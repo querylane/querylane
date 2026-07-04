@@ -1,8 +1,8 @@
 # === Docker image pipeline ================================================
 #   _docker-build.yml   reusable engine: multi-arch build (+ optional push)
 #   docker-ci.yml       on PR         -> build both arches, no push (validate)
-#   docker-publish.yml  on push main  -> publish  edge + sha-<sha>
-#   release.yml         on release    -> publish  <version> + latest
+#   docker-publish.yml  on push main  -> querylane-dev : edge + sha-<sha>
+#   release.yml         on release    -> querylane     : <version> + latest
 # ==========================================================================
 name: docker-ci
 
@@ -36,4 +36,6 @@ jobs:
     if: github.event.pull_request.draft != true
     uses: ./.github/workflows/_docker-build.yml
     with:
+      # Not pushed, so the name is cosmetic; mirror the dev channel for clarity.
+      image: ghcr.io/${{ github.repository }}-dev
       push: false
