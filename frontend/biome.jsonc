@@ -1,0 +1,459 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "root": false,
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/react",
+    "ultracite/biome/vitest",
+    "ultracite/biome/type-aware",
+    "ultracite/biome/tanstack"
+  ],
+  "javascript": {
+    "globals": [
+      "__API_BASE_URL__",
+      "describe",
+      "test",
+      "expect",
+      "beforeEach",
+      "afterEach",
+      "beforeAll",
+      "afterAll",
+      "it",
+      "jest",
+      "mock",
+      "spyOn"
+    ]
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "useSortedKeys": {
+          "level": "on",
+          "options": {
+            "sortOrder": "natural",
+            "groupByNesting": false
+          }
+        }
+      }
+    }
+  },
+  "linter": {
+    "rules": {
+      "a11y": {
+        "noAriaHiddenOnFocusable": "error",
+        "noAutofocus": "error",
+        "noInteractiveElementToNoninteractiveRole": "error",
+        "noNoninteractiveElementToInteractiveRole": "error",
+        "noNoninteractiveTabindex": "error",
+        "noPositiveTabindex": "error",
+        "noStaticElementInteractions": "error",
+        "noSvgWithoutTitle": "error",
+        "useAltText": "error",
+        "useAnchorContent": "error",
+        "useAriaPropsForRole": "error",
+        "useAriaPropsSupportedByRole": "error",
+        "useButtonType": "error",
+        "useFocusableInteractive": "error",
+        "useHeadingContent": "error",
+        "useKeyWithClickEvents": "error",
+        "useValidAriaProps": "error",
+        "useValidAriaRole": "error",
+        "useValidAriaValues": "error"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": {
+            "maxAllowedComplexity": 15
+          }
+        },
+        "noExcessiveLinesPerFunction": {
+          "level": "error",
+          "options": {
+            "maxLines": 300,
+            "skipBlankLines": true,
+            "skipIifes": true
+          }
+        },
+        "noImplicitCoercions": "error",
+        "noImportantStyles": "error",
+        "useLiteralKeys": "off",
+        "useMaxParams": {
+          "level": "error",
+          "options": {
+            "max": 4
+          }
+        }
+      },
+      "correctness": {
+        "noChildrenProp": "error",
+        "noNestedComponentDefinitions": "error",
+        "noNodejsModules": "off",
+        "noPrivateImports": {
+          "level": "error",
+          "options": {
+            "defaultVisibility": "public"
+          }
+        },
+        "noProcessGlobal": "error",
+        "noReactPropAssignments": "error",
+        "noRestrictedElements": {
+          "level": "error",
+          "options": {
+            "elements": {
+              "button": "Use <Button> from src/components/ui/button instead.",
+              "input": "Use <Input> from src/components/ui/input instead.",
+              "select": "Use <Select> or <NativeSelect> from src/components/ui instead.",
+              "textarea": "Use <Textarea> from src/components/ui/textarea instead."
+            }
+          }
+        },
+        "noUndeclaredDependencies": {
+          "level": "error",
+          "options": {
+            "devDependencies": [
+              "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
+              "**/__tests__/**",
+              "**/e2e/**",
+              "**/tests/**",
+              "**/scripts/**",
+              "**/*.config.{ts,js,mts,cts,mjs,cjs}",
+              "**/playwright.config.*",
+              "**/vitest.*.{ts,js,mts,cts,mjs,cjs}",
+              "**/vitest.*.config.*",
+              "**/rsbuild.config.*",
+              "**/postcss.config.*"
+            ],
+            "peerDependencies": true,
+            "optionalDependencies": true
+          }
+        },
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error",
+        "useHookAtTopLevel": "error",
+        "noUnresolvedImports": "error",
+        "useImportExtensions": {
+          "level": "error",
+          "options": {
+            "forceJsExtensions": false
+          }
+        },
+        "useJsxKeyInIterable": "error",
+        "useJsonImportAttributes": "error",
+        "useUniqueElementIds": "error"
+      },
+      "nursery": {
+        "noBaseToString": "error",
+        "noDuplicateSelectors": "error",
+        "noIdenticalTestTitle": "error",
+        "noImpliedEval": "error",
+        "noPlaywrightWaitForSelector": "error",
+        "noPlaywrightWaitForTimeout": "error",
+        "noReactStringRefs": "error",
+        "noUnsafePlusOperands": "error",
+        "useDomNodeTextContent": "error",
+        "useExhaustiveSwitchCases": "error",
+        "useIncludes": "error",
+        "useNullishCoalescing": "error",
+        "useRegexpTest": "error",
+        "useSortedClasses": "error",
+        "useStringStartsEndsWith": "error",
+        "useTestHooksInOrder": "error",
+        "useTestHooksOnTop": "error",
+        "useThisInClassMethods": "error"
+      },
+      "performance": {
+        "noAccumulatingSpread": "error",
+        "noDelete": "error",
+        "noDynamicNamespaceImportAccess": "error",
+        "noReExportAll": "error",
+        "useTopLevelRegex": "error"
+      },
+      "security": {
+        "noBlankTarget": "error",
+        "noDangerouslySetInnerHtml": "error",
+        "noDangerouslySetInnerHtmlWithChildren": "error",
+        "noGlobalEval": "error",
+        "noScriptUrl": "error",
+        "noSecrets": "error"
+      },
+      "style": {
+        "noCommonJs": "error",
+        "noDefaultExport": "error",
+        "noEnum": "error",
+        "noJsxLiterals": "off",
+        "noImplicitBoolean": "error",
+        "noMagicNumbers": "error",
+        "noNamespace": "error",
+        "noNestedTernary": "error",
+        "noNonNullAssertion": "error",
+        "noParameterAssign": "error",
+        "noParameterProperties": "error",
+        "noProcessEnv": "error",
+        "noRestrictedImports": "error",
+        "noRestrictedTypes": "error",
+        "useAsConstAssertion": "error",
+        "useAtIndex": "error",
+        "useComponentExportOnlyModules": "off",
+        "useConsistentArrayType": "error",
+        "useConsistentCurlyBraces": "error",
+        "useDefaultParameterLast": "error",
+        "useErrorCause": "error",
+        "useExportType": "error",
+        "useExplicitLengthCheck": "error",
+        "useExportsLast": "error",
+        "useFragmentSyntax": "error",
+        "useImportType": "error",
+        "useNodejsImportProtocol": "error",
+        "useNumberNamespace": "error",
+        "useReadonlyClassProperties": "error",
+        "useSelfClosingElements": "error",
+        "useSpreadOverApply": "error",
+        "useThrowNewError": "error",
+        "useThrowOnlyError": "error",
+        "useNamingConvention": {
+          "level": "error",
+          "options": {
+            "requireAscii": true,
+            "strictCase": true,
+            "conventions": [
+              {
+                "selector": {
+                  "kind": "objectLiteralProperty"
+                },
+                "formats": ["camelCase", "snake_case", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeProperty"
+                },
+                "formats": ["camelCase", "snake_case", "CONSTANT_CASE"]
+              }
+            ]
+          }
+        },
+        "useSingleVarDeclarator": "error"
+      },
+      "suspicious": {
+        "noArrayIndexKey": "error",
+        "noAssignInExpressions": "error",
+        "noBitwiseOperators": "error",
+        "noConsole": "error",
+        "noDeprecatedImports": "error",
+        "noDoubleEquals": "error",
+        "noEmptyInterface": "error",
+        "noExplicitAny": "error",
+        "noImportCycles": {
+          "level": "error",
+          "options": {
+            "ignoreTypes": true
+          }
+        },
+        "noReturnAssign": "error",
+        "noThenProperty": "error",
+        "noTsIgnore": "error",
+        "useDeprecatedDate": "error"
+      }
+    }
+  },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "defaultBranch": "main"
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "!**/protogen",
+      "!**/components/ui",
+      "!**/dist/**/*",
+      "!**/build/**/*",
+      "!**/out/**/*",
+      "!**/coverage/**/*",
+      "!**/.nyc_output/**/*",
+      "!**/playwright-report/**/*",
+      "!**/routeTree.gen.ts",
+      "!**/test-results/**/*"
+    ]
+  },
+  "overrides": [
+    {
+      // Test/build config is allowed to read CI env directly.
+      "includes": ["vitest.browser.shared.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noProcessEnv": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/components/ui/**",
+        "src/routeTree.gen.ts",
+        "src/protogen/**"
+      ],
+      "linter": {
+        "enabled": false
+      },
+      "formatter": {
+        "enabled": false
+      },
+      "assist": {
+        "enabled": false
+      }
+    },
+    {
+      // Command-line scripts intentionally write to stdio.
+      "includes": ["scripts/**/*"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      // Tooling config files commonly require default exports.
+      "includes": [
+        "*.config.{js,ts,mjs,cjs,mts,cts}",
+        "**/*.config.{js,ts,mjs,cjs,mts,cts}",
+        "playwright.config.*",
+        "rsbuild.config.*",
+        "rstest.config.*",
+        "postcss.config.*"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      // Playwright loads custom reporters through a default export contract.
+      "includes": ["e2e/llm-reporter.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      // Browser/runtime source code should not import Node.js modules.
+      "includes": ["src/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "error"
+          }
+        }
+      }
+    },
+    {
+      // Unresolved import scanner rule is useful for plain JS files.
+      "includes": ["**/*.{js,jsx,mjs,cjs}"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnresolvedImports": "error"
+          }
+        }
+      }
+    },
+    {
+      // Fast-refresh-oriented component module rule should apply to component source.
+      "includes": [
+        "src/components/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
+        "src/features/**/components/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useComponentExportOnlyModules": "error"
+          }
+        }
+      }
+    },
+    {
+      // Test files don't benefit from Fast Refresh constraints and use
+      // literal numbers, test secrets, and non-null assertions freely.
+      "includes": [
+        "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
+        "**/__tests__/**/*"
+      ],
+      "linter": {
+        "rules": {
+          "security": {
+            "noSecrets": "off"
+          },
+          "style": {
+            "noMagicNumbers": "off",
+            "noNonNullAssertion": "off",
+            "useComponentExportOnlyModules": "off",
+            "useTemplate": "off"
+          }
+        }
+      }
+    },
+    {
+      // Re-apply after component-source overrides. This is shadcn registry
+      // hook output, kept exact for future shadcn overwrites.
+      "includes": ["src/hooks/use-mobile.ts"],
+      "linter": {
+        "enabled": false
+      },
+      "formatter": {
+        "enabled": false
+      },
+      "assist": {
+        "enabled": false
+      }
+    },
+    {
+      // Re-apply after Fast Refresh component-source overrides. This file keeps
+      // one shadcn-derived SelectItem fork for multiline option descriptions.
+      "includes": ["src/components/querylane-ui/select.tsx"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noSecrets": "off"
+          }
+        }
+      }
+    },
+    {
+      // Re-apply after Fast Refresh component-source overrides. Sidebar has
+      // shadcn internals forked only for Querylane's lg/mobile breakpoint.
+      "includes": ["src/components/querylane-ui/sidebar.tsx"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noRestrictedElements": "off",
+            "useExhaustiveDependencies": "off"
+          },
+          "performance": {
+            "noNamespaceImport": "off"
+          },
+          "security": {
+            "noSecrets": "off"
+          },
+          "style": {
+            "noMagicNumbers": "off",
+            "useComponentExportOnlyModules": "off",
+            "useConsistentTypeDefinitions": "off"
+          },
+          "suspicious": {
+            "noDocumentCookie": "off"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+name: docker-image
+
+on:
+  workflow_call:
+    inputs:
+      push:
+        required: true
+        type: boolean
+      image:
+        required: false
+        type: string
+        default: ""
+      registry_host:
+        required: false
+        type: string
+        default: ""
+      wif_provider:
+        required: false
+        type: string
+        default: ""
+      wif_service_account:
+        required: false
+        type: string
+        default: ""
+    outputs:
+      image:
+        description: Docker image reference for deploy
+        value: ${{ jobs.docker.outputs.image }}
+
+env:
+  ACTION_CHECKOUT: &action_checkout actions/checkout@v7.0.0
+  ACTION_SETUP_BUILDX: &action_setup_buildx docker/setup-buildx-action@v4.2.0
+  ACTION_BUILD_PUSH: &action_build_push docker/build-push-action@v7.3.0
+  ACTION_AUTH: &action_auth google-github-actions/auth@v3.0.0
+  ACTION_SETUP_GCLOUD: &action_setup_gcloud google-github-actions/setup-gcloud@v3.0.1
+
+jobs:
+  docker:
+    name: Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    outputs:
+      image: ${{ steps.output.outputs.image }}
+    steps:
+      - uses: *action_checkout
+        with:
+          persist-credentials: false
+
+      - name: Validate Docker guardrails
+        run: python3 .github/scripts/check-docker-setup.py
+
+      - name: Validate push inputs
+        if: ${{ inputs.push }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${{ inputs.image }}"
+          test -n "${{ inputs.registry_host }}"
+          test -n "${{ inputs.wif_provider }}"
+          test -n "${{ inputs.wif_service_account }}"
+
+      - uses: *action_auth
+        if: ${{ inputs.push }}
+        with:
+          workload_identity_provider: ${{ inputs.wif_provider }}
+          service_account: ${{ inputs.wif_service_account }}
+
+      - uses: *action_setup_gcloud
+        if: ${{ inputs.push }}
+
+      - name: Configure Docker auth
+        if: ${{ inputs.push }}
+        run: gcloud auth configure-docker ${{ inputs.registry_host }} --quiet
+
+      - name: Set up Docker Buildx
+        uses: *action_setup_buildx
+
+      - name: Derive image tags
+        id: tags
+        if: ${{ inputs.push }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='${{ inputs.image }}'
+          latest_image="${image%:*}:latest"
+          {
+            echo "tags<<EOF"
+            echo "$image"
+            echo "$latest_image"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build Docker image
+        if: ${{ inputs.push }}
+        uses: *action_build_push
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: |
+            type=gha,scope=querylane-docker-${{ github.ref_name }}
+            type=gha,scope=querylane-docker-${{ github.base_ref || 'main' }}
+          cache-to: type=gha,mode=max,scope=querylane-docker-${{ github.ref_name }},ignore-error=true
+
+      - name: Validate Docker image
+        if: ${{ !inputs.push }}
+        uses: *action_build_push
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: .
+          file: ./Dockerfile
+          outputs: type=cacheonly
+          cache-from: |
+            type=gha,scope=querylane-docker-${{ github.ref_name }}
+            type=gha,scope=querylane-docker-${{ github.base_ref || 'main' }}
+          cache-to: type=gha,mode=max,scope=querylane-docker-${{ github.ref_name }},ignore-error=true
+
+      - name: Set image output
+        id: output
+        shell: bash
+        run: |
+          if [ "${{ inputs.push }}" = "true" ]; then
+            echo "image=${{ inputs.image }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "image=" >> "$GITHUB_OUTPUT"
+          fi

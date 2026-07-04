@@ -1,0 +1,63 @@
+name: cd
+
+on:
+  push:
+    branches: [main]
+
+env:
+  ACTION_AUTH: &action_auth google-github-actions/auth@v3.0.0
+  ACTION_DEPLOY_CLOUDRUN: &action_deploy_cloudrun google-github-actions/deploy-cloudrun@v3.0.1
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+  deployments: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  image-meta:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - id: meta
+        run: echo "image=us-central1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/querylane/querylane:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+  # --- Build Docker image + push to Artifact Registry ---
+  build-and-push:
+    needs: image-meta
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/docker-image.yml
+    with:
+      push: true
+      image: ${{ needs.image-meta.outputs.image }}
+      registry_host: us-central1-docker.pkg.dev
+      wif_provider: ${{ vars.WIF_PROVIDER }}
+      wif_service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+  # --- Deploy to Cloud Run ---
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    environment:
+      name: demo
+      url: https://demo.querylane.net
+    steps:
+      - uses: *action_auth
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+      - uses: *action_deploy_cloudrun
+        with:
+          service: querylane-demo
+          image: ${{ needs.build-and-push.outputs.image }}
+          region: us-east1
+          wait: true

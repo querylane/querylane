@@ -1,0 +1,128 @@
+# Querylane Configuration Reference
+#
+# Copy this file to ~/.querylane/config.yaml and adjust for your environment,
+# or pass a custom path with: querylane server start --config /path/to/config.yaml
+
+
+# -----------------------------------------------------------------------------
+# HTTP Server
+# -----------------------------------------------------------------------------
+
+http:
+  host: "0.0.0.0"
+  port: 8080
+  access_log: true
+  cors:
+    allowed_origins:
+      - "*"
+
+
+# -----------------------------------------------------------------------------
+# Metadata Database
+#
+# Querylane stores catalog metadata (schema cache, sync state) in its own
+# PostgreSQL database. Pick ONE of the options below.
+#
+# If you skip this section entirely, Querylane starts a setup wizard on first
+# launch that walks you through the configuration.
+# -----------------------------------------------------------------------------
+
+# Option A — External PostgreSQL (recommended for production):
+database:
+  host: "localhost"
+  port: 5432
+  database: "querylane"
+  username: "querylane"
+  ssl_mode: "prefer"       # disable | allow | prefer | require | verify-ca | verify-full
+
+  # Password:
+  password: "querylane"              # Inline (development only)
+  # Or set QUERYLANE_DATABASE_PASSWORD in the environment instead.
+
+  # Or use a DSN instead of individual fields (takes precedence):
+  # dsn: "postgres://querylane:querylane@localhost:5432/querylane?sslmode=disable"
+  # Or set QUERYLANE_DATABASE_DSN in the environment instead.
+  # When DSN is provided, individual fields above are ignored.
+
+# Option B — Embedded PostgreSQL (zero-setup, good for demos):
+# embedded:
+#   mode: "persistent"     # persistent | ephemeral
+#   data_path: "~/.querylane/pgdata"
+#   port: 5433
+#   health_check_interval: "10s"
+
+
+# -----------------------------------------------------------------------------
+# API-managed instance secrets
+#
+# When managing instances through the UI/API, Querylane encrypts stored instance
+# passwords before writing them to the meta database. Set this process env var
+# in production and keep it stable across restarts:
+#
+#   QUERYLANE_INSTANCE_SECRET_KEY=<base64-encoded 32-byte key>
+#
+# Recommended key generation:
+#
+#   openssl rand -base64 32
+#
+# For local development you can also use a raw 32-byte value or
+# sha256:<passphrase>. API-managed instances can store passwords as:
+# - inline legacy/password_source.inline: encrypted at rest
+# - password_source.env: resolved from a server environment variable
+# - password_source.ref: reserved for future Vault/cloud secret managers
+#
+# Config-managed instances can avoid persistence entirely by using
+# password_env/dsn_env below.
+#
+# Notes:
+# - Existing plaintext instance rows remain readable after upgrade, but are not
+#   encrypted until their credentials are re-saved through the API/UI.
+# - Key rotation is not currently supported; changing the key makes existing
+#   encrypted rows undecryptable.
+# -----------------------------------------------------------------------------
+
+
+# -----------------------------------------------------------------------------
+# Managed Instances
+#
+# List the PostgreSQL servers you want Querylane to connect to.
+#
+# When this section is present, instances are managed through this file and
+# the UI becomes read-only for instance configuration. Remove the section
+# to switch back to managing instances through the UI at runtime.
+# -----------------------------------------------------------------------------
+
+instances:
+  - id: my-database                    # Stable identifier (letters, digits, hyphens, underscores)
+    display_name: "My Database"        # Shown in the UI (defaults to id)
+    host: "db.example.com"
+    port: 5432
+    database: "myapp"
+    username: "myuser"
+    ssl_mode: "prefer"                 # disable | allow | prefer | require | verify-ca | verify-full
+    labels:
+      env: production
+
+    # Password — provide one:
+    password: "my-secret"              # Inline (development only)
+    # password_env: "MY_DB_PASSWORD"   # Read from an environment variable
+    #
+    # Precedence: password_env > password
+    # Resolved secrets are never written back to this file.
+
+    # Or use a DSN instead of individual fields (takes precedence):
+    # dsn: "postgres://myuser:my-secret@db.example.com:5432/myapp?sslmode=prefer"
+    # dsn_env: "MY_DATABASE_URL"       # Read DSN from an environment variable
+    #
+    # Precedence: dsn_env > dsn
+    # When DSN is provided, individual fields above are ignored.
+
+  # More instances:
+  # - id: staging
+  #   host: "staging-db.example.com"
+  #   database: "myapp"
+  #   username: "readonly"
+  #   password_env: "STAGING_DB_PASSWORD"
+  #   ssl_mode: "require"
+  #   labels:
+  #     env: staging

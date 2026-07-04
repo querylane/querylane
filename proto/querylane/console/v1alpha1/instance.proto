@@ -1,0 +1,670 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "google/rpc/status.proto";
+
+// --------------------------------------------------------------------------
+// Service
+// --------------------------------------------------------------------------
+
+// Service for managing connection records to external database instances.
+service InstanceService {
+  // Lists registered Instances.
+  rpc ListInstances(ListInstancesRequest) returns (ListInstancesResponse) {}
+
+  // Gets the details of a registered Instance.
+  rpc GetInstance(GetInstanceRequest) returns (GetInstanceResponse) {}
+
+  // Registers a new external database instance with the platform.
+  // The platform will attempt to validate the connection details upon creation.
+  rpc CreateInstance(CreateInstanceRequest) returns (CreateInstanceResponse) {}
+
+  // Tests PostgreSQL connection details without creating or updating an Instance.
+  rpc TestInstanceConnection(TestInstanceConnectionRequest) returns (TestInstanceConnectionResponse) {}
+
+  // Updates the connection details for a registered Instance.
+  rpc UpdateInstance(UpdateInstanceRequest) returns (UpdateInstanceResponse) {}
+
+  // De-registers an Instance, removing its connection record from the platform.
+  // This does not affect the external database itself.
+  rpc DeleteInstance(DeleteInstanceRequest) returns (DeleteInstanceResponse) {}
+
+  // Returns a live health overview for a PostgreSQL instance.
+  // Metrics are queried directly from the instance and cached briefly.
+  rpc GetInstanceOverview(GetInstanceOverviewRequest) returns (GetInstanceOverviewResponse) {}
+
+  // Checks live PostgreSQL health signals that are inexpensive and directly
+  // observable from ordinary database views/settings.
+  rpc CheckInstanceHealth(CheckInstanceHealthRequest) returns (CheckInstanceHealthResponse) {}
+}
+
+// --------------------------------------------------------------------------
+// Resource Messages
+// --------------------------------------------------------------------------
+
+// An Instance represents a connection record to an existing, externally-managed
+// database. The platform uses this information to connect to and manage the database.
+message Instance {
+  option (google.api.resource) = {
+    type: "console.querylane.dev/Instance"
+    pattern: "instances/{instance}"
+    plural: "instances"
+    singular: "instance"
+  };
+
+  // The health of the connection to the instance.
+  enum ConnectionState {
+    // The connection state is unknown.
+    CONNECTION_STATE_UNSPECIFIED = 0;
+    // The platform is attempting to validate the connection details.
+    CONNECTION_STATE_VALIDATING = 1;
+    // The platform has successfully connected to the instance.
+    CONNECTION_STATE_ACTIVE = 2;
+    // The platform failed to connect to the instance. See the `connection_error`
+    // field for details.
+    CONNECTION_STATE_ERROR = 3;
+  }
+
+  // Output-only identifier. The unique resource name of the instance record.
+  // Format: instances/{instance_id}
+  string name = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.field_behavior) = IDENTIFIER
+  ];
+
+  // Required. A user-friendly name for the instance.
+  string display_name = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 63
+    }
+  ];
+
+  // Optional. Labels for organizing and filtering instances.
+  // Keys and values must be valid label format, max 64 labels.
+  map<string, string> labels = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).map = {
+      max_pairs: 64
+      keys: {
+        string: {
+          pattern: "^[a-zA-Z0-9]([a-zA-Z0-9\\-_./]*[a-zA-Z0-9])?$"
+          min_len: 1
+          max_len: 63
+        }
+      }
+      values: {
+        string: {max_len: 255}
+      }
+    }
+  ];
+
+  // Required. PostgreSQL connection configuration for this instance.
+  PostgresConfig config = 6 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true
+  ];
+
+  // Output-only. The health of the connection to the external database.
+  ConnectionState connection_state = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. If the `connection_state` is `ERROR`, this field may contain
+  // a message describing the error.
+  string connection_error = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The time at which the instance record was created.
+  google.protobuf.Timestamp create_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The time at which the instance record was last updated.
+  google.protobuf.Timestamp update_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The time of the most recent live connection probe for this
+  // instance, regardless of whether it succeeded or failed.
+  google.protobuf.Timestamp last_connection_check_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Live server metadata queried from the PostgreSQL instance.
+message ServerInfo {
+  // The full version string, e.g. "PostgreSQL 16.3 on x86_64-pc-linux-gnu".
+  string version = 1;
+
+  // The numeric server version, e.g. 160003 for PostgreSQL 16.3.
+  int32 version_num = 2;
+
+  // Human-readable version derived from version_num, e.g. "17.8" or "9.6.12".
+  string version_short = 3;
+
+  // The time the PostgreSQL server was started.
+  google.protobuf.Timestamp started_at = 4;
+
+  // The replication role of the server.
+  ReplicationRole replication_role = 5;
+
+  // The maximum number of concurrent connections the server allows.
+  int32 max_connections = 6;
+
+  enum ReplicationRole {
+    REPLICATION_ROLE_UNSPECIFIED = 0;
+    REPLICATION_ROLE_PRIMARY = 1;
+    REPLICATION_ROLE_REPLICA = 2;
+  }
+}
+
+// --------------------------------------------------------------------------
+// RPC request/response messages
+// --------------------------------------------------------------------------
+
+// --- ListInstances RPC ---
+message ListInstancesRequest {
+  reserved 1;
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+  string filter = 4 [(google.api.field_behavior) = OPTIONAL];
+  string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListInstancesResponse {
+  repeated Instance instances = 1;
+  string next_page_token = 2;
+}
+
+// --- GetInstance RPC ---
+message GetInstanceRequest {
+  // Required. The name of the instance record to retrieve.
+  // Format: instances/{instance_id}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Instance"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$"
+  ];
+}
+
+message GetInstanceResponse {
+  Instance instance = 1;
+
+  // Live server metadata queried from the PostgreSQL instance.
+  // Only populated when the instance connection is active.
+  ServerInfo server_info = 2;
+}
+
+// CreateInstanceSpec defines the client-settable fields for creating an instance.
+// This message contains only the fields that can be provided by clients during creation,
+// with strict validation to catch errors as early as possible.
+message CreateInstanceSpec {
+  // Required. A user-friendly name for the instance.
+  string display_name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 63
+    }
+  ];
+
+  // Optional. Labels for organizing and filtering instances.
+  // Keys and values must be valid label format, max 64 labels.
+  map<string, string> labels = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).map = {
+      max_pairs: 64
+      keys: {
+        string: {
+          pattern: "^[a-zA-Z0-9]([a-zA-Z0-9\\-_./]*[a-zA-Z0-9])?$"
+          min_len: 1
+          max_len: 63
+        }
+      }
+      values: {
+        string: {max_len: 255}
+      }
+    }
+  ];
+
+  // Required. PostgreSQL connection configuration for this instance.
+  PostgresConfig config = 4 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true
+  ];
+}
+
+// --- CreateInstance RPC ---
+message CreateInstanceRequest {
+  reserved 1;
+
+  option (buf.validate.message).cel = {
+    id: "create_instance_body_exactly_one"
+    message: "exactly one of spec or instance must be set"
+    expression: "has(this.spec) != has(this.instance)"
+  };
+
+  // Optional. Compatibility request body for creating an instance.
+  // Prefer `instance` for new clients. Exactly one of `spec` or `instance`
+  // must be set.
+  CreateInstanceSpec spec = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. The ID to use for the instance record.
+  string instance_id = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).ignore = IGNORE_IF_UNPOPULATED,
+    (buf.validate.field).string = {
+      pattern: "^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$"
+      min_len: 1
+      max_len: 63
+    }
+  ];
+
+  // Optional. If true, validates the connection but does not create the instance.
+  bool validate_only = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. The instance resource to create. The server ignores `instance.name`
+  // and composes the full resource name from `instance_id`.
+  // Exactly one of `spec` or `instance` must be set.
+  Instance instance = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message CreateInstanceResponse {
+  Instance instance = 1;
+}
+
+// --- TestInstanceConnection RPC ---
+message TestInstanceConnectionRequest {
+  // Required. PostgreSQL connection configuration to test.
+  PostgresConfig config = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true
+  ];
+}
+
+message TestInstanceConnectionResponse {}
+
+// --- UpdateInstance RPC ---
+message UpdateInstanceRequest {
+  // Ensure instance is present and identified by name. Deep validation of the
+  // Instance message is skipped (IGNORE_ALWAYS) because clients send partial
+  // objects per AIP-134. Full validation runs post-merge in the storage layer.
+  option (buf.validate.message).cel = {
+    id: "update_instance_name_required"
+    message: "instance.name is required to identify the resource"
+    expression: "has(this.instance) && this.instance.name != ''"
+  };
+
+  // Required. The instance record to update.
+  // Only the fields specified in update_mask are modified; unset fields are
+  // ignored.
+  Instance instance = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Instance"},
+    (buf.validate.field).ignore = IGNORE_ALWAYS
+  ];
+
+  // Required. The list of fields to be updated.
+  google.protobuf.FieldMask update_mask = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    // Ensure we actually have at least one path.
+    (buf.validate.field).cel = {
+      id: "update_mask_non_empty"
+      message: "update_mask must specify at least one field"
+      expression: "this.paths.size() > 0"
+    }
+  ];
+}
+
+message UpdateInstanceResponse {
+  Instance instance = 1;
+}
+
+// --- DeleteInstance RPC ---
+message DeleteInstanceRequest {
+  // Required. The name of the instance record to delete.
+  // Format: instances/{instance_id}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Instance"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$"
+  ];
+}
+
+message DeleteInstanceResponse {}
+
+// --------------------------------------------------------------------------
+// Configuration and Enum messages
+// --------------------------------------------------------------------------
+
+// SecretSource describes where a secret value should be resolved from.
+message SecretSource {
+  oneof source {
+    // Inline secret value. Intended for development and back-compat; encrypted at rest.
+    string inline = 1 [(buf.validate.field).string.min_len = 1];
+
+    // Environment variable name. The value is resolved by the server process.
+    string env = 2 [(buf.validate.field).string.min_len = 1];
+
+    // Opaque external secret reference. Reserved for future providers such as Vault
+    // or cloud secret managers.
+    string ref = 3 [(buf.validate.field).string.min_len = 1];
+  }
+}
+
+message PostgresConfig {
+  option (buf.validate.message).cel = {
+    id: "postgres_config_direct_ssl_negotiation_requires_tls"
+    message: "ssl_negotiation direct requires ssl_mode require, verify-ca, or verify-full"
+    expression: "this.ssl_negotiation != querylane.console.v1alpha1.PostgresConfig.SslNegotiation.SSL_NEGOTIATION_DIRECT || this.ssl_mode in [querylane.console.v1alpha1.PostgresConfig.SslMode.SSL_MODE_REQUIRE, querylane.console.v1alpha1.PostgresConfig.SslMode.SSL_MODE_VERIFY_CA, querylane.console.v1alpha1.PostgresConfig.SslMode.SSL_MODE_VERIFY_FULL]"
+  };
+
+  enum SslMode {
+    SSL_MODE_UNSPECIFIED = 0;
+    SSL_MODE_DISABLED = 1;
+    SSL_MODE_ALLOW = 2;
+    SSL_MODE_PREFER = 3;
+    SSL_MODE_REQUIRE = 4;
+    SSL_MODE_VERIFY_CA = 5;
+    SSL_MODE_VERIFY_FULL = 6;
+  }
+
+  enum SslNegotiation {
+    SSL_NEGOTIATION_UNSPECIFIED = 0;
+    SSL_NEGOTIATION_POSTGRES = 1;
+    SSL_NEGOTIATION_DIRECT = 2;
+  }
+
+  // Required. The hostname or IP address of the PostgreSQL server.
+  string host = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // Required. The port number of the PostgreSQL server.
+  int32 port = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).int32 = {
+      gte: 1
+      lte: 65535
+    }
+  ];
+
+  // Required. The name of the database to connect to.
+  string database = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // Required. The username to authenticate with.
+  string username = 4 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // Input-only. Legacy inline password field. New clients should use
+  // password_source.inline instead. Inline values are encrypted at rest.
+  string password = 5 [
+    (google.api.field_behavior) = INPUT_ONLY,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // Optional. The SSL mode to use for the connection.
+  SslMode ssl_mode = 6 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+
+  // Optional. Source for the password secret. When omitted, the legacy
+  // `password` field is used for backward compatibility.
+  SecretSource password_source = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. How SSL encryption is negotiated with the server when SSL is
+  // used. `direct` maps to the libpq `sslnegotiation=direct` connection option
+  // and requires ssl_mode `require`, `verify-ca`, or `verify-full`.
+  SslNegotiation ssl_negotiation = 8 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+}
+
+// --------------------------------------------------------------------------
+// Instance Overview (live health signals)
+// --------------------------------------------------------------------------
+
+// --- GetInstanceOverview RPC ---
+message GetInstanceOverviewRequest {
+  // Required. Resource name of the instance.
+  // Format: instances/{instance_id}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Instance"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$"
+  ];
+}
+
+message GetInstanceOverviewResponse {
+  InstanceOverview instance_overview = 1;
+
+  // Errors encountered fetching individual metric categories.
+  // The RPC succeeds (OK) even when some metrics are unavailable.
+  // Each Status identifies the failed category via google.rpc.ErrorInfo
+  // in its details, with metadata key "metric" set to the category name
+  // (one of: "connections", "storage", "cache", "io").
+  repeated google.rpc.Status partial_errors = 2;
+}
+
+// --- CheckInstanceHealth RPC ---
+message CheckInstanceHealthRequest {
+  // Required. Resource name of the instance.
+  // Format: instances/{instance_id}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Instance"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$"
+  ];
+}
+
+message CheckInstanceHealthResponse {
+  InstanceHealth health = 1;
+
+  // Errors encountered fetching individual health categories.
+  // The RPC succeeds (OK) even when some categories are unavailable.
+  // Each Status identifies the failed category via google.rpc.ErrorInfo
+  // in its details, with metadata key "check" set to the category name
+  // (one of: "connection_activity", "replication", "stats_access",
+  // "pg_stat_statements").
+  repeated google.rpc.Status partial_errors = 2;
+}
+
+// Machine-readable status for a health category.
+enum HealthCheckStatus {
+  HEALTH_CHECK_STATUS_UNSPECIFIED = 0;
+  // The check completed and found no concerning signal.
+  HEALTH_CHECK_STATUS_OK = 1;
+  // The check completed but found a signal worth surfacing.
+  HEALTH_CHECK_STATUS_WARNING = 2;
+  // The check completed and found a broken or unusable capability.
+  HEALTH_CHECK_STATUS_ERROR = 3;
+  // The check could not determine the state.
+  HEALTH_CHECK_STATUS_UNKNOWN = 4;
+  // The capability is not configured or not relevant for this instance.
+  HEALTH_CHECK_STATUS_NOT_APPLICABLE = 5;
+}
+
+// Live health checks for a PostgreSQL instance.
+message InstanceHealth {
+  // Timestamp when the checks were observed.
+  google.protobuf.Timestamp observed_at = 1;
+  // Backend activity, connection pressure, and wait signals from
+  // pg_stat_activity.
+  ConnectionActivityHealth connection_activity = 2;
+  // Replication role and attached replica or receiver signals.
+  ReplicationHealth replication = 3;
+  // Whether the connected role can inspect PostgreSQL statistics.
+  StatsAccessHealth stats_access = 4;
+  // Whether pg_stat_statements is installed, loaded, and accumulating rows.
+  PgStatStatementsHealth pg_stat_statements = 5;
+}
+
+// Backend activity and connection pressure from pg_stat_activity.
+message ConnectionActivityHealth {
+  HealthCheckStatus status = 1;
+  string summary = 2;
+  int32 active_connections = 3 [(buf.validate.field).int32.gte = 0];
+  int32 idle_connections = 4 [(buf.validate.field).int32.gte = 0];
+  int32 idle_in_transaction_connections = 5 [(buf.validate.field).int32.gte = 0];
+  int32 total_connections = 6 [(buf.validate.field).int32.gte = 0];
+  int32 max_connections = 7 [(buf.validate.field).int32.gte = 0];
+  double utilization_ratio = 8 [(buf.validate.field).double = {
+    gte: 0
+    lte: 1
+  }];
+  int32 waiting_for_lock_connections = 9 [(buf.validate.field).int32.gte = 0];
+  int32 long_running_transaction_connections = 10 [(buf.validate.field).int32.gte = 0];
+  int64 longest_transaction_seconds = 11 [(buf.validate.field).int64.gte = 0];
+}
+
+// Replication health from pg_is_in_recovery, pg_stat_replication, and
+// pg_stat_wal_receiver.
+message ReplicationHealth {
+  HealthCheckStatus status = 1;
+  string summary = 2;
+  ServerInfo.ReplicationRole role = 3;
+  int32 attached_replicas = 4 [(buf.validate.field).int32.gte = 0];
+  int32 streaming_replicas = 5 [(buf.validate.field).int32.gte = 0];
+  int32 synchronous_replicas = 6 [(buf.validate.field).int32.gte = 0];
+  int64 max_replication_lag_bytes = 7 [(buf.validate.field).int64.gte = 0];
+  bool wal_receiver_active = 8;
+  int64 replay_lag_seconds = 9 [(buf.validate.field).int64.gte = 0];
+}
+
+// Statistics visibility for the connected role.
+message StatsAccessHealth {
+  HealthCheckStatus status = 1;
+  string summary = 2;
+  string current_user = 3;
+  bool superuser = 4;
+  bool pg_monitor_member = 5;
+  bool pg_read_all_stats_member = 6;
+  bool can_read_pg_stat_activity = 7;
+  bool can_read_pg_stat_database = 8;
+}
+
+// pg_stat_statements health from pg_extension, PostgreSQL settings, and the
+// pg_stat_statements views when installed.
+message PgStatStatementsHealth {
+  HealthCheckStatus status = 1;
+  string summary = 2;
+  bool extension_installed = 3;
+  string extension_schema = 4;
+  string extension_version = 5;
+  bool shared_preload_configured = 6;
+  string track_mode = 7;
+  bool view_queryable = 8;
+  int64 statement_count = 9 [(buf.validate.field).int64.gte = 0];
+  google.protobuf.Timestamp stats_reset_at = 10;
+}
+
+// Live health signals for a PostgreSQL instance.
+// All metrics are cluster-wide (instance-scoped).
+message InstanceOverview {
+  // Connection utilization. Nil if the query failed.
+  ConnectionMetrics connections = 1;
+  // Disk usage across all databases. Nil if the query failed.
+  StorageMetrics storage = 2;
+  // Buffer cache performance across all databases. Nil if the query failed.
+  CacheMetrics cache = 3;
+  // Timestamp when the metrics were observed.
+  google.protobuf.Timestamp observed_at = 4;
+  // PostgreSQL I/O statistics from pg_stat_io. Nil if unavailable or the query
+  // failed.
+  IOMetrics io_metrics = 5;
+}
+
+// Connection utilization metrics queried from pg_stat_activity.
+message ConnectionMetrics {
+  option (buf.validate.message).cel = {
+    id: "connection_active_idle_not_above_total"
+    message: "active_connections and idle_connections must not exceed total_connections"
+    expression: "this.active_connections + this.idle_connections <= this.total_connections"
+  };
+
+  option (buf.validate.message).cel = {
+    id: "connection_total_not_above_max"
+    message: "total_connections must not exceed max_connections"
+    expression: "this.total_connections <= this.max_connections"
+  };
+
+  // Number of backends currently executing a query.
+  int32 active_connections = 1 [(buf.validate.field).int32.gte = 0];
+  // Number of backends connected but idle.
+  int32 idle_connections = 2 [(buf.validate.field).int32.gte = 0];
+  // Total number of backends across all states.
+  int32 total_connections = 3 [(buf.validate.field).int32.gte = 0];
+  // Server's max_connections setting.
+  int32 max_connections = 4 [(buf.validate.field).int32.gte = 0];
+}
+
+// Disk usage metrics across all non-template databases.
+message StorageMetrics {
+  // Total size of all non-template databases in bytes.
+  int64 total_size_bytes = 1 [(buf.validate.field).int64.gte = 0];
+}
+
+// Buffer cache performance metrics aggregated across all databases.
+message CacheMetrics {
+  option (buf.validate.message).cel = {
+    id: "cache_empty_ratio_zero"
+    message: "hit_ratio must be zero when no cache blocks were observed"
+    expression: "this.blocks_hit > 0 || this.blocks_read > 0 || this.hit_ratio == 0.0"
+  };
+
+  // Instance-wide buffer cache hit ratio (0.0–1.0).
+  double hit_ratio = 1 [(buf.validate.field).double = {
+    gte: 0
+    lte: 1
+  }];
+  // Total shared buffer cache hits since last stats reset.
+  int64 blocks_hit = 2 [(buf.validate.field).int64.gte = 0];
+  // Total disk block reads since last stats reset.
+  int64 blocks_read = 3 [(buf.validate.field).int64.gte = 0];
+}
+
+// PostgreSQL I/O statistics aggregated across pg_stat_io rows.
+message IOMetrics {
+  option (buf.validate.message).cel = {
+    id: "io_bytes_require_operations"
+    message: "I/O byte counters must be zero when the matching operation counter is zero"
+    expression: "(this.reads > 0 || this.read_bytes == 0) && (this.writes > 0 || this.write_bytes == 0) && (this.extends > 0 || this.extend_bytes == 0)"
+  };
+
+  // Total read operations since last stats reset.
+  int64 reads = 1 [(buf.validate.field).int64.gte = 0];
+  // Total read bytes since last stats reset. On PostgreSQL 16/17 this is
+  // derived from reads * op_bytes; on PostgreSQL 18+ it uses read_bytes.
+  int64 read_bytes = 2 [(buf.validate.field).int64.gte = 0];
+  // Total write operations since last stats reset.
+  int64 writes = 3 [(buf.validate.field).int64.gte = 0];
+  // Total write bytes since last stats reset. On PostgreSQL 16/17 this is
+  // derived from writes * op_bytes; on PostgreSQL 18+ it uses write_bytes.
+  int64 write_bytes = 4 [(buf.validate.field).int64.gte = 0];
+  // Total relation extend operations since last stats reset.
+  int64 extends = 5 [(buf.validate.field).int64.gte = 0];
+  // Total extended bytes since last stats reset. On PostgreSQL 16/17 this is
+  // derived from extends * op_bytes; on PostgreSQL 18+ it uses extend_bytes.
+  int64 extend_bytes = 6 [(buf.validate.field).int64.gte = 0];
+  // Total fsync calls since last stats reset.
+  int64 fsyncs = 7 [(buf.validate.field).int64.gte = 0];
+}

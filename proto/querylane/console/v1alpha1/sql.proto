@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/duration.proto";
+import "querylane/console/v1alpha1/table_data.proto";
+
+// --------------------------------------------------------------------------
+// Service
+// --------------------------------------------------------------------------
+
+// SQLService exposes ad-hoc read-only query execution.
+// This is intended for the SQL editor, not for grid-style table browsing.
+service SQLService {
+  // Executes a single read-only SQL query and streams results in batches.
+  rpc ExecuteQuery(ExecuteQueryRequest) returns (stream ExecuteQueryResponse) {}
+
+  // Produces an EXPLAIN plan for a single query.
+  rpc ExplainQuery(ExplainQueryRequest) returns (ExplainQueryResponse) {}
+}
+
+// --------------------------------------------------------------------------
+// Streaming Result Messages
+// --------------------------------------------------------------------------
+
+// QueryColumnMetadata is the first message in an ExecuteQuery stream.
+message QueryColumnMetadata {
+  repeated TableResultColumn columns = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// QueryRowBatch is a batch of rows in an ExecuteQuery stream.
+message QueryRowBatch {
+  repeated TableResultRow rows = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// QueryStats is the final message in an ExecuteQuery stream.
+message QueryStats {
+  // Output-only. Total rows emitted in the response stream.
+  int64 row_count = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Query execution latency.
+  google.protobuf.Duration latency = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Database notices emitted during execution.
+  repeated string notices = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the server truncated results at the requested limit.
+  bool truncated = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// --------------------------------------------------------------------------
+// RPC Messages
+// --------------------------------------------------------------------------
+
+message ExecuteQueryRequest {
+  // Required. The database against which to execute the query.
+  // Format: instances/{instance}/databases/{database}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Database"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$"
+  ];
+
+  // Required. A single read-only SQL statement.
+  string statement = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // Optional. Maximum number of rows to return before truncation.
+  int32 row_limit = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 10000
+    }
+  ];
+
+  // Optional. Number of rows per streamed batch.
+  int32 batch_size = 4 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+
+  // Optional. Statement timeout. The server should clamp this to a safe max.
+  google.protobuf.Duration timeout = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Default schema/search path context for unqualified objects.
+  string default_schema = 6 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ExecuteQueryResponse {
+  oneof result {
+    QueryColumnMetadata column_metadata = 1;
+    QueryRowBatch row_batch = 2;
+    QueryStats stats = 3;
+  }
+}
+
+message ExplainQueryRequest {
+  enum Format {
+    FORMAT_UNSPECIFIED = 0;
+    FORMAT_TEXT = 1;
+    FORMAT_JSON = 2;
+    FORMAT_YAML = 3;
+  }
+
+  // Required. The database against which to explain the query.
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Database"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$"
+  ];
+
+  // Required. A single SQL statement to explain.
+  string statement = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  Format format = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+
+  // Optional. If true, requests EXPLAIN ANALYZE. The server must only allow
+  // this for statements that remain read-only under execution.
+  bool analyze = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  bool buffers = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  google.protobuf.Duration timeout = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  string default_schema = 7 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ExplainQueryResponse {
+  // Output-only. The plan in the requested format.
+  string plan = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Database notices emitted during explain.
+  repeated string notices = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Explain latency.
+  google.protobuf.Duration latency = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

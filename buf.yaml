@@ -1,0 +1,18 @@
+version: v2
+modules:
+  - path: proto
+
+deps:
+  - buf.build/bufbuild/protovalidate
+  - buf.build/googleapis/googleapis
+
+lint:
+  use:
+    - STANDARD
+  ignore_only:
+    ENUM_VALUE_PREFIX:
+      - proto/querylane/console/v1alpha1/errors.proto
+
+breaking:
+  use:
+    - FILE

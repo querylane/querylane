@@ -1,0 +1,25 @@
+# Manual scenario: degraded → ready transition.
+#
+# The DSN below points at the same Postgres `task dev:db` spins up. Launch
+# this config WITHOUT first starting that container so the backend can't
+# reach the meta DB on boot. Expected log on launch:
+#
+#   "database initialization failed, starting in degraded mode"
+#
+# followed by a background retry every 5s ("database retry failed"). DB-
+# dependent RPCs return CodeUnavailable while in this state. From another
+# terminal:
+#
+#   task dev:db
+#
+# Within ~5s the retry catches the DB and the controller logs
+# "database connected after retry, all services available" and swaps the
+# route tree to the ready stage. Hit a DB-backed RPC (e.g. ListInstances)
+# before and after to confirm the CodeUnavailable → real-response flip.
+
+database:
+  dsn: "postgres://querylane:querylane@localhost:5432/querylane_dev?sslmode=disable"
+
+http:
+  host: 0.0.0.0
+  port: 8080

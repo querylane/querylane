@@ -1,0 +1,57 @@
+<svg
+  fill="none"
+  height="32"
+  viewBox="0 0 32 32"
+  width="32"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <title>QueryLane dark icon</title>
+  <rect fill="#fafafa" height="32" rx="7" width="32" />
+  <rect
+    fill="#18181b"
+    height="4.5"
+    opacity="0.08"
+    rx="1.5"
+    width="26"
+    x="3"
+    y="13"
+  />
+  <rect
+    fill="#18181b"
+    height="2.2"
+    opacity="0.35"
+    rx="1"
+    width="12"
+    x="9"
+    y="6.5"
+  />
+  <rect
+    fill="#18181b"
+    height="2.2"
+    opacity="0.5"
+    rx="1"
+    width="14"
+    x="12"
+    y="10.5"
+  />
+  <rect fill="#18181b" height="2.2" rx="1" width="10" x="12" y="14.2" />
+  <rect
+    fill="#18181b"
+    height="2.2"
+    opacity="0.5"
+    rx="1"
+    width="15"
+    x="12"
+    y="18"
+  />
+  <rect
+    fill="#18181b"
+    height="2.2"
+    opacity="0.35"
+    rx="1"
+    width="8"
+    x="9"
+    y="22"
+  />
+  <path d="M4.5 13.3L8 15.2L4.5 17.1Z" fill="#3b82f6" />
+</svg>

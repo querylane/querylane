@@ -1,0 +1,9 @@
+# Development configuration
+database:
+  dsn: "postgres://querylane:querylane@localhost:5432/querylane_dev?sslmode=disable"
+
+
+http:
+  host: 0.0.0.0
+  port: 8080
+  access_log: false

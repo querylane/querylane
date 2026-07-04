@@ -1,0 +1,204 @@
+version: 3
+
+# Development environment tasks for easy contributor onboarding
+# Usage:
+# - task dev - Start full development environment (DB + Backend + Frontend)
+# - task dev:db - Start PostgreSQL database only
+# - task dev:backend - Start backend server only  
+# - task dev:frontend - Start frontend dev server only
+# - task dev:logs - View database logs
+# - task dev:reset - Reset database with fresh container
+# - task dev:stop - Stop all development services
+# - task dev:clean - Stop and remove all containers/volumes
+
+vars:
+  DEV_COMPOSE_FILE: "{{.ROOT_DIR}}/docker-compose.yaml"
+  DEV_ENV_FILE: "{{.ROOT_DIR}}/.env.development"
+  DEV_CONFIG: "{{.ROOT_DIR}}/backend/configs/dev.yaml"
+  SEED_COMPOSE_FILE: "{{.ROOT_DIR}}/docker-compose.seed.yaml"
+  SEED_ENV_FILE: "{{.ROOT_DIR}}/seed/.env.seed"
+  
+tasks:
+  dev:
+    desc: Start full development environment (Database + Backend + Frontend)
+    deps: [db]
+    cmds:
+      - |
+        echo ""
+        echo "🚀 Starting development environment..."
+        echo ""
+        echo "🔌 Backend:  http://localhost:8080"
+        echo "🐘 Database: localhost:5432"
+        echo ""
+        echo "Starting backend and frontend in parallel..."
+        echo "📊 Frontend will be available at the URL shown by Rsbuild"
+        echo "Press Ctrl+C to stop all services"
+        echo ""
+      - |
+        # Start backend in background
+        (cd {{.BACKEND_ROOT}} && {{.PATH_PREFIX}} go run . server start --config={{.DEV_CONFIG}}) &
+        BACKEND_PID=$!
+        
+        # Start frontend with bun
+        (cd {{.FRONTEND_ROOT}} && bun install --frozen-lockfile && bun dev) &
+        FRONTEND_PID=$!
+        
+        # Function to cleanup on exit
+        cleanup() {
+          echo ""
+          echo "🛑 Shutting down services..."
+          kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
+          wait $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
+          echo "✅ Services stopped"
+        }
+        
+        # Set trap to cleanup on script exit  
+        trap cleanup EXIT
+        trap cleanup INT
+        trap cleanup TERM
+        
+        # Wait for both processes
+        wait
+
+  db:
+    desc: Start PostgreSQL database and wait for it to be healthy
+    preconditions:
+      - sh: docker info >/dev/null 2>&1
+        msg: "Docker is not running or not accessible"
+      - sh: test -f {{.DEV_ENV_FILE}}
+        msg: "Development environment file not found. Run 'task dev:setup' first."
+    cmds:
+      - echo "🐘 Starting PostgreSQL database..."
+      - docker compose --env-file {{.DEV_ENV_FILE}} -f {{.DEV_COMPOSE_FILE}} up -d --wait postgres
+      - echo "✅ PostgreSQL is ready!"
+    status:
+      - docker compose --env-file {{.DEV_ENV_FILE}} -f {{.DEV_COMPOSE_FILE}} ps postgres | grep -q "Up.*healthy"
+
+  backend:
+    desc: Start backend server with development configuration
+    deps: [db]
+    preconditions:
+      - sh: test -f {{.DEV_CONFIG}}
+        msg: "Development config not found at {{.DEV_CONFIG}}"
+    dir: "{{.BACKEND_ROOT}}"
+    cmds:
+      - echo "🔌 Starting backend server..."
+      - '{{.PATH_PREFIX}} go run . server start --config={{.DEV_CONFIG}}'
+
+  frontend:
+    desc: Start frontend development server
+    dir: "{{.FRONTEND_ROOT}}"
+    preconditions:
+      - sh: test -f package.json
+        msg: "Frontend package.json not found"
+    cmds:
+      - echo "📊 Installing frontend dependencies..."
+      - bun install --frozen-lockfile
+      - echo "📊 Starting frontend development server..."
+      - bun dev
+
+  logs:
+    desc: View PostgreSQL database logs
+    cmds:
+      - docker compose --env-file {{.DEV_ENV_FILE}} -f {{.DEV_COMPOSE_FILE}} logs -f postgres
+
+  reset:
+    desc: Reset database with fresh container and data
+    prompt: This will destroy all data in the development database. Continue?
+    cmds:
+      - task: stop
+      - docker compose --env-file {{.DEV_ENV_FILE}} -f {{.DEV_COMPOSE_FILE}} rm -f postgres
+      - docker volume rm querylane_postgres_data 2>/dev/null || true
+      - echo "🔄 Database reset complete. Run 'task dev:db' to start fresh."
+
+  stop:
+    desc: Stop all development services
+    cmds:
+      - docker compose --env-file {{.DEV_ENV_FILE}} -f {{.DEV_COMPOSE_FILE}} stop
+      - echo "🛑 Development services stopped"
+
+  clean:
+    desc: Stop and remove all containers and volumes
+    prompt: This will remove all containers and volumes. Continue?
+    cmds:
+      - docker compose --env-file {{.DEV_ENV_FILE}} -f {{.DEV_COMPOSE_FILE}} down -v
+      - echo "🧹 Development environment cleaned"
+
+  setup:
+    desc: Setup development environment files (run this first)
+    cmds:
+      - task: _create-env-file
+      - task: _create-dev-config
+      - echo "✅ Development environment setup complete!"
+      - echo "   Run 'task dev' to start the development environment"
+
+  _create-env-file:
+    desc: Create development environment file
+    internal: true
+    cmds:
+      - |
+        if [ ! -f {{.DEV_ENV_FILE}} ]; then
+          echo "📝 Creating development environment file..."
+          cat > {{.DEV_ENV_FILE}} << 'EOF'
+        # Development environment variables
+        # Safe to commit for development use only
+        POSTGRES_USER=querylane
+        POSTGRES_PASSWORD=querylane
+        POSTGRES_DB=querylane_dev
+        EOF
+          echo "✅ Created {{.DEV_ENV_FILE}}"
+        else
+          echo "ℹ️  Development environment file already exists"
+        fi
+    status:
+      - test -f {{.DEV_ENV_FILE}}
+
+  _create-dev-config:
+    desc: Create development configuration file
+    internal: true
+    cmds:
+      - |
+        if [ ! -f {{.DEV_CONFIG}} ]; then
+          echo "📝 Creating development configuration file..."
+          cat > {{.DEV_CONFIG}} << 'EOF'
+        # Development configuration
+        database:
+          dsn: "postgres://querylane:querylane@localhost:5432/querylane_dev?sslmode=disable"
+
+        http:
+          host: 0.0.0.0
+          port: 8080
+        EOF
+          echo "✅ Created {{.DEV_CONFIG}}"
+        else
+          echo "ℹ️  Development configuration file already exists"
+        fi
+    status:
+      - test -f {{.DEV_CONFIG}}
+
+  seed:
+    desc: Start meta database and seed PostgreSQL instances with normal, edge-case, and stress data
+    deps: [db]
+    preconditions:
+      - sh: docker info >/dev/null 2>&1
+        msg: "Docker is not running or not accessible"
+      - sh: test -f {{.SEED_ENV_FILE}}
+        msg: "Seed environment file not found at {{.SEED_ENV_FILE}}"
+    cmds:
+      - docker compose --env-file {{.SEED_ENV_FILE}} -f {{.SEED_COMPOSE_FILE}} up -d --wait
+      - |
+        echo ""
+        echo "✅ Seed environment is running!"
+        echo "   Meta DB:     localhost:5432"
+        echo "   Ecommerce:   localhost:5500"
+        echo "   Edge cases:  localhost:5501"
+        echo "   Stress Lab:  localhost:5502"
+        echo "   Demo Complex: localhost:5503"
+        echo ""
+        echo "   Use with: task dev:backend DEV_CONFIG=configs/dev-seed.yaml"
+
+  seed:clean:
+    desc: Stop and remove all seed containers and volumes
+    cmds:
+      - docker compose --env-file {{.SEED_ENV_FILE}} -f {{.SEED_COMPOSE_FILE}} down -v
+      - echo "🧹 Seed environment cleaned"

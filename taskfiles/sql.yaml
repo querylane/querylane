@@ -1,0 +1,90 @@
+version: 3
+
+# Usage:
+# - task sql:generate - Full workflow: fresh DB → migrate → generate code + golden schema → cleanup
+# - task sql:jet - Just regenerate code from existing running DB (no cleanup)
+# - task sql:golden - Dump golden schema from already-running DB (no cleanup)
+# - For debugging: sql:start-db → multiple sql:jet / sql:golden calls → sql:cleanup
+
+vars:
+  CONTAINER_NAME: "querylane-sql-gen-{{.BRANCH_SLUG}}"
+  TEMP_DSN: "postgres://postgres:querylane@localhost:5433/querylane?sslmode=disable"
+  
+tasks:
+  lint:
+    desc: Lint SQL migration files with squawk (Up sections only)
+    deps:
+      - :install:squawk
+    cmds:
+      - '{{.ROOT_DIR}}/scripts/lint-migrations.sh {{.BUILD_ROOT}}/bin/squawk {{.ROOT_DIR}}/backend/storage/migrations "0001_*"'
+
+  start-db:
+    desc: Start fresh Postgres container for code generation
+    internal: true
+    preconditions:
+      - sh: docker info >/dev/null 2>&1
+        msg: "Docker is not running or not accessible"
+    cmds:
+      - docker run -d --name {{.CONTAINER_NAME}} --rm -p 5433:5432 -e POSTGRES_PASSWORD=querylane -e POSTGRES_DB=querylane postgres:17-alpine
+    status:
+      - docker ps --filter "name={{.CONTAINER_NAME}}" --filter "status=running" --quiet | grep -q .
+
+  wait-db:
+    desc: Wait for Postgres to be ready
+    internal: true
+    deps: [start-db]
+    cmds:
+      - |
+        echo "Waiting for Postgres to be ready..."
+        for i in {1..30}; do
+          if docker exec {{.CONTAINER_NAME}} pg_isready -U postgres -d querylane >/dev/null 2>&1; then
+            echo "Postgres is ready!"
+            exit 0
+          fi
+          if [ $i -eq 30 ]; then
+            echo "Postgres failed to start in time"
+            exit 1
+          fi
+          sleep 1
+        done
+
+  migrate:
+    desc: Apply database migrations
+    deps:
+      - :install:goose
+      - wait-db
+    vars:
+      DSN: '{{default .TEMP_DSN .DSN}}'
+    cmds:
+      - '{{.BUILD_ROOT}}/bin/go/goose -dir {{.ROOT_DIR}}/backend/storage/migrations postgres "{{.DSN}}" up'
+
+  jet:
+    desc: Generate Go code from database schema using custom proto-compatible types
+    deps:
+      - migrate
+    vars:
+      DSN: '{{default .TEMP_DSN .DSN}}'
+    cmds:
+      # Use custom go-jet generator with proto type mappings
+      - cd {{.ROOT_DIR}}/backend && go run tools/jet_generator.go "{{.DSN}}"
+
+  golden:
+    desc: Dump the migrated schema to a golden file (run against an already-running DB, or use sql:generate)
+    cmds:
+      - docker exec {{.CONTAINER_NAME}} pg_dump -U postgres -d querylane --schema-only --no-owner --no-privileges > {{.ROOT_DIR}}/backend/storage/schema.sql
+
+  cleanup:
+    desc: Stop and remove Postgres container
+    cmds:
+      - docker stop {{.CONTAINER_NAME}} || true
+
+  generate:
+    desc: Full workflow - fresh DB → migrate → generate code + golden schema → cleanup
+    aliases: [gen, g]
+    deps: [jet]
+    defer:
+      - task: cleanup
+    cmds:
+      - task: golden
+    # Override DSN with: task sql:generate DSN="postgres://user:pass@host:port/db?sslmode=disable"
+    # The task will automatically spin up fresh Postgres, apply migrations, generate code, and dump the golden schema

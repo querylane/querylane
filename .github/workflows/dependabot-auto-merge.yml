@@ -1,0 +1,54 @@
+name: dependabot-auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  ACTION_DEPENDABOT_METADATA: &action_dependabot_metadata dependabot/fetch-metadata@v3.1.0
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    name: Enable Auto-merge
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: *action_dependabot_metadata
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge for minor and patch updates
+        if: startsWith(steps.metadata.outputs.update-type, 'version-update:semver-minor') || startsWith(steps.metadata.outputs.update-type, 'version-update:semver-patch')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          set -euo pipefail
+
+          if auto_merge_output="$(gh pr merge --auto --squash "$PR_URL" 2>&1)"; then
+            echo "$auto_merge_output"
+            echo "Auto-merge enabled"
+            exit 0
+          fi
+
+          echo "$auto_merge_output"
+
+          if ! printf '%s' "$auto_merge_output" | grep -q "enablePullRequestAutoMerge"; then
+            echo "Failed to enable auto-merge for an unexpected reason."
+            exit 1
+          fi
+
+          echo "Auto-merge unavailable for this branch (likely no required branch protection rules)."
+          echo "Falling back to direct squash merge."
+          gh pr merge --squash "$PR_URL"

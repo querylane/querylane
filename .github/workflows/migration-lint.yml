@@ -1,0 +1,34 @@
+name: migration-lint
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - backend/storage/migrations/**
+      - .github/workflows/migration-lint.yml
+
+concurrency:
+  group: migration-lint-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ACTION_CHECKOUT: &action_checkout actions/checkout@v7.0.0
+  ACTION_SETUP_TASK: &action_setup_task go-task/setup-task@v2.1.0
+
+permissions:
+  contents: read
+
+jobs:
+  squawk:
+    name: squawk
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: *action_checkout
+        with:
+          persist-credentials: false
+      - uses: *action_setup_task
+      - name: Lint migration files
+        run: task sql:lint

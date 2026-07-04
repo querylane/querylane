@@ -1,0 +1,121 @@
+version: "3"
+
+vars:
+  GO_VERSION: 1.26.0
+  GO_LINT_VERSION: 2.10.1
+  GOIMPORTS_VERSION: v0.42.0
+  GOFUMPT_VERSION: 0.9.2
+  GCI_VERSION: 0.13.7
+  BUF_VERSION: 1.65.0
+  JET_VERSION: 2.14.1
+  TPARSE_VERSION: 0.18.0
+
+tasks:
+  go:
+    desc: install golang compiler
+    run: once
+    vars:
+      GOLANG_URL_DEFAULT: https://golang.org/dl/go{{.GO_VERSION}}.{{OS}}-{{ARCH}}.tar.gz
+      GOLANG_URL: '{{default .GOLANG_URL_DEFAULT .GOLANG_URL}}'
+    cmds:
+      - rm -rf {{.GO_BUILD_ROOT}}
+      - mkdir -p '{{.GO_BUILD_ROOT}}'
+      - curl -sSLf --retry 3 --retry-connrefused --retry-delay 2 '{{.GOLANG_URL}}' | tar -xz -C '{{.GO_BUILD_ROOT}}' --strip 1
+    status:
+      - test -f '{{.GO_BUILD_ROOT}}/bin/go'
+      - '[[ $({{.GO_BUILD_ROOT}}/bin/go version) == *"go version go{{ .GO_VERSION }}"* ]]'
+
+  golangci-lint:
+    desc: install golangci linter
+    cmds:
+      - mkdir -p {{ .BUILD_ROOT}}/bin
+      - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "{{ .BUILD_ROOT }}"/bin/go v{{ .GO_LINT_VERSION }}
+    status:
+      - '[ -f ''{{ .BUILD_ROOT }}/bin/go'' ] || command -v {{ .BUILD_ROOT }}/bin/go/golangci-lint >/dev/null 2>&1'
+      - '[[ $({{ .BUILD_ROOT }}/bin/go/golangci-lint --version) == *"version {{ .GO_LINT_VERSION }} built"* ]]'
+
+  goimports:
+    desc: install goimports
+    deps:
+      - go
+    cmds:
+      - |
+        {{ .PATH_PREFIX }} go install golang.org/x/tools/cmd/goimports@{{ .GOIMPORTS_VERSION }}
+    status:
+      - '[ -f ''{{ .BUILD_ROOT }}/bin/go'' ] || command -v {{ .BUILD_ROOT }}/bin/go/goimports >/dev/null 2>&1'
+
+  gofumpt:
+    desc: install gofumpt go formater
+    cmds:
+      - |
+        GOBIN={{ .BUILD_ROOT }}/bin/go go install mvdan.cc/gofumpt@v{{ .GOFUMPT_VERSION }}
+    status:
+      - '[ -f ''{{ .BUILD_ROOT }}/bin/go'' ] || command -v {{ .BUILD_ROOT }}/bin/go/gofumpt >/dev/null 2>&1'
+      - '[[ $({{ .BUILD_ROOT }}/bin/go/gofumpt --version) == v{{.GOFUMPT_VERSION}} ]]'
+
+  gci:
+    desc: install gci
+    cmds:
+      - GOBIN={{ .BUILD_ROOT }}/bin/go go install github.com/daixiang0/gci@v{{.GCI_VERSION}}
+    status:
+      - '[[ $({{ .BUILD_ROOT }}/bin/go/gci --version) == v{{.GCI_VERSION}} ]]'
+
+  buf:
+    desc: install buf
+    vars:
+      BUF_URL: https://github.com/bufbuild/buf/releases/download/v{{.BUF_VERSION}}/buf-$(uname -s)-$(uname -m)
+    cmds:
+      - mkdir -p {{.BUILD_ROOT}}/bin
+      - curl -sSLf --retry 3 --retry-connrefused --retry-delay 2 {{.BUF_URL}} -o '{{.BUILD_ROOT}}/bin/buf'
+      - chmod +x '{{.BUILD_ROOT}}/bin/buf'
+    sources:
+      - "{{.BUF_VERSION}}"
+    generates:
+      - "{{.BUILD_ROOT}}/bin/buf"
+    method: checksum
+
+  jet:
+    desc: install jet
+    cmds:
+      - GOBIN={{ .BUILD_ROOT }}/bin/go go install github.com/go-jet/jet/v2/cmd/jet@v{{.JET_VERSION}}
+    status:
+      - test -f '{{ .BUILD_ROOT }}/bin/go/jet'
+      - '[[ $({{ .BUILD_ROOT }}/bin/go/jet 2>&1 | grep "Jet generator" | sed "s/Jet generator v\([0-9.]*\)/\1/") == {{.JET_VERSION}} ]]'
+
+  goose:
+    desc: install goose migration CLI
+    deps:
+      - go
+    vars:
+      GOOSE_VERSION: 3.27.0
+    cmds:
+      - GOBIN={{ .BUILD_ROOT }}/bin/go go install github.com/pressly/goose/v3/cmd/goose@v{{.GOOSE_VERSION}}
+    status:
+      - test -f '{{ .BUILD_ROOT }}/bin/go/goose'
+
+  squawk:
+    desc: install squawk SQL migration linter
+    vars:
+      SQUAWK_VERSION: 2.45.0
+      SQUAWK_OS:
+        sh: uname -s | tr '[:upper:]' '[:lower:]'
+      SQUAWK_ARCH:
+        sh: uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/'
+    cmds:
+      - mkdir -p {{.BUILD_ROOT}}/bin
+      - curl -sSLf --retry 3 --retry-connrefused --retry-delay 2 "https://github.com/sbdchd/squawk/releases/download/v{{.SQUAWK_VERSION}}/squawk-{{.SQUAWK_OS}}-{{.SQUAWK_ARCH}}" -o "{{.BUILD_ROOT}}/bin/squawk"
+      - chmod +x "{{.BUILD_ROOT}}/bin/squawk"
+    status:
+      - test -f '{{.BUILD_ROOT}}/bin/squawk'
+      - '[[ $({{.BUILD_ROOT}}/bin/squawk --version) == *"{{.SQUAWK_VERSION}}"* ]]'
+
+  tparse:
+    desc: Install tparse
+    deps:
+      - go
+    cmds:
+      - mkdir -p {{.BUILD_ROOT}}/bin
+      - GOBIN={{.BUILD_ROOT}}/bin go install github.com/mfridman/tparse@v{{.TPARSE_VERSION}}
+    status:
+      - test -f {{.BUILD_ROOT}}/bin/tparse
+      - '[[ $({{.BUILD_ROOT}}/bin/tparse --version 2>&1) == *"{{.TPARSE_VERSION}}"* ]]'

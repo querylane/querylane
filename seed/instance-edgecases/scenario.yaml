@@ -1,0 +1,293 @@
+version: v1alpha1
+
+runtime:
+  seed: 99
+  state:
+    backend: memory
+    retention: 168h
+
+# All datasets share the same simple structure — only the table names differ.
+# YAML anchors avoid repeating the field definitions.
+datasets:
+  # --- normal_db / public schema ---
+  items_baseline:
+    key: item_id
+    table: items
+    fields: &simple_fields
+      item_id:
+        generator: uuid
+      name:
+        generator: choice
+        values: [alpha, beta, gamma, delta, epsilon]
+      value:
+        generator: number.uniform
+        min: 1
+        max: 1000
+        postgres:
+          type: integer
+      created_at:
+        generator: timestamp.now
+
+  items_long_name:
+    key: item_id
+    table: "this_is_a_very_long_table_name_that_approaches_the_63_byte_lim"
+    fields: *simple_fields
+
+  items_leading_number:
+    key: item_id
+    table: "2024_metrics"
+    fields: *simple_fields
+
+  items_mixed_separators:
+    key: item_id
+    table: "mixed-case_With-Hyphens_AND_underscores"
+    fields: *simple_fields
+
+  # --- normal_db / "api.v2" schema ---
+  items_dots_table:
+    key: item_id
+    table: "api.v2.items"
+    fields: *simple_fields
+
+  # --- normal_db / "User Accounts" schema ---
+  items_spaces:
+    key: item_id
+    table: "User Accounts"
+    fields: *simple_fields
+
+  # --- normal_db / "日本語スキーマ" schema ---
+  items_unicode:
+    key: item_id
+    table: "日本語テーブル"
+    fields: *simple_fields
+
+  # --- normal_db / "schema#special" schema ---
+  items_hash:
+    key: item_id
+    table: "items#archived"
+    fields: *simple_fields
+
+  items_percent:
+    key: item_id
+    table: "100%_complete"
+    fields: *simple_fields
+
+  items_equals:
+    key: item_id
+    table: "key=value"
+    fields: *simple_fields
+
+  # --- db.with.dots / public schema ---
+  items_dotdb:
+    key: item_id
+    table: items
+    fields: *simple_fields
+
+  # --- db-with-hyphens / public schema ---
+  items_hyphendb:
+    key: item_id
+    table: items
+    fields: *simple_fields
+
+  # --- 2024_metrics_db / public schema ---
+  items_numericdb:
+    key: item_id
+    table: items
+    fields: *simple_fields
+
+workloads:
+  seed_baseline:
+    dataset: items_baseline
+    operation: insert
+    rate: { per_minute: 5 }
+
+  seed_long_name:
+    dataset: items_long_name
+    operation: insert
+    rate: { per_minute: 5 }
+
+  seed_leading_number:
+    dataset: items_leading_number
+    operation: insert
+    rate: { per_minute: 5 }
+
+  seed_mixed_separators:
+    dataset: items_mixed_separators
+    operation: insert
+    rate: { per_minute: 5 }
+
+  seed_dots_table:
+    dataset: items_dots_table
+    operation: insert
+    rate: { per_minute: 5 }
+
+  seed_spaces:
+    dataset: items_spaces
+    operation: insert
+    rate: { per_minute: 5 }
+
+  seed_unicode:
+    dataset: items_unicode
+    operation: insert
+    rate: { per_minute: 5 }
+
+  seed_hash:
+    dataset: items_hash
+    operation: insert
+    rate: { per_minute: 5 }
+
+  seed_percent:
+    dataset: items_percent
+    operation: insert
+    rate: { per_minute: 5 }
+
+  seed_equals:
+    dataset: items_equals
+    operation: insert
+    rate: { per_minute: 5 }
+
+  seed_dotdb:
+    dataset: items_dotdb
+    operation: insert
+    rate: { per_minute: 5 }
+
+  seed_hyphendb:
+    dataset: items_hyphendb
+    operation: insert
+    rate: { per_minute: 5 }
+
+  seed_numericdb:
+    dataset: items_numericdb
+    operation: insert
+    rate: { per_minute: 5 }
+
+# Each output targets a different database/schema combination.
+# database_policy: auto_create ensures databases are created on first run.
+# schema_policy: auto_create ensures schemas are created on first run.
+outputs:
+  # ── normal_db, public schema ──
+  normal_public:
+    kind: postgres
+    dsnEnv: EDGE_DSN_NORMAL
+    schema: public
+    table_policy: drop_and_create
+    postgres:
+      database_policy: auto_create
+    bindings:
+      items_baseline:
+        dataset: items_baseline
+      items_long_name:
+        dataset: items_long_name
+      items_leading_number:
+        dataset: items_leading_number
+      items_mixed_separators:
+        dataset: items_mixed_separators
+
+  # ── normal_db, "api.v2" schema ──
+  normal_api_v2:
+    kind: postgres
+    dsnEnv: EDGE_DSN_NORMAL
+    schema: "api.v2"
+    table_policy: drop_and_create
+    postgres:
+      database_policy: auto_create
+      schema_policy: auto_create
+    bindings:
+      items_dots_table:
+        dataset: items_dots_table
+
+  # ── normal_db, "User Accounts" schema ──
+  normal_user_accounts:
+    kind: postgres
+    dsnEnv: EDGE_DSN_NORMAL
+    schema: "User Accounts"
+    table_policy: drop_and_create
+    postgres:
+      database_policy: auto_create
+      schema_policy: auto_create
+    bindings:
+      items_spaces:
+        dataset: items_spaces
+
+  # ── normal_db, "日本語スキーマ" schema ──
+  normal_unicode:
+    kind: postgres
+    dsnEnv: EDGE_DSN_NORMAL
+    schema: "日本語スキーマ"
+    table_policy: drop_and_create
+    postgres:
+      database_policy: auto_create
+      schema_policy: auto_create
+    bindings:
+      items_unicode:
+        dataset: items_unicode
+
+  # ── normal_db, "schema#special" schema ──
+  normal_special:
+    kind: postgres
+    dsnEnv: EDGE_DSN_NORMAL
+    schema: "schema#special"
+    table_policy: drop_and_create
+    postgres:
+      database_policy: auto_create
+      schema_policy: auto_create
+    bindings:
+      items_hash:
+        dataset: items_hash
+      items_percent:
+        dataset: items_percent
+      items_equals:
+        dataset: items_equals
+
+  # ── db.with.dots, public schema ──
+  dots_public:
+    kind: postgres
+    dsnEnv: EDGE_DSN_DOTS
+    schema: public
+    table_policy: drop_and_create
+    postgres:
+      database_policy: auto_create
+    bindings:
+      items_dotdb:
+        dataset: items_dotdb
+
+  # ── db-with-hyphens, public schema ──
+  hyphens_public:
+    kind: postgres
+    dsnEnv: EDGE_DSN_HYPHENS
+    schema: public
+    table_policy: drop_and_create
+    postgres:
+      database_policy: auto_create
+    bindings:
+      items_hyphendb:
+        dataset: items_hyphendb
+
+  # ── 2024_metrics_db, public schema ──
+  numeric_public:
+    kind: postgres
+    dsnEnv: EDGE_DSN_NUMERIC
+    schema: public
+    table_policy: drop_and_create
+    postgres:
+      database_policy: auto_create
+    bindings:
+      items_numericdb:
+        dataset: items_numericdb
+
+schedules:
+  default:
+    workloads:
+      - seed_baseline
+      - seed_long_name
+      - seed_leading_number
+      - seed_mixed_separators
+      - seed_dots_table
+      - seed_spaces
+      - seed_unicode
+      - seed_hash
+      - seed_percent
+      - seed_equals
+      - seed_dotdb
+      - seed_hyphendb
+      - seed_numericdb

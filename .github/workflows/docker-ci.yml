@@ -1,0 +1,31 @@
+name: docker-ci
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - Taskfile.yaml
+      - backend/**
+      - taskfiles/dev.yaml
+      - taskfiles/docker.yaml
+      - .github/scripts/check-docker-setup.py
+      - .github/workflows/cd.yml
+      - .github/workflows/docker-ci.yml
+      - .github/workflows/docker-image.yml
+
+concurrency:
+  group: docker-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  docker-image:
+    if: github.event.pull_request.draft != true
+    uses: ./.github/workflows/docker-image.yml
+    with:
+      push: false

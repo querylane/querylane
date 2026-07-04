@@ -1,0 +1,17 @@
+{
+  "name": "Querylane",
+  "short_name": "Querylane",
+  "description": "Postgres admin UI for managing multiple PostgreSQL servers",
+  "display": "standalone",
+  "start_url": "/",
+  "theme_color": "hsl(0 0% 100%)",
+  "background_color": "hsl(0 0% 100%)",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

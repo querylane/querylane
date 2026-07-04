@@ -1,0 +1,21 @@
+# Manual scenario: onboarding wizard end-to-end.
+#
+# No Database / Embedded section is set, so the backend boots into the
+# bootstrap stage:
+#   - OnboardingService is the only live RPC.
+#   - DB-dependent services return CodeFailedPrecondition (database not
+#     configured), which is what tells the frontend to render the wizard.
+#
+# Drive the wizard via the frontend (http://localhost:3000 if
+# `task dev:frontend` is up) or directly with grpcurl/Connect against
+# http://localhost:8080. The PostgreSQL form in the wizard accepts any
+# reachable instance — point it at a Postgres you've started separately
+# (e.g. `task dev:db` in another terminal) or pick the embedded path.
+#
+# On success, persisted config lands at ConfigManager.StandardHomePath()
+# (surfaced by GetOnboardingState.config_file_path in the response). To
+# rerun the wizard cleanly, delete that file before relaunching.
+
+http:
+  host: 0.0.0.0
+  port: 8080

@@ -1,0 +1,51 @@
+version: v2
+
+# 'managed' contains the configuration for managed mode: https://buf.build/docs/generate/managed-mode
+# It has three top-level keys: 'enabled', 'disable', and 'override'.
+#
+# When managed mode is enabled, it uses default values for certain file and field options during code
+# generation. Options, accepted values, and defaults are documented here:
+# https://buf.build/docs/generate/managed-mode#default-behavior
+# The 'disable' key configures modules, paths, fields, and/or options that are excluded from managed
+# mode's behavior. The 'override' key configures field and file option values that override the
+# default values managed mode uses during code generation.
+managed:
+  enabled: true
+  disable:
+    - file_option: go_package_prefix
+      module: buf.build/googleapis/googleapis
+    - file_option: go_package_prefix
+      module: buf.build/bufbuild/protovalidate
+  override:
+    - file_option: go_package_prefix
+      value: github.com/querylane/querylane/backend/protogen
+
+inputs:
+  - directory: .
+  - module: buf.build/googleapis/googleapis
+    paths:
+      - google/rpc/error_details.proto
+
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.36.6
+    out: backend/protogen
+    opt: paths=source_relative
+
+  - remote: buf.build/bufbuild/validate-go:v1.2.1
+    out: backend/protogen
+    opt:
+      - paths=source_relative
+
+  - remote: buf.build/connectrpc/go:v1.18.1
+    out: backend/protogen
+    opt:
+      - paths=source_relative
+
+  - remote: buf.build/bufbuild/es:v2.11.0
+    out: frontend/src/protogen
+    opt: target=ts
+    include_imports: true
+
+  - remote: buf.build/connectrpc/query-es:v2.2.0
+    out: frontend/src/protogen
+    opt: target=ts

@@ -1,0 +1,553 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "querylane/console/v1alpha1/table.proto";
+
+// --------------------------------------------------------------------------
+// Service
+// --------------------------------------------------------------------------
+
+// TableDataService exposes live row reads against a single Table resource.
+//
+// Methods are AIP-136 custom methods on the Table resource — requests use
+// `name`, not `parent`. Distinct from TableService (catalog) and SQLService
+// (ad-hoc SQL) because the three surfaces have different cost, timeout,
+// pooling, and authorization profiles.
+service TableDataService {
+  // Reads a single bounded page of rows. Intended for the interactive grid.
+  rpc ReadRows(ReadRowsRequest) returns (ReadRowsResponse) {}
+
+  // Streams rows for export and bulk processing. Emits metadata first,
+  // then row batches, then stats. Same filter/order grammar as ReadRows.
+  rpc StreamRows(StreamRowsRequest) returns (stream StreamRowsResponse) {}
+
+  // Reads the full value of a single cell, identified by an opaque token
+  // returned in TableCell.full_value_token when a PREVIEW response
+  // truncated the value.
+  rpc ReadCellValue(ReadCellValueRequest) returns (ReadCellValueResponse) {}
+}
+
+// --------------------------------------------------------------------------
+// Enums and Supporting Messages
+// --------------------------------------------------------------------------
+
+// Controls whether and how the response carries a row count.
+//
+enum RowCountMode {
+  ROW_COUNT_MODE_UNSPECIFIED = 0;
+  ROW_COUNT_MODE_NONE = 1;
+  // Cheap table estimate from pg_class.reltuples. Ignores filters because
+  // PostgreSQL table statistics are table-wide.
+  ROW_COUNT_MODE_ESTIMATE = 2;
+  // Exact COUNT(*). The server may decline on huge tables and return
+  // RowCount.STATUS_ESTIMATED with the cheap table estimate instead, or
+  // RowCount.STATUS_UNAVAILABLE when it cannot provide a useful count.
+  ROW_COUNT_MODE_EXACT = 3;
+}
+
+// Controls per-cell payload size.
+enum CellValueMode {
+  // Server default = PREVIEW.
+  CELL_VALUE_MODE_UNSPECIFIED = 0;
+  // Truncate large cells; carry truncation metadata + a token for ReadCellValue.
+  CELL_VALUE_MODE_PREVIEW = 1;
+  // Always return the full cell value. Combine with selected_columns and
+  // small page_size to avoid blowups.
+  CELL_VALUE_MODE_FULL = 2;
+}
+
+// Describes how the current page was actually paged. Independent of how
+// rows are identified (RowIdentity).
+enum PaginationStrategy {
+  PAGINATION_STRATEGY_UNSPECIFIED = 0;
+  // Stable keyset over a primary or unique key.
+  PAGINATION_STRATEGY_KEYSET = 1;
+  // Keyset over ctid (heap row pointer). Cursors are invalidated by
+  // VACUUM FULL / CLUSTER / pg_repack — clients should refresh on error.
+  // Reserved for a future release; v1alpha1 falls back to OFFSET for
+  // PK-less tables instead.
+  PAGINATION_STRATEGY_UNSTABLE_KEYSET = 2;
+  // Server-applied OFFSET pagination, used when no stable identity is
+  // available or when an ORDER BY column is nullable. Page costs grow with
+  // offset and concurrent writes can shift pages.
+  PAGINATION_STRATEGY_OFFSET = 3;
+}
+
+// RowFilter is a tree of conditions. Empty = no WHERE clause.
+//
+// Example: (a = 1 OR b IS NULL) AND created_at > '2025-01-01'
+message RowFilter {
+  oneof node {
+    RowFilterGroup group = 1;
+    RowPredicate predicate = 2;
+  }
+}
+
+message RowFilterGroup {
+  enum Logic {
+    LOGIC_UNSPECIFIED = 0;
+    LOGIC_AND = 1;
+    LOGIC_OR = 2;
+  }
+
+  // Required.
+  Logic logic = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).enum = {
+      defined_only: true
+      not_in: [0]
+    }
+  ];
+
+  // Bounded fan-out to prevent pathological trees.
+  repeated RowFilter children = 2 [
+    (buf.validate.field).repeated.min_items = 1,
+    (buf.validate.field).repeated.max_items = 64
+  ];
+}
+
+message RowPredicate {
+  enum Operator {
+    OPERATOR_UNSPECIFIED = 0;
+    OPERATOR_EQUAL = 1;
+    OPERATOR_NOT_EQUAL = 2;
+    OPERATOR_GREATER_THAN = 3;
+    OPERATOR_GREATER_THAN_OR_EQUAL = 4;
+    OPERATOR_LESS_THAN = 5;
+    OPERATOR_LESS_THAN_OR_EQUAL = 6;
+    OPERATOR_LIKE = 7;
+    OPERATOR_ILIKE = 8;
+    OPERATOR_IN = 9;
+    OPERATOR_NOT_IN = 10;
+    OPERATOR_IS_NULL = 11;
+    OPERATOR_IS_NOT_NULL = 12;
+    // Exactly two values.
+    OPERATOR_BETWEEN = 13;
+    // jsonb @> operator. Operand must be a JSON value.
+    OPERATOR_JSON_CONTAINS = 14;
+  }
+
+  // Required. Bare column name as it appears in the catalog (NOT pre-quoted).
+  string column = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 63
+  ];
+
+  // Required.
+  Operator operator = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).enum = {
+      defined_only: true
+      not_in: [0]
+    }
+  ];
+
+  // Predicate literals. Uses TableValue (NOT TableCell) — preview metadata
+  // makes no sense in a filter.
+  //   IS_NULL/IS_NOT_NULL  -> 0 values
+  //   IN/NOT_IN            -> 1..1024 values
+  //   BETWEEN              -> exactly 2 values
+  //   everything else      -> exactly 1 value
+  repeated TableValue values = 3 [(buf.validate.field).repeated.max_items = 1024];
+}
+
+// Structured ordering — avoids the AIP-132 string parser, which is unsafe
+// with PostgreSQL identifiers (spaces, mixed case, quotes).
+message RowOrder {
+  enum Direction {
+    DIRECTION_UNSPECIFIED = 0;
+    DIRECTION_ASC = 1;
+    DIRECTION_DESC = 2;
+  }
+
+  enum NullOrder {
+    // PG default: NULLS LAST for ASC, NULLS FIRST for DESC.
+    NULL_ORDER_UNSPECIFIED = 0;
+    NULL_ORDER_FIRST = 1;
+    NULL_ORDER_LAST = 2;
+  }
+
+  // Required. Bare column name (NOT pre-quoted).
+  string column = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 63
+  ];
+  Direction direction = 2;
+  NullOrder null_order = 3;
+}
+
+// --------------------------------------------------------------------------
+// Result Set Messages
+// --------------------------------------------------------------------------
+
+// TableValue is a typed literal. Used in RowPredicate.values, in
+// TableCell.value, and inside opaque token payloads. Has no preview
+// metadata; preview metadata lives on TableCell.
+message TableValue {
+  oneof kind {
+    google.protobuf.NullValue null_value = 1;
+    bool bool_value = 2;
+    int64 int64_value = 3;
+    double double_value = 4;
+    string string_value = 5;
+    bytes bytes_value = 6;
+    string json_value = 7;
+    string numeric_value = 8;
+    string timestamp_value = 9;
+  }
+}
+
+// TableCell is a response-side cell: a TableValue plus optional preview metadata.
+message TableCell {
+  // Output-only.
+  TableValue value = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. True when `value` carries a prefix of the actual cell
+  // rather than the whole thing. Implies full_size_bytes and
+  // full_value_token are set.
+  bool truncated = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Total octet length of the actual on-disk value, when
+  // knowable.
+  int64 full_size_bytes = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Opaque, HMAC-signed token usable with ReadCellValue.
+  // Empty when truncated=false.
+  string full_value_token = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// TableResultColumn describes a plain result-set column. It is not a resource.
+message TableResultColumn {
+  reserved "name";
+
+  // Output-only. Column name as returned by PostgreSQL. This is not an AIP resource name.
+  string column_name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. High-level data type category.
+  DataType data_type = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Engine-specific type name.
+  string raw_type = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the column allows nulls.
+  bool is_nullable = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Hint that this column may be subject to PREVIEW truncation
+  // (text-family, jsonb, bytea, xml, large arrays).
+  bool may_truncate = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// TableResultRow represents a single row in a result set.
+message TableResultRow {
+  // Output-only. Values aligned with TableResultSet.columns.
+  repeated TableCell values = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Reserved for the upcoming Update/Delete row APIs — will
+  // carry an HMAC-signed token bound to (table, identity_columns,
+  // identity_values, schema_version) once those APIs ship. Always empty
+  // in v1alpha1 reads; the field is in the proto so adopting the write
+  // API later does not require a wire change.
+  string row_key = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// RowCount is a tagged union: `value` is meaningful only when status ∈
+// {AVAILABLE, ESTIMATED}.
+message RowCount {
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    // Caller asked for ROW_COUNT_MODE_NONE.
+    STATUS_NOT_REQUESTED = 1;
+    // Exact COUNT(*) succeeded.
+    STATUS_AVAILABLE = 2;
+    // pg_class.reltuples (or a future filter-aware estimate). Also returned
+    // when ROW_COUNT_MODE_EXACT is declined by the table-size threshold.
+    STATUS_ESTIMATED = 3;
+    // Caller asked for a count but the server declined or could not provide
+    // one within its row-count limits.
+    STATUS_UNAVAILABLE = 4;
+  }
+
+  // Output-only.
+  Status status = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Valid only when status ∈ {AVAILABLE, ESTIMATED}.
+  int64 value = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// ResponseLimits reports the effective server caps applied to a response.
+// Lets the client adapt — e.g. shrink page_size when the budget is tight.
+message ResponseLimits {
+  int32 max_page_size = 1;
+  int32 max_cell_bytes = 2;
+  int32 effective_cell_bytes = 3;
+  int64 max_response_bytes = 4;
+  // Cumulative wire bytes already consumed by this response. Pair with
+  // max_response_bytes to compute remaining budget; this is NOT the cap
+  // the server enforced (use max_response_bytes for that).
+  int64 effective_response_bytes = 5;
+  int32 max_filter_depth = 6;
+  int32 max_filter_nodes = 7;
+  google.protobuf.Duration query_timeout = 8;
+}
+
+// TableResultSet is a complete result set with metadata.
+message TableResultSet {
+  // Output-only. Result columns in order.
+  repeated TableResultColumn columns = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Returned rows. May be fewer than ReadRowsRequest.page_size
+  // when max_response_bytes is reached; in that case next_page_token is set.
+  repeated TableResultRow rows = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Always populated. status describes whether value is meaningful.
+  RowCount row_count = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. How rows are identified (and thus how row_keys can be reused).
+  RowIdentity row_identity = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. How this page was paged. Independent of row_identity.
+  PaginationStrategy pagination_strategy = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Snapshot timestamp; same for every row in this page.
+  google.protobuf.Timestamp observed_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// --------------------------------------------------------------------------
+// RPC request/response messages
+// --------------------------------------------------------------------------
+
+// --- ReadRows RPC ---
+
+message ReadRowsRequest {
+  // Required. The table to read from.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+  ];
+
+  // Optional. Default 50, hard cap 500.
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 500
+    }
+  ];
+
+  // Optional. Opaque cursor from a previous response (AIP-158). Bound to
+  // (table, projection, filter, order, page_size); mismatch or expiry
+  // returns INVALID_ARGUMENT.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Subset of columns. Empty = all columns in catalog ordinal order.
+  repeated string selected_columns = 4 [(buf.validate.field).repeated.max_items = 256];
+
+  // Optional. Compound order. Server appends identity columns internally as
+  // a tiebreaker; clients neither see nor need to provide it.
+  repeated RowOrder order_by = 5 [(buf.validate.field).repeated.max_items = 8];
+
+  // Optional. Recursive filter tree.
+  RowFilter filter = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Default NONE.
+  RowCountMode row_count_mode = 7 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+
+  // Optional. Default PREVIEW with server-default max_cell_bytes.
+  CellValueMode cell_value_mode = 8 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+
+  // Optional. Per-cell preview cap. 0 = server default (8 KiB), hard cap 1 MiB.
+  // For text/json/xml the value is interpreted as a character ceiling
+  // (PostgreSQL substring is character-based); resulting wire bytes may be
+  // up to 4× this for multi-byte UTF-8. Byte-exact for bytea.
+  int32 max_cell_bytes = 9 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1048576
+    }
+  ];
+
+  // Optional. Per-response wire-byte cap. 0 = server default (8 MiB),
+  // hard cap 32 MiB. When hit mid-page the server stops adding rows and
+  // returns next_page_token from the last included row. Clients must NOT
+  // treat "fewer rows than page_size" as "last page" — only an empty
+  // next_page_token signals the last page.
+  int64 max_response_bytes = 10 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int64 = {
+      gte: 0
+      lte: 33554432
+    }
+  ];
+}
+
+message ReadRowsResponse {
+  // The retrieved result set.
+  TableResultSet result_set = 1;
+
+  // Empty means this is the last page.
+  string next_page_token = 2;
+
+  // Effective server caps applied this call.
+  ResponseLimits limits = 3;
+}
+
+// --- StreamRows RPC ---
+
+message StreamRowsRequest {
+  // Required. Same shape as ReadRowsRequest.name.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+  ];
+
+  // Optional. Subset of columns.
+  repeated string selected_columns = 2 [(buf.validate.field).repeated.max_items = 256];
+
+  // Optional. Compound order.
+  repeated RowOrder order_by = 3 [(buf.validate.field).repeated.max_items = 8];
+
+  // Optional. Recursive filter tree.
+  RowFilter filter = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Default PREVIEW.
+  CellValueMode cell_value_mode = 5 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+
+  // Optional. Per-cell preview cap. 0 = server default.
+  int32 max_cell_bytes = 6 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1048576
+    }
+  ];
+
+  // Optional. Hard ceiling on rows. 0 = server default (1,000,000).
+  int64 max_rows = 7 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int64 = {
+      gte: 0
+      lte: 10000000
+    }
+  ];
+
+  // Optional. Rows per batch. 0 = server default (1000).
+  int32 batch_size = 8 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 5000
+    }
+  ];
+
+  // Optional. Ceiling on cumulative response payload bytes streamed.
+  // 0 = uncapped (still bounded by max_rows + per-cell cap). Stream ends
+  // with stats.truncated=true if hit. Hard cap 16 GiB.
+  int64 max_total_bytes = 9 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int64 = {
+      gte: 0
+      lte: 17179869184
+    }
+  ];
+}
+
+message StreamRowsResponse {
+  oneof event {
+    // Exactly one, first.
+    StreamRowsMetadata metadata = 1;
+    // Zero or more.
+    StreamRowsBatch batch = 2;
+    // Exactly one, last.
+    StreamRowsStats stats = 3;
+  }
+}
+
+message StreamRowsMetadata {
+  // Output-only.
+  repeated TableResultColumn columns = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only.
+  RowIdentity row_identity = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only.
+  google.protobuf.Timestamp observed_at = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only.
+  ResponseLimits limits = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message StreamRowsBatch {
+  // Output-only.
+  repeated TableResultRow rows = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message StreamRowsStats {
+  // Output-only. Total rows emitted in this stream.
+  int64 row_count = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. End-to-end latency.
+  google.protobuf.Duration latency = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. True when max_rows or max_total_bytes capped the stream early.
+  bool truncated = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// --- ReadCellValue RPC ---
+
+message ReadCellValueRequest {
+  // Required. The table the cell belongs to.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+  ];
+
+  // Required. Token from a TableCell.full_value_token. The server rejects
+  // a token whose payload table_name does not match `name` — this binds
+  // the token to a specific table and prevents cross-table replay.
+  string full_value_token = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // Optional. Max bytes to return. 0 = server default (16 MiB), hard cap 64 MiB.
+  // For text/json/xml the value is interpreted as a character ceiling
+  // (PostgreSQL substring is character-based); resulting wire bytes may be
+  // up to 4× this for multi-byte UTF-8. Byte-exact for bytea.
+  int64 max_bytes = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int64 = {
+      gte: 0
+      lte: 67108864
+    }
+  ];
+}
+
+message ReadCellValueResponse {
+  // Output-only. truncated=true means even the full read still hit max_bytes;
+  // full_size_bytes reports the actual on-disk size.
+  TableCell value = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

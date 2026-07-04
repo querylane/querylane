@@ -1,0 +1,79 @@
+name: backend-test
+
+on:
+  workflow_call:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - backend/**
+      - .github/workflows/backend-test.yml
+
+concurrency:
+  group: backend-test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ACTION_CHECKOUT: &action_checkout actions/checkout@v7.0.0
+  ACTION_SETUP_GO: &action_setup_go actions/setup-go@v6.5.0
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    if: github.event.pull_request.draft != true || github.event_name == 'workflow_call'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: *action_checkout
+        with:
+          persist-credentials: false
+      - uses: *action_setup_go
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@v0.18.0
+      - name: Run unit tests
+        shell: bash
+        run: |
+          set +o pipefail
+          go test -json -cover -short -parallel 10 ./... | tee unit-test-output.json | tparse -follow -all
+          TEST_EXIT_CODE=${PIPESTATUS[0]}
+          set -o pipefail
+          tparse -format markdown -file unit-test-output.json > "$GITHUB_STEP_SUMMARY"
+          exit "$TEST_EXIT_CODE"
+
+  integration-tests:
+    name: Integration Tests
+    if: github.event.pull_request.draft != true || github.event_name == 'workflow_call'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: *action_checkout
+        with:
+          persist-credentials: false
+      - uses: *action_setup_go
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@v0.18.0
+      - name: Run integration tests
+        shell: bash
+        run: |
+          set +o pipefail
+          mapfile -t INTEGRATION_PACKAGES < <(./tools/integration-test-packages.sh Integration)
+          go test -json -cover -parallel 10 -run Integration "${INTEGRATION_PACKAGES[@]}" | tee integration-test-output.json | tparse -follow -all
+          TEST_EXIT_CODE=${PIPESTATUS[0]}
+          set -o pipefail
+          tparse -format markdown -file integration-test-output.json > "$GITHUB_STEP_SUMMARY"
+          exit "$TEST_EXIT_CODE"

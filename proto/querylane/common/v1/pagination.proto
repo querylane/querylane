@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package querylane.common.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+// OrderDirection specifies the sort direction for pagination cursors.
+enum OrderDirection {
+  // Unspecified direction - defaults to ascending
+  ORDER_DIRECTION_UNSPECIFIED = 0;
+
+  // Ascending order
+  ORDER_DIRECTION_ASC = 1;
+
+  // Descending order
+  ORDER_DIRECTION_DESC = 2;
+}
+
+// OrderField represents a single field in an ORDER BY clause with its direction.
+// This provides clean pagination cursor handling with validated field names.
+message OrderField {
+  // The field name as a string (validated against server-side allowlists).
+  // Examples: "display_name", "create_time", "update_time"
+  string field_name = 1;
+
+  // The sort direction for this field
+  OrderDirection direction = 2;
+}
+
+// PageToken is an internal message used to encapsulate the information
+// needed to continue a paginated list request. This message is serialized,
+// base64-encoded, and sent to the client as an opaque `next_page_token`.
+//
+// Security considerations:
+// - Field names are validated against server-side allowlists
+// - Filter consistency is enforced via hash comparison
+// - Resource type validation prevents cross-resource token reuse
+// - Token expiration prevents indefinite reuse
+message PageToken {
+  // The timestamp when this page token was created.
+  // Used to enforce token expiration (typically 24 hours).
+  google.protobuf.Timestamp create_time = 1;
+
+  // Resource type identifier to prevent token reuse across different APIs.
+  // Example: "console.querylane.dev/Instance"
+  string resource_type = 2;
+
+  // SHA256 hash of the filter string from the original request.
+  // This ensures filter consistency across paginated requests without
+  // storing the potentially large filter string in the token.
+  string filter_hash = 3;
+
+  // Cursor values from the last item returned on the previous page.
+  // These correspond to the values of the fields specified in order_fields,
+  // enabling stable cursor-based pagination even with duplicate values.
+  // Uses google.protobuf.Value to preserve type information.
+  repeated google.protobuf.Value cursor_values = 4;
+
+  // Type-safe representation of the order fields used for this pagination.
+  // This replaces integer enum field IDs with validated string field names,
+  // providing security through server-side allowlist validation.
+  repeated OrderField order_fields = 5;
+}

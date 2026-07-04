@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+// --------------------------------------------------------------------------
+// Service
+// --------------------------------------------------------------------------
+
+// ConsoleService provides methods to retrieve metadata about the Querylane
+// Console application itself.
+service ConsoleService {
+  // Retrieves static, server-provided configuration and metadata about the
+  // console instance, such as build information and capabilities.
+  rpc GetConsoleConfig(GetConsoleConfigRequest) returns (GetConsoleConfigResponse) {}
+}
+
+// --------------------------------------------------------------------------
+// Enums
+// --------------------------------------------------------------------------
+
+// InstanceManagementMode describes how managed PostgreSQL instances are
+// configured: dynamically via the API or statically via the config file.
+enum InstanceManagementMode {
+  // Default value, should not be used.
+  INSTANCE_MANAGEMENT_MODE_UNSPECIFIED = 0;
+
+  // Instances are managed at runtime through the Instance API (CRUD).
+  INSTANCE_MANAGEMENT_MODE_API = 1;
+
+  // Instances are defined in the server configuration file and are read-only
+  // through the API.
+  INSTANCE_MANAGEMENT_MODE_CONFIG = 2;
+}
+
+// --------------------------------------------------------------------------
+// Resource Messages
+// --------------------------------------------------------------------------
+
+// Contains version and build information for the application.
+message BuildInfo {
+  // Output-only. The official version string, e.g., "v1.2.3".
+  string version = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The git commit SHA the binary was built from.
+  string git_commit = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The timestamp when the binary was built.
+  google.protobuf.Timestamp built_at = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The git branch the binary was built from.
+  string git_branch = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// --------------------------------------------------------------------------
+// RPC request/response messages
+// --------------------------------------------------------------------------
+
+// --- GetConsoleConfig RPC ---
+
+message GetConsoleConfigRequest {}
+
+message GetConsoleConfigResponse {
+  // Version and build information for the application.
+  BuildInfo build_info = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Current state of the application's metadata database.
+  AppDatabaseStatus database_status = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // How managed PostgreSQL instances are configured (API or config file).
+  InstanceManagementMode instance_management_mode = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Path to the server configuration file when one is active.
+  string config_file_path = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// AppDatabaseStatus describes the current state of the application's metadata database.
+message AppDatabaseStatus {
+  // State represents the lifecycle state of the application database.
+  enum State {
+    // Default value, should not be used.
+    STATE_UNSPECIFIED = 0;
+
+    // No database configuration exists yet.
+    STATE_NOT_CONFIGURED = 1;
+
+    // Database is connected, migrated, and all services are available.
+    STATE_READY = 2;
+
+    // Database configuration exists but initialization failed
+    // (e.g., DB offline, bad credentials, migration error).
+    STATE_ERROR = 3;
+  }
+
+  // Output-only. Current state of the application database.
+  State state = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Error message when state is STATE_ERROR, empty otherwise.
+  string error = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The current schema migration version number.
+  uint32 schema_version = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
