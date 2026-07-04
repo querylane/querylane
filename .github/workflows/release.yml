@@ -95,7 +95,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
   # Docker image pipeline (see .github/workflows/_docker-build.yml): on a real
-  # release, publish the versioned image `<version>` + `latest` to GHCR.
+  # release, publish `<version>` + `latest` to the stable `querylane` package.
   publish-image:
     name: Publish Docker image
     needs: release
@@ -105,5 +105,6 @@ jobs:
       packages: write
     uses: ./.github/workflows/_docker-build.yml
     with:
+      image: ghcr.io/${{ github.repository }}
       version: ${{ needs.release.outputs.version }}
       push: true

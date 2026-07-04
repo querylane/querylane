@@ -1,8 +1,10 @@
 # === Docker image pipeline ================================================
 #   _docker-build.yml   reusable engine: multi-arch build (+ optional push)
 #   docker-ci.yml       on PR         -> build both arches, no push (validate)
-#   docker-publish.yml  on push main  -> publish  edge + sha-<sha>
-#   release.yml         on release    -> publish  <version> + latest
+#   docker-publish.yml  on push main  -> querylane-dev : edge + sha-<sha>
+#   release.yml         on release    -> querylane     : <version> + latest
+# Two channels = two packages: the stable `querylane` history stays curated
+# to real releases; all dev churn lands in `querylane-dev`.
 # ==========================================================================
 name: _docker-build
 
@@ -14,6 +16,10 @@ name: _docker-build
 on:
   workflow_call:
     inputs:
+      image:
+        description: "Target image, e.g. ghcr.io/owner/repo (stable) or .../repo-dev (edge channel)."
+        type: string
+        required: true
       version:
         description: "Release version to tag (e.g. 1.2.3). Empty => rolling edge build."
         type: string
@@ -24,7 +30,7 @@ on:
         default: true
 
 env:
-  IMAGE: ghcr.io/${{ github.repository }}
+  IMAGE: ${{ inputs.image }}
   PLATFORMS: linux/amd64,linux/arm64
 
 # Permissions are granted by each caller (a reusable workflow may not request

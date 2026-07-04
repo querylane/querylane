@@ -1,14 +1,14 @@
 # === Docker image pipeline ================================================
 #   _docker-build.yml   reusable engine: multi-arch build (+ optional push)
 #   docker-ci.yml       on PR         -> build both arches, no push (validate)
-#   docker-publish.yml  on push main  -> publish  edge + sha-<sha>
-#   release.yml         on release    -> publish  <version> + latest
+#   docker-publish.yml  on push main  -> querylane-dev : edge + sha-<sha>
+#   release.yml         on release    -> querylane     : <version> + latest
 # ==========================================================================
 name: docker-publish
 
-# Publishes a rolling `edge` (+ `sha-<sha>`) multi-arch image to GHCR on every
-# push to main. Versioned `latest`/`<version>` images are published from the
-# Release workflow once changesets cuts a release.
+# Publishes a rolling `edge` (+ `sha-<sha>`) multi-arch image to the dev channel
+# package `ghcr.io/<owner>/<repo>-dev` on every push to main. Versioned
+# `latest`/`<version>` images go to the stable `<repo>` package from Release.
 
 on:
   push:
@@ -27,5 +27,6 @@ jobs:
   publish:
     uses: ./.github/workflows/_docker-build.yml
     with:
+      image: ghcr.io/${{ github.repository }}-dev
       version: ""
       push: true
