@@ -1,0 +1,42 @@
+import { cleanup, render } from "@testing-library/react";
+import { afterEach, describe, expect, test } from "vitest";
+import { SqlCodeBlock } from "@/components/ui/sql-code-block";
+
+afterEach(() => {
+  cleanup();
+});
+
+describe("SqlCodeBlock", () => {
+  test("renders SQL snippets through Shiki while preserving copy text", () => {
+    const sql = `-- Required before DROP ROLE "replicator";
+CREATE ROLE "replicator" WITH LOGIN REPLICATION;
+GRANT pg_read_all_data TO "replicator";
+DROP ROLE "replicator";
+SELECT 'active' AS status;`;
+
+    const { container } = render(<SqlCodeBlock sql={sql} />);
+
+    const code = container.querySelector(
+      'code.language-sql[data-syntax-highlighter="shiki"]'
+    );
+    expect(code).not.toBeNull();
+    expect(code?.textContent).toBe(sql);
+
+    const tokenSpans = Array.from(
+      container.querySelectorAll("[data-shiki-token]")
+    );
+    expect(tokenSpans.length).toBeGreaterThan(8);
+    expect(
+      tokenSpans.some((token) =>
+        token
+          .getAttribute("style")
+          ?.includes("--querylane-sql-token-light")
+      )
+    ).toBe(true);
+    expect(
+      tokenSpans.some((token) =>
+        token.getAttribute("style")?.includes("--querylane-sql-token-dark")
+      )
+    ).toBe(true);
+  });
+});

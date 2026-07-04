@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+// CatalogSyncStatus describes freshness of a cached catalog scope.
+enum CatalogSyncStatus {
+  // Default unspecified value.
+  CATALOG_SYNC_STATUS_UNSPECIFIED = 0;
+
+  // The scope has never completed an initial sync.
+  CATALOG_SYNC_STATUS_NEVER_SYNCED = 1;
+
+  // A sync is currently running. Cached rows may be stale.
+  CATALOG_SYNC_STATUS_SYNCING = 2;
+
+  // The scope is synced and fresh.
+  CATALOG_SYNC_STATUS_SYNCED = 3;
+
+  // The last refresh failed. Cached rows may be stale.
+  CATALOG_SYNC_STATUS_ERROR = 4;
+}
+
+// CatalogSyncMetadata describes whether a list response came from fresh,
+// stale, syncing, or degraded cached catalog data.
+message CatalogSyncMetadata {
+  // Output-only. Current sync status for the listed catalog scope.
+  CatalogSyncStatus sync_status = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Last time the listed scope completed a successful sync.
+  google.protobuf.Timestamp last_synced_at = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the returned data may be stale.
+  bool is_stale = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Last sync error, when sync_status is ERROR.
+  string sync_error = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

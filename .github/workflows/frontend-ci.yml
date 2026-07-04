@@ -1,0 +1,139 @@
+name: frontend-ci
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - frontend/**
+      - .github/workflows/frontend-ci.yml
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ACTION_CHECKOUT: &action_checkout actions/checkout@v7.0.0
+  ACTION_SETUP_BUN: &action_setup_bun oven-sh/setup-bun@v2.2.0
+  ACTION_CACHE: &action_cache actions/cache@v6.1.0
+  ACTION_SETUP_NODE: &action_setup_node actions/setup-node@v6.4.0
+  ACTION_UPLOAD_ARTIFACT: &action_upload_artifact actions/upload-artifact@v7.0.1
+  BUN_VERSION: &bun_version 1.3.14
+  NODE_VERSION: &node_version 24
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Frontend Checks
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    permissions:
+      actions: write
+      contents: read
+    env:
+      SENTRY_AUTH_TOKEN: ${{ vars.SENTRY_AUTH_TOKEN != '' && vars.SENTRY_AUTH_TOKEN || secrets.SENTRY_AUTH_TOKEN || '' }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG != '' && vars.SENTRY_ORG || secrets.SENTRY_ORG || '' }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT != '' && vars.SENTRY_PROJECT || secrets.SENTRY_PROJECT || '' }}
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: *action_checkout
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: *action_setup_node
+        with:
+          node-version: *node_version
+      - uses: *action_setup_bun
+        with:
+          bun-version: *bun_version
+      - name: Restore Bun package cache
+        uses: *action_cache
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - name: Restore Rsbuild/Rspack persistent cache
+        uses: *action_cache
+        with:
+          path: frontend/node_modules/.cache/rsbuild
+          key: ${{ runner.os }}-rsbuild-${{ hashFiles('frontend/bun.lock', 'frontend/package.json', 'frontend/rsbuild.config.ts', 'frontend/tsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-rsbuild-
+
+      # --- Lint & Typecheck ---
+      - name: Run Biome on changed files
+        env:
+          QUALITY_BASE_REF: origin/${{ github.base_ref }}
+        run: bun run lint:changed
+      - name: Type check
+        run: bun run type:check
+      - name: Verify shadcn registry sync
+        run: bun run scripts/check-shadcn-registry-sync.ts
+
+      # --- Vitest Tests ---
+      - name: Run changed unit tests
+        env:
+          QUALITY_BASE_REF: origin/${{ github.base_ref }}
+        run: bun run test:unit:changed -- --reporter=verbose
+      - name: Run changed integration tests
+        env:
+          QUALITY_BASE_REF: origin/${{ github.base_ref }}
+        run: bun run test:integration:changed -- --reporter=verbose
+      - name: Restore Playwright Chromium cache
+        id: playwright-cache
+        uses: *action_cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('frontend/node_modules/playwright-core/browsers.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-chromium-
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install chromium
+      - name: Run changed browser visual tests
+        env:
+          QUALITY_BASE_REF: origin/${{ github.base_ref }}
+        run: bun run test:browser:changed -- --reporter=verbose
+      - name: Upload Vitest visual failure artifacts
+        if: failure()
+        uses: *action_upload_artifact
+        with:
+          name: vitest-visual-failure-artifacts
+          path: frontend/.vitest/attachments
+          retention-days: 1
+          overwrite: true
+          if-no-files-found: ignore
+          include-hidden-files: true
+
+      # --- Build ---
+      - name: Build frontend
+        env:
+          PUBLIC_SENTRY_ENVIRONMENT: production
+          PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
+        run: bun run build
+
+      # --- React Doctor ---
+      - name: Run React Doctor on changed files
+        env:
+          QUALITY_BASE_REF: origin/${{ github.base_ref }}
+        shell: bash
+        run: |
+          set +e
+          OUTPUT=$(bun run doctor:ci 2>&1)
+          EXIT_CODE=$?
+          set -e
+          {
+            echo "# React Doctor"
+            echo ""
+            echo '```'
+            echo "$OUTPUT"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $EXIT_CODE

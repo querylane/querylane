@@ -1,0 +1,621 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+
+// --------------------------------------------------------------------------
+// Service
+// --------------------------------------------------------------------------
+
+// Service for viewing PostgreSQL roles available on a registered Instance,
+// including direct memberships sourced from pg_auth_members.
+service RoleService {
+  // Lists server-level PostgreSQL roles available in a given Instance.
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse) {}
+
+  // Gets the details of a specific Role.
+  rpc GetRole(GetRoleRequest) returns (GetRoleResponse) {}
+
+  // Lists the object-level privileges granted directly to a Role within a
+  // specific Database (its rows in pg_database/pg_namespace/pg_class ACLs).
+  rpc ListRoleGrants(ListRoleGrantsRequest) returns (ListRoleGrantsResponse) {}
+
+  // Lists the objects a Role owns within a specific Database. Owners hold every
+  // privilege on their objects implicitly, so ownership is a primary source of
+  // access that ListRoleGrants does not report.
+  rpc ListRoleOwnedObjects(ListRoleOwnedObjectsRequest) returns (ListRoleOwnedObjectsResponse) {}
+
+  // Lists the default privileges (ALTER DEFAULT PRIVILEGES) that grant access
+  // to a Role on objects created later by other roles, within a Database
+  // (its rows in pg_default_acl).
+  rpc ListRoleDefaultPrivileges(ListRoleDefaultPrivilegesRequest) returns (ListRoleDefaultPrivilegesResponse) {}
+
+  // Lists the privileges available to PUBLIC within a Database — privileges
+  // every role implicitly holds regardless of its own grants. Returns the
+  // effective database-level PUBLIC privileges (CONNECT/TEMPORARY, synthesized
+  // from PostgreSQL defaults when datacl is unset) plus every explicit
+  // "GRANT ... TO PUBLIC" ACL entry on schemas and objects. Categorical defaults
+  // that are not per-object enumerable (EXECUTE on every function, the
+  // public-schema USAGE default) are not returned as rows; the UI surfaces those
+  // as guidance. Completes the "no direct grants does not mean no access" story.
+  rpc ListPublicGrants(ListPublicGrantsRequest) returns (ListPublicGrantsResponse) {}
+}
+
+// --------------------------------------------------------------------------
+// Resource Messages
+// --------------------------------------------------------------------------
+
+// A Role represents a PostgreSQL server-level role in an Instance.
+message Role {
+  option (google.api.resource) = {
+    type: "console.querylane.dev/Role"
+    pattern: "instances/{instance}/roles/{role}"
+    plural: "roles"
+    singular: "role"
+  };
+
+  // Output-only identifier. The unique resource name of the role.
+  // Format: instances/{instance}/roles/{role}
+  string name = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.field_behavior) = IDENTIFIER
+  ];
+
+  // Output-only. The exact PostgreSQL role name (rolname). May contain
+  // characters not legal in the resource-name segment, which is why it is
+  // surfaced separately from `name`.
+  string role_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. PostgreSQL role attributes from pg_roles. Whether the role
+  // can be used to log in is exposed via `attributes.can_login`.
+  RoleAttributes attributes = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Direct parent roles this role is a member of.
+  repeated RoleMembership member_of = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether this appears to be a PostgreSQL-managed system role.
+  bool is_system_role = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The COMMENT ON ROLE description (pg_shdescription via
+  // pg_authid). Empty when the role has no comment.
+  string comment = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// --------------------------------------------------------------------------
+// Supporting Messages
+// --------------------------------------------------------------------------
+
+// PostgreSQL role attributes from pg_roles.
+message RoleAttributes {
+  // Output-only. Whether the role may log in (rolcanlogin).
+  bool can_login = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the role has superuser privileges (rolsuper).
+  bool is_superuser = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the role may create new databases (rolcreatedb).
+  bool can_create_database = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the role may create new roles (rolcreaterole).
+  bool can_create_role = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the role may initiate streaming replication
+  // and put the system in and out of backup mode (rolreplication).
+  bool can_replicate = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the role bypasses every row-level security
+  // policy (rolbypassrls).
+  bool bypasses_rls = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the role automatically inherits privileges from
+  // roles it is a member of (rolinherit).
+  bool inherits_by_default = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Maximum concurrent connections allowed for the role.
+  // -1 means no limit (rolconnlimit).
+  int32 connection_limit = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The time after which the role's password is no longer valid
+  // (rolvaliduntil). Unset when there is no expiry, including when the catalog
+  // stores 'infinity'.
+  google.protobuf.Timestamp valid_until = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Per-role default run-time configuration settings applied at
+  // login (rolconfig), each formatted as "parameter=value"
+  // (e.g. "work_mem=64MB").
+  repeated string config_parameters = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// A direct role membership edge from pg_auth_members.
+message RoleMembership {
+  // Output-only. Resource name of the parent role this role is a member of.
+  // Format: instances/{instance}/roles/{role}
+  string role = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Role"}
+  ];
+
+  // Output-only. The exact PostgreSQL parent role name (rolname).
+  string role_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether this role may grant the membership to others.
+  bool admin_option = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether privileges inherit through this membership by default.
+  bool inherit_option = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether SET ROLE may use this membership.
+  bool set_option = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Resource name of the role that granted the membership.
+  // Empty when the grantor is unknown.
+  // Format: instances/{instance}/roles/{role}
+  string grantor_role = 6 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Role"}
+  ];
+
+  // Output-only. The exact PostgreSQL role name that granted the membership.
+  string grantor = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// The kind of object a grant applies to, normalized from the catalog
+// (pg_database, pg_namespace, and pg_class.relkind).
+enum GrantObjectType {
+  GRANT_OBJECT_TYPE_UNSPECIFIED = 0;
+
+  // A database (pg_database.datacl): CONNECT, CREATE, TEMPORARY.
+  GRANT_OBJECT_TYPE_DATABASE = 1;
+
+  // A schema (pg_namespace.nspacl): USAGE, CREATE.
+  GRANT_OBJECT_TYPE_SCHEMA = 2;
+
+  // An ordinary or partitioned table.
+  GRANT_OBJECT_TYPE_TABLE = 3;
+
+  // A view.
+  GRANT_OBJECT_TYPE_VIEW = 4;
+
+  // A materialized view.
+  GRANT_OBJECT_TYPE_MATERIALIZED_VIEW = 5;
+
+  // A sequence.
+  GRANT_OBJECT_TYPE_SEQUENCE = 6;
+
+  // A foreign table.
+  GRANT_OBJECT_TYPE_FOREIGN_TABLE = 7;
+
+  // A function, procedure, aggregate, or window function (pg_proc.proacl):
+  // EXECUTE.
+  GRANT_OBJECT_TYPE_FUNCTION = 8;
+
+  // A PostgreSQL large object (pg_largeobject_metadata.lomacl): SELECT, UPDATE.
+  GRANT_OBJECT_TYPE_LARGE_OBJECT = 9;
+}
+
+// The category of object a default privilege applies to, normalized from
+// pg_default_acl.defaclobjtype. Defaults target a category of future objects
+// rather than a specific existing object.
+enum DefaultPrivilegeObjectType {
+  DEFAULT_PRIVILEGE_OBJECT_TYPE_UNSPECIFIED = 0;
+
+  // Tables and views ('r').
+  DEFAULT_PRIVILEGE_OBJECT_TYPE_TABLES = 1;
+
+  // Sequences ('S').
+  DEFAULT_PRIVILEGE_OBJECT_TYPE_SEQUENCES = 2;
+
+  // Functions and procedures ('f').
+  DEFAULT_PRIVILEGE_OBJECT_TYPE_FUNCTIONS = 3;
+
+  // Types and domains ('T').
+  DEFAULT_PRIVILEGE_OBJECT_TYPE_TYPES = 4;
+
+  // Schemas ('n').
+  DEFAULT_PRIVILEGE_OBJECT_TYPE_SCHEMAS = 5;
+
+  // Large objects ('L').
+  DEFAULT_PRIVILEGE_OBJECT_TYPE_LARGE_OBJECTS = 6;
+}
+
+// A single object-level privilege grant within a database, derived from catalog
+// ACLs. This is a computed value (no resource name). The grantee is implied by
+// the RPC that returns it: ListRoleGrants returns privileges held directly by a
+// specific role, while ListPublicGrants returns privileges held by PUBLIC.
+// Owner-implicit privileges and membership inheritance are never reported here.
+message ObjectGrant {
+  // Output-only. The kind of object the privilege applies to.
+  GrantObjectType object_type = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The schema containing the object. Empty for DATABASE grants;
+  // for SCHEMA grants this is the schema itself.
+  string schema_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The bare object name (relation or sequence name; the database
+  // name for DATABASE grants). Empty for SCHEMA grants, where the target is the
+  // schema named by `schema_name`.
+  string object_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The PostgreSQL privilege keyword (e.g. "SELECT", "USAGE").
+  string privilege = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the role may grant this privilege to others
+  // (WITH GRANT OPTION).
+  bool with_grant_option = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The exact PostgreSQL role name that granted the privilege.
+  // Empty when the grantor is unknown.
+  string grantor = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// An object owned by a role within a database. Owners implicitly hold every
+// privilege on the objects they own, so these are not reported by
+// ListRoleGrants. Computed from pg_class/pg_namespace/pg_proc owner columns.
+message OwnedObject {
+  // Output-only. The kind of object owned. DATABASE represents ownership of the
+  // connected database itself (pg_database.datdba); all other types are objects
+  // within that database.
+  GrantObjectType object_type = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The schema containing the object. For SCHEMA objects this is
+  // the schema itself. Empty for DATABASE.
+  string schema_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The bare object name (the database name for DATABASE). Empty
+  // for SCHEMA objects, where the target is the schema named by `schema_name`.
+  // For functions this includes the identity arguments to disambiguate
+  // overloads.
+  string object_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// A default privilege (ALTER DEFAULT PRIVILEGES) that grants access to a role
+// on objects of a given category created later by `creator_role`. Computed from
+// pg_default_acl; reports the rows where the target role is the grantee.
+message RoleDefaultPrivilege {
+  // Output-only. Resource name of the role whose newly created objects trigger
+  // this default grant — the FOR ROLE in ALTER DEFAULT PRIVILEGES
+  // (pg_default_acl.defaclrole). Format: instances/{instance}/roles/{role}
+  string creator_role = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Role"}
+  ];
+
+  // Output-only. The exact PostgreSQL name of the creator role.
+  string creator_role_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The category of future object the default applies to.
+  DefaultPrivilegeObjectType object_type = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The schema the default is scoped to. Empty when it applies in
+  // every schema (pg_default_acl.defaclnamespace = 0).
+  string schema_name = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The PostgreSQL privilege keyword granted (e.g. "SELECT").
+  string privilege = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the role may grant this privilege onward
+  // (WITH GRANT OPTION).
+  bool with_grant_option = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// --------------------------------------------------------------------------
+// RPC request/response messages
+// --------------------------------------------------------------------------
+
+// --- ListRoles RPC ---
+
+message ListRolesRequest {
+  // Required. The parent Instance from which to list roles.
+  // Format: instances/{instance}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Instance"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$"
+  ];
+
+  // Optional. The maximum number of roles to return. Server may return fewer.
+  // If unspecified or 0, server will choose a reasonable default (typically 50).
+  // Maximum value is 1000.
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+
+  // Optional. A page token received from a previous `ListRoles` call.
+  // Provide this to retrieve the next page of results.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Reserved for future AIP-160 filtering support.
+  // The server currently rejects non-empty filters.
+  string filter = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Ordering expression following AIP-132 syntax.
+  // Supported fields: name
+  // Default: "name asc"
+  //
+  // Examples:
+  //   - "name asc"
+  //   - "name desc"
+  string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListRolesResponse {
+  // The list of roles found in the instance.
+  repeated Role roles = 1;
+
+  // A token to retrieve the next page of results.
+  // If this field is empty, there are no subsequent pages.
+  string next_page_token = 2;
+}
+
+// --- GetRole RPC ---
+
+message GetRoleRequest {
+  // Required. The name of the role to retrieve.
+  // Format: instances/{instance}/roles/{role}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Role"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/roles/[^/]+$"
+  ];
+}
+
+message GetRoleResponse {
+  // The retrieved role resource.
+  Role role = 1;
+}
+
+// --- ListRoleGrants RPC ---
+
+message ListRoleGrantsRequest {
+  // Required. The Role whose grants to list.
+  // Format: instances/{instance}/roles/{role}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Role"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/roles/[^/]+$"
+  ];
+
+  // Required. The Database to inspect for object privileges. Object privileges
+  // are per-database, so a database scope is required. Must belong to the same
+  // instance as `parent`.
+  // Format: instances/{instance}/databases/{database}
+  string database = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Database"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$"
+  ];
+
+  // Optional. The maximum number of grants to return. Server may return fewer.
+  // If unspecified or 0, server will choose a reasonable default (typically 50).
+  // Maximum value is 1000.
+  int32 page_size = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+
+  // Optional. A page token received from a previous `ListRoleGrants` call.
+  // Provide this to retrieve the next page of results.
+  string page_token = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter expression (an AIP-160 subset: `=`, `!=`, the `:`
+  // case-insensitive substring operator, combined with `AND`). Values are
+  // quoted strings. Filterable fields:
+  //   - object_type (`=`/`!=` only, no `:` substring): one of DATABASE, SCHEMA, TABLE, VIEW,
+  //     MATERIALIZED_VIEW, SEQUENCE, FOREIGN_TABLE, FUNCTION, LARGE_OBJECT
+  //   - object_name, schema_name, privilege, grantor (string; support the
+  //     `:` substring operator)
+  // Examples:
+  //   - object_type = "TABLE"
+  //   - privilege = "SELECT" AND schema_name = "public"
+  //   - object_name:"orders"
+  string filter = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Ordering expression following AIP-132 syntax.
+  // Supported fields: schema_name, object_name, privilege
+  // Default: "schema_name asc, object_name asc, privilege asc"
+  string order_by = 6 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListRoleGrantsResponse {
+  // The list of grants held by the role in the database.
+  repeated ObjectGrant grants = 1;
+
+  // A token to retrieve the next page of results.
+  // If this field is empty, there are no subsequent pages.
+  string next_page_token = 2;
+}
+
+// --- ListRoleOwnedObjects RPC ---
+
+message ListRoleOwnedObjectsRequest {
+  // Required. The Role whose owned objects to list.
+  // Format: instances/{instance}/roles/{role}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Role"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/roles/[^/]+$"
+  ];
+
+  // Required. The Database to inspect for owned objects. Ownership is
+  // per-database, so a database scope is required. Must belong to the same
+  // instance as `parent`.
+  // Format: instances/{instance}/databases/{database}
+  string database = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Database"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$"
+  ];
+
+  // Optional. The maximum number of objects to return. Server may return fewer.
+  // If unspecified or 0, server will choose a reasonable default (typically 50).
+  // Maximum value is 1000.
+  int32 page_size = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+
+  // Optional. A page token received from a previous `ListRoleOwnedObjects` call.
+  string page_token = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter expression (an AIP-160 subset: `=`, `!=`, the `:`
+  // case-insensitive substring operator, combined with `AND`). Values are
+  // quoted strings. Filterable fields:
+  //   - object_type (`=`/`!=` only, no `:` substring): one of DATABASE, SCHEMA, TABLE, VIEW,
+  //     MATERIALIZED_VIEW, SEQUENCE, FOREIGN_TABLE, FUNCTION, LARGE_OBJECT
+  //   - object_name, schema_name (string; support the `:` substring operator)
+  // Examples:
+  //   - object_type = "TABLE"
+  //   - object_name:"orders"
+  //   - object_type = "VIEW" AND object_name:"user"
+  string filter = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Ordering expression following AIP-132 syntax.
+  // Supported fields: schema_name, object_name
+  // Default: "schema_name asc, object_name asc"
+  string order_by = 6 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListRoleOwnedObjectsResponse {
+  // The list of objects owned by the role in the database.
+  repeated OwnedObject owned_objects = 1;
+
+  // A token to retrieve the next page of results.
+  // If this field is empty, there are no subsequent pages.
+  string next_page_token = 2;
+}
+
+// --- ListRoleDefaultPrivileges RPC ---
+
+message ListRoleDefaultPrivilegesRequest {
+  // Required. The Role that receives the default privileges.
+  // Format: instances/{instance}/roles/{role}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Role"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/roles/[^/]+$"
+  ];
+
+  // Required. The Database to inspect. Default privileges are per-database, so a
+  // database scope is required. Must belong to the same instance as `parent`.
+  // Format: instances/{instance}/databases/{database}
+  string database = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Database"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$"
+  ];
+
+  // Optional. The maximum number of rows to return. Server may return fewer.
+  // If unspecified or 0, server will choose a reasonable default (typically 50).
+  // Maximum value is 1000.
+  int32 page_size = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+
+  // Optional. A page token from a previous `ListRoleDefaultPrivileges` call.
+  string page_token = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter expression (an AIP-160 subset: `=`, `!=`, the `:`
+  // case-insensitive substring operator, combined with `AND`). Values are
+  // quoted strings. Filterable fields:
+  //   - object_type (`=`/`!=` only, no `:` substring): one of TABLES, SEQUENCES, FUNCTIONS,
+  //     TYPES, SCHEMAS, LARGE_OBJECTS
+  //   - privilege, schema_name, creator_role_name (string; support the `:`
+  //     substring operator)
+  // Examples:
+  //   - object_type = "TABLES"
+  //   - privilege = "SELECT" AND schema_name:"public"
+  string filter = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Ordering expression following AIP-132 syntax.
+  // Supported fields: creator_role_name, schema_name, object_type, privilege
+  // Default: "creator_role_name asc, schema_name asc, object_type asc, privilege asc"
+  string order_by = 6 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListRoleDefaultPrivilegesResponse {
+  // The list of default privileges that grant access to the role.
+  repeated RoleDefaultPrivilege default_privileges = 1;
+
+  // A token to retrieve the next page of results.
+  // If this field is empty, there are no subsequent pages.
+  string next_page_token = 2;
+}
+
+// --- ListPublicGrants RPC ---
+
+message ListPublicGrantsRequest {
+  // Required. The Database whose PUBLIC grants to list. PUBLIC grants are
+  // per-database and apply to every role.
+  // Format: instances/{instance}/databases/{database}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Database"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$"
+  ];
+
+  // Optional. The maximum number of grants to return. Server may return fewer.
+  // If unspecified or 0, server will choose a reasonable default (typically 50).
+  // Maximum value is 1000.
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+
+  // Optional. A page token received from a previous `ListPublicGrants` call.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter expression (an AIP-160 subset: `=`, `!=`, the `:`
+  // case-insensitive substring operator, combined with `AND`). Values are
+  // quoted strings. Filterable fields:
+  //   - object_type (`=`/`!=` only, no `:` substring): one of DATABASE, SCHEMA, TABLE, VIEW,
+  //     MATERIALIZED_VIEW, SEQUENCE, FOREIGN_TABLE, FUNCTION, LARGE_OBJECT
+  //   - object_name, schema_name, privilege, grantor (string; support the
+  //     `:` substring operator)
+  // Examples:
+  //   - privilege = "CONNECT"
+  //   - object_type = "TABLE" AND object_name:"orders"
+  string filter = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Ordering expression following AIP-132 syntax.
+  // Supported fields: schema_name, object_name, privilege
+  // Default: "schema_name asc, object_name asc, privilege asc"
+  string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListPublicGrantsResponse {
+  // The list of privileges granted to PUBLIC in the database.
+  repeated ObjectGrant grants = 1;
+
+  // A token to retrieve the next page of results.
+  // If this field is empty, there are no subsequent pages.
+  string next_page_token = 2;
+}

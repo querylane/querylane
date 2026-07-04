@@ -1,0 +1,60 @@
+# If you prefer the allow list template instead of the deny list, see community template:
+# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
+#
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Delve / VS Code debug binaries
+__debug_bin*
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# IDE dirs
+.idea
+.vscode
+.codex/*
+!.codex/README.md
+!.codex/config.toml
+!.codex/hooks.json
+!.codex/hooks/
+!.codex/hooks/codex-batch-check.sh
+!.codex/hooks/run-vendor-hook.sh
+!.codex/agents/
+!.codex/agents/*.toml
+
+# Go workspace file
+go.work
+go.work.sum
+
+# env file
+.env
+
+# Allow development environment file (contains safe development credentials)
+!.env.development
+
+# Taskfile internals such as hashes
+.task
+.build
+.worktree/
+
+build
+# Claude Code — personal settings
+.claude/settings.local.json
+
+lefthook-local.yml
+
+notes.md
+postgres_data
+frontend/playwright-report
+frontend/test-results
+frontend/.vitest
+frontend/e2e/playwright-report
+frontend/e2e/test-results

@@ -1,0 +1,593 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+import "querylane/console/v1alpha1/catalog_sync.proto";
+
+// --------------------------------------------------------------------------
+// Service
+// --------------------------------------------------------------------------
+
+// Service for managing tables within schemas.
+service TableService {
+  // Lists tables available in a given Schema.
+  rpc ListTables(ListTablesRequest) returns (ListTablesResponse) {}
+
+  // Gets the details of a specific Table.
+  // Returns table information without column details.
+  rpc GetTable(GetTableRequest) returns (GetTableResponse) {}
+
+  // Gets PostgreSQL partition metadata for a specific Table.
+  rpc GetTablePartitionMetadata(GetTablePartitionMetadataRequest) returns (GetTablePartitionMetadataResponse) {}
+
+  // Lists columns for a specific Table.
+  // Returns detailed column information including types, constraints, and metadata.
+  rpc ListTableColumns(ListTableColumnsRequest) returns (ListTableColumnsResponse) {}
+
+  // Lists constraints (primary key, unique, foreign key, check, exclusion) for a table.
+  rpc ListTableConstraints(ListTableConstraintsRequest) returns (ListTableConstraintsResponse) {}
+
+  // Lists indexes for a table.
+  rpc ListTableIndexes(ListTableIndexesRequest) returns (ListTableIndexesResponse) {}
+
+  // Lists row-level security policies for a table.
+  rpc ListTablePolicies(ListTablePoliciesRequest) returns (ListTablePoliciesResponse) {}
+
+  // Lists triggers for a table.
+  rpc ListTableTriggers(ListTableTriggersRequest) returns (ListTableTriggersResponse) {}
+}
+
+// --------------------------------------------------------------------------
+// Enums and Supporting Messages
+// --------------------------------------------------------------------------
+
+// DataType classifies PostgreSQL column types into high-level categories
+// for UI rendering and validation.
+enum DataType {
+  DATA_TYPE_UNSPECIFIED = 0;
+
+  // Text and string types (varchar, text, char).
+  DATA_TYPE_STRING = 1;
+
+  // Integer types (integer, bigint, smallint).
+  DATA_TYPE_INTEGER = 2;
+
+  // Floating-point and decimal types (numeric, real, double precision).
+  DATA_TYPE_FLOAT = 3;
+
+  // Boolean type.
+  DATA_TYPE_BOOLEAN = 4;
+
+  // Date type (no time component).
+  DATA_TYPE_DATE = 5;
+
+  // Binary data (bytea).
+  DATA_TYPE_BINARY = 6;
+
+  // JSON types (json, jsonb).
+  DATA_TYPE_JSON = 7;
+
+  // UUID type.
+  DATA_TYPE_UUID = 8;
+
+  // Array types.
+  DATA_TYPE_ARRAY = 9;
+
+  // Geographic/spatial types (PostGIS geometry).
+  DATA_TYPE_GEOMETRY = 10;
+
+  // Unknown or unmappable types.
+  DATA_TYPE_UNKNOWN = 11;
+
+  // Time types (time, timetz).
+  DATA_TYPE_TIME = 12;
+
+  // Timestamp types (timestamp, timestamptz).
+  DATA_TYPE_TIMESTAMP = 13;
+}
+
+// A Column is bounded table metadata embedded in ListTableColumnsResponse. It is not a resource.
+message Column {
+  reserved "name";
+
+  // Output-only. Column name as defined in the database. This is not an AIP resource name.
+  string column_name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The position of the column within the table (1-based).
+  int32 ordinal_position = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The high-level data type category for UI rendering.
+  DataType data_type = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The PostgreSQL type name (e.g., "character varying", "integer", "jsonb").
+  string raw_type = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the column allows NULL values.
+  bool is_nullable = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the column is part of the primary key.
+  bool is_primary_key = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The default value expression for the column, if any.
+  // This is the raw SQL expression (e.g., "nextval('seq'::regclass)", "'active'::text").
+  string default_value = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The maximum character length for character types (e.g., varchar(255) → 255).
+  // Zero if not applicable to the column type.
+  int32 character_maximum_length = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. User-provided comment or description for the column.
+  // May be empty if no comment was set.
+  string comment = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the column has a unique constraint.
+  bool is_unique = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the column is a generated column.
+  bool is_generated = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The generation expression for generated columns, if applicable.
+  string generation_expression = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the column is an identity column.
+  bool is_identity = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The identity generation strategy, if applicable.
+  IdentityGeneration identity_generation = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// IdentityGeneration specifies how an identity column's value is generated.
+enum IdentityGeneration {
+  IDENTITY_GENERATION_UNSPECIFIED = 0;
+
+  // Values are always generated by the database.
+  IDENTITY_GENERATION_ALWAYS = 1;
+
+  // Values are generated by the database only when not explicitly provided.
+  IDENTITY_GENERATION_BY_DEFAULT = 2;
+}
+
+// --------------------------------------------------------------------------
+// Resource Messages
+// --------------------------------------------------------------------------
+
+// A Table represents a table within a Schema.
+message Table {
+  option (google.api.resource) = {
+    type: "console.querylane.dev/Table"
+    pattern: "instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}"
+    plural: "tables"
+    singular: "table"
+  };
+
+  // The type of table object.
+  enum TableType {
+    // Unspecified table type.
+    TABLE_TYPE_UNSPECIFIED = 0;
+    // Regular table with persistent data.
+    TABLE_TYPE_BASE_TABLE = 1;
+    reserved 2, 3;
+    reserved "TABLE_TYPE_VIEW", "TABLE_TYPE_MATERIALIZED_VIEW";
+    // Temporary table.
+    TABLE_TYPE_TEMPORARY = 4;
+    // External/foreign table.
+    TABLE_TYPE_EXTERNAL = 5;
+    // Partitioned table root.
+    TABLE_TYPE_PARTITIONED = 6;
+  }
+
+  // Output-only identifier. The unique resource name of the table.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  string name = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.field_behavior) = IDENTIFIER
+  ];
+
+  // Output-only. The display name of the table.
+  string display_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The type of this table object.
+  TableType table_type = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether this is a system table that should typically
+  // be hidden from end users.
+  bool is_system_table = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. User-provided comment or description for the table.
+  // May be empty if no comment was set.
+  string comment = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The PostgreSQL role that owns this table.
+  string owner = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Estimated row count from PostgreSQL statistics (pg_class.reltuples).
+  // This value is an approximation updated by ANALYZE operations.
+  int64 row_count = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Total disk size of the table in bytes, including indexes and
+  // TOAST data (pg_total_relation_size).
+  int64 size_bytes = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The time when the table was created.
+  google.protobuf.Timestamp create_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The last time a DDL operation was performed on this table.
+  google.protobuf.Timestamp last_ddl_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// TablePartitionMetadata describes PostgreSQL partitioning for one selected table.
+message TablePartitionMetadata {
+  // Output-only. Partition key definition for a partitioned table, such as
+  // `RANGE (created_at)`. Empty when the table is not itself partitioned.
+  string partition_key = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Bound expression when the selected table is a partition, such as
+  // `FOR VALUES FROM ('2024-01-01') TO ('2025-01-01')`.
+  string partition_bound = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Parent table resource when the selected table is a partition.
+  string parent_table = 3 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Table"}
+  ];
+
+  // Output-only. Direct child partitions of the selected table.
+  repeated TablePartition child_partitions = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Number of direct child partitions.
+  int32 partition_count = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// TablePartition describes one direct child partition.
+message TablePartition {
+  // Output-only. Child partition table resource.
+  string table = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Table"}
+  ];
+
+  // Output-only. Display name of the partition table.
+  string display_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Bound expression for this child partition.
+  string partition_bound = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// --------------------------------------------------------------------------
+// RPC request/response messages
+// --------------------------------------------------------------------------
+
+// --- ListTables RPC ---
+
+message ListTablesRequest {
+  // Required. The parent Schema from which to list tables.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Schema"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+$"
+  ];
+
+  // Optional. The maximum number of tables to return. Server may return fewer.
+  // If unspecified or 0, server will choose a reasonable default (typically 50).
+  // Maximum value is 1000.
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+
+  // Optional. A page token received from a previous `ListTables` call.
+  // Provide this to retrieve the next page of results.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter expression (an AIP-160 subset: `=`, `!=`, the `:`
+  // case-insensitive substring operator, combined with `AND`). Values are
+  // quoted strings or the bare bools true/false. Filterable fields:
+  //   - name, owner (string; support the `:` substring operator)
+  //   - table_type (enum string: TABLE_TYPE_BASE_TABLE, TABLE_TYPE_PARTITIONED, TABLE_TYPE_EXTERNAL, TABLE_TYPE_TEMPORARY)
+  //   - is_system_table (bool)
+  // Examples:
+  //   - is_system_table = false (exclude system tables)
+  //   - name:"user"
+  string filter = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Ordering expression following AIP-132 syntax.
+  // Supported fields: name, display_name, table_type
+  // Default: "name asc"
+  //
+  // Examples:
+  //   - "name asc"
+  //   - "table_type desc, name asc"
+  string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListTablesResponse {
+  // The list of tables found in the schema.
+  repeated Table tables = 1;
+
+  // A token to retrieve the next page of results.
+  // If this field is empty, there are no subsequent pages.
+  string next_page_token = 2;
+
+  // Output-only. Freshness and sync status for this catalog list.
+  CatalogSyncMetadata sync_metadata = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// --- GetTable RPC ---
+
+message GetTableRequest {
+  // Required. The name of the table to retrieve.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+  ];
+}
+
+message GetTableResponse {
+  // The retrieved table resource.
+  Table table = 1;
+}
+
+// --- GetTablePartitionMetadata RPC ---
+
+message GetTablePartitionMetadataRequest {
+  // Required. The name of the table to inspect.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+  ];
+}
+
+message GetTablePartitionMetadataResponse {
+  // Partition metadata for the selected table. Empty when the table is not partitioned.
+  TablePartitionMetadata partition_metadata = 1;
+}
+
+// --- ListTableColumns RPC ---
+
+message ListTableColumnsRequest {
+  // Required. The parent Table from which to list columns.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+  ];
+}
+
+message ListTableColumnsResponse {
+  // The list of columns for the given table.
+  repeated Column columns = 1;
+}
+
+// --- ListTableConstraints RPC ---
+
+message ListTableConstraintsRequest {
+  // Required. The parent Table from which to list constraints.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+  ];
+}
+
+message ListTableConstraintsResponse {
+  repeated TableConstraint constraints = 1;
+}
+
+// --- ListTableIndexes RPC ---
+
+message ListTableIndexesRequest {
+  // Required. The parent Table from which to list indexes.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+  ];
+}
+
+message ListTableIndexesResponse {
+  repeated TableIndex indexes = 1;
+}
+
+// --- ListTablePolicies RPC ---
+
+message ListTablePoliciesRequest {
+  // Required. The parent Table from which to list policies.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+  ];
+}
+
+message ListTablePoliciesResponse {
+  repeated TablePolicy policies = 1;
+}
+
+// --- ListTableTriggers RPC ---
+
+message ListTableTriggersRequest {
+  // Required. The parent Table from which to list triggers.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+  ];
+}
+
+message ListTableTriggersResponse {
+  repeated TableTrigger triggers = 1;
+}
+
+// --------------------------------------------------------------------------
+// Table Structure Metadata
+// --------------------------------------------------------------------------
+
+enum ConstraintType {
+  CONSTRAINT_TYPE_UNSPECIFIED = 0;
+  CONSTRAINT_TYPE_PRIMARY_KEY = 1;
+  CONSTRAINT_TYPE_UNIQUE = 2;
+  CONSTRAINT_TYPE_FOREIGN_KEY = 3;
+  CONSTRAINT_TYPE_CHECK = 4;
+  CONSTRAINT_TYPE_EXCLUSION = 5;
+}
+
+enum ReferentialAction {
+  REFERENTIAL_ACTION_UNSPECIFIED = 0;
+  REFERENTIAL_ACTION_NO_ACTION = 1;
+  REFERENTIAL_ACTION_RESTRICT = 2;
+  REFERENTIAL_ACTION_CASCADE = 3;
+  REFERENTIAL_ACTION_SET_NULL = 4;
+  REFERENTIAL_ACTION_SET_DEFAULT = 5;
+}
+
+enum PolicyMode {
+  POLICY_MODE_UNSPECIFIED = 0;
+  POLICY_MODE_PERMISSIVE = 1;
+  POLICY_MODE_RESTRICTIVE = 2;
+}
+
+enum PolicyCommand {
+  POLICY_COMMAND_UNSPECIFIED = 0;
+  POLICY_COMMAND_ALL = 1;
+  POLICY_COMMAND_SELECT = 2;
+  POLICY_COMMAND_INSERT = 3;
+  POLICY_COMMAND_UPDATE = 4;
+  POLICY_COMMAND_DELETE = 5;
+}
+
+message TableConstraint {
+  reserved "name";
+
+  // Output-only. Constraint name as defined in the database. This embedded metadata is not an AIP resource.
+  string constraint_name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. High-level constraint type.
+  ConstraintType type = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Column names participating in the constraint, if applicable. These are not AIP resource names.
+  repeated string column_names = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Referenced table resource for foreign keys, if applicable.
+  string referenced_table = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Referenced column names for foreign keys, if applicable. These are not AIP resource names.
+  repeated string referenced_column_names = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Foreign key ON UPDATE action, if applicable.
+  ReferentialAction on_update = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Foreign key ON DELETE action, if applicable.
+  ReferentialAction on_delete = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Raw database definition or normalized SQL snippet.
+  string definition = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message TableIndex {
+  reserved "name";
+
+  // Output-only. Index name as defined in the database. This embedded metadata is not an AIP resource.
+  string index_name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Index access method (e.g. btree, gin, gist).
+  string method = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the index enforces uniqueness.
+  bool is_unique = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Raw key column database identifiers in order, not AIP resource names.
+  repeated string key_columns = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Raw included column database identifiers, not AIP resource names.
+  repeated string included_columns = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Predicate for partial indexes, if applicable.
+  string predicate = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Total size of the index in bytes, if available.
+  int64 size_bytes = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message TablePolicy {
+  reserved "name";
+
+  // Output-only. Policy name as defined in the database. This embedded metadata is not an AIP resource.
+  string policy_name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Policy mode.
+  PolicyMode mode = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Command affected by the policy.
+  PolicyCommand command = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Raw database role identifiers referenced by the policy, not AIP resource names.
+  repeated string roles = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. USING expression, if present.
+  string using_expression = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. WITH CHECK expression, if present.
+  string check_expression = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message TableTrigger {
+  reserved "name";
+
+  // Output-only. Trigger name as defined in the database. This embedded metadata is not an AIP resource.
+  string trigger_name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Timing keyword (BEFORE, AFTER, INSTEAD OF).
+  string timing = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Event names such as INSERT, UPDATE, DELETE, TRUNCATE.
+  repeated string events = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Raw trigger function or procedure database identifier, not an AIP resource name.
+  string function_name = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the trigger is enabled.
+  bool enabled = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Raw definition or normalized SQL snippet.
+  string definition = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message RowIdentity {
+  enum Source {
+    SOURCE_UNSPECIFIED = 0;
+
+    // The table has a primary key that can be used for row identity.
+    SOURCE_PRIMARY_KEY = 1;
+
+    // The table lacks a primary key but has a usable unique constraint.
+    SOURCE_UNIQUE_CONSTRAINT = 2;
+
+    // The server can only expose an opaque row key.
+    SOURCE_OPAQUE_ROW_KEY = 3;
+  }
+
+  // Output-only. How row identity is derived.
+  Source source = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Column names used for row identity when available.
+  repeated string column_names = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

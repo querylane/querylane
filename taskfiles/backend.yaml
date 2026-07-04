@@ -1,0 +1,81 @@
+version: 3
+tasks:
+  fmt:
+    desc: Format Go code
+    deps:
+      - :install:goimports
+      - :install:gci
+      - :install:gofumpt
+    dir: "{{.BACKEND_ROOT}}"
+    cmds:
+      - '{{ .BUILD_ROOT }}/bin/go/goimports -l -w -local "github.com/querylane/querylane/backend" .'
+      - '{{ .BUILD_ROOT }}/bin/go/gofumpt -l -w .'
+      - '{{ .BUILD_ROOT }}/bin/go/gci write -s standard -s default -s ''Prefix(github.com/querylane/querylane/backend)'' .'
+
+  vet:
+    desc: Run go vet on a specific package (use -- ./path/...) or all packages
+    deps:
+      - :install:go
+    dir: "{{.BACKEND_ROOT}}"
+    cmds:
+      - '{{.PATH_PREFIX}} go vet {{.CLI_ARGS | default "./..."}}'
+
+  lint:
+    desc: Run all backend linters (Go + SQL migrations)
+    deps:
+      - :install:golangci-lint
+    dir: "{{.BACKEND_ROOT}}"
+    cmds:
+      - '{{ .BUILD_ROOT }}/bin/go/golangci-lint run --fix --timeout 10m ./...'
+      - task: :sql:lint
+
+  start:
+    desc: Start the backend server (use -- to pass args, e.g. task backend:start -- server start --config=./configs/config.yaml)
+    deps:
+      - :install:go
+    dir: "{{.BACKEND_ROOT}}"
+    cmds:
+      - '{{.PATH_PREFIX}} go run . {{.CLI_ARGS}}'
+
+  build:
+    desc: Build Go binary with build info
+    deps:
+      - :install:go
+    dir: "{{.BACKEND_ROOT}}"
+    cmds:
+      - '{{.PATH_PREFIX}} go build -ldflags "-X github.com/querylane/querylane/backend/service/console.GitBranch={{.BRANCH_SLUG}}" -o ../build/bin/querylane'
+
+  test:
+    desc: Run all Go tests
+    deps:
+      - :install:go
+      - :install:tparse
+    dir: "{{.BACKEND_ROOT}}"
+    cmds:
+      - '{{.PATH_PREFIX}} go test -json -cover -parallel 10 ./... | {{.BUILD_ROOT}}/bin/tparse -follow -all'
+
+  test:unit:
+    desc: Run unit tests (excluding integration tests)
+    deps:
+      - :install:go
+      - :install:tparse
+    dir: "{{.BACKEND_ROOT}}"
+    cmds:
+      - '{{.PATH_PREFIX}} go test -json -cover -short -parallel 10 ./... | {{.BUILD_ROOT}}/bin/tparse -follow -all'
+
+  test:integration:
+    desc: Run integration tests (testcontainer path uses postgres:18-alpine)
+    deps:
+      - :install:go
+      - :install:tparse
+    dir: "{{.BACKEND_ROOT}}"
+    cmds:
+      - '{{.PATH_PREFIX}} ./tools/integration-test-packages.sh "Integration|RPCSuite" | xargs go test -json -parallel 10 -run "Integration|RPCSuite" | {{.BUILD_ROOT}}/bin/tparse -follow -all'
+
+  test:coverage:
+    desc: Run unit tests with coverage report
+    deps:
+      - :install:go
+    dir: "{{.BACKEND_ROOT}}"
+    cmds:
+      - '{{.PATH_PREFIX}} go test -short -cover ./...'

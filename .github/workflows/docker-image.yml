@@ -1,0 +1,38 @@
+name: docker-image
+
+on:
+  workflow_call:
+
+env:
+  ACTION_CHECKOUT: &action_checkout actions/checkout@v7.0.0
+  ACTION_SETUP_BUILDX: &action_setup_buildx docker/setup-buildx-action@v4.2.0
+  ACTION_BUILD_PUSH: &action_build_push docker/build-push-action@v7.3.0
+
+jobs:
+  docker:
+    name: Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: *action_checkout
+        with:
+          persist-credentials: false
+
+      - name: Validate Docker guardrails
+        run: python3 .github/scripts/check-docker-setup.py
+
+      - name: Set up Docker Buildx
+        uses: *action_setup_buildx
+
+      - name: Validate Docker image
+        uses: *action_build_push
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: .
+          file: ./Dockerfile
+          outputs: type=cacheonly
+          cache-from: |
+            type=gha,scope=querylane-docker-${{ github.ref_name }}
+            type=gha,scope=querylane-docker-${{ github.base_ref || 'main' }}
+          cache-to: type=gha,mode=max,scope=querylane-docker-${{ github.ref_name }},ignore-error=true

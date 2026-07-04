@@ -1,0 +1,34 @@
+version: 3
+tasks:
+  lint:
+    deps:
+      - :install:buf
+    desc: lint proto files
+    cmds:
+      - PATH={{.BUILD_ROOT}}/bin:$PATH buf lint
+      - PATH={{.BUILD_ROOT}}/bin:$PATH buf format {{.ROOT_DIR}}/proto -w
+
+  format:
+    deps:
+      - :install:buf
+    desc: format proto files
+    cmds:
+      - PATH={{.BUILD_ROOT}}/bin:$PATH buf format -w --exit-code
+
+  dep:update:
+    deps:
+      - :install:buf
+    desc: update mod
+    cmds:
+      - PATH={{.BUILD_ROOT}}/bin:$PATH buf dep update {{.ROOT_DIR}}/proto
+
+  generate:
+    desc: generate protos
+    deps:
+      - :install:buf
+    cmds:
+      - task: lint
+      - task: format
+      - PATH={{.BUILD_ROOT}}/bin:$PATH buf generate --clean
+      - task: :backend:fmt
+      - if [[ $CI == "true" ]]; then git diff --exit-code; fi

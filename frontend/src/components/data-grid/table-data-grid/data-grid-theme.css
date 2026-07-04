@@ -1,0 +1,224 @@
+.querylane-data-grid {
+  --rdg-color: var(--foreground);
+  --rdg-background-color: var(--card);
+  --rdg-header-background-color: var(--card);
+  --rdg-header-row-color: var(--muted-foreground);
+  --rdg-row-hover-background-color: color-mix(
+    in oklch,
+    var(--accent) 60%,
+    var(--card)
+  );
+  --rdg-row-selected-background-color: color-mix(
+    in oklch,
+    var(--accent) 60%,
+    var(--card)
+  );
+  --rdg-row-selected-hover-background-color: color-mix(
+    in oklch,
+    var(--accent) 80%,
+    var(--card)
+  );
+  --rdg-border-color: color-mix(in oklch, var(--foreground) 12%, transparent);
+  --rdg-summary-border-color: color-mix(
+    in oklch,
+    var(--foreground) 16%,
+    transparent
+  );
+  --rdg-checkbox-color: var(--primary);
+  --rdg-checkbox-disabled-border-color: var(--border);
+  --rdg-checkbox-disabled-background-color: var(--muted);
+  --rdg-cell-frozen-background-color: var(--card);
+  --rdg-cell-frozen-box-shadow: 2px 0 6px -2px
+    color-mix(in oklch, var(--foreground) 18%, transparent);
+  --rdg-font-size: 12px;
+  --querylane-scrollbar-size: 0.625rem;
+  --querylane-scrollbar-track: color-mix(
+    in oklch,
+    var(--card) 94%,
+    var(--foreground)
+  );
+  --querylane-scrollbar-thumb: color-mix(
+    in oklch,
+    var(--foreground) 24%,
+    var(--card)
+  );
+  --querylane-scrollbar-thumb-hover: color-mix(
+    in oklch,
+    var(--foreground) 36%,
+    var(--card)
+  );
+  --querylane-row-border-color: color-mix(
+    in oklch,
+    var(--foreground) 10%,
+    var(--card)
+  );
+  --querylane-column-border-color: color-mix(
+    in oklch,
+    var(--foreground) 6%,
+    var(--card)
+  );
+  --querylane-header-border-color: color-mix(
+    in oklch,
+    var(--foreground) 18%,
+    var(--card)
+  );
+  block-size: 100%;
+
+  min-block-size: 0;
+  /* Avoid paint containment: Chromium can drop 1px grid borders on
+     subpixel-aligned DataGrid cells near rounded outer edges. */
+  contain: inline-size;
+  overflow: auto;
+  font-family: inherit;
+  color-scheme: light;
+  scrollbar-color: var(--querylane-scrollbar-thumb)
+    var(--querylane-scrollbar-track);
+  scrollbar-width: thin;
+  border: 1px solid var(--rdg-border-color);
+  border-radius: var(--radius);
+}
+
+.dark .querylane-data-grid {
+  --querylane-scrollbar-track: color-mix(
+    in oklch,
+    var(--card) 92%,
+    var(--foreground)
+  );
+  --querylane-scrollbar-thumb: color-mix(
+    in oklch,
+    var(--foreground) 18%,
+    var(--card)
+  );
+  --querylane-scrollbar-thumb-hover: color-mix(
+    in oklch,
+    var(--foreground) 30%,
+    var(--card)
+  );
+  color-scheme: dark;
+}
+
+.querylane-data-grid::-webkit-scrollbar {
+  width: var(--querylane-scrollbar-size);
+  height: var(--querylane-scrollbar-size);
+}
+
+.querylane-data-grid::-webkit-scrollbar-track {
+  background-color: var(--querylane-scrollbar-track);
+}
+
+.querylane-data-grid::-webkit-scrollbar-thumb {
+  background-color: var(--querylane-scrollbar-thumb);
+  border: 2px solid var(--querylane-scrollbar-track);
+  border-radius: 999px;
+}
+
+.querylane-data-grid::-webkit-scrollbar-thumb:hover {
+  background-color: var(--querylane-scrollbar-thumb-hover);
+}
+
+.querylane-data-grid::-webkit-scrollbar-corner {
+  background-color: var(--querylane-scrollbar-track);
+}
+
+.querylane-data-grid .rdg-cell {
+  display: flex;
+  align-items: center;
+  padding-block: 0;
+  padding-inline: 0.75rem;
+  cursor: default;
+  user-select: none;
+  border-block-end: 1px solid var(--querylane-row-border-color);
+  border-inline-end: 1px solid var(--querylane-column-border-color);
+}
+
+.querylane-data-grid .rdg-header-row .rdg-cell {
+  font-weight: 500;
+  user-select: none;
+  border-block-end: 1px solid var(--querylane-header-border-color);
+  border-inline-end: 1px solid var(--querylane-column-border-color);
+}
+
+.querylane-data-grid .rdg-row .rdg-cell:last-child {
+  border-inline-end: 1px solid transparent;
+}
+
+.querylane-data-grid .rdg-select-cell *,
+.querylane-data-grid .rdg-expand-cell * {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.querylane-data-grid .rdg-header-row .rdg-cell * {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.querylane-data-grid
+  .rdg-row
+  .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.querylane-data-grid
+  .rdg-row
+  .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell)
+  * {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.querylane-data-grid
+  .rdg-row
+  .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell)
+  button,
+.querylane-data-grid
+  .rdg-row
+  .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell)
+  button
+  * {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.querylane-data-grid .rdg-cell[aria-selected="true"] {
+  outline: none;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 2px var(--ring);
+}
+
+.querylane-data-grid .rdg-cell.rdg-select-cell[aria-selected="true"] {
+  outline: none;
+  background-color: inherit;
+  box-shadow: none;
+}
+
+.querylane-data-grid .rdg-cell.rdg-select-cell {
+  padding-inline: 0.25rem;
+}
+
+.querylane-data-grid .rdg-cell.rdg-checkbox-cell {
+  padding-inline-end: 0.125rem;
+  border-inline-end: 1px solid transparent;
+}
+
+.querylane-data-grid .rdg-cell.rdg-expand-cell {
+  padding-inline-start: 0.125rem;
+}
+
+.querylane-data-grid .rdg-expand-button {
+  opacity: 0;
+  transition: opacity 0.1s ease-out;
+}
+
+.querylane-data-grid .rdg-row:hover .rdg-expand-button,
+.querylane-data-grid .rdg-row[aria-selected="true"] .rdg-expand-button,
+.querylane-data-grid .rdg-expand-button:focus-visible,
+.querylane-data-grid .rdg-expand-button[aria-expanded="true"] {
+  opacity: 1;
+}
+
+.querylane-data-grid
+  .rdg-cell.rdg-cell-frozen:nth-last-child(1 of .rdg-cell-frozen) {
+  border-inline-end: 1px solid var(--querylane-header-border-color);
+}

@@ -1,0 +1,52 @@
+@import "./src/index.css";
+
+html,
+body {
+  background: var(--background);
+  scroll-behavior: auto;
+}
+
+[data-visual-test-root],
+[data-visual-test-root] *,
+[data-visual-test-root] *::before,
+[data-visual-test-root] *::after {
+  /* Keep end events firing for components that advance state after animation/transition completion. */
+  animation-duration: 0.001s;
+  animation-delay: 0s;
+  animation-iteration-count: 1;
+  transition-duration: 0.001s;
+  transition-delay: 0s;
+  scroll-behavior: auto;
+  caret-color: transparent;
+}
+
+[data-slot="accordion-content"],
+[data-slot="collapsible-content"] {
+  transition-delay: 0s;
+  transition-duration: 0s;
+  transition-property: none;
+  animation-name: none;
+  animation-duration: 0s;
+}
+
+[data-visual-test-root] {
+  box-sizing: border-box;
+  display: inline-block;
+  width: 1180px;
+  min-height: 820px;
+  background: var(--background);
+}
+
+[data-create-instance-visual-surface] .min-h-screen {
+  min-height: auto;
+}
+
+[data-testid="admin-shell-visual-root"] [data-slot="sidebar-container"] {
+  position: absolute;
+}
+
+[data-testid="admin-shell-visual-root"] [data-slot="sidebar-wrapper"] {
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
+}

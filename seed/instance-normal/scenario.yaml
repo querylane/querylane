@@ -1,0 +1,230 @@
+version: v1alpha1
+
+runtime:
+  seed: 20260406
+  state:
+    backend: memory
+    retention: 168h
+
+datasets:
+  customers:
+    key: customer_id
+    table: customers
+    fields:
+      customer_id:
+        generator: uuid
+      email:
+        generator: template
+        template: "customer-{{customer_id}}@example.com"
+        postgres:
+          unique: true
+      segment:
+        generator: weighted_choice
+        values:
+          vip: 10
+          repeat: 30
+          new: 60
+      status:
+        generator: choice
+        values: [active, active, active, inactive]
+      created_at:
+        generator: timestamp.now
+      updated_at:
+        generator: timestamp.now
+      deleted_at: {}
+
+  products:
+    key: product_id
+    table: products
+    fields:
+      product_id:
+        generator: uuid
+      sku:
+        generator: template
+        template: "SKU-{{product_id}}"
+        postgres:
+          unique: true
+      name:
+        generator: choice
+        values:
+          - Everyday Sneakers
+          - Cotton Hoodie
+          - Ceramic Mug
+          - Travel Backpack
+          - Wireless Charger
+          - Standing Desk
+          - Notebook Set
+          - Water Bottle
+      category:
+        generator: choice
+        values: [footwear, apparel, home, travel, electronics, furniture, stationery, kitchen]
+      price:
+        generator: number.normal
+        mean: 72
+        stddev: 18
+        postgres:
+          type: numeric(12, 2)
+      status:
+        generator: choice
+        values: [active, active, active, inactive]
+      created_at:
+        generator: timestamp.now
+      updated_at:
+        generator: timestamp.now
+      deleted_at: {}
+
+  orders:
+    key: order_id
+    table: orders
+    references:
+      customer_id:
+        dataset: customers
+        strategy: weighted_recent
+        where: "status == 'active' and deleted_at == null"
+    fields:
+      order_id:
+        generator: uuid
+      customer_id:
+        ref: customers.customer_id
+      status:
+        generator: choice
+        values: [pending, paid, fulfilled, cancelled]
+      total_amount:
+        generator: number.normal
+        mean: 108
+        stddev: 26
+        postgres:
+          type: numeric(12, 2)
+      created_at:
+        generator: timestamp.now
+      updated_at:
+        generator: timestamp.now
+      deleted_at: {}
+
+  order_items:
+    key: order_item_id
+    table: order_items
+    references:
+      order_id:
+        dataset: orders
+        strategy: weighted_recent
+        where: "deleted_at == null"
+      product_id:
+        dataset: products
+        strategy: random
+        where: "status == 'active' and deleted_at == null"
+    fields:
+      order_item_id:
+        generator: uuid
+      order_id:
+        ref: orders.order_id
+      product_id:
+        ref: products.product_id
+      quantity:
+        generator: choice
+        values: [1, 1, 1, 2, 2, 3]
+        postgres:
+          type: integer
+      line_status:
+        generator: choice
+        values: [reserved, picked, packed]
+      created_at:
+        generator: timestamp.now
+      updated_at:
+        generator: timestamp.now
+
+workloads:
+  customer_signup:
+    dataset: customers
+    operation: insert
+    rate:
+      per_minute: 30
+
+  product_catalog:
+    dataset: products
+    operation: insert
+    rate:
+      per_minute: 10
+
+  order_create:
+    dataset: orders
+    operation: insert
+    rate:
+      per_minute: 60
+    depends_on:
+      min_available:
+        customers: 5
+
+  order_item_create:
+    dataset: order_items
+    operation: insert
+    rate:
+      per_minute: 90
+    depends_on:
+      min_available:
+        orders: 2
+        products: 5
+
+  order_progression:
+    dataset: orders
+    operation: update
+    rate:
+      per_minute: 30
+    select:
+      dataset: orders
+      where: "status in ['pending', 'paid'] and deleted_at == null"
+      strategy: weighted_recent
+    mutate:
+      status:
+        transition:
+          pending: [paid, cancelled]
+          paid: [fulfilled]
+
+  product_retire:
+    dataset: products
+    operation: soft_delete
+    rate:
+      per_minute: 2
+    select:
+      dataset: products
+      where: "status == 'inactive' and deleted_at == null"
+      strategy: oldest
+
+  customer_churn:
+    dataset: customers
+    operation: soft_delete
+    rate:
+      per_minute: 1
+    select:
+      dataset: customers
+      where: "status == 'inactive' and deleted_at == null"
+      strategy: oldest
+
+outputs:
+  ecommerce:
+    kind: postgres
+    dsnEnv: DATABASE_URL
+    schema: public
+    table_policy: drop_and_create
+    postgres:
+      database_policy: auto_create
+    bindings:
+      customers:
+        dataset: customers
+      products:
+        dataset: products
+      orders:
+        dataset: orders
+      order_items:
+        dataset: order_items
+
+schedules:
+  default:
+    workloads:
+      - customer_signup
+      - product_catalog
+      - order_create
+      - order_item_create
+      - order_progression
+      - product_retire
+      - customer_churn

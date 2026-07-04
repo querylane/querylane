@@ -1,0 +1,117 @@
+# Seed environment: PostgreSQL instances with production-like, edge-case, and stress data.
+# Usage: task dev:seed
+
+services:
+  pg-normal:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${SEED_NORMAL_USER}
+      POSTGRES_PASSWORD: ${SEED_NORMAL_PASSWORD}
+      POSTGRES_DB: postgres
+    ports:
+      - "${QUERYLANE_SEED_NORMAL_PORT:-5500}:5432"
+    volumes:
+      - seed_normal_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SEED_NORMAL_USER}"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+    restart: unless-stopped
+
+  pg-edgecases:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${SEED_EDGE_USER}
+      POSTGRES_PASSWORD: ${SEED_EDGE_PASSWORD}
+      POSTGRES_DB: postgres
+    ports:
+      - "${QUERYLANE_SEED_EDGE_PORT:-5501}:5432"
+    volumes:
+      - seed_edge_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SEED_EDGE_USER}"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+    restart: unless-stopped
+
+  pg-stress:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${SEED_STRESS_USER}
+      POSTGRES_PASSWORD: ${SEED_STRESS_PASSWORD}
+      POSTGRES_DB: stress_lab
+      QUERYLANE_STRESS_ROW_COUNT: ${QUERYLANE_STRESS_ROW_COUNT:-50000}
+    ports:
+      - "${QUERYLANE_SEED_STRESS_PORT:-5502}:5432"
+    volumes:
+      - seed_stress_data:/var/lib/postgresql/data
+      - ./seed/instance-stress/init:/docker-entrypoint-initdb.d:ro
+      - ./seed/instance-stress/sql:/querylane-stress-sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SEED_STRESS_USER} -d stress_lab"]
+      interval: 5s
+      retries: 10
+      start_period: 30s
+      timeout: 5s
+    restart: unless-stopped
+
+  pg-demo-complex:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${SEED_COMPLEX_OWNER_USER}
+      POSTGRES_PASSWORD: ${SEED_COMPLEX_OWNER_PASSWORD}
+      POSTGRES_DB: demo_complex
+    ports:
+      - "${QUERYLANE_SEED_COMPLEX_PORT:-5503}:5432"
+    volumes:
+      - seed_demo_complex_data:/var/lib/postgresql/data
+      - ./seed/instance-demo-complex/init:/docker-entrypoint-initdb.d:ro
+      - ./seed/instance-demo-complex/sql:/querylane-demo-complex-sql:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} && psql -U $${POSTGRES_USER} -d $${POSTGRES_DB} -tAc \"select has_schema_privilege('demo_readonly', 'commerce', 'USAGE') and has_table_privilege('demo_readonly', 'commerce.orders', 'SELECT') and exists (select 1 from pg_policies where policyname = 'tenant_select_orders')\" | grep -q t",
+        ]
+      interval: 5s
+      retries: 10
+      start_period: 30s
+      timeout: 5s
+    restart: unless-stopped
+
+  seeder-normal:
+    image: ghcr.io/querylane/seeder-buddy:edge
+    command: [run, -f, /config/scenario.yaml]
+    environment:
+      DATABASE_URL: "postgres://${SEED_NORMAL_USER}:${SEED_NORMAL_PASSWORD}@pg-normal:5432/ecommerce?sslmode=disable"
+    volumes:
+      - ./seed/instance-normal/scenario.yaml:/config/scenario.yaml:ro
+    depends_on:
+      pg-normal:
+        condition: service_healthy
+    restart: unless-stopped
+
+  seeder-edgecases:
+    image: ghcr.io/querylane/seeder-buddy:edge
+    command: [run, -f, /config/scenario.yaml]
+    environment:
+      EDGE_DSN_NORMAL: "postgres://${SEED_EDGE_USER}:${SEED_EDGE_PASSWORD}@pg-edgecases:5432/normal_db?sslmode=disable"
+      EDGE_DSN_DOTS: "postgres://${SEED_EDGE_USER}:${SEED_EDGE_PASSWORD}@pg-edgecases:5432/db.with.dots?sslmode=disable"
+      EDGE_DSN_HYPHENS: "postgres://${SEED_EDGE_USER}:${SEED_EDGE_PASSWORD}@pg-edgecases:5432/db-with-hyphens?sslmode=disable"
+      EDGE_DSN_NUMERIC: "postgres://${SEED_EDGE_USER}:${SEED_EDGE_PASSWORD}@pg-edgecases:5432/2024_metrics_db?sslmode=disable"
+    volumes:
+      - ./seed/instance-edgecases/scenario.yaml:/config/scenario.yaml:ro
+    depends_on:
+      pg-edgecases:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  seed_normal_data:
+  seed_edge_data:
+  seed_stress_data:
+  seed_demo_complex_data:

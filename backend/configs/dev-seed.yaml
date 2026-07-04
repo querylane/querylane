@@ -1,0 +1,64 @@
+# Development configuration with seed instances.
+#
+# Prerequisites:
+#   task dev:seed    — starts seed PostgreSQL instances
+#
+# Usage:
+#   cd backend && go run . server start --config=./configs/dev-seed.yaml
+#   — or —
+#   task dev:backend DEV_CONFIG=configs/dev-seed.yaml
+
+database:
+  dsn: "postgres://querylane:querylane@localhost:5432/querylane_dev?sslmode=disable"
+
+instances:
+  - id: seed-normal
+    display_name: "Seed: Ecommerce"
+    host: "localhost"
+    port: 5500
+    database: "ecommerce"
+    username: "seeduser"
+    password: "seedpass"
+    ssl_mode: "disable"
+    labels:
+      env: seed
+
+  - id: seed-edgecases
+    display_name: "Seed: Edge Cases"
+    host: "localhost"
+    port: 5501
+    database: "postgres"
+    username: "seeduser"
+    password: "seedpass"
+    ssl_mode: "disable"
+    labels:
+      env: seed
+
+  - id: seed-stress
+    display_name: "Seed: Stress Lab"
+    host: "localhost"
+    port: 5502
+    database: "stress_lab"
+    username: "seedstress"
+    password: "seedstresspass"
+    ssl_mode: "disable"
+    labels:
+      env: seed
+      workload: stress
+
+  - id: seed-demo-complex
+    display_name: "Seed: Demo Complex"
+    host: "localhost"
+    port: 5503
+    database: "demo_complex"
+    username: "demo_readonly"
+    password: "democomplex_readonlypass"
+    ssl_mode: "disable"
+    labels:
+      env: seed
+      workload: complex
+      shape: ecommerce
+
+http:
+  host: 0.0.0.0
+  port: 8080

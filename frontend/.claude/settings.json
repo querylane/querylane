@@ -1,0 +1,14 @@
+{
+  "extraKnownMarketplaces": {
+    "skills": {
+      "source": {
+        "source": "github",
+        "repo": "malinskibeniamin/skills"
+      },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "frontend-skills@skills": true
+  }
+}

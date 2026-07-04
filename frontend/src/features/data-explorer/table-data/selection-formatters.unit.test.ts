@@ -1,0 +1,346 @@
+import { create } from "@bufbuild/protobuf";
+import { describe, expect, test } from "vitest";
+
+import {
+  TableCellSchema,
+  TableResultColumnSchema,
+  TableValueSchema,
+} from "@/protogen/querylane/console/v1alpha1/table_data_pb";
+import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
+
+import {
+  buildExport,
+  createChunkedExportBuilder,
+  type ExportResult,
+  type SelectedRow,
+} from "./selection-formatters";
+
+const RESOURCE = "instances/i/databases/d/schemas/public/tables/events";
+
+function stringCell(value: string, truncated = false) {
+  return create(TableCellSchema, {
+    truncated,
+    value: create(TableValueSchema, {
+      kind: { case: "stringValue", value },
+    }),
+  });
+}
+
+function nameColumn(name: string) {
+  return create(TableResultColumnSchema, {
+    columnName: name,
+    dataType: DataType.STRING,
+    rawType: "text",
+  });
+}
+
+function row(
+  cells: Record<string, ReturnType<typeof stringCell>>
+): SelectedRow {
+  return { cells: new Map(Object.entries(cells)) };
+}
+
+describe("buildExport", () => {
+  const columns = [nameColumn("id"), nameColumn("body")];
+
+  test("exports a clean selection as CSV", () => {
+    const rows: SelectedRow[] = [
+      row({ body: stringCell("hello"), id: stringCell("1") }),
+      row({ body: stringCell("world"), id: stringCell("2") }),
+    ];
+
+    const result = buildExport("csv", rows, columns, RESOURCE);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.payload.contents).toContain("id,body\n");
+    expect(result.payload.contents).toContain("1,hello\n");
+    expect(result.payload.contents).toContain("2,world\n");
+  });
+
+  test("refuses to export when any selected row has a truncated cell", () => {
+    const rows: SelectedRow[] = [
+      row({ body: stringCell("hello"), id: stringCell("1") }),
+      row({
+        body: stringCell("trunc-prefix", true),
+        id: stringCell("2"),
+      }),
+      row({
+        body: stringCell("also-trunc", true),
+        id: stringCell("3"),
+      }),
+    ];
+
+    const result = buildExport("sql", rows, columns, RESOURCE);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.reason).toBe("truncated");
+    expect(result.truncatedRowCount).toBe(2);
+  });
+
+  test("refuses JSON export when truncation present, regardless of format", () => {
+    const rows: SelectedRow[] = [
+      row({ body: stringCell("oops", true), id: stringCell("1") }),
+    ];
+
+    const result = buildExport("json", rows, columns, RESOURCE);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.truncatedRowCount).toBe(1);
+  });
+
+  test("counts a row only once even when multiple cells in it are truncated", () => {
+    const rows: SelectedRow[] = [
+      row({
+        body: stringCell("trunc", true),
+        id: stringCell("1", true),
+      }),
+    ];
+
+    const result = buildExport("csv", rows, columns, RESOURCE);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.truncatedRowCount).toBe(1);
+  });
+});
+
+describe("buildExport formatting", () => {
+  test("exports booleans, nulls, quotes, and numeric literals as SQL", () => {
+    const columns = [
+      nameColumn('id"col'),
+      nameColumn("active"),
+      nameColumn("note"),
+      nameColumn("missing"),
+    ];
+    const rows: SelectedRow[] = [
+      row({
+        active: create(TableCellSchema, {
+          value: create(TableValueSchema, {
+            kind: { case: "boolValue", value: true },
+          }),
+        }),
+        'id"col': create(TableCellSchema, {
+          value: create(TableValueSchema, {
+            kind: { case: "int64Value", value: 7n },
+          }),
+        }),
+        note: stringCell("Bob's value"),
+      }),
+    ];
+
+    const result = buildExport("sql", rows, columns, RESOURCE);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.payload.contents).toBe(
+      'INSERT INTO "public"."events" ("id""col", "active", "note", "missing") VALUES\n' +
+        "  (7, TRUE, 'Bob''s value', NULL);\n"
+    );
+    expect(result.payload.mimeType).toBe("application/sql");
+  });
+
+  test("exports JSON with booleans and nulls as typed values", () => {
+    const columns = [
+      nameColumn("active"),
+      nameColumn("note"),
+      nameColumn("missing"),
+    ];
+    const rows: SelectedRow[] = [
+      row({
+        active: create(TableCellSchema, {
+          value: create(TableValueSchema, {
+            kind: { case: "boolValue", value: false },
+          }),
+        }),
+        note: stringCell("hello"),
+      }),
+    ];
+
+    const result = buildExport("json", rows, columns, RESOURCE);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(JSON.parse(result.payload.contents)).toEqual([
+      { active: false, missing: null, note: "hello" },
+    ]);
+    expect(result.payload.mimeType).toBe("application/json");
+  });
+
+  test("CSV quotes commas, newlines, and double quotes", () => {
+    const columns = [nameColumn("plain"), nameColumn("needs_quote")];
+    const rows: SelectedRow[] = [
+      row({
+        needs_quote: stringCell('line 1\n"line,2"'),
+        plain: stringCell("ok"),
+      }),
+    ];
+
+    const result = buildExport("csv", rows, columns, RESOURCE);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.payload.contents).toBe(
+      'plain,needs_quote\nok,"line 1\n""line,2"""\n'
+    );
+  });
+});
+
+describe("buildExport raw value fidelity", () => {
+  function doubleCell(value: number) {
+    return create(TableCellSchema, {
+      value: create(TableValueSchema, {
+        kind: { case: "doubleValue", value },
+      }),
+    });
+  }
+
+  function timestampCell(value: string) {
+    return create(TableCellSchema, {
+      value: create(TableValueSchema, {
+        kind: { case: "timestampValue", value },
+      }),
+    });
+  }
+
+  function typedColumn(name: string, dataType: DataType, rawType: string) {
+    return create(TableResultColumnSchema, {
+      columnName: name,
+      dataType,
+      rawType,
+    });
+  }
+
+  test("exports non-integer doubles without locale grouping or rounding", () => {
+    const columns = [typedColumn("amount", DataType.FLOAT, "double precision")];
+    const rows: SelectedRow[] = [
+      row({ amount: doubleCell(1_234_567.891_234_5) }),
+    ];
+
+    const csv = buildExport("csv", rows, columns, RESOURCE);
+    const sql = buildExport("sql", rows, columns, RESOURCE);
+    const json = buildExport("json", rows, columns, RESOURCE);
+
+    expect(csv.ok && csv.payload.contents).toBe("amount\n1234567.8912345\n");
+    expect(sql.ok && sql.payload.contents).toContain("(1234567.8912345)");
+    expect(json.ok && JSON.parse(json.payload.contents)).toEqual([
+      { amount: "1234567.8912345" },
+    ]);
+  });
+
+  test("exports timestamps with the original offset and sub-second precision", () => {
+    const raw = "2024-03-05T17:30:15.123456+05:30";
+    const columns = [
+      typedColumn("created_at", DataType.TIMESTAMP, "timestamptz"),
+    ];
+    const rows: SelectedRow[] = [row({ created_at: timestampCell(raw) })];
+
+    const csv = buildExport("csv", rows, columns, RESOURCE);
+    const sql = buildExport("sql", rows, columns, RESOURCE);
+    const json = buildExport("json", rows, columns, RESOURCE);
+
+    expect(csv.ok && csv.payload.contents).toBe(`created_at\n${raw}\n`);
+    expect(sql.ok && sql.payload.contents).toContain(`('${raw}')`);
+    expect(json.ok && JSON.parse(json.payload.contents)).toEqual([
+      { created_at: raw },
+    ]);
+  });
+
+  test("exports int64 values beyond double precision exactly", () => {
+    const columns = [typedColumn("id", DataType.INTEGER, "bigint")];
+    const rows: SelectedRow[] = [
+      row({
+        id: create(TableCellSchema, {
+          value: create(TableValueSchema, {
+            kind: { case: "int64Value", value: 9_007_199_254_740_993n },
+          }),
+        }),
+      }),
+    ];
+
+    const csv = buildExport("csv", rows, columns, RESOURCE);
+    const sql = buildExport("sql", rows, columns, RESOURCE);
+
+    expect(csv.ok && csv.payload.contents).toBe("id\n9007199254740993\n");
+    expect(sql.ok && sql.payload.contents).toContain("(9007199254740993)");
+  });
+});
+
+describe("buildExport edge cases", () => {
+  test("SQL export returns a comment when no rows are selected", () => {
+    const result = buildExport("sql", [], [nameColumn("id")], RESOURCE);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.payload.contents).toBe(
+      '-- No rows selected for "public"."events"\n'
+    );
+  });
+
+  test("unknown export formats fall back to CSV", () => {
+    const result: ExportResult = Reflect.apply(buildExport, undefined, [
+      "xml",
+      [row({ body: stringCell("hello"), id: stringCell("1") })],
+      [nameColumn("id"), nameColumn("body")],
+      RESOURCE,
+    ]);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.payload.mimeType).toBe("text/csv;charset=utf-8");
+  });
+});
+
+describe("createChunkedExportBuilder", () => {
+  const columns = [nameColumn("id"), nameColumn("body")];
+
+  test("emits CSV chunks across batches without joining rows first", () => {
+    const builder = createChunkedExportBuilder("csv", columns, RESOURCE);
+
+    builder.addRows([row({ body: stringCell("hello"), id: stringCell("1") })]);
+    builder.addRows([row({ body: stringCell("world"), id: stringCell("2") })]);
+
+    const result = builder.finish();
+
+    expect(result.ok && result.payload.contents).toEqual([
+      "id,body",
+      "\n",
+      "1,hello",
+      "\n",
+      "2,world",
+      "\n",
+    ]);
+  });
+
+  test("emits parseable JSON chunks", () => {
+    const builder = createChunkedExportBuilder("json", columns, RESOURCE);
+
+    builder.addRows([row({ body: stringCell("hello"), id: stringCell("1") })]);
+
+    const result = builder.finish();
+
+    expect(result.ok && JSON.parse(result.payload.contents.join(""))).toEqual([
+      { body: "hello", id: "1" },
+    ]);
+  });
+});

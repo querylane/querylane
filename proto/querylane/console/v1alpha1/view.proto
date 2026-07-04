@@ -1,0 +1,159 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+
+// --------------------------------------------------------------------------
+// Service
+// --------------------------------------------------------------------------
+
+// ViewService exposes views as a separate resource hierarchy.
+service ViewService {
+  // Lists views and materialized views in a schema.
+  rpc ListViews(ListViewsRequest) returns (ListViewsResponse) {}
+
+  // Gets a single view.
+  rpc GetView(GetViewRequest) returns (GetViewResponse) {}
+}
+
+// --------------------------------------------------------------------------
+// Enums
+// --------------------------------------------------------------------------
+
+// ViewView controls how much detail the server should populate for View resources.
+enum ViewView {
+  VIEW_VIEW_UNSPECIFIED = 0;
+
+  // Lightweight projection for list views.
+  VIEW_VIEW_BASIC = 1;
+
+  // Full projection including view definition.
+  VIEW_VIEW_FULL = 2;
+}
+
+// --------------------------------------------------------------------------
+// Resource Messages
+// --------------------------------------------------------------------------
+
+// A View represents a standard or materialized view within a Schema.
+message View {
+  option (google.api.resource) = {
+    type: "console.querylane.dev/View"
+    pattern: "instances/{instance}/databases/{database}/schemas/{schema}/views/{view}"
+    plural: "views"
+    singular: "view"
+  };
+
+  // The type of view object.
+  enum ViewType {
+    VIEW_TYPE_UNSPECIFIED = 0;
+    VIEW_TYPE_STANDARD = 1;
+    VIEW_TYPE_MATERIALIZED = 2;
+  }
+
+  // Output-only identifier. The unique resource name of the view.
+  string name = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.field_behavior) = IDENTIFIER
+  ];
+
+  // Output-only. UI-friendly display name.
+  string display_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether this is a standard or materialized view.
+  ViewType view_type = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. View owner role.
+  string owner = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Comment for the view, if any.
+  string comment = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether this is a system view.
+  bool is_system_view = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Definition of the view. Populated for VIEW_VIEW_FULL.
+  string definition = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Estimated size in bytes for materialized views, when known.
+  int64 size_bytes = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Estimated row count for materialized views, when known.
+  int64 row_count = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether a materialized view is populated.
+  bool is_populated = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. View creation time when available.
+  google.protobuf.Timestamp create_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Time of the last DDL change when available.
+  google.protobuf.Timestamp last_ddl_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// --------------------------------------------------------------------------
+// RPC Messages
+// --------------------------------------------------------------------------
+
+message ListViewsRequest {
+  // Required. The parent schema from which to list views.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Schema"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+$"
+  ];
+
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter expression (an AIP-160 subset: `=`, `!=`, the `:`
+  // case-insensitive substring operator, combined with `AND`). Values are
+  // quoted strings. Filterable fields:
+  //   - name (string; supports the `:` substring operator)
+  // Example: name:"daily"
+  string filter = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Controls whether definitions are populated.
+  ViewView view = 6 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+}
+
+message ListViewsResponse {
+  repeated View views = 1;
+  string next_page_token = 2;
+}
+
+message GetViewRequest {
+  // Required. The name of the view to retrieve.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/View"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$"
+  ];
+
+  // Optional. Controls whether the definition is populated.
+  ViewView view = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+}
+
+message GetViewResponse {
+  View view = 1;
+}

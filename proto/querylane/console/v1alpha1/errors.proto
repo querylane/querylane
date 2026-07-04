@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+// ErrorReason defines the supported machine-readable error reasons used to
+// construct the `google.rpc.ErrorInfo.reason` string.
+enum ErrorReason {
+  // Do not use this default value.
+  ERROR_REASON_UNSPECIFIED = 0;
+
+  // --- Common Reasons ---
+
+  // The specified resource could not be found.
+  RESOURCE_NOT_FOUND = 1;
+
+  // A resource that a client tried to create already exists.
+  RESOURCE_ALREADY_EXISTS = 2;
+
+  // The input provided with the request is invalid.
+  INVALID_ARGUMENT = 3;
+
+  // The request cannot be completed due to an internal server error.
+  INTERNAL_ERROR = 7;
+
+  // The request timed out.
+  TIMEOUT = 9;
+
+  // The system is not in a state where the request can be fulfilled.
+  FAILED_PRECONDITION = 10;
+
+  // The caller must authenticate before retrying.
+  UNAUTHENTICATED = 11;
+
+  // The caller is authenticated but not authorized for this operation.
+  PERMISSION_DENIED = 12;
+
+  // The application database is not configured yet.
+  APP_DATABASE_NOT_CONFIGURED = 101;
+
+  // The application database is temporarily unavailable.
+  APP_DATABASE_UNAVAILABLE = 102;
+}
+
+// PostgreSqlErrorDetail carries safe PostgreSQL SQLSTATE metadata for Connect
+// error clients. It intentionally excludes raw server message, detail, hint,
+// where, internal query, source file, and routine fields because those can
+// contain SQL text, customer data, credentials, hostnames, or backend internals.
+message PostgreSqlErrorDetail {
+  // The five-character SQLSTATE code, for example "23505".
+  string sqlstate = 1;
+
+  // The two-character SQLSTATE class, for example "23".
+  string sqlstate_class = 2;
+
+  // The documented PostgreSQL condition name when known, for example
+  // "unique_violation". Unknown classes leave this empty.
+  string condition_name = 3;
+
+  // The backend operation that was running when PostgreSQL returned the error.
+  string operation = 4;
+
+  // Safe structured fields copied from pgconn.PgError when available.
+  map<string, string> server_fields = 5;
+}

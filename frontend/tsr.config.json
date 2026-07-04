@@ -1,0 +1,13 @@
+{
+  "target": "react",
+  "tsconfig": "./tsconfig.json",
+  "routesDirectory": "./src/routes",
+  "generatedRouteTree": "./src/routeTree.gen.ts",
+  "autoCodeSplitting": false,
+  "quoteStyle": "single",
+  "semicolons": true,
+  "routeTreeFileHeader": [
+    "// Generated route tree. Excluded from lint and format by Biome config."
+  ],
+  "disableLogging": true
+}

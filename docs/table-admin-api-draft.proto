@@ -1,0 +1,762 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "querylane/console/v1alpha1/schema.proto";
+import "querylane/console/v1alpha1/table.proto";
+
+// --------------------------------------------------------------------------
+// Design Draft
+// --------------------------------------------------------------------------
+//
+// This file is a design sketch for the admin/table API surface. It is kept in
+// docs/ on purpose so we can review the shape without committing to codegen,
+// transport bindings, or backend implementation details yet.
+//
+// Design goals:
+//   1. Preserve the existing resource hierarchy and wrapper response pattern.
+//   2. Add a schema-scoped catalog projection for frontend bootstrapping.
+//   3. Keep live row reads separate from cached metadata/catalog reads.
+//   4. Keep ad-hoc SQL execution separate from catalog and row browsing.
+//   5. Keep DDL out of scope for this iteration.
+
+// --------------------------------------------------------------------------
+// Services
+// --------------------------------------------------------------------------
+
+// CatalogService exposes aggregate, schema-aware metadata projections.
+// It complements the existing DatabaseService, SchemaService, and TableService.
+service CatalogService {
+  // Gets a schema-scoped catalog projection suitable for the admin/studio UI.
+  rpc GetSchemaCatalog(GetSchemaCatalogRequest) returns (GetSchemaCatalogResponse) {}
+
+  // Gets a full catalog projection for a single table.
+  rpc GetTableCatalog(GetTableCatalogRequest) returns (GetTableCatalogResponse) {}
+}
+
+// TableDataService exposes live row reads against a table.
+// This surface is intentionally separate from the catalog because row access
+// has different consistency, latency, and authorization requirements.
+service TableDataService {
+  // Reads rows from a table using a structured filter/order/paging model.
+  rpc ReadRows(ReadRowsRequest) returns (ReadRowsResponse) {}
+}
+
+// ViewService exposes views as a separate resource hierarchy.
+service ViewService {
+  // Lists views and materialized views in a schema.
+  rpc ListViews(ListViewsRequest) returns (ListViewsResponse) {}
+
+  // Gets a single view.
+  rpc GetView(GetViewRequest) returns (GetViewResponse) {}
+}
+
+// SQLService exposes ad-hoc read-only query execution.
+// This is intended for the SQL editor, not for grid-style table browsing.
+service SQLService {
+  // Executes a single read-only SQL query and streams results in batches.
+  rpc ExecuteQuery(ExecuteQueryRequest) returns (stream ExecuteQueryResponse) {}
+
+  // Produces an EXPLAIN plan for a single query.
+  rpc ExplainQuery(ExplainQueryRequest) returns (ExplainQueryResponse) {}
+}
+
+// --------------------------------------------------------------------------
+// Aggregate Catalog Resources
+// --------------------------------------------------------------------------
+
+// CatalogView controls how much detail the server should populate.
+enum CatalogView {
+  CATALOG_VIEW_UNSPECIFIED = 0;
+
+  // Includes table resources and column metadata only.
+  CATALOG_VIEW_BASIC = 1;
+
+  // Includes columns, indexes, constraints, policies, triggers, and row
+  // identity metadata.
+  CATALOG_VIEW_FULL = 2;
+}
+
+// SchemaCatalog is a schema-scoped aggregate projection.
+message SchemaCatalog {
+  option (google.api.resource) = {
+    type: "console.querylane.dev/SchemaCatalog"
+    pattern: "instances/{instance}/databases/{database}/schemas/{schema}/catalog"
+    plural: "schemaCatalogs"
+    singular: "schemaCatalog"
+  };
+
+  // Output-only. Resource name of the catalog projection.
+  string name = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.field_behavior) = IDENTIFIER
+  ];
+
+  // Output-only. The schema resource this catalog describes.
+  Schema schema = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Tables contained in the schema.
+  repeated TableCatalog tables = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Time when this projection was observed/refreshed.
+  google.protobuf.Timestamp observed_at = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// TableCatalog is a table-scoped aggregate projection.
+message TableCatalog {
+  option (google.api.resource) = {
+    type: "console.querylane.dev/TableCatalog"
+    pattern: "instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}/catalog"
+    plural: "tableCatalogs"
+    singular: "tableCatalog"
+  };
+
+  // Output-only. Resource name of the catalog projection.
+  string name = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.field_behavior) = IDENTIFIER
+  ];
+
+  // Output-only. The table resource this catalog describes.
+  Table table = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Columns in ordinal order.
+  repeated Column columns = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Constraints defined on the table.
+  repeated TableConstraint constraints = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Indexes defined on the table.
+  repeated TableIndex indexes = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Row-level security policies defined on the table.
+  repeated TablePolicy policies = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Triggers defined on the table.
+  repeated TableTrigger triggers = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Row identity metadata used for row updates/deletes.
+  RowIdentity row_identity = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether row insert/update/delete can be performed safely
+  // through the API without falling back to raw SQL.
+  bool can_mutate_rows = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether row-level security is enabled for the table.
+  bool row_level_security_enabled = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Time when this projection was observed/refreshed.
+  google.protobuf.Timestamp observed_at = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// --------------------------------------------------------------------------
+// Table Structure Metadata
+// --------------------------------------------------------------------------
+
+enum ConstraintType {
+  CONSTRAINT_TYPE_UNSPECIFIED = 0;
+  CONSTRAINT_TYPE_PRIMARY_KEY = 1;
+  CONSTRAINT_TYPE_UNIQUE = 2;
+  CONSTRAINT_TYPE_FOREIGN_KEY = 3;
+  CONSTRAINT_TYPE_CHECK = 4;
+  CONSTRAINT_TYPE_EXCLUSION = 5;
+}
+
+enum ReferentialAction {
+  REFERENTIAL_ACTION_UNSPECIFIED = 0;
+  REFERENTIAL_ACTION_NO_ACTION = 1;
+  REFERENTIAL_ACTION_RESTRICT = 2;
+  REFERENTIAL_ACTION_CASCADE = 3;
+  REFERENTIAL_ACTION_SET_NULL = 4;
+  REFERENTIAL_ACTION_SET_DEFAULT = 5;
+}
+
+message TableConstraint {
+  // Output-only. Constraint name as defined in the database.
+  string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. High-level constraint type.
+  ConstraintType type = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Columns participating in the constraint, if applicable.
+  repeated string column_names = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Referenced table resource for foreign keys, if applicable.
+  string referenced_table = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Referenced columns for foreign keys, if applicable.
+  repeated string referenced_column_names = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Foreign key ON UPDATE action, if applicable.
+  ReferentialAction on_update = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Foreign key ON DELETE action, if applicable.
+  ReferentialAction on_delete = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Raw database definition or normalized SQL snippet.
+  string definition = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message TableIndex {
+  // Output-only. Index name as defined in the database.
+  string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Index access method (e.g. btree, gin, gist).
+  string method = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the index enforces uniqueness.
+  bool is_unique = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Key columns in order.
+  repeated string key_columns = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Included columns, if supported by the engine.
+  repeated string included_columns = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Predicate for partial indexes, if applicable.
+  string predicate = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Total size of the index in bytes, if available.
+  int64 size_bytes = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+enum PolicyMode {
+  POLICY_MODE_UNSPECIFIED = 0;
+  POLICY_MODE_PERMISSIVE = 1;
+  POLICY_MODE_RESTRICTIVE = 2;
+}
+
+enum PolicyCommand {
+  POLICY_COMMAND_UNSPECIFIED = 0;
+  POLICY_COMMAND_ALL = 1;
+  POLICY_COMMAND_SELECT = 2;
+  POLICY_COMMAND_INSERT = 3;
+  POLICY_COMMAND_UPDATE = 4;
+  POLICY_COMMAND_DELETE = 5;
+}
+
+message TablePolicy {
+  // Output-only. Policy name.
+  string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Policy mode.
+  PolicyMode mode = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Command affected by the policy.
+  PolicyCommand command = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Roles referenced by the policy.
+  repeated string roles = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. USING expression, if present.
+  string using_expression = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. WITH CHECK expression, if present.
+  string check_expression = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message TableTrigger {
+  // Output-only. Trigger name.
+  string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Timing keyword (BEFORE, AFTER, INSTEAD OF).
+  string timing = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Event names such as INSERT, UPDATE, DELETE, TRUNCATE.
+  repeated string events = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Trigger function or procedure name.
+  string function_name = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the trigger is enabled.
+  bool enabled = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Raw definition or normalized SQL snippet.
+  string definition = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message RowIdentity {
+  enum Source {
+    ROW_IDENTITY_SOURCE_UNSPECIFIED = 0;
+
+    // The table has a primary key that can be used for row identity.
+    ROW_IDENTITY_SOURCE_PRIMARY_KEY = 1;
+
+    // The table lacks a primary key but has a usable unique constraint.
+    ROW_IDENTITY_SOURCE_UNIQUE_CONSTRAINT = 2;
+
+    // The server can only expose an opaque row key.
+    ROW_IDENTITY_SOURCE_OPAQUE_ROW_KEY = 3;
+  }
+
+  // Output-only. How row identity is derived.
+  Source source = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Column names used for row identity when available.
+  repeated string column_names = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// --------------------------------------------------------------------------
+// Catalog RPC Messages
+// --------------------------------------------------------------------------
+
+message GetSchemaCatalogRequest {
+  // Required. The schema catalog to retrieve.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/catalog
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/SchemaCatalog"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/catalog$"
+  ];
+
+  // Optional. Controls how much nested metadata to populate.
+  CatalogView view = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+
+  // Optional. If true, forces the server to refresh the underlying catalog
+  // before returning the projection.
+  bool refresh = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Include system tables in the projection.
+  bool include_system_objects = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message GetSchemaCatalogResponse {
+  // The retrieved schema catalog projection.
+  SchemaCatalog schema_catalog = 1;
+}
+
+message GetTableCatalogRequest {
+  // Required. The table catalog to retrieve.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}/catalog
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/TableCatalog"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+/catalog$"
+  ];
+
+  // Optional. Controls how much nested metadata to populate.
+  CatalogView view = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+
+  // Optional. If true, forces the server to refresh the underlying catalog
+  // before returning the projection.
+  bool refresh = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message GetTableCatalogResponse {
+  // The retrieved table catalog projection.
+  TableCatalog table_catalog = 1;
+}
+
+// --------------------------------------------------------------------------
+// Row Read Messages
+// --------------------------------------------------------------------------
+
+message TableRowFilter {
+  enum LogicOperator {
+    LOGIC_OPERATOR_UNSPECIFIED = 0;
+    LOGIC_OPERATOR_AND = 1;
+    LOGIC_OPERATOR_OR = 2;
+  }
+
+  LogicOperator logic = 1 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+
+  repeated TableRowPredicate predicates = 2;
+}
+
+message TableRowPredicate {
+  enum Operator {
+    OPERATOR_UNSPECIFIED = 0;
+    OPERATOR_EQUAL = 1;
+    OPERATOR_NOT_EQUAL = 2;
+    OPERATOR_GREATER_THAN = 3;
+    OPERATOR_GREATER_THAN_OR_EQUAL = 4;
+    OPERATOR_LESS_THAN = 5;
+    OPERATOR_LESS_THAN_OR_EQUAL = 6;
+    OPERATOR_LIKE = 7;
+    OPERATOR_ILIKE = 8;
+    OPERATOR_IN = 9;
+    OPERATOR_IS_NULL = 10;
+    OPERATOR_IS_NOT_NULL = 11;
+  }
+
+  // Required. Column name to filter on.
+  string column = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // Required. Predicate operator.
+  Operator operator = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).enum.defined_only = true
+  ];
+
+  // Optional. Values used by the operator. For IN, provide multiple entries.
+  repeated google.protobuf.Value values = 3;
+}
+
+message ReadRowsRequest {
+  // Required. The table from which to read rows.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+  ];
+
+  // Optional. Maximum number of rows to return. Server may return fewer.
+  // If unspecified or 0, the server chooses a reasonable default.
+  // Maximum value is 500.
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 500
+    }
+  ];
+
+  // Optional. A page token received from a previous ReadRows call.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Explicit column subset to return. If empty, all columns are
+  // returned in ordinal order.
+  repeated string selected_columns = 4;
+
+  // Optional. Ordering expression for rows.
+  // Example: "created_at desc, id asc"
+  string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Structured row filter.
+  TableRowFilter filter = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. If true, include total row count when practical. The server may
+  // return an estimate instead of an exact count.
+  bool include_total_row_count = 7 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message TableResultColumn {
+  // Output-only. Column name.
+  string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. High-level data type category.
+  DataType data_type = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Engine-specific type name.
+  string raw_type = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the column allows nulls.
+  bool is_nullable = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message TableCell {
+  oneof kind {
+    google.protobuf.NullValue null_value = 1;
+    bool bool_value = 2;
+    int64 int64_value = 3;
+    double double_value = 4;
+    string string_value = 5;
+    bytes bytes_value = 6;
+    string json_value = 7;
+    string numeric_value = 8;
+    string timestamp_value = 9;
+  }
+}
+
+message TableResultRow {
+  // Output-only. Values aligned with TableResultSet.columns.
+  repeated TableCell values = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Opaque server-generated row key for later mutation APIs.
+  string row_key = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message TableResultSet {
+  // Output-only. Result columns in order.
+  repeated TableResultColumn columns = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Returned rows.
+  repeated TableResultRow rows = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Total row count when requested and available.
+  int64 total_row_count = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. True when total_row_count is estimated rather than exact.
+  bool total_row_count_estimated = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Row identity metadata for this table.
+  RowIdentity row_identity = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Time when the row read was observed.
+  google.protobuf.Timestamp observed_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message ReadRowsResponse {
+  // The retrieved result set.
+  TableResultSet result_set = 1;
+
+  // A token to retrieve the next page of rows.
+  string next_page_token = 2;
+}
+
+// --------------------------------------------------------------------------
+// View Messages
+// --------------------------------------------------------------------------
+
+enum ViewView {
+  VIEW_VIEW_UNSPECIFIED = 0;
+
+  // Lightweight projection for list views.
+  VIEW_VIEW_BASIC = 1;
+
+  // Full projection including view definition.
+  VIEW_VIEW_FULL = 2;
+}
+
+message View {
+  option (google.api.resource) = {
+    type: "console.querylane.dev/View"
+    pattern: "instances/{instance}/databases/{database}/schemas/{schema}/views/{view}"
+    plural: "views"
+    singular: "view"
+  };
+
+  enum ViewType {
+    VIEW_TYPE_UNSPECIFIED = 0;
+    VIEW_TYPE_STANDARD = 1;
+    VIEW_TYPE_MATERIALIZED = 2;
+  }
+
+  // Output-only. Resource name of the view.
+  string name = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.field_behavior) = IDENTIFIER
+  ];
+
+  // Output-only. UI-friendly display name.
+  string display_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether this is a standard or materialized view.
+  ViewType view_type = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. View owner role.
+  string owner = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Comment for the view, if any.
+  string comment = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether this is a system view.
+  bool is_system_view = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Definition of the view. Populated for VIEW_VIEW_FULL.
+  string definition = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Estimated size in bytes for materialized views, when known.
+  int64 size_bytes = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Estimated row count for materialized views, when known.
+  int64 row_count = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether a materialized view is populated.
+  bool is_populated = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. View creation time when available.
+  google.protobuf.Timestamp create_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Time of the last DDL change when available.
+  google.protobuf.Timestamp last_ddl_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message ListViewsRequest {
+  // Required. The parent schema from which to list views.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Schema"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+$"
+  ];
+
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Supported filters:
+  //   - is_system_view
+  //   - view_type
+  //   - name.contains()
+  string filter = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Controls whether definitions are populated.
+  ViewView view = 6 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+}
+
+message ListViewsResponse {
+  repeated View views = 1;
+  string next_page_token = 2;
+}
+
+message GetViewRequest {
+  // Required. The name of the view to retrieve.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/View"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$"
+  ];
+
+  // Optional. Controls whether the definition is populated.
+  ViewView view = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+}
+
+message GetViewResponse {
+  View view = 1;
+}
+
+// --------------------------------------------------------------------------
+// SQL Messages
+// --------------------------------------------------------------------------
+
+message QueryColumnMetadata {
+  repeated TableResultColumn columns = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message QueryRowBatch {
+  repeated TableResultRow rows = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message QueryStats {
+  // Output-only. Total rows emitted in the response stream.
+  int64 row_count = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Query execution latency.
+  google.protobuf.Duration latency = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Database notices emitted during execution.
+  repeated string notices = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the server truncated results at the requested limit.
+  bool truncated = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message ExecuteQueryRequest {
+  // Required. The database against which to execute the query.
+  // Format: instances/{instance}/databases/{database}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Database"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$"
+  ];
+
+  // Required. A single read-only SQL statement.
+  string statement = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // Optional. Maximum number of rows to return before truncation.
+  int32 row_limit = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 1
+      lte: 10000
+    }
+  ];
+
+  // Optional. Number of rows per streamed batch.
+  int32 batch_size = 4 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 1
+      lte: 1000
+    }
+  ];
+
+  // Optional. Statement timeout. The server should clamp this to a safe max.
+  google.protobuf.Duration timeout = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Default schema/search path context for unqualified objects.
+  string default_schema = 6 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ExecuteQueryResponse {
+  oneof result {
+    QueryColumnMetadata column_metadata = 1;
+    QueryRowBatch row_batch = 2;
+    QueryStats stats = 3;
+  }
+}
+
+message ExplainQueryRequest {
+  enum Format {
+    FORMAT_UNSPECIFIED = 0;
+    FORMAT_TEXT = 1;
+    FORMAT_JSON = 2;
+    FORMAT_YAML = 3;
+  }
+
+  // Required. The database against which to explain the query.
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Database"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$"
+  ];
+
+  // Required. A single SQL statement to explain.
+  string statement = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  Format format = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+
+  // Optional. If true, requests EXPLAIN ANALYZE. The server must only allow
+  // this for statements that remain read-only under execution.
+  bool analyze = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  bool buffers = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  google.protobuf.Duration timeout = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  string default_schema = 7 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ExplainQueryResponse {
+  // Output-only. The plan in the requested format.
+  string plan = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Database notices emitted during explain.
+  repeated string notices = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Explain latency.
+  google.protobuf.Duration latency = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

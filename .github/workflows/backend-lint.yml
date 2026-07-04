@@ -1,0 +1,42 @@
+name: backend-lint
+
+on:
+  workflow_call:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - backend/**
+      - .github/workflows/backend-lint.yml
+
+concurrency:
+  group: backend-lint-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ACTION_CHECKOUT: &action_checkout actions/checkout@v7.0.0
+  ACTION_SETUP_GO: &action_setup_go actions/setup-go@v6.5.0
+  ACTION_GOLANGCI_LINT: &action_golangci_lint golangci/golangci-lint-action@v9.3.0
+
+permissions:
+  contents: read
+
+jobs:
+  golangci-lint:
+    name: golangci-lint
+    if: github.event.pull_request.draft != true || github.event_name == 'workflow_call'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: *action_checkout
+        with:
+          persist-credentials: false
+      - uses: *action_setup_go
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: *action_golangci_lint
+        with:
+          version: v2.10.1
+          working-directory: backend
+          args: --timeout=5m

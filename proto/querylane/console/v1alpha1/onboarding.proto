@@ -1,0 +1,212 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "querylane/console/v1alpha1/console.proto";
+import "querylane/console/v1alpha1/instance.proto";
+
+// --------------------------------------------------------------------------
+// Service
+// --------------------------------------------------------------------------
+
+// OnboardingService guides first-time users through configuring the application
+// database. It exposes the available setup methods, executes setup, and streams
+// real-time progress events back to the client.
+service OnboardingService {
+  // Returns the current onboarding state including available setup methods,
+  // filesystem writability, and database status.
+  rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse) {}
+
+  // Configures and initializes the application database using the provided
+  // connection details or embedded PostgreSQL settings. Returns a stream of
+  // progress events so the client can render a step-by-step UI.
+  rpc SetupAppDatabase(SetupAppDatabaseRequest) returns (stream SetupAppDatabaseResponse) {}
+
+  // Subscribes to database setup progress triggered by external config changes
+  // (e.g. manual YAML edits detected by the file watcher). Returns a stream of
+  // progress events identical in shape to SetupAppDatabase.
+  rpc WatchConfigChanges(WatchConfigChangesRequest) returns (stream WatchConfigChangesResponse) {}
+}
+
+// --------------------------------------------------------------------------
+// Enums
+// --------------------------------------------------------------------------
+
+// StepState represents the lifecycle state of a single setup step.
+enum StepState {
+  // Default value, should not be used.
+  STEP_STATE_UNSPECIFIED = 0;
+
+  // The step has not started yet.
+  STEP_STATE_PENDING = 1;
+
+  // The step is currently executing.
+  STEP_STATE_IN_PROGRESS = 2;
+
+  // The step completed successfully.
+  STEP_STATE_SUCCEEDED = 3;
+
+  // The step failed. See `SetupProgressEvent.error` for details.
+  STEP_STATE_FAILED = 4;
+}
+
+// SetupStep identifies a phase in the database setup pipeline.
+// The frontend uses these values to match UI elements to progress events.
+enum SetupStep {
+  // Default value, should not be used.
+  SETUP_STEP_UNSPECIFIED = 0;
+
+  // Starting the embedded PostgreSQL instance.
+  SETUP_STEP_STARTING_EMBEDDED = 1;
+
+  // Connecting to the PostgreSQL server.
+  SETUP_STEP_CONNECTING = 2;
+
+  // Running database migrations.
+  SETUP_STEP_MIGRATING = 3;
+
+  // Initializing application services.
+  SETUP_STEP_INITIALIZING_SERVICES = 4;
+
+  // Persisting the configuration to disk.
+  SETUP_STEP_PERSISTING_CONFIG = 5;
+
+  // Waiting for an external configuration change (manual YAML edit).
+  SETUP_STEP_WAITING_FOR_CONFIG = 6;
+
+  // An external configuration change was detected.
+  SETUP_STEP_CONFIG_DETECTED = 7;
+}
+
+// SetupMethod describes a way to configure the application database.
+enum SetupMethod {
+  // Default value, should not be used.
+  SETUP_METHOD_UNSPECIFIED = 0;
+
+  // Configure PostgreSQL connection via the UI form. Requires a writable
+  // filesystem to persist the generated config file.
+  SETUP_METHOD_UI_CONFIGURED = 1;
+
+  // Edit the YAML config file manually. Always available.
+  SETUP_METHOD_MANUAL_YAML = 2;
+
+  // Use an embedded PostgreSQL instance managed by querylane. Requires a
+  // writable filesystem for the data directory.
+  SETUP_METHOD_EMBEDDED = 3;
+}
+
+// --------------------------------------------------------------------------
+// Shared Messages
+// --------------------------------------------------------------------------
+
+// SetupProgressEvent reports the state of a single step in the database setup
+// pipeline. Both streaming RPCs return the same event type.
+//
+// Stream protocol:
+//  1. First batch: all steps for the flow are sent with STEP_STATE_PENDING so
+//     the frontend can render the full list upfront.
+//  2. Subsequent messages: individual step state transitions
+//     (IN_PROGRESS → SUCCEEDED or FAILED).
+message SetupProgressEvent {
+  // Output-only. Identifies which setup step this event refers to.
+  SetupStep step_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Human-readable label for display.
+  string display_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Current state of this step.
+  StepState state = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Error details when state is STEP_STATE_FAILED, empty otherwise.
+  string error = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// EmbeddedSetupConfig holds optional overrides for the embedded PostgreSQL
+// setup method.
+message EmbeddedSetupConfig {
+  // Optional. Port for the embedded PostgreSQL instance. Defaults to 5433.
+  int32 port = 1 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).ignore = IGNORE_IF_UNPOPULATED,
+    (buf.validate.field).int32 = {
+      gte: 1024
+      lte: 65535
+    }
+  ];
+
+  // Optional. Data persistence mode: "persistent" (default) or "ephemeral".
+  string mode = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).ignore = IGNORE_IF_UNPOPULATED,
+    (buf.validate.field).string = {
+      in: [
+        "persistent",
+        "ephemeral"
+      ]
+    }
+  ];
+}
+
+// --------------------------------------------------------------------------
+// RPC request/response messages
+// --------------------------------------------------------------------------
+
+// --- GetOnboardingState RPC ---
+
+message GetOnboardingStateRequest {}
+
+message GetOnboardingStateResponse {
+  // Output-only. Whether a database configuration already exists.
+  bool is_configured = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Current status of the application database.
+  AppDatabaseStatus app_database_status = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Absolute path to the querylane home directory (~/.querylane).
+  string home_path = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the home directory is writable.
+  bool is_home_writable = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Setup methods available in the current environment.
+  repeated SetupMethod available_methods = 5 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).repeated.items.enum.defined_only = true
+  ];
+
+  // Output-only. Absolute path to the configuration file.
+  string config_file_path = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Absolute path to the embedded PostgreSQL data directory.
+  string embedded_data_path = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// --- SetupAppDatabase RPC ---
+
+message SetupAppDatabaseRequest {
+  // Required. The setup configuration — either external PostgreSQL connection
+  // details or embedded PostgreSQL settings.
+  oneof setup {
+    // Configure using an external PostgreSQL connection.
+    PostgresConfig postgres_config = 1;
+
+    // Configure using the embedded PostgreSQL instance.
+    EmbeddedSetupConfig embedded_config = 2;
+  }
+}
+
+message SetupAppDatabaseResponse {
+  // Output-only. The progress event for the current step.
+  SetupProgressEvent event = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// --- WatchConfigChanges RPC ---
+
+message WatchConfigChangesRequest {}
+
+message WatchConfigChangesResponse {
+  // Output-only. The progress event for the current step.
+  SetupProgressEvent event = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
