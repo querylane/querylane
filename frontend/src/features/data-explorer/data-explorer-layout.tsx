@@ -8,6 +8,7 @@ import type {
 import { ExplorerEmptyState } from "@/features/data-explorer/explorer-empty-state";
 import { ResourceDetail } from "@/features/data-explorer/explorer-resource-detail";
 import { SchemaDetail } from "@/features/data-explorer/explorer-schema-detail";
+import type { TableDetailTab } from "@/features/data-explorer/table-detail-tab";
 import type { catalogSyncNotice } from "@/features/data-explorer/use-data-explorer-state";
 import { parseResourceLeafId } from "@/lib/console-resources";
 import type { Table } from "@/protogen/querylane/console/v1alpha1/table_pb";
@@ -19,6 +20,7 @@ export function ExplorerDetailPane({
   hasMoreTables,
   hasMoreViews,
   instanceId,
+  onTableTabChange,
   onSelectResource,
   overviewTables,
   overviewViews,
@@ -29,6 +31,7 @@ export function ExplorerDetailPane({
   tablesError,
   tablesLoading,
   tablesSyncNotice,
+  tableTab,
   viewsError,
   viewsLoading,
 }: {
@@ -37,6 +40,7 @@ export function ExplorerDetailPane({
   hasMoreTables: boolean;
   hasMoreViews: boolean;
   instanceId: string;
+  onTableTabChange: (tab: TableDetailTab) => void;
   onSelectResource: (category: CategoryKey, name: string) => void;
   // Unfiltered schema-overview protos (not narrowed by the sidebar search) —
   // used for the schema inventory + header aggregates.
@@ -50,6 +54,7 @@ export function ExplorerDetailPane({
   tablesError: unknown;
   tablesLoading: boolean;
   tablesSyncNotice: ReturnType<typeof catalogSyncNotice>;
+  tableTab: string | undefined;
   viewsError: unknown;
   viewsLoading: boolean;
 }) {
@@ -100,8 +105,10 @@ export function ExplorerDetailPane({
       databaseId={databaseId}
       instanceId={instanceId}
       name={selection.name}
+      onTableTabChange={onTableTabChange}
       schemaName={activeSchema.name}
       table={selectedTable}
+      tableTab={tableTab}
       view={selectedView}
     />
   );

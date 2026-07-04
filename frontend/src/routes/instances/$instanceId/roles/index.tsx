@@ -4,8 +4,8 @@ import { instanceRolesSearchSchema } from "@/components/console-pages/instance-r
 
 function RolesIndexRoute() {
   const { instanceId } = Route.useParams();
-  const { tab } = Route.useSearch();
-  return <InstanceRolesPage instanceId={instanceId} tab={tab} />;
+  const { tab, type } = Route.useSearch();
+  return <InstanceRolesPage instanceId={instanceId} tab={tab} type={type} />;
 }
 
 export const Route = createFileRoute("/instances/$instanceId/roles/")({

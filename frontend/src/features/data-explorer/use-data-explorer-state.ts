@@ -1,13 +1,10 @@
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
 import {
-  DEFAULT_TABLE_LIST_SORT,
-  isTableListSort,
-} from "@/features/data-explorer/data-explorer-table-list-sort";
-import {
   type CategoryKey,
   isCategoryKey,
   type Selection,
 } from "@/features/data-explorer/data-explorer-types";
+import { isTableDetailTab } from "@/features/data-explorer/table-detail-tab";
 import {
   type CatalogSyncMetadata,
   CatalogSyncStatus,
@@ -31,11 +28,11 @@ function selectionFromSearch(search: DataExplorerSearch): Selection {
 function buildExplorerSearch(
   previous: DataExplorerSearch,
   patch: {
-    catalogSort?: string | undefined;
     category?: CategoryKey | undefined;
     name?: string | undefined;
     q?: string | undefined;
     schema?: string | undefined;
+    tab?: string | undefined;
   }
 ): DataExplorerSearch {
   return { ...previous, ...patch };
@@ -46,19 +43,14 @@ function normalizeExplorerSearch(
 ): DataExplorerSearch {
   const category = parseCategory(search.category);
   const hasResourceSelection = Boolean(category && search.name);
+  const hasTableSelection = Boolean(category === "tables" && search.name);
   const normalized: DataExplorerSearch = {
-    catalogSort: undefined,
     category: undefined,
     name: undefined,
     q: undefined,
     schema: undefined,
+    tab: undefined,
   };
-  if (search.catalogSort && isTableListSort(search.catalogSort)) {
-    normalized.catalogSort =
-      search.catalogSort === DEFAULT_TABLE_LIST_SORT
-        ? undefined
-        : search.catalogSort;
-  }
   if (search.q?.trim()) {
     normalized.q = search.q;
   }
@@ -69,16 +61,19 @@ function normalizeExplorerSearch(
     normalized.category = category;
     normalized.name = search.name;
   }
+  if (hasTableSelection && isTableDetailTab(search.tab)) {
+    normalized.tab = search.tab === "data" ? undefined : search.tab;
+  }
   return normalized;
 }
 function isExplorerSearchNormalized(search: DataExplorerSearch): boolean {
   const normalized = normalizeExplorerSearch(search);
   return (
     normalized.category === search.category &&
-    normalized.catalogSort === search.catalogSort &&
     normalized.name === search.name &&
     normalized.q === search.q &&
-    normalized.schema === search.schema
+    normalized.schema === search.schema &&
+    normalized.tab === search.tab
   );
 }
 interface CatalogSyncNotice {

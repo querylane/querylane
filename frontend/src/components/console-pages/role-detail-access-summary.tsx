@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import { SectionCard } from "@/components/console-pages/console-layout";
 import type { Section } from "@/components/console-pages/role-detail-model";
 import { DatabaseSelect } from "@/components/console-pages/role-grants-tab";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -63,18 +64,18 @@ function AccessSummaryRow({
           {row.detail}
         </p>
       </div>
-      <span
+      <Badge
         className={cn(
-          "shrink-0 font-medium text-xs uppercase tabular-nums tracking-wide",
+          "shrink-0 rounded-sm font-medium text-[10.5px] uppercase tabular-nums tracking-wide",
           row.active &&
             row.tone === "danger" &&
-            "text-amber-700 dark:text-amber-400",
-          row.active && row.tone === "active" && "text-foreground",
+            "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
           !row.active && "text-muted-foreground/50"
         )}
+        variant={row.active ? "secondary" : "outline"}
       >
         {row.status}
-      </span>
+      </Badge>
       {jump ? (
         <ChevronRight className="size-4 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
       ) : null}

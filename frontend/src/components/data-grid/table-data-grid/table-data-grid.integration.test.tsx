@@ -37,6 +37,8 @@ import {
 const RETRY_BUTTON_RE = /retry/i;
 const LAST_FETCHED_RE = /Last fetched/;
 const FILTER_BUTTON_RE = /Filter/;
+const DELETE_BUTTON_RE = /delete/i;
+const EDIT_BUTTON_RE = /edit/i;
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
 
 const tableApi = vi.hoisted(() => ({
@@ -1002,7 +1004,7 @@ describe("TableDataGrid URL state", () => {
     });
   });
 
-  it("emits shareable URL state for page size, row selection, selected cell, open row, and frozen columns", async () => {
+  it("emits controlled state for page size, row selection, selected cell, open row, and frozen columns", async () => {
     const user = userEvent.setup();
     const onCellSearchChange = vi.fn();
     const onFrozenColumnsSearchChange = vi.fn();
@@ -1069,6 +1071,23 @@ describe("TableDataGrid URL state", () => {
     expect(onSelectedRowsSearchChange).toHaveBeenCalledWith("row-0");
     expect(onCellSearchChange).toHaveBeenCalledWith("row-0:email");
     expect(onOpenRowSearchChange).toHaveBeenCalledWith("row-0");
+  });
+
+  it("keeps selected-row actions limited to copy and export", () => {
+    seedRowsQuery(3);
+
+    render(
+      <TableDataGrid
+        name="instances/prod/databases/app/schemas/public/tables/customers"
+        selectedRowsSearch="row-0"
+      />
+    );
+
+    expect(screen.getByText("1 selected")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Export" })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: DELETE_BUTTON_RE })).toBeNull();
+    expect(screen.queryByRole("button", { name: EDIT_BUTTON_RE })).toBeNull();
   });
 });
 

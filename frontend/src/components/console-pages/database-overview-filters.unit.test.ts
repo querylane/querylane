@@ -5,7 +5,9 @@ import {
   filterCatalogObjectsByFacets,
   filterCatalogSchemasByFacets,
   presentCatalogObjectKindOptions,
+  presentCatalogObjectOwnerOptions,
   presentCatalogObjectSchemaOptions,
+  presentCatalogObjectSystemOptions,
   presentCatalogSchemaKindOptions,
   presentCatalogSchemaOwnerOptions,
 } from "@/components/console-pages/database-overview-filters";
@@ -20,18 +22,24 @@ interface TestCatalogSchema extends CatalogSchemaFacetRow {
 
 const objects: TestCatalogObject[] = [
   {
+    isSystem: false,
     kind: "table",
     objectId: "orders",
+    owner: "app_owner",
     schemaId: "public",
   },
   {
+    isSystem: false,
     kind: "view",
     objectId: "daily_rollup",
+    owner: "analytics_owner",
     schemaId: "analytics",
   },
   {
+    isSystem: true,
     kind: "table",
     objectId: "pg_class",
+    owner: "postgres",
     schemaId: "pg_catalog",
   },
 ];
@@ -65,14 +73,23 @@ describe("database overview filters", () => {
       { label: "pg_catalog", value: "pg_catalog" },
       { label: "public", value: "public" },
     ]);
+    expect(presentCatalogObjectSystemOptions(objects)).toEqual([
+      { label: "User", value: "user" },
+      { label: "System", value: "system" },
+    ]);
+    expect(
+      presentCatalogObjectOwnerOptions(objects).map((option) => option.label)
+    ).toEqual(["analytics_owner", "app_owner", "postgres"]);
   });
 
-  test("filters largest objects by kind and schema together", () => {
+  test("filters largest objects by kind, system state, schema, and owner together", () => {
     expect(
       filterCatalogObjectsByFacets({
         kindFilters: ["view"],
         objects,
+        ownerFilters: ["analytics_owner"],
         schemaFilters: ["analytics"],
+        systemFilters: ["user"],
       }).map((object) => object.objectId)
     ).toEqual(["daily_rollup"]);
 
@@ -80,7 +97,9 @@ describe("database overview filters", () => {
       filterCatalogObjectsByFacets({
         kindFilters: ["table"],
         objects,
+        ownerFilters: ["postgres"],
         schemaFilters: ["pg_catalog"],
+        systemFilters: ["system"],
       }).map((object) => object.objectId)
     ).toEqual(["pg_class"]);
   });

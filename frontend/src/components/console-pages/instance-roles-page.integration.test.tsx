@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   tableSearch: "",
 }));
+const ROLE_TYPE_USER_FILTER_RE = /Type.*User/;
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
@@ -107,7 +108,9 @@ describe("InstanceRolesPage", () => {
   test("keeps roles details as the default tab and writes map tab to the URL search", async () => {
     const user = userEvent.setup();
 
-    render(<InstanceRolesPage instanceId="prod" tab={undefined} />);
+    render(
+      <InstanceRolesPage instanceId="prod" tab={undefined} type="login" />
+    );
 
     const detailsTab = screen.getByRole("tab", { name: "Details" });
     const mapTab = screen.getByRole("tab", { name: "Map" });
@@ -121,16 +124,17 @@ describe("InstanceRolesPage", () => {
     await user.click(mapTab);
 
     const navigateCall = mocks.navigate.mock.calls[0]?.[0];
-    expect(navigateCall.search({ q: "app" })).toEqual({
+    expect(navigateCall.search({ q: "app", type: "login" })).toEqual({
       q: "app",
       tab: "map",
+      type: "login",
     });
   });
 
   test("hydrates the roles map tab from URL search and clears it when returning to details", async () => {
     const user = userEvent.setup();
 
-    render(<InstanceRolesPage instanceId="prod" tab="map" />);
+    render(<InstanceRolesPage instanceId="prod" tab="map" type="login" />);
 
     const mapTab = screen.getByRole("tab", { name: "Map" });
     expect(mapTab.hasAttribute("data-active")).toBe(true);
@@ -142,9 +146,35 @@ describe("InstanceRolesPage", () => {
     await user.click(screen.getByRole("tab", { name: "Details" }));
 
     const navigateCall = mocks.navigate.mock.calls[0]?.[0];
-    expect(navigateCall.search({ q: "app", tab: "map" })).toEqual({
+    expect(
+      navigateCall.search({ q: "app", tab: "map", type: "login" })
+    ).toEqual({
       q: "app",
       tab: undefined,
+      type: "login",
+    });
+  });
+
+  test("filters roles by URL type and writes shared facet changes back to search", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <InstanceRolesPage instanceId="prod" tab={undefined} type="login" />
+    );
+
+    expect(screen.getByText("app_user")).toBeTruthy();
+    expect(screen.queryByText("app_group")).toBeNull();
+    expect(screen.queryByText("replicator")).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: ROLE_TYPE_USER_FILTER_RE })
+    );
+    await user.click(screen.getByRole("option", { name: "Superuser" }));
+
+    const navigateCall = mocks.navigate.mock.calls[0]?.[0];
+    expect(navigateCall.search({ q: "app", type: "login" })).toEqual({
+      q: "app",
+      type: "super",
     });
   });
 

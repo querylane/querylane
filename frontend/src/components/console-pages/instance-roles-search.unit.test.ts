@@ -28,10 +28,21 @@ describe("instanceRolesSearchSchema", () => {
   });
 
   test("keeps roles table search alongside the selected tab", () => {
-    expect(instanceRolesSearchSchema.parse({ q: "app", tab: "map" })).toEqual({
+    expect(
+      instanceRolesSearchSchema.parse({
+        q: "app",
+        tab: "map",
+        type: "login",
+      })
+    ).toEqual({
       q: "app",
       tab: "map",
+      type: "login",
     });
+  });
+
+  test("drops unsupported role type filters", () => {
+    expect(instanceRolesSearchSchema.parse({ type: "owner" })).toEqual({});
   });
 
   test("rejects unsupported tab values", () => {

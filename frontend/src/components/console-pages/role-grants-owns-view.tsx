@@ -2,7 +2,10 @@
 
 import { Crown, Info, Plus } from "lucide-react";
 import { useState } from "react";
-import { KindFilteredTable } from "@/components/console-pages/role-grants-object-table";
+import {
+  GrantObjectKindBadge,
+  KindFilteredTable,
+} from "@/components/console-pages/role-grants-object-table";
 import {
   ContentHead,
   CountPill,
@@ -181,15 +184,13 @@ function OwnedObjectsTable({ objects }: { objects: OwnedObject[] }) {
     {
       accessorFn: (object) => OBJECT_TYPE_LABEL(object.objectType),
       cell: ({ row }) => (
-        <span className="font-mono text-[10.5px] lowercase tracking-[0.04em]">
-          {OBJECT_TYPE_LABEL(row.original.objectType).toLowerCase()}
-        </span>
+        <GrantObjectKindBadge type={row.original.objectType} />
       ),
       header: ({ column }) => (
         <SortableHeader column={column}>Kind</SortableHeader>
       ),
       id: "kind",
-      meta: { cellClassName: "whitespace-nowrap text-muted-foreground" },
+      meta: { cellClassName: "whitespace-nowrap" },
     },
   ];
 

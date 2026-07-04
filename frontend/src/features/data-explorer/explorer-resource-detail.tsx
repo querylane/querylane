@@ -3,6 +3,7 @@
 import { lazy, Suspense } from "react";
 import type { CategoryKey } from "@/features/data-explorer/data-explorer-types";
 import { ViewDetail } from "@/features/data-explorer/explorer-view-detail";
+import type { TableDetailTab } from "@/features/data-explorer/table-detail-tab";
 import type { Table } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import type { View } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
@@ -52,16 +53,20 @@ export function ResourceDetail({
   databaseId,
   instanceId,
   name,
+  onTableTabChange,
   schemaName,
   table,
+  tableTab,
   view,
 }: {
   category: CategoryKey;
   databaseId: string;
   instanceId: string;
   name: string;
+  onTableTabChange: (tab: TableDetailTab) => void;
   schemaName: string;
   table: Table | undefined;
+  tableTab: string | undefined;
   view: View | undefined;
 }) {
   if (category === "tables") {
@@ -76,7 +81,9 @@ export function ResourceDetail({
       >
         <TableDetail
           databaseId={databaseId}
+          initialTab={tableTab}
           instanceId={instanceId}
+          onTabChange={onTableTabChange}
           schemaName={schemaName}
           table={table}
           tableName={name}

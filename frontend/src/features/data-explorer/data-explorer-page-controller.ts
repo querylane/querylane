@@ -18,6 +18,10 @@ import { selectedResourceQueryError } from "@/features/data-explorer/data-explor
 import { DEFAULT_TABLE_LIST_SORT } from "@/features/data-explorer/data-explorer-table-list-sort";
 import type { CategoryKey } from "@/features/data-explorer/data-explorer-types";
 import {
+  isTableDetailTab,
+  type TableDetailTab,
+} from "@/features/data-explorer/table-detail-tab";
+import {
   buildExplorerSearch,
   catalogSyncNotice,
   selectionFromSearch,
@@ -54,6 +58,9 @@ function useDataExplorerPageController({
   const transport = useTransport();
   const { selectedDatabase } = useDb();
   const [query, setQuery] = useState(() => search.q ?? "");
+  // Category expansion and infinite-page cursors are transient object-browser
+  // mechanics. The URL carries stable resource identity + simple `q`, not a
+  // full replay log of sidebar expansion or paging state.
   const debouncedQuery = useDebouncedValue(query, EXPLORER_SEARCH_DEBOUNCE_MS);
   const [expandedCategories, setExpandedCategories] = useState<
     Set<CategoryKey>
@@ -202,6 +209,10 @@ function useDataExplorerPageController({
         category,
         name,
         schema: activeSchema?.name,
+        tab:
+          category === "tables" && isTableDetailTab(search.tab)
+            ? search.tab
+            : undefined,
       });
     },
     onSelectSchema: (schema: SchemaSummary) => {
@@ -209,6 +220,7 @@ function useDataExplorerPageController({
         category: undefined,
         name: undefined,
         schema: schema.name,
+        tab: undefined,
       });
     },
     onSelectSchemaOverview: () => {
@@ -216,7 +228,11 @@ function useDataExplorerPageController({
         category: undefined,
         name: undefined,
         schema: activeSchema?.name,
+        tab: undefined,
       });
+    },
+    onTableTabChange: (next: TableDetailTab) => {
+      updateSearch({ tab: next === "data" ? undefined : next });
     },
     query,
     rawTables,
@@ -271,6 +287,7 @@ function useDataExplorerPageController({
     tablesSyncNotice: catalogSyncNotice(
       tablesQuery.data?.pages.at(-1)?.syncMetadata
     ),
+    tableTab: search.tab,
     viewsError: viewsQuery.error,
     viewsPagination: {
       hasNextPage: Boolean(viewsQuery.hasNextPage),
@@ -285,6 +302,7 @@ interface ExplorerSearchPatch {
   name?: string | undefined;
   q?: string | undefined;
   schema?: string | undefined;
+  tab?: TableDetailTab | undefined;
 }
 
 function prefetchTableDetails({

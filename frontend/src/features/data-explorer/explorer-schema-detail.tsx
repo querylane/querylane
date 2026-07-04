@@ -321,6 +321,9 @@ function SchemaObjectsTable({
 }) {
   const [kindFilters, setKindFilters] = useState<string[]>([]);
   const [ownerFilters, setOwnerFilters] = useState<string[]>([]);
+  // Schema overview search/facets are detail-scoped inventory controls, not
+  // resource identity. Keep them local so the Data Explorer URL stays focused
+  // on schema/category/name/q and header counts remain based on loaded pages.
   const [search, setSearch] = useState("");
   // Keep the input urgent while deferring the table re-filter for responsive
   // typing on large schemas.

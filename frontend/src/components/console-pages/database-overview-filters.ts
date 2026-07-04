@@ -1,7 +1,9 @@
 import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter";
 
 interface CatalogObjectFacetRow {
+  isSystem: boolean;
   kind: "table" | "view";
+  owner: string;
   schemaId: string;
 }
 
@@ -12,7 +14,9 @@ interface CatalogSchemaFacetRow {
 
 interface CatalogObjectFacetFilters {
   kindFilters: string[];
+  ownerFilters: string[];
   schemaFilters: string[];
+  systemFilters: string[];
 }
 
 interface CatalogSchemaFacetFilters {
@@ -21,6 +25,7 @@ interface CatalogSchemaFacetFilters {
 }
 
 type CatalogSchemaKindFilter = "system" | "user";
+type CatalogObjectSystemFilter = "system" | "user";
 
 const EMPTY_OWNER_FILTER_VALUE = "__querylane_empty_owner__";
 const EMPTY_SCHEMA_FILTER_VALUE = "__querylane_empty_schema__";
@@ -29,6 +34,10 @@ const CATALOG_OBJECT_KIND_OPTIONS = [
   { label: "Views", value: "view" },
 ] satisfies FacetedFilterOption[];
 const CATALOG_SCHEMA_KIND_OPTIONS = [
+  { label: "User", value: "user" },
+  { label: "System", value: "system" },
+] satisfies FacetedFilterOption[];
+const CATALOG_OBJECT_SYSTEM_OPTIONS = [
   { label: "User", value: "user" },
   { label: "System", value: "system" },
 ] satisfies FacetedFilterOption[];
@@ -47,6 +56,12 @@ function ownerFilterValue(row: { owner: string }) {
 
 function ownerFilterLabel(value: string) {
   return value === EMPTY_OWNER_FILTER_VALUE ? "No owner" : value;
+}
+
+function catalogObjectSystemValue(
+  object: CatalogObjectFacetRow
+): CatalogObjectSystemFilter {
+  return object.isSystem ? "system" : "user";
 }
 
 function catalogSchemaKindValue(
@@ -75,6 +90,17 @@ function presentCatalogObjectSchemaOptions(objects: CatalogObjectFacetRow[]) {
   return uniqueSortedOptions(objects.map(schemaFilterValue), schemaFilterLabel);
 }
 
+function presentCatalogObjectSystemOptions(objects: CatalogObjectFacetRow[]) {
+  const presentKinds = new Set(objects.map(catalogObjectSystemValue));
+  return CATALOG_OBJECT_SYSTEM_OPTIONS.filter((option) =>
+    presentKinds.has(option.value as CatalogObjectSystemFilter)
+  );
+}
+
+function presentCatalogObjectOwnerOptions(objects: CatalogObjectFacetRow[]) {
+  return uniqueSortedOptions(objects.map(ownerFilterValue), ownerFilterLabel);
+}
+
 function presentCatalogSchemaKindOptions(schemas: CatalogSchemaFacetRow[]) {
   const presentKinds = new Set(schemas.map(catalogSchemaKindValue));
   return CATALOG_SCHEMA_KIND_OPTIONS.filter((option) =>
@@ -89,15 +115,29 @@ function presentCatalogSchemaOwnerOptions(schemas: CatalogSchemaFacetRow[]) {
 function filterCatalogObjectsByFacets<RowType extends CatalogObjectFacetRow>({
   kindFilters,
   objects,
+  ownerFilters,
   schemaFilters,
+  systemFilters,
 }: CatalogObjectFacetFilters & { objects: RowType[] }): RowType[] {
   return objects.filter((object) => {
     if (kindFilters.length > 0 && !kindFilters.includes(object.kind)) {
       return false;
     }
     if (
+      systemFilters.length > 0 &&
+      !systemFilters.includes(catalogObjectSystemValue(object))
+    ) {
+      return false;
+    }
+    if (
       schemaFilters.length > 0 &&
       !schemaFilters.includes(schemaFilterValue(object))
+    ) {
+      return false;
+    }
+    if (
+      ownerFilters.length > 0 &&
+      !ownerFilters.includes(ownerFilterValue(object))
     ) {
       return false;
     }
@@ -132,7 +172,9 @@ export {
   filterCatalogObjectsByFacets,
   filterCatalogSchemasByFacets,
   presentCatalogObjectKindOptions,
+  presentCatalogObjectOwnerOptions,
   presentCatalogObjectSchemaOptions,
+  presentCatalogObjectSystemOptions,
   presentCatalogSchemaKindOptions,
   presentCatalogSchemaOwnerOptions,
 };

@@ -93,10 +93,24 @@ describe("GrantedObjectsTable: deferred filtering", () => {
   test("renders all objects initially with no search term", () => {
     render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
 
+    expect(screen.getByRole("button", { name: "Kind" })).toBeTruthy();
+    expect(screen.getAllByText("Table").length).toBeGreaterThan(0);
     expect(screen.getByText(RE_ORDERS)).toBeTruthy();
     expect(screen.getByText(RE_PRODUCTS)).toBeTruthy();
     expect(screen.getByText(RE_CUSTOMERS)).toBeTruthy();
     expect(screen.getByText(RE_REVENUE_VIEW)).toBeTruthy();
+  });
+
+  test("filters object kind through the shared facet", async () => {
+    const user = userEvent.setup();
+    render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
+
+    await user.click(screen.getByRole("button", { name: "Kind" }));
+    await user.click(screen.getByRole("option", { name: "View" }));
+
+    expect(await screen.findByText(RE_REVENUE_VIEW)).toBeTruthy();
+    expect(screen.queryByText(RE_ORDERS)).toBeNull();
+    expect(screen.queryByText(RE_PRODUCTS)).toBeNull();
   });
 
   test("search input reflects typed value immediately (urgent path)", async () => {

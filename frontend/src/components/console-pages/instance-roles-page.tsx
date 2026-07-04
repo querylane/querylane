@@ -19,8 +19,10 @@ import {
   ResourcePageState,
 } from "@/components/console-pages/console-layout";
 import {
+  type InstanceRolesSearch,
   type InstanceRolesTab,
   isInstanceRolesTab,
+  isInstanceRolesType,
 } from "@/components/console-pages/instance-roles-search";
 import { RoleAvatar } from "@/components/console-pages/role-avatar";
 import { RoleKindBadge } from "@/components/console-pages/role-kind-badge";
@@ -34,6 +36,7 @@ import {
   DataTableFilter,
   SortableHeader,
 } from "@/components/ui/data-table";
+import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 import {
   Dialog,
   DialogContent,
@@ -81,9 +84,7 @@ import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 type KindFilter = "all" | RoleKind;
 type RoleMapVisibleKind = Exclude<KindFilter, "all">;
 type RoleMapKindVisibility = Record<RoleMapVisibleKind, boolean>;
-type RolesNavigateSearch = Record<string, unknown> & {
-  tab?: string | undefined;
-};
+type RolesNavigateSearch = Record<string, unknown> & InstanceRolesSearch;
 
 interface RoleSpaceMapModel {
   edges: VisualizationEdge[];
@@ -135,6 +136,11 @@ const KIND_FILTERS: { id: KindFilter; label: string; tip: string }[] = [
 
 const ROLE_MAP_FILTERS = KIND_FILTERS.filter(
   (filter): filter is { id: RoleMapVisibleKind; label: string; tip: string } =>
+    filter.id !== "all"
+);
+
+const ROLE_TYPE_FILTERS = KIND_FILTERS.filter(
+  (filter): filter is { id: RoleKind; label: string; tip: string } =>
     filter.id !== "all"
 );
 
@@ -668,12 +674,13 @@ function RoleMapSection({
 export function InstanceRolesPage({
   instanceId,
   tab,
+  type,
 }: {
   instanceId: string;
   tab?: InstanceRolesTab | undefined;
+  type?: RoleKind | undefined;
 }) {
   const [filter, setFilter] = useUrlTableSearch();
-  const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const [isRoleMapExpanded, setIsRoleMapExpanded] = useState(false);
   const [visibleRoleKinds, setVisibleRoleKinds] =
     useState<RoleMapKindVisibility>(DEFAULT_ROLE_MAP_KIND_VISIBILITY);
@@ -715,9 +722,9 @@ export function InstanceRolesPage({
   });
 
   const kindFiltered =
-    kindFilter === "all"
+    type === undefined
       ? roles
-      : roles.filter((_, index) => kinds[index] === kindFilter);
+      : roles.filter((_, index) => kinds[index] === type);
   const roleMapModel = buildRoleSpaceMapModel({
     roles,
     visibleKinds: visibleRoleKinds,
@@ -795,29 +802,39 @@ export function InstanceRolesPage({
     );
   }
 
+  function handleRoleTypeChange(values: string[]) {
+    const nextType = values.at(-1);
+    if (nextType !== undefined && !isInstanceRolesType(nextType)) {
+      return;
+    }
+
+    handleNavigationResult(
+      navigate({
+        params: { instanceId },
+        replace: false,
+        resetScroll: false,
+        search: (previous: RolesNavigateSearch) => ({
+          ...previous,
+          type: nextType,
+        }),
+        to: "/instances/$instanceId/roles",
+      }),
+      { area: "roles.type-filter" }
+    );
+  }
+
   const rolesDetailsContent = (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {KIND_FILTERS.map((entry) => {
-            const active = kindFilter === entry.id;
-            return (
-              <Button
-                key={entry.id}
-                onClick={() => setKindFilter(entry.id)}
-                size="sm"
-                title={entry.tip}
-                type="button"
-                variant={active ? "secondary" : "ghost"}
-              >
-                {entry.label}
-                <span className="text-muted-foreground text-xs tabular-nums">
-                  {counts[entry.id]}
-                </span>
-              </Button>
-            );
-          })}
-        </div>
+        <DataTableFacetedFilter
+          onSelectedValuesChange={handleRoleTypeChange}
+          options={ROLE_TYPE_FILTERS.map((entry) => ({
+            label: ROLE_KIND_LABEL[entry.id],
+            value: entry.id,
+          }))}
+          selectedValues={type === undefined ? [] : [type]}
+          title="Type"
+        />
         <DataTableFilter
           onChange={setFilter}
           placeholder="Search roles..."

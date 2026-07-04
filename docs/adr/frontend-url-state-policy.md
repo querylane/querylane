@@ -45,5 +45,7 @@ Typing into simple search fields should use `history: replace` or equivalent beh
 ## Current applications
 
 - Data Explorer keeps schema, object category/type, and object name in the URL because those are stable resource identity.
-- Data Explorer must not add pagination, page size, selected row drawers, advanced table filters, or full grid replay state as part of this policy.
+- Data Explorer table detail keeps non-default table tabs in `tab` because they are meaningful sub-views; schema overview search/facets stay local because they are detail-scoped inventory controls.
+- Data Explorer must not add pagination, page size, selected row drawers, advanced table filters, sort, category expansion, or full grid replay state as part of this policy.
 - Instance database and role list search use `q`, omit empty values, and update via replacement history.
+- Role list kind filtering uses `type`; map-tab visualization filters stay local.

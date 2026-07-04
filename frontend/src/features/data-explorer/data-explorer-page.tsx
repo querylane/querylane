@@ -148,6 +148,7 @@ function DataExplorerPage({
       hasMoreViews={explorer.schemaOverview.hasMoreViews}
       instanceId={explorer.instanceId}
       onSelectResource={explorer.onSelectResource}
+      onTableTabChange={explorer.onTableTabChange}
       overviewTables={explorer.schemaOverview.rawTables}
       overviewViews={explorer.schemaOverview.rawViews}
       rawTables={explorer.rawTables}
@@ -157,6 +158,7 @@ function DataExplorerPage({
       tablesError={explorer.schemaOverview.tablesError}
       tablesLoading={explorer.schemaOverview.tablesLoading}
       tablesSyncNotice={explorer.schemaOverview.tablesSyncNotice}
+      tableTab={explorer.tableTab}
       viewsError={explorer.schemaOverview.viewsError}
       viewsLoading={explorer.schemaOverview.viewsLoading}
     />

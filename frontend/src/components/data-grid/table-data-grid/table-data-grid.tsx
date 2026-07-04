@@ -115,6 +115,10 @@ type TableSortControlProps =
       sortSearch: string | undefined;
     };
 
+// These "*Search" props are a controlled-state escape hatch for callers that
+// intentionally own grid state. Data Explorer production wiring omits them:
+// table filters, sort, selected rows, page size, frozen columns, and row drawer
+// state stay local per docs/adr/frontend-url-state-policy.md.
 type TableDataGridProps = {
   children?: (state: {
     grid: ReactNode;

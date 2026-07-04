@@ -87,6 +87,7 @@ const state = vi.hoisted(() => ({
   instanceData: undefined as GetInstanceResponse | undefined,
   instances: [] as PostgresInstance[],
   navigate: vi.fn(async () => undefined),
+  navigateToDatabase: vi.fn(),
   overviewData: undefined as GetInstanceOverviewResponse | undefined,
   queryClient: { tag: "query-client" },
   refetchExtensions: vi.fn(async () => ({})),
@@ -233,7 +234,7 @@ vi.mock("@/lib/db-context", () => ({
   useDb: () => ({
     databases: state.databases,
     instances: state.instances,
-    navigateToDatabase: vi.fn(),
+    navigateToDatabase: state.navigateToDatabase,
     queryStates: {
       databases: {
         error: null,
@@ -408,6 +409,7 @@ beforeEach(() => {
   state.instanceData = instanceResponse();
   state.instances = [postgresInstanceFixture()];
   state.navigate.mockClear();
+  state.navigateToDatabase.mockClear();
   state.overviewData = undefined;
   state.refetchExtensions.mockReset();
   state.refetchExtensions.mockResolvedValue({});
@@ -814,6 +816,34 @@ describe("backend instance database list", () => {
     ).toBeTruthy();
     expect(screen.queryByText("customer_events")).toBeNull();
     expect(screen.queryByText("analytics_archive")).toBeNull();
+  });
+
+  test("opens database overview when a database row is selected", async () => {
+    const user = userEvent.setup();
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.databases = [
+      {
+        characterSet: "UTF8",
+        collation: "en_US.UTF-8",
+        id: "customer-events",
+        isSystemDatabase: false,
+        name: "customer_events",
+        owner: "data-platform",
+        resourceName: "instances/prod/databases/customer-events",
+      },
+    ];
+
+    renderInstanceOverview();
+
+    await user.click(screen.getByText("customer_events"));
+
+    expect(state.navigateToDatabase).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resourceName: "instances/prod/databases/customer-events",
+      }),
+      { overridePage: "database.overview" }
+    );
   });
 
   test("groups charset and collation into one encoding column", () => {

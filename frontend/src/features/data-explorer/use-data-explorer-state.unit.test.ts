@@ -16,11 +16,11 @@ describe("buildExplorerSearch", () => {
     expect(
       buildExplorerSearch(
         {
-          catalogSort: "size-desc",
           category: "tables",
           name: "order_items",
           q: "ord",
           schema: "public",
+          tab: "indexes",
         },
         {
           category: "tables",
@@ -29,47 +29,79 @@ describe("buildExplorerSearch", () => {
         }
       )
     ).toEqual({
-      catalogSort: "size-desc",
       category: "tables",
       name: "products",
       q: "ord",
       schema: "public",
+      tab: "indexes",
     });
   });
 
   test("normalizes invalid resource fields as explicit removals", () => {
     expect(
       normalizeExplorerSearch({
-        catalogSort: "name-asc",
         category: "wat",
         name: "orders",
         q: "orders",
         schema: "public",
+        tab: "columns",
       })
     ).toEqual({
-      catalogSort: undefined,
       category: undefined,
       name: undefined,
       q: "orders",
       schema: "public",
+      tab: undefined,
     });
   });
 
   test("keeps stable resource identity and sidebar state in normalized URLs", () => {
     expect(
       normalizeExplorerSearch({
-        catalogSort: "size-desc",
         category: "tables",
         name: "orders",
         q: "ord",
         schema: "public",
+        tab: "columns",
       })
     ).toEqual({
-      catalogSort: "size-desc",
       category: "tables",
       name: "orders",
       q: "ord",
       schema: "public",
+      tab: "columns",
+    });
+  });
+
+  test("omits the default table detail tab and strips tab for non-table resources", () => {
+    expect(
+      normalizeExplorerSearch({
+        category: "tables",
+        name: "orders",
+        schema: "public",
+        tab: "data",
+      })
+    ).toEqual({
+      category: "tables",
+      name: "orders",
+      q: undefined,
+      schema: "public",
+      tab: undefined,
+    });
+
+    expect(
+      normalizeExplorerSearch({
+        category: "views",
+        name: "active_orders",
+        schema: "public",
+        tab: "indexes",
+      })
+    ).toEqual({
+      category: "views",
+      name: "active_orders",
+      q: undefined,
+      schema: "public",
+      tab: undefined,
     });
   });
 });
