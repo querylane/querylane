@@ -48,7 +48,7 @@
         "zustand": "5.0.14",
       },
       "devDependencies": {
-        "@axe-core/playwright": "4.12.2-2d3cb18.0",
+        "@axe-core/playwright": "4.12.2-6c589ff.0",
         "@biomejs/biome": "2.5.2",
         "@changesets/cli": "^2.31.0",
         "@lhci/cli": "0.15.1",
@@ -95,7 +95,7 @@
 
     "@apm-js-collab/tracing-hooks": ["@apm-js-collab/tracing-hooks@0.10.0", "", { "dependencies": { "@apm-js-collab/code-transformer": "^0.15.0", "debug": "^4.4.1", "module-details-from-path": "^1.0.4" } }, "sha512-2/Z3NTewJTruUkmsSnBC5bJlLNUd9keuD1OLlTEpim4FyLhm6m2Rnfv+wrFdUvFfhmH8CRdiDZBqBrn+wyaGuA=="],
 
-    "@axe-core/playwright": ["@axe-core/playwright@4.12.2-2d3cb18.0", "", { "dependencies": { "axe-core": "~4.12.1" }, "peerDependencies": { "playwright-core": ">= 1.0.0" } }, "sha512-1h/emcgXhzrfBwa85Vxqbo03KtztdeOsgW/PqOM89i000geFwYhC+LaMTJLpTjg4xbxQlcirAQmMxoRYs+ZJ/Q=="],
+    "@axe-core/playwright": ["@axe-core/playwright@4.12.2-6c589ff.0", "", { "dependencies": { "axe-core": "~4.12.1" }, "peerDependencies": { "playwright-core": ">= 1.0.0" } }, "sha512-8hoAAXnCwc83DHmnIslp9ptTx/U14qYjAmcB9kvbPTNAW4QBouV0I9FWhOY1APOyipr3GuBf6U+qAzKoGGZcNQ=="],
 
     "@babel/code-frame": ["@babel/code-frame@7.29.7", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.29.7", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw=="],
 
