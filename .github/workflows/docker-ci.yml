@@ -6,23 +6,19 @@
 # ==========================================================================
 name: docker-ci
 
-# On PRs: build the production image (both arches, no push) to catch Dockerfile
+# On PRs: build the production image (both arches, no push) to catch build
 # breakage before merge. Uses the same reusable workflow as publishing, so the
 # build definition never drifts between validation and release.
-
+#
+# Runs on EVERY PR (no `paths:` filter) on purpose: the image bundles both
+# frontend/ (bun build, embedded) and backend/ (go build), so almost any source
+# change can break it. A path filter here silently rotted once (frontend/** was
+# missing); always-run is correct-by-construction and stays cheap via the GHA
+# build cache. Don't re-add a paths filter.
 on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - Dockerfile
-      - .dockerignore
-      - Taskfile.yaml
-      - backend/**
-      - taskfiles/dev.yaml
-      - taskfiles/docker.yaml
-      - .github/workflows/docker-ci.yml
-      - .github/workflows/_docker-build.yml
 
 concurrency:
   group: docker-ci-${{ github.ref }}
