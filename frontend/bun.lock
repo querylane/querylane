@@ -74,7 +74,7 @@
         "dotenv": "17.4.2",
         "happy-dom": "20.10.6",
         "playwright": "1.62.0-alpha-2026-07-03",
-        "playwright-core": "1.62.0-alpha-2026-07-03",
+        "playwright-core": "1.62.0-alpha-1781285727000",
         "react-doctor": "0.6.2",
         "rsbuild-plugin-devtools-json": "1.0.1",
         "shadcn": "4.13.0",
@@ -1773,7 +1773,7 @@
 
     "playwright": ["playwright@1.62.0-alpha-2026-07-03", "", { "dependencies": { "playwright-core": "1.62.0-alpha-2026-07-03" }, "optionalDependencies": { "fsevents": "2.3.2" }, "bin": { "playwright": "cli.js" } }, "sha512-pWJezA8wQkvBVJO3OFPICheJ1g4MRnn+rF7LoEGF6UtfO1WLWamfeQ2HrQquBO/QgUrWnm/K11QdDcY2bKFujg=="],
 
-    "playwright-core": ["playwright-core@1.62.0-alpha-2026-07-03", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-kBwybq+WqfSuTnjg10jVmuYZDsIqn4PuVjqXxzP/iPzdEuZO8CDQF+taB6NFfFxixrakN2v9Xe+YiK9skiciSA=="],
+    "playwright-core": ["playwright-core@1.62.0-alpha-1781285727000", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-NPwzQBFzNeKMHbh1kshW/o4DcPpLeRuLFv8cPToF6JcTYLEy242WXkAh9LwEMiEtRVS45xWQ3Y90LO4FJKCTzA=="],
 
     "pngjs": ["pngjs@7.0.0", "", {}, "sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow=="],
 
@@ -2482,6 +2482,8 @@
     "path-scurry/lru-cache": ["lru-cache@11.5.1", "", {}, "sha512-RPimw/7aMdv2oqRrxKwvZXcPfwBrn/JZ2xYcY9Hus/6LaS3VOAKVWKWgNLCFSiOm1ESXinjsDlidVU7JlnCN2A=="],
 
     "pkg-up/find-up": ["find-up@3.0.0", "", { "dependencies": { "locate-path": "^3.0.0" } }, "sha512-1yD6RmLI1XBfxugvORwlck6f75tYL+iR0jqwsOrOxMZyGYqUuDhJ0l4AXdO1iX/FTs9cBAMEk1gWSEx1kSbylg=="],
+
+    "playwright/playwright-core": ["playwright-core@1.62.0-alpha-2026-07-03", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-kBwybq+WqfSuTnjg10jVmuYZDsIqn4PuVjqXxzP/iPzdEuZO8CDQF+taB6NFfFxixrakN2v9Xe+YiK9skiciSA=="],
 
     "posthog-js/fflate": ["fflate@0.4.8", "", {}, "sha512-FJqqoDBR00Mdj9ppamLa/Y7vxm+PRmNWA67N846RvsoYVMKB4q3y/de5PA7gUmRMYK/8CMz2GDZQmCRN1wBcWA=="],
 
