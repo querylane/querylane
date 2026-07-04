@@ -1,0 +1,79 @@
+name: docker-build-push
+
+# Reusable workflow: builds the production image and (optionally) pushes it to
+# GHCR as a multi-arch (linux/amd64 + linux/arm64) manifest. Both arches are
+# cross-compiled from the amd64 runner via BuildKit's TARGETARCH, so there is no
+# QEMU emulation — a single fast, reliable job produces both variants.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Release version to tag (e.g. 1.2.3). Empty => rolling edge build."
+        type: string
+        default: ""
+      push:
+        description: "Push to GHCR. False builds only (validation)."
+        type: boolean
+        default: true
+
+env:
+  ACTION_CHECKOUT: &action_checkout actions/checkout@v7.0.0
+  ACTION_METADATA: &action_metadata docker/metadata-action@v6.2.0
+  ACTION_SETUP_BUILDX: &action_setup_buildx docker/setup-buildx-action@v4.2.0
+  ACTION_LOGIN: &action_login docker/login-action@v4.4.0
+  ACTION_BUILD_PUSH: &action_build_push docker/build-push-action@v7.3.0
+  IMAGE: ghcr.io/${{ github.repository }}
+  PLATFORMS: linux/amd64,linux/arm64
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build and push
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: *action_checkout
+        with:
+          persist-credentials: false
+
+      - name: Docker metadata
+        id: meta
+        uses: *action_metadata
+        with:
+          images: ${{ env.IMAGE }}
+          # Rolling `edge` + immutable `sha-<sha>` for main builds; the exact
+          # `<version>` + rolling `latest` for releases.
+          tags: |
+            type=raw,value=edge,enable=${{ inputs.version == '' }}
+            type=sha,prefix=sha-,enable=${{ inputs.version == '' }}
+            type=raw,value=${{ inputs.version }},enable=${{ inputs.version != '' }}
+            type=raw,value=latest,enable=${{ inputs.version != '' }}
+
+      - name: Set up Docker Buildx
+        uses: *action_setup_buildx
+
+      - name: Log in to GHCR
+        if: inputs.push
+        uses: *action_login
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: *action_build_push
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: ${{ env.PLATFORMS }}
+          push: ${{ inputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # A clean 2-arch manifest (no unknown/unknown provenance entry).
+          provenance: false
+          cache-from: type=gha,scope=querylane-publish
+          cache-to: type=gha,mode=max,scope=querylane-publish,ignore-error=true

@@ -1,5 +1,9 @@
 name: docker-ci
 
+# On PRs: build the production image (both arches, no push) to catch Dockerfile
+# breakage before merge. Uses the same reusable workflow as publishing, so the
+# build definition never drifts between validation and release.
+
 on:
   pull_request:
     branches: [main]
@@ -11,9 +15,8 @@ on:
       - backend/**
       - taskfiles/dev.yaml
       - taskfiles/docker.yaml
-      - .github/scripts/check-docker-setup.py
       - .github/workflows/docker-ci.yml
-      - .github/workflows/docker-image.yml
+      - .github/workflows/docker-build-push.yml
 
 concurrency:
   group: docker-ci-${{ github.ref }}
@@ -23,6 +26,8 @@ permissions:
   contents: read
 
 jobs:
-  docker-image:
+  validate:
     if: github.event.pull_request.draft != true
-    uses: ./.github/workflows/docker-image.yml
+    uses: ./.github/workflows/docker-build-push.yml
+    with:
+      push: false

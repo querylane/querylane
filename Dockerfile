@@ -2,7 +2,7 @@
 # =============================================================================
 # Stage 1: Build the frontend
 # =============================================================================
-FROM oven/bun:1.3.14-alpine AS frontend-builder
+FROM --platform=$BUILDPLATFORM oven/bun:1.3.14-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/bun.lock ./
@@ -15,7 +15,12 @@ RUN bun run build
 # =============================================================================
 # Stage 2: Build the backend (with embedded frontend)
 # =============================================================================
-FROM golang:1.26-alpine AS backend-builder
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS backend-builder
+
+# Provided automatically by BuildKit; used to cross-compile from the native
+# build platform to each requested target platform (no QEMU emulation).
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /app/backend
 COPY backend/go.mod backend/go.sum ./
@@ -27,7 +32,7 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist/
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -tags embed_frontend -o /querylane .
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldflags="-s -w" -tags embed_frontend -o /querylane .
 
 # =============================================================================
 # Stage 3: Runtime

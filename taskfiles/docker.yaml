@@ -1,14 +1,8 @@
 version: 3
 
 tasks:
-  check:
-    desc: Validate Docker build guardrails and CI/local alignment
-    cmds:
-      - python3 {{.ROOT_DIR}}/.github/scripts/check-docker-setup.py
-
   build:
     desc: Build the production Docker image locally
-    deps: [check]
     preconditions:
       - sh: docker info >/dev/null 2>&1
         msg: "Docker is not running or not accessible"
@@ -17,7 +11,6 @@ tasks:
 
   build:no-cache:
     desc: Build the production Docker image locally without cache
-    deps: [check]
     preconditions:
       - sh: docker info >/dev/null 2>&1
         msg: "Docker is not running or not accessible"

@@ -1,0 +1,25 @@
+name: docker-publish
+
+# Publishes a rolling `edge` (+ `sha-<sha>`) multi-arch image to GHCR on every
+# push to main. Versioned `latest`/`<version>` images are published from the
+# Release workflow once changesets cuts a release.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    uses: ./.github/workflows/docker-build-push.yml
+    with:
+      version: ""
+      push: true

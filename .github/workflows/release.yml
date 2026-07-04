@@ -23,6 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: "!contains(github.event.head_commit.message, 'ci skip') && !contains(github.event.head_commit.message, 'skip ci')"
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      version: ${{ steps.image-version.outputs.version }}
     steps:
       - name: Checkout repository
         uses: *action_checkout
@@ -74,3 +77,25 @@ jobs:
           create-github-releases: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Resolve published image version
+        id: image-version
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          set -euo pipefail
+          version="$(printf '%s' "$PUBLISHED_PACKAGES" | jq -r '.[0].version')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  publish-image:
+    name: Publish Docker image
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker-build-push.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+      push: true
