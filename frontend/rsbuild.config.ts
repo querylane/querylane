@@ -42,7 +42,6 @@ const buildEnv = createEnv({
     PUBLIC_SENTRY_ENVIRONMENT: z.string().optional(),
     PUBLIC_SENTRY_RELEASE: z.string().optional(),
     RSDOCTOR: z.string().optional(),
-    RSPACK_EXPERIMENT_FUTURE_DEFAULTS: z.string().optional(),
     SENTRY_AUTH_TOKEN: z.string().optional(),
     SENTRY_ORG: z.string().optional(),
     SENTRY_PROJECT: z.string().optional(),
@@ -54,8 +53,6 @@ const posthogPreconnect =
   buildEnv.NODE_ENV === "production" && buildEnv.PUBLIC_POSTHOG_KEY
     ? buildEnv.PUBLIC_POSTHOG_HOST?.trim() || "https://us.i.posthog.com"
     : undefined;
-const enableRspackFutureDefaults =
-  buildEnv.RSPACK_EXPERIMENT_FUTURE_DEFAULTS !== "0";
 const sentryAuthToken = buildEnv.SENTRY_AUTH_TOKEN;
 const sentryEnvironment = buildEnv.PUBLIC_SENTRY_ENVIRONMENT;
 const sentryOrg = buildEnv.SENTRY_ORG;
@@ -63,22 +60,6 @@ const sentryProject = buildEnv.SENTRY_PROJECT;
 const sentryReleaseName = buildEnv.PUBLIC_SENTRY_RELEASE;
 const enableSentryPlugin = buildEnv.NODE_ENV === "production";
 const require = createRequire(import.meta.url);
-
-const publicVars = Object.entries(env).reduce<Record<string, string>>(
-  (acc, [key, value]) => {
-    if (key.startsWith("PUBLIC_") && typeof value === "string") {
-      const serializedValue = JSON.stringify(value);
-      acc[`process.env.${key}`] = serializedValue;
-      acc[`import.meta.env.${key}`] = serializedValue;
-    }
-    return acc;
-  },
-  {
-    "import.meta.env.PUBLIC_API_BASE_URL": JSON.stringify(
-      env["PUBLIC_API_BASE_URL"] ?? ""
-    ),
-  }
-);
 
 const buildCacheDigest = [
   JSON.stringify(
@@ -92,7 +73,6 @@ const buildCacheDigest = [
     )
   ),
   buildEnv.NODE_ENV ?? "",
-  String(enableRspackFutureDefaults),
 ];
 
 const rsdoctorPluginOptions = {
@@ -106,7 +86,8 @@ const rsdoctorPluginOptions = {
     plugins: true,
     // Catch slow or CJS-fallback module resolution before it hits CI.
     resolver: true,
-    // Verify risky Rspack export analysis actually removes unused UI/runtime code.
+    // Verify Rspack's production tree-shaking actually removes unused
+    // UI/runtime code.
     treeShaking: true,
   },
   linter: {
@@ -142,16 +123,16 @@ const rsdoctorPluginOptions = {
 
 export default defineConfig({
   dev: {
-    // Defers compiling unused routes/modules until first local access.
-    // First visit to a cold route can be a little slower, but startup stays
-    // faster and production output is unchanged.
-    lazyCompilation: true,
+    // Compile the whole app up front so navigating between routes never triggers
+    // an on-demand compile mid-session. Costs a couple of extra seconds at
+    // `bun run dev` startup in exchange for no per-navigation "fresh compile"
+    // stalls. Flip back to true if cold-start time becomes the bigger annoyance.
+    lazyCompilation: false,
   },
   html: {
     template: "./index.html",
   },
   output: {
-    polyfill: "off",
     sourceMap: {
       js:
         buildEnv.NODE_ENV === "production"
@@ -182,17 +163,11 @@ export default defineConfig({
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
     },
-    conditionNames: [
-      "import",
-      "module",
-      "browser",
-      buildEnv.NODE_ENV === "production" ? "production" : "development",
-      "...",
-    ],
-    mainFields: ["module", "browser", "main", "..."],
   },
   source: {
-    define: publicVars,
+    // PUBLIC_-prefixed env vars are exposed on import.meta.env automatically by
+    // rsbuild (see rsbuild env-vars docs); src/env.ts reads them and defaults
+    // PUBLIC_API_BASE_URL to "" via zod, so no manual `define` is needed.
     entry: {
       index: "./src/main.tsx",
     },
@@ -299,57 +274,15 @@ export default defineConfig({
           })
         );
       }
-      config.optimization ??= {};
-      // Avoid wrapping the entry chunk in an IIFE so Rspack can tree-shake the
-      // Querylane bootstrap graph more aggressively.
-      config.optimization.avoidEntryIife = true;
-      // Keep export names stable across rebuilds for cache-friendly PR size
-      // diffs while still allowing minification.
-      config.optimization.mangleExports = "deterministic";
-      // Stable chunk ids make bundle-budget comparisons meaningful between
-      // dependency-bump commits.
-      config.optimization.chunkIds = "deterministic";
-      // Scope-hoist route-adjacent modules to cut wrapper overhead in hot paths.
-      config.optimization.concatenateModules = true;
-      // Inline simple re-export bindings so shared UI/helper barrels vanish from
-      // production chunks when unused.
-      config.optimization.inlineExports = true;
-      // Let Rspack inspect nested export usage in objects/functions before
-      // marking whole modules live.
-      config.optimization.innerGraph = true;
-      // Stable module ids reduce cache churn when dependency order changes.
-      config.optimization.moduleIds = "deterministic";
-      // Collapse duplicate async chunks created by route code-splitting.
-      config.optimization.mergeDuplicateChunks = true;
-      // Compute provided exports so Rspack can prove unused exports dead.
-      config.optimization.providedExports = true;
-      // Hash final content after optimization, not source order, for reliable
-      // long-term caching.
-      config.optimization.realContentHash = true;
-      // Respect package sideEffects metadata so third-party dead code drops out.
-      config.optimization.sideEffects = true;
-      // Mark used exports for tree-shaking and Rsdoctor tree-shaking reports.
-      config.optimization.usedExports = true;
-
-      // Cache incremental compiler state silently; local rebuilds get faster
-      // without noisy experimental logging in CI output.
-      config.incremental = "advance-silent";
+      // Rspack's native watcher gives faster local invalidation on large
+      // frontend trees. It is a no-op for one-shot production builds. Everything
+      // else about bundle optimization is left to Rspack's mode-aware defaults:
+      // `rsbuild build` runs `mode: 'production'`, which already enables
+      // tree-shaking, module concatenation, deterministic ids, etc., and
+      // `rsbuild dev` disables them — so we don't hand-force (and previously
+      // mis-force) those into dev.
       config.experiments ??= {};
-      // Allow deferred import lowering so route chunks can delay expensive async
-      // module evaluation until actually navigated to.
-      config.experiments.deferImport = true;
-      // Soak upcoming Rspack defaults behind an env kill switch while this PR is
-      // explicitly validating risky compiler behavior.
-      config.experiments.futureDefaults = enableRspackFutureDefaults;
-      // Use Rspack's native watcher for faster local invalidation on large
-      // frontend trees.
       config.experiments.nativeWatcher = true;
-      // Enable pure-function analysis so helper calls marked pure can be removed
-      // from production bundles.
-      config.experiments.pureFunctions = true;
-      // Use the Rspack runtime path rather than webpack compatibility runtime to
-      // match the bundler we ship and measure.
-      config.experiments.runtimeMode = "rspack";
 
       if (enableRsdoctor) {
         config.plugins.push(
