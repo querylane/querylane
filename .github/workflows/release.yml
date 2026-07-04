@@ -78,14 +78,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Resolve published image version
+      - name: Resolve released version
         id: image-version
         if: steps.changesets.outputs.published == 'true'
-        env:
-          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
         run: |
           set -euo pipefail
-          version="$(printf '%s' "$PUBLISHED_PACKAGES" | jq -r '.[0].version')"
+          # Source of truth: package.json is already bumped to the released
+          # version by the time changesets publishes. Do NOT read it from
+          # publishedPackages — this repo's tag-only changesets flow leaves that
+          # array empty, which would tag the image `null`.
+          version="$(node -p "require('./frontend/package.json').version")"
+          if [ -z "$version" ] || [ "$version" = "undefined" ]; then
+            echo "::error::Could not resolve released version from frontend/package.json"
+            exit 1
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
   # Docker image pipeline (see .github/workflows/_docker-build.yml): on a real
