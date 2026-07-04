@@ -1,4 +1,14 @@
+# === Docker image pipeline ================================================
+#   _docker-build.yml   reusable engine: multi-arch build (+ optional push)
+#   docker-ci.yml       on PR         -> build both arches, no push (validate)
+#   docker-publish.yml  on push main  -> publish  edge + sha-<sha>
+#   release.yml         on release    -> publish  <version> + latest
+# ==========================================================================
 name: docker-ci
+
+# On PRs: build the production image (both arches, no push) to catch Dockerfile
+# breakage before merge. Uses the same reusable workflow as publishing, so the
+# build definition never drifts between validation and release.
 
 on:
   pull_request:
@@ -11,9 +21,8 @@ on:
       - backend/**
       - taskfiles/dev.yaml
       - taskfiles/docker.yaml
-      - .github/scripts/check-docker-setup.py
       - .github/workflows/docker-ci.yml
-      - .github/workflows/docker-image.yml
+      - .github/workflows/_docker-build.yml
 
 concurrency:
   group: docker-ci-${{ github.ref }}
@@ -23,6 +32,8 @@ permissions:
   contents: read
 
 jobs:
-  docker-image:
+  validate:
     if: github.event.pull_request.draft != true
-    uses: ./.github/workflows/docker-image.yml
+    uses: ./.github/workflows/_docker-build.yml
+    with:
+      push: false
