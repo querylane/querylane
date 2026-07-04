@@ -21,9 +21,9 @@ env:
   IMAGE: ghcr.io/${{ github.repository }}
   PLATFORMS: linux/amd64,linux/arm64
 
-permissions:
-  contents: read
-  packages: write
+# Permissions are granted by each caller (a reusable workflow may not request
+# more than its caller's token allows). Publish callers grant `packages: write`;
+# the PR validator grants only `contents: read` and never logs in / pushes.
 
 jobs:
   build:
