@@ -400,6 +400,39 @@ test("admin header instance selector uses a rich empty state with a create actio
   expect(document.querySelector('[data-slot="empty"]')).not.toBeNull();
 });
 
+test("admin header keeps the disabled register instance tooltip open while hovered", async () => {
+  renderAdminShell();
+
+  await page.getByText("Instance").first().click();
+  const registerInstanceText = page.getByText("Register instance");
+  const registerInstanceItem = registerInstanceText
+    .element()
+    .closest('[data-slot="command-item"]');
+  const tooltipTrigger = registerInstanceText
+    .element()
+    .closest("[data-base-ui-tooltip-trigger]");
+  if (!(registerInstanceItem instanceof HTMLElement)) {
+    throw new Error("Expected disabled register instance command item");
+  }
+  if (!(tooltipTrigger instanceof HTMLElement)) {
+    throw new Error("Expected register instance tooltip trigger");
+  }
+
+  expect(registerInstanceItem.getAttribute("aria-disabled")).toBe("true");
+  expect(registerInstanceItem.getAttribute("aria-selected")).toBe("false");
+
+  await page.elementLocator(tooltipTrigger).hover();
+
+  const tooltip = page.getByText(
+    "Instances are managed via the server configuration file. Add them to your config and restart the server."
+  );
+  await expect.element(tooltip).toBeVisible();
+
+  await new Promise((resolve) => setTimeout(resolve, 350));
+
+  await expect.element(tooltip).toBeVisible();
+});
+
 test("admin shell phone viewport keeps compact header and drawer trigger stable", async () => {
   await page.viewport(320, 900);
   renderAdminShellAtViewport({ width: 320 });
