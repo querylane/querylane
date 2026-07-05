@@ -10,6 +10,7 @@ const DEFAULT_QUERY_GC_TIME_MS = 300_000;
 const ONE_MINUTE_IN_MILLISECONDS = 60_000;
 const TWO_MINUTES_IN_MILLISECONDS = 2 * ONE_MINUTE_IN_MILLISECONDS;
 const FIVE_MINUTES_IN_MILLISECONDS = DEFAULT_QUERY_GC_TIME_MS;
+const UNAVAILABLE_QUERY_RETRY_DELAY_MS = 2000;
 
 export const QUERY_STALE_TIME = {
   databaseList: TWO_MINUTES_IN_MILLISECONDS,
@@ -32,7 +33,6 @@ export const QUERY_STALE_TIME = {
 } as const;
 
 export const UNAVAILABLE_QUERY_RETRY_LIMIT = 1;
-export const UNAVAILABLE_QUERY_RETRY_DELAY_MS = 2000;
 
 /**
  * Retry only failures where the server said it cannot serve the request right

@@ -97,7 +97,7 @@ export function BootGate({ children }: { children: React.ReactNode }) {
   }, [bootstrap]);
 
   if (status === "boot_error" && blockingRoute && pathname === blockingRoute) {
-    return <>{children}</>;
+    return children;
   }
 
   if (displayedError) {
@@ -135,7 +135,7 @@ export function BootGate({ children }: { children: React.ReactNode }) {
 
   if (status === "onboarding") {
     if (pathname === "/setup") {
-      return <>{children}</>;
+      return children;
     }
 
     return (
@@ -146,5 +146,5 @@ export function BootGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return children;
 }

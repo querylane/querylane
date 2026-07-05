@@ -268,7 +268,7 @@ export function ResourcePageState({
   if (!hasData) {
     return notFoundState ?? <NotFoundState containerClassName="min-h-[60vh]" />;
   }
-  return <>{children}</>;
+  return children;
 }
 export function InstanceNotFoundState() {
   return (

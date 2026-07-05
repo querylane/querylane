@@ -13,6 +13,7 @@ const LOCAL_LHCI_BIN = join(
   ".bin",
   process.platform === "win32" ? "lhci.cmd" : "lhci"
 );
+const LIGHTHOUSE_CONFIG_PATH = join(FRONTEND_ROOT, "lighthouserc.cjs");
 const FAILURE_EXIT_CODE = 1;
 
 function getChromePath() {
@@ -21,14 +22,18 @@ function getChromePath() {
 
 function runLighthouseCi() {
   const lhciBin = existsSync(LOCAL_LHCI_BIN) ? LOCAL_LHCI_BIN : "lhci";
-  const result = spawnSync(lhciBin, ["autorun"], {
-    cwd: FRONTEND_ROOT,
-    env: {
-      ...env,
-      CHROME_PATH: getChromePath(),
-    },
-    stdio: "inherit",
-  });
+  const result = spawnSync(
+    lhciBin,
+    ["autorun", "--config", LIGHTHOUSE_CONFIG_PATH],
+    {
+      cwd: FRONTEND_ROOT,
+      env: {
+        ...env,
+        CHROME_PATH: getChromePath(),
+      },
+      stdio: "inherit",
+    }
+  );
 
   if (typeof result.status === "number") {
     return result.status;

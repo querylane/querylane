@@ -53,18 +53,16 @@ export function SchemaGrantsView({
         count={group.total}
         countUnit="grant"
         icon={group.database ? Database : FolderTree}
-        sub={
-          grantor ? (
-            <span>
-              granted by{" "}
-              <span className="font-mono text-foreground/75">{grantor}</span>
-            </span>
-          ) : undefined
-        }
         title={
           group.database ? (databaseName ?? "Database scope") : group.schema
         }
       />
+      {grantor ? (
+        <div className="-mt-3.5 pb-3.5 text-muted-foreground text-xs">
+          granted by{" "}
+          <span className="font-mono text-foreground/75">{grantor}</span>
+        </div>
+      ) : null}
       <GrantedObjectsTable
         activeKind={activeKind}
         objects={group.objects}

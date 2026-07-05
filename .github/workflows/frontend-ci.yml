@@ -210,6 +210,15 @@ jobs:
     if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 6
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      statuses: write
+    env:
+      SENTRY_AUTH_TOKEN: ${{ vars.SENTRY_AUTH_TOKEN != '' && vars.SENTRY_AUTH_TOKEN || secrets.SENTRY_AUTH_TOKEN || '' }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG != '' && vars.SENTRY_ORG || secrets.SENTRY_ORG || '' }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT != '' && vars.SENTRY_PROJECT || secrets.SENTRY_PROJECT || '' }}
     defaults:
       run:
         working-directory: frontend
@@ -240,21 +249,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-rsbuild-
       - name: Build frontend
+        env:
+          PUBLIC_SENTRY_ENVIRONMENT: production
+          PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
         run: bun run build
       - name: Run React Doctor on changed files
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        shell: bash
-        run: |
-          set +e
-          OUTPUT=$(bun run doctor:ci 2>&1)
-          EXIT_CODE=$?
-          set -e
-          {
-            echo "# React Doctor"
-            echo ""
-            echo '```'
-            echo "$OUTPUT"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          exit $EXIT_CODE
+        run: bun run scripts/run-react-doctor-ci.ts

@@ -17,6 +17,7 @@ import {
 } from "./rsbuild.performance";
 
 const reactCompilerConfig = {
+  compilationMode: "annotation" as const,
   target: "19" as const,
 };
 

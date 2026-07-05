@@ -223,7 +223,7 @@ function hasVisibleCategoryResource({
 
 function ResourceListLoadingSkeleton() {
   return (
-    <div className="space-y-3 px-2 py-2" data-testid="resource-list-loading">
+    <div className="space-y-3 p-2" data-testid="resource-list-loading">
       {CATEGORY_ORDER.map((category) => (
         <div className="space-y-1.5" key={category}>
           <div className="flex items-center gap-2 px-2 py-1">

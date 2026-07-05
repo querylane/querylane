@@ -383,13 +383,6 @@ function RoleDetailContent({
     publicGrantsState: facetStates.publicGrants,
   });
 
-  // Non-system roles show their COMMENT ON ROLE text under the name, when set.
-  const commentLine = comment ? (
-    <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-      <span>{comment}</span>
-    </div>
-  ) : null;
-
   return (
     <RoleDetailView
       accessRows={accessRows}
@@ -397,7 +390,7 @@ function RoleDetailContent({
       belongsTo={belongsTo}
       builtinInfo={builtinInfo}
       builtinParentDetails={builtinParentDetails}
-      commentLine={commentLine}
+      comment={comment ?? ""}
       connLimitSub={connLimitSub}
       databases={databases}
       defaultPrivileges={defaultPrivileges}

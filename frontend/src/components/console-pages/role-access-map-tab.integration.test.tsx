@@ -66,7 +66,7 @@ function accessMapProps(): RoleDetailViewProps {
     belongsTo: [{ options: [], roleId: "app_group", roleName: "app_group" }],
     builtinInfo: null,
     builtinParentDetails: [],
-    commentLine: null,
+    comment: "",
     connLimitSub: undefined,
     databases: [{ id: "appdb", name: "appdb" }],
     defaultPrivileges: [

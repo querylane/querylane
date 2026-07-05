@@ -12,7 +12,7 @@
     "type:check": "bun run type:check:ui && tsgo -b --pretty false",
     "build": "rsbuild build && bun run budget:check",
     "preview": "rsbuild preview",
-    "doctor": "react-doctor . -y --scope full --no-respect-inline-disables",
+    "doctor": "react-doctor . -y --scope full --blocking warning --no-respect-inline-disables",
     "quality:gate": "bun run lint && bun run doctor && bun run type:check && bun run build && bun run test:unit && bun run test:integration",
     "test:unit": "vitest run --config vitest.unit.config.ts",
     "test:unit:watch": "vitest watch --config vitest.unit.config.ts",
@@ -55,8 +55,8 @@
     "test:browser:ui": "NODE_OPTIONS=--disable-warning=DEP0205 TZ=GMT vitest --config vitest.browser.config.ts --ui",
     "test:browser:ci": "NODE_OPTIONS=--disable-warning=DEP0205 TZ=GMT vitest run --config vitest.browser.all.config.ts --reporter=verbose",
     "doctor:ci": "bun run doctor:changed",
-    "doctor:changed": "react-doctor . -y --scope changed --base ${QUALITY_BASE_REF:-origin/main} --no-respect-inline-disables",
-    "doctor:full": "react-doctor . -y --scope full --no-respect-inline-disables",
+    "doctor:changed": "react-doctor . -y --scope changed --base ${QUALITY_BASE_REF:-origin/main} --blocking warning --no-respect-inline-disables",
+    "doctor:full": "react-doctor . -y --scope full --blocking warning --no-respect-inline-disables",
     "doctor:audit": "bun run doctor",
     "lint:changed": "bun run scripts/lint-changed.ts && bun run suppressions:check",
     "test:unit:changed": "vitest run --config vitest.unit.config.ts --changed ${QUALITY_BASE_REF:-origin/main} --passWithNoTests",
@@ -137,7 +137,7 @@
     "happy-dom": "20.10.6",
     "playwright": "1.62.0-alpha-2026-07-06",
     "playwright-core": "1.62.0-alpha-2026-07-06",
-    "react-doctor": "0.6.2",
+    "react-doctor": "0.7.1",
     "rsbuild-plugin-devtools-json": "1.0.1",
     "shadcn": "4.13.0",
     "tw-animate-css": "^1.4.0",
@@ -145,5 +145,9 @@
     "ultracite": "7.8.4",
     "vitest": "5.0.0-beta.6",
     "vitest-browser-react": "2.2.0"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.7",
+    "fast-uri": "3.1.3"
   }
 }

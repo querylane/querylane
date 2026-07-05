@@ -112,6 +112,9 @@ import {
   Table_TableType,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
+const TABLE_METADATA_QUERY_OPTIONS = {
+  staleTime: QUERY_STALE_TIME.static,
+} as const;
 const SKELETON_ROW_COUNT = 6;
 const SKELETON_ROW_IDS = Array.from(
   { length: SKELETON_ROW_COUNT },
@@ -1821,30 +1824,29 @@ function TableDetail({
   // Fetch table metadata up front so tabs can show stable resource counts.
   // The same queries back the tab panels, so counts cannot drift from content.
   const tableResourceInput = { parent: tableResourceName };
-  const tableMetadataQueryOptions = { staleTime: QUERY_STALE_TIME.static };
   const columnsQuery = useListTableColumnsQuery(
     tableResourceInput,
-    tableMetadataQueryOptions
+    TABLE_METADATA_QUERY_OPTIONS
   );
   const constraintsQuery = useListTableConstraintsQuery(
     tableResourceInput,
-    tableMetadataQueryOptions
+    TABLE_METADATA_QUERY_OPTIONS
   );
   const indexesQuery = useListTableIndexesQuery(
     tableResourceInput,
-    tableMetadataQueryOptions
+    TABLE_METADATA_QUERY_OPTIONS
   );
   const policiesQuery = useListTablePoliciesQuery(
     tableResourceInput,
-    tableMetadataQueryOptions
+    TABLE_METADATA_QUERY_OPTIONS
   );
   const triggersQuery = useListTableTriggersQuery(
     tableResourceInput,
-    tableMetadataQueryOptions
+    TABLE_METADATA_QUERY_OPTIONS
   );
   const partitionMetadataQuery = useGetTablePartitionMetadataQuery(
     tableResourceName,
-    tableMetadataQueryOptions
+    TABLE_METADATA_QUERY_OPTIONS
   );
   const columnCount = columnsQuery.data?.columns.length;
   const keyRows =
