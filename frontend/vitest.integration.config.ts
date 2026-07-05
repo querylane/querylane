@@ -10,6 +10,7 @@ import {
 export default defineConfig({
   ...createVitestBaseConfig(),
   test: {
+    clearMocks: true,
     environment: "happy-dom",
     exclude: ["node_modules/**"],
     // Disable Node process-level Web Storage so happy-dom owns per-test storage.
