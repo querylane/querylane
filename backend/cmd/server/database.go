@@ -16,6 +16,7 @@ import (
 	"github.com/querylane/querylane/backend/engine/postgres"
 	"github.com/querylane/querylane/backend/runner"
 	"github.com/querylane/querylane/backend/runner/jobs"
+	metricsvc "github.com/querylane/querylane/backend/service/metrics"
 	"github.com/querylane/querylane/backend/storage"
 	"github.com/querylane/querylane/backend/storage/catalog"
 )
@@ -87,6 +88,7 @@ type dbState struct {
 	configManagedInstances bool
 	metaDBGate             *metaDBGate
 	runnerManager          *runner.Manager
+	sampleStores           metricsvc.Stores
 }
 
 func (d *dbState) close() {
@@ -199,7 +201,7 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 		jobs.NewStorageProbe(storageProbeConfig, connManager, storageSampleStore, databaseSizeSampleStore, instanceTargetSource),
 		jobs.NewIOProbe(ioProbeConfig, connManager, ioSampleStore, instanceTargetSource),
 		jobs.NewVacuumProbe(vacuumProbeConfig, connManager, databaseVacuumSampleStore, databaseTargetSource),
-		jobs.NewSampleRetention(sampleRetentionJobConfig, sampleRetentionAge, staleLeaseRetentionAge),
+		jobs.NewSampleRetention(sampleRetentionJobConfig, cl, sampleRetentionAge, staleLeaseRetentionAge),
 	}
 
 	leaseOwner := xid.New().String()
@@ -226,5 +228,13 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 		configManagedInstances: configManaged,
 		metaDBGate:             newMetaDBGate(cl),
 		runnerManager:          runnerManager,
+		sampleStores: metricsvc.Stores{
+			Connection:     connectionSampleStore,
+			Cache:          cacheSampleStore,
+			IO:             ioSampleStore,
+			Storage:        storageSampleStore,
+			DatabaseSize:   databaseSizeSampleStore,
+			DatabaseVacuum: databaseVacuumSampleStore,
+		},
 	}, nil
 }

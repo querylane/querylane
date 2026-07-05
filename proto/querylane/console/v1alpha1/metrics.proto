@@ -1,0 +1,208 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/rpc/status.proto";
+import "google/type/interval.proto";
+
+// MetricsService serves the time series collected by querylane's background
+// sampling probes, turned into chart-ready shape: samples are bucketed to a
+// requested resolution, cumulative counters are converted to per-second rates,
+// and an optional period-over-period trend delta is computed server-side.
+//
+// It is a read API over the meta database's sample tables; it never touches the
+// managed instances. The live single-point equivalents live on
+// InstanceService.GetInstanceOverview.
+service MetricsService {
+  // QueryMetrics returns one time series per requested metric for a target
+  // (an instance or a database) over a time window.
+  rpc QueryMetrics(QueryMetricsRequest) returns (QueryMetricsResponse) {}
+}
+
+message QueryMetricsRequest {
+  // Required. The resource whose metrics to query, as an AIP resource name:
+  // `instances/{instance}` for instance-scoped metrics or
+  // `instances/{instance}/databases/{database}` for database-scoped metrics.
+  // Each requested metric declares which scope it belongs to; a metric whose
+  // scope does not match the target is rejected. Fails with NOT_FOUND when the
+  // target's instance does not exist.
+  string target = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // Required. The metrics to return. Each yields one MetricSeries in the
+  // response (or one entry in partial_errors if it could not be served).
+  repeated MetricId metrics = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).repeated.min_items = 1,
+    (buf.validate.field).repeated.max_items = 32
+  ];
+
+  // Required. The half-open window `[start_time, end_time)` to query (AIP-145).
+  // Relative ranges like "last 24h" are resolved to absolute timestamps by the
+  // client.
+  google.type.Interval interval = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. The requested bucket width (resolution). The server clamps it
+  // per metric to at least that metric's probe cadence and to a total-point
+  // ceiling; each series echoes the width it actually used in Points.step.
+  // When unset the server picks a width that yields a chart-friendly number of
+  // points.
+  google.protobuf.Duration step = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. A period offset for period-over-period comparison (e.g. 24h, 7d).
+  // When set, each series carries a TrendDelta comparing the window against the
+  // same-length window shifted back by this offset. The previous-period line
+  // itself is not returned; a client that wants to overlay it issues a second
+  // QueryMetrics with the interval shifted back by the same offset.
+  google.protobuf.Duration comparison = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message QueryMetricsResponse {
+  // The requested window, echoed back. A series' buckets cover the window and
+  // may extend slightly past end_time when its step does not divide the window
+  // evenly; the trailing partial bucket only aggregates samples before
+  // end_time.
+  google.type.Interval interval = 1;
+
+  // The finest bucket width used across the returned series. Each series'
+  // Points.step is authoritative: a metric with a coarser probe cadence uses a
+  // coarser width.
+  google.protobuf.Duration step = 2;
+
+  // One series per successfully-served metric, in request order.
+  repeated MetricSeries series = 3;
+
+  // Per-metric failures. The RPC still returns OK; a metric that could not be
+  // served (e.g. an IO metric on PostgreSQL < 16, or a permissions gap) is
+  // omitted from `series` and reported here. The failing metric is identified
+  // by an ErrorInfo detail with metadata `{"metric": "<METRIC_ID_...>"}` —
+  // mirrors GetInstanceOverviewResponse.partial_errors.
+  repeated google.rpc.Status partial_errors = 4;
+}
+
+message MetricSeries {
+  // Which requested metric this series belongs to.
+  MetricId metric = 1;
+
+  // Series identity for breakdowns (e.g. `{"state": "active"}`). Empty in the
+  // current version; reserved for future tag-based breakdowns such as
+  // connections by application.
+  map<string, string> labels = 2;
+
+  // How to format the values (bytes, ratio, per-second, ...).
+  MetricUnit unit = 3;
+
+  // Whether the underlying samples are a gauge, a rate derived from a
+  // cumulative counter, or a ratio. Lets the client label axes appropriately.
+  MetricKind kind = 4;
+
+  // The bucketed values for the requested window.
+  Points points = 5;
+
+  // Present only when the request set `comparison`. The scalar trend used for
+  // stat tiles like "2,841 tps · +62% · 24h".
+  TrendDelta delta = 6;
+}
+
+// Points is a columnar, step-implicit series: `values[i]` is the value at
+// `start_time + i*step`. This avoids a timestamp per point, which is pure
+// redundancy on a regular grid. A gap (no samples in a bucket) is encoded as
+// NaN so charting libraries break the line there natively.
+message Points {
+  // The timestamp of `values[0]`.
+  google.protobuf.Timestamp start_time = 1;
+
+  // The spacing between consecutive values. At least QueryMetricsResponse.step;
+  // coarser when this metric's probe cadence is coarser than the finest series.
+  google.protobuf.Duration step = 2;
+
+  // The bucketed values. NaN marks a bucket with no samples.
+  repeated double values = 3 [packed = true];
+}
+
+// TrendDelta is the scalar period-over-period trend for a series. Fields that
+// could not be computed are NaN, mirroring the NaN-for-gap convention of
+// Points.values; clients should suppress a NaN before rendering.
+message TrendDelta {
+  // The representative value over the current window (e.g. the last connection
+  // count, or the mean TPS) — the number shown on the stat tile. NaN when the
+  // current window has no usable data (e.g. probes stopped).
+  double current_value = 1;
+
+  // The comparable value over the shifted window. NaN when previous_available
+  // is false.
+  double previous_value = 2;
+
+  // The signed percent change from previous_value to current_value (e.g. 62.0
+  // for +62%). NaN when it cannot be computed: either window lacks data, or
+  // previous_value is zero while current_value is not (a rise from zero has no
+  // finite percentage).
+  double percent_change = 3;
+
+  // Whether the shifted window had any data. False for a target younger than
+  // the comparison offset, in which case the client should suppress the delta.
+  bool previous_available = 4;
+}
+
+// MetricKind classifies a series' read-side treatment.
+enum MetricKind {
+  METRIC_KIND_UNSPECIFIED = 0;
+  // A point-in-time reading averaged/last-valued per bucket (e.g. connections).
+  METRIC_KIND_GAUGE = 1;
+  // A per-second rate derived from a cumulative counter's delta per bucket.
+  METRIC_KIND_COUNTER_RATE = 2;
+  // A bounded ratio in [0, 1] derived from counter deltas (e.g. cache hit).
+  METRIC_KIND_RATIO = 3;
+}
+
+// MetricUnit is a formatting hint for the client.
+enum MetricUnit {
+  METRIC_UNIT_UNSPECIFIED = 0;
+  METRIC_UNIT_COUNT = 1;
+  METRIC_UNIT_BYTES = 2;
+  METRIC_UNIT_RATIO = 3;
+  METRIC_UNIT_PER_SECOND = 4;
+  METRIC_UNIT_BYTES_PER_SECOND = 5;
+}
+
+// MetricId enumerates the queryable series. The Go series registry
+// (backend/metricstore) is the source of truth; this enum mirrors it. Values
+// are grouped by scope: the target must be an instance for instance-scoped
+// metrics and a database for database-scoped metrics.
+enum MetricId {
+  METRIC_ID_UNSPECIFIED = 0;
+
+  // -- Instance-scoped -----------------------------------------------------
+  // Connection utilization (gauges) from pg_stat_activity.
+  METRIC_ID_CONNECTIONS_ACTIVE = 1;
+  METRIC_ID_CONNECTIONS_IDLE = 2;
+  METRIC_ID_CONNECTIONS_TOTAL = 3;
+  METRIC_ID_CONNECTIONS_MAX = 4;
+
+  // Transactions per second (counter rate: xact_commit + xact_rollback).
+  METRIC_ID_TRANSACTIONS_PER_SECOND = 5;
+
+  // Buffer-cache hit ratio in [0, 1] (ratio: blocks_hit / (hit + read)).
+  METRIC_ID_CACHE_HIT_RATIO = 6;
+
+  // Total on-disk size across all databases (gauge).
+  METRIC_ID_STORAGE_TOTAL_BYTES = 7;
+
+  // pg_stat_io throughput (counter rates; PostgreSQL 16+).
+  METRIC_ID_IO_READ_BYTES_PER_SECOND = 8;
+  METRIC_ID_IO_WRITE_BYTES_PER_SECOND = 9;
+
+  // -- Database-scoped -----------------------------------------------------
+  // On-disk size of a single database (gauge).
+  METRIC_ID_DATABASE_SIZE_BYTES = 20;
+
+  // Live/dead tuple counts across a database's user tables (gauges).
+  METRIC_ID_DATABASE_LIVE_TUPLES = 21;
+  METRIC_ID_DATABASE_DEAD_TUPLES = 22;
+}

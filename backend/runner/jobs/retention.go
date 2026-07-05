@@ -17,9 +17,15 @@ const SampleRetentionJobName = "sample_retention"
 // just needs a single, stable key.
 const retentionTarget = "meta"
 
-// samplePruner deletes sample rows older than age, returning deleted counts
-// per table. Implemented by storage.PruneSamplesOlderThanTx.
-type samplePruner func(ctx context.Context, exec storage.QueryExecutor, age time.Duration) (map[string]int64, error)
+// sampleRetentionBatchSize bounds each retention DELETE. Sized so a batch
+// finishes in well under a second on modest hardware: the sweep stays
+// responsive to cancellation and never holds long row locks, while still
+// clearing millions of backlogged rows within one lease window.
+const sampleRetentionBatchSize = 10_000
+
+// samplePruner deletes sample rows older than age in batches, returning
+// deleted counts per table. Implemented by storage.PruneSamplesOlderThan.
+type samplePruner func(ctx context.Context, db storage.QueryExecutor, age time.Duration, batchSize int64) (map[string]int64, error)
 
 // leasePruner deletes departed-target lease rows older than age. Implemented
 // by storage.PruneStaleRunnerExecutionStateTx.
@@ -31,6 +37,7 @@ type leasePruner func(ctx context.Context, exec storage.QueryExecutor, age time.
 // never run two retention sweeps at the same time.
 type SampleRetentionJob struct {
 	config        runner.Config
+	db            storage.QueryExecutor
 	sampleAge     time.Duration
 	staleLeaseAge time.Duration
 	pruneSamples  samplePruner
@@ -39,13 +46,15 @@ type SampleRetentionJob struct {
 
 // NewSampleRetention returns a retention job that prunes samples older
 // than sampleAge and departed-target lease rows older than staleLeaseAge on
-// each cycle.
-func NewSampleRetention(cfg runner.Config, sampleAge time.Duration, staleLeaseAge time.Duration) *SampleRetentionJob {
+// each cycle. db must be the raw meta-DB handle (not a transaction): the
+// sample sweep commits each delete batch independently.
+func NewSampleRetention(cfg runner.Config, db storage.QueryExecutor, sampleAge time.Duration, staleLeaseAge time.Duration) *SampleRetentionJob {
 	return &SampleRetentionJob{
 		config:        cfg,
+		db:            db,
 		sampleAge:     sampleAge,
 		staleLeaseAge: staleLeaseAge,
-		pruneSamples:  storage.PruneSamplesOlderThanTx,
+		pruneSamples:  storage.PruneSamplesOlderThan,
 		pruneLeases:   storage.PruneStaleRunnerExecutionStateTx,
 	}
 }
@@ -59,15 +68,21 @@ func (j *SampleRetentionJob) ListTargets(_ context.Context) ([]string, error) {
 	return []string{retentionTarget}, nil
 }
 
-// Run defers the actual DELETEs to Commit so they run in the same transaction
-// as the lease bookkeeping — no risk of "marked done but rows still there".
-func (j *SampleRetentionJob) Run(_ context.Context, _ string) (runner.RunResult, error) {
-	return runner.RunResult{Commit: func(ctx context.Context, exec storage.QueryExecutor) error {
-		prunedSamples, err := j.pruneSamples(ctx, exec, j.sampleAge)
-		if err != nil {
-			return err
-		}
+// Run prunes expired samples in batches directly against the meta DB instead
+// of deferring them to Commit: the deletes are idempotent, so they don't need
+// the lease-shared transaction, and batching them outside it keeps an
+// arbitrarily large backlog from becoming one unbounded DELETE that cannot
+// finish inside the lease window. A sweep cut short by cancellation keeps the
+// batches already committed and reports the error; the next cycle continues
+// where it stopped. Only the cheap lease pruning and the summary log ride in
+// Commit with the success bookkeeping.
+func (j *SampleRetentionJob) Run(ctx context.Context, _ string) (runner.RunResult, error) {
+	prunedSamples, err := j.pruneSamples(ctx, j.db, j.sampleAge, sampleRetentionBatchSize)
+	if err != nil {
+		return runner.RunResult{}, err
+	}
 
+	return runner.RunResult{Commit: func(ctx context.Context, exec storage.QueryExecutor) error {
 		prunedLeases, err := j.pruneLeases(ctx, exec, j.staleLeaseAge)
 		if err != nil {
 			return err
@@ -78,9 +93,9 @@ func (j *SampleRetentionJob) Run(_ context.Context, _ string) (runner.RunResult,
 			totalSamples += rows
 		}
 
-		// Logged before the surrounding transaction commits; the counts can
-		// overstate reality only in the rare lease-lost rollback, which logs
-		// its own warning right after.
+		// Logged before the surrounding transaction commits; the lease count
+		// can overstate reality only in the rare lease-lost rollback, which
+		// logs its own warning right after.
 		slog.InfoContext(ctx, "retention sweep",
 			slog.Int64("samples_pruned", totalSamples),
 			slog.Int64("stale_leases_pruned", prunedLeases),
