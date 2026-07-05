@@ -52,3 +52,24 @@ jobs:
           prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --comment'
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
+
+      # The action exits 0 even when Claude's own run fails (e.g. an expired
+      # CLAUDE_CODE_OAUTH_TOKEN or an account usage limit), so a dead review
+      # looks identical to a clean one. Inspect the execution log and fail the
+      # job when Claude reported an error so the broken state is visible.
+      - name: Verify Claude review succeeded
+        if: always() && steps.claude-review.outcome == 'success'
+        env:
+          EXECUTION_FILE: ${{ steps.claude-review.outputs.execution_file }}
+        run: |
+          if [ -z "$EXECUTION_FILE" ] || [ ! -f "$EXECUTION_FILE" ]; then
+            echo "::error::Claude execution log missing — the review did not run. Check the CLAUDE_CODE_OAUTH_TOKEN secret."
+            exit 1
+          fi
+          # Handles both a single JSON array and newline-delimited JSON events.
+          is_error=$(jq -s -r 'flatten | map(select(.type == "result")) | last | .is_error' "$EXECUTION_FILE" 2>/dev/null || echo parse_error)
+          if [ "$is_error" != "false" ]; then
+            echo "::error::Claude Code review reported an error (is_error=$is_error); no review was posted. Likely an expired/invalid CLAUDE_CODE_OAUTH_TOKEN or an account usage limit."
+            exit 1
+          fi
+          echo "Claude review completed successfully."
