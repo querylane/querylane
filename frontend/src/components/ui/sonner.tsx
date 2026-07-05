@@ -2,12 +2,13 @@ import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
-const Toaster = ({ theme: _theme, ...props }: ToasterProps) => {
+const Toaster = ({ theme: toastTheme, ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
-  // Ignore incoming theme prop so the app-wide next-themes value remains the
-  // single source of truth for Sonner.
   const resolvedTheme: NonNullable<ToasterProps["theme"]> =
-    theme === "light" || theme === "dark" || theme === "system" ? theme : "system"
+    toastTheme ??
+    (theme === "light" || theme === "dark" || theme === "system"
+      ? theme
+      : "system")
 
   return (
     <Sonner

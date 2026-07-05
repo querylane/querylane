@@ -22,8 +22,8 @@ const FILES_SUMMARY_PATTERN =
 const OVERWRITE_SUMMARY_PATTERN = /~(?<count>\d+)\s+overwrite\b/u;
 const NO_CHANGES_PATTERN = /\bNo changes\./u;
 // These are deliberate strict TypeScript compatibility patches against
-// shadcn 4.11.0 output: calendar keeps safer DayPicker modifier access and
-// sonner sanitizes the next-themes value before passing it to Sonner.
+// shadcn output: calendar keeps safer DayPicker modifier access and sonner
+// sanitizes the resolved theme before passing it to Sonner.
 const ALLOWED_STRICT_TYPESCRIPT_DRIFT_FILES = new Set([
   "src/components/ui/calendar.tsx",
   "src/components/ui/sonner.tsx",
