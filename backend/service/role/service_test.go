@@ -55,6 +55,9 @@ type fakeDatabaseSession struct {
 	closed            bool
 }
 
+// Prober is never exercised by role tests.
+func (f *fakeDatabaseSession) Prober() engine.DatabaseProber { return nil }
+
 func (f *fakeDatabaseSession) ListRoleGrants(_ context.Context, roleName string, params aip.Params) ([]engine.RoleGrant, string, error) {
 	f.roleName = roleName
 	f.params = params
@@ -98,6 +101,10 @@ func (f *fakeRoleSession) GetInstanceOverview(_ context.Context) (*engine.Instan
 func (f *fakeRoleSession) CheckInstanceHealth(_ context.Context) (*engine.InstanceHealth, error) {
 	return nil, errors.New("not used in tests")
 }
+
+// Prober is never exercised by role tests; the probe surface lives on a
+// separate interface precisely so this fake ignores it.
+func (f *fakeRoleSession) Prober() engine.InstanceProber { return nil }
 
 func (f *fakeRoleSession) ListDatabases(_ context.Context, _ aip.Params) ([]engine.Database, string, error) {
 	return nil, "", errors.New("not used in tests")

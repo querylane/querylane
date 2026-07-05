@@ -2,13 +2,6 @@ package runner
 
 import "time"
 
-// Stable lease-key names for the built-in jobs. These must not change across
-// restarts; they identify rows in runner_execution_state.
-const (
-	InstanceConnectivityJobName = "instance_connectivity"
-	InstanceMetricsJobName      = "instance_metrics"
-)
-
 // Config holds the static scheduling and identity parameters for a job.
 type Config struct {
 	// Name uniquely identifies this job. It is used as part of the distributed

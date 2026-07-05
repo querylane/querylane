@@ -148,6 +148,67 @@ type IOMetrics struct {
 	Fsyncs      int64
 }
 
+// CacheCounters holds cumulative activity counters aggregated across all
+// databases from pg_stat_database: buffer-cache blocks, transaction and tuple
+// throughput, contention (conflicts, deadlocks), temp-file spill, and
+// PostgreSQL 14+ session tallies (zero on older servers). StatsReset is the
+// newest pg_stat_database.stats_reset, so explicit resets and crash recovery
+// start a new rate window. Windowing on it is not airtight: DROP DATABASE
+// shrinks the sums without a new reset (and can even move the max backward),
+// so readers must additionally treat any negative delta as a discontinuity.
+type CacheCounters struct {
+	BlocksHit         int64
+	BlocksRead        int64
+	XactCommit        int64
+	XactRollback      int64
+	TupReturned       int64
+	TupFetched        int64
+	TupInserted       int64
+	TupUpdated        int64
+	TupDeleted        int64
+	Conflicts         int64
+	Deadlocks         int64
+	TempFiles         int64
+	TempBytes         int64
+	Sessions          int64
+	SessionsAbandoned int64
+	SessionsFatal     int64
+	SessionsKilled    int64
+	StatsReset        *time.Time
+}
+
+// DatabaseSize is the on-disk size of one database at observation time.
+type DatabaseSize struct {
+	DatabaseName string
+	SizeBytes    int64
+}
+
+// IOCounters holds cumulative pg_stat_io totals across the instance
+// (PostgreSQL 16+). See CacheCounters for the StatsReset semantics.
+type IOCounters struct {
+	Reads       int64
+	ReadBytes   int64
+	Writes      int64
+	WriteBytes  int64
+	Extends     int64
+	ExtendBytes int64
+	Fsyncs      int64
+	StatsReset  *time.Time
+}
+
+// VacuumCounters holds vacuum activity aggregated over the connected
+// database's user tables. Tuple counts are gauges; vacuum counts are
+// cumulative. StatsReset is the connected database's stats_reset — but DROP
+// TABLE shrinks the sums without a new reset, so readers must additionally
+// treat any negative delta as a discontinuity.
+type VacuumCounters struct {
+	LiveTuples      int64
+	DeadTuples      int64
+	VacuumCount     int64
+	AutovacuumCount int64
+	StatsReset      *time.Time
+}
+
 // Role represents a server-level PostgreSQL role within an external instance.
 type Role struct {
 	Name         string

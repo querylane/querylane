@@ -71,6 +71,10 @@ func (m *mockInstanceSession) CheckInstanceHealth(_ context.Context) (*engine.In
 	return &engine.InstanceHealth{}, nil
 }
 
+// Prober is never exercised by catalog tests; the probe surface lives on a
+// separate interface precisely so this fake ignores it.
+func (m *mockInstanceSession) Prober() engine.InstanceProber { return nil }
+
 func (m *mockInstanceSession) GetDatabase(_ context.Context, name string) (*engine.Database, error) {
 	for _, db := range m.databases {
 		if db.Name == name {
@@ -105,6 +109,9 @@ type mockDatabaseSession struct {
 	tableSyncCh           chan struct{}
 	tableStartedCh        chan struct{}
 }
+
+// Prober is never exercised by catalog tests.
+func (m *mockDatabaseSession) Prober() engine.DatabaseProber { return nil }
 
 func (m *mockDatabaseSession) ListRoleGrants(_ context.Context, _ string, _ aip.Params) ([]engine.RoleGrant, string, error) {
 	return nil, "", nil

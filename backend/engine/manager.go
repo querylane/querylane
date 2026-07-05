@@ -157,6 +157,42 @@ func (p *instancePool) getOrCreateDBPool(ctx context.Context, cfg *api.PostgresC
 	return db, nil
 }
 
+// openEphemeralDatabasePool dials a single-connection pool that is NOT cached
+// in dbPools; the caller owns it and must Close it. Background probes use
+// this so sampling hundreds of databases never materializes hundreds of
+// standing pools (and idle server connections) the way the cached
+// getOrCreateDBPool path would.
+func (p *instancePool) openEphemeralDatabasePool(ctx context.Context, cfg *api.PostgresConfig, databaseName string) (*sql.DB, error) {
+	clonedCfg := clonePostgresConfig(cfg)
+	if clonedCfg == nil {
+		return nil, errors.New("missing postgres config")
+	}
+
+	clonedCfg.Database = databaseName
+
+	dsn, err := ConfigToDSNWithSecretResolver(ctx, clonedCfg, p.secrets)
+	if err != nil {
+		return nil, fmt.Errorf("resolve engine connection config: %w", err)
+	}
+
+	if dsn == "" {
+		return nil, errors.New("invalid engine connection config")
+	}
+
+	db, err := OpenPostgresDB(dsn)
+	if err != nil {
+		return nil, fmt.Errorf("open engine connection: %w", err)
+	}
+
+	// One lazily-dialed connection, released as soon as it goes idle. No
+	// TestConnection round-trip: the caller's first query surfaces the same
+	// failure with one fewer round-trip.
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(0)
+
+	return db, nil
+}
+
 func (p *instancePool) openDatabasePool(ctx context.Context, cfg *api.PostgresConfig, databaseName string) (*sql.DB, error) {
 	clonedCfg := clonePostgresConfig(cfg)
 	if clonedCfg == nil {
@@ -205,6 +241,7 @@ type Manager struct {
 	closed                bool
 	pools                 map[resource.InstanceName]*instancePool
 	healthDriver          healthDriver
+	probeDriver           probeDriver
 	instanceCatalogDriver instanceCatalogDriver
 	databaseCatalogDriver databaseCatalogDriver
 	tablePartitionDriver  tablePartitionDriver
@@ -216,6 +253,7 @@ type Manager struct {
 
 type managerDrivers struct {
 	healthDriver          healthDriver
+	probeDriver           probeDriver
 	instanceCatalogDriver instanceCatalogDriver
 	databaseCatalogDriver databaseCatalogDriver
 	tablePartitionDriver  tablePartitionDriver
@@ -227,6 +265,7 @@ type managerDrivers struct {
 func NewManager(config PoolConfig, driver adminDriver) *Manager {
 	return newManagerWithDrivers(config, managerDrivers{
 		healthDriver:          driver,
+		probeDriver:           driver,
 		instanceCatalogDriver: driver,
 		databaseCatalogDriver: driver,
 		tablePartitionDriver:  driver,
@@ -239,6 +278,7 @@ func newManagerWithDrivers(config PoolConfig, drivers managerDrivers) *Manager {
 	return &Manager{
 		pools:                 make(map[resource.InstanceName]*instancePool),
 		healthDriver:          drivers.healthDriver,
+		probeDriver:           drivers.probeDriver,
 		instanceCatalogDriver: drivers.instanceCatalogDriver,
 		databaseCatalogDriver: drivers.databaseCatalogDriver,
 		tablePartitionDriver:  drivers.tablePartitionDriver,
@@ -261,6 +301,7 @@ func (m *Manager) OpenInstance(ctx context.Context, instanceName resource.Instan
 		db:                    pool.db,
 		pool:                  pool,
 		healthDriver:          m.healthDriver,
+		probeDriver:           m.probeDriver,
 		instanceCatalogDriver: m.instanceCatalogDriver,
 		databaseCatalogDriver: m.databaseCatalogDriver,
 		tablePartitionDriver:  m.tablePartitionDriver,

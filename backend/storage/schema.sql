@@ -2,8 +2,9 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 17.5
--- Dumped by pg_dump version 17.5
+
+-- Dumped from database version 17.9
+-- Dumped by pg_dump version 17.9
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -281,6 +282,34 @@ CREATE TABLE public.catalog_view (
 
 
 --
+-- Name: database_size_sample; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.database_size_sample (
+    instance_id text NOT NULL,
+    database_name text NOT NULL,
+    observed_at timestamp with time zone NOT NULL,
+    size_bytes bigint NOT NULL
+);
+
+
+--
+-- Name: database_vacuum_sample; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.database_vacuum_sample (
+    instance_id text NOT NULL,
+    database_name text NOT NULL,
+    observed_at timestamp with time zone NOT NULL,
+    live_tuples bigint NOT NULL,
+    dead_tuples bigint NOT NULL,
+    vacuum_count bigint NOT NULL,
+    autovacuum_count bigint NOT NULL,
+    stats_reset timestamp with time zone
+);
+
+
+--
 -- Name: goose_db_version; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -331,7 +360,23 @@ CREATE TABLE public.instance_cache_sample (
     instance_id text NOT NULL,
     observed_at timestamp with time zone NOT NULL,
     blocks_hit bigint NOT NULL,
-    blocks_read bigint NOT NULL
+    blocks_read bigint NOT NULL,
+    stats_reset timestamp with time zone,
+    xact_commit bigint DEFAULT 0 NOT NULL,
+    xact_rollback bigint DEFAULT 0 NOT NULL,
+    tup_returned bigint DEFAULT 0 NOT NULL,
+    tup_fetched bigint DEFAULT 0 NOT NULL,
+    tup_inserted bigint DEFAULT 0 NOT NULL,
+    tup_updated bigint DEFAULT 0 NOT NULL,
+    tup_deleted bigint DEFAULT 0 NOT NULL,
+    conflicts bigint DEFAULT 0 NOT NULL,
+    deadlocks bigint DEFAULT 0 NOT NULL,
+    temp_files bigint DEFAULT 0 NOT NULL,
+    temp_bytes bigint DEFAULT 0 NOT NULL,
+    sessions bigint DEFAULT 0 NOT NULL,
+    sessions_abandoned bigint DEFAULT 0 NOT NULL,
+    sessions_fatal bigint DEFAULT 0 NOT NULL,
+    sessions_killed bigint DEFAULT 0 NOT NULL
 );
 
 
@@ -346,6 +391,24 @@ CREATE TABLE public.instance_connection_sample (
     idle bigint NOT NULL,
     total bigint NOT NULL,
     max_conn bigint NOT NULL
+);
+
+
+--
+-- Name: instance_io_sample; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.instance_io_sample (
+    instance_id text NOT NULL,
+    observed_at timestamp with time zone NOT NULL,
+    reads bigint NOT NULL,
+    read_bytes bigint NOT NULL,
+    writes bigint NOT NULL,
+    write_bytes bigint NOT NULL,
+    extends bigint NOT NULL,
+    extend_bytes bigint NOT NULL,
+    fsyncs bigint NOT NULL,
+    stats_reset timestamp with time zone
 );
 
 
@@ -481,6 +544,22 @@ ALTER TABLE ONLY public.catalog_view
 
 
 --
+-- Name: database_size_sample database_size_sample_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_size_sample
+    ADD CONSTRAINT database_size_sample_pkey PRIMARY KEY (instance_id, database_name, observed_at);
+
+
+--
+-- Name: database_vacuum_sample database_vacuum_sample_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_vacuum_sample
+    ADD CONSTRAINT database_vacuum_sample_pkey PRIMARY KEY (instance_id, database_name, observed_at);
+
+
+--
 -- Name: goose_db_version goose_db_version_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -502,6 +581,14 @@ ALTER TABLE ONLY public.instance_cache_sample
 
 ALTER TABLE ONLY public.instance_connection_sample
     ADD CONSTRAINT instance_connection_sample_pkey PRIMARY KEY (instance_id, observed_at);
+
+
+--
+-- Name: instance_io_sample instance_io_sample_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.instance_io_sample
+    ADD CONSTRAINT instance_io_sample_pkey PRIMARY KEY (instance_id, observed_at);
 
 
 --
@@ -572,6 +659,20 @@ CREATE INDEX idx_catalog_view_name_trgm ON public.catalog_view USING gin (name p
 
 
 --
+-- Name: idx_database_size_sample_observed_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_database_size_sample_observed_at ON public.database_size_sample USING btree (observed_at);
+
+
+--
+-- Name: idx_database_vacuum_sample_observed_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_database_vacuum_sample_observed_at ON public.database_vacuum_sample USING btree (observed_at);
+
+
+--
 -- Name: idx_instance_cache_sample_observed_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -590,6 +691,13 @@ CREATE INDEX idx_instance_connection_sample_observed_at ON public.instance_conne
 --
 
 CREATE INDEX idx_instance_deleted_at ON public.instance USING btree (deleted_at) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_instance_io_sample_observed_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_instance_io_sample_observed_at ON public.instance_io_sample USING btree (observed_at);
 
 
 --
@@ -644,4 +752,5 @@ CREATE TRIGGER update_runner_execution_state_updated_at BEFORE UPDATE ON public.
 --
 -- PostgreSQL database dump complete
 --
+
 

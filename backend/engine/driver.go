@@ -11,11 +11,24 @@ import (
 // Tests should depend on the narrow seam they exercise instead of faking every method.
 type adminDriver interface {
 	healthDriver
+	probeDriver
 	instanceCatalogDriver
 	databaseCatalogDriver
 	tablePartitionDriver
 	tableDataDriver
 	queryDriver
+}
+
+// probeDriver serves the background sampling probes. Its queries run under
+// probe-hardened settings (short statement/lock timeouts, probe
+// application_name) so a slow catalog never occupies shared pool capacity.
+type probeDriver interface {
+	GetServerVersionNum(ctx context.Context, db *sql.DB) (int32, error)
+	GetConnectionMetrics(ctx context.Context, db *sql.DB) (*ConnectionMetrics, error)
+	GetCacheCounters(ctx context.Context, db *sql.DB) (*CacheCounters, error)
+	ListDatabaseSizes(ctx context.Context, db *sql.DB) ([]DatabaseSize, error)
+	GetIOCounters(ctx context.Context, db *sql.DB) (*IOCounters, error)
+	GetVacuumCounters(ctx context.Context, db *sql.DB) (*VacuumCounters, error)
 }
 
 type healthDriver interface {

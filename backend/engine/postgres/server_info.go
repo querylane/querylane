@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/querylane/querylane/backend/engine"
 )
@@ -91,7 +92,12 @@ func (d *Postgres) GetInstanceOverview(ctx context.Context, db *sql.DB) (*engine
 	})
 
 	wg.Go(func() {
-		var io engine.IOMetrics
+		var (
+			io engine.IOMetrics
+			// statsReset is carried by the shared query for the IO probe; the
+			// overview has no use for it.
+			statsReset *time.Time
+		)
 		if err := db.QueryRowContext(ctx, getIOMetricsQuery).Scan(
 			&io.Reads,
 			&io.ReadBytes,
@@ -100,6 +106,7 @@ func (d *Postgres) GetInstanceOverview(ctx context.Context, db *sql.DB) (*engine
 			&io.Extends,
 			&io.ExtendBytes,
 			&io.Fsyncs,
+			&statsReset,
 		); err != nil {
 			recordPartialError("io", "failed to query I/O metrics", "query I/O metrics", err)
 			return

@@ -16,13 +16,40 @@ type InstanceSession interface {
 	ListDatabases(ctx context.Context, params aip.Params) ([]Database, string, error)
 	GetDatabase(ctx context.Context, databaseName string) (*Database, error)
 	OpenDatabase(ctx context.Context, databaseName string) (DatabaseSession, error)
+	// Prober exposes the background-sampling surface. It grows with every new
+	// probe, so it is deliberately split off: UI-facing consumers (and their
+	// test fakes) depend on InstanceSession alone and never notice new probes.
+	Prober() InstanceProber
 	Close() error
+}
+
+// InstanceProber is the instance-level collection surface for background
+// probes. Its queries run probe-hardened (short statement/lock timeouts,
+// probe application_name). Add new instance-level probe methods here.
+type InstanceProber interface {
+	GetServerVersionNum(ctx context.Context) (int32, error)
+	GetConnectionMetrics(ctx context.Context) (*ConnectionMetrics, error)
+	GetCacheCounters(ctx context.Context) (*CacheCounters, error)
+	ListDatabaseSizes(ctx context.Context) ([]DatabaseSize, error)
+	GetIOCounters(ctx context.Context) (*IOCounters, error)
+	// OpenEphemeralDatabase opens a database session backed by an uncached
+	// single-connection pool the session owns; Close releases it. Probes use
+	// this to avoid materializing one standing pool per database.
+	OpenEphemeralDatabase(ctx context.Context, databaseName string) (DatabaseSession, error)
+}
+
+// DatabaseProber is the database-level collection surface for background
+// probes. Add new database-level probe methods here.
+type DatabaseProber interface {
+	GetVacuumCounters(ctx context.Context) (*VacuumCounters, error)
 }
 
 // DatabaseSession provides database-local access to one managed database.
 //
 //nolint:interfacebloat // cohesive engine session contract; matches adminDriver.
 type DatabaseSession interface {
+	// Prober exposes the background-sampling surface; see InstanceSession.Prober.
+	Prober() DatabaseProber
 	ListRoleGrants(ctx context.Context, roleName string, params aip.Params) ([]RoleGrant, string, error)
 	ListRoleOwnedObjects(ctx context.Context, roleName string, params aip.Params) ([]OwnedObject, string, error)
 	ListRoleDefaultPrivileges(ctx context.Context, roleName string, params aip.Params) ([]RoleDefaultPrivilege, string, error)

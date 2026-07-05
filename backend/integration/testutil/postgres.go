@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -25,11 +26,28 @@ import (
 )
 
 const (
-	postgresImage     = "postgres:18-alpine"
-	containerDatabase = "testdb"
-	containerUsername = "testuser"
-	containerPassword = "testpass"
+	// defaultPostgresImage is the newest supported major, exercising the PG18+
+	// pg_stat_io read_bytes/write_bytes columns and the 14+ session counters.
+	// Override with QUERYLANE_TEST_POSTGRES_IMAGE to run the suite against an
+	// older major (e.g. postgres:14-alpine, postgres:16-alpine) so the
+	// version-branching probe queries -- pg_stat_io op_bytes, absent session
+	// counters -- get real coverage across the fleet we support.
+	defaultPostgresImage = "postgres:18-alpine"
+	postgresImageEnv     = "QUERYLANE_TEST_POSTGRES_IMAGE"
+	containerDatabase    = "testdb"
+	containerUsername    = "testuser"
+	containerPassword    = "testpass"
 )
+
+// postgresImage returns the container image the integration suite runs
+// against: QUERYLANE_TEST_POSTGRES_IMAGE when set, else defaultPostgresImage.
+func postgresImage() string {
+	if img := strings.TrimSpace(os.Getenv(postgresImageEnv)); img != "" {
+		return img
+	}
+
+	return defaultPostgresImage
+}
 
 // PostgreSQLContainer wraps a testcontainers PostgreSQL instance with convenience methods.
 type PostgreSQLContainer struct {
@@ -37,10 +55,13 @@ type PostgreSQLContainer struct {
 }
 
 // NewPostgreSQLContainer creates and starts a new PostgreSQL testcontainer.
-// Uses the latest PostgreSQL 18 Alpine image for compatibility smoke coverage.
+// Defaults to the latest PostgreSQL 18 Alpine image; QUERYLANE_TEST_POSTGRES_IMAGE
+// overrides it to run the suite against an older supported major.
 func NewPostgreSQLContainer(ctx context.Context) (*PostgreSQLContainer, error) {
+	image := postgresImage()
+
 	container, err := postgres.Run(ctx,
-		postgresImage,
+		image,
 		postgres.WithDatabase(containerDatabase),
 		postgres.WithUsername(containerUsername),
 		postgres.WithPassword(containerPassword),
@@ -51,7 +72,7 @@ func NewPostgreSQLContainer(ctx context.Context) (*PostgreSQLContainer, error) {
 		),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to start PostgreSQL container %s: %w", postgresImage, err)
+		return nil, fmt.Errorf("failed to start PostgreSQL container %s: %w", image, err)
 	}
 
 	return &PostgreSQLContainer{

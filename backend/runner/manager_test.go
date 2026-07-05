@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/storage"
 )
 
@@ -230,6 +229,17 @@ func defaultJobConfig() Config {
 
 // --- Tests ---
 
+// cycleCounts is the copyable expectation twin of cycleStats (which embeds a
+// mutex and must not be copied).
+type cycleCounts struct {
+	targets     int
+	committed   int
+	empty       int
+	failed      int
+	leaseLost   int
+	claimErrors int
+}
+
 func TestManager_RunCycle(t *testing.T) {
 	t.Parallel()
 
@@ -247,6 +257,7 @@ func TestManager_RunCycle(t *testing.T) {
 		wantTransactCalls int
 		wantSuccessCalls  int
 		wantFailureCalls  int
+		wantStats         cycleCounts
 	}{
 		{
 			name:              "success_with_commit",
@@ -255,6 +266,7 @@ func TestManager_RunCycle(t *testing.T) {
 			wantRunCalls:      1,
 			wantTransactCalls: 1,
 			wantSuccessCalls:  1,
+			wantStats:         cycleCounts{targets: 1, committed: 1},
 		},
 		{
 			name:             "success_no_commit",
@@ -263,6 +275,7 @@ func TestManager_RunCycle(t *testing.T) {
 			commitNil:        true,
 			wantRunCalls:     1,
 			wantSuccessCalls: 1,
+			wantStats:        cycleCounts{targets: 1, empty: 1},
 		},
 		{
 			name:             "run_error",
@@ -271,6 +284,7 @@ func TestManager_RunCycle(t *testing.T) {
 			runErr:           errors.New("collection failed"),
 			wantRunCalls:     1,
 			wantFailureCalls: 1,
+			wantStats:        cycleCounts{targets: 1, failed: 1},
 		},
 		{
 			name:              "commit_error",
@@ -280,6 +294,7 @@ func TestManager_RunCycle(t *testing.T) {
 			wantRunCalls:      1,
 			wantTransactCalls: 1,
 			wantFailureCalls:  1,
+			wantStats:         cycleCounts{targets: 1, failed: 1},
 		},
 		{
 			name:              "transaction_error",
@@ -289,16 +304,19 @@ func TestManager_RunCycle(t *testing.T) {
 			wantRunCalls:      1,
 			wantTransactCalls: 1,
 			wantFailureCalls:  1,
+			wantStats:         cycleCounts{targets: 1, failed: 1},
 		},
 		{
 			name:        "lease_not_claimed",
 			targets:     []string{"instances/a"},
 			claimResult: false,
+			wantStats:   cycleCounts{targets: 1},
 		},
 		{
-			name:     "claim_error",
-			targets:  []string{"instances/a"},
-			claimErr: errors.New("db unreachable"),
+			name:      "claim_error",
+			targets:   []string{"instances/a"},
+			claimErr:  errors.New("db unreachable"),
+			wantStats: cycleCounts{targets: 1, claimErrors: 1},
 		},
 		{
 			name:       "list_targets_error",
@@ -342,13 +360,26 @@ func TestManager_RunCycle(t *testing.T) {
 
 			mgr := newTestManager(execStore, tx)
 
-			mgr.runCycle(context.Background(), job)
+			stats := mgr.runCycle(context.Background(), job)
 
 			runCalls := job.runCallCount()
 			assert.Equal(t, tt.wantRunCalls, runCalls, "run calls")
 			assert.Equal(t, tt.wantTransactCalls, tx.getCalls(), "tx calls")
 			assert.Equal(t, tt.wantSuccessCalls, execStore.getSuccessCalls(), "success calls")
 			assert.Equal(t, tt.wantFailureCalls, execStore.getFailureCalls(), "failure calls")
+
+			if tt.targetsErr != nil {
+				assert.Nil(t, stats, "target-listing failures produce no cycle stats")
+				return
+			}
+
+			require.NotNil(t, stats)
+			assert.Equal(t, tt.wantStats.targets, stats.targets, "stats.targets")
+			assert.Equal(t, tt.wantStats.committed, stats.committed, "stats.committed")
+			assert.Equal(t, tt.wantStats.empty, stats.empty, "stats.empty")
+			assert.Equal(t, tt.wantStats.failed, stats.failed, "stats.failed")
+			assert.Equal(t, tt.wantStats.leaseLost, stats.leaseLost, "stats.leaseLost")
+			assert.Equal(t, tt.wantStats.claimErrors, stats.claimErrors, "stats.claimErrors")
 		})
 	}
 }
@@ -392,12 +423,16 @@ func TestManager_RunCycle_LeaseLost(t *testing.T) {
 			tx := &mockTransactor{exec: noopQueryExecutor{}}
 			mgr := newTestManager(execStore, tx)
 
-			mgr.runCycle(context.Background(), job)
+			stats := mgr.runCycle(context.Background(), job)
 
 			assert.Equal(t, tt.wantTransactCalls, tx.getCalls(), "tx calls")
 			assert.Equal(t, 1, execStore.getSuccessCalls(), "success bookkeeping attempted once")
 			assert.Equal(t, 0, execStore.getFailureCalls(),
 				"lease loss must not be recorded as a failure by a worker that no longer owns the row")
+
+			require.NotNil(t, stats)
+			assert.Equal(t, 1, stats.leaseLost, "stats.leaseLost")
+			assert.Equal(t, 0, stats.failed, "stats.failed")
 		})
 	}
 }
@@ -643,12 +678,6 @@ func TestManager_RunCycle_TargetListingErrorLogging(t *testing.T) {
 func TestManager_Start_AndClose(t *testing.T) {
 	t.Parallel()
 
-	reader := &mockInstanceReader{pages: [][]*api.Instance{
-		{{Name: "instances/a"}},
-	}}
-
-	source := NewInstanceTargetSource(reader)
-
 	job := &fakeJob{
 		config: Config{
 			Name:          "test_job",
@@ -656,7 +685,9 @@ func TestManager_Start_AndClose(t *testing.T) {
 			LeaseDuration: 30 * time.Second,
 			Concurrency:   1,
 		},
-		listFn: source.ListTargets,
+		listFn: func(_ context.Context) ([]string, error) {
+			return []string{"instances/a"}, nil
+		},
 		runFn: func(_ context.Context, _ string) (RunResult, error) {
 			return RunResult{Commit: func(_ context.Context, _ storage.QueryExecutor) error { return nil }}, nil
 		},

@@ -13,7 +13,6 @@ import (
 	"connectrpc.com/grpcreflect"
 	"connectrpc.com/validate"
 
-	"github.com/querylane/querylane/backend/catalogcache"
 	"github.com/querylane/querylane/backend/config"
 	serverconfig "github.com/querylane/querylane/backend/config/server"
 	"github.com/querylane/querylane/backend/connectrpc/apierrors"
@@ -29,12 +28,12 @@ import (
 	"github.com/querylane/querylane/backend/service/instance"
 	"github.com/querylane/querylane/backend/service/onboarding"
 	"github.com/querylane/querylane/backend/service/role"
+	runnersvc "github.com/querylane/querylane/backend/service/runner"
 	"github.com/querylane/querylane/backend/service/schema"
 	"github.com/querylane/querylane/backend/service/sqlsvc"
 	"github.com/querylane/querylane/backend/service/table"
 	"github.com/querylane/querylane/backend/service/tabledata"
 	"github.com/querylane/querylane/backend/service/view"
-	"github.com/querylane/querylane/backend/storage/catalog"
 )
 
 // App is the single application — it implements onboarding.DatabaseInitializer
@@ -260,10 +259,9 @@ func (a *App) mountDBServices(mux *http.ServeMux, state *dbState, accessLogger *
 		)...,
 	)
 
-	catalogCfg := catalogcache.DefaultConfig()
-	catalogRepo := catalog.New(state.postgresCl)
-	catalogSyncStore := catalog.NewSyncStore(state.postgresCl, catalogCfg.SyncLockTimeout)
-	cat := catalogcache.New(catalogCfg, catalogRepo, catalogSyncStore, state.connManager)
+	// The catalog cache is shared with the background runner (see
+	// buildDatabase) so probes and RPCs work from one synced view.
+	cat := state.catalog
 
 	overviewProvider := instance.NewOverviewProvider(state.connManager)
 	instanceSvc := instance.NewService(state.instanceReader, state.instanceRepo, state.connectionRecorder, state.connManager, cat, overviewProvider, state.configManagedInstances)
@@ -271,6 +269,7 @@ func (a *App) mountDBServices(mux *http.ServeMux, state *dbState, accessLogger *
 	mux.Handle(v1alpha1connect.NewInstanceServiceHandler(instanceSvc, opts...))
 	mux.Handle(v1alpha1connect.NewDatabaseServiceHandler(database.NewService(cat, database.NewQueryInsightsProvider(state.connManager)), opts...))
 	mux.Handle(v1alpha1connect.NewRoleServiceHandler(role.NewService(state.connManager), opts...))
+	mux.Handle(v1alpha1connect.NewRunnerServiceHandler(runnersvc.NewService(state.runnerExecutionStore), opts...))
 	mux.Handle(v1alpha1connect.NewSchemaServiceHandler(schema.NewService(cat), opts...))
 	mux.Handle(v1alpha1connect.NewExtensionServiceHandler(extension.NewService(state.connManager), opts...))
 	mux.Handle(v1alpha1connect.NewTableServiceHandler(table.NewService(cat), opts...))
@@ -288,6 +287,7 @@ func (a *App) mountStubs(mux *http.ServeMux, accessLogger *interceptor.AccessLog
 	mux.Handle(v1alpha1connect.NewInstanceServiceHandler(&v1alpha1connect.UnimplementedInstanceServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewDatabaseServiceHandler(&v1alpha1connect.UnimplementedDatabaseServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewRoleServiceHandler(&v1alpha1connect.UnimplementedRoleServiceHandler{}, opts...))
+	mux.Handle(v1alpha1connect.NewRunnerServiceHandler(&v1alpha1connect.UnimplementedRunnerServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewSchemaServiceHandler(&v1alpha1connect.UnimplementedSchemaServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewExtensionServiceHandler(&v1alpha1connect.UnimplementedExtensionServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewTableServiceHandler(&v1alpha1connect.UnimplementedTableServiceHandler{}, opts...))
