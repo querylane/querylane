@@ -43,7 +43,8 @@ totals AS (
             ),
             0
         ) AS extend_bytes,
-        coalesce(sum((stat ->> 'fsyncs')::numeric), 0) AS fsyncs
+        coalesce(sum((stat ->> 'fsyncs')::numeric), 0) AS fsyncs,
+        max((stat ->> 'stats_reset')::timestamptz) AS stats_reset
     FROM io
     CROSS JOIN settings
 )
@@ -54,5 +55,6 @@ SELECT
     least(write_bytes, 9223372036854775807::numeric)::bigint,
     least(extends, 9223372036854775807::numeric)::bigint,
     least(extend_bytes, 9223372036854775807::numeric)::bigint,
-    least(fsyncs, 9223372036854775807::numeric)::bigint
+    least(fsyncs, 9223372036854775807::numeric)::bigint,
+    stats_reset
 FROM totals

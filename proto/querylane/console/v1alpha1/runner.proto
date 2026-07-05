@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+// RunnerService exposes the scheduling state of querylane's background jobs:
+// the sampling probes and maintenance jobs that run against registered
+// instances. It answers "is sampling healthy?" — which probes ran, when they
+// last succeeded per target, and what the last failure was.
+service RunnerService {
+  // Lists background runner executions: one entry per (runner, target) pair.
+  rpc ListRunnerExecutions(ListRunnerExecutionsRequest) returns (ListRunnerExecutionsResponse) {}
+}
+
+// RunnerExecution is the scheduling state of one background runner against
+// one target. Backed by the same lease bookkeeping the multi-replica
+// coordination uses, so it reflects the fleet, not a single replica.
+message RunnerExecution {
+  // Output-only. The runner this state belongs to (e.g. "probe_cache",
+  // "instance_connectivity", "sample_retention").
+  string runner_name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The target the runner executes against, as an AIP resource
+  // name: "instances/{instance}" for instance-level runners,
+  // "instances/{instance}/databases/{database}" for database-level runners,
+  // or "meta" for jobs operating on querylane's own database.
+  string target = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether a replica currently holds the execution lease
+  // (a run is in flight right now).
+  bool lease_held = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. When the most recent run started.
+  google.protobuf.Timestamp last_started_at = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. When the most recent run finished, successfully or not.
+  google.protobuf.Timestamp last_finished_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. When the runner last completed successfully for this
+  // target. A stale value relative to the runner's cadence means sampling
+  // for this target is unhealthy.
+  google.protobuf.Timestamp last_success_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The most recent infrastructure failure, empty after a
+  // successful run. Collection-level issues (e.g. missing permissions on a
+  // statistics view) do not surface here; they show up as missing samples.
+  string last_error = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message ListRunnerExecutionsRequest {
+  int32 page_size = 1 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. AIP-160 filter. Filterable fields: runner_name, target.
+  // Example: `target = "instances/prod"` or `runner_name = "probe_cache"`.
+  string filter = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. AIP-132 order_by. Defaults to `runner_name, target`.
+  string order_by = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListRunnerExecutionsResponse {
+  repeated RunnerExecution runner_executions = 1;
+  string next_page_token = 2;
+}

@@ -20,6 +20,7 @@ type instanceSession struct {
 	db                    *sql.DB
 	pool                  *instancePool
 	healthDriver          healthDriver
+	probeDriver           probeDriver
 	instanceCatalogDriver instanceCatalogDriver
 	databaseCatalogDriver databaseCatalogDriver
 	tablePartitionDriver  tablePartitionDriver
@@ -61,19 +62,29 @@ func (s *instanceSession) OpenDatabase(ctx context.Context, databaseName string)
 		return nil, err
 	}
 
-	return &databaseSession{
-		db:                    db,
-		databaseCatalogDriver: s.databaseCatalogDriver,
-		tablePartitionDriver:  s.tablePartitionDriver,
-		tableDataDriver:       s.tableDataDriver,
-		queryDriver:           s.queryDriver,
-	}, nil
+	return s.newDatabaseSession(db, nil), nil
 }
 
 func (s *instanceSession) Close() error { return nil }
 
+func (s *instanceSession) newDatabaseSession(db *sql.DB, closeDB func() error) *databaseSession {
+	return &databaseSession{
+		db:                    db,
+		closeDB:               closeDB,
+		probeDriver:           s.probeDriver,
+		databaseCatalogDriver: s.databaseCatalogDriver,
+		tablePartitionDriver:  s.tablePartitionDriver,
+		tableDataDriver:       s.tableDataDriver,
+		queryDriver:           s.queryDriver,
+	}
+}
+
 type databaseSession struct {
-	db                    *sql.DB
+	db *sql.DB
+	// closeDB is set only for ephemeral sessions that own their pool; pooled
+	// sessions leave it nil because their pool is owned by the instancePool.
+	closeDB               func() error
+	probeDriver           probeDriver
 	databaseCatalogDriver databaseCatalogDriver
 	tablePartitionDriver  tablePartitionDriver
 	tableDataDriver       tableDataDriver
@@ -168,9 +179,16 @@ func (s *databaseSession) ExplainQuery(ctx context.Context, params ExplainQueryP
 	return s.queryDriver.ExplainQuery(ctx, s.db, params)
 }
 
-// Close is a no-op. Database pools are owned by the instancePool and
-// intentionally outlive request-scoped sessions.
-func (s *databaseSession) Close() error { return nil }
+// Close releases an ephemeral session's private pool. For pooled sessions it
+// is a no-op: their pools are owned by the instancePool and intentionally
+// outlive request-scoped sessions.
+func (s *databaseSession) Close() error {
+	if s.closeDB != nil {
+		return s.closeDB()
+	}
+
+	return nil
+}
 
 func clonePostgresConfig(cfg *api.PostgresConfig) *api.PostgresConfig {
 	if cfg == nil {

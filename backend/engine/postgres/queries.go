@@ -92,6 +92,15 @@ var getCacheMetricsQuery string
 //go:embed queries/get_io_metrics.sql
 var getIOMetricsQuery string
 
+//go:embed queries/get_cache_counters.sql
+var getCacheCountersQuery string
+
+//go:embed queries/list_database_sizes.sql
+var listDatabaseSizesQuery string
+
+//go:embed queries/get_vacuum_counters.sql
+var getVacuumCountersQuery string
+
 //go:embed queries/get_top_queries.sql
 var getTopQueriesQuery string
 

@@ -27,10 +27,7 @@ type StartCmd struct {
 func (cmd *StartCmd) Run(g *config.Globals) error {
 	// 1. Setup logger based on global settings
 	logLevel := config.ParseLogLevel(g.LogLevel, g.Verbose)
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level:     logLevel,
-		AddSource: false,
-	}))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, config.NewLogHandlerOptions(logLevel)))
 	slog.SetDefault(logger)
 
 	// 2. Create config manager and load configuration

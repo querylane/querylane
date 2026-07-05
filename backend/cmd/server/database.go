@@ -9,39 +9,69 @@ import (
 
 	"github.com/rs/xid"
 
+	"github.com/querylane/querylane/backend/catalogcache"
 	serverconfig "github.com/querylane/querylane/backend/config/server"
 	"github.com/querylane/querylane/backend/dbsetup"
 	"github.com/querylane/querylane/backend/engine"
 	"github.com/querylane/querylane/backend/engine/postgres"
 	"github.com/querylane/querylane/backend/runner"
+	"github.com/querylane/querylane/backend/runner/jobs"
 	"github.com/querylane/querylane/backend/storage"
+	"github.com/querylane/querylane/backend/storage/catalog"
 )
+
+// probeJobConfig derives a probe's scheduling config from its cadence. Slow
+// probes get a longer lease: their collection may spend a first-touch pool
+// dial plus a long statement timeout before the meta-DB commit, and the lease
+// deadline covers both.
+func probeJobConfig(name string, interval time.Duration) runner.Config {
+	leaseDuration := 30 * time.Second
+	if interval >= 5*time.Minute {
+		leaseDuration = 2 * time.Minute
+	}
+
+	return runner.Config{
+		Name:          name,
+		Interval:      interval,
+		LeaseDuration: leaseDuration,
+		Concurrency:   4,
+	}
+}
 
 var (
 	connectivityJobConfig = runner.Config{
-		Name:          runner.InstanceConnectivityJobName,
+		Name:          jobs.InstanceConnectivityJobName,
 		Interval:      10 * time.Second,
 		LeaseDuration: 30 * time.Second,
 		Concurrency:   4,
 	}
 
-	instanceMetricsJobConfig = runner.Config{
-		Name:          runner.InstanceMetricsJobName,
-		Interval:      30 * time.Second,
-		LeaseDuration: 30 * time.Second,
-		Concurrency:   4,
-	}
+	// Probe cadences follow what mature collectors converged on: fast-moving
+	// activity every 30s, cumulative counters every 60s, expensive size and
+	// per-table aggregation walks every 5 minutes.
+	connectionsProbeConfig = probeJobConfig(jobs.ConnectionsProbeName, 30*time.Second)
+	cacheProbeConfig       = probeJobConfig(jobs.CacheProbeName, time.Minute)
+	storageProbeConfig     = probeJobConfig(jobs.StorageProbeName, 5*time.Minute)
+	ioProbeConfig          = probeJobConfig(jobs.IOProbeName, time.Minute)
+	vacuumProbeConfig      = probeJobConfig(jobs.VacuumProbeName, 5*time.Minute)
 
 	sampleRetentionJobConfig = runner.Config{
-		Name:          runner.SampleRetentionJobName,
+		Name:          jobs.SampleRetentionJobName,
 		Interval:      time.Hour,
 		LeaseDuration: 5 * time.Minute,
 		Concurrency:   1,
 	}
 
-	// sampleRetentionAge is the maximum age of rows kept in instance_*_sample
+	// sampleRetentionAge is the maximum age of rows kept in the sample
 	// tables. Conservative default; not yet configurable.
 	sampleRetentionAge = 30 * 24 * time.Hour
+
+	// staleLeaseRetentionAge is how long a departed target's
+	// runner_execution_state row survives after its last run. Deliberately a
+	// separate knob from sampleRetentionAge: it must always comfortably
+	// exceed every job's run interval, no matter how short sample retention
+	// is ever configured.
+	staleLeaseRetentionAge = 30 * 24 * time.Hour
 )
 
 type dbState struct {
@@ -51,6 +81,8 @@ type dbState struct {
 	instanceRuntimeStore   *storage.PGInstanceRuntimeStateStore
 	connectionRecorder     *storage.PGInstanceConnectionRecorder
 	connManager            *engine.SessionResolver
+	catalog                *catalogcache.Catalog
+	runnerExecutionStore   *storage.PGRunnerExecutionStore
 	tokenCodec             *engine.TokenCodec
 	configManagedInstances bool
 	metaDBGate             *metaDBGate
@@ -147,21 +179,37 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 	connectionSampleStore := storage.NewInstanceConnectionSampleStore(cl)
 	storageSampleStore := storage.NewInstanceStorageSampleStore(cl)
 	cacheSampleStore := storage.NewInstanceCacheSampleStore(cl)
+	ioSampleStore := storage.NewInstanceIOSampleStore(cl)
+	databaseSizeSampleStore := storage.NewDatabaseSizeSampleStore(cl)
+	databaseVacuumSampleStore := storage.NewDatabaseVacuumSampleStore(cl)
 	instanceReader := storage.NewOverlayInstanceReader(instanceRepo, instanceRuntimeStore)
 
-	instanceTargetSource := runner.NewInstanceTargetSource(instanceRepo)
-	connectivityJob := runner.NewInstanceConnectivityJob(connectivityJobConfig, connManager, connectionRecorder, instanceTargetSource)
-	metricsJob := runner.NewInstanceMetricsJob(instanceMetricsJobConfig, connManager, connectionSampleStore, storageSampleStore, cacheSampleStore, instanceTargetSource)
-	retentionJob := runner.NewSampleRetentionJob(sampleRetentionJobConfig, sampleRetentionAge)
+	// The runner and the RPC services share one catalog cache so database
+	// targets exist even on deployments where no user browses the catalog:
+	// the read-through sync populates it from live instances on demand.
+	catalogCfg := catalogcache.DefaultConfig()
+	catalogCache := catalogcache.New(catalogCfg, catalog.New(cl), catalog.NewSyncStore(cl, catalogCfg.SyncLockTimeout), connManager)
+
+	instanceTargetSource := jobs.NewInstanceTargetSource(instanceRepo)
+	databaseTargetSource := jobs.NewDatabaseTargetSource(instanceTargetSource, catalogCache)
+	backgroundJobs := []runner.Job{
+		jobs.NewInstanceConnectivity(connectivityJobConfig, connManager, connectionRecorder, instanceTargetSource),
+		jobs.NewConnectionsProbe(connectionsProbeConfig, connManager, connectionSampleStore, instanceTargetSource),
+		jobs.NewCacheProbe(cacheProbeConfig, connManager, cacheSampleStore, instanceTargetSource),
+		jobs.NewStorageProbe(storageProbeConfig, connManager, storageSampleStore, databaseSizeSampleStore, instanceTargetSource),
+		jobs.NewIOProbe(ioProbeConfig, connManager, ioSampleStore, instanceTargetSource),
+		jobs.NewVacuumProbe(vacuumProbeConfig, connManager, databaseVacuumSampleStore, databaseTargetSource),
+		jobs.NewSampleRetention(sampleRetentionJobConfig, sampleRetentionAge, staleLeaseRetentionAge),
+	}
 
 	leaseOwner := xid.New().String()
 	runnerManager := runner.NewManager(leaseOwner, cl, runnerExecutionStore)
 	slog.InfoContext(ctx, "runner manager started",
 		slog.String("lease_owner", leaseOwner),
-		slog.Int("jobs", 3))
+		slog.Int("jobs", len(backgroundJobs)))
 	// ctx may be a streaming-RPC ctx (onboarding wizard); detach so runners
 	// outlive the stream. Shutdown goes through dbState.close().
-	runnerManager.Start(context.WithoutCancel(ctx), connectivityJob, metricsJob, retentionJob)
+	runnerManager.Start(context.WithoutCancel(ctx), backgroundJobs...)
 
 	report(dbsetup.NewEvent(dbsetup.StepInitializingServices, dbsetup.StateSucceeded))
 
@@ -172,6 +220,8 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 		instanceRuntimeStore:   instanceRuntimeStore,
 		connectionRecorder:     connectionRecorder,
 		connManager:            connManager,
+		catalog:                catalogCache,
+		runnerExecutionStore:   runnerExecutionStore,
 		tokenCodec:             tokenCodec,
 		configManagedInstances: configManaged,
 		metaDBGate:             newMetaDBGate(cl),

@@ -1,7 +1,8 @@
-package runner
+package jobs
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"sync"
 	"testing"
@@ -12,8 +13,21 @@ import (
 
 	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
+	"github.com/querylane/querylane/backend/runner"
 	"github.com/querylane/querylane/backend/storage"
 )
+
+type noopQueryExecutor struct{}
+
+func (noopQueryExecutor) QueryContext(context.Context, string, ...any) (*sql.Rows, error) {
+	return nil, nil //nolint:nilnil // test stub
+}
+
+func (noopQueryExecutor) QueryRowContext(context.Context, string, ...any) *sql.Row { return &sql.Row{} }
+
+func (noopQueryExecutor) ExecContext(context.Context, string, ...any) (sql.Result, error) {
+	return nil, nil //nolint:nilnil // test stub
+}
 
 type fakeConnectionChecker struct {
 	err error
@@ -64,14 +78,14 @@ func newTestInstanceConnectivityJob(checker InstanceConnectionChecker, recorder 
 		{{Name: "instances/test"}},
 	}}
 
-	cfg := Config{
+	cfg := runner.Config{
 		Name:          "test_connectivity",
 		Interval:      10 * time.Second,
 		LeaseDuration: 30 * time.Second,
 		Concurrency:   1,
 	}
 
-	return NewInstanceConnectivityJob(cfg, checker, recorder, NewInstanceTargetSource(reader))
+	return NewInstanceConnectivity(cfg, checker, recorder, NewInstanceTargetSource(reader))
 }
 
 func TestInstanceConnectivityJob_Config(t *testing.T) {

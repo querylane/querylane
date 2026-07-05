@@ -7,12 +7,13 @@ import "strings"
 type Type string
 
 const (
-	TypeInstance Type = "console.querylane.dev/Instance"
-	TypeRole     Type = "console.querylane.dev/Role"
-	TypeDatabase Type = "console.querylane.dev/Database"
-	TypeSchema   Type = "console.querylane.dev/Schema"
-	TypeTable    Type = "console.querylane.dev/Table"
-	TypeView     Type = "console.querylane.dev/View"
+	TypeInstance        Type = "console.querylane.dev/Instance"
+	TypeRole            Type = "console.querylane.dev/Role"
+	TypeDatabase        Type = "console.querylane.dev/Database"
+	TypeSchema          Type = "console.querylane.dev/Schema"
+	TypeTable           Type = "console.querylane.dev/Table"
+	TypeView            Type = "console.querylane.dev/View"
+	TypeRunnerExecution Type = "console.querylane.dev/RunnerExecution"
 )
 
 // String returns the canonical resource type string.

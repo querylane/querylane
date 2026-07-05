@@ -103,7 +103,7 @@ func (s *PostgresEngineIntegrationTestSuite) TestGetInstanceOverviewExposesPgSta
 
 	s.Require().NoError(err)
 	s.Require().NotNil(overview)
-	s.Require().NotNil(overview.IO, "PostgreSQL 16 exposes pg_stat_io")
+	s.Require().NotNil(overview.IO, "PostgreSQL 16+ exposes pg_stat_io")
 	s.GreaterOrEqual(overview.IO.Reads, int64(0))
 	s.GreaterOrEqual(overview.IO.ReadBytes, int64(0))
 	s.GreaterOrEqual(overview.IO.Writes, int64(0))
@@ -111,6 +111,84 @@ func (s *PostgresEngineIntegrationTestSuite) TestGetInstanceOverviewExposesPgSta
 	s.GreaterOrEqual(overview.IO.Extends, int64(0))
 	s.GreaterOrEqual(overview.IO.ExtendBytes, int64(0))
 	s.GreaterOrEqual(overview.IO.Fsyncs, int64(0))
+}
+
+func (s *PostgresEngineIntegrationTestSuite) TestProbeMetricsCollectRealSamples() {
+	ctx := context.Background()
+
+	version, err := s.eng.GetServerVersionNum(ctx, s.db)
+	s.Require().NoError(err)
+	s.GreaterOrEqual(version, int32(160000), "test container is PG16+")
+
+	conn, err := s.eng.GetConnectionMetrics(ctx, s.db)
+	s.Require().NoError(err)
+	s.Positive(conn.Total, "our own connection must be counted")
+	s.Positive(conn.Max)
+
+	cache, err := s.eng.GetCacheCounters(ctx, s.db)
+	s.Require().NoError(err)
+	s.GreaterOrEqual(cache.BlocksHit, int64(0))
+	s.GreaterOrEqual(cache.BlocksRead, int64(0))
+	// pg_stat_database activity counters aggregated from the same scan. The
+	// server has been committing catalog/bootstrap transactions since startup,
+	// so xact_commit is strictly positive; the rest are cumulative and
+	// non-negative. On PG14+ (our floor) the session counters are real columns;
+	// the JSON access degrades them to 0 on older servers instead of failing.
+	s.Positive(cache.XactCommit, "the server has committed transactions since startup")
+	s.GreaterOrEqual(cache.XactRollback, int64(0))
+	s.GreaterOrEqual(cache.TupReturned, int64(0))
+	s.GreaterOrEqual(cache.TupInserted, int64(0))
+	s.GreaterOrEqual(cache.Deadlocks, int64(0))
+	s.GreaterOrEqual(cache.TempBytes, int64(0))
+	s.GreaterOrEqual(cache.Sessions, int64(0))
+
+	// After an explicit reset, stats_reset is non-NULL and must scan into the
+	// *time.Time field.
+	_, err = s.db.ExecContext(ctx, "SELECT pg_stat_reset()")
+	s.Require().NoError(err)
+
+	cache, err = s.eng.GetCacheCounters(ctx, s.db)
+	s.Require().NoError(err)
+	s.Require().NotNil(cache.StatsReset, "stats_reset must be recorded after pg_stat_reset()")
+	s.WithinDuration(time.Now(), *cache.StatsReset, time.Minute)
+
+	sizes, err := s.eng.ListDatabaseSizes(ctx, s.db)
+	s.Require().NoError(err)
+	s.Require().NotEmpty(sizes)
+
+	sizeByName := make(map[string]int64, len(sizes))
+	for _, size := range sizes {
+		sizeByName[size.DatabaseName] = size.SizeBytes
+	}
+
+	s.Positive(sizeByName["postgres"], "the default database must report a size")
+
+	io, err := s.eng.GetIOCounters(ctx, s.db)
+	s.Require().NoError(err)
+	s.GreaterOrEqual(io.Reads, int64(0))
+	s.GreaterOrEqual(io.Fsyncs, int64(0))
+}
+
+func (s *PostgresEngineIntegrationTestSuite) TestGetVacuumCountersAggregatesUserTables() {
+	ctx := context.Background()
+
+	testDB := s.getTestDBConnection()
+	defer testDB.Close()
+
+	_, err := testDB.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS probe_vacuum_target (id int)")
+	s.Require().NoError(err)
+
+	_, err = testDB.ExecContext(ctx, "INSERT INTO probe_vacuum_target SELECT generate_series(1, 100)")
+	s.Require().NoError(err)
+
+	_, err = testDB.ExecContext(ctx, "VACUUM (ANALYZE) probe_vacuum_target")
+	s.Require().NoError(err)
+
+	vacuum, err := s.eng.GetVacuumCounters(ctx, testDB)
+	s.Require().NoError(err)
+	s.GreaterOrEqual(vacuum.VacuumCount, int64(1), "the manual VACUUM must be counted")
+	s.GreaterOrEqual(vacuum.LiveTuples, int64(0))
+	s.GreaterOrEqual(vacuum.DeadTuples, int64(0))
 }
 
 func (s *PostgresEngineIntegrationTestSuite) TestCheckInstanceHealthReturnsDatabaseBackedSignals() {

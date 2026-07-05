@@ -108,8 +108,65 @@ func (m *Manager) runLoop(ctx context.Context, job Job) {
 	}
 }
 
-func (m *Manager) runCycle(ctx context.Context, job Job) {
+// targetOutcome classifies what one target's run contributed to a cycle.
+type targetOutcome int
+
+const (
+	// outcomeNotClaimed: another replica holds the target, or it isn't due.
+	outcomeNotClaimed targetOutcome = iota
+	// outcomeClaimError: the meta-DB claim itself failed.
+	outcomeClaimError
+	// outcomeCommitted: ran and persisted results.
+	outcomeCommitted
+	// outcomeEmpty: ran its policy with nothing to persist.
+	outcomeEmpty
+	// outcomeFailed: the run or its commit failed; last_error records it.
+	outcomeFailed
+	// outcomeLeaseLost: overran the lease; results were discarded.
+	outcomeLeaseLost
+)
+
+// cycleStats aggregates one scheduling cycle for the per-cycle summary log.
+type cycleStats struct {
+	mu          sync.Mutex
+	targets     int
+	committed   int
+	empty       int
+	failed      int
+	leaseLost   int
+	claimErrors int
+	maxRun      time.Duration
+}
+
+func (s *cycleStats) record(outcome targetOutcome, runDuration time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	switch outcome {
+	case outcomeNotClaimed:
+	case outcomeClaimError:
+		s.claimErrors++
+	case outcomeCommitted:
+		s.committed++
+	case outcomeEmpty:
+		s.empty++
+	case outcomeFailed:
+		s.failed++
+	case outcomeLeaseLost:
+		s.leaseLost++
+	}
+
+	s.maxRun = max(s.maxRun, runDuration)
+}
+
+// claimed reports how many targets this replica actually ran this cycle.
+func (s *cycleStats) claimed() int {
+	return s.committed + s.empty + s.failed + s.leaseLost
+}
+
+func (m *Manager) runCycle(ctx context.Context, job Job) *cycleStats {
 	cfg := job.Config()
+	cycleStartedAt := time.Now()
 
 	targets, err := job.ListTargets(ctx)
 	if err != nil {
@@ -119,30 +176,60 @@ func (m *Manager) runCycle(ctx context.Context, job Job) {
 			slog.DebugContext(ctx, "job target listing aborted by shutdown",
 				slog.String("job", cfg.Name))
 
-			return
+			return nil
 		}
 
 		slog.ErrorContext(ctx, "job target listing failed",
 			slog.String("job", cfg.Name),
 			slog.String("error", err.Error()))
 
-		return
+		return nil
 	}
+
+	stats := &cycleStats{targets: len(targets)}
 
 	grp, grpCtx := errgroup.WithContext(ctx)
 	grp.SetLimit(max(cfg.Concurrency, 1))
 
 	for _, target := range targets {
 		grp.Go(func() error {
-			m.runTarget(grpCtx, job, target)
+			outcome, runDuration := m.runTarget(grpCtx, job, target)
+			stats.record(outcome, runDuration)
+
 			return nil
 		})
 	}
 
 	_ = grp.Wait()
+
+	// One summary line per cycle. Routine healthy cycles are DEBUG: a single
+	// user instance produces several probe cycles every few seconds, and those
+	// success lines are pure noise. INFO is reserved for cycles worth a human's
+	// attention — failed runs, lost leases, or claim errors.
+	level := slog.LevelDebug
+	if stats.failed > 0 || stats.leaseLost > 0 || stats.claimErrors > 0 {
+		level = slog.LevelInfo
+	}
+
+	slog.Log(ctx, level, "job cycle summary",
+		slog.String("job", cfg.Name),
+		slog.Int("targets", stats.targets),
+		slog.Int("claimed", stats.claimed()),
+		slog.Int("committed", stats.committed),
+		slog.Int("empty", stats.empty),
+		slog.Int("failed", stats.failed),
+		slog.Int("lease_lost", stats.leaseLost),
+		slog.Int("claim_errors", stats.claimErrors),
+		slog.Duration("max_run_duration", stats.maxRun),
+		slog.Duration("cycle_duration", time.Since(cycleStartedAt)))
+
+	return stats
 }
 
-func (m *Manager) runTarget(ctx context.Context, job Job, target string) {
+// runTarget claims and runs one target, reporting its outcome and — when this
+// replica won the claim — how long run plus commit took (the duration that
+// must fit inside LeaseDuration).
+func (m *Manager) runTarget(ctx context.Context, job Job, target string) (targetOutcome, time.Duration) {
 	cfg := job.Config()
 	key := storage.RunnerExecutionKey{
 		RunnerName: cfg.Name,
@@ -161,30 +248,29 @@ func (m *Manager) runTarget(ctx context.Context, job Job, target string) {
 			slog.String("target", target),
 			slog.String("error", err.Error()))
 
-		return
+		return outcomeClaimError, 0
 	}
 
 	if !claimed {
-		return
+		return outcomeNotClaimed, 0
 	}
 
 	runCtx, cancel := context.WithTimeout(ctx, cfg.LeaseDuration)
 	defer cancel()
 
 	startedAt := time.Now()
-	result, err := job.Run(runCtx, target)
-	duration := time.Since(startedAt)
 
+	result, err := job.Run(runCtx, target)
 	if err != nil {
 		m.markFailure(ctx, key, err)
-		return
+		return outcomeFailed, time.Since(startedAt)
 	}
 
 	if result.Commit == nil {
 		if markErr := m.executionStore.MarkExecutionSuccess(ctx, m.baseExec, key, m.leaseOwner); markErr != nil {
 			if errors.Is(markErr, storage.ErrLeaseLost) {
 				m.logLeaseLost(ctx, key)
-				return
+				return outcomeLeaseLost, time.Since(startedAt)
 			}
 
 			slog.ErrorContext(ctx, "job success bookkeeping failed",
@@ -193,12 +279,7 @@ func (m *Manager) runTarget(ctx context.Context, job Job, target string) {
 				slog.String("error", markErr.Error()))
 		}
 
-		slog.DebugContext(ctx, "job completed without commit",
-			slog.String("job", key.RunnerName),
-			slog.String("target", key.TargetName),
-			slog.Duration("duration", duration))
-
-		return
+		return outcomeEmpty, time.Since(startedAt)
 	}
 
 	// MarkExecutionSuccess shares the commit transaction: when the lease was
@@ -215,18 +296,15 @@ func (m *Manager) runTarget(ctx context.Context, job Job, target string) {
 	if err != nil {
 		if errors.Is(err, storage.ErrLeaseLost) {
 			m.logLeaseLost(ctx, key)
-			return
+			return outcomeLeaseLost, time.Since(startedAt)
 		}
 
 		m.markFailure(ctx, key, err)
 
-		return
+		return outcomeFailed, time.Since(startedAt)
 	}
 
-	slog.DebugContext(ctx, "job completed",
-		slog.String("job", key.RunnerName),
-		slog.String("target", key.TargetName),
-		slog.Duration("duration", duration))
+	return outcomeCommitted, time.Since(startedAt)
 }
 
 // logLeaseLost records that this worker's run finished after its lease was

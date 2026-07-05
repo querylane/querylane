@@ -17,10 +17,26 @@ type instanceCacheSampleTable struct {
 	postgres.Table
 
 	// Columns
-	InstanceID postgres.ColumnString
-	ObservedAt postgres.ColumnTimestampz
-	BlocksHit  postgres.ColumnInteger
-	BlocksRead postgres.ColumnInteger
+	InstanceID        postgres.ColumnString
+	ObservedAt        postgres.ColumnTimestampz
+	BlocksHit         postgres.ColumnInteger
+	BlocksRead        postgres.ColumnInteger
+	StatsReset        postgres.ColumnTimestampz
+	XactCommit        postgres.ColumnInteger
+	XactRollback      postgres.ColumnInteger
+	TupReturned       postgres.ColumnInteger
+	TupFetched        postgres.ColumnInteger
+	TupInserted       postgres.ColumnInteger
+	TupUpdated        postgres.ColumnInteger
+	TupDeleted        postgres.ColumnInteger
+	Conflicts         postgres.ColumnInteger
+	Deadlocks         postgres.ColumnInteger
+	TempFiles         postgres.ColumnInteger
+	TempBytes         postgres.ColumnInteger
+	Sessions          postgres.ColumnInteger
+	SessionsAbandoned postgres.ColumnInteger
+	SessionsFatal     postgres.ColumnInteger
+	SessionsKilled    postgres.ColumnInteger
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -62,23 +78,55 @@ func newInstanceCacheSampleTable(schemaName, tableName, alias string) *InstanceC
 
 func newInstanceCacheSampleTableImpl(schemaName, tableName, alias string) instanceCacheSampleTable {
 	var (
-		InstanceIDColumn = postgres.StringColumn("instance_id")
-		ObservedAtColumn = postgres.TimestampzColumn("observed_at")
-		BlocksHitColumn  = postgres.IntegerColumn("blocks_hit")
-		BlocksReadColumn = postgres.IntegerColumn("blocks_read")
-		allColumns       = postgres.ColumnList{InstanceIDColumn, ObservedAtColumn, BlocksHitColumn, BlocksReadColumn}
-		mutableColumns   = postgres.ColumnList{BlocksHitColumn, BlocksReadColumn}
-		defaultColumns   = postgres.ColumnList{}
+		InstanceIDColumn        = postgres.StringColumn("instance_id")
+		ObservedAtColumn        = postgres.TimestampzColumn("observed_at")
+		BlocksHitColumn         = postgres.IntegerColumn("blocks_hit")
+		BlocksReadColumn        = postgres.IntegerColumn("blocks_read")
+		StatsResetColumn        = postgres.TimestampzColumn("stats_reset")
+		XactCommitColumn        = postgres.IntegerColumn("xact_commit")
+		XactRollbackColumn      = postgres.IntegerColumn("xact_rollback")
+		TupReturnedColumn       = postgres.IntegerColumn("tup_returned")
+		TupFetchedColumn        = postgres.IntegerColumn("tup_fetched")
+		TupInsertedColumn       = postgres.IntegerColumn("tup_inserted")
+		TupUpdatedColumn        = postgres.IntegerColumn("tup_updated")
+		TupDeletedColumn        = postgres.IntegerColumn("tup_deleted")
+		ConflictsColumn         = postgres.IntegerColumn("conflicts")
+		DeadlocksColumn         = postgres.IntegerColumn("deadlocks")
+		TempFilesColumn         = postgres.IntegerColumn("temp_files")
+		TempBytesColumn         = postgres.IntegerColumn("temp_bytes")
+		SessionsColumn          = postgres.IntegerColumn("sessions")
+		SessionsAbandonedColumn = postgres.IntegerColumn("sessions_abandoned")
+		SessionsFatalColumn     = postgres.IntegerColumn("sessions_fatal")
+		SessionsKilledColumn    = postgres.IntegerColumn("sessions_killed")
+		allColumns              = postgres.ColumnList{InstanceIDColumn, ObservedAtColumn, BlocksHitColumn, BlocksReadColumn, StatsResetColumn, XactCommitColumn, XactRollbackColumn, TupReturnedColumn, TupFetchedColumn, TupInsertedColumn, TupUpdatedColumn, TupDeletedColumn, ConflictsColumn, DeadlocksColumn, TempFilesColumn, TempBytesColumn, SessionsColumn, SessionsAbandonedColumn, SessionsFatalColumn, SessionsKilledColumn}
+		mutableColumns          = postgres.ColumnList{BlocksHitColumn, BlocksReadColumn, StatsResetColumn, XactCommitColumn, XactRollbackColumn, TupReturnedColumn, TupFetchedColumn, TupInsertedColumn, TupUpdatedColumn, TupDeletedColumn, ConflictsColumn, DeadlocksColumn, TempFilesColumn, TempBytesColumn, SessionsColumn, SessionsAbandonedColumn, SessionsFatalColumn, SessionsKilledColumn}
+		defaultColumns          = postgres.ColumnList{}
 	)
 
 	return instanceCacheSampleTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		InstanceID: InstanceIDColumn,
-		ObservedAt: ObservedAtColumn,
-		BlocksHit:  BlocksHitColumn,
-		BlocksRead: BlocksReadColumn,
+		InstanceID:        InstanceIDColumn,
+		ObservedAt:        ObservedAtColumn,
+		BlocksHit:         BlocksHitColumn,
+		BlocksRead:        BlocksReadColumn,
+		StatsReset:        StatsResetColumn,
+		XactCommit:        XactCommitColumn,
+		XactRollback:      XactRollbackColumn,
+		TupReturned:       TupReturnedColumn,
+		TupFetched:        TupFetchedColumn,
+		TupInserted:       TupInsertedColumn,
+		TupUpdated:        TupUpdatedColumn,
+		TupDeleted:        TupDeletedColumn,
+		Conflicts:         ConflictsColumn,
+		Deadlocks:         DeadlocksColumn,
+		TempFiles:         TempFilesColumn,
+		TempBytes:         TempBytesColumn,
+		Sessions:          SessionsColumn,
+		SessionsAbandoned: SessionsAbandonedColumn,
+		SessionsFatal:     SessionsFatalColumn,
+		SessionsKilled:    SessionsKilledColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

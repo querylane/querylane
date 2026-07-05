@@ -305,9 +305,7 @@ func (cmd *StatusCmd) Run(g *config.Globals) error {
 // setupLogger configures structured logging based on global CLI flags.
 func setupLogger(g *config.Globals) {
 	logLevel := config.ParseLogLevel(g.LogLevel, g.Verbose)
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: logLevel,
-	}))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, config.NewLogHandlerOptions(logLevel)))
 	slog.SetDefault(logger)
 }
 

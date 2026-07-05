@@ -69,7 +69,7 @@ func TestIntegrationSanitizeDatabaseName(t *testing.T) {
 	}
 }
 
-func TestIntegrationPostgreSQLContainerRunsPostgres18(t *testing.T) {
+func TestIntegrationPostgreSQLContainerRunsExpectedMajor(t *testing.T) {
 	t.Parallel()
 
 	if testing.Short() {
@@ -94,20 +94,33 @@ func TestIntegrationPostgreSQLContainerRunsPostgres18(t *testing.T) {
 	var versionNum int
 	require.NoError(t, db.QueryRowContext(ctx, "SELECT current_setting('server_version_num')::int").Scan(&versionNum))
 
-	assert.GreaterOrEqual(t, versionNum, 180000)
-	assert.Less(t, versionNum, 190000)
+	// The running server must match the major declared by the (possibly
+	// overridden) image, and stay within the supported PostgreSQL 14+ floor.
+	expectedMajor := imageMajor(t)
+	assert.GreaterOrEqual(t, versionNum, expectedMajor*10000)
+	assert.Less(t, versionNum, (expectedMajor+1)*10000)
+	assert.GreaterOrEqual(t, versionNum, 140000, "Querylane supports PostgreSQL 14+")
 }
 
-func TestPostgreSQLContainerImageUsesPostgres18(t *testing.T) {
+func TestPostgreSQLContainerImageIsSupported(t *testing.T) {
 	t.Parallel()
 
-	tag, ok := strings.CutPrefix(postgresImage, "postgres:")
+	// Default is the newest major; QUERYLANE_TEST_POSTGRES_IMAGE may pin an
+	// older supported one for cross-version probe coverage.
+	assert.GreaterOrEqual(t, imageMajor(t), 14)
+}
+
+// imageMajor extracts the PostgreSQL major version from the resolved test
+// image (e.g. "postgres:16-alpine" -> 16).
+func imageMajor(t *testing.T) int {
+	t.Helper()
+
+	tag, ok := strings.CutPrefix(postgresImage(), "postgres:")
 	require.True(t, ok, "postgres image should use the official postgres repository")
 
 	majorText, _, _ := strings.Cut(tag, "-")
 	major, err := strconv.Atoi(majorText)
 	require.NoError(t, err)
 
-	assert.GreaterOrEqual(t, major, 18)
-	assert.Less(t, major, 19)
+	return major
 }

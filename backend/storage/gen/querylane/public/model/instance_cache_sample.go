@@ -12,8 +12,24 @@ import (
 )
 
 type InstanceCacheSample struct {
-	InstanceID string    `sql:"primary_key"`
-	ObservedAt time.Time `sql:"primary_key"`
-	BlocksHit  int64
-	BlocksRead int64
+	InstanceID        string    `sql:"primary_key"`
+	ObservedAt        time.Time `sql:"primary_key"`
+	BlocksHit         int64
+	BlocksRead        int64
+	StatsReset        *time.Time
+	XactCommit        int64
+	XactRollback      int64
+	TupReturned       int64
+	TupFetched        int64
+	TupInserted       int64
+	TupUpdated        int64
+	TupDeleted        int64
+	Conflicts         int64
+	Deadlocks         int64
+	TempFiles         int64
+	TempBytes         int64
+	Sessions          int64
+	SessionsAbandoned int64
+	SessionsFatal     int64
+	SessionsKilled    int64
 }

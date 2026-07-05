@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/querylane/querylane/backend/aip"
 )
 
 func TestCadenceGate(t *testing.T) {
@@ -32,6 +34,49 @@ func TestCadenceGate(t *testing.T) {
 			assert.Equal(t, tt.want, cadenceGate(tt.runInterval))
 		})
 	}
+}
+
+func TestIntegrationRunnerExecutionStore_ListRunnerExecutions(t *testing.T) {
+	t.Parallel()
+
+	if testing.Short() {
+		t.Skip("skipping integration test; run without -short")
+	}
+
+	testDB := NewTestDB(t)
+	ctx := t.Context()
+
+	_, err := testDB.DB().ExecContext(ctx,
+		`INSERT INTO runner_execution_state (runner_name, target_name, last_started_at)
+		 VALUES
+		   ('probe_cache', 'instances/a', now() - interval '1 minute'),
+		   ('probe_cache', 'instances/b', now() - interval '2 minutes'),
+		   ('probe_vacuum', 'instances/a/databases/appdb', now() - interval '3 minutes')`)
+	require.NoError(t, err)
+
+	store := NewRunnerExecutionStore(testDB.DB())
+
+	// Default order is (runner_name, target); keyset pagination walks it.
+	firstPage, nextPageToken, err := store.ListRunnerExecutions(ctx, aip.Params{PageSize: 2})
+	require.NoError(t, err)
+	require.Len(t, firstPage, 2)
+	require.NotEmpty(t, nextPageToken)
+	assert.Equal(t, "instances/a", firstPage[0].TargetName)
+	assert.Equal(t, "instances/b", firstPage[1].TargetName)
+
+	secondPage, lastPageToken, err := store.ListRunnerExecutions(ctx, aip.Params{PageSize: 2, PageToken: nextPageToken})
+	require.NoError(t, err)
+	require.Len(t, secondPage, 1)
+	assert.Empty(t, lastPageToken)
+	assert.Equal(t, "probe_vacuum", secondPage[0].RunnerName)
+
+	filtered, _, err := store.ListRunnerExecutions(ctx, aip.Params{Filter: `target = "instances/b"`})
+	require.NoError(t, err)
+	require.Len(t, filtered, 1)
+	assert.Equal(t, "instances/b", filtered[0].TargetName)
+
+	_, _, err = store.ListRunnerExecutions(ctx, aip.Params{Filter: `nonsense = "x"`})
+	require.ErrorIs(t, err, ErrInvalidFilter)
 }
 
 func TestIntegrationRunnerExecutionStore_MarkSuccessByNonOwnerReturnsLeaseLost(t *testing.T) {

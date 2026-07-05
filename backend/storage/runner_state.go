@@ -9,6 +9,9 @@ import (
 
 	"github.com/go-jet/jet/v2/postgres"
 
+	"github.com/querylane/querylane/backend/aip"
+	aipjet "github.com/querylane/querylane/backend/aip/jet"
+	"github.com/querylane/querylane/backend/storage/gen/querylane/public/model"
 	"github.com/querylane/querylane/backend/storage/gen/querylane/public/table"
 )
 
@@ -209,6 +212,80 @@ func (s *PGRunnerExecutionStore) MarkExecutionFailure(ctx context.Context, exec 
 	}
 
 	return leaseStillOwned(res, "mark runner execution failure")
+}
+
+// runnerExecutionSchema drives AIP-160 filtering and AIP-132 ordering for
+// ListRunnerExecutions. (runner_name, target) is the primary key, so the
+// default order plus tie-breakers form a unique total order for keyset
+// pagination.
+var runnerExecutionSchema = aipjet.Bind(
+	aip.NewSchema[model.RunnerExecutionState](
+		"console.querylane.dev/RunnerExecution",
+		aip.Fields[model.RunnerExecutionState]{
+			"runner_name": {
+				Codec:      aip.StringCodec{},
+				GetValue:   func(m *model.RunnerExecutionState) any { return m.RunnerName },
+				Filterable: true,
+			},
+			"target": {
+				Codec:      aip.StringCodec{},
+				GetValue:   func(m *model.RunnerExecutionState) any { return m.TargetName },
+				Filterable: true,
+			},
+		},
+		aip.WithDefaultOrder("runner_name", aip.Asc),
+		aip.WithDefaultOrder("target", aip.Asc),
+		aip.WithTieBreaker("runner_name", aip.Asc),
+		aip.WithTieBreaker("target", aip.Asc),
+	),
+	aipjet.Columns{
+		"runner_name": table.RunnerExecutionState.RunnerName,
+		"target":      table.RunnerExecutionState.TargetName,
+	},
+)
+
+// ListRunnerExecutions returns a page of runner scheduling state, one row per
+// (runner, target) pair.
+func (s *PGRunnerExecutionStore) ListRunnerExecutions(ctx context.Context, params aip.Params) ([]model.RunnerExecutionState, string, error) {
+	baseQuery := postgres.SELECT(table.RunnerExecutionState.AllColumns).FROM(table.RunnerExecutionState)
+
+	rows, nextPageToken, err := aipjet.Execute(ctx, runnerExecutionSchema, params, baseQuery, s.db)
+	if err != nil {
+		return nil, "", fmt.Errorf("list runner executions: %w", err)
+	}
+
+	return rows, nextPageToken, nil
+}
+
+// PruneStaleRunnerExecutionStateTx deletes runner_execution_state rows whose
+// last run started more than age ago — targets that departed (deleted
+// instances or databases) stop being claimed, so their rows age out here.
+// Rows with a live lease are never deleted, no matter how old, so a held
+// lease can't be yanked from under a running job even if age is ever
+// configured below a job's runtime. age must comfortably exceed every job's
+// run interval, or idle-but-alive targets lose their cadence bookkeeping
+// between runs.
+func PruneStaleRunnerExecutionStateTx(ctx context.Context, exec QueryExecutor, age time.Duration) (int64, error) {
+	now := postgres.NOW()
+	cutoff := now.SUB(postgres.INTERVALd(age))
+
+	leaseNotHeld := table.RunnerExecutionState.LeaseExpiresAt.IS_NULL().
+		OR(table.RunnerExecutionState.LeaseExpiresAt.LT(now))
+
+	stmt := table.RunnerExecutionState.DELETE().
+		WHERE(table.RunnerExecutionState.LastStartedAt.LT(cutoff).AND(leaseNotHeld))
+
+	res, err := stmt.ExecContext(ctx, exec)
+	if err != nil {
+		return 0, fmt.Errorf("prune stale runner execution state: %w", err)
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("prune stale runner execution state rows affected: %w", err)
+	}
+
+	return rows, nil
 }
 
 // leaseStillOwned translates "0 rows updated" from an owner-guarded mark

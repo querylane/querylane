@@ -14,6 +14,24 @@ type Globals struct {
 	NoColor  bool             `env:"NO_COLOR"                help:"Disable colored output"`
 }
 
+// NewLogHandlerOptions returns the slog JSON handler options used across all
+// commands: the given level plus a ReplaceAttr that renders time.Duration
+// values as human-readable strings (e.g. "77.8ms") instead of raw nanosecond
+// integers, which the default JSON handler would otherwise emit.
+func NewLogHandlerOptions(level slog.Level) *slog.HandlerOptions {
+	return &slog.HandlerOptions{
+		Level:     level,
+		AddSource: false,
+		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
+			if a.Value.Kind() == slog.KindDuration {
+				a.Value = slog.StringValue(a.Value.Duration().String())
+			}
+
+			return a
+		},
+	}
+}
+
 // ParseLogLevel parses log level string and verbose flag into slog.Level.
 func ParseLogLevel(level string, verbose bool) slog.Level {
 	if verbose {
