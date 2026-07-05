@@ -85,21 +85,14 @@ func TestIntegrationPruneSamplesOlderThan_PrunesAllSampleTables(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = RunInTransaction(ctx, testDB.DB(), func(exec QueryExecutor) error {
-		pruned, pruneErr := PruneSamplesOlderThanTx(ctx, exec, 30*24*time.Hour)
-		if pruneErr != nil {
-			return pruneErr
-		}
-
-		// One old row per touched table; untouched tables report zero.
-		assert.Equal(t, int64(1), pruned["instance_io_sample"])
-		assert.Equal(t, int64(1), pruned["database_size_sample"])
-		assert.Equal(t, int64(1), pruned["database_vacuum_sample"])
-		assert.Equal(t, int64(0), pruned["instance_connection_sample"])
-
-		return nil
-	})
+	pruned, err := PruneSamplesOlderThan(ctx, testDB.DB(), 30*24*time.Hour, 1000)
 	require.NoError(t, err)
+
+	// One old row per touched table; untouched tables report zero.
+	assert.Equal(t, int64(1), pruned["instance_io_sample"])
+	assert.Equal(t, int64(1), pruned["database_size_sample"])
+	assert.Equal(t, int64(1), pruned["database_vacuum_sample"])
+	assert.Equal(t, int64(0), pruned["instance_connection_sample"])
 
 	since := time.Now().Add(-100 * 24 * time.Hour)
 	until := time.Now()
@@ -118,6 +111,46 @@ func TestIntegrationPruneSamplesOlderThan_PrunesAllSampleTables(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, vacuumSamples, 1)
 	assert.Equal(t, int64(10), vacuumSamples[0].LiveTuples)
+}
+
+// TestIntegrationPruneSamplesOlderThan_DrainsBacklogAcrossBatches verifies
+// the batching loop: a backlog larger than one batch is fully drained (the
+// loop keeps going until no expired rows remain) and the per-table count
+// accumulates across batches instead of reporting only the last one.
+func TestIntegrationPruneSamplesOlderThan_DrainsBacklogAcrossBatches(t *testing.T) {
+	t.Parallel()
+
+	testDB := NewTestDB(t)
+	ctx := t.Context()
+
+	ioStore := NewInstanceIOSampleStore(testDB.DB())
+	freshTime := time.Now().Add(-time.Hour)
+
+	err := RunInTransaction(ctx, testDB.DB(), func(exec QueryExecutor) error {
+		for i := range 5 {
+			oldTime := time.Now().Add(-40 * 24 * time.Hour).Add(time.Duration(i) * time.Minute)
+			if err := ioStore.InsertTx(ctx, exec, model.InstanceIoSample{
+				InstanceID: "inst", ObservedAt: oldTime, Reads: 1,
+			}); err != nil {
+				return err
+			}
+		}
+
+		return ioStore.InsertTx(ctx, exec, model.InstanceIoSample{
+			InstanceID: "inst", ObservedAt: freshTime, Reads: 1,
+		})
+	})
+	require.NoError(t, err)
+
+	pruned, err := PruneSamplesOlderThan(ctx, testDB.DB(), 30*24*time.Hour, 2)
+	require.NoError(t, err)
+	assert.Equal(t, int64(5), pruned["instance_io_sample"])
+
+	remaining, err := ioStore.ListSamples(ctx, "inst",
+		time.Now().Add(-100*24*time.Hour), time.Now(), 0)
+	require.NoError(t, err)
+	require.Len(t, remaining, 1)
+	assert.WithinDuration(t, freshTime, remaining[0].ObservedAt, time.Second)
 }
 
 // TestIntegrationPruneStaleRunnerExecutionState verifies that

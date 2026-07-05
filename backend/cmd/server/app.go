@@ -26,6 +26,7 @@ import (
 	"github.com/querylane/querylane/backend/service/database"
 	"github.com/querylane/querylane/backend/service/extension"
 	"github.com/querylane/querylane/backend/service/instance"
+	metricsvc "github.com/querylane/querylane/backend/service/metrics"
 	"github.com/querylane/querylane/backend/service/onboarding"
 	"github.com/querylane/querylane/backend/service/role"
 	runnersvc "github.com/querylane/querylane/backend/service/runner"
@@ -270,6 +271,7 @@ func (a *App) mountDBServices(mux *http.ServeMux, state *dbState, accessLogger *
 	mux.Handle(v1alpha1connect.NewDatabaseServiceHandler(database.NewService(cat, database.NewQueryInsightsProvider(state.connManager)), opts...))
 	mux.Handle(v1alpha1connect.NewRoleServiceHandler(role.NewService(state.connManager), opts...))
 	mux.Handle(v1alpha1connect.NewRunnerServiceHandler(runnersvc.NewService(state.runnerExecutionStore), opts...))
+	mux.Handle(v1alpha1connect.NewMetricsServiceHandler(metricsvc.NewService(state.sampleStores, state.instanceReader), opts...))
 	mux.Handle(v1alpha1connect.NewSchemaServiceHandler(schema.NewService(cat), opts...))
 	mux.Handle(v1alpha1connect.NewExtensionServiceHandler(extension.NewService(state.connManager), opts...))
 	mux.Handle(v1alpha1connect.NewTableServiceHandler(table.NewService(cat), opts...))
@@ -288,6 +290,7 @@ func (a *App) mountStubs(mux *http.ServeMux, accessLogger *interceptor.AccessLog
 	mux.Handle(v1alpha1connect.NewDatabaseServiceHandler(&v1alpha1connect.UnimplementedDatabaseServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewRoleServiceHandler(&v1alpha1connect.UnimplementedRoleServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewRunnerServiceHandler(&v1alpha1connect.UnimplementedRunnerServiceHandler{}, opts...))
+	mux.Handle(v1alpha1connect.NewMetricsServiceHandler(&v1alpha1connect.UnimplementedMetricsServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewSchemaServiceHandler(&v1alpha1connect.UnimplementedSchemaServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewExtensionServiceHandler(&v1alpha1connect.UnimplementedExtensionServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewTableServiceHandler(&v1alpha1connect.UnimplementedTableServiceHandler{}, opts...))
