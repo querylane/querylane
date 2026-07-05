@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
   findExpectedShadcnOverwriteCount,
   findShadcnOverwriteFiles,
@@ -10,6 +10,10 @@ import {
 } from "./check-shadcn-registry-sync";
 
 const PINNED_SHADCN_SPECIFIER_PATTERN = /^shadcn@\d+\.\d+\.\d+/u;
+
+function mockExpectedConsoleError() {
+  return vi.spyOn(console, "error").mockImplementation(() => undefined);
+}
 
 describe("shadcn registry sync check", () => {
   test("parses installed registry components from shadcn info JSON", () => {
@@ -109,6 +113,7 @@ describe("shadcn registry sync check", () => {
   });
 
   test("fails on non-allowlisted registry drift", () => {
+    const consoleError = mockExpectedConsoleError();
     let diffFile: string | undefined;
     const runner = {
       run: (_command: string, args: readonly string[]) => {
@@ -139,6 +144,7 @@ describe("shadcn registry sync check", () => {
     };
 
     expect(runShadcnRegistrySyncCheck({ runner })).toBe(1);
+    expect(consoleError).toHaveBeenCalled();
     expect(diffFile).toBe("src/components/ui/button.tsx");
   });
 
@@ -175,6 +181,7 @@ describe("shadcn registry sync check", () => {
   });
 
   test("fails when allowlisted and non-allowlisted drift are mixed", () => {
+    const consoleError = mockExpectedConsoleError();
     const runner = {
       run: (_command: string, args: readonly string[]) => {
         if (args.includes("info")) {
@@ -196,9 +203,11 @@ describe("shadcn registry sync check", () => {
     };
 
     expect(runShadcnRegistrySyncCheck({ runner })).toBe(1);
+    expect(consoleError).toHaveBeenCalled();
   });
 
   test("fails when shadcn info returns no registry components", () => {
+    const consoleError = mockExpectedConsoleError();
     const runner = {
       run: (_command: string, args: readonly string[]) => {
         if (args.includes("info")) {
@@ -214,6 +223,7 @@ describe("shadcn registry sync check", () => {
     };
 
     expect(runShadcnRegistrySyncCheck({ runner })).toBe(1);
+    expect(consoleError).toHaveBeenCalled();
   });
 
   test("fails closed when dry-run summary and parsed overwrites disagree", () => {

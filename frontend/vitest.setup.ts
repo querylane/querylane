@@ -1,16 +1,8 @@
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
+import { installUnexpectedConsoleIssueGuard } from "./vitest.console-guard";
 
-const consoleWarnPatchFlag = Symbol.for("querylane.test.console-warn-patched");
-
-if (!Reflect.get(globalThis, consoleWarnPatchFlag)) {
-  const testConsole = globalThis.console;
-  const originalConsoleWarn = testConsole.warn.bind(testConsole);
-  testConsole.warn = (...args: unknown[]) => {
-    originalConsoleWarn("[console.warn]", ...args);
-  };
-  Reflect.set(globalThis, consoleWarnPatchFlag, true);
-}
+installUnexpectedConsoleIssueGuard();
 
 afterEach(async function resetSharedDomTestEnvironment() {
   cleanup();

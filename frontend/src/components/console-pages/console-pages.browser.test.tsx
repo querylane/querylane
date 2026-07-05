@@ -519,7 +519,9 @@ test("console SQLSTATE error surfaces keep common PostgreSQL failures scannable"
     </div>
   );
 
-  await expect.element(page.getByText("SQLSTATE diagnostics")).toBeVisible();
+  await expect
+    .element(page.getByRole("heading", { name: "SQLSTATE diagnostics" }))
+    .toBeVisible();
 
   for (const scenario of scenarios) {
     const section = page.getByTestId(`sqlstate-scenario-${scenario.slug}`);
@@ -529,7 +531,9 @@ test("console SQLSTATE error surfaces keep common PostgreSQL failures scannable"
 
     await section.getByRole("button", { name: "Error details" }).click();
     await expect
-      .element(page.getByText(`SQLSTATE: ${scenario.sqlstate}`))
+      .element(
+        page.getByText(`SQLSTATE: ${scenario.sqlstate}`, { exact: true })
+      )
       .toBeVisible();
     await page.getByRole("button", { name: "Close" }).click();
     await expect

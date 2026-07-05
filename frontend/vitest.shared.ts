@@ -53,6 +53,7 @@ export const VITEST_BROWSER_OPTIMIZE_DEPS = [
   "chrono-node",
   "cmdk",
   "date-fns",
+  "lucide-react",
   "react",
   "react-data-grid",
   "react-dom",

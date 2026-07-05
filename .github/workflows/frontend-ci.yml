@@ -25,14 +25,191 @@ permissions:
   contents: read
 
 jobs:
-  checks:
-    name: Frontend Checks
+  static:
+    name: Frontend Static
     if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 4
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: *action_checkout
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: *action_setup_node
+        with:
+          node-version: *node_version
+      - uses: *action_setup_bun
+        with:
+          bun-version: *bun_version
+      - name: Restore Bun package cache
+        uses: *action_cache
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - name: Run Biome on changed files
+        env:
+          QUALITY_BASE_REF: origin/${{ github.base_ref }}
+        run: bun run lint:changed
+      - name: Type check
+        run: bun run type:check
+      - name: Verify shadcn registry sync
+        run: bun run scripts/check-shadcn-registry-sync.ts
+
+  unit:
+    name: Frontend Unit
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: *action_checkout
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: *action_setup_node
+        with:
+          node-version: *node_version
+      - uses: *action_setup_bun
+        with:
+          bun-version: *bun_version
+      - name: Restore Bun package cache
+        uses: *action_cache
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - name: Run unit tests
+        env:
+          QUALITY_BASE_REF: origin/${{ github.base_ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|postcss\.config\.mjs|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+            bun run test:unit -- --reporter=verbose
+          else
+            bun run test:unit:changed -- --reporter=verbose
+          fi
+
+  integration:
+    name: Frontend Integration
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: *action_checkout
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: *action_setup_node
+        with:
+          node-version: *node_version
+      - uses: *action_setup_bun
+        with:
+          bun-version: *bun_version
+      - name: Restore Bun package cache
+        uses: *action_cache
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - name: Run integration tests
+        env:
+          QUALITY_BASE_REF: origin/${{ github.base_ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|postcss\.config\.mjs|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+            bun run test:integration -- --reporter=verbose
+          else
+            bun run test:integration:changed -- --reporter=verbose
+          fi
+
+  browser:
+    name: Frontend Browser
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       actions: write
       contents: read
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: *action_checkout
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: *action_setup_node
+        with:
+          node-version: *node_version
+      - uses: *action_setup_bun
+        with:
+          bun-version: *bun_version
+      - name: Restore Bun package cache
+        uses: *action_cache
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - name: Restore Playwright Chromium cache
+        id: playwright-cache
+        uses: *action_cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('frontend/node_modules/playwright-core/browsers.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-chromium-
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install chromium
+      - name: Run browser visual tests
+        env:
+          QUALITY_BASE_REF: origin/${{ github.base_ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|postcss\.config\.mjs|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+            bun run test:browser:ci
+          else
+            bun run test:browser:changed -- --reporter=verbose
+          fi
+      - name: Upload Vitest visual failure artifacts
+        if: failure()
+        uses: *action_upload_artifact
+        with:
+          name: vitest-visual-failure-artifacts
+          path: frontend/.vitest/attachments
+          retention-days: 1
+          overwrite: true
+          if-no-files-found: ignore
+          include-hidden-files: true
+
+  build:
+    name: Frontend Build
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
     defaults:
       run:
         working-directory: frontend
@@ -62,57 +239,8 @@ jobs:
           key: ${{ runner.os }}-rsbuild-${{ hashFiles('frontend/bun.lock', 'frontend/package.json', 'frontend/rsbuild.config.ts', 'frontend/tsconfig.json') }}
           restore-keys: |
             ${{ runner.os }}-rsbuild-
-
-      # --- Lint & Typecheck ---
-      - name: Run Biome on changed files
-        env:
-          QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        run: bun run lint:changed
-      - name: Type check
-        run: bun run type:check
-      - name: Verify shadcn registry sync
-        run: bun run scripts/check-shadcn-registry-sync.ts
-
-      # --- Vitest Tests ---
-      - name: Run changed unit tests
-        env:
-          QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        run: bun run test:unit:changed -- --reporter=verbose
-      - name: Run changed integration tests
-        env:
-          QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        run: bun run test:integration:changed -- --reporter=verbose
-      - name: Restore Playwright Chromium cache
-        id: playwright-cache
-        uses: *action_cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('frontend/node_modules/playwright-core/browsers.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-chromium-
-      - name: Install Playwright Chromium
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: bunx playwright install chromium
-      - name: Run changed browser visual tests
-        env:
-          QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        run: bun run test:browser:changed -- --reporter=verbose
-      - name: Upload Vitest visual failure artifacts
-        if: failure()
-        uses: *action_upload_artifact
-        with:
-          name: vitest-visual-failure-artifacts
-          path: frontend/.vitest/attachments
-          retention-days: 1
-          overwrite: true
-          if-no-files-found: ignore
-          include-hidden-files: true
-
-      # --- Build ---
       - name: Build frontend
         run: bun run build
-
-      # --- React Doctor ---
       - name: Run React Doctor on changed files
         env:
           QUALITY_BASE_REF: origin/${{ github.base_ref }}
@@ -130,3 +258,12 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           exit $EXIT_CODE
+
+  checks:
+    name: Frontend Checks
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    needs: [static, unit, integration, browser, build]
+    timeout-minutes: 1
+    steps:
+      - run: echo "Frontend checks passed."

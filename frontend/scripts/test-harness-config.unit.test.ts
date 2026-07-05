@@ -1,4 +1,7 @@
 import { describe, expect, test } from "vitest";
+import vitestBrowserReactPackageJson from "vitest-browser-react/package.json" with {
+  type: "json",
+};
 import packageJson from "../package.json" with { type: "json" };
 import browserAllConfig from "../vitest.browser.all.config";
 import browserConfig from "../vitest.browser.config";
@@ -9,7 +12,10 @@ import {
   VITEST_PROJECT_CONFIGS,
   VITEST_PROJECT_NAME_ORDER,
 } from "../vitest.projects";
-import { VITEST_PLUGIN_NAMES } from "../vitest.shared";
+import {
+  VITEST_BROWSER_OPTIMIZE_DEPS,
+  VITEST_PLUGIN_NAMES,
+} from "../vitest.shared";
 import unitConfig from "../vitest.unit.config";
 
 const scripts = packageJson.scripts;
@@ -76,6 +82,33 @@ describe("test harness config", () => {
     }
     expect(comparatorOptions.allowedMismatchedPixelRatio).toBeLessThanOrEqual(
       0.05
+    );
+  });
+
+  test("uses one compatible stable Vitest browser dependency set", () => {
+    const devDependencies = packageJson.devDependencies;
+    const vitestVersion = devDependencies.vitest;
+    const vitestMajor = vitestVersion.split(".")[0];
+
+    expect(vitestBrowserReactPackageJson.peerDependencies.vitest).toContain(
+      `^${vitestMajor}.`
+    );
+    expect(devDependencies["@vitest/browser"]).toBe(vitestVersion);
+    expect(devDependencies["@vitest/browser-playwright"]).toBe(vitestVersion);
+    expect(devDependencies["@vitest/coverage-v8"]).toBe(vitestVersion);
+    expect(devDependencies["@vitest/ui"]).toBe(vitestVersion);
+    expect(devDependencies.playwright).toBe(devDependencies["playwright-core"]);
+    expect(devDependencies.playwright).not.toContain("-");
+  });
+
+  test("prebundles direct browser-test dependencies", () => {
+    expect([...VITEST_BROWSER_OPTIMIZE_DEPS]).toEqual(
+      expect.arrayContaining([
+        "lucide-react",
+        "react",
+        "react-dom",
+        "vitest-browser-react",
+      ])
     );
   });
 

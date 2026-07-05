@@ -1197,7 +1197,9 @@ test("data explorer table child partition shows parent metadata", async () => {
 
   await expect.element(page.getByText("Partition bound")).toBeVisible();
   await expect.element(page.getByText("Parent table")).toBeVisible();
-  await expect.element(page.getByText("analytics.events")).toBeVisible();
+  await expect
+    .element(page.getByText("analytics.events", { exact: true }))
+    .toBeVisible();
   await expect.element(page.getByText(PARTITION_2024_BOUND_RE)).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-child-partition"

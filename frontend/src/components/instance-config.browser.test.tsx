@@ -132,7 +132,8 @@ test("editable instance configuration surfaces validation errors near fields", a
 test("editable instance configuration anchors server field errors to fields", async () => {
   renderInstanceConfigSurface(<InstanceConfigServerFieldErrorFixture />);
 
-  await page.getByLabelText("Password").fill("wrong-password");
+  const passwordInput = page.getByRole("textbox", { name: "Password" });
+  await passwordInput.fill("wrong-password");
   await page.getByText("Save changes").click();
 
   await expect.element(page.getByText("Could not save")).toBeVisible();
@@ -143,10 +144,8 @@ test("editable instance configuration anchors server field errors to fields", as
       )
     )
     .toBeVisible();
-  await expect.element(page.getByLabelText("Password")).toHaveFocus();
-  await expect
-    .element(page.getByLabelText("Password"))
-    .toHaveAttribute("aria-invalid", "true");
+  await expect.element(passwordInput).toHaveFocus();
+  await expect.element(passwordInput).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "instance-config-server-field-errors"
   );

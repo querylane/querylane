@@ -73,11 +73,12 @@ async function flushMicrotasks(ticks = 10) {
   }
 }
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   // Drop cached queries so pending garbage-collection timers do not outlive
   // the test.
   for (const queryClient of activeQueryClients.splice(0)) {
+    await queryClient.cancelQueries();
     queryClient.clear();
   }
 });
