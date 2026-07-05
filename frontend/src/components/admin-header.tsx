@@ -409,21 +409,19 @@ function InstanceSelector({
           {hasInstances ? <CommandSeparator className="my-1" /> : null}
           {hasInstances && isModeLoaded && isConfigManaged ? (
             <Tooltip>
-              <TooltipTrigger
-                render={
-                  <CommandItem
-                    aria-disabled={true}
-                    className="cursor-not-allowed opacity-60"
-                    key="__register-instance-disabled"
-                    value="register new instance config managed"
-                  >
-                    <Lock className="size-4 text-muted-foreground" />
-                    <span className="text-muted-foreground text-sm">
-                      Register instance
-                    </span>
-                  </CommandItem>
-                }
-              />
+              <TooltipTrigger render={<div className="cursor-not-allowed" />}>
+                <CommandItem
+                  className="opacity-60"
+                  disabled={true}
+                  key="__register-instance-disabled"
+                  value="register new instance config managed"
+                >
+                  <Lock className="size-4 text-muted-foreground" />
+                  <span className="text-muted-foreground text-sm">
+                    Register instance
+                  </span>
+                </CommandItem>
+              </TooltipTrigger>
               <TooltipContent side="right">
                 Instances are managed via the server configuration file. Add
                 them to your config and restart the server.
