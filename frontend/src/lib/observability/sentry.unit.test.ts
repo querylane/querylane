@@ -46,7 +46,7 @@ interface FakeSentryState {
     extras: Record<string, unknown>;
     tags: Record<string, string>;
   }>;
-  spanCalls: Record<string, unknown>[];
+  spanCalls: unknown[];
 }
 
 function createFakeSentry() {
@@ -64,7 +64,7 @@ function createFakeSentry() {
       state.captureCalls.push(error);
       return "event-id";
     },
-    consoleLoggingIntegration: (options: Record<string, unknown>) => ({
+    consoleLoggingIntegration: (options = { levels: [] }) => ({
       options,
       type: "console-logging",
     }),
@@ -77,9 +77,12 @@ function createFakeSentry() {
       state.globalTags[key] = value;
     },
     startSpan: <T>(
-      options: Record<string, unknown>,
+      options: Parameters<ObservabilityClient["startSpan"]>[0],
       callback: (span: {
-        setAttribute: (key: string, value: unknown) => void;
+        setAttribute: (
+          key: string,
+          value: boolean | number | string | undefined
+        ) => unknown;
       }) => T
     ) => {
       state.spanCalls.push(options);
@@ -87,7 +90,11 @@ function createFakeSentry() {
         setAttribute: () => undefined,
       });
     },
-    thirdPartyErrorFilterIntegration: (options: Record<string, unknown>) => ({
+    thirdPartyErrorFilterIntegration: (
+      options: Parameters<
+        ObservabilityClient["thirdPartyErrorFilterIntegration"]
+      >[0]
+    ) => ({
       options,
       type: "third-party-error-filter",
     }),
@@ -109,7 +116,7 @@ function createFakeSentry() {
       });
       state.scopeCalls.push({ extras, tags });
     },
-  };
+  } satisfies ObservabilityClient;
 
   return { fakeSentry, state };
 }
@@ -239,10 +246,7 @@ describe("sentry runtime config", () => {
 describe("createObservabilityApi", () => {
   it("initializes Sentry with expected options and only once", () => {
     const { fakeSentry, state } = createFakeSentry();
-    const api = createObservabilityApi(
-      fakeSentry as unknown as ObservabilityClient,
-      createEnabledConfig()
-    );
+    const api = createObservabilityApi(fakeSentry, createEnabledConfig());
 
     api.init();
     api.init();
@@ -282,10 +286,7 @@ describe("createObservabilityApi", () => {
 
   it("captures exceptions with tags and extras via scope", () => {
     const { fakeSentry, state } = createFakeSentry();
-    const api = createObservabilityApi(
-      fakeSentry as unknown as ObservabilityClient,
-      createEnabledConfig()
-    );
+    const api = createObservabilityApi(fakeSentry, createEnabledConfig());
     const error = new Error("boom");
 
     api.captureException(error, {
@@ -302,14 +303,11 @@ describe("createObservabilityApi", () => {
 
   it("does not install replay integration when both replay sample rates are zero", () => {
     const { fakeSentry, state } = createFakeSentry();
-    const api = createObservabilityApi(
-      fakeSentry as unknown as ObservabilityClient,
-      {
-        ...createEnabledConfig(),
-        replaysOnErrorSampleRate: 0,
-        replaysSessionSampleRate: 0,
-      }
-    );
+    const api = createObservabilityApi(fakeSentry, {
+      ...createEnabledConfig(),
+      replaysOnErrorSampleRate: 0,
+      replaysSessionSampleRate: 0,
+    });
 
     api.init();
 
@@ -321,13 +319,10 @@ describe("createObservabilityApi", () => {
 
   it("executes span callback without calling Sentry when disabled", () => {
     const { fakeSentry, state } = createFakeSentry();
-    const api = createObservabilityApi(
-      fakeSentry as unknown as ObservabilityClient,
-      {
-        ...createEnabledConfig(),
-        enabled: false,
-      }
-    );
+    const api = createObservabilityApi(fakeSentry, {
+      ...createEnabledConfig(),
+      enabled: false,
+    });
 
     const result = api.startSpan(
       {
@@ -346,10 +341,7 @@ describe("createObservabilityApi", () => {
 
   it("sets global tags when enabled", () => {
     const { fakeSentry, state } = createFakeSentry();
-    const api = createObservabilityApi(
-      fakeSentry as unknown as ObservabilityClient,
-      createEnabledConfig()
-    );
+    const api = createObservabilityApi(fakeSentry, createEnabledConfig());
 
     api.setTag("posthog_session_id", "session-123");
 

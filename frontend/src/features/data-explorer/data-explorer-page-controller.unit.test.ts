@@ -1,7 +1,8 @@
 import type { Transport } from "@connectrpc/connect";
-import type { QueryClient } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { prefetchTableDetails } from "@/features/data-explorer/data-explorer-page-controller";
+import { tableDetailQueryOptions } from "@/hooks/api/table";
 import {
   INTENT_PREFETCH_POLICY,
   RESOURCE_QUERY_OPTIONS,
@@ -26,13 +27,28 @@ afterEach(function expectNoIntentPrefetchTimersLeaked() {
 });
 
 function makeQueryClientStub(calls: unknown[]): QueryClient {
-  return {
-    getQueryState: () => undefined,
-    prefetchQuery: (options: unknown) => {
-      calls.push(options);
-      return Promise.resolve();
-    },
-  } as unknown as QueryClient;
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY } },
+  });
+  vi.spyOn(queryClient, "prefetchQuery").mockImplementation((options) => {
+    calls.push(options);
+    return Promise.resolve();
+  });
+  return queryClient;
+}
+
+function makeFreshQueryClientStub(calls: unknown[]): QueryClient {
+  const queryClient = makeQueryClientStub(calls);
+  for (const query of tableDetailQueryOptions({
+    databaseId: "mydb",
+    instanceId: "local",
+    schemaId: activeSchema.id,
+    tableId: "users",
+    transport,
+  })) {
+    queryClient.setQueryData(query.queryKey, {});
+  }
+  return queryClient;
 }
 
 const activeSchema = { id: "public", name: "public", owner: "postgres" };
@@ -94,18 +110,8 @@ describe("prefetchTableDetails", () => {
   });
 
   test("skips already-fresh table detail queries on intent", async () => {
-    const freshTimestamp = Date.now() - 1000; // 1s ago, staleTime is 5 min
     const calls: unknown[] = [];
-    const queryClient = {
-      getQueryState: () => ({
-        dataUpdatedAt: freshTimestamp,
-        status: "success" as const,
-      }),
-      prefetchQuery: vi.fn((options: unknown) => {
-        calls.push(options);
-        return Promise.resolve();
-      }),
-    } as unknown as QueryClient;
+    const queryClient = makeFreshQueryClientStub(calls);
 
     prefetchTableDetails({
       activeSchema,

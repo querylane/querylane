@@ -79,9 +79,9 @@ function installDom() {
   setDomGlobal("localStorage", window.localStorage);
   setDomGlobal("window", window);
 
-  const testContainer = window.document.createElement("div");
-  window.document.body.append(testContainer);
-  container = testContainer as unknown as HTMLElement;
+  const testContainer = document.createElement("div");
+  document.body.append(testContainer);
+  container = testContainer;
   matchMediaController = installMatchMedia(window);
 }
 

@@ -25,8 +25,10 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { readRows } from "@/protogen/querylane/console/v1alpha1/table_data-TableDataService_connectquery";
 
+type RoutePrefetchClient = Pick<QueryClient, "getQueryState" | "prefetchQuery">;
+
 interface RouteDataContext {
-  queryClient: QueryClient;
+  queryClient: RoutePrefetchClient;
   transport: Transport;
 }
 
@@ -45,7 +47,7 @@ interface ExplorerRouteSearch {
 }
 
 interface RouteDataQuery {
-  prefetch: (queryClient: QueryClient) => void;
+  prefetch: (queryClient: RoutePrefetchClient) => void;
   queryKey: readonly unknown[];
   staleTime?: unknown;
 }

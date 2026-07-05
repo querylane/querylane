@@ -27,6 +27,13 @@ describe("downloadBlob", () => {
     vi.useRealTimers();
   });
 
+  function requireAnchor(value: HTMLAnchorElement | null): HTMLAnchorElement {
+    if (!value) {
+      throw new Error("Expected download anchor to be captured.");
+    }
+    return value;
+  }
+
   test("creates an anchor with the correct href and download attribute, then clicks and removes it", () => {
     let capturedAnchor: HTMLAnchorElement | null = null;
 
@@ -44,7 +51,7 @@ describe("downloadBlob", () => {
     expect(createObjectUrlSpy).toHaveBeenCalledOnce();
     expect(capturedAnchor).not.toBeNull();
 
-    const anchor = capturedAnchor as unknown as HTMLAnchorElement;
+    const anchor = requireAnchor(capturedAnchor);
     expect(anchor.href).toBe("blob:fake-url");
     expect(anchor.download).toBe("export.csv");
 

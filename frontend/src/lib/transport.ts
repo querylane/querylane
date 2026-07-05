@@ -71,10 +71,11 @@ const NULL_BODY_RESPONSE_STATUSES = new Set([
   HTTP_STATUS_NOT_MODIFIED,
 ]);
 type TransportFetch = typeof globalThis.fetch;
-type FetchImplementation = (
-  input: Parameters<typeof globalThis.fetch>[0],
-  init?: Parameters<typeof globalThis.fetch>[1]
-) => Promise<Response>;
+type FetchPreconnect = (url: string | URL) => void;
+type FetchImplementation = typeof globalThis.fetch;
+type PreconnectFetch = FetchImplementation & {
+  preconnect?: FetchPreconnect | undefined;
+};
 
 const defaultSetupInterceptorDependencies: SetupInterceptorDependencies = {
   getCurrentHref: () =>
@@ -163,7 +164,7 @@ async function createResponseSnapshot(response: Response): Promise<Response> {
 
 function createObservedConnectFetch(
   fetchImplementation: FetchImplementation = globalThis.fetch
-): TransportFetch {
+): PreconnectFetch {
   const observedFetch = async (
     input: Parameters<TransportFetch>[0],
     init?: Parameters<TransportFetch>[1]
@@ -172,23 +173,23 @@ function createObservedConnectFetch(
     return createResponseSnapshot(response);
   };
 
-  let preconnect: typeof globalThis.fetch.preconnect | undefined;
-  if (
-    "preconnect" in fetchImplementation &&
-    typeof fetchImplementation.preconnect === "function"
-  ) {
+  let preconnect: FetchPreconnect | undefined;
+  if (hasFetchPreconnect(fetchImplementation)) {
     preconnect = fetchImplementation.preconnect.bind(fetchImplementation);
-  } else if (
-    "preconnect" in globalThis.fetch &&
-    typeof globalThis.fetch.preconnect === "function"
-  ) {
-    preconnect = globalThis.fetch.preconnect.bind(globalThis.fetch);
+  } else {
+    const defaultFetch = globalThis.fetch;
+    if (hasFetchPreconnect(defaultFetch)) {
+      preconnect = defaultFetch.preconnect.bind(defaultFetch);
+    }
   }
 
-  return Object.assign(
-    observedFetch,
-    preconnect ? { preconnect } : {}
-  ) as TransportFetch;
+  return Object.assign(observedFetch, preconnect ? { preconnect } : {});
+}
+
+function hasFetchPreconnect(
+  value: FetchImplementation
+): value is FetchImplementation & { preconnect: FetchPreconnect } {
+  return "preconnect" in value && typeof value.preconnect === "function";
 }
 
 function parseRequestUrl(url: string | null): {

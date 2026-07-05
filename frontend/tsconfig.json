@@ -7,7 +7,7 @@
     "moduleResolution": "Bundler",
     "moduleDetection": "force",
     "jsx": "react-jsx",
-    "types": ["@rsbuild/core/types", "bun-types"],
+    "types": ["@rsbuild/core/types"],
     "paths": {
       "@/components/ui/*": [
         "./node_modules/.tmp/tsconfig.ui/components/ui/*",
