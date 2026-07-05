@@ -50,7 +50,9 @@ describe("github api helpers", () => {
       )
     );
 
-    await expect(fetchGithubRepoStars("querylane/querylane")).resolves.toBe("3k");
+    await expect(fetchGithubRepoStars("querylane/querylane")).resolves.toBe(
+      "3k"
+    );
   });
 
   it("returns null when response is not successful", async () => {
@@ -62,13 +64,17 @@ describe("github api helpers", () => {
       )
     );
 
-    await expect(fetchGithubRepoStars("querylane/querylane")).resolves.toBeNull();
+    await expect(
+      fetchGithubRepoStars("querylane/querylane")
+    ).resolves.toBeNull();
   });
 
   it("returns null on network failure", async () => {
     vi.stubGlobal("fetch", () => Promise.reject(new Error("network down")));
 
-    await expect(fetchGithubRepoStars("querylane/querylane")).resolves.toBeNull();
+    await expect(
+      fetchGithubRepoStars("querylane/querylane")
+    ).resolves.toBeNull();
   });
 
   it("returns null when GitHub payload has no numeric star count", async () => {
@@ -76,7 +82,9 @@ describe("github api helpers", () => {
       Promise.resolve(Response.json({ stargazers_count: "321" }))
     );
 
-    await expect(fetchGithubRepoStars("querylane/querylane")).resolves.toBeNull();
+    await expect(
+      fetchGithubRepoStars("querylane/querylane")
+    ).resolves.toBeNull();
   });
 });
 
