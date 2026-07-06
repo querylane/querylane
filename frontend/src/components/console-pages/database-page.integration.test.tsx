@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { BackendDatabasePage } from "@/components/console-pages/database-page";
+import { BackendDatabaseQueryInsightsPage } from "@/components/console-pages/database-query-insights-page";
 import {
   DatabaseQueryInsightsSchema,
   DatabaseSchema,
@@ -36,6 +37,10 @@ const state = vi.hoisted(() => ({
 const ANALYTICS_SCHEMA_ROW_RE = /analytics User analytics-owner/;
 const ANALYTICS_DAILY_ROLLUP_ROW_RE = /analytics.*daily_rollup/i;
 const PG_CATALOG_SCHEMA_ROW_RE = /pg_catalog System postgres/i;
+const SELECT_EVENTS_QUERY_BUTTON_RE =
+  /SELECT \* FROM events WHERE account_id = \$1/i;
+const UPDATE_EVENTS_QUERY_BUTTON_RE =
+  /UPDATE events SET processed_at = now\(\) WHERE id = \$1/i;
 
 vi.mock("@tanstack/react-router", () => {
   const linkExportName = "Link";
@@ -177,6 +182,14 @@ function queryInsightsResponse() {
           queryId: 123n,
           totalTimeMs: 840,
           totalTimeRatio: 1,
+        }),
+        createProto(QueryRuntimeInsightSchema, {
+          calls: 21n,
+          meanTimeMs: 12,
+          query: "UPDATE events SET processed_at = now() WHERE id = $1",
+          queryId: 456n,
+          totalTimeMs: 252,
+          totalTimeRatio: 0.3,
         }),
       ],
     }),
@@ -414,6 +427,54 @@ describe("backend database overview", () => {
     expect(screen.getByText("Cache hit by table")).toBeTruthy();
     expect(screen.getByText("67% hit")).toBeTruthy();
     expect(screen.getByText("Low cache hit")).toBeTruthy();
+  });
+
+  test("renders the dedicated query insights page with filtering and query detail", async () => {
+    const user = userEvent.setup();
+    state.queryInsightsQuery = { data: queryInsightsResponse() };
+
+    render(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Query insights" })
+    ).toBeTruthy();
+    expect(screen.getByText("Top queries by total time")).toBeTruthy();
+    expect(screen.getByText("Sequential scan hotspots")).toBeTruthy();
+    expect(screen.getByText("Cache hit by table")).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: SELECT_EVENTS_QUERY_BUTTON_RE,
+      })
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Writes" }));
+
+    expect(
+      screen.queryByRole("button", {
+        name: SELECT_EVENTS_QUERY_BUTTON_RE,
+      })
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: UPDATE_EVENTS_QUERY_BUTTON_RE,
+      })
+    ).toBeTruthy();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: UPDATE_EVENTS_QUERY_BUTTON_RE,
+      })
+    );
+
+    const detail = screen.getByRole("region", { name: "Query detail" });
+    expect(within(detail).getByText("queryid 456")).toBeTruthy();
+    expect(within(detail).getByText("21")).toBeTruthy();
+    expect(within(detail).getByText("12 ms")).toBeTruthy();
   });
 
   test("navigates largest objects and schemas with stable explorer params", async () => {
