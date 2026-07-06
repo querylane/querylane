@@ -1,3 +1,4 @@
+import path from "node:path";
 import process from "node:process";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
@@ -22,6 +23,13 @@ const BROWSER_SCREENSHOT_MISMATCH_THRESHOLD =
     : LOCAL_SCREENSHOT_MISMATCH_THRESHOLD;
 const BROWSER_VIEWPORT = { height: 1000, width: 1280 } as const;
 const REDUCED_MOTION_CONTEXT = { reducedMotion: "reduce" } as const;
+
+interface BrowserScreenshotDirectoryInput {
+  project: { config: { browser: { screenshotDirectory?: string } } };
+  root: string;
+  screenshotDirectory: string;
+  testFileDirectory: string;
+}
 
 const browserPolicy = getBrowserPolicy({
   argv: process.argv,
@@ -49,6 +57,27 @@ function createBrowserInstance(theme: BrowserTheme) {
   } as const;
 }
 
+function resolveBrowserScreenshotDirectory({
+  project,
+  root,
+  screenshotDirectory,
+  testFileDirectory,
+}: BrowserScreenshotDirectoryInput) {
+  const browserScreenshotDirectory =
+    project.config.browser.screenshotDirectory ?? screenshotDirectory;
+  const relativeBrowserScreenshotDirectory = path.isAbsolute(
+    browserScreenshotDirectory
+  )
+    ? path.relative(root, browserScreenshotDirectory)
+    : browserScreenshotDirectory;
+
+  return path.resolve(
+    root,
+    testFileDirectory,
+    relativeBrowserScreenshotDirectory
+  );
+}
+
 function getBrowserProjectName(themes: readonly BrowserTheme[]) {
   if (themes.length > 1) {
     return VITEST_PROJECT_NAMES.browser;
@@ -70,6 +99,10 @@ function createBrowserConfig(themes: readonly BrowserTheme[]) {
       include: [...VITEST_BROWSER_OPTIMIZE_DEPS],
     },
     test: {
+      api: {
+        allowExec: browserPolicy.canRunBrowserTestsFromUi,
+        allowWrite: browserPolicy.canWriteBrowserArtifacts,
+      },
       browser: {
         api: {
           allowExec: browserPolicy.canRunBrowserTestsFromUi,
@@ -87,12 +120,32 @@ function createBrowserConfig(themes: readonly BrowserTheme[]) {
               arg,
               browserName,
               ext,
+              project,
               root,
               screenshotDirectory,
               testFileDirectory,
               testFileName,
-            }) =>
-              `${root}/${testFileDirectory}/${screenshotDirectory}/${testFileName}/${arg}-${browserName}-${CANONICAL_SCREENSHOT_PLATFORM}${ext}`,
+            }) => {
+              const screenshotDirectoryPath = resolveBrowserScreenshotDirectory(
+                {
+                  project,
+                  root,
+                  screenshotDirectory,
+                  testFileDirectory,
+                }
+              );
+
+              return path.resolve(
+                screenshotDirectoryPath,
+                testFileName,
+                `${arg}-${browserName}-${CANONICAL_SCREENSHOT_PLATFORM}${ext}`
+              );
+            },
+            screenshotOptions: {
+              animations: "disabled",
+              caret: "hide",
+              scale: "css",
+            },
           },
         },
         headless: true,
@@ -122,4 +175,5 @@ export {
   BROWSER_VIEWPORT,
   createBrowserConfig,
   createBrowserInstance,
+  resolveBrowserScreenshotDirectory,
 };

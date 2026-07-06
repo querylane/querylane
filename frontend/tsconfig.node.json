@@ -52,6 +52,7 @@
     "vitest.browser.shared.ts",
     "vitest.setup.ts",
     "vitest.browser.setup.ts",
+    "vitest.console-guard.ts",
     "vitest-env.d.ts",
     "vitest.projects.ts",
     "vitest.env.ts",

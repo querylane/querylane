@@ -213,7 +213,7 @@ function renderAdminShell() {
     >
       <TooltipProvider>
         <div
-          className="dark h-[760px] w-[1100px] origin-top-left scale-[0.72] overflow-hidden rounded-2xl border border-border bg-background text-foreground"
+          className="dark h-[760px] w-[1100px] origin-top-left scale-[0.8] overflow-hidden rounded-2xl border border-border bg-background text-foreground"
           data-testid="admin-shell-visual-root"
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
@@ -252,7 +252,7 @@ function renderAdminShellAtViewport({ width }: { width: 320 | 768 }) {
     >
       <TooltipProvider>
         <div
-          className={`dark h-[760px] ${widthClassName} origin-top-left scale-[0.8] overflow-hidden rounded-2xl border border-border bg-background text-foreground`}
+          className={`dark h-[760px] ${widthClassName} origin-top-left overflow-hidden rounded-2xl border border-border bg-background text-foreground`}
           data-testid={`admin-shell-visual-root-${width}`}
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
@@ -292,7 +292,7 @@ function renderDatabaseLayoutWithDegradedBanner() {
     >
       <TooltipProvider>
         <div
-          className="dark h-[760px] w-[1100px] origin-top-left scale-[0.72] overflow-hidden rounded-2xl border border-border bg-background text-foreground"
+          className="dark h-[760px] w-[1100px] origin-top-left scale-[0.8] overflow-hidden rounded-2xl border border-border bg-background text-foreground"
           data-testid="admin-shell-visual-root"
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">

@@ -40,6 +40,6 @@ test("browser test environment loads app styles and deterministic visual-test CS
     throw new Error("Expected browser tests to run inside the Vitest iframe.");
   }
   const iframe = frameElement as HTMLIFrameElement;
-  expect(iframe.style.transform).toBe("scale(0.72)");
-  expect(iframe.style.transformOrigin).toBe("left top");
+  expect(iframe.style.transform).toBe("");
+  expect(iframe.style.transformOrigin).toBe("");
 });

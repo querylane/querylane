@@ -508,7 +508,9 @@ test("backend instance overview shows live metrics and database catalog together
   await expect
     .element(page.getByText("Production Analytics Writer"))
     .toBeVisible();
-  await expect.element(page.getByText("Primary")).toBeVisible();
+  await expect
+    .element(page.getByText("Primary", { exact: true }))
+    .toBeVisible();
   await expect.element(page.getByText("74")).toBeVisible();
   await expect
     .element(page.getByPlaceholder("Search databases..."))

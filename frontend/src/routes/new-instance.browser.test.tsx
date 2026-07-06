@@ -158,8 +158,17 @@ test("create instance SSL mode menu keeps descriptions readable", async () => {
   renderCreateInstance();
 
   await page.getByLabelText("SSL mode").click();
+  await expect
+    .element(
+      page.getByText(
+        "Require TLS and verify both the trusted CA and the server hostname."
+      )
+    )
+    .toBeVisible();
 
-  const popup = document.querySelector('[data-slot="select-content"]');
+  const popup = document.querySelector(
+    '[data-slot="select-content"][data-open]'
+  );
   const description = page
     .getByText(
       "Require TLS and verify both the trusted CA and the server hostname."

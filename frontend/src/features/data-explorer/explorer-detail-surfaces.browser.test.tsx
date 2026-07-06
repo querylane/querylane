@@ -828,7 +828,12 @@ test("data explorer table indexes constraints policies and triggers stay readabl
   const constraintFilterBar = requireFacetFilterBar("constraint facet filters");
   expect(constraintFilterBar.textContent).toContain("Kind");
   await page.getByRole("button", { exact: true, name: "Kind" }).click();
-  await page.getByRole("option", { exact: true, name: "PRIMARY KEY" }).click();
+  const primaryKeyOption = page.getByRole("option", {
+    exact: true,
+    name: "PRIMARY KEY",
+  });
+  await expect.element(primaryKeyOption).toBeVisible();
+  await primaryKeyOption.click();
   const kindFilter = page
     .getByRole("button", { exact: true, name: "Kind PRIMARY KEY" })
     .element();
@@ -1197,7 +1202,9 @@ test("data explorer table child partition shows parent metadata", async () => {
 
   await expect.element(page.getByText("Partition bound")).toBeVisible();
   await expect.element(page.getByText("Parent table")).toBeVisible();
-  await expect.element(page.getByText("analytics.events")).toBeVisible();
+  await expect
+    .element(page.getByText("analytics.events", { exact: true }))
+    .toBeVisible();
   await expect.element(page.getByText(PARTITION_2024_BOUND_RE)).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-child-partition"

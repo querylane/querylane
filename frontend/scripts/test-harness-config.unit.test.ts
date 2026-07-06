@@ -4,15 +4,35 @@ import browserAllConfig from "../vitest.browser.all.config";
 import browserConfig from "../vitest.browser.config";
 import browserDarkConfig from "../vitest.browser.dark.config";
 import browserLightConfig from "../vitest.browser.light.config";
+import { resolveBrowserScreenshotDirectory } from "../vitest.browser.shared";
 import integrationConfig from "../vitest.integration.config";
 import {
   VITEST_PROJECT_CONFIGS,
   VITEST_PROJECT_NAME_ORDER,
 } from "../vitest.projects";
-import { VITEST_PLUGIN_NAMES } from "../vitest.shared";
+import {
+  VITEST_BROWSER_OPTIMIZE_DEPS,
+  VITEST_PLUGIN_NAMES,
+} from "../vitest.shared";
 import unitConfig from "../vitest.unit.config";
 
 const scripts = packageJson.scripts;
+const VITEST_BETA_VERSION_PATTERN = /^5\.0\.0-beta\.\d+$/u;
+const PLAYWRIGHT_PRERELEASE_VERSION_PATTERN =
+  /^1\.62\.0-(alpha|beta|rc)[\w.-]*$/u;
+
+function getAllowWrite(api: unknown) {
+  if (
+    typeof api === "object" &&
+    api !== null &&
+    "allowWrite" in api &&
+    typeof api.allowWrite === "boolean"
+  ) {
+    return api.allowWrite;
+  }
+
+  throw new Error("Expected Vitest API config to expose allowWrite.");
+}
 
 describe("test harness config", () => {
   test("splits unit, integration, browser light, and browser dark projects", () => {
@@ -68,6 +88,9 @@ describe("test harness config", () => {
       height: 1000,
       width: 1280,
     });
+    expect(getAllowWrite(browserLightConfig.test?.api)).toBe(
+      getAllowWrite(browserLightConfig.test?.browser?.api)
+    );
     const comparatorOptions =
       browserLightConfig.test?.browser?.expect?.toMatchScreenshot
         ?.comparatorOptions;
@@ -76,6 +99,46 @@ describe("test harness config", () => {
     }
     expect(comparatorOptions.allowedMismatchedPixelRatio).toBeLessThanOrEqual(
       0.05
+    );
+    expect(
+      browserLightConfig.test?.browser?.expect?.toMatchScreenshot
+        ?.screenshotOptions?.scale
+    ).toBe("css");
+    expect(
+      resolveBrowserScreenshotDirectory({
+        project: {
+          config: { browser: { screenshotDirectory: "__screenshots__/dark" } },
+        },
+        root: "/repo/frontend",
+        screenshotDirectory: "__screenshots__",
+        testFileDirectory: "src/components",
+      })
+    ).toBe("/repo/frontend/src/components/__screenshots__/dark");
+  });
+
+  test("uses one requested prerelease Vitest browser dependency set", () => {
+    const devDependencies = packageJson.devDependencies;
+    const vitestVersion = devDependencies.vitest;
+
+    expect(vitestVersion).toMatch(VITEST_BETA_VERSION_PATTERN);
+    expect(devDependencies["@vitest/browser"]).toBe(vitestVersion);
+    expect(devDependencies["@vitest/browser-playwright"]).toBe(vitestVersion);
+    expect(devDependencies["@vitest/coverage-v8"]).toBe(vitestVersion);
+    expect(devDependencies["@vitest/ui"]).toBe(vitestVersion);
+    expect(devDependencies.playwright).toBe(devDependencies["playwright-core"]);
+    expect(devDependencies.playwright).toMatch(
+      PLAYWRIGHT_PRERELEASE_VERSION_PATTERN
+    );
+  });
+
+  test("prebundles direct browser-test dependencies", () => {
+    expect([...VITEST_BROWSER_OPTIMIZE_DEPS]).toEqual(
+      expect.arrayContaining([
+        "lucide-react",
+        "react",
+        "react-dom",
+        "vitest-browser-react",
+      ])
     );
   });
 

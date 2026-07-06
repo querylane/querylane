@@ -119,7 +119,19 @@ vi.mock("@/hooks/api/schema", () => ({
 
 vi.mock("@/hooks/api/table", () => ({
   assertNoUnhandledTableDetailQueries: vi.fn(),
-  tableDetailQueryOptions: vi.fn(() => []),
+  tableDetailQueryOptions: vi.fn(({ tableId }) =>
+    [
+      "columns",
+      "indexes",
+      "constraints",
+      "policies",
+      "triggers",
+      "partition",
+    ].map((facet) => ({
+      queryFn: async () => ({}),
+      queryKey: ["browser", "table-detail", tableId, facet],
+    }))
+  ),
   tablesForSchemaQueryInput: vi.fn((input) => input),
   useGetTablePartitionMetadataQuery: () => ({
     data: {
