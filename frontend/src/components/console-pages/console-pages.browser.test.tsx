@@ -396,6 +396,24 @@ test("console roles list shows kind filters, sortable columns, and role rows", a
   );
 });
 
+test("console roles filter row has a visual baseline", async () => {
+  renderConsoleSurface(<InstanceRolesPage instanceId="prod" />);
+
+  await expect.element(page.getByPlaceholder("Search roles...")).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Type" }))
+    .toBeVisible();
+
+  const filterBar = document.querySelector<HTMLElement>(
+    '[data-slot="roles-filter-bar"]'
+  );
+  if (!filterBar) {
+    throw new Error("Expected roles filter bar.");
+  }
+
+  await expect(filterBar).toMatchScreenshot("console-roles-filter-row");
+});
+
 test("console role map filter switches stay inside the role filters popover", async () => {
   renderConsoleSurface(<InstanceRolesPage instanceId="prod" />);
 
