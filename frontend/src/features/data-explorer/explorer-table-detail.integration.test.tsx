@@ -47,6 +47,8 @@ const SELECT_POLICY_SQL_RE =
   /CREATE POLICY customers_account_read_policy ON public\.customers\s+AS PERMISSIVE\s+FOR SELECT TO app_reader\s+USING \(account_id = current_setting\('app\.account_id'\)::uuid\);/;
 const TRIGGER_SQL_RE =
   /CREATE TRIGGER customers_audit_trigger\s+AFTER INSERT OR UPDATE ON public\.customers\s+FOR EACH ROW EXECUTE FUNCTION audit_customer_changes\(\);/;
+const FULL_TRIGGER_STATEMENTS_SQL_RE =
+  /CREATE TRIGGER customers_replica_trigger\s+AFTER DELETE ON public\.customers\s+FOR EACH ROW EXECUTE FUNCTION audit_customer_changes\(\);\s+CREATE TRIGGER customers_statement_trigger\s+BEFORE UPDATE ON public\.customers\s+FOR EACH STATEMENT EXECUTE FUNCTION sync_customer_summary\(\);/;
 
 interface MockGridColumn {
   key: string;
@@ -374,6 +376,18 @@ describe("TableDetail data tab toolbar", () => {
           timing: "AFTER",
           triggerName: "customers_audit_trigger",
         },
+        {
+          definition:
+            "CREATE TRIGGER customers_replica_trigger\n  AFTER DELETE ON public.customers\n  FOR EACH ROW EXECUTE FUNCTION audit_customer_changes()",
+          enabled: true,
+          triggerName: "customers_replica_trigger",
+        },
+        {
+          definition:
+            "CREATE TRIGGER customers_statement_trigger\n  BEFORE UPDATE ON public.customers\n  FOR EACH STATEMENT EXECUTE FUNCTION sync_customer_summary();",
+          enabled: true,
+          triggerName: "customers_statement_trigger",
+        },
       ],
     });
 
@@ -403,6 +417,9 @@ describe("TableDetail data tab toolbar", () => {
     expect(screen.getByDisplayValue(CUSTOMER_STATUS_INDEX_SQL_RE)).toBeTruthy();
     expect(screen.getByDisplayValue(SELECT_POLICY_SQL_RE)).toBeTruthy();
     expect(screen.getByDisplayValue(TRIGGER_SQL_RE)).toBeTruthy();
+    expect(
+      screen.getByDisplayValue(FULL_TRIGGER_STATEMENTS_SQL_RE)
+    ).toBeTruthy();
     expect(
       screen.getByRole("heading", { name: "Reproduce locally" })
     ).toBeTruthy();

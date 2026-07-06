@@ -44,7 +44,9 @@ const DEFAULT_BALANCED_TREE_SUMMARY_RE = /Default balanced tree for equality/;
 const EXACT_DECIMAL_RE = /Exact decimal/;
 const PARTITION_2024_BOUND_RE = /FOR VALUES FROM \('2024-01-01'\)/;
 const LAST_FETCHED_11_PM_RE = /Last fetched 11:00:00 PM/;
+const POLICIES_ONE_TAB_RE = /^Policies\s+1$/;
 const TABLE_COLUMNS_LAST_FETCHED_RE = /4 columns · base table · Last fetched/;
+const TRIGGERS_ONE_TAB_RE = /^Triggers\s+1$/;
 const UTC_NORMALIZED_INSTANT_RE = /UTC-normalized instant/;
 const refreshableQueryFields = vi.hoisted(() => ({
   dataUpdatedAt: 1_704_150_000_000,
@@ -376,43 +378,35 @@ function seedDefinitionDesignQueries() {
   });
   tableQueries.partitionMetadata.data = {
     partitionMetadata: {
-      childPartitions: [
-        {
-          displayName: "change_log_2026_q1",
-          partitionBound: "FOR VALUES FROM ('2026-01-01') TO ('2026-04-01')",
-          table:
-            "instances/prod/databases/logistics/schemas/audit/tables/change_log_2026_q1",
-        },
-        {
-          displayName: "change_log_2026_q2",
-          partitionBound: "FOR VALUES FROM ('2026-04-01') TO ('2026-07-01')",
-          table:
-            "instances/prod/databases/logistics/schemas/audit/tables/change_log_2026_q2",
-        },
-        {
-          displayName: "change_log_2026_q3",
-          partitionBound: "FOR VALUES FROM ('2026-07-01') TO ('2026-10-01')",
-          table:
-            "instances/prod/databases/logistics/schemas/audit/tables/change_log_2026_q3",
-        },
-        {
-          displayName: "change_log_archive",
-          partitionBound: "DEFAULT",
-          table:
-            "instances/prod/databases/logistics/schemas/audit/tables/change_log_archive",
-        },
-      ],
+      childPartitions: [],
       parentTable: "",
       partitionBound: "",
-      partitionCount: 4,
-      partitionKey: "RANGE (recorded_at)",
+      partitionCount: 0,
+      partitionKey: "",
     },
   };
   tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
-    policies: [],
+    policies: [
+      createProto(TablePolicySchema, {
+        command: PolicyCommand.SELECT,
+        mode: PolicyMode.PERMISSIVE,
+        policyName: "change_log_actor_read_policy",
+        roles: ["audit_reader"],
+        usingExpression: "actor = current_user",
+      }),
+    ],
   });
   tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
-    triggers: [],
+    triggers: [
+      createProto(TableTriggerSchema, {
+        definition: "EXECUTE FUNCTION audit.record_change()",
+        enabled: true,
+        events: ["INSERT", "UPDATE", "DELETE"],
+        functionName: "audit.record_change",
+        timing: "AFTER",
+        triggerName: "change_log_record_trigger",
+      }),
+    ],
   });
 }
 
@@ -1031,7 +1025,6 @@ test("data explorer table definition tab has a visual baseline", async () => {
       instanceId="prod"
       schemaName="audit"
       table={createProto(TableSchema, {
-        comment: "Row-level audit trail written by table triggers",
         displayName: "change_log",
         name: "instances/prod/databases/logistics/schemas/audit/tables/change_log",
         owner: "app_owner",
@@ -1041,17 +1034,26 @@ test("data explorer table definition tab has a visual baseline", async () => {
       })}
       tableName="change_log"
     />,
-    "h-[900px] w-[1100px] overflow-hidden"
+    "h-[950px] w-[1100px] overflow-hidden"
   );
 
   await expect
     .element(page.getByRole("heading", { name: "Create table" }))
     .toBeVisible();
   await expect
+    .element(page.getByRole("tab", { name: POLICIES_ONE_TAB_RE }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("tab", { name: TRIGGERS_ONE_TAB_RE }))
+    .toBeVisible();
+  await expect
     .element(page.getByRole("heading", { name: "Reproduce locally" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("heading", { name: "Comments" }))
+    .element(page.getByRole("heading", { name: "Policies" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("heading", { name: "Triggers" }))
     .toBeVisible();
   await expect
     .element(page.getByText("Copy all steps", { exact: true }))
