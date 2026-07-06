@@ -114,6 +114,8 @@ vi.mock("@tanstack/react-router", () => {
 });
 
 vi.mock("@connectrpc/connect-query", () => ({
+  useMutation: vi.fn(),
+  useQuery: vi.fn(() => ({ data: undefined, isFetching: false })),
   useTransport: () => ({}),
 }));
 
@@ -183,6 +185,13 @@ vi.mock("@/hooks/api/extension", () => ({
 
 vi.mock("@/hooks/api/instance", () => ({
   refreshAllInstancesCache: vi.fn(async () => ({ instances: [] })),
+  useCheckInstanceHealthQuery: () => ({
+    data: undefined,
+    error: null,
+    isFetching: false,
+    isPending: false,
+    refetch: vi.fn(async () => undefined),
+  }),
   useDeleteInstanceMutation: () => ({
     isPending: false,
     mutateAsync: state.deleteInstance,
