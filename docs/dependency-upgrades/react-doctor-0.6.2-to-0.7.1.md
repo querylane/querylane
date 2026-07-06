@@ -24,8 +24,8 @@ Repo actions before target install: install with Bun, scripts disabled, then upd
 ## Dependency tree
 Target: `react-doctor@0.7.1`.
 Parents: direct `frontend/package.json` dev dependency.
-Children: `oxlint-plugin-react-doctor@0.7.1`, `deslop-js@0.7.1`, `oxlint >=1.66.0 <1.67.0`, `eslint-plugin-react-hooks`, `@sentry/node`, `jiti`, `conf`, `confbox`, `magicast`, `yaml`, `typescript`. Security overrides pin vulnerable transitive packages to `brace-expansion@5.0.7` and `fast-uri@3.1.3`, both within their dependent semver ranges.
-Repo dependents: `frontend` scripts `doctor`, `doctor:changed`, `doctor:full`, `doctor:ci`, `quality:gate`, `quality:changed`; frontend CI React Doctor action uses `version: 0.7.1`.
+Children: `oxlint-plugin-react-doctor@0.7.1`, `deslop-js@0.7.1`, `oxlint >=1.66.0 <1.67.0`, `eslint-plugin-react-hooks`, `@sentry/node`, `jiti`, `conf`, `confbox`, `magicast`, `yaml`, `typescript`.
+Repo dependents: `frontend` scripts `doctor`, `doctor:changed`, `doctor:full`, `doctor:ci`, `quality:gate`, `quality:changed`; frontend CI runs `frontend/scripts/run-react-doctor-ci.ts` against the installed `react-doctor@0.7.1`.
 Peers: none declared by `react-doctor`.
 Plugins/adapters: `oxlint-plugin-react-doctor`, bundled React Compiler/React Hooks diagnostics.
 Ignored generated/UI surfaces: `src/components/ui/**`, `src/components/querylane-ui/**`, protobuf/generated route files, build output, coverage, and test result artifacts.
@@ -44,9 +44,7 @@ Danger/blast radius: medium because this is a strict CI gate and 0.x package, mi
 | None for `react-doctor@0.7.1`, `oxlint-plugin-react-doctor@0.7.1`, `deslop-js@0.7.1` | OSV API query | No advisories returned for target packages. | n/a | Proceed. |
 | No published GitHub advisories for `millionco/react-doctor` | [GitHub security page](https://github.com/millionco/react-doctor/security) | No project advisories listed. | n/a | Proceed. |
 | Existing unrelated frontend audit findings: `uuid`, `tmp`, `js-yaml` | `bun audit --audit-level low` | Via `@lhci/cli`, `shadcn`, `@changesets/cli`; not introduced by this upgrade. | n/a | Document only. |
-| `brace-expansion@5.0.6` via `minimatch@10.2.5` | Snyk `SNYK-JS-BRACEEXPANSION-17706650` | High-severity transitive dev-tool path through React Doctor/ESLint. | `5.0.7` | Added Bun top-level override to `5.0.7`; verified with `bun pm why` and Snyk. |
-| `fast-uri@3.1.2` via `ajv@8.20.0` | Snyk `SNYK-JS-FASTURI-17675102` | High-severity transitive dev-tool path through React Doctor `conf` and existing webpack/schema-utils graph. | `3.1.3`, `4.0.1` | Added Bun top-level override to `3.1.3` because it satisfies Ajv semver ranges; verified with `bun pm why` and Snyk. |
-| Snyk package-manifest check after overrides | `snyk test --file=package.json --package-manager=npm --json` | `ok: true`, zero vulnerabilities reported for the manifest view. | n/a | Proceed. |
+| Snyk package-manifest check | `snyk test --file=package.json --package-manager=npm --json` | `ok: true`, zero vulnerabilities reported for the manifest view after removing top-level overrides. | n/a | Proceed. |
 
 ## Risk gate
 Decision: apply now.
@@ -69,8 +67,6 @@ QUALITY_BASE_REF=origin/main bun run test:integration:changed
 QUALITY_BASE_REF=origin/main bun run test:browser:changed
 bun audit --audit-level low
 snyk test --file=package.json --package-manager=npm --json
-bun pm why brace-expansion
-bun pm why fast-uri
 ```
 
 ## Verification
@@ -78,8 +74,9 @@ Lint: `bun run lint:fix` passed.
 Type check: `bun run type:check` passed.
 Doctor: `bun run doctor:full -- --json --no-score` passed with zero diagnostics; `bun run doctor:changed` passed with a 100/100 score.
 Tests: policy test failed before the config migration, then `bun run test:unit -- scripts/react-doctor-policy.unit.test.ts`, `QUALITY_BASE_REF=origin/main bun run test:unit:changed` (19 files, 138 tests), `QUALITY_BASE_REF=origin/main bun run test:integration:changed` (25 files, 164 tests), and `QUALITY_BASE_REF=origin/main bun run test:browser:changed` (26 files, 192 tests) passed.
-Build/vet/security scan: `bun run build` passed. `bun audit --audit-level low` still reports existing unrelated `@lhci/cli`, `shadcn`, and `@changesets/cli` advisories. OSV target package queries returned no advisories. Snyk failed before overrides on `brace-expansion@5.0.6` and `fast-uri@3.1.2`; after Bun overrides, `snyk test --file=package.json --package-manager=npm --json` returned `ok: true` with zero vulnerabilities.
+Build/vet/security scan: `bun run build` passed. `bun audit --audit-level low` still reports existing unrelated `@lhci/cli`, `shadcn`, and `@changesets/cli` advisories. OSV target package queries returned no advisories. `snyk test --file=package.json --package-manager=npm --json` returned `ok: true` with zero vulnerabilities after removing top-level overrides in response to PR review feedback.
 
 ## Notes
-React Doctor 0.7.1 does not detect this repo's React Compiler setup from `rsbuild.config.ts`; it only detected known package/config surfaces locally. I made `compilationMode: "annotation"` explicit in the Rsbuild React plugin config because annotation mode is intentional, and I did not add an unused Babel package solely to satisfy tool detection.
+React Doctor 0.7.1 does not detect this repo's React Compiler setup from `rsbuild.config.ts`; it only detected known package/config surfaces locally. The explicit `compilationMode: "annotation"` was removed in response to PR review because Rsbuild infers the repo's compiler mode and the explicit option made the config less strict.
 Disabled rules are limited to documented false positives/tooling conflicts: automatic JSX runtime (`react-in-jsx-scope`), Tailwind/shadcn `className` styling API (`forbid-component-props`), lazy stable state instances (`hook-use-state`), formatter conflict on boolean JSX props (`jsx-boolean-value`), pass-through event props (`jsx-handler-names`), and typed adapter prop forwarding (`jsx-props-no-spreading`).
+Frontend CI does not use `millionco/react-doctor@v2` after PR feedback because that composite action still shells through `actions/cache@v4` internally, producing Node 20 deprecation warnings even while the workflow itself uses Node 24 LTS. The local wrapper keeps the sticky PR comment, commit status, score, and CI summary surfaces without the deprecated action dependency.
