@@ -43,10 +43,12 @@ function useCanonicalAdminNavigation({
     navigate;
 
   return ({
+    clearPageSearch,
     extraSearch,
     ids,
     overridePage,
   }: {
+    clearPageSearch?: boolean | undefined;
     extraSearch?: Record<string, unknown> | undefined;
     ids: RouteSelectionIds;
     overridePage?: AdminPageId | undefined;
@@ -75,6 +77,7 @@ function useCanonicalAdminNavigation({
       ...target,
       search: (previous: Record<string, unknown>) =>
         buildCanonicalAdminSearch(previous, {
+          clearPageSearch,
           currentPage,
           extraSearch,
           targetPage,
@@ -120,6 +123,7 @@ function useNavigationCallbacks({
     }
 
     navigateToSelection({
+      clearPageSearch: Boolean(effDatabaseId && database.id !== effDatabaseId),
       ids: {
         databaseId: database.id,
         instanceId,

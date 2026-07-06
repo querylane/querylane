@@ -171,17 +171,19 @@ function resolveCanonicalDatabasePageTarget({
 function buildCanonicalAdminSearch(
   previous: Record<string, unknown>,
   {
+    clearPageSearch = false,
     currentPage,
     extraSearch,
     targetPage,
   }: {
+    clearPageSearch?: boolean | undefined;
     currentPage?: AdminPageId | undefined;
     extraSearch?: Record<string, unknown> | undefined;
     targetPage: AdminPageId;
   }
 ): InstanceLayoutSearch {
   const baseSearch =
-    currentPage && targetPage === currentPage
+    currentPage && targetPage === currentPage && !clearPageSearch
       ? previous
       : { ...previous, ...CLEARED_PAGE_SEARCH };
 
