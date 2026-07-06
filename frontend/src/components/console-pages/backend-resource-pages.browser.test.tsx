@@ -186,11 +186,29 @@ vi.mock("@/hooks/api/extension", () => ({
 vi.mock("@/hooks/api/instance", () => ({
   refreshAllInstancesCache: vi.fn(async () => ({ instances: [] })),
   useCheckInstanceHealthQuery: () => ({
-    data: undefined,
+    data: {
+      health: {
+        connectionActivity: {
+          activeConnections: 18,
+          byApplication: [],
+          idleConnections: 54,
+          idleInTransactionConnections: 2,
+          longestTransactionSeconds: 0n,
+          longRunningTransactionConnections: 0,
+          maxConnections: 100,
+          status: 1,
+          summary: "74 connections",
+          totalConnections: 74,
+          utilizationRatio: 0.74,
+          waitingForLockConnections: 0,
+        },
+      },
+      partialErrors: [],
+    },
     error: null,
     isFetching: false,
     isPending: false,
-    refetch: vi.fn(async () => undefined),
+    refetch: vi.fn(async () => ({})),
   }),
   useDeleteInstanceMutation: () => ({
     isPending: false,
