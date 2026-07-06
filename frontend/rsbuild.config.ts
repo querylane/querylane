@@ -115,6 +115,16 @@ export default defineConfig({
   html: {
     template: "./index.html",
   },
+  output: {
+    sourceMap: {
+      // Bundle budgets classify deferred feature chunks from source maps. Keep
+      // maps hidden in production without restoring Sentry upload plumbing.
+      js:
+        buildEnv.NODE_ENV === "production"
+          ? "hidden-source-map"
+          : "eval-cheap-module-source-map",
+    },
+  },
   performance: {
     ...(preconnectOrigins.length > 0 ? { preconnect: preconnectOrigins } : {}),
     buildCache: {
