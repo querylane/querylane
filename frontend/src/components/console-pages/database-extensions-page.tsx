@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronLeft, ChevronRight, PackageOpen, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, PackageOpen } from "lucide-react";
 import { useState } from "react";
 import {
   PageHeader,
@@ -28,6 +28,13 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   extensionsForDatabaseQueryInput,
   useListAllExtensionsQuery,
@@ -304,87 +311,78 @@ function ExtensionCard({
   );
 }
 
-function ExtensionDetails({
-  extension,
-  onClose,
-}: {
-  extension: PresentedExtension;
-  onClose: () => void;
-}) {
+function ExtensionDetails({ extension }: { extension: PresentedExtension }) {
   return (
-    <section
-      aria-label={`${extension.displayName} details`}
-      className="rounded-xl border border-border bg-card shadow-xs xl:w-96 xl:shrink-0"
-    >
-      <div className="flex items-center gap-2 border-border border-b p-4">
-        <h2 className="truncate font-mono font-semibold text-sm">
-          {extension.displayName}
-        </h2>
-        <Badge variant={extension.badgeVariant}>{extension.statusLabel}</Badge>
-        <Button
-          aria-label="Close extension details"
-          className="ml-auto"
-          onClick={onClose}
-          size="icon-xs"
-          type="button"
-          variant="ghost"
-        >
-          <X />
-        </Button>
-      </div>
-      <div className="flex flex-col gap-5 p-4">
-        <div className="grid grid-cols-2 gap-2">
-          {extension.facts.map((fact) => (
-            <div
-              className="rounded-lg border border-border p-3"
-              key={fact.label}
-            >
-              <div className="font-semibold text-[0.65rem] text-muted-foreground uppercase tracking-wide">
-                {fact.label}
-              </div>
-              <div className="mt-1 break-words font-mono text-sm">
-                {fact.value}
-              </div>
-            </div>
-          ))}
+    <>
+      <SheetHeader className="border-border border-b pr-12">
+        <div className="flex min-w-0 items-center gap-2">
+          <SheetTitle className="truncate font-mono font-semibold text-sm">
+            {extension.displayName}
+            <span className="sr-only"> details</span>
+          </SheetTitle>
+          <Badge variant={extension.badgeVariant}>
+            {extension.statusLabel}
+          </Badge>
         </div>
-        <p className="text-sm leading-relaxed">{extension.about}</p>
-        {extension.statusFilter === "available" && extension.installSql ? (
-          <div className="rounded-lg bg-muted/50 p-3 text-muted-foreground text-xs leading-relaxed">
-            A superuser can install it with:
-            <pre className="mt-2 overflow-auto font-mono text-foreground text-xs">
-              {extension.installSql}
-            </pre>
-          </div>
-        ) : null}
-        <section className="space-y-2">
-          <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-            What it gives you
-          </h3>
-          <div className="space-y-2">
-            {extension.provides.map((item) => (
-              <div className="flex gap-2" key={item.label}>
-                <Check className="mt-0.5 size-4 shrink-0 text-primary" />
-                <p className="text-sm leading-relaxed">
-                  <span className="font-medium font-mono text-xs">
-                    {item.label}
-                  </span>{" "}
-                  : {item.value}
-                </p>
+        <SheetDescription>
+          Read-only PostgreSQL extension details and safe example SQL.
+        </SheetDescription>
+      </SheetHeader>
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="flex flex-col gap-5">
+          <div className="grid grid-cols-2 gap-2">
+            {extension.facts.map((fact) => (
+              <div
+                className="rounded-lg border border-border p-3"
+                key={fact.label}
+              >
+                <div className="font-semibold text-[0.65rem] text-muted-foreground uppercase tracking-wide">
+                  {fact.label}
+                </div>
+                <div className="mt-1 break-words font-mono text-sm">
+                  {fact.value}
+                </div>
               </div>
             ))}
           </div>
-        </section>
-        <section className="space-y-2">
-          <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-            Try it
-          </h3>
-          <pre className="overflow-auto rounded-lg border border-border bg-muted/50 p-3 font-mono text-xs leading-relaxed">
-            {extension.exampleSql}
-          </pre>
-        </section>
+          <p className="text-sm leading-relaxed">{extension.about}</p>
+          {extension.statusFilter === "available" && extension.installSql ? (
+            <div className="rounded-lg bg-muted/50 p-3 text-muted-foreground text-xs leading-relaxed">
+              A superuser can install it with:
+              <pre className="mt-2 overflow-auto font-mono text-foreground text-xs">
+                {extension.installSql}
+              </pre>
+            </div>
+          ) : null}
+          <section className="space-y-2">
+            <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
+              What it gives you
+            </h3>
+            <div className="space-y-2">
+              {extension.provides.map((item) => (
+                <div className="flex gap-2" key={item.label}>
+                  <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <p className="text-sm leading-relaxed">
+                    <span className="font-medium font-mono text-xs">
+                      {item.label}
+                    </span>{" "}
+                    : {item.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="space-y-2">
+            <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
+              Try it
+            </h3>
+            <pre className="overflow-auto rounded-lg border border-border bg-muted/50 p-3 font-mono text-xs leading-relaxed">
+              {extension.exampleSql}
+            </pre>
+          </section>
+        </div>
       </div>
-    </section>
+    </>
   );
 }
 
@@ -504,7 +502,7 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
         status={status}
         statusFilterOptions={filterOptions.statuses}
       />
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
+      <div className="flex flex-col gap-4">
         <div className="min-w-0 flex-1 space-y-4">
           {pageExtensions.length === 0 ? (
             <EmptyState
@@ -561,13 +559,24 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
             </div>
           </div>
         </div>
-        {selectedExtension ? (
-          <ExtensionDetails
-            extension={selectedExtension}
-            onClose={() => setSelectedKey(null)}
-          />
-        ) : null}
       </div>
+      <Sheet
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedKey(null);
+          }
+        }}
+        open={selectedExtension !== undefined}
+      >
+        <SheetContent
+          className="w-[min(34rem,calc(100vw-1rem))] gap-0 overflow-hidden p-0 sm:max-w-[34rem]"
+          side="right"
+        >
+          {selectedExtension ? (
+            <ExtensionDetails extension={selectedExtension} />
+          ) : null}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

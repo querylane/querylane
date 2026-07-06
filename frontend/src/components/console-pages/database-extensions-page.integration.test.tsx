@@ -236,7 +236,7 @@ describe("database extensions page", () => {
     expect(screen.getByText("uuid-ossp")).toBeTruthy();
     expect(screen.queryByText("plpgsql")).toBeNull();
   });
-  test("opens extension detail panel without mutation actions", async () => {
+  test("opens extension explanation drawer without mutation actions", async () => {
     const user = userEvent.setup();
     render(
       <BackendDatabaseExtensionsPage
@@ -249,16 +249,23 @@ describe("database extensions page", () => {
       screen.getByRole("button", { name: PG_TRGM_EXTENSION_CARD_NAME })
     );
 
-    const panel = screen.getByRole("region", { name: "pg_trgm details" });
-    expect(within(panel).getByText("What it gives you")).toBeTruthy();
-    expect(within(panel).getByText("Try it")).toBeTruthy();
-    expect(within(panel).getByText("Schema")).toBeTruthy();
-    expect(within(panel).getByText("public")).toBeTruthy();
+    const drawer = screen.getByRole("dialog", { name: "pg_trgm details" });
+    expect(drawer.getAttribute("data-slot")).toBe("sheet-content");
+    expect(within(drawer).getByText("What it gives you")).toBeTruthy();
+    expect(within(drawer).getByText("Try it")).toBeTruthy();
+    expect(within(drawer).getByText("Schema")).toBeTruthy();
+    expect(within(drawer).getByText("public")).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: INSTALL_EXTENSION_BUTTON_NAME })
     ).toBeNull();
     expect(
       screen.queryByRole("button", { name: OPEN_IN_WORKBENCH_BUTTON_NAME })
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(
+      screen.queryByRole("dialog", { name: "pg_trgm details" })
     ).toBeNull();
   });
 });
