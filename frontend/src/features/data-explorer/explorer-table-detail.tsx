@@ -20,7 +20,7 @@ import {
   Table2,
   X,
 } from "lucide-react";
-import { useReducer, useState } from "react";
+import { useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
@@ -74,6 +74,10 @@ import {
   collectQueryErrors,
   type QueryErrorResult,
 } from "@/features/data-explorer/table-detail-query-state";
+import {
+  isTableDetailTab,
+  type TableDetailTab,
+} from "@/features/data-explorer/table-detail-tab";
 import {
   useGetTablePartitionMetadataQuery,
   useListTableColumnsQuery,
@@ -133,15 +137,6 @@ const IDENTITY_GENERATION_LABELS = {
   [IdentityGeneration.BY_DEFAULT]: "BY DEFAULT",
   [IdentityGeneration.UNSPECIFIED]: "",
 } satisfies Record<IdentityGeneration, string>;
-type TableDetailTab =
-  | "columns"
-  | "constraints"
-  | "data"
-  | "indexes"
-  | "keys"
-  | "partitions"
-  | "policies"
-  | "triggers";
 interface TableDetailTabDefinition {
   icon: LucideIcon;
   label: string;
@@ -1795,21 +1790,27 @@ function TableDetail({
   databaseId,
   initialTab = "data",
   instanceId,
+  onTabChange,
   schemaName,
   table,
   tableName,
 }: {
   databaseId: string;
-  initialTab?: TableDetailTab;
+  initialTab?: string | undefined;
   instanceId: string;
+  onTabChange?: ((tab: TableDetailTab) => void) | undefined;
   schemaName: string;
   table: TableProto | undefined;
   tableName: string;
 }) {
-  const [tab, setTab] = useReducer(
-    (_current: TableDetailTab, next: TableDetailTab) => next,
-    initialTab
-  );
+  const resolvedInitialTab = isTableDetailTab(initialTab) ? initialTab : "data";
+
+  function handleTabChange(next: string) {
+    if (!isTableDetailTab(next)) {
+      return;
+    }
+    onTabChange?.(next);
+  }
   const tableResourceName = buildTableName(
     instanceId,
     databaseId,
@@ -1879,8 +1880,9 @@ function TableDetail({
 
           <Tabs
             className="min-h-0 w-full min-w-0 flex-1 flex-col"
-            onValueChange={setTab}
-            value={tab}
+            defaultValue={resolvedInitialTab}
+            key={resolvedInitialTab}
+            onValueChange={handleTabChange}
           >
             <div className="-mx-1 shrink-0 overflow-x-auto overflow-y-hidden px-1 pb-1">
               <TabsList className="h-9 min-w-max">

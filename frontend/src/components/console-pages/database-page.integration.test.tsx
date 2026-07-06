@@ -17,6 +17,7 @@ import {
   TableCacheHitInsightSchema,
 } from "@/protogen/querylane/console/v1alpha1/database_pb";
 import { PostgreSqlErrorDetailSchema } from "@/protogen/querylane/console/v1alpha1/errors_pb";
+import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 interface QueryState<T> {
   data?: T;
@@ -29,9 +30,12 @@ interface QueryState<T> {
 const state = vi.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
   databaseQuery: {} as QueryState<GetDatabaseResponse>,
+  navigate: vi.fn(async () => undefined),
   queryInsightsQuery: {} as QueryState<GetDatabaseQueryInsightsResponse>,
 }));
-const ANALYTICS_SCHEMA_ROW_RE = /analytics analytics-owner/;
+const ANALYTICS_SCHEMA_ROW_RE = /analytics User analytics-owner/;
+const ANALYTICS_DAILY_ROLLUP_ROW_RE = /analytics.*daily_rollup/i;
+const PG_CATALOG_SCHEMA_ROW_RE = /pg_catalog System postgres/i;
 
 vi.mock("@tanstack/react-router", () => {
   const linkExportName = "Link";
@@ -47,7 +51,7 @@ vi.mock("@tanstack/react-router", () => {
         {children}
       </a>
     ),
-    useNavigate: () => vi.fn(async () => undefined),
+    useNavigate: () => state.navigate,
   };
 });
 
@@ -195,6 +199,7 @@ function catalogResult() {
         rowCount: 12_000n,
         schemaId: "public",
         sizeBytes: 4_096_000n,
+        tableType: Table_TableType.BASE_TABLE,
       },
       {
         comment: "",
@@ -209,6 +214,22 @@ function catalogResult() {
         rowCount: 5_000n,
         schemaId: "analytics",
         sizeBytes: 2_048_000n,
+        tableType: Table_TableType.UNSPECIFIED,
+      },
+      {
+        comment: "",
+        isMaterialized: false,
+        isPopulated: true,
+        isSystem: true,
+        kind: "table" as const,
+        lastDdlTime: undefined,
+        name: "instances/prod/databases/customer-events/schemas/pg_catalog/tables/pg_class",
+        objectId: "pg_class",
+        owner: "postgres",
+        rowCount: 100n,
+        schemaId: "pg_catalog",
+        sizeBytes: 1024n,
+        tableType: Table_TableType.BASE_TABLE,
       },
     ],
     schemas: [
@@ -234,13 +255,24 @@ function catalogResult() {
         totalSizeBytes: 2_048_000n,
         viewCount: 1,
       },
+      {
+        estimatedRows: 100,
+        isSystemSchema: true,
+        lastDdlTime: undefined,
+        name: "instances/prod/databases/customer-events/schemas/pg_catalog",
+        owner: "postgres",
+        schemaId: "pg_catalog",
+        tableCount: 1,
+        totalSizeBytes: 1024n,
+        viewCount: 0,
+      },
     ],
     syncMetadata: undefined,
     totals: {
       estimatedRows: 17_000,
-      schemaCount: 2,
-      tableCount: 1,
-      totalSizeBytes: 6_144_000n,
+      schemaCount: 3,
+      tableCount: 2,
+      totalSizeBytes: 6_145_024n,
       viewCount: 1,
     },
   };
@@ -249,6 +281,7 @@ function catalogResult() {
 beforeEach(() => {
   state.databaseQuery = { data: databaseResponse() };
   state.catalogQuery = { data: catalogResult() };
+  state.navigate.mockClear();
   state.queryInsightsQuery = {};
 });
 
@@ -298,13 +331,21 @@ describe("backend database overview", () => {
       within(filterBar)
         .getAllByRole("button")
         .map((button) => button.textContent)
-    ).toEqual(["Kind", "Schema"]);
+    ).toEqual(["Kind", "System", "Owner", "Schema"]);
 
     await user.click(within(filterBar).getByRole("button", { name: "Kind" }));
-    await user.click(screen.getByRole("option", { name: "Views" }));
+    await user.click(
+      screen.getByRole("option", { name: "Materialized views" })
+    );
 
     expect(screen.getByText("daily_rollup")).toBeTruthy();
     expect(screen.queryByText("events")).toBeNull();
+
+    await user.click(within(filterBar).getByRole("button", { name: "Owner" }));
+    await user.click(screen.getByRole("option", { name: "analytics-owner" }));
+
+    expect(screen.getByText("daily_rollup")).toBeTruthy();
+    expect(screen.queryByText("pg_class")).toBeNull();
   });
 
   test("places schema search on the left with kind and owner filters", async () => {
@@ -333,7 +374,7 @@ describe("backend database overview", () => {
       within(filterBar)
         .getAllByRole("button")
         .map((button) => button.textContent)
-    ).toEqual(["Kind", "Owner"]);
+    ).toEqual(["System", "Owner"]);
 
     await user.click(within(filterBar).getByRole("button", { name: "Owner" }));
     await user.click(screen.getByRole("option", { name: "analytics-owner" }));
@@ -373,6 +414,40 @@ describe("backend database overview", () => {
     expect(screen.getByText("Cache hit by table")).toBeTruthy();
     expect(screen.getByText("67% hit")).toBeTruthy();
     expect(screen.getByText("Low cache hit")).toBeTruthy();
+  });
+
+  test("navigates largest objects and schemas with stable explorer params", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <BackendDatabasePage
+        databaseId="customer-events"
+        instanceId="prod"
+        section="overview"
+      />
+    );
+
+    const objectButton = screen.getByRole("button", {
+      name: ANALYTICS_DAILY_ROLLUP_ROW_RE,
+    });
+    await user.click(objectButton);
+
+    expect(state.navigate).toHaveBeenCalledWith({
+      params: { databaseId: "customer-events", instanceId: "prod" },
+      search: { category: "views", name: "daily_rollup", schema: "analytics" },
+      to: "/instances/$instanceId/databases/$databaseId/explorer",
+    });
+
+    const schemaButton = screen.getByRole("button", {
+      name: PG_CATALOG_SCHEMA_ROW_RE,
+    });
+    await user.click(schemaButton);
+
+    expect(state.navigate).toHaveBeenLastCalledWith({
+      params: { databaseId: "customer-events", instanceId: "prod" },
+      search: { schema: "pg_catalog" },
+      to: "/instances/$instanceId/databases/$databaseId/explorer",
+    });
   });
 
   test("shows loading rows without table progress bars while the catalog is pending", () => {

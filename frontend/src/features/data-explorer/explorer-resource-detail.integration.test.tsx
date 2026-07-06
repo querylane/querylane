@@ -35,8 +35,10 @@ describe("ResourceDetail", () => {
         databaseId="db"
         instanceId="inst"
         name="active_users"
+        onTableTabChange={vi.fn()}
         schemaName="public"
         table={undefined}
+        tableTab={undefined}
         view={undefined}
       />
     );
@@ -59,8 +61,10 @@ describe("ResourceDetail", () => {
         databaseId="db"
         instanceId="inst"
         name="orders"
+        onTableTabChange={vi.fn()}
         schemaName="public"
         table={undefined}
+        tableTab={undefined}
         view={undefined}
       />
     );

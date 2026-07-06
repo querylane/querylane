@@ -28,6 +28,8 @@ function SelectionActions({
   onCopy,
   onExport,
 }: SelectionActionsProps) {
+  // Selection remains read-only until row update/delete RPCs exist. Keep this
+  // toolbar to copy/export only.
   return (
     <div className="flex items-center gap-1">
       <FormatDropdown

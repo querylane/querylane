@@ -192,6 +192,40 @@ describe("schema detail integration", () => {
     expect(screen.queryByText("active_accounts")).toBeNull();
   });
 
+  it("resets local schema overview facets without leaving the schema", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <SchemaDetail
+        onSelectTable={vi.fn()}
+        onSelectView={vi.fn()}
+        owner="app_owner"
+        schemaName="public"
+        tables={schemaTables}
+        tablesError={null}
+        tablesLoading={false}
+        views={schemaViews}
+        viewsError={null}
+        viewsLoading={false}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: KIND_FILTER_RE }));
+    await user.click(
+      screen.getByRole("option", { name: "Materialized views" })
+    );
+    await user.click(screen.getByRole("button", { name: OWNER_FILTER_RE }));
+    await user.click(screen.getByRole("option", { name: "analytics_owner" }));
+    expect(screen.getByText("daily_rollups")).toBeTruthy();
+    expect(screen.queryByText("audit_log")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+
+    expect(screen.getByRole("heading", { name: "public" })).toBeTruthy();
+    expect(screen.getByText("audit_log")).toBeTruthy();
+    expect(screen.getByText("active_accounts")).toBeTruthy();
+  });
+
   it("opens the selected view from the inventory table", async () => {
     const user = userEvent.setup();
     const onSelectView = vi.fn();

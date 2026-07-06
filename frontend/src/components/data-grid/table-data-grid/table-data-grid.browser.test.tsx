@@ -1015,6 +1015,8 @@ test("narrow column headers keep the options menu visible", async () => {
   expect(buttonBox.right).toBeLessThanOrEqual(headerBox.right);
 
   await menuButton.click();
+  await expect.element(page.getByText("Sort ascending")).toBeVisible();
+
   const menu = document.querySelector<HTMLElement>(
     '[data-slot="dropdown-menu-content"]'
   );

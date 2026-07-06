@@ -14,6 +14,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/schema_pb";
 import {
   type Table,
+  Table_TableType,
   TableService,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import {
@@ -47,6 +48,7 @@ interface CatalogObject {
   rowCount: bigint;
   schemaId: string;
   sizeBytes: bigint;
+  tableType: Table_TableType;
 }
 
 interface CatalogSchema {
@@ -90,6 +92,7 @@ function tableToObject(table: Table, schemaId: string): CatalogObject {
     rowCount: table.rowCount,
     schemaId,
     sizeBytes: table.sizeBytes,
+    tableType: table.tableType,
   };
 }
 
@@ -107,6 +110,7 @@ function viewToObject(view: View, schemaId: string): CatalogObject {
     rowCount: view.rowCount,
     schemaId,
     sizeBytes: view.sizeBytes,
+    tableType: Table_TableType.UNSPECIFIED,
   };
 }
 

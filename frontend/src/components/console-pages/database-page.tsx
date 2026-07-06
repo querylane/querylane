@@ -1,7 +1,7 @@
 "use client";
 
 import { Link, useNavigate } from "@tanstack/react-router";
-import { CircleOff, X } from "lucide-react";
+import { CircleOff, Eye, FolderTree, Table2, X } from "lucide-react";
 import { useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { CatalogKindBadge } from "@/components/console-pages/catalog-object-badge";
@@ -14,7 +14,9 @@ import {
   filterCatalogObjectsByFacets,
   filterCatalogSchemasByFacets,
   presentCatalogObjectKindOptions,
+  presentCatalogObjectOwnerOptions,
   presentCatalogObjectSchemaOptions,
+  presentCatalogObjectSystemOptions,
   presentCatalogSchemaKindOptions,
   presentCatalogSchemaOwnerOptions,
 } from "@/components/console-pages/database-overview-filters";
@@ -69,6 +71,7 @@ import type {
   SequentialScanHotspot,
   TableCacheHitInsight,
 } from "@/protogen/querylane/console/v1alpha1/database_pb";
+import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 type DatabaseSection = "overview";
 
@@ -100,6 +103,7 @@ interface DatabaseOverviewFacetFilter {
 const OBJECT_LOADING_COLUMNS: CatalogLoadingColumn[] = [
   { label: "Object" },
   { label: "Kind" },
+  { label: "Owner" },
   { headerClassName: "text-right", label: "Est. rows" },
   { headerClassName: "text-right", label: "Size" },
 ];
@@ -205,20 +209,39 @@ function DatabaseStatsBar({
   );
 }
 
+function catalogObjectIcon(object: CatalogObject) {
+  if (object.kind === "view") {
+    return Eye;
+  }
+  if (object.tableType === Table_TableType.PARTITIONED) {
+    return FolderTree;
+  }
+  return Table2;
+}
+
 function objectColumns(): DataTableColumnDef<CatalogObject>[] {
   return [
     {
       // Match the displayed "schema.object" so the filter box narrows on the
       // schema prefix the user sees, not just the bare object name.
       accessorFn: (row) => `${row.schemaId}.${row.objectId}`,
-      cell: ({ row }) => (
-        <span className="font-mono text-sm">
-          <span className="text-muted-foreground">
-            {row.original.schemaId}.
+      cell: ({ row }) => {
+        const Icon = catalogObjectIcon(row.original);
+        return (
+          <span className="flex min-w-0 items-center gap-2">
+            <Icon
+              aria-hidden="true"
+              className="size-3.5 shrink-0 text-muted-foreground"
+            />
+            <span className="min-w-0 truncate font-mono text-sm">
+              <span className="text-muted-foreground">
+                {row.original.schemaId}.
+              </span>
+              {row.original.objectId}
+            </span>
           </span>
-          {row.original.objectId}
-        </span>
-      ),
+        );
+      },
       header: ({ column }) => (
         <SortableHeader column={column}>Object</SortableHeader>
       ),
@@ -232,12 +255,24 @@ function objectColumns(): DataTableColumnDef<CatalogObject>[] {
           isPopulated={row.original.isPopulated}
           isSystem={row.original.isSystem}
           kind={row.original.kind}
+          tableType={row.original.tableType}
         />
       ),
       header: ({ column }) => (
         <SortableHeader column={column}>Kind</SortableHeader>
       ),
       id: "kind",
+    },
+    {
+      accessorFn: (row) => row.owner,
+      cell: ({ row }) => row.original.owner || "—",
+      header: ({ column }) => (
+        <SortableHeader column={column}>Owner</SortableHeader>
+      ),
+      id: "owner",
+      meta: {
+        cellClassName: "text-sm text-muted-foreground",
+      },
     },
     {
       accessorFn: (row) => normalizeEstimatedRowCount(row.rowCount),
@@ -273,10 +308,16 @@ function schemaColumns(): DataTableColumnDef<CatalogSchema>[] {
       accessorFn: (row) => row.schemaId,
       cell: ({ row }) => (
         <span className="flex items-center gap-2">
+          <FolderTree
+            aria-hidden="true"
+            className="size-3.5 shrink-0 text-muted-foreground"
+          />
           <span className="font-medium text-sm">{row.original.schemaId}</span>
           {row.original.isSystemSchema ? (
             <Badge variant="outline">System</Badge>
-          ) : null}
+          ) : (
+            <Badge variant="secondary">User</Badge>
+          )}
         </span>
       ),
       header: ({ column }) => (
@@ -791,13 +832,17 @@ function LargestObjectsSection({
 }) {
   const [filter, setFilter] = useState("");
   const [kindFilters, setKindFilters] = useState<string[]>([]);
+  const [ownerFilters, setOwnerFilters] = useState<string[]>([]);
   const [schemaFilters, setSchemaFilters] = useState<string[]>([]);
+  const [systemFilters, setSystemFilters] = useState<string[]>([]);
   const navigate = useNavigate();
   const objects = catalog?.objects ?? [];
   const filteredObjects = filterCatalogObjectsByFacets({
     kindFilters,
     objects,
+    ownerFilters,
     schemaFilters,
+    systemFilters,
   });
   const objectFacetFilters = [
     {
@@ -805,6 +850,18 @@ function LargestObjectsSection({
       onChange: setKindFilters,
       options: presentCatalogObjectKindOptions(objects),
       selectedValues: kindFilters,
+    },
+    {
+      label: "System",
+      onChange: setSystemFilters,
+      options: presentCatalogObjectSystemOptions(objects),
+      selectedValues: systemFilters,
+    },
+    {
+      label: "Owner",
+      onChange: setOwnerFilters,
+      options: presentCatalogObjectOwnerOptions(objects),
+      selectedValues: ownerFilters,
     },
     {
       label: "Schema",
@@ -890,7 +947,7 @@ function SchemasSection({
   });
   const schemaFacetFilters = [
     {
-      label: "Kind",
+      label: "System",
       onChange: setKindFilters,
       options: presentCatalogSchemaKindOptions(schemas),
       selectedValues: kindFilters,

@@ -13,13 +13,14 @@ import {
   RELATION_TYPES,
   slugForObjectType,
 } from "@/components/console-pages/role-grants-shared";
+import { Badge } from "@/components/ui/badge";
 import {
   DataTable,
   type DataTableColumnDef,
   DataTableFilter,
   SortableHeader,
 } from "@/components/ui/data-table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 import { GrantObjectType } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 // Object types in the order their tabs appear, matching the Owns view.
@@ -45,17 +46,34 @@ const EM_DASH = "—";
 function ObjectNameCell({ object }: { object: GrantedObject }) {
   const showSchema =
     RELATION_TYPES.has(object.objectType) && Boolean(object.schemaName);
+  const meta =
+    GRANT_OBJECT_META[object.objectType] ??
+    GRANT_OBJECT_META[GrantObjectType.UNSPECIFIED];
   return (
-    <span className="font-mono text-[13px] text-foreground">
-      {showSchema ? (
-        <>
-          <span className="text-muted-foreground">{object.schemaName}.</span>
-          {object.objectName}
-        </>
-      ) : (
-        objectDisplayName(object)
-      )}
+    <span className="flex items-center gap-2">
+      <meta.icon className="size-3.5 shrink-0 text-muted-foreground" />
+      <span className="font-mono text-[13px] text-foreground">
+        {showSchema ? (
+          <>
+            <span className="text-muted-foreground">{object.schemaName}.</span>
+            {object.objectName}
+          </>
+        ) : (
+          objectDisplayName(object)
+        )}
+      </span>
     </span>
+  );
+}
+
+function GrantObjectKindBadge({ type }: { type: GrantObjectType }) {
+  const meta =
+    GRANT_OBJECT_META[type] ?? GRANT_OBJECT_META[GrantObjectType.UNSPECIFIED];
+  return (
+    <Badge className="gap-1.5 rounded-sm px-1.5" variant="secondary">
+      <meta.icon className="size-3" />
+      {OBJECT_TYPE_LABEL(type)}
+    </Badge>
   );
 }
 
@@ -74,12 +92,11 @@ function GrantorCell({ object }: { object: GrantedObject }) {
   );
 }
 
-// Shared "tabbed object table" shell: line tabs (All + each present object
-// type) and a search box above a single sortable, paginated DataTable. The kind
-// tabs filter the rows up-front so the table only ever sorts/paginates the
-// active slice — a role can hold thousands of grants, so we never render them
-// all at once. Used by the Owns, schema, and PUBLIC grant views so they share
-// one interaction pattern.
+// Shared object table shell: a faceted Kind filter and a search box above a
+// single sortable, paginated DataTable. The kind facet filters the rows up-front
+// so the table only ever sorts/paginates the active slice — a role can hold
+// thousands of grants, so we never render them all at once. Used by the Owns,
+// schema, and PUBLIC grant views so they share one interaction pattern.
 function KindFilteredTable<T extends RowData>({
   activeKind,
   columns,
@@ -125,24 +142,20 @@ function KindFilteredTable<T extends RowData>({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Tabs onValueChange={onKindChange} value={activeKind}>
-          <TabsList variant="line">
-            <TabsTrigger value="all">All</TabsTrigger>
-            {presentKinds.map((type) => {
-              const slug = slugForObjectType(type);
-              const meta = GRANT_OBJECT_META[type];
-              if (!slug) {
-                return null;
-              }
-              return (
-                <TabsTrigger key={type} value={slug}>
-                  <meta.icon className="size-3" />
-                  {OBJECT_TYPE_LABEL(type)}
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-        </Tabs>
+        <DataTableFacetedFilter
+          onSelectedValuesChange={(values) =>
+            onKindChange(values.at(-1) ?? "all")
+          }
+          options={presentKinds.flatMap((type) => {
+            const slug = slugForObjectType(type);
+            return slug
+              ? [{ label: OBJECT_TYPE_LABEL(type), value: slug }]
+              : [];
+          })}
+          selectedValues={activeKind === "all" ? [] : [activeKind]}
+          singleSelect={true}
+          title="Kind"
+        />
         {/* value stays urgent so the input reflects keystrokes immediately */}
         <DataTableFilter
           onChange={onSearchChange}
@@ -168,7 +181,7 @@ function KindFilteredTable<T extends RowData>({
 }
 
 // Granted-object inventory used by the schema and PUBLIC drill-ins: Object ·
-// Kind · Granted by · Privileges, on the shared kind tabs + search shell.
+// Kind · Granted by · Privileges, on the shared kind facet + search shell.
 function GrantedObjectsTable({
   activeKind,
   objects,
@@ -195,15 +208,13 @@ function GrantedObjectsTable({
     {
       accessorFn: (row) => OBJECT_TYPE_LABEL(row.objectType),
       cell: ({ row }) => (
-        <span className="font-mono text-[10.5px] lowercase tracking-[0.04em]">
-          {OBJECT_TYPE_LABEL(row.original.objectType).toLowerCase()}
-        </span>
+        <GrantObjectKindBadge type={row.original.objectType} />
       ),
       header: ({ column }) => (
         <SortableHeader column={column}>Kind</SortableHeader>
       ),
       id: "kind",
-      meta: { cellClassName: "whitespace-nowrap text-muted-foreground" },
+      meta: { cellClassName: "whitespace-nowrap" },
     },
     {
       accessorFn: (row) => grantorSummary(row.grantors)?.text ?? "",
@@ -247,4 +258,4 @@ function GrantedObjectsTable({
   );
 }
 
-export { GrantedObjectsTable, KindFilteredTable };
+export { GrantedObjectsTable, GrantObjectKindBadge, KindFilteredTable };

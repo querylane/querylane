@@ -1,7 +1,23 @@
 import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter";
+import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
-interface CatalogObjectFacetRow {
+type CatalogObjectKindFilter =
+  | "external-table"
+  | "materialized-view"
+  | "partitioned-table"
+  | "table"
+  | "temporary-table"
+  | "view";
+
+interface CatalogObjectKindRow {
+  isMaterialized: boolean;
   kind: "table" | "view";
+  tableType?: Table_TableType | undefined;
+}
+
+interface CatalogObjectFacetRow extends CatalogObjectKindRow {
+  isSystem: boolean;
+  owner: string;
   schemaId: string;
 }
 
@@ -12,7 +28,9 @@ interface CatalogSchemaFacetRow {
 
 interface CatalogObjectFacetFilters {
   kindFilters: string[];
+  ownerFilters: string[];
   schemaFilters: string[];
+  systemFilters: string[];
 }
 
 interface CatalogSchemaFacetFilters {
@@ -21,14 +39,23 @@ interface CatalogSchemaFacetFilters {
 }
 
 type CatalogSchemaKindFilter = "system" | "user";
+type CatalogObjectSystemFilter = "system" | "user";
 
 const EMPTY_OWNER_FILTER_VALUE = "__querylane_empty_owner__";
 const EMPTY_SCHEMA_FILTER_VALUE = "__querylane_empty_schema__";
 const CATALOG_OBJECT_KIND_OPTIONS = [
   { label: "Tables", value: "table" },
+  { label: "Temporary tables", value: "temporary-table" },
+  { label: "External tables", value: "external-table" },
+  { label: "Partitioned tables", value: "partitioned-table" },
   { label: "Views", value: "view" },
+  { label: "Materialized views", value: "materialized-view" },
 ] satisfies FacetedFilterOption[];
 const CATALOG_SCHEMA_KIND_OPTIONS = [
+  { label: "User", value: "user" },
+  { label: "System", value: "system" },
+] satisfies FacetedFilterOption[];
+const CATALOG_OBJECT_SYSTEM_OPTIONS = [
   { label: "User", value: "user" },
   { label: "System", value: "system" },
 ] satisfies FacetedFilterOption[];
@@ -49,10 +76,39 @@ function ownerFilterLabel(value: string) {
   return value === EMPTY_OWNER_FILTER_VALUE ? "No owner" : value;
 }
 
+function catalogObjectSystemValue(
+  object: CatalogObjectFacetRow
+): CatalogObjectSystemFilter {
+  return object.isSystem ? "system" : "user";
+}
+
 function catalogSchemaKindValue(
   schema: CatalogSchemaFacetRow
 ): CatalogSchemaKindFilter {
   return schema.isSystemSchema ? "system" : "user";
+}
+
+function catalogObjectKindValue(
+  object: CatalogObjectKindRow
+): CatalogObjectKindFilter {
+  if (object.kind === "view") {
+    return object.isMaterialized ? "materialized-view" : "view";
+  }
+
+  switch (object.tableType) {
+    case Table_TableType.TEMPORARY:
+      return "temporary-table";
+    case Table_TableType.EXTERNAL:
+      return "external-table";
+    case Table_TableType.PARTITIONED:
+      return "partitioned-table";
+    case Table_TableType.BASE_TABLE:
+    case Table_TableType.UNSPECIFIED:
+    case undefined:
+      return "table";
+    default:
+      return object.tableType satisfies never;
+  }
 }
 
 function uniqueSortedOptions(
@@ -64,15 +120,26 @@ function uniqueSortedOptions(
     .map((value) => ({ label: getLabel(value), value }));
 }
 
-function presentCatalogObjectKindOptions(objects: CatalogObjectFacetRow[]) {
-  const presentKinds = new Set(objects.map((object) => object.kind));
+function presentCatalogObjectKindOptions(objects: CatalogObjectKindRow[]) {
+  const presentKinds = new Set(objects.map(catalogObjectKindValue));
   return CATALOG_OBJECT_KIND_OPTIONS.filter((option) =>
-    presentKinds.has(option.value as CatalogObjectFacetRow["kind"])
+    presentKinds.has(option.value as CatalogObjectKindFilter)
   );
 }
 
 function presentCatalogObjectSchemaOptions(objects: CatalogObjectFacetRow[]) {
   return uniqueSortedOptions(objects.map(schemaFilterValue), schemaFilterLabel);
+}
+
+function presentCatalogObjectSystemOptions(objects: CatalogObjectFacetRow[]) {
+  const presentKinds = new Set(objects.map(catalogObjectSystemValue));
+  return CATALOG_OBJECT_SYSTEM_OPTIONS.filter((option) =>
+    presentKinds.has(option.value as CatalogObjectSystemFilter)
+  );
+}
+
+function presentCatalogObjectOwnerOptions(objects: CatalogObjectFacetRow[]) {
+  return uniqueSortedOptions(objects.map(ownerFilterValue), ownerFilterLabel);
 }
 
 function presentCatalogSchemaKindOptions(schemas: CatalogSchemaFacetRow[]) {
@@ -89,15 +156,32 @@ function presentCatalogSchemaOwnerOptions(schemas: CatalogSchemaFacetRow[]) {
 function filterCatalogObjectsByFacets<RowType extends CatalogObjectFacetRow>({
   kindFilters,
   objects,
+  ownerFilters,
   schemaFilters,
+  systemFilters,
 }: CatalogObjectFacetFilters & { objects: RowType[] }): RowType[] {
   return objects.filter((object) => {
-    if (kindFilters.length > 0 && !kindFilters.includes(object.kind)) {
+    if (
+      kindFilters.length > 0 &&
+      !kindFilters.includes(catalogObjectKindValue(object))
+    ) {
+      return false;
+    }
+    if (
+      systemFilters.length > 0 &&
+      !systemFilters.includes(catalogObjectSystemValue(object))
+    ) {
       return false;
     }
     if (
       schemaFilters.length > 0 &&
       !schemaFilters.includes(schemaFilterValue(object))
+    ) {
+      return false;
+    }
+    if (
+      ownerFilters.length > 0 &&
+      !ownerFilters.includes(ownerFilterValue(object))
     ) {
       return false;
     }
@@ -129,10 +213,13 @@ function filterCatalogSchemasByFacets<RowType extends CatalogSchemaFacetRow>({
 
 export type { CatalogObjectFacetRow, CatalogSchemaFacetRow };
 export {
+  catalogObjectKindValue,
   filterCatalogObjectsByFacets,
   filterCatalogSchemasByFacets,
   presentCatalogObjectKindOptions,
+  presentCatalogObjectOwnerOptions,
   presentCatalogObjectSchemaOptions,
+  presentCatalogObjectSystemOptions,
   presentCatalogSchemaKindOptions,
   presentCatalogSchemaOwnerOptions,
 };

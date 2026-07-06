@@ -26,6 +26,8 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
+const COLUMNS_TAB_RE = /^Columns/;
+const INDEXES_TAB_RE = /^Indexes/;
 
 interface MockGridColumn {
   key: string;
@@ -273,6 +275,33 @@ describe("TableDetail data tab toolbar", () => {
 
     expect(screen.getByText("≈72k")).toBeTruthy();
     expect(screen.queryByText("≈72,000 rows")).toBeNull();
+  });
+
+  it("honors URL-backed metadata tabs and reports tab changes", async () => {
+    const user = userEvent.setup();
+    const onTabChange = vi.fn();
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="columns"
+        instanceId="prod"
+        onTabChange={onTabChange}
+        schemaName="commerce"
+        table={create(TableSchema, { rowCount: 72_000n, sizeBytes: 4096n })}
+        tableName="order_event_2026_h1"
+      />
+    );
+
+    expect(
+      screen
+        .getByRole("tab", { name: COLUMNS_TAB_RE })
+        .hasAttribute("data-active")
+    ).toBe(true);
+
+    await user.click(screen.getByRole("tab", { name: INDEXES_TAB_RE }));
+
+    expect(onTabChange).toHaveBeenCalledWith("indexes");
   });
 });
 

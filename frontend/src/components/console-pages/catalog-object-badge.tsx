@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 /**
  * Kind badge for a catalog object (table or view), shared by the database
@@ -10,17 +11,27 @@ export function CatalogKindBadge({
   isPopulated = true,
   isSystem,
   kind,
+  tableType,
 }: {
   isMaterialized?: boolean;
   isPopulated?: boolean;
   isSystem: boolean;
   kind: "table" | "view";
+  tableType?: Table_TableType | undefined;
 }) {
   let label = "TABLE";
   let variant: "default" | "secondary" | "outline" = "secondary";
   if (kind === "view") {
     label = isMaterialized ? "MATERIALIZED" : "VIEW";
     variant = isMaterialized ? "default" : "outline";
+  } else if (tableType === Table_TableType.PARTITIONED) {
+    label = "PARTITIONED";
+    variant = "default";
+  } else if (tableType === Table_TableType.EXTERNAL) {
+    label = "EXTERNAL";
+    variant = "outline";
+  } else if (tableType === Table_TableType.TEMPORARY) {
+    label = "TEMP";
   }
 
   return (

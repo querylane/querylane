@@ -94,6 +94,7 @@ function DataExplorerPage({
     onSelectResource: explorer.onSelectResource,
     onSelectSchema: explorer.onSelectSchema,
     onSelectSchemaOverview: explorer.onSelectSchemaOverview,
+    onTableListSortChange: explorer.onTableListSortChange,
     query: explorer.query,
     schemaSelectionError: explorer.schemaSelectionError,
     schemas: explorer.schemas,
@@ -104,6 +105,7 @@ function DataExplorerPage({
     selection: explorer.selection,
     setExpandedCategories: explorer.setExpandedCategories,
     setQuery: explorer.setQuery,
+    tableListSort: explorer.tableListSort,
     tablesError: explorer.tablesError,
     tablesSyncNotice: explorer.tablesSyncNotice,
     viewsError: explorer.viewsError,
@@ -148,6 +150,7 @@ function DataExplorerPage({
       hasMoreViews={explorer.schemaOverview.hasMoreViews}
       instanceId={explorer.instanceId}
       onSelectResource={explorer.onSelectResource}
+      onTableTabChange={explorer.onTableTabChange}
       overviewTables={explorer.schemaOverview.rawTables}
       overviewViews={explorer.schemaOverview.rawViews}
       rawTables={explorer.rawTables}
@@ -157,6 +160,7 @@ function DataExplorerPage({
       tablesError={explorer.schemaOverview.tablesError}
       tablesLoading={explorer.schemaOverview.tablesLoading}
       tablesSyncNotice={explorer.schemaOverview.tablesSyncNotice}
+      tableTab={explorer.tableTab}
       viewsError={explorer.schemaOverview.viewsError}
       viewsLoading={explorer.schemaOverview.viewsLoading}
     />

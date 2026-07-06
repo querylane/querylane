@@ -1390,6 +1390,7 @@ function renderLoadedInstancePageContent({
 
       <InstanceDeleteDialog
         instanceDisplayName={instance.displayName}
+        instanceResourceName={instance.name}
         onConfirm={onDelete}
         onOpenChange={onOpenDeleteDialogChange}
         open={isDeleteDialogOpen}

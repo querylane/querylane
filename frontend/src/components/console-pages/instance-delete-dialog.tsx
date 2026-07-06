@@ -17,12 +17,14 @@ import { Input } from "@/components/ui/input";
 
 export function InstanceDeleteDialog({
   instanceDisplayName,
+  instanceResourceName,
   onConfirm,
   onOpenChange,
   open,
   pending,
 }: {
   instanceDisplayName: string;
+  instanceResourceName: string;
   onConfirm: () => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
@@ -30,7 +32,7 @@ export function InstanceDeleteDialog({
 }) {
   const confirmationInputId = useId();
   const [confirmationName, setConfirmationName] = useState("");
-  const isConfirmed = confirmationName === instanceDisplayName;
+  const isConfirmed = confirmationName === instanceResourceName;
   return (
     <AlertDialog
       onOpenChange={(nextOpen) => {
@@ -46,12 +48,14 @@ export function InstanceDeleteDialog({
           <AlertDialogTitle>Delete instance?</AlertDialogTitle>
           <AlertDialogDescription>
             Delete instance <InlineCode>{instanceDisplayName}</InlineCode> from
-            Querylane? This action cannot be undone.
+            Querylane? Confirm the stable resource{" "}
+            <InlineCode>{instanceResourceName}</InlineCode>. This action cannot
+            be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-2">
           <label className="text-sm" htmlFor={confirmationInputId}>
-            Type {instanceDisplayName} to confirm
+            Type {instanceResourceName} to confirm
           </label>
           <Input
             autoComplete="off"

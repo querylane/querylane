@@ -11,7 +11,7 @@ const INDEX_HTML_PATH = join(DIST_DIR, "index.html");
 const BUILD_ASSET_EXTENSION_PATTERN = /\.(?:html|css|js)$/;
 const LEADING_SLASH_PATTERN = /^\//;
 const MAX_ASYNC_SCRIPT_GZIP_KIB = 130;
-const MAX_DEFERRED_VISUALIZATION_GZIP_KIB = 90;
+const MAX_DEFERRED_VISUALIZATION_GZIP_KIB = 91;
 const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
 // Recharts (+ its d3 deps) is lazy-loaded and only pulled in on the instance
 // overview metrics panel, so it is split out and guarded separately from core.

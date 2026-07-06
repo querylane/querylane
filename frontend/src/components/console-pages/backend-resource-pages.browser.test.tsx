@@ -603,8 +603,8 @@ test("backend instance delete navigates without waiting for catalog refresh", as
     .getByRole("button", { name: "Delete instance" })
     .click();
   await page
-    .getByLabelText("Type Production Analytics Writer to confirm")
-    .fill("Production Analytics Writer");
+    .getByLabelText("Type instances/prod to confirm")
+    .fill("instances/prod");
   await page
     .getByRole("alertdialog")
     .getByRole("button", { name: "Delete instance" })

@@ -187,6 +187,7 @@ test("instance delete dialog and danger zone make destructive actions explicit",
       />
       <InstanceDeleteDialog
         instanceDisplayName="Production Analytics Writer"
+        instanceResourceName="instances/prod-analytics-writer"
         onConfirm={vi.fn()}
         onOpenChange={vi.fn()}
         open={true}

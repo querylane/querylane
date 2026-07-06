@@ -30,7 +30,7 @@ import {
   ViewSchema,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
-const ACTIVE_KIND_FILTER_RE = /^Kind.*Views/;
+const ACTIVE_KIND_FILTER_RE = /^Kind.*Materialized views/;
 const ACTIVE_OWNER_FILTER_RE = /^Owner.*analytics_owner/;
 const KIND_FILTER_RE = /^Kind$/;
 const OWNER_FILTER_RE = /^Owner$/;
@@ -476,7 +476,7 @@ test("data explorer schema detail captures active object filters", async () => {
   );
 
   await page.getByRole("button", { name: KIND_FILTER_RE }).click();
-  await page.getByText("Views").last().click();
+  await page.getByText("Materialized views").last().click();
   await page.getByRole("heading", { name: "sales" }).click();
   await page.getByRole("button", { name: OWNER_FILTER_RE }).click();
   await page.getByText("analytics_owner").last().click();
