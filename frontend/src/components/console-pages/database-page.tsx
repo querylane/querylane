@@ -71,6 +71,7 @@ import type {
   SequentialScanHotspot,
   TableCacheHitInsight,
 } from "@/protogen/querylane/console/v1alpha1/database_pb";
+import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 type DatabaseSection = "overview";
 
@@ -208,6 +209,16 @@ function DatabaseStatsBar({
   );
 }
 
+function catalogObjectIcon(object: CatalogObject) {
+  if (object.kind === "view") {
+    return Eye;
+  }
+  if (object.tableType === Table_TableType.PARTITIONED) {
+    return FolderTree;
+  }
+  return Table2;
+}
+
 function objectColumns(): DataTableColumnDef<CatalogObject>[] {
   return [
     {
@@ -215,7 +226,7 @@ function objectColumns(): DataTableColumnDef<CatalogObject>[] {
       // schema prefix the user sees, not just the bare object name.
       accessorFn: (row) => `${row.schemaId}.${row.objectId}`,
       cell: ({ row }) => {
-        const Icon = row.original.kind === "table" ? Table2 : Eye;
+        const Icon = catalogObjectIcon(row.original);
         return (
           <span className="flex min-w-0 items-center gap-2">
             <Icon
@@ -244,6 +255,7 @@ function objectColumns(): DataTableColumnDef<CatalogObject>[] {
           isPopulated={row.original.isPopulated}
           isSystem={row.original.isSystem}
           kind={row.original.kind}
+          tableType={row.original.tableType}
         />
       ),
       header: ({ column }) => (

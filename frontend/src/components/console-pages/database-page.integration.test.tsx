@@ -17,6 +17,7 @@ import {
   TableCacheHitInsightSchema,
 } from "@/protogen/querylane/console/v1alpha1/database_pb";
 import { PostgreSqlErrorDetailSchema } from "@/protogen/querylane/console/v1alpha1/errors_pb";
+import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 interface QueryState<T> {
   data?: T;
@@ -198,6 +199,7 @@ function catalogResult() {
         rowCount: 12_000n,
         schemaId: "public",
         sizeBytes: 4_096_000n,
+        tableType: Table_TableType.BASE_TABLE,
       },
       {
         comment: "",
@@ -212,6 +214,7 @@ function catalogResult() {
         rowCount: 5_000n,
         schemaId: "analytics",
         sizeBytes: 2_048_000n,
+        tableType: Table_TableType.UNSPECIFIED,
       },
       {
         comment: "",
@@ -226,6 +229,7 @@ function catalogResult() {
         rowCount: 100n,
         schemaId: "pg_catalog",
         sizeBytes: 1024n,
+        tableType: Table_TableType.BASE_TABLE,
       },
     ],
     schemas: [
@@ -330,7 +334,9 @@ describe("backend database overview", () => {
     ).toEqual(["Kind", "System", "Owner", "Schema"]);
 
     await user.click(within(filterBar).getByRole("button", { name: "Kind" }));
-    await user.click(screen.getByRole("option", { name: "Views" }));
+    await user.click(
+      screen.getByRole("option", { name: "Materialized views" })
+    );
 
     expect(screen.getByText("daily_rollup")).toBeTruthy();
     expect(screen.queryByText("events")).toBeNull();

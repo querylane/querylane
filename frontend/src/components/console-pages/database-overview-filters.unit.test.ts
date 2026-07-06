@@ -11,6 +11,7 @@ import {
   presentCatalogSchemaKindOptions,
   presentCatalogSchemaOwnerOptions,
 } from "@/components/console-pages/database-overview-filters";
+import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 interface TestCatalogObject extends CatalogObjectFacetRow {
   objectId: string;
@@ -22,25 +23,49 @@ interface TestCatalogSchema extends CatalogSchemaFacetRow {
 
 const objects: TestCatalogObject[] = [
   {
+    isMaterialized: false,
     isSystem: false,
     kind: "table",
     objectId: "orders",
     owner: "app_owner",
     schemaId: "public",
+    tableType: Table_TableType.BASE_TABLE,
   },
   {
+    isMaterialized: true,
     isSystem: false,
     kind: "view",
     objectId: "daily_rollup",
     owner: "analytics_owner",
     schemaId: "analytics",
+    tableType: Table_TableType.UNSPECIFIED,
   },
   {
+    isMaterialized: false,
+    isSystem: false,
+    kind: "table",
+    objectId: "events_2026",
+    owner: "app_owner",
+    schemaId: "public",
+    tableType: Table_TableType.PARTITIONED,
+  },
+  {
+    isMaterialized: false,
+    isSystem: true,
+    kind: "view",
+    objectId: "pg_views",
+    owner: "postgres",
+    schemaId: "pg_catalog",
+    tableType: Table_TableType.UNSPECIFIED,
+  },
+  {
+    isMaterialized: false,
     isSystem: true,
     kind: "table",
     objectId: "pg_class",
     owner: "postgres",
     schemaId: "pg_catalog",
+    tableType: Table_TableType.BASE_TABLE,
   },
 ];
 
@@ -66,7 +91,9 @@ describe("database overview filters", () => {
   test("builds largest-object kind and schema facets", () => {
     expect(presentCatalogObjectKindOptions(objects)).toEqual([
       { label: "Tables", value: "table" },
+      { label: "Partitioned tables", value: "partitioned-table" },
       { label: "Views", value: "view" },
+      { label: "Materialized views", value: "materialized-view" },
     ]);
     expect(presentCatalogObjectSchemaOptions(objects)).toEqual([
       { label: "analytics", value: "analytics" },
@@ -85,13 +112,23 @@ describe("database overview filters", () => {
   test("filters largest objects by kind, system state, schema, and owner together", () => {
     expect(
       filterCatalogObjectsByFacets({
-        kindFilters: ["view"],
+        kindFilters: ["materialized-view"],
         objects,
         ownerFilters: ["analytics_owner"],
         schemaFilters: ["analytics"],
         systemFilters: ["user"],
       }).map((object) => object.objectId)
     ).toEqual(["daily_rollup"]);
+
+    expect(
+      filterCatalogObjectsByFacets({
+        kindFilters: ["partitioned-table"],
+        objects,
+        ownerFilters: ["app_owner"],
+        schemaFilters: ["public"],
+        systemFilters: ["user"],
+      }).map((object) => object.objectId)
+    ).toEqual(["events_2026"]);
 
     expect(
       filterCatalogObjectsByFacets({

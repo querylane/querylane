@@ -22,7 +22,7 @@ import {
   GrantObjectType,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const SUPERUSERS_FILTER = /Superusers/;
+const SUPERUSER_FILTER = /Superuser/;
 const RESOURCE_FILTERS_BUTTON_NAME = /Resource filters/;
 const ROLE_FILTER_SWITCH_NAMES = [
   /^Users$/,
@@ -366,8 +366,13 @@ test("console roles list shows kind filters, sortable columns, and role rows", a
     .element(page.getByRole("heading", { level: 1, name: "Roles & Users" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: SUPERUSERS_FILTER }))
+    .element(page.getByRole("button", { name: "Type" }))
     .toBeVisible();
+  await page.getByRole("button", { name: "Type" }).click();
+  await expect
+    .element(page.getByRole("option", { name: SUPERUSER_FILTER }))
+    .toBeVisible();
+  await page.getByRole("button", { name: "Type" }).click();
   await expect
     .element(page.getByText("postgres", { exact: true }))
     .toBeVisible();

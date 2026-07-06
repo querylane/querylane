@@ -1,6 +1,16 @@
-import { Database as DatabaseIcon, Eye, Table2, X } from "lucide-react";
+import {
+  Database as DatabaseIcon,
+  Eye,
+  FolderTree,
+  Table2,
+  X,
+} from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { CatalogKindBadge } from "@/components/console-pages/catalog-object-badge";
+import {
+  catalogObjectKindValue,
+  presentCatalogObjectKindOptions,
+} from "@/components/console-pages/database-overview-filters";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -22,7 +32,10 @@ import {
   normalizeEstimatedRowCount,
   parseResourceLeafId,
 } from "@/lib/console-resources";
-import type { Table } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import {
+  type Table,
+  Table_TableType,
+} from "@/protogen/querylane/console/v1alpha1/table_pb";
 import {
   type View,
   View_ViewType,
@@ -47,6 +60,7 @@ interface SchemaObjectRow {
   resourceName: string;
   rowCount: bigint;
   sizeBytes: bigint;
+  tableType: Table_TableType;
 }
 
 function toTableRow(table: Table): SchemaObjectRow {
@@ -63,6 +77,7 @@ function toTableRow(table: Table): SchemaObjectRow {
     resourceName: table.displayName || parseResourceLeafId(table.name),
     rowCount: table.rowCount,
     sizeBytes: table.sizeBytes,
+    tableType: table.tableType,
   };
 }
 
@@ -78,6 +93,7 @@ function toViewRow(view: View): SchemaObjectRow {
     resourceName: view.displayName || parseResourceLeafId(view.name),
     rowCount: view.rowCount,
     sizeBytes: view.sizeBytes,
+    tableType: Table_TableType.UNSPECIFIED,
   };
 }
 
@@ -89,8 +105,18 @@ function lowerBoundStat(formatted: string, hasMore: boolean): string {
   return hasMore ? `≥ ${formatted}` : formatted;
 }
 
+function schemaObjectIcon(row: SchemaObjectRow) {
+  if (row.kind === "view") {
+    return Eye;
+  }
+  if (row.tableType === Table_TableType.PARTITIONED) {
+    return FolderTree;
+  }
+  return Table2;
+}
+
 function ObjectNameCell({ row }: { row: SchemaObjectRow }) {
-  const Icon = row.kind === "table" ? Table2 : Eye;
+  const Icon = schemaObjectIcon(row);
   return (
     <span className="flex min-w-0 items-center gap-2">
       <Icon
@@ -121,6 +147,7 @@ function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
           isPopulated={row.original.isPopulated}
           isSystem={row.original.isSystem}
           kind={row.original.kind}
+          tableType={row.original.tableType}
         />
       ),
       header: ({ column }) => (
@@ -196,15 +223,7 @@ function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
 }
 
 function presentKindOptions(rows: SchemaObjectRow[]): FacetedFilterOption[] {
-  const presentKinds = new Set(rows.map((row) => row.kind));
-  const options: FacetedFilterOption[] = [];
-  if (presentKinds.has("table")) {
-    options.push({ label: "Tables", value: "table" });
-  }
-  if (presentKinds.has("view")) {
-    options.push({ label: "Views", value: "view" });
-  }
-  return options;
+  return presentCatalogObjectKindOptions(rows);
 }
 
 function ownerFilterLabel(owner: string): string {
@@ -232,7 +251,8 @@ function filterSchemaObjectRows({
   const selectedOwners = new Set(ownerFilters);
   return rows.filter(
     (row) =>
-      (selectedKinds.size === 0 || selectedKinds.has(row.kind)) &&
+      (selectedKinds.size === 0 ||
+        selectedKinds.has(catalogObjectKindValue(row))) &&
       (selectedOwners.size === 0 || selectedOwners.has(row.owner))
   );
 }

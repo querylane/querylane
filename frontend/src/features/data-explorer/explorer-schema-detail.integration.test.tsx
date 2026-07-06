@@ -211,7 +211,9 @@ describe("schema detail integration", () => {
     );
 
     await user.click(screen.getByRole("button", { name: KIND_FILTER_RE }));
-    await user.click(screen.getByRole("option", { name: "Views" }));
+    await user.click(
+      screen.getByRole("option", { name: "Materialized views" })
+    );
     await user.click(screen.getByRole("button", { name: OWNER_FILTER_RE }));
     await user.click(screen.getByRole("option", { name: "analytics_owner" }));
     expect(screen.getByText("daily_rollups")).toBeTruthy();
