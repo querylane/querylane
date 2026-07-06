@@ -169,6 +169,13 @@ function renderController(search: DataExplorerSearch) {
   );
 }
 
+function activeTableOrder() {
+  const activeCall = mocks.useListTablesInfiniteQuery.mock.calls
+    .filter(([, options]) => options?.enabled === true)
+    .at(-1);
+  return activeCall?.[0]?.orderBy;
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   mocks.tablesQuery.data = tablePage(["accounts", "events"]);
@@ -226,14 +233,18 @@ describe("data explorer search navigation", () => {
 it("requests table catalog pages ordered by name", () => {
   renderController({ ...BASE_SEARCH });
 
-  const activeTableOrder = () => {
-    const activeCall = mocks.useListTablesInfiniteQuery.mock.calls
-      .filter(([, options]) => options?.enabled === true)
-      .at(-1);
-    return activeCall?.[0]?.orderBy;
-  };
-
   expect(activeTableOrder()).toBe("name asc");
+});
+
+it("keeps sidebar table sort local while updating table ordering", () => {
+  const { result } = renderController({ ...BASE_SEARCH });
+
+  act(() => {
+    result.current.onTableListSortChange("size-desc");
+  });
+
+  expect(activeTableOrder()).toBe("size_bytes desc, name asc");
+  expect(mocks.navigate).not.toHaveBeenCalled();
 });
 
 describe("schema overview stats", () => {

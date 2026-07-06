@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   tableSearch: "",
 }));
 const ROLE_TYPE_USER_FILTER_RE = /Type.*User/;
+const SUPERUSER_OPTION_WITH_COUNT_RE = /Superuser\s+1/;
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
@@ -169,7 +170,9 @@ describe("InstanceRolesPage", () => {
     await user.click(
       screen.getByRole("button", { name: ROLE_TYPE_USER_FILTER_RE })
     );
-    await user.click(screen.getByRole("option", { name: "Superuser" }));
+    await user.click(
+      screen.getByRole("option", { name: SUPERUSER_OPTION_WITH_COUNT_RE })
+    );
 
     const navigateCall = mocks.navigate.mock.calls[0]?.[0];
     expect(navigateCall.search({ q: "app", type: "login" })).toEqual({

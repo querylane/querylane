@@ -56,6 +56,7 @@ function renderLargeExplorerSidebar() {
           onSelectResource={vi.fn()}
           onSelectSchema={vi.fn()}
           onSelectSchemaOverview={vi.fn()}
+          onTableListSortChange={vi.fn()}
           query=""
           schemaSelectionError={null}
           schemas={[defaultSchema]}
@@ -64,6 +65,7 @@ function renderLargeExplorerSidebar() {
           selection={{ kind: "schema" }}
           setExpandedCategories={vi.fn()}
           setQuery={vi.fn()}
+          tableListSort="name-asc"
           tablesError={null}
           tablesSyncNotice={null}
           viewsError={null}

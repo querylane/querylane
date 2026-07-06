@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
+import { useState } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 
@@ -120,6 +121,24 @@ function renderSelectedOwnerFilter() {
   );
 }
 
+function SingleSelectFilterFixture() {
+  const [selectedValues, setSelectedValues] = useState(["login"]);
+  return (
+    <ScreenshotFrame>
+      <DataTableFacetedFilter
+        onSelectedValuesChange={setSelectedValues}
+        options={[
+          { count: 3, label: "User", value: "login" },
+          { count: 1, label: "Superuser", value: "super" },
+        ]}
+        selectedValues={selectedValues}
+        singleSelect
+        title="Type"
+      />
+    </ScreenshotFrame>
+  );
+}
+
 test("selected filter checkbox checkmark remains visible while hovered", async () => {
   renderSelectedOwnerFilter();
 
@@ -153,4 +172,20 @@ test("selected filter checkbox checkmark remains visible while hovered", async (
   expect(
     contrastRatio(checkboxStyles.backgroundColor, optionStyles.color)
   ).toBeGreaterThanOrEqual(MINIMUM_NON_TEXT_CONTRAST_RATIO);
+});
+
+test("single-select filter replaces the previous option and shows counts", async () => {
+  render(<SingleSelectFilterFixture />);
+
+  await page.getByRole("button", { name: /Type.*User/ }).click();
+  await expect.element(page.getByRole("option", { name: /Superuser\s+1/ }))
+    .toBeVisible();
+
+  await page.getByRole("option", { name: /Superuser\s+1/ }).click();
+
+  await expect
+    .element(page.getByRole("button", { name: /Type.*Superuser/ }))
+    .toBeVisible();
+  await expect.element(page.getByRole("button", { name: /Type.*User/ }))
+    .not.toBeInTheDocument();
 });

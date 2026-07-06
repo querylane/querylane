@@ -39,9 +39,21 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CatalogSyncNotice } from "@/features/data-explorer/catalog-sync-notice";
 import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model";
+import {
+  isTableListSort,
+  TABLE_LIST_SORT_ITEMS,
+  type TableListSort,
+} from "@/features/data-explorer/data-explorer-table-list-sort";
 import {
   CATEGORY_META,
   CATEGORY_ORDER,
@@ -661,6 +673,7 @@ function ExplorerSidebar({
   onRetryTables,
   onRetryViews,
   onSelectSchemaOverview,
+  onTableListSortChange,
   onResourceIntent,
   onSelectResource,
   onSelectSchema,
@@ -673,6 +686,7 @@ function ExplorerSidebar({
   setExpandedCategories,
   setQuery,
   tablesError,
+  tableListSort,
   tablesSyncNotice,
   viewsError,
 }: {
@@ -690,6 +704,7 @@ function ExplorerSidebar({
   onSelectResource: (category: CategoryKey, name: string) => void;
   onSelectSchema: (schema: SchemaSummary) => void;
   onSelectSchemaOverview: () => void;
+  onTableListSortChange: (value: TableListSort) => void;
   query: string;
   schemaSelectionError: unknown;
   schemasLoading: boolean;
@@ -701,6 +716,7 @@ function ExplorerSidebar({
   ) => void;
   setQuery: (value: string) => void;
   tablesError: unknown;
+  tableListSort: TableListSort;
   tablesSyncNotice: ReturnType<typeof catalogSyncNotice>;
   viewsError: unknown;
 }) {
@@ -770,6 +786,35 @@ function ExplorerSidebar({
             </Button>
           ) : null}
         </div>
+        <Select
+          disabled={!activeSchema}
+          items={TABLE_LIST_SORT_ITEMS}
+          onValueChange={(next) => {
+            if (next != null && isTableListSort(next)) {
+              onTableListSortChange(next);
+            }
+          }}
+          value={tableListSort}
+        >
+          <SelectTrigger
+            aria-label="Sort tables"
+            className="h-8 w-full justify-between text-xs"
+            size="sm"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger={false}>
+            {TABLE_LIST_SORT_ITEMS.map((option) => (
+              <SelectItem
+                key={option.value}
+                label={option.label}
+                value={option.value}
+              >
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col p-2">

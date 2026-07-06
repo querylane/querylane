@@ -153,6 +153,7 @@ function KindFilteredTable<T extends RowData>({
               : [];
           })}
           selectedValues={activeKind === "all" ? [] : [activeKind]}
+          singleSelect={true}
           title="Kind"
         />
         {/* value stays urgent so the input reflects keystrokes immediately */}

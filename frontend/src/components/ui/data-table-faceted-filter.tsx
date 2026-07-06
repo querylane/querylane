@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 
 interface FacetedFilterOption {
+  count?: number | undefined;
   label: string;
   value: string;
 }
@@ -30,14 +31,14 @@ const MAX_INLINE_BADGES = 2;
 const CLEAR_ITEM_VALUE = "__clear-faceted-filter__";
 
 // Shadcn data-table faceted filter: a dashed-border trigger with a filter icon
-// and the facet title, opening a searchable command list of checkbox options.
-// Fully controlled (multi-select).
+// and the facet title, opening a searchable command list of controlled options.
 function DataTableFacetedFilter({
   emptyText = "No options found.",
   onSelectedValuesChange,
   options,
   searchPlaceholder,
   selectedValues,
+  singleSelect = false,
   title,
 }: {
   emptyText?: string;
@@ -45,11 +46,17 @@ function DataTableFacetedFilter({
   options: FacetedFilterOption[];
   searchPlaceholder?: string;
   selectedValues: string[];
+  singleSelect?: boolean;
   title: string;
 }) {
   const selected = new Set(selectedValues);
 
   function toggle(value: string) {
+    if (singleSelect) {
+      onSelectedValuesChange(selected.has(value) ? [] : [value]);
+      return;
+    }
+
     const next = new Set(selected);
     if (next.has(value)) {
       next.delete(value);
@@ -126,7 +133,8 @@ function DataTableFacetedFilter({
                   >
                     <div
                       className={cn(
-                        "flex size-4 items-center justify-center rounded-sm border",
+                        "flex size-4 items-center justify-center border",
+                        singleSelect ? "rounded-full" : "rounded-sm",
                         isSelected
                           ? "border-foreground/70 bg-background text-foreground [&_svg]:text-foreground"
                           : "border-primary opacity-50 [&_svg]:invisible"
@@ -139,6 +147,11 @@ function DataTableFacetedFilter({
                       />
                     </div>
                     <span>{option.label}</span>
+                    {option.count !== undefined ? (
+                      <span className="ml-auto font-mono text-muted-foreground text-xs tabular-nums">
+                        {option.count}
+                      </span>
+                    ) : null}
                   </CommandItem>
                 );
               })}

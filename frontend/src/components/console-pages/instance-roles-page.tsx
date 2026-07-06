@@ -829,10 +829,12 @@ export function InstanceRolesPage({
         <DataTableFacetedFilter
           onSelectedValuesChange={handleRoleTypeChange}
           options={ROLE_TYPE_FILTERS.map((entry) => ({
+            count: counts[entry.id],
             label: ROLE_KIND_LABEL[entry.id],
             value: entry.id,
           }))}
           selectedValues={type === undefined ? [] : [type]}
+          singleSelect={true}
           title="Type"
         />
         <DataTableFilter
