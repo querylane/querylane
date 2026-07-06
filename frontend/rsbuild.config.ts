@@ -10,24 +10,28 @@ import { TanStackRouterRspack } from "@tanstack/router-plugin/rspack";
 import dotenv from "dotenv";
 import { pluginDevtoolsJson } from "rsbuild-plugin-devtools-json";
 import { z } from "zod/v4";
+import {
+  createBuildCacheDigest,
+  createPreconnectOrigins,
+  managedSplitChunksConfig,
+  productionOptimizationOverrides,
+} from "./rsbuild.performance";
 
 const reactCompilerConfig = {
   target: "19" as const,
 };
 
-const KIB = 1024;
-const ENFORCED_SPLIT_SIZE_KIB = 80;
-const MIN_SPLIT_SIZE_KIB = 20;
-const MAX_ASYNC_CHUNK_REQUESTS = 30;
-const MAX_INITIAL_CHUNK_REQUESTS = 20;
 const RSPACK_BUILD_CACHE_DIRECTORY = "node_modules/.cache/rsbuild";
 const SENTRY_APPLICATION_KEY = "querylane-frontend";
 const RSPACK_BUILD_DEPENDENCIES = [
   path.resolve(import.meta.dirname, ".browserslistrc"),
   path.resolve(import.meta.dirname, "bun.lock"),
+  path.resolve(import.meta.dirname, "index.html"),
   path.resolve(import.meta.dirname, "package.json"),
+  path.resolve(import.meta.dirname, "postcss.config.mjs"),
   path.resolve(import.meta.dirname, "rsbuild.config.ts"),
   path.resolve(import.meta.dirname, "tsconfig.json"),
+  path.resolve(import.meta.dirname, "tsconfig.ui.json"),
 ];
 
 dotenv.config();
@@ -37,6 +41,7 @@ const buildEnv = createEnv({
   runtimeEnv: env,
   server: {
     NODE_ENV: z.enum(["development", "production", "test"]).optional(),
+    PUBLIC_API_BASE_URL: z.string().optional(),
     PUBLIC_POSTHOG_HOST: z.string().optional(),
     PUBLIC_POSTHOG_KEY: z.string().optional(),
     PUBLIC_SENTRY_ENVIRONMENT: z.string().optional(),
@@ -49,31 +54,29 @@ const buildEnv = createEnv({
 });
 
 const enableRsdoctor = Boolean(buildEnv.RSDOCTOR);
-const posthogPreconnect =
-  buildEnv.NODE_ENV === "production" && buildEnv.PUBLIC_POSTHOG_KEY
-    ? buildEnv.PUBLIC_POSTHOG_HOST?.trim() || "https://us.i.posthog.com"
-    : undefined;
 const sentryAuthToken = buildEnv.SENTRY_AUTH_TOKEN;
 const sentryEnvironment = buildEnv.PUBLIC_SENTRY_ENVIRONMENT;
 const sentryOrg = buildEnv.SENTRY_ORG;
 const sentryProject = buildEnv.SENTRY_PROJECT;
 const sentryReleaseName = buildEnv.PUBLIC_SENTRY_RELEASE;
 const enableSentryPlugin = buildEnv.NODE_ENV === "production";
+const enableSentrySourceMapUpload = Boolean(
+  enableSentryPlugin && sentryAuthToken && sentryOrg && sentryProject
+);
 const require = createRequire(import.meta.url);
 
-const buildCacheDigest = [
-  JSON.stringify(
-    Object.fromEntries(
-      Object.entries(env)
-        .filter(
-          ([key, value]) =>
-            key.startsWith("PUBLIC_") && typeof value === "string"
-        )
-        .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
-    )
-  ),
-  buildEnv.NODE_ENV ?? "",
-];
+const buildCacheDigest = createBuildCacheDigest({
+  env,
+  rsdoctorEnabled: enableRsdoctor,
+  sentryUploadEnabled: enableSentrySourceMapUpload,
+});
+const preconnectOrigins = createPreconnectOrigins({
+  apiBaseUrl: buildEnv.PUBLIC_API_BASE_URL,
+  isProduction: buildEnv.NODE_ENV === "production",
+  postHogApiKey: buildEnv.PUBLIC_POSTHOG_KEY,
+  postHogHost:
+    buildEnv.PUBLIC_POSTHOG_HOST?.trim() || "https://us.i.posthog.com",
+});
 
 const rsdoctorPluginOptions = {
   disableClientServer: true,
@@ -141,16 +144,16 @@ export default defineConfig({
     },
   },
   performance: {
-    ...(posthogPreconnect ? { preconnect: [posthogPreconnect] } : {}),
+    ...(preconnectOrigins.length > 0 ? { preconnect: preconnectOrigins } : {}),
     buildCache: {
       buildDependencies: RSPACK_BUILD_DEPENDENCIES,
       cacheDigest: buildCacheDigest,
       cacheDirectory: RSPACK_BUILD_CACHE_DIRECTORY,
     },
-    // Strip debug-only console calls from production bundles so ad hoc logs do
-    // not become support diagnostics by accident. Keep warn/error for real
-    // diagnostics and Sentry console integrations.
-    removeConsole: ["log", "info", "table", "group"],
+    // Strip direct ad hoc diagnostics from production bundles. Runtime
+    // observability should flow through Sentry/PostHog wrappers, while thrown
+    // errors and explicit error handling stay intact.
+    removeConsole: ["log", "info", "warn", "table", "group"],
   },
   plugins: [
     pluginReact({
@@ -173,59 +176,7 @@ export default defineConfig({
     },
     tsconfigPath: "./tsconfig.json",
   },
-  splitChunks: {
-    cacheGroups: {
-      dataGrid: {
-        chunks: "async",
-        name: "data-grid",
-        priority: 32,
-        reuseExistingChunk: true,
-        test: /[/\\]node_modules[/\\]react-data-grid[/\\]/,
-      },
-      posthog: {
-        chunks: "async",
-        name: "posthog",
-        priority: 35,
-        reuseExistingChunk: true,
-        test: /[/\\]node_modules[/\\]posthog-js[/\\]/,
-      },
-      protobuf: {
-        chunks: "async",
-        name: "protobuf",
-        priority: 20,
-        reuseExistingChunk: true,
-        test: /[/\\]node_modules[/\\](?:@bufbuild|@connectrpc)[/\\]/,
-      },
-      sentry: {
-        chunks: "async",
-        name: "sentry",
-        priority: 35,
-        reuseExistingChunk: true,
-        test: /[/\\]node_modules[/\\](?:@sentry|@sentry-internal)[/\\]/,
-      },
-      sharedUi: {
-        chunks: "async",
-        minChunks: 2,
-        name: "shared-ui",
-        priority: 28,
-        reuseExistingChunk: true,
-        test: /[/\\]src[/\\]components[/\\]ui[/\\]/,
-      },
-      ui: {
-        chunks: "async",
-        name: "ui-vendor",
-        priority: 10,
-        reuseExistingChunk: true,
-        test: /[/\\]node_modules[/\\](?:@base-ui|lucide-react)[/\\]/,
-      },
-    },
-    chunks: "all",
-    enforceSizeThreshold: ENFORCED_SPLIT_SIZE_KIB * KIB,
-    maxAsyncRequests: MAX_ASYNC_CHUNK_REQUESTS,
-    maxInitialRequests: MAX_INITIAL_CHUNK_REQUESTS,
-    minSize: MIN_SPLIT_SIZE_KIB * KIB,
-    preset: "default",
-  },
+  splitChunks: managedSplitChunksConfig,
   tools: {
     rspack(config) {
       config.plugins ??= [];
@@ -244,7 +195,7 @@ export default defineConfig({
           target: "react",
         })
       );
-      if (enableSentryPlugin && sentryAuthToken && sentryOrg && sentryProject) {
+      if (enableSentrySourceMapUpload) {
         const { sentryWebpackPlugin } = require("@sentry/webpack-plugin");
         config.plugins.push(
           sentryWebpackPlugin({
@@ -281,6 +232,14 @@ export default defineConfig({
       // tree-shaking, module concatenation, deterministic ids, etc., and
       // `rsbuild dev` disables them — so we don't hand-force (and previously
       // mis-force) those into dev.
+
+      if (config.mode === "production") {
+        config.optimization = {
+          ...config.optimization,
+          ...productionOptimizationOverrides,
+        };
+      }
+
       config.experiments ??= {};
       config.experiments.nativeWatcher = true;
 
