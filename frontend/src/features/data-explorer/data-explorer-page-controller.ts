@@ -37,7 +37,10 @@ import {
   assertNoUnhandledTableDetailQueries,
   tableDetailQueryOptions,
 } from "@/hooks/api/table";
-import { parseResourceLeafId } from "@/lib/console-resources";
+import {
+  parseResourceLeafId,
+  parseTableQualifiedName,
+} from "@/lib/console-resources";
 import { useDb } from "@/lib/db-context";
 import { handleNavigationResult } from "@/lib/navigation-errors";
 import { handleQueryActionError } from "@/lib/query-action-errors";
@@ -279,6 +282,15 @@ function useDataExplorerPageController({
         category: "tables",
         name,
         schema: schemaName,
+        tab: undefined,
+      });
+    },
+    onSelectTableResource: (tableResourceName: string) => {
+      const { schema, table } = parseTableQualifiedName(tableResourceName);
+      updateSearch({
+        category: "tables",
+        name: table,
+        schema,
         tab: undefined,
       });
     },

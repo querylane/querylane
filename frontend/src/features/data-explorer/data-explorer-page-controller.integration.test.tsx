@@ -209,6 +209,30 @@ describe("data explorer search navigation", () => {
     );
   });
 
+  it("selects a referenced table resource by its qualified name", () => {
+    const { result } = renderController({
+      category: "tables",
+      name: "shipments",
+      schema: "shipping",
+      tab: "constraints",
+    });
+
+    act(() => {
+      result.current.onSelectTableResource(
+        "instances/inst-1/databases/db-1/schemas/public/tables/carriers"
+      );
+    });
+
+    const navigation = mocks.navigate.mock.calls.at(-1)?.[0];
+    expect(navigation).toEqual(expect.objectContaining({ replace: false }));
+    expect(navigation?.search({})).toEqual({
+      category: "tables",
+      name: "carriers",
+      schema: "public",
+      tab: undefined,
+    });
+  });
+
   it("hydrates sidebar search from the URL and debounces URL writes", () => {
     const { result } = renderController({ q: "acct", schema: "public" });
 

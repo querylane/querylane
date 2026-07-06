@@ -27,6 +27,11 @@ import { CellContextMenu } from "@/components/data-grid/table-data-grid/cell-con
 import { DataGridToolbar } from "@/components/data-grid/table-data-grid/data-grid-toolbar";
 import { DataValueDialogProvider } from "@/components/data-grid/table-data-grid/data-value-dialog-provider";
 import {
+  buildForeignKeyReferencePreview,
+  type ForeignKeyReferencePreview,
+  type TableForeignKeyReference,
+} from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
+import {
   getGridCell,
   setGridCell,
 } from "@/components/data-grid/table-data-grid/grid-cell-access";
@@ -56,6 +61,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { formatLastFetchedLabel } from "@/features/data-explorer/last-fetched-label";
 import {
   serializeTableFilterSearch,
@@ -124,11 +137,13 @@ type TableDataGridProps = {
     grid: ReactNode;
     lastFetchedLabel: string;
   }) => ReactNode;
+  foreignKeyReferences?: readonly TableForeignKeyReference[] | undefined;
   frozenColumnsSearch?: string | undefined;
   initialPageSize?: number | undefined;
   name: string;
   onCellSearchChange?: (next: string | undefined) => void;
   onFrozenColumnsSearchChange?: (next: string | undefined) => void;
+  onOpenReferencedTable?: ((tableName: string) => void) | undefined;
   onOpenRowSearchChange?: (next: string | undefined) => void;
   onPageSizeSearchChange?: (next: number | undefined) => void;
   onSelectedRowsSearchChange?: (next: string | undefined) => void;
@@ -611,6 +626,79 @@ function RecordDetailDrawerHost({
       rowIndex={openRowIndex ?? 0}
       tableName={tableQualifiedName}
     />
+  );
+}
+
+function ForeignKeyReferenceDrawer({
+  onOpenChange,
+  onOpenReferencedTable,
+  preview,
+}: {
+  onOpenChange: (open: boolean) => void;
+  onOpenReferencedTable?: ((tableName: string) => void) | undefined;
+  preview: ForeignKeyReferencePreview | null;
+}) {
+  const [previewFilterSearch, setPreviewFilterSearch] = useState<
+    string | undefined
+  >(preview?.filterSearch);
+  const previewKey = preview
+    ? `${preview.reference.targetTableName}:${preview.filterSearch}`
+    : "";
+
+  useEffect(
+    function resetForeignKeyPreviewFilter() {
+      setPreviewFilterSearch(preview?.filterSearch);
+    },
+    [preview?.filterSearch]
+  );
+
+  return (
+    <Sheet onOpenChange={onOpenChange} open={preview !== null}>
+      <SheetContent
+        className="!max-w-[min(92vw,64rem)] !w-[min(92vw,64rem)] flex flex-col gap-0 p-0"
+        side="right"
+      >
+        {preview ? (
+          <>
+            <SheetHeader className="gap-2 border-b px-5 py-4 pr-14">
+              <SheetTitle className="break-all font-mono text-base leading-snug">
+                {preview.sourceColumn} references {preview.targetLabel}
+              </SheetTitle>
+              <SheetDescription>
+                Showing rows where the referenced key equals{" "}
+                <code className="rounded bg-muted px-1 py-0.5 font-mono">
+                  {preview.displayValue}
+                </code>
+                .
+              </SheetDescription>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 overflow-auto p-4">
+              <TableDataGrid
+                filterSearch={previewFilterSearch}
+                initialPageSize={10}
+                key={previewKey}
+                name={preview.reference.targetTableName}
+                onFilterSearchChange={setPreviewFilterSearch}
+              />
+            </div>
+            {onOpenReferencedTable ? (
+              <SheetFooter className="border-t">
+                <Button
+                  onClick={() => {
+                    onOpenReferencedTable(preview.reference.targetTableName);
+                    onOpenChange(false);
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  Open table
+                </Button>
+              </SheetFooter>
+            ) : null}
+          </>
+        ) : null}
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -1130,7 +1218,9 @@ function isExportCanceled(error: unknown, signal: AbortSignal): boolean {
 }
 
 function useGridColumns({
+  foreignKeyReferences,
   frozenColumns,
+  onOpenForeignKeyReference,
   onFrozenColumnsChange,
   resultColumns,
   rowIdentity,
@@ -1138,7 +1228,13 @@ function useGridColumns({
   setSortColumns,
   sortColumns,
 }: {
+  foreignKeyReferences: readonly TableForeignKeyReference[];
   frozenColumns: ReadonlySet<string>;
+  onOpenForeignKeyReference: (
+    reference: TableForeignKeyReference,
+    row: GridRow,
+    sourceColumn: string
+  ) => void;
   onFrozenColumnsChange: (next: ReadonlySet<string>) => void;
   resultColumns: TableResultColumn[];
   rowIdentity:
@@ -1218,8 +1314,10 @@ function useGridColumns({
       const sortEntry = sortIndex === -1 ? undefined : sortColumns[sortIndex];
       return buildColumn({
         column,
+        foreignKeyReferences,
         isFrozen: frozenColumns.has(column.columnName),
         onCopyName: () => writeClipboard(column.columnName),
+        onOpenForeignKeyReference,
         onSortAsc: () => toggleColumnSort(column.columnName, "ASC"),
         onSortDesc: () => toggleColumnSort(column.columnName, "DESC"),
         onToggleFreeze: () => toggleColumnFreeze(column.columnName),
@@ -1239,12 +1337,15 @@ function useGridColumns({
 function TableDataGridContent({
   chromeProps,
   contextMenu,
+  foreignKeyReferencePreview,
   isDataGridExpanded,
   name,
   onCloseContextMenu,
   onContextMenuCopyCell,
   onContextMenuCopyRow,
   onDataGridExpandedChange,
+  onForeignKeyReferenceOpenChange,
+  onOpenReferencedTable,
   openRowIndex,
   pkColumnSet,
   resultColumns,
@@ -1253,12 +1354,15 @@ function TableDataGridContent({
 }: {
   chromeProps: TableDataGridChromeProps;
   contextMenu: ContextMenuState | null;
+  foreignKeyReferencePreview: ForeignKeyReferencePreview | null;
   isDataGridExpanded: boolean;
   name: string;
   onCloseContextMenu: () => void;
   onContextMenuCopyCell: () => void;
   onContextMenuCopyRow: () => void;
   onDataGridExpandedChange: (next: boolean) => void;
+  onForeignKeyReferenceOpenChange: (open: boolean) => void;
+  onOpenReferencedTable?: ((tableName: string) => void) | undefined;
   openRowIndex: number | null;
   pkColumnSet: Set<string>;
   resultColumns: TableResultColumn[];
@@ -1321,12 +1425,18 @@ function TableDataGridContent({
         rows={rows}
         setOpenRowIndex={setOpenRowIndex}
       />
+      <ForeignKeyReferenceDrawer
+        onOpenChange={onForeignKeyReferenceOpenChange}
+        onOpenReferencedTable={onOpenReferencedTable}
+        preview={foreignKeyReferencePreview}
+      />
     </div>
   );
 }
 
 function TableDataGrid({
   children,
+  foreignKeyReferences = [],
   name,
   filterSearch,
   frozenColumnsSearch,
@@ -1334,6 +1444,7 @@ function TableDataGrid({
   onCellSearchChange = () => undefined,
   onFilterSearchChange,
   onFrozenColumnsSearchChange = () => undefined,
+  onOpenReferencedTable,
   onOpenRowSearchChange = () => undefined,
   onPageSizeSearchChange = () => undefined,
   onSelectedRowsSearchChange = () => undefined,
@@ -1402,6 +1513,9 @@ function TableDataGrid({
   // grey out and disable unchanged rows (the toolbar spinner covers those).
   const isRefetchingRows = isPlaceholderData && !gridLoading;
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [foreignKeyReferencePreview, setForeignKeyReferencePreview] =
+    useState<ForeignKeyReferencePreview | null>(null);
+  const previousNameRef = useRef(name);
   const [isDataGridExpanded, setIsDataGridExpanded] = useState(false);
   const { selectedRows, setSelectedRows, updateSelectedRows } =
     useSelectedRowsUrlState({
@@ -1435,15 +1549,46 @@ function TableDataGrid({
     frozenColumnsSearch,
     onFrozenColumnsSearchChange,
   });
+
+  function handleOpenForeignKeyReference(
+    reference: TableForeignKeyReference,
+    row: GridRow,
+    sourceColumn: string
+  ) {
+    const preview = buildForeignKeyReferencePreview({
+      reference,
+      resultColumns,
+      row,
+      sourceColumn,
+    });
+    if (!preview) {
+      return;
+    }
+    setForeignKeyReferencePreview(preview);
+  }
+
   const { columns, pkColumnSet } = useGridColumns({
+    foreignKeyReferences,
     frozenColumns,
     onFrozenColumnsChange: setFrozenColumns,
+    onOpenForeignKeyReference: handleOpenForeignKeyReference,
     resultColumns,
     rowIdentity: data?.resultSet?.rowIdentity,
     setOpenRowIndex,
     setSortColumns: controller.setSortColumns,
     sortColumns: controller.sortColumns,
   });
+
+  useEffect(
+    function closeForeignKeyReferenceOnTableChange() {
+      if (previousNameRef.current === name) {
+        return;
+      }
+      previousNameRef.current = name;
+      setForeignKeyReferencePreview(null);
+    },
+    [name]
+  );
   const pageLabel = buildPageLabel({
     pageIndex: controller.currentPageIndex,
     pageSize: controller.pageSize,
@@ -1593,12 +1738,19 @@ function TableDataGrid({
       <TableDataGridContent
         chromeProps={chromeProps}
         contextMenu={contextMenu}
+        foreignKeyReferencePreview={foreignKeyReferencePreview}
         isDataGridExpanded={isDataGridExpanded}
         name={name}
         onCloseContextMenu={() => setContextMenu(null)}
         onContextMenuCopyCell={handleContextMenuCopyCell}
         onContextMenuCopyRow={handleContextMenuCopyRow}
         onDataGridExpandedChange={setIsDataGridExpanded}
+        onForeignKeyReferenceOpenChange={(next) => {
+          if (!next) {
+            setForeignKeyReferencePreview(null);
+          }
+        }}
+        onOpenReferencedTable={onOpenReferencedTable}
         openRowIndex={openRowIndex}
         pkColumnSet={pkColumnSet}
         resultColumns={resultColumns}

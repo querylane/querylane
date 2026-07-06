@@ -101,6 +101,7 @@ function DataExplorerPage({
       hasMoreViews={explorer.schemaOverview.hasMoreViews}
       instanceId={explorer.instanceId}
       onSchemaTabChange={handleSchemaTabChange}
+      onOpenReferencedTable={explorer.onSelectTableResource}
       onSelectResource={handleSelectResource}
       onSelectTableInSchema={handleSelectTableInSchema}
       onTableTabChange={handleTableTabChange}

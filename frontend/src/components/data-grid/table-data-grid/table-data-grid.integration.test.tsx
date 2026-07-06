@@ -22,6 +22,7 @@ import { useRefreshSettingsStore } from "@/features/user-settings/refresh-settin
 import { PostgreSqlErrorDetailSchema } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 import {
   ReadRowsResponseSchema,
+  RowPredicate_Operator,
   TableCellSchema,
   TableResultColumnSchema,
   TableResultRowSchema,
@@ -297,28 +298,31 @@ function createPostgresRowsError() {
   return error;
 }
 
-describe("TableDataGrid query setup", () => {
-  beforeEach(() => {
-    tableDataApi.useStreamRowsExporter.mockReturnValue(
-      vi.fn().mockResolvedValue({
-        payload: {
-          contents: ["email\nuser-0\n"],
-          filename: "customers.csv",
-          mimeType: "text/csv;charset=utf-8",
-        },
-        rowCount: 1n,
-        savedToFile: false,
-        truncated: false,
-      })
-    );
-  });
+function setupTableDataGridIntegrationTest() {
+  tableDataApi.useStreamRowsExporter.mockReturnValue(
+    vi.fn().mockResolvedValue({
+      payload: {
+        contents: ["email\nuser-0\n"],
+        filename: "customers.csv",
+        mimeType: "text/csv;charset=utf-8",
+      },
+      rowCount: 1n,
+      savedToFile: false,
+      truncated: false,
+    })
+  );
+}
 
-  afterEach(() => {
-    cleanup();
-    vi.clearAllMocks();
-    vi.useRealTimers();
-    useRefreshSettingsStore.getState().setRefreshIntervalMs(null);
-  });
+function teardownTableDataGridIntegrationTest() {
+  cleanup();
+  vi.clearAllMocks();
+  vi.useRealTimers();
+  useRefreshSettingsStore.getState().setRefreshIntervalMs(null);
+}
+
+describe("TableDataGrid query setup", () => {
+  beforeEach(setupTableDataGridIntegrationTest);
+  afterEach(teardownTableDataGridIntegrationTest);
 
   it("disables column validation with a concrete input instead of skipToken", () => {
     const tableName =
@@ -528,6 +532,186 @@ describe("TableDataGrid query setup", () => {
     // server-provided row key.
     expect(rows[1]?.[ROW_KEY_FIELD]).toBe(fallbackRowKey(1));
   });
+});
+
+describe("TableDataGrid foreign key references", () => {
+  beforeEach(setupTableDataGridIntegrationTest);
+  afterEach(teardownTableDataGridIntegrationTest);
+
+  it("opens referenced table rows from a foreign key cell in a drawer", async () => {
+    const user = userEvent.setup();
+    const shipmentsName =
+      "instances/prod/databases/app/schemas/shipping/tables/shipments";
+    const carriersName =
+      "instances/prod/databases/app/schemas/public/tables/carriers";
+    const onOpenReferencedTable = vi.fn();
+
+    tableApi.useListTableColumnsQuery.mockImplementation((input) => {
+      if (input.parent === carriersName) {
+        return {
+          data: create(ListTableColumnsResponseSchema, {
+            columns: [
+              create(ColumnSchema, {
+                columnName: "id",
+                dataType: DataType.INTEGER,
+              }),
+              create(ColumnSchema, {
+                columnName: "name",
+                dataType: DataType.STRING,
+              }),
+            ],
+          }),
+          error: null,
+          isError: false,
+        };
+      }
+      return {
+        data: create(ListTableColumnsResponseSchema, { columns: [] }),
+        error: null,
+        isError: false,
+      };
+    });
+    tableDataApi.useReadRowsQuery.mockImplementation((request) => {
+      if (request.name === carriersName) {
+        return {
+          data: create(ReadRowsResponseSchema, {
+            resultSet: create(TableResultSetSchema, {
+              columns: [
+                create(TableResultColumnSchema, {
+                  columnName: "id",
+                  dataType: DataType.INTEGER,
+                  rawType: "int4",
+                }),
+                create(TableResultColumnSchema, {
+                  columnName: "name",
+                  dataType: DataType.STRING,
+                  rawType: "text",
+                }),
+              ],
+              rows: [
+                create(TableResultRowSchema, {
+                  rowKey: "carrier-214",
+                  values: [
+                    create(TableCellSchema, {
+                      value: create(TableValueSchema, {
+                        kind: { case: "int64Value", value: 214n },
+                      }),
+                    }),
+                    create(TableCellSchema, {
+                      value: create(TableValueSchema, {
+                        kind: {
+                          case: "stringValue",
+                          value: "Maersk Logistics",
+                        },
+                      }),
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          }),
+          dataUpdatedAt: 0,
+          error: null,
+          isFetching: false,
+          isLoading: false,
+          refetch: vi.fn(),
+        };
+      }
+      return {
+        data: create(ReadRowsResponseSchema, {
+          resultSet: create(TableResultSetSchema, {
+            columns: [
+              create(TableResultColumnSchema, {
+                columnName: "carrier_id",
+                dataType: DataType.INTEGER,
+                rawType: "int4",
+              }),
+            ],
+            rows: [
+              create(TableResultRowSchema, {
+                rowKey: "shipment-1",
+                values: [
+                  create(TableCellSchema, {
+                    value: create(TableValueSchema, {
+                      kind: { case: "int64Value", value: 214n },
+                    }),
+                  }),
+                ],
+              }),
+            ],
+          }),
+        }),
+        dataUpdatedAt: 0,
+        error: null,
+        isFetching: false,
+        isLoading: false,
+        refetch: vi.fn(),
+      };
+    });
+    tableDataApi.useReadCellValueMutation.mockReturnValue({
+      isError: false,
+      isPending: false,
+      mutate: vi.fn(),
+    });
+
+    render(
+      <TableDataGrid
+        foreignKeyReferences={[
+          {
+            constraintName: "shipments_carrier_id_fkey",
+            sourceColumns: ["carrier_id"],
+            targetColumns: ["id"],
+            targetTableName: carriersName,
+          },
+        ]}
+        name={shipmentsName}
+        onOpenReferencedTable={onOpenReferencedTable}
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Open carrier_id reference 214",
+      })
+    );
+
+    expect(
+      screen.getByRole("dialog", {
+        name: "carrier_id references public.carriers",
+      })
+    ).toBeTruthy();
+    expect(screen.getByText("Maersk Logistics")).toBeTruthy();
+
+    const targetReadCall = tableDataApi.useReadRowsQuery.mock.calls.find(
+      ([request]) => request.name === carriersName
+    );
+    expect(targetReadCall?.[0].filter?.node).toMatchObject({
+      case: "group",
+      value: {
+        children: [
+          {
+            node: {
+              case: "predicate",
+              value: {
+                column: "id",
+                operator: RowPredicate_Operator.EQUAL,
+                values: [{ kind: { case: "int64Value", value: 214n } }],
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open table" }));
+
+    expect(onOpenReferencedTable).toHaveBeenCalledWith(carriersName);
+  });
+});
+
+describe("TableDataGrid row interactions", () => {
+  beforeEach(setupTableDataGridIntegrationTest);
+  afterEach(teardownTableDataGridIntegrationTest);
 
   it("jumps directly to a typed row number from the row drawer", async () => {
     const user = userEvent.setup();

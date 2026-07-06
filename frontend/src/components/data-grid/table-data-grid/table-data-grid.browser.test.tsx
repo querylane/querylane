@@ -11,26 +11,61 @@ import { GridStatusBar } from "@/components/data-grid/table-data-grid/grid-statu
 import { GridSurface } from "@/components/data-grid/table-data-grid/grid-surface";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { RecordDetailDrawer } from "@/components/data-grid/table-data-grid/record-detail-drawer";
+import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import {
+  ReadRowsResponseSchema,
   type TableCell,
   TableCellSchema,
   TableResultColumnSchema,
+  TableResultRowSchema,
+  TableResultSetSchema,
   type TableValue,
   TableValueSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
-import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import {
+  ColumnSchema,
+  DataType,
+  ListTableColumnsResponseSchema,
+} from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 import "@/components/data-grid/table-data-grid/data-grid-theme.css";
 
-vi.mock("@/hooks/api/table-data", () => ({
-  useReadCellValueMutation: () => ({
+const tableApi = vi.hoisted(() => ({
+  useListTableColumnsQuery: vi.fn((_input: { parent: string }) => ({
+    data: undefined as unknown,
+    error: null,
+    isError: false,
+    refetch: vi.fn(),
+  })),
+}));
+
+const tableDataApi = vi.hoisted(() => ({
+  useReadCellValueMutation: vi.fn(() => ({
     isError: false,
     isPending: false,
     mutate: vi.fn(),
-  }),
+  })),
+  useReadRowsQuery: vi.fn(),
+  useStreamRowsExporter: vi.fn(() => vi.fn()),
+}));
+
+vi.mock("@/hooks/api/table", () => ({
+  useListTableColumnsQuery: tableApi.useListTableColumnsQuery,
+}));
+
+vi.mock("@/hooks/api/table-data", () => ({
+  useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
+  useReadRowsQuery: tableDataApi.useReadRowsQuery,
+  useStreamRowsExporter: tableDataApi.useStreamRowsExporter,
 }));
 
 const SQL_WHERE_HELP_RE = /Supports column comparisons joined with AND/;
+const EMPTY_FILTER_HELP_RE =
+  /Pick a column, choose an operator, then enter a value\. Use/;
+const shipmentsName =
+  "instances/prod/databases/app/schemas/shipping/tables/shipments";
+const carriersName =
+  "instances/prod/databases/app/schemas/public/tables/carriers";
 
 function column(name: string, rawType: string, dataType: DataType) {
   return createProto(TableResultColumnSchema, {
@@ -47,6 +82,108 @@ function cell(value: TableValue["kind"], truncated = false) {
     fullValueToken: truncated ? "full-value-token" : "",
     truncated,
     value: createProto(TableValueSchema, { kind: value }),
+  });
+}
+
+function seedForeignKeyGridQueries() {
+  tableApi.useListTableColumnsQuery.mockImplementation((input) => {
+    if (input.parent === carriersName) {
+      return {
+        data: createProto(ListTableColumnsResponseSchema, {
+          columns: [
+            createProto(ColumnSchema, {
+              columnName: "id",
+              dataType: DataType.INTEGER,
+            }),
+            createProto(ColumnSchema, {
+              columnName: "code",
+              dataType: DataType.STRING,
+            }),
+            createProto(ColumnSchema, {
+              columnName: "name",
+              dataType: DataType.STRING,
+            }),
+          ],
+        }),
+        error: null,
+        isError: false,
+        refetch: vi.fn(),
+      };
+    }
+
+    return {
+      data: createProto(ListTableColumnsResponseSchema, { columns: [] }),
+      error: null,
+      isError: false,
+      refetch: vi.fn(),
+    };
+  });
+
+  tableDataApi.useReadRowsQuery.mockImplementation((request) => {
+    if (request.name === carriersName) {
+      return {
+        data: createProto(ReadRowsResponseSchema, {
+          resultSet: createProto(TableResultSetSchema, {
+            columns: [
+              column("id", "int4", DataType.INTEGER),
+              column("code", "text", DataType.STRING),
+              column("name", "text", DataType.STRING),
+            ],
+            rows: [
+              createProto(TableResultRowSchema, {
+                rowKey: "carrier-214",
+                values: [
+                  cell({ case: "int64Value", value: 214n }),
+                  cell({ case: "stringValue", value: "HCL" }),
+                  cell({
+                    case: "stringValue",
+                    value: "Hanse Container Line",
+                  }),
+                ],
+              }),
+            ],
+          }),
+        }),
+        dataUpdatedAt: 1_782_882_000_000,
+        error: null,
+        isFetching: false,
+        isLoading: false,
+        isPlaceholderData: false,
+        refetch: vi.fn(),
+      };
+    }
+
+    return {
+      data: createProto(ReadRowsResponseSchema, {
+        resultSet: createProto(TableResultSetSchema, {
+          columns: [
+            column("ref", "text", DataType.STRING),
+            column("carrier_id", "int4", DataType.INTEGER),
+            column("status", "shipment_status", DataType.STRING),
+            column("origin_port", "text", DataType.STRING),
+            column("dest_port", "text", DataType.STRING),
+          ],
+          rows: [
+            createProto(TableResultRowSchema, {
+              rowKey: "shipment-1",
+              values: [
+                cell({ case: "stringValue", value: "ML-2026-048291" }),
+                cell({ case: "int64Value", value: 214n }),
+                cell({ case: "stringValue", value: "in_transit" }),
+                cell({ case: "stringValue", value: "CNSHA" }),
+                cell({ case: "stringValue", value: "DEHAM" }),
+              ],
+            }),
+          ],
+        }),
+      }),
+      dataUpdatedAt: 1_782_882_000_000,
+      error: null,
+      isFetching: false,
+      isLoading: false,
+      isPlaceholderData: false,
+      refetch: vi.fn(),
+    };
   });
 }
 
@@ -537,6 +674,46 @@ test("data explorer controls and row detail drawer expose dense table context", 
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-controls-and-row-detail"
   );
+});
+
+test("foreign key reference drawer keeps linked rows in context", async () => {
+  seedForeignKeyGridQueries();
+
+  render(
+    <ScreenshotFrame>
+      <div className="h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <TableDataGrid
+          foreignKeyReferences={[
+            {
+              constraintName: "shipments_carrier_id_fkey",
+              sourceColumns: ["carrier_id"],
+              targetColumns: ["id"],
+              targetTableName: carriersName,
+            },
+          ]}
+          initialPageSize={10}
+          name={shipmentsName}
+          onOpenReferencedTable={vi.fn()}
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  const carrierLink = page.getByRole("button", {
+    name: "Open carrier_id reference 214",
+  });
+  await expect.element(carrierLink).toBeVisible();
+  await carrierLink.click();
+
+  const drawer = page.getByRole("dialog", {
+    name: "carrier_id references public.carriers",
+  });
+  await expect.element(drawer).toBeVisible();
+  await expect.element(page.getByText("Hanse Container Line")).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Open table" }))
+    .toBeVisible();
+  await expect(drawer).toMatchScreenshot("foreign-key-reference-drawer");
 });
 
 test("data value expansion keeps one visible dialog layer", async () => {

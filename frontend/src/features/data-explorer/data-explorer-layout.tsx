@@ -22,6 +22,7 @@ export function ExplorerDetailPane({
   hasMoreViews,
   instanceId,
   onSchemaTabChange,
+  onOpenReferencedTable,
   onTableTabChange,
   onSelectResource,
   onSelectTableInSchema,
@@ -46,6 +47,7 @@ export function ExplorerDetailPane({
   hasMoreViews: boolean;
   instanceId: string;
   onSchemaTabChange: (tab: SchemaDetailTab) => void;
+  onOpenReferencedTable?: ((tableName: string) => void) | undefined;
   onTableTabChange: (tab: TableDetailTab) => void;
   onSelectResource: (category: CategoryKey, name: string) => void;
   onSelectTableInSchema: (schemaName: string, name: string) => void;
@@ -120,6 +122,7 @@ export function ExplorerDetailPane({
       databaseId={databaseId}
       instanceId={instanceId}
       name={selection.name}
+      onOpenReferencedTable={onOpenReferencedTable}
       onTableTabChange={onTableTabChange}
       schemaName={activeSchema.name}
       table={selectedTable}

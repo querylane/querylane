@@ -1,6 +1,11 @@
 import type { Column } from "react-data-grid";
 import { ColumnHeader } from "@/components/data-grid/table-data-grid/column-header";
 import { DataCell } from "@/components/data-grid/table-data-grid/data-cell";
+import { ForeignKeyDataCell } from "@/components/data-grid/table-data-grid/foreign-key-data-cell";
+import {
+  foreignKeyReferencesForColumn,
+  type TableForeignKeyReference,
+} from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import { getGridCell } from "@/components/data-grid/table-data-grid/grid-cell-access";
 import type { GridRow } from "@/components/data-grid/table-data-grid/grid-row-model";
 import {
@@ -10,8 +15,14 @@ import {
 
 interface BuildColumnArgs {
   column: TableResultColumn;
+  foreignKeyReferences?: readonly TableForeignKeyReference[] | undefined;
   isFrozen: boolean;
   onCopyName: () => void;
+  onOpenForeignKeyReference?: (
+    reference: TableForeignKeyReference,
+    row: GridRow,
+    sourceColumn: string
+  ) => void;
   onSortAsc: () => void;
   onSortDesc: () => void;
   onToggleFreeze: () => void;
@@ -48,7 +59,9 @@ function estimateHeaderWidth(
 
 function buildColumn({
   column,
+  foreignKeyReferences = [],
   isFrozen,
+  onOpenForeignKeyReference,
   onCopyName,
   onSortAsc,
   onSortDesc,
@@ -59,6 +72,10 @@ function buildColumn({
 }: BuildColumnArgs): Column<GridRow> {
   const columnKey = column.columnName;
   const isPrimaryKey = pkColumnSet.has(columnKey);
+  const columnForeignKeyReferences = foreignKeyReferencesForColumn(
+    foreignKeyReferences,
+    columnKey
+  );
   const width = estimateHeaderWidth(
     column,
     isPrimaryKey,
@@ -74,6 +91,18 @@ function buildColumn({
       const cell = getGridCell(row, column);
       if (cell === undefined) {
         return null;
+      }
+      const foreignKeyReference = columnForeignKeyReferences[0];
+      if (foreignKeyReference && onOpenForeignKeyReference) {
+        return (
+          <ForeignKeyDataCell
+            cell={cell}
+            column={column}
+            onOpen={() =>
+              onOpenForeignKeyReference(foreignKeyReference, row, columnKey)
+            }
+          />
+        );
       }
       return <DataCell cell={cell} column={column} />;
     },

@@ -30,6 +30,7 @@ import {
 import { useEffect, useId, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
+import type { TableForeignKeyReference } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
 import { SearchEmptyState } from "@/components/search-empty-state";
@@ -1357,6 +1358,33 @@ function deriveTableKeyRows(
   }
   return sortTableKeyRows([...rows, ...secondaryIndexRows]);
 }
+
+function deriveForeignKeyReferences(
+  constraints: readonly TableConstraint[] | undefined
+): TableForeignKeyReference[] {
+  if (!constraints) {
+    return [];
+  }
+  return constraints.flatMap((constraint) => {
+    if (
+      constraint.type !== ConstraintType.FOREIGN_KEY ||
+      !constraint.referencedTable ||
+      constraint.columnNames.length === 0 ||
+      constraint.columnNames.length !== constraint.referencedColumnNames.length
+    ) {
+      return [];
+    }
+    return [
+      {
+        constraintName: constraint.constraintName,
+        sourceColumns: constraint.columnNames,
+        targetColumns: constraint.referencedColumnNames,
+        targetTableName: constraint.referencedTable,
+      },
+    ];
+  });
+}
+
 const keyColumns: DataTableColumnDef<TableKeyRow>[] = [
   {
     accessorFn: (row) => row.kindLabel,
@@ -4357,6 +4385,7 @@ function TableDetail({
   databaseId,
   initialTab = "data",
   instanceId,
+  onOpenReferencedTable,
   onTabChange,
   schemaName,
   table,
@@ -4365,6 +4394,7 @@ function TableDetail({
   databaseId: string;
   initialTab?: string | undefined;
   instanceId: string;
+  onOpenReferencedTable?: ((tableName: string) => void) | undefined;
   onTabChange?: ((tab: TableDetailTab) => void) | undefined;
   schemaName: string;
   table: TableProto | undefined;
@@ -4420,6 +4450,9 @@ function TableDetail({
           indexesQuery.data.indexes
         )
       : undefined;
+  const foreignKeyReferences = deriveForeignKeyReferences(
+    constraintsQuery.data?.constraints
+  );
   const tabCounts: Record<TableDetailTab, number | undefined> = {
     columns: columnCount,
     constraints: constraintsQuery.data?.constraints.length,
@@ -4434,7 +4467,12 @@ function TableDetail({
     triggers: triggersQuery.data?.triggers.length,
   };
   return (
-    <TableDataGrid key={tableResourceName} name={tableResourceName}>
+    <TableDataGrid
+      foreignKeyReferences={foreignKeyReferences}
+      key={tableResourceName}
+      name={tableResourceName}
+      onOpenReferencedTable={onOpenReferencedTable}
+    >
       {({ grid, lastFetchedLabel }) => (
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-4 pb-6">
           <TableDetailHeader
