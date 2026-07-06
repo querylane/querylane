@@ -1,5 +1,6 @@
+import { Code, ConnectError } from "@connectrpc/connect";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -35,6 +36,20 @@ function createMediaQueryList({
 }
 
 const mocks = vi.hoisted(() => ({
+  getSchemaQuery: {
+    data: undefined as
+      | {
+          schema: {
+            displayName: string;
+            name: string;
+            owner: string;
+          };
+        }
+      | undefined,
+    error: null as Error | null,
+    isFetching: false,
+    isLoading: false,
+  },
   navigate: vi.fn(),
   prefetchRouteQueryOnIntent: vi.fn(),
   schemasQuery: {
@@ -109,7 +124,7 @@ vi.mock("@connectrpc/connect-query", () => ({
 
 vi.mock("@/hooks/api/schema", () => ({
   schemasForDatabaseQueryInput: vi.fn((input) => input),
-  useGetSchemaQuery: () => ({ data: undefined }),
+  useGetSchemaQuery: () => mocks.getSchemaQuery,
   useListSchemasInfiniteQuery: () => mocks.schemasQuery,
 }));
 
@@ -171,6 +186,10 @@ function renderExplorer(search: DataExplorerSearch = {}) {
 }
 
 beforeEach(() => {
+  mocks.getSchemaQuery.data = undefined;
+  mocks.getSchemaQuery.error = null;
+  mocks.getSchemaQuery.isFetching = false;
+  mocks.getSchemaQuery.isLoading = false;
   mocks.schemasQuery.data = { pages: [{ schemas: [] }] };
   mocks.schemasQuery.error = new Error("schema rpc failed");
   mocks.schemasQuery.isFetching = false;
@@ -246,6 +265,54 @@ describe("DataExplorerPage", () => {
     expect(
       screen.getByRole("complementary", { name: "Database objects" })
     ).toBeTruthy();
+  });
+
+  it("replaces stale schema search with a schema from the current database", async () => {
+    setMatchMedia(true);
+    mocks.getSchemaQuery.error = new ConnectError(
+      "schema not found",
+      Code.NotFound
+    );
+    mocks.schemasQuery.data = {
+      pages: [
+        {
+          schemas: [
+            {
+              displayName: "public",
+              name: "instances/inst-1/databases/db-1/schemas/public",
+              owner: "app_owner",
+            },
+          ],
+        },
+      ],
+    };
+    mocks.schemasQuery.error = null;
+    mocks.tablesQuery.data = { pages: [{ tables: [] }] };
+
+    renderExplorer({ q: "account", schema: "not-valid-schema" });
+
+    expect(screen.queryByText("Schema not found.")).toBeNull();
+    expect(
+      screen.queryByText("The linked schema or resource could not be loaded.")
+    ).toBeNull();
+    expect(screen.getByRole("heading", { name: "public" })).toBeTruthy();
+
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledTimes(1));
+    const navigation = mocks.navigate.mock.calls[0]?.[0];
+    expect(navigation).toMatchObject({
+      params: { databaseId: "db-1", instanceId: "inst-1" },
+      replace: true,
+      to: "/instances/$instanceId/databases/$databaseId/explorer",
+    });
+    expect(
+      navigation.search({ q: "account", schema: "not-valid-schema" })
+    ).toEqual({
+      category: undefined,
+      name: undefined,
+      q: "account",
+      schema: "public",
+      tab: undefined,
+    });
   });
 
   it("renders formatted table sizes in the sidebar table list", () => {

@@ -72,8 +72,14 @@ function useDataExplorerPageController({
     Set<CategoryKey>
   >(() => new Set<CategoryKey>(["tables", "views"]));
 
-  const { activeSchema, schemas, schemasQuery, selectedSchemaError } =
-    useExplorerSchemaState({ databaseId, instanceId, search });
+  const {
+    activeSchema,
+    schemas,
+    schemaSearchNeedsReset,
+    schemasQuery,
+    selectedSchemaError,
+  } = useExplorerSchemaState({ databaseId, instanceId, search });
+  const activeSchemaName = activeSchema?.name;
 
   const selection = selectionFromSearch(search);
   const listFilter = buildNameContainsFilter(debouncedQuery);
@@ -148,6 +154,30 @@ function useDataExplorerPageController({
     [databaseId, debouncedQuery, instanceId, navigate, search.q]
   );
 
+  useEffect(
+    function replaceStaleSchemaSearch() {
+      if (!(schemaSearchNeedsReset && activeSchemaName)) {
+        return;
+      }
+      handleNavigationResult(
+        navigate({
+          params: { databaseId, instanceId },
+          replace: true,
+          search: (previous) =>
+            buildExplorerSearch(previous, {
+              category: undefined,
+              name: undefined,
+              schema: activeSchemaName,
+              tab: undefined,
+            }),
+          to: "/instances/$instanceId/databases/$databaseId/explorer",
+        }),
+        { area: "data-explorer.schema-search" }
+      );
+    },
+    [activeSchemaName, databaseId, instanceId, navigate, schemaSearchNeedsReset]
+  );
+
   const onResourceIntent = (category: CategoryKey, name: string) => {
     if (!(activeSchema && category === "tables")) {
       return;
@@ -214,7 +244,7 @@ function useDataExplorerPageController({
       updateSearch({
         category,
         name,
-        schema: activeSchema?.name,
+        schema: activeSchemaName,
         tab:
           category === "tables" && isTableDetailTab(search.tab)
             ? search.tab
@@ -233,7 +263,7 @@ function useDataExplorerPageController({
       updateSearch({
         category: undefined,
         name: undefined,
-        schema: activeSchema?.name,
+        schema: activeSchemaName,
         tab: undefined,
       });
     },

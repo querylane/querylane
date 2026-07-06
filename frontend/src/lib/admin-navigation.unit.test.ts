@@ -60,6 +60,33 @@ describe("admin navigation", () => {
     });
   });
 
+  test("clears page-local explorer search when changing databases on the same page", () => {
+    expect(
+      buildCanonicalAdminSearch(
+        {
+          category: "tables",
+          name: "orders",
+          q: "ord",
+          schema: "analytics",
+          tab: "columns",
+        },
+        {
+          clearPageSearch: true,
+          currentPage: "database.explorer",
+          targetPage: "database.explorer",
+        }
+      )
+    ).toEqual({
+      category: undefined,
+      name: undefined,
+      page: undefined,
+      q: undefined,
+      schema: undefined,
+      sort: undefined,
+      tab: undefined,
+    });
+  });
+
   test("builds route-level redirect for legacy page search links", () => {
     expect(
       resolveLegacyAdminPageRedirect({

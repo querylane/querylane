@@ -1,3 +1,4 @@
+import { Code, ConnectError } from "@connectrpc/connect";
 import {
   getItemsForCategory,
   pickDefaultSchema,
@@ -70,20 +71,28 @@ function useExplorerSchemaState({
   const fetchedRequestedSchema = schemaSummaryFromQuery(
     selectedSchemaQuery.data?.schema
   );
-  const selectedSchemaError =
+  const fallbackSchema = pickDefaultSchema(schemas);
+  const requestedSchemaError =
     search.schema && !requestedSchema && selectedSchemaQuery.error
       ? selectedSchemaQuery.error
       : undefined;
+  const schemaSearchNeedsReset = Boolean(
+    fallbackSchema && isNotFoundError(requestedSchemaError)
+  );
+  const selectedSchemaError = schemaSearchNeedsReset
+    ? undefined
+    : requestedSchemaError;
 
   return {
     activeSchema: resolveActiveSchema({
-      fallbackSchema: pickDefaultSchema(schemas),
+      fallbackSchema,
       fetchedRequestedSchema,
       hasSchemaSearch: Boolean(search.schema),
       requestedSchema,
       selectedSchemaError,
       selectedSchemaQuery,
     }),
+    schemaSearchNeedsReset,
     schemas,
     schemasQuery,
     selectedSchemaError,
@@ -298,6 +307,10 @@ function schemaSummaryFromQuery(
     name: schema.displayName || parseResourceLeafId(schema.name),
     owner: schema.owner,
   };
+}
+
+function isNotFoundError(error: unknown): boolean {
+  return error instanceof ConnectError && error.code === Code.NotFound;
 }
 
 function tableSummaries(

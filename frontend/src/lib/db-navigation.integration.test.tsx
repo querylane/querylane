@@ -263,5 +263,32 @@ describe("useNavigationCallbacks", () => {
       const updated = applySearchUpdater(navigations[0], { schema: "public" });
       expect(updated).toEqual({ page: undefined, schema: "public" });
     });
+
+    test("clears previous explorer search when switching databases on the same page", () => {
+      const { callbacks, navigations } = renderNavigationCallbacks({
+        currentPage: "database.explorer",
+        effDatabaseId: "analytics",
+        instanceId: "local",
+      });
+
+      callbacks.navigateToDatabase(buildDatabase("postgres"));
+
+      const updated = applySearchUpdater(navigations[0], {
+        category: "tables",
+        name: "orders",
+        q: "ord",
+        schema: "analytics",
+        tab: "columns",
+      });
+      expect(updated).toEqual({
+        category: undefined,
+        name: undefined,
+        page: undefined,
+        q: undefined,
+        schema: undefined,
+        sort: undefined,
+        tab: undefined,
+      });
+    });
   });
 });
