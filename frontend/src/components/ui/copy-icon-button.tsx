@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Copy } from "lucide-react";
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,15 +14,17 @@ const COPY_FEEDBACK_TIMEOUT_MS = 1500;
 
 interface CopyIconButtonProps {
   ariaLabel: string;
+  children?: ReactNode;
   className?: string;
   copiedLabel?: string;
-  size?: "icon-xs" | "icon-sm" | "icon";
+  size?: "icon-xs" | "icon-sm" | "icon" | "sm";
   value: string;
   variant?: "ghost" | "outline";
 }
 
 function CopyIconButton({
   ariaLabel,
+  children,
   className,
   copiedLabel = "Copied",
   size = "icon-xs",
@@ -57,6 +60,8 @@ function CopyIconButton({
     }
   };
 
+  const content = children ?? (copied ? <Check className="size-3 text-success" /> : <Copy className="size-3" />);
+
   return (
     <Tooltip>
       <TooltipTrigger
@@ -72,11 +77,7 @@ function CopyIconButton({
           />
         }
       >
-        {copied ? (
-          <Check className="size-3 text-success" />
-        ) : (
-          <Copy className="size-3" />
-        )}
+        {content}
       </TooltipTrigger>
       <TooltipContent>{copied ? copiedLabel : ariaLabel}</TooltipContent>
     </Tooltip>

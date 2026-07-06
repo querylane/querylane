@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/data-table-faceted-filter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import {
   type ColumnRow,
   deriveColumnRows,
@@ -1876,9 +1877,18 @@ function constraintSql(
     .join("\n");
 }
 
-function indexSql(indexes: TableIndex[], qualifiedTableName: string) {
+function indexSql({
+  backingConstraintNames,
+  indexes,
+  qualifiedTableName,
+}: {
+  backingConstraintNames: Set<string>;
+  indexes: TableIndex[];
+  qualifiedTableName: string;
+}) {
   return indexes
     .filter((index) => index.indexName)
+    .filter((index) => !backingConstraintNames.has(index.indexName))
     .map((index) => {
       const unique = index.isUnique ? "UNIQUE " : "";
       const method = index.method || "btree";
@@ -2000,10 +2010,11 @@ function deriveDefinitionSections({
   tableComment: string;
   triggers: TableTrigger[];
 }): DefinitionSection[] {
+  const { backingConstraintNames } = deriveConstraintKeyRows(constraints);
   const sections: DefinitionSection[] = [
     {
       content: createTableSql({ columns, qualifiedTableName }),
-      detail: `${qualifiedTableName} · ${columns.length.toLocaleString()} columns · pg_dump style`,
+      detail: `${qualifiedTableName} · ${columns.length.toLocaleString()} columns · reconstructed from pg_catalog`,
       id: "create-table",
       kind: "code",
       title: "Create table",
@@ -2019,7 +2030,11 @@ function deriveDefinitionSections({
       title: "Constraints",
     });
   }
-  const indexesText = indexSql(indexes, qualifiedTableName);
+  const indexesText = indexSql({
+    backingConstraintNames,
+    indexes,
+    qualifiedTableName,
+  });
   if (indexesText) {
     sections.push({
       content: indexesText,
@@ -2088,9 +2103,15 @@ function deriveDefinitionSections({
 function SchemaCodeBlock({ sql }: { sql: string }) {
   return (
     <div className="relative">
-      <pre className="overflow-x-auto whitespace-pre rounded-b-xl bg-muted/30 p-4 pr-10 font-mono text-[12px] text-foreground leading-relaxed">
-        {sql}
-      </pre>
+      <Textarea
+        aria-label="SQL definition"
+        className="block w-full resize-none overflow-x-auto whitespace-pre rounded-b-xl border-0 bg-muted/30 p-4 pr-10 font-mono text-[12px] text-foreground leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        readOnly={true}
+        rows={Math.max(sql.split("\n").length, 2)}
+        spellCheck={false}
+        value={sql}
+        wrap="off"
+      />
       <CopyIconButton
         ariaLabel="Copy SQL"
         className="absolute top-3 right-3"
@@ -2162,22 +2183,21 @@ function dependencyReferences(constraints: TableConstraint[]) {
 
 function dumpCommand({
   databaseId,
-  instanceId,
   qualifiedTableName,
   tableName,
 }: {
   databaseId: string;
-  instanceId: string;
   qualifiedTableName: string;
   tableName: string;
 }) {
-  return `pg_dump -h ${shellSingleQuote(
-    instanceId
-  )} \\\n  -U app_readonly -d ${shellSingleQuote(
-    databaseId
-  )} \\\n  --schema-only --no-owner --no-privileges \\\n  --table=${shellSingleQuote(qualifiedTableName)} > ${shellSingleQuote(
-    `${tableName}.sql`
-  )}`;
+  return [
+    'pg_dump -h "$POSTGRES_HOST" \\',
+    `  -U "$POSTGRES_ROLE" -d "\${DATABASE_NAME:-${databaseId}}" \\`,
+    "  --schema-only --no-owner --no-privileges \\",
+    `  --table=${shellSingleQuote(qualifiedTableName)} > ${shellSingleQuote(
+      `${tableName}.sql`
+    )}`,
+  ].join("\n");
 }
 
 function DefinitionCommandStep({
@@ -2202,9 +2222,15 @@ function DefinitionCommandStep({
           value={command}
         />
       </div>
-      <pre className="overflow-x-auto whitespace-pre-wrap p-3 font-mono text-[11px] leading-relaxed">
-        {command}
-      </pre>
+      <Textarea
+        aria-label={`${title} command`}
+        className="block w-full resize-none overflow-x-auto whitespace-pre-wrap border-0 bg-transparent p-3 font-mono text-[11px] leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        readOnly={true}
+        rows={Math.max(command.split("\n").length, 2)}
+        spellCheck={false}
+        value={command}
+        wrap="off"
+      />
     </div>
   );
 }
@@ -2220,30 +2246,22 @@ function ReproduceLocallyCard({
   schemaName: string;
   tableName: string;
 }) {
-  const createDatabaseCommand = `createdb -h localhost ${shellSingleQuote(databaseId)}`;
-  const restoreCommand = `psql -h localhost -d ${shellSingleQuote(
-    databaseId
-  )} \\\n  -f ${shellSingleQuote(`${tableName}.sql`)}`;
-  const allSteps = `${command}\n\n${createDatabaseCommand}\n\n${restoreCommand}`;
-  const [copyError, setCopyError] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopyAllSteps() {
-    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
-      setCopyError(true);
-      setCopied(false);
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(allSteps);
-      setCopyError(false);
-      setCopied(true);
-    } catch {
-      setCopyError(true);
-      setCopied(false);
-    }
-  }
+  const createDatabaseCommand = `createdb -h localhost "\${DATABASE_NAME:-${databaseId}}"`;
+  const restoreCommand = [
+    `psql -h localhost -d "\${DATABASE_NAME:-${databaseId}}" \\`,
+    `  -f ${shellSingleQuote(`${tableName}.sql`)}`,
+  ].join("\n");
+  const allSteps = [
+    "export POSTGRES_HOST=<host>",
+    "export POSTGRES_ROLE=<role>",
+    `export DATABASE_NAME=${shellSingleQuote(databaseId)}`,
+    "",
+    command,
+    "",
+    createDatabaseCommand,
+    "",
+    restoreCommand,
+  ].join("\n");
 
   return (
     <DefinitionSideCard icon={Terminal} title="Reproduce locally">
@@ -2255,11 +2273,8 @@ function ReproduceLocallyCard({
           <span className="px-2 py-1 text-muted-foreground">{schemaName}</span>
           <span className="px-2 py-1 text-muted-foreground">{databaseId}</span>
         </div>
-        <div className="flex h-8 items-center justify-between rounded-lg border bg-background px-3 text-sm">
-          <span>pg_dump — schema only (SQL)</span>
-          <span aria-hidden="true" className="text-muted-foreground">
-            ▾
-          </span>
+        <div className="flex min-h-8 items-center rounded-lg border bg-background px-3 py-1.5 text-sm">
+          <span>Template: pg_dump — schema only (SQL)</span>
         </div>
         <DefinitionCommandStep
           command={command}
@@ -2280,22 +2295,15 @@ function ReproduceLocallyCard({
           Related foreign key targets are not included with --table; dump the
           schema scope if you need them.
         </p>
-        <div>
-          <Button
-            className="w-full"
-            onClick={handleCopyAllSteps}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            {copied ? "Copied" : "Copy all steps"}
-          </Button>
-          {copyError ? (
-            <p className="mt-2 text-destructive text-xs" role="status">
-              Copy failed. Select the commands manually.
-            </p>
-          ) : null}
-        </div>
+        <CopyIconButton
+          ariaLabel="Copy all reproduce steps"
+          className="w-full"
+          size="sm"
+          value={allSteps}
+          variant="outline"
+        >
+          Copy all steps
+        </CopyIconButton>
       </div>
     </DefinitionSideCard>
   );
@@ -2310,7 +2318,6 @@ function DefinitionTab({
   constraintsQuery,
   databaseId,
   indexesQuery,
-  instanceId,
   partitionMetadataQuery,
   policiesQuery,
   schemaName,
@@ -2322,7 +2329,6 @@ function DefinitionTab({
   constraintsQuery: ReturnType<typeof useListTableConstraintsQuery>;
   databaseId: string;
   indexesQuery: ReturnType<typeof useListTableIndexesQuery>;
-  instanceId: string;
   partitionMetadataQuery: ReturnType<typeof useGetTablePartitionMetadataQuery>;
   policiesQuery: ReturnType<typeof useListTablePoliciesQuery>;
   schemaName: string;
@@ -2412,7 +2418,6 @@ function DefinitionTab({
   const references = dependencyReferences(constraintsQuery.data.constraints);
   const command = dumpCommand({
     databaseId,
-    instanceId,
     qualifiedTableName,
     tableName,
   });
@@ -2429,12 +2434,21 @@ function DefinitionTab({
           </span>
           <div className="ml-auto">
             <Button
-              onClick={toolbar.handleRetry}
+              disabled={toolbar.isRefreshing}
+              onClick={toolbar.handleRefresh}
               size="sm"
               type="button"
               variant="outline"
             >
-              <RefreshCw data-icon="inline-start" />
+              <RefreshCw
+                aria-hidden="true"
+                className={cn(
+                  "size-3.5",
+                  toolbar.isRefreshing &&
+                    "animate-spin motion-reduce:animate-none"
+                )}
+                data-icon="inline-start"
+              />
               Refresh
             </Button>
           </div>
@@ -2447,7 +2461,7 @@ function DefinitionTab({
         <DefinitionSideCard
           action={<Badge variant="secondary">Not configured</Badge>}
           icon={GitCompareArrows}
-          title="Drift vs staging-core"
+          title="Drift detection"
         >
           <p className="text-muted-foreground text-sm leading-relaxed">
             Compare environments when drift data is connected.
@@ -2709,7 +2723,6 @@ function TableDetail({
                 constraintsQuery={constraintsQuery}
                 databaseId={databaseId}
                 indexesQuery={indexesQuery}
-                instanceId={instanceId}
                 partitionMetadataQuery={partitionMetadataQuery}
                 policiesQuery={policiesQuery}
                 schemaName={schemaName}
