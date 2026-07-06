@@ -828,7 +828,12 @@ test("data explorer table indexes constraints policies and triggers stay readabl
   const constraintFilterBar = requireFacetFilterBar("constraint facet filters");
   expect(constraintFilterBar.textContent).toContain("Kind");
   await page.getByRole("button", { exact: true, name: "Kind" }).click();
-  await page.getByRole("option", { exact: true, name: "PRIMARY KEY" }).click();
+  const primaryKeyOption = page.getByRole("option", {
+    exact: true,
+    name: "PRIMARY KEY",
+  });
+  await expect.element(primaryKeyOption).toBeVisible();
+  await primaryKeyOption.click();
   const kindFilter = page
     .getByRole("button", { exact: true, name: "Kind PRIMARY KEY" })
     .element();

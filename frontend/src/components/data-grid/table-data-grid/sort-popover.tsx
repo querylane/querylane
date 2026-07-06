@@ -63,9 +63,9 @@ function SortPopover({
     ),
     MAX_SORT_COLUMN_WIDTH_CH
   );
-  const popoverStyle = {
+  const popoverStyle: SortPopoverStyle = {
     "--sort-column-select-width": `${columnSelectWidthCh}ch`,
-  } satisfies SortPopoverStyle;
+  };
   function updateAt(index: number, next: SortColumn) {
     const updated = sortColumns.slice();
     updated[index] = next;

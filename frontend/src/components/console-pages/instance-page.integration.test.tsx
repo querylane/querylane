@@ -89,7 +89,11 @@ const state = vi.hoisted(() => ({
   navigate: vi.fn(async () => undefined),
   navigateToDatabase: vi.fn(),
   overviewData: undefined as GetInstanceOverviewResponse | undefined,
-  queryClient: { tag: "query-client" },
+  queryClient: {
+    getQueryState: vi.fn(() => undefined),
+    prefetchQuery: vi.fn(async () => undefined),
+    tag: "query-client",
+  },
   refetchExtensions: vi.fn(async () => ({})),
   refetchInstance: vi.fn(async () => ({})),
   refreshAllInstancesCache: vi.fn(
@@ -411,6 +415,10 @@ beforeEach(() => {
   state.navigate.mockClear();
   state.navigateToDatabase.mockClear();
   state.overviewData = undefined;
+  state.queryClient.getQueryState.mockReset();
+  state.queryClient.getQueryState.mockReturnValue(undefined);
+  state.queryClient.prefetchQuery.mockReset();
+  state.queryClient.prefetchQuery.mockResolvedValue(undefined);
   state.refetchExtensions.mockReset();
   state.refetchExtensions.mockResolvedValue({});
   state.refetchInstance.mockReset();
