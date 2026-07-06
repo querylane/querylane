@@ -1,0 +1,99 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "scope": "full",
+  "lint": true,
+  "deadCode": true,
+  "warnings": true,
+  "blocking": "warning",
+  "respectInlineDisables": false,
+  "adoptExistingLintConfig": true,
+  "ignore": {
+    "files": [
+      "src/components/ui/**",
+      "src/protogen/**",
+      "src/routeTree.gen.ts",
+      "**/*.gen.ts",
+      "**/*.gen.tsx",
+      "**/*_pb.ts",
+      "**/*_pb.js",
+      "**/*_connectquery.ts",
+      "**/*_connectquery.js",
+      "dist/**",
+      "build/**",
+      "out/**",
+      "coverage/**",
+      ".nyc_output/**",
+      "playwright-report/**",
+      "test-results/**",
+      "e2e/playwright-report/**",
+      "e2e/test-results/**",
+      "src/components/querylane-ui/**"
+    ],
+    "rules": [],
+    "overrides": [],
+    "tags": []
+  },
+  "categories": {
+    "Security": "error",
+    "Bugs": "error",
+    "Performance": "error",
+    "Accessibility": "error",
+    "Maintainability": "error"
+  },
+  "buckets": {
+    "compiler-cleanup": "error"
+  },
+  "surfaces": {
+    "prComment": {
+      "includeTags": ["design"]
+    },
+    "score": {
+      "includeTags": ["design"]
+    },
+    "ciFailure": {
+      "includeTags": ["design"]
+    }
+  },
+  "rules": {
+    "react-doctor/design-no-em-dash-in-jsx-text": "error",
+    "react-doctor/design-no-redundant-padding-axes": "error",
+    "react-doctor/design-no-redundant-size-axes": "error",
+    "react-doctor/design-no-space-on-flex-children": "error",
+    "react-doctor/design-no-three-period-ellipsis": "error",
+    "react-doctor/design-no-vague-button-label": "error",
+    "react-doctor/display-name": "error",
+    "react-doctor/forbid-component-props": "off",
+    "react-doctor/hook-use-state": "error",
+    "react-doctor/jsx-boolean-value": "off",
+    "react-doctor/jsx-curly-brace-presence": "error",
+    "react-doctor/jsx-filename-extension": "error",
+    "react-doctor/jsx-fragments": "error",
+    "react-doctor/jsx-handler-names": "error",
+    "react-doctor/jsx-no-useless-fragment": "error",
+    "react-doctor/jsx-pascal-case": "error",
+    "react-doctor/jsx-props-no-spreading": "off",
+    "react-doctor/no-array-index-key": "error",
+    "react-doctor/no-clone-element": "error",
+    "react-doctor/no-danger": "error",
+    "react-doctor/no-dark-mode-glow": "error",
+    "react-doctor/no-default-props": "error",
+    "react-doctor/no-generic-handler-names": "error",
+    "react-doctor/no-gradient-text": "error",
+    "react-doctor/no-justified-text": "error",
+    "react-doctor/no-prop-types": "error",
+    "react-doctor/no-pure-black-background": "error",
+    "react-doctor/no-react-children": "error",
+    "react-doctor/no-set-state": "error",
+    "react-doctor/no-side-tab-border": "error",
+    "react-doctor/no-unescaped-entities": "error",
+    "react-doctor/no-wide-letter-spacing": "error",
+    "react-doctor/no-z-index-9999": "error",
+    "react-doctor/prefer-es6-class": "error",
+    "react-doctor/prefer-function-component": "error",
+    "react-doctor/react-in-jsx-scope": "off",
+    "react-doctor/rn-animate-layout-property": "error",
+    "react-doctor/rn-prefer-content-inset-adjustment": "error",
+    "react-doctor/self-closing-comp": "error",
+    "react-doctor/state-in-constructor": "error"
+  }
+}

@@ -8,7 +8,7 @@ interface DangerZoneAction {
   description: ReactNode;
   disabled?: boolean;
   disabledReason?: string | null;
-  onAction: () => void;
+  handleClick: () => void;
   title: string;
 }
 interface DangerZoneSectionProps {
@@ -58,7 +58,7 @@ function DangerZoneSection({
               <DisabledReasonButton
                 disabled={action.disabled}
                 disabledReason={disabledReason}
-                onClick={action.onAction}
+                onClick={action.handleClick}
                 size="sm"
                 variant="destructive"
               >

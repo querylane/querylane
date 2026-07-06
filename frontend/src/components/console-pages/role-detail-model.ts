@@ -51,7 +51,7 @@ interface RoleDetailViewProps {
   belongsTo: RelatedRole[];
   builtinInfo: PredefinedRoleInfo | null;
   builtinParentDetails: BuiltinParent[];
-  commentLine: React.ReactNode;
+  comment: string;
   connLimitSub: string | undefined;
   databases: { id: string; name: string }[];
   defaultPrivileges: RoleDefaultPrivilege[];

@@ -93,16 +93,16 @@ function BuiltinPowersCard({
               <span className="min-w-0 flex-1 font-medium text-sm">{line}</span>
               <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 font-medium text-[11px] text-amber-700 dark:text-amber-400">
                 <Lock className="size-3" />
-                Can't revoke
+                Can&apos;t revoke
               </span>
             </div>
           ))}
         </div>
       ) : (
         <p className="px-6 text-muted-foreground text-sm">
-          Grants implicit privileges to its members. This role isn't in our
-          catalogue, so the exact set isn't listed here; check the PostgreSQL
-          documentation for your server version.
+          Grants implicit privileges to its members. This role isn&apos;t in our
+          catalogue, so the exact set isn&apos;t listed here; check the
+          PostgreSQL documentation for your server version.
         </p>
       )}
 
@@ -150,7 +150,7 @@ function BuiltinPowersCard({
               <span className="font-medium text-foreground">
                 Built-in privilege.
               </span>{" "}
-              Enforced by PostgreSQL's{" "}
+              Enforced by PostgreSQL&apos;s{" "}
               <span className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
                 has_*_privilege()
               </span>{" "}
@@ -158,8 +158,8 @@ function BuiltinPowersCard({
               <span className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
                 GRANT
               </span>{" "}
-              rows, so there's nothing to inspect or revoke. Membership is the
-              only switch.
+              rows, so there&apos;s nothing to inspect or revoke. Membership is
+              the only switch.
             </p>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {builtinInfo ? (

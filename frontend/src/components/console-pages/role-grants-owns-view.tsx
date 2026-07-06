@@ -283,8 +283,8 @@ function OwnsDescription({
   if (isEmpty) {
     return (
       <>
-        <span className="font-mono text-foreground/80">{roleName}</span> doesn't
-        own any objects in{" "}
+        <span className="font-mono text-foreground/80">{roleName}</span>{" "}
+        doesn&apos;t own any objects in{" "}
         <span className="font-mono text-foreground/80">{databaseName}</span>{" "}
         today. Ownership still matters: anything this role creates becomes owned
         by it.
@@ -332,9 +332,10 @@ export function OwnsGrantsView({
         countUnit="object"
         icon={Crown}
         iconClassName="text-amber-500 dark:text-amber-400"
-        tag={<ImplicitTag />}
         title="Owns"
-      />
+      >
+        <ImplicitTag />
+      </ContentHead>
       <p className="-mt-1 max-w-[680px] pb-5 text-muted-foreground text-sm leading-relaxed">
         <OwnsDescription
           databaseName={databaseName}

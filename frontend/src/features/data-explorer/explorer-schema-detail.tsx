@@ -274,14 +274,14 @@ function SchemaObjectFilterBar({
 }) {
   const filters = [
     {
+      handleSelectedValuesChange: onKindFiltersChange,
       label: "Kind",
-      onChange: onKindFiltersChange,
       options: kindOptions,
       selectedValues: kindFilters,
     },
     {
+      handleSelectedValuesChange: onOwnerFiltersChange,
       label: "Owner",
-      onChange: onOwnerFiltersChange,
       options: ownerOptions,
       selectedValues: ownerFilters,
     },
@@ -302,7 +302,7 @@ function SchemaObjectFilterBar({
       {filters.map((filter) => (
         <DataTableFacetedFilter
           key={filter.label}
-          onSelectedValuesChange={filter.onChange}
+          onSelectedValuesChange={filter.handleSelectedValuesChange}
           options={filter.options}
           selectedValues={filter.selectedValues}
           title={filter.label}
@@ -313,7 +313,7 @@ function SchemaObjectFilterBar({
           className="h-8 px-2 text-xs"
           onClick={() => {
             for (const filter of filters) {
-              filter.onChange([]);
+              filter.handleSelectedValuesChange([]);
             }
           }}
           size="sm"

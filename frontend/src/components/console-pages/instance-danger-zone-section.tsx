@@ -31,7 +31,7 @@ export function InstanceDangerZoneSection({
           ),
           disabled: deleteDisabled,
           disabledReason: deleteDisabledReason,
-          onAction: onDelete,
+          handleClick: onDelete,
           title: "Delete this instance",
         },
       ]}

@@ -20,7 +20,7 @@ import type { RoleAttributes } from "@/protogen/querylane/console/v1alpha1/role_
 function RoleHero({
   attributes,
   builtinInfo,
-  commentLine,
+  comment,
   expiry,
   isSystem,
   kind,
@@ -29,13 +29,16 @@ function RoleHero({
 }: {
   attributes: RoleAttributes | undefined;
   builtinInfo: PredefinedRoleInfo | null;
-  commentLine: React.ReactNode;
+  comment: string;
   expiry: ReturnType<typeof passwordExpiryStatus>;
   isSystem: boolean;
   kind: ReturnType<typeof deriveRoleKind>;
   ownedCount: number;
   roleName: string;
 }) {
+  const systemDescription =
+    builtinInfo?.summary ?? "Built-in PostgreSQL role — ships in the cluster.";
+
   return (
     <div className="flex items-start gap-4">
       <RoleAvatar kind={kind} size="lg" />
@@ -74,15 +77,14 @@ function RoleHero({
         {isSystem ? (
           <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
             <ShieldCheck className="size-3.5 shrink-0" />
-            <span>
-              {builtinInfo
-                ? builtinInfo.summary
-                : "Built-in PostgreSQL role — ships in the cluster."}
-            </span>
+            <span>{systemDescription}</span>
           </div>
-        ) : (
-          commentLine
-        )}
+        ) : null}
+        {!isSystem && comment ? (
+          <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+            <span>{comment}</span>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -121,7 +123,7 @@ function RoleDetailView(props: RoleDetailViewProps) {
       <RoleHero
         attributes={props.attributes}
         builtinInfo={builtinInfo}
-        commentLine={props.commentLine}
+        comment={props.comment}
         expiry={props.expiry}
         isSystem={isSystem}
         kind={props.kind}

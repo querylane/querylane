@@ -1399,7 +1399,7 @@ function TableDataGrid({
   // grey out and disable unchanged rows (the toolbar spinner covers those).
   const isRefetchingRows = isPlaceholderData && !gridLoading;
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [isDataGridExpanded, setDataGridExpanded] = useState(false);
+  const [isDataGridExpanded, setIsDataGridExpanded] = useState(false);
   const { selectedRows, setSelectedRows, updateSelectedRows } =
     useSelectedRowsUrlState({
       onSelectedRowsSearchChange,
@@ -1565,7 +1565,7 @@ function TableDataGrid({
     onSelectedCellChange: handleSelectedCellChange,
     onSelectedRowsChange: setSelectedRows,
     onSortChange: handleSortChange,
-    onToggleExpanded: () => setDataGridExpanded(true),
+    onToggleExpanded: () => setIsDataGridExpanded(true),
     queryError: queryStateError ?? error,
     resultColumns,
     rows,
@@ -1596,7 +1596,7 @@ function TableDataGrid({
         onCloseContextMenu={() => setContextMenu(null)}
         onContextMenuCopyCell={handleContextMenuCopyCell}
         onContextMenuCopyRow={handleContextMenuCopyRow}
-        onDataGridExpandedChange={setDataGridExpanded}
+        onDataGridExpandedChange={setIsDataGridExpanded}
         openRowIndex={openRowIndex}
         pkColumnSet={pkColumnSet}
         resultColumns={resultColumns}

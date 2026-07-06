@@ -223,7 +223,7 @@ function hasVisibleCategoryResource({
 
 function ResourceListLoadingSkeleton() {
   return (
-    <div className="space-y-3 px-2 py-2" data-testid="resource-list-loading">
+    <div className="space-y-3 p-2" data-testid="resource-list-loading">
       {CATEGORY_ORDER.map((category) => (
         <div className="space-y-1.5" key={category}>
           <div className="flex items-center gap-2 px-2 py-1">
@@ -439,17 +439,20 @@ function useResourceListVirtualizer({
   scrollElement: HTMLDivElement | null;
 }): Virtualizer<HTMLDivElement, Element> {
   const rerender = useReducer((tick: number) => tick + 1, 0)[1];
-  const [virtualizer] = useState(
-    () =>
-      new Virtualizer<HTMLDivElement, Element>({
-        count: items.length,
-        estimateSize: (index) => estimateResourceListItemSize(items[index]),
-        getScrollElement: () => scrollElement,
-        observeElementOffset,
-        observeElementRect: observeResourceListRect,
-        scrollToFn: elementScroll,
-      })
+  const virtualizerRef = useRef<Virtualizer<HTMLDivElement, Element> | null>(
+    null
   );
+  if (virtualizerRef.current === null) {
+    virtualizerRef.current = new Virtualizer<HTMLDivElement, Element>({
+      count: items.length,
+      estimateSize: (index) => estimateResourceListItemSize(items[index]),
+      getScrollElement: () => scrollElement,
+      observeElementOffset,
+      observeElementRect: observeResourceListRect,
+      scrollToFn: elementScroll,
+    });
+  }
+  const virtualizer = virtualizerRef.current;
   virtualizer.setOptions({
     count: items.length,
     estimateSize: (index) => estimateResourceListItemSize(items[index]),
@@ -589,6 +592,8 @@ function ResourceListItem({
   item: VirtualResourceListItem;
 }) {
   const meta = CATEGORY_META[item.category];
+  const handleResourceIntent = controls.onResourceIntent;
+  const handleSelectResource = controls.onSelectResource;
   switch (item.kind) {
     case "category": {
       const isOpen = controls.isCategoryOpen(item.category);
@@ -617,8 +622,8 @@ function ResourceListItem({
           category={item.category}
           icon={meta.icon}
           item={item.item}
-          onResourceIntent={controls.onResourceIntent}
-          onSelectResource={controls.onSelectResource}
+          onResourceIntent={handleResourceIntent}
+          onSelectResource={handleSelectResource}
           query={controls.query}
           selection={controls.selection}
         />

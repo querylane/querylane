@@ -121,16 +121,14 @@ function DefaultsDrillView({ rules }: { rules: DefaultPrivilegeRule[] }) {
       <ContentHead
         icon={Clock}
         iconClassName="text-violet-600 dark:text-violet-300"
-        sub={
-          <>
-            <span className="font-mono text-foreground/75">
-              ALTER DEFAULT PRIVILEGES
-            </span>{" "}
-            rules that grant privileges on objects that don't exist yet.
-          </>
-        }
         title="Default privileges"
       />
+      <div className="-mt-3.5 pb-3.5 text-muted-foreground text-xs">
+        <span className="font-mono text-foreground/75">
+          ALTER DEFAULT PRIVILEGES
+        </span>{" "}
+        rules that grant privileges on objects that don&apos;t exist yet.
+      </div>
       <DefaultsBody rules={rules} />
     </div>
   );
@@ -145,9 +143,12 @@ function PublicDrillView({ objects }: { objects: GrantedObject[] }) {
         count={objects.length}
         icon={Globe}
         iconClassName="text-sky-600 dark:text-sky-400"
-        sub="Granted to every role in this database — including this one. Not unique to this role."
         title="Granted to PUBLIC"
       />
+      <div className="-mt-3.5 pb-3.5 text-muted-foreground text-xs">
+        Granted to every role in this database, including this one. Not unique
+        to this role.
+      </div>
       {objects.length === 0 ? (
         <GrantsEmptyState>
           No grants to{" "}
@@ -326,11 +327,11 @@ function CharacterBanner({
     return (
       <Alert>
         <ShieldAlert aria-hidden="true" />
-        <AlertTitle>Superuser: object grants don't gate access</AlertTitle>
+        <AlertTitle>Superuser: object grants don&apos;t gate access</AlertTitle>
         <AlertDescription>
           <span className="font-mono">{roleName}</span> bypasses every
-          permission check, so these grants don't determine what it can do. The
-          grants below are shown for audit. Revoke SUPERUSER for grant-level
+          permission check, so these grants don&apos;t determine what it can do.
+          The grants below are shown for audit. Revoke SUPERUSER for grant-level
           control.
         </AlertDescription>
       </Alert>
@@ -634,7 +635,7 @@ function GrantsSection({
       ) : null}
       {showOverviewChrome && kind === "group" ? (
         <p className="text-muted-foreground text-sm">
-          This role can't log in; its members inherit these grants.
+          This role can&apos;t log in; its members inherit these grants.
         </p>
       ) : null}
       {loadState ?? (

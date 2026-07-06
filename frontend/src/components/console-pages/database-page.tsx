@@ -94,8 +94,8 @@ interface CatalogLoadingColumn {
 }
 
 interface DatabaseOverviewFacetFilter {
+  handleSelectedValuesChange: (values: string[]) => void;
   label: string;
-  onChange: (values: string[]) => void;
   options: FacetedFilterOption[];
   selectedValues: string[];
 }
@@ -793,7 +793,7 @@ function DatabaseOverviewFilterBar({
       {visibleFilters.map((filter) => (
         <DataTableFacetedFilter
           key={filter.label}
-          onSelectedValuesChange={filter.onChange}
+          onSelectedValuesChange={filter.handleSelectedValuesChange}
           options={filter.options}
           selectedValues={filter.selectedValues}
           title={filter.label}
@@ -804,7 +804,7 @@ function DatabaseOverviewFilterBar({
           className="h-8 px-2 text-xs"
           onClick={() => {
             for (const filter of visibleFilters) {
-              filter.onChange([]);
+              filter.handleSelectedValuesChange([]);
             }
           }}
           size="sm"
@@ -846,26 +846,26 @@ function LargestObjectsSection({
   });
   const objectFacetFilters = [
     {
+      handleSelectedValuesChange: setKindFilters,
       label: "Kind",
-      onChange: setKindFilters,
       options: presentCatalogObjectKindOptions(objects),
       selectedValues: kindFilters,
     },
     {
+      handleSelectedValuesChange: setSystemFilters,
       label: "System",
-      onChange: setSystemFilters,
       options: presentCatalogObjectSystemOptions(objects),
       selectedValues: systemFilters,
     },
     {
+      handleSelectedValuesChange: setOwnerFilters,
       label: "Owner",
-      onChange: setOwnerFilters,
       options: presentCatalogObjectOwnerOptions(objects),
       selectedValues: ownerFilters,
     },
     {
+      handleSelectedValuesChange: setSchemaFilters,
       label: "Schema",
-      onChange: setSchemaFilters,
       options: presentCatalogObjectSchemaOptions(objects),
       selectedValues: schemaFilters,
     },
@@ -947,14 +947,14 @@ function SchemasSection({
   });
   const schemaFacetFilters = [
     {
+      handleSelectedValuesChange: setKindFilters,
       label: "System",
-      onChange: setKindFilters,
       options: presentCatalogSchemaKindOptions(schemas),
       selectedValues: kindFilters,
     },
     {
+      handleSelectedValuesChange: setOwnerFilters,
       label: "Owner",
-      onChange: setOwnerFilters,
       options: presentCatalogSchemaOwnerOptions(schemas),
       selectedValues: ownerFilters,
     },
@@ -1038,6 +1038,7 @@ function BackendDatabasePage({
   );
   const catalog = catalogQuery.data;
   const catalogPending = catalogQuery.isPending;
+  const handleCatalogRetry = catalogQuery.refetch;
 
   return (
     <ResourcePageState
@@ -1061,7 +1062,7 @@ function BackendDatabasePage({
           {catalogQuery.error ? (
             <CatalogErrorNotice
               error={catalogQuery.error}
-              onRetry={catalogQuery.refetch}
+              onRetry={handleCatalogRetry}
             />
           ) : null}
           <LargestObjectsSection

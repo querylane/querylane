@@ -58,7 +58,7 @@ export function AsyncSectionState({
   }
 
   if (!hasContent) {
-    return <>{emptyState}</>;
+    return emptyState;
   }
 
   return (

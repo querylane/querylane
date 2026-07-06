@@ -72,7 +72,7 @@ function ThemeProvider({
   storageKey = "querylane-ui-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(() =>
+  const [theme, setTheme] = useState<Theme>(() =>
     getInitialTheme(storageKey, defaultTheme)
   );
   const systemTheme = useSyncExternalStore(
@@ -97,7 +97,7 @@ function ThemeProvider({
 
   const updateTheme = (newTheme: Theme) => {
     getThemeStorage()?.setItem(storageKey, newTheme);
-    setThemeState(newTheme);
+    setTheme(newTheme);
   };
 
   const value: ThemeProviderState = {

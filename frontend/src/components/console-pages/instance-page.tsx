@@ -4,7 +4,7 @@ import { useTransport } from "@connectrpc/connect-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Database, RefreshCw, X } from "lucide-react";
-import { useState } from "react";
+import { type Dispatch, type SetStateAction, useState } from "react";
 import { toast } from "sonner";
 import { AsyncSectionState } from "@/components/async-section-state";
 import { MetricSparkline } from "@/components/charts/metric-chart";
@@ -126,6 +126,7 @@ type InstanceSection = "configuration" | "overview";
 interface OverviewLiveData {
   /** The server's max_connections, drawn as a threshold on the chart. */
   connectionsMax: number | undefined;
+  handleRangeChange: (rangeHours: number) => void;
   health: InstanceHealth | undefined;
   healthPartialErrors: Status[] | undefined;
   healthPending: boolean;
@@ -135,14 +136,13 @@ interface OverviewLiveData {
   /** True while a range switch is showing the previous window's data. */
   metricsRefreshing: boolean;
   metricsResponse: QueryMetricsResponse | undefined;
-  onMetricsRangeChange: (rangeHours: number) => void;
   /** The window before metricsResponse's, for the comparison overlay. */
   previousMetricsResponse: QueryMetricsResponse | undefined;
 }
 type DatabaseRow = ReturnType<typeof useDb>["databases"][number];
 interface DatabaseFacetFilter {
+  handleSelectedValuesChange: (values: string[]) => void;
   label: string;
-  onChange: (values: string[]) => void;
   options: FacetedFilterOption[];
   selectedValues: string[];
 }
@@ -350,23 +350,22 @@ function CoreInstanceStatsBar({
 }) {
   const connectionPct = getConnectionPct(overview);
   const metricSeries = seriesByMetric(metricsResponse);
-
   return (
     <InstanceStatsBar>
       <InstanceStatItem
         label="Connections"
         notice={getMetricNotice(metricPartialErrors, "connections")}
         progress={connectionPct}
-        suffix={
-          overview?.connections
-            ? `/ ${overview.connections.maxConnections}`
-            : undefined
-        }
-        trend={
+        renderTrend={() => (
           <StatSparkline
             color={CHART_COLORS[2].color}
             series={metricSeries.get(MetricId.CONNECTIONS_TOTAL)}
           />
+        )}
+        suffix={
+          overview?.connections
+            ? `/ ${overview.connections.maxConnections}`
+            : undefined
         }
       >
         <StatValue>
@@ -376,12 +375,12 @@ function CoreInstanceStatsBar({
       <InstanceStatItem
         label="Cache Hit Ratio"
         notice={getMetricNotice(metricPartialErrors, "cache")}
-        trend={
+        renderTrend={() => (
           <StatSparkline
             color={CHART_COLORS[3].color}
             series={metricSeries.get(MetricId.CACHE_HIT_RATIO)}
           />
-        }
+        )}
       >
         <StatValue>
           {overview?.cache
@@ -392,12 +391,12 @@ function CoreInstanceStatsBar({
       <InstanceStatItem
         label="Storage"
         notice={getMetricNotice(metricPartialErrors, "storage")}
-        trend={
+        renderTrend={() => (
           <StatSparkline
             color="var(--color-muted-foreground)"
             series={metricSeries.get(MetricId.STORAGE_TOTAL_BYTES)}
           />
-        }
+        )}
       >
         <StatValue>
           {overview?.storage
@@ -670,7 +669,7 @@ function InstanceDatabaseFilterBar({
       {visibleFilters.map((filter) => (
         <DataTableFacetedFilter
           key={filter.label}
-          onSelectedValuesChange={filter.onChange}
+          onSelectedValuesChange={filter.handleSelectedValuesChange}
           options={filter.options}
           selectedValues={filter.selectedValues}
           title={filter.label}
@@ -681,7 +680,7 @@ function InstanceDatabaseFilterBar({
           className="h-8 px-2 text-xs"
           onClick={() => {
             for (const filter of visibleFilters) {
-              filter.onChange([]);
+              filter.handleSelectedValuesChange([]);
             }
           }}
           size="sm"
@@ -725,20 +724,20 @@ function InstanceOverviewSection({
   });
   const databaseFacetFilters = [
     {
+      handleSelectedValuesChange: setOwnerFilters,
       label: "Owner",
-      onChange: setOwnerFilters,
       options: presentDatabaseOwnerOptions(databases),
       selectedValues: ownerFilters,
     },
     {
+      handleSelectedValuesChange: setEncodingFilters,
       label: "Encoding",
-      onChange: setEncodingFilters,
       options: presentDatabaseEncodingOptions(databases),
       selectedValues: encodingFilters,
     },
     {
+      handleSelectedValuesChange: setKindFilters,
       label: "Kind",
-      onChange: setKindFilters,
       options: presentDatabaseKindOptions(databases),
       selectedValues: kindFilters,
     },
@@ -841,7 +840,7 @@ function InstanceOverviewContent({
             isError={liveData.metricsError}
             isPending={liveData.metricsPending}
             isRefreshing={liveData.metricsRefreshing}
-            onRangeChange={liveData.onMetricsRangeChange}
+            onRangeChange={liveData.handleRangeChange}
             previousResponse={liveData.previousMetricsResponse}
             range={liveData.metricsRange}
             response={liveData.metricsResponse}
@@ -895,6 +894,235 @@ function getInstanceConfigSaveFieldViolationOutcome(error: unknown): {
       variant: "error",
     },
   };
+}
+
+type FormNotice = { message: string; variant: "error" | "success" } | null;
+type InstanceSaveResult =
+  | {
+      fieldErrors: InstanceFormErrors;
+      firstInvalidField: InstanceFormInvalidFieldName | null;
+    }
+  | undefined;
+interface RefetchableQuery {
+  refetch: () => Promise<unknown>;
+}
+
+function refetchInstancePageQuery(query: RefetchableQuery, area: string) {
+  query.refetch().catch((error: unknown) => {
+    handleQueryActionError(error, {
+      action: "retry",
+      area,
+    });
+  });
+}
+
+function refreshInstancePageData({
+  configuredDatabase,
+  extensionsQuery,
+  healthQuery,
+  instanceQuery,
+  isConnected,
+  metricsQuery,
+  overviewQuery,
+  previousMetricsQuery,
+  retryInstanceCatalog,
+  section,
+  setMetricsAnchorMs,
+  showOverviewLiveData,
+}: {
+  configuredDatabase: string;
+  extensionsQuery: RefetchableQuery;
+  healthQuery: RefetchableQuery;
+  instanceQuery: RefetchableQuery;
+  isConnected: boolean;
+  metricsQuery: RefetchableQuery;
+  overviewQuery: RefetchableQuery;
+  previousMetricsQuery: RefetchableQuery;
+  retryInstanceCatalog: () => Promise<unknown>;
+  section: InstanceSection;
+  setMetricsAnchorMs: Dispatch<SetStateAction<number>>;
+  showOverviewLiveData: boolean;
+}) {
+  refetchInstancePageQuery(instanceQuery, "console.instance");
+  if (isConnected) {
+    refetchInstancePageQuery(overviewQuery, "console.instance.overview");
+  }
+  if (showOverviewLiveData) {
+    // Advance the metrics window to "now" — a plain refetch would re-query
+    // the identical frozen interval and charts would never move forward.
+    setMetricsAnchorMs(quantizedMetricsAnchor());
+    refetchInstancePageQuery(metricsQuery, "console.instance.metrics");
+    refetchInstancePageQuery(previousMetricsQuery, "console.instance.metrics");
+    refetchInstancePageQuery(healthQuery, "console.instance.health");
+  }
+  if (isConnected && section === "overview" && configuredDatabase.length > 0) {
+    refetchInstancePageQuery(extensionsQuery, "console.instance.extensions");
+  }
+  retryInstanceCatalog().catch((error: unknown) => {
+    handleQueryActionError(error, {
+      action: "retry",
+      area: "console.instance.catalog",
+    });
+  });
+}
+
+async function saveInstanceConfiguration(
+  rawFormState: InstanceFormState,
+  {
+    instance,
+    instanceQuery,
+    isConfigManaged,
+    isConnected,
+    overviewQuery,
+    queryClient,
+    setConfigFormResetKey,
+    setFormNotice,
+    transport,
+    updateInstanceMutation,
+  }: {
+    instance: InstanceRecord | undefined;
+    instanceQuery: RefetchableQuery;
+    isConfigManaged: boolean;
+    isConnected: boolean;
+    overviewQuery: RefetchableQuery;
+    queryClient: ReturnType<typeof useQueryClient>;
+    setConfigFormResetKey: Dispatch<SetStateAction<number>>;
+    setFormNotice: Dispatch<SetStateAction<FormNotice>>;
+    transport: ReturnType<typeof useTransport>;
+    updateInstanceMutation: ReturnType<typeof useUpdateInstanceMutation>;
+  }
+): Promise<InstanceSaveResult> {
+  if (!instance || isConfigManaged) {
+    return;
+  }
+  // Trim once at the boundary so change detection and the payload use the
+  // same values that validation checks.
+  const formState = trimInstanceFormState(rawFormState);
+  const nextPort = parseInstanceFormPort(formState.port);
+  if (nextPort === null) {
+    return;
+  }
+  const updatePaths = buildInstanceUpdatePaths({
+    formState,
+    instance,
+    nextPort,
+  });
+  if (updatePaths.length === 0) {
+    return;
+  }
+  setFormNotice(null);
+  try {
+    await updateInstanceMutation.mutateAsync(
+      buildInstanceUpdateInput({
+        formState,
+        instance,
+        nextPort,
+        updatePaths,
+      })
+    );
+    setFormNotice({
+      message: "Instance configuration saved.",
+      variant: "success",
+    });
+    toast.success("Instance configuration saved");
+    // Keep the header instance switcher in sync with the saved changes.
+    runInstanceMutationFollowUp(
+      "refresh-instances",
+      refreshAllInstancesCache({
+        queryClient,
+        transport,
+      })
+    );
+    await instanceQuery.refetch();
+    // Remount the configuration form from the refetched instance so the
+    // redacted password returns to blank and dirty state clears.
+    setConfigFormResetKey((key) => key + 1);
+    if (isConnected) {
+      overviewQuery.refetch();
+    }
+  } catch (error) {
+    const fieldViolationOutcome =
+      getInstanceConfigSaveFieldViolationOutcome(error);
+    if (fieldViolationOutcome) {
+      setFormNotice(fieldViolationOutcome.notice);
+      return {
+        fieldErrors: fieldViolationOutcome.fieldErrors,
+        firstInvalidField: fieldViolationOutcome.firstInvalidField,
+      };
+    }
+
+    const uiError = normalizeAppUiError(error, {
+      action: "save instance configuration",
+      area: "console.instance.configuration",
+      source: "mutation",
+      surface: "inline",
+    });
+    setFormNotice({ message: uiError.message, variant: "error" });
+  }
+
+  return;
+}
+
+async function deleteInstanceFromPage({
+  deleteDisabledReason,
+  deleteInstanceMutation,
+  instance,
+  isConfigManaged,
+  navigate,
+  queryClient,
+  setFormNotice,
+  setIsDeleteDialogOpen,
+  transport,
+}: {
+  deleteDisabledReason: string | null;
+  deleteInstanceMutation: ReturnType<typeof useDeleteInstanceMutation>;
+  instance: InstanceRecord | undefined;
+  isConfigManaged: boolean;
+  navigate: ReturnType<typeof useNavigate>;
+  queryClient: ReturnType<typeof useQueryClient>;
+  setFormNotice: Dispatch<SetStateAction<FormNotice>>;
+  setIsDeleteDialogOpen: Dispatch<SetStateAction<boolean>>;
+  transport: ReturnType<typeof useTransport>;
+}) {
+  if (!instance || isConfigManaged) {
+    return;
+  }
+  if (deleteDisabledReason) {
+    setIsDeleteDialogOpen(false);
+    setFormNotice({
+      message: deleteDisabledReason,
+      variant: "error",
+    });
+    return;
+  }
+  setIsDeleteDialogOpen(false);
+  try {
+    await deleteInstanceMutation.mutateAsync({
+      name: instance.name,
+    });
+    runInstanceMutationFollowUp(
+      "navigate-home",
+      navigate({
+        replace: true,
+        to: "/",
+      })
+    );
+    runInstanceMutationFollowUp(
+      "refresh-instances",
+      refreshAllInstancesCache({
+        queryClient,
+        transport,
+      })
+    );
+  } catch (error) {
+    const uiError = normalizeAppUiError(error, {
+      action: "delete instance",
+      area: "console.instance.configuration",
+      source: "mutation",
+      surface: "inline",
+    });
+    setFormNotice({ message: uiError.message, variant: "error" });
+  }
 }
 
 function BackendInstancePage({
@@ -1014,60 +1242,19 @@ function BackendInstancePage({
     instanceCount: instances.length,
   });
   const handleRefresh = () => {
-    instanceQuery.refetch().catch((error: unknown) => {
-      handleQueryActionError(error, {
-        action: "retry",
-        area: "console.instance",
-      });
-    });
-    if (isConnected) {
-      overviewQuery.refetch().catch((error: unknown) => {
-        handleQueryActionError(error, {
-          action: "retry",
-          area: "console.instance.overview",
-        });
-      });
-    }
-    if (showOverviewLiveData) {
-      // Advance the metrics window to "now" — a plain refetch would re-query
-      // the identical frozen interval and charts would never move forward.
-      setMetricsAnchorMs(quantizedMetricsAnchor());
-      metricsQuery.refetch().catch((error: unknown) => {
-        handleQueryActionError(error, {
-          action: "retry",
-          area: "console.instance.metrics",
-        });
-      });
-      previousMetricsQuery.refetch().catch((error: unknown) => {
-        handleQueryActionError(error, {
-          action: "retry",
-          area: "console.instance.metrics",
-        });
-      });
-      healthQuery.refetch().catch((error: unknown) => {
-        handleQueryActionError(error, {
-          action: "retry",
-          area: "console.instance.health",
-        });
-      });
-    }
-    if (
-      isConnected &&
-      section === "overview" &&
-      configuredDatabase.length > 0
-    ) {
-      extensionsQuery.refetch().catch((error: unknown) => {
-        handleQueryActionError(error, {
-          action: "retry",
-          area: "console.instance.extensions",
-        });
-      });
-    }
-    retryInstanceCatalog().catch((error: unknown) => {
-      handleQueryActionError(error, {
-        action: "retry",
-        area: "console.instance.catalog",
-      });
+    refreshInstancePageData({
+      configuredDatabase,
+      extensionsQuery,
+      healthQuery,
+      instanceQuery,
+      isConnected,
+      metricsQuery,
+      overviewQuery,
+      previousMetricsQuery,
+      retryInstanceCatalog,
+      section,
+      setMetricsAnchorMs,
+      showOverviewLiveData,
     });
   };
   const handleInvalidSave = () => {
@@ -1076,126 +1263,31 @@ function BackendInstancePage({
       variant: "error",
     });
   };
-  const handleSave = async (
-    rawFormState: InstanceFormState
-  ): Promise<
-    | {
-        fieldErrors: InstanceFormErrors;
-        firstInvalidField: InstanceFormInvalidFieldName | null;
-      }
-    | undefined
-  > => {
-    if (!instance || isConfigManaged) {
-      return;
-    }
-    // Trim once at the boundary so change detection and the payload use the
-    // same values that validation checks.
-    const formState = trimInstanceFormState(rawFormState);
-    const nextPort = parseInstanceFormPort(formState.port);
-    if (nextPort === null) {
-      return;
-    }
-    const updatePaths = buildInstanceUpdatePaths({
-      formState,
+  const handleSave = (rawFormState: InstanceFormState) =>
+    saveInstanceConfiguration(rawFormState, {
       instance,
-      nextPort,
+      instanceQuery,
+      isConfigManaged,
+      isConnected,
+      overviewQuery,
+      queryClient,
+      setConfigFormResetKey,
+      setFormNotice,
+      transport,
+      updateInstanceMutation,
     });
-    if (updatePaths.length === 0) {
-      return;
-    }
-    setFormNotice(null);
-    try {
-      await updateInstanceMutation.mutateAsync(
-        buildInstanceUpdateInput({
-          formState,
-          instance,
-          nextPort,
-          updatePaths,
-        })
-      );
-      setFormNotice({
-        message: "Instance configuration saved.",
-        variant: "success",
-      });
-      toast.success("Instance configuration saved");
-      // Keep the header instance switcher in sync with the saved changes.
-      runInstanceMutationFollowUp(
-        "refresh-instances",
-        refreshAllInstancesCache({
-          queryClient,
-          transport,
-        })
-      );
-      await instanceQuery.refetch();
-      // Remount the configuration form from the refetched instance so the
-      // redacted password returns to blank and dirty state clears.
-      setConfigFormResetKey((key) => key + 1);
-      if (isConnected) {
-        overviewQuery.refetch();
-      }
-    } catch (error) {
-      const fieldViolationOutcome =
-        getInstanceConfigSaveFieldViolationOutcome(error);
-      if (fieldViolationOutcome) {
-        setFormNotice(fieldViolationOutcome.notice);
-        return {
-          fieldErrors: fieldViolationOutcome.fieldErrors,
-          firstInvalidField: fieldViolationOutcome.firstInvalidField,
-        };
-      }
-
-      const uiError = normalizeAppUiError(error, {
-        action: "save instance configuration",
-        area: "console.instance.configuration",
-        source: "mutation",
-        surface: "inline",
-      });
-      setFormNotice({ message: uiError.message, variant: "error" });
-    }
-
-    return;
-  };
-  const handleDelete = async () => {
-    if (!instance || isConfigManaged) {
-      return;
-    }
-    if (deleteDisabledReason) {
-      setIsDeleteDialogOpen(false);
-      setFormNotice({
-        message: deleteDisabledReason,
-        variant: "error",
-      });
-      return;
-    }
-    setIsDeleteDialogOpen(false);
-    try {
-      await deleteInstanceMutation.mutateAsync({
-        name: instance.name,
-      });
-      runInstanceMutationFollowUp(
-        "navigate-home",
-        navigate({
-          replace: true,
-          to: "/",
-        })
-      );
-      runInstanceMutationFollowUp(
-        "refresh-instances",
-        refreshAllInstancesCache({
-          queryClient,
-          transport,
-        })
-      );
-    } catch (error) {
-      const uiError = normalizeAppUiError(error, {
-        action: "delete instance",
-        area: "console.instance.configuration",
-        source: "mutation",
-        surface: "inline",
-      });
-      setFormNotice({ message: uiError.message, variant: "error" });
-    }
-  };
+  const handleDelete = () =>
+    deleteInstanceFromPage({
+      deleteDisabledReason,
+      deleteInstanceMutation,
+      instance,
+      isConfigManaged,
+      navigate,
+      queryClient,
+      setFormNotice,
+      setIsDeleteDialogOpen,
+      transport,
+    });
   const databasesUnavailable =
     queryStates.databases.isSuppressed && !queryStates.databases.hasData;
   const handleDatabaseIntent = (database: DatabaseRow) => {
@@ -1236,6 +1328,7 @@ function BackendInstancePage({
             lastRefreshedAt: instanceQuery.dataUpdatedAt,
             liveData: {
               connectionsMax: overview?.connections?.maxConnections,
+              handleRangeChange: setMetricsRangeHours,
               health: healthQuery.data?.health,
               healthPartialErrors: healthQuery.data?.partialErrors,
               healthPending: healthQuery.isPending,
@@ -1244,7 +1337,6 @@ function BackendInstancePage({
               metricsRange: metricRangeByHours(metricsRangeHours),
               metricsRefreshing: metricsQuery.isPlaceholderData,
               metricsResponse: metricsQuery.data,
-              onMetricsRangeChange: setMetricsRangeHours,
               // While a range switch still shows the OLD window as placeholder
               // data, suppress the overlay: shifting the old range's points by
               // the new range's window length would draw it at wrong times.

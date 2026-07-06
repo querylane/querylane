@@ -108,7 +108,7 @@ function FormRecoveryDangerSurface() {
             actionLabel: "Delete instance",
             description:
               "Removes connection metadata and query history for this PostgreSQL instance.",
-            onAction: vi.fn(),
+            handleClick: vi.fn(),
             title: "Delete Production Analytics Writer",
           },
           {
@@ -116,7 +116,7 @@ function FormRecoveryDangerSurface() {
             description:
               "Disabled until the backend reports a healthy connection.",
             disabled: true,
-            onAction: vi.fn(),
+            handleClick: vi.fn(),
             title: "Reset local metadata cache",
           },
         ]}

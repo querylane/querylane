@@ -34,8 +34,8 @@ import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_
 const EXTENSIONS_PAGE_SIZE = 20;
 
 interface ExtensionFacetFilter {
+  handleSelectedValuesChange: (values: string[]) => void;
   label: string;
-  onChange: (values: string[]) => void;
   options: FacetedFilterOption[];
   selectedValues: string[];
 }
@@ -137,7 +137,7 @@ function ExtensionFilterBar({
       {visibleFilters.map((filter) => (
         <DataTableFacetedFilter
           key={filter.label}
-          onSelectedValuesChange={filter.onChange}
+          onSelectedValuesChange={filter.handleSelectedValuesChange}
           options={filter.options}
           selectedValues={filter.selectedValues}
           title={filter.label}
@@ -148,7 +148,7 @@ function ExtensionFilterBar({
           className="h-8 px-2 text-xs"
           onClick={() => {
             for (const filter of visibleFilters) {
-              filter.onChange([]);
+              filter.handleSelectedValuesChange([]);
             }
           }}
           size="sm"
@@ -174,14 +174,14 @@ function ExtensionsTable({ extensions }: { extensions: Extension[] }) {
   });
   const facetFilters = [
     {
+      handleSelectedValuesChange: setStatusFilters,
       label: "Status",
-      onChange: setStatusFilters,
       options: presentExtensionStatusOptions(extensions),
       selectedValues: statusFilters,
     },
     {
+      handleSelectedValuesChange: setSchemaFilters,
       label: "Schema",
-      onChange: setSchemaFilters,
       options: presentExtensionSchemaOptions(extensions),
       selectedValues: schemaFilters,
     },

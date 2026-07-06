@@ -185,23 +185,22 @@ export function BackBar({ onBack }: { onBack: () => void }) {
   );
 }
 
-// Title row for a drill-in: icon + heading + optional tag/count, with an
-// optional grantor meta line below as `sub`.
+// Title row for a drill-in: icon + heading + optional child tag/count.
 export function ContentHead({
+  children,
   count,
   countUnit,
   icon: Icon,
   iconClassName,
-  sub,
-  tag,
+
   title,
 }: {
+  children?: ReactNode;
   count?: number | undefined;
   countUnit?: string;
   icon: ComponentType<{ className?: string }>;
   iconClassName?: string;
-  sub?: ReactNode;
-  tag?: ReactNode;
+
   title: string;
 }) {
   return (
@@ -209,7 +208,7 @@ export function ContentHead({
       <div className="flex flex-wrap items-center gap-2.5">
         <Icon className={cn("size-4 text-muted-foreground", iconClassName)} />
         <h2 className="font-semibold text-xl tracking-tight">{title}</h2>
-        {tag}
+        {children}
         {count == null ? null : (
           <span className="inline-flex h-[18px] items-center rounded-full border border-border bg-secondary px-[7px] font-medium font-mono text-[11px] text-muted-foreground tracking-[0.02em]">
             {count.toLocaleString()}
@@ -222,7 +221,6 @@ export function ContentHead({
           </span>
         )}
       </div>
-      {sub ? <div className="text-muted-foreground text-xs">{sub}</div> : null}
     </div>
   );
 }
