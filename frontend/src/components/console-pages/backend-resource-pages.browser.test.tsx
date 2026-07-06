@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { BackendDatabaseExtensionsPage } from "@/components/console-pages/database-extensions-page";
 import { BackendDatabasePage } from "@/components/console-pages/database-page";
 import { BackendInstancePage } from "@/components/console-pages/instance-page";
 import {
@@ -47,6 +48,9 @@ interface QueryState<T> {
   refetch?: () => Promise<unknown>;
 }
 
+const PG_STAT_STATEMENTS_BUTTON_NAME = /pg_stat_statements/i;
+const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/;
+
 const state = vi.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
   databaseQuery: {} as QueryState<GetDatabaseResponse>,
@@ -82,36 +86,29 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-vi.mock("@tanstack/react-router", () => {
-  const linkExportName = "Link";
-  return {
-    [linkExportName]: ({
-      children,
-      to,
-    }: {
-      children: ReactNode;
-      to: string;
-    }) => <a href={to}>{children}</a>,
-    useLocation: ({
-      select,
-    }: {
-      select?: (location: {
-        hash: string;
-        pathname: string;
-        searchStr: string;
-      }) => unknown;
-    } = {}) => {
-      const location = { hash: "", pathname: "/instances/prod", searchStr: "" };
-      return select ? select(location) : location;
-    },
-    useNavigate: () => state.navigate,
-    useSearch: ({
-      select,
-    }: {
-      select?: (search: Record<string, unknown>) => unknown;
-    } = {}) => (select ? select({}) : {}),
-  };
-});
+vi.mock("@tanstack/react-router", () => ({
+  ["Link"]: ({ children, to }: { children: ReactNode; to: string }) => (
+    <a href={to}>{children}</a>
+  ),
+  useLocation: ({
+    select,
+  }: {
+    select?: (location: {
+      hash: string;
+      pathname: string;
+      searchStr: string;
+    }) => unknown;
+  } = {}) => {
+    const location = { hash: "", pathname: "/instances/prod", searchStr: "" };
+    return select ? select(location) : location;
+  },
+  useNavigate: () => state.navigate,
+  useSearch: ({
+    select,
+  }: {
+    select?: (search: Record<string, unknown>) => unknown;
+  } = {}) => (select ? select({}) : {}),
+}));
 
 vi.mock("@connectrpc/connect-query", () => ({
   useMutation: vi.fn(),
@@ -343,6 +340,80 @@ function extensionInventoryResponse() {
         installed: true,
         installedVersion: "1.10",
         schema: "public",
+      }),
+    ],
+  });
+}
+
+function extensionDesignInventoryResponse() {
+  return createProto(ListExtensionsResponseSchema, {
+    extensions: [
+      createProto(ExtensionSchema, {
+        comment:
+          "Track planning and execution statistics of all SQL statements",
+        defaultVersion: "1.10",
+        displayName: "pg_stat_statements",
+        installed: true,
+        installedVersion: "1.10",
+        name: "instances/prod/databases/customer-events/extensions/pg_stat_statements",
+        schema: "public",
+      }),
+      createProto(ExtensionSchema, {
+        comment:
+          "Cryptographic functions — hashing, HMAC, symmetric and public-key encryption",
+        defaultVersion: "1.3",
+        displayName: "pgcrypto",
+        installed: true,
+        installedVersion: "1.3",
+        name: "instances/prod/databases/customer-events/extensions/pgcrypto",
+        schema: "public",
+      }),
+      createProto(ExtensionSchema, {
+        comment: "Generate universally unique identifiers (v1, v3, v4, v5)",
+        defaultVersion: "1.1",
+        displayName: "uuid-ossp",
+        installed: true,
+        installedVersion: "1.1",
+        name: "instances/prod/databases/customer-events/extensions/uuid-ossp",
+        schema: "public",
+      }),
+      createProto(ExtensionSchema, {
+        comment:
+          "Trigram matching — fuzzy text search and fast LIKE/ILIKE indexing",
+        defaultVersion: "1.6",
+        displayName: "pg_trgm",
+        installed: true,
+        installedVersion: "1.6",
+        name: "instances/prod/databases/customer-events/extensions/pg_trgm",
+        schema: "public",
+      }),
+      createProto(ExtensionSchema, {
+        comment:
+          "Vector similarity search — embeddings storage with HNSW and IVFFlat indexes",
+        defaultVersion: "0.8.0",
+        displayName: "pgvector",
+        installed: true,
+        installedVersion: "v0.8.0",
+        name: "instances/prod/databases/customer-events/extensions/pgvector",
+        schema: "public",
+      }),
+      createProto(ExtensionSchema, {
+        comment:
+          "Geospatial types, indexes, and functions — points, polygons, distances, projections",
+        defaultVersion: "3.4.2",
+        displayName: "postgis",
+        installed: true,
+        installedVersion: "v3.4.2",
+        name: "instances/prod/databases/customer-events/extensions/postgis",
+        schema: "public",
+      }),
+      createProto(ExtensionSchema, {
+        comment:
+          "Hypertables — automatic time partitioning, compression, and continuous aggregates",
+        defaultVersion: "2.17",
+        displayName: "timescaledb",
+        installed: false,
+        name: "instances/prod/databases/customer-events/extensions/timescaledb",
       }),
     ],
   });
@@ -601,6 +672,60 @@ test("backend database overview shows query insights", async () => {
   await expect(page.getByTestId("database-query-insights")).toMatchScreenshot(
     "backend-database-query-insights-overview"
   );
+});
+
+test("backend database extensions page matches design source", async () => {
+  state.extensionQuery = { data: extensionDesignInventoryResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendDatabaseExtensionsPage
+          databaseId="customer-events"
+          instanceId="prod"
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await expect
+    .element(page.getByRole("heading", { name: "Extensions" }))
+    .toBeVisible();
+  await expect.element(page.getByText("pg_stat_statements")).toBeVisible();
+  await expect.element(page.getByText("powers Query insights")).toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "backend-database-extensions"
+  );
+});
+
+test("backend database extensions drawer matches design source", async () => {
+  state.extensionQuery = { data: extensionDesignInventoryResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendDatabaseExtensionsPage
+          databaseId="customer-events"
+          instanceId="prod"
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await page
+    .getByRole("button", { name: PG_STAT_STATEMENTS_BUTTON_NAME })
+    .click();
+
+  const drawer = page.getByRole("dialog", {
+    name: "pg_stat_statements details",
+  });
+  await expect.element(drawer).toBeVisible();
+  await expect
+    .element(page.getByText(SHARED_PRELOAD_LIBRARIES_TEXT))
+    .toBeVisible();
+  await expect.element(page.getByText("pg_stat_statements view")).toBeVisible();
+  await expect.element(page.getByText("track_planning setting")).toBeVisible();
+  await expect(drawer).toMatchScreenshot("backend-database-extensions-drawer");
 });
 
 test("backend instance delete navigates without waiting for catalog refresh", async () => {

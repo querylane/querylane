@@ -20,9 +20,12 @@ interface ExtensionFilterOption<Value extends string> {
 
 interface ExtensionMetadata {
   about: string;
+  applied: string;
   category: string;
   exampleSql: string;
   installSql?: string;
+  meta: string;
+  minPostgres: number;
   provides: { label: string; value: string }[];
   scope: Exclude<ExtensionScopeFilter, "All">;
   source: Exclude<ExtensionSourceFilter, "All">;
@@ -30,6 +33,7 @@ interface ExtensionMetadata {
 
 interface PresentedExtension {
   about: string;
+  applied: string;
   badgeVariant: ExtensionBadgeVariant;
   category: string;
   categoryFilter: Exclude<ExtensionCategoryFilter, "All">;
@@ -42,7 +46,9 @@ interface PresentedExtension {
   installedVersion: string;
   installSql?: string;
   key: string;
+  metaLabel: string;
   provides: { label: string; value: string }[];
+  requiresLabel: string;
   schema: string;
   scopeFilter: Exclude<ExtensionScopeFilter, "All">;
   scopeLabel: string;
@@ -80,28 +86,44 @@ const SOURCE_LABELS = {
 const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
   hstore: {
     about: "Stores key-value pairs in a single column with index support.",
+    applied:
+      "Enable it in the database that owns the tables using hstore columns.",
     category: "Data types",
     exampleSql:
-      "SELECT settings -> 'sla_hours' FROM carriers WHERE settings ? 'sla_hours';",
+      "SELECT settings -> 'sla_hours'\nFROM carriers\nWHERE settings ? 'sla_hours';",
     installSql: "CREATE EXTENSION hstore;",
+    meta: "flexible attributes",
+    minPostgres: 9,
     provides: [
-      { label: "hstore type", value: "Represent sparse attributes" },
-      { label: "GIN indexing", value: "Query keys and containment quickly" },
+      { label: "hstore type", value: "represent sparse attributes" },
+      { label: "GIN indexing", value: "query keys and containment quickly" },
     ],
     scope: "table",
     source: "core",
   },
   pg_stat_statements: {
-    about: "Tracks planning and execution statistics for normalized SQL.",
+    about:
+      "Records normalized query texts with call counts, total/mean time, rows, and buffer usage. This is the engine behind Querylane’s Query insights screen.",
+    applied:
+      "Loaded via shared_preload_libraries — tracks every database on the server once installed.",
     category: "Observability",
     exampleSql:
-      "SELECT query, calls, mean_exec_time\nFROM pg_stat_statements\nORDER BY total_exec_time DESC\nLIMIT 20;",
+      "SELECT queryid, calls,\n       round(mean_exec_time::numeric, 1) AS mean_ms,\n       rows / greatest(calls, 1) AS rows_per_call\nFROM pg_stat_statements\nORDER BY total_exec_time DESC\nLIMIT 10;",
     installSql: "CREATE EXTENSION pg_stat_statements;",
+    meta: "powers Query insights",
+    minPostgres: 9,
     provides: [
-      { label: "Query ranking", value: "Find expensive statements" },
       {
-        label: "Timing stats",
-        value: "Compare mean, min, max, and total time",
+        label: "pg_stat_statements view",
+        value: "per-query timing, calls, rows, and I/O since last reset",
+      },
+      {
+        label: "pg_stat_statements_reset()",
+        value: "zero the counters to measure a specific window",
+      },
+      {
+        label: "track_planning setting",
+        value: "optionally record planner time per statement",
       },
     ],
     scope: "cluster",
@@ -109,41 +131,57 @@ const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
   },
   pg_trgm: {
     about:
-      "Adds trigram matching for fuzzy text search and fast LIKE or ILIKE indexes.",
+      "Adds trigram matching for fuzzy text search and fast LIKE/ILIKE indexing.",
+    applied:
+      "Create trigram GIN or GiST indexes on the text columns you search.",
     category: "Search",
     exampleSql:
       "SELECT similarity(name, 'hansa lines') AS score\nFROM carriers\nWHERE name % 'hansa lines'\nORDER BY score DESC;",
     installSql: "CREATE EXTENSION pg_trgm;",
+    meta: "carrier name search",
+    minPostgres: 9,
     provides: [
-      { label: "% operator", value: "Find similar text despite typos" },
+      { label: "% operator", value: "find similar text despite typos" },
       {
         label: "gin_trgm_ops",
-        value: "Index fuzzy search and LIKE or ILIKE predicates",
+        value: "index fuzzy search and LIKE/ILIKE predicates",
       },
     ],
     scope: "table",
     source: "core",
   },
   pgcrypto: {
-    about: "Cryptographic functions for hashing, HMAC, and encryption.",
+    about:
+      "Cryptographic helpers for hashing, HMAC, random bytes, and symmetric or public-key encryption.",
+    applied:
+      "Installed per database; call functions from application-owned schemas as needed.",
     category: "Security",
-    exampleSql: "SELECT crypt('secret', gen_salt('bf'));",
+    exampleSql: "SELECT encode(digest('payload', 'sha256'), 'hex') AS sha256;",
     installSql: "CREATE EXTENSION pgcrypto;",
+    meta: "used by auth.users",
+    minPostgres: 9,
     provides: [
-      { label: "crypt()", value: "Hash passwords and secrets" },
-      { label: "digest()", value: "Compute checksums in SQL" },
+      { label: "digest()", value: "compute hashes and checksums in SQL" },
+      { label: "gen_random_uuid()", value: "generate random UUID values" },
+      { label: "crypt()", value: "hash passwords with salts" },
     ],
     scope: "database",
     source: "core",
   },
   pgvector: {
-    about: "Stores embeddings and runs vector similarity search in PostgreSQL.",
+    about:
+      "Stores embeddings and runs vector similarity search in PostgreSQL with HNSW and IVFFlat indexes.",
+    applied:
+      "Create vector columns on embedding tables, then add HNSW or IVFFlat indexes for nearest-neighbor search.",
     category: "AI / vectors",
-    exampleSql: "SELECT id FROM docs ORDER BY embedding <=> $1 LIMIT 5;",
+    exampleSql: "SELECT id\nFROM docs\nORDER BY embedding <=> $1\nLIMIT 5;",
     installSql: "CREATE EXTENSION vector;",
+    meta: "semantic search",
+    minPostgres: 11,
     provides: [
-      { label: "vector type", value: "Store embeddings next to rows" },
-      { label: "HNSW indexes", value: "Approximate nearest-neighbor search" },
+      { label: "vector type", value: "store embeddings next to rows" },
+      { label: "<=> operator", value: "rank rows by vector distance" },
+      { label: "HNSW indexes", value: "accelerate nearest-neighbor search" },
     ],
     scope: "table",
     source: "community",
@@ -151,55 +189,105 @@ const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
   plpgsql: {
     about:
       "PostgreSQL's bundled procedural language for functions and triggers.",
+    applied: "Created by default in new PostgreSQL databases.",
     category: "Languages",
     exampleSql:
       "CREATE FUNCTION touch_updated_at()\nRETURNS trigger\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  NEW.updated_at = now();\n  RETURN NEW;\nEND;\n$$;",
+    meta: "trigger logic",
+    minPostgres: 9,
     provides: [
-      { label: "Functions", value: "Write server-side control flow" },
-      { label: "Triggers", value: "Run logic when rows change" },
+      { label: "Functions", value: "write server-side control flow" },
+      { label: "Triggers", value: "run logic when rows change" },
     ],
     scope: "database",
     source: "bundled",
   },
   postgis: {
-    about: "Adds geospatial types, functions, and indexes to PostgreSQL.",
+    about:
+      "Adds geospatial types, indexes, and functions for points, polygons, distances, and projections.",
+    applied:
+      "Install per database and keep spatial tables in schemas that own geospatial data.",
     category: "Geospatial",
     exampleSql:
       "SELECT ST_Distance(port_a.geog, port_b.geog)\nFROM ports port_a, ports port_b;",
     installSql: "CREATE EXTENSION postgis;",
+    meta: "maps and routes",
+    minPostgres: 12,
     provides: [
-      { label: "geometry", value: "Store points, lines, and polygons" },
-      { label: "GiST indexes", value: "Speed up spatial lookups" },
+      {
+        label: "geometry/geography",
+        value: "store points, lines, and polygons",
+      },
+      {
+        label: "ST_* functions",
+        value: "measure, transform, and join spatial data",
+      },
+      { label: "GiST indexes", value: "speed up spatial lookups" },
     ],
     scope: "database",
     source: "community",
   },
+  timescaledb: {
+    about:
+      "Adds hypertables for automatic time partitioning, compression, and continuous aggregates.",
+    applied:
+      "Loaded via shared_preload_libraries, then enabled in databases that own time-series tables.",
+    category: "Time-series",
+    exampleSql: "SELECT create_hypertable('metrics', by_range('time'));",
+    installSql: "CREATE EXTENSION timescaledb;",
+    meta: "available to install",
+    minPostgres: 12,
+    provides: [
+      {
+        label: "hypertables",
+        value: "partition time-series data automatically",
+      },
+      { label: "compression", value: "reduce storage for historical chunks" },
+      {
+        label: "continuous aggregates",
+        value: "maintain rollups incrementally",
+      },
+    ],
+    scope: "database",
+    source: "vendor",
+  },
   "uuid-ossp": {
-    about: "Generates universally unique identifiers directly in PostgreSQL.",
+    about:
+      "Generates universally unique identifiers directly in PostgreSQL, including random and namespace-based UUIDs.",
+    applied:
+      "Install per database when UUID defaults or SQL-side UUID generation need uuid-ossp functions.",
     category: "Data types",
     exampleSql: "SELECT uuid_generate_v4();",
     installSql: 'CREATE EXTENSION "uuid-ossp";',
+    meta: "default for shipments.id",
+    minPostgres: 9,
     provides: [
       {
         label: "uuid_generate_v4()",
-        value: "Random UUIDs without application-side generation",
+        value: "random UUIDs without application-side generation",
       },
       {
-        label: "uuid_generate_v1()",
-        value: "Time-based UUIDs when ordering matters",
+        label: "uuid_generate_v5()",
+        value: "stable namespace-based identifiers",
       },
     ],
     scope: "database",
     source: "core",
   },
   vector: {
-    about: "Stores embeddings and runs vector similarity search in PostgreSQL.",
+    about:
+      "Stores embeddings and runs vector similarity search in PostgreSQL with HNSW and IVFFlat indexes.",
+    applied:
+      "Create vector columns on embedding tables, then add HNSW or IVFFlat indexes for nearest-neighbor search.",
     category: "AI / vectors",
-    exampleSql: "SELECT id FROM docs ORDER BY embedding <=> $1 LIMIT 5;",
+    exampleSql: "SELECT id\nFROM docs\nORDER BY embedding <=> $1\nLIMIT 5;",
     installSql: "CREATE EXTENSION vector;",
+    meta: "semantic search",
+    minPostgres: 11,
     provides: [
-      { label: "vector type", value: "Store embeddings next to rows" },
-      { label: "HNSW indexes", value: "Approximate nearest-neighbor search" },
+      { label: "vector type", value: "store embeddings next to rows" },
+      { label: "<=> operator", value: "rank rows by vector distance" },
+      { label: "HNSW indexes", value: "accelerate nearest-neighbor search" },
     ],
     scope: "table",
     source: "community",
@@ -209,14 +297,18 @@ const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
 const DEFAULT_METADATA = {
   about:
     "PostgreSQL reports this extension through pg_available_extensions. Querylane shows its installed state and version without changing the database.",
+  applied:
+    "Querylane reads pg_available_extensions and pg_extension only; it does not install, update, or drop extensions.",
   category: "Extension",
   exampleSql:
     "SELECT extname, extversion\nFROM pg_extension\nORDER BY extname;",
+  meta: "catalog visibility",
+  minPostgres: 9,
   provides: [
-    { label: "Catalog visibility", value: "See whether it is installed" },
+    { label: "Catalog visibility", value: "see whether it is installed" },
     {
       label: "Version tracking",
-      value: "Compare installed and default versions",
+      value: "compare installed and default versions",
     },
   ],
   scope: "database",
@@ -273,17 +365,22 @@ function presentExtension(extension: Extension): PresentedExtension {
   const schema = extensionSchemaLabel(extension);
   const sourceLabel = SOURCE_LABELS[metadata.source];
   const scopeLabel = SCOPE_LABELS[metadata.scope];
+  const requiresLabel = `PG ${metadata.minPostgres}+`;
   const facts = [
     { label: "Version", value: installedVersion },
-    { label: "Default", value: defaultVersion },
+    { label: "Latest", value: defaultVersion },
     { label: "Scope", value: scopeLabel },
     { label: "Source", value: sourceLabel },
+    { label: "Requires", value: requiresLabel },
     { label: "Schema", value: schema },
   ];
   const searchText = [
     displayName,
     description,
+    metadata.about,
+    metadata.applied,
     metadata.category,
+    metadata.meta,
     sourceLabel,
     scopeLabel,
     schema,
@@ -293,6 +390,7 @@ function presentExtension(extension: Extension): PresentedExtension {
 
   return {
     about: metadata.about,
+    applied: metadata.applied,
     badgeVariant: extension.installed ? "default" : "outline",
     category: metadata.category,
     categoryFilter: metadata.category,
@@ -304,7 +402,9 @@ function presentExtension(extension: Extension): PresentedExtension {
     facts,
     installedVersion,
     key: extensionKey(extension),
+    metaLabel: metadata.meta,
     provides: metadata.provides,
+    requiresLabel,
     schema,
     scopeFilter: metadata.scope,
     scopeLabel,

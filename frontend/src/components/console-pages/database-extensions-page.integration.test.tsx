@@ -120,7 +120,7 @@ describe("database extensions page", () => {
     ).toBeNull();
     expect(
       screen.getByText(
-        "2 installed · 1 available on this server. Querylane only reads what is there"
+        "2 installed · 1 available on this server; installation requires a superuser connection; Querylane only reads what is there"
       )
     ).toBeTruthy();
     expect(

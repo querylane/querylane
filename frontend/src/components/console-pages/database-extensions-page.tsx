@@ -1,6 +1,12 @@
 "use client";
 
-import { Check, ChevronLeft, ChevronRight, PackageOpen } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  PackageOpen,
+} from "lucide-react";
 import { useState } from "react";
 import {
   PageHeader,
@@ -35,6 +41,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import {
   extensionsForDatabaseQueryInput,
   useListAllExtensionsQuery,
@@ -303,7 +310,7 @@ function ExtensionCard({
           <Badge variant="ghost">{extension.category}</Badge>
           <Badge variant="outline">{extension.scopeLabel}</Badge>
           <span className="ml-auto truncate text-muted-foreground text-xs">
-            {extension.sourceLabel}
+            {extension.metaLabel}
           </span>
         </span>
       </span>
@@ -346,6 +353,10 @@ function ExtensionDetails({ extension }: { extension: PresentedExtension }) {
             ))}
           </div>
           <p className="text-sm leading-relaxed">{extension.about}</p>
+          <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-muted-foreground text-xs leading-relaxed">
+            <Info className="mt-0.5 size-4 shrink-0" />
+            <span>{extension.applied}</span>
+          </div>
           {extension.statusFilter === "available" && extension.installSql ? (
             <div className="rounded-lg bg-muted/50 p-3 text-muted-foreground text-xs leading-relaxed">
               A superuser can install it with:
@@ -373,12 +384,15 @@ function ExtensionDetails({ extension }: { extension: PresentedExtension }) {
             </div>
           </section>
           <section className="space-y-2">
-            <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-              Try it
-            </h3>
-            <pre className="overflow-auto rounded-lg border border-border bg-muted/50 p-3 font-mono text-xs leading-relaxed">
-              {extension.exampleSql}
-            </pre>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
+                Try it
+              </h3>
+              <span className="text-muted-foreground text-xs">
+                read-only, safe to run
+              </span>
+            </div>
+            <SqlCodeBlock sql={extension.exampleSql} />
           </section>
         </div>
       </div>
@@ -481,8 +495,8 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-muted-foreground text-sm">
-        {extensionInventorySummary(presentedExtensions)}. Querylane only reads
-        what is there
+        {extensionInventorySummary(presentedExtensions)}; installation requires
+        a superuser connection; Querylane only reads what is there
       </p>
       <ExtensionFilterBar
         category={category}
