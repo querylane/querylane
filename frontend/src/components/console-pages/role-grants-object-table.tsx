@@ -141,7 +141,16 @@ function KindFilteredTable<T extends RowData>({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div
+        className="flex min-w-0 flex-wrap items-center justify-start gap-2"
+        data-slot="role-grants-filter-bar"
+      >
+        {/* value stays urgent so the input reflects keystrokes immediately */}
+        <DataTableFilter
+          onChange={onSearchChange}
+          placeholder={searchPlaceholder}
+          value={search}
+        />
         <DataTableFacetedFilter
           onSelectedValuesChange={(values) =>
             onKindChange(values.at(-1) ?? "all")
@@ -155,12 +164,6 @@ function KindFilteredTable<T extends RowData>({
           selectedValues={activeKind === "all" ? [] : [activeKind]}
           singleSelect={true}
           title="Kind"
-        />
-        {/* value stays urgent so the input reflects keystrokes immediately */}
-        <DataTableFilter
-          onChange={onSearchChange}
-          placeholder={searchPlaceholder}
-          value={search}
         />
       </div>
       {/* filterValue uses the deferred term so TanStack Table re-filters at

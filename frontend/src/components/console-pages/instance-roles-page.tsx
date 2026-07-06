@@ -825,7 +825,15 @@ export function InstanceRolesPage({
 
   const rolesDetailsContent = (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div
+        className="flex min-w-0 flex-wrap items-center justify-start gap-2"
+        data-slot="roles-filter-bar"
+      >
+        <DataTableFilter
+          onChange={setFilter}
+          placeholder="Search roles..."
+          value={filter}
+        />
         <DataTableFacetedFilter
           onSelectedValuesChange={handleRoleTypeChange}
           options={ROLE_TYPE_FILTERS.map((entry) => ({
@@ -836,11 +844,6 @@ export function InstanceRolesPage({
           selectedValues={type === undefined ? [] : [type]}
           singleSelect={true}
           title="Type"
-        />
-        <DataTableFilter
-          onChange={setFilter}
-          placeholder="Search roles..."
-          value={filter}
         />
       </div>
 

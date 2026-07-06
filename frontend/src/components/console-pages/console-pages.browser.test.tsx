@@ -379,7 +379,18 @@ test("console roles list shows kind filters, sortable columns, and role rows", a
   await expect
     .element(page.getByText("app_user", { exact: true }))
     .toBeVisible();
+  const searchInput = page.getByPlaceholder("Search roles...").element();
+  const typeFilter = page.getByRole("button", { name: "Type" }).element();
   await expect.element(page.getByPlaceholder("Search roles...")).toBeVisible();
+  expect(typeFilter.getBoundingClientRect().left).toBeGreaterThan(
+    searchInput.getBoundingClientRect().right
+  );
+  expect(
+    Math.abs(
+      typeFilter.getBoundingClientRect().top -
+        searchInput.getBoundingClientRect().top
+    )
+  ).toBeLessThanOrEqual(1);
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "console-roles-table"
   );
