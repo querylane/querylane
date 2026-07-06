@@ -319,9 +319,8 @@ function TabChart({
     dataSeries.push({ key: overlay.series.key, points: overlay.points });
   }
 
-  // Full-bleed: `yAxisMode="inset"` overlays the y-labels inside the plot on a
-  // halo, so the chart spans the card's full width edge to edge — matching the
-  // tab bar above, with no reserved axis gutter on either side.
+  // Default gutter axis: the plot stops at a reserved right-side column for
+  // the y-labels, so dense series never run underneath them.
   return (
     <div className="h-72 w-full pt-4">
       <MetricChart
@@ -331,7 +330,6 @@ function TabChart({
         isRefreshing={isRefreshing}
         series={chartSeries}
         thresholds={thresholds}
-        yAxisMode="inset"
         {...(unit === MetricUnit.RATIO ? { yDomain: RATIO_Y_DOMAIN } : {})}
         yTickBase={metricTickBase(unit)}
       />

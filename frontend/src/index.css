@@ -224,10 +224,7 @@
    * surface-colored halo (painted under the glyphs via paint-order) to stay
    * legible where they cross the line or fill.
    */
-  [data-slot="chart"][data-y-inset]
-    .recharts-yAxis
-    .recharts-cartesian-axis-tick
-    text {
+  [data-slot="chart"][data-y-inset] .recharts-yAxis-tick-labels text {
     stroke: var(--color-card);
     stroke-width: 4px;
     stroke-linejoin: round;
