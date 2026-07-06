@@ -2,7 +2,7 @@
 
 import { spawnSync } from "node:child_process";
 import { appendFileSync, readFileSync } from "node:fs";
-import { exit, stderr, stdout } from "node:process";
+import { env, exit, stderr, stdout } from "node:process";
 
 interface DoctorDiagnostic {
   category?: string;
@@ -52,7 +52,7 @@ const MAX_COMMENT_DIAGNOSTICS = 20;
 const SHORT_SHA_LENGTH = 7;
 
 function getEnv(name: string) {
-  return globalThis.Bun.env[name];
+  return env[name];
 }
 
 function readPullRequestEvent() {
