@@ -23,6 +23,9 @@ const state = vi.hoisted(() => ({
   updateTableSearch: vi.fn(),
 }));
 const INSTALL_EXTENSION_BUTTON_NAME = /install extension/i;
+const OPEN_IN_WORKBENCH_BUTTON_NAME = /open in sql workbench/i;
+const PG_TRGM_EXTENSION_CARD_NAME = /pg_trgm/i;
+const UUID_OSSP_EXTENSION_CARD_NAME = /uuid-ossp/i;
 
 vi.mock("@/hooks/api/extension", () => ({
   extensionsForDatabaseQueryInput: ({
@@ -54,7 +57,8 @@ function extensionsResponse() {
   return create(ListExtensionsResponseSchema, {
     extensions: [
       create(ExtensionSchema, {
-        comment: "text similarity measurement and index searching",
+        comment:
+          "Trigram matching — fuzzy text search and fast LIKE/ILIKE indexing",
         defaultVersion: "1.6",
         displayName: "pg_trgm",
         installed: true,
@@ -72,7 +76,7 @@ function extensionsResponse() {
         schema: "pg_catalog",
       }),
       create(ExtensionSchema, {
-        comment: "generate universally unique identifiers",
+        comment: "Generate universally unique identifiers (v1, v3, v4, v5)",
         defaultVersion: "1.1",
         displayName: "uuid-ossp",
         installed: false,
@@ -111,15 +115,29 @@ describe("database extensions page", () => {
     expect(
       screen.queryByRole("button", { name: INSTALL_EXTENSION_BUTTON_NAME })
     ).toBeNull();
-    expect(screen.getByText("pg_trgm")).toBeTruthy();
-    expect(screen.getByText("uuid-ossp")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: OPEN_IN_WORKBENCH_BUTTON_NAME })
+    ).toBeNull();
+    expect(
+      screen.getByText(
+        "2 installed · 1 available on this server. Querylane only reads what is there"
+      )
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: PG_TRGM_EXTENSION_CARD_NAME })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: UUID_OSSP_EXTENSION_CARD_NAME })
+    ).toBeTruthy();
     expect(screen.getAllByText("Installed").length).toBeGreaterThan(0);
     expect(screen.getByText("Available")).toBeTruthy();
-    expect(screen.getByText("public")).toBeTruthy();
-    expect(screen.getAllByText("1.6")).toHaveLength(2);
+    expect(screen.getByText("1.6")).toBeTruthy();
     expect(
-      screen.getByText("generate universally unique identifiers")
+      screen.getByText(
+        "Generate universally unique identifiers (v1, v3, v4, v5)"
+      )
     ).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
   });
 
   test("restores the table filter from URL search state", () => {
@@ -157,7 +175,7 @@ describe("database extensions page", () => {
     expect(state.updateTableSearch).toHaveBeenCalledWith("p");
   });
 
-  test("places extension search on the left beside status and schema filters", () => {
+  test("places extension search on the left beside redesign filters", () => {
     render(
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
@@ -176,12 +194,18 @@ describe("database extensions page", () => {
     expect(filterBar.className).toContain("justify-start");
     expect(
       within(filterBar)
-        .getAllByRole("button")
-        .map((button) => button.textContent)
-    ).toEqual(["Status", "Schema"]);
+        .getAllByRole("combobox")
+        .map((button) => button.textContent?.replace(/▼/g, ""))
+    ).toEqual([
+      "Status: all",
+      "Scope: all",
+      "Category: all",
+      "Source: all",
+      "Per page 6",
+    ]);
   });
 
-  test("filters extensions by status and schema facets", async () => {
+  test("filters extensions by status and source facets", async () => {
     const user = userEvent.setup();
     render(
       <BackendDatabaseExtensionsPage
@@ -190,7 +214,7 @@ describe("database extensions page", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: "Status" }));
+    await user.click(screen.getByRole("combobox", { name: "Status" }));
     await user.click(screen.getByRole("option", { name: "Available" }));
 
     expect(screen.getByText("uuid-ossp")).toBeTruthy();
@@ -205,11 +229,36 @@ describe("database extensions page", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: "Schema" }));
-    await user.click(screen.getByRole("option", { name: "pg_catalog" }));
+    await user.click(screen.getByRole("combobox", { name: "Source" }));
+    await user.click(screen.getByRole("option", { name: "Core contrib" }));
 
-    expect(screen.getByText("plpgsql")).toBeTruthy();
-    expect(screen.queryByText("pg_trgm")).toBeNull();
-    expect(screen.queryByText("uuid-ossp")).toBeNull();
+    expect(screen.getByText("pg_trgm")).toBeTruthy();
+    expect(screen.getByText("uuid-ossp")).toBeTruthy();
+    expect(screen.queryByText("plpgsql")).toBeNull();
+  });
+  test("opens extension detail panel without mutation actions", async () => {
+    const user = userEvent.setup();
+    render(
+      <BackendDatabaseExtensionsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: PG_TRGM_EXTENSION_CARD_NAME })
+    );
+
+    const panel = screen.getByRole("region", { name: "pg_trgm details" });
+    expect(within(panel).getByText("What it gives you")).toBeTruthy();
+    expect(within(panel).getByText("Try it")).toBeTruthy();
+    expect(within(panel).getByText("Schema")).toBeTruthy();
+    expect(within(panel).getByText("public")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: INSTALL_EXTENSION_BUTTON_NAME })
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: OPEN_IN_WORKBENCH_BUTTON_NAME })
+    ).toBeNull();
   });
 });
