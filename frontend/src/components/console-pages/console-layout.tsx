@@ -89,15 +89,15 @@ export function InstanceStatItem({
   notice,
   progress,
   suffix,
-  trend,
+  renderTrend,
 }: {
   children: React.ReactNode;
   label: string;
   notice?: React.ReactNode | undefined;
   progress?: number | undefined;
   suffix?: string | undefined;
-  /** An optional trend glyph (e.g. a sparkline) right-aligned to the value. */
-  trend?: React.ReactNode | undefined;
+  /** Renders an optional trend glyph (for example, a sparkline) right-aligned to the value. */
+  renderTrend?: (() => React.ReactNode) | undefined;
 }) {
   return (
     <div className="flex flex-col gap-1 px-4 py-3.5">
@@ -111,9 +111,9 @@ export function InstanceStatItem({
             </span>
           ) : null}
         </div>
-        {trend ? (
+        {renderTrend ? (
           <div aria-hidden="true" className="ml-auto h-7 w-20 shrink-0">
-            {trend}
+            {renderTrend()}
           </div>
         ) : null}
       </div>
