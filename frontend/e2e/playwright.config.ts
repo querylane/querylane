@@ -14,7 +14,6 @@ const CI_TEST_TIMEOUT_MS = 45_000;
 const WEB_SERVER_TIMEOUT_MS = 120_000;
 const SCREENSHOT_MISMATCH_THRESHOLD = 0.02;
 const LOCAL_WORKERS = 2;
-const CI_RETRIES = 1;
 const PORT = e2eEnv.PORT ?? e2eEnv.PLAYWRIGHT_PORT ?? DEFAULT_PORT;
 const BASE_URL =
   e2eEnv.BASE_URL ?? e2eEnv.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${PORT}`;
@@ -40,7 +39,6 @@ export default defineConfig({
       maxDiffPixelRatio: SCREENSHOT_MISMATCH_THRESHOLD,
     },
   },
-  failOnFlakyTests: e2eEnv.CI,
   forbidOnly: e2eEnv.CI,
   fullyParallel: true,
   outputDir: "./test-results",
@@ -63,7 +61,7 @@ export default defineConfig({
         ["json", { outputFile: "test-results/results.json" }],
       ]
     : [["./llm-reporter.ts"]],
-  retries: e2eEnv.CI ? CI_RETRIES : 0,
+  retries: 0,
   snapshotPathTemplate:
     "{testDir}/__screenshots__/{testFileBaseName}/{projectName}/{arg}{ext}",
   testDir: "./tests",
@@ -82,16 +80,8 @@ export default defineConfig({
     // should use softScreenshot(), which captures the content panel instead.
     screenshot: { fullPage: false, mode: "only-on-failure" },
     timezoneId: "UTC",
-    trace: e2eEnv.CI ? "retain-on-failure-and-retries" : "retain-on-failure",
-    video: e2eEnv.CI
-      ? {
-          mode: "on-first-retry",
-          show: {
-            actions: { position: "top-right" },
-            test: { level: "title", position: "top-left" },
-          },
-        }
-      : "off",
+    trace: "retain-on-failure",
+    video: "off",
     viewport: { height: 900, width: 1280 },
   },
   ...(!useExternalServer && {

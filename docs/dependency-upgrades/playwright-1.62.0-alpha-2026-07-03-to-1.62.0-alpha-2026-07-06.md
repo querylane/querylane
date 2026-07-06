@@ -20,7 +20,7 @@ Priority: majors + announcements/blogs/migrations/codemods, then minors, then pa
 
 API changes:
 - No Querylane source uses removed Playwright APIs from the stable release notes.
-- Existing e2e config already uses prerelease-capable trace/video options and is kept unchanged.
+- E2E retries stay disabled; failures should surface on the first run instead of passing on retry.
 
 Syntax/style-guide changes:
 - None required.
@@ -28,6 +28,7 @@ Syntax/style-guide changes:
 Behavior/config changes:
 - Keep Querylane on the Playwright prerelease channel by pinning `playwright` and `playwright-core` to the current npm `next` tag: `1.62.0-alpha-2026-07-06`.
 - Do not fall back to latest stable `1.61.1`; user explicitly prefers latest prerelease (`rc` / `alpha` / `beta`).
+- Keep Playwright retries at `0` in every environment. Do not add retry-only trace/video behavior.
 
 Repo actions before target install:
 - Check direct dependencies and peer adapters.
@@ -47,7 +48,7 @@ Release cadence: daily prerelease alpha builds plus monthly stable releases.
 Change volume: unknown per daily alpha; target tarballs are slightly larger than `1.61.1` and newer than the existing alpha by three daily builds.
 Diff size: package pins plus lockfile entries and this report.
 API churn: medium because this is the prerelease `next` channel.
-Effort: low for repo integration because current config loads and tests pass.
+Effort: low for repo integration because current no-retry config loads and tests pass.
 Danger/blast radius: e2e/browser-test tooling only; no production runtime dependency, but CI may need fresh browser cache after alpha changes.
 
 ## Security notes
@@ -93,10 +94,11 @@ bun run test
 bun run test:browser:changed -- --reporter=verbose
 bunx vitest run --config vitest.browser.all.config.ts --reporter=verbose
 CI=1 bun run test:e2e:list
+CI=true bun -e "const config = (await import('./e2e/playwright.config.ts')).default; console.log({ retries: config.retries, trace: config.use.trace, video: config.use.video, failOnFlakyTests: config.failOnFlakyTests ?? null })"
 ```
 
 ## Verification
 Lint: `bun run lint:fix` passed; suppression check passed.
 Type check: `bun run type:check` passed.
-Tests: `bun run test` passed (118 unit files, 1047 tests; 56 integration files, 296 tests). `QUALITY_BASE_REF=origin/main bun run test:browser:changed -- --reporter=verbose` passed (4 browser files, 22 tests). `bunx vitest run --config vitest.browser.all.config.ts --reporter=verbose` passed (34 browser files, 204 tests). `CI=1 bun run test:e2e:list` passed (83 e2e tests listed). Linux browser baselines were regenerated in Docker for the rebased instance overview surface.
+Tests: `bun run test` passed (118 unit files, 1047 tests; 56 integration files, 296 tests). `QUALITY_BASE_REF=origin/main bun run test:browser:changed -- --reporter=verbose` passed (4 browser files, 22 tests). `bunx vitest run --config vitest.browser.all.config.ts --reporter=verbose` passed (34 browser files, 204 tests). `CI=1 bun run test:e2e:list` passed (83 e2e tests listed). Direct CI config assertion passed with `retries: 0`, `trace: "retain-on-failure"`, `video: "off"`, and no `failOnFlakyTests`. Linux browser baselines were regenerated in Docker for the rebased instance overview surface.
 Build/vet/security scan: `bun install --frozen-lockfile --ignore-scripts` passed. `bunx playwright --version` reported `Version 1.62.0-alpha-2026-07-06`. `bun audit --json` reported existing unrelated advisories in `js-yaml`, `tmp`, and `uuid` via `@lhci/cli` / `@changesets`; no Playwright advisory was found in OSV or GitHub advisory checks.
