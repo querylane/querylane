@@ -48,6 +48,10 @@ func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) 
 					LongestTxSeconds:  720,
 					Status:            engine.HealthStatusWarning,
 					Summary:           "1 connection is idle in transaction; 1 connection is waiting on locks",
+					ByApplication: []engine.ApplicationConnections{
+						{ApplicationName: "api-server", Active: 2, Idle: 1, IdleInTransaction: 1, Total: 4},
+						{ApplicationName: "(unnamed)", Active: 0, Idle: 2, IdleInTransaction: 0, Total: 2},
+					},
 				},
 				Replication: &engine.ReplicationHealth{
 					Role:                   engine.ReplicationRolePrimary,
@@ -80,6 +84,13 @@ func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) 
 					Status:                  engine.HealthStatusOK,
 					Summary:                 "pg_stat_statements is tracking 42 statements",
 				},
+				Autovacuum: &engine.AutovacuumHealth{
+					RunningWorkers:   1,
+					MaxWorkers:       3,
+					LastAutovacuumAt: &statsReset,
+					Status:           engine.HealthStatusOK,
+					Summary:          "1 of 3 workers active; last ran 18m ago",
+				},
 			}, nil
 		},
 	), false)
@@ -100,6 +111,14 @@ func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) 
 	assert.Equal(t, int32(1), activity.GetWaitingForLockConnections())
 	assert.Equal(t, int64(720), activity.GetLongestTransactionSeconds())
 
+	byApplication := activity.GetByApplication()
+	require.Len(t, byApplication, 2)
+	assert.Equal(t, "api-server", byApplication[0].GetApplicationName())
+	assert.Equal(t, int32(2), byApplication[0].GetActiveConnections())
+	assert.Equal(t, int32(4), byApplication[0].GetTotalConnections())
+	assert.Equal(t, "(unnamed)", byApplication[1].GetApplicationName())
+	assert.Equal(t, int32(2), byApplication[1].GetIdleConnections())
+
 	replication := health.GetReplication()
 	require.NotNil(t, replication)
 	assert.Equal(t, v1alpha1.ServerInfo_REPLICATION_ROLE_PRIMARY, replication.GetRole())
@@ -119,6 +138,13 @@ func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) 
 	assert.True(t, pgss.GetViewQueryable())
 	assert.Equal(t, int64(42), pgss.GetStatementCount())
 	assert.Equal(t, statsReset, pgss.GetStatsResetAt().AsTime())
+
+	autovacuum := health.GetAutovacuum()
+	require.NotNil(t, autovacuum)
+	assert.Equal(t, v1alpha1.HealthCheckStatus_HEALTH_CHECK_STATUS_OK, autovacuum.GetStatus())
+	assert.Equal(t, int32(1), autovacuum.GetRunningWorkers())
+	assert.Equal(t, int32(3), autovacuum.GetMaxWorkers())
+	assert.Equal(t, statsReset, autovacuum.GetLastAutovacuumAt().AsTime())
 }
 
 func TestCheckInstanceHealthPartialErrorsUseCheckMetadata(t *testing.T) {
@@ -155,7 +181,7 @@ func TestCheckInstanceHealthPartialErrorsUseCheckMetadata(t *testing.T) {
 	}))
 
 	require.NoError(t, err)
-	require.Len(t, resp.Msg.GetPartialErrors(), 4)
+	require.Len(t, resp.Msg.GetPartialErrors(), 5)
 
 	pgStatStatementsError := requireCheckPartialError(t, resp.Msg.GetPartialErrors(), "pg_stat_statements")
 	info := requireStatusErrorInfo(t, pgStatStatementsError)

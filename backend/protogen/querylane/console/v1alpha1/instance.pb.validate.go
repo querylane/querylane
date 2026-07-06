@@ -3062,6 +3062,35 @@ func (m *InstanceHealth) validate(all bool) error {
 		}
 	}
 
+	if all {
+		switch v := interface{}(m.GetAutovacuum()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, InstanceHealthValidationError{
+					field:  "Autovacuum",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, InstanceHealthValidationError{
+					field:  "Autovacuum",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetAutovacuum()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return InstanceHealthValidationError{
+				field:  "Autovacuum",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
 	if len(errors) > 0 {
 		return InstanceHealthMultiError(errors)
 	}
@@ -3184,6 +3213,40 @@ func (m *ConnectionActivityHealth) validate(all bool) error {
 
 	// no validation rules for LongestTransactionSeconds
 
+	for idx, item := range m.GetByApplication() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, ConnectionActivityHealthValidationError{
+						field:  fmt.Sprintf("ByApplication[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, ConnectionActivityHealthValidationError{
+						field:  fmt.Sprintf("ByApplication[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return ConnectionActivityHealthValidationError{
+					field:  fmt.Sprintf("ByApplication[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
 	if len(errors) > 0 {
 		return ConnectionActivityHealthMultiError(errors)
 	}
@@ -3263,6 +3326,118 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = ConnectionActivityHealthValidationError{}
+
+// Validate checks the field values on ApplicationConnections with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ApplicationConnections) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ApplicationConnections with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ApplicationConnectionsMultiError, or nil if none found.
+func (m *ApplicationConnections) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ApplicationConnections) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for ApplicationName
+
+	// no validation rules for ActiveConnections
+
+	// no validation rules for IdleConnections
+
+	// no validation rules for IdleInTransactionConnections
+
+	// no validation rules for TotalConnections
+
+	if len(errors) > 0 {
+		return ApplicationConnectionsMultiError(errors)
+	}
+
+	return nil
+}
+
+// ApplicationConnectionsMultiError is an error wrapping multiple validation
+// errors returned by ApplicationConnections.ValidateAll() if the designated
+// constraints aren't met.
+type ApplicationConnectionsMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ApplicationConnectionsMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ApplicationConnectionsMultiError) AllErrors() []error { return m }
+
+// ApplicationConnectionsValidationError is the validation error returned by
+// ApplicationConnections.Validate if the designated constraints aren't met.
+type ApplicationConnectionsValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ApplicationConnectionsValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ApplicationConnectionsValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ApplicationConnectionsValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ApplicationConnectionsValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ApplicationConnectionsValidationError) ErrorName() string {
+	return "ApplicationConnectionsValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ApplicationConnectionsValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sApplicationConnections.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ApplicationConnectionsValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ApplicationConnectionsValidationError{}
 
 // Validate checks the field values on ReplicationHealth with the rules defined
 // in the proto definition for this message. If any rules are violated, the
@@ -3650,6 +3825,143 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = PgStatStatementsHealthValidationError{}
+
+// Validate checks the field values on AutovacuumHealth with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *AutovacuumHealth) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on AutovacuumHealth with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// AutovacuumHealthMultiError, or nil if none found.
+func (m *AutovacuumHealth) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *AutovacuumHealth) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Status
+
+	// no validation rules for Summary
+
+	// no validation rules for RunningWorkers
+
+	// no validation rules for MaxWorkers
+
+	if all {
+		switch v := interface{}(m.GetLastAutovacuumAt()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, AutovacuumHealthValidationError{
+					field:  "LastAutovacuumAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, AutovacuumHealthValidationError{
+					field:  "LastAutovacuumAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetLastAutovacuumAt()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return AutovacuumHealthValidationError{
+				field:  "LastAutovacuumAt",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return AutovacuumHealthMultiError(errors)
+	}
+
+	return nil
+}
+
+// AutovacuumHealthMultiError is an error wrapping multiple validation errors
+// returned by AutovacuumHealth.ValidateAll() if the designated constraints
+// aren't met.
+type AutovacuumHealthMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m AutovacuumHealthMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m AutovacuumHealthMultiError) AllErrors() []error { return m }
+
+// AutovacuumHealthValidationError is the validation error returned by
+// AutovacuumHealth.Validate if the designated constraints aren't met.
+type AutovacuumHealthValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e AutovacuumHealthValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e AutovacuumHealthValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e AutovacuumHealthValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e AutovacuumHealthValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e AutovacuumHealthValidationError) ErrorName() string { return "AutovacuumHealthValidationError" }
+
+// Error satisfies the builtin error interface
+func (e AutovacuumHealthValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sAutovacuumHealth.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = AutovacuumHealthValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = AutovacuumHealthValidationError{}
 
 // Validate checks the field values on InstanceOverview with the rules defined
 // in the proto definition for this message. If any rules are violated, the

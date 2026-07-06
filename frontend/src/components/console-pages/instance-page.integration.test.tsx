@@ -1,5 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { anyPack } from "@bufbuild/protobuf/wkt";
+import { anyPack, timestampFromDate } from "@bufbuild/protobuf/wkt";
 import { Code, ConnectError } from "@connectrpc/connect";
 import {
   cleanup,
@@ -29,18 +29,24 @@ import {
   ListExtensionsResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 import {
+  AutovacuumHealthSchema,
+  type CheckInstanceHealthResponse,
+  CheckInstanceHealthResponseSchema,
+  ConnectionActivityHealthSchema,
   type GetInstanceOverviewResponse,
-  GetInstanceOverviewResponseSchema,
   type GetInstanceResponse,
   GetInstanceResponseSchema,
-  InstanceOverviewSchema,
+  HealthCheckStatus,
+  InstanceHealthSchema,
   InstanceSchema,
-  IOMetricsSchema,
+  PgStatStatementsHealthSchema,
   PostgresConfig_SslMode,
   PostgresConfig_SslNegotiation,
   PostgresConfigSchema,
+  ReplicationHealthSchema,
   ServerInfo_ReplicationRole,
   ServerInfoSchema,
+  StatsAccessHealthSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
 type RefreshAllInstancesCacheInput = Parameters<
@@ -66,6 +72,8 @@ interface InstanceUpdateInput {
 }
 
 const ENCODING_COLUMN_NAME = /encoding/i;
+const UPTIME_FACT_PATTERN = /^up /;
+const AUTOVACUUM_ROW_NAME = /Autovacuum/;
 const CHARSET_COLUMN_NAME = /^charset/i;
 const COLLATION_COLUMN_NAME = /^collation/i;
 
@@ -75,6 +83,7 @@ const state = vi.hoisted(() => ({
   extensionInput: undefined as
     | { filter?: string; orderBy?: string; pageSize?: number; parent: string }
     | undefined,
+  healthData: undefined as CheckInstanceHealthResponse | undefined,
   instanceData: undefined as GetInstanceResponse | undefined,
   instances: [] as PostgresInstance[],
   navigate: vi.fn(async () => undefined),
@@ -86,7 +95,10 @@ const state = vi.hoisted(() => ({
     async (_input: RefreshAllInstancesCacheInput) => undefined
   ),
   retryInstanceCatalog: vi.fn(async () => undefined),
-  selectedInstanceStatus: "disconnected" as "connected" | "disconnected",
+  selectedInstanceStatus: "disconnected" as
+    | "connected"
+    | "disconnected"
+    | "error",
   transport: { tag: "transport" },
   updateInstance: vi.fn(async (_input: InstanceUpdateInput) => undefined),
 }));
@@ -164,9 +176,34 @@ vi.mock("@/hooks/api/extension", () => ({
   },
 }));
 
+vi.mock("@/hooks/api/metrics", () => ({
+  quantizedMetricsAnchor: () => 0,
+  useInstanceMetricsQuery: () => ({
+    data: undefined,
+    error: null,
+    isFetching: false,
+    isPending: true,
+    refetch: vi.fn(async () => ({})),
+  }),
+  useInstancePreviousMetricsQuery: () => ({
+    data: undefined,
+    error: null,
+    isFetching: false,
+    isPending: true,
+    refetch: vi.fn(async () => ({})),
+  }),
+}));
+
 vi.mock("@/hooks/api/instance", () => ({
   refreshAllInstancesCache: (input: RefreshAllInstancesCacheInput) =>
     state.refreshAllInstancesCache(input),
+  useCheckInstanceHealthQuery: () => ({
+    data: state.healthData,
+    error: null,
+    isFetching: false,
+    isPending: state.healthData === undefined,
+    refetch: vi.fn(async () => ({})),
+  }),
   useDeleteInstanceMutation: () => ({
     isPending: false,
     mutateAsync: vi.fn(async () => undefined),
@@ -231,7 +268,6 @@ function postgresInstanceFixture(
     connectionError: "",
     host: "db.internal",
     id: "prod",
-    lastConnectionCheckTime: undefined,
     name: "Production",
     port: 5432,
     resourceName: "instances/prod",
@@ -239,7 +275,11 @@ function postgresInstanceFixture(
   };
 }
 
-function instanceResponse() {
+function instanceResponse({
+  connectionError = "",
+}: {
+  connectionError?: string;
+} = {}) {
   return createProto(GetInstanceResponseSchema, {
     instance: createProto(InstanceSchema, {
       config: createProto(PostgresConfigSchema, {
@@ -250,6 +290,7 @@ function instanceResponse() {
         sslMode: PostgresConfig_SslMode.PREFER,
         username: "postgres",
       }),
+      connectionError,
       displayName: "Production",
       labels: {},
       name: "instances/prod",
@@ -278,7 +319,12 @@ function connectedInstanceResponse({
       name: "instances/prod",
     }),
     serverInfo: createProto(ServerInfoSchema, {
+      maxConnections: 100,
       replicationRole: ServerInfo_ReplicationRole.PRIMARY,
+      startedAt: timestampFromDate(new Date(Date.now() - 90 * 60 * 1000)),
+      version:
+        "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc, 64-bit",
+      versionShort: "17.9",
     }),
   });
 }
@@ -292,43 +338,65 @@ function extensionInventoryResponse() {
         installedVersion: "1.10",
         schema: "public",
       }),
+      createProto(ExtensionSchema, {
+        displayName: "pgcrypto",
+        installed: true,
+        installedVersion: "1.3",
+        schema: "public",
+      }),
+      createProto(ExtensionSchema, {
+        displayName: "postgis",
+        installed: false,
+      }),
     ],
   });
 }
 
-function overviewResponse() {
-  return createProto(GetInstanceOverviewResponseSchema, {
-    instanceOverview: createProto(InstanceOverviewSchema, {
-      ioMetrics: createProto(IOMetricsSchema, {
-        extendBytes: 16_384n,
-        extends: 2n,
-        fsyncs: 1n,
-        readBytes: 57_344n,
-        reads: 7n,
-        writeBytes: 24_576n,
-        writes: 3n,
+function instanceHealthResponse({
+  includeAutovacuum = true,
+}: {
+  includeAutovacuum?: boolean;
+} = {}) {
+  return createProto(CheckInstanceHealthResponseSchema, {
+    health: createProto(InstanceHealthSchema, {
+      ...(includeAutovacuum
+        ? {
+            autovacuum: createProto(AutovacuumHealthSchema, {
+              maxWorkers: 3,
+              runningWorkers: 1,
+              status: HealthCheckStatus.OK,
+              summary: "1 of 3 workers · last ran 18m ago",
+            }),
+          }
+        : {}),
+      connectionActivity: createProto(ConnectionActivityHealthSchema, {
+        activeConnections: 3,
+        idleConnections: 39,
+        maxConnections: 100,
+        status: HealthCheckStatus.OK,
+        totalConnections: 42,
+        utilizationRatio: 0.42,
+        waitingForLockConnections: 0,
+      }),
+      pgStatStatements: createProto(PgStatStatementsHealthSchema, {
+        extensionInstalled: true,
+        sharedPreloadConfigured: false,
+        status: HealthCheckStatus.WARNING,
+        summary: "Not loaded (needs shared_preload_libraries)",
+      }),
+      replication: createProto(ReplicationHealthSchema, {
+        role: ServerInfo_ReplicationRole.PRIMARY,
+        status: HealthCheckStatus.OK,
+        streamingReplicas: 1,
+        summary: "Primary · 1 replica streaming",
+      }),
+      statsAccess: createProto(StatsAccessHealthSchema, {
+        currentUser: "postgres",
+        status: HealthCheckStatus.OK,
+        summary: "superuser · full visibility",
+        superuser: true,
       }),
     }),
-  });
-}
-
-function ioPartialErrorResponse() {
-  const detail = anyPack(
-    ErrorInfoSchema,
-    createProto(ErrorInfoSchema, {
-      metadata: { metric: "io" },
-      reason: "METRIC_UNAVAILABLE",
-    })
-  );
-
-  return createProto(GetInstanceOverviewResponseSchema, {
-    instanceOverview: createProto(InstanceOverviewSchema, {}),
-    partialErrors: [
-      createProto(StatusSchema, {
-        details: [detail],
-        message: "failed to query I/O metrics",
-      }),
-    ],
   });
 }
 
@@ -336,6 +404,7 @@ beforeEach(() => {
   state.databases = [];
   state.extensionData = undefined;
   state.extensionInput = undefined;
+  state.healthData = undefined;
   state.instanceData = instanceResponse();
   state.instances = [postgresInstanceFixture()];
   state.navigate.mockClear();
@@ -542,111 +611,135 @@ describe("backend instance refresh", () => {
   });
 });
 
-describe("backend instance I/O metrics", () => {
-  test("shows pg_stat_io read/write/extend/fsync metrics", () => {
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.overviewData = overviewResponse();
-
-    renderInstanceOverview();
-
-    expect(screen.getByText("I/O reads")).toBeTruthy();
-    expect(screen.getByText("56 KB")).toBeTruthy();
-    expect(screen.getByText("7 ops")).toBeTruthy();
-    expect(screen.getByText("I/O writes")).toBeTruthy();
-    expect(screen.getByText("24 KB")).toBeTruthy();
-    expect(screen.getByText("3 ops")).toBeTruthy();
-    expect(screen.getByText("I/O extends")).toBeTruthy();
-    expect(screen.getByText("16 KB")).toBeTruthy();
-    expect(screen.getByText("2 ops")).toBeTruthy();
-    expect(screen.getByText("I/O fsyncs")).toBeTruthy();
-    expect(screen.getByText("1 call")).toBeTruthy();
-  });
-
-  test("shows pg_stat_io fallback notice when unavailable", () => {
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.overviewData = ioPartialErrorResponse();
-
-    renderInstanceOverview();
-
-    expect(screen.getAllByText("failed to query I/O metrics")).toHaveLength(4);
-  });
-});
-
 describe("backend instance health checks", () => {
-  test("shows real health check statuses from existing instance data", () => {
+  function renderConnectedHealth() {
     state.selectedInstanceStatus = "connected";
     state.instances = [postgresInstanceFixture("connected")];
     state.instanceData = connectedInstanceResponse();
     state.extensionData = extensionInventoryResponse();
+    state.healthData = instanceHealthResponse();
+    renderInstanceOverview();
+    return screen.getByRole("region", { name: "Health checks" });
+  }
+
+  test("shows server facts and live health rows when connected", () => {
+    const health = renderConnectedHealth();
+
+    // Facts header from serverInfo + the unfiltered extension inventory.
+    expect(within(health).getByText("PostgreSQL 17.9")).toBeTruthy();
+    expect(within(health).getByText(UPTIME_FACT_PATTERN)).toBeTruthy();
+    expect(within(health).getByText("aarch64 / linux")).toBeTruthy();
+    expect(within(health).getByText("2 extensions")).toBeTruthy();
+    expect(within(health).getByText("max 100 connections")).toBeTruthy();
+    expect(state.extensionInput).toEqual({
+      orderBy: "installed desc",
+      pageSize: 50,
+      parent: "instances/prod/databases/postgres",
+    });
+
+    // One compact confirmation row folds TCP, TLS, and auth together.
+    expect(within(health).getByText("Connection")).toBeTruthy();
+    expect(
+      within(health).getByText(
+        "db.internal:5432 · TLS prefer · credentials accepted"
+      )
+    ).toBeTruthy();
+
+    // Live rows from the CheckInstanceHealth RPC, including autovacuum.
+    expect(within(health).getByText("Connections")).toBeTruthy();
+    expect(
+      within(health).getByText("42% used · 3 active · no lock waits")
+    ).toBeTruthy();
+    expect(within(health).getByText("Replication")).toBeTruthy();
+    expect(
+      within(health).getByText("Primary · 1 replica streaming")
+    ).toBeTruthy();
+    expect(within(health).getByText("Stats access")).toBeTruthy();
+    expect(
+      within(health).getByText("superuser · full visibility")
+    ).toBeTruthy();
+    expect(within(health).getByText("pg_stat_statements")).toBeTruthy();
+    expect(
+      within(health).getByText("Not loaded (needs shared_preload_libraries)")
+    ).toBeTruthy();
+    expect(within(health).getByText("Autovacuum")).toBeTruthy();
+    expect(
+      within(health).getByText("1 of 3 workers · last ran 18m ago")
+    ).toBeTruthy();
+  });
+
+  test("expands a row to show its typed detail fields", async () => {
+    const user = userEvent.setup();
+    const health = renderConnectedHealth();
+
+    await user.click(
+      within(health).getByRole("button", { name: AUTOVACUUM_ROW_NAME })
+    );
+
+    expect(await within(health).findByText("Running workers")).toBeTruthy();
+    expect(within(health).getByText("1 of 3")).toBeTruthy();
+  });
+
+  test("renders a category from partial_errors as unavailable with its reason", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    const healthData = instanceHealthResponse({ includeAutovacuum: false });
+    healthData.partialErrors = [
+      createProto(StatusSchema, {
+        details: [
+          anyPack(
+            ErrorInfoSchema,
+            createProto(ErrorInfoSchema, {
+              metadata: { check: "autovacuum" },
+              reason: "AUTOVACUUM_CHECK_FAILED",
+            })
+          ),
+        ],
+        message: "permission denied for pg_stat_activity",
+      }),
+    ];
+    state.healthData = healthData;
+
+    renderInstanceOverview();
+
+    const health = screen.getByRole("region", { name: "Health checks" });
+    expect(within(health).getByText("Autovacuum")).toBeTruthy();
+    expect(
+      within(health).getByText("permission denied for pg_stat_activity")
+    ).toBeTruthy();
+  });
+
+  test("keeps metadata diagnostics when the instance is disconnected", () => {
+    renderInstanceOverview();
+
+    const health = screen.getByRole("region", { name: "Health checks" });
+
+    expect(within(health).getByText("TCP")).toBeTruthy();
+    expect(within(health).getByText("Authentication")).toBeTruthy();
+    expect(within(health).getAllByText("Not checked yet")).toHaveLength(2);
+    expect(within(health).getByText("TLS")).toBeTruthy();
+    expect(
+      within(health).getByText("prefer · may fall back to plaintext")
+    ).toBeTruthy();
+    // No live rows without a connection.
+    expect(within(health).queryByText("Autovacuum")).toBeNull();
+    expect(within(health).queryByText("Stats access")).toBeNull();
+  });
+
+  test("explains the failure when the connection errors", () => {
+    state.selectedInstanceStatus = "error";
+    state.instanceData = instanceResponse({
+      connectionError: "connection refused",
+    });
 
     renderInstanceOverview();
 
     const health = screen.getByRole("region", { name: "Health checks" });
 
     expect(within(health).getByText("TCP")).toBeTruthy();
-    expect(within(health).getByText("Reachable")).toBeTruthy();
-    expect(within(health).getByText("TLS")).toBeTruthy();
-    expect(within(health).getByText("Opportunistic")).toBeTruthy();
-    expect(
-      within(health).getByText(
-        "prefer / postgres; may use plaintext fallback; no handshake observed"
-      )
-    ).toBeTruthy();
-    expect(within(health).getByText("Authentication")).toBeTruthy();
-    expect(within(health).getByText("Accepted")).toBeTruthy();
-    expect(within(health).getByText("Replication")).toBeTruthy();
-    expect(within(health).getByText("Detected")).toBeTruthy();
-    expect(within(health).getByText("primary server")).toBeTruthy();
-    expect(within(health).getByText("pg_stat_statements")).toBeTruthy();
-    expect(within(health).getByText("Installed")).toBeTruthy();
-    expect(state.extensionInput).toEqual({
-      filter: 'name = "pg_stat_statements"',
-      orderBy: "name asc",
-      pageSize: 1,
-      parent: "instances/prod/databases/postgres",
-    });
-  });
-
-  test.each([
-    [
-      PostgresConfig_SslMode.ALLOW,
-      "allow / postgres; may use plaintext fallback; no handshake observed",
-    ],
-    [
-      PostgresConfig_SslMode.PREFER,
-      "prefer / postgres; may use plaintext fallback; no handshake observed",
-    ],
-  ])("labels ssl mode %s as opportunistic, not configured", (sslMode, value) => {
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.instanceData = connectedInstanceResponse({ sslMode });
-
-    renderInstanceOverview();
-
-    const health = screen.getByRole("region", { name: "Health checks" });
-    const tls = within(health).getByRole("group", {
-      name: "TLS health check",
-    });
-
-    expect(within(tls).getByText("Opportunistic")).toBeTruthy();
-    expect(within(tls).getByText(value)).toBeTruthy();
-    expect(within(tls).queryByText("Configured")).toBeNull();
-  });
-
-  test("does not report pg_stat_statements when extension inventory was not checked", () => {
-    renderInstanceOverview();
-
-    const health = screen.getByRole("region", { name: "Health checks" });
-    const pgStatStatements = within(health).getByRole("group", {
-      name: "pg_stat_statements health check",
-    });
-
-    expect(within(pgStatStatements).getByText("Not checked")).toBeTruthy();
-    expect(
-      within(pgStatStatements).getByText("inventory not checked")
-    ).toBeTruthy();
+    expect(within(health).getByText("connection refused")).toBeTruthy();
+    expect(within(health).getByText("No authenticated session")).toBeTruthy();
   });
 });
 

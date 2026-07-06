@@ -1,5 +1,4 @@
 import { create } from "@bufbuild/protobuf";
-import { timestampFromDate } from "@bufbuild/protobuf/wkt";
 import { describe, expect, test } from "vitest";
 import {
   createFallbackDatabase,
@@ -23,9 +22,6 @@ describe("mapInstance", () => {
       connectionError: "password authentication failed",
       connectionState: Instance_ConnectionState.ERROR,
       displayName: "Production",
-      lastConnectionCheckTime: timestampFromDate(
-        new Date("2026-05-21T10:15:00Z")
-      ),
       name: "instances/prod",
     });
 
@@ -33,9 +29,6 @@ describe("mapInstance", () => {
       connectionError: "password authentication failed",
       host: "db.internal",
       id: "prod",
-      lastConnectionCheckTime: timestampFromDate(
-        new Date("2026-05-21T10:15:00Z")
-      ),
       name: "Production",
       port: 6543,
       resourceName: "instances/prod",

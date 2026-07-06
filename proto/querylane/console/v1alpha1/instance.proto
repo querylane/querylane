@@ -484,7 +484,7 @@ message CheckInstanceHealthResponse {
   // Each Status identifies the failed category via google.rpc.ErrorInfo
   // in its details, with metadata key "check" set to the category name
   // (one of: "connection_activity", "replication", "stats_access",
-  // "pg_stat_statements").
+  // "pg_stat_statements", "autovacuum").
   repeated google.rpc.Status partial_errors = 2;
 }
 
@@ -516,6 +516,8 @@ message InstanceHealth {
   StatsAccessHealth stats_access = 4;
   // Whether pg_stat_statements is installed, loaded, and accumulating rows.
   PgStatStatementsHealth pg_stat_statements = 5;
+  // Autovacuum worker saturation and most recent auto-maintenance activity.
+  AutovacuumHealth autovacuum = 6;
 }
 
 // Backend activity and connection pressure from pg_stat_activity.
@@ -534,6 +536,20 @@ message ConnectionActivityHealth {
   int32 waiting_for_lock_connections = 9 [(buf.validate.field).int32.gte = 0];
   int32 long_running_transaction_connections = 10 [(buf.validate.field).int32.gte = 0];
   int64 longest_transaction_seconds = 11 [(buf.validate.field).int64.gte = 0];
+  // Current client backends grouped by application_name (top talkers first,
+  // capped). A live snapshot with no historical backing. Empty when the
+  // breakdown could not be computed; the scalar counts above stay authoritative.
+  repeated ApplicationConnections by_application = 12;
+}
+
+// Client backend connection counts for one application_name, split by state.
+message ApplicationConnections {
+  // The reporting application_name; '(unnamed)' when the backend set none.
+  string application_name = 1;
+  int32 active_connections = 2 [(buf.validate.field).int32.gte = 0];
+  int32 idle_connections = 3 [(buf.validate.field).int32.gte = 0];
+  int32 idle_in_transaction_connections = 4 [(buf.validate.field).int32.gte = 0];
+  int32 total_connections = 5 [(buf.validate.field).int32.gte = 0];
 }
 
 // Replication health from pg_is_in_recovery, pg_stat_replication, and
@@ -575,6 +591,18 @@ message PgStatStatementsHealth {
   bool view_queryable = 8;
   int64 statement_count = 9 [(buf.validate.field).int64.gte = 0];
   google.protobuf.Timestamp stats_reset_at = 10;
+}
+
+// Autovacuum worker saturation and most recent auto-maintenance activity from
+// pg_stat_activity and pg_stat_all_tables.
+message AutovacuumHealth {
+  HealthCheckStatus status = 1;
+  string summary = 2;
+  int32 running_workers = 3 [(buf.validate.field).int32.gte = 0];
+  int32 max_workers = 4 [(buf.validate.field).int32.gte = 0];
+  // Most recent autovacuum/autoanalyze across the CONNECTED database's tables.
+  // Unset when nothing has been auto-maintained yet. Not cluster-wide.
+  google.protobuf.Timestamp last_autovacuum_at = 5;
 }
 
 // Live health signals for a PostgreSQL instance.

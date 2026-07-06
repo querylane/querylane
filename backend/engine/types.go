@@ -28,6 +28,7 @@ type InstanceHealth struct {
 	Replication        *ReplicationHealth
 	StatsAccess        *StatsAccessHealth
 	PGStatStatements   *PGStatStatementsHealth
+	Autovacuum         *AutovacuumHealth
 
 	// PartialErrors carries the safe classified cause for nil health fields or
 	// degraded subqueries. Err may unwrap to PostgresSQLError; callers should
@@ -60,6 +61,20 @@ type ConnectionActivityHealth struct {
 	WaitingForLocks   int32
 	LongRunningTxs    int32
 	LongestTxSeconds  int64
+	// ByApplication breaks the current client backends down by
+	// application_name (top talkers first). Empty when the breakdown query
+	// failed; the scalar counts above remain authoritative.
+	ByApplication []ApplicationConnections
+}
+
+// ApplicationConnections is the connection count for one application_name in
+// pg_stat_activity, split by backend state.
+type ApplicationConnections struct {
+	ApplicationName   string
+	Active            int32
+	Idle              int32
+	IdleInTransaction int32
+	Total             int32
 }
 
 type ReplicationRole string
@@ -109,6 +124,20 @@ type PGStatStatementsHealth struct {
 	ViewQueryable           bool
 	StatementCount          int64
 	StatsResetAt            *time.Time
+}
+
+// AutovacuumHealth describes autovacuum worker saturation and the most recent
+// auto-maintenance activity. RunningWorkers and MaxWorkers are instance-wide,
+// but LastAutovacuumAt is derived from pg_stat_all_tables and therefore
+// reflects only the connected database, not the whole cluster.
+type AutovacuumHealth struct {
+	Status         HealthStatus
+	Summary        string
+	RunningWorkers int32
+	MaxWorkers     int32
+	// LastAutovacuumAt is the newest autovacuum/autoanalyze across the connected
+	// database's tables. Nil when nothing has ever been auto-maintained here.
+	LastAutovacuumAt *time.Time
 }
 
 // OverviewMetricError identifies a failed InstanceOverview metric category.

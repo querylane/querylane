@@ -1,4 +1,4 @@
-import type { DescMessage } from "@bufbuild/protobuf";
+import { createRegistry, type DescMessage } from "@bufbuild/protobuf";
 import type { Interceptor } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 
@@ -20,6 +20,8 @@ import {
   REQUEST_PAYLOAD_SERIALIZATION_FAILURE_MESSAGE,
   STREAMING_INPUT_REQUEST_MESSAGE,
 } from "@/lib/ui-error-types";
+import { file_google_rpc_error_details } from "@/protogen/google/rpc/error_details_pb";
+import { file_querylane_console_v1alpha1_errors } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 import { decideBlockingAppState } from "@/stores/blocking-app-state";
 import { markSetupRequired } from "@/stores/setup-required-signal";
 
@@ -468,12 +470,24 @@ const connectBaseUrl = resolveConnectBaseUrl({
 const instanceRpcConcurrencyInterceptor =
   createInstanceRpcConcurrencyInterceptor();
 
+/**
+ * Registry of the `google.protobuf.Any` detail types the backend packs into
+ * `google.rpc.Status.details` on partial errors (e.g. GetInstanceOverview,
+ * CheckInstanceHealth, QueryMetrics). Without it, connect cannot decode those
+ * Any values from JSON and the whole response fails to deserialize.
+ */
+const errorDetailRegistry = createRegistry(
+  file_google_rpc_error_details,
+  file_querylane_console_v1alpha1_errors
+);
+
 function createAppConnectTransport(defaultTimeoutMs: number) {
   return createConnectTransport({
     baseUrl: connectBaseUrl,
     defaultTimeoutMs,
     fetch: createObservedConnectFetch(globalThis.fetch),
     interceptors: [setupInterceptor, instanceRpcConcurrencyInterceptor],
+    jsonOptions: { registry: errorDetailRegistry },
   });
 }
 

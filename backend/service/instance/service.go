@@ -543,7 +543,7 @@ func (s *Service) CheckInstanceHealth(ctx context.Context, req *connect.Request[
 	} else {
 		recordedPartialErrors["connection_activity"] = true
 
-		resp.PartialErrors = append(resp.PartialErrors, healthPartialError("connection_activity", "failed to query connection activity", checkErrors["connection_activity"]))
+		resp.PartialErrors = append(resp.PartialErrors, healthPartialError("connection_activity", healthPartialErrorMessage("connection_activity"), checkErrors["connection_activity"]))
 	}
 
 	if health.Replication != nil {
@@ -551,7 +551,7 @@ func (s *Service) CheckInstanceHealth(ctx context.Context, req *connect.Request[
 	} else {
 		recordedPartialErrors["replication"] = true
 
-		resp.PartialErrors = append(resp.PartialErrors, healthPartialError("replication", "failed to query replication health", checkErrors["replication"]))
+		resp.PartialErrors = append(resp.PartialErrors, healthPartialError("replication", healthPartialErrorMessage("replication"), checkErrors["replication"]))
 	}
 
 	if health.StatsAccess != nil {
@@ -559,7 +559,7 @@ func (s *Service) CheckInstanceHealth(ctx context.Context, req *connect.Request[
 	} else {
 		recordedPartialErrors["stats_access"] = true
 
-		resp.PartialErrors = append(resp.PartialErrors, healthPartialError("stats_access", "failed to query stats access", checkErrors["stats_access"]))
+		resp.PartialErrors = append(resp.PartialErrors, healthPartialError("stats_access", healthPartialErrorMessage("stats_access"), checkErrors["stats_access"]))
 	}
 
 	if health.PGStatStatements != nil {
@@ -567,7 +567,15 @@ func (s *Service) CheckInstanceHealth(ctx context.Context, req *connect.Request[
 	} else {
 		recordedPartialErrors["pg_stat_statements"] = true
 
-		resp.PartialErrors = append(resp.PartialErrors, healthPartialError("pg_stat_statements", "failed to query pg_stat_statements health", checkErrors["pg_stat_statements"]))
+		resp.PartialErrors = append(resp.PartialErrors, healthPartialError("pg_stat_statements", healthPartialErrorMessage("pg_stat_statements"), checkErrors["pg_stat_statements"]))
+	}
+
+	if health.Autovacuum != nil {
+		resp.Health.Autovacuum = autovacuumHealthToProto(health.Autovacuum)
+	} else {
+		recordedPartialErrors["autovacuum"] = true
+
+		resp.PartialErrors = append(resp.PartialErrors, healthPartialError("autovacuum", healthPartialErrorMessage("autovacuum"), checkErrors["autovacuum"]))
 	}
 
 	for _, partialError := range health.PartialErrors {
@@ -594,7 +602,27 @@ func connectionActivityHealthToProto(activity *engine.ConnectionActivityHealth) 
 		WaitingForLockConnections:         activity.WaitingForLocks,
 		LongRunningTransactionConnections: activity.LongRunningTxs,
 		LongestTransactionSeconds:         activity.LongestTxSeconds,
+		ByApplication:                     applicationConnectionsToProto(activity.ByApplication),
 	}
+}
+
+func applicationConnectionsToProto(apps []engine.ApplicationConnections) []*v1alpha1.ApplicationConnections {
+	if len(apps) == 0 {
+		return nil
+	}
+
+	proto := make([]*v1alpha1.ApplicationConnections, 0, len(apps))
+	for _, app := range apps {
+		proto = append(proto, &v1alpha1.ApplicationConnections{
+			ApplicationName:              app.ApplicationName,
+			ActiveConnections:            app.Active,
+			IdleConnections:              app.Idle,
+			IdleInTransactionConnections: app.IdleInTransaction,
+			TotalConnections:             app.Total,
+		})
+	}
+
+	return proto
 }
 
 func replicationHealthToProto(replication *engine.ReplicationHealth) *v1alpha1.ReplicationHealth {
@@ -639,6 +667,21 @@ func pgStatStatementsHealthToProto(pgStatStatements *engine.PGStatStatementsHeal
 
 	if pgStatStatements.StatsResetAt != nil {
 		protoHealth.StatsResetAt = timestamppb.New(*pgStatStatements.StatsResetAt)
+	}
+
+	return protoHealth
+}
+
+func autovacuumHealthToProto(autovacuum *engine.AutovacuumHealth) *v1alpha1.AutovacuumHealth {
+	protoHealth := &v1alpha1.AutovacuumHealth{
+		Status:         healthStatusToProto(autovacuum.Status),
+		Summary:        autovacuum.Summary,
+		RunningWorkers: autovacuum.RunningWorkers,
+		MaxWorkers:     autovacuum.MaxWorkers,
+	}
+
+	if autovacuum.LastAutovacuumAt != nil {
+		protoHealth.LastAutovacuumAt = timestamppb.New(*autovacuum.LastAutovacuumAt)
 	}
 
 	return protoHealth
@@ -718,6 +761,8 @@ func healthPartialErrorMessage(check string) string {
 		return "failed to query stats access"
 	case "pg_stat_statements":
 		return "failed to query pg_stat_statements health"
+	case "autovacuum":
+		return "failed to query autovacuum health"
 	default:
 		return "failed to query instance health"
 	}

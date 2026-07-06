@@ -228,6 +228,12 @@ func (s *PostgresEngineIntegrationTestSuite) TestCheckInstanceHealthReturnsDatab
 		s.Equal(engine.HealthStatusWarning, health.PGStatStatements.Status)
 		s.Contains(health.PGStatStatements.Summary, "shared_preload_libraries")
 	}
+
+	s.Require().NotNil(health.Autovacuum)
+	s.GreaterOrEqual(health.Autovacuum.RunningWorkers, int32(0))
+	s.Positive(health.Autovacuum.MaxWorkers)
+	s.NotEmpty(health.Autovacuum.Summary)
+	s.Contains([]engine.HealthStatus{engine.HealthStatusOK, engine.HealthStatusWarning}, health.Autovacuum.Status)
 }
 
 func (s *PostgresEngineIntegrationTestSuite) TestListExtensionsIncludesAvailableAndInstalled() {

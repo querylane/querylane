@@ -1572,7 +1572,7 @@ type CheckInstanceHealthResponse struct {
 	// Each Status identifies the failed category via google.rpc.ErrorInfo
 	// in its details, with metadata key "check" set to the category name
 	// (one of: "connection_activity", "replication", "stats_access",
-	// "pg_stat_statements").
+	// "pg_stat_statements", "autovacuum").
 	PartialErrors []*status.Status `protobuf:"bytes,2,rep,name=partial_errors,json=partialErrors,proto3" json:"partial_errors,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1636,8 +1636,10 @@ type InstanceHealth struct {
 	StatsAccess *StatsAccessHealth `protobuf:"bytes,4,opt,name=stats_access,json=statsAccess,proto3" json:"stats_access,omitempty"`
 	// Whether pg_stat_statements is installed, loaded, and accumulating rows.
 	PgStatStatements *PgStatStatementsHealth `protobuf:"bytes,5,opt,name=pg_stat_statements,json=pgStatStatements,proto3" json:"pg_stat_statements,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Autovacuum worker saturation and most recent auto-maintenance activity.
+	Autovacuum    *AutovacuumHealth `protobuf:"bytes,6,opt,name=autovacuum,proto3" json:"autovacuum,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *InstanceHealth) Reset() {
@@ -1705,6 +1707,13 @@ func (x *InstanceHealth) GetPgStatStatements() *PgStatStatementsHealth {
 	return nil
 }
 
+func (x *InstanceHealth) GetAutovacuum() *AutovacuumHealth {
+	if x != nil {
+		return x.Autovacuum
+	}
+	return nil
+}
+
 // Backend activity and connection pressure from pg_stat_activity.
 type ConnectionActivityHealth struct {
 	state                             protoimpl.MessageState `protogen:"open.v1"`
@@ -1719,8 +1728,12 @@ type ConnectionActivityHealth struct {
 	WaitingForLockConnections         int32                  `protobuf:"varint,9,opt,name=waiting_for_lock_connections,json=waitingForLockConnections,proto3" json:"waiting_for_lock_connections,omitempty"`
 	LongRunningTransactionConnections int32                  `protobuf:"varint,10,opt,name=long_running_transaction_connections,json=longRunningTransactionConnections,proto3" json:"long_running_transaction_connections,omitempty"`
 	LongestTransactionSeconds         int64                  `protobuf:"varint,11,opt,name=longest_transaction_seconds,json=longestTransactionSeconds,proto3" json:"longest_transaction_seconds,omitempty"`
-	unknownFields                     protoimpl.UnknownFields
-	sizeCache                         protoimpl.SizeCache
+	// Current client backends grouped by application_name (top talkers first,
+	// capped). A live snapshot with no historical backing. Empty when the
+	// breakdown could not be computed; the scalar counts above stay authoritative.
+	ByApplication []*ApplicationConnections `protobuf:"bytes,12,rep,name=by_application,json=byApplication,proto3" json:"by_application,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ConnectionActivityHealth) Reset() {
@@ -1830,6 +1843,91 @@ func (x *ConnectionActivityHealth) GetLongestTransactionSeconds() int64 {
 	return 0
 }
 
+func (x *ConnectionActivityHealth) GetByApplication() []*ApplicationConnections {
+	if x != nil {
+		return x.ByApplication
+	}
+	return nil
+}
+
+// Client backend connection counts for one application_name, split by state.
+type ApplicationConnections struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The reporting application_name; '(unnamed)' when the backend set none.
+	ApplicationName              string `protobuf:"bytes,1,opt,name=application_name,json=applicationName,proto3" json:"application_name,omitempty"`
+	ActiveConnections            int32  `protobuf:"varint,2,opt,name=active_connections,json=activeConnections,proto3" json:"active_connections,omitempty"`
+	IdleConnections              int32  `protobuf:"varint,3,opt,name=idle_connections,json=idleConnections,proto3" json:"idle_connections,omitempty"`
+	IdleInTransactionConnections int32  `protobuf:"varint,4,opt,name=idle_in_transaction_connections,json=idleInTransactionConnections,proto3" json:"idle_in_transaction_connections,omitempty"`
+	TotalConnections             int32  `protobuf:"varint,5,opt,name=total_connections,json=totalConnections,proto3" json:"total_connections,omitempty"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
+}
+
+func (x *ApplicationConnections) Reset() {
+	*x = ApplicationConnections{}
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApplicationConnections) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApplicationConnections) ProtoMessage() {}
+
+func (x *ApplicationConnections) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApplicationConnections.ProtoReflect.Descriptor instead.
+func (*ApplicationConnections) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ApplicationConnections) GetApplicationName() string {
+	if x != nil {
+		return x.ApplicationName
+	}
+	return ""
+}
+
+func (x *ApplicationConnections) GetActiveConnections() int32 {
+	if x != nil {
+		return x.ActiveConnections
+	}
+	return 0
+}
+
+func (x *ApplicationConnections) GetIdleConnections() int32 {
+	if x != nil {
+		return x.IdleConnections
+	}
+	return 0
+}
+
+func (x *ApplicationConnections) GetIdleInTransactionConnections() int32 {
+	if x != nil {
+		return x.IdleInTransactionConnections
+	}
+	return 0
+}
+
+func (x *ApplicationConnections) GetTotalConnections() int32 {
+	if x != nil {
+		return x.TotalConnections
+	}
+	return 0
+}
+
 // Replication health from pg_is_in_recovery, pg_stat_replication, and
 // pg_stat_wal_receiver.
 type ReplicationHealth struct {
@@ -1849,7 +1947,7 @@ type ReplicationHealth struct {
 
 func (x *ReplicationHealth) Reset() {
 	*x = ReplicationHealth{}
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[23]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1861,7 +1959,7 @@ func (x *ReplicationHealth) String() string {
 func (*ReplicationHealth) ProtoMessage() {}
 
 func (x *ReplicationHealth) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[23]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1874,7 +1972,7 @@ func (x *ReplicationHealth) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReplicationHealth.ProtoReflect.Descriptor instead.
 func (*ReplicationHealth) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{23}
+	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ReplicationHealth) GetStatus() HealthCheckStatus {
@@ -1957,7 +2055,7 @@ type StatsAccessHealth struct {
 
 func (x *StatsAccessHealth) Reset() {
 	*x = StatsAccessHealth{}
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[24]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1969,7 +2067,7 @@ func (x *StatsAccessHealth) String() string {
 func (*StatsAccessHealth) ProtoMessage() {}
 
 func (x *StatsAccessHealth) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[24]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1982,7 +2080,7 @@ func (x *StatsAccessHealth) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatsAccessHealth.ProtoReflect.Descriptor instead.
 func (*StatsAccessHealth) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{24}
+	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *StatsAccessHealth) GetStatus() HealthCheckStatus {
@@ -2061,7 +2159,7 @@ type PgStatStatementsHealth struct {
 
 func (x *PgStatStatementsHealth) Reset() {
 	*x = PgStatStatementsHealth{}
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[25]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2073,7 +2171,7 @@ func (x *PgStatStatementsHealth) String() string {
 func (*PgStatStatementsHealth) ProtoMessage() {}
 
 func (x *PgStatStatementsHealth) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[25]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2086,7 +2184,7 @@ func (x *PgStatStatementsHealth) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PgStatStatementsHealth.ProtoReflect.Descriptor instead.
 func (*PgStatStatementsHealth) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{25}
+	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *PgStatStatementsHealth) GetStatus() HealthCheckStatus {
@@ -2159,6 +2257,86 @@ func (x *PgStatStatementsHealth) GetStatsResetAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// Autovacuum worker saturation and most recent auto-maintenance activity from
+// pg_stat_activity and pg_stat_all_tables.
+type AutovacuumHealth struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Status         HealthCheckStatus      `protobuf:"varint,1,opt,name=status,proto3,enum=querylane.console.v1alpha1.HealthCheckStatus" json:"status,omitempty"`
+	Summary        string                 `protobuf:"bytes,2,opt,name=summary,proto3" json:"summary,omitempty"`
+	RunningWorkers int32                  `protobuf:"varint,3,opt,name=running_workers,json=runningWorkers,proto3" json:"running_workers,omitempty"`
+	MaxWorkers     int32                  `protobuf:"varint,4,opt,name=max_workers,json=maxWorkers,proto3" json:"max_workers,omitempty"`
+	// Most recent autovacuum/autoanalyze across the CONNECTED database's tables.
+	// Unset when nothing has been auto-maintained yet. Not cluster-wide.
+	LastAutovacuumAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=last_autovacuum_at,json=lastAutovacuumAt,proto3" json:"last_autovacuum_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *AutovacuumHealth) Reset() {
+	*x = AutovacuumHealth{}
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutovacuumHealth) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutovacuumHealth) ProtoMessage() {}
+
+func (x *AutovacuumHealth) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutovacuumHealth.ProtoReflect.Descriptor instead.
+func (*AutovacuumHealth) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *AutovacuumHealth) GetStatus() HealthCheckStatus {
+	if x != nil {
+		return x.Status
+	}
+	return HealthCheckStatus_HEALTH_CHECK_STATUS_UNSPECIFIED
+}
+
+func (x *AutovacuumHealth) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
+}
+
+func (x *AutovacuumHealth) GetRunningWorkers() int32 {
+	if x != nil {
+		return x.RunningWorkers
+	}
+	return 0
+}
+
+func (x *AutovacuumHealth) GetMaxWorkers() int32 {
+	if x != nil {
+		return x.MaxWorkers
+	}
+	return 0
+}
+
+func (x *AutovacuumHealth) GetLastAutovacuumAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastAutovacuumAt
+	}
+	return nil
+}
+
 // Live health signals for a PostgreSQL instance.
 // All metrics are cluster-wide (instance-scoped).
 type InstanceOverview struct {
@@ -2180,7 +2358,7 @@ type InstanceOverview struct {
 
 func (x *InstanceOverview) Reset() {
 	*x = InstanceOverview{}
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[26]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2192,7 +2370,7 @@ func (x *InstanceOverview) String() string {
 func (*InstanceOverview) ProtoMessage() {}
 
 func (x *InstanceOverview) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[26]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2205,7 +2383,7 @@ func (x *InstanceOverview) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InstanceOverview.ProtoReflect.Descriptor instead.
 func (*InstanceOverview) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{26}
+	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *InstanceOverview) GetConnections() *ConnectionMetrics {
@@ -2260,7 +2438,7 @@ type ConnectionMetrics struct {
 
 func (x *ConnectionMetrics) Reset() {
 	*x = ConnectionMetrics{}
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[27]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2272,7 +2450,7 @@ func (x *ConnectionMetrics) String() string {
 func (*ConnectionMetrics) ProtoMessage() {}
 
 func (x *ConnectionMetrics) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[27]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2285,7 +2463,7 @@ func (x *ConnectionMetrics) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectionMetrics.ProtoReflect.Descriptor instead.
 func (*ConnectionMetrics) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{27}
+	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ConnectionMetrics) GetActiveConnections() int32 {
@@ -2327,7 +2505,7 @@ type StorageMetrics struct {
 
 func (x *StorageMetrics) Reset() {
 	*x = StorageMetrics{}
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[28]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2339,7 +2517,7 @@ func (x *StorageMetrics) String() string {
 func (*StorageMetrics) ProtoMessage() {}
 
 func (x *StorageMetrics) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[28]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2352,7 +2530,7 @@ func (x *StorageMetrics) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageMetrics.ProtoReflect.Descriptor instead.
 func (*StorageMetrics) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{28}
+	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *StorageMetrics) GetTotalSizeBytes() int64 {
@@ -2377,7 +2555,7 @@ type CacheMetrics struct {
 
 func (x *CacheMetrics) Reset() {
 	*x = CacheMetrics{}
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[29]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2389,7 +2567,7 @@ func (x *CacheMetrics) String() string {
 func (*CacheMetrics) ProtoMessage() {}
 
 func (x *CacheMetrics) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[29]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2402,7 +2580,7 @@ func (x *CacheMetrics) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CacheMetrics.ProtoReflect.Descriptor instead.
 func (*CacheMetrics) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{29}
+	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *CacheMetrics) GetHitRatio() float64 {
@@ -2452,7 +2630,7 @@ type IOMetrics struct {
 
 func (x *IOMetrics) Reset() {
 	*x = IOMetrics{}
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[30]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2464,7 +2642,7 @@ func (x *IOMetrics) String() string {
 func (*IOMetrics) ProtoMessage() {}
 
 func (x *IOMetrics) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[30]
+	mi := &file_querylane_console_v1alpha1_instance_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2477,7 +2655,7 @@ func (x *IOMetrics) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IOMetrics.ProtoReflect.Descriptor instead.
 func (*IOMetrics) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{30}
+	return file_querylane_console_v1alpha1_instance_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *IOMetrics) GetReads() int64 {
@@ -2660,14 +2838,17 @@ const file_querylane_console_v1alpha1_instance_proto_rawDesc = "" +
 	"\x1econsole.querylane.dev/Instance\xbaH7\xc8\x01\x01r220^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$R\x04name\"\x9c\x01\n" +
 	"\x1bCheckInstanceHealthResponse\x12B\n" +
 	"\x06health\x18\x01 \x01(\v2*.querylane.console.v1alpha1.InstanceHealthR\x06health\x129\n" +
-	"\x0epartial_errors\x18\x02 \x03(\v2\x12.google.rpc.StatusR\rpartialErrors\"\xb9\x03\n" +
+	"\x0epartial_errors\x18\x02 \x03(\v2\x12.google.rpc.StatusR\rpartialErrors\"\x87\x04\n" +
 	"\x0eInstanceHealth\x12;\n" +
 	"\vobserved_at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"observedAt\x12e\n" +
 	"\x13connection_activity\x18\x02 \x01(\v24.querylane.console.v1alpha1.ConnectionActivityHealthR\x12connectionActivity\x12O\n" +
 	"\vreplication\x18\x03 \x01(\v2-.querylane.console.v1alpha1.ReplicationHealthR\vreplication\x12P\n" +
 	"\fstats_access\x18\x04 \x01(\v2-.querylane.console.v1alpha1.StatsAccessHealthR\vstatsAccess\x12`\n" +
-	"\x12pg_stat_statements\x18\x05 \x01(\v22.querylane.console.v1alpha1.PgStatStatementsHealthR\x10pgStatStatements\"\xd2\x05\n" +
+	"\x12pg_stat_statements\x18\x05 \x01(\v22.querylane.console.v1alpha1.PgStatStatementsHealthR\x10pgStatStatements\x12L\n" +
+	"\n" +
+	"autovacuum\x18\x06 \x01(\v2,.querylane.console.v1alpha1.AutovacuumHealthR\n" +
+	"autovacuum\"\xad\x06\n" +
 	"\x18ConnectionActivityHealth\x12E\n" +
 	"\x06status\x18\x01 \x01(\x0e2-.querylane.console.v1alpha1.HealthCheckStatusR\x06status\x12\x18\n" +
 	"\asummary\x18\x02 \x01(\tR\asummary\x126\n" +
@@ -2680,7 +2861,14 @@ const file_querylane_console_v1alpha1_instance_proto_rawDesc = "" +
 	"\x1cwaiting_for_lock_connections\x18\t \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x19waitingForLockConnections\x12X\n" +
 	"$long_running_transaction_connections\x18\n" +
 	" \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R!longRunningTransactionConnections\x12G\n" +
-	"\x1blongest_transaction_seconds\x18\v \x01(\x03B\a\xbaH\x04\"\x02(\x00R\x19longestTransactionSeconds\"\x95\x04\n" +
+	"\x1blongest_transaction_seconds\x18\v \x01(\x03B\a\xbaH\x04\"\x02(\x00R\x19longestTransactionSeconds\x12Y\n" +
+	"\x0eby_application\x18\f \x03(\v22.querylane.console.v1alpha1.ApplicationConnectionsR\rbyApplication\"\xb5\x02\n" +
+	"\x16ApplicationConnections\x12)\n" +
+	"\x10application_name\x18\x01 \x01(\tR\x0fapplicationName\x126\n" +
+	"\x12active_connections\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x11activeConnections\x122\n" +
+	"\x10idle_connections\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x0fidleConnections\x12N\n" +
+	"\x1fidle_in_transaction_connections\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x1cidleInTransactionConnections\x124\n" +
+	"\x11total_connections\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x10totalConnections\"\x95\x04\n" +
 	"\x11ReplicationHealth\x12E\n" +
 	"\x06status\x18\x01 \x01(\x0e2-.querylane.console.v1alpha1.HealthCheckStatusR\x06status\x12\x18\n" +
 	"\asummary\x18\x02 \x01(\tR\asummary\x12J\n" +
@@ -2712,7 +2900,14 @@ const file_querylane_console_v1alpha1_instance_proto_rawDesc = "" +
 	"\x0eview_queryable\x18\b \x01(\bR\rviewQueryable\x120\n" +
 	"\x0fstatement_count\x18\t \x01(\x03B\a\xbaH\x04\"\x02(\x00R\x0estatementCount\x12@\n" +
 	"\x0estats_reset_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\fstatsResetAt\"\xec\x02\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\fstatsResetAt\"\x99\x02\n" +
+	"\x10AutovacuumHealth\x12E\n" +
+	"\x06status\x18\x01 \x01(\x0e2-.querylane.console.v1alpha1.HealthCheckStatusR\x06status\x12\x18\n" +
+	"\asummary\x18\x02 \x01(\tR\asummary\x120\n" +
+	"\x0frunning_workers\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x0erunningWorkers\x12(\n" +
+	"\vmax_workers\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\n" +
+	"maxWorkers\x12H\n" +
+	"\x12last_autovacuum_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\x10lastAutovacuumAt\"\xec\x02\n" +
 	"\x10InstanceOverview\x12O\n" +
 	"\vconnections\x18\x01 \x01(\v2-.querylane.console.v1alpha1.ConnectionMetricsR\vconnections\x12D\n" +
 	"\astorage\x18\x02 \x01(\v2*.querylane.console.v1alpha1.StorageMetricsR\astorage\x12>\n" +
@@ -2779,7 +2974,7 @@ func file_querylane_console_v1alpha1_instance_proto_rawDescGZIP() []byte {
 }
 
 var file_querylane_console_v1alpha1_instance_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_querylane_console_v1alpha1_instance_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_querylane_console_v1alpha1_instance_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_querylane_console_v1alpha1_instance_proto_goTypes = []any{
 	(HealthCheckStatus)(0),                 // 0: querylane.console.v1alpha1.HealthCheckStatus
 	(Instance_ConnectionState)(0),          // 1: querylane.console.v1alpha1.Instance.ConnectionState
@@ -2809,85 +3004,91 @@ var file_querylane_console_v1alpha1_instance_proto_goTypes = []any{
 	(*CheckInstanceHealthResponse)(nil),    // 25: querylane.console.v1alpha1.CheckInstanceHealthResponse
 	(*InstanceHealth)(nil),                 // 26: querylane.console.v1alpha1.InstanceHealth
 	(*ConnectionActivityHealth)(nil),       // 27: querylane.console.v1alpha1.ConnectionActivityHealth
-	(*ReplicationHealth)(nil),              // 28: querylane.console.v1alpha1.ReplicationHealth
-	(*StatsAccessHealth)(nil),              // 29: querylane.console.v1alpha1.StatsAccessHealth
-	(*PgStatStatementsHealth)(nil),         // 30: querylane.console.v1alpha1.PgStatStatementsHealth
-	(*InstanceOverview)(nil),               // 31: querylane.console.v1alpha1.InstanceOverview
-	(*ConnectionMetrics)(nil),              // 32: querylane.console.v1alpha1.ConnectionMetrics
-	(*StorageMetrics)(nil),                 // 33: querylane.console.v1alpha1.StorageMetrics
-	(*CacheMetrics)(nil),                   // 34: querylane.console.v1alpha1.CacheMetrics
-	(*IOMetrics)(nil),                      // 35: querylane.console.v1alpha1.IOMetrics
-	nil,                                    // 36: querylane.console.v1alpha1.Instance.LabelsEntry
-	nil,                                    // 37: querylane.console.v1alpha1.CreateInstanceSpec.LabelsEntry
-	(*timestamppb.Timestamp)(nil),          // 38: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),          // 39: google.protobuf.FieldMask
-	(*status.Status)(nil),                  // 40: google.rpc.Status
+	(*ApplicationConnections)(nil),         // 28: querylane.console.v1alpha1.ApplicationConnections
+	(*ReplicationHealth)(nil),              // 29: querylane.console.v1alpha1.ReplicationHealth
+	(*StatsAccessHealth)(nil),              // 30: querylane.console.v1alpha1.StatsAccessHealth
+	(*PgStatStatementsHealth)(nil),         // 31: querylane.console.v1alpha1.PgStatStatementsHealth
+	(*AutovacuumHealth)(nil),               // 32: querylane.console.v1alpha1.AutovacuumHealth
+	(*InstanceOverview)(nil),               // 33: querylane.console.v1alpha1.InstanceOverview
+	(*ConnectionMetrics)(nil),              // 34: querylane.console.v1alpha1.ConnectionMetrics
+	(*StorageMetrics)(nil),                 // 35: querylane.console.v1alpha1.StorageMetrics
+	(*CacheMetrics)(nil),                   // 36: querylane.console.v1alpha1.CacheMetrics
+	(*IOMetrics)(nil),                      // 37: querylane.console.v1alpha1.IOMetrics
+	nil,                                    // 38: querylane.console.v1alpha1.Instance.LabelsEntry
+	nil,                                    // 39: querylane.console.v1alpha1.CreateInstanceSpec.LabelsEntry
+	(*timestamppb.Timestamp)(nil),          // 40: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),          // 41: google.protobuf.FieldMask
+	(*status.Status)(nil),                  // 42: google.rpc.Status
 }
 var file_querylane_console_v1alpha1_instance_proto_depIdxs = []int32{
-	36, // 0: querylane.console.v1alpha1.Instance.labels:type_name -> querylane.console.v1alpha1.Instance.LabelsEntry
+	38, // 0: querylane.console.v1alpha1.Instance.labels:type_name -> querylane.console.v1alpha1.Instance.LabelsEntry
 	21, // 1: querylane.console.v1alpha1.Instance.config:type_name -> querylane.console.v1alpha1.PostgresConfig
 	1,  // 2: querylane.console.v1alpha1.Instance.connection_state:type_name -> querylane.console.v1alpha1.Instance.ConnectionState
-	38, // 3: querylane.console.v1alpha1.Instance.create_time:type_name -> google.protobuf.Timestamp
-	38, // 4: querylane.console.v1alpha1.Instance.update_time:type_name -> google.protobuf.Timestamp
-	38, // 5: querylane.console.v1alpha1.Instance.last_connection_check_time:type_name -> google.protobuf.Timestamp
-	38, // 6: querylane.console.v1alpha1.ServerInfo.started_at:type_name -> google.protobuf.Timestamp
+	40, // 3: querylane.console.v1alpha1.Instance.create_time:type_name -> google.protobuf.Timestamp
+	40, // 4: querylane.console.v1alpha1.Instance.update_time:type_name -> google.protobuf.Timestamp
+	40, // 5: querylane.console.v1alpha1.Instance.last_connection_check_time:type_name -> google.protobuf.Timestamp
+	40, // 6: querylane.console.v1alpha1.ServerInfo.started_at:type_name -> google.protobuf.Timestamp
 	2,  // 7: querylane.console.v1alpha1.ServerInfo.replication_role:type_name -> querylane.console.v1alpha1.ServerInfo.ReplicationRole
 	5,  // 8: querylane.console.v1alpha1.ListInstancesResponse.instances:type_name -> querylane.console.v1alpha1.Instance
 	5,  // 9: querylane.console.v1alpha1.GetInstanceResponse.instance:type_name -> querylane.console.v1alpha1.Instance
 	6,  // 10: querylane.console.v1alpha1.GetInstanceResponse.server_info:type_name -> querylane.console.v1alpha1.ServerInfo
-	37, // 11: querylane.console.v1alpha1.CreateInstanceSpec.labels:type_name -> querylane.console.v1alpha1.CreateInstanceSpec.LabelsEntry
+	39, // 11: querylane.console.v1alpha1.CreateInstanceSpec.labels:type_name -> querylane.console.v1alpha1.CreateInstanceSpec.LabelsEntry
 	21, // 12: querylane.console.v1alpha1.CreateInstanceSpec.config:type_name -> querylane.console.v1alpha1.PostgresConfig
 	11, // 13: querylane.console.v1alpha1.CreateInstanceRequest.spec:type_name -> querylane.console.v1alpha1.CreateInstanceSpec
 	5,  // 14: querylane.console.v1alpha1.CreateInstanceRequest.instance:type_name -> querylane.console.v1alpha1.Instance
 	5,  // 15: querylane.console.v1alpha1.CreateInstanceResponse.instance:type_name -> querylane.console.v1alpha1.Instance
 	21, // 16: querylane.console.v1alpha1.TestInstanceConnectionRequest.config:type_name -> querylane.console.v1alpha1.PostgresConfig
 	5,  // 17: querylane.console.v1alpha1.UpdateInstanceRequest.instance:type_name -> querylane.console.v1alpha1.Instance
-	39, // 18: querylane.console.v1alpha1.UpdateInstanceRequest.update_mask:type_name -> google.protobuf.FieldMask
+	41, // 18: querylane.console.v1alpha1.UpdateInstanceRequest.update_mask:type_name -> google.protobuf.FieldMask
 	5,  // 19: querylane.console.v1alpha1.UpdateInstanceResponse.instance:type_name -> querylane.console.v1alpha1.Instance
 	3,  // 20: querylane.console.v1alpha1.PostgresConfig.ssl_mode:type_name -> querylane.console.v1alpha1.PostgresConfig.SslMode
 	20, // 21: querylane.console.v1alpha1.PostgresConfig.password_source:type_name -> querylane.console.v1alpha1.SecretSource
 	4,  // 22: querylane.console.v1alpha1.PostgresConfig.ssl_negotiation:type_name -> querylane.console.v1alpha1.PostgresConfig.SslNegotiation
-	31, // 23: querylane.console.v1alpha1.GetInstanceOverviewResponse.instance_overview:type_name -> querylane.console.v1alpha1.InstanceOverview
-	40, // 24: querylane.console.v1alpha1.GetInstanceOverviewResponse.partial_errors:type_name -> google.rpc.Status
+	33, // 23: querylane.console.v1alpha1.GetInstanceOverviewResponse.instance_overview:type_name -> querylane.console.v1alpha1.InstanceOverview
+	42, // 24: querylane.console.v1alpha1.GetInstanceOverviewResponse.partial_errors:type_name -> google.rpc.Status
 	26, // 25: querylane.console.v1alpha1.CheckInstanceHealthResponse.health:type_name -> querylane.console.v1alpha1.InstanceHealth
-	40, // 26: querylane.console.v1alpha1.CheckInstanceHealthResponse.partial_errors:type_name -> google.rpc.Status
-	38, // 27: querylane.console.v1alpha1.InstanceHealth.observed_at:type_name -> google.protobuf.Timestamp
+	42, // 26: querylane.console.v1alpha1.CheckInstanceHealthResponse.partial_errors:type_name -> google.rpc.Status
+	40, // 27: querylane.console.v1alpha1.InstanceHealth.observed_at:type_name -> google.protobuf.Timestamp
 	27, // 28: querylane.console.v1alpha1.InstanceHealth.connection_activity:type_name -> querylane.console.v1alpha1.ConnectionActivityHealth
-	28, // 29: querylane.console.v1alpha1.InstanceHealth.replication:type_name -> querylane.console.v1alpha1.ReplicationHealth
-	29, // 30: querylane.console.v1alpha1.InstanceHealth.stats_access:type_name -> querylane.console.v1alpha1.StatsAccessHealth
-	30, // 31: querylane.console.v1alpha1.InstanceHealth.pg_stat_statements:type_name -> querylane.console.v1alpha1.PgStatStatementsHealth
-	0,  // 32: querylane.console.v1alpha1.ConnectionActivityHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
-	0,  // 33: querylane.console.v1alpha1.ReplicationHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
-	2,  // 34: querylane.console.v1alpha1.ReplicationHealth.role:type_name -> querylane.console.v1alpha1.ServerInfo.ReplicationRole
-	0,  // 35: querylane.console.v1alpha1.StatsAccessHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
-	0,  // 36: querylane.console.v1alpha1.PgStatStatementsHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
-	38, // 37: querylane.console.v1alpha1.PgStatStatementsHealth.stats_reset_at:type_name -> google.protobuf.Timestamp
-	32, // 38: querylane.console.v1alpha1.InstanceOverview.connections:type_name -> querylane.console.v1alpha1.ConnectionMetrics
-	33, // 39: querylane.console.v1alpha1.InstanceOverview.storage:type_name -> querylane.console.v1alpha1.StorageMetrics
-	34, // 40: querylane.console.v1alpha1.InstanceOverview.cache:type_name -> querylane.console.v1alpha1.CacheMetrics
-	38, // 41: querylane.console.v1alpha1.InstanceOverview.observed_at:type_name -> google.protobuf.Timestamp
-	35, // 42: querylane.console.v1alpha1.InstanceOverview.io_metrics:type_name -> querylane.console.v1alpha1.IOMetrics
-	7,  // 43: querylane.console.v1alpha1.InstanceService.ListInstances:input_type -> querylane.console.v1alpha1.ListInstancesRequest
-	9,  // 44: querylane.console.v1alpha1.InstanceService.GetInstance:input_type -> querylane.console.v1alpha1.GetInstanceRequest
-	12, // 45: querylane.console.v1alpha1.InstanceService.CreateInstance:input_type -> querylane.console.v1alpha1.CreateInstanceRequest
-	14, // 46: querylane.console.v1alpha1.InstanceService.TestInstanceConnection:input_type -> querylane.console.v1alpha1.TestInstanceConnectionRequest
-	16, // 47: querylane.console.v1alpha1.InstanceService.UpdateInstance:input_type -> querylane.console.v1alpha1.UpdateInstanceRequest
-	18, // 48: querylane.console.v1alpha1.InstanceService.DeleteInstance:input_type -> querylane.console.v1alpha1.DeleteInstanceRequest
-	22, // 49: querylane.console.v1alpha1.InstanceService.GetInstanceOverview:input_type -> querylane.console.v1alpha1.GetInstanceOverviewRequest
-	24, // 50: querylane.console.v1alpha1.InstanceService.CheckInstanceHealth:input_type -> querylane.console.v1alpha1.CheckInstanceHealthRequest
-	8,  // 51: querylane.console.v1alpha1.InstanceService.ListInstances:output_type -> querylane.console.v1alpha1.ListInstancesResponse
-	10, // 52: querylane.console.v1alpha1.InstanceService.GetInstance:output_type -> querylane.console.v1alpha1.GetInstanceResponse
-	13, // 53: querylane.console.v1alpha1.InstanceService.CreateInstance:output_type -> querylane.console.v1alpha1.CreateInstanceResponse
-	15, // 54: querylane.console.v1alpha1.InstanceService.TestInstanceConnection:output_type -> querylane.console.v1alpha1.TestInstanceConnectionResponse
-	17, // 55: querylane.console.v1alpha1.InstanceService.UpdateInstance:output_type -> querylane.console.v1alpha1.UpdateInstanceResponse
-	19, // 56: querylane.console.v1alpha1.InstanceService.DeleteInstance:output_type -> querylane.console.v1alpha1.DeleteInstanceResponse
-	23, // 57: querylane.console.v1alpha1.InstanceService.GetInstanceOverview:output_type -> querylane.console.v1alpha1.GetInstanceOverviewResponse
-	25, // 58: querylane.console.v1alpha1.InstanceService.CheckInstanceHealth:output_type -> querylane.console.v1alpha1.CheckInstanceHealthResponse
-	51, // [51:59] is the sub-list for method output_type
-	43, // [43:51] is the sub-list for method input_type
-	43, // [43:43] is the sub-list for extension type_name
-	43, // [43:43] is the sub-list for extension extendee
-	0,  // [0:43] is the sub-list for field type_name
+	29, // 29: querylane.console.v1alpha1.InstanceHealth.replication:type_name -> querylane.console.v1alpha1.ReplicationHealth
+	30, // 30: querylane.console.v1alpha1.InstanceHealth.stats_access:type_name -> querylane.console.v1alpha1.StatsAccessHealth
+	31, // 31: querylane.console.v1alpha1.InstanceHealth.pg_stat_statements:type_name -> querylane.console.v1alpha1.PgStatStatementsHealth
+	32, // 32: querylane.console.v1alpha1.InstanceHealth.autovacuum:type_name -> querylane.console.v1alpha1.AutovacuumHealth
+	0,  // 33: querylane.console.v1alpha1.ConnectionActivityHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
+	28, // 34: querylane.console.v1alpha1.ConnectionActivityHealth.by_application:type_name -> querylane.console.v1alpha1.ApplicationConnections
+	0,  // 35: querylane.console.v1alpha1.ReplicationHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
+	2,  // 36: querylane.console.v1alpha1.ReplicationHealth.role:type_name -> querylane.console.v1alpha1.ServerInfo.ReplicationRole
+	0,  // 37: querylane.console.v1alpha1.StatsAccessHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
+	0,  // 38: querylane.console.v1alpha1.PgStatStatementsHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
+	40, // 39: querylane.console.v1alpha1.PgStatStatementsHealth.stats_reset_at:type_name -> google.protobuf.Timestamp
+	0,  // 40: querylane.console.v1alpha1.AutovacuumHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
+	40, // 41: querylane.console.v1alpha1.AutovacuumHealth.last_autovacuum_at:type_name -> google.protobuf.Timestamp
+	34, // 42: querylane.console.v1alpha1.InstanceOverview.connections:type_name -> querylane.console.v1alpha1.ConnectionMetrics
+	35, // 43: querylane.console.v1alpha1.InstanceOverview.storage:type_name -> querylane.console.v1alpha1.StorageMetrics
+	36, // 44: querylane.console.v1alpha1.InstanceOverview.cache:type_name -> querylane.console.v1alpha1.CacheMetrics
+	40, // 45: querylane.console.v1alpha1.InstanceOverview.observed_at:type_name -> google.protobuf.Timestamp
+	37, // 46: querylane.console.v1alpha1.InstanceOverview.io_metrics:type_name -> querylane.console.v1alpha1.IOMetrics
+	7,  // 47: querylane.console.v1alpha1.InstanceService.ListInstances:input_type -> querylane.console.v1alpha1.ListInstancesRequest
+	9,  // 48: querylane.console.v1alpha1.InstanceService.GetInstance:input_type -> querylane.console.v1alpha1.GetInstanceRequest
+	12, // 49: querylane.console.v1alpha1.InstanceService.CreateInstance:input_type -> querylane.console.v1alpha1.CreateInstanceRequest
+	14, // 50: querylane.console.v1alpha1.InstanceService.TestInstanceConnection:input_type -> querylane.console.v1alpha1.TestInstanceConnectionRequest
+	16, // 51: querylane.console.v1alpha1.InstanceService.UpdateInstance:input_type -> querylane.console.v1alpha1.UpdateInstanceRequest
+	18, // 52: querylane.console.v1alpha1.InstanceService.DeleteInstance:input_type -> querylane.console.v1alpha1.DeleteInstanceRequest
+	22, // 53: querylane.console.v1alpha1.InstanceService.GetInstanceOverview:input_type -> querylane.console.v1alpha1.GetInstanceOverviewRequest
+	24, // 54: querylane.console.v1alpha1.InstanceService.CheckInstanceHealth:input_type -> querylane.console.v1alpha1.CheckInstanceHealthRequest
+	8,  // 55: querylane.console.v1alpha1.InstanceService.ListInstances:output_type -> querylane.console.v1alpha1.ListInstancesResponse
+	10, // 56: querylane.console.v1alpha1.InstanceService.GetInstance:output_type -> querylane.console.v1alpha1.GetInstanceResponse
+	13, // 57: querylane.console.v1alpha1.InstanceService.CreateInstance:output_type -> querylane.console.v1alpha1.CreateInstanceResponse
+	15, // 58: querylane.console.v1alpha1.InstanceService.TestInstanceConnection:output_type -> querylane.console.v1alpha1.TestInstanceConnectionResponse
+	17, // 59: querylane.console.v1alpha1.InstanceService.UpdateInstance:output_type -> querylane.console.v1alpha1.UpdateInstanceResponse
+	19, // 60: querylane.console.v1alpha1.InstanceService.DeleteInstance:output_type -> querylane.console.v1alpha1.DeleteInstanceResponse
+	23, // 61: querylane.console.v1alpha1.InstanceService.GetInstanceOverview:output_type -> querylane.console.v1alpha1.GetInstanceOverviewResponse
+	25, // 62: querylane.console.v1alpha1.InstanceService.CheckInstanceHealth:output_type -> querylane.console.v1alpha1.CheckInstanceHealthResponse
+	55, // [55:63] is the sub-list for method output_type
+	47, // [47:55] is the sub-list for method input_type
+	47, // [47:47] is the sub-list for extension type_name
+	47, // [47:47] is the sub-list for extension extendee
+	0,  // [0:47] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_instance_proto_init() }
@@ -2906,7 +3107,7 @@ func file_querylane_console_v1alpha1_instance_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_querylane_console_v1alpha1_instance_proto_rawDesc), len(file_querylane_console_v1alpha1_instance_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   33,
+			NumMessages:   35,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

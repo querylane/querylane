@@ -113,6 +113,9 @@ var getTableCacheHitInsightsQuery string
 //go:embed queries/get_connection_activity_health.sql
 var getConnectionActivityHealthQuery string
 
+//go:embed queries/get_connection_activity_by_application.sql
+var getConnectionActivityByApplicationQuery string
+
 //go:embed queries/get_recovery_state.sql
 var getRecoveryStateQuery string
 
@@ -130,6 +133,9 @@ var getPGStatStatementsConfigQuery string
 
 //go:embed queries/get_pg_stat_statements_stats.sql
 var getPGStatStatementsStatsQuery string
+
+//go:embed queries/get_autovacuum_health.sql
+var getAutovacuumHealthQuery string
 
 //go:embed queries/list_views.sql
 var viewListQuery string

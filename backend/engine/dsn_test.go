@@ -44,7 +44,7 @@ func TestConfigToDSN(t *testing.T) {
 				Password: "testpass",
 				SslMode:  api.PostgresConfig_SSL_MODE_DISABLED,
 			},
-			expected: "postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable&client_encoding=UTF8&connect_timeout=10",
+			expected: "postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable&client_encoding=UTF8&connect_timeout=10&application_name=querylane",
 		},
 		{
 			name: "ssl mode prefer",
@@ -56,7 +56,7 @@ func TestConfigToDSN(t *testing.T) {
 				Password: "prodpass",
 				SslMode:  api.PostgresConfig_SSL_MODE_PREFER,
 			},
-			expected: "postgres://produser:prodpass@db.example.com:5432/proddb?sslmode=prefer&client_encoding=UTF8&connect_timeout=10",
+			expected: "postgres://produser:prodpass@db.example.com:5432/proddb?sslmode=prefer&client_encoding=UTF8&connect_timeout=10&application_name=querylane",
 		},
 		{
 			name: "direct ssl negotiation",
@@ -69,7 +69,7 @@ func TestConfigToDSN(t *testing.T) {
 				SslMode:        api.PostgresConfig_SSL_MODE_REQUIRE,
 				SslNegotiation: api.PostgresConfig_SSL_NEGOTIATION_DIRECT,
 			},
-			expected: "postgres://produser:prodpass@db.example.com:5432/proddb?sslmode=require&client_encoding=UTF8&connect_timeout=10&sslnegotiation=direct",
+			expected: "postgres://produser:prodpass@db.example.com:5432/proddb?sslmode=require&client_encoding=UTF8&connect_timeout=10&application_name=querylane&sslnegotiation=direct",
 		},
 	}
 
@@ -165,7 +165,7 @@ func TestIntegrationConfigToDSN_WithEmbeddedPostgres(t *testing.T) {
 	}
 
 	result := ConfigToDSN(config)
-	expected := fmt.Sprintf("postgres://postgres:postgres@localhost:%d/postgres?sslmode=disable&client_encoding=UTF8&connect_timeout=10", testDB.Port())
+	expected := fmt.Sprintf("postgres://postgres:postgres@localhost:%d/postgres?sslmode=disable&client_encoding=UTF8&connect_timeout=10&application_name=querylane", testDB.Port())
 	require.Equal(t, expected, result)
 }
 
@@ -195,7 +195,7 @@ func TestConfigToDSNWithSecretResolver(t *testing.T) {
 				},
 				SslMode: api.PostgresConfig_SSL_MODE_DISABLED,
 			},
-			expected: "postgres://testuser:from-env@localhost:5432/testdb?sslmode=disable&client_encoding=UTF8&connect_timeout=10",
+			expected: "postgres://testuser:from-env@localhost:5432/testdb?sslmode=disable&client_encoding=UTF8&connect_timeout=10&application_name=querylane",
 		},
 
 		{
@@ -211,7 +211,7 @@ func TestConfigToDSNWithSecretResolver(t *testing.T) {
 				},
 				SslMode: api.PostgresConfig_SSL_MODE_DISABLED,
 			},
-			expected: "postgres://testuser:inline-password@localhost:5432/testdb?sslmode=disable&client_encoding=UTF8&connect_timeout=10",
+			expected: "postgres://testuser:inline-password@localhost:5432/testdb?sslmode=disable&client_encoding=UTF8&connect_timeout=10&application_name=querylane",
 		},
 		{
 			name: "missing env password source returns clear error",

@@ -13,9 +13,12 @@ interface QualifiedTableName {
   table: string;
 }
 
-const byteFormatter = new Intl.NumberFormat(undefined, {
+// Pinned to en-US like the metric formatters in lib/metrics.ts — a mixed
+// locale would render "1,5 KB" storage next to "1.5" axis ticks.
+const byteFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 1,
 });
+const BYTE_DECIMAL_SCALE = 10;
 const BYTES_PER_KIBIBYTE = 1024;
 const TABLE_RESOURCE_NAME_PATTERN =
   /^instances\/[^/]+\/databases\/[^/]+\/schemas\/([^/]+)\/tables\/([^/]+)$/;
@@ -107,7 +110,11 @@ export function parseTableQualifiedName(name: string): QualifiedTableName {
 export function formatBytes(
   sizeBytes: bigint | number | string | null | undefined
 ): string {
-  if (sizeBytes === null || sizeBytes === undefined) {
+  if (
+    sizeBytes === null ||
+    sizeBytes === undefined ||
+    (typeof sizeBytes === "string" && sizeBytes.trim() === "")
+  ) {
     return "—";
   }
 
@@ -122,12 +129,8 @@ export function formatBytes(
     return "—";
   }
 
-  if (numeric < BYTES_PER_KIBIBYTE) {
-    return `${numeric} B`;
-  }
-
-  const units = ["KB", "MB", "GB", "TB"];
-  let unitIndex = -1;
+  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+  let unitIndex = 0;
   let value = numeric;
 
   while (value >= BYTES_PER_KIBIBYTE && unitIndex < units.length - 1) {
@@ -135,7 +138,19 @@ export function formatBytes(
     unitIndex += 1;
   }
 
-  return `${byteFormatter.format(value)} ${units[unitIndex]}`;
+  // Round to the displayed precision FIRST, then check for boundary overshoot:
+  // 1048575 B scales to 1023.999 KB, which display-rounds to "1,024 KB" — roll
+  // it into the next unit instead (the filesize.js applyRounding technique).
+  let rounded =
+    unitIndex === 0
+      ? Math.round(value)
+      : Math.round(value * BYTE_DECIMAL_SCALE) / BYTE_DECIMAL_SCALE;
+  if (rounded >= BYTES_PER_KIBIBYTE && unitIndex < units.length - 1) {
+    rounded /= BYTES_PER_KIBIBYTE;
+    unitIndex += 1;
+  }
+
+  return `${byteFormatter.format(rounded)} ${units[unitIndex]}`;
 }
 
 export function normalizeEstimatedRowCount(

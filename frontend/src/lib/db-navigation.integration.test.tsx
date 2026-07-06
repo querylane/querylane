@@ -16,7 +16,6 @@ function buildInstance(id: string): PostgresInstance {
     connectionError: "",
     host: "localhost",
     id,
-    lastConnectionCheckTime: undefined,
     name: id,
     port: 5432,
     resourceName: `instances/${id}`,

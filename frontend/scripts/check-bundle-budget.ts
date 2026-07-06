@@ -13,6 +13,11 @@ const LEADING_SLASH_PATTERN = /^\//;
 const MAX_ASYNC_SCRIPT_GZIP_KIB = 130;
 const MAX_DEFERRED_VISUALIZATION_GZIP_KIB = 90;
 const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
+// Recharts (+ its d3 deps) is lazy-loaded and only pulled in on the instance
+// overview metrics panel, so it is split out and guarded separately from core.
+// 145 (was 140): the console-pages chunk shares these sources and also grew
+// with the instance health section redesign.
+const MAX_DEFERRED_CHARTS_GZIP_KIB = 145;
 const MAX_INITIAL_GZIP_KIB = 450;
 const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // 950 (was 900): headroom for the roles and security pages. Deferred database
@@ -33,6 +38,10 @@ interface BundleBudgetStats {
   coreTotalBrotli: number;
   coreTotalGzip: number;
   coreTotalRaw: number;
+  deferredChartsAssets: BundleBudgetAsset[];
+  deferredChartsBrotli: number;
+  deferredChartsGzip: number;
+  deferredChartsRaw: number;
   deferredSqlHighlighterAssets: BundleBudgetAsset[];
   deferredSqlHighlighterBrotli: number;
   deferredSqlHighlighterGzip: number;
@@ -62,6 +71,7 @@ interface CollectBundleBudgetStatsInput {
 
 const budgets = {
   maxAsyncScriptGzipBytes: MAX_ASYNC_SCRIPT_GZIP_KIB * BYTES_PER_KIB,
+  maxDeferredChartsGzipBytes: MAX_DEFERRED_CHARTS_GZIP_KIB * BYTES_PER_KIB,
   maxDeferredSqlHighlighterGzipBytes:
     MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB * BYTES_PER_KIB,
   maxDeferredVisualizationGzipBytes:
@@ -147,6 +157,21 @@ function isDeferredVisualizationAsset(distDir: string, relativePath: string) {
   });
 }
 
+function isDeferredChartsAsset(distDir: string, relativePath: string) {
+  return sourceMapSources(distDir, relativePath).some((source) => {
+    const normalizedSource = source.replaceAll("\\", "/");
+    // Match only the lazily-imported chart modules, never the whole charts
+    // directory: the eager lazy-boundary (metric-chart.tsx) and range picker
+    // are bundled into the console-pages route chunk, and matching them would
+    // silently exclude that entire chunk from the core budget.
+    return (
+      normalizedSource.includes("node_modules/recharts/") ||
+      normalizedSource.includes("src/components/charts/metric-time-chart") ||
+      normalizedSource.includes("src/components/charts/sparkline-chart")
+    );
+  });
+}
+
 function isDeferredSqlHighlighterAsset(distDir: string, relativePath: string) {
   return sourceMapSources(distDir, relativePath).some((source) => {
     const normalizedSource = source.replaceAll("\\", "/");
@@ -187,11 +212,18 @@ function collectBundleBudgetStats({
   const deferredSqlHighlighterPaths = new Set(
     deferredSqlHighlighterAssets.map((asset) => asset.path)
   );
+  const deferredChartsAssets = allAssets.filter((asset) =>
+    isDeferredChartsAsset(distDir, asset.path)
+  );
+  const deferredChartsPaths = new Set(
+    deferredChartsAssets.map((asset) => asset.path)
+  );
   const coreAssets = allAssets.filter(
     (asset) =>
       !(
         deferredVisualizationPaths.has(asset.path) ||
-        deferredSqlHighlighterPaths.has(asset.path)
+        deferredSqlHighlighterPaths.has(asset.path) ||
+        deferredChartsPaths.has(asset.path)
       )
   );
   const asyncScripts = allAssets.filter(
@@ -243,6 +275,18 @@ function collectBundleBudgetStats({
     (sum, asset) => sum + asset.brotli,
     0
   );
+  const deferredChartsGzip = deferredChartsAssets.reduce(
+    (sum, asset) => sum + asset.gzip,
+    0
+  );
+  const deferredChartsBrotli = deferredChartsAssets.reduce(
+    (sum, asset) => sum + asset.brotli,
+    0
+  );
+  const deferredChartsRaw = deferredChartsAssets.reduce(
+    (sum, asset) => sum + asset.raw,
+    0
+  );
   const deferredSqlHighlighterRaw = deferredSqlHighlighterAssets.reduce(
     (sum, asset) => sum + asset.raw,
     0
@@ -255,6 +299,10 @@ function collectBundleBudgetStats({
     coreTotalBrotli,
     coreTotalGzip,
     coreTotalRaw,
+    deferredChartsAssets,
+    deferredChartsBrotli,
+    deferredChartsGzip,
+    deferredChartsRaw,
     deferredSqlHighlighterAssets,
     deferredSqlHighlighterBrotli,
     deferredSqlHighlighterGzip,
@@ -323,6 +371,12 @@ function runBundleBudgetCheck() {
     stats.deferredSqlHighlighterGzip,
     budgets.maxDeferredSqlHighlighterGzipBytes
   );
+  check(
+    failures,
+    "deferred charts gzip",
+    stats.deferredChartsGzip,
+    budgets.maxDeferredChartsGzipBytes
+  );
   if (stats.maxAsyncScript) {
     check(
       failures,
@@ -350,6 +404,8 @@ function runBundleBudgetCheck() {
       `deferred-visualization-br=${formatKiB(stats.deferredVisualizationBrotli)}`,
       `deferred-sql-highlighter=${formatKiB(stats.deferredSqlHighlighterGzip)}`,
       `deferred-sql-highlighter-br=${formatKiB(stats.deferredSqlHighlighterBrotli)}`,
+      `deferred-charts=${formatKiB(stats.deferredChartsGzip)}`,
+      `deferred-charts-br=${formatKiB(stats.deferredChartsBrotli)}`,
       stats.maxAsyncScript
         ? `largest-async=${stats.maxAsyncScript.path} ${formatKiB(stats.maxAsyncScript.gzip)} gzip ${formatKiB(stats.maxAsyncScript.brotli)} br`
         : "largest-async=n/a",

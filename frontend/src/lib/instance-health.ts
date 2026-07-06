@@ -1,4 +1,4 @@
-import { anyUnpack, timestampDate } from "@bufbuild/protobuf/wkt";
+import { anyUnpack } from "@bufbuild/protobuf/wkt";
 import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
 import type { Status } from "@/protogen/google/rpc/status_pb";
 
@@ -14,23 +14,6 @@ function isMetricKey(value: string | undefined): value is MetricKey {
 function getMetricFromMessage(message: string): MetricKey | undefined {
   const normalizedMessage = message.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
   return METRIC_KEYS.find((key) => normalizedMessage.includes(key));
-}
-
-function formatConnectionCheckLabel(
-  timestamp: Parameters<typeof timestampDate>[0] | null | undefined
-): string | null {
-  if (!timestamp) {
-    return null;
-  }
-
-  try {
-    return `Last checked ${new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(timestampDate(timestamp))}`;
-  } catch {
-    return null;
-  }
 }
 
 function getMetricPartialErrors(partialErrors: Status[]): MetricPartialErrors {
@@ -60,4 +43,4 @@ function getMetricPartialErrors(partialErrors: Status[]): MetricPartialErrors {
 }
 
 export type { MetricPartialErrors };
-export { formatConnectionCheckLabel, getMetricPartialErrors };
+export { getMetricPartialErrors };

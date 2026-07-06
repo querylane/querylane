@@ -177,6 +177,22 @@ describe("formatBytes", () => {
     expect(formatBytes(undefined)).toBe("—");
     expect(formatBytes(-1)).toBe("—");
     expect(formatBytes("not-a-number")).toBe("—");
+    // Number("") is 0 — an absent string must not display as a real zero.
+    expect(formatBytes("")).toBe("—");
+  });
+
+  it("rolls display rounding at a unit boundary into the next unit", () => {
+    // 1048575/1024 = 1023.999 KB would display-round to "1,024 KB".
+    expect(formatBytes(1_048_575)).toBe("1 MB");
+    expect(formatBytes(1023.6)).toBe("1 KB");
+  });
+
+  it("rounds fractional bytes instead of leaking float precision", () => {
+    expect(formatBytes(512.345)).toBe("512 B");
+  });
+
+  it("scales beyond terabytes", () => {
+    expect(formatBytes(1024 ** 5)).toBe("1 PB");
   });
 });
 

@@ -54,7 +54,9 @@ func ConfigToDSNWithSecretResolver(ctx context.Context, config *api.PostgresConf
 
 	// connect_timeout bounds raw TCP/startup dials even when the request
 	// context carries no deadline (e.g. background catalog sync).
-	rawQuery := "sslmode=" + sslMode + "&client_encoding=UTF8&connect_timeout=10"
+	// application_name identifies our pool backends in pg_stat_activity
+	// (connection breakdowns, operators inspecting the instance).
+	rawQuery := "sslmode=" + sslMode + "&client_encoding=UTF8&connect_timeout=10&application_name=querylane"
 	if sslNegotiation := sslNegotiationToString(config.GetSslNegotiation()); sslNegotiation != "" {
 		rawQuery += "&sslnegotiation=" + sslNegotiation
 	}

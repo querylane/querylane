@@ -28,11 +28,16 @@
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.705 0.015 286.067);
-  --chart-1: oklch(0.871 0.006 286.286);
-  --chart-2: oklch(0.552 0.016 285.938);
-  --chart-3: oklch(0.442 0.017 285.786);
-  --chart-4: oklch(0.37 0.013 285.805);
-  --chart-5: oklch(0.274 0.006 286.033);
+  /*
+   * Chart series palette. Validated (light, on white): OKLCH lightness band
+   * 0.43-0.77, chroma >= 0.10, adjacent-pair CVD deltaE >= 12, contrast >= 3:1.
+   * Keep slot order fixed; series colors follow the entity, never its rank.
+   */
+  --chart-1: oklch(0.55 0.22 264);
+  --chart-2: oklch(0.6 0.17 240);
+  --chart-3: oklch(0.6 0.14 162);
+  --chart-4: oklch(0.64 0.15 75);
+  --chart-5: oklch(0.6 0.2 25);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
@@ -83,11 +88,16 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.552 0.016 285.938);
-  --chart-1: oklch(0.871 0.006 286.286);
-  --chart-2: oklch(0.552 0.016 285.938);
-  --chart-3: oklch(0.442 0.017 285.786);
-  --chart-4: oklch(0.37 0.013 285.805);
-  --chart-5: oklch(0.274 0.006 286.033);
+  /*
+   * Dark-mode series steps: same hues, stepped for the dark card surface.
+   * Validated (dark, on --card): lightness band 0.48-0.67, CVD deltaE >= 12,
+   * contrast >= 3:1.
+   */
+  --chart-1: oklch(0.62 0.19 264);
+  --chart-2: oklch(0.66 0.15 240);
+  --chart-3: oklch(0.66 0.14 162);
+  --chart-4: oklch(0.66 0.14 75);
+  --chart-5: oklch(0.64 0.18 25);
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -188,6 +198,40 @@
 
   *::-webkit-scrollbar-corner {
     background-color: var(--querylane-scrollbar-track);
+  }
+
+  /*
+   * Chart kit chrome (see components/charts/chart-container.tsx): re-token the
+   * colors Recharts hardcodes so every chart matches the app theme without
+   * per-element props.
+   */
+  [data-slot="chart"] .recharts-cartesian-axis-tick text {
+    fill: var(--color-muted-foreground);
+  }
+
+  [data-slot="chart"] .recharts-dot[stroke="#fff"] {
+    stroke: transparent;
+  }
+
+  [data-slot="chart"] .recharts-layer,
+  [data-slot="chart"] .recharts-surface {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+
+  /*
+   * Inset y-axis mode: labels render INSIDE the plot, so they wear a
+   * surface-colored halo (painted under the glyphs via paint-order) to stay
+   * legible where they cross the line or fill.
+   */
+  [data-slot="chart"][data-y-inset]
+    .recharts-yAxis
+    .recharts-cartesian-axis-tick
+    text {
+    stroke: var(--color-card);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+    paint-order: stroke;
   }
 
   .ql-rdg {

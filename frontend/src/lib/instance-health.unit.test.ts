@@ -1,29 +1,10 @@
 import { create } from "@bufbuild/protobuf";
-import { anyPack, timestampFromDate } from "@bufbuild/protobuf/wkt";
+import { anyPack } from "@bufbuild/protobuf/wkt";
 import { describe, expect, test } from "vitest";
 import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
 import { StatusSchema } from "@/protogen/google/rpc/status_pb";
 
-import {
-  formatConnectionCheckLabel,
-  getMetricPartialErrors,
-} from "./instance-health";
-
-const LAST_CHECKED_PREFIX_PATTERN = /^Last checked /;
-
-describe("formatConnectionCheckLabel", () => {
-  test("formats backend connection check timestamps", () => {
-    expect(
-      formatConnectionCheckLabel(
-        timestampFromDate(new Date("2026-05-21T10:15:00Z"))
-      )
-    ).toMatch(LAST_CHECKED_PREFIX_PATTERN);
-  });
-
-  test("returns null when no backend check has run", () => {
-    expect(formatConnectionCheckLabel(undefined)).toBeNull();
-  });
-});
+import { getMetricPartialErrors } from "./instance-health";
 
 describe("getMetricPartialErrors", () => {
   test("groups overview partial errors by metric metadata", () => {

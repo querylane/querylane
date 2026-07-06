@@ -197,6 +197,16 @@ func (d *Postgres) CheckInstanceHealth(ctx context.Context, db *sql.DB) (*engine
 		})
 	})
 
+	wg.Go(func() {
+		autovacuum, err := queryAutovacuumHealth(ctx, db)
+		if err != nil {
+			recordPartialError("autovacuum", "failed to query autovacuum health", "query autovacuum health", err)
+			return
+		}
+
+		health.Autovacuum = autovacuum
+	})
+
 	wg.Wait()
 
 	return health, nil
@@ -220,7 +230,47 @@ func queryConnectionActivityHealth(ctx context.Context, db *sql.DB) (*engine.Con
 
 	activity.Status, activity.Summary = summarizeConnectionActivity(activity)
 
+	byApplication, err := queryConnectionActivityByApplication(ctx, db)
+	if err != nil {
+		// The per-application breakdown is supplementary; keep the authoritative
+		// scalar counts even when it fails.
+		slog.WarnContext(ctx, "failed to query connections by application", slog.String("error", err.Error()))
+	} else {
+		activity.ByApplication = byApplication
+	}
+
 	return &activity, nil
+}
+
+func queryConnectionActivityByApplication(ctx context.Context, db *sql.DB) ([]engine.ApplicationConnections, error) {
+	rows, err := db.QueryContext(ctx, getConnectionActivityByApplicationQuery)
+	if err != nil {
+		return nil, classifyQueryError("query connections by application", err)
+	}
+	defer rows.Close()
+
+	var apps []engine.ApplicationConnections
+
+	for rows.Next() {
+		var app engine.ApplicationConnections
+		if err := rows.Scan(
+			&app.ApplicationName,
+			&app.Active,
+			&app.Idle,
+			&app.IdleInTransaction,
+			&app.Total,
+		); err != nil {
+			return nil, classifyQueryError("scan connections by application", err)
+		}
+
+		apps = append(apps, app)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, classifyQueryError("iterate connections by application", err)
+	}
+
+	return apps, nil
 }
 
 func queryReplicationHealth(ctx context.Context, db *sql.DB) (*engine.ReplicationHealth, error) {
@@ -337,6 +387,71 @@ func queryPGStatStatementsHealth(ctx context.Context, db *sql.DB) (*engine.PGSta
 	pgStatStatements.Status, pgStatStatements.Summary = summarizePGStatStatements(pgStatStatements)
 
 	return &pgStatStatements, nil
+}
+
+func queryAutovacuumHealth(ctx context.Context, db *sql.DB) (*engine.AutovacuumHealth, error) {
+	var (
+		autovacuum       engine.AutovacuumHealth
+		lastAutovacuumAt sql.NullTime
+	)
+	if err := db.QueryRowContext(ctx, getAutovacuumHealthQuery).Scan(
+		&autovacuum.RunningWorkers,
+		&autovacuum.MaxWorkers,
+		&lastAutovacuumAt,
+	); err != nil {
+		return nil, classifyQueryError("query autovacuum health", err)
+	}
+
+	if lastAutovacuumAt.Valid {
+		lastAt := lastAutovacuumAt.Time
+		autovacuum.LastAutovacuumAt = &lastAt
+	}
+
+	autovacuum.Status, autovacuum.Summary = summarizeAutovacuum(autovacuum)
+
+	return &autovacuum, nil
+}
+
+// summarizeAutovacuum classifies autovacuum worker saturation. It only warns
+// when every worker is busy (autovacuum may be falling behind); it never warns
+// on the age of the last run, since a low-write database legitimately has an
+// old or absent LastAutovacuumAt.
+func summarizeAutovacuum(autovacuum engine.AutovacuumHealth) (engine.HealthStatus, string) {
+	if autovacuum.MaxWorkers <= 0 {
+		return engine.HealthStatusUnknown, "autovacuum_max_workers is not reported"
+	}
+
+	lastRan := "no autovacuum recorded yet"
+	if autovacuum.LastAutovacuumAt != nil {
+		lastRan = fmt.Sprintf("last ran %s ago", humanizeDuration(time.Since(*autovacuum.LastAutovacuumAt)))
+	}
+
+	summary := fmt.Sprintf("%d of %d workers active; %s", autovacuum.RunningWorkers, autovacuum.MaxWorkers, lastRan)
+
+	if autovacuum.RunningWorkers >= autovacuum.MaxWorkers {
+		return engine.HealthStatusWarning, summary
+	}
+
+	return engine.HealthStatusOK, summary
+}
+
+// humanizeDuration renders a coarse relative age using the single largest
+// whole unit (seconds, minutes, hours, days). Negative inputs clamp to 0s.
+func humanizeDuration(d time.Duration) string {
+	if d < 0 {
+		d = 0
+	}
+
+	switch {
+	case d < time.Minute:
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	case d < time.Hour:
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	default:
+		return fmt.Sprintf("%dd", int(d.Hours()/24))
+	}
 }
 
 func summarizeConnectionActivity(activity engine.ConnectionActivityHealth) (engine.HealthStatus, string) {

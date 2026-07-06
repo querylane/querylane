@@ -7,6 +7,7 @@ import { ChevronRight, Database, RefreshCw, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AsyncSectionState } from "@/components/async-section-state";
+import { MetricSparkline } from "@/components/charts/metric-chart";
 import { ConfigManagedNotice } from "@/components/config-managed-notice";
 import {
   CopyableHost,
@@ -14,13 +15,11 @@ import {
   InstanceStatItem,
   InstanceStatsBar,
   ResourcePageState,
-  SectionCard,
   SummaryCountValue,
 } from "@/components/console-pages/console-layout";
 import { DatabaseEncodingValue } from "@/components/console-pages/database-encoding-value";
 import {
   buildInstanceUpdatePaths,
-  DEFAULT_POSTGRES_PORT,
   type InstanceFormErrors,
   type InstanceFormInvalidFieldName,
   type InstanceFormState,
@@ -30,6 +29,7 @@ import {
   trimInstanceFormState,
 } from "@/components/console-pages/instance-config-model";
 import { InstanceConfigurationSection } from "@/components/console-pages/instance-configuration-section";
+import { InstanceConnectionsCard } from "@/components/console-pages/instance-connections-card";
 import { InstanceDangerZoneSection } from "@/components/console-pages/instance-danger-zone-section";
 import {
   filterDatabasesByFacets,
@@ -38,6 +38,8 @@ import {
   presentDatabaseOwnerOptions,
 } from "@/components/console-pages/instance-database-filters";
 import { InstanceDeleteDialog } from "@/components/console-pages/instance-delete-dialog";
+import { InstanceHealthSection } from "@/components/console-pages/instance-health-section";
+import { InstanceMetricsPanel } from "@/components/console-pages/instance-metrics-panel";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,11 +64,17 @@ import {
 } from "@/hooks/api/extension";
 import {
   refreshAllInstancesCache,
+  useCheckInstanceHealthQuery,
   useDeleteInstanceMutation,
   useGetInstanceOverviewQuery,
   useGetInstanceQuery,
   useUpdateInstanceMutation,
 } from "@/hooks/api/instance";
+import {
+  quantizedMetricsAnchor,
+  useInstanceMetricsQuery,
+  useInstancePreviousMetricsQuery,
+} from "@/hooks/api/metrics";
 import type { DbConnectionStatus } from "@/lib/console-resources";
 import {
   buildInstanceName,
@@ -75,16 +83,23 @@ import {
 } from "@/lib/console-resources";
 import { useDb } from "@/lib/db-context";
 import {
-  formatConnectionCheckLabel,
   getMetricPartialErrors,
   type MetricPartialErrors,
 } from "@/lib/instance-health";
+import {
+  CHART_COLORS,
+  type ChartRow,
+  DEFAULT_METRIC_RANGE,
+  decodePoints,
+  hasRenderableSpan,
+  type MetricRange,
+  metricRangeByHours,
+  seriesByMetric,
+} from "@/lib/metrics";
 import { handleNavigationError } from "@/lib/navigation-errors";
 import { logger } from "@/lib/observability/sentry";
 import {
   formatReplicationRole,
-  formatSslMode,
-  formatSslNegotiation,
   toSslMode,
   toSslNegotiation,
 } from "@/lib/protobuf-enums";
@@ -94,19 +109,36 @@ import { prefetchRouteQueryOnIntent } from "@/lib/route-prefetch";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { useUrlTableSearch } from "@/lib/url-search-state";
 import type { Status } from "@/protogen/google/rpc/status_pb";
-import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 import type {
+  InstanceHealth,
   InstanceOverview,
-  PostgresConfig,
   ServerInfo,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import { ServerInfo_ReplicationRole } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import {
-  PostgresConfig_SslMode,
-  PostgresConfig_SslNegotiation,
-  ServerInfo_ReplicationRole,
-} from "@/protogen/querylane/console/v1alpha1/instance_pb";
+  MetricId,
+  type MetricSeries,
+  type QueryMetricsResponse,
+} from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
 type InstanceSection = "configuration" | "overview";
+
+interface OverviewLiveData {
+  /** The server's max_connections, drawn as a threshold on the chart. */
+  connectionsMax: number | undefined;
+  health: InstanceHealth | undefined;
+  healthPartialErrors: Status[] | undefined;
+  healthPending: boolean;
+  metricsError: boolean;
+  metricsPending: boolean;
+  metricsRange: MetricRange;
+  /** True while a range switch is showing the previous window's data. */
+  metricsRefreshing: boolean;
+  metricsResponse: QueryMetricsResponse | undefined;
+  onMetricsRangeChange: (rangeHours: number) => void;
+  /** The window before metricsResponse's, for the comparison overlay. */
+  previousMetricsResponse: QueryMetricsResponse | undefined;
+}
 type DatabaseRow = ReturnType<typeof useDb>["databases"][number];
 interface DatabaseFacetFilter {
   label: string;
@@ -240,23 +272,6 @@ function getConnectionPct(overview: InstanceOverview | undefined) {
   );
 }
 
-function formatMetricCount(
-  value: bigint | number | undefined,
-  singular: string,
-  plural = `${singular}s`
-) {
-  if (value === undefined) {
-    return "—";
-  }
-
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric < 0) {
-    return "—";
-  }
-
-  return `${value.toLocaleString()} ${numeric === 1 ? singular : plural}`;
-}
-
 function getVisiblePartialErrors(
   isConnected: boolean,
   partialErrors: Status[] | undefined
@@ -295,16 +310,46 @@ function StatValue({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * The quiet trend glyph beside a header stat value: the metric's queried
+ * window as a sparkline. Renders nothing until the series has enough finite
+ * points, so tiles stay clean on fresh instances and disconnected ones.
+ */
+function StatSparkline({
+  color,
+  series,
+}: {
+  color: string;
+  series: MetricSeries | undefined;
+}) {
+  if (!series) {
+    return null;
+  }
+
+  const data: ChartRow[] = decodePoints(series.points).map((point) => ({
+    time: point.time,
+    value: point.value,
+  }));
+  if (!hasRenderableSpan(data)) {
+    return null;
+  }
+
+  return <MetricSparkline color={color} data={data} seriesKey="value" />;
+}
+
 function CoreInstanceStatsBar({
   databasesState,
   metricPartialErrors,
+  metricsResponse,
   overview,
 }: {
   databasesState: InstancePageHeaderDatabasesState;
   metricPartialErrors: MetricPartialErrors;
+  metricsResponse?: QueryMetricsResponse | undefined;
   overview?: InstanceOverview | undefined;
 }) {
   const connectionPct = getConnectionPct(overview);
+  const metricSeries = seriesByMetric(metricsResponse);
 
   return (
     <InstanceStatsBar>
@@ -317,6 +362,12 @@ function CoreInstanceStatsBar({
             ? `/ ${overview.connections.maxConnections}`
             : undefined
         }
+        trend={
+          <StatSparkline
+            color={CHART_COLORS[2].color}
+            series={metricSeries.get(MetricId.CONNECTIONS_TOTAL)}
+          />
+        }
       >
         <StatValue>
           {overview?.connections ? overview.connections.totalConnections : "—"}
@@ -325,6 +376,12 @@ function CoreInstanceStatsBar({
       <InstanceStatItem
         label="Cache Hit Ratio"
         notice={getMetricNotice(metricPartialErrors, "cache")}
+        trend={
+          <StatSparkline
+            color={CHART_COLORS[3].color}
+            series={metricSeries.get(MetricId.CACHE_HIT_RATIO)}
+          />
+        }
       >
         <StatValue>
           {overview?.cache
@@ -335,6 +392,12 @@ function CoreInstanceStatsBar({
       <InstanceStatItem
         label="Storage"
         notice={getMetricNotice(metricPartialErrors, "storage")}
+        trend={
+          <StatSparkline
+            color="var(--color-muted-foreground)"
+            series={metricSeries.get(MetricId.STORAGE_TOTAL_BYTES)}
+          />
+        }
       >
         <StatValue>
           {overview?.storage
@@ -356,405 +419,13 @@ function CoreInstanceStatsBar({
   );
 }
 
-function InstanceIoStatsBar({
-  connectionStatus,
-  metricPartialErrors,
-  overview,
-}: {
-  connectionStatus: DbConnectionStatus;
-  metricPartialErrors: MetricPartialErrors;
-  overview?: InstanceOverview | undefined;
-}) {
-  if (connectionStatus !== "connected") {
-    return null;
-  }
-
-  const ioMetrics = overview?.ioMetrics;
-  const ioNotice = getMetricNotice(metricPartialErrors, "io");
-
-  return (
-    <InstanceStatsBar>
-      <InstanceStatItem
-        label="I/O reads"
-        notice={ioNotice}
-        suffix={
-          ioMetrics
-            ? formatMetricCount(ioMetrics.reads, "op", "ops")
-            : undefined
-        }
-      >
-        <StatValue>
-          {ioMetrics ? formatBytes(ioMetrics.readBytes) : "—"}
-        </StatValue>
-      </InstanceStatItem>
-      <InstanceStatItem
-        label="I/O writes"
-        notice={ioNotice}
-        suffix={
-          ioMetrics
-            ? formatMetricCount(ioMetrics.writes, "op", "ops")
-            : undefined
-        }
-      >
-        <StatValue>
-          {ioMetrics ? formatBytes(ioMetrics.writeBytes) : "—"}
-        </StatValue>
-      </InstanceStatItem>
-      <InstanceStatItem
-        label="I/O extends"
-        notice={ioNotice}
-        suffix={
-          ioMetrics
-            ? formatMetricCount(ioMetrics.extends, "op", "ops")
-            : undefined
-        }
-      >
-        <StatValue>
-          {ioMetrics ? formatBytes(ioMetrics.extendBytes) : "—"}
-        </StatValue>
-      </InstanceStatItem>
-      <InstanceStatItem label="I/O fsyncs" notice={ioNotice}>
-        <StatValue>
-          {ioMetrics ? formatMetricCount(ioMetrics.fsyncs, "call") : "—"}
-        </StatValue>
-      </InstanceStatItem>
-    </InstanceStatsBar>
-  );
-}
-
-type HealthBadgeVariant = "default" | "destructive" | "outline" | "secondary";
-
-interface HealthCheckItemProps {
-  description: string;
-  label: string;
-  status: string;
-  value: string;
-  variant?: HealthBadgeVariant | undefined;
-}
-
-function HealthCheckItem({
-  description,
-  label,
-  status,
-  value,
-  variant = "outline",
-}: HealthCheckItemProps) {
-  return (
-    <fieldset
-      aria-description={description}
-      aria-label={`${label} health check`}
-      className="flex min-h-24 min-w-0 flex-col gap-2 rounded-lg border border-border p-4"
-    >
-      <div className="flex min-w-0 items-start justify-between gap-3">
-        <h3 className="min-w-0 break-words font-medium text-sm [overflow-wrap:anywhere]">
-          {label}
-        </h3>
-        <Badge className="shrink-0" variant={variant}>
-          {status}
-        </Badge>
-      </div>
-      <p className="min-w-0 break-words font-mono text-muted-foreground text-xs [overflow-wrap:anywhere]">
-        {value}
-      </p>
-    </fieldset>
-  );
-}
-
-function connectionHealth({
-  connectionStatus,
-  instance,
-}: {
-  connectionStatus: DbConnectionStatus;
-  instance: InstanceRecord;
-}): HealthCheckItemProps {
-  if (connectionStatus === "connected") {
-    return {
-      description: "Querylane has an active PostgreSQL connection.",
-      label: "TCP",
-      status: "Reachable",
-      value: `${instance.config?.host ?? instance.displayName}:${instance.config?.port ?? DEFAULT_POSTGRES_PORT}`,
-      variant: "default",
-    };
-  }
-
-  if (connectionStatus === "error") {
-    return {
-      description:
-        "The backend reported a connection failure; exact TCP cause needs a backend probe.",
-      label: "TCP",
-      status: "Unavailable",
-      value: instance.connectionError || "Connection failed",
-      variant: "destructive",
-    };
-  }
-
-  return {
-    description: "No successful connection is recorded yet.",
-    label: "TCP",
-    status: "Not checked",
-    value: "Awaiting a successful instance connection.",
-    variant: "secondary",
-  };
-}
-
-function tlsHealth(config: PostgresConfig | undefined): HealthCheckItemProps {
-  const sslMode = config?.sslMode ?? PostgresConfig_SslMode.UNSPECIFIED;
-  const mode = formatSslMode(sslMode);
-  const negotiation = formatSslNegotiation(
-    config?.sslNegotiation ?? PostgresConfig_SslNegotiation.UNSPECIFIED
-  );
-
-  if (sslMode === PostgresConfig_SslMode.DISABLED) {
-    return {
-      description: "The saved connection configuration disables TLS.",
-      label: "TLS",
-      status: "Disabled",
-      value: `${mode} / ${negotiation}`,
-      variant: "secondary",
-    };
-  }
-
-  if (sslMode === PostgresConfig_SslMode.REQUIRE) {
-    return {
-      description:
-        "Saved SSL mode requires encrypted transport, but no TLS handshake has been observed yet.",
-      label: "TLS",
-      status: "Encrypted",
-      value: `${mode} / ${negotiation}; no handshake observed`,
-      variant: "outline",
-    };
-  }
-
-  if (
-    sslMode === PostgresConfig_SslMode.VERIFY_CA ||
-    sslMode === PostgresConfig_SslMode.VERIFY_FULL
-  ) {
-    return {
-      description:
-        "Saved SSL mode requires certificate verification, but no TLS handshake has been observed yet.",
-      label: "TLS",
-      status: "Verified",
-      value: `${mode} / ${negotiation}; no handshake observed`,
-      variant: "default",
-    };
-  }
-
-  return {
-    description:
-      "Saved SSL mode can negotiate TLS but may use plaintext fallback; no TLS handshake has been observed yet.",
-    label: "TLS",
-    status: "Opportunistic",
-    value: `${mode} / ${negotiation}; may use plaintext fallback; no handshake observed`,
-    variant: "secondary",
-  };
-}
-
-function authenticationHealth(
-  connectionStatus: DbConnectionStatus
-): HealthCheckItemProps {
-  if (connectionStatus === "connected") {
-    return {
-      description:
-        "The active connection proves these credentials were accepted.",
-      label: "Authentication",
-      status: "Accepted",
-      value: "credentials accepted",
-      variant: "default",
-    };
-  }
-
-  if (connectionStatus === "error") {
-    return {
-      description:
-        "No authenticated session is available; use the connection error for the exact cause.",
-      label: "Authentication",
-      status: "Unavailable",
-      value: "no authenticated session",
-      variant: "destructive",
-    };
-  }
-
-  return {
-    description: "No successful authentication is recorded yet.",
-    label: "Authentication",
-    status: "Not checked",
-    value: "awaiting successful connection",
-    variant: "secondary",
-  };
-}
-
-function replicationHealth(
-  serverInfo: ServerInfo | undefined
-): HealthCheckItemProps {
-  if (
-    serverInfo &&
-    serverInfo.replicationRole !== ServerInfo_ReplicationRole.UNSPECIFIED
-  ) {
-    const isPrimary =
-      serverInfo.replicationRole === ServerInfo_ReplicationRole.PRIMARY;
-    return {
-      description: "Reported by server metadata for this instance.",
-      label: "Replication",
-      status: "Detected",
-      value: isPrimary ? "primary server" : "replica server",
-      variant: "outline",
-    };
-  }
-
-  return {
-    description: "Replication role is not available from server metadata.",
-    label: "Replication",
-    status: "Unknown",
-    value: "no role reported",
-    variant: "secondary",
-  };
-}
-
-function findPgStatStatements(extensions: Extension[] | undefined) {
-  return extensions?.find(
-    (extension) => extension.displayName === "pg_stat_statements"
-  );
-}
-
-function pgStatStatementsHealth({
-  database,
-  enabled,
-  error,
-  extensions,
-  isPending,
-}: {
-  database: string;
-  enabled: boolean;
-  error: unknown;
-  extensions: Extension[] | undefined;
-  isPending: boolean;
-}): HealthCheckItemProps {
-  if (!enabled) {
-    return {
-      description:
-        "Awaiting a connected instance before checking extension inventory.",
-      label: "pg_stat_statements",
-      status: "Not checked",
-      value: database ? "inventory not checked" : "no configured database",
-      variant: "secondary",
-    };
-  }
-
-  if (isPending) {
-    return {
-      description: "Checking the configured database extension inventory.",
-      label: "pg_stat_statements",
-      status: "Checking",
-      value: "checking inventory",
-      variant: "secondary",
-    };
-  }
-
-  if (error) {
-    return {
-      description:
-        "Querylane could not read extension inventory for the configured database.",
-      label: "pg_stat_statements",
-      status: "Unavailable",
-      value: "extension inventory unavailable",
-      variant: "destructive",
-    };
-  }
-
-  const extension = findPgStatStatements(extensions);
-  if (!extension) {
-    return {
-      description:
-        "The configured database did not report pg_stat_statements as available.",
-      label: "pg_stat_statements",
-      status: "Not reported",
-      value: "not present in inventory",
-      variant: "secondary",
-    };
-  }
-
-  if (extension.installed) {
-    return {
-      description:
-        "The configured database reports pg_stat_statements as installed.",
-      label: "pg_stat_statements",
-      status: "Installed",
-      value: extension.installedVersion || extension.schema || database,
-      variant: "default",
-    };
-  }
-
-  return {
-    description:
-      "The extension is available but not installed in the configured database.",
-    label: "pg_stat_statements",
-    status: "Available",
-    value: extension.defaultVersion || "Available in extension inventory.",
-    variant: "outline",
-  };
-}
-
-function InstanceHealthChecksSection({
-  connectionStatus,
-  extensions,
-  extensionsError,
-  extensionsPending,
-  instance,
-  serverInfo,
-}: {
-  connectionStatus: DbConnectionStatus;
-  extensions: Extension[] | undefined;
-  extensionsError: unknown;
-  extensionsPending: boolean;
-  instance: InstanceRecord;
-  serverInfo?: ServerInfo | undefined;
-}) {
-  const database = instance.config?.database ?? "";
-  const extensionsEnabled =
-    connectionStatus === "connected" && database.length > 0;
-  const items = [
-    connectionHealth({ connectionStatus, instance }),
-    tlsHealth(instance.config),
-    authenticationHealth(connectionStatus),
-    replicationHealth(serverInfo),
-    pgStatStatementsHealth({
-      database,
-      enabled: extensionsEnabled,
-      error: extensionsError,
-      extensions,
-      isPending: extensionsPending,
-    }),
-  ];
-
-  return (
-    <section aria-label="Health checks">
-      <SectionCard
-        description="Real diagnostics from existing instance metadata, connection state, and the configured database extension inventory."
-        title="Health checks"
-      >
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-          {items.map((item) => (
-            <HealthCheckItem
-              description={item.description}
-              key={item.label}
-              label={item.label}
-              status={item.status}
-              value={item.value}
-              variant={item.variant}
-            />
-          ))}
-        </div>
-      </SectionCard>
-    </section>
-  );
-}
-
 function InstancePageHeader({
   connectionStatus,
   databasesState,
   instance,
   isRefreshing,
   lastRefreshedAt,
+  metricsResponse,
   onRefresh,
   overview,
   partialErrors,
@@ -765,15 +436,13 @@ function InstancePageHeader({
   instance: InstanceRecord;
   isRefreshing: boolean;
   lastRefreshedAt: number;
+  metricsResponse?: QueryMetricsResponse | undefined;
   onRefresh: () => void;
   overview?: InstanceOverview | undefined;
   partialErrors: Status[];
   serverInfo?: ServerInfo | undefined;
 }) {
   const lastRefreshedLabel = getLastRefreshedLabel(lastRefreshedAt);
-  const lastConnectionCheckLabel = formatConnectionCheckLabel(
-    instance.lastConnectionCheckTime
-  );
   const metricPartialErrors = getMetricPartialErrors(partialErrors);
   const connectionError = instance.connectionError.trim();
   return (
@@ -814,11 +483,6 @@ function InstancePageHeader({
           <div className="flex shrink-0 items-center gap-2 text-muted-foreground text-xs">
             {lastRefreshedLabel ? (
               <span className="hidden sm:inline">{lastRefreshedLabel}</span>
-            ) : null}
-            {lastConnectionCheckLabel ? (
-              <span className="hidden sm:inline">
-                {lastConnectionCheckLabel}
-              </span>
             ) : null}
             <Button
               aria-label="Refresh data"
@@ -885,11 +549,7 @@ function InstancePageHeader({
       <CoreInstanceStatsBar
         databasesState={databasesState}
         metricPartialErrors={metricPartialErrors}
-        overview={overview}
-      />
-      <InstanceIoStatsBar
-        connectionStatus={connectionStatus}
-        metricPartialErrors={metricPartialErrors}
+        metricsResponse={metricsResponse}
         overview={overview}
       />
     </>
@@ -1152,11 +812,10 @@ function InstanceOverviewSection({
 function InstanceOverviewContent({
   connectionStatus,
   databases,
-  extensions,
-  extensionsError,
-  extensionsPending,
+  extensionsInstalledCount,
   instance,
   isUnavailable,
+  liveData,
   navigateToDatabase,
   onDatabaseIntent,
   queryState,
@@ -1164,11 +823,10 @@ function InstanceOverviewContent({
 }: {
   connectionStatus: DbConnectionStatus;
   databases: DatabaseRow[];
-  extensions: Extension[] | undefined;
-  extensionsError: unknown;
-  extensionsPending: boolean;
+  extensionsInstalledCount: number | undefined;
   instance: InstanceRecord;
   isUnavailable: boolean;
+  liveData: OverviewLiveData;
   navigateToDatabase: ReturnType<typeof useDb>["navigateToDatabase"];
   onDatabaseIntent: (database: DatabaseRow) => void;
   queryState: ReturnType<typeof useDb>["queryStates"]["databases"];
@@ -1176,11 +834,30 @@ function InstanceOverviewContent({
 }) {
   return (
     <>
-      <InstanceHealthChecksSection
+      {connectionStatus === "connected" ? (
+        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+          <InstanceMetricsPanel
+            connectionsLimit={liveData.connectionsMax}
+            isError={liveData.metricsError}
+            isPending={liveData.metricsPending}
+            isRefreshing={liveData.metricsRefreshing}
+            onRangeChange={liveData.onMetricsRangeChange}
+            previousResponse={liveData.previousMetricsResponse}
+            range={liveData.metricsRange}
+            response={liveData.metricsResponse}
+          />
+          <InstanceConnectionsCard
+            activity={liveData.health?.connectionActivity}
+            isPending={liveData.healthPending}
+          />
+        </div>
+      ) : null}
+      <InstanceHealthSection
         connectionStatus={connectionStatus}
-        extensions={extensions}
-        extensionsError={extensionsError}
-        extensionsPending={extensionsPending}
+        extensionsInstalledCount={extensionsInstalledCount}
+        health={liveData.health}
+        healthPartialErrors={liveData.healthPartialErrors}
+        healthPending={liveData.healthPending}
         instance={instance}
         serverInfo={serverInfo}
       />
@@ -1263,21 +940,61 @@ function BackendInstancePage({
   const overview = isConnected
     ? overviewQuery.data?.instanceOverview
     : undefined;
+  const showOverviewLiveData = section === "overview" && isConnected;
+  // TODO: persist the selected metrics range to the URL so it survives reloads.
+  const [metricsRangeHours, setMetricsRangeHours] = useState(
+    DEFAULT_METRIC_RANGE.hours
+  );
+  // One shared anchor for both metrics windows (they must tile exactly);
+  // advanced on explicit refresh so the queried window moves forward.
+  const [metricsAnchorMs, setMetricsAnchorMs] = useState(
+    quantizedMetricsAnchor
+  );
+  const metricsQuery = useInstanceMetricsQuery(
+    instanceId,
+    metricsAnchorMs,
+    metricsRangeHours,
+    {
+      enabled: showOverviewLiveData,
+      // Hold the previous window's charts (dimmed) while a range switch loads,
+      // instead of flashing the skeleton and jumping layout.
+      placeholderData: (previous) => previous,
+      refetchOnWindowFocus: false,
+    }
+  );
+  const previousMetricsQuery = useInstancePreviousMetricsQuery(
+    instanceId,
+    metricsAnchorMs,
+    metricsRangeHours,
+    {
+      enabled: showOverviewLiveData,
+      placeholderData: (previous) => previous,
+      refetchOnWindowFocus: false,
+    }
+  );
+  const healthQuery = useCheckInstanceHealthQuery(
+    {
+      name: instanceName,
+    },
+    {
+      enabled: showOverviewLiveData,
+      refetchOnWindowFocus: false,
+    }
+  );
   const configuredDatabase = instance?.config?.database ?? "";
-  const extensionsInput = {
-    ...extensionsForDatabaseQueryInput({
+  // Full (unfiltered) inventory for the configured database: the health
+  // facts header shows the installed extension count.
+  const extensionsQuery = useListAllExtensionsQuery(
+    extensionsForDatabaseQueryInput({
       databaseId: configuredDatabase,
       instanceId,
     }),
-    filter: 'name = "pg_stat_statements"',
-    orderBy: "name asc",
-    pageSize: 1,
-  } as const;
-  const pgStatStatementsQuery = useListAllExtensionsQuery(extensionsInput, {
-    enabled:
-      section === "overview" && isConnected && configuredDatabase.length > 0,
-    refetchOnWindowFocus: false,
-  });
+    {
+      enabled:
+        section === "overview" && isConnected && configuredDatabase.length > 0,
+      refetchOnWindowFocus: false,
+    }
+  );
   const isConfigManaged = useIsConfigManagedInstances();
   const updateInstanceMutation = useUpdateInstanceMutation();
   const deleteInstanceMutation = useDeleteInstanceMutation();
@@ -1311,12 +1028,35 @@ function BackendInstancePage({
         });
       });
     }
+    if (showOverviewLiveData) {
+      // Advance the metrics window to "now" — a plain refetch would re-query
+      // the identical frozen interval and charts would never move forward.
+      setMetricsAnchorMs(quantizedMetricsAnchor());
+      metricsQuery.refetch().catch((error: unknown) => {
+        handleQueryActionError(error, {
+          action: "retry",
+          area: "console.instance.metrics",
+        });
+      });
+      previousMetricsQuery.refetch().catch((error: unknown) => {
+        handleQueryActionError(error, {
+          action: "retry",
+          area: "console.instance.metrics",
+        });
+      });
+      healthQuery.refetch().catch((error: unknown) => {
+        handleQueryActionError(error, {
+          action: "retry",
+          area: "console.instance.health",
+        });
+      });
+    }
     if (
       isConnected &&
       section === "overview" &&
       configuredDatabase.length > 0
     ) {
-      pgStatStatementsQuery.refetch().catch((error: unknown) => {
+      extensionsQuery.refetch().catch((error: unknown) => {
         handleQueryActionError(error, {
           action: "retry",
           area: "console.instance.extensions",
@@ -1482,9 +1222,11 @@ function BackendInstancePage({
             databasesUnavailable,
             deleteDisabledReason,
             deletePending: deleteInstanceMutation.isPending,
-            extensions: pgStatStatementsQuery.data?.extensions,
-            extensionsError: pgStatStatementsQuery.error,
-            extensionsPending: pgStatStatementsQuery.isPending,
+            extensionsInstalledCount: extensionsQuery.data
+              ? extensionsQuery.data.extensions.filter(
+                  (extension) => extension.installed
+                ).length
+              : undefined,
             formNotice,
             instance,
             isConfigManaged,
@@ -1492,6 +1234,24 @@ function BackendInstancePage({
             isInstanceMutationPending,
             isRefreshing,
             lastRefreshedAt: instanceQuery.dataUpdatedAt,
+            liveData: {
+              connectionsMax: overview?.connections?.maxConnections,
+              health: healthQuery.data?.health,
+              healthPartialErrors: healthQuery.data?.partialErrors,
+              healthPending: healthQuery.isPending,
+              metricsError: metricsQuery.isError,
+              metricsPending: metricsQuery.isPending,
+              metricsRange: metricRangeByHours(metricsRangeHours),
+              metricsRefreshing: metricsQuery.isPlaceholderData,
+              metricsResponse: metricsQuery.data,
+              onMetricsRangeChange: setMetricsRangeHours,
+              // While a range switch still shows the OLD window as placeholder
+              // data, suppress the overlay: shifting the old range's points by
+              // the new range's window length would draw it at wrong times.
+              previousMetricsResponse: previousMetricsQuery.isPlaceholderData
+                ? undefined
+                : previousMetricsQuery.data,
+            },
             navigateToDatabase,
             onDatabaseIntent: handleDatabaseIntent,
             onDelete: handleDelete,
@@ -1520,9 +1280,7 @@ function renderLoadedInstancePageContent({
   databasesUnavailable,
   deleteDisabledReason,
   deletePending,
-  extensions,
-  extensionsError,
-  extensionsPending,
+  extensionsInstalledCount,
   formNotice,
   instance,
   isConfigManaged,
@@ -1530,6 +1288,7 @@ function renderLoadedInstancePageContent({
   isInstanceMutationPending,
   isRefreshing,
   lastRefreshedAt,
+  liveData,
   navigateToDatabase,
   onDatabaseIntent,
   onDelete,
@@ -1549,9 +1308,7 @@ function renderLoadedInstancePageContent({
   databasesUnavailable: boolean;
   deleteDisabledReason: string | null;
   deletePending: boolean;
-  extensions: Extension[] | undefined;
-  extensionsError: unknown;
-  extensionsPending: boolean;
+  extensionsInstalledCount: number | undefined;
   formNotice: { message: string; variant: "error" | "success" } | null;
   instance: InstanceRecord;
   isConfigManaged: boolean;
@@ -1559,6 +1316,7 @@ function renderLoadedInstancePageContent({
   isInstanceMutationPending: boolean;
   isRefreshing: boolean;
   lastRefreshedAt: number;
+  liveData: OverviewLiveData;
   navigateToDatabase: ReturnType<typeof useDb>["navigateToDatabase"];
   onDatabaseIntent: (database: DatabaseRow) => void;
   onDelete: () => void;
@@ -1586,6 +1344,7 @@ function renderLoadedInstancePageContent({
           instance={instance}
           isRefreshing={isRefreshing}
           lastRefreshedAt={lastRefreshedAt}
+          metricsResponse={liveData.metricsResponse}
           onRefresh={onRefresh}
           overview={overview}
           partialErrors={partialErrors}
@@ -1617,11 +1376,10 @@ function renderLoadedInstancePageContent({
           <InstanceOverviewContent
             connectionStatus={connectionStatus}
             databases={databases}
-            extensions={extensions}
-            extensionsError={extensionsError}
-            extensionsPending={extensionsPending}
+            extensionsInstalledCount={extensionsInstalledCount}
             instance={instance}
             isUnavailable={databasesUnavailable}
+            liveData={liveData}
             navigateToDatabase={navigateToDatabase}
             onDatabaseIntent={onDatabaseIntent}
             queryState={queryState}

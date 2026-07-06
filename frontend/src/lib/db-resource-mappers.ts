@@ -13,7 +13,6 @@ interface PostgresInstance {
   connectionError: string;
   host: string;
   id: string;
-  lastConnectionCheckTime: Instance["lastConnectionCheckTime"];
   name: string;
   port: number;
   resourceName: string;
@@ -49,7 +48,6 @@ function mapInstance(instance: Instance): PostgresInstance {
     connectionError: instance.connectionError,
     host: instance.config?.host ?? "",
     id: parseResourceLeafId(instance.name),
-    lastConnectionCheckTime: instance.lastConnectionCheckTime,
     name: instance.displayName || parseResourceLeafId(instance.name),
     port: instance.config?.port ?? DEFAULT_POSTGRES_PORT,
     resourceName: instance.name,

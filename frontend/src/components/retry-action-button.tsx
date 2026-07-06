@@ -28,13 +28,16 @@ export function RetryActionButton({
   const retryErrorId = useId();
   const mountedRef = useRef(true);
 
-  // allow-useEffect: auto-retry timer
-  useEffect(
-    () => () => {
+  // allow-useEffect: track mounted state so late-settling retries don't set
+  // state after unmount. Setting the ref true on mount is required: under
+  // StrictMode the effect runs mount → cleanup → mount, and without this the
+  // cleanup would leave the ref permanently false, wedging the pending state.
+  useEffect(function trackMountedState() {
+    mountedRef.current = true;
+    return () => {
       mountedRef.current = false;
-    },
-    []
-  );
+    };
+  }, []);
 
   const handleRetry = () => {
     if (retryPending) {
