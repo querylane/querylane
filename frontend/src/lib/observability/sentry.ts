@@ -1,5 +1,3 @@
-import type { Scope, Span } from "@sentry/react";
-
 import { env as typedEnv } from "@/env";
 
 type SentryModule = typeof import("@sentry/react");
@@ -56,21 +54,35 @@ interface TelemetrySpan {
   ): unknown;
 }
 type SentryLogger = SentryModule["logger"];
+interface SentryConsoleLoggingOptions {
+  levels: Array<"error" | "log" | "warn">;
+}
+interface SentryScopeLike {
+  setExtra: (key: string, value: unknown) => void;
+  setTag: (key: string, value: string) => void;
+}
+interface SentryThirdPartyErrorFilterOptions {
+  behaviour: "apply-tag-if-exclusively-contains-third-party-frames";
+  filterKeys: string[];
+  ignoreSentryInternalFrames: boolean;
+}
 
 interface SentryClientLike {
   browserTracingIntegration: () => unknown;
   captureException: (error: unknown) => string;
-  consoleLoggingIntegration: SentryModule["consoleLoggingIntegration"];
+  consoleLoggingIntegration: (options?: SentryConsoleLoggingOptions) => unknown;
   init: (options: Record<string, unknown>) => void;
   logger: SentryLogger;
   replayIntegration: () => unknown;
   setTag: (key: string, value: string) => void;
   startSpan: <T>(
     options: SentryStartSpanOptions,
-    callback: (span: Span) => T
+    callback: (span: TelemetrySpan) => T
   ) => T;
-  thirdPartyErrorFilterIntegration: SentryModule["thirdPartyErrorFilterIntegration"];
-  withScope: (callback: (scope: Scope) => void) => void;
+  thirdPartyErrorFilterIntegration: (
+    options: SentryThirdPartyErrorFilterOptions
+  ) => unknown;
+  withScope: (callback: (scope: SentryScopeLike) => void) => void;
 }
 
 function resolveSentryRuntimeConfig({
@@ -225,7 +237,7 @@ function createObservabilityApi(
         return;
       }
 
-      client.withScope((scope: Scope) => {
+      client.withScope((scope) => {
         if (context.tags) {
           for (const [key, value] of Object.entries(context.tags)) {
             scope.setTag(key, value);

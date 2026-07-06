@@ -43,7 +43,7 @@ function createBrowserInstance(theme: BrowserTheme) {
       ...REDUCED_MOTION_CONTEXT,
       colorScheme: theme,
     },
-    env: { VITE_BROWSER_THEME: theme },
+    env: { PUBLIC_TEST_BROWSER_THEME: theme },
     name: `chromium-${theme}`,
     screenshotDirectory: `__screenshots__/${theme}`,
   } as const;

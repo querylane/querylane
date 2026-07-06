@@ -86,7 +86,7 @@ function prefetchSilently<
  * Warm route data without turning speculative fetch failures into app errors.
  * Use for TanStack Router preload/intent paths, not for route-critical awaits.
  */
-export function prefetchRouteQuery<
+function prefetchRouteQuery<
   QueryFnData,
   QueryError,
   QueryData,
@@ -107,7 +107,7 @@ export function prefetchRouteQuery<
  * Warm hover/focus intent data after a small delay. This protects the backend
  * from accidental mouse sweeps while keeping deliberate navigation snappy.
  */
-export function prefetchRouteQueryOnIntent<
+function prefetchRouteQueryOnIntent<
   QueryFnData,
   QueryError,
   QueryData,
@@ -140,3 +140,6 @@ export function prefetchRouteQueryOnIntent<
     prefetchSilently(queryClient, options);
   }, INTENT_PREFETCH_POLICY.delayMs);
 }
+
+export type { RoutePrefetchClient };
+export { prefetchRouteQuery, prefetchRouteQueryOnIntent };

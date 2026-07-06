@@ -447,7 +447,7 @@ describe("transport observability and snapshots", () => {
     const preconnect = () => {
       preconnectCalls += 1;
     };
-    const fakeFetch: typeof globalThis.fetch = Object.assign(
+    const fakeFetch = Object.assign(
       async () => new Response(null, { status: 204 }),
       { preconnect }
     );

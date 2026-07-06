@@ -11,18 +11,27 @@ const ACCOUNTS_BUTTON_NAME = /^accounts 48 KB$/i;
 function setMatchMedia(matches: boolean) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
-    value: vi.fn(
-      (query: string) =>
-        ({
-          addEventListener: vi.fn(),
-          dispatchEvent: vi.fn(),
-          matches,
-          media: query,
-          onchange: null,
-          removeEventListener: vi.fn(),
-        }) as unknown as MediaQueryList
-    ),
+    value: vi.fn((query: string) => createMediaQueryList({ matches, query })),
   });
+}
+
+function createMediaQueryList({
+  matches,
+  query,
+}: {
+  matches: boolean;
+  query: string;
+}): MediaQueryList {
+  return {
+    addEventListener: vi.fn(),
+    addListener: vi.fn(),
+    dispatchEvent: vi.fn(() => true),
+    matches,
+    media: query,
+    onchange: null,
+    removeEventListener: vi.fn(),
+    removeListener: vi.fn(),
+  };
 }
 
 const mocks = vi.hoisted(() => ({

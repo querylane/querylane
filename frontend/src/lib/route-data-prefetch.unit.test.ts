@@ -1,6 +1,6 @@
 import type { Transport } from "@connectrpc/connect";
-import type { QueryClient } from "@tanstack/react-query";
-import { describe, expect, test } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
+import { describe, expect, test, vi } from "vitest";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import {
   databaseRouteDataQueries,
@@ -11,6 +11,33 @@ import {
 } from "@/lib/route-data-prefetch";
 
 const transport = {} as Transport;
+
+function makeQueryClientStub(
+  calls: unknown[],
+  prefetchResult: Promise<void> = Promise.resolve()
+) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
+    },
+  });
+  vi.spyOn(queryClient, "prefetchQuery").mockImplementation((options) => {
+    calls.push(options);
+    return prefetchResult;
+  });
+  return queryClient;
+}
+
+function markFreshRouteDataQueries(
+  queryClient: QueryClient,
+  queries: ReturnType<typeof explorerRouteDataQueries>
+) {
+  for (const query of queries) {
+    if (typeof query.staleTime === "number" && query.staleTime > 0) {
+      queryClient.setQueryData(query.queryKey, {});
+    }
+  }
+}
 
 describe("route data prefetch registry", () => {
   test("describes instance route data in one place", () => {
@@ -101,27 +128,16 @@ describe("route data prefetch registry", () => {
 
   test("skips fresh metadata but still refetches table rows", () => {
     const calls: unknown[] = [];
-    const freshTimestamp = Date.now() - 1000; // 1 s ago — well within 5-min staleTime
-    const queryClient = {
-      getQueryState: () => ({
-        dataUpdatedAt: freshTimestamp,
-        status: "success" as const,
-      }),
-      prefetchQuery: (options: unknown) => {
-        calls.push(options);
-        return Promise.resolve();
-      },
-    } as unknown as QueryClient;
+    const queryClient = makeQueryClientStub(calls);
+    const queries = explorerRouteDataQueries({
+      databaseId: "postgres",
+      instanceId: "local",
+      search: { category: "tables", name: "users", schema: "public" },
+      transport,
+    });
+    markFreshRouteDataQueries(queryClient, queries);
 
-    prefetchRouteData(
-      { queryClient, transport },
-      explorerRouteDataQueries({
-        databaseId: "postgres",
-        instanceId: "local",
-        search: { category: "tables", name: "users", schema: "public" },
-        transport,
-      })
-    );
+    prefetchRouteData({ queryClient, transport }, queries);
 
     // Metadata uses a 5-minute stale policy and is skipped; table rows use
     // staleTime=0, so direct route entry still fetches fresh visible rows.
@@ -137,13 +153,7 @@ describe("route data prefetch registry", () => {
     const pendingPrefetch = new Promise<void>((resolve) => {
       resolvePrefetch = resolve;
     });
-    const queryClient = {
-      getQueryState: () => undefined,
-      prefetchQuery: (options: unknown) => {
-        calls.push(options);
-        return pendingPrefetch;
-      },
-    } as unknown as QueryClient;
+    const queryClient = makeQueryClientStub(calls, pendingPrefetch);
 
     prefetchRouteData(
       { queryClient, transport },
@@ -162,13 +172,7 @@ describe("route data prefetch registry", () => {
 
   test("prefetches every registered route data query", () => {
     const calls: unknown[] = [];
-    const queryClient = {
-      getQueryState: () => undefined,
-      prefetchQuery: (options: unknown) => {
-        calls.push(options);
-        return Promise.resolve();
-      },
-    } as unknown as QueryClient;
+    const queryClient = makeQueryClientStub(calls);
 
     prefetchRouteData(
       { queryClient, transport },

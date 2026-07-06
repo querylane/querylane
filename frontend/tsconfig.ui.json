@@ -7,7 +7,7 @@
     "moduleResolution": "Bundler",
     "moduleDetection": "force",
     "jsx": "react-jsx",
-    "types": ["@rsbuild/core/types", "bun-types"],
+    "types": [],
     "paths": {
       "@/*": ["./src/*"]
     },
@@ -40,14 +40,15 @@
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
     "useUnknownInCatchVariables": true,
-    "skipLibCheck": true,
+    // Keep registry-owned UI sensitive to dependency declaration drift.
+    "skipLibCheck": false,
     "rootDir": "./src"
   },
   "include": ["src/components/ui"],
   "exclude": [
-    "src/**/*.browser.test.ts",
-    "src/**/*.browser.test.tsx",
-    "src/**/*.browser.spec.ts",
-    "src/**/*.browser.spec.tsx"
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx"
   ]
 }

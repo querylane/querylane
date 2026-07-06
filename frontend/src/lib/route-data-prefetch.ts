@@ -1,7 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import type { Transport } from "@connectrpc/connect";
 import { createQueryOptions } from "@connectrpc/connect-query-core";
-import type { QueryClient } from "@tanstack/react-query";
 import {
   databasesForInstanceQueryInput,
   listAllDatabasesQueryOptions,
@@ -17,7 +16,10 @@ import {
 } from "@/hooks/api/instance";
 import { tableDetailQueryOptions } from "@/hooks/api/table";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
-import { prefetchRouteQuery } from "@/lib/route-prefetch";
+import {
+  prefetchRouteQuery,
+  type RoutePrefetchClient,
+} from "@/lib/route-prefetch";
 import {
   CellValueMode,
   ReadRowsRequestSchema,
@@ -26,7 +28,7 @@ import {
 import { readRows } from "@/protogen/querylane/console/v1alpha1/table_data-TableDataService_connectquery";
 
 interface RouteDataContext {
-  queryClient: QueryClient;
+  queryClient: RoutePrefetchClient;
   transport: Transport;
 }
 
@@ -45,7 +47,7 @@ interface ExplorerRouteSearch {
 }
 
 interface RouteDataQuery {
-  prefetch: (queryClient: QueryClient) => void;
+  prefetch: (queryClient: RoutePrefetchClient) => void;
   queryKey: readonly unknown[];
   staleTime?: unknown;
 }

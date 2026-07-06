@@ -31,7 +31,10 @@ import { useDb } from "@/lib/db-context";
 import { handleNavigationResult } from "@/lib/navigation-errors";
 import { handleQueryActionError } from "@/lib/query-action-errors";
 import { createResourceLoader } from "@/lib/resource-loader";
-import { prefetchRouteQueryOnIntent } from "@/lib/route-prefetch";
+import {
+  prefetchRouteQueryOnIntent,
+  type RoutePrefetchClient,
+} from "@/lib/route-prefetch";
 
 const EXPLORER_SEARCH_DEBOUNCE_MS = 200;
 
@@ -297,7 +300,7 @@ function prefetchTableDetails({
   databaseId: string;
   instanceId: string;
   name: string;
-  queryClient: ReturnType<typeof useQueryClient>;
+  queryClient: RoutePrefetchClient;
   rawTables: Array<{ displayName: string; name: string }>;
   transport: Transport;
 }) {

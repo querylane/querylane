@@ -22,7 +22,7 @@ vi.mock("react", () => ({
 }));
 
 function flushPromises() {
-  return new Promise((resolve) => queueMicrotask(resolve));
+  return new Promise<void>((resolve) => queueMicrotask(resolve));
 }
 
 function arrangeReactHooks() {

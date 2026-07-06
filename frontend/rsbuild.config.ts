@@ -33,6 +33,9 @@ const RSPACK_BUILD_DEPENDENCIES = [
   path.resolve(import.meta.dirname, "tsconfig.json"),
   path.resolve(import.meta.dirname, "tsconfig.ui.json"),
 ];
+type RsdoctorPluginOptions = NonNullable<
+  ConstructorParameters<typeof RsdoctorRspackPlugin<[]>>[0]
+>;
 
 dotenv.config();
 
@@ -122,7 +125,7 @@ const rsdoctorPluginOptions = {
       type: ["json"],
     },
   },
-};
+} satisfies RsdoctorPluginOptions;
 
 export default defineConfig({
   dev: {
@@ -244,12 +247,7 @@ export default defineConfig({
       config.experiments.nativeWatcher = true;
 
       if (enableRsdoctor) {
-        config.plugins.push(
-          // Contextually typing the options against RsdoctorRspackPluginOptions
-          // overflows tsgo recursion (UnionToTuple in @rsdoctor/core rule types),
-          // so the options object cannot be checked against the plugin generic.
-          new RsdoctorRspackPlugin(rsdoctorPluginOptions as never)
-        );
+        config.plugins.push(new RsdoctorRspackPlugin(rsdoctorPluginOptions));
       }
     },
   },
