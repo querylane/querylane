@@ -28,8 +28,6 @@ const strictDesignSurfaces = ["prComment", "score", "ciFailure"];
 const documentedDisabledRuleRationales = {
   "react-doctor/forbid-component-props":
     "className is an intentional Tailwind/shadcn styling API.",
-  "react-doctor/hook-use-state":
-    "lazy stable instances intentionally omit unused setters.",
   "react-doctor/jsx-boolean-value":
     "Ultracite formatter rewrites shorthand booleans.",
   "react-doctor/jsx-handler-names":
@@ -48,6 +46,7 @@ const highSignalOptInRules = [
   "react-doctor/design-no-three-period-ellipsis",
   "react-doctor/design-no-vague-button-label",
   "react-doctor/display-name",
+  "react-doctor/hook-use-state",
   "react-doctor/jsx-curly-brace-presence",
   "react-doctor/jsx-filename-extension",
   "react-doctor/jsx-fragments",

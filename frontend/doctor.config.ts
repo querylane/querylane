@@ -6,8 +6,6 @@ import reactDoctorConfig from "./react-doctor.config.json" with {
 export const documentedDisabledReactDoctorRules = {
   "react-doctor/forbid-component-props":
     "False positive for this Tailwind/shadcn codebase: className is an intentional component styling API, not a bypassed contract.",
-  "react-doctor/hook-use-state":
-    "False positive for lazy stable instances where the setter is intentionally unused; changing them to noisier refs would not improve correctness.",
   "react-doctor/jsx-boolean-value":
     "Conflicts with the enforced formatter/linter in this repo; bun run lint:fix rewrites shorthand booleans back to explicit ={true}.",
   "react-doctor/jsx-handler-names":

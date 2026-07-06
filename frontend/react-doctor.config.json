@@ -63,7 +63,7 @@
     "react-doctor/design-no-vague-button-label": "error",
     "react-doctor/display-name": "error",
     "react-doctor/forbid-component-props": "off",
-    "react-doctor/hook-use-state": "off",
+    "react-doctor/hook-use-state": "error",
     "react-doctor/jsx-boolean-value": "off",
     "react-doctor/jsx-curly-brace-presence": "error",
     "react-doctor/jsx-filename-extension": "error",
