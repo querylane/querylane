@@ -184,7 +184,20 @@ function resetSqlQueryState() {
   sqlQueryState.isFetching = false;
 }
 
+function resetPartitionMetadataQuery() {
+  tableQueries.partitionMetadata.data = {
+    partitionMetadata: {
+      childPartitions: [],
+      parentTable: "",
+      partitionBound: "",
+      partitionCount: 0,
+      partitionKey: "",
+    },
+  };
+}
+
 function seedTableDetailQueries() {
+  resetPartitionMetadataQuery();
   tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
     columns: [
       createProto(ColumnSchema, {
@@ -287,7 +300,124 @@ function seedTableDetailQueries() {
   });
 }
 
+function seedDefinitionDesignQueries() {
+  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
+    columns: [
+      createProto(ColumnSchema, {
+        columnName: "id",
+        dataType: DataType.INTEGER,
+        identityGeneration: IdentityGeneration.BY_DEFAULT,
+        isIdentity: true,
+        isNullable: false,
+        ordinalPosition: 1,
+        rawType: "int8",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "table_name",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 2,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "op",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 3,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "actor",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 4,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "diff",
+        dataType: DataType.JSON,
+        isNullable: false,
+        ordinalPosition: 5,
+        rawType: "jsonb",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "recorded_at",
+        dataType: DataType.TIMESTAMP,
+        defaultValue: "now()",
+        isNullable: false,
+        ordinalPosition: 6,
+        rawType: "timestamptz",
+      }),
+    ],
+  });
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    {
+      constraints: [
+        createProto(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "change_log_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+      ],
+    }
+  );
+  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
+    indexes: [
+      createProto(TableIndexSchema, {
+        indexName: "change_log_pkey",
+        isUnique: true,
+        keyColumns: ["id"],
+        method: "btree",
+        sizeBytes: 98_304n,
+      }),
+    ],
+  });
+  tableQueries.partitionMetadata.data = {
+    partitionMetadata: {
+      childPartitions: [
+        {
+          displayName: "change_log_2026_q1",
+          partitionBound: "FOR VALUES FROM ('2026-01-01') TO ('2026-04-01')",
+          table:
+            "instances/prod/databases/logistics/schemas/audit/tables/change_log_2026_q1",
+        },
+        {
+          displayName: "change_log_2026_q2",
+          partitionBound: "FOR VALUES FROM ('2026-04-01') TO ('2026-07-01')",
+          table:
+            "instances/prod/databases/logistics/schemas/audit/tables/change_log_2026_q2",
+        },
+        {
+          displayName: "change_log_2026_q3",
+          partitionBound: "FOR VALUES FROM ('2026-07-01') TO ('2026-10-01')",
+          table:
+            "instances/prod/databases/logistics/schemas/audit/tables/change_log_2026_q3",
+        },
+        {
+          displayName: "change_log_archive",
+          partitionBound: "DEFAULT",
+          table:
+            "instances/prod/databases/logistics/schemas/audit/tables/change_log_archive",
+        },
+      ],
+      parentTable: "",
+      partitionBound: "",
+      partitionCount: 4,
+      partitionKey: "RANGE (recorded_at)",
+    },
+  };
+  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
+    policies: [],
+  });
+  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
+    triggers: [],
+  });
+}
+
 function seedTypeAnnotationQueries() {
+  resetPartitionMetadataQuery();
   tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
     columns: [
       createProto(ColumnSchema, {
@@ -891,6 +1021,45 @@ test("data explorer table data tab has a visual baseline", async () => {
     "data-explorer-table-data"
   );
 });
+
+test("data explorer table definition tab has a visual baseline", async () => {
+  seedDefinitionDesignQueries();
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="definition"
+      instanceId="prod"
+      schemaName="audit"
+      table={createProto(TableSchema, {
+        comment: "Row-level audit trail written by table triggers",
+        displayName: "change_log",
+        name: "instances/prod/databases/logistics/schemas/audit/tables/change_log",
+        owner: "app_owner",
+        rowCount: 4_200_000n,
+        sizeBytes: 4_187_000_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="change_log"
+    />,
+    "h-[900px] w-[1100px] overflow-hidden"
+  );
+
+  await expect
+    .element(page.getByRole("heading", { name: "Create table" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("heading", { name: "Reproduce locally" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("heading", { name: "Comments" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("Copy all steps", { exact: true }))
+    .toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-definition"
+  );
+}, 10_000);
 
 test("data explorer index method copy stays inside its column on narrow surfaces", async () => {
   seedTableDetailQueries();

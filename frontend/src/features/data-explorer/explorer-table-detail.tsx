@@ -5,9 +5,12 @@ import {
   Binary,
   Boxes,
   Columns3,
+  FileCode2,
   GitBranch,
+  GitCompareArrows,
   Hash,
   KeyRound,
+  Layers,
   ListTree,
   type LucideIcon,
   Network,
@@ -18,6 +21,8 @@ import {
   ShieldCheck,
   Sparkles,
   Table2,
+  Terminal,
+  TriangleAlert,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -26,6 +31,14 @@ import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data
 import { EmptyStatePanel } from "@/components/empty-state-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+} from "@/components/ui/card";
+import { CopyIconButton } from "@/components/ui/copy-icon-button";
 import {
   DataTable,
   type DataTableColumnDef,
@@ -101,6 +114,7 @@ import type {
   TableConstraint,
   TableIndex,
   TablePartition,
+  TablePartitionMetadata,
   TablePolicy,
   Table as TableProto,
   TableTrigger,
@@ -152,6 +166,7 @@ const TABLE_DETAIL_TAB_DEFINITIONS: Record<
   columns: { icon: Columns3, label: "Columns" },
   constraints: { icon: GitBranch, label: "Constraints" },
   data: { icon: Rows3, label: "Data" },
+  definition: { icon: FileCode2, label: "Definition" },
   indexes: { icon: ListTree, label: "Indexes" },
   keys: { icon: KeyRound, label: "Keys" },
   partitions: { icon: Network, label: "Partitions" },
@@ -167,6 +182,7 @@ const TABLE_DETAIL_TABS: TableDetailTabDefinition[] = [
   { value: "constraints", ...TABLE_DETAIL_TAB_DEFINITIONS.constraints },
   { value: "policies", ...TABLE_DETAIL_TAB_DEFINITIONS.policies },
   { value: "triggers", ...TABLE_DETAIL_TAB_DEFINITIONS.triggers },
+  { value: "definition", ...TABLE_DETAIL_TAB_DEFINITIONS.definition },
 ];
 const CONSTRAINT_TYPE_LABELS: Record<ConstraintType, string> = {
   [ConstraintType.UNSPECIFIED]: "—",
@@ -424,6 +440,10 @@ const EMPTY_RESOURCE_COPY: Record<
     description:
       "No primary key, foreign key, unique, check, or exclusion constraints were found.",
     title: "No constraints",
+  },
+  definition: {
+    description: "Schema document metadata is not available for this table.",
+    title: "No definition",
   },
   indexes: {
     description:
@@ -1767,6 +1787,745 @@ function TriggersTab({
   );
 }
 
+const SIMPLE_SQL_IDENTIFIER_PATTERN = /^[a-z_][a-z0-9_]*$/;
+
+interface DefinitionSection {
+  content: string;
+  detail: string;
+  id: string;
+  kind: "code" | "note";
+  title: string;
+}
+
+function formatSqlIdentifier(identifier: string) {
+  if (SIMPLE_SQL_IDENTIFIER_PATTERN.test(identifier)) {
+    return identifier;
+  }
+  return `"${identifier.replaceAll('"', '""')}"`;
+}
+
+function formatQualifiedTableName(schemaName: string, tableName: string) {
+  return `${formatSqlIdentifier(schemaName)}.${formatSqlIdentifier(tableName)}`;
+}
+
+function formatSqlStringLiteral(value: string) {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
+function formatIdentityGeneration(generation: IdentityGeneration) {
+  return IDENTITY_GENERATION_LABELS[generation] || "BY DEFAULT";
+}
+
+function formatColumnDefinition(column: TableColumn) {
+  const parts = [
+    formatSqlIdentifier(column.columnName),
+    column.rawType || "unknown",
+  ];
+  if (column.isIdentity) {
+    parts.push(
+      `GENERATED ${formatIdentityGeneration(column.identityGeneration)} AS IDENTITY`
+    );
+  }
+  if (column.isGenerated && column.generationExpression) {
+    parts.push(`GENERATED ALWAYS AS (${column.generationExpression}) STORED`);
+  }
+  if (!column.isNullable) {
+    parts.push("NOT NULL");
+  }
+  if (column.defaultValue && !(column.isGenerated || column.isIdentity)) {
+    parts.push(`DEFAULT ${column.defaultValue}`);
+  }
+  return parts.join(" ");
+}
+
+function createTableSql({
+  columns,
+  qualifiedTableName,
+}: {
+  columns: TableColumn[];
+  qualifiedTableName: string;
+}) {
+  if (columns.length === 0) {
+    return `CREATE TABLE ${qualifiedTableName} (\n  -- Column metadata unavailable\n);`;
+  }
+  const columnLines = columns
+    .slice()
+    .sort((left, right) => left.ordinalPosition - right.ordinalPosition)
+    .map((column, index, sortedColumns) => {
+      const suffix = index < sortedColumns.length - 1 ? "," : "";
+      return `  ${formatColumnDefinition(column)}${suffix}`;
+    })
+    .join("\n");
+  return `CREATE TABLE ${qualifiedTableName} (\n${columnLines}\n);`;
+}
+
+function constraintSql(
+  constraints: TableConstraint[],
+  qualifiedTableName: string
+) {
+  return constraints
+    .filter((constraint) => constraint.definition)
+    .map((constraint) => {
+      if (!constraint.constraintName) {
+        return `ALTER TABLE ${qualifiedTableName} ADD ${constraint.definition};`;
+      }
+      return `ALTER TABLE ${qualifiedTableName} ADD CONSTRAINT ${formatSqlIdentifier(
+        constraint.constraintName
+      )} ${constraint.definition};`;
+    })
+    .join("\n");
+}
+
+function indexSql(indexes: TableIndex[], qualifiedTableName: string) {
+  return indexes
+    .filter((index) => index.indexName)
+    .map((index) => {
+      const unique = index.isUnique ? "UNIQUE " : "";
+      const method = index.method || "btree";
+      const keyColumns =
+        index.keyColumns.length > 0
+          ? index.keyColumns.map(formatSqlIdentifier).join(", ")
+          : "/* expression */";
+      const included =
+        index.includedColumns.length > 0
+          ? ` INCLUDE (${index.includedColumns
+              .map(formatSqlIdentifier)
+              .join(", ")})`
+          : "";
+      const predicate = index.predicate ? ` WHERE ${index.predicate}` : "";
+      return `CREATE ${unique}INDEX ${formatSqlIdentifier(
+        index.indexName
+      )} ON ${qualifiedTableName} USING ${method} (${keyColumns})${included}${predicate};`;
+    })
+    .join("\n");
+}
+
+function partitionSql({
+  metadata,
+  qualifiedTableName,
+}: {
+  metadata: TablePartitionMetadata | undefined;
+  qualifiedTableName: string;
+}) {
+  const lines: string[] = [];
+  if (!metadata) {
+    return "";
+  }
+  if (metadata.partitionKey) {
+    lines.push(`-- PARTITION BY ${metadata.partitionKey}`);
+  }
+  if (metadata.parentTable && metadata.partitionBound) {
+    lines.push(
+      `-- ${qualifiedTableName} is a partition of ${formatReferencedTable(
+        metadata.parentTable
+      )}`
+    );
+    lines.push(`-- ${metadata.partitionBound}`);
+  }
+  for (const partition of metadata.childPartitions) {
+    lines.push(
+      `CREATE TABLE ${formatReferencedTable(
+        partition.table
+      )} PARTITION OF ${qualifiedTableName}`
+    );
+    lines.push(`  ${partition.partitionBound};`);
+  }
+  return lines.join("\n");
+}
+
+function policySql(policies: TablePolicy[], qualifiedTableName: string) {
+  return policies
+    .filter((policy) => policy.policyName)
+    .map((policy) => {
+      const roles =
+        policy.roles.length > 0 ? policy.roles.join(", ") : "PUBLIC";
+      const usingExpression = policy.usingExpression
+        ? `\n  USING (${policy.usingExpression})`
+        : "";
+      const checkExpression = policy.checkExpression
+        ? `\n  WITH CHECK (${policy.checkExpression})`
+        : "";
+      return `CREATE POLICY ${formatSqlIdentifier(
+        policy.policyName
+      )} ON ${qualifiedTableName}\n  AS ${formatPolicyMode(
+        policy.mode
+      ).toUpperCase()}\n  FOR ${formatPolicyCommand(
+        policy.command
+      )} TO ${roles}${usingExpression}${checkExpression};`;
+    })
+    .join("\n");
+}
+
+function triggerSql(triggers: TableTrigger[], qualifiedTableName: string) {
+  return triggers
+    .filter((trigger) => trigger.triggerName)
+    .map((trigger) => {
+      if (
+        trigger.definition.trim().toUpperCase().startsWith("CREATE TRIGGER")
+      ) {
+        return trigger.definition.trim().endsWith(";")
+          ? trigger.definition.trim()
+          : `${trigger.definition.trim()};`;
+      }
+      const events =
+        trigger.events.length > 0 ? trigger.events.join(" OR ") : "UPDATE";
+      if (!(trigger.definition || trigger.functionName)) {
+        return `-- Trigger ${formatSqlIdentifier(trigger.triggerName)} definition unavailable`;
+      }
+      const functionCall =
+        trigger.definition || `EXECUTE FUNCTION ${trigger.functionName}()`;
+      return `CREATE TRIGGER ${formatSqlIdentifier(trigger.triggerName)}\n  ${
+        trigger.timing || "AFTER"
+      } ${events} ON ${qualifiedTableName}\n  FOR EACH ROW ${functionCall};`;
+    })
+    .join("\n");
+}
+
+function deriveDefinitionSections({
+  columns,
+  constraints,
+  indexes,
+  partitionMetadata,
+  policies,
+  qualifiedTableName,
+  tableComment,
+  triggers,
+}: {
+  columns: TableColumn[];
+  constraints: TableConstraint[];
+  indexes: TableIndex[];
+  partitionMetadata: TablePartitionMetadata | undefined;
+  policies: TablePolicy[];
+  qualifiedTableName: string;
+  tableComment: string;
+  triggers: TableTrigger[];
+}): DefinitionSection[] {
+  const sections: DefinitionSection[] = [
+    {
+      content: createTableSql({ columns, qualifiedTableName }),
+      detail: `${qualifiedTableName} · ${columns.length.toLocaleString()} columns · pg_dump style`,
+      id: "create-table",
+      kind: "code",
+      title: "Create table",
+    },
+  ];
+  const constraintsText = constraintSql(constraints, qualifiedTableName);
+  if (constraintsText) {
+    sections.push({
+      content: constraintsText,
+      detail: `${constraints.length.toLocaleString()} from pg_constraint`,
+      id: "constraints",
+      kind: "code",
+      title: "Constraints",
+    });
+  }
+  const indexesText = indexSql(indexes, qualifiedTableName);
+  if (indexesText) {
+    sections.push({
+      content: indexesText,
+      detail: `${indexes.length.toLocaleString()} from pg_index`,
+      id: "indexes",
+      kind: "code",
+      title: "Indexes",
+    });
+  }
+  const partitionText = partitionSql({
+    metadata: partitionMetadata,
+    qualifiedTableName,
+  });
+  if (partitionText) {
+    sections.push({
+      content: partitionText,
+      detail: `${(derivePartitionTabCount(partitionMetadata) ?? 0).toLocaleString()} from pg_partitioned_table`,
+      id: "partitions",
+      kind: "code",
+      title: "Partitions",
+    });
+  }
+  const trimmedComment = tableComment.trim();
+  if (trimmedComment) {
+    sections.push({
+      content: `COMMENT ON TABLE ${qualifiedTableName} IS ${formatSqlStringLiteral(trimmedComment)};`,
+      detail: "from pg_description",
+      id: "comments",
+      kind: "code",
+      title: "Comments",
+    });
+  }
+  const policyText = policySql(policies, qualifiedTableName);
+  if (policyText) {
+    sections.push({
+      content: policyText,
+      detail: `${policies.length.toLocaleString()} from pg_policies`,
+      id: "policies",
+      kind: "code",
+      title: "Policies",
+    });
+  }
+  if (policies.length === 0) {
+    sections.push({
+      content:
+        "No row-level policies are returned for this table. Visibility is governed by grants unless row-level security is enabled outside this metadata response.",
+      detail: "no policies returned",
+      id: "row-level-security",
+      kind: "note",
+      title: "Row-level security",
+    });
+  }
+  const triggerText = triggerSql(triggers, qualifiedTableName);
+  if (triggerText) {
+    sections.push({
+      content: triggerText,
+      detail: `${triggers.length.toLocaleString()} from pg_trigger`,
+      id: "triggers",
+      kind: "code",
+      title: "Triggers",
+    });
+  }
+  return sections;
+}
+
+function SchemaCodeBlock({ sql }: { sql: string }) {
+  return (
+    <div className="relative">
+      <pre className="overflow-x-auto whitespace-pre rounded-b-xl bg-muted/30 p-4 pr-10 font-mono text-[12px] text-foreground leading-relaxed">
+        {sql}
+      </pre>
+      <CopyIconButton
+        ariaLabel="Copy SQL"
+        className="absolute top-3 right-3"
+        value={sql}
+      />
+    </div>
+  );
+}
+
+function DefinitionSectionCard({ section }: { section: DefinitionSection }) {
+  return (
+    <Card className="gap-0 py-0" size="sm">
+      <CardHeader className="border-b bg-muted/40 py-3">
+        <h2 className="flex items-center gap-2 font-medium text-sm">
+          {section.title}
+        </h2>
+        <CardDescription className="font-mono text-xs">
+          {section.detail}
+        </CardDescription>
+      </CardHeader>
+      {section.kind === "code" ? (
+        <SchemaCodeBlock sql={section.content} />
+      ) : (
+        <CardContent className="py-4 text-muted-foreground text-sm leading-relaxed">
+          {section.content}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+function DefinitionSideCard({
+  action,
+  children,
+  icon: Icon,
+  title,
+}: {
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  icon: LucideIcon;
+  title: string;
+}) {
+  return (
+    <Card className="gap-0 py-0" size="sm">
+      <CardHeader className="border-b bg-muted/40 py-3">
+        <h2 className="flex items-center gap-2 font-medium text-sm">
+          <Icon aria-hidden="true" className="size-4 text-muted-foreground" />
+          {title}
+        </h2>
+        {action ? <CardAction>{action}</CardAction> : null}
+      </CardHeader>
+      <CardContent className="py-3">{children}</CardContent>
+    </Card>
+  );
+}
+
+function dependencyReferences(constraints: TableConstraint[]) {
+  return constraints
+    .filter((constraint) => constraint.referencedTable)
+    .map((constraint) => {
+      const target = formatReferencedTable(constraint.referencedTable);
+      const sourceColumns = formatColumnList(constraint.columnNames);
+      const targetColumns = formatColumnList(constraint.referencedColumnNames);
+      return `${sourceColumns} → ${target}${
+        targetColumns === "—" ? "" : `(${targetColumns})`
+      }`;
+    });
+}
+
+function dumpCommand({
+  databaseId,
+  instanceId,
+  qualifiedTableName,
+  tableName,
+}: {
+  databaseId: string;
+  instanceId: string;
+  qualifiedTableName: string;
+  tableName: string;
+}) {
+  return `pg_dump -h ${shellSingleQuote(
+    instanceId
+  )} \\\n  -U app_readonly -d ${shellSingleQuote(
+    databaseId
+  )} \\\n  --schema-only --no-owner --no-privileges \\\n  --table=${shellSingleQuote(qualifiedTableName)} > ${shellSingleQuote(
+    `${tableName}.sql`
+  )}`;
+}
+
+function DefinitionCommandStep({
+  command,
+  number,
+  title,
+}: {
+  command: string;
+  number: number;
+  title: string;
+}) {
+  return (
+    <div className="overflow-hidden rounded-lg border">
+      <div className="flex items-center gap-2 border-b bg-muted/60 px-3 py-2">
+        <span className="flex size-5 items-center justify-center rounded-full bg-muted-foreground/20 font-mono text-[10px]">
+          {number}
+        </span>
+        <h3 className="font-medium text-xs">{title}</h3>
+        <CopyIconButton
+          ariaLabel={`Copy ${title.toLowerCase()} command`}
+          className="ml-auto"
+          value={command}
+        />
+      </div>
+      <pre className="overflow-x-auto whitespace-pre-wrap p-3 font-mono text-[11px] leading-relaxed">
+        {command}
+      </pre>
+    </div>
+  );
+}
+
+function ReproduceLocallyCard({
+  command,
+  databaseId,
+  schemaName,
+  tableName,
+}: {
+  command: string;
+  databaseId: string;
+  schemaName: string;
+  tableName: string;
+}) {
+  const createDatabaseCommand = `createdb -h localhost ${shellSingleQuote(databaseId)}`;
+  const restoreCommand = `psql -h localhost -d ${shellSingleQuote(
+    databaseId
+  )} \\\n  -f ${shellSingleQuote(`${tableName}.sql`)}`;
+  const allSteps = `${command}\n\n${createDatabaseCommand}\n\n${restoreCommand}`;
+  const [copyError, setCopyError] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopyAllSteps() {
+    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      setCopyError(true);
+      setCopied(false);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(allSteps);
+      setCopyError(false);
+      setCopied(true);
+    } catch {
+      setCopyError(true);
+      setCopied(false);
+    }
+  }
+
+  return (
+    <DefinitionSideCard icon={Terminal} title="Reproduce locally">
+      <div className="space-y-3">
+        <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1 text-center font-mono text-[11px]">
+          <span className="rounded-md bg-background px-2 py-1 shadow-sm">
+            {tableName}
+          </span>
+          <span className="px-2 py-1 text-muted-foreground">{schemaName}</span>
+          <span className="px-2 py-1 text-muted-foreground">{databaseId}</span>
+        </div>
+        <div className="flex h-8 items-center justify-between rounded-lg border bg-background px-3 text-sm">
+          <span>pg_dump — schema only (SQL)</span>
+          <span aria-hidden="true" className="text-muted-foreground">
+            ▾
+          </span>
+        </div>
+        <DefinitionCommandStep
+          command={command}
+          number={1}
+          title="Dump schema only"
+        />
+        <DefinitionCommandStep
+          command={createDatabaseCommand}
+          number={2}
+          title="Create a local database"
+        />
+        <DefinitionCommandStep
+          command={restoreCommand}
+          number={3}
+          title="Restore"
+        />
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] text-amber-700 leading-relaxed dark:text-amber-300">
+          Related foreign key targets are not included with --table; dump the
+          schema scope if you need them.
+        </p>
+        <div>
+          <Button
+            className="w-full"
+            onClick={handleCopyAllSteps}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            {copied ? "Copied" : "Copy all steps"}
+          </Button>
+          {copyError ? (
+            <p className="mt-2 text-destructive text-xs" role="status">
+              Copy failed. Select the commands manually.
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </DefinitionSideCard>
+  );
+}
+
+function shellSingleQuote(value: string) {
+  return `'${value.replaceAll("'", "'\"'\"'")}'`;
+}
+
+function DefinitionTab({
+  columnsQuery,
+  constraintsQuery,
+  databaseId,
+  indexesQuery,
+  instanceId,
+  partitionMetadataQuery,
+  policiesQuery,
+  schemaName,
+  tableComment,
+  tableName,
+  triggersQuery,
+}: {
+  columnsQuery: ReturnType<typeof useListTableColumnsQuery>;
+  constraintsQuery: ReturnType<typeof useListTableConstraintsQuery>;
+  databaseId: string;
+  indexesQuery: ReturnType<typeof useListTableIndexesQuery>;
+  instanceId: string;
+  partitionMetadataQuery: ReturnType<typeof useGetTablePartitionMetadataQuery>;
+  policiesQuery: ReturnType<typeof useListTablePoliciesQuery>;
+  schemaName: string;
+  tableComment: string;
+  tableName: string;
+  triggersQuery: ReturnType<typeof useListTableTriggersQuery>;
+}) {
+  const toolbar = deriveMetadataToolbar([
+    columnsQuery,
+    constraintsQuery,
+    indexesQuery,
+    partitionMetadataQuery,
+    policiesQuery,
+    triggersQuery,
+  ]);
+  const errors = collectQueryErrors(
+    {
+      endpoint: "ListTableColumns",
+      label: "Columns",
+      query: columnsQuery,
+    },
+    {
+      endpoint: "ListTableConstraints",
+      label: "Constraints",
+      query: constraintsQuery,
+    },
+    {
+      endpoint: "ListTableIndexes",
+      label: "Indexes",
+      query: indexesQuery,
+    },
+    {
+      endpoint: "GetTablePartitionMetadata",
+      label: "Partitions",
+      query: partitionMetadataQuery,
+    },
+    {
+      endpoint: "ListTablePolicies",
+      label: "Policies",
+      query: policiesQuery,
+    },
+    {
+      endpoint: "ListTableTriggers",
+      label: "Triggers",
+      query: triggersQuery,
+    }
+  );
+  if (errors.length > 0) {
+    return (
+      <TabError
+        errors={errors}
+        onRetry={toolbar.handleRetry}
+        tab="definition"
+      />
+    );
+  }
+  if (
+    !(
+      columnsQuery.data &&
+      constraintsQuery.data &&
+      indexesQuery.data &&
+      partitionMetadataQuery.data &&
+      policiesQuery.data &&
+      triggersQuery.data
+    ) ||
+    columnsQuery.isLoading ||
+    constraintsQuery.isLoading ||
+    indexesQuery.isLoading ||
+    partitionMetadataQuery.isLoading ||
+    policiesQuery.isLoading ||
+    triggersQuery.isLoading
+  ) {
+    return <TabSkeleton />;
+  }
+
+  const qualifiedTableName = formatQualifiedTableName(schemaName, tableName);
+  const sections = deriveDefinitionSections({
+    columns: columnsQuery.data.columns,
+    constraints: constraintsQuery.data.constraints,
+    indexes: indexesQuery.data.indexes,
+    partitionMetadata: partitionMetadataQuery.data.partitionMetadata,
+    policies: policiesQuery.data.policies,
+    qualifiedTableName,
+    tableComment,
+    triggers: triggersQuery.data.triggers,
+  });
+  const references = dependencyReferences(constraintsQuery.data.constraints);
+  const command = dumpCommand({
+    databaseId,
+    instanceId,
+    qualifiedTableName,
+    tableName,
+  });
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="min-w-0 space-y-4">
+        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <span>Schema document</span>
+          <span aria-hidden="true">·</span>
+          <span>
+            generated live from{" "}
+            <code className="rounded bg-muted px-1 py-0.5">pg_catalog</code>
+          </span>
+          <div className="ml-auto">
+            <Button
+              onClick={toolbar.handleRetry}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <RefreshCw data-icon="inline-start" />
+              Refresh
+            </Button>
+          </div>
+        </div>
+        {sections.map((section) => (
+          <DefinitionSectionCard key={section.id} section={section} />
+        ))}
+      </div>
+      <aside className="space-y-4">
+        <DefinitionSideCard
+          action={<Badge variant="secondary">Not configured</Badge>}
+          icon={GitCompareArrows}
+          title="Drift vs staging-core"
+        >
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Compare environments when drift data is connected.
+          </p>
+        </DefinitionSideCard>
+        <DefinitionSideCard icon={Layers} title="Dependencies">
+          <div className="space-y-3 text-sm">
+            <div>
+              <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
+                Referenced by
+              </p>
+              <p className="mt-1 font-mono text-muted-foreground text-xs">—</p>
+            </div>
+            <div>
+              <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
+                References
+              </p>
+              {references.length > 0 ? (
+                <ul className="mt-1 space-y-1">
+                  {references.map((reference) => (
+                    <li className="font-mono text-xs" key={reference}>
+                      {reference}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-1 font-mono text-muted-foreground text-xs">
+                  —
+                </p>
+              )}
+            </div>
+          </div>
+        </DefinitionSideCard>
+        <ReproduceLocallyCard
+          command={command}
+          databaseId={databaseId}
+          schemaName={schemaName}
+          tableName={tableName}
+        />
+        <p className="px-1 text-muted-foreground text-xs leading-relaxed">
+          Definition is generated from pg_catalog on each visit — Querylane
+          never stores or mutates schema.
+        </p>
+        <Card className="gap-0 border-destructive/40 py-0" size="sm">
+          <CardHeader className="border-b bg-destructive/5 py-3">
+            <h2 className="flex items-center gap-2 font-medium text-sm">
+              <TriangleAlert
+                aria-hidden="true"
+                className="size-4 text-destructive"
+              />
+              Danger zone
+            </h2>
+            <CardAction>
+              <Badge variant="outline">requires app_owner</Badge>
+            </CardAction>
+          </CardHeader>
+          <CardContent className="flex items-start gap-3 py-4">
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">Truncate {qualifiedTableName}</p>
+              <p className="mt-1 text-muted-foreground text-sm">
+                Removes every row instantly and resets owned sequences.
+              </p>
+            </div>
+            <Button
+              disabled={true}
+              size="sm"
+              type="button"
+              variant="destructive"
+            >
+              Truncate…
+            </Button>
+          </CardContent>
+        </Card>
+      </aside>
+    </div>
+  );
+}
+
 function TableDetailTabTrigger({
   count,
   icon: Icon,
@@ -1864,6 +2623,7 @@ function TableDetail({
     columns: columnCount,
     constraints: constraintsQuery.data?.constraints.length,
     data: undefined,
+    definition: undefined,
     indexes: indexesQuery.data?.indexes.length,
     keys: keyRows?.length,
     partitions: partitionMetadataQuery.data
@@ -1942,6 +2702,21 @@ function TableDetail({
             </TabsContent>
             <TabsContent className="mt-4" value="triggers">
               <TriggersTab query={triggersQuery} />
+            </TabsContent>
+            <TabsContent className="mt-4" value="definition">
+              <DefinitionTab
+                columnsQuery={columnsQuery}
+                constraintsQuery={constraintsQuery}
+                databaseId={databaseId}
+                indexesQuery={indexesQuery}
+                instanceId={instanceId}
+                partitionMetadataQuery={partitionMetadataQuery}
+                policiesQuery={policiesQuery}
+                schemaName={schemaName}
+                tableComment={table?.comment ?? ""}
+                tableName={tableName}
+                triggersQuery={triggersQuery}
+              />
             </TabsContent>
           </Tabs>
         </div>
