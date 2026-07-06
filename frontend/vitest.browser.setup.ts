@@ -13,7 +13,7 @@ if (!Reflect.get(globalThis, consoleWarnPatchFlag)) {
 }
 
 const browserTheme =
-  import.meta.env["VITE_BROWSER_THEME"] === "dark" ? "dark" : "light";
+  import.meta.env.PUBLIC_TEST_BROWSER_THEME === "dark" ? "dark" : "light";
 
 document.documentElement.classList.remove("light", "dark");
 document.documentElement.classList.add(browserTheme);

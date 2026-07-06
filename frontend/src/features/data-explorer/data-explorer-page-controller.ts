@@ -1,6 +1,5 @@
 import type { Transport } from "@connectrpc/connect";
 import { useTransport } from "@connectrpc/connect-query";
-import type { QueryClient } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -32,10 +31,12 @@ import { useDb } from "@/lib/db-context";
 import { handleNavigationResult } from "@/lib/navigation-errors";
 import { handleQueryActionError } from "@/lib/query-action-errors";
 import { createResourceLoader } from "@/lib/resource-loader";
-import { prefetchRouteQueryOnIntent } from "@/lib/route-prefetch";
+import {
+  prefetchRouteQueryOnIntent,
+  type RoutePrefetchClient,
+} from "@/lib/route-prefetch";
 
 const EXPLORER_SEARCH_DEBOUNCE_MS = 200;
-type RoutePrefetchClient = Pick<QueryClient, "getQueryState" | "prefetchQuery">;
 
 function useDataExplorerPageController({
   databaseId,

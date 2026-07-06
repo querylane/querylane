@@ -37,18 +37,22 @@ function makeQueryClientStub(calls: unknown[]): QueryClient {
   return queryClient;
 }
 
-function makeFreshQueryClientStub(calls: unknown[]): QueryClient {
+function makeFreshQueryClientStub(calls: unknown[]): {
+  queryClient: QueryClient;
+  seededQueryCount: number;
+} {
   const queryClient = makeQueryClientStub(calls);
-  for (const query of tableDetailQueryOptions({
+  const seededQueries = tableDetailQueryOptions({
     databaseId: "mydb",
     instanceId: "local",
     schemaId: activeSchema.id,
     tableId: "users",
     transport,
-  })) {
+  });
+  for (const query of seededQueries) {
     queryClient.setQueryData(query.queryKey, {});
   }
-  return queryClient;
+  return { queryClient, seededQueryCount: seededQueries.length };
 }
 
 const activeSchema = { id: "public", name: "public", owner: "postgres" };
@@ -111,7 +115,9 @@ describe("prefetchTableDetails", () => {
 
   test("skips already-fresh table detail queries on intent", async () => {
     const calls: unknown[] = [];
-    const queryClient = makeFreshQueryClientStub(calls);
+    const { queryClient, seededQueryCount } = makeFreshQueryClientStub(calls);
+
+    expect(seededQueryCount).toBeGreaterThan(0);
 
     prefetchTableDetails({
       activeSchema,

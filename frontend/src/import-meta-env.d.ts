@@ -16,7 +16,7 @@ declare global {
     readonly PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE?: string;
     readonly PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE?: string;
     readonly PUBLIC_SENTRY_TRACES_SAMPLE_RATE?: string;
-    readonly VITE_BROWSER_THEME?: string;
+    readonly PUBLIC_TEST_BROWSER_THEME?: string;
   }
 }
 
