@@ -181,6 +181,28 @@ describe("InstanceRolesPage", () => {
     });
   });
 
+  test("places role search on the left with the type filter directly after it", () => {
+    render(<InstanceRolesPage instanceId="prod" tab={undefined} />);
+
+    const search = screen.getByRole("textbox", { name: "Search roles..." });
+    const filterBar = search.closest('[data-slot="roles-filter-bar"]');
+    if (!(filterBar instanceof HTMLElement)) {
+      throw new Error("Missing roles filter bar");
+    }
+
+    const typeFilter = within(filterBar).getByRole("button", {
+      name: "Type",
+    });
+
+    const controls = Array.from(
+      filterBar.querySelectorAll('input[name="table-filter"], button')
+    );
+
+    expect(filterBar.className).toContain("justify-start");
+    expect(controls[0]).toBe(search);
+    expect(controls[1]).toBe(typeFilter);
+  });
+
   test("hides built-in roles from the access map until that filter is enabled", async () => {
     const user = userEvent.setup();
 

@@ -101,6 +101,25 @@ describe("GrantedObjectsTable: deferred filtering", () => {
     expect(screen.getByText(RE_REVENUE_VIEW)).toBeTruthy();
   });
 
+  test("places object search on the left with the kind filter directly after it", () => {
+    render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
+
+    const search = screen.getByRole("textbox", { name: "Search objects…" });
+    const filterBar = search.closest('[data-slot="role-grants-filter-bar"]');
+    if (!(filterBar instanceof HTMLElement)) {
+      throw new Error("Missing role grants filter bar");
+    }
+
+    const kindFilter = screen.getByRole("button", { name: "Kind" });
+    const controls = Array.from(
+      filterBar.querySelectorAll('input[name="table-filter"], button')
+    );
+
+    expect(filterBar.className).toContain("justify-start");
+    expect(controls[0]).toBe(search);
+    expect(controls[1]).toBe(kindFilter);
+  });
+
   test("filters object kind through the shared facet", async () => {
     const user = userEvent.setup();
     render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
