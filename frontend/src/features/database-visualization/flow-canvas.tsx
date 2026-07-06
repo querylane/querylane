@@ -649,6 +649,7 @@ function layoutGraph({
     nodes,
   });
   const flowNodes: FlowNode[] = positionedNodes.map(({ node, position }) => ({
+    ariaLabel: flowNodeAriaLabel(node),
     data: {
       ...node.data,
       density,
@@ -663,6 +664,12 @@ function layoutGraph({
     type: "visualization",
   }));
   return { flowEdges, flowNodes };
+}
+
+function flowNodeAriaLabel(node: VisualizationNode): string {
+  return [node.data.title, `${node.kind} node`, node.data.subtitle]
+    .filter(Boolean)
+    .join(", ");
 }
 
 function FlowCanvas({
@@ -700,6 +707,7 @@ function FlowCanvas({
       )}
     >
       <ReactFlow<FlowNode, Edge>
+        autoPanOnSelection={true}
         edges={flowEdges}
         fitView={true}
         minZoom={FLOW_MIN_ZOOM[density]}
