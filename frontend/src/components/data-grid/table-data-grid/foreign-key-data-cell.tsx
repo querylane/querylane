@@ -1,7 +1,6 @@
 import { DataCell } from "@/components/data-grid/table-data-grid/data-cell";
 import { Button } from "@/components/ui/button";
 import { formatTableCell } from "@/features/data-explorer/table-data/table-value-format";
-import { cn } from "@/lib/utils";
 import type {
   TableCell,
   TableResultColumn,
@@ -24,11 +23,7 @@ function ForeignKeyDataCell({
   return (
     <Button
       aria-label={`Open ${column.columnName} reference ${formatted.display}`}
-      className={cn(
-        "h-auto max-w-full justify-start px-0 py-0 font-mono text-xs",
-        "text-sky-600 underline decoration-dotted underline-offset-4 hover:text-sky-700",
-        "dark:text-sky-400 dark:hover:text-sky-300"
-      )}
+      className="h-auto max-w-full justify-start px-0 py-0 font-mono text-xs"
       onClick={(event) => {
         event.stopPropagation();
         onOpen();
@@ -36,7 +31,7 @@ function ForeignKeyDataCell({
       size="xs"
       title={`Open referenced row for ${column.columnName}`}
       type="button"
-      variant="link"
+      variant="reference"
     >
       <span className="truncate">{formatted.display}</span>
     </Button>

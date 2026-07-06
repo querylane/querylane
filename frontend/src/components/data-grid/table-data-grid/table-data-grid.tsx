@@ -26,10 +26,9 @@ import { AppInlineError } from "@/components/app-error-view";
 import { CellContextMenu } from "@/components/data-grid/table-data-grid/cell-context-menu";
 import { DataGridToolbar } from "@/components/data-grid/table-data-grid/data-grid-toolbar";
 import { DataValueDialogProvider } from "@/components/data-grid/table-data-grid/data-value-dialog-provider";
-import {
-  buildForeignKeyReferencePreview,
-  type ForeignKeyReferencePreview,
-  type TableForeignKeyReference,
+import type {
+  ForeignKeyReferencePreview,
+  TableForeignKeyReference,
 } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import {
   getGridCell,
@@ -664,13 +663,19 @@ function ForeignKeyReferenceDrawer({
               <SheetTitle className="break-all font-mono text-base leading-snug">
                 {preview.sourceColumn} references {preview.targetLabel}
               </SheetTitle>
-              <SheetDescription>
-                Showing rows where the referenced key equals{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono">
-                  {preview.displayValue}
-                </code>
-                .
-              </SheetDescription>
+              {preview.isComposite ? (
+                <SheetDescription>
+                  Showing rows where all referenced keys match this row.
+                </SheetDescription>
+              ) : (
+                <SheetDescription>
+                  Showing rows where the referenced key equals{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono">
+                    {preview.displayValue}
+                  </code>
+                  .
+                </SheetDescription>
+              )}
             </SheetHeader>
             <div className="min-h-0 flex-1 overflow-auto p-4">
               <TableDataGrid
@@ -1230,11 +1235,7 @@ function useGridColumns({
 }: {
   foreignKeyReferences: readonly TableForeignKeyReference[];
   frozenColumns: ReadonlySet<string>;
-  onOpenForeignKeyReference: (
-    reference: TableForeignKeyReference,
-    row: GridRow,
-    sourceColumn: string
-  ) => void;
+  onOpenForeignKeyReference: (preview: ForeignKeyReferencePreview) => void;
   onFrozenColumnsChange: (next: ReadonlySet<string>) => void;
   resultColumns: TableResultColumn[];
   rowIdentity:
@@ -1322,6 +1323,7 @@ function useGridColumns({
         onSortDesc: () => toggleColumnSort(column.columnName, "DESC"),
         onToggleFreeze: () => toggleColumnFreeze(column.columnName),
         pkColumnSet,
+        resultColumns,
         sortDirection: sortEntry?.direction,
         sortPriority:
           sortIndex !== -1 && sortColumns.length > 1
@@ -1550,20 +1552,7 @@ function TableDataGrid({
     onFrozenColumnsSearchChange,
   });
 
-  function handleOpenForeignKeyReference(
-    reference: TableForeignKeyReference,
-    row: GridRow,
-    sourceColumn: string
-  ) {
-    const preview = buildForeignKeyReferencePreview({
-      reference,
-      resultColumns,
-      row,
-      sourceColumn,
-    });
-    if (!preview) {
-      return;
-    }
+  function handleOpenForeignKeyReference(preview: ForeignKeyReferencePreview) {
     setForeignKeyReferencePreview(preview);
   }
 

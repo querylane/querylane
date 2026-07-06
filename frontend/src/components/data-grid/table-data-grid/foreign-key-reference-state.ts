@@ -21,12 +21,16 @@ interface TableForeignKeyReference {
 interface ForeignKeyReferencePreview {
   displayValue: string;
   filterSearch: string;
+  isComposite: boolean;
   reference: TableForeignKeyReference;
   sourceColumn: string;
   targetLabel: string;
 }
 
 function tableCellValueToFilterLiteral(cell: TableCell | undefined) {
+  if (cell?.truncated === true) {
+    return;
+  }
   const value = cell?.value?.kind;
   if (!value || value.case === "nullValue") {
     return;
@@ -129,7 +133,7 @@ function buildForeignKeyReferencePreview({
   }
   const cell = getGridCell(row, resultColumn);
   const formatted = formatTableCell(cell, resultColumn);
-  if (formatted.isNull || formatted.display === "") {
+  if (formatted.isNull || formatted.isTruncated || formatted.display === "") {
     return;
   }
 
@@ -145,6 +149,7 @@ function buildForeignKeyReferencePreview({
   return {
     displayValue: formatted.display,
     filterSearch,
+    isComposite: reference.sourceColumns.length > 1,
     reference,
     sourceColumn,
     targetLabel: formatForeignKeyTargetLabel(reference.targetTableName),

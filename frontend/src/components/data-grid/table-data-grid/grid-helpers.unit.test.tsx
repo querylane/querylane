@@ -12,6 +12,7 @@ import {
   RowCount_Status,
   TableCellSchema,
   TableResultColumnSchema,
+  type TableValue,
   TableValueSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
@@ -23,18 +24,27 @@ vi.mock("sonner", () => ({
   },
 }));
 
-function testColumn() {
+function testColumn(
+  columnName = "email",
+  dataType = DataType.STRING,
+  rawType = "text"
+) {
   return createProto(TableResultColumnSchema, {
-    columnName: "email",
-    dataType: DataType.STRING,
-    rawType: "text",
+    columnName,
+    dataType,
+    rawType,
   });
 }
 
 function testCell(value: string) {
+  return testValueCell({ case: "stringValue", value });
+}
+
+function testValueCell(kind: TableValue["kind"], truncated = false) {
   return createProto(TableCellSchema, {
+    truncated,
     value: createProto(TableValueSchema, {
-      kind: { case: "stringValue", value },
+      kind,
     }),
   });
 }
@@ -118,6 +128,129 @@ describe("grid helpers", () => {
     expect(renderToStaticMarkup(<span>{rendered}</span>)).toContain(
       "owner@example.com"
     );
+  });
+
+  test("renders a plain cell when a composite foreign key filter is incomplete", () => {
+    const carrierColumn = testColumn("carrier_id", DataType.INTEGER, "int4");
+    const tenantColumn = testColumn("tenant_id", DataType.INTEGER, "int4");
+    const onOpenForeignKeyReference = vi.fn();
+    const column = buildColumn({
+      column: carrierColumn,
+      foreignKeyReferences: [
+        {
+          constraintName: "shipments_carrier_tenant_fkey",
+          sourceColumns: ["carrier_id", "tenant_id"],
+          targetColumns: ["id", "tenant_id"],
+          targetTableName:
+            "instances/prod/databases/app/schemas/public/tables/carriers",
+        },
+      ],
+      isFrozen: false,
+      onCopyName: vi.fn(),
+      onOpenForeignKeyReference,
+      onSortAsc: vi.fn(),
+      onSortDesc: vi.fn(),
+      onToggleFreeze: vi.fn(),
+      pkColumnSet: new Set(),
+      resultColumns: [carrierColumn, tenantColumn],
+    });
+
+    const rendered = column.renderCell?.({
+      row: {
+        [ROW_KEY_FIELD]: "row-1",
+        cells: new Map([
+          ["carrier_id", testValueCell({ case: "int64Value", value: 214n })],
+          ["tenant_id", testValueCell({ case: "nullValue", value: 0 })],
+        ]),
+      },
+    } as never);
+    const markup = renderToStaticMarkup(<span>{rendered}</span>);
+
+    expect(markup).toContain("214");
+    expect(markup).not.toContain("Open carrier_id reference");
+  });
+
+  test("renders a plain cell when a foreign key value is not safe to filter", () => {
+    const textColumn = testColumn("external_id", DataType.STRING, "text");
+    const bytesColumn = testColumn("fingerprint", DataType.BINARY, "bytea");
+    const onOpenForeignKeyReference = vi.fn();
+    const commonArgs = {
+      isFrozen: false,
+      onCopyName: vi.fn(),
+      onOpenForeignKeyReference,
+      onSortAsc: vi.fn(),
+      onSortDesc: vi.fn(),
+      onToggleFreeze: vi.fn(),
+      pkColumnSet: new Set<string>(),
+    };
+
+    const truncatedTextColumn = buildColumn({
+      ...commonArgs,
+      column: textColumn,
+      foreignKeyReferences: [
+        {
+          constraintName: "orders_external_id_fkey",
+          sourceColumns: ["external_id"],
+          targetColumns: ["id"],
+          targetTableName:
+            "instances/prod/databases/app/schemas/public/tables/orders",
+        },
+      ],
+      resultColumns: [textColumn],
+    });
+    const bytesForeignKeyColumn = buildColumn({
+      ...commonArgs,
+      column: bytesColumn,
+      foreignKeyReferences: [
+        {
+          constraintName: "files_fingerprint_fkey",
+          sourceColumns: ["fingerprint"],
+          targetColumns: ["fingerprint"],
+          targetTableName:
+            "instances/prod/databases/app/schemas/public/tables/files",
+        },
+      ],
+      resultColumns: [bytesColumn],
+    });
+
+    const truncatedMarkup = renderToStaticMarkup(
+      <span>
+        {truncatedTextColumn.renderCell?.({
+          row: {
+            [ROW_KEY_FIELD]: "row-1",
+            cells: new Map([
+              [
+                "external_id",
+                testValueCell({ case: "stringValue", value: "prefix" }, true),
+              ],
+            ]),
+          },
+        } as never)}
+      </span>
+    );
+    const bytesMarkup = renderToStaticMarkup(
+      <span>
+        {bytesForeignKeyColumn.renderCell?.({
+          row: {
+            [ROW_KEY_FIELD]: "row-2",
+            cells: new Map([
+              [
+                "fingerprint",
+                testValueCell({
+                  case: "bytesValue",
+                  value: new Uint8Array([1, 2]),
+                }),
+              ],
+            ]),
+          },
+        } as never)}
+      </span>
+    );
+
+    expect(truncatedMarkup).toContain("prefix");
+    expect(truncatedMarkup).not.toContain("Open external_id reference");
+    expect(bytesMarkup).toContain("bytes");
+    expect(bytesMarkup).not.toContain("Open fingerprint reference");
   });
 
   test("renders a frozen indicator in the column header", () => {

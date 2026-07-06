@@ -3,6 +3,8 @@ import { ColumnHeader } from "@/components/data-grid/table-data-grid/column-head
 import { DataCell } from "@/components/data-grid/table-data-grid/data-cell";
 import { ForeignKeyDataCell } from "@/components/data-grid/table-data-grid/foreign-key-data-cell";
 import {
+  buildForeignKeyReferencePreview,
+  type ForeignKeyReferencePreview,
   foreignKeyReferencesForColumn,
   type TableForeignKeyReference,
 } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
@@ -18,15 +20,12 @@ interface BuildColumnArgs {
   foreignKeyReferences?: readonly TableForeignKeyReference[] | undefined;
   isFrozen: boolean;
   onCopyName: () => void;
-  onOpenForeignKeyReference?: (
-    reference: TableForeignKeyReference,
-    row: GridRow,
-    sourceColumn: string
-  ) => void;
+  onOpenForeignKeyReference?: (preview: ForeignKeyReferencePreview) => void;
   onSortAsc: () => void;
   onSortDesc: () => void;
   onToggleFreeze: () => void;
   pkColumnSet: Set<string>;
+  resultColumns?: readonly TableResultColumn[] | undefined;
   sortDirection?: "ASC" | "DESC" | undefined;
   sortPriority?: number | undefined;
 }
@@ -67,6 +66,7 @@ function buildColumn({
   onSortDesc,
   onToggleFreeze,
   pkColumnSet,
+  resultColumns = [column],
   sortDirection,
   sortPriority,
 }: BuildColumnArgs): Column<GridRow> {
@@ -92,15 +92,28 @@ function buildColumn({
       if (cell === undefined) {
         return null;
       }
-      const foreignKeyReference = columnForeignKeyReferences[0];
-      if (foreignKeyReference && onOpenForeignKeyReference) {
+      let foreignKeyPreview: ForeignKeyReferencePreview | undefined;
+      // PostgreSQL allows a column to participate in multiple FK constraints.
+      // Render the first one that can produce a safe equality filter so the
+      // cell never shows a dead link for nullable, truncated, or binary values.
+      for (const reference of columnForeignKeyReferences) {
+        foreignKeyPreview = buildForeignKeyReferencePreview({
+          reference,
+          resultColumns,
+          row,
+          sourceColumn: columnKey,
+        });
+        if (foreignKeyPreview) {
+          break;
+        }
+      }
+      if (foreignKeyPreview && onOpenForeignKeyReference) {
+        const preview = foreignKeyPreview;
         return (
           <ForeignKeyDataCell
             cell={cell}
             column={column}
-            onOpen={() =>
-              onOpenForeignKeyReference(foreignKeyReference, row, columnKey)
-            }
+            onOpen={() => onOpenForeignKeyReference(preview)}
           />
         );
       }
