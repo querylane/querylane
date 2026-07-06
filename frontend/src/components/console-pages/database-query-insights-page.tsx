@@ -368,7 +368,7 @@ function TopQueriesTable({
             >
               <TableCell className="min-w-0 max-w-[34rem] py-2 pl-5">
                 <Button
-                  className="h-auto w-full justify-start overflow-hidden px-0 py-0 text-left font-normal hover:bg-transparent"
+                  className="h-auto w-full justify-start overflow-hidden p-0 text-left font-normal hover:bg-transparent"
                   onClick={() => onSelectQuery(query)}
                   type="button"
                   variant="ghost"
@@ -699,7 +699,7 @@ function QueryInsightsContent({
               Query insights
             </h1>
             <p className="mt-1 text-muted-foreground text-sm">
-              From pg_stat_statements and pg_stat_user_tables — read-only
+              From pg_stat_statements and pg_stat_user_tables, read-only
               observability.
             </p>
           </div>
@@ -821,13 +821,14 @@ function BackendDatabaseQueryInsightsPage({
   const loader = createResourceLoader(databaseQuery, "console.database");
   const insights = queryInsightsQuery.data?.queryInsights;
   const observedAtLabel = formatTimestampLabel(insights?.observedAt);
+  const handleRetryQueryInsights = () => queryInsightsQuery.refetch();
   let pageContent: ReactNode;
 
   if (queryInsightsQuery.error) {
     pageContent = (
       <DatabaseQueryInsightsError
         error={queryInsightsQuery.error}
-        onRetry={queryInsightsQuery.refetch}
+        onRetry={handleRetryQueryInsights}
       />
     );
   } else if (queryInsightsQuery.isPending || !insights) {
