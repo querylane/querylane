@@ -18,11 +18,13 @@ const {
   capturedControlsClassNames,
   capturedControlsStyles,
   capturedEdges,
+  capturedNodes,
   fitViewMock,
 } = vi.hoisted(() => ({
   capturedControlsClassNames: [] as (string | undefined)[],
   capturedControlsStyles: [] as CapturedControlsStyle[],
   capturedEdges: [] as unknown[],
+  capturedNodes: [] as unknown[],
   fitViewMock: vi.fn(),
 }));
 
@@ -64,6 +66,7 @@ vi.mock("@xyflow/react", () => ({
     nodes: unknown[];
   }) => {
     capturedEdges.splice(0, capturedEdges.length, ...edges);
+    capturedNodes.splice(0, capturedNodes.length, ...nodes);
     return (
       <section
         aria-label="Flow mock"
@@ -100,6 +103,7 @@ afterEach(() => {
   capturedControlsClassNames.length = 0;
   capturedControlsStyles.length = 0;
   capturedEdges.length = 0;
+  capturedNodes.length = 0;
   fitViewMock.mockClear();
 });
 
@@ -162,6 +166,28 @@ describe("FlowCanvas", () => {
       expect.objectContaining({
         id: tableEdge.id,
         type: "step",
+      })
+    );
+  });
+
+  test("passes useful labels to React Flow nodes", () => {
+    const nodeWithSubtitle: VisualizationNode = {
+      ...firstNode,
+      data: { ...firstNode.data, subtitle: "public schema" },
+    };
+
+    render(
+      <FlowCanvas
+        direction="LR"
+        edges={[tableEdge]}
+        nodes={[nodeWithSubtitle, secondNode]}
+      />
+    );
+
+    expect(capturedNodes).toContainEqual(
+      expect.objectContaining({
+        ariaLabel: "table:public.one, public schema, table node",
+        id: firstNode.id,
       })
     );
   });

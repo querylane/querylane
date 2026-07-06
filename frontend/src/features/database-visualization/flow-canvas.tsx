@@ -649,6 +649,7 @@ function layoutGraph({
     nodes,
   });
   const flowNodes: FlowNode[] = positionedNodes.map(({ node, position }) => ({
+    ariaLabel: flowNodeAriaLabel(node),
     data: {
       ...node.data,
       density,
@@ -663,6 +664,12 @@ function layoutGraph({
     type: "visualization",
   }));
   return { flowEdges, flowNodes };
+}
+
+function flowNodeAriaLabel(node: VisualizationNode): string {
+  return [node.data.title, node.data.subtitle, `${node.kind} node`]
+    .filter(Boolean)
+    .join(", ");
 }
 
 function FlowCanvas({
