@@ -91,11 +91,12 @@ bun run lint:fix
 bun run type:check
 bun run test
 bun run test:browser:changed -- --reporter=verbose
+bunx vitest run --config vitest.browser.all.config.ts --reporter=verbose
 CI=1 bun run test:e2e:list
 ```
 
 ## Verification
 Lint: `bun run lint:fix` passed; suppression check passed.
 Type check: `bun run type:check` passed.
-Tests: `bun run test` passed (112 unit files, 959 tests; 54 integration files, 288 tests). `bun run test:browser:changed -- --reporter=verbose` passed (2 files, 14 tests). `CI=1 bun run test:e2e:list` passed (83 e2e tests listed).
+Tests: `bun run test` passed (118 unit files, 1047 tests; 56 integration files, 296 tests). `QUALITY_BASE_REF=origin/main bun run test:browser:changed -- --reporter=verbose` passed (4 browser files, 22 tests). `bunx vitest run --config vitest.browser.all.config.ts --reporter=verbose` passed (34 browser files, 204 tests). `CI=1 bun run test:e2e:list` passed (83 e2e tests listed). Linux browser baselines were regenerated in Docker for the rebased instance overview surface.
 Build/vet/security scan: `bun install --frozen-lockfile --ignore-scripts` passed. `bunx playwright --version` reported `Version 1.62.0-alpha-2026-07-06`. `bun audit --json` reported existing unrelated advisories in `js-yaml`, `tmp`, and `uuid` via `@lhci/cli` / `@changesets`; no Playwright advisory was found in OSV or GitHub advisory checks.
