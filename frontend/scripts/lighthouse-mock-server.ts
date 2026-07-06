@@ -228,6 +228,15 @@ const LIGHTHOUSE_MOCK_RESPONSES = {
     },
   },
   "TableService/GetTable": { table: ordersTable },
+  "TableService/GetTablePartitionMetadata": {
+    partitionMetadata: {
+      childPartitions: [],
+      parentTable: "",
+      partitionBound: "",
+      partitionCount: 0,
+      partitionKey: "",
+    },
+  },
   "TableService/ListTableColumns": { columns: orderColumns },
   "TableService/ListTableConstraints": { constraints: orderConstraints },
   "TableService/ListTableIndexes": { indexes: orderIndexes },
