@@ -1,15 +1,25 @@
 import { assertNever } from "@/lib/assert-never";
+import { parseResourceLeafId } from "@/lib/console-resources";
 import { deriveRoleKind, type RoleKind, roleIdOf } from "@/lib/role-display";
 import type {
   ObjectGrant,
   OwnedObject,
   Role,
+  RoleDefaultPrivilege,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
-import { GrantObjectType } from "@/protogen/querylane/console/v1alpha1/role_pb";
+import {
+  DefaultPrivilegeObjectType,
+  GrantObjectType,
+} from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 type RoleMapVisibleKind = Exclude<"all" | RoleKind, "all">;
 type RoleMapKindVisibility = Record<RoleMapVisibleKind, boolean>;
-type RolesAccessMapEdgeTone = "direct" | "owner" | "public";
+type RolesAccessMapEdgeTone =
+  | "default"
+  | "direct"
+  | "member"
+  | "owner"
+  | "public";
 type RolesAccessMapObjectKind =
   | "database"
   | "foreign table"
@@ -24,6 +34,7 @@ type RolesAccessMapObjectKind =
 interface RoleAccessMapResource {
   databaseId: string;
   databaseName: string;
+  defaultPrivileges: RoleDefaultPrivilege[];
   grants: ObjectGrant[];
   ownedObjects: OwnedObject[];
   roleId: string;
@@ -164,10 +175,7 @@ function sortRoles(
     repl: 2,
     super: 0,
   };
-  return (
-    kindRank[left.kind] - kindRank[right.kind] ||
-    left.title.localeCompare(right.title)
-  );
+  return kindRank[left.kind] - kindRank[right.kind];
 }
 
 function grantObjectTitle(input: {
@@ -280,6 +288,44 @@ function mergeEdge(input: {
   });
 }
 
+function membershipTargetRoleId(role: Role["memberOf"][number]): string {
+  return role.role ? parseResourceLeafId(role.role) : role.roleName;
+}
+
+function addMembershipEdges({
+  edgesById,
+  roleNodeIds,
+  roles,
+}: {
+  edgesById: Map<string, RolesAccessMapEdge>;
+  roleNodeIds: Set<string>;
+  roles: Role[];
+}) {
+  for (const role of roles) {
+    const source = `role:${roleIdOf(role)}`;
+    if (!roleNodeIds.has(source)) {
+      continue;
+    }
+    for (const membership of role.memberOf) {
+      const targetRoleId = membershipTargetRoleId(membership);
+      if (!targetRoleId) {
+        continue;
+      }
+      const target = `role:${targetRoleId}`;
+      if (!roleNodeIds.has(target)) {
+        continue;
+      }
+      mergeEdge({
+        edgesById,
+        privilege: "member of",
+        source,
+        target,
+        tone: "member",
+      });
+    }
+  }
+}
+
 function buildVisibleRoleNodes({
   roles,
   search,
@@ -301,28 +347,6 @@ function buildVisibleRoleNodes({
   }
   nodes.sort(sortRoles);
   return { hiddenRoleCount, nodes };
-}
-
-function sortObjects(
-  left: RolesAccessMapObjectNode,
-  right: RolesAccessMapObjectNode
-): number {
-  const kindRank: Record<RolesAccessMapObjectKind, number> = {
-    database: 0,
-    "foreign table": 7,
-    function: 6,
-    "large object": 8,
-    "materialized view": 4,
-    schema: 1,
-    sequence: 5,
-    table: 2,
-    view: 3,
-  };
-  return (
-    kindRank[left.kind] - kindRank[right.kind] ||
-    left.databaseId.localeCompare(right.databaseId) ||
-    left.title.localeCompare(right.title)
-  );
 }
 
 function roleNodeIdForAccess(access: RoleAccessMapResource): string {
@@ -397,6 +421,91 @@ function addGrantEdges({
   }
 }
 
+function defaultPrivilegeLabel({
+  defaultPrivilege,
+  roleName,
+}: {
+  defaultPrivilege: RoleDefaultPrivilege;
+  roleName: string;
+}) {
+  return `default privileges: ${defaultPrivilege.privilege} → ${roleName}`;
+}
+
+function defaultPrivilegeObjectTarget(input: {
+  databaseId: string;
+  databaseName: string;
+  defaultPrivilege: RoleDefaultPrivilege;
+  objectsById: Map<string, RolesAccessMapObjectNode>;
+}) {
+  if (input.defaultPrivilege.schemaName) {
+    return addObjectNode(input.objectsById, {
+      databaseId: input.databaseId,
+      databaseName: input.databaseName,
+      objectName: "",
+      objectType: GrantObjectType.SCHEMA,
+      schemaName: input.defaultPrivilege.schemaName,
+    });
+  }
+  if (
+    input.defaultPrivilege.objectType === DefaultPrivilegeObjectType.SCHEMAS
+  ) {
+    return addObjectNode(input.objectsById, {
+      databaseId: input.databaseId,
+      databaseName: input.databaseName,
+      objectName: input.databaseName,
+      objectType: GrantObjectType.DATABASE,
+      schemaName: "",
+    });
+  }
+  return addObjectNode(input.objectsById, {
+    databaseId: input.databaseId,
+    databaseName: input.databaseName,
+    objectName: input.databaseName,
+    objectType: GrantObjectType.DATABASE,
+    schemaName: "",
+  });
+}
+
+function addDefaultPrivilegeEdges({
+  access,
+  edgesById,
+  objectsById,
+  roleNodeIds,
+}: {
+  access: RoleAccessMapResource;
+  edgesById: Map<string, RolesAccessMapEdge>;
+  objectsById: Map<string, RolesAccessMapObjectNode>;
+  roleNodeIds: Set<string>;
+}) {
+  for (const defaultPrivilege of access.defaultPrivileges ?? []) {
+    const creatorRoleId =
+      parseResourceLeafId(defaultPrivilege.creatorRole) ||
+      defaultPrivilege.creatorRoleName;
+    const source = `role:${creatorRoleId}`;
+    if (!roleNodeIds.has(source)) {
+      continue;
+    }
+    const target = defaultPrivilegeObjectTarget({
+      databaseId: access.databaseId,
+      databaseName: access.databaseName,
+      defaultPrivilege,
+      objectsById,
+    });
+    if (target) {
+      mergeEdge({
+        edgesById,
+        privilege: defaultPrivilegeLabel({
+          defaultPrivilege,
+          roleName: access.roleName,
+        }),
+        source,
+        target,
+        tone: "default",
+      });
+    }
+  }
+}
+
 function buildRolesAccessMapModel({
   publicAccess,
   roleAccess,
@@ -415,6 +524,8 @@ function buildRolesAccessMapModel({
   const edgesById = new Map<string, RolesAccessMapEdge>();
   const includePublicAccess = roleMatchesSearch("PUBLIC", normalizedSearch);
 
+  addMembershipEdges({ edgesById, roleNodeIds, roles });
+
   for (const access of roleAccess) {
     const roleNodeId = roleNodeIdForAccess(access);
     if (!roleNodeIds.has(roleNodeId)) {
@@ -430,6 +541,7 @@ function buildRolesAccessMapModel({
       source: roleNodeId,
       tone: "direct",
     });
+    addDefaultPrivilegeEdges({ access, edgesById, objectsById, roleNodeIds });
   }
 
   if (includePublicAccess) {
@@ -452,7 +564,7 @@ function buildRolesAccessMapModel({
     edges.some((edge) => edge.source === PUBLIC_ROLE_NODE.id)
       ? [...visibleRoles.nodes, PUBLIC_ROLE_NODE].toSorted(sortRoles)
       : visibleRoles.nodes;
-  const objects = [...objectsById.values()].toSorted(sortObjects);
+  const objects = [...objectsById.values()];
 
   return {
     edges,

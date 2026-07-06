@@ -22,17 +22,14 @@ import {
   GrantObjectType,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const SUPERUSER_FILTER = /Superuser/;
-const RESOURCE_FILTERS_BUTTON_NAME = /Resource filters/;
-const ROLE_FILTER_SWITCH_NAMES = [
-  /^Users$/,
-  /^Superusers$/,
-  /^Groups$/,
-  /^Replicators$/,
-  /^Built-in$/,
-] as const;
+const ALL_ROLES_CHIP_NAME = /All/;
+const SUPERUSERS_CHIP_NAME = /Superusers/;
 
 const roleApiState = vi.hoisted(() => ({
+  accessMapResources: null as null | {
+    publicAccess: unknown[];
+    roleAccess: unknown[];
+  },
   defaultPrivileges: [] as unknown[],
   grants: [] as unknown[],
   ownedObjects: [] as unknown[],
@@ -161,6 +158,250 @@ function setRoleDetailFixture() {
   ];
 }
 
+function roleAttributes(overrides: Record<string, unknown> = {}) {
+  return {
+    bypassesRls: false,
+    canCreateDatabase: false,
+    canCreateRole: false,
+    canLogin: true,
+    canReplicate: false,
+    connectionLimit: -1,
+    inheritsByDefault: true,
+    isSuperuser: false,
+    ...overrides,
+  };
+}
+
+function roleMembership(roleName: string) {
+  return {
+    adminOption: false,
+    grantor: "postgres",
+    grantorRole: "instances/prod/roles/postgres",
+    inheritOption: true,
+    role: `instances/prod/roles/${roleName}`,
+    roleName,
+    setOption: true,
+  };
+}
+
+function setRolesAccessMapDesignFixture() {
+  // Mirrors the unzipped design source: ROLES screen `AMAP_ROLES`,
+  // `AMAP_OBJS`, and `AMAP_EDGES`.
+  roleApiState.roles = [
+    roleFixture({
+      attributes: roleAttributes({ isSuperuser: true }),
+      memberOf: [],
+      name: "instances/prod/roles/cloud_admin",
+      roleName: "cloud_admin",
+    }),
+    roleFixture({
+      attributes: roleAttributes(),
+      memberOf: [],
+      name: "instances/prod/roles/app_owner",
+      roleName: "app_owner",
+    }),
+    roleFixture({
+      attributes: roleAttributes(),
+      memberOf: [roleMembership("app_owner")],
+      name: "instances/prod/roles/app_readwrite",
+      roleName: "app_readwrite",
+    }),
+    roleFixture({
+      attributes: roleAttributes(),
+      memberOf: [],
+      name: "instances/prod/roles/app_readonly",
+      roleName: "app_readonly",
+    }),
+    roleFixture({
+      attributes: roleAttributes(),
+      memberOf: [roleMembership("app_readonly")],
+      name: "instances/prod/roles/analytics_reader",
+      roleName: "analytics_reader",
+    }),
+    roleFixture({
+      attributes: roleAttributes(),
+      memberOf: [roleMembership("app_owner")],
+      name: "instances/prod/roles/deploy_bot",
+      roleName: "deploy_bot",
+    }),
+    roleFixture({
+      attributes: roleAttributes({ canLogin: false }),
+      memberOf: [roleMembership("pg_monitor")],
+      name: "instances/prod/roles/dba_admins",
+      roleName: "dba_admins",
+    }),
+    roleFixture({
+      attributes: roleAttributes({ canLogin: false }),
+      isSystemRole: true,
+      memberOf: [],
+      name: "instances/prod/roles/pg_monitor",
+      roleName: "pg_monitor",
+    }),
+  ];
+  roleApiState.accessMapResources = {
+    publicAccess: [
+      {
+        databaseId: "functions",
+        databaseName: "functions",
+        grants: [
+          {
+            objectName: "",
+            objectType: GrantObjectType.SCHEMA,
+            privilege: "USAGE · EXECUTE on functions",
+            schemaName: "public",
+            withGrantOption: false,
+          },
+        ],
+      },
+    ],
+    roleAccess: [
+      {
+        databaseId: "logistics",
+        databaseName: "logistics",
+        defaultPrivileges: [],
+        grants: [],
+        ownedObjects: [
+          {
+            objectName: "logistics",
+            objectType: GrantObjectType.DATABASE,
+            schemaName: "",
+          },
+        ],
+        roleId: "app_owner",
+        roleName: "app_owner",
+      },
+      {
+        databaseId: "logistics",
+        databaseName: "logistics",
+        defaultPrivileges: [
+          {
+            creatorRole: "instances/prod/roles/app_owner",
+            creatorRoleName: "app_owner",
+            objectType: DefaultPrivilegeObjectType.TABLES,
+            privilege: "SELECT",
+            schemaName: "shipping",
+            withGrantOption: false,
+          },
+        ],
+        grants: [
+          {
+            objectName: "",
+            objectType: GrantObjectType.SCHEMA,
+            privilege: "SELECT on all tables",
+            schemaName: "shipping",
+            withGrantOption: false,
+          },
+          {
+            objectName: "",
+            objectType: GrantObjectType.SCHEMA,
+            privilege: "SELECT on all tables",
+            schemaName: "catalog",
+            withGrantOption: false,
+          },
+          {
+            objectName: "",
+            objectType: GrantObjectType.SCHEMA,
+            privilege: "SELECT on all tables",
+            schemaName: "audit",
+            withGrantOption: false,
+          },
+        ],
+        ownedObjects: [],
+        roleId: "app_readonly",
+        roleName: "app_readonly",
+      },
+      {
+        databaseId: "logistics",
+        databaseName: "logistics",
+        defaultPrivileges: [],
+        grants: [
+          {
+            objectName: "",
+            objectType: GrantObjectType.SCHEMA,
+            privilege: "SELECT · INSERT · UPDATE · DELETE",
+            schemaName: "shipping",
+            withGrantOption: false,
+          },
+          {
+            objectName: "",
+            objectType: GrantObjectType.SCHEMA,
+            privilege: "SELECT · INSERT · UPDATE · DELETE",
+            schemaName: "catalog",
+            withGrantOption: false,
+          },
+        ],
+        ownedObjects: [],
+        roleId: "app_readwrite",
+        roleName: "app_readwrite",
+      },
+      {
+        databaseId: "billing",
+        databaseName: "billing",
+        defaultPrivileges: [],
+        grants: [
+          {
+            objectName: "billing",
+            objectType: GrantObjectType.DATABASE,
+            privilege: "SELECT on invoices, payments",
+            schemaName: "",
+            withGrantOption: false,
+          },
+        ],
+        ownedObjects: [],
+        roleId: "analytics_reader",
+        roleName: "analytics_reader",
+      },
+      {
+        databaseId: "billing",
+        databaseName: "billing",
+        defaultPrivileges: [],
+        grants: [],
+        ownedObjects: [
+          {
+            objectName: "billing",
+            objectType: GrantObjectType.DATABASE,
+            schemaName: "",
+          },
+        ],
+        roleId: "app_owner",
+        roleName: "app_owner",
+      },
+      {
+        databaseId: "auth",
+        databaseName: "auth",
+        defaultPrivileges: [],
+        grants: [],
+        ownedObjects: [
+          {
+            objectName: "auth",
+            objectType: GrantObjectType.DATABASE,
+            schemaName: "",
+          },
+        ],
+        roleId: "app_owner",
+        roleName: "app_owner",
+      },
+      {
+        databaseId: "functions",
+        databaseName: "functions",
+        defaultPrivileges: [],
+        grants: [
+          {
+            objectName: "",
+            objectType: GrantObjectType.SCHEMA,
+            privilege: "ALL — superuser",
+            schemaName: "public",
+            withGrantOption: false,
+          },
+        ],
+        ownedObjects: [],
+        roleId: "cloud_admin",
+        roleName: "cloud_admin",
+      },
+    ],
+  };
+}
+
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@tanstack/react-router")>();
@@ -263,6 +504,14 @@ vi.mock("@/hooks/api/role", () => ({
     isPending: false,
     refetch: vi.fn(async () => undefined),
   }),
+  useRolesAccessMapResourcesQuery: () => ({
+    data: roleApiState.accessMapResources ?? {
+      publicAccess: [],
+      roleAccess: [],
+    },
+    error: null,
+    isPending: false,
+  }),
 }));
 
 vi.mock("@/lib/db-context", () => ({
@@ -359,91 +608,58 @@ test("console resource overview keeps dense metadata readable", async () => {
   );
 });
 
-test("console roles list shows kind filters, sortable columns, and role rows", async () => {
+test("console roles list shows kind chips, sortable columns, and role rows", async () => {
   renderConsoleSurface(<InstanceRolesPage instanceId="prod" />);
 
   await expect
-    .element(page.getByRole("heading", { level: 1, name: "Roles & Users" }))
+    .element(page.getByRole("heading", { level: 1, name: "Roles" }))
+    .toBeVisible();
+  await expect.element(page.getByRole("tab", { name: "Table" })).toBeVisible();
+  await expect
+    .element(page.getByRole("tab", { name: "Access map" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: "Type" }))
+    .element(page.getByRole("button", { name: ALL_ROLES_CHIP_NAME }))
     .toBeVisible();
-  await page.getByRole("button", { name: "Type" }).click();
   await expect
-    .element(page.getByRole("option", { name: SUPERUSER_FILTER }))
+    .element(page.getByRole("button", { name: SUPERUSERS_CHIP_NAME }))
     .toBeVisible();
-  await page.getByRole("button", { name: "Type" }).click();
   await expect
     .element(page.getByText("postgres", { exact: true }))
     .toBeVisible();
   await expect
     .element(page.getByText("app_user", { exact: true }))
     .toBeVisible();
-  const searchInput = page.getByPlaceholder("Search roles...").element();
-  const typeFilter = page.getByRole("button", { name: "Type" }).element();
-  await expect.element(page.getByPlaceholder("Search roles...")).toBeVisible();
-  expect(typeFilter.getBoundingClientRect().left).toBeGreaterThan(
-    searchInput.getBoundingClientRect().right
-  );
-  expect(
-    Math.abs(
-      typeFilter.getBoundingClientRect().top -
-        searchInput.getBoundingClientRect().top
-    )
-  ).toBeLessThanOrEqual(1);
+  await expect.element(page.getByPlaceholder("Search roles…")).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "console-roles-table"
   );
 });
 
-test("console roles filter row has a visual baseline", async () => {
-  renderConsoleSurface(<InstanceRolesPage instanceId="prod" />);
+test("console roles access map matches the design source", async () => {
+  setRolesAccessMapDesignFixture();
+  renderConsoleSurface(<InstanceRolesPage instanceId="prod" tab="map" />);
 
-  await expect.element(page.getByPlaceholder("Search roles...")).toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: "Type" }))
+    .element(page.getByText("cloud_admin", { exact: true }))
     .toBeVisible();
-
-  const filterBar = document.querySelector<HTMLElement>(
-    '[data-slot="roles-filter-bar"]'
+  await expect
+    .element(page.getByText("app_readwrite", { exact: true }))
+    .toBeVisible();
+  await expect.element(page.getByText("PUBLIC", { exact: true })).toBeVisible();
+  await expect
+    .element(page.getByText("logistics", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("shipping", { exact: true }))
+    .toBeVisible();
+  await page.getByRole("button", { name: "View" }).click();
+  await expect.element(page.getByText("Access filters")).toBeVisible();
+  await expect.element(page.getByText("Default privileges")).toBeVisible();
+  await page.getByRole("button", { name: "View" }).click();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "console-roles-access-map"
   );
-  if (!filterBar) {
-    throw new Error("Expected roles filter bar.");
-  }
-
-  await expect(filterBar).toMatchScreenshot("console-roles-filter-row");
-});
-
-test("console role map filter switches stay inside the role filters popover", async () => {
-  renderConsoleSurface(<InstanceRolesPage instanceId="prod" />);
-
-  await page.getByRole("tab", { name: "Map" }).click();
-  await page
-    .getByRole("button", { name: RESOURCE_FILTERS_BUTTON_NAME })
-    .click();
-
-  const popover = page
-    .getByText("Role filters")
-    .element()
-    .closest("[data-slot='popover-content']");
-  if (!popover) {
-    throw new Error("Expected role filters popover content.");
-  }
-
-  const popoverRect = popover.getBoundingClientRect();
-  for (const filterName of ROLE_FILTER_SWITCH_NAMES) {
-    const filterSwitch = page
-      .getByRole("switch", { name: filterName })
-      .element();
-    const switchRect = filterSwitch.getBoundingClientRect();
-    const filterRow = filterSwitch.parentElement;
-    if (!filterRow) {
-      throw new Error("Expected switch to be inside a role map filter row.");
-    }
-    expect(filterRow.scrollWidth).toBeLessThanOrEqual(filterRow.clientWidth);
-    expect(switchRect.left).toBeGreaterThanOrEqual(popoverRect.left);
-    expect(switchRect.right).toBeLessThanOrEqual(popoverRect.right);
-  }
 });
 
 test("console roles login no state keeps the same indicator slot", async () => {

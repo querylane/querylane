@@ -16,7 +16,12 @@ import {
   useListAllRoleGrantsQuery,
   useListAllRoleOwnedObjectsQuery,
   useListAllRolesQuery,
+  useRolesAccessMapResourcesQuery,
 } from "@/hooks/api/role";
+import {
+  DatabaseService,
+  ListDatabasesResponseSchema,
+} from "@/protogen/querylane/console/v1alpha1/database_pb";
 import {
   type ListPublicGrantsRequest,
   ListPublicGrantsResponseSchema,
@@ -28,6 +33,7 @@ import {
   ListRoleOwnedObjectsResponseSchema,
   type ListRolesRequest,
   ListRolesResponseSchema,
+  RoleSchema,
   RoleService,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
@@ -392,6 +398,95 @@ describe("useListAllRoleDefaultPrivilegesQuery", () => {
     await flushMicrotasks();
     expect(result.current.fetchStatus).toBe("idle");
     expect(requests).toHaveLength(0);
+  });
+});
+
+describe("useRolesAccessMapResourcesQuery", () => {
+  test("collects default privileges beside grants and owned objects for the map", async () => {
+    const defaultPrivilegeRequests: ListRoleDefaultPrivilegesRequest[] = [];
+    const transport = createRouterTransport(({ service }) => {
+      service(DatabaseService, {
+        listDatabases() {
+          return create(ListDatabasesResponseSchema, {
+            databases: [
+              {
+                displayName: "logistics",
+                isSystemDatabase: false,
+                name: "instances/local/databases/logistics",
+              },
+            ],
+            nextPageToken: "",
+          });
+        },
+      });
+      service(RoleService, {
+        listPublicGrants() {
+          return create(ListPublicGrantsResponseSchema, {
+            grants: [],
+            nextPageToken: "",
+          });
+        },
+        listRoleDefaultPrivileges(request) {
+          defaultPrivilegeRequests.push(request);
+          return create(ListRoleDefaultPrivilegesResponseSchema, {
+            defaultPrivileges: [
+              {
+                creatorRoleName: "app_owner",
+                privilege: "SELECT",
+                schemaName: "shipping",
+              },
+            ],
+            nextPageToken: "",
+          });
+        },
+        listRoleGrants() {
+          return create(ListRoleGrantsResponseSchema, {
+            grants: [],
+            nextPageToken: "",
+          });
+        },
+        listRoleOwnedObjects() {
+          return create(ListRoleOwnedObjectsResponseSchema, {
+            nextPageToken: "",
+            ownedObjects: [],
+          });
+        },
+      });
+    });
+
+    const { result } = renderHook(
+      () =>
+        useRolesAccessMapResourcesQuery(
+          {
+            instanceId: "local",
+            roles: [
+              create(RoleSchema, {
+                name: `instances/local/roles/${ROLE_ID}`,
+                roleName: "app_readonly",
+              }),
+            ],
+          },
+          { refetchOnWindowFocus: false }
+        ),
+      { wrapper: createWrapper(transport) }
+    );
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(defaultPrivilegeRequests).toHaveLength(1);
+    expect(defaultPrivilegeRequests[0]?.database).toBe(
+      "instances/local/databases/logistics"
+    );
+    expect(defaultPrivilegeRequests[0]?.parent).toBe(
+      `instances/local/roles/${ROLE_ID}`
+    );
+    expect(
+      result.current.data?.roleAccess[0]?.defaultPrivileges.map(
+        (privilege) =>
+          `${privilege.creatorRoleName}:${privilege.schemaName}:${privilege.privilege}`
+      )
+    ).toEqual(["app_owner:shipping:SELECT"]);
   });
 });
 

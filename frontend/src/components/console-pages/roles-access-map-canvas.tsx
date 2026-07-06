@@ -2,20 +2,29 @@
 
 import {
   Database,
+  Maximize2,
   Minus,
   Plus,
-  RotateCcw,
   SlidersHorizontal,
 } from "lucide-react";
 import { useState } from "react";
 import type {
   RolesAccessMapEdge,
+  RolesAccessMapEdgeTone,
   RolesAccessMapModel,
   RolesAccessMapObjectNode,
   RolesAccessMapRoleNode,
 } from "@/components/console-pages/roles-access-map-model";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Sheet,
   SheetContent,
@@ -23,59 +32,123 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { assertNever } from "@/lib/assert-never";
 import { cn } from "@/lib/utils";
 
-const CANVAS_WIDTH = 1120;
-const ROLE_X = 36;
-const OBJECT_X = 784;
-const NODE_WIDTH = 316;
-const NODE_HEIGHT = 56;
-const ROW_GAP = 88;
-const TOP_OFFSET = 72;
-const MIN_CANVAS_HEIGHT = 560;
-const ROLE_ANCHOR_X = ROLE_X + NODE_WIDTH;
-const OBJECT_ANCHOR_X = OBJECT_X;
+const CANVAS_WIDTH = 920;
+const CANVAS_BASE_HEIGHT = 588;
+const ROLE_X = 30;
+const OBJECT_X = 688;
+const ROLE_NODE_WIDTH = 202;
+const OBJECT_NODE_WIDTH = 202;
+const ROLE_NODE_HEIGHT = 36;
+const OBJECT_NODE_HEIGHT = 42;
+const ROLE_ROW_GAP = 60;
+const OBJECT_ROW_GAP = 76;
+const ROLE_TOP = 34;
+const OBJECT_TOP = 40;
+const ROLE_ANCHOR_X = ROLE_X + ROLE_NODE_WIDTH;
+const ROLE_MEMBER_CURVE_X = 300;
+const OBJECT_CURVE_START_X = 420;
+const OBJECT_CURVE_END_X = 500;
 const DEFAULT_ZOOM = 1;
-const MIN_ZOOM = 0.75;
-const MAX_ZOOM = 1.25;
-const ZOOM_STEP = 0.1;
+const MIN_ZOOM = 0.55;
+const MAX_ZOOM = 1.6;
+const ZOOM_STEP = 0.15;
 const ZOOM_PERCENT_FACTOR = 100;
+const EDGE_ACTIVE_WIDTH = 2;
+const EDGE_DEFAULT_WIDTH = 1.5;
 
-function nodeY(index: number): number {
-  return TOP_OFFSET + index * ROW_GAP;
+const EDGE_FILTERS: {
+  description: string;
+  label: string;
+  tone: RolesAccessMapEdgeTone;
+}[] = [
+  {
+    description: "Role inheritance from pg_auth_members.",
+    label: "Members",
+    tone: "member",
+  },
+  {
+    description: "Explicit object privileges.",
+    label: "Direct grants",
+    tone: "direct",
+  },
+  {
+    description: "Objects owned by roles.",
+    label: "Owned objects",
+    tone: "owner",
+  },
+  {
+    description: "Privileges granted to PUBLIC.",
+    label: "Public grants",
+    tone: "public",
+  },
+  {
+    description: "Privileges for future objects.",
+    label: "Default privileges",
+    tone: "default",
+  },
+];
+
+const DEFAULT_EDGE_VISIBILITY = {
+  default: true,
+  direct: true,
+  member: true,
+  owner: true,
+  public: true,
+} satisfies Record<RolesAccessMapEdgeTone, boolean>;
+
+function roleY(index: number): number {
+  return ROLE_TOP + index * ROLE_ROW_GAP;
+}
+
+function objectY(index: number): number {
+  return OBJECT_TOP + index * OBJECT_ROW_GAP;
 }
 
 function canvasHeight(model: RolesAccessMapModel): number {
   return Math.max(
-    MIN_CANVAS_HEIGHT,
-    TOP_OFFSET +
-      Math.max(model.roles.length, model.objects.length, 1) * ROW_GAP +
-      NODE_HEIGHT
+    CANVAS_BASE_HEIGHT,
+    ROLE_TOP + model.roles.length * ROLE_ROW_GAP + ROLE_NODE_HEIGHT,
+    OBJECT_TOP + model.objects.length * OBJECT_ROW_GAP + OBJECT_NODE_HEIGHT
   );
 }
 
 function edgePath({
   objectIndex,
   roleIndex,
+  targetRoleIndex,
 }: {
-  objectIndex: number;
+  objectIndex: number | null;
   roleIndex: number;
+  targetRoleIndex: number | null;
 }): string {
-  const startY = nodeY(roleIndex) + NODE_HEIGHT / 2;
-  const endY = nodeY(objectIndex) + NODE_HEIGHT / 2;
-  const middleX = (ROLE_ANCHOR_X + OBJECT_ANCHOR_X) / 2;
-  return `M ${ROLE_ANCHOR_X} ${startY} C ${middleX} ${startY}, ${middleX} ${endY}, ${OBJECT_ANCHOR_X} ${endY}`;
+  const startY = roleY(roleIndex) + ROLE_NODE_HEIGHT / 2;
+  if (targetRoleIndex != null) {
+    const endY = roleY(targetRoleIndex) + ROLE_NODE_HEIGHT / 2;
+    return `M ${ROLE_ANCHOR_X} ${startY} C ${ROLE_MEMBER_CURVE_X} ${startY}, ${ROLE_MEMBER_CURVE_X} ${endY}, ${ROLE_ANCHOR_X} ${endY}`;
+  }
+  if (objectIndex == null) {
+    return "";
+  }
+  const endY = objectY(objectIndex) + OBJECT_NODE_HEIGHT / 2;
+  return `M ${ROLE_ANCHOR_X} ${startY} C ${OBJECT_CURVE_START_X} ${startY}, ${OBJECT_CURVE_END_X} ${endY}, ${OBJECT_X} ${endY}`;
 }
 
 function edgeToneClass(tone: RolesAccessMapEdge["tone"]): string {
   switch (tone) {
+    case "default":
+      return "stroke-emerald-500/80 [stroke-dasharray:2_4]";
     case "direct":
       return "stroke-blue-500/80";
+    case "member":
+      return "stroke-muted-foreground/60";
     case "owner":
       return "stroke-amber-500/80";
     case "public":
-      return "stroke-red-500/75 [stroke-dasharray:8_8]";
+      return "stroke-red-500/75 [stroke-dasharray:6_4]";
     default:
       return assertNever(tone);
   }
@@ -113,12 +186,10 @@ function edgeIsActive({
   );
 }
 
-function roleConnections(model: RolesAccessMapModel, nodeId: string) {
-  return model.edges.filter((edge) => edge.source === nodeId);
-}
-
-function objectConnections(model: RolesAccessMapModel, nodeId: string) {
-  return model.edges.filter((edge) => edge.target === nodeId);
+function nodeConnections(model: RolesAccessMapModel, nodeId: string) {
+  return model.edges.filter(
+    (edge) => edge.source === nodeId || edge.target === nodeId
+  );
 }
 
 function roleById(model: RolesAccessMapModel, nodeId: string) {
@@ -139,15 +210,15 @@ function nodeDetails(
   const role = roleById(model, selectedNodeId);
   if (role) {
     return {
-      connections: roleConnections(model, selectedNodeId),
-      description: role.subtitle,
+      connections: nodeConnections(model, selectedNodeId),
+      description: `${role.subtitle} access breakdown — from pg_auth_members, information_schema, pg_default_acl`,
       title: role.title,
     };
   }
   const object = objectById(model, selectedNodeId);
   if (object) {
     return {
-      connections: objectConnections(model, selectedNodeId),
+      connections: nodeConnections(model, selectedNodeId),
       description: object.subtitle,
       title: object.title,
     };
@@ -157,16 +228,19 @@ function nodeDetails(
 
 function connectionLabel(model: RolesAccessMapModel, edge: RolesAccessMapEdge) {
   const role = roleById(model, edge.source);
+  const targetRole = roleById(model, edge.target);
   const object = objectById(model, edge.target);
-  return `${role?.title ?? "Role"} → ${object?.title ?? "Object"} · ${edge.privileges.join(", ")}`;
+  return `${role?.title ?? "Role"} → ${targetRole?.title ?? object?.title ?? "Object"} · ${edge.privileges.join(" · ")}`;
 }
 
 function RoleNodeButton({
+  dimmed,
   node,
   onSelect,
   selected,
   top,
 }: {
+  dimmed: boolean;
   node: RolesAccessMapRoleNode;
   onSelect: (nodeId: string) => void;
   selected: boolean;
@@ -176,36 +250,37 @@ function RoleNodeButton({
     <Button
       aria-label={`Trace access for ${node.title}`}
       className={cn(
-        "absolute h-14 justify-start rounded-xl border bg-background px-4 text-left shadow-sm hover:bg-accent",
-        selected && "ring-2 ring-primary"
+        "absolute h-9 justify-start rounded-lg border bg-background px-3 text-left shadow-xs hover:bg-accent",
+        selected && "border-primary ring-2 ring-primary/30",
+        dimmed && "opacity-30"
       )}
       onClick={() => onSelect(node.id)}
-      style={{ left: ROLE_X, top, width: NODE_WIDTH }}
+      style={{ left: ROLE_X, top, width: ROLE_NODE_WIDTH }}
       type="button"
       variant="ghost"
     >
       <span
         aria-hidden="true"
-        className={cn("mr-3 size-2.5 rounded-full", roleDotClass(node.kind))}
+        className={cn("mr-2 size-2 rounded-full", roleDotClass(node.kind))}
       />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-mono font-semibold text-sm">
-          {node.title}
-        </span>
-        <span className="block truncate text-muted-foreground text-xs">
-          {node.subtitle}
-        </span>
+      <span className="min-w-0 flex-1 truncate font-mono font-semibold text-[11.5px]">
+        {node.title}
+      </span>
+      <span className="ml-2 shrink-0 text-[9.5px] text-muted-foreground">
+        {node.subtitle}
       </span>
     </Button>
   );
 }
 
 function ObjectNodeButton({
+  dimmed,
   node,
   onSelect,
   selected,
   top,
 }: {
+  dimmed: boolean;
   node: RolesAccessMapObjectNode;
   onSelect: (nodeId: string) => void;
   selected: boolean;
@@ -215,23 +290,24 @@ function ObjectNodeButton({
     <Button
       aria-label={`Trace access to ${node.title}`}
       className={cn(
-        "absolute h-14 justify-start rounded-xl border bg-background px-4 text-left shadow-sm hover:bg-accent",
-        selected && "ring-2 ring-primary"
+        "absolute h-[42px] justify-start rounded-lg border bg-background px-3 text-left shadow-xs hover:bg-accent",
+        selected && "border-primary ring-2 ring-primary/30",
+        dimmed && "opacity-30"
       )}
       onClick={() => onSelect(node.id)}
-      style={{ left: OBJECT_X, top, width: NODE_WIDTH }}
+      style={{ left: OBJECT_X, top, width: OBJECT_NODE_WIDTH }}
       type="button"
       variant="ghost"
     >
       <Database
         aria-hidden="true"
-        className="mr-3 size-4 shrink-0 text-muted-foreground"
+        className="mr-2 size-3.5 shrink-0 text-muted-foreground"
       />
       <span className="min-w-0">
-        <span className="block truncate font-mono font-semibold text-sm">
+        <span className="block truncate font-mono font-semibold text-[11.5px] leading-tight">
           {node.title}
         </span>
-        <span className="block truncate text-muted-foreground text-xs">
+        <span className="block truncate text-[9.5px] text-muted-foreground leading-tight">
           {node.subtitle}
         </span>
       </span>
@@ -241,9 +317,73 @@ function ObjectNodeButton({
 
 function EmptyObjects() {
   return (
-    <div className="absolute right-9 flex h-56 w-[316px] items-center justify-center rounded-xl border border-dashed bg-background/70 text-center text-muted-foreground text-sm">
+    <div
+      className="absolute flex h-36 items-center justify-center rounded-xl border border-dashed bg-background/70 text-center text-muted-foreground text-sm"
+      style={{ left: OBJECT_X, top: OBJECT_TOP, width: OBJECT_NODE_WIDTH }}
+    >
       No object grants found for the visible roles.
     </div>
+  );
+}
+
+function AccessFiltersPopover({
+  edgeVisibility,
+  onToggle,
+}: {
+  edgeVisibility: Record<RolesAccessMapEdgeTone, boolean>;
+  onToggle: (tone: RolesAccessMapEdgeTone, visible: boolean) => void;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <Button size="sm" type="button" variant="outline">
+            <SlidersHorizontal className="size-3.5" />
+            View
+          </Button>
+        }
+      />
+      <PopoverContent align="start" className="w-72 gap-3 p-3">
+        <PopoverHeader>
+          <PopoverTitle>Access filters</PopoverTitle>
+        </PopoverHeader>
+        <div className="grid gap-2">
+          {EDGE_FILTERS.map((filter) => {
+            const switchId = `role-access-map-${filter.tone}`;
+            return (
+              <div
+                className="flex items-center justify-between gap-3 rounded-lg p-2 hover:bg-muted"
+                key={filter.tone}
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "h-0 w-8 border-t-2",
+                      edgeToneClass(filter.tone)
+                    )}
+                  />
+                  <div className="min-w-0">
+                    <Label className="text-xs" htmlFor={switchId}>
+                      {filter.label}
+                    </Label>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {filter.description}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={edgeVisibility[filter.tone]}
+                  id={switchId}
+                  onCheckedChange={(checked) => onToggle(filter.tone, checked)}
+                  size="sm"
+                />
+              </div>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -304,12 +444,23 @@ function RolesAccessMapCanvas({
   selectedNodeId: string | null;
 }) {
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const [edgeVisibility, setEdgeVisibility] = useState(DEFAULT_EDGE_VISIBILITY);
   const height = canvasHeight(model);
   const roleIndexById = new Map(
     model.roles.map((node, index) => [node.id, index])
   );
   const objectIndexById = new Map(
     model.objects.map((node, index) => [node.id, index])
+  );
+  const visibleEdges = model.edges.filter((edge) => edgeVisibility[edge.tone]);
+  const adjacentNodeIds = new Set(
+    selectedNodeId == null
+      ? []
+      : visibleEdges.flatMap((edge) =>
+          edge.source === selectedNodeId || edge.target === selectedNodeId
+            ? [edge.source, edge.target]
+            : []
+        )
   );
 
   function zoomOut() {
@@ -324,116 +475,152 @@ function RolesAccessMapCanvas({
     setZoom(DEFAULT_ZOOM);
   }
 
+  function toggleEdgeTone(tone: RolesAccessMapEdgeTone, visible: boolean) {
+    setEdgeVisibility((current) => ({ ...current, [tone]: visible }));
+  }
+
+  function nodeIsDimmed(nodeId: string): boolean {
+    return (
+      selectedNodeId != null &&
+      selectedNodeId !== nodeId &&
+      !adjacentNodeIds.has(nodeId)
+    );
+  }
+
   return (
     <section aria-label="Role access map" className="grid gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Button type="button" variant="outline">
-          <SlidersHorizontal className="size-4" />
-          View
-        </Button>
-        <div className="flex flex-wrap items-center gap-3 text-muted-foreground text-sm">
-          <fieldset className="flex items-center rounded-lg border bg-background shadow-sm">
-            <legend className="sr-only">Role access map zoom controls</legend>
-            <Button
-              aria-label="Zoom out"
-              onClick={zoomOut}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <Minus className="size-4" />
-            </Button>
-            <span className="min-w-14 text-center font-mono text-xs tabular-nums">
-              {Math.round(zoom * ZOOM_PERCENT_FACTOR)}%
-            </span>
-            <Button
-              aria-label="Zoom in"
-              onClick={zoomIn}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <Plus className="size-4" />
-            </Button>
-            <Button onClick={resetZoom} size="sm" type="button" variant="ghost">
-              Fit
-            </Button>
-            <Button
-              aria-label="Reset access trace"
-              onClick={() => onSelectNode(null)}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <RotateCcw className="size-4" />
-            </Button>
-          </fieldset>
-          <span>
-            Click a node to trace its access · details open in the drawer
+      <div className="flex flex-wrap items-center gap-3">
+        <AccessFiltersPopover
+          edgeVisibility={edgeVisibility}
+          onToggle={toggleEdgeTone}
+        />
+        <div className="flex-1" />
+        <fieldset className="flex items-center rounded-lg border bg-background p-0.5 shadow-sm">
+          <legend className="sr-only">Role access map zoom controls</legend>
+          <Button
+            aria-label="Zoom out"
+            onClick={zoomOut}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            <Minus className="size-4" />
+          </Button>
+          <span className="min-w-10 text-center font-mono text-[10.5px] text-muted-foreground tabular-nums">
+            {Math.round(zoom * ZOOM_PERCENT_FACTOR)}%
           </span>
-        </div>
+          <Button
+            aria-label="Zoom in"
+            onClick={zoomIn}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            <Plus className="size-4" />
+          </Button>
+          <div className="mx-1 h-4 w-px bg-border" />
+          <Button onClick={resetZoom} size="sm" type="button" variant="ghost">
+            Fit
+          </Button>
+          <div className="mx-1 h-4 w-px bg-border" />
+          <Button
+            aria-label="Maximize role access map"
+            onClick={zoomIn}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            <Maximize2 className="size-3.5" />
+          </Button>
+        </fieldset>
+        <span className="text-[11.5px] text-muted-foreground">
+          click a node to trace its access · details open in the drawer
+        </span>
       </div>
-      <div className="overflow-x-auto rounded-2xl border bg-muted/30 p-4">
+      <div className="overflow-auto rounded-2xl border bg-card shadow-xs">
         <div
-          className="relative origin-top-left"
+          className="overflow-hidden"
           style={{
-            height,
-            transform: `scale(${zoom})`,
-            width: CANVAS_WIDTH,
+            height: Math.round(height * zoom),
+            width: Math.round(CANVAS_WIDTH * zoom),
           }}
         >
-          <div className="absolute top-0 left-9 font-semibold text-muted-foreground text-xs uppercase tracking-[0.2em]">
-            Roles
-          </div>
-          <div className="absolute top-0 right-9 font-semibold text-muted-foreground text-xs uppercase tracking-[0.2em]">
-            Objects
-          </div>
-          <svg
-            aria-hidden="true"
-            className="absolute inset-0"
-            height={height}
-            viewBox={`0 0 ${CANVAS_WIDTH} ${height}`}
-            width={CANVAS_WIDTH}
+          <div
+            className="relative origin-top-left"
+            style={{
+              height,
+              transform: `scale(${zoom})`,
+              width: CANVAS_WIDTH,
+            }}
           >
-            {model.edges.map((edge) => {
-              const roleIndex = roleIndexById.get(edge.source);
-              const objectIndex = objectIndexById.get(edge.target);
-              if (roleIndex == null || objectIndex == null) {
-                return null;
-              }
-              const active = edgeIsActive({ edge, selectedNodeId });
-              return (
-                <path
-                  className={cn(
-                    "fill-none stroke-2 transition-opacity",
-                    edgeToneClass(edge.tone),
-                    active ? "opacity-90" : "opacity-15"
-                  )}
-                  d={edgePath({ objectIndex, roleIndex })}
-                  key={edge.id}
-                />
-              );
-            })}
-          </svg>
-          {model.roles.map((node, index) => (
-            <RoleNodeButton
-              key={node.id}
-              node={node}
-              onSelect={onSelectNode}
-              selected={selectedNodeId === node.id}
-              top={nodeY(index)}
-            />
-          ))}
-          {model.objects.length === 0 ? <EmptyObjects /> : null}
-          {model.objects.map((node, index) => (
-            <ObjectNodeButton
-              key={node.id}
-              node={node}
-              onSelect={onSelectNode}
-              selected={selectedNodeId === node.id}
-              top={nodeY(index)}
-            />
-          ))}
+            <div
+              className="absolute top-2 font-semibold text-[10.5px] text-muted-foreground uppercase tracking-[0.06em]"
+              style={{ left: ROLE_X }}
+            >
+              Roles
+            </div>
+            <div
+              className="absolute top-2 font-semibold text-[10.5px] text-muted-foreground uppercase tracking-[0.06em]"
+              style={{ left: OBJECT_X }}
+            >
+              Objects
+            </div>
+            <svg
+              aria-hidden="true"
+              className="absolute inset-0 overflow-visible"
+              height={height}
+              viewBox={`0 0 ${CANVAS_WIDTH} ${height}`}
+              width={CANVAS_WIDTH}
+            >
+              {visibleEdges.map((edge) => {
+                const roleIndex = roleIndexById.get(edge.source);
+                const targetRoleIndex = roleIndexById.get(edge.target) ?? null;
+                const objectIndex = objectIndexById.get(edge.target) ?? null;
+                if (roleIndex == null) {
+                  return null;
+                }
+                if (targetRoleIndex == null && objectIndex == null) {
+                  return null;
+                }
+                const active = edgeIsActive({ edge, selectedNodeId });
+                return (
+                  <path
+                    className={cn(
+                      "fill-none transition-opacity",
+                      edgeToneClass(edge.tone),
+                      active ? "opacity-100" : "opacity-15"
+                    )}
+                    d={edgePath({ objectIndex, roleIndex, targetRoleIndex })}
+                    key={edge.id}
+                    strokeWidth={
+                      active ? EDGE_ACTIVE_WIDTH : EDGE_DEFAULT_WIDTH
+                    }
+                  />
+                );
+              })}
+            </svg>
+            {model.roles.map((node, index) => (
+              <RoleNodeButton
+                dimmed={nodeIsDimmed(node.id)}
+                key={node.id}
+                node={node}
+                onSelect={onSelectNode}
+                selected={selectedNodeId === node.id}
+                top={roleY(index)}
+              />
+            ))}
+            {model.objects.length === 0 ? <EmptyObjects /> : null}
+            {model.objects.map((node, index) => (
+              <ObjectNodeButton
+                dimmed={nodeIsDimmed(node.id)}
+                key={node.id}
+                node={node}
+                onSelect={onSelectNode}
+                selected={selectedNodeId === node.id}
+                top={objectY(index)}
+              />
+            ))}
+          </div>
         </div>
       </div>
       <SelectedNodeSheet

@@ -23,6 +23,7 @@ import {
   type ObjectGrant,
   type OwnedObject,
   type Role,
+  type RoleDefaultPrivilege,
   RoleService,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 import type {
@@ -59,6 +60,7 @@ type ListPublicGrantsInput = MessageInitShape<
 interface RoleAccessMapResource {
   databaseId: string;
   databaseName: string;
+  defaultPrivileges: RoleDefaultPrivilege[];
   grants: ObjectGrant[];
   ownedObjects: OwnedObject[];
   roleId: string;
@@ -229,7 +231,19 @@ async function fetchRoleAccessMapResources(
           input.instanceId,
           databaseId
         );
-        const [grants, ownedObjects] = await Promise.all([
+        const [defaultPrivileges, grants, ownedObjects] = await Promise.all([
+          paginateAll(
+            (pageToken) =>
+              roleClient.listRoleDefaultPrivileges({
+                database: databaseResource,
+                orderBy:
+                  "creator_role_name asc, schema_name asc, object_type asc, privilege asc",
+                pageSize: 1000,
+                pageToken: pageToken ?? "",
+                parent,
+              }),
+            (response) => response.defaultPrivileges
+          ),
           paginateAll(
             (pageToken) =>
               roleClient.listRoleGrants({
@@ -256,6 +270,7 @@ async function fetchRoleAccessMapResources(
         return {
           databaseId,
           databaseName,
+          defaultPrivileges,
           grants,
           ownedObjects,
           roleId,

@@ -2,16 +2,26 @@ import { create } from "@bufbuild/protobuf";
 import { describe, expect, test } from "vitest";
 import { buildRolesAccessMapModel } from "@/components/console-pages/roles-access-map-model";
 import {
+  DefaultPrivilegeObjectType,
   GrantObjectType,
   ObjectGrantSchema,
   OwnedObjectSchema,
   RoleAttributesSchema,
+  RoleDefaultPrivilegeSchema,
+  RoleMembershipSchema,
   RoleSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-function role(roleName: string, attrs = {}) {
+function role(
+  roleName: string,
+  attrs = {},
+  memberOf: { role: string; roleName: string }[] = []
+) {
   return create(RoleSchema, {
     attributes: create(RoleAttributesSchema, attrs),
+    memberOf: memberOf.map((membership) =>
+      create(RoleMembershipSchema, membership)
+    ),
     name: `instances/prod/roles/${roleName}`,
     roleName,
   });
@@ -37,6 +47,7 @@ describe("buildRolesAccessMapModel", () => {
         {
           databaseId: "logistics",
           databaseName: "logistics",
+          defaultPrivileges: [],
           grants: [
             create(ObjectGrantSchema, {
               objectName: "orders",
@@ -71,8 +82,8 @@ describe("buildRolesAccessMapModel", () => {
     ]);
     expect(model.objects.map((node) => [node.title, node.subtitle])).toEqual([
       ["logistics", "database"],
-      ["public", "schema · logistics"],
       ["orders", "table · shipping"],
+      ["public", "schema · logistics"],
     ]);
     expect(
       model.edges.map((edge) => [edge.source, edge.target, edge.tone])
@@ -137,5 +148,63 @@ describe("buildRolesAccessMapModel", () => {
     expect(model.roles.map((node) => node.title)).toEqual(["app_reader"]);
     expect(model.objects).toEqual([]);
     expect(model.edges).toEqual([]);
+  });
+
+  test("maps role memberships and default privileges from the design access map", () => {
+    const model = buildRolesAccessMapModel({
+      publicAccess: [],
+      roleAccess: [
+        {
+          databaseId: "logistics",
+          databaseName: "logistics",
+          defaultPrivileges: [
+            create(RoleDefaultPrivilegeSchema, {
+              creatorRole: "instances/prod/roles/app_owner",
+              creatorRoleName: "app_owner",
+              objectType: DefaultPrivilegeObjectType.TABLES,
+              privilege: "SELECT",
+              schemaName: "shipping",
+            }),
+          ],
+          grants: [],
+          ownedObjects: [],
+          roleId: "app_readonly",
+          roleName: "app_readonly",
+        },
+      ],
+      roles: [
+        role("app_owner", { canLogin: true }),
+        role("app_readonly", { canLogin: true }, [
+          {
+            role: "instances/prod/roles/app_owner",
+            roleName: "app_owner",
+          },
+        ]),
+      ],
+      visibleKinds: {
+        builtin: true,
+        group: true,
+        login: true,
+        repl: true,
+        super: true,
+      },
+    });
+
+    expect(
+      model.edges.map((edge) => [
+        edge.source,
+        edge.target,
+        edge.tone,
+        edge.privileges,
+      ])
+    ).toEqual([
+      ["role:app_readonly", "role:app_owner", "member", ["member of"]],
+      [
+        "role:app_owner",
+        "object:schema:logistics:shipping",
+        "default",
+        ["default privileges: SELECT → app_readonly"],
+      ],
+    ]);
   });
 });

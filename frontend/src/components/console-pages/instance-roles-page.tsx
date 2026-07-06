@@ -305,9 +305,6 @@ export function InstanceRolesPage({
 
   const rolesMapContent = (
     <div className="grid gap-3">
-      <div className="inline-flex w-fit items-center rounded-lg border bg-background px-3 py-2 text-sm">
-        Attribute: any
-      </div>
       {accessMapResourcesQuery.isPending ? (
         <p className="text-muted-foreground text-sm" role="status">
           Loading role object access.
@@ -334,7 +331,7 @@ export function InstanceRolesPage({
       retry={rolesQuery.refetch}
       title="Roles"
     >
-      <div className="flex flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-[980px] flex-col gap-6">
         <PageHeader
           description={`${counts.all} role${counts.all === 1 ? "" : "s"} · ${loginCount} can log in · ${counts.group} group${counts.group === 1 ? "" : "s"} · ${counts.builtin} built-in`}
           eyebrow="Instance"
@@ -346,18 +343,11 @@ export function InstanceRolesPage({
           onValueChange={handleRolesTabChange}
           value={activeTab}
         >
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex min-w-0 flex-wrap items-center gap-3">
-              <TabsList>
-                <TabsTrigger value="details">Table</TabsTrigger>
-                <TabsTrigger value="map">Access map</TabsTrigger>
-              </TabsList>
-              <DataTableFilter
-                onChange={setFilter}
-                placeholder="Search roles..."
-                value={filter}
-              />
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <TabsList className="mr-2">
+              <TabsTrigger value="details">Table</TabsTrigger>
+              <TabsTrigger value="map">Access map</TabsTrigger>
+            </TabsList>
             <div className="flex flex-wrap items-center gap-1.5">
               {KIND_FILTERS.map((entry) => {
                 const active =
@@ -380,6 +370,12 @@ export function InstanceRolesPage({
                 );
               })}
             </div>
+            <div className="min-w-52 flex-1" />
+            <DataTableFilter
+              onChange={setFilter}
+              placeholder="Search roles…"
+              value={filter}
+            />
           </div>
           <TabsContent className="mt-4" value="details">
             {rolesDetailsContent}

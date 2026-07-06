@@ -139,7 +139,7 @@ describe("InstanceRolesPage", () => {
     const mapTab = screen.getByRole("tab", { name: "Access map" });
     expect(tableTab.hasAttribute("data-active")).toBe(true);
     expect(mapTab.hasAttribute("data-active")).toBe(false);
-    expect(screen.getByPlaceholderText("Search roles...")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Search roles…")).toBeTruthy();
     expect(screen.queryByLabelText("Role access map")).toBeNull();
 
     await user.click(mapTab);
@@ -163,12 +163,11 @@ describe("InstanceRolesPage", () => {
         .hasAttribute("data-active")
     ).toBe(true);
     expect(screen.getByLabelText("Role access map")).toBeTruthy();
-    expect(screen.getByText("Attribute: any")).toBeTruthy();
     expect(screen.getByText("Objects")).toBeTruthy();
     expect(screen.getByText("orders")).toBeTruthy();
     expect(screen.getByText("logistics")).toBeTruthy();
     expect(screen.getByText("PUBLIC")).toBeTruthy();
-    expect(screen.getByPlaceholderText("Search roles...")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Search roles…")).toBeTruthy();
 
     await user.click(screen.getByRole("tab", { name: "Table" }));
 
