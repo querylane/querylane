@@ -1,15 +1,12 @@
 import { create } from "@bufbuild/protobuf";
-import {
-  cleanup,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { InstanceRolesPage } from "@/components/console-pages/instance-roles-page";
 import {
+  GrantObjectType,
+  ObjectGrantSchema,
+  OwnedObjectSchema,
   RoleAttributesSchema,
   RoleMembershipSchema,
   RoleSchema,
@@ -19,8 +16,9 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   tableSearch: "",
 }));
-const ROLE_TYPE_USER_FILTER_RE = /Type.*User/;
-const SUPERUSER_OPTION_WITH_COUNT_RE = /Superuser\s+1/;
+
+const SUPERUSERS_CHIP_NAME = /Superusers 1/;
+const BUILT_IN_CHIP_NAME = /Built-in 1/;
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
@@ -28,23 +26,6 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@/lib/url-search-state", () => ({
   useUrlTableSearch: () => [mocks.tableSearch, vi.fn()] as const,
-}));
-
-vi.mock("@/features/database-visualization/flow-canvas", () => ({
-  ["FlowCanvas"]: ({
-    actionPanel,
-    nodes,
-  }: {
-    actionPanel?: React.ReactNode | undefined;
-    nodes: { id: string }[];
-  }) => (
-    <section aria-label="Role access flow canvas">
-      <fieldset aria-label="Role access canvas controls">
-        {actionPanel}
-      </fieldset>
-      <span>Node ids {nodes.map((node) => node.id).join(",")}</span>
-    </section>
-  ),
 }));
 
 vi.mock("@/hooks/api/role", () => ({
@@ -97,6 +78,47 @@ vi.mock("@/hooks/api/role", () => ({
     isPending: false,
     refetch: vi.fn(async () => undefined),
   }),
+  useRolesAccessMapResourcesQuery: () => ({
+    data: {
+      publicAccess: [
+        {
+          databaseId: "logistics",
+          databaseName: "logistics",
+          grants: [
+            create(ObjectGrantSchema, {
+              objectType: GrantObjectType.SCHEMA,
+              privilege: "USAGE",
+              schemaName: "public",
+            }),
+          ],
+        },
+      ],
+      roleAccess: [
+        {
+          databaseId: "logistics",
+          databaseName: "logistics",
+          grants: [
+            create(ObjectGrantSchema, {
+              objectName: "orders",
+              objectType: GrantObjectType.TABLE,
+              privilege: "SELECT",
+              schemaName: "shipping",
+            }),
+          ],
+          ownedObjects: [
+            create(OwnedObjectSchema, {
+              objectName: "logistics",
+              objectType: GrantObjectType.DATABASE,
+            }),
+          ],
+          roleId: "app_user",
+          roleName: "app_user",
+        },
+      ],
+    },
+    error: null,
+    isPending: false,
+  }),
 }));
 
 afterEach(() => {
@@ -106,21 +128,19 @@ afterEach(() => {
 });
 
 describe("InstanceRolesPage", () => {
-  test("keeps roles details as the default tab and writes map tab to the URL search", async () => {
+  test("keeps roles table as the default tab and writes access map tab to the URL search", async () => {
     const user = userEvent.setup();
 
     render(
       <InstanceRolesPage instanceId="prod" tab={undefined} type="login" />
     );
 
-    const detailsTab = screen.getByRole("tab", { name: "Details" });
-    const mapTab = screen.getByRole("tab", { name: "Map" });
-    expect(detailsTab.hasAttribute("data-active")).toBe(true);
+    const tableTab = screen.getByRole("tab", { name: "Table" });
+    const mapTab = screen.getByRole("tab", { name: "Access map" });
+    expect(tableTab.hasAttribute("data-active")).toBe(true);
     expect(mapTab.hasAttribute("data-active")).toBe(false);
     expect(screen.getByPlaceholderText("Search roles...")).toBeTruthy();
-    expect(
-      screen.queryByRole("heading", { name: "Role access map" })
-    ).toBeNull();
+    expect(screen.queryByLabelText("Role access map")).toBeNull();
 
     await user.click(mapTab);
 
@@ -132,19 +152,25 @@ describe("InstanceRolesPage", () => {
     });
   });
 
-  test("hydrates the roles map tab from URL search and clears it when returning to details", async () => {
+  test("hydrates the access map tab from URL search and shows object access", async () => {
     const user = userEvent.setup();
 
     render(<InstanceRolesPage instanceId="prod" tab="map" type="login" />);
 
-    const mapTab = screen.getByRole("tab", { name: "Map" });
-    expect(mapTab.hasAttribute("data-active")).toBe(true);
     expect(
-      await screen.findByLabelText("Role access flow canvas")
-    ).toBeTruthy();
-    expect(screen.queryByPlaceholderText("Search roles...")).toBeNull();
+      screen
+        .getByRole("tab", { name: "Access map" })
+        .hasAttribute("data-active")
+    ).toBe(true);
+    expect(screen.getByLabelText("Role access map")).toBeTruthy();
+    expect(screen.getByText("Attribute: any")).toBeTruthy();
+    expect(screen.getByText("Objects")).toBeTruthy();
+    expect(screen.getByText("orders")).toBeTruthy();
+    expect(screen.getByText("logistics")).toBeTruthy();
+    expect(screen.getByText("PUBLIC")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Search roles...")).toBeTruthy();
 
-    await user.click(screen.getByRole("tab", { name: "Details" }));
+    await user.click(screen.getByRole("tab", { name: "Table" }));
 
     const navigateCall = mocks.navigate.mock.calls[0]?.[0];
     expect(
@@ -156,7 +182,7 @@ describe("InstanceRolesPage", () => {
     });
   });
 
-  test("filters roles by URL type and writes shared facet changes back to search", async () => {
+  test("filters roles by URL type and writes chip changes back to search", async () => {
     const user = userEvent.setup();
 
     render(
@@ -168,10 +194,7 @@ describe("InstanceRolesPage", () => {
     expect(screen.queryByText("replicator")).toBeNull();
 
     await user.click(
-      screen.getByRole("button", { name: ROLE_TYPE_USER_FILTER_RE })
-    );
-    await user.click(
-      screen.getByRole("option", { name: SUPERUSER_OPTION_WITH_COUNT_RE })
+      screen.getByRole("button", { name: SUPERUSERS_CHIP_NAME })
     );
 
     const navigateCall = mocks.navigate.mock.calls[0]?.[0];
@@ -181,61 +204,13 @@ describe("InstanceRolesPage", () => {
     });
   });
 
-  test("places role search on the left with the type filter directly after it", () => {
-    render(<InstanceRolesPage instanceId="prod" tab={undefined} />);
-
-    const search = screen.getByRole("textbox", { name: "Search roles..." });
-    const filterBar = search.closest('[data-slot="roles-filter-bar"]');
-    if (!(filterBar instanceof HTMLElement)) {
-      throw new Error("Missing roles filter bar");
-    }
-
-    const typeFilter = within(filterBar).getByRole("button", {
-      name: "Type",
-    });
-
-    const controls = Array.from(
-      filterBar.querySelectorAll('input[name="table-filter"], button')
-    );
-
-    expect(filterBar.className).toContain("justify-start");
-    expect(controls[0]).toBe(search);
-    expect(controls[1]).toBe(typeFilter);
-  });
-
-  test("hides built-in roles from the access map until that filter is enabled", async () => {
-    const user = userEvent.setup();
-
+  test("shows built-in roles in the redesigned access map by default", () => {
     render(<InstanceRolesPage instanceId="prod" tab="map" />);
 
-    const canvas = await screen.findByLabelText("Role access flow canvas");
-    expect(canvas.textContent).toContain("role:app_user");
-    expect(canvas.textContent).toContain("role:app_group");
-    expect(canvas.textContent).toContain("role:replicator");
-    expect(canvas.textContent).toContain("role:postgres");
-    expect(canvas.textContent).not.toContain("role:pg_read_all_data");
-
-    const controls = screen.getByLabelText("Role access canvas controls");
+    const canvas = screen.getByLabelText("Role access map");
+    expect(canvas.textContent).toContain("pg_read_all_data");
     expect(
-      within(controls).getByRole("button", { name: "Switch to vertical" })
+      screen.getByRole("button", { name: BUILT_IN_CHIP_NAME })
     ).toBeTruthy();
-    expect(
-      within(controls).getByRole("button", { name: "Resource filters" })
-    ).toBeTruthy();
-    expect(
-      within(controls).getByRole("button", { name: "Expand role access map" })
-    ).toBeTruthy();
-
-    await user.click(
-      within(controls).getByRole("button", { name: "Resource filters" })
-    );
-    const builtinSwitch = screen.getByRole("switch", { name: "Built-in" });
-    expect(builtinSwitch.getAttribute("aria-checked")).toBe("false");
-
-    await user.click(builtinSwitch);
-
-    await waitFor(() => {
-      expect(canvas.textContent).toContain("role:pg_read_all_data");
-    });
   });
 });

@@ -6,15 +6,23 @@ import {
   buildDatabaseName,
   buildInstanceName,
   buildRoleName,
+  parseResourceLeafId,
 } from "@/lib/console-resources";
 import { paginateAll } from "@/lib/paginate-all";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
+import {
+  type Database,
+  DatabaseService,
+} from "@/protogen/querylane/console/v1alpha1/database_pb";
 import {
   ListPublicGrantsResponseSchema,
   ListRoleDefaultPrivilegesResponseSchema,
   ListRoleGrantsResponseSchema,
   ListRoleOwnedObjectsResponseSchema,
   ListRolesResponseSchema,
+  type ObjectGrant,
+  type OwnedObject,
+  type Role,
   RoleService,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 import type {
@@ -47,6 +55,26 @@ type ListRoleDefaultPrivilegesInput = MessageInitShape<
 type ListPublicGrantsInput = MessageInitShape<
   (typeof listPublicGrants)["input"]
 >;
+
+interface RoleAccessMapResource {
+  databaseId: string;
+  databaseName: string;
+  grants: ObjectGrant[];
+  ownedObjects: OwnedObject[];
+  roleId: string;
+  roleName: string;
+}
+
+interface PublicAccessMapResource {
+  databaseId: string;
+  databaseName: string;
+  grants: ObjectGrant[];
+}
+
+interface RoleAccessMapResourcesResult {
+  publicAccess: PublicAccessMapResource[];
+  roleAccess: RoleAccessMapResource[];
+}
 
 function getListAllRolesQueryKey(
   input?: MessageInitShape<(typeof listRoles)["input"]>
@@ -149,6 +177,111 @@ async function fetchAllPublicGrants(
   });
 }
 
+async function fetchRoleAccessMapResources(
+  transport: Transport,
+  input: { instanceId: string; roles: Role[] }
+): Promise<RoleAccessMapResourcesResult> {
+  const databaseClient = createClient(DatabaseService, transport);
+  const roleClient = createClient(RoleService, transport);
+  const databases = await paginateAll(
+    (pageToken) =>
+      databaseClient.listDatabases({
+        orderBy: "name asc",
+        pageSize: 1000,
+        pageToken: pageToken ?? "",
+        parent: buildInstanceName(input.instanceId),
+      }),
+    (response) => response.databases
+  );
+  const userDatabases = databases.filter(
+    (database) => !database.isSystemDatabase
+  );
+  const mapDatabases = userDatabases.length > 0 ? userDatabases : databases;
+
+  const publicAccess = await Promise.all(
+    mapDatabases.map(async (database) => {
+      const databaseId = databaseIdOf(database);
+      const grants = await paginateAll(
+        (pageToken) =>
+          roleClient.listPublicGrants({
+            orderBy: "schema_name asc, object_name asc, privilege asc",
+            pageSize: 1000,
+            pageToken: pageToken ?? "",
+            parent: buildDatabaseName(input.instanceId, databaseId),
+          }),
+        (response) => response.grants
+      );
+      return {
+        databaseId,
+        databaseName: databaseDisplayName(database),
+        grants,
+      };
+    })
+  );
+  const roleAccess = await Promise.all(
+    input.roles.flatMap((role) => {
+      const roleId = roleResourceIdOf(role);
+      const parent = buildRoleName(input.instanceId, roleId);
+      return mapDatabases.map(async (database) => {
+        const databaseId = databaseIdOf(database);
+        const databaseName = databaseDisplayName(database);
+        const databaseResource = buildDatabaseName(
+          input.instanceId,
+          databaseId
+        );
+        const [grants, ownedObjects] = await Promise.all([
+          paginateAll(
+            (pageToken) =>
+              roleClient.listRoleGrants({
+                database: databaseResource,
+                orderBy: "schema_name asc, object_name asc, privilege asc",
+                pageSize: 1000,
+                pageToken: pageToken ?? "",
+                parent,
+              }),
+            (response) => response.grants
+          ),
+          paginateAll(
+            (pageToken) =>
+              roleClient.listRoleOwnedObjects({
+                database: databaseResource,
+                orderBy: "schema_name asc, object_name asc",
+                pageSize: 1000,
+                pageToken: pageToken ?? "",
+                parent,
+              }),
+            (response) => response.ownedObjects
+          ),
+        ]);
+        return {
+          databaseId,
+          databaseName,
+          grants,
+          ownedObjects,
+          roleId,
+          roleName: role.roleName,
+        };
+      });
+    })
+  );
+
+  return { publicAccess, roleAccess };
+}
+
+function databaseIdOf(database: Database): string {
+  return (
+    parseResourceLeafId(database.name) || database.displayName || database.name
+  );
+}
+
+function databaseDisplayName(database: Database): string {
+  return database.displayName || databaseIdOf(database);
+}
+
+function roleResourceIdOf(role: Role): string {
+  return parseResourceLeafId(role.name) || role.roleName;
+}
+
 function rolesForInstanceQueryInput(instanceId: string) {
   return {
     orderBy: "name asc",
@@ -183,6 +316,29 @@ function useListAllRolesQuery(
       transport,
     }),
     enabled: options?.enabled ?? true,
+    ...(options?.refetchOnWindowFocus === undefined
+      ? {}
+      : { refetchOnWindowFocus: options.refetchOnWindowFocus }),
+  });
+}
+
+function useRolesAccessMapResourcesQuery(
+  input: { instanceId: string; roles: Role[] },
+  options?: ListAllQueryOptions
+) {
+  const transport = useTransport();
+  const roleKey = input.roles.map((role) => role.name).join("|");
+
+  return useQuery({
+    enabled: (options?.enabled ?? true) && input.roles.length > 0,
+    queryFn: () => fetchRoleAccessMapResources(transport, input),
+    queryKey: [
+      "console",
+      "roles-access-map-resources",
+      input.instanceId,
+      roleKey,
+    ] as const,
+    ...RESOURCE_QUERY_OPTIONS.roleGrants,
     ...(options?.refetchOnWindowFocus === undefined
       ? {}
       : { refetchOnWindowFocus: options.refetchOnWindowFocus }),
@@ -328,4 +484,13 @@ export function useListAllPublicGrantsQuery(
   });
 }
 
-export { rolesForInstanceQueryInput, useListAllRolesQuery };
+export type {
+  PublicAccessMapResource,
+  RoleAccessMapResource,
+  RoleAccessMapResourcesResult,
+};
+export {
+  rolesForInstanceQueryInput,
+  useListAllRolesQuery,
+  useRolesAccessMapResourcesQuery,
+};
