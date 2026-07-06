@@ -6,7 +6,7 @@ import { getProgressSummary } from "@/components/onboarding-wizard/shared/progre
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { captureException } from "@/lib/observability/sentry";
+import { captureException } from "@/lib/diagnostics";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
 

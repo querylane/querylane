@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
-import { logger } from "@/lib/observability/sentry";
+import { logger } from "@/lib/diagnostics";
 import { createResourceLoader } from "./resource-loader";
 
-vi.mock("@/lib/observability/sentry", () => ({
+vi.mock("@/lib/diagnostics", () => ({
   logger: {
     debug: vi.fn(),
     error: vi.fn(),

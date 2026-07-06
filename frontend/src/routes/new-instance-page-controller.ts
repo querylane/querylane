@@ -27,11 +27,11 @@ import {
 } from "@/hooks/api/instance";
 import { parseResourceLeafId } from "@/lib/console-resources";
 import { resolveCreateInstanceSuccessTarget } from "@/lib/create-instance-navigation";
+import { logger } from "@/lib/diagnostics";
 import {
   handleNavigationError,
   isNavigationCancellationError,
 } from "@/lib/navigation-errors";
-import { logger } from "@/lib/observability/sentry";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { focusFirstCreateInstanceInvalidField } from "@/routes/new-instance-focus";
 import type {

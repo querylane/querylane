@@ -16,7 +16,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { captureException } from "@/lib/observability/sentry";
+import { captureException } from "@/lib/diagnostics";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";

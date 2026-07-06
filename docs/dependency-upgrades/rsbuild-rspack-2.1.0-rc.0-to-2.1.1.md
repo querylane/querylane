@@ -39,7 +39,7 @@ Parents: direct dev dependencies.
 Children: `@rsbuild/core` depends on `@rspack/core`; `@rspack/core` depends on platform `@rspack/binding-*` packages.
 Repo dependents: `frontend/rsbuild.config.ts`, `frontend/package.json`, `frontend/bun.lock`.
 Peers: `@rsbuild/plugin-react` peers with Rsbuild; `@rsbuild/plugin-tailwindcss` peers with Rsbuild and Tailwind; `@rsdoctor/rspack-plugin@2.0.0-alpha.0` peers with Rspack (`*`).
-Plugins/adapters: TanStack Router Rspack plugin, Sentry webpack plugin, Rsdoctor Rspack plugin, Rsbuild Tailwind plugin.
+Plugins/adapters: TanStack Router Rspack plugin, Rsdoctor Rspack plugin, Rsbuild Tailwind plugin.
 
 ## Non-SemVer scale
 Release cadence: high around 2.1 release week.

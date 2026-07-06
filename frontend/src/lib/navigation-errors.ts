@@ -1,5 +1,5 @@
+import { logger } from "@/lib/diagnostics";
 import { errorMessageOf } from "@/lib/error-message";
-import { logger } from "@/lib/observability/sentry";
 
 interface NavigationErrorContext {
   area: string;

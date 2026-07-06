@@ -8,7 +8,7 @@ import { AppErrorView } from "@/components/app-error-view";
 import { AppShellFrame } from "@/components/app-shell-frame";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
 import { useRetainedRetryError } from "@/components/use-retained-retry-error";
-import { captureException } from "@/lib/observability/sentry";
+import { captureException } from "@/lib/diagnostics";
 import { getBlockingRoutePath, normalizeAppUiError } from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { useBlockingErrorStore } from "@/stores/blocking-error-store";

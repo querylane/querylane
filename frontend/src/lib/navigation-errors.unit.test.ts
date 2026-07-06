@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { logger } from "@/lib/diagnostics";
 import {
   handleNavigationError,
   handleNavigationResult,
   isNavigationCancellationError,
 } from "@/lib/navigation-errors";
-import { logger } from "@/lib/observability/sentry";
 
-vi.mock("@/lib/observability/sentry", () => ({
+vi.mock("@/lib/diagnostics", () => ({
   logger: {
     debug: vi.fn(),
     error: vi.fn(),

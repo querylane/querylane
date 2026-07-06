@@ -4,7 +4,7 @@ import {
   persist,
   type StateStorage,
 } from "zustand/middleware";
-import { captureException } from "@/lib/observability/sentry";
+import { captureException } from "@/lib/diagnostics";
 
 const ONE_SECOND_MS = 1000;
 const ONE_MINUTE_MS = 60_000;

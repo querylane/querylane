@@ -5,9 +5,9 @@ import { BrandedLoadingState } from "@/components/branded-loading-state";
 import { OnboardingWizard } from "@/components/onboarding-wizard/wizard";
 import { useConsoleConfigStatus } from "@/hooks/api/console";
 import { useDb } from "@/lib/db-context";
+import { logger } from "@/lib/diagnostics";
 import { errorMessageOf } from "@/lib/error-message";
 import { handleNavigationError } from "@/lib/navigation-errors";
-import { logger } from "@/lib/observability/sentry";
 import { useBlockingErrorStore } from "@/stores/blocking-error-store";
 import { useSetupStore } from "@/stores/setup-store";
 

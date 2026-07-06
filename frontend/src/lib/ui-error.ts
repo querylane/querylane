@@ -1,7 +1,7 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 import { toast } from "sonner";
 
-import { captureException, logger } from "@/lib/observability/sentry";
+import { captureException, logger } from "@/lib/diagnostics";
 import { normalizeConnectErrorState } from "@/lib/ui-error-connect";
 import { buildReproduction } from "@/lib/ui-error-reproduction";
 import {

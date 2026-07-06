@@ -6,7 +6,6 @@ import {
   type UnaryRequest,
   type UnaryResponse,
 } from "@connectrpc/connect";
-import type { Span } from "@sentry/react";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -74,18 +73,6 @@ function createFakeLogger() {
   };
 }
 
-function createFakeSpan(
-  setAttribute: (key: string, value: unknown) => void = () => undefined
-): Span {
-  return { setAttribute } as Span;
-}
-
-function createFakeStartSpan(
-  setAttribute?: (key: string, value: unknown) => void
-): SetupInterceptorDependencies["startSpan"] {
-  return (_options, callback) => callback(createFakeSpan(setAttribute));
-}
-
 function createUnaryConsoleConfigRequest(): UnaryRequest<
   typeof GetConsoleConfigRequestSchema,
   typeof GetConsoleConfigResponseSchema
@@ -145,7 +132,6 @@ function createTestInterceptor() {
     markSetupRequired: () => {
       setupRequiredCalls += 1;
     },
-    startSpan: createFakeStartSpan(),
   };
 
   return {
@@ -381,9 +367,8 @@ describe("transport error instrumentation", () => {
   });
 });
 
-describe("transport observability and snapshots", () => {
-  it("passes through successful calls and records success spans", async () => {
-    const spanAttributes: Record<string, unknown> = {};
+describe("transport snapshots", () => {
+  it("passes through successful calls", async () => {
     const interceptor = createSetupInterceptor({
       getCurrentHref: () => null,
       loadBlockingErrorStore: async () => ({
@@ -393,9 +378,6 @@ describe("transport observability and snapshots", () => {
       }),
       logger: createFakeLogger(),
       markSetupRequired: () => undefined,
-      startSpan: createFakeStartSpan((key, value) => {
-        spanAttributes[key] = value;
-      }),
     });
     const response = createUnaryConsoleConfigResponse();
 
@@ -404,7 +386,6 @@ describe("transport observability and snapshots", () => {
         createUnaryConsoleConfigRequest()
       )
     ).resolves.toBe(response);
-    expect(spanAttributes["result"]).toBe("success");
   });
 
   it("captures invalid successful content-type response bodies", async () => {
@@ -517,7 +498,6 @@ describe("transport observability and snapshots", () => {
       }),
       logger,
       markSetupRequired: () => undefined,
-      startSpan: createFakeStartSpan(),
     });
     const request = {
       get message(): unknown {

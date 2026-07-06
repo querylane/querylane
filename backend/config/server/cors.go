@@ -31,10 +31,6 @@ func (c *CORS) SetDefaults() {
 		c.AllowedHeaders = append(
 			connectcors.AllowedHeaders(),
 			"authorization",
-			// Sentry headers are checked only during browser CORS preflights;
-			// the runtime overhead is two extra header-name comparisons there.
-			"sentry-trace",
-			"baggage",
 		)
 	}
 

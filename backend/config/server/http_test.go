@@ -72,7 +72,6 @@ func TestCORSSetDefaultsFillsUnsetValues(t *testing.T) {
 
 	assert.Equal(t, []string{"*"}, c.AllowedOrigins)
 	assert.NotEmpty(t, c.AllowedMethods)
-	assert.Contains(t, c.AllowedHeaders, "sentry-trace")
-	assert.Contains(t, c.AllowedHeaders, "baggage")
+	assert.Contains(t, c.AllowedHeaders, "authorization")
 	assert.NotEmpty(t, c.ExposedHeaders)
 }

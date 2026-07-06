@@ -68,33 +68,7 @@ This README is agent-facing documentation under `frontend/**/*{.md,_agent.{js,ts
 - Tailwind CSS 4
 - Vitest (unit/integration/browser) + Playwright (e2e)
 
-## Sentry
+## Diagnostics
 
-Sentry is enabled for production builds only and is configured through public env vars:
-
-- `PUBLIC_SENTRY_DSN`
-- `PUBLIC_SENTRY_ENVIRONMENT`
-- `PUBLIC_SENTRY_RELEASE`
-- `PUBLIC_SENTRY_TRACES_SAMPLE_RATE` (default `0.02`)
-- `PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE` (default `0.1`)
-- `PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` (default `1`)
-- `PUBLIC_SENTRY_ENABLE_LOGS` (`1` to enable logs)
-- `PUBLIC_SENTRY_ENABLE_CONSOLE_LOG_INTEGRATION` (`1` to forward selected console logs)
-- Spans are intentionally limited to boundary layers (router navigation and transport/API) to reduce noise.
-
-## PostHog
-
-PostHog is enabled for production builds when configured in the environment.
-
-### Local usage
-
-- Add your PostHog host and key to your local `.env` file.
-- Leave values empty to disable PostHog locally without code changes.
-
-### Source maps and releases
-
-- CI build sets `PUBLIC_SENTRY_RELEASE` to the commit SHA.
-- Source maps and release metadata are uploaded during `bun run build` via `@sentry/webpack-plugin` when `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` are present.
-- CI does not run a separate Sentry CLI upload step.
-- Frontend build output uses hidden source maps in production.
-- Sentry correlation uses the `posthog_session_id` tag to link errors with PostHog sessions.
+- Runtime diagnostics stay in local app error states and tests.
+- Production builds do not upload source maps or initialize external product analytics/error tracking clients.
