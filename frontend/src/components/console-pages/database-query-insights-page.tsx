@@ -58,7 +58,16 @@ const MILLISECONDS_PER_SECOND = 1000;
 const PERCENT_RATIO_MULTIPLIER = 100;
 const CACHE_HIT_WARNING_THRESHOLD = 0.9;
 const QUERY_KIND_FILTERS = ["all", "reads", "writes"] as const;
-const QUERY_KEYWORD_SEPARATOR_RE = /\s+/;
+const LEADING_EXPLAIN_RE = /^EXPLAIN\b\s*(?:\([^)]*\)\s*)?/i;
+const LEADING_EXPLAIN_FLAG_RE = /^(?:(?:ANALYZE|VERBOSE)\b\s*)+/i;
+const WITH_QUERY_RE = /^WITH\b/i;
+const READ_QUERY_RE = /^(?:SELECT|SHOW|TABLE|VALUES)\b/i;
+const WRITE_QUERY_RE =
+  /^(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|CREATE|ALTER|DROP|GRANT|REVOKE|CALL|DO)\b/i;
+const WRITE_QUERY_KEYWORD_RE =
+  /\b(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|CREATE|ALTER|DROP|GRANT|REVOKE|CALL|DO)\b/i;
+const COPY_TO_QUERY_RE = /^COPY\b[\s\S]*\bTO\b/i;
+const COPY_FROM_QUERY_RE = /^COPY\b[\s\S]*\bFROM\b/i;
 const MEAN_FILTERS = [
   { label: "Mean: any", value: 0 },
   { label: "> 5 ms", value: 5 },
@@ -67,6 +76,12 @@ const MEAN_FILTERS = [
 ] as const;
 
 type QueryKindFilter = (typeof QUERY_KIND_FILTERS)[number];
+type QueryClassification = "read" | "write" | "other";
+
+interface IndexedQueryRuntimeInsight {
+  index: number;
+  query: QueryRuntimeInsight;
+}
 
 function formatInsightInteger(value: bigint | number) {
   return value.toLocaleString();
@@ -121,17 +136,39 @@ function queryInsightLabel(query: QueryRuntimeInsight) {
   return "Query text unavailable";
 }
 
-function queryKeyword(query: QueryRuntimeInsight) {
-  return (
-    queryInsightLabel(query)
-      .trim()
-      .split(QUERY_KEYWORD_SEPARATOR_RE, 1)[0]
-      ?.toUpperCase() ?? ""
-  );
+function stripLeadingExplain(queryText: string) {
+  return queryText
+    .replace(LEADING_EXPLAIN_RE, "")
+    .trimStart()
+    .replace(LEADING_EXPLAIN_FLAG_RE, "")
+    .trimStart();
 }
 
-function isReadQuery(query: QueryRuntimeInsight) {
-  return ["EXPLAIN", "SELECT", "SHOW", "WITH"].includes(queryKeyword(query));
+function classifyQuery(query: QueryRuntimeInsight): QueryClassification {
+  const queryText = query.query.trim();
+  if (!queryText) {
+    return "other";
+  }
+
+  // Best effort from pg_stat_statements text until the backend returns a statement kind.
+  const statement = stripLeadingExplain(queryText);
+  if (COPY_FROM_QUERY_RE.test(statement)) {
+    return "write";
+  }
+  if (COPY_TO_QUERY_RE.test(statement)) {
+    return "read";
+  }
+  if (WITH_QUERY_RE.test(statement)) {
+    return WRITE_QUERY_KEYWORD_RE.test(statement) ? "write" : "read";
+  }
+  if (WRITE_QUERY_RE.test(statement)) {
+    return "write";
+  }
+  if (READ_QUERY_RE.test(statement)) {
+    return "read";
+  }
+
+  return "other";
 }
 
 function queryMatchesKind(query: QueryRuntimeInsight, filter: QueryKindFilter) {
@@ -139,12 +176,46 @@ function queryMatchesKind(query: QueryRuntimeInsight, filter: QueryKindFilter) {
     case "all":
       return true;
     case "reads":
-      return isReadQuery(query);
+      return classifyQuery(query) === "read";
     case "writes":
-      return !isReadQuery(query);
+      return classifyQuery(query) === "write";
     default:
       return filter satisfies never;
   }
+}
+
+function indexQueries(queries: QueryRuntimeInsight[]) {
+  return queries.map((query, index) => ({ index, query }));
+}
+
+function querySelectionKey({ index, query }: IndexedQueryRuntimeInsight) {
+  if (query.queryId !== 0n) {
+    return `queryid:${query.queryId.toString()}`;
+  }
+
+  return `row:${index}:queryid:0`;
+}
+
+function queryRowKey({ index, query }: IndexedQueryRuntimeInsight) {
+  return `${index}:${query.queryId.toString()}:${query.calls.toString()}`;
+}
+
+function findSelectedQuery({
+  queries,
+  selectedQueryKey,
+}: {
+  queries: QueryRuntimeInsight[];
+  selectedQueryKey: string | null;
+}) {
+  if (selectedQueryKey === null) {
+    return null;
+  }
+
+  return (
+    indexQueries(queries).find(
+      (query) => querySelectionKey(query) === selectedQueryKey
+    )?.query ?? null
+  );
 }
 
 function filterQueries({
@@ -159,7 +230,7 @@ function filterQueries({
   search: string;
 }) {
   const normalizedSearch = search.trim().toLowerCase();
-  return queries.filter((query) => {
+  return indexQueries(queries).filter(({ query }) => {
     if (!queryMatchesKind(query, kind)) {
       return false;
     }
@@ -321,11 +392,11 @@ function QueryToolbar({
 function TopQueriesTable({
   onSelectQuery,
   queries,
-  selectedQueryId,
+  selectedQueryKey,
 }: {
-  onSelectQuery: (query: QueryRuntimeInsight) => void;
-  queries: QueryRuntimeInsight[];
-  selectedQueryId: bigint | null;
+  onSelectQuery: (query: IndexedQueryRuntimeInsight) => void;
+  queries: IndexedQueryRuntimeInsight[];
+  selectedQueryKey: string | null;
 }) {
   if (queries.length === 0) {
     return (
@@ -357,19 +428,21 @@ function TopQueriesTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {queries.map((query) => {
+        {queries.map((entry) => {
+          const { query } = entry;
           const queryLabel = queryInsightLabel(query);
-          const selected =
-            selectedQueryId !== null && selectedQueryId === query.queryId;
+          const rowSelectionKey = querySelectionKey(entry);
+          const selected = selectedQueryKey === rowSelectionKey;
           return (
             <TableRow
               className={cn(selected && "bg-muted/70 hover:bg-muted/70")}
-              key={`${query.queryId.toString()}:${query.calls.toString()}`}
+              key={queryRowKey(entry)}
             >
               <TableCell className="min-w-0 max-w-[34rem] py-2 pl-5">
                 <Button
+                  aria-pressed={selected}
                   className="h-auto w-full justify-start overflow-hidden p-0 text-left font-normal hover:bg-transparent"
-                  onClick={() => onSelectQuery(query)}
+                  onClick={() => onSelectQuery(entry)}
                   type="button"
                   variant="ghost"
                 >
@@ -475,11 +548,11 @@ function QueryDetailPanel({
 function TopQueriesCard({
   insights,
   onSelectQuery,
-  selectedQuery,
+  selectedQueryKey,
 }: {
   insights: DatabaseQueryInsights;
-  onSelectQuery: (query: QueryRuntimeInsight | null) => void;
-  selectedQuery: QueryRuntimeInsight | null;
+  onSelectQuery: (query: IndexedQueryRuntimeInsight | null) => void;
+  selectedQueryKey: string | null;
 }) {
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState<QueryKindFilter>("all");
@@ -526,7 +599,7 @@ function TopQueriesCard({
       <TopQueriesTable
         onSelectQuery={onSelectQuery}
         queries={queries}
-        selectedQueryId={selectedQuery?.queryId ?? null}
+        selectedQueryKey={selectedQueryKey}
       />
     </CardShell>
   );
@@ -681,8 +754,15 @@ function QueryInsightsContent({
   insights: DatabaseQueryInsights;
   observedAtLabel: string;
 }) {
-  const [selectedQuery, setSelectedQuery] =
-    useState<QueryRuntimeInsight | null>(insights.topQueries[0] ?? null);
+  const [selectedQueryKey, setSelectedQueryKey] = useState<string | null>(
+    insights.topQueries[0]
+      ? querySelectionKey({ index: 0, query: insights.topQueries[0] })
+      : null
+  );
+  const selectedQuery = findSelectedQuery({
+    queries: insights.topQueries,
+    selectedQueryKey,
+  });
   const hasAnyStats =
     insights.queryStatsAvailable || insights.tableStatsAvailable;
 
@@ -712,8 +792,10 @@ function QueryInsightsContent({
         </div>
         <TopQueriesCard
           insights={insights}
-          onSelectQuery={setSelectedQuery}
-          selectedQuery={selectedQuery}
+          onSelectQuery={(query) =>
+            setSelectedQueryKey(query ? querySelectionKey(query) : null)
+          }
+          selectedQueryKey={selectedQueryKey}
         />
         <div className="grid gap-4 xl:grid-cols-2">
           {insights.tableStatsAvailable ? (
@@ -735,7 +817,7 @@ function QueryInsightsContent({
         </div>
       </div>
       <QueryDetailPanel
-        onClose={() => setSelectedQuery(null)}
+        onClose={() => setSelectedQueryKey(null)}
         query={selectedQuery}
       />
     </div>

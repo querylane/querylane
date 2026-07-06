@@ -13,8 +13,11 @@ import {
   GetDatabaseQueryInsightsResponseSchema,
   type GetDatabaseResponse,
   GetDatabaseResponseSchema,
+  type QueryRuntimeInsight,
   QueryRuntimeInsightSchema,
+  type SequentialScanHotspot,
   SequentialScanHotspotSchema,
+  type TableCacheHitInsight,
   TableCacheHitInsightSchema,
 } from "@/protogen/querylane/console/v1alpha1/database_pb";
 import { PostgreSqlErrorDetailSchema } from "@/protogen/querylane/console/v1alpha1/errors_pb";
@@ -41,6 +44,15 @@ const SELECT_EVENTS_QUERY_BUTTON_RE =
   /SELECT \* FROM events WHERE account_id = \$1/i;
 const UPDATE_EVENTS_QUERY_BUTTON_RE =
   /UPDATE events SET processed_at = now\(\) WHERE id = \$1/i;
+const WITH_UPDATE_QUERY_BUTTON_RE =
+  /WITH moved AS \(UPDATE events SET processed_at = now\(\) RETURNING \*\) SELECT \* FROM moved/i;
+const EXPLAIN_UPDATE_QUERY_BUTTON_RE =
+  /EXPLAIN ANALYZE UPDATE events SET processed_at = now\(\) WHERE id = \$1/i;
+const TABLE_EVENTS_QUERY_BUTTON_RE = /TABLE events/i;
+const VALUES_QUERY_BUTTON_RE = /VALUES \(\$1\)/i;
+const COPY_TO_QUERY_BUTTON_RE = /COPY events TO STDOUT/i;
+const COPY_FROM_QUERY_BUTTON_RE = /COPY events FROM STDIN/i;
+const SLOW_COUNT_QUERY_BUTTON_RE = /SELECT count\(\*\) FROM events/i;
 
 vi.mock("@tanstack/react-router", () => {
   const linkExportName = "Link";
@@ -193,6 +205,197 @@ function queryInsightsResponse() {
         }),
       ],
     }),
+  });
+}
+
+function queryRuntimeInsight({
+  calls,
+  meanTimeMs,
+  query,
+  queryId,
+  totalTimeMs,
+  totalTimeRatio,
+}: {
+  calls: bigint;
+  meanTimeMs: number;
+  query: string;
+  queryId: bigint;
+  totalTimeMs: number;
+  totalTimeRatio: number;
+}) {
+  return createProto(QueryRuntimeInsightSchema, {
+    calls,
+    meanTimeMs,
+    query,
+    queryId,
+    totalTimeMs,
+    totalTimeRatio,
+  });
+}
+
+function queryInsightsResponseWith({
+  queryStatsAvailable = true,
+  sequentialScanHotspots = [],
+  tableCacheHits = [],
+  tableStatsAvailable = true,
+  topQueries = [],
+}: {
+  queryStatsAvailable?: boolean;
+  sequentialScanHotspots?: SequentialScanHotspot[];
+  tableCacheHits?: TableCacheHitInsight[];
+  tableStatsAvailable?: boolean;
+  topQueries?: QueryRuntimeInsight[];
+}) {
+  return createProto(GetDatabaseQueryInsightsResponseSchema, {
+    queryInsights: createProto(DatabaseQueryInsightsSchema, {
+      queryStatsAvailable,
+      sequentialScanHotspots,
+      tableCacheHits,
+      tableStatsAvailable,
+      topQueries,
+    }),
+  });
+}
+
+function queryInsightsResponseWithEdgeQueries() {
+  return queryInsightsResponseWith({
+    topQueries: [
+      queryRuntimeInsight({
+        calls: 8n,
+        meanTimeMs: 16,
+        query:
+          "WITH moved AS (UPDATE events SET processed_at = now() RETURNING *) SELECT * FROM moved",
+        queryId: 100n,
+        totalTimeMs: 128,
+        totalTimeRatio: 1,
+      }),
+      queryRuntimeInsight({
+        calls: 4n,
+        meanTimeMs: 30,
+        query:
+          "EXPLAIN ANALYZE UPDATE events SET processed_at = now() WHERE id = $1",
+        queryId: 101n,
+        totalTimeMs: 120,
+        totalTimeRatio: 0.9,
+      }),
+      queryRuntimeInsight({
+        calls: 10n,
+        meanTimeMs: 2,
+        query: "TABLE events",
+        queryId: 102n,
+        totalTimeMs: 20,
+        totalTimeRatio: 0.2,
+      }),
+      queryRuntimeInsight({
+        calls: 7n,
+        meanTimeMs: 1,
+        query: "VALUES ($1)",
+        queryId: 103n,
+        totalTimeMs: 7,
+        totalTimeRatio: 0.1,
+      }),
+      queryRuntimeInsight({
+        calls: 5n,
+        meanTimeMs: 4,
+        query: "COPY events TO STDOUT",
+        queryId: 104n,
+        totalTimeMs: 20,
+        totalTimeRatio: 0.2,
+      }),
+      queryRuntimeInsight({
+        calls: 2n,
+        meanTimeMs: 9,
+        query: "COPY events FROM STDIN",
+        queryId: 105n,
+        totalTimeMs: 18,
+        totalTimeRatio: 0.18,
+      }),
+      queryRuntimeInsight({
+        calls: 3n,
+        meanTimeMs: 5,
+        query: "",
+        queryId: 0n,
+        totalTimeMs: 15,
+        totalTimeRatio: 0.05,
+      }),
+      queryRuntimeInsight({
+        calls: 2n,
+        meanTimeMs: 6,
+        query: "",
+        queryId: 0n,
+        totalTimeMs: 12,
+        totalTimeRatio: 0.04,
+      }),
+    ],
+  });
+}
+
+function queryInsightsResponseWithSearchableQueries() {
+  return queryInsightsResponseWith({
+    topQueries: [
+      queryRuntimeInsight({
+        calls: 42n,
+        meanTimeMs: 20,
+        query: "SELECT * FROM events WHERE account_id = $1",
+        queryId: 123n,
+        totalTimeMs: 840,
+        totalTimeRatio: 1,
+      }),
+      queryRuntimeInsight({
+        calls: 21n,
+        meanTimeMs: 12,
+        query: "UPDATE events SET processed_at = now() WHERE id = $1",
+        queryId: 456n,
+        totalTimeMs: 252,
+        totalTimeRatio: 0.3,
+      }),
+      queryRuntimeInsight({
+        calls: 3n,
+        meanTimeMs: 38,
+        query: "SELECT count(*) FROM events",
+        queryId: 789n,
+        totalTimeMs: 114,
+        totalTimeRatio: 0.14,
+      }),
+    ],
+  });
+}
+
+function queryInsightsResponseWithUpdatedSelection() {
+  return queryInsightsResponseWith({
+    topQueries: [
+      queryRuntimeInsight({
+        calls: 84n,
+        meanTimeMs: 18,
+        query: "UPDATE events SET processed_at = now() WHERE id = $1",
+        queryId: 456n,
+        totalTimeMs: 1512,
+        totalTimeRatio: 1,
+      }),
+    ],
+  });
+}
+
+function unavailableQueryInsightsResponse() {
+  return queryInsightsResponseWith({
+    queryStatsAvailable: false,
+    tableStatsAvailable: false,
+  });
+}
+
+function queryInsightsWithoutTableStatsResponse() {
+  return queryInsightsResponseWith({
+    tableStatsAvailable: false,
+    topQueries: [
+      queryRuntimeInsight({
+        calls: 42n,
+        meanTimeMs: 20,
+        query: "SELECT * FROM events WHERE account_id = $1",
+        queryId: 123n,
+        totalTimeMs: 840,
+        totalTimeRatio: 1,
+      }),
+    ],
   });
 }
 
@@ -571,5 +774,201 @@ describe("backend database overview", () => {
     expect(screen.getByText("Condition: invalid_password")).toBeTruthy();
     expect(screen.getByText("Operation: list_views")).toBeTruthy();
     expect(screen.getByText("Endpoint: DatabaseCatalog")).toBeTruthy();
+  });
+});
+
+describe("backend database query insights page", () => {
+  test("classifies edge query text without treating unknown statements as writes", async () => {
+    const user = userEvent.setup();
+    state.queryInsightsQuery = { data: queryInsightsResponseWithEdgeQueries() };
+
+    render(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Writes" }));
+
+    expect(
+      screen.getByRole("button", { name: WITH_UPDATE_QUERY_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: EXPLAIN_UPDATE_QUERY_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: COPY_FROM_QUERY_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: TABLE_EVENTS_QUERY_BUTTON_RE })
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: COPY_TO_QUERY_BUTTON_RE })
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Query text unavailable" })
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Reads" }));
+
+    expect(
+      screen.getByRole("button", { name: TABLE_EVENTS_QUERY_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: VALUES_QUERY_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: COPY_TO_QUERY_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: WITH_UPDATE_QUERY_BUTTON_RE })
+    ).toBeNull();
+  });
+
+  test("exposes selected query state without colliding on queryid zero", async () => {
+    const user = userEvent.setup();
+    state.queryInsightsQuery = { data: queryInsightsResponseWithEdgeQueries() };
+
+    render(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    const unavailableQueryButtons = screen.getAllByRole("button", {
+      name: "Query text unavailable",
+    });
+    expect(unavailableQueryButtons).toHaveLength(2);
+    const [firstUnavailableQueryButton, secondUnavailableQueryButton] =
+      unavailableQueryButtons;
+    if (!(firstUnavailableQueryButton && secondUnavailableQueryButton)) {
+      throw new Error("Expected two unavailable query buttons");
+    }
+
+    await user.click(firstUnavailableQueryButton);
+
+    expect(firstUnavailableQueryButton.getAttribute("aria-pressed")).toBe(
+      "true"
+    );
+    expect(secondUnavailableQueryButton.getAttribute("aria-pressed")).toBe(
+      "false"
+    );
+  });
+
+  test("keeps selected query detail synced to refetched insights", async () => {
+    const user = userEvent.setup();
+    state.queryInsightsQuery = { data: queryInsightsResponse() };
+
+    const { rerender } = render(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: UPDATE_EVENTS_QUERY_BUTTON_RE,
+      })
+    );
+    const detail = screen.getByRole("region", { name: "Query detail" });
+    expect(within(detail).getByText("21")).toBeTruthy();
+
+    state.queryInsightsQuery = {
+      data: queryInsightsResponseWithUpdatedSelection(),
+    };
+    rerender(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    expect(within(detail).getByText("84")).toBeTruthy();
+    expect(within(detail).getByText("18 ms")).toBeTruthy();
+  });
+
+  test("filters query insights by search text and mean runtime", async () => {
+    const user = userEvent.setup();
+    state.queryInsightsQuery = {
+      data: queryInsightsResponseWithSearchableQueries(),
+    };
+
+    render(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search top queries" }),
+      "update"
+    );
+
+    expect(
+      screen.getByRole("button", { name: UPDATE_EVENTS_QUERY_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: SELECT_EVENTS_QUERY_BUTTON_RE })
+    ).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: "Clear query search" })
+    );
+    await user.click(screen.getByRole("button", { name: "> 30 ms" }));
+
+    expect(
+      screen.getByRole("button", { name: SLOW_COUNT_QUERY_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: UPDATE_EVENTS_QUERY_BUTTON_RE })
+    ).toBeNull();
+  });
+
+  test("renders unavailable, table-stats-missing, and error states", () => {
+    const { rerender } = render(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    state.queryInsightsQuery = { data: unavailableQueryInsightsResponse() };
+    rerender(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+    expect(screen.getByText("No query insights yet")).toBeTruthy();
+
+    state.queryInsightsQuery = {
+      data: queryInsightsWithoutTableStatsResponse(),
+    };
+    rerender(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+    expect(
+      screen.getByText("Table statistics are unavailable for this database.")
+    ).toBeTruthy();
+
+    state.queryInsightsQuery = {
+      error: new Error("query insights unavailable"),
+      refetch: vi.fn(async () => undefined),
+    };
+    rerender(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
   });
 });
