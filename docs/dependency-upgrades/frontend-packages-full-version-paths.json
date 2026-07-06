@@ -509,60 +509,6 @@
       ]
     },
     {
-      "name": "@sentry/react",
-      "section": "dependencies",
-      "currentSpec": "10.58.0",
-      "current": "10.58.0",
-      "target": "10.60.0",
-      "targetReason": "highest-semver-including-prerelease",
-      "distTags": {
-        "v7": "7.120.4",
-        "v9": "9.47.1",
-        "next": "10.50.0-alpha.0",
-        "v8": "8.55.2",
-        "latest": "10.60.0"
-      },
-      "currentPublishedAt": "2026-06-15T12:28:32.942Z",
-      "targetPublishedAt": "2026-06-23T09:51:48.323Z",
-      "repository": {
-        "type": "git",
-        "url": "git://github.com/getsentry/sentry-javascript.git"
-      },
-      "homepage": "https://github.com/getsentry/sentry-javascript/tree/master/packages/react",
-      "bugs": {
-        "url": "https://github.com/getsentry/sentry-javascript/issues"
-      },
-      "license": "MIT",
-      "path": [
-        "10.59.0",
-        "10.60.0"
-      ]
-    },
-    {
-      "name": "@sentry/webpack-plugin",
-      "section": "devDependencies",
-      "currentSpec": "^5.3.0",
-      "current": "5.3.0",
-      "target": "5.3.0",
-      "targetReason": "highest-semver-including-prerelease",
-      "distTags": {
-        "next": "3.3.0-alpha.1",
-        "latest": "5.3.0"
-      },
-      "currentPublishedAt": "2026-05-12T08:42:43.250Z",
-      "targetPublishedAt": "2026-05-12T08:42:43.250Z",
-      "repository": {
-        "type": "git",
-        "url": "git://github.com/getsentry/sentry-javascript-bundler-plugins.git"
-      },
-      "homepage": "https://github.com/getsentry/sentry-javascript-bundler-plugins/tree/main/packages/webpack-plugin",
-      "bugs": {
-        "url": "https://github.com/getsentry/sentry-javascript-bundler-plugins/issues"
-      },
-      "license": "MIT",
-      "path": []
-    },
-    {
       "name": "@t3-oss/env-core",
       "section": "dependencies",
       "currentSpec": "^0.13.11",
@@ -1868,49 +1814,6 @@
       },
       "license": "MIT",
       "path": []
-    },
-    {
-      "name": "posthog-js",
-      "section": "dependencies",
-      "currentSpec": "1.390.2",
-      "current": "1.390.2",
-      "target": "1.393.4",
-      "targetReason": "highest-semver-including-prerelease",
-      "distTags": {
-        "beta": "1.8.0-beta.1",
-        "alpha": "1.236.8-alpha.0",
-        "previous": "1.297.4",
-        "latest": "1.393.4"
-      },
-      "currentPublishedAt": "2026-06-17T21:25:40.526Z",
-      "targetPublishedAt": "2026-06-24T14:48:04.951Z",
-      "repository": {
-        "type": "git",
-        "url": "git+https://github.com/PostHog/posthog-js.git"
-      },
-      "homepage": "https://posthog.com/docs/libraries/js",
-      "bugs": {
-        "url": "https://github.com/PostHog/posthog-js/issues"
-      },
-      "license": "SEE LICENSE IN LICENSE",
-      "path": [
-        "1.391.0",
-        "1.391.1",
-        "1.391.2",
-        "1.391.3",
-        "1.391.4",
-        "1.391.5",
-        "1.391.6",
-        "1.391.7",
-        "1.391.8",
-        "1.391.9",
-        "1.392.0",
-        "1.393.0",
-        "1.393.1",
-        "1.393.2",
-        "1.393.3",
-        "1.393.4"
-      ]
     },
     {
       "name": "react",

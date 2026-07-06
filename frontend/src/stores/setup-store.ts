@@ -1,7 +1,7 @@
 import { createClient } from "@connectrpc/connect";
 import { create, type StateCreator } from "zustand";
 
-import { captureException, logger } from "@/lib/observability/sentry";
+import { captureException, logger } from "@/lib/diagnostics";
 import { transport } from "@/lib/transport";
 import { normalizeAppUiError, reportAppUiError } from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";

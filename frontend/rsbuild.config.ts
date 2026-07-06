@@ -1,4 +1,3 @@
-import { createRequire } from "node:module";
 import path from "node:path";
 import { env } from "node:process";
 import { defineConfig } from "@rsbuild/core";
@@ -22,7 +21,6 @@ const reactCompilerConfig = {
 };
 
 const RSPACK_BUILD_CACHE_DIRECTORY = "node_modules/.cache/rsbuild";
-const SENTRY_APPLICATION_KEY = "querylane-frontend";
 const RSPACK_BUILD_DEPENDENCIES = [
   path.resolve(import.meta.dirname, ".browserslistrc"),
   path.resolve(import.meta.dirname, "bun.lock"),
@@ -45,40 +43,19 @@ const buildEnv = createEnv({
   server: {
     NODE_ENV: z.enum(["development", "production", "test"]).optional(),
     PUBLIC_API_BASE_URL: z.string().optional(),
-    PUBLIC_POSTHOG_HOST: z.string().optional(),
-    PUBLIC_POSTHOG_KEY: z.string().optional(),
-    PUBLIC_SENTRY_ENVIRONMENT: z.string().optional(),
-    PUBLIC_SENTRY_RELEASE: z.string().optional(),
     RSDOCTOR: z.string().optional(),
-    SENTRY_AUTH_TOKEN: z.string().optional(),
-    SENTRY_ORG: z.string().optional(),
-    SENTRY_PROJECT: z.string().optional(),
   },
 });
 
 const enableRsdoctor = Boolean(buildEnv.RSDOCTOR);
-const sentryAuthToken = buildEnv.SENTRY_AUTH_TOKEN;
-const sentryEnvironment = buildEnv.PUBLIC_SENTRY_ENVIRONMENT;
-const sentryOrg = buildEnv.SENTRY_ORG;
-const sentryProject = buildEnv.SENTRY_PROJECT;
-const sentryReleaseName = buildEnv.PUBLIC_SENTRY_RELEASE;
-const enableSentryPlugin = buildEnv.NODE_ENV === "production";
-const enableSentrySourceMapUpload = Boolean(
-  enableSentryPlugin && sentryAuthToken && sentryOrg && sentryProject
-);
-const require = createRequire(import.meta.url);
 
 const buildCacheDigest = createBuildCacheDigest({
   env,
   rsdoctorEnabled: enableRsdoctor,
-  sentryUploadEnabled: enableSentrySourceMapUpload,
 });
 const preconnectOrigins = createPreconnectOrigins({
   apiBaseUrl: buildEnv.PUBLIC_API_BASE_URL,
   isProduction: buildEnv.NODE_ENV === "production",
-  postHogApiKey: buildEnv.PUBLIC_POSTHOG_KEY,
-  postHogHost:
-    buildEnv.PUBLIC_POSTHOG_HOST?.trim() || "https://us.i.posthog.com",
 });
 
 const rsdoctorPluginOptions = {
@@ -88,7 +65,7 @@ const rsdoctorPluginOptions = {
     bundle: true,
     // Surface expensive loader transforms when frontend build time regresses.
     loader: true,
-    // Attribute bundle changes to router, Sentry, Tailwind, and React plugins.
+    // Attribute bundle changes to router, Tailwind, and React plugins.
     plugins: true,
     // Catch slow or CJS-fallback module resolution before it hits CI.
     resolver: true,
@@ -140,6 +117,8 @@ export default defineConfig({
   },
   output: {
     sourceMap: {
+      // Bundle budgets classify deferred feature chunks from source maps. Keep
+      // maps hidden in production without restoring Sentry upload plumbing.
       js:
         buildEnv.NODE_ENV === "production"
           ? "hidden-source-map"
@@ -153,8 +132,7 @@ export default defineConfig({
       cacheDigest: buildCacheDigest,
       cacheDirectory: RSPACK_BUILD_CACHE_DIRECTORY,
     },
-    // Strip direct ad hoc diagnostics from production bundles. Runtime
-    // observability should flow through Sentry/PostHog wrappers, while thrown
+    // Strip direct ad hoc diagnostics from production bundles while thrown
     // errors and explicit error handling stay intact.
     removeConsole: ["log", "info", "warn", "table", "group"],
   },
@@ -198,36 +176,6 @@ export default defineConfig({
           target: "react",
         })
       );
-      if (enableSentrySourceMapUpload) {
-        const { sentryWebpackPlugin } = require("@sentry/webpack-plugin");
-        config.plugins.push(
-          sentryWebpackPlugin({
-            applicationKey: SENTRY_APPLICATION_KEY,
-            authToken: sentryAuthToken,
-            bundleSizeOptimizations: {
-              excludeDebugStatements: true,
-              excludeReplayIframe: true,
-              excludeReplayShadowDom: true,
-            },
-            org: sentryOrg,
-            project: sentryProject,
-            release: {
-              ...(sentryEnvironment
-                ? { deploy: { env: sentryEnvironment } }
-                : {}),
-              name: sentryReleaseName,
-            },
-            // Production builds emit hidden source maps for upload only: bundle
-            // comments do not advertise them, and the plugin deletes `.map`
-            // files after upload so implementation sources are not shipped.
-            sourcemaps: {
-              assets: "./dist/**/*.{js,map}",
-              filesToDeleteAfterUpload: "./dist/**/*.map",
-            },
-            telemetry: false,
-          })
-        );
-      }
       // Rspack's native watcher gives faster local invalidation on large
       // frontend trees. It is a no-op for one-shot production builds. Everything
       // else about bundle optimization is left to Rspack's mode-aware defaults:

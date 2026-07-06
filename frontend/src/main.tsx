@@ -5,9 +5,7 @@ import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 
 import { RouteErrorView } from "@/components/route-error-view";
-import { trackPostHogPageview } from "@/lib/observability/posthog-events";
-import { logger, sentryConfig, startSpan } from "@/lib/observability/sentry";
-import { initTelemetry } from "@/lib/observability/telemetry";
+import { logger } from "@/lib/diagnostics";
 import { queryClient } from "@/lib/query-client";
 import { createReactRootErrorHandlers } from "@/lib/react-root-errors";
 import {
@@ -44,8 +42,6 @@ const router = createRouter({
   routeTree,
 });
 
-initTelemetry();
-
 router.subscribe("onResolved", (event) => {
   if (!(event.hrefChanged || event.pathChanged)) {
     return;
@@ -54,37 +50,6 @@ router.subscribe("onResolved", (event) => {
   const activeMatch = router.state.matches.at(-1);
   const routeId = activeMatch?.routeId ?? "unknown-route";
   const routePath = activeMatch?.fullPath ?? event.toLocation.pathname;
-  const routeAnalytics = {
-    hash: event.toLocation.hash,
-    pathname: event.toLocation.pathname,
-    routeFullPath: routePath,
-    routeId,
-    search: event.toLocation.searchStr,
-  };
-
-  startSpan(
-    {
-      attributes: {
-        "route.full_path": routePath,
-        "route.id": routeId,
-        "url.hash": event.toLocation.hash,
-        "url.path": event.toLocation.pathname,
-        "url.search": event.toLocation.searchStr,
-      },
-      name: routeId,
-      op: "navigation",
-    },
-    (span) => {
-      span.setAttribute("route.full_path", routePath);
-      span.setAttribute("route.id", routeId);
-      span.setAttribute("sentry.enabled", sentryConfig.enabled);
-      span.setAttribute("url.hash", event.toLocation.hash);
-      span.setAttribute("url.search", event.toLocation.searchStr);
-      return;
-    }
-  );
-
-  trackPostHogPageview(routeAnalytics);
 
   logger.debug(logger.fmt`Navigation resolved for ${routePath}`, {
     routeId,

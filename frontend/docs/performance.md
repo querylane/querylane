@@ -84,6 +84,6 @@ The Lighthouse command uses three desktop runs and median assertions against a m
 
 1. Move bundle comparison into pull requests once the main artifact source is stable.
 2. Add Playwright collection for Long Animation Frames and long tasks around Data Explorer interactions.
-3. Add sanitized Web Vitals real-user monitoring through one owner only, either Sentry or PostHog.
+3. Add local Web Vitals lab collection once the report shape is useful and stable.
 4. Add CI only after the local report shape is useful and stable.
 5. Add a mocked query editor perf journey once the route has stable fixtures and a clear ready marker.

@@ -45,7 +45,7 @@ bun add -d @typescript/native-preview@7.0.0-dev.20260705.1 --ignore-scripts
 bun remove bun-types --ignore-scripts
 bun run lint:fix
 bun run type:check
-bun run test:unit -- src/components/onboarding-wizard/hooks/use-setup-execution.unit.test.ts src/features/data-explorer/data-explorer-page-controller.unit.test.ts src/lib/observability/sentry.unit.test.ts src/lib/route-data-prefetch.unit.test.ts src/lib/transport.unit.test.ts src/theme-provider.unit.test.tsx
+bun run test:unit -- src/components/onboarding-wizard/hooks/use-setup-execution.unit.test.ts src/features/data-explorer/data-explorer-page-controller.unit.test.ts src/lib/route-data-prefetch.unit.test.ts src/lib/transport.unit.test.ts src/theme-provider.unit.test.tsx
 bun run test:integration -- src/features/data-explorer/data-explorer-page.integration.test.tsx src/lib/download-blob.integration.test.ts
 bun run test
 bun run doctor:changed

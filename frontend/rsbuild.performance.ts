@@ -21,20 +21,6 @@ const managedChunkCacheGroups = {
     reuseExistingChunk: true,
     test: /[/\\]node_modules[/\\]react-data-grid[/\\]/,
   },
-  observabilityPostHog: {
-    chunks: "async",
-    name: "posthog",
-    priority: 35,
-    reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\]posthog-js[/\\]/,
-  },
-  observabilitySentry: {
-    chunks: "async",
-    name: "sentry",
-    priority: 35,
-    reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\](?:@sentry|@sentry-internal)[/\\]/,
-  },
   protobufRpc: {
     chunks: "async",
     name: "protobuf",
@@ -99,14 +85,11 @@ const productionOptimizationOverrides = {
 interface BuildCacheDigestInput {
   env: Record<string, string | undefined>;
   rsdoctorEnabled: boolean;
-  sentryUploadEnabled: boolean;
 }
 
 interface PreconnectOriginInput {
   apiBaseUrl?: string | undefined;
   isProduction: boolean;
-  postHogApiKey?: string | undefined;
-  postHogHost?: string | undefined;
 }
 
 function httpOrigin(rawValue: string | undefined) {
@@ -130,7 +113,6 @@ function httpOrigin(rawValue: string | undefined) {
 function createBuildCacheDigest({
   env,
   rsdoctorEnabled,
-  sentryUploadEnabled,
 }: BuildCacheDigestInput) {
   return [
     JSON.stringify(
@@ -145,24 +127,20 @@ function createBuildCacheDigest({
     ),
     env["NODE_ENV"] ?? "",
     `rsdoctor:${String(rsdoctorEnabled)}`,
-    `sentry-upload:${String(sentryUploadEnabled)}`,
   ];
 }
 
 function createPreconnectOrigins({
   apiBaseUrl,
   isProduction,
-  postHogApiKey,
-  postHogHost,
 }: PreconnectOriginInput) {
   if (!isProduction) {
     return [];
   }
 
-  const origins = [
-    httpOrigin(apiBaseUrl),
-    postHogApiKey?.trim() ? httpOrigin(postHogHost) : undefined,
-  ].filter((origin): origin is string => typeof origin === "string");
+  const origins = [httpOrigin(apiBaseUrl)].filter(
+    (origin): origin is string => typeof origin === "string"
+  );
 
   return Array.from(new Set(origins));
 }

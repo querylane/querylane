@@ -32,8 +32,6 @@ Every published version path captured in JSON because this request spans 80 dire
 | @rsbuild/plugin-tailwindcss | devDependencies | 2.0.3 | 2.0.3 | highest-semver-including-prerelease | 11 | 0 | no |
 | @rsdoctor/rspack-plugin | devDependencies | 1.5.15 | 2.0.0-alpha.0 | alpha-after-review-with-rsdoctor-build-verification | 0 | 2 | yes |
 | @rspack/core | devDependencies | 2.1.0-beta.0 | 2.1.0-rc.0 | highest-semver-including-prerelease | 1 | 1 | yes |
-| @sentry/react | dependencies | 10.58.0 | 10.60.0 | highest-semver-including-prerelease | 1 | 2 | no |
-| @sentry/webpack-plugin | devDependencies | ^5.3.0 | 5.3.0 | highest-semver-including-prerelease | 43 | 0 | no |
 | @t3-oss/env-core | dependencies | ^0.13.11 | 0.13.11 | highest-semver-including-prerelease | 93 | 0 | no |
 | @tailwindcss/postcss | devDependencies | 4.3.1 | 4.3.1 | stable-4x-after-review | 2 | 0 | no |
 | @tailwindcss/vite | devDependencies | 4.3.1 | 4.3.1 | stable-4x-after-review | 2 | 0 | no |
@@ -74,7 +72,6 @@ Every published version path captured in JSON because this request spans 80 dire
 | next-themes | dependencies | ^0.4.6 | 0.4.6 | stale-prerelease-skipped-latest-stable | 469 | 0 | no |
 | playwright | devDependencies | 1.61.0 | 1.62.0-alpha-2026-06-24 | highest-semver-including-prerelease | 0 | 16 | yes |
 | playwright-core | devDependencies | 1.61.0 | 1.62.0-alpha-2026-06-24 | highest-semver-including-prerelease | 0 | 16 | yes |
-| posthog-js | dependencies | 1.390.2 | 1.393.4 | highest-semver-including-prerelease | 0 | 16 | no |
 | react | dependencies | 19.2.7 | 19.2.7 | stable-latest-after-review | 18 | 0 | no |
 | react-data-grid | dependencies | 7.0.0-beta.59 | 7.0.0-beta.59 | current-latest-stale-canary-skipped | 1855 | 0 | yes |
 | react-day-picker | dependencies | ^10.0.1 | 10.0.1 | highest-semver-including-prerelease | 40 | 0 | no |
@@ -116,10 +113,10 @@ Syntax/style-guide changes:
 Behavior/config changes:
 - Added an admin-shell browser-test scale shim to preserve existing Linux visual baselines after Vitest 5 screenshot capture semantics changed.
 - Removed all package-manager overrides after review accepted dev-tooling transitive advisory risk over forced overrides.
-- Sentry hardening is now bundled: immediate telemetry init, relative and absolute same-origin trace propagation targets, third-party error filtering with application key, source-map upload/delete config, deploy env metadata, bundle-size optimizations, and backend CORS defaults for `sentry-trace`/`baggage`.
+- External browser telemetry setup is no longer bundled in this app.
 - Advanced Rspack/Rsbuild settings are now explicit: deterministic IDs, duplicate chunk merge, real content hash, export/module graph optimizers, `incremental: advance-silent`, `runtimeMode: rspack`, deferred imports, native watcher, pure functions, future defaults, and explicit Rsdoctor loader/plugin/resolver/bundle/tree-shaking analysis unless explicitly disabled.
 - Very high toolchain blast radius remains: Vitest beta, Playwright alpha, Rsbuild/Rspack rc, Rsdoctor alpha, and TypeScript native-preview.
-- Some targets are younger than seven days: @axe-core/playwright@4.12.2-6c589ff.0, @biomejs/biome@2.5.1, @bufbuild/protobuf@2.12.1, @rsbuild/core@2.1.0-rc.0, @rspack/core@2.1.0-rc.0, @sentry/react@10.60.0, @tanstack/query-core@5.101.1, @tanstack/react-query@5.101.1, @tanstack/react-query-devtools@5.101.1, @tanstack/react-table@9.0.0-beta.18, @types/node@26.0.0, @typescript/native-preview@7.0.0-dev.20260624.1, @xyflow/react@12.11.1, playwright@1.62.0-alpha-2026-06-24, playwright-core@1.62.0-alpha-2026-06-24, posthog-js@1.393.4, react-doctor@0.5.8.
+- Some targets are younger than seven days: @axe-core/playwright@4.12.2-6c589ff.0, @biomejs/biome@2.5.1, @bufbuild/protobuf@2.12.1, @rsbuild/core@2.1.0-rc.0, @rspack/core@2.1.0-rc.0, @tanstack/query-core@5.101.1, @tanstack/react-query@5.101.1, @tanstack/react-query-devtools@5.101.1, @tanstack/react-table@9.0.0-beta.18, @types/node@26.0.0, @typescript/native-preview@7.0.0-dev.20260624.1, @xyflow/react@12.11.1, playwright@1.62.0-alpha-2026-06-24, playwright-core@1.62.0-alpha-2026-06-24, react-doctor@0.5.8.
 - Non-semver pins are intentional risky-channel pins in this PR: @axe-core/playwright uses a commit-SHA prerelease and bun-types uses a dated canary because the request explicitly asked for beta/rc/alpha/nightly packages. Re-check both on the next dependency sweep because registry availability is more fragile than normal semver releases.
 
 Repo actions before target install:
@@ -127,7 +124,7 @@ Repo actions before target install:
 - Removed all overrides; no package-manager resolution forcing remains.
 
 ## Dependency tree
-Target: all direct frontend package entries. Parents: frontend/package.json. Children: transitive packages resolved by Bun. Repo dependents: frontend source, tests, scripts, Rsbuild config, Vitest config, Playwright E2E, bundle/lighthouse scripts. Peers: React, React DOM, TanStack Query, Rsbuild/Rspack, Tailwind, Vitest, Playwright. Plugins/adapters: connect-query, router-plugin, rsbuild plugins, tailwind plugins, vitest browser/playwright adapter, Sentry webpack plugin.
+Target: all direct frontend package entries. Parents: frontend/package.json. Children: transitive packages resolved by Bun. Repo dependents: frontend source, tests, scripts, Rsbuild config, Vitest config, Playwright E2E, bundle/lighthouse scripts. Peers: React, React DOM, TanStack Query, Rsbuild/Rspack, Tailwind, Vitest, Playwright. Plugins/adapters: connect-query, router-plugin, rsbuild plugins, tailwind plugins, vitest browser/playwright adapter.
 
 ## Non-SemVer scale
 Release cadence: high. Change volume: very high. Diff size: high lockfile churn. API churn: high. Effort: high. Danger/blast radius: very high.
@@ -162,7 +159,7 @@ QUALITY_BASE_REF=origin/main bun run test:browser:changed -- --reporter=verbose
 ```
 
 ## Verification
-Lint: pass. Type check: pass. Tests: full unit/integration pass; targeted Sentry/telemetry/harness unit pass. Backend CORS targeted tests pass. Build/vet/security scan: normal build pass (`initial-br=239.9 KiB`, `total-br=801.6 KiB`), Rsdoctor alpha `build:profile` pass. Changed browser passes locally after the Vitest 5 browser-scale fix. `bun audit` reports dev-tooling transitives because package overrides were intentionally removed. `build:profile` removes `dist` first so Rsdoctor output cannot mix stale profile assets into later budget checks. Dev-server smoke passed with native watcher/runtime experiments enabled (`bun run dev`, `curl /`, live edit, `curl /`).
+Lint: pass. Type check: pass. Tests: full unit/integration pass; targeted harness unit pass. Backend CORS targeted tests pass. Build/vet/security scan: normal build pass (`initial-br=239.9 KiB`, `total-br=801.6 KiB`), Rsdoctor alpha `build:profile` pass. Changed browser passes locally after the Vitest 5 browser-scale fix. `bun audit` reports dev-tooling transitives because package overrides were intentionally removed. `build:profile` removes `dist` first so Rsdoctor output cannot mix stale profile assets into later budget checks. Dev-server smoke passed with native watcher/runtime experiments enabled (`bun run dev`, `curl /`, live edit, `curl /`).
 
 ## Known residual risk
 - Frontend still carries risky prerelease/nightly toolchain pins; re-check the SHA/date prereleases during the next dependency sweep.

@@ -33,10 +33,6 @@ jobs:
     permissions:
       actions: write
       contents: read
-    env:
-      SENTRY_AUTH_TOKEN: ${{ vars.SENTRY_AUTH_TOKEN != '' && vars.SENTRY_AUTH_TOKEN || secrets.SENTRY_AUTH_TOKEN || '' }}
-      SENTRY_ORG: ${{ vars.SENTRY_ORG != '' && vars.SENTRY_ORG || secrets.SENTRY_ORG || '' }}
-      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT != '' && vars.SENTRY_PROJECT || secrets.SENTRY_PROJECT || '' }}
     defaults:
       run:
         working-directory: frontend
@@ -114,9 +110,6 @@ jobs:
 
       # --- Build ---
       - name: Build frontend
-        env:
-          PUBLIC_SENTRY_ENVIRONMENT: production
-          PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
         run: bun run build
 
       # --- React Doctor ---

@@ -3,8 +3,8 @@ import type { Interceptor } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 
 import { env } from "@/env";
+import { logger } from "@/lib/diagnostics";
 import { createInstanceRpcConcurrencyInterceptor } from "@/lib/instance-rpc-concurrency";
-import { logger, startSpan } from "@/lib/observability/sentry";
 import {
   attachAppUiErrorContext,
   normalizeAppUiError,
@@ -45,7 +45,6 @@ interface SetupInterceptorDependencies {
   loadBlockingErrorStore: () => Promise<BlockingErrorStoreModule>;
   logger: typeof logger;
   markSetupRequired: () => void;
-  startSpan: typeof startSpan;
 }
 
 interface ConnectRequestLike {
@@ -87,7 +86,6 @@ const defaultSetupInterceptorDependencies: SetupInterceptorDependencies = {
   loadBlockingErrorStore: () => import("@/stores/blocking-error-store"),
   logger,
   markSetupRequired,
-  startSpan,
 };
 
 function encodeBase64Utf8(value: string): string {
@@ -325,91 +323,72 @@ async function buildRequestContext(
 function createSetupInterceptor(
   dependencies: SetupInterceptorDependencies = defaultSetupInterceptorDependencies
 ): Interceptor {
-  return (next) => (req) => {
+  return (next) => async (req) => {
     const endpoint = getRpcEndpoint(req);
 
-    return dependencies.startSpan(
-      {
-        attributes: {
-          connection_mode: "connectrpc",
-          endpoint,
-          "http.method": "POST",
-        },
-        name: endpoint,
-        op: "http.client",
-      },
-      async (span) => {
-        try {
-          const response = await next(req);
-          span.setAttribute("result", "success");
-          return response;
-        } catch (err) {
-          span.setAttribute("result", "error");
-          const request: AppUiErrorRequestContext | undefined =
-            await buildRequestContext(req).catch(
-              (
-                requestContextError: unknown
-              ): AppUiErrorRequestContext | undefined => {
-                dependencies.logger.warn(
-                  "Failed to build API error request context",
-                  {
-                    endpoint,
-                    error: requestContextError,
-                  }
-                );
-                return;
-              }
-            );
-          attachAppUiErrorContext(err, {
-            area: "transport",
-            endpoint,
-            request,
-            source: "connect",
-          });
-          const uiError = normalizeAppUiError(err, {
-            area: "transport",
-            endpoint,
-            request,
-            source: "connect",
-          });
-
-          const blockingDecision = decideBlockingAppState({
-            currentHref: dependencies.getCurrentHref(),
-            error: uiError,
-          });
-
-          if (blockingDecision.setupRequired) {
-            dependencies.logger.info(
-              "Setup required detected from API response",
+    try {
+      return await next(req);
+    } catch (err) {
+      const request: AppUiErrorRequestContext | undefined =
+        await buildRequestContext(req).catch(
+          (
+            requestContextError: unknown
+          ): AppUiErrorRequestContext | undefined => {
+            dependencies.logger.warn(
+              "Failed to build API error request context",
               {
                 endpoint,
+                error: requestContextError,
               }
             );
-
-            dependencies.markSetupRequired();
+            return;
           }
+        );
+      attachAppUiErrorContext(err, {
+        area: "transport",
+        endpoint,
+        request,
+        source: "connect",
+      });
+      const uiError = normalizeAppUiError(err, {
+        area: "transport",
+        endpoint,
+        request,
+        source: "connect",
+      });
 
-          if (blockingDecision.blockingError) {
-            const { useBlockingErrorStore } =
-              await dependencies.loadBlockingErrorStore();
-            useBlockingErrorStore
-              .getState()
-              .setBlockingError(
-                blockingDecision.blockingError,
-                blockingDecision.returnTo
-              );
-          }
+      const blockingDecision = decideBlockingAppState({
+        currentHref: dependencies.getCurrentHref(),
+        error: uiError,
+      });
 
-          reportAppUiError(uiError, {
-            tags: {
-              endpoint,
-            },
-          });
+      if (blockingDecision.setupRequired) {
+        dependencies.logger.info("Setup required detected from API response", {
+          endpoint,
+        });
 
-          throw err;
-        }
+        dependencies.markSetupRequired();
       }
-    );
+
+      if (blockingDecision.blockingError) {
+        const { useBlockingErrorStore } =
+          await dependencies.loadBlockingErrorStore();
+        useBlockingErrorStore
+          .getState()
+          .setBlockingError(
+            blockingDecision.blockingError,
+            blockingDecision.returnTo
+          );
+      }
+
+      reportAppUiError(uiError, {
+        tags: {
+          endpoint,
+        },
+      });
+
+      throw err;
+    }
   };
 }
 

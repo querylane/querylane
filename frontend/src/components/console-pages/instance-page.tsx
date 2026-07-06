@@ -82,6 +82,7 @@ import {
   formatUptime,
 } from "@/lib/console-resources";
 import { useDb } from "@/lib/db-context";
+import { logger } from "@/lib/diagnostics";
 import {
   getMetricPartialErrors,
   type MetricPartialErrors,
@@ -97,7 +98,6 @@ import {
   seriesByMetric,
 } from "@/lib/metrics";
 import { handleNavigationError } from "@/lib/navigation-errors";
-import { logger } from "@/lib/observability/sentry";
 import {
   formatReplicationRole,
   toSslMode,
