@@ -46,6 +46,8 @@ export function resolveBreadcrumbTail(pathname: string): BreadcrumbTail {
       return { kind: "page", label: "Configuration" };
     case "database.extensions":
       return { kind: "page", label: "Extensions" };
+    case "database.insights":
+      return { kind: "page", label: "Query insights" };
     case "database.explorer":
       return { kind: "page", label: "Data Explorer" };
     case "instance.roles": {

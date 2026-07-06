@@ -114,6 +114,7 @@ function resolveActivePage(
     const blank: NavActiveState = {
       databaseExplorer: false,
       databaseExtensions: false,
+      databaseInsights: false,
       databaseOverview: false,
       instanceConfiguration: false,
       instanceOverview: false,
@@ -122,6 +123,7 @@ function resolveActivePage(
     const activeKeyMap: Record<AdminPageId, keyof NavActiveState> = {
       "database.explorer": "databaseExplorer",
       "database.extensions": "databaseExtensions",
+      "database.insights": "databaseInsights",
       "database.overview": "databaseOverview",
       "instance.configuration": "instanceConfiguration",
       "instance.overview": "instanceOverview",

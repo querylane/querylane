@@ -1,4 +1,5 @@
 import {
+  ChartNoAxesColumnIncreasing,
   DatabaseZap,
   FolderTree,
   LayoutDashboard,
@@ -68,6 +69,7 @@ function buildNavLinkProps({
 
   if (ids.instanceId && ids.databaseId) {
     linkToPage({ page: "database.overview" });
+    linkToPage({ page: "database.insights" });
     linkToPage({ page: "database.extensions" });
     linkToPage({ page: "database.explorer" });
   }
@@ -125,6 +127,13 @@ function getDatabaseNav({
           isDisabled: !paths.databaseOverview,
           key: "database.overview",
           label: "Overview",
+        },
+        {
+          icon: ChartNoAxesColumnIncreasing,
+          isActive: active.databaseInsights,
+          isDisabled: !paths.databaseInsights,
+          key: "database.insights",
+          label: "Query insights",
         },
         {
           icon: Puzzle,
