@@ -21,6 +21,7 @@ env:
   # is applied unless a repository variable deliberately overrides it.
   VISUAL_RECAP_SKILL_SOURCE: ${{ vars.VISUAL_RECAP_SKILL_SOURCE || 'repo' }}
   VISUAL_RECAP_SECRET_SCAN: ${{ vars.VISUAL_RECAP_SECRET_SCAN || 'high-confidence' }}
+  VISUAL_RECAP_AGENT_TIMEOUT_SECONDS: ${{ vars.VISUAL_RECAP_AGENT_TIMEOUT_SECONDS || '300' }}
 
 jobs:
   gate:
@@ -47,6 +48,8 @@ jobs:
           VISUAL_RECAP_MODEL: ${{ vars.VISUAL_RECAP_MODEL }}
           VISUAL_RECAP_SKILL_SOURCE: ${{ env.VISUAL_RECAP_SKILL_SOURCE }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          VISUAL_RECAP_ALLOW_SELF_TEST: ${{ vars.VISUAL_RECAP_ALLOW_SELF_TEST }}
+          VISUAL_RECAP_AGENT_TIMEOUT_SECONDS: ${{ env.VISUAL_RECAP_AGENT_TIMEOUT_SECONDS }}
         with:
           script: |
             const pr = context.payload.pull_request;
@@ -104,6 +107,11 @@ jobs:
             }
             const usesRepoSkill = skillSource === 'repo';
 
+            const timeoutSeconds = Number(process.env.VISUAL_RECAP_AGENT_TIMEOUT_SECONDS || '300');
+            if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 60 || timeoutSeconds > 900) {
+              reasons.push('invalid VISUAL_RECAP_AGENT_TIMEOUT_SECONDS value (expected integer 60-900)');
+            }
+
             // Self-modifying guard, evaluated in the trusted gate (runs NO
             // PR-checked-out code): skip the ENTIRE job if the PR touches the
             // repo-pinned skill instructions or any agent config the runner
@@ -115,7 +123,7 @@ jobs:
             // Trusted write actors may edit recap-control files as normal
             // reviewable content; running the recap is useful signal for those
             // changes.
-            if (pr && isFork && !isTrustedAuthor) {
+            if (pr && usesRepoSkill) {
               try {
                 const files = await github.paginate(github.rest.pulls.listFiles, {
                   owner: context.repo.owner,
@@ -124,16 +132,18 @@ jobs:
                   per_page: 100,
                 });
                 const isSensitive = (p) =>
-                  (usesRepoSkill && /(^|\/)skills\/visual-(recap|plan|plans)\//.test(p)) ||
-                  (usesRepoSkill && p.startsWith('.agents/skills/visual-')) ||
-                  (usesRepoSkill && p.startsWith('.agents/commands/visual-')) ||
+                  /(^|\/)skills\/visual-(recap|plan|plans)\//.test(p) ||
+                  p.startsWith('.agents/skills/visual-') ||
+                  p.startsWith('.agents/commands/visual-') ||
+                  p === '.github/workflows/pr-visual-recap.yml' ||
                   p.startsWith('.claude/') ||
                   p === 'CLAUDE.md' ||
                   p === 'AGENTS.md' ||
                   p === '.mcp.json';
                 const hits = files.map((f) => f.filename).filter(isSensitive);
-                if (hits.length) {
-                  reasons.push(`PR modifies recap-control files (${hits.slice(0, 3).join(', ')}${hits.length > 3 ? ', …' : ''}) — skipping so untrusted PR code never runs with secrets`);
+                const allowSelfTest = (process.env.VISUAL_RECAP_ALLOW_SELF_TEST || '').toLowerCase() === 'true';
+                if (hits.length && (!allowSelfTest || (isFork && !isTrustedAuthor))) {
+                  reasons.push(`PR modifies recap-control files (${hits.slice(0, 3).join(', ')}${hits.length > 3 ? ', …' : ''}) — skipping so the recap does not run with instructions changed by the same PR`);
                 }
               } catch (e) {
                 // Fail closed: if the file list can't be read, skip.
@@ -221,6 +231,7 @@ jobs:
       VISUAL_RECAP_REASONING: ${{ vars.VISUAL_RECAP_REASONING }}
       VISUAL_RECAP_SKILL_SOURCE: ${{ vars.VISUAL_RECAP_SKILL_SOURCE || 'repo' }}
       VISUAL_RECAP_SECRET_SCAN: ${{ vars.VISUAL_RECAP_SECRET_SCAN || 'high-confidence' }}
+      VISUAL_RECAP_AGENT_TIMEOUT_SECONDS: ${{ vars.VISUAL_RECAP_AGENT_TIMEOUT_SECONDS || '300' }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -463,16 +474,18 @@ jobs:
           rm -f recap-source.json recap-url.txt recap-url-reason.txt claude-result.json claude-stderr.log
           run_claude() {
             set +e
-            npx -y @anthropic-ai/claude-code@2 "${CLAUDE_ARGS[@]}" > claude-result.json 2> claude-stderr.log
+            timeout --foreground "${VISUAL_RECAP_AGENT_TIMEOUT_SECONDS:-300}" npx -y @anthropic-ai/claude-code@2 "${CLAUDE_ARGS[@]}" > claude-result.json 2> claude-stderr.log
             CLAUDE_STATUS="$?"
             set -e
+            if [ "$CLAUDE_STATUS" = "124" ]; then
+              echo "Claude Code timed out after ${VISUAL_RECAP_AGENT_TIMEOUT_SECONDS:-300} seconds." >> claude-stderr.log
+            fi
             echo "$CLAUDE_STATUS" > claude-exit-code.txt
           }
           run_claude
-          # A clean agent exit WITHOUT recap-source.json is the strongest
-          # "retry me" signal — the deterministic publisher needs that file, and
-          # the agent occasionally finishes a turn without writing it. Retry once.
-          if [ ! -s recap-source.json ]; then
+          # Retry only a clean-but-empty agent exit. Never double-spend time on
+          # timeout/auth/tool failures; later steps post the failure summary.
+          if [ "$(cat claude-exit-code.txt)" = "0" ] && [ ! -s recap-source.json ]; then
             echo "::warning::recap-source.json missing after the agent run; retrying the agent once."
             sleep 5
             run_claude
@@ -503,15 +516,16 @@ jobs:
           rm -f recap-source.json recap-url.txt recap-url-reason.txt codex-events.jsonl codex-stderr.log
           run_codex() {
             set +e
-            npx -y @openai/codex@0 "${CODEX_ARGS[@]}" --json "$(cat recap-prompt.md)" 2> codex-stderr.log | tee codex-events.jsonl
+            timeout --foreground "${VISUAL_RECAP_AGENT_TIMEOUT_SECONDS:-300}" npx -y @openai/codex@0 "${CODEX_ARGS[@]}" --json "$(cat recap-prompt.md)" 2> codex-stderr.log | tee codex-events.jsonl
             CODEX_STATUS="${PIPESTATUS[0]}"
             set -e
+            if [ "$CODEX_STATUS" = "124" ]; then
+              echo "Codex timed out after ${VISUAL_RECAP_AGENT_TIMEOUT_SECONDS:-300} seconds." >> codex-stderr.log
+            fi
             echo "$CODEX_STATUS" > codex-exit-code.txt
           }
           run_codex
-          # Retry once if the agent exited without writing recap-source.json
-          # (see the Claude step) — the publisher needs that file.
-          if [ ! -s recap-source.json ]; then
+          if [ "$(cat codex-exit-code.txt)" = "0" ] && [ ! -s recap-source.json ]; then
             echo "::warning::recap-source.json missing after the agent run; retrying the agent once."
             sleep 5
             run_codex
