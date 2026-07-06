@@ -29,9 +29,7 @@ const documentedDisabledRuleRationales = {
   "react-doctor/forbid-component-props":
     "className is an intentional Tailwind/shadcn styling API.",
   "react-doctor/jsx-boolean-value":
-    "Ultracite formatter rewrites shorthand booleans.",
-  "react-doctor/jsx-handler-names":
-    "pass-through event props preserve caller APIs.",
+    "formatter territory, no correctness signal.",
   "react-doctor/jsx-props-no-spreading":
     "typed wrapper components intentionally forward prop surfaces.",
   "react-doctor/react-in-jsx-scope":
@@ -50,6 +48,7 @@ const highSignalOptInRules = [
   "react-doctor/jsx-curly-brace-presence",
   "react-doctor/jsx-filename-extension",
   "react-doctor/jsx-fragments",
+  "react-doctor/jsx-handler-names",
   "react-doctor/jsx-no-useless-fragment",
   "react-doctor/jsx-pascal-case",
   "react-doctor/no-array-index-key",

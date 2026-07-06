@@ -68,7 +68,7 @@
     "react-doctor/jsx-curly-brace-presence": "error",
     "react-doctor/jsx-filename-extension": "error",
     "react-doctor/jsx-fragments": "error",
-    "react-doctor/jsx-handler-names": "off",
+    "react-doctor/jsx-handler-names": "error",
     "react-doctor/jsx-no-useless-fragment": "error",
     "react-doctor/jsx-pascal-case": "error",
     "react-doctor/jsx-props-no-spreading": "off",

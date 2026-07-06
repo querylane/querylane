@@ -126,6 +126,7 @@ type InstanceSection = "configuration" | "overview";
 interface OverviewLiveData {
   /** The server's max_connections, drawn as a threshold on the chart. */
   connectionsMax: number | undefined;
+  handleRangeChange: (rangeHours: number) => void;
   health: InstanceHealth | undefined;
   healthPartialErrors: Status[] | undefined;
   healthPending: boolean;
@@ -135,14 +136,13 @@ interface OverviewLiveData {
   /** True while a range switch is showing the previous window's data. */
   metricsRefreshing: boolean;
   metricsResponse: QueryMetricsResponse | undefined;
-  onMetricsRangeChange: (rangeHours: number) => void;
   /** The window before metricsResponse's, for the comparison overlay. */
   previousMetricsResponse: QueryMetricsResponse | undefined;
 }
 type DatabaseRow = ReturnType<typeof useDb>["databases"][number];
 interface DatabaseFacetFilter {
+  handleSelectedValuesChange: (values: string[]) => void;
   label: string;
-  onChange: (values: string[]) => void;
   options: FacetedFilterOption[];
   selectedValues: string[];
 }
@@ -670,7 +670,7 @@ function InstanceDatabaseFilterBar({
       {visibleFilters.map((filter) => (
         <DataTableFacetedFilter
           key={filter.label}
-          onSelectedValuesChange={filter.onChange}
+          onSelectedValuesChange={filter.handleSelectedValuesChange}
           options={filter.options}
           selectedValues={filter.selectedValues}
           title={filter.label}
@@ -681,7 +681,7 @@ function InstanceDatabaseFilterBar({
           className="h-8 px-2 text-xs"
           onClick={() => {
             for (const filter of visibleFilters) {
-              filter.onChange([]);
+              filter.handleSelectedValuesChange([]);
             }
           }}
           size="sm"
@@ -725,20 +725,20 @@ function InstanceOverviewSection({
   });
   const databaseFacetFilters = [
     {
+      handleSelectedValuesChange: setOwnerFilters,
       label: "Owner",
-      onChange: setOwnerFilters,
       options: presentDatabaseOwnerOptions(databases),
       selectedValues: ownerFilters,
     },
     {
+      handleSelectedValuesChange: setEncodingFilters,
       label: "Encoding",
-      onChange: setEncodingFilters,
       options: presentDatabaseEncodingOptions(databases),
       selectedValues: encodingFilters,
     },
     {
+      handleSelectedValuesChange: setKindFilters,
       label: "Kind",
-      onChange: setKindFilters,
       options: presentDatabaseKindOptions(databases),
       selectedValues: kindFilters,
     },
@@ -841,7 +841,7 @@ function InstanceOverviewContent({
             isError={liveData.metricsError}
             isPending={liveData.metricsPending}
             isRefreshing={liveData.metricsRefreshing}
-            onRangeChange={liveData.onMetricsRangeChange}
+            onRangeChange={liveData.handleRangeChange}
             previousResponse={liveData.previousMetricsResponse}
             range={liveData.metricsRange}
             response={liveData.metricsResponse}
@@ -1236,6 +1236,7 @@ function BackendInstancePage({
             lastRefreshedAt: instanceQuery.dataUpdatedAt,
             liveData: {
               connectionsMax: overview?.connections?.maxConnections,
+              handleRangeChange: setMetricsRangeHours,
               health: healthQuery.data?.health,
               healthPartialErrors: healthQuery.data?.partialErrors,
               healthPending: healthQuery.isPending,
@@ -1244,7 +1245,6 @@ function BackendInstancePage({
               metricsRange: metricRangeByHours(metricsRangeHours),
               metricsRefreshing: metricsQuery.isPlaceholderData,
               metricsResponse: metricsQuery.data,
-              onMetricsRangeChange: setMetricsRangeHours,
               // While a range switch still shows the OLD window as placeholder
               // data, suppress the overlay: shifting the old range's points by
               // the new range's window length would draw it at wrong times.

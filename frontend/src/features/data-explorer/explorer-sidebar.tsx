@@ -592,6 +592,8 @@ function ResourceListItem({
   item: VirtualResourceListItem;
 }) {
   const meta = CATEGORY_META[item.category];
+  const handleResourceIntent = controls.onResourceIntent;
+  const handleSelectResource = controls.onSelectResource;
   switch (item.kind) {
     case "category": {
       const isOpen = controls.isCategoryOpen(item.category);
@@ -620,8 +622,8 @@ function ResourceListItem({
           category={item.category}
           icon={meta.icon}
           item={item.item}
-          onResourceIntent={controls.onResourceIntent}
-          onSelectResource={controls.onSelectResource}
+          onResourceIntent={handleResourceIntent}
+          onSelectResource={handleSelectResource}
           query={controls.query}
           selection={controls.selection}
         />

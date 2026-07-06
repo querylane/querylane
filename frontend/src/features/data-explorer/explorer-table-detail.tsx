@@ -177,8 +177,8 @@ const CONSTRAINT_TYPE_LABELS: Record<ConstraintType, string> = {
   [ConstraintType.EXCLUSION]: "EXCLUSION",
 };
 interface FacetFilterDefinition {
+  handleSelectedValuesChange: (values: string[]) => void;
   label: string;
-  onChange: (values: string[]) => void;
   options: FacetedFilterOption[];
   selectedValues: string[];
 }
@@ -317,7 +317,7 @@ function FacetFilterBar({ filters }: { filters: FacetFilterDefinition[] }) {
       {visibleFilters.map((filter) => (
         <DataTableFacetedFilter
           key={filter.label}
-          onSelectedValuesChange={filter.onChange}
+          onSelectedValuesChange={filter.handleSelectedValuesChange}
           options={filter.options}
           selectedValues={filter.selectedValues}
           title={filter.label}
@@ -328,7 +328,7 @@ function FacetFilterBar({ filters }: { filters: FacetFilterDefinition[] }) {
           className="h-8 px-2 text-xs"
           onClick={() => {
             for (const filter of visibleFilters) {
-              filter.onChange([]);
+              filter.handleSelectedValuesChange([]);
             }
           }}
           size="sm"
@@ -458,9 +458,10 @@ interface RefreshableMetadataQuery {
   refetch: () => Promise<unknown>;
 }
 interface MetadataToolbar {
+  handleRefresh: () => Promise<unknown>;
+  handleRetry: () => Promise<unknown>;
   isRefreshing: boolean;
   lastFetchedLabel: string;
-  onRefresh: () => Promise<unknown>;
 }
 function deriveMetadataToolbar(
   queries: RefreshableMetadataQuery[]
@@ -470,9 +471,10 @@ function deriveMetadataToolbar(
     ? 0
     : Math.min(...updatedTimes);
   return {
+    handleRefresh: () => Promise.all(queries.map((query) => query.refetch())),
+    handleRetry: () => Promise.all(queries.map((query) => query.refetch())),
     isRefreshing: queries.some((query) => query.isFetching),
     lastFetchedLabel: formatLastFetchedLabel(dataUpdatedAt),
-    onRefresh: () => Promise.all(queries.map((query) => query.refetch())),
   };
 }
 
@@ -498,7 +500,7 @@ function TableResourceEmptyState({
           <Button
             disabled={toolbar.isRefreshing}
             onClick={() => {
-              toolbar.onRefresh();
+              toolbar.handleRefresh();
             }}
             size="sm"
             type="button"
@@ -560,7 +562,7 @@ function MetadataTabResult<Row extends RowData>({
         filterPlaceholder={filterPlaceholder}
         isRefreshing={toolbar.isRefreshing}
         lastFetchedLabel={toolbar.lastFetchedLabel}
-        onRefresh={toolbar.onRefresh}
+        onRefresh={toolbar.handleRefresh}
         pageSize={pageSize}
         tableClassName={tableClassName}
         tableKey={tableKey}
@@ -842,7 +844,7 @@ function ColumnsTab({
   );
   if (errors.length > 0) {
     return (
-      <TabError errors={errors} onRetry={toolbar.onRefresh} tab="columns" />
+      <TabError errors={errors} onRetry={toolbar.handleRetry} tab="columns" />
     );
   }
   if (
@@ -873,14 +875,14 @@ function ColumnsTab({
         <FacetFilterBar
           filters={[
             {
+              handleSelectedValuesChange: setTypeCategories,
               label: "Type",
-              onChange: setTypeCategories,
               options: uniqueSortedOptions(rows.map(columnTypeCategory)),
               selectedValues: typeCategories,
             },
             {
+              handleSelectedValuesChange: setKeyKinds,
               label: "Key",
-              onChange: setKeyKinds,
               options: presentColumnKeyOptions(rows),
               selectedValues: keyKinds,
             },
@@ -1097,7 +1099,9 @@ function KeysTab({
     }
   );
   if (errors.length > 0) {
-    return <TabError errors={errors} onRetry={toolbar.onRefresh} tab="keys" />;
+    return (
+      <TabError errors={errors} onRetry={toolbar.handleRetry} tab="keys" />
+    );
   }
   if (
     !(constraintsQuery.data && indexesQuery.data) ||
@@ -1122,8 +1126,8 @@ function KeysTab({
         <FacetFilterBar
           filters={[
             {
+              handleSelectedValuesChange: setKindFilters,
               label: "Kind",
-              onChange: setKindFilters,
               options: uniqueSortedOptions(rows.map((row) => row.kind)).map(
                 (option) => ({
                   label: TABLE_KEY_KIND_LABELS[option.value as TableKeyKind],
@@ -1186,7 +1190,7 @@ function PartitionsTab({
             label: "Partitions",
           },
         ]}
-        onRetry={toolbar.onRefresh}
+        onRetry={toolbar.handleRetry}
         tab="partitions"
       />
     );
@@ -1228,26 +1232,26 @@ function PartitionsTab({
       <FacetFilterBar
         filters={[
           {
-            label: "Schema",
-            onChange: (schemaNames) => {
+            handleSelectedValuesChange: (schemaNames) => {
               setPartitionFilters((current) => ({
                 ...current,
                 schemaNames,
               }));
             },
+            label: "Schema",
             options: uniqueSortedOptions(
               childPartitions.map(partitionSchemaName)
             ),
             selectedValues: partitionFilters.schemaNames ?? [],
           },
           {
-            label: "Bound kind",
-            onChange: (values) => {
+            handleSelectedValuesChange: (values) => {
               setPartitionFilters((current) => ({
                 ...current,
                 boundKinds: values.filter(isPartitionBoundKind),
               }));
             },
+            label: "Bound kind",
             options: presentPartitionBoundKindOptions(childPartitions),
             selectedValues: partitionFilters.boundKinds ?? [],
           },
@@ -1269,7 +1273,7 @@ function PartitionsTab({
           <Button
             disabled={toolbar.isRefreshing}
             onClick={() => {
-              toolbar.onRefresh();
+              toolbar.handleRefresh();
             }}
             size="sm"
             type="button"
@@ -1308,7 +1312,7 @@ function PartitionsTab({
           filterPlaceholder="Search partitions…"
           isRefreshing={toolbar.isRefreshing}
           lastFetchedLabel={toolbar.lastFetchedLabel}
-          onRefresh={toolbar.onRefresh}
+          onRefresh={toolbar.handleRefresh}
           renderToolbarFilters={renderPartitionToolbarFilters}
           tableKey="data-explorer-table-partitions"
         />
@@ -1416,7 +1420,7 @@ function IndexesTab({
             label: "Indexes",
           },
         ]}
-        onRetry={toolbar.onRefresh}
+        onRetry={toolbar.handleRetry}
         tab="indexes"
       />
     );
@@ -1437,8 +1441,8 @@ function IndexesTab({
         <FacetFilterBar
           filters={[
             {
+              handleSelectedValuesChange: setMethodFilters,
               label: "Method",
-              onChange: setMethodFilters,
               options: presentIndexMethodOptions(indexes),
               selectedValues: methodFilters,
             },
@@ -1502,7 +1506,7 @@ function ConstraintsTab({
             label: "Constraints",
           },
         ]}
-        onRetry={toolbar.onRefresh}
+        onRetry={toolbar.handleRetry}
         tab="constraints"
       />
     );
@@ -1526,8 +1530,8 @@ function ConstraintsTab({
         <FacetFilterBar
           filters={[
             {
+              handleSelectedValuesChange: setKindFilters,
               label: "Kind",
-              onChange: setKindFilters,
               options: presentConstraintKindOptions(constraints),
               selectedValues: kindFilters,
             },
@@ -1621,7 +1625,7 @@ function PoliciesTab({
             label: "Policies",
           },
         ]}
-        onRetry={toolbar.onRefresh}
+        onRetry={toolbar.handleRetry}
         tab="policies"
       />
     );
@@ -1645,8 +1649,8 @@ function PoliciesTab({
         <FacetFilterBar
           filters={[
             {
+              handleSelectedValuesChange: setModeFilters,
               label: "Mode",
-              onChange: setModeFilters,
               options: presentPolicyModeOptions(policies),
               selectedValues: modeFilters,
             },
@@ -1724,7 +1728,7 @@ function TriggersTab({
             label: "Triggers",
           },
         ]}
-        onRetry={toolbar.onRefresh}
+        onRetry={toolbar.handleRetry}
         tab="triggers"
       />
     );
@@ -1748,8 +1752,8 @@ function TriggersTab({
         <FacetFilterBar
           filters={[
             {
+              handleSelectedValuesChange: setStateFilters,
               label: "State",
-              onChange: setStateFilters,
               options: presentTriggerStateOptions(triggers),
               selectedValues: stateFilters,
             },

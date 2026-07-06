@@ -7,13 +7,11 @@ export const documentedDisabledReactDoctorRules = {
   "react-doctor/forbid-component-props":
     "False positive for this Tailwind/shadcn codebase: className is an intentional component styling API, not a bypassed contract.",
   "react-doctor/jsx-boolean-value":
-    "Conflicts with the enforced formatter/linter in this repo; bun run lint:fix rewrites shorthand booleans back to explicit ={true}.",
-  "react-doctor/jsx-handler-names":
-    "False positive for pass-through event props: forwarding onChange/onSelect props preserves the caller API and renaming locally adds noise.",
+    "Permanent false positive/noise for this repo: boolean JSX shorthand is formatter territory, not a correctness rule; enforcing this adds churn without catching bugs.",
   "react-doctor/jsx-props-no-spreading":
     "False positive for adapter and wrapper components that intentionally forward a typed prop surface to framework or UI primitives.",
   "react-doctor/react-in-jsx-scope":
-    "False positive with React 19 automatic JSX runtime; adding React imports would create unused imports.",
+    "Permanent false positive with React 19 automatic JSX runtime; JSX does not require React in scope and adding imports creates unused code.",
 } as const;
 
 export default defineConfig(reactDoctorConfig);
