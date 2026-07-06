@@ -15,14 +15,12 @@ type CapturedControlsStyle = React.CSSProperties & {
 };
 
 const {
-  capturedAutoPanOnSelection,
   capturedControlsClassNames,
   capturedControlsStyles,
   capturedEdges,
   capturedNodes,
   fitViewMock,
 } = vi.hoisted(() => ({
-  capturedAutoPanOnSelection: [] as (boolean | undefined)[],
   capturedControlsClassNames: [] as (string | undefined)[],
   capturedControlsStyles: [] as CapturedControlsStyle[],
   capturedEdges: [] as unknown[],
@@ -57,19 +55,16 @@ vi.mock("@xyflow/react", () => ({
   }) => <div data-testid="flow-panel">{children}</div>,
   ["Position"]: { ["Left"]: "left", ["Right"]: "right" },
   ["ReactFlow"]: ({
-    autoPanOnSelection,
     children,
     edges,
     minZoom,
     nodes,
   }: {
-    autoPanOnSelection?: boolean | undefined;
     children: React.ReactNode;
     edges: unknown[];
     minZoom?: number | undefined;
     nodes: unknown[];
   }) => {
-    capturedAutoPanOnSelection.push(autoPanOnSelection);
     capturedEdges.splice(0, capturedEdges.length, ...edges);
     capturedNodes.splice(0, capturedNodes.length, ...nodes);
     return (
@@ -105,7 +100,6 @@ const tableEdge: VisualizationEdge = {
 
 afterEach(() => {
   cleanup();
-  capturedAutoPanOnSelection.length = 0;
   capturedControlsClassNames.length = 0;
   capturedControlsStyles.length = 0;
   capturedEdges.length = 0;
@@ -176,31 +170,23 @@ describe("FlowCanvas", () => {
     );
   });
 
-  test("enables auto-pan while selected nodes are dragged near the canvas edge", () => {
-    render(
-      <FlowCanvas
-        density="compact"
-        direction="LR"
-        edges={[tableEdge]}
-        nodes={[firstNode, secondNode]}
-      />
-    );
-
-    expect(capturedAutoPanOnSelection.at(-1)).toBe(true);
-  });
-
   test("passes useful labels to React Flow nodes", () => {
+    const nodeWithSubtitle: VisualizationNode = {
+      ...firstNode,
+      data: { ...firstNode.data, subtitle: "public schema" },
+    };
+
     render(
       <FlowCanvas
         direction="LR"
         edges={[tableEdge]}
-        nodes={[firstNode, secondNode]}
+        nodes={[nodeWithSubtitle, secondNode]}
       />
     );
 
     expect(capturedNodes).toContainEqual(
       expect.objectContaining({
-        ariaLabel: "table:public.one, table node",
+        ariaLabel: "table:public.one, public schema, table node",
         id: firstNode.id,
       })
     );

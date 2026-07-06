@@ -667,7 +667,7 @@ function layoutGraph({
 }
 
 function flowNodeAriaLabel(node: VisualizationNode): string {
-  return [node.data.title, `${node.kind} node`, node.data.subtitle]
+  return [node.data.title, node.data.subtitle, `${node.kind} node`]
     .filter(Boolean)
     .join(", ");
 }
@@ -707,7 +707,6 @@ function FlowCanvas({
       )}
     >
       <ReactFlow<FlowNode, Edge>
-        autoPanOnSelection={true}
         edges={flowEdges}
         fitView={true}
         minZoom={FLOW_MIN_ZOOM[density]}
