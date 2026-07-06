@@ -96,7 +96,10 @@ export function DatabaseLayout({
           ) : null}
           <main
             className={cn(
-              "min-w-0 flex-1",
+              // `relative` keeps absolutely-positioned descendants (e.g.
+              // sr-only labels) anchored inside this scroll container instead
+              // of escaping it and stretching the document.
+              "relative min-w-0 flex-1",
               mainOverflowClass,
               mainPaddingClass
             )}
