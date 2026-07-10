@@ -399,7 +399,9 @@ function seedDefinitionDesignQueries() {
   tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
     triggers: [
       createProto(TableTriggerSchema, {
-        definition: "EXECUTE FUNCTION audit.record_change()",
+        // Full pg_get_triggerdef form, matching what the backend returns.
+        definition:
+          "CREATE TRIGGER change_log_record_trigger\n  AFTER INSERT OR UPDATE OR DELETE ON audit.change_log\n  FOR EACH ROW EXECUTE FUNCTION audit.record_change()",
         enabled: true,
         events: ["INSERT", "UPDATE", "DELETE"],
         functionName: "audit.record_change",

@@ -1789,6 +1789,164 @@ function TriggersTab({
 }
 
 const SIMPLE_SQL_IDENTIFIER_PATTERN = /^[a-z_][a-z0-9_]*$/;
+// PostgreSQL reserved key words plus type/function-name keywords. These match
+// the simple identifier pattern but a bare `user` or `order` column would make
+// the generated DDL unexecutable; quoting is valid in every position, so the
+// list errs on the side of quoting.
+const RESERVED_SQL_KEYWORDS = new Set([
+  "all",
+  "analyse",
+  "analyze",
+  "and",
+  "any",
+  "array",
+  "as",
+  "asc",
+  "asymmetric",
+  "authorization",
+  "between",
+  "bigint",
+  "binary",
+  "bit",
+  "boolean",
+  "both",
+  "case",
+  "cast",
+  "char",
+  "character",
+  "check",
+  "coalesce",
+  "collate",
+  "collation",
+  "column",
+  "concurrently",
+  "constraint",
+  "create",
+  "cross",
+  "current_catalog",
+  "current_date",
+  "current_role",
+  "current_schema",
+  "current_time",
+  "current_timestamp",
+  "current_user",
+  "dec",
+  "decimal",
+  "default",
+  "deferrable",
+  "desc",
+  "distinct",
+  "do",
+  "else",
+  "end",
+  "except",
+  "exists",
+  "extract",
+  "false",
+  "fetch",
+  "float",
+  "for",
+  "foreign",
+  "freeze",
+  "from",
+  "full",
+  "grant",
+  "greatest",
+  "group",
+  "grouping",
+  "having",
+  "ilike",
+  "in",
+  "initially",
+  "inner",
+  "inout",
+  "int",
+  "integer",
+  "intersect",
+  "interval",
+  "into",
+  "is",
+  "isnull",
+  "join",
+  "lateral",
+  "leading",
+  "least",
+  "left",
+  "like",
+  "limit",
+  "localtime",
+  "localtimestamp",
+  "national",
+  "natural",
+  "nchar",
+  "none",
+  "normalize",
+  "not",
+  "notnull",
+  "null",
+  "nullif",
+  "numeric",
+  "offset",
+  "on",
+  "only",
+  "or",
+  "order",
+  "out",
+  "outer",
+  "overlaps",
+  "overlay",
+  "placing",
+  "position",
+  "precision",
+  "primary",
+  "real",
+  "references",
+  "returning",
+  "right",
+  "row",
+  "select",
+  "session_user",
+  "setof",
+  "similar",
+  "smallint",
+  "some",
+  "substring",
+  "symmetric",
+  "system_user",
+  "table",
+  "tablesample",
+  "then",
+  "time",
+  "timestamp",
+  "to",
+  "trailing",
+  "treat",
+  "trim",
+  "true",
+  "union",
+  "unique",
+  "user",
+  "using",
+  "values",
+  "varchar",
+  "variadic",
+  "verbose",
+  "when",
+  "where",
+  "window",
+  "with",
+  "xmlattributes",
+  "xmlconcat",
+  "xmlelement",
+  "xmlexists",
+  "xmlforest",
+  "xmlnamespaces",
+  "xmlparse",
+  "xmlpi",
+  "xmlroot",
+  "xmlserialize",
+  "xmltable",
+]);
 
 interface DefinitionSection {
   content: string;
@@ -1799,7 +1957,10 @@ interface DefinitionSection {
 }
 
 function formatSqlIdentifier(identifier: string) {
-  if (SIMPLE_SQL_IDENTIFIER_PATTERN.test(identifier)) {
+  if (
+    SIMPLE_SQL_IDENTIFIER_PATTERN.test(identifier) &&
+    !RESERVED_SQL_KEYWORDS.has(identifier)
+  ) {
     return identifier;
   }
   return `"${identifier.replaceAll('"', '""')}"`;
@@ -1948,7 +2109,9 @@ function policySql(policies: TablePolicy[], qualifiedTableName: string) {
     .filter((policy) => policy.policyName)
     .map((policy) => {
       const roles =
-        policy.roles.length > 0 ? policy.roles.join(", ") : "PUBLIC";
+        policy.roles.length > 0
+          ? policy.roles.map(formatSqlIdentifier).join(", ")
+          : "PUBLIC";
       const usingExpression = policy.usingExpression
         ? `\n  USING (${policy.usingExpression})`
         : "";
@@ -1966,27 +2129,19 @@ function policySql(policies: TablePolicy[], qualifiedTableName: string) {
     .join("\n");
 }
 
-function triggerSql(triggers: TableTrigger[], qualifiedTableName: string) {
+function triggerSql(triggers: TableTrigger[]) {
   return triggers
     .filter((trigger) => trigger.triggerName)
     .map((trigger) => {
-      if (
-        trigger.definition.trim().toUpperCase().startsWith("CREATE TRIGGER")
-      ) {
-        return trigger.definition.trim().endsWith(";")
-          ? trigger.definition.trim()
-          : `${trigger.definition.trim()};`;
+      const definition = trigger.definition.trim();
+      if (definition.toUpperCase().startsWith("CREATE TRIGGER")) {
+        return definition.endsWith(";") ? definition : `${definition};`;
       }
-      const events =
-        trigger.events.length > 0 ? trigger.events.join(" OR ") : "UPDATE";
-      if (!(trigger.definition || trigger.functionName)) {
-        return `-- Trigger ${formatSqlIdentifier(trigger.triggerName)} definition unavailable`;
-      }
-      const functionCall =
-        trigger.definition || `EXECUTE FUNCTION ${trigger.functionName}()`;
-      return `CREATE TRIGGER ${formatSqlIdentifier(trigger.triggerName)}\n  ${
-        trigger.timing || "AFTER"
-      } ${events} ON ${qualifiedTableName}\n  FOR EACH ROW ${functionCall};`;
+      // The backend returns pg_get_triggerdef output, so this branch only
+      // sees unexpected data. A statement cannot be reconstructed faithfully
+      // from the remaining metadata (row vs statement level is not exposed),
+      // so surface that instead of guessing FOR EACH ROW.
+      return `-- Trigger ${formatSqlIdentifier(trigger.triggerName)}: full definition unavailable`;
     })
     .join("\n");
 }
@@ -2087,7 +2242,7 @@ function deriveDefinitionSections({
       title: "Row-level security",
     });
   }
-  const triggerText = triggerSql(triggers, qualifiedTableName);
+  const triggerText = triggerSql(triggers);
   if (triggerText) {
     sections.push({
       content: triggerText,
@@ -2192,7 +2347,7 @@ function dumpCommand({
 }) {
   return [
     'pg_dump -h "$POSTGRES_HOST" \\',
-    `  -U "$POSTGRES_ROLE" -d "\${DATABASE_NAME:-${databaseId}}" \\`,
+    `  -U "$POSTGRES_ROLE" -d "\${DATABASE_NAME:-${shellDoubleQuoteEscape(databaseId)}}" \\`,
     "  --schema-only --no-owner --no-privileges \\",
     `  --table=${shellSingleQuote(qualifiedTableName)} > ${shellSingleQuote(
       `${tableName}.sql`
@@ -2246,9 +2401,9 @@ function ReproduceLocallyCard({
   schemaName: string;
   tableName: string;
 }) {
-  const createDatabaseCommand = `createdb -h localhost "\${DATABASE_NAME:-${databaseId}}"`;
+  const createDatabaseCommand = `createdb -h localhost "\${DATABASE_NAME:-${shellDoubleQuoteEscape(databaseId)}}"`;
   const restoreCommand = [
-    `psql -h localhost -d "\${DATABASE_NAME:-${databaseId}}" \\`,
+    `psql -h localhost -d "\${DATABASE_NAME:-${shellDoubleQuoteEscape(databaseId)}}" \\`,
     `  -f ${shellSingleQuote(`${tableName}.sql`)}`,
   ].join("\n");
   const allSteps = [
@@ -2313,6 +2468,12 @@ function shellSingleQuote(value: string) {
   return `'${value.replaceAll("'", "'\"'\"'")}'`;
 }
 
+// For values interpolated inside a double-quoted shell word, where $, ", \
+// and backticks keep their special meaning.
+function shellDoubleQuoteEscape(value: string) {
+  return value.replace(/([\\"$`])/g, "\\$1");
+}
+
 function DefinitionTab({
   columnsQuery,
   constraintsQuery,
@@ -2323,6 +2484,7 @@ function DefinitionTab({
   schemaName,
   tableComment,
   tableName,
+  tableOwner,
   triggersQuery,
 }: {
   columnsQuery: ReturnType<typeof useListTableColumnsQuery>;
@@ -2334,6 +2496,7 @@ function DefinitionTab({
   schemaName: string;
   tableComment: string;
   tableName: string;
+  tableOwner: string;
   triggersQuery: ReturnType<typeof useListTableTriggersQuery>;
 }) {
   const toolbar = deriveMetadataToolbar([
@@ -2515,7 +2678,9 @@ function DefinitionTab({
               Danger zone
             </h2>
             <CardAction>
-              <Badge variant="outline">requires app_owner</Badge>
+              <Badge variant="outline">
+                {tableOwner ? `requires ${tableOwner}` : "requires table owner"}
+              </Badge>
             </CardAction>
           </CardHeader>
           <CardContent className="flex items-start gap-3 py-4">
@@ -2728,6 +2893,7 @@ function TableDetail({
                 schemaName={schemaName}
                 tableComment={table?.comment ?? ""}
                 tableName={tableName}
+                tableOwner={table?.owner ?? ""}
                 triggersQuery={triggersQuery}
               />
             </TabsContent>

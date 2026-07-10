@@ -47,6 +47,11 @@ const SELECT_POLICY_SQL_RE =
   /CREATE POLICY customers_account_read_policy ON public\.customers\s+AS PERMISSIVE\s+FOR SELECT TO app_reader\s+USING \(account_id = current_setting\('app\.account_id'\)::uuid\);/;
 const TRIGGER_SQL_RE =
   /CREATE TRIGGER customers_audit_trigger\s+AFTER INSERT OR UPDATE ON public\.customers\s+FOR EACH ROW EXECUTE FUNCTION audit_customer_changes\(\);/;
+const SNIPPET_TRIGGER_UNAVAILABLE_RE =
+  /-- Trigger customers_search_trigger: full definition unavailable/;
+const RESERVED_COLUMN_SQL_RE = /"order" text NOT NULL/;
+const RESERVED_NULLABLE_COLUMN_SQL_RE = /"user" text,/;
+const QUOTED_POLICY_ROLE_SQL_RE = /TO "App Reader"/;
 const FULL_TRIGGER_STATEMENTS_SQL_RE =
   /CREATE TRIGGER customers_replica_trigger\s+AFTER DELETE ON public\.customers\s+FOR EACH ROW EXECUTE FUNCTION audit_customer_changes\(\);\s+CREATE TRIGGER customers_statement_trigger\s+BEFORE UPDATE ON public\.customers\s+FOR EACH STATEMENT EXECUTE FUNCTION sync_customer_summary\(\);/;
 
@@ -369,7 +374,8 @@ describe("TableDetail data tab toolbar", () => {
     tableQueries.triggers.data = create(ListTableTriggersResponseSchema, {
       triggers: [
         {
-          definition: "EXECUTE FUNCTION audit_customer_changes()",
+          definition:
+            "CREATE TRIGGER customers_audit_trigger\n  AFTER INSERT OR UPDATE ON public.customers\n  FOR EACH ROW EXECUTE FUNCTION audit_customer_changes()",
           enabled: true,
           events: ["INSERT", "UPDATE"],
           functionName: "audit_customer_changes",
@@ -387,6 +393,14 @@ describe("TableDetail data tab toolbar", () => {
             "CREATE TRIGGER customers_statement_trigger\n  BEFORE UPDATE ON public.customers\n  FOR EACH STATEMENT EXECUTE FUNCTION sync_customer_summary();",
           enabled: true,
           triggerName: "customers_statement_trigger",
+        },
+        {
+          // Snippet-form definition: not reconstructable without guessing the
+          // trigger level, so the document should say so instead.
+          definition: "EXECUTE FUNCTION refresh_customer_search()",
+          enabled: true,
+          functionName: "refresh_customer_search",
+          triggerName: "customers_search_trigger",
         },
       ],
     });
@@ -421,6 +435,9 @@ describe("TableDetail data tab toolbar", () => {
       screen.getByDisplayValue(FULL_TRIGGER_STATEMENTS_SQL_RE)
     ).toBeTruthy();
     expect(
+      screen.getByDisplayValue(SNIPPET_TRIGGER_UNAVAILABLE_RE)
+    ).toBeTruthy();
+    expect(
       screen.getByRole("heading", { name: "Reproduce locally" })
     ).toBeTruthy();
     expect(
@@ -428,6 +445,55 @@ describe("TableDetail data tab toolbar", () => {
         "Definition is generated from pg_catalog on each visit — Querylane never stores or mutates schema."
       )
     ).toBeTruthy();
+  });
+
+  it("quotes reserved identifiers and policy roles in the definition document", () => {
+    tableQueries.columns.data = create(ListTableColumnsResponseSchema, {
+      columns: [
+        {
+          columnName: "user",
+          dataType: DataType.STRING,
+          isNullable: true,
+          ordinalPosition: 1,
+          rawType: "text",
+        },
+        {
+          columnName: "order",
+          dataType: DataType.STRING,
+          isNullable: false,
+          ordinalPosition: 2,
+          rawType: "text",
+        },
+      ],
+    });
+    tableQueries.policies.data = create(ListTablePoliciesResponseSchema, {
+      policies: [
+        {
+          command: PolicyCommand.SELECT,
+          mode: PolicyMode.PERMISSIVE,
+          policyName: "orders_read_policy",
+          roles: ["App Reader"],
+          usingExpression: "true",
+        },
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="definition"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema, { tableType: Table_TableType.BASE_TABLE })}
+        tableName="orders"
+      />
+    );
+
+    expect(screen.getByDisplayValue(RESERVED_COLUMN_SQL_RE)).toBeTruthy();
+    expect(
+      screen.getByDisplayValue(RESERVED_NULLABLE_COLUMN_SQL_RE)
+    ).toBeTruthy();
+    expect(screen.getByDisplayValue(QUOTED_POLICY_ROLE_SQL_RE)).toBeTruthy();
   });
 
   it("honors URL-backed metadata tabs and reports tab changes", async () => {
