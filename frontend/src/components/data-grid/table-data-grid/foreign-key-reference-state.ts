@@ -41,13 +41,22 @@ function tableCellValueToFilterLiteral(cell: TableCell | undefined) {
     case "boolValue":
       return value.value ? "true" : "false";
     case "doubleValue":
+      // Non-finite doubles have no parseable filter literal, and the drawer
+      // grid would drop the resulting predicate as invalid.
+      if (!Number.isFinite(value.value)) {
+        return;
+      }
+      return String(value.value);
     case "int64Value":
     case "jsonValue":
     case "numericValue":
     case "stringValue":
     case "timestampValue": {
       const literal = String(value.value);
-      return literal === "" ? undefined : literal;
+      // Values that trim to empty are treated as "incomplete" filter rules by
+      // the drawer grid and silently excluded from the row filter, which would
+      // leave the drawer showing the whole referenced table.
+      return literal.trim() === "" ? undefined : literal;
     }
     default:
       return;

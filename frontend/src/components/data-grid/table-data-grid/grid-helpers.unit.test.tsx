@@ -253,6 +253,86 @@ describe("grid helpers", () => {
     expect(bytesMarkup).not.toContain("Open fingerprint reference");
   });
 
+  test("renders a plain cell when a foreign key value cannot survive the drawer filter", () => {
+    const textColumn = testColumn("external_id", DataType.STRING, "text");
+    const doubleColumn = testColumn("weight", DataType.FLOAT, "float8");
+    const onOpenForeignKeyReference = vi.fn();
+    const commonArgs = {
+      isFrozen: false,
+      onCopyName: vi.fn(),
+      onOpenForeignKeyReference,
+      onSortAsc: vi.fn(),
+      onSortDesc: vi.fn(),
+      onToggleFreeze: vi.fn(),
+      pkColumnSet: new Set<string>(),
+    };
+
+    // Whitespace-only literals are trimmed to empty by the drawer's
+    // incomplete-rule check, so the row filter would be dropped silently.
+    const whitespaceColumn = buildColumn({
+      ...commonArgs,
+      column: textColumn,
+      foreignKeyReferences: [
+        {
+          constraintName: "orders_external_id_fkey",
+          sourceColumns: ["external_id"],
+          targetColumns: ["id"],
+          targetTableName:
+            "instances/prod/databases/app/schemas/public/tables/orders",
+        },
+      ],
+      resultColumns: [textColumn],
+    });
+    const nonFiniteColumn = buildColumn({
+      ...commonArgs,
+      column: doubleColumn,
+      foreignKeyReferences: [
+        {
+          constraintName: "parcels_weight_fkey",
+          sourceColumns: ["weight"],
+          targetColumns: ["weight"],
+          targetTableName:
+            "instances/prod/databases/app/schemas/public/tables/parcels",
+        },
+      ],
+      resultColumns: [doubleColumn],
+    });
+
+    const whitespaceMarkup = renderToStaticMarkup(
+      <span>
+        {whitespaceColumn.renderCell?.({
+          row: {
+            [ROW_KEY_FIELD]: "row-1",
+            cells: new Map([
+              [
+                "external_id",
+                testValueCell({ case: "stringValue", value: " " }),
+              ],
+            ]),
+          },
+        } as never)}
+      </span>
+    );
+    const nonFiniteMarkup = renderToStaticMarkup(
+      <span>
+        {nonFiniteColumn.renderCell?.({
+          row: {
+            [ROW_KEY_FIELD]: "row-2",
+            cells: new Map([
+              [
+                "weight",
+                testValueCell({ case: "doubleValue", value: Number.NaN }),
+              ],
+            ]),
+          },
+        } as never)}
+      </span>
+    );
+
+    expect(whitespaceMarkup).not.toContain("Open external_id reference");
+    expect(nonFiniteMarkup).not.toContain("Open weight reference");
+  });
+
   test("renders a frozen indicator in the column header", () => {
     const column = buildColumn({
       column: testColumn(),

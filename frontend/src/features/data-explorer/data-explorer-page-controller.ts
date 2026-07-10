@@ -286,11 +286,18 @@ function useDataExplorerPageController({
       });
     },
     onSelectTableResource: (tableResourceName: string) => {
-      const { schema, table } = parseTableQualifiedName(tableResourceName);
+      // Constraint metadata is backend-controlled, but a malformed resource
+      // name must not throw out of a click handler.
+      let parsed: ReturnType<typeof parseTableQualifiedName>;
+      try {
+        parsed = parseTableQualifiedName(tableResourceName);
+      } catch {
+        return;
+      }
       updateSearch({
         category: "tables",
-        name: table,
-        schema,
+        name: parsed.table,
+        schema: parsed.schema,
         tab: undefined,
       });
     },
