@@ -542,6 +542,9 @@ function usePageSizeUrlState({
 // buildGridRows and everything downstream of it.
 const EMPTY_RESULT_COLUMNS: TableResultColumn[] = [];
 const EMPTY_RESULT_ROWS: Array<{ rowKey: string; values: TableCell[] }> = [];
+// Stable default so the grid columns are not rebuilt every render for tables
+// without foreign keys.
+const NO_FOREIGN_KEY_REFERENCES: readonly TableForeignKeyReference[] = [];
 
 function buildGridRows(
   resultRows: Array<{ rowKey: string; values: TableCell[] }>,
@@ -628,6 +631,29 @@ function RecordDetailDrawerHost({
   );
 }
 
+// Filter edits inside the drawer stay local to this keyed child; opening a
+// different reference remounts it and reseeds the filter from the clicked
+// foreign key value.
+function ForeignKeyPreviewGrid({
+  initialFilterSearch,
+  name,
+}: {
+  initialFilterSearch: string;
+  name: string;
+}) {
+  const [filterSearch, setFilterSearch] = useState<string | undefined>(
+    initialFilterSearch
+  );
+  return (
+    <TableDataGrid
+      filterSearch={filterSearch}
+      initialPageSize={10}
+      name={name}
+      onFilterSearchChange={setFilterSearch}
+    />
+  );
+}
+
 function ForeignKeyReferenceDrawer({
   onOpenChange,
   onOpenReferencedTable,
@@ -637,20 +663,6 @@ function ForeignKeyReferenceDrawer({
   onOpenReferencedTable?: ((tableName: string) => void) | undefined;
   preview: ForeignKeyReferencePreview | null;
 }) {
-  const [previewFilterSearch, setPreviewFilterSearch] = useState<
-    string | undefined
-  >(preview?.filterSearch);
-  const previewKey = preview
-    ? `${preview.reference.targetTableName}:${preview.filterSearch}`
-    : "";
-
-  useEffect(
-    function resetForeignKeyPreviewFilter() {
-      setPreviewFilterSearch(preview?.filterSearch);
-    },
-    [preview?.filterSearch]
-  );
-
   return (
     <Sheet onOpenChange={onOpenChange} open={preview !== null}>
       <SheetContent
@@ -678,12 +690,10 @@ function ForeignKeyReferenceDrawer({
               )}
             </SheetHeader>
             <div className="min-h-0 flex-1 overflow-auto p-4">
-              <TableDataGrid
-                filterSearch={previewFilterSearch}
-                initialPageSize={10}
-                key={previewKey}
+              <ForeignKeyPreviewGrid
+                initialFilterSearch={preview.filterSearch}
+                key={`${preview.reference.targetTableName}:${preview.filterSearch}`}
                 name={preview.reference.targetTableName}
-                onFilterSearchChange={setPreviewFilterSearch}
               />
             </div>
             {onOpenReferencedTable ? (
@@ -1436,9 +1446,105 @@ function TableDataGridContent({
   );
 }
 
+// Grid cell mouse/selection handlers plus the context-menu copy actions. Built
+// per render from the current rows and menu position; hoisted out of
+// TableDataGrid to keep the component itself readable.
+function buildCellInteractionHandlers({
+  contextMenu,
+  onCellSearchChange,
+  rows,
+  selectionActions,
+  setContextMenu,
+}: {
+  contextMenu: ContextMenuState | null;
+  onCellSearchChange: (next: string | undefined) => void;
+  rows: GridRow[];
+  selectionActions: ReturnType<typeof useSelectionActions>;
+  setContextMenu: (next: ContextMenuState | null) => void;
+}) {
+  function handleCellContextMenu(
+    args: CellMouseArgs<GridRow>,
+    event: CellMouseEvent
+  ) {
+    if (
+      args.column.key === SELECT_COLUMN_KEY ||
+      args.column.key === EXPAND_COLUMN_KEY
+    ) {
+      return;
+    }
+    event.preventGridDefault();
+    event.preventDefault();
+    setContextMenu({
+      columnKey: args.column.key,
+      left: event.clientX,
+      rowIdx: args.rowIdx,
+      top: event.clientY,
+    });
+  }
+
+  function handleSelectedCellChange(args: CellSelectArgs<GridRow>) {
+    if (
+      !args.row ||
+      args.column.key === SELECT_COLUMN_KEY ||
+      args.column.key === EXPAND_COLUMN_KEY
+    ) {
+      onCellSearchChange(undefined);
+      return;
+    }
+    onCellSearchChange(
+      encodeSelectedCellSearch({
+        columnKey: args.column.key,
+        rowKey: args.row[ROW_KEY_FIELD],
+      })
+    );
+  }
+
+  function handleContextMenuCopyCell() {
+    if (!contextMenu) {
+      return;
+    }
+    const row = rows[contextMenu.rowIdx];
+    if (row) {
+      selectionActions.copyCellValue(row, contextMenu.columnKey);
+    }
+  }
+
+  function handleContextMenuCopyRow() {
+    if (!contextMenu) {
+      return;
+    }
+    const row = rows[contextMenu.rowIdx];
+    if (row) {
+      selectionActions.copyRowValues(row);
+    }
+  }
+
+  return {
+    handleCellContextMenu,
+    handleContextMenuCopyCell,
+    handleContextMenuCopyRow,
+    handleSelectedCellChange,
+  };
+}
+
+// Tracks which foreign key preview is open, scoped to the table it was opened
+// from: when the grid renders another table the stale preview is simply not
+// returned, so the drawer closes without an effect.
+function useForeignKeyReferenceDrawer(name: string) {
+  const [reference, setReference] = useState<{
+    name: string;
+    preview: ForeignKeyReferencePreview;
+  } | null>(null);
+  const preview = reference?.name === name ? reference.preview : null;
+  const openReference = (next: ForeignKeyReferencePreview) =>
+    setReference({ name, preview: next });
+  const closeReference = () => setReference(null);
+  return { closeReference, openReference, preview };
+}
+
 function TableDataGrid({
   children,
-  foreignKeyReferences = [],
+  foreignKeyReferences = NO_FOREIGN_KEY_REFERENCES,
   name,
   filterSearch,
   frozenColumnsSearch,
@@ -1515,9 +1621,7 @@ function TableDataGrid({
   // grey out and disable unchanged rows (the toolbar spinner covers those).
   const isRefetchingRows = isPlaceholderData && !gridLoading;
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [foreignKeyReferencePreview, setForeignKeyReferencePreview] =
-    useState<ForeignKeyReferencePreview | null>(null);
-  const previousNameRef = useRef(name);
+  const foreignKeyDrawer = useForeignKeyReferenceDrawer(name);
   const [isDataGridExpanded, setIsDataGridExpanded] = useState(false);
   const { selectedRows, setSelectedRows, updateSelectedRows } =
     useSelectedRowsUrlState({
@@ -1552,15 +1656,11 @@ function TableDataGrid({
     onFrozenColumnsSearchChange,
   });
 
-  function handleOpenForeignKeyReference(preview: ForeignKeyReferencePreview) {
-    setForeignKeyReferencePreview(preview);
-  }
-
   const { columns, pkColumnSet } = useGridColumns({
     foreignKeyReferences,
     frozenColumns,
     onFrozenColumnsChange: setFrozenColumns,
-    onOpenForeignKeyReference: handleOpenForeignKeyReference,
+    onOpenForeignKeyReference: foreignKeyDrawer.openReference,
     resultColumns,
     rowIdentity: data?.resultSet?.rowIdentity,
     setOpenRowIndex,
@@ -1568,16 +1668,6 @@ function TableDataGrid({
     sortColumns: controller.sortColumns,
   });
 
-  useEffect(
-    function closeForeignKeyReferenceOnTableChange() {
-      if (previousNameRef.current === name) {
-        return;
-      }
-      previousNameRef.current = name;
-      setForeignKeyReferencePreview(null);
-    },
-    [name]
-  );
   const pageLabel = buildPageLabel({
     pageIndex: controller.currentPageIndex,
     pageSize: controller.pageSize,
@@ -1604,6 +1694,14 @@ function TableDataGrid({
     setSelectedRows,
   });
 
+  const cellHandlers = buildCellInteractionHandlers({
+    contextMenu,
+    onCellSearchChange,
+    rows,
+    selectionActions,
+    setContextMenu,
+  });
+
   function handleSortChange(next: SortColumn[]) {
     controller.setSortColumns(next);
   }
@@ -1611,63 +1709,6 @@ function TableDataGrid({
   function handleNext() {
     if (data?.nextPageToken) {
       controller.goNext(data.nextPageToken);
-    }
-  }
-
-  function handleCellContextMenu(
-    args: CellMouseArgs<GridRow>,
-    event: CellMouseEvent
-  ) {
-    if (
-      args.column.key === SELECT_COLUMN_KEY ||
-      args.column.key === EXPAND_COLUMN_KEY
-    ) {
-      return;
-    }
-    event.preventGridDefault();
-    event.preventDefault();
-    setContextMenu({
-      columnKey: args.column.key,
-      left: event.clientX,
-      rowIdx: args.rowIdx,
-      top: event.clientY,
-    });
-  }
-
-  function handleSelectedCellChange(args: CellSelectArgs<GridRow>) {
-    if (
-      !args.row ||
-      args.column.key === SELECT_COLUMN_KEY ||
-      args.column.key === EXPAND_COLUMN_KEY
-    ) {
-      onCellSearchChange(undefined);
-      return;
-    }
-    onCellSearchChange(
-      encodeSelectedCellSearch({
-        columnKey: args.column.key,
-        rowKey: args.row[ROW_KEY_FIELD],
-      })
-    );
-  }
-
-  function handleContextMenuCopyCell() {
-    if (!contextMenu) {
-      return;
-    }
-    const row = rows[contextMenu.rowIdx];
-    if (row) {
-      selectionActions.copyCellValue(row, contextMenu.columnKey);
-    }
-  }
-
-  function handleContextMenuCopyRow() {
-    if (!contextMenu) {
-      return;
-    }
-    const row = rows[contextMenu.rowIdx];
-    if (row) {
-      selectionActions.copyRowValues(row);
     }
   }
 
@@ -1686,7 +1727,7 @@ function TableDataGrid({
     filterTitle: `Filter ${tableQualifiedName.schema}.${tableQualifiedName.table}`,
     invalidFilterRules,
     lastFetchedLabel: refreshState.lastFetchedLabel,
-    onCellContextMenu: handleCellContextMenu,
+    onCellContextMenu: cellHandlers.handleCellContextMenu,
     onCellCopy: selectionActions.handleCellCopy,
     onClearFilters: clearFilters,
     onClearSelection: selectionActions.clearSelection,
@@ -1698,7 +1739,7 @@ function TableDataGrid({
     onPageSizeChange: controller.setPageSize,
     onPrev: controller.goPrev,
     onRefresh: refreshState.refreshNow,
-    onSelectedCellChange: handleSelectedCellChange,
+    onSelectedCellChange: cellHandlers.handleSelectedCellChange,
     onSelectedRowsChange: setSelectedRows,
     onSortChange: handleSortChange,
     onToggleExpanded: () => setIsDataGridExpanded(true),
@@ -1727,16 +1768,16 @@ function TableDataGrid({
       <TableDataGridContent
         chromeProps={chromeProps}
         contextMenu={contextMenu}
-        foreignKeyReferencePreview={foreignKeyReferencePreview}
+        foreignKeyReferencePreview={foreignKeyDrawer.preview}
         isDataGridExpanded={isDataGridExpanded}
         name={name}
         onCloseContextMenu={() => setContextMenu(null)}
-        onContextMenuCopyCell={handleContextMenuCopyCell}
-        onContextMenuCopyRow={handleContextMenuCopyRow}
+        onContextMenuCopyCell={cellHandlers.handleContextMenuCopyCell}
+        onContextMenuCopyRow={cellHandlers.handleContextMenuCopyRow}
         onDataGridExpandedChange={setIsDataGridExpanded}
         onForeignKeyReferenceOpenChange={(next) => {
           if (!next) {
-            setForeignKeyReferencePreview(null);
+            foreignKeyDrawer.closeReference();
           }
         }}
         onOpenReferencedTable={onOpenReferencedTable}

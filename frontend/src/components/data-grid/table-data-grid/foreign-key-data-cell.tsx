@@ -1,5 +1,5 @@
 import { DataCell } from "@/components/data-grid/table-data-grid/data-cell";
-import { Button } from "@/components/ui/button";
+import { ReferenceButton } from "@/components/querylane-ui/reference-button";
 import { formatTableCell } from "@/features/data-explorer/table-data/table-value-format";
 import type {
   TableCell,
@@ -21,9 +21,9 @@ function ForeignKeyDataCell({
   }
 
   return (
-    <Button
+    <ReferenceButton
       aria-label={`Open ${column.columnName} reference ${formatted.display}`}
-      className="h-auto max-w-full justify-start px-0 py-0 font-mono text-xs"
+      className="h-auto max-w-full justify-start p-0 font-mono text-xs"
       onClick={(event) => {
         event.stopPropagation();
         onOpen();
@@ -31,10 +31,9 @@ function ForeignKeyDataCell({
       size="xs"
       title={`Open referenced row for ${column.columnName}`}
       type="button"
-      variant="reference"
     >
       <span className="truncate">{formatted.display}</span>
-    </Button>
+    </ReferenceButton>
   );
 }
 

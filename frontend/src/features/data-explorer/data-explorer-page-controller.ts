@@ -244,6 +244,22 @@ function useDataExplorerPageController({
           area: "data-explorer.schemas",
         });
       }),
+    onOpenReferencedTable: (tableResourceName: string) => {
+      // Constraint metadata is backend-controlled, but a malformed resource
+      // name must not throw out of a click handler.
+      let parsed: ReturnType<typeof parseTableQualifiedName>;
+      try {
+        parsed = parseTableQualifiedName(tableResourceName);
+      } catch {
+        return;
+      }
+      updateSearch({
+        category: "tables",
+        name: parsed.table,
+        schema: parsed.schema,
+        tab: undefined,
+      });
+    },
     onResourceIntent,
     onRetryTables,
     onRetryViews,
@@ -282,22 +298,6 @@ function useDataExplorerPageController({
         category: "tables",
         name,
         schema: schemaName,
-        tab: undefined,
-      });
-    },
-    onSelectTableResource: (tableResourceName: string) => {
-      // Constraint metadata is backend-controlled, but a malformed resource
-      // name must not throw out of a click handler.
-      let parsed: ReturnType<typeof parseTableQualifiedName>;
-      try {
-        parsed = parseTableQualifiedName(tableResourceName);
-      } catch {
-        return;
-      }
-      updateSearch({
-        category: "tables",
-        name: parsed.table,
-        schema: parsed.schema,
         tab: undefined,
       });
     },

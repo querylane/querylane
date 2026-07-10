@@ -218,7 +218,7 @@ describe("data explorer search navigation", () => {
     });
 
     act(() => {
-      result.current.onSelectTableResource(
+      result.current.onOpenReferencedTable(
         "instances/inst-1/databases/db-1/schemas/public/tables/carriers"
       );
     });
