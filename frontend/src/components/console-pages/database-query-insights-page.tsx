@@ -268,10 +268,7 @@ function QueryKindFilterButton({
   return (
     <Button
       aria-pressed={selected}
-      className={cn(
-        "h-7 rounded-full px-3 text-xs",
-        selected && "bg-primary text-primary-foreground hover:bg-primary/80"
-      )}
+      className="h-7 rounded-full px-3 text-xs"
       onClick={() => onSelect(filter)}
       size="sm"
       type="button"
@@ -587,20 +584,29 @@ function TopQueriesCard({
             </CardDescription>
           </div>
         </div>
-        <QueryToolbar
-          kind={kind}
-          meanThreshold={meanThreshold}
-          onKindChange={handleKindChange}
-          onMeanThresholdChange={handleMeanThresholdChange}
-          onSearchChange={handleSearchChange}
-          search={search}
-        />
+        {insights.queryStatsAvailable ? (
+          <QueryToolbar
+            kind={kind}
+            meanThreshold={meanThreshold}
+            onKindChange={handleKindChange}
+            onMeanThresholdChange={handleMeanThresholdChange}
+            onSearchChange={handleSearchChange}
+            search={search}
+          />
+        ) : null}
       </CardHeader>
-      <TopQueriesTable
-        onSelectQuery={onSelectQuery}
-        queries={queries}
-        selectedQueryKey={selectedQueryKey}
-      />
+      {insights.queryStatsAvailable ? (
+        <TopQueriesTable
+          onSelectQuery={onSelectQuery}
+          queries={queries}
+          selectedQueryKey={selectedQueryKey}
+        />
+      ) : (
+        <div className="px-5 py-8 text-muted-foreground text-sm">
+          Query statistics are unavailable for this database. Install the
+          pg_stat_statements extension to see top queries by runtime.
+        </div>
+      )}
     </CardShell>
   );
 }
@@ -917,8 +923,12 @@ function BackendDatabaseQueryInsightsPage({
     pageContent = <DatabaseInsightsLoadingState />;
   } else {
     pageContent = (
+      // Keyed by database so selection and filter state reset when the user
+      // switches databases without a route remount (queryids are stable text
+      // hashes, so stale selections could silently match in the new database).
       <QueryInsightsContent
         insights={insights}
+        key={databaseName}
         observedAtLabel={observedAtLabel}
       />
     );

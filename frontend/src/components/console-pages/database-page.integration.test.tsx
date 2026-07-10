@@ -53,6 +53,8 @@ const VALUES_QUERY_BUTTON_RE = /VALUES \(\$1\)/i;
 const COPY_TO_QUERY_BUTTON_RE = /COPY events TO STDOUT/i;
 const COPY_FROM_QUERY_BUTTON_RE = /COPY events FROM STDIN/i;
 const SLOW_COUNT_QUERY_BUTTON_RE = /SELECT count\(\*\) FROM events/i;
+const QUERY_STATS_UNAVAILABLE_RE =
+  /Query statistics are unavailable for this database/;
 
 vi.mock("@tanstack/react-router", () => {
   const linkExportName = "Link";
@@ -396,6 +398,13 @@ function queryInsightsWithoutTableStatsResponse() {
         totalTimeRatio: 1,
       }),
     ],
+  });
+}
+
+function queryInsightsWithoutQueryStatsResponse() {
+  return queryInsightsResponseWith({
+    queryStatsAvailable: false,
+    tableStatsAvailable: true,
   });
 }
 
@@ -890,6 +899,38 @@ describe("backend database query insights page", () => {
     expect(within(detail).getByText("18 ms")).toBeTruthy();
   });
 
+  test("resets query selection when switching databases", async () => {
+    const user = userEvent.setup();
+    state.queryInsightsQuery = { data: queryInsightsResponse() };
+
+    const { rerender } = render(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: UPDATE_EVENTS_QUERY_BUTTON_RE,
+      })
+    );
+    const detail = screen.getByRole("region", { name: "Query detail" });
+    expect(within(detail).getByText("queryid 456")).toBeTruthy();
+
+    // The other database also reports queryid 456 (queryids are stable text
+    // hashes), so a carried-over selection would silently match there.
+    state.queryInsightsQuery = {
+      data: queryInsightsResponseWithSearchableQueries(),
+    };
+    rerender(
+      <BackendDatabaseQueryInsightsPage databaseId="orders" instanceId="prod" />
+    );
+
+    const freshDetail = screen.getByRole("region", { name: "Query detail" });
+    expect(within(freshDetail).getByText("queryid 123")).toBeTruthy();
+  });
+
   test("filters query insights by search text and mean runtime", async () => {
     const user = userEvent.setup();
     state.queryInsightsQuery = {
@@ -957,6 +998,20 @@ describe("backend database query insights page", () => {
     expect(
       screen.getByText("Table statistics are unavailable for this database.")
     ).toBeTruthy();
+
+    state.queryInsightsQuery = {
+      data: queryInsightsWithoutQueryStatsResponse(),
+    };
+    rerender(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+    expect(screen.getByText(QUERY_STATS_UNAVAILABLE_RE)).toBeTruthy();
+    expect(
+      screen.queryByRole("searchbox", { name: "Search top queries" })
+    ).toBeNull();
 
     state.queryInsightsQuery = {
       error: new Error("query insights unavailable"),
