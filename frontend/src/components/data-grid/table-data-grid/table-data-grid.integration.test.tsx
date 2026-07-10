@@ -1,6 +1,7 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -64,6 +65,15 @@ interface MockGridColumn {
 interface MockGridProps {
   columns?: MockGridColumn[];
   defaultColumnOptions?: DefaultColumnOptions<GridRow, unknown>;
+  onCellContextMenu?: (
+    args: { column: MockGridColumn; row: GridRow; rowIdx: number },
+    event: {
+      clientX: number;
+      clientY: number;
+      preventDefault: () => void;
+      preventGridDefault: () => void;
+    }
+  ) => void;
   onCellCopy?: (
     args: { column: MockGridColumn; row: GridRow },
     event: ReactClipboardEvent<HTMLDivElement>
@@ -103,6 +113,27 @@ const reactDataGrid = vi.hoisted(() => ({
   )),
 }));
 
+// The mocked DataGrid renders plain divs, so context-menu tests invoke the
+// grid's onCellContextMenu prop directly instead of dispatching a DOM event.
+function openCellContextMenu(columnKey: string, rowIdx: number) {
+  const gridProps = reactDataGrid.dataGrid.mock.lastCall?.[0];
+  const row = gridProps?.rows?.[rowIdx];
+  if (!(gridProps?.onCellContextMenu && row)) {
+    throw new Error("Expected the data grid mock to receive rows");
+  }
+  act(() => {
+    gridProps.onCellContextMenu?.(
+      { column: { key: columnKey }, row, rowIdx },
+      {
+        clientX: 40,
+        clientY: 40,
+        preventDefault: () => undefined,
+        preventGridDefault: () => undefined,
+      }
+    );
+  });
+}
+
 vi.mock("react-data-grid", () => ({
   ...Object.fromEntries([
     ["DataGrid", reactDataGrid.dataGrid],
@@ -123,6 +154,12 @@ vi.mock("@/hooks/api/table-data", () => ({
 
 vi.mock("@/lib/download-blob", () => ({
   downloadBlob: downloadBlobMock,
+}));
+
+const writeClipboardMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/components/data-grid/table-data-grid/grid-clipboard", () => ({
+  writeClipboard: writeClipboardMock,
 }));
 
 function seedRowsQuery(
@@ -712,6 +749,24 @@ describe("TableDataGrid foreign key references", () => {
 describe("TableDataGrid row interactions", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
+
+  it("copies a row as a sql insert statement from the context menu", async () => {
+    const user = userEvent.setup();
+    seedRowsQuery(1);
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+
+    openCellContextMenu("email", 0);
+    await user.click(
+      screen.getByRole("button", { name: "Copy row as INSERT" })
+    );
+
+    expect(writeClipboardMock).toHaveBeenCalledWith(
+      `INSERT INTO "public"."customers" ("email") VALUES\n  ('user-0');\n`
+    );
+  });
 
   it("jumps directly to a typed row number from the row drawer", async () => {
     const user = userEvent.setup();

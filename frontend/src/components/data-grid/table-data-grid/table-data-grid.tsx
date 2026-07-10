@@ -1082,6 +1082,18 @@ function useSelectionActions({
     clearSelection,
     copyCellValue: (row: GridRow, columnKey: string) =>
       copyCellValue(row, resultColumns, columnKey),
+    copyRowAsSqlInsert: (row: GridRow) => {
+      const cells = new Map<string, TableCell | undefined>();
+      for (const column of resultColumns) {
+        cells.set(column.columnName, getGridCell(row, column));
+      }
+      const result = buildExport("sql", [{ cells }], resultColumns, name);
+      if (!result.ok) {
+        reportTruncatedExport(result);
+        return;
+      }
+      writeClipboard(result.payload.contents);
+    },
     copyRowValues: (row: GridRow) => copyRowValues(row, resultColumns),
     handleCellCopy: (
       { row, column }: CellCopyArgs<GridRow>,
@@ -1355,6 +1367,7 @@ function TableDataGridContent({
   onCloseContextMenu,
   onContextMenuCopyCell,
   onContextMenuCopyRow,
+  onContextMenuCopyRowAsSql,
   onDataGridExpandedChange,
   onForeignKeyReferenceOpenChange,
   onOpenReferencedTable,
@@ -1372,6 +1385,7 @@ function TableDataGridContent({
   onCloseContextMenu: () => void;
   onContextMenuCopyCell: () => void;
   onContextMenuCopyRow: () => void;
+  onContextMenuCopyRowAsSql: () => void;
   onDataGridExpandedChange: (next: boolean) => void;
   onForeignKeyReferenceOpenChange: (open: boolean) => void;
   onOpenReferencedTable?: ((tableName: string) => void) | undefined;
@@ -1425,6 +1439,7 @@ function TableDataGridContent({
           onClose={onCloseContextMenu}
           onCopyCell={onContextMenuCopyCell}
           onCopyRow={onContextMenuCopyRow}
+          onCopyRowAsSql={onContextMenuCopyRowAsSql}
           top={contextMenu.top}
         />
       ) : null}
@@ -1519,10 +1534,21 @@ function buildCellInteractionHandlers({
     }
   }
 
+  function handleContextMenuCopyRowAsSql() {
+    if (!contextMenu) {
+      return;
+    }
+    const row = rows[contextMenu.rowIdx];
+    if (row) {
+      selectionActions.copyRowAsSqlInsert(row);
+    }
+  }
+
   return {
     handleCellContextMenu,
     handleContextMenuCopyCell,
     handleContextMenuCopyRow,
+    handleContextMenuCopyRowAsSql,
     handleSelectedCellChange,
   };
 }
@@ -1774,6 +1800,7 @@ function TableDataGrid({
         onCloseContextMenu={() => setContextMenu(null)}
         onContextMenuCopyCell={cellHandlers.handleContextMenuCopyCell}
         onContextMenuCopyRow={cellHandlers.handleContextMenuCopyRow}
+        onContextMenuCopyRowAsSql={cellHandlers.handleContextMenuCopyRowAsSql}
         onDataGridExpandedChange={setIsDataGridExpanded}
         onForeignKeyReferenceOpenChange={(next) => {
           if (!next) {

@@ -1,4 +1,4 @@
-import { Copy, Rows3 } from "lucide-react";
+import { Copy, FileCode2, Rows3 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ interface CellContextMenuProps {
   onClose: () => void;
   onCopyCell: () => void;
   onCopyRow: () => void;
+  onCopyRowAsSql: () => void;
   top: number;
 }
 function CellContextMenu({
@@ -16,6 +17,7 @@ function CellContextMenu({
   onClose,
   onCopyCell,
   onCopyRow,
+  onCopyRowAsSql,
   top,
 }: CellContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -81,6 +83,19 @@ function CellContextMenu({
       >
         <Rows3 className="size-3.5" />
         Copy row
+      </Button>
+      <Button
+        className="h-7 justify-start gap-2 px-2 text-xs"
+        onClick={() => {
+          onCopyRowAsSql();
+          onClose();
+        }}
+        size="sm"
+        type="button"
+        variant="ghost"
+      >
+        <FileCode2 className="size-3.5" />
+        Copy row as INSERT
       </Button>
     </div>,
     document.body
