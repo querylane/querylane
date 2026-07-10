@@ -1948,6 +1948,10 @@ const RESERVED_SQL_KEYWORDS = new Set([
   "xmltable",
 ]);
 
+// Data-placeholder glyph used across metadata surfaces (see formatColumnList
+// and formatBytes) for values the catalog does not report.
+const EMPTY_DEPENDENCY_PLACEHOLDER = "—";
+
 interface DefinitionSection {
   content: string;
   detail: string;
@@ -2026,14 +2030,20 @@ function constraintSql(
   qualifiedTableName: string
 ) {
   return constraints
-    .filter((constraint) => constraint.definition)
-    .map((constraint) => {
-      if (!constraint.constraintName) {
-        return `ALTER TABLE ${qualifiedTableName} ADD ${constraint.definition};`;
+    .flatMap((constraint) => {
+      if (!constraint.definition) {
+        return [];
       }
-      return `ALTER TABLE ${qualifiedTableName} ADD CONSTRAINT ${formatSqlIdentifier(
-        constraint.constraintName
-      )} ${constraint.definition};`;
+      if (!constraint.constraintName) {
+        return [
+          `ALTER TABLE ${qualifiedTableName} ADD ${constraint.definition};`,
+        ];
+      }
+      return [
+        `ALTER TABLE ${qualifiedTableName} ADD CONSTRAINT ${formatSqlIdentifier(
+          constraint.constraintName
+        )} ${constraint.definition};`,
+      ];
     })
     .join("\n");
 }
@@ -2048,9 +2058,10 @@ function indexSql({
   qualifiedTableName: string;
 }) {
   return indexes
-    .filter((index) => index.indexName)
-    .filter((index) => !backingConstraintNames.has(index.indexName))
-    .map((index) => {
+    .flatMap((index) => {
+      if (!index.indexName || backingConstraintNames.has(index.indexName)) {
+        return [];
+      }
       const unique = index.isUnique ? "UNIQUE " : "";
       const method = index.method || "btree";
       const keyColumns =
@@ -2064,9 +2075,11 @@ function indexSql({
               .join(", ")})`
           : "";
       const predicate = index.predicate ? ` WHERE ${index.predicate}` : "";
-      return `CREATE ${unique}INDEX ${formatSqlIdentifier(
-        index.indexName
-      )} ON ${qualifiedTableName} USING ${method} (${keyColumns})${included}${predicate};`;
+      return [
+        `CREATE ${unique}INDEX ${formatSqlIdentifier(
+          index.indexName
+        )} ON ${qualifiedTableName} USING ${method} (${keyColumns})${included}${predicate};`,
+      ];
     })
     .join("\n");
 }
@@ -2106,8 +2119,10 @@ function partitionSql({
 
 function policySql(policies: TablePolicy[], qualifiedTableName: string) {
   return policies
-    .filter((policy) => policy.policyName)
-    .map((policy) => {
+    .flatMap((policy) => {
+      if (!policy.policyName) {
+        return [];
+      }
       const roles =
         policy.roles.length > 0
           ? policy.roles.map(formatSqlIdentifier).join(", ")
@@ -2118,30 +2133,36 @@ function policySql(policies: TablePolicy[], qualifiedTableName: string) {
       const checkExpression = policy.checkExpression
         ? `\n  WITH CHECK (${policy.checkExpression})`
         : "";
-      return `CREATE POLICY ${formatSqlIdentifier(
-        policy.policyName
-      )} ON ${qualifiedTableName}\n  AS ${formatPolicyMode(
-        policy.mode
-      ).toUpperCase()}\n  FOR ${formatPolicyCommand(
-        policy.command
-      )} TO ${roles}${usingExpression}${checkExpression};`;
+      return [
+        `CREATE POLICY ${formatSqlIdentifier(
+          policy.policyName
+        )} ON ${qualifiedTableName}\n  AS ${formatPolicyMode(
+          policy.mode
+        ).toUpperCase()}\n  FOR ${formatPolicyCommand(
+          policy.command
+        )} TO ${roles}${usingExpression}${checkExpression};`,
+      ];
     })
     .join("\n");
 }
 
 function triggerSql(triggers: TableTrigger[]) {
   return triggers
-    .filter((trigger) => trigger.triggerName)
-    .map((trigger) => {
+    .flatMap((trigger) => {
+      if (!trigger.triggerName) {
+        return [];
+      }
       const definition = trigger.definition.trim();
       if (definition.toUpperCase().startsWith("CREATE TRIGGER")) {
-        return definition.endsWith(";") ? definition : `${definition};`;
+        return [definition.endsWith(";") ? definition : `${definition};`];
       }
       // The backend returns pg_get_triggerdef output, so this branch only
       // sees unexpected data. A statement cannot be reconstructed faithfully
       // from the remaining metadata (row vs statement level is not exposed),
       // so surface that instead of guessing FOR EACH ROW.
-      return `-- Trigger ${formatSqlIdentifier(trigger.triggerName)}: full definition unavailable`;
+      return [
+        `-- Trigger ${formatSqlIdentifier(trigger.triggerName)}: full definition unavailable`,
+      ];
     })
     .join("\n");
 }
@@ -2324,16 +2345,19 @@ function DefinitionSideCard({
 }
 
 function dependencyReferences(constraints: TableConstraint[]) {
-  return constraints
-    .filter((constraint) => constraint.referencedTable)
-    .map((constraint) => {
-      const target = formatReferencedTable(constraint.referencedTable);
-      const sourceColumns = formatColumnList(constraint.columnNames);
-      const targetColumns = formatColumnList(constraint.referencedColumnNames);
-      return `${sourceColumns} → ${target}${
+  return constraints.flatMap((constraint) => {
+    if (!constraint.referencedTable) {
+      return [];
+    }
+    const target = formatReferencedTable(constraint.referencedTable);
+    const sourceColumns = formatColumnList(constraint.columnNames);
+    const targetColumns = formatColumnList(constraint.referencedColumnNames);
+    return [
+      `${sourceColumns} → ${target}${
         targetColumns === "—" ? "" : `(${targetColumns})`
-      }`;
-    });
+      }`,
+    ];
+  });
 }
 
 function dumpCommand({
@@ -2429,7 +2453,7 @@ function ReproduceLocallyCard({
           <span className="px-2 py-1 text-muted-foreground">{databaseId}</span>
         </div>
         <div className="flex min-h-8 items-center rounded-lg border bg-background px-3 py-1.5 text-sm">
-          <span>Template: pg_dump — schema only (SQL)</span>
+          <span>Template: pg_dump, schema only (SQL)</span>
         </div>
         <DefinitionCommandStep
           command={command}
@@ -2636,7 +2660,9 @@ function DefinitionTab({
               <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                 Referenced by
               </p>
-              <p className="mt-1 font-mono text-muted-foreground text-xs">—</p>
+              <p className="mt-1 font-mono text-muted-foreground text-xs">
+                {EMPTY_DEPENDENCY_PLACEHOLDER}
+              </p>
             </div>
             <div>
               <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
@@ -2652,7 +2678,7 @@ function DefinitionTab({
                 </ul>
               ) : (
                 <p className="mt-1 font-mono text-muted-foreground text-xs">
-                  —
+                  {EMPTY_DEPENDENCY_PLACEHOLDER}
                 </p>
               )}
             </div>
@@ -2665,8 +2691,8 @@ function DefinitionTab({
           tableName={tableName}
         />
         <p className="px-1 text-muted-foreground text-xs leading-relaxed">
-          Definition is generated from pg_catalog on each visit — Querylane
-          never stores or mutates schema.
+          Definition is generated from pg_catalog on each visit; Querylane never
+          stores or mutates schema.
         </p>
         <Card className="gap-0 border-destructive/40 py-0" size="sm">
           <CardHeader className="border-b bg-destructive/5 py-3">

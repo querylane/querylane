@@ -442,7 +442,7 @@ describe("TableDetail data tab toolbar", () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        "Definition is generated from pg_catalog on each visit — Querylane never stores or mutates schema."
+        "Definition is generated from pg_catalog on each visit; Querylane never stores or mutates schema."
       )
     ).toBeTruthy();
   });
