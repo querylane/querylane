@@ -283,7 +283,7 @@ func TestListWorkflowNodes(t *testing.T) {
 
 	workflowName := resource.NewWorkflowName("prod", "appdb", "wf-01hq3").String()
 	updatedAt := time.Date(2026, time.July, 1, 12, 0, 0, 0, time.UTC)
-	leftNode := int64(2)
+	leftNode := "fd79a31b"
 
 	tests := []struct {
 		name      string
@@ -296,21 +296,21 @@ func TestListWorkflowNodes(t *testing.T) {
 			opener: &fakeOpener{sess: &fakeInstanceSession{dbSession: &fakeDatabaseSession{
 				nodes: []engine.WorkflowNode{
 					{
-						NodeID:         1,
-						NodeType:       "THEN",
-						LeftNode:       &leftNode,
-						Status:         "completed",
-						InferredStatus: "completed",
-						UpdatedAt:      &updatedAt,
+						ExecutionID: 1,
+						NodeID:      "8bb139e2",
+						NodeType:    "THEN",
+						LeftNode:    &leftNode,
+						Status:      "completed",
+						UpdatedAt:   &updatedAt,
 					},
 					{
-						NodeID:        2,
-						NodeType:      "SQL",
-						Query:         "SELECT 1",
-						ResultName:    "batch",
-						Status:        "failed",
-						Result:        `{"error": "boom"}`,
-						StatusDetails: "division by zero",
+						ExecutionID: 1,
+						NodeID:      "fd79a31b",
+						NodeType:    "SQL",
+						Query:       "SELECT 1",
+						ResultName:  "batch",
+						Status:      "failed",
+						Result:      `"SQL execution failed: division by zero"`,
 					},
 				},
 				token: "next",
@@ -332,9 +332,10 @@ func TestListWorkflowNodes(t *testing.T) {
 				nodes := res.Msg.GetWorkflowNodes()
 				require.Len(t, nodes, 2)
 				first := nodes[0]
-				assert.Equal(t, int64(1), first.GetNodeId())
+				assert.Equal(t, int64(1), first.GetExecutionId())
+				assert.Equal(t, "8bb139e2", first.GetNodeId())
 				assert.Equal(t, "THEN", first.GetNodeType())
-				assert.Equal(t, int64(2), first.GetLeftNode())
+				assert.Equal(t, "fd79a31b", first.GetLeftNode())
 				assert.Nil(t, first.RightNode)
 				assert.Equal(t, "completed", first.GetStatus())
 				require.NotNil(t, first.GetUpdateTime())
@@ -343,8 +344,7 @@ func TestListWorkflowNodes(t *testing.T) {
 				second := nodes[1]
 				assert.Equal(t, "SELECT 1", second.GetQuery())
 				assert.Equal(t, "batch", second.GetResultName())
-				assert.JSONEq(t, `{"error": "boom"}`, second.GetResult())
-				assert.Equal(t, "division by zero", second.GetStatusDetails())
+				assert.Equal(t, `"SQL execution failed: division by zero"`, second.GetResult())
 				assert.Nil(t, second.LeftNode)
 				assert.Nil(t, second.GetUpdateTime())
 			},

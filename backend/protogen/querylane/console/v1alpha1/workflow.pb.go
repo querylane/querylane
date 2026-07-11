@@ -210,41 +210,39 @@ func (x *Workflow) GetCurrentExecutionId() string {
 	return ""
 }
 
-// One node (step) of a workflow instance's execution graph.
+// One node (step) of a workflow instance's execution graph, as reported by
+// pg_durable v0.2.3's df.instance_nodes.
 //
 // Node statuses and types are surfaced as the raw strings pg_durable reports
-// (e.g. node_type "SQL", "THEN", "JOIN"; status "pending", "completed").
+// (e.g. node_type "SQL", "THEN", "JOIN"; status "pending", "failed").
 // pg_durable is in preview and its node vocabulary is not a documented closed
 // set, so these are intentionally not modeled as enums yet.
 type WorkflowNode struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Output-only. The node id within the instance graph.
-	NodeId int64 `protobuf:"varint,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	// Output-only. The execution (deterministic replay) this node row belongs
+	// to. ListWorkflowNodes returns the latest execution only.
+	ExecutionId int64 `protobuf:"varint,1,opt,name=execution_id,json=executionId,proto3" json:"execution_id,omitempty"`
+	// Output-only. The node id within the instance graph (an opaque hex id).
+	NodeId string `protobuf:"bytes,2,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
 	// Output-only. Raw pg_durable node type (e.g. "SQL", "THEN", "IF", "JOIN",
 	// "LOOP").
-	NodeType string `protobuf:"bytes,2,opt,name=node_type,json=nodeType,proto3" json:"node_type,omitempty"`
+	NodeType string `protobuf:"bytes,3,opt,name=node_type,json=nodeType,proto3" json:"node_type,omitempty"`
 	// Output-only. The SQL text of the node, for SQL nodes.
-	Query string `protobuf:"bytes,3,opt,name=query,proto3" json:"query,omitempty"`
+	Query string `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
 	// Output-only. The result name assigned via the |=> operator, when set.
-	ResultName string `protobuf:"bytes,4,opt,name=result_name,json=resultName,proto3" json:"result_name,omitempty"`
+	ResultName string `protobuf:"bytes,5,opt,name=result_name,json=resultName,proto3" json:"result_name,omitempty"`
 	// Output-only. Left child node id in the graph. Unset for leaf nodes.
-	LeftNode *int64 `protobuf:"varint,5,opt,name=left_node,json=leftNode,proto3,oneof" json:"left_node,omitempty"`
+	LeftNode *string `protobuf:"bytes,6,opt,name=left_node,json=leftNode,proto3,oneof" json:"left_node,omitempty"`
 	// Output-only. Right child node id in the graph. Unset for leaf nodes.
-	RightNode *int64 `protobuf:"varint,6,opt,name=right_node,json=rightNode,proto3,oneof" json:"right_node,omitempty"`
+	RightNode *string `protobuf:"bytes,7,opt,name=right_node,json=rightNode,proto3,oneof" json:"right_node,omitempty"`
 	// Output-only. Raw recorded status of the node.
-	Status string `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
-	// Output-only. Node result as JSON text. Empty when the node has not
-	// produced a result.
-	Result string `protobuf:"bytes,8,opt,name=result,proto3" json:"result,omitempty"`
-	// Output-only. Additional status detail (e.g. error text for failed nodes).
-	StatusDetails string `protobuf:"bytes,9,opt,name=status_details,json=statusDetails,proto3" json:"status_details,omitempty"`
-	// Output-only. Status inferred at read time from ancestor nodes, when the
-	// recorded status alone is not conclusive (e.g. a node skipped because an
-	// ancestor failed).
-	InferredStatus string `protobuf:"bytes,10,opt,name=inferred_status,json=inferredStatus,proto3" json:"inferred_status,omitempty"`
+	Status string `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`
+	// Output-only. Node result as JSON text (error text for failed nodes).
+	// Empty when the node has not produced a result.
+	Result string `protobuf:"bytes,9,opt,name=result,proto3" json:"result,omitempty"`
 	// Output-only. When the node status last changed. Unset when pg_durable has
 	// not recorded an update yet.
-	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -279,11 +277,18 @@ func (*WorkflowNode) Descriptor() ([]byte, []int) {
 	return file_querylane_console_v1alpha1_workflow_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *WorkflowNode) GetNodeId() int64 {
+func (x *WorkflowNode) GetExecutionId() int64 {
+	if x != nil {
+		return x.ExecutionId
+	}
+	return 0
+}
+
+func (x *WorkflowNode) GetNodeId() string {
 	if x != nil {
 		return x.NodeId
 	}
-	return 0
+	return ""
 }
 
 func (x *WorkflowNode) GetNodeType() string {
@@ -307,18 +312,18 @@ func (x *WorkflowNode) GetResultName() string {
 	return ""
 }
 
-func (x *WorkflowNode) GetLeftNode() int64 {
+func (x *WorkflowNode) GetLeftNode() string {
 	if x != nil && x.LeftNode != nil {
 		return *x.LeftNode
 	}
-	return 0
+	return ""
 }
 
-func (x *WorkflowNode) GetRightNode() int64 {
+func (x *WorkflowNode) GetRightNode() string {
 	if x != nil && x.RightNode != nil {
 		return *x.RightNode
 	}
-	return 0
+	return ""
 }
 
 func (x *WorkflowNode) GetStatus() string {
@@ -331,20 +336,6 @@ func (x *WorkflowNode) GetStatus() string {
 func (x *WorkflowNode) GetResult() string {
 	if x != nil {
 		return x.Result
-	}
-	return ""
-}
-
-func (x *WorkflowNode) GetStatusDetails() string {
-	if x != nil {
-		return x.StatusDetails
-	}
-	return ""
-}
-
-func (x *WorkflowNode) GetInferredStatus() string {
-	if x != nil {
-		return x.InferredStatus
 	}
 	return ""
 }
@@ -715,22 +706,21 @@ const file_querylane_console_v1alpha1_workflow_proto_rawDesc = "" +
 	"\x0fexecution_count\x18\a \x01(\x03B\x03\xe0A\x03R\x0eexecutionCount\x12\x1b\n" +
 	"\x06output\x18\b \x01(\tB\x03\xe0A\x03R\x06output\x125\n" +
 	"\x14current_execution_id\x18\t \x01(\tB\x03\xe0A\x03R\x12currentExecutionId:x\xeaAu\n" +
-	"\x1econsole.querylane.dev/Workflow\x12>instances/{instance}/databases/{database}/workflows/{workflow}*\tworkflows2\bworkflow\"\xd2\x03\n" +
-	"\fWorkflowNode\x12\x1c\n" +
-	"\anode_id\x18\x01 \x01(\x03B\x03\xe0A\x03R\x06nodeId\x12 \n" +
-	"\tnode_type\x18\x02 \x01(\tB\x03\xe0A\x03R\bnodeType\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tB\x03\xe0A\x03R\x05query\x12$\n" +
-	"\vresult_name\x18\x04 \x01(\tB\x03\xe0A\x03R\n" +
+	"\x1econsole.querylane.dev/Workflow\x12>instances/{instance}/databases/{database}/workflows/{workflow}*\tworkflows2\bworkflow\"\xa0\x03\n" +
+	"\fWorkflowNode\x12&\n" +
+	"\fexecution_id\x18\x01 \x01(\x03B\x03\xe0A\x03R\vexecutionId\x12\x1c\n" +
+	"\anode_id\x18\x02 \x01(\tB\x03\xe0A\x03R\x06nodeId\x12 \n" +
+	"\tnode_type\x18\x03 \x01(\tB\x03\xe0A\x03R\bnodeType\x12\x19\n" +
+	"\x05query\x18\x04 \x01(\tB\x03\xe0A\x03R\x05query\x12$\n" +
+	"\vresult_name\x18\x05 \x01(\tB\x03\xe0A\x03R\n" +
 	"resultName\x12%\n" +
-	"\tleft_node\x18\x05 \x01(\x03B\x03\xe0A\x03H\x00R\bleftNode\x88\x01\x01\x12'\n" +
+	"\tleft_node\x18\x06 \x01(\tB\x03\xe0A\x03H\x00R\bleftNode\x88\x01\x01\x12'\n" +
 	"\n" +
-	"right_node\x18\x06 \x01(\x03B\x03\xe0A\x03H\x01R\trightNode\x88\x01\x01\x12\x1b\n" +
-	"\x06status\x18\a \x01(\tB\x03\xe0A\x03R\x06status\x12\x1b\n" +
-	"\x06result\x18\b \x01(\tB\x03\xe0A\x03R\x06result\x12*\n" +
-	"\x0estatus_details\x18\t \x01(\tB\x03\xe0A\x03R\rstatusDetails\x12,\n" +
-	"\x0finferred_status\x18\n" +
-	" \x01(\tB\x03\xe0A\x03R\x0einferredStatus\x12@\n" +
-	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"right_node\x18\a \x01(\tB\x03\xe0A\x03H\x01R\trightNode\x88\x01\x01\x12\x1b\n" +
+	"\x06status\x18\b \x01(\tB\x03\xe0A\x03R\x06status\x12\x1b\n" +
+	"\x06result\x18\t \x01(\tB\x03\xe0A\x03R\x06result\x12@\n" +
+	"\vupdate_time\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"updateTimeB\f\n" +
 	"\n" +
 	"_left_nodeB\r\n" +

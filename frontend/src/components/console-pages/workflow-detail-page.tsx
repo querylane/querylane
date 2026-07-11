@@ -28,19 +28,15 @@ import type { WorkflowNode } from "@/protogen/querylane/console/v1alpha1/workflo
 
 const NODES_PAGE_SIZE = 50;
 
-function nodeStatusText(node: WorkflowNode): string {
-  return node.inferredStatus || node.status || "—";
-}
-
 function nodeColumns(): DataTableColumnDef<WorkflowNode>[] {
   return [
     {
-      accessorFn: (row) => Number(row.nodeId),
-      cell: ({ row }) => String(row.original.nodeId),
+      accessorFn: (row) => row.nodeId,
+      cell: ({ row }) => row.original.nodeId,
       header: () => "Node",
       id: "nodeId",
       meta: {
-        cellClassName: "text-sm tabular-nums",
+        cellClassName: "font-mono text-sm",
       },
     },
     {
@@ -53,8 +49,8 @@ function nodeColumns(): DataTableColumnDef<WorkflowNode>[] {
       },
     },
     {
-      accessorFn: (row) => nodeStatusText(row),
-      cell: ({ row }) => nodeStatusText(row.original),
+      accessorFn: (row) => row.status,
+      cell: ({ row }) => row.original.status || "—",
       header: () => "Status",
       id: "status",
       meta: {
@@ -88,13 +84,20 @@ function nodeColumns(): DataTableColumnDef<WorkflowNode>[] {
       },
     },
     {
-      accessorFn: (row) => row.statusDetails,
-      cell: ({ row }) => row.original.statusDetails || "—",
+      accessorFn: (row) => row.result,
+      cell: ({ row }) =>
+        row.original.result ? (
+          <span className="block max-w-96 truncate" title={row.original.result}>
+            {row.original.result}
+          </span>
+        ) : (
+          "—"
+        ),
       enableSorting: false,
-      header: () => "Details",
-      id: "statusDetails",
+      header: () => "Result",
+      id: "result",
       meta: {
-        cellClassName: "min-w-48 text-sm text-muted-foreground",
+        cellClassName: "min-w-48 font-mono text-sm text-muted-foreground",
       },
     },
     {

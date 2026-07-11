@@ -548,18 +548,17 @@ type Workflow struct {
 }
 
 // WorkflowNode represents one node of a pg_durable workflow instance graph as
-// reported by df.instance_nodes. NodeType, Status, and InferredStatus are the
-// raw pg_durable values; Result is JSON text.
+// reported by df.instance_nodes (latest execution only). NodeType and Status
+// are the raw pg_durable values; Result is JSON text.
 type WorkflowNode struct {
-	NodeID         int64
-	NodeType       string
-	Query          string
-	ResultName     string
-	LeftNode       *int64
-	RightNode      *int64
-	Status         string
-	Result         string
-	StatusDetails  string
-	InferredStatus string
-	UpdatedAt      *time.Time
+	ExecutionID int64
+	NodeID      string
+	NodeType    string
+	Query       string
+	ResultName  string
+	LeftNode    *string
+	RightNode   *string
+	Status      string
+	Result      string
+	UpdatedAt   *time.Time
 }

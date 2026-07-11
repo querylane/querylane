@@ -15,7 +15,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file querylane/console/v1alpha1/workflow.proto.
  */
 export const file_querylane_console_v1alpha1_workflow: GenFile = /*@__PURE__*/
-  fileDesc("CilxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS93b3JrZmxvdy5wcm90bxIacXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEilwMKCFdvcmtmbG93EhEKBG5hbWUYASABKAlCA+BBCBIYCgt3b3JrZmxvd19pZBgCIAEoCUID4EEDEhIKBWxhYmVsGAMgASgJQgPgQQMSGgoNZnVuY3Rpb25fbmFtZRgEIAEoCUID4EEDEh0KEGZ1bmN0aW9uX3ZlcnNpb24YBSABKAlCA+BBAxI/CgZzdGF0dXMYBiABKA4yKi5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5Xb3JrZmxvd1N0YXR1c0ID4EEDEhwKD2V4ZWN1dGlvbl9jb3VudBgHIAEoA0ID4EEDEhMKBm91dHB1dBgIIAEoCUID4EEDEiEKFGN1cnJlbnRfZXhlY3V0aW9uX2lkGAkgASgJQgPgQQM6eOpBdQoeY29uc29sZS5xdWVyeWxhbmUuZGV2L1dvcmtmbG93Ej5pbnN0YW5jZXMve2luc3RhbmNlfS9kYXRhYmFzZXMve2RhdGFiYXNlfS93b3JrZmxvd3Mve3dvcmtmbG93fSoJd29ya2Zsb3dzMgh3b3JrZmxvdyLdAgoMV29ya2Zsb3dOb2RlEhQKB25vZGVfaWQYASABKANCA+BBAxIWCglub2RlX3R5cGUYAiABKAlCA+BBAxISCgVxdWVyeRgDIAEoCUID4EEDEhgKC3Jlc3VsdF9uYW1lGAQgASgJQgPgQQMSGwoJbGVmdF9ub2RlGAUgASgDQgPgQQNIAIgBARIcCgpyaWdodF9ub2RlGAYgASgDQgPgQQNIAYgBARITCgZzdGF0dXMYByABKAlCA+BBAxITCgZyZXN1bHQYCCABKAlCA+BBAxIbCg5zdGF0dXNfZGV0YWlscxgJIAEoCUID4EEDEhwKD2luZmVycmVkX3N0YXR1cxgKIAEoCUID4EEDEjQKC3VwZGF0ZV90aW1lGAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEID4EEDQgwKCl9sZWZ0X25vZGVCDQoLX3JpZ2h0X25vZGUigAIKFExpc3RXb3JrZmxvd3NSZXF1ZXN0EoABCgZwYXJlbnQYASABKAlCcOBBAvpBIAoeY29uc29sZS5xdWVyeWxhbmUuZGV2L0RhdGFiYXNlukhHyAEBckIyQF5pbnN0YW5jZXMvW2EtekEtWl0oW2EtekEtWjAtOV8tXSpbYS16QS1aMC05XSk/L2RhdGFiYXNlcy9bXi9dKyQSIAoJcGFnZV9zaXplGAIgASgFQg3gQQG6SAcaBRjoBygAEhcKCnBhZ2VfdG9rZW4YAyABKAlCA+BBARITCgZmaWx0ZXIYBCABKAlCA+BBARIVCghvcmRlcl9ieRgFIAEoCUID4EEBImkKFUxpc3RXb3JrZmxvd3NSZXNwb25zZRI3Cgl3b3JrZmxvd3MYASADKAsyJC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5Xb3JrZmxvdxIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkipgEKEkdldFdvcmtmbG93UmVxdWVzdBKPAQoEbmFtZRgBIAEoCUKAAeBBAvpBIAoeY29uc29sZS5xdWVyeWxhbmUuZGV2L1dvcmtmbG93ukhXyAEBclIyUF5pbnN0YW5jZXMvW2EtekEtWl0oW2EtekEtWjAtOV8tXSpbYS16QS1aMC05XSk/L2RhdGFiYXNlcy9bXi9dKy93b3JrZmxvd3MvW14vXSskIpUCChhMaXN0V29ya2Zsb3dOb2Rlc1JlcXVlc3QSkQEKBnBhcmVudBgBIAEoCUKAAeBBAvpBIAoeY29uc29sZS5xdWVyeWxhbmUuZGV2L1dvcmtmbG93ukhXyAEBclIyUF5pbnN0YW5jZXMvW2EtekEtWl0oW2EtekEtWjAtOV8tXSpbYS16QS1aMC05XSk/L2RhdGFiYXNlcy9bXi9dKy93b3JrZmxvd3MvW14vXSskEiAKCXBhZ2Vfc2l6ZRgCIAEoBUIN4EEBukgHGgUY6AcoABIXCgpwYWdlX3Rva2VuGAMgASgJQgPgQQESEwoGZmlsdGVyGAQgASgJQgPgQQESFQoIb3JkZXJfYnkYBSABKAlCA+BBASJ2ChlMaXN0V29ya2Zsb3dOb2Rlc1Jlc3BvbnNlEkAKDndvcmtmbG93X25vZGVzGAEgAygLMigucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuV29ya2Zsb3dOb2RlEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSrFAQoOV29ya2Zsb3dTdGF0dXMSHwobV09SS0ZMT1dfU1RBVFVTX1VOU1BFQ0lGSUVEEAASGwoXV09SS0ZMT1dfU1RBVFVTX1BFTkRJTkcQARIbChdXT1JLRkxPV19TVEFUVVNfUlVOTklORxACEh0KGVdPUktGTE9XX1NUQVRVU19DT01QTEVURUQQAxIaChZXT1JLRkxPV19TVEFUVVNfRkFJTEVEEAQSHQoZV09SS0ZMT1dfU1RBVFVTX0NBTkNFTExFRBAFMvUCCg9Xb3JrZmxvd1NlcnZpY2USdgoNTGlzdFdvcmtmbG93cxIwLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkxpc3RXb3JrZmxvd3NSZXF1ZXN0GjEucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuTGlzdFdvcmtmbG93c1Jlc3BvbnNlIgASZQoLR2V0V29ya2Zsb3cSLi5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5HZXRXb3JrZmxvd1JlcXVlc3QaJC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5Xb3JrZmxvdyIAEoIBChFMaXN0V29ya2Zsb3dOb2RlcxI0LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkxpc3RXb3JrZmxvd05vZGVzUmVxdWVzdBo1LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkxpc3RXb3JrZmxvd05vZGVzUmVzcG9uc2UiAEKVAgoeY29tLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExQg1Xb3JrZmxvd1Byb3RvUAFaWmdpdGh1Yi5jb20vcXVlcnlsYW5lL3F1ZXJ5bGFuZS9iYWNrZW5kL3Byb3RvZ2VuL3F1ZXJ5bGFuZS9jb25zb2xlL3YxYWxwaGExO2NvbnNvbGV2MWFscGhhMaICA1FDWKoCGlF1ZXJ5bGFuZS5Db25zb2xlLlYxYWxwaGExygIaUXVlcnlsYW5lXENvbnNvbGVcVjFhbHBoYTHiAiZRdWVyeWxhbmVcQ29uc29sZVxWMWFscGhhMVxHUEJNZXRhZGF0YeoCHFF1ZXJ5bGFuZTo6Q29uc29sZTo6VjFhbHBoYTFiBnByb3RvMw", [file_buf_validate_validate, file_google_api_field_behavior, file_google_api_resource, file_google_protobuf_timestamp]);
+  fileDesc("CilxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS93b3JrZmxvdy5wcm90bxIacXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEilwMKCFdvcmtmbG93EhEKBG5hbWUYASABKAlCA+BBCBIYCgt3b3JrZmxvd19pZBgCIAEoCUID4EEDEhIKBWxhYmVsGAMgASgJQgPgQQMSGgoNZnVuY3Rpb25fbmFtZRgEIAEoCUID4EEDEh0KEGZ1bmN0aW9uX3ZlcnNpb24YBSABKAlCA+BBAxI/CgZzdGF0dXMYBiABKA4yKi5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5Xb3JrZmxvd1N0YXR1c0ID4EEDEhwKD2V4ZWN1dGlvbl9jb3VudBgHIAEoA0ID4EEDEhMKBm91dHB1dBgIIAEoCUID4EEDEiEKFGN1cnJlbnRfZXhlY3V0aW9uX2lkGAkgASgJQgPgQQM6eOpBdQoeY29uc29sZS5xdWVyeWxhbmUuZGV2L1dvcmtmbG93Ej5pbnN0YW5jZXMve2luc3RhbmNlfS9kYXRhYmFzZXMve2RhdGFiYXNlfS93b3JrZmxvd3Mve3dvcmtmbG93fSoJd29ya2Zsb3dzMgh3b3JrZmxvdyK9AgoMV29ya2Zsb3dOb2RlEhkKDGV4ZWN1dGlvbl9pZBgBIAEoA0ID4EEDEhQKB25vZGVfaWQYAiABKAlCA+BBAxIWCglub2RlX3R5cGUYAyABKAlCA+BBAxISCgVxdWVyeRgEIAEoCUID4EEDEhgKC3Jlc3VsdF9uYW1lGAUgASgJQgPgQQMSGwoJbGVmdF9ub2RlGAYgASgJQgPgQQNIAIgBARIcCgpyaWdodF9ub2RlGAcgASgJQgPgQQNIAYgBARITCgZzdGF0dXMYCCABKAlCA+BBAxITCgZyZXN1bHQYCSABKAlCA+BBAxI0Cgt1cGRhdGVfdGltZRgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBA0IMCgpfbGVmdF9ub2RlQg0KC19yaWdodF9ub2RlIoACChRMaXN0V29ya2Zsb3dzUmVxdWVzdBKAAQoGcGFyZW50GAEgASgJQnDgQQL6QSAKHmNvbnNvbGUucXVlcnlsYW5lLmRldi9EYXRhYmFzZbpIR8gBAXJCMkBeaW5zdGFuY2VzL1thLXpBLVpdKFthLXpBLVowLTlfLV0qW2EtekEtWjAtOV0pPy9kYXRhYmFzZXMvW14vXSskEiAKCXBhZ2Vfc2l6ZRgCIAEoBUIN4EEBukgHGgUY6AcoABIXCgpwYWdlX3Rva2VuGAMgASgJQgPgQQESEwoGZmlsdGVyGAQgASgJQgPgQQESFQoIb3JkZXJfYnkYBSABKAlCA+BBASJpChVMaXN0V29ya2Zsb3dzUmVzcG9uc2USNwoJd29ya2Zsb3dzGAEgAygLMiQucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuV29ya2Zsb3cSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIqYBChJHZXRXb3JrZmxvd1JlcXVlc3QSjwEKBG5hbWUYASABKAlCgAHgQQL6QSAKHmNvbnNvbGUucXVlcnlsYW5lLmRldi9Xb3JrZmxvd7pIV8gBAXJSMlBeaW5zdGFuY2VzL1thLXpBLVpdKFthLXpBLVowLTlfLV0qW2EtekEtWjAtOV0pPy9kYXRhYmFzZXMvW14vXSsvd29ya2Zsb3dzL1teL10rJCKVAgoYTGlzdFdvcmtmbG93Tm9kZXNSZXF1ZXN0EpEBCgZwYXJlbnQYASABKAlCgAHgQQL6QSAKHmNvbnNvbGUucXVlcnlsYW5lLmRldi9Xb3JrZmxvd7pIV8gBAXJSMlBeaW5zdGFuY2VzL1thLXpBLVpdKFthLXpBLVowLTlfLV0qW2EtekEtWjAtOV0pPy9kYXRhYmFzZXMvW14vXSsvd29ya2Zsb3dzL1teL10rJBIgCglwYWdlX3NpemUYAiABKAVCDeBBAbpIBxoFGOgHKAASFwoKcGFnZV90b2tlbhgDIAEoCUID4EEBEhMKBmZpbHRlchgEIAEoCUID4EEBEhUKCG9yZGVyX2J5GAUgASgJQgPgQQEidgoZTGlzdFdvcmtmbG93Tm9kZXNSZXNwb25zZRJACg53b3JrZmxvd19ub2RlcxgBIAMoCzIoLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLldvcmtmbG93Tm9kZRIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkqxQEKDldvcmtmbG93U3RhdHVzEh8KG1dPUktGTE9XX1NUQVRVU19VTlNQRUNJRklFRBAAEhsKF1dPUktGTE9XX1NUQVRVU19QRU5ESU5HEAESGwoXV09SS0ZMT1dfU1RBVFVTX1JVTk5JTkcQAhIdChlXT1JLRkxPV19TVEFUVVNfQ09NUExFVEVEEAMSGgoWV09SS0ZMT1dfU1RBVFVTX0ZBSUxFRBAEEh0KGVdPUktGTE9XX1NUQVRVU19DQU5DRUxMRUQQBTL1AgoPV29ya2Zsb3dTZXJ2aWNlEnYKDUxpc3RXb3JrZmxvd3MSMC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5MaXN0V29ya2Zsb3dzUmVxdWVzdBoxLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkxpc3RXb3JrZmxvd3NSZXNwb25zZSIAEmUKC0dldFdvcmtmbG93Ei4ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuR2V0V29ya2Zsb3dSZXF1ZXN0GiQucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuV29ya2Zsb3ciABKCAQoRTGlzdFdvcmtmbG93Tm9kZXMSNC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5MaXN0V29ya2Zsb3dOb2Rlc1JlcXVlc3QaNS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5MaXN0V29ya2Zsb3dOb2Rlc1Jlc3BvbnNlIgBClQIKHmNvbS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMUINV29ya2Zsb3dQcm90b1ABWlpnaXRodWIuY29tL3F1ZXJ5bGFuZS9xdWVyeWxhbmUvYmFja2VuZC9wcm90b2dlbi9xdWVyeWxhbmUvY29uc29sZS92MWFscGhhMTtjb25zb2xldjFhbHBoYTGiAgNRQ1iqAhpRdWVyeWxhbmUuQ29uc29sZS5WMWFscGhhMcoCGlF1ZXJ5bGFuZVxDb25zb2xlXFYxYWxwaGEx4gImUXVlcnlsYW5lXENvbnNvbGVcVjFhbHBoYTFcR1BCTWV0YWRhdGHqAhxRdWVyeWxhbmU6OkNvbnNvbGU6OlYxYWxwaGExYgZwcm90bzM", [file_buf_validate_validate, file_google_api_field_behavior, file_google_api_resource, file_google_protobuf_timestamp]);
 
 /**
  * A pg_durable workflow instance visible in a Database.
@@ -102,10 +102,11 @@ export const WorkflowSchema: GenMessage<Workflow> = /*@__PURE__*/
   messageDesc(file_querylane_console_v1alpha1_workflow, 0);
 
 /**
- * One node (step) of a workflow instance's execution graph.
+ * One node (step) of a workflow instance's execution graph, as reported by
+ * pg_durable v0.2.3's df.instance_nodes.
  *
  * Node statuses and types are surfaced as the raw strings pg_durable reports
- * (e.g. node_type "SQL", "THEN", "JOIN"; status "pending", "completed").
+ * (e.g. node_type "SQL", "THEN", "JOIN"; status "pending", "failed").
  * pg_durable is in preview and its node vocabulary is not a documented closed
  * set, so these are intentionally not modeled as enums yet.
  *
@@ -113,84 +114,76 @@ export const WorkflowSchema: GenMessage<Workflow> = /*@__PURE__*/
  */
 export type WorkflowNode = Message<"querylane.console.v1alpha1.WorkflowNode"> & {
   /**
-   * Output-only. The node id within the instance graph.
+   * Output-only. The execution (deterministic replay) this node row belongs
+   * to. ListWorkflowNodes returns the latest execution only.
    *
-   * @generated from field: int64 node_id = 1;
+   * @generated from field: int64 execution_id = 1;
    */
-  nodeId: bigint;
+  executionId: bigint;
+
+  /**
+   * Output-only. The node id within the instance graph (an opaque hex id).
+   *
+   * @generated from field: string node_id = 2;
+   */
+  nodeId: string;
 
   /**
    * Output-only. Raw pg_durable node type (e.g. "SQL", "THEN", "IF", "JOIN",
    * "LOOP").
    *
-   * @generated from field: string node_type = 2;
+   * @generated from field: string node_type = 3;
    */
   nodeType: string;
 
   /**
    * Output-only. The SQL text of the node, for SQL nodes.
    *
-   * @generated from field: string query = 3;
+   * @generated from field: string query = 4;
    */
   query: string;
 
   /**
    * Output-only. The result name assigned via the |=> operator, when set.
    *
-   * @generated from field: string result_name = 4;
+   * @generated from field: string result_name = 5;
    */
   resultName: string;
 
   /**
    * Output-only. Left child node id in the graph. Unset for leaf nodes.
    *
-   * @generated from field: optional int64 left_node = 5;
+   * @generated from field: optional string left_node = 6;
    */
-  leftNode?: bigint;
+  leftNode?: string;
 
   /**
    * Output-only. Right child node id in the graph. Unset for leaf nodes.
    *
-   * @generated from field: optional int64 right_node = 6;
+   * @generated from field: optional string right_node = 7;
    */
-  rightNode?: bigint;
+  rightNode?: string;
 
   /**
    * Output-only. Raw recorded status of the node.
    *
-   * @generated from field: string status = 7;
+   * @generated from field: string status = 8;
    */
   status: string;
 
   /**
-   * Output-only. Node result as JSON text. Empty when the node has not
-   * produced a result.
+   * Output-only. Node result as JSON text (error text for failed nodes).
+   * Empty when the node has not produced a result.
    *
-   * @generated from field: string result = 8;
+   * @generated from field: string result = 9;
    */
   result: string;
-
-  /**
-   * Output-only. Additional status detail (e.g. error text for failed nodes).
-   *
-   * @generated from field: string status_details = 9;
-   */
-  statusDetails: string;
-
-  /**
-   * Output-only. Status inferred at read time from ancestor nodes, when the
-   * recorded status alone is not conclusive (e.g. a node skipped because an
-   * ancestor failed).
-   *
-   * @generated from field: string inferred_status = 10;
-   */
-  inferredStatus: string;
 
   /**
    * Output-only. When the node status last changed. Unset when pg_durable has
    * not recorded an update yet.
    *
-   * @generated from field: google.protobuf.Timestamp update_time = 11;
+   * @generated from field: google.protobuf.Timestamp update_time = 10;
    */
   updateTime?: Timestamp;
 };

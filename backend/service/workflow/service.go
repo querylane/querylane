@@ -179,16 +179,15 @@ func convertWorkflow(workflow engine.Workflow, databaseResource resource.Databas
 
 func convertWorkflowNode(node engine.WorkflowNode) *v1alpha1.WorkflowNode {
 	pbNode := &v1alpha1.WorkflowNode{
-		NodeId:         node.NodeID,
-		NodeType:       node.NodeType,
-		Query:          node.Query,
-		ResultName:     node.ResultName,
-		LeftNode:       node.LeftNode,
-		RightNode:      node.RightNode,
-		Status:         node.Status,
-		Result:         node.Result,
-		StatusDetails:  node.StatusDetails,
-		InferredStatus: node.InferredStatus,
+		ExecutionId: node.ExecutionID,
+		NodeId:      node.NodeID,
+		NodeType:    node.NodeType,
+		Query:       node.Query,
+		ResultName:  node.ResultName,
+		LeftNode:    node.LeftNode,
+		RightNode:   node.RightNode,
+		Status:      node.Status,
+		Result:      node.Result,
 	}
 
 	if node.UpdatedAt != nil {

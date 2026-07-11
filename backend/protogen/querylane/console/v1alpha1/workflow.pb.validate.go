@@ -174,6 +174,8 @@ func (m *WorkflowNode) validate(all bool) error {
 
 	var errors []error
 
+	// no validation rules for ExecutionId
+
 	// no validation rules for NodeId
 
 	// no validation rules for NodeType
@@ -185,10 +187,6 @@ func (m *WorkflowNode) validate(all bool) error {
 	// no validation rules for Status
 
 	// no validation rules for Result
-
-	// no validation rules for StatusDetails
-
-	// no validation rules for InferredStatus
 
 	if all {
 		switch v := interface{}(m.GetUpdateTime()).(type) {

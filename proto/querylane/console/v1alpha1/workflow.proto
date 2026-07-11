@@ -89,50 +89,47 @@ message Workflow {
   string current_execution_id = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// One node (step) of a workflow instance's execution graph.
+// One node (step) of a workflow instance's execution graph, as reported by
+// pg_durable v0.2.3's df.instance_nodes.
 //
 // Node statuses and types are surfaced as the raw strings pg_durable reports
-// (e.g. node_type "SQL", "THEN", "JOIN"; status "pending", "completed").
+// (e.g. node_type "SQL", "THEN", "JOIN"; status "pending", "failed").
 // pg_durable is in preview and its node vocabulary is not a documented closed
 // set, so these are intentionally not modeled as enums yet.
 message WorkflowNode {
-  // Output-only. The node id within the instance graph.
-  int64 node_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Output-only. The execution (deterministic replay) this node row belongs
+  // to. ListWorkflowNodes returns the latest execution only.
+  int64 execution_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The node id within the instance graph (an opaque hex id).
+  string node_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output-only. Raw pg_durable node type (e.g. "SQL", "THEN", "IF", "JOIN",
   // "LOOP").
-  string node_type = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string node_type = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output-only. The SQL text of the node, for SQL nodes.
-  string query = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string query = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output-only. The result name assigned via the |=> operator, when set.
-  string result_name = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string result_name = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output-only. Left child node id in the graph. Unset for leaf nodes.
-  optional int64 left_node = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  optional string left_node = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output-only. Right child node id in the graph. Unset for leaf nodes.
-  optional int64 right_node = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  optional string right_node = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output-only. Raw recorded status of the node.
-  string status = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string status = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
 
-  // Output-only. Node result as JSON text. Empty when the node has not
-  // produced a result.
-  string result = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // Output-only. Additional status detail (e.g. error text for failed nodes).
-  string status_details = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // Output-only. Status inferred at read time from ancestor nodes, when the
-  // recorded status alone is not conclusive (e.g. a node skipped because an
-  // ancestor failed).
-  string inferred_status = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Output-only. Node result as JSON text (error text for failed nodes).
+  // Empty when the node has not produced a result.
+  string result = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output-only. When the node status last changed. Unset when pg_durable has
   // not recorded an update yet.
-  google.protobuf.Timestamp update_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp update_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 message ListWorkflowsRequest {

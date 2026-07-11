@@ -97,7 +97,24 @@ Everything is SQL (USER_GUIDE.md, api-reference.md):
 
 None. The README and the project website ship no UI and recommend none; the website explicitly frames "No external dashboards" as a feature, with observability via "Postgres tables such as `df.instances`" under standard Postgres auth. The docs site (<https://microsoft.github.io/pg_durable/>) is marketing/docs only. The only hosted offering mentioned is Azure HorizonDB integration (`aka.ms/horizondb_pg_durable`). This is a clear gap an admin tool like querylane could fill: instance list/detail (graph node drill-down via `df.instance_nodes`), execution history, `df.metrics()` overview, cancel/signal actions, and worker heartbeat from `df._worker_epoch`.
 
-## Sources
+## Live validation against v0.2.3 (2026-07-11)
+
+Validated hands-on against `ghcr.io/microsoft/pg_durable:pg17` (amd64, PostgreSQL 17.10, pg_durable 0.2.3). The shipped introspection signatures differ from the current docs in ways that matter for tooling:
+
+```text
+df.list_instances(status_filter text DEFAULT NULL, limit_count integer DEFAULT 100)
+  → TABLE(instance_id text, label text, function_name text, status text,
+          execution_count bigint, output text)
+df.instance_info(instance_id text)
+  → TABLE(instance_id text, label text, function_name text, function_version text,
+          current_execution_id bigint, status text, output text)
+df.instance_nodes(instance_id_param text, last_n_executions integer DEFAULT 5)
+  → TABLE(execution_id bigint, node_id text, node_type text, query text,
+          result_name text, left_node text, right_node text, status text,
+          result text, updated_at timestamptz)
+```
+
+Differences from the doc-derived table above: `current_execution_id` is **bigint** (not text); `df.instance_nodes` has an extra leading `execution_id` column and a `last_n_executions` parameter, node ids (`node_id`, `left_node`, `right_node`) are **text** hex ids (e.g. `fd79a31b`), and there are **no** `status_details` / `inferred_status` / `inferred_status_from_ancestor_id` columns in v0.2.3 (those are newer additions). Instance ids from `df.start()` are short hex strings (e.g. `dc1a9927`). `df.instance_info()` returns zero rows (not an error) for unknown or RLS-hidden ids, and calling any `df.*` function in a database without the extension raises `3F000` (`schema "df" does not exist`).
 
 - Repo page (metadata, stars, structure): <https://github.com/microsoft/pg_durable>
 - README (raw): <https://raw.githubusercontent.com/microsoft/pg_durable/main/README.md>

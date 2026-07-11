@@ -137,7 +137,7 @@ describe("workflow query option helpers", () => {
           requests.push(request);
           return create(ListWorkflowNodesResponseSchema, {
             nextPageToken: "",
-            workflowNodes: [{ nodeId: 1n, nodeType: "SQL" }],
+            workflowNodes: [{ nodeId: "fd79a31b", nodeType: "SQL" }],
           });
         },
       });

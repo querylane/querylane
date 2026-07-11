@@ -193,7 +193,8 @@ describe("workflow detail page", () => {
           return create(ListWorkflowNodesResponseSchema, {
             workflowNodes: [
               {
-                nodeId: 1n,
+                executionId: 1n,
+                nodeId: "fd79a31b",
                 nodeType: "SQL",
                 query: "SELECT id FROM documents",
                 resultName: "batch",

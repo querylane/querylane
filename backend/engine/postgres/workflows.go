@@ -67,7 +67,7 @@ var workflowNodeSchema = rawsql.Bind(
 		"console.querylane.dev/WorkflowNode",
 		aip.Fields[engine.WorkflowNode]{
 			"node_id": {
-				Codec:    aip.Int64Codec{},
+				Codec:    aip.StringCodec{},
 				GetValue: func(m *engine.WorkflowNode) any { return m.NodeID },
 			},
 			"node_type": {
@@ -191,12 +191,13 @@ func scanWorkflowInfoRow(s scanner) (engine.Workflow, error) {
 func scanWorkflowNode(rows *sql.Rows) (engine.WorkflowNode, error) {
 	var (
 		node      engine.WorkflowNode
-		leftNode  sql.NullInt64
-		rightNode sql.NullInt64
+		leftNode  sql.NullString
+		rightNode sql.NullString
 		updatedAt sql.NullTime
 	)
 
 	err := rows.Scan(
+		&node.ExecutionID,
 		&node.NodeID,
 		&node.NodeType,
 		&node.Query,
@@ -205,8 +206,6 @@ func scanWorkflowNode(rows *sql.Rows) (engine.WorkflowNode, error) {
 		&rightNode,
 		&node.Status,
 		&node.Result,
-		&node.StatusDetails,
-		&node.InferredStatus,
 		&updatedAt,
 	)
 	if err != nil {
@@ -214,11 +213,11 @@ func scanWorkflowNode(rows *sql.Rows) (engine.WorkflowNode, error) {
 	}
 
 	if leftNode.Valid {
-		node.LeftNode = &leftNode.Int64
+		node.LeftNode = &leftNode.String
 	}
 
 	if rightNode.Valid {
-		node.RightNode = &rightNode.Int64
+		node.RightNode = &rightNode.String
 	}
 
 	if updatedAt.Valid {
