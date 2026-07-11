@@ -35,6 +35,7 @@ import (
 	"github.com/querylane/querylane/backend/service/table"
 	"github.com/querylane/querylane/backend/service/tabledata"
 	"github.com/querylane/querylane/backend/service/view"
+	"github.com/querylane/querylane/backend/service/workflow"
 )
 
 // App is the single application — it implements onboarding.DatabaseInitializer
@@ -184,6 +185,7 @@ func (a *App) Routes(ctx context.Context) http.Handler {
 		v1alpha1connect.RoleServiceName,
 		v1alpha1connect.SchemaServiceName,
 		v1alpha1connect.ExtensionServiceName,
+		v1alpha1connect.WorkflowServiceName,
 		v1alpha1connect.TableServiceName,
 		v1alpha1connect.ViewServiceName,
 		v1alpha1connect.TableDataServiceName,
@@ -274,6 +276,7 @@ func (a *App) mountDBServices(mux *http.ServeMux, state *dbState, accessLogger *
 	mux.Handle(v1alpha1connect.NewMetricsServiceHandler(metricsvc.NewService(state.sampleStores, state.instanceReader), opts...))
 	mux.Handle(v1alpha1connect.NewSchemaServiceHandler(schema.NewService(cat), opts...))
 	mux.Handle(v1alpha1connect.NewExtensionServiceHandler(extension.NewService(state.connManager), opts...))
+	mux.Handle(v1alpha1connect.NewWorkflowServiceHandler(workflow.NewService(state.connManager), opts...))
 	mux.Handle(v1alpha1connect.NewTableServiceHandler(table.NewService(cat), opts...))
 	mux.Handle(v1alpha1connect.NewViewServiceHandler(view.NewService(cat), opts...))
 	mux.Handle(v1alpha1connect.NewTableDataServiceHandler(tabledata.NewService(cat, state.connManager, state.tokenCodec), opts...))
@@ -293,6 +296,7 @@ func (a *App) mountStubs(mux *http.ServeMux, accessLogger *interceptor.AccessLog
 	mux.Handle(v1alpha1connect.NewMetricsServiceHandler(&v1alpha1connect.UnimplementedMetricsServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewSchemaServiceHandler(&v1alpha1connect.UnimplementedSchemaServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewExtensionServiceHandler(&v1alpha1connect.UnimplementedExtensionServiceHandler{}, opts...))
+	mux.Handle(v1alpha1connect.NewWorkflowServiceHandler(&v1alpha1connect.UnimplementedWorkflowServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewTableServiceHandler(&v1alpha1connect.UnimplementedTableServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewViewServiceHandler(&v1alpha1connect.UnimplementedViewServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewTableDataServiceHandler(&v1alpha1connect.UnimplementedTableDataServiceHandler{}, opts...))

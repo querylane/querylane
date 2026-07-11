@@ -12,6 +12,7 @@ const (
 	SchemaPattern   = "instances/{instanceID}/databases/{databaseID}/schemas/{schemaID}"
 	TablePattern    = "instances/{instanceID}/databases/{databaseID}/schemas/{schemaID}/tables/{tableID}"
 	ViewPattern     = "instances/{instanceID}/databases/{databaseID}/schemas/{schemaID}/views/{viewID}"
+	WorkflowPattern = "instances/{instanceID}/databases/{databaseID}/workflows/{workflowID}"
 )
 
 // Match reports whether name matches pattern.

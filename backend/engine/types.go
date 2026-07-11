@@ -530,3 +530,36 @@ type TableTrigger struct {
 	Enabled      bool
 	Definition   string
 }
+
+// Workflow represents a pg_durable workflow instance as reported by the
+// df.list_instances / df.instance_info introspection functions. Status is the
+// raw pg_durable value (pending, running, completed, failed, cancelled).
+// FunctionVersion and CurrentExecutionID are only populated by GetWorkflow;
+// pg_durable's listing surface does not expose them.
+type Workflow struct {
+	ID                 string
+	Label              string
+	FunctionName       string
+	FunctionVersion    string
+	Status             string
+	ExecutionCount     int64
+	Output             string
+	CurrentExecutionID string
+}
+
+// WorkflowNode represents one node of a pg_durable workflow instance graph as
+// reported by df.instance_nodes. NodeType, Status, and InferredStatus are the
+// raw pg_durable values; Result is JSON text.
+type WorkflowNode struct {
+	NodeID         int64
+	NodeType       string
+	Query          string
+	ResultName     string
+	LeftNode       *int64
+	RightNode      *int64
+	Status         string
+	Result         string
+	StatusDetails  string
+	InferredStatus string
+	UpdatedAt      *time.Time
+}

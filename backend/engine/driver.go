@@ -56,6 +56,10 @@ type databaseCatalogDriver interface {
 	GetSchema(ctx context.Context, db *sql.DB, schemaName string) (*Schema, error)
 	ListExtensions(ctx context.Context, db *sql.DB, params aip.Params) ([]Extension, string, error)
 
+	ListWorkflows(ctx context.Context, db *sql.DB, params aip.Params) ([]Workflow, string, error)
+	GetWorkflow(ctx context.Context, db *sql.DB, workflowID string) (*Workflow, error)
+	ListWorkflowNodes(ctx context.Context, db *sql.DB, workflowID string, params aip.Params) ([]WorkflowNode, string, error)
+
 	ListTables(ctx context.Context, db *sql.DB, schemaName string, params aip.Params) ([]Table, string, error)
 	GetTable(ctx context.Context, db *sql.DB, schemaName, tableName string) (*Table, error)
 	ListTableColumns(ctx context.Context, db *sql.DB, schemaName, tableName string) ([]Column, error)

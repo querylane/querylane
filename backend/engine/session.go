@@ -119,6 +119,18 @@ func (s *databaseSession) ListExtensions(ctx context.Context, params aip.Params)
 	return s.databaseCatalogDriver.ListExtensions(ctx, s.db, params)
 }
 
+func (s *databaseSession) ListWorkflows(ctx context.Context, params aip.Params) ([]Workflow, string, error) {
+	return s.databaseCatalogDriver.ListWorkflows(ctx, s.db, params)
+}
+
+func (s *databaseSession) GetWorkflow(ctx context.Context, workflowID string) (*Workflow, error) {
+	return s.databaseCatalogDriver.GetWorkflow(ctx, s.db, workflowID)
+}
+
+func (s *databaseSession) ListWorkflowNodes(ctx context.Context, workflowID string, params aip.Params) ([]WorkflowNode, string, error) {
+	return s.databaseCatalogDriver.ListWorkflowNodes(ctx, s.db, workflowID, params)
+}
+
 func (s *databaseSession) ListTables(ctx context.Context, schemaName string, params aip.Params) ([]Table, string, error) {
 	return s.databaseCatalogDriver.ListTables(ctx, s.db, schemaName, params)
 }

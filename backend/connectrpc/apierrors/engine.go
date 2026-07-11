@@ -41,6 +41,25 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 		)
 	}
 
+	// pg_durable is a per-database installation the operator controls; its
+	// absence is a precondition failure the client can surface as "install
+	// the extension", not an invalid request. Checked before the generic
+	// SQLSTATE mapping because the sentinel wraps the raw PgError (42883 or
+	// 3F000) that triggered it.
+	if errors.Is(err, engine.ErrDurableNotInstalled) {
+		errorInfo := NewErrorInfo(
+			DomainConsole,
+			consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+			KeyVal{Key: "operation", Value: rctx.Op},
+		)
+
+		return NewConnectError(
+			connect.CodeFailedPrecondition,
+			err,
+			errorInfo,
+		)
+	}
+
 	var pgSQLErr *engine.PostgresSQLError
 	if errors.As(err, &pgSQLErr) {
 		return mapPostgresSQLError(err, pgSQLErr, rctx)
@@ -407,6 +426,8 @@ func notFoundResource(err error, rctx ResourceCtx) (resourceType resource.Type, 
 	switch {
 	case errors.Is(err, engine.ErrRoleNotFound):
 		return resource.TypeRole, name, true
+	case errors.Is(err, engine.ErrWorkflowNotFound):
+		return resource.TypeWorkflow, name, true
 	case errors.Is(err, engine.ErrViewNotFound):
 		return resource.TypeView, name, true
 	case errors.Is(err, engine.ErrTableNotFound):

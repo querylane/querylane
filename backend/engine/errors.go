@@ -26,6 +26,15 @@ var (
 	// ErrRoleNotFound indicates the requested role does not exist.
 	ErrRoleNotFound = errors.New("role not found")
 
+	// ErrWorkflowNotFound indicates the requested pg_durable workflow instance
+	// does not exist or is not visible to the connection role under RLS.
+	ErrWorkflowNotFound = errors.New("workflow not found")
+
+	// ErrDurableNotInstalled indicates the pg_durable extension is not
+	// installed in the connected database, so the df schema and its
+	// introspection functions are absent.
+	ErrDurableNotInstalled = errors.New("pg_durable extension is not installed in this database")
+
 	// ErrQueryInvalid indicates the SQL statement or query options are invalid.
 	ErrQueryInvalid = errors.New("invalid sql query")
 
@@ -73,7 +82,8 @@ func IsNotFound(err error) bool {
 		errors.Is(err, ErrSchemaNotFound) ||
 		errors.Is(err, ErrTableNotFound) ||
 		errors.Is(err, ErrViewNotFound) ||
-		errors.Is(err, ErrRoleNotFound)
+		errors.Is(err, ErrRoleNotFound) ||
+		errors.Is(err, ErrWorkflowNotFound)
 }
 
 // InvalidQueryError carries a structured field path for a query-validation

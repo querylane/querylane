@@ -13,6 +13,7 @@ const (
 	TypeSchema          Type = "console.querylane.dev/Schema"
 	TypeTable           Type = "console.querylane.dev/Table"
 	TypeView            Type = "console.querylane.dev/View"
+	TypeWorkflow        Type = "console.querylane.dev/Workflow"
 	TypeRunnerExecution Type = "console.querylane.dev/RunnerExecution"
 )
 

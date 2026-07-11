@@ -32,6 +32,12 @@ var schemaListQuery string
 //go:embed queries/list_extensions.sql
 var extensionListQuery string
 
+//go:embed queries/list_workflows.sql
+var workflowListQuery string
+
+//go:embed queries/list_workflow_nodes.sql
+var workflowNodeListQuery string
+
 //go:embed queries/list_tables.sql
 var rawTableListQuery string
 
@@ -47,6 +53,9 @@ var getRoleQuery string
 
 //go:embed queries/get_schema.sql
 var getSchemaQuery string
+
+//go:embed queries/get_workflow.sql
+var getWorkflowQuery string
 
 //go:embed queries/get_table.sql
 var rawGetTableQuery string

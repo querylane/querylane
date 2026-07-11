@@ -537,3 +537,62 @@ func TestMapEngineErr_PostgresErrorUsesSQLStateClassifier(t *testing.T) {
 		t.Errorf("unexpected legacy constraintName metadata: %q", info.Metadata["constraintName"])
 	}
 }
+
+func TestMapEngineErrWorkflow(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	workflowName := "instances/prod/databases/app/workflows/wf-01hq3"
+
+	t.Run("workflow not found maps to NotFound with workflow resource", func(t *testing.T) {
+		t.Parallel()
+
+		connectErr := MapEngineErr(ctx, fmt.Errorf("%w: wf-01hq3", engine.ErrWorkflowNotFound), ResourceCtx{
+			Type: resource.TypeWorkflow,
+			Name: workflowName,
+			Op:   "get_workflow",
+		})
+		if connectErr == nil {
+			t.Fatal("expected non-nil error")
+		}
+
+		if connectErr.Code() != connect.CodeNotFound {
+			t.Errorf("expected code %v, got %v", connect.CodeNotFound, connectErr.Code())
+		}
+
+		if connectErr.Message() != "workflow not found: "+workflowName {
+			t.Errorf("unexpected message %q", connectErr.Message())
+		}
+
+		info := requireErrorInfo(t, connectErr)
+		if info.Reason != consolev1alpha1.ErrorReason_RESOURCE_NOT_FOUND.String() {
+			t.Errorf("expected reason %q, got %q", consolev1alpha1.ErrorReason_RESOURCE_NOT_FOUND, info.Reason)
+		}
+	})
+
+	t.Run("pg_durable not installed maps to FailedPrecondition", func(t *testing.T) {
+		t.Parallel()
+
+		// The engine sentinel wraps the raw PgError; the FailedPrecondition
+		// mapping must win over the generic SQLSTATE classification.
+		pgErr := &pgconn.PgError{Code: "3F000", Message: `schema "df" does not exist`}
+
+		connectErr := MapEngineErr(ctx, fmt.Errorf("%w: %w", engine.ErrDurableNotInstalled, pgErr), ResourceCtx{
+			Type: resource.TypeWorkflow,
+			Name: "instances/prod/databases/app",
+			Op:   "list_workflows",
+		})
+		if connectErr == nil {
+			t.Fatal("expected non-nil error")
+		}
+
+		if connectErr.Code() != connect.CodeFailedPrecondition {
+			t.Errorf("expected code %v, got %v", connect.CodeFailedPrecondition, connectErr.Code())
+		}
+
+		info := requireErrorInfo(t, connectErr)
+		if info.Reason != consolev1alpha1.ErrorReason_FAILED_PRECONDITION.String() {
+			t.Errorf("expected reason %q, got %q", consolev1alpha1.ErrorReason_FAILED_PRECONDITION, info.Reason)
+		}
+	})
+}
