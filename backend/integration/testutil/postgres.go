@@ -52,6 +52,13 @@ func postgresImage() string {
 // PostgreSQLContainer wraps a testcontainers PostgreSQL instance with convenience methods.
 type PostgreSQLContainer struct {
 	container *postgres.PostgresContainer
+
+	// Superuser credentials and maintenance database for this container.
+	// The standard container uses the testuser/testdb constants; variants
+	// (e.g. the pg_durable image) override them.
+	username string
+	password string
+	database string
 }
 
 // NewPostgreSQLContainer creates and starts a new PostgreSQL testcontainer.
@@ -77,6 +84,9 @@ func NewPostgreSQLContainer(ctx context.Context) (*PostgreSQLContainer, error) {
 
 	return &PostgreSQLContainer{
 		container: container,
+		username:  containerUsername,
+		password:  containerPassword,
+		database:  containerDatabase,
 	}, nil
 }
 
@@ -121,7 +131,7 @@ func (c *PostgreSQLContainer) MappedPort(ctx context.Context) (string, error) {
 func (c *PostgreSQLContainer) CreateDatabase(ctx context.Context, dbName string) (string, error) {
 	// Execute CREATE DATABASE command using psql directly in the container
 	_, _, err := c.container.Exec(ctx, []string{
-		"psql", "-U", containerUsername, "-d", containerDatabase, "-c", fmt.Sprintf("CREATE DATABASE %s;", dbName),
+		"psql", "-U", c.username, "-d", c.database, "-c", fmt.Sprintf("CREATE DATABASE %s;", dbName),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create database %s: %w", dbName, err)
@@ -154,8 +164,8 @@ func (c *PostgreSQLContainer) CreateDatabase(ctx context.Context, dbName string)
 func (c *PostgreSQLContainer) CreateDatabaseWithEncoding(ctx context.Context, dbName, encoding string) (string, error) {
 	_, _, err := c.container.Exec(ctx, []string{
 		"psql",
-		"-U", containerUsername,
-		"-d", containerDatabase,
+		"-U", c.username,
+		"-d", c.database,
 		"-v", "ON_ERROR_STOP=1",
 		"-c", fmt.Sprintf(
 			"CREATE DATABASE %s WITH TEMPLATE template0 ENCODING %s LC_COLLATE 'C' LC_CTYPE 'C';",
@@ -194,8 +204,8 @@ func (c *PostgreSQLContainer) CreateDatabaseWithEncoding(ctx context.Context, db
 func (c *PostgreSQLContainer) SetDatabaseClientEncoding(ctx context.Context, dbName, encoding string) error {
 	_, _, err := c.container.Exec(ctx, []string{
 		"psql",
-		"-U", containerUsername,
-		"-d", containerDatabase,
+		"-U", c.username,
+		"-d", c.database,
 		"-v", "ON_ERROR_STOP=1",
 		"-c", fmt.Sprintf(
 			"ALTER DATABASE %s SET client_encoding = %s;",
@@ -213,7 +223,7 @@ func (c *PostgreSQLContainer) SetDatabaseClientEncoding(ctx context.Context, dbN
 // DropDatabase drops a database with the given name from this PostgreSQL instance.
 func (c *PostgreSQLContainer) DropDatabase(ctx context.Context, dbName string) error {
 	_, _, err := c.container.Exec(ctx, []string{
-		"psql", "-U", containerUsername, "-d", containerDatabase, "-c", fmt.Sprintf("DROP DATABASE IF EXISTS %s;", dbName),
+		"psql", "-U", c.username, "-d", c.database, "-c", fmt.Sprintf("DROP DATABASE IF EXISTS %s;", dbName),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to drop database %s: %w", dbName, err)
@@ -269,8 +279,8 @@ func (c *PostgreSQLContainer) databaseConnectionString(ctx context.Context, dbNa
 
 	return fmt.Sprintf(
 		"postgresql://%s:%s@%s/%s?%s",
-		containerUsername,
-		containerPassword,
+		c.username,
+		c.password,
 		hostPort,
 		dbName,
 		query.Encode(),
