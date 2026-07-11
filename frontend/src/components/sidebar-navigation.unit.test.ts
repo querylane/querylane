@@ -53,6 +53,7 @@ describe("sidebar navigation", () => {
         databaseExplorer: false,
         databaseExtensions: false,
         databaseOverview: false,
+        databaseWorkflows: false,
         instanceConfiguration: false,
         instanceOverview: true,
         instanceRoles: false,
@@ -79,6 +80,7 @@ describe("sidebar navigation", () => {
         databaseExplorer: false,
         databaseExtensions: false,
         databaseOverview: true,
+        databaseWorkflows: false,
         instanceConfiguration: false,
         instanceOverview: false,
         instanceRoles: false,
@@ -87,6 +89,7 @@ describe("sidebar navigation", () => {
         databaseExplorer: "/instances/local/databases/postgres/explorer",
         databaseExtensions: "/instances/local/databases/postgres/extensions",
         databaseOverview: "/instances/local/databases/postgres",
+        databaseWorkflows: "/instances/local/databases/postgres/workflows",
         instanceConfiguration: "/instances/local/configuration",
         instanceOverview: "/instances/local",
         instanceRoles: "/instances/local/roles",
@@ -101,6 +104,7 @@ describe("sidebar navigation", () => {
     expect(sections[1]?.items.map((item) => item.key)).toEqual([
       "database.overview",
       "database.extensions",
+      "database.workflows",
       "database.explorer",
     ]);
   });

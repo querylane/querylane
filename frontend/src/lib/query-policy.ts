@@ -30,6 +30,9 @@ export const QUERY_STALE_TIME = {
   static: Number.POSITIVE_INFINITY,
   tableMetadata: FIVE_MINUTES_IN_MILLISECONDS,
   tableRows: 0,
+  // Workflow state moves while the user watches (running → completed), so it
+  // goes stale as fast as the grant views.
+  workflowList: 15_000,
 } as const;
 
 export const UNAVAILABLE_QUERY_RETRY_LIMIT = 1;
@@ -112,6 +115,9 @@ export const RESOURCE_QUERY_OPTIONS = {
   },
   tableRows: {
     staleTime: QUERY_STALE_TIME.tableRows,
+  },
+  workflowList: {
+    staleTime: QUERY_STALE_TIME.workflowList,
   },
 } as const;
 

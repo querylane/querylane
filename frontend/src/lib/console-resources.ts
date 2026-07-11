@@ -91,6 +91,14 @@ export function buildViewName(
   return `${buildSchemaName(instanceId, databaseId, schemaId)}/views/${encodeResourceSegment(viewId)}`;
 }
 
+export function buildWorkflowName(
+  instanceId: string,
+  databaseId: string,
+  workflowId: string
+): string {
+  return `${buildDatabaseName(instanceId, databaseId)}/workflows/${encodeResourceSegment(workflowId)}`;
+}
+
 export function parseResourceLeafId(name: string): string {
   const segments = splitResourceName(name);
   return decodeResourceSegment(segments.at(-1) ?? name);

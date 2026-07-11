@@ -15,6 +15,10 @@ import {
   selectedInstanceQueryOptions,
 } from "@/hooks/api/instance";
 import { tableDetailQueryOptions } from "@/hooks/api/table";
+import {
+  listAllWorkflowsQueryOptions,
+  workflowsForDatabaseQueryInput,
+} from "@/hooks/api/workflow";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import {
   prefetchRouteQuery,
@@ -147,6 +151,22 @@ export function extensionRouteDataQueries({
     routeDataQuery(
       listAllExtensionsQueryOptions({
         input: extensionsForDatabaseQueryInput({ databaseId, instanceId }),
+        transport,
+      })
+    ),
+  ];
+}
+
+export function workflowRouteDataQueries({
+  databaseId,
+  instanceId,
+  transport,
+}: DatabaseRouteParams & { transport: Transport }): RouteDataQuery[] {
+  return [
+    ...databaseSummaryQueries({ databaseId, instanceId, transport }),
+    routeDataQuery(
+      listAllWorkflowsQueryOptions({
+        input: workflowsForDatabaseQueryInput({ databaseId, instanceId }),
         transport,
       })
     ),

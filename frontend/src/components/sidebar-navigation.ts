@@ -5,6 +5,7 @@ import {
   Puzzle,
   Settings,
   Users,
+  Workflow,
 } from "lucide-react";
 import type {
   NavActiveState,
@@ -69,6 +70,7 @@ function buildNavLinkProps({
   if (ids.instanceId && ids.databaseId) {
     linkToPage({ page: "database.overview" });
     linkToPage({ page: "database.extensions" });
+    linkToPage({ page: "database.workflows" });
     linkToPage({ page: "database.explorer" });
   }
 
@@ -132,6 +134,13 @@ function getDatabaseNav({
           isDisabled: !paths.databaseExtensions,
           key: "database.extensions",
           label: "Extensions",
+        },
+        {
+          icon: Workflow,
+          isActive: active.databaseWorkflows,
+          isDisabled: !paths.databaseWorkflows,
+          key: "database.workflows",
+          label: "Workflows",
         },
         {
           icon: FolderTree,

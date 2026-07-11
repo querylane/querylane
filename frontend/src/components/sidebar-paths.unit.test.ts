@@ -29,6 +29,7 @@ describe("buildSidebarPaths", () => {
       databaseExplorer: "/instances/prod/databases/app/explorer",
       databaseExtensions: "/instances/prod/databases/app/extensions",
       databaseOverview: "/instances/prod/databases/app",
+      databaseWorkflows: "/instances/prod/databases/app/workflows",
       instanceConfiguration: "/instances/prod/configuration",
       instanceOverview: "/instances/prod",
       instanceRoles: "/instances/prod/roles",
@@ -54,6 +55,7 @@ describe("buildNavActiveState", () => {
       databaseExplorer: false,
       databaseExtensions: false,
       databaseOverview: false,
+      databaseWorkflows: false,
       instanceConfiguration: false,
       instanceOverview: false,
       instanceRoles: false,
@@ -146,10 +148,21 @@ describe("buildNavActiveState", () => {
       databaseExplorer: false,
       databaseExtensions: false,
       databaseOverview: false,
+      databaseWorkflows: false,
       instanceConfiguration: false,
       instanceOverview: false,
       instanceRoles: false,
     });
+  });
+
+  test("databaseWorkflows stays active on the workflow detail page", () => {
+    const paths = buildSidebarPaths({ databaseId: "app", instanceId: "prod" });
+    const active = buildNavActiveState({
+      pathname: "/instances/prod/databases/app/workflows/wf-01hq3",
+      paths,
+    });
+
+    expect(active.databaseWorkflows).toBe(true);
   });
 
   test("databaseOverview trailing slash is also active", () => {

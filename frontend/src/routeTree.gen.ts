@@ -19,6 +19,8 @@ import { Route as InstancesInstanceIdRolesRoleIdRouteImport } from './routes/ins
 import { Route as InstancesInstanceIdDatabasesDatabaseIdIndexRouteImport } from './routes/instances/$instanceId/databases/$databaseId/index';
 import { Route as InstancesInstanceIdDatabasesDatabaseIdExtensionsRouteImport } from './routes/instances/$instanceId/databases/$databaseId/extensions';
 import { Route as InstancesInstanceIdDatabasesDatabaseIdExplorerRouteImport } from './routes/instances/$instanceId/databases/$databaseId/explorer';
+import { Route as InstancesInstanceIdDatabasesDatabaseIdWorkflowsIndexRouteImport } from './routes/instances/$instanceId/databases/$databaseId/workflows/index';
+import { Route as InstancesInstanceIdDatabasesDatabaseIdWorkflowsWorkflowIdRouteImport } from './routes/instances/$instanceId/databases/$databaseId/workflows/$workflowId';
 
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
@@ -100,6 +102,18 @@ const InstancesInstanceIdDatabasesDatabaseIdExplorerRoute =
     path: '/$databaseId/explorer',
     getParentRoute: () => InstancesInstanceIdDatabasesRouteRoute,
   } as any);
+const InstancesInstanceIdDatabasesDatabaseIdWorkflowsIndexRoute =
+  InstancesInstanceIdDatabasesDatabaseIdWorkflowsIndexRouteImport.update({
+    id: '/$databaseId/workflows/',
+    path: '/$databaseId/workflows/',
+    getParentRoute: () => InstancesInstanceIdDatabasesRouteRoute,
+  } as any);
+const InstancesInstanceIdDatabasesDatabaseIdWorkflowsWorkflowIdRoute =
+  InstancesInstanceIdDatabasesDatabaseIdWorkflowsWorkflowIdRouteImport.update({
+    id: '/$databaseId/workflows/$workflowId',
+    path: '/$databaseId/workflows/$workflowId',
+    getParentRoute: () => InstancesInstanceIdDatabasesRouteRoute,
+  } as any);
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
@@ -116,6 +130,8 @@ export interface FileRoutesByFullPath {
   '/instances/$instanceId/databases/$databaseId/explorer': typeof InstancesInstanceIdDatabasesDatabaseIdExplorerRoute;
   '/instances/$instanceId/databases/$databaseId/extensions': typeof InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute;
   '/instances/$instanceId/databases/$databaseId/': typeof InstancesInstanceIdDatabasesDatabaseIdIndexRoute;
+  '/instances/$instanceId/databases/$databaseId/workflows/$workflowId': typeof InstancesInstanceIdDatabasesDatabaseIdWorkflowsWorkflowIdRoute;
+  '/instances/$instanceId/databases/$databaseId/workflows/': typeof InstancesInstanceIdDatabasesDatabaseIdWorkflowsIndexRoute;
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
@@ -130,6 +146,8 @@ export interface FileRoutesByTo {
   '/instances/$instanceId/databases/$databaseId/explorer': typeof InstancesInstanceIdDatabasesDatabaseIdExplorerRoute;
   '/instances/$instanceId/databases/$databaseId/extensions': typeof InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute;
   '/instances/$instanceId/databases/$databaseId': typeof InstancesInstanceIdDatabasesDatabaseIdIndexRoute;
+  '/instances/$instanceId/databases/$databaseId/workflows/$workflowId': typeof InstancesInstanceIdDatabasesDatabaseIdWorkflowsWorkflowIdRoute;
+  '/instances/$instanceId/databases/$databaseId/workflows': typeof InstancesInstanceIdDatabasesDatabaseIdWorkflowsIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -147,6 +165,8 @@ export interface FileRoutesById {
   '/instances/$instanceId/databases/$databaseId/explorer': typeof InstancesInstanceIdDatabasesDatabaseIdExplorerRoute;
   '/instances/$instanceId/databases/$databaseId/extensions': typeof InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute;
   '/instances/$instanceId/databases/$databaseId/': typeof InstancesInstanceIdDatabasesDatabaseIdIndexRoute;
+  '/instances/$instanceId/databases/$databaseId/workflows/$workflowId': typeof InstancesInstanceIdDatabasesDatabaseIdWorkflowsWorkflowIdRoute;
+  '/instances/$instanceId/databases/$databaseId/workflows/': typeof InstancesInstanceIdDatabasesDatabaseIdWorkflowsIndexRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -164,7 +184,9 @@ export interface FileRouteTypes {
     | '/instances/$instanceId/roles/'
     | '/instances/$instanceId/databases/$databaseId/explorer'
     | '/instances/$instanceId/databases/$databaseId/extensions'
-    | '/instances/$instanceId/databases/$databaseId/';
+    | '/instances/$instanceId/databases/$databaseId/'
+    | '/instances/$instanceId/databases/$databaseId/workflows/$workflowId'
+    | '/instances/$instanceId/databases/$databaseId/workflows/';
   fileRoutesByTo: FileRoutesByTo;
   to:
     | '/'
@@ -178,7 +200,9 @@ export interface FileRouteTypes {
     | '/instances/$instanceId/roles'
     | '/instances/$instanceId/databases/$databaseId/explorer'
     | '/instances/$instanceId/databases/$databaseId/extensions'
-    | '/instances/$instanceId/databases/$databaseId';
+    | '/instances/$instanceId/databases/$databaseId'
+    | '/instances/$instanceId/databases/$databaseId/workflows/$workflowId'
+    | '/instances/$instanceId/databases/$databaseId/workflows';
   id:
     | '__root__'
     | '/'
@@ -194,7 +218,9 @@ export interface FileRouteTypes {
     | '/instances/$instanceId/roles/'
     | '/instances/$instanceId/databases/$databaseId/explorer'
     | '/instances/$instanceId/databases/$databaseId/extensions'
-    | '/instances/$instanceId/databases/$databaseId/';
+    | '/instances/$instanceId/databases/$databaseId/'
+    | '/instances/$instanceId/databases/$databaseId/workflows/$workflowId'
+    | '/instances/$instanceId/databases/$databaseId/workflows/';
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -305,6 +331,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InstancesInstanceIdDatabasesDatabaseIdExplorerRouteImport;
       parentRoute: typeof InstancesInstanceIdDatabasesRouteRoute;
     };
+    '/instances/$instanceId/databases/$databaseId/workflows/': {
+      id: '/instances/$instanceId/databases/$databaseId/workflows/';
+      path: '/$databaseId/workflows';
+      fullPath: '/instances/$instanceId/databases/$databaseId/workflows/';
+      preLoaderRoute: typeof InstancesInstanceIdDatabasesDatabaseIdWorkflowsIndexRouteImport;
+      parentRoute: typeof InstancesInstanceIdDatabasesRouteRoute;
+    };
+    '/instances/$instanceId/databases/$databaseId/workflows/$workflowId': {
+      id: '/instances/$instanceId/databases/$databaseId/workflows/$workflowId';
+      path: '/$databaseId/workflows/$workflowId';
+      fullPath: '/instances/$instanceId/databases/$databaseId/workflows/$workflowId';
+      preLoaderRoute: typeof InstancesInstanceIdDatabasesDatabaseIdWorkflowsWorkflowIdRouteImport;
+      parentRoute: typeof InstancesInstanceIdDatabasesRouteRoute;
+    };
   }
 }
 
@@ -312,6 +352,8 @@ interface InstancesInstanceIdDatabasesRouteRouteChildren {
   InstancesInstanceIdDatabasesDatabaseIdExplorerRoute: typeof InstancesInstanceIdDatabasesDatabaseIdExplorerRoute;
   InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute: typeof InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute;
   InstancesInstanceIdDatabasesDatabaseIdIndexRoute: typeof InstancesInstanceIdDatabasesDatabaseIdIndexRoute;
+  InstancesInstanceIdDatabasesDatabaseIdWorkflowsWorkflowIdRoute: typeof InstancesInstanceIdDatabasesDatabaseIdWorkflowsWorkflowIdRoute;
+  InstancesInstanceIdDatabasesDatabaseIdWorkflowsIndexRoute: typeof InstancesInstanceIdDatabasesDatabaseIdWorkflowsIndexRoute;
 }
 
 const InstancesInstanceIdDatabasesRouteRouteChildren: InstancesInstanceIdDatabasesRouteRouteChildren =
@@ -322,6 +364,10 @@ const InstancesInstanceIdDatabasesRouteRouteChildren: InstancesInstanceIdDatabas
       InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute,
     InstancesInstanceIdDatabasesDatabaseIdIndexRoute:
       InstancesInstanceIdDatabasesDatabaseIdIndexRoute,
+    InstancesInstanceIdDatabasesDatabaseIdWorkflowsWorkflowIdRoute:
+      InstancesInstanceIdDatabasesDatabaseIdWorkflowsWorkflowIdRoute,
+    InstancesInstanceIdDatabasesDatabaseIdWorkflowsIndexRoute:
+      InstancesInstanceIdDatabasesDatabaseIdWorkflowsIndexRoute,
   };
 
 const InstancesInstanceIdDatabasesRouteRouteWithChildren =

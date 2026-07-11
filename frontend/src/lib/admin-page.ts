@@ -17,6 +17,7 @@ type AdminPageId =
   // Database-level pages
   | "database.overview"
   | "database.extensions"
+  | "database.workflows"
   | "database.explorer";
 
 type AdminSelectionScope = "none" | "instance" | "database";
@@ -27,6 +28,7 @@ const ADMIN_PAGE_IDS: readonly AdminPageId[] = [
   "instance.configuration",
   "database.overview",
   "database.extensions",
+  "database.workflows",
   "database.explorer",
 ] as const;
 
@@ -37,6 +39,7 @@ const ADMIN_PAGE_MIN_SCOPE: Record<
   "database.explorer": "database",
   "database.extensions": "database",
   "database.overview": "database",
+  "database.workflows": "database",
   "instance.configuration": "instance",
   "instance.overview": "instance",
   "instance.roles": "instance",
@@ -114,6 +117,9 @@ function resolveImplicitAdminPageFromPathname(
     if (segments[4] === "extensions") {
       return "database.extensions";
     }
+    if (segments[4] === "workflows") {
+      return "database.workflows";
+    }
     return "database.overview";
   }
   if (pathname.includes("/instances/")) {
@@ -136,6 +142,9 @@ function resolveImplicitAdminPageFromRouteId(
       return "database.explorer";
     case "/instances/$instanceId/databases/$databaseId/extensions":
       return "database.extensions";
+    case "/instances/$instanceId/databases/$databaseId/workflows/":
+    case "/instances/$instanceId/databases/$databaseId/workflows/$workflowId":
+      return "database.workflows";
     case "/instances/$instanceId/databases/$databaseId/":
       return "database.overview";
     case "/instances/$instanceId":
