@@ -96,6 +96,9 @@ function workflowColumns({
         <SortableHeader column={column}>Workflow</SortableHeader>
       ),
       id: "workflow",
+      // Hex ids sort surprisingly under the default alphanumeric heuristic
+      // (leading digits parse as numbers), so force plain text ordering.
+      sortFn: "text",
     },
     {
       accessorFn: (row) => workflowStatusLabel(row.status),
