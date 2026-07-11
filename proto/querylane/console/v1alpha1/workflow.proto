@@ -1,0 +1,244 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+
+// Service for observing pg_durable workflow instances in a database.
+//
+// pg_durable (https://github.com/microsoft/pg_durable) is a PostgreSQL
+// extension for in-database durable execution. All state it exposes lives in
+// the `df` schema of the database where the extension is installed; this
+// service is a read-only view over the documented `df.*` introspection
+// functions. Visibility follows pg_durable's row-level security: the
+// connection role configured for the instance sees only workflows it
+// submitted, unless it is a superuser.
+//
+// Every RPC fails with FAILED_PRECONDITION when the pg_durable extension is
+// not installed in the target database.
+service WorkflowService {
+  // Lists workflow instances in a database, newest-visible first bounded by
+  // pg_durable's list window (at most 1000 instances per listing; terminal
+  // instances older than the extension's retention window are pruned by
+  // pg_durable itself).
+  rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse) {}
+
+  // Gets a single workflow instance.
+  rpc GetWorkflow(GetWorkflowRequest) returns (Workflow) {}
+
+  // Lists the graph nodes (steps) of one workflow instance with their
+  // per-node execution status.
+  rpc ListWorkflowNodes(ListWorkflowNodesRequest) returns (ListWorkflowNodesResponse) {}
+}
+
+// Lifecycle status of a workflow instance, mirroring pg_durable's documented
+// instance lifecycle: pending → running → completed | failed | cancelled.
+enum WorkflowStatus {
+  WORKFLOW_STATUS_UNSPECIFIED = 0;
+  WORKFLOW_STATUS_PENDING = 1;
+  WORKFLOW_STATUS_RUNNING = 2;
+  WORKFLOW_STATUS_COMPLETED = 3;
+  WORKFLOW_STATUS_FAILED = 4;
+  WORKFLOW_STATUS_CANCELLED = 5;
+}
+
+// A pg_durable workflow instance visible in a Database.
+message Workflow {
+  option (google.api.resource) = {
+    type: "console.querylane.dev/Workflow"
+    pattern: "instances/{instance}/databases/{database}/workflows/{workflow}"
+    plural: "workflows"
+    singular: "workflow"
+  };
+
+  // Output-only identifier. The unique resource name of the workflow.
+  // Format: instances/{instance}/databases/{database}/workflows/{workflow}
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // Output-only. The raw pg_durable instance id (the {workflow} segment of
+  // `name` before URL-safe encoding).
+  string workflow_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The optional label passed to df.start(). Empty when the
+  // workflow was submitted without a label.
+  string label = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The durable function name backing this instance.
+  string function_name = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The durable function version. Only populated by GetWorkflow;
+  // pg_durable's listing surface does not expose it.
+  string function_version = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Lifecycle status of the instance.
+  WorkflowStatus status = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Number of executions (deterministic replays) recorded for
+  // this instance.
+  int64 execution_count = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Final output as JSON text. Empty while the workflow is
+  // still running or when it produced no output.
+  string output = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The current execution id. Only populated by GetWorkflow;
+  // pg_durable's listing surface does not expose it.
+  string current_execution_id = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// One node (step) of a workflow instance's execution graph.
+//
+// Node statuses and types are surfaced as the raw strings pg_durable reports
+// (e.g. node_type "SQL", "THEN", "JOIN"; status "pending", "completed").
+// pg_durable is in preview and its node vocabulary is not a documented closed
+// set, so these are intentionally not modeled as enums yet.
+message WorkflowNode {
+  // Output-only. The node id within the instance graph.
+  int64 node_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Raw pg_durable node type (e.g. "SQL", "THEN", "IF", "JOIN",
+  // "LOOP").
+  string node_type = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The SQL text of the node, for SQL nodes.
+  string query = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The result name assigned via the |=> operator, when set.
+  string result_name = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Left child node id in the graph. Unset for leaf nodes.
+  optional int64 left_node = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Right child node id in the graph. Unset for leaf nodes.
+  optional int64 right_node = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Raw recorded status of the node.
+  string status = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Node result as JSON text. Empty when the node has not
+  // produced a result.
+  string result = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Additional status detail (e.g. error text for failed nodes).
+  string status_details = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Status inferred at read time from ancestor nodes, when the
+  // recorded status alone is not conclusive (e.g. a node skipped because an
+  // ancestor failed).
+  string inferred_status = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. When the node status last changed. Unset when pg_durable has
+  // not recorded an update yet.
+  google.protobuf.Timestamp update_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message ListWorkflowsRequest {
+  // Required. The parent Database whose workflows to list.
+  // Format: instances/{instance}/databases/{database}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Database"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$"
+  ];
+
+  // Optional. The maximum number of workflows to return. Server may return
+  // fewer. If unspecified or 0, server will choose a reasonable default
+  // (typically 50). Maximum value is 1000.
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+
+  // Optional. A page token received from a previous `ListWorkflows` call.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter expression (an AIP-160 subset: `=`, `!=`, the `:`
+  // case-insensitive substring operator, combined with `AND`). Values are
+  // quoted strings. Filterable fields:
+  //   - name, label, function_name (string; support the `:` substring operator)
+  //   - status (string; one of "pending", "running", "completed", "failed",
+  //     "cancelled")
+  // Examples:
+  //   - status = "failed"
+  //   - label:"embed" AND status = "running"
+  string filter = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Ordering expression following AIP-132 syntax.
+  // Supported fields: name
+  // Default: "name asc"
+  string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListWorkflowsResponse {
+  // The workflow instances visible in the database.
+  repeated Workflow workflows = 1;
+
+  // A token to retrieve the next page of results.
+  // If this field is empty, there are no subsequent pages.
+  string next_page_token = 2;
+}
+
+message GetWorkflowRequest {
+  // Required. The workflow resource name.
+  // Format: instances/{instance}/databases/{database}/workflows/{workflow}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Workflow"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/workflows/[^/]+$"
+  ];
+}
+
+message ListWorkflowNodesRequest {
+  // Required. The parent Workflow whose graph nodes to list.
+  // Format: instances/{instance}/databases/{database}/workflows/{workflow}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Workflow"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/workflows/[^/]+$"
+  ];
+
+  // Optional. The maximum number of nodes to return. Server may return fewer.
+  // If unspecified or 0, server will choose a reasonable default (typically
+  // 50). Maximum value is 1000. Workflow graphs are small (one node per DSL
+  // step), so a single page normally holds the whole graph.
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+
+  // Optional. A page token received from a previous `ListWorkflowNodes` call.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter expression (an AIP-160 subset: `=`, `!=`, the `:`
+  // case-insensitive substring operator, combined with `AND`). Values are
+  // quoted strings. Filterable fields:
+  //   - node_type, status (string; support the `:` substring operator)
+  // Example: status = "failed"
+  string filter = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Ordering expression following AIP-132 syntax.
+  // Supported fields: node_id
+  // Default: "node_id asc"
+  string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListWorkflowNodesResponse {
+  // The graph nodes of the workflow instance, ordered by node_id.
+  repeated WorkflowNode workflow_nodes = 1;
+
+  // A token to retrieve the next page of results.
+  // If this field is empty, there are no subsequent pages.
+  string next_page_token = 2;
+}

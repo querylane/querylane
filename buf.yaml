@@ -12,6 +12,11 @@ lint:
   ignore_only:
     ENUM_VALUE_PREFIX:
       - proto/querylane/console/v1alpha1/errors.proto
+    # Canonical AIP standard methods return the resource directly (see
+    # docs/aip-compatibility.md — the Get*Response wrappers are frozen
+    # migration debt that new services must not copy).
+    RPC_RESPONSE_STANDARD_NAME:
+      - proto/querylane/console/v1alpha1/workflow.proto
 
 breaking:
   use:
