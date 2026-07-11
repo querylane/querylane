@@ -218,10 +218,9 @@ function WorkflowDetailPage({
                 label: "Function version",
                 value: workflow.functionVersion || "—",
               },
-              {
-                label: "Executions",
-                value: String(workflow.executionCount),
-              },
+              // Executions is deliberately absent: pg_durable's
+              // df.instance_info does not report execution_count (the list
+              // surface does).
               {
                 label: "Current execution",
                 value: workflow.currentExecutionId || "—",
