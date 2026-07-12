@@ -3,13 +3,12 @@
 --
 
 
--- Dumped from database version 17.9
--- Dumped by pg_dump version 17.9
+-- Dumped from database version 16.13
+-- Dumped by pg_dump version 16.13
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -438,6 +437,19 @@ CREATE TABLE public.instance_storage_sample (
 
 
 --
+-- Name: replica; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.replica (
+    id text NOT NULL,
+    hostname text NOT NULL,
+    pid bigint NOT NULL,
+    started_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_seen_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: runner_execution_state; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -613,6 +625,14 @@ ALTER TABLE ONLY public.instance_runtime_state
 
 ALTER TABLE ONLY public.instance_storage_sample
     ADD CONSTRAINT instance_storage_sample_pkey PRIMARY KEY (instance_id, observed_at);
+
+
+--
+-- Name: replica replica_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.replica
+    ADD CONSTRAINT replica_pkey PRIMARY KEY (id);
 
 
 --

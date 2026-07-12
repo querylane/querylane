@@ -84,16 +84,23 @@ type dbState struct {
 	connManager            *engine.SessionResolver
 	catalog                *catalogcache.Catalog
 	runnerExecutionStore   *storage.PGRunnerExecutionStore
+	replicaStore           *storage.PGReplicaStore
+	catalogSyncStore       *catalog.PGSyncStore
 	tokenCodec             *engine.TokenCodec
 	configManagedInstances bool
 	metaDBGate             *metaDBGate
 	runnerManager          *runner.Manager
+	heartbeater            *runner.Heartbeater
 	sampleStores           metricsvc.Stores
 }
 
 func (d *dbState) close() {
 	if d == nil {
 		return
+	}
+
+	if d.heartbeater != nil {
+		d.heartbeater.Close()
 	}
 
 	if d.runnerManager != nil {
@@ -190,7 +197,8 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 	// targets exist even on deployments where no user browses the catalog:
 	// the read-through sync populates it from live instances on demand.
 	catalogCfg := catalogcache.DefaultConfig()
-	catalogCache := catalogcache.New(catalogCfg, catalog.New(cl), catalog.NewSyncStore(cl, catalogCfg.SyncLockTimeout), connManager)
+	catalogSyncStore := catalog.NewSyncStore(cl, catalogCfg.SyncLockTimeout)
+	catalogCache := catalogcache.New(catalogCfg, catalog.New(cl), catalogSyncStore, connManager)
 
 	instanceTargetSource := jobs.NewInstanceTargetSource(instanceRepo)
 	databaseTargetSource := jobs.NewDatabaseTargetSource(instanceTargetSource, catalogCache)
@@ -213,6 +221,12 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 	// outlive the stream. Shutdown goes through dbState.close().
 	runnerManager.Start(context.WithoutCancel(ctx), backgroundJobs...)
 
+	// Every replica heartbeats (not lease-gated), so the replica registry
+	// lists the whole fleet — including replicas holding zero leases.
+	replicaStore := storage.NewReplicaStore(cl)
+	heartbeater := runner.NewHeartbeater(leaseOwner, replicaStore, storage.ReplicaHeartbeatInterval, storage.ReplicaPruneAge)
+	heartbeater.Start(context.WithoutCancel(ctx))
+
 	report(dbsetup.NewEvent(dbsetup.StepInitializingServices, dbsetup.StateSucceeded))
 
 	return &dbState{
@@ -224,10 +238,13 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 		connManager:            connManager,
 		catalog:                catalogCache,
 		runnerExecutionStore:   runnerExecutionStore,
+		replicaStore:           replicaStore,
+		catalogSyncStore:       catalogSyncStore,
 		tokenCodec:             tokenCodec,
 		configManagedInstances: configManaged,
 		metaDBGate:             newMetaDBGate(cl),
 		runnerManager:          runnerManager,
+		heartbeater:            heartbeater,
 		sampleStores: metricsvc.Stores{
 			Connection:     connectionSampleStore,
 			Cache:          cacheSampleStore,

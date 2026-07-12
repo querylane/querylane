@@ -1,0 +1,228 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "querylane/console/v1alpha1/catalog_sync.proto";
+
+// AdminService exposes operational introspection of querylane's own backend:
+// live replicas, the background runner job queue including lease ownership,
+// raw catalog sync state, and metrics sample storage. It is a debugging
+// surface for operators ("why don't my metrics show up?") and is not yet
+// gated by authorization; once authn/authz lands, access will be restricted
+// to admins at the service level.
+service AdminService {
+  // Lists querylane backend replicas known from their heartbeats.
+  rpc ListReplicas(ListReplicasRequest) returns (ListReplicasResponse) {}
+
+  // Lists background runner executions with lease ownership details. The
+  // admin counterpart of RunnerService.ListRunnerExecutions, which hides
+  // lease owners.
+  rpc ListAdminRunnerExecutions(ListAdminRunnerExecutionsRequest) returns (ListAdminRunnerExecutionsResponse) {}
+
+  // Lists catalog sync state per scope with raw, unsanitized errors.
+  rpc ListCatalogSyncStates(ListCatalogSyncStatesRequest) returns (ListCatalogSyncStatesResponse) {}
+
+  // Reports storage consumed by the metrics sample tables and the
+  // configured retention period.
+  rpc GetMetricsStorageStats(GetMetricsStorageStatsRequest) returns (GetMetricsStorageStatsResponse) {}
+}
+
+// Replica is one querylane backend process, registered via periodic
+// heartbeats. Replicas coordinate background work through per-target leases;
+// the replica id is the lease owner token used in runner executions.
+message Replica {
+  // Output-only. Stable per-process identifier (also the lease owner token).
+  // Regenerated on every process start.
+  string replica_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Hostname of the machine running the replica.
+  string hostname = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. OS process id of the replica.
+  int64 pid = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. When the replica process started heartbeating.
+  google.protobuf.Timestamp started_at = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. When the replica last heartbeated.
+  google.protobuf.Timestamp last_seen_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the last heartbeat is recent enough for the
+  // replica to be considered alive. Computed against the meta database
+  // clock, so it is consistent across replicas.
+  bool active = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message ListReplicasRequest {
+  int32 page_size = 1 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. AIP-160 filter. Filterable fields: replica_id, hostname.
+  string filter = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. AIP-132 order_by. Defaults to `replica_id`.
+  string order_by = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListReplicasResponse {
+  repeated Replica replicas = 1;
+  string next_page_token = 2;
+}
+
+// ReplicaIdentity identifies the replica holding a lease.
+message ReplicaIdentity {
+  // Output-only. The replica's per-process identifier.
+  string replica_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Hostname of the replica, empty when the replica's
+  // heartbeat row is gone (e.g. the process died and was pruned).
+  string hostname = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// AdminRunnerExecution is the scheduling state of one background runner
+// against one target, including lease ownership. Superset of
+// RunnerService's RunnerExecution.
+message AdminRunnerExecution {
+  // Output-only. The runner this state belongs to (e.g. "probe_cache",
+  // "instance_connectivity", "sample_retention").
+  string runner_name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The target the runner executes against, as an AIP resource
+  // name: "instances/{instance}" for instance-level runners,
+  // "instances/{instance}/databases/{database}" for database-level runners,
+  // or "meta" for jobs operating on querylane's own database.
+  string target = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether a replica currently holds the execution lease
+  // (a run is in flight right now).
+  bool lease_held = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The replica holding the lease. Unset when no live lease.
+  ReplicaIdentity lease_owner = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. When the currently held lease expires. Unset when no live
+  // lease.
+  google.protobuf.Timestamp lease_expires_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. When the most recent run started.
+  google.protobuf.Timestamp last_started_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. When the most recent run finished, successfully or not.
+  google.protobuf.Timestamp last_finished_at = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. When the runner last completed successfully for this
+  // target.
+  google.protobuf.Timestamp last_success_at = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The most recent infrastructure failure, empty after a
+  // successful run.
+  string last_error = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message ListAdminRunnerExecutionsRequest {
+  int32 page_size = 1 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. AIP-160 filter. Filterable fields: runner_name, target.
+  // Example: `target = "instances/prod"` or `runner_name = "probe_cache"`.
+  string filter = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. AIP-132 order_by. Defaults to `runner_name, target`.
+  string order_by = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListAdminRunnerExecutionsResponse {
+  repeated AdminRunnerExecution runner_executions = 1;
+  string next_page_token = 2;
+}
+
+// CatalogSyncState is the raw sync bookkeeping of one cached catalog scope.
+// Unlike the user-facing CatalogSyncMetadata, errors are surfaced verbatim.
+message CatalogSyncState {
+  // Output-only. The cached scope, e.g. "instances/{instance}/databases".
+  string scope = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Current sync status of the scope.
+  CatalogSyncStatus status = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Last time the scope completed a successful sync.
+  google.protobuf.Timestamp last_synced_at = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Raw error from the last failed sync attempt. Not
+  // sanitized: this is an operator-facing debugging surface.
+  string sync_error = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. When the sync state row last changed.
+  google.protobuf.Timestamp updated_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message ListCatalogSyncStatesRequest {
+  int32 page_size = 1 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. AIP-160 filter. Filterable fields: scope, status.
+  string filter = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. AIP-132 order_by. Defaults to `scope`.
+  string order_by = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListCatalogSyncStatesResponse {
+  repeated CatalogSyncState catalog_sync_states = 1;
+  string next_page_token = 2;
+}
+
+// SampleTableStats is the storage footprint of one metrics sample table.
+message SampleTableStats {
+  // Output-only. Unqualified table name, e.g. "instance_cache_sample".
+  string table_name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Planner row estimate (pg_class.reltuples). -1 when the
+  // table has never been vacuumed or analyzed.
+  int64 estimated_row_count = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Total on-disk size including indexes and TOAST
+  // (pg_total_relation_size).
+  int64 total_bytes = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Observation time of the oldest retained sample. Unset
+  // when the table is empty.
+  google.protobuf.Timestamp oldest_sample_at = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Observation time of the newest sample. Unset when the
+  // table is empty.
+  google.protobuf.Timestamp newest_sample_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message GetMetricsStorageStatsRequest {}
+
+message GetMetricsStorageStatsResponse {
+  // Output-only. Per-table storage stats, one entry per sample table.
+  repeated SampleTableStats sample_tables = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Maximum age of retained samples; older rows are pruned by
+  // the sample_retention runner.
+  google.protobuf.Duration retention_period = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

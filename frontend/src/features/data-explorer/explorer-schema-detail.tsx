@@ -484,18 +484,22 @@ function SchemaDetail({
         <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:w-auto sm:shrink-0 sm:items-center sm:gap-5">
           <HeaderStat
             label="Tables"
+            loading={isLoading}
             value={countStat(tables.length, hasMoreTables)}
           />
           <HeaderStat
             label="Views"
+            loading={isLoading}
             value={countStat(views.length, hasMoreViews)}
           />
           <HeaderStat
             label="Total size"
+            loading={isLoading}
             value={lowerBoundStat(formatBytes(totalSizeBytes), hasMoreTables)}
           />
           <HeaderStat
             label="Estimated rows"
+            loading={isLoading}
             value={lowerBoundStat(formatRows(totalRows), hasMoreTables)}
           />
         </div>

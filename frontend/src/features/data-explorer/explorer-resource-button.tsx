@@ -8,7 +8,17 @@ import type {
   ResourceItem,
   Selection,
 } from "@/features/data-explorer/data-explorer-types";
+import { MaterializedViewIcon } from "@/features/data-explorer/object-icons";
 import { cn } from "@/lib/utils";
+
+function resolveResourceIcon(
+  item: ResourceItem,
+  categoryIcon: ComponentType<SVGProps<SVGSVGElement>>
+): ComponentType<SVGProps<SVGSVGElement>> {
+  return item.objectType === "materialized"
+    ? MaterializedViewIcon
+    : categoryIcon;
+}
 
 export function ExplorerResourceButton({
   category,
@@ -31,10 +41,11 @@ export function ExplorerResourceButton({
     selection.kind === "resource" &&
     selection.category === category &&
     selection.name === item.name;
+  const ResolvedIcon = resolveResourceIcon(item, Icon);
   return (
     <Button
       className={cn(
-        "h-[30px] w-full justify-start @max-[14rem]/object-browser:gap-1.5 gap-2.5 @max-[14rem]/object-browser:px-2 px-3 py-0 font-normal text-sm hover:bg-accent/60",
+        "h-[26px] w-full justify-start @max-[14rem]/object-browser:gap-1.5 gap-2 px-2 py-0 font-normal text-[13px] hover:bg-accent/60",
         isItemSelected && "bg-accent hover:bg-accent"
       )}
       onClick={() => onSelectResource(category, item.name)}
@@ -43,7 +54,7 @@ export function ExplorerResourceButton({
       title={item.name}
       variant="ghost"
     >
-      <Icon className="@max-[14rem]/object-browser:hidden size-4 shrink-0 text-muted-foreground" />
+      <ResolvedIcon className="@max-[14rem]/object-browser:hidden size-4 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex-1 truncate text-left">
         {highlightMatch(item.name, query)}
       </span>

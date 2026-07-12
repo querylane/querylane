@@ -308,6 +308,54 @@ function renderDatabaseLayoutWithDegradedBanner() {
   );
 }
 
+function renderDatabaseLayoutExplorerMode() {
+  render(
+    <ThemeProvider
+      defaultTheme="dark"
+      storageKey="querylane-admin-shell-browser-test-theme-explorer"
+    >
+      <TooltipProvider>
+        <div
+          className="dark h-[760px] w-[1100px] origin-top-left scale-[0.8] overflow-hidden rounded-2xl border border-border bg-background text-foreground"
+          data-testid="admin-shell-visual-root"
+        >
+          <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
+            <DatabaseLayout page="database.explorer">
+              <div className="rounded-xl border border-border bg-card p-6">
+                <h1 className="font-semibold text-2xl">Explorer detail</h1>
+              </div>
+            </DatabaseLayout>
+          </div>
+        </div>
+      </TooltipProvider>
+    </ThemeProvider>
+  );
+}
+
+test("explorer route swaps the workspace nav for a drill-in rail", async () => {
+  await page.viewport(1280, 800);
+  renderDatabaseLayoutExplorerMode();
+
+  const backLink = page.getByRole("link", { name: "Back to workspace" });
+  await expect.element(backLink).toBeVisible();
+
+  // The workspace nav is replaced in place — same rail, no nav links.
+  await expect
+    .element(page.getByRole("link", { name: "Database Data Explorer" }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("link", { name: "Instance Overview" }))
+    .not.toBeInTheDocument();
+
+  // Back leads to the database overview (mock Link keeps the route template).
+  expect(backLink.element().getAttribute("href")).toBe(
+    "/instances/$instanceId/databases/$databaseId"
+  );
+
+  // The rail footer stays available in explorer mode.
+  await expect.element(page.getByText("Collapse menu")).toBeVisible();
+});
+
 test("degraded mode banner starts after the desktop sidebar", async () => {
   await page.viewport(1280, 800);
   renderDatabaseLayoutWithDegradedBanner();

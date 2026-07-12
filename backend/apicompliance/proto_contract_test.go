@@ -68,6 +68,14 @@ var aipCompatibilityExceptions = map[string]compatibilityException{
 		category: exceptionOutputOnlyResourceName,
 		reason:   "Existing v1alpha1 descriptors expose resource names as OUTPUT_ONLY plus IDENTIFIER; preserve descriptor compatibility.",
 	},
+	"querylane.console.v1alpha1.AdminService.GetMetricsStorageStats": {
+		category: exceptionCustomGetName,
+		reason:   "Singleton/custom operational stats method has no resource name request field.",
+	},
+	"querylane.console.v1alpha1.AdminService.GetMetricsStorageStats.response": {
+		category: exceptionResponseWrapper,
+		reason:   "Operational stats method returns a custom aggregate shape (per-table stats plus retention), not a resource.",
+	},
 	"querylane.console.v1alpha1.ConsoleService.GetConsoleConfig": {
 		category: exceptionCustomGetName,
 		reason:   "Singleton/custom console configuration method has no resource name request field.",

@@ -127,3 +127,8 @@ func NewTableDataClient(serverURL string) consolev1alpha1connect.TableDataServic
 func NewSQLClient(serverURL string) consolev1alpha1connect.SQLServiceClient {
 	return consolev1alpha1connect.NewSQLServiceClient(httpClient(), serverURL)
 }
+
+// NewAdminClient creates a ConnectRPC AdminService client.
+func NewAdminClient(serverURL string) consolev1alpha1connect.AdminServiceClient {
+	return consolev1alpha1connect.NewAdminServiceClient(httpClient(), serverURL)
+}

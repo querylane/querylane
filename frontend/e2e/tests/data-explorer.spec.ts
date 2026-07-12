@@ -40,8 +40,11 @@ const ORDERS_HEADING_RE = /public\.orders/;
 const SORT_WITH_ONE_COLUMN_RE = /Sort 1/;
 const TIER_ENTERPRISE_JSON_RE = /"tier":"enterprise"/;
 const COPY_BUTTON_RE = /Copy/;
-const OBJECT_BROWSER_PHONE_MIN_WIDTH = 300;
-const OBJECT_BROWSER_PHONE_MAX_WIDTH = 306;
+const DB_OVERVIEW_URL_RE =
+  /\/instances\/production\/databases\/appdb(?:[?#]|$)/;
+// The shared sidebar renders as an 18rem sheet on phone viewports.
+const OBJECT_BROWSER_PHONE_MIN_WIDTH = 280;
+const OBJECT_BROWSER_PHONE_MAX_WIDTH = 296;
 
 const RICH_COLUMNS = [
   {
@@ -143,8 +146,10 @@ test("data explorer: schema overview shows top tables and switches schema", {
   await expect(page.getByRole("cell", { name: "orders" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "customers" })).toBeVisible();
 
-  await page.getByText("public", { exact: true }).first().click();
-  await page.getByRole("option", { name: "billing" }).click();
+  await page
+    .getByRole("complementary", { name: "Database objects" })
+    .getByRole("button", { exact: true, name: "billing" })
+    .click();
 
   await expect(page.getByRole("heading", { name: "billing" })).toBeVisible();
   await expect(page).toHaveURL(BILLING_SCHEMA_URL_RE);
@@ -242,9 +247,6 @@ test("data explorer: Lighthouse route covers manual accessibility contracts", {
     "true"
   );
   await expect(page.getByPlaceholder("Filter…")).toBeVisible();
-  await expect(
-    page.getByRole("combobox", { name: "Sort tables" })
-  ).toBeVisible();
   const refreshRowsButton = page.getByRole("button", { name: "Refresh rows" });
   await expect(refreshRowsButton).toBeVisible();
   await refreshRowsButton.focus();
@@ -375,8 +377,10 @@ test("data explorer: switching schema clears stale table search state", {
 }, async ({ page }) => {
   await gotoExplorer(page, "?schema=public&category=tables&name=orders");
 
-  await page.getByText("public", { exact: true }).first().click();
-  await page.getByRole("option", { name: "billing" }).click();
+  await page
+    .getByRole("complementary", { name: "Database objects" })
+    .getByRole("button", { exact: true, name: "billing" })
+    .click();
 
   await expect(page).toHaveURL(BILLING_SCHEMA_URL_RE);
   await expect(page).not.toHaveURL(TABLE_CATEGORY_URL_RE);
@@ -705,8 +709,10 @@ test("data explorer: stale catalog notices persist across schema navigation", {
   await expect(
     page.getByText("Refreshing catalog. Showing cached results.").first()
   ).toBeVisible();
-  await page.getByText("public", { exact: true }).first().click();
-  await page.getByRole("option", { name: "billing" }).click();
+  await page
+    .getByRole("complementary", { name: "Database objects" })
+    .getByRole("button", { exact: true, name: "billing" })
+    .click();
 
   await expect(page).toHaveURL(BILLING_SCHEMA_URL_RE);
   await expect(
@@ -714,24 +720,56 @@ test("data explorer: stale catalog notices persist across schema navigation", {
   ).toBeVisible();
 });
 
-test("data explorer: phone viewport can open object browser", async ({
+test("data explorer: phone viewport opens the object browser in the sidebar drawer", async ({
   page,
 }) => {
   await page.setViewportSize({ height: 900, width: 320 });
   await gotoExplorer(page);
 
-  const openBrowser = page.getByRole("button", { name: "Open object browser" });
-  await expect(openBrowser).toBeVisible();
+  const openMenu = page.getByRole("button", { name: "Open navigation menu" });
+  await expect(openMenu).toBeVisible();
 
-  await openBrowser.click();
-  const drawer = page.getByRole("dialog", { name: "Database objects" });
+  await openMenu.click();
+  const drawer = page.getByRole("dialog", { name: "Sidebar" });
   await expect(drawer).toBeVisible();
   const drawerWidth = await drawer.evaluate(
     (element) => element.getBoundingClientRect().width
   );
   expect(drawerWidth).toBeGreaterThanOrEqual(OBJECT_BROWSER_PHONE_MIN_WIDTH);
   expect(drawerWidth).toBeLessThanOrEqual(OBJECT_BROWSER_PHONE_MAX_WIDTH);
+  const objectBrowser = drawer.getByRole("complementary", {
+    name: "Database objects",
+  });
+  await expect(objectBrowser).toBeVisible();
   await expect(
-    page.getByRole("complementary", { name: "Database objects" })
+    drawer.getByRole("link", { name: "Back to workspace" })
   ).toBeVisible();
+
+  // Picking an object closes the drawer so the detail pane is visible.
+  await drawer.getByRole("button", { name: ORDERS_BUTTON_RE }).click();
+  await expect(drawer).not.toBeVisible();
+  await expect(page).toHaveURL(ORDERS_NAME_URL_RE);
+});
+
+test("data explorer: back to workspace restores the nav rail on the database overview", async ({
+  page,
+}) => {
+  await gotoExplorer(page, "?schema=public&category=tables&name=orders");
+  await expect(
+    page.getByRole("heading", { name: ORDERS_HEADING_RE })
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "Back to workspace" }).click();
+
+  await expect(page).toHaveURL(DB_OVERVIEW_URL_RE);
+  expect(page.url()).not.toContain("category=");
+  expect(page.url()).not.toContain("name=");
+
+  // Same rail now shows the workspace navigation again.
+  await expect(
+    page.getByRole("link", { exact: true, name: "Data Explorer" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Back to workspace" })
+  ).not.toBeVisible();
 });

@@ -44,6 +44,7 @@ type RPCSuite struct {
 	viewClient      consolev1alpha1connect.ViewServiceClient
 	tableDataClient consolev1alpha1connect.TableDataServiceClient
 	sqlClient       consolev1alpha1connect.SQLServiceClient
+	adminClient     consolev1alpha1connect.AdminServiceClient
 }
 
 func TestRPCSuite(t *testing.T) { //nolint:paralleltest // suite manages its own lifecycle
@@ -120,6 +121,7 @@ func (s *RPCSuite) SetupSuite() {
 	s.viewClient = testutil.NewViewClient(s.serverURL)
 	s.tableDataClient = testutil.NewTableDataClient(s.serverURL)
 	s.sqlClient = testutil.NewSQLClient(s.serverURL)
+	s.adminClient = testutil.NewAdminClient(s.serverURL)
 
 	// 7. Register the external instance via CreateInstance RPC.
 	s.instanceID = "test-ext"

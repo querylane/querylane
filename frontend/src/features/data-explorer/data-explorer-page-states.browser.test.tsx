@@ -3,6 +3,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { ExplorerRailFrame } from "@/__tests__/explorer-rail-test-utils";
 import { DataExplorerPage } from "@/features/data-explorer/data-explorer-page";
 import { createTestQueryClient } from "@/test/query-client";
 
@@ -105,6 +106,10 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
 }));
 
+vi.mock("@/components/querylane-ui/sidebar", () => ({
+  useSidebar: () => ({ isMobile: false, setOpenMobile: vi.fn() }),
+}));
+
 vi.mock("@connectrpc/connect-query", () => ({
   useMutation: vi.fn(),
   useQuery: () => ({ data: undefined }),
@@ -169,7 +174,9 @@ function renderDataExplorerPage() {
     <ScreenshotFrame>
       <div className="h-[720px] w-[1180px] overflow-hidden rounded-2xl border border-border bg-background text-foreground">
         <QueryClientProvider client={queryClient}>
-          <DataExplorerPage databaseId="app" instanceId="prod" search={{}} />
+          <ExplorerRailFrame>
+            <DataExplorerPage databaseId="app" instanceId="prod" search={{}} />
+          </ExplorerRailFrame>
         </QueryClientProvider>
       </div>
     </ScreenshotFrame>
@@ -186,15 +193,17 @@ function renderSelectedTableExplorerPage() {
         data-testid="wide-explorer-shell"
       >
         <QueryClientProvider client={queryClient}>
-          <DataExplorerPage
-            databaseId="app"
-            instanceId="prod"
-            search={{
-              category: "tables",
-              name: "page_views",
-              schema: "analytics",
-            }}
-          />
+          <ExplorerRailFrame>
+            <DataExplorerPage
+              databaseId="app"
+              instanceId="prod"
+              search={{
+                category: "tables",
+                name: "page_views",
+                schema: "analytics",
+              }}
+            />
+          </ExplorerRailFrame>
         </QueryClientProvider>
       </div>
     </ScreenshotFrame>
@@ -294,79 +303,46 @@ test("data explorer table grid uses width immediately beside object browser", as
   await expect.element(page.getByTestId("mock-table-data-grid")).toBeVisible();
 
   const shell = document.querySelector("[data-testid='wide-explorer-shell']");
+  const rail = document.querySelector("[data-testid='explorer-rail-slot']");
   const sidebar = document.querySelector(
     "aside[aria-label='Database objects']"
   );
   const grid = document.querySelector("[data-testid='mock-table-data-grid']");
-  const handle = document.querySelector("[data-slot='resizable-handle']");
   const tabsList = document.querySelector("[data-slot='tabs-list']");
-  if (!(shell && sidebar && grid && handle && tabsList)) {
-    throw new Error(
-      "Expected explorer shell, sidebar, handle, tabs, and grid."
-    );
+  if (!(shell && rail && sidebar && grid && tabsList)) {
+    throw new Error("Expected explorer shell, rail, sidebar, tabs, and grid.");
   }
+
+  // The object browser portals into the fixed-width rail; no drag handle.
+  expect(rail.contains(sidebar)).toBe(true);
+  expect(document.querySelector("[data-slot='resizable-handle']")).toBeNull();
 
   const shellRect = shell.getBoundingClientRect();
+  const railRect = rail.getBoundingClientRect();
   const sidebarRect = sidebar.getBoundingClientRect();
   const gridRect = grid.getBoundingClientRect();
-  const handleRect = handle.getBoundingClientRect();
   const tabsListRect = tabsList.getBoundingClientRect();
-  const gapBetweenSidebarAndGrid = gridRect.left - sidebarRect.right;
+  const gapBetweenRailAndGrid = gridRect.left - railRect.right;
   const unusedRightSpace = shellRect.right - gridRect.right;
 
-  expect(sidebarRect.width).toBeGreaterThanOrEqual(300);
-  expect(sidebarRect.width).toBeLessThanOrEqual(340);
-  expect(tabsListRect.left).toBeGreaterThanOrEqual(sidebarRect.right - 1);
-  expect(gridRect.left).toBeGreaterThanOrEqual(sidebarRect.right - 1);
-  expect(handleRect.width).toBeGreaterThanOrEqual(16);
-  expect(gapBetweenSidebarAndGrid).toBeLessThanOrEqual(64);
+  expect(sidebarRect.width).toBeGreaterThanOrEqual(railRect.width - 2);
+  expect(tabsListRect.left).toBeGreaterThanOrEqual(railRect.right - 1);
+  expect(gridRect.left).toBeGreaterThanOrEqual(railRect.right - 1);
+  expect(gapBetweenRailAndGrid).toBeLessThanOrEqual(64);
   expect(unusedRightSpace).toBeLessThanOrEqual(64);
 
-  if (!(handle instanceof HTMLElement)) {
-    throw new Error("Expected resizable handle to be focusable.");
-  }
-  expect(handle.getAttribute("role")).toBe("separator");
-  expect(handle.tabIndex).toBeGreaterThanOrEqual(0);
-  expect(handle.getAttribute("aria-orientation")).toBe("vertical");
-
-  handle.dispatchEvent(
-    new KeyboardEvent("keydown", { bubbles: true, key: "ArrowRight" })
-  );
-  await expect
-    .poll(() => sidebar.getBoundingClientRect().width)
-    .toBeGreaterThan(sidebarRect.width + 40);
-
-  handle.dispatchEvent(
-    new KeyboardEvent("keydown", { bubbles: true, key: "Home" })
-  );
-  await expect
-    .poll(() => sidebar.getBoundingClientRect().width)
-    .toBeLessThan(240);
-
-  const narrowedSidebarRect = sidebar.getBoundingClientRect();
-  expect(narrowedSidebarRect.width).toBeGreaterThanOrEqual(192);
-  expect(grid.getBoundingClientRect().left).toBeGreaterThanOrEqual(
-    narrowedSidebarRect.right - 1
-  );
-
   const filterInput = sidebar.querySelector("[data-slot='input']");
-  const schemaPickerTrigger = Array.from(
-    sidebar.querySelectorAll("button")
-  ).find((button) => button.textContent?.includes("Schema"));
+  const schemaNode = Array.from(sidebar.querySelectorAll("button")).find(
+    (button) => button.textContent?.includes("analytics")
+  );
   if (
-    !(
-      filterInput instanceof HTMLElement &&
-      schemaPickerTrigger instanceof HTMLElement
-    )
+    !(filterInput instanceof HTMLElement && schemaNode instanceof HTMLElement)
   ) {
-    throw new Error("Expected schema picker and filter input.");
+    throw new Error("Expected schema tree node and filter input.");
   }
-  const filterRect = filterInput.getBoundingClientRect();
-  const schemaPickerRect = schemaPickerTrigger.getBoundingClientRect();
-  const controlsAreStacked = filterRect.top >= schemaPickerRect.bottom - 1;
-  const controlsShareRowWithoutOverlap =
-    filterRect.left >= schemaPickerRect.right - 1;
-  expect(controlsAreStacked || controlsShareRowWithoutOverlap).toBe(true);
+  // The active schema renders as an expanded tree node with its objects
+  // nested underneath.
+  expect(schemaNode.getAttribute("aria-expanded")).toBe("true");
 
   const tableButton = Array.from(sidebar.querySelectorAll("button")).find(
     (button) => button.textContent?.includes("page_views")
@@ -386,7 +362,7 @@ test("data explorer table grid uses width immediately beside object browser", as
   }
   const tableNameRect = tableName.getBoundingClientRect();
   const sizeLabelRect = sizeLabel.getBoundingClientRect();
-  expect(tableNameRect.width).toBeGreaterThan(120);
+  expect(tableNameRect.width).toBeGreaterThan(80);
   expect(sizeLabelRect.right).toBeLessThanOrEqual(
     sidebar.getBoundingClientRect().right
   );

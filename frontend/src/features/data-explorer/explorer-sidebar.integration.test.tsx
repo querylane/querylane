@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -105,7 +105,6 @@ function explorerSidebarProps(
     onSelectResource: vi.fn(),
     onSelectSchema: vi.fn(),
     onSelectSchemaOverview: vi.fn(),
-    onTableListSortChange: vi.fn(),
     query: "",
     schemaSelectionError: null,
     schemas: [defaultSchema],
@@ -114,7 +113,6 @@ function explorerSidebarProps(
     selection: { kind: "schema" },
     setExpandedCategories: vi.fn(),
     setQuery: vi.fn(),
-    tableListSort: "name-asc",
     tablesError: null,
     tablesSyncNotice: null,
     viewsError: null,
@@ -308,31 +306,45 @@ describe("ExplorerSidebar search empty state", () => {
     expect(screen.getByText("No database objects found")).toBeTruthy();
   });
 
-  it("keeps a stable loading skeleton while server-side search results load", () => {
-    const emptyItemsByCategory: Record<CategoryKey, ResourceItem[]> = {
-      tables: [],
-      views: [],
-    };
+  it("paces the loading skeleton: hidden at first, shown for slow loads", () => {
+    vi.useFakeTimers();
+    try {
+      const emptyItemsByCategory: Record<CategoryKey, ResourceItem[]> = {
+        tables: [],
+        views: [],
+      };
 
-    renderExplorerSidebar({
-      categoryPagination: {
-        schemas: { hasNextPage: false, isFetchingNextPage: false },
-        tables: {
-          hasNextPage: false,
-          isFetchingNextPage: false,
-          isLoading: true,
+      renderExplorerSidebar({
+        categoryPagination: {
+          schemas: { hasNextPage: false, isFetchingNextPage: false },
+          tables: {
+            hasNextPage: false,
+            isFetchingNextPage: false,
+            isLoading: true,
+          },
+          views: {
+            hasNextPage: false,
+            isFetchingNextPage: false,
+            isLoading: true,
+          },
         },
-        views: {
-          hasNextPage: false,
-          isFetchingNextPage: false,
-          isLoading: true,
-        },
-      },
-      itemsByCategory: emptyItemsByCategory,
-      query: "orders",
-    });
+        itemsByCategory: emptyItemsByCategory,
+        query: "orders",
+      });
 
-    expect(screen.queryByText("No database objects found")).toBeNull();
-    expect(screen.getByTestId("resource-list-loading")).toBeTruthy();
+      // Within the appear delay nothing renders: no premature skeleton, and
+      // no misleading empty state either.
+      expect(screen.queryByText("No database objects found")).toBeNull();
+      expect(screen.queryByTestId("resource-list-loading")).toBeNull();
+
+      act(() => {
+        vi.advanceTimersByTime(350);
+      });
+
+      expect(screen.getByTestId("resource-list-loading")).toBeTruthy();
+      expect(screen.queryByText("No database objects found")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -7,11 +7,13 @@
 import { Route as rootRouteImport } from './routes/__root';
 import { Route as SetupRouteImport } from './routes/setup';
 import { Route as NewInstanceRouteImport } from './routes/new-instance';
+import { Route as AdminRouteImport } from './routes/admin';
 import { Route as AccessDeniedRouteImport } from './routes/access-denied';
 import { Route as IndexRouteImport } from './routes/index';
 import { Route as InstancesInstanceIdRouteRouteImport } from './routes/instances/$instanceId/route';
 import { Route as InstancesInstanceIdIndexRouteImport } from './routes/instances/$instanceId/index';
 import { Route as InstancesInstanceIdConfigurationRouteImport } from './routes/instances/$instanceId/configuration';
+import { Route as InstancesInstanceIdAdminRouteImport } from './routes/instances/$instanceId/admin';
 import { Route as InstancesInstanceIdRolesRouteRouteImport } from './routes/instances/$instanceId/roles/route';
 import { Route as InstancesInstanceIdDatabasesRouteRouteImport } from './routes/instances/$instanceId/databases/route';
 import { Route as InstancesInstanceIdRolesIndexRouteImport } from './routes/instances/$instanceId/roles/index';
@@ -28,6 +30,11 @@ const SetupRoute = SetupRouteImport.update({
 const NewInstanceRoute = NewInstanceRouteImport.update({
   id: '/new-instance',
   path: '/new-instance',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any);
 const AccessDeniedRoute = AccessDeniedRouteImport.update({
@@ -56,6 +63,12 @@ const InstancesInstanceIdConfigurationRoute =
   InstancesInstanceIdConfigurationRouteImport.update({
     id: '/configuration',
     path: '/configuration',
+    getParentRoute: () => InstancesInstanceIdRouteRoute,
+  } as any);
+const InstancesInstanceIdAdminRoute =
+  InstancesInstanceIdAdminRouteImport.update({
+    id: '/admin',
+    path: '/admin',
     getParentRoute: () => InstancesInstanceIdRouteRoute,
   } as any);
 const InstancesInstanceIdRolesRouteRoute =
@@ -104,11 +117,13 @@ const InstancesInstanceIdDatabasesDatabaseIdExplorerRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
   '/access-denied': typeof AccessDeniedRoute;
+  '/admin': typeof AdminRoute;
   '/new-instance': typeof NewInstanceRoute;
   '/setup': typeof SetupRoute;
   '/instances/$instanceId': typeof InstancesInstanceIdRouteRouteWithChildren;
   '/instances/$instanceId/databases': typeof InstancesInstanceIdDatabasesRouteRouteWithChildren;
   '/instances/$instanceId/roles': typeof InstancesInstanceIdRolesRouteRouteWithChildren;
+  '/instances/$instanceId/admin': typeof InstancesInstanceIdAdminRoute;
   '/instances/$instanceId/configuration': typeof InstancesInstanceIdConfigurationRoute;
   '/instances/$instanceId/': typeof InstancesInstanceIdIndexRoute;
   '/instances/$instanceId/roles/$roleId': typeof InstancesInstanceIdRolesRoleIdRoute;
@@ -120,9 +135,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
   '/access-denied': typeof AccessDeniedRoute;
+  '/admin': typeof AdminRoute;
   '/new-instance': typeof NewInstanceRoute;
   '/setup': typeof SetupRoute;
   '/instances/$instanceId/databases': typeof InstancesInstanceIdDatabasesRouteRouteWithChildren;
+  '/instances/$instanceId/admin': typeof InstancesInstanceIdAdminRoute;
   '/instances/$instanceId/configuration': typeof InstancesInstanceIdConfigurationRoute;
   '/instances/$instanceId': typeof InstancesInstanceIdIndexRoute;
   '/instances/$instanceId/roles/$roleId': typeof InstancesInstanceIdRolesRoleIdRoute;
@@ -135,11 +152,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
   '/access-denied': typeof AccessDeniedRoute;
+  '/admin': typeof AdminRoute;
   '/new-instance': typeof NewInstanceRoute;
   '/setup': typeof SetupRoute;
   '/instances/$instanceId': typeof InstancesInstanceIdRouteRouteWithChildren;
   '/instances/$instanceId/databases': typeof InstancesInstanceIdDatabasesRouteRouteWithChildren;
   '/instances/$instanceId/roles': typeof InstancesInstanceIdRolesRouteRouteWithChildren;
+  '/instances/$instanceId/admin': typeof InstancesInstanceIdAdminRoute;
   '/instances/$instanceId/configuration': typeof InstancesInstanceIdConfigurationRoute;
   '/instances/$instanceId/': typeof InstancesInstanceIdIndexRoute;
   '/instances/$instanceId/roles/$roleId': typeof InstancesInstanceIdRolesRoleIdRoute;
@@ -153,11 +172,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/access-denied'
+    | '/admin'
     | '/new-instance'
     | '/setup'
     | '/instances/$instanceId'
     | '/instances/$instanceId/databases'
     | '/instances/$instanceId/roles'
+    | '/instances/$instanceId/admin'
     | '/instances/$instanceId/configuration'
     | '/instances/$instanceId/'
     | '/instances/$instanceId/roles/$roleId'
@@ -169,9 +190,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/access-denied'
+    | '/admin'
     | '/new-instance'
     | '/setup'
     | '/instances/$instanceId/databases'
+    | '/instances/$instanceId/admin'
     | '/instances/$instanceId/configuration'
     | '/instances/$instanceId'
     | '/instances/$instanceId/roles/$roleId'
@@ -183,11 +206,13 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/access-denied'
+    | '/admin'
     | '/new-instance'
     | '/setup'
     | '/instances/$instanceId'
     | '/instances/$instanceId/databases'
     | '/instances/$instanceId/roles'
+    | '/instances/$instanceId/admin'
     | '/instances/$instanceId/configuration'
     | '/instances/$instanceId/'
     | '/instances/$instanceId/roles/$roleId'
@@ -200,6 +225,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   AccessDeniedRoute: typeof AccessDeniedRoute;
+  AdminRoute: typeof AdminRoute;
   NewInstanceRoute: typeof NewInstanceRoute;
   SetupRoute: typeof SetupRoute;
   InstancesInstanceIdRouteRoute: typeof InstancesInstanceIdRouteRouteWithChildren;
@@ -219,6 +245,13 @@ declare module '@tanstack/react-router' {
       path: '/new-instance';
       fullPath: '/new-instance';
       preLoaderRoute: typeof NewInstanceRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/admin': {
+      id: '/admin';
+      path: '/admin';
+      fullPath: '/admin';
+      preLoaderRoute: typeof AdminRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/access-denied': {
@@ -254,6 +287,13 @@ declare module '@tanstack/react-router' {
       path: '/configuration';
       fullPath: '/instances/$instanceId/configuration';
       preLoaderRoute: typeof InstancesInstanceIdConfigurationRouteImport;
+      parentRoute: typeof InstancesInstanceIdRouteRoute;
+    };
+    '/instances/$instanceId/admin': {
+      id: '/instances/$instanceId/admin';
+      path: '/admin';
+      fullPath: '/instances/$instanceId/admin';
+      preLoaderRoute: typeof InstancesInstanceIdAdminRouteImport;
       parentRoute: typeof InstancesInstanceIdRouteRoute;
     };
     '/instances/$instanceId/roles': {
@@ -348,6 +388,7 @@ const InstancesInstanceIdRolesRouteRouteWithChildren =
 interface InstancesInstanceIdRouteRouteChildren {
   InstancesInstanceIdDatabasesRouteRoute: typeof InstancesInstanceIdDatabasesRouteRouteWithChildren;
   InstancesInstanceIdRolesRouteRoute: typeof InstancesInstanceIdRolesRouteRouteWithChildren;
+  InstancesInstanceIdAdminRoute: typeof InstancesInstanceIdAdminRoute;
   InstancesInstanceIdConfigurationRoute: typeof InstancesInstanceIdConfigurationRoute;
   InstancesInstanceIdIndexRoute: typeof InstancesInstanceIdIndexRoute;
 }
@@ -358,6 +399,7 @@ const InstancesInstanceIdRouteRouteChildren: InstancesInstanceIdRouteRouteChildr
       InstancesInstanceIdDatabasesRouteRouteWithChildren,
     InstancesInstanceIdRolesRouteRoute:
       InstancesInstanceIdRolesRouteRouteWithChildren,
+    InstancesInstanceIdAdminRoute: InstancesInstanceIdAdminRoute,
     InstancesInstanceIdConfigurationRoute:
       InstancesInstanceIdConfigurationRoute,
     InstancesInstanceIdIndexRoute: InstancesInstanceIdIndexRoute,
@@ -371,6 +413,7 @@ const InstancesInstanceIdRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccessDeniedRoute: AccessDeniedRoute,
+  AdminRoute: AdminRoute,
   NewInstanceRoute: NewInstanceRoute,
   SetupRoute: SetupRoute,
   InstancesInstanceIdRouteRoute: InstancesInstanceIdRouteRouteWithChildren,

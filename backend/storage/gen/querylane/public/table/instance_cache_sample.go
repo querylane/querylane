@@ -100,7 +100,7 @@ func newInstanceCacheSampleTableImpl(schemaName, tableName, alias string) instan
 		SessionsKilledColumn    = postgres.IntegerColumn("sessions_killed")
 		allColumns              = postgres.ColumnList{InstanceIDColumn, ObservedAtColumn, BlocksHitColumn, BlocksReadColumn, StatsResetColumn, XactCommitColumn, XactRollbackColumn, TupReturnedColumn, TupFetchedColumn, TupInsertedColumn, TupUpdatedColumn, TupDeletedColumn, ConflictsColumn, DeadlocksColumn, TempFilesColumn, TempBytesColumn, SessionsColumn, SessionsAbandonedColumn, SessionsFatalColumn, SessionsKilledColumn}
 		mutableColumns          = postgres.ColumnList{BlocksHitColumn, BlocksReadColumn, StatsResetColumn, XactCommitColumn, XactRollbackColumn, TupReturnedColumn, TupFetchedColumn, TupInsertedColumn, TupUpdatedColumn, TupDeletedColumn, ConflictsColumn, DeadlocksColumn, TempFilesColumn, TempBytesColumn, SessionsColumn, SessionsAbandonedColumn, SessionsFatalColumn, SessionsKilledColumn}
-		defaultColumns          = postgres.ColumnList{}
+		defaultColumns          = postgres.ColumnList{XactCommitColumn, XactRollbackColumn, TupReturnedColumn, TupFetchedColumn, TupInsertedColumn, TupUpdatedColumn, TupDeletedColumn, ConflictsColumn, DeadlocksColumn, TempFilesColumn, TempBytesColumn, SessionsColumn, SessionsAbandonedColumn, SessionsFatalColumn, SessionsKilledColumn}
 	)
 
 	return instanceCacheSampleTable{

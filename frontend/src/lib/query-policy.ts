@@ -13,6 +13,7 @@ const FIVE_MINUTES_IN_MILLISECONDS = DEFAULT_QUERY_GC_TIME_MS;
 const UNAVAILABLE_QUERY_RETRY_DELAY_MS = 2000;
 
 export const QUERY_STALE_TIME = {
+  adminOps: 5000,
   databaseList: TWO_MINUTES_IN_MILLISECONDS,
   default: TWO_MINUTES_IN_MILLISECONDS,
   explainPlan: 0,
@@ -70,7 +71,23 @@ export const STATIC_QUERY_OPTIONS = {
   staleTime: QUERY_STALE_TIME.static,
 } as const;
 
+/**
+ * Auto-refresh cadence for the admin ops page. It is a live debugging
+ * surface: the job queue and replica liveness change on heartbeat/probe
+ * cadence (15-30s), catalog sync and storage change slower. Polling stops
+ * when the tab is hidden (refetchIntervalInBackground stays false).
+ */
+export const ADMIN_OPS_REFETCH_INTERVALS = {
+  catalogSync: 30_000,
+  jobQueue: 10_000,
+  replicas: 10_000,
+  storage: ONE_MINUTE_IN_MILLISECONDS,
+} as const;
+
 export const RESOURCE_QUERY_OPTIONS = {
+  adminOps: {
+    staleTime: QUERY_STALE_TIME.adminOps,
+  },
   databaseList: {
     staleTime: QUERY_STALE_TIME.databaseList,
   },

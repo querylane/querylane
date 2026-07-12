@@ -25,7 +25,11 @@ tasks:
       - sh: docker info >/dev/null 2>&1
         msg: "Docker is not running or not accessible"
     cmds:
-      - docker run -d --name {{.CONTAINER_NAME}} --rm -p 5433:5432 -e POSTGRES_PASSWORD=querylane -e POSTGRES_DB=querylane postgres:17-alpine
+      # Generate against the minimum supported major (16) so the golden schema
+      # and jet output stay PostgreSQL 16+ compatible: codegen fails loudly if a
+      # migration ever introduces pg17-only DDL, and the dump omits the pg17-only
+      # pg_dump preamble (e.g. `SET transaction_timeout`).
+      - docker run -d --name {{.CONTAINER_NAME}} --rm -p 5433:5432 -e POSTGRES_PASSWORD=querylane -e POSTGRES_DB=querylane postgres:16-alpine
     status:
       - docker ps --filter "name={{.CONTAINER_NAME}}" --filter "status=running" --quiet | grep -q .
 
@@ -70,8 +74,21 @@ tasks:
 
   golden:
     desc: Dump the migrated schema to a golden file (run against an already-running DB, or use sql:generate)
+    vars:
+      GOLDEN: '{{.ROOT_DIR}}/backend/storage/schema.sql'
     cmds:
-      - docker exec {{.CONTAINER_NAME}} pg_dump -U postgres -d querylane --schema-only --no-owner --no-privileges > {{.ROOT_DIR}}/backend/storage/schema.sql
+      # Strip pg_dump's `\restrict`/`\unrestrict` psql guards: their key is
+      # randomized per dump (pg16.10+/pg17+), so keeping them produces noisy,
+      # unrelated diffs on every regeneration. Removing them also lets older
+      # psql clients (pre-16.10, which don't know the meta-command) restore the
+      # golden schema. pg_dump 18's `--restrict-key` would fix this natively.
+      #
+      # Dump to a temp file first so a pg_dump failure aborts the task instead of
+      # being masked by grep's exit status in a pipeline, which would leave a
+      # silently truncated golden schema.
+      - docker exec {{.CONTAINER_NAME}} pg_dump -U postgres -d querylane --schema-only --no-owner --no-privileges > "{{.GOLDEN}}.tmp"
+      - grep -vE '^\\(un)?restrict ' "{{.GOLDEN}}.tmp" > "{{.GOLDEN}}"
+      - rm -f "{{.GOLDEN}}.tmp"
 
   cleanup:
     desc: Stop and remove Postgres container

@@ -29,5 +29,6 @@ func UseSchema(schema string) {
 	InstanceIoSample = InstanceIoSample.FromSchema(schema)
 	InstanceRuntimeState = InstanceRuntimeState.FromSchema(schema)
 	InstanceStorageSample = InstanceStorageSample.FromSchema(schema)
+	Replica = Replica.FromSchema(schema)
 	RunnerExecutionState = RunnerExecutionState.FromSchema(schema)
 }

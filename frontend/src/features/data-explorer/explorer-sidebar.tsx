@@ -9,14 +9,14 @@ import {
 } from "@tanstack/virtual-core";
 import {
   AlertTriangle,
-  Check,
   ChevronRight,
-  ChevronsUpDown,
   Database as DatabaseIcon,
+  Folder,
   Search,
   X,
 } from "lucide-react";
 import {
+  type ReactNode,
   useEffect,
   useLayoutEffect,
   useReducer,
@@ -26,34 +26,14 @@ import {
 import { RetryActionButton } from "@/components/retry-action-button";
 import { SearchEmptyState } from "@/components/search-empty-state";
 import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CatalogSyncNotice } from "@/features/data-explorer/catalog-sync-notice";
-import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model";
 import {
-  isTableListSort,
-  TABLE_LIST_SORT_ITEMS,
-  type TableListSort,
-} from "@/features/data-explorer/data-explorer-table-list-sort";
+  highlightMatch,
+  matchesQuery,
+  type SchemaSummary,
+} from "@/features/data-explorer/data-explorer-model";
 import {
   CATEGORY_META,
   CATEGORY_ORDER,
@@ -64,79 +44,6 @@ import {
 import { ExplorerResourceButton } from "@/features/data-explorer/explorer-resource-button";
 import type { catalogSyncNotice } from "@/features/data-explorer/use-data-explorer-state";
 import { cn } from "@/lib/utils";
-
-function SchemaPicker({
-  hasNextPage,
-  isFetchingNextPage,
-  onChange,
-  onLoadMore,
-  schemas,
-  value,
-}: {
-  hasNextPage: boolean;
-  isFetchingNextPage: boolean;
-  onChange: (schema: SchemaSummary) => void;
-  onLoadMore: () => void;
-  schemas: SchemaSummary[];
-  value: SchemaSummary | null;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <Popover onOpenChange={setOpen} open={open}>
-      <PopoverTrigger className="flex items-center gap-2 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
-        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-          Schema
-        </span>
-        <span className="flex-1 truncate text-left font-mono text-[13px]">
-          {value?.name ?? "—"}
-        </span>
-        <ChevronsUpDown className="size-3 text-muted-foreground" />
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 gap-0 p-0">
-        <Command
-          filter={(itemValue, search) =>
-            itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
-          }
-        >
-          <CommandList className="pt-1">
-            <CommandEmpty className="p-0">
-              <SearchEmptyState
-                className="min-h-24 py-6"
-                resourceName="schemas"
-              />
-            </CommandEmpty>
-            <CommandGroup heading="Switch schema">
-              {schemas.map((schema) => (
-                <CommandItem
-                  data-checked={value?.id === schema.id}
-                  key={schema.id}
-                  onSelect={() => {
-                    onChange(schema);
-                    setOpen(false);
-                  }}
-                  value={schema.name}
-                >
-                  <Check
-                    className={cn(
-                      "size-3.5",
-                      value?.id === schema.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <span className="font-mono text-sm">{schema.name}</span>
-                </CommandItem>
-              ))}
-              <CategoryInfiniteScrollSentinel
-                hasNextPage={hasNextPage}
-                isFetchingNextPage={isFetchingNextPage}
-                onLoadMore={onLoadMore}
-              />
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
 
 interface CategoryPaginationState {
   hasNextPage: boolean;
@@ -162,28 +69,116 @@ type VirtualResourceListItem =
       isFetchingNextPage: boolean;
       key: string;
       kind: "sentinel";
+    }
+  | {
+      key: string;
+      kind: "schema";
+      schema: SchemaSummary;
+    }
+  | {
+      hasNextPage: boolean;
+      isFetchingNextPage: boolean;
+      key: string;
+      kind: "schemas-sentinel";
+    }
+  | {
+      key: string;
+      kind: "loading";
+    }
+  | {
+      key: string;
+      kind: "empty";
     };
 
 interface ResourceListItemControls {
+  activeSchemaId: string | null;
+  isActiveSchemaExpanded: boolean;
   isCategoryOpen: (category: CategoryKey) => boolean;
   onLoadMoreCategory: (category: CategoryKey) => void;
+  onLoadMoreSchemas: () => void;
   onResourceIntent?:
     | ((category: CategoryKey, name: string) => void)
     | undefined;
   onSelectResource: (category: CategoryKey, name: string) => void;
+  onSelectSchema: (schema: SchemaSummary) => void;
+  onToggleActiveSchema: () => void;
   query: string;
   scrollRoot: HTMLDivElement | null;
   selection: Selection;
   toggleCategory: (category: CategoryKey) => void;
 }
 
+type LoadingPhase = "idle" | "pending" | "skeleton";
+
+const SKELETON_APPEAR_DELAY_MS = 300;
+const SKELETON_MIN_VISIBLE_MS = 400;
+
+/**
+ * Paces the loading skeleton so schema expansion never flickers: nothing is
+ * shown for the first 300ms (fast loads render content directly), and once
+ * the skeleton appears it stays for at least 400ms so it is never yanked
+ * out after a frame or two ("pending" = loading but skeleton suppressed).
+ */
+function useCalmLoadingPhase(isLoading: boolean): LoadingPhase {
+  const [phase, setPhase] = useState<LoadingPhase>("idle");
+  const shownAtRef = useRef(0);
+
+  useEffect(
+    function paceLoadingSkeleton() {
+      if (isLoading) {
+        setPhase((previous) =>
+          previous === "skeleton" ? "skeleton" : "pending"
+        );
+        const timer = setTimeout(() => {
+          shownAtRef.current = Date.now();
+          setPhase("skeleton");
+        }, SKELETON_APPEAR_DELAY_MS);
+        return () => clearTimeout(timer);
+      }
+      const remainingVisible =
+        shownAtRef.current + SKELETON_MIN_VISIBLE_MS - Date.now();
+      if (shownAtRef.current > 0 && remainingVisible > 0) {
+        const timer = setTimeout(() => {
+          shownAtRef.current = 0;
+          setPhase("idle");
+        }, remainingVisible);
+        return () => clearTimeout(timer);
+      }
+      shownAtRef.current = 0;
+      setPhase("idle");
+      return;
+    },
+    [isLoading]
+  );
+
+  // The effect lags the first paint by a frame; never let that frame render
+  // the "No objects" row (or content) while a load is already in flight.
+  if (isLoading && phase === "idle") {
+    return "pending";
+  }
+  return phase;
+}
+
 const RESOURCE_LIST_FALLBACK_ITEM_SIZE = 32;
-const RESOURCE_LIST_CATEGORY_ITEM_SIZE = 36;
-const RESOURCE_LIST_RESOURCE_ITEM_SIZE = 30;
+const RESOURCE_LIST_CATEGORY_ITEM_SIZE = 24;
+const RESOURCE_LIST_RESOURCE_ITEM_SIZE = 26;
 const RESOURCE_LIST_SENTINEL_ITEM_SIZE = 34;
+const RESOURCE_LIST_SCHEMA_ITEM_SIZE = 28;
+const RESOURCE_LIST_EMPTY_ITEM_SIZE = 24;
+const RESOURCE_LIST_LOADING_ITEM_SIZE = 86;
 const RESOURCE_LIST_INITIAL_RECT = { height: 420, width: 300 } satisfies Rect;
 const useIsomorphicLayoutEffect =
   typeof document === "undefined" ? useEffect : useLayoutEffect;
+
+function anySchemaNameMatches(
+  schemas: SchemaSummary[],
+  query: string
+): boolean {
+  return (
+    query.trim().length > 0 &&
+    schemas.some((schema) => matchesQuery(schema.name, query))
+  );
+}
 
 function schemaEmptyMessage({
   schemaSelectionError,
@@ -219,33 +214,6 @@ function hasVisibleCategoryResource({
       pagination.isFetchingNextPage
     );
   });
-}
-
-function ResourceListLoadingSkeleton() {
-  return (
-    <div className="space-y-3 p-2" data-testid="resource-list-loading">
-      {CATEGORY_ORDER.map((category) => (
-        <div className="space-y-1.5" key={category}>
-          <div className="flex items-center gap-2 px-2 py-1">
-            <Skeleton className="size-3.5 shrink-0" />
-            <Skeleton className="h-3 w-16" />
-          </div>
-          <div className="space-y-1">
-            {["first", "second", "third"].map((rowId) => (
-              <div
-                className="flex h-7 items-center gap-2 rounded-md px-3"
-                key={`${category}-${rowId}`}
-              >
-                <Skeleton className="size-4 shrink-0" />
-                <Skeleton className="h-4 flex-1" />
-                <Skeleton className="h-3 w-12" />
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function hasResourceLoadingState(
@@ -336,26 +304,36 @@ function CategoryInfiniteScrollSentinel({
   );
 }
 
-function ResourceCategoryList({
+function ObjectTreeList({
+  activeSchema,
   categoryPagination,
   expandedCategories,
   itemsByCategory,
   onLoadMoreCategory,
+  onLoadMoreSchemas,
   onResourceIntent,
   onSelectResource,
+  onSelectSchema,
   query,
+  resourcesLoading,
+  schemas,
   selection,
   setExpandedCategories,
 }: {
+  activeSchema: SchemaSummary | null;
   categoryPagination: Record<CategoryKey | "schemas", CategoryPaginationState>;
   expandedCategories: Set<CategoryKey>;
-  itemsByCategory: Record<CategoryKey, ResourceItem[]>;
+  itemsByCategory: Record<CategoryKey, ResourceItem[]> | null;
   onLoadMoreCategory: (category: CategoryKey) => void;
+  onLoadMoreSchemas: () => void;
   onResourceIntent?:
     | ((category: CategoryKey, name: string) => void)
     | undefined;
   onSelectResource: (category: CategoryKey, name: string) => void;
+  onSelectSchema: (schema: SchemaSummary) => void;
   query: string;
+  resourcesLoading: boolean;
+  schemas: SchemaSummary[];
   selection: Selection;
   setExpandedCategories: (
     update: (prev: Set<CategoryKey>) => Set<CategoryKey>
@@ -364,6 +342,14 @@ function ResourceCategoryList({
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
     null
   );
+  // Accordion: the active schema is the only one with loaded objects, and it
+  // can be collapsed without switching schemas.
+  const [collapsedSchemaId, setCollapsedSchemaId] = useState<string | null>(
+    null
+  );
+  const activeSchemaId = activeSchema?.id ?? null;
+  const isActiveSchemaExpanded =
+    activeSchemaId !== null && collapsedSchemaId !== activeSchemaId;
   const isCategoryOpen = (category: CategoryKey) =>
     expandedCategories.has(category);
   const toggleCategory = (category: CategoryKey) => {
@@ -377,16 +363,32 @@ function ResourceCategoryList({
       return next;
     });
   };
-  const flatItems = flattenResourceListItems({
+  const loadingPhase = useCalmLoadingPhase(resourcesLoading);
+  const flatItems = flattenObjectTreeItems({
+    activeSchemaId,
     categoryPagination,
     expandedCategories,
+    isActiveSchemaExpanded,
     itemsByCategory,
+    loadingPhase,
+    query,
+    schemas,
   });
   const itemControls: ResourceListItemControls = {
+    activeSchemaId,
+    isActiveSchemaExpanded,
     isCategoryOpen,
     onLoadMoreCategory,
+    onLoadMoreSchemas,
     onResourceIntent,
     onSelectResource,
+    onSelectSchema: (schema) => {
+      setCollapsedSchemaId(null);
+      onSelectSchema(schema);
+    },
+    onToggleActiveSchema: () => {
+      setCollapsedSchemaId(isActiveSchemaExpanded ? activeSchemaId : null);
+    },
     query,
     scrollRoot: scrollElement,
     selection,
@@ -503,7 +505,7 @@ function observeResourceListRect(
   });
 }
 
-function flattenResourceListItems({
+function flattenActiveSchemaItems({
   categoryPagination,
   expandedCategories,
   itemsByCategory,
@@ -551,6 +553,95 @@ function flattenResourceListItems({
   return flatItems;
 }
 
+function expandedSchemaChildren({
+  categoryPagination,
+  expandedCategories,
+  itemsByCategory,
+  loadingPhase,
+  query,
+  schemaId,
+}: {
+  categoryPagination: Record<CategoryKey | "schemas", CategoryPaginationState>;
+  expandedCategories: Set<CategoryKey>;
+  itemsByCategory: Record<CategoryKey, ResourceItem[]> | null;
+  loadingPhase: LoadingPhase;
+  query: string;
+  schemaId: string;
+}): VirtualResourceListItem[] {
+  if (loadingPhase === "pending") {
+    // Loading but within the skeleton delay: keep the area empty so a fast
+    // response swaps straight to content without an intermediate flash.
+    return [];
+  }
+  if (loadingPhase === "skeleton") {
+    return [{ key: `schema:${schemaId}:loading`, kind: "loading" }];
+  }
+  const children = itemsByCategory
+    ? flattenActiveSchemaItems({
+        categoryPagination,
+        expandedCategories,
+        itemsByCategory,
+      })
+    : [];
+  if (children.length === 0 && query.trim().length === 0) {
+    return [{ key: `schema:${schemaId}:empty`, kind: "empty" }];
+  }
+  return children;
+}
+
+function flattenObjectTreeItems({
+  activeSchemaId,
+  categoryPagination,
+  expandedCategories,
+  isActiveSchemaExpanded,
+  itemsByCategory,
+  loadingPhase,
+  query,
+  schemas,
+}: {
+  activeSchemaId: string | null;
+  categoryPagination: Record<CategoryKey | "schemas", CategoryPaginationState>;
+  expandedCategories: Set<CategoryKey>;
+  isActiveSchemaExpanded: boolean;
+  itemsByCategory: Record<CategoryKey, ResourceItem[]> | null;
+  loadingPhase: LoadingPhase;
+  query: string;
+  schemas: SchemaSummary[];
+}): VirtualResourceListItem[] {
+  const flatItems: VirtualResourceListItem[] = [];
+  for (const schema of schemas) {
+    const isActive = schema.id === activeSchemaId;
+    // The filter always keeps the active schema visible: its objects are
+    // filtered server-side, so hiding the node would orphan the matches.
+    if (!(isActive || matchesQuery(schema.name, query))) {
+      continue;
+    }
+    flatItems.push({ key: `schema:${schema.id}`, kind: "schema", schema });
+    if (isActive && isActiveSchemaExpanded) {
+      flatItems.push(
+        ...expandedSchemaChildren({
+          categoryPagination,
+          expandedCategories,
+          itemsByCategory,
+          loadingPhase,
+          query,
+          schemaId: schema.id,
+        })
+      );
+    }
+  }
+  const schemasPagination = categoryPagination.schemas;
+  if (schemasPagination.hasNextPage || schemasPagination.isFetchingNextPage) {
+    flatItems.push({
+      hasNextPage: schemasPagination.hasNextPage,
+      isFetchingNextPage: schemasPagination.isFetchingNextPage,
+      key: "schemas:sentinel",
+      kind: "schemas-sentinel",
+    });
+  }
+  return flatItems;
+}
+
 function estimateResourceListItemSize(
   item: VirtualResourceListItem | undefined
 ): number {
@@ -563,7 +654,14 @@ function estimateResourceListItemSize(
     case "resource":
       return RESOURCE_LIST_RESOURCE_ITEM_SIZE;
     case "sentinel":
+    case "schemas-sentinel":
       return RESOURCE_LIST_SENTINEL_ITEM_SIZE;
+    case "schema":
+      return RESOURCE_LIST_SCHEMA_ITEM_SIZE;
+    case "loading":
+      return RESOURCE_LIST_LOADING_ITEM_SIZE;
+    case "empty":
+      return RESOURCE_LIST_EMPTY_ITEM_SIZE;
     default:
       return assertNeverVirtualResourceListItem(item);
   }
@@ -584,6 +682,125 @@ function getResourceListItemKey(
   return item.key;
 }
 
+/**
+ * Indent guide for rows nested under a schema node, mirroring the design's
+ * tree-sub style: rows sit flush vertically, so the per-row left border
+ * reads as one continuous guide line.
+ */
+function NestedTreeRow({
+  children,
+  indented,
+}: {
+  children: ReactNode;
+  indented?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "ml-4 h-full border-border border-l",
+        // Resource rows sit one level deeper than their Kind header so the
+        // tree reads as objects nested under the group, not siblings of it.
+        indented ? "pl-5" : "pl-1"
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SchemaTreeButton({
+  controls,
+  schema,
+}: {
+  controls: ResourceListItemControls;
+  schema: SchemaSummary;
+}) {
+  const isActive = controls.activeSchemaId === schema.id;
+  const isExpanded = isActive && controls.isActiveSchemaExpanded;
+  return (
+    <Button
+      aria-expanded={isExpanded}
+      className={cn(
+        "h-7 w-full justify-start gap-2 px-2 py-0 font-normal",
+        isActive ? "text-foreground" : "text-muted-foreground"
+      )}
+      onClick={() =>
+        isActive
+          ? controls.onToggleActiveSchema()
+          : controls.onSelectSchema(schema)
+      }
+      title={schema.name}
+      variant="ghost"
+    >
+      <ChevronRight
+        className={cn(
+          "size-3.5 shrink-0 text-muted-foreground transition-transform",
+          isExpanded && "rotate-90"
+        )}
+      />
+      <Folder
+        className={cn(
+          "size-4 shrink-0",
+          isActive ? "text-primary" : "text-muted-foreground"
+        )}
+      />
+      <span className="min-w-0 flex-1 truncate text-left font-mono text-xs">
+        {highlightMatch(schema.name, controls.query)}
+      </span>
+    </Button>
+  );
+}
+
+const SCHEMA_SKELETON_ROWS = [
+  { id: "first", width: "w-2/3" },
+  { id: "second", width: "w-1/2" },
+  { id: "third", width: "w-3/5" },
+  { id: "fourth", width: "w-2/5" },
+  { id: "fifth", width: "w-1/2" },
+];
+
+/**
+ * Placeholder rows shaped like schema tree buttons (chevron + folder + label),
+ * shown while the first schema page loads on a cold cache. Keeping the rail's
+ * shape stable avoids the "text → whole tree pops in" flash on entry.
+ */
+function SchemaLoadingRows() {
+  return (
+    <div
+      className="fade-in animate-in space-y-1 py-1 duration-200"
+      data-testid="schema-list-loading"
+      role="status"
+    >
+      {SCHEMA_SKELETON_ROWS.map((row) => (
+        <div className="flex h-7 items-center gap-2 px-2" key={row.id}>
+          <Skeleton className="size-3.5 shrink-0" />
+          <Skeleton className="size-4 shrink-0" />
+          <Skeleton className={cn("h-3.5", row.width)} />
+        </div>
+      ))}
+      <span className="sr-only">Loading schemas</span>
+    </div>
+  );
+}
+
+function NestedLoadingRows() {
+  // Appearance pacing (delay + minimum visible time) lives in
+  // useCalmLoadingPhase; this only softens the skeleton's entrance.
+  return (
+    <div
+      className="fade-in animate-in space-y-1 py-1 duration-200"
+      data-testid="resource-list-loading"
+    >
+      {["first", "second", "third"].map((rowId) => (
+        <div className="flex h-[26px] items-center gap-2 px-3" key={rowId}>
+          <Skeleton className="size-4 shrink-0" />
+          <Skeleton className="h-4 flex-1" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ResourceListItem({
   controls,
   item,
@@ -591,16 +808,60 @@ function ResourceListItem({
   controls: ResourceListItemControls;
   item: VirtualResourceListItem;
 }) {
+  switch (item.kind) {
+    case "schema":
+      return <SchemaTreeButton controls={controls} schema={item.schema} />;
+    case "schemas-sentinel":
+      return (
+        <CategoryInfiniteScrollSentinel
+          hasNextPage={item.hasNextPage}
+          isFetchingNextPage={item.isFetchingNextPage}
+          onLoadMore={controls.onLoadMoreSchemas}
+          scrollRoot={controls.scrollRoot}
+        />
+      );
+    case "loading":
+      return (
+        <NestedTreeRow>
+          <NestedLoadingRows />
+        </NestedTreeRow>
+      );
+    case "empty":
+      return (
+        <NestedTreeRow>
+          <p className="px-3 py-1 text-muted-foreground text-xs">No objects</p>
+        </NestedTreeRow>
+      );
+    default:
+      return (
+        <NestedTreeRow indented={item.kind !== "category"}>
+          <CategoryListItem controls={controls} item={item} />
+        </NestedTreeRow>
+      );
+  }
+}
+
+function CategoryListItem({
+  controls,
+  item,
+}: {
+  controls: ResourceListItemControls;
+  item: Extract<
+    VirtualResourceListItem,
+    { kind: "category" | "resource" | "sentinel" }
+  >;
+}) {
   const meta = CATEGORY_META[item.category];
-  const handleResourceIntent = controls.onResourceIntent;
-  const handleSelectResource = controls.onSelectResource;
   switch (item.kind) {
     case "category": {
       const isOpen = controls.isCategoryOpen(item.category);
       return (
         <Button
           aria-expanded={isOpen}
-          className="h-9 w-full justify-start gap-2 px-2 py-0 font-normal text-muted-foreground hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-muted-foreground aria-expanded:hover:bg-muted aria-expanded:hover:text-foreground"
+          // Kind headers are labels, not rows: hover brightens the text only
+          // (per the concept design), so they read differently from the
+          // background-highlighted object rows around them.
+          className="h-6 w-full justify-start gap-2 px-2 py-0 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-muted-foreground aria-expanded:hover:text-foreground dark:hover:bg-transparent"
           onClick={() => controls.toggleCategory(item.category)}
           variant="ghost"
         >
@@ -622,8 +883,8 @@ function ResourceListItem({
           category={item.category}
           icon={meta.icon}
           item={item.item}
-          onResourceIntent={handleResourceIntent}
-          onSelectResource={handleSelectResource}
+          onResourceIntent={controls.onResourceIntent}
+          onSelectResource={controls.onSelectResource}
           query={controls.query}
           selection={controls.selection}
         />
@@ -655,6 +916,10 @@ function SchemaEmptyPanel({
     return null;
   }
 
+  if (schemasLoading) {
+    return <SchemaLoadingRows />;
+  }
+
   return (
     <p className="px-3 py-6 text-center text-muted-foreground text-sm">
       {schemaEmptyMessage({ schemaSelectionError, schemasLoading })}
@@ -668,7 +933,6 @@ function schemaOverviewButtonLabel(databaseLabel: string) {
 
 function ExplorerSidebar({
   activeSchema,
-  className,
   databaseLabel,
   expandedCategories,
   itemsByCategory,
@@ -678,7 +942,6 @@ function ExplorerSidebar({
   onRetryTables,
   onRetryViews,
   onSelectSchemaOverview,
-  onTableListSortChange,
   onResourceIntent,
   onSelectResource,
   onSelectSchema,
@@ -691,12 +954,10 @@ function ExplorerSidebar({
   setExpandedCategories,
   setQuery,
   tablesError,
-  tableListSort,
   tablesSyncNotice,
   viewsError,
 }: {
   activeSchema: SchemaSummary | null;
-  className?: string;
   databaseLabel: string;
   expandedCategories: Set<CategoryKey>;
   itemsByCategory: Record<CategoryKey, ResourceItem[]> | null;
@@ -709,7 +970,6 @@ function ExplorerSidebar({
   onSelectResource: (category: CategoryKey, name: string) => void;
   onSelectSchema: (schema: SchemaSummary) => void;
   onSelectSchemaOverview: () => void;
-  onTableListSortChange: (value: TableListSort) => void;
   query: string;
   schemaSelectionError: unknown;
   schemasLoading: boolean;
@@ -721,7 +981,6 @@ function ExplorerSidebar({
   ) => void;
   setQuery: (value: string) => void;
   tablesError: unknown;
-  tableListSort: TableListSort;
   tablesSyncNotice: ReturnType<typeof catalogSyncNotice>;
   viewsError: unknown;
 }) {
@@ -731,26 +990,26 @@ function ExplorerSidebar({
   });
   const hasResourceLoadError = tablesError !== null || viewsError !== null;
   const hasResourceLoading = hasResourceLoadingState(categoryPagination);
-  const showSearchEmptyState = shouldShowSearchEmptyState({
-    activeSchema,
-    hasResourceLoadError,
-    hasResourceLoading,
-    hasVisibleResource,
-    itemsByCategory,
-    query,
-  });
+  const hasSchemaNameMatch = anySchemaNameMatches(schemas, query);
+  const showSearchEmptyState =
+    shouldShowSearchEmptyState({
+      activeSchema,
+      hasResourceLoadError,
+      hasResourceLoading,
+      hasVisibleResource,
+      itemsByCategory,
+      query,
+    }) && !hasSchemaNameMatch;
+  const showObjectTree = schemas.length > 0 && !showSearchEmptyState;
   // Object browser thresholds shed chrome in stages: below 18rem stacks search
   // controls, below 15rem hides row sizes, below 14rem hides icons and tightens
   // spacing.
   return (
     <aside
       aria-label="Database objects"
-      className={cn(
-        "@container/object-browser flex w-[300px] shrink-0 flex-col border-border border-r bg-sidebar/40",
-        className
-      )}
+      className="@container/object-browser flex h-full min-h-0 w-full flex-1 flex-col"
     >
-      <div className="flex flex-col gap-2 @max-[14rem]/object-browser:px-2 px-3 pt-3 pb-2">
+      <div className="flex flex-col gap-1.5 @max-[14rem]/object-browser:px-2 px-2 pt-2 pb-1.5">
         <Button
           aria-label={schemaOverviewButtonLabel(databaseLabel)}
           className={cn(
@@ -763,18 +1022,10 @@ function ExplorerSidebar({
           <DatabaseIcon className="@max-[14rem]/object-browser:hidden size-4 text-muted-foreground" />
           <span className="truncate font-medium text-sm">{databaseLabel}</span>
         </Button>
-        <SchemaPicker
-          hasNextPage={categoryPagination.schemas.hasNextPage}
-          isFetchingNextPage={categoryPagination.schemas.isFetchingNextPage}
-          onChange={onSelectSchema}
-          onLoadMore={onLoadMoreSchemas}
-          schemas={schemas}
-          value={activeSchema}
-        />
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            className="h-8 pr-7 pl-8 text-sm"
+            className="h-7 pr-7 pl-8 text-[13px]"
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Filter…"
             value={query}
@@ -791,38 +1042,9 @@ function ExplorerSidebar({
             </Button>
           ) : null}
         </div>
-        <Select
-          disabled={!activeSchema}
-          items={TABLE_LIST_SORT_ITEMS}
-          onValueChange={(next) => {
-            if (next != null && isTableListSort(next)) {
-              onTableListSortChange(next);
-            }
-          }}
-          value={tableListSort}
-        >
-          <SelectTrigger
-            aria-label="Sort tables"
-            className="h-8 w-full justify-between text-xs"
-            size="sm"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent alignItemWithTrigger={false}>
-            {TABLE_LIST_SORT_ITEMS.map((option) => (
-              <SelectItem
-                key={option.value}
-                label={option.label}
-                value={option.value}
-              >
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col p-2">
+      <div className="flex min-h-0 flex-1 flex-col p-1.5">
         {schemasSyncNotice ? (
           <CatalogSyncNotice notice={schemasSyncNotice} surface="sidebar" />
         ) : null}
@@ -875,19 +1097,20 @@ function ExplorerSidebar({
           <CatalogSyncNotice notice={tablesSyncNotice} surface="sidebar" />
         ) : null}
 
-        {activeSchema && hasResourceLoading && !hasVisibleResource ? (
-          <ResourceListLoadingSkeleton />
-        ) : null}
-
-        {activeSchema && itemsByCategory && hasVisibleResource ? (
-          <ResourceCategoryList
+        {showObjectTree ? (
+          <ObjectTreeList
+            activeSchema={activeSchema}
             categoryPagination={categoryPagination}
             expandedCategories={expandedCategories}
             itemsByCategory={itemsByCategory}
             onLoadMoreCategory={onLoadMoreCategory}
+            onLoadMoreSchemas={onLoadMoreSchemas}
             onResourceIntent={onResourceIntent}
             onSelectResource={onSelectResource}
+            onSelectSchema={onSelectSchema}
             query={query}
+            resourcesLoading={hasResourceLoading && !hasVisibleResource}
+            schemas={schemas}
             selection={selection}
             setExpandedCategories={setExpandedCategories}
           />
