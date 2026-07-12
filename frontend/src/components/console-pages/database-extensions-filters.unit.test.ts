@@ -72,6 +72,32 @@ describe("database extension filters", () => {
     });
   });
 
+  test("presents version labels without duplicate v prefixes", () => {
+    const presentedExtensions = presentExtensions([
+      create(ExtensionSchema, {
+        comment: "vector similarity search",
+        defaultVersion: "v0.8.0",
+        displayName: "pgvector",
+        installed: true,
+        installedVersion: "v0.8.0",
+        name: "instances/prod/databases/customer-events/extensions/pgvector",
+        schema: "public",
+      }),
+    ]);
+    const [presented] = presentedExtensions;
+    if (!presented) {
+      throw new Error("Expected pgvector extension metadata");
+    }
+
+    expect(presented.versionLabel).toBe("0.8.0");
+    expect(presented.defaultVersion).toBe("0.8.0");
+    expect(presented.installedVersion).toBe("0.8.0");
+    expect(presented.facts).toContainEqual({
+      label: "Version",
+      value: "0.8.0",
+    });
+  });
+
   test("filters presented extensions by search and redesign facets", () => {
     const presented = presentExtensions(extensions);
 

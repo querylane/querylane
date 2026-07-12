@@ -50,6 +50,7 @@ interface QueryState<T> {
 
 const PG_STAT_STATEMENTS_BUTTON_NAME = /pg_stat_statements/i;
 const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/;
+const TIMESCALEDB_BUTTON_NAME = /timescaledb/i;
 
 const state = vi.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
@@ -726,6 +727,41 @@ test("backend database extensions drawer matches design source", async () => {
   await expect.element(page.getByText("pg_stat_statements view")).toBeVisible();
   await expect.element(page.getByText("track_planning setting")).toBeVisible();
   await expect(drawer).toMatchScreenshot("backend-database-extensions-drawer");
+});
+
+test("backend database extensions available drawer matches design source", async () => {
+  state.extensionQuery = { data: extensionDesignInventoryResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendDatabaseExtensionsPage
+          databaseId="customer-events"
+          instanceId="prod"
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await page
+    .getByRole("textbox", { name: "Search extensions..." })
+    .fill("timescaledb");
+  await expect.element(page.getByText("Available")).toBeVisible();
+  await expect.element(page.getByText("available to install")).toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "backend-database-extensions-available"
+  );
+
+  await page.getByRole("button", { name: TIMESCALEDB_BUTTON_NAME }).click();
+
+  const drawer = page.getByRole("dialog", { name: "timescaledb details" });
+  await expect.element(drawer).toBeVisible();
+  await expect
+    .element(page.getByText("A superuser can install it with:"))
+    .toBeVisible();
+  await expect(drawer).toMatchScreenshot(
+    "backend-database-extensions-available-drawer"
+  );
 });
 
 test("backend instance delete navigates without waiting for catalog refresh", async () => {

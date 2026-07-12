@@ -82,6 +82,7 @@ const SOURCE_LABELS = {
   postgresql: "PostgreSQL",
   vendor: "Vendor",
 } satisfies Record<Exclude<ExtensionSourceFilter, "All">, string>;
+const VERSION_PREFIX_PATTERN = /^v(?=\d)/i;
 
 const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
   hstore: {
@@ -340,12 +341,16 @@ function extensionSchemaLabel(extension: Extension): string {
   return extension.schema || "—";
 }
 
+function versionLabel(version: string): string {
+  return version.replace(VERSION_PREFIX_PATTERN, "") || "—";
+}
+
 function extensionVersionLabel(extension: Extension): string {
   if (extension.installedVersion) {
-    return extension.installedVersion;
+    return versionLabel(extension.installedVersion);
   }
   if (extension.defaultVersion) {
-    return `v${extension.defaultVersion}`;
+    return versionLabel(extension.defaultVersion);
   }
   return "—";
 }
@@ -359,8 +364,8 @@ function presentExtension(extension: Extension): PresentedExtension {
   const metadata = metadataForExtension(extension);
   const statusFilter = extensionStatusFilterValue(extension);
   const statusLabel = extension.installed ? "Installed" : "Available";
-  const defaultVersion = extension.defaultVersion || "—";
-  const installedVersion = extension.installedVersion || "—";
+  const defaultVersion = versionLabel(extension.defaultVersion);
+  const installedVersion = versionLabel(extension.installedVersion);
   const description = extension.comment || metadata.about;
   const schema = extensionSchemaLabel(extension);
   const sourceLabel = SOURCE_LABELS[metadata.source];

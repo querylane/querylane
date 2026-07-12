@@ -285,8 +285,9 @@ function ExtensionCard({
 }) {
   return (
     <Button
-      aria-pressed={isSelected}
-      className="h-auto min-h-0 w-full items-stretch justify-start rounded-xl border border-border bg-card p-0 text-left text-card-foreground shadow-xs hover:bg-card hover:ring-1 hover:ring-foreground/20 aria-pressed:ring-2 aria-pressed:ring-primary/50"
+      aria-expanded={isSelected}
+      aria-haspopup="dialog"
+      className="h-auto min-h-0 w-full items-stretch justify-start rounded-xl border border-border bg-card p-0 text-left text-card-foreground shadow-xs hover:bg-card hover:ring-1 hover:ring-foreground/20 aria-expanded:ring-2 aria-expanded:ring-primary/50"
       onClick={() => onSelect(extension.key)}
       type="button"
       variant="ghost"
@@ -358,11 +359,9 @@ function ExtensionDetails({ extension }: { extension: PresentedExtension }) {
             <span>{extension.applied}</span>
           </div>
           {extension.statusFilter === "available" && extension.installSql ? (
-            <div className="rounded-lg bg-muted/50 p-3 text-muted-foreground text-xs leading-relaxed">
-              A superuser can install it with:
-              <pre className="mt-2 overflow-auto font-mono text-foreground text-xs">
-                {extension.installSql}
-              </pre>
+            <div className="space-y-2 rounded-lg bg-muted/50 p-3 text-muted-foreground text-xs leading-relaxed">
+              <p>A superuser can install it with:</p>
+              <SqlCodeBlock sql={extension.installSql} />
             </div>
           ) : null}
           <section className="space-y-2">
@@ -409,9 +408,6 @@ function paginationLabel({
   pageIndex: number;
   pageSize: number;
 }) {
-  if (filteredCount === 0) {
-    return "No extensions match";
-  }
   const first = pageIndex * pageSize + 1;
   const last = Math.min((pageIndex + 1) * pageSize, filteredCount);
   return `Showing ${first}–${last} of ${filteredCount} extensions`;
@@ -485,11 +481,22 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
 
   function handlePageSizeChange(nextPageSize: number) {
     resetPage();
+    setSelectedKey(null);
     setPageSize(nextPageSize);
   }
 
   function handleSelectExtension(key: string) {
     setSelectedKey((currentKey) => (currentKey === key ? null : key));
+  }
+
+  function handlePreviousPage() {
+    setSelectedKey(null);
+    setPageIndex((index) => Math.max(0, index - 1));
+  }
+
+  function handleNextPage() {
+    setSelectedKey(null);
+    setPageIndex((index) => Math.min(pageCount - 1, index + 1));
   }
 
   return (
@@ -536,42 +543,42 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
               ))}
             </div>
           )}
-          <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
-            <span>
-              {paginationLabel({
-                filteredCount: filteredExtensions.length,
-                pageIndex: currentPageIndex,
-                pageSize,
-              })}
-            </span>
-            <div className="ml-auto flex items-center gap-2">
-              <Button
-                aria-label="Previous extensions page"
-                disabled={currentPageIndex === 0}
-                onClick={() => setPageIndex((index) => Math.max(0, index - 1))}
-                size="icon-xs"
-                type="button"
-                variant="outline"
-              >
-                <ChevronLeft />
-              </Button>
-              <span className="font-mono text-xs">
-                Page {currentPageIndex + 1} of {pageCount}
+          {filteredExtensions.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
+              <span>
+                {paginationLabel({
+                  filteredCount: filteredExtensions.length,
+                  pageIndex: currentPageIndex,
+                  pageSize,
+                })}
               </span>
-              <Button
-                aria-label="Next extensions page"
-                disabled={currentPageIndex >= pageCount - 1}
-                onClick={() =>
-                  setPageIndex((index) => Math.min(pageCount - 1, index + 1))
-                }
-                size="icon-xs"
-                type="button"
-                variant="outline"
-              >
-                <ChevronRight />
-              </Button>
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  aria-label="Previous extensions page"
+                  disabled={currentPageIndex === 0}
+                  onClick={handlePreviousPage}
+                  size="icon-xs"
+                  type="button"
+                  variant="outline"
+                >
+                  <ChevronLeft />
+                </Button>
+                <span className="font-mono text-xs">
+                  Page {currentPageIndex + 1} of {pageCount}
+                </span>
+                <Button
+                  aria-label="Next extensions page"
+                  disabled={currentPageIndex >= pageCount - 1}
+                  onClick={handleNextPage}
+                  size="icon-xs"
+                  type="button"
+                  variant="outline"
+                >
+                  <ChevronRight />
+                </Button>
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
       <Sheet

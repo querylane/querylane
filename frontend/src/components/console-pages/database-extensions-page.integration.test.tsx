@@ -26,6 +26,7 @@ const INSTALL_EXTENSION_BUTTON_NAME = /install extension/i;
 const OPEN_IN_WORKBENCH_BUTTON_NAME = /open in sql workbench/i;
 const PG_TRGM_EXTENSION_CARD_NAME = /pg_trgm/i;
 const UUID_OSSP_EXTENSION_CARD_NAME = /uuid-ossp/i;
+const PG_TRGM_EXTENSION_KEY = "pg_trgm";
 
 vi.mock("@/hooks/api/extension", () => ({
   extensionsForDatabaseQueryInput: ({
@@ -60,7 +61,7 @@ function extensionsResponse() {
         comment:
           "Trigram matching — fuzzy text search and fast LIKE/ILIKE indexing",
         defaultVersion: "1.6",
-        displayName: "pg_trgm",
+        displayName: PG_TRGM_EXTENSION_KEY,
         installed: true,
         installedVersion: "1.6",
         name: "instances/prod/databases/customer-events/extensions/pg_trgm",
@@ -138,6 +139,18 @@ describe("database extensions page", () => {
       )
     ).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  test("shows one empty-state message when filters match nothing", () => {
+    state.tableSearch = "missing";
+    render(
+      <BackendDatabaseExtensionsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    expect(screen.getAllByText("No extensions match")).toHaveLength(1);
   });
 
   test("restores the table filter from URL search state", () => {
@@ -267,5 +280,47 @@ describe("database extensions page", () => {
     expect(
       screen.queryByRole("dialog", { name: "pg_trgm details" })
     ).toBeNull();
+  });
+
+  test("renders available install SQL with the shared code block", async () => {
+    const user = userEvent.setup();
+    render(
+      <BackendDatabaseExtensionsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: UUID_OSSP_EXTENSION_CARD_NAME })
+    );
+
+    const drawer = screen.getByRole("dialog", { name: "uuid-ossp details" });
+    expect(
+      within(drawer).getByText("A superuser can install it with:")
+    ).toBeTruthy();
+    expect(
+      within(drawer).getAllByRole("button", { name: "Copy SQL" })
+    ).toHaveLength(2);
+  });
+
+  test("marks extension cards as dialog triggers", async () => {
+    const user = userEvent.setup();
+    render(
+      <BackendDatabaseExtensionsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    const card = screen.getByRole("button", {
+      name: PG_TRGM_EXTENSION_CARD_NAME,
+    });
+    expect(card.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(card.getAttribute("aria-expanded")).toBe("false");
+
+    await user.click(card);
+
+    expect(card.getAttribute("aria-expanded")).toBe("true");
   });
 });
