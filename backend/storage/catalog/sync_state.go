@@ -4,18 +4,23 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/go-jet/jet/v2/postgres"
 	"github.com/go-jet/jet/v2/qrm"
 
+	"github.com/querylane/querylane/backend/aip"
+	aipjet "github.com/querylane/querylane/backend/aip/jet"
 	"github.com/querylane/querylane/backend/storage"
 	"github.com/querylane/querylane/backend/storage/gen/querylane/public/model"
 	"github.com/querylane/querylane/backend/storage/gen/querylane/public/table"
 )
 
-// Sync status constants.
+// Sync status constants. SyncStatusPending is the column default for rows
+// that never claimed a sync; the store only ever writes the other three.
 const (
+	SyncStatusPending = "pending"
 	SyncStatusSyncing = "syncing"
 	SyncStatusSynced  = "synced"
 	SyncStatusError   = "error"
@@ -184,6 +189,47 @@ func (s *PGSyncStore) MarkSynced(ctx context.Context, scope string) error {
 	}
 
 	return nil
+}
+
+// syncStateSchema drives AIP-160 filtering and AIP-132 ordering for
+// ListSyncStates. scope is the primary key, so the default order is a unique
+// total order for keyset pagination.
+var syncStateSchema = aipjet.Bind(
+	aip.NewSchema[model.CatalogSyncState](
+		"console.querylane.dev/CatalogSyncState",
+		aip.Fields[model.CatalogSyncState]{
+			"scope": {
+				Codec:      aip.StringCodec{},
+				GetValue:   func(m *model.CatalogSyncState) any { return m.Scope },
+				Filterable: true,
+			},
+			"status": {
+				Codec:      aip.StringCodec{},
+				GetValue:   func(m *model.CatalogSyncState) any { return m.Status },
+				Filterable: true,
+			},
+		},
+		aip.WithDefaultOrder("scope", aip.Asc),
+		aip.WithTieBreaker("scope", aip.Asc),
+	),
+	aipjet.Columns{
+		"scope":  table.CatalogSyncState.Scope,
+		"status": table.CatalogSyncState.Status,
+	},
+)
+
+// ListSyncStates returns a page of raw sync bookkeeping rows, one per cached
+// scope. Errors are returned verbatim — this feeds the admin surface, not
+// the sanitized user-facing sync metadata.
+func (s *PGSyncStore) ListSyncStates(ctx context.Context, params aip.Params) ([]model.CatalogSyncState, string, error) {
+	baseQuery := postgres.SELECT(table.CatalogSyncState.AllColumns).FROM(table.CatalogSyncState)
+
+	rows, nextPageToken, err := aipjet.Execute(ctx, syncStateSchema, params, baseQuery, s.db)
+	if err != nil {
+		return nil, "", fmt.Errorf("list catalog sync states: %w", err)
+	}
+
+	return rows, nextPageToken, nil
 }
 
 // MarkSyncError updates the sync state to 'error' with the error message.

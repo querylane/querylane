@@ -1,63 +1,13 @@
 "use client";
 
-import { PanelLeftIcon } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
 import { ResourcePageState } from "@/components/console-pages/console-layout";
-import { Button } from "@/components/ui/button";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { useSidebar } from "@/components/querylane-ui/sidebar";
 import { ExplorerDetailPane } from "@/features/data-explorer/data-explorer-layout";
 import { useDataExplorerPageController } from "@/features/data-explorer/data-explorer-page-controller";
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
 import { ExplorerSidebar } from "@/features/data-explorer/explorer-sidebar";
+import { ExplorerSidebarPortal } from "@/lib/explorer-sidebar-slot";
 import { cn } from "@/lib/utils";
-
-const OBJECT_BROWSER_DOCKED_QUERY = "(min-width: 1280px)";
-// react-resizable-panels treats numeric sizes as pixels, so keep units explicit.
-const OBJECT_BROWSER_DEFAULT_WIDTH = "20rem";
-const OBJECT_BROWSER_MIN_WIDTH = "12rem";
-const OBJECT_BROWSER_MAX_WIDTH = "48rem";
-const DETAIL_PANE_MIN_WIDTH = "20rem";
-
-function getObjectBrowserDockedSnapshot() {
-  if (
-    typeof window === "undefined" ||
-    typeof window.matchMedia !== "function"
-  ) {
-    return false;
-  }
-  return window.matchMedia(OBJECT_BROWSER_DOCKED_QUERY).matches;
-}
-
-function subscribeObjectBrowserDocking(onStoreChange: () => void) {
-  if (
-    typeof window === "undefined" ||
-    typeof window.matchMedia !== "function"
-  ) {
-    return () => undefined;
-  }
-  const mediaQuery = window.matchMedia(OBJECT_BROWSER_DOCKED_QUERY);
-  mediaQuery.addEventListener("change", onStoreChange);
-  return () => mediaQuery.removeEventListener("change", onStoreChange);
-}
-
-function useObjectBrowserDocked() {
-  return useSyncExternalStore(
-    subscribeObjectBrowserDocking,
-    getObjectBrowserDockedSnapshot,
-    () => false
-  );
-}
 
 function DataExplorerPage({
   databaseId,
@@ -73,9 +23,14 @@ function DataExplorerPage({
     instanceId,
     search,
   });
-  const [isObjectBrowserOpen, setIsObjectBrowserOpen] = useState(false);
-  const isObjectBrowserDocked = useObjectBrowserDocked();
-  const closeObjectBrowser = () => setIsObjectBrowserOpen(false);
+  const { isMobile, setOpenMobile } = useSidebar();
+  // On phones the shared rail renders as a sheet; close it after a pick so
+  // the selected object's detail is visible immediately.
+  const closeMobileSidebar = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
   const sidebarProps = {
     activeSchema: explorer.activeSchema,
     categoryPagination: {
@@ -91,10 +46,21 @@ function DataExplorerPage({
     onResourceIntent: explorer.onResourceIntent,
     onRetryTables: explorer.onRetryTables,
     onRetryViews: explorer.onRetryViews,
-    onSelectResource: explorer.onSelectResource,
-    onSelectSchema: explorer.onSelectSchema,
-    onSelectSchemaOverview: explorer.onSelectSchemaOverview,
-    onTableListSortChange: explorer.onTableListSortChange,
+    onSelectResource: (
+      category: Parameters<typeof explorer.onSelectResource>[0],
+      name: string
+    ) => {
+      explorer.onSelectResource(category, name);
+      closeMobileSidebar();
+    },
+    onSelectSchema: (schema: Parameters<typeof explorer.onSelectSchema>[0]) => {
+      explorer.onSelectSchema(schema);
+      closeMobileSidebar();
+    },
+    onSelectSchemaOverview: () => {
+      explorer.onSelectSchemaOverview();
+      closeMobileSidebar();
+    },
     query: explorer.query,
     schemaSelectionError: explorer.schemaSelectionError,
     schemas: explorer.schemas,
@@ -105,28 +71,9 @@ function DataExplorerPage({
     selection: explorer.selection,
     setExpandedCategories: explorer.setExpandedCategories,
     setQuery: explorer.setQuery,
-    tableListSort: explorer.tableListSort,
     tablesError: explorer.tablesError,
     tablesSyncNotice: explorer.tablesSyncNotice,
     viewsError: explorer.viewsError,
-  };
-  const mobileSidebarProps = {
-    ...sidebarProps,
-    onSelectResource: (
-      category: Parameters<typeof explorer.onSelectResource>[0],
-      name: string
-    ) => {
-      explorer.onSelectResource(category, name);
-      closeObjectBrowser();
-    },
-    onSelectSchema: (schema: Parameters<typeof explorer.onSelectSchema>[0]) => {
-      explorer.onSelectSchema(schema);
-      closeObjectBrowser();
-    },
-    onSelectSchemaOverview: () => {
-      explorer.onSelectSchemaOverview();
-      closeObjectBrowser();
-    },
   };
   const showShellWhileSchemasLoad =
     explorer.schemaPageStateProps.loading &&
@@ -167,117 +114,46 @@ function DataExplorerPage({
       viewsLoading={explorer.schemaOverview.viewsLoading}
     />
   );
-  const detailContent = (
-    <div
-      className={cn(
-        "min-w-0",
-        isTableResource
-          ? "flex min-h-0 w-full flex-1 flex-col p-3 sm:p-4 lg:p-6"
-          : "mx-auto max-w-[900px] p-4 sm:p-6 lg:p-8"
-      )}
-    >
-      {detailPane}
-    </div>
-  );
-  const explorerBody = (
-    <div
-      className={cn(
-        "w-full",
-        isTableResource && "flex h-full min-h-0 flex-col"
-      )}
-    >
-      {isObjectBrowserDocked ? null : (
-        <div className="flex flex-wrap items-center gap-3 p-3 pb-0 sm:p-4 sm:pb-0 lg:p-6 lg:pb-0">
-          <Button
-            onClick={() => setIsObjectBrowserOpen(true)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <PanelLeftIcon className="size-4" />
-            Open object browser
-          </Button>
-        </div>
-      )}
-      {detailContent}
-    </div>
-  );
 
+  // Schema listing failed with nothing cached: the detail area shows the
+  // retryable error, so an object browser claiming "No schemas" would lie.
+  const schemasFailed =
+    Boolean(explorer.schemaPageStateProps.error) &&
+    !explorer.schemaPageStateProps.hasData;
+
+  // The object browser renders inside the shared sidebar rail via the slot
+  // portal, outside ResourcePageState on purpose: while schemas load the rail
+  // shows the tree's own skeletons instead of a blank panel.
   return (
-    <ResourcePageState {...schemaPageStateProps} title="Loading explorer">
-      {isObjectBrowserDocked ? (
-        <ResizablePanelGroup
-          className="min-w-0 overflow-hidden"
-          orientation="horizontal"
-          resizeTargetMinimumSize={{ coarse: 36, fine: 16 }}
+    <>
+      <ExplorerSidebarPortal>
+        {schemasFailed ? null : <ExplorerSidebar {...sidebarProps} />}
+      </ExplorerSidebarPortal>
+      <ResourcePageState {...schemaPageStateProps} title="Loading explorer">
+        <section
+          aria-label="Data Explorer details"
+          className="relative h-full min-w-0 overflow-auto"
         >
-          <ResizablePanel
-            className="min-w-0 overflow-hidden"
-            defaultSize={OBJECT_BROWSER_DEFAULT_WIDTH}
-            groupResizeBehavior="preserve-pixel-size"
-            maxSize={OBJECT_BROWSER_MAX_WIDTH}
-            minSize={OBJECT_BROWSER_MIN_WIDTH}
+          <div
+            className={cn(
+              "w-full",
+              isTableResource && "flex h-full min-h-0 flex-col"
+            )}
           >
-            <ExplorerSidebar
-              {...sidebarProps}
-              className="h-full w-full min-w-0 max-w-full border-r-0"
-            />
-          </ResizablePanel>
-          <ResizableHandle
-            className="w-4 cursor-col-resize after:w-4"
-            withHandle={true}
-          />
-          <ResizablePanel
-            className="min-w-0 overflow-hidden"
-            minSize={DETAIL_PANE_MIN_WIDTH}
-          >
-            <section
-              aria-label="Data Explorer details"
-              className="relative h-full min-w-0 overflow-auto"
+            <div
+              className={cn(
+                "min-w-0",
+                isTableResource
+                  ? "flex min-h-0 w-full flex-1 flex-col p-3 sm:p-4 lg:p-6"
+                  : "mx-auto max-w-[900px] p-4 sm:p-6 lg:p-8"
+              )}
             >
-              {explorerBody}
-            </section>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      ) : (
-        <div className="flex h-full min-w-0 overflow-hidden">
-          <ExplorerSidebar {...sidebarProps} className="hidden xl:flex" />
-
-          <section
-            aria-label="Data Explorer details"
-            className="relative min-w-0 flex-1 overflow-auto"
-          >
-            {explorerBody}
-            <Sheet
-              onOpenChange={setIsObjectBrowserOpen}
-              open={isObjectBrowserOpen}
-            >
-              <SheetContent
-                className="w-[min(20rem,calc(100vw-1rem))] gap-0 bg-background p-0"
-                side="left"
-                style={{
-                  maxWidth: "none",
-                  width: "min(20rem, calc(100vw - 1rem))",
-                }}
-              >
-                <SheetHeader className="border-b">
-                  <SheetTitle>Database objects</SheetTitle>
-                  <SheetDescription>
-                    Browse schemas, tables, and views.
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="min-h-0 flex-1 overflow-hidden">
-                  <ExplorerSidebar
-                    {...mobileSidebarProps}
-                    className="h-full w-full border-r-0 bg-sidebar"
-                  />
-                </div>
-              </SheetContent>
-            </Sheet>
-          </section>
-        </div>
-      )}
-    </ResourcePageState>
+              {detailPane}
+            </div>
+          </div>
+        </section>
+      </ResourcePageState>
+    </>
   );
 }
 

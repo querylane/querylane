@@ -6,7 +6,7 @@ import type {
   ResourceItem,
 } from "@/features/data-explorer/data-explorer-types";
 import { formatBytes } from "@/lib/console-resources";
-import type { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import { View_ViewType } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
 export interface SchemaSummary {
@@ -69,21 +69,28 @@ export function getItemsForCategory(
 ): ResourceItem[] {
   switch (category) {
     case "tables":
-      return tables.map((table) => ({
-        name: table.name,
-        sizeLabel: formatBytes(table.sizeBytes),
-      }));
-    case "views":
-      return views.map((view) => ({
-        badge:
-          view.type === View_ViewType.MATERIALIZED
-            ? {
-                label: "mat",
-                tone: "violet",
-              }
+      return tables.map((table) => {
+        const isPartitioned = table.type === Table_TableType.PARTITIONED;
+        return {
+          badge: isPartitioned
+            ? { label: "part", tone: "violet" as const }
             : undefined,
-        name: view.name,
-      }));
+          name: table.name,
+          objectType: isPartitioned ? ("partitioned" as const) : "table",
+          sizeLabel: formatBytes(table.sizeBytes),
+        };
+      });
+    case "views":
+      return views.map((view) => {
+        const isMaterialized = view.type === View_ViewType.MATERIALIZED;
+        return {
+          badge: isMaterialized
+            ? { label: "mat", tone: "violet" as const }
+            : undefined,
+          name: view.name,
+          objectType: isMaterialized ? ("materialized" as const) : "view",
+        };
+      });
     default:
       return [];
   }

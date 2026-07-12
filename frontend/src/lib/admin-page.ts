@@ -116,6 +116,11 @@ function resolveImplicitAdminPageFromPathname(
     }
     return "database.overview";
   }
+  // The instance-scoped admin panel is not an AdminPageId page: it renders
+  // app-global backend state and must not resolve to instance.overview.
+  if (segments[2] === "admin" && !segments[3]) {
+    return;
+  }
   if (pathname.includes("/instances/")) {
     return "instance.overview";
   }

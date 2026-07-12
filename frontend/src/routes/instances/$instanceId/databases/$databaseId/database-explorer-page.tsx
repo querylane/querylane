@@ -1,10 +1,12 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { lazy, Suspense, useLayoutEffect } from "react";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   isExplorerSearchNormalized,
   normalizeExplorerSearch,
 } from "@/features/data-explorer/use-data-explorer-state";
+import { ExplorerSidebarPortal } from "@/lib/explorer-sidebar-slot";
 import { handleNavigationError } from "@/lib/navigation-errors";
 
 const DataExplorerPage = lazy(() =>
@@ -14,26 +16,29 @@ const DataExplorerPage = lazy(() =>
 );
 
 function DatabaseExplorerLoadingShell() {
+  // Mirrors the loaded layout: the object browser lives in the shared
+  // sidebar rail (via the slot portal), the detail area fills the page.
   return (
-    <div className="flex h-full min-w-0 overflow-hidden">
-      <aside
-        aria-label="Database objects"
-        className="hidden w-[300px] shrink-0 flex-col border-border border-r bg-sidebar/40 xl:flex"
-      >
-        <div className="flex flex-col gap-2 px-3 pt-3 pb-2">
-          <div className="h-8 rounded-md bg-muted" />
-          <div className="h-8 rounded-md border bg-card" />
-          <div className="h-8 rounded-md bg-muted/70" />
-        </div>
-        <div className="flex-1 p-2">
+    <>
+      <ExplorerSidebarPortal>
+        <div
+          aria-label="Database objects"
+          className="flex h-full min-h-0 flex-col"
+          role="status"
+        >
+          <div className="flex flex-col gap-2 px-3 pt-3 pb-2">
+            <Skeleton className="h-8 rounded-md" />
+            <Skeleton className="h-8 rounded-md" />
+            <Skeleton className="h-8 rounded-md" />
+          </div>
           <p className="px-3 py-6 text-center text-muted-foreground text-sm">
             Loading schemas…
           </p>
         </div>
-      </aside>
+      </ExplorerSidebarPortal>
       <section
         aria-label="Data Explorer"
-        className="relative min-w-0 flex-1 overflow-auto"
+        className="relative h-full min-w-0 overflow-auto"
       >
         <div className="mx-auto max-w-[900px] p-4 sm:p-6 lg:p-8">
           <BrandedLoadingState
@@ -43,7 +48,7 @@ function DatabaseExplorerLoadingShell() {
           />
         </div>
       </section>
-    </div>
+    </>
   );
 }
 

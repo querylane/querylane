@@ -30,6 +30,13 @@ export function resolveBreadcrumbTail(pathname: string): BreadcrumbTail {
     return { kind: "none" };
   }
 
+  // The instance-scoped admin panel is not an AdminPageId page (it shows
+  // app-global backend state), so it never resolves from the page mapping.
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments[2] === "admin" && !segments[3]) {
+    return { kind: "page", label: "Admin" };
+  }
+
   const page = resolveImplicitAdminPageFromPathname(pathname);
   switch (page) {
     case "instance.overview":

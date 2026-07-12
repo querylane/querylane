@@ -14,6 +14,9 @@ const (
 	TypeTable           Type = "console.querylane.dev/Table"
 	TypeView            Type = "console.querylane.dev/View"
 	TypeRunnerExecution Type = "console.querylane.dev/RunnerExecution"
+	TypeReplica         Type = "console.querylane.dev/Replica"
+	TypeCatalogSync     Type = "console.querylane.dev/CatalogSyncState"
+	TypeMetricSample    Type = "console.querylane.dev/MetricSample"
 )
 
 // String returns the canonical resource type string.

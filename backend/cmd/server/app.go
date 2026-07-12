@@ -22,6 +22,7 @@ import (
 	"github.com/querylane/querylane/backend/interceptor"
 	"github.com/querylane/querylane/backend/middleware"
 	v1alpha1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
+	adminsvc "github.com/querylane/querylane/backend/service/admin"
 	"github.com/querylane/querylane/backend/service/console"
 	"github.com/querylane/querylane/backend/service/database"
 	"github.com/querylane/querylane/backend/service/extension"
@@ -35,6 +36,7 @@ import (
 	"github.com/querylane/querylane/backend/service/table"
 	"github.com/querylane/querylane/backend/service/tabledata"
 	"github.com/querylane/querylane/backend/service/view"
+	"github.com/querylane/querylane/backend/storage"
 )
 
 // App is the single application — it implements onboarding.DatabaseInitializer
@@ -271,6 +273,11 @@ func (a *App) mountDBServices(mux *http.ServeMux, state *dbState, accessLogger *
 	mux.Handle(v1alpha1connect.NewDatabaseServiceHandler(database.NewService(cat, database.NewQueryInsightsProvider(state.connManager)), opts...))
 	mux.Handle(v1alpha1connect.NewRoleServiceHandler(role.NewService(state.connManager), opts...))
 	mux.Handle(v1alpha1connect.NewRunnerServiceHandler(runnersvc.NewService(state.runnerExecutionStore), opts...))
+
+	sampleStats := func(ctx context.Context) ([]storage.SampleTableStats, error) {
+		return storage.ListSampleTableStats(ctx, state.postgresCl)
+	}
+	mux.Handle(v1alpha1connect.NewAdminServiceHandler(adminsvc.NewService(state.replicaStore, state.runnerExecutionStore, state.catalogSyncStore, sampleStats, sampleRetentionAge), opts...))
 	mux.Handle(v1alpha1connect.NewMetricsServiceHandler(metricsvc.NewService(state.sampleStores, state.instanceReader), opts...))
 	mux.Handle(v1alpha1connect.NewSchemaServiceHandler(schema.NewService(cat), opts...))
 	mux.Handle(v1alpha1connect.NewExtensionServiceHandler(extension.NewService(state.connManager), opts...))
@@ -290,6 +297,7 @@ func (a *App) mountStubs(mux *http.ServeMux, accessLogger *interceptor.AccessLog
 	mux.Handle(v1alpha1connect.NewDatabaseServiceHandler(&v1alpha1connect.UnimplementedDatabaseServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewRoleServiceHandler(&v1alpha1connect.UnimplementedRoleServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewRunnerServiceHandler(&v1alpha1connect.UnimplementedRunnerServiceHandler{}, opts...))
+	mux.Handle(v1alpha1connect.NewAdminServiceHandler(&v1alpha1connect.UnimplementedAdminServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewMetricsServiceHandler(&v1alpha1connect.UnimplementedMetricsServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewSchemaServiceHandler(&v1alpha1connect.UnimplementedSchemaServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewExtensionServiceHandler(&v1alpha1connect.UnimplementedExtensionServiceHandler{}, opts...))

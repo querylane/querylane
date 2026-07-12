@@ -1,7 +1,12 @@
 "use client";
 
 import { Link, useLocation } from "@tanstack/react-router";
-import { AlertTriangle, InfoIcon, PanelLeftIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeftIcon,
+  InfoIcon,
+  PanelLeftIcon,
+} from "lucide-react";
 import { Fragment, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { Logo } from "@/components/logo";
@@ -65,6 +70,7 @@ import {
 } from "@/lib/app-metadata";
 import { useDb } from "@/lib/db-context";
 import type { ScopeLevel } from "@/lib/db-navigation";
+import { useExplorerSidebarSlotRegistration } from "@/lib/explorer-sidebar-slot";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";
 import packageJson from "../../package.json" with { type: "json" };
@@ -276,6 +282,38 @@ function SidebarFooterContent({
     </Dialog>
   );
 }
+/**
+ * Drill-in rail content for the Data Explorer: a "Back to workspace" row on
+ * top and a slot the lazily loaded explorer page portals its object browser
+ * into. The slot deliberately lives outside SidebarContent — that container
+ * scrolls, and the explorer tree brings its own virtualized scroll area.
+ */
+function ExplorerRailContent({
+  backLink,
+}: {
+  backLink: NavLinkProps | undefined;
+}) {
+  const registerSlotTarget = useExplorerSidebarSlotRegistration();
+  return (
+    <>
+      <div className="border-sidebar-border border-b p-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              disabled={!backLink}
+              {...(backLink ? { render: <Link {...backLink} /> } : {})}
+              className="text-sidebar-foreground/70 hover:text-sidebar-foreground"
+            >
+              <ArrowLeftIcon className="size-4 shrink-0" />
+              <span>Back to workspace</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col" ref={registerSlotTarget} />
+    </>
+  );
+}
 function SidebarNavigationContent({
   linkProps,
   nextStepHint,
@@ -350,7 +388,7 @@ function SidebarNavigationContent({
     </SidebarContent>
   );
 }
-export function AppSidebar() {
+export function AppSidebar({ page }: { page?: AdminPageId | undefined }) {
   const location = useLocation({
     select: (loc) => ({
       pathname: loc.pathname,
@@ -381,16 +419,21 @@ export function AppSidebar() {
     scopeLevel,
   });
   const nextStepHint = getNextStepHint(scopeLevel);
+  const isExplorerMode = page === "database.explorer";
   return (
     <Sidebar
       className="top-14 h-[calc(100svh-3.5rem)] overflow-hidden"
       collapsible="offcanvas"
     >
-      <SidebarNavigationContent
-        linkProps={linkProps}
-        nextStepHint={nextStepHint}
-        sections={sections}
-      />
+      {isExplorerMode ? (
+        <ExplorerRailContent backLink={linkProps["database.overview"]} />
+      ) : (
+        <SidebarNavigationContent
+          linkProps={linkProps}
+          nextStepHint={nextStepHint}
+          sections={sections}
+        />
+      )}
 
       <SidebarFooter>
         <SidebarFooterContent

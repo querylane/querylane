@@ -75,7 +75,7 @@ describe("data explorer model", () => {
     expect(tableListSortToOrderBy("size-asc")).toBe("size_bytes asc, name asc");
   });
 
-  test("omits table type badges from the sidebar", () => {
+  test("badges partitioned roots and keeps other table types unbadged", () => {
     expect(
       getItemsForCategory(
         "tables",
@@ -113,19 +113,27 @@ describe("data explorer model", () => {
       )
     ).toEqual([
       {
+        badge: undefined,
         name: "customers",
+        objectType: "table",
         sizeLabel: "0 B",
       },
       {
+        badge: { label: "part", tone: "violet" },
         name: "events",
+        objectType: "partitioned",
         sizeLabel: "0 B",
       },
       {
+        badge: undefined,
         name: "remote_orders",
+        objectType: "table",
         sizeLabel: "0 B",
       },
       {
+        badge: undefined,
         name: "session_export",
+        objectType: "table",
         sizeLabel: "0 B",
       },
     ]);
@@ -146,6 +154,12 @@ describe("data explorer model", () => {
           },
         ]
       )
-    ).toEqual([{ badge: { label: "mat", tone: "violet" }, name: "rollup" }]);
+    ).toEqual([
+      {
+        badge: { label: "mat", tone: "violet" },
+        name: "rollup",
+        objectType: "materialized",
+      },
+    ]);
   });
 });

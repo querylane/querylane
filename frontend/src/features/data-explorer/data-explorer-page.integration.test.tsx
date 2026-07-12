@@ -6,33 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataExplorerPage } from "@/features/data-explorer/data-explorer-page";
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
+import {
+  ExplorerSidebarSlotProvider,
+  useExplorerSidebarSlotRegistration,
+} from "@/lib/explorer-sidebar-slot";
 
 const ACCOUNTS_BUTTON_NAME = /^accounts 48 KB$/i;
 
-function setMatchMedia(matches: boolean) {
-  Object.defineProperty(window, "matchMedia", {
-    configurable: true,
-    value: vi.fn((query: string) => createMediaQueryList({ matches, query })),
-  });
-}
-
-function createMediaQueryList({
-  matches,
-  query,
-}: {
-  matches: boolean;
-  query: string;
-}): MediaQueryList {
-  return {
-    addEventListener: vi.fn(),
-    addListener: vi.fn(),
-    dispatchEvent: vi.fn(() => true),
-    matches,
-    media: query,
-    onchange: null,
-    removeEventListener: vi.fn(),
-    removeListener: vi.fn(),
-  };
+function ExplorerRailSlotTarget() {
+  const registerSlotTarget = useExplorerSidebarSlotRegistration();
+  return <div data-testid="explorer-rail-slot" ref={registerSlotTarget} />;
 }
 
 const mocks = vi.hoisted(() => ({
@@ -117,6 +100,10 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
 }));
 
+vi.mock("@/components/querylane-ui/sidebar", () => ({
+  useSidebar: () => ({ isMobile: false, setOpenMobile: vi.fn() }),
+}));
+
 vi.mock("@connectrpc/connect-query", () => ({
   useQuery: () => ({ data: undefined }),
   useTransport: () => ({}),
@@ -180,7 +167,14 @@ function renderExplorer(search: DataExplorerSearch = {}) {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <DataExplorerPage databaseId="db-1" instanceId="inst-1" search={search} />
+      <ExplorerSidebarSlotProvider>
+        <ExplorerRailSlotTarget />
+        <DataExplorerPage
+          databaseId="db-1"
+          instanceId="inst-1"
+          search={search}
+        />
+      </ExplorerSidebarSlotProvider>
     </QueryClientProvider>
   );
 }
@@ -206,7 +200,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  Reflect.deleteProperty(window, "matchMedia");
   vi.clearAllMocks();
 });
 
@@ -222,10 +215,9 @@ describe("DataExplorerPage", () => {
     expect(
       screen.getByRole("complementary", { name: "Database objects" })
     ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "Open object browser" })
-    ).toBeTruthy();
-    expect(screen.getByText("Loading schemas…")).toBeTruthy();
+    // The rail shows a schema-list skeleton (not the full-page loader) so it
+    // keeps its shape while schemas load instead of popping the tree in.
+    expect(screen.getByTestId("schema-list-loading")).toBeTruthy();
     expect(
       screen.queryByText("Fetching live metadata from the backend.")
     ).toBeNull();
@@ -240,8 +232,7 @@ describe("DataExplorerPage", () => {
     expect(screen.queryByRole("heading", { name: "Data Explorer" })).toBeNull();
   });
 
-  it("renders the docked object browser on the first wide-screen paint", () => {
-    setMatchMedia(true);
+  it("portals the object browser into the sidebar rail slot", () => {
     mocks.schemasQuery.data = {
       pages: [
         {
@@ -259,16 +250,15 @@ describe("DataExplorerPage", () => {
 
     renderExplorer();
 
+    const objectBrowser = screen.getByRole("complementary", {
+      name: "Database objects",
+    });
     expect(
-      screen.queryByRole("button", { name: "Open object browser" })
-    ).toBeNull();
-    expect(
-      screen.getByRole("complementary", { name: "Database objects" })
-    ).toBeTruthy();
+      screen.getByTestId("explorer-rail-slot").contains(objectBrowser)
+    ).toBe(true);
   });
 
   it("replaces stale schema search with a schema from the current database", async () => {
-    setMatchMedia(true);
     mocks.getSchemaQuery.error = new ConnectError(
       "schema not found",
       Code.NotFound
