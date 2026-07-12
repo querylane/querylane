@@ -1,4 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
+import type { ReactNode } from "react";
 import { expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
@@ -30,6 +31,20 @@ import {
   View_ViewType,
   ViewSchema,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
+
+vi.mock("@tanstack/react-router", () => ({
+  ["Link"]: ({
+    children,
+    className,
+  }: {
+    children: ReactNode;
+    className?: string | undefined;
+  }) => (
+    <a className={className} href="#referenced-table">
+      {children}
+    </a>
+  ),
+}));
 
 const ACTIVE_KIND_FILTER_RE = /^Kind.*Materialized views/;
 const ACTIVE_OWNER_FILTER_RE = /^Owner.*analytics_owner/;
@@ -1089,6 +1104,88 @@ test("data explorer constraints tab matches redesign card groups", async () => {
   expect(document.querySelector("table")).toBeNull();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-constraints-redesign"
+  );
+});
+
+test("data explorer constraints tab covers validation and action states", async () => {
+  seedTableDetailQueries();
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    {
+      constraints: [
+        createProto(TableConstraintSchema, {
+          columnNames: ["account_id"],
+          constraintName: "customers_account_id_fkey",
+          definition:
+            "FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON UPDATE SET NULL ON DELETE RESTRICT",
+          onDelete: ReferentialAction.RESTRICT,
+          onUpdate: ReferentialAction.SET_NULL,
+          referencedColumnNames: ["id"],
+          referencedTable:
+            "instances/prod/databases/app/schemas/public/tables/accounts",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["status"],
+          constraintName: "customers_status_check",
+          definition: "CHECK (status IN ('active', 'archived'))",
+          type: ConstraintType.CHECK,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["legacy_status"],
+          constraintName: "customers_legacy_status_check",
+          definition: "CHECK (legacy_status <> 'deleted') NOT VALID",
+          type: ConstraintType.CHECK,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["active_period"],
+          constraintName: "customers_active_period_excl",
+          definition: "EXCLUDE USING gist (active_period WITH &&)",
+          type: ConstraintType.EXCLUSION,
+        }),
+      ],
+    }
+  );
+
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="app"
+      initialTab="constraints"
+      instanceId="prod"
+      schemaName="public"
+      table={createProto(TableSchema, {
+        displayName: "customers",
+        name: "instances/prod/databases/app/schemas/public/tables/customers",
+        owner: "app_owner",
+        rowCount: 12_400n,
+        sizeBytes: 8_900_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="customers"
+    />
+  );
+
+  await expect.element(page.getByText("ON UPDATE SET NULL")).toBeVisible();
+  await expect.element(page.getByText("ON DELETE RESTRICT")).toBeVisible();
+  await expect.element(page.getByText("NOT VALID")).toBeVisible();
+  await expect
+    .element(
+      page.getByRole("heading", {
+        exact: true,
+        name: "Checks row-level validation rules",
+      })
+    )
+    .toBeVisible();
+  await expect
+    .element(
+      page.getByRole("heading", {
+        exact: true,
+        name: "Other constraints exclusion and other rules",
+      })
+    )
+    .toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-constraint-states"
   );
 });
 

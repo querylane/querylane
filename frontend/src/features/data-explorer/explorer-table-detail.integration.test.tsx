@@ -1,6 +1,12 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -62,6 +68,24 @@ const CHILD_PARTITION_SQL_RE =
   /CREATE TABLE "archive"\."events_2025" PARTITION OF "public"\."events"\s+FOR VALUES FROM \('2025-01-01'\) TO \('2026-01-01'\);/;
 const COLUMN_COMMENT_SQL_RE =
   /COMMENT ON COLUMN "public"\."customers"\."display name" IS 'Owner''s name';/;
+
+vi.mock("@tanstack/react-router", () => ({
+  ["Link"]: ({
+    children,
+    params,
+    search,
+  }: {
+    children: ReactNode;
+    params: { databaseId: string; instanceId: string };
+    search: { category: string; name: string; schema: string };
+  }) => (
+    <a
+      href={`/instances/${params.instanceId}/databases/${params.databaseId}/explorer?schema=${search.schema}&category=${search.category}&name=${search.name}`}
+    >
+      {children}
+    </a>
+  ),
+}));
 
 interface MockGridColumn {
   key: string;
@@ -904,7 +928,13 @@ describe("TableDetail constraints tab", () => {
     expect(screen.getByText("PRIMARY KEY (id)")).toBeTruthy();
     expect(screen.getByText("shipment_event_shipment_id_fkey")).toBeTruthy();
     expect(screen.getByText("ON DELETE CASCADE")).toBeTruthy();
-    expect(screen.getByText("shipping.shipments ↗")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "shipping.shipments" })
+        .getAttribute("href")
+    ).toBe(
+      "/instances/prod/databases/app/explorer?schema=shipping&category=tables&name=shipments"
+    );
     expect(screen.queryByRole("table")).toBeNull();
   });
 
@@ -950,6 +980,58 @@ describe("TableDetail constraints tab", () => {
       })
     ).toBeTruthy();
     expect(screen.queryByText("Other constraints")).toBeNull();
+  });
+
+  it("only treats a trailing NOT VALID clause as unvalidated", () => {
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["notes"],
+          constraintName: "customers_notes_check",
+          definition: "CHECK (notes <> 'NOT VALID')",
+          type: ConstraintType.CHECK,
+        }),
+        create(TableConstraintSchema, {
+          columnNames: ["status"],
+          constraintName: "customers_status_not_valid_check",
+          definition: "CHECK (status <> 'deleted') NOT VALID",
+          type: ConstraintType.CHECK,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="constraints"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema)}
+        tableName="customers"
+      />
+    );
+
+    const validatedCard = screen
+      .getByText("customers_notes_check")
+      .closest("article");
+    const notValidCard = screen
+      .getByText("customers_status_not_valid_check")
+      .closest("article");
+
+    expect(validatedCard).not.toBeNull();
+    expect(notValidCard).not.toBeNull();
+    expect(
+      within(validatedCard as HTMLElement).getByText("validated")
+    ).toBeTruthy();
+    expect(
+      within(validatedCard as HTMLElement).queryByText("NOT VALID")
+    ).toBeNull();
+    expect(
+      within(notValidCard as HTMLElement).getByText("NOT VALID")
+    ).toBeTruthy();
+    expect(
+      within(notValidCard as HTMLElement).queryByText("validated")
+    ).toBeNull();
   });
 });
 

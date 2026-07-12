@@ -1,5 +1,6 @@
 "use client";
 
+import { Link } from "@tanstack/react-router";
 import type { RowData } from "@tanstack/react-table";
 import {
   Binary,
@@ -1477,7 +1478,7 @@ const VALIDATED_CONSTRAINT_TYPES = new Set<ConstraintType>([
   ConstraintType.CHECK,
   ConstraintType.FOREIGN_KEY,
 ]);
-const NOT_VALID_DEFINITION_PATTERN = /\bNOT\s+VALID\b/i;
+const NOT_VALID_DEFINITION_PATTERN = /(?:^|\s)NOT\s+VALID\s*;?\s*$/i;
 
 function isKeyConstraint(constraint: TableConstraint) {
   return KEY_CONSTRAINT_TYPES.has(constraint.type);
@@ -1502,10 +1503,54 @@ function hasNotValidDefinition(constraint: TableConstraint) {
   return NOT_VALID_DEFINITION_PATTERN.test(constraint.definition);
 }
 
+function parseReferencedTableTarget(referencedTable: string) {
+  if (!referencedTable) {
+    return null;
+  }
+  try {
+    const { schema, table } = parseTableQualifiedName(referencedTable);
+    return { label: `${schema}.${table}`, schema, table };
+  } catch {
+    return null;
+  }
+}
+
 function shouldShowValidatedPill(constraint: TableConstraint) {
   return (
     VALIDATED_CONSTRAINT_TYPES.has(constraint.type) &&
     !hasNotValidDefinition(constraint)
+  );
+}
+
+function ReferencedTableTarget({
+  databaseId,
+  instanceId,
+  referencedTable,
+}: {
+  databaseId: string;
+  instanceId: string;
+  referencedTable: string;
+}) {
+  const target = parseReferencedTableTarget(referencedTable);
+  if (!target) {
+    return referencedTable ? (
+      <ConstraintBadge tone="ghost">{referencedTable}</ConstraintBadge>
+    ) : null;
+  }
+  return (
+    <Link
+      className="inline-flex h-[18px] items-center rounded-sm font-mono text-[11.5px] text-blue-700 focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-300"
+      params={{ databaseId, instanceId }}
+      search={{
+        category: "tables",
+        name: target.table,
+        schema: target.schema,
+      }}
+      to="/instances/$instanceId/databases/$databaseId/explorer"
+    >
+      {target.label}
+      <span aria-hidden="true">&nbsp;↗</span>
+    </Link>
   );
 }
 
@@ -1568,10 +1613,15 @@ function ConstraintSectionHeading({
   );
 }
 
-function ConstraintCard({ constraint }: { constraint: TableConstraint }) {
-  const referencedTableLabel = formatReferencedTable(
-    constraint.referencedTable
-  );
+function ConstraintCard({
+  constraint,
+  databaseId,
+  instanceId,
+}: {
+  constraint: TableConstraint;
+  databaseId: string;
+  instanceId: string;
+}) {
   const isForeignKey = isForeignKeyConstraint(constraint);
   return (
     <article
@@ -1606,13 +1656,12 @@ function ConstraintCard({ constraint }: { constraint: TableConstraint }) {
         {shouldShowValidatedPill(constraint) ? (
           <ConstraintBadge tone="ghost">validated</ConstraintBadge>
         ) : null}
-        {isForeignKey && referencedTableLabel ? (
-          <Badge
-            className="h-[18px] border-transparent bg-transparent px-0 font-mono text-[11.5px] text-blue-700 shadow-none dark:text-blue-300"
-            variant="secondary"
-          >
-            {referencedTableLabel} ↗
-          </Badge>
+        {isForeignKey ? (
+          <ReferencedTableTarget
+            databaseId={databaseId}
+            instanceId={instanceId}
+            referencedTable={constraint.referencedTable}
+          />
         ) : null}
       </div>
       <p className="mt-[7px] break-words font-mono text-[11.5px] text-muted-foreground leading-[1.55] [overflow-wrap:anywhere]">
@@ -1627,11 +1676,15 @@ function ConstraintCard({ constraint }: { constraint: TableConstraint }) {
 
 function ConstraintSection({
   constraints,
+  databaseId,
   description,
+  instanceId,
   title,
 }: {
   constraints: TableConstraint[];
+  databaseId: string;
   description: string;
+  instanceId: string;
   title: string;
 }) {
   if (constraints.length === 0) {
@@ -1641,10 +1694,15 @@ function ConstraintSection({
     <section className="space-y-2">
       <ConstraintSectionHeading description={description} title={title} />
       <div className="space-y-2">
-        {constraints.map((constraint) => (
+        {constraints.map((constraint, index) => (
           <ConstraintCard
             constraint={constraint}
-            key={`${constraint.type}:${constraint.constraintName}`}
+            databaseId={databaseId}
+            instanceId={instanceId}
+            key={
+              constraint.constraintName ||
+              `${constraint.type}:${constraint.definition}:${index}`
+            }
           />
         ))}
       </div>
@@ -1653,8 +1711,12 @@ function ConstraintSection({
 }
 
 function ConstraintsTab({
+  databaseId,
+  instanceId,
   query,
 }: {
+  databaseId: string;
+  instanceId: string;
   query: ReturnType<typeof useListTableConstraintsQuery>;
 }) {
   const toolbar = deriveMetadataToolbar([query]);
@@ -1697,22 +1759,30 @@ function ConstraintsTab({
     <div className="space-y-3.5" data-slot="constraints-card-list">
       <ConstraintSection
         constraints={keyConstraints}
+        databaseId={databaseId}
         description="primary key and uniqueness"
+        instanceId={instanceId}
         title="Keys"
       />
       <ConstraintSection
         constraints={foreignKeyConstraints}
+        databaseId={databaseId}
         description="outbound references from this table"
+        instanceId={instanceId}
         title="Foreign keys"
       />
       <ConstraintSection
         constraints={checkConstraints}
+        databaseId={databaseId}
         description="row-level validation rules"
+        instanceId={instanceId}
         title="Checks"
       />
       <ConstraintSection
         constraints={otherConstraints}
+        databaseId={databaseId}
         description="exclusion and other rules"
+        instanceId={instanceId}
         title="Other constraints"
       />
     </div>
@@ -2843,7 +2913,11 @@ function TableDetail({
               <IndexesTab query={indexesQuery} />
             </TabsContent>
             <TabsContent className="mt-4" value="constraints">
-              <ConstraintsTab query={constraintsQuery} />
+              <ConstraintsTab
+                databaseId={databaseId}
+                instanceId={instanceId}
+                query={constraintsQuery}
+              />
             </TabsContent>
             <TabsContent className="mt-4" value="policies">
               <PoliciesTab query={policiesQuery} />
