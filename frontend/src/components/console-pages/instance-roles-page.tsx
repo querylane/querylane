@@ -226,7 +226,7 @@ export function InstanceRolesPage({
       ? roles
       : roles.filter((_, index) => kinds[index] === type);
   const accessMapResourcesQuery = useRolesAccessMapResourcesQuery(
-    { instanceId, roles },
+    { instanceId, roles: kindFiltered },
     { enabled: activeTab === "map" && roles.length > 0 }
   );
   const roleMapModel = buildRolesAccessMapModel({
@@ -313,6 +313,13 @@ export function InstanceRolesPage({
       {accessMapResourcesQuery.error ? (
         <p className="text-destructive text-sm" role="alert">
           Object access failed to load: {accessMapResourcesQuery.error.message}
+        </p>
+      ) : null}
+      {accessMapResourcesQuery.data?.failedRequestCount ? (
+        <p className="text-amber-700 text-sm dark:text-amber-300" role="status">
+          {`${accessMapResourcesQuery.data.failedRequestCount} access request${
+            accessMapResourcesQuery.data.failedRequestCount === 1 ? "" : "s"
+          } could not be loaded. The map shows the available data.`}
         </p>
       ) : null}
       <RolesAccessMapCanvas

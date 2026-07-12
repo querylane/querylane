@@ -23,6 +23,7 @@ import {
   ListDatabasesResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/database_pb";
 import {
+  GrantObjectType,
   type ListPublicGrantsRequest,
   ListPublicGrantsResponseSchema,
   type ListRoleDefaultPrivilegesRequest,
@@ -487,6 +488,146 @@ describe("useRolesAccessMapResourcesQuery", () => {
           `${privilege.creatorRoleName}:${privilege.schemaName}:${privilege.privilege}`
       )
     ).toEqual(["app_owner:shipping:SELECT"]);
+  });
+
+  test("keeps partial map data when one access request fails", async () => {
+    const transport = createRouterTransport(({ service }) => {
+      service(DatabaseService, {
+        listDatabases() {
+          return create(ListDatabasesResponseSchema, {
+            databases: [
+              {
+                displayName: "logistics",
+                isSystemDatabase: false,
+                name: "instances/local/databases/logistics",
+              },
+            ],
+          });
+        },
+      });
+      service(RoleService, {
+        listPublicGrants() {
+          return create(ListPublicGrantsResponseSchema, { grants: [] });
+        },
+        listRoleDefaultPrivileges() {
+          return create(ListRoleDefaultPrivilegesResponseSchema, {
+            defaultPrivileges: [],
+          });
+        },
+        listRoleGrants() {
+          throw new Error("grants unavailable");
+        },
+        listRoleOwnedObjects() {
+          return create(ListRoleOwnedObjectsResponseSchema, {
+            ownedObjects: [
+              {
+                objectName: "logistics",
+                objectType: GrantObjectType.DATABASE,
+              },
+            ],
+          });
+        },
+      });
+    });
+
+    const { result } = renderHook(
+      () =>
+        useRolesAccessMapResourcesQuery(
+          {
+            instanceId: "local",
+            roles: [
+              create(RoleSchema, {
+                name: `instances/local/roles/${ROLE_ID}`,
+                roleName: "app_readonly",
+              }),
+            ],
+          },
+          { refetchOnWindowFocus: false }
+        ),
+      { wrapper: createWrapper(transport) }
+    );
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data?.failedRequestCount).toBe(1);
+    expect(result.current.data?.roleAccess[0]?.grants).toEqual([]);
+    expect(result.current.data?.roleAccess[0]?.ownedObjects).toHaveLength(1);
+  });
+
+  test("bounds concurrent access requests across role and database pairs", async () => {
+    let activeRequests = 0;
+    let maximumActiveRequests = 0;
+
+    async function trackRequest<Response>(response: Response) {
+      activeRequests += 1;
+      maximumActiveRequests = Math.max(maximumActiveRequests, activeRequests);
+      await Promise.resolve();
+      activeRequests -= 1;
+      return response;
+    }
+
+    const transport = createRouterTransport(({ service }) => {
+      service(DatabaseService, {
+        listDatabases() {
+          return create(ListDatabasesResponseSchema, {
+            databases: [
+              {
+                displayName: "logistics",
+                name: "instances/local/databases/logistics",
+              },
+            ],
+          });
+        },
+      });
+      service(RoleService, {
+        listPublicGrants() {
+          return trackRequest(
+            create(ListPublicGrantsResponseSchema, { grants: [] })
+          );
+        },
+        listRoleDefaultPrivileges() {
+          return trackRequest(
+            create(ListRoleDefaultPrivilegesResponseSchema, {
+              defaultPrivileges: [],
+            })
+          );
+        },
+        listRoleGrants() {
+          return trackRequest(
+            create(ListRoleGrantsResponseSchema, { grants: [] })
+          );
+        },
+        listRoleOwnedObjects() {
+          return trackRequest(
+            create(ListRoleOwnedObjectsResponseSchema, { ownedObjects: [] })
+          );
+        },
+      });
+    });
+
+    const { result } = renderHook(
+      () =>
+        useRolesAccessMapResourcesQuery(
+          {
+            instanceId: "local",
+            roles: Array.from({ length: 5 }, (_, index) =>
+              create(RoleSchema, {
+                name: `instances/local/roles/role-${index}`,
+                roleName: `role-${index}`,
+              })
+            ),
+          },
+          { refetchOnWindowFocus: false }
+        ),
+      { wrapper: createWrapper(transport) }
+    );
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data?.roleAccess).toHaveLength(5);
+    expect(maximumActiveRequests).toBeLessThanOrEqual(6);
   });
 });
 

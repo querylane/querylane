@@ -74,8 +74,44 @@ interface PublicAccessMapResource {
 }
 
 interface RoleAccessMapResourcesResult {
+  failedRequestCount: number;
   publicAccess: PublicAccessMapResource[];
   roleAccess: RoleAccessMapResource[];
+}
+
+interface PartialAccessResult<T> {
+  failedRequestCount: number;
+  value: T;
+}
+
+// A role/database pair starts three facet requests. Two pairs keep scheduling
+// bounded while the transport's per-instance semaphore caps active RPCs at 4.
+const ACCESS_MAP_RESOURCE_CONCURRENCY = 2;
+
+async function mapInBatches<T, Result>(
+  items: T[],
+  mapItem: (item: T) => Promise<Result>
+): Promise<Result[]> {
+  const results: Result[] = [];
+  for (
+    let start = 0;
+    start < items.length;
+    start += ACCESS_MAP_RESOURCE_CONCURRENCY
+  ) {
+    const batch = items.slice(start, start + ACCESS_MAP_RESOURCE_CONCURRENCY);
+    results.push(...(await Promise.all(batch.map(mapItem))));
+  }
+  return results;
+}
+
+async function keepPartialAccess<T>(
+  request: Promise<T[]>
+): Promise<PartialAccessResult<T[]>> {
+  const [result] = await Promise.allSettled([request]);
+  if (result.status === "fulfilled") {
+    return { failedRequestCount: 0, value: result.value };
+  }
+  return { failedRequestCount: 1, value: [] };
 }
 
 function getListAllRolesQueryKey(
@@ -200,10 +236,10 @@ async function fetchRoleAccessMapResources(
   );
   const mapDatabases = userDatabases.length > 0 ? userDatabases : databases;
 
-  const publicAccess = await Promise.all(
-    mapDatabases.map(async (database) => {
-      const databaseId = databaseIdOf(database);
-      const grants = await paginateAll(
+  const publicResults = await mapInBatches(mapDatabases, async (database) => {
+    const databaseId = databaseIdOf(database);
+    const grants = await keepPartialAccess(
+      paginateAll(
         (pageToken) =>
           roleClient.listPublicGrants({
             orderBy: "schema_name asc, object_name asc, privilege asc",
@@ -212,26 +248,30 @@ async function fetchRoleAccessMapResources(
             parent: buildDatabaseName(input.instanceId, databaseId),
           }),
         (response) => response.grants
-      );
-      return {
+      )
+    );
+    return {
+      failedRequestCount: grants.failedRequestCount,
+      value: {
         databaseId,
         databaseName: databaseDisplayName(database),
-        grants,
-      };
-    })
+        grants: grants.value,
+      },
+    };
+  });
+  const roleDatabasePairs = input.roles.flatMap((role) =>
+    mapDatabases.map((database) => ({ database, role }))
   );
-  const roleAccess = await Promise.all(
-    input.roles.flatMap((role) => {
+  const roleResults = await mapInBatches(
+    roleDatabasePairs,
+    async ({ database, role }) => {
       const roleId = roleResourceIdOf(role);
       const parent = buildRoleName(input.instanceId, roleId);
-      return mapDatabases.map(async (database) => {
-        const databaseId = databaseIdOf(database);
-        const databaseName = databaseDisplayName(database);
-        const databaseResource = buildDatabaseName(
-          input.instanceId,
-          databaseId
-        );
-        const [defaultPrivileges, grants, ownedObjects] = await Promise.all([
+      const databaseId = databaseIdOf(database);
+      const databaseName = databaseDisplayName(database);
+      const databaseResource = buildDatabaseName(input.instanceId, databaseId);
+      const [defaultPrivileges, grants, ownedObjects] = await Promise.all([
+        keepPartialAccess(
           paginateAll(
             (pageToken) =>
               roleClient.listRoleDefaultPrivileges({
@@ -243,7 +283,9 @@ async function fetchRoleAccessMapResources(
                 parent,
               }),
             (response) => response.defaultPrivileges
-          ),
+          )
+        ),
+        keepPartialAccess(
           paginateAll(
             (pageToken) =>
               roleClient.listRoleGrants({
@@ -254,7 +296,9 @@ async function fetchRoleAccessMapResources(
                 parent,
               }),
             (response) => response.grants
-          ),
+          )
+        ),
+        keepPartialAccess(
           paginateAll(
             (pageToken) =>
               roleClient.listRoleOwnedObjects({
@@ -265,22 +309,35 @@ async function fetchRoleAccessMapResources(
                 parent,
               }),
             (response) => response.ownedObjects
-          ),
-        ]);
-        return {
+          )
+        ),
+      ]);
+      return {
+        failedRequestCount:
+          defaultPrivileges.failedRequestCount +
+          grants.failedRequestCount +
+          ownedObjects.failedRequestCount,
+        value: {
           databaseId,
           databaseName,
-          defaultPrivileges,
-          grants,
-          ownedObjects,
+          defaultPrivileges: defaultPrivileges.value,
+          grants: grants.value,
+          ownedObjects: ownedObjects.value,
           roleId,
           roleName: role.roleName,
-        };
-      });
-    })
+        },
+      };
+    }
   );
 
-  return { publicAccess, roleAccess };
+  return {
+    failedRequestCount: [...publicResults, ...roleResults].reduce(
+      (total, result) => total + result.failedRequestCount,
+      0
+    ),
+    publicAccess: publicResults.map((result) => result.value),
+    roleAccess: roleResults.map((result) => result.value),
+  };
 }
 
 function databaseIdOf(database: Database): string {

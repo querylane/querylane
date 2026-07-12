@@ -3,11 +3,12 @@
 import {
   Database,
   Maximize2,
+  Minimize2,
   Minus,
   Plus,
   SlidersHorizontal,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type {
   RolesAccessMapEdge,
   RolesAccessMapEdgeTone,
@@ -17,6 +18,13 @@ import type {
 } from "@/components/console-pages/roles-access-map-model";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
   Popover,
@@ -444,7 +452,9 @@ function RolesAccessMapCanvas({
   selectedNodeId: string | null;
 }) {
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [edgeVisibility, setEdgeVisibility] = useState(DEFAULT_EDGE_VISIBILITY);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const height = canvasHeight(model);
   const roleIndexById = new Map(
     model.roles.map((node, index) => [node.id, index])
@@ -471,8 +481,15 @@ function RolesAccessMapCanvas({
     setZoom((current) => Math.min(MAX_ZOOM, current + ZOOM_STEP));
   }
 
-  function resetZoom() {
-    setZoom(DEFAULT_ZOOM);
+  function fitZoom() {
+    const viewportWidth = viewportRef.current?.clientWidth ?? 0;
+    if (viewportWidth <= 0) {
+      setZoom(DEFAULT_ZOOM);
+      return;
+    }
+    setZoom(
+      Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, viewportWidth / CANVAS_WIDTH))
+    );
   }
 
   function toggleEdgeTone(tone: RolesAccessMapEdgeTone, visible: boolean) {
@@ -487,8 +504,13 @@ function RolesAccessMapCanvas({
     );
   }
 
-  return (
-    <section aria-label="Role access map" className="grid gap-3">
+  const mapSurface = (
+    <div
+      className={cn(
+        "grid gap-3",
+        isExpanded && "min-h-0 grid-rows-[auto_minmax(0,1fr)]"
+      )}
+    >
       <div className="flex flex-wrap items-center gap-3">
         <AccessFiltersPopover
           edgeVisibility={edgeVisibility}
@@ -519,25 +541,36 @@ function RolesAccessMapCanvas({
             <Plus className="size-4" />
           </Button>
           <div className="mx-1 h-4 w-px bg-border" />
-          <Button onClick={resetZoom} size="sm" type="button" variant="ghost">
+          <Button onClick={fitZoom} size="sm" type="button" variant="ghost">
             Fit
           </Button>
           <div className="mx-1 h-4 w-px bg-border" />
           <Button
-            aria-label="Maximize role access map"
-            onClick={zoomIn}
+            aria-label={
+              isExpanded
+                ? "Collapse role access map"
+                : "Maximize role access map"
+            }
+            onClick={() => setIsExpanded((current) => !current)}
             size="icon-sm"
             type="button"
             variant="ghost"
           >
-            <Maximize2 className="size-3.5" />
+            {isExpanded ? (
+              <Minimize2 className="size-3.5" />
+            ) : (
+              <Maximize2 className="size-3.5" />
+            )}
           </Button>
         </fieldset>
         <span className="text-[11.5px] text-muted-foreground">
           click a node to trace its access · details open in the drawer
         </span>
       </div>
-      <div className="overflow-auto rounded-2xl border bg-card shadow-xs">
+      <div
+        className="overflow-auto rounded-2xl border bg-card shadow-xs"
+        ref={viewportRef}
+      >
         <div
           className="overflow-hidden"
           style={{
@@ -623,6 +656,23 @@ function RolesAccessMapCanvas({
           </div>
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <section aria-label="Role access map" className="grid gap-3">
+      {isExpanded ? null : mapSurface}
+      <Dialog onOpenChange={setIsExpanded} open={isExpanded}>
+        <DialogContent className="!flex !max-w-[calc(100vw-2rem)] h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col gap-4 overflow-hidden p-4">
+          <DialogHeader>
+            <DialogTitle>Expanded role access map</DialogTitle>
+            <DialogDescription>
+              Trace role membership and object access with more room.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1">{isExpanded ? mapSurface : null}</div>
+        </DialogContent>
+      </Dialog>
       <SelectedNodeSheet
         model={model}
         onOpenChange={(open) => {

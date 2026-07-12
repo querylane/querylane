@@ -13,6 +13,8 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 const mocks = vi.hoisted(() => ({
+  accessMapRoleNames: [] as string[],
+  failedRequestCount: 0,
   navigate: vi.fn(),
   tableSearch: "",
 }));
@@ -78,50 +80,58 @@ vi.mock("@/hooks/api/role", () => ({
     isPending: false,
     refetch: vi.fn(async () => undefined),
   }),
-  useRolesAccessMapResourcesQuery: () => ({
-    data: {
-      publicAccess: [
-        {
-          databaseId: "logistics",
-          databaseName: "logistics",
-          grants: [
-            create(ObjectGrantSchema, {
-              objectType: GrantObjectType.SCHEMA,
-              privilege: "USAGE",
-              schemaName: "public",
-            }),
-          ],
-        },
-      ],
-      roleAccess: [
-        {
-          databaseId: "logistics",
-          databaseName: "logistics",
-          grants: [
-            create(ObjectGrantSchema, {
-              objectName: "orders",
-              objectType: GrantObjectType.TABLE,
-              privilege: "SELECT",
-              schemaName: "shipping",
-            }),
-          ],
-          ownedObjects: [
-            create(OwnedObjectSchema, {
-              objectName: "logistics",
-              objectType: GrantObjectType.DATABASE,
-            }),
-          ],
-          roleId: "app_user",
-          roleName: "app_user",
-        },
-      ],
-    },
-    error: null,
-    isPending: false,
-  }),
+  useRolesAccessMapResourcesQuery: (input: {
+    roles: { roleName: string }[];
+  }) => {
+    mocks.accessMapRoleNames = input.roles.map((role) => role.roleName);
+    return {
+      data: {
+        failedRequestCount: mocks.failedRequestCount,
+        publicAccess: [
+          {
+            databaseId: "logistics",
+            databaseName: "logistics",
+            grants: [
+              create(ObjectGrantSchema, {
+                objectType: GrantObjectType.SCHEMA,
+                privilege: "USAGE",
+                schemaName: "public",
+              }),
+            ],
+          },
+        ],
+        roleAccess: [
+          {
+            databaseId: "logistics",
+            databaseName: "logistics",
+            grants: [
+              create(ObjectGrantSchema, {
+                objectName: "orders",
+                objectType: GrantObjectType.TABLE,
+                privilege: "SELECT",
+                schemaName: "shipping",
+              }),
+            ],
+            ownedObjects: [
+              create(OwnedObjectSchema, {
+                objectName: "logistics",
+                objectType: GrantObjectType.DATABASE,
+              }),
+            ],
+            roleId: "app_user",
+            roleName: "app_user",
+          },
+        ],
+      },
+      error: null,
+      isPending: false,
+    };
+  },
 }));
 
 afterEach(() => {
+  mocks.accessMapRoleNames = [];
+  mocks.failedRequestCount = 0;
   cleanup();
   vi.clearAllMocks();
   mocks.tableSearch = "";
@@ -168,6 +178,7 @@ describe("InstanceRolesPage", () => {
     expect(screen.getByText("logistics")).toBeTruthy();
     expect(screen.getByText("PUBLIC")).toBeTruthy();
     expect(screen.getByPlaceholderText("Search roles…")).toBeTruthy();
+    expect(mocks.accessMapRoleNames).toEqual(["app_user"]);
 
     await user.click(screen.getByRole("tab", { name: "Table" }));
 
@@ -211,5 +222,18 @@ describe("InstanceRolesPage", () => {
     expect(
       screen.getByRole("button", { name: BUILT_IN_CHIP_NAME })
     ).toBeTruthy();
+  });
+
+  test("keeps partial access data visible with a warning", () => {
+    mocks.failedRequestCount = 2;
+
+    render(<InstanceRolesPage instanceId="prod" tab="map" />);
+
+    expect(
+      screen.getByText(
+        "2 access requests could not be loaded. The map shows the available data."
+      )
+    ).toBeTruthy();
+    expect(screen.getByText("orders")).toBeTruthy();
   });
 });

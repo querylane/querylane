@@ -1,16 +1,16 @@
+import type {
+  PublicAccessMapResource,
+  RoleAccessMapResource,
+} from "@/hooks/api/role";
 import { assertNever } from "@/lib/assert-never";
 import { parseResourceLeafId } from "@/lib/console-resources";
 import { deriveRoleKind, type RoleKind, roleIdOf } from "@/lib/role-display";
 import type {
   ObjectGrant,
-  OwnedObject,
   Role,
   RoleDefaultPrivilege,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
-import {
-  DefaultPrivilegeObjectType,
-  GrantObjectType,
-} from "@/protogen/querylane/console/v1alpha1/role_pb";
+import { GrantObjectType } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 type RoleMapVisibleKind = Exclude<"all" | RoleKind, "all">;
 type RoleMapKindVisibility = Record<RoleMapVisibleKind, boolean>;
@@ -30,22 +30,6 @@ type RolesAccessMapObjectKind =
   | "sequence"
   | "table"
   | "view";
-
-interface RoleAccessMapResource {
-  databaseId: string;
-  databaseName: string;
-  defaultPrivileges: RoleDefaultPrivilege[];
-  grants: ObjectGrant[];
-  ownedObjects: OwnedObject[];
-  roleId: string;
-  roleName: string;
-}
-
-interface PublicAccessMapResource {
-  databaseId: string;
-  databaseName: string;
-  grants: ObjectGrant[];
-}
 
 interface RolesAccessMapRoleNode {
   id: string;
@@ -75,11 +59,6 @@ interface RolesAccessMapModel {
   edges: RolesAccessMapEdge[];
   objects: RolesAccessMapObjectNode[];
   roles: RolesAccessMapRoleNode[];
-  summary: {
-    hiddenRoleCount: number;
-    objectCount: number;
-    visibleRoleCount: number;
-  };
 }
 
 interface BuildRolesAccessMapModelInput {
@@ -334,19 +313,17 @@ function buildVisibleRoleNodes({
   roles: Role[];
   search: string;
   visibleKinds: RoleMapKindVisibility;
-}): { hiddenRoleCount: number; nodes: RolesAccessMapRoleNode[] } {
+}): RolesAccessMapRoleNode[] {
   const nodes: RolesAccessMapRoleNode[] = [];
-  let hiddenRoleCount = 0;
   for (const role of roles) {
     const kind = deriveRoleKind(role);
     if (!(visibleKinds[kind] && roleMatchesSearch(role.roleName, search))) {
-      hiddenRoleCount += 1;
       continue;
     }
     nodes.push(roleToNode(role, kind));
   }
   nodes.sort(sortRoles);
-  return { hiddenRoleCount, nodes };
+  return nodes;
 }
 
 function roleNodeIdForAccess(access: RoleAccessMapResource): string {
@@ -446,17 +423,6 @@ function defaultPrivilegeObjectTarget(input: {
       schemaName: input.defaultPrivilege.schemaName,
     });
   }
-  if (
-    input.defaultPrivilege.objectType === DefaultPrivilegeObjectType.SCHEMAS
-  ) {
-    return addObjectNode(input.objectsById, {
-      databaseId: input.databaseId,
-      databaseName: input.databaseName,
-      objectName: input.databaseName,
-      objectType: GrantObjectType.DATABASE,
-      schemaName: "",
-    });
-  }
   return addObjectNode(input.objectsById, {
     databaseId: input.databaseId,
     databaseName: input.databaseName,
@@ -519,7 +485,7 @@ function buildRolesAccessMapModel({
     search: normalizedSearch,
     visibleKinds,
   });
-  const roleNodeIds = new Set(visibleRoles.nodes.map((node) => node.id));
+  const roleNodeIds = new Set(visibleRoles.map((node) => node.id));
   const objectsById = new Map<string, RolesAccessMapObjectNode>();
   const edgesById = new Map<string, RolesAccessMapEdge>();
   const includePublicAccess = roleMatchesSearch("PUBLIC", normalizedSearch);
@@ -562,25 +528,18 @@ function buildRolesAccessMapModel({
   const rolesWithPublic =
     includePublicAccess &&
     edges.some((edge) => edge.source === PUBLIC_ROLE_NODE.id)
-      ? [...visibleRoles.nodes, PUBLIC_ROLE_NODE].toSorted(sortRoles)
-      : visibleRoles.nodes;
+      ? [...visibleRoles, PUBLIC_ROLE_NODE].toSorted(sortRoles)
+      : visibleRoles;
   const objects = [...objectsById.values()];
 
   return {
     edges,
     objects,
     roles: rolesWithPublic,
-    summary: {
-      hiddenRoleCount: visibleRoles.hiddenRoleCount,
-      objectCount: objects.length,
-      visibleRoleCount: rolesWithPublic.length,
-    },
   };
 }
 
 export type {
-  PublicAccessMapResource,
-  RoleAccessMapResource,
   RoleMapKindVisibility,
   RoleMapVisibleKind,
   RolesAccessMapEdge,

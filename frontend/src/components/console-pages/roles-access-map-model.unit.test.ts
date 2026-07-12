@@ -115,7 +115,6 @@ describe("buildRolesAccessMapModel", () => {
     });
 
     expect(model.roles.map((node) => node.title)).toEqual(["app_reader"]);
-    expect(model.summary.hiddenRoleCount).toBe(3);
   });
 
   test("hides PUBLIC-only objects when search excludes the PUBLIC pseudo-role", () => {
