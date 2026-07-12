@@ -32,19 +32,25 @@ import {
   ViewSchema,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
-vi.mock("@tanstack/react-router", () => ({
-  ["Link"]: ({
-    children,
-    className,
-  }: {
-    children: ReactNode;
-    className?: string | undefined;
-  }) => (
-    <a className={className} href="#referenced-table">
-      {children}
-    </a>
-  ),
-}));
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@tanstack/react-router")>();
+  const linkExportName = "Link";
+  return {
+    ...actual,
+    [linkExportName]: ({
+      children,
+      className,
+    }: {
+      children: ReactNode;
+      className?: string | undefined;
+    }) => (
+      <a className={className} href="#referenced-table">
+        {children}
+      </a>
+    ),
+  };
+});
 
 const ACTIVE_KIND_FILTER_RE = /^Kind.*Materialized views/;
 const ACTIVE_OWNER_FILTER_RE = /^Owner.*analytics_owner/;

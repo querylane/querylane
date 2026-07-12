@@ -69,23 +69,29 @@ const CHILD_PARTITION_SQL_RE =
 const COLUMN_COMMENT_SQL_RE =
   /COMMENT ON COLUMN "public"\."customers"\."display name" IS 'Owner''s name';/;
 
-vi.mock("@tanstack/react-router", () => ({
-  ["Link"]: ({
-    children,
-    params,
-    search,
-  }: {
-    children: ReactNode;
-    params: { databaseId: string; instanceId: string };
-    search: { category: string; name: string; schema: string };
-  }) => (
-    <a
-      href={`/instances/${params.instanceId}/databases/${params.databaseId}/explorer?schema=${search.schema}&category=${search.category}&name=${search.name}`}
-    >
-      {children}
-    </a>
-  ),
-}));
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@tanstack/react-router")>();
+  const linkExportName = "Link";
+  return {
+    ...actual,
+    [linkExportName]: ({
+      children,
+      params,
+      search,
+    }: {
+      children: ReactNode;
+      params: { databaseId: string; instanceId: string };
+      search: { category: string; name: string; schema: string };
+    }) => (
+      <a
+        href={`/instances/${params.instanceId}/databases/${params.databaseId}/explorer?schema=${search.schema}&category=${search.category}&name=${search.name}`}
+      >
+        {children}
+      </a>
+    ),
+  };
+});
 
 interface MockGridColumn {
   key: string;
