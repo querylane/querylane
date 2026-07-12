@@ -25,6 +25,11 @@ const DataExplorerPage = lazy(() =>
     default: module.DataExplorerPage,
   }))
 );
+const SqlWorkbenchPage = lazy(() =>
+  import("@/features/sql-workbench/sql-workbench-page").then((module) => ({
+    default: module.SqlWorkbenchPage,
+  }))
+);
 const InstanceRolesPage = lazy(() =>
   import("@/components/console-pages/instance-roles-page").then((module) => ({
     default: module.InstanceRolesPage,
@@ -116,6 +121,10 @@ function DatabaseAdminPageContent({
           databaseId={databaseId}
           instanceId={instanceId}
         />
+      );
+    case "database.workbench":
+      return (
+        <SqlWorkbenchPage databaseId={databaseId} instanceId={instanceId} />
       );
     case "database.explorer":
       return (

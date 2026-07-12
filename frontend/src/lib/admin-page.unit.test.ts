@@ -22,6 +22,8 @@ describe("canRenderAdminPageAtScope", () => {
     { expected: true, page: "database.extensions", scope: "database" },
     { expected: false, page: "database.explorer", scope: "instance" },
     { expected: true, page: "database.explorer", scope: "database" },
+    { expected: false, page: "database.workbench", scope: "instance" },
+    { expected: true, page: "database.workbench", scope: "database" },
     // "none" scope cannot render any page
     { expected: false, page: "instance.overview", scope: "none" },
     { expected: false, page: "database.overview", scope: "none" },
@@ -128,6 +130,11 @@ describe("resolveCurrentAdminPage", () => {
       scope: "database",
     },
     {
+      expected: "database.workbench",
+      pathname: "/instances/x/databases/db/workbench",
+      scope: "database",
+    },
+    {
       expected: "database.overview",
       pathname: "/instances/x/databases/db",
       scope: "database",
@@ -229,6 +236,14 @@ describe("resolveImplicitAdminPageFromRouteId", () => {
         "/instances/$instanceId/databases/$databaseId/insights"
       )
     ).toBeUndefined();
+  });
+
+  test("maps canonical SQL workbench route to the workbench page", () => {
+    expect(
+      resolveImplicitAdminPageFromRouteId(
+        "/instances/$instanceId/databases/$databaseId/workbench"
+      )
+    ).toBe("database.workbench");
   });
 
   test("maps canonical database overview route to the overview page", () => {
