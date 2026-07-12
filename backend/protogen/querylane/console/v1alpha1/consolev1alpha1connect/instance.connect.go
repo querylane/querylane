@@ -59,6 +59,9 @@ const (
 	// InstanceServiceCheckInstanceHealthProcedure is the fully-qualified name of the InstanceService's
 	// CheckInstanceHealth RPC.
 	InstanceServiceCheckInstanceHealthProcedure = "/querylane.console.v1alpha1.InstanceService/CheckInstanceHealth"
+	// InstanceServiceCheckInstanceActivityProcedure is the fully-qualified name of the
+	// InstanceService's CheckInstanceActivity RPC.
+	InstanceServiceCheckInstanceActivityProcedure = "/querylane.console.v1alpha1.InstanceService/CheckInstanceActivity"
 )
 
 // InstanceServiceClient is a client for the querylane.console.v1alpha1.InstanceService service.
@@ -83,6 +86,8 @@ type InstanceServiceClient interface {
 	// Checks live PostgreSQL health signals that are inexpensive and directly
 	// observable from ordinary database views/settings.
 	CheckInstanceHealth(context.Context, *connect.Request[v1alpha1.CheckInstanceHealthRequest]) (*connect.Response[v1alpha1.CheckInstanceHealthResponse], error)
+	// Checks only live connection activity for high-frequency session polling.
+	CheckInstanceActivity(context.Context, *connect.Request[v1alpha1.CheckInstanceActivityRequest]) (*connect.Response[v1alpha1.CheckInstanceActivityResponse], error)
 }
 
 // NewInstanceServiceClient constructs a client for the querylane.console.v1alpha1.InstanceService
@@ -144,6 +149,12 @@ func NewInstanceServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(instanceServiceMethods.ByName("CheckInstanceHealth")),
 			connect.WithClientOptions(opts...),
 		),
+		checkInstanceActivity: connect.NewClient[v1alpha1.CheckInstanceActivityRequest, v1alpha1.CheckInstanceActivityResponse](
+			httpClient,
+			baseURL+InstanceServiceCheckInstanceActivityProcedure,
+			connect.WithSchema(instanceServiceMethods.ByName("CheckInstanceActivity")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -157,6 +168,7 @@ type instanceServiceClient struct {
 	deleteInstance         *connect.Client[v1alpha1.DeleteInstanceRequest, v1alpha1.DeleteInstanceResponse]
 	getInstanceOverview    *connect.Client[v1alpha1.GetInstanceOverviewRequest, v1alpha1.GetInstanceOverviewResponse]
 	checkInstanceHealth    *connect.Client[v1alpha1.CheckInstanceHealthRequest, v1alpha1.CheckInstanceHealthResponse]
+	checkInstanceActivity  *connect.Client[v1alpha1.CheckInstanceActivityRequest, v1alpha1.CheckInstanceActivityResponse]
 }
 
 // ListInstances calls querylane.console.v1alpha1.InstanceService.ListInstances.
@@ -199,6 +211,11 @@ func (c *instanceServiceClient) CheckInstanceHealth(ctx context.Context, req *co
 	return c.checkInstanceHealth.CallUnary(ctx, req)
 }
 
+// CheckInstanceActivity calls querylane.console.v1alpha1.InstanceService.CheckInstanceActivity.
+func (c *instanceServiceClient) CheckInstanceActivity(ctx context.Context, req *connect.Request[v1alpha1.CheckInstanceActivityRequest]) (*connect.Response[v1alpha1.CheckInstanceActivityResponse], error) {
+	return c.checkInstanceActivity.CallUnary(ctx, req)
+}
+
 // InstanceServiceHandler is an implementation of the querylane.console.v1alpha1.InstanceService
 // service.
 type InstanceServiceHandler interface {
@@ -222,6 +239,8 @@ type InstanceServiceHandler interface {
 	// Checks live PostgreSQL health signals that are inexpensive and directly
 	// observable from ordinary database views/settings.
 	CheckInstanceHealth(context.Context, *connect.Request[v1alpha1.CheckInstanceHealthRequest]) (*connect.Response[v1alpha1.CheckInstanceHealthResponse], error)
+	// Checks only live connection activity for high-frequency session polling.
+	CheckInstanceActivity(context.Context, *connect.Request[v1alpha1.CheckInstanceActivityRequest]) (*connect.Response[v1alpha1.CheckInstanceActivityResponse], error)
 }
 
 // NewInstanceServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -279,6 +298,12 @@ func NewInstanceServiceHandler(svc InstanceServiceHandler, opts ...connect.Handl
 		connect.WithSchema(instanceServiceMethods.ByName("CheckInstanceHealth")),
 		connect.WithHandlerOptions(opts...),
 	)
+	instanceServiceCheckInstanceActivityHandler := connect.NewUnaryHandler(
+		InstanceServiceCheckInstanceActivityProcedure,
+		svc.CheckInstanceActivity,
+		connect.WithSchema(instanceServiceMethods.ByName("CheckInstanceActivity")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/querylane.console.v1alpha1.InstanceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case InstanceServiceListInstancesProcedure:
@@ -297,6 +322,8 @@ func NewInstanceServiceHandler(svc InstanceServiceHandler, opts ...connect.Handl
 			instanceServiceGetInstanceOverviewHandler.ServeHTTP(w, r)
 		case InstanceServiceCheckInstanceHealthProcedure:
 			instanceServiceCheckInstanceHealthHandler.ServeHTTP(w, r)
+		case InstanceServiceCheckInstanceActivityProcedure:
+			instanceServiceCheckInstanceActivityHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -336,4 +363,8 @@ func (UnimplementedInstanceServiceHandler) GetInstanceOverview(context.Context, 
 
 func (UnimplementedInstanceServiceHandler) CheckInstanceHealth(context.Context, *connect.Request[v1alpha1.CheckInstanceHealthRequest]) (*connect.Response[v1alpha1.CheckInstanceHealthResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("querylane.console.v1alpha1.InstanceService.CheckInstanceHealth is not implemented"))
+}
+
+func (UnimplementedInstanceServiceHandler) CheckInstanceActivity(context.Context, *connect.Request[v1alpha1.CheckInstanceActivityRequest]) (*connect.Response[v1alpha1.CheckInstanceActivityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("querylane.console.v1alpha1.InstanceService.CheckInstanceActivity is not implemented"))
 }

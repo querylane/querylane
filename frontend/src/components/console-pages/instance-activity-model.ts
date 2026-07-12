@@ -27,10 +27,10 @@ interface ActivityStat {
 }
 
 interface ActivitySessionFilters {
-  app: string;
-  database: string;
+  app: string | null;
+  database: string | null;
   search: string;
-  state: string;
+  state: string | null;
 }
 
 interface ActivitySessionRow {
@@ -49,13 +49,14 @@ interface ActivitySessionRow {
 
 interface ActivityBlockingChain {
   blocked: ActivitySessionRow[];
-  blocker: ActivitySessionRow;
+  blocker: ActivitySessionRow | null;
+  blockerPid: number;
 }
 
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
 const LONG_TRANSACTION_WARNING_SECONDS = 300;
-const EMPTY_FILTER_VALUE = "All";
+const EMPTY_FILTER_VALUE: null = null;
 
 function safeCount(value: number | undefined): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0
@@ -93,6 +94,16 @@ function formatActivityDuration(value: bigint | number | undefined): string {
 function presentActivityStats(
   activity: ActivityLike | undefined
 ): ActivityStat[] {
+  if (!activity) {
+    return [
+      { label: "Active", tone: "default", value: "—" },
+      { label: "Idle", tone: "default", value: "—" },
+      { label: "Idle in transaction", tone: "default", value: "—" },
+      { label: "Waiting", tone: "default", value: "—" },
+      { label: "Oldest transaction", tone: "default", value: "—" },
+    ];
+  }
+
   const idleInTransaction = safeCount(activity?.idleInTransactionConnections);
   const waiting = safeCount(activity?.waitingForLockConnections);
 
@@ -190,7 +201,7 @@ function presentActivitySessionRow(
   };
 }
 
-function matchesFilter(value: string, filterValue: string) {
+function matchesFilter(value: string, filterValue: string | null) {
   return filterValue === EMPTY_FILTER_VALUE || value === filterValue;
 }
 
@@ -229,34 +240,27 @@ function presentActivityFilterOptions(
   rows: readonly ActivitySessionRow[],
   key: "app" | "database" | "state"
 ): string[] {
-  return [EMPTY_FILTER_VALUE, ...uniqueSorted(rows.map((row) => row[key]))];
+  return uniqueSorted(rows.map((row) => row[key]));
 }
 
-function getActivityBlockingChain(
+function getActivityBlockingChains(
   rows: readonly ActivitySessionRow[]
-): ActivityBlockingChain | null {
+): ActivityBlockingChain[] {
   const blocked = rows.filter((row) => row.blockedByPid > 0);
-  if (blocked.length === 0) {
-    return null;
-  }
+  const blockerPids = [...new Set(blocked.map((row) => row.blockedByPid))];
 
-  const blockerPid = blocked[0]?.blockedByPid ?? 0;
-  const blocker = rows.find((row) => row.pid === blockerPid);
-  if (!blocker) {
-    return null;
-  }
-
-  return {
+  return blockerPids.map((blockerPid) => ({
     blocked: blocked.filter((row) => row.blockedByPid === blockerPid),
-    blocker,
-  };
+    blocker: rows.find((row) => row.pid === blockerPid) ?? null,
+    blockerPid,
+  }));
 }
 
 export type { ActivityStat };
 export {
   EMPTY_FILTER_VALUE,
   formatActivityDuration,
-  getActivityBlockingChain,
+  getActivityBlockingChains,
   presentActivityFilterOptions,
   presentActivitySessionRows,
   presentActivityStats,

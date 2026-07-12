@@ -65,6 +65,7 @@ import {
 } from "@/hooks/api/extension";
 import {
   refreshAllInstancesCache,
+  useCheckInstanceActivityQuery,
   useCheckInstanceHealthQuery,
   useDeleteInstanceMutation,
   useGetInstanceOverviewQuery,
@@ -111,6 +112,7 @@ import { normalizeAppUiError } from "@/lib/ui-error";
 import { useUrlTableSearch } from "@/lib/url-search-state";
 import type { Status } from "@/protogen/google/rpc/status_pb";
 import type {
+  ConnectionActivityHealth,
   InstanceHealth,
   InstanceOverview,
   ServerInfo,
@@ -128,13 +130,16 @@ import {
 type InstanceSection = "activity" | "configuration" | "overview";
 
 interface OverviewLiveData {
+  activity: ConnectionActivityHealth | undefined;
+  activityPartialErrors: Status[] | undefined;
+  activityPending: boolean;
+  activityRefreshing: boolean;
   /** The server's max_connections, drawn as a threshold on the chart. */
   connectionsMax: number | undefined;
   handleRangeChange: (rangeHours: number) => void;
   health: InstanceHealth | undefined;
   healthPartialErrors: Status[] | undefined;
   healthPending: boolean;
-  healthRefreshing: boolean;
   metricsError: boolean;
   metricsPending: boolean;
   metricsRange: MetricRange;
@@ -951,6 +956,7 @@ function refetchInstancePageQuery(query: RefetchableQuery, area: string) {
 }
 
 function refreshInstancePageData({
+  activityQuery,
   configuredDatabase,
   extensionsQuery,
   healthQuery,
@@ -965,6 +971,7 @@ function refreshInstancePageData({
   showActivityLiveData,
   showOverviewLiveData,
 }: {
+  activityQuery: RefetchableQuery;
   configuredDatabase: string;
   extensionsQuery: RefetchableQuery;
   healthQuery: RefetchableQuery;
@@ -992,7 +999,7 @@ function refreshInstancePageData({
     refetchInstancePageQuery(healthQuery, "console.instance.health");
   }
   if (showActivityLiveData) {
-    refetchInstancePageQuery(healthQuery, "console.instance.activity");
+    refetchInstancePageQuery(activityQuery, "console.instance.activity");
   }
   if (isConnected && section === "overview" && configuredDatabase.length > 0) {
     refetchInstancePageQuery(extensionsQuery, "console.instance.extensions");
@@ -1176,7 +1183,6 @@ function getInstanceLiveDataVisibility({
   if (!isConnected) {
     return {
       activity: false,
-      any: false,
       overview: false,
     };
   }
@@ -1185,7 +1191,6 @@ function getInstanceLiveDataVisibility({
   const overview = section === "overview";
   return {
     activity,
-    any: activity || overview,
     overview,
   };
 }
@@ -1327,10 +1332,17 @@ function BackendInstancePage({
       name: instanceName,
     },
     {
-      enabled: liveDataVisibility.any,
-      refetchInterval: liveDataVisibility.activity
-        ? ACTIVITY_REFRESH_INTERVAL_MS
-        : false,
+      enabled: liveDataVisibility.overview,
+      refetchOnWindowFocus: false,
+    }
+  );
+  const activityQuery = useCheckInstanceActivityQuery(
+    {
+      name: instanceName,
+    },
+    {
+      enabled: liveDataVisibility.activity,
+      refetchInterval: ACTIVITY_REFRESH_INTERVAL_MS,
       refetchOnWindowFocus: false,
     }
   );
@@ -1375,6 +1387,7 @@ function BackendInstancePage({
   });
   const handleRefresh = () => {
     refreshInstancePageData({
+      activityQuery,
       configuredDatabase,
       extensionsQuery,
       healthQuery,
@@ -1459,13 +1472,16 @@ function BackendInstancePage({
             isRefreshing,
             lastRefreshedAt: instanceQuery.dataUpdatedAt,
             liveData: {
+              activity: activityQuery.data?.activity,
+              activityPartialErrors: activityQuery.data?.partialErrors,
+              activityPending: activityQuery.isPending,
+              activityRefreshing:
+                activityQuery.isFetching && !activityQuery.isPending,
               connectionsMax: overview?.connections?.maxConnections,
               handleRangeChange: setMetricsRangeHours,
               health: healthQuery.data?.health,
               healthPartialErrors: healthQuery.data?.partialErrors,
               healthPending: healthQuery.isPending,
-              healthRefreshing:
-                healthQuery.isFetching && !healthQuery.isPending,
               metricsError: metricsQuery.isError,
               metricsPending: metricsQuery.isPending,
               metricsRange: metricRangeByHours(metricsRangeHours),
@@ -1584,11 +1600,11 @@ function renderLoadedInstancePageContent({
   } else if (section === "activity") {
     sectionContent = (
       <InstanceActivityPage
+        activity={liveData.activity}
         connectionStatus={connectionStatus}
-        health={liveData.health}
-        partialErrors={liveData.healthPartialErrors}
-        pending={liveData.healthPending}
-        refreshing={liveData.healthRefreshing}
+        partialErrors={liveData.activityPartialErrors}
+        pending={liveData.activityPending}
+        refreshing={liveData.activityRefreshing}
       />
     );
   } else {

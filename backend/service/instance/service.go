@@ -56,6 +56,11 @@ type HealthFetcher interface {
 	CheckInstanceHealth(ctx context.Context, instance resource.InstanceName) (*engine.InstanceHealth, error)
 }
 
+// ActivityFetcher provides the narrow connection-activity polling path.
+type ActivityFetcher interface {
+	CheckInstanceActivity(ctx context.Context, instance resource.InstanceName) (*engine.InstanceHealth, error)
+}
+
 // Reader provides read-only instance views with runtime state applied.
 type Reader interface {
 	ListInstances(ctx context.Context, pageSize int32, pageToken string, filter string, orderBy string) ([]*v1alpha1.Instance, string, error)
@@ -81,6 +86,7 @@ type Service struct {
 	catalog            CatalogProvider
 	overview           OverviewFetcher
 	health             HealthFetcher
+	activity           ActivityFetcher
 	readOnly           bool
 }
 
@@ -97,6 +103,7 @@ func NewService(
 	readOnly bool,
 ) *Service {
 	health, _ := overview.(HealthFetcher)
+	activity, _ := overview.(ActivityFetcher)
 
 	return &Service{
 		instanceReader:     instanceReader,
@@ -106,6 +113,7 @@ func NewService(
 		catalog:            catalog,
 		overview:           overview,
 		health:             health,
+		activity:           activity,
 		readOnly:           readOnly,
 	}
 }
@@ -585,6 +593,43 @@ func (s *Service) CheckInstanceHealth(ctx context.Context, req *connect.Request[
 
 		resp.PartialErrors = append(resp.PartialErrors, healthPartialError(partialError.Metric, healthPartialErrorMessage(partialError.Metric), partialError.Err))
 	}
+
+	return connect.NewResponse(resp), nil
+}
+
+// CheckInstanceActivity returns only connection activity for high-frequency
+// polling without running unrelated health checks.
+func (s *Service) CheckInstanceActivity(ctx context.Context, req *connect.Request[v1alpha1.CheckInstanceActivityRequest]) (*connect.Response[v1alpha1.CheckInstanceActivityResponse], error) {
+	instanceResource, connectErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseInstanceName)
+	if connectErr != nil {
+		return nil, connectErr
+	}
+
+	if s.activity == nil {
+		return nil, connect.NewError(connect.CodeUnimplemented, errors.New("instance activity checks are not configured"))
+	}
+
+	health, err := s.activity.CheckInstanceActivity(ctx, instanceResource)
+	if err != nil {
+		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
+			Type: instanceResource.ResourceType(),
+			Name: instanceResource.String(),
+			Op:   "check_instance_activity",
+		})
+	}
+
+	resp := &v1alpha1.CheckInstanceActivityResponse{}
+	if health.ConnectionActivity != nil {
+		resp.Activity = connectionActivityHealthToProto(health.ConnectionActivity)
+		return connect.NewResponse(resp), nil
+	}
+
+	checkErrors := overviewMetricErrorsByMetric(health.PartialErrors)
+	resp.PartialErrors = append(resp.PartialErrors, healthPartialError(
+		"connection_activity",
+		healthPartialErrorMessage("connection_activity"),
+		checkErrors["connection_activity"],
+	))
 
 	return connect.NewResponse(resp), nil
 }

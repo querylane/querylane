@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   formatActivityDuration,
-  getActivityBlockingChain,
+  getActivityBlockingChains,
   presentActivityFilterOptions,
   presentActivitySessionRows,
   presentActivityStats,
@@ -29,6 +29,16 @@ describe("instance activity model", () => {
   test("formats zero and long durations without empty output", () => {
     expect(formatActivityDuration(0)).toBe("0s");
     expect(formatActivityDuration(3661)).toBe("1h 1m");
+  });
+
+  test("presents unavailable stats as placeholders", () => {
+    expect(presentActivityStats(undefined).map((stat) => stat.value)).toEqual([
+      "—",
+      "—",
+      "—",
+      "—",
+      "—",
+    ]);
   });
 
   test("presents live sessions and blocking chain from pg_stat_activity rows", () => {
@@ -59,10 +69,10 @@ describe("instance activity model", () => {
         ],
       },
       {
-        app: "All",
-        database: "All",
+        app: null,
+        database: null,
         search: "shipping",
-        state: "All",
+        state: null,
       }
     );
 
@@ -86,13 +96,111 @@ describe("instance activity model", () => {
       },
     ]);
     expect(presentActivityFilterOptions(rows, "app")).toEqual([
-      "All",
       "api-gateway",
       "worker-pool",
     ]);
-    expect(getActivityBlockingChain(rows)).toMatchObject({
-      blocked: [{ pid: 4302 }],
-      blocker: { pid: 4211 },
+    expect(getActivityBlockingChains(rows)).toMatchObject([
+      {
+        blocked: [{ pid: 4302 }],
+        blocker: { pid: 4211 },
+        blockerPid: 4211,
+      },
+    ]);
+  });
+
+  test("keeps every blocking chain and missing blocker visible", () => {
+    const rows = presentActivitySessionRows(
+      {
+        sessions: [
+          {
+            applicationName: "worker-a",
+            databaseName: "app",
+            durationSeconds: 20,
+            pid: 100,
+            query: "UPDATE one",
+            state: "active",
+            username: "app",
+          },
+          {
+            applicationName: "api",
+            blockedByPid: 100,
+            databaseName: "app",
+            durationSeconds: 10,
+            pid: 101,
+            query: "UPDATE two",
+            state: "active",
+            username: "app",
+          },
+          {
+            applicationName: "api",
+            blockedByPid: 999,
+            databaseName: "app",
+            durationSeconds: 5,
+            pid: 102,
+            query: "UPDATE three",
+            state: "active",
+            username: "app",
+          },
+        ],
+      },
+      { app: null, database: null, search: "", state: null }
+    );
+
+    expect(getActivityBlockingChains(rows)).toMatchObject([
+      {
+        blocked: [{ pid: 101 }],
+        blocker: { pid: 100 },
+        blockerPid: 100,
+      },
+      {
+        blocked: [{ pid: 102 }],
+        blocker: null,
+        blockerPid: 999,
+      },
+    ]);
+  });
+
+  test("filters a real value named All without treating it as a sentinel", () => {
+    const activity = {
+      sessions: [
+        {
+          applicationName: "All",
+          databaseName: "app",
+          durationSeconds: 1,
+          pid: 100,
+          query: "SELECT 1",
+          state: "active",
+          username: "app",
+        },
+        {
+          applicationName: "api",
+          databaseName: "app",
+          durationSeconds: 1,
+          pid: 101,
+          query: "SELECT 2",
+          state: "active",
+          username: "app",
+        },
+      ],
+    };
+
+    const allRows = presentActivitySessionRows(activity, {
+      app: null,
+      database: null,
+      search: "",
+      state: null,
     });
+    const literalAllRows = presentActivitySessionRows(activity, {
+      app: "All",
+      database: null,
+      search: "",
+      state: null,
+    });
+
+    expect(presentActivityFilterOptions(allRows, "app")).toEqual([
+      "All",
+      "api",
+    ]);
+    expect(literalAllRows.map((row) => row.pid)).toEqual([100]);
   });
 });

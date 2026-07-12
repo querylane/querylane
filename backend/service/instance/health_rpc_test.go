@@ -25,6 +25,49 @@ func (f healthFetcherFunc) CheckInstanceHealth(ctx context.Context, instance res
 	return f(ctx, instance)
 }
 
+type activityFetcherStub struct {
+	activity *engine.ConnectionActivityHealth
+}
+
+func (f *activityFetcherStub) GetInstanceOverview(context.Context, resource.InstanceName) (*engine.InstanceOverview, error) {
+	return &engine.InstanceOverview{}, nil
+}
+
+func (f *activityFetcherStub) CheckInstanceActivity(context.Context, resource.InstanceName) (*engine.InstanceHealth, error) {
+	return &engine.InstanceHealth{ConnectionActivity: f.activity}, nil
+}
+
+func TestCheckInstanceActivityReturnsOnlyConnectionActivity(t *testing.T) {
+	t.Parallel()
+
+	if !testing.Short() {
+		t.Skip("unit test: run with -short")
+	}
+
+	service := NewService(nil, nil, nil, nil, nil, &activityFetcherStub{
+		activity: &engine.ConnectionActivityHealth{
+			Active:           2,
+			Idle:             3,
+			Total:            5,
+			WaitingForLocks:  1,
+			LongestTxSeconds: 90,
+			Sessions: []engine.ConnectionActivitySession{
+				{PID: 4211, ApplicationName: "worker-pool", State: "active"},
+			},
+		},
+	}, false)
+
+	resp, err := service.CheckInstanceActivity(context.Background(), connect.NewRequest(&v1alpha1.CheckInstanceActivityRequest{
+		Name: "instances/prod",
+	}))
+
+	require.NoError(t, err)
+	require.NotNil(t, resp.Msg.GetActivity())
+	assert.Equal(t, int32(2), resp.Msg.GetActivity().GetActiveConnections())
+	require.Len(t, resp.Msg.GetActivity().GetSessions(), 1)
+	assert.Equal(t, int32(4211), resp.Msg.GetActivity().GetSessions()[0].GetPid())
+}
+
 func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) {
 	t.Parallel()
 

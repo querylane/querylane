@@ -42,6 +42,9 @@ service InstanceService {
   // Checks live PostgreSQL health signals that are inexpensive and directly
   // observable from ordinary database views/settings.
   rpc CheckInstanceHealth(CheckInstanceHealthRequest) returns (CheckInstanceHealthResponse) {}
+
+  // Checks only live connection activity for high-frequency session polling.
+  rpc CheckInstanceActivity(CheckInstanceActivityRequest) returns (CheckInstanceActivityResponse) {}
 }
 
 // --------------------------------------------------------------------------
@@ -502,6 +505,27 @@ message CheckInstanceHealthResponse {
   // in its details, with metadata key "check" set to the category name
   // (one of: "connection_activity", "replication", "stats_access",
   // "pg_stat_statements", "autovacuum").
+  repeated google.rpc.Status partial_errors = 2;
+}
+
+// --- CheckInstanceActivity RPC ---
+message CheckInstanceActivityRequest {
+  // Required. Resource name of the instance.
+  // Format: instances/{instance_id}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Instance"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$"
+  ];
+}
+
+message CheckInstanceActivityResponse {
+  ConnectionActivityHealth activity = 1;
+
+  // Errors encountered fetching connection activity. The RPC succeeds (OK)
+  // when activity is unavailable so the page can show the category reason.
+  // ErrorInfo metadata key "check" is "connection_activity".
   repeated google.rpc.Status partial_errors = 2;
 }
 

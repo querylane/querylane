@@ -35,6 +35,10 @@ func (d *testHealthDriver) CheckInstanceHealth(_ context.Context, _ *sql.DB) (*I
 	return &InstanceHealth{}, nil
 }
 
+func (d *testHealthDriver) CheckInstanceActivity(_ context.Context, _ *sql.DB) (*InstanceHealth, error) {
+	return &InstanceHealth{}, nil
+}
+
 func (d *testHealthDriver) TestConnection(ctx context.Context, db *sql.DB) error {
 	var result int
 	return db.QueryRowContext(ctx, "SELECT 1").Scan(&result)

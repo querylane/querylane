@@ -79,10 +79,13 @@ const UPTIME_FACT_PATTERN = /^up /;
 const AUTOVACUUM_ROW_NAME = /Autovacuum/;
 const CHARSET_COLUMN_NAME = /^charset/i;
 const COLLATION_COLUMN_NAME = /^collation/i;
+const BLOCKED_ACTIVITY_TABLE_ROW_NAME = /4302/;
+const BLOCKER_ACTIVITY_TABLE_ROW_NAME = /4211/;
 const MISSING_INSTANCE_SECRET_KEY_MESSAGE =
   /QUERYLANE_INSTANCE_SECRET_KEY is not configured/;
 
 const state = vi.hoisted(() => ({
+  activityQueryOptions: undefined as Record<string, unknown> | undefined,
   databases: [] as PostgresDatabase[],
   deleteInstance: vi.fn(async () => undefined),
   extensionData: undefined as ListExtensionsResponse | undefined,
@@ -90,6 +93,7 @@ const state = vi.hoisted(() => ({
     | { filter?: string; orderBy?: string; pageSize?: number; parent: string }
     | undefined,
   healthData: undefined as CheckInstanceHealthResponse | undefined,
+  healthQueryOptions: undefined as Record<string, unknown> | undefined,
   instanceCatalogError: null as unknown,
   instanceCatalogHasData: true,
   instanceCatalogHasResolved: true,
@@ -212,13 +216,37 @@ vi.mock("@/hooks/api/metrics", () => ({
 vi.mock("@/hooks/api/instance", () => ({
   refreshAllInstancesCache: (input: RefreshAllInstancesCacheInput) =>
     state.refreshAllInstancesCache(input),
-  useCheckInstanceHealthQuery: () => ({
-    data: state.healthData,
-    error: null,
-    isFetching: false,
-    isPending: state.healthData === undefined,
-    refetch: vi.fn(async () => ({})),
-  }),
+  useCheckInstanceActivityQuery: (
+    _input: unknown,
+    options: Record<string, unknown>
+  ) => {
+    state.activityQueryOptions = options;
+    return {
+      data: state.healthData
+        ? {
+            activity: state.healthData.health?.connectionActivity,
+            partialErrors: state.healthData.partialErrors,
+          }
+        : undefined,
+      error: null,
+      isFetching: false,
+      isPending: state.healthData === undefined,
+      refetch: vi.fn(async () => ({})),
+    };
+  },
+  useCheckInstanceHealthQuery: (
+    _input: unknown,
+    options: Record<string, unknown>
+  ) => {
+    state.healthQueryOptions = options;
+    return {
+      data: state.healthData,
+      error: null,
+      isFetching: false,
+      isPending: state.healthData === undefined,
+      refetch: vi.fn(async () => ({})),
+    };
+  },
   useDeleteInstanceMutation: () => ({
     isPending: false,
     mutateAsync: state.deleteInstance,
@@ -480,12 +508,14 @@ function activityHealthResponse() {
 }
 
 beforeEach(() => {
+  state.activityQueryOptions = undefined;
   state.databases = [];
   state.deleteInstance.mockReset();
   state.deleteInstance.mockResolvedValue(undefined);
   state.extensionData = undefined;
   state.extensionInput = undefined;
   state.healthData = undefined;
+  state.healthQueryOptions = undefined;
   state.instanceCatalogError = null;
   state.instanceCatalogHasData = true;
   state.instanceCatalogHasResolved = true;
@@ -885,6 +915,103 @@ describe("backend instance activity", () => {
         "UPDATE shipping.shipments SET eta = $1 WHERE id = $2"
       ).length
     ).toBeGreaterThan(0);
+    expect(state.activityQueryOptions).toMatchObject({
+      enabled: true,
+      refetchInterval: 5000,
+    });
+    expect(state.healthQueryOptions).toMatchObject({ enabled: false });
+  });
+
+  test("filters session rows by URL-backed search and state", async () => {
+    const user = userEvent.setup();
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = activityHealthResponse();
+
+    renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    const table = within(activity).getByRole("table");
+    const search = within(activity).getByRole("textbox", {
+      name: "Search query, user, app…",
+    });
+
+    await user.type(search, "4302");
+
+    expect(
+      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
+    expect(
+      within(table).queryByRole("row", {
+        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
+      })
+    ).toBeNull();
+    expect(state.navigate).toHaveBeenLastCalledWith({
+      href: "/?q=4302",
+      replace: true,
+      resetScroll: false,
+    });
+
+    await user.clear(search);
+    await user.click(within(activity).getByRole("combobox", { name: "State" }));
+    await user.click(screen.getByRole("option", { name: "active" }));
+
+    expect(
+      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
+    expect(
+      within(table).queryByRole("row", {
+        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
+      })
+    ).toBeNull();
+  });
+
+  test("shows the empty sessions state", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = createProto(CheckInstanceHealthResponseSchema, {
+      health: createProto(InstanceHealthSchema, {
+        connectionActivity: createProto(ConnectionActivityHealthSchema, {
+          totalConnections: 2,
+        }),
+      }),
+    });
+
+    renderInstanceActivity();
+
+    expect(screen.getByText("No activity sessions")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "No live client sessions are visible from pg_stat_activity yet."
+      )
+    ).toBeTruthy();
+  });
+
+  test("shows unavailable placeholders and the activity partial error", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = createProto(CheckInstanceHealthResponseSchema, {
+      health: createProto(InstanceHealthSchema),
+      partialErrors: [
+        createProto(StatusSchema, {
+          message: "permission denied for pg_stat_activity",
+        }),
+      ],
+    });
+
+    renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    expect(within(activity).getAllByText("—")).toHaveLength(5);
+    expect(
+      within(activity).getByText("Activity data unavailable")
+    ).toBeTruthy();
+    expect(
+      within(activity).getByText("permission denied for pg_stat_activity")
+    ).toBeTruthy();
   });
 });
 

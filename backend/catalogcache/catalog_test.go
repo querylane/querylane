@@ -71,6 +71,10 @@ func (m *mockInstanceSession) CheckInstanceHealth(_ context.Context) (*engine.In
 	return &engine.InstanceHealth{}, nil
 }
 
+func (m *mockInstanceSession) CheckInstanceActivity(_ context.Context) (*engine.InstanceHealth, error) {
+	return &engine.InstanceHealth{}, nil
+}
+
 // Prober is never exercised by catalog tests; the probe surface lives on a
 // separate interface precisely so this fake ignores it.
 func (m *mockInstanceSession) Prober() engine.InstanceProber { return nil }

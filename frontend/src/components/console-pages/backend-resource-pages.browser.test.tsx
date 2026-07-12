@@ -158,6 +158,14 @@ function defaultHealthResponse() {
 }
 
 beforeEach(() => {
+  window.localStorage.removeItem("querylane-browser-test-theme");
+  const visualTheme =
+    document.documentElement.dataset["visualTheme"] === "dark"
+      ? "dark"
+      : "light";
+  document.documentElement.classList.remove("light", "dark");
+  document.documentElement.classList.add(visualTheme);
+  document.documentElement.style.colorScheme = visualTheme;
   state.catalogQuery = {};
   state.databaseQuery = {};
   state.extensionQuery = {};
@@ -244,6 +252,18 @@ vi.mock("@/hooks/api/extension", () => ({
 
 vi.mock("@/hooks/api/instance", () => ({
   refreshAllInstancesCache: vi.fn(async () => ({ instances: [] })),
+  useCheckInstanceActivityQuery: () => ({
+    data: state.healthQuery.data
+      ? {
+          activity: state.healthQuery.data.health?.connectionActivity,
+          partialErrors: state.healthQuery.data.partialErrors,
+        }
+      : undefined,
+    error: state.healthQuery.error ?? null,
+    isFetching: state.healthQuery.isFetching ?? false,
+    isPending: state.healthQuery.isPending ?? false,
+    refetch: state.healthQuery.refetch ?? vi.fn(async () => ({})),
+  }),
   useCheckInstanceHealthQuery: () => ({
     data: state.healthQuery.data,
     error: state.healthQuery.error ?? null,
@@ -793,8 +813,62 @@ test("backend instance activity matches the live sessions redesign", async () =>
       })
     )
     .toBeVisible();
+  await document.fonts.ready;
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-instance-activity"
+  );
+});
+
+test("backend instance activity empty state matches", async () => {
+  state.instanceQuery = {
+    data: instanceResponse(),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
+  };
+  state.healthQuery = { data: defaultHealthResponse() };
+  state.overviewQuery = { data: overviewResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendInstancePage instanceId="prod" section="activity" />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await expect.element(page.getByText("No activity sessions")).toBeVisible();
+  await document.fonts.ready;
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "backend-instance-activity-empty"
+  );
+});
+
+test("backend instance activity unavailable state matches", async () => {
+  state.instanceQuery = {
+    data: instanceResponse(),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
+  };
+  state.healthQuery = {
+    data: {
+      health: {},
+      partialErrors: [{ message: "permission denied for pg_stat_activity" }],
+    },
+  };
+  state.overviewQuery = { data: overviewResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendInstancePage instanceId="prod" section="activity" />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await expect
+    .element(page.getByText("Activity data unavailable"))
+    .toBeVisible();
+  await document.fonts.ready;
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "backend-instance-activity-unavailable"
   );
 });
 

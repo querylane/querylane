@@ -63,3 +63,10 @@ export const getInstanceOverview = InstanceService.method.getInstanceOverview;
  * @generated from rpc querylane.console.v1alpha1.InstanceService.CheckInstanceHealth
  */
 export const checkInstanceHealth = InstanceService.method.checkInstanceHealth;
+
+/**
+ * Checks only live connection activity for high-frequency session polling.
+ *
+ * @generated from rpc querylane.console.v1alpha1.InstanceService.CheckInstanceActivity
+ */
+export const checkInstanceActivity = InstanceService.method.checkInstanceActivity;

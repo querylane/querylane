@@ -212,6 +212,28 @@ func (d *Postgres) CheckInstanceHealth(ctx context.Context, db *sql.DB) (*engine
 	return health, nil
 }
 
+// CheckInstanceActivity retrieves only pg_stat_activity-backed signals for
+// high-frequency polling on the Activity page.
+func (d *Postgres) CheckInstanceActivity(ctx context.Context, db *sql.DB) (*engine.InstanceHealth, error) {
+	health := &engine.InstanceHealth{}
+
+	activity, err := queryConnectionActivityHealth(ctx, db)
+	if err != nil {
+		classified := classifyQueryError("query connection activity health", err)
+		slog.WarnContext(ctx, "failed to query connection activity health", slog.String("error", classified.Error()))
+		health.PartialErrors = append(health.PartialErrors, engine.OverviewMetricError{
+			Metric: "connection_activity",
+			Err:    classified,
+		})
+
+		return health, nil
+	}
+
+	health.ConnectionActivity = activity
+
+	return health, nil
+}
+
 func queryConnectionActivityHealth(ctx context.Context, db *sql.DB) (*engine.ConnectionActivityHealth, error) {
 	var activity engine.ConnectionActivityHealth
 	if err := db.QueryRowContext(ctx, getConnectionActivityHealthQuery).Scan(

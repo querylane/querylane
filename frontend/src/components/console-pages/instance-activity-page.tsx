@@ -11,7 +11,7 @@ import { useState } from "react";
 import { AsyncSectionState } from "@/components/async-section-state";
 import {
   EMPTY_FILTER_VALUE,
-  getActivityBlockingChain,
+  getActivityBlockingChains,
   presentActivityFilterOptions,
   presentActivitySessionRows,
   presentActivityStats,
@@ -39,11 +39,11 @@ import type { DbConnectionStatus } from "@/lib/console-resources";
 import { useUrlTableSearch } from "@/lib/url-search-state";
 import { cn } from "@/lib/utils";
 import type { Status } from "@/protogen/google/rpc/status_pb";
-import type { InstanceHealth } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import type { ConnectionActivityHealth } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
 type ActivityStat = ReturnType<typeof presentActivityStats>[number];
 type ActivitySessionRow = ReturnType<typeof presentActivitySessionRows>[number];
-type BlockingChain = NonNullable<ReturnType<typeof getActivityBlockingChain>>;
+type BlockingChain = ReturnType<typeof getActivityBlockingChains>[number];
 
 type FilterKey = "app" | "database" | "state";
 
@@ -91,25 +91,50 @@ function ActivityFilterSelect({
   value,
 }: {
   label: string;
-  onChange: (value: string) => void;
+  onChange: (value: string | null) => void;
   options: string[];
-  value: string;
+  value: string | null;
 }) {
+  const selectOptions = [
+    { label: "any", selectValue: "all", value: EMPTY_FILTER_VALUE },
+    ...options.map((option, index) => ({
+      label: option,
+      selectValue: `value-${index}`,
+      value: option,
+    })),
+  ];
+  const selectedOption =
+    selectOptions.find((option) => option.value === value) ?? selectOptions[0];
+
   return (
-    <Select onValueChange={(next) => next && onChange(next)} value={value}>
+    <Select
+      onValueChange={(next) => {
+        const option = selectOptions.find(
+          (candidate) => candidate.selectValue === next
+        );
+        if (option) {
+          onChange(option.value);
+        }
+      }}
+      value={selectedOption?.selectValue}
+    >
       <SelectTrigger
         aria-label={label}
         className="h-7 min-w-28 text-xs"
         size="sm"
       >
         <SelectValue>
-          {label}: {value === EMPTY_FILTER_VALUE ? "any" : value}
+          {label}: {selectedOption?.label ?? "any"}
         </SelectValue>
       </SelectTrigger>
       <SelectContent alignItemWithTrigger={false}>
-        {options.map((option) => (
-          <SelectItem key={option} label={option} value={option}>
-            {option === EMPTY_FILTER_VALUE ? "any" : option}
+        {selectOptions.map((option) => (
+          <SelectItem
+            key={option.selectValue}
+            label={option.label}
+            value={option.selectValue}
+          >
+            {option.label}
           </SelectItem>
         ))}
       </SelectContent>
@@ -117,56 +142,92 @@ function ActivityFilterSelect({
   );
 }
 
-function BlockingChainCard({ chain }: { chain: BlockingChain }) {
+function BlockedSessionRow({ row }: { row: ActivitySessionRow }) {
+  return (
+    <div className="mt-2 ml-6 flex items-center gap-2 rounded-[9px] border border-border bg-background px-3 py-2">
+      <Badge className="h-[17px] text-[9.5px]" variant="outline">
+        waiting · pid {row.pid}
+      </Badge>
+      <span className="min-w-0 flex-1 truncate font-mono text-[10.5px] text-muted-foreground">
+        {row.query}
+      </span>
+      <span className="shrink-0 font-mono text-[10.5px] text-amber-700 dark:text-amber-300">
+        waiting {row.duration}
+      </span>
+    </div>
+  );
+}
+
+function BlockingChainGroup({ chain }: { chain: BlockingChain }) {
+  if (!chain.blocker) {
+    return (
+      <div className="rounded-[10px] border border-amber-500/50 border-dashed bg-background px-[13px] py-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge className="h-[18px] text-[10px]" variant="secondary">
+            blocker unavailable · pid {chain.blockerPid}
+          </Badge>
+          <span className="text-muted-foreground text-xs">
+            Blocking session is outside the sampled client sessions.
+          </span>
+        </div>
+        {chain.blocked.map((row) => (
+          <BlockedSessionRow key={row.pid} row={row} />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-[10px] border border-border bg-background px-[13px] py-2.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge className="h-[18px] text-[10px]" variant="secondary">
+          blocker · pid {chain.blocker.pid}
+        </Badge>
+        <span className="font-mono text-muted-foreground text-xs">
+          {chain.blocker.user} · {chain.blocker.app} · {chain.blocker.state}{" "}
+          {chain.blocker.duration}
+        </span>
+        <Button
+          className="ml-auto"
+          disabled={true}
+          size="xs"
+          title="Requires a backend action API"
+          variant="destructive"
+        >
+          Terminate…
+        </Button>
+      </div>
+      <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-[11px] leading-6">
+        {chain.blocker.query}
+      </pre>
+      {chain.blocked.map((row) => (
+        <BlockedSessionRow key={row.pid} row={row} />
+      ))}
+    </div>
+  );
+}
+
+function BlockingChainCard({ chains }: { chains: BlockingChain[] }) {
+  const waitingCount = chains.reduce(
+    (total, chain) => total + chain.blocked.length,
+    0
+  );
+
   return (
     <div className="overflow-hidden rounded-[14px] border border-amber-500/40 bg-amber-500/5">
       <div className="flex flex-wrap items-center gap-2 px-[18px] py-3">
         <LockKeyhole className="size-3.5 text-amber-600 dark:text-amber-400" />
         <span className="font-semibold text-sm">Blocking chain</span>
         <span className="text-muted-foreground text-xs">
-          1 session holds locks that {chain.blocked.length} others are waiting
-          on
+          {chains.length.toLocaleString()}{" "}
+          {chains.length === 1 ? "chain" : "chains"} ·{" "}
+          {waitingCount.toLocaleString()} waiting{" "}
+          {waitingCount === 1 ? "session" : "sessions"}
         </span>
       </div>
-      <div className="px-[18px] pb-3.5">
-        <div className="rounded-[10px] border border-border bg-background px-[13px] py-2.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge className="h-[18px] text-[10px]" variant="secondary">
-              blocker · pid {chain.blocker.pid}
-            </Badge>
-            <span className="font-mono text-muted-foreground text-xs">
-              {chain.blocker.user} · {chain.blocker.app} · {chain.blocker.state}{" "}
-              {chain.blocker.duration}
-            </span>
-            <Button
-              className="ml-auto"
-              disabled={true}
-              size="xs"
-              title="Requires a backend action API"
-              variant="destructive"
-            >
-              Terminate…
-            </Button>
-          </div>
-          <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-[11px] leading-6">
-            {chain.blocker.query}
-          </pre>
-        </div>
-        {chain.blocked.map((row) => (
-          <div
-            className="mt-2 ml-6 flex items-center gap-2 rounded-[9px] border border-border bg-background px-3 py-2"
-            key={row.pid}
-          >
-            <Badge className="h-[17px] text-[9.5px]" variant="outline">
-              waiting · pid {row.pid}
-            </Badge>
-            <span className="min-w-0 flex-1 truncate font-mono text-[10.5px] text-muted-foreground">
-              {row.query}
-            </span>
-            <span className="shrink-0 font-mono text-[10.5px] text-amber-700 dark:text-amber-300">
-              waiting {row.duration}
-            </span>
-          </div>
+      <div className="grid gap-2 px-[18px] pb-3.5">
+        {chains.map((chain) => (
+          <BlockingChainGroup chain={chain} key={chain.blockerPid} />
         ))}
       </div>
     </div>
@@ -210,8 +271,11 @@ function ActivitySessionsTable({
     );
   }
 
-  const blockerPid =
-    rows.find((candidate) => candidate.blockedByPid > 0)?.blockedByPid ?? 0;
+  const blockerPids = new Set(
+    rows
+      .filter((candidate) => candidate.blockedByPid > 0)
+      .map((candidate) => candidate.blockedByPid)
+  );
 
   return (
     <div className="overflow-x-auto">
@@ -222,7 +286,9 @@ function ActivitySessionsTable({
             <TableHead>User · app</TableHead>
             <TableHead>DB</TableHead>
             <TableHead>State</TableHead>
-            <TableHead>Duration</TableHead>
+            <TableHead title="Idle in transaction uses transaction age; other rows use current query duration.">
+              Duration
+            </TableHead>
             <TableHead>Query</TableHead>
             <TableHead className="w-11 pr-3" />
           </TableRow>
@@ -232,7 +298,7 @@ function ActivitySessionsTable({
             <TableRow
               className={cn(
                 row.blockedByPid > 0 && "bg-muted/40",
-                row.pid === blockerPid && "bg-amber-500/5"
+                blockerPids.has(row.pid) && "bg-amber-500/5"
               )}
               key={row.pid}
             >
@@ -309,23 +375,26 @@ function ActivityUnavailable({
 }
 
 function InstanceActivityPage({
+  activity,
   connectionStatus,
-  health,
   partialErrors,
   pending,
   refreshing,
 }: {
+  activity: ConnectionActivityHealth | undefined;
   connectionStatus: DbConnectionStatus;
-  health: InstanceHealth | undefined;
   partialErrors: Status[] | undefined;
   pending: boolean;
   refreshing: boolean;
 }) {
   const [search, setSearch] = useUrlTableSearch();
-  const [stateFilter, setStateFilter] = useState(EMPTY_FILTER_VALUE);
-  const [appFilter, setAppFilter] = useState(EMPTY_FILTER_VALUE);
-  const [databaseFilter, setDatabaseFilter] = useState(EMPTY_FILTER_VALUE);
-  const activity = health?.connectionActivity;
+  const [stateFilter, setStateFilter] = useState<string | null>(
+    EMPTY_FILTER_VALUE
+  );
+  const [appFilter, setAppFilter] = useState<string | null>(EMPTY_FILTER_VALUE);
+  const [databaseFilter, setDatabaseFilter] = useState<string | null>(
+    EMPTY_FILTER_VALUE
+  );
   const stats = presentActivityStats(activity);
   const allRows = presentActivitySessionRows(activity, {
     app: EMPTY_FILTER_VALUE,
@@ -339,7 +408,7 @@ function InstanceActivityPage({
     search,
     state: stateFilter,
   });
-  const blockingChain = getActivityBlockingChain(allRows);
+  const blockingChains = getActivityBlockingChains(allRows);
   const hasActivity = connectionStatus === "connected" && Boolean(activity);
   const filterOptions: Record<FilterKey, string[]> = {
     app: presentActivityFilterOptions(allRows, "app"),
@@ -377,7 +446,9 @@ function InstanceActivityPage({
         loadingMessage="Loading activity..."
         refreshingMessage="Refreshing activity..."
       >
-        {blockingChain ? <BlockingChainCard chain={blockingChain} /> : null}
+        {blockingChains.length > 0 ? (
+          <BlockingChainCard chains={blockingChains} />
+        ) : null}
 
         <div className="overflow-hidden rounded-[14px] bg-card shadow-xs ring-1 ring-border">
           <div className="flex flex-wrap items-center gap-2 px-[18px] py-3">
