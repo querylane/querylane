@@ -18,7 +18,10 @@ const (
 	encryptedSecretPrefix = "qlenc:v1:" //nolint:gosec // Marker prefix for ciphertext, not a credential.
 )
 
-var ErrMissingInstanceSecretKey = errors.New("instance secret encryption key is required")
+var (
+	ErrMissingInstanceSecretKey      = errors.New("instance secret encryption key is required")
+	ErrUnreadableInstanceCredentials = errors.New("instance credentials are unreadable")
+)
 
 type secretCipher struct{ aead cipher.AEAD }
 

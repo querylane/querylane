@@ -11,6 +11,7 @@ import {
   validateInstanceForm,
 } from "@/components/console-pages/instance-config-model";
 import {
+  Instance_CredentialState,
   InstanceSchema,
   PostgresConfigSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
@@ -283,5 +284,33 @@ describe("instance config update paths", () => {
         nextPort: 5432,
       })
     ).toContain("config.password");
+  });
+
+  it("replaces the full config when repairing unreadable credentials", () => {
+    const unreadableInstance = createProto(InstanceSchema, {
+      config: createProto(PostgresConfigSchema, {
+        database: "querylane",
+        host: "db.internal",
+        port: 5432,
+        sslMode: 3,
+        sslNegotiation: 1,
+        username: "querylane",
+      }),
+      credentialState: Instance_CredentialState.UNREADABLE,
+      displayName: "Production",
+      labels: { env: "prod" },
+    });
+
+    expect(
+      buildInstanceUpdatePaths({
+        formState: {
+          ...persistedForm,
+          dirtyFields: { password: true },
+          password: "replacement-secret",
+        },
+        instance: unreadableInstance,
+        nextPort: 5432,
+      })
+    ).toEqual(["config"]);
   });
 });

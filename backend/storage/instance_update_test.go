@@ -221,3 +221,18 @@ func TestFilterUpdateMaskRejectsLabelSubpaths(t *testing.T) {
 	require.ErrorIs(t, err, ErrInvalidInput)
 	require.ErrorContains(t, err, `field path "labels.env" is not supported for updates`)
 }
+
+func TestFilterUpdateMaskIgnoresCredentialOutputFields(t *testing.T) {
+	t.Parallel()
+
+	repo := &PGInstanceRepository{}
+
+	paths, err := repo.filterUpdateMask(&fieldmaskpb.FieldMask{Paths: []string{
+		"credential_state",
+		"credential_error",
+		"display_name",
+	}})
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"display_name"}, paths)
+}

@@ -14,6 +14,7 @@ import type {
 function buildInstance(id: string): PostgresInstance {
   return {
     connectionError: "",
+    credentialsUnreadable: false,
     host: "localhost",
     id,
     name: id,

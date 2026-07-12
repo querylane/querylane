@@ -71,6 +71,17 @@ message Instance {
     CONNECTION_STATE_ERROR = 3;
   }
 
+  // Whether Querylane can read the stored credentials for this instance.
+  // This does not describe whether PostgreSQL accepts those credentials.
+  enum CredentialState {
+    // No credential storage problem is known.
+    CREDENTIAL_STATE_UNSPECIFIED = 0;
+    // Stored inline credentials cannot be decrypted with the configured key.
+    CREDENTIAL_STATE_UNREADABLE = 1;
+    // Stored inline credentials cannot be read because no encryption key is configured.
+    CREDENTIAL_STATE_KEY_MISSING = 2;
+  }
+
   // Output-only identifier. The unique resource name of the instance record.
   // Format: instances/{instance_id}
   string name = 1 [
@@ -128,6 +139,12 @@ message Instance {
   // Output-only. The time of the most recent live connection probe for this
   // instance, regardless of whether it succeeded or failed.
   google.protobuf.Timestamp last_connection_check_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether stored inline credentials can be read by Querylane.
+  CredentialState credential_state = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Actionable recovery guidance when credential_state is UNREADABLE.
+  string credential_error = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Live server metadata queried from the PostgreSQL instance.

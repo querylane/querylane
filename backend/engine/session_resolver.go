@@ -35,6 +35,10 @@ func (r *SessionResolver) OpenInstance(ctx context.Context, instanceName resourc
 		return nil, fmt.Errorf("get instance: %w", err)
 	}
 
+	if instance.GetCredentialState() != api.Instance_CREDENTIAL_STATE_UNSPECIFIED {
+		return nil, fmt.Errorf("%w: %s", storage.ErrUnreadableInstanceCredentials, instanceName)
+	}
+
 	return r.manager.OpenInstance(ctx, instanceName, instance)
 }
 

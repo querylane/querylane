@@ -6,11 +6,13 @@ import {
 } from "@/lib/console-resources";
 import type { Database } from "@/protogen/querylane/console/v1alpha1/database_pb";
 import type { Instance } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import { Instance_CredentialState } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
 const DEFAULT_POSTGRES_PORT = 5432;
 
 interface PostgresInstance {
   connectionError: string;
+  credentialsUnreadable: boolean;
   host: string;
   id: string;
   name: string;
@@ -44,14 +46,20 @@ interface ResourceCollectionQueryState {
 }
 
 function mapInstance(instance: Instance): PostgresInstance {
+  const credentialsUnreadable =
+    instance.credentialState !== Instance_CredentialState.UNSPECIFIED;
+
   return {
     connectionError: instance.connectionError,
+    credentialsUnreadable,
     host: instance.config?.host ?? "",
     id: parseResourceLeafId(instance.name),
     name: instance.displayName || parseResourceLeafId(instance.name),
     port: instance.config?.port ?? DEFAULT_POSTGRES_PORT,
     resourceName: instance.name,
-    status: toConnectionStatus(instance.connectionState),
+    status: credentialsUnreadable
+      ? "error"
+      : toConnectionStatus(instance.connectionState),
   };
 }
 

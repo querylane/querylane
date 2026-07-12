@@ -66,6 +66,179 @@ func TestIntegrationInstanceRepository_CreateInstanceEncryptsPasswordAtRest(t *t
 	}
 }
 
+func TestIntegrationInstanceRepository_ListInstancesKeepsRowsWithUnreadableCredentials(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		config *api.PostgresConfig
+	}{
+		{
+			name: "legacy password",
+			config: &api.PostgresConfig{
+				Host:     "broken.internal",
+				Port:     5432,
+				Database: "postgres",
+				Username: "querylane",
+				Password: "old-secret",
+			},
+		},
+		{
+			name: "inline password source",
+			config: &api.PostgresConfig{
+				Host:     "broken.internal",
+				Port:     5432,
+				Database: "postgres",
+				Username: "querylane",
+				PasswordSource: &api.SecretSource{
+					Source: &api.SecretSource_Inline{Inline: "old-secret"},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			withInstanceSecretKey(t, "0123456789abcdef0123456789abcdef", func() {
+				testDB := NewTestDB(t)
+				originalRepo, err := NewInstanceRepository(testDB.DB())
+				require.NoError(t, err)
+
+				_, err = originalRepo.CreateInstance(t.Context(), &api.Instance{
+					DisplayName: "Healthy",
+					Config: &api.PostgresConfig{
+						Host:     "healthy.internal",
+						Port:     5432,
+						Database: "postgres",
+						Username: "querylane",
+						PasswordSource: &api.SecretSource{
+							Source: &api.SecretSource_Env{Env: "HEALTHY_PASSWORD"},
+						},
+					},
+				}, "healthy")
+				require.NoError(t, err)
+
+				_, err = originalRepo.CreateInstance(t.Context(), &api.Instance{
+					DisplayName: "Broken",
+					Config:      tc.config,
+				}, "broken")
+				require.NoError(t, err)
+
+				otherCipher, err := newSecretCipher("abcdef0123456789abcdef0123456789")
+				require.NoError(t, err)
+
+				otherRepo := &PGInstanceRepository{
+					db:     testDB.DB(),
+					exec:   testDB.DB(),
+					mapper: instanceMapper{secrets: otherCipher},
+				}
+
+				instances, nextPageToken, err := otherRepo.ListInstances(t.Context(), 10, "", "", "")
+				require.NoError(t, err)
+				assert.Empty(t, nextPageToken)
+				require.Len(t, instances, 2)
+				assert.Equal(t, []string{"instances/broken", "instances/healthy"}, []string{
+					instances[0].GetName(),
+					instances[1].GetName(),
+				})
+
+				broken := instances[0]
+				assert.Equal(t, api.Instance_CREDENTIAL_STATE_UNREADABLE, broken.GetCredentialState())
+				assert.Equal(t, "Stored credentials cannot be read. Re-enter the password to restore access.", broken.GetCredentialError())
+				assert.Empty(t, broken.GetConfig().GetPassword())
+				assert.Nil(t, broken.GetConfig().GetPasswordSource())
+
+				healthy := instances[1]
+				assert.Equal(t, api.Instance_CREDENTIAL_STATE_UNSPECIFIED, healthy.GetCredentialState())
+				assert.Equal(t, "HEALTHY_PASSWORD", healthy.GetConfig().GetPasswordSource().GetEnv())
+
+				loaded, err := otherRepo.GetInstance(t.Context(), "instances/broken")
+				require.NoError(t, err)
+				assert.Equal(t, api.Instance_CREDENTIAL_STATE_UNREADABLE, loaded.GetCredentialState())
+				assert.Equal(t, "broken.internal", loaded.GetConfig().GetHost())
+
+				_, err = otherRepo.UpdateInstance(t.Context(), &api.Instance{
+					Name: "instances/broken",
+					Config: &api.PostgresConfig{
+						Host:     "broken.internal",
+						Port:     5432,
+						Database: "postgres",
+						Username: "querylane",
+					},
+				}, &fieldmaskpb.FieldMask{Paths: []string{"config"}})
+				require.Error(t, err)
+				stillUnreadable, getErr := otherRepo.GetInstance(t.Context(), "instances/broken")
+				require.NoError(t, getErr)
+				assert.Equal(t, api.Instance_CREDENTIAL_STATE_UNREADABLE, stillUnreadable.GetCredentialState())
+
+				updated, err := otherRepo.UpdateInstance(t.Context(), &api.Instance{
+					Name: "instances/broken",
+					Config: &api.PostgresConfig{
+						Host:     "broken.internal",
+						Port:     5432,
+						Database: "postgres",
+						Username: "querylane",
+						Password: "replacement-secret",
+					},
+				}, &fieldmaskpb.FieldMask{Paths: []string{"config.password"}})
+				require.NoError(t, err)
+				assert.Equal(t, "replacement-secret", updated.GetConfig().GetPassword())
+				assert.Nil(t, updated.GetConfig().GetPasswordSource())
+
+				recovered, err := otherRepo.GetInstance(t.Context(), "instances/broken")
+				require.NoError(t, err)
+				assert.Equal(t, api.Instance_CREDENTIAL_STATE_UNSPECIFIED, recovered.GetCredentialState())
+			})
+		})
+	}
+}
+
+func TestIntegrationInstanceRepository_MissingKeyRequiresOperatorRecovery(t *testing.T) {
+	t.Parallel()
+
+	withInstanceSecretKey(t, "0123456789abcdef0123456789abcdef", func() {
+		testDB := NewTestDB(t)
+		originalRepo, err := NewInstanceRepository(testDB.DB())
+		require.NoError(t, err)
+
+		_, err = originalRepo.CreateInstance(t.Context(), &api.Instance{
+			DisplayName: "Production",
+			Config: &api.PostgresConfig{
+				Host:     "db.internal",
+				Port:     5432,
+				Database: "postgres",
+				Username: "querylane",
+				Password: "old-secret",
+			},
+		}, "prod")
+		require.NoError(t, err)
+		require.NoError(t, os.Unsetenv(instanceSecretKeyEnv))
+
+		missingKeyRepo, err := NewInstanceRepository(testDB.DB())
+		require.NoError(t, err)
+
+		loaded, err := missingKeyRepo.GetInstance(t.Context(), "instances/prod")
+		require.NoError(t, err)
+		assert.Equal(t, api.Instance_CREDENTIAL_STATE_KEY_MISSING, loaded.GetCredentialState())
+		assert.Contains(t, loaded.GetCredentialError(), instanceSecretKeyEnv)
+		assert.Empty(t, loaded.GetConfig().GetPassword())
+
+		_, err = missingKeyRepo.UpdateInstance(t.Context(), &api.Instance{
+			Name: "instances/prod",
+			Config: &api.PostgresConfig{
+				Host:     "db.internal",
+				Port:     5432,
+				Database: "postgres",
+				Username: "querylane",
+				Password: "replacement-secret",
+			},
+		}, &fieldmaskpb.FieldMask{Paths: []string{"config"}})
+		assert.ErrorIs(t, err, ErrMissingInstanceSecretKey)
+	})
+}
+
 func TestIntegrationInstanceRepository_UpdateInstanceReplacesConfig(t *testing.T) {
 	t.Parallel()
 

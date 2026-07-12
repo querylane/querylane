@@ -65,6 +65,11 @@ database:
 #
 #   openssl rand -base64 32
 #
+# Generate this key once and persist the exact value across restarts. For local
+# `task` commands, store QUERYLANE_INSTANCE_SECRET_KEY in the gitignored
+# repository-root .env file. For deployments, use the service or container
+# secret store. Do not generate a new key for each shell session or process.
+#
 # For local development you can also use a raw 32-byte value or
 # sha256:<passphrase>. API-managed instances can store passwords as:
 # - inline legacy/password_source.inline: encrypted at rest

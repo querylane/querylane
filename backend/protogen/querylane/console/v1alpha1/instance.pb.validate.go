@@ -183,6 +183,10 @@ func (m *Instance) validate(all bool) error {
 		}
 	}
 
+	// no validation rules for CredentialState
+
+	// no validation rules for CredentialError
+
 	if len(errors) > 0 {
 		return InstanceMultiError(errors)
 	}

@@ -13,7 +13,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useSetupStore } from "@/stores/setup-store";
 import { ThemeProvider } from "@/theme-provider";
 
-const navigateMock = vi.fn();
+const navigateMock = vi.fn(async () => undefined);
 const adminHeaderMockState = vi.hoisted(() => ({
   instanceMode: {
     isConfigManaged: true,
@@ -100,6 +100,7 @@ const queryState = {
 
 const selectedInstance = {
   connectionError: "",
+  credentialsUnreadable: false,
   host: "analytics-writer.internal.querylane.test",
   id: "prod-analytics",
   name: "Production Analytics Writer With Long Display Name",
@@ -398,6 +399,29 @@ test("admin header instance selector uses a rich empty state with a create actio
     .element(page.getByRole("link", { name: "Create instance" }))
     .toBeVisible();
   expect(document.querySelector('[data-slot="empty"]')).not.toBeNull();
+});
+
+test("admin header routes unreadable credentials to credential recovery", async () => {
+  adminHeaderMockState.instances = [
+    {
+      ...selectedInstance,
+      credentialsUnreadable: true,
+      status: "error",
+    },
+  ];
+  adminHeaderMockState.selectedInstance = null;
+  renderAdminShell();
+
+  await page.getByText("Instance").first().click();
+  await expect
+    .element(page.getByText("Credentials need attention"))
+    .toBeVisible();
+  await page.getByText("Review credentials").click();
+
+  expect(navigateMock).toHaveBeenCalledWith({
+    params: { instanceId: "prod-analytics" },
+    to: "/instances/$instanceId/configuration",
+  });
 });
 
 test("admin header keeps the disabled register instance tooltip open while hovered", async () => {

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -11,6 +12,11 @@ import (
 	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/storage/gen/querylane/public/model"
 	"github.com/querylane/querylane/backend/storage/types"
+)
+
+const (
+	unreadableStorageMessage = "Stored credentials cannot be read. Re-enter the password to restore access."
+	missingKeyStorageMessage = "Stored credentials cannot be read because QUERYLANE_INSTANCE_SECRET_KEY is not configured. Set the key and restart Querylane before replacing the password."
 )
 
 // instanceMapper handles conversion between storage and protobuf types for instances.
@@ -29,11 +35,38 @@ func (m instanceMapper) storageToProto(inst model.Instance) (*api.Instance, erro
 		config, _ = proto.Clone(inst.Config.V).(*api.PostgresConfig)
 		if config != nil {
 			if err := m.decryptConfigSecrets(config); err != nil {
-				return nil, err
+				return newInstanceProto(inst, config), err
 			}
 		}
 	}
 
+	return newInstanceProto(inst, config), nil
+}
+
+func (m instanceMapper) storageToProtoForRead(inst model.Instance) (*api.Instance, error) {
+	instance, err := m.storageToProto(inst)
+	if err == nil {
+		return instance, nil
+	}
+
+	if !errors.Is(err, ErrUnreadableInstanceCredentials) {
+		return nil, err
+	}
+
+	RedactInstanceForAPI(instance)
+
+	if errors.Is(err, ErrMissingInstanceSecretKey) {
+		instance.CredentialState = api.Instance_CREDENTIAL_STATE_KEY_MISSING
+		instance.CredentialError = missingKeyStorageMessage
+	} else {
+		instance.CredentialState = api.Instance_CREDENTIAL_STATE_UNREADABLE
+		instance.CredentialError = unreadableStorageMessage
+	}
+
+	return instance, nil
+}
+
+func newInstanceProto(inst model.Instance, config *api.PostgresConfig) *api.Instance {
 	// ConnectionState / ConnectionError / LastConnectionCheckTime are populated
 	// by OverlayInstanceReader from instance_runtime_state, the single authority.
 	instance := &api.Instance{
@@ -46,7 +79,7 @@ func (m instanceMapper) storageToProto(inst model.Instance) (*api.Instance, erro
 	instance.CreateTime = timestamppb.New(inst.CreatedAt)
 	instance.UpdateTime = timestamppb.New(inst.UpdatedAt)
 
-	return instance, nil
+	return instance
 }
 
 func (m instanceMapper) protoToStorage(instance *api.Instance, instanceID string) (model.Instance, error) {
@@ -138,7 +171,12 @@ func (m instanceMapper) decryptSecret(value string) (string, error) {
 		return "", m.secretsErr
 	}
 
-	return m.secrets.decrypt(value)
+	decrypted, err := m.secrets.decrypt(value)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", ErrUnreadableInstanceCredentials, err)
+	}
+
+	return decrypted, nil
 }
 
 func (m instanceMapper) extractIDFromName(name string) (string, error) {
