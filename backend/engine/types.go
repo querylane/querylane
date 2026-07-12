@@ -65,6 +65,9 @@ type ConnectionActivityHealth struct {
 	// application_name (top talkers first). Empty when the breakdown query
 	// failed; the scalar counts above remain authoritative.
 	ByApplication []ApplicationConnections
+	// Sessions is a risk-first sample of current client backends. Empty when
+	// the session detail query failed; aggregate counts remain authoritative.
+	Sessions []ConnectionActivitySession
 }
 
 // ApplicationConnections is the connection count for one application_name in
@@ -75,6 +78,20 @@ type ApplicationConnections struct {
 	Idle              int32
 	IdleInTransaction int32
 	Total             int32
+}
+
+// ConnectionActivitySession is one live pg_stat_activity client backend row.
+type ConnectionActivitySession struct {
+	PID             int32
+	Username        string
+	ApplicationName string
+	DatabaseName    string
+	State           string
+	DurationSeconds int64
+	Query           string
+	WaitEventType   string
+	WaitEvent       string
+	BlockedByPID    int32
 }
 
 type ReplicationRole string

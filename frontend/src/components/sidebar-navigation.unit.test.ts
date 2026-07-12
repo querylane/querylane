@@ -12,6 +12,10 @@ describe("sidebar navigation", () => {
       ids: { instanceId: "local" },
     });
 
+    expect(links["instance.activity"]).toMatchObject({
+      params: { instanceId: "local" },
+      to: "/instances/$instanceId/activity",
+    });
     expect(links["instance.configuration"]).toMatchObject({
       params: { instanceId: "local" },
       to: "/instances/$instanceId/configuration",
@@ -68,11 +72,13 @@ describe("sidebar navigation", () => {
         databaseExtensions: false,
         databaseInsights: false,
         databaseOverview: false,
+        instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: true,
         instanceRoles: false,
       },
       paths: {
+        instanceActivity: "/instances/local/activity",
         instanceConfiguration: "/instances/local/configuration",
         instanceOverview: "/instances/local",
         instanceRoles: "/instances/local/roles",
@@ -83,6 +89,7 @@ describe("sidebar navigation", () => {
     expect(sections.map((section) => section.title)).toEqual(["Instance"]);
     expect(sections[0]?.items.map((item) => item.key)).toEqual([
       "instance.overview",
+      "instance.activity",
       "instance.roles",
       "instance.configuration",
     ]);
@@ -95,6 +102,7 @@ describe("sidebar navigation", () => {
         databaseExtensions: false,
         databaseInsights: false,
         databaseOverview: true,
+        instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: false,
         instanceRoles: false,
@@ -104,6 +112,7 @@ describe("sidebar navigation", () => {
         databaseExtensions: "/instances/local/databases/postgres/extensions",
         databaseInsights: "/instances/local/databases/postgres/insights",
         databaseOverview: "/instances/local/databases/postgres",
+        instanceActivity: "/instances/local/activity",
         instanceConfiguration: "/instances/local/configuration",
         instanceOverview: "/instances/local",
         instanceRoles: "/instances/local/roles",

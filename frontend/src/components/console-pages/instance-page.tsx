@@ -18,6 +18,7 @@ import {
   SummaryCountValue,
 } from "@/components/console-pages/console-layout";
 import { DatabaseEncodingValue } from "@/components/console-pages/database-encoding-value";
+import { InstanceActivityPage } from "@/components/console-pages/instance-activity-page";
 import {
   buildInstanceUpdatePaths,
   type InstanceFormErrors,
@@ -124,7 +125,7 @@ import {
   type QueryMetricsResponse,
 } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
-type InstanceSection = "configuration" | "overview";
+type InstanceSection = "activity" | "configuration" | "overview";
 
 interface OverviewLiveData {
   /** The server's max_connections, drawn as a threshold on the chart. */
@@ -133,6 +134,7 @@ interface OverviewLiveData {
   health: InstanceHealth | undefined;
   healthPartialErrors: Status[] | undefined;
   healthPending: boolean;
+  healthRefreshing: boolean;
   metricsError: boolean;
   metricsPending: boolean;
   metricsRange: MetricRange;
@@ -155,6 +157,7 @@ const TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
+const ACTIVITY_REFRESH_INTERVAL_MS = 5000;
 const LAST_INSTANCE_DELETE_DISABLED_REASON =
   "Querylane needs at least one registered instance. Add another instance before deleting this one.";
 const EMPTY_INSTANCE_CATALOG_DELETE_DISABLED_REASON =
@@ -959,6 +962,7 @@ function refreshInstancePageData({
   retryInstanceCatalog,
   section,
   setMetricsAnchorMs,
+  showActivityLiveData,
   showOverviewLiveData,
 }: {
   configuredDatabase: string;
@@ -972,6 +976,7 @@ function refreshInstancePageData({
   retryInstanceCatalog: () => Promise<unknown>;
   section: InstanceSection;
   setMetricsAnchorMs: Dispatch<SetStateAction<number>>;
+  showActivityLiveData: boolean;
   showOverviewLiveData: boolean;
 }) {
   refetchInstancePageQuery(instanceQuery, "console.instance");
@@ -985,6 +990,9 @@ function refreshInstancePageData({
     refetchInstancePageQuery(metricsQuery, "console.instance.metrics");
     refetchInstancePageQuery(previousMetricsQuery, "console.instance.metrics");
     refetchInstancePageQuery(healthQuery, "console.instance.health");
+  }
+  if (showActivityLiveData) {
+    refetchInstancePageQuery(healthQuery, "console.instance.activity");
   }
   if (isConnected && section === "overview" && configuredDatabase.length > 0) {
     refetchInstancePageQuery(extensionsQuery, "console.instance.extensions");
@@ -1158,6 +1166,62 @@ async function deleteInstanceFromPage({
   }
 }
 
+function getInstanceLiveDataVisibility({
+  isConnected,
+  section,
+}: {
+  isConnected: boolean;
+  section: InstanceSection;
+}) {
+  if (!isConnected) {
+    return {
+      activity: false,
+      any: false,
+      overview: false,
+    };
+  }
+
+  const activity = section === "activity";
+  const overview = section === "overview";
+  return {
+    activity,
+    any: activity || overview,
+    overview,
+  };
+}
+
+function getConnectedOverview({
+  isConnected,
+  overview,
+}: {
+  isConnected: boolean;
+  overview: InstanceOverview | undefined;
+}) {
+  if (!isConnected) {
+    return;
+  }
+  return overview;
+}
+
+function getInstalledExtensionCount(
+  extensions: readonly { installed: boolean }[] | undefined
+) {
+  return extensions?.filter((extension) => extension.installed).length;
+}
+
+function getSettledMetricsResponse({
+  data,
+  isPlaceholderData,
+}: {
+  data: QueryMetricsResponse | undefined;
+  isPlaceholderData: boolean;
+}) {
+  if (isPlaceholderData) {
+    return;
+  }
+  return data;
+}
+
 function BackendInstancePage({
   instanceId,
   section,
@@ -1219,10 +1283,14 @@ function BackendInstancePage({
       refetchOnWindowFocus: false,
     }
   );
-  const overview = isConnected
-    ? overviewQuery.data?.instanceOverview
-    : undefined;
-  const showOverviewLiveData = section === "overview" && isConnected;
+  const overview = getConnectedOverview({
+    isConnected,
+    overview: overviewQuery.data?.instanceOverview,
+  });
+  const liveDataVisibility = getInstanceLiveDataVisibility({
+    isConnected,
+    section,
+  });
   // TODO: persist the selected metrics range to the URL so it survives reloads.
   const [metricsRangeHours, setMetricsRangeHours] = useState(
     DEFAULT_METRIC_RANGE.hours
@@ -1237,7 +1305,7 @@ function BackendInstancePage({
     metricsAnchorMs,
     metricsRangeHours,
     {
-      enabled: showOverviewLiveData,
+      enabled: liveDataVisibility.overview,
       // Hold the previous window's charts (dimmed) while a range switch loads,
       // instead of flashing the skeleton and jumping layout.
       placeholderData: (previous) => previous,
@@ -1249,7 +1317,7 @@ function BackendInstancePage({
     metricsAnchorMs,
     metricsRangeHours,
     {
-      enabled: showOverviewLiveData,
+      enabled: liveDataVisibility.overview,
       placeholderData: (previous) => previous,
       refetchOnWindowFocus: false,
     }
@@ -1259,7 +1327,10 @@ function BackendInstancePage({
       name: instanceName,
     },
     {
-      enabled: showOverviewLiveData,
+      enabled: liveDataVisibility.any,
+      refetchInterval: liveDataVisibility.activity
+        ? ACTIVITY_REFRESH_INTERVAL_MS
+        : false,
       refetchOnWindowFocus: false,
     }
   );
@@ -1315,7 +1386,8 @@ function BackendInstancePage({
       retryInstanceCatalog,
       section,
       setMetricsAnchorMs,
-      showOverviewLiveData,
+      showActivityLiveData: liveDataVisibility.activity,
+      showOverviewLiveData: liveDataVisibility.overview,
     });
   };
   const handleInvalidSave = () => {
@@ -1376,11 +1448,9 @@ function BackendInstancePage({
             databasesUnavailable,
             deleteDisabledReason,
             deletePending: deleteInstanceMutation.isPending,
-            extensionsInstalledCount: extensionsQuery.data
-              ? extensionsQuery.data.extensions.filter(
-                  (extension) => extension.installed
-                ).length
-              : undefined,
+            extensionsInstalledCount: getInstalledExtensionCount(
+              extensionsQuery.data?.extensions
+            ),
             formNotice,
             instance,
             isConfigManaged,
@@ -1394,6 +1464,8 @@ function BackendInstancePage({
               health: healthQuery.data?.health,
               healthPartialErrors: healthQuery.data?.partialErrors,
               healthPending: healthQuery.isPending,
+              healthRefreshing:
+                healthQuery.isFetching && !healthQuery.isPending,
               metricsError: metricsQuery.isError,
               metricsPending: metricsQuery.isPending,
               metricsRange: metricRangeByHours(metricsRangeHours),
@@ -1402,9 +1474,10 @@ function BackendInstancePage({
               // While a range switch still shows the OLD window as placeholder
               // data, suppress the overlay: shifting the old range's points by
               // the new range's window length would draw it at wrong times.
-              previousMetricsResponse: previousMetricsQuery.isPlaceholderData
-                ? undefined
-                : previousMetricsQuery.data,
+              previousMetricsResponse: getSettledMetricsResponse({
+                data: previousMetricsQuery.data,
+                isPlaceholderData: previousMetricsQuery.isPlaceholderData,
+              }),
             },
             navigateToDatabase,
             onDatabaseIntent: handleDatabaseIntent,
@@ -1484,6 +1557,57 @@ function renderLoadedInstancePageContent({
   section: InstanceSection;
   serverInfo: ServerInfo | undefined;
 }) {
+  let sectionContent: React.ReactNode;
+  if (section === "configuration") {
+    sectionContent = (
+      <>
+        {isConfigManaged ? <ConfigManagedNotice /> : null}
+        <InstanceConfigurationSection
+          formNotice={formNotice}
+          instance={instance}
+          isConfigManaged={isConfigManaged}
+          key={`${instance.name}:${configFormResetKey}`}
+          onInvalidSave={onInvalidSave}
+          onSave={onSave}
+          pending={isInstanceMutationPending}
+        />
+        {isConfigManaged ? null : (
+          <InstanceDangerZoneSection
+            deleteDisabledReason={deleteDisabledReason}
+            instanceDisplayName={instance.displayName}
+            onDelete={() => onOpenDeleteDialogChange(true)}
+            pending={isInstanceMutationPending}
+          />
+        )}
+      </>
+    );
+  } else if (section === "activity") {
+    sectionContent = (
+      <InstanceActivityPage
+        connectionStatus={connectionStatus}
+        health={liveData.health}
+        partialErrors={liveData.healthPartialErrors}
+        pending={liveData.healthPending}
+        refreshing={liveData.healthRefreshing}
+      />
+    );
+  } else {
+    sectionContent = (
+      <InstanceOverviewContent
+        connectionStatus={connectionStatus}
+        databases={databases}
+        extensionsInstalledCount={extensionsInstalledCount}
+        instance={instance}
+        isUnavailable={databasesUnavailable}
+        liveData={liveData}
+        navigateToDatabase={navigateToDatabase}
+        onDatabaseIntent={onDatabaseIntent}
+        queryState={queryState}
+        serverInfo={serverInfo}
+      />
+    );
+  }
+
   return (
     <>
       <div className="flex flex-col gap-8">
@@ -1505,41 +1629,7 @@ function renderLoadedInstancePageContent({
           serverInfo={serverInfo}
         />
 
-        {section === "configuration" ? (
-          <>
-            {isConfigManaged ? <ConfigManagedNotice /> : null}
-            <InstanceConfigurationSection
-              formNotice={formNotice}
-              instance={instance}
-              isConfigManaged={isConfigManaged}
-              key={`${instance.name}:${configFormResetKey}`}
-              onInvalidSave={onInvalidSave}
-              onSave={onSave}
-              pending={isInstanceMutationPending}
-            />
-            {isConfigManaged ? null : (
-              <InstanceDangerZoneSection
-                deleteDisabledReason={deleteDisabledReason}
-                instanceDisplayName={instance.displayName}
-                onDelete={() => onOpenDeleteDialogChange(true)}
-                pending={isInstanceMutationPending}
-              />
-            )}
-          </>
-        ) : (
-          <InstanceOverviewContent
-            connectionStatus={connectionStatus}
-            databases={databases}
-            extensionsInstalledCount={extensionsInstalledCount}
-            instance={instance}
-            isUnavailable={databasesUnavailable}
-            liveData={liveData}
-            navigateToDatabase={navigateToDatabase}
-            onDatabaseIntent={onDatabaseIntent}
-            queryState={queryState}
-            serverInfo={serverInfo}
-          />
-        )}
+        {sectionContent}
       </div>
 
       <InstanceDeleteDialog

@@ -29,10 +29,12 @@ import {
   ListExtensionsResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 import {
+  ApplicationConnectionsSchema,
   AutovacuumHealthSchema,
   type CheckInstanceHealthResponse,
   CheckInstanceHealthResponseSchema,
   ConnectionActivityHealthSchema,
+  ConnectionActivitySessionSchema,
   type GetInstanceOverviewResponse,
   type GetInstanceResponse,
   GetInstanceResponseSchema,
@@ -420,6 +422,63 @@ function instanceHealthResponse({
   });
 }
 
+function activityHealthResponse() {
+  return createProto(CheckInstanceHealthResponseSchema, {
+    health: createProto(InstanceHealthSchema, {
+      connectionActivity: createProto(ConnectionActivityHealthSchema, {
+        activeConnections: 3,
+        byApplication: [
+          createProto(ApplicationConnectionsSchema, {
+            activeConnections: 2,
+            applicationName: "api-gateway",
+            idleConnections: 1,
+            idleInTransactionConnections: 1,
+            totalConnections: 4,
+          }),
+          createProto(ApplicationConnectionsSchema, {
+            activeConnections: 1,
+            applicationName: "metabase",
+            totalConnections: 1,
+          }),
+        ],
+        idleConnections: 39,
+        idleInTransactionConnections: 1,
+        longestTransactionSeconds: BigInt(252),
+        longRunningTransactionConnections: 1,
+        maxConnections: 100,
+        sessions: [
+          createProto(ConnectionActivitySessionSchema, {
+            applicationName: "worker-pool",
+            databaseName: "logistics",
+            durationSeconds: BigInt(252),
+            pid: 4211,
+            query:
+              "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
+            state: "idle in transaction",
+            username: "app_readwrite",
+          }),
+          createProto(ConnectionActivitySessionSchema, {
+            applicationName: "api-gateway",
+            blockedByPid: 4211,
+            databaseName: "logistics",
+            durationSeconds: BigInt(38),
+            pid: 4302,
+            query: "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
+            state: "active",
+            username: "app_readwrite",
+            waitEvent: "transactionid",
+            waitEventType: "Lock",
+          }),
+        ],
+        status: HealthCheckStatus.WARNING,
+        totalConnections: 44,
+        utilizationRatio: 0.44,
+        waitingForLockConnections: 1,
+      }),
+    }),
+  });
+}
+
 beforeEach(() => {
   state.databases = [];
   state.deleteInstance.mockReset();
@@ -468,6 +527,10 @@ function renderInstanceConfiguration() {
 
 function renderInstanceOverview() {
   return render(<BackendInstancePage instanceId="prod" section="overview" />);
+}
+
+function renderInstanceActivity() {
+  return render(<BackendInstancePage instanceId="prod" section="activity" />);
 }
 
 function setFieldValue(label: string, value: string) {
@@ -791,6 +854,37 @@ describe("backend instance refresh", () => {
       expect(state.refetchInstance).toHaveBeenCalledTimes(1);
     });
     expect(state.refetchExtensions).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("backend instance activity", () => {
+  test("shows live pg_stat_activity session rows and blocking chain", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = activityHealthResponse();
+
+    renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    expect(
+      within(activity).getByText(
+        "Live sessions from pg_stat_activity — refreshed every 5 s"
+      )
+    ).toBeTruthy();
+    expect(within(activity).getAllByText("4m 12s").length).toBeGreaterThan(0);
+    expect(within(activity).getByText("Blocking chain")).toBeTruthy();
+    expect(within(activity).getByText("blocker · pid 4211")).toBeTruthy();
+    expect(within(activity).getByText("PID")).toBeTruthy();
+    expect(
+      within(activity).getAllByText("app_readwrite").length
+    ).toBeGreaterThan(0);
+    expect(within(activity).getByText("api-gateway")).toBeTruthy();
+    expect(
+      within(activity).getAllByText(
+        "UPDATE shipping.shipments SET eta = $1 WHERE id = $2"
+      ).length
+    ).toBeGreaterThan(0);
   });
 });
 

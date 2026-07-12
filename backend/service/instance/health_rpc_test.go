@@ -52,6 +52,29 @@ func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) 
 						{ApplicationName: "api-server", Active: 2, Idle: 1, IdleInTransaction: 1, Total: 4},
 						{ApplicationName: "(unnamed)", Active: 0, Idle: 2, IdleInTransaction: 0, Total: 2},
 					},
+					Sessions: []engine.ConnectionActivitySession{
+						{
+							PID:             4211,
+							Username:        "app_readwrite",
+							ApplicationName: "worker-pool",
+							DatabaseName:    "logistics",
+							State:           "idle in transaction",
+							DurationSeconds: 252,
+							Query:           "UPDATE shipping.shipments SET status = 'in_transit'",
+						},
+						{
+							PID:             4302,
+							Username:        "app_readwrite",
+							ApplicationName: "api-gateway",
+							DatabaseName:    "logistics",
+							State:           "active",
+							DurationSeconds: 38,
+							Query:           "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
+							WaitEventType:   "Lock",
+							WaitEvent:       "transactionid",
+							BlockedByPID:    4211,
+						},
+					},
 				},
 				Replication: &engine.ReplicationHealth{
 					Role:                   engine.ReplicationRolePrimary,
@@ -118,6 +141,15 @@ func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) 
 	assert.Equal(t, int32(4), byApplication[0].GetTotalConnections())
 	assert.Equal(t, "(unnamed)", byApplication[1].GetApplicationName())
 	assert.Equal(t, int32(2), byApplication[1].GetIdleConnections())
+
+	sessions := activity.GetSessions()
+	require.Len(t, sessions, 2)
+	assert.Equal(t, int32(4211), sessions[0].GetPid())
+	assert.Equal(t, "worker-pool", sessions[0].GetApplicationName())
+	assert.Equal(t, int64(252), sessions[0].GetDurationSeconds())
+	assert.Equal(t, int32(4302), sessions[1].GetPid())
+	assert.Equal(t, int32(4211), sessions[1].GetBlockedByPid())
+	assert.Equal(t, "Lock", sessions[1].GetWaitEventType())
 
 	replication := health.GetReplication()
 	require.NotNil(t, replication)

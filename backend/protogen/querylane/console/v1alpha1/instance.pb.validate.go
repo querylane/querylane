@@ -3251,6 +3251,40 @@ func (m *ConnectionActivityHealth) validate(all bool) error {
 
 	}
 
+	for idx, item := range m.GetSessions() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, ConnectionActivityHealthValidationError{
+						field:  fmt.Sprintf("Sessions[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, ConnectionActivityHealthValidationError{
+						field:  fmt.Sprintf("Sessions[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return ConnectionActivityHealthValidationError{
+					field:  fmt.Sprintf("Sessions[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
 	if len(errors) > 0 {
 		return ConnectionActivityHealthMultiError(errors)
 	}
@@ -3442,6 +3476,128 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = ApplicationConnectionsValidationError{}
+
+// Validate checks the field values on ConnectionActivitySession with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ConnectionActivitySession) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ConnectionActivitySession with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ConnectionActivitySessionMultiError, or nil if none found.
+func (m *ConnectionActivitySession) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ConnectionActivitySession) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Pid
+
+	// no validation rules for Username
+
+	// no validation rules for ApplicationName
+
+	// no validation rules for DatabaseName
+
+	// no validation rules for State
+
+	// no validation rules for DurationSeconds
+
+	// no validation rules for Query
+
+	// no validation rules for WaitEventType
+
+	// no validation rules for WaitEvent
+
+	// no validation rules for BlockedByPid
+
+	if len(errors) > 0 {
+		return ConnectionActivitySessionMultiError(errors)
+	}
+
+	return nil
+}
+
+// ConnectionActivitySessionMultiError is an error wrapping multiple validation
+// errors returned by ConnectionActivitySession.ValidateAll() if the
+// designated constraints aren't met.
+type ConnectionActivitySessionMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ConnectionActivitySessionMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ConnectionActivitySessionMultiError) AllErrors() []error { return m }
+
+// ConnectionActivitySessionValidationError is the validation error returned by
+// ConnectionActivitySession.Validate if the designated constraints aren't met.
+type ConnectionActivitySessionValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ConnectionActivitySessionValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ConnectionActivitySessionValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ConnectionActivitySessionValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ConnectionActivitySessionValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ConnectionActivitySessionValidationError) ErrorName() string {
+	return "ConnectionActivitySessionValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ConnectionActivitySessionValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sConnectionActivitySession.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ConnectionActivitySessionValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ConnectionActivitySessionValidationError{}
 
 // Validate checks the field values on ReplicationHealth with the rules defined
 // in the proto definition for this message. If any rules are violated, the

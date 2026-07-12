@@ -603,6 +603,7 @@ func connectionActivityHealthToProto(activity *engine.ConnectionActivityHealth) 
 		LongRunningTransactionConnections: activity.LongRunningTxs,
 		LongestTransactionSeconds:         activity.LongestTxSeconds,
 		ByApplication:                     applicationConnectionsToProto(activity.ByApplication),
+		Sessions:                          connectionActivitySessionsToProto(activity.Sessions),
 	}
 }
 
@@ -619,6 +620,30 @@ func applicationConnectionsToProto(apps []engine.ApplicationConnections) []*v1al
 			IdleConnections:              app.Idle,
 			IdleInTransactionConnections: app.IdleInTransaction,
 			TotalConnections:             app.Total,
+		})
+	}
+
+	return proto
+}
+
+func connectionActivitySessionsToProto(sessions []engine.ConnectionActivitySession) []*v1alpha1.ConnectionActivitySession {
+	if len(sessions) == 0 {
+		return nil
+	}
+
+	proto := make([]*v1alpha1.ConnectionActivitySession, 0, len(sessions))
+	for _, session := range sessions {
+		proto = append(proto, &v1alpha1.ConnectionActivitySession{
+			Pid:             session.PID,
+			Username:        session.Username,
+			ApplicationName: session.ApplicationName,
+			DatabaseName:    session.DatabaseName,
+			State:           session.State,
+			DurationSeconds: session.DurationSeconds,
+			Query:           session.Query,
+			WaitEventType:   session.WaitEventType,
+			WaitEvent:       session.WaitEvent,
+			BlockedByPid:    session.BlockedByPID,
 		})
 	}
 

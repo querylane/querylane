@@ -40,6 +40,9 @@ import {
   StorageMetricsSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
+const BLOCKED_ACTIVITY_ROW_NAME =
+  /4302.*api-gateway.*UPDATE shipping\.shipments/;
+
 interface QueryState<T> {
   data?: T;
   dataUpdatedAt?: number;
@@ -58,6 +61,39 @@ const state = vi.hoisted(() => ({
   databaseQuery: {} as QueryState<GetDatabaseResponse>,
   deleteInstance: vi.fn(async () => undefined),
   extensionQuery: {} as QueryState<ListExtensionsResponse>,
+  healthQuery: {} as QueryState<{
+    health?: {
+      connectionActivity?: {
+        activeConnections: number;
+        byApplication: {
+          activeConnections: number;
+          applicationName: string;
+          idleConnections: number;
+          idleInTransactionConnections: number;
+          totalConnections: number;
+        }[];
+        idleConnections: number;
+        idleInTransactionConnections: number;
+        longestTransactionSeconds: bigint;
+        longRunningTransactionConnections: number;
+        sessions: {
+          applicationName: string;
+          blockedByPid?: number;
+          databaseName: string;
+          durationSeconds: bigint;
+          pid: number;
+          query: string;
+          state: string;
+          username: string;
+          waitEvent?: string;
+          waitEventType?: string;
+        }[];
+        totalConnections: number;
+        waitingForLockConnections: number;
+      };
+    };
+    partialErrors?: unknown[];
+  }>,
   instanceQuery: {} as QueryState<GetInstanceResponse>,
   navigate: vi.fn(async () => undefined),
   overviewQuery: {} as QueryState<GetInstanceOverviewResponse>,
@@ -67,26 +103,6 @@ const state = vi.hoisted(() => ({
   },
   queryInsightsQuery: {} as QueryState<GetDatabaseQueryInsightsResponse>,
 }));
-
-beforeEach(() => {
-  state.catalogQuery = {};
-  state.databaseQuery = {};
-  state.extensionQuery = {};
-  state.queryInsightsQuery = {};
-  state.instanceQuery = {};
-  state.overviewQuery = {};
-  state.queryClient.getQueryState.mockReset();
-  state.queryClient.getQueryState.mockReturnValue(undefined);
-  state.queryClient.prefetchQuery.mockReset();
-  state.queryClient.prefetchQuery.mockResolvedValue(undefined);
-  state.deleteInstance.mockReset();
-  state.deleteInstance.mockResolvedValue(undefined);
-  state.navigate.mockClear();
-});
-
-afterEach(() => {
-  vi.clearAllMocks();
-});
 
 vi.mock("@tanstack/react-router", () => ({
   ["Link"]: ({ children, to }: { children: ReactNode; to: string }) => (
@@ -117,6 +133,50 @@ vi.mock("@connectrpc/connect-query", () => ({
   useQuery: vi.fn(() => ({ data: undefined, isFetching: false })),
   useTransport: () => ({}),
 }));
+
+function defaultHealthResponse() {
+  return {
+    health: {
+      connectionActivity: {
+        activeConnections: 18,
+        byApplication: [],
+        idleConnections: 54,
+        idleInTransactionConnections: 2,
+        longestTransactionSeconds: 0n,
+        longRunningTransactionConnections: 0,
+        maxConnections: 100,
+        sessions: [],
+        status: 1,
+        summary: "74 connections",
+        totalConnections: 74,
+        utilizationRatio: 0.74,
+        waitingForLockConnections: 0,
+      },
+    },
+    partialErrors: [],
+  };
+}
+
+beforeEach(() => {
+  state.catalogQuery = {};
+  state.databaseQuery = {};
+  state.extensionQuery = {};
+  state.healthQuery = { data: defaultHealthResponse() };
+  state.queryInsightsQuery = {};
+  state.instanceQuery = {};
+  state.overviewQuery = {};
+  state.queryClient.getQueryState.mockReset();
+  state.queryClient.getQueryState.mockReturnValue(undefined);
+  state.queryClient.prefetchQuery.mockReset();
+  state.queryClient.prefetchQuery.mockResolvedValue(undefined);
+  state.deleteInstance.mockReset();
+  state.deleteInstance.mockResolvedValue(undefined);
+  state.navigate.mockClear();
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 vi.mock("@tanstack/react-query", async () => {
   const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
@@ -185,29 +245,11 @@ vi.mock("@/hooks/api/extension", () => ({
 vi.mock("@/hooks/api/instance", () => ({
   refreshAllInstancesCache: vi.fn(async () => ({ instances: [] })),
   useCheckInstanceHealthQuery: () => ({
-    data: {
-      health: {
-        connectionActivity: {
-          activeConnections: 18,
-          byApplication: [],
-          idleConnections: 54,
-          idleInTransactionConnections: 2,
-          longestTransactionSeconds: 0n,
-          longRunningTransactionConnections: 0,
-          maxConnections: 100,
-          status: 1,
-          summary: "74 connections",
-          totalConnections: 74,
-          utilizationRatio: 0.74,
-          waitingForLockConnections: 0,
-        },
-      },
-      partialErrors: [],
-    },
-    error: null,
-    isFetching: false,
-    isPending: false,
-    refetch: vi.fn(async () => ({})),
+    data: state.healthQuery.data,
+    error: state.healthQuery.error ?? null,
+    isFetching: state.healthQuery.isFetching ?? false,
+    isPending: state.healthQuery.isPending ?? false,
+    refetch: state.healthQuery.refetch ?? vi.fn(async () => ({})),
   }),
   useDeleteInstanceMutation: () => ({
     isPending: false,
@@ -442,6 +484,106 @@ function overviewResponse() {
   });
 }
 
+function activityHealthResponse() {
+  return {
+    health: {
+      connectionActivity: {
+        activeConnections: 41,
+        byApplication: [
+          {
+            activeConnections: 20,
+            applicationName: "api-gateway",
+            idleConnections: 14,
+            idleInTransactionConnections: 0,
+            totalConnections: 34,
+          },
+          {
+            activeConnections: 8,
+            applicationName: "worker-pool",
+            idleConnections: 20,
+            idleInTransactionConnections: 5,
+            totalConnections: 33,
+          },
+          {
+            activeConnections: 3,
+            applicationName: "metabase",
+            idleConnections: 11,
+            idleInTransactionConnections: 0,
+            totalConnections: 14,
+          },
+        ],
+        idleConnections: 118,
+        idleInTransactionConnections: 9,
+        longestTransactionSeconds: 252n,
+        longRunningTransactionConnections: 1,
+        maxConnections: 250,
+        sessions: [
+          {
+            applicationName: "worker-pool",
+            databaseName: "logistics",
+            durationSeconds: 252n,
+            pid: 4211,
+            query:
+              "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
+            state: "idle in transaction",
+            username: "app_readwrite",
+          },
+          {
+            applicationName: "api-gateway",
+            blockedByPid: 4211,
+            databaseName: "logistics",
+            durationSeconds: 38n,
+            pid: 4302,
+            query: "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
+            state: "active",
+            username: "app_readwrite",
+            waitEvent: "transactionid",
+            waitEventType: "Lock",
+          },
+          {
+            applicationName: "api-gateway",
+            blockedByPid: 4211,
+            databaseName: "logistics",
+            durationSeconds: 21n,
+            pid: 4318,
+            query: "SELECT * FROM shipping.shipments WHERE id = $1 FOR UPDATE",
+            state: "active",
+            username: "app_readwrite",
+            waitEvent: "tuple",
+            waitEventType: "Lock",
+          },
+          {
+            applicationName: "api-gateway",
+            databaseName: "logistics",
+            durationSeconds: 0n,
+            pid: 3987,
+            query:
+              "SELECT s.*, c.name FROM shipping.shipments s JOIN shipping.carriers c ON c.id = s.carrier_id WHERE s.status = ANY($1)",
+            state: "active",
+            username: "app_readwrite",
+          },
+          {
+            applicationName: "metabase",
+            databaseName: "billing",
+            durationSeconds: 2n,
+            pid: 4402,
+            query:
+              "SELECT date_trunc('week', issued_at) AS wk, sum(amount) FROM billing.invoices GROUP BY 1 ORDER BY 1",
+            state: "active",
+            username: "analytics_reader",
+          },
+        ],
+        status: 2,
+        summary: "171 connections",
+        totalConnections: 171,
+        utilizationRatio: 0.684,
+        waitingForLockConnections: 3,
+      },
+    },
+    partialErrors: [],
+  };
+}
+
 function databaseResponse() {
   return createProto(GetDatabaseResponseSchema, {
     database: createProto(DatabaseSchema, {
@@ -618,6 +760,41 @@ test("backend instance overview shows live metrics and database catalog together
   await expect.element(page.getByText("customer_events")).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-instance-overview"
+  );
+});
+
+test("backend instance activity matches the live sessions redesign", async () => {
+  state.instanceQuery = {
+    data: instanceResponse(),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
+  };
+  state.healthQuery = { data: activityHealthResponse() };
+  state.overviewQuery = { data: overviewResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendInstancePage instanceId="prod" section="activity" />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await expect
+    .element(page.getByRole("heading", { name: "Activity" }))
+    .toBeVisible();
+  await expect.element(page.getByText("Blocking chain")).toBeVisible();
+  await expect.element(page.getByText("blocker · pid 4211")).toBeVisible();
+  await expect.element(page.getByText("PID")).toBeVisible();
+  await expect.element(page.getByText("User · app")).toBeVisible();
+  await expect
+    .element(
+      page.getByRole("row", {
+        name: BLOCKED_ACTIVITY_ROW_NAME,
+      })
+    )
+    .toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "backend-instance-activity"
   );
 });
 

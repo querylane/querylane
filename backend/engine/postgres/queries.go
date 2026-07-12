@@ -116,6 +116,9 @@ var getConnectionActivityHealthQuery string
 //go:embed queries/get_connection_activity_by_application.sql
 var getConnectionActivityByApplicationQuery string
 
+//go:embed queries/get_connection_activity_sessions.sql
+var getConnectionActivitySessionsQuery string
+
 //go:embed queries/get_recovery_state.sql
 var getRecoveryStateQuery string
 
