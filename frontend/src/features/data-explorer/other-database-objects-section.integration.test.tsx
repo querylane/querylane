@@ -120,10 +120,22 @@ const variantObjects: OtherDatabaseObject[] = [
     status: "ok",
     summary: "0 3 * * * · postgres · app",
   },
+  {
+    badge: "pg_cron",
+    category: "cronJobs",
+    definition:
+      "SELECT cron.schedule('weekly-refresh', '0 3 * * 1', 'CALL refresh()');",
+    detail: "CALL refresh()",
+    extra: "active",
+    name: "weekly-refresh",
+    sortKey: "weekly-refresh",
+    status: "ok",
+    summary: "0 3 * * 1 · postgres · app",
+  },
 ];
 
 const COLLATIONS_BUTTON_RE = /^Collations 1$/;
-const CRON_JOBS_BUTTON_RE = /^Jobs · pg_cron 1$/;
+const CRON_JOBS_BUTTON_RE = /^Jobs · pg_cron 2$/;
 const CUSTOM_TYPES_INFO_RE = /Custom enums, composites, domains, and ranges/i;
 const EVENT_TRIGGERS_BUTTON_RE = /^Event triggers 1$/;
 const FDW_SERVERS_BUTTON_RE = /^FDW servers 1$/;
@@ -134,6 +146,7 @@ const TYPES_BUTTON_RE = /^Types 2$/;
 const ROUTINES_BUTTON_RE = /^Routines 1$/;
 const REPLICATION_BUTTON_RE = /^Replication 1$/;
 const SEQUENCES_BUTTON_RE = /^Sequences 1$/;
+const TRUNCATED_INVENTORY_RE = /Showing a partial inventory/;
 
 afterEach(() => {
   cleanup();
@@ -236,6 +249,7 @@ describe("OtherDatabaseObjectsPanel", () => {
     expect(screen.getByText("audit_ddl")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: CRON_JOBS_BUTTON_RE }));
     expect(screen.getByText("refresh")).toBeTruthy();
+    expect(screen.getAllByText("0 3 * * 1")).toHaveLength(2);
   });
 
   it("preserves enum labels containing commas and shows hidden value counts", () => {
@@ -274,6 +288,18 @@ describe("OtherDatabaseObjectsPanel", () => {
     );
     await user.click(screen.getByRole("button", { name: "Retry" }));
     expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it("warns when the database-wide inventory is truncated", () => {
+    render(
+      <OtherDatabaseObjectsPanel
+        isLoading={false}
+        isTruncated={true}
+        objects={objects}
+      />
+    );
+
+    expect(screen.getByText(TRUNCATED_INVENTORY_RE)).toBeTruthy();
   });
 
   it("handles unavailable clipboard access without throwing", async () => {

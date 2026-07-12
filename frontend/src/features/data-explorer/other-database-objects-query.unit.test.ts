@@ -96,6 +96,7 @@ describe("other database objects query", () => {
     });
 
     expect(result.objects).toHaveLength(1);
+    expect(result.isTruncated).toBe(false);
     expect(execute).toHaveBeenCalledTimes(2);
     const mainStatement = execute.mock.calls[0]?.[0].statement;
     expect(mainStatement).toContain("pg_sequence_last_value");
@@ -146,5 +147,30 @@ describe("other database objects query", () => {
       "cronJobs",
     ]);
     expect(execute).toHaveBeenCalledTimes(3);
+  });
+
+  it("reports and trims inventories over the display limit", async () => {
+    const execute = vi.fn(
+      ({ statement }: { parent: string; statement: string }) => {
+        const rows: Record<string, string>[] = statement.includes(
+          "WITH visible_namespaces"
+        )
+          ? Array.from({ length: 1001 }, (_, index) => ({
+              ...typeRow,
+              name: `shipping.route_${index}`,
+              sort_key: `shipping.route_${index}`,
+            }))
+          : [{ has_cron_job_table: "false" }];
+        return Promise.resolve(rows);
+      }
+    );
+
+    const result = await fetchOtherDatabaseObjects({
+      execute,
+      parent: "instances/i/databases/d",
+    });
+
+    expect(result.isTruncated).toBe(true);
+    expect(result.objects).toHaveLength(1000);
   });
 });

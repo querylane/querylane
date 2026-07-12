@@ -9,6 +9,7 @@ import {
 
 const CREATE_SHIPMENT_STATUS_RE = /CREATE TYPE shipping\.shipment_status/;
 const JOBS_CATEGORY_RE = /^Jobs · pg_cron 4$/;
+const LOCK_TIMEOUT_RE = /lock timeout · 29 Jun 05:00/;
 const NEXT_RUNS_RE = /next runs:/;
 const PARTMAN_MAINTENANCE_RE = /partman-maintenance/;
 const SHIPMENT_STATUS_BUTTON_RE = /shipping\.shipment_status/;
@@ -64,7 +65,7 @@ const designJobObjects: OtherDatabaseObject[] = [
     definition:
       "SELECT cron.schedule('partman-maintenance', '0 3 * * *', $$CALL partman.run_maintenance_proc()$$);",
     detail: "CALL partman.run_maintenance_proc()",
-    extra: "ok · 4.2 s · 5 Jul 03:00",
+    extra: "4.2 s · 5 Jul 03:00",
     name: "partman-maintenance",
     sortKey: "partman-maintenance",
     status: "ok",
@@ -76,7 +77,7 @@ const designJobObjects: OtherDatabaseObject[] = [
     definition:
       "SELECT cron.schedule('refresh-carrier-volume', '10 3 * * *', $$REFRESH MATERIALIZED VIEW CONCURRENTLY shipping.mv_carrier_volume$$);",
     detail: "REFRESH MATERIALIZED VIEW CONCURRENTLY shipping.mv_carrier_volume",
-    extra: "ok · 4.2 s · 5 Jul 03:10",
+    extra: "4.2 s · 5 Jul 03:10",
     name: "refresh-carrier-volume",
     sortKey: "refresh-carrier-volume",
     status: "ok",
@@ -88,7 +89,7 @@ const designJobObjects: OtherDatabaseObject[] = [
     definition:
       "SELECT cron.schedule('stats-snapshot', '*/15 * * * *', $$INSERT INTO ops.stat_snapshots SELECT …$$);",
     detail: "INSERT INTO ops.stat_snapshots SELECT …",
-    extra: "ok · 0.3 s · 5 Jul 01:45",
+    extra: "0.3 s · 5 Jul 01:45",
     name: "stats-snapshot",
     sortKey: "stats-snapshot",
     status: "ok",
@@ -100,7 +101,7 @@ const designJobObjects: OtherDatabaseObject[] = [
     definition:
       "SELECT cron.schedule('vacuum-audit-log', '0 5 * * 0', $$VACUUM (ANALYZE) audit.change_log$$);",
     detail: "VACUUM (ANALYZE) audit.change_log",
-    extra: "failed · lock timeout · 29 Jun 05:00",
+    extra: "lock timeout · 29 Jun 05:00",
     name: "vacuum-audit-log",
     sortKey: "vacuum-audit-log",
     status: "failed",
@@ -153,9 +154,7 @@ test("other database objects matches the design's pg cron run history view", asy
     .toHaveAttribute("aria-current", "page");
   await expect.element(page.getByText("partman-maintenance")).toBeVisible();
   await expect.element(page.getByText("vacuum-audit-log")).toBeVisible();
-  await expect
-    .element(page.getByText("failed · lock timeout · 29 Jun 05:00"))
-    .toBeVisible();
+  await expect.element(page.getByText(LOCK_TIMEOUT_RE)).toBeVisible();
 
   await page.getByRole("button", { name: PARTMAN_MAINTENANCE_RE }).click();
 

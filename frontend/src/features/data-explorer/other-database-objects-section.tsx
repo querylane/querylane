@@ -98,6 +98,7 @@ interface OtherDatabaseObject {
 interface OtherDatabaseObjectsPanelProps {
   error?: unknown;
   isLoading: boolean;
+  isTruncated?: boolean | undefined;
   objects: OtherDatabaseObject[];
   onRetry?: (() => Promise<unknown>) | undefined;
 }
@@ -215,7 +216,7 @@ function ObjectStatus({ status }: { status?: OtherDatabaseObject["status"] }) {
         statusClassName(status)
       )}
     >
-      <span className="size-1.5 rounded-full bg-current" />
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       {statusLabel(status)}
     </span>
   );
@@ -524,15 +525,29 @@ function cronHuman(object: OtherDatabaseObject): string {
   const parts = schedule.split(CRON_PARTS_RE);
   const minute = parts[0];
   const hour = parts[1];
+  const dayOfMonth = parts[2];
+  const month = parts[3];
   const dayOfWeek = parts[4];
 
   if (minute?.startsWith("*/")) {
     return `every ${minute.slice(2)} minutes`;
   }
-  if (minute && hour && dayOfWeek === "0") {
+  if (
+    minute &&
+    hour &&
+    dayOfMonth === "*" &&
+    month === "*" &&
+    dayOfWeek === "0"
+  ) {
     return `Sundays at ${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
   }
-  if (minute && hour) {
+  if (
+    minute &&
+    hour &&
+    dayOfMonth === "*" &&
+    month === "*" &&
+    dayOfWeek === "*"
+  ) {
     return `daily at ${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
   }
   return schedule;
@@ -613,16 +628,7 @@ function CronObjectCard(props: OtherObjectCardProps) {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {object.status ? (
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 font-mono text-[11px]",
-                  statusClassName(object.status)
-                )}
-              >
-                <span className="size-1.5 rounded-full bg-current" />
-              </span>
-            ) : null}
+            <ObjectStatus status={object.status} />
             {object.extra ? (
               <span
                 className={cn(
@@ -758,6 +764,7 @@ function OtherObjectsError({
 function OtherDatabaseObjectsPanel({
   error,
   isLoading,
+  isTruncated = false,
   objects,
   onRetry,
 }: OtherDatabaseObjectsPanelProps) {
@@ -918,6 +925,13 @@ function OtherDatabaseObjectsPanel({
             </p>
           ) : null}
 
+          {isTruncated ? (
+            <p className="mb-3 text-amber-700 text-xs dark:text-amber-300">
+              This database has more than 1,000 other objects. Showing a partial
+              inventory.
+            </p>
+          ) : null}
+
           {objectListContent}
         </div>
       </div>
@@ -938,6 +952,7 @@ function OtherDatabaseObjectsSection({
     <OtherDatabaseObjectsPanel
       error={query.error}
       isLoading={query.isLoading}
+      isTruncated={query.data?.isTruncated}
       objects={query.data?.objects ?? []}
       onRetry={() => query.refetch()}
     />

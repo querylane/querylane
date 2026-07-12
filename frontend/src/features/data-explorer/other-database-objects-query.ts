@@ -10,7 +10,9 @@ import type {
   TableValue,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
-const OTHER_DATABASE_OBJECTS_ROW_LIMIT = 1000;
+const OTHER_DATABASE_OBJECTS_DISPLAY_LIMIT = 1000;
+const OTHER_DATABASE_OBJECTS_ROW_LIMIT =
+  OTHER_DATABASE_OBJECTS_DISPLAY_LIMIT + 1;
 const OTHER_DATABASE_OBJECTS_BATCH_SIZE = 100;
 
 const MAIN_OTHER_DATABASE_OBJECTS_SQL = `
@@ -493,9 +495,12 @@ async function fetchOtherDatabaseObjects({
   const cronRows = hasCron
     ? await execute({ parent, statement: CRON_JOBS_SQL })
     : [];
+  const rows = [...mainRows, ...cronRows];
 
   return {
-    objects: [...mainRows, ...cronRows]
+    isTruncated: rows.length > OTHER_DATABASE_OBJECTS_DISPLAY_LIMIT,
+    objects: rows
+      .slice(0, OTHER_DATABASE_OBJECTS_DISPLAY_LIMIT)
       .map(queryRowToObject)
       .filter((object): object is OtherDatabaseObject => object !== null),
   };
