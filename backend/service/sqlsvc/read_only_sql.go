@@ -34,44 +34,10 @@ var blockedReadOnlyStatementStarts = map[string]struct{}{
 }
 
 var forbiddenReadOnlyStatementKeywords = map[string]struct{}{
-	"ALTER":      {},
-	"ANALYZE":    {},
-	"BEGIN":      {},
-	"CALL":       {},
-	"CLUSTER":    {},
-	"COMMENT":    {},
-	"COMMIT":     {},
-	"COPY":       {},
-	"CREATE":     {},
-	"DEALLOCATE": {},
-	"DELETE":     {},
-	"DISCARD":    {},
-	"DO":         {},
-	"DROP":       {},
-	"EXECUTE":    {},
-	"GRANT":      {},
-	"INSERT":     {},
-	"INTO":       {},
-	"LISTEN":     {},
-	"LOAD":       {},
-	"LOCK":       {},
-	"MERGE":      {},
-	"NOTIFY":     {},
-	"PREPARE":    {},
-	"REFRESH":    {},
-	"REINDEX":    {},
-	"RELEASE":    {},
-	"RESET":      {},
-	"REVOKE":     {},
-	"ROLLBACK":   {},
-	"SAVEPOINT":  {},
-	"SET":        {},
-	"SHARE":      {},
-	"START":      {},
-	"TRUNCATE":   {},
-	"UNLISTEN":   {},
-	"UPDATE":     {},
-	"VACUUM":     {},
+	"DELETE": {},
+	"INSERT": {},
+	"INTO":   {},
+	"UPDATE": {},
 }
 
 // validateReadOnlyStatement is a fast application-level guardrail for the SQL
@@ -106,11 +72,18 @@ func validateReadOnlyStatement(statement string) error {
 		return nil
 	}
 
-	for _, token := range tokens {
+	for index, token := range tokens {
 		if _, ok := forbiddenReadOnlyStatementKeywords[token]; ok {
 			return engine.NewInvalidQueryError(
 				"statement",
 				strings.ToLower(token)+" is not allowed in the read-only workbench",
+			)
+		}
+
+		if index > 0 && tokens[index-1] == "FOR" && token == "SHARE" {
+			return engine.NewInvalidQueryError(
+				"statement",
+				"for share is not allowed in the read-only workbench",
 			)
 		}
 	}
