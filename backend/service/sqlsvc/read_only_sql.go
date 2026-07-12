@@ -80,7 +80,10 @@ func validateReadOnlyStatement(statement string) error {
 			)
 		}
 
-		if index > 0 && tokens[index-1] == "FOR" && token == "SHARE" {
+		isForShare := index > 0 && tokens[index-1] == "FOR"
+
+		isForKeyShare := index > 1 && tokens[index-2] == "FOR" && tokens[index-1] == "KEY"
+		if token == "SHARE" && (isForShare || isForKeyShare) {
 			return engine.NewInvalidQueryError(
 				"statement",
 				"for share is not allowed in the read-only workbench",

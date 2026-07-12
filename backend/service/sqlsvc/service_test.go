@@ -85,6 +85,9 @@ func TestValidateReadOnlyStatementRejectsNonReadQueries(t *testing.T) {
 		"SET search_path = public",
 		"SELECT * INTO scratch_customers FROM customers",
 		"SELECT * FROM customers FOR SHARE",
+		"SELECT * FROM customers FOR KEY SHARE",
+		"SELECT * FROM customers FOR UPDATE",
+		"SELECT * FROM customers FOR NO KEY UPDATE",
 		"EXPLAIN SELECT 1",
 	}
 
