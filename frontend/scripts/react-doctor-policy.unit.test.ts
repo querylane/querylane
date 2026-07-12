@@ -30,8 +30,16 @@ const documentedDisabledRuleRationales = {
     "className is an intentional Tailwind/shadcn styling API.",
   "react-doctor/jsx-boolean-value":
     "formatter territory, no correctness signal.",
+  "react-doctor/jsx-handler-names":
+    "false positive for on… props forwarded through a controls/slot object.",
+  "react-doctor/jsx-no-constructed-context-values":
+    "React Compiler auto-memoizes context values; manual useMemo is banned.",
+  "react-doctor/jsx-no-jsx-as-prop":
+    "React Compiler auto-memoizes JSX props; manual memoization is banned.",
   "react-doctor/jsx-props-no-spreading":
     "typed wrapper components intentionally forward prop surfaces.",
+  "react-doctor/no-adjust-state-on-prop-change":
+    "false positive for intentional setTimeout-based loading debounce.",
   "react-doctor/react-in-jsx-scope":
     "React 19 automatic JSX runtime does not need React in scope.",
 };
@@ -48,7 +56,6 @@ const highSignalOptInRules = [
   "react-doctor/jsx-curly-brace-presence",
   "react-doctor/jsx-filename-extension",
   "react-doctor/jsx-fragments",
-  "react-doctor/jsx-handler-names",
   "react-doctor/jsx-no-useless-fragment",
   "react-doctor/jsx-pascal-case",
   "react-doctor/no-array-index-key",

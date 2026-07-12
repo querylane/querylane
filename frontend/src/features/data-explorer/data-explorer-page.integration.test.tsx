@@ -215,7 +215,9 @@ describe("DataExplorerPage", () => {
     expect(
       screen.getByRole("complementary", { name: "Database objects" })
     ).toBeTruthy();
-    expect(screen.getByText("Loading schemas…")).toBeTruthy();
+    // The rail shows a schema-list skeleton (not the full-page loader) so it
+    // keeps its shape while schemas load instead of popping the tree in.
+    expect(screen.getByTestId("schema-list-loading")).toBeTruthy();
     expect(
       screen.queryByText("Fetching live metadata from the backend.")
     ).toBeNull();

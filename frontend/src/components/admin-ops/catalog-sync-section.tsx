@@ -11,6 +11,10 @@ import { formatRelativeTimestamp } from "@/lib/admin-ops";
 import type { CatalogSyncState } from "@/protogen/querylane/console/v1alpha1/admin_pb";
 import { CatalogSyncStatus } from "@/protogen/querylane/console/v1alpha1/catalog_sync_pb";
 
+// Placeholder shown for empty cells; held in a constant so the em-dash is a
+// value rather than JSX prose (matches how the explorer tables render blanks).
+const EMPTY_CELL = "—";
+
 function SyncStatusCell({ status }: { status: CatalogSyncStatus }) {
   switch (status) {
     case CatalogSyncStatus.SYNCED:
@@ -68,7 +72,7 @@ const CATALOG_SYNC_COLUMNS: DataTableColumnDef<CatalogSyncState>[] = [
           {row.original.syncError}
         </OverflowTooltip>
       ) : (
-        <span className="text-muted-foreground">—</span>
+        <span className="text-muted-foreground">{EMPTY_CELL}</span>
       ),
     header: "Error",
     id: "syncError",

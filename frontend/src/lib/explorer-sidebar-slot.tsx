@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, use, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface ExplorerSidebarSlotContextValue {
@@ -34,7 +34,7 @@ function ExplorerSidebarSlotProvider({
 function useExplorerSidebarSlotRegistration(): (
   element: HTMLElement | null
 ) => void {
-  const context = useContext(ExplorerSidebarSlotContext);
+  const context = use(ExplorerSidebarSlotContext);
   if (!context) {
     throw new Error(
       "useExplorerSidebarSlotRegistration requires ExplorerSidebarSlotProvider"
@@ -50,7 +50,7 @@ function useExplorerSidebarSlotRegistration(): (
  * unmounting the tree here loses nothing.
  */
 function ExplorerSidebarPortal({ children }: { children: React.ReactNode }) {
-  const context = useContext(ExplorerSidebarSlotContext);
+  const context = use(ExplorerSidebarSlotContext);
   if (!context?.target) {
     return null;
   }

@@ -8,6 +8,10 @@ import {
 } from "@/lib/admin-ops";
 import type { AdminRunnerExecution } from "@/protogen/querylane/console/v1alpha1/admin_pb";
 
+// Placeholder shown for empty cells; held in a constant so the em-dash is a
+// value rather than JSX prose (matches how the explorer tables render blanks).
+const EMPTY_CELL = "—";
+
 export function JobStatusCell({ status }: { status: JobExecutionStatus }) {
   if (status === "running") {
     return (
@@ -29,7 +33,7 @@ export function JobStatusCell({ status }: { status: JobExecutionStatus }) {
 export function LeaseCell({ execution }: { execution: AdminRunnerExecution }) {
   const owner = execution.leaseOwner;
   if (!(execution.leaseHeld && owner)) {
-    return <span className="text-muted-foreground">—</span>;
+    return <span className="text-muted-foreground">{EMPTY_CELL}</span>;
   }
   return (
     <span className="flex min-w-0 flex-col">
@@ -46,7 +50,7 @@ export function LeaseCell({ execution }: { execution: AdminRunnerExecution }) {
 
 export function LastErrorCell({ lastError }: { lastError: string }) {
   if (!lastError) {
-    return <span className="text-muted-foreground">—</span>;
+    return <span className="text-muted-foreground">{EMPTY_CELL}</span>;
   }
   return (
     <OverflowTooltip className="block max-w-72 truncate font-mono text-destructive text-xs">
