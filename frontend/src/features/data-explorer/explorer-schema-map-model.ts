@@ -58,6 +58,7 @@ interface SchemaMapColumn {
 
 interface SchemaMapNode {
   columns: SchemaMapColumn[];
+  columnsLoaded: boolean;
   height: number;
   id: string;
   kind: "table";
@@ -151,7 +152,12 @@ function buildSchemaMapModel({
     schemaOrder.map((schemaName, index) => [schemaName, schemaToneAt(index)])
   );
   const tableInfos = tables.map((table) =>
-    tableInfo(table, columnsByTable[table.name] ?? [], constraintsByTable)
+    tableInfo(
+      table,
+      columnsByTable[table.name] ?? [],
+      constraintsByTable,
+      Object.hasOwn(columnsByTable, table.name)
+    )
   );
   const viewInfos = views.map(viewInfo);
   const chips = schemaChips(schemaOrder, tableInfos);
@@ -209,7 +215,7 @@ function buildSchemaOrder(
 ): string[] {
   const ordered = new Set(schemas.map((schema) => schema.name));
   for (const table of tables) {
-    ordered.add(tableSchemaName(table));
+    ordered.add(schemaNameForTable(table));
   }
   for (const view of views) {
     ordered.add(viewSchemaName(view));
@@ -238,7 +244,8 @@ function schemaChips(
 function tableInfo(
   table: Table,
   columns: Column[],
-  constraintsByTable: Record<string, TableConstraint[]>
+  constraintsByTable: Record<string, TableConstraint[]>,
+  columnsLoaded: boolean
 ) {
   const qualified = tableSafeQualifiedName(table.name);
   const foreignKeyColumns = new Set(
@@ -256,6 +263,7 @@ function tableInfo(
     }));
   return {
     columns,
+    columnsLoaded,
     displayName: table.displayName || qualified.table,
     id: table.name,
     rowLabel: rowLabel(table.rowCount),
@@ -275,7 +283,7 @@ function viewInfo(view: View) {
   };
 }
 
-function tableSchemaName(table: Table): string {
+function schemaNameForTable(table: Table): string {
   return tableSafeQualifiedName(table.name).schema;
 }
 
@@ -630,6 +638,7 @@ function tableNode({
 }): SchemaMapNode {
   return {
     columns: table.visibleColumns,
+    columnsLoaded: table.columnsLoaded,
     height,
     id: table.id,
     kind: "table",
@@ -649,7 +658,7 @@ function tableNode({
 function tableNodeHeight(table: ReturnType<typeof tableInfo>): number {
   return (
     HEADER_HEIGHT +
-    table.visibleColumns.length * ROW_HEIGHT +
+    Math.max(1, table.visibleColumns.length) * ROW_HEIGHT +
     NODE_FOOTER_HEIGHT +
     (table.columns.length > MAX_VISIBLE_COLUMNS ? ROW_HEIGHT : 0)
   );
@@ -745,22 +754,8 @@ function edgeForConstraint({
 }): SchemaMapEdge {
   const sourceColumnName = constraint.columnNames[0] ?? "";
   const targetColumnName = constraint.referencedColumnNames[0] ?? "id";
-  const sourceColumnIndex = source.columns.findIndex(
-    (column) => column.name === sourceColumnName
-  );
-  const targetColumnIndex = target.columns.findIndex(
-    (column) => column.name === targetColumnName
-  );
-  const sourceY =
-    source.y +
-    HEADER_HEIGHT +
-    (sourceColumnIndex >= 0 ? sourceColumnIndex : 0) * ROW_HEIGHT +
-    ROW_HEIGHT / 2;
-  const targetY =
-    target.y +
-    HEADER_HEIGHT +
-    (targetColumnIndex >= 0 ? targetColumnIndex : 0) * ROW_HEIGHT +
-    ROW_HEIGHT / 2;
+  const sourceY = edgeAnchorY(source, sourceColumnName);
+  const targetY = edgeAnchorY(target, targetColumnName);
   const sourceOnLeft = source.x < target.x;
   const sourceX = sourceOnLeft ? source.x + NODE_WIDTH : source.x;
   const targetX = sourceOnLeft ? target.x : target.x + NODE_WIDTH;
@@ -782,6 +777,21 @@ function edgeForConstraint({
   };
 }
 
+function edgeAnchorY(node: SchemaMapNode, columnName: string): number {
+  const columnIndex = node.columns.findIndex(
+    (column) => column.name === columnName
+  );
+  if (columnIndex >= 0) {
+    return node.y + HEADER_HEIGHT + columnIndex * ROW_HEIGHT + ROW_HEIGHT / 2;
+  }
+  if (node.truncatedColumnCount > 0) {
+    return (
+      node.y + HEADER_HEIGHT + node.columns.length * ROW_HEIGHT + ROW_HEIGHT / 2
+    );
+  }
+  return node.y + node.height / 2;
+}
+
 export type {
   BuildSchemaMapModelInput,
   SchemaMapChip,
@@ -792,4 +802,4 @@ export type {
   SchemaMapTone,
   SchemaMapViewNode,
 };
-export { buildSchemaMapModel, NODE_WIDTH, VIEW_NODE_WIDTH };
+export { buildSchemaMapModel, NODE_WIDTH, schemaNameForTable, VIEW_NODE_WIDTH };

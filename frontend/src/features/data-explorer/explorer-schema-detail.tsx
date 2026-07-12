@@ -576,6 +576,7 @@ function SchemaDetail({
               databaseId={databaseId}
               enabled={true}
               instanceId={instanceId}
+              key={schemaName}
               onSelectTable={handleSelectTableInSchema}
               schemas={mapSchemas}
             />

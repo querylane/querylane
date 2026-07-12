@@ -10,10 +10,9 @@ import {
   Plus,
   RotateCcw,
   Search,
-  SlidersHorizontal,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useDeferredValue, useState } from "react";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +25,7 @@ import {
   type SchemaMapNode,
   type SchemaMapTone,
   type SchemaMapViewNode,
+  schemaNameForTable,
   VIEW_NODE_WIDTH,
 } from "@/features/data-explorer/explorer-schema-map-model";
 import { tablesForSchemaQueryInput } from "@/hooks/api/table";
@@ -112,11 +112,13 @@ function useSchemaMapCatalog({
   databaseId,
   enabled,
   instanceId,
+  metadataSchemaNames,
   schemas,
 }: {
   databaseId: string;
   enabled: boolean;
   instanceId: string;
+  metadataSchemaNames: string[];
   schemas: SchemaSummary[];
 }) {
   const transport = useTransport();
@@ -152,7 +154,13 @@ function useSchemaMapCatalog({
   });
   const tables = tableQueries.flatMap((query) => query.data?.tables ?? []);
   const views = viewQueries.flatMap((query) => query.data?.views ?? []);
-  const tableNames = tables.map((table) => table.name);
+  const metadataSchemaSet = new Set(metadataSchemaNames);
+  const tableNames: string[] = [];
+  for (const table of tables) {
+    if (metadataSchemaSet.has(schemaNameForTable(table))) {
+      tableNames.push(table.name);
+    }
+  }
   const columnQueries = useQueries({
     queries: tableNames.map((tableName) => ({
       ...createQueryOptions(
@@ -201,6 +209,9 @@ function useSchemaMapCatalog({
     isMetadataLoading:
       columnQueries.some((query) => query.isLoading) ||
       constraintQueries.some((query) => query.isLoading),
+    isTruncated:
+      tableQueries.some((query) => Boolean(query.data?.nextPageToken)) ||
+      viewQueries.some((query) => Boolean(query.data?.nextPageToken)),
     tables,
     views,
   };
@@ -282,16 +293,6 @@ function SchemaMapToolbar({
         ))}
       </div>
       <div className="hidden h-5 w-px bg-border sm:block" />
-      <Button
-        className="h-8"
-        disabled={true}
-        size="sm"
-        type="button"
-        variant="outline"
-      >
-        <SlidersHorizontal aria-hidden="true" className="size-4" />
-        View
-      </Button>
       <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
         <div className="relative min-w-48 flex-1 sm:w-72">
           <Search
@@ -369,6 +370,9 @@ function TableNode({
   selected: boolean;
 }) {
   const tone = TONE_CLASSES[node.tone];
+  const emptyColumnsLabel = node.columnsLoaded
+    ? "No columns found."
+    : "Select this schema to load details.";
 
   return (
     <foreignObject
@@ -386,6 +390,12 @@ function TableNode({
         )}
         onClick={onSelect}
         onDoubleClick={onOpen}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            onOpen();
+          }
+        }}
         type="button"
         variant="ghost"
       >
@@ -430,8 +440,8 @@ function TableNode({
               </span>
             ))
           ) : (
-            <span className="block px-3 py-3 text-muted-foreground text-xs">
-              Loading columns…
+            <span className="block p-3 text-muted-foreground text-xs">
+              {emptyColumnsLabel}
             </span>
           )}
           {node.truncatedColumnCount > 0 ? (
@@ -533,20 +543,22 @@ function SchemaMapMinimap({
 }
 
 function SchemaMapCanvas({
+  catalogTruncated,
   model,
   onOpenTable,
   selectedTable,
   setSelectedTable,
   zoom,
 }: {
+  catalogTruncated: boolean;
   model: ReturnType<typeof buildSchemaMapModel>;
   onOpenTable: (schemaName: string, tableName: string) => void;
   selectedTable: string | null;
   setSelectedTable: (tableId: string | null) => void;
   zoom: number;
 }) {
-  const viewWidth = Math.round(model.worldWidth / (zoom / PERCENT_SCALE));
-  const viewHeight = Math.round(model.worldHeight / (zoom / PERCENT_SCALE));
+  const renderedWidth = Math.round(model.worldWidth * (zoom / PERCENT_SCALE));
+  const renderedHeight = Math.round(model.worldHeight * (zoom / PERCENT_SCALE));
   const activeNode =
     model.nodes.find((node) => node.id === selectedTable) ?? null;
 
@@ -561,16 +573,19 @@ function SchemaMapCanvas({
   }
 
   return (
-    <div className="relative min-h-[32rem] flex-1 overflow-auto bg-[radial-gradient(color-mix(in_oklch,var(--foreground)_8%,transparent)_1px,transparent_1px)] bg-[size:22px_22px] bg-background">
+    <section
+      aria-label="Schema relationship map"
+      className="relative min-h-[32rem] flex-1 overflow-auto bg-[radial-gradient(color-mix(in_oklch,var(--foreground)_8%,transparent)_1px,transparent_1px)] bg-[size:22px_22px] bg-background"
+    >
       <svg
-        aria-label="Schema relationship map"
         className="block"
-        height={model.worldHeight}
-        role="img"
-        viewBox={`0 0 ${viewWidth} ${viewHeight}`}
-        width={model.worldWidth}
+        data-testid="schema-map-canvas"
+        height={renderedHeight}
+        role="presentation"
+        viewBox={model.viewBox}
+        width={renderedWidth}
       >
-        <title>Schema relationship map</title>
+        <title>Schema relationship map canvas</title>
         {model.hulls.map((hull) => (
           <g key={hull.label}>
             <rect
@@ -626,7 +641,9 @@ function SchemaMapCanvas({
           <span>Curved lines show foreign keys.</span>
           <span>{model.stats}</span>
         </div>
-        <p className="mt-1">Double-click a table to open data.</p>
+        <p className="mt-1">
+          Press Enter or double-click a table to open data.
+        </p>
       </div>
       <SchemaMapMinimap model={model} />
       {activeNode ? (
@@ -656,7 +673,12 @@ function SchemaMapCanvas({
           </Button>
         </div>
       ) : null}
-    </div>
+      {catalogTruncated ? (
+        <p className="absolute right-3 bottom-28 rounded-lg border bg-background/90 px-3 py-2 text-muted-foreground text-xs shadow-sm">
+          Some schemas have more objects. This map shows the first loaded page.
+        </p>
+      ) : null}
+    </section>
   );
 }
 
@@ -676,20 +698,25 @@ function ExplorerSchemaMap({
   schemas: SchemaSummary[];
 }) {
   const [selectedSchema, setSelectedSchema] = useState(ALL_SCHEMAS);
+  const [metadataSchemaNames, setMetadataSchemaNames] = useState([
+    activeSchemaName,
+  ]);
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const catalog = useSchemaMapCatalog({
     databaseId,
     enabled,
     instanceId,
+    metadataSchemaNames,
     schemas,
   });
   const filterSchema = selectedSchema || ALL_SCHEMAS;
   const model = buildSchemaMapModel({
     columnsByTable: catalog.columnsByTable,
     constraintsByTable: catalog.constraintsByTable,
-    filter: { query, schemaName: filterSchema },
+    filter: { query: deferredQuery, schemaName: filterSchema },
     schemas,
     tables: catalog.tables,
     views: catalog.views,
@@ -717,6 +744,12 @@ function ExplorerSchemaMap({
           onSchemaChange={(schemaName) => {
             setSelectedSchema(schemaName);
             setSelectedTable(null);
+            if (
+              schemaName !== ALL_SCHEMAS &&
+              !metadataSchemaNames.includes(schemaName)
+            ) {
+              setMetadataSchemaNames((current) => [...current, schemaName]);
+            }
           }}
           onZoomIn={() =>
             setZoom((current) => Math.min(MAX_ZOOM, current + ZOOM_STEP))
@@ -747,6 +780,7 @@ function ExplorerSchemaMap({
           </div>
         ) : (
           <SchemaMapCanvas
+            catalogTruncated={catalog.isTruncated}
             model={model}
             onOpenTable={onSelectTable}
             selectedTable={selectedTable}

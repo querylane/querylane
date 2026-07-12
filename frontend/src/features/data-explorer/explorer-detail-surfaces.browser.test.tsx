@@ -36,6 +36,7 @@ const ACTIVE_OWNER_FILTER_RE = /^Owner.*analytics_owner/;
 const KIND_FILTER_RE = /^Kind$/;
 const OWNER_FILTER_RE = /^Owner$/;
 const SCHEMA_MAP_ALL_CHIP_RE = /^All 7$/;
+const SCHEMA_MAP_CATALOG_CHIP_RE = /^catalog 2$/;
 const SCHEMA_MAP_SHIPPING_CHIP_RE = /^shipping 4$/;
 const DEFAULT_BROWSER_VIEWPORT = { height: 1000, width: 1280 } as const;
 const SCHEMA_MAP_BROWSER_VIEWPORT = { height: 1400, width: 2048 } as const;
@@ -113,7 +114,10 @@ const sqlQueryState = vi.hoisted(() => ({
 const schemaMapCatalog = vi.hoisted(() => ({
   columnsByTable: {} as Record<string, unknown[]>,
   constraintsByTable: {} as Record<string, unknown[]>,
+  errorMethods: [] as string[],
+  observedQueries: [] as { methodName: string; parent: string }[],
   tablesBySchema: {} as Record<string, unknown[]>,
+  truncatedSchemas: [] as string[],
   viewsBySchema: {} as Record<string, unknown[]>,
 }));
 
@@ -183,10 +187,10 @@ vi.mock("@tanstack/react-query", async () => {
     return parent?.split("/").at(-1) ?? "";
   }
 
-  function result(data: unknown) {
+  function result(data: unknown, error: Error | null = null) {
     return {
       data,
-      error: null,
+      error,
       isFetching: false,
       isLoading: false,
       refetch: () => Promise.resolve(),
@@ -199,28 +203,51 @@ vi.mock("@tanstack/react-query", async () => {
       | { input?: { parent?: string }; methodName?: string }
       | undefined;
     const parent = descriptor?.input?.parent;
+    const methodName = descriptor?.methodName ?? "";
+    schemaMapCatalog.observedQueries.push({
+      methodName,
+      parent: parent ?? "",
+    });
+    const error = schemaMapCatalog.errorMethods.includes(methodName)
+      ? new Error(`${methodName} failed`)
+      : null;
 
-    if (descriptor?.methodName === "ListTables") {
-      return result({
-        tables:
-          schemaMapCatalog.tablesBySchema[schemaNameFromParent(parent)] ?? [],
-      });
+    if (methodName === "ListTables") {
+      const schemaName = schemaNameFromParent(parent);
+      return result(
+        {
+          nextPageToken: schemaMapCatalog.truncatedSchemas.includes(schemaName)
+            ? "next"
+            : "",
+          tables: schemaMapCatalog.tablesBySchema[schemaName] ?? [],
+        },
+        error
+      );
     }
-    if (descriptor?.methodName === "ListViews") {
-      return result({
-        views:
-          schemaMapCatalog.viewsBySchema[schemaNameFromParent(parent)] ?? [],
-      });
+    if (methodName === "ListViews") {
+      return result(
+        {
+          views:
+            schemaMapCatalog.viewsBySchema[schemaNameFromParent(parent)] ?? [],
+        },
+        error
+      );
     }
-    if (descriptor?.methodName === "ListTableColumns") {
-      return result({
-        columns: schemaMapCatalog.columnsByTable[parent ?? ""] ?? [],
-      });
+    if (methodName === "ListTableColumns") {
+      return result(
+        {
+          columns: schemaMapCatalog.columnsByTable[parent ?? ""] ?? [],
+        },
+        error
+      );
     }
-    if (descriptor?.methodName === "ListTableConstraints") {
-      return result({
-        constraints: schemaMapCatalog.constraintsByTable[parent ?? ""] ?? [],
-      });
+    if (methodName === "ListTableConstraints") {
+      return result(
+        {
+          constraints: schemaMapCatalog.constraintsByTable[parent ?? ""] ?? [],
+        },
+        error
+      );
     }
 
     return result({});
@@ -301,6 +328,9 @@ function tableResource(schemaName: string, tableName: string) {
 }
 
 function seedSchemaMapVisualCatalog() {
+  schemaMapCatalog.errorMethods = [];
+  schemaMapCatalog.observedQueries = [];
+  schemaMapCatalog.truncatedSchemas = [];
   const table = (schemaName: string, tableName: string, rowCount: bigint) =>
     createProto(TableSchema, {
       displayName: tableName,
@@ -896,6 +926,7 @@ test("data explorer schema detail captures active object filters", async () => {
 
 test("data explorer schema map tab matches the redesign relationship map", async () => {
   const catalog = seedSchemaMapVisualCatalog();
+  const onSelectTable = vi.fn();
 
   await page.viewport(
     SCHEMA_MAP_BROWSER_VIEWPORT.width,
@@ -910,7 +941,7 @@ test("data explorer schema map tab matches the redesign relationship map", async
             databaseId="logistics"
             enabled={true}
             instanceId="prod"
-            onSelectTable={() => undefined}
+            onSelectTable={onSelectTable}
             schemas={catalog.schemas}
           />
         </div>
@@ -937,12 +968,80 @@ test("data explorer schema map tab matches the redesign relationship map", async
     await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
       "data-explorer-schema-map"
     );
+
+    const metadataParents = schemaMapCatalog.observedQueries
+      .filter(({ methodName }) => methodName === "ListTableColumns")
+      .map(({ parent }) => parent);
+    expect(metadataParents.length).toBeGreaterThan(0);
+    expect(
+      metadataParents.every((parent) => parent.includes("/schemas/shipping/"))
+    ).toBe(true);
+
+    await page
+      .getByRole("button", { name: SCHEMA_MAP_CATALOG_CHIP_RE })
+      .click();
+    expect(
+      schemaMapCatalog.observedQueries.some(
+        ({ methodName, parent }) =>
+          methodName === "ListTableColumns" &&
+          parent.includes("/schemas/catalog/")
+      )
+    ).toBe(true);
+    await page.getByRole("button", { name: SCHEMA_MAP_ALL_CHIP_RE }).click();
+
+    const map = document.querySelector<SVGElement>(
+      'svg[data-testid="schema-map-canvas"]'
+    );
+    const initialWidth = Number(map?.getAttribute("width"));
+    await page.getByRole("button", { name: "Zoom in" }).click();
+    expect(Number(map?.getAttribute("width"))).toBeGreaterThan(initialWidth);
+
+    await page.getByRole("button", { name: "shipping.shipments" }).click();
+    await expect
+      .element(page.getByRole("button", { name: "Open data" }))
+      .toBeVisible();
+    await page.getByRole("button", { name: "Open data" }).click();
+    expect(onSelectTable).toHaveBeenCalledWith("shipping", "shipments");
+
+    await page
+      .getByRole("searchbox", { name: "Find a table" })
+      .fill("change_log");
+    await expect.element(page.getByText("change_log")).toBeVisible();
+    await expect.element(page.getByText("shipments")).not.toBeInTheDocument();
   } finally {
     await page.viewport(
       DEFAULT_BROWSER_VIEWPORT.width,
       DEFAULT_BROWSER_VIEWPORT.height
     );
   }
+}, 30_000);
+
+test("data explorer schema map surfaces partial catalog failures and truncation", async () => {
+  const catalog = seedSchemaMapVisualCatalog();
+  schemaMapCatalog.errorMethods = ["ListViews"];
+  schemaMapCatalog.truncatedSchemas = ["shipping"];
+
+  render(
+    <ExplorerSchemaMap
+      activeSchemaName="shipping"
+      databaseId="logistics"
+      enabled={true}
+      instanceId="prod"
+      onSelectTable={() => undefined}
+      schemas={catalog.schemas}
+    />
+  );
+
+  await expect
+    .element(page.getByText("Some schema metadata could not load"))
+    .toBeVisible();
+  await expect
+    .element(
+      page.getByText(
+        "Some schemas have more objects. This map shows the first loaded page."
+      )
+    )
+    .toBeVisible();
 });
 
 test("data explorer materialized view detail stays readable", async () => {

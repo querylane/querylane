@@ -215,4 +215,63 @@ describe("buildSchemaMapModel", () => {
     expect(model.nodes.map((node) => node.name)).toEqual(["ports"]);
     expect(model.stats).toBe("1 table · 0 foreign keys");
   });
+
+  test("anchors foreign keys from hidden columns to the truncated footer", () => {
+    const columns = Array.from({ length: 9 }, (_, index) =>
+      create(ColumnSchema, {
+        columnName: index === 8 ? "carrier_id" : `column_${index + 1}`,
+        rawType: "integer",
+      })
+    );
+    const model = buildSchemaMapModel({
+      columnsByTable: {
+        [carriers.name]: [
+          create(ColumnSchema, {
+            columnName: "id",
+            isPrimaryKey: true,
+            rawType: "integer",
+          }),
+        ],
+        [shipments.name]: columns,
+      },
+      constraintsByTable: {
+        [shipments.name]: [
+          create(TableConstraintSchema, {
+            columnNames: ["carrier_id"],
+            referencedColumnNames: ["id"],
+            referencedTable: carriers.name,
+            type: ConstraintType.FOREIGN_KEY,
+          }),
+        ],
+      },
+      filter: { query: "", schemaName: "shipping" },
+      schemas,
+      tables: [carriers, shipments],
+      views: [],
+    });
+
+    const source = model.nodes.find((node) => node.name === "shipments");
+    const edge = model.edges[0];
+    expect(source).toBeDefined();
+    expect(edge).toBeDefined();
+
+    const moveY = Number(edge?.d.split(" ")[2]);
+    expect(moveY).toBeGreaterThan(
+      (source?.y ?? 0) + (source?.height ?? 0) - 30
+    );
+  });
+
+  test("reserves body space when table details have not loaded", () => {
+    const model = buildSchemaMapModel({
+      columnsByTable: {},
+      constraintsByTable: {},
+      filter: { query: "", schemaName: "catalog" },
+      schemas,
+      tables: [ports],
+      views: [],
+    });
+
+    expect(model.nodes[0]?.columnsLoaded).toBe(false);
+    expect(model.nodes[0]?.height).toBeGreaterThan(60);
+  });
 });
