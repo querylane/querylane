@@ -1,5 +1,6 @@
 "use client";
 
+import type { UseQueryResult } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, Workflow as WorkflowIcon } from "lucide-react";
 import {
@@ -9,10 +10,11 @@ import {
   SectionCard,
 } from "@/components/console-pages/console-layout";
 import {
+  WorkflowPreconditionPanel,
   WorkflowStatusBadge,
-  WorkflowsNotInstalledState,
 } from "@/components/console-pages/database-workflows-page";
 import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import {
   useListAllWorkflowNodesQuery,
@@ -23,8 +25,11 @@ import {
   buildWorkflowName,
   formatTimestampLabel,
 } from "@/lib/console-resources";
-import { isDurableNotInstalledError } from "@/lib/workflow-presentation";
-import type { WorkflowNode } from "@/protogen/querylane/console/v1alpha1/workflow_pb";
+import { workflowPreconditionKind } from "@/lib/workflow-presentation";
+import type {
+  ListWorkflowNodesResponse,
+  WorkflowNode,
+} from "@/protogen/querylane/console/v1alpha1/workflow_pb";
 
 const NODES_PAGE_SIZE = 50;
 
@@ -150,6 +155,57 @@ function AllWorkflowsLink({
   );
 }
 
+// WorkflowStepsSection owns the graph query's loading/error/empty states so a
+// failed ListWorkflowNodes shows an error with retry instead of silently
+// rendering a valid workflow as having zero steps.
+function WorkflowStepsSection({
+  nodesQuery,
+}: {
+  nodesQuery: UseQueryResult<ListWorkflowNodesResponse>;
+}) {
+  let body: React.ReactNode;
+
+  if (nodesQuery.isPending) {
+    body = <p className="text-muted-foreground text-sm">Loading steps…</p>;
+  } else if (nodesQuery.error) {
+    body = (
+      <div className="flex flex-col items-start gap-2">
+        <p className="text-muted-foreground text-sm">
+          Could not load the workflow steps.
+        </p>
+        <Button
+          onClick={() => nodesQuery.refetch()}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  } else {
+    body = (
+      <DataTable
+        columns={nodeColumns()}
+        data={nodesQuery.data.workflowNodes}
+        emptyResourceName="workflow steps"
+        initialSorting={[{ desc: false, id: "nodeId" }]}
+        pageSize={NODES_PAGE_SIZE}
+        tableKey="workflow-nodes"
+      />
+    );
+  }
+
+  return (
+    <SectionCard
+      description="One node per step of the workflow graph, with the status pg_durable reports for it."
+      title="Steps"
+    >
+      {body}
+    </SectionCard>
+  );
+}
+
 function WorkflowDetailPage({
   databaseId,
   instanceId,
@@ -169,13 +225,20 @@ function WorkflowDetailPage({
   );
   const workflow = workflowQuery.data;
 
-  if (isDurableNotInstalledError(workflowQuery.error)) {
+  // pg_durable preconditions can surface from either query; treat them the same
+  // actionable way rather than as a transient error.
+  const precondition = workflowPreconditionKind(
+    workflowQuery.error ?? nodesQuery.error
+  );
+
+  if (precondition) {
     return (
       <div className="flex flex-col gap-6">
         <AllWorkflowsLink databaseId={databaseId} instanceId={instanceId} />
-        <WorkflowsNotInstalledState
+        <WorkflowPreconditionPanel
           databaseId={databaseId}
           instanceId={instanceId}
+          kind={precondition}
         />
       </div>
     );
@@ -229,25 +292,13 @@ function WorkflowDetailPage({
             title="Details"
           />
         ) : null}
-        <SectionCard
-          description="One node per step of the workflow graph, with the status pg_durable reports for it."
-          title="Steps"
-        >
-          <DataTable
-            columns={nodeColumns()}
-            data={nodesQuery.data?.workflowNodes ?? []}
-            emptyResourceName="workflow steps"
-            initialSorting={[{ desc: false, id: "nodeId" }]}
-            pageSize={NODES_PAGE_SIZE}
-            tableKey="workflow-nodes"
-          />
-        </SectionCard>
+        <WorkflowStepsSection nodesQuery={nodesQuery} />
         {workflow?.output ? (
           <SectionCard
             description="Final output recorded for this workflow instance."
             title="Output"
           >
-            <pre className="overflow-x-auto rounded-md bg-muted p-4 font-mono text-sm">
+            <pre className="max-h-96 overflow-auto rounded-md bg-muted p-4 font-mono text-sm">
               {workflow.output}
             </pre>
           </SectionCard>

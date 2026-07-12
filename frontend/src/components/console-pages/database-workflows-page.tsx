@@ -1,7 +1,13 @@
 "use client";
 
 import { Link } from "@tanstack/react-router";
-import { PackageOpen, Workflow as WorkflowIcon, X } from "lucide-react";
+import {
+  Info,
+  Lock,
+  PackageOpen,
+  Workflow as WorkflowIcon,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import {
   PageHeader,
@@ -22,12 +28,14 @@ import {
 } from "@/components/ui/data-table-faceted-filter";
 import {
   useListAllWorkflowsQuery,
+  WORKFLOW_LIST_WINDOW,
   workflowsForDatabaseQueryInput,
 } from "@/hooks/api/workflow";
 import { useUrlTableSearch } from "@/lib/url-search-state";
 import { cn } from "@/lib/utils";
 import {
-  isDurableNotInstalledError,
+  type WorkflowPreconditionKind,
+  workflowPreconditionKind,
   workflowStatusLabel,
   workflowStatusPresentation,
 } from "@/lib/workflow-presentation";
@@ -66,6 +74,58 @@ function WorkflowsNotInstalledState({
       icon={PackageOpen}
       title="pg_durable is not installed"
     />
+  );
+}
+
+function WorkflowsAccessDeniedState() {
+  return (
+    <EmptyState
+      description="pg_durable is installed, but the role Querylane connects with has not been granted access to it. An administrator can grant it by running df.grant_usage on this connection role. pg_durable grants nothing by default, so this step is required before workflows appear."
+      icon={Lock}
+      title="This role cannot see workflows"
+    />
+  );
+}
+
+// WorkflowPreconditionPanel renders the actionable panel for a pg_durable
+// precondition (extension absent, or role not granted). Both the list and
+// detail pages compute the kind via workflowPreconditionKind and render this.
+function WorkflowPreconditionPanel({
+  databaseId,
+  instanceId,
+  kind,
+}: {
+  databaseId: string;
+  instanceId: string;
+  kind: WorkflowPreconditionKind;
+}) {
+  if (kind === "not-installed") {
+    return (
+      <WorkflowsNotInstalledState
+        databaseId={databaseId}
+        instanceId={instanceId}
+      />
+    );
+  }
+
+  return <WorkflowsAccessDeniedState />;
+}
+
+// Best-effort truncation hint: pg_durable's df.list_instances is capped at its
+// listing limit, so a full window means older instances may be hidden. This is
+// a signal, not a guarantee (exactly-at-the-cap also trips it).
+function WorkflowsTruncatedNote() {
+  return (
+    <div
+      className="flex items-start gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-muted-foreground text-sm"
+      role="status"
+    >
+      <Info className="mt-0.5 size-4 shrink-0" />
+      <span>
+        Showing the newest {WORKFLOW_LIST_WINDOW} workflows. pg_durable caps its
+        listing at this limit, so older instances may not appear.
+      </span>
+    </div>
   );
 }
 
@@ -246,8 +306,14 @@ function BackendDatabaseWorkflowsPage({
   });
   const workflows = workflowsQuery.data?.workflows ?? [];
   const hasData = workflowsQuery.data !== undefined;
+  const truncated = workflows.length >= WORKFLOW_LIST_WINDOW;
 
-  if (isDurableNotInstalledError(workflowsQuery.error)) {
+  // pg_durable "not usable" states (extension absent, or role not granted) are
+  // preconditions, not transient errors, so they get their own actionable
+  // panels instead of the retry-forever error card.
+  const precondition = workflowPreconditionKind(workflowsQuery.error);
+
+  if (precondition) {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader
@@ -255,9 +321,10 @@ function BackendDatabaseWorkflowsPage({
           eyebrow="Database"
           title="Workflows"
         />
-        <WorkflowsNotInstalledState
+        <WorkflowPreconditionPanel
           databaseId={databaseId}
           instanceId={instanceId}
+          kind={precondition}
         />
       </div>
     );
@@ -281,11 +348,14 @@ function BackendDatabaseWorkflowsPage({
         {workflows.length === 0 ? (
           <NoWorkflowsState />
         ) : (
-          <WorkflowsTable
-            databaseId={databaseId}
-            instanceId={instanceId}
-            workflows={workflows}
-          />
+          <div className="flex flex-col gap-3">
+            {truncated ? <WorkflowsTruncatedNote /> : null}
+            <WorkflowsTable
+              databaseId={databaseId}
+              instanceId={instanceId}
+              workflows={workflows}
+            />
+          </div>
         )}
       </div>
     </ResourcePageState>
@@ -294,6 +364,6 @@ function BackendDatabaseWorkflowsPage({
 
 export {
   BackendDatabaseWorkflowsPage,
+  WorkflowPreconditionPanel,
   WorkflowStatusBadge,
-  WorkflowsNotInstalledState,
 };

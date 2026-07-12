@@ -27,6 +27,9 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/workflow_pb";
 import { createTestQueryClient } from "@/test/query-client";
 
+const GRANT_USAGE_TEXT = /df\.grant_usage/;
+const TRUNCATION_NOTE_TEXT = /Showing the newest 1000 workflows/;
+
 afterEach(() => cleanup());
 
 function WorkflowsListHarness() {
@@ -171,6 +174,46 @@ describe("database workflows page", () => {
 
     expect(await screen.findByText("No workflows found")).toBeTruthy();
   });
+
+  test("shows the access-denied state on PermissionDenied", async () => {
+    const transport = createRouterTransport(({ service }) => {
+      service(WorkflowService, {
+        listWorkflows() {
+          throw new ConnectError(
+            "pg_durable is installed but this role lacks access to the df schema",
+            Code.PermissionDenied
+          );
+        },
+      });
+    });
+
+    renderWithRouter(transport, LIST_ENTRY);
+
+    expect(
+      await screen.findByText("This role cannot see workflows")
+    ).toBeTruthy();
+    expect(screen.getByText(GRANT_USAGE_TEXT)).toBeTruthy();
+  });
+
+  test("shows the truncation note when the listing window is full", async () => {
+    const transport = createRouterTransport(({ service }) => {
+      service(WorkflowService, {
+        listWorkflows() {
+          return create(ListWorkflowsResponseSchema, {
+            workflows: Array.from({ length: 1000 }, (_unused, index) => ({
+              name: `instances/local/databases/postgres/workflows/wf-${index}`,
+              status: WorkflowStatus.COMPLETED,
+              workflowId: `wf-${index}`,
+            })),
+          });
+        },
+      });
+    });
+
+    renderWithRouter(transport, LIST_ENTRY);
+
+    expect(await screen.findByText(TRUNCATION_NOTE_TEXT)).toBeTruthy();
+  });
 });
 
 describe("workflow detail page", () => {
@@ -232,5 +275,34 @@ describe("workflow detail page", () => {
     renderWithRouter(transport, DETAIL_ENTRY);
 
     expect(await screen.findByText("Workflow not found")).toBeTruthy();
+  });
+
+  test("surfaces a steps error with retry when GetWorkflow succeeds but nodes fail", async () => {
+    const transport = createRouterTransport(({ service }) => {
+      service(WorkflowService, {
+        getWorkflow(request) {
+          return create(WorkflowSchema, {
+            name: request.name,
+            status: WorkflowStatus.RUNNING,
+            workflowId: "wf-01hq3",
+          });
+        },
+        listWorkflowNodes() {
+          throw new ConnectError("nodes unavailable", Code.Unavailable);
+        },
+      });
+    });
+
+    renderWithRouter(transport, DETAIL_ENTRY);
+
+    // The workflow itself still renders...
+    expect(
+      await screen.findByRole("heading", { name: "wf-01hq3" })
+    ).toBeTruthy();
+    // ...but the Steps section shows an error + retry, not a false "no steps".
+    expect(
+      await screen.findByText("Could not load the workflow steps.")
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
   });
 });

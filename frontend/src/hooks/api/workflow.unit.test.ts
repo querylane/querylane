@@ -35,7 +35,8 @@ describe("workflow query option helpers", () => {
         instanceId: "local",
       })
     ).toEqual({
-      pageSize: 50,
+      // The whole listing window in one call (see WORKFLOW_LIST_WINDOW).
+      pageSize: 1000,
       parent: "instances/local/databases/postgres",
     });
   });
@@ -53,25 +54,17 @@ describe("workflow query option helpers", () => {
     });
   });
 
-  test("collects every workflow page into a single list response", async () => {
+  test("fetches the listing window in a single call and ignores extra pages", async () => {
     const requests: ListWorkflowsRequest[] = [];
     const transport = createRouterTransport(({ service }) => {
       service(WorkflowService, {
         listWorkflows(request) {
           requests.push(request);
-          if (request.pageToken === "") {
-            return create(ListWorkflowsResponseSchema, {
-              nextPageToken: "page-2",
-              workflows: [
-                { status: WorkflowStatus.RUNNING, workflowId: "wf-1" },
-              ],
-            });
-          }
+          // A non-empty next token must NOT trigger a follow-up request: the
+          // window is fetched in one shot to avoid an unstable keyset walk.
           return create(ListWorkflowsResponseSchema, {
-            nextPageToken: "",
-            workflows: [
-              { status: WorkflowStatus.COMPLETED, workflowId: "wf-2" },
-            ],
+            nextPageToken: "page-2",
+            workflows: [{ status: WorkflowStatus.RUNNING, workflowId: "wf-1" }],
           });
         },
       });
@@ -87,12 +80,11 @@ describe("workflow query option helpers", () => {
 
     const response = await queryClient.fetchQuery(options);
 
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(1);
     expect(requests[0]?.parent).toBe("instances/local/databases/postgres");
-    expect(requests[1]?.pageToken).toBe("page-2");
+    expect(requests[0]?.pageSize).toBe(1000);
     expect(response.workflows.map((workflow) => workflow.workflowId)).toEqual([
       "wf-1",
-      "wf-2",
     ]);
     expect(options.staleTime).toBe(QUERY_STALE_TIME.workflowList);
     await disposeTestQueryClient(queryClient);
