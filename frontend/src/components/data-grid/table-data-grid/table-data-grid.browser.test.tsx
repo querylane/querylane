@@ -1,5 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { expect, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
@@ -60,12 +60,51 @@ vi.mock("@/hooks/api/table-data", () => ({
 }));
 
 const SQL_WHERE_HELP_RE = /Supports column comparisons joined with AND/;
+afterEach(() => {
+  tableApi.useListTableColumnsQuery.mockReset();
+  tableDataApi.useReadRowsQuery.mockReset();
+});
+
 const EMPTY_FILTER_HELP_RE =
   /Pick a column, choose an operator, then enter a value\. Use/;
 const shipmentsName =
   "instances/prod/databases/app/schemas/shipping/tables/shipments";
 const carriersName =
   "instances/prod/databases/app/schemas/public/tables/carriers";
+
+function browserColorChannels(color: string) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("expected a 2D canvas context");
+  }
+  context.fillStyle = color;
+  context.fillRect(0, 0, 1, 1);
+  return Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3));
+}
+
+function colorContrastRatio(first: string, second: string) {
+  function relativeLuminance(color: string) {
+    const channels = browserColorChannels(color).map((channel) => {
+      const normalized = channel / 255;
+      return normalized <= 0.040_45
+        ? normalized / 12.92
+        : ((normalized + 0.055) / 1.055) ** 2.4;
+    });
+    return (
+      0.2126 * (channels[0] ?? 0) +
+      0.7152 * (channels[1] ?? 0) +
+      0.0722 * (channels[2] ?? 0)
+    );
+  }
+  const firstLuminance = relativeLuminance(first);
+  const secondLuminance = relativeLuminance(second);
+  const lighter = Math.max(firstLuminance, secondLuminance);
+  const darker = Math.min(firstLuminance, secondLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+}
 
 function column(name: string, rawType: string, dataType: DataType) {
   return createProto(TableResultColumnSchema, {
@@ -693,7 +732,9 @@ test("foreign key reference drawer keeps linked rows in context", async () => {
           ]}
           initialPageSize={10}
           name={shipmentsName}
-          onOpenReferencedTable={vi.fn()}
+          renderOpenReferencedTableLink={() => (
+            <a href="/explorer?schema=public&table=carriers">Open table</a>
+          )}
         />
       </div>
     </ScreenshotFrame>
@@ -703,6 +744,13 @@ test("foreign key reference drawer keeps linked rows in context", async () => {
     name: "Open carrier_id reference 214",
   });
   await expect.element(carrierLink).toBeVisible();
+  const carrierLinkStyle = getComputedStyle(carrierLink.element());
+  const frameStyle = getComputedStyle(
+    page.getByTestId("screenshot-frame").element()
+  );
+  expect(
+    colorContrastRatio(carrierLinkStyle.color, frameStyle.backgroundColor)
+  ).toBeGreaterThanOrEqual(4.5);
   await carrierLink.click();
 
   const drawer = page.getByRole("dialog", {
@@ -711,9 +759,15 @@ test("foreign key reference drawer keeps linked rows in context", async () => {
   await expect.element(drawer).toBeVisible();
   await expect.element(page.getByText("Hanse Container Line")).toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: "Open table" }))
+    .element(page.getByRole("link", { name: "Open table" }))
     .toBeVisible();
   await expect(drawer).toMatchScreenshot("foreign-key-reference-drawer");
+});
+
+test("foreign key query fixtures do not leak into later browser cases", () => {
+  expect(
+    tableDataApi.useReadRowsQuery({ name: "unrelated-table" })
+  ).toBeUndefined();
 });
 
 test("data value expansion keeps one visible dialog layer", async () => {

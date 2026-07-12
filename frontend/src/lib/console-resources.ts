@@ -97,9 +97,19 @@ export function parseResourceLeafId(name: string): string {
 }
 
 export function parseTableQualifiedName(name: string): QualifiedTableName {
+  const parsed = tryParseTableQualifiedName(name);
+  if (!parsed) {
+    throw new Error(`invalid table resource name: ${name}`);
+  }
+  return parsed;
+}
+
+export function tryParseTableQualifiedName(
+  name: string
+): QualifiedTableName | undefined {
   const match = TABLE_RESOURCE_NAME_PATTERN.exec(name);
   if (!(match?.[1] && match[2])) {
-    throw new Error(`invalid table resource name: ${name}`);
+    return;
   }
   return {
     schema: decodeResourceSegment(match[1]),

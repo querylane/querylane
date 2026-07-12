@@ -100,6 +100,7 @@ import { downloadBlob } from "@/lib/download-blob";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import type {
   ReadRowsRequest,
+  RowFilter,
   TableCell,
   TableResultColumn,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
@@ -142,9 +143,12 @@ type TableDataGridProps = {
   name: string;
   onCellSearchChange?: (next: string | undefined) => void;
   onFrozenColumnsSearchChange?: (next: string | undefined) => void;
-  onOpenReferencedTable?: ((tableName: string) => void) | undefined;
   onOpenRowSearchChange?: (next: string | undefined) => void;
   onPageSizeSearchChange?: (next: number | undefined) => void;
+  renderOpenReferencedTableLink?:
+    | ((tableName: string, onNavigate: () => void) => ReactNode)
+    | undefined;
+  requiredFilter?: RowFilter | undefined;
   onSelectedRowsSearchChange?: (next: string | undefined) => void;
   openRowSearch?: string | undefined;
   pageSizeSearch?: number | undefined;
@@ -155,7 +159,8 @@ type TableDataGridProps = {
 interface ContextMenuState {
   columnKey: string;
   left: number;
-  rowIdx: number;
+  returnFocusTo: HTMLElement;
+  row: GridRow;
   top: number;
 }
 
@@ -635,32 +640,30 @@ function RecordDetailDrawerHost({
 // different reference remounts it and reseeds the filter from the clicked
 // foreign key value.
 function ForeignKeyPreviewGrid({
-  initialFilterSearch,
   name,
+  requiredFilter,
 }: {
-  initialFilterSearch: string;
   name: string;
+  requiredFilter: RowFilter;
 }) {
-  const [filterSearch, setFilterSearch] = useState<string | undefined>(
-    initialFilterSearch
-  );
   return (
     <TableDataGrid
-      filterSearch={filterSearch}
       initialPageSize={10}
       name={name}
-      onFilterSearchChange={setFilterSearch}
+      requiredFilter={requiredFilter}
     />
   );
 }
 
 function ForeignKeyReferenceDrawer({
   onOpenChange,
-  onOpenReferencedTable,
+  renderOpenReferencedTableLink,
   preview,
 }: {
   onOpenChange: (open: boolean) => void;
-  onOpenReferencedTable?: ((tableName: string) => void) | undefined;
+  renderOpenReferencedTableLink?:
+    | ((tableName: string, onNavigate: () => void) => ReactNode)
+    | undefined;
   preview: ForeignKeyReferencePreview | null;
 }) {
   return (
@@ -691,23 +694,17 @@ function ForeignKeyReferenceDrawer({
             </SheetHeader>
             <div className="min-h-0 flex-1 overflow-auto p-4">
               <ForeignKeyPreviewGrid
-                initialFilterSearch={preview.filterSearch}
-                key={`${preview.reference.targetTableName}:${preview.filterSearch}`}
+                key={preview.key}
                 name={preview.reference.targetTableName}
+                requiredFilter={preview.requiredFilter}
               />
             </div>
-            {onOpenReferencedTable ? (
+            {renderOpenReferencedTableLink ? (
               <SheetFooter className="border-t">
-                <Button
-                  onClick={() => {
-                    onOpenReferencedTable(preview.reference.targetTableName);
-                    onOpenChange(false);
-                  }}
-                  type="button"
-                  variant="outline"
-                >
-                  Open table
-                </Button>
+                {renderOpenReferencedTableLink(
+                  preview.reference.targetTableName,
+                  () => onOpenChange(false)
+                )}
               </SheetFooter>
             ) : null}
           </>
@@ -1370,7 +1367,7 @@ function TableDataGridContent({
   onContextMenuCopyRowAsSql,
   onDataGridExpandedChange,
   onForeignKeyReferenceOpenChange,
-  onOpenReferencedTable,
+  renderOpenReferencedTableLink,
   openRowIndex,
   pkColumnSet,
   resultColumns,
@@ -1388,7 +1385,9 @@ function TableDataGridContent({
   onContextMenuCopyRowAsSql: () => void;
   onDataGridExpandedChange: (next: boolean) => void;
   onForeignKeyReferenceOpenChange: (open: boolean) => void;
-  onOpenReferencedTable?: ((tableName: string) => void) | undefined;
+  renderOpenReferencedTableLink?:
+    | ((tableName: string, onNavigate: () => void) => ReactNode)
+    | undefined;
   openRowIndex: number | null;
   pkColumnSet: Set<string>;
   resultColumns: TableResultColumn[];
@@ -1440,6 +1439,7 @@ function TableDataGridContent({
           onCopyCell={onContextMenuCopyCell}
           onCopyRow={onContextMenuCopyRow}
           onCopyRowAsSql={onContextMenuCopyRowAsSql}
+          returnFocusTo={contextMenu.returnFocusTo}
           top={contextMenu.top}
         />
       ) : null}
@@ -1454,8 +1454,8 @@ function TableDataGridContent({
       />
       <ForeignKeyReferenceDrawer
         onOpenChange={onForeignKeyReferenceOpenChange}
-        onOpenReferencedTable={onOpenReferencedTable}
         preview={foreignKeyReferencePreview}
+        renderOpenReferencedTableLink={renderOpenReferencedTableLink}
       />
     </div>
   );
@@ -1467,13 +1467,11 @@ function TableDataGridContent({
 function buildCellInteractionHandlers({
   contextMenu,
   onCellSearchChange,
-  rows,
   selectionActions,
   setContextMenu,
 }: {
   contextMenu: ContextMenuState | null;
   onCellSearchChange: (next: string | undefined) => void;
-  rows: GridRow[];
   selectionActions: ReturnType<typeof useSelectionActions>;
   setContextMenu: (next: ContextMenuState | null) => void;
 }) {
@@ -1492,7 +1490,8 @@ function buildCellInteractionHandlers({
     setContextMenu({
       columnKey: args.column.key,
       left: event.clientX,
-      rowIdx: args.rowIdx,
+      returnFocusTo: event.currentTarget,
+      row: args.row,
       top: event.clientY,
     });
   }
@@ -1518,30 +1517,21 @@ function buildCellInteractionHandlers({
     if (!contextMenu) {
       return;
     }
-    const row = rows[contextMenu.rowIdx];
-    if (row) {
-      selectionActions.copyCellValue(row, contextMenu.columnKey);
-    }
+    selectionActions.copyCellValue(contextMenu.row, contextMenu.columnKey);
   }
 
   function handleContextMenuCopyRow() {
     if (!contextMenu) {
       return;
     }
-    const row = rows[contextMenu.rowIdx];
-    if (row) {
-      selectionActions.copyRowValues(row);
-    }
+    selectionActions.copyRowValues(contextMenu.row);
   }
 
   function handleContextMenuCopyRowAsSql() {
     if (!contextMenu) {
       return;
     }
-    const row = rows[contextMenu.rowIdx];
-    if (row) {
-      selectionActions.copyRowAsSqlInsert(row);
-    }
+    selectionActions.copyRowAsSqlInsert(contextMenu.row);
   }
 
   return {
@@ -1578,9 +1568,10 @@ function TableDataGrid({
   onCellSearchChange = () => undefined,
   onFilterSearchChange,
   onFrozenColumnsSearchChange = () => undefined,
-  onOpenReferencedTable,
   onOpenRowSearchChange = () => undefined,
   onPageSizeSearchChange = () => undefined,
+  renderOpenReferencedTableLink,
+  requiredFilter,
   onSelectedRowsSearchChange = () => undefined,
   onSortSearchChange,
   openRowSearch,
@@ -1620,6 +1611,7 @@ function TableDataGrid({
     onPageSizeChange: setPageSize,
     onSortSearchChange: setEffectiveSortSearch,
     pageSize,
+    requiredFilter,
     sortSearch: effectiveSortSearch,
   });
   const {
@@ -1723,7 +1715,6 @@ function TableDataGrid({
   const cellHandlers = buildCellInteractionHandlers({
     contextMenu,
     onCellSearchChange,
-    rows,
     selectionActions,
     setContextMenu,
   });
@@ -1807,9 +1798,9 @@ function TableDataGrid({
             foreignKeyDrawer.closeReference();
           }
         }}
-        onOpenReferencedTable={onOpenReferencedTable}
         openRowIndex={openRowIndex}
         pkColumnSet={pkColumnSet}
+        renderOpenReferencedTableLink={renderOpenReferencedTableLink}
         resultColumns={resultColumns}
         rows={rows}
         setOpenRowIndex={setOpenRowIndex}

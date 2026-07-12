@@ -53,7 +53,6 @@ export function ResourceDetail({
   databaseId,
   instanceId,
   name,
-  onOpenReferencedTable,
   onTableTabChange,
   schemaName,
   table,
@@ -64,7 +63,6 @@ export function ResourceDetail({
   databaseId: string;
   instanceId: string;
   name: string;
-  onOpenReferencedTable?: ((tableName: string) => void) | undefined;
   onTableTabChange: (tab: TableDetailTab) => void;
   schemaName: string;
   table: Table | undefined;
@@ -85,7 +83,6 @@ export function ResourceDetail({
           databaseId={databaseId}
           initialTab={tableTab}
           instanceId={instanceId}
-          onOpenReferencedTable={onOpenReferencedTable}
           onTabChange={onTableTabChange}
           schemaName={schemaName}
           table={table}

@@ -1,3 +1,4 @@
+import { create } from "@bufbuild/protobuf";
 import { useEffect } from "react";
 import type { SortColumn } from "react-data-grid";
 import {
@@ -14,6 +15,12 @@ import { useTableDataController } from "@/features/data-explorer/table-data/use-
 import { useListTableColumnsQuery } from "@/hooks/api/table";
 import { useReadRowsQuery } from "@/hooks/api/table-data";
 import { QUERY_STALE_TIME } from "@/lib/query-policy";
+import {
+  type RowFilter,
+  RowFilterGroup_Logic,
+  RowFilterGroupSchema,
+  RowFilterSchema,
+} from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 interface TableDataSearchState {
   filterSearch?: string | undefined;
@@ -26,6 +33,7 @@ interface UseTableDataQueryArgs extends TableDataSearchState {
   onPageSizeChange: (next: number) => void;
   onSortSearchChange: (next: string | undefined) => void;
   pageSize: number;
+  requiredFilter?: RowFilter | undefined;
 }
 
 const SORT_COLUMN_KEY_QUERY_META_PATTERN = /[&=+]/g;
@@ -176,6 +184,7 @@ function useTableDataQuery({
   onPageSizeChange,
   onSortSearchChange,
   pageSize,
+  requiredFilter,
   sortSearch,
 }: UseTableDataQueryArgs) {
   const parsed = resolveTableDataQueryState({ filterSearch, sortSearch });
@@ -196,11 +205,12 @@ function useTableDataQuery({
     filterSearch,
     sortSearch,
   });
-  const filter = buildRowFilter(
+  const editableFilter = buildRowFilter(
     queryState.filterRules,
     queryState.filterColumns,
     queryState.filterLogic
   );
+  const filter = combineRowFilters(requiredFilter, editableFilter);
   const controller = useTableDataController({
     filter,
     name,
@@ -282,6 +292,27 @@ function useTableDataQuery({
     refetch,
     rowsQuery,
   };
+}
+
+function combineRowFilters(
+  requiredFilter: RowFilter | undefined,
+  editableFilter: RowFilter | undefined
+): RowFilter | undefined {
+  if (!requiredFilter) {
+    return editableFilter;
+  }
+  if (!editableFilter) {
+    return requiredFilter;
+  }
+  return create(RowFilterSchema, {
+    node: {
+      case: "group",
+      value: create(RowFilterGroupSchema, {
+        children: [requiredFilter, editableFilter],
+        logic: RowFilterGroup_Logic.AND,
+      }),
+    },
+  });
 }
 
 export type { TableDataSearchState };

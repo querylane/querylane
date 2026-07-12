@@ -92,7 +92,6 @@ function DataExplorerPage({
   const handleSelectResource = explorer.onSelectResource;
   const handleSchemaTabChange = explorer.onSchemaTabChange;
   const handleSelectTableInSchema = explorer.onSelectTableInSchema;
-  const handleOpenReferencedTable = explorer.onOpenReferencedTable;
   const handleTableTabChange = explorer.onTableTabChange;
   const detailPane = (
     <ExplorerDetailPane
@@ -102,7 +101,6 @@ function DataExplorerPage({
       hasMoreViews={explorer.schemaOverview.hasMoreViews}
       instanceId={explorer.instanceId}
       onSchemaTabChange={handleSchemaTabChange}
-      onOpenReferencedTable={handleOpenReferencedTable}
       onSelectResource={handleSelectResource}
       onSelectTableInSchema={handleSelectTableInSchema}
       onTableTabChange={handleTableTabChange}

@@ -70,6 +70,7 @@ interface MockGridProps {
     event: {
       clientX: number;
       clientY: number;
+      currentTarget: HTMLDivElement;
       preventDefault: () => void;
       preventGridDefault: () => void;
     }
@@ -115,7 +116,11 @@ const reactDataGrid = vi.hoisted(() => ({
 
 // The mocked DataGrid renders plain divs, so context-menu tests invoke the
 // grid's onCellContextMenu prop directly instead of dispatching a DOM event.
-function openCellContextMenu(columnKey: string, rowIdx: number) {
+function openCellContextMenu(
+  columnKey: string,
+  rowIdx: number,
+  currentTarget = document.createElement("div")
+) {
   const gridProps = reactDataGrid.dataGrid.mock.lastCall?.[0];
   const row = gridProps?.rows?.[rowIdx];
   if (!(gridProps?.onCellContextMenu && row)) {
@@ -127,6 +132,7 @@ function openCellContextMenu(columnKey: string, rowIdx: number) {
       {
         clientX: 40,
         clientY: 40,
+        currentTarget,
         preventDefault: () => undefined,
         preventGridDefault: () => undefined,
       }
@@ -163,7 +169,7 @@ vi.mock("@/components/data-grid/table-data-grid/grid-clipboard", () => ({
 }));
 
 function seedRowsQuery(
-  rows = 1,
+  rows: number | readonly { rowKey: string; value: string }[] = 1,
   overrides: {
     dataUpdatedAt?: number;
     isFetching?: boolean;
@@ -186,13 +192,19 @@ function seedRowsQuery(
             rawType: "text",
           }),
         ],
-        rows: Array.from({ length: rows }, (_, index) =>
+        rows: (typeof rows === "number"
+          ? Array.from({ length: rows }, (_, index) => ({
+              rowKey: `row-${index}`,
+              value: `user-${index}`,
+            }))
+          : rows
+        ).map((row) =>
           create(TableResultRowSchema, {
-            rowKey: `row-${index}`,
+            rowKey: row.rowKey,
             values: [
               create(TableCellSchema, {
                 value: create(TableValueSchema, {
-                  kind: { case: "stringValue", value: `user-${index}` },
+                  kind: { case: "stringValue", value: row.value },
                 }),
               }),
             ],
@@ -581,7 +593,6 @@ describe("TableDataGrid foreign key references", () => {
       "instances/prod/databases/app/schemas/shipping/tables/shipments";
     const carriersName =
       "instances/prod/databases/app/schemas/public/tables/carriers";
-    const onOpenReferencedTable = vi.fn();
 
     tableApi.useListTableColumnsQuery.mockImplementation((input) => {
       if (input.parent === carriersName) {
@@ -702,7 +713,14 @@ describe("TableDataGrid foreign key references", () => {
           },
         ]}
         name={shipmentsName}
-        onOpenReferencedTable={onOpenReferencedTable}
+        renderOpenReferencedTableLink={(tableName, onNavigate) => (
+          <a
+            href={`/explorer?table=${encodeURIComponent(tableName)}`}
+            onClick={onNavigate}
+          >
+            Open table
+          </a>
+        )}
       />
     );
 
@@ -718,6 +736,7 @@ describe("TableDataGrid foreign key references", () => {
       })
     ).toBeTruthy();
     expect(screen.getByText("Maersk Logistics")).toBeTruthy();
+    expect(screen.queryByText("Clear")).toBeNull();
 
     const targetReadCall = tableDataApi.useReadRowsQuery.mock.calls.find(
       ([request]) => request.name === carriersName
@@ -740,9 +759,12 @@ describe("TableDataGrid foreign key references", () => {
       },
     });
 
-    await user.click(screen.getByRole("button", { name: "Open table" }));
-
-    expect(onOpenReferencedTable).toHaveBeenCalledWith(carriersName);
+    const openTableLink = screen.getByRole("link", { name: "Open table" });
+    expect(openTableLink.getAttribute("href")).toBe(
+      `/explorer?table=${encodeURIComponent(carriersName)}`
+    );
+    await user.click(openTableLink);
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
 
@@ -760,12 +782,63 @@ describe("TableDataGrid row interactions", () => {
 
     openCellContextMenu("email", 0);
     await user.click(
-      screen.getByRole("button", { name: "Copy row as INSERT" })
+      screen.getByRole("menuitem", { name: "Copy row as INSERT" })
     );
 
     expect(writeClipboardMock).toHaveBeenCalledWith(
       `INSERT INTO "public"."customers" ("email") VALUES\n  ('user-0');\n`
     );
+  });
+
+  it("copies the row that opened the menu after rows reorder", async () => {
+    const user = userEvent.setup();
+    const initialRows = [
+      { rowKey: "row-alpha", value: "alpha@example.com" },
+      { rowKey: "row-beta", value: "beta@example.com" },
+    ];
+    seedRowsQuery(initialRows);
+
+    const { rerender } = render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+    openCellContextMenu("email", 0);
+
+    seedRowsQuery([...initialRows].reverse());
+    rerender(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+    await user.click(
+      screen.getByRole("menuitem", { name: "Copy row as INSERT" })
+    );
+
+    expect(writeClipboardMock).toHaveBeenCalledWith(
+      `INSERT INTO "public"."customers" ("email") VALUES\n  ('alpha@example.com');\n`
+    );
+  });
+
+  it("supports keyboard navigation and restores focus to the invoking cell", async () => {
+    const user = userEvent.setup();
+    seedRowsQuery(1);
+    const invokingCell = document.createElement("div");
+    invokingCell.tabIndex = 0;
+    document.body.append(invokingCell);
+    invokingCell.focus();
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+    openCellContextMenu("email", 0, invokingCell);
+
+    const menu = screen.getByRole("menu", { name: "Cell actions" });
+    const items = within(menu).getAllByRole("menuitem");
+    await waitFor(() => expect(document.activeElement).toBe(items[0]));
+    await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(items[1]);
+    await user.keyboard("{End}");
+    expect(document.activeElement).toBe(items[2]);
+    await user.keyboard("{Escape}");
+    expect(document.activeElement).toBe(invokingCell);
+    expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull();
   });
 
   it("jumps directly to a typed row number from the row drawer", async () => {

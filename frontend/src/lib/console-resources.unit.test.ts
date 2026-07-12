@@ -13,6 +13,7 @@ import {
   parseResourceLeafId,
   parseTableQualifiedName,
   toConnectionStatus,
+  tryParseTableQualifiedName,
 } from "@/lib/console-resources";
 import { Instance_ConnectionState } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
@@ -161,6 +162,12 @@ describe("resource names", () => {
     expect(() => parseTableQualifiedName("instances/i1/databases/app")).toThrow(
       "invalid table resource name"
     );
+    expect(
+      tryParseTableQualifiedName(
+        "instances/i1/databases/app/schemas/public/tables/events"
+      )
+    ).toEqual({ schema: "public", table: "events" });
+    expect(tryParseTableQualifiedName("public.events")).toBeUndefined();
   });
 });
 

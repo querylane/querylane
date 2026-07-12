@@ -37,10 +37,7 @@ import {
   assertNoUnhandledTableDetailQueries,
   tableDetailQueryOptions,
 } from "@/hooks/api/table";
-import {
-  parseResourceLeafId,
-  parseTableQualifiedName,
-} from "@/lib/console-resources";
+import { parseResourceLeafId } from "@/lib/console-resources";
 import { useDb } from "@/lib/db-context";
 import { handleNavigationResult } from "@/lib/navigation-errors";
 import { handleQueryActionError } from "@/lib/query-action-errors";
@@ -244,22 +241,6 @@ function useDataExplorerPageController({
           area: "data-explorer.schemas",
         });
       }),
-    onOpenReferencedTable: (tableResourceName: string) => {
-      // Constraint metadata is backend-controlled, but a malformed resource
-      // name must not throw out of a click handler.
-      let parsed: ReturnType<typeof parseTableQualifiedName>;
-      try {
-        parsed = parseTableQualifiedName(tableResourceName);
-      } catch {
-        return;
-      }
-      updateSearch({
-        category: "tables",
-        name: parsed.table,
-        schema: parsed.schema,
-        tab: undefined,
-      });
-    },
     onResourceIntent,
     onRetryTables,
     onRetryViews,

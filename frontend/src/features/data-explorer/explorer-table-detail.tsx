@@ -37,7 +37,7 @@ import { SearchEmptyState } from "@/components/search-empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -141,6 +141,7 @@ import {
   normalizeEstimatedRowCount,
   parseResourceLeafId,
   parseTableQualifiedName,
+  tryParseTableQualifiedName,
 } from "@/lib/console-resources";
 import {
   formatPolicyCommand,
@@ -4385,7 +4386,6 @@ function TableDetail({
   databaseId,
   initialTab = "data",
   instanceId,
-  onOpenReferencedTable,
   onTabChange,
   schemaName,
   table,
@@ -4394,7 +4394,6 @@ function TableDetail({
   databaseId: string;
   initialTab?: string | undefined;
   instanceId: string;
-  onOpenReferencedTable?: ((tableName: string) => void) | undefined;
   onTabChange?: ((tab: TableDetailTab) => void) | undefined;
   schemaName: string;
   table: TableProto | undefined;
@@ -4453,6 +4452,32 @@ function TableDetail({
   const foreignKeyReferences = deriveForeignKeyReferences(
     constraintsQuery.data?.constraints
   );
+  function renderOpenReferencedTableLink(
+    targetTableName: string,
+    onNavigate: () => void
+  ) {
+    const target = tryParseTableQualifiedName(targetTableName);
+    if (!target) {
+      return null;
+    }
+    return (
+      <Link
+        className={buttonVariants({ variant: "outline" })}
+        onClick={onNavigate}
+        params={{ databaseId, instanceId }}
+        search={(previous) => ({
+          ...previous,
+          category: "tables",
+          name: target.table,
+          schema: target.schema,
+          tab: undefined,
+        })}
+        to="/instances/$instanceId/databases/$databaseId/explorer"
+      >
+        Open table
+      </Link>
+    );
+  }
   const tabCounts: Record<TableDetailTab, number | undefined> = {
     columns: columnCount,
     constraints: constraintsQuery.data?.constraints.length,
@@ -4471,7 +4496,7 @@ function TableDetail({
       foreignKeyReferences={foreignKeyReferences}
       key={tableResourceName}
       name={tableResourceName}
-      onOpenReferencedTable={onOpenReferencedTable}
+      renderOpenReferencedTableLink={renderOpenReferencedTableLink}
     >
       {({ grid, lastFetchedLabel }) => (
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-4 pb-6">
