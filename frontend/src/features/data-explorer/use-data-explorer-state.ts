@@ -4,6 +4,7 @@ import {
   isCategoryKey,
   type Selection,
 } from "@/features/data-explorer/data-explorer-types";
+import { isSchemaDetailTab } from "@/features/data-explorer/schema-detail-tab";
 import { isTableDetailTab } from "@/features/data-explorer/table-detail-tab";
 import {
   type CatalogSyncMetadata,
@@ -63,6 +64,9 @@ function normalizeExplorerSearch(
   }
   if (hasTableSelection && isTableDetailTab(search.tab)) {
     normalized.tab = search.tab === "data" ? undefined : search.tab;
+  }
+  if (!hasResourceSelection && isSchemaDetailTab(search.tab)) {
+    normalized.tab = search.tab === "objects" ? undefined : search.tab;
   }
   return normalized;
 }

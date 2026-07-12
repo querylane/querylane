@@ -8,6 +8,7 @@ import type {
 import { ExplorerEmptyState } from "@/features/data-explorer/explorer-empty-state";
 import { ResourceDetail } from "@/features/data-explorer/explorer-resource-detail";
 import { SchemaDetail } from "@/features/data-explorer/explorer-schema-detail";
+import type { SchemaDetailTab } from "@/features/data-explorer/schema-detail-tab";
 import type { TableDetailTab } from "@/features/data-explorer/table-detail-tab";
 import type { catalogSyncNotice } from "@/features/data-explorer/use-data-explorer-state";
 import { parseResourceLeafId } from "@/lib/console-resources";
@@ -20,12 +21,16 @@ export function ExplorerDetailPane({
   hasMoreTables,
   hasMoreViews,
   instanceId,
+  onSchemaTabChange,
   onTableTabChange,
   onSelectResource,
+  onSelectTableInSchema,
   overviewTables,
   overviewViews,
   rawTables,
   rawViews,
+  schemas,
+  schemaTab,
   selectedResourceError,
   selection,
   tablesError,
@@ -40,8 +45,10 @@ export function ExplorerDetailPane({
   hasMoreTables: boolean;
   hasMoreViews: boolean;
   instanceId: string;
+  onSchemaTabChange: (tab: SchemaDetailTab) => void;
   onTableTabChange: (tab: TableDetailTab) => void;
   onSelectResource: (category: CategoryKey, name: string) => void;
+  onSelectTableInSchema: (schemaName: string, name: string) => void;
   // Unfiltered schema-overview protos (not narrowed by the sidebar search) —
   // used for the schema inventory + header aggregates.
   overviewTables: Table[];
@@ -49,6 +56,8 @@ export function ExplorerDetailPane({
   // Sidebar-filtered protos — used only to resolve the selected resource.
   rawTables: Table[];
   rawViews: View[];
+  schemas: SchemaSummary[];
+  schemaTab: SchemaDetailTab;
   selectedResourceError: unknown;
   selection: Selection;
   tablesError: unknown;
@@ -64,12 +73,18 @@ export function ExplorerDetailPane({
   if (selection.kind === "schema") {
     return (
       <SchemaDetail
+        activeTab={schemaTab}
+        databaseId={databaseId}
         hasMoreTables={hasMoreTables}
         hasMoreViews={hasMoreViews}
+        instanceId={instanceId}
         onSelectTable={(name) => onSelectResource("tables", name)}
+        onSelectTableInSchema={onSelectTableInSchema}
         onSelectView={(name) => onSelectResource("views", name)}
+        onTabChange={onSchemaTabChange}
         owner={activeSchema.owner}
         schemaName={activeSchema.name}
+        schemas={schemas}
         tables={overviewTables}
         tablesError={tablesError}
         tablesLoading={tablesLoading}

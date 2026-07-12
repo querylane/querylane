@@ -90,6 +90,8 @@ function DataExplorerPage({
     explorer.selection.kind === "resource" &&
     explorer.selection.category === "tables";
   const handleSelectResource = explorer.onSelectResource;
+  const handleSchemaTabChange = explorer.onSchemaTabChange;
+  const handleSelectTableInSchema = explorer.onSelectTableInSchema;
   const handleTableTabChange = explorer.onTableTabChange;
   const detailPane = (
     <ExplorerDetailPane
@@ -98,12 +100,16 @@ function DataExplorerPage({
       hasMoreTables={explorer.schemaOverview.hasMoreTables}
       hasMoreViews={explorer.schemaOverview.hasMoreViews}
       instanceId={explorer.instanceId}
+      onSchemaTabChange={handleSchemaTabChange}
       onSelectResource={handleSelectResource}
+      onSelectTableInSchema={handleSelectTableInSchema}
       onTableTabChange={handleTableTabChange}
       overviewTables={explorer.schemaOverview.rawTables}
       overviewViews={explorer.schemaOverview.rawViews}
       rawTables={explorer.rawTables}
       rawViews={explorer.rawViews}
+      schemas={explorer.schemas}
+      schemaTab={explorer.schemaTab}
       selectedResourceError={explorer.selectedResourceError}
       selection={explorer.selection}
       tablesError={explorer.schemaOverview.tablesError}
