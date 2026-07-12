@@ -880,7 +880,7 @@ test("backend instance activity disconnected state matches", async () => {
     data: instanceResponse(),
     dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
   };
-  state.healthQuery = { isPending: true };
+  state.healthQuery = { data: activityHealthResponse(), isPending: false };
   state.overviewQuery = { data: overviewResponse() };
 
   render(

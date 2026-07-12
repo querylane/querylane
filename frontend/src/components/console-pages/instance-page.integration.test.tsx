@@ -1015,9 +1015,12 @@ describe("backend instance activity", () => {
   });
 
   test("shows Activity unavailable instead of loading forever when disconnected", () => {
+    state.healthData = activityHealthResponse();
+
     renderInstanceActivity();
 
     const activity = screen.getByRole("region", { name: "Activity" });
+    expect(within(activity).getAllByText("—")).toHaveLength(5);
     expect(within(activity).getByText("Activity unavailable")).toBeTruthy();
     expect(
       within(activity).getByText(

@@ -395,7 +395,9 @@ function InstanceActivityPage({
   const [databaseFilter, setDatabaseFilter] = useState<string | null>(
     EMPTY_FILTER_VALUE
   );
-  const stats = presentActivityStats(activity);
+  const stats = presentActivityStats(
+    connectionStatus === "connected" ? activity : undefined
+  );
   const allRows = presentActivitySessionRows(activity, {
     app: EMPTY_FILTER_VALUE,
     database: EMPTY_FILTER_VALUE,
