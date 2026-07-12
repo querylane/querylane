@@ -97,11 +97,9 @@ export function DatabaseLayout({
   // Use the committed page match from the parent route so pending navigations
   // keep the current page until the next route is ready.
   const isExplorerRoute = page === "database.explorer";
-  const mainPaddingClass = isExplorerRoute ? "p-0" : "p-4 sm:p-6 lg:p-8";
-  const mainOverflowClass = isExplorerRoute
-    ? "overflow-hidden"
-    : "overflow-auto";
-  const isWideRoute = isExplorerRoute;
+  const isWideRoute = isExplorerRoute || page === "database.workbench";
+  const mainPaddingClass = isWideRoute ? "p-0" : "p-4 sm:p-6 lg:p-8";
+  const mainOverflowClass = isWideRoute ? "overflow-hidden" : "overflow-auto";
   return (
     <SidebarProvider className="!h-svh !max-h-svh flex-col">
       <AdminHeader />

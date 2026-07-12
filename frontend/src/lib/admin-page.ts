@@ -18,7 +18,8 @@ type AdminPageId =
   // Database-level pages
   | "database.overview"
   | "database.extensions"
-  | "database.explorer";
+  | "database.explorer"
+  | "database.workbench";
 
 type AdminSelectionScope = "none" | "instance" | "database";
 
@@ -30,6 +31,7 @@ const ADMIN_PAGE_IDS: readonly AdminPageId[] = [
   "database.overview",
   "database.extensions",
   "database.explorer",
+  "database.workbench",
 ] as const;
 
 const ADMIN_PAGE_MIN_SCOPE: Record<
@@ -39,10 +41,17 @@ const ADMIN_PAGE_MIN_SCOPE: Record<
   "database.explorer": "database",
   "database.extensions": "database",
   "database.overview": "database",
+  "database.workbench": "database",
   "instance.activity": "instance",
   "instance.configuration": "instance",
   "instance.overview": "instance",
   "instance.roles": "instance",
+};
+
+const DATABASE_PAGE_BY_ROUTE_SEGMENT: Readonly<Record<string, AdminPageId>> = {
+  explorer: "database.explorer",
+  extensions: "database.extensions",
+  workbench: "database.workbench",
 };
 
 function isValidAdminPageId(value: string): value is AdminPageId {
@@ -114,13 +123,9 @@ function resolveImplicitAdminPageFromPathname(
   }
 
   if (segments[2] === "databases" && segments[3]) {
-    if (segments[4] === "explorer") {
-      return "database.explorer";
-    }
-    if (segments[4] === "extensions") {
-      return "database.extensions";
-    }
-    return "database.overview";
+    return (
+      DATABASE_PAGE_BY_ROUTE_SEGMENT[segments[4] ?? ""] ?? "database.overview"
+    );
   }
   // The instance-scoped admin panel is not an AdminPageId page: it renders
   // app-global backend state and must not resolve to instance.overview.
@@ -144,6 +149,8 @@ function resolveImplicitAdminPageFromRouteId(
       return "instance.roles";
     case "/instances/$instanceId/databases/$databaseId/explorer":
       return "database.explorer";
+    case "/instances/$instanceId/databases/$databaseId/workbench":
+      return "database.workbench";
     case "/instances/$instanceId/databases/$databaseId/extensions":
       return "database.extensions";
     case "/instances/$instanceId/databases/$databaseId/":
