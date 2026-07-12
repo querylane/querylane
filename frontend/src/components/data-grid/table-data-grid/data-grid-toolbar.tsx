@@ -1,10 +1,8 @@
 import { Maximize2, Minimize2, X } from "lucide-react";
 import { useState } from "react";
 import type { SortColumn } from "react-data-grid";
-import {
-  FilterChips,
-  FilterPopover,
-} from "@/components/data-grid/table-data-grid/filter-popover";
+import { FilterPopover } from "@/components/data-grid/table-data-grid/filter-popover";
+import { FilterChips } from "@/components/data-grid/table-data-grid/filter-popover-chips";
 import {
   ExportRowsActions,
   SelectionActions,
@@ -27,6 +25,7 @@ interface DataGridToolbarProps {
   exportRowsDisabled?: boolean | undefined;
   filterLogic: TableFilterLogic;
   filterRules: TableFilterRule[];
+  filterTitle?: string | undefined;
   isExpanded?: boolean | undefined;
   isFetching: boolean;
   lastFetchedLabel?: string | undefined;
@@ -34,8 +33,10 @@ interface DataGridToolbarProps {
   onCopySelection: (format: ExportFormat) => void;
   onExportRows?: ((format: ExportFormat) => void) | undefined;
   onExportSelection: (format: ExportFormat) => void;
-  onFilterChange: (next: TableFilterRule[]) => void;
-  onFilterLogicChange: (next: TableFilterLogic) => void;
+  onFilterChange: (
+    nextRules: TableFilterRule[],
+    nextLogic?: TableFilterLogic
+  ) => void;
   onFitColumns?: (() => void) | undefined;
   onRefresh: () => Promise<unknown> | undefined;
   onSortChange: (next: SortColumn[]) => void;
@@ -71,6 +72,7 @@ function DataGridToolbar({
   className,
   columns,
   exportRowsDisabled = false,
+  filterTitle,
   filterLogic,
   filterRules,
   isExpanded = false,
@@ -81,7 +83,6 @@ function DataGridToolbar({
   onExportRows,
   onExportSelection,
   onFilterChange,
-  onFilterLogicChange,
   onFitColumns,
   onRefresh,
   onSortChange,
@@ -113,9 +114,9 @@ function DataGridToolbar({
           columns={columns}
           logic={filterLogic}
           onChange={onFilterChange}
-          onLogicChange={onFilterLogicChange}
           popoverBoundary={popoverBoundary}
           rules={filterRules}
+          title={filterTitle}
         />
         <SortPopover
           columns={columns}

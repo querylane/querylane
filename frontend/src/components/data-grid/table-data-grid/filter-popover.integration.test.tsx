@@ -9,10 +9,8 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  FilterPopover,
-  FilterRow,
-} from "@/components/data-grid/table-data-grid/filter-popover";
+import { FilterPopover } from "@/components/data-grid/table-data-grid/filter-popover";
+import { FilterRow } from "@/components/data-grid/table-data-grid/filter-popover-row";
 import type { TableFilterRule } from "@/features/data-explorer/table-data/filter-state";
 import { TableResultColumnSchema } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
@@ -33,7 +31,20 @@ const columns = [
     dataType: DataType.BOOLEAN,
     rawType: "boolean",
   }),
+  create(TableResultColumnSchema, {
+    columnName: "status",
+    dataType: DataType.STRING,
+    rawType: "text",
+  }),
+  create(TableResultColumnSchema, {
+    columnName: "weight_kg",
+    dataType: DataType.INTEGER,
+    rawType: "integer",
+  }),
 ];
+const SQL_WHERE_VALIDATION_ERROR_RE =
+  /joined with AND only|missing is not available/;
+const UNSUPPORTED_SQL_RULES_RE = /cannot be represented in SQL WHERE/i;
 
 function emailRule(value = ""): TableFilterRule {
   return { column: "email", id: "rule-1", operator: "eq", value };
@@ -45,7 +56,7 @@ afterEach(() => {
 });
 
 describe("FilterPopover match logic", () => {
-  it("shows the all label for the default match logic", async () => {
+  it("labels the first rule with where", async () => {
     const user = userEvent.setup();
 
     render(
@@ -53,34 +64,143 @@ describe("FilterPopover match logic", () => {
         columns={columns}
         logic="and"
         onChange={vi.fn()}
-        onLogicChange={vi.fn()}
         rules={[emailRule("alice@example.com")]}
       />
     );
 
     await user.click(screen.getByRole("button", { name: "Filter 1" }));
 
-    const matchControl = screen.getByText("Match").parentElement;
-    if (!matchControl) {
-      throw new Error("expected match control");
-    }
+    expect(screen.getByText("where")).toBeTruthy();
+    expect(screen.queryByText("Match")).toBeNull();
+  });
 
-    expect(matchControl.textContent).toContain("all");
-    expect(matchControl.textContent).not.toContain("and");
+  it("applies a SQL WHERE draft through the same rules callback", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <FilterPopover
+        columns={columns}
+        logic="and"
+        onChange={onChange}
+        rules={[]}
+        title="Filter shipping.carriers"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.click(screen.getByRole("tab", { name: "SQL WHERE" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "SQL WHERE clause" }),
+      "status = 'customs_hold' AND weight_kg > 10000"
+    );
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(onChange).toHaveBeenCalledWith(
+      [
+        {
+          column: "status",
+          id: "sql-1-status",
+          operator: "eq",
+          value: "customs_hold",
+        },
+        {
+          column: "weight_kg",
+          id: "sql-2-weight_kg",
+          operator: "gt",
+          value: "10000",
+        },
+      ],
+      "and"
+    );
+  });
+
+  it("does not apply the blank starter rule", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <FilterPopover
+        columns={columns}
+        logic="and"
+        onChange={onChange}
+        rules={[]}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(onChange).toHaveBeenCalledWith([], "and");
+  });
+
+  it("shows every SQL WHERE validation error before applying", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <FilterPopover
+        columns={columns}
+        logic="and"
+        onChange={onChange}
+        rules={[]}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.click(screen.getByRole("tab", { name: "SQL WHERE" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "SQL WHERE clause" }),
+      "missing = 'x' OR status = 'held'"
+    );
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(screen.getByText(SQL_WHERE_VALIDATION_ERROR_RE)).toBeTruthy();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("does not silently clear rules that SQL WHERE cannot represent", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <FilterPopover
+        columns={columns}
+        logic="and"
+        onChange={onChange}
+        rules={[
+          {
+            column: "metadata",
+            id: "rule-json",
+            operator: "jsonContains",
+            value: '{"tier":"enterprise"}',
+          },
+        ]}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Filter 1" }));
+    await user.click(screen.getByRole("tab", { name: "SQL WHERE" }));
+
+    expect(screen.getByText(UNSUPPORTED_SQL_RULES_RE)).toBeTruthy();
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", { name: "Apply" }).disabled
+    ).toBe(true);
+    expect(onChange).not.toHaveBeenCalled();
   });
 });
 
 describe("FilterRow value editing", () => {
   it("exposes accessible names for filter controls", () => {
     render(
-      <ul>
+      <div>
         <FilterRow
           columns={columns}
           onChange={vi.fn()}
           onRemove={vi.fn()}
           rule={emailRule()}
         />
-      </ul>
+      </div>
     );
 
     expect(
@@ -96,14 +216,14 @@ describe("FilterRow value editing", () => {
     const user = userEvent.setup();
 
     render(
-      <ul>
+      <div>
         <FilterRow
           columns={columns}
           onChange={vi.fn()}
           onRemove={vi.fn()}
           rule={emailRule()}
         />
-      </ul>
+      </div>
     );
 
     await user.click(screen.getByRole("combobox", { name: "Filter operator" }));
@@ -119,14 +239,14 @@ describe("FilterRow value editing", () => {
     const onChange = vi.fn();
 
     render(
-      <ul>
+      <div>
         <FilterRow
           columns={columns}
           onChange={onChange}
           onRemove={vi.fn()}
           rule={emailRule()}
         />
-      </ul>
+      </div>
     );
 
     const input = screen.getByPlaceholderText<HTMLInputElement>("Value");
@@ -144,25 +264,25 @@ describe("FilterRow value editing", () => {
   it("resets the draft when the rule value changes from outside", async () => {
     const onChange = vi.fn();
     const { rerender } = render(
-      <ul>
+      <div>
         <FilterRow
           columns={columns}
           onChange={onChange}
           onRemove={vi.fn()}
           rule={emailRule("alice")}
         />
-      </ul>
+      </div>
     );
 
     rerender(
-      <ul>
+      <div>
         <FilterRow
           columns={columns}
           onChange={onChange}
           onRemove={vi.fn()}
           rule={emailRule("")}
         />
-      </ul>
+      </div>
     );
 
     const input = screen.getByPlaceholderText<HTMLInputElement>("Value");
@@ -174,14 +294,14 @@ describe("FilterRow value editing", () => {
     vi.useFakeTimers();
     const onChange = vi.fn();
     const { rerender } = render(
-      <ul>
+      <div>
         <FilterRow
           columns={columns}
           onChange={onChange}
           onRemove={vi.fn()}
           rule={emailRule()}
         />
-      </ul>
+      </div>
     );
 
     fireEvent.change(screen.getByPlaceholderText("Value"), {
@@ -189,14 +309,14 @@ describe("FilterRow value editing", () => {
     });
 
     rerender(
-      <ul>
+      <div>
         <FilterRow
           columns={columns}
           onChange={onChange}
           onRemove={vi.fn()}
           rule={{ column: "active", id: "rule-1", operator: "eq", value: "" }}
         />
-      </ul>
+      </div>
     );
 
     act(() => {
