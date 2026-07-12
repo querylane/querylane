@@ -60,6 +60,25 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 		)
 	}
 
+	// Installed but the connection role was never granted df.grant_usage.
+	// Mapped to PermissionDenied (not the generic 42501 path) so the UI can
+	// tell the operator to grant workflow access rather than showing a
+	// retry-forever error card. Checked before generic SQLSTATE mapping
+	// because the sentinel wraps the raw 42501 PgError.
+	if errors.Is(err, engine.ErrDurableAccessDenied) {
+		errorInfo := NewErrorInfo(
+			DomainConsole,
+			consolev1alpha1.ErrorReason_PERMISSION_DENIED,
+			KeyVal{Key: "operation", Value: rctx.Op},
+		)
+
+		return NewConnectError(
+			connect.CodePermissionDenied,
+			err,
+			errorInfo,
+		)
+	}
+
 	var pgSQLErr *engine.PostgresSQLError
 	if errors.As(err, &pgSQLErr) {
 		return mapPostgresSQLError(err, pgSQLErr, rctx)

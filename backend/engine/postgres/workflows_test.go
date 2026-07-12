@@ -15,27 +15,31 @@ func TestClassifyWorkflowError(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name              string
-		err               error
-		wantDurableAbsent bool
+		name         string
+		err          error
+		wantSentinel error // nil means "must not be a durable sentinel"
 	}{
 		{
 			// df.list_instances() when the df schema exists but the function
 			// does not (partial/broken install).
-			name:              "undefined function means pg_durable absent",
-			err:               &pgconn.PgError{Code: "42883", Message: "function df.list_instances(unknown, integer) does not exist"},
-			wantDurableAbsent: true,
+			name:         "undefined function means pg_durable absent",
+			err:          &pgconn.PgError{Code: "42883", Message: "function df.list_instances(unknown, integer) does not exist"},
+			wantSentinel: engine.ErrDurableNotInstalled,
 		},
 		{
 			// df.* calls when the df schema itself is missing (extension not
 			// installed at all).
-			name:              "invalid schema name means pg_durable absent",
-			err:               &pgconn.PgError{Code: "3F000", Message: `schema "df" does not exist`},
-			wantDurableAbsent: true,
+			name:         "invalid schema name means pg_durable absent",
+			err:          &pgconn.PgError{Code: "3F000", Message: `schema "df" does not exist`},
+			wantSentinel: engine.ErrDurableNotInstalled,
 		},
 		{
-			name: "other sqlstates keep regular classification",
-			err:  &pgconn.PgError{Code: "42501", Message: "permission denied for function list_instances"},
+			// Every WorkflowService query targets the df schema, so an
+			// insufficient-privilege error here always means the connection
+			// role was never granted df.grant_usage — not a normal table ACL.
+			name:         "insufficient privilege means df access not granted",
+			err:          &pgconn.PgError{Code: "42501", Message: "permission denied for schema df"},
+			wantSentinel: engine.ErrDurableAccessDenied,
 		},
 		{
 			name: "non-postgres errors pass through classification",
@@ -50,18 +54,14 @@ func TestClassifyWorkflowError(t *testing.T) {
 			got := classifyWorkflowError("list workflows", tt.err)
 			require.Error(t, got)
 
-			if tt.wantDurableAbsent {
-				assert.ErrorIs(t, got, engine.ErrDurableNotInstalled)
+			if tt.wantSentinel != nil {
+				assert.ErrorIs(t, got, tt.wantSentinel)
 
 				return
 			}
 
 			require.NotErrorIs(t, got, engine.ErrDurableNotInstalled)
-
-			var pgErr *pgconn.PgError
-			if errors.As(tt.err, &pgErr) {
-				assert.ErrorIs(t, got, engine.ErrQueryPermissionDenied)
-			}
+			require.NotErrorIs(t, got, engine.ErrDurableAccessDenied)
 		})
 	}
 }

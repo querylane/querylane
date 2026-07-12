@@ -46,6 +46,9 @@ func TestWorkflowsIntegration(t *testing.T) {
 		"CREATE EXTENSION IF NOT EXISTS pg_durable;",
 		"CREATE ROLE wf_submitter LOGIN PASSWORD 'wf';",
 		"CREATE ROLE wf_stranger LOGIN PASSWORD 'wf';",
+		// wf_nogrant is deliberately NOT granted df.grant_usage, exercising the
+		// installed-but-not-granted path (the common least-privilege state).
+		"CREATE ROLE wf_nogrant LOGIN PASSWORD 'wf';",
 		"SELECT df.grant_usage('wf_submitter');",
 		"SELECT df.grant_usage('wf_stranger');",
 		"CREATE TABLE wf_docs(id int PRIMARY KEY, processed bool DEFAULT false);",
@@ -55,9 +58,9 @@ func TestWorkflowsIntegration(t *testing.T) {
 		require.NoError(t, container.ExecSQL(ctx, statement), "setup statement: %s", statement)
 	}
 
-	submitterDB := openWorkflowDB(ctx, t, container, "postgres", "wf_submitter")
-	strangerDB := openWorkflowDB(ctx, t, container, "postgres", "wf_stranger")
-	superuserDB := openWorkflowDB(ctx, t, container, "postgres", "")
+	submitterDB := openWorkflowDB(ctx, t, container, "wf_submitter")
+	strangerDB := openWorkflowDB(ctx, t, container, "wf_stranger")
+	superuserDB := openWorkflowDB(ctx, t, container, "")
 
 	completedID := startWorkflow(ctx, t, submitterDB,
 		`SELECT df.start('SELECT id FROM wf_docs WHERE processed = false LIMIT 5' |=> 'batch' ~> 'UPDATE wf_docs SET processed = true WHERE id IN (SELECT id FROM $batch.*)', 'it-completed')`)
@@ -94,7 +97,9 @@ func TestWorkflowsIntegration(t *testing.T) {
 		failed := byID[failedID]
 		assert.Equal(t, "it-failed", failed.Label)
 		assert.Equal(t, "failed", failed.Status)
-		assert.NotEmpty(t, failed.Output, "failed workflows report the error as output")
+		// The list surface omits output by design; it is asserted via
+		// GetWorkflow below.
+		assert.Empty(t, failed.Output)
 	})
 
 	t.Run("list workflows filters on status", func(t *testing.T) {
@@ -146,6 +151,11 @@ func TestWorkflowsIntegration(t *testing.T) {
 		assert.Equal(t, "completed", workflow.Status)
 		assert.NotEmpty(t, workflow.FunctionVersion)
 		assert.NotEmpty(t, workflow.CurrentExecutionID)
+
+		// Output lives on the detail surface (df.instance_info), not the list.
+		failed, err := eng.GetWorkflow(ctx, submitterDB, failedID)
+		require.NoError(t, err)
+		assert.NotEmpty(t, failed.Output, "a failed workflow reports its error as output")
 	})
 
 	t.Run("get workflow maps unknown ids to not found", func(t *testing.T) {
@@ -180,6 +190,18 @@ func TestWorkflowsIntegration(t *testing.T) {
 		assert.NotNil(t, thenNode.RightNode)
 	})
 
+	t.Run("role without df.grant_usage maps to access-denied sentinel", func(t *testing.T) {
+		t.Parallel()
+
+		nograntDB := openWorkflowDB(ctx, t, container, "wf_nogrant")
+
+		_, _, err := eng.ListWorkflows(ctx, nograntDB, aip.Params{PageSize: 50})
+		require.ErrorIs(t, err, engine.ErrDurableAccessDenied)
+
+		_, err = eng.GetWorkflow(ctx, nograntDB, "anything")
+		require.ErrorIs(t, err, engine.ErrDurableAccessDenied)
+	})
+
 	t.Run("missing extension maps to a dedicated sentinel", func(t *testing.T) {
 		t.Parallel()
 
@@ -198,9 +220,9 @@ func TestWorkflowsIntegration(t *testing.T) {
 	})
 }
 
-// openWorkflowDB opens a pooled connection to the given database as the given
-// role (empty role means the container superuser) and registers cleanup.
-func openWorkflowDB(ctx context.Context, t *testing.T, container *testutil.PostgreSQLContainer, dbName, role string) *sql.DB {
+// openWorkflowDB opens a pooled connection to the maintenance database as the
+// given role (empty role means the container superuser) and registers cleanup.
+func openWorkflowDB(ctx context.Context, t *testing.T, container *testutil.PostgreSQLContainer, role string) *sql.DB {
 	t.Helper()
 
 	var (
@@ -211,7 +233,7 @@ func openWorkflowDB(ctx context.Context, t *testing.T, container *testutil.Postg
 	if role == "" {
 		connString, err = container.ConnectionString(ctx)
 	} else {
-		connString, err = container.DatabaseConnectionStringForUser(ctx, dbName, role, "wf")
+		connString, err = container.DatabaseConnectionStringForUser(ctx, "postgres", role, "wf")
 	}
 
 	require.NoError(t, err)

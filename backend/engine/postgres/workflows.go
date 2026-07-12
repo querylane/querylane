@@ -133,10 +133,12 @@ func withWorkflowErrorClassifier(query rawsql.Query, op string) rawsql.Query {
 	return query
 }
 
-// classifyWorkflowError maps the SQLSTATEs PostgreSQL raises when the df
-// schema or its functions are absent — pg_durable not installed in the
-// connected database — to engine.ErrDurableNotInstalled, and defers to the
-// regular live-SQL classifier for everything else.
+// classifyWorkflowError maps the SQLSTATEs PostgreSQL raises against the df
+// schema to actionable sentinels, and defers to the regular live-SQL
+// classifier for everything else. Every WorkflowService query targets df.*,
+// so these codes have an unambiguous meaning here:
+//   - undefined function / schema  → pg_durable is not installed
+//   - insufficient privilege       → the role was never granted df.grant_usage
 func classifyWorkflowError(op string, err error) error {
 	if err == nil {
 		return nil
@@ -147,6 +149,8 @@ func classifyWorkflowError(op string, err error) error {
 		switch pgErr.Code {
 		case pgerrcode.UndefinedFunction, pgerrcode.InvalidSchemaName:
 			return fmt.Errorf("%w: %w", engine.ErrDurableNotInstalled, err)
+		case pgerrcode.InsufficientPrivilege:
+			return fmt.Errorf("%w: %w", engine.ErrDurableAccessDenied, err)
 		}
 	}
 
@@ -160,13 +164,15 @@ func scanWorkflow(rows *sql.Rows) (engine.Workflow, error) {
 func scanWorkflowRow(s scanner) (engine.Workflow, error) {
 	var workflow engine.Workflow
 
+	// The list surface intentionally does not select output: it is never shown
+	// in the list table and a fan-out result can be a large JSON blob per row
+	// (see df.instance_info in GetWorkflow for the detail view's output).
 	err := s.Scan(
 		&workflow.ID,
 		&workflow.Label,
 		&workflow.FunctionName,
 		&workflow.Status,
 		&workflow.ExecutionCount,
-		&workflow.Output,
 	)
 
 	return workflow, err
@@ -190,14 +196,18 @@ func scanWorkflowInfoRow(s scanner) (engine.Workflow, error) {
 
 func scanWorkflowNode(rows *sql.Rows) (engine.WorkflowNode, error) {
 	var (
-		node      engine.WorkflowNode
-		leftNode  sql.NullString
-		rightNode sql.NullString
-		updatedAt sql.NullTime
+		node        engine.WorkflowNode
+		executionID sql.NullInt64
+		leftNode    sql.NullString
+		rightNode   sql.NullString
+		updatedAt   sql.NullTime
 	)
 
+	// execution_id is non-null for every instance observed in pg_durable 0.2.3
+	// (even pending instances carry execution 1), but scanning it through
+	// NullInt64 keeps a future/edge NULL from failing the whole node listing.
 	err := rows.Scan(
-		&node.ExecutionID,
+		&executionID,
 		&node.NodeID,
 		&node.NodeType,
 		&node.Query,
@@ -211,6 +221,8 @@ func scanWorkflowNode(rows *sql.Rows) (engine.WorkflowNode, error) {
 	if err != nil {
 		return node, err
 	}
+
+	node.ExecutionID = executionID.Int64
 
 	if leftNode.Valid {
 		node.LeftNode = &leftNode.String

@@ -35,6 +35,13 @@ var (
 	// introspection functions are absent.
 	ErrDurableNotInstalled = errors.New("pg_durable extension is not installed in this database")
 
+	// ErrDurableAccessDenied indicates the pg_durable extension is installed
+	// but the connection role has not been granted usage of the df schema
+	// (pg_durable grants nothing to PUBLIC; an admin must run
+	// df.grant_usage('<role>')). Distinct from ErrDurableNotInstalled so the
+	// UI can point the operator at the grant rather than the install.
+	ErrDurableAccessDenied = errors.New("pg_durable is installed but this role lacks access to the df schema")
+
 	// ErrQueryInvalid indicates the SQL statement or query options are invalid.
 	ErrQueryInvalid = errors.New("invalid sql query")
 

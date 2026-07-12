@@ -595,4 +595,31 @@ func TestMapEngineErrWorkflow(t *testing.T) {
 			t.Errorf("expected reason %q, got %q", consolev1alpha1.ErrorReason_FAILED_PRECONDITION, info.Reason)
 		}
 	})
+
+	t.Run("pg_durable access denied maps to PermissionDenied", func(t *testing.T) {
+		t.Parallel()
+
+		// Installed-but-not-granted: the sentinel wraps SQLSTATE 42501 and must
+		// map to PermissionDenied, not the generic internal path, so the UI can
+		// point the operator at df.grant_usage.
+		pgErr := &pgconn.PgError{Code: "42501", Message: `permission denied for schema df`}
+
+		connectErr := MapEngineErr(ctx, fmt.Errorf("%w: %w", engine.ErrDurableAccessDenied, pgErr), ResourceCtx{
+			Type: resource.TypeWorkflow,
+			Name: "instances/prod/databases/app",
+			Op:   "list_workflows",
+		})
+		if connectErr == nil {
+			t.Fatal("expected non-nil error")
+		}
+
+		if connectErr.Code() != connect.CodePermissionDenied {
+			t.Errorf("expected code %v, got %v", connect.CodePermissionDenied, connectErr.Code())
+		}
+
+		info := requireErrorInfo(t, connectErr)
+		if info.Reason != consolev1alpha1.ErrorReason_PERMISSION_DENIED.String() {
+			t.Errorf("expected reason %q, got %q", consolev1alpha1.ErrorReason_PERMISSION_DENIED, info.Reason)
+		}
+	})
 }
