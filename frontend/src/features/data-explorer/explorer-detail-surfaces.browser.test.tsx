@@ -67,6 +67,7 @@ const SCHEMA_MAP_BROWSER_VIEWPORT = { height: 1400, width: 2048 } as const;
 // 2024-01-01T23:00:00Z renders as "Last fetched 11:00:00 PM" under the pinned
 // TZ=GMT used for screenshots, matching the mocked data grid label below.
 const ACCOUNT_REFERENCE_CELL_RE = /→public\.accounts\.id/;
+const APP_READER_SUPPORT_AGENT_RE = /app_reader, support_agent/;
 const CUSTOMER_ID_CELL_RE = /customer_id/;
 const DEFAULT_BALANCED_TREE_RE = /Default balanced tree/;
 const DEFAULT_BALANCED_TREE_SUMMARY_RE = /Default balanced tree for equality/;
@@ -728,6 +729,35 @@ function seedDefinitionDesignQueries() {
         functionName: "audit.record_change",
         timing: "AFTER",
         triggerName: "change_log_record_trigger",
+      }),
+    ],
+  });
+}
+
+function seedInvoicePolicies() {
+  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
+    policies: [
+      createProto(TablePolicySchema, {
+        checkExpression: "customer = current_setting('app.tenant')",
+        command: PolicyCommand.ALL,
+        mode: PolicyMode.PERMISSIVE,
+        policyName: "invoices_tenant_all",
+        roles: ["app_readwrite"],
+        usingExpression: "customer = current_setting('app.tenant')",
+      }),
+      createProto(TablePolicySchema, {
+        command: PolicyCommand.SELECT,
+        mode: PolicyMode.PERMISSIVE,
+        policyName: "invoices_finance_select",
+        roles: ["app_readwrite"],
+        usingExpression: "pg_has_role(current_user, 'billing', 'member')",
+      }),
+      createProto(TablePolicySchema, {
+        command: PolicyCommand.SELECT,
+        mode: PolicyMode.PERMISSIVE,
+        policyName: "invoices_reader_recent",
+        roles: ["app_readonly"],
+        usingExpression: "issued_at >= now() - interval '90 days'",
       }),
     ],
   });
@@ -1625,10 +1655,21 @@ test("data explorer table indexes constraints policies and triggers stay readabl
 
   await page.getByRole("tab", { exact: true, name: "Policies 1" }).click();
   await expect
-    .element(page.getByText("customers_account_read_policy"))
+    .element(
+      page.getByRole("heading", {
+        exact: true,
+        name: "customers_account_read_policy",
+      })
+    )
     .toBeVisible();
   await expect
-    .element(page.getByText("app_reader, support_agent"))
+    .element(page.getByText(APP_READER_SUPPORT_AGENT_RE))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("How the server combines these"))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Policy command" }))
     .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-policies"
@@ -1901,6 +1942,41 @@ test("data explorer constraints tab covers validation and action states", async 
     .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-constraint-states"
+  );
+});
+
+test("data explorer table policies explain RLS composition", async () => {
+  await page.viewport(1280, 1300);
+  seedTableDetailQueries();
+  seedInvoicePolicies();
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="billing"
+      initialTab="policies"
+      instanceId="prod"
+      schemaName="billing"
+      table={createProto(TableSchema, {
+        displayName: "invoices",
+        name: "instances/prod/databases/billing/schemas/billing/tables/invoices",
+        owner: "app_owner",
+        rowCount: 940_000n,
+        sizeBytes: 2_100_000_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="invoices"
+    />
+  );
+
+  await expect
+    .element(
+      page.getByRole("heading", { exact: true, name: "invoices_tenant_all" })
+    )
+    .toBeVisible();
+  await expect
+    .element(page.getByText("2 permissive policies apply", { exact: false }))
+    .toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-policies-rls-composition"
   );
 });
 

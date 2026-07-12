@@ -36,6 +36,7 @@ import {
   ReferentialAction,
   Table_TableType,
   TableConstraintSchema,
+  TablePolicySchema,
   TableSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
@@ -1482,6 +1483,148 @@ describe("TableDetail metadata errors", () => {
     }
     expect(endpoints).toEqual(
       new Set(["ListTableConstraints", "ListTableIndexes"])
+    );
+  });
+});
+
+describe("TableDetail policies tab", () => {
+  it("explains RLS policy cards and previews matching policies by role and command", async () => {
+    const user = userEvent.setup();
+    tableQueries.policies.data = create(ListTablePoliciesResponseSchema, {
+      policies: [
+        create(TablePolicySchema, {
+          checkExpression: "customer = current_setting('app.tenant')",
+          command: PolicyCommand.ALL,
+          mode: PolicyMode.PERMISSIVE,
+          policyName: "invoices_tenant_all",
+          roles: ["app_readwrite"],
+          usingExpression: "customer = current_setting('app.tenant')",
+        }),
+        create(TablePolicySchema, {
+          command: PolicyCommand.SELECT,
+          mode: PolicyMode.PERMISSIVE,
+          policyName: "invoices_finance_select",
+          roles: ["app_readwrite"],
+          usingExpression: "pg_has_role(current_user, 'billing', 'member')",
+        }),
+        create(TablePolicySchema, {
+          command: PolicyCommand.SELECT,
+          mode: PolicyMode.PERMISSIVE,
+          policyName: "invoices_reader_recent",
+          roles: ["app_readonly"],
+          usingExpression: "issued_at >= now() - interval '90 days'",
+        }),
+      ],
+    });
+
+    const { container } = render(
+      <TableDetail
+        databaseId="app"
+        initialTab="policies"
+        instanceId="prod"
+        schemaName="billing"
+        table={create(TableSchema, { rowCount: 940_000n, sizeBytes: 4096n })}
+        tableName="invoices"
+      />
+    );
+
+    expect(
+      screen.getByText(
+        "Row-level security policies are present — table owners and BYPASSRLS roles may bypass them"
+      )
+    ).toBeTruthy();
+    expect(screen.getAllByText("invoices_tenant_all").length).toBeGreaterThan(
+      0
+    );
+    expect(screen.getAllByText("FOR SELECT")).toHaveLength(2);
+    expect(screen.getAllByText("PERMISSIVE")).toHaveLength(3);
+    expect(screen.getAllByText("TO app_readwrite")).toHaveLength(2);
+    expect(screen.getByText("WITH CHECK")).toBeTruthy();
+    expect(screen.getByText("How the server combines these")).toBeTruthy();
+    const sqlExpressions = Array.from(
+      container.querySelectorAll(
+        'code.language-sql[data-syntax-highlighter="shiki"]'
+      ),
+      (code) => code.textContent
+    );
+    expect(sqlExpressions).toHaveLength(5);
+    expect(sqlExpressions).toContain(
+      "customer = current_setting('app.tenant')"
+    );
+    expect(screen.queryAllByRole("button", { name: "Copy SQL" })).toHaveLength(
+      0
+    );
+
+    expect(
+      screen.getByText(
+        "2 permissive policies apply — a row passes if any one matches. Rows visible to app_readwrite are those where:"
+      )
+    ).toBeTruthy();
+    expect(
+      screen.getAllByText("invoices_finance_select").length
+    ).toBeGreaterThan(0);
+    expect(sqlExpressions).toContain(
+      "(customer = current_setting('app.tenant'))\nOR (pg_has_role(current_user, 'billing', 'member'))"
+    );
+    expect(screen.queryByText("invoices_reader_recent")).toBeTruthy();
+
+    await user.click(screen.getByRole("combobox", { name: "Policy command" }));
+    await user.click(screen.getByRole("option", { name: "INSERT" }));
+
+    expect(
+      screen.getByText(
+        "1 permissive policy applies — a row passes if it matches. Rows visible to app_readwrite are those where:"
+      )
+    ).toBeTruthy();
+    expect(
+      Array.from(
+        container.querySelectorAll(
+          'code.language-sql[data-syntax-highlighter="shiki"]'
+        ),
+        (code) => code.textContent
+      )
+    ).not.toContain(
+      "(customer = current_setting('app.tenant'))\nOR (pg_has_role(current_user, 'billing', 'member'))"
+    );
+  });
+
+  it("previews UPDATE visibility from USING without folding in WITH CHECK", async () => {
+    const user = userEvent.setup();
+    tableQueries.policies.data = create(ListTablePoliciesResponseSchema, {
+      policies: [
+        create(TablePolicySchema, {
+          checkExpression: "status <> 'archived'",
+          command: PolicyCommand.UPDATE,
+          mode: PolicyMode.PERMISSIVE,
+          policyName: "invoices_tenant_update",
+          roles: ["app_writer"],
+          usingExpression: "tenant_id = current_setting('app.tenant')",
+        }),
+      ],
+    });
+
+    const { container } = render(
+      <TableDetail
+        databaseId="app"
+        initialTab="policies"
+        instanceId="prod"
+        schemaName="billing"
+        table={create(TableSchema)}
+        tableName="invoices"
+      />
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "Policy command" }));
+    await user.click(screen.getByRole("option", { name: "UPDATE" }));
+
+    const sqlExpressions = Array.from(
+      container.querySelectorAll(
+        'code.language-sql[data-syntax-highlighter="shiki"]'
+      ),
+      (code) => code.textContent
+    );
+    expect(sqlExpressions.at(-1)).toBe(
+      "(tenant_id = current_setting('app.tenant'))"
     );
   });
 });
