@@ -483,13 +483,14 @@ function RolesAccessMapCanvas({
 
   function fitZoom() {
     const viewportWidth = viewportRef.current?.clientWidth ?? 0;
+    const viewportHeight = viewportRef.current?.clientHeight ?? 0;
     if (viewportWidth <= 0) {
       setZoom(DEFAULT_ZOOM);
       return;
     }
-    setZoom(
-      Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, viewportWidth / CANVAS_WIDTH))
-    );
+    const widthZoom = viewportWidth / CANVAS_WIDTH;
+    const heightZoom = viewportHeight > 0 ? viewportHeight / height : MAX_ZOOM;
+    setZoom(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, widthZoom, heightZoom)));
   }
 
   function toggleEdgeTone(tone: RolesAccessMapEdgeTone, visible: boolean) {

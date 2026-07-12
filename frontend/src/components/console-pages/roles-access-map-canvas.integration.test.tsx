@@ -61,7 +61,8 @@ describe("RolesAccessMapCanvas", () => {
     if (!(viewport instanceof HTMLElement)) {
       throw new Error("Expected the role access map viewport.");
     }
-    Object.defineProperty(viewport, "clientWidth", { value: 460 });
+    Object.defineProperty(viewport, "clientWidth", { value: 920 });
+    Object.defineProperty(viewport, "clientHeight", { value: 294 });
     await user.click(screen.getByRole("button", { name: "Fit" }));
     expect(screen.getByText("55%")).toBeTruthy();
 

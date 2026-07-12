@@ -629,6 +629,81 @@ describe("useRolesAccessMapResourcesQuery", () => {
     expect(result.current.data?.roleAccess).toHaveLength(5);
     expect(maximumActiveRequests).toBeLessThanOrEqual(6);
   });
+
+  test("starts the next role while an earlier access request is still pending", async () => {
+    let releaseSlowRequest: () => void = () => undefined;
+    const slowRequest = new Promise<void>((resolve) => {
+      releaseSlowRequest = resolve;
+    });
+    let thirdRoleStarted = false;
+
+    const transport = createRouterTransport(({ service }) => {
+      service(DatabaseService, {
+        listDatabases() {
+          return create(ListDatabasesResponseSchema, {
+            databases: [
+              {
+                displayName: "logistics",
+                name: "instances/local/databases/logistics",
+              },
+            ],
+          });
+        },
+      });
+      service(RoleService, {
+        listPublicGrants() {
+          return create(ListPublicGrantsResponseSchema, { grants: [] });
+        },
+        listRoleDefaultPrivileges() {
+          return create(ListRoleDefaultPrivilegesResponseSchema, {
+            defaultPrivileges: [],
+          });
+        },
+        async listRoleGrants(request) {
+          if (request.parent.endsWith("/role-0")) {
+            await slowRequest;
+          }
+          if (request.parent.endsWith("/role-2")) {
+            thirdRoleStarted = true;
+          }
+          return create(ListRoleGrantsResponseSchema, { grants: [] });
+        },
+        listRoleOwnedObjects() {
+          return create(ListRoleOwnedObjectsResponseSchema, {
+            ownedObjects: [],
+          });
+        },
+      });
+    });
+
+    const { result } = renderHook(
+      () =>
+        useRolesAccessMapResourcesQuery(
+          {
+            instanceId: "local",
+            roles: Array.from({ length: 3 }, (_, index) =>
+              create(RoleSchema, {
+                name: `instances/local/roles/role-${index}`,
+                roleName: `role-${index}`,
+              })
+            ),
+          },
+          { refetchOnWindowFocus: false }
+        ),
+      { wrapper: createWrapper(transport) }
+    );
+
+    try {
+      await waitFor(() => {
+        expect(thirdRoleStarted).toBe(true);
+      });
+    } finally {
+      releaseSlowRequest();
+    }
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+  });
 });
 
 describe("useListAllPublicGrantsQuery", () => {

@@ -88,19 +88,25 @@ interface PartialAccessResult<T> {
 // bounded while the transport's per-instance semaphore caps active RPCs at 4.
 const ACCESS_MAP_RESOURCE_CONCURRENCY = 2;
 
-async function mapInBatches<T, Result>(
+async function mapWithConcurrency<T, Result>(
   items: T[],
   mapItem: (item: T) => Promise<Result>
 ): Promise<Result[]> {
   const results: Result[] = [];
-  for (
-    let start = 0;
-    start < items.length;
-    start += ACCESS_MAP_RESOURCE_CONCURRENCY
-  ) {
-    const batch = items.slice(start, start + ACCESS_MAP_RESOURCE_CONCURRENCY);
-    results.push(...(await Promise.all(batch.map(mapItem))));
+  const entries = items.entries();
+
+  async function worker() {
+    for (const [index, item] of entries) {
+      results[index] = await mapItem(item);
+    }
   }
+
+  await Promise.all(
+    Array.from(
+      { length: Math.min(ACCESS_MAP_RESOURCE_CONCURRENCY, items.length) },
+      worker
+    )
+  );
   return results;
 }
 
@@ -236,33 +242,36 @@ async function fetchRoleAccessMapResources(
   );
   const mapDatabases = userDatabases.length > 0 ? userDatabases : databases;
 
-  const publicResults = await mapInBatches(mapDatabases, async (database) => {
-    const databaseId = databaseIdOf(database);
-    const grants = await keepPartialAccess(
-      paginateAll(
-        (pageToken) =>
-          roleClient.listPublicGrants({
-            orderBy: "schema_name asc, object_name asc, privilege asc",
-            pageSize: 1000,
-            pageToken: pageToken ?? "",
-            parent: buildDatabaseName(input.instanceId, databaseId),
-          }),
-        (response) => response.grants
-      )
-    );
-    return {
-      failedRequestCount: grants.failedRequestCount,
-      value: {
-        databaseId,
-        databaseName: databaseDisplayName(database),
-        grants: grants.value,
-      },
-    };
-  });
+  const publicResults = await mapWithConcurrency(
+    mapDatabases,
+    async (database) => {
+      const databaseId = databaseIdOf(database);
+      const grants = await keepPartialAccess(
+        paginateAll(
+          (pageToken) =>
+            roleClient.listPublicGrants({
+              orderBy: "schema_name asc, object_name asc, privilege asc",
+              pageSize: 1000,
+              pageToken: pageToken ?? "",
+              parent: buildDatabaseName(input.instanceId, databaseId),
+            }),
+          (response) => response.grants
+        )
+      );
+      return {
+        failedRequestCount: grants.failedRequestCount,
+        value: {
+          databaseId,
+          databaseName: databaseDisplayName(database),
+          grants: grants.value,
+        },
+      };
+    }
+  );
   const roleDatabasePairs = input.roles.flatMap((role) =>
     mapDatabases.map((database) => ({ database, role }))
   );
-  const roleResults = await mapInBatches(
+  const roleResults = await mapWithConcurrency(
     roleDatabasePairs,
     async ({ database, role }) => {
       const roleId = roleResourceIdOf(role);
