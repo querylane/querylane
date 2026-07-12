@@ -128,6 +128,14 @@ interface BuildSchemaMapModelInput {
   views: View[];
 }
 
+interface SelectSchemaMapMetadataTableNamesInput {
+  limit: number;
+  query: string;
+  schemaNames: string[];
+  selectedTableName: string | null;
+  tables: Table[];
+}
+
 type TableInfo = ReturnType<typeof tableInfo>;
 type ViewInfo = ReturnType<typeof viewInfo>;
 
@@ -285,6 +293,36 @@ function viewInfo(view: View) {
 
 function schemaNameForTable(table: Table): string {
   return tableSafeQualifiedName(table.name).schema;
+}
+
+function selectSchemaMapMetadataTableNames({
+  limit,
+  query,
+  schemaNames,
+  selectedTableName,
+  tables,
+}: SelectSchemaMapMetadataTableNamesInput): string[] {
+  const selectedSchemas = new Set(schemaNames);
+  const normalizedQuery = query.trim().toLowerCase();
+  const tableNames: string[] = [];
+
+  for (const table of tables) {
+    const qualified = tableSafeQualifiedName(table.name);
+    if (!selectedSchemas.has(qualified.schema)) {
+      continue;
+    }
+    const displayName = table.displayName || qualified.table;
+    const isSelected = table.name === selectedTableName;
+    const matchesQuery =
+      !normalizedQuery ||
+      displayName.toLowerCase().includes(normalizedQuery) ||
+      qualified.schema.toLowerCase().includes(normalizedQuery);
+    if (isSelected || (matchesQuery && tableNames.length < limit)) {
+      tableNames.push(table.name);
+    }
+  }
+
+  return tableNames;
 }
 
 function viewSchemaName(view: View): string {
@@ -802,4 +840,9 @@ export type {
   SchemaMapTone,
   SchemaMapViewNode,
 };
-export { buildSchemaMapModel, NODE_WIDTH, schemaNameForTable, VIEW_NODE_WIDTH };
+export {
+  buildSchemaMapModel,
+  NODE_WIDTH,
+  selectSchemaMapMetadataTableNames,
+  VIEW_NODE_WIDTH,
+};

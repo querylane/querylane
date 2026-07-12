@@ -25,7 +25,7 @@ import {
   type SchemaMapNode,
   type SchemaMapTone,
   type SchemaMapViewNode,
-  schemaNameForTable,
+  selectSchemaMapMetadataTableNames,
   VIEW_NODE_WIDTH,
 } from "@/features/data-explorer/explorer-schema-map-model";
 import { tablesForSchemaQueryInput } from "@/hooks/api/table";
@@ -54,6 +54,7 @@ const HULL_LABEL_OFFSET_Y = 6;
 const MINIMAP_WIDTH = 132;
 const MINIMAP_HEIGHT = 92;
 const MINIMAP_NODE_RADIUS = 4;
+const MAX_AUTO_METADATA_TABLES = 24;
 
 const TONE_CLASSES: Record<
   SchemaMapTone,
@@ -112,13 +113,17 @@ function useSchemaMapCatalog({
   databaseId,
   enabled,
   instanceId,
+  metadataQuery,
   metadataSchemaNames,
+  selectedTableName,
   schemas,
 }: {
   databaseId: string;
   enabled: boolean;
   instanceId: string;
+  metadataQuery: string;
   metadataSchemaNames: string[];
+  selectedTableName: string | null;
   schemas: SchemaSummary[];
 }) {
   const transport = useTransport();
@@ -154,13 +159,13 @@ function useSchemaMapCatalog({
   });
   const tables = tableQueries.flatMap((query) => query.data?.tables ?? []);
   const views = viewQueries.flatMap((query) => query.data?.views ?? []);
-  const metadataSchemaSet = new Set(metadataSchemaNames);
-  const tableNames: string[] = [];
-  for (const table of tables) {
-    if (metadataSchemaSet.has(schemaNameForTable(table))) {
-      tableNames.push(table.name);
-    }
-  }
+  const tableNames = selectSchemaMapMetadataTableNames({
+    limit: MAX_AUTO_METADATA_TABLES,
+    query: metadataQuery,
+    schemaNames: metadataSchemaNames,
+    selectedTableName,
+    tables,
+  });
   const columnQueries = useQueries({
     queries: tableNames.map((tableName) => ({
       ...createQueryOptions(
@@ -372,7 +377,7 @@ function TableNode({
   const tone = TONE_CLASSES[node.tone];
   const emptyColumnsLabel = node.columnsLoaded
     ? "No columns found."
-    : "Select this schema to load details.";
+    : "Select table to load details.";
 
   return (
     <foreignObject
@@ -642,7 +647,7 @@ function SchemaMapCanvas({
           <span>{model.stats}</span>
         </div>
         <p className="mt-1">
-          Press Enter or double-click a table to open data.
+          Press Space to select, or Enter or double-click to open data.
         </p>
       </div>
       <SchemaMapMinimap model={model} />
@@ -709,8 +714,10 @@ function ExplorerSchemaMap({
     databaseId,
     enabled,
     instanceId,
+    metadataQuery: deferredQuery,
     metadataSchemaNames,
     schemas,
+    selectedTableName: selectedTable,
   });
   const filterSchema = selectedSchema || ALL_SCHEMAS;
   const model = buildSchemaMapModel({

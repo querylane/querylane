@@ -1003,6 +1003,16 @@ test("data explorer schema map tab matches the redesign relationship map", async
     await page.getByRole("button", { name: "Open data" }).click();
     expect(onSelectTable).toHaveBeenCalledWith("shipping", "shipments");
 
+    onSelectTable.mockClear();
+    const shipmentsButton = page
+      .getByRole("button", { name: "shipping.shipments" })
+      .element();
+    shipmentsButton.focus();
+    shipmentsButton.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true, key: "Enter" })
+    );
+    expect(onSelectTable).toHaveBeenCalledWith("shipping", "shipments");
+
     await page
       .getByRole("searchbox", { name: "Find a table" })
       .fill("change_log");

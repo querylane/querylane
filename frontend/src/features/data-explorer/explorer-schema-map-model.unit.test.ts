@@ -1,7 +1,10 @@
 import { create } from "@bufbuild/protobuf";
 import { describe, expect, test } from "vitest";
 import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model";
-import { buildSchemaMapModel } from "@/features/data-explorer/explorer-schema-map-model";
+import {
+  buildSchemaMapModel,
+  selectSchemaMapMetadataTableNames,
+} from "@/features/data-explorer/explorer-schema-map-model";
 import {
   ColumnSchema,
   ConstraintType,
@@ -273,5 +276,46 @@ describe("buildSchemaMapModel", () => {
 
     expect(model.nodes[0]?.columnsLoaded).toBe(false);
     expect(model.nodes[0]?.height).toBeGreaterThan(60);
+  });
+
+  test("bounds automatic metadata fetches and keeps search and selection on demand", () => {
+    const manyTables = Array.from({ length: 30 }, (_, index) =>
+      create(TableSchema, {
+        displayName: `table_${index + 1}`,
+        name: `instances/local/databases/logistics/schemas/shipping/tables/table_${index + 1}`,
+      })
+    );
+    const selectedTable = manyTables[28]?.name ?? "";
+
+    expect(
+      selectSchemaMapMetadataTableNames({
+        limit: 24,
+        query: "",
+        schemaNames: ["shipping"],
+        selectedTableName: null,
+        tables: manyTables,
+      })
+    ).toHaveLength(24);
+    expect(
+      selectSchemaMapMetadataTableNames({
+        limit: 24,
+        query: "table_29",
+        schemaNames: ["shipping"],
+        selectedTableName: null,
+        tables: manyTables,
+      })
+    ).toEqual([selectedTable]);
+    expect(
+      selectSchemaMapMetadataTableNames({
+        limit: 24,
+        query: "",
+        schemaNames: ["shipping"],
+        selectedTableName: selectedTable,
+        tables: manyTables,
+      })
+    ).toEqual([
+      ...manyTables.slice(0, 24).map((table) => table.name),
+      selectedTable,
+    ]);
   });
 });
