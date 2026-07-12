@@ -61,7 +61,6 @@ import {
   columnKeyKinds,
   columnTypeCategory,
   filterColumnDetailRows,
-  filterConstraintsByKind,
   filterIndexesByMethod,
   filterPoliciesByMode,
   filterTriggersByState,
@@ -106,7 +105,11 @@ import {
   normalizeEstimatedRowCount,
   parseTableQualifiedName,
 } from "@/lib/console-resources";
-import { formatPolicyCommand, formatPolicyMode } from "@/lib/protobuf-enums";
+import {
+  formatPolicyCommand,
+  formatPolicyMode,
+  formatReferentialAction,
+} from "@/lib/protobuf-enums";
 import { QUERY_STALE_TIME } from "@/lib/query-policy";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
@@ -124,6 +127,7 @@ import {
   ConstraintType,
   IdentityGeneration,
   type PolicyMode,
+  ReferentialAction,
   Table_TableType,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
@@ -255,18 +259,6 @@ function presentIndexMethodOptions(
   return Array.from(options.entries())
     .sort((left, right) => left[1].localeCompare(right[1]))
     .map(([value, label]) => ({ label, value }));
-}
-function presentConstraintKindOptions(
-  constraints: TableConstraint[]
-): FacetedFilterOption[] {
-  return Array.from(new Set(constraints.map((constraint) => constraint.type)))
-    .sort((left, right) =>
-      CONSTRAINT_TYPE_LABELS[left].localeCompare(CONSTRAINT_TYPE_LABELS[right])
-    )
-    .map((type) => ({
-      label: CONSTRAINT_TYPE_LABELS[type],
-      value: String(type),
-    }));
 }
 function presentPolicyModeOptions(
   policies: TablePolicy[]
@@ -1477,45 +1469,194 @@ function IndexesTab({
     />
   );
 }
-const constraintColumns: DataTableColumnDef<TableConstraint>[] = [
-  {
-    accessorKey: "constraintName",
-    cell: ({ row }) => row.original.constraintName,
-    header: ({ column }) => (
-      <SortableHeader column={column}>Name</SortableHeader>
-    ),
-    meta: {
-      cellClassName: "font-mono text-xs",
-      headerClassName: "pl-3",
-    },
-  },
-  {
-    accessorFn: (row) => CONSTRAINT_TYPE_LABELS[row.type],
-    cell: ({ row }) => (
-      <Badge className="font-mono text-[10px]" variant="outline">
-        {CONSTRAINT_TYPE_LABELS[row.original.type]}
-      </Badge>
-    ),
-    header: ({ column }) => (
-      <SortableHeader column={column}>Kind</SortableHeader>
-    ),
-    id: "type",
-  },
-  {
-    accessorKey: "definition",
-    cell: ({ row }) => row.original.definition,
-    header: "Definition",
-    meta: {
-      cellClassName: "font-mono text-muted-foreground text-xs",
-    },
-  },
-];
+const KEY_CONSTRAINT_TYPES = new Set<ConstraintType>([
+  ConstraintType.PRIMARY_KEY,
+  ConstraintType.UNIQUE,
+]);
+const VALIDATED_CONSTRAINT_TYPES = new Set<ConstraintType>([
+  ConstraintType.CHECK,
+  ConstraintType.FOREIGN_KEY,
+]);
+const NOT_VALID_DEFINITION_PATTERN = /\bNOT\s+VALID\b/i;
+
+function isKeyConstraint(constraint: TableConstraint) {
+  return KEY_CONSTRAINT_TYPES.has(constraint.type);
+}
+
+function isForeignKeyConstraint(constraint: TableConstraint) {
+  return constraint.type === ConstraintType.FOREIGN_KEY;
+}
+
+function formatConstraintColumns(columnNames: string[]) {
+  return columnNames.length > 0 ? columnNames.join(", ") : "—";
+}
+
+function shouldShowReferentialAction(action: ReferentialAction) {
+  return (
+    action !== ReferentialAction.UNSPECIFIED &&
+    action !== ReferentialAction.NO_ACTION
+  );
+}
+
+function hasNotValidDefinition(constraint: TableConstraint) {
+  return NOT_VALID_DEFINITION_PATTERN.test(constraint.definition);
+}
+
+function shouldShowValidatedPill(constraint: TableConstraint) {
+  return (
+    VALIDATED_CONSTRAINT_TYPES.has(constraint.type) &&
+    !hasNotValidDefinition(constraint)
+  );
+}
+
+function ConstraintBadge({
+  children,
+  tone = "secondary",
+}: {
+  children: React.ReactNode;
+  tone?: "ghost" | "outline" | "secondary" | "warning" | undefined;
+}) {
+  return (
+    <Badge
+      className={cn(
+        "h-[18px] font-mono text-[10px]",
+        tone === "ghost" && "border-transparent text-muted-foreground",
+        tone === "warning" &&
+          "border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-300"
+      )}
+      variant={tone === "outline" ? "outline" : "secondary"}
+    >
+      {children}
+    </Badge>
+  );
+}
+
+function ReferentialActionPill({
+  action,
+  label,
+}: {
+  action: ReferentialAction;
+  label: "delete" | "update";
+}) {
+  if (!shouldShowReferentialAction(action)) {
+    return null;
+  }
+  const actionLabel = formatReferentialAction(action);
+  return (
+    <ConstraintBadge
+      tone={action === ReferentialAction.CASCADE ? "warning" : "outline"}
+    >
+      ON {label.toUpperCase()} {actionLabel}
+    </ConstraintBadge>
+  );
+}
+
+function ConstraintSectionHeading({
+  description,
+  title,
+}: {
+  description: string;
+  title: string;
+}) {
+  return (
+    <h2 className="flex flex-wrap items-baseline gap-2 font-semibold text-[12.5px]">
+      <span>{title}</span>
+      <span className="font-normal text-[11px] text-muted-foreground">
+        {description}
+      </span>
+    </h2>
+  );
+}
+
+function ConstraintCard({ constraint }: { constraint: TableConstraint }) {
+  const referencedTableLabel = formatReferencedTable(
+    constraint.referencedTable
+  );
+  const isForeignKey = isForeignKeyConstraint(constraint);
+  return (
+    <article
+      className={cn(
+        "rounded-[10px] border bg-card px-3.5 py-[11px] shadow-xs",
+        hasNotValidDefinition(constraint) &&
+          "border-amber-500/45 dark:border-amber-400/45"
+      )}
+    >
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <h3 className="break-all font-mono font-semibold text-[12.5px]">
+          {constraint.constraintName || "—"}
+        </h3>
+        <ConstraintBadge>
+          {CONSTRAINT_TYPE_LABELS[constraint.type]}
+        </ConstraintBadge>
+        {isForeignKey ? (
+          <>
+            <ReferentialActionPill
+              action={constraint.onDelete}
+              label="delete"
+            />
+            <ReferentialActionPill
+              action={constraint.onUpdate}
+              label="update"
+            />
+          </>
+        ) : null}
+        {hasNotValidDefinition(constraint) ? (
+          <ConstraintBadge tone="warning">NOT VALID</ConstraintBadge>
+        ) : null}
+        {shouldShowValidatedPill(constraint) ? (
+          <ConstraintBadge tone="ghost">validated</ConstraintBadge>
+        ) : null}
+        {isForeignKey && referencedTableLabel ? (
+          <Badge
+            className="h-[18px] border-transparent bg-transparent px-0 font-mono text-[11.5px] text-blue-700 shadow-none dark:text-blue-300"
+            variant="secondary"
+          >
+            {referencedTableLabel} ↗
+          </Badge>
+        ) : null}
+      </div>
+      <p className="mt-[7px] break-words font-mono text-[11.5px] text-muted-foreground leading-[1.55] [overflow-wrap:anywhere]">
+        {constraint.definition ||
+          `${CONSTRAINT_TYPE_LABELS[constraint.type]} (${formatConstraintColumns(
+            constraint.columnNames
+          )})`}
+      </p>
+    </article>
+  );
+}
+
+function ConstraintSection({
+  constraints,
+  description,
+  title,
+}: {
+  constraints: TableConstraint[];
+  description: string;
+  title: string;
+}) {
+  if (constraints.length === 0) {
+    return null;
+  }
+  return (
+    <section className="space-y-2">
+      <ConstraintSectionHeading description={description} title={title} />
+      <div className="space-y-2">
+        {constraints.map((constraint) => (
+          <ConstraintCard
+            constraint={constraint}
+            key={`${constraint.type}:${constraint.constraintName}`}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ConstraintsTab({
   query,
 }: {
   query: ReturnType<typeof useListTableConstraintsQuery>;
 }) {
-  const [kindFilters, setKindFilters] = useState<string[]>([]);
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
     return (
@@ -1536,33 +1677,45 @@ function ConstraintsTab({
     return <TabSkeleton />;
   }
   const constraints = query.data.constraints;
-  const filteredConstraints = filterConstraintsByKind(
-    constraints,
-    kindFilters.map(Number) as ConstraintType[]
+  if (constraints.length === 0) {
+    return <TableResourceEmptyState category="constraints" toolbar={toolbar} />;
+  }
+  const keyConstraints = constraints.filter(isKeyConstraint);
+  const foreignKeyConstraints = constraints.filter(isForeignKeyConstraint);
+  const checkConstraints = constraints.filter(
+    (constraint) => constraint.type === ConstraintType.CHECK
+  );
+  const otherConstraints = constraints.filter(
+    (constraint) =>
+      !(
+        isKeyConstraint(constraint) ||
+        isForeignKeyConstraint(constraint) ||
+        constraint.type === ConstraintType.CHECK
+      )
   );
   return (
-    <MetadataTabResult
-      category="constraints"
-      columns={constraintColumns}
-      data={filteredConstraints}
-      filterColumn="constraintName"
-      filterPlaceholder="Search constraints…"
-      filters={
-        <FacetFilterBar
-          filters={[
-            {
-              handleSelectedValuesChange: setKindFilters,
-              label: "Kind",
-              options: presentConstraintKindOptions(constraints),
-              selectedValues: kindFilters,
-            },
-          ]}
-        />
-      }
-      hasUnfilteredData={constraints.length > 0}
-      tableKey="data-explorer-table-constraints"
-      toolbar={toolbar}
-    />
+    <div className="space-y-3.5" data-slot="constraints-card-list">
+      <ConstraintSection
+        constraints={keyConstraints}
+        description="primary key and uniqueness"
+        title="Keys"
+      />
+      <ConstraintSection
+        constraints={foreignKeyConstraints}
+        description="outbound references from this table"
+        title="Foreign keys"
+      />
+      <ConstraintSection
+        constraints={checkConstraints}
+        description="row-level validation rules"
+        title="Checks"
+      />
+      <ConstraintSection
+        constraints={otherConstraints}
+        description="exclusion and other rules"
+        title="Other constraints"
+      />
+    </div>
   );
 }
 const policyColumns: DataTableColumnDef<TablePolicy>[] = [

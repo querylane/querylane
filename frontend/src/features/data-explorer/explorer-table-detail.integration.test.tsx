@@ -27,6 +27,8 @@ import {
   ListTableTriggersResponseSchema,
   PolicyCommand,
   PolicyMode,
+  ReferentialAction,
+  TableConstraintSchema,
   Table_TableType,
   TableSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
@@ -850,6 +852,104 @@ describe("TableDetail tab routing", () => {
     await user.click(screen.getByRole("tab", { name: INDEXES_TAB_RE }));
 
     expect(onTabChange).toHaveBeenCalledWith("indexes");
+  });
+});
+
+describe("TableDetail constraints tab", () => {
+  it("groups keys and outbound foreign keys as constraint cards", () => {
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "shipment_event_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+        create(TableConstraintSchema, {
+          columnNames: ["shipment_id"],
+          constraintName: "shipment_event_shipment_id_fkey",
+          definition:
+            "FOREIGN KEY (shipment_id) REFERENCES shipping.shipments(id) ON DELETE CASCADE",
+          onDelete: ReferentialAction.CASCADE,
+          referencedColumnNames: ["id"],
+          referencedTable:
+            "instances/prod/databases/app/schemas/shipping/tables/shipments",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="constraints"
+        instanceId="prod"
+        schemaName="shipping"
+        table={create(TableSchema, { rowCount: 18_200_000n, sizeBytes: 4096n })}
+        tableName="shipment_event"
+      />
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Keys primary key and uniqueness",
+      })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", {
+        name: "Foreign keys outbound references from this table",
+      })
+    ).toBeTruthy();
+    expect(screen.getByText("shipment_event_pkey")).toBeTruthy();
+    expect(screen.getByText("PRIMARY KEY (id)")).toBeTruthy();
+    expect(screen.getByText("shipment_event_shipment_id_fkey")).toBeTruthy();
+    expect(screen.getByText("ON DELETE CASCADE")).toBeTruthy();
+    expect(screen.getByText("shipping.shipments ↗")).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("shows design-export validation badges and check groups", () => {
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["account_id"],
+          constraintName: "customers_account_id_fkey",
+          definition:
+            "FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE RESTRICT",
+          onDelete: ReferentialAction.RESTRICT,
+          referencedColumnNames: ["id"],
+          referencedTable:
+            "instances/prod/databases/app/schemas/public/tables/accounts",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+        create(TableConstraintSchema, {
+          columnNames: ["status"],
+          constraintName: "customers_status_check",
+          definition: "CHECK (status IN ('active', 'archived'))",
+          type: ConstraintType.CHECK,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="constraints"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema, { rowCount: 12n, sizeBytes: 4096n })}
+        tableName="customers"
+      />
+    );
+
+    expect(screen.getByText("ON DELETE RESTRICT")).toBeTruthy();
+    expect(screen.getAllByText("validated")).toHaveLength(2);
+    expect(
+      screen.getByRole("heading", {
+        name: "Checks row-level validation rules",
+      })
+    ).toBeTruthy();
+    expect(screen.queryByText("Other constraints")).toBeNull();
   });
 });
 

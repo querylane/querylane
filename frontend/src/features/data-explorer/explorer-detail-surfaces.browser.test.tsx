@@ -18,6 +18,7 @@ import {
   ListTableTriggersResponseSchema,
   PolicyCommand,
   PolicyMode,
+  ReferentialAction,
   Table_TableType,
   TableConstraintSchema,
   TableIndexSchema,
@@ -946,28 +947,28 @@ test("data explorer table indexes constraints policies and triggers stay readabl
 
   await page.getByRole("tab", { exact: true, name: "Constraints 2" }).click();
   await expect
-    .element(page.getByText("customers_account_id_fkey"))
+    .element(
+      page.getByRole("heading", {
+        exact: true,
+        name: "Keys primary key and uniqueness",
+      })
+    )
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-constraints"
-  );
-  const constraintFilterBar = requireFacetFilterBar("constraint facet filters");
-  expect(constraintFilterBar.textContent).toContain("Kind");
-  await page.getByRole("button", { exact: true, name: "Kind" }).click();
-  const primaryKeyOption = page.getByRole("option", {
-    exact: true,
-    name: "PRIMARY KEY",
-  });
-  await expect.element(primaryKeyOption).toBeVisible();
-  await primaryKeyOption.click();
-  const kindFilter = page
-    .getByRole("button", { exact: true, name: "Kind PRIMARY KEY" })
-    .element();
-  expect(kindFilter.textContent).toContain("PRIMARY KEY");
+  await expect
+    .element(
+      page.getByRole("heading", {
+        exact: true,
+        name: "Foreign keys outbound references from this table",
+      })
+    )
+    .toBeVisible();
   await expect.element(page.getByText("customers_pkey")).toBeVisible();
   await expect
     .element(page.getByText("customers_account_id_fkey"))
-    .not.toBeInTheDocument();
+    .toBeVisible();
+  await expect.element(page.getByText("public.accounts ↗")).toBeVisible();
+  expect(document.querySelector('[data-slot="facet-filter-bar"]')).toBeNull();
+  expect(document.querySelector("table")).toBeNull();
 
   await page.getByRole("tab", { exact: true, name: "Policies 1" }).click();
   await expect
@@ -984,6 +985,110 @@ test("data explorer table indexes constraints policies and triggers stay readabl
   await expect.element(page.getByText("customers_audit_trigger")).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-triggers"
+  );
+});
+
+test("data explorer constraints tab matches redesign card groups", async () => {
+  seedTableDetailQueries();
+  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
+    columns: [
+      createProto(ColumnSchema, {
+        columnName: "id",
+        dataType: DataType.INTEGER,
+        isNullable: false,
+        isPrimaryKey: true,
+        ordinalPosition: 1,
+        rawType: "int8",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "shipment_id",
+        dataType: DataType.UUID,
+        isNullable: false,
+        ordinalPosition: 2,
+        rawType: "uuid",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "event",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 3,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "recorded_at",
+        dataType: DataType.TIMESTAMP,
+        isNullable: false,
+        ordinalPosition: 4,
+        rawType: "timestamptz",
+      }),
+    ],
+  });
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    {
+      constraints: [
+        createProto(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "shipment_event_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["shipment_id"],
+          constraintName: "shipment_event_shipment_id_fkey",
+          definition:
+            "FOREIGN KEY (shipment_id) REFERENCES shipping.shipments(id) ON DELETE CASCADE",
+          onDelete: ReferentialAction.CASCADE,
+          referencedColumnNames: ["id"],
+          referencedTable:
+            "instances/prod/databases/logistics/schemas/shipping/tables/shipments",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+      ],
+    }
+  );
+
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="constraints"
+      instanceId="prod"
+      schemaName="shipping"
+      table={createProto(TableSchema, {
+        displayName: "shipment_event",
+        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
+        owner: "app_owner",
+        rowCount: 18_200_000n,
+        sizeBytes: 21_400_000_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="shipment_event"
+    />
+  );
+
+  await expect
+    .element(
+      page.getByRole("heading", {
+        exact: true,
+        name: "Keys primary key and uniqueness",
+      })
+    )
+    .toBeVisible();
+  await expect
+    .element(
+      page.getByRole("heading", {
+        exact: true,
+        name: "Foreign keys outbound references from this table",
+      })
+    )
+    .toBeVisible();
+  await expect.element(page.getByText("ON DELETE CASCADE")).toBeVisible();
+  await expect.element(page.getByText("validated")).toBeVisible();
+  await expect.element(page.getByText("shipping.shipments ↗")).toBeVisible();
+  expect(document.querySelector('[data-slot="facet-filter-bar"]')).toBeNull();
+  expect(document.querySelector("table")).toBeNull();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-constraints-redesign"
   );
 });
 
