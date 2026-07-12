@@ -272,8 +272,13 @@ describe("SqlWorkbenchPage", () => {
     const editorTab = screen.getByRole("tab", { name: "SQL editor" });
     const builderTab = screen.getByRole("tab", { name: "Visual builder" });
     expect(editorTab.getAttribute("aria-selected")).toBe("true");
+    const editorPanel = screen.getByRole("tabpanel", { name: "SQL editor" });
+    expect(editorTab.getAttribute("aria-controls")).toBe(editorPanel.id);
     await user.click(builderTab);
     expect(builderTab.getAttribute("aria-selected")).toBe("true");
+    expect(
+      screen.getByRole("tabpanel", { name: "Visual builder" })
+    ).toBeTruthy();
     const runButton = screen.getByRole("button", { name: RUN_BUTTON_NAME });
     expect(runButton).toBeInstanceOf(HTMLButtonElement);
     if (runButton instanceof HTMLButtonElement) {
