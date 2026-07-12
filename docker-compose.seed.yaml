@@ -84,7 +84,7 @@ services:
     restart: unless-stopped
 
   seeder-normal:
-    image: ghcr.io/querylane/seeder-buddy:edge
+    image: ghcr.io/querylane/seeder-buddy:edge@sha256:873b61bc539c7438c855e20b12c1d1a441a0b4c498729b894c483ceef7fae186
     command: [run, -f, /config/scenario.yaml]
     environment:
       DATABASE_URL: "postgres://${SEED_NORMAL_USER}:${SEED_NORMAL_PASSWORD}@pg-normal:5432/ecommerce?sslmode=disable"
@@ -96,7 +96,7 @@ services:
     restart: unless-stopped
 
   seeder-edgecases:
-    image: ghcr.io/querylane/seeder-buddy:edge
+    image: ghcr.io/querylane/seeder-buddy:edge@sha256:873b61bc539c7438c855e20b12c1d1a441a0b4c498729b894c483ceef7fae186
     command: [run, -f, /config/scenario.yaml]
     environment:
       EDGE_DSN_NORMAL: "postgres://${SEED_EDGE_USER}:${SEED_EDGE_PASSWORD}@pg-edgecases:5432/normal_db?sslmode=disable"
