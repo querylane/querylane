@@ -82,6 +82,9 @@ func TestWorkflowsIntegration(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, nextToken)
 		require.Len(t, workflows, 2)
+		assert.False(t, workflows[0].CreateTime.IsZero())
+		assert.False(t, workflows[1].CreateTime.IsZero())
+		assert.False(t, workflows[0].CreateTime.Before(workflows[1].CreateTime), "default order must be newest first")
 
 		byID := map[string]engine.Workflow{}
 		for _, workflow := range workflows {
@@ -151,6 +154,7 @@ func TestWorkflowsIntegration(t *testing.T) {
 		assert.Equal(t, "completed", workflow.Status)
 		assert.NotEmpty(t, workflow.FunctionVersion)
 		assert.NotEmpty(t, workflow.CurrentExecutionID)
+		assert.False(t, workflow.CreateTime.IsZero())
 
 		// Output lives on the detail surface (df.instance_info), not the list.
 		failed, err := eng.GetWorkflow(ctx, submitterDB, failedID)

@@ -5,10 +5,9 @@
 import { WorkflowService } from "./workflow_pb";
 
 /**
- * Lists workflow instances in a database, newest-visible first bounded by
- * pg_durable's list window (at most 1000 instances per listing; terminal
- * instances older than the extension's retention window are pruned by
- * pg_durable itself).
+ * Lists workflow instances in a database, newest-visible first. Terminal
+ * instances older than the extension's retention window may be pruned by
+ * pg_durable itself.
  *
  * @generated from rpc querylane.console.v1alpha1.WorkflowService.ListWorkflows
  */

@@ -1,5 +1,6 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { badgeVariants } from "@/components/ui/badge";
+import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
 import { WorkflowStatus } from "@/protogen/querylane/console/v1alpha1/workflow_pb";
 
 type BadgeVariant = NonNullable<Parameters<typeof badgeVariants>[0]>["variant"];
@@ -30,24 +31,68 @@ function workflowStatusLabel(status: WorkflowStatus): string {
   return workflowStatusPresentation(status).label;
 }
 
-/**
- * WorkflowService RPCs fail with FailedPrecondition exactly when the
- * pg_durable extension is absent from the target database.
- */
-function isDurableNotInstalledError(error: unknown): boolean {
-  return (
-    error instanceof ConnectError && error.code === Code.FailedPrecondition
-  );
+const WORKFLOW_STATUS_FILTER_VALUE: Partial<Record<WorkflowStatus, string>> = {
+  [WorkflowStatus.PENDING]: "pending",
+  [WorkflowStatus.RUNNING]: "running",
+  [WorkflowStatus.COMPLETED]: "completed",
+  [WorkflowStatus.FAILED]: "failed",
+  [WorkflowStatus.CANCELLED]: "cancelled",
+};
+
+function escapeWorkflowFilterString(value: string): string {
+  return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
-/**
- * WorkflowService RPCs fail with PermissionDenied exactly when pg_durable is
- * installed but the connection role was never granted df.grant_usage. Every
- * WorkflowService query targets the df schema, so on these pages a
- * PermissionDenied unambiguously means "this role lacks workflow access".
- */
+function buildWorkflowListFilter({
+  query,
+  statuses,
+}: {
+  query: string;
+  statuses: WorkflowStatus[];
+}): string {
+  const filters: string[] = [];
+  const trimmedQuery = query.trim();
+
+  if (trimmedQuery) {
+    const value = escapeWorkflowFilterString(trimmedQuery);
+    filters.push(`(name:"${value}" OR label:"${value}")`);
+  }
+
+  const statusFilters = statuses.flatMap((status) => {
+    const value = WORKFLOW_STATUS_FILTER_VALUE[status];
+    return value ? [`status = "${value}"`] : [];
+  });
+  if (statusFilters.length > 0) {
+    filters.push(`(${statusFilters.join(" OR ")})`);
+  }
+
+  return filters.join(" AND ");
+}
+
+function isDurableNotInstalledError(error: unknown): boolean {
+  if (
+    !(error instanceof ConnectError) ||
+    error.code !== Code.FailedPrecondition
+  ) {
+    return false;
+  }
+
+  return error
+    .findDetails(ErrorInfoSchema)
+    .some((detail) => detail.metadata["pg_durable_state"] === "not_installed");
+}
+
 function isDurableAccessDeniedError(error: unknown): boolean {
-  return error instanceof ConnectError && error.code === Code.PermissionDenied;
+  if (
+    !(error instanceof ConnectError) ||
+    error.code !== Code.PermissionDenied
+  ) {
+    return false;
+  }
+
+  return error
+    .findDetails(ErrorInfoSchema)
+    .some((detail) => detail.metadata["pg_durable_state"] === "access_denied");
 }
 
 type WorkflowPreconditionKind = "not-installed" | "access-denied";
@@ -72,6 +117,7 @@ function workflowPreconditionKind(
 }
 
 export {
+  buildWorkflowListFilter,
   isDurableAccessDeniedError,
   isDurableNotInstalledError,
   type WorkflowPreconditionKind,

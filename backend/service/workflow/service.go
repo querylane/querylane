@@ -4,6 +4,7 @@ package workflow
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -20,7 +21,56 @@ import (
 var _ v1connect.WorkflowServiceHandler = (*Service)(nil)
 
 type instanceOpener interface {
+	OpenInstance(ctx context.Context, name resource.InstanceName) (instanceSession, error)
+}
+
+type instanceSession interface {
+	OpenDatabase(ctx context.Context, databaseName string) (databaseSession, error)
+	Close() error
+}
+
+type databaseSession interface {
+	ListWorkflows(ctx context.Context, params aip.Params) ([]engine.Workflow, string, error)
+	GetWorkflow(ctx context.Context, workflowID string) (*engine.Workflow, error)
+	ListWorkflowNodes(ctx context.Context, workflowID string, params aip.Params) ([]engine.WorkflowNode, string, error)
+	Close() error
+}
+
+type engineInstanceOpener interface {
 	OpenInstance(ctx context.Context, name resource.InstanceName) (engine.InstanceSession, error)
+}
+
+type engineOpenerAdapter struct {
+	opener engineInstanceOpener
+}
+
+func (a engineOpenerAdapter) OpenInstance(ctx context.Context, name resource.InstanceName) (instanceSession, error) {
+	session, err := a.opener.OpenInstance(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	return engineInstanceSession{InstanceSession: session}, nil
+}
+
+type engineInstanceSession struct {
+	engine.InstanceSession
+}
+
+func (s engineInstanceSession) OpenDatabase(ctx context.Context, databaseName string) (databaseSession, error) {
+	session, err := s.InstanceSession.OpenDatabase(ctx, databaseName)
+	if err != nil {
+		return nil, err
+	}
+
+	workflowSession, ok := session.(databaseSession)
+	if !ok {
+		_ = session.Close()
+
+		return nil, errors.New("engine database session does not support workflows")
+	}
+
+	return workflowSession, nil
 }
 
 // Service implements WorkflowService RPC handlers.
@@ -29,7 +79,11 @@ type Service struct {
 }
 
 // NewService creates a new WorkflowService.
-func NewService(connManager instanceOpener) *Service {
+func NewService(connManager engineInstanceOpener) *Service {
+	return newService(engineOpenerAdapter{opener: connManager})
+}
+
+func newService(connManager instanceOpener) *Service {
 	return &Service{connManager: connManager}
 }
 
@@ -119,6 +173,10 @@ func (s *Service) ListWorkflowNodes(ctx context.Context, req *connect.Request[v1
 	}
 	defer cleanup()
 
+	if _, err := dbSession.GetWorkflow(ctx, workflowResource.WorkflowID); err != nil {
+		return nil, apierrors.MapEngineErr(ctx, err, rctx)
+	}
+
 	nodes, nextToken, err := dbSession.ListWorkflowNodes(ctx, workflowResource.WorkflowID, aip.Params{
 		PageSize:  req.Msg.GetPageSize(),
 		PageToken: req.Msg.GetPageToken(),
@@ -142,7 +200,7 @@ func (s *Service) ListWorkflowNodes(ctx context.Context, req *connect.Request[v1
 
 // openDatabase opens the instance and database sessions for a request. The
 // returned cleanup closes both sessions and is safe to defer immediately.
-func (s *Service) openDatabase(ctx context.Context, databaseResource resource.DatabaseName) (engine.DatabaseSession, func(), error) {
+func (s *Service) openDatabase(ctx context.Context, databaseResource resource.DatabaseName) (databaseSession, func(), error) {
 	instSession, err := s.connManager.OpenInstance(ctx, databaseResource.Instance())
 	if err != nil {
 		return nil, nil, err
@@ -164,7 +222,7 @@ func (s *Service) openDatabase(ctx context.Context, databaseResource resource.Da
 }
 
 func convertWorkflow(workflow engine.Workflow, databaseResource resource.DatabaseName) *v1alpha1.Workflow {
-	return &v1alpha1.Workflow{
+	pbWorkflow := &v1alpha1.Workflow{
 		Name:               resource.NewWorkflowName(databaseResource.InstanceID, databaseResource.DatabaseID, workflow.ID).String(),
 		WorkflowId:         workflow.ID,
 		Label:              workflow.Label,
@@ -175,6 +233,12 @@ func convertWorkflow(workflow engine.Workflow, databaseResource resource.Databas
 		Output:             workflow.Output,
 		CurrentExecutionId: workflow.CurrentExecutionID,
 	}
+
+	if !workflow.CreateTime.IsZero() {
+		pbWorkflow.CreateTime = timestamppb.New(workflow.CreateTime)
+	}
+
+	return pbWorkflow
 }
 
 func convertWorkflowNode(node engine.WorkflowNode) *v1alpha1.WorkflowNode {

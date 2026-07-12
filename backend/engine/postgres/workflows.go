@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -14,51 +16,49 @@ import (
 	"github.com/querylane/querylane/backend/engine"
 )
 
-// workflowListWindow is the listing window requested from df.list_instances.
-// It matches pg_durable's default pg_durable.list_instances_max_limit, so one
-// window holds everything the extension is willing to report per call.
-const workflowListWindow = 1000
-
 // workflowStatusTokens is pg_durable's documented instance lifecycle
 // vocabulary, used to bound status filter values.
 var workflowStatusTokens = []string{"pending", "running", "completed", "failed", "cancelled"}
 
-var workflowSchema = rawsql.Bind(
-	aip.NewSchema(
-		"console.querylane.dev/Workflow",
-		aip.Fields[engine.Workflow]{
-			"name": {
-				Codec:      aip.StringCodec{},
-				GetValue:   func(m *engine.Workflow) any { return m.ID },
-				Filterable: true,
-			},
-			// Only name is orderable: it is the sole unique column, and keyset
-			// cursors over non-unique columns without a tiebreaker can skip or
-			// repeat rows across pages.
-			"label": {
-				Codec:           aip.StringCodec{},
-				DisableOrdering: true,
-				Filterable:      true,
-			},
-			"function_name": {
-				Codec:           aip.StringCodec{},
-				DisableOrdering: true,
-				Filterable:      true,
-			},
-			"status": {
-				Codec:           aip.StringCodec{},
-				DisableOrdering: true,
-				Filterable:      true,
-				FilterValues:    workflowStatusTokens,
-			},
+var workflowCoreSchema = aip.NewSchema(
+	"console.querylane.dev/Workflow",
+	aip.Fields[engine.Workflow]{
+		"name": {
+			Codec:      aip.StringCodec{},
+			GetValue:   func(m *engine.Workflow) any { return m.ID },
+			Filterable: true,
 		},
-		aip.WithNameOrdering(),
-	),
+		"create_time": {
+			Codec:    aip.TimestampCodec{},
+			GetValue: func(m *engine.Workflow) any { return m.CreateTime },
+		},
+		"label": {
+			Codec:           aip.StringCodec{},
+			DisableOrdering: true,
+			Filterable:      true,
+		},
+		"function_name": {
+			Codec:           aip.StringCodec{},
+			DisableOrdering: true,
+		},
+		"status": {
+			Codec:           aip.StringCodec{},
+			DisableOrdering: true,
+			Filterable:      true,
+			FilterValues:    workflowStatusTokens,
+		},
+	},
+	aip.WithDefaultOrder("create_time", aip.Desc),
+	aip.WithTieBreaker("name", aip.Desc),
+)
+
+var workflowSchema = rawsql.Bind(
+	workflowCoreSchema,
 	rawsql.Exprs{
-		"name":          "li.instance_id",
-		"label":         "COALESCE(li.label, '')",
-		"function_name": "COALESCE(li.function_name, '')",
-		"status":        "COALESCE(li.status, '')",
+		"name":        "i.id",
+		"create_time": "COALESCE(i.created_at, TIMESTAMPTZ 'epoch')",
+		"label":       "COALESCE(i.label, '')",
+		"status":      "COALESCE(i.status, '')",
 	},
 )
 
@@ -91,16 +91,95 @@ var workflowNodeSchema = rawsql.Bind(
 )
 
 // ListWorkflows returns pg_durable workflow instances visible in the
-// connected database, bounded by the extension's listing window.
+// connected database, newest first by default.
 func (d *Postgres) ListWorkflows(ctx context.Context, db *sql.DB, params aip.Params) ([]engine.Workflow, string, error) {
-	return rawsql.Execute(ctx, workflowSchema, params, withWorkflowErrorClassifier(rawsql.Query{
-		BaseQuery: workflowListQuery,
-		Args:      []any{workflowListWindow},
-	}, "list workflows"), scanWorkflow, db)
+	plan, err := aip.BuildPlan(workflowCoreSchema, params)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if err := ensurePgDurableInstalled(ctx, db); err != nil {
+		return nil, "", err
+	}
+
+	clauses, err := rawsql.BuildClauses(workflowSchema, plan, 1)
+	if err != nil {
+		return nil, "", err
+	}
+
+	rows, err := db.QueryContext(ctx, buildWorkflowListQuery(clauses), clauses.Args...)
+	if err != nil {
+		return nil, "", fmt.Errorf("query execution failed: %w", classifyWorkflowError("list workflows", err))
+	}
+	defer rows.Close()
+
+	var workflows []engine.Workflow
+
+	for rows.Next() {
+		workflow, scanErr := scanWorkflow(rows)
+		if scanErr != nil {
+			return nil, "", fmt.Errorf("failed to scan query row: %w", classifyWorkflowError("list workflows", scanErr))
+		}
+
+		workflows = append(workflows, workflow)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, "", fmt.Errorf("error iterating query rows: %w", classifyWorkflowError("list workflows", err))
+	}
+
+	nextToken, err := workflowCoreSchema.NextPageToken(plan, workflows)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if len(workflows) > int(plan.PageSize) {
+		workflows = workflows[:plan.PageSize]
+	}
+
+	return workflows, nextToken, nil
+}
+
+// buildWorkflowListQuery places all predicates and the page-size bound inside
+// a materialized metadata CTE. pg_durable 0.2.3's df.list_instances performs
+// one sequential runtime lookup for every row in its input window; hydrating
+// after this CTE limits df.instance_info calls to page_size+1 instead.
+func buildWorkflowListQuery(clauses *rawsql.Clauses) string {
+	var query strings.Builder
+	query.WriteString(workflowListQuery)
+
+	if clauses.Where != "" {
+		query.WriteString(" WHERE ")
+		query.WriteString(clauses.Where)
+	}
+
+	query.WriteString(" ORDER BY ")
+	query.WriteString(clauses.OrderBy)
+	query.WriteString(" LIMIT ")
+	query.WriteString(strconv.FormatInt(int64(clauses.Limit), 10))
+	query.WriteString(`
+)
+SELECT
+	c.id,
+	c.label,
+	COALESCE(info.function_name, ''),
+	c.status,
+	COALESCE(info.current_execution_id, 0),
+	c.created_at
+FROM candidates AS c
+LEFT JOIN LATERAL df.instance_info(c.id) AS info ON TRUE
+ORDER BY `)
+	query.WriteString(strings.ReplaceAll(clauses.OrderBy, "i.", "c."))
+
+	return query.String()
 }
 
 // GetWorkflow retrieves one pg_durable workflow instance by id.
 func (d *Postgres) GetWorkflow(ctx context.Context, db *sql.DB, workflowID string) (*engine.Workflow, error) {
+	if err := ensurePgDurableInstalled(ctx, db); err != nil {
+		return nil, err
+	}
+
 	workflow, err := scanWorkflowInfoRow(db.QueryRowContext(ctx, getWorkflowQuery, workflowID))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -116,15 +195,39 @@ func (d *Postgres) GetWorkflow(ctx context.Context, db *sql.DB, workflowID strin
 // ListWorkflowNodes returns the graph nodes of one pg_durable workflow
 // instance, ordered by node id.
 func (d *Postgres) ListWorkflowNodes(ctx context.Context, db *sql.DB, workflowID string, params aip.Params) ([]engine.WorkflowNode, string, error) {
+	if err := ensurePgDurableInstalled(ctx, db); err != nil {
+		return nil, "", err
+	}
+
 	return rawsql.Execute(ctx, workflowNodeSchema, params, withWorkflowErrorClassifier(rawsql.Query{
 		BaseQuery: workflowNodeListQuery,
 		Args:      []any{workflowID},
 	}, "list workflow nodes"), scanWorkflowNode, db)
 }
 
-// withWorkflowErrorClassifier installs classifyWorkflowError as the query's
-// error mapper so a missing pg_durable installation surfaces as
-// engine.ErrDurableNotInstalled instead of a generic invalid-query error.
+// ensurePgDurableInstalled distinguishes an absent extension from an installed
+// but incompatible or damaged one. SQLSTATE 42883/42P01 alone cannot make that
+// distinction: an older/newer pg_durable can be installed while a particular
+// function or metadata table is missing.
+func ensurePgDurableInstalled(ctx context.Context, db *sql.DB) error {
+	var installed bool
+
+	err := db.QueryRowContext(ctx, `SELECT EXISTS (
+		SELECT 1 FROM pg_catalog.pg_extension WHERE extname = 'pg_durable'
+	)`).Scan(&installed)
+	if err != nil {
+		return fmt.Errorf("failed to check pg_durable installation: %w", classifyQueryError("check pg_durable installation", err))
+	}
+
+	if !installed {
+		return engine.ErrDurableNotInstalled
+	}
+
+	return nil
+}
+
+// withWorkflowErrorClassifier installs the WorkflowService-specific privilege
+// mapper after ensurePgDurableInstalled has confirmed extension presence.
 func withWorkflowErrorClassifier(query rawsql.Query, op string) rawsql.Query {
 	query.ErrorMapper = func(err error) error {
 		return classifyWorkflowError(op, err)
@@ -133,12 +236,10 @@ func withWorkflowErrorClassifier(query rawsql.Query, op string) rawsql.Query {
 	return query
 }
 
-// classifyWorkflowError maps the SQLSTATEs PostgreSQL raises against the df
-// schema to actionable sentinels, and defers to the regular live-SQL
-// classifier for everything else. Every WorkflowService query targets df.*,
-// so these codes have an unambiguous meaning here:
-//   - undefined function / schema  → pg_durable is not installed
-//   - insufficient privilege       → the role was never granted df.grant_usage
+// classifyWorkflowError maps df privilege failures to an actionable sentinel
+// and defers to the regular live-SQL classifier for everything else. Extension
+// absence is established authoritatively by ensurePgDurableInstalled; undefined
+// objects here therefore mean the installed version is incompatible or broken.
 func classifyWorkflowError(op string, err error) error {
 	if err == nil {
 		return nil
@@ -146,10 +247,7 @@ func classifyWorkflowError(op string, err error) error {
 
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
-		switch pgErr.Code {
-		case pgerrcode.UndefinedFunction, pgerrcode.InvalidSchemaName:
-			return fmt.Errorf("%w: %w", engine.ErrDurableNotInstalled, err)
-		case pgerrcode.InsufficientPrivilege:
+		if pgErr.Code == pgerrcode.InsufficientPrivilege {
 			return fmt.Errorf("%w: %w", engine.ErrDurableAccessDenied, err)
 		}
 	}
@@ -173,6 +271,7 @@ func scanWorkflowRow(s scanner) (engine.Workflow, error) {
 		&workflow.FunctionName,
 		&workflow.Status,
 		&workflow.ExecutionCount,
+		&workflow.CreateTime,
 	)
 
 	return workflow, err
@@ -189,6 +288,7 @@ func scanWorkflowInfoRow(s scanner) (engine.Workflow, error) {
 		&workflow.Status,
 		&workflow.Output,
 		&workflow.CurrentExecutionID,
+		&workflow.CreateTime,
 	)
 
 	return workflow, err

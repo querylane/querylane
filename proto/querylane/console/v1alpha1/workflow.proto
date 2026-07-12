@@ -20,10 +20,9 @@ import "google/protobuf/timestamp.proto";
 // Every RPC fails with FAILED_PRECONDITION when the pg_durable extension is
 // not installed in the target database.
 service WorkflowService {
-  // Lists workflow instances in a database, newest-visible first bounded by
-  // pg_durable's list window (at most 1000 instances per listing; terminal
-  // instances older than the extension's retention window are pruned by
-  // pg_durable itself).
+  // Lists workflow instances in a database, newest-visible first. Terminal
+  // instances older than the extension's retention window may be pruned by
+  // pg_durable itself.
   rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse) {}
 
   // Gets a single workflow instance.
@@ -87,6 +86,9 @@ message Workflow {
   // Output-only. The current execution id. Only populated by GetWorkflow;
   // pg_durable's listing surface does not expose it.
   string current_execution_id = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. When the workflow was submitted.
+  google.protobuf.Timestamp create_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // One node (step) of a workflow instance's execution graph, as reported by
@@ -157,9 +159,9 @@ message ListWorkflowsRequest {
   string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Filter expression (an AIP-160 subset: `=`, `!=`, the `:`
-  // case-insensitive substring operator, combined with `AND`). Values are
+  // case-insensitive substring operator, combined with `AND` or `OR`). Values are
   // quoted strings. Filterable fields:
-  //   - name, label, function_name (string; support the `:` substring operator)
+  //   - name, label (string; support the `:` substring operator)
   //   - status (string; one of "pending", "running", "completed", "failed",
   //     "cancelled")
   // Examples:
@@ -168,8 +170,8 @@ message ListWorkflowsRequest {
   string filter = 4 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Ordering expression following AIP-132 syntax.
-  // Supported fields: name
-  // Default: "name asc"
+  // Supported fields: create_time, name
+  // Default: "create_time desc, name desc"
   string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
 }
 

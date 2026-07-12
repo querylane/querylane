@@ -77,3 +77,32 @@ jobs:
           set -o pipefail
           tparse -format markdown -file integration-test-output.json > "$GITHUB_STEP_SUMMARY"
           exit "$TEST_EXIT_CODE"
+
+  pg-durable-integration-tests:
+    name: pg_durable integration tests
+    if: github.event.pull_request.draft != true || github.event_name == 'workflow_call'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      # pg_durable 0.2.3 on PostgreSQL 17; digest pins the handwritten df.* contract.
+      QUERYLANE_TEST_PGDURABLE_IMAGE: ghcr.io/microsoft/pg_durable@sha256:0f0f999ee4b4b02ae41a958ad6c6f9198bde3de4cf46b1177b1a70e27cb3e059
+    steps:
+      - uses: *action_checkout
+        with:
+          persist-credentials: false
+      - uses: *action_setup_go
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Run pinned pg_durable contract test
+        shell: bash
+        run: |
+          set -o pipefail
+          go test -json -count=1 -run '^TestWorkflowsIntegration$' ./engine/postgres | tee pg-durable-test-output.json
+          jq --exit-status 'select(.Action == "pass" and .Test == "TestWorkflowsIntegration")' pg-durable-test-output.json >/dev/null || {
+            echo '::error::TestWorkflowsIntegration did not run to completion (it may have been skipped)'
+            exit 1
+          }

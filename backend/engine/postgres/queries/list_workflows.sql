@@ -1,15 +1,13 @@
--- List pg_durable workflow instances visible to the connection role (RLS).
--- df.list_instances is the documented introspection surface; $1 is its listing
--- window (the extension caps it via pg_durable.list_instances_max_limit).
--- Cursor, ORDER BY, and LIMIT are appended by the AIP framework.
--- Columns: instance_id, label, function_name, status, execution_count.
--- Output is deliberately omitted: the list table never renders it and it can
--- be a large per-row JSON blob. The detail view reads output from
--- df.instance_info instead.
-SELECT
-	li.instance_id,
-	COALESCE(li.label, ''),
-	COALESCE(li.function_name, ''),
-	COALESCE(li.status, ''),
-	COALESCE(li.execution_count, 0)
-FROM df.list_instances(NULL, $1) AS li
+-- Candidate metadata comes from df.instances, the RLS-protected source of
+-- truth that df.grant_usage explicitly grants SELECT on in pg_durable 0.2.3.
+-- ListWorkflows appends its validated filter, keyset cursor, order, and limit
+-- inside this MATERIALIZED CTE before hydrating the bounded page through
+-- df.instance_info. This avoids df.list_instances' sequential fan-out across
+-- its entire requested window.
+WITH candidates AS MATERIALIZED (
+	SELECT
+		i.id,
+		COALESCE(i.label, '') AS label,
+		COALESCE(i.status, '') AS status,
+		COALESCE(i.created_at, TIMESTAMPTZ 'epoch') AS created_at
+	FROM df.instances AS i

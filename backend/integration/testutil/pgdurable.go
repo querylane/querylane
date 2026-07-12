@@ -17,8 +17,8 @@ import (
 const (
 	// pgDurableImageEnv opts a run into the pg_durable integration tests and
 	// names the image to use, e.g. ghcr.io/microsoft/pg_durable:pg17. The
-	// tests skip when it is unset so required CI never depends on an external
-	// preview image.
+	// tests skip when it is unset for local runs. Required CI sets a pinned
+	// digest and separately fails if the contract test skips.
 	pgDurableImageEnv = "QUERYLANE_TEST_PGDURABLE_IMAGE"
 
 	// The pg_durable background worker connects to the database named by the

@@ -545,6 +545,7 @@ type Workflow struct {
 	ExecutionCount     int64
 	Output             string
 	CurrentExecutionID string
+	CreateTime         time.Time
 }
 
 // WorkflowNode represents one node of a pg_durable workflow instance graph as

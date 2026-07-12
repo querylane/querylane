@@ -8,6 +8,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 
 	"github.com/querylane/querylane/backend/engine"
@@ -221,6 +223,27 @@ func TestMapEngineErrNotFoundSentinelDoesNotAttachPostgresDetail(t *testing.T) {
 	}
 }
 
+func TestMapEngineErrDatabaseNotFoundFromWorkflowUsesDatabaseResourceName(t *testing.T) {
+	t.Parallel()
+
+	for _, op := range []string{"get_workflow", "list_workflow_nodes"} {
+		t.Run(op, func(t *testing.T) {
+			t.Parallel()
+
+			connectErr := MapEngineErr(context.Background(), engine.ErrDatabaseNotFound, ResourceCtx{
+				Type: resource.TypeWorkflow,
+				Name: "instances/prod/databases/app/workflows/wf-01hq3",
+				Op:   op,
+			})
+			require.NotNil(t, connectErr)
+
+			resourceInfo := requireEngineResourceInfo(t, connectErr)
+			assert.Equal(t, resource.TypeDatabase.String(), resourceInfo.GetResourceType())
+			assert.Equal(t, "instances/prod/databases/app", resourceInfo.GetResourceName())
+		})
+	}
+}
+
 func resourceTypeForErr(err error, defaultType resource.Type) resource.Type {
 	switch {
 	case errors.Is(err, engine.ErrViewNotFound):
@@ -243,7 +266,7 @@ func truncateExpectedName(err error, name string) string {
 	case errors.Is(err, engine.ErrSchemaNotFound):
 		return truncateBefore(name, schemaChildPathSegments...)
 	case errors.Is(err, engine.ErrDatabaseNotFound):
-		return truncateBefore(name, "/schemas/")
+		return truncateBefore(name, databaseChildPathSegments...)
 	case errors.Is(err, engine.ErrInstanceNotFound):
 		return truncateBefore(name, "/databases/")
 	default:
@@ -594,6 +617,30 @@ func TestMapEngineErrWorkflow(t *testing.T) {
 		if info.Reason != consolev1alpha1.ErrorReason_FAILED_PRECONDITION.String() {
 			t.Errorf("expected reason %q, got %q", consolev1alpha1.ErrorReason_FAILED_PRECONDITION, info.Reason)
 		}
+
+		assert.Equal(t, "not_installed", info.GetMetadata()["pg_durable_state"])
+	})
+
+	t.Run("generic failed precondition omits pg_durable state", func(t *testing.T) {
+		t.Parallel()
+
+		connectErr := MapEngineErr(ctx, &engine.PostgresSQLError{
+			Kind:          engine.PostgresSQLKindFailedPrecondition,
+			SQLState:      "55000",
+			SQLStateClass: "55",
+			ConditionName: "object_not_in_prerequisite_state",
+			Operation:     "list workflows",
+			Sentinel:      engine.ErrQueryFailedPrecondition,
+		}, ResourceCtx{
+			Type: resource.TypeWorkflow,
+			Name: "instances/prod/databases/app",
+			Op:   "list_workflows",
+		})
+		require.NotNil(t, connectErr)
+		assert.Equal(t, connect.CodeFailedPrecondition, connectErr.Code())
+
+		info := requireErrorInfo(t, connectErr)
+		assert.NotContains(t, info.GetMetadata(), "pg_durable_state")
 	})
 
 	t.Run("pg_durable access denied maps to PermissionDenied", func(t *testing.T) {
@@ -621,5 +668,7 @@ func TestMapEngineErrWorkflow(t *testing.T) {
 		if info.Reason != consolev1alpha1.ErrorReason_PERMISSION_DENIED.String() {
 			t.Errorf("expected reason %q, got %q", consolev1alpha1.ErrorReason_PERMISSION_DENIED, info.Reason)
 		}
+
+		assert.Equal(t, "access_denied", info.GetMetadata()["pg_durable_state"])
 	})
 }

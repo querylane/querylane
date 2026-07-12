@@ -15,7 +15,9 @@ import {
 } from "@/components/console-pages/database-workflows-page";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
+import { CopyIconButton } from "@/components/ui/copy-icon-button";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
+import { OverflowTooltip } from "@/components/ui/overflow-tooltip";
 import {
   useListAllWorkflowNodesQuery,
   useWorkflowQuery,
@@ -25,13 +27,42 @@ import {
   buildWorkflowName,
   formatTimestampLabel,
 } from "@/lib/console-resources";
+import { QUERY_STALE_TIME } from "@/lib/query-policy";
 import { workflowPreconditionKind } from "@/lib/workflow-presentation";
-import type {
-  ListWorkflowNodesResponse,
-  WorkflowNode,
+import {
+  type ListWorkflowNodesResponse,
+  type WorkflowNode,
+  WorkflowStatus,
 } from "@/protogen/querylane/console/v1alpha1/workflow_pb";
 
 const NODES_PAGE_SIZE = 50;
+
+function DiagnosticCell({
+  label,
+  value,
+}: {
+  label: "query" | "result";
+  value: string;
+}) {
+  return (
+    <span className="inline-flex min-w-0 max-w-96 items-center gap-1">
+      <OverflowTooltip
+        className="block min-w-0 flex-1 truncate rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        forceTooltip={true}
+        tabIndex={0}
+        tooltipContent={value}
+      >
+        {value}
+      </OverflowTooltip>
+      <CopyIconButton
+        ariaLabel={`Copy ${label}`}
+        className="size-11 shrink-0"
+        size="icon"
+        value={value}
+      />
+    </span>
+  );
+}
 
 function nodeColumns(): DataTableColumnDef<WorkflowNode>[] {
   return [
@@ -66,9 +97,7 @@ function nodeColumns(): DataTableColumnDef<WorkflowNode>[] {
       accessorFn: (row) => row.query,
       cell: ({ row }) =>
         row.original.query ? (
-          <span className="block max-w-96 truncate" title={row.original.query}>
-            {row.original.query}
-          </span>
+          <DiagnosticCell label="query" value={row.original.query} />
         ) : (
           "—"
         ),
@@ -92,9 +121,7 @@ function nodeColumns(): DataTableColumnDef<WorkflowNode>[] {
       accessorFn: (row) => row.result,
       cell: ({ row }) =>
         row.original.result ? (
-          <span className="block max-w-96 truncate" title={row.original.result}>
-            {row.original.result}
-          </span>
+          <DiagnosticCell label="result" value={row.original.result} />
         ) : (
           "—"
         ),
@@ -221,7 +248,21 @@ function WorkflowDetailPage({
   });
   const nodesQuery = useListAllWorkflowNodesQuery(
     workflowNodesQueryInput({ databaseId, instanceId, workflowId }),
-    { enabled: Boolean(instanceId && databaseId && workflowId) }
+    {
+      enabled: Boolean(instanceId && databaseId && workflowId),
+      refetchInterval: ({ state }) => {
+        const parentIsActive =
+          workflowQuery.data?.status === WorkflowStatus.PENDING ||
+          workflowQuery.data?.status === WorkflowStatus.RUNNING;
+        const nodeIsActive = state.data?.workflowNodes.some(
+          (node) => node.status === "pending" || node.status === "running"
+        );
+
+        return parentIsActive || nodeIsActive
+          ? QUERY_STALE_TIME.workflowList
+          : false;
+      },
+    }
   );
   const workflow = workflowQuery.data;
 

@@ -18,7 +18,10 @@ import (
 	"github.com/querylane/querylane/backend/resource"
 )
 
-var schemaChildPathSegments = []string{"/tables/", "/views/"}
+var (
+	databaseChildPathSegments = []string{"/schemas/", "/workflows/"}
+	schemaChildPathSegments   = []string{"/tables/", "/views/"}
+)
 
 // MapEngineErr converts engine layer errors to rich Connect RPC errors.
 // It mirrors the MapRepoErr pattern: one ResourceCtx per call, caller decides
@@ -51,6 +54,7 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 			DomainConsole,
 			consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
 			KeyVal{Key: "operation", Value: rctx.Op},
+			KeyVal{Key: "pg_durable_state", Value: "not_installed"},
 		)
 
 		return NewConnectError(
@@ -70,6 +74,7 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 			DomainConsole,
 			consolev1alpha1.ErrorReason_PERMISSION_DENIED,
 			KeyVal{Key: "operation", Value: rctx.Op},
+			KeyVal{Key: "pg_durable_state", Value: "access_denied"},
 		)
 
 		return NewConnectError(
@@ -454,7 +459,7 @@ func notFoundResource(err error, rctx ResourceCtx) (resourceType resource.Type, 
 	case errors.Is(err, engine.ErrSchemaNotFound):
 		return resource.TypeSchema, truncateBefore(name, schemaChildPathSegments...), true
 	case errors.Is(err, engine.ErrDatabaseNotFound):
-		return resource.TypeDatabase, truncateBefore(name, "/schemas/"), true
+		return resource.TypeDatabase, truncateBefore(name, databaseChildPathSegments...), true
 	case errors.Is(err, engine.ErrInstanceNotFound):
 		return resource.TypeInstance, truncateBefore(name, "/databases/"), true
 	default:

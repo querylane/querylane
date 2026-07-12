@@ -48,10 +48,9 @@ const (
 
 // WorkflowServiceClient is a client for the querylane.console.v1alpha1.WorkflowService service.
 type WorkflowServiceClient interface {
-	// Lists workflow instances in a database, newest-visible first bounded by
-	// pg_durable's list window (at most 1000 instances per listing; terminal
-	// instances older than the extension's retention window are pruned by
-	// pg_durable itself).
+	// Lists workflow instances in a database, newest-visible first. Terminal
+	// instances older than the extension's retention window may be pruned by
+	// pg_durable itself.
 	ListWorkflows(context.Context, *connect.Request[v1alpha1.ListWorkflowsRequest]) (*connect.Response[v1alpha1.ListWorkflowsResponse], error)
 	// Gets a single workflow instance.
 	GetWorkflow(context.Context, *connect.Request[v1alpha1.GetWorkflowRequest]) (*connect.Response[v1alpha1.Workflow], error)
@@ -117,10 +116,9 @@ func (c *workflowServiceClient) ListWorkflowNodes(ctx context.Context, req *conn
 // WorkflowServiceHandler is an implementation of the querylane.console.v1alpha1.WorkflowService
 // service.
 type WorkflowServiceHandler interface {
-	// Lists workflow instances in a database, newest-visible first bounded by
-	// pg_durable's list window (at most 1000 instances per listing; terminal
-	// instances older than the extension's retention window are pruned by
-	// pg_durable itself).
+	// Lists workflow instances in a database, newest-visible first. Terminal
+	// instances older than the extension's retention window may be pruned by
+	// pg_durable itself.
 	ListWorkflows(context.Context, *connect.Request[v1alpha1.ListWorkflowsRequest]) (*connect.Response[v1alpha1.ListWorkflowsResponse], error)
 	// Gets a single workflow instance.
 	GetWorkflow(context.Context, *connect.Request[v1alpha1.GetWorkflowRequest]) (*connect.Response[v1alpha1.Workflow], error)

@@ -23,7 +23,7 @@ type fakeOpener struct {
 	err    error
 }
 
-func (f *fakeOpener) OpenInstance(_ context.Context, name resource.InstanceName) (engine.InstanceSession, error) {
+func (f *fakeOpener) OpenInstance(_ context.Context, name resource.InstanceName) (instanceSession, error) {
 	f.opened = name
 	if f.err != nil {
 		return nil, f.err
@@ -32,18 +32,14 @@ func (f *fakeOpener) OpenInstance(_ context.Context, name resource.InstanceName)
 	return f.sess, nil
 }
 
-// fakeInstanceSession embeds the interface so only the methods the workflow
-// service exercises need real implementations.
 type fakeInstanceSession struct {
-	engine.InstanceSession
-
 	dbSession       *fakeDatabaseSession
 	openDatabaseErr error
 	openedDatabase  string
 	closed          bool
 }
 
-func (f *fakeInstanceSession) OpenDatabase(_ context.Context, name string) (engine.DatabaseSession, error) {
+func (f *fakeInstanceSession) OpenDatabase(_ context.Context, name string) (databaseSession, error) {
 	f.openedDatabase = name
 	if f.openDatabaseErr != nil {
 		return nil, f.openDatabaseErr
@@ -58,14 +54,13 @@ func (f *fakeInstanceSession) Close() error {
 }
 
 type fakeDatabaseSession struct {
-	engine.DatabaseSession
-
 	params         aip.Params
 	workflows      []engine.Workflow
 	workflow       *engine.Workflow
 	getWorkflowID  string
 	nodes          []engine.WorkflowNode
 	nodesID        string
+	nodesCalled    bool
 	token          string
 	err            error
 	getWorkflowErr error
@@ -85,6 +80,7 @@ func (f *fakeDatabaseSession) GetWorkflow(_ context.Context, workflowID string) 
 }
 
 func (f *fakeDatabaseSession) ListWorkflowNodes(_ context.Context, workflowID string, params aip.Params) ([]engine.WorkflowNode, string, error) {
+	f.nodesCalled = true
 	f.nodesID = workflowID
 	f.params = params
 
@@ -155,6 +151,7 @@ func TestListWorkflows(t *testing.T) {
 				assert.Equal(t, int64(3), got.GetExecutionCount())
 				assert.Equal(t, `{"rows": 12}`, got.GetOutput())
 				assert.Equal(t, v1alpha1.WorkflowStatus_WORKFLOW_STATUS_CANCELLED, workflows[1].GetStatus())
+				assert.Nil(t, workflows[1].GetCreateTime())
 			},
 		},
 		{
@@ -194,7 +191,7 @@ func TestListWorkflows(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := NewService(tt.opener)
+			svc := newService(tt.opener)
 			res, err := svc.ListWorkflows(context.Background(), connect.NewRequest(tt.req))
 			tt.assertion(t, tt.opener, res, err)
 		})
@@ -205,6 +202,7 @@ func TestGetWorkflow(t *testing.T) {
 	t.Parallel()
 
 	workflowName := resource.NewWorkflowName("prod", "appdb", "wf-01hq3").String()
+	createdAt := time.Date(2026, time.July, 2, 9, 30, 0, 0, time.UTC)
 
 	tests := []struct {
 		name      string
@@ -223,6 +221,7 @@ func TestGetWorkflow(t *testing.T) {
 					Status:             "completed",
 					Output:             `{"ok": true}`,
 					CurrentExecutionID: "exec-9",
+					CreateTime:         createdAt,
 				},
 			}}},
 			req: &v1alpha1.GetWorkflowRequest{Name: workflowName},
@@ -241,6 +240,8 @@ func TestGetWorkflow(t *testing.T) {
 				assert.Equal(t, "v3", res.Msg.GetFunctionVersion())
 				assert.Equal(t, "exec-9", res.Msg.GetCurrentExecutionId())
 				assert.Equal(t, v1alpha1.WorkflowStatus_WORKFLOW_STATUS_COMPLETED, res.Msg.GetStatus())
+				require.NotNil(t, res.Msg.GetCreateTime())
+				assert.Equal(t, createdAt, res.Msg.GetCreateTime().AsTime())
 			},
 		},
 		{
@@ -271,7 +272,7 @@ func TestGetWorkflow(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := NewService(tt.opener)
+			svc := newService(tt.opener)
 			res, err := svc.GetWorkflow(context.Background(), connect.NewRequest(tt.req))
 			tt.assertion(t, tt.opener, res, err)
 		})
@@ -360,6 +361,20 @@ func TestListWorkflowNodes(t *testing.T) {
 			},
 		},
 		{
+			name: "returns not found before listing nodes when parent is missing or hidden",
+			opener: &fakeOpener{sess: &fakeInstanceSession{dbSession: &fakeDatabaseSession{
+				getWorkflowErr: fmt.Errorf("%w: wf-01hq3", engine.ErrWorkflowNotFound),
+			}}},
+			req: &v1alpha1.ListWorkflowNodesRequest{Parent: workflowName},
+			assertion: func(t *testing.T, opener *fakeOpener, _ *connect.Response[v1alpha1.ListWorkflowNodesResponse], err error) {
+				t.Helper()
+				require.Error(t, err)
+				assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+				assert.Equal(t, "wf-01hq3", opener.sess.dbSession.getWorkflowID)
+				assert.False(t, opener.sess.dbSession.nodesCalled)
+			},
+		},
+		{
 			name: "maps pg_durable not installed to failed precondition",
 			opener: &fakeOpener{sess: &fakeInstanceSession{dbSession: &fakeDatabaseSession{
 				err: fmt.Errorf("query execution failed: %w", engine.ErrDurableNotInstalled),
@@ -377,7 +392,7 @@ func TestListWorkflowNodes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := NewService(tt.opener)
+			svc := newService(tt.opener)
 			res, err := svc.ListWorkflowNodes(context.Background(), connect.NewRequest(tt.req))
 			tt.assertion(t, tt.opener, res, err)
 		})

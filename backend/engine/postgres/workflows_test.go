@@ -20,18 +20,18 @@ func TestClassifyWorkflowError(t *testing.T) {
 		wantSentinel error // nil means "must not be a durable sentinel"
 	}{
 		{
-			// df.list_instances() when the df schema exists but the function
-			// does not (partial/broken install).
-			name:         "undefined function means pg_durable absent",
-			err:          &pgconn.PgError{Code: "42883", Message: "function df.list_instances(unknown, integer) does not exist"},
-			wantSentinel: engine.ErrDurableNotInstalled,
+			// df.instance_info() when the df schema exists but the function
+			// does not (partial/broken or incompatible install).
+			name: "undefined function does not claim pg_durable is absent",
+			err:  &pgconn.PgError{Code: "42883", Message: "function df.instance_info(text) does not exist"},
 		},
 		{
-			// df.* calls when the df schema itself is missing (extension not
-			// installed at all).
-			name:         "invalid schema name means pg_durable absent",
-			err:          &pgconn.PgError{Code: "3F000", Message: `schema "df" does not exist`},
-			wantSentinel: engine.ErrDurableNotInstalled,
+			name: "invalid schema does not claim pg_durable is absent",
+			err:  &pgconn.PgError{Code: "3F000", Message: `schema "df" does not exist`},
+		},
+		{
+			name: "undefined df table does not claim pg_durable is absent",
+			err:  &pgconn.PgError{Code: "42P01", Message: `relation "df.instances" does not exist`},
 		},
 		{
 			// Every WorkflowService query targets the df schema, so an

@@ -150,18 +150,6 @@ func (m *mockDatabaseSession) ListExtensions(_ context.Context, _ aip.Params) ([
 	return nil, "", nil
 }
 
-func (m *mockDatabaseSession) ListWorkflows(_ context.Context, _ aip.Params) ([]engine.Workflow, string, error) {
-	return nil, "", nil
-}
-
-func (m *mockDatabaseSession) GetWorkflow(_ context.Context, _ string) (*engine.Workflow, error) {
-	return nil, engine.ErrWorkflowNotFound
-}
-
-func (m *mockDatabaseSession) ListWorkflowNodes(_ context.Context, _ string, _ aip.Params) ([]engine.WorkflowNode, string, error) {
-	return nil, "", nil
-}
-
 func (m *mockDatabaseSession) ListTables(ctx context.Context, schemaName string, _ aip.Params) ([]engine.Table, string, error) {
 	m.listTablesCalls++
 

@@ -1,9 +1,10 @@
 import { create } from "@bufbuild/protobuf";
 import { createRouterTransport } from "@connectrpc/connect";
-import { describe, expect, test } from "vitest";
+import { InfiniteQueryObserver, QueryObserver } from "@tanstack/react-query";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   listAllWorkflowNodesQueryOptions,
-  listAllWorkflowsQueryOptions,
+  listWorkflowsInfiniteQueryOptions,
   workflowNodesQueryInput,
   workflowQueryOptions,
   workflowsForDatabaseQueryInput,
@@ -12,13 +13,16 @@ import { QUERY_STALE_TIME } from "@/lib/query-policy";
 import {
   type ListWorkflowNodesRequest,
   ListWorkflowNodesResponseSchema,
-  type ListWorkflowsRequest,
   ListWorkflowsResponseSchema,
   WorkflowSchema,
   WorkflowService,
   WorkflowStatus,
 } from "@/protogen/querylane/console/v1alpha1/workflow_pb";
 import { createTestQueryClient } from "@/test/query-client";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 async function disposeTestQueryClient(
   queryClient: ReturnType<typeof createTestQueryClient>
@@ -35,8 +39,7 @@ describe("workflow query option helpers", () => {
         instanceId: "local",
       })
     ).toEqual({
-      // The whole listing window in one call (see WORKFLOW_LIST_WINDOW).
-      pageSize: 1000,
+      pageSize: 50,
       parent: "instances/local/databases/postgres",
     });
   });
@@ -54,39 +57,97 @@ describe("workflow query option helpers", () => {
     });
   });
 
-  test("fetches the listing window in a single call and ignores extra pages", async () => {
-    const requests: ListWorkflowsRequest[] = [];
+  test("loads workflow pages only when the next page is requested", async () => {
+    const pageTokens: string[] = [];
     const transport = createRouterTransport(({ service }) => {
       service(WorkflowService, {
         listWorkflows(request) {
-          requests.push(request);
-          // A non-empty next token must NOT trigger a follow-up request: the
-          // window is fetched in one shot to avoid an unstable keyset walk.
+          pageTokens.push(request.pageToken);
           return create(ListWorkflowsResponseSchema, {
-            nextPageToken: "page-2",
-            workflows: [{ status: WorkflowStatus.RUNNING, workflowId: "wf-1" }],
+            nextPageToken: request.pageToken ? "" : "page-2",
+            workflows: [
+              {
+                status: WorkflowStatus.COMPLETED,
+                workflowId: request.pageToken ? "wf-older" : "wf-newer",
+              },
+            ],
+          });
+        },
+      });
+    });
+    const unary = vi.spyOn(transport, "unary");
+    const queryClient = createTestQueryClient();
+    const observer = new InfiniteQueryObserver(
+      queryClient,
+      listWorkflowsInfiniteQueryOptions({
+        input: workflowsForDatabaseQueryInput({
+          databaseId: "postgres",
+          instanceId: "local",
+        }),
+        transport,
+      })
+    );
+    const unsubscribe = observer.subscribe(() => undefined);
+
+    await vi.waitFor(() => expect(pageTokens).toEqual([""]));
+    expect(unary.mock.calls[0]?.[1]).toBeInstanceOf(AbortSignal);
+    await observer.fetchNextPage();
+
+    expect(pageTokens).toEqual(["", "page-2"]);
+    expect(
+      observer
+        .getCurrentResult()
+        .data?.pages.flatMap((page) => page.workflows)
+        .map((workflow) => workflow.workflowId)
+    ).toEqual(["wf-newer", "wf-older"]);
+    expect(observer.getCurrentResult().hasNextPage).toBe(false);
+
+    unsubscribe();
+    await disposeTestQueryClient(queryClient);
+  });
+
+  test("polls loaded workflow pages while one contains an active workflow", async () => {
+    vi.useFakeTimers();
+    let requestCount = 0;
+    const transport = createRouterTransport(({ service }) => {
+      service(WorkflowService, {
+        listWorkflows() {
+          requestCount += 1;
+          return create(ListWorkflowsResponseSchema, {
+            workflows: [
+              {
+                status:
+                  requestCount === 1
+                    ? WorkflowStatus.RUNNING
+                    : WorkflowStatus.CANCELLED,
+                workflowId: "wf-1",
+              },
+            ],
           });
         },
       });
     });
     const queryClient = createTestQueryClient();
-    const options = listAllWorkflowsQueryOptions({
-      input: workflowsForDatabaseQueryInput({
-        databaseId: "postgres",
-        instanceId: "local",
-      }),
-      transport,
-    });
+    const observer = new InfiniteQueryObserver(
+      queryClient,
+      listWorkflowsInfiniteQueryOptions({
+        input: workflowsForDatabaseQueryInput({
+          databaseId: "postgres",
+          instanceId: "local",
+        }),
+        transport,
+      })
+    );
+    const unsubscribe = observer.subscribe(() => undefined);
 
-    const response = await queryClient.fetchQuery(options);
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(QUERY_STALE_TIME.workflowList);
+    expect(requestCount).toBe(2);
 
-    expect(requests).toHaveLength(1);
-    expect(requests[0]?.parent).toBe("instances/local/databases/postgres");
-    expect(requests[0]?.pageSize).toBe(1000);
-    expect(response.workflows.map((workflow) => workflow.workflowId)).toEqual([
-      "wf-1",
-    ]);
-    expect(options.staleTime).toBe(QUERY_STALE_TIME.workflowList);
+    await vi.advanceTimersByTimeAsync(QUERY_STALE_TIME.workflowList * 2);
+    expect(requestCount).toBe(2);
+
+    unsubscribe();
     await disposeTestQueryClient(queryClient);
   });
 
@@ -118,6 +179,52 @@ describe("workflow query option helpers", () => {
     expect(workflow.workflowId).toBe("wf-01hq3");
     expect(workflow.status).toBe(WorkflowStatus.FAILED);
     expect(options.staleTime).toBe(QUERY_STALE_TIME.workflowList);
+    await disposeTestQueryClient(queryClient);
+  });
+
+  test("polls a running workflow detail until it becomes terminal", async () => {
+    vi.useFakeTimers();
+    let requestCount = 0;
+    const transport = createRouterTransport(({ service }) => {
+      service(WorkflowService, {
+        getWorkflow(request) {
+          requestCount += 1;
+          return create(WorkflowSchema, {
+            name: request.name,
+            status:
+              requestCount === 1
+                ? WorkflowStatus.PENDING
+                : WorkflowStatus.FAILED,
+            workflowId: "wf-01hq3",
+          });
+        },
+      });
+    });
+    const queryClient = createTestQueryClient();
+    const observer = new QueryObserver(
+      queryClient,
+      workflowQueryOptions({
+        name: "instances/local/databases/postgres/workflows/wf-01hq3",
+        transport,
+      })
+    );
+    const unsubscribe = observer.subscribe(() => undefined);
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(observer.getCurrentResult().data?.status).toBe(
+      WorkflowStatus.PENDING
+    );
+
+    await vi.advanceTimersByTimeAsync(QUERY_STALE_TIME.workflowList);
+    expect(requestCount).toBe(2);
+    expect(observer.getCurrentResult().data?.status).toBe(
+      WorkflowStatus.FAILED
+    );
+
+    await vi.advanceTimersByTimeAsync(QUERY_STALE_TIME.workflowList * 2);
+    expect(requestCount).toBe(2);
+
+    unsubscribe();
     await disposeTestQueryClient(queryClient);
   });
 

@@ -8,6 +8,7 @@ import {
   extensionRouteDataQueries,
   instanceRouteDataQueries,
   prefetchRouteData,
+  workflowRouteDataQueries,
 } from "@/lib/route-data-prefetch";
 
 const transport = {} as Transport;
@@ -79,6 +80,19 @@ describe("route data prefetch registry", () => {
       RESOURCE_QUERY_OPTIONS.selectedDatabase.staleTime,
       RESOURCE_QUERY_OPTIONS.extensionList.staleTime,
     ]);
+  });
+
+  test("does not duplicate the workflow page's infinite-query request", () => {
+    const queries = workflowRouteDataQueries({
+      databaseId: "postgres",
+      instanceId: "local",
+      transport,
+    });
+
+    expect(queries).toHaveLength(1);
+    expect(queries[0]?.staleTime).toBe(
+      RESOURCE_QUERY_OPTIONS.selectedDatabase.staleTime
+    );
   });
 
   test("keeps explorer prefetch cheap without selected schema", () => {

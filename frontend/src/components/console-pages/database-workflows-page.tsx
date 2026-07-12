@@ -1,13 +1,7 @@
 "use client";
 
 import { Link } from "@tanstack/react-router";
-import {
-  Info,
-  Lock,
-  PackageOpen,
-  Workflow as WorkflowIcon,
-  X,
-} from "lucide-react";
+import { Lock, PackageOpen, Workflow as WorkflowIcon, X } from "lucide-react";
 import { useState } from "react";
 import {
   PageHeader,
@@ -20,27 +14,26 @@ import {
   DataTable,
   type DataTableColumnDef,
   DataTableFilter,
-  SortableHeader,
 } from "@/components/ui/data-table";
 import {
   DataTableFacetedFilter,
   type FacetedFilterOption,
 } from "@/components/ui/data-table-faceted-filter";
 import {
-  useListAllWorkflowsQuery,
-  WORKFLOW_LIST_WINDOW,
+  useListWorkflowsInfiniteQuery,
   workflowsForDatabaseQueryInput,
 } from "@/hooks/api/workflow";
 import { useUrlTableSearch } from "@/lib/url-search-state";
 import { cn } from "@/lib/utils";
 import {
+  buildWorkflowListFilter,
   type WorkflowPreconditionKind,
   workflowPreconditionKind,
   workflowStatusLabel,
   workflowStatusPresentation,
 } from "@/lib/workflow-presentation";
-import type {
-  Workflow,
+import {
+  type Workflow,
   WorkflowStatus,
 } from "@/protogen/querylane/console/v1alpha1/workflow_pb";
 
@@ -111,24 +104,6 @@ function WorkflowPreconditionPanel({
   return <WorkflowsAccessDeniedState />;
 }
 
-// Best-effort truncation hint: pg_durable's df.list_instances is capped at its
-// listing limit, so a full window means older instances may be hidden. This is
-// a signal, not a guarantee (exactly-at-the-cap also trips it).
-function WorkflowsTruncatedNote() {
-  return (
-    <div
-      className="flex items-start gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-muted-foreground text-sm"
-      role="status"
-    >
-      <Info className="mt-0.5 size-4 shrink-0" />
-      <span>
-        Showing the newest {WORKFLOW_LIST_WINDOW} workflows. pg_durable caps its
-        listing at this limit, so older instances may not appear.
-      </span>
-    </div>
-  );
-}
-
 function workflowColumns({
   databaseId,
   instanceId,
@@ -152,28 +127,19 @@ function workflowColumns({
           {row.original.workflowId}
         </Link>
       ),
-      header: ({ column }) => (
-        <SortableHeader column={column}>Workflow</SortableHeader>
-      ),
+      header: "Workflow",
       id: "workflow",
-      // Hex ids sort surprisingly under the default alphanumeric heuristic
-      // (leading digits parse as numbers), so force plain text ordering.
-      sortFn: "text",
     },
     {
       accessorFn: (row) => workflowStatusLabel(row.status),
       cell: ({ row }) => <WorkflowStatusBadge status={row.original.status} />,
-      header: ({ column }) => (
-        <SortableHeader column={column}>Status</SortableHeader>
-      ),
+      header: "Status",
       id: "status",
     },
     {
       accessorFn: (row) => row.label,
       cell: ({ row }) => row.original.label || "—",
-      header: ({ column }) => (
-        <SortableHeader column={column}>Label</SortableHeader>
-      ),
+      header: "Label",
       id: "label",
       meta: {
         cellClassName: "text-sm text-muted-foreground",
@@ -182,9 +148,7 @@ function workflowColumns({
     {
       accessorFn: (row) => row.functionName,
       cell: ({ row }) => row.original.functionName || "—",
-      header: ({ column }) => (
-        <SortableHeader column={column}>Function</SortableHeader>
-      ),
+      header: "Function",
       id: "functionName",
       meta: {
         cellClassName: "font-mono text-sm text-muted-foreground",
@@ -193,9 +157,7 @@ function workflowColumns({
     {
       accessorFn: (row) => Number(row.executionCount),
       cell: ({ row }) => String(row.original.executionCount),
-      header: ({ column }) => (
-        <SortableHeader column={column}>Executions</SortableHeader>
-      ),
+      header: "Executions",
       id: "executionCount",
       meta: {
         cellClassName: "text-sm text-muted-foreground tabular-nums",
@@ -204,36 +166,45 @@ function workflowColumns({
   ];
 }
 
-function presentWorkflowStatusOptions(
-  workflows: Workflow[]
-): FacetedFilterOption[] {
-  const labels = new Set(
-    workflows.map((workflow) => workflowStatusLabel(workflow.status))
-  );
-
-  return [...labels]
-    .sort((a, b) => a.localeCompare(b))
-    .map((label) => ({ label, value: label }));
-}
+const WORKFLOW_STATUS_OPTIONS: FacetedFilterOption[] = [
+  WorkflowStatus.PENDING,
+  WorkflowStatus.RUNNING,
+  WorkflowStatus.COMPLETED,
+  WorkflowStatus.FAILED,
+  WorkflowStatus.CANCELLED,
+].map((status) => ({
+  label: workflowStatusLabel(status),
+  value: String(status),
+}));
 
 function WorkflowsTable({
   databaseId,
+  fetchNextPage,
+  filter,
+  hasNextPage,
   instanceId,
+  isFetchingNextPage,
+  setFilter,
+  setStatusFilters,
+  statusFilters,
   workflows,
 }: {
   databaseId: string;
+  fetchNextPage: () => Promise<unknown>;
+  filter: string;
+  hasNextPage: boolean;
   instanceId: string;
+  isFetchingNextPage: boolean;
+  setFilter: (value: string) => Promise<void>;
+  setStatusFilters: (values: string[]) => void;
+  statusFilters: string[];
   workflows: Workflow[];
 }) {
-  const [filter, setFilter] = useUrlTableSearch();
-  const [statusFilters, setStatusFilters] = useState<string[]>([]);
-  const filteredWorkflows =
-    statusFilters.length === 0
-      ? workflows
-      : workflows.filter((workflow) =>
-          statusFilters.includes(workflowStatusLabel(workflow.status))
-        );
-  const statusOptions = presentWorkflowStatusOptions(workflows);
+  const visibleWorkflows = workflows.filter(
+    (workflow) =>
+      statusFilters.length === 0 ||
+      statusFilters.includes(String(workflow.status))
+  );
 
   return (
     <div className="flex flex-col gap-3">
@@ -246,14 +217,12 @@ function WorkflowsTable({
           placeholder="Search workflows..."
           value={filter}
         />
-        {statusOptions.length > 0 ? (
-          <DataTableFacetedFilter
-            onSelectedValuesChange={setStatusFilters}
-            options={statusOptions}
-            selectedValues={statusFilters}
-            title="Status"
-          />
-        ) : null}
+        <DataTableFacetedFilter
+          onSelectedValuesChange={setStatusFilters}
+          options={WORKFLOW_STATUS_OPTIONS}
+          selectedValues={statusFilters}
+          title="Status"
+        />
         {statusFilters.length > 0 ? (
           <Button
             className="h-8 px-2 text-xs"
@@ -269,15 +238,22 @@ function WorkflowsTable({
       </div>
       <DataTable
         columns={workflowColumns({ databaseId, instanceId })}
-        data={filteredWorkflows}
+        data={visibleWorkflows}
         emptyResourceName="workflows"
-        filterColumn="workflow"
-        filterValue={filter}
-        initialSorting={[{ desc: false, id: "workflow" }]}
-        onFilterChange={setFilter}
         pageSize={WORKFLOWS_PAGE_SIZE}
         tableKey="database-workflows"
       />
+      {hasNextPage ? (
+        <Button
+          className="self-center"
+          disabled={isFetchingNextPage}
+          onClick={() => fetchNextPage()}
+          type="button"
+          variant="outline"
+        >
+          {isFetchingNextPage ? "Loading…" : "Load more"}
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -299,14 +275,26 @@ function BackendDatabaseWorkflowsPage({
   databaseId: string;
   instanceId: string;
 }) {
-  const input = workflowsForDatabaseQueryInput({ databaseId, instanceId });
-  const workflowsQuery = useListAllWorkflowsQuery(input, {
-    enabled: Boolean(instanceId && databaseId),
-    refetchOnWindowFocus: false,
+  const [filter, setFilter] = useUrlTableSearch();
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const statuses = statusFilters
+    .map(Number)
+    .filter((status): status is WorkflowStatus =>
+      WORKFLOW_STATUS_OPTIONS.some((option) => option.value === String(status))
+    );
+  const serverFilter = buildWorkflowListFilter({ query: filter, statuses });
+  const input = workflowsForDatabaseQueryInput({
+    databaseId,
+    filter: serverFilter,
+    instanceId,
   });
-  const workflows = workflowsQuery.data?.workflows ?? [];
+  const workflowsQuery = useListWorkflowsInfiniteQuery(input, {
+    enabled: Boolean(instanceId && databaseId),
+  });
+  const workflows =
+    workflowsQuery.data?.pages.flatMap((page) => page.workflows) ?? [];
   const hasData = workflowsQuery.data !== undefined;
-  const truncated = workflows.length >= WORKFLOW_LIST_WINDOW;
+  const hasFilters = filter.trim() !== "" || statusFilters.length > 0;
 
   // pg_durable "not usable" states (extension absent, or role not granted) are
   // preconditions, not transient errors, so they get their own actionable
@@ -345,17 +333,21 @@ function BackendDatabaseWorkflowsPage({
           eyebrow="Database"
           title="Workflows"
         />
-        {workflows.length === 0 ? (
+        {workflows.length === 0 && !hasFilters ? (
           <NoWorkflowsState />
         ) : (
-          <div className="flex flex-col gap-3">
-            {truncated ? <WorkflowsTruncatedNote /> : null}
-            <WorkflowsTable
-              databaseId={databaseId}
-              instanceId={instanceId}
-              workflows={workflows}
-            />
-          </div>
+          <WorkflowsTable
+            databaseId={databaseId}
+            fetchNextPage={workflowsQuery.fetchNextPage}
+            filter={filter}
+            hasNextPage={workflowsQuery.hasNextPage}
+            instanceId={instanceId}
+            isFetchingNextPage={workflowsQuery.isFetchingNextPage}
+            setFilter={setFilter}
+            setStatusFilters={setStatusFilters}
+            statusFilters={statusFilters}
+            workflows={workflows}
+          />
         )}
       </div>
     </ResourcePageState>

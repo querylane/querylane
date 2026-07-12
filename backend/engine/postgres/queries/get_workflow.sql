@@ -8,5 +8,7 @@ SELECT
 	COALESCE(ii.function_version, ''),
 	COALESCE(ii.status, ''),
 	COALESCE(ii.output::text, ''),
-	COALESCE(ii.current_execution_id::text, '')
+	COALESCE(ii.current_execution_id::text, ''),
+	COALESCE(i.created_at, TIMESTAMPTZ 'epoch')
 FROM df.instance_info($1) AS ii
+JOIN df.instances AS i ON i.id = ii.instance_id

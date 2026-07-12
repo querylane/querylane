@@ -113,8 +113,10 @@ type Workflow struct {
 	// Output-only. The current execution id. Only populated by GetWorkflow;
 	// pg_durable's listing surface does not expose it.
 	CurrentExecutionId string `protobuf:"bytes,9,opt,name=current_execution_id,json=currentExecutionId,proto3" json:"current_execution_id,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Output-only. When the workflow was submitted.
+	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Workflow) Reset() {
@@ -208,6 +210,13 @@ func (x *Workflow) GetCurrentExecutionId() string {
 		return x.CurrentExecutionId
 	}
 	return ""
+}
+
+func (x *Workflow) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
 }
 
 // One node (step) of a workflow instance's execution graph, as reported by
@@ -359,9 +368,9 @@ type ListWorkflowsRequest struct {
 	// Optional. A page token received from a previous `ListWorkflows` call.
 	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	// Optional. Filter expression (an AIP-160 subset: `=`, `!=`, the `:`
-	// case-insensitive substring operator, combined with `AND`). Values are
+	// case-insensitive substring operator, combined with `AND` or `OR`). Values are
 	// quoted strings. Filterable fields:
-	//   - name, label, function_name (string; support the `:` substring operator)
+	//   - name, label (string; support the `:` substring operator)
 	//   - status (string; one of "pending", "running", "completed", "failed",
 	//     "cancelled")
 	//
@@ -370,8 +379,8 @@ type ListWorkflowsRequest struct {
 	//   - label:"embed" AND status = "running"
 	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	// Optional. Ordering expression following AIP-132 syntax.
-	// Supported fields: name
-	// Default: "name asc"
+	// Supported fields: create_time, name
+	// Default: "create_time desc, name desc"
 	OrderBy       string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -694,7 +703,7 @@ var File_querylane_console_v1alpha1_workflow_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_workflow_proto_rawDesc = "" +
 	"\n" +
-	")querylane/console/v1alpha1/workflow.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x83\x04\n" +
+	")querylane/console/v1alpha1/workflow.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc5\x04\n" +
 	"\bWorkflow\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\bR\x04name\x12$\n" +
 	"\vworkflow_id\x18\x02 \x01(\tB\x03\xe0A\x03R\n" +
@@ -705,7 +714,10 @@ const file_querylane_console_v1alpha1_workflow_proto_rawDesc = "" +
 	"\x06status\x18\x06 \x01(\x0e2*.querylane.console.v1alpha1.WorkflowStatusB\x03\xe0A\x03R\x06status\x12,\n" +
 	"\x0fexecution_count\x18\a \x01(\x03B\x03\xe0A\x03R\x0eexecutionCount\x12\x1b\n" +
 	"\x06output\x18\b \x01(\tB\x03\xe0A\x03R\x06output\x125\n" +
-	"\x14current_execution_id\x18\t \x01(\tB\x03\xe0A\x03R\x12currentExecutionId:x\xeaAu\n" +
+	"\x14current_execution_id\x18\t \x01(\tB\x03\xe0A\x03R\x12currentExecutionId\x12@\n" +
+	"\vcreate_time\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime:x\xeaAu\n" +
 	"\x1econsole.querylane.dev/Workflow\x12>instances/{instance}/databases/{database}/workflows/{workflow}*\tworkflows2\bworkflow\"\xa0\x03\n" +
 	"\fWorkflowNode\x12&\n" +
 	"\fexecution_id\x18\x01 \x01(\x03B\x03\xe0A\x03R\vexecutionId\x12\x1c\n" +
@@ -790,20 +802,21 @@ var file_querylane_console_v1alpha1_workflow_proto_goTypes = []any{
 }
 var file_querylane_console_v1alpha1_workflow_proto_depIdxs = []int32{
 	0, // 0: querylane.console.v1alpha1.Workflow.status:type_name -> querylane.console.v1alpha1.WorkflowStatus
-	8, // 1: querylane.console.v1alpha1.WorkflowNode.update_time:type_name -> google.protobuf.Timestamp
-	1, // 2: querylane.console.v1alpha1.ListWorkflowsResponse.workflows:type_name -> querylane.console.v1alpha1.Workflow
-	2, // 3: querylane.console.v1alpha1.ListWorkflowNodesResponse.workflow_nodes:type_name -> querylane.console.v1alpha1.WorkflowNode
-	3, // 4: querylane.console.v1alpha1.WorkflowService.ListWorkflows:input_type -> querylane.console.v1alpha1.ListWorkflowsRequest
-	5, // 5: querylane.console.v1alpha1.WorkflowService.GetWorkflow:input_type -> querylane.console.v1alpha1.GetWorkflowRequest
-	6, // 6: querylane.console.v1alpha1.WorkflowService.ListWorkflowNodes:input_type -> querylane.console.v1alpha1.ListWorkflowNodesRequest
-	4, // 7: querylane.console.v1alpha1.WorkflowService.ListWorkflows:output_type -> querylane.console.v1alpha1.ListWorkflowsResponse
-	1, // 8: querylane.console.v1alpha1.WorkflowService.GetWorkflow:output_type -> querylane.console.v1alpha1.Workflow
-	7, // 9: querylane.console.v1alpha1.WorkflowService.ListWorkflowNodes:output_type -> querylane.console.v1alpha1.ListWorkflowNodesResponse
-	7, // [7:10] is the sub-list for method output_type
-	4, // [4:7] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	8, // 1: querylane.console.v1alpha1.Workflow.create_time:type_name -> google.protobuf.Timestamp
+	8, // 2: querylane.console.v1alpha1.WorkflowNode.update_time:type_name -> google.protobuf.Timestamp
+	1, // 3: querylane.console.v1alpha1.ListWorkflowsResponse.workflows:type_name -> querylane.console.v1alpha1.Workflow
+	2, // 4: querylane.console.v1alpha1.ListWorkflowNodesResponse.workflow_nodes:type_name -> querylane.console.v1alpha1.WorkflowNode
+	3, // 5: querylane.console.v1alpha1.WorkflowService.ListWorkflows:input_type -> querylane.console.v1alpha1.ListWorkflowsRequest
+	5, // 6: querylane.console.v1alpha1.WorkflowService.GetWorkflow:input_type -> querylane.console.v1alpha1.GetWorkflowRequest
+	6, // 7: querylane.console.v1alpha1.WorkflowService.ListWorkflowNodes:input_type -> querylane.console.v1alpha1.ListWorkflowNodesRequest
+	4, // 8: querylane.console.v1alpha1.WorkflowService.ListWorkflows:output_type -> querylane.console.v1alpha1.ListWorkflowsResponse
+	1, // 9: querylane.console.v1alpha1.WorkflowService.GetWorkflow:output_type -> querylane.console.v1alpha1.Workflow
+	7, // 10: querylane.console.v1alpha1.WorkflowService.ListWorkflowNodes:output_type -> querylane.console.v1alpha1.ListWorkflowNodesResponse
+	8, // [8:11] is the sub-list for method output_type
+	5, // [5:8] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_workflow_proto_init() }
