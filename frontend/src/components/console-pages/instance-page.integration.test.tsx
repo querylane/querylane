@@ -1013,6 +1013,47 @@ describe("backend instance activity", () => {
       within(activity).getByText("permission denied for pg_stat_activity")
     ).toBeTruthy();
   });
+
+  test("shows Activity unavailable instead of loading forever when disconnected", () => {
+    renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    expect(within(activity).getByText("Activity unavailable")).toBeTruthy();
+    expect(
+      within(activity).getByText(
+        "Connect the instance before Querylane can read pg_stat_activity."
+      )
+    ).toBeTruthy();
+    expect(within(activity).queryByText("Loading activity...")).toBeNull();
+  });
+
+  test("gives blocker highlighting precedence for a chained lock row", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    const response = activityHealthResponse();
+    response.health?.connectionActivity?.sessions.push(
+      createProto(ConnectionActivitySessionSchema, {
+        applicationName: "api-gateway",
+        blockedByPid: 4302,
+        databaseName: "logistics",
+        durationSeconds: 12n,
+        pid: 4318,
+        query: "SELECT * FROM shipping.shipments FOR UPDATE",
+        state: "active",
+        username: "app_readwrite",
+      })
+    );
+    state.healthData = response;
+
+    renderInstanceActivity();
+
+    const row = screen.getByRole("row", {
+      name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
+    });
+    expect(row.className).toContain("bg-amber-500/5");
+    expect(row.className).not.toContain("bg-muted/40");
+  });
 });
 
 describe("backend instance health checks", () => {

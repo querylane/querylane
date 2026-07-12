@@ -441,7 +441,7 @@ function InstanceActivityPage({
           />
         }
         hasContent={hasActivity}
-        isPending={pending}
+        isPending={connectionStatus === "connected" && pending}
         isRefreshing={refreshing}
         loadingMessage="Loading activity..."
         refreshingMessage="Refreshing activity..."

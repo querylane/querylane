@@ -102,6 +102,7 @@ const state = vi.hoisted(() => ({
     prefetchQuery: vi.fn(async () => undefined),
   },
   queryInsightsQuery: {} as QueryState<GetDatabaseQueryInsightsResponse>,
+  selectedInstanceStatus: "connected" as "connected" | "disconnected",
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -171,6 +172,7 @@ beforeEach(() => {
   state.extensionQuery = {};
   state.healthQuery = { data: defaultHealthResponse() };
   state.queryInsightsQuery = {};
+  state.selectedInstanceStatus = "connected";
   state.instanceQuery = {};
   state.overviewQuery = {};
   state.queryClient.getQueryState.mockReset();
@@ -369,7 +371,7 @@ vi.mock("@/lib/db-context", () => ({
       name: "Production Analytics Writer",
       port: 5432,
       resourceName: "instances/prod",
-      status: "connected",
+      status: state.selectedInstanceStatus,
     },
   }),
 }));
@@ -869,6 +871,33 @@ test("backend instance activity unavailable state matches", async () => {
   await document.fonts.ready;
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-instance-activity-unavailable"
+  );
+});
+
+test("backend instance activity disconnected state matches", async () => {
+  state.selectedInstanceStatus = "disconnected";
+  state.instanceQuery = {
+    data: instanceResponse(),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
+  };
+  state.healthQuery = { isPending: true };
+  state.overviewQuery = { data: overviewResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendInstancePage instanceId="prod" section="activity" />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await expect.element(page.getByText("Activity unavailable")).toBeVisible();
+  await expect
+    .element(page.getByText("Loading activity..."))
+    .not.toBeInTheDocument();
+  await document.fonts.ready;
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "backend-instance-activity-disconnected"
   );
 });
 
