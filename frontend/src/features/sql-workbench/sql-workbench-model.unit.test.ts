@@ -21,6 +21,10 @@ const EXPLAIN_PLAN = `Limit  (cost=112.41..112.53 rows=50 width=64) (actual time
         ->  Index Scan using shipments_status_idx on shipping.shipments s  (cost=0.43..88.20 rows=1180 width=52) (actual time=0.71..25.51 rows=1204 loops=1)
 Planning Time: 0.42 ms
 Execution Time: 27.80 ms`;
+const LOOPED_EXPLAIN_PLAN = `Nested Loop  (cost=0.00..20.00 rows=10 width=8) (actual time=0.10..10.00 rows=10 loops=1)
+  ->  Seq Scan on public.parents  (cost=0.00..5.00 rows=2 width=4) (actual time=0.01..2.00 rows=2 loops=1)
+  ->  Index Scan on public.children  (cost=0.00..5.00 rows=5 width=4) (actual time=0.01..0.50 rows=5 loops=10)
+Execution Time: 10.20 ms`;
 
 function streamResponses(
   responses: ExecuteQueryResponse[]
@@ -45,7 +49,7 @@ describe("sql workbench model", () => {
     ).toBe("instances/prod-core-eu/databases/logistics");
   });
 
-  test("accepts only read-only statement candidates in the client hint", () => {
+  test("uses a permissive first-keyword client hint and leaves enforcement to the server", () => {
     expect(
       isReadOnlyStatementCandidate("SELECT * FROM shipping.shipments")
     ).toBe(true);
@@ -65,11 +69,17 @@ describe("sql workbench model", () => {
       isReadOnlyStatementCandidate(
         "SELECT * INTO scratch_shipments FROM shipping.shipments"
       )
-    ).toBe(false);
+    ).toBe(true);
     expect(
       isReadOnlyStatementCandidate("SELECT * FROM shipping.shipments FOR SHARE")
-    ).toBe(false);
-    expect(isReadOnlyStatementCandidate("SELECT 1; SELECT 2")).toBe(false);
+    ).toBe(true);
+    expect(isReadOnlyStatementCandidate("SELECT 1; SELECT 2")).toBe(true);
+    expect(isReadOnlyStatementCandidate("SELECT ';' AS delimiter")).toBe(true);
+    expect(isReadOnlyStatementCandidate("SELECT 'INTO' AS keyword")).toBe(true);
+    expect(isReadOnlyStatementCandidate("SELECT 'FOR UPDATE' AS clause")).toBe(
+      true
+    );
+    expect(isReadOnlyStatementCandidate("(SELECT 1)")).toBe(true);
   });
 
   test("collects streamed SQL responses into table state", async () => {
@@ -196,5 +206,13 @@ describe("sql workbench model", () => {
       sharedHitBlocks: 1852,
       sharedReadBlocks: 126,
     });
+  });
+
+  test("calculates exclusive node time across repeated loops", () => {
+    const summary = parseExplainTextPlan(LOOPED_EXPLAIN_PLAN);
+
+    expect(summary.nodes.map((node) => node.exclusiveTimeMs)).toEqual([
+      3, 2, 5,
+    ]);
   });
 });

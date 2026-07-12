@@ -11,10 +11,7 @@ import type {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 const CLIENT_READ_ONLY_STARTS = new Set(["SELECT", "WITH", "VALUES", "SHOW"]);
-const FIRST_SQL_TOKEN_PATTERN = /^[a-z_]+/i;
-const SELECT_INTO_PATTERN = /\bINTO\b/i;
-const SELECT_LOCKING_CLAUSE_PATTERN =
-  /\bFOR\s+(?:NO\s+KEY\s+)?(?:UPDATE|SHARE|KEY\s+SHARE)\b/i;
+const FIRST_SQL_TOKEN_PATTERN = /[a-z_]+/i;
 const MILLISECONDS_PER_SECOND = 1000;
 const NANOSECONDS_PER_MILLISECOND = 1_000_000;
 const WHOLE_MILLISECONDS_THRESHOLD = 100;
@@ -89,23 +86,7 @@ function stripLeadingSqlTrivia(statement: string): string {
 }
 
 function isReadOnlyStatementCandidate(statement: string): boolean {
-  const trimmed = statement.trim();
-  if (!trimmed) {
-    return false;
-  }
-  const withoutTrailingSemicolon = trimmed.endsWith(";")
-    ? trimmed.slice(0, -1)
-    : trimmed;
-  if (withoutTrailingSemicolon.includes(";")) {
-    return false;
-  }
-  if (
-    SELECT_INTO_PATTERN.test(withoutTrailingSemicolon) ||
-    SELECT_LOCKING_CLAUSE_PATTERN.test(withoutTrailingSemicolon)
-  ) {
-    return false;
-  }
-  return CLIENT_READ_ONLY_STARTS.has(firstSqlToken(trimmed));
+  return CLIENT_READ_ONLY_STARTS.has(firstSqlToken(statement));
 }
 
 function durationToMs(duration: Duration): number {
@@ -196,15 +177,17 @@ function parsePlanNode(line: string, id: number): ExplainPlanNode | null {
   if (!(match?.[2] && match[3])) {
     return null;
   }
+  const loops = match[6] ? Number(match[6]) : null;
+  const actualTimeMs = match[4] ? Number(match[4]) : null;
   return {
     actualRows: match[5] ? Number(match[5]) : null,
-    actualTimeMs: match[4] ? Number(match[4]) : null,
+    actualTimeMs,
     depth: Math.floor((match[1]?.length ?? 0) / 2),
     estimatedRows: Number(match[3]),
-    exclusiveTimeMs: match[4] ? Number(match[4]) : null,
+    exclusiveTimeMs: actualTimeMs === null ? null : actualTimeMs * (loops ?? 1),
     id,
     label: match[2].trim(),
-    loops: match[6] ? Number(match[6]) : null,
+    loops,
   };
 }
 
@@ -221,12 +204,12 @@ function deriveExclusiveNodeTimes(nodes: ExplainPlanNode[]) {
     if (
       parent?.exclusiveTimeMs !== null &&
       parent?.exclusiveTimeMs !== undefined &&
-      node.actualTimeMs !== null
+      node.exclusiveTimeMs !== null
     ) {
       parent.exclusiveTimeMs = Math.max(
         0,
         Math.round(
-          (parent.exclusiveTimeMs - node.actualTimeMs) *
+          (parent.exclusiveTimeMs - node.exclusiveTimeMs) *
             MILLISECOND_PRECISION_FACTOR
         ) / MILLISECOND_PRECISION_FACTOR
       );
