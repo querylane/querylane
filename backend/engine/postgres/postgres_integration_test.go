@@ -18,6 +18,7 @@ import (
 	"github.com/querylane/querylane/backend/engine"
 	"github.com/querylane/querylane/backend/engine/postgres"
 	"github.com/querylane/querylane/backend/integration/testutil"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
@@ -868,6 +869,32 @@ func (s *PostgresEngineIntegrationTestSuite) TestExecuteQueryPreservesTypedValue
 	for i := range readValues {
 		s.True(proto.Equal(readValues[i].GetValue(), executeValues[i].GetValue()), "cell %d differs", i)
 	}
+}
+
+func (s *PostgresEngineIntegrationTestSuite) TestExecuteQueryReadOnlyTransactionRejectsWrite() {
+	ctx := context.Background()
+
+	testDB := s.getTestDBConnection()
+	defer testDB.Close()
+
+	_, err := testDB.ExecContext(ctx, "CREATE TABLE read_only_guard_probe (id integer)")
+	s.Require().NoError(err)
+
+	_, err = s.eng.ExecuteQuery(ctx, testDB, engine.ExecuteQueryParams{
+		Statement: "INSERT INTO read_only_guard_probe (id) VALUES (1) RETURNING id",
+		Timeout:   time.Second,
+	})
+
+	var classified *postgreserrors.Error
+	s.Require().ErrorAs(err, &classified)
+	s.Equal(postgreserrors.KindFailedPrecondition, classified.Classification().Kind)
+	s.Equal("25006", classified.Classification().SQLState)
+
+	var count int
+
+	err = testDB.QueryRowContext(ctx, "SELECT count(*) FROM read_only_guard_probe").Scan(&count)
+	s.Require().NoError(err)
+	s.Zero(count)
 }
 
 func (s *PostgresEngineIntegrationTestSuite) TestExplainQueryCapturesPostgresWarnings() {
