@@ -53,6 +53,7 @@ import {
   DataTableFacetedFilter,
   type FacetedFilterOption,
 } from "@/components/ui/data-table-faceted-filter";
+import { RefreshControl } from "@/components/ui/refresh-control";
 import {
   Select,
   SelectContent,
@@ -648,37 +649,278 @@ function MetadataTabResult<Row extends RowData>({
   );
 }
 
-function ColumnTypeCell({ column }: { column: TableColumn }) {
-  const typeMeta = describePostgresType(column);
+function formatColumnInventorySummary(rows: ColumnRow[]) {
+  const indexedCount = rows.filter(
+    (row) => row.isIndexed || row.column.isPrimaryKey || row.column.isUnique
+  ).length;
+  const nullableCount = rows.filter((row) => row.column.isNullable).length;
+  return `${rows.length.toLocaleString()} columns · ${indexedCount.toLocaleString()} indexed · ${nullableCount.toLocaleString()} nullable`;
+}
+
+function columnSearchText(row: ColumnRow) {
+  const typeMeta = describePostgresType(row.column);
+  return [
+    row.column.columnName,
+    row.column.rawType,
+    row.column.defaultValue,
+    row.column.comment,
+    typeMeta.category,
+    typeMeta.summary,
+    ...typeMeta.badges,
+    ...row.fks.map((fk) => `${fk.table}.${fk.column}`),
+  ]
+    .join(" ")
+    .toLocaleLowerCase();
+}
+
+function filterColumnRowsBySearch(rows: ColumnRow[], searchValue: string) {
+  const needle = searchValue.trim().toLocaleLowerCase();
+  if (!needle) {
+    return rows;
+  }
+  return rows.filter((row) => columnSearchText(row).includes(needle));
+}
+
+function ColumnNameCell({ row }: { row: ColumnRow }) {
+  const { column, fks, isIndexed } = row;
+  const identityLabel = IDENTITY_GENERATION_LABELS[column.identityGeneration];
+  const foreignKeyTitle = fks
+    .map((fk) => `References ${fk.table}.${fk.column}`)
+    .join("; ");
+  const showIndexedBadge =
+    isIndexed && !(column.isPrimaryKey || column.isUnique || fks.length > 0);
   return (
-    <div
-      className="min-w-[14rem] max-w-[24rem]"
-      title={`${typeMeta.category}. ${typeMeta.summary}`}
-    >
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-        <span className="font-mono text-foreground text-xs">
-          {typeMeta.displayType}
+    <div className="min-w-[14rem]">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className="truncate font-mono font-semibold text-foreground text-xs">
+          {column.columnName}
         </span>
-        <Badge className="h-4 px-1.5 text-[10px]" variant="outline">
-          {typeMeta.category}
-        </Badge>
+        {column.isPrimaryKey ? (
+          <Pill size="sm" tone="amber">
+            PK
+          </Pill>
+        ) : null}
+        {column.isUnique ? (
+          <Pill size="sm" tone="emerald">
+            UQ
+          </Pill>
+        ) : null}
+        {fks.length > 0 ? (
+          <Pill size="sm" title={foreignKeyTitle} tone="blue">
+            FK
+          </Pill>
+        ) : null}
+        {showIndexedBadge ? (
+          <Pill size="sm" tone="violet">
+            IDX
+          </Pill>
+        ) : null}
+        {column.isGenerated ? (
+          <Pill size="sm" tone="emerald">
+            GENERATED
+          </Pill>
+        ) : null}
+        {column.isIdentity ? (
+          <Pill size="sm" tone="amber">
+            IDENTITY
+          </Pill>
+        ) : null}
+        {identityLabel ? (
+          <Pill size="sm" tone="amber">
+            {identityLabel}
+          </Pill>
+        ) : null}
       </div>
-      {typeMeta.badges.length > 0 ? (
-        <div className="mt-1 flex flex-wrap items-center gap-1">
-          {typeMeta.badges.map((badge) => (
-            <Badge
-              className="h-4 px-1.5 font-mono text-[9px] text-muted-foreground"
-              key={badge}
-              variant="secondary"
-            >
-              {badge}
-            </Badge>
-          ))}
+      {column.comment ? (
+        <div className="mt-1 max-w-[22rem] truncate text-muted-foreground text-xs">
+          {column.comment}
         </div>
       ) : null}
-      <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
-        {typeMeta.summary}
-      </p>
+      {column.generationExpression ? (
+        <div
+          className="mt-1 max-w-[22rem] truncate font-mono text-[11px] text-muted-foreground"
+          title={column.generationExpression}
+        >
+          AS {column.generationExpression}
+        </div>
+      ) : null}
+      {foreignKeyTitle ? (
+        <span className="sr-only">{foreignKeyTitle}</span>
+      ) : null}
+    </div>
+  );
+}
+
+function ColumnInventoryTypeCell({ column }: { column: TableColumn }) {
+  const typeMeta = describePostgresType(column);
+  const badgesLabel =
+    typeMeta.badges.length > 0 ? ` ${typeMeta.badges.join(" · ")}.` : "";
+  return (
+    <span
+      className="font-mono text-muted-foreground text-xs"
+      title={`${typeMeta.category}.${badgesLabel} ${typeMeta.summary}`}
+    >
+      {typeMeta.displayType}
+      <span className="sr-only">
+        {`. ${typeMeta.category}.${badgesLabel} ${typeMeta.summary}`}
+      </span>
+    </span>
+  );
+}
+
+function formatColumnNullFraction(column: TableColumn) {
+  return column.isNullable ? "-" : "0%";
+}
+
+const columnInventoryColumns: DataTableColumnDef<ColumnRow>[] = [
+  {
+    accessorFn: (row) => row.column.ordinalPosition,
+    header: "#",
+    id: "ordinalPosition",
+    meta: {
+      cellClassName: "w-12 font-mono text-muted-foreground text-xs",
+      headerClassName: "w-12",
+    },
+  },
+  {
+    accessorFn: (row) => row.column.columnName,
+    cell: ({ row }) => <ColumnNameCell row={row.original} />,
+    header: ({ column }) => (
+      <SortableHeader column={column}>Column</SortableHeader>
+    ),
+    id: "columnName",
+    meta: {
+      cellClassName: "align-top",
+    },
+  },
+  {
+    accessorFn: (row) => row.column.rawType,
+    cell: ({ row }) => <ColumnInventoryTypeCell column={row.original.column} />,
+    header: ({ column }) => (
+      <SortableHeader column={column}>Type</SortableHeader>
+    ),
+    id: "type",
+    meta: {
+      cellClassName: "align-top",
+    },
+  },
+  {
+    accessorFn: (row) => row.column.isNullable,
+    cell: ({ row }) => (row.original.column.isNullable ? "YES" : "NO"),
+    header: "Nullable",
+    id: "nullable",
+    meta: {
+      cellClassName: "font-mono text-muted-foreground text-xs",
+    },
+  },
+  {
+    accessorFn: (row) => row.column.defaultValue,
+    cell: ({ row }) => {
+      const defaultValue = row.original.column.defaultValue;
+      return defaultValue ? (
+        <span title={defaultValue}>{defaultValue}</span>
+      ) : (
+        "-"
+      );
+    },
+    header: "Default",
+    id: "default",
+    meta: {
+      cellClassName:
+        "max-w-[18rem] truncate font-mono text-muted-foreground text-xs",
+    },
+  },
+  {
+    cell: () => "-",
+    enableSorting: false,
+    header: "Storage",
+    id: "storage",
+    meta: {
+      cellClassName: "font-mono text-muted-foreground text-xs",
+    },
+  },
+  {
+    cell: () => "-",
+    enableSorting: false,
+    header: "Distinct",
+    id: "distinct",
+    meta: {
+      cellClassName: "text-right font-mono text-xs",
+      headerClassName: "text-right",
+    },
+  },
+  {
+    cell: ({ row }) => formatColumnNullFraction(row.original.column),
+    enableSorting: false,
+    header: "Null %",
+    id: "nullFraction",
+    meta: {
+      cellClassName: "text-right font-mono text-xs",
+      headerClassName: "text-right",
+    },
+  },
+  {
+    cell: () => "-",
+    enableSorting: false,
+    header: "Avg width",
+    id: "averageWidth",
+    meta: {
+      cellClassName: "text-right font-mono text-muted-foreground text-xs",
+      headerClassName: "text-right",
+    },
+  },
+];
+
+function ColumnsInventoryTable({
+  filters,
+  hasUnfilteredRows,
+  rows,
+  toolbar,
+}: {
+  filters: React.ReactNode;
+  hasUnfilteredRows: boolean;
+  rows: ColumnRow[];
+  toolbar: MetadataToolbar;
+}) {
+  const [searchValue, setSearchValue] = useState("");
+  const visibleRows = filterColumnRowsBySearch(rows, searchValue);
+
+  if (!hasUnfilteredRows) {
+    return <TableResourceEmptyState category="columns" toolbar={toolbar} />;
+  }
+
+  return (
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex min-h-8 min-w-0 flex-wrap items-center gap-2">
+        <DataTableFilter
+          onChange={setSearchValue}
+          placeholder="Filter columns…"
+          value={searchValue}
+        />
+        <span className="text-muted-foreground text-xs">
+          {formatColumnInventorySummary(rows)}
+        </span>
+        {filters}
+        <div className="flex-1" />
+        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+          <span>Catalog metadata</span>
+          <span aria-hidden="true">·</span>
+          <RefreshControl
+            isRefreshing={toolbar.isRefreshing}
+            labelClassName="not-sr-only"
+            lastFetchedLabel={toolbar.lastFetchedLabel}
+            onRefresh={toolbar.handleRefresh}
+          />
+        </div>
+      </div>
+      <DataTable
+        columns={columnInventoryColumns}
+        data={visibleRows}
+        emptyResourceName="columns"
+        pageSize={25}
+        tableClassName="text-sm"
+        tableKey="data-explorer-table-columns"
+      />
     </div>
   );
 }
@@ -799,92 +1041,6 @@ function TableDetailHeader({
     </header>
   );
 }
-const columnTabColumns: DataTableColumnDef<ColumnRow>[] = [
-  {
-    accessorFn: (row) => row.column.columnName,
-    cell: ({ row }) => {
-      const { column, fks } = row.original;
-      return (
-        <span className="inline-flex items-center gap-1.5">
-          {column.isPrimaryKey ? (
-            <Pill size="sm" tone="amber">
-              PK
-            </Pill>
-          ) : null}
-          {fks.length > 0 ? (
-            <Pill size="sm" tone="blue">
-              FK
-            </Pill>
-          ) : null}
-          {column.columnName}
-        </span>
-      );
-    },
-    header: ({ column }) => (
-      <SortableHeader column={column}>Name</SortableHeader>
-    ),
-    id: "columnName",
-    meta: {
-      cellClassName: "font-mono text-xs",
-      headerClassName: "pl-3",
-    },
-  },
-  {
-    accessorFn: (row) => row.column.rawType,
-    cell: ({ row }) => <ColumnTypeCell column={row.original.column} />,
-    header: ({ column }) => (
-      <SortableHeader column={column}>Type</SortableHeader>
-    ),
-    id: "type",
-    meta: {
-      cellClassName: "align-top",
-    },
-  },
-  {
-    accessorFn: (row) => row.column.defaultValue,
-    cell: ({ row }) => row.original.column.defaultValue || "—",
-    header: "Default",
-    id: "default",
-    meta: {
-      cellClassName: "font-mono text-muted-foreground text-xs",
-    },
-  },
-  {
-    cell: ({ row }) => {
-      const { column, fks, isIndexed } = row.original;
-      const identityLabel =
-        IDENTITY_GENERATION_LABELS[column.identityGeneration];
-      return (
-        <div className="flex flex-wrap items-center gap-1">
-          {column.isNullable || column.isPrimaryKey ? null : (
-            <Pill tone="slate">NOT NULL</Pill>
-          )}
-          {fks.map((fk) => (
-            <Pill key={`${fk.table}.${fk.column}`} mono={true} tone="blue">
-              →{fk.table}.{fk.column}
-            </Pill>
-          ))}
-          {isIndexed && !column.isPrimaryKey ? (
-            <Pill tone="violet">INDEXED</Pill>
-          ) : null}
-          {column.isGenerated ? <Pill tone="emerald">GENERATED</Pill> : null}
-          {column.generationExpression ? (
-            <Pill mono={true} title={column.generationExpression} tone="slate">
-              <span className="block max-w-[18rem] truncate">
-                AS {column.generationExpression}
-              </span>
-            </Pill>
-          ) : null}
-          {column.isIdentity ? <Pill tone="amber">IDENTITY</Pill> : null}
-          {identityLabel ? <Pill tone="amber">{identityLabel}</Pill> : null}
-        </div>
-      );
-    },
-    enableSorting: false,
-    header: "Properties",
-    id: "properties",
-  },
-];
 function ColumnsTab({
   columnsQuery,
   constraintsQuery,
@@ -941,12 +1097,7 @@ function ColumnsTab({
     typeCategories,
   });
   return (
-    <MetadataTabResult
-      category="columns"
-      columns={columnTabColumns}
-      data={filteredRows}
-      filterColumn="columnName"
-      filterPlaceholder="Search columns…"
+    <ColumnsInventoryTable
       filters={
         <FacetFilterBar
           filters={[
@@ -965,9 +1116,8 @@ function ColumnsTab({
           ]}
         />
       }
-      hasUnfilteredData={rows.length > 0}
-      pageSize={25}
-      tableKey="data-explorer-table-columns"
+      hasUnfilteredRows={rows.length > 0}
+      rows={filteredRows}
       toolbar={toolbar}
     />
   );

@@ -22,6 +22,7 @@ import {
   TableResultSetSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import {
+  ColumnSchema,
   ConstraintType,
   DataType,
   GetTablePartitionMetadataResponseSchema,
@@ -36,6 +37,7 @@ import {
   ReferentialAction,
   Table_TableType,
   TableConstraintSchema,
+  TableIndexSchema,
   type TablePolicy,
   TablePolicySchema,
   TableSchema,
@@ -1351,6 +1353,110 @@ describe("TableDetail constraints tab", () => {
     expect(
       within(notValidCard as HTMLElement).queryByText("validated")
     ).toBeNull();
+  });
+});
+
+describe("TableDetail columns tab", () => {
+  it("renders a dense column inventory with comments, badges, and catalog freshness", () => {
+    tableQueries.columns.data = create(ListTableColumnsResponseSchema, {
+      columns: [
+        create(ColumnSchema, {
+          columnName: "id",
+          comment: "Surrogate key",
+          dataType: DataType.UUID,
+          defaultValue: "gen_random_uuid()",
+          isNullable: false,
+          isPrimaryKey: true,
+          ordinalPosition: 1,
+          rawType: "uuid",
+        }),
+        create(ColumnSchema, {
+          columnName: "ref",
+          comment: "Human-readable booking reference",
+          dataType: DataType.STRING,
+          isNullable: false,
+          isUnique: true,
+          ordinalPosition: 2,
+          rawType: "text",
+        }),
+        create(ColumnSchema, {
+          columnName: "carrier_id",
+          dataType: DataType.INTEGER,
+          isNullable: false,
+          ordinalPosition: 3,
+          rawType: "int4",
+        }),
+        create(ColumnSchema, {
+          columnName: "eta",
+          comment: "Set NULL once delivered",
+          dataType: DataType.DATE,
+          isNullable: true,
+          ordinalPosition: 4,
+          rawType: "date",
+        }),
+      ],
+    });
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["carrier_id"],
+          referencedColumnNames: ["id"],
+          referencedTable:
+            "instances/prod/databases/app/schemas/public/tables/carriers",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+      ],
+    });
+    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+      indexes: [
+        create(TableIndexSchema, {
+          indexName: "shipments_ref_key",
+          isUnique: true,
+          keyColumns: ["ref"],
+          method: "btree",
+        }),
+      ],
+    });
+    tableQueries.columns.dataUpdatedAt = Date.UTC(2026, 5, 30, 3, 12);
+    tableQueries.constraints.dataUpdatedAt = Date.UTC(2026, 5, 30, 3, 12);
+    tableQueries.indexes.dataUpdatedAt = Date.UTC(2026, 5, 30, 3, 12);
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="columns"
+        instanceId="prod"
+        schemaName="shipping"
+        table={create(TableSchema, {
+          rowCount: 2_400_000n,
+          sizeBytes: 12_800_000_000n,
+        })}
+        tableName="shipments"
+      />
+    );
+
+    expect(screen.getByText("4 columns · 2 indexed · 1 nullable")).toBeTruthy();
+    expect(screen.getByText("Catalog metadata")).toBeTruthy();
+    expect(screen.getByText(LAST_FETCHED_RE)).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "#" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Column" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Nullable" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Storage" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Distinct" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Null %" })).toBeTruthy();
+    expect(
+      screen.getByRole("columnheader", { name: "Avg width" })
+    ).toBeTruthy();
+    expect(screen.getByText("Surrogate key")).toBeTruthy();
+    expect(screen.getByText("Human-readable booking reference")).toBeTruthy();
+    expect(screen.getByText("Set NULL once delivered")).toBeTruthy();
+    expect(screen.getByText("PK")).toBeTruthy();
+    expect(screen.getByText("UQ")).toBeTruthy();
+    expect(screen.getByText("FK")).toBeTruthy();
+    expect(screen.getByText("YES")).toBeTruthy();
+    expect(screen.getAllByText("NO")).toHaveLength(3);
+    expect(screen.getAllByText("0%")).toHaveLength(3);
+    expect(screen.getByText("gen_random_uuid()")).toBeTruthy();
   });
 });
 
