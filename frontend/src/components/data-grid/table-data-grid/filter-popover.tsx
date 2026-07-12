@@ -41,7 +41,7 @@ interface FilterPopoverState {
   draftLogic: TableFilterLogic;
   draftMode: FilterPopoverMode;
   draftRules: TableFilterRule[];
-  errors: string[];
+  errors: Array<{ id: string; message: string }>;
   hasUnsupportedSqlRules: boolean;
   open: boolean;
   sqlWhere: string;
@@ -158,10 +158,13 @@ function FilterPopover({
     commitFilterState({ logic: DEFAULT_FILTER_LOGIC, rules: [] });
   }
 
-  function ruleValidationErrors(nextRules: TableFilterRule[]): string[] {
-    return getInvalidFilterRules(nextRules, columns).map(
-      (rule) => rule.message
-    );
+  function ruleValidationErrors(
+    nextRules: TableFilterRule[]
+  ): Array<{ id: string; message: string }> {
+    return getInvalidFilterRules(nextRules, columns).map((rule) => ({
+      id: rule.id,
+      message: rule.message,
+    }));
   }
 
   function applyRules() {
@@ -180,7 +183,9 @@ function FilterPopover({
   function applySqlWhere() {
     const parsed = parseSqlWhereFilter(sqlWhere);
     if (!parsed.ok) {
-      updateState({ errors: [parsed.error] });
+      updateState({
+        errors: [{ id: "sql-where-parse", message: parsed.error }],
+      });
       return;
     }
     const nextErrors = ruleValidationErrors(parsed.rules);
@@ -232,6 +237,7 @@ function FilterPopover({
       />
       <DataGridPopoverContent
         align="start"
+        aria-label={title}
         className="w-[min(38.75rem,var(--available-width))] max-w-[calc(100vw-2rem)] gap-0 overflow-hidden rounded-xl border-border bg-popover p-0 shadow-lg"
         collisionBoundary={popoverBoundary ?? undefined}
       >
@@ -243,7 +249,12 @@ function FilterPopover({
                 draftMode: next,
                 errors:
                   next === "sql" && hasUnsupportedSqlRules
-                    ? [UNSUPPORTED_SQL_RULES_MESSAGE]
+                    ? [
+                        {
+                          id: "unsupported-sql-rules",
+                          message: UNSUPPORTED_SQL_RULES_MESSAGE,
+                        },
+                      ]
                     : [],
               });
             }

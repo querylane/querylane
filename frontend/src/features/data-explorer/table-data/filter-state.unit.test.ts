@@ -147,6 +147,24 @@ describe("SQL WHERE filter parser", () => {
     });
   });
 
+  test("handles lowercase AND, escaped quotes, IS NOT NULL, and trailing garbage", () => {
+    expect(
+      parseSqlWhereFilter(
+        "status = 'customs'' hold' and deleted_at IS NOT NULL"
+      )
+    ).toMatchObject({
+      ok: true,
+      rules: [
+        { column: "status", operator: "eq", value: "customs' hold" },
+        { column: "deleted_at", operator: "isNotNull", value: "" },
+      ],
+    });
+    expect(parseSqlWhereFilter("status = 'held' trailing")).toMatchObject({
+      ok: false,
+      rules: [],
+    });
+  });
+
   test("rejects OR and arbitrary SQL instead of treating it as raw SQL", () => {
     expect(parseSqlWhereFilter("status = 'new' OR status = 'held'")).toEqual({
       error:

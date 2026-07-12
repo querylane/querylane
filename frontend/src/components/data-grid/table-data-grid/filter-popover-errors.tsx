@@ -1,5 +1,5 @@
 interface FilterErrorsProps {
-  errors: string[];
+  errors: Array<{ id: string; message: string }>;
 }
 
 function FilterErrors({ errors }: FilterErrorsProps) {
@@ -7,10 +7,10 @@ function FilterErrors({ errors }: FilterErrorsProps) {
     return null;
   }
   return (
-    <div className="border-t px-3.5 py-2.5">
+    <div className="border-t px-3.5 py-2.5" role="alert">
       <ul className="list-disc space-y-1 pl-5 text-destructive text-xs">
         {errors.map((error) => (
-          <li key={error}>{error}</li>
+          <li key={error.id}>{error.message}</li>
         ))}
       </ul>
     </div>

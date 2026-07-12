@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FilterPopover } from "@/components/data-grid/table-data-grid/filter-popover";
+import { FilterErrors } from "@/components/data-grid/table-data-grid/filter-popover-errors";
 import { FilterRow } from "@/components/data-grid/table-data-grid/filter-popover-row";
 import type { TableFilterRule } from "@/features/data-explorer/table-data/filter-state";
 import { TableResultColumnSchema } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
@@ -70,6 +71,7 @@ describe("FilterPopover match logic", () => {
 
     await user.click(screen.getByRole("button", { name: "Filter 1" }));
 
+    expect(screen.getByRole("dialog", { name: "Filter rows" })).toBeTruthy();
     expect(screen.getByText("where")).toBeTruthy();
     expect(screen.queryByText("Match")).toBeNull();
   });
@@ -187,6 +189,22 @@ describe("FilterPopover match logic", () => {
       screen.getByRole<HTMLButtonElement>("button", { name: "Apply" }).disabled
     ).toBe(true);
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("FilterErrors", () => {
+  it("announces and preserves duplicate validation errors", () => {
+    render(
+      <FilterErrors
+        errors={[
+          { id: "first", message: "Invalid value." },
+          { id: "second", message: "Invalid value." },
+        ]}
+      />
+    );
+
+    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(screen.getAllByText("Invalid value.")).toHaveLength(2);
   });
 });
 
