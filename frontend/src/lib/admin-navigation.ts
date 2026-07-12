@@ -74,6 +74,13 @@ type CanonicalAdminPageTarget =
         instanceId: string;
       };
       to: "/instances/$instanceId/databases/$databaseId/explorer";
+    }
+  | {
+      params: {
+        databaseId: string;
+        instanceId: string;
+      };
+      to: "/instances/$instanceId/databases/$databaseId/workbench";
     };
 
 interface CanonicalAdminSearchOptions {
@@ -190,6 +197,14 @@ function resolveCanonicalDatabasePageTarget({
           instanceId: ids.instanceId,
         },
         to: "/instances/$instanceId/databases/$databaseId/explorer",
+      };
+    case "database.workbench":
+      return {
+        params: {
+          databaseId: ids.databaseId,
+          instanceId: ids.instanceId,
+        },
+        to: "/instances/$instanceId/databases/$databaseId/workbench",
       };
     default:
       return null;
