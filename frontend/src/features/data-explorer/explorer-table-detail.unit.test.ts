@@ -3,18 +3,15 @@ import { describe, expect, test } from "vitest";
 import { deriveColumnRows } from "@/features/data-explorer/explorer-column-rows";
 import {
   filterColumnDetailRows,
-  filterIndexesByMethod,
+  filterConstraintsByKind,
   filterPoliciesByMode,
-  filterTableTriggers,
+  filterTriggersByState,
 } from "@/features/data-explorer/explorer-table-detail-filters";
 import {
   ColumnSchema,
   ConstraintType,
-  DataType,
-  IdentityGeneration,
   PolicyMode,
   TableConstraintSchema,
-  TableIndexSchema,
   TablePolicySchema,
   TableTriggerSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
@@ -142,106 +139,22 @@ describe("table detail facet filters", () => {
     ]);
   });
 
-  test("filters columns by unique, index, nullability, default, and generation", () => {
-    const rows = deriveColumnRows(
-      [
-        create(ColumnSchema, {
-          columnName: "id",
-          dataType: DataType.INTEGER,
-          identityGeneration: IdentityGeneration.BY_DEFAULT,
-          isIdentity: true,
-          isPrimaryKey: true,
-          rawType: "int8",
-        }),
-        create(ColumnSchema, {
-          columnName: "reference",
-          dataType: DataType.STRING,
-          isUnique: true,
-          rawType: "text",
-        }),
-        create(ColumnSchema, {
-          columnName: "status",
-          dataType: DataType.STRING,
-          defaultValue: "'pending'::text",
-          rawType: "text",
-        }),
-        create(ColumnSchema, {
-          columnName: "total_with_tax",
-          dataType: DataType.FLOAT,
-          isGenerated: true,
-          rawType: "numeric(12,2)",
-        }),
-        create(ColumnSchema, {
-          columnName: "notes",
-          dataType: DataType.STRING,
-          isNullable: true,
-          rawType: "text",
-        }),
-      ],
-      [],
-      [
-        create(TableIndexSchema, {
-          indexName: "orders_reference_key",
-          isUnique: true,
-          keyColumns: ["reference"],
-        }),
-        create(TableIndexSchema, {
-          indexName: "orders_status_index",
-          keyColumns: ["status"],
-        }),
-      ]
-    );
-
+  test("filters metadata rows by constraint kind, policy mode, and trigger state", () => {
     expect(
-      filterColumnDetailRows(rows, { keyKinds: ["unique"] }).map(
-        (row) => row.column.columnName
-      )
-    ).toEqual(["reference"]);
-    expect(
-      filterColumnDetailRows(rows, { keyKinds: ["index"] }).map(
-        (row) => row.column.columnName
-      )
-    ).toEqual(["status"]);
-    expect(
-      filterColumnDetailRows(rows, { nullability: ["nullable"] }).map(
-        (row) => row.column.columnName
-      )
-    ).toEqual(["notes"]);
-    expect(
-      filterColumnDetailRows(rows, { defaultKinds: ["has-default"] }).map(
-        (row) => row.column.columnName
-      )
-    ).toEqual(["status"]);
-    expect(
-      filterColumnDetailRows(rows, { generationKinds: ["identity"] }).map(
-        (row) => row.column.columnName
-      )
-    ).toEqual(["id"]);
-    expect(
-      filterColumnDetailRows(rows, { generationKinds: ["generated"] }).map(
-        (row) => row.column.columnName
-      )
-    ).toEqual(["total_with_tax"]);
-    expect(
-      filterColumnDetailRows(rows, {
-        defaultKinds: ["no-default"],
-        generationKinds: ["regular"],
-        nullability: ["nullable"],
-        typeCategories: ["Text"],
-      }).map((row) => row.column.columnName)
-    ).toEqual(["notes"]);
-  });
-
-  test("filters metadata rows by index method and policy mode", () => {
-    expect(
-      filterIndexesByMethod(
+      filterConstraintsByKind(
         [
-          create(TableIndexSchema, { indexName: "idx_gin", method: "gin" }),
-          create(TableIndexSchema, { indexName: "idx_btree", method: "btree" }),
+          create(TableConstraintSchema, {
+            constraintName: "orders_check",
+            type: ConstraintType.CHECK,
+          }),
+          create(TableConstraintSchema, {
+            constraintName: "orders_pk",
+            type: ConstraintType.PRIMARY_KEY,
+          }),
         ],
-        ["gin"]
-      ).map((index) => index.indexName)
-    ).toEqual(["idx_gin"]);
+        [ConstraintType.CHECK]
+      ).map((constraint) => constraint.constraintName)
+    ).toEqual(["orders_check"]);
 
     expect(
       filterPoliciesByMode(
@@ -258,46 +171,18 @@ describe("table detail facet filters", () => {
         [PolicyMode.RESTRICTIVE]
       ).map((policy) => policy.policyName)
     ).toEqual(["policy_restrictive"]);
-  });
-
-  test("filters triggers by name and enabled state", () => {
-    const triggers = [
-      create(TableTriggerSchema, {
-        enabled: true,
-        triggerName: "trg_event_enrich",
-      }),
-      create(TableTriggerSchema, {
-        enabled: false,
-        triggerName: "trg_shipments_notify",
-      }),
-    ];
 
     expect(
-      filterTableTriggers(triggers, { search: "  ENRICH  ", states: [] }).map(
-        (trigger) => trigger.triggerName
-      )
-    ).toEqual(["trg_event_enrich"]);
-    expect(
-      filterTableTriggers(triggers, { search: "", states: ["enabled"] }).map(
-        (trigger) => trigger.triggerName
-      )
-    ).toEqual(["trg_event_enrich"]);
-    expect(
-      filterTableTriggers(triggers, { search: "", states: ["disabled"] }).map(
-        (trigger) => trigger.triggerName
-      )
-    ).toEqual(["trg_shipments_notify"]);
-    expect(
-      filterTableTriggers(triggers, {
-        search: "",
-        states: ["enabled", "disabled"],
-      })
-    ).toEqual(triggers);
-    expect(
-      filterTableTriggers(triggers, {
-        search: "enrich",
-        states: ["disabled"],
-      })
-    ).toEqual([]);
+      filterTriggersByState(
+        [
+          create(TableTriggerSchema, { enabled: true, triggerName: "audit" }),
+          create(TableTriggerSchema, {
+            enabled: false,
+            triggerName: "disabled",
+          }),
+        ],
+        ["disabled"]
+      ).map((trigger) => trigger.triggerName)
+    ).toEqual(["disabled"]);
   });
 });

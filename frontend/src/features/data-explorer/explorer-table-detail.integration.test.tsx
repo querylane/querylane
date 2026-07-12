@@ -1497,9 +1497,44 @@ describe("TableDetail indexes tab", () => {
     expect(screen.getByText("lower(ref)")).toBeTruthy();
     expect(screen.getByText("99.7%")).toBeTruthy();
     expect(screen.getAllByText("0").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("progressbar", { name: "82% of index scans" })
+    ).toBeTruthy();
+    expect(
+      screen.getAllByText("Cache hit")[0]?.getAttribute("title")
+    ).toContain("shared-buffer");
     expect(document.body.textContent).toContain(
       "CREATE INDEX shipments_status_idx ON shipping.shipments USING btree (status) WHERE status <> 'delivered'"
     );
+  });
+
+  it("preserves quoted key parts in fallback index SQL", () => {
+    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+      indexes: [
+        create(TableIndexSchema, {
+          indexName: "orders_mixed_case_idx",
+          isValid: true,
+          keyParts: ['"Order"'],
+          method: "btree",
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="indexes"
+        instanceId="prod"
+        schemaName="sales"
+        table={undefined}
+        tableName="orders"
+      />
+    );
+
+    expect(document.body.textContent).toContain(
+      'CREATE INDEX orders_mixed_case_idx ON sales.orders USING btree ("Order")'
+    );
+    expect(document.body.textContent).not.toContain('"""Order"""');
   });
 });
 

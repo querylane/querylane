@@ -2042,6 +2042,9 @@ function createIndexSql({
   schemaName: string;
   tableName: string;
 }) {
+  if (index.definition) {
+    return index.definition;
+  }
   const unique = index.isUnique ? "UNIQUE " : "";
   const indexName = formatSqlIdentifier(index.indexName || "unnamed_index");
   const method = index.method || "btree";
@@ -2051,9 +2054,6 @@ function createIndexSql({
       ? ` INCLUDE (${index.includedColumns.map(formatSqlIdentifier).join(", ")})`
       : "";
   const predicate = index.predicate ? ` WHERE ${index.predicate}` : "";
-  if (index.definition) {
-    return index.definition;
-  }
   return `CREATE ${unique}INDEX ${indexName} ON ${formatQualifiedTableName(
     schemaName,
     tableName
@@ -2063,7 +2063,11 @@ function formatIndexKeyPartForSql(keyPart: string) {
   if (SIMPLE_SQL_IDENTIFIER_PATTERN.test(keyPart)) {
     return keyPart;
   }
-  if (keyPart.includes("(") || keyPart.includes(" ")) {
+  if (
+    keyPart.startsWith('"') ||
+    keyPart.includes("(") ||
+    keyPart.includes(" ")
+  ) {
     return keyPart;
   }
   return formatSqlIdentifier(keyPart);
@@ -2099,11 +2103,13 @@ function isIndexUnused(index: TableIndex) {
 function indexInvalidCount(indexes: TableIndex[]) {
   return indexes.filter((index) => !index.isValid).length;
 }
-function indexScanShare(index: TableIndex, maxScanCount: bigint) {
-  if (!(index.hasUsageStats && index.scanCount > 0n && maxScanCount > 0n)) {
+function indexScanShare(index: TableIndex, totalScanCount: bigint) {
+  if (!(index.hasUsageStats && index.scanCount > 0n && totalScanCount > 0n)) {
     return 0;
   }
-  const percent = Number((index.scanCount * PERCENT_SCALE) / maxScanCount);
+  const percent = Number(
+    (index.scanCount * PERCENT_SCALE + totalScanCount / 2n) / totalScanCount
+  );
   return Math.min(
     FULL_PERCENT,
     Math.max(MIN_VISIBLE_SCAN_SHARE_PERCENT, percent)
@@ -2295,7 +2301,15 @@ function IndexMetrics({ index }: { index: TableIndex }) {
               {value}
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-              {label}
+              <span
+                title={
+                  label === "Cache hit"
+                    ? "PostgreSQL shared-buffer hit ratio; operating-system cache reads count as reads."
+                    : undefined
+                }
+              >
+                {label}
+              </span>
             </p>
           </div>
         );
@@ -2317,15 +2331,15 @@ function IndexCard({
   index,
   schemaName,
   tableName,
-  maxScanCount,
+  totalScanCount,
 }: {
   index: TableIndex;
-  maxScanCount: bigint;
   schemaName: string;
   tableName: string;
+  totalScanCount: bigint;
 }) {
   const sql = createIndexSql({ index, schemaName, tableName });
-  const scanShare = indexScanShare(index, maxScanCount);
+  const scanShare = indexScanShare(index, totalScanCount);
   const unused = isIndexUnused(index);
   return (
     <Card
@@ -2385,7 +2399,16 @@ function IndexCard({
       <CardContent className="space-y-4 p-4">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)]">
           <div className="min-w-0 space-y-2">
-            <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <progress
+              aria-label={`${scanShare}% of index scans`}
+              className="sr-only"
+              max={FULL_PERCENT}
+              value={scanShare}
+            />
+            <div
+              aria-hidden="true"
+              className="h-2 overflow-hidden rounded-full bg-muted"
+            >
               <div
                 aria-hidden="true"
                 className="h-full rounded-full bg-muted-foreground/70"
@@ -2438,11 +2461,6 @@ function IndexesTab({
   const totalSizeBytes = sumIndexSizeBytes(indexes);
   const totalScanCount = sumIndexScans(indexes);
   const usageStatsAvailable = hasIndexUsageStats(indexes);
-  const maxScanCount = indexes.reduce<bigint>(
-    (max, index) =>
-      index.hasUsageStats && index.scanCount > max ? index.scanCount : max,
-    0n
-  );
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-stretch gap-3">
@@ -2487,9 +2505,9 @@ function IndexesTab({
           <IndexCard
             index={index}
             key={`${index.indexName}-${index.method}-${index.keyColumns.join(",")}`}
-            maxScanCount={maxScanCount}
             schemaName={schemaName}
             tableName={tableName}
+            totalScanCount={totalScanCount}
           />
         ))}
       </div>

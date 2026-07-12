@@ -2,8 +2,6 @@
 -- PostgreSQL database dump
 --
 
-\restrict 5rZUbcEOWqLDlOb2VEV9R5BULZfldhSlSt1XjM0iegiUwzIdue9wXin9F8JaaU4
-
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
 
@@ -783,6 +781,3 @@ CREATE TRIGGER update_runner_execution_state_updated_at BEFORE UPDATE ON public.
 --
 -- PostgreSQL database dump complete
 --
-
-\unrestrict 5rZUbcEOWqLDlOb2VEV9R5BULZfldhSlSt1XjM0iegiUwzIdue9wXin9F8JaaU4
-

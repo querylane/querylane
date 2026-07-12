@@ -1,9 +1,9 @@
 import type { ColumnRow } from "@/features/data-explorer/explorer-column-rows";
-import { normalizeIndexMethod } from "@/features/data-explorer/postgres-index-method-display";
 import { describePostgresType } from "@/features/data-explorer/postgres-type-display";
 import type {
+  ConstraintType,
   PolicyMode,
-  TableIndex,
+  TableConstraint,
   TablePolicy,
   TableTrigger,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
@@ -93,16 +93,14 @@ function filterColumnDetailRows(
   );
 }
 
-function filterIndexesByMethod(
-  indexes: TableIndex[],
-  methods: string[]
-): TableIndex[] {
-  if (methods.length === 0) {
-    return indexes;
+function filterConstraintsByKind(
+  constraints: TableConstraint[],
+  kinds: ConstraintType[]
+): TableConstraint[] {
+  if (kinds.length === 0) {
+    return constraints;
   }
-  return indexes.filter((index) =>
-    methods.includes(normalizeIndexMethod(index.method))
-  );
+  return constraints.filter((constraint) => kinds.includes(constraint.type));
 }
 
 function filterPoliciesByMode(
@@ -147,7 +145,7 @@ export {
   columnNullability,
   columnTypeCategory,
   filterColumnDetailRows,
-  filterIndexesByMethod,
+  filterConstraintsByKind,
   filterPoliciesByMode,
   filterTableTriggers,
 };
