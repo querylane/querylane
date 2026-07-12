@@ -1562,6 +1562,12 @@ describe("TableDetail triggers tab", () => {
         screen.getByText("WHEN ((old.status IS DISTINCT FROM new.status))")
       ).toBeTruthy();
       expect(screen.getByText(TRIGGER_CREATE_SQL_RE)).toBeTruthy();
+      expect(screen.getAllByRole("status")).toHaveLength(2);
+      expect(
+        screen
+          .getAllByRole("status")
+          .every((status) => status.textContent === "")
+      ).toBe(true);
 
       await user.click(
         screen.getByRole("button", {
@@ -1572,9 +1578,20 @@ describe("TableDetail triggers tab", () => {
       expect(writeText).toHaveBeenCalledWith(
         "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event\n  FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location();"
       );
-      expect(screen.getByRole("status").textContent).toBe(
-        "SQL for trg_event_enrich copied."
+      expect(
+        screen.getAllByRole("status").map((status) => status.textContent)
+      ).toContain("SQL for trg_event_enrich copied.");
+
+      writeText.mockRejectedValueOnce(new Error("Clipboard denied"));
+      await user.click(
+        screen.getByRole("button", {
+          name: "Copy SQL for trg_shipments_notify",
+        })
       );
+      expect(screen.getByText("Copy failed")).toBeTruthy();
+      expect(
+        screen.getAllByRole("status").map((status) => status.textContent)
+      ).toContain("Could not copy SQL for trg_shipments_notify.");
 
       await user.click(screen.getByRole("button", { name: "Refresh" }));
       expect(tableQueries.triggers.refetch).toHaveBeenCalledTimes(1);

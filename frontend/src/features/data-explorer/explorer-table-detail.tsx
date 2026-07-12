@@ -3315,10 +3315,12 @@ function TriggerSqlCopyButton({
   } else if (copyState === "error") {
     buttonLabel = "Copy failed";
   }
-  const statusMessage =
-    copyState === "copied"
-      ? `SQL for ${triggerName} copied.`
-      : `Could not copy SQL for ${triggerName}.`;
+  let statusMessage = "";
+  if (copyState === "copied") {
+    statusMessage = `SQL for ${triggerName} copied.`;
+  } else if (copyState === "error") {
+    statusMessage = `Could not copy SQL for ${triggerName}.`;
+  }
 
   return (
     <>
@@ -3332,11 +3334,9 @@ function TriggerSqlCopyButton({
       >
         {buttonLabel}
       </Button>
-      {copyState === "idle" ? null : (
-        <span aria-live="polite" className="sr-only" role="status">
-          {statusMessage}
-        </span>
-      )}
+      <span aria-live="polite" className="sr-only" role="status">
+        {statusMessage}
+      </span>
     </>
   );
 }
