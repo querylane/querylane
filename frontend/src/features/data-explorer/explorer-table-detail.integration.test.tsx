@@ -1357,7 +1357,8 @@ describe("TableDetail constraints tab", () => {
 });
 
 describe("TableDetail columns tab", () => {
-  it("renders a dense column inventory with comments, badges, and catalog freshness", () => {
+  it("renders and filters a dense column inventory", async () => {
+    const user = userEvent.setup();
     tableQueries.columns.data = create(ListTableColumnsResponseSchema, {
       columns: [
         create(ColumnSchema, {
@@ -1438,7 +1439,9 @@ describe("TableDetail columns tab", () => {
     expect(screen.getByText("4 columns · 2 indexed · 1 nullable")).toBeTruthy();
     expect(screen.getByText("Catalog metadata")).toBeTruthy();
     expect(screen.getByText(LAST_FETCHED_RE)).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "#" })).toBeTruthy();
+    expect(
+      screen.getByRole("columnheader", { name: "Ordinal position" })
+    ).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Column" })).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Nullable" })).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Storage" })).toBeTruthy();
@@ -1457,6 +1460,28 @@ describe("TableDetail columns tab", () => {
     expect(screen.getAllByText("NO")).toHaveLength(3);
     expect(screen.getAllByText("0%")).toHaveLength(3);
     expect(screen.getByText("gen_random_uuid()")).toBeTruthy();
+    expect(
+      screen.getAllByTitle("Not available from the current column metadata API")
+    ).toHaveLength(16);
+
+    const filter = screen.getByRole("textbox", { name: "Filter columns…" });
+    await user.type(filter, "booking");
+    await waitFor(() => {
+      expect(
+        screen.getByText("1 column · 1 indexed · 0 nullable")
+      ).toBeTruthy();
+    });
+    expect(screen.getByText("Human-readable booking reference")).toBeTruthy();
+    expect(screen.queryByText("Surrogate key")).toBeNull();
+
+    await user.clear(filter);
+    await user.type(filter, "carriers.id");
+    await waitFor(() => {
+      expect(
+        screen.getByText("1 column · 0 indexed · 0 nullable")
+      ).toBeTruthy();
+    });
+    expect(screen.getByText("carrier_id")).toBeTruthy();
   });
 });
 

@@ -150,6 +150,8 @@ import {
 const TABLE_METADATA_QUERY_OPTIONS = {
   staleTime: QUERY_STALE_TIME.static,
 } as const;
+const UNAVAILABLE_COLUMN_STATISTIC_LABEL =
+  "Not available from the current column metadata API";
 const SKELETON_ROW_COUNT = 6;
 const CONSTRAINTS_DEFAULT_PAGE_SIZE = 10;
 const CONSTRAINTS_MEDIUM_PAGE_SIZE = 25;
@@ -654,7 +656,8 @@ function formatColumnInventorySummary(rows: ColumnRow[]) {
     (row) => row.isIndexed || row.column.isPrimaryKey || row.column.isUnique
   ).length;
   const nullableCount = rows.filter((row) => row.column.isNullable).length;
-  return `${rows.length.toLocaleString()} columns · ${indexedCount.toLocaleString()} indexed · ${nullableCount.toLocaleString()} nullable`;
+  const columnLabel = rows.length === 1 ? "column" : "columns";
+  return `${rows.length.toLocaleString()} ${columnLabel} · ${indexedCount.toLocaleString()} indexed · ${nullableCount.toLocaleString()} nullable`;
 }
 
 function columnSearchText(row: ColumnRow) {
@@ -706,9 +709,11 @@ function ColumnNameCell({ row }: { row: ColumnRow }) {
           </Pill>
         ) : null}
         {fks.length > 0 ? (
-          <Pill size="sm" title={foreignKeyTitle} tone="blue">
-            FK
-          </Pill>
+          <span aria-hidden="true" title={foreignKeyTitle}>
+            <Pill size="sm" tone="blue">
+              FK
+            </Pill>
+          </span>
         ) : null}
         {showIndexedBadge ? (
           <Pill size="sm" tone="violet">
@@ -768,14 +773,36 @@ function ColumnInventoryTypeCell({ column }: { column: TableColumn }) {
   );
 }
 
-function formatColumnNullFraction(column: TableColumn) {
-  return column.isNullable ? "-" : "0%";
+function ColumnNullFraction({ column }: { column: TableColumn }) {
+  return column.isNullable ? <UnavailableColumnStatistic /> : "0%";
+}
+
+function UnavailableColumnStatistic() {
+  return (
+    <span title={UNAVAILABLE_COLUMN_STATISTIC_LABEL}>
+      <span aria-hidden="true">-</span>
+      <span className="sr-only">{UNAVAILABLE_COLUMN_STATISTIC_LABEL}</span>
+    </span>
+  );
+}
+
+function UnavailableColumnStatisticHeader({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <span title={UNAVAILABLE_COLUMN_STATISTIC_LABEL}>{children}</span>;
 }
 
 const columnInventoryColumns: DataTableColumnDef<ColumnRow>[] = [
   {
     accessorFn: (row) => row.column.ordinalPosition,
-    header: "#",
+    header: () => (
+      <span>
+        <span aria-hidden="true">#</span>
+        <span className="sr-only">Ordinal position</span>
+      </span>
+    ),
     id: "ordinalPosition",
     meta: {
       cellClassName: "w-12 font-mono text-muted-foreground text-xs",
@@ -831,18 +858,26 @@ const columnInventoryColumns: DataTableColumnDef<ColumnRow>[] = [
     },
   },
   {
-    cell: () => "-",
+    cell: () => <UnavailableColumnStatistic />,
     enableSorting: false,
-    header: "Storage",
+    header: () => (
+      <UnavailableColumnStatisticHeader>
+        Storage
+      </UnavailableColumnStatisticHeader>
+    ),
     id: "storage",
     meta: {
       cellClassName: "font-mono text-muted-foreground text-xs",
     },
   },
   {
-    cell: () => "-",
+    cell: () => <UnavailableColumnStatistic />,
     enableSorting: false,
-    header: "Distinct",
+    header: () => (
+      <UnavailableColumnStatisticHeader>
+        Distinct
+      </UnavailableColumnStatisticHeader>
+    ),
     id: "distinct",
     meta: {
       cellClassName: "text-right font-mono text-xs",
@@ -850,7 +885,7 @@ const columnInventoryColumns: DataTableColumnDef<ColumnRow>[] = [
     },
   },
   {
-    cell: ({ row }) => formatColumnNullFraction(row.original.column),
+    cell: ({ row }) => <ColumnNullFraction column={row.original.column} />,
     enableSorting: false,
     header: "Null %",
     id: "nullFraction",
@@ -860,9 +895,13 @@ const columnInventoryColumns: DataTableColumnDef<ColumnRow>[] = [
     },
   },
   {
-    cell: () => "-",
+    cell: () => <UnavailableColumnStatistic />,
     enableSorting: false,
-    header: "Avg width",
+    header: () => (
+      <UnavailableColumnStatisticHeader>
+        Avg width
+      </UnavailableColumnStatisticHeader>
+    ),
     id: "averageWidth",
     meta: {
       cellClassName: "text-right font-mono text-muted-foreground text-xs",
@@ -898,7 +937,7 @@ function ColumnsInventoryTable({
           value={searchValue}
         />
         <span className="text-muted-foreground text-xs">
-          {formatColumnInventorySummary(rows)}
+          {formatColumnInventorySummary(visibleRows)}
         </span>
         {filters}
         <div className="flex-1" />

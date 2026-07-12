@@ -1661,6 +1661,9 @@ test("data explorer table columns match the redesign inventory", async () => {
     .getByRole("textbox", { exact: true, name: "Filter columns…" })
     .fill("eta");
   await expect.element(page.getByText("Set NULL once delivered")).toBeVisible();
+  await expect
+    .element(page.getByText("1 column · 0 indexed · 1 nullable"))
+    .toBeVisible();
   expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
 });
 
