@@ -317,5 +317,14 @@ describe("buildSchemaMapModel", () => {
       ...manyTables.slice(0, 24).map((table) => table.name),
       selectedTable,
     ]);
+    expect(
+      selectSchemaMapMetadataTableNames({
+        limit: 24,
+        query: "",
+        schemaNames: ["shipping"],
+        selectedTableName: ports.name,
+        tables: [ports],
+      })
+    ).toEqual([ports.name]);
   });
 });

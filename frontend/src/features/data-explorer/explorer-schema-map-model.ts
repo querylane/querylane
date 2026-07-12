@@ -308,16 +308,20 @@ function selectSchemaMapMetadataTableNames({
 
   for (const table of tables) {
     const qualified = tableSafeQualifiedName(table.name);
+    const isSelected = table.name === selectedTableName;
+    if (isSelected) {
+      tableNames.push(table.name);
+      continue;
+    }
     if (!selectedSchemas.has(qualified.schema)) {
       continue;
     }
     const displayName = table.displayName || qualified.table;
-    const isSelected = table.name === selectedTableName;
     const matchesQuery =
       !normalizedQuery ||
       displayName.toLowerCase().includes(normalizedQuery) ||
       qualified.schema.toLowerCase().includes(normalizedQuery);
-    if (isSelected || (matchesQuery && tableNames.length < limit)) {
+    if (matchesQuery && tableNames.length < limit) {
       tableNames.push(table.name);
     }
   }
