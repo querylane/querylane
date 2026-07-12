@@ -49,7 +49,13 @@ function streamResponses(
   };
 }
 
-function queryResponseStream() {
+function queryResponseStream({
+  notices = ["using index shipments_status_idx"],
+  truncated = false,
+}: {
+  notices?: string[];
+  truncated?: boolean;
+} = {}) {
   return streamResponses([
     create(ExecuteQueryResponseSchema, {
       result: {
@@ -155,9 +161,9 @@ function queryResponseStream() {
         case: "stats",
         value: {
           latency: durationFromMs(27.8),
-          notices: ["using index shipments_status_idx"],
+          notices,
           rowCount: 2n,
-          truncated: false,
+          truncated,
         },
       },
     }),
@@ -209,7 +215,7 @@ test(
     await expect
       .element(page.getByRole("heading", { name: "SQL workbench" }))
       .toBeVisible();
-    await expect.element(page.getByText("customs-holds.sql")).toBeVisible();
+    await expect.element(page.getByText("query.sql")).toBeVisible();
     await page.getByRole("button", { name: RUN_BUTTON_NAME_RE }).click();
     await expect
       .element(page.getByText("Pacific Crest Shipping").first())
@@ -256,7 +262,7 @@ test(
     renderWorkbench();
 
     await page.getByRole("button", { name: RUN_BUTTON_NAME_RE }).click();
-    await page.getByRole("button", { name: "Visual builder" }).click();
+    await page.getByRole("tab", { name: "Visual builder" }).click();
 
     await expect.element(page.getByText("Query pipeline")).toBeVisible();
     await expect
@@ -265,6 +271,45 @@ test(
     await expect(
       page.getByTestId("sql-workbench-visual-surface")
     ).toMatchScreenshot("sql-workbench-visual-builder");
+  },
+  VISUAL_TEST_TIMEOUT_MS
+);
+
+test(
+  "SQL workbench keeps truncated results visually explicit",
+  async () => {
+    apiMocks.executeWorkbenchQuery.mockReturnValue(
+      queryResponseStream({
+        notices: ["NOTICE: result includes a fallback plan"],
+        truncated: true,
+      })
+    );
+    renderWorkbench();
+
+    await page.getByRole("button", { name: RUN_BUTTON_NAME_RE }).click();
+    await expect
+      .element(page.getByText("Results limited to 2 rows"))
+      .toBeVisible();
+    await expect(
+      page.getByTestId("sql-workbench-visual-surface")
+    ).toMatchScreenshot("sql-workbench-truncated-results");
+  },
+  VISUAL_TEST_TIMEOUT_MS
+);
+
+test(
+  "SQL workbench keeps query errors visually recoverable",
+  async () => {
+    apiMocks.executeWorkbenchQuery.mockImplementation(() => {
+      throw new Error("database connection dropped");
+    });
+    renderWorkbench();
+
+    await page.getByRole("button", { name: RUN_BUTTON_NAME_RE }).click();
+    await expect.element(page.getByRole("alert")).toBeVisible();
+    await expect(
+      page.getByTestId("sql-workbench-visual-surface")
+    ).toMatchScreenshot("sql-workbench-query-error");
   },
   VISUAL_TEST_TIMEOUT_MS
 );
