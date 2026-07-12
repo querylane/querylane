@@ -9,6 +9,7 @@ import {
 
 const CREATE_SHIPMENT_STATUS_RE = /CREATE TYPE shipping\.shipment_status/;
 const JOBS_CATEGORY_RE = /^Jobs · pg_cron 4$/;
+const NEXT_RUNS_RE = /next runs:/;
 const PARTMAN_MAINTENANCE_RE = /partman-maintenance/;
 const SHIPMENT_STATUS_BUTTON_RE = /shipping\.shipment_status/;
 const TYPES_CATEGORY_RE = /^Types 3$/;
@@ -25,6 +26,14 @@ const designObjects: OtherDatabaseObject[] = [
     sortKey: "1",
     summary:
       "booked · in_transit · customs_hold · delayed · delivered · cancelled",
+    values: [
+      "booked",
+      "in_transit",
+      "customs_hold",
+      "delayed",
+      "delivered",
+      "cancelled",
+    ],
   },
   {
     badge: "DOMAIN",
@@ -152,7 +161,7 @@ test("other database objects matches the design's pg cron run history view", asy
 
   await expect.element(page.getByText("Minute")).toBeVisible();
   await expect.element(page.getByText("“At 03:00, every day”")).toBeVisible();
-  await expect.element(page.getByText("Sun 5 Jul, 03:00")).toBeVisible();
+  await expect.element(page.getByText(NEXT_RUNS_RE)).not.toBeInTheDocument();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-other-database-objects-pg-cron"
   );

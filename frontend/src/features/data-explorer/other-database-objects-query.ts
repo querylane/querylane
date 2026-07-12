@@ -14,11 +14,13 @@ const OTHER_DATABASE_OBJECTS_ROW_LIMIT = 1000;
 const OTHER_DATABASE_OBJECTS_BATCH_SIZE = 100;
 
 const MAIN_OTHER_DATABASE_OBJECTS_SQL = `
+-- Querylane supports PostgreSQL 14 and newer.
 WITH visible_namespaces AS (
   SELECT oid, nspname
   FROM pg_catalog.pg_namespace
   WHERE nspname NOT IN ('pg_catalog', 'information_schema')
     AND nspname !~ '^pg_toast'
+    AND nspname !~ '^pg_temp_'
 ),
 routine_objects AS (
   SELECT
@@ -43,6 +45,7 @@ routine_objects AS (
       ELSE ''
     END AS definition,
     ''::text AS extra,
+    ''::text AS values,
     format('%s:%s:%s', n.nspname, p.proname, p.oid) AS sort_key,
     ''::text AS status
   FROM pg_catalog.pg_proc p
@@ -56,6 +59,14 @@ sequence_objects AS (
     'SEQUENCE'::text AS badge,
     concat_ws(
       ' · ',
+      format(
+        'last %s',
+        CASE
+          WHEN pg_catalog.has_sequence_privilege(c.oid, 'SELECT')
+            THEN COALESCE(pg_catalog.pg_sequence_last_value(c.oid)::text, 'not called')
+          ELSE 'unavailable'
+        END
+      ),
       format('increment %s', s.seqincrement),
       format('min %s', s.seqmin),
       format('max %s', s.seqmax),
@@ -75,6 +86,7 @@ sequence_objects AS (
       CASE WHEN s.seqcycle THEN ' CYCLE' ELSE '' END
     ) AS definition,
     ''::text AS extra,
+    ''::text AS values,
     format('%s:%s', n.nspname, c.relname) AS sort_key,
     ''::text AS status
   FROM pg_catalog.pg_class c
@@ -108,7 +120,8 @@ type_objects AS (
       WHEN 'r' THEN format('CREATE TYPE %I.%I AS RANGE (SUBTYPE = %s);', n.nspname, t.typname, pg_catalog.format_type(r.rngsubtype, NULL::integer))
       ELSE ''
     END AS definition,
-    CASE WHEN t.typtype = 'e' THEN COALESCE(enum_labels.labels, '') ELSE '' END AS extra,
+    ''::text AS extra,
+    CASE WHEN t.typtype = 'e' THEN COALESCE(enum_labels.labels_json, '[]') ELSE '[]' END AS values,
     format('%s:%s', n.nspname, t.typname) AS sort_key,
     ''::text AS status
   FROM pg_catalog.pg_type t
@@ -118,7 +131,8 @@ type_objects AS (
   LEFT JOIN LATERAL (
     SELECT
       pg_catalog.string_agg(e.enumlabel, ', ' ORDER BY e.enumsortorder) AS labels,
-      pg_catalog.string_agg(pg_catalog.quote_literal(e.enumlabel), ', ' ORDER BY e.enumsortorder) AS quoted_labels
+      pg_catalog.string_agg(pg_catalog.quote_literal(e.enumlabel), ', ' ORDER BY e.enumsortorder) AS quoted_labels,
+      COALESCE(pg_catalog.jsonb_agg(e.enumlabel ORDER BY e.enumsortorder), '[]'::jsonb)::text AS labels_json
     FROM pg_catalog.pg_enum e
     WHERE e.enumtypid = t.oid
   ) enum_labels ON true
@@ -142,10 +156,14 @@ collation_objects AS (
   SELECT
     'collations'::text AS category,
     CASE WHEN n.nspname = 'public' THEN format('%I', c.collname) ELSE format('%I.%I', n.nspname, c.collname) END AS name,
-    CASE c.collprovider WHEN 'i' THEN 'icu' WHEN 'c' THEN 'libc' ELSE c.collprovider::text END AS badge,
+    CASE c.collprovider WHEN 'i' THEN 'icu' WHEN 'c' THEN 'libc' WHEN 'b' THEN 'builtin' ELSE c.collprovider::text END AS badge,
     concat_ws(
       ' · ',
-      COALESCE(NULLIF(pg_catalog.to_jsonb(c)->>'colliculocale', ''), NULLIF(c.collcollate, '')),
+      COALESCE(
+        NULLIF(pg_catalog.to_jsonb(c)->>'colllocale', ''),
+        NULLIF(pg_catalog.to_jsonb(c)->>'colliculocale', ''),
+        NULLIF(c.collcollate, '')
+      ),
       CASE WHEN c.collisdeterministic THEN 'deterministic' ELSE 'nondeterministic' END,
       CASE WHEN c.collversion IS NOT NULL THEN concat('version ', c.collversion) ELSE NULL END
     ) AS summary,
@@ -153,11 +171,12 @@ collation_objects AS (
     format(
       'CREATE COLLATION %s (provider = %s, locale = %s, deterministic = %s);',
       CASE WHEN n.nspname = 'public' THEN pg_catalog.quote_ident(c.collname) ELSE format('%I.%I', n.nspname, c.collname) END,
-      CASE c.collprovider WHEN 'i' THEN 'icu' WHEN 'c' THEN 'libc' ELSE c.collprovider::text END,
-      pg_catalog.quote_literal(COALESCE(NULLIF(pg_catalog.to_jsonb(c)->>'colliculocale', ''), c.collcollate)),
+      CASE c.collprovider WHEN 'i' THEN 'icu' WHEN 'c' THEN 'libc' WHEN 'b' THEN 'builtin' ELSE c.collprovider::text END,
+      pg_catalog.quote_literal(COALESCE(NULLIF(pg_catalog.to_jsonb(c)->>'colllocale', ''), NULLIF(pg_catalog.to_jsonb(c)->>'colliculocale', ''), c.collcollate)),
       CASE WHEN c.collisdeterministic THEN 'true' ELSE 'false' END
     ) AS definition,
     ''::text AS extra,
+    ''::text AS values,
     format('%s:%s', n.nspname, c.collname) AS sort_key,
     ''::text AS status
   FROM pg_catalog.pg_collation c
@@ -169,19 +188,36 @@ fdw_objects AS (
     'fdwServers'::text AS category,
     s.srvname AS name,
     w.fdwname AS badge,
-    concat_ws(' · ', pg_catalog.array_to_string(s.srvoptions, ', '), COALESCE(pg_catalog.obj_description(s.oid, 'pg_foreign_server'), '')) AS summary,
+    concat_ws(' · ', options.summary, COALESCE(pg_catalog.obj_description(s.oid, 'pg_foreign_server'), '')) AS summary,
     ''::text AS detail,
     format(
       'CREATE SERVER %I FOREIGN DATA WRAPPER %I%s;',
       s.srvname,
       w.fdwname,
-      CASE WHEN s.srvoptions IS NULL THEN '' ELSE concat(' OPTIONS (', pg_catalog.array_to_string(s.srvoptions, ', '), ')') END
+      CASE WHEN options.definition = '' THEN '' ELSE concat(' OPTIONS (', options.definition, ')') END
     ) AS definition,
     ''::text AS extra,
+    ''::text AS values,
     s.srvname AS sort_key,
     ''::text AS status
   FROM pg_catalog.pg_foreign_server s
   JOIN pg_catalog.pg_foreign_data_wrapper w ON w.oid = s.srvfdw
+  LEFT JOIN LATERAL (
+    SELECT
+      COALESCE(pg_catalog.string_agg(option, ', ' ORDER BY option), '') AS summary,
+      COALESCE(
+        pg_catalog.string_agg(
+          format(
+            '%I %L',
+            pg_catalog.left(option, pg_catalog.strpos(option, '=') - 1),
+            pg_catalog.substr(option, pg_catalog.strpos(option, '=') + 1)
+          ),
+          ', ' ORDER BY option
+        ),
+        ''
+      ) AS definition
+    FROM pg_catalog.unnest(s.srvoptions) AS option
+  ) options ON true
 ),
 replication_publications AS (
   SELECT
@@ -197,13 +233,26 @@ replication_publications AS (
     format(
       'CREATE PUBLICATION %I%s WITH (publish = %s);',
       p.pubname,
-      CASE WHEN p.puballtables THEN ' FOR ALL TABLES' ELSE '' END,
+      CASE
+        WHEN p.puballtables THEN ' FOR ALL TABLES'
+        WHEN publication_tables.definition <> '' THEN concat(' FOR TABLE ', publication_tables.definition)
+        ELSE ''
+      END,
       pg_catalog.quote_literal(concat_ws(', ', CASE WHEN p.pubinsert THEN 'insert' END, CASE WHEN p.pubupdate THEN 'update' END, CASE WHEN p.pubdelete THEN 'delete' END, CASE WHEN p.pubtruncate THEN 'truncate' END))
     ) AS definition,
     ''::text AS extra,
+    ''::text AS values,
     p.pubname AS sort_key,
     'ok'::text AS status
   FROM pg_catalog.pg_publication p
+  LEFT JOIN LATERAL (
+    SELECT COALESCE(
+      pg_catalog.string_agg(format('%I.%I', schemaname, tablename), ', ' ORDER BY schemaname, tablename),
+      ''
+    ) AS definition
+    FROM pg_catalog.pg_publication_tables publication_table
+    WHERE publication_table.pubname = p.pubname
+  ) publication_tables ON true
 ),
 event_trigger_objects AS (
   SELECT
@@ -219,11 +268,12 @@ event_trigger_objects AS (
       e.evtfoid::regprocedure::text
     ) AS definition,
     ''::text AS extra,
+    ''::text AS values,
     e.evtname AS sort_key,
     CASE e.evtenabled WHEN 'O' THEN 'ok' ELSE 'warning' END AS status
   FROM pg_catalog.pg_event_trigger e
 )
-SELECT category, name, badge, summary, detail, definition, extra, sort_key, status
+SELECT category, name, badge, summary, detail, definition, extra, values, sort_key, status
 FROM (
   SELECT * FROM routine_objects
   UNION ALL SELECT * FROM sequence_objects
@@ -248,7 +298,7 @@ ORDER BY
 `;
 
 const HAS_CRON_JOBS_SQL =
-  "SELECT CASE WHEN pg_catalog.to_regclass('cron.job') IS NULL THEN 'false' ELSE 'true' END AS has_cron_job_table";
+  "SELECT CASE WHEN pg_catalog.to_regclass('cron.job') IS NOT NULL AND pg_catalog.has_table_privilege('cron.job', 'SELECT') THEN 'true' ELSE 'false' END AS has_cron_job_table";
 
 const CRON_JOBS_SQL = `
 SELECT
@@ -259,6 +309,7 @@ SELECT
   command AS detail,
   format('SELECT cron.schedule(%L, %L, %L);', COALESCE(jobname, format('job %s', jobid)), schedule, command) AS definition,
   CASE WHEN active THEN 'active' ELSE 'paused' END AS extra,
+  '[]'::text AS values,
   COALESCE(jobname, jobid::text) AS sort_key,
   CASE WHEN active THEN 'ok' ELSE 'warning' END AS status
 FROM cron.job
@@ -266,6 +317,10 @@ ORDER BY lower(COALESCE(jobname, jobid::text))
 `;
 
 type QueryRow = Record<string, string>;
+type OtherObjectsRowExecutor = (input: {
+  parent: string;
+  statement: string;
+}) => Promise<QueryRow[]>;
 
 function tableValueToText(value: TableValue | undefined): string {
   const kind = value?.kind;
@@ -370,7 +425,24 @@ function queryRowToObject(row: QueryRow): OtherDatabaseObject | null {
     sortKey: row["sort_key"] ?? row["name"] ?? "",
     status: parseObjectStatus(row["status"]),
     summary: row["summary"] ?? "",
+    values: parseObjectValues(row["values"]),
   };
+}
+
+function parseObjectValues(values: string | undefined): string[] | undefined {
+  if (!values) {
+    return;
+  }
+  const parsed: unknown = JSON.parse(values);
+  if (
+    !(
+      Array.isArray(parsed) &&
+      parsed.every((value) => typeof value === "string")
+    )
+  ) {
+    throw new Error("Invalid database object values");
+  }
+  return parsed;
 }
 
 function parseObjectStatus(status: string | undefined) {
@@ -403,25 +475,23 @@ function isOtherDatabaseObjectCategory(
 }
 
 async function fetchOtherDatabaseObjects({
+  execute,
   parent,
-  transport,
 }: {
+  execute: OtherObjectsRowExecutor;
   parent: string;
-  transport: Transport;
 }) {
-  const mainRows = await executeRows({
+  const mainRows = await execute({
     parent,
     statement: MAIN_OTHER_DATABASE_OBJECTS_SQL,
-    transport,
   });
-  const hasCronRows = await executeRows({
+  const hasCronRows = await execute({
     parent,
     statement: HAS_CRON_JOBS_SQL,
-    transport,
   });
   const hasCron = hasCronRows[0]?.["has_cron_job_table"] === "true";
   const cronRows = hasCron
-    ? await executeRows({ parent, statement: CRON_JOBS_SQL, transport })
+    ? await execute({ parent, statement: CRON_JOBS_SQL })
     : [];
 
   return {
@@ -443,10 +513,21 @@ function useOtherDatabaseObjectsQuery({
 
   return useQuery({
     enabled: Boolean(databaseId && instanceId),
-    queryFn: () => fetchOtherDatabaseObjects({ parent, transport }),
+    queryFn: () =>
+      fetchOtherDatabaseObjects({
+        execute: ({ parent: queryParent, statement }) =>
+          executeRows({ parent: queryParent, statement, transport }),
+        parent,
+      }),
     queryKey: ["console", "database", "other-objects", parent] as const,
     ...RESOURCE_QUERY_OPTIONS.schemaList,
   });
 }
 
-export { useOtherDatabaseObjectsQuery };
+export {
+  fetchOtherDatabaseObjects,
+  queryRowToObject,
+  rowToRecord,
+  tableValueToText,
+  useOtherDatabaseObjectsQuery,
+};

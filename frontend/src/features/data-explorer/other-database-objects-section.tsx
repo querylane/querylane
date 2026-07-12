@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, Clipboard, Info, Search, Server } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { RetryActionButton } from "@/components/retry-action-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,58 +11,50 @@ import { cn } from "@/lib/utils";
 
 const OTHER_OBJECT_CATEGORIES = [
   {
-    actionLabel: "List all with \\df",
     description:
       "Functions and procedures that live in this database. Expand one to read its body, or call it with arguments in the workbench.",
     key: "routines",
     label: "Routines",
   },
   {
-    actionLabel: "Check for exhaustion",
     description:
       "Every auto-increment counter, with its current position. Click the owning column to jump to the table — watch for counters approaching their type’s max.",
     key: "sequences",
     label: "Sequences",
   },
   {
-    actionLabel: "Where are these used?",
     description:
       "Custom enums, composites, domains, and ranges. Enum values are ordered — new values can be added between existing ones, but never removed.",
     key: "types",
     label: "Types",
   },
   {
-    actionLabel: "Check version drift",
     description:
       "Text sort orders. After an OS glibc or ICU upgrade, version mismatches here can silently corrupt indexes on text columns.",
     key: "collations",
     label: "Collations",
   },
   {
-    actionLabel: "Test remote latency",
     description:
       "Connections to other servers, queryable as local tables. Filters are pushed down — only matching rows cross the wire.",
     key: "fdwServers",
     label: "FDW servers",
   },
   {
-    actionLabel: "Check replication lag",
     description:
       "Publications feeding logical replicas and the WAL senders streaming them. Lag here means replicas are reading stale data.",
     key: "replication",
     label: "Replication",
   },
   {
-    actionLabel: "Audit recent DDL",
     description:
       "Fire on DDL, not on rows — this database uses them to log every schema change. Disable one before large migrations if it slows them down.",
     key: "eventTriggers",
     label: "Event triggers",
   },
   {
-    actionLabel: "View run history",
     description:
-      "Cron schedules that run inside Postgres — no external scheduler. Each run is recorded with its outcome and duration.",
+      "Cron schedules that run inside Postgres with no external scheduler. Expand a job to inspect its schedule and command.",
     key: "cronJobs",
     label: "Jobs · pg_cron",
   },
@@ -85,7 +77,8 @@ const CRON_DAY_OF_MONTH_INDEX = 2;
 const CRON_MONTH_INDEX = 3;
 const CRON_DAY_OF_WEEK_INDEX = 4;
 const INTRO_COPY =
-  "everything that isn’t a relation — from pg_proc, pg_type, pg_collation, pg_foreign_server, pg_publication, pg_event_trigger";
+  "Across this database: everything that isn’t a relation, from pg_proc, pg_type, pg_collation, pg_foreign_server, pg_publication, pg_event_trigger";
+const COPY_NOTICE_DURATION_MS = 2000;
 
 type OtherObjectCategory = (typeof OTHER_OBJECT_CATEGORIES)[number]["key"];
 
@@ -99,6 +92,7 @@ interface OtherDatabaseObject {
   sortKey: string;
   status?: "failed" | "ok" | "warning" | undefined;
   summary: string;
+  values?: string[] | undefined;
 }
 
 interface OtherDatabaseObjectsPanelProps {
@@ -172,13 +166,7 @@ function enumChips(object: OtherDatabaseObject): string[] {
   if (object.category !== "types" || object.badge !== "ENUM") {
     return [];
   }
-  return object.summary
-    .split(object.summary.includes(" · ") ? " · " : ",")
-    .flatMap((value) => {
-      const chip = value.trim();
-      return chip ? [chip] : [];
-    })
-    .slice(0, MAX_ENUM_CHIPS);
+  return (object.values ?? []).slice(0, MAX_ENUM_CHIPS);
 }
 
 function assertNeverStatus(_status: never): never {
@@ -306,6 +294,10 @@ function TypeObjectCard({
 }: OtherObjectCardProps) {
   const chips = enumChips(object);
   const isEnum = chips.length > 0;
+  const hiddenChipCount = Math.max(
+    0,
+    (object.values?.length ?? 0) - chips.length
+  );
 
   return (
     <article className="rounded-[10px] border border-border bg-card p-3 transition-colors hover:border-ring">
@@ -329,6 +321,11 @@ function TypeObjectCard({
                 {chip}
               </li>
             ))}
+            {hiddenChipCount > 0 ? (
+              <li className="inline-flex h-6 items-center rounded-full border border-border px-2.5 text-[11px] text-muted-foreground">
+                +{hiddenChipCount} more
+              </li>
+            ) : null}
           </ol>
         ) : (
           <div className="mt-2 font-mono text-[12px] text-muted-foreground">
@@ -340,7 +337,7 @@ function TypeObjectCard({
         <ObjectDefinition
           extra={
             object.extra ? (
-              <span className="cursor-default text-[11px] text-primary underline decoration-primary/40 underline-offset-2">
+              <span className="text-[11px] text-muted-foreground">
                 {object.extra}
               </span>
             ) : null
@@ -358,6 +355,10 @@ function RoutineObjectCard(props: OtherObjectCardProps) {
   const signature = object.name.match(ROUTINE_SIGNATURE_RE);
   const routineName = signature?.[1] ?? object.name;
   const routineArgs = signature?.[2] ?? "";
+  const summaryParts = object.summary.split(" · ").filter(Boolean);
+  const hasReturnType = object.badge !== "PROCEDURE" && summaryParts.length > 0;
+  const returnType = hasReturnType ? summaryParts[0] : undefined;
+  const metadata = hasReturnType ? summaryParts.slice(1) : summaryParts;
 
   return (
     <article className="rounded-[10px] border border-border bg-card p-3 transition-colors hover:border-ring">
@@ -365,22 +366,15 @@ function RoutineObjectCard(props: OtherObjectCardProps) {
         <div className="font-mono text-[12px] leading-5">
           <span className="font-bold">{routineName}</span>
           <span className="text-muted-foreground">{routineArgs}</span>
-          {object.summary ? (
-            <span className="text-primary">
-              {" "}
-              → {object.summary.split(" · ")[0]}
-            </span>
+          {returnType ? (
+            <span className="text-primary"> → {returnType}</span>
           ) : null}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {object.badge ? <ObjectBadge>{object.badge}</ObjectBadge> : null}
-          {object.summary
-            .split(" · ")
-            .slice(1)
-            .filter(Boolean)
-            .map((part) => (
-              <ObjectBadge key={part}>{part}</ObjectBadge>
-            ))}
+          {metadata.map((part) => (
+            <ObjectBadge key={part}>{part}</ObjectBadge>
+          ))}
         </div>
         {object.detail ? (
           <p className="mt-2 text-[12px] text-muted-foreground leading-5">
@@ -539,7 +533,7 @@ function cronHuman(object: OtherDatabaseObject): string {
     return `Sundays at ${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
   }
   if (minute && hour) {
-    return `nightly at ${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
+    return `daily at ${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
   }
   return schedule;
 }
@@ -590,20 +584,10 @@ function cronSentence(schedule: string): string {
   return schedule;
 }
 
-function cronNextRuns(schedule: string): string[] {
-  const [minute, hour] = schedule.split(CRON_PARTS_RE);
-  if (!(minute && hour) || minute.startsWith("*/")) {
-    return [];
-  }
-  const time = `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
-  return [`Sun 5 Jul, ${time}`, `Mon 6 Jul, ${time}`, `Tue 7 Jul, ${time}`];
-}
-
 function CronObjectCard(props: OtherObjectCardProps) {
   const { isExpanded, object, onCopySql, onToggle } = props;
   const schedule = cronSchedule(object);
   const fields = schedule.split(CRON_PARTS_RE).slice(0, CRON_FIELD_COUNT);
-  const nextRuns = cronNextRuns(schedule);
 
   return (
     <article
@@ -681,19 +665,6 @@ function CronObjectCard(props: OtherObjectCardProps) {
             <span className="font-semibold text-sm">
               “{cronSentence(schedule)}”
             </span>
-            {nextRuns.length > 0 ? (
-              <span className="text-[11px] text-muted-foreground">
-                next runs:
-              </span>
-            ) : null}
-            {nextRuns.map((run) => (
-              <span
-                className="rounded-full border border-border px-2 py-0.5 font-mono text-[11px]"
-                key={run}
-              >
-                {run}
-              </span>
-            ))}
           </div>
           <ObjectDefinition object={object} onCopySql={onCopySql} />
         </div>
@@ -798,6 +769,7 @@ function OtherDatabaseObjectsPanel({
     null
   );
   const [copyNotice, setCopyNotice] = useState("");
+  const copyNoticeTimeout = useRef<number | undefined>(undefined);
   const searchedObjects = objects.filter((object) =>
     objectMatchesSearch(object, query)
   );
@@ -812,11 +784,34 @@ function OtherDatabaseObjectsPanel({
     .filter((object) => object.category === selectedCategory)
     .sort((left, right) => left.sortKey.localeCompare(right.sortKey));
 
+  useEffect(function clearCopyNoticeTimeoutOnUnmount() {
+    return () => window.clearTimeout(copyNoticeTimeout.current);
+  }, []);
+
+  const showCopyNotice = (notice: string) => {
+    window.clearTimeout(copyNoticeTimeout.current);
+    setCopyNotice(notice);
+    copyNoticeTimeout.current = window.setTimeout(
+      () => setCopyNotice(""),
+      COPY_NOTICE_DURATION_MS
+    );
+  };
+
   const copySql = (definition: string) => {
-    navigator.clipboard
-      .writeText(definition)
-      .then(() => setCopyNotice("SQL copied."))
-      .catch(() => setCopyNotice("Could not copy SQL."));
+    let copyRequest: Promise<void> | undefined;
+    try {
+      copyRequest = navigator.clipboard?.writeText(definition);
+    } catch {
+      showCopyNotice("Could not copy SQL.");
+      return;
+    }
+    if (!copyRequest) {
+      showCopyNotice("Could not copy SQL.");
+      return;
+    }
+    copyRequest
+      .then(() => showCopyNotice("SQL copied."))
+      .catch(() => showCopyNotice("Could not copy SQL."));
   };
 
   let objectListContent: ReactNode;
@@ -915,14 +910,6 @@ function OtherDatabaseObjectsPanel({
             <p className="min-w-0 flex-1 text-[12px] text-muted-foreground leading-5">
               {categoryMeta.description}
             </p>
-            <Button
-              className="h-7 shrink-0 whitespace-nowrap"
-              size="xs"
-              type="button"
-              variant="outline"
-            >
-              {categoryMeta.actionLabel}
-            </Button>
           </div>
 
           {copyNotice ? (

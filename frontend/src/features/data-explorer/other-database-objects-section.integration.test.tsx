@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -12,18 +13,28 @@ import {
   OtherDatabaseObjectsPanel,
 } from "@/features/data-explorer/other-database-objects-section";
 
+const shipmentStatusObject: OtherDatabaseObject = {
+  badge: "ENUM",
+  category: "types",
+  definition:
+    "CREATE TYPE shipping.shipment_status AS ENUM ('booked', 'in_transit', 'customs_hold', 'delayed', 'delivered', 'cancelled');",
+  detail: "Enum values are ordered and can only be added.",
+  extra: "used by shipping.shipments.status",
+  name: "shipping.shipment_status",
+  sortKey: "shipping.shipment_status",
+  summary: "booked, in_transit, customs_hold, delayed, delivered, cancelled",
+  values: [
+    "booked",
+    "in_transit",
+    "customs_hold",
+    "delayed",
+    "delivered",
+    "cancelled",
+  ],
+};
+
 const objects: OtherDatabaseObject[] = [
-  {
-    badge: "ENUM",
-    category: "types",
-    definition:
-      "CREATE TYPE shipping.shipment_status AS ENUM ('booked', 'in_transit', 'customs_hold', 'delayed', 'delivered', 'cancelled');",
-    detail: "Enum values are ordered and can only be added.",
-    extra: "used by shipping.shipments.status",
-    name: "shipping.shipment_status",
-    sortKey: "shipping.shipment_status",
-    summary: "booked, in_transit, customs_hold, delayed, delivered, cancelled",
-  },
+  shipmentStatusObject,
   {
     badge: "DOMAIN",
     category: "types",
@@ -46,14 +57,88 @@ const objects: OtherDatabaseObject[] = [
   },
 ];
 
+const variantObjects: OtherDatabaseObject[] = [
+  ...objects,
+  {
+    badge: "SEQUENCE",
+    category: "sequences",
+    definition: "CREATE SEQUENCE shipping.shipment_id_seq;",
+    detail: "",
+    name: "shipping.shipment_id_seq",
+    sortKey: "shipping.shipment_id_seq",
+    summary: "last 42 · increment 1 · max 9223372036854775807",
+  },
+  {
+    badge: "PROCEDURE",
+    category: "routines",
+    definition: "CREATE PROCEDURE shipping.refresh_routes() LANGUAGE plpgsql;",
+    detail: "",
+    name: "shipping.refresh_routes()",
+    sortKey: "shipping.refresh_routes",
+    summary: "plpgsql · volatile",
+  },
+  {
+    badge: "postgres_fdw",
+    category: "fdwServers",
+    definition:
+      "CREATE SERVER replica_us FOREIGN DATA WRAPPER postgres_fdw OPTIONS (host 'replica', port '5432');",
+    detail: "",
+    name: "replica_us",
+    sortKey: "replica_us",
+    summary: "host=replica · port=5432",
+  },
+  {
+    badge: "PUBLICATION",
+    category: "replication",
+    definition: "CREATE PUBLICATION pub_shipping FOR TABLE shipping.shipments;",
+    detail: "",
+    name: "pub_shipping",
+    sortKey: "pub_shipping",
+    status: "ok",
+    summary: "selected tables · insert, update, delete",
+  },
+  {
+    badge: "ON ddl_command_start",
+    category: "eventTriggers",
+    definition:
+      "CREATE EVENT TRIGGER audit_ddl ON ddl_command_start EXECUTE FUNCTION audit.log_ddl();",
+    detail: "→ audit.log_ddl()",
+    name: "audit_ddl",
+    sortKey: "audit_ddl",
+    status: "ok",
+    summary: "Logs schema changes",
+  },
+  {
+    badge: "pg_cron",
+    category: "cronJobs",
+    definition:
+      "SELECT cron.schedule('refresh', '0 3 * * *', 'CALL refresh()');",
+    detail: "CALL refresh()",
+    extra: "active",
+    name: "refresh",
+    sortKey: "refresh",
+    status: "ok",
+    summary: "0 3 * * * · postgres · app",
+  },
+];
+
 const COLLATIONS_BUTTON_RE = /^Collations 1$/;
+const CRON_JOBS_BUTTON_RE = /^Jobs · pg_cron 1$/;
 const CUSTOM_TYPES_INFO_RE = /Custom enums, composites, domains, and ranges/i;
+const EVENT_TRIGGERS_BUTTON_RE = /^Event triggers 1$/;
+const FDW_SERVERS_BUTTON_RE = /^FDW servers 1$/;
+const INCREMENT_ONE_RE = /increment 1/;
 const INTRO_COPY_RE = /everything that isn’t a relation/i;
 const SHIPMENT_STATUS_BUTTON_RE = /shipping\.shipment_status/i;
 const TYPES_BUTTON_RE = /^Types 2$/;
+const ROUTINES_BUTTON_RE = /^Routines 1$/;
+const REPLICATION_BUTTON_RE = /^Replication 1$/;
+const SEQUENCES_BUTTON_RE = /^Sequences 1$/;
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -115,7 +200,136 @@ describe("OtherDatabaseObjectsPanel", () => {
     await user.click(within(card).getByRole("button", { name: "Copy SQL" }));
 
     await waitFor(() =>
-      expect(writeText).toHaveBeenCalledWith(objects[0]?.definition)
+      expect(writeText).toHaveBeenCalledWith(shipmentStatusObject.definition)
     );
+  });
+
+  it("renders accurate sequence values and procedure metadata", async () => {
+    const user = userEvent.setup();
+    render(
+      <OtherDatabaseObjectsPanel isLoading={false} objects={variantObjects} />
+    );
+
+    await user.click(screen.getByRole("button", { name: SEQUENCES_BUTTON_RE }));
+    expect(screen.getByText("42")).toBeTruthy();
+    expect(screen.getByText("Last value")).toBeTruthy();
+    expect(screen.getByText(INCREMENT_ONE_RE)).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: ROUTINES_BUTTON_RE }));
+    const procedureCard = screen
+      .getByText("shipping.refresh_routes")
+      .closest("article");
+    expect(procedureCard?.textContent).toContain("plpgsql");
+    expect(procedureCard?.textContent).not.toContain("→ plpgsql");
+
+    await user.click(
+      screen.getByRole("button", { name: FDW_SERVERS_BUTTON_RE })
+    );
+    expect(screen.getByText("replica_us")).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: REPLICATION_BUTTON_RE })
+    );
+    expect(screen.getByText("pub_shipping")).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: EVENT_TRIGGERS_BUTTON_RE })
+    );
+    expect(screen.getByText("audit_ddl")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: CRON_JOBS_BUTTON_RE }));
+    expect(screen.getByText("refresh")).toBeTruthy();
+  });
+
+  it("preserves enum labels containing commas and shows hidden value counts", () => {
+    const values = Array.from({ length: 13 }, (_, index) =>
+      index === 2 ? "port, transfer" : `value-${index + 1}`
+    );
+    render(
+      <OtherDatabaseObjectsPanel
+        isLoading={false}
+        objects={[{ ...shipmentStatusObject, values }]}
+      />
+    );
+
+    expect(screen.getByText("port, transfer")).toBeTruthy();
+    expect(screen.getByText("+1 more")).toBeTruthy();
+  });
+
+  it("shows loading and retryable error states", async () => {
+    const onRetry = vi.fn(() => Promise.resolve());
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <OtherDatabaseObjectsPanel isLoading={true} objects={[]} />
+    );
+
+    expect(
+      screen.getByRole("status", { name: "Loading other database objects" })
+    ).toBeTruthy();
+
+    rerender(
+      <OtherDatabaseObjectsPanel
+        error={new Error("catalog unavailable")}
+        isLoading={false}
+        objects={[]}
+        onRetry={onRetry}
+      />
+    );
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it("handles unavailable clipboard access without throwing", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("navigator", { ...navigator, clipboard: undefined });
+    render(<OtherDatabaseObjectsPanel isLoading={false} objects={objects} />);
+
+    const card = screen
+      .getByText("shipping.shipment_status")
+      .closest("article");
+    if (!(card instanceof HTMLElement)) {
+      throw new Error("Missing type card");
+    }
+    await user.click(
+      within(card).getByRole("button", { name: SHIPMENT_STATUS_BUTTON_RE })
+    );
+    await user.click(within(card).getByRole("button", { name: "Copy SQL" }));
+
+    expect(screen.getByRole("status").textContent).toBe("Could not copy SQL.");
+  });
+
+  it("clears copy feedback after it has been announced", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    const user = userEvent.setup();
+    const nativeSetTimeout = globalThis.setTimeout;
+    let clearNotice: (() => void) | undefined;
+    vi.spyOn(globalThis, "setTimeout").mockImplementation(
+      (handler, timeout, ...args) => {
+        if (timeout === 2000) {
+          clearNotice = () => handler(...args);
+          return nativeSetTimeout(() => undefined, 0);
+        }
+        return nativeSetTimeout(handler, timeout, ...args);
+      }
+    );
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      clipboard: { writeText },
+    });
+    render(<OtherDatabaseObjectsPanel isLoading={false} objects={objects} />);
+
+    const card = screen
+      .getByText("shipping.shipment_status")
+      .closest("article");
+    if (!(card instanceof HTMLElement)) {
+      throw new Error("Missing type card");
+    }
+    await user.click(
+      within(card).getByRole("button", { name: SHIPMENT_STATUS_BUTTON_RE })
+    );
+    await user.click(within(card).getByRole("button", { name: "Copy SQL" }));
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe("SQL copied.")
+    );
+
+    act(() => clearNotice?.());
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });
