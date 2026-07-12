@@ -57,35 +57,6 @@ const EDITOR_LINE_NUMBERS = Array.from(
   (_, index) => index + FIRST_EDITOR_LINE_NUMBER
 );
 
-const SAVED_QUERIES = [
-  { owner: "ops · l.moreau", title: "Customs holds by carrier" },
-  { owner: "billing · s.okafor", title: "Overdue invoices this month" },
-  { owner: "ops · k.tanaka", title: "Slow lanes (transit > 14d over plan)" },
-];
-
-const HISTORY = [
-  {
-    meta: "22:41  41 ms  128 rows",
-    sql: "SELECT ref, status, eta FROM shipping.shipments WHERE eta <…",
-  },
-  {
-    meta: "22:37  112 ms  5 rows",
-    sql: "SELECT c.name, count(*) FROM shipping.shipments s JOIN…",
-  },
-  {
-    meta: "22:30  9 ms  12 rows",
-    sql: "SELECT * FROM shipping.shipment_event WHERE…",
-  },
-  {
-    meta: "22:18  6 ms  20 rows",
-    sql: "SELECT schemaname, relname, n_live_tup FROM…",
-  },
-  {
-    meta: "21:55  18 ms  31 rows",
-    sql: "SELECT * FROM billing.invoices WHERE status = 'overdue' ORDER…",
-  },
-];
-
 const GUARD_ALLOWED = [
   {
     note: "joins, CTE reads, aggregates, and filters",
@@ -110,18 +81,51 @@ interface SqlWorkbenchPageProps {
 type WorkbenchMode = "editor" | "builder" | "english";
 type ResultTab = "results" | "explain";
 type ExplainView = "graph" | "timeline" | "table" | "text";
+type PlanInsightKind = "buffers" | "estimates" | "slowest";
 
 const PERCENT = 100;
 const HEALTHY_ESTIMATE_DELTA_PERCENT = 20;
 const MINIMUM_NODE_BAR_PERCENT = 2;
 const MAX_GRAPH_DEPTH = 6;
 const GRAPH_DEPTH_OFFSET_PX = 40;
+const SMALL_PLAN_MS_FORMATTER = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
+});
+const LARGE_PLAN_MS_FORMATTER = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 1,
+});
+
+function planInsightKinds(summary: ExplainPlanSummary): PlanInsightKind[] {
+  const [root] = summary.nodes;
+  const kinds: PlanInsightKind[] = [];
+  if (root?.actualRows !== null && root?.actualRows !== undefined) {
+    kinds.push("estimates");
+  }
+  if (summary.sharedHitBlocks > 0 || summary.sharedReadBlocks > 0) {
+    kinds.push("buffers");
+  }
+  if (slowestExplainNode(summary)) {
+    kinds.push("slowest");
+  }
+  return kinds;
+}
+
+function withOccurrenceKeys(values: string[]) {
+  const occurrences = new Map<string, number>();
+  return values.map((value) => {
+    const occurrence = (occurrences.get(value) ?? 0) + 1;
+    occurrences.set(value, occurrence);
+    return { key: `${value}-${occurrence}`, value };
+  });
+}
 
 function WorkbenchSidebar() {
   const savedQueriesHeadingId = useId();
   const historyHeadingId = useId();
   return (
-    <aside className="hidden w-[270px] shrink-0 border-white/10 border-r bg-black/60 px-3 py-5 text-zinc-400 xl:block">
+    <aside className="hidden w-[270px] shrink-0 border-white/10 border-r bg-zinc-950/60 px-3 py-5 text-zinc-400 xl:block">
       <section aria-labelledby={savedQueriesHeadingId} className="space-y-4">
         <h2
           className="font-semibold text-[11px] text-zinc-500 uppercase tracking-[0.18em]"
@@ -129,16 +133,7 @@ function WorkbenchSidebar() {
         >
           Saved queries
         </h2>
-        <div className="space-y-5">
-          {SAVED_QUERIES.map((query) => (
-            <article className="space-y-1" key={query.title}>
-              <h3 className="font-semibold text-sm text-zinc-100">
-                {query.title}
-              </h3>
-              <p className="text-xs">{query.owner}</p>
-            </article>
-          ))}
-        </div>
+        <p className="text-sm text-zinc-500">No saved queries yet</p>
       </section>
       <section aria-labelledby={historyHeadingId} className="mt-8 space-y-4">
         <h2
@@ -147,16 +142,7 @@ function WorkbenchSidebar() {
         >
           History
         </h2>
-        <div className="space-y-5">
-          {HISTORY.map((entry) => (
-            <article className="space-y-1" key={`${entry.meta}-${entry.sql}`}>
-              <p className="line-clamp-2 font-mono text-[13px] text-zinc-100 leading-5">
-                {entry.sql}
-              </p>
-              <p className="text-xs">{entry.meta}</p>
-            </article>
-          ))}
-        </div>
+        <p className="text-sm text-zinc-500">No query history yet</p>
       </section>
     </aside>
   );
@@ -187,7 +173,7 @@ function GuardPill() {
           <PopoverDescription className="text-zinc-400 leading-6">
             The workbench uses a server-side validator before execution, then
             runs approved SQL in a read-only PostgreSQL transaction. Querylane
-            never applies the advisory DDL shown in plan insights.
+            never commits a statement from this page.
           </PopoverDescription>
         </PopoverHeader>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -232,24 +218,13 @@ function GuardPill() {
 function FileTabs() {
   return (
     <div className="flex flex-wrap items-center gap-3 text-zinc-500">
-      {["customs-holds.sql", "scratch-1.sql", "batch-demo.sql"].map(
-        (file, index) => (
-          <div
-            className={cn(
-              "inline-flex items-center gap-2 rounded-lg px-3 py-2 font-mono text-sm",
-              index === 0
-                ? "border border-white/10 bg-white/12 text-zinc-100"
-                : "text-zinc-500"
-            )}
-            key={file}
-          >
-            <FileText className="size-3.5" />
-            {file}
-          </div>
-        )
-      )}
+      <div className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/12 px-3 py-2 font-mono text-sm text-zinc-100">
+        <FileText className="size-3.5" />
+        query.sql
+      </div>
       <Button
-        aria-label="Open new SQL tab"
+        aria-label="Open new SQL tab (coming soon)"
+        disabled={true}
         size="icon-sm"
         type="button"
         variant="ghost"
@@ -268,19 +243,25 @@ function ModeTabs({
   setMode: (mode: WorkbenchMode) => void;
 }) {
   return (
-    <div className="inline-flex rounded-xl bg-white/12 p-1 text-sm text-zinc-400">
+    <div
+      aria-label="Workbench mode"
+      className="inline-flex rounded-xl bg-white/12 p-1 text-sm text-zinc-400"
+      role="tablist"
+    >
       {[
         ["editor", "SQL editor"],
         ["builder", "Visual builder"],
         ["english", "Ask in English"],
       ].map(([value, label]) => (
         <Button
+          aria-selected={mode === value}
           className={cn(
             "h-8 rounded-lg px-4",
-            mode === value ? "bg-black text-white shadow" : "text-zinc-400"
+            mode === value ? "bg-zinc-950 text-white shadow" : "text-zinc-400"
           )}
           key={value}
           onClick={() => setMode(value as WorkbenchMode)}
+          role="tab"
           type="button"
           variant="ghost"
         >
@@ -306,7 +287,7 @@ function SqlTextEditor({
       className="overflow-hidden rounded-xl border border-white/10 bg-zinc-900/80 shadow-2xl shadow-black/30"
     >
       <div className="grid min-h-[210px] grid-cols-[52px_1fr]">
-        <div className="border-white/10 border-r bg-black/20 py-5 text-right font-mono text-sm text-zinc-600 leading-8">
+        <div className="border-white/10 border-r bg-zinc-950/20 py-5 text-right font-mono text-sm text-zinc-600 leading-8">
           {EDITOR_LINE_NUMBERS.map((lineNumber) => (
             <div className="pr-4" key={`line-${lineNumber}`}>
               {lineNumber}
@@ -345,7 +326,7 @@ function VisualBuilderPreview() {
           <span className="w-20 font-semibold text-[11px] text-zinc-500 uppercase tracking-[0.18em]">
             From
           </span>
-          <span className="rounded-lg border border-white/10 bg-black px-4 py-2 font-mono text-zinc-100">
+          <span className="rounded-lg border border-white/10 bg-zinc-950 px-4 py-2 font-mono text-zinc-100">
             logistics.shipping.shipments
           </span>
           <span className="text-zinc-500">join:</span>
@@ -375,7 +356,7 @@ function VisualBuilderPreview() {
                   column
                 )
                   ? "bg-zinc-100 text-zinc-950"
-                  : "bg-black text-zinc-500"
+                  : "bg-zinc-950 text-zinc-500"
               )}
               key={column}
             >
@@ -387,14 +368,14 @@ function VisualBuilderPreview() {
           <span className="w-20 font-semibold text-[11px] text-zinc-500 uppercase tracking-[0.18em]">
             Where
           </span>
-          <span className="rounded-lg border border-white/10 bg-black px-4 py-2 font-mono">
+          <span className="rounded-lg border border-white/10 bg-zinc-950 px-4 py-2 font-mono">
             status
           </span>
-          <span className="rounded-lg border border-white/10 bg-black px-4 py-2 font-mono">
+          <span className="rounded-lg border border-white/10 bg-zinc-950 px-4 py-2 font-mono">
             =
           </span>
-          <span className="rounded-lg border border-white/10 bg-black px-4 py-2 font-mono text-zinc-100">
-            'customs_hold'
+          <span className="rounded-lg border border-white/10 bg-zinc-950 px-4 py-2 font-mono text-zinc-100">
+            &apos;customs_hold&apos;
           </span>
         </div>
       </div>
@@ -412,7 +393,7 @@ function VisualBuilderPreview() {
           ].map((step, index) => (
             <div
               className={cn(
-                "min-w-36 rounded-lg border bg-black p-3 font-mono text-sm",
+                "min-w-36 rounded-lg border bg-zinc-950 p-3 font-mono text-sm",
                 index === 2
                   ? "border-blue-400 text-blue-300"
                   : "border-white/10 text-zinc-100"
@@ -459,7 +440,7 @@ function EditorToolbar({
         <kbd className="ml-2 rounded-md bg-zinc-300 px-2 py-1 text-xs">⌘ ↵</kbd>
       </Button>
       <Button
-        className="h-11 rounded-xl bg-black px-5 text-lg text-white hover:bg-zinc-950"
+        className="h-11 rounded-xl bg-zinc-950 px-5 text-lg text-white hover:bg-zinc-900"
         disabled={!canRun || isBusy}
         onClick={onExplain}
         type="button"
@@ -467,14 +448,15 @@ function EditorToolbar({
         Explain
       </Button>
       <Button
-        className="h-11 rounded-xl bg-black px-5 text-lg text-white hover:bg-zinc-950"
+        className="h-11 rounded-xl bg-zinc-950 px-5 text-lg text-white hover:bg-zinc-900"
         onClick={onFormat}
         type="button"
       >
         Format
       </Button>
       <Button
-        className="h-11 rounded-xl bg-black px-5 text-lg text-white hover:bg-zinc-950"
+        className="h-11 rounded-xl bg-zinc-950 px-5 text-lg text-white hover:bg-zinc-900"
+        disabled={true}
         type="button"
       >
         Save query
@@ -483,7 +465,7 @@ function EditorToolbar({
       <span className="font-semibold text-[11px] text-zinc-500 uppercase tracking-[0.18em]">
         Engine
       </span>
-      <span className="inline-flex rounded-lg bg-black p-1 text-sm">
+      <span className="inline-flex rounded-lg bg-zinc-950 p-1 text-sm">
         <span className="rounded-md bg-zinc-800 px-3 py-1 text-white">
           postgres
         </span>
@@ -517,7 +499,10 @@ function ResultsTable({
     );
   }
 
-  const columns = result.columns.map((column) => column.columnName);
+  const columns = withOccurrenceKeys(
+    result.columns.map((column) => column.columnName)
+  );
+  const notices = withOccurrenceKeys(result.notices);
   const rows = result.rows.map((row, index) => ({
     key: row.rowKey || String(index),
     values: row.values.map((cell) => formatCellValue(cell)),
@@ -527,22 +512,38 @@ function ResultsTable({
   return (
     <div className="overflow-hidden rounded-xl border border-white/10 bg-zinc-900/80">
       <div className="flex items-center justify-between gap-4 border-white/10 border-b px-4 py-3 font-mono text-sm text-zinc-400">
-        <span className="min-w-0 truncate">
+        <output aria-label="Executed statement" className="min-w-0 truncate">
           <span className="text-emerald-400">●</span>{" "}
           {statement.replace(/\s+/g, " ").trim()}
-        </span>
+        </output>
         <span className="shrink-0">
           {rowCount.toLocaleString()} rows ·{" "}
           {formatDurationMs(result.stats?.latency)}
         </span>
       </div>
+      {result.stats?.truncated ? (
+        <p className="border-amber-400/20 border-b bg-amber-400/10 px-4 py-2 text-amber-200 text-sm">
+          Results limited to {rowCount.toLocaleString()} rows
+        </p>
+      ) : null}
+      {result.notices.length > 0 ? (
+        <ul className="border-white/10 border-b bg-white/5 px-4 py-2 text-sm text-zinc-300">
+          {notices.map((notice) => (
+            <li key={notice.key}>{notice.value}</li>
+          ))}
+        </ul>
+      ) : null}
       <div className="overflow-auto">
         <table className="w-full min-w-[760px] text-left font-mono text-sm">
           <thead className="bg-white/5 text-zinc-200">
             <tr>
               {columns.map((column) => (
-                <th className="px-4 py-3 font-semibold" key={column}>
-                  {column}
+                <th
+                  className="px-4 py-3 font-semibold"
+                  key={column.key}
+                  scope="col"
+                >
+                  {column.value}
                 </th>
               ))}
             </tr>
@@ -551,7 +552,7 @@ function ResultsTable({
             {rows.map((row) => (
               <tr key={row.key}>
                 {columns.map((column, cellIndex) => (
-                  <td className="px-4 py-3" key={column}>
+                  <td className="px-4 py-3" key={column.key}>
                     {row.values[cellIndex] ?? ""}
                   </td>
                 ))}
@@ -569,10 +570,9 @@ function formatPlanMs(value: number | null): string {
     return "—";
   }
 
-  return `${new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 2,
-    minimumFractionDigits: value < 10 ? 2 : 1,
-  }).format(value)} ms`;
+  const formatter =
+    value < 10 ? SMALL_PLAN_MS_FORMATTER : LARGE_PLAN_MS_FORMATTER;
+  return `${formatter.format(value)} ms`;
 }
 
 function slowestExplainNode(
@@ -688,7 +688,7 @@ function ExplainControls({
           <Button
             className={cn(
               "h-8 rounded-lg px-4",
-              view === value ? "bg-black text-white" : "text-zinc-400"
+              view === value ? "bg-zinc-950 text-white" : "text-zinc-400"
             )}
             key={value}
             onClick={() => setView(value as ExplainView)}
@@ -714,26 +714,89 @@ function ExplainControls({
   );
 }
 
-function PlanInsights({
-  onDismiss,
-  summary,
-}: {
-  onDismiss: () => void;
-  summary: ExplainPlanSummary;
-}) {
-  const root = summary.nodes[0] ?? null;
-  const slowest = slowestExplainNode(summary);
+function EstimateInsight({ root }: { root: ExplainPlanNode }) {
   const estimateDelta =
-    root?.actualRows === null || root?.actualRows === undefined
+    root.actualRows === null
       ? null
       : Math.abs(root.actualRows - root.estimatedRows);
   const estimatePercent =
-    root && estimateDelta !== null && root.estimatedRows > 0
+    estimateDelta !== null && root.estimatedRows > 0
       ? Math.round((estimateDelta / root.estimatedRows) * PERCENT)
       : null;
   const estimatesHealthy =
     estimatePercent !== null &&
     estimatePercent <= HEALTHY_ESTIMATE_DELTA_PERCENT;
+
+  return (
+    <article className="px-5 py-4">
+      <p className="font-semibold text-zinc-100">
+        <span
+          className={cn(
+            "mr-2",
+            estimatesHealthy ? "text-emerald-400" : "text-amber-300"
+          )}
+        >
+          ●
+        </span>
+        {estimatesHealthy ? "Estimates are healthy" : "Check row estimates"}
+      </p>
+      <p className="mt-1 text-sm text-zinc-400">
+        Actual {root.actualRows?.toLocaleString() ?? "—"} rows vs{" "}
+        {root.estimatedRows.toLocaleString()} planned (
+        {estimatePercent?.toLocaleString() ?? "—"}% off).
+      </p>
+    </article>
+  );
+}
+
+function BufferInsight({ summary }: { summary: ExplainPlanSummary }) {
+  return (
+    <article className="px-5 py-4">
+      <p className="font-semibold text-zinc-100">
+        <span
+          className={cn(
+            "mr-2",
+            summary.sharedReadBlocks > 0 ? "text-amber-300" : "text-emerald-400"
+          )}
+        >
+          ●
+        </span>
+        {summary.sharedReadBlocks.toLocaleString()} buffers read from disk
+      </p>
+      <p className="mt-1 text-sm text-zinc-400">
+        PostgreSQL reported {summary.sharedHitBlocks.toLocaleString()} shared
+        buffer hits and {summary.sharedReadBlocks.toLocaleString()} reads.
+      </p>
+    </article>
+  );
+}
+
+function SlowestNodeInsight({ node }: { node: ExplainPlanNode }) {
+  return (
+    <article className="px-5 py-4">
+      <p className="font-semibold text-zinc-100">
+        <span className="mr-2 text-blue-400">●</span>
+        Slowest node: {node.label}
+      </p>
+      <p className="mt-1 text-sm text-zinc-400">
+        PostgreSQL reported {formatPlanMs(node.exclusiveTimeMs)} of its own
+        execution time for this node.
+      </p>
+    </article>
+  );
+}
+
+function PlanInsights({
+  kinds,
+  onDismiss,
+  summary,
+}: {
+  kinds: PlanInsightKind[];
+  onDismiss: () => void;
+  summary: ExplainPlanSummary;
+}) {
+  const [root] = summary.nodes;
+  const slowest = slowestExplainNode(summary);
 
   return (
     <section className="overflow-hidden rounded-xl border border-white/10 bg-zinc-900/90">
@@ -755,63 +818,13 @@ function PlanInsights({
         </Button>
       </div>
       <div className="divide-y divide-white/10">
-        <article className="px-5 py-4">
-          <p className="font-semibold text-zinc-100">
-            <span
-              className={cn(
-                "mr-2",
-                estimatesHealthy ? "text-emerald-400" : "text-amber-300"
-              )}
-            >
-              ●
-            </span>
-            {estimatesHealthy ? "Estimates are healthy" : "Check row estimates"}
-          </p>
-          <p className="mt-1 text-sm text-zinc-400">
-            {root && estimatePercent !== null
-              ? "Actual " +
-                (root.actualRows?.toLocaleString() ?? "—") +
-                " rows vs " +
-                root.estimatedRows.toLocaleString() +
-                " planned (" +
-                estimatePercent.toLocaleString() +
-                "% off)."
-              : "PostgreSQL did not report actual and planned row counts."}
-          </p>
-        </article>
-        <article className="px-5 py-4">
-          <p className="font-semibold text-zinc-100">
-            <span
-              className={cn(
-                "mr-2",
-                summary.sharedReadBlocks > 0
-                  ? "text-amber-300"
-                  : "text-emerald-400"
-              )}
-            >
-              ●
-            </span>
-            {summary.sharedReadBlocks.toLocaleString()} buffers read from disk
-          </p>
-          <p className="mt-1 text-sm text-zinc-400">
-            PostgreSQL reported {summary.sharedHitBlocks.toLocaleString()}{" "}
-            shared buffer hits and {summary.sharedReadBlocks.toLocaleString()}{" "}
-            reads.
-          </p>
-        </article>
-        <article className="px-5 py-4">
-          <p className="font-semibold text-zinc-100">
-            <span className="mr-2 text-blue-400">●</span>
-            {slowest ? `Slowest node: ${slowest.label}` : "No timed nodes"}
-          </p>
-          <p className="mt-1 text-sm text-zinc-400">
-            {slowest
-              ? "PostgreSQL reported " +
-                formatPlanMs(slowest.exclusiveTimeMs) +
-                " of its own execution time for this node."
-              : "Run EXPLAIN ANALYZE to collect node timing."}
-          </p>
-        </article>
+        {kinds.includes("estimates") && root ? (
+          <EstimateInsight root={root} />
+        ) : null}
+        {kinds.includes("buffers") ? <BufferInsight summary={summary} /> : null}
+        {kinds.includes("slowest") && slowest ? (
+          <SlowestNodeInsight node={slowest} />
+        ) : null}
       </div>
     </section>
   );
@@ -832,7 +845,7 @@ function ExplainGraph({ summary }: { summary: ExplainPlanSummary }) {
   const maxTimeMs = slowest?.exclusiveTimeMs ?? 0;
 
   return (
-    <div className="min-h-[540px] overflow-auto rounded-xl border border-white/10 bg-black p-8 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.12)_1px,transparent_0)] [background-size:24px_24px]">
+    <div className="min-h-[540px] overflow-auto rounded-xl border border-white/10 bg-zinc-950 p-8 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.12)_1px,transparent_0)] [background-size:24px_24px]">
       <div className="mx-auto grid max-w-4xl gap-4">
         {summary.nodes.map((node) => {
           const offset =
@@ -840,7 +853,7 @@ function ExplainGraph({ summary }: { summary: ExplainPlanSummary }) {
           return (
             <article
               className={cn(
-                "rounded-xl border bg-black p-4 shadow-2xl",
+                "rounded-xl border bg-zinc-950 p-4 shadow-2xl",
                 node.id === slowest?.id
                   ? "border-orange-400 shadow-[0_0_0_2px_rgba(251,146,60,0.2)]"
                   : "border-white/15"
@@ -882,7 +895,7 @@ function ExplainGraph({ summary }: { summary: ExplainPlanSummary }) {
 function ExplainTimeline({ summary }: { summary: ExplainPlanSummary }) {
   const maxTimeMs = slowestExplainNode(summary)?.exclusiveTimeMs ?? 0;
   return (
-    <div className="overflow-hidden rounded-xl border border-white/10 bg-black p-5">
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-zinc-950 p-5">
       <div className="grid gap-4">
         {summary.nodes.map((node) => (
           <div
@@ -912,15 +925,25 @@ function ExplainTimeline({ summary }: { summary: ExplainPlanSummary }) {
 
 function ExplainTable({ summary }: { summary: ExplainPlanSummary }) {
   return (
-    <div className="overflow-auto rounded-xl border border-white/10 bg-black">
+    <div className="overflow-auto rounded-xl border border-white/10 bg-zinc-950">
       <table className="w-full min-w-[880px] text-left font-mono text-sm">
         <thead className="text-zinc-500 uppercase tracking-wider">
           <tr>
-            <th className="px-4 py-3">#</th>
-            <th className="px-4 py-3">Node</th>
-            <th className="px-4 py-3 text-right">Own time</th>
-            <th className="px-4 py-3 text-right">Rows act / est</th>
-            <th className="px-4 py-3 text-right">Loops</th>
+            <th className="px-4 py-3" scope="col">
+              #
+            </th>
+            <th className="px-4 py-3" scope="col">
+              Node
+            </th>
+            <th className="px-4 py-3 text-right" scope="col">
+              Own time
+            </th>
+            <th className="px-4 py-3 text-right" scope="col">
+              Rows act / est
+            </th>
+            <th className="px-4 py-3 text-right" scope="col">
+              Loops
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/10">
@@ -977,9 +1000,9 @@ function ExplainText({ explain }: { explain: ExplainQueryResponse }) {
     <section className="overflow-hidden rounded-xl border border-white/10 bg-zinc-900/90">
       <div className="flex items-center justify-between border-white/10 border-b px-5 py-4">
         <h3 className="font-semibold text-zinc-100">
-          EXPLAIN (ANALYZE, BUFFERS, VERBOSE){" "}
+          EXPLAIN (ANALYZE, BUFFERS){" "}
           <span className="ml-2 font-normal text-sm text-zinc-500">
-            text format — paste anywhere
+            text format: paste anywhere
           </span>
         </h3>
         <Button onClick={copyPlan} size="sm" type="button" variant="secondary">
@@ -1034,6 +1057,7 @@ function WorkbenchOutput({
   explainResult,
   explainSummary,
   explainView,
+  insightKinds,
   insightsOpen,
   onDismissInsights,
   queryResult,
@@ -1043,6 +1067,7 @@ function WorkbenchOutput({
   explainResult: ExplainQueryResponse | null;
   explainSummary: ExplainPlanSummary;
   explainView: ExplainView;
+  insightKinds: PlanInsightKind[];
   insightsOpen: boolean;
   onDismissInsights: () => void;
   queryResult: ExecuteQueryTableState | null;
@@ -1067,8 +1092,12 @@ function WorkbenchOutput({
   return (
     <div className="grid gap-5">
       <MetricCards explain={explainResult} summary={explainSummary} />
-      {insightsOpen ? (
-        <PlanInsights onDismiss={onDismissInsights} summary={explainSummary} />
+      {insightsOpen && insightKinds.length > 0 ? (
+        <PlanInsights
+          kinds={insightKinds}
+          onDismiss={onDismissInsights}
+          summary={explainSummary}
+        />
       ) : null}
       <ExplainPanel
         explain={explainResult}
@@ -1091,13 +1120,15 @@ export function SqlWorkbenchPage({
   const [queryResult, setQueryResult] = useState<ExecuteQueryTableState | null>(
     null
   );
+  const [executedStatement, setExecutedStatement] = useState("");
   const [explainResult, setExplainResult] =
     useState<ExplainQueryResponse | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(true);
-  const canRun = isReadOnlyStatementCandidate(statement);
+  const canRun = mode === "editor" && isReadOnlyStatementCandidate(statement);
   const explainSummary = parseExplainTextPlan(explainResult?.plan ?? "");
+  const insightKinds = planInsightKinds(explainSummary);
 
   async function runQuery() {
     if (!canRun) {
@@ -1105,14 +1136,16 @@ export function SqlWorkbenchPage({
     }
     setIsBusy(true);
     setError(null);
+    const submittedStatement = statement;
     try {
       const stream = executeWorkbenchQuery({
         batchSize: 250,
         parent,
         rowLimit: 1000,
-        statement,
+        statement: submittedStatement,
       });
       setQueryResult(await collectExecuteQueryStream(stream));
+      setExecutedStatement(submittedStatement);
       setResultTab("results");
     } catch (caught) {
       setError(caught);
@@ -1167,7 +1200,8 @@ export function SqlWorkbenchPage({
             <div className="flex items-center gap-4">
               <ModeTabs mode={mode} setMode={setMode} />
               <Button
-                aria-label="Enter full screen"
+                aria-label="Enter full screen (coming soon)"
+                disabled={true}
                 size="icon"
                 type="button"
                 variant="ghost"
@@ -1184,7 +1218,7 @@ export function SqlWorkbenchPage({
             <section className="rounded-xl border border-white/10 bg-zinc-900/80 p-5">
               <div className="flex items-center gap-3 text-lg text-zinc-500">
                 <Sparkles className="size-5 text-blue-400" />
-                Describe what you want to see — for example, shipments held in
+                Describe what you want to see, for example, shipments held in
                 customs arriving this month
               </div>
               <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
@@ -1198,7 +1232,7 @@ export function SqlWorkbenchPage({
                   "unpaid invoices over 20k, newest first",
                 ].map((suggestion) => (
                   <span
-                    className="rounded-full bg-black px-3 py-1.5 text-zinc-400"
+                    className="rounded-full bg-zinc-950 px-3 py-1.5 text-zinc-400"
                     key={suggestion}
                   >
                     {suggestion}
@@ -1253,7 +1287,7 @@ export function SqlWorkbenchPage({
               </span>
               {resultTab === "explain" && explainResult ? (
                 <ExplainControls
-                  insightCount={3}
+                  insightCount={insightKinds.length}
                   insightsOpen={insightsOpen}
                   onToggleInsights={() => setInsightsOpen(!insightsOpen)}
                   setView={setExplainView}
@@ -1267,11 +1301,12 @@ export function SqlWorkbenchPage({
             explainResult={explainResult}
             explainSummary={explainSummary}
             explainView={explainView}
+            insightKinds={insightKinds}
             insightsOpen={insightsOpen}
             onDismissInsights={() => setInsightsOpen(false)}
             queryResult={queryResult}
             resultTab={resultTab}
-            statement={statement}
+            statement={executedStatement}
           />
         </div>
       </section>
