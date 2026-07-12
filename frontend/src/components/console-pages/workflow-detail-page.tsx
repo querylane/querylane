@@ -9,10 +9,8 @@ import {
   ResourcePageState,
   SectionCard,
 } from "@/components/console-pages/console-layout";
-import {
-  WorkflowPreconditionPanel,
-  WorkflowStatusBadge,
-} from "@/components/console-pages/database-workflows-page";
+import { WorkflowPreconditionPanel } from "@/components/console-pages/workflow-precondition-panel";
+import { WorkflowStatusBadge } from "@/components/console-pages/workflow-status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
