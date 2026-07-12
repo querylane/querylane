@@ -2,6 +2,7 @@
 -- PostgreSQL database dump
 --
 
+\restrict 5rZUbcEOWqLDlOb2VEV9R5BULZfldhSlSt1XjM0iegiUwzIdue9wXin9F8JaaU4
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -216,7 +217,17 @@ CREATE TABLE public.catalog_table_index (
     included_columns text[] DEFAULT '{}'::text[] NOT NULL,
     predicate text DEFAULT ''::text NOT NULL,
     size_bytes bigint DEFAULT 0 NOT NULL,
-    synced_at timestamp with time zone DEFAULT now() NOT NULL
+    synced_at timestamp with time zone DEFAULT now() NOT NULL,
+    key_parts text[] DEFAULT '{}'::text[] NOT NULL,
+    is_valid boolean DEFAULT true NOT NULL,
+    has_expression boolean DEFAULT false NOT NULL,
+    definition text DEFAULT ''::text NOT NULL,
+    scan_count bigint DEFAULT 0 NOT NULL,
+    tuples_read bigint DEFAULT 0 NOT NULL,
+    tuples_fetched bigint DEFAULT 0 NOT NULL,
+    blocks_hit bigint DEFAULT 0 NOT NULL,
+    blocks_read bigint DEFAULT 0 NOT NULL,
+    has_usage_stats boolean DEFAULT false NOT NULL
 );
 
 
@@ -773,4 +784,5 @@ CREATE TRIGGER update_runner_execution_state_updated_at BEFORE UPDATE ON public.
 -- PostgreSQL database dump complete
 --
 
+\unrestrict 5rZUbcEOWqLDlOb2VEV9R5BULZfldhSlSt1XjM0iegiUwzIdue9wXin9F8JaaU4
 

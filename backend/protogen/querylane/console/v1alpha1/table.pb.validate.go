@@ -2684,6 +2684,24 @@ func (m *TableIndex) validate(all bool) error {
 
 	// no validation rules for SizeBytes
 
+	// no validation rules for IsValid
+
+	// no validation rules for HasExpression
+
+	// no validation rules for Definition
+
+	// no validation rules for ScanCount
+
+	// no validation rules for TuplesRead
+
+	// no validation rules for TuplesFetched
+
+	// no validation rules for BlocksHit
+
+	// no validation rules for BlocksRead
+
+	// no validation rules for HasUsageStats
+
 	if len(errors) > 0 {
 		return TableIndexMultiError(errors)
 	}

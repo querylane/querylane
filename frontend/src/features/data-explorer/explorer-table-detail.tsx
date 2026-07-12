@@ -43,6 +43,7 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
 import {
@@ -96,7 +97,6 @@ import {
   columnNullability,
   columnTypeCategory,
   filterColumnDetailRows,
-  filterIndexesByMethod,
   filterPoliciesByMode,
   filterTableTriggers,
   type TriggerStateFilter,
@@ -310,18 +310,6 @@ function presentColumnOptions<Value extends string>(
 ): FacetedFilterOption[] {
   const present = new Set(values);
   return options.filter((option) => present.has(option.value));
-}
-function presentIndexMethodOptions(
-  indexes: TableIndex[]
-): FacetedFilterOption[] {
-  const options = new Map<string, string>();
-  for (const index of indexes) {
-    const value = normalizeIndexMethod(index.method);
-    options.set(value, describePostgresIndexMethod(index.method).label);
-  }
-  return Array.from(options.entries())
-    .sort((left, right) => left[1].localeCompare(right[1]))
-    .map(([value, label]) => ({ label, value }));
 }
 function presentConstraintKindOptions(
   constraints: TableConstraint[]
@@ -999,49 +987,6 @@ const INDEX_METHOD_ICONS: Record<string, LucideIcon> = {
   rum: Search,
   spgist: Network,
 };
-
-function IndexMethodCell({ method }: { method: string }) {
-  const methodMeta = describePostgresIndexMethod(method);
-  const Icon = INDEX_METHOD_ICONS[normalizeIndexMethod(method)] ?? Table2;
-  return (
-    <div
-      className="min-w-0 max-w-full [overflow-wrap:anywhere]"
-      title={`${methodMeta.label}. ${methodMeta.summary}`}
-    >
-      <div className="flex min-w-0 items-start gap-2">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-          <Icon aria-hidden="true" className="size-4" />
-        </span>
-        <div className="min-w-0">
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <span className="font-semibold text-foreground text-xs">
-              {methodMeta.label}
-            </span>
-            <Badge className="h-4 px-1.5 text-[10px]" variant="outline">
-              {methodMeta.source}
-            </Badge>
-          </div>
-          <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-            {methodMeta.summary}
-          </p>
-        </div>
-      </div>
-      {methodMeta.badges.length > 0 ? (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1">
-          {methodMeta.badges.map((badge) => (
-            <Badge
-              className="h-4 px-1.5 font-mono text-[9px] text-muted-foreground"
-              key={badge}
-              variant="secondary"
-            >
-              {badge}
-            </Badge>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
 
 function TableDetailHeader({
   columnCount,
@@ -2058,94 +2003,415 @@ function PartitionsTab({
   );
 }
 
-const indexColumns: DataTableColumnDef<TableIndex>[] = [
-  {
-    accessorKey: "indexName",
-    cell: ({ row }) => row.original.indexName,
-    header: ({ column }) => (
-      <SortableHeader column={column}>Name</SortableHeader>
-    ),
-    meta: {
-      cellClassName:
-        "w-[24%] max-w-0 whitespace-normal break-words font-mono text-xs [overflow-wrap:anywhere]",
-      headerClassName: "w-[24%] whitespace-normal pl-3",
-    },
-  },
-  {
-    accessorKey: "method",
-    cell: ({ row }) => <IndexMethodCell method={row.original.method} />,
-    header: ({ column }) => (
-      <SortableHeader column={column}>Method</SortableHeader>
-    ),
-    meta: {
-      cellClassName: "w-[27%] max-w-0 whitespace-normal align-top",
-      headerClassName: "w-[27%] whitespace-normal",
-    },
-  },
-  {
-    accessorFn: (row) => row.keyColumns.join(", "),
-    cell: ({ row }) => {
-      const { keyColumns, includedColumns } = row.original;
-      const base = `(${keyColumns.join(", ")})`;
-      if (includedColumns.length === 0) {
+const SIMPLE_SQL_IDENTIFIER_PATTERN = /^[a-z_][a-z0-9_]*$/;
+const INDEX_METRIC_LABELS = [
+  "Scans",
+  "Tuples read",
+  "Tuples fetched",
+  "Cache hit",
+] as const;
+const PERCENT_SCALE = 100n;
+const FULL_PERCENT = 100;
+const MIN_VISIBLE_SCAN_SHARE_PERCENT = 2;
+const COMPACT_ONE_DECIMAL_THRESHOLD = 100;
+const ONE_DECIMAL_SCALE = 10;
+const CACHE_PERCENT_TENTHS_SCALE = 1000n;
+
+function formatSqlIdentifier(identifier: string) {
+  if (SIMPLE_SQL_IDENTIFIER_PATTERN.test(identifier)) {
+    return identifier;
+  }
+  return `"${identifier.replaceAll('"', '""')}"`;
+}
+function formatQualifiedTableName(schemaName: string, tableName: string) {
+  return `${formatSqlIdentifier(schemaName)}.${formatSqlIdentifier(tableName)}`;
+}
+function formatIndexSqlColumns(index: TableIndex) {
+  const keyParts = getIndexKeyParts(index);
+  if (keyParts.length === 0) {
+    return "/* expression */";
+  }
+  return keyParts.map(formatIndexKeyPartForSql).join(", ");
+}
+function createIndexSql({
+  index,
+  schemaName,
+  tableName,
+}: {
+  index: TableIndex;
+  schemaName: string;
+  tableName: string;
+}) {
+  const unique = index.isUnique ? "UNIQUE " : "";
+  const indexName = formatSqlIdentifier(index.indexName || "unnamed_index");
+  const method = index.method || "btree";
+  const columns = formatIndexSqlColumns(index);
+  const included =
+    index.includedColumns.length > 0
+      ? ` INCLUDE (${index.includedColumns.map(formatSqlIdentifier).join(", ")})`
+      : "";
+  const predicate = index.predicate ? ` WHERE ${index.predicate}` : "";
+  if (index.definition) {
+    return index.definition;
+  }
+  return `CREATE ${unique}INDEX ${indexName} ON ${formatQualifiedTableName(
+    schemaName,
+    tableName
+  )} USING ${method} (${columns})${included}${predicate}`;
+}
+function formatIndexKeyPartForSql(keyPart: string) {
+  if (SIMPLE_SQL_IDENTIFIER_PATTERN.test(keyPart)) {
+    return keyPart;
+  }
+  if (keyPart.includes("(") || keyPart.includes(" ")) {
+    return keyPart;
+  }
+  return formatSqlIdentifier(keyPart);
+}
+function getIndexKeyParts(index: TableIndex) {
+  if (index.keyParts.length > 0) {
+    return index.keyParts;
+  }
+  return index.keyColumns;
+}
+function sumIndexSizeBytes(indexes: TableIndex[]) {
+  return indexes.reduce<bigint>((total, index) => {
+    if (index.sizeBytes < 0n) {
+      return total;
+    }
+    return total + index.sizeBytes;
+  }, 0n);
+}
+function sumIndexScans(indexes: TableIndex[]) {
+  return indexes.reduce<bigint>((total, index) => {
+    if (!(index.hasUsageStats && index.scanCount > 0n)) {
+      return total;
+    }
+    return total + index.scanCount;
+  }, 0n);
+}
+function hasIndexUsageStats(indexes: TableIndex[]) {
+  return indexes.some((index) => index.hasUsageStats);
+}
+function isIndexUnused(index: TableIndex) {
+  return index.hasUsageStats && index.scanCount === 0n;
+}
+function indexInvalidCount(indexes: TableIndex[]) {
+  return indexes.filter((index) => !index.isValid).length;
+}
+function indexScanShare(index: TableIndex, maxScanCount: bigint) {
+  if (!(index.hasUsageStats && index.scanCount > 0n && maxScanCount > 0n)) {
+    return 0;
+  }
+  const percent = Number((index.scanCount * PERCENT_SCALE) / maxScanCount);
+  return Math.min(
+    FULL_PERCENT,
+    Math.max(MIN_VISIBLE_SCAN_SHARE_PERCENT, percent)
+  );
+}
+function uniqueIndexCount(indexes: TableIndex[]) {
+  return indexes.filter((index) => index.isUnique).length;
+}
+function formatIndexCountDetail(indexes: TableIndex[]) {
+  const unusedCount = indexes.filter(isIndexUnused).length;
+  if (indexes.length === 0) {
+    return "no index metadata";
+  }
+  if (hasIndexUsageStats(indexes)) {
+    return unusedCount > 0
+      ? `${unusedCount.toLocaleString()} unused`
+      : "all in use";
+  }
+  const uniqueCount = uniqueIndexCount(indexes);
+  if (uniqueCount === 0) {
+    return "non-unique only";
+  }
+  return `${uniqueCount.toLocaleString()} unique`;
+}
+function formatValidityValue(indexes: TableIndex[]) {
+  const invalidCount = indexInvalidCount(indexes);
+  if (invalidCount === 0) {
+    return "all valid";
+  }
+  return `${invalidCount.toLocaleString()} invalid`;
+}
+function formatValidityDetail(indexes: TableIndex[]) {
+  const invalidCount = indexInvalidCount(indexes);
+  if (invalidCount === 0) {
+    return "no INVALID indexes";
+  }
+  return "needs attention";
+}
+function formatCompactInteger(value: bigint) {
+  if (value === 0n) {
+    return "0";
+  }
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return value.toLocaleString();
+  }
+  const units = [
+    { suffix: "B", value: 1_000_000_000 },
+    { suffix: "M", value: 1_000_000 },
+    { suffix: "k", value: 1000 },
+  ] as const;
+  const unit = units.find((candidate) => numeric >= candidate.value);
+  if (!unit) {
+    return numeric.toLocaleString();
+  }
+  const compact = numeric / unit.value;
+  const rounded =
+    compact >= COMPACT_ONE_DECIMAL_THRESHOLD
+      ? Math.round(compact)
+      : Math.round(compact * ONE_DECIMAL_SCALE) / ONE_DECIMAL_SCALE;
+  return `${rounded.toLocaleString()}${unit.suffix}`;
+}
+function formatMaybeStat(value: bigint, hasUsageStats: boolean) {
+  if (!hasUsageStats) {
+    return "—";
+  }
+  return formatCompactInteger(value);
+}
+function formatCacheHit(index: TableIndex) {
+  if (!index.hasUsageStats) {
+    return "—";
+  }
+  const totalBlocks = index.blocksHit + index.blocksRead;
+  if (totalBlocks <= 0n) {
+    return "—";
+  }
+  const tenths =
+    (index.blocksHit * CACHE_PERCENT_TENTHS_SCALE + totalBlocks / 2n) /
+    totalBlocks;
+  return `${(Number(tenths) / ONE_DECIMAL_SCALE).toLocaleString()}%`;
+}
+function indexHasExpression(index: TableIndex) {
+  return (
+    index.hasExpression ||
+    getIndexKeyParts(index).some(
+      (keyPart) => !SIMPLE_SQL_IDENTIFIER_PATTERN.test(keyPart)
+    )
+  );
+}
+function getIndexMetricValue(
+  label: (typeof INDEX_METRIC_LABELS)[number],
+  index: TableIndex
+) {
+  switch (label) {
+    case "Scans":
+      return formatMaybeStat(index.scanCount, index.hasUsageStats);
+    case "Tuples read":
+      return formatMaybeStat(index.tuplesRead, index.hasUsageStats);
+    case "Tuples fetched":
+      return formatMaybeStat(index.tuplesFetched, index.hasUsageStats);
+    case "Cache hit":
+      return formatCacheHit(index);
+    default: {
+      const exhaustive: never = label;
+      return exhaustive;
+    }
+  }
+}
+function IndexSummaryCard({
+  detail,
+  label,
+  value,
+}: {
+  detail: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <Card className="gap-0 py-0" size="sm">
+      <CardContent className="p-4">
+        <p className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
+          {label}
+        </p>
+        <p className="mt-1 font-mono font-semibold text-2xl leading-none">
+          {value}
+        </p>
+        <p className="mt-2 text-muted-foreground text-xs">{detail}</p>
+      </CardContent>
+    </Card>
+  );
+}
+function IndexMethodBadge({ method }: { method: string }) {
+  const methodMeta = describePostgresIndexMethod(method);
+  const Icon = INDEX_METHOD_ICONS[normalizeIndexMethod(method)] ?? Table2;
+  return (
+    <Badge
+      className="gap-1 rounded-full px-2 py-1 font-mono text-[11px]"
+      title={`${methodMeta.label}. ${methodMeta.summary}`}
+      variant="outline"
+    >
+      <Icon aria-hidden="true" className="size-3" />
+      {normalizeIndexMethod(method)}
+    </Badge>
+  );
+}
+function IndexColumnPills({ index }: { index: TableIndex }) {
+  const keyParts = getIndexKeyParts(index);
+  if (keyParts.length === 0 && index.includedColumns.length === 0) {
+    return (
+      <span className="font-mono text-muted-foreground text-sm">none</span>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {keyParts.map((column) => (
+        <Badge
+          className="rounded-full font-mono"
+          key={`key-${column}`}
+          variant="secondary"
+        >
+          {column}
+        </Badge>
+      ))}
+      {index.includedColumns.map((column) => (
+        <Badge
+          className="rounded-full font-mono"
+          key={`include-${column}`}
+          variant="outline"
+        >
+          INCLUDE {column}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+function IndexMetrics({ index }: { index: TableIndex }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-4">
+      {INDEX_METRIC_LABELS.map((label) => {
+        const value = getIndexMetricValue(label, index);
         return (
-          <span className="block whitespace-normal break-words [overflow-wrap:anywhere]">
-            {base}
-          </span>
+          <div key={label}>
+            <p
+              className={cn(
+                "font-mono font-semibold text-lg leading-none",
+                label === "Cache hit" && value !== "—" && "text-emerald-500"
+              )}
+            >
+              {value}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground uppercase tracking-wider">
+              {label}
+            </p>
+          </div>
         );
-      }
-      return (
-        <span className="block whitespace-normal break-words [overflow-wrap:anywhere]">
-          {base} INCLUDE ({includedColumns.join(", ")})
-        </span>
-      );
-    },
-    header: "Columns",
-    id: "columns",
-    meta: {
-      cellClassName:
-        "w-[31%] max-w-0 whitespace-normal break-words font-mono text-xs leading-relaxed [overflow-wrap:anywhere]",
-      headerClassName: "w-[31%] whitespace-normal",
-    },
-  },
-  {
-    accessorKey: "isUnique",
-    cell: ({ row }) =>
-      row.original.isUnique ? (
-        "YES"
-      ) : (
-        <span className="text-muted-foreground">no</span>
-      ),
-    header: ({ column }) => (
-      <SortableHeader column={column}>Unique</SortableHeader>
-    ),
-    id: "isUnique",
-    meta: {
-      cellClassName: "w-[9%] whitespace-normal font-mono text-xs",
-      headerClassName: "w-[9%] whitespace-normal",
-    },
-  },
-  {
-    accessorFn: (row) => Number(row.sizeBytes),
-    cell: ({ row }) => formatBytes(row.original.sizeBytes),
-    header: ({ column }) => (
-      <SortableHeader className="ml-auto" column={column}>
-        Size
-      </SortableHeader>
-    ),
-    id: "sizeBytes",
-    meta: {
-      cellClassName: "w-[9%] whitespace-normal text-right font-mono text-xs",
-      headerClassName: "w-[9%] whitespace-normal text-right",
-    },
-  },
-];
+      })}
+    </div>
+  );
+}
+function IndexSqlBlock({ sql }: { sql: string }) {
+  return (
+    <div className="border-t bg-muted/20 p-4">
+      <SqlCodeBlock
+        className="whitespace-pre-wrap break-words border-0 bg-transparent p-0 pr-10 text-[12px]"
+        sql={sql}
+      />
+    </div>
+  );
+}
+function IndexCard({
+  index,
+  schemaName,
+  tableName,
+  maxScanCount,
+}: {
+  index: TableIndex;
+  maxScanCount: bigint;
+  schemaName: string;
+  tableName: string;
+}) {
+  const sql = createIndexSql({ index, schemaName, tableName });
+  const scanShare = indexScanShare(index, maxScanCount);
+  const unused = isIndexUnused(index);
+  return (
+    <Card
+      className={cn(
+        "gap-0 py-0",
+        unused && "ring-amber-500/70 dark:ring-amber-400/60"
+      )}
+      size="sm"
+    >
+      <CardHeader className="bg-card py-4">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <CardTitle className="break-words font-mono text-base">
+            {index.indexName || "unnamed_index"}
+          </CardTitle>
+          <IndexMethodBadge method={index.method} />
+          {index.isUnique ? (
+            <Badge
+              className="rounded-full px-2 py-1 font-semibold text-[11px]"
+              variant="secondary"
+            >
+              UNIQUE
+            </Badge>
+          ) : null}
+          {index.predicate ? (
+            <Badge
+              className="rounded-full px-2 py-1 font-semibold text-[11px]"
+              variant="outline"
+            >
+              PARTIAL
+            </Badge>
+          ) : null}
+          {indexHasExpression(index) ? (
+            <Badge
+              className="rounded-full px-2 py-1 font-semibold text-[11px]"
+              variant="outline"
+            >
+              EXPRESSION
+            </Badge>
+          ) : null}
+          {unused ? (
+            <Badge className="rounded-full bg-amber-500/20 px-2 py-1 font-semibold text-[11px] text-amber-700 dark:text-amber-300">
+              UNUSED
+            </Badge>
+          ) : null}
+          <span className="ml-auto font-mono text-muted-foreground text-sm">
+            {formatBytes(index.sizeBytes)}
+          </span>
+        </div>
+        <CardDescription className="mt-3 flex flex-wrap items-center gap-2">
+          <span>Columns</span>
+          <IndexColumnPills index={index} />
+          {index.predicate ? (
+            <span className="font-mono text-xs">WHERE {index.predicate}</span>
+          ) : null}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 p-4">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)]">
+          <div className="min-w-0 space-y-2">
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                aria-hidden="true"
+                className="h-full rounded-full bg-muted-foreground/70"
+                style={{ width: `${scanShare}%` }}
+              />
+            </div>
+            <p className="text-muted-foreground text-xs">share of scans</p>
+          </div>
+          <IndexMetrics index={index} />
+        </div>
+      </CardContent>
+      <IndexSqlBlock sql={sql} />
+    </Card>
+  );
+}
 function IndexesTab({
   query,
+  schemaName,
+  table,
+  tableName,
 }: {
   query: ReturnType<typeof useListTableIndexesQuery>;
+  schemaName: string;
+  table: TableProto | undefined;
+  tableName: string;
 }) {
-  const [methodFilters, setMethodFilters] = useState<string[]>([]);
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
     return (
@@ -2166,31 +2432,68 @@ function IndexesTab({
     return <TabSkeleton />;
   }
   const indexes = query.data.indexes;
-  const filteredIndexes = filterIndexesByMethod(indexes, methodFilters);
+  if (indexes.length === 0) {
+    return <TableResourceEmptyState category="indexes" toolbar={toolbar} />;
+  }
+  const totalSizeBytes = sumIndexSizeBytes(indexes);
+  const totalScanCount = sumIndexScans(indexes);
+  const usageStatsAvailable = hasIndexUsageStats(indexes);
+  const maxScanCount = indexes.reduce<bigint>(
+    (max, index) =>
+      index.hasUsageStats && index.scanCount > max ? index.scanCount : max,
+    0n
+  );
   return (
-    <MetadataTabResult
-      category="indexes"
-      columns={indexColumns}
-      data={filteredIndexes}
-      filterColumn="indexName"
-      filterPlaceholder="Search indexes…"
-      filters={
-        <FacetFilterBar
-          filters={[
-            {
-              handleSelectedValuesChange: setMethodFilters,
-              label: "Method",
-              options: presentIndexMethodOptions(indexes),
-              selectedValues: methodFilters,
-            },
-          ]}
-        />
-      }
-      hasUnfilteredData={indexes.length > 0}
-      tableClassName="table-fixed"
-      tableKey="data-explorer-table-indexes"
-      toolbar={toolbar}
-    />
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-stretch gap-3">
+        <div className="grid flex-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <IndexSummaryCard
+            detail={formatIndexCountDetail(indexes)}
+            label="Indexes"
+            value={indexes.length.toLocaleString()}
+          />
+          <IndexSummaryCard
+            detail={`vs heap ${formatBytes(table?.sizeBytes)}`}
+            label="Total size"
+            value={formatBytes(totalSizeBytes)}
+          />
+          <IndexSummaryCard
+            detail={
+              usageStatsAvailable
+                ? "across all indexes"
+                : "usage stats unavailable"
+            }
+            label="Scans"
+            value={
+              usageStatsAvailable ? formatCompactInteger(totalScanCount) : "—"
+            }
+          />
+          <IndexSummaryCard
+            detail={formatValidityDetail(indexes)}
+            label="Validity"
+            value={formatValidityValue(indexes)}
+          />
+        </div>
+        <div className="ml-auto flex items-center gap-2 self-center whitespace-nowrap text-muted-foreground text-sm">
+          <span>Usage from</span>
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+            pg_stat_user_indexes
+          </code>
+          <span>since last stats reset</span>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {indexes.map((index) => (
+          <IndexCard
+            index={index}
+            key={`${index.indexName}-${index.method}-${index.keyColumns.join(",")}`}
+            maxScanCount={maxScanCount}
+            schemaName={schemaName}
+            tableName={tableName}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 const KEY_CONSTRAINT_TYPES = new Set<ConstraintType>([
@@ -4493,7 +4796,12 @@ function TableDetail({
               <PartitionsTab query={partitionMetadataQuery} />
             </TabsContent>
             <TabsContent className="mt-4" value="indexes">
-              <IndexesTab query={indexesQuery} />
+              <IndexesTab
+                query={indexesQuery}
+                schemaName={schemaName}
+                table={table}
+                tableName={tableName}
+              />
             </TabsContent>
             <TabsContent className="mt-4" value="constraints">
               <ConstraintsTab

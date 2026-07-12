@@ -531,6 +531,36 @@ message TableIndex {
 
   // Output-only. Total size of the index in bytes, if available.
   int64 size_bytes = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Raw key column identifiers or expressions in index order, excluding INCLUDE columns.
+  repeated string key_parts = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether PostgreSQL currently considers the index valid.
+  bool is_valid = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether at least one key part is an expression rather than a plain column.
+  bool has_expression = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Normalized CREATE INDEX statement from PostgreSQL.
+  string definition = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Number of index scans reported by pg_stat_user_indexes.
+  int64 scan_count = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Number of index entries returned by pg_stat_user_indexes.
+  int64 tuples_read = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Number of live table rows fetched by pg_stat_user_indexes.
+  int64 tuples_fetched = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Buffer hits for this index from pg_statio_user_indexes.
+  int64 blocks_hit = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Buffer reads for this index from pg_statio_user_indexes.
+  int64 blocks_read = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether pg_stat_user_indexes counters were captured for this index.
+  bool has_usage_stats = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 message TablePolicy {

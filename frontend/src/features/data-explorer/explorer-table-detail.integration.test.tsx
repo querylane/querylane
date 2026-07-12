@@ -22,7 +22,6 @@ import {
   TableResultSetSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import {
-  ColumnSchema,
   ConstraintType,
   DataType,
   GetTablePartitionMetadataResponseSchema,
@@ -1357,146 +1356,150 @@ describe("TableDetail constraints tab", () => {
   });
 });
 
-describe("TableDetail columns tab", () => {
-  it("renders and filters a dense column inventory", async () => {
-    const user = userEvent.setup();
-    tableQueries.columns.data = create(ListTableColumnsResponseSchema, {
-      columns: [
-        create(ColumnSchema, {
-          columnName: "id",
-          comment: "Surrogate key",
-          dataType: DataType.UUID,
-          defaultValue: "gen_random_uuid()",
-          isNullable: false,
-          isPrimaryKey: true,
-          ordinalPosition: 1,
-          rawType: "uuid",
-        }),
-        create(ColumnSchema, {
-          columnName: "ref",
-          comment: "Human-readable booking reference",
-          dataType: DataType.STRING,
-          isNullable: false,
-          isUnique: true,
-          ordinalPosition: 2,
-          rawType: "text",
-        }),
-        create(ColumnSchema, {
-          columnName: "carrier_id",
-          dataType: DataType.INTEGER,
-          isNullable: false,
-          ordinalPosition: 3,
-          rawType: "int4",
-        }),
-        create(ColumnSchema, {
-          columnName: "eta",
-          comment: "Set NULL once delivered",
-          dataType: DataType.DATE,
-          isNullable: true,
-          ordinalPosition: 4,
-          rawType: "date",
-        }),
-      ],
-    });
-    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
-      constraints: [
-        create(TableConstraintSchema, {
-          columnNames: ["carrier_id"],
-          referencedColumnNames: ["id"],
-          referencedTable:
-            "instances/prod/databases/app/schemas/public/tables/carriers",
-          type: ConstraintType.FOREIGN_KEY,
-        }),
-      ],
-    });
+describe("TableDetail indexes tab", () => {
+  it("renders index summary cards and copyable SQL instead of a grid", () => {
     tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
       indexes: [
         create(TableIndexSchema, {
-          indexName: "shipments_ref_key",
+          indexName: "shipment_event_pkey",
           isUnique: true,
-          keyColumns: ["ref"],
+          isValid: true,
+          keyColumns: ["id"],
+          keyParts: ["id"],
           method: "btree",
+          sizeBytes: 16_384n,
         }),
       ],
     });
-    tableQueries.columns.dataUpdatedAt = Date.UTC(2026, 5, 30, 3, 12);
-    tableQueries.constraints.dataUpdatedAt = Date.UTC(2026, 5, 30, 3, 12);
-    tableQueries.indexes.dataUpdatedAt = Date.UTC(2026, 5, 30, 3, 12);
 
     render(
       <TableDetail
         databaseId="app"
-        initialTab="columns"
+        initialTab="indexes"
+        instanceId="prod"
+        schemaName="shipping"
+        table={create(TableSchema, {
+          rowCount: 18_200_000n,
+          sizeBytes: 21_400_000_000n,
+        })}
+        tableName="shipment_event"
+      />
+    );
+
+    expect(screen.getByText("Total size")).toBeTruthy();
+    expect(screen.getAllByText("Scans").length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toContain("41d");
+    expect(screen.getByText("Validity")).toBeTruthy();
+    expect(screen.getByText("Usage from")).toBeTruthy();
+    expect(screen.getByText("pg_stat_user_indexes")).toBeTruthy();
+    expect(screen.getAllByText("shipment_event_pkey").length).toBeGreaterThan(
+      0
+    );
+    expect(screen.getAllByText("btree").length).toBeGreaterThan(0);
+    expect(screen.getByText("UNIQUE")).toBeTruthy();
+    expect(screen.getByText("id")).toBeTruthy();
+    expect(document.body.textContent).toContain(
+      "CREATE UNIQUE INDEX shipment_event_pkey ON shipping.shipment_event USING btree (id)"
+    );
+    expect(screen.getByRole("button", { name: "Copy SQL" })).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("renders usage stats, partial indexes, expression indexes, and unused warnings", () => {
+    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+      indexes: [
+        create(TableIndexSchema, {
+          blocksHit: 997n,
+          blocksRead: 3n,
+          definition:
+            "CREATE UNIQUE INDEX shipments_pkey ON shipping.shipments USING btree (id)",
+          hasUsageStats: true,
+          indexName: "shipments_pkey",
+          isUnique: true,
+          isValid: true,
+          keyColumns: ["id"],
+          keyParts: ["id"],
+          method: "btree",
+          scanCount: 48_100_000n,
+          sizeBytes: 312n * 1024n * 1024n,
+          tuplesFetched: 48_100_000n,
+          tuplesRead: 48_400_000n,
+        }),
+        create(TableIndexSchema, {
+          blocksHit: 989n,
+          blocksRead: 11n,
+          definition:
+            "CREATE INDEX shipments_status_idx ON shipping.shipments USING btree (status) WHERE status <> 'delivered'",
+          hasUsageStats: true,
+          indexName: "shipments_status_idx",
+          isValid: true,
+          keyColumns: ["status"],
+          keyParts: ["status"],
+          method: "btree",
+          predicate: "status <> 'delivered'",
+          scanCount: 9_400_000n,
+          sizeBytes: 18n * 1024n * 1024n,
+          tuplesFetched: 9_300_000n,
+          tuplesRead: 11_200_000n,
+        }),
+        create(TableIndexSchema, {
+          blocksHit: 991n,
+          blocksRead: 9n,
+          definition:
+            "CREATE INDEX shipments_carrier_id_idx ON shipping.shipments USING btree (carrier_id)",
+          hasUsageStats: true,
+          indexName: "shipments_carrier_id_idx",
+          isValid: true,
+          keyColumns: ["carrier_id"],
+          keyParts: ["carrier_id"],
+          method: "btree",
+          scanCount: 1_200_000n,
+          sizeBytes: 52n * 1024n * 1024n,
+          tuplesFetched: 1_200_000n,
+          tuplesRead: 2_800_000n,
+        }),
+        create(TableIndexSchema, {
+          definition:
+            "CREATE INDEX shipments_legacy_ref_idx ON shipping.shipments USING btree (lower(ref))",
+          hasExpression: true,
+          hasUsageStats: true,
+          indexName: "shipments_legacy_ref_idx",
+          isValid: true,
+          keyParts: ["lower(ref)"],
+          method: "btree",
+          sizeBytes: 96n * 1024n * 1024n,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="indexes"
         instanceId="prod"
         schemaName="shipping"
         table={create(TableSchema, {
           rowCount: 2_400_000n,
-          sizeBytes: 12_800_000_000n,
+          sizeBytes: 13_743_895_347n,
         })}
         tableName="shipments"
       />
     );
 
-    expect(screen.queryByText("4 columns · 2 indexed · 1 nullable")).toBeNull();
-    for (const filter of [
-      "Type",
-      "Key",
-      "Nullability",
-      "Default",
-      "Generation",
-    ]) {
-      expect(screen.getByRole("button", { name: filter })).toBeTruthy();
-    }
-    expect(screen.getByText("Catalog metadata")).toBeTruthy();
-    expect(screen.getByText(LAST_FETCHED_RE)).toBeTruthy();
-    expect(
-      screen.getByRole("columnheader", { name: "Ordinal position" })
-    ).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "Column" })).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "Nullable" })).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "Storage" })).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "Distinct" })).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "Null %" })).toBeTruthy();
-    expect(
-      screen.getByRole("columnheader", { name: "Avg width" })
-    ).toBeTruthy();
-    expect(screen.getByText("Surrogate key")).toBeTruthy();
-    expect(screen.getByText("Human-readable booking reference")).toBeTruthy();
-    expect(screen.getByText("Set NULL once delivered")).toBeTruthy();
-    expect(screen.getByText("Primary key")).toBeTruthy();
-    expect(screen.getByText("Unique")).toBeTruthy();
-    expect(screen.getByText("Foreign key")).toBeTruthy();
-    expect(screen.queryByText("PK")).toBeNull();
-    expect(screen.queryByText("UQ")).toBeNull();
-    expect(screen.queryByText("FK")).toBeNull();
-    expect(screen.getByText("YES")).toBeTruthy();
-    expect(screen.getAllByText("NO")).toHaveLength(3);
-    expect(screen.getAllByText("0%")).toHaveLength(3);
-    expect(screen.getByText("gen_random_uuid()")).toBeTruthy();
-    expect(
-      screen.getAllByTitle("Not available from the current column metadata API")
-    ).toHaveLength(16);
-
-    await user.click(screen.getByRole("button", { name: "Nullability" }));
-    await user.click(screen.getByRole("option", { name: "Nullable" }));
-    await waitFor(() => {
-      expect(screen.queryByText("Surrogate key")).toBeNull();
-    });
-    expect(screen.getByText("Set NULL once delivered")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Reset" }));
-
-    const search = screen.getByRole("textbox", { name: "Search columns…" });
-    await user.type(search, "booking");
-    await waitFor(() => {
-      expect(screen.queryByText("Surrogate key")).toBeNull();
-    });
-    expect(screen.getByText("Human-readable booking reference")).toBeTruthy();
-
-    await user.clear(search);
-    await user.type(search, "carriers.id");
-    await waitFor(() => {
-      expect(screen.getByText("carrier_id")).toBeTruthy();
-    });
+    expect(screen.getAllByText("4").length).toBeGreaterThan(0);
+    expect(screen.getByText("1 unused")).toBeTruthy();
+    expect(screen.getByText("478 MB")).toBeTruthy();
+    expect(screen.getByText("58.7M")).toBeTruthy();
+    expect(screen.getByText("all valid")).toBeTruthy();
+    expect(screen.getByText("PARTIAL")).toBeTruthy();
+    expect(screen.getByText("EXPRESSION")).toBeTruthy();
+    expect(screen.getByText("UNUSED")).toBeTruthy();
+    expect(screen.getByText("lower(ref)")).toBeTruthy();
+    expect(screen.getByText("99.7%")).toBeTruthy();
+    expect(screen.getAllByText("0").length).toBeGreaterThan(0);
+    expect(document.body.textContent).toContain(
+      "CREATE INDEX shipments_status_idx ON shipping.shipments USING btree (status) WHERE status <> 'delivered'"
+    );
   });
 });
 

@@ -525,9 +525,19 @@ type TableIndex struct {
 	Method          string
 	IsUnique        bool
 	KeyColumns      []string
+	KeyParts        []string
 	IncludedColumns []string
 	Predicate       string
 	SizeBytes       int64
+	IsValid         bool
+	HasExpression   bool
+	Definition      string
+	ScanCount       int64
+	TuplesRead      int64
+	TuplesFetched   int64
+	BlocksHit       int64
+	BlocksRead      int64
+	HasUsageStats   bool
 }
 
 // TablePolicy represents a row-level security policy on a table.

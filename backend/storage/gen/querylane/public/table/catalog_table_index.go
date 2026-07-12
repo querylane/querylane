@@ -29,6 +29,16 @@ type catalogTableIndexTable struct {
 	Predicate       postgres.ColumnString
 	SizeBytes       postgres.ColumnInteger
 	SyncedAt        postgres.ColumnTimestampz
+	KeyParts        postgres.ColumnStringArray
+	IsValid         postgres.ColumnBool
+	HasExpression   postgres.ColumnBool
+	Definition      postgres.ColumnString
+	ScanCount       postgres.ColumnInteger
+	TuplesRead      postgres.ColumnInteger
+	TuplesFetched   postgres.ColumnInteger
+	BlocksHit       postgres.ColumnInteger
+	BlocksRead      postgres.ColumnInteger
+	HasUsageStats   postgres.ColumnBool
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -82,9 +92,19 @@ func newCatalogTableIndexTableImpl(schemaName, tableName, alias string) catalogT
 		PredicateColumn       = postgres.StringColumn("predicate")
 		SizeBytesColumn       = postgres.IntegerColumn("size_bytes")
 		SyncedAtColumn        = postgres.TimestampzColumn("synced_at")
-		allColumns            = postgres.ColumnList{InstanceIDColumn, DatabaseNameColumn, SchemaName_Column, TableName_Column, NameColumn, MethodColumn, IsUniqueColumn, KeyColumnsColumn, IncludedColumnsColumn, PredicateColumn, SizeBytesColumn, SyncedAtColumn}
-		mutableColumns        = postgres.ColumnList{MethodColumn, IsUniqueColumn, KeyColumnsColumn, IncludedColumnsColumn, PredicateColumn, SizeBytesColumn, SyncedAtColumn}
-		defaultColumns        = postgres.ColumnList{MethodColumn, IsUniqueColumn, KeyColumnsColumn, IncludedColumnsColumn, PredicateColumn, SizeBytesColumn, SyncedAtColumn}
+		KeyPartsColumn        = postgres.StringArrayColumn("key_parts")
+		IsValidColumn         = postgres.BoolColumn("is_valid")
+		HasExpressionColumn   = postgres.BoolColumn("has_expression")
+		DefinitionColumn      = postgres.StringColumn("definition")
+		ScanCountColumn       = postgres.IntegerColumn("scan_count")
+		TuplesReadColumn      = postgres.IntegerColumn("tuples_read")
+		TuplesFetchedColumn   = postgres.IntegerColumn("tuples_fetched")
+		BlocksHitColumn       = postgres.IntegerColumn("blocks_hit")
+		BlocksReadColumn      = postgres.IntegerColumn("blocks_read")
+		HasUsageStatsColumn   = postgres.BoolColumn("has_usage_stats")
+		allColumns            = postgres.ColumnList{InstanceIDColumn, DatabaseNameColumn, SchemaName_Column, TableName_Column, NameColumn, MethodColumn, IsUniqueColumn, KeyColumnsColumn, IncludedColumnsColumn, PredicateColumn, SizeBytesColumn, SyncedAtColumn, KeyPartsColumn, IsValidColumn, HasExpressionColumn, DefinitionColumn, ScanCountColumn, TuplesReadColumn, TuplesFetchedColumn, BlocksHitColumn, BlocksReadColumn, HasUsageStatsColumn}
+		mutableColumns        = postgres.ColumnList{MethodColumn, IsUniqueColumn, KeyColumnsColumn, IncludedColumnsColumn, PredicateColumn, SizeBytesColumn, SyncedAtColumn, KeyPartsColumn, IsValidColumn, HasExpressionColumn, DefinitionColumn, ScanCountColumn, TuplesReadColumn, TuplesFetchedColumn, BlocksHitColumn, BlocksReadColumn, HasUsageStatsColumn}
+		defaultColumns        = postgres.ColumnList{MethodColumn, IsUniqueColumn, KeyColumnsColumn, IncludedColumnsColumn, PredicateColumn, SizeBytesColumn, SyncedAtColumn, KeyPartsColumn, IsValidColumn, HasExpressionColumn, DefinitionColumn, ScanCountColumn, TuplesReadColumn, TuplesFetchedColumn, BlocksHitColumn, BlocksReadColumn, HasUsageStatsColumn}
 	)
 
 	return catalogTableIndexTable{
@@ -103,6 +123,16 @@ func newCatalogTableIndexTableImpl(schemaName, tableName, alias string) catalogT
 		Predicate:       PredicateColumn,
 		SizeBytes:       SizeBytesColumn,
 		SyncedAt:        SyncedAtColumn,
+		KeyParts:        KeyPartsColumn,
+		IsValid:         IsValidColumn,
+		HasExpression:   HasExpressionColumn,
+		Definition:      DefinitionColumn,
+		ScanCount:       ScanCountColumn,
+		TuplesRead:      TuplesReadColumn,
+		TuplesFetched:   TuplesFetchedColumn,
+		BlocksHit:       BlocksHitColumn,
+		BlocksRead:      BlocksReadColumn,
+		HasUsageStats:   HasUsageStatsColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

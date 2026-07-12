@@ -11,6 +11,7 @@ import (
 	"github.com/querylane/querylane/backend/storage"
 	"github.com/querylane/querylane/backend/storage/gen/querylane/public/model"
 	"github.com/querylane/querylane/backend/storage/gen/querylane/public/table"
+	"github.com/querylane/querylane/backend/storage/types"
 )
 
 // ListTableIndexes returns all cached indexes for a table.
@@ -55,6 +56,12 @@ func (r *PGRepository) SyncTableIndexes(ctx context.Context, instanceID, databas
 			return nil
 		}
 
+		for index := range indexes {
+			if indexes[index].KeyParts == nil {
+				indexes[index].KeyParts = types.StringArray{}
+			}
+		}
+
 		stmt := table.CatalogTableIndex.
 			INSERT(
 				table.CatalogTableIndex.InstanceID,
@@ -65,9 +72,19 @@ func (r *PGRepository) SyncTableIndexes(ctx context.Context, instanceID, databas
 				table.CatalogTableIndex.Method,
 				table.CatalogTableIndex.IsUnique,
 				table.CatalogTableIndex.KeyColumns,
+				table.CatalogTableIndex.KeyParts,
 				table.CatalogTableIndex.IncludedColumns,
 				table.CatalogTableIndex.Predicate,
 				table.CatalogTableIndex.SizeBytes,
+				table.CatalogTableIndex.IsValid,
+				table.CatalogTableIndex.HasExpression,
+				table.CatalogTableIndex.Definition,
+				table.CatalogTableIndex.ScanCount,
+				table.CatalogTableIndex.TuplesRead,
+				table.CatalogTableIndex.TuplesFetched,
+				table.CatalogTableIndex.BlocksHit,
+				table.CatalogTableIndex.BlocksRead,
+				table.CatalogTableIndex.HasUsageStats,
 				table.CatalogTableIndex.SyncedAt,
 			).
 			MODELS(indexes)

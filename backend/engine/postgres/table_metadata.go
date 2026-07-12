@@ -226,6 +226,7 @@ func (d *Postgres) ListTableIndexes(ctx context.Context, db *sql.DB, schemaName,
 		var (
 			idx             engine.TableIndex
 			keyColumns      types.StringArray
+			keyParts        types.StringArray
 			includedColumns types.StringArray
 		)
 
@@ -237,12 +238,23 @@ func (d *Postgres) ListTableIndexes(ctx context.Context, db *sql.DB, schemaName,
 			&includedColumns,
 			&idx.Predicate,
 			&idx.SizeBytes,
+			&keyParts,
+			&idx.IsValid,
+			&idx.HasExpression,
+			&idx.Definition,
+			&idx.ScanCount,
+			&idx.TuplesRead,
+			&idx.TuplesFetched,
+			&idx.BlocksHit,
+			&idx.BlocksRead,
+			&idx.HasUsageStats,
 		)
 		if err != nil {
 			return nil, classifyQueryError("scan table index", err)
 		}
 
 		idx.KeyColumns = []string(keyColumns)
+		idx.KeyParts = []string(keyParts)
 		idx.IncludedColumns = []string(includedColumns)
 		indexes = append(indexes, idx)
 	}

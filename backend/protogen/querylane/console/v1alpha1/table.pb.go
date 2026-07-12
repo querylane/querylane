@@ -1897,7 +1897,27 @@ type TableIndex struct {
 	// Output-only. Predicate for partial indexes, if applicable.
 	Predicate string `protobuf:"bytes,6,opt,name=predicate,proto3" json:"predicate,omitempty"`
 	// Output-only. Total size of the index in bytes, if available.
-	SizeBytes     int64 `protobuf:"varint,7,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	SizeBytes int64 `protobuf:"varint,7,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	// Output-only. Raw key column identifiers or expressions in index order, excluding INCLUDE columns.
+	KeyParts []string `protobuf:"bytes,8,rep,name=key_parts,json=keyParts,proto3" json:"key_parts,omitempty"`
+	// Output-only. Whether PostgreSQL currently considers the index valid.
+	IsValid bool `protobuf:"varint,9,opt,name=is_valid,json=isValid,proto3" json:"is_valid,omitempty"`
+	// Output-only. Whether at least one key part is an expression rather than a plain column.
+	HasExpression bool `protobuf:"varint,10,opt,name=has_expression,json=hasExpression,proto3" json:"has_expression,omitempty"`
+	// Output-only. Normalized CREATE INDEX statement from PostgreSQL.
+	Definition string `protobuf:"bytes,11,opt,name=definition,proto3" json:"definition,omitempty"`
+	// Output-only. Number of index scans reported by pg_stat_user_indexes.
+	ScanCount int64 `protobuf:"varint,12,opt,name=scan_count,json=scanCount,proto3" json:"scan_count,omitempty"`
+	// Output-only. Number of index entries returned by pg_stat_user_indexes.
+	TuplesRead int64 `protobuf:"varint,13,opt,name=tuples_read,json=tuplesRead,proto3" json:"tuples_read,omitempty"`
+	// Output-only. Number of live table rows fetched by pg_stat_user_indexes.
+	TuplesFetched int64 `protobuf:"varint,14,opt,name=tuples_fetched,json=tuplesFetched,proto3" json:"tuples_fetched,omitempty"`
+	// Output-only. Buffer hits for this index from pg_statio_user_indexes.
+	BlocksHit int64 `protobuf:"varint,15,opt,name=blocks_hit,json=blocksHit,proto3" json:"blocks_hit,omitempty"`
+	// Output-only. Buffer reads for this index from pg_statio_user_indexes.
+	BlocksRead int64 `protobuf:"varint,16,opt,name=blocks_read,json=blocksRead,proto3" json:"blocks_read,omitempty"`
+	// Output-only. Whether pg_stat_user_indexes counters were captured for this index.
+	HasUsageStats bool `protobuf:"varint,17,opt,name=has_usage_stats,json=hasUsageStats,proto3" json:"has_usage_stats,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1979,6 +1999,76 @@ func (x *TableIndex) GetSizeBytes() int64 {
 		return x.SizeBytes
 	}
 	return 0
+}
+
+func (x *TableIndex) GetKeyParts() []string {
+	if x != nil {
+		return x.KeyParts
+	}
+	return nil
+}
+
+func (x *TableIndex) GetIsValid() bool {
+	if x != nil {
+		return x.IsValid
+	}
+	return false
+}
+
+func (x *TableIndex) GetHasExpression() bool {
+	if x != nil {
+		return x.HasExpression
+	}
+	return false
+}
+
+func (x *TableIndex) GetDefinition() string {
+	if x != nil {
+		return x.Definition
+	}
+	return ""
+}
+
+func (x *TableIndex) GetScanCount() int64 {
+	if x != nil {
+		return x.ScanCount
+	}
+	return 0
+}
+
+func (x *TableIndex) GetTuplesRead() int64 {
+	if x != nil {
+		return x.TuplesRead
+	}
+	return 0
+}
+
+func (x *TableIndex) GetTuplesFetched() int64 {
+	if x != nil {
+		return x.TuplesFetched
+	}
+	return 0
+}
+
+func (x *TableIndex) GetBlocksHit() int64 {
+	if x != nil {
+		return x.BlocksHit
+	}
+	return 0
+}
+
+func (x *TableIndex) GetBlocksRead() int64 {
+	if x != nil {
+		return x.BlocksRead
+	}
+	return 0
+}
+
+func (x *TableIndex) GetHasUsageStats() bool {
+	if x != nil {
+		return x.HasUsageStats
+	}
+	return false
 }
 
 type TablePolicy struct {
@@ -2333,7 +2423,7 @@ const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\ton_delete\x18\a \x01(\x0e2-.querylane.console.v1alpha1.ReferentialActionB\x03\xe0A\x03R\bonDelete\x12#\n" +
 	"\n" +
 	"definition\x18\b \x01(\tB\x03\xe0A\x03R\n" +
-	"definitionR\x04name\"\x92\x02\n" +
+	"definitionR\x04name\"\x92\x05\n" +
 	"\n" +
 	"TableIndex\x12\"\n" +
 	"\n" +
@@ -2345,7 +2435,24 @@ const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\x10included_columns\x18\x05 \x03(\tB\x03\xe0A\x03R\x0fincludedColumns\x12!\n" +
 	"\tpredicate\x18\x06 \x01(\tB\x03\xe0A\x03R\tpredicate\x12\"\n" +
 	"\n" +
-	"size_bytes\x18\a \x01(\x03B\x03\xe0A\x03R\tsizeBytesR\x04name\"\xbf\x02\n" +
+	"size_bytes\x18\a \x01(\x03B\x03\xe0A\x03R\tsizeBytes\x12 \n" +
+	"\tkey_parts\x18\b \x03(\tB\x03\xe0A\x03R\bkeyParts\x12\x1e\n" +
+	"\bis_valid\x18\t \x01(\bB\x03\xe0A\x03R\aisValid\x12*\n" +
+	"\x0ehas_expression\x18\n" +
+	" \x01(\bB\x03\xe0A\x03R\rhasExpression\x12#\n" +
+	"\n" +
+	"definition\x18\v \x01(\tB\x03\xe0A\x03R\n" +
+	"definition\x12\"\n" +
+	"\n" +
+	"scan_count\x18\f \x01(\x03B\x03\xe0A\x03R\tscanCount\x12$\n" +
+	"\vtuples_read\x18\r \x01(\x03B\x03\xe0A\x03R\n" +
+	"tuplesRead\x12*\n" +
+	"\x0etuples_fetched\x18\x0e \x01(\x03B\x03\xe0A\x03R\rtuplesFetched\x12\"\n" +
+	"\n" +
+	"blocks_hit\x18\x0f \x01(\x03B\x03\xe0A\x03R\tblocksHit\x12$\n" +
+	"\vblocks_read\x18\x10 \x01(\x03B\x03\xe0A\x03R\n" +
+	"blocksRead\x12+\n" +
+	"\x0fhas_usage_stats\x18\x11 \x01(\bB\x03\xe0A\x03R\rhasUsageStatsR\x04name\"\xbf\x02\n" +
 	"\vTablePolicy\x12$\n" +
 	"\vpolicy_name\x18\x01 \x01(\tB\x03\xe0A\x03R\n" +
 	"policyName\x12?\n" +

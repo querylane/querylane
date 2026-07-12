@@ -26,4 +26,14 @@ type CatalogTableIndex struct {
 	Predicate       string
 	SizeBytes       int64
 	SyncedAt        time.Time
+	KeyParts        types.StringArray
+	IsValid         bool
+	HasExpression   bool
+	Definition      string
+	ScanCount       int64
+	TuplesRead      int64
+	TuplesFetched   int64
+	BlocksHit       int64
+	BlocksRead      int64
+	HasUsageStats   bool
 }

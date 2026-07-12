@@ -66,14 +66,10 @@ const SCHEMA_MAP_BROWSER_VIEWPORT = { height: 1400, width: 2048 } as const;
 
 // 2024-01-01T23:00:00Z renders as "Last fetched 11:00:00 PM" under the pinned
 // TZ=GMT used for screenshots, matching the mocked data grid label below.
+const ACCOUNT_REFERENCE_CELL_RE = /→public\.accounts\.id/;
 const APP_READER_SUPPORT_AGENT_RE = /app_reader, support_agent/;
-const DEFAULT_BALANCED_TREE_RE = /Default balanced tree/;
-const DEFAULT_BALANCED_TREE_SUMMARY_RE = /Default balanced tree for equality/;
-const GENERATED_GENERATION_FILTER_RE = /Generation.*Generated/;
-const BIGINT_TYPE_TITLE_RE = /Integer.*64-bit/;
-const ID_PRIMARY_KEY_CELL_RE = /id\s+Primary key\s+Surrogate key/;
-const JSONB_TYPE_TITLE_RE = /JSON.*binary JSON/;
-const NUMERIC_TYPE_TITLE_RE = /Decimal.*Exact decimal/;
+const CUSTOMER_ID_CELL_RE = /customer_id/;
+const EXACT_DECIMAL_RE = /Exact decimal/;
 const PARTITION_2024_BOUND_RE = /FOR VALUES FROM \('2024-01-01'\)/;
 const PARTITION_Q1_ROW_RE = /change_log_2026_q1.*1\.02M/;
 const PARTITION_Q2_ROW_RE = /change_log_2026_q2.*1\.18M/;
@@ -87,10 +83,9 @@ const PARTITION_PAGE_ALL_RE = /Showing 1–12 of 12/;
 const PARTITION_REDESIGN_FETCHED_AT = Date.parse("2026-07-07T22:51:48Z");
 const LAST_FETCHED_11_PM_RE = /Last fetched 11:00:00 PM/;
 const POLICIES_ONE_TAB_RE = /^Policies\s+1$/;
-const TABLE_COLUMNS_LAST_FETCHED_RE = /11 columns · base table · Last fetched/;
-const TIMESTAMPTZ_TYPE_TITLE_RE =
-  /Timestamp.*timestamptz.*UTC-normalized instant/;
+const TABLE_COLUMNS_LAST_FETCHED_RE = /4 columns · base table · Last fetched/;
 const TRIGGERS_ONE_TAB_RE = /^Triggers\s+1$/;
+const UTC_NORMALIZED_INSTANT_RE = /UTC-normalized instant/;
 const refreshableQueryFields = vi.hoisted(() => ({
   dataUpdatedAt: 1_704_150_000_000,
   isFetching: false,
@@ -167,21 +162,6 @@ function requireFacetFilterBar(description: string) {
   }
 
   return filterBar;
-}
-
-function requireColumnTypeTitle(displayType: string) {
-  const typeCell = Array.from(
-    document.querySelectorAll<HTMLElement>("td")
-  ).find((cell) => cell.textContent?.trim().startsWith(displayType));
-  const title = typeCell
-    ?.querySelector<HTMLElement>("[title]")
-    ?.getAttribute("title");
-
-  if (!title) {
-    throw new Error(`Expected ${displayType} type metadata.`);
-  }
-
-  return title;
 }
 
 vi.mock("@/components/data-grid/table-data-grid/table-data-grid", () =>
@@ -348,6 +328,26 @@ function renderExplorerSurface(
         className={`${surfaceWidthClassName} rounded-2xl border border-border bg-background p-8 text-foreground`}
       >
         {children}
+      </div>
+    </ScreenshotFrame>
+  );
+}
+
+function renderScaledExplorerSurface(children: React.ReactNode) {
+  render(
+    <ScreenshotFrame>
+      <div
+        className="relative h-[930px] w-[850px] overflow-hidden"
+        data-testid="indexes-complex-frame"
+      >
+        <div
+          className="absolute top-0 left-0 w-[1180px] origin-top-left"
+          style={{ transform: "scale(0.72)" }}
+        >
+          <div className="rounded-2xl border border-border bg-background p-8 text-foreground">
+            {children}
+          </div>
+        </div>
       </div>
     </ScreenshotFrame>
   );
@@ -610,19 +610,38 @@ function seedTableDetailQueries() {
   tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
     indexes: [
       createProto(TableIndexSchema, {
+        blocksHit: 989n,
+        blocksRead: 11n,
+        definition:
+          "CREATE INDEX customers_status_account_idx ON public.customers USING btree (status, account_id) INCLUDE (last_seen_at)",
+        hasUsageStats: true,
         includedColumns: ["last_seen_at"],
         indexName: "customers_status_account_idx",
         isUnique: false,
+        isValid: true,
         keyColumns: ["status", "account_id"],
+        keyParts: ["status", "account_id"],
         method: "btree",
+        scanCount: 10n,
         sizeBytes: 327_680n,
+        tuplesFetched: 8n,
+        tuplesRead: 12n,
       }),
       createProto(TableIndexSchema, {
+        blocksHit: 100n,
+        definition:
+          "CREATE UNIQUE INDEX customers_pkey ON public.customers USING btree (customer_id)",
+        hasUsageStats: true,
         indexName: "customers_pkey",
         isUnique: true,
+        isValid: true,
         keyColumns: ["customer_id"],
+        keyParts: ["customer_id"],
         method: "btree",
+        scanCount: 20n,
         sizeBytes: 98_304n,
+        tuplesFetched: 18n,
+        tuplesRead: 20n,
       }),
     ],
   });
@@ -791,14 +810,12 @@ function seedInvoicePolicies() {
   });
 }
 
-function seedShippingColumnsDesignQueries() {
+function seedShipmentIndexesRedesignQueries() {
   tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
     columns: [
       createProto(ColumnSchema, {
         columnName: "id",
-        comment: "Surrogate key",
         dataType: DataType.UUID,
-        defaultValue: "gen_random_uuid()",
         isNullable: false,
         isPrimaryKey: true,
         ordinalPosition: 1,
@@ -806,10 +823,8 @@ function seedShippingColumnsDesignQueries() {
       }),
       createProto(ColumnSchema, {
         columnName: "ref",
-        comment: "Human-readable booking reference",
         dataType: DataType.STRING,
         isNullable: false,
-        isUnique: true,
         ordinalPosition: 2,
         rawType: "text",
       }),
@@ -818,7 +833,7 @@ function seedShippingColumnsDesignQueries() {
         dataType: DataType.INTEGER,
         isNullable: false,
         ordinalPosition: 3,
-        rawType: "int4",
+        rawType: "integer",
       }),
       createProto(ColumnSchema, {
         columnName: "status",
@@ -842,45 +857,25 @@ function seedShippingColumnsDesignQueries() {
         rawType: "text",
       }),
       createProto(ColumnSchema, {
-        columnName: "route_code",
-        dataType: DataType.STRING,
-        generationExpression: "origin_port || ':' || dest_port",
-        isGenerated: true,
-        isNullable: false,
-        ordinalPosition: 7,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "sequence_no",
-        dataType: DataType.INTEGER,
-        identityGeneration: IdentityGeneration.BY_DEFAULT,
-        isIdentity: true,
-        isNullable: false,
-        ordinalPosition: 8,
-        rawType: "int8",
-      }),
-      createProto(ColumnSchema, {
         columnName: "weight_kg",
         dataType: DataType.FLOAT,
         isNullable: false,
-        ordinalPosition: 9,
-        rawType: "numeric(10,2)",
+        ordinalPosition: 7,
+        rawType: "numeric",
       }),
       createProto(ColumnSchema, {
         columnName: "eta",
-        comment: "Set NULL once delivered",
         dataType: DataType.DATE,
         isNullable: true,
-        ordinalPosition: 10,
+        ordinalPosition: 8,
         rawType: "date",
       }),
       createProto(ColumnSchema, {
         columnName: "created_at",
         dataType: DataType.TIMESTAMP,
-        defaultValue: "now()",
         isNullable: false,
-        ordinalPosition: 11,
-        rawType: "timestamptz",
+        ordinalPosition: 9,
+        rawType: "timestamp with time zone",
       }),
     ],
   });
@@ -904,11 +899,23 @@ function seedShippingColumnsDesignQueries() {
           columnNames: ["carrier_id"],
           constraintName: "shipments_carrier_id_fkey",
           definition:
-            "FOREIGN KEY (carrier_id) REFERENCES shipping.carriers(id)",
+            "FOREIGN KEY (carrier_id) REFERENCES shipping.carriers(id) ON DELETE RESTRICT",
           referencedColumnNames: ["id"],
           referencedTable:
             "instances/prod/databases/logistics/schemas/shipping/tables/carriers",
           type: ConstraintType.FOREIGN_KEY,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["weight_kg"],
+          constraintName: "shipments_weight_positive",
+          definition: "CHECK (weight_kg > 0)",
+          type: ConstraintType.CHECK,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["eta", "created_at"],
+          constraintName: "shipments_eta_reasonable",
+          definition: "CHECK (eta IS NULL OR eta > created_at::date)",
+          type: ConstraintType.CHECK,
         }),
       ],
     }
@@ -916,30 +923,65 @@ function seedShippingColumnsDesignQueries() {
   tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
     indexes: [
       createProto(TableIndexSchema, {
+        blocksHit: 997n,
+        blocksRead: 3n,
+        definition:
+          "CREATE UNIQUE INDEX shipments_pkey ON shipping.shipments USING btree (id)",
+        hasUsageStats: true,
         indexName: "shipments_pkey",
         isUnique: true,
+        isValid: true,
         keyColumns: ["id"],
+        keyParts: ["id"],
         method: "btree",
-        sizeBytes: 327_155_712n,
+        scanCount: 48_100_000n,
+        sizeBytes: 312n * 1024n * 1024n,
+        tuplesFetched: 48_100_000n,
+        tuplesRead: 48_400_000n,
       }),
       createProto(TableIndexSchema, {
-        indexName: "shipments_ref_key",
-        isUnique: true,
-        keyColumns: ["ref"],
-        method: "btree",
-        sizeBytes: 104_857_600n,
-      }),
-      createProto(TableIndexSchema, {
+        blocksHit: 989n,
+        blocksRead: 11n,
+        definition:
+          "CREATE INDEX shipments_status_idx ON shipping.shipments USING btree (status) WHERE status <> 'delivered'",
+        hasUsageStats: true,
         indexName: "shipments_status_idx",
+        isValid: true,
         keyColumns: ["status"],
+        keyParts: ["status"],
         method: "btree",
-        sizeBytes: 18_874_368n,
+        predicate: "status <> 'delivered'",
+        scanCount: 9_400_000n,
+        sizeBytes: 18n * 1024n * 1024n,
+        tuplesFetched: 9_300_000n,
+        tuplesRead: 11_200_000n,
       }),
       createProto(TableIndexSchema, {
+        blocksHit: 991n,
+        blocksRead: 9n,
+        definition:
+          "CREATE INDEX shipments_carrier_id_idx ON shipping.shipments USING btree (carrier_id)",
+        hasUsageStats: true,
         indexName: "shipments_carrier_id_idx",
+        isValid: true,
         keyColumns: ["carrier_id"],
+        keyParts: ["carrier_id"],
         method: "btree",
-        sizeBytes: 54_525_952n,
+        scanCount: 1_200_000n,
+        sizeBytes: 52n * 1024n * 1024n,
+        tuplesFetched: 1_200_000n,
+        tuplesRead: 2_800_000n,
+      }),
+      createProto(TableIndexSchema, {
+        definition:
+          "CREATE INDEX shipments_legacy_ref_idx ON shipping.shipments USING btree (lower(ref))",
+        hasExpression: true,
+        hasUsageStats: true,
+        indexName: "shipments_legacy_ref_idx",
+        isValid: true,
+        keyParts: ["lower(ref)"],
+        method: "btree",
+        sizeBytes: 96n * 1024n * 1024n,
       }),
     ],
   });
@@ -947,7 +989,32 @@ function seedShippingColumnsDesignQueries() {
     policies: [],
   });
   tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
-    triggers: [],
+    triggers: [
+      createProto(TableTriggerSchema, {
+        definition: "EXECUTE FUNCTION shipping.touch_updated_at()",
+        enabled: true,
+        events: ["UPDATE"],
+        functionName: "shipping.touch_updated_at",
+        timing: "BEFORE",
+        triggerName: "trg_shipments_touch",
+      }),
+      createProto(TableTriggerSchema, {
+        definition: "EXECUTE FUNCTION audit.log_change()",
+        enabled: true,
+        events: ["INSERT", "UPDATE", "DELETE"],
+        functionName: "audit.log_change",
+        timing: "AFTER",
+        triggerName: "trg_shipments_audit",
+      }),
+      createProto(TableTriggerSchema, {
+        definition: "EXECUTE FUNCTION shipping.notify_status_change()",
+        enabled: false,
+        events: ["UPDATE"],
+        functionName: "shipping.notify_status_change",
+        timing: "AFTER",
+        triggerName: "trg_shipments_notify",
+      }),
+    ],
   });
 }
 
@@ -999,91 +1066,6 @@ function seedTypeAnnotationQueries() {
   });
   tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
     triggers: [],
-  });
-}
-
-function seedTriggerRedesignQueries() {
-  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
-    columns: [
-      createProto(ColumnSchema, {
-        columnName: "shipment_event_id",
-        dataType: DataType.UUID,
-        isNullable: false,
-        ordinalPosition: 1,
-        rawType: "uuid",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "shipment_id",
-        dataType: DataType.UUID,
-        isNullable: false,
-        ordinalPosition: 2,
-        rawType: "uuid",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "event_type",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 3,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "event_time",
-        dataType: DataType.TIMESTAMP,
-        isNullable: false,
-        ordinalPosition: 4,
-        rawType: "timestamptz",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "metadata",
-        dataType: DataType.JSON,
-        isNullable: true,
-        ordinalPosition: 5,
-        rawType: "jsonb",
-      }),
-    ],
-  });
-  tableQueries.constraints.data = createProto(
-    ListTableConstraintsResponseSchema,
-    {
-      constraints: [],
-    }
-  );
-  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
-    indexes: [],
-  });
-  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
-    policies: [],
-  });
-  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
-    triggers: [
-      createProto(TableTriggerSchema, {
-        definition:
-          "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event\n  FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location();",
-        enabled: true,
-        events: ["INSERT"],
-        functionName: "shipping.enrich_event_location",
-        timing: "BEFORE",
-        triggerName: "trg_event_enrich",
-      }),
-      createProto(TableTriggerSchema, {
-        definition:
-          "CREATE TRIGGER trg_shipments_notify AFTER UPDATE OF status ON shipping.shipment_event FOR EACH ROW WHEN ((old.status IS DISTINCT FROM new.status)) EXECUTE FUNCTION shipping.notify_status_change()",
-        enabled: false,
-        events: ["UPDATE"],
-        functionName: "notify_status_change",
-        timing: "AFTER",
-        triggerName: "trg_shipments_notify",
-      }),
-      createProto(TableTriggerSchema, {
-        definition:
-          "CREATE TRIGGER trg_event_statement_log AFTER INSERT OR DELETE OR UPDATE ON shipping.shipment_event FOR EACH STATEMENT EXECUTE FUNCTION shipping.log_shipment_event_summary()",
-        enabled: true,
-        events: ["INSERT", "DELETE", "UPDATE"],
-        functionName: "log_shipment_event_summary",
-        timing: "AFTER",
-        triggerName: "trg_event_statement_log",
-      }),
-    ],
   });
 }
 
@@ -1685,155 +1667,12 @@ test("data explorer schema detail highlights stale catalog warnings", async () =
   );
 });
 
-test("data explorer table columns match the redesign inventory", async () => {
-  seedShippingColumnsDesignQueries();
-  renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="columns"
-      instanceId="prod"
-      schemaName="shipping"
-      table={createProto(TableSchema, {
-        displayName: "shipments",
-        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipments",
-        owner: "app_owner",
-        rowCount: 2_400_000n,
-        sizeBytes: 12_800_000_000n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="shipments"
-    />
-  );
-
-  await expect
-    .element(page.getByRole("cell", { exact: true, name: "Storage" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("cell", { exact: true, name: "Distinct" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("cell", { exact: true, name: "Null %" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("cell", { exact: true, name: "Avg width" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("cell", { name: ID_PRIMARY_KEY_CELL_RE }))
-    .toBeVisible();
-  await expect.element(page.getByText("Unique")).toBeVisible();
-  await expect.element(page.getByText("Foreign key")).toBeVisible();
-  await expect.element(page.getByText("Index")).toBeVisible();
-  await expect
-    .element(page.getByText("Human-readable booking reference"))
-    .toBeVisible();
-  await expect.element(page.getByText("Set NULL once delivered")).toBeVisible();
-  await expect
-    .element(page.getByText("11 columns · 4 indexed · 1 nullable"))
-    .not.toBeInTheDocument();
-  await expect
-    .element(page.getByText(TABLE_COLUMNS_LAST_FETCHED_RE))
-    .toBeVisible();
-  await expect
-    .element(page.getByText("table · 4 columns"))
-    .not.toBeInTheDocument();
-
-  const searchInput = page
-    .getByRole("textbox", { name: "Search columns…" })
-    .element();
-  const filterBar = requireFacetFilterBar("column facet filters");
-  expect(filterBar.textContent).toContain("Type");
-  expect(filterBar.textContent).toContain("Key");
-  expect(filterBar.textContent).toContain("Nullability");
-  expect(filterBar.textContent).toContain("Default");
-  expect(filterBar.textContent).toContain("Generation");
-  expect(filterBar.textContent).not.toContain("__all__");
-  expect(filterBar.getBoundingClientRect().left).toBeGreaterThan(
-    searchInput.getBoundingClientRect().right
-  );
-  expect(
-    Math.abs(
-      filterBar.getBoundingClientRect().top -
-        searchInput.getBoundingClientRect().top
-    )
-  ).toBeLessThanOrEqual(4);
-
-  await page.getByRole("button", { exact: true, name: "Key" }).click();
-  for (const option of [
-    "Primary key",
-    "Foreign key",
-    "Unique",
-    "Index",
-    "No key",
-  ]) {
-    await expect
-      .element(page.getByRole("option", { exact: true, name: option }))
-      .toBeVisible();
-  }
-  await page.getByRole("button", { exact: true, name: "Key" }).click();
-
-  await page.getByRole("button", { exact: true, name: "Generation" }).click();
-  await expect
-    .element(page.getByRole("option", { exact: true, name: "Identity" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("option", { exact: true, name: "Generated" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("option", { exact: true, name: "Regular" }))
-    .toBeVisible();
-  await page.getByRole("option", { exact: true, name: "Generated" }).click();
-  await page
-    .getByRole("button", { name: GENERATED_GENERATION_FILTER_RE })
-    .click();
-  await expect.element(page.getByText("route_code")).toBeVisible();
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
-  await page.getByRole("button", { exact: true, name: "Reset" }).click();
-
-  await expect
-    .element(page.getByRole("tab", { exact: true, name: "Columns 11" }))
-    .toBeVisible();
-  await expect.element(page.getByText("Showing 1–10 of 11")).toBeVisible();
-  await expect.element(page.getByText("Page 1 of 2")).toBeVisible();
-  await expect
-    .element(page.getByRole("button", { name: "Next page" }))
-    .toBeEnabled();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-columns"
-  );
-  await page.getByRole("button", { name: "Next page" }).click();
-  await expect.element(page.getByText("created_at")).toBeVisible();
-  await expect.element(page.getByText("Showing 11–11 of 11")).toBeVisible();
-  await page.getByRole("button", { name: "Previous page" }).click();
-  await page
-    .getByRole("button", { exact: true, name: "Column, not sorted" })
-    .click();
-  await expect
-    .element(
-      page.getByRole("button", {
-        exact: true,
-        name: "Column, sorted ascending",
-      })
-    )
-    .toBeVisible();
-  expect(
-    document.querySelector("tbody tr:first-child td:nth-child(2)")?.textContent
-  ).toContain("carrier_id");
-  await page
-    .getByRole("textbox", { exact: true, name: "Search columns…" })
-    .fill("eta");
-  await expect.element(page.getByText("Set NULL once delivered")).toBeVisible();
-  await expect
-    .element(page.getByText("1 column · 0 indexed · 1 nullable"))
-    .not.toBeInTheDocument();
-  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
-});
-
-test("data explorer table keys preserve the existing relationship view", async () => {
+test("data explorer table columns show keys relationships and indexed fields", async () => {
   seedTableDetailQueries();
   renderExplorerSurface(
     <TableDetail
       databaseId="app"
-      initialTab="keys"
+      initialTab="columns"
       instanceId="prod"
       schemaName="public"
       table={createProto(TableSchema, {
@@ -1848,6 +1687,59 @@ test("data explorer table keys preserve the existing relationship view", async (
     />
   );
 
+  await expect
+    .element(page.getByRole("cell", { name: CUSTOMER_ID_CELL_RE }).first())
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("cell", { name: ACCOUNT_REFERENCE_CELL_RE }))
+    .toBeVisible();
+  await expect.element(page.getByText("INDEXED").first()).toBeVisible();
+  await expect
+    .element(page.getByText(TABLE_COLUMNS_LAST_FETCHED_RE))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("table · 4 columns"))
+    .not.toBeInTheDocument();
+
+  const searchInput = page
+    .getByRole("textbox", { name: "Search columns…" })
+    .element();
+  const filterBar = requireFacetFilterBar("column facet filters");
+  expect(filterBar.textContent).toContain("Type");
+  expect(filterBar.textContent).toContain("Key");
+  expect(filterBar.textContent).not.toContain("__all__");
+  expect(filterBar.getBoundingClientRect().left).toBeGreaterThan(
+    searchInput.getBoundingClientRect().right
+  );
+  expect(
+    Math.abs(
+      filterBar.getBoundingClientRect().top -
+        searchInput.getBoundingClientRect().top
+    )
+  ).toBeLessThanOrEqual(4);
+
+  await expect
+    .element(page.getByRole("tab", { exact: true, name: "Columns 4" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("tab", { exact: true, name: "Keys 3" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("tab", { exact: true, name: "Indexes 2" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("tab", { exact: true, name: "Constraints 2" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("tab", { exact: true, name: "Policies 1" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("tab", { exact: true, name: "Triggers 1" }))
+    .toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-columns"
+  );
+  await page.getByRole("tab", { exact: true, name: "Keys 3" }).click();
   await expect.element(page.getByText("Primary key").first()).toBeVisible();
   await expect.element(page.getByText("customers_pkey")).toBeVisible();
   await expect.element(page.getByText("Foreign key").first()).toBeVisible();
@@ -1916,12 +1808,6 @@ test("data explorer table columns show generated and identity metadata", async (
   await expect.element(page.getByText("BY DEFAULT")).toBeVisible();
   await expect.element(page.getByText("GENERATED")).toBeVisible();
   await expect.element(page.getByText("AS lower(email)")).toBeVisible();
-
-  const badgeRow = page.getByText("IDENTITY").element().parentElement;
-  if (!badgeRow) {
-    throw new Error("Expected identity badges to render in a row.");
-  }
-  expect(badgeRow.scrollWidth).toBeLessThanOrEqual(badgeRow.clientWidth);
 });
 
 test("data explorer table tabs stay visible when column metadata overflows", async () => {
@@ -1961,6 +1847,46 @@ test("data explorer table tabs stay visible when column metadata overflows", asy
   );
 });
 
+test("data explorer table indexes have a redesigned card baseline", async () => {
+  seedTableDetailQueries();
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="app"
+      initialTab="indexes"
+      instanceId="prod"
+      schemaName="public"
+      table={createProto(TableSchema, {
+        displayName: "customers",
+        name: "instances/prod/databases/app/schemas/public/tables/customers",
+        owner: "app_owner",
+        rowCount: 987_654n,
+        sizeBytes: 42_467_328n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="customers"
+    />
+  );
+
+  await expect
+    .element(page.getByText("customers_status_account_idx").first())
+    .toBeVisible();
+  await expect.element(page.getByText("btree").first()).toBeVisible();
+  await expect.element(page.getByText("Scans").first()).toBeVisible();
+  await expect.element(page.getByText("pg_stat_user_indexes")).toBeVisible();
+  await expect
+    .element(page.getByText("INCLUDE last_seen_at").first())
+    .toBeVisible();
+  expect(document.body.textContent).toContain(
+    "CREATE INDEX customers_status_account_idx ON public.customers USING btree (status, account_id) INCLUDE (last_seen_at)"
+  );
+  expect(document.body.textContent).toContain(
+    "CREATE UNIQUE INDEX customers_pkey ON public.customers USING btree (customer_id)"
+  );
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-indexes"
+  );
+});
+
 test("data explorer table indexes constraints policies and triggers stay readable", async () => {
   seedTableDetailQueries();
   renderExplorerSurface(
@@ -1982,17 +1908,19 @@ test("data explorer table indexes constraints policies and triggers stay readabl
   );
 
   await expect
-    .element(page.getByText("customers_status_account_idx"))
+    .element(page.getByText("customers_status_account_idx").first())
     .toBeVisible();
-  await expect.element(page.getByText("B-tree").first()).toBeVisible();
+  await expect.element(page.getByText("btree").first()).toBeVisible();
+  await expect.element(page.getByText("Scans").first()).toBeVisible();
+  await expect.element(page.getByText("pg_stat_user_indexes")).toBeVisible();
   await expect
-    .element(page.getByRole("cell", { name: DEFAULT_BALANCED_TREE_RE }).first())
+    .element(page.getByText("INCLUDE last_seen_at").first())
     .toBeVisible();
-  await expect
-    .element(page.getByText("(status, account_id) INCLUDE (last_seen_at)"))
-    .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-indexes"
+  expect(document.body.textContent).toContain(
+    "CREATE INDEX customers_status_account_idx ON public.customers USING btree (status, account_id) INCLUDE (last_seen_at)"
+  );
+  expect(document.body.textContent).toContain(
+    "CREATE UNIQUE INDEX customers_pkey ON public.customers USING btree (customer_id)"
   );
 
   await page.getByRole("tab", { exact: true, name: "Constraints 2" }).click();
@@ -2045,9 +1973,7 @@ test("data explorer table indexes constraints policies and triggers stay readabl
   );
 
   await page.getByRole("tab", { exact: true, name: "Triggers 1" }).click();
-  await expect
-    .element(page.getByText("customers_audit_trigger").first())
-    .toBeVisible();
+  await expect.element(page.getByText("customers_audit_trigger")).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-triggers"
   );
@@ -2374,161 +2300,52 @@ test("data explorer table policies explain RLS composition", async () => {
   );
 });
 
-test("data explorer table triggers match redesign", async () => {
-  seedTriggerRedesignQueries();
-  renderExplorerSurface(
+test("data explorer table indexes match the redesign complex usage scenario", async () => {
+  seedShipmentIndexesRedesignQueries();
+  renderScaledExplorerSurface(
     <TableDetail
       databaseId="logistics"
-      initialTab="triggers"
+      initialTab="indexes"
       instanceId="prod"
       schemaName="shipping"
       table={createProto(TableSchema, {
-        displayName: "shipment_event",
-        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
-        owner: "shipping_owner",
-        rowCount: 18_200_000n,
-        sizeBytes: 21_400_000_000n,
+        displayName: "shipments",
+        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipments",
+        owner: "app_owner",
+        rowCount: 2_400_000n,
+        sizeBytes: 13_743_895_347n,
         tableType: Table_TableType.BASE_TABLE,
       })}
-      tableName="shipment_event"
+      tableName="shipments"
     />
   );
 
-  const triggerSearch = page.getByRole("textbox", {
-    exact: true,
-    name: "Search triggers…",
-  });
-  const triggerStateFilter = page.getByRole("button", {
-    exact: true,
-    name: "State",
-  });
-  await expect.element(triggerSearch).toBeVisible();
-  await expect.element(triggerStateFilter).toBeVisible();
-  const searchBounds = triggerSearch.element().getBoundingClientRect();
-  const stateBounds = triggerStateFilter.element().getBoundingClientRect();
-  expect(stateBounds.left).toBeGreaterThan(searchBounds.right);
-  expect(Math.abs(stateBounds.top - searchBounds.top)).toBeLessThanOrEqual(1);
   await expect
-    .element(page.getByText("trg_event_enrich").first())
+    .element(page.getByRole("heading", { name: "shipping.shipments" }))
     .toBeVisible();
   await expect
-    .element(page.getByText("→ shipping.enrich_event_location()"))
+    .element(page.getByRole("tab", { exact: true, name: "Indexes 4" }))
     .toBeVisible();
-  await expect.element(page.getByText("ROW").first()).toBeVisible();
-  await expect.element(page.getByText("disabled")).toBeVisible();
+  await expect.element(page.getByText("shipments_pkey").first()).toBeVisible();
   await expect
-    .element(page.getByText("WHEN ((old.status IS DISTINCT FROM new.status))"))
+    .element(page.getByText("shipments_status_idx").first())
     .toBeVisible();
-  await expect.element(page.getByText("STATEMENT").first()).toBeVisible();
-  await document.fonts.ready;
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-triggers-redesign",
-    { timeout: 20_000 }
-  );
-  await expect(
-    page.getByTestId("data-explorer-table-triggers")
-  ).toMatchScreenshot("data-explorer-table-trigger-card-states", {
-    comparatorOptions: { threshold: 0.2 },
-    timeout: 20_000,
-  });
-
-  await triggerStateFilter.click();
-  const disabledOption = page.getByRole("option", {
-    exact: true,
-    name: "Disabled",
-  });
-  await expect.element(disabledOption).toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-trigger-filter-open",
-    { timeout: 20_000 }
-  );
-
-  await disabledOption.click();
   await expect
-    .element(page.getByText("trg_event_enrich").first())
-    .not.toBeInTheDocument();
-  await expect
-    .element(page.getByText("trg_shipments_notify").first())
+    .element(page.getByText("shipments_carrier_id_idx").first())
     .toBeVisible();
-  await page
-    .getByRole("button", { exact: true, name: "State Disabled" })
-    .click();
-  await triggerSearch.fill("missing");
-  await expect.element(page.getByText("No triggers found")).toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-trigger-filter-empty",
-    { timeout: 20_000 }
-  );
-});
-
-test("data explorer trigger cards paginate dense resources", async () => {
-  seedTriggerRedesignQueries();
-  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
-    triggers: Array.from({ length: 12 }, (_, index) => {
-      const suffix = String(index).padStart(2, "0");
-      return createProto(TableTriggerSchema, {
-        definition: `CREATE TRIGGER trg_bulk_${suffix} AFTER UPDATE ON shipping.shipment_event FOR EACH ROW EXECUTE FUNCTION shipping.handle_bulk_${suffix}()`,
-        enabled: true,
-        events: ["UPDATE"],
-        functionName: `shipping.handle_bulk_${suffix}`,
-        timing: "AFTER",
-        triggerName: `trg_bulk_${suffix}`,
-      });
-    }),
-  });
-  renderExplorerSurface(
-    <TableDetail
-      databaseId="logistics"
-      initialTab="triggers"
-      instanceId="prod"
-      schemaName="shipping"
-      table={createProto(TableSchema, {
-        displayName: "shipment_event",
-        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
-        rowCount: 18_200_000n,
-        sizeBytes: 21_400_000_000n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="shipment_event"
-    />
-  );
-
-  await expect.element(page.getByText("Page 1 of 2")).toBeVisible();
   await expect
-    .element(page.getByRole("combobox", { name: "Triggers per page" }))
+    .element(page.getByText("shipments_legacy_ref_idx").first())
     .toBeVisible();
-  await expect.element(page.getByText("trg_bulk_00").first()).toBeVisible();
-  await expect
-    .element(page.getByText("trg_bulk_10").first())
-    .not.toBeInTheDocument();
-  const pageSizeSelect = page
-    .getByRole("combobox", { name: "Triggers per page" })
-    .element();
-  const paginationFooter = pageSizeSelect.parentElement;
-  if (!paginationFooter) {
-    throw new Error("expected trigger pagination footer");
-  }
-  paginationFooter.scrollIntoView({ block: "center" });
-  await document.fonts.ready;
-  await expect(page.elementLocator(paginationFooter)).toMatchScreenshot(
-    "data-explorer-table-trigger-pagination",
-    {
-      timeout: 20_000,
-    }
+  await expect.element(page.getByText("1 unused")).toBeVisible();
+  await expect.element(page.getByText("478 MB")).toBeVisible();
+  await expect.element(page.getByText("58.7M")).toBeVisible();
+  await expect.element(page.getByText("99.7%")).toBeVisible();
+  expect(document.body.textContent).toContain(
+    "CREATE INDEX shipments_legacy_ref_idx ON shipping.shipments USING btree (lower(ref))"
   );
-
-  await page.getByRole("button", { name: "Next page" }).click();
-  await expect.element(page.getByText("Page 2 of 2")).toBeVisible();
-  await expect.element(page.getByText("trg_bulk_10").first()).toBeVisible();
-  await expect
-    .element(page.getByText("trg_bulk_00").first())
-    .not.toBeInTheDocument();
-
-  await page.getByRole("combobox", { name: "Triggers per page" }).click();
-  await page.getByRole("option", { exact: true, name: "25" }).click();
-  await expect.element(page.getByText("Page 1 of 1")).toBeVisible();
-  await expect.element(page.getByText("trg_bulk_00").first()).toBeVisible();
-  await expect.element(page.getByText("trg_bulk_11").first()).toBeVisible();
+  await expect(page.getByTestId("indexes-complex-frame")).toMatchScreenshot(
+    "data-explorer-table-indexes-complex"
+  );
 });
 
 test("data explorer table data tab has a visual baseline", async () => {
@@ -2655,7 +2472,7 @@ test("data explorer definition toolbar keeps refresh reachable when narrow", asy
   );
 });
 
-test("data explorer index method copy stays inside its column on narrow surfaces", async () => {
+test("data explorer index cards keep SQL inside narrow surfaces", async () => {
   seedTableDetailQueries();
   renderExplorerSurface(
     <TableDetail
@@ -2676,34 +2493,30 @@ test("data explorer index method copy stays inside its column on narrow surfaces
     "w-[560px]"
   );
 
-  const methodSummaryLocator = page
-    .getByText(DEFAULT_BALANCED_TREE_SUMMARY_RE)
-    .first();
-  const columnsTextLocator = page.getByText(
-    "(status, account_id) INCLUDE (last_seen_at)"
+  const sqlText =
+    "CREATE INDEX customers_status_account_idx ON public.customers USING btree (status, account_id) INCLUDE (last_seen_at)";
+  await expect.element(page.getByText("btree").first()).toBeVisible();
+  await expect.element(page.getByText("INCLUDE last_seen_at")).toBeVisible();
+  expect(document.body.textContent).toContain(sqlText);
+
+  const sql = [...document.querySelectorAll('[data-language="sql"]')].find(
+    (element) => element.textContent?.includes(sqlText)
   );
-  await expect.element(methodSummaryLocator).toBeVisible();
-  await expect.element(columnsTextLocator).toBeVisible();
+  if (!sql) {
+    throw new Error("Expected index SQL to render.");
+  }
+  const card = sql.closest('[data-slot="card"]');
+  const frame = page.getByTestId("screenshot-frame").element();
 
-  const methodSummary = methodSummaryLocator.element();
-  const columnsText = columnsTextLocator.element();
-  const methodCell = methodSummary.closest("td");
-  const columnsCell = columnsText.closest("td");
-  const table = methodSummary.closest("table");
-  const tableFrame = table?.parentElement;
-
-  if (!(methodCell && columnsCell && table && tableFrame)) {
-    throw new Error("Expected index method and columns table to render.");
+  if (!(card && frame)) {
+    throw new Error("Expected index SQL to render inside a card.");
   }
 
-  expect(methodSummary.getBoundingClientRect().right).toBeLessThanOrEqual(
-    methodCell.getBoundingClientRect().right + 1
+  expect(sql.getBoundingClientRect().right).toBeLessThanOrEqual(
+    card.getBoundingClientRect().right + 1
   );
-  expect(methodCell.getBoundingClientRect().right).toBeLessThanOrEqual(
-    columnsCell.getBoundingClientRect().left + 1
-  );
-  expect(table.getBoundingClientRect().right).toBeLessThanOrEqual(
-    tableFrame.getBoundingClientRect().right + 1
+  expect(card.getBoundingClientRect().right).toBeLessThanOrEqual(
+    frame.getBoundingClientRect().right + 1
   );
 });
 
@@ -2727,13 +2540,14 @@ test("data explorer table columns explain PostgreSQL type semantics", async () =
     />
   );
 
-  await expect.element(page.getByText("event_time")).toBeVisible();
-  expect(requireColumnTypeTitle("timestamp with time zone")).toMatch(
-    TIMESTAMPTZ_TYPE_TITLE_RE
-  );
-  expect(requireColumnTypeTitle("numeric")).toMatch(NUMERIC_TYPE_TITLE_RE);
-  expect(requireColumnTypeTitle("bigint")).toMatch(BIGINT_TYPE_TITLE_RE);
-  expect(requireColumnTypeTitle("jsonb")).toMatch(JSONB_TYPE_TITLE_RE);
+  await expect
+    .element(page.getByText("timestamp with time zone"))
+    .toBeVisible();
+  await expect.element(page.getByText("timestamptz")).toBeVisible();
+  await expect.element(page.getByText(UTC_NORMALIZED_INSTANT_RE)).toBeVisible();
+  await expect.element(page.getByText(EXACT_DECIMAL_RE)).toBeVisible();
+  await expect.element(page.getByText("64-bit")).toBeVisible();
+  await expect.element(page.getByText("binary JSON").first()).toBeVisible();
 });
 
 test("data explorer table empty resource tabs use shared empty panels", async () => {

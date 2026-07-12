@@ -56,9 +56,45 @@ func TestConvertTableMetadataUsesExplicitObjectNameFields(t *testing.T) {
 		t.Fatalf("referenced column names = %v, want [tenant_id id]", got)
 	}
 
-	indexes := convertIndexes([]engine.TableIndex{{Name: "customers_email_idx"}})
+	indexes := convertIndexes([]engine.TableIndex{{
+		Name:          "customers_email_idx",
+		KeyParts:      []string{"lower(email)"},
+		IsValid:       true,
+		HasExpression: true,
+		Definition:    "CREATE INDEX customers_email_idx ON public.customers USING btree (lower(email))",
+		ScanCount:     12,
+		TuplesRead:    120,
+		TuplesFetched: 10,
+		BlocksHit:     95,
+		BlocksRead:    5,
+		HasUsageStats: true,
+	}})
 	if got := indexes[0].GetIndexName(); got != "customers_email_idx" {
 		t.Fatalf("index name field = %q, want customers_email_idx", got)
+	}
+
+	if got := indexes[0].GetKeyParts(); len(got) != 1 || got[0] != "lower(email)" {
+		t.Fatalf("index key parts = %v, want [lower(email)]", got)
+	}
+
+	if !indexes[0].GetIsValid() || !indexes[0].GetHasExpression() {
+		t.Fatalf("index flags = is_valid:%v has_expression:%v, want both true", indexes[0].GetIsValid(), indexes[0].GetHasExpression())
+	}
+
+	if got := indexes[0].GetDefinition(); got == "" {
+		t.Fatal("index definition is empty, want CREATE INDEX definition")
+	}
+
+	if got := indexes[0].GetScanCount(); got != 12 {
+		t.Fatalf("index scan count = %d, want 12", got)
+	}
+
+	if got := indexes[0].GetBlocksHit(); got != 95 {
+		t.Fatalf("index blocks hit = %d, want 95", got)
+	}
+
+	if !indexes[0].GetHasUsageStats() {
+		t.Fatal("index has_usage_stats = false, want true")
 	}
 
 	policies := convertPolicies([]engine.TablePolicy{{Name: "tenant_isolation"}})
