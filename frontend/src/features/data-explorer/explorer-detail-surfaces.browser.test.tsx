@@ -1060,10 +1060,51 @@ test("data explorer table definition tab has a visual baseline", async () => {
   await expect
     .element(page.getByText("Copy all steps", { exact: true }))
     .toBeVisible();
+  const dumpCommand = page
+    .getByRole("textbox", { name: "Dump schema only command" })
+    .element();
+  expect(getComputedStyle(dumpCommand).whiteSpace).toBe("pre");
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-definition"
   );
 }, 10_000);
+
+test("data explorer definition toolbar keeps refresh reachable when narrow", async () => {
+  seedDefinitionDesignQueries();
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="definition"
+      instanceId="prod"
+      schemaName="audit"
+      table={createProto(TableSchema, {
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="change_log"
+    />,
+    "w-[420px]"
+  );
+
+  await expect
+    .element(page.getByText("Schema document", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { exact: true, name: "Refresh" }))
+    .toBeVisible();
+  const caption = page.getByText("Schema document", { exact: true }).element();
+  const toolbar = caption.parentElement;
+  const refresh = page
+    .getByRole("button", { exact: true, name: "Refresh" })
+    .element();
+  if (!toolbar) {
+    throw new Error("Expected the definition toolbar to render.");
+  }
+
+  expect(toolbar.scrollWidth).toBeLessThanOrEqual(toolbar.clientWidth + 1);
+  expect(refresh.getBoundingClientRect().right).toBeLessThanOrEqual(
+    toolbar.getBoundingClientRect().right + 1
+  );
+});
 
 test("data explorer index method copy stays inside its column on narrow surfaces", async () => {
   seedTableDetailQueries();

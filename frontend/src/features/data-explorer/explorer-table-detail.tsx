@@ -7,7 +7,6 @@ import {
   Columns3,
   FileCode2,
   GitBranch,
-  GitCompareArrows,
   Hash,
   KeyRound,
   Layers,
@@ -22,13 +21,13 @@ import {
   Sparkles,
   Table2,
   Terminal,
-  TriangleAlert,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -1788,166 +1787,6 @@ function TriggersTab({
   );
 }
 
-const SIMPLE_SQL_IDENTIFIER_PATTERN = /^[a-z_][a-z0-9_]*$/;
-// PostgreSQL reserved key words plus type/function-name keywords. These match
-// the simple identifier pattern but a bare `user` or `order` column would make
-// the generated DDL unexecutable; quoting is valid in every position, so the
-// list errs on the side of quoting.
-const RESERVED_SQL_KEYWORDS = new Set([
-  "all",
-  "analyse",
-  "analyze",
-  "and",
-  "any",
-  "array",
-  "as",
-  "asc",
-  "asymmetric",
-  "authorization",
-  "between",
-  "bigint",
-  "binary",
-  "bit",
-  "boolean",
-  "both",
-  "case",
-  "cast",
-  "char",
-  "character",
-  "check",
-  "coalesce",
-  "collate",
-  "collation",
-  "column",
-  "concurrently",
-  "constraint",
-  "create",
-  "cross",
-  "current_catalog",
-  "current_date",
-  "current_role",
-  "current_schema",
-  "current_time",
-  "current_timestamp",
-  "current_user",
-  "dec",
-  "decimal",
-  "default",
-  "deferrable",
-  "desc",
-  "distinct",
-  "do",
-  "else",
-  "end",
-  "except",
-  "exists",
-  "extract",
-  "false",
-  "fetch",
-  "float",
-  "for",
-  "foreign",
-  "freeze",
-  "from",
-  "full",
-  "grant",
-  "greatest",
-  "group",
-  "grouping",
-  "having",
-  "ilike",
-  "in",
-  "initially",
-  "inner",
-  "inout",
-  "int",
-  "integer",
-  "intersect",
-  "interval",
-  "into",
-  "is",
-  "isnull",
-  "join",
-  "lateral",
-  "leading",
-  "least",
-  "left",
-  "like",
-  "limit",
-  "localtime",
-  "localtimestamp",
-  "national",
-  "natural",
-  "nchar",
-  "none",
-  "normalize",
-  "not",
-  "notnull",
-  "null",
-  "nullif",
-  "numeric",
-  "offset",
-  "on",
-  "only",
-  "or",
-  "order",
-  "out",
-  "outer",
-  "overlaps",
-  "overlay",
-  "placing",
-  "position",
-  "precision",
-  "primary",
-  "real",
-  "references",
-  "returning",
-  "right",
-  "row",
-  "select",
-  "session_user",
-  "setof",
-  "similar",
-  "smallint",
-  "some",
-  "substring",
-  "symmetric",
-  "system_user",
-  "table",
-  "tablesample",
-  "then",
-  "time",
-  "timestamp",
-  "to",
-  "trailing",
-  "treat",
-  "trim",
-  "true",
-  "union",
-  "unique",
-  "user",
-  "using",
-  "values",
-  "varchar",
-  "variadic",
-  "verbose",
-  "when",
-  "where",
-  "window",
-  "with",
-  "xmlattributes",
-  "xmlconcat",
-  "xmlelement",
-  "xmlexists",
-  "xmlforest",
-  "xmlnamespaces",
-  "xmlparse",
-  "xmlpi",
-  "xmlroot",
-  "xmlserialize",
-  "xmltable",
-]);
-
 // Data-placeholder glyph used across metadata surfaces (see formatColumnList
 // and formatBytes) for values the catalog does not report.
 const EMPTY_DEPENDENCY_PLACEHOLDER = "—";
@@ -1961,12 +1800,6 @@ interface DefinitionSection {
 }
 
 function formatSqlIdentifier(identifier: string) {
-  if (
-    SIMPLE_SQL_IDENTIFIER_PATTERN.test(identifier) &&
-    !RESERVED_SQL_KEYWORDS.has(identifier)
-  ) {
-    return identifier;
-  }
   return `"${identifier.replaceAll('"', '""')}"`;
 }
 
@@ -1974,8 +1807,40 @@ function formatQualifiedTableName(schemaName: string, tableName: string) {
   return `${formatSqlIdentifier(schemaName)}.${formatSqlIdentifier(tableName)}`;
 }
 
+function formatTableResourceName(tableResourceName: string) {
+  const { schema, table } = parseTableQualifiedName(tableResourceName);
+  return formatQualifiedTableName(schema, table);
+}
+
 function formatSqlStringLiteral(value: string) {
   return `'${value.replaceAll("'", "''")}'`;
+}
+
+function commentSql({
+  columns,
+  qualifiedTableName,
+  tableComment,
+}: {
+  columns: TableColumn[];
+  qualifiedTableName: string;
+  tableComment: string;
+}) {
+  const statements: string[] = [];
+  if (tableComment.trim()) {
+    statements.push(
+      `COMMENT ON TABLE ${qualifiedTableName} IS ${formatSqlStringLiteral(tableComment)};`
+    );
+  }
+  for (const column of columns) {
+    if (column.comment.trim()) {
+      statements.push(
+        `COMMENT ON COLUMN ${qualifiedTableName}.${formatSqlIdentifier(
+          column.columnName
+        )} IS ${formatSqlStringLiteral(column.comment)};`
+      );
+    }
+  }
+  return statements;
 }
 
 function formatIdentityGeneration(generation: IdentityGeneration) {
@@ -2006,11 +1871,20 @@ function formatColumnDefinition(column: TableColumn) {
 
 function createTableSql({
   columns,
+  partitionMetadata,
   qualifiedTableName,
+  tableType,
 }: {
   columns: TableColumn[];
+  partitionMetadata: TablePartitionMetadata | undefined;
   qualifiedTableName: string;
+  tableType: Table_TableType;
 }) {
+  if (partitionMetadata?.parentTable && partitionMetadata.partitionBound) {
+    return `CREATE TABLE ${qualifiedTableName} PARTITION OF ${formatTableResourceName(
+      partitionMetadata.parentTable
+    )}\n  ${partitionMetadata.partitionBound};`;
+  }
   if (columns.length === 0) {
     return `CREATE TABLE ${qualifiedTableName} (\n  -- Column metadata unavailable\n);`;
   }
@@ -2022,7 +1896,14 @@ function createTableSql({
       return `  ${formatColumnDefinition(column)}${suffix}`;
     })
     .join("\n");
-  return `CREATE TABLE ${qualifiedTableName} (\n${columnLines}\n);`;
+  const createPrefix =
+    tableType === Table_TableType.TEMPORARY
+      ? "CREATE TEMPORARY TABLE"
+      : "CREATE TABLE";
+  const partitionClause = partitionMetadata?.partitionKey
+    ? ` PARTITION BY ${partitionMetadata.partitionKey}`
+    : "";
+  return `${createPrefix} ${qualifiedTableName} (\n${columnLines}\n)${partitionClause};`;
 }
 
 function constraintSql(
@@ -2048,42 +1929,6 @@ function constraintSql(
     .join("\n");
 }
 
-function indexSql({
-  backingConstraintNames,
-  indexes,
-  qualifiedTableName,
-}: {
-  backingConstraintNames: Set<string>;
-  indexes: TableIndex[];
-  qualifiedTableName: string;
-}) {
-  return indexes
-    .flatMap((index) => {
-      if (!index.indexName || backingConstraintNames.has(index.indexName)) {
-        return [];
-      }
-      const unique = index.isUnique ? "UNIQUE " : "";
-      const method = index.method || "btree";
-      const keyColumns =
-        index.keyColumns.length > 0
-          ? index.keyColumns.map(formatSqlIdentifier).join(", ")
-          : "/* expression */";
-      const included =
-        index.includedColumns.length > 0
-          ? ` INCLUDE (${index.includedColumns
-              .map(formatSqlIdentifier)
-              .join(", ")})`
-          : "";
-      const predicate = index.predicate ? ` WHERE ${index.predicate}` : "";
-      return [
-        `CREATE ${unique}INDEX ${formatSqlIdentifier(
-          index.indexName
-        )} ON ${qualifiedTableName} USING ${method} (${keyColumns})${included}${predicate};`,
-      ];
-    })
-    .join("\n");
-}
-
 function partitionSql({
   metadata,
   qualifiedTableName,
@@ -2095,20 +1940,9 @@ function partitionSql({
   if (!metadata) {
     return "";
   }
-  if (metadata.partitionKey) {
-    lines.push(`-- PARTITION BY ${metadata.partitionKey}`);
-  }
-  if (metadata.parentTable && metadata.partitionBound) {
-    lines.push(
-      `-- ${qualifiedTableName} is a partition of ${formatReferencedTable(
-        metadata.parentTable
-      )}`
-    );
-    lines.push(`-- ${metadata.partitionBound}`);
-  }
   for (const partition of metadata.childPartitions) {
     lines.push(
-      `CREATE TABLE ${formatReferencedTable(
+      `CREATE TABLE ${formatTableResourceName(
         partition.table
       )} PARTITION OF ${qualifiedTableName}`
     );
@@ -2117,36 +1951,7 @@ function partitionSql({
   return lines.join("\n");
 }
 
-function policySql(policies: TablePolicy[], qualifiedTableName: string) {
-  return policies
-    .flatMap((policy) => {
-      if (!policy.policyName) {
-        return [];
-      }
-      const roles =
-        policy.roles.length > 0
-          ? policy.roles.map(formatSqlIdentifier).join(", ")
-          : "PUBLIC";
-      const usingExpression = policy.usingExpression
-        ? `\n  USING (${policy.usingExpression})`
-        : "";
-      const checkExpression = policy.checkExpression
-        ? `\n  WITH CHECK (${policy.checkExpression})`
-        : "";
-      return [
-        `CREATE POLICY ${formatSqlIdentifier(
-          policy.policyName
-        )} ON ${qualifiedTableName}\n  AS ${formatPolicyMode(
-          policy.mode
-        ).toUpperCase()}\n  FOR ${formatPolicyCommand(
-          policy.command
-        )} TO ${roles}${usingExpression}${checkExpression};`,
-      ];
-    })
-    .join("\n");
-}
-
-function triggerSql(triggers: TableTrigger[]) {
+function triggerSql(triggers: TableTrigger[], qualifiedTableName: string) {
   return triggers
     .flatMap((trigger) => {
       if (!trigger.triggerName) {
@@ -2154,7 +1959,17 @@ function triggerSql(triggers: TableTrigger[]) {
       }
       const definition = trigger.definition.trim();
       if (definition.toUpperCase().startsWith("CREATE TRIGGER")) {
-        return [definition.endsWith(";") ? definition : `${definition};`];
+        const createStatement = definition.endsWith(";")
+          ? definition
+          : `${definition};`;
+        if (trigger.enabled) {
+          return [createStatement];
+        }
+        return [
+          `${createStatement}\nALTER TABLE ${qualifiedTableName} DISABLE TRIGGER ${formatSqlIdentifier(
+            trigger.triggerName
+          )};`,
+        ];
       }
       // The backend returns pg_get_triggerdef output, so this branch only
       // sees unexpected data. A statement cannot be reconstructed faithfully
@@ -2175,6 +1990,7 @@ function deriveDefinitionSections({
   policies,
   qualifiedTableName,
   tableComment,
+  tableType,
   triggers,
 }: {
   columns: TableColumn[];
@@ -2184,16 +2000,27 @@ function deriveDefinitionSections({
   policies: TablePolicy[];
   qualifiedTableName: string;
   tableComment: string;
+  tableType: Table_TableType;
   triggers: TableTrigger[];
 }): DefinitionSection[] {
   const { backingConstraintNames } = deriveConstraintKeyRows(constraints);
+  const isForeignTable = tableType === Table_TableType.EXTERNAL;
   const sections: DefinitionSection[] = [
     {
-      content: createTableSql({ columns, qualifiedTableName }),
-      detail: `${qualifiedTableName} · ${columns.length.toLocaleString()} columns · reconstructed from pg_catalog`,
+      content: isForeignTable
+        ? "Exact foreign-table DDL is unavailable. Use the pg_dump command to preserve its server and options."
+        : createTableSql({
+            columns,
+            partitionMetadata,
+            qualifiedTableName,
+            tableType,
+          }),
+      detail: isForeignTable
+        ? "foreign server and options are not exposed"
+        : `${qualifiedTableName} · ${columns.length.toLocaleString()} columns · reconstructed from pg_catalog`,
       id: "create-table",
-      kind: "code",
-      title: "Create table",
+      kind: isForeignTable ? "note" : "code",
+      title: isForeignTable ? "Foreign table" : "Create table",
     },
   ];
   const constraintsText = constraintSql(constraints, qualifiedTableName);
@@ -2206,17 +2033,16 @@ function deriveDefinitionSections({
       title: "Constraints",
     });
   }
-  const indexesText = indexSql({
-    backingConstraintNames,
-    indexes,
-    qualifiedTableName,
-  });
-  if (indexesText) {
+  const standaloneIndexCount = indexes.filter(
+    (index) => !backingConstraintNames.has(index.indexName)
+  ).length;
+  if (standaloneIndexCount > 0) {
     sections.push({
-      content: indexesText,
-      detail: `${indexes.length.toLocaleString()} from pg_index`,
+      content:
+        "Exact index definitions are unavailable. Use the pg_dump command to preserve expressions, operator classes, and ordering.",
+      detail: `${standaloneIndexCount.toLocaleString()} indexes require pg_get_indexdef`,
       id: "indexes",
-      kind: "code",
+      kind: "note",
       title: "Indexes",
     });
   }
@@ -2233,23 +2059,27 @@ function deriveDefinitionSections({
       title: "Partitions",
     });
   }
-  const trimmedComment = tableComment.trim();
-  if (trimmedComment) {
+  const commentStatements = commentSql({
+    columns,
+    qualifiedTableName,
+    tableComment,
+  });
+  if (commentStatements.length > 0) {
     sections.push({
-      content: `COMMENT ON TABLE ${qualifiedTableName} IS ${formatSqlStringLiteral(trimmedComment)};`,
-      detail: "from pg_description",
+      content: commentStatements.join("\n"),
+      detail: `${commentStatements.length.toLocaleString()} from pg_description`,
       id: "comments",
       kind: "code",
       title: "Comments",
     });
   }
-  const policyText = policySql(policies, qualifiedTableName);
-  if (policyText) {
+  if (policies.length > 0) {
     sections.push({
-      content: policyText,
-      detail: `${policies.length.toLocaleString()} from pg_policies`,
+      content:
+        "Policy definitions are available, but row-level security enablement and forced mode are not. Use the pg_dump command to reproduce policies safely.",
+      detail: `${policies.length.toLocaleString()} policies require table-level RLS state`,
       id: "policies",
-      kind: "code",
+      kind: "note",
       title: "Policies",
     });
   }
@@ -2263,7 +2093,7 @@ function deriveDefinitionSections({
       title: "Row-level security",
     });
   }
-  const triggerText = triggerSql(triggers);
+  const triggerText = triggerSql(triggers, qualifiedTableName);
   if (triggerText) {
     sections.push({
       content: triggerText,
@@ -2403,7 +2233,7 @@ function DefinitionCommandStep({
       </div>
       <Textarea
         aria-label={`${title} command`}
-        className="block w-full resize-none overflow-x-auto whitespace-pre-wrap border-0 bg-transparent p-3 font-mono text-[11px] leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        className="block w-full resize-none overflow-x-auto whitespace-pre border-0 bg-transparent p-3 font-mono text-[11px] leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         readOnly={true}
         rows={Math.max(command.split("\n").length, 2)}
         spellCheck={false}
@@ -2431,8 +2261,8 @@ function ReproduceLocallyCard({
     `  -f ${shellSingleQuote(`${tableName}.sql`)}`,
   ].join("\n");
   const allSteps = [
-    "export POSTGRES_HOST=<host>",
-    "export POSTGRES_ROLE=<role>",
+    "export POSTGRES_HOST='your-host'",
+    "export POSTGRES_ROLE='your-role'",
     `export DATABASE_NAME=${shellSingleQuote(databaseId)}`,
     "",
     command,
@@ -2470,12 +2300,14 @@ function ReproduceLocallyCard({
           number={3}
           title="Restore"
         />
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] text-amber-700 leading-relaxed dark:text-amber-300">
-          Related foreign key targets are not included with --table; dump the
-          schema scope if you need them.
-        </p>
+        <Alert className="px-3 py-2">
+          <AlertDescription className="text-[11px] leading-relaxed">
+            Related foreign key targets are not included with --table; dump the
+            schema scope if you need them.
+          </AlertDescription>
+        </Alert>
         <CopyIconButton
-          ariaLabel="Copy all reproduce steps"
+          ariaLabel="Copy all steps"
           className="w-full"
           size="sm"
           value={allSteps}
@@ -2508,7 +2340,7 @@ function DefinitionTab({
   schemaName,
   tableComment,
   tableName,
-  tableOwner,
+  tableType,
   triggersQuery,
 }: {
   columnsQuery: ReturnType<typeof useListTableColumnsQuery>;
@@ -2520,9 +2352,29 @@ function DefinitionTab({
   schemaName: string;
   tableComment: string;
   tableName: string;
-  tableOwner: string;
+  tableType: Table_TableType;
   triggersQuery: ReturnType<typeof useListTableTriggersQuery>;
 }) {
+  useEffect(
+    function refreshDefinitionOnOpen() {
+      Promise.all([
+        columnsQuery.refetch(),
+        constraintsQuery.refetch(),
+        indexesQuery.refetch(),
+        partitionMetadataQuery.refetch(),
+        policiesQuery.refetch(),
+        triggersQuery.refetch(),
+      ]);
+    },
+    [
+      columnsQuery.refetch,
+      constraintsQuery.refetch,
+      indexesQuery.refetch,
+      partitionMetadataQuery.refetch,
+      policiesQuery.refetch,
+      triggersQuery.refetch,
+    ]
+  );
   const toolbar = deriveMetadataToolbar([
     columnsQuery,
     constraintsQuery,
@@ -2563,46 +2415,39 @@ function DefinitionTab({
       query: triggersQuery,
     }
   );
-  if (errors.length > 0) {
+  const blockingErrors = columnsQuery.data
+    ? []
+    : errors.filter((queryError) => queryError.label === "Columns");
+  if (blockingErrors.length > 0) {
     return (
       <TabError
-        errors={errors}
+        errors={blockingErrors}
         onRetry={toolbar.handleRetry}
         tab="definition"
       />
     );
   }
-  if (
-    !(
-      columnsQuery.data &&
-      constraintsQuery.data &&
-      indexesQuery.data &&
-      partitionMetadataQuery.data &&
-      policiesQuery.data &&
-      triggersQuery.data
-    ) ||
-    columnsQuery.isLoading ||
-    constraintsQuery.isLoading ||
-    indexesQuery.isLoading ||
-    partitionMetadataQuery.isLoading ||
-    policiesQuery.isLoading ||
-    triggersQuery.isLoading
-  ) {
+  if (!columnsQuery.data || columnsQuery.isLoading) {
     return <TabSkeleton />;
   }
 
+  const constraints = constraintsQuery.data?.constraints ?? [];
+  const indexes = indexesQuery.data?.indexes ?? [];
+  const policies = policiesQuery.data?.policies ?? [];
+  const triggers = triggersQuery.data?.triggers ?? [];
   const qualifiedTableName = formatQualifiedTableName(schemaName, tableName);
   const sections = deriveDefinitionSections({
     columns: columnsQuery.data.columns,
-    constraints: constraintsQuery.data.constraints,
-    indexes: indexesQuery.data.indexes,
-    partitionMetadata: partitionMetadataQuery.data.partitionMetadata,
-    policies: policiesQuery.data.policies,
+    constraints,
+    indexes,
+    partitionMetadata: partitionMetadataQuery.data?.partitionMetadata,
+    policies,
     qualifiedTableName,
     tableComment,
-    triggers: triggersQuery.data.triggers,
+    tableType,
+    triggers,
   });
-  const references = dependencyReferences(constraintsQuery.data.constraints);
+  const references = dependencyReferences(constraints);
   const command = dumpCommand({
     databaseId,
     qualifiedTableName,
@@ -2610,123 +2455,85 @@ function DefinitionTab({
   });
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
-      <div className="min-w-0 space-y-4">
-        <div className="flex items-center gap-2 text-muted-foreground text-sm">
-          <span>Schema document</span>
-          <span aria-hidden="true">·</span>
-          <span>
-            generated live from{" "}
-            <code className="rounded bg-muted px-1 py-0.5">pg_catalog</code>
-          </span>
-          <div className="ml-auto">
-            <Button
-              disabled={toolbar.isRefreshing}
-              onClick={toolbar.handleRefresh}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <RefreshCw
-                aria-hidden="true"
-                className={cn(
-                  "size-3.5",
-                  toolbar.isRefreshing &&
-                    "animate-spin motion-reduce:animate-none"
-                )}
-                data-icon="inline-start"
-              />
-              Refresh
-            </Button>
+    <div className="@container/definition">
+      <div className="grid @5xl/definition:grid-cols-[minmax(0,1fr)_22rem] gap-4">
+        <div className="min-w-0 space-y-4">
+          {errors.length > 0 ? (
+            <TabError
+              errors={errors}
+              onRetry={toolbar.handleRetry}
+              tab="definition"
+            />
+          ) : null}
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 text-muted-foreground text-sm">
+            <span>Schema document</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              generated live from{" "}
+              <code className="rounded bg-muted px-1 py-0.5">pg_catalog</code>
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>{toolbar.lastFetchedLabel}</span>
+            <div className="ml-auto shrink-0">
+              <Button
+                disabled={toolbar.isRefreshing}
+                onClick={toolbar.handleRefresh}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                <RefreshCw
+                  aria-hidden="true"
+                  className={cn(
+                    "size-3.5",
+                    toolbar.isRefreshing &&
+                      "animate-spin motion-reduce:animate-none"
+                  )}
+                  data-icon="inline-start"
+                />
+                Refresh
+              </Button>
+            </div>
           </div>
+          {sections.map((section) => (
+            <DefinitionSectionCard key={section.id} section={section} />
+          ))}
         </div>
-        {sections.map((section) => (
-          <DefinitionSectionCard key={section.id} section={section} />
-        ))}
-      </div>
-      <aside className="space-y-4">
-        <DefinitionSideCard
-          action={<Badge variant="secondary">Not configured</Badge>}
-          icon={GitCompareArrows}
-          title="Drift detection"
-        >
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            Compare environments when drift data is connected.
-          </p>
-        </DefinitionSideCard>
-        <DefinitionSideCard icon={Layers} title="Dependencies">
-          <div className="space-y-3 text-sm">
-            <div>
-              <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
-                Referenced by
-              </p>
-              <p className="mt-1 font-mono text-muted-foreground text-xs">
-                {EMPTY_DEPENDENCY_PLACEHOLDER}
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
-                References
-              </p>
-              {references.length > 0 ? (
-                <ul className="mt-1 space-y-1">
-                  {references.map((reference) => (
-                    <li className="font-mono text-xs" key={reference}>
-                      {reference}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-1 font-mono text-muted-foreground text-xs">
-                  {EMPTY_DEPENDENCY_PLACEHOLDER}
+        <aside className="space-y-4">
+          <DefinitionSideCard icon={Layers} title="Dependencies">
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
+                  References
                 </p>
-              )}
+                {references.length > 0 ? (
+                  <ul className="mt-1 space-y-1">
+                    {references.map((reference) => (
+                      <li className="font-mono text-xs" key={reference}>
+                        {reference}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-1 font-mono text-muted-foreground text-xs">
+                    {EMPTY_DEPENDENCY_PLACEHOLDER}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        </DefinitionSideCard>
-        <ReproduceLocallyCard
-          command={command}
-          databaseId={databaseId}
-          schemaName={schemaName}
-          tableName={tableName}
-        />
-        <p className="px-1 text-muted-foreground text-xs leading-relaxed">
-          Definition is generated from pg_catalog on each visit; Querylane never
-          stores or mutates schema.
-        </p>
-        <Card className="gap-0 border-destructive/40 py-0" size="sm">
-          <CardHeader className="border-b bg-destructive/5 py-3">
-            <h2 className="flex items-center gap-2 font-medium text-sm">
-              <TriangleAlert
-                aria-hidden="true"
-                className="size-4 text-destructive"
-              />
-              Danger zone
-            </h2>
-            <CardAction>
-              <Badge variant="outline">
-                {tableOwner ? `requires ${tableOwner}` : "requires table owner"}
-              </Badge>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="flex items-start gap-3 py-4">
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">Truncate {qualifiedTableName}</p>
-              <p className="mt-1 text-muted-foreground text-sm">
-                Removes every row instantly and resets owned sequences.
-              </p>
-            </div>
-            <Button
-              disabled={true}
-              size="sm"
-              type="button"
-              variant="destructive"
-            >
-              Truncate…
-            </Button>
-          </CardContent>
-        </Card>
-      </aside>
+          </DefinitionSideCard>
+          <ReproduceLocallyCard
+            command={command}
+            databaseId={databaseId}
+            schemaName={schemaName}
+            tableName={tableName}
+          />
+          <p className="px-1 text-muted-foreground text-xs leading-relaxed">
+            Definition is generated from pg_catalog on each visit; Querylane
+            never stores or mutates schema.
+          </p>
+        </aside>
+      </div>
     </div>
   );
 }
@@ -2919,7 +2726,7 @@ function TableDetail({
                 schemaName={schemaName}
                 tableComment={table?.comment ?? ""}
                 tableName={tableName}
-                tableOwner={table?.owner ?? ""}
+                tableType={table?.tableType ?? Table_TableType.UNSPECIFIED}
                 triggersQuery={triggersQuery}
               />
             </TabsContent>
