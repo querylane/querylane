@@ -1060,6 +1060,11 @@ test("data explorer table definition tab has a visual baseline", async () => {
   await expect
     .element(page.getByText("Copy all steps", { exact: true }))
     .toBeVisible();
+  expect(
+    document.querySelectorAll(
+      'code.language-sql[data-syntax-highlighter="shiki"]'
+    ).length
+  ).toBeGreaterThan(2);
   const dumpCommand = page
     .getByRole("textbox", { name: "Dump schema only command" })
     .element();

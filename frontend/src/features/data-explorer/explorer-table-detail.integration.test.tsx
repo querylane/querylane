@@ -72,6 +72,22 @@ interface MockGridProps {
   rows?: GridRow[];
 }
 
+function querySqlCodeBlock(pattern: RegExp) {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(
+      'code.language-sql[data-syntax-highlighter="shiki"]'
+    )
+  ).find((codeBlock) => pattern.test(codeBlock.textContent ?? ""));
+}
+
+function getSqlCodeBlock(pattern: RegExp) {
+  const codeBlock = querySqlCodeBlock(pattern);
+  if (!codeBlock) {
+    throw new Error(`Expected a highlighted SQL block matching ${pattern}.`);
+  }
+  return codeBlock;
+}
+
 const tableQueries = vi.hoisted(() => ({
   columns: {
     data: undefined as unknown,
@@ -430,12 +446,10 @@ describe("TableDetail definition document", () => {
 
     expect(screen.getByText("Schema document")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Create table" })).toBeTruthy();
-    expect(screen.getByDisplayValue(CREATE_TABLE_SQL_RE)).toBeTruthy();
-    expect(screen.getByDisplayValue(IDENTITY_COLUMN_SQL_RE)).toBeTruthy();
-    expect(
-      screen.getByDisplayValue(PRIMARY_KEY_CONSTRAINT_SQL_RE)
-    ).toBeTruthy();
-    expect(screen.queryByDisplayValue(PRIMARY_KEY_INDEX_SQL_RE)).toBeNull();
+    expect(getSqlCodeBlock(CREATE_TABLE_SQL_RE)).toBeTruthy();
+    expect(getSqlCodeBlock(IDENTITY_COLUMN_SQL_RE)).toBeTruthy();
+    expect(getSqlCodeBlock(PRIMARY_KEY_CONSTRAINT_SQL_RE)).toBeTruthy();
+    expect(querySqlCodeBlock(PRIMARY_KEY_INDEX_SQL_RE)).toBeUndefined();
     expect(
       screen.getByText(
         "Exact index definitions are unavailable. Use the pg_dump command to preserve expressions, operator classes, and ordering."
@@ -446,13 +460,9 @@ describe("TableDetail definition document", () => {
         "Policy definitions are available, but row-level security enablement and forced mode are not. Use the pg_dump command to reproduce policies safely."
       )
     ).toBeTruthy();
-    expect(screen.getByDisplayValue(TRIGGER_SQL_RE)).toBeTruthy();
-    expect(
-      screen.getByDisplayValue(FULL_TRIGGER_STATEMENTS_SQL_RE)
-    ).toBeTruthy();
-    expect(
-      screen.getByDisplayValue(SNIPPET_TRIGGER_UNAVAILABLE_RE)
-    ).toBeTruthy();
+    expect(getSqlCodeBlock(TRIGGER_SQL_RE)).toBeTruthy();
+    expect(getSqlCodeBlock(FULL_TRIGGER_STATEMENTS_SQL_RE)).toBeTruthy();
+    expect(getSqlCodeBlock(SNIPPET_TRIGGER_UNAVAILABLE_RE)).toBeTruthy();
     expect(
       screen.getByRole("heading", { name: "Reproduce locally" })
     ).toBeTruthy();
@@ -498,10 +508,8 @@ describe("TableDetail definition document", () => {
       />
     );
 
-    expect(screen.getByDisplayValue(RESERVED_COLUMN_SQL_RE)).toBeTruthy();
-    expect(
-      screen.getByDisplayValue(RESERVED_NULLABLE_COLUMN_SQL_RE)
-    ).toBeTruthy();
+    expect(getSqlCodeBlock(RESERVED_COLUMN_SQL_RE)).toBeTruthy();
+    expect(getSqlCodeBlock(RESERVED_NULLABLE_COLUMN_SQL_RE)).toBeTruthy();
   });
 
   it("renders executable DDL for a partitioned table and its children", () => {
@@ -546,8 +554,8 @@ describe("TableDetail definition document", () => {
       />
     );
 
-    expect(screen.getByDisplayValue(PARTITIONED_TABLE_SQL_RE)).toBeTruthy();
-    expect(screen.getByDisplayValue(CHILD_PARTITION_SQL_RE)).toBeTruthy();
+    expect(getSqlCodeBlock(PARTITIONED_TABLE_SQL_RE)).toBeTruthy();
+    expect(getSqlCodeBlock(CHILD_PARTITION_SQL_RE)).toBeTruthy();
   });
 });
 
@@ -601,7 +609,7 @@ describe("TableDetail definition safety", () => {
       />
     );
 
-    expect(screen.queryByDisplayValue(CREATE_TABLE_RE)).toBeNull();
+    expect(querySqlCodeBlock(CREATE_TABLE_RE)).toBeUndefined();
     expect(
       screen.getByText(
         "Exact foreign-table DDL is unavailable. Use the pg_dump command to preserve its server and options."
@@ -633,7 +641,7 @@ describe("TableDetail definition safety", () => {
       />
     );
 
-    expect(screen.queryByDisplayValue(CREATE_INDEX_RE)).toBeNull();
+    expect(querySqlCodeBlock(CREATE_INDEX_RE)).toBeUndefined();
     expect(
       screen.getByText(
         "Exact index definitions are unavailable. Use the pg_dump command to preserve expressions, operator classes, and ordering."
@@ -667,7 +675,7 @@ describe("TableDetail definition safety", () => {
       />
     );
 
-    expect(screen.queryByDisplayValue(CREATE_POLICY_RE)).toBeNull();
+    expect(querySqlCodeBlock(CREATE_POLICY_RE)).toBeUndefined();
     expect(
       screen.getByText(
         "Policy definitions are available, but row-level security enablement and forced mode are not. Use the pg_dump command to reproduce policies safely."
@@ -700,7 +708,7 @@ describe("TableDetail definition safety", () => {
       />
     );
 
-    expect(screen.getByDisplayValue(DISABLED_TRIGGER_SQL_RE)).toBeTruthy();
+    expect(getSqlCodeBlock(DISABLED_TRIGGER_SQL_RE)).toBeTruthy();
   });
 
   it("includes available column comments", () => {
@@ -729,7 +737,7 @@ describe("TableDetail definition safety", () => {
       />
     );
 
-    expect(screen.getByDisplayValue(COLUMN_COMMENT_SQL_RE)).toBeTruthy();
+    expect(getSqlCodeBlock(COLUMN_COMMENT_SQL_RE)).toBeTruthy();
   });
 
   it("copies a shell-valid reproduce script", async () => {
@@ -880,7 +888,7 @@ describe("TableDetail metadata errors", () => {
       />
     );
 
-    expect(screen.getByDisplayValue(CREATE_TABLE_SQL_RE)).toBeTruthy();
+    expect(getSqlCodeBlock(CREATE_TABLE_SQL_RE)).toBeTruthy();
     expect(screen.getByText("PostgreSQL permission denied")).toBeTruthy();
   });
 

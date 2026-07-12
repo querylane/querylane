@@ -48,6 +48,7 @@ import {
   type FacetedFilterOption,
 } from "@/components/ui/data-table-faceted-filter";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -2106,27 +2107,6 @@ function deriveDefinitionSections({
   return sections;
 }
 
-function SchemaCodeBlock({ sql }: { sql: string }) {
-  return (
-    <div className="relative">
-      <Textarea
-        aria-label="SQL definition"
-        className="block w-full resize-none overflow-x-auto whitespace-pre rounded-b-xl border-0 bg-muted/30 p-4 pr-10 font-mono text-[12px] text-foreground leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-        readOnly={true}
-        rows={Math.max(sql.split("\n").length, 2)}
-        spellCheck={false}
-        value={sql}
-        wrap="off"
-      />
-      <CopyIconButton
-        ariaLabel="Copy SQL"
-        className="absolute top-3 right-3"
-        value={sql}
-      />
-    </div>
-  );
-}
-
 function DefinitionSectionCard({ section }: { section: DefinitionSection }) {
   return (
     <Card className="gap-0 py-0" size="sm">
@@ -2139,7 +2119,10 @@ function DefinitionSectionCard({ section }: { section: DefinitionSection }) {
         </CardDescription>
       </CardHeader>
       {section.kind === "code" ? (
-        <SchemaCodeBlock sql={section.content} />
+        <SqlCodeBlock
+          className="rounded-none rounded-b-xl border-0 bg-muted/30 p-4 pr-10 text-[12px]"
+          sql={section.content}
+        />
       ) : (
         <CardContent className="py-4 text-muted-foreground text-sm leading-relaxed">
           {section.content}
