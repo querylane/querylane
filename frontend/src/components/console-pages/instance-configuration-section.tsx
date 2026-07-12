@@ -24,7 +24,13 @@ import {
   SslNegotiationSelectItems,
   SslNegotiationSelectValue,
 } from "@/components/ssl-negotiation-select";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { DisabledReasonButton } from "@/components/ui/disabled-reason-button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectTrigger } from "@/components/ui/select";
@@ -34,7 +40,10 @@ import {
   normalizeSslNegotiation,
 } from "@/lib/protobuf-enums";
 import { waitForNextFrame } from "@/lib/wait-for-next-frame";
-import { PostgresConfig_SslMode } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import {
+  Instance_CredentialState,
+  PostgresConfig_SslMode,
+} from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import { InstanceConfigurationLabels } from "./instance-configuration-labels";
 
 function createInstanceFormState(instance: InstanceRecord): InstanceFormState {
@@ -115,6 +124,7 @@ function InstanceConfigurationSection({
   const passwordId = useId();
   const sslModeId = useId();
   const sslNegotiationId = useId();
+  const credentialGuidanceId = `${passwordId}-credential-guidance`;
   const [formState, setFormState] = useState<InstanceFormState>(() =>
     createInstanceFormState(instance)
   );
@@ -124,8 +134,15 @@ function InstanceConfigurationSection({
     formState,
     persistedFormState
   );
-  const saveDisabledReason =
+  const credentialsUnreadable =
+    instance.credentialState === Instance_CredentialState.UNREADABLE;
+  const needsReplacementPassword =
+    credentialsUnreadable && !formState.dirtyFields?.password;
+  let saveDisabledReason =
     hasUnsavedChanges || pending ? null : "No changes to save.";
+  if (needsReplacementPassword) {
+    saveDisabledReason = "Re-enter the password before saving.";
+  }
   const handleSaveClick = async () => {
     const validation = validateInstanceForm(formState);
     setFormErrors(validation.errors);
@@ -164,6 +181,26 @@ function InstanceConfigurationSection({
       }
       title="Configuration"
     >
+      {credentialsUnreadable ? (
+        <Alert className="pr-44" variant="destructive">
+          <AlertCircle aria-hidden="true" />
+          <AlertTitle>Credentials need attention</AlertTitle>
+          <AlertDescription id={credentialGuidanceId}>
+            Stored credentials can’t be read. Enter the password again to
+            restore access.
+          </AlertDescription>
+          <AlertAction>
+            <Button
+              onClick={() => focusInstanceConfigurationInvalidField("password")}
+              size="sm"
+              variant="outline"
+            >
+              Re-enter password
+            </Button>
+          </AlertAction>
+        </Alert>
+      ) : null}
+
       <InstanceConfigurationFields
         databaseId={databaseId}
         displayNameId={displayNameId}
@@ -171,6 +208,9 @@ function InstanceConfigurationSection({
         formState={formState}
         hostId={hostId}
         isConfigManaged={isConfigManaged}
+        passwordDescriptionId={
+          credentialsUnreadable ? credentialGuidanceId : undefined
+        }
         passwordId={passwordId}
         portId={portId}
         setFormState={setFormState}
@@ -206,6 +246,7 @@ function InstanceConfigurationFields({
   hostId,
   isConfigManaged,
   passwordId,
+  passwordDescriptionId,
   portId,
   setFormState,
   sslModeId,
@@ -219,6 +260,7 @@ function InstanceConfigurationFields({
   hostId: string;
   isConfigManaged: boolean;
   passwordId: string;
+  passwordDescriptionId?: string | undefined;
   portId: string;
   setFormState: Dispatch<SetStateAction<InstanceFormState>>;
   sslModeId: string;
@@ -332,6 +374,7 @@ function InstanceConfigurationFields({
           Password
         </label>
         <PasswordInput
+          aria-describedby={passwordDescriptionId}
           aria-invalid={Boolean(formErrors.password)}
           data-instance-config-field="password"
           disabled={isConfigManaged}

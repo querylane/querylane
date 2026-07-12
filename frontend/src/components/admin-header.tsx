@@ -378,10 +378,23 @@ function InstanceSelector({
               data-checked={selectedInstance?.id === instance.id}
               key={instance.id}
               onSelect={() => {
+                if (instance.credentialsUnreadable) {
+                  navigate({
+                    params: { instanceId: instance.id },
+                    to: "/instances/$instanceId/configuration",
+                  }).catch((error: unknown) =>
+                    handleNavigationError(error, {
+                      area: "admin-header.recover-instance-credentials",
+                    })
+                  );
+                  close();
+                  return;
+                }
+
                 navigateToInstance(instance);
                 close();
               }}
-              value={`${instance.name} ${instance.host}`}
+              value={`${instance.name} ${instance.host}${instance.credentialsUnreadable ? " credentials need attention re-enter password" : ""}`}
             >
               <StatusDot status={instance.status} />
               <div className="flex min-w-0 flex-1 flex-col">
@@ -391,7 +404,18 @@ function InstanceSelector({
                 <OverflowAwareText className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
                   {instance.host}:{instance.port}
                 </OverflowAwareText>
-                {instance.status !== "connected" && (
+                {instance.credentialsUnreadable ? (
+                  <>
+                    <span className="truncate text-[11px] text-destructive">
+                      Credentials need attention
+                    </span>
+                    <span className="truncate text-[11px] text-destructive underline underline-offset-2">
+                      Re-enter password
+                    </span>
+                  </>
+                ) : null}
+                {!instance.credentialsUnreadable &&
+                instance.status !== "connected" ? (
                   <span
                     className={cn(
                       "truncate text-[11px]",
@@ -402,7 +426,7 @@ function InstanceSelector({
                   >
                     {getConnectionStatusLabel(instance.status)}
                   </span>
-                )}
+                ) : null}
               </div>
             </CommandItem>
           ))}

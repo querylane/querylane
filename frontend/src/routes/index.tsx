@@ -36,7 +36,11 @@ function resolveHomeInstanceId({
     }
   }
 
-  return instances[0]?.id ?? null;
+  return (
+    instances.find((instance) => !instance.credentialsUnreadable)?.id ??
+    instances[0]?.id ??
+    null
+  );
 }
 
 function HomeRedirectPage() {
@@ -53,6 +57,9 @@ function HomeRedirectPage() {
     instances,
     requestedInstanceId: search.instanceId,
   });
+  const targetInstance = instances.find(
+    (instance) => instance.id === targetInstanceId
+  );
   const noInstances =
     instancesState.hasResolved &&
     !instancesState.error &&
@@ -80,16 +87,22 @@ function HomeRedirectPage() {
       return;
     }
 
+    const destination = targetInstance?.credentialsUnreadable
+      ? "/instances/$instanceId/configuration"
+      : "/instances/$instanceId";
     navigate({
-      params: {
-        instanceId: targetInstanceId,
-      },
+      params: { instanceId: targetInstanceId },
       replace: true,
-      to: "/instances/$instanceId",
+      to: destination,
     }).catch((error: unknown) =>
       handleNavigationError(error, { area: "home.instance-redirect" })
     );
-  }, [navigate, shouldRedirectToNewInstance, targetInstanceId]);
+  }, [
+    navigate,
+    shouldRedirectToNewInstance,
+    targetInstance?.credentialsUnreadable,
+    targetInstanceId,
+  ]);
 
   if (targetInstanceId) {
     return (
@@ -145,7 +158,9 @@ function HomeRedirectPage() {
   );
 }
 
-export const Route = createFileRoute("/")({
+const Route = createFileRoute("/")({
   component: HomeRedirectPage,
   validateSearch: homeSearchSchema,
 });
+
+export { Route, resolveHomeInstanceId };

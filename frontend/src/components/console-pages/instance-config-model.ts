@@ -9,6 +9,7 @@ import {
 import { isDirectSslNegotiationMode } from "@/lib/ssl-modes";
 import {
   CreateInstanceSpecSchema,
+  Instance_CredentialState,
   PostgresConfig_SslMode,
   PostgresConfigSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
@@ -269,6 +270,13 @@ function buildInstanceConfigUpdatePaths({
   instance: InstanceRecord;
   nextPort: number;
 }) {
+  if (
+    instance.credentialState === Instance_CredentialState.UNREADABLE &&
+    formState.dirtyFields?.password
+  ) {
+    return ["config"];
+  }
+
   const updatePaths: string[] = [];
   if (formState.host !== (instance.config?.host ?? "")) {
     updatePaths.push("config.host");

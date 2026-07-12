@@ -37,6 +37,7 @@ import {
   type GetInstanceResponse,
   GetInstanceResponseSchema,
   HealthCheckStatus,
+  Instance_CredentialState,
   InstanceHealthSchema,
   InstanceSchema,
   PgStatStatementsHealthSchema,
@@ -79,6 +80,7 @@ const COLLATION_COLUMN_NAME = /^collation/i;
 
 const state = vi.hoisted(() => ({
   databases: [] as PostgresDatabase[],
+  deleteInstance: vi.fn(async () => undefined),
   extensionData: undefined as ListExtensionsResponse | undefined,
   extensionInput: undefined as
     | { filter?: string; orderBy?: string; pageSize?: number; parent: string }
@@ -211,7 +213,7 @@ vi.mock("@/hooks/api/instance", () => ({
   }),
   useDeleteInstanceMutation: () => ({
     isPending: false,
-    mutateAsync: vi.fn(async () => undefined),
+    mutateAsync: state.deleteInstance,
   }),
   useGetInstanceOverviewQuery: () => ({
     data: state.overviewData,
@@ -271,6 +273,7 @@ function postgresInstanceFixture(
 ): PostgresInstance {
   return {
     connectionError: "",
+    credentialsUnreadable: false,
     host: "db.internal",
     id: "prod",
     name: "Production",
@@ -282,8 +285,12 @@ function postgresInstanceFixture(
 
 function instanceResponse({
   connectionError = "",
+  credentialError = "",
+  credentialState = Instance_CredentialState.UNSPECIFIED,
 }: {
   connectionError?: string;
+  credentialError?: string;
+  credentialState?: Instance_CredentialState;
 } = {}) {
   return createProto(GetInstanceResponseSchema, {
     instance: createProto(InstanceSchema, {
@@ -296,6 +303,8 @@ function instanceResponse({
         username: "postgres",
       }),
       connectionError,
+      credentialError,
+      credentialState,
       displayName: "Production",
       labels: {},
       name: "instances/prod",
@@ -407,6 +416,8 @@ function instanceHealthResponse({
 
 beforeEach(() => {
   state.databases = [];
+  state.deleteInstance.mockReset();
+  state.deleteInstance.mockResolvedValue(undefined);
   state.extensionData = undefined;
   state.extensionInput = undefined;
   state.healthData = undefined;
@@ -454,6 +465,39 @@ function setFieldValue(label: string, value: string) {
 }
 
 describe("backend instance configuration save", () => {
+  test("guides unreadable credentials through a full config replacement", async () => {
+    const user = userEvent.setup();
+    state.instanceData = instanceResponse({
+      credentialError:
+        "Stored credentials cannot be read. Re-enter the password to restore access.",
+      credentialState: Instance_CredentialState.UNREADABLE,
+    });
+    renderInstanceConfiguration();
+
+    expect(screen.getByText("Credentials need attention")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Stored credentials can’t be read. Enter the password again to restore access."
+      )
+    ).toBeTruthy();
+    const saveButton = screen.getByRole("button", { name: "Save changes" });
+    expect(saveButton).toHaveProperty("disabled", true);
+
+    await user.click(screen.getByRole("button", { name: "Re-enter password" }));
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByLabelText("Password"));
+    });
+    await user.type(screen.getByLabelText("Password"), "replacement-secret");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => {
+      expect(state.updateInstance).toHaveBeenCalledTimes(1);
+    });
+    expect(state.updateInstance.mock.calls[0]?.[0]?.updateMask.paths).toEqual([
+      "config",
+    ]);
+  });
+
   test("refreshes the all-instances cache after a successful update", async () => {
     const user = userEvent.setup();
     renderInstanceConfiguration();
@@ -573,6 +617,23 @@ describe("backend instance configuration save", () => {
   });
 });
 
+describe("backend instance credential recovery routing", () => {
+  test("redirects unreadable instance overview to configuration", async () => {
+    state.instanceData = instanceResponse({
+      credentialState: Instance_CredentialState.UNREADABLE,
+    });
+    renderInstanceOverview();
+
+    await waitFor(() => {
+      expect(state.navigate).toHaveBeenCalledWith({
+        params: { instanceId: "prod" },
+        replace: true,
+        to: "/instances/$instanceId/configuration",
+      });
+    });
+  });
+});
+
 describe("backend instance danger zone", () => {
   test("disables delete when this is the only registered instance", () => {
     renderInstanceConfiguration();
@@ -598,6 +659,45 @@ describe("backend instance danger zone", () => {
         "No registered instances were found. Refresh the instance list before deleting."
       )
     ).toBeTruthy();
+  });
+
+  test("keeps delete available when the only instance credentials are unreadable", () => {
+    state.instanceData = instanceResponse({
+      credentialState: Instance_CredentialState.UNREADABLE,
+    });
+    renderInstanceConfiguration();
+
+    const dangerZone = screen.getByTestId("instance-danger-zone");
+    expect(
+      within(dangerZone).getByRole("button", { name: "Delete instance" })
+    ).toHaveProperty("disabled", false);
+  });
+
+  test("opens registration after deleting the only unreadable instance", async () => {
+    const user = userEvent.setup();
+    state.instanceData = instanceResponse({
+      credentialState: Instance_CredentialState.UNREADABLE,
+    });
+    renderInstanceConfiguration();
+
+    await user.click(screen.getByRole("button", { name: "Delete instance" }));
+    await user.type(
+      screen.getByRole("textbox", {
+        name: "Type instances/prod to confirm",
+      }),
+      "instances/prod"
+    );
+    await user.click(screen.getByRole("button", { name: "Delete instance" }));
+
+    await waitFor(() => {
+      expect(state.deleteInstance).toHaveBeenCalledWith({
+        name: "instances/prod",
+      });
+    });
+    expect(state.navigate).toHaveBeenCalledWith({
+      replace: true,
+      to: "/new-instance",
+    });
   });
 });
 

@@ -4,7 +4,7 @@ import { useTransport } from "@connectrpc/connect-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Database, RefreshCw, X } from "lucide-react";
-import { type Dispatch, type SetStateAction, useState } from "react";
+import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AsyncSectionState } from "@/components/async-section-state";
 import { MetricSparkline } from "@/components/charts/metric-chart";
@@ -114,7 +114,10 @@ import type {
   InstanceOverview,
   ServerInfo,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
-import { ServerInfo_ReplicationRole } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import {
+  Instance_CredentialState,
+  ServerInfo_ReplicationRole,
+} from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import {
   MetricId,
   type MetricSeries,
@@ -158,14 +161,20 @@ const EMPTY_INSTANCE_CATALOG_DELETE_DISABLED_REASON =
   "No registered instances were found. Refresh the instance list before deleting.";
 
 function getInstanceDeleteDisabledReason({
+  credentialsUnreadable,
   instanceCatalogHasData,
   instanceCatalogHasResolved,
   instanceCount,
 }: {
+  credentialsUnreadable: boolean;
   instanceCatalogHasData: boolean;
   instanceCatalogHasResolved: boolean;
   instanceCount: number;
 }) {
+  if (credentialsUnreadable) {
+    return null;
+  }
+
   if (!(instanceCatalogHasData || instanceCatalogHasResolved)) {
     return "Checking registered instances before delete.";
   }
@@ -1064,6 +1073,7 @@ async function saveInstanceConfiguration(
 }
 
 async function deleteInstanceFromPage({
+  deleteDestination,
   deleteDisabledReason,
   deleteInstanceMutation,
   instance,
@@ -1074,6 +1084,7 @@ async function deleteInstanceFromPage({
   setIsDeleteDialogOpen,
   transport,
 }: {
+  deleteDestination: "/" | "/new-instance";
   deleteDisabledReason: string | null;
   deleteInstanceMutation: ReturnType<typeof useDeleteInstanceMutation>;
   instance: InstanceRecord | undefined;
@@ -1104,7 +1115,7 @@ async function deleteInstanceFromPage({
       "navigate-home",
       navigate({
         replace: true,
-        to: "/",
+        to: deleteDestination,
       })
     );
     runInstanceMutationFollowUp(
@@ -1155,6 +1166,26 @@ function BackendInstancePage({
   const instance = instanceQuery.data?.instance;
   const serverInfo = instanceQuery.data?.serverInfo;
   const instanceName = buildInstanceName(instanceId);
+  const credentialsUnreadable =
+    instance?.credentialState === Instance_CredentialState.UNREADABLE;
+  useEffect(
+    function redirectUnreadableCredentialsToConfiguration() {
+      if (!(credentialsUnreadable && section === "overview")) {
+        return;
+      }
+
+      navigate({
+        params: { instanceId },
+        replace: true,
+        to: "/instances/$instanceId/configuration",
+      }).catch((error: unknown) =>
+        handleNavigationError(error, {
+          area: "console.instance.credentials-recovery",
+        })
+      );
+    },
+    [credentialsUnreadable, instanceId, navigate, section]
+  );
   const isConnected = selectedInstance?.status === "connected";
   const overviewQuery = useGetInstanceOverviewQuery(
     {
@@ -1237,10 +1268,13 @@ function BackendInstancePage({
   const loader = createResourceLoader(instanceQuery, "console.instance");
   const isRefreshing = instanceQuery.isFetching;
   const deleteDisabledReason = getInstanceDeleteDisabledReason({
+    credentialsUnreadable,
     instanceCatalogHasData: queryStates.instances.hasData,
     instanceCatalogHasResolved: queryStates.instances.hasResolved,
     instanceCount: instances.length,
   });
+  const deleteDestination =
+    credentialsUnreadable && instances.length <= 1 ? "/new-instance" : "/";
   const handleRefresh = () => {
     refreshInstancePageData({
       configuredDatabase,
@@ -1278,6 +1312,7 @@ function BackendInstancePage({
     });
   const handleDelete = () =>
     deleteInstanceFromPage({
+      deleteDestination,
       deleteDisabledReason,
       deleteInstanceMutation,
       instance,
