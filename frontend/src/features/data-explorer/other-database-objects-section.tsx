@@ -69,6 +69,7 @@ const CRON_FIELD_LABELS = [
   "Day of week",
 ] as const;
 const CRON_PARTS_RE = /\s+/;
+const CRON_NUMBER_RE = /^\d+$/;
 const ROUTINE_SIGNATURE_RE = /^([^(]+)(\(.*\))$/;
 const CRON_FIELD_COUNT = 5;
 const CRON_MINUTE_INDEX = 0;
@@ -529,12 +530,20 @@ function cronHuman(object: OtherDatabaseObject): string {
   const month = parts[3];
   const dayOfWeek = parts[4];
 
-  if (minute?.startsWith("*/")) {
+  if (
+    minute?.startsWith("*/") &&
+    hour === "*" &&
+    dayOfMonth === "*" &&
+    month === "*" &&
+    dayOfWeek === "*"
+  ) {
     return `every ${minute.slice(2)} minutes`;
   }
   if (
     minute &&
     hour &&
+    CRON_NUMBER_RE.test(minute) &&
+    CRON_NUMBER_RE.test(hour) &&
     dayOfMonth === "*" &&
     month === "*" &&
     dayOfWeek === "0"
@@ -544,6 +553,8 @@ function cronHuman(object: OtherDatabaseObject): string {
   if (
     minute &&
     hour &&
+    CRON_NUMBER_RE.test(minute) &&
+    CRON_NUMBER_RE.test(hour) &&
     dayOfMonth === "*" &&
     month === "*" &&
     dayOfWeek === "*"
@@ -581,19 +592,35 @@ function cronFieldText(value: string, index: number): string {
 function cronSentence(schedule: string): string {
   const [minute, hour, dayOfMonth, month, dayOfWeek] =
     schedule.split(CRON_PARTS_RE);
-  if (minute?.startsWith("*/")) {
+  if (
+    minute?.startsWith("*/") &&
+    hour === "*" &&
+    dayOfMonth === "*" &&
+    month === "*" &&
+    dayOfWeek === "*"
+  ) {
     return `Every ${minute.slice(2)} minutes`;
   }
   if (
     minute &&
     hour &&
+    CRON_NUMBER_RE.test(minute) &&
+    CRON_NUMBER_RE.test(hour) &&
     dayOfMonth === "*" &&
     month === "*" &&
     dayOfWeek === "*"
   ) {
     return `At ${hour.padStart(2, "0")}:${minute.padStart(2, "0")}, every day`;
   }
-  if (minute && hour && dayOfWeek === "0") {
+  if (
+    minute &&
+    hour &&
+    CRON_NUMBER_RE.test(minute) &&
+    CRON_NUMBER_RE.test(hour) &&
+    dayOfMonth === "*" &&
+    month === "*" &&
+    dayOfWeek === "0"
+  ) {
     return `At ${hour.padStart(2, "0")}:${minute.padStart(2, "0")}, Sundays`;
   }
   return schedule;
@@ -615,7 +642,10 @@ function CronObjectCard(props: OtherObjectCardProps) {
         <div className="flex items-center gap-4">
           <div className="w-28 shrink-0">
             <div className="font-bold font-mono text-[13px]">{schedule}</div>
-            <div className="mt-0.5 text-[11px] text-muted-foreground">
+            <div
+              className="mt-0.5 text-[11px] text-muted-foreground"
+              data-testid="schedule-description"
+            >
               {cronHuman(object)}
             </div>
           </div>
