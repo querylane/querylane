@@ -44,6 +44,7 @@ func TestValidateReadOnlyStatementAcceptsReadQueries(t *testing.T) {
 		"SHOW search_path",
 		"/* explainable */ SELECT ';' AS semicolon",
 		"SELECT $$not a ; delimiter$$ AS body",
+		"SELECT comment, share, start, merge FROM subscriptions ORDER BY start",
 	}
 
 	for _, statement := range statements {

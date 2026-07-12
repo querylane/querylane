@@ -96,6 +96,14 @@ const LARGE_PLAN_MS_FORMATTER = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
   minimumFractionDigits: 1,
 });
+const WORKBENCH_MODE_OPTIONS = [
+  { label: "SQL editor", value: "editor" },
+  { label: "Visual builder", value: "builder" },
+  { label: "Ask in English", value: "english" },
+] as const satisfies ReadonlyArray<{
+  label: string;
+  value: WorkbenchMode;
+}>;
 
 function planInsightKinds(summary: ExplainPlanSummary): PlanInsightKind[] {
   const [root] = summary.nodes;
@@ -236,9 +244,11 @@ function FileTabs() {
 }
 
 function ModeTabs({
+  idPrefix,
   mode,
   setMode,
 }: {
+  idPrefix: string;
   mode: WorkbenchMode;
   setMode: (mode: WorkbenchMode) => void;
 }) {
@@ -248,19 +258,17 @@ function ModeTabs({
       className="inline-flex rounded-xl bg-white/12 p-1 text-sm text-zinc-400"
       role="tablist"
     >
-      {[
-        ["editor", "SQL editor"],
-        ["builder", "Visual builder"],
-        ["english", "Ask in English"],
-      ].map(([value, label]) => (
+      {WORKBENCH_MODE_OPTIONS.map(({ label, value }) => (
         <Button
+          aria-controls={`${idPrefix}-${value}-panel`}
           aria-selected={mode === value}
           className={cn(
             "h-8 rounded-lg px-4",
             mode === value ? "bg-zinc-950 text-white shadow" : "text-zinc-400"
           )}
+          id={`${idPrefix}-${value}-tab`}
           key={value}
-          onClick={() => setMode(value as WorkbenchMode)}
+          onClick={() => setMode(value)}
           role="tab"
           type="button"
           variant="ghost"
@@ -1113,6 +1121,7 @@ export function SqlWorkbenchPage({
   instanceId,
 }: SqlWorkbenchPageProps) {
   const parent = buildWorkbenchParent({ databaseId, instanceId });
+  const modeId = useId();
   const [mode, setMode] = useState<WorkbenchMode>("editor");
   const [statement, setStatement] = useState(DEFAULT_SQL);
   const [resultTab, setResultTab] = useState<ResultTab>("results");
@@ -1198,7 +1207,7 @@ export function SqlWorkbenchPage({
               <GuardPill />
             </div>
             <div className="flex items-center gap-4">
-              <ModeTabs mode={mode} setMode={setMode} />
+              <ModeTabs idPrefix={modeId} mode={mode} setMode={setMode} />
               <Button
                 aria-label="Enter full screen (coming soon)"
                 disabled={true}
@@ -1213,9 +1222,22 @@ export function SqlWorkbenchPage({
 
           <FileTabs />
 
-          {mode === "builder" ? <VisualBuilderPreview /> : null}
+          {mode === "builder" ? (
+            <section
+              aria-labelledby={`${modeId}-builder-tab`}
+              id={`${modeId}-builder-panel`}
+              role="tabpanel"
+            >
+              <VisualBuilderPreview />
+            </section>
+          ) : null}
           {mode === "english" ? (
-            <section className="rounded-xl border border-white/10 bg-zinc-900/80 p-5">
+            <section
+              aria-labelledby={`${modeId}-english-tab`}
+              className="rounded-xl border border-white/10 bg-zinc-900/80 p-5"
+              id={`${modeId}-english-panel`}
+              role="tabpanel"
+            >
               <div className="flex items-center gap-3 text-lg text-zinc-500">
                 <Sparkles className="size-5 text-blue-400" />
                 Describe what you want to see, for example, shipments held in
@@ -1242,7 +1264,16 @@ export function SqlWorkbenchPage({
             </section>
           ) : null}
           {mode === "editor" ? (
-            <SqlTextEditor setStatement={setStatement} statement={statement} />
+            <div
+              aria-labelledby={`${modeId}-editor-tab`}
+              id={`${modeId}-editor-panel`}
+              role="tabpanel"
+            >
+              <SqlTextEditor
+                setStatement={setStatement}
+                statement={statement}
+              />
+            </div>
           ) : null}
 
           <EditorToolbar
