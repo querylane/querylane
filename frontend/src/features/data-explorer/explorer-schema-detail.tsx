@@ -29,6 +29,7 @@ import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model
 import { ExplorerSchemaMap } from "@/features/data-explorer/explorer-schema-map";
 import { HeaderStat } from "@/features/data-explorer/explorer-shared-ui";
 import { formatRows } from "@/features/data-explorer/format-rows";
+import { OtherDatabaseObjectsSection } from "@/features/data-explorer/other-database-objects-section";
 import type { SchemaDetailTab } from "@/features/data-explorer/schema-detail-tab";
 import type { catalogSyncNotice } from "@/features/data-explorer/use-data-explorer-state";
 import {
@@ -557,7 +558,7 @@ function SchemaDetail({
           <TabsTrigger value="objects">Objects</TabsTrigger>
           <TabsTrigger value="map">Schema map</TabsTrigger>
         </TabsList>
-        <TabsContent className="mt-4" value="objects">
+        <TabsContent className="mt-4 space-y-6" value="objects">
           {isLoading ? (
             <SchemaObjectsLoading />
           ) : (
@@ -568,6 +569,12 @@ function SchemaDetail({
               views={views}
             />
           )}
+          {databaseId && instanceId ? (
+            <OtherDatabaseObjectsSection
+              databaseId={databaseId}
+              instanceId={instanceId}
+            />
+          ) : null}
         </TabsContent>
         <TabsContent className="mt-4" value="map">
           {activeTab === "map" ? (
