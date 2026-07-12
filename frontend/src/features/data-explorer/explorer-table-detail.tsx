@@ -3315,18 +3315,29 @@ function TriggerSqlCopyButton({
   } else if (copyState === "error") {
     buttonLabel = "Copy failed";
   }
+  const statusMessage =
+    copyState === "copied"
+      ? `SQL for ${triggerName} copied.`
+      : `Could not copy SQL for ${triggerName}.`;
 
   return (
-    <Button
-      aria-label={`Copy SQL for ${triggerName}`}
-      className="h-6 px-2 text-xs"
-      onClick={handleCopyTriggerSql}
-      size="xs"
-      type="button"
-      variant="ghost"
-    >
-      {buttonLabel}
-    </Button>
+    <>
+      <Button
+        aria-label={`Copy SQL for ${triggerName}`}
+        className="h-6 px-2 text-xs"
+        onClick={handleCopyTriggerSql}
+        size="xs"
+        type="button"
+        variant="ghost"
+      >
+        {buttonLabel}
+      </Button>
+      {copyState === "idle" ? null : (
+        <span aria-live="polite" className="sr-only" role="status">
+          {statusMessage}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -3381,9 +3392,14 @@ function TriggerCard({
           {triggerLevelLabel(trigger)}
         </Badge>
         {trigger.enabled ? null : (
-          <Badge className="h-[18px] rounded-full bg-amber-500/15 px-2 text-[10px] text-amber-700 dark:text-amber-400">
+          <span
+            className={cn(
+              "inline-flex h-[18px] items-center rounded-full px-2 font-medium text-[10px]",
+              PILL_TONE_CLASSES.amber
+            )}
+          >
             disabled
-          </Badge>
+          </span>
         )}
         <span className="ml-auto truncate font-mono text-[11px] text-muted-foreground">
           {triggerFunctionLabel(trigger)}
@@ -3438,17 +3454,43 @@ function TriggersTab({
   }
   return (
     <div
-      className="flex flex-col gap-2.5"
+      className="flex flex-col gap-3"
       data-table-key="data-explorer-table-triggers"
+      data-testid="data-explorer-table-triggers"
     >
-      {triggers.map((trigger) => (
-        <TriggerCard
-          key={trigger.triggerName}
-          schemaName={schemaName}
-          tableName={tableName}
-          trigger={trigger}
-        />
-      ))}
+      <div className="flex items-center justify-end gap-2">
+        <span aria-live="polite" className="text-muted-foreground text-xs">
+          {toolbar.lastFetchedLabel}
+        </span>
+        <Button
+          disabled={toolbar.isRefreshing}
+          onClick={() => {
+            toolbar.handleRefresh();
+          }}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <RefreshCw
+            aria-hidden="true"
+            className={cn(
+              "size-3.5",
+              toolbar.isRefreshing && "animate-spin motion-reduce:animate-none"
+            )}
+          />
+          Refresh
+        </Button>
+      </div>
+      <div className="flex flex-col gap-2.5">
+        {triggers.map((trigger) => (
+          <TriggerCard
+            key={trigger.triggerName}
+            schemaName={schemaName}
+            tableName={tableName}
+            trigger={trigger}
+          />
+        ))}
+      </div>
     </div>
   );
 }

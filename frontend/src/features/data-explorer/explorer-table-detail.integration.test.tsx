@@ -1527,15 +1527,16 @@ describe("TableDetail triggers tab", () => {
         }),
         create(TableTriggerSchema, {
           definition:
-            "CREATE TRIGGER trg_shipments_notify AFTER UPDATE OF status ON shipping.shipments\n  FOR EACH ROW WHEN (OLD.status IS DISTINCT FROM NEW.status)\n  EXECUTE FUNCTION shipping.notify_status_change();",
+            "CREATE TRIGGER trg_shipments_notify AFTER UPDATE OF status ON shipping.shipment_event FOR EACH ROW WHEN ((old.status IS DISTINCT FROM new.status)) EXECUTE FUNCTION shipping.notify_status_change()",
           enabled: false,
-          events: ["UPDATE OF status"],
-          functionName: "shipping.notify_status_change",
+          events: ["UPDATE"],
+          functionName: "notify_status_change",
           timing: "AFTER",
           triggerName: "trg_shipments_notify",
         }),
       ],
     });
+    tableQueries.triggers.refetch.mockClear();
 
     try {
       render(
@@ -1558,7 +1559,7 @@ describe("TableDetail triggers tab", () => {
       ).toBeTruthy();
       expect(screen.getByText("disabled")).toBeTruthy();
       expect(
-        screen.getByText("WHEN (OLD.status IS DISTINCT FROM NEW.status)")
+        screen.getByText("WHEN ((old.status IS DISTINCT FROM new.status))")
       ).toBeTruthy();
       expect(screen.getByText(TRIGGER_CREATE_SQL_RE)).toBeTruthy();
 
@@ -1571,6 +1572,12 @@ describe("TableDetail triggers tab", () => {
       expect(writeText).toHaveBeenCalledWith(
         "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event\n  FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location();"
       );
+      expect(screen.getByRole("status").textContent).toBe(
+        "SQL for trg_event_enrich copied."
+      );
+
+      await user.click(screen.getByRole("button", { name: "Refresh" }));
+      expect(tableQueries.triggers.refetch).toHaveBeenCalledTimes(1);
     } finally {
       if (originalClipboardDescriptor) {
         Object.defineProperty(

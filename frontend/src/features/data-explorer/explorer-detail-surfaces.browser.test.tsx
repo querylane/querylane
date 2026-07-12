@@ -1065,6 +1065,24 @@ function seedTriggerRedesignQueries() {
         timing: "BEFORE",
         triggerName: "trg_event_enrich",
       }),
+      createProto(TableTriggerSchema, {
+        definition:
+          "CREATE TRIGGER trg_shipments_notify AFTER UPDATE OF status ON shipping.shipment_event FOR EACH ROW WHEN ((old.status IS DISTINCT FROM new.status)) EXECUTE FUNCTION shipping.notify_status_change()",
+        enabled: false,
+        events: ["UPDATE"],
+        functionName: "notify_status_change",
+        timing: "AFTER",
+        triggerName: "trg_shipments_notify",
+      }),
+      createProto(TableTriggerSchema, {
+        definition:
+          "CREATE TRIGGER trg_event_statement_log AFTER INSERT OR DELETE OR UPDATE ON shipping.shipment_event FOR EACH STATEMENT EXECUTE FUNCTION shipping.log_shipment_event_summary()",
+        enabled: true,
+        events: ["INSERT", "DELETE", "UPDATE"],
+        functionName: "log_shipment_event_summary",
+        timing: "AFTER",
+        triggerName: "trg_event_statement_log",
+      }),
     ],
   });
 }
@@ -2378,12 +2396,23 @@ test("data explorer table triggers match redesign", async () => {
   await expect
     .element(page.getByText("→ shipping.enrich_event_location()"))
     .toBeVisible();
-  await expect.element(page.getByText("ROW")).toBeVisible();
+  await expect.element(page.getByText("ROW").first()).toBeVisible();
+  await expect.element(page.getByText("disabled")).toBeVisible();
+  await expect
+    .element(page.getByText("WHEN ((old.status IS DISTINCT FROM new.status))"))
+    .toBeVisible();
+  await expect.element(page.getByText("STATEMENT")).toBeVisible();
   await document.fonts.ready;
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-triggers-redesign",
     { timeout: 20_000 }
   );
+  await expect(
+    page.getByTestId("data-explorer-table-triggers")
+  ).toMatchScreenshot("data-explorer-table-trigger-card-states", {
+    comparatorOptions: { threshold: 0.2 },
+    timeout: 20_000,
+  });
 });
 
 test("data explorer table data tab has a visual baseline", async () => {
