@@ -92,6 +92,19 @@ func (c *secretCipher) encrypt(plaintext string) (string, error) {
 	return encryptedSecretPrefix + base64.StdEncoding.EncodeToString(blob), nil
 }
 
+func looksLikeEncryptedSecret(value string) bool {
+	if !strings.HasPrefix(value, encryptedSecretPrefix) {
+		return false
+	}
+
+	blob, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(value, encryptedSecretPrefix))
+	if err != nil {
+		return false
+	}
+
+	return len(blob) >= 12+16
+}
+
 func (c *secretCipher) decrypt(value string) (string, error) {
 	if value == "" || !strings.HasPrefix(value, encryptedSecretPrefix) {
 		return value, nil

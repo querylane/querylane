@@ -195,6 +195,50 @@ func TestIntegrationInstanceRepository_ListInstancesKeepsRowsWithUnreadableCrede
 	}
 }
 
+func TestIntegrationInstanceRepository_MissingKeyRequiresOperatorRecovery(t *testing.T) {
+	t.Parallel()
+
+	withInstanceSecretKey(t, "0123456789abcdef0123456789abcdef", func() {
+		testDB := NewTestDB(t)
+		originalRepo, err := NewInstanceRepository(testDB.DB())
+		require.NoError(t, err)
+
+		_, err = originalRepo.CreateInstance(t.Context(), &api.Instance{
+			DisplayName: "Production",
+			Config: &api.PostgresConfig{
+				Host:     "db.internal",
+				Port:     5432,
+				Database: "postgres",
+				Username: "querylane",
+				Password: "old-secret",
+			},
+		}, "prod")
+		require.NoError(t, err)
+		require.NoError(t, os.Unsetenv(instanceSecretKeyEnv))
+
+		missingKeyRepo, err := NewInstanceRepository(testDB.DB())
+		require.NoError(t, err)
+
+		loaded, err := missingKeyRepo.GetInstance(t.Context(), "instances/prod")
+		require.NoError(t, err)
+		assert.Equal(t, api.Instance_CREDENTIAL_STATE_KEY_MISSING, loaded.GetCredentialState())
+		assert.Contains(t, loaded.GetCredentialError(), instanceSecretKeyEnv)
+		assert.Empty(t, loaded.GetConfig().GetPassword())
+
+		_, err = missingKeyRepo.UpdateInstance(t.Context(), &api.Instance{
+			Name: "instances/prod",
+			Config: &api.PostgresConfig{
+				Host:     "db.internal",
+				Port:     5432,
+				Database: "postgres",
+				Username: "querylane",
+				Password: "replacement-secret",
+			},
+		}, &fieldmaskpb.FieldMask{Paths: []string{"config"}})
+		assert.ErrorIs(t, err, ErrMissingInstanceSecretKey)
+	})
+}
+
 func TestIntegrationInstanceRepository_UpdateInstanceReplacesConfig(t *testing.T) {
 	t.Parallel()
 

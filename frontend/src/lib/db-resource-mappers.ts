@@ -47,7 +47,7 @@ interface ResourceCollectionQueryState {
 
 function mapInstance(instance: Instance): PostgresInstance {
   const credentialsUnreadable =
-    instance.credentialState === Instance_CredentialState.UNREADABLE;
+    instance.credentialState !== Instance_CredentialState.UNSPECIFIED;
 
   return {
     connectionError: instance.connectionError,

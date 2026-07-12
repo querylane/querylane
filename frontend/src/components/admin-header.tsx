@@ -394,7 +394,7 @@ function InstanceSelector({
                 navigateToInstance(instance);
                 close();
               }}
-              value={`${instance.name} ${instance.host}${instance.credentialsUnreadable ? " credentials need attention re-enter password" : ""}`}
+              value={`${instance.name} ${instance.host}${instance.credentialsUnreadable ? " credentials need attention review credentials" : ""}`}
             >
               <StatusDot status={instance.status} />
               <div className="flex min-w-0 flex-1 flex-col">
@@ -410,7 +410,7 @@ function InstanceSelector({
                       Credentials need attention
                     </span>
                     <span className="truncate text-[11px] text-destructive underline underline-offset-2">
-                      Re-enter password
+                      Review credentials
                     </span>
                   </>
                 ) : null}

@@ -158,6 +158,8 @@ const (
 	Instance_CREDENTIAL_STATE_UNSPECIFIED Instance_CredentialState = 0
 	// Stored inline credentials cannot be decrypted with the configured key.
 	Instance_CREDENTIAL_STATE_UNREADABLE Instance_CredentialState = 1
+	// Stored inline credentials cannot be read because no encryption key is configured.
+	Instance_CREDENTIAL_STATE_KEY_MISSING Instance_CredentialState = 2
 )
 
 // Enum value maps for Instance_CredentialState.
@@ -165,10 +167,12 @@ var (
 	Instance_CredentialState_name = map[int32]string{
 		0: "CREDENTIAL_STATE_UNSPECIFIED",
 		1: "CREDENTIAL_STATE_UNREADABLE",
+		2: "CREDENTIAL_STATE_KEY_MISSING",
 	}
 	Instance_CredentialState_value = map[string]int32{
 		"CREDENTIAL_STATE_UNSPECIFIED": 0,
 		"CREDENTIAL_STATE_UNREADABLE":  1,
+		"CREDENTIAL_STATE_KEY_MISSING": 2,
 	}
 )
 
@@ -2779,7 +2783,7 @@ var File_querylane_console_v1alpha1_instance_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_instance_proto_rawDesc = "" +
 	"\n" +
-	")querylane/console/v1alpha1/instance.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/rpc/status.proto\"\xba\t\n" +
+	")querylane/console/v1alpha1/instance.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/rpc/status.proto\"\xdc\t\n" +
 	"\bInstance\x12\x1a\n" +
 	"\x04name\x18\x01 \x01(\tB\x06\xe0A\x03\xe0A\bR\x04name\x12/\n" +
 	"\fdisplay_name\x18\x02 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18?R\vdisplayName\x12\x92\x01\n" +
@@ -2802,10 +2806,11 @@ const file_querylane_console_v1alpha1_instance_proto_rawDesc = "" +
 	"\x1cCONNECTION_STATE_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bCONNECTION_STATE_VALIDATING\x10\x01\x12\x1b\n" +
 	"\x17CONNECTION_STATE_ACTIVE\x10\x02\x12\x1a\n" +
-	"\x16CONNECTION_STATE_ERROR\x10\x03\"T\n" +
+	"\x16CONNECTION_STATE_ERROR\x10\x03\"v\n" +
 	"\x0fCredentialState\x12 \n" +
 	"\x1cCREDENTIAL_STATE_UNSPECIFIED\x10\x00\x12\x1f\n" +
-	"\x1bCREDENTIAL_STATE_UNREADABLE\x10\x01:N\xeaAK\n" +
+	"\x1bCREDENTIAL_STATE_UNREADABLE\x10\x01\x12 \n" +
+	"\x1cCREDENTIAL_STATE_KEY_MISSING\x10\x02:N\xeaAK\n" +
 	"\x1econsole.querylane.dev/Instance\x12\x14instances/{instance}*\tinstances2\binstance\"\xa4\x03\n" +
 	"\n" +
 	"ServerInfo\x12\x18\n" +

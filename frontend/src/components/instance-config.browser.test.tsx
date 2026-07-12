@@ -8,6 +8,7 @@ import { InstanceConfigurationSection } from "@/components/console-pages/instanc
 import { InstanceDangerZoneSection } from "@/components/console-pages/instance-danger-zone-section";
 import { InstanceDeleteDialog } from "@/components/console-pages/instance-delete-dialog";
 import {
+  Instance_CredentialState,
   InstanceSchema,
   PostgresConfig_SslMode,
   PostgresConfigSchema,
@@ -31,6 +32,14 @@ function createInstance() {
     },
     name: "instances/prod-analytics-writer",
   });
+}
+
+function createUnreadableInstance() {
+  const instance = createInstance();
+  instance.credentialState = Instance_CredentialState.UNREADABLE;
+  instance.credentialError =
+    "Stored credentials cannot be read. Re-enter the password to restore access.";
+  return instance;
 }
 
 function renderInstanceConfigSurface(children: ReactNode) {
@@ -203,4 +212,36 @@ test("instance delete dialog and danger zone make destructive actions explicit",
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "instance-delete-confirmation"
   );
+});
+
+test("credential recovery action does not overlap the alert copy on phones", async () => {
+  await page.viewport(320, 900);
+  render(
+    <ScreenshotFrame>
+      <div className="w-[240px] rounded-2xl border border-border bg-background p-2 text-foreground">
+        <InstanceConfigurationSection
+          formNotice={null}
+          instance={createUnreadableInstance()}
+          isConfigManaged={false}
+          onInvalidSave={vi.fn()}
+          onSave={vi.fn()}
+          pending={false}
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  const title = page.getByText("Credentials need attention");
+  const action = page.getByRole("button", { name: "Re-enter password" });
+  await expect.element(title).toBeVisible();
+  await expect.element(action).toBeVisible();
+
+  const titleRect = title.element().getBoundingClientRect();
+  const actionRect = action.element().getBoundingClientRect();
+  const overlaps =
+    titleRect.left < actionRect.right &&
+    titleRect.right > actionRect.left &&
+    titleRect.top < actionRect.bottom &&
+    titleRect.bottom > actionRect.top;
+  expect(overlaps).toBe(false);
 });

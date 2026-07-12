@@ -135,12 +135,18 @@ function InstanceConfigurationSection({
     persistedFormState
   );
   const credentialsUnreadable =
-    instance.credentialState === Instance_CredentialState.UNREADABLE;
+    instance.credentialState !== Instance_CredentialState.UNSPECIFIED;
+  const credentialKeyMissing =
+    instance.credentialState === Instance_CredentialState.KEY_MISSING;
   const needsReplacementPassword =
-    credentialsUnreadable && !formState.dirtyFields?.password;
+    instance.credentialState === Instance_CredentialState.UNREADABLE &&
+    !formState.dirtyFields?.password;
   let saveDisabledReason =
     hasUnsavedChanges || pending ? null : "No changes to save.";
-  if (needsReplacementPassword) {
+  if (credentialKeyMissing) {
+    saveDisabledReason =
+      "Configure QUERYLANE_INSTANCE_SECRET_KEY and restart Querylane before saving.";
+  } else if (needsReplacementPassword) {
     saveDisabledReason = "Re-enter the password before saving.";
   }
   const handleSaveClick = async () => {
@@ -182,22 +188,31 @@ function InstanceConfigurationSection({
       title="Configuration"
     >
       {credentialsUnreadable ? (
-        <Alert className="pr-44" variant="destructive">
+        <Alert
+          className="has-data-[slot=alert-action]:pr-4 sm:has-data-[slot=alert-action]:pr-44"
+          variant="destructive"
+        >
           <AlertCircle aria-hidden="true" />
           <AlertTitle>Credentials need attention</AlertTitle>
           <AlertDescription id={credentialGuidanceId}>
-            Stored credentials can’t be read. Enter the password again to
-            restore access.
+            {credentialKeyMissing
+              ? instance.credentialError ||
+                "Configure QUERYLANE_INSTANCE_SECRET_KEY and restart Querylane before replacing the password."
+              : "Stored credentials can’t be read. Enter the password again to restore access."}
           </AlertDescription>
-          <AlertAction>
-            <Button
-              onClick={() => focusInstanceConfigurationInvalidField("password")}
-              size="sm"
-              variant="outline"
-            >
-              Re-enter password
-            </Button>
-          </AlertAction>
+          {credentialKeyMissing ? null : (
+            <AlertAction className="static col-start-2 mt-2 justify-self-start sm:absolute sm:mt-0">
+              <Button
+                onClick={() =>
+                  focusInstanceConfigurationInvalidField("password")
+                }
+                size="sm"
+                variant="outline"
+              >
+                Re-enter password
+              </Button>
+            </AlertAction>
+          )}
         </Alert>
       ) : null}
 

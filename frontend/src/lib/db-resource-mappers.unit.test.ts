@@ -50,10 +50,13 @@ describe("mapInstance", () => {
     });
   });
 
-  test("marks unreadable credentials as an actionable instance error", () => {
+  test.each([
+    Instance_CredentialState.UNREADABLE,
+    Instance_CredentialState.KEY_MISSING,
+  ])("marks unavailable credential state %s as an actionable instance error", (credentialState) => {
     const instance = create(InstanceSchema, {
       credentialError: "Stored credentials cannot be read.",
-      credentialState: Instance_CredentialState.UNREADABLE,
+      credentialState,
       name: "instances/broken",
     });
 

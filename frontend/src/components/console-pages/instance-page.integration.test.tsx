@@ -77,6 +77,8 @@ const UPTIME_FACT_PATTERN = /^up /;
 const AUTOVACUUM_ROW_NAME = /Autovacuum/;
 const CHARSET_COLUMN_NAME = /^charset/i;
 const COLLATION_COLUMN_NAME = /^collation/i;
+const MISSING_INSTANCE_SECRET_KEY_MESSAGE =
+  /QUERYLANE_INSTANCE_SECRET_KEY is not configured/;
 
 const state = vi.hoisted(() => ({
   databases: [] as PostgresDatabase[],
@@ -86,6 +88,10 @@ const state = vi.hoisted(() => ({
     | { filter?: string; orderBy?: string; pageSize?: number; parent: string }
     | undefined,
   healthData: undefined as CheckInstanceHealthResponse | undefined,
+  instanceCatalogError: null as unknown,
+  instanceCatalogHasData: true,
+  instanceCatalogHasResolved: true,
+  instanceCatalogIsPending: false,
   instanceData: undefined as GetInstanceResponse | undefined,
   instances: [] as PostgresInstance[],
   navigate: vi.fn(async () => undefined),
@@ -253,11 +259,11 @@ vi.mock("@/lib/db-context", () => ({
         suppressedReason: null,
       },
       instances: {
-        error: null,
-        hasData: true,
-        hasResolved: true,
+        error: state.instanceCatalogError,
+        hasData: state.instanceCatalogHasData,
+        hasResolved: state.instanceCatalogHasResolved,
         isFetching: false,
-        isPending: false,
+        isPending: state.instanceCatalogIsPending,
         isSuppressed: false,
         status: "success",
         suppressedReason: null,
@@ -421,6 +427,10 @@ beforeEach(() => {
   state.extensionData = undefined;
   state.extensionInput = undefined;
   state.healthData = undefined;
+  state.instanceCatalogError = null;
+  state.instanceCatalogHasData = true;
+  state.instanceCatalogHasResolved = true;
+  state.instanceCatalogIsPending = false;
   state.instanceData = instanceResponse();
   state.instances = [postgresInstanceFixture()];
   state.navigate.mockClear();
@@ -465,6 +475,24 @@ function setFieldValue(label: string, value: string) {
 }
 
 describe("backend instance configuration save", () => {
+  test("requires the operator key before password recovery", () => {
+    state.instanceData = instanceResponse({
+      credentialError:
+        "Stored credentials cannot be read because QUERYLANE_INSTANCE_SECRET_KEY is not configured. Set the key and restart Querylane before replacing the password.",
+      credentialState: Instance_CredentialState.KEY_MISSING,
+    });
+    renderInstanceConfiguration();
+
+    expect(screen.getByText(MISSING_INSTANCE_SECRET_KEY_MESSAGE)).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Re-enter password" })
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Save changes" })).toHaveProperty(
+      "disabled",
+      true
+    );
+  });
+
   test("guides unreadable credentials through a full config replacement", async () => {
     const user = userEvent.setup();
     state.instanceData = instanceResponse({
@@ -618,9 +646,12 @@ describe("backend instance configuration save", () => {
 });
 
 describe("backend instance credential recovery routing", () => {
-  test("redirects unreadable instance overview to configuration", async () => {
+  test.each([
+    Instance_CredentialState.UNREADABLE,
+    Instance_CredentialState.KEY_MISSING,
+  ])("redirects unavailable credential state %s to configuration", async (credentialState) => {
     state.instanceData = instanceResponse({
-      credentialState: Instance_CredentialState.UNREADABLE,
+      credentialState,
     });
     renderInstanceOverview();
 
@@ -671,6 +702,48 @@ describe("backend instance danger zone", () => {
     expect(
       within(dangerZone).getByRole("button", { name: "Delete instance" })
     ).toHaveProperty("disabled", false);
+  });
+
+  test("keeps delete disabled while the instance catalog is pending", () => {
+    state.instanceCatalogHasData = false;
+    state.instanceCatalogHasResolved = false;
+    state.instanceCatalogIsPending = true;
+    state.instanceData = instanceResponse({
+      credentialState: Instance_CredentialState.UNREADABLE,
+    });
+    state.instances = [];
+    renderInstanceConfiguration();
+
+    expect(
+      within(screen.getByTestId("instance-danger-zone")).getByRole("button", {
+        name: "Delete instance",
+      })
+    ).toHaveProperty("disabled", true);
+    expect(
+      screen.getByText("Checking registered instances before delete.")
+    ).toBeTruthy();
+  });
+
+  test("keeps delete disabled when the instance catalog failed", () => {
+    state.instanceCatalogError = new Error("catalog unavailable");
+    state.instanceCatalogHasData = false;
+    state.instanceCatalogHasResolved = true;
+    state.instanceData = instanceResponse({
+      credentialState: Instance_CredentialState.UNREADABLE,
+    });
+    state.instances = [];
+    renderInstanceConfiguration();
+
+    expect(
+      within(screen.getByTestId("instance-danger-zone")).getByRole("button", {
+        name: "Delete instance",
+      })
+    ).toHaveProperty("disabled", true);
+    expect(
+      screen.getByText(
+        "Could not verify registered instances. Refresh data before deleting."
+      )
+    ).toBeTruthy();
   });
 
   test("opens registration after deleting the only unreadable instance", async () => {

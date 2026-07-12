@@ -401,7 +401,7 @@ test("admin header instance selector uses a rich empty state with a create actio
   expect(document.querySelector('[data-slot="empty"]')).not.toBeNull();
 });
 
-test("admin header routes unreadable credentials to password recovery", async () => {
+test("admin header routes unreadable credentials to credential recovery", async () => {
   adminHeaderMockState.instances = [
     {
       ...selectedInstance,
@@ -416,7 +416,7 @@ test("admin header routes unreadable credentials to password recovery", async ()
   await expect
     .element(page.getByText("Credentials need attention"))
     .toBeVisible();
-  await page.getByText("Re-enter password").click();
+  await page.getByText("Review credentials").click();
 
   expect(navigateMock).toHaveBeenCalledWith({
     params: { instanceId: "prod-analytics" },

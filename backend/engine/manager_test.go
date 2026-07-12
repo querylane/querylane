@@ -418,19 +418,33 @@ func TestIntegrationManager_StalePoolOpenFailureKeepsLastKnownGoodPool(t *testin
 	require.NoError(t, err, "last-known-good pool should remain usable")
 }
 
-func TestSessionResolverRejectsUnreadableInstanceCredentials(t *testing.T) {
+func TestSessionResolverRejectsUnavailableInstanceCredentials(t *testing.T) {
 	t.Parallel()
 
-	instanceName := mustParseInstanceName(t, "instances/unreadable")
-	repo := &testInstanceRepo{instance: &api.Instance{
-		Name:            instanceName.String(),
-		CredentialState: api.Instance_CREDENTIAL_STATE_UNREADABLE,
-	}}
-	resolver := newHealthOnlyResolver(repo, &countingHealthDriver{})
+	tests := []struct {
+		name  string
+		state api.Instance_CredentialState
+	}{
+		{name: "unreadable", state: api.Instance_CREDENTIAL_STATE_UNREADABLE},
+		{name: "key missing", state: api.Instance_CREDENTIAL_STATE_KEY_MISSING},
+	}
 
-	_, err := resolver.OpenInstance(t.Context(), instanceName)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-	require.ErrorIs(t, err, storage.ErrUnreadableInstanceCredentials)
+			instanceName := mustParseInstanceName(t, "instances/unavailable")
+			repo := &testInstanceRepo{instance: &api.Instance{
+				Name:            instanceName.String(),
+				CredentialState: tc.state,
+			}}
+			resolver := newHealthOnlyResolver(repo, &countingHealthDriver{})
+
+			_, err := resolver.OpenInstance(t.Context(), instanceName)
+
+			require.ErrorIs(t, err, storage.ErrUnreadableInstanceCredentials)
+		})
+	}
 }
 
 func TestIntegrationManager_Close_ClosesDatabasePools(t *testing.T) {

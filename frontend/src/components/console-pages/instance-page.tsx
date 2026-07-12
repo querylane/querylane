@@ -162,21 +162,27 @@ const EMPTY_INSTANCE_CATALOG_DELETE_DISABLED_REASON =
 
 function getInstanceDeleteDisabledReason({
   credentialsUnreadable,
+  instanceCatalogHasError,
   instanceCatalogHasData,
   instanceCatalogHasResolved,
   instanceCount,
 }: {
   credentialsUnreadable: boolean;
+  instanceCatalogHasError: boolean;
   instanceCatalogHasData: boolean;
   instanceCatalogHasResolved: boolean;
   instanceCount: number;
 }) {
-  if (credentialsUnreadable) {
-    return null;
+  if (instanceCatalogHasError) {
+    return "Could not verify registered instances. Refresh data before deleting.";
   }
 
   if (!(instanceCatalogHasData || instanceCatalogHasResolved)) {
     return "Checking registered instances before delete.";
+  }
+
+  if (credentialsUnreadable) {
+    return null;
   }
 
   if (instanceCount === 0) {
@@ -188,6 +194,22 @@ function getInstanceDeleteDisabledReason({
   }
 
   return null;
+}
+
+function getInstanceDeleteDestination({
+  credentialsUnreadable,
+  deleteDisabledReason,
+  instanceCount,
+}: {
+  credentialsUnreadable: boolean;
+  deleteDisabledReason: string | null;
+  instanceCount: number;
+}): "/" | "/new-instance" {
+  if (!credentialsUnreadable || deleteDisabledReason || instanceCount > 1) {
+    return "/";
+  }
+
+  return "/new-instance";
 }
 
 function nonBlockingFollowUpErrorPayload(error: unknown) {
@@ -1167,7 +1189,8 @@ function BackendInstancePage({
   const serverInfo = instanceQuery.data?.serverInfo;
   const instanceName = buildInstanceName(instanceId);
   const credentialsUnreadable =
-    instance?.credentialState === Instance_CredentialState.UNREADABLE;
+    instance !== undefined &&
+    instance.credentialState !== Instance_CredentialState.UNSPECIFIED;
   useEffect(
     function redirectUnreadableCredentialsToConfiguration() {
       if (!(credentialsUnreadable && section === "overview")) {
@@ -1270,11 +1293,15 @@ function BackendInstancePage({
   const deleteDisabledReason = getInstanceDeleteDisabledReason({
     credentialsUnreadable,
     instanceCatalogHasData: queryStates.instances.hasData,
+    instanceCatalogHasError: Boolean(queryStates.instances.error),
     instanceCatalogHasResolved: queryStates.instances.hasResolved,
     instanceCount: instances.length,
   });
-  const deleteDestination =
-    credentialsUnreadable && instances.length <= 1 ? "/new-instance" : "/";
+  const deleteDestination = getInstanceDeleteDestination({
+    credentialsUnreadable,
+    deleteDisabledReason,
+    instanceCount: instances.length,
+  });
   const handleRefresh = () => {
     refreshInstancePageData({
       configuredDatabase,

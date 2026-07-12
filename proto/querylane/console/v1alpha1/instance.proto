@@ -78,6 +78,8 @@ message Instance {
     CREDENTIAL_STATE_UNSPECIFIED = 0;
     // Stored inline credentials cannot be decrypted with the configured key.
     CREDENTIAL_STATE_UNREADABLE = 1;
+    // Stored inline credentials cannot be read because no encryption key is configured.
+    CREDENTIAL_STATE_KEY_MISSING = 2;
   }
 
   // Output-only identifier. The unique resource name of the instance record.

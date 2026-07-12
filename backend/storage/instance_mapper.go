@@ -14,7 +14,10 @@ import (
 	"github.com/querylane/querylane/backend/storage/types"
 )
 
-const unreadableStorageMessage = "Stored credentials cannot be read. Re-enter the password to restore access."
+const (
+	unreadableStorageMessage = "Stored credentials cannot be read. Re-enter the password to restore access."
+	missingKeyStorageMessage = "Stored credentials cannot be read because QUERYLANE_INSTANCE_SECRET_KEY is not configured. Set the key and restart Querylane before replacing the password."
+)
 
 // instanceMapper handles conversion between storage and protobuf types for instances.
 type instanceMapper struct {
@@ -51,8 +54,14 @@ func (m instanceMapper) storageToProtoForRead(inst model.Instance) (*api.Instanc
 	}
 
 	RedactInstanceForAPI(instance)
-	instance.CredentialState = api.Instance_CREDENTIAL_STATE_UNREADABLE
-	instance.CredentialError = unreadableStorageMessage
+
+	if errors.Is(err, ErrMissingInstanceSecretKey) {
+		instance.CredentialState = api.Instance_CREDENTIAL_STATE_KEY_MISSING
+		instance.CredentialError = missingKeyStorageMessage
+	} else {
+		instance.CredentialState = api.Instance_CREDENTIAL_STATE_UNREADABLE
+		instance.CredentialError = unreadableStorageMessage
+	}
 
 	return instance, nil
 }
@@ -154,7 +163,7 @@ func (m instanceMapper) encryptSecret(value string) (string, error) {
 }
 
 func (m instanceMapper) decryptSecret(value string) (string, error) {
-	if value == "" || !strings.HasPrefix(value, encryptedSecretPrefix) {
+	if value == "" || !looksLikeEncryptedSecret(value) {
 		return value, nil
 	}
 
