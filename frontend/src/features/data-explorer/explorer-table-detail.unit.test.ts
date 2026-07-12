@@ -5,7 +5,6 @@ import {
   filterColumnDetailRows,
   filterIndexesByMethod,
   filterPoliciesByMode,
-  filterTriggersByState,
 } from "@/features/data-explorer/explorer-table-detail-filters";
 import {
   ColumnSchema,
@@ -16,7 +15,6 @@ import {
   TableConstraintSchema,
   TableIndexSchema,
   TablePolicySchema,
-  TableTriggerSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 function column(columnName: string) {
@@ -258,18 +256,5 @@ describe("table detail facet filters", () => {
         [PolicyMode.RESTRICTIVE]
       ).map((policy) => policy.policyName)
     ).toEqual(["policy_restrictive"]);
-
-    expect(
-      filterTriggersByState(
-        [
-          create(TableTriggerSchema, { enabled: true, triggerName: "audit" }),
-          create(TableTriggerSchema, {
-            enabled: false,
-            triggerName: "disabled",
-          }),
-        ],
-        ["disabled"]
-      ).map((trigger) => trigger.triggerName)
-    ).toEqual(["disabled"]);
   });
 });

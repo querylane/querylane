@@ -95,8 +95,6 @@ import {
   filterColumnDetailRows,
   filterIndexesByMethod,
   filterPoliciesByMode,
-  filterTriggersByState,
-  type TriggerStateFilter,
 } from "@/features/data-explorer/explorer-table-detail-filters";
 import {
   derivePartitionTabCount,
@@ -269,10 +267,6 @@ const COLUMN_NULLABILITY_FILTER_OPTIONS = [
   { label: "Not null", value: "not-null" },
   { label: "Nullable", value: "nullable" },
 ] satisfies ColumnFacetOption<ColumnNullabilityFilter>[];
-const TRIGGER_STATE_FILTER_LABELS: Record<TriggerStateFilter, string> = {
-  disabled: "Disabled",
-  enabled: "Enabled",
-};
 const PARTITION_BOUND_KIND_LABELS: Record<PartitionBoundKind, string> = {
   default: "Default",
   hash: "Hash",
@@ -331,20 +325,6 @@ function presentPolicyModeOptions(
       formatPolicyMode(left).localeCompare(formatPolicyMode(right))
     )
     .map((mode) => ({ label: formatPolicyMode(mode), value: String(mode) }));
-}
-function presentTriggerStateOptions(
-  triggers: TableTrigger[]
-): FacetedFilterOption[] {
-  const present = new Set<TriggerStateFilter>(
-    triggers.map((trigger) => (trigger.enabled ? "enabled" : "disabled"))
-  );
-  const options: FacetedFilterOption[] = [];
-  for (const value of ["enabled", "disabled"] satisfies TriggerStateFilter[]) {
-    if (present.has(value)) {
-      options.push({ label: TRIGGER_STATE_FILTER_LABELS[value], value });
-    }
-  }
-  return options;
 }
 function presentPartitionSchemaOptions(
   rows: PartitionDisplayRow[]
@@ -3189,60 +3169,250 @@ function PoliciesTab({
     </div>
   );
 }
-const triggerColumns: DataTableColumnDef<TableTrigger>[] = [
-  {
-    accessorKey: "triggerName",
-    cell: ({ row }) => row.original.triggerName,
-    header: ({ column }) => (
-      <SortableHeader column={column}>Name</SortableHeader>
-    ),
-    meta: {
-      cellClassName: "font-mono text-xs",
-      headerClassName: "pl-3",
-    },
-  },
-  {
-    accessorFn: (row) => `${row.timing} · ${row.events.join(", ")}`,
-    cell: ({ row }) =>
-      `${row.original.timing} · ${row.original.events.join(", ")}`,
-    header: "When",
-    id: "when",
-    meta: {
-      cellClassName: "font-mono text-muted-foreground text-xs",
-    },
-  },
-  {
-    accessorKey: "functionName",
-    cell: ({ row }) => row.original.functionName,
-    header: "Function",
-    id: "functionName",
-    meta: {
-      cellClassName: "font-mono text-muted-foreground text-xs",
-    },
-  },
-  {
-    accessorKey: "enabled",
-    cell: ({ row }) =>
-      row.original.enabled ? (
-        <span className="text-emerald-600 dark:text-emerald-400">enabled</span>
-      ) : (
-        <span className="text-muted-foreground">disabled</span>
-      ),
-    header: ({ column }) => (
-      <SortableHeader column={column}>State</SortableHeader>
-    ),
-    id: "state",
-    meta: {
-      cellClassName: "font-mono text-xs",
-    },
-  },
-];
+const SIMPLE_SQL_IDENTIFIER_RE = /^[a-z_][a-z0-9_]*$/;
+const CREATE_TRIGGER_RE = /^CREATE\s+(?:CONSTRAINT\s+)?TRIGGER\b/i;
+const EXECUTE_FUNCTION_RE = /EXECUTE\s+(?:FUNCTION|PROCEDURE)\s+([^;]+);?$/i;
+const EXECUTE_FUNCTION_PREFIX_RE = /^EXECUTE\s+(?:FUNCTION|PROCEDURE)\b/i;
+const TRIGGER_SQL_FOR_EACH_RE = /\s+FOR\s+EACH\s+/i;
+const TRIGGER_SCOPE_RE = /FOR\s+EACH\s+(ROW|STATEMENT)\b/i;
+const TRIGGER_WHEN_RE =
+  /\bWHEN\s*\(([\s\S]+)\)\s+EXECUTE\s+(?:FUNCTION|PROCEDURE)\b/i;
+const TRIGGER_SQL_COPY_FEEDBACK_MS = 1500;
+
+function formatSqlIdentifier(identifier: string) {
+  if (SIMPLE_SQL_IDENTIFIER_RE.test(identifier)) {
+    return identifier;
+  }
+  return `"${identifier.replaceAll('"', '""')}"`;
+}
+
+function formatTriggerTableName(schemaName: string, tableName: string) {
+  return `${formatSqlIdentifier(schemaName)}.${formatSqlIdentifier(tableName)}`;
+}
+
+function ensureSqlTerminator(sql: string) {
+  const trimmed = sql.trim();
+  return trimmed.endsWith(";") ? trimmed : `${trimmed};`;
+}
+
+function formatTriggerFunctionCall(trigger: TableTrigger) {
+  const definition = trigger.definition.trim();
+  if (EXECUTE_FUNCTION_PREFIX_RE.test(definition)) {
+    return ensureSqlTerminator(definition).slice(0, -1);
+  }
+  if (!trigger.functionName) {
+    return "EXECUTE FUNCTION unknown_trigger_function()";
+  }
+  const functionName = trigger.functionName.includes("(")
+    ? trigger.functionName
+    : `${trigger.functionName}()`;
+  return `EXECUTE FUNCTION ${functionName}`;
+}
+
+function formatTriggerSql({
+  schemaName,
+  tableName,
+  trigger,
+}: {
+  schemaName: string;
+  tableName: string;
+  trigger: TableTrigger;
+}) {
+  if (CREATE_TRIGGER_RE.test(trigger.definition.trim())) {
+    return ensureSqlTerminator(trigger.definition);
+  }
+  const events =
+    trigger.events.length > 0 ? trigger.events.join(" OR ") : "UPDATE";
+  const timing = trigger.timing || "AFTER";
+  const tableLabel = formatTriggerTableName(schemaName, tableName);
+  return ensureSqlTerminator(
+    `CREATE TRIGGER ${formatSqlIdentifier(
+      trigger.triggerName
+    )} ${timing} ${events} ON ${tableLabel} FOR EACH ROW ${formatTriggerFunctionCall(
+      trigger
+    )}`
+  );
+}
+
+function formatTriggerSqlForDisplay(sql: string) {
+  return ensureSqlTerminator(sql).replace(
+    TRIGGER_SQL_FOR_EACH_RE,
+    "\n  FOR EACH "
+  );
+}
+
+function triggerFunctionLabel(trigger: TableTrigger) {
+  const match = trigger.definition.trim().match(EXECUTE_FUNCTION_RE);
+  if (match?.[1]) {
+    return `→ ${match[1].trim()}`;
+  }
+  if (!trigger.functionName) {
+    return "→ unknown_trigger_function()";
+  }
+  const functionName = trigger.functionName.includes("(")
+    ? trigger.functionName
+    : `${trigger.functionName}()`;
+  return `→ ${functionName}`;
+}
+
+function triggerEventsLabel(trigger: TableTrigger) {
+  const events = trigger.events.filter(Boolean);
+  return events.length > 0 ? events.join(" OR ") : "UPDATE";
+}
+
+function triggerLevelLabel(trigger: TableTrigger) {
+  const match = trigger.definition.match(TRIGGER_SCOPE_RE);
+  if (!match?.[1]) {
+    return "ROW";
+  }
+  return match[1].toUpperCase();
+}
+
+function triggerWhenExpression(trigger: TableTrigger) {
+  const match = trigger.definition.match(TRIGGER_WHEN_RE);
+  return match?.[1]?.trim() ?? "";
+}
+
+function TriggerSqlCopyButton({
+  sql,
+  triggerName,
+}: {
+  sql: string;
+  triggerName: string;
+}) {
+  const [copyState, setCopyState] = useState<"copied" | "error" | "idle">(
+    "idle"
+  );
+
+  useEffect(() => {
+    if (copyState === "idle") {
+      return;
+    }
+    const timeout = window.setTimeout(function resetTriggerSqlCopyState() {
+      setCopyState("idle");
+    }, TRIGGER_SQL_COPY_FEEDBACK_MS);
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [copyState]);
+
+  async function handleCopyTriggerSql() {
+    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      setCopyState("error");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(sql);
+      setCopyState("copied");
+    } catch {
+      setCopyState("error");
+    }
+  }
+
+  let buttonLabel = "Copy";
+  if (copyState === "copied") {
+    buttonLabel = "Copied";
+  } else if (copyState === "error") {
+    buttonLabel = "Copy failed";
+  }
+
+  return (
+    <Button
+      aria-label={`Copy SQL for ${triggerName}`}
+      className="h-6 px-2 text-xs"
+      onClick={handleCopyTriggerSql}
+      size="xs"
+      type="button"
+      variant="ghost"
+    >
+      {buttonLabel}
+    </Button>
+  );
+}
+
+function TriggerCard({
+  schemaName,
+  tableName,
+  trigger,
+}: {
+  schemaName: string;
+  tableName: string;
+  trigger: TableTrigger;
+}) {
+  const sql = formatTriggerSql({ schemaName, tableName, trigger });
+  const whenExpression = triggerWhenExpression(trigger);
+  return (
+    <div
+      className="flex-none rounded-[10px] border bg-card px-[14px] py-[11px] shadow-xs"
+      data-trigger-name={trigger.triggerName}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          aria-hidden="true"
+          className={cn(
+            "size-[7px] flex-none rounded-full",
+            trigger.enabled ? "bg-success" : "bg-muted-foreground"
+          )}
+        />
+        <span className="sr-only">
+          {trigger.enabled ? "Enabled trigger" : "Disabled trigger"}
+        </span>
+        <span className="font-mono font-semibold text-[12.5px]">
+          {trigger.triggerName}
+        </span>
+        {trigger.timing ? (
+          <Badge
+            className="h-[18px] rounded-full px-2 text-[10px]"
+            variant="secondary"
+          >
+            {trigger.timing}
+          </Badge>
+        ) : null}
+        <Badge
+          className="h-[18px] rounded-full px-2 font-mono text-[10px]"
+          variant="outline"
+        >
+          {triggerEventsLabel(trigger)}
+        </Badge>
+        <Badge
+          className="h-[18px] rounded-full px-2 text-[10px] text-muted-foreground"
+          variant="ghost"
+        >
+          {triggerLevelLabel(trigger)}
+        </Badge>
+        {trigger.enabled ? null : (
+          <Badge className="h-[18px] rounded-full bg-amber-500/15 px-2 text-[10px] text-amber-700 dark:text-amber-400">
+            disabled
+          </Badge>
+        )}
+        <span className="ml-auto truncate font-mono text-[11px] text-muted-foreground">
+          {triggerFunctionLabel(trigger)}
+        </span>
+      </div>
+      {whenExpression ? (
+        <div className="mt-[7px] font-mono text-[11px] text-muted-foreground">
+          WHEN ({whenExpression})
+        </div>
+      ) : null}
+      <div className="mt-[9px] flex items-start gap-2 border-t pt-2">
+        <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-[11px] leading-[1.55]">
+          <code>{formatTriggerSqlForDisplay(sql)}</code>
+        </pre>
+        <TriggerSqlCopyButton sql={sql} triggerName={trigger.triggerName} />
+      </div>
+    </div>
+  );
+}
+
 function TriggersTab({
   query,
+  schemaName,
+  tableName,
 }: {
   query: ReturnType<typeof useListTableTriggersQuery>;
+  schemaName: string;
+  tableName: string;
 }) {
-  const [stateFilters, setStateFilters] = useState<string[]>([]);
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
     return (
@@ -3263,33 +3433,23 @@ function TriggersTab({
     return <TabSkeleton />;
   }
   const triggers = query.data.triggers;
-  const filteredTriggers = filterTriggersByState(
-    triggers,
-    stateFilters as TriggerStateFilter[]
-  );
+  if (triggers.length === 0) {
+    return <TableResourceEmptyState category="triggers" toolbar={toolbar} />;
+  }
   return (
-    <MetadataTabResult
-      category="triggers"
-      columns={triggerColumns}
-      data={filteredTriggers}
-      filterColumn="triggerName"
-      filterPlaceholder="Search triggers…"
-      filters={
-        <FacetFilterBar
-          filters={[
-            {
-              handleSelectedValuesChange: setStateFilters,
-              label: "State",
-              options: presentTriggerStateOptions(triggers),
-              selectedValues: stateFilters,
-            },
-          ]}
+    <div
+      className="flex flex-col gap-2.5"
+      data-table-key="data-explorer-table-triggers"
+    >
+      {triggers.map((trigger) => (
+        <TriggerCard
+          key={trigger.triggerName}
+          schemaName={schemaName}
+          tableName={tableName}
+          trigger={trigger}
         />
-      }
-      hasUnfilteredData={triggers.length > 0}
-      tableKey="data-explorer-table-triggers"
-      toolbar={toolbar}
-    />
+      ))}
+    </div>
   );
 }
 
@@ -4205,7 +4365,11 @@ function TableDetail({
               <PoliciesTab query={policiesQuery} />
             </TabsContent>
             <TabsContent className="mt-4" value="triggers">
-              <TriggersTab query={triggersQuery} />
+              <TriggersTab
+                query={triggersQuery}
+                schemaName={schemaName}
+                tableName={tableName}
+              />
             </TabsContent>
             <TabsContent className="mt-4" value="definition">
               <DefinitionTab

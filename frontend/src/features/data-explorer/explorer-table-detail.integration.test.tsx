@@ -41,9 +41,12 @@ import {
   type TablePolicy,
   TablePolicySchema,
   TableSchema,
+  TableTriggerSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
+const TRIGGER_CREATE_SQL_RE =
+  /CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping\.shipment_event/;
 const COLUMNS_TAB_RE = /^Columns/;
 const CREATE_TABLE_RE = /CREATE TABLE/;
 const CREATE_INDEX_RE = /CREATE (?:UNIQUE )?INDEX/;
@@ -1496,6 +1499,89 @@ describe("TableDetail columns tab", () => {
     await waitFor(() => {
       expect(screen.getByText("carrier_id")).toBeTruthy();
     });
+  });
+});
+
+describe("TableDetail triggers tab", () => {
+  it("renders trigger cards with executable SQL and copy action", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn(() => Promise.resolve());
+    const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(
+      navigator,
+      "clipboard"
+    );
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    tableQueries.triggers.data = create(ListTableTriggersResponseSchema, {
+      triggers: [
+        create(TableTriggerSchema, {
+          definition:
+            "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event\n  FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location();",
+          enabled: true,
+          events: ["INSERT"],
+          functionName: "shipping.enrich_event_location",
+          timing: "BEFORE",
+          triggerName: "trg_event_enrich",
+        }),
+        create(TableTriggerSchema, {
+          definition:
+            "CREATE TRIGGER trg_shipments_notify AFTER UPDATE OF status ON shipping.shipments\n  FOR EACH ROW WHEN (OLD.status IS DISTINCT FROM NEW.status)\n  EXECUTE FUNCTION shipping.notify_status_change();",
+          enabled: false,
+          events: ["UPDATE OF status"],
+          functionName: "shipping.notify_status_change",
+          timing: "AFTER",
+          triggerName: "trg_shipments_notify",
+        }),
+      ],
+    });
+
+    try {
+      render(
+        <TableDetail
+          databaseId="warehouse"
+          initialTab="triggers"
+          instanceId="prod"
+          schemaName="shipping"
+          table={create(TableSchema, { rowCount: 18_200_000n })}
+          tableName="shipment_event"
+        />
+      );
+
+      expect(screen.getByText("trg_event_enrich")).toBeTruthy();
+      expect(screen.getByText("BEFORE")).toBeTruthy();
+      expect(screen.getByText("INSERT")).toBeTruthy();
+      expect(screen.getAllByText("ROW").length).toBeGreaterThan(0);
+      expect(
+        screen.getByText("→ shipping.enrich_event_location()")
+      ).toBeTruthy();
+      expect(screen.getByText("disabled")).toBeTruthy();
+      expect(
+        screen.getByText("WHEN (OLD.status IS DISTINCT FROM NEW.status)")
+      ).toBeTruthy();
+      expect(screen.getByText(TRIGGER_CREATE_SQL_RE)).toBeTruthy();
+
+      await user.click(
+        screen.getByRole("button", {
+          name: "Copy SQL for trg_event_enrich",
+        })
+      );
+
+      expect(writeText).toHaveBeenCalledWith(
+        "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event\n  FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location();"
+      );
+    } finally {
+      if (originalClipboardDescriptor) {
+        Object.defineProperty(
+          navigator,
+          "clipboard",
+          originalClipboardDescriptor
+        );
+      } else {
+        Reflect.deleteProperty(navigator, "clipboard");
+      }
+    }
   });
 });
 

@@ -1002,6 +1002,73 @@ function seedTypeAnnotationQueries() {
   });
 }
 
+function seedTriggerRedesignQueries() {
+  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
+    columns: [
+      createProto(ColumnSchema, {
+        columnName: "shipment_event_id",
+        dataType: DataType.UUID,
+        isNullable: false,
+        ordinalPosition: 1,
+        rawType: "uuid",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "shipment_id",
+        dataType: DataType.UUID,
+        isNullable: false,
+        ordinalPosition: 2,
+        rawType: "uuid",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "event_type",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 3,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "event_time",
+        dataType: DataType.TIMESTAMP,
+        isNullable: false,
+        ordinalPosition: 4,
+        rawType: "timestamptz",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "metadata",
+        dataType: DataType.JSON,
+        isNullable: true,
+        ordinalPosition: 5,
+        rawType: "jsonb",
+      }),
+    ],
+  });
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    {
+      constraints: [],
+    }
+  );
+  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
+    indexes: [],
+  });
+  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
+    policies: [],
+  });
+  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
+    triggers: [
+      createProto(TableTriggerSchema, {
+        definition:
+          "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event\n  FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location();",
+        enabled: true,
+        events: ["INSERT"],
+        functionName: "shipping.enrich_event_location",
+        timing: "BEFORE",
+        triggerName: "trg_event_enrich",
+      }),
+    ],
+  });
+}
+
 test("data explorer schema detail keeps dense table summaries scannable", async () => {
   renderExplorerSurface(
     <SchemaDetail
@@ -2284,6 +2351,38 @@ test("data explorer table policies explain RLS composition", async () => {
     .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-policies-rls-composition"
+  );
+});
+
+test("data explorer table triggers match redesign", async () => {
+  seedTriggerRedesignQueries();
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="triggers"
+      instanceId="prod"
+      schemaName="shipping"
+      table={createProto(TableSchema, {
+        displayName: "shipment_event",
+        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
+        owner: "shipping_owner",
+        rowCount: 18_200_000n,
+        sizeBytes: 21_400_000_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="shipment_event"
+    />
+  );
+
+  await expect.element(page.getByText("trg_event_enrich")).toBeVisible();
+  await expect
+    .element(page.getByText("→ shipping.enrich_event_location()"))
+    .toBeVisible();
+  await expect.element(page.getByText("ROW")).toBeVisible();
+  await document.fonts.ready;
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-triggers-redesign",
+    { timeout: 20_000 }
   );
 });
 
