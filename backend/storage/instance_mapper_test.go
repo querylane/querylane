@@ -108,20 +108,19 @@ func TestInstanceMapper_SecretHandling(t *testing.T) {
 			},
 		},
 		{
-			name: "storageToProto preserves legacy plaintext password with ciphertext prefix",
+			name: "storageToProto rejects malformed encrypted password",
 			run: func(t *testing.T) {
 				t.Helper()
 
 				mapper := instanceMapper{}
-				legacyPlaintext := encryptedSecretPrefix + "legacy-plaintext-password"
+				malformed := encryptedSecretPrefix + "not-base64"
 
-				loaded, err := mapper.storageToProto(model.Instance{
+				_, err := mapper.storageToProto(model.Instance{
 					ID:          "test-instance",
 					DisplayName: "Test Instance",
-					Config:      types.EngineConfigJSON{V: &api.PostgresConfig{Password: legacyPlaintext}},
+					Config:      types.EngineConfigJSON{V: &api.PostgresConfig{Password: malformed}},
 				})
-				require.NoError(t, err)
-				assert.Equal(t, legacyPlaintext, loaded.Config.Password)
+				assert.ErrorIs(t, err, ErrUnreadableInstanceCredentials)
 			},
 		},
 		{

@@ -18,7 +18,10 @@ const (
 	encryptedSecretPrefix = "qlenc:v1:" //nolint:gosec // Marker prefix for ciphertext, not a credential.
 )
 
-var ErrMissingInstanceSecretKey = errors.New("instance secret encryption key is required")
+var (
+	ErrMissingInstanceSecretKey      = errors.New("instance secret encryption key is required")
+	ErrUnreadableInstanceCredentials = errors.New("instance credentials are unreadable")
+)
 
 type secretCipher struct{ aead cipher.AEAD }
 
@@ -87,19 +90,6 @@ func (c *secretCipher) encrypt(plaintext string) (string, error) {
 	blob = append(blob, sealed...)
 
 	return encryptedSecretPrefix + base64.StdEncoding.EncodeToString(blob), nil
-}
-
-func looksLikeEncryptedSecret(value string) bool {
-	if !strings.HasPrefix(value, encryptedSecretPrefix) {
-		return false
-	}
-
-	blob, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(value, encryptedSecretPrefix))
-	if err != nil {
-		return false
-	}
-
-	return len(blob) >= 12+16
 }
 
 func (c *secretCipher) decrypt(value string) (string, error) {

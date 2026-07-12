@@ -2,9 +2,13 @@ package rpctest
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	consolev1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
@@ -156,6 +160,104 @@ func (s *RPCSuite) TestListInstances() {
 	}
 
 	s.True(found, "registered instance %q should appear in ListInstances", s.instanceName())
+}
+
+func (s *RPCSuite) TestInstanceCredentialRecovery() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	const instanceID = "credential-recovery"
+
+	config := s.externalPostgresConfig(ctx)
+	created, err := s.instanceClient.CreateInstance(ctx, connect.NewRequest(&consolev1alpha1.CreateInstanceRequest{
+		Spec: &consolev1alpha1.CreateInstanceSpec{
+			DisplayName: "Credential recovery",
+			Config:      config,
+		},
+		InstanceId: instanceID,
+	}))
+	s.Require().NoError(err)
+
+	instanceName := created.Msg.GetInstance().GetName()
+
+	defer func() {
+		_, _ = s.instanceClient.DeleteInstance(context.Background(), connect.NewRequest(&consolev1alpha1.DeleteInstanceRequest{
+			Name: instanceName,
+		}))
+	}()
+
+	s.corruptStoredInstancePassword(ctx, instanceID)
+
+	listResp, err := s.instanceClient.ListInstances(ctx, connect.NewRequest(&consolev1alpha1.ListInstancesRequest{}))
+	s.Require().NoError(err)
+
+	listed := findInstance(listResp.Msg.GetInstances(), instanceName)
+	s.Require().NotNil(listed)
+	s.Equal(consolev1alpha1.Instance_CREDENTIAL_STATE_UNREADABLE, listed.GetCredentialState())
+	s.NotEmpty(listed.GetCredentialError())
+	s.NotContains(listed.GetCredentialError(), "cipher")
+	s.Empty(listed.GetConfig().GetPassword())
+
+	getResp, err := s.instanceClient.GetInstance(ctx, connect.NewRequest(&consolev1alpha1.GetInstanceRequest{Name: instanceName}))
+	s.Require().NoError(err)
+	s.Equal(consolev1alpha1.Instance_CREDENTIAL_STATE_UNREADABLE, getResp.Msg.GetInstance().GetCredentialState())
+
+	updateResp, err := s.instanceClient.UpdateInstance(ctx, connect.NewRequest(&consolev1alpha1.UpdateInstanceRequest{
+		Instance: &consolev1alpha1.Instance{
+			Name:   instanceName,
+			Config: s.externalPostgresConfig(ctx),
+		},
+		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"config"}},
+	}))
+	s.Require().NoError(err)
+	s.Equal(consolev1alpha1.Instance_CREDENTIAL_STATE_UNSPECIFIED, updateResp.Msg.GetInstance().GetCredentialState())
+
+	getResp, err = s.instanceClient.GetInstance(ctx, connect.NewRequest(&consolev1alpha1.GetInstanceRequest{Name: instanceName}))
+	s.Require().NoError(err)
+	s.Equal(consolev1alpha1.Instance_CREDENTIAL_STATE_UNSPECIFIED, getResp.Msg.GetInstance().GetCredentialState())
+}
+
+func (s *RPCSuite) corruptStoredInstancePassword(ctx context.Context, instanceID string) {
+	s.T().Helper()
+
+	db, err := s.pgContainer.ConnectToDatabase(ctx, metaDBName)
+	s.Require().NoError(err)
+
+	defer db.Close()
+
+	var rawConfig []byte
+
+	err = db.QueryRowContext(ctx, `SELECT config FROM instance WHERE id = $1`, instanceID).Scan(&rawConfig)
+	s.Require().NoError(err)
+
+	var config map[string]any
+	s.Require().NoError(json.Unmarshal(rawConfig, &config))
+
+	password, ok := config["password"].(string)
+	s.Require().True(ok)
+	encoded, ok := strings.CutPrefix(password, "qlenc:v1:")
+	s.Require().True(ok)
+
+	blob, err := base64.StdEncoding.DecodeString(encoded)
+	s.Require().NoError(err)
+	s.Require().NotEmpty(blob)
+	blob[len(blob)-1] ^= 0xff
+	config["password"] = "qlenc:v1:" + base64.StdEncoding.EncodeToString(blob)
+
+	rawConfig, err = json.Marshal(config)
+	s.Require().NoError(err)
+	_, err = db.ExecContext(ctx, `UPDATE instance SET config = $1 WHERE id = $2`, rawConfig, instanceID)
+	s.Require().NoError(err)
+}
+
+func findInstance(instances []*consolev1alpha1.Instance, name string) *consolev1alpha1.Instance {
+	for _, instance := range instances {
+		if instance.GetName() == name {
+			return instance
+		}
+	}
+
+	return nil
 }
 
 func (s *RPCSuite) TestDeleteInstance_Success() {

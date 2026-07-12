@@ -418,6 +418,21 @@ func TestIntegrationManager_StalePoolOpenFailureKeepsLastKnownGoodPool(t *testin
 	require.NoError(t, err, "last-known-good pool should remain usable")
 }
 
+func TestSessionResolverRejectsUnreadableInstanceCredentials(t *testing.T) {
+	t.Parallel()
+
+	instanceName := mustParseInstanceName(t, "instances/unreadable")
+	repo := &testInstanceRepo{instance: &api.Instance{
+		Name:            instanceName.String(),
+		CredentialState: api.Instance_CREDENTIAL_STATE_UNREADABLE,
+	}}
+	resolver := newHealthOnlyResolver(repo, &countingHealthDriver{})
+
+	_, err := resolver.OpenInstance(t.Context(), instanceName)
+
+	require.ErrorIs(t, err, storage.ErrUnreadableInstanceCredentials)
+}
+
 func TestIntegrationManager_Close_ClosesDatabasePools(t *testing.T) {
 	t.Parallel()
 

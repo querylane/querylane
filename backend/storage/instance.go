@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -178,7 +179,7 @@ func (p *PGInstanceRepository) ListInstances(ctx context.Context, pageSize int32
 
 	result := make([]*api.Instance, len(rows))
 	for i, instance := range rows {
-		result[i], err = p.mapper.storageToProto(instance)
+		result[i], err = p.mapper.storageToProtoForRead(instance)
 		if err != nil {
 			return nil, "", err
 		}
@@ -211,7 +212,7 @@ func (p *PGInstanceRepository) GetInstance(ctx context.Context, name string) (*a
 		return nil, fmt.Errorf("failed to get instance: %w", err)
 	}
 
-	result, err := p.mapper.storageToProto(storedInstance)
+	result, err := p.mapper.storageToProtoForRead(storedInstance)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +308,16 @@ func (p *PGInstanceRepository) UpdateInstanceWithValidation(ctx context.Context,
 
 	currentProto, err := p.mapper.storageToProto(currentModel)
 	if err != nil {
-		return nil, err
+		credentialReplacement := slices.Contains(validPaths, "config") ||
+			slices.Contains(validPaths, "config.password")
+		if !errors.Is(err, ErrUnreadableInstanceCredentials) || !credentialReplacement {
+			return nil, err
+		}
+
+		currentProto, err = p.mapper.storageToProtoForRead(currentModel)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	patch, ok := proto.Clone(reqInstance).(*api.Instance)
@@ -479,7 +489,7 @@ func (p *PGInstanceRepository) filterUpdateMask(mask *fieldmaskpb.FieldMask) ([]
 		// Immutable or output only fields (ignore silently)
 		// AIP-161 says we should NOT fail if these are present, just ignore them.
 		case "name", "id", "engine", "create_time", "update_time",
-			"connection_state", "connection_error", "engine_version",
+			"connection_state", "connection_error", "credential_state", "credential_error", "engine_version",
 			"last_connection_check_time":
 			continue
 
