@@ -247,6 +247,26 @@ it("keeps sidebar table sort local while updating table ordering", () => {
   expect(mocks.navigate).not.toHaveBeenCalled();
 });
 
+it("persists the schema map tab without creating a sidebar destination", () => {
+  const { result } = renderController({ schema: "public" });
+
+  act(() => {
+    result.current.onSchemaTabChange("map");
+  });
+
+  expect(mocks.navigate).toHaveBeenCalledTimes(1);
+  const navigation = mocks.navigate.mock.calls[0]?.[0];
+  expect(navigation).toMatchObject({
+    params: { databaseId: "db-1", instanceId: "inst-1" },
+    replace: false,
+    to: "/instances/$instanceId/databases/$databaseId/explorer",
+  });
+  expect(navigation.search({ schema: "public" })).toEqual({
+    schema: "public",
+    tab: "map",
+  });
+});
+
 describe("schema overview stats", () => {
   it("drives the schema overview from unfiltered catalog lists", () => {
     const { result } = renderController({ schema: "public" });

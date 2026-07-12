@@ -86,7 +86,7 @@ describe("schema detail integration", () => {
     expect(screen.getByText("active_accounts")).toBeTruthy();
   });
 
-  it("uses kind and owner filters instead of object facet tabs", () => {
+  it("keeps kind and owner filters inside the Objects tab", () => {
     render(
       <SchemaDetail
         onSelectTable={vi.fn()}
@@ -102,7 +102,8 @@ describe("schema detail integration", () => {
       />
     );
 
-    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.getByRole("tab", { name: "Objects" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Schema map" })).toBeTruthy();
     expect(screen.getByRole("button", { name: KIND_FILTER_RE })).toBeTruthy();
     expect(screen.getByRole("button", { name: OWNER_FILTER_RE })).toBeTruthy();
   });

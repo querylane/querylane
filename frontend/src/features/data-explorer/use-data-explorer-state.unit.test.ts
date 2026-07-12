@@ -104,6 +104,36 @@ describe("buildExplorerSearch", () => {
       tab: undefined,
     });
   });
+
+  test("keeps the schema map tab only for schema overview selections", () => {
+    expect(
+      normalizeExplorerSearch({
+        schema: "public",
+        tab: "map",
+      })
+    ).toEqual({
+      category: undefined,
+      name: undefined,
+      q: undefined,
+      schema: "public",
+      tab: "map",
+    });
+
+    expect(
+      normalizeExplorerSearch({
+        category: "tables",
+        name: "orders",
+        schema: "public",
+        tab: "map",
+      })
+    ).toEqual({
+      category: "tables",
+      name: "orders",
+      q: undefined,
+      schema: "public",
+      tab: undefined,
+    });
+  });
 });
 
 describe("selectionFromSearch", () => {

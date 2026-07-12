@@ -4,6 +4,7 @@ import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { SchemaDetail } from "@/features/data-explorer/explorer-schema-detail";
+import { ExplorerSchemaMap } from "@/features/data-explorer/explorer-schema-map";
 import { TableDetail } from "@/features/data-explorer/explorer-table-detail";
 import { ViewDetail } from "@/features/data-explorer/explorer-view-detail";
 import {
@@ -34,6 +35,10 @@ const ACTIVE_KIND_FILTER_RE = /^Kind.*Materialized views/;
 const ACTIVE_OWNER_FILTER_RE = /^Owner.*analytics_owner/;
 const KIND_FILTER_RE = /^Kind$/;
 const OWNER_FILTER_RE = /^Owner$/;
+const SCHEMA_MAP_ALL_CHIP_RE = /^All 7$/;
+const SCHEMA_MAP_SHIPPING_CHIP_RE = /^shipping 4$/;
+const DEFAULT_BROWSER_VIEWPORT = { height: 1000, width: 1280 } as const;
+const SCHEMA_MAP_BROWSER_VIEWPORT = { height: 1400, width: 2048 } as const;
 
 // 2024-01-01T23:00:00Z renders as "Last fetched 11:00:00 PM" under the pinned
 // TZ=GMT used for screenshots, matching the mocked data grid label below.
@@ -105,6 +110,12 @@ const sqlQueryState = vi.hoisted(() => ({
   isFetching: false,
   refetch: () => Promise.resolve(),
 }));
+const schemaMapCatalog = vi.hoisted(() => ({
+  columnsByTable: {} as Record<string, unknown[]>,
+  constraintsByTable: {} as Record<string, unknown[]>,
+  tablesBySchema: {} as Record<string, unknown[]>,
+  viewsBySchema: {} as Record<string, unknown[]>,
+}));
 
 function requireFacetFilterBar(description: string) {
   const filterBar = document.querySelector<HTMLElement>(
@@ -152,7 +163,90 @@ vi.mock("@/components/data-grid/table-data-grid/table-data-grid", () =>
   ])
 );
 
+vi.mock("@connectrpc/connect-query", async () => {
+  const actual = await vi.importActual<
+    typeof import("@connectrpc/connect-query")
+  >("@connectrpc/connect-query");
+
+  return {
+    ...actual,
+    useTransport: () => ({}),
+  };
+});
+
+vi.mock("@tanstack/react-query", async () => {
+  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
+    "@tanstack/react-query"
+  );
+
+  function schemaNameFromParent(parent: string | undefined) {
+    return parent?.split("/").at(-1) ?? "";
+  }
+
+  function result(data: unknown) {
+    return {
+      data,
+      error: null,
+      isFetching: false,
+      isLoading: false,
+      refetch: () => Promise.resolve(),
+    };
+  }
+
+  function schemaMapQuery(query: unknown) {
+    const queryKey = (query as { queryKey?: readonly unknown[] }).queryKey;
+    const descriptor = queryKey?.[1] as
+      | { input?: { parent?: string }; methodName?: string }
+      | undefined;
+    const parent = descriptor?.input?.parent;
+
+    if (descriptor?.methodName === "ListTables") {
+      return result({
+        tables:
+          schemaMapCatalog.tablesBySchema[schemaNameFromParent(parent)] ?? [],
+      });
+    }
+    if (descriptor?.methodName === "ListViews") {
+      return result({
+        views:
+          schemaMapCatalog.viewsBySchema[schemaNameFromParent(parent)] ?? [],
+      });
+    }
+    if (descriptor?.methodName === "ListTableColumns") {
+      return result({
+        columns: schemaMapCatalog.columnsByTable[parent ?? ""] ?? [],
+      });
+    }
+    if (descriptor?.methodName === "ListTableConstraints") {
+      return result({
+        constraints: schemaMapCatalog.constraintsByTable[parent ?? ""] ?? [],
+      });
+    }
+
+    return result({});
+  }
+
+  return {
+    ...actual,
+    useQueries: ({ queries }: { queries: unknown[] }) =>
+      queries.map(schemaMapQuery),
+  };
+});
+
 vi.mock("@/hooks/api/table", () => ({
+  tablesForSchemaQueryInput: ({
+    databaseId,
+    instanceId,
+    schemaId,
+  }: {
+    databaseId: string;
+    instanceId: string;
+    schemaId: string;
+  }) => ({
+    parent: schemaResource(schemaId)
+      .replace("instances/prod", `instances/${instanceId}`)
+      .replace("databases/logistics", `databases/${databaseId}`),
+  }),
   useGetTablePartitionMetadataQuery: () => tableQueries.partitionMetadata,
   useListTableColumnsQuery: () => tableQueries.columns,
   useListTableConstraintsQuery: () => tableQueries.constraints,
@@ -195,6 +289,180 @@ function resetPartitionMetadataQuery() {
       partitionCount: 0,
       partitionKey: "",
     },
+  };
+}
+
+function schemaResource(schemaName: string) {
+  return `instances/prod/databases/logistics/schemas/${schemaName}`;
+}
+
+function tableResource(schemaName: string, tableName: string) {
+  return `${schemaResource(schemaName)}/tables/${tableName}`;
+}
+
+function seedSchemaMapVisualCatalog() {
+  const table = (schemaName: string, tableName: string, rowCount: bigint) =>
+    createProto(TableSchema, {
+      displayName: tableName,
+      name: tableResource(schemaName, tableName),
+      owner: "app_owner",
+      rowCount,
+      sizeBytes: 128n,
+    });
+  const column = (
+    columnName: string,
+    rawType: string,
+    options: { primary?: boolean } = {}
+  ) =>
+    createProto(ColumnSchema, {
+      columnName,
+      isPrimaryKey: options.primary ?? false,
+      rawType,
+    });
+  const foreignKey = ({
+    columnName,
+    constraintName,
+    referencedColumn = "id",
+    referencedSchema,
+    referencedTable,
+  }: {
+    columnName: string;
+    constraintName: string;
+    referencedColumn?: string;
+    referencedSchema: string;
+    referencedTable: string;
+  }) =>
+    createProto(TableConstraintSchema, {
+      columnNames: [columnName],
+      constraintName,
+      referencedColumnNames: [referencedColumn],
+      referencedTable: tableResource(referencedSchema, referencedTable),
+      type: ConstraintType.FOREIGN_KEY,
+    });
+
+  const carriers = table("shipping", "carriers", 312n);
+  const shipments = table("shipping", "shipments", 2_400_000n);
+  const shipmentEvent = table("shipping", "shipment_event", 18_200_000n);
+  const containers = table("shipping", "containers", 88_000n);
+  const ports = table("catalog", "ports", 642n);
+  const routes = table("catalog", "routes", 1_800n);
+  const changeLog = table("audit", "change_log", 4_200_000n);
+
+  schemaMapCatalog.tablesBySchema = {
+    audit: [changeLog],
+    catalog: [ports, routes],
+    shipping: [carriers, shipments, shipmentEvent, containers],
+  };
+  schemaMapCatalog.viewsBySchema = { audit: [], catalog: [], shipping: [] };
+  schemaMapCatalog.columnsByTable = {
+    [carriers.name]: [
+      column("id", "int4", { primary: true }),
+      column("code", "text"),
+      column("name", "text"),
+      column("scac", "text"),
+      column("active", "bool"),
+      column("rating", "numeric(3,2)"),
+      column("onboarded_at", "date"),
+    ],
+    [changeLog.name]: [
+      column("id", "int8", { primary: true }),
+      column("table_name", "text"),
+      column("op", "text"),
+      column("actor", "text"),
+      column("diff", "jsonb"),
+      column("recorded_at", "timestamptz"),
+    ],
+    [containers.name]: [
+      column("id", "int4", { primary: true }),
+      column("shipment_id", "uuid"),
+      column("iso_code", "text"),
+      column("ctype", "text"),
+      column("tare_kg", "numeric"),
+    ],
+    [ports.name]: [
+      column("id", "int4", { primary: true }),
+      column("code", "text"),
+      column("name", "text"),
+      column("country", "text"),
+      column("tz", "text"),
+    ],
+    [routes.name]: [
+      column("id", "int4", { primary: true }),
+      column("origin_port", "text"),
+      column("dest_port", "text"),
+      column("transit_days", "int4"),
+      column("distance_nm", "int4"),
+      column("active", "bool"),
+    ],
+    [shipmentEvent.name]: [
+      column("id", "int8", { primary: true }),
+      column("shipment_id", "uuid"),
+      column("event", "text"),
+      column("location", "text"),
+      column("recorded_at", "timestamptz"),
+    ],
+    [shipments.name]: [
+      column("id", "uuid", { primary: true }),
+      column("ref", "text"),
+      column("carrier_id", "int4"),
+      column("status", "shipment_status"),
+      column("origin_port", "text"),
+      column("dest_port", "text"),
+      column("weight_kg", "numeric(10,2)"),
+      column("eta", "date"),
+      column("created_at", "timestamptz"),
+    ],
+  };
+  schemaMapCatalog.constraintsByTable = {
+    [containers.name]: [
+      foreignKey({
+        columnName: "shipment_id",
+        constraintName: "containers_shipment_id_fkey",
+        referencedSchema: "shipping",
+        referencedTable: "shipments",
+      }),
+    ],
+    [routes.name]: [
+      foreignKey({
+        columnName: "origin_port",
+        constraintName: "routes_origin_port_fkey",
+        referencedColumn: "code",
+        referencedSchema: "catalog",
+        referencedTable: "ports",
+      }),
+      foreignKey({
+        columnName: "dest_port",
+        constraintName: "routes_dest_port_fkey",
+        referencedColumn: "code",
+        referencedSchema: "catalog",
+        referencedTable: "ports",
+      }),
+    ],
+    [shipmentEvent.name]: [
+      foreignKey({
+        columnName: "shipment_id",
+        constraintName: "shipment_event_shipment_id_fkey",
+        referencedSchema: "shipping",
+        referencedTable: "shipments",
+      }),
+    ],
+    [shipments.name]: [
+      foreignKey({
+        columnName: "carrier_id",
+        constraintName: "shipments_carrier_id_fkey",
+        referencedSchema: "shipping",
+        referencedTable: "carriers",
+      }),
+    ],
+  };
+
+  return {
+    schemas: [
+      { id: "shipping", name: "shipping", owner: "app_owner" },
+      { id: "catalog", name: "catalog", owner: "app_owner" },
+      { id: "audit", name: "audit", owner: "app_owner" },
+    ],
+    shippingTables: [carriers, shipments, shipmentEvent, containers],
   };
 }
 
@@ -546,7 +814,12 @@ test("data explorer schema detail keeps dense table summaries scannable", async 
   await expect
     .element(page.getByRole("button", { name: OWNER_FILTER_RE }))
     .toBeVisible();
-  await expect.element(page.getByRole("tablist")).not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("tab", { name: "Objects" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("tab", { name: "Schema map" }))
+    .toBeVisible();
   const searchInput = page.getByLabelText("Search objects…").element();
   const objectTable = page.getByRole("table").element();
   expect(
@@ -619,6 +892,57 @@ test("data explorer schema detail captures active object filters", async () => {
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-schema-active-filters"
   );
+});
+
+test("data explorer schema map tab matches the redesign relationship map", async () => {
+  const catalog = seedSchemaMapVisualCatalog();
+
+  await page.viewport(
+    SCHEMA_MAP_BROWSER_VIEWPORT.width,
+    SCHEMA_MAP_BROWSER_VIEWPORT.height
+  );
+  try {
+    render(
+      <ScreenshotFrame>
+        <div className="flex h-[1320px] w-[1132px] bg-background text-foreground">
+          <ExplorerSchemaMap
+            activeSchemaName="shipping"
+            databaseId="logistics"
+            enabled={true}
+            instanceId="prod"
+            onSelectTable={() => undefined}
+            schemas={catalog.schemas}
+          />
+        </div>
+      </ScreenshotFrame>
+    );
+
+    await expect
+      .element(page.getByRole("heading", { name: "Schema map" }))
+      .toBeVisible();
+    await expect.element(page.getByText("logistics")).toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: SCHEMA_MAP_ALL_CHIP_RE }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: SCHEMA_MAP_SHIPPING_CHIP_RE }))
+      .toBeVisible();
+    await expect.element(page.getByText("shipment_event")).toBeVisible();
+    await expect.element(page.getByText("shipments")).toBeVisible();
+    await expect.element(page.getByText("carriers")).toBeVisible();
+    await expect.element(page.getByText("change_log")).toBeVisible();
+    await expect
+      .element(page.getByRole("searchbox", { name: "Find a table" }))
+      .toBeVisible();
+    await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+      "data-explorer-schema-map"
+    );
+  } finally {
+    await page.viewport(
+      DEFAULT_BROWSER_VIEWPORT.width,
+      DEFAULT_BROWSER_VIEWPORT.height
+    );
+  }
 });
 
 test("data explorer materialized view detail stays readable", async () => {
