@@ -15,6 +15,7 @@ describe("sidebar navigation", () => {
     });
 
     expect(links["database.explorer"]).toBeUndefined();
+    expect(links["database.workbench"]).toBeUndefined();
   });
 
   test("provides a link for every database nav item", () => {
@@ -71,13 +72,29 @@ describe("sidebar navigation", () => {
     });
   });
 
+  test("builds native link props for the SQL workbench", () => {
+    const links = buildNavLinkProps({
+      currentPage: "database.overview",
+      ids: { databaseId: "postgres", instanceId: "local" },
+    });
+
+    expect(links["database.workbench"]).toMatchObject({
+      params: { databaseId: "postgres", instanceId: "local" },
+      to: "/instances/$instanceId/databases/$databaseId/workbench",
+    });
+  });
+
   test("returns instance-only navigation until a database is selected", () => {
     const sections = getNavForScope({
       active: {
         databaseExplorer: false,
         databaseExtensions: false,
         databaseOverview: false,
+<<<<<<< HEAD
         databaseSql: false,
+=======
+        databaseWorkbench: false,
+>>>>>>> 31e80938 (feat(frontend): add read-only sql workbench)
         instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: true,
@@ -107,7 +124,11 @@ describe("sidebar navigation", () => {
         databaseExplorer: false,
         databaseExtensions: false,
         databaseOverview: true,
+<<<<<<< HEAD
         databaseSql: false,
+=======
+        databaseWorkbench: false,
+>>>>>>> 31e80938 (feat(frontend): add read-only sql workbench)
         instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: false,
@@ -117,7 +138,11 @@ describe("sidebar navigation", () => {
         databaseExplorer: "/instances/local/databases/postgres/explorer",
         databaseExtensions: "/instances/local/databases/postgres/extensions",
         databaseOverview: "/instances/local/databases/postgres",
+<<<<<<< HEAD
         databaseSql: "/instances/local/databases/postgres/sql",
+=======
+        databaseWorkbench: "/instances/local/databases/postgres/workbench",
+>>>>>>> 31e80938 (feat(frontend): add read-only sql workbench)
         instanceActivity: "/instances/local/activity",
         instanceConfiguration: "/instances/local/configuration",
         instanceOverview: "/instances/local",
@@ -132,6 +157,7 @@ describe("sidebar navigation", () => {
     ]);
     expect(sections[1]?.items.map((item) => item.key)).toEqual([
       "database.overview",
+      "database.workbench",
       "database.extensions",
       "database.explorer",
       "database.sql",

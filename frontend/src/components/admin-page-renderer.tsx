@@ -26,7 +26,7 @@ const DataExplorerPage = lazy(() =>
   }))
 );
 const SqlWorkbenchPage = lazy(() =>
-  import("@/features/sql-workbench/sql-workbench-page").then((module) => ({
+  import("@/features/sql-workbench/read-only-workbench-page").then((module) => ({
     default: module.SqlWorkbenchPage,
   }))
 );
@@ -143,6 +143,10 @@ function DatabaseAdminPageContent({
           instanceId={instanceId}
           searchRoute="/instances/$instanceId"
         />
+      );
+    case "database.workbench":
+      return (
+        <SqlWorkbenchPage databaseId={databaseId} instanceId={instanceId} />
       );
     case "database.explorer":
       return (

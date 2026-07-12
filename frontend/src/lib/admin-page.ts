@@ -19,7 +19,8 @@ type AdminPageId =
   | "database.overview"
   | "database.extensions"
   | "database.explorer"
-  | "database.sql";
+  | "database.sql"
+  | "database.workbench";
 
 type AdminSelectionScope = "none" | "instance" | "database";
 
@@ -32,6 +33,7 @@ const ADMIN_PAGE_IDS: readonly AdminPageId[] = [
   "database.extensions",
   "database.explorer",
   "database.sql",
+  "database.workbench",
 ] as const;
 
 const ADMIN_PAGE_MIN_SCOPE: Record<
@@ -42,6 +44,7 @@ const ADMIN_PAGE_MIN_SCOPE: Record<
   "database.extensions": "database",
   "database.overview": "database",
   "database.sql": "database",
+  "database.workbench": "database",
   "instance.activity": "instance",
   "instance.configuration": "instance",
   "instance.overview": "instance",
@@ -117,6 +120,7 @@ const DATABASE_PAGE_BY_SEGMENT: Record<string, AdminPageId> = {
   explorer: "database.explorer",
   extensions: "database.extensions",
   sql: "database.sql",
+  workbench: "database.workbench",
 };
 
 function resolveDatabasePageFromSegment(
@@ -165,6 +169,8 @@ function resolveImplicitAdminPageFromRouteId(
       return "instance.roles";
     case "/instances/$instanceId/databases/$databaseId/explorer":
       return "database.explorer";
+    case "/instances/$instanceId/databases/$databaseId/workbench":
+      return "database.workbench";
     case "/instances/$instanceId/databases/$databaseId/extensions":
       return "database.extensions";
     case "/instances/$instanceId/databases/$databaseId/sql":
