@@ -170,7 +170,7 @@ describe("grid helpers", () => {
     expect(markup).not.toContain("Open carrier_id reference");
   });
 
-  test("renders a plain cell when a foreign key value is not safe to filter", () => {
+  test("links exact binary foreign keys but rejects truncated values", () => {
     const textColumn = testColumn("external_id", DataType.STRING, "text");
     const bytesColumn = testColumn("fingerprint", DataType.BINARY, "bytea");
     const onOpenForeignKeyReference = vi.fn();
@@ -250,7 +250,7 @@ describe("grid helpers", () => {
     expect(truncatedMarkup).toContain("prefix");
     expect(truncatedMarkup).not.toContain("Open external_id reference");
     expect(bytesMarkup).toContain("bytes");
-    expect(bytesMarkup).not.toContain("Open fingerprint reference");
+    expect(bytesMarkup).toContain("Open fingerprint reference");
   });
 
   test("renders a plain cell when a foreign key value cannot survive the drawer filter", () => {
