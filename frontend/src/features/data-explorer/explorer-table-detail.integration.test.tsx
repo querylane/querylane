@@ -1498,11 +1498,15 @@ describe("TableDetail indexes tab", () => {
     expect(screen.getByText("99.7%")).toBeTruthy();
     expect(screen.getAllByText("0").length).toBeGreaterThan(0);
     expect(
-      screen.getByRole("progressbar", { name: "82% of index scans" })
+      screen.getByRole("progressbar", {
+        name: "shipments_pkey: 82% of index scans",
+      })
     ).toBeTruthy();
-    expect(
-      screen.getAllByText("Cache hit")[0]?.getAttribute("title")
-    ).toContain("shared-buffer");
+    const cacheHitHelp = screen
+      .getAllByText("Cache hit")[0]
+      ?.closest('[data-slot="tooltip-trigger"]');
+    expect(cacheHitHelp?.getAttribute("tabindex")).toBe("0");
+    expect(cacheHitHelp?.getAttribute("aria-label")).toContain("shared-buffer");
     expect(document.body.textContent).toContain(
       "CREATE INDEX shipments_status_idx ON shipping.shipments USING btree (status) WHERE status <> 'delivered'"
     );
@@ -1535,6 +1539,45 @@ describe("TableDetail indexes tab", () => {
       'CREATE INDEX orders_mixed_case_idx ON sales.orders USING btree ("Order")'
     );
     expect(document.body.textContent).not.toContain('"""Order"""');
+  });
+
+  it("announces exact tiny scan shares without the visual floor", () => {
+    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+      indexes: [
+        create(TableIndexSchema, {
+          hasUsageStats: true,
+          indexName: "orders_tiny_idx",
+          isValid: true,
+          keyParts: ["status"],
+          method: "btree",
+          scanCount: 1n,
+        }),
+        create(TableIndexSchema, {
+          hasUsageStats: true,
+          indexName: "orders_busy_idx",
+          isValid: true,
+          keyParts: ["customer_id"],
+          method: "btree",
+          scanCount: 999n,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="indexes"
+        instanceId="prod"
+        schemaName="sales"
+        table={undefined}
+        tableName="orders"
+      />
+    );
+
+    const tinyShare = screen.getByRole("progressbar", {
+      name: "orders_tiny_idx: 0% of index scans",
+    });
+    expect(tinyShare.getAttribute("aria-valuenow")).toBe("0");
   });
 });
 

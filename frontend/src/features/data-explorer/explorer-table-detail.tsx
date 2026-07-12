@@ -65,6 +65,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   SqlCodeBlock,
@@ -81,6 +82,11 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   type ColumnRow,
   deriveColumnRows,
@@ -2016,6 +2022,8 @@ const MIN_VISIBLE_SCAN_SHARE_PERCENT = 2;
 const COMPACT_ONE_DECIMAL_THRESHOLD = 100;
 const ONE_DECIMAL_SCALE = 10;
 const CACHE_PERCENT_TENTHS_SCALE = 1000n;
+const CACHE_HIT_DESCRIPTION =
+  "PostgreSQL shared-buffer hit ratio; operating-system cache reads count as reads.";
 
 function formatSqlIdentifier(identifier: string) {
   if (SIMPLE_SQL_IDENTIFIER_PATTERN.test(identifier)) {
@@ -2110,10 +2118,7 @@ function indexScanShare(index: TableIndex, totalScanCount: bigint) {
   const percent = Number(
     (index.scanCount * PERCENT_SCALE + totalScanCount / 2n) / totalScanCount
   );
-  return Math.min(
-    FULL_PERCENT,
-    Math.max(MIN_VISIBLE_SCAN_SHARE_PERCENT, percent)
-  );
+  return Math.min(FULL_PERCENT, percent);
 }
 function uniqueIndexCount(indexes: TableIndex[]) {
   return indexes.filter((index) => index.isUnique).length;
@@ -2301,15 +2306,26 @@ function IndexMetrics({ index }: { index: TableIndex }) {
               {value}
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-              <span
-                title={
-                  label === "Cache hit"
-                    ? "PostgreSQL shared-buffer hit ratio; operating-system cache reads count as reads."
-                    : undefined
-                }
-              >
-                {label}
-              </span>
+              {label === "Cache hit" ? (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        aria-label={`Cache hit. ${CACHE_HIT_DESCRIPTION}`}
+                        className="h-auto cursor-help rounded-none p-0 text-[11px] text-muted-foreground uppercase tracking-wider underline decoration-dotted underline-offset-2"
+                        size="sm"
+                        type="button"
+                        variant="link"
+                      />
+                    }
+                  >
+                    {label}
+                  </TooltipTrigger>
+                  <TooltipContent>{CACHE_HIT_DESCRIPTION}</TooltipContent>
+                </Tooltip>
+              ) : (
+                label
+              )}
             </p>
           </div>
         );
@@ -2340,6 +2356,10 @@ function IndexCard({
 }) {
   const sql = createIndexSql({ index, schemaName, tableName });
   const scanShare = indexScanShare(index, totalScanCount);
+  const scanBarWidth =
+    index.hasUsageStats && index.scanCount > 0n
+      ? Math.max(MIN_VISIBLE_SCAN_SHARE_PERCENT, scanShare)
+      : 0;
   const unused = isIndexUnused(index);
   return (
     <Card
@@ -2399,22 +2419,12 @@ function IndexCard({
       <CardContent className="space-y-4 p-4">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)]">
           <div className="min-w-0 space-y-2">
-            <progress
-              aria-label={`${scanShare}% of index scans`}
-              className="sr-only"
-              max={FULL_PERCENT}
-              value={scanShare}
+            <Progress
+              aria-label={`${index.indexName}: ${scanShare}% of index scans`}
+              aria-valuenow={scanShare}
+              className="gap-0 [&_[data-slot=progress-indicator]]:bg-muted-foreground/70 [&_[data-slot=progress-track]]:h-2"
+              value={scanBarWidth}
             />
-            <div
-              aria-hidden="true"
-              className="h-2 overflow-hidden rounded-full bg-muted"
-            >
-              <div
-                aria-hidden="true"
-                className="h-full rounded-full bg-muted-foreground/70"
-                style={{ width: `${scanShare}%` }}
-              />
-            </div>
             <p className="text-muted-foreground text-xs">share of scans</p>
           </div>
           <IndexMetrics index={index} />
