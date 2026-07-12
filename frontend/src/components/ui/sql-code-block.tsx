@@ -14,7 +14,7 @@ type SqlCodeBlockProps = {
   className?: string;
   copyable?: boolean;
   sql: string;
-  variant?: "block" | "inline";
+  variant?: "block" | "compact" | "inline";
   wrap?: boolean;
 };
 
@@ -81,6 +81,7 @@ export function SqlCodeBlock({
   wrap = false,
 }: SqlCodeBlockProps) {
   const tokenLines = highlightSql(sqlText);
+  const compact = variant === "compact";
   const inline = variant === "inline";
 
   return (
@@ -89,14 +90,21 @@ export function SqlCodeBlock({
         className={cn(
           inline
             ? "min-w-0 max-w-full truncate font-mono text-[12px] leading-normal"
-            : "min-w-0 max-w-full rounded-md border bg-muted/40 p-3 font-mono text-foreground text-xs leading-relaxed",
+            : cn(
+                "min-w-0 max-w-full rounded-md font-mono text-foreground text-xs leading-relaxed",
+                compact
+                  ? "overflow-x-auto whitespace-pre-wrap break-words border-0 bg-muted/55 px-3 py-2"
+                  : "border bg-muted/40 p-3"
+              ),
           !inline &&
+            !compact &&
             (wrap
               ? cn(
                   "overflow-x-hidden whitespace-pre-wrap break-words",
                   copyable && "pr-14"
                 )
               : cn("overflow-x-auto", copyable && "pr-10")),
+          compact && copyable && "pr-10",
           className
         )}
       >

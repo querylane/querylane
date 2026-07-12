@@ -1530,12 +1530,15 @@ describe("TableDetail policies tab", () => {
 
     expect(
       screen.getByText(
-        "Row-level security policies are present — table owners and BYPASSRLS roles may bypass them"
+        "This table defines row-level security policies — table owners and BYPASSRLS roles may bypass them"
       )
     ).toBeTruthy();
-    expect(screen.getAllByText("invoices_tenant_all").length).toBeGreaterThan(
-      0
-    );
+    expect(
+      screen.getByRole("heading", {
+        level: 2,
+        name: "invoices_tenant_all",
+      })
+    ).toBeTruthy();
     expect(screen.getAllByText("FOR SELECT")).toHaveLength(2);
     expect(screen.getAllByText("PERMISSIVE")).toHaveLength(3);
     expect(screen.getAllByText("TO app_readwrite")).toHaveLength(2);
@@ -1573,7 +1576,7 @@ describe("TableDetail policies tab", () => {
 
     expect(
       screen.getByText(
-        "1 permissive policy applies — a row passes if it matches. Rows visible to app_readwrite are those where:"
+        "1 permissive policy applies — a new row passes if it matches. New rows inserted by app_readwrite must satisfy:"
       )
     ).toBeTruthy();
     expect(
@@ -1586,6 +1589,17 @@ describe("TableDetail policies tab", () => {
     ).not.toContain(
       "(customer = current_setting('app.tenant'))\nOR (pg_has_role(current_user, 'billing', 'member'))"
     );
+
+    await user.click(screen.getByRole("combobox", { name: "Policy role" }));
+    await user.click(screen.getByRole("option", { name: "app_readonly" }));
+
+    const rejectedInsertVerdict = screen.getByText(
+      "No permissive policy applies — RLS rejects every INSERT by app_readonly."
+    );
+    expect(rejectedInsertVerdict).toBeTruthy();
+    expect(
+      rejectedInsertVerdict.closest('[aria-live="polite"]')
+    ).not.toBeNull();
   });
 
   it("previews UPDATE visibility from USING without folding in WITH CHECK", async () => {
@@ -1626,5 +1640,52 @@ describe("TableDetail policies tab", () => {
     expect(sqlExpressions.at(-1)).toBe(
       "(tenant_id = current_setting('app.tenant'))"
     );
+  });
+
+  it("ANDs restrictive policies on top without double-wrapping permissive predicates", () => {
+    tableQueries.policies.data = create(ListTablePoliciesResponseSchema, {
+      policies: [
+        create(TablePolicySchema, {
+          command: PolicyCommand.SELECT,
+          mode: PolicyMode.PERMISSIVE,
+          policyName: "invoices_tenant_select",
+          roles: ["app_reader"],
+          usingExpression: "tenant_id = current_setting('app.tenant')",
+        }),
+        create(TablePolicySchema, {
+          command: PolicyCommand.SELECT,
+          mode: PolicyMode.RESTRICTIVE,
+          policyName: "invoices_not_suspended",
+          roles: ["app_reader"],
+          usingExpression: "NOT suspended",
+        }),
+      ],
+    });
+
+    const { container } = render(
+      <TableDetail
+        databaseId="app"
+        initialTab="policies"
+        instanceId="prod"
+        schemaName="billing"
+        table={create(TableSchema)}
+        tableName="invoices"
+      />
+    );
+
+    expect(screen.getByText("RESTRICTIVE")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "1 permissive policy applies — a row passes if it matches. 1 restrictive policy must also pass. Rows visible to app_reader are those where:"
+      )
+    ).toBeTruthy();
+    expect(
+      Array.from(
+        container.querySelectorAll(
+          'code.language-sql[data-syntax-highlighter="shiki"]'
+        ),
+        (code) => code.textContent
+      ).at(-1)
+    ).toBe("(tenant_id = current_setting('app.tenant'))\nAND (NOT suspended)");
   });
 });

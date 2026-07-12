@@ -2036,7 +2036,10 @@ function deriveRlsPreview({
       appliedPolicies: matchingPolicies,
       hasRows: false,
       predicate: "",
-      verdict: `No permissive policy applies — RLS returns zero rows for ${role} running ${formatPolicyCommand(command)}.`,
+      verdict:
+        command === PolicyCommand.INSERT
+          ? `No permissive policy applies — RLS rejects every INSERT by ${role}.`
+          : `No permissive policy applies — RLS returns zero rows for ${role} running ${formatPolicyCommand(command)}.`,
     };
   }
 
@@ -2051,19 +2054,21 @@ function deriveRlsPreview({
   );
   const predicate =
     restrictivePredicates.length > 0
-      ? joinPolicyPredicates(
-          [permissivePredicate, ...restrictivePredicates],
-          "AND"
-        )
+      ? [
+          permissivePolicies.length === 1
+            ? permissivePredicate
+            : `(${permissivePredicate})`,
+          ...restrictivePredicates.map(wrapPolicyPredicate),
+        ].join("\nAND ")
       : permissivePredicate;
   const permissiveLabel =
     permissivePolicies.length === 1
       ? "1 permissive policy applies"
       : `${permissivePolicies.length.toLocaleString()} permissive policies apply`;
-  const passCopy =
-    permissivePolicies.length === 1
-      ? "a row passes if it matches"
-      : "a row passes if any one matches";
+  const rowSubject = command === PolicyCommand.INSERT ? "a new row" : "a row";
+  const matchCondition =
+    permissivePolicies.length === 1 ? "if it matches" : "if any one matches";
+  const passCopy = `${rowSubject} passes ${matchCondition}`;
   const restrictiveCopy =
     restrictivePolicies.length > 0
       ? ` ${restrictivePolicies.length.toLocaleString()} restrictive ${
@@ -2075,16 +2080,21 @@ function deriveRlsPreview({
     appliedPolicies: matchingPolicies,
     hasRows: true,
     predicate,
-    verdict: `${permissiveLabel} — ${passCopy}.${restrictiveCopy} Rows visible to ${role} are those where:`,
+    verdict: `${permissiveLabel} — ${passCopy}.${restrictiveCopy} ${
+      command === PolicyCommand.INSERT
+        ? `New rows inserted by ${role} must satisfy:`
+        : `Rows visible to ${role} are those where:`
+    }`,
   };
 }
 
 function PolicyExpression({ expression }: { expression: string }) {
   return (
     <SqlCodeBlock
-      className="mt-1 whitespace-pre-wrap break-words border-0 bg-muted/55 px-3 py-2 pr-3"
+      className="mt-1"
       copyable={false}
       sql={expression}
+      variant="compact"
     />
   );
 }
@@ -2093,7 +2103,7 @@ function PolicyCard({ policy }: { policy: TablePolicy }) {
   return (
     <article className="rounded-lg border bg-card p-3 shadow-xs">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="font-mono font-semibold text-sm">{policy.policyName}</h3>
+        <h2 className="font-mono font-semibold text-sm">{policy.policyName}</h2>
         <Badge className="h-[18px] font-mono text-[10px]" variant="outline">
           FOR {formatPolicyCommand(policy.command)}
         </Badge>
@@ -2133,7 +2143,7 @@ function PolicyCard({ policy }: { policy: TablePolicy }) {
 function RlsCombinationGuide() {
   return (
     <section className="rounded-lg border bg-card p-4 shadow-xs">
-      <h3 className="font-semibold text-sm">How the server combines these</h3>
+      <h2 className="font-semibold text-sm">How the server combines these</h2>
       <ol className="mt-3 flex list-none flex-col gap-2 pl-0 text-muted-foreground text-sm leading-relaxed">
         <li>
           <span className="font-medium text-foreground">1 · Grants first.</span>{" "}
@@ -2197,7 +2207,7 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
   return (
     <section className="rounded-lg border bg-card p-4 shadow-xs">
       <div className="flex flex-wrap items-center gap-3">
-        <h3 className="font-semibold text-sm">Preview visibility as</h3>
+        <h2 className="font-semibold text-sm">Preview visibility as</h2>
         <Select onValueChange={handleRoleChange} value={activeRole}>
           <SelectTrigger
             aria-label="Policy role"
@@ -2240,43 +2250,45 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
         </Select>
       </div>
 
-      <div
-        className={cn(
-          "mt-4 flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm leading-relaxed",
-          preview.hasRows
-            ? "bg-emerald-500/10 text-foreground"
-            : "bg-amber-500/10 text-foreground"
-        )}
-      >
-        <span
-          aria-hidden="true"
+      <div aria-atomic="true" aria-live="polite">
+        <div
           className={cn(
-            "mt-1.5 size-2 shrink-0 rounded-full",
-            preview.hasRows ? "bg-emerald-500" : "bg-amber-500"
+            "mt-4 flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm leading-relaxed",
+            preview.hasRows
+              ? "bg-emerald-500/10 text-foreground"
+              : "bg-amber-500/10 text-foreground"
           )}
-        />
-        <span>{preview.verdict}</span>
-      </div>
+        >
+          <span
+            aria-hidden="true"
+            className={cn(
+              "mt-1.5 size-2 shrink-0 rounded-full",
+              preview.hasRows ? "bg-emerald-500" : "bg-amber-500"
+            )}
+          />
+          <span>{preview.verdict}</span>
+        </div>
 
-      {preview.hasRows ? (
-        <>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
-              Applied
-            </span>
-            {preview.appliedPolicies.map((policy) => (
-              <Badge
-                className="h-5 font-mono text-[10px]"
-                key={policy.policyName}
-                variant="secondary"
-              >
-                {policy.policyName}
-              </Badge>
-            ))}
-          </div>
-          <PolicyExpression expression={preview.predicate} />
-        </>
-      ) : null}
+        {preview.hasRows ? (
+          <>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
+                Applied
+              </span>
+              {preview.appliedPolicies.map((policy) => (
+                <Badge
+                  className="h-5 font-mono text-[10px]"
+                  key={policy.policyName}
+                  variant="secondary"
+                >
+                  {policy.policyName}
+                </Badge>
+              ))}
+            </div>
+            <PolicyExpression expression={preview.predicate} />
+          </>
+        ) : null}
+      </div>
     </section>
   );
 }
@@ -2317,8 +2329,8 @@ function PoliciesTab({
           className="size-2 rounded-full bg-emerald-500"
         />
         <p className="font-medium text-sm">
-          Row-level security policies are present — table owners and BYPASSRLS
-          roles may bypass them
+          This table defines row-level security policies — table owners and
+          BYPASSRLS roles may bypass them
         </p>
         <span
           aria-live="polite"
