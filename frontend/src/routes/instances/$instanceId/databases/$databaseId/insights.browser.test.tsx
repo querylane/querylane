@@ -212,6 +212,24 @@ test("query insights route matches the redesign visual slice", async () => {
   await expect
     .element(page.getByRole("region", { name: "Query detail" }))
     .toBeVisible();
+  const surface = page
+    .getByTestId("query-insights-route-visual-surface")
+    .element();
+  const detail = page.getByRole("region", { name: "Query detail" }).element();
+  expect(detail.scrollWidth).toBeLessThanOrEqual(detail.clientWidth);
+  expect(detail.getBoundingClientRect().right).toBeLessThanOrEqual(
+    surface.getBoundingClientRect().right
+  );
+  for (const label of ["Calls", "Mean", "Total", "Relative to top"]) {
+    const metricLabel = Array.from(detail.querySelectorAll("div")).find(
+      (element) =>
+        element.children.length === 0 && element.textContent === label
+    );
+    expect(metricLabel).toBeTruthy();
+    expect(metricLabel?.getBoundingClientRect().right).toBeLessThanOrEqual(
+      detail.getBoundingClientRect().right
+    );
+  }
   await expect
     .element(page.getByRole("button", { name: UPDATE_SHIPMENTS_QUERY_RE }))
     .toBeVisible();
@@ -222,4 +240,47 @@ test("query insights route matches the redesign visual slice", async () => {
   await expect(
     page.getByTestId("query-insights-route-visual-surface")
   ).toMatchScreenshot("query-insights-route-redesign");
+});
+
+test("query detail follows the query table on narrow viewports", async () => {
+  await page.viewport(390, 600);
+  render(
+    <ScreenshotFrame>
+      <div className="w-full bg-background p-4 text-foreground">
+        <BackendDatabaseQueryInsightsPage
+          databaseId="logistics"
+          instanceId="prod-core-eu"
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  const initialScrollY = window.scrollY;
+  await page.getByRole("button", { name: UPDATE_SHIPMENTS_QUERY_RE }).click();
+
+  const topQueriesCard = page
+    .getByText("Top queries by total time")
+    .element()
+    .closest('[data-slot="card"]');
+  const detail = page.getByRole("region", { name: "Query detail" }).element();
+  const tableStatsCard = page
+    .getByText("Sequential scan hotspots")
+    .element()
+    .closest('[data-slot="card"]');
+  if (!(topQueriesCard && tableStatsCard)) {
+    throw new Error("Expected query insight cards");
+  }
+
+  expect(document.activeElement).toBe(detail);
+  expect(window.scrollY).toBeGreaterThan(initialScrollY);
+  expect(detail.getBoundingClientRect().top).toBeGreaterThanOrEqual(0);
+  expect(detail.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+    window.innerHeight
+  );
+  expect(detail.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+    topQueriesCard.getBoundingClientRect().bottom
+  );
+  expect(detail.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+    tableStatsCard.getBoundingClientRect().top
+  );
 });

@@ -1,11 +1,20 @@
 import { create as createProto, toBinary } from "@bufbuild/protobuf";
+import { anyPack } from "@bufbuild/protobuf/wkt";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { BackendDatabasePage } from "@/components/console-pages/database-page";
 import { BackendDatabaseQueryInsightsPage } from "@/components/console-pages/database-query-insights-page";
+import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
+import { StatusSchema } from "@/protogen/google/rpc/status_pb";
 import {
   DatabaseQueryInsightsSchema,
   DatabaseSchema,
@@ -52,6 +61,21 @@ const TABLE_EVENTS_QUERY_BUTTON_RE = /TABLE events/i;
 const VALUES_QUERY_BUTTON_RE = /VALUES \(\$1\)/i;
 const COPY_TO_QUERY_BUTTON_RE = /COPY events TO STDOUT/i;
 const COPY_FROM_QUERY_BUTTON_RE = /COPY events FROM STDIN/i;
+const COPY_SELECT_TO_QUERY_BUTTON_RE =
+  /COPY \(SELECT \* FROM events\) TO STDOUT/i;
+const COPY_TO_PATH_WITH_FROM_BUTTON_RE =
+  /COPY events TO '\/tmp\/from\/archive\.csv'/i;
+const COPY_FROM_PROGRAM_WITH_TO_BUTTON_RE =
+  /COPY events FROM PROGRAM 'echo TO file'/i;
+const COPY_COLUMN_TO_FROM_BUTTON_RE = /COPY events \(id, "to"\) FROM STDIN/i;
+const COMMENTED_SELECT_QUERY_BUTTON_RE =
+  /\/\* trace: dashboard \*\/ SELECT \* FROM events/i;
+const COMMENTED_UPDATE_QUERY_BUTTON_RE =
+  /-- trace: worker\s+UPDATE events SET processed_at = now\(\)/i;
+const EXACT_THRESHOLD_QUERY_BUTTON_RE =
+  /SELECT avg\(duration_ms\) FROM events/i;
+const DUPLICATE_QUERY_ID_SECOND_ROW_RE =
+  /SELECT \* FROM events WHERE tenant_id = \$2/i;
 const SLOW_COUNT_QUERY_BUTTON_RE = /SELECT count\(\*\) FROM events/i;
 const QUERY_STATS_UNAVAILABLE_RE =
   /Query statistics are unavailable for this database/;
@@ -313,6 +337,54 @@ function queryInsightsResponseWithEdgeQueries() {
         totalTimeRatio: 0.18,
       }),
       queryRuntimeInsight({
+        calls: 2n,
+        meanTimeMs: 8,
+        query: "COPY (SELECT * FROM events) TO STDOUT",
+        queryId: 106n,
+        totalTimeMs: 16,
+        totalTimeRatio: 0.16,
+      }),
+      queryRuntimeInsight({
+        calls: 2n,
+        meanTimeMs: 7,
+        query: "COPY events TO '/tmp/from/archive.csv'",
+        queryId: 109n,
+        totalTimeMs: 14,
+        totalTimeRatio: 0.14,
+      }),
+      queryRuntimeInsight({
+        calls: 2n,
+        meanTimeMs: 7,
+        query: "COPY events FROM PROGRAM 'echo TO file'",
+        queryId: 110n,
+        totalTimeMs: 14,
+        totalTimeRatio: 0.14,
+      }),
+      queryRuntimeInsight({
+        calls: 2n,
+        meanTimeMs: 7,
+        query: 'COPY events (id, "to") FROM STDIN',
+        queryId: 111n,
+        totalTimeMs: 14,
+        totalTimeRatio: 0.14,
+      }),
+      queryRuntimeInsight({
+        calls: 3n,
+        meanTimeMs: 4,
+        query: "/* trace: dashboard */ SELECT * FROM events",
+        queryId: 107n,
+        totalTimeMs: 12,
+        totalTimeRatio: 0.12,
+      }),
+      queryRuntimeInsight({
+        calls: 2n,
+        meanTimeMs: 5,
+        query: "-- trace: worker\nUPDATE events SET processed_at = now()",
+        queryId: 108n,
+        totalTimeMs: 10,
+        totalTimeRatio: 0.1,
+      }),
+      queryRuntimeInsight({
         calls: 3n,
         meanTimeMs: 5,
         query: "",
@@ -352,6 +424,14 @@ function queryInsightsResponseWithSearchableQueries() {
         totalTimeRatio: 0.3,
       }),
       queryRuntimeInsight({
+        calls: 4n,
+        meanTimeMs: 30,
+        query: "SELECT avg(duration_ms) FROM events",
+        queryId: 790n,
+        totalTimeMs: 120,
+        totalTimeRatio: 0.15,
+      }),
+      queryRuntimeInsight({
         calls: 3n,
         meanTimeMs: 38,
         query: "SELECT count(*) FROM events",
@@ -373,6 +453,29 @@ function queryInsightsResponseWithUpdatedSelection() {
         queryId: 456n,
         totalTimeMs: 1512,
         totalTimeRatio: 1,
+      }),
+    ],
+  });
+}
+
+function queryInsightsResponseWithDuplicateQueryIds() {
+  return queryInsightsResponseWith({
+    topQueries: [
+      queryRuntimeInsight({
+        calls: 8n,
+        meanTimeMs: 10,
+        query: "SELECT * FROM events WHERE tenant_id = $1",
+        queryId: 900n,
+        totalTimeMs: 80,
+        totalTimeRatio: 1,
+      }),
+      queryRuntimeInsight({
+        calls: 4n,
+        meanTimeMs: 15,
+        query: "SELECT * FROM events WHERE tenant_id = $2",
+        queryId: 900n,
+        totalTimeMs: 60,
+        totalTimeRatio: 0.75,
       }),
     ],
   });
@@ -406,6 +509,26 @@ function queryInsightsWithoutQueryStatsResponse() {
     queryStatsAvailable: false,
     tableStatsAvailable: true,
   });
+}
+
+function queryInsightsWithPartialError(metric: "query_stats" | "table_stats") {
+  const response = queryInsightsResponseWith({
+    queryStatsAvailable: metric !== "query_stats",
+    tableStatsAvailable: metric !== "table_stats",
+  });
+  response.partialErrors = [
+    createProto(StatusSchema, {
+      code: 13,
+      details: [
+        anyPack(
+          ErrorInfoSchema,
+          createProto(ErrorInfoSchema, { metadata: { metric } })
+        ),
+      ],
+      message: `${metric} temporarily unavailable`,
+    }),
+  ];
+  return response;
 }
 
 function catalogResult() {
@@ -656,6 +779,9 @@ describe("backend database overview", () => {
       screen.getByRole("heading", { name: "Query insights" })
     ).toBeTruthy();
     expect(screen.getByText("Top queries by total time")).toBeTruthy();
+    expect(
+      screen.getByRole("columnheader", { name: "Relative to top" })
+    ).toBeTruthy();
     expect(screen.getByText("Sequential scan hotspots")).toBeTruthy();
     expect(screen.getByText("Cache hit by table")).toBeTruthy();
     expect(
@@ -684,6 +810,7 @@ describe("backend database overview", () => {
     );
 
     const detail = screen.getByRole("region", { name: "Query detail" });
+    expect(within(detail).getByText("Relative to top")).toBeTruthy();
     expect(within(detail).getByText("queryid 456")).toBeTruthy();
     expect(within(detail).getByText("21")).toBeTruthy();
     expect(within(detail).getByText("12 ms")).toBeTruthy();
@@ -810,6 +937,17 @@ describe("backend database query insights page", () => {
       screen.getByRole("button", { name: COPY_FROM_QUERY_BUTTON_RE })
     ).toBeTruthy();
     expect(
+      screen.getByRole("button", {
+        name: COPY_FROM_PROGRAM_WITH_TO_BUTTON_RE,
+      })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: COPY_COLUMN_TO_FROM_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: COMMENTED_UPDATE_QUERY_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
       screen.queryByRole("button", { name: TABLE_EVENTS_QUERY_BUTTON_RE })
     ).toBeNull();
     expect(
@@ -829,6 +967,15 @@ describe("backend database query insights page", () => {
     ).toBeTruthy();
     expect(
       screen.getByRole("button", { name: COPY_TO_QUERY_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: COPY_SELECT_TO_QUERY_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: COPY_TO_PATH_WITH_FROM_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: COMMENTED_SELECT_QUERY_BUTTON_RE })
     ).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: WITH_UPDATE_QUERY_BUTTON_RE })
@@ -866,6 +1013,60 @@ describe("backend database query insights page", () => {
     );
   });
 
+  test("clears an unidentifiable query selection after rows reorder", async () => {
+    const user = userEvent.setup();
+    state.queryInsightsQuery = { data: queryInsightsResponseWithEdgeQueries() };
+    const { rerender } = render(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+    const unavailableQueryButtons = screen.getAllByRole("button", {
+      name: "Query text unavailable",
+    });
+    const firstUnavailableQueryButton = unavailableQueryButtons[0];
+    if (!firstUnavailableQueryButton) {
+      throw new Error("Expected an unavailable query button");
+    }
+    await user.click(firstUnavailableQueryButton);
+
+    const refreshed = queryInsightsResponseWithEdgeQueries();
+    const topQueries = refreshed.queryInsights?.topQueries;
+    if (!topQueries) {
+      throw new Error("Expected query insights");
+    }
+    const firstUnknown = topQueries.at(-2);
+    const secondUnknown = topQueries.at(-1);
+    if (!(firstUnknown && secondUnknown)) {
+      throw new Error("Expected two unavailable queries");
+    }
+    topQueries.splice(-2, 2, secondUnknown, firstUnknown);
+    state.queryInsightsQuery = { data: refreshed };
+    rerender(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole("region", { name: "Query detail" })).toBeNull();
+    });
+
+    state.queryInsightsQuery = {
+      data: queryInsightsResponseWithEdgeQueries(),
+    };
+    rerender(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    expect(screen.queryByRole("region", { name: "Query detail" })).toBeNull();
+  });
+
   test("keeps selected query detail synced to refetched insights", async () => {
     const user = userEvent.setup();
     state.queryInsightsQuery = { data: queryInsightsResponse() };
@@ -897,6 +1098,38 @@ describe("backend database query insights page", () => {
 
     expect(within(detail).getByText("84")).toBeTruthy();
     expect(within(detail).getByText("18 ms")).toBeTruthy();
+  });
+});
+
+describe("database query insights resilience", () => {
+  test("selects the intended row when queryids repeat", async () => {
+    const user = userEvent.setup();
+    state.queryInsightsQuery = {
+      data: queryInsightsResponseWithDuplicateQueryIds(),
+    };
+
+    render(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: DUPLICATE_QUERY_ID_SECOND_ROW_RE,
+      })
+    );
+
+    const detail = screen.getByRole("region", { name: "Query detail" });
+    expect(
+      within(detail).getByText(
+        (_content, element) =>
+          element?.tagName.toLowerCase() === "code" &&
+          element.textContent === "SELECT * FROM events WHERE tenant_id = $2"
+      )
+    ).toBeTruthy();
+    expect(within(detail).getByText("4")).toBeTruthy();
   });
 
   test("resets query selection when switching databases", async () => {
@@ -965,6 +1198,9 @@ describe("backend database query insights page", () => {
       screen.getByRole("button", { name: SLOW_COUNT_QUERY_BUTTON_RE })
     ).toBeTruthy();
     expect(
+      screen.queryByRole("button", { name: EXACT_THRESHOLD_QUERY_BUTTON_RE })
+    ).toBeNull();
+    expect(
       screen.queryByRole("button", { name: UPDATE_EVENTS_QUERY_BUTTON_RE })
     ).toBeNull();
   });
@@ -1025,5 +1261,51 @@ describe("backend database query insights page", () => {
     );
     expect(screen.getByRole("alert")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+  });
+
+  test("shows partial metric failures with retry while retaining other data", async () => {
+    const user = userEvent.setup();
+    const refetch = vi.fn(async () => undefined);
+    state.queryInsightsQuery = {
+      data: queryInsightsWithPartialError("query_stats"),
+      refetch,
+    };
+
+    render(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    expect(screen.getByText("Cache hit by table")).toBeTruthy();
+    expect(
+      screen.getByText("query_stats temporarily unavailable")
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: "Retry query statistics" })
+    );
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  test("keeps cached insights visible after a background refetch error", () => {
+    state.queryInsightsQuery = {
+      data: queryInsightsResponse(),
+      error: new Error("background refresh failed"),
+      refetch: vi.fn(async () => undefined),
+    };
+
+    render(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(screen.getByText("Top queries by total time")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: SELECT_EVENTS_QUERY_BUTTON_RE })
+    ).toBeTruthy();
   });
 });

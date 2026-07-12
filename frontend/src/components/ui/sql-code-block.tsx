@@ -59,10 +59,10 @@ export function SqlCodeBlock({ className, sql: sqlText }: SqlCodeBlockProps) {
   const tokenLines = highlightSql(sqlText);
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0 max-w-full">
       <pre
         className={cn(
-          "overflow-x-auto rounded-md border bg-muted/40 p-3 pr-10 font-mono text-foreground text-xs leading-relaxed",
+          "min-w-0 max-w-full overflow-x-auto rounded-md border bg-muted/40 p-3 pr-10 font-mono text-foreground text-xs leading-relaxed",
           className
         )}
       >

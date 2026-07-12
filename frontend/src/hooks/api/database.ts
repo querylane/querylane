@@ -85,6 +85,25 @@ export function selectedDatabaseQueryOptions({
   };
 }
 
+export function databaseQueryInsightsQueryOptions({
+  databaseId,
+  instanceId,
+  transport,
+}: {
+  databaseId: string;
+  instanceId: string;
+  transport: Transport;
+}) {
+  return {
+    ...createQueryOptions(
+      getDatabaseQueryInsights,
+      { name: buildDatabaseName(instanceId, databaseId) },
+      { transport }
+    ),
+    ...RESOURCE_QUERY_OPTIONS.selectedDatabase,
+  };
+}
+
 export function databasesForInstanceQueryInput(instanceId: string) {
   return {
     orderBy: "name asc",

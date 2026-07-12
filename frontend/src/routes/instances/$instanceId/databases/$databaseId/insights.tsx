@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { BackendDatabaseQueryInsightsPage } from "@/components/console-pages/database-query-insights-page";
 import {
-  databaseRouteDataQueries,
   prefetchRouteData,
+  queryInsightsRouteDataQueries,
 } from "@/lib/route-data-prefetch";
 
 function DatabaseQueryInsightsRoute() {
@@ -22,7 +22,7 @@ export const Route = createFileRoute(
   loader: ({ context, params }) => {
     prefetchRouteData(
       context,
-      databaseRouteDataQueries({
+      queryInsightsRouteDataQueries({
         databaseId: params.databaseId,
         instanceId: params.instanceId,
         transport: context.transport,

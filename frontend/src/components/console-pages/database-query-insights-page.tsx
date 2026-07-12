@@ -1,5 +1,6 @@
 "use client";
 
+import { anyUnpack } from "@bufbuild/protobuf/wkt";
 import {
   ChartNoAxesColumnIncreasing,
   CircleOff,
@@ -7,11 +8,19 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { ResourcePageState } from "@/components/console-pages/console-layout";
 import { EmptyState } from "@/components/empty-state";
 import { Progress } from "@/components/querylane-ui/progress";
+import { WarningBadge } from "@/components/querylane-ui/warning-badge";
+import { RetryActionButton } from "@/components/retry-action-button";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,9 +53,19 @@ import {
   formatBytes,
   formatTimestampLabel,
 } from "@/lib/console-resources";
+import {
+  formatInsightInteger,
+  formatInsightMs,
+  formatInsightPercent,
+  formatQualifiedTable,
+  insightProgressValue,
+  queryInsightLabel,
+} from "@/lib/query-insights";
 import { createResourceLoader } from "@/lib/resource-loader";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
+import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
+import type { Status } from "@/protogen/google/rpc/status_pb";
 import type {
   DatabaseQueryInsights,
   QueryRuntimeInsight,
@@ -54,8 +73,6 @@ import type {
   TableCacheHitInsight,
 } from "@/protogen/querylane/console/v1alpha1/database_pb";
 
-const MILLISECONDS_PER_SECOND = 1000;
-const PERCENT_RATIO_MULTIPLIER = 100;
 const CACHE_HIT_WARNING_THRESHOLD = 0.9;
 const QUERY_KIND_FILTERS = ["all", "reads", "writes"] as const;
 const LEADING_EXPLAIN_RE = /^EXPLAIN\b\s*(?:\([^)]*\)\s*)?/i;
@@ -66,8 +83,12 @@ const WRITE_QUERY_RE =
   /^(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|CREATE|ALTER|DROP|GRANT|REVOKE|CALL|DO)\b/i;
 const WRITE_QUERY_KEYWORD_RE =
   /\b(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|CREATE|ALTER|DROP|GRANT|REVOKE|CALL|DO)\b/i;
-const COPY_TO_QUERY_RE = /^COPY\b[\s\S]*\bTO\b/i;
-const COPY_FROM_QUERY_RE = /^COPY\b[\s\S]*\bFROM\b/i;
+const LEADING_SQL_COMMENT_RE =
+  /^(?:(?:\/\*[\s\S]*?\*\/)|(?:--[^\r\n]*(?:\r?\n|$)))\s*/;
+const COPY_KEYWORD_RE = /^COPY\b/i;
+const DOLLAR_QUOTE_DELIMITER_RE = /^\$[A-Za-z_0-9]*\$/;
+const SQL_WORD_START_RE = /[A-Za-z_]/;
+const SQL_WORD_RE = /^[A-Za-z_][A-Za-z_0-9$]*/;
 const MEAN_FILTERS = [
   { label: "Mean: any", value: 0 },
   { label: "> 5 ms", value: 5 },
@@ -77,63 +98,37 @@ const MEAN_FILTERS = [
 
 type QueryKindFilter = (typeof QUERY_KIND_FILTERS)[number];
 type QueryClassification = "read" | "write" | "other";
+type QueryInsightMetric = "query_stats" | "table_stats";
+type QueryInsightPartialErrors = Partial<Record<QueryInsightMetric, Status>>;
 
 interface IndexedQueryRuntimeInsight {
   index: number;
   query: QueryRuntimeInsight;
+  selectionKey: string;
 }
 
-function formatInsightInteger(value: bigint | number) {
-  return value.toLocaleString();
+interface QuerySelection {
+  selectionKey: string;
+  snapshotSource: QueryRuntimeInsight[] | null;
 }
 
-function formatInsightMs(value: number) {
-  if (!Number.isFinite(value) || value < 0) {
-    return "—";
+function getQueryInsightPartialErrors(partialErrors: Status[]) {
+  const errors: QueryInsightPartialErrors = {};
+  for (const partialError of partialErrors) {
+    for (const detail of partialError.details) {
+      let errorInfo: ReturnType<typeof anyUnpack<typeof ErrorInfoSchema>>;
+      try {
+        errorInfo = anyUnpack(detail, ErrorInfoSchema);
+      } catch {
+        errorInfo = undefined;
+      }
+      const metric = errorInfo?.metadata["metric"];
+      if (metric === "query_stats" || metric === "table_stats") {
+        errors[metric] = partialError;
+      }
+    }
   }
-
-  if (value >= MILLISECONDS_PER_SECOND) {
-    return `${(value / MILLISECONDS_PER_SECOND).toFixed(1)} s`;
-  }
-
-  if (value >= 10) {
-    return `${Math.round(value).toLocaleString()} ms`;
-  }
-
-  return `${value.toFixed(1)} ms`;
-}
-
-function formatInsightPercent(value: number) {
-  if (!Number.isFinite(value) || value < 0) {
-    return "—";
-  }
-
-  return `${Math.round(value * PERCENT_RATIO_MULTIPLIER).toLocaleString()}%`;
-}
-
-function formatQualifiedTable(schemaName: string, tableName: string) {
-  return `${schemaName}.${tableName}`;
-}
-
-function insightProgressValue(ratio: number) {
-  if (!Number.isFinite(ratio) || ratio <= 0) {
-    return 0;
-  }
-
-  return Math.min(ratio * PERCENT_RATIO_MULTIPLIER, PERCENT_RATIO_MULTIPLIER);
-}
-
-function queryInsightLabel(query: QueryRuntimeInsight) {
-  const queryText = query.query.trim();
-  if (queryText) {
-    return queryText;
-  }
-
-  if (query.queryId !== 0n) {
-    return `Query ID ${query.queryId.toString()}`;
-  }
-
-  return "Query text unavailable";
+  return errors;
 }
 
 function stripLeadingExplain(queryText: string) {
@@ -144,6 +139,115 @@ function stripLeadingExplain(queryText: string) {
     .trimStart();
 }
 
+function stripLeadingSqlComments(queryText: string) {
+  let statement = queryText.trimStart();
+  let previousStatement: string;
+  do {
+    previousStatement = statement;
+    statement = statement.replace(LEADING_SQL_COMMENT_RE, "").trimStart();
+  } while (statement !== previousStatement);
+  return statement;
+}
+
+function skipQuotedSql(statement: string, index: number, quote: string) {
+  let nextIndex = index + 1;
+  while (nextIndex < statement.length) {
+    if (statement[nextIndex] !== quote) {
+      nextIndex += 1;
+      continue;
+    }
+    if (statement[nextIndex + 1] === quote) {
+      nextIndex += 2;
+      continue;
+    }
+    return nextIndex + 1;
+  }
+  return statement.length;
+}
+
+function skipSqlComment(statement: string, index: number) {
+  const character = statement[index];
+  const nextCharacter = statement[index + 1];
+  if (character === "-" && nextCharacter === "-") {
+    const newlineIndex = statement.indexOf("\n", index + 2);
+    return newlineIndex < 0 ? statement.length : newlineIndex + 1;
+  }
+  if (character === "/" && nextCharacter === "*") {
+    const commentEndIndex = statement.indexOf("*/", index + 2);
+    return commentEndIndex < 0 ? statement.length : commentEndIndex + 2;
+  }
+  return null;
+}
+
+function skipProtectedSql(statement: string, index: number) {
+  const character = statement[index];
+  if (character === "'" || character === '"') {
+    return skipQuotedSql(statement, index, character);
+  }
+  if (character === "$") {
+    const delimiter = DOLLAR_QUOTE_DELIMITER_RE.exec(
+      statement.slice(index)
+    )?.[0];
+    if (delimiter) {
+      const closingIndex = statement.indexOf(
+        delimiter,
+        index + delimiter.length
+      );
+      return closingIndex < 0
+        ? statement.length
+        : closingIndex + delimiter.length;
+    }
+  }
+  return skipSqlComment(statement, index);
+}
+
+function updateParenthesesDepth(character: string | undefined, depth: number) {
+  if (character === "(") {
+    return depth + 1;
+  }
+  if (character === ")") {
+    return Math.max(0, depth - 1);
+  }
+  return depth;
+}
+
+function copyDirection(statement: string): "from" | "to" | null {
+  const copyKeyword = COPY_KEYWORD_RE.exec(statement);
+  if (!copyKeyword) {
+    return null;
+  }
+
+  let parenthesesDepth = 0;
+  let index = copyKeyword[0].length;
+  while (index < statement.length) {
+    const protectedSqlEnd = skipProtectedSql(statement, index);
+    if (protectedSqlEnd !== null) {
+      index = protectedSqlEnd;
+      continue;
+    }
+
+    const character = statement[index];
+    parenthesesDepth = updateParenthesesDepth(character, parenthesesDepth);
+    const wordMatch =
+      parenthesesDepth === 0 && character && SQL_WORD_START_RE.test(character)
+        ? SQL_WORD_RE.exec(statement.slice(index))
+        : null;
+    if (!wordMatch) {
+      index += 1;
+      continue;
+    }
+
+    const word = wordMatch[0].toLowerCase();
+    const previousNonSpace = statement.slice(0, index).trimEnd().at(-1);
+    if (previousNonSpace !== "." && (word === "from" || word === "to")) {
+      return word;
+    }
+    index += wordMatch[0].length;
+  }
+
+  return null;
+}
+
 function classifyQuery(query: QueryRuntimeInsight): QueryClassification {
   const queryText = query.query.trim();
   if (!queryText) {
@@ -151,12 +255,12 @@ function classifyQuery(query: QueryRuntimeInsight): QueryClassification {
   }
 
   // Best effort from pg_stat_statements text until the backend returns a statement kind.
-  const statement = stripLeadingExplain(queryText);
-  if (COPY_FROM_QUERY_RE.test(statement)) {
-    return "write";
-  }
-  if (COPY_TO_QUERY_RE.test(statement)) {
-    return "read";
+  const statement = stripLeadingSqlComments(
+    stripLeadingExplain(stripLeadingSqlComments(queryText))
+  );
+  const direction = copyDirection(statement);
+  if (direction) {
+    return direction === "to" ? "read" : "write";
   }
   if (WITH_QUERY_RE.test(statement)) {
     return WRITE_QUERY_KEYWORD_RE.test(statement) ? "write" : "read";
@@ -185,37 +289,71 @@ function queryMatchesKind(query: QueryRuntimeInsight, filter: QueryKindFilter) {
 }
 
 function indexQueries(queries: QueryRuntimeInsight[]) {
-  return queries.map((query, index) => ({ index, query }));
-}
-
-function querySelectionKey({ index, query }: IndexedQueryRuntimeInsight) {
-  if (query.queryId !== 0n) {
-    return `queryid:${query.queryId.toString()}`;
+  const queryIdCounts = new Map<bigint, number>();
+  for (const query of queries) {
+    queryIdCounts.set(
+      query.queryId,
+      (queryIdCounts.get(query.queryId) ?? 0) + 1
+    );
   }
 
-  return `row:${index}:queryid:0`;
+  return queries.map((query, index) => {
+    const selectionKey =
+      query.queryId !== 0n && queryIdCounts.get(query.queryId) === 1
+        ? `queryid:${query.queryId.toString()}`
+        : [
+            "snapshot",
+            index.toString(),
+            query.queryId.toString(),
+            query.query,
+            query.calls.toString(),
+            query.totalTimeMs.toString(),
+          ].join(":");
+    return { index, query, selectionKey };
+  });
 }
 
-function queryRowKey({ index, query }: IndexedQueryRuntimeInsight) {
-  return `${index}:${query.queryId.toString()}:${query.calls.toString()}`;
+function createQuerySelection(
+  entry: IndexedQueryRuntimeInsight,
+  queries: QueryRuntimeInsight[]
+): QuerySelection {
+  return {
+    selectionKey: entry.selectionKey,
+    snapshotSource: entry.selectionKey.startsWith("snapshot:") ? queries : null,
+  };
 }
 
 function findSelectedQuery({
   queries,
-  selectedQueryKey,
+  selection,
 }: {
   queries: QueryRuntimeInsight[];
-  selectedQueryKey: string | null;
+  selection: QuerySelection | null;
 }) {
-  if (selectedQueryKey === null) {
+  if (
+    !selection ||
+    (selection.snapshotSource && selection.snapshotSource !== queries)
+  ) {
     return null;
   }
 
   return (
     indexQueries(queries).find(
-      (query) => querySelectionKey(query) === selectedQueryKey
+      (query) => query.selectionKey === selection.selectionKey
     )?.query ?? null
   );
+}
+
+function focusQueryDetailOnSmallScreens(
+  panelRef: RefObject<HTMLElement | null>
+) {
+  if (!window.matchMedia?.("(max-width: 1023px)").matches) {
+    return;
+  }
+  window.requestAnimationFrame(function focusQueryDetail() {
+    panelRef.current?.focus({ preventScroll: true });
+    panelRef.current?.scrollIntoView({ block: "start" });
+  });
 }
 
 function filterQueries({
@@ -234,7 +372,7 @@ function filterQueries({
     if (!queryMatchesKind(query, kind)) {
       return false;
     }
-    if (meanThreshold > 0 && query.meanTimeMs < meanThreshold) {
+    if (meanThreshold > 0 && query.meanTimeMs <= meanThreshold) {
       return false;
     }
     if (normalizedSearch.length === 0) {
@@ -254,47 +392,49 @@ function CardShell({
   return <Card className={cn("gap-0 py-0", className)}>{children}</Card>;
 }
 
-function QueryKindFilterButton({
-  filter,
-  label,
-  onSelect,
-  selected,
+function MetricUnavailableNotice({
+  fallback,
+  onRetry,
+  retryLabel,
+  status,
+  title,
 }: {
-  filter: QueryKindFilter;
-  label: string;
-  onSelect: (filter: QueryKindFilter) => void;
-  selected: boolean;
+  fallback: string;
+  onRetry: () => Promise<unknown>;
+  retryLabel: string;
+  status: Status | undefined;
+  title: string;
 }) {
   return (
-    <Button
-      aria-pressed={selected}
-      className="h-7 rounded-full px-3 text-xs"
-      onClick={() => onSelect(filter)}
-      size="sm"
-      type="button"
-      variant={selected ? "default" : "outline"}
-    >
-      {label}
-    </Button>
+    <Alert className="m-5 w-auto">
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription>{status?.message || fallback}</AlertDescription>
+      <AlertAction>
+        <RetryActionButton
+          label={retryLabel}
+          onRetry={onRetry}
+          size="xs"
+          variant="outline"
+        />
+      </AlertAction>
+    </Alert>
   );
 }
 
-function MeanFilterButton({
+function FilterButton({
   label,
-  onSelect,
+  onClick,
   selected,
-  value,
 }: {
   label: string;
-  onSelect: (value: number) => void;
+  onClick: () => void;
   selected: boolean;
-  value: number;
 }) {
   return (
     <Button
       aria-pressed={selected}
       className="h-7 rounded-full px-3 text-xs"
-      onClick={() => onSelect(value)}
+      onClick={onClick}
       size="sm"
       type="button"
       variant={selected ? "default" : "outline"}
@@ -348,22 +488,19 @@ function QueryToolbar({
         ) : null}
       </InputGroup>
       <div className="flex flex-wrap items-center gap-2">
-        <QueryKindFilterButton
-          filter="all"
+        <FilterButton
           label="All"
-          onSelect={onKindChange}
+          onClick={() => onKindChange("all")}
           selected={kind === "all"}
         />
-        <QueryKindFilterButton
-          filter="reads"
+        <FilterButton
           label="Reads"
-          onSelect={onKindChange}
+          onClick={() => onKindChange("reads")}
           selected={kind === "reads"}
         />
-        <QueryKindFilterButton
-          filter="writes"
+        <FilterButton
           label="Writes"
-          onSelect={onKindChange}
+          onClick={() => onKindChange("writes")}
           selected={kind === "writes"}
         />
       </div>
@@ -373,12 +510,11 @@ function QueryToolbar({
           Mean
         </span>
         {MEAN_FILTERS.map((filter) => (
-          <MeanFilterButton
+          <FilterButton
             key={filter.value}
             label={filter.label}
-            onSelect={onMeanThresholdChange}
+            onClick={() => onMeanThresholdChange(filter.value)}
             selected={meanThreshold === filter.value}
-            value={filter.value}
           />
         ))}
       </div>
@@ -420,7 +556,7 @@ function TopQueriesTable({
             Total
           </TableHead>
           <TableHead className="w-40 text-muted-foreground text-xs">
-            Share
+            Relative to top
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -428,12 +564,12 @@ function TopQueriesTable({
         {queries.map((entry) => {
           const { query } = entry;
           const queryLabel = queryInsightLabel(query);
-          const rowSelectionKey = querySelectionKey(entry);
+          const rowSelectionKey = entry.selectionKey;
           const selected = selectedQueryKey === rowSelectionKey;
           return (
             <TableRow
               className={cn(selected && "bg-muted/70 hover:bg-muted/70")}
-              key={queryRowKey(entry)}
+              key={entry.selectionKey}
             >
               <TableCell className="min-w-0 max-w-[34rem] py-2 pl-5">
                 <Button
@@ -459,7 +595,7 @@ function TopQueriesTable({
               </TableCell>
               <TableCell>
                 <Progress
-                  aria-label={`Total time ratio for ${queryLabel}`}
+                  aria-label={`Runtime relative to top query for ${queryLabel}`}
                   className="gap-0"
                   value={insightProgressValue(query.totalTimeRatio)}
                 />
@@ -477,12 +613,18 @@ function QueryStatsGrid({ query }: { query: QueryRuntimeInsight }) {
     { label: "Calls", value: formatInsightInteger(query.calls) },
     { label: "Mean", value: formatInsightMs(query.meanTimeMs) },
     { label: "Total", value: formatInsightMs(query.totalTimeMs) },
-    { label: "Share", value: formatInsightPercent(query.totalTimeRatio) },
+    {
+      label: "Relative to top",
+      value: formatInsightPercent(query.totalTimeRatio),
+    },
   ];
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid min-w-0 grid-cols-2 gap-2">
       {stats.map((stat) => (
-        <div className="rounded-lg border border-border p-3" key={stat.label}>
+        <div
+          className="min-w-0 rounded-lg border border-border p-3"
+          key={stat.label}
+        >
           <div className="font-medium text-muted-foreground text-xs">
             {stat.label}
           </div>
@@ -496,10 +638,14 @@ function QueryStatsGrid({ query }: { query: QueryRuntimeInsight }) {
 }
 
 function QueryDetailPanel({
+  className,
   onClose,
+  panelRef,
   query,
 }: {
+  className?: string;
   onClose: () => void;
+  panelRef: RefObject<HTMLElement | null>;
   query: QueryRuntimeInsight | null;
 }) {
   if (!query) {
@@ -507,8 +653,13 @@ function QueryDetailPanel({
   }
 
   return (
-    <section aria-label="Query detail" className="lg:sticky lg:top-0">
-      <CardShell>
+    <section
+      aria-label="Query detail"
+      className={cn("min-w-0 lg:sticky lg:top-0", className)}
+      ref={panelRef}
+      tabIndex={-1}
+    >
+      <CardShell className="min-w-0">
         <CardHeader className="border-b py-4">
           <div className="flex items-start gap-3">
             <div className="min-w-0">
@@ -529,7 +680,7 @@ function QueryDetailPanel({
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-4 py-4">
+        <CardContent className="grid min-w-0 gap-4 py-4">
           <SqlCodeBlock className="max-h-56" sql={queryInsightLabel(query)} />
           <QueryStatsGrid query={query} />
           <div className="rounded-lg bg-muted/50 p-3 text-muted-foreground text-xs leading-relaxed">
@@ -544,11 +695,15 @@ function QueryDetailPanel({
 
 function TopQueriesCard({
   insights,
+  onRetry,
   onSelectQuery,
+  partialError,
   selectedQueryKey,
 }: {
   insights: DatabaseQueryInsights;
+  onRetry: () => Promise<unknown>;
   onSelectQuery: (query: IndexedQueryRuntimeInsight | null) => void;
+  partialError: Status | undefined;
   selectedQueryKey: string | null;
 }) {
   const [search, setSearch] = useState("");
@@ -574,7 +729,7 @@ function TopQueriesCard({
   };
 
   return (
-    <CardShell className="lg:col-span-2">
+    <CardShell>
       <CardHeader className="gap-3 py-4">
         <div className="flex flex-wrap items-start gap-3">
           <div>
@@ -602,10 +757,13 @@ function TopQueriesCard({
           selectedQueryKey={selectedQueryKey}
         />
       ) : (
-        <div className="px-5 py-8 text-muted-foreground text-sm">
-          Query statistics are unavailable for this database. Install the
-          pg_stat_statements extension to see top queries by runtime.
-        </div>
+        <MetricUnavailableNotice
+          fallback="Query statistics are unavailable for this database. Check that pg_stat_statements is installed and queryable."
+          onRetry={onRetry}
+          retryLabel="Retry query statistics"
+          status={partialError}
+          title="Query statistics unavailable"
+        />
       )}
     </CardShell>
   );
@@ -701,12 +859,9 @@ function TableCacheHitCard({
                       {label}
                     </span>
                     {warning ? (
-                      <Badge
-                        className="ml-auto border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                        variant="outline"
-                      >
-                        Low cache hit
-                      </Badge>
+                      <span className="ml-auto">
+                        <WarningBadge>Low cache hit</WarningBadge>
+                      </span>
                     ) : null}
                     <span className="font-mono text-xs tabular-nums">
                       {formatInsightPercent(cacheHit.hitRatio)}
@@ -756,76 +911,99 @@ function QueryInsightsEmptyState() {
 function QueryInsightsContent({
   insights,
   observedAtLabel,
+  onRetry,
+  partialErrors,
 }: {
   insights: DatabaseQueryInsights;
   observedAtLabel: string;
+  onRetry: () => Promise<unknown>;
+  partialErrors: QueryInsightPartialErrors;
 }) {
-  const [selectedQueryKey, setSelectedQueryKey] = useState<string | null>(
-    insights.topQueries[0]
-      ? querySelectionKey({ index: 0, query: insights.topQueries[0] })
-      : null
-  );
+  const [selectedQuerySelection, setSelectedQuerySelection] =
+    useState<QuerySelection | null>(() => {
+      const firstQuery = indexQueries(insights.topQueries)[0];
+      return firstQuery
+        ? createQuerySelection(firstQuery, insights.topQueries)
+        : null;
+    });
+  const detailPanelRef = useRef<HTMLElement>(null);
   const selectedQuery = findSelectedQuery({
     queries: insights.topQueries,
-    selectedQueryKey,
+    selection: selectedQuerySelection,
   });
+  const selectedQueryKey = selectedQuery
+    ? (selectedQuerySelection?.selectionKey ?? null)
+    : null;
   const hasAnyStats =
     insights.queryStatsAvailable || insights.tableStatsAvailable;
 
-  if (!hasAnyStats) {
+  if (!hasAnyStats && Object.keys(partialErrors).length === 0) {
     return <QueryInsightsEmptyState />;
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="grid min-w-0 gap-4">
-        <div className="flex flex-wrap items-start gap-3">
-          <div className="min-w-0">
-            <h1 className="font-bold text-2xl text-foreground tracking-tight">
-              Query insights
-            </h1>
-            <p className="mt-1 text-muted-foreground text-sm">
-              From pg_stat_statements and pg_stat_user_tables, read-only
-              observability.
-            </p>
-          </div>
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            <Badge variant="outline">Since stats reset</Badge>
-            <Badge className="font-mono" variant="secondary">
-              Observed {observedAtLabel}
-            </Badge>
-          </div>
+    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="flex min-w-0 flex-wrap items-start gap-3 lg:col-start-1">
+        <div className="min-w-0">
+          <h1 className="font-bold text-2xl text-foreground tracking-tight">
+            Query insights
+          </h1>
+          <p className="mt-1 text-muted-foreground text-sm">
+            From pg_stat_statements and pg_stat_user_tables, read-only
+            observability.
+          </p>
         </div>
-        <TopQueriesCard
-          insights={insights}
-          onSelectQuery={(query) =>
-            setSelectedQueryKey(query ? querySelectionKey(query) : null)
-          }
-          selectedQueryKey={selectedQueryKey}
-        />
-        <div className="grid gap-4 xl:grid-cols-2">
-          {insights.tableStatsAvailable ? (
-            <>
-              <SequentialScanHotspotsCard
-                hotspots={insights.sequentialScanHotspots}
-              />
-              <TableCacheHitCard cacheHits={insights.tableCacheHits} />
-            </>
-          ) : (
-            <CardShell className="xl:col-span-2">
-              <CardContent className="py-5">
-                <p className="text-muted-foreground text-sm">
-                  Table statistics are unavailable for this database.
-                </p>
-              </CardContent>
-            </CardShell>
-          )}
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Badge variant="outline">Since stats reset</Badge>
+          <Badge className="font-mono" variant="secondary">
+            Observed {observedAtLabel}
+          </Badge>
         </div>
       </div>
+      <div className="min-w-0 lg:col-start-1">
+        <TopQueriesCard
+          insights={insights}
+          onRetry={onRetry}
+          onSelectQuery={(query) => {
+            if (query) {
+              setSelectedQuerySelection(
+                createQuerySelection(query, insights.topQueries)
+              );
+              focusQueryDetailOnSmallScreens(detailPanelRef);
+              return;
+            }
+            setSelectedQuerySelection(null);
+          }}
+          partialError={partialErrors.query_stats}
+          selectedQueryKey={selectedQueryKey}
+        />
+      </div>
       <QueryDetailPanel
-        onClose={() => setSelectedQueryKey(null)}
+        className="lg:col-start-2 lg:row-span-3 lg:row-start-1"
+        onClose={() => setSelectedQuerySelection(null)}
+        panelRef={detailPanelRef}
         query={selectedQuery}
       />
+      <div className="grid min-w-0 gap-4 lg:col-start-1 xl:grid-cols-2">
+        {insights.tableStatsAvailable ? (
+          <>
+            <SequentialScanHotspotsCard
+              hotspots={insights.sequentialScanHotspots}
+            />
+            <TableCacheHitCard cacheHits={insights.tableCacheHits} />
+          </>
+        ) : (
+          <CardShell className="xl:col-span-2">
+            <MetricUnavailableNotice
+              fallback="Table statistics are unavailable for this database."
+              onRetry={onRetry}
+              retryLabel="Retry table statistics"
+              status={partialErrors.table_stats}
+              title="Table statistics unavailable"
+            />
+          </CardShell>
+        )}
+      </div>
     </div>
   );
 }
@@ -908,30 +1086,40 @@ function BackendDatabaseQueryInsightsPage({
   );
   const loader = createResourceLoader(databaseQuery, "console.database");
   const insights = queryInsightsQuery.data?.queryInsights;
+  const partialErrors = getQueryInsightPartialErrors(
+    queryInsightsQuery.data?.partialErrors ?? []
+  );
   const observedAtLabel = formatTimestampLabel(insights?.observedAt);
   const handleRetryQueryInsights = () => queryInsightsQuery.refetch();
   let pageContent: ReactNode;
 
-  if (queryInsightsQuery.error) {
+  if (insights) {
+    pageContent = (
+      <div className="grid gap-4">
+        {queryInsightsQuery.error ? (
+          <DatabaseQueryInsightsError
+            error={queryInsightsQuery.error}
+            onRetry={handleRetryQueryInsights}
+          />
+        ) : null}
+        <QueryInsightsContent
+          insights={insights}
+          key={databaseName}
+          observedAtLabel={observedAtLabel}
+          onRetry={handleRetryQueryInsights}
+          partialErrors={partialErrors}
+        />
+      </div>
+    );
+  } else if (queryInsightsQuery.error) {
     pageContent = (
       <DatabaseQueryInsightsError
         error={queryInsightsQuery.error}
         onRetry={handleRetryQueryInsights}
       />
     );
-  } else if (queryInsightsQuery.isPending || !insights) {
-    pageContent = <DatabaseInsightsLoadingState />;
   } else {
-    pageContent = (
-      // Keyed by database so selection and filter state reset when the user
-      // switches databases without a route remount (queryids are stable text
-      // hashes, so stale selections could silently match in the new database).
-      <QueryInsightsContent
-        insights={insights}
-        key={databaseName}
-        observedAtLabel={observedAtLabel}
-      />
-    );
+    pageContent = <DatabaseInsightsLoadingState />;
   }
 
   return (
