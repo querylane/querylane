@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableFilter } from "@/components/ui/data-table";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
+import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import {
   Table,
   TableBody,
@@ -118,9 +119,14 @@ function BlockedSessionRow({ row }: { row: ActivitySessionRow }) {
       <Badge className="h-[17px] text-[9.5px]" variant="outline">
         waiting · pid {row.pid}
       </Badge>
-      <span className="min-w-0 flex-1 truncate font-mono text-[10.5px] text-muted-foreground">
-        {row.query}
-      </span>
+      <div className="min-w-0 flex-1 opacity-70">
+        <SqlCodeBlock
+          className="text-[10.5px]"
+          copyable={false}
+          sql={row.query}
+          variant="inline"
+        />
+      </div>
       <span className="shrink-0 font-mono text-[10.5px] text-amber-700 dark:text-amber-300">
         waiting {row.duration}
       </span>
@@ -167,9 +173,12 @@ function BlockingChainGroup({ chain }: { chain: BlockingChain }) {
           Terminate…
         </Button>
       </div>
-      <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-[11px] leading-6">
-        {chain.blocker.query}
-      </pre>
+      <SqlCodeBlock
+        className="mt-2 rounded-none border-0 bg-transparent p-0 text-[11px] leading-6"
+        copyable={false}
+        sql={chain.blocker.query}
+        wrap={true}
+      />
       {chain.blocked.map((row) => (
         <BlockedSessionRow key={row.pid} row={row} />
       ))}
@@ -298,8 +307,13 @@ function ActivitySessionsTable({
               >
                 {row.duration}
               </TableCell>
-              <TableCell className="max-w-[340px] truncate font-mono text-[11px]">
-                {row.query}
+              <TableCell className="max-w-[340px] font-mono text-[11px]">
+                <SqlCodeBlock
+                  className="text-[11px]"
+                  copyable={false}
+                  sql={row.query}
+                  variant="inline"
+                />
               </TableCell>
               <TableCell className="pr-2 text-right">
                 <SessionActionsButton pid={row.pid} />

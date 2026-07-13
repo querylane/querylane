@@ -853,6 +853,11 @@ test("backend instance activity matches the live sessions redesign", async () =>
       })
     )
     .toBeVisible();
+  expect(
+    document.querySelectorAll(
+      'code.language-sql[data-syntax-highlighter="shiki"]'
+    )
+  ).toHaveLength(8);
   await document.fonts.ready;
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-instance-activity"

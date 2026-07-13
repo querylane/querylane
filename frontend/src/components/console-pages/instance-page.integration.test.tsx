@@ -935,10 +935,18 @@ describe("backend instance activity", () => {
     ).toBeGreaterThan(0);
     expect(within(activity).getByText("api-gateway")).toBeTruthy();
     expect(
-      within(activity).getAllByText(
-        "UPDATE shipping.shipments SET eta = $1 WHERE id = $2"
-      ).length
-    ).toBeGreaterThan(0);
+      Array.from(
+        activity.querySelectorAll(
+          'code.language-sql[data-syntax-highlighter="shiki"]'
+        ),
+        (code) => code.textContent
+      )
+    ).toEqual([
+      "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
+      "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
+      "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
+      "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
+    ]);
     expect(state.activityQueryOptions).toMatchObject({
       enabled: true,
       refetchInterval: 5000,
