@@ -792,6 +792,24 @@ test("expanded data grid prioritizes space for rows", async () => {
   expect(gridHeight / dialogHeight).toBeGreaterThan(0.7);
 });
 
+test("expanded data grid keeps close and refresh actions separate", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
+  );
+
+  await page.getByRole("button", { name: "Expand data grid" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Expanded data grid" });
+  const closeButton = dialog.getByRole("button", { name: "Close" });
+  const refreshButton = dialog.getByRole("button", { name: "Refresh rows" });
+  await expect.element(closeButton).toBeVisible();
+  await expect.element(refreshButton).toBeVisible();
+
+  const closeBox = closeButton.element().getBoundingClientRect();
+  const refreshBox = refreshButton.element().getBoundingClientRect();
+  expect(refreshBox.right).toBeLessThanOrEqual(closeBox.left - 8);
+});
+
 async function openForeignKeyReference() {
   const carrierLink = page.getByRole("button", {
     name: "Open carrier_id reference 214",

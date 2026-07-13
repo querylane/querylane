@@ -753,6 +753,7 @@ function TableDataGridChrome({
   return (
     <>
       <DataGridToolbar
+        className={state.variant === "expanded" ? "pr-12" : undefined}
         columns={resultColumns}
         exportRowsDisabled={
           state.isExportingRows || invalidFilterRules.length > 0
