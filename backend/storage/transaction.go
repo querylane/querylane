@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -101,34 +100,4 @@ func postgresDomainError(classification postgreserrors.Classification, uniqueVio
 	}
 
 	return nil
-}
-
-// PaginationToken represents a cursor-based pagination token.
-type PaginationToken struct {
-	Timestamp time.Time
-	ID        string
-}
-
-// ParsePaginationToken parses a pagination token from a string.
-// Returns zero values if the token is empty or invalid.
-func ParsePaginationToken(token string) (PaginationToken, error) {
-	if token == "" {
-		return PaginationToken{}, nil
-	}
-
-	timestamp, err := time.Parse(time.RFC3339, token)
-	if err != nil {
-		return PaginationToken{}, fmt.Errorf("invalid pagination token: %w", err)
-	}
-
-	return PaginationToken{Timestamp: timestamp}, nil
-}
-
-// ToString converts a pagination token to its string representation.
-func (p PaginationToken) ToString() string {
-	if p.Timestamp.IsZero() {
-		return ""
-	}
-
-	return p.Timestamp.Format(time.RFC3339)
 }
