@@ -2462,7 +2462,7 @@ function PoliciesTab({
               aria-label="Previous policies page"
               disabled={currentPageIndex === 0}
               onClick={() => {
-                setPageIndex((index) => Math.max(0, index - 1));
+                setPageIndex(Math.max(0, currentPageIndex - 1));
               }}
               size="icon-xs"
               type="button"
@@ -2470,14 +2470,19 @@ function PoliciesTab({
             >
               <ChevronLeft />
             </Button>
-            <span className="font-mono text-xs">
+            <span
+              aria-atomic="true"
+              aria-live="polite"
+              className="font-mono text-xs"
+              role="status"
+            >
               Page {currentPageIndex + 1} of {pageCount}
             </span>
             <Button
               aria-label="Next policies page"
               disabled={currentPageIndex >= pageCount - 1}
               onClick={() => {
-                setPageIndex((index) => Math.min(pageCount - 1, index + 1));
+                setPageIndex(Math.min(pageCount - 1, currentPageIndex + 1));
               }}
               size="icon-xs"
               type="button"

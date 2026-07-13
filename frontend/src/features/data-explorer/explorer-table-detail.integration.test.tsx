@@ -1504,20 +1504,22 @@ function renderPoliciesTab(policies: TablePolicy[]) {
   );
 }
 
+function createPolicies(count: number): TablePolicy[] {
+  return Array.from({ length: count }, (_, index) =>
+    create(TablePolicySchema, {
+      command: PolicyCommand.SELECT,
+      mode: PolicyMode.PERMISSIVE,
+      policyName: `invoices_policy_${index + 1}`,
+      roles: ["app_reader"],
+      usingExpression: `tenant_id = ${index + 1}`,
+    })
+  );
+}
+
 describe("TableDetail policies tab pagination", () => {
   it("paginates policy cards six at a time", async () => {
     const user = userEvent.setup();
-    renderPoliciesTab(
-      Array.from({ length: 7 }, (_, index) =>
-        create(TablePolicySchema, {
-          command: PolicyCommand.SELECT,
-          mode: PolicyMode.PERMISSIVE,
-          policyName: `invoices_policy_${index + 1}`,
-          roles: ["app_reader"],
-          usingExpression: `tenant_id = ${index + 1}`,
-        })
-      )
-    );
+    renderPoliciesTab(createPolicies(7));
 
     expect(
       screen.getByRole("heading", { name: "invoices_policy_1" })
@@ -1527,6 +1529,7 @@ describe("TableDetail policies tab pagination", () => {
     ).toBeNull();
     expect(screen.getByText("Showing 1–6 of 7 policies")).toBeTruthy();
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("Page 1 of 2");
 
     await user.click(
       screen.getByRole("button", { name: "Next policies page" })
@@ -1540,21 +1543,12 @@ describe("TableDetail policies tab pagination", () => {
     ).toBeTruthy();
     expect(screen.getByText("Showing 7–7 of 7 policies")).toBeTruthy();
     expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("Page 2 of 2");
   });
 
   it("changes policy page size using the resource-card options", async () => {
     const user = userEvent.setup();
-    renderPoliciesTab(
-      Array.from({ length: 13 }, (_, index) =>
-        create(TablePolicySchema, {
-          command: PolicyCommand.SELECT,
-          mode: PolicyMode.PERMISSIVE,
-          policyName: `invoices_policy_${index + 1}`,
-          roles: ["app_reader"],
-          usingExpression: `tenant_id = ${index + 1}`,
-        })
-      )
-    );
+    renderPoliciesTab(createPolicies(13));
 
     await user.click(
       screen.getByRole("button", { name: "Next policies page" })
@@ -1583,17 +1577,7 @@ describe("TableDetail policies tab pagination", () => {
 
   it("returns to the first policy page when search changes", async () => {
     const user = userEvent.setup();
-    renderPoliciesTab(
-      Array.from({ length: 7 }, (_, index) =>
-        create(TablePolicySchema, {
-          command: PolicyCommand.SELECT,
-          mode: PolicyMode.PERMISSIVE,
-          policyName: `invoices_policy_${index + 1}`,
-          roles: ["app_reader"],
-          usingExpression: `tenant_id = ${index + 1}`,
-        })
-      )
-    );
+    renderPoliciesTab(createPolicies(7));
 
     await user.click(
       screen.getByRole("button", { name: "Next policies page" })
@@ -1631,6 +1615,47 @@ describe("TableDetail policies tab pagination", () => {
     await user.click(screen.getByRole("button", { name: "Mode" }));
     await user.click(screen.getByRole("option", { name: "Restrictive" }));
     await user.click(screen.getByRole("option", { name: "Clear filter" }));
+
+    expect(
+      screen.getByRole("heading", { name: "invoices_policy_1" })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: "invoices_policy_7" })
+    ).toBeNull();
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+  });
+
+  it("navigates from the clamped page after refreshed policies shrink", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderPoliciesTab(createPolicies(25));
+    const nextPage = screen.getByRole("button", {
+      name: "Next policies page",
+    });
+    await user.click(nextPage);
+    await user.click(nextPage);
+    await user.click(nextPage);
+    await user.click(nextPage);
+    expect(
+      screen.getByRole("heading", { name: "invoices_policy_25" })
+    ).toBeTruthy();
+
+    tableQueries.policies.data = create(ListTablePoliciesResponseSchema, {
+      policies: createPolicies(7),
+    });
+    rerender(
+      <TableDetail
+        databaseId="app"
+        initialTab="policies"
+        instanceId="prod"
+        schemaName="billing"
+        table={create(TableSchema)}
+        tableName="invoices"
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Previous policies page" })
+    );
 
     expect(
       screen.getByRole("heading", { name: "invoices_policy_1" })
