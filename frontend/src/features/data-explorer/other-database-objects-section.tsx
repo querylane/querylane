@@ -1153,6 +1153,10 @@ function OtherDatabaseObjectsSection({
 }) {
   const query = useOtherDatabaseObjectsQuery({ databaseId, instanceId });
 
+  if (query.data && !query.error && query.data.objects.length === 0) {
+    return null;
+  }
+
   return (
     <OtherDatabaseObjectsPanel
       error={query.error}

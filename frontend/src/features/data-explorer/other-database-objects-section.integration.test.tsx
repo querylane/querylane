@@ -11,7 +11,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type OtherDatabaseObject,
   OtherDatabaseObjectsPanel,
+  OtherDatabaseObjectsSection,
 } from "@/features/data-explorer/other-database-objects-section";
+
+const otherObjectsQuery = vi.hoisted(() => ({
+  data: { isTruncated: false, objects: [] },
+  error: null,
+  isLoading: false,
+  refetch: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock("@/features/data-explorer/other-database-objects-query", () => ({
+  useOtherDatabaseObjectsQuery: () => otherObjectsQuery,
+}));
 
 const shipmentStatusObject: OtherDatabaseObject = {
   badge: "ENUM",
@@ -181,6 +193,16 @@ async function selectCategory(
   await user.click(screen.getByRole("option", { name: categoryName }));
   await user.keyboard("{Escape}");
 }
+
+describe("OtherDatabaseObjectsSection", () => {
+  it("hides the section when the database has no objects", () => {
+    const { container } = render(
+      <OtherDatabaseObjectsSection databaseId="app" instanceId="prod" />
+    );
+
+    expect(container.childElementCount).toBe(0);
+  });
+});
 
 describe("OtherDatabaseObjectsPanel", () => {
   it("places search before the inline category filter", async () => {
