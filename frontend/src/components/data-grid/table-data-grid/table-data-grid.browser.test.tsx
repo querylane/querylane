@@ -761,7 +761,7 @@ test("foreign key reference drawer keeps linked rows in context", async () => {
   await expect
     .element(page.getByRole("link", { name: "Open table" }))
     .toBeVisible();
-  await expect(drawer).toMatchScreenshot("foreign-key-reference-drawer");
+  await expect(page).toMatchScreenshot("foreign-key-reference-layout");
 });
 
 test("foreign key query fixtures do not leak into later browser cases", () => {
