@@ -305,6 +305,98 @@ func TestManager_ChangeNotificationOnlyWhenActuallyChanged(t *testing.T) {
 	}, time.Second, 10*time.Millisecond)
 }
 
+func TestManager_ChangeNotificationsAreDeliveredSequentially(t *testing.T) {
+	t.Parallel()
+
+	configFile, cleanup := config.CreateTempConfigFile(t, "", "config.yaml")
+	defer cleanup()
+
+	manager, err := config.NewConfigManager(context.Background(),
+		NewSimpleTestConfig(),
+		config.WithConfigFile(configFile))
+	require.NoError(t, err)
+
+	defer manager.Stop()
+
+	firstStarted := make(chan struct{})
+	releaseFirst := make(chan struct{})
+	firstFinished := make(chan struct{})
+	secondStarted := make(chan struct{})
+
+	var (
+		mu            sync.Mutex
+		notifications []string
+	)
+
+	manager.Subscribe(func(_, newCfg *SimpleTestConfig) {
+		if newCfg.Name == "first-change" {
+			close(firstStarted)
+			<-releaseFirst
+		}
+
+		mu.Lock()
+
+		notifications = append(notifications, newCfg.Name)
+		mu.Unlock()
+
+		if newCfg.Name == "first-change" {
+			close(firstFinished)
+		}
+
+		if newCfg.Name == "second-change" {
+			close(secondStarted)
+		}
+	})
+
+	update := func(name string) <-chan error {
+		errCh := make(chan error, 1)
+
+		go func() {
+			cfg := NewSimpleTestConfig()
+
+			cfg.Name = name
+			errCh <- manager.UpdateConfig(cfg)
+		}()
+
+		return errCh
+	}
+
+	waitForSignal := func(signal <-chan struct{}, message string) {
+		t.Helper()
+
+		select {
+		case <-signal:
+		case <-time.After(time.Second):
+			t.Fatal(message)
+		}
+	}
+
+	waitForUpdate := func(errCh <-chan error) {
+		t.Helper()
+
+		select {
+		case updateErr := <-errCh:
+			require.NoError(t, updateErr)
+		case <-time.After(time.Second):
+			t.Fatal("timed out waiting for config update")
+		}
+	}
+
+	firstErr := update("first-change")
+
+	waitForSignal(firstStarted, "timed out waiting for first notification")
+	waitForUpdate(firstErr)
+
+	secondErr := update("second-change")
+	waitForUpdate(secondErr)
+
+	close(releaseFirst)
+	waitForSignal(firstFinished, "timed out waiting for first notification to finish")
+	waitForSignal(secondStarted, "timed out waiting for second notification")
+
+	assert.Equal(t, []string{"first-change", "second-change"}, notifications)
+}
+
 func TestManager_ReadOnlyFileSystemDegradation(t *testing.T) {
 	t.Parallel()
 
