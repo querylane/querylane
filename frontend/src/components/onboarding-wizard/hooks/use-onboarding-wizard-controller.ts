@@ -45,6 +45,7 @@ function useWizardSessionState() {
     setStreamFailure: useOnboardingWizardStore(
       (state) => state.setStreamFailure
     ),
+    setupRunToken: useOnboardingWizardStore((state) => state.setupRunToken),
     setWatchNotice: useOnboardingWizardStore((state) => state.setWatchNotice),
     submittedEmbeddedConfig: useOnboardingWizardStore(
       (state) => state.submittedEmbeddedConfig
@@ -66,6 +67,7 @@ export function useOnboardingWizardController({
     phase,
     resetSession,
     selectedMethod,
+    setupRunToken,
     setConfigureValidationError,
     setStreamFailure,
     setWatchNotice,
@@ -108,6 +110,7 @@ export function useOnboardingWizardController({
     selectedMethod,
     setConfigureValidationError,
     setStreamFailure,
+    setupRunToken,
     submittedEmbeddedConfig,
     submittedPostgresConfig,
   });

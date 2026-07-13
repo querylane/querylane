@@ -1,5 +1,5 @@
 import { Code } from "@connectrpc/connect";
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 import { SETUP_FAILURE_FALLBACK_MESSAGE } from "@/components/onboarding-wizard/constants";
 import {
@@ -34,6 +34,7 @@ interface SetupExecutionOptions {
   selectedMethod: ConfigMethod | null;
   setConfigureValidationError: (error: AppUiError) => void;
   setStreamFailure: (error: AppUiError) => void;
+  setupRunToken: number;
   submittedEmbeddedConfig: EmbeddedSetupConfig | null;
   submittedPostgresConfig: PostgresConfig | null;
 }
@@ -97,14 +98,12 @@ function resolveSetupFailureAction({
 
 async function executeSetupRequest({
   controller,
-  onSuccess,
   runSetupMutation,
   selectedMethod,
   submittedEmbeddedConfig,
   submittedPostgresConfig,
 }: {
   controller: AbortController;
-  onSuccess: () => void;
   runSetupMutation: (
     variables: SetupAppDatabaseMutationVariables
   ) => Promise<void>;
@@ -131,8 +130,6 @@ async function executeSetupRequest({
     request,
     signal: controller.signal,
   });
-
-  onSuccess();
 }
 
 function useSetupExecution({
@@ -141,79 +138,99 @@ function useSetupExecution({
   phase,
   runSetupMutation,
   selectedMethod,
+  setupRunToken,
   setConfigureValidationError,
   setStreamFailure,
   submittedEmbeddedConfig,
   submittedPostgresConfig,
 }: SetupExecutionOptions) {
   const setupAbortRef = useRef<AbortController | null>(null);
+  const setupRequestOptionsRef = useRef({
+    phase,
+    runSetupMutation,
+    selectedMethod,
+    submittedEmbeddedConfig,
+    submittedPostgresConfig,
+  });
   const setupRunning = shouldAutoRunSetup(phase, selectedMethod);
 
   const abortSetup = () => {
     setupAbortRef.current?.abort();
   };
 
-  // allow-useEffect: sync setup execution state
-  useEffect(
-    () => () => {
-      setupAbortRef.current?.abort();
-    },
-    []
-  );
+  const handleSetupSuccess = useEffectEvent(function handleSetupSuccess() {
+    onSuccess();
+  });
 
-  // allow-useEffect: sync setup execution state
-  useEffect(() => {
-    if (!shouldAutoRunSetup(phase, selectedMethod)) {
+  const handleSetupFailure = useEffectEvent(function handleSetupFailure(
+    error: unknown
+  ) {
+    const resolution = resolveSetupFailureAction({
+      error,
+      failedEvent: getFailedEvent(),
+    });
+
+    if (resolution.action === "success") {
+      onSuccess();
       return;
     }
 
-    const controller = new AbortController();
-    setupAbortRef.current = controller;
+    if (resolution.action === "configure") {
+      setConfigureValidationError(resolution.configureError);
+      return;
+    }
 
-    executeSetupRequest({
-      controller,
-      onSuccess,
+    setStreamFailure(resolution.streamError);
+  });
+
+  // allow-useEffect: keep setup inputs current without restarting execution
+  useEffect(function syncSetupExecutionOptions() {
+    setupRequestOptionsRef.current = {
+      phase,
       runSetupMutation,
       selectedMethod,
       submittedEmbeddedConfig,
       submittedPostgresConfig,
-    }).catch((error) => {
-      if (controller.signal.aborted) {
-        return;
-      }
-
-      const resolution = resolveSetupFailureAction({
-        error,
-        failedEvent: getFailedEvent(),
-      });
-
-      if (resolution.action === "success") {
-        onSuccess();
-        return;
-      }
-
-      if (resolution.action === "configure") {
-        setConfigureValidationError(resolution.configureError);
-        return;
-      }
-
-      setStreamFailure(resolution.streamError);
-    });
-
-    return () => {
-      controller.abort();
     };
-  }, [
-    getFailedEvent,
-    onSuccess,
-    phase,
-    runSetupMutation,
-    selectedMethod,
-    setConfigureValidationError,
-    setStreamFailure,
-    submittedEmbeddedConfig,
-    submittedPostgresConfig,
-  ]);
+  });
+
+  // allow-useEffect: execute each explicitly requested setup run
+  useEffect(
+    function executeSetupRun() {
+      const currentOptions = setupRequestOptionsRef.current;
+      if (
+        setupRunToken === 0 ||
+        !shouldAutoRunSetup(currentOptions.phase, currentOptions.selectedMethod)
+      ) {
+        return;
+      }
+
+      const controller = new AbortController();
+      setupAbortRef.current = controller;
+
+      executeSetupRequest({
+        controller,
+        runSetupMutation: currentOptions.runSetupMutation,
+        selectedMethod: currentOptions.selectedMethod,
+        submittedEmbeddedConfig: currentOptions.submittedEmbeddedConfig,
+        submittedPostgresConfig: currentOptions.submittedPostgresConfig,
+      }).then(
+        () => {
+          handleSetupSuccess();
+        },
+        (error) => {
+          if (!controller.signal.aborted) {
+            handleSetupFailure(error);
+          }
+        }
+      );
+
+      return () => {
+        controller.abort();
+      };
+    },
+    [setupRunToken]
+  );
 
   return { abortSetup, setupRunning };
 }

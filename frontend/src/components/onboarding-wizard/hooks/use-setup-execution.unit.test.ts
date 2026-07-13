@@ -7,17 +7,17 @@ import {
   useSetupExecution,
 } from "@/components/onboarding-wizard/hooks/use-setup-execution";
 
-const { cleanupCallbacks, refState, useEffectMock, useRefMock } = vi.hoisted(
-  () => ({
+const { cleanupCallbacks, useEffectEventMock, useEffectMock, useRefMock } =
+  vi.hoisted(() => ({
     cleanupCallbacks: [] as Array<() => void>,
-    refState: { current: null as AbortController | null },
+    useEffectEventMock: vi.fn((callback: unknown) => callback),
     useEffectMock: vi.fn(),
     useRefMock: vi.fn(),
-  })
-);
+  }));
 
 vi.mock("react", () => ({
   useEffect: useEffectMock,
+  useEffectEvent: useEffectEventMock,
   useRef: useRefMock,
 }));
 
@@ -27,8 +27,9 @@ function flushPromises() {
 
 function arrangeReactHooks() {
   cleanupCallbacks.length = 0;
-  refState.current = null;
-  useRefMock.mockReturnValue(refState);
+  useRefMock.mockImplementation((initialValue: unknown) => ({
+    current: initialValue,
+  }));
   useEffectMock.mockImplementation(
     (callback: () => undefined | (() => void)) => {
       const cleanup = callback();
@@ -50,6 +51,7 @@ function createSetupOptions(
     selectedMethod: "embedded" as const,
     setConfigureValidationError: vi.fn(),
     setStreamFailure: vi.fn(),
+    setupRunToken: 1,
     submittedEmbeddedConfig: null,
     submittedPostgresConfig: null,
     ...overrides,
@@ -138,6 +140,14 @@ describe("useSetupExecution", () => {
     const result = useSetupExecution(options);
 
     expect(result.setupRunning).toBe(false);
+    expect(options.runSetupMutation).not.toHaveBeenCalled();
+  });
+
+  it("does not run setup before an explicit run is requested", () => {
+    const options = createSetupOptions({ setupRunToken: 0 });
+
+    useSetupExecution(options);
+
     expect(options.runSetupMutation).not.toHaveBeenCalled();
   });
 
