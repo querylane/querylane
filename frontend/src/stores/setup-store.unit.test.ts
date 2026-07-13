@@ -1,11 +1,14 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   AppDatabaseStatus_State,
   AppDatabaseStatusSchema,
 } from "@/protogen/querylane/console/v1alpha1/console_pb";
-import { GetOnboardingStateResponseSchema } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
+import {
+  type GetOnboardingStateResponse,
+  GetOnboardingStateResponseSchema,
+} from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 import {
   createSetupStore,
   type SetupStoreDependencies,
@@ -38,6 +41,19 @@ function createTestStore(
   return {
     useSetupStore: createSetupStore(dependencies),
   };
+}
+
+function createInterleavedTestStore() {
+  const olderRequest = Promise.withResolvers<GetOnboardingStateResponse>();
+  const newerRequest = Promise.withResolvers<GetOnboardingStateResponse>();
+  const { useSetupStore } = createTestStore(
+    vi
+      .fn()
+      .mockReturnValueOnce(olderRequest.promise)
+      .mockReturnValueOnce(newerRequest.promise)
+  );
+
+  return { newerRequest, olderRequest, useSetupStore };
 }
 
 describe("setup-store bootstrap flow", () => {
@@ -95,24 +111,6 @@ describe("setup-store bootstrap flow", () => {
 
     expect(useSetupStore.getState().status).toBe("boot_error");
     expect(useSetupStore.getState().bootError?.message).toBe("network down");
-  });
-
-  it("retryBootstrap re-runs bootstrap flow", async () => {
-    let calls = 0;
-    const { useSetupStore } = createTestStore(() => {
-      calls += 1;
-      return Promise.resolve(
-        buildOnboardingState({
-          isConfigured: true,
-          state: AppDatabaseStatus_State.READY,
-        })
-      );
-    });
-
-    await useSetupStore.getState().retryBootstrap();
-
-    expect(calls).toBe(1);
-    expect(useSetupStore.getState().status).toBe("ready");
   });
 });
 
@@ -183,6 +181,89 @@ describe("setup-store verify flow", () => {
 
     expect(useSetupStore.getState().status).toBe("boot_error");
     expect(useSetupStore.getState().bootError?.message).toBe("verify failed");
+  });
+});
+
+describe("setup-store request sequencing", () => {
+  it("keeps a newer verify response when an older refresh resolves last", async () => {
+    const { newerRequest, olderRequest, useSetupStore } =
+      createInterleavedTestStore();
+
+    const olderRefresh = useSetupStore.getState().refreshOnboardingState();
+    const newerVerify = useSetupStore.getState().verifyAfterSetup();
+
+    newerRequest.resolve(
+      buildOnboardingState({
+        isConfigured: true,
+        state: AppDatabaseStatus_State.READY,
+      })
+    );
+    await newerVerify;
+    expect(useSetupStore.getState().status).toBe("ready");
+
+    olderRequest.resolve(
+      buildOnboardingState({
+        isConfigured: false,
+        state: AppDatabaseStatus_State.NOT_CONFIGURED,
+      })
+    );
+    await olderRefresh;
+
+    expect(useSetupStore.getState().status).toBe("ready");
+    expect(useSetupStore.getState().onboardingState?.isConfigured).toBe(true);
+  });
+
+  it("keeps a newer setup-required response when an older verify resolves last", async () => {
+    const { newerRequest, olderRequest, useSetupStore } =
+      createInterleavedTestStore();
+
+    const olderVerify = useSetupStore.getState().verifyAfterSetup();
+    useSetupStore.getState().setSetupRequired();
+
+    newerRequest.resolve(
+      buildOnboardingState({
+        isConfigured: false,
+        state: AppDatabaseStatus_State.NOT_CONFIGURED,
+      })
+    );
+    await vi.waitFor(() => {
+      expect(useSetupStore.getState().onboardingState?.isConfigured).toBe(
+        false
+      );
+    });
+
+    olderRequest.resolve(
+      buildOnboardingState({
+        isConfigured: true,
+        state: AppDatabaseStatus_State.READY,
+      })
+    );
+    await olderVerify;
+
+    expect(useSetupStore.getState().status).toBe("onboarding");
+    expect(useSetupStore.getState().onboardingState?.isConfigured).toBe(false);
+  });
+
+  it("ignores an older failure after a newer request succeeds", async () => {
+    const { newerRequest, olderRequest, useSetupStore } =
+      createInterleavedTestStore();
+
+    const olderRefresh = useSetupStore.getState().refreshOnboardingState();
+    const newerVerify = useSetupStore.getState().verifyAfterSetup();
+
+    newerRequest.resolve(
+      buildOnboardingState({
+        isConfigured: true,
+        state: AppDatabaseStatus_State.READY,
+      })
+    );
+    await newerVerify;
+
+    olderRequest.reject(new Error("stale failure"));
+    await olderRefresh;
+
+    expect(useSetupStore.getState().status).toBe("ready");
+    expect(useSetupStore.getState().bootError).toBeNull();
   });
 });
 

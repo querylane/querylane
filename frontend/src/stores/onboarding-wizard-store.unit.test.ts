@@ -100,15 +100,15 @@ describe("onboarding-wizard-store", () => {
     expect(useStore.getState().streamError).toBeNull();
   });
 
-  it("advanceToConfigure and goBackToConfigure return path-specific phases", () => {
+  it("goToConfigure returns to the path-specific phase", () => {
     const useStore = createOnboardingWizardStore();
 
     useStore.getState().selectMethod("embedded");
-    useStore.getState().advanceToConfigure();
+    useStore.getState().goToConfigure();
     expect(useStore.getState().phase).toBe("configure_embedded");
 
     useStore.getState().startProgress();
-    useStore.getState().goBackToConfigure();
+    useStore.getState().goToConfigure();
     expect(useStore.getState().phase).toBe("configure_embedded");
   });
 
@@ -124,7 +124,7 @@ describe("onboarding-wizard-store", () => {
     const useStore = createOnboardingWizardStore();
 
     useStore.getState().selectMethod("ui_configured");
-    useStore.getState().advanceToConfigure();
+    useStore.getState().goToConfigure();
     useStore.getState().setWatchNotice("notice");
 
     useStore.getState().resetSession();
@@ -162,11 +162,11 @@ it("covers configure navigation and direct setters", () => {
     username: "querylane",
   });
 
-  useStore.getState().advanceToConfigure();
+  useStore.getState().goToConfigure();
   expect(useStore.getState().phase).toBe("method_selection");
 
   useStore.getState().selectMethod("manual_yaml");
-  useStore.getState().advanceToConfigure();
+  useStore.getState().goToConfigure();
   expect(useStore.getState().phase).toBe("configure_yaml");
 
   useStore.getState().goBackToMethodSelection();
