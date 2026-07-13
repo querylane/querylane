@@ -452,7 +452,7 @@ func TestWatchConfigChangesCompletesWhenTerminalEventFillsBuffer(t *testing.T) {
 		}
 	}, time.Second, 10*time.Millisecond)
 
-	for range 32 {
+	for range progressEventBufferCapacity {
 		init.ProgressBroadcaster().Send(dbsetup.NewEvent(dbsetup.StepConnecting, dbsetup.StateInProgress))
 	}
 

@@ -20,6 +20,8 @@ import (
 	"github.com/querylane/querylane/backend/service/internal/pgconv"
 )
 
+const progressEventBufferCapacity = 32
+
 // DatabaseInitializer is used by the OnboardingService to trigger database
 // initialization and observe progress.
 type DatabaseInitializer interface {
@@ -157,7 +159,7 @@ func (s *Service) setupAppDatabase(
 	}
 
 	// 2. Subscribe to broadcaster for buildDatabase progress.
-	eventCh, subID := s.dbInitializer.ProgressBroadcaster().SubscribeChan(32)
+	eventCh, subID := s.dbInitializer.ProgressBroadcaster().SubscribeChan(progressEventBufferCapacity)
 	defer s.dbInitializer.ProgressBroadcaster().Unsubscribe(subID)
 
 	// 3. Handle embedded setup: start PG and derive connection config.
@@ -258,7 +260,7 @@ func (s *Service) watchConfigChanges(ctx context.Context, sendEvent func(dbsetup
 	defer s.configManager.Unsubscribe(configSubID)
 
 	// 4. Subscribe to broadcaster for buildDatabase progress.
-	eventCh, subID := s.dbInitializer.ProgressBroadcaster().SubscribeChan(32)
+	eventCh, subID := s.dbInitializer.ProgressBroadcaster().SubscribeChan(progressEventBufferCapacity)
 	defer s.dbInitializer.ProgressBroadcaster().Unsubscribe(subID)
 
 	// 5. Wait loop.
