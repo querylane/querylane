@@ -414,7 +414,7 @@ test("data explorer: row drawer fetches a truncated cell full value", {
 test.describe("data explorer grid metadata", () => {
   test.use({ locale: "en-US", timezoneId: "UTC" });
 
-  test("data explorer: grid status bar exposes backend row metadata", {
+  test("data explorer: grid status bar keeps actionable warnings", {
     tag: ["@feat:data-explorer", "@flow:query"],
   }, async ({ page }) => {
     await mockExplorerShell(page);
@@ -456,10 +456,12 @@ test.describe("data explorer grid metadata", () => {
     const statusBar = page.locator('[aria-label="Grid status"]');
     await expect(statusBar).toContainText("Offset pagination");
     await expect(statusBar).toContainText("No stable key");
-    await expect(statusBar).toContainText("Count unavailable");
     await expect(statusBar).toContainText("Response capped");
-    await expect(statusBar).toContainText("Observed May 20, 2026, 10:00 AM");
     await expect(statusBar).toContainText("Row actions limited; no PK");
+    await expect(statusBar).not.toContainText("Count unavailable");
+    await expect(statusBar).not.toContainText(
+      "Observed May 20, 2026, 10:00 AM"
+    );
   });
 });
 

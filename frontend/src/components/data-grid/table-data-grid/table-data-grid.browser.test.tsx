@@ -559,18 +559,6 @@ function renderGridStatusBar() {
               label: "No stable key",
               tone: "warning",
             },
-            {
-              description: "The server could not return an exact row count.",
-              id: "count-unavailable",
-              label: "Count unavailable",
-              tone: "muted",
-            },
-            {
-              description: "Read snapshot timestamp returned by the backend.",
-              id: "observed-at",
-              label: "Observed May 20, 2026, 10:00 AM",
-              tone: "info",
-            },
           ]}
         />
       </div>
@@ -773,6 +761,36 @@ function renderForeignKeyReferenceGrid(
     </ScreenshotFrame>
   );
 }
+
+test("expanded data grid prioritizes space for rows", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
+  );
+
+  await page.getByRole("button", { name: "Expand data grid" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Expanded data grid" });
+  await expect.element(dialog).toBeVisible();
+  const dialogTitleStyle = getComputedStyle(
+    dialog.getByText("Expanded data grid").element()
+  );
+  expect(dialogTitleStyle.position).toBe("absolute");
+  expect(dialogTitleStyle.width).toBe("1px");
+  await expect
+    .element(
+      dialog.getByText(
+        "Use the same filters, sorting, selection, and pagination with more room for rows and columns."
+      )
+    )
+    .not.toBeInTheDocument();
+
+  const dialogHeight = dialog.element().getBoundingClientRect().height;
+  const gridHeight = dialog
+    .getByTestId("grid-refresh-surface")
+    .element()
+    .getBoundingClientRect().height;
+  expect(gridHeight / dialogHeight).toBeGreaterThan(0.7);
+});
 
 async function openForeignKeyReference() {
   const carrierLink = page.getByRole("button", {
@@ -1328,17 +1346,13 @@ test("sort popover stays inside the data-grid boundary when the grid is offset",
   expect(popoverBox.right).toBeLessThanOrEqual(boundaryBox.right + 1);
 });
 
-test("grid status bar exposes backend metadata labels as visible UI", async () => {
+test("grid status bar exposes actionable warning labels as visible UI", async () => {
   renderGridStatusBar();
 
   const status = page.getByRole("status", { name: "Grid status" });
   await expect.element(status).toBeVisible();
   await expect.element(status.getByText("Offset pagination")).toBeVisible();
   await expect.element(status.getByText("No stable key")).toBeVisible();
-  await expect.element(status.getByText("Count unavailable")).toBeVisible();
-  await expect
-    .element(status.getByText("Observed May 20, 2026, 10:00 AM"))
-    .toBeVisible();
 });
 
 test("data grid refresh treatment is centered and readable", async () => {
