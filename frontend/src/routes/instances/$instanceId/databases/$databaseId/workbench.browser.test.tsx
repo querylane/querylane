@@ -16,6 +16,7 @@ const READ_ONLY_GUARD_NAME_RE = /read-only guard/i;
 const RUN_BUTTON_NAME_RE = /^Run/;
 const SERVER_SIDE_VALIDATOR_RE = /server-side validator/i;
 const PLAN_INSIGHTS_RE = /Plan insights/;
+const PURE_WHITE_COLOR_RE = /oklch\(1 0 0\)|rgb\(255, 255, 255\)/;
 const SLOWEST_NODE_INSIGHT_RE = /Slowest node: Index Scan/;
 const EXPLAIN_PLAN = `Limit  (cost=112.41..112.53 rows=50 width=64) (actual time=27.78..27.80 rows=50 loops=1)
   Buffers: shared hit=1852 read=126
@@ -307,6 +308,9 @@ test(
 
     await page.getByRole("button", { name: RUN_BUTTON_NAME_RE }).click();
     await expect.element(page.getByRole("alert")).toBeVisible();
+    const retryButton = page.getByRole("button", { name: "Retry" }).element();
+    const retryStyle = getComputedStyle(retryButton);
+    expect(retryStyle.backgroundColor).not.toMatch(PURE_WHITE_COLOR_RE);
     await expect(
       page.getByTestId("sql-workbench-visual-surface")
     ).toMatchScreenshot("sql-workbench-query-error");
