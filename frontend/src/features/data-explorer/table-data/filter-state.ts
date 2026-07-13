@@ -16,6 +16,7 @@ import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 const MAX_FILTER_RULES = 64;
 const DEFAULT_FILTER_LOGIC = "and" as const;
 const FILTER_LOGICS = ["and", "or"] as const;
+const FLOAT_LITERAL_PATTERN = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
 const INTEGER_LITERAL_PATTERN = /^-?\d+$/;
 
 const FILTER_OPERATORS = [
@@ -834,12 +835,17 @@ function parseTableValue(
       }
       return;
     }
-    case DataType.FLOAT:
-      return Number.isFinite(Number(value))
+    case DataType.FLOAT: {
+      if (!FLOAT_LITERAL_PATTERN.test(rawValue)) {
+        return;
+      }
+      const numberValue = Number(value);
+      return Number.isFinite(numberValue)
         ? create(TableValueSchema, {
-            kind: { case: "doubleValue", value: Number(value) },
+            kind: { case: "doubleValue", value: numberValue },
           })
         : undefined;
+    }
     case DataType.INTEGER: {
       if (!INTEGER_LITERAL_PATTERN.test(value)) {
         return;
