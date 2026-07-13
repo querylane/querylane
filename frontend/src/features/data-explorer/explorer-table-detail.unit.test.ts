@@ -4,6 +4,7 @@ import { deriveColumnRows } from "@/features/data-explorer/explorer-column-rows"
 import {
   filterColumnDetailRows,
   filterConstraintsByKind,
+  filterIndexesByMethod,
   filterPoliciesByMode,
   filterTriggersByState,
 } from "@/features/data-explorer/explorer-table-detail-filters";
@@ -12,6 +13,7 @@ import {
   ConstraintType,
   PolicyMode,
   TableConstraintSchema,
+  TableIndexSchema,
   TablePolicySchema,
   TableTriggerSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
@@ -139,7 +141,23 @@ describe("table detail facet filters", () => {
     ]);
   });
 
-  test("filters metadata rows by constraint kind, policy mode, and trigger state", () => {
+  test("filters metadata rows by index method, constraint kind, policy mode, and trigger state", () => {
+    expect(
+      filterIndexesByMethod(
+        [
+          create(TableIndexSchema, {
+            indexName: "idx_gin",
+            method: "gin",
+          }),
+          create(TableIndexSchema, {
+            indexName: "idx_btree",
+            method: "btree",
+          }),
+        ],
+        ["gin"]
+      ).map((index) => index.indexName)
+    ).toEqual(["idx_gin"]);
+
     expect(
       filterConstraintsByKind(
         [

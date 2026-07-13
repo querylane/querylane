@@ -1410,6 +1410,63 @@ describe("TableDetail indexes tab", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 
+  it("searches and filters index cards without changing summary totals", async () => {
+    const user = userEvent.setup();
+    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+      indexes: [
+        create(TableIndexSchema, {
+          indexName: "orders_pkey",
+          isValid: true,
+          keyColumns: ["id"],
+          keyParts: ["id"],
+          method: "btree",
+        }),
+        create(TableIndexSchema, {
+          indexName: "orders_payload_idx",
+          isValid: true,
+          keyColumns: ["payload"],
+          keyParts: ["payload"],
+          method: "gin",
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="indexes"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema)}
+        tableName="orders"
+      />
+    );
+
+    const search = screen.getByRole("textbox", { name: "Search indexes…" });
+    await user.type(search, "payload");
+
+    expect(document.body.textContent).toContain("orders_payload_idx");
+    expect(document.body.textContent).not.toContain("orders_pkey");
+    expect(screen.getAllByText("2").length).toBeGreaterThan(0);
+
+    await user.clear(search);
+
+    expect(document.body.textContent).toContain("orders_payload_idx");
+    expect(document.body.textContent).toContain("orders_pkey");
+
+    await user.click(screen.getByRole("button", { name: "Method" }));
+    await user.click(screen.getByRole("option", { name: "GIN" }));
+
+    expect(document.body.textContent).toContain("orders_payload_idx");
+    expect(document.body.textContent).not.toContain("orders_pkey");
+    expect(screen.getAllByText("2").length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+
+    expect(document.body.textContent).toContain("orders_payload_idx");
+    expect(document.body.textContent).toContain("orders_pkey");
+  });
+
   it("renders usage stats, partial indexes, expression indexes, and unused warnings", () => {
     tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
       indexes: [

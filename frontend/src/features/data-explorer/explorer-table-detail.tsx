@@ -65,6 +65,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -103,6 +104,8 @@ import {
   columnNullability,
   columnTypeCategory,
   filterColumnDetailRows,
+  filterConstraintsByKind,
+  filterIndexesByMethod,
   filterPoliciesByMode,
   filterTableTriggers,
   type TriggerStateFilter,
@@ -328,6 +331,18 @@ function presentConstraintKindOptions(
       label: CONSTRAINT_TYPE_LABELS[type],
       value: String(type),
     }));
+}
+function presentIndexMethodOptions(
+  indexes: TableIndex[]
+): FacetedFilterOption[] {
+  const options = new Map<string, string>();
+  for (const index of indexes) {
+    const value = normalizeIndexMethod(index.method);
+    options.set(value, describePostgresIndexMethod(index.method).label);
+  }
+  return Array.from(options.entries())
+    .sort((left, right) => left[1].localeCompare(right[1]))
+    .map(([value, label]) => ({ label, value }));
 }
 function presentPolicyModeOptions(
   policies: TablePolicy[]
@@ -2467,6 +2482,8 @@ function IndexesTab({
   table: TableProto | undefined;
   tableName: string;
 }) {
+  const [searchFilter, setSearchFilter] = useState("");
+  const [methodFilters, setMethodFilters] = useState<string[]>([]);
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
     return (
@@ -2493,6 +2510,14 @@ function IndexesTab({
   const totalSizeBytes = sumIndexSizeBytes(indexes);
   const totalScanCount = sumIndexScans(indexes);
   const usageStatsAvailable = hasIndexUsageStats(indexes);
+  const normalizedSearch = searchFilter.trim().toLocaleLowerCase();
+  const methodFilteredIndexes = filterIndexesByMethod(indexes, methodFilters);
+  const filteredIndexes =
+    normalizedSearch === ""
+      ? methodFilteredIndexes
+      : methodFilteredIndexes.filter((index) =>
+          index.indexName.toLocaleLowerCase().includes(normalizedSearch)
+        );
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -2528,17 +2553,47 @@ function IndexesTab({
           value={formatValidityValue(indexes)}
         />
       </div>
-      <div className="space-y-3">
-        {indexes.map((index) => (
-          <IndexCard
-            index={index}
-            key={`${index.indexName}-${index.method}-${index.keyColumns.join(",")}`}
-            schemaName={schemaName}
-            tableName={tableName}
-            totalScanCount={totalScanCount}
+      <div className="flex min-h-8 flex-wrap items-center gap-2">
+        <div className="relative w-52 max-w-full shrink-0">
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
           />
-        ))}
+          <Input
+            aria-label="Search indexes…"
+            className="h-8 pl-8 text-sm"
+            name="index-filter"
+            onChange={(event) => setSearchFilter(event.target.value)}
+            placeholder="Search indexes…"
+            value={searchFilter}
+          />
+        </div>
+        <FacetFilterBar
+          filters={[
+            {
+              handleSelectedValuesChange: setMethodFilters,
+              label: "Method",
+              options: presentIndexMethodOptions(indexes),
+              selectedValues: methodFilters,
+            },
+          ]}
+        />
       </div>
+      {filteredIndexes.length > 0 ? (
+        <div className="space-y-3">
+          {filteredIndexes.map((index) => (
+            <IndexCard
+              index={index}
+              key={`${index.indexName}-${index.method}-${index.keyColumns.join(",")}`}
+              schemaName={schemaName}
+              tableName={tableName}
+              totalScanCount={totalScanCount}
+            />
+          ))}
+        </div>
+      ) : (
+        <SearchEmptyState className="border" resourceName="indexes" />
+      )}
     </div>
   );
 }

@@ -1873,6 +1873,17 @@ test("data explorer table indexes have a redesigned card baseline", async () => 
   await expect.element(page.getByText("btree").first()).toBeVisible();
   await expect.element(page.getByText("Scans").first()).toBeVisible();
   await expect.element(page.getByText("since last stats reset")).toBeVisible();
+  const indexSearch = page
+    .getByRole("textbox", { name: "Search indexes…" })
+    .element();
+  const indexFilterBar = requireFacetFilterBar("index facet filters");
+  await expect
+    .element(page.getByRole("button", { exact: true, name: "Method" }))
+    .toBeVisible();
+  const searchBox = indexSearch.getBoundingClientRect();
+  const filterBox = indexFilterBar.getBoundingClientRect();
+  expect(filterBox.left).toBeGreaterThan(searchBox.right);
+  expect(Math.abs(filterBox.top - searchBox.top)).toBeLessThanOrEqual(1);
   await expect
     .element(
       page.getByRole("button", {
@@ -2369,6 +2380,12 @@ test("data explorer table indexes match the redesign complex usage scenario", as
   await expect.element(page.getByText("478 MB")).toBeVisible();
   await expect.element(page.getByText("58.7M")).toBeVisible();
   await expect.element(page.getByText("99.7%")).toBeVisible();
+  await expect
+    .element(page.getByRole("textbox", { name: "Search indexes…" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { exact: true, name: "Method" }))
+    .toBeVisible();
   expect(document.body.textContent).toContain(
     "CREATE INDEX shipments_legacy_ref_idx ON shipping.shipments USING btree (lower(ref))"
   );
