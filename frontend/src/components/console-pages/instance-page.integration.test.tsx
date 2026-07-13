@@ -911,6 +911,115 @@ describe("backend instance refresh", () => {
   });
 });
 
+describe("backend instance activity interactions", () => {
+  test("opens session details from a table row", async () => {
+    const user = userEvent.setup();
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = activityHealthResponse();
+
+    renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    const blockedSessionRow = within(activity).getByRole("row", {
+      name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
+    });
+
+    await user.click(
+      within(blockedSessionRow).getByRole("button", {
+        name: "View session 4302 details",
+      })
+    );
+
+    const details = await screen.findByRole("dialog", {
+      name: "Session 4302",
+    });
+    expect(within(details).getByText("api-gateway")).toBeTruthy();
+    expect(within(details).getByText("Lock · transactionid")).toBeTruthy();
+    expect(within(details).getByRole("code")).toHaveProperty(
+      "textContent",
+      "UPDATE shipping.shipments SET eta = $1 WHERE id = $2"
+    );
+  });
+
+  test("opens session actions from the row menu", async () => {
+    const user = userEvent.setup();
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = activityHealthResponse();
+
+    renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    const blockedSessionRow = within(activity).getByRole("row", {
+      name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
+    });
+
+    await user.click(
+      within(blockedSessionRow).getByRole("button", {
+        name: "Open session actions for pid 4302",
+      })
+    );
+
+    expect(screen.getByRole("menuitem", { name: "View details" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Copy PID" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Copy query" })).toBeTruthy();
+
+    await user.click(screen.getByRole("menuitem", { name: "View details" }));
+
+    expect(
+      await screen.findByRole("dialog", { name: "Session 4302" })
+    ).toBeTruthy();
+  });
+
+  test("copies the session pid and query from the row menu", async () => {
+    const user = userEvent.setup();
+    const originalClipboard = navigator.clipboard;
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = activityHealthResponse();
+
+    try {
+      renderInstanceActivity();
+
+      const activity = screen.getByRole("region", { name: "Activity" });
+      const blockedSessionRow = within(activity).getByRole("row", {
+        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
+      });
+      const actions = within(blockedSessionRow).getByRole("button", {
+        name: "Open session actions for pid 4302",
+      });
+
+      await user.click(actions);
+      await user.click(screen.getByRole("menuitem", { name: "Copy PID" }));
+      await waitFor(() => {
+        expect(writeText).toHaveBeenCalledWith("4302");
+      });
+
+      await user.click(actions);
+      await user.click(screen.getByRole("menuitem", { name: "Copy query" }));
+      await waitFor(() => {
+        expect(writeText).toHaveBeenCalledWith(
+          "UPDATE shipping.shipments SET eta = $1 WHERE id = $2"
+        );
+      });
+    } finally {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: originalClipboard,
+      });
+    }
+  });
+});
+
 describe("backend instance activity", () => {
   test("shows live pg_stat_activity session rows and blocking chain", () => {
     state.selectedInstanceStatus = "connected";

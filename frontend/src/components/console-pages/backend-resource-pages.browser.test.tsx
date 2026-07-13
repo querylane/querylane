@@ -891,6 +891,57 @@ test("backend instance activity matches the live sessions redesign", async () =>
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-instance-activity"
   );
+
+  await page.getByRole("row", { name: BLOCKED_ACTIVITY_ROW_NAME }).click();
+  await expect
+    .element(page.getByRole("dialog", { name: "Session 4302" }))
+    .toBeVisible();
+  await page.getByRole("button", { name: "Close" }).click();
+
+  await page
+    .getByRole("button", { name: "Open session actions for pid 4302" })
+    .click();
+  await expect
+    .element(page.getByRole("menuitem", { name: "View details" }))
+    .toBeVisible();
+});
+
+test("background activity refresh keeps the table fixed in place", async () => {
+  state.instanceQuery = {
+    data: instanceResponse(),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
+  };
+  state.healthQuery = {
+    data: activityHealthResponse(),
+    isFetching: false,
+  };
+  state.overviewQuery = { data: overviewResponse() };
+
+  function activityPage() {
+    return (
+      <ScreenshotFrame>
+        <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
+          <BackendInstancePage instanceId="prod" section="activity" />
+        </div>
+      </ScreenshotFrame>
+    );
+  }
+
+  const view = await render(activityPage());
+  const table = page.getByRole("table");
+
+  await expect.element(table).toBeVisible();
+  const settledTableBox = table.element().getBoundingClientRect();
+
+  state.healthQuery = {
+    data: activityHealthResponse(),
+    isFetching: true,
+  };
+  await view.rerender(activityPage());
+
+  const refreshingTableBox = table.element().getBoundingClientRect();
+  expect(refreshingTableBox.top).toBe(settledTableBox.top);
+  expect(refreshingTableBox.height).toBe(settledTableBox.height);
 });
 
 test("backend instance activity empty state matches", async () => {
