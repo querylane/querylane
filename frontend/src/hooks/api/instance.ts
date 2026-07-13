@@ -12,13 +12,17 @@ import { createQueryOptions } from "@connectrpc/connect-query-core";
 import {
   type QueryClient,
   queryOptions,
+  useQueryClient,
   useQuery as useTanStackQuery,
 } from "@tanstack/react-query";
 import { buildInstanceName } from "@/lib/console-resources";
+import { logger } from "@/lib/diagnostics";
 import { paginateAll } from "@/lib/paginate-all";
 import { QUERY_STALE_TIME, RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import {
+  type Instance,
   InstanceService,
+  type ListInstancesResponse,
   ListInstancesResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import {
@@ -70,6 +74,78 @@ async function fetchAllInstances(
   });
 }
 
+function queryKeyReferencesInstanceResource(
+  value: unknown,
+  instanceName: string
+): boolean {
+  if (typeof value === "string") {
+    return value === instanceName || value.startsWith(`${instanceName}/`);
+  }
+  if (Array.isArray(value)) {
+    return value.some((part) =>
+      queryKeyReferencesInstanceResource(part, instanceName)
+    );
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.values(value).some((part) =>
+      queryKeyReferencesInstanceResource(part, instanceName)
+    );
+  }
+  return false;
+}
+
+function orderInstancesByDisplayName(first: Instance, second: Instance) {
+  return (
+    first.displayName.localeCompare(second.displayName) ||
+    first.name.localeCompare(second.name)
+  );
+}
+
+function upsertInstance(instances: Instance[], instance: Instance) {
+  return [
+    ...instances.filter((item) => item.name !== instance.name),
+    instance,
+  ].sort(orderInstancesByDisplayName);
+}
+
+function runInstanceMutationCacheFollowUp({
+  instanceName,
+  queryClient,
+  transport,
+  updateInstances,
+}: {
+  instanceName: string;
+  queryClient: QueryClient;
+  transport: Transport;
+  updateInstances: ((instances: Instance[]) => Instance[]) | undefined;
+}) {
+  if (instanceName) {
+    queryClient.removeQueries({
+      predicate: (query) =>
+        queryKeyReferencesInstanceResource(query.queryKey, instanceName),
+    });
+  }
+
+  if (updateInstances) {
+    const queryKey = listAllInstancesQueryOptions({ transport }).queryKey;
+    queryClient.setQueryData<ListInstancesResponse>(queryKey, (current) =>
+      current
+        ? create(ListInstancesResponseSchema, {
+            instances: updateInstances(current.instances),
+            nextPageToken: current.nextPageToken,
+          })
+        : current
+    );
+  }
+
+  refreshAllInstancesCache({ queryClient, transport }).catch((error) => {
+    logger.warn("Instance mutation cache refresh failed", {
+      error: error instanceof Error ? error.message : String(error),
+      instanceName,
+    });
+  });
+}
+
 export function listAllInstancesQueryOptions({
   input = DEFAULT_ALL_INSTANCES_QUERY_INPUT,
   transport,
@@ -110,11 +186,16 @@ export async function refreshAllInstancesCache({
   queryClient: QueryClient;
   transport: Transport;
 }) {
+  const queryOptions = listAllInstancesQueryOptions({
+    input: input ?? DEFAULT_ALL_INSTANCES_QUERY_INPUT,
+    transport,
+  });
+  await queryClient.cancelQueries(
+    { exact: true, queryKey: queryOptions.queryKey },
+    { revert: false, silent: true }
+  );
   return await queryClient.fetchQuery({
-    ...listAllInstancesQueryOptions({
-      input: input ?? DEFAULT_ALL_INSTANCES_QUERY_INPUT,
-      transport,
-    }),
+    ...queryOptions,
     staleTime: QUERY_STALE_TIME.immediate,
   });
 }
@@ -189,7 +270,28 @@ export function useCreateInstanceMutation(
     (typeof createInstance)["output"]
   >
 ) {
-  return useMutation(createInstance, options);
+  const contextTransport = useTransport();
+  const queryClient = useQueryClient();
+  const transport = options?.transport ?? contextTransport;
+
+  return useMutation(createInstance, {
+    ...options,
+    onSuccess: async (data, variables, onMutateResult, context) => {
+      const createdInstance = data.instance;
+      runInstanceMutationCacheFollowUp({
+        instanceName:
+          createdInstance?.name ||
+          (variables.instanceId ? buildInstanceName(variables.instanceId) : ""),
+        queryClient,
+        transport,
+        updateInstances: createdInstance
+          ? (instances) => upsertInstance(instances, createdInstance)
+          : undefined,
+      });
+      await options?.onSuccess?.(data, variables, onMutateResult, context);
+    },
+    transport,
+  });
 }
 
 export function useTestInstanceConnectionMutation(
@@ -207,7 +309,26 @@ export function useUpdateInstanceMutation(
     (typeof updateInstance)["output"]
   >
 ) {
-  return useMutation(updateInstance, options);
+  const contextTransport = useTransport();
+  const queryClient = useQueryClient();
+  const transport = options?.transport ?? contextTransport;
+
+  return useMutation(updateInstance, {
+    ...options,
+    onSuccess: async (data, variables, onMutateResult, context) => {
+      const updatedInstance = data.instance;
+      runInstanceMutationCacheFollowUp({
+        instanceName: updatedInstance?.name || variables.instance?.name || "",
+        queryClient,
+        transport,
+        updateInstances: updatedInstance
+          ? (instances) => upsertInstance(instances, updatedInstance)
+          : undefined,
+      });
+      await options?.onSuccess?.(data, variables, onMutateResult, context);
+    },
+    transport,
+  });
 }
 
 export function useDeleteInstanceMutation(
@@ -216,7 +337,26 @@ export function useDeleteInstanceMutation(
     (typeof deleteInstance)["output"]
   >
 ) {
-  return useMutation(deleteInstance, options);
+  const contextTransport = useTransport();
+  const queryClient = useQueryClient();
+  const transport = options?.transport ?? contextTransport;
+
+  return useMutation(deleteInstance, {
+    ...options,
+    onSuccess: async (data, variables, onMutateResult, context) => {
+      runInstanceMutationCacheFollowUp({
+        instanceName: variables.name ?? "",
+        queryClient,
+        transport,
+        updateInstances: variables.name
+          ? (instances) =>
+              instances.filter((instance) => instance.name !== variables.name)
+          : undefined,
+      });
+      await options?.onSuccess?.(data, variables, onMutateResult, context);
+    },
+    transport,
+  });
 }
 
 export { DEFAULT_ALL_INSTANCES_QUERY_INPUT };
