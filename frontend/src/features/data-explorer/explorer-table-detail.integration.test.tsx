@@ -1504,6 +1504,144 @@ function renderPoliciesTab(policies: TablePolicy[]) {
   );
 }
 
+describe("TableDetail policies tab pagination", () => {
+  it("paginates policy cards six at a time", async () => {
+    const user = userEvent.setup();
+    renderPoliciesTab(
+      Array.from({ length: 7 }, (_, index) =>
+        create(TablePolicySchema, {
+          command: PolicyCommand.SELECT,
+          mode: PolicyMode.PERMISSIVE,
+          policyName: `invoices_policy_${index + 1}`,
+          roles: ["app_reader"],
+          usingExpression: `tenant_id = ${index + 1}`,
+        })
+      )
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "invoices_policy_1" })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: "invoices_policy_7" })
+    ).toBeNull();
+    expect(screen.getByText("Showing 1–6 of 7 policies")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+
+    await user.click(
+      screen.getByRole("button", { name: "Next policies page" })
+    );
+
+    expect(
+      screen.queryByRole("heading", { name: "invoices_policy_1" })
+    ).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: "invoices_policy_7" })
+    ).toBeTruthy();
+    expect(screen.getByText("Showing 7–7 of 7 policies")).toBeTruthy();
+    expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+  });
+
+  it("changes policy page size using the resource-card options", async () => {
+    const user = userEvent.setup();
+    renderPoliciesTab(
+      Array.from({ length: 13 }, (_, index) =>
+        create(TablePolicySchema, {
+          command: PolicyCommand.SELECT,
+          mode: PolicyMode.PERMISSIVE,
+          policyName: `invoices_policy_${index + 1}`,
+          roles: ["app_reader"],
+          usingExpression: `tenant_id = ${index + 1}`,
+        })
+      )
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Next policies page" })
+    );
+    const pageSizeSelect = screen.getByRole("combobox", { name: "Per page" });
+    expect(pageSizeSelect.textContent).toContain("6");
+
+    await user.click(pageSizeSelect);
+    expect(screen.getByRole("option", { name: "6" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "12" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "24" })).toBeTruthy();
+    await user.click(screen.getByRole("option", { name: "12" }));
+
+    expect(
+      screen.getByRole("heading", { name: "invoices_policy_1" })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "invoices_policy_12" })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: "invoices_policy_13" })
+    ).toBeNull();
+    expect(screen.getByText("Showing 1–12 of 13 policies")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+  });
+
+  it("returns to the first policy page when search changes", async () => {
+    const user = userEvent.setup();
+    renderPoliciesTab(
+      Array.from({ length: 7 }, (_, index) =>
+        create(TablePolicySchema, {
+          command: PolicyCommand.SELECT,
+          mode: PolicyMode.PERMISSIVE,
+          policyName: `invoices_policy_${index + 1}`,
+          roles: ["app_reader"],
+          usingExpression: `tenant_id = ${index + 1}`,
+        })
+      )
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Next policies page" })
+    );
+    const search = screen.getByRole("textbox", { name: "Search policies…" });
+    await user.type(search, "policy_1");
+    await user.clear(search);
+
+    expect(
+      screen.getByRole("heading", { name: "invoices_policy_1" })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: "invoices_policy_7" })
+    ).toBeNull();
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+  });
+
+  it("returns to the first policy page when mode filters change", async () => {
+    const user = userEvent.setup();
+    renderPoliciesTab(
+      Array.from({ length: 7 }, (_, index) =>
+        create(TablePolicySchema, {
+          command: PolicyCommand.SELECT,
+          mode: index === 6 ? PolicyMode.RESTRICTIVE : PolicyMode.PERMISSIVE,
+          policyName: `invoices_policy_${index + 1}`,
+          roles: ["app_reader"],
+          usingExpression: `tenant_id = ${index + 1}`,
+        })
+      )
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Next policies page" })
+    );
+    await user.click(screen.getByRole("button", { name: "Mode" }));
+    await user.click(screen.getByRole("option", { name: "Restrictive" }));
+    await user.click(screen.getByRole("option", { name: "Clear filter" }));
+
+    expect(
+      screen.getByRole("heading", { name: "invoices_policy_1" })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: "invoices_policy_7" })
+    ).toBeNull();
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+  });
+});
+
 describe("TableDetail policies tab", () => {
   it("explains RLS policy cards and previews matching policies by role and command", async () => {
     const user = userEvent.setup();
@@ -1547,7 +1685,7 @@ describe("TableDetail policies tab", () => {
 
     expect(
       screen.getByText(
-        "This table defines row-level security policies — table owners and BYPASSRLS roles may bypass them"
+        "This table defines row-level security policies; table owners and BYPASSRLS roles may bypass them"
       )
     ).toBeTruthy();
     expect(

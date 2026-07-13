@@ -5,6 +5,8 @@ import type { RowData } from "@tanstack/react-table";
 import {
   Binary,
   Boxes,
+  ChevronLeft,
+  ChevronRight,
   Columns3,
   FileCode2,
   GitBranch,
@@ -1979,6 +1981,20 @@ function collectPolicyRoles(policies: TablePolicy[]) {
   return roles.length > 0 ? roles : ["public"];
 }
 
+const SMALL_POLICY_PAGE_SIZE = 6;
+const MEDIUM_POLICY_PAGE_SIZE = 12;
+const LARGE_POLICY_PAGE_SIZE = 24;
+const POLICY_PAGE_SIZE_OPTIONS = [
+  SMALL_POLICY_PAGE_SIZE,
+  MEDIUM_POLICY_PAGE_SIZE,
+  LARGE_POLICY_PAGE_SIZE,
+] as const;
+type PolicyPageSize = (typeof POLICY_PAGE_SIZE_OPTIONS)[number];
+
+function isPolicyPageSize(value: number): value is PolicyPageSize {
+  return POLICY_PAGE_SIZE_OPTIONS.some((pageSize) => pageSize === value);
+}
+
 function policyAppliesToRole(policy: TablePolicy, role: string) {
   const roles = policyRoles(policy);
   return roles.includes("public") || roles.includes(role);
@@ -2157,7 +2173,7 @@ function RlsCombinationGuide() {
       <ol className="mt-3 flex list-none flex-col gap-2 pl-0 text-muted-foreground text-sm leading-relaxed">
         <li>
           <span className="font-medium text-foreground">1 · Grants first.</span>{" "}
-          A role with no SELECT grant sees nothing — RLS never even runs.
+          A role with no SELECT grant sees nothing; RLS never even runs.
         </li>
         <li>
           <span className="font-medium text-foreground">
@@ -2181,7 +2197,7 @@ function RlsCombinationGuide() {
           <span className="font-medium text-foreground">
             5 · Owner and BYPASSRLS skip it
           </span>{" "}
-          — unless FORCE ROW LEVEL SECURITY is set.
+          unless FORCE ROW LEVEL SECURITY is set.
         </li>
       </ol>
     </section>
@@ -2310,6 +2326,10 @@ function PoliciesTab({
 }) {
   const [policySearch, setPolicySearch] = useState("");
   const [modeFilters, setModeFilters] = useState<string[]>([]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState<PolicyPageSize>(
+    SMALL_POLICY_PAGE_SIZE
+  );
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
     return (
@@ -2340,6 +2360,28 @@ function PoliciesTab({
   ).filter((policy) =>
     policy.policyName.toLocaleLowerCase().includes(normalizedSearch)
   );
+  const pageCount = Math.max(1, Math.ceil(visiblePolicies.length / pageSize));
+  const currentPageIndex = Math.min(pageIndex, pageCount - 1);
+  const pagePolicies = visiblePolicies.slice(
+    currentPageIndex * pageSize,
+    (currentPageIndex + 1) * pageSize
+  );
+  const firstPolicy = currentPageIndex * pageSize + 1;
+  const lastPolicy = Math.min(
+    (currentPageIndex + 1) * pageSize,
+    visiblePolicies.length
+  );
+
+  function handlePolicySearchChange(nextSearch: string) {
+    setPageIndex(0);
+    setPolicySearch(nextSearch);
+  }
+
+  function handlePolicyModeFiltersChange(nextModeFilters: string[]) {
+    setPageIndex(0);
+    setModeFilters(nextModeFilters);
+  }
+
   return (
     <div className="flex flex-col gap-3" data-slot="policies-tab">
       <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-xs">
@@ -2348,7 +2390,7 @@ function PoliciesTab({
           className="size-2 rounded-full bg-emerald-500"
         />
         <p className="font-medium text-sm">
-          This table defines row-level security policies — table owners and
+          This table defines row-level security policies; table owners and
           BYPASSRLS roles may bypass them
         </p>
         <span
@@ -2360,30 +2402,92 @@ function PoliciesTab({
       </div>
       <div className="flex min-h-8 flex-wrap items-center gap-2">
         <DataTableFilter
-          onChange={setPolicySearch}
+          onChange={handlePolicySearchChange}
           placeholder="Search policies…"
           value={policySearch}
         />
         <FacetFilterBar
           filters={[
             {
-              handleSelectedValuesChange: setModeFilters,
+              handleSelectedValuesChange: handlePolicyModeFiltersChange,
               label: "Mode",
               options: presentPolicyModeOptions(policies),
               selectedValues: modeFilters,
             },
           ]}
         />
+        <Select
+          onValueChange={(nextValue) => {
+            if (typeof nextValue !== "string") {
+              return;
+            }
+            const nextPageSize = Number(nextValue);
+            if (isPolicyPageSize(nextPageSize)) {
+              setPageIndex(0);
+              setPageSize(nextPageSize);
+            }
+          }}
+          value={String(pageSize)}
+        >
+          <SelectTrigger aria-label="Per page" className="h-8 w-28" size="sm">
+            <span className="text-muted-foreground">Per page </span>
+            <span>{pageSize}</span>
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger={false}>
+            {POLICY_PAGE_SIZE_OPTIONS.map((size) => (
+              <SelectItem key={size} label={String(size)} value={String(size)}>
+                {size}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      {visiblePolicies.length > 0 ? (
+      {pagePolicies.length > 0 ? (
         <div className="flex flex-col gap-3">
-          {visiblePolicies.map((policy) => (
+          {pagePolicies.map((policy) => (
             <PolicyCard key={policy.policyName} policy={policy} />
           ))}
         </div>
       ) : (
         <SearchEmptyState className="border" resourceName="policies" />
       )}
+      {visiblePolicies.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
+          <span>
+            Showing {firstPolicy}&ndash;{lastPolicy} of {visiblePolicies.length}{" "}
+            policies
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              aria-label="Previous policies page"
+              disabled={currentPageIndex === 0}
+              onClick={() => {
+                setPageIndex((index) => Math.max(0, index - 1));
+              }}
+              size="icon-xs"
+              type="button"
+              variant="outline"
+            >
+              <ChevronLeft />
+            </Button>
+            <span className="font-mono text-xs">
+              Page {currentPageIndex + 1} of {pageCount}
+            </span>
+            <Button
+              aria-label="Next policies page"
+              disabled={currentPageIndex >= pageCount - 1}
+              onClick={() => {
+                setPageIndex((index) => Math.min(pageCount - 1, index + 1));
+              }}
+              size="icon-xs"
+              type="button"
+              variant="outline"
+            >
+              <ChevronRight />
+            </Button>
+          </div>
+        </div>
+      ) : null}
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <RlsCombinationGuide />
         <RlsPreview policies={policies} />
