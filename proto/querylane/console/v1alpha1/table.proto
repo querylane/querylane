@@ -255,6 +255,12 @@ message TablePartition {
 
   // Output-only. Bound expression for this child partition.
   string partition_bound = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Estimated live rows for this child partition from PostgreSQL statistics.
+  int64 estimated_rows = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Total relation size in bytes for this child partition.
+  int64 size_bytes = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // --------------------------------------------------------------------------

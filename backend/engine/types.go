@@ -455,6 +455,8 @@ type TablePartition struct {
 	SchemaName     string
 	TableName      string
 	PartitionBound string
+	EstimatedRows  int64
+	TotalSizeBytes int64
 }
 
 type TablePartitionMetadata struct {

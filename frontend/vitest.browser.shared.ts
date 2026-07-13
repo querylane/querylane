@@ -17,6 +17,7 @@ type BrowserTheme = "light" | "dark";
 const CANONICAL_SCREENSHOT_PLATFORM = "linux";
 const CANONICAL_SCREENSHOT_MISMATCH_THRESHOLD = 0.02;
 const LOCAL_SCREENSHOT_MISMATCH_THRESHOLD = 0.05;
+const BROWSER_SCREENSHOT_TIMEOUT_MS = 15_000;
 const BROWSER_SCREENSHOT_MISMATCH_THRESHOLD =
   process.platform === CANONICAL_SCREENSHOT_PLATFORM
     ? CANONICAL_SCREENSHOT_MISMATCH_THRESHOLD
@@ -146,6 +147,7 @@ function createBrowserConfig(themes: readonly BrowserTheme[]) {
               caret: "hide",
               scale: "css",
             },
+            timeout: BROWSER_SCREENSHOT_TIMEOUT_MS,
           },
         },
         headless: true,

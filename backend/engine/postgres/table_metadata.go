@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -14,10 +15,14 @@ import (
 
 func (d *Postgres) GetTablePartitionMetadata(ctx context.Context, db *sql.DB, schemaName, tableName string) (*engine.TablePartitionMetadata, error) {
 	var (
-		metadata     engine.TablePartitionMetadata
-		childSchemas types.StringArray
-		childTables  types.StringArray
-		childBounds  types.StringArray
+		metadata      engine.TablePartitionMetadata
+		childSchemas  types.StringArray
+		childTables   types.StringArray
+		childBounds   types.StringArray
+		childRows     []int64
+		childSizes    []int64
+		childRowsRaw  []byte
+		childSizesRaw []byte
 	)
 
 	err := db.QueryRowContext(ctx, getTablePartitionMetadataQuery, schemaName, tableName).Scan(
@@ -28,6 +33,8 @@ func (d *Postgres) GetTablePartitionMetadata(ctx context.Context, db *sql.DB, sc
 		&childSchemas,
 		&childTables,
 		&childBounds,
+		&childRowsRaw,
+		&childSizesRaw,
 		&metadata.PartitionCount,
 	)
 	if err != nil {
@@ -36,6 +43,14 @@ func (d *Postgres) GetTablePartitionMetadata(ctx context.Context, db *sql.DB, sc
 		}
 
 		return nil, classifyQueryError("query table partition metadata", err)
+	}
+
+	if err := json.Unmarshal(childRowsRaw, &childRows); err != nil {
+		return nil, fmt.Errorf("parse table partition row estimates: %w", err)
+	}
+
+	if err := json.Unmarshal(childSizesRaw, &childSizes); err != nil {
+		return nil, fmt.Errorf("parse table partition sizes: %w", err)
 	}
 
 	metadata.ChildPartitions = make([]engine.TablePartition, 0, len(childTables))
@@ -47,6 +62,14 @@ func (d *Postgres) GetTablePartitionMetadata(ctx context.Context, db *sql.DB, sc
 
 		if i < len(childBounds) {
 			child.PartitionBound = childBounds[i]
+		}
+
+		if i < len(childRows) {
+			child.EstimatedRows = childRows[i]
+		}
+
+		if i < len(childSizes) {
+			child.TotalSizeBytes = childSizes[i]
 		}
 
 		metadata.ChildPartitions = append(metadata.ChildPartitions, child)
