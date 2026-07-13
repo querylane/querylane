@@ -47,6 +47,10 @@ type TableFilterSearchParseResult =
   | { error: null; ok: true; state: TableFilterState }
   | { error: string; ok: false; state: TableFilterState };
 
+type SqlWhereFilterParseResult =
+  | { error: null; ok: true; rules: TableFilterRule[] }
+  | { error: string; ok: false; rules: [] };
+
 interface TableFilterRule {
   column: string;
   id: string;
@@ -178,6 +182,48 @@ const OPERATOR_SET = new Set<string>(FILTER_OPERATORS);
 const FILTER_LOGIC_SET = new Set<string>(FILTER_LOGICS);
 const TABLE_FILTER_SEARCH_PARSE_ERROR_MESSAGE =
   "Filter URL is malformed. Clear the filter and try again.";
+const SQL_WHERE_PARSE_ERROR_PREFIX =
+  "SQL WHERE supports column comparisons joined with AND only. Check the condition near";
+const SQL_AND_TOKEN = "AND";
+const SQL_AND_TOKEN_LENGTH = SQL_AND_TOKEN.length;
+const SQL_RULE_ID_MAX_COLUMN_LENGTH = 40;
+const SQL_WHERE_PREFIX_PATTERN = /^where\s+/i;
+const SQL_WORD_CHARACTER_PATTERN = /[A-Za-z0-9_$]/;
+const NON_WHITESPACE_PATTERN = /\S/;
+const SQL_IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_$]*/;
+const SQL_BARE_LITERAL_TOKEN_PATTERN = /^\S+/;
+const BARE_LITERAL_PATTERN = /^[^\s();'"]+$/;
+const NUMERIC_LITERAL_PATTERN = /^-?(?:\d+|\d+\.\d+|\.\d+)$/;
+const SQL_IS_NULL_PATTERN = /^IS\s+NULL$/i;
+const SQL_IS_NOT_NULL_PATTERN = /^IS\s+NOT\s+NULL$/i;
+const SQL_WORD_OPERATOR_PATTERN = /^(>=|<=|<>|!=|=|>|<|ILIKE|LIKE)\b/i;
+const SQL_SYMBOL_OPERATOR_PATTERN = /^(>=|<=|<>|!=|=|>|<)/;
+
+const SQL_OPERATOR_TO_FILTER_OPERATOR: Record<string, FilterOperator> = {
+  "!=": "ne",
+  "<": "lt",
+  "<=": "lte",
+  "<>": "ne",
+  "=": "eq",
+  ">": "gt",
+  ">=": "gte",
+  ilike: "ilike",
+  like: "like",
+};
+
+const FILTER_OPERATOR_TO_SQL_OPERATOR: Partial<Record<FilterOperator, string>> =
+  {
+    eq: "=",
+    gt: ">",
+    gte: ">=",
+    ilike: "ILIKE",
+    isNotNull: "IS NOT NULL",
+    isNull: "IS NULL",
+    like: "LIKE",
+    lt: "<",
+    lte: "<=",
+    ne: "<>",
+  };
 
 function isFilterOperator(value: string): value is FilterOperator {
   return OPERATOR_SET.has(value);
@@ -194,6 +240,309 @@ function createFilterRule(column = ""): TableFilterRule {
     operator: "eq",
     value: "",
   };
+}
+
+function normalizeSqlWhereInput(value: string): string {
+  return value.trim().replace(SQL_WHERE_PREFIX_PATTERN, "").trim();
+}
+
+function formatSqlWhereParseError(condition: string): string {
+  return `${SQL_WHERE_PARSE_ERROR_PREFIX} "${condition.trim()}".`;
+}
+
+function isSqlWordBoundary(value: string | undefined): boolean {
+  return value === undefined || !SQL_WORD_CHARACTER_PATTERN.test(value);
+}
+
+function skipSqlQuotedIdentifier(
+  value: string,
+  start: number
+): number | undefined {
+  let index = start + 1;
+  while (index < value.length) {
+    if (value[index] === '"') {
+      if (value[index + 1] === '"') {
+        index += 2;
+        continue;
+      }
+      return index + 1;
+    }
+    index += 1;
+  }
+  return;
+}
+
+function skipSqlQuotedString(value: string, start: number): number | undefined {
+  const literal = readSqlStringLiteral(value.slice(start));
+  return literal ? start + literal.next : undefined;
+}
+
+function isSqlAndAt(value: string, index: number): boolean {
+  return (
+    value.slice(index, index + SQL_AND_TOKEN_LENGTH).toUpperCase() ===
+      SQL_AND_TOKEN &&
+    isSqlWordBoundary(value[index - 1]) &&
+    isSqlWordBoundary(value[index + SQL_AND_TOKEN_LENGTH])
+  );
+}
+
+function splitSqlWhereConditions(value: string): string[] | undefined {
+  const parts: string[] = [];
+  let start = 0;
+  let index = 0;
+
+  while (index < value.length) {
+    const char = value[index];
+    if (char === "'") {
+      const next = skipSqlQuotedString(value, index);
+      if (!next) {
+        return;
+      }
+      index = next;
+      continue;
+    }
+    if (char === '"') {
+      const next = skipSqlQuotedIdentifier(value, index);
+      if (!next) {
+        return;
+      }
+      index = next;
+      continue;
+    }
+
+    if (isSqlAndAt(value, index)) {
+      parts.push(value.slice(start, index).trim());
+      index += SQL_AND_TOKEN_LENGTH;
+      start = index;
+      continue;
+    }
+
+    index += 1;
+  }
+
+  parts.push(value.slice(start).trim());
+  return parts;
+}
+
+function readSqlIdentifier(
+  value: string
+): { column: string; next: number } | undefined {
+  const trimmedStart = value.search(NON_WHITESPACE_PATTERN);
+  if (trimmedStart < 0) {
+    return;
+  }
+  if (value[trimmedStart] === '"') {
+    let column = "";
+    let index = trimmedStart + 1;
+    while (index < value.length) {
+      const char = value[index];
+      if (char === '"') {
+        if (value[index + 1] === '"') {
+          column += '"';
+          index += 2;
+          continue;
+        }
+        return { column, next: index + 1 };
+      }
+      column += char;
+      index += 1;
+    }
+    return;
+  }
+
+  const match = SQL_IDENTIFIER_PATTERN.exec(value.slice(trimmedStart));
+  if (!match) {
+    return;
+  }
+  return { column: match[0], next: trimmedStart + match[0].length };
+}
+
+function readSqlStringLiteral(
+  value: string
+): { next: number; value: string } | undefined {
+  let literal = "";
+  let index = 1;
+  while (index < value.length) {
+    const char = value[index];
+    if (char === "'") {
+      if (value[index + 1] === "'") {
+        literal += "'";
+        index += 2;
+        continue;
+      }
+      return { next: index + 1, value: literal };
+    }
+    literal += char;
+    index += 1;
+  }
+  return;
+}
+
+function readSqlLiteral(
+  value: string
+): { next: number; value: string } | undefined {
+  const rest = value.trimStart();
+  const offset = value.length - rest.length;
+  if (rest.startsWith("'")) {
+    const literal = readSqlStringLiteral(rest);
+    return literal
+      ? { next: offset + literal.next, value: literal.value }
+      : undefined;
+  }
+
+  const match = SQL_BARE_LITERAL_TOKEN_PATTERN.exec(rest);
+  if (!(match && BARE_LITERAL_PATTERN.test(match[0]))) {
+    return;
+  }
+  return { next: offset + match[0].length, value: match[0] };
+}
+
+function sqlRuleId(index: number, column: string): string {
+  const columnSlug =
+    column
+      .toLowerCase()
+      .replace(/[^a-z0-9_$-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, SQL_RULE_ID_MAX_COLUMN_LENGTH) || "column";
+  return `sql-${index + 1}-${columnSlug}`;
+}
+
+function parseSqlWhereCondition(
+  condition: string,
+  index: number
+): TableFilterRule | undefined {
+  const identifier = readSqlIdentifier(condition);
+  if (!identifier?.column) {
+    return;
+  }
+
+  const rest = condition.slice(identifier.next).trimStart();
+  if (SQL_IS_NULL_PATTERN.test(rest)) {
+    return {
+      column: identifier.column,
+      id: sqlRuleId(index, identifier.column),
+      operator: "isNull",
+      value: "",
+    };
+  }
+
+  if (SQL_IS_NOT_NULL_PATTERN.test(rest)) {
+    return {
+      column: identifier.column,
+      id: sqlRuleId(index, identifier.column),
+      operator: "isNotNull",
+      value: "",
+    };
+  }
+
+  const operatorMatch =
+    SQL_WORD_OPERATOR_PATTERN.exec(rest) ??
+    SQL_SYMBOL_OPERATOR_PATTERN.exec(rest);
+  if (!operatorMatch) {
+    return;
+  }
+
+  const rawOperator = operatorMatch[1] ?? "";
+  const operator =
+    SQL_OPERATOR_TO_FILTER_OPERATOR[rawOperator.toLowerCase()] ??
+    SQL_OPERATOR_TO_FILTER_OPERATOR[rawOperator];
+  if (!operator) {
+    return;
+  }
+
+  const literal = readSqlLiteral(rest.slice(rawOperator.length));
+  if (!literal) {
+    return;
+  }
+
+  const trailing = rest.slice(rawOperator.length + literal.next).trim();
+  if (trailing) {
+    return;
+  }
+
+  return {
+    column: identifier.column,
+    id: sqlRuleId(index, identifier.column),
+    operator,
+    value: literal.value,
+  };
+}
+
+function parseSqlWhereFilter(value: string): SqlWhereFilterParseResult {
+  const normalized = normalizeSqlWhereInput(value);
+  if (!normalized) {
+    return { error: null, ok: true, rules: [] };
+  }
+
+  const conditions = splitSqlWhereConditions(normalized);
+  if (!conditions || conditions.some((condition) => condition.length === 0)) {
+    return {
+      error: formatSqlWhereParseError(normalized),
+      ok: false,
+      rules: [],
+    };
+  }
+
+  const rules: TableFilterRule[] = [];
+  for (let index = 0; index < conditions.length; index += 1) {
+    const condition = conditions[index] ?? "";
+    const rule = parseSqlWhereCondition(condition, index);
+    if (!rule) {
+      return {
+        error: formatSqlWhereParseError(condition),
+        ok: false,
+        rules: [],
+      };
+    }
+    rules.push(rule);
+  }
+
+  return { error: null, ok: true, rules };
+}
+
+function quoteSqlIdentifier(value: string): string {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+function quoteSqlLiteral(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
+function formatSqlLiteral(value: string): string {
+  const trimmed = value.trim();
+  if (
+    NUMERIC_LITERAL_PATTERN.test(trimmed) ||
+    trimmed.toLowerCase() === "true" ||
+    trimmed.toLowerCase() === "false"
+  ) {
+    return trimmed;
+  }
+  return quoteSqlLiteral(value);
+}
+
+function serializeSqlWhereFilterRules(
+  rules: readonly TableFilterRule[]
+): string | undefined {
+  const parts: string[] = [];
+  for (const rule of rules) {
+    const operator = FILTER_OPERATOR_TO_SQL_OPERATOR[rule.operator];
+    if (!operator) {
+      return;
+    }
+    if (rule.operator === "isNull" || rule.operator === "isNotNull") {
+      parts.push(`${quoteSqlIdentifier(rule.column)} ${operator}`);
+      continue;
+    }
+    if (!rule.value.trim()) {
+      return;
+    }
+    parts.push(
+      `${quoteSqlIdentifier(rule.column)} ${operator} ${formatSqlLiteral(
+        rule.value
+      )}`
+    );
+  }
+  return parts.length > 0 ? parts.join(" AND ") : undefined;
 }
 
 const compactRuleSearchSchema = z.object({
@@ -512,6 +861,7 @@ function parseTableValue(
 
 export type {
   FilterColumnMeta,
+  SqlWhereFilterParseResult,
   TableFilterLogic,
   TableFilterRule,
   TableFilterSearchParseResult,
@@ -527,8 +877,11 @@ export {
   getOperatorsForColumn,
   isFilterLogic,
   isFilterOperator,
+  isIncompleteFilterRule,
   MAX_FILTER_RULES,
+  parseSqlWhereFilter,
   parseTableFilterSearch,
   parseTableFilterSearchResult,
+  serializeSqlWhereFilterRules,
   serializeTableFilterSearch,
 };

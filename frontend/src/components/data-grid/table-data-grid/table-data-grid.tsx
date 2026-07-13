@@ -710,6 +710,7 @@ interface TableDataGridChromeProps {
   columns: Column<GridRow>[];
   filterLogic: TableFilterLogic;
   filterRules: TableFilterRule[];
+  filterTitle: string;
   invalidFilterRules: Array<{ id: string; message: string }>;
   lastFetchedLabel: string;
   onCellContextMenu: (
@@ -725,8 +726,10 @@ interface TableDataGridChromeProps {
   onCopySelection: (format: ExportFormat) => void;
   onExportRows: (format: ExportFormat) => void;
   onExportSelection: (format: ExportFormat) => void;
-  onFilterChange: (next: TableFilterRule[]) => void;
-  onFilterLogicChange: (next: TableFilterLogic) => void;
+  onFilterChange: (
+    nextRules: TableFilterRule[],
+    nextLogic?: TableFilterLogic
+  ) => void;
   onFitColumns?: (() => void) | undefined;
   onNext: () => void;
   onPageSizeChange: (next: number) => void;
@@ -760,6 +763,7 @@ function TableDataGridChrome({
   columns,
   filterLogic,
   filterRules,
+  filterTitle,
   invalidFilterRules,
   lastFetchedLabel,
   onCellContextMenu,
@@ -770,7 +774,6 @@ function TableDataGridChrome({
   onExportRows,
   onExportSelection,
   onFilterChange,
-  onFilterLogicChange,
   onFitColumns,
   onNext,
   onPageSizeChange,
@@ -798,6 +801,7 @@ function TableDataGridChrome({
         }
         filterLogic={filterLogic}
         filterRules={filterRules}
+        filterTitle={filterTitle}
         isExpanded={state.variant === "expanded"}
         isFetching={state.isFetching}
         lastFetchedLabel={lastFetchedLabel}
@@ -806,7 +810,6 @@ function TableDataGridChrome({
         onExportRows={onExportRows}
         onExportSelection={onExportSelection}
         onFilterChange={onFilterChange}
-        onFilterLogicChange={onFilterLogicChange}
         onFitColumns={onFitColumns}
         onRefresh={onRefresh}
         onSortChange={onSortChange}
@@ -1341,6 +1344,7 @@ function TableDataGrid({
   selectedRowsSearch,
   sortSearch,
 }: TableDataGridProps) {
+  const tableQualifiedName = parseTableQualifiedName(name);
   const [effectiveFilterSearch, setEffectiveFilterSearch] = useLocalSearchValue(
     {
       externalValue: filterSearch,
@@ -1534,19 +1538,19 @@ function TableDataGrid({
     }
   }
 
-  const handleFilterChange = (next: TableFilterRule[]) =>
+  const handleFilterChange = (
+    next: TableFilterRule[],
+    nextLogic: TableFilterLogic = filterLogic
+  ) =>
     setEffectiveFilterSearch(
-      serializeTableFilterSearch({ logic: filterLogic, rules: next })
-    );
-  const handleFilterLogicChange = (next: TableFilterLogic) =>
-    setEffectiveFilterSearch(
-      serializeTableFilterSearch({ logic: next, rules: filterRules })
+      serializeTableFilterSearch({ logic: nextLogic, rules: next })
     );
   const clearFilters = () => setEffectiveFilterSearch(undefined);
   const chromeProps: TableDataGridChromeProps = {
     columns,
     filterLogic,
     filterRules,
+    filterTitle: `Filter ${tableQualifiedName.schema}.${tableQualifiedName.table}`,
     invalidFilterRules,
     lastFetchedLabel: refreshState.lastFetchedLabel,
     onCellContextMenu: handleCellContextMenu,
@@ -1557,7 +1561,6 @@ function TableDataGrid({
     onExportRows: handleExportRows,
     onExportSelection: selectionActions.handleExportSelection,
     onFilterChange: handleFilterChange,
-    onFilterLogicChange: handleFilterLogicChange,
     onNext: handleNext,
     onPageSizeChange: controller.setPageSize,
     onPrev: controller.goPrev,

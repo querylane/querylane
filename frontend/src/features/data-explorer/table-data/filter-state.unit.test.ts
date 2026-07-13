@@ -3,8 +3,10 @@ import {
   buildRowFilter,
   filterRulesForColumnNames,
   getInvalidFilterRules,
+  parseSqlWhereFilter,
   parseTableFilterSearch,
   parseTableFilterSearchResult,
+  serializeSqlWhereFilterRules,
   serializeTableFilterSearch,
   type TableFilterRule,
 } from "@/features/data-explorer/table-data/filter-state";
@@ -18,6 +20,7 @@ const columns = [
   { columnName: "id", dataType: DataType.INTEGER },
   { columnName: "email", dataType: DataType.STRING },
   { columnName: "status", dataType: DataType.STRING },
+  { columnName: "weight_kg", dataType: DataType.INTEGER },
   { columnName: "external_id", dataType: DataType.STRING },
   { columnName: "active", dataType: DataType.BOOLEAN },
   { columnName: "payload", dataType: DataType.JSON },
@@ -94,6 +97,97 @@ describe("table filter search params", () => {
         ["email"]
       )
     ).toEqual([{ column: "email", id: "a", operator: "eq", value: "x" }]);
+  });
+});
+
+describe("SQL WHERE filter parser", () => {
+  test("parses a bounded AND-only WHERE clause into table filter rules", () => {
+    expect(
+      parseSqlWhereFilter(
+        "status = 'customs_hold' AND weight_kg > 10000 AND deleted_at IS NULL"
+      )
+    ).toEqual({
+      error: null,
+      ok: true,
+      rules: [
+        {
+          column: "status",
+          id: "sql-1-status",
+          operator: "eq",
+          value: "customs_hold",
+        },
+        {
+          column: "weight_kg",
+          id: "sql-2-weight_kg",
+          operator: "gt",
+          value: "10000",
+        },
+        {
+          column: "deleted_at",
+          id: "sql-3-deleted_at",
+          operator: "isNull",
+          value: "",
+        },
+      ],
+    });
+  });
+
+  test("supports LIKE, ILIKE, comparison variants, and quoted identifiers", () => {
+    expect(
+      parseSqlWhereFilter(
+        `"external_id" <> 'cus_123' AND email ILIKE '%@acme.com' AND total_cents >= 500`
+      )
+    ).toMatchObject({
+      ok: true,
+      rules: [
+        { column: "external_id", operator: "ne", value: "cus_123" },
+        { column: "email", operator: "ilike", value: "%@acme.com" },
+        { column: "total_cents", operator: "gte", value: "500" },
+      ],
+    });
+  });
+
+  test("handles lowercase AND, escaped quotes, IS NOT NULL, and trailing garbage", () => {
+    expect(
+      parseSqlWhereFilter(
+        "status = 'customs'' hold' and deleted_at IS NOT NULL"
+      )
+    ).toMatchObject({
+      ok: true,
+      rules: [
+        { column: "status", operator: "eq", value: "customs' hold" },
+        { column: "deleted_at", operator: "isNotNull", value: "" },
+      ],
+    });
+    expect(parseSqlWhereFilter("status = 'held' trailing")).toMatchObject({
+      ok: false,
+      rules: [],
+    });
+  });
+
+  test("rejects OR and arbitrary SQL instead of treating it as raw SQL", () => {
+    expect(parseSqlWhereFilter("status = 'new' OR status = 'held'")).toEqual({
+      error:
+        "SQL WHERE supports column comparisons joined with AND only. Check the condition near \"status = 'new' OR status = 'held'\".",
+      ok: false,
+      rules: [],
+    });
+    expect(parseSqlWhereFilter("lower(email) = 'x'")).toMatchObject({
+      ok: false,
+      rules: [],
+    });
+  });
+
+  test("serializes rules back into the supported SQL WHERE subset", () => {
+    expect(
+      serializeSqlWhereFilterRules([
+        { column: "status", id: "a", operator: "eq", value: "customs' hold" },
+        { column: "weight_kg", id: "b", operator: "gt", value: "10000" },
+        { column: "deleted_at", id: "c", operator: "isNotNull", value: "" },
+      ])
+    ).toBe(
+      `"status" = 'customs'' hold' AND "weight_kg" > 10000 AND "deleted_at" IS NOT NULL`
+    );
   });
 });
 

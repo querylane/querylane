@@ -30,8 +30,7 @@ vi.mock("@/hooks/api/table-data", () => ({
   }),
 }));
 
-const EMPTY_FILTER_HELP_RE =
-  /Pick a column, choose an operator, then enter a value\. Use/;
+const SQL_WHERE_HELP_RE = /Supports column comparisons joined with AND/;
 
 function column(name: string, rawType: string, dataType: DataType) {
   return createProto(TableResultColumnSchema, {
@@ -124,7 +123,6 @@ function renderDataExplorerSurfaces() {
             onCopySelection={vi.fn()}
             onExportSelection={vi.fn()}
             onFilterChange={vi.fn()}
-            onFilterLogicChange={vi.fn()}
             onRefresh={vi.fn()}
             onSortChange={vi.fn()}
             selectedCount={3}
@@ -248,7 +246,6 @@ function renderFilteredToolbar() {
             onCopySelection={vi.fn()}
             onExportSelection={vi.fn()}
             onFilterChange={vi.fn()}
-            onFilterLogicChange={vi.fn()}
             onRefresh={vi.fn()}
             onSortChange={vi.fn()}
             selectedCount={0}
@@ -268,12 +265,37 @@ function renderEmptyFilterToolbar() {
           columns={resultColumns}
           filterLogic="and"
           filterRules={[]}
+          filterTitle="Filter shipping.carriers"
           isFetching={false}
           onClearSelection={vi.fn()}
           onCopySelection={vi.fn()}
           onExportSelection={vi.fn()}
           onFilterChange={vi.fn()}
-          onFilterLogicChange={vi.fn()}
+          onRefresh={vi.fn()}
+          onSortChange={vi.fn()}
+          selectedCount={0}
+          sortColumns={[]}
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+}
+
+function renderSqlWhereFilterToolbar() {
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1100px] rounded-2xl border border-border bg-background p-4 text-foreground">
+        <DataGridToolbar
+          columns={resultColumns}
+          filterLogic="and"
+          filterRules={[]}
+          filterTitle="Filter shipping.carriers"
+          isFetching={false}
+          onClearSelection={vi.fn()}
+          onCopySelection={vi.fn()}
+          onExportRows={vi.fn()}
+          onExportSelection={vi.fn()}
+          onFilterChange={vi.fn()}
           onRefresh={vi.fn()}
           onSortChange={vi.fn()}
           selectedCount={0}
@@ -297,7 +319,6 @@ function renderSortableToolbar() {
           onCopySelection={vi.fn()}
           onExportSelection={vi.fn()}
           onFilterChange={vi.fn()}
-          onFilterLogicChange={vi.fn()}
           onRefresh={vi.fn()}
           onSortChange={vi.fn()}
           selectedCount={0}
@@ -566,7 +587,6 @@ test("toolbar shows active sort summary beside the maximize action", async () =>
           onCopySelection={vi.fn()}
           onExportSelection={vi.fn()}
           onFilterChange={vi.fn()}
-          onFilterLogicChange={vi.fn()}
           onRefresh={vi.fn()}
           onSortChange={vi.fn()}
           onToggleExpanded={vi.fn()}
@@ -719,15 +739,56 @@ test("filter popover keeps multiple rules compact and aligned", async () => {
   }
 });
 
-test("filter popover explains the empty filter state", async () => {
+test("filter popover starts with an unapplied rule", async () => {
   renderEmptyFilterToolbar();
 
   await page.getByRole("button", { name: "Filter" }).click();
 
-  await expect.element(page.getByText(EMPTY_FILTER_HELP_RE)).toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Filter column" }))
+    .toBeVisible();
+  await expect.element(page.getByText("No conditions yet")).toBeVisible();
   await expect
     .element(page.getByRole("button", { name: "Add filter" }))
     .toBeVisible();
+
+  const popover = document.querySelector<HTMLElement>(
+    '[data-slot="popover-content"]'
+  );
+  if (!popover) {
+    throw new Error("expected Rules filter popover");
+  }
+  await expect(page.elementLocator(popover)).toMatchScreenshot(
+    "data-explorer-rules-filter-popover"
+  );
+});
+
+test("filter popover exposes SQL WHERE mode", async () => {
+  renderSqlWhereFilterToolbar();
+
+  await page.getByRole("button", { name: "Filter" }).click();
+  await page.getByRole("tab", { name: "SQL WHERE" }).click();
+  await page
+    .getByRole("textbox", { name: "SQL WHERE clause" })
+    .fill("status = 'customs_hold' AND weight_kg > 10000");
+
+  await expect
+    .element(page.getByText("Filter shipping.carriers"))
+    .toBeVisible();
+  await expect.element(page.getByText(SQL_WHERE_HELP_RE)).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Apply" }))
+    .toBeVisible();
+
+  const popover = document.querySelector<HTMLElement>(
+    '[data-slot="popover-content"]'
+  );
+  if (!popover) {
+    throw new Error("expected SQL WHERE filter popover");
+  }
+  await expect(page.elementLocator(popover)).toMatchScreenshot(
+    "data-explorer-sql-where-filter-popover"
+  );
 });
 
 test("page size select shows every option when the footer is near the viewport edge", async () => {
@@ -794,7 +855,6 @@ test("filter popover stays inside the data-grid boundary when the grid is offset
             onCopySelection={vi.fn()}
             onExportSelection={vi.fn()}
             onFilterChange={vi.fn()}
-            onFilterLogicChange={vi.fn()}
             onRefresh={vi.fn()}
             onSortChange={vi.fn()}
             selectedCount={0}
@@ -875,7 +935,6 @@ test("sort popover stays inside the data-grid boundary when the grid is offset",
             onCopySelection={vi.fn()}
             onExportSelection={vi.fn()}
             onFilterChange={vi.fn()}
-            onFilterLogicChange={vi.fn()}
             onRefresh={vi.fn()}
             onSortChange={vi.fn()}
             selectedCount={0}

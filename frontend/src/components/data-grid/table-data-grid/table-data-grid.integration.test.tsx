@@ -924,6 +924,19 @@ describe("TableDataGrid toolbar", () => {
     );
   });
 
+  it("labels the filter with the selected relation", async () => {
+    const user = userEvent.setup();
+    seedRowsQuery(1);
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+
+    expect(screen.getByText("Filter public.customers")).toBeTruthy();
+  });
+
   it("places row export beside expand and keeps fetch time out of the visible toolbar", () => {
     seedRowsQuery(1, {
       dataUpdatedAt: Date.UTC(2026, 5, 14, 10, 30, 15),
