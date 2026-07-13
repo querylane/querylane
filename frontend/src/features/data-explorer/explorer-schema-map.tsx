@@ -538,7 +538,7 @@ function SchemaMapCanvas({
   return (
     <section
       aria-label="Schema relationship map"
-      className="relative min-h-[32rem] flex-1 overflow-auto bg-[radial-gradient(color-mix(in_oklch,var(--foreground)_8%,transparent)_1px,transparent_1px)] bg-[size:22px_22px] bg-background"
+      className="relative min-h-0 flex-1 overflow-auto bg-[radial-gradient(color-mix(in_oklch,var(--foreground)_8%,transparent)_1px,transparent_1px)] bg-[size:22px_22px] bg-background"
     >
       <svg
         className="block"
@@ -710,7 +710,7 @@ function ExplorerSchemaMap({
   return (
     <section
       aria-label={`Schema map for ${activeSchemaName}`}
-      className="flex min-h-[42rem] overflow-hidden rounded-xl border bg-background"
+      className="flex h-full min-h-[32rem] overflow-hidden rounded-xl border bg-background"
     >
       <div className="flex min-w-0 flex-1 flex-col">
         <SchemaMapToolbar

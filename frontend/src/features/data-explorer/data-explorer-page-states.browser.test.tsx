@@ -5,6 +5,7 @@ import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { ExplorerRailFrame } from "@/__tests__/explorer-rail-test-utils";
 import { DataExplorerPage } from "@/features/data-explorer/data-explorer-page";
+import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
 import { createTestQueryClient } from "@/test/query-client";
 
 interface SchemaFixture {
@@ -50,6 +51,7 @@ const mocks = vi.hoisted(() => ({
     error: null as Error | null,
     isLoading: false,
   },
+  schemaMapTables: [] as TableFixture[],
   schemasQuery: {
     data: { pages: [{ schemas: [] as SchemaFixture[] }] },
     error: new Error("schema rpc failed") as Error | null,
@@ -125,6 +127,27 @@ vi.mock("@connectrpc/connect-query", () => ({
   useTransport: () => ({}),
 }));
 
+vi.mock("@tanstack/react-query", async () => {
+  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
+    "@tanstack/react-query"
+  );
+
+  return {
+    ...actual,
+    useQueries: ({ queries }: { queries: unknown[] }) =>
+      queries.map(() => ({
+        data: {
+          columns: [],
+          constraints: [],
+          tables: mocks.schemaMapTables,
+          views: [],
+        },
+        error: null,
+        isLoading: false,
+      })),
+  };
+});
+
 vi.mock("@/hooks/api/schema", () => ({
   schemasForDatabaseQueryInput: vi.fn((input) => input),
   useGetSchemaQuery: () => ({ data: undefined }),
@@ -192,7 +215,7 @@ function renderDataExplorerPage() {
   );
 }
 
-function renderSelectedTableExplorerPage() {
+function renderWideExplorerPage(search: DataExplorerSearch) {
   const queryClient = createTestQueryClient();
 
   render(
@@ -206,17 +229,31 @@ function renderSelectedTableExplorerPage() {
             <DataExplorerPage
               databaseId="app"
               instanceId="prod"
-              search={{
-                category: "tables",
-                name: "page_views",
-                schema: "analytics",
-              }}
+              search={search}
             />
           </ExplorerRailFrame>
         </QueryClientProvider>
       </div>
     </ScreenshotFrame>
   );
+}
+
+function seedAnalyticsSchema() {
+  mocks.schemasQuery.data = {
+    pages: [
+      {
+        schemas: [
+          {
+            displayName: "analytics",
+            name: "instances/prod/databases/app/schemas/analytics",
+            owner: "postgres",
+          },
+        ],
+      },
+    ],
+  };
+  mocks.schemasQuery.error = null;
+  mocks.tablesQuery.data = { pages: [{ tables: [] }] };
 }
 
 beforeEach(() => {
@@ -236,6 +273,7 @@ beforeEach(() => {
   mocks.schemasQuery.error = new Error("schema rpc failed");
   mocks.schemasQuery.isFetching = false;
   mocks.schemasQuery.isPending = false;
+  mocks.schemaMapTables = [];
   mocks.selectedTableQuery.data = undefined;
   mocks.selectedTableQuery.error = null;
   mocks.tablesQuery.data = undefined;
@@ -307,7 +345,11 @@ test("data explorer table grid uses width immediately beside object browser", as
     },
   };
 
-  renderSelectedTableExplorerPage();
+  renderWideExplorerPage({
+    category: "tables",
+    name: "page_views",
+    schema: "analytics",
+  });
 
   await expect.element(page.getByTestId("mock-table-data-grid")).toBeVisible();
 
@@ -376,4 +418,71 @@ test("data explorer table grid uses width immediately beside object browser", as
     sidebar.getBoundingClientRect().right
   );
   expect(sizeLabelRect.left).toBeGreaterThanOrEqual(tableNameRect.right - 1);
+});
+
+test("data explorer schema map fills the available detail area", async () => {
+  seedAnalyticsSchema();
+  mocks.schemaMapTables = [
+    {
+      displayName: "page_views",
+      name: "instances/prod/databases/app/schemas/analytics/tables/page_views",
+      rowCount: 42n,
+      sizeBytes: 65_536n,
+    },
+  ];
+  renderWideExplorerPage({ schema: "analytics", tab: "map" });
+
+  await expect
+    .element(page.getByRole("region", { name: "Schema map for analytics" }))
+    .toBeVisible();
+
+  const shell = page.getByTestId("wide-explorer-shell").element();
+  const rail = page.getByTestId("explorer-rail-slot").element();
+  const map = page
+    .getByRole("region", { name: "Schema map for analytics" })
+    .element();
+  const canvas = page
+    .getByRole("region", { name: "Schema relationship map" })
+    .element();
+  const shellRect = shell.getBoundingClientRect();
+  const railRect = rail.getBoundingClientRect();
+  const mapRect = map.getBoundingClientRect();
+  const canvasRect = canvas.getBoundingClientRect();
+
+  expect(mapRect.width).toBeGreaterThan(1200);
+  expect(mapRect.left).toBeGreaterThanOrEqual(railRect.right);
+  expect(mapRect.left - railRect.right).toBeLessThanOrEqual(64);
+  expect(mapRect.right).toBeLessThanOrEqual(shellRect.right);
+  expect(shellRect.right - mapRect.right).toBeLessThanOrEqual(64);
+  expect(mapRect.bottom).toBeLessThanOrEqual(shellRect.bottom);
+  expect(shellRect.bottom - mapRect.bottom).toBeLessThanOrEqual(64);
+  expect(canvasRect.bottom).toBeLessThanOrEqual(mapRect.bottom);
+});
+
+test("data explorer schema objects stay centered at wide widths", async () => {
+  seedAnalyticsSchema();
+  renderWideExplorerPage({ schema: "analytics" });
+
+  await expect
+    .element(page.getByRole("heading", { name: "analytics" }))
+    .toBeVisible();
+
+  const shell = page.getByTestId("wide-explorer-shell").element();
+  const rail = page.getByTestId("explorer-rail-slot").element();
+  const details = page
+    .getByRole("region", { name: "Data Explorer details" })
+    .element();
+  const content = details.firstElementChild?.firstElementChild;
+  if (!(content instanceof HTMLElement)) {
+    throw new Error("Expected the Data Explorer detail content.");
+  }
+
+  const shellRect = shell.getBoundingClientRect();
+  const railRect = rail.getBoundingClientRect();
+  const contentRect = content.getBoundingClientRect();
+  const availableCenter = (railRect.right + shellRect.right) / 2;
+  const contentCenter = (contentRect.left + contentRect.right) / 2;
+
+  expect(contentRect.width).toBeLessThanOrEqual(900);
+  expect(Math.abs(contentCenter - availableCenter)).toBeLessThanOrEqual(1);
 });
