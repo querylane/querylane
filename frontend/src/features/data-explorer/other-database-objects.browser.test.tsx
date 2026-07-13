@@ -25,12 +25,10 @@ vi.mock("@/features/data-explorer/other-database-objects-query", () => ({
 }));
 
 const CREATE_SHIPMENT_STATUS_RE = /CREATE TYPE shipping\.shipment_status/;
-const JOBS_CATEGORY_RE = /^Category.*Jobs · pg_cron/;
 const LOCK_TIMEOUT_RE = /lock timeout · 29 Jun 05:00/;
 const NEXT_RUNS_RE = /next runs:/;
 const PARTMAN_MAINTENANCE_RE = /partman-maintenance/;
 const SHIPMENT_STATUS_BUTTON_RE = /shipping\.shipment_status/;
-const TYPES_CATEGORY_RE = /^Category.*Types/;
 
 const designObjects: OtherDatabaseObject[] = [
   {
@@ -202,7 +200,7 @@ test("schema overview keeps search and filters above the new inventory", async (
     )
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: TYPES_CATEGORY_RE }))
+    .element(page.getByRole("button", { name: "Category" }))
     .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-schema-overview-other-database-objects"
@@ -216,13 +214,13 @@ test("other database objects matches the design's compact type inventory", async
     .element(page.getByRole("heading", { name: "Other database objects" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: TYPES_CATEGORY_RE }))
+    .element(page.getByRole("button", { name: "Category" }))
     .toBeVisible();
   const search = page
     .getByRole("searchbox", { name: "Search other database objects" })
     .element();
   const categoryFilter = page
-    .getByRole("button", { name: TYPES_CATEGORY_RE })
+    .getByRole("button", { name: "Category" })
     .element();
   expect(search.getBoundingClientRect().left).toBeLessThan(
     categoryFilter.getBoundingClientRect().left
@@ -261,7 +259,9 @@ test("other database objects keeps its filter layout stable while loading", asyn
   );
 
   await expect
-    .element(page.getByRole("status", { name: "Loading object filters" }))
+    .element(
+      page.getByRole("status", { name: "Loading other database objects" })
+    )
     .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-other-database-objects-loading"
@@ -272,7 +272,7 @@ test("other database objects matches the design's pg cron run history view", asy
   renderPanel(designJobObjects);
 
   await expect
-    .element(page.getByRole("button", { name: JOBS_CATEGORY_RE }))
+    .element(page.getByRole("button", { name: "Category" }))
     .toBeVisible();
   await expect.element(page.getByText("partman-maintenance")).toBeVisible();
   await expect.element(page.getByText("vacuum-audit-log")).toBeVisible();

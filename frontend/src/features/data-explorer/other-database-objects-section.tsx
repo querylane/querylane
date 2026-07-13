@@ -148,14 +148,14 @@ function isOtherObjectCategory(value: string): value is OtherObjectCategory {
 }
 
 function resolveSelectedCategory(
-  requestedCategories: OtherObjectCategory[] | null,
+  requestedCategories: OtherObjectCategory[],
   presentCategories: OtherObjectCategoryMeta[]
 ): OtherObjectCategory | undefined {
-  if (requestedCategories?.length === 0) {
+  if (requestedCategories.length === 0) {
     return;
   }
   const requestedCategory =
-    requestedCategories?.length === 1 ? requestedCategories[0] : undefined;
+    requestedCategories.length === 1 ? requestedCategories[0] : undefined;
   return (
     presentCategories.find((category) => category.key === requestedCategory)
       ?.key ?? presentCategories[0]?.key
@@ -825,11 +825,7 @@ function OtherObjectsLoading() {
 function OtherObjectsFiltersLoading() {
   return (
     <>
-      <div
-        aria-label="Loading object filters"
-        className="flex min-w-0 items-center gap-2"
-        role="status"
-      >
+      <div aria-hidden="true" className="flex min-w-0 items-center gap-2">
         <Skeleton className="h-8 min-w-0 flex-1 sm:max-w-64" />
         <Skeleton className="h-8 w-28 shrink-0" />
       </div>
@@ -968,8 +964,8 @@ function OtherDatabaseObjectsPanel({
 }: OtherDatabaseObjectsPanelProps) {
   const titleId = useId();
   const [requestedCategories, setRequestedCategories] = useState<
-    OtherObjectCategory[] | null
-  >(null);
+    OtherObjectCategory[]
+  >([]);
   const [query, setQuery] = useState("");
   const [expandedObjectKey, setExpandedObjectKey] = useState<string | null>(
     null
@@ -998,8 +994,7 @@ function OtherDatabaseObjectsPanel({
     )
     .sort((left, right) => left.sortKey.localeCompare(right.sortKey));
   const hasActiveFilters =
-    query.trim().length > 0 ||
-    (requestedCategories !== null && selectedCategory !== undefined);
+    query.trim().length > 0 || selectedCategory !== undefined;
   const hasMatchesInOtherCategories =
     visibleObjects.length === 0 &&
     selectedCategory !== undefined &&
@@ -1111,22 +1106,24 @@ function OtherDatabaseObjectsPanel({
       </header>
 
       <div className="min-h-72 border-border border-t p-4">
-        <OtherObjectsFilters
-          categoryDescription={categoryDescription}
-          counts={counts}
-          isLoading={isLoading}
-          onCategoryChange={(categories) => {
-            setRequestedCategories(categories);
-            setExpandedObjectKey(null);
-          }}
-          onQueryChange={(nextQuery) => {
-            setQuery(nextQuery);
-            setExpandedObjectKey(null);
-          }}
-          presentCategories={presentCategories}
-          query={query}
-          selectedCategories={selectedCategories}
-        />
+        {error ? null : (
+          <OtherObjectsFilters
+            categoryDescription={categoryDescription}
+            counts={counts}
+            isLoading={isLoading}
+            onCategoryChange={(categories) => {
+              setRequestedCategories(categories);
+              setExpandedObjectKey(null);
+            }}
+            onQueryChange={(nextQuery) => {
+              setQuery(nextQuery);
+              setExpandedObjectKey(null);
+            }}
+            presentCategories={presentCategories}
+            query={query}
+            selectedCategories={selectedCategories}
+          />
+        )}
 
         {copyNotice ? (
           <p className="mt-3 text-muted-foreground text-sm" role="status">

@@ -164,6 +164,7 @@ const ROUTINES_OPTION_RE = /^Routines/;
 const SEQUENCES_BUTTON_RE = /^Sequences 1$/;
 const TRUNCATED_INVENTORY_RE = /Showing a partial inventory/;
 const CRON_JOBS_OPTION_RE = /^Jobs · pg_cron/;
+const TYPES_BUTTON_RE = /^Types 2$/;
 
 afterEach(() => {
   cleanup();
@@ -210,9 +211,7 @@ describe("OtherDatabaseObjectsPanel", () => {
     const user = userEvent.setup();
     render(<OtherDatabaseObjectsPanel isLoading={false} objects={objects} />);
 
-    await user.click(
-      screen.getByRole("button", { name: CATEGORY_TYPES_FILTER_RE })
-    );
+    await user.click(screen.getByRole("button", { name: CATEGORY_FILTER_RE }));
 
     expect(screen.getByRole("option", { name: "Types 2" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "Collations 1" })).toBeTruthy();
@@ -224,12 +223,21 @@ describe("OtherDatabaseObjectsPanel", () => {
     ).toBeNull();
   });
 
+  it("starts with every present category visible", () => {
+    render(<OtherDatabaseObjectsPanel isLoading={false} objects={objects} />);
+
+    expect(screen.getByRole("button", { name: "Category" })).toBeTruthy();
+    expect(screen.getByText("shipping.shipment_status")).toBeTruthy();
+    expect(screen.getByText("case_insensitive")).toBeTruthy();
+  });
+
   it("uses placeholders instead of empty categories while loading", () => {
     render(<OtherDatabaseObjectsPanel isLoading={true} objects={[]} />);
 
     expect(
-      screen.getByRole("status", { name: "Loading object filters" })
+      screen.getByRole("status", { name: "Loading other database objects" })
     ).toBeTruthy();
+    expect(screen.getAllByRole("status")).toHaveLength(1);
     expect(
       screen.queryByRole("searchbox", {
         name: "Search other database objects",
@@ -277,13 +285,16 @@ describe("OtherDatabaseObjectsPanel", () => {
     expect(screen.queryByText("Matches exist in other categories.")).toBeNull();
   });
 
-  it("renders the category filter and type cards", () => {
+  it("renders the category filter and type cards", async () => {
+    const user = userEvent.setup();
     render(<OtherDatabaseObjectsPanel isLoading={false} objects={objects} />);
 
     expect(
       screen.getByRole("heading", { name: "Other database objects" })
     ).toBeTruthy();
     expect(screen.getByText(INTRO_COPY_RE)).toBeTruthy();
+
+    await selectCategory(user, TYPES_BUTTON_RE);
 
     expect(
       screen.getByRole("button", { name: CATEGORY_TYPES_FILTER_RE })
@@ -297,6 +308,7 @@ describe("OtherDatabaseObjectsPanel", () => {
     const user = userEvent.setup();
     render(<OtherDatabaseObjectsPanel isLoading={false} objects={objects} />);
 
+    await selectCategory(user, TYPES_BUTTON_RE);
     await user.type(
       screen.getByRole("searchbox", {
         name: "Search other database objects",
@@ -441,6 +453,11 @@ describe("OtherDatabaseObjectsPanel", () => {
         onRetry={onRetry}
       />
     );
+    expect(
+      screen.queryByRole("searchbox", {
+        name: "Search other database objects",
+      })
+    ).toBeNull();
     await user.click(screen.getByRole("button", { name: "Retry" }));
     expect(onRetry).toHaveBeenCalledOnce();
   });
