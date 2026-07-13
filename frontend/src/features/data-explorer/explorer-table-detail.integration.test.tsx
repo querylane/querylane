@@ -1501,6 +1501,70 @@ describe("TableDetail columns tab", () => {
 });
 
 describe("TableDetail triggers tab", () => {
+  it("searches and filters trigger cards from one inline toolbar", async () => {
+    const user = userEvent.setup();
+    tableQueries.triggers.data = create(ListTableTriggersResponseSchema, {
+      triggers: [
+        create(TableTriggerSchema, {
+          definition:
+            "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location()",
+          enabled: true,
+          triggerName: "trg_event_enrich",
+        }),
+        create(TableTriggerSchema, {
+          definition:
+            "CREATE TRIGGER trg_shipments_notify AFTER UPDATE ON shipping.shipment_event FOR EACH ROW EXECUTE FUNCTION shipping.notify_status_change()",
+          enabled: false,
+          triggerName: "trg_shipments_notify",
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="warehouse"
+        initialTab="triggers"
+        instanceId="prod"
+        schemaName="shipping"
+        table={create(TableSchema, { rowCount: 18_200_000n })}
+        tableName="shipment_event"
+      />
+    );
+
+    const search = screen.getByRole("textbox", { name: "Search triggers…" });
+    const filterRail = search.parentElement?.parentElement;
+    if (!filterRail) {
+      throw new Error("Missing trigger filter rail");
+    }
+    const stateFilter = within(filterRail).getByRole("button", {
+      name: "State",
+    });
+    expect(search.compareDocumentPosition(stateFilter)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+
+    await user.type(search, "notify");
+    expect(screen.queryByText("trg_event_enrich")).toBeNull();
+    expect(screen.getAllByText("trg_shipments_notify").length).toBeGreaterThan(
+      0
+    );
+
+    await user.clear(search);
+    await user.click(stateFilter);
+    await user.click(screen.getByRole("option", { name: "Disabled" }));
+    expect(screen.queryByText("trg_event_enrich")).toBeNull();
+    expect(screen.getAllByText("trg_shipments_notify").length).toBeGreaterThan(
+      0
+    );
+
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+    expect(screen.getAllByText("trg_event_enrich").length).toBeGreaterThan(0);
+
+    await user.type(search, "missing");
+    expect(screen.getByText("No triggers found")).toBeTruthy();
+    expect(screen.getByText("Try a different search or filter.")).toBeTruthy();
+  });
+
   it("renders trigger cards with executable SQL and copy action", async () => {
     const user = userEvent.setup();
     const writeText = vi.fn(() => Promise.resolve());

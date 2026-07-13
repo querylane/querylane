@@ -98,6 +98,8 @@ import {
   filterColumnDetailRows,
   filterIndexesByMethod,
   filterPoliciesByMode,
+  filterTableTriggers,
+  type TriggerStateFilter,
 } from "@/features/data-explorer/explorer-table-detail-filters";
 import {
   derivePartitionTabCount,
@@ -277,6 +279,10 @@ const PARTITION_BOUND_KIND_LABELS: Record<PartitionBoundKind, string> = {
   other: "Other",
   range: "Range",
 };
+const TRIGGER_STATE_FILTER_LABELS: Record<TriggerStateFilter, string> = {
+  disabled: "Disabled",
+  enabled: "Enabled",
+};
 const PARTITION_BOUND_KIND_ORDER = [
   "range",
   "list",
@@ -345,6 +351,23 @@ function presentPartitionBoundKindOptions(
     }
   }
   return options;
+}
+function presentTriggerStateOptions(
+  triggers: TableTrigger[]
+): FacetedFilterOption[] {
+  const present = new Set<TriggerStateFilter>(
+    triggers.map((trigger) => (trigger.enabled ? "enabled" : "disabled"))
+  );
+  const options: FacetedFilterOption[] = [];
+  for (const value of ["enabled", "disabled"] satisfies TriggerStateFilter[]) {
+    if (present.has(value)) {
+      options.push({ label: TRIGGER_STATE_FILTER_LABELS[value], value });
+    }
+  }
+  return options;
+}
+function isTriggerStateFilter(value: string): value is TriggerStateFilter {
+  return value === "disabled" || value === "enabled";
 }
 function isPartitionBoundKind(value: string): value is PartitionBoundKind {
   return PARTITION_BOUND_KIND_ORDER.includes(value as PartitionBoundKind);
@@ -3435,6 +3458,8 @@ function TriggersTab({
   schemaName: string;
   tableName: string;
 }) {
+  const [search, setSearch] = useState("");
+  const [stateFilters, setStateFilters] = useState<string[]>([]);
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
     return (
@@ -3458,45 +3483,59 @@ function TriggersTab({
   if (triggers.length === 0) {
     return <TableResourceEmptyState category="triggers" toolbar={toolbar} />;
   }
+  const filteredTriggers = filterTableTriggers(triggers, {
+    search,
+    states: stateFilters.filter(isTriggerStateFilter),
+  });
   return (
     <div
       className="flex flex-col gap-3"
       data-table-key="data-explorer-table-triggers"
       data-testid="data-explorer-table-triggers"
     >
-      <div className="flex items-center justify-end gap-2">
-        <span aria-live="polite" className="text-muted-foreground text-xs">
-          {toolbar.lastFetchedLabel}
-        </span>
-        <Button
-          disabled={toolbar.isRefreshing}
-          onClick={() => {
-            toolbar.handleRefresh();
-          }}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          <RefreshCw
-            aria-hidden="true"
-            className={cn(
-              "size-3.5",
-              toolbar.isRefreshing && "animate-spin motion-reduce:animate-none"
-            )}
+      <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <DataTableFilter
+            onChange={setSearch}
+            placeholder="Search triggers…"
+            value={search}
           />
-          Refresh
-        </Button>
-      </div>
-      <div className="flex flex-col gap-2.5">
-        {triggers.map((trigger) => (
-          <TriggerCard
-            key={trigger.triggerName}
-            schemaName={schemaName}
-            tableName={tableName}
-            trigger={trigger}
+          <FacetFilterBar
+            filters={[
+              {
+                handleSelectedValuesChange: setStateFilters,
+                label: "State",
+                options: presentTriggerStateOptions(triggers),
+                selectedValues: stateFilters,
+              },
+            ]}
           />
-        ))}
+        </div>
+        <RefreshControl
+          className="text-muted-foreground text-xs"
+          isRefreshing={toolbar.isRefreshing}
+          labelClassName="sm:not-sr-only"
+          lastFetchedLabel={toolbar.lastFetchedLabel}
+          onRefresh={toolbar.handleRefresh}
+        />
       </div>
+      {filteredTriggers.length === 0 ? (
+        <SearchEmptyState
+          className="rounded-[10px] border"
+          resourceName="triggers"
+        />
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {filteredTriggers.map((trigger) => (
+            <TriggerCard
+              key={trigger.triggerName}
+              schemaName={schemaName}
+              tableName={tableName}
+              trigger={trigger}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

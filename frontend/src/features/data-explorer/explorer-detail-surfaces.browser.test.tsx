@@ -2394,6 +2394,20 @@ test("data explorer table triggers match redesign", async () => {
     />
   );
 
+  const triggerSearch = page.getByRole("textbox", {
+    exact: true,
+    name: "Search triggers…",
+  });
+  const triggerStateFilter = page.getByRole("button", {
+    exact: true,
+    name: "State",
+  });
+  await expect.element(triggerSearch).toBeVisible();
+  await expect.element(triggerStateFilter).toBeVisible();
+  const searchBounds = triggerSearch.element().getBoundingClientRect();
+  const stateBounds = triggerStateFilter.element().getBoundingClientRect();
+  expect(stateBounds.left).toBeGreaterThan(searchBounds.right);
+  expect(Math.abs(stateBounds.top - searchBounds.top)).toBeLessThanOrEqual(1);
   await expect
     .element(page.getByText("trg_event_enrich").first())
     .toBeVisible();
@@ -2417,6 +2431,34 @@ test("data explorer table triggers match redesign", async () => {
     comparatorOptions: { threshold: 0.2 },
     timeout: 20_000,
   });
+
+  await triggerStateFilter.click();
+  const disabledOption = page.getByRole("option", {
+    exact: true,
+    name: "Disabled",
+  });
+  await expect.element(disabledOption).toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-trigger-filter-open",
+    { timeout: 20_000 }
+  );
+
+  await disabledOption.click();
+  await expect
+    .element(page.getByText("trg_event_enrich").first())
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByText("trg_shipments_notify").first())
+    .toBeVisible();
+  await page
+    .getByRole("button", { exact: true, name: "State Disabled" })
+    .click();
+  await triggerSearch.fill("missing");
+  await expect.element(page.getByText("No triggers found")).toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-trigger-filter-empty",
+    { timeout: 20_000 }
+  );
 });
 
 test("data explorer table data tab has a visual baseline", async () => {

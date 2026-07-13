@@ -5,12 +5,14 @@ import type {
   PolicyMode,
   TableIndex,
   TablePolicy,
+  TableTrigger,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 type ColumnDefaultFilter = "has-default" | "no-default";
 type ColumnGenerationFilter = "generated" | "identity" | "regular";
 type ColumnKeyFilter = "foreign" | "index" | "none" | "primary" | "unique";
 type ColumnNullabilityFilter = "not-null" | "nullable";
+type TriggerStateFilter = "disabled" | "enabled";
 
 // Multi-select facets: an empty selection means "no filter". Each facet keeps
 // only rows whose value is one of the selected values.
@@ -113,12 +115,30 @@ function filterPoliciesByMode(
   return policies.filter((policy) => modes.includes(policy.mode));
 }
 
+function filterTableTriggers(
+  triggers: TableTrigger[],
+  filters: { search: string; states: TriggerStateFilter[] }
+): TableTrigger[] {
+  const search = filters.search.trim().toLowerCase();
+  return triggers.filter((trigger) => {
+    if (search && !trigger.triggerName.toLowerCase().includes(search)) {
+      return false;
+    }
+    if (filters.states.length === 0) {
+      return true;
+    }
+    const state = trigger.enabled ? "enabled" : "disabled";
+    return filters.states.includes(state);
+  });
+}
+
 export type {
   ColumnDefaultFilter,
   ColumnDetailFilters,
   ColumnGenerationFilter,
   ColumnKeyFilter,
   ColumnNullabilityFilter,
+  TriggerStateFilter,
 };
 export {
   columnDefaultKind,
@@ -129,4 +149,5 @@ export {
   filterColumnDetailRows,
   filterIndexesByMethod,
   filterPoliciesByMode,
+  filterTableTriggers,
 };
