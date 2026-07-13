@@ -99,9 +99,12 @@ async function consumeSetupStreamWithProgress(
     const event = response.event;
     if (event) {
       onProgress(event);
-      setupCompleted ||=
+      if (
         event.stepId === SetupStep.PERSISTING_CONFIG &&
-        event.state === StepState.SUCCEEDED;
+        event.state === StepState.SUCCEEDED
+      ) {
+        setupCompleted = true;
+      }
     }
 
     const message = getProgressFailureMessage(event);
