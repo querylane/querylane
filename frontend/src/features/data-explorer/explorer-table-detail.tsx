@@ -34,6 +34,7 @@ import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data
 import { EmptyStatePanel } from "@/components/empty-state-panel";
 import { SearchEmptyState } from "@/components/search-empty-state";
 import { SelectValue } from "@/components/select-extensions";
+import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1662,7 +1663,7 @@ function DefaultPartitionCard({
   return (
     <aside className="flex w-full flex-none flex-col rounded-lg border border-amber-500/50 bg-amber-500/5 p-4 shadow-xs md:w-64">
       <div className="flex items-center gap-2">
-        <Badge variant="warning">DEFAULT</Badge>
+        <StatusBadge variant="warning">DEFAULT</StatusBadge>
         <span className="truncate font-mono text-muted-foreground text-xs">
           {partition.name}
         </span>
@@ -1716,10 +1717,10 @@ function PartitionRowsTable({
                     {row.name}
                   </span>
                   {row.isCurrent ? (
-                    <Badge variant="success">CURRENT</Badge>
+                    <StatusBadge variant="success">CURRENT</StatusBadge>
                   ) : null}
                   {row.isDefault ? (
-                    <Badge variant="warning">DEFAULT</Badge>
+                    <StatusBadge variant="warning">DEFAULT</StatusBadge>
                   ) : null}
                 </div>
               </TableCell>
