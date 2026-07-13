@@ -14,6 +14,10 @@ func col(dataType api.DataType) *api.TableResultColumn {
 	return &api.TableResultColumn{DataType: dataType}
 }
 
+func temporalCol(dataType api.DataType, rawType string) *api.TableResultColumn {
+	return &api.TableResultColumn{DataType: dataType, RawType: rawType}
+}
+
 func TestConvertToValueTyped(t *testing.T) {
 	t.Parallel()
 
@@ -110,12 +114,69 @@ func TestConvertToValueTyped(t *testing.T) {
 			},
 		},
 		{
-			name:   "timestamp_time",
+			name:   "timestamp_without_time_zone_omits_zone",
 			value:  time.Date(2025, 5, 10, 12, 34, 56, 0, time.UTC),
-			column: col(api.DataType_DATA_TYPE_TIMESTAMP),
+			column: temporalCol(api.DataType_DATA_TYPE_TIMESTAMP, "timestamp(3)"),
+			check: func(t *testing.T, v *api.TableValue) {
+				t.Helper()
+				assert.Equal(t, "2025-05-10T12:34:56", v.GetTimestampValue())
+			},
+		},
+		{
+			name:   "timestamp_with_time_zone_keeps_zone",
+			value:  time.Date(2025, 5, 10, 12, 34, 56, 0, time.UTC),
+			column: temporalCol(api.DataType_DATA_TYPE_TIMESTAMP, "timestamptz(3)"),
 			check: func(t *testing.T, v *api.TableValue) {
 				t.Helper()
 				assert.Equal(t, "2025-05-10T12:34:56Z", v.GetTimestampValue())
+			},
+		},
+		{
+			name:   "date_omits_midnight_time",
+			value:  time.Date(2025, 5, 10, 0, 0, 0, 0, time.UTC),
+			column: temporalCol(api.DataType_DATA_TYPE_DATE, "date"),
+			check: func(t *testing.T, v *api.TableValue) {
+				t.Helper()
+				assert.Equal(t, "2025-05-10", v.GetTimestampValue())
+			},
+		},
+		{
+			name:   "time_without_time_zone_omits_date_and_zone",
+			value:  time.Date(1, 1, 1, 12, 34, 56, 123_456_000, time.UTC),
+			column: temporalCol(api.DataType_DATA_TYPE_TIME, "time(6)"),
+			check: func(t *testing.T, v *api.TableValue) {
+				t.Helper()
+				assert.Equal(t, "12:34:56.123456", v.GetTimestampValue())
+			},
+		},
+		{
+			name:   "time_text_keeps_temporal_value_kind",
+			value:  "12:34:56.123456",
+			column: temporalCol(api.DataType_DATA_TYPE_TIME, "time(6)"),
+			check: func(t *testing.T, v *api.TableValue) {
+				t.Helper()
+				assert.Equal(t, "12:34:56.123456", v.GetTimestampValue())
+			},
+		},
+		{
+			name:  "time_with_time_zone_keeps_zone",
+			value: time.Date(1, 1, 1, 12, 34, 56, 0, time.FixedZone("", 5*60*60+30*60)),
+			column: temporalCol(
+				api.DataType_DATA_TYPE_TIME,
+				"timetz(3)",
+			),
+			check: func(t *testing.T, v *api.TableValue) {
+				t.Helper()
+				assert.Equal(t, "12:34:56+05:30", v.GetTimestampValue())
+			},
+		},
+		{
+			name:   "timetz_text_keeps_temporal_value_kind",
+			value:  "12:34:56+05:30",
+			column: temporalCol(api.DataType_DATA_TYPE_TIME, "timetz"),
+			check: func(t *testing.T, v *api.TableValue) {
+				t.Helper()
+				assert.Equal(t, "12:34:56+05:30", v.GetTimestampValue())
 			},
 		},
 		{

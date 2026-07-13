@@ -27,8 +27,11 @@ interface FormattedCell {
 const NULL_DISPLAY = "NULL";
 const TIMESTAMP_FORMAT = "yyyy-MM-dd HH:mm:ss";
 const MAX_FRACTION_DIGITS = 6;
+const DATE_PART_PATTERN = /^(\d{4}-\d{2}-\d{2})(?:$|[T ])/;
 const RFC3339_PARTS_PATTERN =
   /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})(?:\.\d+)?(?:\s*(Z|[+-]\d{2}(?::?\d{2})?))?$/i;
+const TIME_PARTS_PATTERN =
+  /^(\d{2}:\d{2}:\d{2}(?:\.\d+)?)(?:\s*(Z|[+-]\d{2}(?::?\d{2})?))?$/i;
 const TIMEZONE_OFFSET_PATTERN = /^([+-])(\d{2})(?::?(\d{2}))?$/;
 
 function formatTimezoneLabel(offset: string | undefined): string | undefined {
@@ -71,6 +74,29 @@ function formatTimestamp(raw: string): {
   } catch {
     return { display: raw };
   }
+}
+
+function formatTime(raw: string): {
+  display: string;
+  timezoneLabel?: string | undefined;
+} {
+  const parts = raw.match(TIME_PARTS_PATTERN);
+  if (!parts?.[1]) {
+    return { display: raw };
+  }
+  return {
+    display: parts[1],
+    timezoneLabel: formatTimezoneLabel(parts[2]),
+  };
+}
+
+function columnHasTimezone(rawType: string): boolean {
+  const normalized = rawType.trim().toLowerCase();
+  return (
+    normalized.startsWith("timestamptz") ||
+    normalized.startsWith("timetz") ||
+    normalized.includes(" with time zone")
+  );
 }
 
 function formatNumber(value: number): string {
@@ -127,17 +153,24 @@ function formatTimestampCell(
   rawValue: unknown,
   truncated: boolean
 ): FormattedCell {
-  const timestamp = formatTimestamp(String(rawValue ?? ""));
-  const display =
-    column.dataType === DataType.DATE || !timestamp.timezoneLabel
-      ? timestamp.display
-      : `${timestamp.display} ${timestamp.timezoneLabel}`;
+  const raw = String(rawValue ?? "");
+  let temporal = formatTimestamp(raw);
+  if (column.dataType === DataType.DATE) {
+    temporal = { display: raw.match(DATE_PART_PATTERN)?.[1] ?? raw };
+  } else if (column.dataType === DataType.TIME) {
+    temporal = formatTime(raw);
+  }
+  const timezoneLabel = columnHasTimezone(column.rawType)
+    ? temporal.timezoneLabel
+    : undefined;
+  const display = timezoneLabel
+    ? `${temporal.display} ${timezoneLabel}`
+    : temporal.display;
   return createFormattedCell({
     display,
     isTruncated: truncated,
     kind: column.dataType === DataType.DATE ? "date" : "timestamp",
-    timezoneLabel:
-      column.dataType === DataType.DATE ? undefined : timestamp.timezoneLabel,
+    timezoneLabel,
   });
 }
 
