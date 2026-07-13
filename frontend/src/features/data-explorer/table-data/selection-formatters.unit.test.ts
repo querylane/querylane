@@ -17,6 +17,15 @@ import {
 
 const RESOURCE = "instances/i/databases/d/schemas/public/tables/events";
 
+const DANGEROUS_CSV_VALUES = [
+  { input: "=1+1", output: "'=1+1" },
+  { input: "+1", output: "'+1" },
+  { input: "-1", output: "'-1" },
+  { input: "@SUM(A1)", output: "'@SUM(A1)" },
+  { input: "\t=1+1", output: "'\t=1+1" },
+  { input: "\r=1+1", output: '"\'\r=1+1"' },
+] as const;
+
 function stringCell(value: string, truncated = false) {
   return create(TableCellSchema, {
     truncated,
@@ -224,6 +233,23 @@ describe("buildExport formatting", () => {
     }
     expect(result.payload.contents).toBe('id,value\n1,\n2,""\n');
   });
+
+  test("CSV neutralizes spreadsheet formulas", () => {
+    const columns = [nameColumn("=value")];
+    const rows = DANGEROUS_CSV_VALUES.map(({ input }) =>
+      row({ "=value": stringCell(input) })
+    );
+
+    const result = buildExport("csv", rows, columns, RESOURCE);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.payload.contents).toBe(
+      `'=value\n${DANGEROUS_CSV_VALUES.map(({ output }) => output).join("\n")}\n`
+    );
+  });
 });
 
 describe("buildExport raw value fidelity", () => {
@@ -266,6 +292,15 @@ describe("buildExport raw value fidelity", () => {
     expect(json.ok && JSON.parse(json.payload.contents)).toEqual([
       { amount: "1234567.8912345" },
     ]);
+  });
+
+  test("preserves typed negative numbers in CSV", () => {
+    const columns = [typedColumn("amount", DataType.FLOAT, "double precision")];
+    const rows: SelectedRow[] = [row({ amount: doubleCell(-1.5) })];
+
+    const csv = buildExport("csv", rows, columns, RESOURCE);
+
+    expect(csv.ok && csv.payload.contents).toBe("amount\n-1.5\n");
   });
 
   test("exports timestamps with the original offset and sub-second precision", () => {
@@ -373,6 +408,26 @@ describe("createChunkedExportBuilder", () => {
       "\n",
       '2,""',
       "\n",
+    ]);
+  });
+
+  test("neutralizes spreadsheet formulas in CSV chunks", () => {
+    const builder = createChunkedExportBuilder(
+      "csv",
+      [nameColumn("value")],
+      RESOURCE
+    );
+
+    builder.addRows(
+      DANGEROUS_CSV_VALUES.map(({ input }) => row({ value: stringCell(input) }))
+    );
+
+    const result = builder.finish();
+
+    expect(result.ok && result.payload.contents).toEqual([
+      "value",
+      "\n",
+      ...DANGEROUS_CSV_VALUES.flatMap(({ output }) => [output, "\n"]),
     ]);
   });
 

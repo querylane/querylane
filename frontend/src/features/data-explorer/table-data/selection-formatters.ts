@@ -67,6 +67,7 @@ function countRowsWithTruncatedCells(
 const FILENAME_DATE_FORMAT = "yyyy-MM-dd";
 const SAFE_FILENAME_PATTERN = /[^a-zA-Z0-9_.-]+/g;
 const SQL_NUMERIC_PATTERN = /^-?\d+(?:\.\d+)?$/;
+const CSV_FORMULA_PREFIX_PATTERN = /^[=+\-@\t\r]/;
 const CSV_QUOTE_REQUIRED_PATTERN = /[",\n\r]/;
 const CSV_QUOTE_PATTERN = /"/g;
 const SQL_QUOTE_PATTERN = /'/g;
@@ -105,11 +106,15 @@ function getExportFileDetails(
   }
 }
 
-function escapeCsv(value: string): string {
-  if (value === "" || CSV_QUOTE_REQUIRED_PATTERN.test(value)) {
-    return `"${value.replace(CSV_QUOTE_PATTERN, '""')}"`;
+function escapeCsv(value: string, neutralizeFormula = true): string {
+  const safeValue =
+    neutralizeFormula && CSV_FORMULA_PREFIX_PATTERN.test(value)
+      ? `'${value}`
+      : value;
+  if (safeValue === "" || CSV_QUOTE_REQUIRED_PATTERN.test(safeValue)) {
+    return `"${safeValue.replace(CSV_QUOTE_PATTERN, '""')}"`;
   }
-  return value;
+  return safeValue;
 }
 
 // Exports serialise the RAW TableCell value, never the on-screen display
@@ -181,7 +186,9 @@ function formatCellForClipboard(cell: TableCell | undefined): string {
 function formatCsvRow(row: SelectedRow, columns: TableResultColumn[]): string {
   const cells = columns.map((column) => {
     const raw = rawCellValue(row.cells.get(column.columnName));
-    return raw.kind === "null" ? "" : escapeCsv(rawCellText(raw));
+    return raw.kind === "null"
+      ? ""
+      : escapeCsv(rawCellText(raw), raw.kind === "text");
   });
   return cells.join(",");
 }
