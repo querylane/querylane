@@ -31,4 +31,5 @@ func UseSchema(schema string) {
 	InstanceStorageSample = InstanceStorageSample.FromSchema(schema)
 	Replica = Replica.FromSchema(schema)
 	RunnerExecutionState = RunnerExecutionState.FromSchema(schema)
+	TokenSigningKey = TokenSigningKey.FromSchema(schema)
 }

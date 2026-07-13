@@ -170,14 +170,16 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 
 	connConfig := engine.DefaultPoolConfig()
 
-	tokenCodec, err := engine.NewRandomTokenCodec()
+	tokenSigningKey, err := storage.LoadOrCreateTokenSigningKey(ctx, cl)
 	if err != nil {
 		report(dbsetup.NewErrorEvent(dbsetup.StepInitializingServices, err.Error()))
 
 		_ = cl.Close()
 
-		return nil, fmt.Errorf("failed to initialize token codec: %w", err)
+		return nil, fmt.Errorf("failed to initialize token signing key: %w", err)
 	}
+
+	tokenCodec := engine.NewTokenCodec(tokenSigningKey)
 
 	engineImpl := postgres.New(tokenCodec)
 	poolManager := engine.NewManager(connConfig, engineImpl)
