@@ -8,7 +8,6 @@ import {
   extensionRouteDataQueries,
   instanceRouteDataQueries,
   prefetchRouteData,
-  queryInsightsRouteDataQueries,
 } from "@/lib/route-data-prefetch";
 
 const transport = {} as Transport;
@@ -79,24 +78,6 @@ describe("route data prefetch registry", () => {
     expect(queries.map((query) => query.staleTime)).toEqual([
       RESOURCE_QUERY_OPTIONS.selectedDatabase.staleTime,
       RESOURCE_QUERY_OPTIONS.extensionList.staleTime,
-    ]);
-  });
-
-  test("describes database query insights route data", () => {
-    const queries = queryInsightsRouteDataQueries({
-      databaseId: "postgres",
-      instanceId: "local",
-      transport,
-    });
-
-    expect(queries).toHaveLength(2);
-    expect(queries.map((query) => query.staleTime)).toEqual([
-      RESOURCE_QUERY_OPTIONS.selectedDatabase.staleTime,
-      RESOURCE_QUERY_OPTIONS.selectedDatabase.staleTime,
-    ]);
-    expect(queries.map((query) => JSON.stringify(query.queryKey))).toEqual([
-      expect.stringContaining("GetDatabase"),
-      expect.stringContaining("GetDatabaseQueryInsights"),
     ]);
   });
 

@@ -15,13 +15,6 @@ const BackendDatabaseExtensionsPage = lazy(() =>
     })
   )
 );
-const BackendDatabaseQueryInsightsPage = lazy(() =>
-  import("@/components/console-pages/database-query-insights-page").then(
-    (module) => ({
-      default: module.BackendDatabaseQueryInsightsPage,
-    })
-  )
-);
 const BackendInstancePage = lazy(() =>
   import("@/components/console-pages/instance-page").then((module) => ({
     default: module.BackendInstancePage,
@@ -120,13 +113,6 @@ function DatabaseAdminPageContent({
     case "database.extensions":
       return (
         <BackendDatabaseExtensionsPage
-          databaseId={databaseId}
-          instanceId={instanceId}
-        />
-      );
-    case "database.insights":
-      return (
-        <BackendDatabaseQueryInsightsPage
           databaseId={databaseId}
           instanceId={instanceId}
         />

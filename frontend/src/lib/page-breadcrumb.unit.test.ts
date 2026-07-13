@@ -23,7 +23,7 @@ describe("resolveBreadcrumbTail", () => {
       pathname: "/instances/prod/databases/app",
     },
     {
-      expected: { kind: "page", label: "Query insights" },
+      expected: { kind: "page", label: "Overview" },
       pathname: "/instances/prod/databases/app/insights",
     },
     {

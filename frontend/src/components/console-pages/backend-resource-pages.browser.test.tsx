@@ -7,7 +7,6 @@ import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { BackendDatabaseExtensionsPage } from "@/components/console-pages/database-extensions-page";
 import { BackendDatabasePage } from "@/components/console-pages/database-page";
-import { BackendDatabaseQueryInsightsPage } from "@/components/console-pages/database-query-insights-page";
 import { BackendInstancePage } from "@/components/console-pages/instance-page";
 import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
 import { StatusSchema } from "@/protogen/google/rpc/status_pb";
@@ -1149,7 +1148,7 @@ test("backend database overview shows mission control stats and catalog tables",
   );
 });
 
-test("backend database overview shows query insights", async () => {
+test("backend database overview opens the query insights drawer", async () => {
   state.databaseQuery = { data: databaseResponse() };
   state.catalogQuery = { data: catalogResult() };
   state.queryInsightsQuery = { data: queryInsightsResponse() };
@@ -1166,7 +1165,13 @@ test("backend database overview shows query insights", async () => {
     </ScreenshotFrame>
   );
 
-  await expect.element(page.getByText("Query insights")).toBeVisible();
+  await expect
+    .element(page.getByText("Top queries by total time"))
+    .not.toBeInTheDocument();
+  await page.getByRole("button", { name: "View query insights" }).click();
+
+  const drawer = page.getByRole("dialog", { name: "Query insights" });
+  await expect.element(drawer).toBeVisible();
   await expect
     .element(page.getByText("Top queries by total time"))
     .toBeVisible();
@@ -1174,8 +1179,9 @@ test("backend database overview shows query insights", async () => {
     .element(page.getByText("Sequential scan hotspots"))
     .toBeVisible();
   await expect.element(page.getByText("Cache hit by table")).toBeVisible();
-  await expect(page.getByTestId("database-query-insights")).toMatchScreenshot(
-    "backend-database-query-insights-overview"
+  await document.fonts.ready;
+  await expect(drawer).toMatchScreenshot(
+    "backend-database-query-insights-drawer"
   );
 });
 
@@ -1266,36 +1272,6 @@ test("backend database extensions available drawer matches design source", async
   await expect(drawer).toMatchScreenshot(
     "backend-database-extensions-available-drawer"
   );
-});
-
-test("backend database query insights page follows redesign", async () => {
-  state.databaseQuery = { data: databaseResponse() };
-  state.queryInsightsQuery = { data: queryInsightsResponse() };
-
-  render(
-    <ScreenshotFrame>
-      <div className="w-[1280px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendDatabaseQueryInsightsPage
-          databaseId="customer-events"
-          instanceId="prod"
-        />
-      </div>
-    </ScreenshotFrame>
-  );
-
-  await expect
-    .element(page.getByRole("heading", { name: "Query insights" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByText("Top queries by total time"))
-    .toBeVisible();
-  await expect
-    .element(page.getByText("Sequential scan hotspots"))
-    .toBeVisible();
-  await expect.element(page.getByText("Cache hit by table")).toBeVisible();
-  await expect
-    .element(page.getByRole("region", { name: "Query detail" }))
-    .toBeVisible();
 });
 
 test("backend instance delete navigates without waiting for catalog refresh", async () => {

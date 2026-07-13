@@ -20,7 +20,6 @@ import { Route as InstancesInstanceIdDatabasesRouteRouteImport } from './routes/
 import { Route as InstancesInstanceIdRolesIndexRouteImport } from './routes/instances/$instanceId/roles/index';
 import { Route as InstancesInstanceIdRolesRoleIdRouteImport } from './routes/instances/$instanceId/roles/$roleId';
 import { Route as InstancesInstanceIdDatabasesDatabaseIdIndexRouteImport } from './routes/instances/$instanceId/databases/$databaseId/index';
-import { Route as InstancesInstanceIdDatabasesDatabaseIdInsightsRouteImport } from './routes/instances/$instanceId/databases/$databaseId/insights';
 import { Route as InstancesInstanceIdDatabasesDatabaseIdExtensionsRouteImport } from './routes/instances/$instanceId/databases/$databaseId/extensions';
 import { Route as InstancesInstanceIdDatabasesDatabaseIdExplorerRouteImport } from './routes/instances/$instanceId/databases/$databaseId/explorer';
 
@@ -109,12 +108,6 @@ const InstancesInstanceIdDatabasesDatabaseIdIndexRoute =
     path: '/$databaseId/',
     getParentRoute: () => InstancesInstanceIdDatabasesRouteRoute,
   } as any);
-const InstancesInstanceIdDatabasesDatabaseIdInsightsRoute =
-  InstancesInstanceIdDatabasesDatabaseIdInsightsRouteImport.update({
-    id: '/$databaseId/insights',
-    path: '/$databaseId/insights',
-    getParentRoute: () => InstancesInstanceIdDatabasesRouteRoute,
-  } as any);
 const InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute =
   InstancesInstanceIdDatabasesDatabaseIdExtensionsRouteImport.update({
     id: '/$databaseId/extensions',
@@ -145,7 +138,6 @@ export interface FileRoutesByFullPath {
   '/instances/$instanceId/roles/': typeof InstancesInstanceIdRolesIndexRoute;
   '/instances/$instanceId/databases/$databaseId/explorer': typeof InstancesInstanceIdDatabasesDatabaseIdExplorerRoute;
   '/instances/$instanceId/databases/$databaseId/extensions': typeof InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute;
-  '/instances/$instanceId/databases/$databaseId/insights': typeof InstancesInstanceIdDatabasesDatabaseIdInsightsRoute;
   '/instances/$instanceId/databases/$databaseId/': typeof InstancesInstanceIdDatabasesDatabaseIdIndexRoute;
 }
 export interface FileRoutesByTo {
@@ -163,7 +155,6 @@ export interface FileRoutesByTo {
   '/instances/$instanceId/roles': typeof InstancesInstanceIdRolesIndexRoute;
   '/instances/$instanceId/databases/$databaseId/explorer': typeof InstancesInstanceIdDatabasesDatabaseIdExplorerRoute;
   '/instances/$instanceId/databases/$databaseId/extensions': typeof InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute;
-  '/instances/$instanceId/databases/$databaseId/insights': typeof InstancesInstanceIdDatabasesDatabaseIdInsightsRoute;
   '/instances/$instanceId/databases/$databaseId': typeof InstancesInstanceIdDatabasesDatabaseIdIndexRoute;
 }
 export interface FileRoutesById {
@@ -184,7 +175,6 @@ export interface FileRoutesById {
   '/instances/$instanceId/roles/': typeof InstancesInstanceIdRolesIndexRoute;
   '/instances/$instanceId/databases/$databaseId/explorer': typeof InstancesInstanceIdDatabasesDatabaseIdExplorerRoute;
   '/instances/$instanceId/databases/$databaseId/extensions': typeof InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute;
-  '/instances/$instanceId/databases/$databaseId/insights': typeof InstancesInstanceIdDatabasesDatabaseIdInsightsRoute;
   '/instances/$instanceId/databases/$databaseId/': typeof InstancesInstanceIdDatabasesDatabaseIdIndexRoute;
 }
 export interface FileRouteTypes {
@@ -206,7 +196,6 @@ export interface FileRouteTypes {
     | '/instances/$instanceId/roles/'
     | '/instances/$instanceId/databases/$databaseId/explorer'
     | '/instances/$instanceId/databases/$databaseId/extensions'
-    | '/instances/$instanceId/databases/$databaseId/insights'
     | '/instances/$instanceId/databases/$databaseId/';
   fileRoutesByTo: FileRoutesByTo;
   to:
@@ -224,7 +213,6 @@ export interface FileRouteTypes {
     | '/instances/$instanceId/roles'
     | '/instances/$instanceId/databases/$databaseId/explorer'
     | '/instances/$instanceId/databases/$databaseId/extensions'
-    | '/instances/$instanceId/databases/$databaseId/insights'
     | '/instances/$instanceId/databases/$databaseId';
   id:
     | '__root__'
@@ -244,7 +232,6 @@ export interface FileRouteTypes {
     | '/instances/$instanceId/roles/'
     | '/instances/$instanceId/databases/$databaseId/explorer'
     | '/instances/$instanceId/databases/$databaseId/extensions'
-    | '/instances/$instanceId/databases/$databaseId/insights'
     | '/instances/$instanceId/databases/$databaseId/';
   fileRoutesById: FileRoutesById;
 }
@@ -364,13 +351,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InstancesInstanceIdDatabasesDatabaseIdIndexRouteImport;
       parentRoute: typeof InstancesInstanceIdDatabasesRouteRoute;
     };
-    '/instances/$instanceId/databases/$databaseId/insights': {
-      id: '/instances/$instanceId/databases/$databaseId/insights';
-      path: '/$databaseId/insights';
-      fullPath: '/instances/$instanceId/databases/$databaseId/insights';
-      preLoaderRoute: typeof InstancesInstanceIdDatabasesDatabaseIdInsightsRouteImport;
-      parentRoute: typeof InstancesInstanceIdDatabasesRouteRoute;
-    };
     '/instances/$instanceId/databases/$databaseId/extensions': {
       id: '/instances/$instanceId/databases/$databaseId/extensions';
       path: '/$databaseId/extensions';
@@ -391,7 +371,6 @@ declare module '@tanstack/react-router' {
 interface InstancesInstanceIdDatabasesRouteRouteChildren {
   InstancesInstanceIdDatabasesDatabaseIdExplorerRoute: typeof InstancesInstanceIdDatabasesDatabaseIdExplorerRoute;
   InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute: typeof InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute;
-  InstancesInstanceIdDatabasesDatabaseIdInsightsRoute: typeof InstancesInstanceIdDatabasesDatabaseIdInsightsRoute;
   InstancesInstanceIdDatabasesDatabaseIdIndexRoute: typeof InstancesInstanceIdDatabasesDatabaseIdIndexRoute;
 }
 
@@ -401,8 +380,6 @@ const InstancesInstanceIdDatabasesRouteRouteChildren: InstancesInstanceIdDatabas
       InstancesInstanceIdDatabasesDatabaseIdExplorerRoute,
     InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute:
       InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute,
-    InstancesInstanceIdDatabasesDatabaseIdInsightsRoute:
-      InstancesInstanceIdDatabasesDatabaseIdInsightsRoute,
     InstancesInstanceIdDatabasesDatabaseIdIndexRoute:
       InstancesInstanceIdDatabasesDatabaseIdIndexRoute,
   };

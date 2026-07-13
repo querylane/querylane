@@ -29,7 +29,6 @@ describe("buildSidebarPaths", () => {
     expect(paths).toEqual({
       databaseExplorer: "/instances/prod/databases/app/explorer",
       databaseExtensions: "/instances/prod/databases/app/extensions",
-      databaseInsights: "/instances/prod/databases/app/insights",
       databaseOverview: "/instances/prod/databases/app",
       instanceActivity: "/instances/prod/activity",
       instanceConfiguration: "/instances/prod/configuration",
@@ -56,7 +55,6 @@ describe("buildNavActiveState", () => {
     expect(active).toEqual({
       databaseExplorer: false,
       databaseExtensions: false,
-      databaseInsights: false,
       databaseOverview: false,
       instanceActivity: false,
       instanceConfiguration: false,
@@ -128,7 +126,6 @@ describe("buildNavActiveState", () => {
     expect(active.databaseOverview).toBe(true);
     expect(active.databaseExplorer).toBe(false);
     expect(active.databaseExtensions).toBe(false);
-    expect(active.databaseInsights).toBe(false);
   });
 
   test("databaseExtensions is active on exact match", () => {
@@ -140,19 +137,25 @@ describe("buildNavActiveState", () => {
 
     expect(active.databaseExtensions).toBe(true);
     expect(active.databaseExplorer).toBe(false);
-    expect(active.databaseInsights).toBe(false);
     expect(active.databaseOverview).toBe(false);
   });
 
-  test("databaseInsights is active on exact match", () => {
+  test("removed insights path does not activate database navigation", () => {
     const paths = buildSidebarPaths({ databaseId: "app", instanceId: "prod" });
     const active = buildNavActiveState({
       pathname: "/instances/prod/databases/app/insights",
       paths,
     });
 
-    expect(active.databaseInsights).toBe(true);
-    expect(active.databaseOverview).toBe(false);
+    expect(active).toEqual({
+      databaseExplorer: false,
+      databaseExtensions: false,
+      databaseOverview: false,
+      instanceActivity: false,
+      instanceConfiguration: false,
+      instanceOverview: false,
+      instanceRoles: false,
+    });
   });
 
   test("databaseExplorer is active on exact match", () => {
@@ -174,7 +177,6 @@ describe("buildNavActiveState", () => {
     expect(active).toEqual({
       databaseExplorer: false,
       databaseExtensions: false,
-      databaseInsights: false,
       databaseOverview: false,
       instanceActivity: false,
       instanceConfiguration: false,

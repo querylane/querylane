@@ -20,9 +20,8 @@ import {
   presentCatalogSchemaKindOptions,
   presentCatalogSchemaOwnerOptions,
 } from "@/components/console-pages/database-overview-filters";
+import { DatabaseQueryInsightsDrawer } from "@/components/console-pages/database-query-insights-drawer";
 import { EmptyState } from "@/components/empty-state";
-import { Progress } from "@/components/querylane-ui/progress";
-import { WarningBadge } from "@/components/querylane-ui/warning-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -36,7 +35,6 @@ import {
   type FacetedFilterOption,
 } from "@/components/ui/data-table-faceted-filter";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import {
   Table,
   TableBody,
@@ -46,10 +44,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatRows } from "@/features/data-explorer/format-rows";
-import {
-  useGetDatabaseQuery,
-  useGetDatabaseQueryInsightsQuery,
-} from "@/hooks/api/database";
+import { useGetDatabaseQuery } from "@/hooks/api/database";
 import {
   type CatalogObject,
   type CatalogSchema,
@@ -62,31 +57,16 @@ import {
   formatTimestampLabel,
   normalizeEstimatedRowCount,
 } from "@/lib/console-resources";
-import {
-  formatInsightInteger,
-  formatInsightMs,
-  formatInsightPercent,
-  formatQualifiedTable,
-  insightProgressValue,
-  queryInsightLabel,
-} from "@/lib/query-insights";
 import { createResourceLoader } from "@/lib/resource-loader";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
-import type {
-  Database,
-  DatabaseQueryInsights,
-  QueryRuntimeInsight,
-  SequentialScanHotspot,
-  TableCacheHitInsight,
-} from "@/protogen/querylane/console/v1alpha1/database_pb";
+import type { Database } from "@/protogen/querylane/console/v1alpha1/database_pb";
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 type DatabaseSection = "overview";
 
 const OBJECTS_PAGE_SIZE = 15;
 const SCHEMAS_PAGE_SIZE = 15;
-const CACHE_HIT_WARNING_THRESHOLD = 0.9;
 const EXPLORER_ROUTE =
   "/instances/$instanceId/databases/$databaseId/explorer" as const;
 const LOADING_ROW_COUNT = 5;
@@ -129,10 +109,12 @@ function DatabaseOverviewHeader({
   database,
   databaseId,
   instanceId,
+  onViewQueryInsights,
 }: {
   database: Database;
   databaseId: string;
   instanceId: string;
+  onViewQueryInsights: () => void;
 }) {
   const kindLabel = database.isSystemDatabase
     ? "System database"
@@ -153,13 +135,18 @@ function DatabaseOverviewHeader({
           <span>{kindLabel}</span>
         </div>
       </div>
-      <Link
-        className={cn(buttonVariants({ variant: "outline" }))}
-        params={{ databaseId, instanceId }}
-        to={EXPLORER_ROUTE}
-      >
-        Open data explorer
-      </Link>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button onClick={onViewQueryInsights} type="button" variant="outline">
+          View query insights
+        </Button>
+        <Link
+          className={cn(buttonVariants({ variant: "outline" }))}
+          params={{ databaseId, instanceId }}
+          to={EXPLORER_ROUTE}
+        >
+          Open data explorer
+        </Link>
+      </div>
     </div>
   );
 }
@@ -400,241 +387,6 @@ function schemaColumns(): DataTableColumnDef<CatalogSchema>[] {
       },
     },
   ];
-}
-
-function QueryInsightPanel({
-  children,
-  title,
-}: {
-  children: React.ReactNode;
-  title: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-card/50 p-4">
-      <h3 className="font-medium text-foreground text-sm">{title}</h3>
-      <div className="mt-3">{children}</div>
-    </div>
-  );
-}
-
-function TopQueryItem({ query }: { query: QueryRuntimeInsight }) {
-  const queryLabel = queryInsightLabel(query);
-  return (
-    <li className="grid gap-3 rounded-md border border-border/70 bg-background p-3">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-xs">
-        <span>{formatInsightInteger(query.calls)} calls</span>
-        <span>{formatInsightMs(query.meanTimeMs)} mean</span>
-        <span>{formatInsightMs(query.totalTimeMs)} total</span>
-      </div>
-      <Progress
-        aria-label={`Total time ratio for ${queryLabel}`}
-        className="gap-0"
-        value={insightProgressValue(query.totalTimeRatio)}
-      />
-      <SqlCodeBlock className="max-h-28" sql={queryLabel} />
-    </li>
-  );
-}
-
-function TopQueriesPanel({ queries }: { queries: QueryRuntimeInsight[] }) {
-  return (
-    <QueryInsightPanel title="Top queries by total time">
-      {queries.length > 0 ? (
-        <ol className="grid gap-3">
-          {queries.map((query) => (
-            <TopQueryItem key={`${query.query}:${query.calls}`} query={query} />
-          ))}
-        </ol>
-      ) : (
-        <p className="text-muted-foreground text-sm">
-          No query runtime data yet.
-        </p>
-      )}
-    </QueryInsightPanel>
-  );
-}
-
-function SequentialScanHotspotItem({
-  hotspot,
-}: {
-  hotspot: SequentialScanHotspot;
-}) {
-  return (
-    <li className="grid gap-2 rounded-md border border-border/70 bg-background p-3">
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-mono text-sm">
-          {formatQualifiedTable(hotspot.schemaName, hotspot.tableName)}
-        </span>
-        <span className="text-muted-foreground text-xs tabular-nums">
-          {formatInsightPercent(hotspot.sequentialScanRatio)} sequential
-        </span>
-      </div>
-      <Progress
-        aria-label={`Sequential scan ratio for ${formatQualifiedTable(hotspot.schemaName, hotspot.tableName)}`}
-        className="gap-0"
-        value={insightProgressValue(hotspot.sequentialScanRatio)}
-      />
-      <div className="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground text-xs">
-        <span>
-          {formatInsightInteger(hotspot.sequentialTuplesRead)} tuples read
-        </span>
-        <span>
-          {formatInsightInteger(hotspot.sequentialScans)} sequential scans
-        </span>
-        <span>{formatInsightInteger(hotspot.indexScans)} index scans</span>
-        <span>{formatBytes(hotspot.totalSizeBytes)}</span>
-      </div>
-    </li>
-  );
-}
-
-function SequentialScanHotspotsPanel({
-  hotspots,
-}: {
-  hotspots: SequentialScanHotspot[];
-}) {
-  return (
-    <QueryInsightPanel title="Sequential scan hotspots">
-      {hotspots.length > 0 ? (
-        <ol className="grid gap-3">
-          {hotspots.map((hotspot) => (
-            <SequentialScanHotspotItem
-              hotspot={hotspot}
-              key={`${hotspot.schemaName}.${hotspot.tableName}`}
-            />
-          ))}
-        </ol>
-      ) : (
-        <p className="text-muted-foreground text-sm">
-          No sequential scan pressure reported yet.
-        </p>
-      )}
-    </QueryInsightPanel>
-  );
-}
-
-function TableCacheHitItem({ cacheHit }: { cacheHit: TableCacheHitInsight }) {
-  const warning = cacheHit.hitRatio < CACHE_HIT_WARNING_THRESHOLD;
-  return (
-    <li className="grid gap-2 rounded-md border border-border/70 bg-background p-3">
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-mono text-sm">
-          {formatQualifiedTable(cacheHit.schemaName, cacheHit.tableName)}
-        </span>
-        <div className="flex items-center gap-2">
-          {warning ? <WarningBadge>Low cache hit</WarningBadge> : null}
-          <span
-            className={cn(
-              "text-xs tabular-nums",
-              warning
-                ? "text-amber-600 dark:text-amber-400"
-                : "text-muted-foreground"
-            )}
-          >
-            {formatInsightPercent(cacheHit.hitRatio)} hit
-          </span>
-        </div>
-      </div>
-      <Progress
-        aria-label={`${warning ? "Low cache hit, " : ""}cache hit ratio for ${formatQualifiedTable(cacheHit.schemaName, cacheHit.tableName)}`}
-        className="gap-0"
-        value={insightProgressValue(cacheHit.hitRatio)}
-        variant={warning ? "warning" : "default"}
-      />
-      <div className="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground text-xs">
-        <span>{formatInsightInteger(cacheHit.heapBlocksHit)} heap hits</span>
-        <span>{formatInsightInteger(cacheHit.heapBlocksRead)} heap reads</span>
-        <span>{formatBytes(cacheHit.totalSizeBytes)}</span>
-      </div>
-    </li>
-  );
-}
-
-function TableCacheHitsPanel({
-  cacheHits,
-}: {
-  cacheHits: TableCacheHitInsight[];
-}) {
-  return (
-    <QueryInsightPanel title="Cache hit by table">
-      {cacheHits.length > 0 ? (
-        <ol className="grid gap-3">
-          {cacheHits.map((cacheHit) => (
-            <TableCacheHitItem
-              cacheHit={cacheHit}
-              key={`${cacheHit.schemaName}.${cacheHit.tableName}`}
-            />
-          ))}
-        </ol>
-      ) : (
-        <p className="text-muted-foreground text-sm">
-          No table cache data yet.
-        </p>
-      )}
-    </QueryInsightPanel>
-  );
-}
-
-function QueryInsightsSection({
-  error,
-  insights,
-  isPending,
-}: {
-  error: unknown;
-  insights?: DatabaseQueryInsights | undefined;
-  isPending: boolean;
-}) {
-  if (error) {
-    return null;
-  }
-
-  if (isPending) {
-    return (
-      <section className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <h2 className="font-semibold text-base text-foreground">
-            Query insights
-          </h2>
-          <p className="text-[13px] text-muted-foreground">
-            Loading PostgreSQL query statistics.
-          </p>
-        </div>
-      </section>
-    );
-  }
-
-  if (!(insights?.queryStatsAvailable || insights?.tableStatsAvailable)) {
-    return null;
-  }
-
-  return (
-    <section
-      className="flex flex-col gap-3"
-      data-testid="database-query-insights"
-    >
-      <div className="flex flex-col gap-1">
-        <h2 className="font-semibold text-base text-foreground">
-          Query insights
-        </h2>
-        <p className="text-[13px] text-muted-foreground">
-          Live PostgreSQL statistics since the last stats reset.
-        </p>
-      </div>
-      <div className="grid gap-3 2xl:grid-cols-3">
-        {insights.queryStatsAvailable ? (
-          <TopQueriesPanel queries={insights.topQueries} />
-        ) : null}
-        {insights.tableStatsAvailable ? (
-          <>
-            <SequentialScanHotspotsPanel
-              hotspots={insights.sequentialScanHotspots}
-            />
-            <TableCacheHitsPanel cacheHits={insights.tableCacheHits} />
-          </>
-        ) : null}
-      </div>
-    </section>
-  );
 }
 
 function CatalogErrorNotice({
@@ -962,6 +714,11 @@ function BackendDatabasePage({
   instanceId: string;
   section: DatabaseSection;
 }) {
+  const databaseName = buildDatabaseName(instanceId, databaseId);
+  const [queryInsightsDatabaseName, setQueryInsightsDatabaseName] = useState<
+    string | null
+  >(null);
+  const queryInsightsOpen = queryInsightsDatabaseName === databaseName;
   const databaseQuery = useGetDatabaseQuery(
     {
       name: buildDatabaseName(instanceId, databaseId),
@@ -974,15 +731,6 @@ function BackendDatabasePage({
   const catalogQuery = useDatabaseCatalogQuery({ databaseId, instanceId });
   const loader = createResourceLoader(databaseQuery, "console.database");
   const database = databaseQuery.data?.database;
-  const queryInsightsQuery = useGetDatabaseQueryInsightsQuery(
-    {
-      name: buildDatabaseName(instanceId, databaseId),
-    },
-    {
-      enabled: Boolean(databaseId && instanceId && database),
-      refetchOnWindowFocus: false,
-    }
-  );
   const catalog = catalogQuery.data;
   const catalogPending = catalogQuery.isPending;
   const handleCatalogRetry = catalogQuery.refetch;
@@ -999,13 +747,11 @@ function BackendDatabasePage({
             database={database}
             databaseId={databaseId}
             instanceId={instanceId}
+            onViewQueryInsights={() =>
+              setQueryInsightsDatabaseName(databaseName)
+            }
           />
           <DatabaseStatsBar catalog={catalog} isPending={catalogPending} />
-          <QueryInsightsSection
-            error={queryInsightsQuery.error}
-            insights={queryInsightsQuery.data?.queryInsights}
-            isPending={queryInsightsQuery.isPending}
-          />
           {catalogQuery.error ? (
             <CatalogErrorNotice
               error={catalogQuery.error}
@@ -1024,6 +770,18 @@ function BackendDatabasePage({
             instanceId={instanceId}
             isPending={catalogPending}
           />
+          {queryInsightsOpen ? (
+            <DatabaseQueryInsightsDrawer
+              databaseId={databaseId}
+              instanceId={instanceId}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setQueryInsightsDatabaseName(null);
+                }
+              }}
+              open={queryInsightsOpen}
+            />
+          ) : null}
         </div>
       ) : null}
     </ResourcePageState>

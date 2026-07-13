@@ -18,7 +18,6 @@ type AdminPageId =
   // Database-level pages
   | "database.overview"
   | "database.extensions"
-  | "database.insights"
   | "database.explorer";
 
 type AdminSelectionScope = "none" | "instance" | "database";
@@ -30,7 +29,6 @@ const ADMIN_PAGE_IDS: readonly AdminPageId[] = [
   "instance.configuration",
   "database.overview",
   "database.extensions",
-  "database.insights",
   "database.explorer",
 ] as const;
 
@@ -40,7 +38,6 @@ const ADMIN_PAGE_MIN_SCOPE: Record<
 > = {
   "database.explorer": "database",
   "database.extensions": "database",
-  "database.insights": "database",
   "database.overview": "database",
   "instance.activity": "instance",
   "instance.configuration": "instance",
@@ -123,9 +120,6 @@ function resolveImplicitAdminPageFromPathname(
     if (segments[4] === "extensions") {
       return "database.extensions";
     }
-    if (segments[4] === "insights") {
-      return "database.insights";
-    }
     return "database.overview";
   }
   // The instance-scoped admin panel is not an AdminPageId page: it renders
@@ -155,8 +149,6 @@ function resolveImplicitAdminPageFromRouteId(
       return "database.explorer";
     case "/instances/$instanceId/databases/$databaseId/extensions":
       return "database.extensions";
-    case "/instances/$instanceId/databases/$databaseId/insights":
-      return "database.insights";
     case "/instances/$instanceId/databases/$databaseId/":
       return "database.overview";
     case "/instances/$instanceId":

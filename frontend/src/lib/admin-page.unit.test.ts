@@ -20,8 +20,6 @@ describe("canRenderAdminPageAtScope", () => {
     { expected: true, page: "database.overview", scope: "database" },
     { expected: false, page: "database.extensions", scope: "instance" },
     { expected: true, page: "database.extensions", scope: "database" },
-    { expected: false, page: "database.insights", scope: "instance" },
-    { expected: true, page: "database.insights", scope: "database" },
     { expected: false, page: "database.explorer", scope: "instance" },
     { expected: true, page: "database.explorer", scope: "database" },
     // "none" scope cannot render any page
@@ -120,7 +118,7 @@ describe("resolveCurrentAdminPage", () => {
       scope: "database",
     },
     {
-      expected: "database.insights",
+      expected: "database.overview",
       pathname: "/instances/x/databases/db/insights",
       scope: "database",
     },
@@ -184,6 +182,9 @@ describe("resolveRequestedAdminPageForScope", () => {
       resolveRequestedAdminPageForScope("not.a.page", "instance")
     ).toBeUndefined();
     expect(resolveRequestedAdminPageForScope("", "database")).toBeUndefined();
+    expect(
+      resolveRequestedAdminPageForScope("database.insights", "database")
+    ).toBeUndefined();
   });
 
   test("higher scope can render lower-scoped page", () => {
@@ -222,12 +223,12 @@ describe("resolveImplicitAdminPageFromRouteId", () => {
     ).toBe("database.extensions");
   });
 
-  test("maps canonical database insights route to the insights page", () => {
+  test("does not map the removed database insights route", () => {
     expect(
       resolveImplicitAdminPageFromRouteId(
         "/instances/$instanceId/databases/$databaseId/insights"
       )
-    ).toBe("database.insights");
+    ).toBeUndefined();
   });
 
   test("maps canonical database overview route to the overview page", () => {
