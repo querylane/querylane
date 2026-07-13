@@ -55,8 +55,6 @@ func (r *PGRepository) ListDatabases(ctx context.Context, instanceID string, par
 	baseQuery := postgres.SELECT(table.CatalogDatabase.AllColumns).FROM(table.CatalogDatabase)
 	baseCondition := table.CatalogDatabase.InstanceID.EQ(postgres.String(instanceID))
 
-	params.Filter = normalizeLegacyCatalogFilter(params.Filter)
-
 	rows, nextToken, err := aipjet.ExecuteWithCondition(ctx, catalogDatabaseSchema, params, baseQuery, baseCondition, r.db)
 	if err != nil {
 		return nil, "", fmt.Errorf("query databases: %w", err)

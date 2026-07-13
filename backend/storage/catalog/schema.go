@@ -56,8 +56,6 @@ func (r *PGRepository) ListSchemas(ctx context.Context, instanceID, databaseName
 	baseCondition := table.CatalogSchema.InstanceID.EQ(postgres.String(instanceID)).
 		AND(table.CatalogSchema.DatabaseName.EQ(postgres.String(databaseName)))
 
-	params.Filter = normalizeLegacyCatalogFilter(params.Filter)
-
 	rows, nextToken, err := aipjet.ExecuteWithCondition(ctx, catalogSchemaSchema, params, baseQuery, baseCondition, r.db)
 	if err != nil {
 		return nil, "", fmt.Errorf("query schemas: %w", err)
