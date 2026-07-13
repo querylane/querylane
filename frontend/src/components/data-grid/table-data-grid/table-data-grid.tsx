@@ -74,6 +74,7 @@ import {
   buildExport,
   type ExportFormat,
   type ExportResult,
+  formatCellForClipboard,
   type SelectedRow,
 } from "@/features/data-explorer/table-data/selection-formatters";
 import { toggleColumnSortDirection } from "@/features/data-explorer/table-data/sort-state";
@@ -81,7 +82,6 @@ import {
   serializeSortSearch,
   useTableDataQuery,
 } from "@/features/data-explorer/table-data/table-data-query";
-import { formatTableCell } from "@/features/data-explorer/table-data/table-value-format";
 import {
   type RefreshIntervalMs,
   useRefreshSettingsStore,
@@ -929,18 +929,13 @@ function copyCellValue(
   if (cell === undefined) {
     return;
   }
-  const formatted = formatTableCell(cell, meta);
-  writeClipboard(formatted.display);
+  writeClipboard(formatCellForClipboard(cell));
 }
 
 function copyRowValues(row: GridRow, resultColumns: TableResultColumn[]) {
-  const parts = resultColumns.map((meta) => {
-    const cell = getGridCell(row, meta);
-    if (cell === undefined) {
-      return "";
-    }
-    return formatTableCell(cell, meta).display;
-  });
+  const parts = resultColumns.map((meta) =>
+    formatCellForClipboard(getGridCell(row, meta))
+  );
   writeClipboard(parts.join("\t"));
 }
 
