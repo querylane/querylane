@@ -178,6 +178,10 @@ when non-empty, values outside the set return `InvalidArgument` and the field su
 The object-type token set differs by endpoint (singular for owned objects/grants, plural for default
 privileges — §5.8). `privilege` remains unbounded because PostgreSQL can add values across versions.
 
+PostgreSQL 17 `MAINTAIN` is supported wherever PostgreSQL returns it: direct role grants, PUBLIC grants,
+and default privileges. Clients can filter these rows with `privilege = "MAINTAIN"` without Querylane
+rejecting a version-dependent privilege token.
+
 `NewSchema` validates that every filterable field has a supported codec and that `FilterValues` is used
 only with strings. Backend binding is separate and construction-time:
 
