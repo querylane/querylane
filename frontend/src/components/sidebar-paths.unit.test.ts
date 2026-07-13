@@ -13,6 +13,7 @@ describe("buildSidebarPaths", () => {
     const paths = buildSidebarPaths({ instanceId: "prod" });
 
     expect(paths).toEqual({
+      instanceActivity: "/instances/prod/activity",
       instanceConfiguration: "/instances/prod/configuration",
       instanceOverview: "/instances/prod",
       instanceRoles: "/instances/prod/roles",
@@ -30,6 +31,7 @@ describe("buildSidebarPaths", () => {
       databaseExtensions: "/instances/prod/databases/app/extensions",
       databaseInsights: "/instances/prod/databases/app/insights",
       databaseOverview: "/instances/prod/databases/app",
+      instanceActivity: "/instances/prod/activity",
       instanceConfiguration: "/instances/prod/configuration",
       instanceOverview: "/instances/prod",
       instanceRoles: "/instances/prod/roles",
@@ -56,6 +58,7 @@ describe("buildNavActiveState", () => {
       databaseExtensions: false,
       databaseInsights: false,
       databaseOverview: false,
+      instanceActivity: false,
       instanceConfiguration: false,
       instanceOverview: false,
       instanceRoles: false,
@@ -102,6 +105,17 @@ describe("buildNavActiveState", () => {
     });
 
     expect(active.instanceRoles).toBe(true);
+  });
+
+  test("instanceActivity is active on exact match", () => {
+    const paths = buildSidebarPaths({ instanceId: "prod" });
+    const active = buildNavActiveState({
+      pathname: "/instances/prod/activity",
+      paths,
+    });
+
+    expect(active.instanceActivity).toBe(true);
+    expect(active.instanceOverview).toBe(false);
   });
 
   test("databaseOverview is active on exact match", () => {
@@ -162,6 +176,7 @@ describe("buildNavActiveState", () => {
       databaseExtensions: false,
       databaseInsights: false,
       databaseOverview: false,
+      instanceActivity: false,
       instanceConfiguration: false,
       instanceOverview: false,
       instanceRoles: false,

@@ -12,6 +12,7 @@ import { z } from "zod";
 type AdminPageId =
   // Instance-level pages
   | "instance.overview"
+  | "instance.activity"
   | "instance.roles"
   | "instance.configuration"
   // Database-level pages
@@ -24,6 +25,7 @@ type AdminSelectionScope = "none" | "instance" | "database";
 
 const ADMIN_PAGE_IDS: readonly AdminPageId[] = [
   "instance.overview",
+  "instance.activity",
   "instance.roles",
   "instance.configuration",
   "database.overview",
@@ -40,6 +42,7 @@ const ADMIN_PAGE_MIN_SCOPE: Record<
   "database.extensions": "database",
   "database.insights": "database",
   "database.overview": "database",
+  "instance.activity": "instance",
   "instance.configuration": "instance",
   "instance.overview": "instance",
   "instance.roles": "instance",
@@ -106,6 +109,9 @@ function resolveImplicitAdminPageFromPathname(
   if (pathname.endsWith("/configuration")) {
     return "instance.configuration";
   }
+  if (pathname.endsWith("/activity")) {
+    return "instance.activity";
+  }
   if (pathname.endsWith("/roles") || pathname.includes("/roles/")) {
     return "instance.roles";
   }
@@ -137,6 +143,8 @@ function resolveImplicitAdminPageFromRouteId(
   routeId: string | undefined
 ): AdminPageId | undefined {
   switch (routeId) {
+    case "/instances/$instanceId/activity":
+      return "instance.activity";
     case "/instances/$instanceId/configuration":
       return "instance.configuration";
     case "/instances/$instanceId/roles":

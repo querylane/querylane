@@ -29,10 +29,12 @@ import {
   ListExtensionsResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 import {
+  ApplicationConnectionsSchema,
   AutovacuumHealthSchema,
   type CheckInstanceHealthResponse,
   CheckInstanceHealthResponseSchema,
   ConnectionActivityHealthSchema,
+  ConnectionActivitySessionSchema,
   type GetInstanceOverviewResponse,
   type GetInstanceResponse,
   GetInstanceResponseSchema,
@@ -77,10 +79,13 @@ const UPTIME_FACT_PATTERN = /^up /;
 const AUTOVACUUM_ROW_NAME = /Autovacuum/;
 const CHARSET_COLUMN_NAME = /^charset/i;
 const COLLATION_COLUMN_NAME = /^collation/i;
+const BLOCKED_ACTIVITY_TABLE_ROW_NAME = /4302/;
+const BLOCKER_ACTIVITY_TABLE_ROW_NAME = /4211/;
 const MISSING_INSTANCE_SECRET_KEY_MESSAGE =
   /QUERYLANE_INSTANCE_SECRET_KEY is not configured/;
 
 const state = vi.hoisted(() => ({
+  activityQueryOptions: undefined as Record<string, unknown> | undefined,
   databases: [] as PostgresDatabase[],
   deleteInstance: vi.fn(async () => undefined),
   extensionData: undefined as ListExtensionsResponse | undefined,
@@ -88,6 +93,7 @@ const state = vi.hoisted(() => ({
     | { filter?: string; orderBy?: string; pageSize?: number; parent: string }
     | undefined,
   healthData: undefined as CheckInstanceHealthResponse | undefined,
+  healthQueryOptions: undefined as Record<string, unknown> | undefined,
   instanceCatalogError: null as unknown,
   instanceCatalogHasData: true,
   instanceCatalogHasResolved: true,
@@ -210,13 +216,37 @@ vi.mock("@/hooks/api/metrics", () => ({
 vi.mock("@/hooks/api/instance", () => ({
   refreshAllInstancesCache: (input: RefreshAllInstancesCacheInput) =>
     state.refreshAllInstancesCache(input),
-  useCheckInstanceHealthQuery: () => ({
-    data: state.healthData,
-    error: null,
-    isFetching: false,
-    isPending: state.healthData === undefined,
-    refetch: vi.fn(async () => ({})),
-  }),
+  useCheckInstanceActivityQuery: (
+    _input: unknown,
+    options: Record<string, unknown>
+  ) => {
+    state.activityQueryOptions = options;
+    return {
+      data: state.healthData
+        ? {
+            activity: state.healthData.health?.connectionActivity,
+            partialErrors: state.healthData.partialErrors,
+          }
+        : undefined,
+      error: null,
+      isFetching: false,
+      isPending: state.healthData === undefined,
+      refetch: vi.fn(async () => ({})),
+    };
+  },
+  useCheckInstanceHealthQuery: (
+    _input: unknown,
+    options: Record<string, unknown>
+  ) => {
+    state.healthQueryOptions = options;
+    return {
+      data: state.healthData,
+      error: null,
+      isFetching: false,
+      isPending: state.healthData === undefined,
+      refetch: vi.fn(async () => ({})),
+    };
+  },
   useDeleteInstanceMutation: () => ({
     isPending: false,
     mutateAsync: state.deleteInstance,
@@ -420,13 +450,96 @@ function instanceHealthResponse({
   });
 }
 
+function activityHealthResponse() {
+  return createProto(CheckInstanceHealthResponseSchema, {
+    health: createProto(InstanceHealthSchema, {
+      connectionActivity: createProto(ConnectionActivityHealthSchema, {
+        activeConnections: 3,
+        byApplication: [
+          createProto(ApplicationConnectionsSchema, {
+            activeConnections: 2,
+            applicationName: "api-gateway",
+            idleConnections: 1,
+            idleInTransactionConnections: 1,
+            totalConnections: 4,
+          }),
+          createProto(ApplicationConnectionsSchema, {
+            activeConnections: 1,
+            applicationName: "metabase",
+            totalConnections: 1,
+          }),
+        ],
+        idleConnections: 39,
+        idleInTransactionConnections: 1,
+        longestTransactionSeconds: BigInt(252),
+        longRunningTransactionConnections: 1,
+        maxConnections: 100,
+        sessions: [
+          createProto(ConnectionActivitySessionSchema, {
+            applicationName: "worker-pool",
+            databaseName: "logistics",
+            durationSeconds: BigInt(252),
+            pid: 4211,
+            query:
+              "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
+            state: "idle in transaction",
+            username: "app_readwrite",
+          }),
+          createProto(ConnectionActivitySessionSchema, {
+            applicationName: "api-gateway",
+            blockedByPid: 4211,
+            databaseName: "logistics",
+            durationSeconds: BigInt(38),
+            pid: 4302,
+            query: "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
+            state: "active",
+            username: "app_readwrite",
+            waitEvent: "transactionid",
+            waitEventType: "Lock",
+          }),
+        ],
+        status: HealthCheckStatus.WARNING,
+        totalConnections: 44,
+        utilizationRatio: 0.44,
+        waitingForLockConnections: 1,
+      }),
+    }),
+  });
+}
+
+function paginatedActivityHealthResponse() {
+  const response = activityHealthResponse();
+  const activity = response.health?.connectionActivity;
+  if (!activity) {
+    throw new Error("Expected activity health fixture.");
+  }
+
+  activity.sessions.push(
+    ...Array.from({ length: 10 }, (_, index) =>
+      createProto(ConnectionActivitySessionSchema, {
+        applicationName: "batch-worker",
+        databaseName: "logistics",
+        durationSeconds: BigInt(index + 1),
+        pid: 5000 + index,
+        query: `SELECT ${index}`,
+        state: "active",
+        username: "app_readwrite",
+      })
+    )
+  );
+
+  return response;
+}
+
 beforeEach(() => {
+  state.activityQueryOptions = undefined;
   state.databases = [];
   state.deleteInstance.mockReset();
   state.deleteInstance.mockResolvedValue(undefined);
   state.extensionData = undefined;
   state.extensionInput = undefined;
   state.healthData = undefined;
+  state.healthQueryOptions = undefined;
   state.instanceCatalogError = null;
   state.instanceCatalogHasData = true;
   state.instanceCatalogHasResolved = true;
@@ -468,6 +581,10 @@ function renderInstanceConfiguration() {
 
 function renderInstanceOverview() {
   return render(<BackendInstancePage instanceId="prod" section="overview" />);
+}
+
+function renderInstanceActivity() {
+  return render(<BackendInstancePage instanceId="prod" section="activity" />);
 }
 
 function setFieldValue(label: string, value: string) {
@@ -791,6 +908,346 @@ describe("backend instance refresh", () => {
       expect(state.refetchInstance).toHaveBeenCalledTimes(1);
     });
     expect(state.refetchExtensions).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("backend instance activity", () => {
+  test("shows live pg_stat_activity session rows and blocking chain", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = activityHealthResponse();
+
+    renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    expect(
+      within(activity).getByText(
+        "Live sessions from pg_stat_activity, refreshed every 5 s"
+      )
+    ).toBeTruthy();
+    expect(within(activity).getAllByText("4m 12s").length).toBeGreaterThan(0);
+    expect(within(activity).getByText("Blocking chain")).toBeTruthy();
+    expect(within(activity).getByText("blocker · pid 4211")).toBeTruthy();
+    expect(within(activity).getByText("PID")).toBeTruthy();
+    expect(
+      within(activity).getAllByText("app_readwrite").length
+    ).toBeGreaterThan(0);
+    expect(within(activity).getByText("api-gateway")).toBeTruthy();
+    expect(
+      Array.from(
+        activity.querySelectorAll(
+          'code.language-sql[data-syntax-highlighter="shiki"]'
+        ),
+        (code) => code.textContent
+      )
+    ).toEqual([
+      "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
+      "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
+      "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
+      "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
+    ]);
+    expect(state.activityQueryOptions).toMatchObject({
+      enabled: true,
+      refetchInterval: 5000,
+    });
+    expect(state.healthQueryOptions).toMatchObject({ enabled: false });
+  });
+
+  test("filters session rows by URL-backed search and shared facets", async () => {
+    const user = userEvent.setup();
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = activityHealthResponse();
+
+    renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    const table = within(activity).getByRole("table");
+    const search = within(activity).getByRole("textbox", {
+      name: "Search query, user, app…",
+    });
+    const stateFilter = within(activity).getByRole("button", {
+      name: "State",
+    });
+    const appFilter = within(activity).getByRole("button", { name: "App" });
+
+    expect(appFilter).toBeTruthy();
+    expect(within(activity).getByRole("button", { name: "DB" })).toBeTruthy();
+
+    await user.type(search, "4302");
+
+    expect(
+      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
+    expect(
+      within(table).queryByRole("row", {
+        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
+      })
+    ).toBeNull();
+    expect(state.navigate).toHaveBeenLastCalledWith({
+      href: "/?q=4302",
+      replace: true,
+      resetScroll: false,
+    });
+
+    await user.clear(search);
+    await user.click(stateFilter);
+    await user.click(screen.getByRole("option", { name: "active" }));
+
+    expect(
+      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
+    expect(
+      within(table).queryByRole("row", {
+        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
+      })
+    ).toBeNull();
+
+    await user.click(within(activity).getByRole("button", { name: "Reset" }));
+
+    expect(
+      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
+    expect(
+      within(table).getByRole("row", { name: BLOCKER_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
+    expect(
+      within(activity).queryByRole("button", { name: "Reset" })
+    ).toBeNull();
+
+    await user.click(appFilter);
+    await user.click(screen.getByRole("option", { name: "api-gateway" }));
+
+    expect(
+      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
+    expect(
+      within(table).queryByRole("row", {
+        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
+      })
+    ).toBeNull();
+
+    await user.click(screen.getByRole("option", { name: "api-gateway" }));
+
+    expect(
+      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
+    expect(
+      within(table).getByRole("row", { name: BLOCKER_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
+  });
+
+  test("paginates the session sample and changes page size", async () => {
+    const user = userEvent.setup();
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = paginatedActivityHealthResponse();
+
+    renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    const table = within(activity).getByRole("table");
+    const search = within(activity).getByRole("textbox", {
+      name: "Search query, user, app…",
+    });
+    const nextPage = within(activity).getByRole("button", {
+      name: "Next page",
+    });
+    const previousPage = within(activity).getByRole("button", {
+      name: "Previous page",
+    });
+    const pageSize = within(activity).getByRole("combobox", {
+      name: "Rows per page",
+    });
+
+    expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
+    expect(within(table).queryByText("5008")).toBeNull();
+    expect(nextPage).toHaveProperty("disabled", false);
+    expect(previousPage).toHaveProperty("disabled", true);
+
+    await user.click(nextPage);
+
+    expect(within(activity).getByText("Page 2 of 2")).toBeTruthy();
+    expect(within(table).getByText("5008")).toBeTruthy();
+    expect(within(table).queryByText("4211")).toBeNull();
+    expect(previousPage).toHaveProperty("disabled", false);
+
+    await user.click(previousPage);
+
+    expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
+    expect(within(table).getByText("4211")).toBeTruthy();
+    expect(previousPage).toHaveProperty("disabled", true);
+
+    await user.click(nextPage);
+
+    await user.type(search, "4211");
+
+    expect(within(activity).getByText("Page 1 of 1")).toBeTruthy();
+    expect(within(table).getByText("4211")).toBeTruthy();
+
+    await user.clear(search);
+
+    expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
+    expect(within(table).getByText("4211")).toBeTruthy();
+
+    await user.click(nextPage);
+    await user.click(within(activity).getByRole("button", { name: "State" }));
+    await user.click(screen.getByRole("option", { name: "active" }));
+
+    expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
+    expect(within(table).getByText("4302")).toBeTruthy();
+    expect(
+      within(activity).getByText(
+        "Showing 1–10 of 11 matches · 12 sampled sessions · 44 total on server"
+      )
+    ).toBeTruthy();
+
+    await user.click(within(activity).getByRole("button", { name: "Reset" }));
+
+    await user.click(pageSize);
+    await user.click(screen.getByRole("option", { name: "25" }));
+
+    expect(within(activity).getByText("Page 1 of 1")).toBeTruthy();
+    expect(within(table).getByText("5008")).toBeTruthy();
+    expect(nextPage).toHaveProperty("disabled", true);
+
+    await user.click(pageSize);
+    await user.click(screen.getByRole("option", { name: "10" }));
+
+    expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
+    expect(within(table).queryByText("5008")).toBeNull();
+    expect(nextPage).toHaveProperty("disabled", false);
+  });
+
+  test("clamps the current page when a live sample shrinks", async () => {
+    const user = userEvent.setup();
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = paginatedActivityHealthResponse();
+
+    const { rerender } = renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    const table = within(activity).getByRole("table");
+    const nextPage = within(activity).getByRole("button", {
+      name: "Next page",
+    });
+    const previousPage = within(activity).getByRole("button", {
+      name: "Previous page",
+    });
+
+    await user.click(nextPage);
+
+    expect(within(activity).getByText("Page 2 of 2")).toBeTruthy();
+    expect(within(table).getByText("5008")).toBeTruthy();
+
+    state.healthData = activityHealthResponse();
+    rerender(<BackendInstancePage instanceId="prod" section="activity" />);
+
+    expect(within(activity).getByText("Page 1 of 1")).toBeTruthy();
+    expect(within(table).getByText("4211")).toBeTruthy();
+    expect(within(table).getByText("4302")).toBeTruthy();
+    expect(within(table).queryByText("5008")).toBeNull();
+    expect(previousPage).toHaveProperty("disabled", true);
+    expect(nextPage).toHaveProperty("disabled", true);
+  });
+
+  test("shows the empty sessions state", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = createProto(CheckInstanceHealthResponseSchema, {
+      health: createProto(InstanceHealthSchema, {
+        connectionActivity: createProto(ConnectionActivityHealthSchema, {
+          totalConnections: 2,
+        }),
+      }),
+    });
+
+    renderInstanceActivity();
+
+    expect(screen.getByText("No activity sessions")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "No live client sessions are visible from pg_stat_activity yet."
+      )
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("combobox", { name: "Rows per page" })
+    ).toBeNull();
+  });
+
+  test("shows unavailable placeholders and the activity partial error", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = createProto(CheckInstanceHealthResponseSchema, {
+      health: createProto(InstanceHealthSchema),
+      partialErrors: [
+        createProto(StatusSchema, {
+          message: "permission denied for pg_stat_activity",
+        }),
+      ],
+    });
+
+    renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    expect(within(activity).getAllByText("—")).toHaveLength(5);
+    expect(
+      within(activity).getByText("Activity data unavailable")
+    ).toBeTruthy();
+    expect(
+      within(activity).getByText("permission denied for pg_stat_activity")
+    ).toBeTruthy();
+  });
+
+  test("shows Activity unavailable instead of loading forever when disconnected", () => {
+    state.healthData = activityHealthResponse();
+
+    renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    expect(within(activity).getAllByText("—")).toHaveLength(5);
+    expect(within(activity).getByText("Activity unavailable")).toBeTruthy();
+    expect(
+      within(activity).getByText(
+        "Connect the instance before Querylane can read pg_stat_activity."
+      )
+    ).toBeTruthy();
+    expect(within(activity).queryByText("Loading activity...")).toBeNull();
+  });
+
+  test("gives blocker highlighting precedence for a chained lock row", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    const response = activityHealthResponse();
+    response.health?.connectionActivity?.sessions.push(
+      createProto(ConnectionActivitySessionSchema, {
+        applicationName: "api-gateway",
+        blockedByPid: 4302,
+        databaseName: "logistics",
+        durationSeconds: 12n,
+        pid: 4318,
+        query: "SELECT * FROM shipping.shipments FOR UPDATE",
+        state: "active",
+        username: "app_readwrite",
+      })
+    );
+    state.healthData = response;
+
+    renderInstanceActivity();
+
+    const row = screen.getByRole("row", {
+      name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
+    });
+    expect(row.className).toContain("bg-amber-500/5");
+    expect(row.className).not.toContain("bg-muted/40");
   });
 });
 

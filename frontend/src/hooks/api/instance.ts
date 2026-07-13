@@ -22,6 +22,7 @@ import {
   ListInstancesResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import {
+  checkInstanceActivity,
   checkInstanceHealth,
   createInstance,
   deleteInstance,
@@ -170,6 +171,16 @@ export function useCheckInstanceHealthQuery(
   options?: ConnectUseQueryOptions<(typeof checkInstanceHealth)["output"]>
 ) {
   return useConnectQuery(checkInstanceHealth, input, options);
+}
+
+export function useCheckInstanceActivityQuery(
+  input?:
+    | MessageInitShape<(typeof checkInstanceActivity)["input"]>
+    | SkipToken
+    | undefined,
+  options?: ConnectUseQueryOptions<(typeof checkInstanceActivity)["output"]>
+) {
+  return useConnectQuery(checkInstanceActivity, input, options);
 }
 
 export function useCreateInstanceMutation(

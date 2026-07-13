@@ -12,6 +12,7 @@ function buildInstancePaths(instanceBase?: string): SidebarPaths {
     return {};
   }
   return {
+    instanceActivity: `${instanceBase}/activity`,
     instanceConfiguration: `${instanceBase}/configuration`,
     instanceOverview: instanceBase,
     instanceRoles: `${instanceBase}/roles`,
@@ -56,6 +57,7 @@ interface SidebarPaths {
   databaseExtensions?: string | undefined;
   databaseInsights?: string | undefined;
   databaseOverview?: string | undefined;
+  instanceActivity?: string | undefined;
   instanceConfiguration?: string | undefined;
   instanceOverview?: string | undefined;
   instanceRoles?: string | undefined;
@@ -66,6 +68,7 @@ interface NavActiveState {
   databaseExtensions: boolean;
   databaseInsights: boolean;
   databaseOverview: boolean;
+  instanceActivity: boolean;
   instanceConfiguration: boolean;
   instanceOverview: boolean;
   instanceRoles: boolean;
@@ -99,6 +102,7 @@ function buildNavActiveState({
     databaseExtensions: matchesPath(pathname, paths.databaseExtensions),
     databaseInsights: matchesPath(pathname, paths.databaseInsights),
     databaseOverview: matchesPath(pathname, paths.databaseOverview),
+    instanceActivity: matchesPath(pathname, paths.instanceActivity),
     instanceConfiguration: matchesPath(pathname, paths.instanceConfiguration),
     instanceOverview: matchesPath(pathname, paths.instanceOverview),
     instanceRoles: matchesPath(pathname, paths.instanceRoles),

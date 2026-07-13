@@ -78,6 +78,8 @@ function InstanceAdminPageContent({
     return null;
   }
   switch (page) {
+    case "instance.activity":
+      return <BackendInstancePage instanceId={instanceId} section="activity" />;
     case "instance.overview":
       return <BackendInstancePage instanceId={instanceId} section="overview" />;
     case "instance.roles":

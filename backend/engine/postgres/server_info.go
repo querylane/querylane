@@ -212,6 +212,28 @@ func (d *Postgres) CheckInstanceHealth(ctx context.Context, db *sql.DB) (*engine
 	return health, nil
 }
 
+// CheckInstanceActivity retrieves only pg_stat_activity-backed signals for
+// high-frequency polling on the Activity page.
+func (d *Postgres) CheckInstanceActivity(ctx context.Context, db *sql.DB) (*engine.InstanceHealth, error) {
+	health := &engine.InstanceHealth{}
+
+	activity, err := queryConnectionActivityHealth(ctx, db)
+	if err != nil {
+		classified := classifyQueryError("query connection activity health", err)
+		slog.WarnContext(ctx, "failed to query connection activity health", slog.String("error", classified.Error()))
+		health.PartialErrors = append(health.PartialErrors, engine.OverviewMetricError{
+			Metric: "connection_activity",
+			Err:    classified,
+		})
+
+		return health, nil
+	}
+
+	health.ConnectionActivity = activity
+
+	return health, nil
+}
+
 func queryConnectionActivityHealth(ctx context.Context, db *sql.DB) (*engine.ConnectionActivityHealth, error) {
 	var activity engine.ConnectionActivityHealth
 	if err := db.QueryRowContext(ctx, getConnectionActivityHealthQuery).Scan(
@@ -237,6 +259,15 @@ func queryConnectionActivityHealth(ctx context.Context, db *sql.DB) (*engine.Con
 		slog.WarnContext(ctx, "failed to query connections by application", slog.String("error", err.Error()))
 	} else {
 		activity.ByApplication = byApplication
+	}
+
+	sessions, err := queryConnectionActivitySessions(ctx, db)
+	if err != nil {
+		// Session rows are supplementary; keep the authoritative scalar counts
+		// even when detail visibility is unavailable.
+		slog.WarnContext(ctx, "failed to query activity sessions", slog.String("error", err.Error()))
+	} else {
+		activity.Sessions = sessions
 	}
 
 	return &activity, nil
@@ -271,6 +302,42 @@ func queryConnectionActivityByApplication(ctx context.Context, db *sql.DB) ([]en
 	}
 
 	return apps, nil
+}
+
+func queryConnectionActivitySessions(ctx context.Context, db *sql.DB) ([]engine.ConnectionActivitySession, error) {
+	rows, err := db.QueryContext(ctx, getConnectionActivitySessionsQuery)
+	if err != nil {
+		return nil, classifyQueryError("query activity sessions", err)
+	}
+	defer rows.Close()
+
+	var sessions []engine.ConnectionActivitySession
+
+	for rows.Next() {
+		var session engine.ConnectionActivitySession
+		if err := rows.Scan(
+			&session.PID,
+			&session.Username,
+			&session.ApplicationName,
+			&session.DatabaseName,
+			&session.State,
+			&session.DurationSeconds,
+			&session.Query,
+			&session.WaitEventType,
+			&session.WaitEvent,
+			&session.BlockedByPID,
+		); err != nil {
+			return nil, classifyQueryError("scan activity sessions", err)
+		}
+
+		sessions = append(sessions, session)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, classifyQueryError("iterate activity sessions", err)
+	}
+
+	return sessions, nil
 }
 
 func queryReplicationHealth(ctx context.Context, db *sql.DB) (*engine.ReplicationHealth, error) {

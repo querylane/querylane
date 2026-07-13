@@ -33,13 +33,28 @@ const SQL_THEMES = {
   dark: "github-dark",
   light: "github-light",
 } as const;
+const MAX_CACHED_SQL_QUERIES = 500;
+const SQL_TOKEN_CACHE = new Map<string, ThemedTokenWithVariants[][]>();
 
 function highlightSql(sqlText: string): ThemedTokenWithVariants[][] {
-  return SQL_HIGHLIGHTER.codeToTokensWithThemes(sqlText, {
+  const cachedTokenLines = SQL_TOKEN_CACHE.get(sqlText);
+  if (cachedTokenLines) {
+    return cachedTokenLines;
+  }
+
+  const tokenLines = SQL_HIGHLIGHTER.codeToTokensWithThemes(sqlText, {
     lang: "sql",
     themes: SQL_THEMES,
     tokenizeTimeLimit: 200,
   });
+  if (SQL_TOKEN_CACHE.size >= MAX_CACHED_SQL_QUERIES) {
+    const oldestSqlText = SQL_TOKEN_CACHE.keys().next().value;
+    if (oldestSqlText !== undefined) {
+      SQL_TOKEN_CACHE.delete(oldestSqlText);
+    }
+  }
+  SQL_TOKEN_CACHE.set(sqlText, tokenLines);
+  return tokenLines;
 }
 
 function tokenStyle(token: ThemedTokenWithVariants): ShikiTokenStyle | undefined {

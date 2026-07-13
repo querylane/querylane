@@ -7,6 +7,18 @@ import {
 } from "@/lib/admin-navigation";
 
 describe("admin navigation", () => {
+  test("resolves canonical targets for instance activity", () => {
+    expect(
+      resolveCanonicalAdminPageTarget({
+        ids: { instanceId: "local" },
+        page: "instance.activity",
+      })
+    ).toEqual({
+      params: { instanceId: "local" },
+      to: "/instances/$instanceId/activity",
+    });
+  });
+
   test("resolves canonical targets for database explorer", () => {
     expect(
       resolveCanonicalAdminPageTarget({

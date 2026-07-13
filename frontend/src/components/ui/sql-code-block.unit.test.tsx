@@ -48,4 +48,15 @@ SELECT 'active' AS status;`;
     expect(screen.queryByRole("button", { name: "Copy SQL" })).toBeNull();
     expect(container.querySelector("pre")?.className).not.toContain("pr-10");
   });
+
+  test("preserves the empty-query placeholder", () => {
+    const { container } = render(
+      <SqlCodeBlock copyable={false} sql="—" variant="inline" />
+    );
+
+    const code = container.querySelector(
+      'code.language-sql[data-syntax-highlighter="shiki"]'
+    );
+    expect(code?.textContent).toBe("—");
+  });
 });

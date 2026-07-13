@@ -33,6 +33,12 @@ type CanonicalAdminPageTarget =
       params: {
         instanceId: string;
       };
+      to: "/instances/$instanceId/activity";
+    }
+  | {
+      params: {
+        instanceId: string;
+      };
       to: "/instances/$instanceId/configuration";
     }
   | {
@@ -118,6 +124,11 @@ function resolveCanonicalInstancePageTarget({
       return {
         params: { instanceId: ids.instanceId },
         to: "/instances/$instanceId",
+      };
+    case "instance.activity":
+      return {
+        params: { instanceId: ids.instanceId },
+        to: "/instances/$instanceId/activity",
       };
     case "instance.configuration":
       return {

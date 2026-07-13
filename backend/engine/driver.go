@@ -35,6 +35,7 @@ type healthDriver interface {
 	GetServerInfo(ctx context.Context, db *sql.DB) (*ServerInfo, error)
 	GetInstanceOverview(ctx context.Context, db *sql.DB) (*InstanceOverview, error)
 	CheckInstanceHealth(ctx context.Context, db *sql.DB) (*InstanceHealth, error)
+	CheckInstanceActivity(ctx context.Context, db *sql.DB) (*InstanceHealth, error)
 	TestConnection(ctx context.Context, db *sql.DB) error
 }
 

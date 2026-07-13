@@ -14,6 +14,7 @@ import { Route as InstancesInstanceIdRouteRouteImport } from './routes/instances
 import { Route as InstancesInstanceIdIndexRouteImport } from './routes/instances/$instanceId/index';
 import { Route as InstancesInstanceIdConfigurationRouteImport } from './routes/instances/$instanceId/configuration';
 import { Route as InstancesInstanceIdAdminRouteImport } from './routes/instances/$instanceId/admin';
+import { Route as InstancesInstanceIdActivityRouteImport } from './routes/instances/$instanceId/activity';
 import { Route as InstancesInstanceIdRolesRouteRouteImport } from './routes/instances/$instanceId/roles/route';
 import { Route as InstancesInstanceIdDatabasesRouteRouteImport } from './routes/instances/$instanceId/databases/route';
 import { Route as InstancesInstanceIdRolesIndexRouteImport } from './routes/instances/$instanceId/roles/index';
@@ -70,6 +71,12 @@ const InstancesInstanceIdAdminRoute =
   InstancesInstanceIdAdminRouteImport.update({
     id: '/admin',
     path: '/admin',
+    getParentRoute: () => InstancesInstanceIdRouteRoute,
+  } as any);
+const InstancesInstanceIdActivityRoute =
+  InstancesInstanceIdActivityRouteImport.update({
+    id: '/activity',
+    path: '/activity',
     getParentRoute: () => InstancesInstanceIdRouteRoute,
   } as any);
 const InstancesInstanceIdRolesRouteRoute =
@@ -130,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/instances/$instanceId': typeof InstancesInstanceIdRouteRouteWithChildren;
   '/instances/$instanceId/databases': typeof InstancesInstanceIdDatabasesRouteRouteWithChildren;
   '/instances/$instanceId/roles': typeof InstancesInstanceIdRolesRouteRouteWithChildren;
+  '/instances/$instanceId/activity': typeof InstancesInstanceIdActivityRoute;
   '/instances/$instanceId/admin': typeof InstancesInstanceIdAdminRoute;
   '/instances/$instanceId/configuration': typeof InstancesInstanceIdConfigurationRoute;
   '/instances/$instanceId/': typeof InstancesInstanceIdIndexRoute;
@@ -147,6 +155,7 @@ export interface FileRoutesByTo {
   '/new-instance': typeof NewInstanceRoute;
   '/setup': typeof SetupRoute;
   '/instances/$instanceId/databases': typeof InstancesInstanceIdDatabasesRouteRouteWithChildren;
+  '/instances/$instanceId/activity': typeof InstancesInstanceIdActivityRoute;
   '/instances/$instanceId/admin': typeof InstancesInstanceIdAdminRoute;
   '/instances/$instanceId/configuration': typeof InstancesInstanceIdConfigurationRoute;
   '/instances/$instanceId': typeof InstancesInstanceIdIndexRoute;
@@ -167,6 +176,7 @@ export interface FileRoutesById {
   '/instances/$instanceId': typeof InstancesInstanceIdRouteRouteWithChildren;
   '/instances/$instanceId/databases': typeof InstancesInstanceIdDatabasesRouteRouteWithChildren;
   '/instances/$instanceId/roles': typeof InstancesInstanceIdRolesRouteRouteWithChildren;
+  '/instances/$instanceId/activity': typeof InstancesInstanceIdActivityRoute;
   '/instances/$instanceId/admin': typeof InstancesInstanceIdAdminRoute;
   '/instances/$instanceId/configuration': typeof InstancesInstanceIdConfigurationRoute;
   '/instances/$instanceId/': typeof InstancesInstanceIdIndexRoute;
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/instances/$instanceId'
     | '/instances/$instanceId/databases'
     | '/instances/$instanceId/roles'
+    | '/instances/$instanceId/activity'
     | '/instances/$instanceId/admin'
     | '/instances/$instanceId/configuration'
     | '/instances/$instanceId/'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/new-instance'
     | '/setup'
     | '/instances/$instanceId/databases'
+    | '/instances/$instanceId/activity'
     | '/instances/$instanceId/admin'
     | '/instances/$instanceId/configuration'
     | '/instances/$instanceId'
@@ -224,6 +236,7 @@ export interface FileRouteTypes {
     | '/instances/$instanceId'
     | '/instances/$instanceId/databases'
     | '/instances/$instanceId/roles'
+    | '/instances/$instanceId/activity'
     | '/instances/$instanceId/admin'
     | '/instances/$instanceId/configuration'
     | '/instances/$instanceId/'
@@ -307,6 +320,13 @@ declare module '@tanstack/react-router' {
       path: '/admin';
       fullPath: '/instances/$instanceId/admin';
       preLoaderRoute: typeof InstancesInstanceIdAdminRouteImport;
+      parentRoute: typeof InstancesInstanceIdRouteRoute;
+    };
+    '/instances/$instanceId/activity': {
+      id: '/instances/$instanceId/activity';
+      path: '/activity';
+      fullPath: '/instances/$instanceId/activity';
+      preLoaderRoute: typeof InstancesInstanceIdActivityRouteImport;
       parentRoute: typeof InstancesInstanceIdRouteRoute;
     };
     '/instances/$instanceId/roles': {
@@ -411,6 +431,7 @@ const InstancesInstanceIdRolesRouteRouteWithChildren =
 interface InstancesInstanceIdRouteRouteChildren {
   InstancesInstanceIdDatabasesRouteRoute: typeof InstancesInstanceIdDatabasesRouteRouteWithChildren;
   InstancesInstanceIdRolesRouteRoute: typeof InstancesInstanceIdRolesRouteRouteWithChildren;
+  InstancesInstanceIdActivityRoute: typeof InstancesInstanceIdActivityRoute;
   InstancesInstanceIdAdminRoute: typeof InstancesInstanceIdAdminRoute;
   InstancesInstanceIdConfigurationRoute: typeof InstancesInstanceIdConfigurationRoute;
   InstancesInstanceIdIndexRoute: typeof InstancesInstanceIdIndexRoute;
@@ -422,6 +443,7 @@ const InstancesInstanceIdRouteRouteChildren: InstancesInstanceIdRouteRouteChildr
       InstancesInstanceIdDatabasesRouteRouteWithChildren,
     InstancesInstanceIdRolesRouteRoute:
       InstancesInstanceIdRolesRouteRouteWithChildren,
+    InstancesInstanceIdActivityRoute: InstancesInstanceIdActivityRoute,
     InstancesInstanceIdAdminRoute: InstancesInstanceIdAdminRoute,
     InstancesInstanceIdConfigurationRoute:
       InstancesInstanceIdConfigurationRoute,

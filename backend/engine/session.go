@@ -40,6 +40,10 @@ func (s *instanceSession) CheckInstanceHealth(ctx context.Context) (*InstanceHea
 	return s.healthDriver.CheckInstanceHealth(ctx, s.db)
 }
 
+func (s *instanceSession) CheckInstanceActivity(ctx context.Context) (*InstanceHealth, error) {
+	return s.healthDriver.CheckInstanceActivity(ctx, s.db)
+}
+
 func (s *instanceSession) ListDatabases(ctx context.Context, params aip.Params) ([]Database, string, error) {
 	return s.instanceCatalogDriver.ListDatabases(ctx, s.db, params)
 }

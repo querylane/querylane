@@ -102,6 +102,10 @@ func (f *fakeRoleSession) CheckInstanceHealth(_ context.Context) (*engine.Instan
 	return nil, errors.New("not used in tests")
 }
 
+func (f *fakeRoleSession) CheckInstanceActivity(_ context.Context) (*engine.InstanceHealth, error) {
+	return nil, errors.New("not used in tests")
+}
+
 // Prober is never exercised by role tests; the probe surface lives on a
 // separate interface precisely so this fake ignores it.
 func (f *fakeRoleSession) Prober() engine.InstanceProber { return nil }

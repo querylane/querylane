@@ -11,6 +11,7 @@ type InstanceSession interface {
 	GetServerInfo(ctx context.Context) (*ServerInfo, error)
 	GetInstanceOverview(ctx context.Context) (*InstanceOverview, error)
 	CheckInstanceHealth(ctx context.Context) (*InstanceHealth, error)
+	CheckInstanceActivity(ctx context.Context) (*InstanceHealth, error)
 	ListRoles(ctx context.Context, params aip.Params) ([]Role, string, error)
 	GetRole(ctx context.Context, roleName string) (*Role, error)
 	ListDatabases(ctx context.Context, params aip.Params) ([]Database, string, error)

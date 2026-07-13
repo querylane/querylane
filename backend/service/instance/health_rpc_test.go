@@ -25,6 +25,49 @@ func (f healthFetcherFunc) CheckInstanceHealth(ctx context.Context, instance res
 	return f(ctx, instance)
 }
 
+type activityFetcherStub struct {
+	activity *engine.ConnectionActivityHealth
+}
+
+func (f *activityFetcherStub) GetInstanceOverview(context.Context, resource.InstanceName) (*engine.InstanceOverview, error) {
+	return &engine.InstanceOverview{}, nil
+}
+
+func (f *activityFetcherStub) CheckInstanceActivity(context.Context, resource.InstanceName) (*engine.InstanceHealth, error) {
+	return &engine.InstanceHealth{ConnectionActivity: f.activity}, nil
+}
+
+func TestCheckInstanceActivityReturnsOnlyConnectionActivity(t *testing.T) {
+	t.Parallel()
+
+	if !testing.Short() {
+		t.Skip("unit test: run with -short")
+	}
+
+	service := NewService(nil, nil, nil, nil, nil, &activityFetcherStub{
+		activity: &engine.ConnectionActivityHealth{
+			Active:           2,
+			Idle:             3,
+			Total:            5,
+			WaitingForLocks:  1,
+			LongestTxSeconds: 90,
+			Sessions: []engine.ConnectionActivitySession{
+				{PID: 4211, ApplicationName: "worker-pool", State: "active"},
+			},
+		},
+	}, false)
+
+	resp, err := service.CheckInstanceActivity(context.Background(), connect.NewRequest(&v1alpha1.CheckInstanceActivityRequest{
+		Name: "instances/prod",
+	}))
+
+	require.NoError(t, err)
+	require.NotNil(t, resp.Msg.GetActivity())
+	assert.Equal(t, int32(2), resp.Msg.GetActivity().GetActiveConnections())
+	require.Len(t, resp.Msg.GetActivity().GetSessions(), 1)
+	assert.Equal(t, int32(4211), resp.Msg.GetActivity().GetSessions()[0].GetPid())
+}
+
 func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) {
 	t.Parallel()
 
@@ -51,6 +94,29 @@ func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) 
 					ByApplication: []engine.ApplicationConnections{
 						{ApplicationName: "api-server", Active: 2, Idle: 1, IdleInTransaction: 1, Total: 4},
 						{ApplicationName: "(unnamed)", Active: 0, Idle: 2, IdleInTransaction: 0, Total: 2},
+					},
+					Sessions: []engine.ConnectionActivitySession{
+						{
+							PID:             4211,
+							Username:        "app_readwrite",
+							ApplicationName: "worker-pool",
+							DatabaseName:    "logistics",
+							State:           "idle in transaction",
+							DurationSeconds: 252,
+							Query:           "UPDATE shipping.shipments SET status = 'in_transit'",
+						},
+						{
+							PID:             4302,
+							Username:        "app_readwrite",
+							ApplicationName: "api-gateway",
+							DatabaseName:    "logistics",
+							State:           "active",
+							DurationSeconds: 38,
+							Query:           "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
+							WaitEventType:   "Lock",
+							WaitEvent:       "transactionid",
+							BlockedByPID:    4211,
+						},
 					},
 				},
 				Replication: &engine.ReplicationHealth{
@@ -118,6 +184,15 @@ func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) 
 	assert.Equal(t, int32(4), byApplication[0].GetTotalConnections())
 	assert.Equal(t, "(unnamed)", byApplication[1].GetApplicationName())
 	assert.Equal(t, int32(2), byApplication[1].GetIdleConnections())
+
+	sessions := activity.GetSessions()
+	require.Len(t, sessions, 2)
+	assert.Equal(t, int32(4211), sessions[0].GetPid())
+	assert.Equal(t, "worker-pool", sessions[0].GetApplicationName())
+	assert.Equal(t, int64(252), sessions[0].GetDurationSeconds())
+	assert.Equal(t, int32(4302), sessions[1].GetPid())
+	assert.Equal(t, int32(4211), sessions[1].GetBlockedByPid())
+	assert.Equal(t, "Lock", sessions[1].GetWaitEventType())
 
 	replication := health.GetReplication()
 	require.NotNil(t, replication)

@@ -1,4 +1,5 @@
 import {
+  Activity,
   ChartNoAxesColumnIncreasing,
   DatabaseZap,
   FolderTree,
@@ -63,6 +64,7 @@ function buildNavLinkProps({
 
   if (ids.instanceId) {
     linkToPage({ page: "instance.overview" });
+    linkToPage({ page: "instance.activity" });
     linkToPage({ page: "instance.roles" });
     linkToPage({ page: "instance.configuration" });
   }
@@ -91,6 +93,13 @@ function getInstanceNav({
       isDisabled: !paths.instanceOverview,
       key: "instance.overview",
       label: "Overview",
+    },
+    {
+      icon: Activity,
+      isActive: active.instanceActivity,
+      isDisabled: !paths.instanceActivity,
+      key: "instance.activity",
+      label: "Activity",
     },
     {
       icon: Users,

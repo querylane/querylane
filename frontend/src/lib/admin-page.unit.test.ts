@@ -12,6 +12,7 @@ describe("canRenderAdminPageAtScope", () => {
   test.each([
     // Instance pages render at instance and above
     { expected: true, page: "instance.overview", scope: "instance" },
+    { expected: true, page: "instance.activity", scope: "instance" },
     { expected: true, page: "instance.roles", scope: "database" },
     { expected: true, page: "instance.configuration", scope: "database" },
     // Database pages need at least database scope
@@ -93,6 +94,11 @@ describe("resolveCurrentAdminPage", () => {
   });
 
   test.each([
+    {
+      expected: "instance.activity",
+      pathname: "/instances/x/activity",
+      scope: "instance",
+    },
     {
       expected: "instance.configuration",
       pathname: "/instances/x/configuration",
@@ -185,9 +191,21 @@ describe("resolveRequestedAdminPageForScope", () => {
       resolveRequestedAdminPageForScope("instance.roles", "database")
     ).toBe("instance.roles");
   });
+
+  test("accepts the activity page at instance scope", () => {
+    expect(
+      resolveRequestedAdminPageForScope("instance.activity", "instance")
+    ).toBe("instance.activity");
+  });
 });
 
 describe("resolveImplicitAdminPageFromRouteId", () => {
+  test("maps canonical instance activity route to the activity page", () => {
+    expect(
+      resolveImplicitAdminPageFromRouteId("/instances/$instanceId/activity")
+    ).toBe("instance.activity");
+  });
+
   test("maps canonical database explorer route to the explorer page", () => {
     expect(
       resolveImplicitAdminPageFromRouteId(

@@ -42,6 +42,9 @@ service InstanceService {
   // Checks live PostgreSQL health signals that are inexpensive and directly
   // observable from ordinary database views/settings.
   rpc CheckInstanceHealth(CheckInstanceHealthRequest) returns (CheckInstanceHealthResponse) {}
+
+  // Checks only live connection activity for high-frequency session polling.
+  rpc CheckInstanceActivity(CheckInstanceActivityRequest) returns (CheckInstanceActivityResponse) {}
 }
 
 // --------------------------------------------------------------------------
@@ -505,6 +508,27 @@ message CheckInstanceHealthResponse {
   repeated google.rpc.Status partial_errors = 2;
 }
 
+// --- CheckInstanceActivity RPC ---
+message CheckInstanceActivityRequest {
+  // Required. Resource name of the instance.
+  // Format: instances/{instance_id}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Instance"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$"
+  ];
+}
+
+message CheckInstanceActivityResponse {
+  ConnectionActivityHealth activity = 1;
+
+  // Errors encountered fetching connection activity. The RPC succeeds (OK)
+  // when activity is unavailable so the page can show the category reason.
+  // ErrorInfo metadata key "check" is "connection_activity".
+  repeated google.rpc.Status partial_errors = 2;
+}
+
 // Machine-readable status for a health category.
 enum HealthCheckStatus {
   HEALTH_CHECK_STATUS_UNSPECIFIED = 0;
@@ -557,6 +581,10 @@ message ConnectionActivityHealth {
   // capped). A live snapshot with no historical backing. Empty when the
   // breakdown could not be computed; the scalar counts above stay authoritative.
   repeated ApplicationConnections by_application = 12;
+  // Current client backends from pg_stat_activity (risk-first, capped). Empty
+  // when the session query could not be computed; the scalar counts above stay
+  // authoritative.
+  repeated ConnectionActivitySession sessions = 13;
 }
 
 // Client backend connection counts for one application_name, split by state.
@@ -567,6 +595,20 @@ message ApplicationConnections {
   int32 idle_connections = 3 [(buf.validate.field).int32.gte = 0];
   int32 idle_in_transaction_connections = 4 [(buf.validate.field).int32.gte = 0];
   int32 total_connections = 5 [(buf.validate.field).int32.gte = 0];
+}
+
+// One live pg_stat_activity client backend row.
+message ConnectionActivitySession {
+  int32 pid = 1 [(buf.validate.field).int32.gte = 0];
+  string username = 2;
+  string application_name = 3;
+  string database_name = 4;
+  string state = 5;
+  int64 duration_seconds = 6 [(buf.validate.field).int64.gte = 0];
+  string query = 7;
+  string wait_event_type = 8;
+  string wait_event = 9;
+  int32 blocked_by_pid = 10 [(buf.validate.field).int32.gte = 0];
 }
 
 // Replication health from pg_is_in_recovery, pg_stat_replication, and

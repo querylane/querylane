@@ -21,6 +21,7 @@ type OverviewProvider struct {
 	sessions instanceSessionOpener
 	cache    *gocache.Cache[string, engine.InstanceOverview]
 	health   *gocache.Cache[string, engine.InstanceHealth]
+	activity *gocache.Cache[string, engine.InstanceHealth]
 }
 
 // NewOverviewProvider creates an OverviewProvider with a 1-second TTL cache.
@@ -32,6 +33,10 @@ func NewOverviewProvider(sessions instanceSessionOpener) *OverviewProvider {
 			gocache.MaxErrorAge(time.Second),
 		),
 		health: gocache.New[string, engine.InstanceHealth](
+			gocache.MaxAge(time.Second),
+			gocache.MaxErrorAge(time.Second),
+		),
+		activity: gocache.New[string, engine.InstanceHealth](
 			gocache.MaxAge(time.Second),
 			gocache.MaxErrorAge(time.Second),
 		),
@@ -92,4 +97,30 @@ func (p *OverviewProvider) CheckInstanceHealth(ctx context.Context, instance res
 	}
 
 	return &health, nil
+}
+
+// CheckInstanceActivity returns cached or live connection activity only.
+// Concurrent callers for the same instance are coalesced into a single query.
+func (p *OverviewProvider) CheckInstanceActivity(ctx context.Context, instance resource.InstanceName) (*engine.InstanceHealth, error) {
+	fillCtx := context.WithoutCancel(ctx)
+
+	activity, err, _ := p.activity.Get(instance.String(), func() (engine.InstanceHealth, error) {
+		session, err := p.sessions.OpenInstance(fillCtx, instance)
+		if err != nil {
+			return engine.InstanceHealth{}, err
+		}
+		defer session.Close()
+
+		result, err := session.CheckInstanceActivity(fillCtx)
+		if err != nil {
+			return engine.InstanceHealth{}, err
+		}
+
+		return *result, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &activity, nil
 }
