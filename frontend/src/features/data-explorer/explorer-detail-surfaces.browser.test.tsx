@@ -1890,6 +1890,19 @@ test("data explorer table indexes have a redesigned card baseline", async () => 
   expect(document.body.textContent).toContain(
     "CREATE UNIQUE INDEX customers_pkey ON public.customers USING btree (customer_id)"
   );
+  const copyButton = page
+    .getByRole("button", { name: "Copy SQL" })
+    .first()
+    .element();
+  const sqlBlock = copyButton.parentElement;
+  if (!sqlBlock) {
+    throw new Error("Expected Copy SQL to render inside its SQL block.");
+  }
+  const copyBox = copyButton.getBoundingClientRect();
+  const sqlBlockBox = sqlBlock.getBoundingClientRect();
+  const copyCenter = copyBox.top + copyBox.height / 2;
+  const sqlBlockCenter = sqlBlockBox.top + sqlBlockBox.height / 2;
+  expect(Math.abs(copyCenter - sqlBlockCenter)).toBeLessThanOrEqual(1);
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-indexes"
   );

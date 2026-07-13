@@ -2359,6 +2359,7 @@ function IndexSqlBlock({ sql }: { sql: string }) {
     <div className="border-t bg-muted/20 p-4">
       <SqlCodeBlock
         className="whitespace-pre-wrap break-words border-0 bg-transparent p-0 pr-10 text-[12px]"
+        copyButtonClassName="right-0 top-1/2 -translate-y-1/2"
         sql={sql}
       />
     </div>
