@@ -1546,14 +1546,19 @@ describe("TableDetail policies tab pagination", () => {
     expect(screen.getByRole("status").textContent).toBe("Page 2 of 2");
   });
 
-  it("changes policy page size using the resource-card options", async () => {
+  it("changes policy page size from the pagination footer", async () => {
     const user = userEvent.setup();
     renderPoliciesTab(createPolicies(13));
 
     await user.click(
       screen.getByRole("button", { name: "Next policies page" })
     );
-    const pageSizeSelect = screen.getByRole("combobox", { name: "Per page" });
+    const pagination = screen.getByRole("navigation", {
+      name: "Policies pagination",
+    });
+    const pageSizeSelect = within(pagination).getByRole("combobox", {
+      name: "Rows per page",
+    });
     expect(pageSizeSelect.textContent).toContain("6");
 
     await user.click(pageSizeSelect);

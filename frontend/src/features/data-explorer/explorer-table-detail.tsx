@@ -2416,31 +2416,6 @@ function PoliciesTab({
             },
           ]}
         />
-        <Select
-          onValueChange={(nextValue) => {
-            if (typeof nextValue !== "string") {
-              return;
-            }
-            const nextPageSize = Number(nextValue);
-            if (isPolicyPageSize(nextPageSize)) {
-              setPageIndex(0);
-              setPageSize(nextPageSize);
-            }
-          }}
-          value={String(pageSize)}
-        >
-          <SelectTrigger aria-label="Per page" className="h-8 w-28" size="sm">
-            <span className="text-muted-foreground">Per page </span>
-            <span>{pageSize}</span>
-          </SelectTrigger>
-          <SelectContent alignItemWithTrigger={false}>
-            {POLICY_PAGE_SIZE_OPTIONS.map((size) => (
-              <SelectItem key={size} label={String(size)} value={String(size)}>
-                {size}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
       {pagePolicies.length > 0 ? (
         <div className="flex flex-col gap-3">
@@ -2452,8 +2427,44 @@ function PoliciesTab({
         <SearchEmptyState className="border" resourceName="policies" />
       )}
       {visiblePolicies.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
-          <span>
+        <nav
+          aria-label="Policies pagination"
+          className="flex min-h-8 flex-wrap items-center gap-2 text-muted-foreground text-xs"
+        >
+          <span className="text-[11px]">Rows per page</span>
+          <Select
+            onValueChange={(nextValue) => {
+              if (typeof nextValue !== "string") {
+                return;
+              }
+              const nextPageSize = Number(nextValue);
+              if (isPolicyPageSize(nextPageSize)) {
+                setPageIndex(0);
+                setPageSize(nextPageSize);
+              }
+            }}
+            value={String(pageSize)}
+          >
+            <SelectTrigger
+              aria-label="Rows per page"
+              className="h-7 w-16"
+              size="sm"
+            >
+              <span>{pageSize}</span>
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              {POLICY_PAGE_SIZE_OPTIONS.map((size) => (
+                <SelectItem
+                  key={size}
+                  label={String(size)}
+                  value={String(size)}
+                >
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="tabular-nums">
             Showing {firstPolicy}&ndash;{lastPolicy} of {visiblePolicies.length}{" "}
             policies
           </span>
@@ -2491,7 +2502,7 @@ function PoliciesTab({
               <ChevronRight />
             </Button>
           </div>
-        </div>
+        </nav>
       ) : null}
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <RlsCombinationGuide />
