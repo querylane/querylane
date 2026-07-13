@@ -316,12 +316,7 @@ function normalizePostgresRecord(
   );
   const operation = normalizeOperation(record["operation"]);
 
-  if (
-    sqlstate === null &&
-    sqlstateClass === null &&
-    conditionName === null &&
-    operation === null
-  ) {
+  if (sqlstate === null && sqlstateClass === null && conditionName === null) {
     return null;
   }
 

@@ -21,6 +21,8 @@ import type {
 const APP_UI_ERROR_CONTEXT = Symbol.for("querylane.app-ui-error-context");
 const APP_UI_ERROR_REPORTED = Symbol.for("querylane.app-ui-error-reported");
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
+const POSTGRES_WIRE_MESSAGE_PATTERN =
+  /^PostgreSQL(?: ([0-9A-Z]{5}))?(?::| error(?:$|\s))/;
 type PostgresUiErrorKind =
   | "authentication_failed"
   | "constraint_violation"
@@ -666,12 +668,13 @@ function shouldReportAppUiError(error: AppUiError, expected: boolean): boolean {
 }
 
 function buildPostgresTelemetrySummary(
-  error: AppUiError
+  error: AppUiError,
+  matchesPostgresWireMessage: boolean
 ): Record<string, unknown> | null {
   const hasPostgresDetail = error.details.some(
     (detail) => detail.type === POSTGRES_DETAIL_TYPE
   );
-  if (!(error.postgres || hasPostgresDetail)) {
+  if (!(error.postgres || hasPostgresDetail || matchesPostgresWireMessage)) {
     return null;
   }
 
@@ -689,8 +692,20 @@ function buildPostgresTelemetrySummary(
   };
 }
 
-function postgresTelemetryMessage(error: AppUiError): string {
-  const sqlstate = error.postgres?.sqlstate;
+function postgresWireSqlstate(message: string): string | null | undefined {
+  const match = POSTGRES_WIRE_MESSAGE_PATTERN.exec(message);
+  if (!match) {
+    return;
+  }
+
+  return match[1] ?? null;
+}
+
+function postgresTelemetryMessage(
+  error: AppUiError,
+  wireSqlstate: string | null | undefined
+): string {
+  const sqlstate = error.postgres?.sqlstate ?? wireSqlstate;
   const condition = error.postgres?.conditionName;
 
   if (sqlstate && condition) {
@@ -705,10 +720,14 @@ function postgresTelemetryMessage(error: AppUiError): string {
 }
 
 function buildAppUiErrorTelemetry(error: AppUiError) {
-  const postgresSummary = buildPostgresTelemetrySummary(error);
+  const wireSqlstate = postgresWireSqlstate(error.message);
+  const postgresSummary = buildPostgresTelemetrySummary(
+    error,
+    wireSqlstate !== undefined
+  );
   if (postgresSummary) {
     const dump = JSON.stringify(postgresSummary);
-    const message = postgresTelemetryMessage(error);
+    const message = postgresTelemetryMessage(error, wireSqlstate);
 
     return {
       captureTarget: new Error(message),

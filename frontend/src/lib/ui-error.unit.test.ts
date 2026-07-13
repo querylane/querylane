@@ -376,6 +376,31 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
     expect(JSON.stringify(loggerCalls)).not.toContain("private.example.com");
   });
 
+  it("redacts PostgreSQL wire messages when typed details are unavailable", () => {
+    const error = new ConnectError(
+      "PostgreSQL 57014: query contains api_key=secret",
+      Code.DeadlineExceeded
+    );
+    const normalized = normalizeAppUiError(error, { source: "connect" });
+    const dependencies = {
+      captureException: vi.fn(),
+      logger: { error: vi.fn() },
+      toast: { error: vi.fn() },
+    };
+
+    reportAppUiError(normalized, undefined, dependencies);
+
+    const capturedError = dependencies.captureException.mock.calls[0]?.[0];
+    expect(capturedError).toBeInstanceOf(Error);
+    expect((capturedError as Error).message).toBe("PostgreSQL 57014");
+    expect(
+      JSON.stringify(dependencies.captureException.mock.calls)
+    ).not.toContain("api_key=secret");
+    expect(JSON.stringify(dependencies.logger.error.mock.calls)).not.toContain(
+      "api_key=secret"
+    );
+  });
+
   it("keeps SQLSTATE operation labels that use backend casing", () => {
     const error = new ConnectError("operation coverage", Code.Internal);
     error.details = [
@@ -394,6 +419,33 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
     ];
 
     expect(normalizeAppUiError(error).postgres?.operation).toBe("1BatchLoad");
+  });
+
+  it("keeps operation-only ErrorInfo on the generic telemetry path", () => {
+    const error = new ConnectError(
+      "the request deadline elapsed",
+      Code.DeadlineExceeded
+    );
+    error.details = [
+      {
+        debug: {
+          metadata: { operation: "list_databases" },
+        },
+        type: "google.rpc.ErrorInfo",
+        value: new Uint8Array([1]),
+      },
+    ];
+    const normalized = normalizeAppUiError(error);
+    const dependencies = {
+      captureException: vi.fn(),
+      logger: { error: vi.fn() },
+      toast: { error: vi.fn() },
+    };
+
+    reportAppUiError(normalized, undefined, dependencies);
+
+    expect(normalized.postgres).toBeNull();
+    expect(dependencies.captureException.mock.calls[0]?.[0]).toBe(error);
   });
 
   it("uses meta database copy for app database outages with SQLSTATE details", () => {
@@ -759,6 +811,7 @@ describe("normalizeAppUiError PostgreSQL classification", () => {
     }> = [
       {
         code: Code.AlreadyExists,
+        conditionName: "unique_violation",
         title: "PostgreSQL constraint violation",
       },
       {
