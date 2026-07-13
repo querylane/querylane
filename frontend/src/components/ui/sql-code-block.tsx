@@ -77,7 +77,7 @@ function tokenStyle(token: ThemedTokenWithVariants): ShikiTokenStyle | undefined
   return style;
 }
 
-/** Render inside a preformatted or otherwise whitespace-preserving container. */
+/** Multiline SQL needs preserved whitespace; nowrap containers support single-line SQL. */
 export function SqlSyntaxHighlight({ sql: sqlText }: SqlSyntaxHighlightProps) {
   const tokenLines = highlightSql(sqlText);
 
