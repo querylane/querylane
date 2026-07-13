@@ -353,6 +353,23 @@ function renderScaledExplorerSurface(children: React.ReactNode) {
   );
 }
 
+function renderPaginatedIndexesSurface(children: React.ReactNode) {
+  render(
+    <ScreenshotFrame>
+      <div
+        className="relative h-[1000px] w-[850px] overflow-hidden"
+        data-testid="indexes-pagination-frame"
+      >
+        <div className="absolute top-0 left-0 w-[1180px] origin-top-left scale-[0.62]">
+          <div className="rounded-2xl border border-border bg-background p-8 text-foreground">
+            {children}
+          </div>
+        </div>
+      </div>
+    </ScreenshotFrame>
+  );
+}
+
 function resetSqlQueryState() {
   sqlQueryState.data = undefined;
   sqlQueryState.error = null;
@@ -2397,6 +2414,52 @@ test("data explorer table indexes match the redesign complex usage scenario", as
   );
   await expect(page.getByTestId("indexes-complex-frame")).toMatchScreenshot(
     "data-explorer-table-indexes-complex"
+  );
+});
+
+test("data explorer table indexes pagination has a visual baseline", async () => {
+  seedShipmentIndexesRedesignQueries();
+  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
+    indexes: Array.from({ length: 6 }, (_, index) =>
+      createProto(TableIndexSchema, {
+        indexName: `shipments_route_${index + 1}_idx`,
+        isValid: true,
+        keyColumns: ["route_id"],
+        keyParts: ["route_id"],
+        method: index === 5 ? "gin" : "btree",
+        sizeBytes: BigInt(index + 1) * 1024n * 1024n,
+      })
+    ),
+  });
+  renderPaginatedIndexesSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="indexes"
+      instanceId="prod"
+      schemaName="shipping"
+      table={createProto(TableSchema, {
+        displayName: "shipments",
+        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipments",
+        owner: "app_owner",
+        rowCount: 2_400_000n,
+        sizeBytes: 13_743_895_347n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="shipments"
+    />
+  );
+
+  await page.getByRole("combobox", { name: "Indexes per page" }).click();
+  await page.getByRole("option", { name: "5" }).click();
+
+  await expect
+    .element(page.getByRole("status"))
+    .toHaveTextContent("Showing 1–5 of 6 indexes");
+  await expect
+    .element(page.getByRole("navigation", { name: "Indexes pagination" }))
+    .toBeVisible();
+  await expect(page.getByTestId("indexes-pagination-frame")).toMatchScreenshot(
+    "data-explorer-table-indexes-pagination"
   );
 });
 

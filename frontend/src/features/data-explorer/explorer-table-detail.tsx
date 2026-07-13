@@ -2554,6 +2554,8 @@ function IndexesTab({
     (currentPageIndex + 1) * pageSize,
     filteredIndexes.length
   );
+  const hasPreviousPage = currentPageIndex > 0;
+  const hasNextPage = currentPageIndex < pageCount - 1;
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -2657,8 +2659,11 @@ function IndexesTab({
             />
           ))}
           {pageCount > 1 ? (
-            <div className="flex items-center justify-between text-muted-foreground text-xs">
-              <span className="tabular-nums">
+            <nav
+              aria-label="Indexes pagination"
+              className="flex items-center justify-between text-muted-foreground text-xs"
+            >
+              <span className="tabular-nums" role="status">
                 Showing {firstPageIndex}&ndash;{lastPageIndex} of{" "}
                 {filteredIndexes.length} indexes
               </span>
@@ -2667,9 +2672,13 @@ function IndexesTab({
                   Page {currentPageIndex + 1} of {pageCount}
                 </span>
                 <Button
+                  aria-disabled={!hasPreviousPage}
                   aria-label="Previous indexes page"
-                  disabled={currentPageIndex === 0}
+                  className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
                   onClick={() => {
+                    if (!hasPreviousPage) {
+                      return;
+                    }
                     setPageIndex(Math.max(0, currentPageIndex - 1));
                   }}
                   size="icon-sm"
@@ -2679,9 +2688,13 @@ function IndexesTab({
                   <ChevronLeft aria-hidden="true" className="size-4" />
                 </Button>
                 <Button
+                  aria-disabled={!hasNextPage}
                   aria-label="Next indexes page"
-                  disabled={currentPageIndex >= pageCount - 1}
+                  className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
                   onClick={() => {
+                    if (!hasNextPage) {
+                      return;
+                    }
                     setPageIndex(Math.min(pageCount - 1, currentPageIndex + 1));
                   }}
                   size="icon-sm"
@@ -2691,7 +2704,7 @@ function IndexesTab({
                   <ChevronRight aria-hidden="true" className="size-4" />
                 </Button>
               </div>
-            </div>
+            </nav>
           ) : null}
         </div>
       ) : (

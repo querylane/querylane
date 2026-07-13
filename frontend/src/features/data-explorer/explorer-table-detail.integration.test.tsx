@@ -1405,8 +1405,8 @@ describe("TableDetail indexes pagination", () => {
     expect(
       screen
         .getByRole("button", { name: "Previous indexes page" })
-        .hasAttribute("disabled")
-    ).toBe(true);
+        .getAttribute("aria-disabled")
+    ).toBe("true");
 
     await user.click(screen.getByRole("button", { name: "Next indexes page" }));
 
@@ -1480,6 +1480,37 @@ describe("TableDetail indexes pagination", () => {
       screen.queryAllByText("orders_idx_11", { exact: true })
     ).toHaveLength(0);
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+  });
+
+  it("keeps pager focus at page boundaries", async () => {
+    const user = userEvent.setup();
+    seedPaginatedIndexes();
+    renderPaginatedIndexes();
+
+    const nextPage = screen.getByRole("button", {
+      name: "Next indexes page",
+    });
+    await user.click(nextPage);
+
+    expect(document.activeElement).toBe(nextPage);
+    expect(nextPage.hasAttribute("disabled")).toBe(false);
+    expect(nextPage.getAttribute("aria-disabled")).toBe("true");
+  });
+
+  it("announces indexes page changes", async () => {
+    const user = userEvent.setup();
+    seedPaginatedIndexes();
+    renderPaginatedIndexes();
+
+    expect(screen.getByRole("status").textContent).toBe(
+      "Showing 1–10 of 12 indexes"
+    );
+
+    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
+
+    expect(screen.getByRole("status").textContent).toBe(
+      "Showing 11–12 of 12 indexes"
+    );
   });
 });
 
