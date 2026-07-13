@@ -105,8 +105,12 @@ vi.mock("@/components/data-grid/table-data-grid/table-data-grid", () => {
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@tanstack/react-router")>();
+  const linkExportName = "Link";
   return {
     ...actual,
+    [linkExportName]: ({ children }: { children: React.ReactNode }) => (
+      <a href="/explorer">{children}</a>
+    ),
     useNavigate: () => mocks.navigate,
   };
 });

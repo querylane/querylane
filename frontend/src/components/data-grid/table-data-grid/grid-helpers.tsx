@@ -1,6 +1,14 @@
 import type { Column } from "react-data-grid";
 import { ColumnHeader } from "@/components/data-grid/table-data-grid/column-header";
 import { DataCell } from "@/components/data-grid/table-data-grid/data-cell";
+import { ForeignKeyDataCell } from "@/components/data-grid/table-data-grid/foreign-key-data-cell";
+import {
+  buildForeignKeyReferencePreview,
+  type ForeignKeyReferencePreview,
+  foreignKeyReferencesForColumn,
+  type RenderOpenReferencedTableLink,
+  type TableForeignKeyReference,
+} from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import { getGridCell } from "@/components/data-grid/table-data-grid/grid-cell-access";
 import type { GridRow } from "@/components/data-grid/table-data-grid/grid-row-model";
 import {
@@ -10,12 +18,15 @@ import {
 
 interface BuildColumnArgs {
   column: TableResultColumn;
+  foreignKeyReferences?: readonly TableForeignKeyReference[] | undefined;
   isFrozen: boolean;
   onCopyName: () => void;
   onSortAsc: () => void;
   onSortDesc: () => void;
   onToggleFreeze: () => void;
   pkColumnSet: Set<string>;
+  renderOpenReferencedTableLink?: RenderOpenReferencedTableLink | undefined;
+  resultColumns?: readonly TableResultColumn[] | undefined;
   sortDirection?: "ASC" | "DESC" | undefined;
   sortPriority?: number | undefined;
 }
@@ -48,17 +59,24 @@ function estimateHeaderWidth(
 
 function buildColumn({
   column,
+  foreignKeyReferences = [],
   isFrozen,
   onCopyName,
   onSortAsc,
   onSortDesc,
   onToggleFreeze,
   pkColumnSet,
+  resultColumns = [column],
+  renderOpenReferencedTableLink,
   sortDirection,
   sortPriority,
 }: BuildColumnArgs): Column<GridRow> {
   const columnKey = column.columnName;
   const isPrimaryKey = pkColumnSet.has(columnKey);
+  const columnForeignKeyReferences = foreignKeyReferencesForColumn(
+    foreignKeyReferences,
+    columnKey
+  );
   const width = estimateHeaderWidth(
     column,
     isPrimaryKey,
@@ -74,6 +92,31 @@ function buildColumn({
       const cell = getGridCell(row, column);
       if (cell === undefined) {
         return null;
+      }
+      let foreignKeyPreview: ForeignKeyReferencePreview | undefined;
+      // PostgreSQL allows a column to participate in multiple FK constraints.
+      // Render the first one that can produce a safe equality filter so the
+      // cell never shows a dead link for nullable, truncated, or binary values.
+      for (const reference of columnForeignKeyReferences) {
+        foreignKeyPreview = buildForeignKeyReferencePreview({
+          reference,
+          resultColumns,
+          row,
+          sourceColumn: columnKey,
+        });
+        if (foreignKeyPreview) {
+          break;
+        }
+      }
+      if (foreignKeyPreview) {
+        return (
+          <ForeignKeyDataCell
+            cell={cell}
+            column={column}
+            preview={foreignKeyPreview}
+            renderOpenReferencedTableLink={renderOpenReferencedTableLink}
+          />
+        );
       }
       return <DataCell cell={cell} column={column} />;
     },

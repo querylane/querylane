@@ -26,6 +26,10 @@ import { AppInlineError } from "@/components/app-error-view";
 import { CellContextMenu } from "@/components/data-grid/table-data-grid/cell-context-menu";
 import { DataGridToolbar } from "@/components/data-grid/table-data-grid/data-grid-toolbar";
 import { DataValueDialogProvider } from "@/components/data-grid/table-data-grid/data-value-dialog-provider";
+import type {
+  RenderOpenReferencedTableLink,
+  TableForeignKeyReference,
+} from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import {
   getGridCell,
   setGridCell,
@@ -124,6 +128,7 @@ type TableDataGridProps = {
     grid: ReactNode;
     lastFetchedLabel: string;
   }) => ReactNode;
+  foreignKeyReferences?: readonly TableForeignKeyReference[] | undefined;
   frozenColumnsSearch?: string | undefined;
   initialPageSize?: number | undefined;
   name: string;
@@ -131,6 +136,7 @@ type TableDataGridProps = {
   onFrozenColumnsSearchChange?: (next: string | undefined) => void;
   onOpenRowSearchChange?: (next: string | undefined) => void;
   onPageSizeSearchChange?: (next: number | undefined) => void;
+  renderOpenReferencedTableLink?: RenderOpenReferencedTableLink | undefined;
   onSelectedRowsSearchChange?: (next: string | undefined) => void;
   openRowSearch?: string | undefined;
   pageSizeSearch?: number | undefined;
@@ -141,7 +147,8 @@ type TableDataGridProps = {
 interface ContextMenuState {
   columnKey: string;
   left: number;
-  rowIdx: number;
+  returnFocusTo: HTMLElement;
+  row: GridRow;
   top: number;
 }
 
@@ -528,6 +535,9 @@ function usePageSizeUrlState({
 // buildGridRows and everything downstream of it.
 const EMPTY_RESULT_COLUMNS: TableResultColumn[] = [];
 const EMPTY_RESULT_ROWS: Array<{ rowKey: string; values: TableCell[] }> = [];
+// Stable default so the grid columns are not rebuilt every render for tables
+// without foreign keys.
+const NO_FOREIGN_KEY_REFERENCES: readonly TableForeignKeyReference[] = [];
 
 function buildGridRows(
   resultRows: Array<{ rowKey: string; values: TableCell[] }>,
@@ -979,6 +989,18 @@ function useSelectionActions({
     clearSelection,
     copyCellValue: (row: GridRow, columnKey: string) =>
       copyCellValue(row, resultColumns, columnKey),
+    copyRowAsSqlInsert: (row: GridRow) => {
+      const cells = new Map<string, TableCell | undefined>();
+      for (const column of resultColumns) {
+        cells.set(column.columnName, getGridCell(row, column));
+      }
+      const result = buildExport("sql", [{ cells }], resultColumns, name);
+      if (!result.ok) {
+        reportTruncatedExport(result);
+        return;
+      }
+      writeClipboard(result.payload.contents);
+    },
     copyRowValues: (row: GridRow) => copyRowValues(row, resultColumns),
     handleCellCopy: (
       { row, column }: CellCopyArgs<GridRow>,
@@ -1130,16 +1152,20 @@ function isExportCanceled(error: unknown, signal: AbortSignal): boolean {
 }
 
 function useGridColumns({
+  foreignKeyReferences,
   frozenColumns,
   onFrozenColumnsChange,
+  renderOpenReferencedTableLink,
   resultColumns,
   rowIdentity,
   setOpenRowIndex,
   setSortColumns,
   sortColumns,
 }: {
+  foreignKeyReferences: readonly TableForeignKeyReference[];
   frozenColumns: ReadonlySet<string>;
   onFrozenColumnsChange: (next: ReadonlySet<string>) => void;
+  renderOpenReferencedTableLink?: RenderOpenReferencedTableLink | undefined;
   resultColumns: TableResultColumn[];
   rowIdentity:
     | { columnNames: string[]; source: RowIdentity_Source }
@@ -1218,12 +1244,15 @@ function useGridColumns({
       const sortEntry = sortIndex === -1 ? undefined : sortColumns[sortIndex];
       return buildColumn({
         column,
+        foreignKeyReferences,
         isFrozen: frozenColumns.has(column.columnName),
         onCopyName: () => writeClipboard(column.columnName),
         onSortAsc: () => toggleColumnSort(column.columnName, "ASC"),
         onSortDesc: () => toggleColumnSort(column.columnName, "DESC"),
         onToggleFreeze: () => toggleColumnFreeze(column.columnName),
         pkColumnSet,
+        renderOpenReferencedTableLink,
+        resultColumns,
         sortDirection: sortEntry?.direction,
         sortPriority:
           sortIndex !== -1 && sortColumns.length > 1
@@ -1244,6 +1273,7 @@ function TableDataGridContent({
   onCloseContextMenu,
   onContextMenuCopyCell,
   onContextMenuCopyRow,
+  onContextMenuCopyRowAsSql,
   onDataGridExpandedChange,
   openRowIndex,
   pkColumnSet,
@@ -1258,6 +1288,7 @@ function TableDataGridContent({
   onCloseContextMenu: () => void;
   onContextMenuCopyCell: () => void;
   onContextMenuCopyRow: () => void;
+  onContextMenuCopyRowAsSql: () => void;
   onDataGridExpandedChange: (next: boolean) => void;
   openRowIndex: number | null;
   pkColumnSet: Set<string>;
@@ -1309,6 +1340,8 @@ function TableDataGridContent({
           onClose={onCloseContextMenu}
           onCopyCell={onContextMenuCopyCell}
           onCopyRow={onContextMenuCopyRow}
+          onCopyRowAsSql={onContextMenuCopyRowAsSql}
+          returnFocusTo={contextMenu.returnFocusTo}
           top={contextMenu.top}
         />
       ) : null}
@@ -1325,8 +1358,91 @@ function TableDataGridContent({
   );
 }
 
+// Grid cell mouse/selection handlers plus the context-menu copy actions. Built
+// per render from the current rows and menu position; hoisted out of
+// TableDataGrid to keep the component itself readable.
+function buildCellInteractionHandlers({
+  contextMenu,
+  onCellSearchChange,
+  selectionActions,
+  setContextMenu,
+}: {
+  contextMenu: ContextMenuState | null;
+  onCellSearchChange: (next: string | undefined) => void;
+  selectionActions: ReturnType<typeof useSelectionActions>;
+  setContextMenu: (next: ContextMenuState | null) => void;
+}) {
+  function handleCellContextMenu(
+    args: CellMouseArgs<GridRow>,
+    event: CellMouseEvent
+  ) {
+    if (
+      args.column.key === SELECT_COLUMN_KEY ||
+      args.column.key === EXPAND_COLUMN_KEY
+    ) {
+      return;
+    }
+    event.preventGridDefault();
+    event.preventDefault();
+    setContextMenu({
+      columnKey: args.column.key,
+      left: event.clientX,
+      returnFocusTo: event.currentTarget,
+      row: args.row,
+      top: event.clientY,
+    });
+  }
+
+  function handleSelectedCellChange(args: CellSelectArgs<GridRow>) {
+    if (
+      !args.row ||
+      args.column.key === SELECT_COLUMN_KEY ||
+      args.column.key === EXPAND_COLUMN_KEY
+    ) {
+      onCellSearchChange(undefined);
+      return;
+    }
+    onCellSearchChange(
+      encodeSelectedCellSearch({
+        columnKey: args.column.key,
+        rowKey: args.row[ROW_KEY_FIELD],
+      })
+    );
+  }
+
+  function handleContextMenuCopyCell() {
+    if (!contextMenu) {
+      return;
+    }
+    selectionActions.copyCellValue(contextMenu.row, contextMenu.columnKey);
+  }
+
+  function handleContextMenuCopyRow() {
+    if (!contextMenu) {
+      return;
+    }
+    selectionActions.copyRowValues(contextMenu.row);
+  }
+
+  function handleContextMenuCopyRowAsSql() {
+    if (!contextMenu) {
+      return;
+    }
+    selectionActions.copyRowAsSqlInsert(contextMenu.row);
+  }
+
+  return {
+    handleCellContextMenu,
+    handleContextMenuCopyCell,
+    handleContextMenuCopyRow,
+    handleContextMenuCopyRowAsSql,
+    handleSelectedCellChange,
+  };
+}
+
 function TableDataGrid({
   children,
+  foreignKeyReferences = NO_FOREIGN_KEY_REFERENCES,
   name,
   filterSearch,
   frozenColumnsSearch,
@@ -1336,6 +1452,7 @@ function TableDataGrid({
   onFrozenColumnsSearchChange = () => undefined,
   onOpenRowSearchChange = () => undefined,
   onPageSizeSearchChange = () => undefined,
+  renderOpenReferencedTableLink,
   onSelectedRowsSearchChange = () => undefined,
   onSortSearchChange,
   openRowSearch,
@@ -1435,15 +1552,19 @@ function TableDataGrid({
     frozenColumnsSearch,
     onFrozenColumnsSearchChange,
   });
+
   const { columns, pkColumnSet } = useGridColumns({
+    foreignKeyReferences,
     frozenColumns,
     onFrozenColumnsChange: setFrozenColumns,
+    renderOpenReferencedTableLink,
     resultColumns,
     rowIdentity: data?.resultSet?.rowIdentity,
     setOpenRowIndex,
     setSortColumns: controller.setSortColumns,
     sortColumns: controller.sortColumns,
   });
+
   const pageLabel = buildPageLabel({
     pageIndex: controller.currentPageIndex,
     pageSize: controller.pageSize,
@@ -1470,6 +1591,13 @@ function TableDataGrid({
     setSelectedRows,
   });
 
+  const cellHandlers = buildCellInteractionHandlers({
+    contextMenu,
+    onCellSearchChange,
+    selectionActions,
+    setContextMenu,
+  });
+
   function handleSortChange(next: SortColumn[]) {
     controller.setSortColumns(next);
   }
@@ -1477,63 +1605,6 @@ function TableDataGrid({
   function handleNext() {
     if (data?.nextPageToken) {
       controller.goNext(data.nextPageToken);
-    }
-  }
-
-  function handleCellContextMenu(
-    args: CellMouseArgs<GridRow>,
-    event: CellMouseEvent
-  ) {
-    if (
-      args.column.key === SELECT_COLUMN_KEY ||
-      args.column.key === EXPAND_COLUMN_KEY
-    ) {
-      return;
-    }
-    event.preventGridDefault();
-    event.preventDefault();
-    setContextMenu({
-      columnKey: args.column.key,
-      left: event.clientX,
-      rowIdx: args.rowIdx,
-      top: event.clientY,
-    });
-  }
-
-  function handleSelectedCellChange(args: CellSelectArgs<GridRow>) {
-    if (
-      !args.row ||
-      args.column.key === SELECT_COLUMN_KEY ||
-      args.column.key === EXPAND_COLUMN_KEY
-    ) {
-      onCellSearchChange(undefined);
-      return;
-    }
-    onCellSearchChange(
-      encodeSelectedCellSearch({
-        columnKey: args.column.key,
-        rowKey: args.row[ROW_KEY_FIELD],
-      })
-    );
-  }
-
-  function handleContextMenuCopyCell() {
-    if (!contextMenu) {
-      return;
-    }
-    const row = rows[contextMenu.rowIdx];
-    if (row) {
-      selectionActions.copyCellValue(row, contextMenu.columnKey);
-    }
-  }
-
-  function handleContextMenuCopyRow() {
-    if (!contextMenu) {
-      return;
-    }
-    const row = rows[contextMenu.rowIdx];
-    if (row) {
-      selectionActions.copyRowValues(row);
     }
   }
 
@@ -1552,7 +1623,7 @@ function TableDataGrid({
     filterTitle: `Filter ${tableQualifiedName.schema}.${tableQualifiedName.table}`,
     invalidFilterRules,
     lastFetchedLabel: refreshState.lastFetchedLabel,
-    onCellContextMenu: handleCellContextMenu,
+    onCellContextMenu: cellHandlers.handleCellContextMenu,
     onCellCopy: selectionActions.handleCellCopy,
     onClearFilters: clearFilters,
     onClearSelection: selectionActions.clearSelection,
@@ -1564,7 +1635,7 @@ function TableDataGrid({
     onPageSizeChange: controller.setPageSize,
     onPrev: controller.goPrev,
     onRefresh: refreshState.refreshNow,
-    onSelectedCellChange: handleSelectedCellChange,
+    onSelectedCellChange: cellHandlers.handleSelectedCellChange,
     onSelectedRowsChange: setSelectedRows,
     onSortChange: handleSortChange,
     onToggleExpanded: () => setIsDataGridExpanded(true),
@@ -1596,8 +1667,9 @@ function TableDataGrid({
         isDataGridExpanded={isDataGridExpanded}
         name={name}
         onCloseContextMenu={() => setContextMenu(null)}
-        onContextMenuCopyCell={handleContextMenuCopyCell}
-        onContextMenuCopyRow={handleContextMenuCopyRow}
+        onContextMenuCopyCell={cellHandlers.handleContextMenuCopyCell}
+        onContextMenuCopyRow={cellHandlers.handleContextMenuCopyRow}
+        onContextMenuCopyRowAsSql={cellHandlers.handleContextMenuCopyRowAsSql}
         onDataGridExpandedChange={setIsDataGridExpanded}
         openRowIndex={openRowIndex}
         pkColumnSet={pkColumnSet}

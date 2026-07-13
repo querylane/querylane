@@ -1,6 +1,7 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -22,6 +23,7 @@ import { useRefreshSettingsStore } from "@/features/user-settings/refresh-settin
 import { PostgreSqlErrorDetailSchema } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 import {
   ReadRowsResponseSchema,
+  RowPredicate_Operator,
   TableCellSchema,
   TableResultColumnSchema,
   TableResultRowSchema,
@@ -63,6 +65,16 @@ interface MockGridColumn {
 interface MockGridProps {
   columns?: MockGridColumn[];
   defaultColumnOptions?: DefaultColumnOptions<GridRow, unknown>;
+  onCellContextMenu?: (
+    args: { column: MockGridColumn; row: GridRow; rowIdx: number },
+    event: {
+      clientX: number;
+      clientY: number;
+      currentTarget: HTMLDivElement;
+      preventDefault: () => void;
+      preventGridDefault: () => void;
+    }
+  ) => void;
   onCellCopy?: (
     args: { column: MockGridColumn; row: GridRow },
     event: ReactClipboardEvent<HTMLDivElement>
@@ -102,6 +114,32 @@ const reactDataGrid = vi.hoisted(() => ({
   )),
 }));
 
+// The mocked DataGrid renders plain divs, so context-menu tests invoke the
+// grid's onCellContextMenu prop directly instead of dispatching a DOM event.
+function openCellContextMenu(
+  columnKey: string,
+  rowIdx: number,
+  currentTarget = document.createElement("div")
+) {
+  const gridProps = reactDataGrid.dataGrid.mock.lastCall?.[0];
+  const row = gridProps?.rows?.[rowIdx];
+  if (!(gridProps?.onCellContextMenu && row)) {
+    throw new Error("Expected the data grid mock to receive rows");
+  }
+  act(() => {
+    gridProps.onCellContextMenu?.(
+      { column: { key: columnKey }, row, rowIdx },
+      {
+        clientX: 40,
+        clientY: 40,
+        currentTarget,
+        preventDefault: () => undefined,
+        preventGridDefault: () => undefined,
+      }
+    );
+  });
+}
+
 vi.mock("react-data-grid", () => ({
   ...Object.fromEntries([
     ["DataGrid", reactDataGrid.dataGrid],
@@ -124,8 +162,14 @@ vi.mock("@/lib/download-blob", () => ({
   downloadBlob: downloadBlobMock,
 }));
 
+const writeClipboardMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/components/data-grid/table-data-grid/grid-clipboard", () => ({
+  writeClipboard: writeClipboardMock,
+}));
+
 function seedRowsQuery(
-  rows = 1,
+  rows: number | readonly { rowKey: string; value: string }[] = 1,
   overrides: {
     dataUpdatedAt?: number;
     isFetching?: boolean;
@@ -148,13 +192,19 @@ function seedRowsQuery(
             rawType: "text",
           }),
         ],
-        rows: Array.from({ length: rows }, (_, index) =>
+        rows: (typeof rows === "number"
+          ? Array.from({ length: rows }, (_, index) => ({
+              rowKey: `row-${index}`,
+              value: `user-${index}`,
+            }))
+          : rows
+        ).map((row) =>
           create(TableResultRowSchema, {
-            rowKey: `row-${index}`,
+            rowKey: row.rowKey,
             values: [
               create(TableCellSchema, {
                 value: create(TableValueSchema, {
-                  kind: { case: "stringValue", value: `user-${index}` },
+                  kind: { case: "stringValue", value: row.value },
                 }),
               }),
             ],
@@ -297,28 +347,31 @@ function createPostgresRowsError() {
   return error;
 }
 
-describe("TableDataGrid query setup", () => {
-  beforeEach(() => {
-    tableDataApi.useStreamRowsExporter.mockReturnValue(
-      vi.fn().mockResolvedValue({
-        payload: {
-          contents: ["email\nuser-0\n"],
-          filename: "customers.csv",
-          mimeType: "text/csv;charset=utf-8",
-        },
-        rowCount: 1n,
-        savedToFile: false,
-        truncated: false,
-      })
-    );
-  });
+function setupTableDataGridIntegrationTest() {
+  tableDataApi.useStreamRowsExporter.mockReturnValue(
+    vi.fn().mockResolvedValue({
+      payload: {
+        contents: ["email\nuser-0\n"],
+        filename: "customers.csv",
+        mimeType: "text/csv;charset=utf-8",
+      },
+      rowCount: 1n,
+      savedToFile: false,
+      truncated: false,
+    })
+  );
+}
 
-  afterEach(() => {
-    cleanup();
-    vi.clearAllMocks();
-    vi.useRealTimers();
-    useRefreshSettingsStore.getState().setRefreshIntervalMs(null);
-  });
+function teardownTableDataGridIntegrationTest() {
+  cleanup();
+  vi.clearAllMocks();
+  vi.useRealTimers();
+  useRefreshSettingsStore.getState().setRefreshIntervalMs(null);
+}
+
+describe("TableDataGrid query setup", () => {
+  beforeEach(setupTableDataGridIntegrationTest);
+  afterEach(teardownTableDataGridIntegrationTest);
 
   it("disables column validation with a concrete input instead of skipToken", () => {
     const tableName =
@@ -527,6 +580,349 @@ describe("TableDataGrid query setup", () => {
     // Index fallback keys are namespaced so they cannot collide with a
     // server-provided row key.
     expect(rows[1]?.[ROW_KEY_FIELD]).toBe(fallbackRowKey(1));
+  });
+});
+
+describe("TableDataGrid foreign key references", () => {
+  beforeEach(setupTableDataGridIntegrationTest);
+  afterEach(teardownTableDataGridIntegrationTest);
+
+  it("opens a compact referenced-row preview from a foreign key cell", async () => {
+    const user = userEvent.setup();
+    let targetQueryState: "error" | "paused" | "success" = "success";
+    const shipmentsName =
+      "instances/prod/databases/app/schemas/shipping/tables/shipments";
+    const carriersName =
+      "instances/prod/databases/app/schemas/public/tables/carriers";
+
+    tableApi.useListTableColumnsQuery.mockImplementation((input) => {
+      if (input.parent === carriersName) {
+        return {
+          data: create(ListTableColumnsResponseSchema, {
+            columns: [
+              create(ColumnSchema, {
+                columnName: "id",
+                dataType: DataType.INTEGER,
+              }),
+              create(ColumnSchema, {
+                columnName: "name",
+                dataType: DataType.STRING,
+              }),
+            ],
+          }),
+          error: null,
+          isError: false,
+        };
+      }
+      return {
+        data: create(ListTableColumnsResponseSchema, { columns: [] }),
+        error: null,
+        isError: false,
+      };
+    });
+    tableDataApi.useReadRowsQuery.mockImplementation((request) => {
+      if (request.name === carriersName) {
+        const targetData = create(ReadRowsResponseSchema, {
+          resultSet: create(TableResultSetSchema, {
+            columns: [
+              create(TableResultColumnSchema, {
+                columnName: "id",
+                dataType: DataType.INTEGER,
+                rawType: "int4",
+              }),
+              create(TableResultColumnSchema, {
+                columnName: "name",
+                dataType: DataType.STRING,
+                rawType: "text",
+              }),
+            ],
+            rows: [
+              create(TableResultRowSchema, {
+                rowKey: "carrier-214",
+                values: [
+                  create(TableCellSchema, {
+                    value: create(TableValueSchema, {
+                      kind: { case: "int64Value", value: 214n },
+                    }),
+                  }),
+                  create(TableCellSchema, {
+                    value: create(TableValueSchema, {
+                      kind: {
+                        case: "stringValue",
+                        value: "Maersk Logistics",
+                      },
+                    }),
+                  }),
+                ],
+              }),
+            ],
+          }),
+        });
+        return {
+          data: targetQueryState === "paused" ? undefined : targetData,
+          dataUpdatedAt: 0,
+          error:
+            targetQueryState === "error"
+              ? new Error("target read failed")
+              : null,
+          fetchStatus: targetQueryState === "paused" ? "paused" : "idle",
+          isError: targetQueryState === "error",
+          isFetching: false,
+          isLoading: false,
+          isPending: targetQueryState === "paused",
+          refetch: vi.fn(),
+        };
+      }
+      return {
+        data: create(ReadRowsResponseSchema, {
+          resultSet: create(TableResultSetSchema, {
+            columns: [
+              create(TableResultColumnSchema, {
+                columnName: "carrier_id",
+                dataType: DataType.INTEGER,
+                rawType: "int4",
+              }),
+            ],
+            rows: [
+              create(TableResultRowSchema, {
+                rowKey: "shipment-1",
+                values: [
+                  create(TableCellSchema, {
+                    value: create(TableValueSchema, {
+                      kind: { case: "int64Value", value: 214n },
+                    }),
+                  }),
+                ],
+              }),
+            ],
+          }),
+        }),
+        dataUpdatedAt: 0,
+        error: null,
+        isFetching: false,
+        isLoading: false,
+        refetch: vi.fn(),
+      };
+    });
+    tableDataApi.useReadCellValueMutation.mockReturnValue({
+      isError: false,
+      isPending: false,
+      mutate: vi.fn(),
+    });
+
+    render(
+      <TableDataGrid
+        foreignKeyReferences={[
+          {
+            sourceColumns: ["carrier_id"],
+            targetColumns: ["id"],
+            targetTableName: carriersName,
+          },
+        ]}
+        name={shipmentsName}
+        renderOpenReferencedTableLink={(tableName, onNavigate) => (
+          <a
+            href={`/explorer?table=${encodeURIComponent(tableName)}`}
+            onClick={(event) => {
+              event.preventDefault();
+              onNavigate?.();
+            }}
+          >
+            Open table
+          </a>
+        )}
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Open carrier_id reference 214",
+      })
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "Open carrier_id reference 214",
+    });
+    const preview = screen.getByRole("dialog", {
+      name: "public.carriers",
+    });
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(preview.getAttribute("data-slot")).toBe("popover-content");
+    expect(
+      within(preview).getByRole("status", { name: "Referenced row loaded" })
+    ).toBeTruthy();
+    expect(within(preview).getByText("Maersk Logistics")).toBeTruthy();
+    expect(
+      within(preview).queryByRole("button", { name: "Filter" })
+    ).toBeNull();
+    expect(
+      within(preview).queryByRole("button", { name: "Rows per page" })
+    ).toBeNull();
+
+    const targetReadCall = tableDataApi.useReadRowsQuery.mock.calls.find(
+      ([request]) => request.name === carriersName
+    );
+    expect(targetReadCall?.[0].pageSize).toBe(1);
+    expect(targetReadCall?.[0].filter?.node).toMatchObject({
+      case: "group",
+      value: {
+        children: [
+          {
+            node: {
+              case: "predicate",
+              value: {
+                column: "id",
+                operator: RowPredicate_Operator.EQUAL,
+                values: [{ kind: { case: "int64Value", value: 214n } }],
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    const openTableLink = screen.getByRole("link", { name: "Open table" });
+    expect(openTableLink.getAttribute("href")).toBe(
+      `/explorer?table=${encodeURIComponent(carriersName)}`
+    );
+    await user.click(openTableLink);
+    expect(
+      screen.queryByRole("dialog", { name: "public.carriers" })
+    ).toBeNull();
+
+    targetQueryState = "paused";
+    await user.click(trigger);
+    expect(
+      screen.getByRole("status", { name: "Waiting for connection" })
+    ).toBeTruthy();
+    expect(screen.getByText("Waiting for connection")).toBeTruthy();
+    expect(screen.queryByText("Referenced row not found.")).toBeNull();
+    await user.keyboard("{Escape}");
+
+    targetQueryState = "error";
+    await user.click(trigger);
+    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(screen.queryByText("Maersk Logistics")).toBeNull();
+    await user.keyboard("{Escape}");
+    expect(
+      screen.queryByRole("dialog", { name: "public.carriers" })
+    ).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+});
+
+describe("TableDataGrid row interactions", () => {
+  beforeEach(setupTableDataGridIntegrationTest);
+  afterEach(teardownTableDataGridIntegrationTest);
+
+  it("copies a row as a sql insert statement from the context menu", async () => {
+    const user = userEvent.setup();
+    seedRowsQuery(1);
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+
+    openCellContextMenu("email", 0);
+    await user.click(
+      screen.getByRole("menuitem", { name: "Copy row as INSERT" })
+    );
+
+    expect(writeClipboardMock).toHaveBeenCalledWith(
+      `INSERT INTO "public"."customers" ("email") VALUES\n  ('user-0');\n`
+    );
+  });
+
+  it("copies the row that opened the menu after rows reorder", async () => {
+    const user = userEvent.setup();
+    const initialRows = [
+      { rowKey: "row-alpha", value: "alpha@example.com" },
+      { rowKey: "row-beta", value: "beta@example.com" },
+    ];
+    seedRowsQuery(initialRows);
+
+    const { rerender } = render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+    openCellContextMenu("email", 0);
+
+    seedRowsQuery([...initialRows].reverse());
+    rerender(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+    await user.click(
+      screen.getByRole("menuitem", { name: "Copy row as INSERT" })
+    );
+
+    expect(writeClipboardMock).toHaveBeenCalledWith(
+      `INSERT INTO "public"."customers" ("email") VALUES\n  ('alpha@example.com');\n`
+    );
+  });
+
+  it("supports keyboard navigation and restores focus to the invoking cell", async () => {
+    const user = userEvent.setup();
+    seedRowsQuery(1);
+    const invokingCell = document.createElement("div");
+    invokingCell.tabIndex = 0;
+    document.body.append(invokingCell);
+    invokingCell.focus();
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+    openCellContextMenu("email", 0, invokingCell);
+
+    const menu = screen.getByRole("menu", { name: "Cell actions" });
+    const items = within(menu).getAllByRole("menuitem");
+    await waitFor(() => expect(document.activeElement).toBe(items[0]));
+    await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(items[1]);
+    await user.keyboard("{End}");
+    expect(document.activeElement).toBe(items[2]);
+    await user.keyboard("{Escape}");
+    expect(document.activeElement).toBe(invokingCell);
+    expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull();
+  });
+
+  it("tabs from the invoking cell when the context menu closes", async () => {
+    const user = userEvent.setup();
+    seedRowsQuery(1);
+    const controls = render(<div />).container;
+    const previousControl = document.createElement("button");
+    const invokingCell = document.createElement("div");
+    const hiddenControl = document.createElement("button");
+    const nextControl = document.createElement("button");
+    invokingCell.tabIndex = -1;
+    hiddenControl.style.display = "none";
+    controls.append(previousControl, invokingCell, hiddenControl, nextControl);
+    invokingCell.focus();
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+    openCellContextMenu("email", 0, invokingCell);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("menuitem", { name: "Copy cell" })
+      )
+    );
+
+    await user.tab();
+
+    expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull();
+    expect(document.activeElement).toBe(nextControl);
+
+    invokingCell.focus();
+    openCellContextMenu("email", 0, invokingCell);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("menuitem", { name: "Copy cell" })
+      )
+    );
+    await user.tab({ shift: true });
+
+    expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull();
+    expect(document.activeElement).toBe(previousControl);
   });
 
   it("jumps directly to a typed row number from the row drawer", async () => {

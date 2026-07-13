@@ -26,6 +26,8 @@
   --destructive-foreground: oklch(0.577 0.245 27.325);
   --success: oklch(0.696 0.17 162.48);
   --success-foreground: oklch(0.985 0 0);
+  /* Cross-resource reference links (e.g. foreign key values in the grid). */
+  --reference: oklch(0.55 0.158 241.966);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.623 0.214 259.815);
@@ -87,6 +89,7 @@
   --destructive-foreground: oklch(0.704 0.191 22.216);
   --success: oklch(0.696 0.17 162.48);
   --success-foreground: oklch(0.985 0 0);
+  --reference: oklch(0.746 0.16 232.661);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.623 0.214 259.815);
@@ -149,6 +152,7 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-reference: var(--reference);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

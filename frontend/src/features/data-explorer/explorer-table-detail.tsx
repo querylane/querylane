@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
+import type { TableForeignKeyReference } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
@@ -36,7 +37,7 @@ import { SearchEmptyState } from "@/components/search-empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -147,6 +148,7 @@ import {
   normalizeEstimatedRowCount,
   parseResourceLeafId,
   parseTableQualifiedName,
+  tryParseTableQualifiedName,
 } from "@/lib/console-resources";
 import {
   formatPolicyCommand,
@@ -1335,6 +1337,32 @@ function deriveTableKeyRows(
   }
   return sortTableKeyRows([...rows, ...secondaryIndexRows]);
 }
+
+function deriveForeignKeyReferences(
+  constraints: readonly TableConstraint[] | undefined
+): TableForeignKeyReference[] {
+  if (!constraints) {
+    return [];
+  }
+  return constraints.flatMap((constraint) => {
+    if (
+      constraint.type !== ConstraintType.FOREIGN_KEY ||
+      !constraint.referencedTable ||
+      constraint.columnNames.length === 0 ||
+      constraint.columnNames.length !== constraint.referencedColumnNames.length
+    ) {
+      return [];
+    }
+    return [
+      {
+        sourceColumns: constraint.columnNames,
+        targetColumns: constraint.referencedColumnNames,
+        targetTableName: constraint.referencedTable,
+      },
+    ];
+  });
+}
+
 const keyColumns: DataTableColumnDef<TableKeyRow>[] = [
   {
     accessorFn: (row) => row.kindLabel,
@@ -4938,6 +4966,35 @@ function TableDetail({
           indexesQuery.data.indexes
         )
       : undefined;
+  const foreignKeyReferences = deriveForeignKeyReferences(
+    constraintsQuery.data?.constraints
+  );
+  function renderOpenReferencedTableLink(
+    targetTableName: string,
+    onNavigate: () => void
+  ) {
+    const target = tryParseTableQualifiedName(targetTableName);
+    if (!target) {
+      return null;
+    }
+    return (
+      <Link
+        className={buttonVariants({ variant: "outline" })}
+        onClick={onNavigate}
+        params={{ databaseId, instanceId }}
+        search={(previous) => ({
+          ...previous,
+          category: "tables",
+          name: target.table,
+          schema: target.schema,
+          tab: undefined,
+        })}
+        to="/instances/$instanceId/databases/$databaseId/explorer"
+      >
+        Open table
+      </Link>
+    );
+  }
   const tabCounts: Record<TableDetailTab, number | undefined> = {
     columns: columnCount,
     constraints: constraintsQuery.data?.constraints.length,
@@ -4952,7 +5009,12 @@ function TableDetail({
     triggers: triggersQuery.data?.triggers.length,
   };
   return (
-    <TableDataGrid key={tableResourceName} name={tableResourceName}>
+    <TableDataGrid
+      foreignKeyReferences={foreignKeyReferences}
+      key={tableResourceName}
+      name={tableResourceName}
+      renderOpenReferencedTableLink={renderOpenReferencedTableLink}
+    >
       {({ grid, lastFetchedLabel }) => (
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-4 pb-6">
           <TableDetailHeader

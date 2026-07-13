@@ -1,5 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { expect, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
@@ -11,26 +11,113 @@ import { GridStatusBar } from "@/components/data-grid/table-data-grid/grid-statu
 import { GridSurface } from "@/components/data-grid/table-data-grid/grid-surface";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { RecordDetailDrawer } from "@/components/data-grid/table-data-grid/record-detail-drawer";
+import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import {
+  ReadRowsResponseSchema,
   type TableCell,
   TableCellSchema,
   TableResultColumnSchema,
+  TableResultRowSchema,
+  TableResultSetSchema,
   type TableValue,
   TableValueSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
-import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import {
+  ColumnSchema,
+  DataType,
+  ListTableColumnsResponseSchema,
+} from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 import "@/components/data-grid/table-data-grid/data-grid-theme.css";
 
-vi.mock("@/hooks/api/table-data", () => ({
-  useReadCellValueMutation: () => ({
+const tableApi = vi.hoisted(() => ({
+  useListTableColumnsQuery: vi.fn((_input: { parent: string }) => ({
+    data: undefined as unknown,
+    error: null,
+    isError: false,
+    refetch: vi.fn(),
+  })),
+}));
+
+const tableDataApi = vi.hoisted(() => ({
+  useReadCellValueMutation: vi.fn(() => ({
     isError: false,
     isPending: false,
     mutate: vi.fn(),
-  }),
+  })),
+  useReadRowsQuery: vi.fn(),
+  useStreamRowsExporter: vi.fn(() => vi.fn()),
+}));
+
+vi.mock("@/hooks/api/table", () => ({
+  useListTableColumnsQuery: tableApi.useListTableColumnsQuery,
+}));
+
+vi.mock("@/hooks/api/table-data", () => ({
+  useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
+  useReadRowsQuery: tableDataApi.useReadRowsQuery,
+  useStreamRowsExporter: tableDataApi.useStreamRowsExporter,
 }));
 
 const SQL_WHERE_HELP_RE = /Supports column comparisons joined with AND/;
+afterEach(() => {
+  tableApi.useListTableColumnsQuery.mockReset();
+  tableDataApi.useReadRowsQuery.mockReset();
+});
+
+const shipmentsName =
+  "instances/prod/databases/app/schemas/shipping/tables/shipments";
+const carriersName =
+  "instances/prod/databases/app/schemas/public/tables/carriers";
+const longSchemaName = `schema_${"x".repeat(56)}`;
+const longCarriersName = `instances/prod/databases/app/schemas/${longSchemaName}/tables/carriers`;
+
+function browserColorChannels(color: string) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("expected a 2D canvas context");
+  }
+  context.fillStyle = color;
+  context.fillRect(0, 0, 1, 1);
+  return Array.from(context.getImageData(0, 0, 1, 1).data);
+}
+
+function colorContrastRatio(first: string, second: string) {
+  function compositeColor(foreground: string, background: string) {
+    const foregroundChannels = browserColorChannels(foreground);
+    const backgroundChannels = browserColorChannels(background);
+    const alpha = (foregroundChannels[3] ?? 255) / 255;
+    return foregroundChannels
+      .slice(0, 3)
+      .map(
+        (channel, index) =>
+          channel * alpha + (backgroundChannels[index] ?? 0) * (1 - alpha)
+      );
+  }
+  function relativeLuminance(channels: number[]) {
+    const linearChannels = channels.map((channel) => {
+      const normalized = channel / 255;
+      return normalized <= 0.040_45
+        ? normalized / 12.92
+        : ((normalized + 0.055) / 1.055) ** 2.4;
+    });
+    return (
+      0.2126 * (linearChannels[0] ?? 0) +
+      0.7152 * (linearChannels[1] ?? 0) +
+      0.0722 * (linearChannels[2] ?? 0)
+    );
+  }
+  const firstLuminance = relativeLuminance(compositeColor(first, second));
+  const secondLuminance = relativeLuminance(
+    browserColorChannels(second).slice(0, 3)
+  );
+  const lighter = Math.max(firstLuminance, secondLuminance);
+  const darker = Math.min(firstLuminance, secondLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+}
 
 function column(name: string, rawType: string, dataType: DataType) {
   return createProto(TableResultColumnSchema, {
@@ -47,6 +134,108 @@ function cell(value: TableValue["kind"], truncated = false) {
     fullValueToken: truncated ? "full-value-token" : "",
     truncated,
     value: createProto(TableValueSchema, { kind: value }),
+  });
+}
+
+function seedForeignKeyGridQueries(targetTableName = carriersName) {
+  tableApi.useListTableColumnsQuery.mockImplementation((input) => {
+    if (input.parent === targetTableName) {
+      return {
+        data: createProto(ListTableColumnsResponseSchema, {
+          columns: [
+            createProto(ColumnSchema, {
+              columnName: "id",
+              dataType: DataType.INTEGER,
+            }),
+            createProto(ColumnSchema, {
+              columnName: "code",
+              dataType: DataType.STRING,
+            }),
+            createProto(ColumnSchema, {
+              columnName: "name",
+              dataType: DataType.STRING,
+            }),
+          ],
+        }),
+        error: null,
+        isError: false,
+        refetch: vi.fn(),
+      };
+    }
+
+    return {
+      data: createProto(ListTableColumnsResponseSchema, { columns: [] }),
+      error: null,
+      isError: false,
+      refetch: vi.fn(),
+    };
+  });
+
+  tableDataApi.useReadRowsQuery.mockImplementation((request) => {
+    if (request.name === targetTableName) {
+      return {
+        data: createProto(ReadRowsResponseSchema, {
+          resultSet: createProto(TableResultSetSchema, {
+            columns: [
+              column("id", "int4", DataType.INTEGER),
+              column("code", "text", DataType.STRING),
+              column("name", "text", DataType.STRING),
+            ],
+            rows: [
+              createProto(TableResultRowSchema, {
+                rowKey: "carrier-214",
+                values: [
+                  cell({ case: "int64Value", value: 214n }),
+                  cell({ case: "stringValue", value: "HCL" }),
+                  cell({
+                    case: "stringValue",
+                    value: "Hanse Container Line",
+                  }),
+                ],
+              }),
+            ],
+          }),
+        }),
+        dataUpdatedAt: 1_782_882_000_000,
+        error: null,
+        isFetching: false,
+        isLoading: false,
+        isPlaceholderData: false,
+        refetch: vi.fn(),
+      };
+    }
+
+    return {
+      data: createProto(ReadRowsResponseSchema, {
+        resultSet: createProto(TableResultSetSchema, {
+          columns: [
+            column("ref", "text", DataType.STRING),
+            column("carrier_id", "int4", DataType.INTEGER),
+            column("status", "shipment_status", DataType.STRING),
+            column("origin_port", "text", DataType.STRING),
+            column("dest_port", "text", DataType.STRING),
+          ],
+          rows: [
+            createProto(TableResultRowSchema, {
+              rowKey: "shipment-1",
+              values: [
+                cell({ case: "stringValue", value: "ML-2026-048291" }),
+                cell({ case: "int64Value", value: 214n }),
+                cell({ case: "stringValue", value: "in_transit" }),
+                cell({ case: "stringValue", value: "CNSHA" }),
+                cell({ case: "stringValue", value: "DEHAM" }),
+              ],
+            }),
+          ],
+        }),
+      }),
+      dataUpdatedAt: 1_782_882_000_000,
+      error: null,
+      isFetching: false,
+      isLoading: false,
+      isPlaceholderData: false,
+      refetch: vi.fn(),
+    };
   });
 }
 
@@ -537,6 +726,122 @@ test("data explorer controls and row detail drawer expose dense table context", 
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-controls-and-row-detail"
   );
+});
+
+function renderForeignKeyReferenceGrid(
+  className: string,
+  targetTableName = carriersName
+) {
+  seedForeignKeyGridQueries(targetTableName);
+
+  render(
+    <ScreenshotFrame>
+      <div className={className}>
+        <TableDataGrid
+          foreignKeyReferences={[
+            {
+              sourceColumns: ["carrier_id"],
+              targetColumns: ["id"],
+              targetTableName,
+            },
+          ]}
+          initialPageSize={10}
+          name={shipmentsName}
+          renderOpenReferencedTableLink={() => (
+            <a href="/explorer?schema=public&table=carriers">Open table</a>
+          )}
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+}
+
+async function openForeignKeyReference() {
+  const carrierLink = page.getByRole("button", {
+    name: "Open carrier_id reference 214",
+  });
+  await carrierLink.click();
+  return carrierLink;
+}
+
+test("foreign key reference popover keeps the source table visible", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
+  );
+
+  const carrierLink = await openForeignKeyReference();
+  const carrierLinkStyle = getComputedStyle(carrierLink.element());
+  const frameStyle = getComputedStyle(
+    page.getByTestId("screenshot-frame").element()
+  );
+  expect(
+    colorContrastRatio(carrierLinkStyle.color, frameStyle.backgroundColor)
+  ).toBeGreaterThanOrEqual(4.5);
+  await carrierLink.hover();
+  const carrierLinkHoverStyle = getComputedStyle(carrierLink.element());
+  expect(carrierLinkHoverStyle.opacity).toBe("1");
+  expect(carrierLinkHoverStyle.color).not.toBe(frameStyle.color);
+  expect(
+    colorContrastRatio(carrierLinkHoverStyle.color, frameStyle.backgroundColor)
+  ).toBeGreaterThanOrEqual(4.5);
+
+  const preview = page.getByRole("dialog", {
+    name: "public.carriers",
+  });
+  await expect.element(preview).toBeVisible();
+  await preview.hover();
+  expect(preview.element().dataset["slot"]).toBe("popover-content");
+  expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull();
+  await expect.element(carrierLink).toBeVisible();
+  await expect.element(page.getByText("Hanse Container Line")).toBeVisible();
+  const typeMetadata = preview.getByText("int4");
+  expect(
+    colorContrastRatio(
+      getComputedStyle(typeMetadata.element()).color,
+      getComputedStyle(preview.element()).backgroundColor
+    )
+  ).toBeGreaterThanOrEqual(4.5);
+  await expect
+    .element(page.getByRole("link", { name: "Open table" }))
+    .toBeVisible();
+  await expect(page).toMatchScreenshot("foreign-key-reference-popover-layout");
+});
+
+test("foreign key reference popover fits a narrow viewport", async () => {
+  await page.viewport(390, 844);
+  try {
+    renderForeignKeyReferenceGrid(
+      "h-[700px] w-full rounded-xl border border-border bg-background p-3 text-foreground",
+      longCarriersName
+    );
+    await openForeignKeyReference();
+
+    const preview = page.getByRole("dialog", {
+      name: `${longSchemaName}.carriers`,
+    });
+    await expect.element(preview).toBeVisible();
+    const previewBox = preview.element().getBoundingClientRect();
+    expect(previewBox.left).toBeGreaterThanOrEqual(0);
+    expect(previewBox.right).toBeLessThanOrEqual(390);
+    const title = preview
+      .element()
+      .querySelector<HTMLElement>('[data-slot="popover-title"]');
+    if (!title) {
+      throw new Error("expected popover title");
+    }
+    expect(title.scrollWidth).toBeLessThanOrEqual(title.clientWidth);
+    await expect(page).toMatchScreenshot(
+      "foreign-key-reference-popover-narrow-layout"
+    );
+  } finally {
+    await page.viewport(1280, 1000);
+  }
+});
+
+test("foreign key query fixtures do not leak into later browser cases", () => {
+  expect(
+    tableDataApi.useReadRowsQuery({ name: "unrelated-table" })
+  ).toBeUndefined();
 });
 
 test("data value expansion keeps one visible dialog layer", async () => {
