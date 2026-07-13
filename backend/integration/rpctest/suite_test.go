@@ -262,3 +262,28 @@ func (s *RPCSuite) requireErrorInfoMetadata(err error, want map[string]string) {
 
 	s.FailNow("expected ErrorInfo detail")
 }
+
+func (s *RPCSuite) requireInstanceLiveQueryLimitExceeded(err error) {
+	s.T().Helper()
+
+	var connectErr *connect.Error
+	s.Require().ErrorAs(err, &connectErr)
+	s.Equal(connect.CodeResourceExhausted, connectErr.Code())
+
+	for _, detail := range connectErr.Details() {
+		value, valueErr := detail.Value()
+		s.Require().NoError(valueErr)
+
+		info, ok := value.(*errdetails.ErrorInfo)
+		if !ok {
+			continue
+		}
+
+		s.Equal(consolev1alpha1.ErrorReason_LIVE_QUERY_LIMIT_EXCEEDED.String(), info.GetReason())
+		s.Equal("instance", info.GetMetadata()["scope"])
+
+		return
+	}
+
+	s.FailNow("expected ErrorInfo detail for live-query limit")
+}

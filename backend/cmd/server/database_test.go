@@ -2,7 +2,9 @@ package server
 
 import (
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	serverconfig "github.com/querylane/querylane/backend/config/server"
@@ -61,4 +63,20 @@ func TestIntegrationBuildDatabasePersistsTokenCodecAcrossRestart(t *testing.T) {
 		cellToken,
 		&api.TableCellFullValueTokenPayload{},
 	))
+}
+
+func TestPoolConfigFromLimits(t *testing.T) {
+	t.Parallel()
+
+	pool := poolConfigFromLimits(serverconfig.PostgresPoolLimits{
+		MaxOpenConnections:    7,
+		MaxIdleConnections:    1,
+		IdleTimeout:           time.Minute,
+		ConnectionMaxLifetime: time.Hour,
+	})
+
+	assert.Equal(t, 7, pool.MaxOpenConns)
+	assert.Equal(t, 1, pool.MaxIdleConns)
+	assert.Equal(t, time.Minute, pool.IdleTimeout)
+	assert.Equal(t, time.Hour, pool.ConnMaxLifetime)
 }

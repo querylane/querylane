@@ -53,6 +53,31 @@ database:
 
 
 # -----------------------------------------------------------------------------
+# Managed PostgreSQL limits
+#
+# These settings protect managed PostgreSQL servers from user-driven query
+# fan-out. Changes take effect after restarting Querylane.
+# -----------------------------------------------------------------------------
+
+limits:
+  live_queries:
+    # Process-local ceiling across all instances on this Querylane replica.
+    global: 32
+    # Shared by every database in one managed PostgreSQL instance.
+    per_instance: 6
+
+  # Shared physical-connection budget across all pools targeting one endpoint.
+  # Database-specific pools retain one connection for one second so paged
+  # reads can reuse it without hoarding capacity across many databases.
+  postgres_pool:
+    max_open_connections: 8
+    # Aggregate idle allowance; must leave room for live queries.
+    max_idle_connections: 2       # 0 disables idle connections
+    idle_timeout: "5m"             # 0 disables idle expiry
+    connection_max_lifetime: "30m" # 0 disables lifetime expiry
+
+
+# -----------------------------------------------------------------------------
 # API-managed instance secrets
 #
 # When managing instances through the UI/API, Querylane encrypts stored instance

@@ -11,6 +11,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/livequery"
 	consolev1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
 )
@@ -91,6 +92,14 @@ func TestMapEngineErr(t *testing.T) {
 			expectedCode:       connect.CodeNotFound,
 			expectedReason:     consolev1alpha1.ErrorReason_RESOURCE_NOT_FOUND,
 			expectedErrMessage: "schema not found: instances/i1/databases/mydb/schemas/nonexistent",
+		},
+		{
+			name:               "live query instance limit",
+			inputErr:           fmt.Errorf("open instance: %w", &livequery.LimitExceededError{Scope: livequery.ScopeInstance}),
+			rctx:               ResourceCtx{Type: resource.TypeDatabase, Name: "instances/i1/databases/test_db", Op: "execute_query"},
+			expectedCode:       connect.CodeResourceExhausted,
+			expectedReason:     consolev1alpha1.ErrorReason_LIVE_QUERY_LIMIT_EXCEEDED,
+			expectedErrMessage: "live query concurrency limit reached",
 		},
 		{
 			name:               "Unknown error returns CodeInternal",

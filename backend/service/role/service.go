@@ -107,7 +107,7 @@ func (s *Service) ListRoleGrants(ctx context.Context, req *connect.Request[v1alp
 	if err != nil {
 		return nil, err
 	}
-	defer target.session.Close()
+	defer target.close()
 
 	grants, nextToken, err := target.session.ListRoleGrants(ctx, target.postgresRoleName, aip.Params{
 		PageSize:  req.Msg.GetPageSize(),
@@ -128,10 +128,16 @@ func (s *Service) ListRoleGrants(ctx context.Context, req *connect.Request[v1alp
 // roleDatabaseTarget holds the resolved inputs for a role-scoped, database-local
 // list RPC (grants, owned objects, default privileges).
 type roleDatabaseTarget struct {
+	instanceSession  engine.InstanceSession
 	session          engine.DatabaseSession
 	postgresRoleName string
 	instanceID       string
 	rctx             apierrors.ResourceCtx
+}
+
+func (t *roleDatabaseTarget) close() {
+	_ = t.session.Close()
+	_ = t.instanceSession.Close()
 }
 
 // openRoleDatabaseSession resolves the shared preamble for the role-scoped,
@@ -174,20 +180,23 @@ func (s *Service) openRoleDatabaseSession(ctx context.Context, parent, database,
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, rctx)
 	}
-	defer instSession.Close()
-
 	// Verify the role exists; an ACL-join query would otherwise silently return
 	// zero rows for a dropped or misspelled role.
 	if _, err := instSession.GetRole(ctx, postgresRoleName); err != nil {
+		_ = instSession.Close()
+
 		return nil, apierrors.MapEngineErr(ctx, err, rctx)
 	}
 
 	dbSession, err := instSession.OpenDatabase(ctx, databaseResource.DatabaseID)
 	if err != nil {
+		_ = instSession.Close()
+
 		return nil, apierrors.MapEngineErr(ctx, err, rctx)
 	}
 
 	return &roleDatabaseTarget{
+		instanceSession:  instSession,
 		session:          dbSession,
 		postgresRoleName: postgresRoleName,
 		instanceID:       roleResource.InstanceID,
@@ -202,7 +211,7 @@ func (s *Service) ListRoleOwnedObjects(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
-	defer target.session.Close()
+	defer target.close()
 
 	objects, nextToken, err := target.session.ListRoleOwnedObjects(ctx, target.postgresRoleName, aip.Params{
 		PageSize:  req.Msg.GetPageSize(),
@@ -228,7 +237,7 @@ func (s *Service) ListRoleDefaultPrivileges(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
-	defer target.session.Close()
+	defer target.close()
 
 	privileges, nextToken, err := target.session.ListRoleDefaultPrivileges(ctx, target.postgresRoleName, aip.Params{
 		PageSize:  req.Msg.GetPageSize(),

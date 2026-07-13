@@ -14,6 +14,7 @@ import (
 	"github.com/querylane/querylane/backend/dbsetup"
 	"github.com/querylane/querylane/backend/engine"
 	"github.com/querylane/querylane/backend/engine/postgres"
+	"github.com/querylane/querylane/backend/livequery"
 	"github.com/querylane/querylane/backend/runner"
 	"github.com/querylane/querylane/backend/runner/jobs"
 	metricsvc "github.com/querylane/querylane/backend/service/metrics"
@@ -82,6 +83,7 @@ type dbState struct {
 	instanceRuntimeStore   *storage.PGInstanceRuntimeStateStore
 	connectionRecorder     *storage.PGInstanceConnectionRecorder
 	connManager            *engine.SessionResolver
+	liveQueryLimiter       *livequery.Limiter
 	catalog                *catalogcache.Catalog
 	runnerExecutionStore   *storage.PGRunnerExecutionStore
 	replicaStore           *storage.PGReplicaStore
@@ -128,6 +130,19 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 
 	report(dbsetup.NewEvent(dbsetup.StepConnecting, dbsetup.StateInProgress))
 
+	limits := cfg.Limits
+	if limits == (serverconfig.Limits{}) {
+		limits.SetDefaults()
+	}
+
+	liveQueryLimiter, err := livequery.NewLimiter(
+		limits.LiveQueries.Global,
+		limits.LiveQueries.PerInstance,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("configure live query limiter: %w", err)
+	}
+
 	cl, err := storage.NewPostgresDB(ctx, cfg)
 	if err != nil {
 		report(dbsetup.NewErrorEvent(dbsetup.StepConnecting, err.Error()))
@@ -168,7 +183,7 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 		instanceRepo = pgInstanceRepo
 	}
 
-	connConfig := engine.DefaultPoolConfig()
+	connConfig := poolConfigFromLimits(limits.PostgresPool)
 
 	tokenSigningKey, err := storage.LoadOrCreateTokenSigningKey(ctx, cl)
 	if err != nil {
@@ -238,6 +253,7 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 		instanceRuntimeStore:   instanceRuntimeStore,
 		connectionRecorder:     connectionRecorder,
 		connManager:            connManager,
+		liveQueryLimiter:       liveQueryLimiter,
 		catalog:                catalogCache,
 		runnerExecutionStore:   runnerExecutionStore,
 		replicaStore:           replicaStore,
@@ -256,4 +272,13 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 			DatabaseVacuum: databaseVacuumSampleStore,
 		},
 	}, nil
+}
+
+func poolConfigFromLimits(limits serverconfig.PostgresPoolLimits) engine.PoolConfig {
+	return engine.PoolConfig{
+		MaxOpenConns:    limits.MaxOpenConnections,
+		MaxIdleConns:    limits.MaxIdleConnections,
+		IdleTimeout:     limits.IdleTimeout,
+		ConnMaxLifetime: limits.ConnectionMaxLifetime,
+	}
 }

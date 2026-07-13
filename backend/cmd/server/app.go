@@ -20,6 +20,7 @@ import (
 	"github.com/querylane/querylane/backend/embeddedpg"
 	"github.com/querylane/querylane/backend/frontend"
 	"github.com/querylane/querylane/backend/interceptor"
+	"github.com/querylane/querylane/backend/livequery"
 	"github.com/querylane/querylane/backend/middleware"
 	v1alpha1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	adminsvc "github.com/querylane/querylane/backend/service/admin"
@@ -265,13 +266,14 @@ func (a *App) mountDBServices(mux *http.ServeMux, state *dbState, accessLogger *
 	// The catalog cache is shared with the background runner (see
 	// buildDatabase) so probes and RPCs work from one synced view.
 	cat := state.catalog
+	liveSessions := livequery.NewSessionOpener(state.connManager, state.liveQueryLimiter)
 
-	overviewProvider := instance.NewOverviewProvider(state.connManager)
+	overviewProvider := instance.NewOverviewProvider(liveSessions)
 	instanceSvc := instance.NewService(state.instanceReader, state.instanceRepo, state.connectionRecorder, state.connManager, cat, overviewProvider, state.configManagedInstances)
 
 	mux.Handle(v1alpha1connect.NewInstanceServiceHandler(instanceSvc, opts...))
-	mux.Handle(v1alpha1connect.NewDatabaseServiceHandler(database.NewService(cat, database.NewQueryInsightsProvider(state.connManager)), opts...))
-	mux.Handle(v1alpha1connect.NewRoleServiceHandler(role.NewService(state.connManager), opts...))
+	mux.Handle(v1alpha1connect.NewDatabaseServiceHandler(database.NewService(cat, database.NewQueryInsightsProvider(liveSessions)), opts...))
+	mux.Handle(v1alpha1connect.NewRoleServiceHandler(role.NewService(liveSessions), opts...))
 	mux.Handle(v1alpha1connect.NewRunnerServiceHandler(runnersvc.NewService(state.runnerExecutionStore), opts...))
 
 	sampleStats := func(ctx context.Context) ([]storage.SampleTableStats, error) {
@@ -280,11 +282,11 @@ func (a *App) mountDBServices(mux *http.ServeMux, state *dbState, accessLogger *
 	mux.Handle(v1alpha1connect.NewAdminServiceHandler(adminsvc.NewService(state.replicaStore, state.runnerExecutionStore, state.catalogSyncStore, sampleStats, sampleRetentionAge), opts...))
 	mux.Handle(v1alpha1connect.NewMetricsServiceHandler(metricsvc.NewService(state.sampleStores, state.instanceReader), opts...))
 	mux.Handle(v1alpha1connect.NewSchemaServiceHandler(schema.NewService(cat), opts...))
-	mux.Handle(v1alpha1connect.NewExtensionServiceHandler(extension.NewService(state.connManager), opts...))
+	mux.Handle(v1alpha1connect.NewExtensionServiceHandler(extension.NewService(liveSessions), opts...))
 	mux.Handle(v1alpha1connect.NewTableServiceHandler(table.NewService(cat), opts...))
 	mux.Handle(v1alpha1connect.NewViewServiceHandler(view.NewService(cat), opts...))
-	mux.Handle(v1alpha1connect.NewTableDataServiceHandler(tabledata.NewService(cat, state.connManager, state.tokenCodec), opts...))
-	mux.Handle(v1alpha1connect.NewSQLServiceHandler(sqlsvc.NewService(state.connManager), opts...))
+	mux.Handle(v1alpha1connect.NewTableDataServiceHandler(tabledata.NewService(cat, state.connManager, state.tokenCodec, state.liveQueryLimiter), opts...))
+	mux.Handle(v1alpha1connect.NewSQLServiceHandler(sqlsvc.NewService(liveSessions), opts...))
 }
 
 // mountStubs wires Unimplemented handlers for all DB-dependent services. The

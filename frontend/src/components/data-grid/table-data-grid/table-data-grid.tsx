@@ -1053,11 +1053,16 @@ function useServerRowExport(request: ReadRowsRequest) {
         return;
       }
 
-      toast.error("Export failed", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "Could not export rows. Try again.",
+      const uiError = normalizeAppUiError(error, {
+        action: "stream_rows",
+        area: "data-explorer.table-data-grid.export",
+        endpoint: "StreamRows",
+        source: "connect",
+        surface: "toast",
+      });
+
+      toast.error(uiError.title, {
+        description: uiError.retryGuidance ?? uiError.message,
         id: toastId,
       });
     } finally {

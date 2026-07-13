@@ -141,6 +141,8 @@ function createKeyedRpcSemaphore(limit: number): KeyedRpcSemaphore {
 function createInstanceRpcConcurrencyInterceptor(
   limit: number = INSTANCE_RPC_CONCURRENCY_LIMIT
 ): Interceptor {
+  // UX-only backpressure for browser fan-out. The backend live-query limiter
+  // is the security boundary because callers can bypass this interceptor.
   const semaphore = createKeyedRpcSemaphore(limit);
 
   return (next) => async (req) => {

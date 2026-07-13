@@ -35,12 +35,12 @@ func (s *instanceSession) GetIOCounters(ctx context.Context) (*IOCounters, error
 }
 
 func (s *instanceSession) OpenEphemeralDatabase(ctx context.Context, databaseName string) (DatabaseSession, error) {
-	db, err := s.pool.openEphemeralDatabasePool(ctx, s.cfg, databaseName)
+	db, closeDB, err := s.pool.openEphemeralDatabasePool(ctx, s.cfg, databaseName)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.newDatabaseSession(db, db.Close), nil
+	return s.newDatabaseSession(db, closeDB), nil
 }
 
 // Prober returns the session itself; see instanceSession.Prober.

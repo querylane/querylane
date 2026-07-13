@@ -226,6 +226,13 @@ function isAppDatabaseUnavailableReason(reason: string | null): boolean {
   );
 }
 
+function isLiveQueryLimitReason(reason: string | null): boolean {
+  return (
+    reason === "LIVE_QUERY_LIMIT_EXCEEDED" ||
+    reason === "ERROR_REASON_LIVE_QUERY_LIMIT_EXCEEDED"
+  );
+}
+
 function buildTitle({
   blockingReason,
   code,
@@ -251,6 +258,10 @@ function buildTitle({
 
   if (isAppDatabaseUnavailableReason(reason)) {
     return "Meta database unavailable";
+  }
+
+  if (isLiveQueryLimitReason(reason)) {
+    return "Query limit reached";
   }
 
   if (postgresKind) {
@@ -463,6 +474,10 @@ function buildRetryGuidance({
 }): string | null {
   if (isAppDatabaseUnavailableReason(reason)) {
     return "Retry after the meta database is available.";
+  }
+
+  if (isLiveQueryLimitReason(reason)) {
+    return "Another query or export is using the available capacity. Try again when it finishes.";
   }
 
   if (postgresKind) {

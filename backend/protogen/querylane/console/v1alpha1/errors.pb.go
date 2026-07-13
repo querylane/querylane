@@ -49,6 +49,8 @@ const (
 	ErrorReason_APP_DATABASE_NOT_CONFIGURED ErrorReason = 101
 	// The application database is temporarily unavailable.
 	ErrorReason_APP_DATABASE_UNAVAILABLE ErrorReason = 102
+	// Querylane's live-query admission limit is currently saturated.
+	ErrorReason_LIVE_QUERY_LIMIT_EXCEEDED ErrorReason = 103
 )
 
 // Enum value maps for ErrorReason.
@@ -65,6 +67,7 @@ var (
 		12:  "PERMISSION_DENIED",
 		101: "APP_DATABASE_NOT_CONFIGURED",
 		102: "APP_DATABASE_UNAVAILABLE",
+		103: "LIVE_QUERY_LIMIT_EXCEEDED",
 	}
 	ErrorReason_value = map[string]int32{
 		"ERROR_REASON_UNSPECIFIED":    0,
@@ -78,6 +81,7 @@ var (
 		"PERMISSION_DENIED":           12,
 		"APP_DATABASE_NOT_CONFIGURED": 101,
 		"APP_DATABASE_UNAVAILABLE":    102,
+		"LIVE_QUERY_LIMIT_EXCEEDED":   103,
 	}
 )
 
@@ -207,7 +211,7 @@ const file_querylane_console_v1alpha1_errors_proto_rawDesc = "" +
 	"\rserver_fields\x18\x05 \x03(\v2C.querylane.console.v1alpha1.PostgreSqlErrorDetail.ServerFieldsEntryR\fserverFields\x1a?\n" +
 	"\x11ServerFieldsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x9b\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xba\x02\n" +
 	"\vErrorReason\x12\x1c\n" +
 	"\x18ERROR_REASON_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12RESOURCE_NOT_FOUND\x10\x01\x12\x1b\n" +
@@ -220,7 +224,8 @@ const file_querylane_console_v1alpha1_errors_proto_rawDesc = "" +
 	"\x0fUNAUTHENTICATED\x10\v\x12\x15\n" +
 	"\x11PERMISSION_DENIED\x10\f\x12\x1f\n" +
 	"\x1bAPP_DATABASE_NOT_CONFIGURED\x10e\x12\x1c\n" +
-	"\x18APP_DATABASE_UNAVAILABLE\x10fB\x93\x02\n" +
+	"\x18APP_DATABASE_UNAVAILABLE\x10f\x12\x1d\n" +
+	"\x19LIVE_QUERY_LIMIT_EXCEEDED\x10gB\x93\x02\n" +
 	"\x1ecom.querylane.console.v1alpha1B\vErrorsProtoP\x01ZZgithub.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1;consolev1alpha1\xa2\x02\x03QCX\xaa\x02\x1aQuerylane.Console.V1alpha1\xca\x02\x1aQuerylane\\Console\\V1alpha1\xe2\x02&Querylane\\Console\\V1alpha1\\GPBMetadata\xea\x02\x1cQuerylane::Console::V1alpha1b\x06proto3"
 
 var (

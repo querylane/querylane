@@ -58,10 +58,24 @@ type PostgreSQLContainer struct {
 // Defaults to the latest PostgreSQL 18 Alpine image; QUERYLANE_TEST_POSTGRES_IMAGE
 // overrides it to run the suite against an older supported major.
 func NewPostgreSQLContainer(ctx context.Context) (*PostgreSQLContainer, error) {
+	return newPostgreSQLContainer(ctx)
+}
+
+// NewPostgreSQLContainerWithMaxConnections creates a PostgreSQL testcontainer
+// with a deliberately small physical connection ceiling.
+func NewPostgreSQLContainerWithMaxConnections(ctx context.Context, maxConnections int) (*PostgreSQLContainer, error) {
+	return newPostgreSQLContainer(ctx, testcontainers.WithCmd(
+		"postgres",
+		"-c", "fsync=off",
+		"-c", "max_connections="+strconv.Itoa(maxConnections),
+	))
+}
+
+func newPostgreSQLContainer(ctx context.Context, extraOptions ...testcontainers.ContainerCustomizer) (*PostgreSQLContainer, error) {
 	image := postgresImage()
 
-	container, err := postgres.Run(ctx,
-		image,
+	options := make([]testcontainers.ContainerCustomizer, 0, 4+len(extraOptions))
+	options = append(options,
 		postgres.WithDatabase(containerDatabase),
 		postgres.WithUsername(containerUsername),
 		postgres.WithPassword(containerPassword),
@@ -71,6 +85,12 @@ func NewPostgreSQLContainer(ctx context.Context) (*PostgreSQLContainer, error) {
 				WithStartupTimeout(30*time.Second),
 		),
 	)
+	options = append(options, extraOptions...)
+
+	container, err := postgres.Run(ctx,
+		image,
+		options...,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start PostgreSQL container %s: %w", image, err)
 	}
@@ -78,6 +98,21 @@ func NewPostgreSQLContainer(ctx context.Context) (*PostgreSQLContainer, error) {
 	return &PostgreSQLContainer{
 		container: container,
 	}, nil
+}
+
+// RequirePostgreSQLContainerWithMaxConnections starts a low-capacity target
+// and skips the test when Docker/Testcontainers is unavailable.
+func RequirePostgreSQLContainerWithMaxConnections(ctx context.Context, t *testing.T, maxConnections int) *PostgreSQLContainer {
+	t.Helper()
+
+	testcontainers.SkipIfProviderIsNotHealthy(t)
+
+	container, err := NewPostgreSQLContainerWithMaxConnections(ctx, maxConnections)
+	if err != nil {
+		t.Fatalf("failed to start low-connection PostgreSQL testcontainer: %v", err)
+	}
+
+	return container
 }
 
 // RequirePostgreSQLContainer skips the calling test when Docker/Testcontainers

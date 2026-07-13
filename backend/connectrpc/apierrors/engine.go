@@ -14,6 +14,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/livequery"
 	consolev1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
 )
@@ -28,6 +29,11 @@ var schemaChildPathSegments = []string{"/tables/", "/views/"}
 func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Error {
 	if err == nil {
 		return nil
+	}
+
+	var liveQueryLimitErr *livequery.LimitExceededError
+	if errors.As(err, &liveQueryLimitErr) {
+		return MapLiveQueryLimit(err)
 	}
 
 	// Hierarchy not-found sentinels win before generic SQLSTATE mapping so

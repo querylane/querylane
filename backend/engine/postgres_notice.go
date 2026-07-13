@@ -32,6 +32,10 @@ var ErrPostgresNoticeCaptureUnsupported = errors.New("postgres notice capture re
 // not share notices across requests. The router is always attached, but it is
 // a no-op while no request-local collector is installed.
 func OpenPostgresDB(dsn string) (*sql.DB, error) {
+	return openPostgresDBWithBudget(dsn, nil)
+}
+
+func openPostgresDBWithBudget(dsn string, budget *connectionBudget) (*sql.DB, error) {
 	cfg, err := pgx.ParseConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("parse postgres connection config: %w", err)
@@ -39,11 +43,16 @@ func OpenPostgresDB(dsn string) (*sql.DB, error) {
 
 	cfg.OnNotice = routePostgresNotice
 
-	return stdlib.OpenDB(*cfg, stdlib.OptionAfterConnect(func(_ context.Context, conn *pgx.Conn) error {
+	connector := stdlib.GetConnector(*cfg, stdlib.OptionAfterConnect(func(_ context.Context, conn *pgx.Conn) error {
 		conn.PgConn().CustomData()[postgresNoticeCollectorKey] = &postgresNoticeSlot{}
 
 		return nil
-	})), nil
+	}))
+	if budget != nil {
+		connector = &budgetedConnector{Connector: connector, budget: budget}
+	}
+
+	return sql.OpenDB(connector), nil
 }
 
 // PostgresNoticeSession reserves one database/sql connection and attaches a
@@ -182,12 +191,12 @@ func (s *postgresNoticeSlot) add(notice *pgconn.Notice) {
 
 func installPostgresNoticeCollector(conn *sql.Conn, collector *postgresNoticeCollector) error {
 	return conn.Raw(func(driverConn any) error {
-		stdlibConn, ok := driverConn.(*stdlib.Conn)
+		postgresConn, ok := unwrapPostgresConn(driverConn)
 		if !ok {
 			return ErrPostgresNoticeCaptureUnsupported
 		}
 
-		slot, ok := stdlibConn.Conn().PgConn().CustomData()[postgresNoticeCollectorKey].(*postgresNoticeSlot)
+		slot, ok := postgresConn.PgConn().CustomData()[postgresNoticeCollectorKey].(*postgresNoticeSlot)
 		if !ok {
 			return ErrPostgresNoticeCaptureUnsupported
 		}
@@ -200,12 +209,12 @@ func installPostgresNoticeCollector(conn *sql.Conn, collector *postgresNoticeCol
 
 func clearPostgresNoticeCollector(conn *sql.Conn) error {
 	return conn.Raw(func(driverConn any) error {
-		stdlibConn, ok := driverConn.(*stdlib.Conn)
+		postgresConn, ok := unwrapPostgresConn(driverConn)
 		if !ok {
 			return ErrPostgresNoticeCaptureUnsupported
 		}
 
-		slot, ok := stdlibConn.Conn().PgConn().CustomData()[postgresNoticeCollectorKey].(*postgresNoticeSlot)
+		slot, ok := postgresConn.PgConn().CustomData()[postgresNoticeCollectorKey].(*postgresNoticeSlot)
 		if !ok {
 			return ErrPostgresNoticeCaptureUnsupported
 		}
@@ -214,6 +223,17 @@ func clearPostgresNoticeCollector(conn *sql.Conn) error {
 
 		return nil
 	})
+}
+
+func unwrapPostgresConn(driverConn any) (*pgx.Conn, bool) {
+	switch conn := driverConn.(type) {
+	case *stdlib.Conn:
+		return conn.Conn(), true
+	case interface{ postgresConn() *pgx.Conn }:
+		return conn.postgresConn(), true
+	default:
+		return nil, false
+	}
 }
 
 func formatPostgresNotice(notice *pgconn.Notice) string {
