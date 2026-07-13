@@ -36,6 +36,7 @@ import {
   ReferentialAction,
   Table_TableType,
   TableConstraintSchema,
+  type TablePolicy,
   TablePolicySchema,
   TableSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
@@ -1487,6 +1488,22 @@ describe("TableDetail metadata errors", () => {
   });
 });
 
+function renderPoliciesTab(policies: TablePolicy[]) {
+  tableQueries.policies.data = create(ListTablePoliciesResponseSchema, {
+    policies,
+  });
+  return render(
+    <TableDetail
+      databaseId="app"
+      initialTab="policies"
+      instanceId="prod"
+      schemaName="billing"
+      table={create(TableSchema)}
+      tableName="invoices"
+    />
+  );
+}
+
 describe("TableDetail policies tab", () => {
   it("explains RLS policy cards and previews matching policies by role and command", async () => {
     const user = userEvent.setup();
@@ -1600,6 +1617,98 @@ describe("TableDetail policies tab", () => {
     expect(
       rejectedInsertVerdict.closest('[aria-live="polite"]')
     ).not.toBeNull();
+  });
+
+  it("searches policy cards by name without changing the RLS preview", async () => {
+    const user = userEvent.setup();
+    renderPoliciesTab([
+      create(TablePolicySchema, {
+        command: PolicyCommand.SELECT,
+        mode: PolicyMode.PERMISSIVE,
+        policyName: "invoices_tenant_select",
+        roles: ["app_reader"],
+        usingExpression: "tenant_id = current_setting('app.tenant')",
+      }),
+      create(TablePolicySchema, {
+        command: PolicyCommand.SELECT,
+        mode: PolicyMode.PERMISSIVE,
+        policyName: "invoices_finance_select",
+        roles: ["app_reader"],
+        usingExpression: "department = 'finance'",
+      }),
+    ]);
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Search policies…" }),
+      "finance"
+    );
+
+    expect(
+      screen.queryByRole("heading", { name: "invoices_tenant_select" })
+    ).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: "invoices_finance_select" })
+    ).toBeTruthy();
+    expect(
+      screen.getByText("2 permissive policies apply", { exact: false })
+    ).toBeTruthy();
+  });
+
+  it("filters policy cards by mode without changing the RLS preview", async () => {
+    const user = userEvent.setup();
+    renderPoliciesTab([
+      create(TablePolicySchema, {
+        command: PolicyCommand.SELECT,
+        mode: PolicyMode.PERMISSIVE,
+        policyName: "invoices_tenant_select",
+        roles: ["app_reader"],
+        usingExpression: "tenant_id = current_setting('app.tenant')",
+      }),
+      create(TablePolicySchema, {
+        command: PolicyCommand.SELECT,
+        mode: PolicyMode.RESTRICTIVE,
+        policyName: "invoices_not_suspended",
+        roles: ["app_reader"],
+        usingExpression: "NOT suspended",
+      }),
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "Mode" }));
+    await user.click(screen.getByRole("option", { name: "Restrictive" }));
+
+    expect(
+      screen.queryByRole("heading", { name: "invoices_tenant_select" })
+    ).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: "invoices_not_suspended" })
+    ).toBeTruthy();
+    expect(
+      screen.getByText("1 restrictive policy must also pass", { exact: false })
+    ).toBeTruthy();
+  });
+
+  it("keeps policy filters available when no cards match", async () => {
+    const user = userEvent.setup();
+    renderPoliciesTab([
+      create(TablePolicySchema, {
+        command: PolicyCommand.SELECT,
+        mode: PolicyMode.PERMISSIVE,
+        policyName: "invoices_tenant_select",
+        roles: ["app_reader"],
+        usingExpression: "tenant_id = current_setting('app.tenant')",
+      }),
+    ]);
+
+    const search = screen.getByRole("textbox", { name: "Search policies…" });
+    await user.type(search, "missing");
+
+    expect(screen.getByText("No policies found")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Mode" })).toBeTruthy();
+
+    await user.clear(search);
+    expect(
+      screen.getByRole("heading", { name: "invoices_tenant_select" })
+    ).toBeTruthy();
   });
 
   it("previews UPDATE visibility from USING without folding in WITH CHECK", async () => {

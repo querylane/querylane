@@ -73,6 +73,7 @@ import {
   columnTypeCategory,
   filterColumnDetailRows,
   filterIndexesByMethod,
+  filterPoliciesByMode,
   filterTriggersByState,
   type TriggerStateFilter,
 } from "@/features/data-explorer/explorer-table-detail-filters";
@@ -291,6 +292,15 @@ function presentConstraintKindOptions(
       label: CONSTRAINT_TYPE_LABELS[type],
       value: String(type),
     }));
+}
+function presentPolicyModeOptions(
+  policies: TablePolicy[]
+): FacetedFilterOption[] {
+  return Array.from(new Set(policies.map((policy) => policy.mode)))
+    .sort((left, right) =>
+      formatPolicyMode(left).localeCompare(formatPolicyMode(right))
+    )
+    .map((mode) => ({ label: formatPolicyMode(mode), value: String(mode) }));
 }
 function presentTriggerStateOptions(
   triggers: TableTrigger[]
@@ -2298,6 +2308,8 @@ function PoliciesTab({
 }: {
   query: ReturnType<typeof useListTablePoliciesQuery>;
 }) {
+  const [policySearch, setPolicySearch] = useState("");
+  const [modeFilters, setModeFilters] = useState<string[]>([]);
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
     return (
@@ -2321,6 +2333,13 @@ function PoliciesTab({
   if (policies.length === 0) {
     return <TableResourceEmptyState category="policies" toolbar={toolbar} />;
   }
+  const normalizedSearch = policySearch.trim().toLocaleLowerCase();
+  const visiblePolicies = filterPoliciesByMode(
+    policies,
+    modeFilters.map(Number) as PolicyMode[]
+  ).filter((policy) =>
+    policy.policyName.toLocaleLowerCase().includes(normalizedSearch)
+  );
   return (
     <div className="flex flex-col gap-3" data-slot="policies-tab">
       <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-xs">
@@ -2339,11 +2358,32 @@ function PoliciesTab({
           {toolbar.lastFetchedLabel}
         </span>
       </div>
-      <div className="flex flex-col gap-3">
-        {policies.map((policy) => (
-          <PolicyCard key={policy.policyName} policy={policy} />
-        ))}
+      <div className="flex min-h-8 flex-wrap items-center gap-2">
+        <DataTableFilter
+          onChange={setPolicySearch}
+          placeholder="Search policies…"
+          value={policySearch}
+        />
+        <FacetFilterBar
+          filters={[
+            {
+              handleSelectedValuesChange: setModeFilters,
+              label: "Mode",
+              options: presentPolicyModeOptions(policies),
+              selectedValues: modeFilters,
+            },
+          ]}
+        />
       </div>
+      {visiblePolicies.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          {visiblePolicies.map((policy) => (
+            <PolicyCard key={policy.policyName} policy={policy} />
+          ))}
+        </div>
+      ) : (
+        <SearchEmptyState className="border" resourceName="policies" />
+      )}
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <RlsCombinationGuide />
         <RlsPreview policies={policies} />
