@@ -66,6 +66,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   SqlCodeBlock,
@@ -180,6 +186,14 @@ const TABLE_METADATA_QUERY_OPTIONS = {
 } as const;
 const UNAVAILABLE_COLUMN_STATISTIC_LABEL =
   "Not available from the current column metadata API";
+const SMALL_INDEX_PAGE_SIZE = 5;
+const DEFAULT_INDEX_PAGE_SIZE = 10;
+const LARGE_INDEX_PAGE_SIZE = 25;
+const INDEX_PAGE_SIZE_OPTIONS = [
+  SMALL_INDEX_PAGE_SIZE,
+  DEFAULT_INDEX_PAGE_SIZE,
+  LARGE_INDEX_PAGE_SIZE,
+] as const;
 const SKELETON_ROW_COUNT = 6;
 const CONSTRAINTS_DEFAULT_PAGE_SIZE = 10;
 const CONSTRAINTS_MEDIUM_PAGE_SIZE = 25;
@@ -193,6 +207,12 @@ const SKELETON_ROW_IDS = Array.from(
   { length: SKELETON_ROW_COUNT },
   (_, index) => `skeleton-row-${index}`
 );
+
+type IndexPageSize = (typeof INDEX_PAGE_SIZE_OPTIONS)[number];
+
+function isIndexPageSize(value: number): value is IndexPageSize {
+  return INDEX_PAGE_SIZE_OPTIONS.some((pageSize) => pageSize === value);
+}
 type PillTone = "amber" | "blue" | "emerald" | "slate" | "violet";
 const PILL_TONE_CLASSES: Record<PillTone, string> = {
   amber: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
@@ -2483,6 +2503,10 @@ function IndexesTab({
   table: TableProto | undefined;
   tableName: string;
 }) {
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState<IndexPageSize>(
+    DEFAULT_INDEX_PAGE_SIZE
+  );
   const [searchFilter, setSearchFilter] = useState("");
   const [methodFilters, setMethodFilters] = useState<string[]>([]);
   const toolbar = deriveMetadataToolbar([query]);
@@ -2519,6 +2543,17 @@ function IndexesTab({
       : methodFilteredIndexes.filter((index) =>
           index.indexName.toLocaleLowerCase().includes(normalizedSearch)
         );
+  const pageCount = Math.max(1, Math.ceil(filteredIndexes.length / pageSize));
+  const currentPageIndex = Math.min(pageIndex, pageCount - 1);
+  const pageIndexes = filteredIndexes.slice(
+    currentPageIndex * pageSize,
+    (currentPageIndex + 1) * pageSize
+  );
+  const firstPageIndex = currentPageIndex * pageSize + 1;
+  const lastPageIndex = Math.min(
+    (currentPageIndex + 1) * pageSize,
+    filteredIndexes.length
+  );
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -2556,24 +2591,63 @@ function IndexesTab({
       </div>
       <div className="flex min-h-8 flex-wrap items-center gap-2">
         <DataTableFilter
-          onChange={setSearchFilter}
+          onChange={(value) => {
+            setPageIndex(0);
+            setSearchFilter(value);
+          }}
           placeholder="Search indexes…"
           value={searchFilter}
         />
         <FacetFilterBar
           filters={[
             {
-              handleSelectedValuesChange: setMethodFilters,
+              handleSelectedValuesChange: (values) => {
+                setPageIndex(0);
+                setMethodFilters(values);
+              },
               label: "Method",
               options: presentIndexMethodOptions(indexes),
               selectedValues: methodFilters,
             },
           ]}
         />
+        <Select
+          onValueChange={(value) => {
+            if (typeof value !== "string") {
+              return;
+            }
+            const nextPageSize = Number(value);
+            if (isIndexPageSize(nextPageSize)) {
+              setPageIndex(0);
+              setPageSize(nextPageSize);
+            }
+          }}
+          value={String(pageSize)}
+        >
+          <SelectTrigger
+            aria-label="Indexes per page"
+            className="ml-auto h-8 w-28"
+            size="sm"
+          >
+            <span className="text-muted-foreground">Per page</span>
+            <span>{pageSize}</span>
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger={false}>
+            {INDEX_PAGE_SIZE_OPTIONS.map((option) => (
+              <SelectItem
+                key={option}
+                label={String(option)}
+                value={String(option)}
+              >
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       {filteredIndexes.length > 0 ? (
         <div className="space-y-3">
-          {filteredIndexes.map((index) => (
+          {pageIndexes.map((index) => (
             <IndexCard
               index={index}
               key={`${index.indexName}-${index.method}-${index.keyColumns.join(",")}`}
@@ -2582,6 +2656,43 @@ function IndexesTab({
               totalScanCount={totalScanCount}
             />
           ))}
+          {pageCount > 1 ? (
+            <div className="flex items-center justify-between text-muted-foreground text-xs">
+              <span className="tabular-nums">
+                Showing {firstPageIndex}&ndash;{lastPageIndex} of{" "}
+                {filteredIndexes.length} indexes
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="tabular-nums">
+                  Page {currentPageIndex + 1} of {pageCount}
+                </span>
+                <Button
+                  aria-label="Previous indexes page"
+                  disabled={currentPageIndex === 0}
+                  onClick={() => {
+                    setPageIndex(Math.max(0, currentPageIndex - 1));
+                  }}
+                  size="icon-sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <ChevronLeft aria-hidden="true" className="size-4" />
+                </Button>
+                <Button
+                  aria-label="Next indexes page"
+                  disabled={currentPageIndex >= pageCount - 1}
+                  onClick={() => {
+                    setPageIndex(Math.min(pageCount - 1, currentPageIndex + 1));
+                  }}
+                  size="icon-sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <ChevronRight aria-hidden="true" className="size-4" />
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : (
         <SearchEmptyState className="border" resourceName="indexes" />

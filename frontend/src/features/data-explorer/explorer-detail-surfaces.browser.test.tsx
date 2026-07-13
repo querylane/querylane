@@ -1880,6 +1880,9 @@ test("data explorer table indexes have a redesigned card baseline", async () => 
   await expect
     .element(page.getByRole("button", { exact: true, name: "Method" }))
     .toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Indexes per page" }))
+    .toBeVisible();
   const searchBox = indexSearch.getBoundingClientRect();
   const filterBox = indexFilterBar.getBoundingClientRect();
   expect(filterBox.left).toBeGreaterThan(searchBox.right);
@@ -2385,6 +2388,9 @@ test("data explorer table indexes match the redesign complex usage scenario", as
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { exact: true, name: "Method" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Indexes per page" }))
     .toBeVisible();
   expect(document.body.textContent).toContain(
     "CREATE INDEX shipments_legacy_ref_idx ON shipping.shipments USING btree (lower(ref))"

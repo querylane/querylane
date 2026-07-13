@@ -1356,6 +1356,133 @@ describe("TableDetail constraints tab", () => {
   });
 });
 
+function seedPaginatedIndexes(
+  methodForIndex: (index: number) => string = () => "btree"
+) {
+  tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+    indexes: Array.from({ length: 12 }, (_, index) =>
+      create(TableIndexSchema, {
+        indexName: `orders_idx_${index + 1}`,
+        isValid: true,
+        keyColumns: ["id"],
+        keyParts: ["id"],
+        method: methodForIndex(index),
+      })
+    ),
+  });
+}
+
+function renderPaginatedIndexes() {
+  render(
+    <TableDetail
+      databaseId="app"
+      initialTab="indexes"
+      instanceId="prod"
+      schemaName="public"
+      table={create(TableSchema)}
+      tableName="orders"
+    />
+  );
+}
+
+describe("TableDetail indexes pagination", () => {
+  it("paginates index cards with the shared 10-item default", async () => {
+    const user = userEvent.setup();
+    seedPaginatedIndexes();
+    renderPaginatedIndexes();
+
+    expect(
+      screen.queryAllByText("orders_idx_10", { exact: true }).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText("orders_idx_11", { exact: true })
+    ).toHaveLength(0);
+    expect(screen.getByText("Showing 1–10 of 12 indexes")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+    expect(
+      screen.getByRole("combobox", { name: "Indexes per page" }).textContent
+    ).toContain("10");
+    expect(
+      screen
+        .getByRole("button", { name: "Previous indexes page" })
+        .hasAttribute("disabled")
+    ).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
+
+    expect(screen.queryAllByText("orders_idx_1", { exact: true })).toHaveLength(
+      0
+    );
+    expect(
+      screen.queryAllByText("orders_idx_11", { exact: true }).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText("orders_idx_12", { exact: true }).length
+    ).toBeGreaterThan(0);
+    expect(screen.getByText("Showing 11–12 of 12 indexes")).toBeTruthy();
+    expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+  });
+
+  it("changes the number of index cards shown per page", async () => {
+    const user = userEvent.setup();
+    seedPaginatedIndexes();
+    renderPaginatedIndexes();
+
+    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
+    await user.click(
+      screen.getByRole("combobox", { name: "Indexes per page" })
+    );
+    await user.click(screen.getByRole("option", { name: "5" }));
+
+    expect(
+      screen.queryAllByText("orders_idx_5", { exact: true }).length
+    ).toBeGreaterThan(0);
+    expect(screen.queryAllByText("orders_idx_6", { exact: true })).toHaveLength(
+      0
+    );
+    expect(screen.getByText("Showing 1–5 of 12 indexes")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 3")).toBeTruthy();
+  });
+
+  it("returns to the first indexes page when search changes", async () => {
+    const user = userEvent.setup();
+    seedPaginatedIndexes();
+    renderPaginatedIndexes();
+
+    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
+    const search = screen.getByRole("textbox", { name: "Search indexes…" });
+    await user.type(search, "orders_idx_2");
+    await user.clear(search);
+
+    expect(
+      screen.queryAllByText("orders_idx_1", { exact: true }).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText("orders_idx_11", { exact: true })
+    ).toHaveLength(0);
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+  });
+
+  it("returns to the first indexes page when method filters change", async () => {
+    const user = userEvent.setup();
+    seedPaginatedIndexes((index) => (index < 10 ? "btree" : "gin"));
+    renderPaginatedIndexes();
+
+    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
+    await user.click(screen.getByRole("button", { name: "Method" }));
+    await user.click(screen.getByRole("option", { name: "GIN" }));
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+
+    expect(
+      screen.queryAllByText("orders_idx_1", { exact: true }).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText("orders_idx_11", { exact: true })
+    ).toHaveLength(0);
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+  });
+});
+
 describe("TableDetail indexes tab", () => {
   it("renders index summary cards and copyable SQL instead of a grid", () => {
     tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
