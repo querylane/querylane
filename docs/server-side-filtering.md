@@ -17,16 +17,14 @@ rows on the server instead of the client fetching everything and filtering in th
 Before this work, filtering was a **no-op**: the `filter` string was accepted, threaded into
 `aip.Params`, and hashed into the page token for cursor consistency, but never compiled into SQL.
 The role-centric services originally rejected non-empty filters, and the cached catalog lists accepted exactly 1 legacy
-spelling, `name.contains('...')`, through a pre-parser (now a translation shim; see the §3 callout).
+spelling, `name.contains('...')`, through a pre-parser.
 
-The framework already compiles a validated query *plan* to **2 backends**: go-jet
-(`backend/aip/jet.go`, metadata database and catalog-cache reads through `aip.Execute` and
-`ExecuteWithCondition`) and raw SQL (`backend/aip/sql.go` and `sql_execute.go`, live target-instance
-reads through `aip.ExecuteSQL`).
-Cursor predicates and `ORDER BY` already have a compiler in each. **Filtering becomes another concern
-that follows the exact same dual-compiler pattern**, reusing the existing helpers (`joinPredicates`,
-the shared `sqlBuilder`, `combineJetConditions`, `equalityExpr`). Implemented once in `aip`, every
-cached or live list endpoint gains filtering by declaring which fields are filterable.
+The framework now compiles each validated query *plan* once through `backend/aip/rawsql`. Handwritten
+live-instance queries execute those clauses directly; meta-database/catalog-cache queries embed the
+same bound predicate into go-jet while retaining typed Jet bindings and `ORDER BY`. Filtering and
+keyset pagination therefore share one PostgreSQL predicate compiler instead of parallel Jet and raw
+SQL implementations. An endpoint gains filtering by declaring which fields are filterable and binding
+their trusted backend expression.
 
 This revision trims the original design: **no `Filter` wrapper struct, no `FilterOps` override, and no
 new abstractions**. It adds about 100 lines across the existing files (see §11).
@@ -36,7 +34,8 @@ new abstractions**. It adds about 100 lines across the existing files (see §11)
 **Goals**
 - A small **AIP-160 subset** grammar with comparisons, `AND`/`OR`/`NOT`, groups, and string substring
   using `:` (see §2.1), parsed by a quote-aware, schema-free lexer/parser.
-- 1 parser → a validated `FilterExpr` tree → 2 compilers (Jet and raw SQL), reusing existing helpers.
+- 1 parser → a validated `FilterExpr` tree → 1 parameterized PostgreSQL compiler shared by the
+  handwritten-SQL and go-jet execution adapters.
 - Per-field opt-in with a single `Filterable bool`; allowed operators **derived from the field codec**;
   enum-like fields validated against an optional **bounded value set** (§5.1).
 - Endpoints that opt in **nothing** reject non-empty filters with `InvalidArgument`; empty filters keep
@@ -88,33 +87,27 @@ This is **AIP-160-inspired**, not wire-compatible with a strict AIP-160 client: 
 small `:` subset and use stored enum tokens (not canonical enum names). This behavior supports Querylane's UI. Revisit it if filtering is exposed to third-party AIP clients.
 
 If full AIP-160 is needed later, `go.einride.tech/aip/filtering` provides a real parser; we would still
-write our own lowering to the Jet and SQL plans. That dependency is not warranted for this subset.
+write our own lowering to the shared PostgreSQL clauses. That dependency is not warranted for this subset.
 
 ## 3. Background: where does each list come from?
 
-2 read paths exist; the filter must be honored on **both** and compiled differently.
+Two read paths honor the filter through one shared predicate compiler.
 
 | Path | Source | aip entry | Compiler | Endpoints |
 |---|---|---|---|---|
-| **Metadata database (catalog cache)** | Querylane's own PostgreSQL database, synced from instances | `aip.Execute` or `ExecuteWithCondition` → go-jet | `jet.go` | `ListDatabases`, `ListSchemas`, `ListTables`, `ListViews`, `ListInstances` |
-| **Live target instance** | target's `pg_catalog`, queried directly | `aip.ExecuteSQL` → raw SQL | `sql.go` | `ListRoles`, `ListRoleGrants`, `ListRoleOwnedObjects`, `ListRoleDefaultPrivileges`, `ListPublicGrants` |
+| **Meta DB (catalog cache)** | querylane's own Postgres, synced from instances | `aip/jet.Execute` / `ExecuteWithCondition` | `aip/rawsql.BuildClauses`, embedded by `aip/jet` | `ListDatabases`, `ListSchemas`, `ListTables`, `ListViews`, `ListInstances` |
+| **Live target instance** | target's `pg_catalog`, queried directly | `aip/rawsql.Execute` | `aip/rawsql.BuildClauses` | `ListRoles`, `ListRoleGrants`, `ListRoleOwnedObjects`, `ListRoleDefaultPrivileges`, `ListPublicGrants` |
 
-A `Field` carries both a go-jet `Column` (Jet path) and a raw `SQLExpr` (SQL path); the filter compiler
-uses whichever the endpoint's backend needs.
+The core `aip.Schema` stays backend-neutral. `rawsql.Bind` attaches trusted SQL expressions for
+handwritten queries. `jet.Bind` validates typed go-jet columns, derives quoted SQL expressions from
+them, and creates the corresponding raw-SQL binding so both paths compile identical predicates.
 
-> **Behavior-change callout (resolved).** Before this rollout, `ListDatabases`, `ListSchemas`, `ListTables`, and `ListViews`
-> did **not** silently ignore filters: a legacy pre-parser (`storage/catalog/filter.go`) accepted
-> exactly `name.contains('...')` (compiled to `REGEXP_LIKE`) and rejected every other non-empty filter
-> with `InvalidArgument`. The legacy grammar and the new `:` grammar were therefore mutually rejecting.
-> The rollout replaced the pre-parser with `normalizeLegacyCatalogFilter`, a **translation shim** that
-> rewrites the legacy spelling `name.contains('X')` to `name:'X'` (identical escape rules, so the
-> quoted content is carried verbatim) and hands everything else to the engine unchanged. Old SPA
-> bundles keep working; the engine compiles both spellings to `ILIKE` on the trigram-indexed `name`
-> columns; the proto comments now document the `:` grammar. Remove the shim once no pre-rollout
-> frontend remains in service.
-> Note `TestListDatabasesFilterIsTokenOnly` covers the **live engine** `ListDatabases` (0
-> filterable fields → no-op rule), not the cached catalog list; it still asserts the ignore behavior
-> and is unaffected. The catalog lists are covered by `TestIntegrationCatalogListAIPFilterGrammar`.
+> **Behavior-change callout (resolved).** Before this rollout, `ListDatabases/Schemas/Tables/Views`
+> accepted exactly `name.contains('...')` through a legacy pre-parser. Catalog filters now use the
+> same canonical grammar as the rest of the AIP engine. Data Explorer emits `name:"..."`, and
+> `.contains()` is rejected with `InvalidArgument`; there is no compatibility rewrite.
+> `TestIntegrationCatalogListAIPFilterGrammar` covers the cached catalog contract, including rejection
+> of the removed `.contains()` spelling.
 
 ## 4. Filter grammar (the supported subset)
 
@@ -143,7 +136,7 @@ Examples the UI sends:
 
 **Decisions**
 - **Expression tree:** `FilterAnd`, `FilterOr`, `FilterNot`, and `FilterCondition` preserve grouping
-  and AIP-160 precedence for both compilers.
+  and AIP-160 precedence for the shared compiler.
 - **Field paths:** the parser accepts dotted identifiers, but schema validation requires the complete
   path to be explicitly allowlisted. It never performs implicit or reflective traversal.
 - **`:`** means a case-insensitive substring for string fields (the search-box operator). See §5.4 for
@@ -288,84 +281,55 @@ validated tree and exposes it through `ParsedFilter()` for the Jet, raw-SQL, and
 Because the token already hashes the (normalized) raw filter, **changing the filter mid-pagination is
 already rejected** with `ErrFilterMismatch` (`page.go:117`). No token-machinery change is needed.
 
-### 5.4 `:` string substring: SQL form, escaping, and the ILIKE decision
+### 5.4 `:` string substring — SQL form, escaping, and the ILIKE decision
 
-**Decision: `ILIKE` on both backends**, as `<expr> ILIKE $n` with the bound value
+**Decision: the shared compiler emits `ILIKE`**, as `<expr> ILIKE $n` with the bound value
 `"%" + escapeLikePattern(term) + "%"`, where unexported `escapeLikePattern` escapes `\`, `%`, `_`.
-**No explicit `ESCAPE` clause**: PostgreSQL's default `LIKE`/`ILIKE` escape character is already the
+**No explicit `ESCAPE` clause** — PostgreSQL's default `LIKE`/`ILIKE` escape character is already the
 backslash, and because the pattern is a **bound parameter** (not a string literal) it is not subject to
-`standard_conforming_strings`. Dropping `ESCAPE` keeps the go-jet construction simple (`BinaryOperator`,
-§5.6) and avoids a `CustomExpression`/`Token` dance.
+`standard_conforming_strings`. Both execution adapters consume the same compiled fragment, so there is
+no separate go-jet spelling to keep in sync.
 
-Rationale:
+Rationale (resolves the simplicity-vs-performance conflict):
 - The meta tables **already have `pg_trgm` GIN indexes on every `name` column**
   (`backend/storage/migrations/0001_initial.sql`). `col ILIKE '%term%'` uses those indexes; the
   alternatives **silently disable them**: `LOWER(col) LIKE LOWER($n)` can't use an index on the raw
   column, and `strpos(lower(col), …) > 0` can't either. So **do not** use `LOWER(col) LIKE …`. (Per the
-  pg_trgm docs, very short or wildcard-only patterns degrade to a scan, which is acceptable here.)
+  pg_trgm docs, very short or wildcard-only patterns degrade to a scan — acceptable here.)
 - `ILIKE` is case-insensitive natively (no `LOWER` needed) and marginally cheaper per row on the live path.
-- `escapeLikePattern` neutralizes user `%`, `_`, and `\` so a search for `"50%"` matches the literal,
-  not a wildcard. It gets a focused unit test for the metacharacter cases, and the Jet and SQL
-  compilers get a `DebugSql()` or string assertion confirming the emitted `ILIKE $n`.
+- `escapeLikePattern` neutralizes user `%`/`_`/`\` so a search for `"50%"` matches the literal, not a
+  wildcard. It gets a focused unit test, and the shared compiler asserts the emitted `ILIKE $n` and
+  bound pattern.
 
-> **Rejected:** `strpos` or `POSITION` (simpler escaping, but forfeits the existing trigram indexes and
-> causes a performance regression on the cached path). Escaping adds only a small, tested helper.
+> **Rejected:** `strpos`/`POSITION` (simpler escaping, but forfeits the existing trigram indexes — a
+> performance regression on the cached path). The escaping cost is one small, tested helper.
 
-### 5.5 SQL compiler (`backend/aip/sql.go`): live path
+### 5.5 Shared compiler (`backend/aip/rawsql/compile.go`)
 
-Add `buildSQLFilterPredicate[M](b *sqlBuilder, fields Fields[M], conds []FilterCondition) (string, error)`.
-Create a parameterized fragment for each condition and join the fragments with `AND`:
-- `OpEqual`: `(<SQLExpr> = $n)`
-- `OpNotEqual`: `(<SQLExpr> <> $n)`
-- `OpContains` (`:`): `(<SQLExpr> ILIKE $n)`, arg = `"%"+escapeLikePattern(v)+"%"` (default backslash escape, §5.4)
+`rawsql.BuildClauses` lowers the validated `FilterExpr`, keyset cursor, ordering, and sentinel limit
+into one parameterized PostgreSQL clause set. `buildFilterPredicate` handles the expression tree and
+emits bound leaf comparisons; `buildKeysetPredicate` handles uniform tuple comparisons and mixed
+lexicographic orderings.
 
-**Parameter ordering (invariant, not a style note):** placeholders are positional, so build the filter
-predicate **first**, then the cursor predicate, **sharing the same `sqlBuilder`**, inside
-`buildSQLClauses`. Combine, **skipping empty fragments** (critical: `joinPredicates` does **not** skip
-`""`, so `joinPredicates(["", cursor], "AND")` would emit invalid `() AND (cursor)`):
+**Parameter ordering is an invariant, not a style note.** The filter predicate is built first and the
+cursor predicate second with one `argBuilder`, so filter arguments precede cursor arguments. Empty
+fragments are skipped before they are joined. `placeholderStart` lets handwritten queries continue
+after their existing base arguments.
 
-```go
-func buildSQLClauses[M any](schema *Schema[M], plan *Plan, placeholderStart int) (*SQLClauses, error) {
-    b := sqlBuilder{next: placeholderStart}
-    // Filter params MUST precede cursor params (placeholder numbering is positional).
-    filterWhere, err := buildSQLFilterPredicate(&b, schema.fields, plan.parsedFilter) // $n first
-    // ... cursorWhere uses the SAME &b, continuing the numbering ...
-    var parts []string
-    if filterWhere != "" { parts = append(parts, filterWhere) }
-    if cursorWhere != "" { parts = append(parts, cursorWhere) }
-    where := joinPredicates(parts, "AND") // existing helper; parenthesizes each branch
-    return &SQLClauses{Where: where, Args: b.args, OrderBy: orderBy, Limit: plan.PageSize + 1}, nil
-}
-```
+`rawsql.Execute` appends the combined `Where`, `OrderBy`, and `Limit` clauses to handwritten SQL. It
+does not need to distinguish filter predicates from cursor predicates.
 
-`assembleSQLQuery` (`sql_execute.go`) is **unchanged**: it appends the single combined `clauses.Where`
-with `WHERE` and `AND` according to `SQLQuery.HasWhere`. Document in a comment that the filter and
-cursor are combined inside `buildSQLClauses`; `assembleSQLQuery` must stay unaware of the distinction.
+### 5.6 Jet execution adapter (`backend/aip/jet`)
 
-### 5.6 Jet compiler (`backend/aip/jet.go`): cached path
+`jet.Bind` validates every schema binding against the go-jet column type, quotes the trusted table and
+column identifiers, and builds a matching `rawsql.Schema`. `ExecuteWithCondition` then calls the same
+`rawsql.BuildClauses` used by handwritten queries.
 
-Add `buildJetFilterCondition[M](fields Fields[M], conds []FilterCondition) (postgres.BoolExpression, error)`,
-combined at `execute.go:63` through the already-variadic, nil-safe `combineJetConditions`:
-
-```go
-if where := combineJetConditions(baseCondition, filterCond, cursorCond); where != nil {
-    stmt = stmt.WHERE(where)
-}
-```
-
-Reuse, don't duplicate, the type-switch:
-- `OpEqual` and `OpNotEqual`: route through the existing `equalityExpr` (`jet.go:143`). Extend it with an
-  operator argument (or add a thin `inequalityExpr` peer) so `=` and `<>` share 1 type switch over
-  strings, booleans, and integers.
-- `OpContains` (`:`): type-assert the column to `postgres.StringExpression` (exactly as `equalityExpr` does
-  at `jet.go:147`; error if it is not because substring is `StringCodec`-only). Emit `col ILIKE $n` using
-  `postgres.BoolExp(postgres.BinaryOperator(col, postgres.String(pattern), "ILIKE"))`, pattern =
-  `"%"+escapeLikePattern(v)+"%"` (no `ESCAPE` clause needed, §5.4). Add a **`Sql()`** assertion (it keeps
-  `$n` placeholders; `DebugSql()` inlines literals) that the emitted SQL is `… ILIKE $n` (not
-  `LOWER(col) LIKE …`, which would break the trigram index).
-
-`len(conds) == 0` → returns `nil` (no-op). `combineJetConditions` already guards
-`postgres.AND()`-on-empty.
+The adapter replaces positional placeholders in reverse order (`$10` before `$1`) with go-jet named
+arguments and embeds the result through `postgres.RawBool`. Jet assigns the final placeholder numbers
+after any base condition, while the raw predicate values remain bound. `ORDER BY` stays on typed Jet
+columns. Focused tests cover `$1`/`$10`, a preceding base argument, exact argument order, mixed cursor
+directions, and quoted identifiers.
 
 ### 5.7 Errors (`backend/aip/errors.go` and mappers)
 
@@ -399,7 +363,7 @@ Enabled fields:
 
 Caveats from review:
 - **`is_system_role` is a computed SELECT alias** (`list_roles.sql`: `r.rolname LIKE 'pg\_%' … AS
-  is_system_role`). PostgreSQL can't reference a SELECT alias in `WHERE`, so its `Field.SQLExpr` must be
+  is_system_role`). PostgreSQL can't reference a SELECT alias in `WHERE`, so its raw-SQL binding must be
   the **full expression** `(r.rolname LIKE 'pg\_%' ESCAPE '\')`, not the alias. (Live grant/owned
   queries are wrapped as `… ) AS g`, so their `g.<col>` exprs are fine.)
 - **`grantor` is `COALESCE`d to `''`** in the grant queries (not NULL), so `!=`/`:` behave
@@ -423,7 +387,7 @@ Caveats from review:
 ### 5.9 Comparisons and typed literals
 
 Numeric and temporal comparisons ship in the shared engine. `Int64Codec` accepts bare signed integers;
-`TimestampCodec` accepts quoted RFC 3339 timestamps. Jet and raw SQL compile all comparison operators.
+`TimestampCodec` accepts quoted RFC 3339 timestamps. The shared compiler handles all comparison operators.
 Endpoints still opt individual fields in with `Filterable`; support in the engine does not expose a field by default.
 
 ## 6. Vertical slice: live role lists (shared session opener)
@@ -481,9 +445,8 @@ with `create(Schema, …)`; keep `filter` and `pageToken` in client state and th
 
 ## 8. Testing plan
 
-Mirror `backend/aip` conventions (table-driven, standard library `t.Fatalf`, exact SQL string and
-argument-count assertions; `newTestSchema()` for Jet, `newTestSQLSchema()` for SQL; no `-short` guard
-on the I/O-free unit tests).
+Mirror `backend/aip` conventions: table-driven parser and validation cases, exact SQL and argument
+assertions for `rawsql`, focused adapter assertions for `jet`, and no `-short` guard on I/O-free tests.
 
 - **Parser** (`filter_test.go`): valid grammars → expected raw conditions; malformed → wrapped
   `ErrInvalidFilter`; empty and whitespace-only → `nil`; both quote styles; case-insensitive `AND`;
@@ -491,11 +454,10 @@ on the I/O-free unit tests).
   `name = "x AND y"`) parses as 1 condition; `\\`, `\"`, and `\'` unescape; a dangling backslash → error;
   exceeding `maxConditions` or `maxFilterBytes` → error.
 - **`escapeLikePattern`** (`filter_test.go`): `%`, `_`, `\`, and combinations.
-- **SQL compiler** (`sql_test.go`): assert the exact `WHERE` fragment **and `$n` ordering when
-  combined with a cursor** (the empty-fragment and filter-before-cursor cases explicitly).
-- **Jet compiler**: assert using the statement's **`Sql()`** method (parameterized, keeps `$n`; not
-  `DebugSql()`, which inlines literals). No `jet_test.go` exists, so add minimal coverage, including that `:` emits
-  `ILIKE $n` (not `LOWER … LIKE`).
+- **Shared compiler** (`rawsql/compile_test.go`): exact fully parenthesized `WHERE`, typed operators,
+  bound values, filter-before-cursor ordering, tuple and mixed-direction cursors, and empty fragments.
+- **Jet adapter** (`jet/raw_predicate_test.go`): `$1`/`$10` replacement, a preceding base argument,
+  exact argument order, mixed cursors, typed ordering, and quoted identifiers.
 - **Validation**: unknown field, non-filterable field, disallowed operator, or type mismatch →
   wrapped `ErrInvalidFilter`; message lists `filterableFields()`.
 - **Service** (`service/role/service_test.go`): the "rejects filter" cases flip to "passes filter to
@@ -503,29 +465,26 @@ on the I/O-free unit tests).
 - **Integration** (`postgres_integration_test.go`, `-short`-guarded suite): `ListRoleOwnedObjects`
   filter by `object_type`, by `object_name:"..."`, and by both fields; the filter and cursor round trip
   (page 1 → next consistent under the same filter; changed filter → `ErrFilterMismatch`).
-- **Existing test that breaks (cached-list rollout):** `postgres_integration_test.go:613`
-  `TestListDatabasesFilterIsTokenOnly` asserts today's no-op (filtered == unfiltered); it breaks
-  deterministically once `catalogDatabaseSchema.owner` becomes `Filterable`. Rewrite it then to assert
-  filtered results, keeping the changed-filter → `ErrFilterMismatch` half. (Distinct from the
-  known-flaky `TestCreateInstance_Success` and `TestDeleteInstance_Success`.)
+- **Catalog integration** (`storage/catalog/filter_integration_test.go`): canonical substring/equality
+  filters, changed-filter token rejection, unknown fields, and rejection of legacy `.contains()`.
 - **API errors**: `ErrInvalidFilter` → `InvalidArgument` with a `filter` field violation.
 - **Frontend**: `paginateUpTo` caps role summaries without changing counts or tabs. Shared escaped filter
   builders have unit coverage; integration tests assert role, grant, Explorer, and palette request filters.
 
 ## 9. Security
 
-- **Field names never come from user input**: the parser maps user tokens to declared schema fields;
-  unknown/non-filterable fields error. Column/`SQLExpr` come only from the schema.
-- **Values are always bound parameters** (`$n` on the SQL path; `postgres.String` or `postgres.Bool`
-  literals on the Jet path). No string interpolation of values into SQL.
-- **`:` and `ILIKE`**: `escapeLikePattern` neutralizes `%`, `_`, and `\` (default backslash escape,
-  §5.4) in a read-only context. This is the only place user text reaches a pattern position.
+- **Field names never become SQL identifiers directly** — user tokens must match declared schema paths;
+  trusted expressions/typed columns come only from backend bindings.
+- **Values are always bound parameters.** Both execution paths use the shared `$n` clause arguments;
+  the Jet adapter converts placeholders to named `RawArgs` before go-jet assigns final positions.
+- **`:`/ILIKE**: `escapeLikePattern` neutralizes `%`/`_`/`\` (default backslash escape, §5.4);
+  read-only context. This is the only place user text reaches a pattern position.
 - **Filter-grammar injection:** the frontend uses tested
   `quoteFilterValue`/`buildOwnedFilter` helper: `quoteFilterValue` escapes `\` and `"` and wraps the
   value in quotes. User search text is always a single escaped, quoted literal and cannot inject
   conditions or operators. The backend parser independently re-validates (unknown field or operator, bad escape,
   over-limit → `InvalidArgument`) regardless of client.
-- **No new engine RPC surface**: the existing `filter` field simply becomes effective.
+- **No new engine RPC surface** — the existing `filter` field simply becomes effective.
 
 ## 10. Performance
 
@@ -550,34 +509,32 @@ on the I/O-free unit tests).
 - **Frontend:** bounded unfiltered summaries derive counts and tabs; filtered table queries are separately
   keyed, so search and kind changes cannot corrupt summary state.
 
-## 11. Leanest v1: file-by-file delta
+## 11. Implementation map
 
 **Backend (`backend/aip/`):**
-- `filter.go`: comparison operators, raw and validated expression trees, the quote-aware schema-free
-  `parseFilter`, schema-aware `validateFilter` (coercion, `FilterValues` bounds, and codec operations
-  through `allowedOps`), `newFilterFieldError`, `escapeLikePattern`.
-- `schema.go`: add `Filterable bool` and optional `FilterValues []string` to `Field`; extend `validate()`
-  for filter codecs independently of ordering; add `filterableFields()`.
-- `plan.go`: add the validated filter expression to `Plan`; trim `params.Filter`; if the
-  schema has 0 filterable fields, reject non-empty input; otherwise, parse and validate in `BuildPlan`
-  between `validateToken` and `decodeCursorValues`, using `wrapAIPError`.
-- `errors.go`: add `ErrInvalidFilter`.
-- `sql.go`: add `buildSQLFilterPredicate`; in `buildSQLClauses`, build filter first (shared `sqlBuilder`)
-  and combine skipping empty fragments.
-- `jet.go`: add `buildJetFilterCondition` (reusing `equalityExpr`); combine at `execute.go:63`.
+- `filter.go`: lexer/parser, raw and validated expression trees, typed coercion, `FilterValues` bounds,
+  codec-derived operators, abuse guards, and substring-pattern escaping.
+- `schema.go`: backend-neutral field behavior plus construction-time codec validation.
+- `plan.go`: normalized filter hashing and private validated `FilterExpr` storage.
+- `rawsql/compile.go`: the sole filter/keyset predicate compiler.
+- `rawsql/execute.go`: handwritten-query assembly and execution.
+- `jet/`: typed bindings, trusted identifier derivation, raw predicate embedding, and typed ordering.
+- `errors.go`: `ErrInvalidFilter`.
 - `engine/errors.go`, `storage/errors.go`: re-export `ErrInvalidFilter`.
 - `connectrpc/apierrors/{engine,storage}.go`: add `ErrInvalidFilter` → `filter` field violation.
 
 **Per-endpoint (the slice):**
-- `engine/postgres/owned_objects.go`, `default_privileges.go`, and `grants.go` (shared by role and `PUBLIC`
-  grants). Add `Filterable: true` to the listed fields and `FilterValues:` on `object_type` from the
-  shared `backend/engine` token slices. The sets differ by endpoint: singular tokens for owned
+- `engine/postgres/owned_objects.go` + `default_privileges.go` + `grants.go` (shared by role + PUBLIC
+  grants): add `Filterable: true` to the listed fields, plus `FilterValues:` on `object_type` from the
+  shared `backend/engine` token slices — **different per endpoint**: singular tokens for owned
   objects/grants, plural tokens for default privileges (§5.8).
 - `service/role/service.go`: remove the shared opener guard (enables grants, owned objects, and default
   privileges) and the `ListPublicGrants` guard; drop the now-dead `filter` param from
   `openRoleDatabaseSession` and its call sites.
-- `storage/catalog/`: mark the §5.8 fields `Filterable`; replace the `catalogNameContainsFilter`
-  pre-parser with the `normalizeLegacyCatalogFilter` translation shim (§3 callout).
+- `storage/catalog/`: mark the §5.8 fields `Filterable` and pass canonical AIP filters directly to the
+  shared engine; no catalog-specific pre-parser or compatibility rewrite remains.
+- `frontend/src/features/data-explorer/data-explorer-catalog-filter.ts`: emit `name:"..."` and escape
+  backslashes plus double quotes for the selected string delimiter.
 - `proto/…/role.proto`: replace the "Reserved for future … rejects non-empty filters" comments on the
   enabled requests with the supported filters; update existing `database/schema/table/view` comments
   from `.contains()` examples to `field:"..."`; run `task proto:generate` (never hand-edit `protogen/`).
@@ -590,42 +547,43 @@ on the I/O-free unit tests).
 - Role/grant views: preserve summary/facet inputs while filtered requests supply table rows and partial states.
 - Explorer and command palette: send `name:"..."` filters; the palette limits result sets.
 
-About 100 lines of new backend code, no new dependencies, no new abstractions.
+No third-party parser or SQL compiler dependency is required.
 
 ## 12. Resolved decisions
 
-1. **Subset, not full AIP-160** (AIP-160-*inspired*, not wire-compatible; §2.1): comparisons, string
-   substring using `:`, logical operators, and groups. Enum fields are filtered on the stored token with a bounded `FilterValues` set
-   that also makes them **equality-only** (no `:`); token sets differ per endpoint (singular for
-   owned/grants, plural for default privileges) and live in shared `backend/engine` token slices.
-   Documented deviations; no silent unsupported syntax.
-2. **`:` substring:** `ILIKE` on both backends (uses the existing trigram GIN indexes); `escapeLikePattern`
-   and the **default** backslash escape (no explicit `ESCAPE`, §5.4).
-3. **Allowed operators:** `FilterValues`-bounded → `=` and `!=` only; otherwise, derive from `Codec`;
-   no `FilterOps` override. Abuse guards bound bytes, conditions, and nesting (§5.3).
-4. **Parser vs validation:** `parseFilter` is lexical and schema-free; coercion, bounds, and operator checks live in
+1. **Subset, not full AIP-160** (AIP-160-*inspired*, not wire-compatible — §2.1): typed comparisons,
+   string substring via `:`, boolean composition, negation, and groups. Enum fields use stored tokens
+   bounded by `FilterValues`; unsupported syntax fails explicitly.
+2. **`:` substring:** the shared compiler emits `ILIKE` (uses the existing trigram GIN indexes);
+   `escapeLikePattern` + the **default** backslash escape (no explicit `ESCAPE`, §5.4).
+3. **Allowed operators:** `FilterValues`-bounded → `=`/`!=`; otherwise derived from `Codec` (string,
+   bool, int64, timestamp). No `FilterOps` override. Size, condition-count, and depth guards apply.
+4. **Parser vs validation:** `parseFilter` is lexical + schema-free; coercion/bounds/op-checks live in
    schema-aware `validateFilter`.
-5. **Explicit support:** endpoints with 0 `Filterable` fields reject non-empty filters (§5.3).
-6. **AST:** validated `FilterAnd`/`FilterOr`/`FilterNot`/`FilterCondition` tree.
+5. **Unsupported endpoints reject filters:** zero `Filterable` fields means a non-empty filter is
+   `InvalidArgument`; opting fields in only widens accepted requests.
+6. **AST:** `FilterAnd`/`FilterOr`/`FilterNot` with validated `FilterCondition` leaves.
 7. **Frontend:** bounded unfiltered summaries feed KPIs/overview/tabs; split table queries send escaped
    server filters and expose partial-result states (§7).
-8. **`is_system_role`:** filterable, but its `SQLExpr` must be the full LIKE expression, not the alias.
-9. **Jet `:` substring:** `col ILIKE $n` using go-jet `BinaryOperator`/`BoolExp`, column type-asserted to
-   `StringExpression`, asserted with **`Sql()`** (keeps `$n`; not `DebugSql()`).
+8. **`is_system_role`:** when enabled, its raw-SQL binding must be the full LIKE expression, not the
+   SELECT alias.
+9. **Jet adapter:** typed columns are validated at bind time, converted to trusted quoted expressions,
+   and passed through the shared compiler. Bound raw predicates are embedded with `RawBool`; Jet owns
+   final placeholder numbering after base conditions.
 
 ## 13. Open questions (for implementation)
 
 - Verify with `EXPLAIN` whether PostgreSQL prunes / pushes into the owned-objects `UNION ALL` arms under
-  a kind filter (§10), which determines whether the single-branch query variant is worth building.
+  a kind filter (§10) — decides whether the single-branch query variant is worth building.
 - ~~`paginateUpTo` cap value.~~ **Resolved:** role summaries cap at 5,000; grant table slices cap at one
   1,000-row server page and ask the user to refine filters when more rows exist.
 - ~~Whether to enable the cached-list (`ListDatabases/Schemas/Tables/Views`) filters in the same release
-  as the live slice or stage them after.~~ **Resolved: enabled with the live slice**, with a legacy
-  `name.contains('...')` translation shim for pre-rollout SPA bundles (§3 callout). The Explorer now emits
-  `name:"..."`; remove the shim after the compatibility window. Also add the
-  §5.8 partial btree indexes for `is_system_*` if those filters show up in slow-query logs.
+  as the live slice or stage them after.~~ **Resolved: enabled with the live slice.** Data Explorer now
+  emits canonical `name:"..."` filters and the catalog lists reject `.contains()`; no compatibility
+  shim remains. Add the §5.8 partial btree indexes for `is_system_*` if those filters show up in
+  slow-query logs.
 - **AIP-158 follow-up (not blocking):** page tokens enforce filter/order/resource type but not
   parent/database scope (`proto/querylane/common/v1/pagination.proto`). AIP-158 wants all non-`page_size`
-  arguments stable across page turns; add scope to the token hash later if "AIP-compatible" becomes the standard.
-- If full AIP-160 (`OR`, wildcards, traversal, full `:` HAS semantics) is ever required, adopt
-  `go.einride.tech/aip/filtering` for parsing and write our own lowering. That work is out of scope.
+  args stable across page turns; add scope to the token hash later if "AIP-compatible" becomes the bar.
+- If full AIP-160 (wildcards, traversal, full `:` HAS semantics) is ever required, adopt
+  `go.einride.tech/aip/filtering` for parsing and write our own lowering — out of scope now.
