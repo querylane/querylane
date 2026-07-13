@@ -1,19 +1,36 @@
-import { expect, test } from "vitest";
+import { create as createProto } from "@bufbuild/protobuf";
+import { expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { SchemaDetail } from "@/features/data-explorer/explorer-schema-detail";
 import {
   type OtherDatabaseObject,
   OtherDatabaseObjectsPanel,
 } from "@/features/data-explorer/other-database-objects-section";
+import { TableSchema } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import { ViewSchema } from "@/protogen/querylane/console/v1alpha1/view_pb";
+
+const otherObjectsQuery = vi.hoisted(() => ({
+  data: undefined as
+    | { isTruncated: boolean; objects: OtherDatabaseObject[] }
+    | undefined,
+  error: null as Error | null,
+  isLoading: false,
+  refetch: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock("@/features/data-explorer/other-database-objects-query", () => ({
+  useOtherDatabaseObjectsQuery: () => otherObjectsQuery,
+}));
 
 const CREATE_SHIPMENT_STATUS_RE = /CREATE TYPE shipping\.shipment_status/;
-const JOBS_CATEGORY_RE = /^Jobs · pg_cron 4$/;
+const JOBS_CATEGORY_RE = /^Category.*Jobs · pg_cron/;
 const LOCK_TIMEOUT_RE = /lock timeout · 29 Jun 05:00/;
 const NEXT_RUNS_RE = /next runs:/;
 const PARTMAN_MAINTENANCE_RE = /partman-maintenance/;
 const SHIPMENT_STATUS_BUTTON_RE = /shipping\.shipment_status/;
-const TYPES_CATEGORY_RE = /^Types 3$/;
+const TYPES_CATEGORY_RE = /^Category.*Types/;
 
 const designObjects: OtherDatabaseObject[] = [
   {
@@ -119,6 +136,79 @@ function renderPanel(objects = designObjects) {
   );
 }
 
+function renderSchemaOverview() {
+  otherObjectsQuery.data = {
+    isTruncated: false,
+    objects: designObjects,
+  };
+  render(
+    <ScreenshotFrame>
+      <div className="w-[900px] rounded-2xl border border-border bg-background p-8 text-foreground">
+        <SchemaDetail
+          databaseId="app"
+          instanceId="prod"
+          onSelectTable={() => undefined}
+          onSelectView={() => undefined}
+          owner="data_platform"
+          schemaName="shipping"
+          tables={[
+            createProto(TableSchema, {
+              displayName: "shipments",
+              name: "shipments",
+              owner: "data_platform",
+              rowCount: 84_200n,
+              sizeBytes: 42_000_000n,
+            }),
+          ]}
+          tablesError={null}
+          tablesLoading={false}
+          views={[
+            createProto(ViewSchema, {
+              displayName: "active_shipments",
+              name: "active_shipments",
+              owner: "analytics_owner",
+              rowCount: 12_400n,
+              sizeBytes: 0n,
+            }),
+          ]}
+          viewsError={null}
+          viewsLoading={false}
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+}
+
+test("schema overview keeps search and filters above the new inventory", async () => {
+  renderSchemaOverview();
+
+  await expect
+    .element(page.getByRole("heading", { name: "shipping" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("textbox", { name: "Search objects…" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Kind" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Owner" }))
+    .toBeVisible();
+  await expect
+    .element(
+      page.getByRole("searchbox", {
+        name: "Search other database objects",
+      })
+    )
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: TYPES_CATEGORY_RE }))
+    .toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-schema-overview-other-database-objects"
+  );
+});
+
 test("other database objects matches the design's compact type inventory", async () => {
   renderPanel();
 
@@ -127,7 +217,22 @@ test("other database objects matches the design's compact type inventory", async
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: TYPES_CATEGORY_RE }))
-    .toHaveAttribute("aria-current", "page");
+    .toBeVisible();
+  const search = page
+    .getByRole("searchbox", { name: "Search other database objects" })
+    .element();
+  const categoryFilter = page
+    .getByRole("button", { name: TYPES_CATEGORY_RE })
+    .element();
+  expect(search.getBoundingClientRect().left).toBeLessThan(
+    categoryFilter.getBoundingClientRect().left
+  );
+  expect(
+    Math.abs(
+      search.getBoundingClientRect().top -
+        categoryFilter.getBoundingClientRect().top
+    )
+  ).toBeLessThanOrEqual(1);
   await expect
     .element(page.getByText("shipping.shipment_status"))
     .toBeVisible();
@@ -151,7 +256,7 @@ test("other database objects matches the design's pg cron run history view", asy
 
   await expect
     .element(page.getByRole("button", { name: JOBS_CATEGORY_RE }))
-    .toHaveAttribute("aria-current", "page");
+    .toBeVisible();
   await expect.element(page.getByText("partman-maintenance")).toBeVisible();
   await expect.element(page.getByText("vacuum-audit-log")).toBeVisible();
   await expect.element(page.getByText(LOCK_TIMEOUT_RE)).toBeVisible();

@@ -1,9 +1,17 @@
 "use client";
 
 import { AlertTriangle, Clipboard, Info, Search, Server } from "lucide-react";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { RetryActionButton } from "@/components/retry-action-button";
 import { Button } from "@/components/ui/button";
+import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOtherDatabaseObjectsQuery } from "@/features/data-explorer/other-database-objects-query";
@@ -79,6 +87,8 @@ const CRON_MONTH_INDEX = 3;
 const CRON_DAY_OF_WEEK_INDEX = 4;
 const INTRO_COPY =
   "Across this database: everything that isn’t a relation, from pg_proc, pg_type, pg_collation, pg_foreign_server, pg_publication, pg_event_trigger";
+const ALL_CATEGORIES_DESCRIPTION =
+  "Browse routines, sequences, types, collations, foreign servers, replication, event triggers, and pg_cron jobs across this database.";
 const COPY_NOTICE_DURATION_MS = 2000;
 
 type OtherObjectCategory = (typeof OTHER_OBJECT_CATEGORIES)[number]["key"];
@@ -140,6 +150,14 @@ function selectedCategoryMeta(category: OtherObjectCategory) {
     OTHER_OBJECT_CATEGORIES.find((candidate) => candidate.key === category) ??
     OTHER_OBJECT_CATEGORIES[0]
   );
+}
+
+function isOtherObjectCategory(value: string): value is OtherObjectCategory {
+  return OTHER_OBJECT_CATEGORIES.some((category) => category.key === value);
+}
+
+function preventSearchSubmit(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault();
 }
 
 function objectMatchesSearch(
@@ -753,6 +771,37 @@ function gridClassName(category: OtherObjectCategory) {
   }
 }
 
+function OtherObjectCards({
+  category,
+  expandedObjectKey,
+  objects,
+  onCopySql,
+  onToggle,
+}: {
+  category: OtherObjectCategory;
+  expandedObjectKey: string | null;
+  objects: OtherDatabaseObject[];
+  onCopySql: (definition: string) => void;
+  onToggle: (key: string) => void;
+}) {
+  return (
+    <div className={gridClassName(category)}>
+      {objects.map((object) => {
+        const key = objectKey(object);
+        return (
+          <OtherObjectCard
+            isExpanded={expandedObjectKey === key}
+            key={key}
+            object={object}
+            onCopySql={onCopySql}
+            onToggle={() => onToggle(key)}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function OtherObjectsLoading() {
   return (
     <div
@@ -799,8 +848,9 @@ function OtherDatabaseObjectsPanel({
   onRetry,
 }: OtherDatabaseObjectsPanelProps) {
   const titleId = useId();
-  const [requestedCategory, setRequestedCategory] =
-    useState<OtherObjectCategory>(() => firstPopulatedCategory(objects));
+  const [requestedCategories, setRequestedCategories] = useState<
+    OtherObjectCategory[] | null
+  >(null);
   const [query, setQuery] = useState("");
   const [expandedObjectKey, setExpandedObjectKey] = useState<string | null>(
     null
@@ -810,15 +860,20 @@ function OtherDatabaseObjectsPanel({
   const searchedObjects = objects.filter((object) =>
     objectMatchesSearch(object, query)
   );
-  const counts = countByCategory(searchedObjects);
+  const counts = countByCategory(objects);
+  const selectedCategories = requestedCategories ?? [
+    firstPopulatedCategory(objects),
+  ];
   const selectedCategory =
-    counts[requestedCategory] > 0 || searchedObjects.length === 0
-      ? requestedCategory
-      : firstPopulatedCategory(searchedObjects);
-
-  const categoryMeta = selectedCategoryMeta(selectedCategory);
+    selectedCategories.length === 1 ? selectedCategories[0] : undefined;
+  const categoryDescription = selectedCategory
+    ? selectedCategoryMeta(selectedCategory).description
+    : ALL_CATEGORIES_DESCRIPTION;
   const visibleObjects = searchedObjects
-    .filter((object) => object.category === selectedCategory)
+    .filter(
+      (object) =>
+        selectedCategory === undefined || object.category === selectedCategory
+    )
     .sort((left, right) => left.sortKey.localeCompare(right.sortKey));
 
   useEffect(function clearCopyNoticeTimeoutOnUnmount() {
@@ -851,26 +906,56 @@ function OtherDatabaseObjectsPanel({
       .catch(() => showCopyNotice("Could not copy SQL."));
   };
 
+  const toggleObject = (key: string) =>
+    setExpandedObjectKey(expandedObjectKey === key ? null : key);
+
   let objectListContent: ReactNode;
   if (error) {
     objectListContent = <OtherObjectsError onRetry={onRetry} />;
   } else if (isLoading) {
     objectListContent = <OtherObjectsLoading />;
   } else if (visibleObjects.length > 0) {
-    objectListContent = (
-      <div className={gridClassName(selectedCategory)}>
-        {visibleObjects.map((object) => {
-          const key = objectKey(object);
+    objectListContent = selectedCategory ? (
+      <OtherObjectCards
+        category={selectedCategory}
+        expandedObjectKey={expandedObjectKey}
+        objects={visibleObjects}
+        onCopySql={copySql}
+        onToggle={toggleObject}
+      />
+    ) : (
+      <div className="space-y-5">
+        {OTHER_OBJECT_CATEGORIES.map((category) => {
+          const categoryObjects = visibleObjects.filter(
+            (object) => object.category === category.key
+          );
+          if (categoryObjects.length === 0) {
+            return null;
+          }
           return (
-            <OtherObjectCard
-              isExpanded={expandedObjectKey === key}
-              key={key}
-              object={object}
-              onCopySql={copySql}
-              onToggle={() =>
-                setExpandedObjectKey(expandedObjectKey === key ? null : key)
-              }
-            />
+            <section
+              aria-labelledby={`${titleId}-${category.key}`}
+              key={category.key}
+            >
+              <div className="mb-2 flex items-center gap-2">
+                <h3
+                  className="font-medium text-sm"
+                  id={`${titleId}-${category.key}`}
+                >
+                  {category.label}
+                </h3>
+                <span className="font-mono text-muted-foreground text-xs tabular-nums">
+                  {categoryObjects.length}
+                </span>
+              </div>
+              <OtherObjectCards
+                category={category.key}
+                expandedObjectKey={expandedObjectKey}
+                objects={categoryObjects}
+                onCopySql={copySql}
+                onToggle={toggleObject}
+              />
+            </section>
           );
         })}
       </div>
@@ -888,82 +973,70 @@ function OtherDatabaseObjectsPanel({
       aria-labelledby={titleId}
       className="overflow-hidden rounded-[14px] border border-border bg-card text-card-foreground shadow-xs"
     >
-      <header className="flex flex-wrap items-start gap-2 p-4">
+      <header className="p-4">
         <h2 className="font-semibold text-sm" id={titleId}>
           Other database objects
         </h2>
-        <div className="relative ml-auto w-full sm:w-56">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            aria-label="Search other database objects"
-            className="h-8 pl-8 text-sm"
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setExpandedObjectKey(null);
-            }}
-            placeholder="Search objects…"
-            value={query}
-          />
-        </div>
-        <p className="w-full text-muted-foreground text-xs">{INTRO_COPY}</p>
+        <p className="mt-2 text-muted-foreground text-xs">{INTRO_COPY}</p>
       </header>
 
-      <div className="flex min-h-72 border-border border-t">
-        <nav
-          aria-label="Other database object categories"
-          className="w-48 shrink-0 border-border border-r p-2"
+      <div className="min-h-72 border-border border-t p-4">
+        <form
+          aria-label="Filter other database objects"
+          className="flex min-w-0 items-center gap-2"
+          onSubmit={preventSearchSubmit}
         >
-          <div className="flex flex-col gap-px">
-            {OTHER_OBJECT_CATEGORIES.map((category) => (
-              <Button
-                aria-current={
-                  selectedCategory === category.key ? "page" : undefined
-                }
-                className={cn(
-                  "h-8 justify-between gap-3 px-2.5 text-muted-foreground text-xs",
-                  selectedCategory === category.key &&
-                    "bg-muted text-foreground hover:bg-muted"
-                )}
-                key={category.key}
-                onClick={() => {
-                  setRequestedCategory(category.key);
-                  setExpandedObjectKey(null);
-                }}
-                type="button"
-                variant="ghost"
-              >
-                <span>{category.label}</span>
-                <span className="font-mono text-[11px] tabular-nums">
-                  {counts[category.key]}
-                </span>
-              </Button>
-            ))}
+          <div className="relative min-w-0 flex-1 sm:max-w-64">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Search other database objects"
+              className="h-8 pl-8 text-sm"
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setExpandedObjectKey(null);
+              }}
+              placeholder="Search objects…"
+              type="search"
+              value={query}
+            />
           </div>
-        </nav>
+          <DataTableFacetedFilter
+            onSelectedValuesChange={(values) => {
+              setRequestedCategories(values.filter(isOtherObjectCategory));
+              setExpandedObjectKey(null);
+            }}
+            options={OTHER_OBJECT_CATEGORIES.map((category) => ({
+              count: counts[category.key],
+              label: category.label,
+              value: category.key,
+            }))}
+            selectedValues={selectedCategories}
+            singleSelect={true}
+            title="Category"
+          />
+        </form>
 
-        <div className="min-w-0 flex-1 p-4">
-          <div className="mb-3 flex items-center gap-2 rounded-[9px] border border-border bg-muted/40 px-3 py-2">
-            <Info className="size-3.5 shrink-0 text-muted-foreground" />
-            <p className="min-w-0 flex-1 text-[12px] text-muted-foreground leading-5">
-              {categoryMeta.description}
-            </p>
-          </div>
-
-          {copyNotice ? (
-            <p className="mb-3 text-muted-foreground text-sm" role="status">
-              {copyNotice}
-            </p>
-          ) : null}
-
-          {isTruncated ? (
-            <p className="mb-3 text-amber-700 text-xs dark:text-amber-300">
-              This database has more than 1,000 other objects. Showing a partial
-              inventory.
-            </p>
-          ) : null}
-
-          {objectListContent}
+        <div className="mt-3 flex items-center gap-2 rounded-[9px] border border-border bg-muted/40 px-3 py-2">
+          <Info className="size-3.5 shrink-0 text-muted-foreground" />
+          <p className="min-w-0 flex-1 text-[12px] text-muted-foreground leading-5">
+            {categoryDescription}
+          </p>
         </div>
+
+        {copyNotice ? (
+          <p className="mt-3 text-muted-foreground text-sm" role="status">
+            {copyNotice}
+          </p>
+        ) : null}
+
+        {isTruncated ? (
+          <p className="mt-3 text-amber-700 text-xs dark:text-amber-300">
+            This database has more than 1,000 other objects. Showing a partial
+            inventory.
+          </p>
+        ) : null}
+
+        <div className="mt-3">{objectListContent}</div>
       </div>
     </section>
   );

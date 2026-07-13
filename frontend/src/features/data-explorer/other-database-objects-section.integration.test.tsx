@@ -147,6 +147,8 @@ const variantObjects: OtherDatabaseObject[] = [
 ];
 
 const COLLATIONS_BUTTON_RE = /^Collations 1$/;
+const CATEGORY_FILTER_RE = /Category/;
+const CATEGORY_TYPES_FILTER_RE = /Category.*Types/;
 const CRON_JOBS_BUTTON_RE = /^Jobs · pg_cron 3$/;
 const CUSTOM_TYPES_INFO_RE = /Custom enums, composites, domains, and ranges/i;
 const EVENT_TRIGGERS_BUTTON_RE = /^Event triggers 1$/;
@@ -154,7 +156,6 @@ const FDW_SERVERS_BUTTON_RE = /^FDW servers 1$/;
 const INCREMENT_ONE_RE = /increment 1/;
 const INTRO_COPY_RE = /everything that isn’t a relation/i;
 const SHIPMENT_STATUS_BUTTON_RE = /shipping\.shipment_status/i;
-const TYPES_BUTTON_RE = /^Types 2$/;
 const ROUTINES_BUTTON_RE = /^Routines 1$/;
 const REPLICATION_BUTTON_RE = /^Replication 1$/;
 const RESTRICTED_INTERVAL_BUTTON_RE = /restricted-interval/;
@@ -168,8 +169,41 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+async function selectCategory(
+  user: ReturnType<typeof userEvent.setup>,
+  categoryName: RegExp
+) {
+  await user.click(screen.getByRole("button", { name: CATEGORY_FILTER_RE }));
+  await user.click(screen.getByRole("option", { name: categoryName }));
+  await user.keyboard("{Escape}");
+}
+
 describe("OtherDatabaseObjectsPanel", () => {
-  it("renders the design's internal object category rail and type cards", () => {
+  it("places search before the inline category filter", async () => {
+    const user = userEvent.setup();
+    render(<OtherDatabaseObjectsPanel isLoading={false} objects={objects} />);
+
+    const toolbar = screen.getByRole("form", {
+      name: "Filter other database objects",
+    });
+    const search = within(toolbar).getByRole("searchbox", {
+      name: "Search other database objects",
+    });
+    const categoryFilter = within(toolbar).getByRole("button", {
+      name: CATEGORY_FILTER_RE,
+    });
+
+    expect(
+      Array.from(toolbar.querySelectorAll("input, button")).slice(0, 2)
+    ).toEqual([search, categoryFilter]);
+
+    await selectCategory(user, COLLATIONS_BUTTON_RE);
+
+    expect(screen.getByText("case_insensitive")).toBeTruthy();
+    expect(screen.queryByText("shipping.shipment_status")).toBeNull();
+  });
+
+  it("renders the category filter and type cards", () => {
     render(<OtherDatabaseObjectsPanel isLoading={false} objects={objects} />);
 
     expect(
@@ -177,9 +211,8 @@ describe("OtherDatabaseObjectsPanel", () => {
     ).toBeTruthy();
     expect(screen.getByText(INTRO_COPY_RE)).toBeTruthy();
 
-    expect(screen.getByRole("button", { name: TYPES_BUTTON_RE })).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: COLLATIONS_BUTTON_RE })
+      screen.getByRole("button", { name: CATEGORY_TYPES_FILTER_RE })
     ).toBeTruthy();
     expect(screen.getByText(CUSTOM_TYPES_INFO_RE)).toBeTruthy();
     expect(screen.getByText("shipping.shipment_status")).toBeTruthy();
@@ -190,14 +223,14 @@ describe("OtherDatabaseObjectsPanel", () => {
     const user = userEvent.setup();
     render(<OtherDatabaseObjectsPanel isLoading={false} objects={objects} />);
 
-    await user.click(
-      screen.getByRole("button", { name: COLLATIONS_BUTTON_RE })
-    );
+    await selectCategory(user, COLLATIONS_BUTTON_RE);
     expect(screen.getByText("case_insensitive")).toBeTruthy();
     expect(screen.queryByText("shipping.shipment_status")).toBeNull();
 
     await user.type(
-      screen.getByRole("textbox", { name: "Search other database objects" }),
+      screen.getByRole("searchbox", {
+        name: "Search other database objects",
+      }),
       "phonebook"
     );
     expect(screen.getByText("None in this database.")).toBeTruthy();
@@ -236,31 +269,25 @@ describe("OtherDatabaseObjectsPanel", () => {
       <OtherDatabaseObjectsPanel isLoading={false} objects={variantObjects} />
     );
 
-    await user.click(screen.getByRole("button", { name: SEQUENCES_BUTTON_RE }));
+    await selectCategory(user, SEQUENCES_BUTTON_RE);
     expect(screen.getByText("42")).toBeTruthy();
     expect(screen.getByText("Last value")).toBeTruthy();
     expect(screen.getByText(INCREMENT_ONE_RE)).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: ROUTINES_BUTTON_RE }));
+    await selectCategory(user, ROUTINES_BUTTON_RE);
     const procedureCard = screen
       .getByText("shipping.refresh_routes")
       .closest("article");
     expect(procedureCard?.textContent).toContain("plpgsql");
     expect(procedureCard?.textContent).not.toContain("→ plpgsql");
 
-    await user.click(
-      screen.getByRole("button", { name: FDW_SERVERS_BUTTON_RE })
-    );
+    await selectCategory(user, FDW_SERVERS_BUTTON_RE);
     expect(screen.getByText("replica_us")).toBeTruthy();
-    await user.click(
-      screen.getByRole("button", { name: REPLICATION_BUTTON_RE })
-    );
+    await selectCategory(user, REPLICATION_BUTTON_RE);
     expect(screen.getByText("pub_shipping")).toBeTruthy();
-    await user.click(
-      screen.getByRole("button", { name: EVENT_TRIGGERS_BUTTON_RE })
-    );
+    await selectCategory(user, EVENT_TRIGGERS_BUTTON_RE);
     expect(screen.getByText("audit_ddl")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: CRON_JOBS_BUTTON_RE }));
+    await selectCategory(user, CRON_JOBS_BUTTON_RE);
     expect(screen.getByText("refresh")).toBeTruthy();
     expect(screen.getAllByText("0 3 * * 1")).toHaveLength(2);
     const restrictedCard = screen
