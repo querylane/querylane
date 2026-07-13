@@ -3182,6 +3182,7 @@ const TRIGGER_WHEN_RE =
   /\bWHEN\s*\(([\s\S]+)\)\s+EXECUTE\s+(?:FUNCTION|PROCEDURE)\b/i;
 const TRIGGER_SQL_COPY_FEEDBACK_MS = 1500;
 
+/** Leaves simple names bare to mirror pg_get_triggerdef output. */
 function formatTriggerSqlIdentifier(identifier: string) {
   if (SIMPLE_SQL_IDENTIFIER_RE.test(identifier)) {
     return identifier;
@@ -3512,6 +3513,7 @@ interface DefinitionSection {
   title: string;
 }
 
+/** Always quotes identifiers used in copy-paste DDL. */
 function formatSqlIdentifier(identifier: string) {
   return `"${identifier.replaceAll('"', '""')}"`;
 }
