@@ -10,7 +10,11 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ClipboardEvent as ReactClipboardEvent, ReactNode } from "react";
+import {
+  type ClipboardEvent as ReactClipboardEvent,
+  type ReactNode,
+  StrictMode,
+} from "react";
 import type { DefaultColumnOptions, Renderers } from "react-data-grid";
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import {
@@ -910,7 +914,7 @@ describe("TableDataGrid row interactions", () => {
     );
   });
 
-  it("copies the row that opened the menu after rows reorder", async () => {
+  it("copies the cell that opened the menu after rows reorder", async () => {
     const user = userEvent.setup();
     const initialRows = [
       { rowKey: "row-alpha", value: "alpha@example.com" },
@@ -927,13 +931,9 @@ describe("TableDataGrid row interactions", () => {
     rerender(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
     );
-    await user.click(
-      screen.getByRole("menuitem", { name: "Copy row as INSERT" })
-    );
+    await user.click(screen.getByRole("menuitem", { name: "Copy cell" }));
 
-    expect(writeClipboardMock).toHaveBeenCalledWith(
-      `INSERT INTO "public"."customers" ("email") VALUES\n  ('alpha@example.com');\n`
-    );
+    expect(writeClipboardMock).toHaveBeenCalledWith("alpha@example.com");
   });
 
   it("supports keyboard navigation and restores focus to the invoking cell", async () => {
@@ -1488,6 +1488,46 @@ describe("TableDataGrid URL state", () => {
         frozen: true,
       });
     });
+  });
+
+  it("emits URL resets once and only after navigation in StrictMode", async () => {
+    const onOpenRowSearchChange = vi.fn();
+    const onSelectedRowsSearchChange = vi.fn();
+    seedRowsQuery(3);
+
+    const { rerender } = render(
+      <StrictMode>
+        <TableDataGrid
+          name="instances/prod/databases/app/schemas/public/tables/customers"
+          onOpenRowSearchChange={onOpenRowSearchChange}
+          onSelectedRowsSearchChange={onSelectedRowsSearchChange}
+          openRowSearch="row-0"
+          selectedRowsSearch="row-0"
+        />
+      </StrictMode>
+    );
+
+    expect(onOpenRowSearchChange).not.toHaveBeenCalled();
+    expect(onSelectedRowsSearchChange).not.toHaveBeenCalled();
+
+    rerender(
+      <StrictMode>
+        <TableDataGrid
+          name="instances/prod/databases/app/schemas/public/tables/orders"
+          onOpenRowSearchChange={onOpenRowSearchChange}
+          onSelectedRowsSearchChange={onSelectedRowsSearchChange}
+          openRowSearch="row-0"
+          selectedRowsSearch="row-0"
+        />
+      </StrictMode>
+    );
+
+    await waitFor(() => {
+      expect(onOpenRowSearchChange).toHaveBeenCalledTimes(1);
+      expect(onSelectedRowsSearchChange).toHaveBeenCalledTimes(1);
+    });
+    expect(onOpenRowSearchChange).toHaveBeenCalledWith(undefined);
+    expect(onSelectedRowsSearchChange).toHaveBeenCalledWith(undefined);
   });
 
   it("emits controlled state for page size, row selection, selected cell, open row, and frozen columns", async () => {
