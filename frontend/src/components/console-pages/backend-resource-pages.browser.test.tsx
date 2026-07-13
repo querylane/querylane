@@ -1,5 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { timestampFromDate } from "@bufbuild/protobuf/wkt";
+import { anyPack, timestampFromDate } from "@bufbuild/protobuf/wkt";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
@@ -9,6 +9,8 @@ import { BackendDatabaseExtensionsPage } from "@/components/console-pages/databa
 import { BackendDatabasePage } from "@/components/console-pages/database-page";
 import { BackendDatabaseQueryInsightsPage } from "@/components/console-pages/database-query-insights-page";
 import { BackendInstancePage } from "@/components/console-pages/instance-page";
+import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
+import { StatusSchema } from "@/protogen/google/rpc/status_pb";
 import {
   DatabaseQueryInsightsSchema,
   DatabaseSchema,
@@ -393,7 +395,11 @@ vi.mock("@/lib/db-context", () => ({
   }),
 }));
 
-function instanceResponse() {
+function instanceResponse({
+  includeServerInfo = true,
+}: {
+  includeServerInfo?: boolean;
+} = {}) {
   return createProto(GetInstanceResponseSchema, {
     instance: createProto(InstanceSchema, {
       config: createProto(PostgresConfigSchema, {
@@ -406,14 +412,48 @@ function instanceResponse() {
       labels: { environment: "production", team: "data-platform" },
       name: "instances/prod",
     }),
-    serverInfo: createProto(ServerInfoSchema, {
-      maxConnections: 250,
-      replicationRole: ServerInfo_ReplicationRole.PRIMARY,
-      versionNum: 1_704_000,
-      versionShort: "17.4",
-    }),
+    ...(includeServerInfo
+      ? {
+          serverInfo: createProto(ServerInfoSchema, {
+            maxConnections: 250,
+            replicationRole: ServerInfo_ReplicationRole.PRIMARY,
+            versionNum: 1_704_000,
+            versionShort: "17.4",
+          }),
+        }
+      : {}),
   });
 }
+
+test("backend instance page explains unavailable server info", async () => {
+  const response = instanceResponse({ includeServerInfo: false });
+  response.partialErrors = [
+    createProto(StatusSchema, {
+      details: [
+        anyPack(
+          ErrorInfoSchema,
+          createProto(ErrorInfoSchema, {
+            metadata: { metric: "server_info" },
+            reason: "METRIC_UNAVAILABLE",
+          })
+        ),
+      ],
+      message: "failed to query server info",
+    }),
+  ];
+  state.instanceQuery = { data: response };
+
+  render(<BackendInstancePage instanceId="prod" section="overview" />);
+
+  await expect.element(page.getByText("Server info unavailable")).toBeVisible();
+  await expect
+    .element(
+      page.getByText(
+        "Querylane is connected, but couldn’t load live server details: failed to query server info"
+      )
+    )
+    .toBeVisible();
+});
 
 function extensionInventoryResponse() {
   return createProto(ListExtensionsResponseSchema, {

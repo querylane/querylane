@@ -339,9 +339,11 @@ function instanceResponse({
 }
 
 function connectedInstanceResponse({
+  includeServerInfo = true,
   replicationRole = ServerInfo_ReplicationRole.PRIMARY,
   sslMode = PostgresConfig_SslMode.PREFER,
 }: {
+  includeServerInfo?: boolean;
   replicationRole?: ServerInfo_ReplicationRole;
   sslMode?: PostgresConfig_SslMode;
 } = {}) {
@@ -360,14 +362,18 @@ function connectedInstanceResponse({
       labels: {},
       name: "instances/prod",
     }),
-    serverInfo: createProto(ServerInfoSchema, {
-      maxConnections: 100,
-      replicationRole,
-      startedAt: timestampFromDate(new Date(Date.now() - 90 * 60 * 1000)),
-      version:
-        "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc, 64-bit",
-      versionShort: "17.9",
-    }),
+    ...(includeServerInfo
+      ? {
+          serverInfo: createProto(ServerInfoSchema, {
+            maxConnections: 100,
+            replicationRole,
+            startedAt: timestampFromDate(new Date(Date.now() - 90 * 60 * 1000)),
+            version:
+              "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc, 64-bit",
+            versionShort: "17.9",
+          }),
+        }
+      : {}),
   });
 }
 
@@ -1005,6 +1011,38 @@ describe("backend instance activity interactions", () => {
 });
 
 describe("backend instance overview redesign", () => {
+  test("shows why server info is unavailable while connected", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse({
+      includeServerInfo: false,
+    });
+    state.instanceData.partialErrors = [
+      createProto(StatusSchema, {
+        details: [
+          anyPack(
+            ErrorInfoSchema,
+            createProto(ErrorInfoSchema, {
+              metadata: { metric: "server_info" },
+              reason: "METRIC_UNAVAILABLE",
+            })
+          ),
+        ],
+        message: "failed to query server info",
+      }),
+    ];
+
+    renderInstanceOverview();
+
+    const alert = screen.getByRole("alert");
+    expect(within(alert).getByText("Server info unavailable")).toBeTruthy();
+    expect(
+      within(alert).getByText(
+        "Querylane is connected, but couldn’t load live server details: failed to query server info"
+      )
+    ).toBeTruthy();
+  });
+
   test("keeps health primary and adds compact replication after it", () => {
     state.selectedInstanceStatus = "connected";
     state.instances = [postgresInstanceFixture("connected")];

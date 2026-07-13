@@ -3,7 +3,14 @@
 import { useTransport } from "@connectrpc/connect-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Database, GitBranch, RefreshCw, X } from "lucide-react";
+import {
+  ChevronRight,
+  Database,
+  GitBranch,
+  RefreshCw,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AsyncSectionState } from "@/components/async-section-state";
@@ -43,6 +50,7 @@ import { InstanceDeleteDialog } from "@/components/console-pages/instance-delete
 import { InstanceHealthSection } from "@/components/console-pages/instance-health-section";
 import { InstanceMetricsPanel } from "@/components/console-pages/instance-metrics-panel";
 import { EmptyState } from "@/components/empty-state";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
@@ -450,6 +458,7 @@ function InstancePageHeader({
 }) {
   const lastRefreshedLabel = getLastRefreshedLabel(lastRefreshedAt);
   const metricPartialErrors = getMetricPartialErrors(partialErrors);
+  const serverInfoNotice = getMetricNotice(metricPartialErrors, "server_info");
   const connectionError = instance.connectionError.trim();
   return (
     <>
@@ -538,6 +547,16 @@ function InstancePageHeader({
             </span>
           ) : null}
         </div>
+        {serverInfoNotice ? (
+          <Alert>
+            <TriangleAlert aria-hidden="true" />
+            <AlertTitle>Server info unavailable</AlertTitle>
+            <AlertDescription>
+              Querylane is connected, but couldn’t load live server details:{" "}
+              {serverInfoNotice}
+            </AlertDescription>
+          </Alert>
+        ) : null}
         {connectionError ? (
           <div className="flex max-w-3xl items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
             <span className="min-w-0 flex-1 truncate">
@@ -1578,10 +1597,10 @@ function BackendInstancePage({
             onRefresh: handleRefresh,
             onSave: handleSave,
             overview,
-            partialErrors: getVisiblePartialErrors(
-              isConnected,
-              overviewQuery.data?.partialErrors
-            ),
+            partialErrors: getVisiblePartialErrors(isConnected, [
+              ...(instanceQuery.data?.partialErrors ?? []),
+              ...(overviewQuery.data?.partialErrors ?? []),
+            ]),
             queryState: queryStates.databases,
             section,
             serverInfo,

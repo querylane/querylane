@@ -2,7 +2,13 @@ import { anyUnpack } from "@bufbuild/protobuf/wkt";
 import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
 import type { Status } from "@/protogen/google/rpc/status_pb";
 
-const METRIC_KEYS = ["connections", "storage", "cache", "io"] as const;
+const METRIC_KEYS = [
+  "connections",
+  "storage",
+  "cache",
+  "io",
+  "server_info",
+] as const;
 
 type MetricKey = (typeof METRIC_KEYS)[number];
 type MetricPartialErrors = Partial<Record<MetricKey, Status>>;
