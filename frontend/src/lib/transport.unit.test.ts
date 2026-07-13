@@ -6,7 +6,7 @@ import {
   type UnaryRequest,
   type UnaryResponse,
 } from "@connectrpc/connect";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   createObservedConnectFetch,
@@ -18,6 +18,7 @@ import {
 import type { AppUiError } from "@/lib/ui-error-types";
 import {
   CONNECT_ERROR_SNAPSHOT_BODY_HEADER,
+  CONNECT_ERROR_SNAPSHOT_STATUS_HEADER,
   REQUEST_PAYLOAD_SERIALIZATION_FAILURE_MESSAGE,
   STREAMING_INPUT_REQUEST_MESSAGE,
 } from "@/lib/ui-error-types";
@@ -26,6 +27,10 @@ import {
   GetConsoleConfigRequestSchema,
   GetConsoleConfigResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/console_pb";
+import {
+  InstanceService,
+  TestInstanceConnectionRequestSchema,
+} from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
 type SetupInterceptorDependencies = NonNullable<
   Parameters<typeof createSetupInterceptor>[0]
@@ -104,6 +109,26 @@ function createUnaryConsoleConfigResponse(): UnaryResponse<
     service: ConsoleService,
     stream: false,
     trailer: new Headers(),
+  };
+}
+
+function createTestInstanceConnectionRequest(): UnaryRequest<
+  typeof TestInstanceConnectionRequestSchema,
+  (typeof InstanceService.method.testInstanceConnection)["output"]
+> {
+  return {
+    contextValues: createContextValues(),
+    header: new Headers({
+      "Connect-Protocol-Version": "1",
+      "Content-Type": "application/json",
+    }),
+    message: createProto(TestInstanceConnectionRequestSchema),
+    method: InstanceService.method.testInstanceConnection,
+    requestMethod: "POST",
+    service: InstanceService,
+    signal: new AbortController().signal,
+    stream: false,
+    url: "http://localhost:8080/querylane.console.v1alpha1.InstanceService/TestInstanceConnection",
   };
 }
 
@@ -282,6 +307,28 @@ describe("transport error instrumentation", () => {
     expect(getSetupRequiredCalls()).toBe(0);
   });
 
+  it("does not globally report expected connection-test failures", async () => {
+    const failure = new ConnectError(
+      "PostgreSQL rejected this password",
+      Code.InvalidArgument
+    );
+    const reportError = vi.fn();
+    vi.stubGlobal("reportError", reportError);
+    const { interceptor } = createTestInterceptor();
+
+    try {
+      await expect(
+        interceptor(() => Promise.reject(failure))(
+          createTestInstanceConnectionRequest()
+        )
+      ).rejects.toBe(failure);
+
+      expect(reportError).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("captures request context for grpc-style transcripts", async () => {
     const failure = new ConnectError("setup required", Code.FailedPrecondition);
     const { blockingErrors, interceptor } = createTestInterceptor();
@@ -421,6 +468,18 @@ describe("transport snapshots", () => {
       ).toBeNull();
       await observed.text();
     }
+  });
+
+  it("preserves empty failed response status for semantic mapping", async () => {
+    const observedFetch = createObservedConnectFetch(
+      async () => new Response(null, { status: 499 })
+    );
+
+    const response = await observedFetch("http://localhost:8080/test");
+
+    expect(response.headers.get(CONNECT_ERROR_SNAPSHOT_STATUS_HEADER)).toBe(
+      "499"
+    );
   });
 
   it("uses fetch implementation preconnect when available", () => {

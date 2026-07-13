@@ -31,6 +31,7 @@ const REDACTED_METADATA_KEYS = new Set([
 ]);
 
 const HTTP_STATUS_MESSAGE_PATTERN = /^HTTP \d{3}\b/u;
+const HTTP_CLIENT_CLOSED_REQUEST_STATUS = 499;
 const NEWLINE_PATTERN = /\r?\n/u;
 const OPERATION_PATTERN = /^[0-9A-Za-z][0-9A-Za-z_.:-]{0,127}$/u;
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
@@ -238,6 +239,10 @@ function extractResponseContext(
     statusText,
     truncated,
   };
+}
+
+function mapHttpStatusToConnectCode(status: number | null | undefined) {
+  return status === HTTP_CLIENT_CLOSED_REQUEST_STATUS ? Code.Canceled : null;
 }
 
 function normalizeMetadata(metadata: Headers): Record<string, string[]> {
@@ -689,10 +694,11 @@ function normalizeConnectErrorState(
       : (response?.decodedConnectDetails ?? []);
   const preferDecodedConnectPayload =
     response !== null && shouldPreferDecodedConnectPayload(rawMessage);
+  const responseCode = mapHttpStatusToConnectCode(response?.status);
   const code =
     preferDecodedConnectPayload && response.decodedConnectCode !== null
       ? response.decodedConnectCode
-      : connectError.code;
+      : (responseCode ?? connectError.code);
   const codeLabel =
     getCodeLabel(code) ??
     (preferDecodedConnectPayload

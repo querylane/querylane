@@ -1357,6 +1357,103 @@ describe("reportAppUiError monitoring payload", () => {
   });
 });
 
+describe("reportAppUiError semantic filters", () => {
+  function createReportingDependencies() {
+    return {
+      captureException: vi.fn(),
+      logger: { error: vi.fn() },
+      toast: { error: vi.fn() },
+    };
+  }
+
+  test.each([
+    {
+      error: new ConnectError("cancelled", Code.Canceled),
+      expectedCode: Code.Canceled,
+      expectedCodeLabel: "Canceled",
+      name: "Connect cancellation",
+    },
+    {
+      error: new DOMException("aborted", "AbortError"),
+      expectedCode: null,
+      expectedCodeLabel: null,
+      name: "browser abort",
+    },
+    {
+      error: { name: "AbortError" },
+      expectedCode: null,
+      expectedCodeLabel: null,
+      name: "cross-realm browser abort",
+    },
+    {
+      error: new ConnectError("HTTP 499", Code.Unknown, {
+        [CONNECT_ERROR_SNAPSHOT_BODY_HEADER]: btoa(
+          JSON.stringify({ code: "canceled", message: "request canceled" })
+        ),
+        [CONNECT_ERROR_SNAPSHOT_CONTENT_TYPE_HEADER]: "application/json",
+        [CONNECT_ERROR_SNAPSHOT_STATUS_HEADER]: "499",
+      }),
+      expectedCode: Code.Canceled,
+      expectedCodeLabel: "Canceled",
+      name: "REST cancellation payload",
+    },
+    {
+      error: new ConnectError("HTTP 499", Code.Unknown, {
+        [CONNECT_ERROR_SNAPSHOT_STATUS_HEADER]: "499",
+      }),
+      expectedCode: Code.Canceled,
+      expectedCodeLabel: "Canceled",
+      name: "empty REST cancellation response",
+    },
+  ])("does not report $name", ({ error, expectedCode, expectedCodeLabel }) => {
+    const normalized = normalizeAppUiError(error, { surface: "toast" });
+    const dependencies = createReportingDependencies();
+
+    reportAppUiError(normalized, undefined, dependencies);
+
+    expect(normalized.code).toBe(expectedCode);
+    expect(normalized.codeLabel).toBe(expectedCodeLabel);
+    expect(dependencies.captureException).not.toHaveBeenCalled();
+    expect(dependencies.logger.error).not.toHaveBeenCalled();
+    expect(dependencies.toast.error).not.toHaveBeenCalled();
+  });
+
+  test("does not report setup-required control flow", () => {
+    const error = new ConnectError("setup required", Code.FailedPrecondition);
+    error.details = [
+      {
+        debug: { reason: "ERROR_REASON_APP_DATABASE_NOT_CONFIGURED" },
+        type: "google.rpc.ErrorInfo",
+        value: new Uint8Array([1]),
+      },
+    ];
+    const normalized = normalizeAppUiError(error, { surface: "toast" });
+    const dependencies = createReportingDependencies();
+
+    reportAppUiError(normalized, undefined, dependencies);
+
+    expect(dependencies.captureException).not.toHaveBeenCalled();
+    expect(dependencies.logger.error).not.toHaveBeenCalled();
+    expect(dependencies.toast.error).not.toHaveBeenCalled();
+  });
+
+  test("lets expected-failure callers suppress later reports", () => {
+    const originalError = new ConnectError(
+      "connection rejected",
+      Code.InvalidArgument
+    );
+    const normalized = normalizeAppUiError(originalError, { surface: "toast" });
+    const dependencies = createReportingDependencies();
+
+    reportAppUiError(normalized, { expected: true }, dependencies);
+    reportAppUiError(normalized, undefined, dependencies);
+
+    expect(dependencies.captureException).not.toHaveBeenCalled();
+    expect(dependencies.logger.error).not.toHaveBeenCalled();
+    expect(dependencies.toast.error).not.toHaveBeenCalled();
+  });
+});
+
 describe("reportAppUiError toast surface", () => {
   function createSilentDependencies() {
     return {
