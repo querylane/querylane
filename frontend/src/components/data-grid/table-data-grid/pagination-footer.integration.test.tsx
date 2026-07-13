@@ -18,7 +18,6 @@ describe("PaginationFooter", () => {
         onNext={vi.fn()}
         onPageSizeChange={onPageSizeChange}
         onPrev={vi.fn()}
-        pageIndex={0}
         pageLabel="Page 1 of 2"
         pageSize={10}
         pageSizeOptions={[10, 25, 50]}
@@ -42,7 +41,6 @@ describe("PaginationFooter", () => {
       onNext: vi.fn(),
       onPageSizeChange: vi.fn(),
       onPrev: vi.fn(),
-      pageIndex: 0,
       pageLabel: "Page 1 of 4",
       pageSize: 25,
     };

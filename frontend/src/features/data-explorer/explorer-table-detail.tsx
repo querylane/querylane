@@ -3570,6 +3570,7 @@ function TriggersTab({
               />
             ))}
           </div>
+          {/* Keep the selector available after choosing a larger page size. */}
           {filteredTriggers.length > DEFAULT_TRIGGER_PAGE_SIZE ? (
             <PaginationFooter
               hasNext={currentPageIndex < pageCount - 1}
@@ -3582,7 +3583,6 @@ function TriggersTab({
               onPrev={() => {
                 setPageIndex(Math.max(currentPageIndex - 1, 0));
               }}
-              pageIndex={currentPageIndex}
               pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
               pageSize={pageSize}
               pageSizeOptions={TRIGGER_PAGE_SIZE_OPTIONS}

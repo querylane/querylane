@@ -26,7 +26,6 @@ interface PaginationFooterProps {
   onNext: () => void;
   onPageSizeChange: (next: number) => void;
   onPrev: () => void;
-  pageIndex: number;
   pageLabel: string;
   pageSize: number;
   pageSizeLabel?: string;
