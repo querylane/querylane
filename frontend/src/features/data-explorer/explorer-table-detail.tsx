@@ -2605,7 +2605,6 @@ function ConstraintsTab({
                     setPageIndex(0);
                   }}
                   onPrev={() => setPageIndex(currentPageIndex - 1)}
-                  pageIndex={currentPageIndex}
                   pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
                   pageSize={pageSize}
                   pageSizeLabel="Constraints per page"
@@ -3575,7 +3574,6 @@ function TriggersTab({
             <PaginationFooter
               hasNext={currentPageIndex < pageCount - 1}
               hasPrev={currentPageIndex > 0}
-              pageSizeLabel="Triggers per page"
               onNext={() => {
                 setPageIndex(Math.min(currentPageIndex + 1, pageCount - 1));
               }}
@@ -3585,6 +3583,7 @@ function TriggersTab({
               }}
               pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
               pageSize={pageSize}
+              pageSizeLabel="Triggers per page"
               pageSizeOptions={TRIGGER_PAGE_SIZE_OPTIONS}
             />
           ) : null}

@@ -14,12 +14,12 @@ describe("PaginationFooter", () => {
       <PaginationFooter
         hasNext={true}
         hasPrev={false}
-        pageSizeLabel="Triggers per page"
         onNext={vi.fn()}
         onPageSizeChange={onPageSizeChange}
         onPrev={vi.fn()}
         pageLabel="Page 1 of 2"
         pageSize={10}
+        pageSizeLabel="Triggers per page"
         pageSizeOptions={[10, 25, 50]}
       />
     );
