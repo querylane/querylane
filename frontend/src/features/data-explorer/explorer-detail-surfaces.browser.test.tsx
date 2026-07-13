@@ -44,7 +44,9 @@ const DEFAULT_BALANCED_TREE_SUMMARY_RE = /Default balanced tree for equality/;
 const EXACT_DECIMAL_RE = /Exact decimal/;
 const PARTITION_2024_BOUND_RE = /FOR VALUES FROM \('2024-01-01'\)/;
 const LAST_FETCHED_11_PM_RE = /Last fetched 11:00:00 PM/;
+const POLICIES_ONE_TAB_RE = /^Policies\s+1$/;
 const TABLE_COLUMNS_LAST_FETCHED_RE = /4 columns · base table · Last fetched/;
+const TRIGGERS_ONE_TAB_RE = /^Triggers\s+1$/;
 const UTC_NORMALIZED_INSTANT_RE = /UTC-normalized instant/;
 const refreshableQueryFields = vi.hoisted(() => ({
   dataUpdatedAt: 1_704_150_000_000,
@@ -184,7 +186,20 @@ function resetSqlQueryState() {
   sqlQueryState.isFetching = false;
 }
 
+function resetPartitionMetadataQuery() {
+  tableQueries.partitionMetadata.data = {
+    partitionMetadata: {
+      childPartitions: [],
+      parentTable: "",
+      partitionBound: "",
+      partitionCount: 0,
+      partitionKey: "",
+    },
+  };
+}
+
 function seedTableDetailQueries() {
+  resetPartitionMetadataQuery();
   tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
     columns: [
       createProto(ColumnSchema, {
@@ -287,7 +302,118 @@ function seedTableDetailQueries() {
   });
 }
 
+function seedDefinitionDesignQueries() {
+  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
+    columns: [
+      createProto(ColumnSchema, {
+        columnName: "id",
+        dataType: DataType.INTEGER,
+        identityGeneration: IdentityGeneration.BY_DEFAULT,
+        isIdentity: true,
+        isNullable: false,
+        ordinalPosition: 1,
+        rawType: "int8",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "table_name",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 2,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "op",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 3,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "actor",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 4,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "diff",
+        dataType: DataType.JSON,
+        isNullable: false,
+        ordinalPosition: 5,
+        rawType: "jsonb",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "recorded_at",
+        dataType: DataType.TIMESTAMP,
+        defaultValue: "now()",
+        isNullable: false,
+        ordinalPosition: 6,
+        rawType: "timestamptz",
+      }),
+    ],
+  });
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    {
+      constraints: [
+        createProto(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "change_log_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+      ],
+    }
+  );
+  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
+    indexes: [
+      createProto(TableIndexSchema, {
+        indexName: "change_log_pkey",
+        isUnique: true,
+        keyColumns: ["id"],
+        method: "btree",
+        sizeBytes: 98_304n,
+      }),
+    ],
+  });
+  tableQueries.partitionMetadata.data = {
+    partitionMetadata: {
+      childPartitions: [],
+      parentTable: "",
+      partitionBound: "",
+      partitionCount: 0,
+      partitionKey: "",
+    },
+  };
+  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
+    policies: [
+      createProto(TablePolicySchema, {
+        command: PolicyCommand.SELECT,
+        mode: PolicyMode.PERMISSIVE,
+        policyName: "change_log_actor_read_policy",
+        roles: ["audit_reader"],
+        usingExpression: "actor = current_user",
+      }),
+    ],
+  });
+  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
+    triggers: [
+      createProto(TableTriggerSchema, {
+        // Full pg_get_triggerdef form, matching what the backend returns.
+        definition:
+          "CREATE TRIGGER change_log_record_trigger\n  AFTER INSERT OR UPDATE OR DELETE ON audit.change_log\n  FOR EACH ROW EXECUTE FUNCTION audit.record_change()",
+        enabled: true,
+        events: ["INSERT", "UPDATE", "DELETE"],
+        functionName: "audit.record_change",
+        timing: "AFTER",
+        triggerName: "change_log_record_trigger",
+      }),
+    ],
+  });
+}
+
 function seedTypeAnnotationQueries() {
+  resetPartitionMetadataQuery();
   tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
     columns: [
       createProto(ColumnSchema, {
@@ -889,6 +1015,99 @@ test("data explorer table data tab has a visual baseline", async () => {
     .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-data"
+  );
+});
+
+test("data explorer table definition tab has a visual baseline", async () => {
+  seedDefinitionDesignQueries();
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="definition"
+      instanceId="prod"
+      schemaName="audit"
+      table={createProto(TableSchema, {
+        displayName: "change_log",
+        name: "instances/prod/databases/logistics/schemas/audit/tables/change_log",
+        owner: "app_owner",
+        rowCount: 4_200_000n,
+        sizeBytes: 4_187_000_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="change_log"
+    />,
+    "h-[950px] w-[1100px] overflow-hidden"
+  );
+
+  await expect
+    .element(page.getByRole("heading", { name: "Create table" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("tab", { name: POLICIES_ONE_TAB_RE }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("tab", { name: TRIGGERS_ONE_TAB_RE }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("heading", { name: "Reproduce locally" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("heading", { name: "Policies" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("heading", { name: "Triggers" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("Copy all steps", { exact: true }))
+    .toBeVisible();
+  expect(
+    document.querySelectorAll(
+      'code.language-sql[data-syntax-highlighter="shiki"]'
+    ).length
+  ).toBeGreaterThan(2);
+  const dumpCommand = page
+    .getByRole("textbox", { name: "Dump schema only command" })
+    .element();
+  expect(getComputedStyle(dumpCommand).whiteSpace).toBe("pre");
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-definition"
+  );
+}, 10_000);
+
+test("data explorer definition toolbar keeps refresh reachable when narrow", async () => {
+  seedDefinitionDesignQueries();
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="definition"
+      instanceId="prod"
+      schemaName="audit"
+      table={createProto(TableSchema, {
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="change_log"
+    />,
+    "w-[420px]"
+  );
+
+  await expect
+    .element(page.getByText("Schema document", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { exact: true, name: "Refresh" }))
+    .toBeVisible();
+  const caption = page.getByText("Schema document", { exact: true }).element();
+  const toolbar = caption.parentElement;
+  const refresh = page
+    .getByRole("button", { exact: true, name: "Refresh" })
+    .element();
+  if (!toolbar) {
+    throw new Error("Expected the definition toolbar to render.");
+  }
+
+  expect(toolbar.scrollWidth).toBeLessThanOrEqual(toolbar.clientWidth + 1);
+  expect(refresh.getBoundingClientRect().right).toBeLessThanOrEqual(
+    toolbar.getBoundingClientRect().right + 1
   );
 });
 

@@ -7,6 +7,7 @@ const TABLE_DETAIL_TAB_VALUES = [
   "constraints",
   "policies",
   "triggers",
+  "definition",
 ] as const;
 
 type TableDetailTab = (typeof TABLE_DETAIL_TAB_VALUES)[number];

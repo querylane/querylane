@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, TriangleAlert } from "lucide-react";
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,61 +11,88 @@ import {
 } from "@/components/ui/tooltip";
 
 const COPY_FEEDBACK_TIMEOUT_MS = 1500;
+type CopyState = "copied" | "failed" | "idle";
 
 interface CopyIconButtonProps {
   ariaLabel: string;
+  children?: ReactNode;
   className?: string;
   copiedLabel?: string;
-  size?: "icon-xs" | "icon-sm" | "icon";
+  size?: "icon-xs" | "icon-sm" | "icon" | "sm";
   value: string;
   variant?: "ghost" | "outline";
 }
 
 function CopyIconButton({
   ariaLabel,
+  children,
   className,
   copiedLabel = "Copied",
   size = "icon-xs",
   value,
   variant = "ghost",
 }: CopyIconButtonProps) {
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<CopyState>("idle");
 
   useEffect(() => {
-    if (!copied) {
+    if (copyState === "idle") {
       return;
     }
 
     const timeout = window.setTimeout(() => {
-      setCopied(false);
+      setCopyState("idle");
     }, COPY_FEEDBACK_TIMEOUT_MS);
 
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [copied]);
+  }, [copyState]);
 
   const handleClick = async () => {
     if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      setCopyState("failed");
       return;
     }
 
     try {
       await navigator.clipboard.writeText(value);
-      setCopied(true);
+      setCopyState("copied");
     } catch {
-      // Ignore clipboard failures and keep the action non-blocking.
+      setCopyState("failed");
     }
   };
+
+  const stateLabel =
+    copyState === "copied"
+      ? copiedLabel
+      : copyState === "failed"
+        ? "Copy failed"
+        : ariaLabel;
+  let content = children ?? <Copy className="size-3" />;
+  if (copyState === "copied") {
+    content = (
+      <>
+        <Check className="size-3 text-success" />
+        {children ? copiedLabel : null}
+      </>
+    );
+  } else if (copyState === "failed") {
+    content = (
+      <>
+        <TriangleAlert className="size-3 text-destructive" />
+        {children ? "Copy failed" : null}
+      </>
+    );
+  }
 
   return (
     <Tooltip>
       <TooltipTrigger
         render={
           <Button
-            aria-label={ariaLabel}
+            aria-label={stateLabel}
             className={className}
-            data-copied={copied ? "true" : "false"}
+            data-copy-state={copyState}
             onClick={handleClick}
             size={size}
             type="button"
@@ -72,13 +100,9 @@ function CopyIconButton({
           />
         }
       >
-        {copied ? (
-          <Check className="size-3 text-success" />
-        ) : (
-          <Copy className="size-3" />
-        )}
+        {content}
       </TooltipTrigger>
-      <TooltipContent>{copied ? copiedLabel : ariaLabel}</TooltipContent>
+      <TooltipContent>{stateLabel}</TooltipContent>
     </Tooltip>
   );
 }
