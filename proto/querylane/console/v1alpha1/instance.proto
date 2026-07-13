@@ -219,6 +219,11 @@ message GetInstanceResponse {
   // Live server metadata queried from the PostgreSQL instance.
   // Only populated when the instance connection is active.
   ServerInfo server_info = 2;
+
+  // Error encountered fetching live server metadata. The RPC succeeds (OK)
+  // so the instance resource and its latest connection state remain available.
+  // ErrorInfo metadata key "metric" is "server_info".
+  repeated google.rpc.Status partial_errors = 3 [(buf.validate.field).repeated.max_items = 1];
 }
 
 // CreateInstanceSpec defines the client-settable fields for creating an instance.

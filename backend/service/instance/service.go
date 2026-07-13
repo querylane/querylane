@@ -294,6 +294,8 @@ func (s *Service) GetInstance(ctx context.Context, req *connect.Request[v1alpha1
 	if instance.GetConnectionState() == v1alpha1.Instance_CONNECTION_STATE_ACTIVE {
 		serverInfo, err := s.buildServerInfo(ctx, instanceResource)
 		if err != nil {
+			resp.PartialErrors = append(resp.PartialErrors, metricPartialError("server_info", "failed to query server info", err))
+
 			// The sync may have marked the instance as ERROR in the DB.
 			// Re-read so this response reflects the current state.
 			if fresh, rerr := s.instanceReader.GetInstance(ctx, instanceName); rerr == nil {

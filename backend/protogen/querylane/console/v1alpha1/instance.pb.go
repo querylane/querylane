@@ -767,7 +767,11 @@ type GetInstanceResponse struct {
 	Instance *Instance              `protobuf:"bytes,1,opt,name=instance,proto3" json:"instance,omitempty"`
 	// Live server metadata queried from the PostgreSQL instance.
 	// Only populated when the instance connection is active.
-	ServerInfo    *ServerInfo `protobuf:"bytes,2,opt,name=server_info,json=serverInfo,proto3" json:"server_info,omitempty"`
+	ServerInfo *ServerInfo `protobuf:"bytes,2,opt,name=server_info,json=serverInfo,proto3" json:"server_info,omitempty"`
+	// Error encountered fetching live server metadata. The RPC succeeds (OK)
+	// so the instance resource and its latest connection state remain available.
+	// ErrorInfo metadata key "metric" is "server_info".
+	PartialErrors []*status.Status `protobuf:"bytes,3,rep,name=partial_errors,json=partialErrors,proto3" json:"partial_errors,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -812,6 +816,13 @@ func (x *GetInstanceResponse) GetInstance() *Instance {
 func (x *GetInstanceResponse) GetServerInfo() *ServerInfo {
 	if x != nil {
 		return x.ServerInfo
+	}
+	return nil
+}
+
+func (x *GetInstanceResponse) GetPartialErrors() []*status.Status {
+	if x != nil {
+		return x.PartialErrors
 	}
 	return nil
 }
@@ -3067,11 +3078,12 @@ const file_querylane_console_v1alpha1_instance_proto_rawDesc = "" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x8a\x01\n" +
 	"\x12GetInstanceRequest\x12t\n" +
 	"\x04name\x18\x01 \x01(\tB`\xe0A\x02\xfaA \n" +
-	"\x1econsole.querylane.dev/Instance\xbaH7\xc8\x01\x01r220^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$R\x04name\"\xa0\x01\n" +
+	"\x1econsole.querylane.dev/Instance\xbaH7\xc8\x01\x01r220^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$R\x04name\"\xe5\x01\n" +
 	"\x13GetInstanceResponse\x12@\n" +
 	"\binstance\x18\x01 \x01(\v2$.querylane.console.v1alpha1.InstanceR\binstance\x12G\n" +
 	"\vserver_info\x18\x02 \x01(\v2&.querylane.console.v1alpha1.ServerInfoR\n" +
-	"serverInfo\"\xf1\x02\n" +
+	"serverInfo\x12C\n" +
+	"\x0epartial_errors\x18\x03 \x03(\v2\x12.google.rpc.StatusB\b\xbaH\x05\x92\x01\x02\x10\x01R\rpartialErrors\"\xf1\x02\n" +
 	"\x12CreateInstanceSpec\x122\n" +
 	"\fdisplay_name\x18\x01 \x01(\tB\x0f\xe0A\x02\xbaH\t\xc8\x01\x01r\x04\x10\x01\x18?R\vdisplayName\x12\x9c\x01\n" +
 	"\x06labels\x18\x02 \x03(\v2:.querylane.console.v1alpha1.CreateInstanceSpec.LabelsEntryBH\xe0A\x01\xbaHB\x9a\x01?\x10@\"4r2\x10\x01\x18?2,^[a-zA-Z0-9]([a-zA-Z0-9\\-_./]*[a-zA-Z0-9])?$*\x05r\x03\x18\xff\x01R\x06labels\x12M\n" +
@@ -3350,8 +3362,8 @@ var file_querylane_console_v1alpha1_instance_proto_goTypes = []any{
 	nil,                                    // 42: querylane.console.v1alpha1.Instance.LabelsEntry
 	nil,                                    // 43: querylane.console.v1alpha1.CreateInstanceSpec.LabelsEntry
 	(*timestamppb.Timestamp)(nil),          // 44: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),          // 45: google.protobuf.FieldMask
-	(*status.Status)(nil),                  // 46: google.rpc.Status
+	(*status.Status)(nil),                  // 45: google.rpc.Status
+	(*fieldmaskpb.FieldMask)(nil),          // 46: google.protobuf.FieldMask
 }
 var file_querylane_console_v1alpha1_instance_proto_depIdxs = []int32{
 	42, // 0: querylane.console.v1alpha1.Instance.labels:type_name -> querylane.console.v1alpha1.Instance.LabelsEntry
@@ -3366,68 +3378,69 @@ var file_querylane_console_v1alpha1_instance_proto_depIdxs = []int32{
 	6,  // 9: querylane.console.v1alpha1.ListInstancesResponse.instances:type_name -> querylane.console.v1alpha1.Instance
 	6,  // 10: querylane.console.v1alpha1.GetInstanceResponse.instance:type_name -> querylane.console.v1alpha1.Instance
 	7,  // 11: querylane.console.v1alpha1.GetInstanceResponse.server_info:type_name -> querylane.console.v1alpha1.ServerInfo
-	43, // 12: querylane.console.v1alpha1.CreateInstanceSpec.labels:type_name -> querylane.console.v1alpha1.CreateInstanceSpec.LabelsEntry
-	22, // 13: querylane.console.v1alpha1.CreateInstanceSpec.config:type_name -> querylane.console.v1alpha1.PostgresConfig
-	12, // 14: querylane.console.v1alpha1.CreateInstanceRequest.spec:type_name -> querylane.console.v1alpha1.CreateInstanceSpec
-	6,  // 15: querylane.console.v1alpha1.CreateInstanceRequest.instance:type_name -> querylane.console.v1alpha1.Instance
-	6,  // 16: querylane.console.v1alpha1.CreateInstanceResponse.instance:type_name -> querylane.console.v1alpha1.Instance
-	22, // 17: querylane.console.v1alpha1.TestInstanceConnectionRequest.config:type_name -> querylane.console.v1alpha1.PostgresConfig
-	6,  // 18: querylane.console.v1alpha1.UpdateInstanceRequest.instance:type_name -> querylane.console.v1alpha1.Instance
-	45, // 19: querylane.console.v1alpha1.UpdateInstanceRequest.update_mask:type_name -> google.protobuf.FieldMask
-	6,  // 20: querylane.console.v1alpha1.UpdateInstanceResponse.instance:type_name -> querylane.console.v1alpha1.Instance
-	4,  // 21: querylane.console.v1alpha1.PostgresConfig.ssl_mode:type_name -> querylane.console.v1alpha1.PostgresConfig.SslMode
-	21, // 22: querylane.console.v1alpha1.PostgresConfig.password_source:type_name -> querylane.console.v1alpha1.SecretSource
-	5,  // 23: querylane.console.v1alpha1.PostgresConfig.ssl_negotiation:type_name -> querylane.console.v1alpha1.PostgresConfig.SslNegotiation
-	37, // 24: querylane.console.v1alpha1.GetInstanceOverviewResponse.instance_overview:type_name -> querylane.console.v1alpha1.InstanceOverview
-	46, // 25: querylane.console.v1alpha1.GetInstanceOverviewResponse.partial_errors:type_name -> google.rpc.Status
-	29, // 26: querylane.console.v1alpha1.CheckInstanceHealthResponse.health:type_name -> querylane.console.v1alpha1.InstanceHealth
-	46, // 27: querylane.console.v1alpha1.CheckInstanceHealthResponse.partial_errors:type_name -> google.rpc.Status
-	30, // 28: querylane.console.v1alpha1.CheckInstanceActivityResponse.activity:type_name -> querylane.console.v1alpha1.ConnectionActivityHealth
-	46, // 29: querylane.console.v1alpha1.CheckInstanceActivityResponse.partial_errors:type_name -> google.rpc.Status
-	44, // 30: querylane.console.v1alpha1.InstanceHealth.observed_at:type_name -> google.protobuf.Timestamp
-	30, // 31: querylane.console.v1alpha1.InstanceHealth.connection_activity:type_name -> querylane.console.v1alpha1.ConnectionActivityHealth
-	33, // 32: querylane.console.v1alpha1.InstanceHealth.replication:type_name -> querylane.console.v1alpha1.ReplicationHealth
-	34, // 33: querylane.console.v1alpha1.InstanceHealth.stats_access:type_name -> querylane.console.v1alpha1.StatsAccessHealth
-	35, // 34: querylane.console.v1alpha1.InstanceHealth.pg_stat_statements:type_name -> querylane.console.v1alpha1.PgStatStatementsHealth
-	36, // 35: querylane.console.v1alpha1.InstanceHealth.autovacuum:type_name -> querylane.console.v1alpha1.AutovacuumHealth
-	0,  // 36: querylane.console.v1alpha1.ConnectionActivityHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
-	31, // 37: querylane.console.v1alpha1.ConnectionActivityHealth.by_application:type_name -> querylane.console.v1alpha1.ApplicationConnections
-	32, // 38: querylane.console.v1alpha1.ConnectionActivityHealth.sessions:type_name -> querylane.console.v1alpha1.ConnectionActivitySession
-	0,  // 39: querylane.console.v1alpha1.ReplicationHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
-	3,  // 40: querylane.console.v1alpha1.ReplicationHealth.role:type_name -> querylane.console.v1alpha1.ServerInfo.ReplicationRole
-	0,  // 41: querylane.console.v1alpha1.StatsAccessHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
-	0,  // 42: querylane.console.v1alpha1.PgStatStatementsHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
-	44, // 43: querylane.console.v1alpha1.PgStatStatementsHealth.stats_reset_at:type_name -> google.protobuf.Timestamp
-	0,  // 44: querylane.console.v1alpha1.AutovacuumHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
-	44, // 45: querylane.console.v1alpha1.AutovacuumHealth.last_autovacuum_at:type_name -> google.protobuf.Timestamp
-	38, // 46: querylane.console.v1alpha1.InstanceOverview.connections:type_name -> querylane.console.v1alpha1.ConnectionMetrics
-	39, // 47: querylane.console.v1alpha1.InstanceOverview.storage:type_name -> querylane.console.v1alpha1.StorageMetrics
-	40, // 48: querylane.console.v1alpha1.InstanceOverview.cache:type_name -> querylane.console.v1alpha1.CacheMetrics
-	44, // 49: querylane.console.v1alpha1.InstanceOverview.observed_at:type_name -> google.protobuf.Timestamp
-	41, // 50: querylane.console.v1alpha1.InstanceOverview.io_metrics:type_name -> querylane.console.v1alpha1.IOMetrics
-	8,  // 51: querylane.console.v1alpha1.InstanceService.ListInstances:input_type -> querylane.console.v1alpha1.ListInstancesRequest
-	10, // 52: querylane.console.v1alpha1.InstanceService.GetInstance:input_type -> querylane.console.v1alpha1.GetInstanceRequest
-	13, // 53: querylane.console.v1alpha1.InstanceService.CreateInstance:input_type -> querylane.console.v1alpha1.CreateInstanceRequest
-	15, // 54: querylane.console.v1alpha1.InstanceService.TestInstanceConnection:input_type -> querylane.console.v1alpha1.TestInstanceConnectionRequest
-	17, // 55: querylane.console.v1alpha1.InstanceService.UpdateInstance:input_type -> querylane.console.v1alpha1.UpdateInstanceRequest
-	19, // 56: querylane.console.v1alpha1.InstanceService.DeleteInstance:input_type -> querylane.console.v1alpha1.DeleteInstanceRequest
-	23, // 57: querylane.console.v1alpha1.InstanceService.GetInstanceOverview:input_type -> querylane.console.v1alpha1.GetInstanceOverviewRequest
-	25, // 58: querylane.console.v1alpha1.InstanceService.CheckInstanceHealth:input_type -> querylane.console.v1alpha1.CheckInstanceHealthRequest
-	27, // 59: querylane.console.v1alpha1.InstanceService.CheckInstanceActivity:input_type -> querylane.console.v1alpha1.CheckInstanceActivityRequest
-	9,  // 60: querylane.console.v1alpha1.InstanceService.ListInstances:output_type -> querylane.console.v1alpha1.ListInstancesResponse
-	11, // 61: querylane.console.v1alpha1.InstanceService.GetInstance:output_type -> querylane.console.v1alpha1.GetInstanceResponse
-	14, // 62: querylane.console.v1alpha1.InstanceService.CreateInstance:output_type -> querylane.console.v1alpha1.CreateInstanceResponse
-	16, // 63: querylane.console.v1alpha1.InstanceService.TestInstanceConnection:output_type -> querylane.console.v1alpha1.TestInstanceConnectionResponse
-	18, // 64: querylane.console.v1alpha1.InstanceService.UpdateInstance:output_type -> querylane.console.v1alpha1.UpdateInstanceResponse
-	20, // 65: querylane.console.v1alpha1.InstanceService.DeleteInstance:output_type -> querylane.console.v1alpha1.DeleteInstanceResponse
-	24, // 66: querylane.console.v1alpha1.InstanceService.GetInstanceOverview:output_type -> querylane.console.v1alpha1.GetInstanceOverviewResponse
-	26, // 67: querylane.console.v1alpha1.InstanceService.CheckInstanceHealth:output_type -> querylane.console.v1alpha1.CheckInstanceHealthResponse
-	28, // 68: querylane.console.v1alpha1.InstanceService.CheckInstanceActivity:output_type -> querylane.console.v1alpha1.CheckInstanceActivityResponse
-	60, // [60:69] is the sub-list for method output_type
-	51, // [51:60] is the sub-list for method input_type
-	51, // [51:51] is the sub-list for extension type_name
-	51, // [51:51] is the sub-list for extension extendee
-	0,  // [0:51] is the sub-list for field type_name
+	45, // 12: querylane.console.v1alpha1.GetInstanceResponse.partial_errors:type_name -> google.rpc.Status
+	43, // 13: querylane.console.v1alpha1.CreateInstanceSpec.labels:type_name -> querylane.console.v1alpha1.CreateInstanceSpec.LabelsEntry
+	22, // 14: querylane.console.v1alpha1.CreateInstanceSpec.config:type_name -> querylane.console.v1alpha1.PostgresConfig
+	12, // 15: querylane.console.v1alpha1.CreateInstanceRequest.spec:type_name -> querylane.console.v1alpha1.CreateInstanceSpec
+	6,  // 16: querylane.console.v1alpha1.CreateInstanceRequest.instance:type_name -> querylane.console.v1alpha1.Instance
+	6,  // 17: querylane.console.v1alpha1.CreateInstanceResponse.instance:type_name -> querylane.console.v1alpha1.Instance
+	22, // 18: querylane.console.v1alpha1.TestInstanceConnectionRequest.config:type_name -> querylane.console.v1alpha1.PostgresConfig
+	6,  // 19: querylane.console.v1alpha1.UpdateInstanceRequest.instance:type_name -> querylane.console.v1alpha1.Instance
+	46, // 20: querylane.console.v1alpha1.UpdateInstanceRequest.update_mask:type_name -> google.protobuf.FieldMask
+	6,  // 21: querylane.console.v1alpha1.UpdateInstanceResponse.instance:type_name -> querylane.console.v1alpha1.Instance
+	4,  // 22: querylane.console.v1alpha1.PostgresConfig.ssl_mode:type_name -> querylane.console.v1alpha1.PostgresConfig.SslMode
+	21, // 23: querylane.console.v1alpha1.PostgresConfig.password_source:type_name -> querylane.console.v1alpha1.SecretSource
+	5,  // 24: querylane.console.v1alpha1.PostgresConfig.ssl_negotiation:type_name -> querylane.console.v1alpha1.PostgresConfig.SslNegotiation
+	37, // 25: querylane.console.v1alpha1.GetInstanceOverviewResponse.instance_overview:type_name -> querylane.console.v1alpha1.InstanceOverview
+	45, // 26: querylane.console.v1alpha1.GetInstanceOverviewResponse.partial_errors:type_name -> google.rpc.Status
+	29, // 27: querylane.console.v1alpha1.CheckInstanceHealthResponse.health:type_name -> querylane.console.v1alpha1.InstanceHealth
+	45, // 28: querylane.console.v1alpha1.CheckInstanceHealthResponse.partial_errors:type_name -> google.rpc.Status
+	30, // 29: querylane.console.v1alpha1.CheckInstanceActivityResponse.activity:type_name -> querylane.console.v1alpha1.ConnectionActivityHealth
+	45, // 30: querylane.console.v1alpha1.CheckInstanceActivityResponse.partial_errors:type_name -> google.rpc.Status
+	44, // 31: querylane.console.v1alpha1.InstanceHealth.observed_at:type_name -> google.protobuf.Timestamp
+	30, // 32: querylane.console.v1alpha1.InstanceHealth.connection_activity:type_name -> querylane.console.v1alpha1.ConnectionActivityHealth
+	33, // 33: querylane.console.v1alpha1.InstanceHealth.replication:type_name -> querylane.console.v1alpha1.ReplicationHealth
+	34, // 34: querylane.console.v1alpha1.InstanceHealth.stats_access:type_name -> querylane.console.v1alpha1.StatsAccessHealth
+	35, // 35: querylane.console.v1alpha1.InstanceHealth.pg_stat_statements:type_name -> querylane.console.v1alpha1.PgStatStatementsHealth
+	36, // 36: querylane.console.v1alpha1.InstanceHealth.autovacuum:type_name -> querylane.console.v1alpha1.AutovacuumHealth
+	0,  // 37: querylane.console.v1alpha1.ConnectionActivityHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
+	31, // 38: querylane.console.v1alpha1.ConnectionActivityHealth.by_application:type_name -> querylane.console.v1alpha1.ApplicationConnections
+	32, // 39: querylane.console.v1alpha1.ConnectionActivityHealth.sessions:type_name -> querylane.console.v1alpha1.ConnectionActivitySession
+	0,  // 40: querylane.console.v1alpha1.ReplicationHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
+	3,  // 41: querylane.console.v1alpha1.ReplicationHealth.role:type_name -> querylane.console.v1alpha1.ServerInfo.ReplicationRole
+	0,  // 42: querylane.console.v1alpha1.StatsAccessHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
+	0,  // 43: querylane.console.v1alpha1.PgStatStatementsHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
+	44, // 44: querylane.console.v1alpha1.PgStatStatementsHealth.stats_reset_at:type_name -> google.protobuf.Timestamp
+	0,  // 45: querylane.console.v1alpha1.AutovacuumHealth.status:type_name -> querylane.console.v1alpha1.HealthCheckStatus
+	44, // 46: querylane.console.v1alpha1.AutovacuumHealth.last_autovacuum_at:type_name -> google.protobuf.Timestamp
+	38, // 47: querylane.console.v1alpha1.InstanceOverview.connections:type_name -> querylane.console.v1alpha1.ConnectionMetrics
+	39, // 48: querylane.console.v1alpha1.InstanceOverview.storage:type_name -> querylane.console.v1alpha1.StorageMetrics
+	40, // 49: querylane.console.v1alpha1.InstanceOverview.cache:type_name -> querylane.console.v1alpha1.CacheMetrics
+	44, // 50: querylane.console.v1alpha1.InstanceOverview.observed_at:type_name -> google.protobuf.Timestamp
+	41, // 51: querylane.console.v1alpha1.InstanceOverview.io_metrics:type_name -> querylane.console.v1alpha1.IOMetrics
+	8,  // 52: querylane.console.v1alpha1.InstanceService.ListInstances:input_type -> querylane.console.v1alpha1.ListInstancesRequest
+	10, // 53: querylane.console.v1alpha1.InstanceService.GetInstance:input_type -> querylane.console.v1alpha1.GetInstanceRequest
+	13, // 54: querylane.console.v1alpha1.InstanceService.CreateInstance:input_type -> querylane.console.v1alpha1.CreateInstanceRequest
+	15, // 55: querylane.console.v1alpha1.InstanceService.TestInstanceConnection:input_type -> querylane.console.v1alpha1.TestInstanceConnectionRequest
+	17, // 56: querylane.console.v1alpha1.InstanceService.UpdateInstance:input_type -> querylane.console.v1alpha1.UpdateInstanceRequest
+	19, // 57: querylane.console.v1alpha1.InstanceService.DeleteInstance:input_type -> querylane.console.v1alpha1.DeleteInstanceRequest
+	23, // 58: querylane.console.v1alpha1.InstanceService.GetInstanceOverview:input_type -> querylane.console.v1alpha1.GetInstanceOverviewRequest
+	25, // 59: querylane.console.v1alpha1.InstanceService.CheckInstanceHealth:input_type -> querylane.console.v1alpha1.CheckInstanceHealthRequest
+	27, // 60: querylane.console.v1alpha1.InstanceService.CheckInstanceActivity:input_type -> querylane.console.v1alpha1.CheckInstanceActivityRequest
+	9,  // 61: querylane.console.v1alpha1.InstanceService.ListInstances:output_type -> querylane.console.v1alpha1.ListInstancesResponse
+	11, // 62: querylane.console.v1alpha1.InstanceService.GetInstance:output_type -> querylane.console.v1alpha1.GetInstanceResponse
+	14, // 63: querylane.console.v1alpha1.InstanceService.CreateInstance:output_type -> querylane.console.v1alpha1.CreateInstanceResponse
+	16, // 64: querylane.console.v1alpha1.InstanceService.TestInstanceConnection:output_type -> querylane.console.v1alpha1.TestInstanceConnectionResponse
+	18, // 65: querylane.console.v1alpha1.InstanceService.UpdateInstance:output_type -> querylane.console.v1alpha1.UpdateInstanceResponse
+	20, // 66: querylane.console.v1alpha1.InstanceService.DeleteInstance:output_type -> querylane.console.v1alpha1.DeleteInstanceResponse
+	24, // 67: querylane.console.v1alpha1.InstanceService.GetInstanceOverview:output_type -> querylane.console.v1alpha1.GetInstanceOverviewResponse
+	26, // 68: querylane.console.v1alpha1.InstanceService.CheckInstanceHealth:output_type -> querylane.console.v1alpha1.CheckInstanceHealthResponse
+	28, // 69: querylane.console.v1alpha1.InstanceService.CheckInstanceActivity:output_type -> querylane.console.v1alpha1.CheckInstanceActivityResponse
+	61, // [61:70] is the sub-list for method output_type
+	52, // [52:61] is the sub-list for method input_type
+	52, // [52:52] is the sub-list for extension type_name
+	52, // [52:52] is the sub-list for extension extendee
+	0,  // [0:52] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_instance_proto_init() }
