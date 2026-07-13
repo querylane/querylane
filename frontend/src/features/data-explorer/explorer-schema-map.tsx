@@ -351,6 +351,7 @@ function TableNode({
 
   return (
     <foreignObject
+      className="overflow-visible"
       height={node.height}
       width={NODE_WIDTH}
       x={node.x}

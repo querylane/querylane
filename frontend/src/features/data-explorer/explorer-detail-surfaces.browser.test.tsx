@@ -1122,6 +1122,33 @@ test("data explorer schema map spells out key labels", async () => {
   expect(document.body.textContent).not.toMatch(SCHEMA_MAP_KEY_ABBREVIATION_RE);
 });
 
+test("data explorer schema map does not clip table card decoration", async () => {
+  const catalog = seedSchemaMapVisualCatalog();
+
+  render(
+    <ExplorerSchemaMap
+      activeSchemaName="shipping"
+      databaseId="logistics"
+      enabled={true}
+      instanceId="prod"
+      onSelectTable={() => undefined}
+      schemas={catalog.schemas}
+    />
+  );
+
+  const tableCardLocator = page.getByRole("button", {
+    name: "shipping.carriers",
+  });
+  await expect.element(tableCardLocator).toBeVisible();
+  const tableCard = tableCardLocator.element();
+  const cardBoundary = tableCard.closest("foreignObject");
+  if (!(cardBoundary instanceof SVGElement)) {
+    throw new Error("Expected the table card SVG boundary to render.");
+  }
+
+  expect(getComputedStyle(cardBoundary).overflow).toBe("visible");
+});
+
 test("data explorer schema map surfaces partial catalog failures and truncation", async () => {
   const catalog = seedSchemaMapVisualCatalog();
   schemaMapCatalog.errorMethods = ["ListViews"];
