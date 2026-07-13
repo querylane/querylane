@@ -71,6 +71,8 @@ const shipmentsName =
   "instances/prod/databases/app/schemas/shipping/tables/shipments";
 const carriersName =
   "instances/prod/databases/app/schemas/public/tables/carriers";
+const longSchemaName = `schema_${"x".repeat(56)}`;
+const longCarriersName = `instances/prod/databases/app/schemas/${longSchemaName}/tables/carriers`;
 
 function browserColorChannels(color: string) {
   const canvas = document.createElement("canvas");
@@ -82,25 +84,38 @@ function browserColorChannels(color: string) {
   }
   context.fillStyle = color;
   context.fillRect(0, 0, 1, 1);
-  return Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3));
+  return Array.from(context.getImageData(0, 0, 1, 1).data);
 }
 
 function colorContrastRatio(first: string, second: string) {
-  function relativeLuminance(color: string) {
-    const channels = browserColorChannels(color).map((channel) => {
+  function compositeColor(foreground: string, background: string) {
+    const foregroundChannels = browserColorChannels(foreground);
+    const backgroundChannels = browserColorChannels(background);
+    const alpha = (foregroundChannels[3] ?? 255) / 255;
+    return foregroundChannels
+      .slice(0, 3)
+      .map(
+        (channel, index) =>
+          channel * alpha + (backgroundChannels[index] ?? 0) * (1 - alpha)
+      );
+  }
+  function relativeLuminance(channels: number[]) {
+    const linearChannels = channels.map((channel) => {
       const normalized = channel / 255;
       return normalized <= 0.040_45
         ? normalized / 12.92
         : ((normalized + 0.055) / 1.055) ** 2.4;
     });
     return (
-      0.2126 * (channels[0] ?? 0) +
-      0.7152 * (channels[1] ?? 0) +
-      0.0722 * (channels[2] ?? 0)
+      0.2126 * (linearChannels[0] ?? 0) +
+      0.7152 * (linearChannels[1] ?? 0) +
+      0.0722 * (linearChannels[2] ?? 0)
     );
   }
-  const firstLuminance = relativeLuminance(first);
-  const secondLuminance = relativeLuminance(second);
+  const firstLuminance = relativeLuminance(compositeColor(first, second));
+  const secondLuminance = relativeLuminance(
+    browserColorChannels(second).slice(0, 3)
+  );
   const lighter = Math.max(firstLuminance, secondLuminance);
   const darker = Math.min(firstLuminance, secondLuminance);
   return (lighter + 0.05) / (darker + 0.05);
@@ -124,9 +139,9 @@ function cell(value: TableValue["kind"], truncated = false) {
   });
 }
 
-function seedForeignKeyGridQueries() {
+function seedForeignKeyGridQueries(targetTableName = carriersName) {
   tableApi.useListTableColumnsQuery.mockImplementation((input) => {
-    if (input.parent === carriersName) {
+    if (input.parent === targetTableName) {
       return {
         data: createProto(ListTableColumnsResponseSchema, {
           columns: [
@@ -159,7 +174,7 @@ function seedForeignKeyGridQueries() {
   });
 
   tableDataApi.useReadRowsQuery.mockImplementation((request) => {
-    if (request.name === carriersName) {
+    if (request.name === targetTableName) {
       return {
         data: createProto(ReadRowsResponseSchema, {
           resultSet: createProto(TableResultSetSchema, {
@@ -715,19 +730,21 @@ test("data explorer controls and row detail drawer expose dense table context", 
   );
 });
 
-test("foreign key reference drawer keeps linked rows in context", async () => {
-  seedForeignKeyGridQueries();
+function renderForeignKeyReferenceGrid(
+  className: string,
+  targetTableName = carriersName
+) {
+  seedForeignKeyGridQueries(targetTableName);
 
   render(
     <ScreenshotFrame>
-      <div className="h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
+      <div className={className}>
         <TableDataGrid
           foreignKeyReferences={[
             {
-              constraintName: "shipments_carrier_id_fkey",
               sourceColumns: ["carrier_id"],
               targetColumns: ["id"],
-              targetTableName: carriersName,
+              targetTableName,
             },
           ]}
           initialPageSize={10}
@@ -739,11 +756,22 @@ test("foreign key reference drawer keeps linked rows in context", async () => {
       </div>
     </ScreenshotFrame>
   );
+}
 
+async function openForeignKeyReference() {
   const carrierLink = page.getByRole("button", {
     name: "Open carrier_id reference 214",
   });
-  await expect.element(carrierLink).toBeVisible();
+  await carrierLink.click();
+  return carrierLink;
+}
+
+test("foreign key reference popover keeps the source table visible", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
+  );
+
+  const carrierLink = await openForeignKeyReference();
   const carrierLinkStyle = getComputedStyle(carrierLink.element());
   const frameStyle = getComputedStyle(
     page.getByTestId("screenshot-frame").element()
@@ -751,17 +779,57 @@ test("foreign key reference drawer keeps linked rows in context", async () => {
   expect(
     colorContrastRatio(carrierLinkStyle.color, frameStyle.backgroundColor)
   ).toBeGreaterThanOrEqual(4.5);
-  await carrierLink.click();
 
-  const drawer = page.getByRole("dialog", {
-    name: "carrier_id references public.carriers",
+  const preview = page.getByRole("dialog", {
+    name: "public.carriers",
   });
-  await expect.element(drawer).toBeVisible();
+  await expect.element(preview).toBeVisible();
+  expect(preview.element().dataset["slot"]).toBe("popover-content");
+  expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull();
+  await expect.element(carrierLink).toBeVisible();
   await expect.element(page.getByText("Hanse Container Line")).toBeVisible();
+  const typeMetadata = preview.getByText("int4");
+  expect(
+    colorContrastRatio(
+      getComputedStyle(typeMetadata.element()).color,
+      getComputedStyle(preview.element()).backgroundColor
+    )
+  ).toBeGreaterThanOrEqual(4.5);
   await expect
     .element(page.getByRole("link", { name: "Open table" }))
     .toBeVisible();
-  await expect(page).toMatchScreenshot("foreign-key-reference-layout");
+  await expect(page).toMatchScreenshot("foreign-key-reference-popover-layout");
+});
+
+test("foreign key reference popover fits a narrow viewport", async () => {
+  await page.viewport(390, 844);
+  try {
+    renderForeignKeyReferenceGrid(
+      "h-[700px] w-full rounded-xl border border-border bg-background p-3 text-foreground",
+      longCarriersName
+    );
+    await openForeignKeyReference();
+
+    const preview = page.getByRole("dialog", {
+      name: `${longSchemaName}.carriers`,
+    });
+    await expect.element(preview).toBeVisible();
+    const previewBox = preview.element().getBoundingClientRect();
+    expect(previewBox.left).toBeGreaterThanOrEqual(0);
+    expect(previewBox.right).toBeLessThanOrEqual(390);
+    const title = preview
+      .element()
+      .querySelector<HTMLElement>('[data-slot="popover-title"]');
+    if (!title) {
+      throw new Error("expected popover title");
+    }
+    expect(title.scrollWidth).toBeLessThanOrEqual(title.clientWidth);
+    await expect(page).toMatchScreenshot(
+      "foreign-key-reference-popover-narrow-layout"
+    );
+  } finally {
+    await page.viewport(1280, 1000);
+  }
 });
 
 test("foreign key query fixtures do not leak into later browser cases", () => {

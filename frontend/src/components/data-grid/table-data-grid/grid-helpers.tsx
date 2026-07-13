@@ -6,6 +6,7 @@ import {
   buildForeignKeyReferencePreview,
   type ForeignKeyReferencePreview,
   foreignKeyReferencesForColumn,
+  type RenderOpenReferencedTableLink,
   type TableForeignKeyReference,
 } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import { getGridCell } from "@/components/data-grid/table-data-grid/grid-cell-access";
@@ -20,11 +21,11 @@ interface BuildColumnArgs {
   foreignKeyReferences?: readonly TableForeignKeyReference[] | undefined;
   isFrozen: boolean;
   onCopyName: () => void;
-  onOpenForeignKeyReference?: (preview: ForeignKeyReferencePreview) => void;
   onSortAsc: () => void;
   onSortDesc: () => void;
   onToggleFreeze: () => void;
   pkColumnSet: Set<string>;
+  renderOpenReferencedTableLink?: RenderOpenReferencedTableLink | undefined;
   resultColumns?: readonly TableResultColumn[] | undefined;
   sortDirection?: "ASC" | "DESC" | undefined;
   sortPriority?: number | undefined;
@@ -60,13 +61,13 @@ function buildColumn({
   column,
   foreignKeyReferences = [],
   isFrozen,
-  onOpenForeignKeyReference,
   onCopyName,
   onSortAsc,
   onSortDesc,
   onToggleFreeze,
   pkColumnSet,
   resultColumns = [column],
+  renderOpenReferencedTableLink,
   sortDirection,
   sortPriority,
 }: BuildColumnArgs): Column<GridRow> {
@@ -107,13 +108,13 @@ function buildColumn({
           break;
         }
       }
-      if (foreignKeyPreview && onOpenForeignKeyReference) {
-        const preview = foreignKeyPreview;
+      if (foreignKeyPreview) {
         return (
           <ForeignKeyDataCell
             cell={cell}
             column={column}
-            onOpen={() => onOpenForeignKeyReference(preview)}
+            preview={foreignKeyPreview}
+            renderOpenReferencedTableLink={renderOpenReferencedTableLink}
           />
         );
       }

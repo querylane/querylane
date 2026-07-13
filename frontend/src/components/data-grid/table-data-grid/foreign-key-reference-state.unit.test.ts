@@ -24,7 +24,6 @@ function buildPreview(
   });
   return buildForeignKeyReferencePreview({
     reference: {
-      constraintName: "events_account_id_fkey",
       sourceColumns: ["account_id"],
       targetColumns: ["id"],
       targetTableName,

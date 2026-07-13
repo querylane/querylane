@@ -1377,7 +1377,6 @@ function deriveForeignKeyReferences(
     }
     return [
       {
-        constraintName: constraint.constraintName,
         sourceColumns: constraint.columnNames,
         targetColumns: constraint.referencedColumnNames,
         targetTableName: constraint.referencedTable,

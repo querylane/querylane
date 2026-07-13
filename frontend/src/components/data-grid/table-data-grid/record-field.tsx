@@ -78,7 +78,7 @@ function RecordField({
         <span className="min-w-0 break-all font-medium font-mono text-foreground text-xs">
           {column.columnName}
         </span>
-        <span className="font-mono text-[10px] text-muted-foreground/70 uppercase tracking-wide">
+        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wide">
           {column.rawType}
         </span>
         {isPrimaryKey ? (
@@ -90,11 +90,11 @@ function RecordField({
           </span>
         ) : null}
         {column.isNullable ? (
-          <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wide">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
             nullable
           </span>
         ) : (
-          <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wide">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
             not null
           </span>
         )}

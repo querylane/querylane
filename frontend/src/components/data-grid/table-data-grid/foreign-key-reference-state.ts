@@ -1,9 +1,7 @@
 import { create } from "@bufbuild/protobuf";
+import type { ReactNode } from "react";
 import { getGridCell } from "@/components/data-grid/table-data-grid/grid-cell-access";
-import {
-  type GridRow,
-  ROW_KEY_FIELD,
-} from "@/components/data-grid/table-data-grid/grid-row-model";
+import type { GridRow } from "@/components/data-grid/table-data-grid/grid-row-model";
 import { formatTableCell } from "@/features/data-explorer/table-data/table-value-format";
 import { tryParseTableQualifiedName } from "@/lib/console-resources";
 import {
@@ -19,16 +17,19 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 interface TableForeignKeyReference {
-  constraintName: string;
   sourceColumns: string[];
   targetColumns: string[];
   targetTableName: string;
 }
 
+type RenderOpenReferencedTableLink = (
+  tableName: string,
+  onNavigate: () => void
+) => ReactNode;
+
 interface ForeignKeyReferencePreview {
   displayValue: string;
   isComposite: boolean;
-  key: string;
   reference: TableForeignKeyReference;
   requiredFilter: RowFilter;
   sourceColumn: string;
@@ -182,7 +183,6 @@ function buildForeignKeyReferencePreview({
   return {
     displayValue: formatted.display,
     isComposite: reference.sourceColumns.length > 1,
-    key: `${reference.constraintName}:${row[ROW_KEY_FIELD]}`,
     reference,
     requiredFilter,
     sourceColumn,
@@ -190,5 +190,9 @@ function buildForeignKeyReferencePreview({
   };
 }
 
-export type { ForeignKeyReferencePreview, TableForeignKeyReference };
+export type {
+  ForeignKeyReferencePreview,
+  RenderOpenReferencedTableLink,
+  TableForeignKeyReference,
+};
 export { buildForeignKeyReferencePreview, foreignKeyReferencesForColumn };

@@ -27,7 +27,7 @@ import { CellContextMenu } from "@/components/data-grid/table-data-grid/cell-con
 import { DataGridToolbar } from "@/components/data-grid/table-data-grid/data-grid-toolbar";
 import { DataValueDialogProvider } from "@/components/data-grid/table-data-grid/data-value-dialog-provider";
 import type {
-  ForeignKeyReferencePreview,
+  RenderOpenReferencedTableLink,
   TableForeignKeyReference,
 } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import {
@@ -60,14 +60,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { formatLastFetchedLabel } from "@/features/data-explorer/last-fetched-label";
 import {
   serializeTableFilterSearch,
@@ -100,7 +92,6 @@ import { downloadBlob } from "@/lib/download-blob";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import type {
   ReadRowsRequest,
-  RowFilter,
   TableCell,
   TableResultColumn,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
@@ -145,10 +136,7 @@ type TableDataGridProps = {
   onFrozenColumnsSearchChange?: (next: string | undefined) => void;
   onOpenRowSearchChange?: (next: string | undefined) => void;
   onPageSizeSearchChange?: (next: number | undefined) => void;
-  renderOpenReferencedTableLink?:
-    | ((tableName: string, onNavigate: () => void) => ReactNode)
-    | undefined;
-  requiredFilter?: RowFilter | undefined;
+  renderOpenReferencedTableLink?: RenderOpenReferencedTableLink | undefined;
   onSelectedRowsSearchChange?: (next: string | undefined) => void;
   openRowSearch?: string | undefined;
   pageSizeSearch?: number | undefined;
@@ -633,84 +621,6 @@ function RecordDetailDrawerHost({
       rowIndex={openRowIndex ?? 0}
       tableName={tableQualifiedName}
     />
-  );
-}
-
-// Filter edits inside the drawer stay local to this keyed child; opening a
-// different reference remounts it and reseeds the filter from the clicked
-// foreign key value.
-function ForeignKeyPreviewGrid({
-  name,
-  requiredFilter,
-}: {
-  name: string;
-  requiredFilter: RowFilter;
-}) {
-  return (
-    <TableDataGrid
-      initialPageSize={10}
-      name={name}
-      requiredFilter={requiredFilter}
-    />
-  );
-}
-
-function ForeignKeyReferenceDrawer({
-  onOpenChange,
-  renderOpenReferencedTableLink,
-  preview,
-}: {
-  onOpenChange: (open: boolean) => void;
-  renderOpenReferencedTableLink?:
-    | ((tableName: string, onNavigate: () => void) => ReactNode)
-    | undefined;
-  preview: ForeignKeyReferencePreview | null;
-}) {
-  return (
-    <Sheet onOpenChange={onOpenChange} open={preview !== null}>
-      <SheetContent
-        className="!max-w-[min(92vw,64rem)] !w-[min(92vw,64rem)] flex flex-col gap-0 p-0"
-        side="right"
-      >
-        {preview ? (
-          <>
-            <SheetHeader className="gap-2 border-b px-5 py-4 pr-14">
-              <SheetTitle className="break-all font-mono text-base leading-snug">
-                {preview.sourceColumn} references {preview.targetLabel}
-              </SheetTitle>
-              {preview.isComposite ? (
-                <SheetDescription>
-                  Showing rows where all referenced keys match this row.
-                </SheetDescription>
-              ) : (
-                <SheetDescription>
-                  Showing rows where the referenced key equals{" "}
-                  <code className="rounded bg-muted px-1 py-0.5 font-mono">
-                    {preview.displayValue}
-                  </code>
-                  .
-                </SheetDescription>
-              )}
-            </SheetHeader>
-            <div className="min-h-0 flex-1 overflow-auto p-4">
-              <ForeignKeyPreviewGrid
-                key={preview.key}
-                name={preview.reference.targetTableName}
-                requiredFilter={preview.requiredFilter}
-              />
-            </div>
-            {renderOpenReferencedTableLink ? (
-              <SheetFooter className="border-t">
-                {renderOpenReferencedTableLink(
-                  preview.reference.targetTableName,
-                  () => onOpenChange(false)
-                )}
-              </SheetFooter>
-            ) : null}
-          </>
-        ) : null}
-      </SheetContent>
-    </Sheet>
   );
 }
 
@@ -1244,8 +1154,8 @@ function isExportCanceled(error: unknown, signal: AbortSignal): boolean {
 function useGridColumns({
   foreignKeyReferences,
   frozenColumns,
-  onOpenForeignKeyReference,
   onFrozenColumnsChange,
+  renderOpenReferencedTableLink,
   resultColumns,
   rowIdentity,
   setOpenRowIndex,
@@ -1254,8 +1164,8 @@ function useGridColumns({
 }: {
   foreignKeyReferences: readonly TableForeignKeyReference[];
   frozenColumns: ReadonlySet<string>;
-  onOpenForeignKeyReference: (preview: ForeignKeyReferencePreview) => void;
   onFrozenColumnsChange: (next: ReadonlySet<string>) => void;
+  renderOpenReferencedTableLink?: RenderOpenReferencedTableLink | undefined;
   resultColumns: TableResultColumn[];
   rowIdentity:
     | { columnNames: string[]; source: RowIdentity_Source }
@@ -1337,11 +1247,11 @@ function useGridColumns({
         foreignKeyReferences,
         isFrozen: frozenColumns.has(column.columnName),
         onCopyName: () => writeClipboard(column.columnName),
-        onOpenForeignKeyReference,
         onSortAsc: () => toggleColumnSort(column.columnName, "ASC"),
         onSortDesc: () => toggleColumnSort(column.columnName, "DESC"),
         onToggleFreeze: () => toggleColumnFreeze(column.columnName),
         pkColumnSet,
+        renderOpenReferencedTableLink,
         resultColumns,
         sortDirection: sortEntry?.direction,
         sortPriority:
@@ -1358,7 +1268,6 @@ function useGridColumns({
 function TableDataGridContent({
   chromeProps,
   contextMenu,
-  foreignKeyReferencePreview,
   isDataGridExpanded,
   name,
   onCloseContextMenu,
@@ -1366,8 +1275,6 @@ function TableDataGridContent({
   onContextMenuCopyRow,
   onContextMenuCopyRowAsSql,
   onDataGridExpandedChange,
-  onForeignKeyReferenceOpenChange,
-  renderOpenReferencedTableLink,
   openRowIndex,
   pkColumnSet,
   resultColumns,
@@ -1376,7 +1283,6 @@ function TableDataGridContent({
 }: {
   chromeProps: TableDataGridChromeProps;
   contextMenu: ContextMenuState | null;
-  foreignKeyReferencePreview: ForeignKeyReferencePreview | null;
   isDataGridExpanded: boolean;
   name: string;
   onCloseContextMenu: () => void;
@@ -1384,10 +1290,6 @@ function TableDataGridContent({
   onContextMenuCopyRow: () => void;
   onContextMenuCopyRowAsSql: () => void;
   onDataGridExpandedChange: (next: boolean) => void;
-  onForeignKeyReferenceOpenChange: (open: boolean) => void;
-  renderOpenReferencedTableLink?:
-    | ((tableName: string, onNavigate: () => void) => ReactNode)
-    | undefined;
   openRowIndex: number | null;
   pkColumnSet: Set<string>;
   resultColumns: TableResultColumn[];
@@ -1451,11 +1353,6 @@ function TableDataGridContent({
         resultColumns={resultColumns}
         rows={rows}
         setOpenRowIndex={setOpenRowIndex}
-      />
-      <ForeignKeyReferenceDrawer
-        onOpenChange={onForeignKeyReferenceOpenChange}
-        preview={foreignKeyReferencePreview}
-        renderOpenReferencedTableLink={renderOpenReferencedTableLink}
       />
     </div>
   );
@@ -1543,21 +1440,6 @@ function buildCellInteractionHandlers({
   };
 }
 
-// Tracks which foreign key preview is open, scoped to the table it was opened
-// from: when the grid renders another table the stale preview is simply not
-// returned, so the drawer closes without an effect.
-function useForeignKeyReferenceDrawer(name: string) {
-  const [reference, setReference] = useState<{
-    name: string;
-    preview: ForeignKeyReferencePreview;
-  } | null>(null);
-  const preview = reference?.name === name ? reference.preview : null;
-  const openReference = (next: ForeignKeyReferencePreview) =>
-    setReference({ name, preview: next });
-  const closeReference = () => setReference(null);
-  return { closeReference, openReference, preview };
-}
-
 function TableDataGrid({
   children,
   foreignKeyReferences = NO_FOREIGN_KEY_REFERENCES,
@@ -1571,7 +1453,6 @@ function TableDataGrid({
   onOpenRowSearchChange = () => undefined,
   onPageSizeSearchChange = () => undefined,
   renderOpenReferencedTableLink,
-  requiredFilter,
   onSelectedRowsSearchChange = () => undefined,
   onSortSearchChange,
   openRowSearch,
@@ -1611,7 +1492,6 @@ function TableDataGrid({
     onPageSizeChange: setPageSize,
     onSortSearchChange: setEffectiveSortSearch,
     pageSize,
-    requiredFilter,
     sortSearch: effectiveSortSearch,
   });
   const {
@@ -1639,7 +1519,6 @@ function TableDataGrid({
   // grey out and disable unchanged rows (the toolbar spinner covers those).
   const isRefetchingRows = isPlaceholderData && !gridLoading;
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const foreignKeyDrawer = useForeignKeyReferenceDrawer(name);
   const [isDataGridExpanded, setIsDataGridExpanded] = useState(false);
   const { selectedRows, setSelectedRows, updateSelectedRows } =
     useSelectedRowsUrlState({
@@ -1678,7 +1557,7 @@ function TableDataGrid({
     foreignKeyReferences,
     frozenColumns,
     onFrozenColumnsChange: setFrozenColumns,
-    onOpenForeignKeyReference: foreignKeyDrawer.openReference,
+    renderOpenReferencedTableLink,
     resultColumns,
     rowIdentity: data?.resultSet?.rowIdentity,
     setOpenRowIndex,
@@ -1785,7 +1664,6 @@ function TableDataGrid({
       <TableDataGridContent
         chromeProps={chromeProps}
         contextMenu={contextMenu}
-        foreignKeyReferencePreview={foreignKeyDrawer.preview}
         isDataGridExpanded={isDataGridExpanded}
         name={name}
         onCloseContextMenu={() => setContextMenu(null)}
@@ -1793,14 +1671,8 @@ function TableDataGrid({
         onContextMenuCopyRow={cellHandlers.handleContextMenuCopyRow}
         onContextMenuCopyRowAsSql={cellHandlers.handleContextMenuCopyRowAsSql}
         onDataGridExpandedChange={setIsDataGridExpanded}
-        onForeignKeyReferenceOpenChange={(next) => {
-          if (!next) {
-            foreignKeyDrawer.closeReference();
-          }
-        }}
         openRowIndex={openRowIndex}
         pkColumnSet={pkColumnSet}
-        renderOpenReferencedTableLink={renderOpenReferencedTableLink}
         resultColumns={resultColumns}
         rows={rows}
         setOpenRowIndex={setOpenRowIndex}

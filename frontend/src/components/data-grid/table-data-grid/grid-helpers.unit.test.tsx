@@ -133,12 +133,10 @@ describe("grid helpers", () => {
   test("renders a plain cell when a composite foreign key filter is incomplete", () => {
     const carrierColumn = testColumn("carrier_id", DataType.INTEGER, "int4");
     const tenantColumn = testColumn("tenant_id", DataType.INTEGER, "int4");
-    const onOpenForeignKeyReference = vi.fn();
     const column = buildColumn({
       column: carrierColumn,
       foreignKeyReferences: [
         {
-          constraintName: "shipments_carrier_tenant_fkey",
           sourceColumns: ["carrier_id", "tenant_id"],
           targetColumns: ["id", "tenant_id"],
           targetTableName:
@@ -147,7 +145,6 @@ describe("grid helpers", () => {
       ],
       isFrozen: false,
       onCopyName: vi.fn(),
-      onOpenForeignKeyReference,
       onSortAsc: vi.fn(),
       onSortDesc: vi.fn(),
       onToggleFreeze: vi.fn(),
@@ -173,11 +170,9 @@ describe("grid helpers", () => {
   test("links exact binary foreign keys but rejects truncated values", () => {
     const textColumn = testColumn("external_id", DataType.STRING, "text");
     const bytesColumn = testColumn("fingerprint", DataType.BINARY, "bytea");
-    const onOpenForeignKeyReference = vi.fn();
     const commonArgs = {
       isFrozen: false,
       onCopyName: vi.fn(),
-      onOpenForeignKeyReference,
       onSortAsc: vi.fn(),
       onSortDesc: vi.fn(),
       onToggleFreeze: vi.fn(),
@@ -189,7 +184,6 @@ describe("grid helpers", () => {
       column: textColumn,
       foreignKeyReferences: [
         {
-          constraintName: "orders_external_id_fkey",
           sourceColumns: ["external_id"],
           targetColumns: ["id"],
           targetTableName:
@@ -203,7 +197,6 @@ describe("grid helpers", () => {
       column: bytesColumn,
       foreignKeyReferences: [
         {
-          constraintName: "files_fingerprint_fkey",
           sourceColumns: ["fingerprint"],
           targetColumns: ["fingerprint"],
           targetTableName:
@@ -253,28 +246,25 @@ describe("grid helpers", () => {
     expect(bytesMarkup).toContain("Open fingerprint reference");
   });
 
-  test("renders a plain cell when a foreign key value cannot survive the drawer filter", () => {
+  test("renders a plain cell when a foreign key value cannot survive the reference filter", () => {
     const textColumn = testColumn("external_id", DataType.STRING, "text");
     const doubleColumn = testColumn("weight", DataType.FLOAT, "float8");
-    const onOpenForeignKeyReference = vi.fn();
     const commonArgs = {
       isFrozen: false,
       onCopyName: vi.fn(),
-      onOpenForeignKeyReference,
       onSortAsc: vi.fn(),
       onSortDesc: vi.fn(),
       onToggleFreeze: vi.fn(),
       pkColumnSet: new Set<string>(),
     };
 
-    // Whitespace-only literals are trimmed to empty by the drawer's
+    // Whitespace-only literals are trimmed to empty by the reference
     // incomplete-rule check, so the row filter would be dropped silently.
     const whitespaceColumn = buildColumn({
       ...commonArgs,
       column: textColumn,
       foreignKeyReferences: [
         {
-          constraintName: "orders_external_id_fkey",
           sourceColumns: ["external_id"],
           targetColumns: ["id"],
           targetTableName:
@@ -288,7 +278,6 @@ describe("grid helpers", () => {
       column: doubleColumn,
       foreignKeyReferences: [
         {
-          constraintName: "parcels_weight_fkey",
           sourceColumns: ["weight"],
           targetColumns: ["weight"],
           targetTableName:

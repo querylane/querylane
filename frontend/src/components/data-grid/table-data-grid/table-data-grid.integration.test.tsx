@@ -587,8 +587,9 @@ describe("TableDataGrid foreign key references", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  it("opens referenced table rows from a foreign key cell in a drawer", async () => {
+  it("opens a compact referenced-row preview from a foreign key cell", async () => {
     const user = userEvent.setup();
+    let targetQueryState: "error" | "paused" | "success" = "success";
     const shipmentsName =
       "instances/prod/databases/app/schemas/shipping/tables/shipments";
     const carriersName =
@@ -621,47 +622,54 @@ describe("TableDataGrid foreign key references", () => {
     });
     tableDataApi.useReadRowsQuery.mockImplementation((request) => {
       if (request.name === carriersName) {
-        return {
-          data: create(ReadRowsResponseSchema, {
-            resultSet: create(TableResultSetSchema, {
-              columns: [
-                create(TableResultColumnSchema, {
-                  columnName: "id",
-                  dataType: DataType.INTEGER,
-                  rawType: "int4",
-                }),
-                create(TableResultColumnSchema, {
-                  columnName: "name",
-                  dataType: DataType.STRING,
-                  rawType: "text",
-                }),
-              ],
-              rows: [
-                create(TableResultRowSchema, {
-                  rowKey: "carrier-214",
-                  values: [
-                    create(TableCellSchema, {
-                      value: create(TableValueSchema, {
-                        kind: { case: "int64Value", value: 214n },
-                      }),
+        const targetData = create(ReadRowsResponseSchema, {
+          resultSet: create(TableResultSetSchema, {
+            columns: [
+              create(TableResultColumnSchema, {
+                columnName: "id",
+                dataType: DataType.INTEGER,
+                rawType: "int4",
+              }),
+              create(TableResultColumnSchema, {
+                columnName: "name",
+                dataType: DataType.STRING,
+                rawType: "text",
+              }),
+            ],
+            rows: [
+              create(TableResultRowSchema, {
+                rowKey: "carrier-214",
+                values: [
+                  create(TableCellSchema, {
+                    value: create(TableValueSchema, {
+                      kind: { case: "int64Value", value: 214n },
                     }),
-                    create(TableCellSchema, {
-                      value: create(TableValueSchema, {
-                        kind: {
-                          case: "stringValue",
-                          value: "Maersk Logistics",
-                        },
-                      }),
+                  }),
+                  create(TableCellSchema, {
+                    value: create(TableValueSchema, {
+                      kind: {
+                        case: "stringValue",
+                        value: "Maersk Logistics",
+                      },
                     }),
-                  ],
-                }),
-              ],
-            }),
+                  }),
+                ],
+              }),
+            ],
           }),
+        });
+        return {
+          data: targetQueryState === "paused" ? undefined : targetData,
           dataUpdatedAt: 0,
-          error: null,
+          error:
+            targetQueryState === "error"
+              ? new Error("target read failed")
+              : null,
+          fetchStatus: targetQueryState === "paused" ? "paused" : "idle",
+          isError: targetQueryState === "error",
           isFetching: false,
           isLoading: false,
+          isPending: targetQueryState === "paused",
           refetch: vi.fn(),
         };
       }
@@ -706,7 +714,6 @@ describe("TableDataGrid foreign key references", () => {
       <TableDataGrid
         foreignKeyReferences={[
           {
-            constraintName: "shipments_carrier_id_fkey",
             sourceColumns: ["carrier_id"],
             targetColumns: ["id"],
             targetTableName: carriersName,
@@ -716,7 +723,10 @@ describe("TableDataGrid foreign key references", () => {
         renderOpenReferencedTableLink={(tableName, onNavigate) => (
           <a
             href={`/explorer?table=${encodeURIComponent(tableName)}`}
-            onClick={onNavigate}
+            onClick={(event) => {
+              event.preventDefault();
+              onNavigate?.();
+            }}
           >
             Open table
           </a>
@@ -730,17 +740,29 @@ describe("TableDataGrid foreign key references", () => {
       })
     );
 
+    const trigger = screen.getByRole("button", {
+      name: "Open carrier_id reference 214",
+    });
+    const preview = screen.getByRole("dialog", {
+      name: "public.carriers",
+    });
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(preview.getAttribute("data-slot")).toBe("popover-content");
     expect(
-      screen.getByRole("dialog", {
-        name: "carrier_id references public.carriers",
-      })
+      within(preview).getByRole("status", { name: "Referenced row loaded" })
     ).toBeTruthy();
-    expect(screen.getByText("Maersk Logistics")).toBeTruthy();
-    expect(screen.queryByText("Clear")).toBeNull();
+    expect(within(preview).getByText("Maersk Logistics")).toBeTruthy();
+    expect(
+      within(preview).queryByRole("button", { name: "Filter" })
+    ).toBeNull();
+    expect(
+      within(preview).queryByRole("button", { name: "Rows per page" })
+    ).toBeNull();
 
     const targetReadCall = tableDataApi.useReadRowsQuery.mock.calls.find(
       ([request]) => request.name === carriersName
     );
+    expect(targetReadCall?.[0].pageSize).toBe(1);
     expect(targetReadCall?.[0].filter?.node).toMatchObject({
       case: "group",
       value: {
@@ -764,7 +786,27 @@ describe("TableDataGrid foreign key references", () => {
       `/explorer?table=${encodeURIComponent(carriersName)}`
     );
     await user.click(openTableLink);
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      screen.queryByRole("dialog", { name: "public.carriers" })
+    ).toBeNull();
+
+    targetQueryState = "paused";
+    await user.click(trigger);
+    expect(
+      screen.getByRole("status", { name: "Loading referenced row" })
+    ).toBeTruthy();
+    expect(screen.queryByText("Referenced row not found.")).toBeNull();
+    await user.keyboard("{Escape}");
+
+    targetQueryState = "error";
+    await user.click(trigger);
+    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(screen.queryByText("Maersk Logistics")).toBeNull();
+    await user.keyboard("{Escape}");
+    expect(
+      screen.queryByRole("dialog", { name: "public.carriers" })
+    ).toBeNull();
+    expect(document.activeElement).toBe(trigger);
   });
 });
 
