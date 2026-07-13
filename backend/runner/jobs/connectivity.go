@@ -80,7 +80,7 @@ func (j *InstanceConnectivityJob) Run(ctx context.Context, target string) (runne
 	if probeErr != nil {
 		slog.DebugContext(ctx, "instance probe failed",
 			slog.String("instance", instanceName.InstanceID),
-			slog.String("error", probeErr.Error()))
+			slog.String("error", probeLogError(probeErr)))
 	}
 
 	return runner.RunResult{Commit: func(ctx context.Context, exec storage.QueryExecutor) error {

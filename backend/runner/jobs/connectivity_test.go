@@ -1,13 +1,17 @@
 package jobs
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -175,4 +179,28 @@ func TestInstanceConnectivityJob_Run_ExtractsInstanceID(t *testing.T) {
 
 	require.NoError(t, result.Commit(context.Background(), noopQueryExecutor{}))
 	assert.Equal(t, "my-prod-db", recorder.lastID)
+}
+
+func TestInstanceConnectivityJob_Run_RedactsPostgresLogButRecordsOriginalError(t *testing.T) { //nolint:paralleltest // replaces the process-wide slog logger
+	var logs bytes.Buffer
+
+	previousLogger := slog.Default()
+
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(previousLogger) })
+
+	pgErr := &pgconn.PgError{
+		Code:    pgerrcode.InvalidPassword,
+		Message: "password contains api_key=secret",
+	}
+	recorder := &fakeConnectionRecorder{}
+	job := newTestInstanceConnectivityJob(&fakeConnectionChecker{err: pgErr}, recorder)
+
+	result, err := job.Run(t.Context(), "instances/private")
+	require.NoError(t, err)
+	require.NoError(t, result.Commit(t.Context(), noopQueryExecutor{}))
+
+	assert.NotContains(t, logs.String(), "api_key=secret")
+	assert.Contains(t, logs.String(), pgerrcode.InvalidPassword)
+	assert.ErrorIs(t, recorder.lastErr, pgErr)
 }
