@@ -1,7 +1,11 @@
 package embeddedpg
 
 import (
+	"fmt"
 	"io"
+	"net"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -142,6 +146,36 @@ func TestManager_ConfigLifecycle(t *testing.T) {
 			tt.run(t)
 		})
 	}
+}
+
+func TestManager_StartWithConfig_PortInUseFailsBeforeStartup(t *testing.T) {
+	t.Parallel()
+
+	listener, err := net.Listen("tcp4", "127.0.0.1:0") //nolint:noctx // Test owns the listener lifecycle.
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, listener.Close())
+	})
+
+	address, ok := listener.Addr().(*net.TCPAddr)
+	require.True(t, ok)
+
+	dataPath := filepath.Join(t.TempDir(), "pgdata")
+	mgr := NewManager(Config{})
+
+	err = mgr.StartWithConfig(t.Context(), Config{
+		Mode:                ModeEphemeral,
+		DataPath:            dataPath,
+		Port:                address.Port,
+		HealthCheckInterval: time.Second,
+	})
+	require.EqualError(t, err, fmt.Sprintf(
+		"embedded postgres port %d is already in use; stop the process using it or set embedded.port to another available port",
+		address.Port,
+	))
+
+	_, statErr := os.Stat(dataPath)
+	assert.True(t, os.IsNotExist(statErr), "preflight should fail before creating the data directory")
 }
 
 func TestManager_Logs_Empty(t *testing.T) {

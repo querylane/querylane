@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
+	"syscall"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 
@@ -292,6 +294,22 @@ func (m *Manager) startLockedFromReadyConfig(ctx context.Context) error {
 // startLocked creates and starts the embedded postgres process. The caller
 // must hold m.mu.
 func (m *Manager) startLocked(ctx context.Context) error {
+	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp4", fmt.Sprintf("127.0.0.1:%d", m.cfg.Port))
+	if err != nil {
+		if errors.Is(err, syscall.EADDRINUSE) {
+			return fmt.Errorf(
+				"embedded postgres port %d is already in use; stop the process using it or set embedded.port to another available port",
+				m.cfg.Port,
+			)
+		}
+
+		return fmt.Errorf("check embedded postgres port %d availability: %w", m.cfg.Port, err)
+	}
+
+	if err := listener.Close(); err != nil {
+		return fmt.Errorf("release embedded postgres port %d after availability check: %w", m.cfg.Port, err)
+	}
+
 	if err := os.MkdirAll(m.cfg.DataPath, 0o755); err != nil {
 		return fmt.Errorf("create data directory: %w", err)
 	}
