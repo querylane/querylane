@@ -360,7 +360,7 @@ function AccessFiltersPopover({
             const switchId = `role-access-map-${filter.tone}`;
             return (
               <div
-                className="flex items-center justify-between gap-3 rounded-lg p-2 hover:bg-muted"
+                className="flex min-w-0 items-center justify-between gap-3 rounded-lg p-2 hover:bg-muted"
                 key={filter.tone}
               >
                 <div className="flex min-w-0 items-center gap-2">

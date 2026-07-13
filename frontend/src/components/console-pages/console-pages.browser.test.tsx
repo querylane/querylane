@@ -662,6 +662,36 @@ test("console roles access map matches the design source", async () => {
   );
 });
 
+test("console roles access filters contain their switches on narrow viewports", async () => {
+  await page.viewport(355, 812);
+  try {
+    setRolesAccessMapDesignFixture();
+    renderConsoleSurface(<InstanceRolesPage instanceId="prod" tab="map" />);
+
+    await page.getByRole("button", { name: "View" }).click();
+    await expect.element(page.getByText("Access filters")).toBeVisible();
+
+    const popover = document.querySelector<HTMLElement>(
+      '[data-slot="popover-content"]'
+    );
+    if (!popover) {
+      throw new Error("Expected the access filters popover.");
+    }
+    const popoverBox = popover.getBoundingClientRect();
+    const switches = popover.querySelectorAll<HTMLElement>(
+      '[data-slot="switch"]'
+    );
+    expect(switches.length).toBeGreaterThan(0);
+    for (const filterSwitch of switches) {
+      expect(filterSwitch.getBoundingClientRect().right).toBeLessThanOrEqual(
+        popoverBox.right
+      );
+    }
+  } finally {
+    await page.viewport(1280, 1000);
+  }
+});
+
 test("console roles login no state keeps the same indicator slot", async () => {
   roleApiState.roles = [
     roleFixture({
