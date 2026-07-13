@@ -618,12 +618,28 @@ function isAppDatabaseUnavailableError(error: unknown): boolean {
   );
 }
 
-function shouldReportAppUiError(error: unknown): boolean {
-  if (!(typeof error === "object" && error !== null)) {
-    return true;
+function isExpectedAppUiError(error: AppUiError): boolean {
+  return (
+    error.code === Code.Canceled ||
+    error.blockingReason === "setup_required" ||
+    (typeof error.originalError === "object" &&
+      error.originalError !== null &&
+      Reflect.get(error.originalError, "name") === "AbortError")
+  );
+}
+
+function shouldReportAppUiError(error: AppUiError, expected: boolean): boolean {
+  const { originalError } = error;
+  if (!(typeof originalError === "object" && originalError !== null)) {
+    return !(expected || isExpectedAppUiError(error));
   }
 
-  const errorRecord = error as Record<PropertyKey, unknown>;
+  const errorRecord = originalError as Record<PropertyKey, unknown>;
+
+  if (expected || isExpectedAppUiError(error)) {
+    errorRecord[APP_UI_ERROR_REPORTED] = true;
+    return false;
+  }
 
   if (errorRecord[APP_UI_ERROR_REPORTED] === true) {
     return false;
@@ -636,11 +652,12 @@ function shouldReportAppUiError(error: unknown): boolean {
 function reportAppUiError(
   error: AppUiError,
   context?: {
+    expected?: boolean | undefined;
     tags?: Record<string, string> | undefined;
   },
   dependencies: ReportAppUiErrorDependencies = defaultReportAppUiErrorDependencies
 ) {
-  if (!shouldReportAppUiError(error.originalError)) {
+  if (!shouldReportAppUiError(error, context?.expected ?? false)) {
     return;
   }
 

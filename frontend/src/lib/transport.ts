@@ -71,6 +71,8 @@ const NULL_BODY_RESPONSE_STATUSES = new Set([
   HTTP_STATUS_RESET_CONTENT,
   HTTP_STATUS_NOT_MODIFIED,
 ]);
+const EXPECTED_FAILURE_RPC_PATH =
+  "querylane.console.v1alpha1.InstanceService/TestInstanceConnection";
 type TransportFetch = typeof globalThis.fetch;
 type FetchPreconnect = (url: string | URL) => void;
 type FetchImplementation = typeof globalThis.fetch;
@@ -139,6 +141,9 @@ async function createResponseSnapshot(response: Response): Promise<Response> {
     : bodyText;
   const headers = new Headers(response.headers);
 
+  headers.set(CONNECT_ERROR_SNAPSHOT_STATUS_HEADER, String(response.status));
+  headers.set(CONNECT_ERROR_SNAPSHOT_STATUS_TEXT_HEADER, response.statusText);
+
   if (bodyText.length > 0) {
     headers.set(
       CONNECT_ERROR_SNAPSHOT_BODY_HEADER,
@@ -148,8 +153,6 @@ async function createResponseSnapshot(response: Response): Promise<Response> {
       CONNECT_ERROR_SNAPSHOT_CONTENT_TYPE_HEADER,
       response.headers.get("content-type") ?? ""
     );
-    headers.set(CONNECT_ERROR_SNAPSHOT_STATUS_HEADER, String(response.status));
-    headers.set(CONNECT_ERROR_SNAPSHOT_STATUS_TEXT_HEADER, response.statusText);
     if (truncated) {
       headers.set(CONNECT_ERROR_SNAPSHOT_TRUNCATED_HEADER, "1");
     }
@@ -382,6 +385,7 @@ function createSetupInterceptor(
       }
 
       reportAppUiError(uiError, {
+        expected: endpoint === EXPECTED_FAILURE_RPC_PATH,
         tags: {
           endpoint,
         },
