@@ -5,12 +5,10 @@ import {
   ChartNoAxesColumnIncreasing,
   ChevronLeft,
   ChevronRight,
-  CircleOff,
   X,
 } from "lucide-react";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
-import { ResourcePageState } from "@/components/console-pages/console-layout";
 import { EmptyState } from "@/components/empty-state";
 import { Progress } from "@/components/querylane-ui/progress";
 import { WarningBadge } from "@/components/querylane-ui/warning-badge";
@@ -47,10 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  useGetDatabaseQuery,
-  useGetDatabaseQueryInsightsQuery,
-} from "@/hooks/api/database";
+import { useGetDatabaseQueryInsightsQuery } from "@/hooks/api/database";
 import { buildDatabaseName, formatBytes } from "@/lib/console-resources";
 import {
   formatInsightInteger,
@@ -60,7 +55,6 @@ import {
   insightProgressValue,
   queryInsightLabel,
 } from "@/lib/query-insights";
-import { createResourceLoader } from "@/lib/resource-loader";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
 import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
@@ -596,8 +590,8 @@ function TopQueriesTable({
           <TableHead className="text-right text-muted-foreground text-xs">
             Total
           </TableHead>
-          <TableHead className="w-40 text-muted-foreground text-xs">
-            Relative to top
+          <TableHead className="w-28 text-muted-foreground text-xs">
+            Relative
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -1114,17 +1108,6 @@ function QueryInsightsContent({
 
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="flex min-w-0 flex-wrap items-start gap-3 lg:col-start-1">
-        <div className="min-w-0">
-          <h1 className="font-bold text-2xl text-foreground tracking-tight">
-            Query insights
-          </h1>
-          <p className="mt-1 text-muted-foreground text-sm">
-            From pg_stat_statements and pg_stat_user_tables, read-only
-            observability.
-          </p>
-        </div>
-      </div>
       <div className="min-w-0 lg:col-start-1">
         <TopQueriesCard
           insights={insights}
@@ -1144,12 +1127,12 @@ function QueryInsightsContent({
         />
       </div>
       <QueryDetailPanel
-        className="lg:col-start-2 lg:row-span-2 lg:row-start-2"
+        className="lg:col-start-2 lg:row-span-2 lg:row-start-1"
         onClose={() => setSelectedQuerySelection(null)}
         panelRef={detailPanelRef}
         query={selectedQuery}
       />
-      <div className="grid min-w-0 gap-4 lg:col-start-1 xl:grid-cols-2">
+      <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(20rem,100%),1fr))] gap-4 lg:col-start-1">
         {insights.tableStatsAvailable ? (
           <>
             <SequentialScanHotspotsCard
@@ -1158,7 +1141,7 @@ function QueryInsightsContent({
             <TableCacheHitCard cacheHits={insights.tableCacheHits} />
           </>
         ) : (
-          <CardShell className="xl:col-span-2">
+          <CardShell className="col-span-full">
             <MetricUnavailableNotice
               fallback="Table statistics are unavailable for this database."
               onRetry={onRetry}
@@ -1211,21 +1194,7 @@ function DatabaseInsightsLoadingState() {
   );
 }
 
-function DatabaseNotFoundState() {
-  return (
-    <div className="flex min-h-[60vh] items-center justify-center p-4">
-      <div className="w-full max-w-lg">
-        <EmptyState
-          description="This database is no longer available from the backend. Select another database from the header or return to the instance overview."
-          icon={CircleOff}
-          title="Database not found"
-        />
-      </div>
-    </div>
-  );
-}
-
-function BackendDatabaseQueryInsightsPage({
+function DatabaseQueryInsightsContent({
   databaseId,
   instanceId,
 }: {
@@ -1233,32 +1202,22 @@ function BackendDatabaseQueryInsightsPage({
   instanceId: string;
 }) {
   const databaseName = buildDatabaseName(instanceId, databaseId);
-  const databaseQuery = useGetDatabaseQuery(
-    { name: databaseName },
-    {
-      enabled: Boolean(instanceId && databaseId),
-      refetchOnWindowFocus: false,
-    }
-  );
   const queryInsightsQuery = useGetDatabaseQueryInsightsQuery(
     { name: databaseName },
     {
-      enabled: Boolean(
-        databaseId && instanceId && databaseQuery.data?.database
-      ),
+      enabled: Boolean(databaseId && instanceId),
       refetchOnWindowFocus: false,
     }
   );
-  const loader = createResourceLoader(databaseQuery, "console.database");
   const insights = queryInsightsQuery.data?.queryInsights;
   const partialErrors = getQueryInsightPartialErrors(
     queryInsightsQuery.data?.partialErrors ?? []
   );
   const handleRetryQueryInsights = () => queryInsightsQuery.refetch();
-  let pageContent: ReactNode;
+  let drawerContent: ReactNode;
 
   if (insights) {
-    pageContent = (
+    drawerContent = (
       <div className="grid gap-4">
         {queryInsightsQuery.error ? (
           <DatabaseQueryInsightsError
@@ -1275,25 +1234,17 @@ function BackendDatabaseQueryInsightsPage({
       </div>
     );
   } else if (queryInsightsQuery.error) {
-    pageContent = (
+    drawerContent = (
       <DatabaseQueryInsightsError
         error={queryInsightsQuery.error}
         onRetry={handleRetryQueryInsights}
       />
     );
   } else {
-    pageContent = <DatabaseInsightsLoadingState />;
+    drawerContent = <DatabaseInsightsLoadingState />;
   }
 
-  return (
-    <ResourcePageState
-      {...loader.pageStateProps}
-      notFoundState={<DatabaseNotFoundState />}
-      title="Loading database"
-    >
-      {pageContent}
-    </ResourcePageState>
-  );
+  return drawerContent;
 }
 
-export { BackendDatabaseQueryInsightsPage };
+export { DatabaseQueryInsightsContent };

@@ -2,7 +2,6 @@ import { create } from "@bufbuild/protobuf";
 import type { Transport } from "@connectrpc/connect";
 import { createQueryOptions } from "@connectrpc/connect-query-core";
 import {
-  databaseQueryInsightsQueryOptions,
   databasesForInstanceQueryInput,
   listAllDatabasesQueryOptions,
   selectedDatabaseQueryOptions,
@@ -136,23 +135,6 @@ export function databaseRouteDataQueries({
   transport,
 }: DatabaseRouteParams & { transport: Transport }): RouteDataQuery[] {
   return databaseSummaryQueries({ databaseId, instanceId, transport });
-}
-
-export function queryInsightsRouteDataQueries({
-  databaseId,
-  instanceId,
-  transport,
-}: DatabaseRouteParams & { transport: Transport }): RouteDataQuery[] {
-  return [
-    ...databaseSummaryQueries({ databaseId, instanceId, transport }),
-    routeDataQuery(
-      databaseQueryInsightsQueryOptions({
-        databaseId,
-        instanceId,
-        transport,
-      })
-    ),
-  ];
 }
 
 export function extensionRouteDataQueries({

@@ -43,18 +43,6 @@ describe("admin navigation", () => {
     });
   });
 
-  test("resolves canonical targets for database query insights", () => {
-    expect(
-      resolveCanonicalAdminPageTarget({
-        ids: { databaseId: "postgres", instanceId: "local" },
-        page: "database.insights",
-      })
-    ).toEqual({
-      params: { databaseId: "postgres", instanceId: "local" },
-      to: "/instances/$instanceId/databases/$databaseId/insights",
-    });
-  });
-
   test("falls back to scope default when requested page needs deeper scope", () => {
     expect(
       resolveNextAdminPage({

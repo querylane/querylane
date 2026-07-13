@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { BackendDatabasePage } from "@/components/console-pages/database-page";
-import { BackendDatabaseQueryInsightsPage } from "@/components/console-pages/database-query-insights-page";
+import { DatabaseQueryInsightsContent } from "@/components/console-pages/database-query-insights-content";
 import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
 import { StatusSchema } from "@/protogen/google/rpc/status_pb";
 import {
@@ -44,6 +44,7 @@ const state = vi.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
   databaseQuery: {} as QueryState<GetDatabaseResponse>,
   navigate: vi.fn(async () => undefined),
+  queryInsightsHook: vi.fn(),
   queryInsightsQuery: {} as QueryState<GetDatabaseQueryInsightsResponse>,
 }));
 const ANALYTICS_SCHEMA_ROW_RE = /analytics User analytics-owner/;
@@ -111,13 +112,16 @@ vi.mock("@/hooks/api/database", () => ({
     isPending: state.databaseQuery.isPending ?? false,
     refetch: state.databaseQuery.refetch ?? vi.fn(async () => undefined),
   }),
-  useGetDatabaseQueryInsightsQuery: () => ({
-    data: state.queryInsightsQuery.data,
-    error: state.queryInsightsQuery.error ?? null,
-    isFetching: state.queryInsightsQuery.isFetching ?? false,
-    isPending: state.queryInsightsQuery.isPending ?? false,
-    refetch: state.queryInsightsQuery.refetch ?? vi.fn(async () => undefined),
-  }),
+  useGetDatabaseQueryInsightsQuery: () => {
+    state.queryInsightsHook();
+    return {
+      data: state.queryInsightsQuery.data,
+      error: state.queryInsightsQuery.error ?? null,
+      isFetching: state.queryInsightsQuery.isFetching ?? false,
+      isPending: state.queryInsightsQuery.isPending ?? false,
+      refetch: state.queryInsightsQuery.refetch ?? vi.fn(async () => undefined),
+    };
+  },
 }));
 
 vi.mock("@/hooks/api/database-catalog", () => ({
@@ -188,6 +192,24 @@ function databaseResponse() {
       owner: "data-platform",
     }),
   });
+}
+
+function QueryInsightsDrawerForTest({
+  databaseId,
+  instanceId,
+}: {
+  databaseId: string;
+  instanceId: string;
+}) {
+  return (
+    <dialog aria-label="Query insights" open={true}>
+      <h1>Query insights</h1>
+      <DatabaseQueryInsightsContent
+        databaseId={databaseId}
+        instanceId={instanceId}
+      />
+    </dialog>
+  );
 }
 
 function queryInsightsResponse() {
@@ -651,6 +673,7 @@ beforeEach(() => {
   state.databaseQuery = { data: databaseResponse() };
   state.catalogQuery = { data: catalogResult() };
   state.navigate.mockClear();
+  state.queryInsightsHook.mockClear();
   state.queryInsightsQuery = {};
 });
 
@@ -756,7 +779,8 @@ describe("backend database overview", () => {
     expect(within(schemaSection).queryByText("public")).toBeNull();
   });
 
-  test("renders query insights when PostgreSQL stats are available", () => {
+  test("loads query insights only after opening the overview drawer", async () => {
+    const user = userEvent.setup();
     state.queryInsightsQuery = { data: queryInsightsResponse() };
 
     render(
@@ -767,30 +791,94 @@ describe("backend database overview", () => {
       />
     );
 
-    expect(screen.getByText("Query insights")).toBeTruthy();
-    expect(screen.getByText("Top queries by total time")).toBeTruthy();
+    expect(state.queryInsightsHook).not.toHaveBeenCalled();
+    expect(screen.queryByText("Top queries by total time")).toBeNull();
+
+    const trigger = screen.getByRole("button", {
+      name: "View query insights",
+    });
+    await user.click(trigger);
+
+    await waitFor(() => expect(state.queryInsightsHook).toHaveBeenCalledOnce());
+    const drawer = await screen.findByRole("dialog", {
+      name: "Query insights",
+    });
+    expect(drawer.className).toContain("!w-screen");
+    expect(drawer.className).toContain("sm:!w-[80vw]");
+    expect(drawer.className).toContain("sm:!max-w-[80rem]");
     expect(
-      screen.getByText(
-        (_content, element) =>
-          element?.tagName.toLowerCase() === "code" &&
-          element.textContent?.includes("SELECT * FROM events") === true
-      )
+      await within(drawer).findByText("Top queries by total time")
     ).toBeTruthy();
-    expect(screen.getByText("42 calls")).toBeTruthy();
-    expect(screen.getByText("Sequential scan hotspots")).toBeTruthy();
-    expect(screen.getAllByText("public.events").length).toBeGreaterThan(0);
-    expect(screen.getByText("120,000 tuples read")).toBeTruthy();
-    expect(screen.getByText("Cache hit by table")).toBeTruthy();
-    expect(screen.getByText("67% hit")).toBeTruthy();
-    expect(screen.getByText("Low cache hit")).toBeTruthy();
+    expect(
+      within(drawer).getByRole("columnheader", { name: "Relative" })
+    ).toBeTruthy();
+
+    await user.click(within(drawer).getByRole("button", { name: "Type" }));
+    await user.click(screen.getByRole("option", { name: "Write queries" }));
+    expect(
+      within(drawer).queryByRole("button", {
+        name: SELECT_EVENTS_QUERY_BUTTON_RE,
+      })
+    ).toBeNull();
+
+    await user.click(within(drawer).getByRole("button", { name: "Close" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Query insights" })
+      ).toBeNull()
+    );
+    expect(document.activeElement).toBe(trigger);
+
+    await user.click(trigger);
+    const reopenedDrawer = await screen.findByRole("dialog", {
+      name: "Query insights",
+    });
+    expect(
+      within(reopenedDrawer).getByRole("button", {
+        name: SELECT_EVENTS_QUERY_BUTTON_RE,
+      })
+    ).toBeTruthy();
   });
 
-  test("renders the dedicated query insights page with filtering and query detail", async () => {
+  test("closes query insights when the selected database changes", async () => {
+    const user = userEvent.setup();
+    state.queryInsightsQuery = { data: queryInsightsResponse() };
+    const { rerender } = render(
+      <BackendDatabasePage
+        databaseId="customer-events"
+        instanceId="prod"
+        section="overview"
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "View query insights" })
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Query insights" })
+    ).toBeTruthy();
+
+    rerender(
+      <BackendDatabasePage
+        databaseId="orders"
+        instanceId="prod"
+        section="overview"
+      />
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Query insights" })
+      ).toBeNull()
+    );
+  });
+
+  test("renders the query insights drawer with filtering and query detail", async () => {
     const user = userEvent.setup();
     state.queryInsightsQuery = { data: queryInsightsResponse() };
 
     render(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -800,9 +888,7 @@ describe("backend database overview", () => {
       screen.getByRole("heading", { name: "Query insights" })
     ).toBeTruthy();
     expect(screen.getByText("Top queries by total time")).toBeTruthy();
-    expect(
-      screen.getByRole("columnheader", { name: "Relative to top" })
-    ).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Relative" })).toBeTruthy();
     expect(screen.getByText("Sequential scan hotspots")).toBeTruthy();
     expect(screen.getByText("Cache hit by table")).toBeTruthy();
     expect(
@@ -960,13 +1046,13 @@ describe("backend database overview", () => {
   });
 });
 
-describe("backend database query insights page", () => {
+describe("backend database query insights drawer", () => {
   test("classifies edge query text without treating unknown statements as writes", async () => {
     const user = userEvent.setup();
     state.queryInsightsQuery = { data: queryInsightsResponseWithEdgeQueries() };
 
     render(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1039,7 +1125,7 @@ describe("backend database query insights page", () => {
     state.queryInsightsQuery = { data: queryInsightsResponseWithEdgeQueries() };
 
     render(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1071,7 +1157,7 @@ describe("backend database query insights page", () => {
     const user = userEvent.setup();
     state.queryInsightsQuery = { data: queryInsightsResponseWithEdgeQueries() };
     const { rerender } = render(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1100,7 +1186,7 @@ describe("backend database query insights page", () => {
     topQueries.splice(-2, 2, secondUnknown, firstUnknown);
     state.queryInsightsQuery = { data: refreshed };
     rerender(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1114,7 +1200,7 @@ describe("backend database query insights page", () => {
       data: queryInsightsResponseWithEdgeQueries(),
     };
     rerender(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1128,7 +1214,7 @@ describe("backend database query insights page", () => {
     state.queryInsightsQuery = { data: queryInsightsResponse() };
 
     const { rerender } = render(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1146,7 +1232,7 @@ describe("backend database query insights page", () => {
       data: queryInsightsResponseWithUpdatedSelection(),
     };
     rerender(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1165,7 +1251,7 @@ describe("database query insights resilience", () => {
     };
 
     render(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1193,7 +1279,7 @@ describe("database query insights resilience", () => {
     state.queryInsightsQuery = { data: queryInsightsResponse() };
 
     const { rerender } = render(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1213,7 +1299,7 @@ describe("database query insights resilience", () => {
       data: queryInsightsResponseWithSearchableQueries(),
     };
     rerender(
-      <BackendDatabaseQueryInsightsPage databaseId="orders" instanceId="prod" />
+      <QueryInsightsDrawerForTest databaseId="orders" instanceId="prod" />
     );
 
     const freshDetail = screen.getByRole("region", { name: "Query detail" });
@@ -1227,7 +1313,7 @@ describe("database query insights resilience", () => {
     };
 
     render(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1300,7 +1386,7 @@ describe("database query insights resilience", () => {
     };
 
     render(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1361,7 +1447,7 @@ describe("database query insights resilience", () => {
 
   test("renders unavailable, table-stats-missing, and error states", () => {
     const { rerender } = render(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1369,7 +1455,7 @@ describe("database query insights resilience", () => {
 
     state.queryInsightsQuery = { data: unavailableQueryInsightsResponse() };
     rerender(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1380,7 +1466,7 @@ describe("database query insights resilience", () => {
       data: queryInsightsWithoutTableStatsResponse(),
     };
     rerender(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1393,7 +1479,7 @@ describe("database query insights resilience", () => {
       data: queryInsightsWithoutQueryStatsResponse(),
     };
     rerender(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1408,7 +1494,7 @@ describe("database query insights resilience", () => {
       refetch: vi.fn(async () => undefined),
     };
     rerender(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1426,7 +1512,7 @@ describe("database query insights resilience", () => {
     };
 
     render(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />
@@ -1450,7 +1536,7 @@ describe("database query insights resilience", () => {
     };
 
     render(
-      <BackendDatabaseQueryInsightsPage
+      <QueryInsightsDrawerForTest
         databaseId="customer-events"
         instanceId="prod"
       />

@@ -29,7 +29,6 @@ describe("sidebar navigation", () => {
     });
 
     expect(links["database.explorer"]).toBeUndefined();
-    expect(links["database.insights"]).toBeUndefined();
   });
 
   test("clears explorer search when moving to another sidebar page", () => {
@@ -53,24 +52,11 @@ describe("sidebar navigation", () => {
     });
   });
 
-  test("builds native link props for database query insights", () => {
-    const links = buildNavLinkProps({
-      currentPage: "database.overview",
-      ids: { databaseId: "postgres", instanceId: "local" },
-    });
-
-    expect(links["database.insights"]).toMatchObject({
-      params: { databaseId: "postgres", instanceId: "local" },
-      to: "/instances/$instanceId/databases/$databaseId/insights",
-    });
-  });
-
   test("returns instance-only navigation until a database is selected", () => {
     const sections = getNavForScope({
       active: {
         databaseExplorer: false,
         databaseExtensions: false,
-        databaseInsights: false,
         databaseOverview: false,
         instanceActivity: false,
         instanceConfiguration: false,
@@ -100,7 +86,6 @@ describe("sidebar navigation", () => {
       active: {
         databaseExplorer: false,
         databaseExtensions: false,
-        databaseInsights: false,
         databaseOverview: true,
         instanceActivity: false,
         instanceConfiguration: false,
@@ -110,7 +95,6 @@ describe("sidebar navigation", () => {
       paths: {
         databaseExplorer: "/instances/local/databases/postgres/explorer",
         databaseExtensions: "/instances/local/databases/postgres/extensions",
-        databaseInsights: "/instances/local/databases/postgres/insights",
         databaseOverview: "/instances/local/databases/postgres",
         instanceActivity: "/instances/local/activity",
         instanceConfiguration: "/instances/local/configuration",
@@ -126,7 +110,6 @@ describe("sidebar navigation", () => {
     ]);
     expect(sections[1]?.items.map((item) => item.key)).toEqual([
       "database.overview",
-      "database.insights",
       "database.extensions",
       "database.explorer",
     ]);
