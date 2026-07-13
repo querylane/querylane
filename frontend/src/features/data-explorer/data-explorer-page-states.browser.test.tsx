@@ -102,9 +102,14 @@ vi.mock("@/components/data-grid/table-data-grid/table-data-grid", () => {
   };
 });
 
-vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => mocks.navigate,
-}));
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...actual,
+    useNavigate: () => mocks.navigate,
+  };
+});
 
 vi.mock("@/components/querylane-ui/sidebar", () => ({
   useSidebar: () => ({ isMobile: false, setOpenMobile: vi.fn() }),
