@@ -1500,6 +1500,497 @@ describe("TableDetail columns tab", () => {
   });
 });
 
+function seedPaginatedIndexes(
+  methodForIndex: (index: number) => string = () => "btree"
+) {
+  tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+    indexes: Array.from({ length: 12 }, (_, index) =>
+      create(TableIndexSchema, {
+        indexName: `orders_idx_${index + 1}`,
+        isValid: true,
+        keyColumns: ["id"],
+        keyParts: ["id"],
+        method: methodForIndex(index),
+      })
+    ),
+  });
+}
+
+function renderPaginatedIndexes() {
+  render(
+    <TableDetail
+      databaseId="app"
+      initialTab="indexes"
+      instanceId="prod"
+      schemaName="public"
+      table={create(TableSchema)}
+      tableName="orders"
+    />
+  );
+}
+
+describe("TableDetail indexes pagination", () => {
+  it("places the page-size control in the bottom pager", () => {
+    seedPaginatedIndexes();
+    renderPaginatedIndexes();
+
+    expect(
+      screen
+        .getByRole("navigation", { name: "Indexes pagination" })
+        .contains(screen.getByRole("combobox", { name: "Indexes per page" }))
+    ).toBe(true);
+  });
+
+  it("keeps the page-size control without an empty pagination landmark", () => {
+    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+      indexes: [
+        create(TableIndexSchema, {
+          indexName: "orders_pkey",
+          isValid: true,
+          keyColumns: ["id"],
+          keyParts: ["id"],
+          method: "btree",
+        }),
+      ],
+    });
+    renderPaginatedIndexes();
+
+    expect(
+      screen.getByRole("combobox", { name: "Indexes per page" })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("navigation", { name: "Indexes pagination" })
+    ).toBeNull();
+  });
+
+  it("paginates index cards with the shared 10-item default", async () => {
+    const user = userEvent.setup();
+    seedPaginatedIndexes();
+    renderPaginatedIndexes();
+
+    expect(
+      screen.queryAllByText("orders_idx_10", { exact: true }).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText("orders_idx_11", { exact: true })
+    ).toHaveLength(0);
+    expect(screen.getByText("Showing 1–10 of 12 indexes")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+    expect(
+      screen.getByRole("combobox", { name: "Indexes per page" }).textContent
+    ).toContain("10");
+    expect(
+      screen
+        .getByRole("button", { name: "Previous indexes page" })
+        .getAttribute("aria-disabled")
+    ).toBe("true");
+
+    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
+
+    expect(screen.queryAllByText("orders_idx_1", { exact: true })).toHaveLength(
+      0
+    );
+    expect(
+      screen.queryAllByText("orders_idx_11", { exact: true }).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText("orders_idx_12", { exact: true }).length
+    ).toBeGreaterThan(0);
+    expect(screen.getByText("Showing 11–12 of 12 indexes")).toBeTruthy();
+    expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+  });
+
+  it("changes the number of index cards shown per page", async () => {
+    const user = userEvent.setup();
+    seedPaginatedIndexes();
+    renderPaginatedIndexes();
+
+    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
+    await user.click(
+      screen.getByRole("combobox", { name: "Indexes per page" })
+    );
+    await user.click(screen.getByRole("option", { name: "5" }));
+
+    expect(
+      screen.queryAllByText("orders_idx_5", { exact: true }).length
+    ).toBeGreaterThan(0);
+    expect(screen.queryAllByText("orders_idx_6", { exact: true })).toHaveLength(
+      0
+    );
+    expect(screen.getByText("Showing 1–5 of 12 indexes")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 3")).toBeTruthy();
+  });
+
+  it("returns to the first indexes page when search changes", async () => {
+    const user = userEvent.setup();
+    seedPaginatedIndexes();
+    renderPaginatedIndexes();
+
+    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
+    const search = screen.getByRole("textbox", { name: "Search indexes…" });
+    await user.type(search, "orders_idx_2");
+    await user.clear(search);
+
+    expect(
+      screen.queryAllByText("orders_idx_1", { exact: true }).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText("orders_idx_11", { exact: true })
+    ).toHaveLength(0);
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+  });
+
+  it("returns to the first indexes page when method filters change", async () => {
+    const user = userEvent.setup();
+    seedPaginatedIndexes((index) => (index < 10 ? "btree" : "gin"));
+    renderPaginatedIndexes();
+
+    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
+    await user.click(screen.getByRole("button", { name: "Method" }));
+    await user.click(screen.getByRole("option", { name: "GIN" }));
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+
+    expect(
+      screen.queryAllByText("orders_idx_1", { exact: true }).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText("orders_idx_11", { exact: true })
+    ).toHaveLength(0);
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+  });
+
+  it("keeps pager focus at page boundaries", async () => {
+    const user = userEvent.setup();
+    seedPaginatedIndexes();
+    renderPaginatedIndexes();
+
+    const nextPage = screen.getByRole("button", {
+      name: "Next indexes page",
+    });
+    await user.click(nextPage);
+
+    expect(document.activeElement).toBe(nextPage);
+    expect(nextPage.hasAttribute("disabled")).toBe(false);
+    expect(nextPage.getAttribute("aria-disabled")).toBe("true");
+  });
+
+  it("announces indexes page changes", async () => {
+    const user = userEvent.setup();
+    seedPaginatedIndexes();
+    renderPaginatedIndexes();
+
+    expect(screen.getByRole("status").textContent).toBe(
+      "Showing 1–10 of 12 indexes"
+    );
+
+    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
+
+    expect(screen.getByRole("status").textContent).toBe(
+      "Showing 11–12 of 12 indexes"
+    );
+  });
+});
+
+describe("TableDetail indexes tab", () => {
+  it("renders index summary cards and copyable SQL instead of a grid", () => {
+    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+      indexes: [
+        create(TableIndexSchema, {
+          indexName: "shipment_event_pkey",
+          isUnique: true,
+          isValid: true,
+          keyColumns: ["id"],
+          keyParts: ["id"],
+          method: "btree",
+          sizeBytes: 16_384n,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="indexes"
+        instanceId="prod"
+        schemaName="shipping"
+        table={create(TableSchema, {
+          rowCount: 18_200_000n,
+          sizeBytes: 21_400_000_000n,
+        })}
+        tableName="shipment_event"
+      />
+    );
+
+    expect(screen.getByText("Total size")).toBeTruthy();
+    expect(screen.getAllByText("Scans").length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toContain("41d");
+    expect(screen.getByText("Validity")).toBeTruthy();
+    expect(screen.getByText("usage stats unavailable")).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: "Scans. PostgreSQL did not return usage data from pg_stat_user_indexes.",
+      })
+    ).toBeTruthy();
+    expect(screen.queryByText("Usage from")).toBeNull();
+    expect(screen.getAllByText("shipment_event_pkey").length).toBeGreaterThan(
+      0
+    );
+    expect(screen.getAllByText("btree").length).toBeGreaterThan(0);
+    expect(screen.getByText("UNIQUE")).toBeTruthy();
+    expect(screen.getByText("id")).toBeTruthy();
+    expect(document.body.textContent).toContain(
+      "CREATE UNIQUE INDEX shipment_event_pkey ON shipping.shipment_event USING btree (id)"
+    );
+    expect(screen.getByRole("button", { name: "Copy SQL" })).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("searches and filters index cards without changing summary totals", async () => {
+    const user = userEvent.setup();
+    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+      indexes: [
+        create(TableIndexSchema, {
+          indexName: "orders_pkey",
+          isValid: true,
+          keyColumns: ["id"],
+          keyParts: ["id"],
+          method: "btree",
+        }),
+        create(TableIndexSchema, {
+          indexName: "orders_payload_idx",
+          isValid: true,
+          keyColumns: ["payload"],
+          keyParts: ["payload"],
+          method: "gin",
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="indexes"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema)}
+        tableName="orders"
+      />
+    );
+
+    const search = screen.getByRole("textbox", { name: "Search indexes…" });
+    const indexesSummary = screen.getByText("Indexes", {
+      selector: "p",
+    }).parentElement;
+    if (!indexesSummary) {
+      throw new Error("Expected the indexes summary card to render.");
+    }
+    await user.type(search, "payload");
+
+    expect(document.body.textContent).toContain("orders_payload_idx");
+    expect(document.body.textContent).not.toContain("orders_pkey");
+    expect(within(indexesSummary).getByText("2")).toBeTruthy();
+
+    await user.clear(search);
+
+    expect(document.body.textContent).toContain("orders_payload_idx");
+    expect(document.body.textContent).toContain("orders_pkey");
+
+    await user.click(screen.getByRole("button", { name: "Method" }));
+    await user.click(screen.getByRole("option", { name: "GIN" }));
+
+    expect(document.body.textContent).toContain("orders_payload_idx");
+    expect(document.body.textContent).not.toContain("orders_pkey");
+    expect(within(indexesSummary).getByText("2")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+
+    expect(document.body.textContent).toContain("orders_payload_idx");
+    expect(document.body.textContent).toContain("orders_pkey");
+
+    await user.type(search, "missing");
+
+    expect(screen.getByText("No indexes found")).toBeTruthy();
+    expect(screen.getByText("Try a different search or filter.")).toBeTruthy();
+    expect(within(indexesSummary).getByText("2")).toBeTruthy();
+  });
+
+  it("renders usage stats, partial indexes, expression indexes, and unused warnings", () => {
+    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+      indexes: [
+        create(TableIndexSchema, {
+          blocksHit: 997n,
+          blocksRead: 3n,
+          definition:
+            "CREATE UNIQUE INDEX shipments_pkey ON shipping.shipments USING btree (id)",
+          hasUsageStats: true,
+          indexName: "shipments_pkey",
+          isUnique: true,
+          isValid: true,
+          keyColumns: ["id"],
+          keyParts: ["id"],
+          method: "btree",
+          scanCount: 48_100_000n,
+          sizeBytes: 312n * 1024n * 1024n,
+          tuplesFetched: 48_100_000n,
+          tuplesRead: 48_400_000n,
+        }),
+        create(TableIndexSchema, {
+          blocksHit: 989n,
+          blocksRead: 11n,
+          definition:
+            "CREATE INDEX shipments_status_idx ON shipping.shipments USING btree (status) WHERE status <> 'delivered'",
+          hasUsageStats: true,
+          indexName: "shipments_status_idx",
+          isValid: true,
+          keyColumns: ["status"],
+          keyParts: ["status"],
+          method: "btree",
+          predicate: "status <> 'delivered'",
+          scanCount: 9_400_000n,
+          sizeBytes: 18n * 1024n * 1024n,
+          tuplesFetched: 9_300_000n,
+          tuplesRead: 11_200_000n,
+        }),
+        create(TableIndexSchema, {
+          blocksHit: 991n,
+          blocksRead: 9n,
+          definition:
+            "CREATE INDEX shipments_carrier_id_idx ON shipping.shipments USING btree (carrier_id)",
+          hasUsageStats: true,
+          indexName: "shipments_carrier_id_idx",
+          isValid: true,
+          keyColumns: ["carrier_id"],
+          keyParts: ["carrier_id"],
+          method: "btree",
+          scanCount: 1_200_000n,
+          sizeBytes: 52n * 1024n * 1024n,
+          tuplesFetched: 1_200_000n,
+          tuplesRead: 2_800_000n,
+        }),
+        create(TableIndexSchema, {
+          definition:
+            "CREATE INDEX shipments_legacy_ref_idx ON shipping.shipments USING btree (lower(ref))",
+          hasExpression: true,
+          hasUsageStats: true,
+          indexName: "shipments_legacy_ref_idx",
+          isValid: true,
+          keyParts: ["lower(ref)"],
+          method: "btree",
+          sizeBytes: 96n * 1024n * 1024n,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="indexes"
+        instanceId="prod"
+        schemaName="shipping"
+        table={create(TableSchema, {
+          rowCount: 2_400_000n,
+          sizeBytes: 13_743_895_347n,
+        })}
+        tableName="shipments"
+      />
+    );
+
+    expect(screen.getAllByText("4").length).toBeGreaterThan(0);
+    expect(screen.getByText("1 unused")).toBeTruthy();
+    expect(screen.getByText("478 MB")).toBeTruthy();
+    expect(screen.getByText("58.7M")).toBeTruthy();
+    expect(screen.getByText("since last stats reset")).toBeTruthy();
+    expect(screen.getByText("all valid")).toBeTruthy();
+    expect(screen.getByText("PARTIAL")).toBeTruthy();
+    expect(screen.getByText("EXPRESSION")).toBeTruthy();
+    expect(screen.getByText("UNUSED")).toBeTruthy();
+    expect(screen.getByText("lower(ref)")).toBeTruthy();
+    expect(screen.getByText("99.7%")).toBeTruthy();
+    expect(screen.getAllByText("0").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("progressbar", {
+        name: "shipments_pkey: 82% of index scans",
+      })
+    ).toBeTruthy();
+    const cacheHitHelp = screen
+      .getAllByText("Cache hit")[0]
+      ?.closest('[data-slot="tooltip-trigger"]');
+    expect(cacheHitHelp?.getAttribute("tabindex")).toBe("0");
+    expect(cacheHitHelp?.getAttribute("aria-label")).toContain("shared-buffer");
+    expect(document.body.textContent).toContain(
+      "CREATE INDEX shipments_status_idx ON shipping.shipments USING btree (status) WHERE status <> 'delivered'"
+    );
+  });
+
+  it("preserves quoted key parts in fallback index SQL", () => {
+    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+      indexes: [
+        create(TableIndexSchema, {
+          indexName: "orders_mixed_case_idx",
+          isValid: true,
+          keyParts: ['"Order"'],
+          method: "btree",
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="indexes"
+        instanceId="prod"
+        schemaName="sales"
+        table={undefined}
+        tableName="orders"
+      />
+    );
+
+    expect(document.body.textContent).toContain(
+      'CREATE INDEX orders_mixed_case_idx ON sales.orders USING btree ("Order")'
+    );
+    expect(document.body.textContent).not.toContain('"""Order"""');
+  });
+
+  it("announces exact tiny scan shares without the visual floor", () => {
+    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+      indexes: [
+        create(TableIndexSchema, {
+          hasUsageStats: true,
+          indexName: "orders_tiny_idx",
+          isValid: true,
+          keyParts: ["status"],
+          method: "btree",
+          scanCount: 1n,
+        }),
+        create(TableIndexSchema, {
+          hasUsageStats: true,
+          indexName: "orders_busy_idx",
+          isValid: true,
+          keyParts: ["customer_id"],
+          method: "btree",
+          scanCount: 999n,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="indexes"
+        instanceId="prod"
+        schemaName="sales"
+        table={undefined}
+        tableName="orders"
+      />
+    );
+
+    const tinyShare = screen.getByRole("progressbar", {
+      name: "orders_tiny_idx: 0% of index scans",
+    });
+    expect(tinyShare.getAttribute("aria-valuenow")).toBe("0");
+  });
+});
+
 describe("TableDetail triggers tab", () => {
   it("paginates filtered trigger cards and changes page size", async () => {
     const user = userEvent.setup();

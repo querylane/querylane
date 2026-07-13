@@ -67,8 +67,6 @@ const SCHEMA_MAP_BROWSER_VIEWPORT = { height: 1400, width: 2048 } as const;
 // 2024-01-01T23:00:00Z renders as "Last fetched 11:00:00 PM" under the pinned
 // TZ=GMT used for screenshots, matching the mocked data grid label below.
 const APP_READER_SUPPORT_AGENT_RE = /app_reader, support_agent/;
-const DEFAULT_BALANCED_TREE_RE = /Default balanced tree/;
-const DEFAULT_BALANCED_TREE_SUMMARY_RE = /Default balanced tree for equality/;
 const GENERATED_GENERATION_FILTER_RE = /Generation.*Generated/;
 const BIGINT_TYPE_TITLE_RE = /Integer.*64-bit/;
 const ID_PRIMARY_KEY_CELL_RE = /id\s+Primary key\s+Surrogate key/;
@@ -353,6 +351,40 @@ function renderExplorerSurface(
   );
 }
 
+function renderScaledExplorerSurface(children: React.ReactNode) {
+  render(
+    <ScreenshotFrame>
+      <div
+        className="relative h-[930px] w-[850px] overflow-hidden"
+        data-testid="indexes-complex-frame"
+      >
+        <div className="absolute top-0 left-0 w-[1180px] origin-top-left scale-[0.72]">
+          <div className="rounded-2xl border border-border bg-background p-8 text-foreground">
+            {children}
+          </div>
+        </div>
+      </div>
+    </ScreenshotFrame>
+  );
+}
+
+function renderPaginatedIndexesSurface(children: React.ReactNode) {
+  render(
+    <ScreenshotFrame>
+      <div
+        className="relative h-[1000px] w-[850px] overflow-hidden"
+        data-testid="indexes-pagination-frame"
+      >
+        <div className="absolute top-0 left-0 w-[1180px] origin-top-left scale-[0.62]">
+          <div className="rounded-2xl border border-border bg-background p-8 text-foreground">
+            {children}
+          </div>
+        </div>
+      </div>
+    </ScreenshotFrame>
+  );
+}
+
 function resetSqlQueryState() {
   sqlQueryState.data = undefined;
   sqlQueryState.error = null;
@@ -610,19 +642,38 @@ function seedTableDetailQueries() {
   tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
     indexes: [
       createProto(TableIndexSchema, {
+        blocksHit: 989n,
+        blocksRead: 11n,
+        definition:
+          "CREATE INDEX customers_status_account_idx ON public.customers USING btree (status, account_id) INCLUDE (last_seen_at)",
+        hasUsageStats: true,
         includedColumns: ["last_seen_at"],
         indexName: "customers_status_account_idx",
         isUnique: false,
+        isValid: true,
         keyColumns: ["status", "account_id"],
+        keyParts: ["status", "account_id"],
         method: "btree",
+        scanCount: 10n,
         sizeBytes: 327_680n,
+        tuplesFetched: 8n,
+        tuplesRead: 12n,
       }),
       createProto(TableIndexSchema, {
+        blocksHit: 100n,
+        definition:
+          "CREATE UNIQUE INDEX customers_pkey ON public.customers USING btree (customer_id)",
+        hasUsageStats: true,
         indexName: "customers_pkey",
         isUnique: true,
+        isValid: true,
         keyColumns: ["customer_id"],
+        keyParts: ["customer_id"],
         method: "btree",
+        scanCount: 20n,
         sizeBytes: 98_304n,
+        tuplesFetched: 18n,
+        tuplesRead: 20n,
       }),
     ],
   });
@@ -948,6 +999,214 @@ function seedShippingColumnsDesignQueries() {
   });
   tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
     triggers: [],
+  });
+}
+
+function seedShipmentIndexesRedesignQueries() {
+  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
+    columns: [
+      createProto(ColumnSchema, {
+        columnName: "id",
+        dataType: DataType.UUID,
+        isNullable: false,
+        isPrimaryKey: true,
+        ordinalPosition: 1,
+        rawType: "uuid",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "ref",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 2,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "carrier_id",
+        dataType: DataType.INTEGER,
+        isNullable: false,
+        ordinalPosition: 3,
+        rawType: "integer",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "status",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 4,
+        rawType: "shipment_status",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "origin_port",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 5,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "dest_port",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 6,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "weight_kg",
+        dataType: DataType.FLOAT,
+        isNullable: false,
+        ordinalPosition: 7,
+        rawType: "numeric",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "eta",
+        dataType: DataType.DATE,
+        isNullable: true,
+        ordinalPosition: 8,
+        rawType: "date",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "created_at",
+        dataType: DataType.TIMESTAMP,
+        isNullable: false,
+        ordinalPosition: 9,
+        rawType: "timestamp with time zone",
+      }),
+    ],
+  });
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    {
+      constraints: [
+        createProto(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "shipments_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["ref"],
+          constraintName: "shipments_ref_key",
+          definition: "UNIQUE (ref)",
+          type: ConstraintType.UNIQUE,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["carrier_id"],
+          constraintName: "shipments_carrier_id_fkey",
+          definition:
+            "FOREIGN KEY (carrier_id) REFERENCES shipping.carriers(id) ON DELETE RESTRICT",
+          referencedColumnNames: ["id"],
+          referencedTable:
+            "instances/prod/databases/logistics/schemas/shipping/tables/carriers",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["weight_kg"],
+          constraintName: "shipments_weight_positive",
+          definition: "CHECK (weight_kg > 0)",
+          type: ConstraintType.CHECK,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["eta", "created_at"],
+          constraintName: "shipments_eta_reasonable",
+          definition: "CHECK (eta IS NULL OR eta > created_at::date)",
+          type: ConstraintType.CHECK,
+        }),
+      ],
+    }
+  );
+  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
+    indexes: [
+      createProto(TableIndexSchema, {
+        blocksHit: 997n,
+        blocksRead: 3n,
+        definition:
+          "CREATE UNIQUE INDEX shipments_pkey ON shipping.shipments USING btree (id)",
+        hasUsageStats: true,
+        indexName: "shipments_pkey",
+        isUnique: true,
+        isValid: true,
+        keyColumns: ["id"],
+        keyParts: ["id"],
+        method: "btree",
+        scanCount: 48_100_000n,
+        sizeBytes: 312n * 1024n * 1024n,
+        tuplesFetched: 48_100_000n,
+        tuplesRead: 48_400_000n,
+      }),
+      createProto(TableIndexSchema, {
+        blocksHit: 989n,
+        blocksRead: 11n,
+        definition:
+          "CREATE INDEX shipments_status_idx ON shipping.shipments USING btree (status) WHERE status <> 'delivered'",
+        hasUsageStats: true,
+        indexName: "shipments_status_idx",
+        isValid: true,
+        keyColumns: ["status"],
+        keyParts: ["status"],
+        method: "btree",
+        predicate: "status <> 'delivered'",
+        scanCount: 9_400_000n,
+        sizeBytes: 18n * 1024n * 1024n,
+        tuplesFetched: 9_300_000n,
+        tuplesRead: 11_200_000n,
+      }),
+      createProto(TableIndexSchema, {
+        blocksHit: 991n,
+        blocksRead: 9n,
+        definition:
+          "CREATE INDEX shipments_carrier_id_idx ON shipping.shipments USING btree (carrier_id)",
+        hasUsageStats: true,
+        indexName: "shipments_carrier_id_idx",
+        isValid: true,
+        keyColumns: ["carrier_id"],
+        keyParts: ["carrier_id"],
+        method: "btree",
+        scanCount: 1_200_000n,
+        sizeBytes: 52n * 1024n * 1024n,
+        tuplesFetched: 1_200_000n,
+        tuplesRead: 2_800_000n,
+      }),
+      createProto(TableIndexSchema, {
+        definition:
+          "CREATE INDEX shipments_legacy_ref_idx ON shipping.shipments USING btree (lower(ref))",
+        hasExpression: true,
+        hasUsageStats: true,
+        indexName: "shipments_legacy_ref_idx",
+        isValid: true,
+        keyParts: ["lower(ref)"],
+        method: "btree",
+        sizeBytes: 96n * 1024n * 1024n,
+      }),
+    ],
+  });
+  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
+    policies: [],
+  });
+  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
+    triggers: [
+      createProto(TableTriggerSchema, {
+        definition: "EXECUTE FUNCTION shipping.touch_updated_at()",
+        enabled: true,
+        events: ["UPDATE"],
+        functionName: "shipping.touch_updated_at",
+        timing: "BEFORE",
+        triggerName: "trg_shipments_touch",
+      }),
+      createProto(TableTriggerSchema, {
+        definition: "EXECUTE FUNCTION audit.log_change()",
+        enabled: true,
+        events: ["INSERT", "UPDATE", "DELETE"],
+        functionName: "audit.log_change",
+        timing: "AFTER",
+        triggerName: "trg_shipments_audit",
+      }),
+      createProto(TableTriggerSchema, {
+        definition: "EXECUTE FUNCTION shipping.notify_status_change()",
+        enabled: false,
+        events: ["UPDATE"],
+        functionName: "shipping.notify_status_change",
+        timing: "AFTER",
+        triggerName: "trg_shipments_notify",
+      }),
+    ],
   });
 }
 
@@ -1961,6 +2220,81 @@ test("data explorer table tabs stay visible when column metadata overflows", asy
   );
 });
 
+test("data explorer table indexes have a redesigned card baseline", async () => {
+  seedTableDetailQueries();
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="app"
+      initialTab="indexes"
+      instanceId="prod"
+      schemaName="public"
+      table={createProto(TableSchema, {
+        displayName: "customers",
+        name: "instances/prod/databases/app/schemas/public/tables/customers",
+        owner: "app_owner",
+        rowCount: 987_654n,
+        sizeBytes: 42_467_328n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="customers"
+    />
+  );
+
+  await expect
+    .element(page.getByText("customers_status_account_idx").first())
+    .toBeVisible();
+  await expect.element(page.getByText("btree").first()).toBeVisible();
+  await expect.element(page.getByText("Scans").first()).toBeVisible();
+  await expect.element(page.getByText("since last stats reset")).toBeVisible();
+  const indexSearch = page
+    .getByRole("textbox", { name: "Search indexes…" })
+    .element();
+  const indexFilterBar = requireFacetFilterBar("index facet filters");
+  await expect
+    .element(page.getByRole("button", { exact: true, name: "Method" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Indexes per page" }))
+    .toBeVisible();
+  const searchBox = indexSearch.getBoundingClientRect();
+  const filterBox = indexFilterBar.getBoundingClientRect();
+  expect(filterBox.left).toBeGreaterThan(searchBox.right);
+  expect(Math.abs(filterBox.top - searchBox.top)).toBeLessThanOrEqual(1);
+  await expect
+    .element(
+      page.getByRole("button", {
+        name: "Scans. Usage source: pg_stat_user_indexes.",
+      })
+    )
+    .toBeVisible();
+  expect(document.body.textContent).not.toContain("Usage from");
+  await expect
+    .element(page.getByText("INCLUDE last_seen_at").first())
+    .toBeVisible();
+  expect(document.body.textContent).toContain(
+    "CREATE INDEX customers_status_account_idx ON public.customers USING btree (status, account_id) INCLUDE (last_seen_at)"
+  );
+  expect(document.body.textContent).toContain(
+    "CREATE UNIQUE INDEX customers_pkey ON public.customers USING btree (customer_id)"
+  );
+  const copyButton = page
+    .getByRole("button", { name: "Copy SQL" })
+    .first()
+    .element();
+  const sqlBlock = copyButton.parentElement;
+  if (!sqlBlock) {
+    throw new Error("Expected Copy SQL to render inside its SQL block.");
+  }
+  const copyBox = copyButton.getBoundingClientRect();
+  const sqlBlockBox = sqlBlock.getBoundingClientRect();
+  const copyCenter = copyBox.top + copyBox.height / 2;
+  const sqlBlockCenter = sqlBlockBox.top + sqlBlockBox.height / 2;
+  expect(Math.abs(copyCenter - sqlBlockCenter)).toBeLessThanOrEqual(1);
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-indexes"
+  );
+});
+
 test("data explorer table indexes constraints policies and triggers stay readable", async () => {
   seedTableDetailQueries();
   renderExplorerSurface(
@@ -1982,17 +2316,27 @@ test("data explorer table indexes constraints policies and triggers stay readabl
   );
 
   await expect
-    .element(page.getByText("customers_status_account_idx"))
+    .element(page.getByText("customers_status_account_idx").first())
     .toBeVisible();
-  await expect.element(page.getByText("B-tree").first()).toBeVisible();
+  await expect.element(page.getByText("btree").first()).toBeVisible();
+  await expect.element(page.getByText("Scans").first()).toBeVisible();
+  await expect.element(page.getByText("since last stats reset")).toBeVisible();
   await expect
-    .element(page.getByRole("cell", { name: DEFAULT_BALANCED_TREE_RE }).first())
+    .element(
+      page.getByRole("button", {
+        name: "Scans. Usage source: pg_stat_user_indexes.",
+      })
+    )
     .toBeVisible();
+  expect(document.body.textContent).not.toContain("Usage from");
   await expect
-    .element(page.getByText("(status, account_id) INCLUDE (last_seen_at)"))
+    .element(page.getByText("INCLUDE last_seen_at").first())
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-indexes"
+  expect(document.body.textContent).toContain(
+    "CREATE INDEX customers_status_account_idx ON public.customers USING btree (status, account_id) INCLUDE (last_seen_at)"
+  );
+  expect(document.body.textContent).toContain(
+    "CREATE UNIQUE INDEX customers_pkey ON public.customers USING btree (customer_id)"
   );
 
   await page.getByRole("tab", { exact: true, name: "Constraints 2" }).click();
@@ -2374,6 +2718,109 @@ test("data explorer table policies explain RLS composition", async () => {
   );
 });
 
+test("data explorer table indexes match the redesign complex usage scenario", async () => {
+  seedShipmentIndexesRedesignQueries();
+  renderScaledExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="indexes"
+      instanceId="prod"
+      schemaName="shipping"
+      table={createProto(TableSchema, {
+        displayName: "shipments",
+        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipments",
+        owner: "app_owner",
+        rowCount: 2_400_000n,
+        sizeBytes: 13_743_895_347n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="shipments"
+    />
+  );
+
+  await expect
+    .element(page.getByRole("heading", { name: "shipping.shipments" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("tab", { exact: true, name: "Indexes 4" }))
+    .toBeVisible();
+  await expect.element(page.getByText("shipments_pkey").first()).toBeVisible();
+  await expect
+    .element(page.getByText("shipments_status_idx").first())
+    .toBeVisible();
+  await expect
+    .element(page.getByText("shipments_carrier_id_idx").first())
+    .toBeVisible();
+  await expect
+    .element(page.getByText("shipments_legacy_ref_idx").first())
+    .toBeVisible();
+  await expect.element(page.getByText("1 unused")).toBeVisible();
+  await expect.element(page.getByText("478 MB")).toBeVisible();
+  await expect.element(page.getByText("58.7M")).toBeVisible();
+  await expect.element(page.getByText("99.7%")).toBeVisible();
+  await expect
+    .element(page.getByRole("textbox", { name: "Search indexes…" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { exact: true, name: "Method" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Indexes per page" }))
+    .toBeVisible();
+  expect(document.body.textContent).toContain(
+    "CREATE INDEX shipments_legacy_ref_idx ON shipping.shipments USING btree (lower(ref))"
+  );
+  await expect(page.getByTestId("indexes-complex-frame")).toMatchScreenshot(
+    "data-explorer-table-indexes-complex"
+  );
+});
+
+test("data explorer table indexes pagination has a visual baseline", async () => {
+  seedShipmentIndexesRedesignQueries();
+  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
+    indexes: Array.from({ length: 6 }, (_, index) =>
+      createProto(TableIndexSchema, {
+        indexName: `shipments_route_${index + 1}_idx`,
+        isValid: true,
+        keyColumns: ["route_id"],
+        keyParts: ["route_id"],
+        method: index === 5 ? "gin" : "btree",
+        sizeBytes: BigInt(index + 1) * 1024n * 1024n,
+      })
+    ),
+  });
+  renderPaginatedIndexesSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="indexes"
+      instanceId="prod"
+      schemaName="shipping"
+      table={createProto(TableSchema, {
+        displayName: "shipments",
+        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipments",
+        owner: "app_owner",
+        rowCount: 2_400_000n,
+        sizeBytes: 13_743_895_347n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="shipments"
+    />
+  );
+
+  await page.getByRole("combobox", { name: "Indexes per page" }).click();
+  await page.getByRole("option", { name: "5" }).click();
+
+  await expect
+    .element(page.getByRole("status"))
+    .toHaveTextContent("Showing 1–5 of 6 indexes");
+  await expect
+    .element(page.getByRole("navigation", { name: "Indexes pagination" }))
+    .toBeVisible();
+  await expect(page.getByTestId("indexes-pagination-frame")).toMatchScreenshot(
+    "data-explorer-table-indexes-pagination"
+  );
+});
+
 test("data explorer table triggers match redesign", async () => {
   seedTriggerRedesignQueries();
   renderExplorerSurface(
@@ -2655,7 +3102,7 @@ test("data explorer definition toolbar keeps refresh reachable when narrow", asy
   );
 });
 
-test("data explorer index method copy stays inside its column on narrow surfaces", async () => {
+test("data explorer index cards keep SQL inside narrow surfaces", async () => {
   seedTableDetailQueries();
   renderExplorerSurface(
     <TableDetail
@@ -2676,34 +3123,30 @@ test("data explorer index method copy stays inside its column on narrow surfaces
     "w-[560px]"
   );
 
-  const methodSummaryLocator = page
-    .getByText(DEFAULT_BALANCED_TREE_SUMMARY_RE)
-    .first();
-  const columnsTextLocator = page.getByText(
-    "(status, account_id) INCLUDE (last_seen_at)"
+  const sqlText =
+    "CREATE INDEX customers_status_account_idx ON public.customers USING btree (status, account_id) INCLUDE (last_seen_at)";
+  await expect.element(page.getByText("btree").first()).toBeVisible();
+  await expect.element(page.getByText("INCLUDE last_seen_at")).toBeVisible();
+  expect(document.body.textContent).toContain(sqlText);
+
+  const sql = [...document.querySelectorAll('[data-language="sql"]')].find(
+    (element) => element.textContent?.includes(sqlText)
   );
-  await expect.element(methodSummaryLocator).toBeVisible();
-  await expect.element(columnsTextLocator).toBeVisible();
+  if (!sql) {
+    throw new Error("Expected index SQL to render.");
+  }
+  const card = sql.closest('[data-slot="card"]');
+  const frame = page.getByTestId("screenshot-frame").element();
 
-  const methodSummary = methodSummaryLocator.element();
-  const columnsText = columnsTextLocator.element();
-  const methodCell = methodSummary.closest("td");
-  const columnsCell = columnsText.closest("td");
-  const table = methodSummary.closest("table");
-  const tableFrame = table?.parentElement;
-
-  if (!(methodCell && columnsCell && table && tableFrame)) {
-    throw new Error("Expected index method and columns table to render.");
+  if (!(card && frame)) {
+    throw new Error("Expected index SQL to render inside a card.");
   }
 
-  expect(methodSummary.getBoundingClientRect().right).toBeLessThanOrEqual(
-    methodCell.getBoundingClientRect().right + 1
+  expect(sql.getBoundingClientRect().right).toBeLessThanOrEqual(
+    card.getBoundingClientRect().right + 1
   );
-  expect(methodCell.getBoundingClientRect().right).toBeLessThanOrEqual(
-    columnsCell.getBoundingClientRect().left + 1
-  );
-  expect(table.getBoundingClientRect().right).toBeLessThanOrEqual(
-    tableFrame.getBoundingClientRect().right + 1
+  expect(card.getBoundingClientRect().right).toBeLessThanOrEqual(
+    frame.getBoundingClientRect().right + 1
   );
 });
 

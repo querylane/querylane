@@ -153,6 +153,10 @@ func (s *RPCSuite) TestListTableIndexes_Orders() {
 	s.Require().True(ok, "should have idx_orders_customer_id index")
 	s.Equal("btree", idx.GetMethod())
 	s.Contains(idx.GetKeyColumns(), "customer_id")
+	s.Contains(idx.GetKeyParts(), "customer_id")
+	s.True(idx.GetIsValid())
+	s.Contains(idx.GetDefinition(), "CREATE INDEX")
+	s.True(idx.GetHasUsageStats())
 }
 
 func (s *RPCSuite) TestListTablePolicies_Orders() {

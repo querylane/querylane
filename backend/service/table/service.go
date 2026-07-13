@@ -372,9 +372,19 @@ func convertIndexes(indexes []engine.TableIndex) []*v1alpha1.TableIndex {
 			Method:          idx.Method,
 			IsUnique:        idx.IsUnique,
 			KeyColumns:      idx.KeyColumns,
+			KeyParts:        idx.KeyParts,
 			IncludedColumns: idx.IncludedColumns,
 			Predicate:       idx.Predicate,
 			SizeBytes:       idx.SizeBytes,
+			IsValid:         idx.IsValid,
+			HasExpression:   idx.HasExpression,
+			Definition:      idx.Definition,
+			ScanCount:       idx.ScanCount,
+			TuplesRead:      idx.TuplesRead,
+			TuplesFetched:   idx.TuplesFetched,
+			BlocksHit:       idx.BlocksHit,
+			BlocksRead:      idx.BlocksRead,
+			HasUsageStats:   idx.HasUsageStats,
 		})
 	}
 

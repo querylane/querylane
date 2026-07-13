@@ -236,8 +236,14 @@ describe("table detail facet filters", () => {
     expect(
       filterIndexesByMethod(
         [
-          create(TableIndexSchema, { indexName: "idx_gin", method: "gin" }),
-          create(TableIndexSchema, { indexName: "idx_btree", method: "btree" }),
+          create(TableIndexSchema, {
+            indexName: "idx_gin",
+            method: "gin",
+          }),
+          create(TableIndexSchema, {
+            indexName: "idx_btree",
+            method: "btree",
+          }),
         ],
         ["gin"]
       ).map((index) => index.indexName)

@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 
 type SqlCodeBlockProps = {
   className?: string;
+  copyButtonClassName?: string;
   copyable?: boolean;
   sql: string;
   variant?: "block" | "compact" | "inline";
@@ -108,6 +109,7 @@ export function SqlSyntaxHighlight({ sql: sqlText }: SqlSyntaxHighlightProps) {
 
 export function SqlCodeBlock({
   className,
+  copyButtonClassName,
   copyable = true,
   sql: sqlText,
   variant = "block",
@@ -145,7 +147,7 @@ export function SqlCodeBlock({
       {copyable ? (
         <CopyIconButton
           ariaLabel="Copy SQL"
-          className="absolute top-2 right-2"
+          className={cn("absolute top-2 right-2", copyButtonClassName)}
           value={sqlText}
         />
       ) : null}

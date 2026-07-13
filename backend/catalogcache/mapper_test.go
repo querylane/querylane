@@ -279,9 +279,19 @@ func TestIndexMapperRoundTrip(t *testing.T) {
 		Method:          "btree",
 		IsUnique:        false,
 		KeyColumns:      []string{"customer_id"},
+		KeyParts:        []string{"lower(customer_id::text)"},
 		IncludedColumns: []string{"status"},
 		Predicate:       "status <> 'deleted'",
 		SizeBytes:       1024,
+		IsValid:         true,
+		HasExpression:   true,
+		Definition:      "CREATE INDEX idx_orders_customer_id ON sales.orders USING btree (lower(customer_id::text)) INCLUDE (status)",
+		ScanCount:       42,
+		TuplesRead:      420,
+		TuplesFetched:   40,
+		BlocksHit:       99,
+		BlocksRead:      1,
+		HasUsageStats:   true,
 	}
 
 	now := time.Now()
