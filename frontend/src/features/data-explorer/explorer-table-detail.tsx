@@ -33,7 +33,6 @@ import { PaginationFooter } from "@/components/data-grid/table-data-grid/paginat
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
 import { SearchEmptyState } from "@/components/search-empty-state";
-import { SelectValue } from "@/components/select-extensions";
 import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +62,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
