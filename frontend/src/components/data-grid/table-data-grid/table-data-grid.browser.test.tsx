@@ -46,6 +46,7 @@ const tableDataApi = vi.hoisted(() => ({
     mutate: vi.fn(),
   })),
   useReadRowsQuery: vi.fn(),
+  useReadRowsQueryActions: vi.fn(),
   useStreamRowsExporter: vi.fn(() => vi.fn()),
 }));
 
@@ -56,12 +57,14 @@ vi.mock("@/hooks/api/table", () => ({
 vi.mock("@/hooks/api/table-data", () => ({
   useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
   useReadRowsQuery: tableDataApi.useReadRowsQuery,
+  useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
   useStreamRowsExporter: tableDataApi.useStreamRowsExporter,
 }));
 
 const SQL_WHERE_HELP_RE = /Supports column comparisons joined with AND/;
 afterEach(() => {
   tableApi.useListTableColumnsQuery.mockReset();
+  tableDataApi.useReadRowsQueryActions.mockReset();
   tableDataApi.useReadRowsQuery.mockReset();
 });
 
@@ -137,7 +140,21 @@ function cell(value: TableValue["kind"], truncated = false) {
   });
 }
 
-function seedForeignKeyGridQueries(targetTableName = carriersName) {
+interface ForeignKeyQueryActionsStub {
+  fetch: () => Promise<unknown>;
+  getState: () => { fetchStatus: string; status: string } | undefined;
+  prefetch: () => void;
+}
+
+function seedForeignKeyGridQueries(
+  targetTableName = carriersName,
+  queryActions: ForeignKeyQueryActionsStub = {
+    fetch: vi.fn(() => Promise.resolve()),
+    getState: vi.fn(() => ({ fetchStatus: "idle", status: "success" })),
+    prefetch: vi.fn(),
+  }
+) {
+  tableDataApi.useReadRowsQueryActions.mockReturnValue(queryActions);
   tableApi.useListTableColumnsQuery.mockImplementation((input) => {
     if (input.parent === targetTableName) {
       return {
@@ -730,9 +747,10 @@ test("data explorer controls and row detail drawer expose dense table context", 
 
 function renderForeignKeyReferenceGrid(
   className: string,
-  targetTableName = carriersName
+  targetTableName = carriersName,
+  queryActions?: ForeignKeyQueryActionsStub
 ) {
-  seedForeignKeyGridQueries(targetTableName);
+  seedForeignKeyGridQueries(targetTableName, queryActions);
 
   render(
     <ScreenshotFrame>
@@ -805,6 +823,49 @@ test("foreign key reference popover keeps the source table visible", async () =>
     .element(page.getByRole("link", { name: "Open table" }))
     .toBeVisible();
   await expect(page).toMatchScreenshot("foreign-key-reference-popover-layout");
+});
+
+test("foreign key reference waits for first-load data before opening", async () => {
+  let queryState = { fetchStatus: "fetching", status: "pending" };
+  let resolveFetch: (() => void) | undefined;
+  const fetchPromise = new Promise<void>((resolve) => {
+    resolveFetch = resolve;
+  });
+  const queryActions = {
+    fetch: vi.fn(() => fetchPromise),
+    getState: vi.fn(() => queryState),
+    prefetch: vi.fn(),
+  };
+
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground",
+    carriersName,
+    queryActions
+  );
+
+  const trigger = page.getByRole("button", {
+    name: "Open carrier_id reference 214",
+  });
+  await trigger.click();
+
+  expect(document.querySelector('[data-slot="popover-content"]')).toBeNull();
+  expect(trigger.element().getAttribute("aria-busy")).toBe("true");
+
+  queryState = { fetchStatus: "idle", status: "success" };
+  resolveFetch?.();
+
+  await expect
+    .element(page.getByRole("dialog", { name: "public.carriers" }))
+    .toBeVisible();
+  expect(trigger.element().hasAttribute("aria-busy")).toBe(false);
+
+  await trigger.click();
+  expect(document.querySelector('[data-slot="popover-content"]')).toBeNull();
+  await trigger.click();
+  await expect
+    .element(page.getByRole("dialog", { name: "public.carriers" }))
+    .toBeVisible();
+  expect(queryActions.fetch).toHaveBeenCalledTimes(1);
 });
 
 test("foreign key reference popover fits a narrow viewport", async () => {

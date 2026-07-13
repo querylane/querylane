@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   ForeignKeyReferencePreview,
   RenderOpenReferencedTableLink,
@@ -18,10 +18,15 @@ import {
 } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTableCell } from "@/features/data-explorer/table-data/table-value-format";
-import { useReadRowsQuery } from "@/hooks/api/table-data";
+import {
+  useReadRowsQuery,
+  useReadRowsQueryActions,
+} from "@/hooks/api/table-data";
+import { INTENT_PREFETCH_POLICY } from "@/lib/query-policy";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import {
   CellValueMode,
+  type ReadRowsRequest,
   ReadRowsRequestSchema,
   RowCountMode,
   type TableCell,
@@ -161,22 +166,16 @@ function ForeignKeyReferenceQueryState({
 function ForeignKeyReferenceContent({
   onNavigate,
   preview,
+  request,
   renderOpenReferencedTableLink,
 }: {
   onNavigate: () => void;
   preview: ForeignKeyReferencePreview;
+  request: ReadRowsRequest;
   renderOpenReferencedTableLink?: RenderOpenReferencedTableLink | undefined;
 }) {
   const name = preview.reference.targetTableName;
-  const rowsQuery = useReadRowsQuery(
-    create(ReadRowsRequestSchema, {
-      cellValueMode: CellValueMode.PREVIEW,
-      filter: preview.requiredFilter,
-      name,
-      pageSize: 1,
-      rowCountMode: RowCountMode.NONE,
-    })
-  );
+  const rowsQuery = useReadRowsQuery(request, { enabled: false });
   const resultSet = rowsQuery.data?.resultSet;
   const row = resultSet?.rows[0];
   const pkColumnSet = new Set(
@@ -244,16 +243,142 @@ function ForeignKeyDataCell({
   renderOpenReferencedTableLink?: RenderOpenReferencedTableLink | undefined;
 }) {
   const [open, setOpen] = useState(false);
+  const [isAwaitingOpen, setIsAwaitingOpen] = useState(false);
+  const hoverPrefetchTimerRef = useRef<
+    ReturnType<typeof globalThis.setTimeout> | undefined
+  >(undefined);
+  const openIntentRef = useRef(0);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const formatted = formatTableCell(cell, column);
+  const request = create(ReadRowsRequestSchema, {
+    cellValueMode: CellValueMode.PREVIEW,
+    filter: preview.requiredFilter,
+    name: preview.reference.targetTableName,
+    pageSize: 1,
+    rowCountMode: RowCountMode.NONE,
+  });
+  const rowsQueryActions = useReadRowsQueryActions(request);
+
+  function clearHoverPrefetchTimer() {
+    if (hoverPrefetchTimerRef.current !== undefined) {
+      globalThis.clearTimeout(hoverPrefetchTimerRef.current);
+      hoverPrefetchTimerRef.current = undefined;
+    }
+  }
+
+  function cancelOpenIntent() {
+    openIntentRef.current += 1;
+    setIsAwaitingOpen(false);
+  }
+
+  function finishOpenIntent(intent: number) {
+    if (openIntentRef.current !== intent) {
+      return;
+    }
+    setIsAwaitingOpen(false);
+    setOpen(true);
+  }
+
+  function requestOpen() {
+    const currentState = rowsQueryActions.getState();
+    if (currentState?.status === "success") {
+      setIsAwaitingOpen(false);
+      setOpen(true);
+      return;
+    }
+
+    const intent = openIntentRef.current + 1;
+    openIntentRef.current = intent;
+    setIsAwaitingOpen(true);
+    const fetchPromise = rowsQueryActions.fetch();
+
+    if (rowsQueryActions.getState()?.fetchStatus === "paused") {
+      finishOpenIntent(intent);
+    }
+    fetchPromise.then(
+      () => finishOpenIntent(intent),
+      () => finishOpenIntent(intent)
+    );
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
+      requestOpen();
+      return;
+    }
+    cancelOpenIntent();
+    setOpen(false);
+  }
+
+  function scheduleReferencedRowPrefetch() {
+    clearHoverPrefetchTimer();
+    hoverPrefetchTimerRef.current = globalThis.setTimeout(() => {
+      hoverPrefetchTimerRef.current = undefined;
+      rowsQueryActions.prefetch();
+    }, INTENT_PREFETCH_POLICY.delayMs);
+  }
+
+  function cancelPendingHoverPrefetch() {
+    clearHoverPrefetchTimer();
+  }
+
+  function prefetchReferencedRowOnFocus() {
+    clearHoverPrefetchTimer();
+    rowsQueryActions.prefetch();
+  }
+
+  function cancelPendingOpenOnBlur() {
+    clearHoverPrefetchTimer();
+    if (!open) {
+      cancelOpenIntent();
+    }
+  }
+
+  useEffect(function clearPendingHoverPrefetchOnUnmount() {
+    return () => {
+      if (hoverPrefetchTimerRef.current !== undefined) {
+        globalThis.clearTimeout(hoverPrefetchTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(
+    function cancelPendingOpenOnOutsidePointerDown() {
+      if (!isAwaitingOpen) {
+        return;
+      }
+      function cancelIfOutsideTrigger(event: PointerEvent) {
+        if (
+          event.target instanceof Node &&
+          triggerRef.current?.contains(event.target)
+        ) {
+          return;
+        }
+        openIntentRef.current += 1;
+        setIsAwaitingOpen(false);
+      }
+      document.addEventListener("pointerdown", cancelIfOutsideTrigger);
+      return () => {
+        document.removeEventListener("pointerdown", cancelIfOutsideTrigger);
+      };
+    },
+    [isAwaitingOpen]
+  );
 
   return (
-    <Popover onOpenChange={setOpen} open={open}>
+    <Popover onOpenChange={handleOpenChange} open={open}>
       <PopoverTrigger
         render={
           <ReferenceButton
+            aria-busy={isAwaitingOpen || undefined}
             aria-label={`Open ${column.columnName} reference ${formatted.display}`}
             className="h-auto max-w-full justify-start p-0 font-mono text-xs"
+            onBlur={cancelPendingOpenOnBlur}
             onClick={(event) => event.stopPropagation()}
+            onFocus={prefetchReferencedRowOnFocus}
+            onPointerEnter={scheduleReferencedRowPrefetch}
+            onPointerLeave={cancelPendingHoverPrefetch}
+            ref={triggerRef}
             size="xs"
             title={`Open referenced row for ${column.columnName}`}
             type="button"
@@ -272,6 +397,7 @@ function ForeignKeyDataCell({
             onNavigate={() => setOpen(false)}
             preview={preview}
             renderOpenReferencedTableLink={renderOpenReferencedTableLink}
+            request={request}
           />
         </PopoverContent>
       ) : null}

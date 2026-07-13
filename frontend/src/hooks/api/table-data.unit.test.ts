@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   useReadCellValueMutation,
   useReadRowsQuery,
+  useReadRowsQueryActions,
 } from "@/hooks/api/table-data";
 import { QUERY_STALE_TIME, RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import { ReadRowsRequestSchema } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
@@ -11,20 +12,30 @@ import {
   readRows,
 } from "@/protogen/querylane/console/v1alpha1/table_data-TableDataService_connectquery";
 
-const { useMutationMock, useQueryMock } = vi.hoisted(() => ({
-  useMutationMock: vi.fn(),
-  useQueryMock: vi.fn(),
-}));
+const { useMutationMock, useQueryClientMock, useQueryMock, useTransportMock } =
+  vi.hoisted(() => ({
+    useMutationMock: vi.fn(),
+    useQueryClientMock: vi.fn(),
+    useQueryMock: vi.fn(),
+    useTransportMock: vi.fn(),
+  }));
 
 vi.mock("@connectrpc/connect-query", () => ({
   useMutation: useMutationMock,
   useQuery: useQueryMock,
+  useTransport: useTransportMock,
+}));
+
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: useQueryClientMock,
 }));
 
 describe("useReadRowsQuery", () => {
   beforeEach(() => {
     useQueryMock.mockReset();
     useMutationMock.mockReset();
+    useQueryClientMock.mockReset();
+    useTransportMock.mockReset();
   });
 
   test("disables reads until the table resource name is known", () => {
@@ -99,6 +110,45 @@ describe("useReadRowsQuery", () => {
         ],
       })
     ).toBeUndefined();
+  });
+});
+
+describe("useReadRowsQueryActions", () => {
+  test("uses the same query options for intent prefetch and clicked fetch", async () => {
+    const request = create(ReadRowsRequestSchema, {
+      name: "instances/i/databases/d/schemas/public/tables/events",
+    });
+    const queryState = { fetchStatus: "idle", status: "success" };
+    interface QueryOptionsStub {
+      meta?: Record<string, unknown>;
+      queryKey: readonly unknown[];
+      staleTime?: number;
+    }
+    const queryClient = {
+      fetchQuery: vi.fn((_options: QueryOptionsStub) =>
+        Promise.resolve("rows")
+      ),
+      getQueryState: vi.fn(() => queryState),
+      prefetchQuery: vi.fn((_options: QueryOptionsStub) => Promise.resolve()),
+    };
+    useQueryClientMock.mockReturnValue(queryClient);
+    useTransportMock.mockReturnValue({});
+
+    const actions = useReadRowsQueryActions(request);
+
+    expect(actions.getState()).toBe(queryState);
+    await actions.fetch();
+    actions.prefetch();
+    await Promise.resolve();
+
+    const fetchOptions = queryClient.fetchQuery.mock.calls[0]?.[0];
+    const prefetchOptions = queryClient.prefetchQuery.mock.calls[0]?.[0];
+    expect(fetchOptions).toMatchObject(RESOURCE_QUERY_OPTIONS.tableRows);
+    expect(prefetchOptions).toMatchObject({
+      ...RESOURCE_QUERY_OPTIONS.tableRows,
+      meta: { appErrorSurface: "silent" },
+    });
+    expect(prefetchOptions?.queryKey).toEqual(fetchOptions?.queryKey);
   });
 });
 

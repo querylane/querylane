@@ -5,6 +5,8 @@ import {
   useMutation,
   useTransport,
 } from "@connectrpc/connect-query";
+import { createQueryOptions } from "@connectrpc/connect-query-core";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ExportFormat } from "@/features/data-explorer/table-data/selection-formatters";
 import {
   exportStreamRows,
@@ -12,6 +14,7 @@ import {
   type StreamRowsExportProgress,
 } from "@/features/data-explorer/table-data/stream-rows-export";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
+import { prefetchRouteQuery } from "@/lib/route-prefetch";
 import type { ReadRowsRequest } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import {
   readCellValue,
@@ -56,6 +59,21 @@ function useReadRowsQuery(
   return useConnectQuery(readRows, request, connectOptions);
 }
 
+function useReadRowsQueryActions(request: ReadRowsRequest) {
+  const queryClient = useQueryClient();
+  const transport = useTransport();
+  const queryOptions = {
+    ...createQueryOptions(readRows, request, { transport }),
+    ...RESOURCE_QUERY_OPTIONS.tableRows,
+  };
+
+  return {
+    fetch: () => queryClient.fetchQuery(queryOptions),
+    getState: () => queryClient.getQueryState(queryOptions.queryKey),
+    prefetch: () => prefetchRouteQuery(queryClient, queryOptions),
+  };
+}
+
 function useReadCellValueMutation(
   options?: UseMutationOptions<
     (typeof readCellValue)["input"],
@@ -77,4 +95,9 @@ function useStreamRowsExporter(): (args: {
     exportStreamRows({ exportFormat, onProgress, request, signal, transport });
 }
 
-export { useReadCellValueMutation, useReadRowsQuery, useStreamRowsExporter };
+export {
+  useReadCellValueMutation,
+  useReadRowsQuery,
+  useReadRowsQueryActions,
+  useStreamRowsExporter,
+};
