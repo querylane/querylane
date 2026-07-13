@@ -651,15 +651,6 @@ function MetadataTabResult<Row extends RowData>({
   );
 }
 
-function formatColumnInventorySummary(rows: ColumnRow[]) {
-  const indexedCount = rows.filter(
-    (row) => row.isIndexed || row.column.isPrimaryKey || row.column.isUnique
-  ).length;
-  const nullableCount = rows.filter((row) => row.column.isNullable).length;
-  const columnLabel = rows.length === 1 ? "column" : "columns";
-  return `${rows.length.toLocaleString()} ${columnLabel} · ${indexedCount.toLocaleString()} indexed · ${nullableCount.toLocaleString()} nullable`;
-}
-
 function columnSearchText(row: ColumnRow) {
   const typeMeta = describePostgresType(row.column);
   return [
@@ -700,24 +691,24 @@ function ColumnNameCell({ row }: { row: ColumnRow }) {
         </span>
         {column.isPrimaryKey ? (
           <Pill size="sm" tone="amber">
-            PK
+            Primary key
           </Pill>
         ) : null}
         {column.isUnique ? (
           <Pill size="sm" tone="emerald">
-            UQ
+            Unique
           </Pill>
         ) : null}
         {fks.length > 0 ? (
           <span aria-hidden="true" title={foreignKeyTitle}>
             <Pill size="sm" tone="blue">
-              FK
+              Foreign
             </Pill>
           </span>
         ) : null}
         {showIndexedBadge ? (
           <Pill size="sm" tone="violet">
-            IDX
+            Index
           </Pill>
         ) : null}
         {column.isGenerated ? (
@@ -933,12 +924,9 @@ function ColumnsInventoryTable({
       <div className="flex min-h-8 min-w-0 flex-wrap items-center gap-2">
         <DataTableFilter
           onChange={setSearchValue}
-          placeholder="Filter columns…"
+          placeholder="Search columns…"
           value={searchValue}
         />
-        <span className="text-muted-foreground text-xs">
-          {formatColumnInventorySummary(visibleRows)}
-        </span>
         {filters}
         <div className="flex-1" />
         <div className="flex items-center gap-1.5 text-muted-foreground text-xs">

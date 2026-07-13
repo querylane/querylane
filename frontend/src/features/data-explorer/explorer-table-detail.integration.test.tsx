@@ -1436,7 +1436,7 @@ describe("TableDetail columns tab", () => {
       />
     );
 
-    expect(screen.getByText("4 columns · 2 indexed · 1 nullable")).toBeTruthy();
+    expect(screen.queryByText("4 columns · 2 indexed · 1 nullable")).toBeNull();
     expect(screen.getByText("Catalog metadata")).toBeTruthy();
     expect(screen.getByText(LAST_FETCHED_RE)).toBeTruthy();
     expect(
@@ -1453,9 +1453,12 @@ describe("TableDetail columns tab", () => {
     expect(screen.getByText("Surrogate key")).toBeTruthy();
     expect(screen.getByText("Human-readable booking reference")).toBeTruthy();
     expect(screen.getByText("Set NULL once delivered")).toBeTruthy();
-    expect(screen.getByText("PK")).toBeTruthy();
-    expect(screen.getByText("UQ")).toBeTruthy();
-    expect(screen.getByText("FK")).toBeTruthy();
+    expect(screen.getByText("Primary key")).toBeTruthy();
+    expect(screen.getByText("Unique")).toBeTruthy();
+    expect(screen.getByText("Foreign")).toBeTruthy();
+    expect(screen.queryByText("PK")).toBeNull();
+    expect(screen.queryByText("UQ")).toBeNull();
+    expect(screen.queryByText("FK")).toBeNull();
     expect(screen.getByText("YES")).toBeTruthy();
     expect(screen.getAllByText("NO")).toHaveLength(3);
     expect(screen.getAllByText("0%")).toHaveLength(3);
@@ -1464,24 +1467,18 @@ describe("TableDetail columns tab", () => {
       screen.getAllByTitle("Not available from the current column metadata API")
     ).toHaveLength(16);
 
-    const filter = screen.getByRole("textbox", { name: "Filter columns…" });
-    await user.type(filter, "booking");
+    const search = screen.getByRole("textbox", { name: "Search columns…" });
+    await user.type(search, "booking");
     await waitFor(() => {
-      expect(
-        screen.getByText("1 column · 1 indexed · 0 nullable")
-      ).toBeTruthy();
+      expect(screen.queryByText("Surrogate key")).toBeNull();
     });
     expect(screen.getByText("Human-readable booking reference")).toBeTruthy();
-    expect(screen.queryByText("Surrogate key")).toBeNull();
 
-    await user.clear(filter);
-    await user.type(filter, "carriers.id");
+    await user.clear(search);
+    await user.type(search, "carriers.id");
     await waitFor(() => {
-      expect(
-        screen.getByText("1 column · 0 indexed · 0 nullable")
-      ).toBeTruthy();
+      expect(screen.getByText("carrier_id")).toBeTruthy();
     });
-    expect(screen.getByText("carrier_id")).toBeTruthy();
   });
 });
 

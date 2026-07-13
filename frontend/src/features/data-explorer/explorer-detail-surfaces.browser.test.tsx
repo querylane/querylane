@@ -70,7 +70,7 @@ const APP_READER_SUPPORT_AGENT_RE = /app_reader, support_agent/;
 const DEFAULT_BALANCED_TREE_RE = /Default balanced tree/;
 const DEFAULT_BALANCED_TREE_SUMMARY_RE = /Default balanced tree for equality/;
 const BIGINT_TYPE_TITLE_RE = /Integer.*64-bit/;
-const ID_PRIMARY_KEY_CELL_RE = /id\s+PK\s+Surrogate key/;
+const ID_PRIMARY_KEY_CELL_RE = /id\s+Primary key\s+Surrogate key/;
 const JSONB_TYPE_TITLE_RE = /JSON.*binary JSON/;
 const NUMERIC_TYPE_TITLE_RE = /Decimal.*Exact decimal/;
 const PARTITION_2024_BOUND_RE = /FOR VALUES FROM \('2024-01-01'\)/;
@@ -1606,13 +1606,16 @@ test("data explorer table columns match the redesign inventory", async () => {
   await expect
     .element(page.getByRole("cell", { name: ID_PRIMARY_KEY_CELL_RE }))
     .toBeVisible();
+  await expect.element(page.getByText("Unique")).toBeVisible();
+  await expect.element(page.getByText("Foreign")).toBeVisible();
+  await expect.element(page.getByText("Index")).toBeVisible();
   await expect
     .element(page.getByText("Human-readable booking reference"))
     .toBeVisible();
   await expect.element(page.getByText("Set NULL once delivered")).toBeVisible();
   await expect
     .element(page.getByText("9 columns · 4 indexed · 1 nullable"))
-    .toBeVisible();
+    .not.toBeInTheDocument();
   await expect
     .element(page.getByText(TABLE_COLUMNS_LAST_FETCHED_RE))
     .toBeVisible();
@@ -1621,7 +1624,7 @@ test("data explorer table columns match the redesign inventory", async () => {
     .not.toBeInTheDocument();
 
   const searchInput = page
-    .getByRole("textbox", { name: "Filter columns…" })
+    .getByRole("textbox", { name: "Search columns…" })
     .element();
   const filterBar = requireFacetFilterBar("column facet filters");
   expect(filterBar.textContent).toContain("Type");
@@ -1658,12 +1661,12 @@ test("data explorer table columns match the redesign inventory", async () => {
     document.querySelector("tbody tr:first-child td:nth-child(2)")?.textContent
   ).toContain("carrier_id");
   await page
-    .getByRole("textbox", { exact: true, name: "Filter columns…" })
+    .getByRole("textbox", { exact: true, name: "Search columns…" })
     .fill("eta");
   await expect.element(page.getByText("Set NULL once delivered")).toBeVisible();
   await expect
     .element(page.getByText("1 column · 0 indexed · 1 nullable"))
-    .toBeVisible();
+    .not.toBeInTheDocument();
   expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
 });
 
