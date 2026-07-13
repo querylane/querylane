@@ -13,10 +13,13 @@ export const file_querylane_console_v1alpha1_errors: GenFile = /*@__PURE__*/
   fileDesc("CidxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS9lcnJvcnMucHJvdG8SGnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExIv0BChVQb3N0Z3JlU3FsRXJyb3JEZXRhaWwSEAoIc3Fsc3RhdGUYASABKAkSFgoOc3Fsc3RhdGVfY2xhc3MYAiABKAkSFgoOY29uZGl0aW9uX25hbWUYAyABKAkSEQoJb3BlcmF0aW9uGAQgASgJEloKDXNlcnZlcl9maWVsZHMYBSADKAsyQy5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5Qb3N0Z3JlU3FsRXJyb3JEZXRhaWwuU2VydmVyRmllbGRzRW50cnkaMwoRU2VydmVyRmllbGRzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASq6AgoLRXJyb3JSZWFzb24SHAoYRVJST1JfUkVBU09OX1VOU1BFQ0lGSUVEEAASFgoSUkVTT1VSQ0VfTk9UX0ZPVU5EEAESGwoXUkVTT1VSQ0VfQUxSRUFEWV9FWElTVFMQAhIUChBJTlZBTElEX0FSR1VNRU5UEAMSEgoOSU5URVJOQUxfRVJST1IQBxILCgdUSU1FT1VUEAkSFwoTRkFJTEVEX1BSRUNPTkRJVElPThAKEhMKD1VOQVVUSEVOVElDQVRFRBALEhUKEVBFUk1JU1NJT05fREVOSUVEEAwSHwobQVBQX0RBVEFCQVNFX05PVF9DT05GSUdVUkVEEGUSHAoYQVBQX0RBVEFCQVNFX1VOQVZBSUxBQkxFEGYSHQoZTElWRV9RVUVSWV9MSU1JVF9FWENFRURFRBBnQpMCCh5jb20ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTFCC0Vycm9yc1Byb3RvUAFaWmdpdGh1Yi5jb20vcXVlcnlsYW5lL3F1ZXJ5bGFuZS9iYWNrZW5kL3Byb3RvZ2VuL3F1ZXJ5bGFuZS9jb25zb2xlL3YxYWxwaGExO2NvbnNvbGV2MWFscGhhMaICA1FDWKoCGlF1ZXJ5bGFuZS5Db25zb2xlLlYxYWxwaGExygIaUXVlcnlsYW5lXENvbnNvbGVcVjFhbHBoYTHiAiZRdWVyeWxhbmVcQ29uc29sZVxWMWFscGhhMVxHUEJNZXRhZGF0YeoCHFF1ZXJ5bGFuZTo6Q29uc29sZTo6VjFhbHBoYTFiBnByb3RvMw");
 
 /**
- * PostgreSqlErrorDetail carries safe PostgreSQL SQLSTATE metadata for Connect
- * error clients. It intentionally excludes raw server message, detail, hint,
- * where, internal query, source file, and routine fields because those can
- * contain SQL text, customer data, credentials, hostnames, or backend internals.
+ * PostgreSqlErrorDetail carries PostgreSQL SQLSTATE metadata for Connect error
+ * clients. For user-managed instances, server_fields can contain bounded,
+ * untrusted message, detail, hint, severity, position, schema_name, table_name,
+ * column_name, data_type_name, and constraint_name values. Clients must render
+ * these as text and must not copy them into telemetry. Querylane's meta database
+ * never exposes server_fields. Internal query context and PostgreSQL source
+ * fields are always excluded.
  *
  * @generated from message querylane.console.v1alpha1.PostgreSqlErrorDetail
  */
@@ -51,7 +54,7 @@ export type PostgreSqlErrorDetail = Message<"querylane.console.v1alpha1.PostgreS
   operation: string;
 
   /**
-   * Safe structured fields copied from pgconn.PgError when available.
+   * Bounded server fields approved for the current database trust boundary.
    *
    * @generated from field: map<string, string> server_fields = 5;
    */

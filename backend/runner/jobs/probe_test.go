@@ -1,17 +1,22 @@
 package jobs
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
 	"github.com/querylane/querylane/backend/runner"
@@ -287,6 +292,34 @@ func TestInstanceProbeJob_Run(t *testing.T) {
 	}
 }
 
+func TestOpenProbeSessionRedactsPostgresServerFieldsFromLogs(t *testing.T) { //nolint:paralleltest // replaces the process-wide slog logger
+	var logs bytes.Buffer
+
+	previous := slog.Default()
+
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	pgErr := &pgconn.PgError{
+		Code:    pgerrcode.InvalidPassword,
+		Message: "password contains api_key=secret",
+		Detail:  "connect to private.example.com",
+	}
+
+	session, ok := openProbeSession(
+		context.Background(),
+		&fakeSessionOpener{openErr: fmt.Errorf("dial instance: %w", pgErr)},
+		"redaction_probe",
+		resource.InstanceName{InstanceID: "test"},
+	)
+
+	assert.False(t, ok)
+	assert.Nil(t, session)
+	assert.Contains(t, logs.String(), "postgres SQLSTATE 28P01 invalid_password")
+	assert.NotContains(t, logs.String(), "api_key=secret")
+	assert.NotContains(t, logs.String(), "private.example.com")
+}
+
 func TestInstanceProbeJob_VersionGateCachesLookups(t *testing.T) {
 	t.Parallel()
 
@@ -343,9 +376,12 @@ func TestInstanceProbeJob_StructuralFailureSuppressesTarget(t *testing.T) {
 		Config: probeConfig("probe_test"),
 		Collect: func(context.Context, engine.InstanceProber, string, time.Time) (runner.Commit, error) {
 			collectCalls++
-			// A fork missing the catalog view the probe needs surfaces as
-			// ErrQueryInvalid (undefined table/function/column).
-			return nil, fmt.Errorf("query cache counters: %w", engine.ErrQueryInvalid)
+
+			return nil, fmt.Errorf("query cache counters: %w", postgreserrors.Wrap(
+				&pgconn.PgError{Code: pgerrcode.UndefinedTable},
+				postgreserrors.ProfileDefault,
+				"query cache counters",
+			))
 		},
 	}
 

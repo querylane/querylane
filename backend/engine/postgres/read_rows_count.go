@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
@@ -53,7 +54,7 @@ func (d *Postgres) resolveReadRowsRowCount(ctx context.Context, tx *sql.Tx, para
 
 		count, err := readExactRowCount(ctx, tx, params)
 		if err != nil {
-			if errors.Is(err, engine.ErrQueryTimeout) {
+			if isExactRowCountTimeout(err) {
 				return &api.RowCount{Status: api.RowCount_STATUS_UNAVAILABLE}, nil
 			}
 
@@ -64,6 +65,10 @@ func (d *Postgres) resolveReadRowsRowCount(ctx context.Context, tx *sql.Tx, para
 	default:
 		return &api.RowCount{Status: api.RowCount_STATUS_UNAVAILABLE}, nil
 	}
+}
+
+func isExactRowCountTimeout(err error) bool {
+	return errors.Is(err, engine.ErrQueryTimeout) || postgreserrors.IsKind(err, postgreserrors.KindTimeout)
 }
 
 func buildExactRowCountFromStats(stats rowCountStats) *api.RowCount {
@@ -112,7 +117,7 @@ func readExactRowCount(ctx context.Context, tx *sql.Tx, params engine.ReadRowsPa
 		return 0, err
 	}
 
-	if err := setStatementTimeout(ctx, tx, exactRowCountTimeout); err != nil {
+	if err := setStatementTimeout(ctx, tx, exactRowCountTimeout, postgreserrors.ProfileDefault); err != nil {
 		if rollbackErr := rollbackExactRowCountSavepoint(ctx, tx); rollbackErr != nil {
 			return 0, rollbackErr
 		}
@@ -140,7 +145,7 @@ func readExactRowCount(ctx context.Context, tx *sql.Tx, params engine.ReadRowsPa
 		return 0, classified
 	}
 
-	if err := setStatementTimeout(ctx, tx, defaultReadTimeout); err != nil {
+	if err := setStatementTimeout(ctx, tx, defaultReadTimeout, postgreserrors.ProfileDefault); err != nil {
 		if rollbackErr := rollbackExactRowCountSavepoint(ctx, tx); rollbackErr != nil {
 			return 0, rollbackErr
 		}

@@ -15,9 +15,8 @@ type InstanceOverview struct {
 	Cache       *CacheMetrics
 	IO          *IOMetrics
 
-	// PartialErrors carries the safe classified cause for nil metric fields.
-	// Err may unwrap to PostgresSQLError; callers should use errors.As for
-	// technical metadata and must not render Err.Error() directly to users.
+	// PartialErrors carries the classified cause for nil metric fields.
+	// PostgreSQL causes may unwrap to postgreserrors.Error.
 	PartialErrors []OverviewMetricError
 }
 
@@ -30,10 +29,8 @@ type InstanceHealth struct {
 	PGStatStatements   *PGStatStatementsHealth
 	Autovacuum         *AutovacuumHealth
 
-	// PartialErrors carries the safe classified cause for nil health fields or
-	// degraded subqueries. Err may unwrap to PostgresSQLError; callers should
-	// use errors.As for technical metadata and must not render Err.Error()
-	// directly to users.
+	// PartialErrors carries the classified cause for nil health fields or
+	// degraded subqueries. PostgreSQL causes may unwrap to postgreserrors.Error.
 	PartialErrors []OverviewMetricError
 }
 

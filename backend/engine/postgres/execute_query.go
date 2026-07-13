@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
@@ -40,16 +41,16 @@ func closeNoticeSession(session *engine.PostgresNoticeSession) {
 func (*Postgres) ExecuteQuery(ctx context.Context, db *sql.DB, params engine.ExecuteQueryParams) (engine.ExecuteQueryStream, error) {
 	queryConn, noticeSession, err := beginNoticeCapture(ctx, db)
 	if err != nil {
-		return nil, classifyQueryError("capture query notices", err)
+		return nil, classifySQLConsoleError("capture query notices", err)
 	}
 
 	tx, err := queryConn.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		closeNoticeSession(noticeSession)
-		return nil, classifyQueryError("begin read-only tx", err)
+		return nil, classifySQLConsoleError("begin read-only tx", err)
 	}
 
-	if err := setStatementTimeout(ctx, tx, params.Timeout); err != nil {
+	if err := setStatementTimeout(ctx, tx, params.Timeout, postgreserrors.ProfileSQLConsole); err != nil {
 		_ = tx.Rollback()
 
 		closeNoticeSession(noticeSession)
@@ -63,7 +64,7 @@ func (*Postgres) ExecuteQuery(ctx context.Context, db *sql.DB, params engine.Exe
 
 			closeNoticeSession(noticeSession)
 
-			return nil, classifyQueryError("set search_path", err)
+			return nil, classifySQLConsoleError("set search_path", err)
 		}
 	}
 
@@ -75,7 +76,7 @@ func (*Postgres) ExecuteQuery(ctx context.Context, db *sql.DB, params engine.Exe
 
 		closeNoticeSession(noticeSession)
 
-		return nil, classifyQueryError("execute query", err)
+		return nil, classifySQLConsoleError("execute query", err)
 	}
 
 	columns, err := buildResultColumns(rows)
@@ -103,23 +104,23 @@ func (*Postgres) ExecuteQuery(ctx context.Context, db *sql.DB, params engine.Exe
 func (*Postgres) ExplainQuery(ctx context.Context, db *sql.DB, params engine.ExplainQueryParams) (*engine.ExplainQueryResult, error) {
 	queryConn, noticeSession, err := beginNoticeCapture(ctx, db)
 	if err != nil {
-		return nil, classifyQueryError("capture explain notices", err)
+		return nil, classifySQLConsoleError("capture explain notices", err)
 	}
 	defer closeNoticeSession(noticeSession)
 
 	tx, err := queryConn.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
-		return nil, classifyQueryError("begin read-only tx", err)
+		return nil, classifySQLConsoleError("begin read-only tx", err)
 	}
 	defer tx.Rollback() //nolint:errcheck // read-only tx cleanup is best-effort
 
-	if err := setStatementTimeout(ctx, tx, params.Timeout); err != nil {
+	if err := setStatementTimeout(ctx, tx, params.Timeout, postgreserrors.ProfileSQLConsole); err != nil {
 		return nil, err
 	}
 
 	if params.DefaultSchema != "" {
 		if _, err := tx.ExecContext(ctx, "SET LOCAL search_path = "+quoteIdent(params.DefaultSchema)); err != nil {
-			return nil, classifyQueryError("set search_path", err)
+			return nil, classifySQLConsoleError("set search_path", err)
 		}
 	}
 
@@ -127,7 +128,7 @@ func (*Postgres) ExplainQuery(ctx context.Context, db *sql.DB, params engine.Exp
 
 	rows, err := tx.QueryContext(ctx, buildExplainStatement(params))
 	if err != nil {
-		return nil, classifyQueryError("explain query", err)
+		return nil, classifySQLConsoleError("explain query", err)
 	}
 	defer rows.Close()
 
@@ -136,14 +137,14 @@ func (*Postgres) ExplainQuery(ctx context.Context, db *sql.DB, params engine.Exp
 	for rows.Next() {
 		var line string
 		if err := rows.Scan(&line); err != nil {
-			return nil, classifyQueryError("scan explain", err)
+			return nil, classifySQLConsoleError("scan explain", err)
 		}
 
 		planLines = append(planLines, line)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, classifyQueryError("explain rows", err)
+		return nil, classifySQLConsoleError("explain rows", err)
 	}
 
 	return &engine.ExplainQueryResult{
@@ -189,7 +190,7 @@ func (s *queryStream) Next() bool {
 
 	if !s.rows.Next() {
 		if err := s.rows.Err(); err != nil {
-			s.err = classifyQueryError("stream rows", err)
+			s.err = classifySQLConsoleError("stream rows", err)
 		}
 
 		s.finalize()
@@ -235,7 +236,7 @@ func (s *queryStream) detectTruncation() {
 	}
 
 	if err := s.rows.Err(); err != nil {
-		s.err = classifyQueryError("stream rows", err)
+		s.err = classifySQLConsoleError("stream rows", err)
 	}
 }
 
@@ -266,18 +267,18 @@ func (s *queryStream) closeResources() {
 
 	if s.rows != nil {
 		if err := s.rows.Close(); err != nil && s.err == nil {
-			s.err = classifyQueryError("close rows", err)
+			s.err = classifySQLConsoleError("close rows", err)
 		}
 	}
 
 	if s.tx != nil {
 		if err := s.tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) && s.err == nil {
-			s.err = classifyQueryError("rollback tx", err)
+			s.err = classifySQLConsoleError("rollback tx", err)
 		}
 	}
 
 	if err := s.notices.Close(); err != nil && s.err == nil {
-		s.err = classifyQueryError("close notice capture", err)
+		s.err = classifySQLConsoleError("close notice capture", err)
 	}
 }
 
@@ -288,7 +289,7 @@ func (s *queryStream) closeResources() {
 func buildResultColumns(rows *sql.Rows) ([]*api.TableResultColumn, error) {
 	columnTypes, err := rows.ColumnTypes()
 	if err != nil {
-		return nil, classifyQueryError("column types", err)
+		return nil, classifySQLConsoleError("column types", err)
 	}
 
 	resultColumns := make([]*api.TableResultColumn, len(columnTypes))
@@ -315,7 +316,7 @@ func scanResultRow(rows *sql.Rows, columns []*api.TableResultColumn) (*api.Table
 	}
 
 	if err := rows.Scan(values...); err != nil {
-		return nil, classifyQueryError("scan row", err)
+		return nil, classifySQLConsoleError("scan row", err)
 	}
 
 	cells := make([]*api.TableCell, len(values))

@@ -112,10 +112,13 @@ func (ErrorReason) EnumDescriptor() ([]byte, []int) {
 	return file_querylane_console_v1alpha1_errors_proto_rawDescGZIP(), []int{0}
 }
 
-// PostgreSqlErrorDetail carries safe PostgreSQL SQLSTATE metadata for Connect
-// error clients. It intentionally excludes raw server message, detail, hint,
-// where, internal query, source file, and routine fields because those can
-// contain SQL text, customer data, credentials, hostnames, or backend internals.
+// PostgreSqlErrorDetail carries PostgreSQL SQLSTATE metadata for Connect error
+// clients. For user-managed instances, server_fields can contain bounded,
+// untrusted message, detail, hint, severity, position, schema_name, table_name,
+// column_name, data_type_name, and constraint_name values. Clients must render
+// these as text and must not copy them into telemetry. Querylane's meta database
+// never exposes server_fields. Internal query context and PostgreSQL source
+// fields are always excluded.
 type PostgreSqlErrorDetail struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The five-character SQLSTATE code, for example "23505".
@@ -127,7 +130,7 @@ type PostgreSqlErrorDetail struct {
 	ConditionName string `protobuf:"bytes,3,opt,name=condition_name,json=conditionName,proto3" json:"condition_name,omitempty"`
 	// The backend operation that was running when PostgreSQL returned the error.
 	Operation string `protobuf:"bytes,4,opt,name=operation,proto3" json:"operation,omitempty"`
-	// Safe structured fields copied from pgconn.PgError when available.
+	// Bounded server fields approved for the current database trust boundary.
 	ServerFields  map[string]string `protobuf:"bytes,5,rep,name=server_fields,json=serverFields,proto3" json:"server_fields,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

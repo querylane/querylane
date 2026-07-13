@@ -36,6 +36,7 @@ function encodeBinaryDetail(value: Uint8Array): string {
 function encodePostgresErrorDetail(input: {
   conditionName: string;
   operation: string;
+  serverFields?: Record<string, string>;
   sqlstate: string;
   sqlstateClass: string;
 }): Uint8Array {
@@ -260,7 +261,7 @@ describe("normalizeAppUiError", () => {
 describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
   it("promotes decoded PostgreSQL details into title, badges, and safe monitoring tags", () => {
     const error = new ConnectError(
-      "PostgreSQL query_canceled during execute_query",
+      "PostgreSQL 57014: query contains api_key=secret",
       Code.DeadlineExceeded
     );
     error.details = [
@@ -279,10 +280,26 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
         value: new Uint8Array([1]),
       },
       {
+        debug: {
+          conditionName: "query_canceled",
+          operation: "execute_query",
+          serverFields: {
+            detail: "api_key=secret",
+            hint: "connect to private.example.com",
+            message: "query contains api_key=secret",
+          },
+          sqlstate: "57014",
+          sqlstateClass: "57",
+        },
         type: POSTGRES_DETAIL_TYPE,
         value: encodePostgresErrorDetail({
           conditionName: "query_canceled",
           operation: "execute_query",
+          serverFields: {
+            detail: "api_key=secret",
+            hint: "connect to private.example.com",
+            message: "query contains api_key=secret",
+          },
           sqlstate: "57014",
           sqlstateClass: "57",
         }),
@@ -292,6 +309,7 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
     const normalized = normalizeAppUiError(error, { source: "connect" });
     const sections = buildAppUiErrorTechnicalSections(normalized);
     const captureCalls: Array<{
+      capturedError: unknown;
       context: {
         extras?: Record<string, unknown> | undefined;
         tags?: Record<string, string> | undefined;
@@ -302,8 +320,8 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
     }> = [];
 
     reportAppUiError(normalized, undefined, {
-      captureException: (_capturedError, context) => {
-        captureCalls.push({ context });
+      captureException: (capturedError, context) => {
+        captureCalls.push({ capturedError, context });
       },
       logger: {
         error: (_message, payload) => {
@@ -315,6 +333,9 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
     const errorSection = sections.find((section) => section.id === "error");
 
     expect(normalized.title).toBe("PostgreSQL query timed out");
+    expect(normalized.message).toContain("api_key=secret");
+    expect(normalized.technicalDetails).toContain("api_key=secret");
+    expect(normalized.technicalDetails).toContain("private.example.com");
     expect(normalized.postgres).toEqual({
       conditionName: "query_canceled",
       operation: "execute_query",
@@ -349,6 +370,10 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
       postgresSqlstate: "57014",
       postgresSqlstateClass: "57",
     });
+    expect(JSON.stringify(captureCalls)).not.toContain("api_key=secret");
+    expect(JSON.stringify(captureCalls)).not.toContain("private.example.com");
+    expect(JSON.stringify(loggerCalls)).not.toContain("api_key=secret");
+    expect(JSON.stringify(loggerCalls)).not.toContain("private.example.com");
   });
 
   it("keeps SQLSTATE operation labels that use backend casing", () => {

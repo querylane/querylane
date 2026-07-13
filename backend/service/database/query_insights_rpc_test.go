@@ -5,11 +5,13 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
 )
@@ -97,14 +99,10 @@ func TestGetDatabaseQueryInsightsReportsPartialErrors(t *testing.T) {
 			return &engine.DatabaseQueryInsights{
 				PartialErrors: []engine.OverviewMetricError{{
 					Metric: "query_stats",
-					Err: &engine.PostgresSQLError{
-						Kind:          engine.PostgresSQLKindInvalidArgument,
-						SQLState:      "42P01",
-						SQLStateClass: "42",
-						ConditionName: "undefined_table",
-						Operation:     "query pg_stat_statements",
-						Sentinel:      engine.ErrQueryInvalid,
-					},
+					Err: postgreserrors.Wrap(&pgconn.PgError{
+						Code:    "42P01",
+						Message: `relation "pg_stat_statements" does not exist`,
+					}, postgreserrors.ProfileDefault, "query pg_stat_statements"),
 				}},
 			}, nil
 		},
@@ -121,6 +119,7 @@ func TestGetDatabaseQueryInsightsReportsPartialErrors(t *testing.T) {
 
 	var info errdetails.ErrorInfo
 	require.NoError(t, partialErrors[0].GetDetails()[0].UnmarshalTo(&info))
+	assert.Equal(t, `PostgreSQL 42P01: relation "pg_stat_statements" does not exist`, partialErrors[0].GetMessage())
 	assert.Equal(t, "QUERY_INSIGHTS_UNAVAILABLE", info.GetReason())
 	assert.Equal(t, "query_stats", info.GetMetadata()["metric"])
 	assert.Equal(t, "42P01", info.GetMetadata()["sqlstate"])

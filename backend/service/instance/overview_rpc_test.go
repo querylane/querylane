@@ -5,12 +5,14 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
 )
@@ -112,17 +114,11 @@ func TestGetInstanceOverviewPartialErrorIncludesPostgresSQLMetadata(t *testing.T
 				PartialErrors: []engine.OverviewMetricError{
 					{
 						Metric: "storage",
-						Err: &engine.PostgresSQLError{
-							Kind:          engine.PostgresSQLKindPermissionDenied,
-							SQLState:      "42501",
-							SQLStateClass: "42",
-							ConditionName: "insufficient_privilege",
-							Operation:     "query storage metrics",
-							SafeFields: map[string]string{
-								"schema_name": "pg_catalog",
-							},
-							Sentinel: engine.ErrQueryPermissionDenied,
-						},
+						Err: postgreserrors.Wrap(&pgconn.PgError{
+							Code:       "42501",
+							Message:    "permission denied for view pg_stat_database",
+							SchemaName: "pg_catalog",
+						}, postgreserrors.ProfileDefault, "query storage metrics"),
 					},
 				},
 			}, nil
@@ -137,6 +133,7 @@ func TestGetInstanceOverviewPartialErrorIncludesPostgresSQLMetadata(t *testing.T
 
 	storageError := requireMetricPartialError(t, resp.Msg.GetPartialErrors(), "storage")
 	assert.Equal(t, int32(connect.CodePermissionDenied), storageError.GetCode())
+	assert.Equal(t, "PostgreSQL 42501: permission denied for view pg_stat_database", storageError.GetMessage())
 
 	info := requireStatusErrorInfo(t, storageError)
 	assert.Equal(t, "METRIC_UNAVAILABLE", info.GetReason())
@@ -145,7 +142,7 @@ func TestGetInstanceOverviewPartialErrorIncludesPostgresSQLMetadata(t *testing.T
 	assert.Equal(t, "42", info.GetMetadata()["sqlstate_class"])
 	assert.Equal(t, "insufficient_privilege", info.GetMetadata()["condition_name"])
 	assert.Equal(t, "query storage metrics", info.GetMetadata()["operation"])
-	assert.Equal(t, "pg_catalog", info.GetMetadata()["schema_name"])
+	assert.NotContains(t, info.GetMetadata(), "schema_name")
 	assert.NotContains(t, info.GetMetadata(), "schemaName")
 
 	postgresDetail := requireStatusPostgresErrorDetail(t, storageError)
@@ -154,6 +151,7 @@ func TestGetInstanceOverviewPartialErrorIncludesPostgresSQLMetadata(t *testing.T
 	assert.Equal(t, "insufficient_privilege", postgresDetail.GetConditionName())
 	assert.Equal(t, "query storage metrics", postgresDetail.GetOperation())
 	assert.Equal(t, "pg_catalog", postgresDetail.GetServerFields()["schema_name"])
+	assert.Equal(t, "permission denied for view pg_stat_database", postgresDetail.GetServerFields()["message"])
 }
 
 func requireMetricPartialError(t *testing.T, partialErrors []*rpcstatus.Status, metric string) *rpcstatus.Status {

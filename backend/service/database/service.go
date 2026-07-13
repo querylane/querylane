@@ -4,7 +4,6 @@ package database
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"connectrpc.com/connect"
@@ -251,16 +250,17 @@ func queryInsightPartialError(metric string, err error) *rpcstatus.Status {
 
 	var postgresDetail *v1alpha1.PostgreSqlErrorDetail
 
-	var pgSQLErr *engine.PostgresSQLError
-	if errors.As(err, &pgSQLErr) {
-		code = apierrors.PostgresSQLKindConnectCode(pgSQLErr.Kind)
-		for key, value := range apierrors.PostgresSQLErrorMetadata(pgSQLErr, pgSQLErr.Operation) {
+	if response, ok := apierrors.PostgresErrorResponseFromError(err, ""); ok {
+		code = response.ConnectCode
+
+		message = response.Message
+		for key, value := range response.Metadata {
 			if value != "" {
 				metadata[key] = value
 			}
 		}
 
-		postgresDetail = apierrors.NewPostgresSQLErrorDetail(pgSQLErr, pgSQLErr.Operation)
+		postgresDetail = response.Detail
 	}
 
 	info := &errdetails.ErrorInfo{

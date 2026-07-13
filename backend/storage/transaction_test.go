@@ -25,6 +25,7 @@ func TestParsePostgresErrorMapsConstraintAndTransactionSQLStates(t *testing.T) {
 		{name: "restrict violation", code: pgerrcode.RestrictViolation, wantErr: ErrInvalidReference},
 		{name: "exclusion violation", code: pgerrcode.ExclusionViolation, wantErr: ErrInvalidInput},
 		{name: "unknown integrity violation class", code: "23ZZZ", wantErr: ErrInvalidInput},
+		{name: "normalized integrity violation class", code: " 23p01 ", wantErr: ErrInvalidInput},
 		{name: "serialization failure", code: pgerrcode.SerializationFailure, wantErr: ErrConcurrentModification},
 		{name: "deadlock detected", code: pgerrcode.DeadlockDetected, wantErr: ErrConcurrentModification},
 	}
