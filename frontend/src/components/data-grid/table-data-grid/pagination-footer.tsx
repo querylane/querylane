@@ -29,6 +29,8 @@ interface PaginationFooterProps {
   pageIndex: number;
   pageLabel: string;
   pageSize: number;
+  pageSizeLabel?: string;
+  pageSizeOptions?: readonly number[];
 }
 export function PaginationFooter({
   hasNext,
@@ -38,10 +40,12 @@ export function PaginationFooter({
   onPrev,
   pageLabel,
   pageSize,
+  pageSizeLabel = "Rows per page",
+  pageSizeOptions = PAGE_SIZE_OPTIONS,
 }: PaginationFooterProps) {
   return (
     <div className="flex h-8 items-center gap-2 text-muted-foreground text-xs">
-      <span className="text-[11px]">Rows per page</span>
+      <span className="text-[11px]">{pageSizeLabel}</span>
       <Select
         onValueChange={(value) => {
           if (!value) {
@@ -51,11 +55,11 @@ export function PaginationFooter({
         }}
         value={String(pageSize)}
       >
-        <SelectTrigger aria-label="Rows per page" className="h-7" size="sm">
+        <SelectTrigger aria-label={pageSizeLabel} className="h-7" size="sm">
           <SelectValue />
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={false}>
-          {PAGE_SIZE_OPTIONS.map((size) => (
+          {pageSizeOptions.map((size) => (
             <SelectItem key={size} label={String(size)} value={String(size)}>
               {size}
             </SelectItem>

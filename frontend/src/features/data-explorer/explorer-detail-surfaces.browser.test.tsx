@@ -988,7 +988,9 @@ test("data explorer table indexes constraints policies and triggers stay readabl
     .element(page.getByText("customers_account_id_fkey"))
     .toBeVisible();
   await expect.element(page.getByText("public.accounts ↗")).toBeVisible();
-  expect(document.querySelector('[data-slot="facet-filter-bar"]')).toBeNull();
+  expect(
+    document.querySelector('[data-slot="facet-filter-bar"]')
+  ).not.toBeNull();
   expect(document.querySelector("table")).toBeNull();
 
   await page.getByRole("tab", { exact: true, name: "Policies 1" }).click();
@@ -1130,6 +1132,53 @@ test("data explorer constraints tab matches redesign card groups", async () => {
   expect(document.querySelector("table")).toBeNull();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-constraints-redesign"
+  );
+});
+
+test("data explorer constraints tab paginates dense card groups", async () => {
+  seedTableDetailQueries();
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    {
+      constraints: Array.from({ length: 11 }, (_, index) =>
+        createProto(TableConstraintSchema, {
+          columnNames: [`status_${index + 1}`],
+          constraintName: `shipment_event_status_${index + 1}_check`,
+          definition: `CHECK (status_${index + 1} <> '')`,
+          type: ConstraintType.CHECK,
+        })
+      ),
+    }
+  );
+
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="constraints"
+      instanceId="prod"
+      schemaName="shipping"
+      table={createProto(TableSchema, {
+        displayName: "shipment_event",
+        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
+        owner: "app_owner",
+        rowCount: 18_200_000n,
+        sizeBytes: 21_400_000_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="shipment_event"
+    />
+  );
+
+  const pagination = page.getByRole("navigation", {
+    name: "Constraints pagination",
+  });
+  await expect.element(pagination).toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Constraints per page" }))
+    .toBeVisible();
+  await expect.element(page.getByText("Page 1 of 2")).toBeVisible();
+  await expect(pagination).toMatchScreenshot(
+    "data-explorer-table-constraints-pagination"
   );
 });
 

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
+import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
 import { SearchEmptyState } from "@/components/search-empty-state";
@@ -139,6 +140,14 @@ const TABLE_METADATA_QUERY_OPTIONS = {
   staleTime: QUERY_STALE_TIME.static,
 } as const;
 const SKELETON_ROW_COUNT = 6;
+const CONSTRAINTS_DEFAULT_PAGE_SIZE = 10;
+const CONSTRAINTS_MEDIUM_PAGE_SIZE = 25;
+const CONSTRAINTS_LARGE_PAGE_SIZE = 50;
+const CONSTRAINTS_PAGE_SIZE_OPTIONS = [
+  CONSTRAINTS_DEFAULT_PAGE_SIZE,
+  CONSTRAINTS_MEDIUM_PAGE_SIZE,
+  CONSTRAINTS_LARGE_PAGE_SIZE,
+] as const;
 const SKELETON_ROW_IDS = Array.from(
   { length: SKELETON_ROW_COUNT },
   (_, index) => `skeleton-row-${index}`
@@ -1750,6 +1759,8 @@ function ConstraintsTab({
   query: ReturnType<typeof useListTableConstraintsQuery>;
 }) {
   const [kindFilters, setKindFilters] = useState<string[]>([]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(CONSTRAINTS_DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState("");
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
@@ -1782,14 +1793,34 @@ function ConstraintsTab({
       (kindFilters.length === 0 ||
         kindFilters.includes(String(constraint.type)))
   );
-  const keyConstraints = visibleConstraints.filter(isKeyConstraint);
-  const foreignKeyConstraints = visibleConstraints.filter(
-    isForeignKeyConstraint
+  const orderedConstraints = [
+    ...visibleConstraints.filter(isKeyConstraint),
+    ...visibleConstraints.filter(isForeignKeyConstraint),
+    ...visibleConstraints.filter(
+      (constraint) => constraint.type === ConstraintType.CHECK
+    ),
+    ...visibleConstraints.filter(
+      (constraint) =>
+        !(
+          isKeyConstraint(constraint) ||
+          isForeignKeyConstraint(constraint) ||
+          constraint.type === ConstraintType.CHECK
+        )
+    ),
+  ];
+  const pageCount = Math.ceil(visibleConstraints.length / pageSize);
+  const currentPageIndex = Math.min(pageIndex, Math.max(pageCount - 1, 0));
+  const pageStart = currentPageIndex * pageSize;
+  const pageConstraints = orderedConstraints.slice(
+    pageStart,
+    pageStart + pageSize
   );
-  const checkConstraints = visibleConstraints.filter(
+  const keyConstraints = pageConstraints.filter(isKeyConstraint);
+  const foreignKeyConstraints = pageConstraints.filter(isForeignKeyConstraint);
+  const checkConstraints = pageConstraints.filter(
     (constraint) => constraint.type === ConstraintType.CHECK
   );
-  const otherConstraints = visibleConstraints.filter(
+  const otherConstraints = pageConstraints.filter(
     (constraint) =>
       !(
         isKeyConstraint(constraint) ||
@@ -1805,14 +1836,20 @@ function ConstraintsTab({
           data-slot="constraints-filter-controls"
         >
           <DataTableFilter
-            onChange={setSearch}
+            onChange={(value) => {
+              setSearch(value);
+              setPageIndex(0);
+            }}
             placeholder="Search constraints…"
             value={search}
           />
           <FacetFilterBar
             filters={[
               {
-                handleSelectedValuesChange: setKindFilters,
+                handleSelectedValuesChange: (values) => {
+                  setKindFilters(values);
+                  setPageIndex(0);
+                },
                 label: "Kind",
                 options: presentConstraintKindOptions(constraints),
                 selectedValues: kindFilters,
@@ -1854,6 +1891,35 @@ function ConstraintsTab({
             instanceId={instanceId}
             title="Other constraints"
           />
+          {constraints.length > CONSTRAINTS_DEFAULT_PAGE_SIZE ? (
+            <nav
+              aria-label="Constraints pagination"
+              className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs"
+            >
+              <span className="tabular-nums" role="status">
+                Showing {pageStart + 1}&ndash;
+                {Math.min(pageStart + pageSize, visibleConstraints.length)} of{" "}
+                {visibleConstraints.length}
+              </span>
+              <div className="ml-auto">
+                <PaginationFooter
+                  hasNext={currentPageIndex < pageCount - 1}
+                  hasPrev={currentPageIndex > 0}
+                  onNext={() => setPageIndex(currentPageIndex + 1)}
+                  onPageSizeChange={(nextPageSize) => {
+                    setPageSize(nextPageSize);
+                    setPageIndex(0);
+                  }}
+                  onPrev={() => setPageIndex(currentPageIndex - 1)}
+                  pageIndex={currentPageIndex}
+                  pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
+                  pageSize={pageSize}
+                  pageSizeLabel="Constraints per page"
+                  pageSizeOptions={CONSTRAINTS_PAGE_SIZE_OPTIONS}
+                />
+              </div>
+            </nav>
+          ) : null}
         </>
       )}
     </div>

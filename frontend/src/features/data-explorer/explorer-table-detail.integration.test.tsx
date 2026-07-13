@@ -318,6 +318,30 @@ function createMetadataError({
   return error;
 }
 
+function createCheckConstraints(count: number) {
+  return Array.from({ length: count }, (_, index) =>
+    create(TableConstraintSchema, {
+      columnNames: [`status_${index + 1}`],
+      constraintName: `customers_status_${index + 1}_check`,
+      definition: `CHECK (status_${index + 1} <> '')`,
+      type: ConstraintType.CHECK,
+    })
+  );
+}
+
+function renderConstraintsTab() {
+  return render(
+    <TableDetail
+      databaseId="app"
+      initialTab="constraints"
+      instanceId="prod"
+      schemaName="public"
+      table={create(TableSchema)}
+      tableName="customers"
+    />
+  );
+}
+
 beforeEach(() => {
   seedSuccessfulMetadataQueries();
 });
@@ -886,6 +910,154 @@ describe("TableDetail tab routing", () => {
     await user.click(screen.getByRole("tab", { name: INDEXES_TAB_RE }));
 
     expect(onTabChange).toHaveBeenCalledWith("indexes");
+  });
+});
+
+describe("TableDetail constraints pagination", () => {
+  it("paginates constraint cards after ten results", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: createCheckConstraints(11),
+    });
+    renderConstraintsTab();
+
+    expect(screen.getByText("customers_status_1_check")).toBeTruthy();
+    expect(screen.getByText("customers_status_10_check")).toBeTruthy();
+    expect(screen.queryByText("customers_status_11_check")).toBeNull();
+    expect(screen.getByText("Showing 1–10 of 11")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+    expect(
+      screen.getByRole("navigation", { name: "Constraints pagination" })
+    ).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain(
+      "Showing 1–10 of 11"
+    );
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+
+    expect(screen.queryByText("customers_status_1_check")).toBeNull();
+    expect(screen.getByText("customers_status_11_check")).toBeTruthy();
+    expect(screen.getByText("Showing 11–11 of 11")).toBeTruthy();
+    expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+  });
+
+  it("paginates constraints in their grouped display order", () => {
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        ...createCheckConstraints(10),
+        create(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "customers_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+      ],
+    });
+
+    renderConstraintsTab();
+
+    expect(screen.getByText("customers_pkey")).toBeTruthy();
+    expect(screen.getByText("customers_status_9_check")).toBeTruthy();
+    expect(screen.queryByText("customers_status_10_check")).toBeNull();
+  });
+
+  it("changes the constraint page size", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: createCheckConstraints(26),
+    });
+    renderConstraintsTab();
+
+    const pageSize = screen.getByRole("combobox", {
+      name: "Constraints per page",
+    });
+    expect(within(pageSize).getByText("10")).toBeTruthy();
+
+    await user.click(pageSize);
+    await user.click(screen.getByRole("option", { name: "25" }));
+
+    expect(screen.getByText("customers_status_25_check")).toBeTruthy();
+    expect(screen.queryByText("customers_status_26_check")).toBeNull();
+    expect(screen.getByText("Showing 1–25 of 26")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+  });
+
+  it("returns to the first page when constraint search changes", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: createCheckConstraints(11),
+    });
+    renderConstraintsTab();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Search constraints…" }),
+      "status_5_check"
+    );
+
+    expect(screen.getByText("customers_status_5_check")).toBeTruthy();
+    expect(screen.queryByText("customers_status_11_check")).toBeNull();
+    expect(
+      screen.getByRole("combobox", { name: "Constraints per page" })
+    ).toBeTruthy();
+    expect(screen.getByText("Showing 1–1 of 1")).toBeTruthy();
+  });
+
+  it("returns to the first page when the constraint kind changes", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        ...createCheckConstraints(10),
+        create(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "customers_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+      ],
+    });
+
+    renderConstraintsTab();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+    await user.click(screen.getByRole("button", { name: KIND_FILTER_RE }));
+    await user.click(screen.getByRole("option", { name: "PRIMARY KEY" }));
+
+    expect(screen.getByText("customers_pkey")).toBeTruthy();
+    expect(screen.queryByText("customers_status_1_check")).toBeNull();
+  });
+
+  it("keeps a valid page when refreshed constraints shrink", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: createCheckConstraints(11),
+    });
+    const { rerender } = renderConstraintsTab();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["status"],
+          constraintName: "customers_status_check",
+          definition: "CHECK (status <> '')",
+          type: ConstraintType.CHECK,
+        }),
+      ],
+    });
+    rerender(
+      <TableDetail
+        databaseId="app"
+        initialTab="constraints"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema)}
+        tableName="customers"
+      />
+    );
+
+    expect(screen.getByText("customers_status_check")).toBeTruthy();
   });
 });
 
