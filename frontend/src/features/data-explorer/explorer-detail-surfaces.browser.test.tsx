@@ -2461,6 +2461,76 @@ test("data explorer table triggers match redesign", async () => {
   );
 });
 
+test("data explorer trigger cards paginate dense resources", async () => {
+  seedTriggerRedesignQueries();
+  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
+    triggers: Array.from({ length: 12 }, (_, index) => {
+      const suffix = String(index).padStart(2, "0");
+      return createProto(TableTriggerSchema, {
+        definition: `CREATE TRIGGER trg_bulk_${suffix} AFTER UPDATE ON shipping.shipment_event FOR EACH ROW EXECUTE FUNCTION shipping.handle_bulk_${suffix}()`,
+        enabled: true,
+        events: ["UPDATE"],
+        functionName: `shipping.handle_bulk_${suffix}`,
+        timing: "AFTER",
+        triggerName: `trg_bulk_${suffix}`,
+      });
+    }),
+  });
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="triggers"
+      instanceId="prod"
+      schemaName="shipping"
+      table={createProto(TableSchema, {
+        displayName: "shipment_event",
+        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
+        rowCount: 18_200_000n,
+        sizeBytes: 21_400_000_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="shipment_event"
+    />
+  );
+
+  await expect.element(page.getByText("Page 1 of 2")).toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Triggers per page" }))
+    .toBeVisible();
+  await expect.element(page.getByText("trg_bulk_00").first()).toBeVisible();
+  await expect
+    .element(page.getByText("trg_bulk_10").first())
+    .not.toBeInTheDocument();
+  const pageSizeSelect = page
+    .getByRole("combobox", { name: "Triggers per page" })
+    .element();
+  const paginationFooter = pageSizeSelect.parentElement;
+  if (!paginationFooter) {
+    throw new Error("expected trigger pagination footer");
+  }
+  paginationFooter.scrollIntoView({ block: "center" });
+  await document.fonts.ready;
+  await expect(page.elementLocator(paginationFooter)).toMatchScreenshot(
+    "data-explorer-table-trigger-pagination",
+    {
+      timeout: 20_000,
+    }
+  );
+
+  await page.getByRole("button", { name: "Next page" }).click();
+  await expect.element(page.getByText("Page 2 of 2")).toBeVisible();
+  await expect.element(page.getByText("trg_bulk_10").first()).toBeVisible();
+  await expect
+    .element(page.getByText("trg_bulk_00").first())
+    .not.toBeInTheDocument();
+
+  await page.getByRole("combobox", { name: "Triggers per page" }).click();
+  await page.getByRole("option", { exact: true, name: "25" }).click();
+  await expect.element(page.getByText("Page 1 of 1")).toBeVisible();
+  await expect.element(page.getByText("trg_bulk_00").first()).toBeVisible();
+  await expect.element(page.getByText("trg_bulk_11").first()).toBeVisible();
+});
+
 test("data explorer table data tab has a visual baseline", async () => {
   seedTableDetailQueries();
   renderExplorerSurface(

@@ -1501,6 +1501,64 @@ describe("TableDetail columns tab", () => {
 });
 
 describe("TableDetail triggers tab", () => {
+  it("paginates filtered trigger cards and changes page size", async () => {
+    const user = userEvent.setup();
+    tableQueries.triggers.data = create(ListTableTriggersResponseSchema, {
+      triggers: Array.from({ length: 12 }, (_, index) => {
+        const suffix = String(index).padStart(2, "0");
+        return create(TableTriggerSchema, {
+          definition: `CREATE TRIGGER trg_event_${suffix} AFTER UPDATE ON shipping.shipment_event FOR EACH ROW EXECUTE FUNCTION shipping.handle_event_${suffix}()`,
+          enabled: true,
+          triggerName: `trg_event_${suffix}`,
+        });
+      }),
+    });
+
+    render(
+      <TableDetail
+        databaseId="warehouse"
+        initialTab="triggers"
+        instanceId="prod"
+        schemaName="shipping"
+        table={create(TableSchema, { rowCount: 18_200_000n })}
+        tableName="shipment_event"
+      />
+    );
+
+    expect(screen.getAllByText("trg_event_00").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("trg_event_10")).toHaveLength(0);
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+    expect(
+      screen.getByRole("combobox", { name: "Triggers per page" })
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+    expect(screen.queryAllByText("trg_event_00")).toHaveLength(0);
+    expect(screen.getAllByText("trg_event_10").length).toBeGreaterThan(0);
+    expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "State" }));
+    await user.click(screen.getByRole("option", { name: "Enabled" }));
+    expect(screen.getAllByText("trg_event_00").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("trg_event_10")).toHaveLength(0);
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+    const search = screen.getByRole("textbox", { name: "Search triggers…" });
+    await user.type(search, "00");
+    await user.clear(search);
+    expect(screen.getAllByText("trg_event_00").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("trg_event_10")).toHaveLength(0);
+
+    await user.click(
+      screen.getByRole("combobox", { name: "Triggers per page" })
+    );
+    await user.click(screen.getByRole("option", { name: "25" }));
+    expect(screen.getAllByText("trg_event_00").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("trg_event_11").length).toBeGreaterThan(0);
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+  });
+
   it("searches and filters trigger cards from one inline toolbar", async () => {
     const user = userEvent.setup();
     tableQueries.triggers.data = create(ListTableTriggersResponseSchema, {

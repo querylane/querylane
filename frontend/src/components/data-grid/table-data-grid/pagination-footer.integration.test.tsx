@@ -1,10 +1,40 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 
 afterEach(() => cleanup());
 
 describe("PaginationFooter", () => {
+  it("supports resource-specific page sizes", async () => {
+    const user = userEvent.setup();
+    const onPageSizeChange = vi.fn();
+
+    render(
+      <PaginationFooter
+        hasNext={true}
+        hasPrev={false}
+        pageSizeLabel="Triggers per page"
+        onNext={vi.fn()}
+        onPageSizeChange={onPageSizeChange}
+        onPrev={vi.fn()}
+        pageIndex={0}
+        pageLabel="Page 1 of 2"
+        pageSize={10}
+        pageSizeOptions={[10, 25, 50]}
+      />
+    );
+
+    await user.click(
+      screen.getByRole("combobox", { name: "Triggers per page" })
+    );
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent)
+    ).toEqual(["10", "25", "50"]);
+    await user.click(screen.getByRole("option", { name: "25" }));
+    expect(onPageSizeChange).toHaveBeenCalledWith(25);
+  });
+
   it("uses a stable rows-per-page select label", () => {
     const props = {
       hasNext: true,

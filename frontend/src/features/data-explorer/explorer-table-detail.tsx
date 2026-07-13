@@ -283,6 +283,15 @@ const TRIGGER_STATE_FILTER_LABELS: Record<TriggerStateFilter, string> = {
   disabled: "Disabled",
   enabled: "Enabled",
 };
+const SMALL_TRIGGER_PAGE_SIZE = 10;
+const MEDIUM_TRIGGER_PAGE_SIZE = 25;
+const LARGE_TRIGGER_PAGE_SIZE = 50;
+const TRIGGER_PAGE_SIZE_OPTIONS = [
+  SMALL_TRIGGER_PAGE_SIZE,
+  MEDIUM_TRIGGER_PAGE_SIZE,
+  LARGE_TRIGGER_PAGE_SIZE,
+] as const;
+const DEFAULT_TRIGGER_PAGE_SIZE = TRIGGER_PAGE_SIZE_OPTIONS[0];
 const PARTITION_BOUND_KIND_ORDER = [
   "range",
   "list",
@@ -3458,6 +3467,8 @@ function TriggersTab({
   schemaName: string;
   tableName: string;
 }) {
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_TRIGGER_PAGE_SIZE);
   const [search, setSearch] = useState("");
   const [stateFilters, setStateFilters] = useState<string[]>([]);
   const toolbar = deriveMetadataToolbar([query]);
@@ -3487,6 +3498,29 @@ function TriggersTab({
     search,
     states: stateFilters.filter(isTriggerStateFilter),
   });
+  const pageCount = Math.max(1, Math.ceil(filteredTriggers.length / pageSize));
+  const currentPageIndex = Math.min(pageIndex, pageCount - 1);
+  const pageStart = currentPageIndex * pageSize;
+  const paginatedTriggers = filteredTriggers.slice(
+    pageStart,
+    pageStart + pageSize
+  );
+
+  function handleSearchChange(nextSearch: string) {
+    setSearch(nextSearch);
+    setPageIndex(0);
+  }
+
+  function handleStateFiltersChange(nextStateFilters: string[]) {
+    setStateFilters(nextStateFilters);
+    setPageIndex(0);
+  }
+
+  function handlePageSizeChange(nextPageSize: number) {
+    setPageSize(nextPageSize);
+    setPageIndex(0);
+  }
+
   return (
     <div
       className="flex flex-col gap-3"
@@ -3496,14 +3530,14 @@ function TriggersTab({
       <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <DataTableFilter
-            onChange={setSearch}
+            onChange={handleSearchChange}
             placeholder="Search triggers…"
             value={search}
           />
           <FacetFilterBar
             filters={[
               {
-                handleSelectedValuesChange: setStateFilters,
+                handleSelectedValuesChange: handleStateFiltersChange,
                 label: "State",
                 options: presentTriggerStateOptions(triggers),
                 selectedValues: stateFilters,
@@ -3525,16 +3559,36 @@ function TriggersTab({
           resourceName="triggers"
         />
       ) : (
-        <div className="flex flex-col gap-2.5">
-          {filteredTriggers.map((trigger) => (
-            <TriggerCard
-              key={trigger.triggerName}
-              schemaName={schemaName}
-              tableName={tableName}
-              trigger={trigger}
+        <>
+          <div className="flex flex-col gap-2.5">
+            {paginatedTriggers.map((trigger) => (
+              <TriggerCard
+                key={trigger.triggerName}
+                schemaName={schemaName}
+                tableName={tableName}
+                trigger={trigger}
+              />
+            ))}
+          </div>
+          {filteredTriggers.length > DEFAULT_TRIGGER_PAGE_SIZE ? (
+            <PaginationFooter
+              hasNext={currentPageIndex < pageCount - 1}
+              hasPrev={currentPageIndex > 0}
+              pageSizeLabel="Triggers per page"
+              onNext={() => {
+                setPageIndex(Math.min(currentPageIndex + 1, pageCount - 1));
+              }}
+              onPageSizeChange={handlePageSizeChange}
+              onPrev={() => {
+                setPageIndex(Math.max(currentPageIndex - 1, 0));
+              }}
+              pageIndex={currentPageIndex}
+              pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
+              pageSize={pageSize}
+              pageSizeOptions={TRIGGER_PAGE_SIZE_OPTIONS}
             />
-          ))}
-        </div>
+          ) : null}
+        </>
       )}
     </div>
   );
