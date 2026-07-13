@@ -39,8 +39,6 @@ func (r *PGRepository) ListViews(ctx context.Context, instanceID, databaseName, 
 		AND(table.CatalogView.DatabaseName.EQ(postgres.String(databaseName))).
 		AND(table.CatalogView.SchemaName_.EQ(postgres.String(schemaName)))
 
-	params.Filter = normalizeLegacyCatalogFilter(params.Filter)
-
 	rows, nextToken, err := aipjet.ExecuteWithCondition(ctx, catalogViewSchema, params, baseQuery, baseCondition, r.db)
 	if err != nil {
 		return nil, "", fmt.Errorf("query views: %w", err)
