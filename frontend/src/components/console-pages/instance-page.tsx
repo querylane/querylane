@@ -3,7 +3,7 @@
 import { useTransport } from "@connectrpc/connect-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Database, RefreshCw, X } from "lucide-react";
+import { ChevronRight, Database, GitBranch, RefreshCw, X } from "lucide-react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AsyncSectionState } from "@/components/async-section-state";
@@ -15,6 +15,7 @@ import {
   InstanceStatItem,
   InstanceStatsBar,
   ResourcePageState,
+  SectionCard,
   SummaryCountValue,
 } from "@/components/console-pages/console-layout";
 import { DatabaseEncodingValue } from "@/components/console-pages/database-encoding-value";
@@ -847,6 +848,134 @@ function InstanceOverviewSection({
     </section>
   );
 }
+
+function OverviewFact({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0 space-y-1 rounded-lg bg-muted/30 px-3 py-2">
+      <dt className="text-muted-foreground text-xs">{label}</dt>
+      <dd className="truncate font-medium text-sm tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+function InstanceReplicationOverviewCard({
+  health,
+  isPending,
+  serverReplicationRole,
+}: {
+  health: InstanceHealth | undefined;
+  isPending: boolean;
+  serverReplicationRole: ServerInfo_ReplicationRole | undefined;
+}) {
+  const replication = health?.replication;
+  if (!replication) {
+    return (
+      <section aria-label="Replication overview">
+        <SectionCard title="Replication">
+          {isPending ? (
+            <div className="h-32 w-full animate-pulse rounded-lg bg-muted/40" />
+          ) : (
+            <EmptyState
+              description="The health check did not return replication data. Refresh to retry."
+              icon={GitBranch}
+              title="Replication unavailable"
+            />
+          )}
+        </SectionCard>
+      </section>
+    );
+  }
+
+  const healthRoleLabel = formatReplicationRole(replication.role);
+  const resolvedRole = serverReplicationRole ?? replication.role;
+  const roleLabel = formatReplicationRole(resolvedRole);
+  const trimmedSummary = replication.summary.trim();
+  const summary =
+    serverReplicationRole === undefined ||
+    serverReplicationRole === replication.role
+      ? trimmedSummary || "Replication state reported by the backend."
+      : `Health check reports ${healthRoleLabel}. Server info reports ${roleLabel}.`;
+  const isReplica = resolvedRole === ServerInfo_ReplicationRole.REPLICA;
+  const facts = isReplica
+    ? [
+        {
+          label: "Role",
+          value: roleLabel,
+        },
+        {
+          label: "WAL receiver",
+          value: replication.walReceiverActive ? "Active" : "Not active",
+        },
+        {
+          label: "Replay lag",
+          value: replication.walReceiverActive
+            ? `${Number(replication.replayLagSeconds).toLocaleString()}s`
+            : "Not streaming",
+        },
+      ]
+    : [
+        {
+          label: "Role",
+          value: roleLabel,
+        },
+        {
+          label: "Attached replicas",
+          value: replication.attachedReplicas.toLocaleString(),
+        },
+        {
+          label: "Streaming replicas",
+          value: replication.streamingReplicas.toLocaleString(),
+        },
+        {
+          label: "Synchronous replicas",
+          value: replication.synchronousReplicas.toLocaleString(),
+        },
+        {
+          label: "Max lag",
+          value: formatBytes(replication.maxReplicationLagBytes),
+        },
+      ];
+
+  return (
+    <section aria-label="Replication overview">
+      <SectionCard
+        description="Compact details from pg_stat_replication and recovery state."
+        title="Replication"
+      >
+        <div className="space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 space-y-1">
+              <p className="text-muted-foreground text-sm">{summary}</p>
+            </div>
+            <GitBranch
+              aria-hidden="true"
+              className="mt-1 size-5 shrink-0 text-muted-foreground/70"
+            />
+          </div>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            {facts.map((fact) => (
+              <OverviewFact
+                key={fact.label}
+                label={fact.label}
+                value={fact.value}
+              />
+            ))}
+          </dl>
+          <p className="border-border border-t pt-2 text-muted-foreground text-xs">
+            Replica names, slots, and replay trend are not reported yet.
+          </p>
+        </div>
+      </SectionCard>
+    </section>
+  );
+}
+
 function InstanceOverviewContent({
   connectionStatus,
   databases,
@@ -899,6 +1028,13 @@ function InstanceOverviewContent({
         instance={instance}
         serverInfo={serverInfo}
       />
+      {connectionStatus === "connected" ? (
+        <InstanceReplicationOverviewCard
+          health={liveData.health}
+          isPending={liveData.healthPending}
+          serverReplicationRole={serverInfo?.replicationRole}
+        />
+      ) : null}
       <InstanceOverviewSection
         databases={databases}
         isUnavailable={isUnavailable}

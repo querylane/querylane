@@ -349,8 +349,10 @@ function instanceResponse({
 }
 
 function connectedInstanceResponse({
+  replicationRole = ServerInfo_ReplicationRole.PRIMARY,
   sslMode = PostgresConfig_SslMode.PREFER,
 }: {
+  replicationRole?: ServerInfo_ReplicationRole;
   sslMode?: PostgresConfig_SslMode;
 } = {}) {
   return createProto(GetInstanceResponseSchema, {
@@ -370,7 +372,7 @@ function connectedInstanceResponse({
     }),
     serverInfo: createProto(ServerInfoSchema, {
       maxConnections: 100,
-      replicationRole: ServerInfo_ReplicationRole.PRIMARY,
+      replicationRole,
       startedAt: timestampFromDate(new Date(Date.now() - 90 * 60 * 1000)),
       version:
         "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc, 64-bit",
@@ -404,8 +406,12 @@ function extensionInventoryResponse() {
 
 function instanceHealthResponse({
   includeAutovacuum = true,
+  replicationRole = ServerInfo_ReplicationRole.PRIMARY,
+  walReceiverActive = false,
 }: {
   includeAutovacuum?: boolean;
+  replicationRole?: ServerInfo_ReplicationRole;
+  walReceiverActive?: boolean;
 } = {}) {
   return createProto(CheckInstanceHealthResponseSchema, {
     health: createProto(InstanceHealthSchema, {
@@ -435,10 +441,18 @@ function instanceHealthResponse({
         summary: "Not loaded (needs shared_preload_libraries)",
       }),
       replication: createProto(ReplicationHealthSchema, {
-        role: ServerInfo_ReplicationRole.PRIMARY,
+        attachedReplicas: 1,
+        maxReplicationLagBytes: 86_000_000n,
+        replayLagSeconds: 0n,
+        role: replicationRole,
         status: HealthCheckStatus.OK,
         streamingReplicas: 1,
-        summary: "Primary · 1 replica streaming",
+        summary:
+          replicationRole === ServerInfo_ReplicationRole.PRIMARY
+            ? "Primary · 1 replica streaming"
+            : "Replica · WAL receiver active",
+        synchronousReplicas: 0,
+        walReceiverActive,
       }),
       statsAccess: createProto(StatsAccessHealthSchema, {
         currentUser: "postgres",
@@ -1017,6 +1031,76 @@ describe("backend instance activity interactions", () => {
         value: originalClipboard,
       });
     }
+  });
+});
+
+describe("backend instance overview redesign", () => {
+  test("keeps health primary and adds compact replication after it", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = instanceHealthResponse();
+
+    renderInstanceOverview();
+
+    const health = screen.getByRole("region", { name: "Health checks" });
+    const replication = screen.getByRole("region", {
+      name: "Replication overview",
+    });
+    const regionLabels = screen
+      .getAllByRole("region")
+      .map((region) => region.getAttribute("aria-label"));
+    expect(regionLabels.indexOf("Health checks")).toBeLessThan(
+      regionLabels.indexOf("Replication overview")
+    );
+    expect(
+      within(health).getByText(
+        "Live checks from this instance's system catalogs."
+      )
+    ).toBeTruthy();
+    expect(within(replication).getByText("Replication")).toBeTruthy();
+    expect(within(replication).getByText("Primary")).toBeTruthy();
+    expect(within(replication).getByText("Streaming replicas")).toBeTruthy();
+    expect(within(replication).queryByText("1 streaming")).toBeNull();
+    expect(
+      within(replication).getByText(
+        "Replica names, slots, and replay trend are not reported yet."
+      )
+    ).toBeTruthy();
+
+    expect(
+      screen.queryByRole("region", { name: "Storage overview" })
+    ).toBeNull();
+    expect(screen.queryByText("Connections by application")).toBeNull();
+    expect(screen.queryByText("CPU")).toBeNull();
+    expect(screen.queryByText("Memory")).toBeNull();
+  });
+
+  test("keeps replication facts aligned when server info and health roles disagree", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse({
+      replicationRole: ServerInfo_ReplicationRole.PRIMARY,
+    });
+    state.healthData = instanceHealthResponse({
+      replicationRole: ServerInfo_ReplicationRole.REPLICA,
+      walReceiverActive: true,
+    });
+
+    renderInstanceOverview();
+
+    const replication = screen.getByRole("region", {
+      name: "Replication overview",
+    });
+    expect(
+      within(replication).getByText(
+        "Health check reports Replica. Server info reports Primary."
+      )
+    ).toBeTruthy();
+    expect(within(replication).getByText("Role")).toBeTruthy();
+    expect(within(replication).getByText("Primary")).toBeTruthy();
+    expect(within(replication).getByText("Attached replicas")).toBeTruthy();
+    expect(within(replication).queryByText("WAL receiver")).toBeNull();
   });
 });
 
