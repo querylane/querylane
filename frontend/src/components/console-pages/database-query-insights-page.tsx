@@ -614,15 +614,18 @@ function TopQueriesTable({
             >
               <TableCell className="min-w-0 max-w-[34rem] py-2 pl-5">
                 <Button
+                  aria-label={queryLabel}
                   aria-pressed={selected}
                   className="h-auto w-full justify-start overflow-hidden p-0 text-left font-normal hover:bg-transparent"
                   onClick={() => onSelectQuery(entry)}
                   type="button"
                   variant="ghost"
                 >
-                  <span className="block min-w-0 truncate font-mono text-[12px]">
-                    {queryLabel}
-                  </span>
+                  <SqlCodeBlock
+                    copyable={false}
+                    sql={queryLabel}
+                    variant="inline"
+                  />
                 </Button>
               </TableCell>
               <TableCell className="text-right font-mono text-muted-foreground text-xs tabular-nums">

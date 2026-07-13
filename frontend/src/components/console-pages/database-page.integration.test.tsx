@@ -810,6 +810,19 @@ describe("backend database overview", () => {
         name: SELECT_EVENTS_QUERY_BUTTON_RE,
       })
     ).toBeTruthy();
+    const selectQueryButton = screen.getByRole("button", {
+      name: SELECT_EVENTS_QUERY_BUTTON_RE,
+    });
+    const highlightedQueryPreview = within(selectQueryButton).getByText(
+      (_content, element) =>
+        element instanceof HTMLElement &&
+        element.matches('code.language-sql[data-syntax-highlighter="shiki"]') &&
+        element.textContent?.includes("SELECT * FROM events") === true
+    );
+    expect(highlightedQueryPreview).toBeTruthy();
+    expect(
+      within(selectQueryButton).queryByRole("button", { name: "Copy SQL" })
+    ).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Type" }));
     await user.click(screen.getByRole("option", { name: "Write queries" }));
