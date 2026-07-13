@@ -1437,6 +1437,15 @@ describe("TableDetail columns tab", () => {
     );
 
     expect(screen.queryByText("4 columns · 2 indexed · 1 nullable")).toBeNull();
+    for (const filter of [
+      "Type",
+      "Key",
+      "Nullability",
+      "Default",
+      "Generation",
+    ]) {
+      expect(screen.getByRole("button", { name: filter })).toBeTruthy();
+    }
     expect(screen.getByText("Catalog metadata")).toBeTruthy();
     expect(screen.getByText(LAST_FETCHED_RE)).toBeTruthy();
     expect(
@@ -1466,6 +1475,14 @@ describe("TableDetail columns tab", () => {
     expect(
       screen.getAllByTitle("Not available from the current column metadata API")
     ).toHaveLength(16);
+
+    await user.click(screen.getByRole("button", { name: "Nullability" }));
+    await user.click(screen.getByRole("option", { name: "Nullable" }));
+    await waitFor(() => {
+      expect(screen.queryByText("Surrogate key")).toBeNull();
+    });
+    expect(screen.getByText("Set NULL once delivered")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Reset" }));
 
     const search = screen.getByRole("textbox", { name: "Search columns…" });
     await user.type(search, "booking");

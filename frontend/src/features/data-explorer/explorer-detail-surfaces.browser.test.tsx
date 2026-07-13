@@ -69,6 +69,7 @@ const SCHEMA_MAP_BROWSER_VIEWPORT = { height: 1400, width: 2048 } as const;
 const APP_READER_SUPPORT_AGENT_RE = /app_reader, support_agent/;
 const DEFAULT_BALANCED_TREE_RE = /Default balanced tree/;
 const DEFAULT_BALANCED_TREE_SUMMARY_RE = /Default balanced tree for equality/;
+const GENERATED_GENERATION_FILTER_RE = /Generation.*Generated/;
 const BIGINT_TYPE_TITLE_RE = /Integer.*64-bit/;
 const ID_PRIMARY_KEY_CELL_RE = /id\s+Primary key\s+Surrogate key/;
 const JSONB_TYPE_TITLE_RE = /JSON.*binary JSON/;
@@ -76,7 +77,7 @@ const NUMERIC_TYPE_TITLE_RE = /Decimal.*Exact decimal/;
 const PARTITION_2024_BOUND_RE = /FOR VALUES FROM \('2024-01-01'\)/;
 const LAST_FETCHED_11_PM_RE = /Last fetched 11:00:00 PM/;
 const POLICIES_ONE_TAB_RE = /^Policies\s+1$/;
-const TABLE_COLUMNS_LAST_FETCHED_RE = /9 columns · base table · Last fetched/;
+const TABLE_COLUMNS_LAST_FETCHED_RE = /11 columns · base table · Last fetched/;
 const TIMESTAMPTZ_TYPE_TITLE_RE =
   /Timestamp.*timestamptz.*UTC-normalized instant/;
 const TRIGGERS_ONE_TAB_RE = /^Triggers\s+1$/;
@@ -831,10 +832,28 @@ function seedShippingColumnsDesignQueries() {
         rawType: "text",
       }),
       createProto(ColumnSchema, {
+        columnName: "route_code",
+        dataType: DataType.STRING,
+        generationExpression: "origin_port || ':' || dest_port",
+        isGenerated: true,
+        isNullable: false,
+        ordinalPosition: 7,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "sequence_no",
+        dataType: DataType.INTEGER,
+        identityGeneration: IdentityGeneration.BY_DEFAULT,
+        isIdentity: true,
+        isNullable: false,
+        ordinalPosition: 8,
+        rawType: "int8",
+      }),
+      createProto(ColumnSchema, {
         columnName: "weight_kg",
         dataType: DataType.FLOAT,
         isNullable: false,
-        ordinalPosition: 7,
+        ordinalPosition: 9,
         rawType: "numeric(10,2)",
       }),
       createProto(ColumnSchema, {
@@ -842,7 +861,7 @@ function seedShippingColumnsDesignQueries() {
         comment: "Set NULL once delivered",
         dataType: DataType.DATE,
         isNullable: true,
-        ordinalPosition: 8,
+        ordinalPosition: 10,
         rawType: "date",
       }),
       createProto(ColumnSchema, {
@@ -850,7 +869,7 @@ function seedShippingColumnsDesignQueries() {
         dataType: DataType.TIMESTAMP,
         defaultValue: "now()",
         isNullable: false,
-        ordinalPosition: 9,
+        ordinalPosition: 11,
         rawType: "timestamptz",
       }),
     ],
@@ -1614,7 +1633,7 @@ test("data explorer table columns match the redesign inventory", async () => {
     .toBeVisible();
   await expect.element(page.getByText("Set NULL once delivered")).toBeVisible();
   await expect
-    .element(page.getByText("9 columns · 4 indexed · 1 nullable"))
+    .element(page.getByText("11 columns · 4 indexed · 1 nullable"))
     .not.toBeInTheDocument();
   await expect
     .element(page.getByText(TABLE_COLUMNS_LAST_FETCHED_RE))
@@ -1629,6 +1648,9 @@ test("data explorer table columns match the redesign inventory", async () => {
   const filterBar = requireFacetFilterBar("column facet filters");
   expect(filterBar.textContent).toContain("Type");
   expect(filterBar.textContent).toContain("Key");
+  expect(filterBar.textContent).toContain("Nullability");
+  expect(filterBar.textContent).toContain("Default");
+  expect(filterBar.textContent).toContain("Generation");
   expect(filterBar.textContent).not.toContain("__all__");
   expect(filterBar.getBoundingClientRect().left).toBeGreaterThan(
     searchInput.getBoundingClientRect().right
@@ -1640,8 +1662,40 @@ test("data explorer table columns match the redesign inventory", async () => {
     )
   ).toBeLessThanOrEqual(4);
 
+  await page.getByRole("button", { exact: true, name: "Key" }).click();
+  for (const option of [
+    "Primary key",
+    "Foreign key",
+    "Unique",
+    "Index",
+    "No key",
+  ]) {
+    await expect
+      .element(page.getByRole("option", { exact: true, name: option }))
+      .toBeVisible();
+  }
+  await page.getByRole("button", { exact: true, name: "Key" }).click();
+
+  await page.getByRole("button", { exact: true, name: "Generation" }).click();
   await expect
-    .element(page.getByRole("tab", { exact: true, name: "Columns 9" }))
+    .element(page.getByRole("option", { exact: true, name: "Identity" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("option", { exact: true, name: "Generated" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("option", { exact: true, name: "Regular" }))
+    .toBeVisible();
+  await page.getByRole("option", { exact: true, name: "Generated" }).click();
+  await page
+    .getByRole("button", { name: GENERATED_GENERATION_FILTER_RE })
+    .click();
+  await expect.element(page.getByText("route_code")).toBeVisible();
+  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
+  await page.getByRole("button", { exact: true, name: "Reset" }).click();
+
+  await expect
+    .element(page.getByRole("tab", { exact: true, name: "Columns 11" }))
     .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-columns"

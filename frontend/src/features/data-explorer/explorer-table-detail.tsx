@@ -71,8 +71,14 @@ import {
 } from "@/features/data-explorer/explorer-column-rows";
 import { HeaderStat } from "@/features/data-explorer/explorer-shared-ui";
 import {
+  type ColumnDefaultFilter,
+  type ColumnGenerationFilter,
   type ColumnKeyFilter,
+  type ColumnNullabilityFilter,
+  columnDefaultKind,
+  columnGenerationKinds,
   columnKeyKinds,
+  columnNullability,
   columnTypeCategory,
   filterColumnDetailRows,
   filterIndexesByMethod,
@@ -229,12 +235,29 @@ interface FacetFilterDefinition {
   options: FacetedFilterOption[];
   selectedValues: string[];
 }
-const COLUMN_KEY_FILTER_LABELS: Record<ColumnKeyFilter, string> = {
-  foreign: "Foreign key",
-  indexed: "Indexed",
-  none: "No key",
-  primary: "Primary key",
+type ColumnFacetOption<Value extends string> = FacetedFilterOption & {
+  value: Value;
 };
+const COLUMN_DEFAULT_FILTER_OPTIONS = [
+  { label: "Has default", value: "has-default" },
+  { label: "No default", value: "no-default" },
+] satisfies ColumnFacetOption<ColumnDefaultFilter>[];
+const COLUMN_GENERATION_FILTER_OPTIONS = [
+  { label: "Identity", value: "identity" },
+  { label: "Generated", value: "generated" },
+  { label: "Regular", value: "regular" },
+] satisfies ColumnFacetOption<ColumnGenerationFilter>[];
+const COLUMN_KEY_FILTER_OPTIONS = [
+  { label: "Primary key", value: "primary" },
+  { label: "Foreign key", value: "foreign" },
+  { label: "Unique", value: "unique" },
+  { label: "Index", value: "index" },
+  { label: "No key", value: "none" },
+] satisfies ColumnFacetOption<ColumnKeyFilter>[];
+const COLUMN_NULLABILITY_FILTER_OPTIONS = [
+  { label: "Not null", value: "not-null" },
+  { label: "Nullable", value: "nullable" },
+] satisfies ColumnFacetOption<ColumnNullabilityFilter>[];
 const TRIGGER_STATE_FILTER_LABELS: Record<TriggerStateFilter, string> = {
   disabled: "Disabled",
   enabled: "Enabled",
@@ -259,20 +282,12 @@ function uniqueSortedOptions(values: string[]): FacetedFilterOption[] {
     .sort((left, right) => left.localeCompare(right))
     .map((value) => ({ label: value, value }));
 }
-function presentColumnKeyOptions(rows: ColumnRow[]): FacetedFilterOption[] {
-  const present = new Set(rows.flatMap(columnKeyKinds));
-  const options: FacetedFilterOption[] = [];
-  for (const value of [
-    "primary",
-    "foreign",
-    "indexed",
-    "none",
-  ] satisfies ColumnKeyFilter[]) {
-    if (present.has(value)) {
-      options.push({ label: COLUMN_KEY_FILTER_LABELS[value], value });
-    }
-  }
-  return options;
+function presentColumnOptions<Value extends string>(
+  values: Value[],
+  options: readonly ColumnFacetOption<Value>[]
+): FacetedFilterOption[] {
+  const present = new Set(values);
+  return options.filter((option) => present.has(option.value));
 }
 function presentIndexMethodOptions(
   indexes: TableIndex[]
@@ -1079,6 +1094,9 @@ function ColumnsTab({
 }) {
   const [typeCategories, setTypeCategories] = useState<string[]>([]);
   const [keyKinds, setKeyKinds] = useState<string[]>([]);
+  const [nullability, setNullability] = useState<string[]>([]);
+  const [defaultKinds, setDefaultKinds] = useState<string[]>([]);
+  const [generationKinds, setGenerationKinds] = useState<string[]>([]);
   const toolbar = deriveMetadataToolbar([
     columnsQuery,
     constraintsQuery,
@@ -1120,7 +1138,10 @@ function ColumnsTab({
     indexesQuery.data.indexes
   );
   const filteredRows = filterColumnDetailRows(rows, {
+    defaultKinds: defaultKinds as ColumnDefaultFilter[],
+    generationKinds: generationKinds as ColumnGenerationFilter[],
     keyKinds: keyKinds as ColumnKeyFilter[],
+    nullability: nullability as ColumnNullabilityFilter[],
     typeCategories,
   });
   return (
@@ -1137,8 +1158,38 @@ function ColumnsTab({
             {
               handleSelectedValuesChange: setKeyKinds,
               label: "Key",
-              options: presentColumnKeyOptions(rows),
+              options: presentColumnOptions(
+                rows.flatMap(columnKeyKinds),
+                COLUMN_KEY_FILTER_OPTIONS
+              ),
               selectedValues: keyKinds,
+            },
+            {
+              handleSelectedValuesChange: setNullability,
+              label: "Nullability",
+              options: presentColumnOptions(
+                rows.map(columnNullability),
+                COLUMN_NULLABILITY_FILTER_OPTIONS
+              ),
+              selectedValues: nullability,
+            },
+            {
+              handleSelectedValuesChange: setDefaultKinds,
+              label: "Default",
+              options: presentColumnOptions(
+                rows.map(columnDefaultKind),
+                COLUMN_DEFAULT_FILTER_OPTIONS
+              ),
+              selectedValues: defaultKinds,
+            },
+            {
+              handleSelectedValuesChange: setGenerationKinds,
+              label: "Generation",
+              options: presentColumnOptions(
+                rows.flatMap(columnGenerationKinds),
+                COLUMN_GENERATION_FILTER_OPTIONS
+              ),
+              selectedValues: generationKinds,
             },
           ]}
         />
