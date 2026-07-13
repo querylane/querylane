@@ -90,9 +90,10 @@ func TestIntegrationTokenSigningKey(t *testing.T) {
 		start.Done()
 		callers.Wait()
 
+		assert.Equal(t, make([]error, replicas), errs)
+
 		for i := range replicas {
-			require.NoError(t, errs[i])
-			require.Equal(t, keys[0], keys[i])
+			assert.Equal(t, keys[0], keys[i])
 		}
 	})
 

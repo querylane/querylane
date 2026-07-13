@@ -7,6 +7,11 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+
+	"github.com/go-jet/jet/v2/postgres"
+
+	"github.com/querylane/querylane/backend/storage/gen/querylane/public/model"
+	"github.com/querylane/querylane/backend/storage/gen/querylane/public/table"
 )
 
 const (
@@ -37,18 +42,24 @@ func LoadOrCreateTokenSigningKey(ctx context.Context, db *sql.DB) ([]byte, error
 		}
 	}
 
-	var stored string
+	stmt := table.TokenSigningKey.
+		INSERT(
+			table.TokenSigningKey.ID,
+			table.TokenSigningKey.Material,
+		).
+		VALUES(tokenSigningKeyID, storedCandidate).
+		ON_CONFLICT(table.TokenSigningKey.ID).
+		DO_UPDATE(postgres.SET(
+			table.TokenSigningKey.Material.SET(table.TokenSigningKey.Material),
+		)).
+		RETURNING(table.TokenSigningKey.AllColumns)
 
-	err = db.QueryRowContext(ctx, `
-		INSERT INTO token_signing_key (id, material)
-		VALUES ($1, $2)
-		ON CONFLICT (id) DO UPDATE
-		SET material = token_signing_key.material
-		RETURNING material
-	`, tokenSigningKeyID, storedCandidate).Scan(&stored)
-	if err != nil {
+	var persisted model.TokenSigningKey
+	if err := stmt.QueryContext(ctx, db, &persisted); err != nil {
 		return nil, fmt.Errorf("load or create token signing key: %w", err)
 	}
+
+	stored := persisted.Material
 
 	encoded := stored
 	if looksLikeEncryptedSecret(stored) {
