@@ -660,6 +660,13 @@ test("console roles access map matches the design source", async () => {
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "console-roles-access-map"
   );
+
+  await page
+    .getByRole("button", { name: "Trace access for cloud_admin" })
+    .click();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "console-roles-access-map-selected-node"
+  );
 });
 
 test("console roles login no state keeps the same indicator slot", async () => {

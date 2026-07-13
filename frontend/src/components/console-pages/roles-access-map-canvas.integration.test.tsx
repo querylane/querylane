@@ -14,6 +14,13 @@ const MODEL: RolesAccessMapModel = {
       target: "object:table:prod:public.orders",
       tone: "direct",
     },
+    {
+      id: "role:app_writer->object:table:prod:public.invoices:owner",
+      privileges: ["OWNER"],
+      source: "role:app_writer",
+      target: "object:table:prod:public.invoices",
+      tone: "owner",
+    },
   ],
   objects: [
     {
@@ -23,6 +30,13 @@ const MODEL: RolesAccessMapModel = {
       subtitle: "table · public",
       title: "orders",
     },
+    {
+      databaseId: "prod",
+      id: "object:table:prod:public.invoices",
+      kind: "table",
+      subtitle: "table · public",
+      title: "invoices",
+    },
   ],
   roles: [
     {
@@ -31,6 +45,13 @@ const MODEL: RolesAccessMapModel = {
       roleId: "app_reader",
       subtitle: "user",
       title: "app_reader",
+    },
+    {
+      id: "role:app_writer",
+      kind: "login",
+      roleId: "app_writer",
+      subtitle: "user",
+      title: "app_writer",
     },
   ],
 };
@@ -78,25 +99,45 @@ describe("RolesAccessMapCanvas", () => {
     ).toBeTruthy();
   });
 
-  test("opens the selected node drawer and filters visible edge paths", async () => {
+  test("highlights selected node edges without opening a drawer", async () => {
     const user = userEvent.setup();
     const { container } = render(<CanvasHarness />);
+    const selectedNode = screen.getByRole("button", {
+      name: "Trace access for app_reader",
+    });
 
-    await user.click(
-      screen.getByRole("button", { name: "Trace access for app_reader" })
-    );
+    selectedNode.focus();
+    await user.keyboard("{Enter}");
 
-    expect(screen.getByRole("heading", { name: "app_reader" })).toBeTruthy();
-    expect(screen.getByText("1 connection")).toBeTruthy();
-    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(selectedNode.getAttribute("aria-pressed")).toBe("true");
 
     const mapSvg = container.querySelector<SVGElement>("svg.absolute");
-    expect(mapSvg?.querySelectorAll("path")).toHaveLength(1);
+    const [connectedEdge, unrelatedEdge] = Array.from(
+      mapSvg?.querySelectorAll("path") ?? []
+    );
+    expect(connectedEdge?.classList.contains("opacity-100")).toBe(true);
+    expect(connectedEdge?.getAttribute("stroke-width")).toBe("2");
+    expect(unrelatedEdge?.classList.contains("opacity-15")).toBe(true);
+    expect(unrelatedEdge?.getAttribute("stroke-width")).toBe("1.5");
+
+    await user.click(selectedNode);
+
+    expect(selectedNode.getAttribute("aria-pressed")).toBe("false");
+    expect(unrelatedEdge?.classList.contains("opacity-100")).toBe(true);
+  });
+
+  test("filters visible edge paths", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<CanvasHarness />);
+    const mapSvg = container.querySelector<SVGElement>("svg.absolute");
+
+    expect(mapSvg?.querySelectorAll("path")).toHaveLength(2);
 
     await user.click(screen.getByRole("button", { name: "View" }));
     await user.click(screen.getByRole("switch", { name: "Direct grants" }));
 
-    expect(mapSvg?.querySelectorAll("path")).toHaveLength(0);
+    expect(mapSvg?.querySelectorAll("path")).toHaveLength(1);
   });
 
   test("shows the empty object state", () => {

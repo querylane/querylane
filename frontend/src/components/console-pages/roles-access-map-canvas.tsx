@@ -16,7 +16,6 @@ import type {
   RolesAccessMapObjectNode,
   RolesAccessMapRoleNode,
 } from "@/components/console-pages/roles-access-map-model";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,13 +32,6 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { assertNever } from "@/lib/assert-never";
 import { cn } from "@/lib/utils";
@@ -194,53 +186,6 @@ function edgeIsActive({
   );
 }
 
-function nodeConnections(model: RolesAccessMapModel, nodeId: string) {
-  return model.edges.filter(
-    (edge) => edge.source === nodeId || edge.target === nodeId
-  );
-}
-
-function roleById(model: RolesAccessMapModel, nodeId: string) {
-  return model.roles.find((role) => role.id === nodeId);
-}
-
-function objectById(model: RolesAccessMapModel, nodeId: string) {
-  return model.objects.find((object) => object.id === nodeId);
-}
-
-function nodeDetails(
-  model: RolesAccessMapModel,
-  selectedNodeId: string | null
-) {
-  if (selectedNodeId == null) {
-    return null;
-  }
-  const role = roleById(model, selectedNodeId);
-  if (role) {
-    return {
-      connections: nodeConnections(model, selectedNodeId),
-      description: `${role.subtitle} access breakdown — from pg_auth_members, information_schema, pg_default_acl`,
-      title: role.title,
-    };
-  }
-  const object = objectById(model, selectedNodeId);
-  if (object) {
-    return {
-      connections: nodeConnections(model, selectedNodeId),
-      description: object.subtitle,
-      title: object.title,
-    };
-  }
-  return null;
-}
-
-function connectionLabel(model: RolesAccessMapModel, edge: RolesAccessMapEdge) {
-  const role = roleById(model, edge.source);
-  const targetRole = roleById(model, edge.target);
-  const object = objectById(model, edge.target);
-  return `${role?.title ?? "Role"} → ${targetRole?.title ?? object?.title ?? "Object"} · ${edge.privileges.join(" · ")}`;
-}
-
 function RoleNodeButton({
   dimmed,
   node,
@@ -257,6 +202,7 @@ function RoleNodeButton({
   return (
     <Button
       aria-label={`Trace access for ${node.title}`}
+      aria-pressed={selected}
       className={cn(
         "absolute h-9 justify-start rounded-lg border bg-background px-3 text-left shadow-xs hover:bg-accent",
         selected && "border-primary ring-2 ring-primary/30",
@@ -297,6 +243,7 @@ function ObjectNodeButton({
   return (
     <Button
       aria-label={`Trace access to ${node.title}`}
+      aria-pressed={selected}
       className={cn(
         "absolute h-[42px] justify-start rounded-lg border bg-background px-3 text-left shadow-xs hover:bg-accent",
         selected && "border-primary ring-2 ring-primary/30",
@@ -395,53 +342,6 @@ function AccessFiltersPopover({
   );
 }
 
-function SelectedNodeSheet({
-  model,
-  onOpenChange,
-  selectedNodeId,
-}: {
-  model: RolesAccessMapModel;
-  onOpenChange: (open: boolean) => void;
-  selectedNodeId: string | null;
-}) {
-  const details = nodeDetails(model, selectedNodeId);
-  return (
-    <Sheet onOpenChange={onOpenChange} open={details != null}>
-      <SheetContent className="w-[min(100vw,28rem)] sm:max-w-md">
-        {details ? (
-          <>
-            <SheetHeader>
-              <SheetTitle>{details.title}</SheetTitle>
-              <SheetDescription>{details.description}</SheetDescription>
-            </SheetHeader>
-            <div className="grid gap-3 px-4">
-              <Badge className="w-fit" variant="secondary">
-                {details.connections.length} connection
-                {details.connections.length === 1 ? "" : "s"}
-              </Badge>
-              <div className="grid gap-2">
-                {details.connections.map((edge) => (
-                  <div
-                    className="rounded-lg border bg-card p-3 text-card-foreground"
-                    key={edge.id}
-                  >
-                    <p className="font-medium text-sm">
-                      {connectionLabel(model, edge)}
-                    </p>
-                    <p className="mt-1 text-muted-foreground text-xs">
-                      {edge.tone}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        ) : null}
-      </SheetContent>
-    </Sheet>
-  );
-}
-
 function RolesAccessMapCanvas({
   model,
   onSelectNode,
@@ -495,6 +395,10 @@ function RolesAccessMapCanvas({
 
   function toggleEdgeTone(tone: RolesAccessMapEdgeTone, visible: boolean) {
     setEdgeVisibility((current) => ({ ...current, [tone]: visible }));
+  }
+
+  function selectNode(nodeId: string) {
+    onSelectNode(selectedNodeId === nodeId ? null : nodeId);
   }
 
   function nodeIsDimmed(nodeId: string): boolean {
@@ -565,7 +469,7 @@ function RolesAccessMapCanvas({
           </Button>
         </fieldset>
         <span className="text-[11.5px] text-muted-foreground">
-          click a node to trace its access · details open in the drawer
+          Click a node to highlight its access paths.
         </span>
       </div>
       <div
@@ -638,7 +542,7 @@ function RolesAccessMapCanvas({
                 dimmed={nodeIsDimmed(node.id)}
                 key={node.id}
                 node={node}
-                onSelect={onSelectNode}
+                onSelect={selectNode}
                 selected={selectedNodeId === node.id}
                 top={roleY(index)}
               />
@@ -649,7 +553,7 @@ function RolesAccessMapCanvas({
                 dimmed={nodeIsDimmed(node.id)}
                 key={node.id}
                 node={node}
-                onSelect={onSelectNode}
+                onSelect={selectNode}
                 selected={selectedNodeId === node.id}
                 top={objectY(index)}
               />
@@ -674,15 +578,6 @@ function RolesAccessMapCanvas({
           <div className="min-h-0 flex-1">{isExpanded ? mapSurface : null}</div>
         </DialogContent>
       </Dialog>
-      <SelectedNodeSheet
-        model={model}
-        onOpenChange={(open) => {
-          if (!open) {
-            onSelectNode(null);
-          }
-        }}
-        selectedNodeId={selectedNodeId}
-      />
     </section>
   );
 }
