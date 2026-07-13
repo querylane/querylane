@@ -3182,7 +3182,7 @@ const TRIGGER_WHEN_RE =
   /\bWHEN\s*\(([\s\S]+)\)\s+EXECUTE\s+(?:FUNCTION|PROCEDURE)\b/i;
 const TRIGGER_SQL_COPY_FEEDBACK_MS = 1500;
 
-function formatSqlIdentifier(identifier: string) {
+function formatTriggerSqlIdentifier(identifier: string) {
   if (SIMPLE_SQL_IDENTIFIER_RE.test(identifier)) {
     return identifier;
   }
@@ -3190,7 +3190,9 @@ function formatSqlIdentifier(identifier: string) {
 }
 
 function formatTriggerTableName(schemaName: string, tableName: string) {
-  return `${formatSqlIdentifier(schemaName)}.${formatSqlIdentifier(tableName)}`;
+  return `${formatTriggerSqlIdentifier(schemaName)}.${formatTriggerSqlIdentifier(
+    tableName
+  )}`;
 }
 
 function ensureSqlTerminator(sql: string) {
@@ -3229,7 +3231,7 @@ function formatTriggerSql({
   const timing = trigger.timing || "AFTER";
   const tableLabel = formatTriggerTableName(schemaName, tableName);
   return ensureSqlTerminator(
-    `CREATE TRIGGER ${formatSqlIdentifier(
+    `CREATE TRIGGER ${formatTriggerSqlIdentifier(
       trigger.triggerName
     )} ${timing} ${events} ON ${tableLabel} FOR EACH ROW ${formatTriggerFunctionCall(
       trigger
