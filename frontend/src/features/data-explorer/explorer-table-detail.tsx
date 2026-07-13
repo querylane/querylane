@@ -33,6 +33,7 @@ import type { TableForeignKeyReference } from "@/components/data-grid/table-data
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
+import { BashSyntaxHighlight } from "@/components/querylane-ui/bash-syntax-highlight";
 import { SearchEmptyState } from "@/components/search-empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -40,7 +41,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -82,7 +82,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -4139,10 +4138,6 @@ function TriggersTab({
   );
 }
 
-// Data-placeholder glyph used across metadata surfaces (see formatColumnList
-// and formatBytes) for values the catalog does not report.
-const EMPTY_DEPENDENCY_PLACEHOLDER = "—";
-
 interface DefinitionSection {
   content: string;
   detail: string;
@@ -4461,7 +4456,7 @@ function deriveDefinitionSections({
 
 function DefinitionSectionCard({ section }: { section: DefinitionSection }) {
   return (
-    <Card className="gap-0 py-0" size="sm">
+    <Card className="min-w-0 gap-0 py-0" size="sm">
       <CardHeader className="border-b bg-muted/40 py-3">
         <h2 className="flex items-center gap-2 font-medium text-sm">
           {section.title}
@@ -4485,24 +4480,21 @@ function DefinitionSectionCard({ section }: { section: DefinitionSection }) {
 }
 
 function DefinitionSideCard({
-  action,
   children,
   icon: Icon,
   title,
 }: {
-  action?: React.ReactNode;
   children: React.ReactNode;
   icon: LucideIcon;
   title: string;
 }) {
   return (
-    <Card className="gap-0 py-0" size="sm">
+    <Card className="min-w-0 gap-0 py-0" size="sm">
       <CardHeader className="border-b bg-muted/40 py-3">
         <h2 className="flex items-center gap-2 font-medium text-sm">
           <Icon aria-hidden="true" className="size-4 text-muted-foreground" />
           {title}
         </h2>
-        {action ? <CardAction>{action}</CardAction> : null}
       </CardHeader>
       <CardContent className="py-3">{children}</CardContent>
     </Card>
@@ -4523,6 +4515,35 @@ function dependencyReferences(constraints: TableConstraint[]) {
       }`,
     ];
   });
+}
+
+function ReferencedTablesCard({ references }: { references: string[] }) {
+  return (
+    <Card className="min-w-0 gap-0 py-0" size="sm">
+      <CardHeader className={cn("py-3", references.length > 0 && "border-b")}>
+        <h2 className="flex items-center gap-2 font-medium text-sm">
+          <Layers aria-hidden="true" className="size-4 text-muted-foreground" />
+          Referenced tables
+        </h2>
+        <CardDescription>
+          {references.length > 0
+            ? `${references.length.toLocaleString()} outbound ${references.length === 1 ? "reference" : "references"}`
+            : "No referenced tables"}
+        </CardDescription>
+      </CardHeader>
+      {references.length > 0 ? (
+        <CardContent className="py-3">
+          <ul className="space-y-1">
+            {references.map((reference) => (
+              <li className="font-mono text-xs" key={reference}>
+                {reference}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      ) : null}
+    </Card>
+  );
 }
 
 function dumpCommand({
@@ -4554,7 +4575,7 @@ function DefinitionCommandStep({
   title: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="min-w-0 max-w-full overflow-hidden rounded-lg border">
       <div className="flex items-center gap-2 border-b bg-muted/60 px-3 py-2">
         <span className="flex size-5 items-center justify-center rounded-full bg-muted-foreground/20 font-mono text-[10px]">
           {number}
@@ -4566,15 +4587,14 @@ function DefinitionCommandStep({
           value={command}
         />
       </div>
-      <Textarea
+      <section
         aria-label={`${title} command`}
-        className="block w-full resize-none overflow-x-auto whitespace-pre border-0 bg-transparent p-3 font-mono text-[11px] leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-        readOnly={true}
-        rows={Math.max(command.split("\n").length, 2)}
-        spellCheck={false}
-        value={command}
-        wrap="off"
-      />
+        className="max-w-full overflow-x-auto focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+      >
+        <pre className="min-h-14 w-max min-w-full whitespace-pre bg-transparent p-3 font-mono text-xs leading-relaxed">
+          <BashSyntaxHighlight code={command} />
+        </pre>
+      </section>
     </div>
   );
 }
@@ -4609,13 +4629,17 @@ function ReproduceLocallyCard({
 
   return (
     <DefinitionSideCard icon={Terminal} title="Reproduce locally">
-      <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1 text-center font-mono text-[11px]">
-          <span className="rounded-md bg-background px-2 py-1 shadow-sm">
+      <div className="min-w-0 space-y-3">
+        <div className="grid min-w-0 grid-cols-3 gap-1 rounded-lg bg-muted p-1 text-center font-mono text-[11px]">
+          <span className="truncate rounded-md bg-background px-2 py-1 shadow-sm">
             {tableName}
           </span>
-          <span className="px-2 py-1 text-muted-foreground">{schemaName}</span>
-          <span className="px-2 py-1 text-muted-foreground">{databaseId}</span>
+          <span className="truncate px-2 py-1 text-muted-foreground">
+            {schemaName}
+          </span>
+          <span className="truncate px-2 py-1 text-muted-foreground">
+            {databaseId}
+          </span>
         </div>
         <div className="flex min-h-8 items-center rounded-lg border bg-background px-3 py-1.5 text-sm">
           <span>Template: pg_dump, schema only (SQL)</span>
@@ -4790,85 +4814,58 @@ function DefinitionTab({
   });
 
   return (
-    <div className="@container/definition">
-      <div className="grid @5xl/definition:grid-cols-[minmax(0,1fr)_22rem] gap-4">
-        <div className="min-w-0 space-y-4">
-          {errors.length > 0 ? (
-            <TabError
-              errors={errors}
-              onRetry={toolbar.handleRetry}
-              tab="definition"
+    <div className="min-w-0 space-y-4">
+      {errors.length > 0 ? (
+        <TabError
+          errors={errors}
+          onRetry={toolbar.handleRetry}
+          tab="definition"
+        />
+      ) : null}
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-2 text-muted-foreground text-sm">
+        <span>Schema document</span>
+        <span aria-hidden="true">·</span>
+        <span>
+          generated live from{" "}
+          <code className="rounded bg-muted px-1 py-0.5">pg_catalog</code>
+        </span>
+        <span aria-hidden="true">·</span>
+        <span>{toolbar.lastFetchedLabel}</span>
+        <div className="ml-auto shrink-0">
+          <Button
+            disabled={toolbar.isRefreshing}
+            onClick={toolbar.handleRefresh}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <RefreshCw
+              aria-hidden="true"
+              className={cn(
+                "size-3.5",
+                toolbar.isRefreshing &&
+                  "animate-spin motion-reduce:animate-none"
+              )}
+              data-icon="inline-start"
             />
-          ) : null}
-          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 text-muted-foreground text-sm">
-            <span>Schema document</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              generated live from{" "}
-              <code className="rounded bg-muted px-1 py-0.5">pg_catalog</code>
-            </span>
-            <span aria-hidden="true">·</span>
-            <span>{toolbar.lastFetchedLabel}</span>
-            <div className="ml-auto shrink-0">
-              <Button
-                disabled={toolbar.isRefreshing}
-                onClick={toolbar.handleRefresh}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <RefreshCw
-                  aria-hidden="true"
-                  className={cn(
-                    "size-3.5",
-                    toolbar.isRefreshing &&
-                      "animate-spin motion-reduce:animate-none"
-                  )}
-                  data-icon="inline-start"
-                />
-                Refresh
-              </Button>
-            </div>
-          </div>
-          {sections.map((section) => (
-            <DefinitionSectionCard key={section.id} section={section} />
-          ))}
+            Refresh
+          </Button>
         </div>
-        <aside className="space-y-4">
-          <DefinitionSideCard icon={Layers} title="Dependencies">
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
-                  References
-                </p>
-                {references.length > 0 ? (
-                  <ul className="mt-1 space-y-1">
-                    {references.map((reference) => (
-                      <li className="font-mono text-xs" key={reference}>
-                        {reference}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-1 font-mono text-muted-foreground text-xs">
-                    {EMPTY_DEPENDENCY_PLACEHOLDER}
-                  </p>
-                )}
-              </div>
-            </div>
-          </DefinitionSideCard>
-          <ReproduceLocallyCard
-            command={command}
-            databaseId={databaseId}
-            schemaName={schemaName}
-            tableName={tableName}
-          />
-          <p className="px-1 text-muted-foreground text-xs leading-relaxed">
-            Definition is generated from pg_catalog on each visit; Querylane
-            never stores or mutates schema.
-          </p>
-        </aside>
       </div>
+      {sections.map((section) => (
+        <DefinitionSectionCard key={section.id} section={section} />
+      ))}
+      <ReferencedTablesCard references={references} />
+      <ReproduceLocallyCard
+        command={command}
+        databaseId={databaseId}
+        schemaName={schemaName}
+        tableName={tableName}
+      />
+      <p className="px-1 text-muted-foreground text-xs leading-relaxed">
+        Definition is generated from pg_catalog on each visit; Querylane never
+        stores or mutates schema.
+      </p>
     </div>
   );
 }
