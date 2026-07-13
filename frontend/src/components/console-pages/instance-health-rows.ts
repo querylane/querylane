@@ -215,19 +215,28 @@ function buildConnectionActivityRow(
 
 function buildReplicationRow(
   replication: ReplicationHealth | undefined,
-  reason: string | undefined
+  reason: string | undefined,
+  serverReplicationRole: ServerInfo_ReplicationRole | undefined
 ): HealthRowModel {
   if (!replication) {
     return unavailableRow({ id: "replication", label: "Replication", reason });
   }
 
-  const roleLabel = formatReplicationRole(replication.role);
-  const summary =
-    replication.summary.trim() ||
-    `${roleLabel} · ${replication.streamingReplicas} streaming`;
+  const reportedServerRole =
+    serverReplicationRole === undefined ||
+    serverReplicationRole === ServerInfo_ReplicationRole.UNSPECIFIED
+      ? replication.role
+      : serverReplicationRole;
+  const rolesDisagree = reportedServerRole !== replication.role;
+  const healthRoleLabel = formatReplicationRole(replication.role);
+  const roleLabel = formatReplicationRole(reportedServerRole);
+  const summary = rolesDisagree
+    ? `Health check reports ${healthRoleLabel}. Server info reports ${roleLabel}.`
+    : replication.summary.trim() ||
+      `${roleLabel} · ${replication.streamingReplicas} streaming`;
   const detail: HealthRowDetail[] = [{ label: "Role", value: roleLabel }];
 
-  if (replication.role === ServerInfo_ReplicationRole.REPLICA) {
+  if (reportedServerRole === ServerInfo_ReplicationRole.REPLICA) {
     detail.push(
       {
         label: "WAL receiver",
@@ -264,7 +273,10 @@ function buildReplicationRow(
     id: "replication",
     label: "Replication",
     summary,
-    tone: toneFromHealthCheckStatus(replication.status),
+    tone:
+      rolesDisagree && replication.status !== HealthCheckStatus.ERROR
+        ? "warning"
+        : toneFromHealthCheckStatus(replication.status),
   };
 }
 
@@ -424,7 +436,8 @@ function buildAutovacuumRow(
  */
 function buildLiveHealthRows(
   health: InstanceHealth | undefined,
-  partialErrors: Status[] | undefined
+  partialErrors: Status[] | undefined,
+  serverReplicationRole?: ServerInfo_ReplicationRole | undefined
 ): HealthRowModel[] {
   const reasons = getHealthCheckPartialReasons(partialErrors);
   return [
@@ -432,7 +445,11 @@ function buildLiveHealthRows(
       health?.connectionActivity,
       reasons.connection_activity
     ),
-    buildReplicationRow(health?.replication, reasons.replication),
+    buildReplicationRow(
+      health?.replication,
+      reasons.replication,
+      serverReplicationRole
+    ),
     buildStatsAccessRow(health?.statsAccess, reasons.stats_access),
     buildPgStatStatementsRow(
       health?.pgStatStatements,

@@ -165,7 +165,11 @@ function InstanceHealthSection({
   const rows = isConnected
     ? [
         buildConnectedEndpointRow(instance),
-        ...buildLiveHealthRows(health, healthPartialErrors),
+        ...buildLiveHealthRows(
+          health,
+          healthPartialErrors,
+          serverInfo?.replicationRole
+        ),
       ]
     : buildDisconnectedDiagnosticRows({ connectionStatus, instance });
 
