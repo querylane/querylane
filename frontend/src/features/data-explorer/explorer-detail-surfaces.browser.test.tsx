@@ -358,10 +358,7 @@ function renderScaledExplorerSurface(children: React.ReactNode) {
         className="relative h-[930px] w-[850px] overflow-hidden"
         data-testid="indexes-complex-frame"
       >
-        <div
-          className="absolute top-0 left-0 w-[1180px] origin-top-left"
-          style={{ transform: "scale(0.72)" }}
-        >
+        <div className="absolute top-0 left-0 w-[1180px] origin-top-left scale-[0.72]">
           <div className="rounded-2xl border border-border bg-background p-8 text-foreground">
             {children}
           </div>
