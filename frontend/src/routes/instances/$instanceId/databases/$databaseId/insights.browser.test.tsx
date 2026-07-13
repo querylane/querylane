@@ -212,6 +212,12 @@ test("query insights route matches the redesign visual slice", async () => {
   await expect
     .element(page.getByRole("region", { name: "Query detail" }))
     .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Type" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Mean" }))
+    .toBeVisible();
   const surface = page
     .getByTestId("query-insights-route-visual-surface")
     .element();

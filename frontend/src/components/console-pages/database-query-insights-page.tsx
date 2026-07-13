@@ -24,13 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DataTableFilter } from "@/components/ui/data-table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import {
   Table,
@@ -66,15 +60,12 @@ import type {
 } from "@/protogen/querylane/console/v1alpha1/database_pb";
 
 const CACHE_HIT_WARNING_THRESHOLD = 0.9;
-const QUERY_KIND_FILTERS = ["all", "reads", "writes"] as const;
-
-type QueryKindFilter = (typeof QUERY_KIND_FILTERS)[number];
+type QueryKindFilter = "all" | "reads" | "writes";
 
 const QUERY_KIND_FILTER_OPTIONS = [
-  { label: "All queries", value: "all" },
   { label: "Read queries", value: "reads" },
   { label: "Write queries", value: "writes" },
-] satisfies { label: string; value: QueryKindFilter }[];
+] satisfies { label: string; value: Exclude<QueryKindFilter, "all"> }[];
 const LEADING_EXPLAIN_RE = /^EXPLAIN\b\s*(?:\([^)]*\)\s*)?/i;
 const LEADING_EXPLAIN_FLAG_RE = /^(?:(?:ANALYZE|VERBOSE)\b\s*)+/i;
 const WITH_QUERY_RE = /^WITH\b/i;
@@ -89,17 +80,17 @@ const COPY_KEYWORD_RE = /^COPY\b/i;
 const DOLLAR_QUOTE_DELIMITER_RE = /^\$[A-Za-z_0-9]*\$/;
 const SQL_WORD_START_RE = /[A-Za-z_]/;
 const SQL_WORD_RE = /^[A-Za-z_][A-Za-z_0-9$]*/;
+type MeanFilterValue = "any" | "5" | "10" | "30";
+
 const MEAN_FILTER_OPTIONS = [
-  { label: "Mean: any", threshold: 0, value: "any" },
   { label: "Mean > 5 ms", threshold: 5, value: "5" },
   { label: "Mean > 10 ms", threshold: 10, value: "10" },
   { label: "Mean > 30 ms", threshold: 30, value: "30" },
-] as const;
-const MEAN_FILTER_SELECT_ITEMS = MEAN_FILTER_OPTIONS.map(
-  ({ label, value }) => ({ label, value })
-);
-
-type MeanFilterValue = (typeof MEAN_FILTER_OPTIONS)[number]["value"];
+] satisfies {
+  label: string;
+  threshold: number;
+  value: Exclude<MeanFilterValue, "any">;
+}[];
 type QueryClassification = "read" | "write" | "other";
 type QueryInsightMetric = "query_stats" | "table_stats";
 type QueryInsightPartialErrors = Partial<Record<QueryInsightMetric, Status>>;
@@ -115,22 +106,34 @@ interface QuerySelection {
   snapshotSource: QueryRuntimeInsight[] | null;
 }
 
-function isQueryKindFilter(value: string): value is QueryKindFilter {
+function queryKindFromSelectedValues(values: string[]): QueryKindFilter {
+  const value = values.at(-1);
   switch (value) {
-    case "all":
     case "reads":
     case "writes":
-      return true;
+      return value;
     default:
-      return false;
+      return "all";
   }
 }
 
-function isMeanFilterValue(value: string): value is MeanFilterValue {
-  return MEAN_FILTER_OPTIONS.some((filter) => filter.value === value);
+function meanFilterFromSelectedValues(values: string[]): MeanFilterValue {
+  switch (values.at(-1)) {
+    case "5":
+      return "5";
+    case "10":
+      return "10";
+    case "30":
+      return "30";
+    default:
+      return "any";
+  }
 }
 
 function meanFilterThreshold(value: MeanFilterValue) {
+  if (value === "any") {
+    return 0;
+  }
   return (
     MEAN_FILTER_OPTIONS.find((filter) => filter.value === value)?.threshold ?? 0
   );
@@ -460,6 +463,8 @@ function QueryToolbar({
   onSearchChange: (value: string) => void;
   search: string;
 }) {
+  const hasActiveFacet = kind !== "all" || meanFilter !== "any";
+
   return (
     <div
       className="flex min-w-0 flex-wrap items-center justify-start gap-2"
@@ -470,46 +475,39 @@ function QueryToolbar({
         placeholder="Search queries..."
         value={search}
       />
-      <Select
-        items={QUERY_KIND_FILTER_OPTIONS}
-        onValueChange={(value) => {
-          if (value != null && isQueryKindFilter(value)) {
-            onKindChange(value);
-          }
-        }}
-        value={kind}
-      >
-        <SelectTrigger aria-label="Query type" size="sm">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {QUERY_KIND_FILTER_OPTIONS.map((filter) => (
-            <SelectItem key={filter.value} value={filter.value}>
-              {filter.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
-        items={MEAN_FILTER_SELECT_ITEMS}
-        onValueChange={(value) => {
-          if (value != null && isMeanFilterValue(value)) {
-            onMeanFilterChange(value);
-          }
-        }}
-        value={meanFilter}
-      >
-        <SelectTrigger aria-label="Mean runtime" size="sm">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {MEAN_FILTER_OPTIONS.map((filter) => (
-            <SelectItem key={filter.value} value={filter.value}>
-              {filter.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <DataTableFacetedFilter
+        onSelectedValuesChange={(values) =>
+          onKindChange(queryKindFromSelectedValues(values))
+        }
+        options={QUERY_KIND_FILTER_OPTIONS}
+        selectedValues={kind === "all" ? [] : [kind]}
+        singleSelect={true}
+        title="Type"
+      />
+      <DataTableFacetedFilter
+        onSelectedValuesChange={(values) =>
+          onMeanFilterChange(meanFilterFromSelectedValues(values))
+        }
+        options={MEAN_FILTER_OPTIONS}
+        selectedValues={meanFilter === "any" ? [] : [meanFilter]}
+        singleSelect={true}
+        title="Mean"
+      />
+      {hasActiveFacet ? (
+        <Button
+          className="h-8 px-2 text-xs"
+          onClick={() => {
+            onKindChange("all");
+            onMeanFilterChange("any");
+          }}
+          size="sm"
+          type="button"
+          variant="ghost"
+        >
+          <X data-icon="inline-start" />
+          Reset
+        </Button>
+      ) : null}
     </div>
   );
 }

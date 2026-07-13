@@ -792,7 +792,7 @@ describe("backend database overview", () => {
       })
     ).toBeTruthy();
 
-    await user.click(screen.getByRole("combobox", { name: "Query type" }));
+    await user.click(screen.getByRole("button", { name: "Type" }));
     await user.click(screen.getByRole("option", { name: "Write queries" }));
 
     expect(
@@ -940,7 +940,7 @@ describe("backend database query insights page", () => {
       />
     );
 
-    await user.click(screen.getByRole("combobox", { name: "Query type" }));
+    await user.click(screen.getByRole("button", { name: "Type" }));
     await user.click(screen.getByRole("option", { name: "Write queries" }));
 
     expect(
@@ -973,7 +973,8 @@ describe("backend database query insights page", () => {
       screen.queryByRole("button", { name: "Query text unavailable" })
     ).toBeNull();
 
-    await user.click(screen.getByRole("combobox", { name: "Query type" }));
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+    await user.click(screen.getByRole("button", { name: "Type" }));
     await user.click(screen.getByRole("option", { name: "Read queries" }));
 
     expect(
@@ -1181,7 +1182,7 @@ describe("database query insights resilience", () => {
     expect(within(freshDetail).getByText("queryid 123")).toBeTruthy();
   });
 
-  test("filters query insights with table-style search and select dropdowns", async () => {
+  test("filters query insights with table-style search and shared faceted filters", async () => {
     const user = userEvent.setup();
     state.queryInsightsQuery = {
       data: queryInsightsResponseWithSearchableQueries(),
@@ -1207,15 +1208,16 @@ describe("database query insights resilience", () => {
     expect(filterBar.className).toContain("justify-start");
     expect(filterBar.firstElementChild?.contains(searchInput)).toBe(true);
     expect(
-      within(filterBar).getByRole("combobox", { name: "Query type" })
-        .textContent
-    ).toContain("All queries");
+      within(filterBar).getByRole("button", { name: "Type" })
+    ).toBeTruthy();
     expect(
-      within(filterBar).getByRole("combobox", { name: "Mean runtime" })
-        .textContent
-    ).toContain("Mean: any");
+      within(filterBar).getByRole("button", { name: "Mean" })
+    ).toBeTruthy();
     expect(
-      within(filterBar).queryByRole("button", { name: "Reads" })
+      within(filterBar).queryByRole("combobox", { name: "Query type" })
+    ).toBeNull();
+    expect(
+      within(filterBar).queryByRole("combobox", { name: "Mean runtime" })
     ).toBeNull();
 
     await user.type(searchInput, "update");
@@ -1228,9 +1230,7 @@ describe("database query insights resilience", () => {
     ).toBeNull();
 
     await user.clear(searchInput);
-    await user.click(
-      within(filterBar).getByRole("combobox", { name: "Query type" })
-    );
+    await user.click(within(filterBar).getByRole("button", { name: "Type" }));
     await user.click(screen.getByRole("option", { name: "Write queries" }));
 
     expect(
@@ -1240,13 +1240,8 @@ describe("database query insights resilience", () => {
       screen.queryByRole("button", { name: SELECT_EVENTS_QUERY_BUTTON_RE })
     ).toBeNull();
 
-    await user.click(
-      within(filterBar).getByRole("combobox", { name: "Query type" })
-    );
-    await user.click(screen.getByRole("option", { name: "All queries" }));
-    await user.click(
-      within(filterBar).getByRole("combobox", { name: "Mean runtime" })
-    );
+    await user.click(within(filterBar).getByRole("button", { name: "Reset" }));
+    await user.click(within(filterBar).getByRole("button", { name: "Mean" }));
     await user.click(screen.getByRole("option", { name: "Mean > 30 ms" }));
 
     expect(
