@@ -2039,14 +2039,14 @@ const CACHE_PERCENT_TENTHS_SCALE = 1000n;
 const CACHE_HIT_DESCRIPTION =
   "PostgreSQL shared-buffer hit ratio; operating-system cache reads count as reads.";
 
-function formatSqlIdentifier(identifier: string) {
+function formatIndexSqlIdentifier(identifier: string) {
   if (SIMPLE_SQL_IDENTIFIER_PATTERN.test(identifier)) {
     return identifier;
   }
   return `"${identifier.replaceAll('"', '""')}"`;
 }
-function formatQualifiedTableName(schemaName: string, tableName: string) {
-  return `${formatSqlIdentifier(schemaName)}.${formatSqlIdentifier(tableName)}`;
+function formatIndexQualifiedTableName(schemaName: string, tableName: string) {
+  return `${formatIndexSqlIdentifier(schemaName)}.${formatIndexSqlIdentifier(tableName)}`;
 }
 function formatIndexSqlColumns(index: TableIndex) {
   const keyParts = getIndexKeyParts(index);
@@ -2068,15 +2068,17 @@ function createIndexSql({
     return index.definition;
   }
   const unique = index.isUnique ? "UNIQUE " : "";
-  const indexName = formatSqlIdentifier(index.indexName || "unnamed_index");
+  const indexName = formatIndexSqlIdentifier(
+    index.indexName || "unnamed_index"
+  );
   const method = index.method || "btree";
   const columns = formatIndexSqlColumns(index);
   const included =
     index.includedColumns.length > 0
-      ? ` INCLUDE (${index.includedColumns.map(formatSqlIdentifier).join(", ")})`
+      ? ` INCLUDE (${index.includedColumns.map(formatIndexSqlIdentifier).join(", ")})`
       : "";
   const predicate = index.predicate ? ` WHERE ${index.predicate}` : "";
-  return `CREATE ${unique}INDEX ${indexName} ON ${formatQualifiedTableName(
+  return `CREATE ${unique}INDEX ${indexName} ON ${formatIndexQualifiedTableName(
     schemaName,
     tableName
   )} USING ${method} (${columns})${included}${predicate}`;
@@ -2092,7 +2094,7 @@ function formatIndexKeyPartForSql(keyPart: string) {
   ) {
     return keyPart;
   }
-  return formatSqlIdentifier(keyPart);
+  return formatIndexSqlIdentifier(keyPart);
 }
 function getIndexKeyParts(index: TableIndex) {
   if (index.keyParts.length > 0) {
