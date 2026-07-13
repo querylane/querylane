@@ -68,6 +68,7 @@ const CHILD_PARTITION_SQL_RE =
   /CREATE TABLE "archive"\."events_2025" PARTITION OF "public"\."events"\s+FOR VALUES FROM \('2025-01-01'\) TO \('2026-01-01'\);/;
 const COLUMN_COMMENT_SQL_RE =
   /COMMENT ON COLUMN "public"\."customers"\."display name" IS 'Owner''s name';/;
+const LAST_FETCHED_RE = /^Last fetched/;
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual =
@@ -224,7 +225,9 @@ function seedSuccessfulMetadataQueries() {
   tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
     constraints: [],
   });
+  tableQueries.constraints.dataUpdatedAt = 0;
   tableQueries.constraints.error = null;
+  tableQueries.constraints.isFetching = false;
   tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
     indexes: [],
   });
@@ -886,7 +889,9 @@ describe("TableDetail tab routing", () => {
 });
 
 describe("TableDetail constraints tab", () => {
-  it("groups keys and outbound foreign keys as constraint cards", () => {
+  it("groups keys and outbound foreign keys as constraint cards", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.dataUpdatedAt = Date.UTC(2026, 0, 1, 23);
     tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
       constraints: [
         create(TableConstraintSchema, {
@@ -958,6 +963,50 @@ describe("TableDetail constraints tab", () => {
     ).toBeGreaterThan(8);
     expect(screen.queryByRole("button", { name: "Copy SQL" })).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.getByText(LAST_FETCHED_RE)).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Refresh" }));
+
+    expect(tableQueries.constraints.refetch).toHaveBeenCalledOnce();
+  });
+
+  it("uses readable plain-text fallbacks for incomplete metadata", () => {
+    const malformedReference =
+      "instances/prod/databases/app/tables/legacy_orders";
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["order_id"],
+          constraintName: "orders_order_id_fkey",
+          referencedTable: malformedReference,
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="constraints"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema)}
+        tableName="orders"
+      />
+    );
+
+    const card = screen.getByText("orders_order_id_fkey").closest("article");
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByText("legacy_orders")).toBeTruthy();
+    expect(
+      within(card as HTMLElement).queryByText(malformedReference)
+    ).toBeNull();
+    expect(
+      within(card as HTMLElement).getByText("FOREIGN KEY (order_id)")
+    ).toBeTruthy();
+    expect(
+      card?.querySelector('code[data-syntax-highlighter="shiki"]')
+    ).toBeNull();
   });
 
   it("shows design-export validation badges and check groups", () => {

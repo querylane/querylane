@@ -1108,6 +1108,12 @@ test("data explorer constraints tab matches redesign card groups", async () => {
     .toBeVisible();
   await expect.element(page.getByText("validated")).toBeVisible();
   await expect.element(page.getByText("shipping.shipments ↗")).toBeVisible();
+  await expect
+    .element(page.getByText("Last fetched 11:00:00 PM", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Refresh" }))
+    .toBeVisible();
   expect(document.querySelector('[data-slot="facet-filter-bar"]')).toBeNull();
   expect(document.querySelector("table")).toBeNull();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(

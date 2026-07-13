@@ -104,6 +104,7 @@ import {
   buildTableName,
   formatBytes,
   normalizeEstimatedRowCount,
+  parseResourceLeafId,
   parseTableQualifiedName,
 } from "@/lib/console-resources";
 import {
@@ -490,6 +491,34 @@ function deriveMetadataToolbar(
     isRefreshing: queries.some((query) => query.isFetching),
     lastFetchedLabel: formatLastFetchedLabel(dataUpdatedAt),
   };
+}
+
+function MetadataRefreshControl({ toolbar }: { toolbar: MetadataToolbar }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span aria-live="polite" className="text-muted-foreground text-xs">
+        {toolbar.lastFetchedLabel}
+      </span>
+      <Button
+        disabled={toolbar.isRefreshing}
+        onClick={() => {
+          toolbar.handleRefresh();
+        }}
+        size="sm"
+        type="button"
+        variant="outline"
+      >
+        <RefreshCw
+          aria-hidden="true"
+          className={cn(
+            "size-3.5",
+            toolbar.isRefreshing && "animate-spin motion-reduce:animate-none"
+          )}
+        />
+        Refresh
+      </Button>
+    </div>
+  );
 }
 
 function TableResourceEmptyState({
@@ -1280,30 +1309,7 @@ function PartitionsTab({
         <span className="text-muted-foreground text-sm">
           PostgreSQL partition hierarchy for this table.
         </span>
-        <div className="flex items-center gap-2">
-          <span aria-live="polite" className="text-muted-foreground text-xs">
-            {toolbar.lastFetchedLabel}
-          </span>
-          <Button
-            disabled={toolbar.isRefreshing}
-            onClick={() => {
-              toolbar.handleRefresh();
-            }}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={cn(
-                "size-3.5",
-                toolbar.isRefreshing &&
-                  "animate-spin motion-reduce:animate-none"
-              )}
-            />
-            Refresh
-          </Button>
-        </div>
+        <MetadataRefreshControl toolbar={toolbar} />
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {summaryItems.map((item) => (
@@ -1534,7 +1540,9 @@ function ReferencedTableTarget({
   const target = parseReferencedTableTarget(referencedTable);
   if (!target) {
     return referencedTable ? (
-      <ConstraintBadge tone="ghost">{referencedTable}</ConstraintBadge>
+      <ConstraintBadge tone="ghost">
+        {parseResourceLeafId(referencedTable)}
+      </ConstraintBadge>
     ) : null;
   }
   return (
@@ -1623,11 +1631,9 @@ function ConstraintCard({
   instanceId: string;
 }) {
   const isForeignKey = isForeignKeyConstraint(constraint);
-  const definition =
-    constraint.definition ||
-    `${CONSTRAINT_TYPE_LABELS[constraint.type]} (${formatConstraintColumns(
-      constraint.columnNames
-    )})`;
+  const fallbackDefinition = `${CONSTRAINT_TYPE_LABELS[constraint.type]} (${formatConstraintColumns(
+    constraint.columnNames
+  )})`;
   return (
     <article
       className={cn(
@@ -1669,11 +1675,17 @@ function ConstraintCard({
           />
         ) : null}
       </div>
-      <SqlCodeBlock
-        className="mt-[7px] whitespace-pre-wrap rounded-none border-0 bg-transparent p-0 pr-0 text-[11.5px] text-muted-foreground leading-[1.55] [overflow-wrap:anywhere]"
-        copyable={false}
-        sql={definition}
-      />
+      {constraint.definition ? (
+        <SqlCodeBlock
+          className="mt-[7px] whitespace-pre-wrap rounded-none border-0 bg-transparent p-0 text-[11.5px] text-muted-foreground leading-[1.55] [overflow-wrap:anywhere]"
+          copyable={false}
+          sql={constraint.definition}
+        />
+      ) : (
+        <p className="mt-[7px] break-words font-mono text-[11.5px] text-muted-foreground leading-[1.55] [overflow-wrap:anywhere]">
+          {fallbackDefinition}
+        </p>
+      )}
     </article>
   );
 }
@@ -1761,6 +1773,9 @@ function ConstraintsTab({
   );
   return (
     <div className="space-y-3.5" data-slot="constraints-card-list">
+      <div className="flex justify-end">
+        <MetadataRefreshControl toolbar={toolbar} />
+      </div>
       <ConstraintSection
         constraints={keyConstraints}
         databaseId={databaseId}

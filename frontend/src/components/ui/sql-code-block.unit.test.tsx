@@ -1,4 +1,4 @@
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 
@@ -38,5 +38,14 @@ SELECT 'active' AS status;`;
         token.getAttribute("style")?.includes("--querylane-sql-token-dark")
       )
     ).toBe(true);
+  });
+
+  test("removes the copy control and reserved padding together", () => {
+    const { container } = render(
+      <SqlCodeBlock copyable={false} sql="SELECT 1" />
+    );
+
+    expect(screen.queryByRole("button", { name: "Copy SQL" })).toBeNull();
+    expect(container.querySelector("pre")?.className).not.toContain("pr-10");
   });
 });
