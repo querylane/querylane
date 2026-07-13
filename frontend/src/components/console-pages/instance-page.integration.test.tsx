@@ -936,6 +936,12 @@ describe("backend instance activity", () => {
     const search = within(activity).getByRole("textbox", {
       name: "Search query, user, app…",
     });
+    const stateFilter = within(activity).getByRole("button", {
+      name: "State",
+    });
+
+    expect(within(activity).getByRole("button", { name: "App" })).toBeTruthy();
+    expect(within(activity).getByRole("button", { name: "DB" })).toBeTruthy();
 
     await user.type(search, "4302");
 
@@ -954,7 +960,7 @@ describe("backend instance activity", () => {
     });
 
     await user.clear(search);
-    await user.click(within(activity).getByRole("combobox", { name: "State" }));
+    await user.click(stateFilter);
     await user.click(screen.getByRole("option", { name: "active" }));
 
     expect(

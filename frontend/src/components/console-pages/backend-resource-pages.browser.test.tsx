@@ -808,6 +808,36 @@ test("backend instance activity matches the live sessions redesign", async () =>
   await expect.element(page.getByText("blocker · pid 4211")).toBeVisible();
   await expect.element(page.getByText("PID")).toBeVisible();
   await expect.element(page.getByText("User · app")).toBeVisible();
+  const search = page.getByRole("textbox", {
+    name: "Search query, user, app…",
+  });
+  const stateFilter = page.getByRole("button", {
+    exact: true,
+    name: "State",
+  });
+  const appFilter = page.getByRole("button", {
+    exact: true,
+    name: "App",
+  });
+  const databaseFilter = page.getByRole("button", {
+    exact: true,
+    name: "DB",
+  });
+  await expect.element(search).toBeVisible();
+  await expect.element(stateFilter).toBeVisible();
+  await expect.element(appFilter).toBeVisible();
+  await expect.element(databaseFilter).toBeVisible();
+
+  const searchBox = search.element().getBoundingClientRect();
+  const filterBoxes = [stateFilter, appFilter, databaseFilter].map((filter) =>
+    filter.element().getBoundingClientRect()
+  );
+  expect(searchBox.right).toBeLessThan(filterBoxes[0]?.left ?? 0);
+  expect(filterBoxes[0]?.right ?? 0).toBeLessThan(filterBoxes[1]?.left ?? 0);
+  expect(filterBoxes[1]?.right ?? 0).toBeLessThan(filterBoxes[2]?.left ?? 0);
+  for (const filterBox of filterBoxes) {
+    expect(Math.abs(searchBox.top - filterBox.top)).toBeLessThanOrEqual(1);
+  }
   await expect
     .element(
       page.getByRole("row", {

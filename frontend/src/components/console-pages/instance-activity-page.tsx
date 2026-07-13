@@ -20,13 +20,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableFilter } from "@/components/ui/data-table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 import {
   Table,
   TableBody,
@@ -81,64 +75,6 @@ function ActivityStateBadge({ row }: { row: ActivitySessionRow }) {
     >
       {row.state}
     </Badge>
-  );
-}
-
-function ActivityFilterSelect({
-  label,
-  onChange,
-  options,
-  value,
-}: {
-  label: string;
-  onChange: (value: string | null) => void;
-  options: string[];
-  value: string | null;
-}) {
-  const selectOptions = [
-    { label: "any", selectValue: "all", value: EMPTY_FILTER_VALUE },
-    ...options.map((option, index) => ({
-      label: option,
-      selectValue: `value-${index}`,
-      value: option,
-    })),
-  ];
-  const selectedOption =
-    selectOptions.find((option) => option.value === value) ?? selectOptions[0];
-
-  return (
-    <Select
-      onValueChange={(next) => {
-        const option = selectOptions.find(
-          (candidate) => candidate.selectValue === next
-        );
-        if (option) {
-          onChange(option.value);
-        }
-      }}
-      value={selectedOption?.selectValue}
-    >
-      <SelectTrigger
-        aria-label={label}
-        className="h-7 min-w-28 text-xs"
-        size="sm"
-      >
-        <SelectValue>
-          {label}: {selectedOption?.label ?? "any"}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent alignItemWithTrigger={false}>
-        {selectOptions.map((option) => (
-          <SelectItem
-            key={option.selectValue}
-            label={option.label}
-            value={option.selectValue}
-          >
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
   );
 }
 
@@ -389,13 +325,9 @@ function InstanceActivityPage({
   refreshing: boolean;
 }) {
   const [search, setSearch] = useUrlTableSearch();
-  const [stateFilter, setStateFilter] = useState<string | null>(
-    EMPTY_FILTER_VALUE
-  );
-  const [appFilter, setAppFilter] = useState<string | null>(EMPTY_FILTER_VALUE);
-  const [databaseFilter, setDatabaseFilter] = useState<string | null>(
-    EMPTY_FILTER_VALUE
-  );
+  const [stateFilter, setStateFilter] = useState<string[]>([]);
+  const [appFilter, setAppFilter] = useState<string[]>([]);
+  const [databaseFilter, setDatabaseFilter] = useState<string[]>([]);
   const stats = presentActivityStats(
     connectionStatus === "connected" ? activity : undefined
   );
@@ -406,10 +338,10 @@ function InstanceActivityPage({
     state: EMPTY_FILTER_VALUE,
   });
   const rows = presentActivitySessionRows(activity, {
-    app: appFilter,
-    database: databaseFilter,
+    app: appFilter[0] ?? EMPTY_FILTER_VALUE,
+    database: databaseFilter[0] ?? EMPTY_FILTER_VALUE,
     search,
-    state: stateFilter,
+    state: stateFilter[0] ?? EMPTY_FILTER_VALUE,
   });
   const blockingChains = getActivityBlockingChains(allRows);
   const hasActivity = connectionStatus === "connected" && Boolean(activity);
@@ -454,31 +386,44 @@ function InstanceActivityPage({
         ) : null}
 
         <div className="overflow-hidden rounded-[14px] bg-card shadow-xs ring-1 ring-border">
-          <div className="flex flex-wrap items-center gap-2 px-[18px] py-3">
-            <DataTableFilter
-              onChange={setSearch}
-              placeholder="Search query, user, app…"
-              value={search}
-            />
-            <div className="flex-1" />
-            <ActivityFilterSelect
-              label="State"
-              onChange={setStateFilter}
-              options={filterOptions.state}
-              value={stateFilter}
-            />
-            <ActivityFilterSelect
-              label="App"
-              onChange={setAppFilter}
-              options={filterOptions.app}
-              value={appFilter}
-            />
-            <ActivityFilterSelect
-              label="DB"
-              onChange={setDatabaseFilter}
-              options={filterOptions.database}
-              value={databaseFilter}
-            />
+          <div className="overflow-x-auto px-[18px] py-3">
+            <div className="flex min-w-max items-center gap-2">
+              <DataTableFilter
+                onChange={setSearch}
+                placeholder="Search query, user, app…"
+                value={search}
+              />
+              <DataTableFacetedFilter
+                onSelectedValuesChange={setStateFilter}
+                options={filterOptions.state.map((value) => ({
+                  label: value,
+                  value,
+                }))}
+                selectedValues={stateFilter}
+                singleSelect={true}
+                title="State"
+              />
+              <DataTableFacetedFilter
+                onSelectedValuesChange={setAppFilter}
+                options={filterOptions.app.map((value) => ({
+                  label: value,
+                  value,
+                }))}
+                selectedValues={appFilter}
+                singleSelect={true}
+                title="App"
+              />
+              <DataTableFacetedFilter
+                onSelectedValuesChange={setDatabaseFilter}
+                options={filterOptions.database.map((value) => ({
+                  label: value,
+                  value,
+                }))}
+                selectedValues={databaseFilter}
+                singleSelect={true}
+                title="DB"
+              />
+            </div>
           </div>
           <ActivitySessionsTable rows={rows} search={search} />
           <div className="flex items-center gap-2 border-border border-t px-[18px] py-2.5">
