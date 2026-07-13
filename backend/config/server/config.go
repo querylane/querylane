@@ -20,6 +20,7 @@ type Config struct {
 	HTTP     HTTP              `koanf:"http"`
 	Database *Database         `koanf:"database"`
 	Embedded *EmbeddedDatabase `koanf:"embedded"`
+	Limits   Limits            `koanf:"limits"`
 
 	// Instances defines managed PostgreSQL instances via config (IaC mode).
 	// When set, instances are read-only through the API — mutations are rejected.
@@ -30,6 +31,7 @@ type Config struct {
 // SetDefaults for all configurations.
 func (c *Config) SetDefaults() {
 	c.HTTP.SetDefaults()
+	c.Limits.SetDefaults()
 
 	if c.Database != nil {
 		c.Database.SetDefaults()
@@ -48,6 +50,17 @@ func (c *Config) SetDefaults() {
 func (c *Config) Validate() error {
 	if err := c.HTTP.Validate(); err != nil {
 		return fmt.Errorf("http: %w", err)
+	}
+
+	// Programmatic callers historically validate a partial Config directly.
+	// Treat a wholly omitted limits section like the loader does, while still
+	// rejecting invalid values in a section that was actually populated.
+	if c.Limits == (Limits{}) {
+		c.Limits.SetDefaults()
+	}
+
+	if err := c.Limits.Validate(); err != nil {
+		return fmt.Errorf("limits: %w", err)
 	}
 
 	if c.Database != nil && c.Embedded != nil {

@@ -15,6 +15,7 @@ import (
 
 	"github.com/querylane/querylane/backend/connectrpc/apierrors"
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/livequery"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	"github.com/querylane/querylane/backend/resource"
@@ -51,17 +52,22 @@ type Service struct {
 	resolver    tableResolver
 	connManager instanceOpener
 	tokens      *engine.TokenCodec
+	liveQueries *livequery.Limiter
 }
 
 // NewService creates a new TableDataService. The token codec is used by
 // ReadCellValue to verify full_value_token and is shared with the engine
 // (which mints those tokens during ReadRows scans).
-func NewService(resolver tableResolver, connManager instanceOpener, tokens *engine.TokenCodec) *Service {
+func NewService(resolver tableResolver, connManager instanceOpener, tokens *engine.TokenCodec, liveQueries *livequery.Limiter) *Service {
 	if tokens == nil {
 		panic("tabledata.NewService: token codec is required") //nolint:forbidigo // programmer error during DI setup
 	}
 
-	return &Service{resolver: resolver, connManager: connManager, tokens: tokens}
+	if liveQueries == nil {
+		panic("tabledata.NewService: live query limiter is required") //nolint:forbidigo // programmer error during DI setup
+	}
+
+	return &Service{resolver: resolver, connManager: connManager, tokens: tokens, liveQueries: liveQueries}
 }
 
 // ReadRows reads a single page of rows from a table.
@@ -70,6 +76,12 @@ func (s *Service) ReadRows(ctx context.Context, req *connect.Request[v1alpha1.Re
 	if connErr != nil {
 		return nil, connErr
 	}
+
+	release, err := s.liveQueries.Acquire(tableRes.Instance())
+	if err != nil {
+		return nil, apierrors.MapLiveQueryLimit(err)
+	}
+	defer release()
 
 	if err := s.resolver.EnsureTableExists(ctx, tableRes); err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
@@ -142,6 +154,12 @@ func (s *Service) StreamRows(ctx context.Context, req *connect.Request[v1alpha1.
 	if connErr != nil {
 		return connErr
 	}
+
+	release, err := s.liveQueries.Acquire(tableRes.Instance())
+	if err != nil {
+		return apierrors.MapLiveQueryLimit(err)
+	}
+	defer release()
 
 	mapErr := func(err error) error {
 		return apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
@@ -394,6 +412,12 @@ func (s *Service) ReadCellValue(ctx context.Context, req *connect.Request[v1alph
 			apierrors.NewFieldViolation("full_value_token", "token expired"),
 		)
 	}
+
+	release, err := s.liveQueries.Acquire(tableRes.Instance())
+	if err != nil {
+		return nil, apierrors.MapLiveQueryLimit(err)
+	}
+	defer release()
 
 	mapErr := func(err error) error {
 		return apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{

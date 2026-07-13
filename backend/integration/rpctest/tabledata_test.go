@@ -9,8 +9,10 @@ import (
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/querylane/querylane/backend/integration/testutil"
 	consolev1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
+	"github.com/querylane/querylane/backend/sampledata"
 )
 
 func (s *RPCSuite) TestReadRows_BasicRead() {
@@ -33,6 +35,196 @@ func (s *RPCSuite) TestReadRows_BasicRead() {
 	s.True(colNames["id"], "should have id column")
 	s.True(colNames["first_name"], "should have first_name column")
 	s.True(colNames["email"], "should have email column")
+}
+
+func (s *RPCSuite) TestLiveQueryConcurrencyLimitIsSharedAcrossServices() {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	const (
+		perInstanceLimit    = 6
+		targetConnectionMax = perInstanceLimit + 4
+		executeHolders      = perInstanceLimit
+		queryMarker         = "live-query-limit-test"
+		lowInstanceID       = "low-connection-target"
+		lowDatabase         = "testdb"
+	)
+
+	lowTarget := testutil.RequirePostgreSQLContainerWithMaxConnections(ctx, s.T(), targetConnectionMax)
+	s.T().Cleanup(func() { s.Require().NoError(lowTarget.Cleanup(context.Background())) })
+
+	targetDB, err := lowTarget.ConnectToDatabase(ctx, lowDatabase)
+	s.Require().NoError(err)
+
+	var maxConnections int
+	s.Require().NoError(targetDB.QueryRowContext(ctx, "SHOW max_connections").Scan(&maxConnections))
+	s.Equal(targetConnectionMax, maxConnections)
+	s.Require().NoError(sampledata.Apply(ctx, targetDB))
+	s.T().Cleanup(func() { s.Require().NoError(targetDB.Close()) })
+
+	targetHost, err := lowTarget.Host(ctx)
+	s.Require().NoError(err)
+	targetPort, err := lowTarget.MappedPort(ctx)
+	s.Require().NoError(err)
+
+	_, err = s.instanceClient.CreateInstance(ctx, connect.NewRequest(&consolev1alpha1.CreateInstanceRequest{
+		Spec: &consolev1alpha1.CreateInstanceSpec{
+			DisplayName: "Low-connection target",
+			Config: &consolev1alpha1.PostgresConfig{
+				Host:     targetHost,
+				Port:     mustAtoi(s.T(), targetPort),
+				Database: lowDatabase,
+				Username: "testuser",
+				Password: "testpass",
+				SslMode:  consolev1alpha1.PostgresConfig_SSL_MODE_DISABLED,
+			},
+		},
+		InstanceId: lowInstanceID,
+	}))
+	s.Require().NoError(err)
+	s.T().Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cleanupCancel()
+
+		_, cleanupErr := s.instanceClient.DeleteInstance(cleanupCtx, connect.NewRequest(&consolev1alpha1.DeleteInstanceRequest{
+			Name: "instances/" + lowInstanceID,
+		}))
+		s.Require().NoError(cleanupErr)
+	})
+
+	instanceName := "instances/" + lowInstanceID
+	databaseName := instanceName + "/databases/" + lowDatabase
+	productsTable := databaseName + "/schemas/public/tables/products"
+	customersTable := databaseName + "/schemas/public/tables/customers"
+
+	preview, err := s.tableDataClient.ReadRows(ctx, connect.NewRequest(&consolev1alpha1.ReadRowsRequest{
+		Name:            productsTable,
+		PageSize:        1,
+		SelectedColumns: []string{"id", "description"},
+		CellValueMode:   consolev1alpha1.CellValueMode_CELL_VALUE_MODE_PREVIEW,
+		MaxCellBytes:    1,
+	}))
+	s.Require().NoError(err)
+
+	previewRows := preview.Msg.GetResultSet().GetRows()
+	s.Require().Len(previewRows, 1)
+	fullValueToken := previewRows[0].GetValues()[1].GetFullValueToken()
+	s.Require().NotEmpty(fullValueToken)
+
+	queryErrors := make(chan error, executeHolders)
+	for range executeHolders {
+		go func() {
+			stream, err := s.sqlClient.ExecuteQuery(ctx, connect.NewRequest(&consolev1alpha1.ExecuteQueryRequest{
+				Parent:    databaseName,
+				Statement: "SELECT pg_sleep(60) /* " + queryMarker + " */",
+			}))
+			if err != nil {
+				queryErrors <- err
+
+				return
+			}
+
+			for stream.Receive() {
+			}
+
+			queryErrors <- stream.Err()
+		}()
+	}
+
+	s.Require().Eventually(func() bool {
+		var active int
+
+		err := targetDB.QueryRowContext(ctx, `
+			SELECT count(*)
+			FROM pg_stat_activity
+			WHERE datname = $1
+			  AND state = 'active'
+			  AND query LIKE '%' || $2 || '%'
+		`, lowDatabase, queryMarker).Scan(&active)
+
+		return err == nil && active == executeHolders
+	}, 5*time.Second, 25*time.Millisecond, "all ExecuteQuery holders should reach PostgreSQL")
+
+	var targetBackends int
+	s.Require().NoError(targetDB.QueryRowContext(ctx, `
+		SELECT count(*)
+		FROM pg_stat_activity
+		WHERE datname = $1
+	`, lowDatabase).Scan(&targetBackends))
+	s.LessOrEqual(targetBackends, perInstanceLimit+2, "target backend count must stay below its low connection ceiling")
+
+	_, err = s.tableDataClient.ReadRows(ctx, connect.NewRequest(&consolev1alpha1.ReadRowsRequest{
+		Name:     customersTable,
+		PageSize: 1,
+	}))
+	s.requireInstanceLiveQueryLimitExceeded(err)
+
+	_, err = s.extensionClient.ListExtensions(ctx, connect.NewRequest(&consolev1alpha1.ListExtensionsRequest{
+		Parent: databaseName,
+	}))
+	s.requireInstanceLiveQueryLimitExceeded(err)
+
+	_, err = s.sqlClient.ExplainQuery(ctx, connect.NewRequest(&consolev1alpha1.ExplainQueryRequest{
+		Parent:    databaseName,
+		Statement: "SELECT 1",
+	}))
+	s.requireInstanceLiveQueryLimitExceeded(err)
+
+	executeStream, err := s.sqlClient.ExecuteQuery(ctx, connect.NewRequest(&consolev1alpha1.ExecuteQueryRequest{
+		Parent:    databaseName,
+		Statement: "SELECT 1",
+	}))
+	if err == nil {
+		for executeStream.Receive() {
+		}
+
+		err = executeStream.Err()
+	}
+
+	s.requireInstanceLiveQueryLimitExceeded(err)
+
+	rowsStream, err := s.tableDataClient.StreamRows(ctx, connect.NewRequest(&consolev1alpha1.StreamRowsRequest{
+		Name:    customersTable,
+		MaxRows: 1,
+	}))
+	if err == nil {
+		for rowsStream.Receive() {
+		}
+
+		err = rowsStream.Err()
+	}
+
+	s.requireInstanceLiveQueryLimitExceeded(err)
+
+	_, err = s.tableDataClient.ReadCellValue(ctx, connect.NewRequest(&consolev1alpha1.ReadCellValueRequest{
+		Name:           productsTable,
+		FullValueToken: fullValueToken,
+	}))
+	s.requireInstanceLiveQueryLimitExceeded(err)
+
+	cancel()
+
+	for range executeHolders {
+		<-queryErrors
+	}
+
+	retryCtx, retryCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer retryCancel()
+
+	s.Require().Eventually(func() bool {
+		stream, err := s.tableDataClient.StreamRows(retryCtx, connect.NewRequest(&consolev1alpha1.StreamRowsRequest{
+			Name:    customersTable,
+			MaxRows: 1,
+		}))
+		if err != nil {
+			return false
+		}
+
+		for stream.Receive() {
+		}
+
+		return stream.Err() == nil
+	}, 5*time.Second, 25*time.Millisecond, "canceling streams should release every live-query slot")
 }
 
 func (s *RPCSuite) TestReadRows_RowIdentityPK() {

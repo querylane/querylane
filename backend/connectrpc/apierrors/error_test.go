@@ -21,3 +21,16 @@ func TestNewDatabaseUnavailableReportsAppDatabaseUnavailable(t *testing.T) {
 	assert.Equal(t, consolev1alpha1.ErrorReason_APP_DATABASE_UNAVAILABLE.String(), info.Reason)
 	assert.Equal(t, string(DomainConsole), info.Domain)
 }
+
+func TestNewLiveQueryLimitExceededReportsScope(t *testing.T) {
+	t.Parallel()
+
+	connectErr := NewLiveQueryLimitExceeded("instance")
+
+	assert.Equal(t, connect.CodeResourceExhausted, connectErr.Code())
+
+	info := requireErrorInfo(t, connectErr)
+	assert.Equal(t, consolev1alpha1.ErrorReason_LIVE_QUERY_LIMIT_EXCEEDED.String(), info.Reason)
+	assert.Equal(t, string(DomainConsole), info.Domain)
+	assert.Equal(t, "instance", info.Metadata["scope"])
+}

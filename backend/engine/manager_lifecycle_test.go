@@ -209,7 +209,49 @@ func TestInstancePool_GetOrCreateDBPool_CloseDuringDial(t *testing.T) {
 	assert.Zero(t, leaked, "evicted instance pool must not retain orphaned database pools")
 }
 
-func TestInstancePool_GetOrCreateDBPool_DialDetachedFromCallerContext(t *testing.T) {
+func TestInstancePool_PendingCreationRetainsBudgetAcrossEvictionAndReplacement(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	mgr := newHealthOnlyManager(&nopHealthDriver{})
+
+	t.Cleanup(func() { _ = mgr.Close() })
+
+	instanceName := mustParseInstanceName(t, "instances/pending-budget")
+	instance := lifecycleTestInstance(instanceName.String())
+	pool, err := mgr.getOrCreatePool(ctx, instanceName, instance)
+	require.NoError(t, err)
+
+	originalBudget := pool.budget
+
+	gate := newGateHealthDriver()
+	pool.driver = gate
+	results := make(chan error, 1)
+
+	go func() {
+		_, openErr := pool.getOrCreateDBPool(ctx, instance.GetConfig(), "appdb")
+		results <- openErr
+	}()
+
+	<-gate.started
+	mgr.EvictInstance(instanceName)
+	require.Equal(t, 1, managerBudgetCount(mgr), "the pending creation must retain the endpoint entry")
+
+	replacement, err := mgr.getOrCreatePool(ctx, instanceName, instance)
+	require.NoError(t, err)
+	require.Same(t, originalBudget, replacement.budget,
+		"a replacement generation must share the pending creator's physical budget")
+
+	close(gate.release)
+	require.ErrorIs(t, <-results, errInstancePoolClosed)
+
+	mgr.EvictInstance(instanceName)
+	require.Eventually(t, func() bool { return managerBudgetCount(mgr) == 0 }, time.Second, 10*time.Millisecond)
+}
+
+func TestInstancePool_GetOrCreateDBPool_CreatorCancellationLeavesDetachedCreationForWaiter(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -227,25 +269,38 @@ func TestInstancePool_GetOrCreateDBPool_DialDetachedFromCallerContext(t *testing
 		err error
 	}
 
-	results := make(chan result, 1)
+	creatorResults := make(chan result, 1)
 
 	go func() {
 		db, err := pool.getOrCreateDBPool(callerCtx, lifecycleTestInstance("instances/detached-dial").GetConfig(), "appdb")
-		results <- result{db: db, err: err}
+		creatorResults <- result{db: db, err: err}
 	}()
 
 	<-gate.started
 	cancelCaller()
+
+	creatorResult := <-creatorResults
+	require.ErrorIs(t, creatorResult.err, context.Canceled,
+		"the first caller must not wait for detached pool creation after cancellation")
+	assert.Nil(t, creatorResult.db)
+
+	waiterResults := make(chan result, 1)
+
+	go func() {
+		db, err := pool.getOrCreateDBPool(ctx, lifecycleTestInstance("instances/detached-dial").GetConfig(), "appdb")
+		waiterResults <- result{db: db, err: err}
+	}()
+
 	close(gate.release)
 
-	res := <-results
-	require.NoError(t, res.err, "pool creation must not die with the first caller's request context")
-	require.NotNil(t, res.db)
+	waiterResult := <-waiterResults
+	require.NoError(t, waiterResult.err, "detached creation must continue for coalesced waiters")
+	require.NotNil(t, waiterResult.db)
 
 	pool.mu.Lock()
 	cached := pool.dbPools["appdb"]
 	pool.mu.Unlock()
-	assert.Same(t, res.db, cached, "the detached dial must still cache the pool for later callers")
+	assert.Same(t, waiterResult.db, cached, "the detached dial must still cache the pool for later callers")
 }
 
 func TestInstancePool_GetOrCreateDBPool_WaiterReceivesCreationError(t *testing.T) {

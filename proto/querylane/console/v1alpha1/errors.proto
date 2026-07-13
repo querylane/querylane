@@ -39,6 +39,9 @@ enum ErrorReason {
 
   // The application database is temporarily unavailable.
   APP_DATABASE_UNAVAILABLE = 102;
+
+  // Querylane's live-query admission limit is currently saturated.
+  LIVE_QUERY_LIMIT_EXCEEDED = 103;
 }
 
 // PostgreSqlErrorDetail carries safe PostgreSQL SQLSTATE metadata for Connect

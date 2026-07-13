@@ -401,6 +401,32 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
     );
   });
 
+  it("normalizes Querylane live-query saturation separately from PostgreSQL exhaustion", () => {
+    const error = new ConnectError(
+      "live query concurrency limit reached",
+      Code.ResourceExhausted
+    );
+    error.details = [
+      {
+        debug: {
+          domain: "console.querylane.dev",
+          metadata: { scope: "instance" },
+          reason: "LIVE_QUERY_LIMIT_EXCEEDED",
+        },
+        type: "google.rpc.ErrorInfo",
+        value: new Uint8Array([1]),
+      },
+    ];
+
+    const normalized = normalizeAppUiError(error, { source: "query" });
+
+    expect(normalized.title).toBe("Query limit reached");
+    expect(normalized.retryGuidance).toBe(
+      "Another query or export is using the available capacity. Try again when it finishes."
+    );
+    expect(normalized.postgres).toBeNull();
+  });
+
   it("does not route PostgreSQL permission errors to the app access-denied page", () => {
     const error = new ConnectError(
       "PostgreSQL insufficient_privilege",

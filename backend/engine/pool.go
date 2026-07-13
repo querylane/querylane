@@ -5,17 +5,20 @@ import (
 	"time"
 )
 
-// PoolConfig defines configuration for cached instance connection pools.
+const databasePoolIdleTimeout = time.Second
+
+// PoolConfig defines connection limits for a managed endpoint's cached sql.DB
+// pools. Database-specific pools retain one connection briefly for paged reads,
+// then release it so many databases cannot accumulate standing backends.
 type PoolConfig struct {
-	// MaxOpenConns is the maximum number of open connections per instance pool.
-	// Default: 10
+	// MaxOpenConns is the aggregate maximum across every sql.DB pool targeting
+	// one PostgreSQL endpoint. It is also applied to each pool as a local ceiling.
+	// Default: 8
 	MaxOpenConns int
 
-	// MaxIdleConns is the maximum number of idle connections per instance pool.
-	// Kept equal to MaxOpenConns so bursts (for example the table-detail screen
-	// fans out several concurrent RPCs) reuse warm connections instead of paying
-	// fresh TCP + TLS + auth on every spike.
-	// Default: 10
+	// MaxIdleConns is the aggregate maximum of idle connections for one endpoint.
+	// Database-specific pools retain at most one locally for one second.
+	// Default: 2
 	MaxIdleConns int
 
 	// IdleTimeout is how long an individual connection can remain idle before being closed.
@@ -34,8 +37,8 @@ type PoolConfig struct {
 // DefaultPoolConfig returns a PoolConfig with sensible defaults.
 func DefaultPoolConfig() PoolConfig {
 	return PoolConfig{
-		MaxOpenConns:    10,
-		MaxIdleConns:    10,
+		MaxOpenConns:    8,
+		MaxIdleConns:    2,
 		IdleTimeout:     5 * time.Minute,
 		ConnMaxLifetime: 30 * time.Minute,
 	}
@@ -49,4 +52,12 @@ func (c PoolConfig) apply(db *sql.DB) {
 	db.SetMaxIdleConns(c.MaxIdleConns)
 	db.SetConnMaxIdleTime(c.IdleTimeout)
 	db.SetConnMaxLifetime(c.ConnMaxLifetime)
+}
+
+// applyDatabase keeps one connection warm between adjacent pages in a stream,
+// but expires it quickly so cached pools cannot hoard the aggregate budget.
+func (c PoolConfig) applyDatabase(db *sql.DB) {
+	c.apply(db)
+	db.SetMaxIdleConns(min(c.MaxIdleConns, 1))
+	db.SetConnMaxIdleTime(databasePoolIdleTimeout)
 }

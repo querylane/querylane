@@ -13,10 +13,8 @@ func TestDefaultPoolConfig(t *testing.T) {
 
 	cfg := DefaultPoolConfig()
 
-	assert.Equal(t, 10, cfg.MaxOpenConns, "default max open connections")
-	assert.Equal(t, 10, cfg.MaxIdleConns, "default max idle connections")
-	assert.Equal(t, cfg.MaxOpenConns, cfg.MaxIdleConns,
-		"idle should equal open to avoid fresh TCP/TLS/auth churn under burst")
+	assert.Equal(t, 8, cfg.MaxOpenConns, "default max open connections")
+	assert.Equal(t, 2, cfg.MaxIdleConns, "default max idle connections")
 	assert.Equal(t, 5*time.Minute, cfg.IdleTimeout, "default idle timeout")
 	assert.Equal(t, 30*time.Minute, cfg.ConnMaxLifetime,
 		"default connection max lifetime enables rotation across failovers and DNS changes")

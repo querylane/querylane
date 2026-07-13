@@ -9,6 +9,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/querylane/querylane/backend/livequery"
 	consolev1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
 )
@@ -130,6 +131,32 @@ func NewDatabaseUnavailable(innerErr error) *connect.Error {
 		innerErr,
 		NewErrorInfo(DomainConsole, consolev1alpha1.ErrorReason_APP_DATABASE_UNAVAILABLE),
 	)
+}
+
+// NewLiveQueryLimitExceeded reports that Querylane rejected a live-query RPC
+// before opening another managed-PostgreSQL connection. Scope is "instance" or
+// "global" and lets clients distinguish which process-local ceiling is full.
+func NewLiveQueryLimitExceeded(scope string) *connect.Error {
+	return NewConnectError(
+		connect.CodeResourceExhausted,
+		errors.New("live query concurrency limit reached"),
+		NewErrorInfo(
+			DomainConsole,
+			consolev1alpha1.ErrorReason_LIVE_QUERY_LIMIT_EXCEEDED,
+			KeyVal{Key: "scope", Value: scope},
+		),
+	)
+}
+
+// MapLiveQueryLimit maps an admission failure to the stable public error
+// contract. Unexpected limiter errors remain internal failures.
+func MapLiveQueryLimit(err error) *connect.Error {
+	var limitErr *livequery.LimitExceededError
+	if errors.As(err, &limitErr) {
+		return NewLiveQueryLimitExceeded(string(limitErr.Scope))
+	}
+
+	return connect.NewError(connect.CodeInternal, err)
 }
 
 // NewInvalidArgumentError creates an AIP-193 compliant INVALID_ARGUMENT error for field validation failures.

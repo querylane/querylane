@@ -32,9 +32,10 @@ var (
 // The creator stores the outcome before closing done, so waiters observe the
 // real result instead of inferring failure from an absent cache entry.
 type pendingDBPool struct {
-	done chan struct{}
-	db   *sql.DB
-	err  error
+	done  chan struct{}
+	db    *sql.DB
+	err   error
+	lease *endpointBudgetLease
 }
 
 // instancePool holds the instance-level connection pool and all database-level
@@ -47,6 +48,8 @@ type instancePool struct {
 	config  PoolConfig
 	driver  healthDriver
 	secrets SecretResolver
+	budget  *connectionBudget
+	lease   *endpointBudgetLease
 
 	// closed marks the pool as terminally shut down. It guards against a
 	// concurrent getOrCreateDBPool finishing its dial after eviction and
@@ -80,6 +83,10 @@ func (p *instancePool) close() error {
 
 	if err := p.db.Close(); err != nil {
 		errs = append(errs, fmt.Errorf("close instance pool: %w", err))
+	}
+
+	if p.lease != nil {
+		p.lease.Release()
 	}
 
 	return errors.Join(errs...)
@@ -118,17 +125,53 @@ func (p *instancePool) getOrCreateDBPool(ctx context.Context, cfg *api.PostgresC
 	}
 
 	// Mark this database as being created.
-	pending := &pendingDBPool{done: make(chan struct{})}
+	pendingLease, err := p.lease.Retain()
+	if err != nil {
+		p.mu.Unlock()
+		return nil, err
+	}
+
+	pending := &pendingDBPool{
+		done:  make(chan struct{}),
+		lease: pendingLease,
+	}
 	p.pending[databaseName] = pending
 	p.mu.Unlock()
 
-	// Coalesced waiters depend on this dial, so it must not die with the
-	// first caller's request context. Detach cancellation and bound the dial
-	// with the package connection-test timeout instead.
+	// Coalesced waiters depend on this dial, so run one bounded creation detached
+	// from the first caller. Every caller, including the creator, may still stop
+	// waiting when its own context is canceled.
 	dialCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), connectionTestTimeout)
-	defer cancel()
+	go p.createDBPool(dialCtx, cancel, cfg, databaseName, pending)
 
-	db, err := p.openDatabasePool(dialCtx, cfg, databaseName)
+	return waitForDBPool(ctx, pending)
+}
+
+func waitForDBPool(ctx context.Context, pending *pendingDBPool) (*sql.DB, error) {
+	select {
+	case <-pending.done:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+
+	if pending.err != nil {
+		return nil, pending.err
+	}
+
+	return pending.db, nil
+}
+
+func (p *instancePool) createDBPool(
+	ctx context.Context,
+	cancel context.CancelFunc,
+	cfg *api.PostgresConfig,
+	databaseName string,
+	pending *pendingDBPool,
+) {
+	defer cancel()
+	defer pending.lease.Release()
+
+	db, err := p.openDatabasePool(ctx, cfg, databaseName)
 
 	p.mu.Lock()
 	delete(p.pending, databaseName)
@@ -144,17 +187,12 @@ func (p *instancePool) getOrCreateDBPool(ctx context.Context, cfg *api.PostgresC
 	if err == nil {
 		p.dbPools[databaseName] = db
 	}
-	p.mu.Unlock()
 
 	pending.db = db
+
 	pending.err = err
+	p.mu.Unlock()
 	close(pending.done)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
 }
 
 // openEphemeralDatabasePool dials a single-connection pool that is NOT cached
@@ -162,26 +200,47 @@ func (p *instancePool) getOrCreateDBPool(ctx context.Context, cfg *api.PostgresC
 // this so sampling hundreds of databases never materializes hundreds of
 // standing pools (and idle server connections) the way the cached
 // getOrCreateDBPool path would.
-func (p *instancePool) openEphemeralDatabasePool(ctx context.Context, cfg *api.PostgresConfig, databaseName string) (*sql.DB, error) {
+func (p *instancePool) openEphemeralDatabasePool(
+	ctx context.Context,
+	cfg *api.PostgresConfig,
+	databaseName string,
+) (*sql.DB, func() error, error) {
+	p.mu.Lock()
+	if p.closed {
+		p.mu.Unlock()
+		return nil, nil, errInstancePoolClosed
+	}
+
+	probeLease, err := p.lease.Retain()
+	p.mu.Unlock()
+
+	if err != nil {
+		return nil, nil, err
+	}
+
 	clonedCfg := clonePostgresConfig(cfg)
 	if clonedCfg == nil {
-		return nil, errors.New("missing postgres config")
+		probeLease.Release()
+		return nil, nil, errors.New("missing postgres config")
 	}
 
 	clonedCfg.Database = databaseName
 
 	dsn, err := ConfigToDSNWithSecretResolver(ctx, clonedCfg, p.secrets)
 	if err != nil {
-		return nil, fmt.Errorf("resolve engine connection config: %w", err)
+		probeLease.Release()
+		return nil, nil, fmt.Errorf("resolve engine connection config: %w", err)
 	}
 
 	if dsn == "" {
-		return nil, errors.New("invalid engine connection config")
+		probeLease.Release()
+		return nil, nil, errors.New("invalid engine connection config")
 	}
 
-	db, err := OpenPostgresDB(dsn)
+	db, err := openPostgresDBWithBudget(dsn, p.budget)
 	if err != nil {
-		return nil, fmt.Errorf("open engine connection: %w", err)
+		probeLease.Release()
+		return nil, nil, fmt.Errorf("open engine connection: %w", err)
 	}
 
 	// One lazily-dialed connection, released as soon as it goes idle. No
@@ -190,7 +249,15 @@ func (p *instancePool) openEphemeralDatabasePool(ctx context.Context, cfg *api.P
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(0)
 
-	return db, nil
+	closeDB := func() error {
+		err := db.Close()
+
+		probeLease.Release()
+
+		return err
+	}
+
+	return db, closeDB, nil
 }
 
 func (p *instancePool) openDatabasePool(ctx context.Context, cfg *api.PostgresConfig, databaseName string) (*sql.DB, error) {
@@ -210,7 +277,7 @@ func (p *instancePool) openDatabasePool(ctx context.Context, cfg *api.PostgresCo
 		return nil, errors.New("invalid engine connection config")
 	}
 
-	db, err := OpenPostgresDB(dsn)
+	db, err := openPostgresDBWithBudget(dsn, p.budget)
 	if err != nil {
 		return nil, fmt.Errorf("open engine connection: %w", err)
 	}
@@ -229,7 +296,47 @@ func (p *instancePool) openDatabasePool(ctx context.Context, cfg *api.PostgresCo
 }
 
 func (p *instancePool) configurePool(db *sql.DB) {
-	p.config.apply(db)
+	p.config.applyDatabase(db)
+}
+
+type managedEndpointBudget struct {
+	budget *connectionBudget
+	refs   int
+}
+
+type endpointBudgetLease struct {
+	manager  *Manager
+	endpoint postgresEndpoint
+	entry    *managedEndpointBudget
+	once     sync.Once
+}
+
+func (l *endpointBudgetLease) Release() {
+	if l == nil {
+		return
+	}
+
+	l.once.Do(func() {
+		l.manager.releaseConnectionBudget(l.endpoint, l.entry)
+	})
+}
+
+func (l *endpointBudgetLease) Retain() (*endpointBudgetLease, error) {
+	l.manager.budgetMu.Lock()
+	defer l.manager.budgetMu.Unlock()
+
+	current, ok := l.manager.budgets[l.endpoint]
+	if !ok || current != l.entry {
+		return nil, errInstancePoolClosed
+	}
+
+	l.entry.refs++
+
+	return &endpointBudgetLease{
+		manager:  l.manager,
+		endpoint: l.endpoint,
+		entry:    l.entry,
+	}, nil
 }
 
 // Manager provides connection pooling and lifecycle management for external database instances.
@@ -240,6 +347,9 @@ type Manager struct {
 	// finish after Close are closed instead of cached.
 	closed                bool
 	pools                 map[resource.InstanceName]*instancePool
+	budgetMu              sync.Mutex
+	budgets               map[postgresEndpoint]*managedEndpointBudget
+	testConnectionSlots   chan struct{}
 	healthDriver          healthDriver
 	probeDriver           probeDriver
 	instanceCatalogDriver instanceCatalogDriver
@@ -277,6 +387,8 @@ func NewManager(config PoolConfig, driver adminDriver) *Manager {
 func newManagerWithDrivers(config PoolConfig, drivers managerDrivers) *Manager {
 	return &Manager{
 		pools:                 make(map[resource.InstanceName]*instancePool),
+		budgets:               make(map[postgresEndpoint]*managedEndpointBudget),
+		testConnectionSlots:   make(chan struct{}, config.MaxOpenConns),
 		healthDriver:          drivers.healthDriver,
 		probeDriver:           drivers.probeDriver,
 		instanceCatalogDriver: drivers.instanceCatalogDriver,
@@ -322,11 +434,31 @@ func (m *Manager) TestConnection(ctx context.Context, instance *api.Instance) er
 		return err
 	}
 
-	db, err := sql.Open("pgx", dsn)
+	endpoint, err := postgresEndpointFromDSN(dsn)
+	if err != nil {
+		return err
+	}
+
+	releaseAdmission, err := m.acquireTestConnection(ctx)
+	if err != nil {
+		return err
+	}
+	defer releaseAdmission()
+
+	lease, err := m.retainConnectionBudget(endpoint)
+	if err != nil {
+		return err
+	}
+	defer lease.Release()
+
+	db, err := openPostgresDBWithBudget(dsn, lease.entry.budget)
 	if err != nil {
 		return fmt.Errorf("failed to open connection: %w", err)
 	}
 	defer db.Close()
+
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(0)
 
 	testCtx, cancel := context.WithTimeout(ctx, connectionTestTimeout)
 	defer cancel()
@@ -412,8 +544,19 @@ func (m *Manager) getOrCreatePool(ctx context.Context, instanceName resource.Ins
 		return pool, nil
 	}
 
-	db, err := m.openPool(ctx, dsn)
+	endpoint, err := postgresEndpointFromDSN(dsn)
 	if err != nil {
+		return nil, err
+	}
+
+	lease, err := m.retainConnectionBudget(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := m.openPool(ctx, dsn, lease.entry.budget)
+	if err != nil {
+		lease.Release()
 		return nil, fmt.Errorf("open instance pool: %w", err)
 	}
 
@@ -424,12 +567,18 @@ func (m *Manager) getOrCreatePool(ctx context.Context, instanceName resource.Ins
 	// pool would orphan it, so reject the late creation instead.
 	if m.closed {
 		_ = db.Close()
+
+		lease.Release()
+
 		return nil, errManagerClosed
 	}
 
 	if existing, ok := m.pools[instanceName]; ok {
 		if existing.fingerprint == fingerprint {
 			_ = db.Close()
+
+			lease.Release()
+
 			return existing, nil
 		}
 
@@ -444,6 +593,8 @@ func (m *Manager) getOrCreatePool(ctx context.Context, instanceName resource.Ins
 		config:      m.config,
 		driver:      m.healthDriver,
 		secrets:     m.secrets,
+		budget:      lease.entry.budget,
+		lease:       lease,
 		fingerprint: fingerprint,
 	}
 	m.pools[instanceName] = pool
@@ -453,6 +604,70 @@ func (m *Manager) getOrCreatePool(ctx context.Context, instanceName resource.Ins
 		slog.String("engine", "postgresql"))
 
 	return pool, nil
+}
+
+func (m *Manager) acquireTestConnection(ctx context.Context) (func(), error) {
+	select {
+	case m.testConnectionSlots <- struct{}{}:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+
+	return func() { <-m.testConnectionSlots }, nil
+}
+
+// retainConnectionBudget keeps the stable physical-connection budget for a
+// target endpoint alive for one pool generation or transient connection test.
+func (m *Manager) retainConnectionBudget(endpoint postgresEndpoint) (*endpointBudgetLease, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.closed {
+		return nil, errManagerClosed
+	}
+
+	m.budgetMu.Lock()
+	defer m.budgetMu.Unlock()
+
+	entry, ok := m.budgets[endpoint]
+	if !ok {
+		entry = &managedEndpointBudget{}
+		entry.budget = newConnectionBudget(m.config.MaxOpenConns, m.config.MaxIdleConns)
+		entry.budget.onPhysicalRelease = func() { m.reclaimConnectionBudget(endpoint, entry) }
+		m.budgets[endpoint] = entry
+	}
+
+	entry.refs++
+
+	return &endpointBudgetLease{
+		manager:  m,
+		endpoint: endpoint,
+		entry:    entry,
+	}, nil
+}
+
+func (m *Manager) releaseConnectionBudget(endpoint postgresEndpoint, entry *managedEndpointBudget) {
+	m.budgetMu.Lock()
+	defer m.budgetMu.Unlock()
+
+	current, ok := m.budgets[endpoint]
+	if !ok || current != entry {
+		return
+	}
+
+	entry.refs--
+	if entry.refs == 0 && entry.budget.physicalConnections() == 0 {
+		delete(m.budgets, endpoint)
+	}
+}
+
+func (m *Manager) reclaimConnectionBudget(endpoint postgresEndpoint, entry *managedEndpointBudget) {
+	m.budgetMu.Lock()
+	defer m.budgetMu.Unlock()
+
+	if current, ok := m.budgets[endpoint]; ok && current == entry && entry.refs == 0 && entry.budget.physicalConnections() == 0 {
+		delete(m.budgets, endpoint)
+	}
 }
 
 // cachedPool returns the cached pool for the instance when its fingerprint
@@ -503,8 +718,8 @@ func (m *Manager) resolveInstanceDSN(ctx context.Context, instance *api.Instance
 }
 
 // openPool opens and configures a database connection pool.
-func (m *Manager) openPool(ctx context.Context, dsn string) (*sql.DB, error) {
-	db, err := OpenPostgresDB(dsn)
+func (m *Manager) openPool(ctx context.Context, dsn string, budget *connectionBudget) (*sql.DB, error) {
+	db, err := openPostgresDBWithBudget(dsn, budget)
 	if err != nil {
 		return nil, fmt.Errorf("open connection: %w", err)
 	}

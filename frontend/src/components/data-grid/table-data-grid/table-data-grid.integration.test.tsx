@@ -58,6 +58,13 @@ const tableDataApi = vi.hoisted(() => ({
 }));
 
 const downloadBlobMock = vi.hoisted(() => vi.fn());
+const toastMock = vi.hoisted(() => ({
+  dismiss: vi.fn(),
+  error: vi.fn(),
+  loading: vi.fn(() => "toast-id"),
+  success: vi.fn(),
+  warning: vi.fn(),
+}));
 
 interface MockGridColumn {
   frozen?: boolean;
@@ -165,6 +172,8 @@ vi.mock("@/hooks/api/table-data", () => ({
 vi.mock("@/lib/download-blob", () => ({
   downloadBlob: downloadBlobMock,
 }));
+
+vi.mock("sonner", () => ({ toast: toastMock }));
 
 const writeClipboardMock = vi.hoisted(() => vi.fn());
 
@@ -402,6 +411,25 @@ function createPostgresRowsError() {
           sqlstateClass: "57",
         })
       ),
+    },
+  ];
+  return error;
+}
+
+function createLiveQueryLimitError() {
+  const error = new ConnectError(
+    "live query concurrency limit reached",
+    Code.ResourceExhausted
+  );
+  error.details = [
+    {
+      debug: {
+        domain: "console.querylane.dev",
+        metadata: { scope: "instance" },
+        reason: "LIVE_QUERY_LIMIT_EXCEEDED",
+      },
+      type: "google.rpc.ErrorInfo",
+      value: new Uint8Array([1]),
     },
   ];
   return error;
@@ -1341,6 +1369,29 @@ describe("TableDataGrid toolbar", () => {
     });
   });
 
+  it("shows live-query limit guidance when server-side export is saturated", async () => {
+    const user = userEvent.setup();
+    tableDataApi.useStreamRowsExporter.mockReturnValue(
+      vi.fn().mockRejectedValue(createLiveQueryLimitError())
+    );
+    seedRowsQuery(1);
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Export" }));
+    await user.click(await screen.findByRole("menuitem", { name: "CSV" }));
+
+    await waitFor(() =>
+      expect(toastMock.error).toHaveBeenCalledWith("Query limit reached", {
+        description:
+          "Another query or export is using the available capacity. Try again when it finishes.",
+        id: "toast-id",
+      })
+    );
+  });
+
   it("does not create a Blob download when the stream was saved to a file", async () => {
     const user = userEvent.setup();
     const exportRows = vi.fn().mockResolvedValue({
@@ -1655,6 +1706,22 @@ describe("TableDataGrid error recovery", () => {
     expect(screen.getByText("SQLSTATE: 57014")).toBeTruthy();
     expect(screen.getByText("Condition: query_canceled")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Copy details" })).toBeTruthy();
+  });
+
+  test("renders Querylane live-query saturation with retry guidance", () => {
+    seedRowsQueryError(createLiveQueryLimitError());
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+
+    expect(screen.getByText("Query limit reached")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Another query or export is using the available capacity. Try again when it finishes."
+      )
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: RETRY_BUTTON_RE })).toBeTruthy();
   });
 
   test("clicking the retry button triggers a refetch", async () => {

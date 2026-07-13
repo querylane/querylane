@@ -54,6 +54,38 @@ type countingHealthDriver struct {
 	blockRelease        chan struct{}
 }
 
+type staticErrorHealthDriver struct {
+	testHealthDriver
+
+	err error
+}
+
+func (d *staticErrorHealthDriver) TestConnection(context.Context, *sql.DB) error {
+	return d.err
+}
+
+type blockingHealthDriver struct {
+	testHealthDriver
+
+	started chan struct{}
+	release chan struct{}
+}
+
+func (d *blockingHealthDriver) TestConnection(ctx context.Context, _ *sql.DB) error {
+	select {
+	case d.started <- struct{}{}:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	select {
+	case <-d.release:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 func (d *countingHealthDriver) TestConnection(ctx context.Context, db *sql.DB) error {
 	d.mu.Lock()
 	d.testConnectionCalls++
@@ -97,6 +129,13 @@ func newHealthOnlyManager(health healthDriver) *Manager {
 
 func newHealthOnlyResolver(repo storage.InstanceRepository, health healthDriver) *SessionResolver {
 	return NewSessionResolver(repo, newHealthOnlyManager(health))
+}
+
+func managerBudgetCount(mgr *Manager) int {
+	mgr.budgetMu.Lock()
+	defer mgr.budgetMu.Unlock()
+
+	return len(mgr.budgets)
 }
 
 type testInstanceRepo struct {
@@ -192,6 +231,214 @@ func TestIntegrationManager_TestConnection_WithEmbeddedPostgres(t *testing.T) {
 
 	err := mgr.TestConnection(ctx, instance)
 	assert.NoError(t, err)
+}
+
+func TestIntegrationManager_UnnamedTestConnectionSharesEndpointBudget(t *testing.T) {
+	t.Parallel()
+
+	testDB := storage.NewTestDB(t)
+	poolConfig := DefaultPoolConfig()
+	poolConfig.MaxOpenConns = 1
+	poolConfig.MaxIdleConns = 0
+	mgr := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: &testHealthDriver{}})
+
+	t.Cleanup(func() { require.NoError(t, mgr.Close()) })
+
+	instanceName := mustParseInstanceName(t, "instances/budgeted-test-connection")
+	instance := testInstance(t, testDB, instanceName)
+	session, err := mgr.OpenInstance(t.Context(), instanceName, instance)
+	require.NoError(t, err)
+
+	concrete, ok := session.(*instanceSession)
+	require.True(t, ok)
+
+	held, err := concrete.db.Conn(t.Context())
+	require.NoError(t, err)
+
+	defer held.Close()
+
+	unnamed, ok := proto.Clone(instance).(*api.Instance)
+	require.True(t, ok)
+
+	unnamed.Name = ""
+
+	blockedCtx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	defer cancel()
+
+	err = mgr.TestConnection(blockedCtx, unnamed)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	require.NoError(t, held.Close())
+	require.NoError(t, mgr.TestConnection(t.Context(), unnamed))
+}
+
+func TestIntegrationManager_InstanceNamesShareEndpointBudget(t *testing.T) {
+	t.Parallel()
+
+	testDB := storage.NewTestDB(t)
+	poolConfig := DefaultPoolConfig()
+	poolConfig.MaxOpenConns = 1
+	poolConfig.MaxIdleConns = 0
+	mgr := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: &testHealthDriver{}})
+
+	t.Cleanup(func() { require.NoError(t, mgr.Close()) })
+
+	firstName := mustParseInstanceName(t, "instances/endpoint-alias-one")
+	firstInstance := testInstance(t, testDB, firstName)
+	firstSession, err := mgr.OpenInstance(t.Context(), firstName, firstInstance)
+	require.NoError(t, err)
+
+	concrete, ok := firstSession.(*instanceSession)
+	require.True(t, ok)
+
+	held, err := concrete.db.Conn(t.Context())
+	require.NoError(t, err)
+
+	defer held.Close()
+
+	secondName := mustParseInstanceName(t, "instances/endpoint-alias-two")
+	secondInstance := testInstance(t, testDB, secondName)
+
+	blockedCtx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err = mgr.OpenInstance(blockedCtx, secondName, secondInstance)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	require.NoError(t, held.Close())
+	_, err = mgr.OpenInstance(t.Context(), secondName, secondInstance)
+	require.NoError(t, err)
+}
+
+func TestManager_TestConnectionBudgetsAreReclaimedAfterSuccessAndFailure(t *testing.T) {
+	t.Parallel()
+
+	successManager := newHealthOnlyManager(&nopHealthDriver{})
+
+	t.Cleanup(func() { require.NoError(t, successManager.Close()) })
+
+	successProbe := lifecycleTestInstance("")
+	successProbe.Config.Host = "finished-probe.internal"
+
+	require.NoError(t, successManager.TestConnection(t.Context(), successProbe))
+	require.Zero(t, managerBudgetCount(successManager))
+
+	probeErr := errors.New("probe failed")
+	failureManager := newHealthOnlyManager(&staticErrorHealthDriver{err: probeErr})
+
+	t.Cleanup(func() { require.NoError(t, failureManager.Close()) })
+
+	failureProbe := lifecycleTestInstance("")
+	failureProbe.Config.Host = "failed-probe.internal"
+
+	require.ErrorIs(t, failureManager.TestConnection(t.Context(), failureProbe), probeErr)
+	require.Zero(t, managerBudgetCount(failureManager))
+}
+
+func TestManager_EphemeralProbeRetainsBudgetUntilClosed(t *testing.T) {
+	t.Parallel()
+
+	mgr := newHealthOnlyManager(&nopHealthDriver{})
+
+	t.Cleanup(func() { require.NoError(t, mgr.Close()) })
+
+	instanceName := mustParseInstanceName(t, "instances/ephemeral-budget-ref")
+	instance := lifecycleTestInstance(instanceName.String())
+	session, err := mgr.OpenInstance(t.Context(), instanceName, instance)
+	require.NoError(t, err)
+
+	probe, err := session.Prober().OpenEphemeralDatabase(t.Context(), "appdb")
+	require.NoError(t, err)
+	mgr.EvictInstance(instanceName)
+	require.Equal(t, 1, managerBudgetCount(mgr), "the lazy probe still references the old endpoint budget")
+
+	require.NoError(t, probe.Close())
+	require.Zero(t, managerBudgetCount(mgr))
+}
+
+func TestManager_TestConnectionAdmissionBoundsArbitraryEndpoints(t *testing.T) {
+	t.Parallel()
+
+	poolConfig := DefaultPoolConfig()
+	poolConfig.MaxOpenConns = 2
+	driver := &blockingHealthDriver{
+		started: make(chan struct{}, 3),
+		release: make(chan struct{}),
+	}
+	mgr := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: driver})
+
+	t.Cleanup(func() { require.NoError(t, mgr.Close()) })
+
+	results := make(chan error, 2)
+
+	for _, host := range []string{"probe-one.internal", "probe-two.internal"} {
+		probe := lifecycleTestInstance("")
+		probe.Config.Host = host
+
+		go func() { results <- mgr.TestConnection(t.Context(), probe) }()
+	}
+
+	<-driver.started
+	<-driver.started
+	require.Equal(t, 2, managerBudgetCount(mgr))
+
+	thirdProbe := lifecycleTestInstance("")
+	thirdProbe.Config.Host = "probe-three.internal"
+
+	blockedCtx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	defer cancel()
+
+	require.ErrorIs(t, mgr.TestConnection(blockedCtx, thirdProbe), context.DeadlineExceeded)
+
+	select {
+	case <-driver.started:
+		t.Fatal("probe beyond admission limit reached the driver")
+	default:
+	}
+
+	close(driver.release)
+	require.NoError(t, <-results)
+	require.NoError(t, <-results)
+	require.Eventually(t, func() bool { return managerBudgetCount(mgr) == 0 }, time.Second, 10*time.Millisecond)
+}
+
+func TestIntegrationManager_EndpointIdleAllowanceDoesNotStarveAnotherAlias(t *testing.T) {
+	t.Parallel()
+
+	testDB := storage.NewTestDB(t)
+	poolConfig := DefaultPoolConfig()
+	poolConfig.MaxOpenConns = 2
+	poolConfig.MaxIdleConns = 1
+	mgr := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: &testHealthDriver{}})
+
+	t.Cleanup(func() { require.NoError(t, mgr.Close()) })
+
+	firstName := mustParseInstanceName(t, "instances/idle-alias-one")
+	first, err := mgr.OpenInstance(t.Context(), firstName, testInstance(t, testDB, firstName))
+	require.NoError(t, err)
+	secondName := mustParseInstanceName(t, "instances/idle-alias-two")
+	second, err := mgr.OpenInstance(t.Context(), secondName, testInstance(t, testDB, secondName))
+	require.NoError(t, err)
+
+	firstConcrete, ok := first.(*instanceSession)
+	require.True(t, ok)
+	secondConcrete, ok := second.(*instanceSession)
+	require.True(t, ok)
+	require.LessOrEqual(t, firstConcrete.db.Stats().Idle+secondConcrete.db.Stats().Idle, 1,
+		"the endpoint-wide idle allowance must not be multiplied by aliases")
+
+	thirdName := mustParseInstanceName(t, "instances/idle-alias-three")
+
+	thirdCtx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+
+	_, err = mgr.OpenInstance(thirdCtx, thirdName, testInstance(t, testDB, thirdName))
+	require.NoError(t, err, "an idle connection in another alias must not consume all physical capacity")
+
+	mgr.EvictInstance(firstName)
+	mgr.EvictInstance(secondName)
+	mgr.EvictInstance(thirdName)
+	require.Eventually(t, func() bool { return managerBudgetCount(mgr) == 0 }, time.Second, 10*time.Millisecond)
 }
 
 func TestManager_Close(t *testing.T) {
@@ -350,6 +597,109 @@ func TestIntegrationManager_OpenDatabase_DifferentDatabasesUseDifferentPools(t *
 
 	assert.NotSame(t, postgresDBSession.db, analyticsDBSession.db)
 	assert.Equal(t, 3, eng.calls(), "instance pool plus one validation per database pool")
+}
+
+func TestIntegrationManager_DatabasePoolBrieflyReusesThenReleasesIdleConnection(t *testing.T) {
+	t.Parallel()
+
+	testDB := storage.NewTestDB(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	instanceName := mustParseInstanceName(t, "instances/no-idle-db-pool")
+	instance := testInstance(t, testDB, instanceName)
+	resolver := newHealthOnlyResolver(&testInstanceRepo{instance: instance}, &testHealthDriver{})
+
+	instSession, err := resolver.OpenInstance(ctx, instanceName)
+	require.NoError(t, err)
+	dbSession, err := instSession.OpenDatabase(ctx, "postgres")
+	require.NoError(t, err)
+
+	concrete, ok := dbSession.(*databaseSession)
+	require.True(t, ok)
+
+	var firstPID int
+	require.NoError(t, concrete.db.QueryRowContext(ctx, "SELECT pg_backend_pid()").Scan(&firstPID))
+
+	var secondPID int
+	require.NoError(t, concrete.db.QueryRowContext(ctx, "SELECT pg_backend_pid()").Scan(&secondPID))
+	require.Equal(t, firstPID, secondPID, "adjacent pages should reuse one physical connection")
+	require.NoError(t, dbSession.Close())
+	require.Equal(t, 1, concrete.db.Stats().Idle)
+
+	require.Eventually(t, func() bool {
+		stats := concrete.db.Stats()
+
+		return stats.Idle == 0 && stats.OpenConnections == 0
+	}, 3*time.Second, 10*time.Millisecond)
+}
+
+func TestIntegrationManager_BoundsPhysicalConnectionsAcrossPools(t *testing.T) {
+	t.Parallel()
+
+	testDB := storage.NewTestDB(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	const secondDatabase = "aggregate_budget"
+
+	_, err := testDB.DB().ExecContext(ctx, `CREATE DATABASE `+secondDatabase)
+	require.NoError(t, err)
+
+	instanceName := mustParseInstanceName(t, "instances/aggregate-budget")
+	instance := testInstance(t, testDB, instanceName)
+	poolConfig := DefaultPoolConfig()
+	poolConfig.MaxOpenConns = 2
+	poolConfig.MaxIdleConns = 0
+	manager := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: &testHealthDriver{}})
+	resolver := NewSessionResolver(&testInstanceRepo{instance: instance}, manager)
+
+	t.Cleanup(func() { require.NoError(t, manager.Close()) })
+
+	instSession, err := resolver.OpenInstance(ctx, instanceName)
+	require.NoError(t, err)
+
+	concreteInstance, ok := instSession.(*instanceSession)
+	require.True(t, ok)
+
+	firstSession, err := instSession.OpenDatabase(ctx, "postgres")
+	require.NoError(t, err)
+
+	firstDB, ok := firstSession.(*databaseSession)
+	require.True(t, ok)
+
+	secondSession, err := instSession.OpenDatabase(ctx, secondDatabase)
+	require.NoError(t, err)
+
+	secondDB, ok := secondSession.(*databaseSession)
+	require.True(t, ok)
+
+	first, err := firstDB.db.Conn(ctx)
+	require.NoError(t, err)
+
+	defer first.Close()
+
+	second, err := secondDB.db.Conn(ctx)
+	require.NoError(t, err)
+
+	defer second.Close()
+
+	blockedCtx, blockedCancel := context.WithTimeout(ctx, 50*time.Millisecond)
+	defer blockedCancel()
+
+	_, err = concreteInstance.db.Conn(blockedCtx)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	require.NoError(t, first.Close())
+
+	thirdCtx, thirdCancel := context.WithTimeout(ctx, time.Second)
+	defer thirdCancel()
+
+	third, err := concreteInstance.db.Conn(thirdCtx)
+	require.NoError(t, err)
+	require.NoError(t, third.Close())
 }
 
 func TestIntegrationManager_EvictInstance_ClosesDatabasePools(t *testing.T) {

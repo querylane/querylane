@@ -4,10 +4,12 @@ import (
 	"context"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/livequery"
 	"github.com/querylane/querylane/backend/resource"
 )
 
@@ -68,4 +70,51 @@ func TestOverviewProviderCacheFillSurvivesCallerCancellation(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, overview)
 	require.Equal(t, int32(1), opener.opens.Load(), "second caller should hit the cache")
+}
+
+type blockingOverviewSession struct {
+	engine.InstanceSession
+
+	closes atomic.Int32
+}
+
+func (s *blockingOverviewSession) GetInstanceOverview(ctx context.Context) (*engine.InstanceOverview, error) {
+	<-ctx.Done()
+
+	return nil, ctx.Err()
+}
+
+func (s *blockingOverviewSession) Close() error {
+	s.closes.Add(1)
+
+	return nil
+}
+
+type blockingOverviewOpener struct {
+	session *blockingOverviewSession
+}
+
+func (o *blockingOverviewOpener) OpenInstance(context.Context, resource.InstanceName) (engine.InstanceSession, error) {
+	return o.session, nil
+}
+
+func TestOverviewProviderTimeoutClosesAdmittedSession(t *testing.T) {
+	t.Parallel()
+
+	limiter, err := livequery.NewLimiter(1, 1)
+	require.NoError(t, err)
+
+	underlying := &blockingOverviewSession{}
+	opener := livequery.NewSessionOpener(&blockingOverviewOpener{session: underlying}, limiter)
+	provider := NewOverviewProvider(opener)
+	provider.fillTimeout = 20 * time.Millisecond
+	instance := resource.NewInstanceName("inst1")
+
+	_, err = provider.GetInstanceOverview(t.Context(), instance)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.Equal(t, int32(1), underlying.closes.Load())
+
+	release, err := limiter.Acquire(instance)
+	require.NoError(t, err, "timed-out fill must release its live-query slot")
+	release()
 }
