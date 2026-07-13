@@ -6,6 +6,7 @@ import {
   LockKeyhole,
   MoreHorizontal,
   SearchX,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import { AsyncSectionState } from "@/components/async-section-state";
@@ -350,6 +351,8 @@ function InstanceActivityPage({
     database: presentActivityFilterOptions(allRows, "database"),
     state: presentActivityFilterOptions(allRows, "state"),
   };
+  const hasActiveFacet =
+    stateFilter.length > 0 || appFilter.length > 0 || databaseFilter.length > 0;
 
   return (
     <section aria-label="Activity" className="flex flex-col gap-[18px]">
@@ -423,6 +426,22 @@ function InstanceActivityPage({
                 singleSelect={true}
                 title="DB"
               />
+              {hasActiveFacet ? (
+                <Button
+                  className="h-8 px-2 text-xs"
+                  onClick={() => {
+                    setStateFilter([]);
+                    setAppFilter([]);
+                    setDatabaseFilter([]);
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <X data-icon="inline-start" />
+                  Reset
+                </Button>
+              ) : null}
             </div>
           </div>
           <ActivitySessionsTable rows={rows} search={search} />

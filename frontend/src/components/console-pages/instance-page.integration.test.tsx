@@ -922,7 +922,7 @@ describe("backend instance activity", () => {
     expect(state.healthQueryOptions).toMatchObject({ enabled: false });
   });
 
-  test("filters session rows by URL-backed search and state", async () => {
+  test("filters session rows by URL-backed search and shared facets", async () => {
     const user = userEvent.setup();
     state.selectedInstanceStatus = "connected";
     state.instances = [postgresInstanceFixture("connected")];
@@ -939,8 +939,9 @@ describe("backend instance activity", () => {
     const stateFilter = within(activity).getByRole("button", {
       name: "State",
     });
+    const appFilter = within(activity).getByRole("button", { name: "App" });
 
-    expect(within(activity).getByRole("button", { name: "App" })).toBeTruthy();
+    expect(appFilter).toBeTruthy();
     expect(within(activity).getByRole("button", { name: "DB" })).toBeTruthy();
 
     await user.type(search, "4302");
@@ -971,6 +972,39 @@ describe("backend instance activity", () => {
         name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
       })
     ).toBeNull();
+
+    await user.click(within(activity).getByRole("button", { name: "Reset" }));
+
+    expect(
+      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
+    expect(
+      within(table).getByRole("row", { name: BLOCKER_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
+    expect(
+      within(activity).queryByRole("button", { name: "Reset" })
+    ).toBeNull();
+
+    await user.click(appFilter);
+    await user.click(screen.getByRole("option", { name: "api-gateway" }));
+
+    expect(
+      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
+    expect(
+      within(table).queryByRole("row", {
+        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
+      })
+    ).toBeNull();
+
+    await user.click(screen.getByRole("option", { name: "api-gateway" }));
+
+    expect(
+      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
+    expect(
+      within(table).getByRole("row", { name: BLOCKER_ACTIVITY_TABLE_ROW_NAME })
+    ).toBeTruthy();
   });
 
   test("shows the empty sessions state", () => {
