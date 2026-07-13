@@ -38,6 +38,7 @@ const OWNER_FILTER_RE = /^Owner$/;
 const SCHEMA_MAP_ALL_CHIP_RE = /^All 7$/;
 const SCHEMA_MAP_FILTER_RE = /^Schema$/;
 const SCHEMA_MAP_ACTIVE_FILTER_RE = /^Schema.*catalog/;
+const SCHEMA_MAP_KEY_ABBREVIATION_RE = /\b(?:FK|IDX|PK)\b/;
 const DEFAULT_BROWSER_VIEWPORT = { height: 1000, width: 1280 } as const;
 const SCHEMA_MAP_BROWSER_VIEWPORT = { height: 1400, width: 2048 } as const;
 
@@ -1100,6 +1101,25 @@ test("data explorer schema map keeps schema labels clear of group borders", asyn
   const labelBox = shippingLabel.getBBox();
   const borderY = Number(firstHull.getAttribute("y"));
   expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(borderY - 4);
+});
+
+test("data explorer schema map spells out key labels", async () => {
+  const catalog = seedSchemaMapVisualCatalog();
+
+  render(
+    <ExplorerSchemaMap
+      activeSchemaName="shipping"
+      databaseId="logistics"
+      enabled={true}
+      instanceId="prod"
+      onSelectTable={() => undefined}
+      schemas={catalog.schemas}
+    />
+  );
+
+  await expect.element(page.getByText("Primary key").first()).toBeVisible();
+  await expect.element(page.getByText("Foreign key").first()).toBeVisible();
+  expect(document.body.textContent).not.toMatch(SCHEMA_MAP_KEY_ABBREVIATION_RE);
 });
 
 test("data explorer schema map surfaces partial catalog failures and truncation", async () => {

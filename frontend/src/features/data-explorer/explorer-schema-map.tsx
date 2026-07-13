@@ -394,18 +394,18 @@ function TableNode({
                   <span className="truncate">{column.name}</span>
                   {column.isPrimaryKey ? (
                     <Badge
-                      className="h-4 bg-chart-4/15 px-1 text-[9px] text-chart-4"
+                      className="h-4 shrink-0 bg-chart-4/15 px-1 text-[9px] text-chart-4"
                       variant="secondary"
                     >
-                      PK
+                      Primary key
                     </Badge>
                   ) : null}
                   {column.isForeignKey ? (
                     <Badge
-                      className="h-4 bg-chart-1/15 px-1 text-[9px] text-chart-1"
+                      className="h-4 shrink-0 bg-chart-1/15 px-1 text-[9px] text-chart-1"
                       variant="secondary"
                     >
-                      FK
+                      Foreign key
                     </Badge>
                   ) : null}
                 </span>
