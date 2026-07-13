@@ -197,7 +197,7 @@ func (s *queryStream) Next() bool {
 		return false
 	}
 
-	row, err := scanResultRow(s.rows, len(s.columns))
+	row, err := scanResultRow(s.rows, s.columns)
 	if err != nil {
 		s.err = err
 		s.finalize()
@@ -308,8 +308,8 @@ func buildResultColumns(rows *sql.Rows) ([]*api.TableResultColumn, error) {
 	return resultColumns, nil
 }
 
-func scanResultRow(rows *sql.Rows, columnCount int) (*api.TableResultRow, error) {
-	values := make([]any, columnCount)
+func scanResultRow(rows *sql.Rows, columns []*api.TableResultColumn) (*api.TableResultRow, error) {
+	values := make([]any, len(columns))
 	for i := range values {
 		values[i] = new(any)
 	}
@@ -321,7 +321,7 @@ func scanResultRow(rows *sql.Rows, columnCount int) (*api.TableResultRow, error)
 	cells := make([]*api.TableCell, len(values))
 	for i, v := range values {
 		ptr, _ := v.(*any)
-		cells[i] = convertToCell(*ptr)
+		cells[i] = &api.TableCell{Value: convertToValueTyped(*ptr, columns[i])}
 	}
 
 	return &api.TableResultRow{Values: cells}, nil
