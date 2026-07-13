@@ -181,6 +181,11 @@ const tableQueries = vi.hoisted(() => ({
 const tableDataApi = vi.hoisted(() => ({
   useReadCellValueMutation: vi.fn(),
   useReadRowsQuery: vi.fn(),
+  useReadRowsQueryActions: vi.fn(() => ({
+    fetch: vi.fn(() => Promise.resolve()),
+    getState: vi.fn(() => ({ fetchStatus: "idle", status: "success" })),
+    prefetch: vi.fn(),
+  })),
   useStreamRowsExporter: vi.fn(),
 }));
 
@@ -220,6 +225,7 @@ vi.mock("@/hooks/api/table", () => ({
 vi.mock("@/hooks/api/table-data", () => ({
   useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
   useReadRowsQuery: tableDataApi.useReadRowsQuery,
+  useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
   useStreamRowsExporter: tableDataApi.useStreamRowsExporter,
 }));
 
