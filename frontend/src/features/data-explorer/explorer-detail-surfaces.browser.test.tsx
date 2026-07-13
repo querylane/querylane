@@ -1,4 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
+import type { ReactNode } from "react";
 import { expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
@@ -18,6 +19,7 @@ import {
   ListTableTriggersResponseSchema,
   PolicyCommand,
   PolicyMode,
+  ReferentialAction,
   Table_TableType,
   TableConstraintSchema,
   TableIndexSchema,
@@ -29,6 +31,26 @@ import {
   View_ViewType,
   ViewSchema,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
+
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@tanstack/react-router")>();
+  const linkExportName = "Link";
+  return {
+    ...actual,
+    [linkExportName]: ({
+      children,
+      className,
+    }: {
+      children: ReactNode;
+      className?: string | undefined;
+    }) => (
+      <a className={className} href="#referenced-table">
+        {children}
+      </a>
+    ),
+  };
+});
 
 const ACTIVE_KIND_FILTER_RE = /^Kind.*Materialized views/;
 const ACTIVE_OWNER_FILTER_RE = /^Owner.*analytics_owner/;
@@ -946,28 +968,30 @@ test("data explorer table indexes constraints policies and triggers stay readabl
 
   await page.getByRole("tab", { exact: true, name: "Constraints 2" }).click();
   await expect
-    .element(page.getByText("customers_account_id_fkey"))
+    .element(
+      page.getByRole("heading", {
+        exact: true,
+        name: "Keys primary key and uniqueness",
+      })
+    )
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-constraints"
-  );
-  const constraintFilterBar = requireFacetFilterBar("constraint facet filters");
-  expect(constraintFilterBar.textContent).toContain("Kind");
-  await page.getByRole("button", { exact: true, name: "Kind" }).click();
-  const primaryKeyOption = page.getByRole("option", {
-    exact: true,
-    name: "PRIMARY KEY",
-  });
-  await expect.element(primaryKeyOption).toBeVisible();
-  await primaryKeyOption.click();
-  const kindFilter = page
-    .getByRole("button", { exact: true, name: "Kind PRIMARY KEY" })
-    .element();
-  expect(kindFilter.textContent).toContain("PRIMARY KEY");
+  await expect
+    .element(
+      page.getByRole("heading", {
+        exact: true,
+        name: "Foreign keys outbound references from this table",
+      })
+    )
+    .toBeVisible();
   await expect.element(page.getByText("customers_pkey")).toBeVisible();
   await expect
     .element(page.getByText("customers_account_id_fkey"))
-    .not.toBeInTheDocument();
+    .toBeVisible();
+  await expect.element(page.getByText("public.accounts ↗")).toBeVisible();
+  expect(
+    document.querySelector('[data-slot="facet-filter-bar"]')
+  ).not.toBeNull();
+  expect(document.querySelector("table")).toBeNull();
 
   await page.getByRole("tab", { exact: true, name: "Policies 1" }).click();
   await expect
@@ -984,6 +1008,269 @@ test("data explorer table indexes constraints policies and triggers stay readabl
   await expect.element(page.getByText("customers_audit_trigger")).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-triggers"
+  );
+});
+
+test("data explorer constraints tab matches redesign card groups", async () => {
+  seedTableDetailQueries();
+  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
+    columns: [
+      createProto(ColumnSchema, {
+        columnName: "id",
+        dataType: DataType.INTEGER,
+        isNullable: false,
+        isPrimaryKey: true,
+        ordinalPosition: 1,
+        rawType: "int8",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "shipment_id",
+        dataType: DataType.UUID,
+        isNullable: false,
+        ordinalPosition: 2,
+        rawType: "uuid",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "event",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 3,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "recorded_at",
+        dataType: DataType.TIMESTAMP,
+        isNullable: false,
+        ordinalPosition: 4,
+        rawType: "timestamptz",
+      }),
+    ],
+  });
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    {
+      constraints: [
+        createProto(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "shipment_event_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["shipment_id"],
+          constraintName: "shipment_event_shipment_id_fkey",
+          definition:
+            "FOREIGN KEY (shipment_id) REFERENCES shipping.shipments(id) ON DELETE CASCADE",
+          onDelete: ReferentialAction.CASCADE,
+          referencedColumnNames: ["id"],
+          referencedTable:
+            "instances/prod/databases/logistics/schemas/shipping/tables/shipments",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+      ],
+    }
+  );
+
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="constraints"
+      instanceId="prod"
+      schemaName="shipping"
+      table={createProto(TableSchema, {
+        displayName: "shipment_event",
+        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
+        owner: "app_owner",
+        rowCount: 18_200_000n,
+        sizeBytes: 21_400_000_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="shipment_event"
+    />
+  );
+
+  await expect
+    .element(
+      page.getByRole("heading", {
+        exact: true,
+        name: "Keys primary key and uniqueness",
+      })
+    )
+    .toBeVisible();
+  await expect
+    .element(
+      page.getByRole("heading", {
+        exact: true,
+        name: "Foreign keys outbound references from this table",
+      })
+    )
+    .toBeVisible();
+  await expect
+    .element(page.getByText("ON DELETE CASCADE").first())
+    .toBeVisible();
+  await expect.element(page.getByText("validated")).toBeVisible();
+  await expect.element(page.getByText("shipping.shipments ↗")).toBeVisible();
+  await expect
+    .element(page.getByText("Last fetched 11:00:00 PM", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Refresh" }))
+    .toBeVisible();
+  await expect
+    .element(
+      page.getByRole("textbox", {
+        name: "Search constraints…",
+      })
+    )
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: KIND_FILTER_RE }))
+    .toBeVisible();
+  expect(
+    document.querySelector('[data-slot="facet-filter-bar"]')
+  ).not.toBeNull();
+  expect(document.querySelector("table")).toBeNull();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-constraints-redesign"
+  );
+});
+
+test("data explorer constraints tab paginates dense card groups", async () => {
+  seedTableDetailQueries();
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    {
+      constraints: Array.from({ length: 11 }, (_, index) =>
+        createProto(TableConstraintSchema, {
+          columnNames: [`status_${index + 1}`],
+          constraintName: `shipment_event_status_${index + 1}_check`,
+          definition: `CHECK (status_${index + 1} <> '')`,
+          type: ConstraintType.CHECK,
+        })
+      ),
+    }
+  );
+
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="constraints"
+      instanceId="prod"
+      schemaName="shipping"
+      table={createProto(TableSchema, {
+        displayName: "shipment_event",
+        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
+        owner: "app_owner",
+        rowCount: 18_200_000n,
+        sizeBytes: 21_400_000_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="shipment_event"
+    />
+  );
+
+  const pagination = page.getByRole("navigation", {
+    name: "Constraints pagination",
+  });
+  await expect.element(pagination).toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Constraints per page" }))
+    .toBeVisible();
+  await expect.element(page.getByText("Page 1 of 2")).toBeVisible();
+  await page.getByRole("button", { name: "Next page" }).click();
+  await expect
+    .element(page.getByText("shipment_event_status_11_check"))
+    .toBeVisible();
+  await expect.element(page.getByText("Showing 11–11 of 11")).toBeVisible();
+  await expect.element(page.getByText("Page 2 of 2")).toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-constraints-pagination"
+  );
+});
+
+test("data explorer constraints tab covers validation and action states", async () => {
+  seedTableDetailQueries();
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    {
+      constraints: [
+        createProto(TableConstraintSchema, {
+          columnNames: ["account_id"],
+          constraintName: "customers_account_id_fkey",
+          definition:
+            "FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON UPDATE SET NULL ON DELETE RESTRICT",
+          onDelete: ReferentialAction.RESTRICT,
+          onUpdate: ReferentialAction.SET_NULL,
+          referencedColumnNames: ["id"],
+          referencedTable:
+            "instances/prod/databases/app/schemas/public/tables/accounts",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["status"],
+          constraintName: "customers_status_check",
+          definition: "CHECK (status IN ('active', 'archived'))",
+          type: ConstraintType.CHECK,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["legacy_status"],
+          constraintName: "customers_legacy_status_check",
+          definition: "CHECK (legacy_status <> 'deleted') NOT VALID",
+          type: ConstraintType.CHECK,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["active_period"],
+          constraintName: "customers_active_period_excl",
+          definition: "EXCLUDE USING gist (active_period WITH &&)",
+          type: ConstraintType.EXCLUSION,
+        }),
+      ],
+    }
+  );
+
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="app"
+      initialTab="constraints"
+      instanceId="prod"
+      schemaName="public"
+      table={createProto(TableSchema, {
+        displayName: "customers",
+        name: "instances/prod/databases/app/schemas/public/tables/customers",
+        owner: "app_owner",
+        rowCount: 12_400n,
+        sizeBytes: 8_900_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="customers"
+    />
+  );
+
+  await expect
+    .element(page.getByText("ON UPDATE SET NULL").first())
+    .toBeVisible();
+  await expect
+    .element(page.getByText("ON DELETE RESTRICT").first())
+    .toBeVisible();
+  await expect.element(page.getByText("NOT VALID").first()).toBeVisible();
+  await expect
+    .element(
+      page.getByRole("heading", {
+        exact: true,
+        name: "Checks row-level validation rules",
+      })
+    )
+    .toBeVisible();
+  await expect
+    .element(
+      page.getByRole("heading", {
+        exact: true,
+        name: "Other constraints exclusion and other rules",
+      })
+    )
+    .toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-constraint-states"
   );
 });
 

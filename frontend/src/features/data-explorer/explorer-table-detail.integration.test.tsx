@@ -1,6 +1,12 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -27,7 +33,9 @@ import {
   ListTableTriggersResponseSchema,
   PolicyCommand,
   PolicyMode,
+  ReferentialAction,
   Table_TableType,
+  TableConstraintSchema,
   TableSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
@@ -60,6 +68,32 @@ const CHILD_PARTITION_SQL_RE =
   /CREATE TABLE "archive"\."events_2025" PARTITION OF "public"\."events"\s+FOR VALUES FROM \('2025-01-01'\) TO \('2026-01-01'\);/;
 const COLUMN_COMMENT_SQL_RE =
   /COMMENT ON COLUMN "public"\."customers"\."display name" IS 'Owner''s name';/;
+const KIND_FILTER_RE = /^Kind$/;
+const LAST_FETCHED_RE = /^Last fetched/;
+
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@tanstack/react-router")>();
+  const linkExportName = "Link";
+  return {
+    ...actual,
+    [linkExportName]: ({
+      children,
+      params,
+      search,
+    }: {
+      children: ReactNode;
+      params: { databaseId: string; instanceId: string };
+      search: { category: string; name: string; schema: string };
+    }) => (
+      <a
+        href={`/instances/${params.instanceId}/databases/${params.databaseId}/explorer?schema=${search.schema}&category=${search.category}&name=${search.name}`}
+      >
+        {children}
+      </a>
+    ),
+  };
+});
 
 interface MockGridColumn {
   key: string;
@@ -192,7 +226,9 @@ function seedSuccessfulMetadataQueries() {
   tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
     constraints: [],
   });
+  tableQueries.constraints.dataUpdatedAt = 0;
   tableQueries.constraints.error = null;
+  tableQueries.constraints.isFetching = false;
   tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
     indexes: [],
   });
@@ -280,6 +316,30 @@ function createMetadataError({
     },
   ];
   return error;
+}
+
+function createCheckConstraints(count: number) {
+  return Array.from({ length: count }, (_, index) =>
+    create(TableConstraintSchema, {
+      columnNames: [`status_${index + 1}`],
+      constraintName: `customers_status_${index + 1}_check`,
+      definition: `CHECK (status_${index + 1} <> '')`,
+      type: ConstraintType.CHECK,
+    })
+  );
+}
+
+function renderConstraintsTab() {
+  return render(
+    <TableDetail
+      databaseId="app"
+      initialTab="constraints"
+      instanceId="prod"
+      schemaName="public"
+      table={create(TableSchema)}
+      tableName="customers"
+    />
+  );
 }
 
 beforeEach(() => {
@@ -850,6 +910,445 @@ describe("TableDetail tab routing", () => {
     await user.click(screen.getByRole("tab", { name: INDEXES_TAB_RE }));
 
     expect(onTabChange).toHaveBeenCalledWith("indexes");
+  });
+});
+
+describe("TableDetail constraints pagination", () => {
+  it("paginates constraint cards after ten results", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: createCheckConstraints(11),
+    });
+    renderConstraintsTab();
+
+    expect(screen.getByText("customers_status_1_check")).toBeTruthy();
+    expect(screen.getByText("customers_status_10_check")).toBeTruthy();
+    expect(screen.queryByText("customers_status_11_check")).toBeNull();
+    expect(screen.getByText("Showing 1–10 of 11")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+    expect(
+      screen.getByRole("navigation", { name: "Constraints pagination" })
+    ).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain(
+      "Showing 1–10 of 11"
+    );
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+
+    expect(screen.queryByText("customers_status_1_check")).toBeNull();
+    expect(screen.getByText("customers_status_11_check")).toBeTruthy();
+    expect(screen.getByText("Showing 11–11 of 11")).toBeTruthy();
+    expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+  });
+
+  it("paginates constraints in their grouped display order", () => {
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        ...createCheckConstraints(10),
+        create(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "customers_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+      ],
+    });
+
+    renderConstraintsTab();
+
+    expect(screen.getByText("customers_pkey")).toBeTruthy();
+    expect(screen.getByText("customers_status_9_check")).toBeTruthy();
+    expect(screen.queryByText("customers_status_10_check")).toBeNull();
+  });
+
+  it("changes the constraint page size", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: createCheckConstraints(26),
+    });
+    renderConstraintsTab();
+
+    const pageSize = screen.getByRole("combobox", {
+      name: "Constraints per page",
+    });
+    expect(within(pageSize).getByText("10")).toBeTruthy();
+
+    await user.click(pageSize);
+    await user.click(screen.getByRole("option", { name: "25" }));
+
+    expect(screen.getByText("customers_status_25_check")).toBeTruthy();
+    expect(screen.queryByText("customers_status_26_check")).toBeNull();
+    expect(screen.getByText("Showing 1–25 of 26")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+  });
+
+  it("returns to the first page when constraint search changes", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: createCheckConstraints(11),
+    });
+    renderConstraintsTab();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Search constraints…" }),
+      "status_5_check"
+    );
+
+    expect(screen.getByText("customers_status_5_check")).toBeTruthy();
+    expect(screen.queryByText("customers_status_11_check")).toBeNull();
+    expect(
+      screen.getByRole("combobox", { name: "Constraints per page" })
+    ).toBeTruthy();
+    expect(screen.getByText("Showing 1–1 of 1")).toBeTruthy();
+  });
+
+  it("returns to the first page when the constraint kind changes", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        ...createCheckConstraints(10),
+        create(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "customers_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+      ],
+    });
+
+    renderConstraintsTab();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+    await user.click(screen.getByRole("button", { name: KIND_FILTER_RE }));
+    await user.click(screen.getByRole("option", { name: "PRIMARY KEY" }));
+
+    expect(screen.getByText("customers_pkey")).toBeTruthy();
+    expect(screen.queryByText("customers_status_1_check")).toBeNull();
+  });
+
+  it("keeps a valid page when refreshed constraints shrink", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: createCheckConstraints(11),
+    });
+    const { rerender } = renderConstraintsTab();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["status"],
+          constraintName: "customers_status_check",
+          definition: "CHECK (status <> '')",
+          type: ConstraintType.CHECK,
+        }),
+      ],
+    });
+    rerender(
+      <TableDetail
+        databaseId="app"
+        initialTab="constraints"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema)}
+        tableName="customers"
+      />
+    );
+
+    expect(screen.getByText("customers_status_check")).toBeTruthy();
+  });
+});
+
+describe("TableDetail constraints tab", () => {
+  it("keeps search left of the inline kind filter and combines both", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "customers_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+        create(TableConstraintSchema, {
+          columnNames: ["account_id"],
+          constraintName: "customers_account_id_fkey",
+          definition: "FOREIGN KEY (account_id) REFERENCES public.accounts(id)",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+        create(TableConstraintSchema, {
+          columnNames: ["status"],
+          constraintName: "customers_status_check",
+          definition: "CHECK (status <> '')",
+          type: ConstraintType.CHECK,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="constraints"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema)}
+        tableName="customers"
+      />
+    );
+
+    const search = screen.getByRole("textbox", {
+      name: "Search constraints…",
+    });
+    const kindFilter = screen.getByRole("button", { name: KIND_FILTER_RE });
+    const filterControls = search.closest(
+      '[data-slot="constraints-filter-controls"]'
+    );
+
+    expect(filterControls).not.toBeNull();
+    expect(filterControls?.contains(kindFilter)).toBe(true);
+    expect(filterControls?.firstElementChild?.contains(search)).toBe(true);
+    expect(filterControls?.lastElementChild?.contains(kindFilter)).toBe(true);
+
+    await user.type(search, "account_id");
+
+    expect(screen.getByText("customers_account_id_fkey")).toBeTruthy();
+    expect(screen.queryByText("customers_pkey")).toBeNull();
+    expect(screen.queryByText("customers_status_check")).toBeNull();
+
+    await user.click(kindFilter);
+    await user.click(screen.getByRole("option", { name: "CHECK" }));
+
+    expect(screen.getByText("No constraints found")).toBeTruthy();
+
+    await user.clear(search);
+
+    expect(screen.getByText("customers_status_check")).toBeTruthy();
+    expect(screen.queryByText("customers_pkey")).toBeNull();
+    expect(screen.queryByText("customers_account_id_fkey")).toBeNull();
+  });
+
+  it("groups keys and outbound foreign keys as constraint cards", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.dataUpdatedAt = Date.UTC(2026, 0, 1, 23);
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "shipment_event_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+        create(TableConstraintSchema, {
+          columnNames: ["shipment_id"],
+          constraintName: "shipment_event_shipment_id_fkey",
+          definition:
+            "FOREIGN KEY (shipment_id) REFERENCES shipping.shipments(id) ON DELETE CASCADE",
+          onDelete: ReferentialAction.CASCADE,
+          referencedColumnNames: ["id"],
+          referencedTable:
+            "instances/prod/databases/app/schemas/shipping/tables/shipments",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+      ],
+    });
+
+    const { container } = render(
+      <TableDetail
+        databaseId="app"
+        initialTab="constraints"
+        instanceId="prod"
+        schemaName="shipping"
+        table={create(TableSchema, { rowCount: 18_200_000n, sizeBytes: 4096n })}
+        tableName="shipment_event"
+      />
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Keys primary key and uniqueness",
+      })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", {
+        name: "Foreign keys outbound references from this table",
+      })
+    ).toBeTruthy();
+    expect(screen.getByText("shipment_event_pkey")).toBeTruthy();
+    expect(screen.getByText("shipment_event_shipment_id_fkey")).toBeTruthy();
+    expect(
+      screen.getByText("ON DELETE CASCADE", {
+        selector: '[data-slot="badge"]',
+      })
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "shipping.shipments" })
+        .getAttribute("href")
+    ).toBe(
+      "/instances/prod/databases/app/explorer?schema=shipping&category=tables&name=shipments"
+    );
+    const highlightedDefinitions = Array.from(
+      container.querySelectorAll(
+        'code.language-sql[data-syntax-highlighter="shiki"]'
+      )
+    );
+    expect(highlightedDefinitions.map((code) => code.textContent)).toEqual([
+      "PRIMARY KEY (id)",
+      "FOREIGN KEY (shipment_id) REFERENCES shipping.shipments(id) ON DELETE CASCADE",
+    ]);
+    expect(
+      container.querySelectorAll("[data-shiki-token]").length
+    ).toBeGreaterThan(8);
+    expect(screen.queryByRole("button", { name: "Copy SQL" })).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.getByText(LAST_FETCHED_RE)).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Refresh" }));
+
+    expect(tableQueries.constraints.refetch).toHaveBeenCalledOnce();
+  });
+
+  it("uses readable plain-text fallbacks for incomplete metadata", () => {
+    const malformedReference =
+      "instances/prod/databases/app/tables/legacy_orders";
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["order_id"],
+          constraintName: "orders_order_id_fkey",
+          referencedTable: malformedReference,
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="constraints"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema)}
+        tableName="orders"
+      />
+    );
+
+    const card = screen.getByText("orders_order_id_fkey").closest("article");
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByText("legacy_orders")).toBeTruthy();
+    expect(
+      within(card as HTMLElement).queryByText(malformedReference)
+    ).toBeNull();
+    expect(
+      within(card as HTMLElement).getByText("FOREIGN KEY (order_id)")
+    ).toBeTruthy();
+    expect(
+      card?.querySelector('code[data-syntax-highlighter="shiki"]')
+    ).toBeNull();
+  });
+
+  it("shows design-export validation badges and check groups", () => {
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["account_id"],
+          constraintName: "customers_account_id_fkey",
+          definition:
+            "FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE RESTRICT",
+          onDelete: ReferentialAction.RESTRICT,
+          referencedColumnNames: ["id"],
+          referencedTable:
+            "instances/prod/databases/app/schemas/public/tables/accounts",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+        create(TableConstraintSchema, {
+          columnNames: ["status"],
+          constraintName: "customers_status_check",
+          definition: "CHECK (status IN ('active', 'archived'))",
+          type: ConstraintType.CHECK,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="constraints"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema, { rowCount: 12n, sizeBytes: 4096n })}
+        tableName="customers"
+      />
+    );
+
+    expect(
+      screen.getByText("ON DELETE RESTRICT", {
+        selector: '[data-slot="badge"]',
+      })
+    ).toBeTruthy();
+    expect(screen.getAllByText("validated")).toHaveLength(2);
+    expect(
+      screen.getByRole("heading", {
+        name: "Checks row-level validation rules",
+      })
+    ).toBeTruthy();
+    expect(screen.queryByText("Other constraints")).toBeNull();
+  });
+
+  it("only treats a trailing NOT VALID clause as unvalidated", () => {
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["notes"],
+          constraintName: "customers_notes_check",
+          definition: "CHECK (notes <> 'NOT VALID')",
+          type: ConstraintType.CHECK,
+        }),
+        create(TableConstraintSchema, {
+          columnNames: ["status"],
+          constraintName: "customers_status_not_valid_check",
+          definition: "CHECK (status <> 'deleted') NOT VALID",
+          type: ConstraintType.CHECK,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="constraints"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema)}
+        tableName="customers"
+      />
+    );
+
+    const validatedCard = screen
+      .getByText("customers_notes_check")
+      .closest("article");
+    const notValidCard = screen
+      .getByText("customers_status_not_valid_check")
+      .closest("article");
+
+    expect(validatedCard).not.toBeNull();
+    expect(notValidCard).not.toBeNull();
+    expect(
+      within(validatedCard as HTMLElement).getByText("validated")
+    ).toBeTruthy();
+    expect(
+      within(validatedCard as HTMLElement).queryByText("NOT VALID")
+    ).toBeNull();
+    expect(
+      within(notValidCard as HTMLElement).getByText("NOT VALID", {
+        selector: '[data-slot="badge"]',
+      })
+    ).toBeTruthy();
+    expect(
+      within(notValidCard as HTMLElement).queryByText("validated")
+    ).toBeNull();
   });
 });
 

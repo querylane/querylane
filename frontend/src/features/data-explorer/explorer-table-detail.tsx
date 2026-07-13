@@ -1,5 +1,6 @@
 "use client";
 
+import { Link } from "@tanstack/react-router";
 import type { RowData } from "@tanstack/react-table";
 import {
   Binary,
@@ -25,8 +26,10 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
+import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
+import { SearchEmptyState } from "@/components/search-empty-state";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,6 +44,7 @@ import { CopyIconButton } from "@/components/ui/copy-icon-button";
 import {
   DataTable,
   type DataTableColumnDef,
+  DataTableFilter,
   SortableHeader,
 } from "@/components/ui/data-table";
 import {
@@ -61,7 +65,6 @@ import {
   columnKeyKinds,
   columnTypeCategory,
   filterColumnDetailRows,
-  filterConstraintsByKind,
   filterIndexesByMethod,
   filterPoliciesByMode,
   filterTriggersByState,
@@ -104,9 +107,14 @@ import {
   buildTableName,
   formatBytes,
   normalizeEstimatedRowCount,
+  parseResourceLeafId,
   parseTableQualifiedName,
 } from "@/lib/console-resources";
-import { formatPolicyCommand, formatPolicyMode } from "@/lib/protobuf-enums";
+import {
+  formatPolicyCommand,
+  formatPolicyMode,
+  formatReferentialAction,
+} from "@/lib/protobuf-enums";
 import { QUERY_STALE_TIME } from "@/lib/query-policy";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
@@ -124,6 +132,7 @@ import {
   ConstraintType,
   IdentityGeneration,
   type PolicyMode,
+  ReferentialAction,
   Table_TableType,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
@@ -131,6 +140,14 @@ const TABLE_METADATA_QUERY_OPTIONS = {
   staleTime: QUERY_STALE_TIME.static,
 } as const;
 const SKELETON_ROW_COUNT = 6;
+const CONSTRAINTS_DEFAULT_PAGE_SIZE = 10;
+const CONSTRAINTS_MEDIUM_PAGE_SIZE = 25;
+const CONSTRAINTS_LARGE_PAGE_SIZE = 50;
+const CONSTRAINTS_PAGE_SIZE_OPTIONS = [
+  CONSTRAINTS_DEFAULT_PAGE_SIZE,
+  CONSTRAINTS_MEDIUM_PAGE_SIZE,
+  CONSTRAINTS_LARGE_PAGE_SIZE,
+] as const;
 const SKELETON_ROW_IDS = Array.from(
   { length: SKELETON_ROW_COUNT },
   (_, index) => `skeleton-row-${index}`
@@ -497,6 +514,34 @@ function deriveMetadataToolbar(
     isRefreshing: queries.some((query) => query.isFetching),
     lastFetchedLabel: formatLastFetchedLabel(dataUpdatedAt),
   };
+}
+
+function MetadataRefreshControl({ toolbar }: { toolbar: MetadataToolbar }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span aria-live="polite" className="text-muted-foreground text-xs">
+        {toolbar.lastFetchedLabel}
+      </span>
+      <Button
+        disabled={toolbar.isRefreshing}
+        onClick={() => {
+          toolbar.handleRefresh();
+        }}
+        size="sm"
+        type="button"
+        variant="outline"
+      >
+        <RefreshCw
+          aria-hidden="true"
+          className={cn(
+            "size-3.5",
+            toolbar.isRefreshing && "animate-spin motion-reduce:animate-none"
+          )}
+        />
+        Refresh
+      </Button>
+    </div>
+  );
 }
 
 function TableResourceEmptyState({
@@ -1287,30 +1332,7 @@ function PartitionsTab({
         <span className="text-muted-foreground text-sm">
           PostgreSQL partition hierarchy for this table.
         </span>
-        <div className="flex items-center gap-2">
-          <span aria-live="polite" className="text-muted-foreground text-xs">
-            {toolbar.lastFetchedLabel}
-          </span>
-          <Button
-            disabled={toolbar.isRefreshing}
-            onClick={() => {
-              toolbar.handleRefresh();
-            }}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={cn(
-                "size-3.5",
-                toolbar.isRefreshing &&
-                  "animate-spin motion-reduce:animate-none"
-              )}
-            />
-            Refresh
-          </Button>
-        </div>
+        <MetadataRefreshControl toolbar={toolbar} />
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {summaryItems.map((item) => (
@@ -1477,45 +1499,269 @@ function IndexesTab({
     />
   );
 }
-const constraintColumns: DataTableColumnDef<TableConstraint>[] = [
-  {
-    accessorKey: "constraintName",
-    cell: ({ row }) => row.original.constraintName,
-    header: ({ column }) => (
-      <SortableHeader column={column}>Name</SortableHeader>
-    ),
-    meta: {
-      cellClassName: "font-mono text-xs",
-      headerClassName: "pl-3",
-    },
-  },
-  {
-    accessorFn: (row) => CONSTRAINT_TYPE_LABELS[row.type],
-    cell: ({ row }) => (
-      <Badge className="font-mono text-[10px]" variant="outline">
-        {CONSTRAINT_TYPE_LABELS[row.original.type]}
-      </Badge>
-    ),
-    header: ({ column }) => (
-      <SortableHeader column={column}>Kind</SortableHeader>
-    ),
-    id: "type",
-  },
-  {
-    accessorKey: "definition",
-    cell: ({ row }) => row.original.definition,
-    header: "Definition",
-    meta: {
-      cellClassName: "font-mono text-muted-foreground text-xs",
-    },
-  },
-];
+const KEY_CONSTRAINT_TYPES = new Set<ConstraintType>([
+  ConstraintType.PRIMARY_KEY,
+  ConstraintType.UNIQUE,
+]);
+const VALIDATED_CONSTRAINT_TYPES = new Set<ConstraintType>([
+  ConstraintType.CHECK,
+  ConstraintType.FOREIGN_KEY,
+]);
+const NOT_VALID_DEFINITION_PATTERN = /(?:^|\s)NOT\s+VALID\s*;?\s*$/i;
+
+function isKeyConstraint(constraint: TableConstraint) {
+  return KEY_CONSTRAINT_TYPES.has(constraint.type);
+}
+
+function isForeignKeyConstraint(constraint: TableConstraint) {
+  return constraint.type === ConstraintType.FOREIGN_KEY;
+}
+
+function formatConstraintColumns(columnNames: string[]) {
+  return columnNames.length > 0 ? columnNames.join(", ") : "—";
+}
+
+function shouldShowReferentialAction(action: ReferentialAction) {
+  return (
+    action !== ReferentialAction.UNSPECIFIED &&
+    action !== ReferentialAction.NO_ACTION
+  );
+}
+
+function hasNotValidDefinition(constraint: TableConstraint) {
+  return NOT_VALID_DEFINITION_PATTERN.test(constraint.definition);
+}
+
+function parseReferencedTableTarget(referencedTable: string) {
+  if (!referencedTable) {
+    return null;
+  }
+  try {
+    const { schema, table } = parseTableQualifiedName(referencedTable);
+    return { label: `${schema}.${table}`, schema, table };
+  } catch {
+    return null;
+  }
+}
+
+function shouldShowValidatedPill(constraint: TableConstraint) {
+  return (
+    VALIDATED_CONSTRAINT_TYPES.has(constraint.type) &&
+    !hasNotValidDefinition(constraint)
+  );
+}
+
+function ReferencedTableTarget({
+  databaseId,
+  instanceId,
+  referencedTable,
+}: {
+  databaseId: string;
+  instanceId: string;
+  referencedTable: string;
+}) {
+  const target = parseReferencedTableTarget(referencedTable);
+  if (!target) {
+    return referencedTable ? (
+      <ConstraintBadge tone="ghost">
+        {parseResourceLeafId(referencedTable)}
+      </ConstraintBadge>
+    ) : null;
+  }
+  return (
+    <Link
+      className="inline-flex h-[18px] items-center rounded-sm font-mono text-[11.5px] text-blue-700 focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-300"
+      params={{ databaseId, instanceId }}
+      search={{
+        category: "tables",
+        name: target.table,
+        schema: target.schema,
+      }}
+      to="/instances/$instanceId/databases/$databaseId/explorer"
+    >
+      {target.label}
+      <span aria-hidden="true">&nbsp;↗</span>
+    </Link>
+  );
+}
+
+function ConstraintBadge({
+  children,
+  tone = "secondary",
+}: {
+  children: React.ReactNode;
+  tone?: "ghost" | "outline" | "secondary" | "warning" | undefined;
+}) {
+  return (
+    <Badge
+      className={cn(
+        "h-[18px] font-mono text-[10px]",
+        tone === "ghost" && "border-transparent text-muted-foreground",
+        tone === "warning" &&
+          "border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-300"
+      )}
+      variant={tone === "outline" ? "outline" : "secondary"}
+    >
+      {children}
+    </Badge>
+  );
+}
+
+function ReferentialActionPill({
+  action,
+  label,
+}: {
+  action: ReferentialAction;
+  label: "delete" | "update";
+}) {
+  if (!shouldShowReferentialAction(action)) {
+    return null;
+  }
+  const actionLabel = formatReferentialAction(action);
+  return (
+    <ConstraintBadge
+      tone={action === ReferentialAction.CASCADE ? "warning" : "outline"}
+    >
+      ON {label.toUpperCase()} {actionLabel}
+    </ConstraintBadge>
+  );
+}
+
+function ConstraintSectionHeading({
+  description,
+  title,
+}: {
+  description: string;
+  title: string;
+}) {
+  return (
+    <h2 className="flex flex-wrap items-baseline gap-2 font-semibold text-[12.5px]">
+      <span>{title}</span>
+      <span className="font-normal text-[11px] text-muted-foreground">
+        {description}
+      </span>
+    </h2>
+  );
+}
+
+function ConstraintCard({
+  constraint,
+  databaseId,
+  instanceId,
+}: {
+  constraint: TableConstraint;
+  databaseId: string;
+  instanceId: string;
+}) {
+  const isForeignKey = isForeignKeyConstraint(constraint);
+  const fallbackDefinition = `${CONSTRAINT_TYPE_LABELS[constraint.type]} (${formatConstraintColumns(
+    constraint.columnNames
+  )})`;
+  return (
+    <article
+      className={cn(
+        "rounded-[10px] border bg-card px-3.5 py-[11px] shadow-xs",
+        hasNotValidDefinition(constraint) &&
+          "border-amber-500/45 dark:border-amber-400/45"
+      )}
+    >
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <h3 className="break-all font-mono font-semibold text-[12.5px]">
+          {constraint.constraintName || "—"}
+        </h3>
+        <ConstraintBadge>
+          {CONSTRAINT_TYPE_LABELS[constraint.type]}
+        </ConstraintBadge>
+        {isForeignKey ? (
+          <>
+            <ReferentialActionPill
+              action={constraint.onDelete}
+              label="delete"
+            />
+            <ReferentialActionPill
+              action={constraint.onUpdate}
+              label="update"
+            />
+          </>
+        ) : null}
+        {hasNotValidDefinition(constraint) ? (
+          <ConstraintBadge tone="warning">NOT VALID</ConstraintBadge>
+        ) : null}
+        {shouldShowValidatedPill(constraint) ? (
+          <ConstraintBadge tone="ghost">validated</ConstraintBadge>
+        ) : null}
+        {isForeignKey ? (
+          <ReferencedTableTarget
+            databaseId={databaseId}
+            instanceId={instanceId}
+            referencedTable={constraint.referencedTable}
+          />
+        ) : null}
+      </div>
+      {constraint.definition ? (
+        <SqlCodeBlock
+          className="mt-[7px] whitespace-pre-wrap rounded-none border-0 bg-transparent p-0 text-[11.5px] text-muted-foreground leading-[1.55] [overflow-wrap:anywhere]"
+          copyable={false}
+          sql={constraint.definition}
+        />
+      ) : (
+        <p className="mt-[7px] break-words font-mono text-[11.5px] text-muted-foreground leading-[1.55] [overflow-wrap:anywhere]">
+          {fallbackDefinition}
+        </p>
+      )}
+    </article>
+  );
+}
+
+function ConstraintSection({
+  constraints,
+  databaseId,
+  description,
+  instanceId,
+  title,
+}: {
+  constraints: TableConstraint[];
+  databaseId: string;
+  description: string;
+  instanceId: string;
+  title: string;
+}) {
+  if (constraints.length === 0) {
+    return null;
+  }
+  return (
+    <section className="space-y-2">
+      <ConstraintSectionHeading description={description} title={title} />
+      <div className="space-y-2">
+        {constraints.map((constraint, index) => (
+          <ConstraintCard
+            constraint={constraint}
+            databaseId={databaseId}
+            instanceId={instanceId}
+            key={
+              constraint.constraintName ||
+              `${constraint.type}:${constraint.definition}:${index}`
+            }
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ConstraintsTab({
+  databaseId,
+  instanceId,
   query,
 }: {
+  databaseId: string;
+  instanceId: string;
   query: ReturnType<typeof useListTableConstraintsQuery>;
 }) {
   const [kindFilters, setKindFilters] = useState<string[]>([]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(CONSTRAINTS_DEFAULT_PAGE_SIZE);
+  const [search, setSearch] = useState("");
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
     return (
@@ -1536,33 +1782,147 @@ function ConstraintsTab({
     return <TabSkeleton />;
   }
   const constraints = query.data.constraints;
-  const filteredConstraints = filterConstraintsByKind(
-    constraints,
-    kindFilters.map(Number) as ConstraintType[]
+  if (constraints.length === 0) {
+    return <TableResourceEmptyState category="constraints" toolbar={toolbar} />;
+  }
+  const normalizedSearch = search.trim().toLowerCase();
+  const visibleConstraints = constraints.filter(
+    (constraint) =>
+      (normalizedSearch.length === 0 ||
+        constraint.constraintName.toLowerCase().includes(normalizedSearch)) &&
+      (kindFilters.length === 0 ||
+        kindFilters.includes(String(constraint.type)))
+  );
+  const orderedConstraints = [
+    ...visibleConstraints.filter(isKeyConstraint),
+    ...visibleConstraints.filter(isForeignKeyConstraint),
+    ...visibleConstraints.filter(
+      (constraint) => constraint.type === ConstraintType.CHECK
+    ),
+    ...visibleConstraints.filter(
+      (constraint) =>
+        !(
+          isKeyConstraint(constraint) ||
+          isForeignKeyConstraint(constraint) ||
+          constraint.type === ConstraintType.CHECK
+        )
+    ),
+  ];
+  const pageCount = Math.ceil(visibleConstraints.length / pageSize);
+  const currentPageIndex = Math.min(pageIndex, Math.max(pageCount - 1, 0));
+  const pageStart = currentPageIndex * pageSize;
+  const pageConstraints = orderedConstraints.slice(
+    pageStart,
+    pageStart + pageSize
+  );
+  const keyConstraints = pageConstraints.filter(isKeyConstraint);
+  const foreignKeyConstraints = pageConstraints.filter(isForeignKeyConstraint);
+  const checkConstraints = pageConstraints.filter(
+    (constraint) => constraint.type === ConstraintType.CHECK
+  );
+  const otherConstraints = pageConstraints.filter(
+    (constraint) =>
+      !(
+        isKeyConstraint(constraint) ||
+        isForeignKeyConstraint(constraint) ||
+        constraint.type === ConstraintType.CHECK
+      )
   );
   return (
-    <MetadataTabResult
-      category="constraints"
-      columns={constraintColumns}
-      data={filteredConstraints}
-      filterColumn="constraintName"
-      filterPlaceholder="Search constraints…"
-      filters={
-        <FacetFilterBar
-          filters={[
-            {
-              handleSelectedValuesChange: setKindFilters,
-              label: "Kind",
-              options: presentConstraintKindOptions(constraints),
-              selectedValues: kindFilters,
-            },
-          ]}
-        />
-      }
-      hasUnfilteredData={constraints.length > 0}
-      tableKey="data-explorer-table-constraints"
-      toolbar={toolbar}
-    />
+    <div className="space-y-3.5" data-slot="constraints-card-list">
+      <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+        <div
+          className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+          data-slot="constraints-filter-controls"
+        >
+          <DataTableFilter
+            onChange={(value) => {
+              setSearch(value);
+              setPageIndex(0);
+            }}
+            placeholder="Search constraints…"
+            value={search}
+          />
+          <FacetFilterBar
+            filters={[
+              {
+                handleSelectedValuesChange: (values) => {
+                  setKindFilters(values);
+                  setPageIndex(0);
+                },
+                label: "Kind",
+                options: presentConstraintKindOptions(constraints),
+                selectedValues: kindFilters,
+              },
+            ]}
+          />
+        </div>
+        <MetadataRefreshControl toolbar={toolbar} />
+      </div>
+      {visibleConstraints.length === 0 ? (
+        <SearchEmptyState resourceName="constraints" />
+      ) : (
+        <>
+          <ConstraintSection
+            constraints={keyConstraints}
+            databaseId={databaseId}
+            description="primary key and uniqueness"
+            instanceId={instanceId}
+            title="Keys"
+          />
+          <ConstraintSection
+            constraints={foreignKeyConstraints}
+            databaseId={databaseId}
+            description="outbound references from this table"
+            instanceId={instanceId}
+            title="Foreign keys"
+          />
+          <ConstraintSection
+            constraints={checkConstraints}
+            databaseId={databaseId}
+            description="row-level validation rules"
+            instanceId={instanceId}
+            title="Checks"
+          />
+          <ConstraintSection
+            constraints={otherConstraints}
+            databaseId={databaseId}
+            description="exclusion and other rules"
+            instanceId={instanceId}
+            title="Other constraints"
+          />
+          {constraints.length > CONSTRAINTS_DEFAULT_PAGE_SIZE ? (
+            <nav
+              aria-label="Constraints pagination"
+              className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs"
+            >
+              <span className="tabular-nums" role="status">
+                Showing {pageStart + 1}&ndash;
+                {Math.min(pageStart + pageSize, visibleConstraints.length)} of{" "}
+                {visibleConstraints.length}
+              </span>
+              <div className="ml-auto">
+                <PaginationFooter
+                  hasNext={currentPageIndex < pageCount - 1}
+                  hasPrev={currentPageIndex > 0}
+                  onNext={() => setPageIndex(currentPageIndex + 1)}
+                  onPageSizeChange={(nextPageSize) => {
+                    setPageSize(nextPageSize);
+                    setPageIndex(0);
+                  }}
+                  onPrev={() => setPageIndex(currentPageIndex - 1)}
+                  pageIndex={currentPageIndex}
+                  pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
+                  pageSize={pageSize}
+                  pageSizeLabel="Constraints per page"
+                  pageSizeOptions={CONSTRAINTS_PAGE_SIZE_OPTIONS}
+                />
+              </div>
+            </nav>
+          ) : null}
+        </>
+      )}
+    </div>
   );
 }
 const policyColumns: DataTableColumnDef<TablePolicy>[] = [
@@ -2690,7 +3050,11 @@ function TableDetail({
               <IndexesTab query={indexesQuery} />
             </TabsContent>
             <TabsContent className="mt-4" value="constraints">
-              <ConstraintsTab query={constraintsQuery} />
+              <ConstraintsTab
+                databaseId={databaseId}
+                instanceId={instanceId}
+                query={constraintsQuery}
+              />
             </TabsContent>
             <TabsContent className="mt-4" value="policies">
               <PoliciesTab query={policiesQuery} />

@@ -2,9 +2,7 @@ import type { ColumnRow } from "@/features/data-explorer/explorer-column-rows";
 import { normalizeIndexMethod } from "@/features/data-explorer/postgres-index-method-display";
 import { describePostgresType } from "@/features/data-explorer/postgres-type-display";
 import type {
-  ConstraintType,
   PolicyMode,
-  TableConstraint,
   TableIndex,
   TablePolicy,
   TableTrigger,
@@ -70,16 +68,6 @@ function filterIndexesByMethod(
   );
 }
 
-function filterConstraintsByKind(
-  constraints: TableConstraint[],
-  kinds: ConstraintType[]
-): TableConstraint[] {
-  if (kinds.length === 0) {
-    return constraints;
-  }
-  return constraints.filter((constraint) => kinds.includes(constraint.type));
-}
-
 function filterPoliciesByMode(
   policies: TablePolicy[],
   modes: PolicyMode[]
@@ -107,7 +95,6 @@ export {
   columnKeyKinds,
   columnTypeCategory,
   filterColumnDetailRows,
-  filterConstraintsByKind,
   filterIndexesByMethod,
   filterPoliciesByMode,
   filterTriggersByState,
