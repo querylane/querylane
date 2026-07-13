@@ -52,9 +52,8 @@ func (op FilterOperator) String() string {
 }
 
 // FilterExpr is a node in a validated, schema-aware filter expression tree.
-// The backend compilers (aip/jet, aip/rawsql) translate it into parameterized
-// predicates. Leaves are FilterCondition; interior nodes are FilterAnd,
-// FilterOr, and FilterNot.
+// The SQL compiler translates it into parameterized predicates. Leaves are
+// FilterCondition; interior nodes are FilterAnd, FilterOr, and FilterNot.
 type FilterExpr interface {
 	isFilterExpr()
 }
@@ -82,7 +81,7 @@ func (FilterNot) isFilterExpr() {}
 
 // FilterCondition is a validated, schema-aware filter condition. Value holds
 // the coerced Go value (string, bool, int64, or time.Time, matching the field
-// codec); the compilers translate it into a parameterized predicate.
+// codec); the compiler translates it into a parameterized predicate.
 type FilterCondition struct {
 	Field    string
 	Operator FilterOperator

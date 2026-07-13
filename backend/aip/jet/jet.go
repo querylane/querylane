@@ -1,7 +1,6 @@
-// Package jet executes aip list plans with the go-jet query builder. It is
-// the backend for meta-database queries (storage/): Bind attaches go-jet
-// columns to a backend-neutral aip.Schema, and Execute/ExecuteWithCondition
-// run the full paginated list query.
+// Package jet executes aip list plans with the go-jet query builder. Bind
+// attaches typed go-jet columns to a backend-neutral aip.Schema; predicates
+// are compiled once by aip/rawsql and embedded into the final statement.
 package jet
 
 import (
@@ -10,6 +9,7 @@ import (
 	"github.com/go-jet/jet/v2/postgres"
 
 	"github.com/querylane/querylane/backend/aip"
+	"github.com/querylane/querylane/backend/aip/rawsql"
 )
 
 // Columns maps schema field paths to the go-jet columns backing them
@@ -21,6 +21,7 @@ type Columns map[string]postgres.Column
 type Schema[Model any] struct {
 	core *aip.Schema[Model]
 	cols Columns
+	raw  *rawsql.Schema[Model]
 }
 
 // Bind attaches go-jet columns to a schema's field paths. It panics if any
@@ -33,7 +34,12 @@ func Bind[Model any](core *aip.Schema[Model], cols Columns) *Schema[Model] {
 		panic(fmt.Sprintf("aip/jet: invalid binding for %s: %v", core.ResourceType(), err)) //nolint:forbidigo // init-time validation, same pattern as regexp.MustCompile
 	}
 
-	return &Schema[Model]{core: core, cols: cols}
+	exprs := make(rawsql.Exprs, len(cols))
+	for path, column := range cols {
+		exprs[path] = rawColumnExpression(column)
+	}
+
+	return &Schema[Model]{core: core, cols: cols, raw: rawsql.Bind(core, exprs)}
 }
 
 func validateBinding[Model any](core *aip.Schema[Model], cols Columns) error {
