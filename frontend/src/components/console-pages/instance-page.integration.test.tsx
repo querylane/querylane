@@ -78,6 +78,8 @@ const BLOCKED_ACTIVITY_TABLE_ROW_NAME = /4302/;
 const BLOCKER_ACTIVITY_TABLE_ROW_NAME = /4211/;
 const MISSING_INSTANCE_SECRET_KEY_MESSAGE =
   /QUERYLANE_INSTANCE_SECRET_KEY is not configured/;
+const REPLICATION_ROW_NAME = /Replication/;
+const REPLICATION_WARNING_ROW_NAME = /Warning: Replication/;
 
 const state = vi.hoisted(() => ({
   activityQueryOptions: undefined as Record<string, unknown> | undefined,
@@ -1043,7 +1045,8 @@ describe("backend instance overview redesign", () => {
     ).toBeTruthy();
   });
 
-  test("keeps health primary and adds compact replication after it", () => {
+  test("keeps replication inside health without a standalone card", async () => {
+    const user = userEvent.setup();
     state.selectedInstanceStatus = "connected";
     state.instances = [postgresInstanceFixture("connected")];
     state.instanceData = connectedInstanceResponse();
@@ -1052,29 +1055,26 @@ describe("backend instance overview redesign", () => {
     renderInstanceOverview();
 
     const health = screen.getByRole("region", { name: "Health checks" });
-    const replication = screen.getByRole("region", {
-      name: "Replication overview",
-    });
-    const regionLabels = screen
-      .getAllByRole("region")
-      .map((region) => region.getAttribute("aria-label"));
-    expect(regionLabels.indexOf("Health checks")).toBeLessThan(
-      regionLabels.indexOf("Replication overview")
-    );
+    expect(
+      screen.queryByRole("region", { name: "Replication overview" })
+    ).toBeNull();
     expect(
       within(health).getByText(
         "Live checks from this instance's system catalogs."
       )
     ).toBeTruthy();
-    expect(within(replication).getByText("Replication")).toBeTruthy();
-    expect(within(replication).getByText("Primary")).toBeTruthy();
-    expect(within(replication).getByText("Streaming replicas")).toBeTruthy();
-    expect(within(replication).queryByText("1 streaming")).toBeNull();
+    expect(within(health).getByText("Replication")).toBeTruthy();
     expect(
-      within(replication).getByText(
-        "Replica names, slots, and replay trend are not reported yet."
-      )
+      within(health).getByText("Primary · 1 replica streaming")
     ).toBeTruthy();
+
+    await user.click(
+      within(health).getByRole("button", { name: REPLICATION_ROW_NAME })
+    );
+
+    expect(await within(health).findByText("Role")).toBeTruthy();
+    expect(within(health).getByText("Primary")).toBeTruthy();
+    expect(within(health).getByText("Streaming replicas")).toBeTruthy();
 
     expect(
       screen.queryByRole("region", { name: "Storage overview" })
@@ -1084,7 +1084,8 @@ describe("backend instance overview redesign", () => {
     expect(screen.queryByText("Memory")).toBeNull();
   });
 
-  test("keeps replication facts aligned when server info and health roles disagree", () => {
+  test("keeps replication facts aligned when server info and health roles disagree", async () => {
+    const user = userEvent.setup();
     state.selectedInstanceStatus = "connected";
     state.instances = [postgresInstanceFixture("connected")];
     state.instanceData = connectedInstanceResponse({
@@ -1097,18 +1098,22 @@ describe("backend instance overview redesign", () => {
 
     renderInstanceOverview();
 
-    const replication = screen.getByRole("region", {
-      name: "Replication overview",
+    const health = screen.getByRole("region", { name: "Health checks" });
+    const replication = within(health).getByRole("button", {
+      name: REPLICATION_WARNING_ROW_NAME,
     });
     expect(
-      within(replication).getByText(
+      within(health).getByText(
         "Health check reports Replica. Server info reports Primary."
       )
     ).toBeTruthy();
-    expect(within(replication).getByText("Role")).toBeTruthy();
-    expect(within(replication).getByText("Primary")).toBeTruthy();
-    expect(within(replication).getByText("Attached replicas")).toBeTruthy();
-    expect(within(replication).queryByText("WAL receiver")).toBeNull();
+
+    await user.click(replication);
+
+    expect(await within(health).findByText("Role")).toBeTruthy();
+    expect(within(health).getByText("Primary")).toBeTruthy();
+    expect(within(health).getByText("Attached replicas")).toBeTruthy();
+    expect(within(health).queryByText("WAL receiver")).toBeNull();
   });
 });
 

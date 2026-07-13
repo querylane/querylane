@@ -54,6 +54,7 @@ interface QueryState<T> {
 }
 
 const PG_STAT_STATEMENTS_BUTTON_NAME = /pg_stat_statements/i;
+const REPLICATION_ROW_NAME = /Replication/;
 const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/;
 const TIMESCALEDB_BUTTON_NAME = /timescaledb/i;
 
@@ -819,38 +820,22 @@ test("backend instance overview shows live metrics and database catalog together
   await expect
     .element(page.getByText("Production Analytics Writer"))
     .toBeVisible();
+  const health = page.getByRole("region", { name: "Health checks" });
   await expect
-    .element(
-      page
-        .getByRole("region", { name: "Replication overview" })
-        .getByText("Primary", { exact: true })
-    )
+    .element(health.getByRole("button", { name: REPLICATION_ROW_NAME }))
     .toBeVisible();
+  await expect
+    .element(health.getByText("primary with 2 attached replicas"))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("region", { name: "Replication overview" }))
+    .not.toBeInTheDocument();
   await expect.element(page.getByText("74")).toBeVisible();
+  await health.getByRole("button", { name: REPLICATION_ROW_NAME }).click();
   await expect
-    .element(
-      page
-        .getByRole("region", { name: "Replication overview" })
-        .getByText("Replication", { exact: true })
-    )
+    .element(health.getByText("Primary", { exact: true }))
     .toBeVisible();
-  await expect
-    .element(
-      page
-        .getByRole("region", { name: "Replication overview" })
-        .getByText("Streaming replicas")
-    )
-    .toBeVisible();
-  await expect
-    .element(
-      page
-        .getByRole("region", { name: "Replication overview" })
-        .getByText("primary with 2 attached replicas")
-    )
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("region", { name: "Health checks" }))
-    .toBeVisible();
+  await expect.element(health.getByText("Streaming replicas")).toBeVisible();
   await expect
     .element(page.getByPlaceholder("Search databases..."))
     .toBeVisible();
@@ -864,21 +849,10 @@ test("backend instance overview shows live metrics and database catalog together
     .element(page.getByRole("button", { exact: true, name: "Owner" }))
     .toBeVisible();
   await expect.element(page.getByText("customer_events")).toBeVisible();
-  const healthTop = page
-    .getByRole("region", { name: "Health checks" })
-    .element()
-    .getBoundingClientRect().top;
-  const replicationTop = page
-    .getByRole("region", { name: "Replication overview" })
-    .element()
-    .getBoundingClientRect().top;
-  expect(healthTop).toBeLessThan(replicationTop);
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-instance-overview"
   );
-  await expect(
-    page.getByRole("region", { name: "Replication overview" })
-  ).toMatchScreenshot("backend-instance-overview-replication");
+  await expect(health).toMatchScreenshot("backend-instance-overview-health");
 });
 
 test("backend instance activity matches the live sessions redesign", async () => {
