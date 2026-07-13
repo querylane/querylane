@@ -1,4 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
+import { useLayoutEffect } from "react";
+import { flushSync } from "react-dom";
+import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 
 import { useSetupExecution } from "@/components/onboarding-wizard/hooks/use-setup-execution";
@@ -52,6 +55,81 @@ describe("useSetupExecution", () => {
 
     expect(firstOnSuccess).not.toHaveBeenCalled();
     expect(secondOnSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the latest completion callback before passive effects flush", async () => {
+    const setup = createDeferred();
+    let markUpdateCommitted!: () => void;
+    const updateCommitted = new Promise<void>((resolve) => {
+      markUpdateCommitted = resolve;
+    });
+    const runSetupMutation = vi.fn(
+      (_variables: SetupAppDatabaseMutationVariables) => setup.promise
+    );
+    const firstOnSuccess = vi.fn();
+    const secondOnSuccess = vi.fn();
+    const stableOptions = {
+      getFailedEvent: vi.fn(() => null),
+      phase: "progress_running" as const,
+      runSetupMutation,
+      selectedMethod: "embedded" as const,
+      setConfigureValidationError: vi.fn(),
+      setStreamFailure: vi.fn(),
+      setupRunToken: 1,
+      submittedEmbeddedConfig: null,
+      submittedPostgresConfig: null,
+    };
+
+    function Harness({
+      onSuccess,
+      settleInLayout,
+    }: {
+      onSuccess: () => void;
+      settleInLayout: boolean;
+    }) {
+      useSetupExecution({ ...stableOptions, onSuccess });
+      useLayoutEffect(
+        function settleSetupDuringCommit() {
+          if (settleInLayout) {
+            setup.resolve();
+            markUpdateCommitted();
+          }
+        },
+        [settleInLayout]
+      );
+      return null;
+    }
+
+    const root = createRoot(document.createElement("div"));
+    const actEnvironmentKey = "IS_REACT_ACT_ENVIRONMENT";
+    const previousActEnvironment = Reflect.get(globalThis, actEnvironmentKey);
+    Reflect.set(globalThis, actEnvironmentKey, false);
+
+    try {
+      flushSync(() => {
+        root.render(
+          <Harness onSuccess={firstOnSuccess} settleInLayout={false} />
+        );
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(runSetupMutation).toHaveBeenCalledTimes(1);
+
+      root.render(
+        <Harness onSuccess={secondOnSuccess} settleInLayout={true} />
+      );
+      await updateCommitted;
+      await Promise.resolve();
+
+      expect(firstOnSuccess).not.toHaveBeenCalled();
+      expect(secondOnSuccess).toHaveBeenCalledTimes(1);
+    } finally {
+      flushSync(() => root.unmount());
+      if (previousActEnvironment === undefined) {
+        Reflect.deleteProperty(globalThis, actEnvironmentKey);
+      } else {
+        Reflect.set(globalThis, actEnvironmentKey, previousActEnvironment);
+      }
+    }
   });
 
   it("restarts setup when the run token changes", () => {

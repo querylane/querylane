@@ -7,14 +7,17 @@ import {
   useSetupExecution,
 } from "@/components/onboarding-wizard/hooks/use-setup-execution";
 
-const { cleanupCallbacks, useEffectMock, useRefMock } = vi.hoisted(() => ({
-  cleanupCallbacks: [] as Array<() => void>,
-  useEffectMock: vi.fn(),
-  useRefMock: vi.fn(),
-}));
+const { cleanupCallbacks, useEffectEventMock, useEffectMock, useRefMock } =
+  vi.hoisted(() => ({
+    cleanupCallbacks: [] as Array<() => void>,
+    useEffectEventMock: vi.fn((callback: unknown) => callback),
+    useEffectMock: vi.fn(),
+    useRefMock: vi.fn(),
+  }));
 
 vi.mock("react", () => ({
   useEffect: useEffectMock,
+  useEffectEvent: useEffectEventMock,
   useRef: useRefMock,
 }));
 

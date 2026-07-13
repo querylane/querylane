@@ -1,5 +1,5 @@
 import { Code } from "@connectrpc/connect";
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 import { SETUP_FAILURE_FALLBACK_MESSAGE } from "@/components/onboarding-wizard/constants";
 import {
@@ -98,14 +98,12 @@ function resolveSetupFailureAction({
 
 async function executeSetupRequest({
   controller,
-  onSuccess,
   runSetupMutation,
   selectedMethod,
   submittedEmbeddedConfig,
   submittedPostgresConfig,
 }: {
   controller: AbortController;
-  onSuccess: () => void;
   runSetupMutation: (
     variables: SetupAppDatabaseMutationVariables
   ) => Promise<void>;
@@ -132,8 +130,6 @@ async function executeSetupRequest({
     request,
     signal: controller.signal,
   });
-
-  onSuccess();
 }
 
 function useSetupExecution({
@@ -149,14 +145,10 @@ function useSetupExecution({
   submittedPostgresConfig,
 }: SetupExecutionOptions) {
   const setupAbortRef = useRef<AbortController | null>(null);
-  const setupOptionsRef = useRef({
-    getFailedEvent,
-    onSuccess,
+  const setupRequestOptionsRef = useRef({
     phase,
     runSetupMutation,
     selectedMethod,
-    setConfigureValidationError,
-    setStreamFailure,
     submittedEmbeddedConfig,
     submittedPostgresConfig,
   });
@@ -166,32 +158,46 @@ function useSetupExecution({
     setupAbortRef.current?.abort();
   };
 
+  const handleSetupSuccess = useEffectEvent(function handleSetupSuccess() {
+    onSuccess();
+  });
+
+  const handleSetupFailure = useEffectEvent(function handleSetupFailure(
+    error: unknown
+  ) {
+    const resolution = resolveSetupFailureAction({
+      error,
+      failedEvent: getFailedEvent(),
+    });
+
+    if (resolution.action === "success") {
+      onSuccess();
+      return;
+    }
+
+    if (resolution.action === "configure") {
+      setConfigureValidationError(resolution.configureError);
+      return;
+    }
+
+    setStreamFailure(resolution.streamError);
+  });
+
   // allow-useEffect: keep setup inputs current without restarting execution
   useEffect(function syncSetupExecutionOptions() {
-    setupOptionsRef.current = {
-      getFailedEvent,
-      onSuccess,
+    setupRequestOptionsRef.current = {
       phase,
       runSetupMutation,
       selectedMethod,
-      setConfigureValidationError,
-      setStreamFailure,
       submittedEmbeddedConfig,
       submittedPostgresConfig,
     };
   });
 
-  // allow-useEffect: abort setup when the owning wizard unmounts
-  useEffect(function abortSetupOnUnmount() {
-    return () => {
-      setupAbortRef.current?.abort();
-    };
-  }, []);
-
   // allow-useEffect: execute each explicitly requested setup run
   useEffect(
     function executeSetupRun() {
-      const currentOptions = setupOptionsRef.current;
+      const currentOptions = setupRequestOptionsRef.current;
       if (
         setupRunToken === 0 ||
         !shouldAutoRunSetup(currentOptions.phase, currentOptions.selectedMethod)
@@ -204,34 +210,20 @@ function useSetupExecution({
 
       executeSetupRequest({
         controller,
-        onSuccess: () => setupOptionsRef.current.onSuccess(),
         runSetupMutation: currentOptions.runSetupMutation,
         selectedMethod: currentOptions.selectedMethod,
         submittedEmbeddedConfig: currentOptions.submittedEmbeddedConfig,
         submittedPostgresConfig: currentOptions.submittedPostgresConfig,
-      }).catch((error) => {
-        if (controller.signal.aborted) {
-          return;
+      }).then(
+        () => {
+          handleSetupSuccess();
+        },
+        (error) => {
+          if (!controller.signal.aborted) {
+            handleSetupFailure(error);
+          }
         }
-
-        const latestOptions = setupOptionsRef.current;
-        const resolution = resolveSetupFailureAction({
-          error,
-          failedEvent: latestOptions.getFailedEvent(),
-        });
-
-        if (resolution.action === "success") {
-          latestOptions.onSuccess();
-          return;
-        }
-
-        if (resolution.action === "configure") {
-          latestOptions.setConfigureValidationError(resolution.configureError);
-          return;
-        }
-
-        latestOptions.setStreamFailure(resolution.streamError);
-      });
+      );
 
       return () => {
         controller.abort();
