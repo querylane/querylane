@@ -1000,6 +1000,9 @@ test("data explorer schema map tab matches the redesign relationship map", async
     await expect
       .element(page.getByRole("button", { name: "Open data" }))
       .toBeVisible();
+    await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+      "data-explorer-schema-map-selected-table"
+    );
     await page.getByRole("button", { name: "Open data" }).click();
     expect(onSelectTable).toHaveBeenCalledWith("shipping", "shipments");
 
@@ -1147,6 +1150,50 @@ test("data explorer schema map does not clip table card decoration", async () =>
   }
 
   expect(getComputedStyle(cardBoundary).overflow).toBe("visible");
+});
+
+test("data explorer schema map emphasizes incoming and outgoing relationships", async () => {
+  const catalog = seedSchemaMapVisualCatalog();
+
+  render(
+    <ExplorerSchemaMap
+      activeSchemaName="shipping"
+      databaseId="logistics"
+      enabled={true}
+      instanceId="prod"
+      onSelectTable={() => undefined}
+      schemas={catalog.schemas}
+    />
+  );
+
+  await expect.element(page.getByText("Foreign key").first()).toBeVisible();
+  await page.getByRole("button", { name: "shipping.shipments" }).click();
+
+  const relationshipPath = (label: string) => {
+    const path = document.querySelector(`path[aria-label="${label}"]`);
+    if (!(path instanceof SVGPathElement)) {
+      throw new Error(`Expected the ${label} relationship to render.`);
+    }
+    return path;
+  };
+  const outgoing = relationshipPath(
+    "shipments.carrier_id references carriers.id"
+  );
+  const incoming = relationshipPath(
+    "containers.shipment_id references shipments.id"
+  );
+
+  for (const connected of [outgoing, incoming]) {
+    expect(connected.getAttribute("stroke-dasharray")).toBe("7 5");
+    expect(getComputedStyle(connected).animationName).toBe(
+      "schema-map-edge-dash"
+    );
+    expect(getComputedStyle(connected).opacity).toBe("0.95");
+  }
+
+  await page.getByRole("button", { name: "shipping.carriers" }).click();
+  expect(getComputedStyle(outgoing).opacity).toBe("0.95");
+  expect(getComputedStyle(incoming).opacity).toBe("0.1");
 });
 
 test("data explorer schema map places controls directly after the schema filter", async () => {

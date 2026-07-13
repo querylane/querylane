@@ -56,6 +56,8 @@ const MINIMAP_WIDTH = 132;
 const MINIMAP_HEIGHT = 92;
 const MINIMAP_NODE_RADIUS = 4;
 const MAX_AUTO_METADATA_TABLES = 24;
+const EDGE_STROKE_WIDTH = 1.5;
+const SELECTED_EDGE_STROKE_WIDTH = 2;
 
 const TONE_CLASSES: Record<
   SchemaMapTone,
@@ -591,16 +593,33 @@ function SchemaMapCanvas({
             </text>
           </g>
         ))}
-        {model.edges.map((edge) => (
-          <path
-            aria-label={`${edge.fromLabel} references ${edge.toLabel}`}
-            className={cn("fill-none opacity-70", TONE_CLASSES[edge.tone].edge)}
-            d={edge.d}
-            key={edge.id}
-            strokeLinecap="round"
-            strokeWidth={2}
-          />
-        ))}
+        {model.edges.map((edge) => {
+          const isConnected =
+            selectedTable !== null &&
+            (edge.source === selectedTable || edge.target === selectedTable);
+          const isDimmed = selectedTable !== null && !isConnected;
+
+          return (
+            <path
+              aria-label={`${edge.fromLabel} references ${edge.toLabel}`}
+              className={cn(
+                "fill-none",
+                TONE_CLASSES[edge.tone].edge,
+                selectedTable === null && "opacity-50",
+                isConnected &&
+                  "animate-[schema-map-edge-dash_0.5s_linear_infinite] opacity-95 motion-reduce:animate-none",
+                isDimmed && "opacity-10"
+              )}
+              d={edge.d}
+              key={edge.id}
+              strokeDasharray={isConnected ? "7 5" : undefined}
+              strokeLinecap="round"
+              strokeWidth={
+                isConnected ? SELECTED_EDGE_STROKE_WIDTH : EDGE_STROKE_WIDTH
+              }
+            />
+          );
+        })}
         {model.viewNodes.map((node) => (
           <ViewNode key={node.id} node={node} />
         ))}

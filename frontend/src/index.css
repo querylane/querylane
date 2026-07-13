@@ -316,6 +316,12 @@
   }
 }
 
+@keyframes schema-map-edge-dash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
 .route-progress-bar-fill {
   transform-origin: left center;
   animation: route-progress-indeterminate 1.3s ease-in-out infinite;
