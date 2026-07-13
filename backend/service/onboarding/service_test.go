@@ -412,6 +412,66 @@ func TestWatchConfigChanges(t *testing.T) {
 	}
 }
 
+func TestWatchConfigChangesCompletesWhenTerminalEventFillsBuffer(t *testing.T) {
+	t.Parallel()
+
+	if !testing.Short() {
+		t.Skip("unit test: run with -short")
+	}
+
+	cfgMgr := newTestConfigManager(t, `database:
+  dsn: "postgres://user:pass@localhost:5432/querylane?sslmode=disable"
+`)
+	init := newFakeDatabaseInitializer()
+	svc := NewService(cfgMgr, init, nil)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	configDetected := make(chan struct{})
+	releaseStream := make(chan struct{})
+	done := make(chan error, 1)
+
+	go func() {
+		done <- svc.watchConfigChanges(ctx, func(event dbsetup.ProgressEvent) error {
+			if event.StepID == dbsetup.StepConfigDetected && event.State == dbsetup.StateSucceeded {
+				close(configDetected)
+				<-releaseStream
+			}
+
+			return nil
+		})
+	}()
+
+	require.Eventually(t, func() bool {
+		select {
+		case <-configDetected:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
+
+	for range progressEventBufferCapacity {
+		init.ProgressBroadcaster().Send(dbsetup.NewEvent(dbsetup.StepConnecting, dbsetup.StateInProgress))
+	}
+
+	init.ProgressBroadcaster().Send(dbsetup.NewEvent(dbsetup.StepInitializingServices, dbsetup.StateSucceeded))
+	close(releaseStream)
+
+	var watchErr error
+
+	require.Eventually(t, func() bool {
+		select {
+		case watchErr = <-done:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond, "watch should complete after initialization succeeds")
+	require.NoError(t, watchErr)
+}
+
 // TestSetupAppDatabasePersistsConfigWhenClientDisconnects is the regression
 // guard for the disconnect-during-setup bug: the route swap inside
 // InitializeDatabaseWithConfig happens before initialization completes, so the

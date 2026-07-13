@@ -9,6 +9,7 @@ import {
   SetupAppDatabaseRequestSchema,
   type SetupAppDatabaseResponse,
   type SetupProgressEvent,
+  SetupStep,
   StepState,
   type WatchConfigChangesResponse,
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
@@ -92,11 +93,18 @@ async function consumeSetupStreamWithProgress(
   onProgress: StepProgressCallback
 ): Promise<SetupStreamFailure | null> {
   let failureMessage: SetupStreamFailure | null = null;
+  let setupCompleted = false;
 
   for await (const response of stream) {
     const event = response.event;
     if (event) {
       onProgress(event);
+      if (
+        event.stepId === SetupStep.PERSISTING_CONFIG &&
+        event.state === StepState.SUCCEEDED
+      ) {
+        setupCompleted = true;
+      }
     }
 
     const message = getProgressFailureMessage(event);
@@ -105,7 +113,15 @@ async function consumeSetupStreamWithProgress(
     }
   }
 
-  return failureMessage;
+  if (failureMessage) {
+    return failureMessage;
+  }
+
+  if (!setupCompleted) {
+    throw new Error("Database setup stream ended before setup completed");
+  }
+
+  return null;
 }
 
 async function consumeWatchStreamWithProgress(

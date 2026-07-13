@@ -95,18 +95,43 @@ func NewBroadcaster() *Broadcaster {
 
 // SubscribeChan creates a buffered channel and subscribes it to this
 // broadcaster. Returns the channel and a subscription ID for Unsubscribe.
-// Events are dropped (not blocking the broadcaster) if the channel buffer
-// is full.
+// Progress updates are dropped (not blocking the broadcaster) if the channel
+// buffer is full. Terminal results replace the oldest buffered update.
 func (b *Broadcaster) SubscribeChan(bufSize int) (<-chan ProgressEvent, uint32) {
-	ch := make(chan ProgressEvent, bufSize)
+	ch := make(chan ProgressEvent, max(bufSize, 1))
+
+	var sendMu sync.Mutex
+
 	id := b.Subscribe(func(e ProgressEvent) {
+		sendMu.Lock()
+		defer sendMu.Unlock()
+
 		select {
 		case ch <- e:
+			return
 		default:
 		}
+
+		if !isTerminalEvent(e) {
+			return
+		}
+
+		// Progress updates are best-effort, but the result is authoritative.
+		// Replace the oldest buffered update so consumers always receive it.
+		select {
+		case <-ch:
+		default:
+		}
+
+		ch <- e
 	})
 
 	return ch, id
+}
+
+func isTerminalEvent(e ProgressEvent) bool {
+	return e.State == StateFailed ||
+		(e.StepID == StepInitializingServices && e.State == StateSucceeded)
 }
 
 // Subscribe registers a callback and returns its subscription ID.
