@@ -31,31 +31,7 @@ interface BuildColumnArgs {
   sortPriority?: number | undefined;
 }
 
-const NAME_CHAR_WIDTH_PX = 7.5;
-const TYPE_CHAR_WIDTH_PX = 6;
-const HEADER_RESERVED_PX = 88;
-const PK_RESERVED_PX = 18;
-const SORT_RESERVED_PX = 22;
 const MIN_COLUMN_WIDTH = 140;
-const MAX_COLUMN_WIDTH = 420;
-
-function estimateHeaderWidth(
-  column: TableResultColumn,
-  isPrimaryKey: boolean,
-  hasSort: boolean
-): number {
-  const columnKey = column.columnName;
-  const nameWidth = columnKey.length * NAME_CHAR_WIDTH_PX;
-  const typeWidth = column.rawType.length * TYPE_CHAR_WIDTH_PX;
-  const pkWidth = isPrimaryKey ? PK_RESERVED_PX : 0;
-  const sortWidth = hasSort ? SORT_RESERVED_PX : 0;
-  const total =
-    nameWidth + typeWidth + pkWidth + sortWidth + HEADER_RESERVED_PX;
-  return Math.max(
-    MIN_COLUMN_WIDTH,
-    Math.min(MAX_COLUMN_WIDTH, Math.ceil(total))
-  );
-}
 
 function buildColumn({
   column,
@@ -76,11 +52,6 @@ function buildColumn({
   const columnForeignKeyReferences = foreignKeyReferencesForColumn(
     foreignKeyReferences,
     columnKey
-  );
-  const width = estimateHeaderWidth(
-    column,
-    isPrimaryKey,
-    sortDirection !== undefined
   );
   return {
     cellClass: "",
@@ -135,7 +106,7 @@ function buildColumn({
     ),
     resizable: true,
     sortable: false,
-    width,
+    width: "auto",
   };
 }
 

@@ -37,35 +37,11 @@ interface DataGridToolbarProps {
     nextRules: TableFilterRule[],
     nextLogic?: TableFilterLogic
   ) => void;
-  onFitColumns?: (() => void) | undefined;
   onRefresh: () => Promise<unknown> | undefined;
   onSortChange: (next: SortColumn[]) => void;
   onToggleExpanded?: (() => void) | undefined;
   selectedCount: number;
   sortColumns: SortColumn[];
-}
-
-function FitColumnsButton({
-  isExpanded,
-  onFitColumns,
-}: {
-  isExpanded: boolean;
-  onFitColumns?: (() => void) | undefined;
-}) {
-  if (!(isExpanded && onFitColumns)) {
-    return null;
-  }
-  return (
-    <Button
-      onClick={onFitColumns}
-      size="sm"
-      title="Fit columns"
-      type="button"
-      variant="outline"
-    >
-      Fit columns
-    </Button>
-  );
 }
 
 function DataGridToolbar({
@@ -83,7 +59,6 @@ function DataGridToolbar({
   onExportRows,
   onExportSelection,
   onFilterChange,
-  onFitColumns,
   onRefresh,
   onSortChange,
   onToggleExpanded,
@@ -141,7 +116,6 @@ function DataGridToolbar({
             {isExpanded ? "Collapse" : "Expand"}
           </Button>
         ) : null}
-        <FitColumnsButton isExpanded={isExpanded} onFitColumns={onFitColumns} />
         {onExportRows ? (
           <ExportRowsActions
             disabled={exportRowsDisabled || columns.length === 0}
