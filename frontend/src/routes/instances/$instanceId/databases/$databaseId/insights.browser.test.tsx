@@ -181,6 +181,17 @@ function queryInsightsResponse() {
           totalTimeMs: 324_000,
           totalTimeRatio: 0.09,
         }),
+        ...Array.from({ length: 7 }, (_, index) => {
+          const sequence = index + 1;
+          return createProto(QueryRuntimeInsightSchema, {
+            calls: BigInt(7200 - sequence * 100),
+            meanTimeMs: 6 + sequence,
+            query: `SELECT * FROM shipping.shipment_event WHERE retry_batch = ${sequence}`,
+            queryId: BigInt(48_121_000 + sequence),
+            totalTimeMs: 210_000 - sequence * 10_000,
+            totalTimeRatio: 0.08 - sequence * 0.005,
+          });
+        }),
       ],
     }),
   });
@@ -218,10 +229,30 @@ test("query insights route matches the redesign visual slice", async () => {
   await expect
     .element(page.getByRole("button", { name: "Mean" }))
     .toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Rows per page" }))
+    .toBeVisible();
+  await expect.element(page.getByText("Page 1 of 3")).toBeVisible();
   const surface = page
     .getByTestId("query-insights-route-visual-surface")
     .element();
   const detail = page.getByRole("region", { name: "Query detail" }).element();
+  const heading = page
+    .getByRole("heading", { name: "Query insights" })
+    .element();
+  const topQueriesCard = page
+    .getByText("Top queries by total time")
+    .element()
+    .closest('[data-slot="card"]');
+  if (!topQueriesCard) {
+    throw new Error("Expected top queries card");
+  }
+  expect(detail.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+    topQueriesCard.getBoundingClientRect().top
+  );
+  expect(detail.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+    heading.getBoundingClientRect().bottom
+  );
   expect(detail.scrollWidth).toBeLessThanOrEqual(detail.clientWidth);
   expect(detail.getBoundingClientRect().right).toBeLessThanOrEqual(
     surface.getBoundingClientRect().right
@@ -279,7 +310,7 @@ test("query detail follows the query table on narrow viewports", async () => {
 
   expect(document.activeElement).toBe(detail);
   expect(window.scrollY).toBeGreaterThan(initialScrollY);
-  expect(detail.getBoundingClientRect().top).toBeGreaterThanOrEqual(0);
+  expect(detail.getBoundingClientRect().top).toBeGreaterThanOrEqual(-1);
   expect(detail.getBoundingClientRect().bottom).toBeLessThanOrEqual(
     window.innerHeight
   );

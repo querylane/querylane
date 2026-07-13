@@ -1,7 +1,13 @@
 "use client";
 
 import { anyUnpack } from "@bufbuild/protobuf/wkt";
-import { ChartNoAxesColumnIncreasing, CircleOff, X } from "lucide-react";
+import {
+  ChartNoAxesColumnIncreasing,
+  ChevronLeft,
+  ChevronRight,
+  CircleOff,
+  X,
+} from "lucide-react";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { ResourcePageState } from "@/components/console-pages/console-layout";
@@ -9,6 +15,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Progress } from "@/components/querylane-ui/progress";
 import { WarningBadge } from "@/components/querylane-ui/warning-badge";
 import { RetryActionButton } from "@/components/retry-action-button";
+import { SelectValue } from "@/components/select-extensions";
 import {
   Alert,
   AlertAction,
@@ -25,6 +32,12 @@ import {
 } from "@/components/ui/card";
 import { DataTableFilter } from "@/components/ui/data-table";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import {
   Table,
@@ -60,6 +73,21 @@ import type {
 } from "@/protogen/querylane/console/v1alpha1/database_pb";
 
 const CACHE_HIT_WARNING_THRESHOLD = 0.9;
+const QUERY_PAGE_SIZE_5 = 5;
+const QUERY_PAGE_SIZE_10 = 10;
+const QUERY_PAGE_SIZE_25 = 25;
+const QUERY_PAGE_SIZE_50 = 50;
+const QUERY_PAGE_SIZE_100 = 100;
+const QUERY_PAGE_SIZE_DEFAULT = QUERY_PAGE_SIZE_5;
+const QUERY_PAGE_SIZE_OPTIONS = [
+  QUERY_PAGE_SIZE_5,
+  QUERY_PAGE_SIZE_10,
+  QUERY_PAGE_SIZE_25,
+  QUERY_PAGE_SIZE_50,
+  QUERY_PAGE_SIZE_100,
+] as const;
+
+type QueryPageSize = (typeof QUERY_PAGE_SIZE_OPTIONS)[number];
 type QueryKindFilter = "all" | "reads" | "writes";
 
 const QUERY_KIND_FILTER_OPTIONS = [
@@ -137,6 +165,29 @@ function meanFilterThreshold(value: MeanFilterValue) {
   return (
     MEAN_FILTER_OPTIONS.find((filter) => filter.value === value)?.threshold ?? 0
   );
+}
+
+function queryPageCount(totalRows: number, pageSize: number) {
+  return Math.max(1, Math.ceil(totalRows / pageSize));
+}
+
+function queryPageSizeFromValue(value: string): QueryPageSize | null {
+  const pageSize = Number.parseInt(value, 10);
+  return QUERY_PAGE_SIZE_OPTIONS.find((option) => option === pageSize) ?? null;
+}
+
+function queryPaginationRange({
+  pageIndex,
+  pageSize,
+  totalRows,
+}: {
+  pageIndex: number;
+  pageSize: number;
+  totalRows: number;
+}) {
+  const start = pageIndex * pageSize + 1;
+  const end = Math.min((pageIndex + 1) * pageSize, totalRows);
+  return { end, start };
 }
 
 function getQueryInsightPartialErrors(partialErrors: Status[]) {
@@ -598,6 +649,99 @@ function TopQueriesTable({
   );
 }
 
+function QueryPaginationFooter({
+  onNextPage,
+  onPageSizeChange,
+  onPreviousPage,
+  pageCount,
+  pageIndex,
+  pageSize,
+  totalRows,
+}: {
+  onNextPage: () => void;
+  onPageSizeChange: (pageSize: QueryPageSize) => void;
+  onPreviousPage: () => void;
+  pageCount: number;
+  pageIndex: number;
+  pageSize: QueryPageSize;
+  totalRows: number;
+}) {
+  const shouldRender =
+    totalRows > 0 &&
+    (totalRows > QUERY_PAGE_SIZE_DEFAULT ||
+      pageSize !== QUERY_PAGE_SIZE_DEFAULT);
+  if (!shouldRender) {
+    return null;
+  }
+
+  const { end, start } = queryPaginationRange({
+    pageIndex,
+    pageSize,
+    totalRows,
+  });
+  return (
+    <div
+      className="flex min-h-10 flex-wrap items-center gap-2 border-t px-5 py-2 text-muted-foreground text-xs"
+      data-slot="query-insights-pagination"
+    >
+      <span className="tabular-nums">
+        Showing {start}&ndash;{end} of {totalRows}
+      </span>
+      <span className="ml-2 text-[11px]">Rows per page</span>
+      <Select
+        onValueChange={(value) => {
+          if (!value) {
+            return;
+          }
+          const nextPageSize = queryPageSizeFromValue(value);
+          if (nextPageSize !== null) {
+            onPageSizeChange(nextPageSize);
+          }
+        }}
+        value={String(pageSize)}
+      >
+        <SelectTrigger aria-label="Rows per page" className="h-7" size="sm">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent alignItemWithTrigger={false}>
+          {QUERY_PAGE_SIZE_OPTIONS.map((size) => (
+            <SelectItem key={size} label={String(size)} value={String(size)}>
+              {size}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <div className="ml-auto flex items-center gap-1">
+        <Button
+          aria-label="Previous page"
+          className="size-7 p-0"
+          disabled={pageIndex <= 0}
+          onClick={onPreviousPage}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <ChevronLeft className="size-3" />
+        </Button>
+        <span className="px-1 font-mono tabular-nums">
+          Page {pageIndex + 1} of {pageCount}
+        </span>
+        <Button
+          aria-label="Next page"
+          className="size-7 p-0"
+          disabled={pageIndex >= pageCount - 1}
+          onClick={onNextPage}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <ChevronRight className="size-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function QueryStatsGrid({ query }: { query: QueryRuntimeInsight }) {
   const stats = [
     { label: "Calls", value: formatInsightInteger(query.calls) },
@@ -699,22 +843,47 @@ function TopQueriesCard({
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState<QueryKindFilter>("all");
   const [meanFilter, setMeanFilter] = useState<MeanFilterValue>("any");
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState<QueryPageSize>(
+    QUERY_PAGE_SIZE_DEFAULT
+  );
   const queries = filterQueries({
     kind,
     meanThreshold: meanFilterThreshold(meanFilter),
     queries: insights.topQueries,
     search,
   });
+  const pageCount = queryPageCount(queries.length, pageSize);
+  const safePageIndex = Math.min(pageIndex, pageCount - 1);
+  const pageStart = safePageIndex * pageSize;
+  const pagedQueries = queries.slice(pageStart, pageStart + pageSize);
+
   const handleSearchChange = (value: string) => {
     setSearch(value);
+    setPageIndex(0);
     onSelectQuery(null);
   };
   const handleKindChange = (value: QueryKindFilter) => {
     setKind(value);
+    setPageIndex(0);
     onSelectQuery(null);
   };
   const handleMeanFilterChange = (value: MeanFilterValue) => {
     setMeanFilter(value);
+    setPageIndex(0);
+    onSelectQuery(null);
+  };
+  const handlePageSizeChange = (value: QueryPageSize) => {
+    setPageSize(value);
+    setPageIndex(0);
+    onSelectQuery(null);
+  };
+  const handlePreviousPage = () => {
+    setPageIndex(Math.max(0, safePageIndex - 1));
+    onSelectQuery(null);
+  };
+  const handleNextPage = () => {
+    setPageIndex(Math.min(pageCount - 1, safePageIndex + 1));
     onSelectQuery(null);
   };
 
@@ -743,7 +912,7 @@ function TopQueriesCard({
       {insights.queryStatsAvailable ? (
         <TopQueriesTable
           onSelectQuery={onSelectQuery}
-          queries={queries}
+          queries={pagedQueries}
           selectedQueryKey={selectedQueryKey}
         />
       ) : (
@@ -755,6 +924,17 @@ function TopQueriesCard({
           title="Query statistics unavailable"
         />
       )}
+      {insights.queryStatsAvailable ? (
+        <QueryPaginationFooter
+          onNextPage={handleNextPage}
+          onPageSizeChange={handlePageSizeChange}
+          onPreviousPage={handlePreviousPage}
+          pageCount={pageCount}
+          pageIndex={safePageIndex}
+          pageSize={pageSize}
+          totalRows={queries.length}
+        />
+      ) : null}
     </CardShell>
   );
 }
@@ -961,7 +1141,7 @@ function QueryInsightsContent({
         />
       </div>
       <QueryDetailPanel
-        className="lg:col-start-2 lg:row-span-3 lg:row-start-1"
+        className="lg:col-start-2 lg:row-span-2 lg:row-start-2"
         onClose={() => setSelectedQuerySelection(null)}
         panelRef={detailPanelRef}
         query={selectedQuery}

@@ -79,6 +79,9 @@ const EXACT_THRESHOLD_QUERY_BUTTON_RE =
 const DUPLICATE_QUERY_ID_SECOND_ROW_RE =
   /SELECT \* FROM events WHERE tenant_id = \$2/i;
 const SLOW_COUNT_QUERY_BUTTON_RE = /SELECT count\(\*\) FROM events/i;
+const QUERY_PAGE_SIX_BUTTON_RE = /sequence = 6/i;
+const QUERY_PAGE_ELEVEN_BUTTON_RE = /sequence = 11/i;
+const EMPTY_PAGINATION_RANGE_RE = /Showing 1–0/;
 const QUERY_STATS_UNAVAILABLE_RE =
   /Query statistics are unavailable for this database/;
 
@@ -442,6 +445,22 @@ function queryInsightsResponseWithSearchableQueries() {
         totalTimeRatio: 0.14,
       }),
     ],
+  });
+}
+
+function queryInsightsResponseWithManyQueries() {
+  return queryInsightsResponseWith({
+    topQueries: Array.from({ length: 12 }, (_, index) => {
+      const sequence = index + 1;
+      return queryRuntimeInsight({
+        calls: BigInt(120 - sequence),
+        meanTimeMs: sequence,
+        query: `SELECT * FROM events WHERE sequence = ${sequence}`,
+        queryId: BigInt(10_000 + sequence),
+        totalTimeMs: 1200 - sequence,
+        totalTimeRatio: 1 - index / 20,
+      });
+    }),
   });
 }
 
@@ -940,6 +959,8 @@ describe("backend database query insights page", () => {
       />
     );
 
+    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
+    await user.click(screen.getByRole("option", { name: "25" }));
     await user.click(screen.getByRole("button", { name: "Type" }));
     await user.click(screen.getByRole("option", { name: "Write queries" }));
 
@@ -1010,6 +1031,8 @@ describe("backend database query insights page", () => {
         instanceId="prod"
       />
     );
+    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
+    await user.click(screen.getByRole("option", { name: "25" }));
 
     const unavailableQueryButtons = screen.getAllByRole("button", {
       name: "Query text unavailable",
@@ -1040,6 +1063,8 @@ describe("backend database query insights page", () => {
         instanceId="prod"
       />
     );
+    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
+    await user.click(screen.getByRole("option", { name: "25" }));
     const unavailableQueryButtons = screen.getAllByRole("button", {
       name: "Query text unavailable",
     });
@@ -1253,6 +1278,72 @@ describe("database query insights resilience", () => {
     expect(
       screen.queryByRole("button", { name: UPDATE_EVENTS_QUERY_BUTTON_RE })
     ).toBeNull();
+  });
+
+  test("paginates query insights and lets users change page size", async () => {
+    const user = userEvent.setup();
+    state.queryInsightsQuery = {
+      data: queryInsightsResponseWithManyQueries(),
+    };
+
+    render(
+      <BackendDatabaseQueryInsightsPage
+        databaseId="customer-events"
+        instanceId="prod"
+      />
+    );
+
+    expect(
+      screen.getByRole("combobox", { name: "Rows per page" })
+    ).toBeTruthy();
+    expect(screen.getByText("Showing 1–5 of 12")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 3")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: QUERY_PAGE_SIX_BUTTON_RE })
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: QUERY_PAGE_ELEVEN_BUTTON_RE })
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+
+    expect(screen.getByText("Showing 6–10 of 12")).toBeTruthy();
+    expect(screen.getByText("Page 2 of 3")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: QUERY_PAGE_SIX_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: QUERY_PAGE_ELEVEN_BUTTON_RE })
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+
+    expect(screen.getByText("Showing 11–12 of 12")).toBeTruthy();
+    expect(screen.getByText("Page 3 of 3")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: QUERY_PAGE_ELEVEN_BUTTON_RE })
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
+    await user.click(screen.getByRole("option", { name: "25" }));
+
+    expect(screen.getByText("Showing 1–12 of 12")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: QUERY_PAGE_ELEVEN_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: "Next page" }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Search queries..." }),
+      "missing query"
+    );
+
+    expect(screen.getByText("No matching query runtime data.")).toBeTruthy();
+    expect(screen.queryByText(EMPTY_PAGINATION_RANGE_RE)).toBeNull();
   });
 
   test("renders unavailable, table-stats-missing, and error states", () => {
