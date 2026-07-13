@@ -19,6 +19,21 @@ import (
 // The callback receives the old and new configuration values.
 type ChangeCallback[T any] func(oldConfig, newConfig T)
 
+type configChange[T any] struct {
+	oldConfig T
+	newConfig T
+}
+
+type changeSubscriber[T any] struct {
+	callback ChangeCallback[T]
+
+	// pending is drained by at most one dispatcher, preserving change order for
+	// this subscriber without blocking other subscribers.
+	mu          sync.Mutex
+	pending     []configChange[T]
+	dispatching bool
+}
+
 // Manager handles dynamic configuration management.
 // It orchestrates loading, persistence, file watching, and change notifications.
 type Manager[T Node] struct {
@@ -36,13 +51,17 @@ type Manager[T Node] struct {
 	defaultConfig T // Default configuration to use as base
 	options       *Options
 
+	// reloadMu serializes the full load-store-notify transition so subscribers
+	// observe configuration changes in the same order they are stored.
+	reloadMu sync.Mutex
+
 	// envKeyMatcher reports whether a flattened config key maps to a real field.
 	// Computed once from the config type; used to filter environment variables.
 	envKeyMatcher func(key string) bool
 
 	// Configuration change subscription
 	subscribersMu sync.RWMutex
-	subscribers   map[uint32]ChangeCallback[T]
+	subscribers   map[uint32]*changeSubscriber[T]
 	nextID        uint32
 
 	// File write synchronization
@@ -91,7 +110,7 @@ func NewConfigManager[T Node](ctx context.Context, defaultConfig T, options ...O
 		activeFilePath:         opts.configFile,
 		defaultConfig:          defaultConfig,
 		options:                opts,
-		subscribers:            make(map[uint32]ChangeCallback[T]),
+		subscribers:            make(map[uint32]*changeSubscriber[T]),
 		envKeyMatcher:          knownConfigKeys(reflect.TypeOf(defaultConfig)),
 	}
 
@@ -111,6 +130,9 @@ func NewConfigManager[T Node](ctx context.Context, defaultConfig T, options ...O
 
 // reloadConfiguration loads configuration using the Loader and configured sources.
 func (cm *Manager[T]) reloadConfiguration(ctx context.Context) error {
+	cm.reloadMu.Lock()
+	defer cm.reloadMu.Unlock()
+
 	// Get the old config before loading (for subscribers that want to diff changes)
 	oldConfig := cm.CurrentConfig()
 
@@ -322,6 +344,7 @@ func (cm *Manager[T]) ConfigPersisted() bool {
 }
 
 // Subscribe registers a callback to be called when configuration changes.
+// Changes are delivered in order per subscriber; subscribers run independently.
 // Returns a subscription ID that can be used to unsubscribe.
 func (cm *Manager[T]) Subscribe(callback ChangeCallback[T]) uint32 {
 	cm.subscribersMu.Lock()
@@ -329,7 +352,7 @@ func (cm *Manager[T]) Subscribe(callback ChangeCallback[T]) uint32 {
 
 	cm.nextID++
 	id := cm.nextID
-	cm.subscribers[id] = callback
+	cm.subscribers[id] = &changeSubscriber[T]{callback: callback}
 
 	return id
 }
@@ -494,17 +517,62 @@ func (cm *Manager[T]) notifySubscribers(oldCfg, newCfg T) {
 	}
 
 	cm.subscribersMu.RLock()
-	defer cm.subscribersMu.RUnlock()
 
-	for _, cb := range cm.subscribers {
-		go func() {
+	subscribers := make([]*changeSubscriber[T], 0, len(cm.subscribers))
+	for _, subscriber := range cm.subscribers {
+		subscribers = append(subscribers, subscriber)
+	}
+
+	cm.subscribersMu.RUnlock()
+
+	for _, subscriber := range subscribers {
+		subscriber.enqueue(oldCfg, newCfg)
+	}
+}
+
+func (subscriber *changeSubscriber[T]) enqueue(oldConfig, newConfig T) {
+	subscriber.mu.Lock()
+	subscriber.pending = append(subscriber.pending, configChange[T]{
+		oldConfig: oldConfig,
+		newConfig: newConfig,
+	})
+
+	if subscriber.dispatching {
+		subscriber.mu.Unlock()
+
+		return
+	}
+
+	subscriber.dispatching = true
+	subscriber.mu.Unlock()
+
+	go subscriber.dispatch()
+}
+
+func (subscriber *changeSubscriber[T]) dispatch() {
+	for {
+		subscriber.mu.Lock()
+		if len(subscriber.pending) == 0 {
+			subscriber.pending = nil
+			subscriber.dispatching = false
+			subscriber.mu.Unlock()
+
+			return
+		}
+
+		change := subscriber.pending[0]
+		subscriber.pending[0] = configChange[T]{}
+		subscriber.pending = subscriber.pending[1:]
+		subscriber.mu.Unlock()
+
+		func() {
 			defer func() {
 				if r := recover(); r != nil {
 					slog.Error("config change subscriber panicked", "panic", r)
 				}
 			}()
 
-			cb(oldCfg, newCfg)
+			subscriber.callback(change.oldConfig, change.newConfig)
 		}()
 	}
 }
