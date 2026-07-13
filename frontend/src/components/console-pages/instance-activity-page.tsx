@@ -523,33 +523,35 @@ function InstanceActivityPage({
             </div>
           </div>
           <ActivitySessionsTable rows={pageRows} search={search} />
-          <div className="overflow-x-auto border-border border-t px-[18px] py-1.5">
-            <div className="flex min-w-[680px] items-center gap-4">
-              <span className="shrink-0 text-muted-foreground text-xs">
-                {activityPaginationSummary({
-                  filteredCount: rows.length,
-                  first: firstVisibleRow,
-                  hasActiveFiltering,
-                  last: lastVisibleRow,
-                  sampledCount: allRows.length,
-                  totalConnections: activity?.totalConnections ?? 0,
-                })}
-              </span>
-              <div className="min-w-0 flex-1">
-                <PaginationFooter
-                  hasNext={currentPageIndex < pageCount - 1}
-                  hasPrev={currentPageIndex > 0}
-                  onNext={() => setPageIndex(currentPageIndex + 1)}
-                  onPageSizeChange={handlePageSizeChange}
-                  onPrev={() => setPageIndex(currentPageIndex - 1)}
-                  pageIndex={currentPageIndex}
-                  pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
-                  pageSize={pageSize}
-                  pageSizeOptions={ACTIVITY_PAGE_SIZE_OPTIONS}
-                />
+          {allRows.length > 0 ? (
+            <div className="overflow-x-auto border-border border-t px-[18px] py-1.5">
+              <div className="flex min-w-[680px] items-center gap-4">
+                <span className="shrink-0 text-muted-foreground text-xs">
+                  {activityPaginationSummary({
+                    filteredCount: rows.length,
+                    first: firstVisibleRow,
+                    hasActiveFiltering,
+                    last: lastVisibleRow,
+                    sampledCount: allRows.length,
+                    totalConnections: activity?.totalConnections ?? 0,
+                  })}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <PaginationFooter
+                    hasNext={currentPageIndex < pageCount - 1}
+                    hasPrev={currentPageIndex > 0}
+                    onNext={() => setPageIndex(currentPageIndex + 1)}
+                    onPageSizeChange={handlePageSizeChange}
+                    onPrev={() => setPageIndex(currentPageIndex - 1)}
+                    pageIndex={currentPageIndex}
+                    pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
+                    pageSize={pageSize}
+                    pageSizeOptions={ACTIVITY_PAGE_SIZE_OPTIONS}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </AsyncSectionState>
     </section>

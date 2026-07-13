@@ -1048,6 +1048,9 @@ describe("backend instance activity", () => {
     const nextPage = within(activity).getByRole("button", {
       name: "Next page",
     });
+    const previousPage = within(activity).getByRole("button", {
+      name: "Previous page",
+    });
     const pageSize = within(activity).getByRole("combobox", {
       name: "Rows per page",
     });
@@ -1055,12 +1058,22 @@ describe("backend instance activity", () => {
     expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
     expect(within(table).queryByText("5008")).toBeNull();
     expect(nextPage).toHaveProperty("disabled", false);
+    expect(previousPage).toHaveProperty("disabled", true);
 
     await user.click(nextPage);
 
     expect(within(activity).getByText("Page 2 of 2")).toBeTruthy();
     expect(within(table).getByText("5008")).toBeTruthy();
     expect(within(table).queryByText("4211")).toBeNull();
+    expect(previousPage).toHaveProperty("disabled", false);
+
+    await user.click(previousPage);
+
+    expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
+    expect(within(table).getByText("4211")).toBeTruthy();
+    expect(previousPage).toHaveProperty("disabled", true);
+
+    await user.click(nextPage);
 
     await user.type(search, "4211");
 
@@ -1078,6 +1091,11 @@ describe("backend instance activity", () => {
 
     expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
     expect(within(table).getByText("4302")).toBeTruthy();
+    expect(
+      within(activity).getByText(
+        "Showing 1–10 of 11 matches · 12 sampled sessions · 44 total on server"
+      )
+    ).toBeTruthy();
 
     await user.click(within(activity).getByRole("button", { name: "Reset" }));
 
@@ -1094,6 +1112,40 @@ describe("backend instance activity", () => {
     expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
     expect(within(table).queryByText("5008")).toBeNull();
     expect(nextPage).toHaveProperty("disabled", false);
+  });
+
+  test("clamps the current page when a live sample shrinks", async () => {
+    const user = userEvent.setup();
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = paginatedActivityHealthResponse();
+
+    const { rerender } = renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    const table = within(activity).getByRole("table");
+    const nextPage = within(activity).getByRole("button", {
+      name: "Next page",
+    });
+    const previousPage = within(activity).getByRole("button", {
+      name: "Previous page",
+    });
+
+    await user.click(nextPage);
+
+    expect(within(activity).getByText("Page 2 of 2")).toBeTruthy();
+    expect(within(table).getByText("5008")).toBeTruthy();
+
+    state.healthData = activityHealthResponse();
+    rerender(<BackendInstancePage instanceId="prod" section="activity" />);
+
+    expect(within(activity).getByText("Page 1 of 1")).toBeTruthy();
+    expect(within(table).getByText("4211")).toBeTruthy();
+    expect(within(table).getByText("4302")).toBeTruthy();
+    expect(within(table).queryByText("5008")).toBeNull();
+    expect(previousPage).toHaveProperty("disabled", true);
+    expect(nextPage).toHaveProperty("disabled", true);
   });
 
   test("shows the empty sessions state", () => {
@@ -1116,6 +1168,9 @@ describe("backend instance activity", () => {
         "No live client sessions are visible from pg_stat_activity yet."
       )
     ).toBeTruthy();
+    expect(
+      screen.queryByRole("combobox", { name: "Rows per page" })
+    ).toBeNull();
   });
 
   test("shows unavailable placeholders and the activity partial error", () => {

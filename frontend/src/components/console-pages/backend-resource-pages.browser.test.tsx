@@ -876,6 +876,9 @@ test("backend instance activity empty state matches", async () => {
   );
 
   await expect.element(page.getByText("No activity sessions")).toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Rows per page" }))
+    .not.toBeInTheDocument();
   await document.fonts.ready;
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-instance-activity-empty"
