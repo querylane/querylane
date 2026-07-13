@@ -1529,7 +1529,9 @@ describe("TableDetail policies tab pagination", () => {
     ).toBeNull();
     expect(screen.getByText("Showing 1–6 of 7 policies")).toBeTruthy();
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toBe("Page 1 of 2");
+    expect(screen.getByRole("status").textContent).toBe(
+      "Showing 1–6 of 7 policies. Page 1 of 2."
+    );
 
     await user.click(
       screen.getByRole("button", { name: "Next policies page" })
@@ -1543,7 +1545,9 @@ describe("TableDetail policies tab pagination", () => {
     ).toBeTruthy();
     expect(screen.getByText("Showing 7–7 of 7 policies")).toBeTruthy();
     expect(screen.getByText("Page 2 of 2")).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toBe("Page 2 of 2");
+    expect(screen.getByRole("status").textContent).toBe(
+      "Showing 7–7 of 7 policies. Page 2 of 2."
+    );
   });
 
   it("changes policy page size from the pagination footer", async () => {
@@ -1553,12 +1557,18 @@ describe("TableDetail policies tab pagination", () => {
     await user.click(
       screen.getByRole("button", { name: "Next policies page" })
     );
-    const pagination = screen.getByRole("navigation", {
+    const pagination = screen.getByRole("group", {
       name: "Policies pagination",
     });
     const pageSizeSelect = within(pagination).getByRole("combobox", {
       name: "Rows per page",
     });
+    const pageNavigation = within(pagination).getByRole("navigation", {
+      name: "Policy pages",
+    });
+    expect(
+      within(pageNavigation).queryByRole("combobox", { name: "Rows per page" })
+    ).toBeNull();
     expect(pageSizeSelect.textContent).toContain("6");
 
     await user.click(pageSizeSelect);

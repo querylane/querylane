@@ -1978,6 +1978,23 @@ test("data explorer table policies explain RLS composition", async () => {
   await expect
     .element(page.getByRole("button", { exact: true, name: "Mode" }))
     .toBeVisible();
+  const pageSizeHeight = page
+    .getByRole("combobox", { name: "Rows per page" })
+    .element()
+    .getBoundingClientRect().height;
+  expect(pageSizeHeight).toBeGreaterThanOrEqual(28);
+  expect(
+    page
+      .getByRole("button", { name: "Previous policies page" })
+      .element()
+      .getBoundingClientRect().height
+  ).toBe(28);
+  expect(
+    page
+      .getByRole("button", { name: "Next policies page" })
+      .element()
+      .getBoundingClientRect().height
+  ).toBe(28);
   await expect
     .element(page.getByText("2 permissive policies apply", { exact: false }))
     .toBeVisible();

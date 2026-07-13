@@ -2427,9 +2427,9 @@ function PoliciesTab({
         <SearchEmptyState className="border" resourceName="policies" />
       )}
       {visiblePolicies.length > 0 ? (
-        <nav
+        <fieldset
           aria-label="Policies pagination"
-          className="flex min-h-8 flex-wrap items-center gap-2 text-muted-foreground text-xs"
+          className="m-0 flex min-h-8 min-w-0 flex-wrap items-center gap-2 border-0 p-0 text-muted-foreground text-xs"
         >
           <span className="text-[11px]">Rows per page</span>
           <Select
@@ -2450,7 +2450,7 @@ function PoliciesTab({
               className="h-7 w-16"
               size="sm"
             >
-              <span>{pageSize}</span>
+              <SelectValue />
             </SelectTrigger>
             <SelectContent alignItemWithTrigger={false}>
               {POLICY_PAGE_SIZE_OPTIONS.map((size) => (
@@ -2468,41 +2468,50 @@ function PoliciesTab({
             Showing {firstPolicy}&ndash;{lastPolicy} of {visiblePolicies.length}{" "}
             policies
           </span>
-          <div className="ml-auto flex items-center gap-2">
+          <span
+            aria-atomic="true"
+            aria-live="polite"
+            className="sr-only"
+            role="status"
+          >
+            Showing {firstPolicy}&ndash;{lastPolicy} of {visiblePolicies.length}{" "}
+            policies. Page {currentPageIndex + 1} of {pageCount}.
+          </span>
+          <nav
+            aria-label="Policy pages"
+            className="ml-auto flex items-center gap-2"
+          >
             <Button
               aria-label="Previous policies page"
+              className="size-7 p-0"
               disabled={currentPageIndex === 0}
               onClick={() => {
                 setPageIndex(Math.max(0, currentPageIndex - 1));
               }}
-              size="icon-xs"
+              size="sm"
               type="button"
               variant="outline"
             >
-              <ChevronLeft />
+              <ChevronLeft className="size-3" />
             </Button>
-            <span
-              aria-atomic="true"
-              aria-live="polite"
-              className="font-mono text-xs"
-              role="status"
-            >
+            <span className="font-mono text-xs">
               Page {currentPageIndex + 1} of {pageCount}
             </span>
             <Button
               aria-label="Next policies page"
+              className="size-7 p-0"
               disabled={currentPageIndex >= pageCount - 1}
               onClick={() => {
                 setPageIndex(Math.min(pageCount - 1, currentPageIndex + 1));
               }}
-              size="icon-xs"
+              size="sm"
               type="button"
               variant="outline"
             >
-              <ChevronRight />
+              <ChevronRight className="size-3" />
             </Button>
-          </div>
-        </nav>
+          </nav>
+        </fieldset>
       ) : null}
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <RlsCombinationGuide />
