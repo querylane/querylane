@@ -1390,8 +1390,13 @@ describe("TableDetail indexes tab", () => {
     expect(screen.getAllByText("Scans").length).toBeGreaterThan(0);
     expect(document.body.textContent).not.toContain("41d");
     expect(screen.getByText("Validity")).toBeTruthy();
-    expect(screen.getByText("Usage from")).toBeTruthy();
-    expect(screen.getByText("pg_stat_user_indexes")).toBeTruthy();
+    expect(screen.getByText("usage stats unavailable")).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: "Scans. Usage source: pg_stat_user_indexes.",
+      })
+    ).toBeTruthy();
+    expect(screen.queryByText("Usage from")).toBeNull();
     expect(screen.getAllByText("shipment_event_pkey").length).toBeGreaterThan(
       0
     );
@@ -1490,6 +1495,7 @@ describe("TableDetail indexes tab", () => {
     expect(screen.getByText("1 unused")).toBeTruthy();
     expect(screen.getByText("478 MB")).toBeTruthy();
     expect(screen.getByText("58.7M")).toBeTruthy();
+    expect(screen.getByText("since last stats reset")).toBeTruthy();
     expect(screen.getByText("all valid")).toBeTruthy();
     expect(screen.getByText("PARTIAL")).toBeTruthy();
     expect(screen.getByText("EXPRESSION")).toBeTruthy();

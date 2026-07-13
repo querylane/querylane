@@ -1872,7 +1872,15 @@ test("data explorer table indexes have a redesigned card baseline", async () => 
     .toBeVisible();
   await expect.element(page.getByText("btree").first()).toBeVisible();
   await expect.element(page.getByText("Scans").first()).toBeVisible();
-  await expect.element(page.getByText("pg_stat_user_indexes")).toBeVisible();
+  await expect.element(page.getByText("since last stats reset")).toBeVisible();
+  await expect
+    .element(
+      page.getByRole("button", {
+        name: "Scans. Usage source: pg_stat_user_indexes.",
+      })
+    )
+    .toBeVisible();
+  expect(document.body.textContent).not.toContain("Usage from");
   await expect
     .element(page.getByText("INCLUDE last_seen_at").first())
     .toBeVisible();
@@ -1912,7 +1920,15 @@ test("data explorer table indexes constraints policies and triggers stay readabl
     .toBeVisible();
   await expect.element(page.getByText("btree").first()).toBeVisible();
   await expect.element(page.getByText("Scans").first()).toBeVisible();
-  await expect.element(page.getByText("pg_stat_user_indexes")).toBeVisible();
+  await expect.element(page.getByText("since last stats reset")).toBeVisible();
+  await expect
+    .element(
+      page.getByRole("button", {
+        name: "Scans. Usage source: pg_stat_user_indexes.",
+      })
+    )
+    .toBeVisible();
+  expect(document.body.textContent).not.toContain("Usage from");
   await expect
     .element(page.getByText("INCLUDE last_seen_at").first())
     .toBeVisible();

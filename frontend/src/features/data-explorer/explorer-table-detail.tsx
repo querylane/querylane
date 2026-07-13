@@ -2226,17 +2226,38 @@ function getIndexMetricValue(
 function IndexSummaryCard({
   detail,
   label,
+  labelDescription,
   value,
 }: {
   detail: string;
   label: string;
+  labelDescription?: string;
   value: string;
 }) {
   return (
     <Card className="gap-0 py-0" size="sm">
       <CardContent className="p-4">
         <p className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
-          {label}
+          {labelDescription ? (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    aria-label={`${label}. ${labelDescription}`}
+                    className="h-auto cursor-help rounded-none p-0 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider underline decoration-dotted underline-offset-2"
+                    size="sm"
+                    type="button"
+                    variant="link"
+                  />
+                }
+              >
+                {label}
+              </TooltipTrigger>
+              <TooltipContent>{labelDescription}</TooltipContent>
+            </Tooltip>
+          ) : (
+            label
+          )}
         </p>
         <p className="mt-1 font-mono font-semibold text-2xl leading-none">
           {value}
@@ -2473,42 +2494,34 @@ function IndexesTab({
   const usageStatsAvailable = hasIndexUsageStats(indexes);
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-stretch gap-3">
-        <div className="grid flex-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <IndexSummaryCard
-            detail={formatIndexCountDetail(indexes)}
-            label="Indexes"
-            value={indexes.length.toLocaleString()}
-          />
-          <IndexSummaryCard
-            detail={`vs heap ${formatBytes(table?.sizeBytes)}`}
-            label="Total size"
-            value={formatBytes(totalSizeBytes)}
-          />
-          <IndexSummaryCard
-            detail={
-              usageStatsAvailable
-                ? "across all indexes"
-                : "usage stats unavailable"
-            }
-            label="Scans"
-            value={
-              usageStatsAvailable ? formatCompactInteger(totalScanCount) : "—"
-            }
-          />
-          <IndexSummaryCard
-            detail={formatValidityDetail(indexes)}
-            label="Validity"
-            value={formatValidityValue(indexes)}
-          />
-        </div>
-        <div className="ml-auto flex items-center gap-2 self-center whitespace-nowrap text-muted-foreground text-sm">
-          <span>Usage from</span>
-          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-            pg_stat_user_indexes
-          </code>
-          <span>since last stats reset</span>
-        </div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <IndexSummaryCard
+          detail={formatIndexCountDetail(indexes)}
+          label="Indexes"
+          value={indexes.length.toLocaleString()}
+        />
+        <IndexSummaryCard
+          detail={`vs heap ${formatBytes(table?.sizeBytes)}`}
+          label="Total size"
+          value={formatBytes(totalSizeBytes)}
+        />
+        <IndexSummaryCard
+          detail={
+            usageStatsAvailable
+              ? "since last stats reset"
+              : "usage stats unavailable"
+          }
+          label="Scans"
+          labelDescription="Usage source: pg_stat_user_indexes."
+          value={
+            usageStatsAvailable ? formatCompactInteger(totalScanCount) : "—"
+          }
+        />
+        <IndexSummaryCard
+          detail={formatValidityDetail(indexes)}
+          label="Validity"
+          value={formatValidityValue(indexes)}
+        />
       </div>
       <div className="space-y-3">
         {indexes.map((index) => (
