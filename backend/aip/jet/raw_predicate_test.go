@@ -1,11 +1,12 @@
 package jet
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/go-jet/jet/v2/postgres"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/querylane/querylane/backend/aip"
 	"github.com/querylane/querylane/backend/aip/rawsql"
@@ -34,18 +35,11 @@ func TestRawPredicatePreservesPlaceholdersAfterBaseCondition(t *testing.T) {
 		WHERE(baseCondition.AND(predicate)).
 		Sql()
 
-	if !strings.Contains(query, `"things"."value_1" = $2`) {
-		t.Fatalf("query = %q, want first predicate placeholder to follow the base condition", query)
-	}
-
-	if !strings.Contains(query, `"things"."value_10" = $11`) {
-		t.Fatalf("query = %q, want $10 to remain distinct from $1", query)
-	}
+	assert.Contains(t, query, `"things"."value_1" = $2`)
+	assert.Contains(t, query, `"things"."value_10" = $11`)
 
 	wantArgs := []any{"tenant-1", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	if !reflect.DeepEqual(args, wantArgs) {
-		t.Fatalf("args = %v, want %v", args, wantArgs)
-	}
+	assert.Equal(t, wantArgs, args)
 }
 
 func TestRawColumnExpressionQuotesJetIdentifiers(t *testing.T) {
@@ -54,9 +48,7 @@ func TestRawColumnExpressionQuotesJetIdentifiers(t *testing.T) {
 	column := postgres.StringColumn(`display"name`)
 	postgres.NewTable("public", "things", "item", column)
 
-	if got, want := rawColumnExpression(column), `"item"."display""name"`; got != want {
-		t.Fatalf("rawColumnExpression() = %q, want %q", got, want)
-	}
+	assert.Equal(t, `"item"."display""name"`, rawColumnExpression(column))
 }
 
 func TestRawSQLPredicateEmbedsWithBaseConditionAndMixedCursor(t *testing.T) {
@@ -114,23 +106,17 @@ func TestRawSQLPredicateEmbedsWithBaseConditionAndMixedCursor(t *testing.T) {
 		filter,
 		map[string]aip.CursorCodec{"name": aip.StringCodec{}, "id": aip.StringCodec{}},
 	)
-	if err != nil {
-		t.Fatalf("EncodeToken() error = %v", err)
-	}
+	require.NoError(t, err)
 
 	plan, err := aip.BuildPlan(core, aip.Params{
 		PageToken: pageToken,
 		Filter:    filter,
 		OrderBy:   "name asc, id desc",
 	})
-	if err != nil {
-		t.Fatalf("BuildPlan() error = %v", err)
-	}
+	require.NoError(t, err)
 
 	clauses, err := rawsql.BuildClauses(schema.raw, plan, 1)
-	if err != nil {
-		t.Fatalf("rawsql.BuildClauses() error = %v", err)
-	}
+	require.NoError(t, err)
 
 	query, args := postgres.SELECT(postgres.Raw("1")).
 		WHERE(tenantColumn.EQ(postgres.String("tenant-1")).AND(rawPredicate(clauses.Where, clauses.Args))).
@@ -146,13 +132,9 @@ func TestRawSQLPredicateEmbedsWithBaseConditionAndMixedCursor(t *testing.T) {
 		`"things"."id" < $6`,
 		`ORDER BY things.name ASC, things.id DESC`,
 	} {
-		if !strings.Contains(query, fragment) {
-			t.Fatalf("query = %q, want fragment %q", query, fragment)
-		}
+		assert.Contains(t, query, fragment)
 	}
 
 	wantArgs := []any{"tenant-1", "%foo%", false, "alpha", "alpha", "id-9", int64(51)}
-	if !reflect.DeepEqual(args, wantArgs) {
-		t.Fatalf("args = %v, want %v", args, wantArgs)
-	}
+	assert.Equal(t, wantArgs, args)
 }
