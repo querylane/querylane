@@ -53,13 +53,7 @@ import { PaginationFooter } from "@/components/data-grid/table-data-grid/paginat
 import { RecordDetailDrawer } from "@/components/data-grid/table-data-grid/record-detail-drawer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { formatLastFetchedLabel } from "@/features/data-explorer/last-fetched-label";
 import {
   serializeTableFilterSearch,
@@ -841,13 +835,7 @@ function ExpandedDataGridDialog({
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="!flex !max-w-[calc(100vw-1rem)] sm:!max-w-[calc(100vw-2rem)] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] flex-col gap-3 overflow-hidden p-3 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:p-4">
-        <DialogHeader className="shrink-0 pr-10">
-          <DialogTitle>Expanded data grid</DialogTitle>
-          <DialogDescription>
-            Use the same filters, sorting, selection, and pagination with more
-            room for rows and columns.
-          </DialogDescription>
-        </DialogHeader>
+        <DialogTitle className="sr-only">Expanded data grid</DialogTitle>
         <div className="flex min-h-0 flex-1 flex-col gap-2">
           <TableDataGridChrome
             {...chromeProps}
@@ -1535,10 +1523,8 @@ function TableDataGrid({
     ? buildGridStatusItems({
         hasNext,
         limits: data.limits,
-        observedAt: data.resultSet.observedAt,
         pageSize: controller.pageSize,
         paginationStrategy: data.resultSet.paginationStrategy,
-        rowCount,
         rowIdentity: data.resultSet.rowIdentity,
         rowsReturned: resultRows.length,
       })

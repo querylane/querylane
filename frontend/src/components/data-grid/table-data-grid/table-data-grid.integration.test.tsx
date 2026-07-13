@@ -1122,9 +1122,18 @@ describe("TableDataGrid row interactions", () => {
 
     await user.click(screen.getByRole("button", { name: "Expand data grid" }));
 
+    const expandedGrid = screen.getByRole("dialog", {
+      name: "Expanded data grid",
+    });
+    expect(expandedGrid).toBeTruthy();
     expect(
-      screen.getByRole("dialog", { name: "Expanded data grid" })
-    ).toBeTruthy();
+      within(expandedGrid).queryByText(
+        "Use the same filters, sorting, selection, and pagination with more room for rows and columns."
+      )
+    ).toBeNull();
+    expect(
+      within(expandedGrid).getByText("Expanded data grid").className
+    ).toContain("sr-only");
     expect(
       screen.getByRole("button", { name: "Collapse data grid" })
     ).toBeTruthy();

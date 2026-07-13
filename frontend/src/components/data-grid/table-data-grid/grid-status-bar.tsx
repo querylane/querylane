@@ -1,4 +1,4 @@
-import { AlertTriangle, Clock, Info, KeyRound } from "lucide-react";
+import { AlertTriangle, KeyRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -41,26 +41,14 @@ function GridStatusBadge({ item }: { item: GridStatusItem }) {
 }
 
 function getStatusBadgeVariant(item: GridStatusItem) {
-  if (item.tone === "warning") {
-    return "destructive";
-  }
-  if (item.tone === "muted") {
-    return "secondary";
-  }
-  return "outline";
+  return item.tone === "warning" ? "destructive" : "secondary";
 }
 
 function getStatusIcon(item: GridStatusItem) {
-  if (item.id === "observed-at") {
-    return <Clock className="size-3" />;
-  }
   if (item.id === "no-stable-key" || item.id === "row-actions-limited") {
     return <KeyRound className="size-3" />;
   }
-  if (item.tone === "warning") {
-    return <AlertTriangle className="size-3" />;
-  }
-  return <Info className="size-3" />;
+  return <AlertTriangle className="size-3" />;
 }
 
 export { GridStatusBar };

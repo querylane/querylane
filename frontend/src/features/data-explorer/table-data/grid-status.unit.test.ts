@@ -1,5 +1,4 @@
 import { create } from "@bufbuild/protobuf";
-import { timestampFromDate } from "@bufbuild/protobuf/wkt";
 import { describe, expect, expectTypeOf, test } from "vitest";
 import {
   buildGridStatusItems,
@@ -11,8 +10,6 @@ import {
 import {
   PaginationStrategy,
   ResponseLimitsSchema,
-  RowCount_Status,
-  RowCountSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import {
   RowIdentity_Source,
@@ -23,20 +20,19 @@ describe("grid status metadata", () => {
   test("status item ids are constrained to known UI semantics", () => {
     expectTypeOf<GridStatusItem["id"]>().toEqualTypeOf<GridStatusId>();
     expectTypeOf<"offset-pagination">().toExtend<GridStatusId>();
+    expectTypeOf<"response-capped">().toExtend<GridStatusId>();
     expectTypeOf<"row-actions-limited">().toExtend<GridStatusId>();
-    expectTypeOf<"count-estimated">().toExtend<GridStatusId>();
-    expectTypeOf<"count-exact">().toExtend<GridStatusId>();
-    expectTypeOf<"count-not-requested">().toExtend<GridStatusId>();
+    expectTypeOf<"count-estimated">().not.toExtend<GridStatusId>();
+    expectTypeOf<"count-exact">().not.toExtend<GridStatusId>();
+    expectTypeOf<"count-not-requested">().not.toExtend<GridStatusId>();
+    expectTypeOf<"count-unavailable">().not.toExtend<GridStatusId>();
+    expectTypeOf<"observed-at">().not.toExtend<GridStatusId>();
   });
-  test("warns for offset pagination, missing stable identity, unavailable count, caps, and no PK", () => {
+  test("warns for offset pagination, missing stable identity, caps, and no PK", () => {
     const items = buildGridStatusItems({
       hasNext: true,
-      observedAt: timestampFromDate(new Date("2026-05-21T08:00:00Z")),
       pageSize: 50,
       paginationStrategy: PaginationStrategy.OFFSET,
-      rowCount: create(RowCountSchema, {
-        status: RowCount_Status.UNAVAILABLE,
-      }),
       rowIdentity: create(RowIdentitySchema, {
         source: RowIdentity_Source.OPAQUE_ROW_KEY,
       }),
@@ -46,9 +42,7 @@ describe("grid status metadata", () => {
     expect(items.map((item) => item.id)).toEqual([
       "offset-pagination",
       "no-stable-key",
-      "count-unavailable",
       "response-capped",
-      "observed-at",
       "row-actions-limited",
     ]);
   });
@@ -71,21 +65,17 @@ describe("grid status metadata", () => {
       hasNext: false,
       pageSize: 50,
       paginationStrategy: PaginationStrategy.KEYSET,
-      rowCount: create(RowCountSchema, { status: RowCount_Status.ESTIMATED }),
       rowIdentity: create(RowIdentitySchema, {
         source: RowIdentity_Source.UNIQUE_CONSTRAINT,
       }),
       rowsReturned: 50,
     });
 
-    expect(items.map((item) => item.id)).toEqual([
-      "count-estimated",
-      "row-actions-limited",
-    ]);
+    expect(items.map((item) => item.id)).toEqual(["row-actions-limited"]);
   });
 
-  test("distinguishes row count modes in the grid status bar", () => {
-    const baseArgs = {
+  test("keeps stable primary-key grids free of informational badges", () => {
+    const items = buildGridStatusItems({
       hasNext: false,
       pageSize: 50,
       paginationStrategy: PaginationStrategy.KEYSET,
@@ -93,48 +83,9 @@ describe("grid status metadata", () => {
         source: RowIdentity_Source.PRIMARY_KEY,
       }),
       rowsReturned: 2,
-    };
+    });
 
-    const cases = [
-      {
-        id: "count-not-requested",
-        label: "Count not requested",
-        status: RowCount_Status.NOT_REQUESTED,
-        value: 0n,
-      },
-      {
-        id: "count-estimated",
-        label: "Estimated count",
-        status: RowCount_Status.ESTIMATED,
-        value: 3n,
-      },
-      {
-        id: "count-exact",
-        label: "Exact count",
-        status: RowCount_Status.AVAILABLE,
-        value: 2n,
-      },
-      {
-        id: "count-unavailable",
-        label: "Count unavailable",
-        status: RowCount_Status.UNAVAILABLE,
-        value: 0n,
-      },
-    ] as const;
-
-    for (const countCase of cases) {
-      const items = buildGridStatusItems({
-        ...baseArgs,
-        rowCount: create(RowCountSchema, {
-          status: countCase.status,
-          value: countCase.value,
-        }),
-      });
-
-      expect(items.find((item) => item.id === countCase.id)?.label).toBe(
-        countCase.label
-      );
-    }
+    expect(items).toEqual([]);
   });
 
   test("detects response caps from short pages or exhausted byte budgets", () => {
@@ -186,23 +137,7 @@ describe("grid status metadata", () => {
     );
   });
 
-  test("omits observed status when backend timestamp cannot be formatted", () => {
-    const invalidTimestamp = timestampFromDate(
-      new Date("2026-05-21T08:00:00Z")
-    );
-    invalidTimestamp.nanos = Number.NaN;
-
-    const items = buildGridStatusItems({
-      hasNext: false,
-      observedAt: invalidTimestamp,
-      pageSize: 50,
-      paginationStrategy: PaginationStrategy.KEYSET,
-      rowIdentity: create(RowIdentitySchema, {
-        source: RowIdentity_Source.PRIMARY_KEY,
-      }),
-      rowsReturned: 50,
-    });
-
-    expect(items.map((item) => item.id)).not.toContain("observed-at");
+  test("treats missing row identity as unstable", () => {
+    expect(hasStableRowIdentity(undefined)).toBe(false);
   });
 });
