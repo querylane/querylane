@@ -1,26 +1,58 @@
-import { create } from "@bufbuild/protobuf";
+import { create, type DescService, getOption } from "@bufbuild/protobuf";
 import {
   createContextValues,
   type UnaryRequest,
   type UnaryResponse,
 } from "@connectrpc/connect";
 import { describe, expect, it } from "vitest";
-
 import {
   createInstanceRpcConcurrencyInterceptor,
   createKeyedRpcSemaphore,
   extractInstanceScopeKey,
+  INSTANCE_SCOPED_SERVICE_TYPE_NAMES,
 } from "@/lib/instance-rpc-concurrency";
+import { field as fieldRules } from "@/protogen/buf/validate/validate_pb";
 import {
   ConsoleService,
   GetConsoleConfigRequestSchema,
   type GetConsoleConfigResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/console_pb";
+import { InstanceService } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import {
   ListSchemasRequestSchema,
   ListSchemasResponseSchema,
   SchemaService,
 } from "@/protogen/querylane/console/v1alpha1/schema_pb";
+
+const generatedProtoModules = import.meta.glob<Record<string, unknown>>(
+  "@/protogen/querylane/console/v1alpha1/*_pb.ts",
+  { eager: true }
+);
+
+function isServiceDescriptor(value: unknown): value is DescService {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "kind" in value &&
+    value.kind === "service"
+  );
+}
+
+function hasInstanceResourceRequest(service: DescService): boolean {
+  return service.methods.some((method) =>
+    method.input.fields.some((inputField) => {
+      if (inputField.name !== "name" && inputField.name !== "parent") {
+        return false;
+      }
+
+      const validationRules = getOption(inputField, fieldRules);
+      return (
+        validationRules.type.case === "string" &&
+        validationRules.type.value.pattern.startsWith("^instances/")
+      );
+    })
+  );
+}
 
 function createListSchemasRequest(
   parent: string
@@ -71,6 +103,24 @@ function createConsoleConfigRequest(): UnaryRequest<
     url: "http://localhost:8080/querylane.console.v1alpha1.ConsoleService/GetConsoleConfig",
   };
 }
+
+describe("INSTANCE_SCOPED_SERVICE_TYPE_NAMES", () => {
+  it("covers every non-meta service with instance resource requests", () => {
+    const discoveredServiceTypeNames = new Set(
+      Object.values(generatedProtoModules)
+        .flatMap((generatedModule) => Object.values(generatedModule))
+        .filter(isServiceDescriptor)
+        .filter(hasInstanceResourceRequest)
+        // InstanceService names identify connection records in the meta database.
+        .filter((service) => service.typeName !== InstanceService.typeName)
+        .map((service) => service.typeName)
+    );
+
+    expect(INSTANCE_SCOPED_SERVICE_TYPE_NAMES).toEqual(
+      discoveredServiceTypeNames
+    );
+  });
+});
 
 describe("extractInstanceScopeKey", () => {
   it("extracts the instance prefix from name and parent fields", () => {

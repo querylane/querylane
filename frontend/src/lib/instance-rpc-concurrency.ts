@@ -18,6 +18,7 @@ const INSTANCE_RPC_CONCURRENCY_LIMIT = 4;
  */
 const INSTANCE_SCOPED_SERVICE_TYPE_NAMES: ReadonlySet<string> = new Set([
   "querylane.console.v1alpha1.DatabaseService",
+  "querylane.console.v1alpha1.ExtensionService",
   "querylane.console.v1alpha1.RoleService",
   "querylane.console.v1alpha1.SQLService",
   "querylane.console.v1alpha1.SchemaService",
