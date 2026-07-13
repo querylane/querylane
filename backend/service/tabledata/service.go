@@ -197,16 +197,11 @@ func (s *Service) StreamRows(ctx context.Context, req *connect.Request[v1alpha1.
 	metadataSent := false
 
 	for streamer.canReadMore() {
-		pageSize := min(readRowsInternalPageSize, int(streamer.remainingRows()))
-		if pageSize <= 0 {
-			break
-		}
-
 		result, err := dbSession.ReadRows(ctx, engine.ReadRowsParams{
 			ResourceName:    tableRes.String(),
 			SchemaName:      tableRes.SchemaID,
 			TableName:       tableRes.TableID,
-			PageSize:        pageSize,
+			PageSize:        readRowsInternalPageSize,
 			PageToken:       pageToken,
 			SelectedColumns: req.Msg.GetSelectedColumns(),
 			OrderBy:         req.Msg.GetOrderBy(),
@@ -312,10 +307,6 @@ type streamRowsSender struct {
 
 func (s *streamRowsSender) canReadMore() bool {
 	return !s.truncated && s.rowCount < s.maxRows
-}
-
-func (s *streamRowsSender) remainingRows() int64 {
-	return s.maxRows - s.rowCount
 }
 
 func (s *streamRowsSender) addRows(rows []*v1alpha1.TableResultRow) error {
