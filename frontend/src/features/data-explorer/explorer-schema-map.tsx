@@ -399,7 +399,7 @@ function TableNode({
                       className="h-4 shrink-0 bg-chart-4/15 px-1 text-[9px] text-chart-4"
                       variant="secondary"
                     >
-                      Primary key
+                      PRIMARY KEY
                     </Badge>
                   ) : null}
                   {column.isForeignKey ? (
@@ -407,7 +407,7 @@ function TableNode({
                       className="h-4 shrink-0 bg-chart-1/15 px-1 text-[9px] text-chart-1"
                       variant="secondary"
                     >
-                      Foreign key
+                      FOREIGN KEY
                     </Badge>
                   ) : null}
                 </span>

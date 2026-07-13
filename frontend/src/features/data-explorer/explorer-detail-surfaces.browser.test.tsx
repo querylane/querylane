@@ -1106,7 +1106,7 @@ test("data explorer schema map keeps schema labels clear of group borders", asyn
   expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(borderY - 4);
 });
 
-test("data explorer schema map spells out key labels", async () => {
+test("data explorer schema map spells out uppercase key labels", async () => {
   const catalog = seedSchemaMapVisualCatalog();
 
   render(
@@ -1120,8 +1120,8 @@ test("data explorer schema map spells out key labels", async () => {
     />
   );
 
-  await expect.element(page.getByText("Primary key").first()).toBeVisible();
-  await expect.element(page.getByText("Foreign key").first()).toBeVisible();
+  await expect.element(page.getByText("PRIMARY KEY").first()).toBeVisible();
+  await expect.element(page.getByText("FOREIGN KEY").first()).toBeVisible();
   expect(document.body.textContent).not.toMatch(SCHEMA_MAP_KEY_ABBREVIATION_RE);
 });
 
@@ -1166,7 +1166,7 @@ test("data explorer schema map emphasizes incoming and outgoing relationships", 
     />
   );
 
-  await expect.element(page.getByText("Foreign key").first()).toBeVisible();
+  await expect.element(page.getByText("FOREIGN KEY").first()).toBeVisible();
   await page.getByRole("button", { name: "shipping.shipments" }).click();
 
   const relationshipPath = (label: string) => {
