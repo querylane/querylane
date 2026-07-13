@@ -66,18 +66,21 @@ const SCHEMA_MAP_BROWSER_VIEWPORT = { height: 1400, width: 2048 } as const;
 
 // 2024-01-01T23:00:00Z renders as "Last fetched 11:00:00 PM" under the pinned
 // TZ=GMT used for screenshots, matching the mocked data grid label below.
-const ACCOUNT_REFERENCE_CELL_RE = /→public\.accounts\.id/;
 const APP_READER_SUPPORT_AGENT_RE = /app_reader, support_agent/;
-const CUSTOMER_ID_CELL_RE = /customer_id/;
 const DEFAULT_BALANCED_TREE_RE = /Default balanced tree/;
 const DEFAULT_BALANCED_TREE_SUMMARY_RE = /Default balanced tree for equality/;
-const EXACT_DECIMAL_RE = /Exact decimal/;
+const GENERATED_GENERATION_FILTER_RE = /Generation.*Generated/;
+const BIGINT_TYPE_TITLE_RE = /Integer.*64-bit/;
+const ID_PRIMARY_KEY_CELL_RE = /id\s+Primary key\s+Surrogate key/;
+const JSONB_TYPE_TITLE_RE = /JSON.*binary JSON/;
+const NUMERIC_TYPE_TITLE_RE = /Decimal.*Exact decimal/;
 const PARTITION_2024_BOUND_RE = /FOR VALUES FROM \('2024-01-01'\)/;
 const LAST_FETCHED_11_PM_RE = /Last fetched 11:00:00 PM/;
 const POLICIES_ONE_TAB_RE = /^Policies\s+1$/;
-const TABLE_COLUMNS_LAST_FETCHED_RE = /4 columns · base table · Last fetched/;
+const TABLE_COLUMNS_LAST_FETCHED_RE = /11 columns · base table · Last fetched/;
+const TIMESTAMPTZ_TYPE_TITLE_RE =
+  /Timestamp.*timestamptz.*UTC-normalized instant/;
 const TRIGGERS_ONE_TAB_RE = /^Triggers\s+1$/;
-const UTC_NORMALIZED_INSTANT_RE = /UTC-normalized instant/;
 const refreshableQueryFields = vi.hoisted(() => ({
   dataUpdatedAt: 1_704_150_000_000,
   isFetching: false,
@@ -154,6 +157,21 @@ function requireFacetFilterBar(description: string) {
   }
 
   return filterBar;
+}
+
+function requireColumnTypeTitle(displayType: string) {
+  const typeCell = Array.from(
+    document.querySelectorAll<HTMLElement>("td")
+  ).find((cell) => cell.textContent?.trim().startsWith(displayType));
+  const title = typeCell
+    ?.querySelector<HTMLElement>("[title]")
+    ?.getAttribute("title");
+
+  if (!title) {
+    throw new Error(`Expected ${displayType} type metadata.`);
+  }
+
+  return title;
 }
 
 vi.mock("@/components/data-grid/table-data-grid/table-data-grid", () =>
@@ -760,6 +778,166 @@ function seedInvoicePolicies() {
         usingExpression: "issued_at >= now() - interval '90 days'",
       }),
     ],
+  });
+}
+
+function seedShippingColumnsDesignQueries() {
+  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
+    columns: [
+      createProto(ColumnSchema, {
+        columnName: "id",
+        comment: "Surrogate key",
+        dataType: DataType.UUID,
+        defaultValue: "gen_random_uuid()",
+        isNullable: false,
+        isPrimaryKey: true,
+        ordinalPosition: 1,
+        rawType: "uuid",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "ref",
+        comment: "Human-readable booking reference",
+        dataType: DataType.STRING,
+        isNullable: false,
+        isUnique: true,
+        ordinalPosition: 2,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "carrier_id",
+        dataType: DataType.INTEGER,
+        isNullable: false,
+        ordinalPosition: 3,
+        rawType: "int4",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "status",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 4,
+        rawType: "shipment_status",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "origin_port",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 5,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "dest_port",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 6,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "route_code",
+        dataType: DataType.STRING,
+        generationExpression: "origin_port || ':' || dest_port",
+        isGenerated: true,
+        isNullable: false,
+        ordinalPosition: 7,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "sequence_no",
+        dataType: DataType.INTEGER,
+        identityGeneration: IdentityGeneration.BY_DEFAULT,
+        isIdentity: true,
+        isNullable: false,
+        ordinalPosition: 8,
+        rawType: "int8",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "weight_kg",
+        dataType: DataType.FLOAT,
+        isNullable: false,
+        ordinalPosition: 9,
+        rawType: "numeric(10,2)",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "eta",
+        comment: "Set NULL once delivered",
+        dataType: DataType.DATE,
+        isNullable: true,
+        ordinalPosition: 10,
+        rawType: "date",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "created_at",
+        dataType: DataType.TIMESTAMP,
+        defaultValue: "now()",
+        isNullable: false,
+        ordinalPosition: 11,
+        rawType: "timestamptz",
+      }),
+    ],
+  });
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    {
+      constraints: [
+        createProto(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "shipments_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["ref"],
+          constraintName: "shipments_ref_key",
+          definition: "UNIQUE (ref)",
+          type: ConstraintType.UNIQUE,
+        }),
+        createProto(TableConstraintSchema, {
+          columnNames: ["carrier_id"],
+          constraintName: "shipments_carrier_id_fkey",
+          definition:
+            "FOREIGN KEY (carrier_id) REFERENCES shipping.carriers(id)",
+          referencedColumnNames: ["id"],
+          referencedTable:
+            "instances/prod/databases/logistics/schemas/shipping/tables/carriers",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+      ],
+    }
+  );
+  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
+    indexes: [
+      createProto(TableIndexSchema, {
+        indexName: "shipments_pkey",
+        isUnique: true,
+        keyColumns: ["id"],
+        method: "btree",
+        sizeBytes: 327_155_712n,
+      }),
+      createProto(TableIndexSchema, {
+        indexName: "shipments_ref_key",
+        isUnique: true,
+        keyColumns: ["ref"],
+        method: "btree",
+        sizeBytes: 104_857_600n,
+      }),
+      createProto(TableIndexSchema, {
+        indexName: "shipments_status_idx",
+        keyColumns: ["status"],
+        method: "btree",
+        sizeBytes: 18_874_368n,
+      }),
+      createProto(TableIndexSchema, {
+        indexName: "shipments_carrier_id_idx",
+        keyColumns: ["carrier_id"],
+        method: "btree",
+        sizeBytes: 54_525_952n,
+      }),
+    ],
+  });
+  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
+    policies: [],
+  });
+  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
+    triggers: [],
   });
 }
 
@@ -1412,12 +1590,155 @@ test("data explorer schema detail highlights stale catalog warnings", async () =
   );
 });
 
-test("data explorer table columns show keys relationships and indexed fields", async () => {
-  seedTableDetailQueries();
+test("data explorer table columns match the redesign inventory", async () => {
+  seedShippingColumnsDesignQueries();
   renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="columns"
+      instanceId="prod"
+      schemaName="shipping"
+      table={createProto(TableSchema, {
+        displayName: "shipments",
+        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipments",
+        owner: "app_owner",
+        rowCount: 2_400_000n,
+        sizeBytes: 12_800_000_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="shipments"
+    />
+  );
+
+  await expect
+    .element(page.getByRole("cell", { exact: true, name: "Storage" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("cell", { exact: true, name: "Distinct" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("cell", { exact: true, name: "Null %" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("cell", { exact: true, name: "Avg width" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("cell", { name: ID_PRIMARY_KEY_CELL_RE }))
+    .toBeVisible();
+  await expect.element(page.getByText("Unique")).toBeVisible();
+  await expect.element(page.getByText("Foreign key")).toBeVisible();
+  await expect.element(page.getByText("Index")).toBeVisible();
+  await expect
+    .element(page.getByText("Human-readable booking reference"))
+    .toBeVisible();
+  await expect.element(page.getByText("Set NULL once delivered")).toBeVisible();
+  await expect
+    .element(page.getByText("11 columns · 4 indexed · 1 nullable"))
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByText(TABLE_COLUMNS_LAST_FETCHED_RE))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("table · 4 columns"))
+    .not.toBeInTheDocument();
+
+  const searchInput = page
+    .getByRole("textbox", { name: "Search columns…" })
+    .element();
+  const filterBar = requireFacetFilterBar("column facet filters");
+  expect(filterBar.textContent).toContain("Type");
+  expect(filterBar.textContent).toContain("Key");
+  expect(filterBar.textContent).toContain("Nullability");
+  expect(filterBar.textContent).toContain("Default");
+  expect(filterBar.textContent).toContain("Generation");
+  expect(filterBar.textContent).not.toContain("__all__");
+  expect(filterBar.getBoundingClientRect().left).toBeGreaterThan(
+    searchInput.getBoundingClientRect().right
+  );
+  expect(
+    Math.abs(
+      filterBar.getBoundingClientRect().top -
+        searchInput.getBoundingClientRect().top
+    )
+  ).toBeLessThanOrEqual(4);
+
+  await page.getByRole("button", { exact: true, name: "Key" }).click();
+  for (const option of [
+    "Primary key",
+    "Foreign key",
+    "Unique",
+    "Index",
+    "No key",
+  ]) {
+    await expect
+      .element(page.getByRole("option", { exact: true, name: option }))
+      .toBeVisible();
+  }
+  await page.getByRole("button", { exact: true, name: "Key" }).click();
+
+  await page.getByRole("button", { exact: true, name: "Generation" }).click();
+  await expect
+    .element(page.getByRole("option", { exact: true, name: "Identity" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("option", { exact: true, name: "Generated" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("option", { exact: true, name: "Regular" }))
+    .toBeVisible();
+  await page.getByRole("option", { exact: true, name: "Generated" }).click();
+  await page
+    .getByRole("button", { name: GENERATED_GENERATION_FILTER_RE })
+    .click();
+  await expect.element(page.getByText("route_code")).toBeVisible();
+  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
+  await page.getByRole("button", { exact: true, name: "Reset" }).click();
+
+  await expect
+    .element(page.getByRole("tab", { exact: true, name: "Columns 11" }))
+    .toBeVisible();
+  await expect.element(page.getByText("Showing 1–10 of 11")).toBeVisible();
+  await expect.element(page.getByText("Page 1 of 2")).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Next page" }))
+    .toBeEnabled();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-columns"
+  );
+  await page.getByRole("button", { name: "Next page" }).click();
+  await expect.element(page.getByText("created_at")).toBeVisible();
+  await expect.element(page.getByText("Showing 11–11 of 11")).toBeVisible();
+  await page.getByRole("button", { name: "Previous page" }).click();
+  await page
+    .getByRole("button", { exact: true, name: "Column, not sorted" })
+    .click();
+  await expect
+    .element(
+      page.getByRole("button", {
+        exact: true,
+        name: "Column, sorted ascending",
+      })
+    )
+    .toBeVisible();
+  expect(
+    document.querySelector("tbody tr:first-child td:nth-child(2)")?.textContent
+  ).toContain("carrier_id");
+  await page
+    .getByRole("textbox", { exact: true, name: "Search columns…" })
+    .fill("eta");
+  await expect.element(page.getByText("Set NULL once delivered")).toBeVisible();
+  await expect
+    .element(page.getByText("1 column · 0 indexed · 1 nullable"))
+    .not.toBeInTheDocument();
+  expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
+});
+
+test("data explorer table keys preserve the existing relationship view", async () => {
+  seedTableDetailQueries();
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="app"
+      initialTab="keys"
       instanceId="prod"
       schemaName="public"
       table={createProto(TableSchema, {
@@ -1432,59 +1753,6 @@ test("data explorer table columns show keys relationships and indexed fields", a
     />
   );
 
-  await expect
-    .element(page.getByRole("cell", { name: CUSTOMER_ID_CELL_RE }).first())
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("cell", { name: ACCOUNT_REFERENCE_CELL_RE }))
-    .toBeVisible();
-  await expect.element(page.getByText("INDEXED").first()).toBeVisible();
-  await expect
-    .element(page.getByText(TABLE_COLUMNS_LAST_FETCHED_RE))
-    .toBeVisible();
-  await expect
-    .element(page.getByText("table · 4 columns"))
-    .not.toBeInTheDocument();
-
-  const searchInput = page
-    .getByRole("textbox", { name: "Search columns…" })
-    .element();
-  const filterBar = requireFacetFilterBar("column facet filters");
-  expect(filterBar.textContent).toContain("Type");
-  expect(filterBar.textContent).toContain("Key");
-  expect(filterBar.textContent).not.toContain("__all__");
-  expect(filterBar.getBoundingClientRect().left).toBeGreaterThan(
-    searchInput.getBoundingClientRect().right
-  );
-  expect(
-    Math.abs(
-      filterBar.getBoundingClientRect().top -
-        searchInput.getBoundingClientRect().top
-    )
-  ).toBeLessThanOrEqual(4);
-
-  await expect
-    .element(page.getByRole("tab", { exact: true, name: "Columns 4" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("tab", { exact: true, name: "Keys 3" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("tab", { exact: true, name: "Indexes 2" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("tab", { exact: true, name: "Constraints 2" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("tab", { exact: true, name: "Policies 1" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("tab", { exact: true, name: "Triggers 1" }))
-    .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-columns"
-  );
-  await page.getByRole("tab", { exact: true, name: "Keys 3" }).click();
   await expect.element(page.getByText("Primary key").first()).toBeVisible();
   await expect.element(page.getByText("customers_pkey")).toBeVisible();
   await expect.element(page.getByText("Foreign key").first()).toBeVisible();
@@ -1553,6 +1821,12 @@ test("data explorer table columns show generated and identity metadata", async (
   await expect.element(page.getByText("BY DEFAULT")).toBeVisible();
   await expect.element(page.getByText("GENERATED")).toBeVisible();
   await expect.element(page.getByText("AS lower(email)")).toBeVisible();
+
+  const badgeRow = page.getByText("IDENTITY").element().parentElement;
+  if (!badgeRow) {
+    throw new Error("Expected identity badges to render in a row.");
+  }
+  expect(badgeRow.scrollWidth).toBeLessThanOrEqual(badgeRow.clientWidth);
 });
 
 test("data explorer table tabs stay visible when column metadata overflows", async () => {
@@ -2199,14 +2473,13 @@ test("data explorer table columns explain PostgreSQL type semantics", async () =
     />
   );
 
-  await expect
-    .element(page.getByText("timestamp with time zone"))
-    .toBeVisible();
-  await expect.element(page.getByText("timestamptz")).toBeVisible();
-  await expect.element(page.getByText(UTC_NORMALIZED_INSTANT_RE)).toBeVisible();
-  await expect.element(page.getByText(EXACT_DECIMAL_RE)).toBeVisible();
-  await expect.element(page.getByText("64-bit")).toBeVisible();
-  await expect.element(page.getByText("binary JSON").first()).toBeVisible();
+  await expect.element(page.getByText("event_time")).toBeVisible();
+  expect(requireColumnTypeTitle("timestamp with time zone")).toMatch(
+    TIMESTAMPTZ_TYPE_TITLE_RE
+  );
+  expect(requireColumnTypeTitle("numeric")).toMatch(NUMERIC_TYPE_TITLE_RE);
+  expect(requireColumnTypeTitle("bigint")).toMatch(BIGINT_TYPE_TITLE_RE);
+  expect(requireColumnTypeTitle("jsonb")).toMatch(JSONB_TYPE_TITLE_RE);
 });
 
 test("data explorer table empty resource tabs use shared empty panels", async () => {

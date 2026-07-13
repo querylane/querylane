@@ -53,6 +53,7 @@ import {
   DataTableFacetedFilter,
   type FacetedFilterOption,
 } from "@/components/ui/data-table-faceted-filter";
+import { RefreshControl } from "@/components/ui/refresh-control";
 import {
   Select,
   SelectContent,
@@ -70,8 +71,14 @@ import {
 } from "@/features/data-explorer/explorer-column-rows";
 import { HeaderStat } from "@/features/data-explorer/explorer-shared-ui";
 import {
+  type ColumnDefaultFilter,
+  type ColumnGenerationFilter,
   type ColumnKeyFilter,
+  type ColumnNullabilityFilter,
+  columnDefaultKind,
+  columnGenerationKinds,
   columnKeyKinds,
+  columnNullability,
   columnTypeCategory,
   filterColumnDetailRows,
   filterIndexesByMethod,
@@ -149,6 +156,8 @@ import {
 const TABLE_METADATA_QUERY_OPTIONS = {
   staleTime: QUERY_STALE_TIME.static,
 } as const;
+const UNAVAILABLE_COLUMN_STATISTIC_LABEL =
+  "Not available from the current column metadata API";
 const SKELETON_ROW_COUNT = 6;
 const CONSTRAINTS_DEFAULT_PAGE_SIZE = 10;
 const CONSTRAINTS_MEDIUM_PAGE_SIZE = 25;
@@ -226,12 +235,29 @@ interface FacetFilterDefinition {
   options: FacetedFilterOption[];
   selectedValues: string[];
 }
-const COLUMN_KEY_FILTER_LABELS: Record<ColumnKeyFilter, string> = {
-  foreign: "Foreign key",
-  indexed: "Indexed",
-  none: "No key",
-  primary: "Primary key",
+type ColumnFacetOption<Value extends string> = FacetedFilterOption & {
+  value: Value;
 };
+const COLUMN_DEFAULT_FILTER_OPTIONS = [
+  { label: "Has default", value: "has-default" },
+  { label: "No default", value: "no-default" },
+] satisfies ColumnFacetOption<ColumnDefaultFilter>[];
+const COLUMN_GENERATION_FILTER_OPTIONS = [
+  { label: "Identity", value: "identity" },
+  { label: "Generated", value: "generated" },
+  { label: "Regular", value: "regular" },
+] satisfies ColumnFacetOption<ColumnGenerationFilter>[];
+const COLUMN_KEY_FILTER_OPTIONS = [
+  { label: "Primary key", value: "primary" },
+  { label: "Foreign key", value: "foreign" },
+  { label: "Unique", value: "unique" },
+  { label: "Index", value: "index" },
+  { label: "No key", value: "none" },
+] satisfies ColumnFacetOption<ColumnKeyFilter>[];
+const COLUMN_NULLABILITY_FILTER_OPTIONS = [
+  { label: "Not null", value: "not-null" },
+  { label: "Nullable", value: "nullable" },
+] satisfies ColumnFacetOption<ColumnNullabilityFilter>[];
 const TRIGGER_STATE_FILTER_LABELS: Record<TriggerStateFilter, string> = {
   disabled: "Disabled",
   enabled: "Enabled",
@@ -256,20 +282,12 @@ function uniqueSortedOptions(values: string[]): FacetedFilterOption[] {
     .sort((left, right) => left.localeCompare(right))
     .map((value) => ({ label: value, value }));
 }
-function presentColumnKeyOptions(rows: ColumnRow[]): FacetedFilterOption[] {
-  const present = new Set(rows.flatMap(columnKeyKinds));
-  const options: FacetedFilterOption[] = [];
-  for (const value of [
-    "primary",
-    "foreign",
-    "indexed",
-    "none",
-  ] satisfies ColumnKeyFilter[]) {
-    if (present.has(value)) {
-      options.push({ label: COLUMN_KEY_FILTER_LABELS[value], value });
-    }
-  }
-  return options;
+function presentColumnOptions<Value extends string>(
+  values: Value[],
+  options: readonly ColumnFacetOption<Value>[]
+): FacetedFilterOption[] {
+  const present = new Set(values);
+  return options.filter((option) => present.has(option.value));
 }
 function presentIndexMethodOptions(
   indexes: TableIndex[]
@@ -648,37 +666,303 @@ function MetadataTabResult<Row extends RowData>({
   );
 }
 
-function ColumnTypeCell({ column }: { column: TableColumn }) {
-  const typeMeta = describePostgresType(column);
+function columnSearchText(row: ColumnRow) {
+  const typeMeta = describePostgresType(row.column);
+  return [
+    row.column.columnName,
+    row.column.rawType,
+    row.column.defaultValue,
+    row.column.comment,
+    typeMeta.category,
+    typeMeta.summary,
+    ...typeMeta.badges,
+    ...row.fks.map((fk) => `${fk.table}.${fk.column}`),
+  ]
+    .join(" ")
+    .toLocaleLowerCase();
+}
+
+function filterColumnRowsBySearch(rows: ColumnRow[], searchValue: string) {
+  const needle = searchValue.trim().toLocaleLowerCase();
+  if (!needle) {
+    return rows;
+  }
+  return rows.filter((row) => columnSearchText(row).includes(needle));
+}
+
+function ColumnNameCell({ row }: { row: ColumnRow }) {
+  const { column, fks, isIndexed } = row;
+  const identityLabel = IDENTITY_GENERATION_LABELS[column.identityGeneration];
+  const foreignKeyTitle = fks
+    .map((fk) => `References ${fk.table}.${fk.column}`)
+    .join("; ");
+  const showIndexedBadge =
+    isIndexed && !(column.isPrimaryKey || column.isUnique || fks.length > 0);
   return (
-    <div
-      className="min-w-[14rem] max-w-[24rem]"
-      title={`${typeMeta.category}. ${typeMeta.summary}`}
-    >
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-        <span className="font-mono text-foreground text-xs">
-          {typeMeta.displayType}
+    <div className="min-w-[14rem]">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className="truncate font-mono font-semibold text-foreground text-xs">
+          {column.columnName}
         </span>
-        <Badge className="h-4 px-1.5 text-[10px]" variant="outline">
-          {typeMeta.category}
-        </Badge>
+        {column.isPrimaryKey ? (
+          <Pill size="sm" tone="amber">
+            Primary key
+          </Pill>
+        ) : null}
+        {column.isUnique ? (
+          <Pill size="sm" tone="emerald">
+            Unique
+          </Pill>
+        ) : null}
+        {fks.length > 0 ? (
+          <span aria-hidden="true" title={foreignKeyTitle}>
+            <Pill size="sm" tone="blue">
+              Foreign key
+            </Pill>
+          </span>
+        ) : null}
+        {showIndexedBadge ? (
+          <Pill size="sm" tone="violet">
+            Index
+          </Pill>
+        ) : null}
+        {column.isGenerated ? (
+          <Pill size="sm" tone="emerald">
+            GENERATED
+          </Pill>
+        ) : null}
+        {column.isIdentity ? (
+          <Pill size="sm" tone="amber">
+            IDENTITY
+          </Pill>
+        ) : null}
+        {identityLabel ? (
+          <Pill size="sm" tone="amber">
+            {identityLabel}
+          </Pill>
+        ) : null}
       </div>
-      {typeMeta.badges.length > 0 ? (
-        <div className="mt-1 flex flex-wrap items-center gap-1">
-          {typeMeta.badges.map((badge) => (
-            <Badge
-              className="h-4 px-1.5 font-mono text-[9px] text-muted-foreground"
-              key={badge}
-              variant="secondary"
-            >
-              {badge}
-            </Badge>
-          ))}
+      {column.comment ? (
+        <div className="mt-1 max-w-[22rem] truncate text-muted-foreground text-xs">
+          {column.comment}
         </div>
       ) : null}
-      <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
-        {typeMeta.summary}
-      </p>
+      {column.generationExpression ? (
+        <div
+          className="mt-1 max-w-[22rem] truncate font-mono text-[11px] text-muted-foreground"
+          title={column.generationExpression}
+        >
+          AS {column.generationExpression}
+        </div>
+      ) : null}
+      {foreignKeyTitle ? (
+        <span className="sr-only">{foreignKeyTitle}</span>
+      ) : null}
+    </div>
+  );
+}
+
+function ColumnInventoryTypeCell({ column }: { column: TableColumn }) {
+  const typeMeta = describePostgresType(column);
+  const badgesLabel =
+    typeMeta.badges.length > 0 ? ` ${typeMeta.badges.join(" · ")}.` : "";
+  return (
+    <span
+      className="font-mono text-muted-foreground text-xs"
+      title={`${typeMeta.category}.${badgesLabel} ${typeMeta.summary}`}
+    >
+      {typeMeta.displayType}
+      <span className="sr-only">
+        {`. ${typeMeta.category}.${badgesLabel} ${typeMeta.summary}`}
+      </span>
+    </span>
+  );
+}
+
+function ColumnNullFraction({ column }: { column: TableColumn }) {
+  return column.isNullable ? <UnavailableColumnStatistic /> : "0%";
+}
+
+function UnavailableColumnStatistic() {
+  return (
+    <span title={UNAVAILABLE_COLUMN_STATISTIC_LABEL}>
+      <span aria-hidden="true">-</span>
+      <span className="sr-only">{UNAVAILABLE_COLUMN_STATISTIC_LABEL}</span>
+    </span>
+  );
+}
+
+function UnavailableColumnStatisticHeader({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <span title={UNAVAILABLE_COLUMN_STATISTIC_LABEL}>{children}</span>;
+}
+
+const columnInventoryColumns: DataTableColumnDef<ColumnRow>[] = [
+  {
+    accessorFn: (row) => row.column.ordinalPosition,
+    header: () => (
+      <span>
+        <span aria-hidden="true">#</span>
+        <span className="sr-only">Ordinal position</span>
+      </span>
+    ),
+    id: "ordinalPosition",
+    meta: {
+      cellClassName: "w-12 font-mono text-muted-foreground text-xs",
+      headerClassName: "w-12",
+    },
+  },
+  {
+    accessorFn: (row) => row.column.columnName,
+    cell: ({ row }) => <ColumnNameCell row={row.original} />,
+    header: ({ column }) => (
+      <SortableHeader column={column}>Column</SortableHeader>
+    ),
+    id: "columnName",
+    meta: {
+      cellClassName: "align-top",
+    },
+  },
+  {
+    accessorFn: (row) => row.column.rawType,
+    cell: ({ row }) => <ColumnInventoryTypeCell column={row.original.column} />,
+    header: ({ column }) => (
+      <SortableHeader column={column}>Type</SortableHeader>
+    ),
+    id: "type",
+    meta: {
+      cellClassName: "align-top",
+    },
+  },
+  {
+    accessorFn: (row) => row.column.isNullable,
+    cell: ({ row }) => (row.original.column.isNullable ? "YES" : "NO"),
+    header: "Nullable",
+    id: "nullable",
+    meta: {
+      cellClassName: "font-mono text-muted-foreground text-xs",
+    },
+  },
+  {
+    accessorFn: (row) => row.column.defaultValue,
+    cell: ({ row }) => {
+      const defaultValue = row.original.column.defaultValue;
+      return defaultValue ? (
+        <span title={defaultValue}>{defaultValue}</span>
+      ) : (
+        "-"
+      );
+    },
+    header: "Default",
+    id: "default",
+    meta: {
+      cellClassName:
+        "max-w-[18rem] truncate font-mono text-muted-foreground text-xs",
+    },
+  },
+  {
+    cell: () => <UnavailableColumnStatistic />,
+    enableSorting: false,
+    header: () => (
+      <UnavailableColumnStatisticHeader>
+        Storage
+      </UnavailableColumnStatisticHeader>
+    ),
+    id: "storage",
+    meta: {
+      cellClassName: "font-mono text-muted-foreground text-xs",
+    },
+  },
+  {
+    cell: () => <UnavailableColumnStatistic />,
+    enableSorting: false,
+    header: () => (
+      <UnavailableColumnStatisticHeader>
+        Distinct
+      </UnavailableColumnStatisticHeader>
+    ),
+    id: "distinct",
+    meta: {
+      cellClassName: "text-right font-mono text-xs",
+      headerClassName: "text-right",
+    },
+  },
+  {
+    cell: ({ row }) => <ColumnNullFraction column={row.original.column} />,
+    enableSorting: false,
+    header: "Null %",
+    id: "nullFraction",
+    meta: {
+      cellClassName: "text-right font-mono text-xs",
+      headerClassName: "text-right",
+    },
+  },
+  {
+    cell: () => <UnavailableColumnStatistic />,
+    enableSorting: false,
+    header: () => (
+      <UnavailableColumnStatisticHeader>
+        Avg width
+      </UnavailableColumnStatisticHeader>
+    ),
+    id: "averageWidth",
+    meta: {
+      cellClassName: "text-right font-mono text-muted-foreground text-xs",
+      headerClassName: "text-right",
+    },
+  },
+];
+
+function ColumnsInventoryTable({
+  filters,
+  hasUnfilteredRows,
+  rows,
+  toolbar,
+}: {
+  filters: React.ReactNode;
+  hasUnfilteredRows: boolean;
+  rows: ColumnRow[];
+  toolbar: MetadataToolbar;
+}) {
+  const [searchValue, setSearchValue] = useState("");
+  const visibleRows = filterColumnRowsBySearch(rows, searchValue);
+
+  if (!hasUnfilteredRows) {
+    return <TableResourceEmptyState category="columns" toolbar={toolbar} />;
+  }
+
+  return (
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex min-h-8 min-w-0 flex-wrap items-center gap-2">
+        <DataTableFilter
+          onChange={setSearchValue}
+          placeholder="Search columns…"
+          value={searchValue}
+        />
+        {filters}
+        <div className="flex-1" />
+        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+          <span>Catalog metadata</span>
+          <span aria-hidden="true">·</span>
+          <RefreshControl
+            isRefreshing={toolbar.isRefreshing}
+            labelClassName="not-sr-only"
+            lastFetchedLabel={toolbar.lastFetchedLabel}
+            onRefresh={toolbar.handleRefresh}
+          />
+        </div>
+      </div>
+      <DataTable
+        columns={columnInventoryColumns}
+        data={visibleRows}
+        emptyResourceName="columns"
+        pageSize={10}
+        tableClassName="text-sm"
+        tableKey="data-explorer-table-columns"
+      />
     </div>
   );
 }
@@ -799,92 +1083,6 @@ function TableDetailHeader({
     </header>
   );
 }
-const columnTabColumns: DataTableColumnDef<ColumnRow>[] = [
-  {
-    accessorFn: (row) => row.column.columnName,
-    cell: ({ row }) => {
-      const { column, fks } = row.original;
-      return (
-        <span className="inline-flex items-center gap-1.5">
-          {column.isPrimaryKey ? (
-            <Pill size="sm" tone="amber">
-              PK
-            </Pill>
-          ) : null}
-          {fks.length > 0 ? (
-            <Pill size="sm" tone="blue">
-              FK
-            </Pill>
-          ) : null}
-          {column.columnName}
-        </span>
-      );
-    },
-    header: ({ column }) => (
-      <SortableHeader column={column}>Name</SortableHeader>
-    ),
-    id: "columnName",
-    meta: {
-      cellClassName: "font-mono text-xs",
-      headerClassName: "pl-3",
-    },
-  },
-  {
-    accessorFn: (row) => row.column.rawType,
-    cell: ({ row }) => <ColumnTypeCell column={row.original.column} />,
-    header: ({ column }) => (
-      <SortableHeader column={column}>Type</SortableHeader>
-    ),
-    id: "type",
-    meta: {
-      cellClassName: "align-top",
-    },
-  },
-  {
-    accessorFn: (row) => row.column.defaultValue,
-    cell: ({ row }) => row.original.column.defaultValue || "—",
-    header: "Default",
-    id: "default",
-    meta: {
-      cellClassName: "font-mono text-muted-foreground text-xs",
-    },
-  },
-  {
-    cell: ({ row }) => {
-      const { column, fks, isIndexed } = row.original;
-      const identityLabel =
-        IDENTITY_GENERATION_LABELS[column.identityGeneration];
-      return (
-        <div className="flex flex-wrap items-center gap-1">
-          {column.isNullable || column.isPrimaryKey ? null : (
-            <Pill tone="slate">NOT NULL</Pill>
-          )}
-          {fks.map((fk) => (
-            <Pill key={`${fk.table}.${fk.column}`} mono={true} tone="blue">
-              →{fk.table}.{fk.column}
-            </Pill>
-          ))}
-          {isIndexed && !column.isPrimaryKey ? (
-            <Pill tone="violet">INDEXED</Pill>
-          ) : null}
-          {column.isGenerated ? <Pill tone="emerald">GENERATED</Pill> : null}
-          {column.generationExpression ? (
-            <Pill mono={true} title={column.generationExpression} tone="slate">
-              <span className="block max-w-[18rem] truncate">
-                AS {column.generationExpression}
-              </span>
-            </Pill>
-          ) : null}
-          {column.isIdentity ? <Pill tone="amber">IDENTITY</Pill> : null}
-          {identityLabel ? <Pill tone="amber">{identityLabel}</Pill> : null}
-        </div>
-      );
-    },
-    enableSorting: false,
-    header: "Properties",
-    id: "properties",
-  },
-];
 function ColumnsTab({
   columnsQuery,
   constraintsQuery,
@@ -896,6 +1094,9 @@ function ColumnsTab({
 }) {
   const [typeCategories, setTypeCategories] = useState<string[]>([]);
   const [keyKinds, setKeyKinds] = useState<string[]>([]);
+  const [nullability, setNullability] = useState<string[]>([]);
+  const [defaultKinds, setDefaultKinds] = useState<string[]>([]);
+  const [generationKinds, setGenerationKinds] = useState<string[]>([]);
   const toolbar = deriveMetadataToolbar([
     columnsQuery,
     constraintsQuery,
@@ -937,16 +1138,14 @@ function ColumnsTab({
     indexesQuery.data.indexes
   );
   const filteredRows = filterColumnDetailRows(rows, {
+    defaultKinds: defaultKinds as ColumnDefaultFilter[],
+    generationKinds: generationKinds as ColumnGenerationFilter[],
     keyKinds: keyKinds as ColumnKeyFilter[],
+    nullability: nullability as ColumnNullabilityFilter[],
     typeCategories,
   });
   return (
-    <MetadataTabResult
-      category="columns"
-      columns={columnTabColumns}
-      data={filteredRows}
-      filterColumn="columnName"
-      filterPlaceholder="Search columns…"
+    <ColumnsInventoryTable
       filters={
         <FacetFilterBar
           filters={[
@@ -959,15 +1158,44 @@ function ColumnsTab({
             {
               handleSelectedValuesChange: setKeyKinds,
               label: "Key",
-              options: presentColumnKeyOptions(rows),
+              options: presentColumnOptions(
+                rows.flatMap(columnKeyKinds),
+                COLUMN_KEY_FILTER_OPTIONS
+              ),
               selectedValues: keyKinds,
+            },
+            {
+              handleSelectedValuesChange: setNullability,
+              label: "Nullability",
+              options: presentColumnOptions(
+                rows.map(columnNullability),
+                COLUMN_NULLABILITY_FILTER_OPTIONS
+              ),
+              selectedValues: nullability,
+            },
+            {
+              handleSelectedValuesChange: setDefaultKinds,
+              label: "Default",
+              options: presentColumnOptions(
+                rows.map(columnDefaultKind),
+                COLUMN_DEFAULT_FILTER_OPTIONS
+              ),
+              selectedValues: defaultKinds,
+            },
+            {
+              handleSelectedValuesChange: setGenerationKinds,
+              label: "Generation",
+              options: presentColumnOptions(
+                rows.flatMap(columnGenerationKinds),
+                COLUMN_GENERATION_FILTER_OPTIONS
+              ),
+              selectedValues: generationKinds,
             },
           ]}
         />
       }
-      hasUnfilteredData={rows.length > 0}
-      pageSize={25}
-      tableKey="data-explorer-table-columns"
+      hasUnfilteredRows={rows.length > 0}
+      rows={filteredRows}
       toolbar={toolbar}
     />
   );

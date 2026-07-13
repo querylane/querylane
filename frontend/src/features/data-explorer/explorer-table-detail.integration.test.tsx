@@ -22,6 +22,7 @@ import {
   TableResultSetSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import {
+  ColumnSchema,
   ConstraintType,
   DataType,
   GetTablePartitionMetadataResponseSchema,
@@ -36,6 +37,7 @@ import {
   ReferentialAction,
   Table_TableType,
   TableConstraintSchema,
+  TableIndexSchema,
   type TablePolicy,
   TablePolicySchema,
   TableSchema,
@@ -1351,6 +1353,149 @@ describe("TableDetail constraints tab", () => {
     expect(
       within(notValidCard as HTMLElement).queryByText("validated")
     ).toBeNull();
+  });
+});
+
+describe("TableDetail columns tab", () => {
+  it("renders and filters a dense column inventory", async () => {
+    const user = userEvent.setup();
+    tableQueries.columns.data = create(ListTableColumnsResponseSchema, {
+      columns: [
+        create(ColumnSchema, {
+          columnName: "id",
+          comment: "Surrogate key",
+          dataType: DataType.UUID,
+          defaultValue: "gen_random_uuid()",
+          isNullable: false,
+          isPrimaryKey: true,
+          ordinalPosition: 1,
+          rawType: "uuid",
+        }),
+        create(ColumnSchema, {
+          columnName: "ref",
+          comment: "Human-readable booking reference",
+          dataType: DataType.STRING,
+          isNullable: false,
+          isUnique: true,
+          ordinalPosition: 2,
+          rawType: "text",
+        }),
+        create(ColumnSchema, {
+          columnName: "carrier_id",
+          dataType: DataType.INTEGER,
+          isNullable: false,
+          ordinalPosition: 3,
+          rawType: "int4",
+        }),
+        create(ColumnSchema, {
+          columnName: "eta",
+          comment: "Set NULL once delivered",
+          dataType: DataType.DATE,
+          isNullable: true,
+          ordinalPosition: 4,
+          rawType: "date",
+        }),
+      ],
+    });
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["carrier_id"],
+          referencedColumnNames: ["id"],
+          referencedTable:
+            "instances/prod/databases/app/schemas/public/tables/carriers",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+      ],
+    });
+    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+      indexes: [
+        create(TableIndexSchema, {
+          indexName: "shipments_ref_key",
+          isUnique: true,
+          keyColumns: ["ref"],
+          method: "btree",
+        }),
+      ],
+    });
+    tableQueries.columns.dataUpdatedAt = Date.UTC(2026, 5, 30, 3, 12);
+    tableQueries.constraints.dataUpdatedAt = Date.UTC(2026, 5, 30, 3, 12);
+    tableQueries.indexes.dataUpdatedAt = Date.UTC(2026, 5, 30, 3, 12);
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="columns"
+        instanceId="prod"
+        schemaName="shipping"
+        table={create(TableSchema, {
+          rowCount: 2_400_000n,
+          sizeBytes: 12_800_000_000n,
+        })}
+        tableName="shipments"
+      />
+    );
+
+    expect(screen.queryByText("4 columns · 2 indexed · 1 nullable")).toBeNull();
+    for (const filter of [
+      "Type",
+      "Key",
+      "Nullability",
+      "Default",
+      "Generation",
+    ]) {
+      expect(screen.getByRole("button", { name: filter })).toBeTruthy();
+    }
+    expect(screen.getByText("Catalog metadata")).toBeTruthy();
+    expect(screen.getByText(LAST_FETCHED_RE)).toBeTruthy();
+    expect(
+      screen.getByRole("columnheader", { name: "Ordinal position" })
+    ).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Column" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Nullable" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Storage" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Distinct" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Null %" })).toBeTruthy();
+    expect(
+      screen.getByRole("columnheader", { name: "Avg width" })
+    ).toBeTruthy();
+    expect(screen.getByText("Surrogate key")).toBeTruthy();
+    expect(screen.getByText("Human-readable booking reference")).toBeTruthy();
+    expect(screen.getByText("Set NULL once delivered")).toBeTruthy();
+    expect(screen.getByText("Primary key")).toBeTruthy();
+    expect(screen.getByText("Unique")).toBeTruthy();
+    expect(screen.getByText("Foreign key")).toBeTruthy();
+    expect(screen.queryByText("PK")).toBeNull();
+    expect(screen.queryByText("UQ")).toBeNull();
+    expect(screen.queryByText("FK")).toBeNull();
+    expect(screen.getByText("YES")).toBeTruthy();
+    expect(screen.getAllByText("NO")).toHaveLength(3);
+    expect(screen.getAllByText("0%")).toHaveLength(3);
+    expect(screen.getByText("gen_random_uuid()")).toBeTruthy();
+    expect(
+      screen.getAllByTitle("Not available from the current column metadata API")
+    ).toHaveLength(16);
+
+    await user.click(screen.getByRole("button", { name: "Nullability" }));
+    await user.click(screen.getByRole("option", { name: "Nullable" }));
+    await waitFor(() => {
+      expect(screen.queryByText("Surrogate key")).toBeNull();
+    });
+    expect(screen.getByText("Set NULL once delivered")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+
+    const search = screen.getByRole("textbox", { name: "Search columns…" });
+    await user.type(search, "booking");
+    await waitFor(() => {
+      expect(screen.queryByText("Surrogate key")).toBeNull();
+    });
+    expect(screen.getByText("Human-readable booking reference")).toBeTruthy();
+
+    await user.clear(search);
+    await user.type(search, "carriers.id");
+    await waitFor(() => {
+      expect(screen.getByText("carrier_id")).toBeTruthy();
+    });
   });
 });
 
