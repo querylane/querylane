@@ -19,8 +19,9 @@ const mocks = vi.hoisted(() => ({
   tableSearch: "",
 }));
 
-const SUPERUSERS_CHIP_NAME = /Superusers 1/;
-const BUILT_IN_CHIP_NAME = /Built-in 1/;
+const SUPERUSERS_FILTER_OPTION_NAME = /Superusers 1/;
+const BUILT_IN_FILTER_OPTION_NAME = /Built-in 1/;
+const TYPE_FILTER_BUTTON_NAME = /^Type/;
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
@@ -192,7 +193,7 @@ describe("InstanceRolesPage", () => {
     });
   });
 
-  test("filters roles by URL type and writes chip changes back to search", async () => {
+  test("filters roles by URL type with the shared type filter", async () => {
     const user = userEvent.setup();
 
     render(
@@ -204,7 +205,10 @@ describe("InstanceRolesPage", () => {
     expect(screen.queryByText("replicator")).toBeNull();
 
     await user.click(
-      screen.getByRole("button", { name: SUPERUSERS_CHIP_NAME })
+      screen.getByRole("button", { name: TYPE_FILTER_BUTTON_NAME })
+    );
+    await user.click(
+      screen.getByRole("option", { name: SUPERUSERS_FILTER_OPTION_NAME })
     );
 
     const navigateCall = mocks.navigate.mock.calls[0]?.[0];
@@ -214,13 +218,16 @@ describe("InstanceRolesPage", () => {
     });
   });
 
-  test("shows built-in roles in the redesigned access map by default", () => {
+  test("shows built-in roles in the redesigned access map by default", async () => {
+    const user = userEvent.setup();
+
     render(<InstanceRolesPage instanceId="prod" tab="map" />);
 
     const canvas = screen.getByLabelText("Role access map");
     expect(canvas.textContent).toContain("pg_read_all_data");
+    await user.click(screen.getByRole("button", { name: "Type" }));
     expect(
-      screen.getByRole("button", { name: BUILT_IN_CHIP_NAME })
+      screen.getByRole("option", { name: BUILT_IN_FILTER_OPTION_NAME })
     ).toBeTruthy();
   });
 
