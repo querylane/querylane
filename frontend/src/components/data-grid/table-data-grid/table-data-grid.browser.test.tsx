@@ -65,8 +65,6 @@ afterEach(() => {
   tableDataApi.useReadRowsQuery.mockReset();
 });
 
-const EMPTY_FILTER_HELP_RE =
-  /Pick a column, choose an operator, then enter a value\. Use/;
 const shipmentsName =
   "instances/prod/databases/app/schemas/shipping/tables/shipments";
 const carriersName =

@@ -29,8 +29,8 @@ import {
 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
-import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import type { TableForeignKeyReference } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
+import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
 import { SearchEmptyState } from "@/components/search-empty-state";
