@@ -17,6 +17,7 @@ import {
   presentActivitySessionRows,
   presentActivityStats,
 } from "@/components/console-pages/instance-activity-model";
+import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,38 @@ type ActivitySessionRow = ReturnType<typeof presentActivitySessionRows>[number];
 type BlockingChain = ReturnType<typeof getActivityBlockingChains>[number];
 
 type FilterKey = "app" | "database" | "state";
+
+const DEFAULT_ACTIVITY_PAGE_SIZE = 10;
+const MEDIUM_ACTIVITY_PAGE_SIZE = 25;
+const MAX_ACTIVITY_PAGE_SIZE = 50;
+const ACTIVITY_PAGE_SIZE_OPTIONS = [
+  DEFAULT_ACTIVITY_PAGE_SIZE,
+  MEDIUM_ACTIVITY_PAGE_SIZE,
+  MAX_ACTIVITY_PAGE_SIZE,
+] as const;
+
+function activityPaginationSummary({
+  filteredCount,
+  first,
+  hasActiveFiltering,
+  last,
+  sampledCount,
+  totalConnections,
+}: {
+  filteredCount: number;
+  first: number;
+  hasActiveFiltering: boolean;
+  last: number;
+  sampledCount: number;
+  totalConnections: number;
+}) {
+  const visibleRange = first === 0 ? "0" : `${first}–${last}`;
+  const scope = hasActiveFiltering
+    ? `${filteredCount} matches · ${sampledCount} sampled sessions`
+    : `${filteredCount} sampled sessions`;
+
+  return `Showing ${visibleRange} of ${scope} · ${totalConnections} total on server`;
+}
 
 function ActivityHeaderStat({ label, tone, value }: ActivityStat) {
   return (
@@ -329,6 +362,8 @@ function InstanceActivityPage({
   const [stateFilter, setStateFilter] = useState<string[]>([]);
   const [appFilter, setAppFilter] = useState<string[]>([]);
   const [databaseFilter, setDatabaseFilter] = useState<string[]>([]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_ACTIVITY_PAGE_SIZE);
   const stats = presentActivityStats(
     connectionStatus === "connected" ? activity : undefined
   );
@@ -353,6 +388,48 @@ function InstanceActivityPage({
   };
   const hasActiveFacet =
     stateFilter.length > 0 || appFilter.length > 0 || databaseFilter.length > 0;
+  const hasActiveFiltering = search.trim().length > 0 || hasActiveFacet;
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPageIndex = Math.min(pageIndex, pageCount - 1);
+  const pageRows = rows.slice(
+    currentPageIndex * pageSize,
+    (currentPageIndex + 1) * pageSize
+  );
+  const firstVisibleRow =
+    rows.length === 0 ? 0 : currentPageIndex * pageSize + 1;
+  const lastVisibleRow = Math.min(
+    (currentPageIndex + 1) * pageSize,
+    rows.length
+  );
+
+  function resetPage() {
+    setPageIndex(0);
+  }
+
+  function handleSearchChange(nextSearch: string) {
+    resetPage();
+    setSearch(nextSearch);
+  }
+
+  function handleStateFilterChange(nextFilter: string[]) {
+    resetPage();
+    setStateFilter(nextFilter);
+  }
+
+  function handleAppFilterChange(nextFilter: string[]) {
+    resetPage();
+    setAppFilter(nextFilter);
+  }
+
+  function handleDatabaseFilterChange(nextFilter: string[]) {
+    resetPage();
+    setDatabaseFilter(nextFilter);
+  }
+
+  function handlePageSizeChange(nextPageSize: number) {
+    resetPage();
+    setPageSize(nextPageSize);
+  }
 
   return (
     <section aria-label="Activity" className="flex flex-col gap-[18px]">
@@ -392,12 +469,12 @@ function InstanceActivityPage({
           <div className="overflow-x-auto px-[18px] py-3">
             <div className="flex min-w-max items-center gap-2">
               <DataTableFilter
-                onChange={setSearch}
+                onChange={handleSearchChange}
                 placeholder="Search query, user, app…"
                 value={search}
               />
               <DataTableFacetedFilter
-                onSelectedValuesChange={setStateFilter}
+                onSelectedValuesChange={handleStateFilterChange}
                 options={filterOptions.state.map((value) => ({
                   label: value,
                   value,
@@ -407,7 +484,7 @@ function InstanceActivityPage({
                 title="State"
               />
               <DataTableFacetedFilter
-                onSelectedValuesChange={setAppFilter}
+                onSelectedValuesChange={handleAppFilterChange}
                 options={filterOptions.app.map((value) => ({
                   label: value,
                   value,
@@ -417,7 +494,7 @@ function InstanceActivityPage({
                 title="App"
               />
               <DataTableFacetedFilter
-                onSelectedValuesChange={setDatabaseFilter}
+                onSelectedValuesChange={handleDatabaseFilterChange}
                 options={filterOptions.database.map((value) => ({
                   label: value,
                   value,
@@ -430,6 +507,7 @@ function InstanceActivityPage({
                 <Button
                   className="h-8 px-2 text-xs"
                   onClick={() => {
+                    resetPage();
                     setStateFilter([]);
                     setAppFilter([]);
                     setDatabaseFilter([]);
@@ -444,35 +522,33 @@ function InstanceActivityPage({
               ) : null}
             </div>
           </div>
-          <ActivitySessionsTable rows={rows} search={search} />
-          <div className="flex items-center gap-2 border-border border-t px-[18px] py-2.5">
-            <span className="text-muted-foreground text-xs">
-              {rows.length.toLocaleString()} sessions shown ·{" "}
-              {activity?.totalConnections.toLocaleString() ?? "0"} total on the
-              server
-            </span>
-            <div className="flex-1" />
-            <span className="font-mono text-muted-foreground text-xs">
-              Page 1 of 1
-            </span>
-            <Button
-              aria-label="Previous activity page"
-              disabled={true}
-              size="icon-xs"
-              type="button"
-              variant="outline"
-            >
-              ‹
-            </Button>
-            <Button
-              aria-label="Next activity page"
-              disabled={true}
-              size="icon-xs"
-              type="button"
-              variant="outline"
-            >
-              ›
-            </Button>
+          <ActivitySessionsTable rows={pageRows} search={search} />
+          <div className="overflow-x-auto border-border border-t px-[18px] py-1.5">
+            <div className="flex min-w-[680px] items-center gap-4">
+              <span className="shrink-0 text-muted-foreground text-xs">
+                {activityPaginationSummary({
+                  filteredCount: rows.length,
+                  first: firstVisibleRow,
+                  hasActiveFiltering,
+                  last: lastVisibleRow,
+                  sampledCount: allRows.length,
+                  totalConnections: activity?.totalConnections ?? 0,
+                })}
+              </span>
+              <div className="min-w-0 flex-1">
+                <PaginationFooter
+                  hasNext={currentPageIndex < pageCount - 1}
+                  hasPrev={currentPageIndex > 0}
+                  onNext={() => setPageIndex(currentPageIndex + 1)}
+                  onPageSizeChange={handlePageSizeChange}
+                  onPrev={() => setPageIndex(currentPageIndex - 1)}
+                  pageIndex={currentPageIndex}
+                  pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
+                  pageSize={pageSize}
+                  pageSizeOptions={ACTIVITY_PAGE_SIZE_OPTIONS}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </AsyncSectionState>

@@ -507,6 +507,30 @@ function activityHealthResponse() {
   });
 }
 
+function paginatedActivityHealthResponse() {
+  const response = activityHealthResponse();
+  const activity = response.health?.connectionActivity;
+  if (!activity) {
+    throw new Error("Expected activity health fixture.");
+  }
+
+  activity.sessions.push(
+    ...Array.from({ length: 10 }, (_, index) =>
+      createProto(ConnectionActivitySessionSchema, {
+        applicationName: "batch-worker",
+        databaseName: "logistics",
+        durationSeconds: BigInt(index + 1),
+        pid: 5000 + index,
+        query: `SELECT ${index}`,
+        state: "active",
+        username: "app_readwrite",
+      })
+    )
+  );
+
+  return response;
+}
+
 beforeEach(() => {
   state.activityQueryOptions = undefined;
   state.databases = [];
@@ -1005,6 +1029,71 @@ describe("backend instance activity", () => {
     expect(
       within(table).getByRole("row", { name: BLOCKER_ACTIVITY_TABLE_ROW_NAME })
     ).toBeTruthy();
+  });
+
+  test("paginates the session sample and changes page size", async () => {
+    const user = userEvent.setup();
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = paginatedActivityHealthResponse();
+
+    renderInstanceActivity();
+
+    const activity = screen.getByRole("region", { name: "Activity" });
+    const table = within(activity).getByRole("table");
+    const search = within(activity).getByRole("textbox", {
+      name: "Search query, user, app…",
+    });
+    const nextPage = within(activity).getByRole("button", {
+      name: "Next page",
+    });
+    const pageSize = within(activity).getByRole("combobox", {
+      name: "Rows per page",
+    });
+
+    expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
+    expect(within(table).queryByText("5008")).toBeNull();
+    expect(nextPage).toHaveProperty("disabled", false);
+
+    await user.click(nextPage);
+
+    expect(within(activity).getByText("Page 2 of 2")).toBeTruthy();
+    expect(within(table).getByText("5008")).toBeTruthy();
+    expect(within(table).queryByText("4211")).toBeNull();
+
+    await user.type(search, "4211");
+
+    expect(within(activity).getByText("Page 1 of 1")).toBeTruthy();
+    expect(within(table).getByText("4211")).toBeTruthy();
+
+    await user.clear(search);
+
+    expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
+    expect(within(table).getByText("4211")).toBeTruthy();
+
+    await user.click(nextPage);
+    await user.click(within(activity).getByRole("button", { name: "State" }));
+    await user.click(screen.getByRole("option", { name: "active" }));
+
+    expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
+    expect(within(table).getByText("4302")).toBeTruthy();
+
+    await user.click(within(activity).getByRole("button", { name: "Reset" }));
+
+    await user.click(pageSize);
+    await user.click(screen.getByRole("option", { name: "25" }));
+
+    expect(within(activity).getByText("Page 1 of 1")).toBeTruthy();
+    expect(within(table).getByText("5008")).toBeTruthy();
+    expect(nextPage).toHaveProperty("disabled", true);
+
+    await user.click(pageSize);
+    await user.click(screen.getByRole("option", { name: "10" }));
+
+    expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
+    expect(within(table).queryByText("5008")).toBeNull();
+    expect(nextPage).toHaveProperty("disabled", false);
   });
 
   test("shows the empty sessions state", () => {

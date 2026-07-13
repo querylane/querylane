@@ -827,6 +827,14 @@ test("backend instance activity matches the live sessions redesign", async () =>
   await expect.element(stateFilter).toBeVisible();
   await expect.element(appFilter).toBeVisible();
   await expect.element(databaseFilter).toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Rows per page" }))
+    .toBeVisible();
+  await expect
+    .element(
+      page.getByText("Showing 1–5 of 5 sampled sessions · 171 total on server")
+    )
+    .toBeVisible();
 
   const searchBox = search.element().getBoundingClientRect();
   const filterBoxes = [stateFilter, appFilter, databaseFilter].map((filter) =>
