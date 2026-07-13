@@ -286,24 +286,12 @@ function useLocalSearchValue({
   return [onExternalChange ? externalValue : localValue, setValue] as const;
 }
 
-function resetPageScopedSelection(
-  _navigationStateKey: string,
-  setOpenRowIndex: (updater: (prev: number | null) => number | null) => void,
-  setSelectedRows: (
-    updater: (prev: ReadonlySet<string>) => ReadonlySet<string>
-  ) => void
-) {
-  setSelectedRows((prev) => (prev.size > 0 ? new Set() : prev));
-  setOpenRowIndex((prev) => (prev === null ? prev : null));
-}
-
 function useResetSelectionOnNavigation({
   currentPageIndex,
   filterLogic,
   name,
   pageSize,
-  setOpenRowIndex,
-  setSelectedRows,
+  resetSelection,
   sortColumns,
   filterRules,
 }: {
@@ -312,49 +300,33 @@ function useResetSelectionOnNavigation({
   filterRules: TableFilterRule[];
   name: string;
   pageSize: number;
-  setOpenRowIndex: (updater: (prev: number | null) => number | null) => void;
-  setSelectedRows: (
-    updater: (prev: ReadonlySet<string>) => ReadonlySet<string>
-  ) => void;
+  resetSelection: () => void;
   sortColumns: SortColumn[];
 }) {
-  const resetHandlersRef = useRef({
-    setOpenRowIndex,
-    setSelectedRows,
-  });
+  const resetSelectionRef = useRef(resetSelection);
   const navigationStateKey = `${name}:${currentPageIndex}:${pageSize}:${
     serializeTableFilterSearch({ logic: filterLogic, rules: filterRules }) ?? ""
   }:${serializeSortSearch(sortColumns) ?? ""}`;
-  const didMountRef = useRef(false);
+  const previousNavigationStateKeyRef = useRef(navigationStateKey);
 
   useEffect(
-    function syncResetHandlers() {
-      resetHandlersRef.current = {
-        setOpenRowIndex,
-        setSelectedRows,
-      };
+    function syncResetSelection() {
+      resetSelectionRef.current = resetSelection;
     },
-    [setOpenRowIndex, setSelectedRows]
+    [resetSelection]
   );
 
-  // Selection and the open record drawer are page-scoped: prior indices/keys
-  // don't map across page/sort changes. Functional setState lets us read the
-  // previous value from React (not from a stale closure) and skip the update
-  // when there's nothing to clear, so the initial mount is a no-op. Keep the
-  // handler refs out of the navigation effect dependencies because the local
-  // URL-sync wrappers are intentionally recreated each render.
+  // Selection and the open record drawer are page-scoped: prior keys don't map
+  // across page/sort changes. Compare committed navigation keys so StrictMode's
+  // mount-effect replay stays a no-op, and keep state/callback refs out of the
+  // navigation dependencies because the URL-sync wrappers change each render.
   useEffect(
     function resetSelectionOnPageChange() {
-      if (!didMountRef.current) {
-        didMountRef.current = true;
+      if (previousNavigationStateKeyRef.current === navigationStateKey) {
         return;
       }
-      const { setOpenRowIndex, setSelectedRows } = resetHandlersRef.current;
-      resetPageScopedSelection(
-        navigationStateKey,
-        setOpenRowIndex,
-        setSelectedRows
-      );
+      previousNavigationStateKeyRef.current = navigationStateKey;
+      resetSelectionRef.current();
     },
     [navigationStateKey]
   );
@@ -387,20 +359,9 @@ function useSelectedRowsUrlState({
     onSelectedRowsSearchChange(encodeUrlList(next));
   }
 
-  function updateSelectedRows(
-    updater: (prev: ReadonlySet<string>) => ReadonlySet<string>
-  ) {
-    setSelectedRowsState((previous) => {
-      const next = updater(previous.rows);
-      onSelectedRowsSearchChange(encodeUrlList(next));
-      return { rows: next, search: selectedRowsSearch };
-    });
-  }
-
   return {
     selectedRows: selectedRowsState.rows,
     setSelectedRows,
-    updateSelectedRows,
   };
 }
 
@@ -484,14 +445,9 @@ function useOpenRowUrlState({
     onOpenRowSearchChange(nextRowKey);
   }
 
-  function updateOpenRowIndex(updater: (prev: number | null) => number | null) {
-    setOpenRowIndex(updater(resolvedOpenRowIndex));
-  }
-
   return {
     openRowIndex: resolvedOpenRowIndex,
     setOpenRowIndex,
-    updateOpenRowIndex,
   };
 }
 
@@ -1515,22 +1471,20 @@ function TableDataGrid({
   const isRefetchingRows = isPlaceholderData && !gridLoading;
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [isDataGridExpanded, setIsDataGridExpanded] = useState(false);
-  const { selectedRows, setSelectedRows, updateSelectedRows } =
-    useSelectedRowsUrlState({
-      onSelectedRowsSearchChange,
-      selectedRowsSearch,
-    });
+  const { selectedRows, setSelectedRows } = useSelectedRowsUrlState({
+    onSelectedRowsSearchChange,
+    selectedRowsSearch,
+  });
 
   const resultColumns = data?.resultSet?.columns ?? EMPTY_RESULT_COLUMNS;
   const resultRows = data?.resultSet?.rows ?? EMPTY_RESULT_ROWS;
   const rowCount = data?.resultSet?.rowCount;
   const rows = buildGridRows(resultRows, resultColumns);
-  const { openRowIndex, setOpenRowIndex, updateOpenRowIndex } =
-    useOpenRowUrlState({
-      onOpenRowSearchChange,
-      openRowSearch,
-      rows,
-    });
+  const { openRowIndex, setOpenRowIndex } = useOpenRowUrlState({
+    onOpenRowSearchChange,
+    openRowSearch,
+    rows,
+  });
 
   useResetSelectionOnNavigation({
     currentPageIndex: controller.currentPageIndex,
@@ -1538,8 +1492,14 @@ function TableDataGrid({
     filterRules,
     name,
     pageSize: controller.pageSize,
-    setOpenRowIndex: updateOpenRowIndex,
-    setSelectedRows: updateSelectedRows,
+    resetSelection: () => {
+      if (selectedRows.size > 0) {
+        setSelectedRows(new Set());
+      }
+      if (openRowIndex !== null) {
+        setOpenRowIndex(null);
+      }
+    },
     sortColumns: controller.sortColumns,
   });
 
