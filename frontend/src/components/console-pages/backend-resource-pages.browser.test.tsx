@@ -858,6 +858,35 @@ test("backend instance activity matches the live sessions redesign", async () =>
       'code.language-sql[data-syntax-highlighter="shiki"]'
     )
   ).toHaveLength(8);
+  const waitingSql = page
+    .getByText("waiting · pid 4302")
+    .element()
+    .parentElement?.querySelector("code.language-sql");
+  if (!waitingSql) {
+    throw new Error("Missing highlighted waiting-session SQL");
+  }
+  const waitingSqlContainer = waitingSql.closest(".opacity-70");
+  if (!waitingSqlContainer) {
+    throw new Error("Missing muted waiting-session SQL container");
+  }
+  expect(getComputedStyle(waitingSqlContainer).opacity).toBe("0.7");
+  const tableSql = document.querySelector(
+    'table code.language-sql[data-syntax-highlighter="shiki"]'
+  );
+  if (!tableSql) {
+    throw new Error("Missing highlighted table SQL");
+  }
+  const tableSqlContainer = tableSql.parentElement;
+  if (!tableSqlContainer) {
+    throw new Error("Missing highlighted table SQL container");
+  }
+  const tableSqlStyle = getComputedStyle(tableSqlContainer);
+  expect(tableSqlStyle.overflow).toBe("hidden");
+  expect(tableSqlStyle.textOverflow).toBe("ellipsis");
+  expect(tableSqlStyle.whiteSpace).toBe("nowrap");
+  expect(tableSqlContainer.scrollWidth).toBeGreaterThan(
+    tableSqlContainer.clientWidth
+  );
   await document.fonts.ready;
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-instance-activity"
