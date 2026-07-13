@@ -2613,39 +2613,6 @@ function IndexesTab({
             },
           ]}
         />
-        <Select
-          onValueChange={(value) => {
-            if (typeof value !== "string") {
-              return;
-            }
-            const nextPageSize = Number(value);
-            if (isIndexPageSize(nextPageSize)) {
-              setPageIndex(0);
-              setPageSize(nextPageSize);
-            }
-          }}
-          value={String(pageSize)}
-        >
-          <SelectTrigger
-            aria-label="Indexes per page"
-            className="ml-auto h-8 w-28"
-            size="sm"
-          >
-            <span className="text-muted-foreground">Per page</span>
-            <span>{pageSize}</span>
-          </SelectTrigger>
-          <SelectContent alignItemWithTrigger={false}>
-            {INDEX_PAGE_SIZE_OPTIONS.map((option) => (
-              <SelectItem
-                key={option}
-                label={String(option)}
-                value={String(option)}
-              >
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
       {filteredIndexes.length > 0 ? (
         <div className="space-y-3">
@@ -2658,54 +2625,91 @@ function IndexesTab({
               totalScanCount={totalScanCount}
             />
           ))}
-          {pageCount > 1 ? (
-            <nav
-              aria-label="Indexes pagination"
-              className="flex items-center justify-between text-muted-foreground text-xs"
+          <nav
+            aria-label="Indexes pagination"
+            className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs"
+          >
+            <Select
+              onValueChange={(value) => {
+                if (typeof value !== "string") {
+                  return;
+                }
+                const nextPageSize = Number(value);
+                if (isIndexPageSize(nextPageSize)) {
+                  setPageIndex(0);
+                  setPageSize(nextPageSize);
+                }
+              }}
+              value={String(pageSize)}
             >
-              <span className="tabular-nums" role="status">
-                Showing {firstPageIndex}&ndash;{lastPageIndex} of{" "}
-                {filteredIndexes.length} indexes
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="tabular-nums">
-                  Page {currentPageIndex + 1} of {pageCount}
+              <SelectTrigger
+                aria-label="Indexes per page"
+                className="h-8 w-28"
+                size="sm"
+              >
+                <span className="text-muted-foreground">Per page</span>
+                <span>{pageSize}</span>
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false}>
+                {INDEX_PAGE_SIZE_OPTIONS.map((option) => (
+                  <SelectItem
+                    key={option}
+                    label={String(option)}
+                    value={String(option)}
+                  >
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {pageCount > 1 ? (
+              <>
+                <span className="ml-1 tabular-nums" role="status">
+                  Showing {firstPageIndex}&ndash;{lastPageIndex} of{" "}
+                  {filteredIndexes.length} indexes
                 </span>
-                <Button
-                  aria-disabled={!hasPreviousPage}
-                  aria-label="Previous indexes page"
-                  className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
-                  onClick={() => {
-                    if (!hasPreviousPage) {
-                      return;
-                    }
-                    setPageIndex(Math.max(0, currentPageIndex - 1));
-                  }}
-                  size="icon-sm"
-                  type="button"
-                  variant="outline"
-                >
-                  <ChevronLeft aria-hidden="true" className="size-4" />
-                </Button>
-                <Button
-                  aria-disabled={!hasNextPage}
-                  aria-label="Next indexes page"
-                  className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
-                  onClick={() => {
-                    if (!hasNextPage) {
-                      return;
-                    }
-                    setPageIndex(Math.min(pageCount - 1, currentPageIndex + 1));
-                  }}
-                  size="icon-sm"
-                  type="button"
-                  variant="outline"
-                >
-                  <ChevronRight aria-hidden="true" className="size-4" />
-                </Button>
-              </div>
-            </nav>
-          ) : null}
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="tabular-nums">
+                    Page {currentPageIndex + 1} of {pageCount}
+                  </span>
+                  <Button
+                    aria-disabled={!hasPreviousPage}
+                    aria-label="Previous indexes page"
+                    className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
+                    onClick={() => {
+                      if (!hasPreviousPage) {
+                        return;
+                      }
+                      setPageIndex(Math.max(0, currentPageIndex - 1));
+                    }}
+                    size="icon-sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <ChevronLeft aria-hidden="true" className="size-4" />
+                  </Button>
+                  <Button
+                    aria-disabled={!hasNextPage}
+                    aria-label="Next indexes page"
+                    className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
+                    onClick={() => {
+                      if (!hasNextPage) {
+                        return;
+                      }
+                      setPageIndex(
+                        Math.min(pageCount - 1, currentPageIndex + 1)
+                      );
+                    }}
+                    size="icon-sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <ChevronRight aria-hidden="true" className="size-4" />
+                  </Button>
+                </div>
+              </>
+            ) : null}
+          </nav>
         </div>
       ) : (
         <SearchEmptyState className="border" resourceName="indexes" />

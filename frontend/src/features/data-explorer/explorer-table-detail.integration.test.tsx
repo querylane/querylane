@@ -1386,6 +1386,17 @@ function renderPaginatedIndexes() {
 }
 
 describe("TableDetail indexes pagination", () => {
+  it("places the page-size control in the bottom pager", () => {
+    seedPaginatedIndexes();
+    renderPaginatedIndexes();
+
+    expect(
+      screen
+        .getByRole("navigation", { name: "Indexes pagination" })
+        .contains(screen.getByRole("combobox", { name: "Indexes per page" }))
+    ).toBe(true);
+  });
+
   it("paginates index cards with the shared 10-item default", async () => {
     const user = userEvent.setup();
     seedPaginatedIndexes();
