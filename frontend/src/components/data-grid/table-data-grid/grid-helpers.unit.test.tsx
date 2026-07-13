@@ -17,6 +17,23 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
+const tableDataApi = vi.hoisted(() => ({
+  useReadRowsQueryActions: vi.fn(() => ({
+    fetch: vi.fn(() => Promise.resolve()),
+    getState: vi.fn(() => ({ fetchStatus: "idle", status: "success" })),
+    prefetch: vi.fn(),
+  })),
+}));
+
+vi.mock("@/hooks/api/table-data", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/hooks/api/table-data")>();
+  return {
+    ...actual,
+    useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
+  };
+});
+
 vi.mock("sonner", () => ({
   toast: {
     error: vi.fn(),
