@@ -134,7 +134,7 @@ describe("grid helpers", () => {
 
     expect(column.key).toBe("email");
     expect(column.frozen).toBe(true);
-    expect(column.width).toBeGreaterThanOrEqual(140);
+    expect(column.width).toBe("auto");
 
     const rendered = column.renderCell?.({
       row: {

@@ -360,7 +360,7 @@ function seedRowsQueryWithExpandableValues() {
   });
 }
 
-function expandedEmailGridColumn() {
+function latestEmailGridColumn() {
   return reactDataGrid.dataGrid.mock.calls
     .at(-1)?.[0]
     ?.columns?.find((column) => column.key === "email");
@@ -1112,13 +1112,15 @@ describe("TableDataGrid row interactions", () => {
     );
   });
 
-  it("opens an expanded data grid surface from the toolbar", async () => {
+  it("automatically fits columns in default and expanded views", async () => {
     const user = userEvent.setup();
     seedRowsQuery(3);
 
     render(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
     );
+
+    expect(latestEmailGridColumn()).toMatchObject({ width: "auto" });
 
     await user.click(screen.getByRole("button", { name: "Expand data grid" }));
 
@@ -1137,8 +1139,8 @@ describe("TableDataGrid row interactions", () => {
     expect(
       screen.getByRole("button", { name: "Collapse data grid" })
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Fit columns" })).toBeTruthy();
-    expect(expandedEmailGridColumn()).toMatchObject({ width: "auto" });
+    expect(screen.queryByRole("button", { name: "Fit columns" })).toBeNull();
+    expect(latestEmailGridColumn()).toMatchObject({ width: "auto" });
 
     await user.click(
       screen.getByRole("button", { name: "Collapse data grid" })

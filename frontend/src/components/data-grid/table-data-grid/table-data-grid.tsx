@@ -690,7 +690,6 @@ interface TableDataGridChromeProps {
     nextRules: TableFilterRule[],
     nextLogic?: TableFilterLogic
   ) => void;
-  onFitColumns?: (() => void) | undefined;
   onNext: () => void;
   onPageSizeChange: (next: number) => void;
   onPrev: () => void;
@@ -734,7 +733,6 @@ function TableDataGridChrome({
   onExportRows,
   onExportSelection,
   onFilterChange,
-  onFitColumns,
   onNext,
   onPageSizeChange,
   onPrev,
@@ -770,7 +768,6 @@ function TableDataGridChrome({
         onExportRows={onExportRows}
         onExportSelection={onExportSelection}
         onFilterChange={onFilterChange}
-        onFitColumns={onFitColumns}
         onRefresh={onRefresh}
         onSortChange={onSortChange}
         onToggleExpanded={onToggleExpanded}
@@ -823,12 +820,10 @@ function TableDataGridChrome({
 
 function ExpandedDataGridDialog({
   chromeProps,
-  fitColumnsResetKey,
   onOpenChange,
   open,
 }: {
   chromeProps: TableDataGridChromeProps;
-  fitColumnsResetKey: number;
   onOpenChange: (open: boolean) => void;
   open: boolean;
 }) {
@@ -839,7 +834,6 @@ function ExpandedDataGridDialog({
         <div className="flex min-h-0 flex-1 flex-col gap-2">
           <TableDataGridChrome
             {...chromeProps}
-            key={fitColumnsResetKey}
             onToggleExpanded={() => onOpenChange(false)}
             state={{ ...chromeProps.state, variant: "expanded" }}
           />
@@ -847,17 +841,6 @@ function ExpandedDataGridDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-function buildExpandedAutoFitColumns(
-  columns: Column<GridRow>[]
-): Column<GridRow>[] {
-  return columns.map((column) => {
-    if (column.key === SELECT_COLUMN_KEY || column.key === EXPAND_COLUMN_KEY) {
-      return column;
-    }
-    return { ...column, width: "auto" };
-  });
 }
 
 function copyCellValue(
@@ -1240,41 +1223,13 @@ function TableDataGridContent({
   rows: GridRow[];
   setOpenRowIndex: (next: number | null) => void;
 }) {
-  const [fitColumnsResetKey, setFitColumnsResetKey] = useState(0);
-
-  function handleExpandedOpenChange(next: boolean) {
-    if (next) {
-      setFitColumnsResetKey((current) => current + 1);
-    }
-    onDataGridExpandedChange(next);
-  }
-
-  function handleFitColumns() {
-    setFitColumnsResetKey((current) => current + 1);
-  }
-
-  function handleExpandFromToolbar() {
-    setFitColumnsResetKey((current) => current + 1);
-    chromeProps.onToggleExpanded();
-  }
-
-  const expandedChromeProps: TableDataGridChromeProps = {
-    ...chromeProps,
-    columns: buildExpandedAutoFitColumns(chromeProps.columns),
-    onFitColumns: handleFitColumns,
-  };
-
   // Parent table tabs own the available height; keep RDG at that finite height so row virtualization stays active.
   return (
     <div className="flex h-full min-h-[480px] flex-col gap-2">
-      <TableDataGridChrome
-        {...chromeProps}
-        onToggleExpanded={handleExpandFromToolbar}
-      />
+      <TableDataGridChrome {...chromeProps} />
       <ExpandedDataGridDialog
-        chromeProps={expandedChromeProps}
-        fitColumnsResetKey={fitColumnsResetKey}
-        onOpenChange={handleExpandedOpenChange}
+        chromeProps={chromeProps}
+        onOpenChange={onDataGridExpandedChange}
         open={isDataGridExpanded}
       />
 
