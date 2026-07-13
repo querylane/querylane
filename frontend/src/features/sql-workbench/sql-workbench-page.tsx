@@ -1192,7 +1192,7 @@ export function SqlWorkbenchPage({
   }
 
   return (
-    <div className="flex h-full min-h-0 bg-[#050506] text-zinc-100">
+    <div className="dark flex h-full min-h-0 bg-[#050506] text-zinc-100">
       <WorkbenchSidebar />
       <section
         aria-label="SQL workbench content"
