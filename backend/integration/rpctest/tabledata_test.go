@@ -592,6 +592,49 @@ func (s *RPCSuite) TestStreamRows_MetadataBatchesStatsAndOrderParity() {
 	}
 }
 
+func (s *RPCSuite) TestStreamRows_CustomMaxRowsAcrossPages() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	targetDB, err := s.pgContainer.ConnectToDatabase(ctx, externalDBName)
+	s.Require().NoError(err)
+	s.T().Cleanup(func() { s.Require().NoError(targetDB.Close()) })
+
+	const firstID = 10_000
+
+	_, err = targetDB.ExecContext(ctx, `
+		INSERT INTO public.customers (id, first_name, last_name, email, is_active)
+		SELECT $1 + value, 'Stream', 'Row', 'stream-' || value || '@example.com', true
+		FROM generate_series(1, 1201) AS value
+	`, firstID)
+	s.Require().NoError(err)
+	s.T().Cleanup(func() {
+		_, cleanupErr := targetDB.ExecContext(
+			context.Background(),
+			"DELETE FROM public.customers WHERE id > $1 AND id <= $1 + 1201",
+			firstID,
+		)
+		s.Require().NoError(cleanupErr)
+	})
+
+	stream, err := s.tableDataClient.StreamRows(ctx, connect.NewRequest(&consolev1alpha1.StreamRowsRequest{
+		Name:            s.tableName("public", "customers"),
+		SelectedColumns: []string{"id"},
+		OrderBy: []*consolev1alpha1.RowOrder{
+			{Column: "id", Direction: consolev1alpha1.RowOrder_DIRECTION_ASC},
+		},
+		MaxRows:   1200,
+		BatchSize: 500,
+	}))
+	s.Require().NoError(err)
+
+	_, batches, stats := s.collectStreamRows(stream)
+	s.Require().NotNil(stats)
+	s.Len(batches, 3)
+	s.Equal(int64(1200), stats.GetRowCount())
+	s.True(stats.GetTruncated())
+}
+
 func (s *RPCSuite) TestStreamRows_FilterParityAndByteCap() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
