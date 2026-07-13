@@ -41,6 +41,7 @@ import {
   type TablePolicy,
   TablePolicySchema,
   TableSchema,
+  TableTriggerSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
@@ -1496,6 +1497,248 @@ describe("TableDetail columns tab", () => {
     await waitFor(() => {
       expect(screen.getByText("carrier_id")).toBeTruthy();
     });
+  });
+});
+
+describe("TableDetail triggers tab", () => {
+  it("paginates filtered trigger cards and changes page size", async () => {
+    const user = userEvent.setup();
+    tableQueries.triggers.data = create(ListTableTriggersResponseSchema, {
+      triggers: Array.from({ length: 12 }, (_, index) => {
+        const suffix = String(index).padStart(2, "0");
+        return create(TableTriggerSchema, {
+          definition: `CREATE TRIGGER trg_event_${suffix} AFTER UPDATE ON shipping.shipment_event FOR EACH ROW EXECUTE FUNCTION shipping.handle_event_${suffix}()`,
+          enabled: true,
+          triggerName: `trg_event_${suffix}`,
+        });
+      }),
+    });
+
+    render(
+      <TableDetail
+        databaseId="warehouse"
+        initialTab="triggers"
+        instanceId="prod"
+        schemaName="shipping"
+        table={create(TableSchema, { rowCount: 18_200_000n })}
+        tableName="shipment_event"
+      />
+    );
+
+    expect(screen.getAllByText("trg_event_00").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("trg_event_10")).toHaveLength(0);
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+    expect(
+      screen.getByRole("combobox", { name: "Triggers per page" })
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+    expect(screen.queryAllByText("trg_event_00")).toHaveLength(0);
+    expect(screen.getAllByText("trg_event_10").length).toBeGreaterThan(0);
+    expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "State" }));
+    await user.click(screen.getByRole("option", { name: "Enabled" }));
+    expect(screen.getAllByText("trg_event_00").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("trg_event_10")).toHaveLength(0);
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+    const search = screen.getByRole("textbox", { name: "Search triggers…" });
+    await user.type(search, "00");
+    await user.clear(search);
+    expect(screen.getAllByText("trg_event_00").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("trg_event_10")).toHaveLength(0);
+
+    await user.click(
+      screen.getByRole("combobox", { name: "Triggers per page" })
+    );
+    await user.click(screen.getByRole("option", { name: "25" }));
+    expect(screen.getAllByText("trg_event_00").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("trg_event_11").length).toBeGreaterThan(0);
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+  });
+
+  it("searches and filters trigger cards from one inline toolbar", async () => {
+    const user = userEvent.setup();
+    tableQueries.triggers.data = create(ListTableTriggersResponseSchema, {
+      triggers: [
+        create(TableTriggerSchema, {
+          definition:
+            "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location()",
+          enabled: true,
+          triggerName: "trg_event_enrich",
+        }),
+        create(TableTriggerSchema, {
+          definition:
+            "CREATE TRIGGER trg_shipments_notify AFTER UPDATE ON shipping.shipment_event FOR EACH ROW EXECUTE FUNCTION shipping.notify_status_change()",
+          enabled: false,
+          triggerName: "trg_shipments_notify",
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="warehouse"
+        initialTab="triggers"
+        instanceId="prod"
+        schemaName="shipping"
+        table={create(TableSchema, { rowCount: 18_200_000n })}
+        tableName="shipment_event"
+      />
+    );
+
+    const triggersTab = screen.getByTestId("data-explorer-table-triggers");
+    const search = screen.getByRole("textbox", { name: "Search triggers…" });
+    const stateFilter = within(triggersTab).getByRole("button", {
+      name: "State",
+    });
+    expect(search.compareDocumentPosition(stateFilter)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+
+    await user.type(search, "notify");
+    expect(screen.queryByText("trg_event_enrich")).toBeNull();
+    expect(screen.getAllByText("trg_shipments_notify").length).toBeGreaterThan(
+      0
+    );
+
+    await user.clear(search);
+    await user.click(stateFilter);
+    await user.click(screen.getByRole("option", { name: "Disabled" }));
+    expect(screen.queryByText("trg_event_enrich")).toBeNull();
+    expect(screen.getAllByText("trg_shipments_notify").length).toBeGreaterThan(
+      0
+    );
+
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+    expect(screen.getAllByText("trg_event_enrich").length).toBeGreaterThan(0);
+
+    await user.type(search, "missing");
+    expect(screen.getByText("No triggers found")).toBeTruthy();
+    expect(screen.getByText("Try a different search or filter.")).toBeTruthy();
+  });
+
+  it("renders trigger cards with executable SQL and copy action", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn(() => Promise.resolve());
+    const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(
+      navigator,
+      "clipboard"
+    );
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    tableQueries.triggers.data = create(ListTableTriggersResponseSchema, {
+      triggers: [
+        create(TableTriggerSchema, {
+          definition:
+            "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event\n  FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location();",
+          enabled: true,
+          events: ["INSERT"],
+          functionName: "shipping.enrich_event_location",
+          timing: "BEFORE",
+          triggerName: "trg_event_enrich",
+        }),
+        create(TableTriggerSchema, {
+          definition:
+            "CREATE TRIGGER trg_shipments_notify AFTER UPDATE OF status ON shipping.shipment_event FOR EACH ROW WHEN ((old.status IS DISTINCT FROM new.status)) EXECUTE FUNCTION shipping.notify_status_change()",
+          enabled: false,
+          events: ["UPDATE"],
+          functionName: "notify_status_change",
+          timing: "AFTER",
+          triggerName: "trg_shipments_notify",
+        }),
+      ],
+    });
+    tableQueries.triggers.refetch.mockClear();
+
+    try {
+      render(
+        <TableDetail
+          databaseId="warehouse"
+          initialTab="triggers"
+          instanceId="prod"
+          schemaName="shipping"
+          table={create(TableSchema, { rowCount: 18_200_000n })}
+          tableName="shipment_event"
+        />
+      );
+
+      expect(screen.getAllByText("trg_event_enrich").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("BEFORE").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("INSERT").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("ROW").length).toBeGreaterThan(0);
+      expect(
+        screen.getByText("→ shipping.enrich_event_location()")
+      ).toBeTruthy();
+      expect(screen.getByText("disabled")).toBeTruthy();
+      expect(
+        screen.getByText("WHEN ((old.status IS DISTINCT FROM new.status))")
+      ).toBeTruthy();
+      const highlightedDefinitions = Array.from(
+        screen
+          .getByTestId("data-explorer-table-triggers")
+          .querySelectorAll(
+            'code.language-sql[data-syntax-highlighter="shiki"]'
+          )
+      );
+      expect(highlightedDefinitions).toHaveLength(2);
+      expect(highlightedDefinitions[0]?.textContent).toBe(
+        "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event\n  FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location();"
+      );
+      expect(
+        highlightedDefinitions.every(
+          (definition) =>
+            definition.querySelectorAll("[data-shiki-token]").length > 5
+        )
+      ).toBe(true);
+      expect(screen.getAllByRole("status")).toHaveLength(2);
+      expect(
+        screen
+          .getAllByRole("status")
+          .every((status) => status.textContent === "")
+      ).toBe(true);
+
+      await user.click(
+        screen.getByRole("button", {
+          name: "Copy SQL for trg_event_enrich",
+        })
+      );
+
+      expect(writeText).toHaveBeenCalledWith(
+        "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event\n  FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location();"
+      );
+      expect(
+        screen.getAllByRole("status").map((status) => status.textContent)
+      ).toContain("SQL for trg_event_enrich copied.");
+
+      writeText.mockRejectedValueOnce(new Error("Clipboard denied"));
+      await user.click(
+        screen.getByRole("button", {
+          name: "Copy SQL for trg_shipments_notify",
+        })
+      );
+      expect(screen.getByText("Copy failed")).toBeTruthy();
+      expect(
+        screen.getAllByRole("status").map((status) => status.textContent)
+      ).toContain("Could not copy SQL for trg_shipments_notify.");
+
+      await user.click(screen.getByRole("button", { name: "Refresh" }));
+      expect(tableQueries.triggers.refetch).toHaveBeenCalledTimes(1);
+    } finally {
+      if (originalClipboardDescriptor) {
+        Object.defineProperty(
+          navigator,
+          "clipboard",
+          originalClipboardDescriptor
+        );
+      } else {
+        Reflect.deleteProperty(navigator, "clipboard");
+      }
+    }
   });
 });
 

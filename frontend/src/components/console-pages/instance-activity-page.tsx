@@ -673,7 +673,6 @@ function InstanceActivityPage({
                     onNext={() => setPageIndex(currentPageIndex + 1)}
                     onPageSizeChange={handlePageSizeChange}
                     onPrev={() => setPageIndex(currentPageIndex - 1)}
-                    pageIndex={currentPageIndex}
                     pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
                     pageSize={pageSize}
                     pageSizeOptions={ACTIVITY_PAGE_SIZE_OPTIONS}

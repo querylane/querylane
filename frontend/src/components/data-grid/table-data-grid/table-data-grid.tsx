@@ -854,7 +854,6 @@ function TableDataGridChrome({
         onNext={onNext}
         onPageSizeChange={onPageSizeChange}
         onPrev={onPrev}
-        pageIndex={state.currentPageIndex}
         pageLabel={state.pageLabel}
         pageSize={state.pageSize}
       />

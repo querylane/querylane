@@ -115,16 +115,21 @@ function filterPoliciesByMode(
   return policies.filter((policy) => modes.includes(policy.mode));
 }
 
-function filterTriggersByState(
+function filterTableTriggers(
   triggers: TableTrigger[],
-  states: TriggerStateFilter[]
+  filters: { search: string; states: TriggerStateFilter[] }
 ): TableTrigger[] {
-  if (states.length === 0) {
-    return triggers;
-  }
-  return triggers.filter((trigger) =>
-    trigger.enabled ? states.includes("enabled") : states.includes("disabled")
-  );
+  const search = filters.search.trim().toLowerCase();
+  return triggers.filter((trigger) => {
+    if (search && !trigger.triggerName.toLowerCase().includes(search)) {
+      return false;
+    }
+    if (filters.states.length === 0) {
+      return true;
+    }
+    const state = trigger.enabled ? "enabled" : "disabled";
+    return filters.states.includes(state);
+  });
 }
 
 export type {
@@ -144,5 +149,5 @@ export {
   filterColumnDetailRows,
   filterIndexesByMethod,
   filterPoliciesByMode,
-  filterTriggersByState,
+  filterTableTriggers,
 };

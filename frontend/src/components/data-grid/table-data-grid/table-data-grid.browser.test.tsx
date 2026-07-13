@@ -138,7 +138,6 @@ function renderDataExplorerSurfaces() {
               onNext={vi.fn()}
               onPageSizeChange={vi.fn()}
               onPrev={vi.fn()}
-              pageIndex={2}
               pageLabel="Page 3 of 6"
               pageSize={25}
             />
@@ -803,7 +802,6 @@ test("page size select shows every option when the footer is near the viewport e
           onNext={vi.fn()}
           onPageSizeChange={onPageSizeChange}
           onPrev={vi.fn()}
-          pageIndex={0}
           pageLabel="Page 1"
           pageSize={50}
         />

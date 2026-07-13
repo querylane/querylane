@@ -18,6 +18,10 @@ type SqlCodeBlockProps = {
   wrap?: boolean;
 };
 
+type SqlSyntaxHighlightProps = {
+  sql: string;
+};
+
 type ShikiTokenStyle = CSSProperties & {
   "--querylane-sql-token-dark"?: string;
   "--querylane-sql-token-light"?: string;
@@ -73,6 +77,35 @@ function tokenStyle(token: ThemedTokenWithVariants): ShikiTokenStyle | undefined
   return style;
 }
 
+/** Multiline SQL needs preserved whitespace; nowrap containers support single-line SQL. */
+export function SqlSyntaxHighlight({ sql: sqlText }: SqlSyntaxHighlightProps) {
+  const tokenLines = highlightSql(sqlText);
+
+  return (
+    <code
+      className="language-sql"
+      data-language="sql"
+      data-syntax-highlighter="shiki"
+    >
+      {tokenLines.map((line, lineIndex) => (
+        <span data-shiki-line="" key={`line-${lineIndex}`}>
+          {line.map((token, tokenIndex) => (
+            <span
+              className="[color:var(--querylane-sql-token-light,currentColor)] dark:[color:var(--querylane-sql-token-dark,var(--querylane-sql-token-light,currentColor))]"
+              data-shiki-token=""
+              key={`token-${lineIndex}-${tokenIndex}`}
+              style={tokenStyle(token)}
+            >
+              {token.content}
+            </span>
+          ))}
+          {lineIndex < tokenLines.length - 1 ? "\n" : null}
+        </span>
+      ))}
+    </code>
+  );
+}
+
 export function SqlCodeBlock({
   className,
   copyable = true,
@@ -80,7 +113,6 @@ export function SqlCodeBlock({
   variant = "block",
   wrap = false,
 }: SqlCodeBlockProps) {
-  const tokenLines = highlightSql(sqlText);
   const compact = variant === "compact";
   const inline = variant === "inline";
 
@@ -108,27 +140,7 @@ export function SqlCodeBlock({
           className
         )}
       >
-        <code
-          className="language-sql"
-          data-language="sql"
-          data-syntax-highlighter="shiki"
-        >
-          {tokenLines.map((line, lineIndex) => (
-            <span data-shiki-line="" key={`line-${lineIndex}`}>
-              {line.map((token, tokenIndex) => (
-                <span
-                  className="[color:var(--querylane-sql-token-light,currentColor)] dark:[color:var(--querylane-sql-token-dark,var(--querylane-sql-token-light,currentColor))]"
-                  data-shiki-token=""
-                  key={`token-${lineIndex}-${tokenIndex}`}
-                  style={tokenStyle(token)}
-                >
-                  {token.content}
-                </span>
-              ))}
-              {lineIndex < tokenLines.length - 1 ? "\n" : null}
-            </span>
-          ))}
-        </code>
+        <SqlSyntaxHighlight sql={sqlText} />
       </pre>
       {copyable ? (
         <CopyIconButton
