@@ -77,6 +77,7 @@ function tokenStyle(token: ThemedTokenWithVariants): ShikiTokenStyle | undefined
   return style;
 }
 
+/** Render inside a preformatted or otherwise whitespace-preserving container. */
 export function SqlSyntaxHighlight({ sql: sqlText }: SqlSyntaxHighlightProps) {
   const tokenLines = highlightSql(sqlText);
 
