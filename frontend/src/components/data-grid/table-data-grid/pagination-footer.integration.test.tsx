@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
@@ -6,7 +6,7 @@ import { PaginationFooter } from "@/components/data-grid/table-data-grid/paginat
 afterEach(() => cleanup());
 
 describe("PaginationFooter", () => {
-  it("supports resource-specific page sizes", async () => {
+  it("groups resource-specific page sizes with navigation", async () => {
     const user = userEvent.setup();
     const onPageSizeChange = vi.fn();
 
@@ -23,6 +23,18 @@ describe("PaginationFooter", () => {
         pageSizeOptions={[10, 25, 50]}
       />
     );
+
+    const pageLabel = screen.getByText("Page 1 of 2");
+    const footer = pageLabel.closest('[data-slot="pagination-footer"]');
+    if (!(footer instanceof HTMLElement)) {
+      throw new Error("Missing shared pagination footer");
+    }
+    expect(
+      within(footer).getByRole("button", { name: "Previous page" })
+    ).toBeTruthy();
+    expect(
+      within(footer).getByRole("button", { name: "Next page" })
+    ).toBeTruthy();
 
     await user.click(
       screen.getByRole("combobox", { name: "Triggers per page" })

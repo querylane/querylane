@@ -1203,6 +1203,42 @@ test("backend database extensions page matches design source", async () => {
   );
 });
 
+test("backend database extensions pagination stays contained on narrow screens", async () => {
+  state.extensionQuery = { data: extensionDesignInventoryResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div
+        className="w-[320px] rounded-2xl border border-border bg-background p-4 text-foreground"
+        data-testid="narrow-extensions-page"
+      >
+        <BackendDatabaseExtensionsPage
+          databaseId="customer-events"
+          instanceId="prod"
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await expect.element(page.getByRole("combobox")).toBeVisible();
+
+  const surfaceBox = page
+    .getByTestId("narrow-extensions-page")
+    .element()
+    .getBoundingClientRect();
+  const pageSizeBox = page
+    .getByRole("combobox")
+    .element()
+    .getBoundingClientRect();
+  const nextPageBox = page
+    .getByRole("button", { name: "Next page" })
+    .element()
+    .getBoundingClientRect();
+
+  expect(pageSizeBox.left).toBeGreaterThanOrEqual(surfaceBox.left);
+  expect(nextPageBox.right).toBeLessThanOrEqual(surfaceBox.right);
+});
+
 test("backend database extensions drawer matches design source", async () => {
   state.extensionQuery = { data: extensionDesignInventoryResponse() };
 
