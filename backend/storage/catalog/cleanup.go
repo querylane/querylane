@@ -3,12 +3,17 @@ package catalog
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-jet/jet/v2/postgres"
 
 	"github.com/querylane/querylane/backend/storage"
 	"github.com/querylane/querylane/backend/storage/gen/querylane/public/table"
 )
+
+// Keep cleanup queries and their bound parameters comfortably below
+// PostgreSQL's 65,535-parameter protocol limit.
+const departedCatalogBatchSize = 1000
 
 type tableChildDeleteConditions struct {
 	label       string
@@ -105,4 +110,37 @@ func deleteSyncStateScopes(ctx context.Context, tx storage.QueryExecutor, scopes
 	}
 
 	return nil
+}
+
+func escapeLikePattern(value string) string {
+	return strings.NewReplacer(
+		`\`, `\\`,
+		`%`, `\%`,
+		`_`, `\_`,
+	).Replace(value)
+}
+
+// deleteSyncStateSubtrees deletes exact resource scopes and every nested scope
+// beneath them. Callers pass bounded batches, so this avoids materializing all
+// descendant table scopes for a departed database or schema.
+func deleteSyncStateSubtrees(ctx context.Context, tx storage.QueryExecutor, roots []string) error {
+	var cond postgres.BoolExpression
+
+	for _, root := range roots {
+		rootCond := table.CatalogSyncState.Scope.EQ(postgres.String(root)).
+			OR(table.CatalogSyncState.Scope.LIKE(postgres.String(escapeLikePattern(root) + "/%")))
+		if cond == nil {
+			cond = rootCond
+		} else {
+			cond = cond.OR(rootCond)
+		}
+	}
+
+	if cond == nil {
+		return nil
+	}
+
+	_, err := table.CatalogSyncState.DELETE().WHERE(cond).ExecContext(ctx, tx)
+
+	return err
 }

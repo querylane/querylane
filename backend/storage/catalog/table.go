@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
+	"time"
 
 	"github.com/go-jet/jet/v2/postgres"
 	"github.com/go-jet/jet/v2/qrm"
@@ -102,138 +104,188 @@ func (r *PGRepository) GetTable(ctx context.Context, instanceID, databaseName, s
 	return &row, nil
 }
 
-// SyncTables reconciles the schema's table list with the incoming snapshot.
-//
-// Delta-delete contract: rows (and child sync_state) for tables that still
-// exist after the sync are preserved. Only tables absent from the incoming
-// snapshot are removed, along with their descendant columns / constraints /
-// indexes / policies / triggers and the matching child catalog_sync_state
-// entries. Surviving same-name tables keep their previously-synced child data
-// and child freshness. Child staleness is governed by each child scope's own
-// StalenessThreshold.
-func (r *PGRepository) SyncTables(ctx context.Context, instanceID, databaseName, schemaName string, tables []model.CatalogTable) error {
+// SyncTablePages atomically reconciles a schema's tables while consuming only
+// one bounded page at a time. Tables that survive keep their previously synced
+// descendants and child freshness state.
+func (r *PGRepository) SyncTablePages(
+	ctx context.Context,
+	instanceID, databaseName, schemaName string,
+	syncedAt time.Time,
+	pages iter.Seq2[[]model.CatalogTable, error],
+) error {
 	return storage.RunInTransaction(ctx, r.db, func(tx storage.QueryExecutor) error {
-		schemaCond := table.CatalogTable.InstanceID.EQ(postgres.String(instanceID)).
+		syncMarker, err := nextTableSyncMarker(ctx, tx, instanceID, databaseName, schemaName, syncedAt)
+		if err != nil {
+			return err
+		}
+
+		for tables, pageErr := range pages {
+			if pageErr != nil {
+				return pageErr
+			}
+
+			for i := range tables {
+				tables[i].SyncedAt = syncMarker
+			}
+
+			if err := upsertTables(ctx, tx, tables); err != nil {
+				return err
+			}
+		}
+
+		departedCond := table.CatalogTable.InstanceID.EQ(postgres.String(instanceID)).
 			AND(table.CatalogTable.DatabaseName.EQ(postgres.String(databaseName))).
-			AND(table.CatalogTable.SchemaName_.EQ(postgres.String(schemaName)))
+			AND(table.CatalogTable.SchemaName_.EQ(postgres.String(schemaName))).
+			AND(table.CatalogTable.SyncedAt.NOT_EQ(postgres.TimestampzT(syncMarker)))
 
-		incomingNames := make([]postgres.Expression, len(tables))
-		for i, t := range tables {
-			incomingNames[i] = postgres.String(t.Name)
-		}
+		return deleteDepartedTables(ctx, tx, instanceID, databaseName, schemaName, departedCond)
+	})
+}
 
-		// Find tables present in the catalog but absent from the incoming snapshot.
-		departedCond := schemaCond
-		if len(incomingNames) > 0 {
-			departedCond = departedCond.AND(table.CatalogTable.Name.NOT_IN(incomingNames...))
-		}
+func nextTableSyncMarker(
+	ctx context.Context,
+	tx storage.QueryExecutor,
+	instanceID, databaseName, schemaName string,
+	proposed time.Time,
+) (time.Time, error) {
+	marker := proposed.UTC().Truncate(time.Microsecond)
 
+	var latest []model.CatalogTable
+
+	if err := postgres.SELECT(table.CatalogTable.SyncedAt).
+		FROM(table.CatalogTable).
+		WHERE(table.CatalogTable.InstanceID.EQ(postgres.String(instanceID)).
+			AND(table.CatalogTable.DatabaseName.EQ(postgres.String(databaseName))).
+			AND(table.CatalogTable.SchemaName_.EQ(postgres.String(schemaName)))).
+		ORDER_BY(table.CatalogTable.SyncedAt.DESC()).
+		LIMIT(1).
+		QueryContext(ctx, tx, &latest); err != nil {
+		return time.Time{}, fmt.Errorf("get latest table sync marker: %w", err)
+	}
+
+	if len(latest) > 0 && !latest[0].SyncedAt.Before(marker) {
+		marker = latest[0].SyncedAt.UTC().Add(time.Microsecond)
+	}
+
+	return marker, nil
+}
+
+func deleteDepartedTables(
+	ctx context.Context,
+	tx storage.QueryExecutor,
+	instanceID, databaseName, schemaName string,
+	departedCond postgres.BoolExpression,
+) error {
+	schemaCond := table.CatalogTable.InstanceID.EQ(postgres.String(instanceID)).
+		AND(table.CatalogTable.DatabaseName.EQ(postgres.String(databaseName))).
+		AND(table.CatalogTable.SchemaName_.EQ(postgres.String(schemaName)))
+
+	for {
 		var departedRows []model.CatalogTable
 		if err := postgres.SELECT(table.CatalogTable.Name).
 			FROM(table.CatalogTable).
 			WHERE(departedCond).
+			ORDER_BY(table.CatalogTable.Name.ASC()).
+			LIMIT(departedCatalogBatchSize).
 			QueryContext(ctx, tx, &departedRows); err != nil {
 			return fmt.Errorf("list departed tables: %w", err)
 		}
 
-		// Clean descendants and the table row itself for every departed table.
-		if len(departedRows) > 0 {
-			departedNames := make([]postgres.Expression, len(departedRows))
-			for i, r := range departedRows {
-				departedNames[i] = postgres.String(r.Name)
-			}
-
-			instStr := postgres.String(instanceID)
-			dbStr := postgres.String(databaseName)
-			schStr := postgres.String(schemaName)
-
-			if err := deleteTableChildCatalogRows(ctx, tx, tableChildDeleteConditions{
-				label: "departed",
-				triggers: table.CatalogTableTrigger.InstanceID.EQ(instStr).
-					AND(table.CatalogTableTrigger.DatabaseName.EQ(dbStr)).
-					AND(table.CatalogTableTrigger.SchemaName_.EQ(schStr)).
-					AND(table.CatalogTableTrigger.TableName_.IN(departedNames...)),
-				policies: table.CatalogTablePolicy.InstanceID.EQ(instStr).
-					AND(table.CatalogTablePolicy.DatabaseName.EQ(dbStr)).
-					AND(table.CatalogTablePolicy.SchemaName_.EQ(schStr)).
-					AND(table.CatalogTablePolicy.TableName_.IN(departedNames...)),
-				indexes: table.CatalogTableIndex.InstanceID.EQ(instStr).
-					AND(table.CatalogTableIndex.DatabaseName.EQ(dbStr)).
-					AND(table.CatalogTableIndex.SchemaName_.EQ(schStr)).
-					AND(table.CatalogTableIndex.TableName_.IN(departedNames...)),
-				constraints: table.CatalogTableConstraint.InstanceID.EQ(instStr).
-					AND(table.CatalogTableConstraint.DatabaseName.EQ(dbStr)).
-					AND(table.CatalogTableConstraint.SchemaName_.EQ(schStr)).
-					AND(table.CatalogTableConstraint.TableName_.IN(departedNames...)),
-				columns: table.CatalogColumn.InstanceID.EQ(instStr).
-					AND(table.CatalogColumn.DatabaseName.EQ(dbStr)).
-					AND(table.CatalogColumn.SchemaName_.EQ(schStr)).
-					AND(table.CatalogColumn.TableName_.IN(departedNames...)),
-			}); err != nil {
-				return err
-			}
-
-			if _, err := table.CatalogTable.DELETE().
-				WHERE(schemaCond.AND(table.CatalogTable.Name.IN(departedNames...))).
-				ExecContext(ctx, tx); err != nil {
-				return fmt.Errorf("delete departed tables: %w", err)
-			}
-
-			// Build the exact set of child sync_state scopes to delete for
-			// each departed table — avoids LIKE-pattern escaping pitfalls with
-			// PostgreSQL identifiers that may contain '%' or '_'.
-			departedScopes := make([]postgres.Expression, 0, len(departedRows)*(len(catalogChildScopeSuffixes)+1))
-			for _, r := range departedRows {
-				departedScopes = appendTableSubtreeScopeExpressions(departedScopes, instanceID, databaseName, schemaName, r.Name)
-			}
-
-			if err := deleteSyncStateScopes(ctx, tx, departedScopes); err != nil {
-				return fmt.Errorf("delete departed child sync states: %w", err)
-			}
+		if len(departedRows) == 0 {
+			return nil
 		}
 
-		// Upsert incoming tables. Existing rows for surviving tables get their
-		// metadata refreshed; their descendant data and child sync_state are
-		// left untouched.
-		if len(tables) > 0 {
-			stmt := table.CatalogTable.
-				INSERT(
-					table.CatalogTable.InstanceID,
-					table.CatalogTable.DatabaseName,
-					table.CatalogTable.SchemaName_,
-					table.CatalogTable.Name,
-					table.CatalogTable.DisplayName,
-					table.CatalogTable.TableType,
-					table.CatalogTable.IsSystemTable,
-					table.CatalogTable.Comment,
-					table.CatalogTable.Owner,
-					table.CatalogTable.RowCount,
-					table.CatalogTable.SizeBytes,
-					table.CatalogTable.SyncedAt,
-				).
-				MODELS(tables).
-				ON_CONFLICT(
-					table.CatalogTable.InstanceID,
-					table.CatalogTable.DatabaseName,
-					table.CatalogTable.SchemaName_,
-					table.CatalogTable.Name,
-				).
-				DO_UPDATE(postgres.SET(
-					table.CatalogTable.DisplayName.SET(table.CatalogTable.EXCLUDED.DisplayName),
-					table.CatalogTable.TableType.SET(table.CatalogTable.EXCLUDED.TableType),
-					table.CatalogTable.IsSystemTable.SET(table.CatalogTable.EXCLUDED.IsSystemTable),
-					table.CatalogTable.Comment.SET(table.CatalogTable.EXCLUDED.Comment),
-					table.CatalogTable.Owner.SET(table.CatalogTable.EXCLUDED.Owner),
-					table.CatalogTable.RowCount.SET(table.CatalogTable.EXCLUDED.RowCount),
-					table.CatalogTable.SizeBytes.SET(table.CatalogTable.EXCLUDED.SizeBytes),
-					table.CatalogTable.SyncedAt.SET(table.CatalogTable.EXCLUDED.SyncedAt),
-				))
+		departedNames := make([]postgres.Expression, len(departedRows))
 
-			if _, err := stmt.ExecContext(ctx, tx); err != nil {
-				return fmt.Errorf("upsert tables: %w", err)
-			}
+		departedRoots := make([]string, len(departedRows))
+		for i, r := range departedRows {
+			departedNames[i] = postgres.String(r.Name)
+			departedRoots[i] = scopeTable(instanceID, databaseName, schemaName, r.Name)
 		}
 
-		return nil
-	})
+		instStr := postgres.String(instanceID)
+		dbStr := postgres.String(databaseName)
+		schStr := postgres.String(schemaName)
+
+		if err := deleteTableChildCatalogRows(ctx, tx, tableChildDeleteConditions{
+			label: "departed",
+			triggers: table.CatalogTableTrigger.InstanceID.EQ(instStr).
+				AND(table.CatalogTableTrigger.DatabaseName.EQ(dbStr)).
+				AND(table.CatalogTableTrigger.SchemaName_.EQ(schStr)).
+				AND(table.CatalogTableTrigger.TableName_.IN(departedNames...)),
+			policies: table.CatalogTablePolicy.InstanceID.EQ(instStr).
+				AND(table.CatalogTablePolicy.DatabaseName.EQ(dbStr)).
+				AND(table.CatalogTablePolicy.SchemaName_.EQ(schStr)).
+				AND(table.CatalogTablePolicy.TableName_.IN(departedNames...)),
+			indexes: table.CatalogTableIndex.InstanceID.EQ(instStr).
+				AND(table.CatalogTableIndex.DatabaseName.EQ(dbStr)).
+				AND(table.CatalogTableIndex.SchemaName_.EQ(schStr)).
+				AND(table.CatalogTableIndex.TableName_.IN(departedNames...)),
+			constraints: table.CatalogTableConstraint.InstanceID.EQ(instStr).
+				AND(table.CatalogTableConstraint.DatabaseName.EQ(dbStr)).
+				AND(table.CatalogTableConstraint.SchemaName_.EQ(schStr)).
+				AND(table.CatalogTableConstraint.TableName_.IN(departedNames...)),
+			columns: table.CatalogColumn.InstanceID.EQ(instStr).
+				AND(table.CatalogColumn.DatabaseName.EQ(dbStr)).
+				AND(table.CatalogColumn.SchemaName_.EQ(schStr)).
+				AND(table.CatalogColumn.TableName_.IN(departedNames...)),
+		}); err != nil {
+			return err
+		}
+
+		if _, err := table.CatalogTable.DELETE().
+			WHERE(schemaCond.AND(table.CatalogTable.Name.IN(departedNames...))).
+			ExecContext(ctx, tx); err != nil {
+			return fmt.Errorf("delete departed tables: %w", err)
+		}
+
+		if err := deleteSyncStateSubtrees(ctx, tx, departedRoots); err != nil {
+			return fmt.Errorf("delete departed child sync states: %w", err)
+		}
+	}
+}
+
+func upsertTables(ctx context.Context, tx storage.QueryExecutor, tables []model.CatalogTable) error {
+	// Existing rows for surviving tables get their metadata refreshed; their
+	// descendant data and child sync_state are left untouched.
+	if len(tables) > 0 {
+		stmt := table.CatalogTable.
+			INSERT(
+				table.CatalogTable.InstanceID,
+				table.CatalogTable.DatabaseName,
+				table.CatalogTable.SchemaName_,
+				table.CatalogTable.Name,
+				table.CatalogTable.DisplayName,
+				table.CatalogTable.TableType,
+				table.CatalogTable.IsSystemTable,
+				table.CatalogTable.Comment,
+				table.CatalogTable.Owner,
+				table.CatalogTable.RowCount,
+				table.CatalogTable.SizeBytes,
+				table.CatalogTable.SyncedAt,
+			).
+			MODELS(tables).
+			ON_CONFLICT(
+				table.CatalogTable.InstanceID,
+				table.CatalogTable.DatabaseName,
+				table.CatalogTable.SchemaName_,
+				table.CatalogTable.Name,
+			).
+			DO_UPDATE(postgres.SET(
+				table.CatalogTable.DisplayName.SET(table.CatalogTable.EXCLUDED.DisplayName),
+				table.CatalogTable.TableType.SET(table.CatalogTable.EXCLUDED.TableType),
+				table.CatalogTable.IsSystemTable.SET(table.CatalogTable.EXCLUDED.IsSystemTable),
+				table.CatalogTable.Comment.SET(table.CatalogTable.EXCLUDED.Comment),
+				table.CatalogTable.Owner.SET(table.CatalogTable.EXCLUDED.Owner),
+				table.CatalogTable.RowCount.SET(table.CatalogTable.EXCLUDED.RowCount),
+				table.CatalogTable.SizeBytes.SET(table.CatalogTable.EXCLUDED.SizeBytes),
+				table.CatalogTable.SyncedAt.SET(table.CatalogTable.EXCLUDED.SyncedAt),
+			))
+
+		if _, err := stmt.ExecContext(ctx, tx); err != nil {
+			return fmt.Errorf("upsert tables: %w", err)
+		}
+	}
+
+	return nil
 }

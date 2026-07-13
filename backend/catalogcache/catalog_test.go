@@ -2,6 +2,8 @@ package catalogcache
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -17,15 +19,17 @@ import (
 
 // mockInstanceSession implements engine.InstanceSession for testing.
 type mockInstanceSession struct {
-	databases   []engine.Database
-	dbSessions  map[string]*mockDatabaseSession
-	listDBErr   error
-	listDBCalls int
-	syncCh      chan struct{} // if non-nil, ListDatabases blocks until signaled
-	startedCh   chan struct{} // if non-nil, signaled (closed) when ListDatabases is entered
+	databases           []engine.Database
+	dbSessions          map[string]*mockDatabaseSession
+	listDBErr           error
+	listDatabasesFn     func(aip.Params) ([]engine.Database, string, error)
+	beforeListDatabases func(context.Context) error
+	listDBCalls         int
+	syncCh              chan struct{} // if non-nil, ListDatabases blocks until signaled
+	startedCh           chan struct{} // if non-nil, signaled (closed) when ListDatabases is entered
 }
 
-func (m *mockInstanceSession) ListDatabases(ctx context.Context, _ aip.Params) ([]engine.Database, string, error) {
+func (m *mockInstanceSession) ListDatabases(ctx context.Context, params aip.Params) ([]engine.Database, string, error) {
 	m.listDBCalls++
 
 	if m.syncCh != nil {
@@ -48,7 +52,82 @@ func (m *mockInstanceSession) ListDatabases(ctx context.Context, _ aip.Params) (
 		return nil, "", m.listDBErr
 	}
 
-	return m.databases, "", nil
+	if m.beforeListDatabases != nil {
+		if err := m.beforeListDatabases(ctx); err != nil {
+			return nil, "", err
+		}
+	}
+
+	if m.listDatabasesFn != nil {
+		return m.listDatabasesFn(params)
+	}
+
+	return paginateMockRows(m.databases, params)
+}
+
+func generateMockDatabases(total int, params aip.Params) ([]engine.Database, string, error) {
+	start := 0
+
+	if params.PageToken != "" {
+		var err error
+
+		start, err = strconv.Atoi(params.PageToken)
+		if err != nil {
+			return nil, "", fmt.Errorf("invalid mock page token: %w", err)
+		}
+	}
+
+	if start < 0 || start > total {
+		return nil, "", fmt.Errorf("mock page token %d exceeds row count %d", start, total)
+	}
+
+	pageSize := int(params.PageSize)
+	if pageSize <= 0 {
+		pageSize = total
+	}
+
+	end := min(start+pageSize, total)
+
+	rows := make([]engine.Database, end-start)
+	for i := range rows {
+		rows[i] = engine.Database{Name: fmt.Sprintf("db-%05d", start+i)}
+	}
+
+	if end == total {
+		return rows, "", nil
+	}
+
+	return rows, strconv.Itoa(end), nil
+}
+
+func paginateMockRows[T any](rows []T, params aip.Params) ([]T, string, error) {
+	start := 0
+
+	if params.PageToken != "" {
+		var err error
+
+		start, err = strconv.Atoi(params.PageToken)
+		if err != nil {
+			return nil, "", fmt.Errorf("invalid mock page token: %w", err)
+		}
+	}
+
+	if start < 0 || start > len(rows) {
+		return nil, "", fmt.Errorf("mock page token %d exceeds row count %d", start, len(rows))
+	}
+
+	pageSize := int(params.PageSize)
+	if pageSize <= 0 {
+		pageSize = len(rows)
+	}
+
+	end := min(start+pageSize, len(rows))
+
+	if end == len(rows) {
+		return rows[start:end], "", nil
+	}
+
+	return rows[start:end], strconv.Itoa(end), nil
 }
 
 func (m *mockInstanceSession) ListRoles(_ context.Context, _ aip.Params) ([]engine.Role, string, error) {
@@ -326,6 +405,83 @@ func TestIntegrationListDatabases(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, databases, 2)
 	assert.Greater(t, eng.callCount, initialCallCount)
+}
+
+func TestIntegrationListDatabasesSpoolsLargeCatalogInBoundedPages(t *testing.T) {
+	t.Parallel()
+
+	if testing.Short() {
+		t.Skip("skipping integration test; run without -short")
+	}
+
+	const databaseCount = 9000
+
+	instanceSession := &mockInstanceSession{
+		listDatabasesFn: func(params aip.Params) ([]engine.Database, string, error) {
+			return generateMockDatabases(databaseCount, params)
+		},
+	}
+	testDB := storage.NewTestDB(t)
+	cfg := DefaultConfig()
+	cat := New(cfg, catalog.New(testDB.DB()), catalog.NewSyncStore(testDB.DB(), cfg.SyncLockTimeout), &mockEngine{sessions: map[string]*mockInstanceSession{
+		"large": instanceSession,
+	}})
+
+	got, nextToken, err := cat.ListDatabases(
+		context.Background(),
+		resource.NewInstanceName("large"),
+		aip.Params{PageSize: 10},
+	)
+	require.NoError(t, err)
+	assert.Len(t, got, 10)
+	assert.NotEmpty(t, nextToken)
+	assert.Greater(t, instanceSession.listDBCalls, 1, "catalog sync must fetch bounded pages")
+
+	var persistedCount int
+	require.NoError(t, testDB.DB().QueryRowContext(
+		context.Background(),
+		"SELECT count(*) FROM catalog_database WHERE instance_id = $1",
+		"large",
+	).Scan(&persistedCount))
+	assert.Equal(t, databaseCount, persistedCount)
+}
+
+func TestIntegrationListDatabasesFetchesBeforeOpeningMetaTransaction(t *testing.T) {
+	t.Parallel()
+
+	if testing.Short() {
+		t.Skip("skipping integration test; run without -short")
+	}
+
+	const databaseCount = syncPageSize + 1
+
+	testDB := storage.NewTestDB(t)
+	testDB.DB().SetMaxOpenConns(1)
+
+	instanceSession := &mockInstanceSession{
+		listDatabasesFn: func(params aip.Params) ([]engine.Database, string, error) {
+			return generateMockDatabases(databaseCount, params)
+		},
+		beforeListDatabases: func(ctx context.Context) error {
+			var one int
+
+			return testDB.DB().QueryRowContext(ctx, "SELECT 1").Scan(&one)
+		},
+	}
+	cfg := DefaultConfig()
+	cfg.SyncTimeout = time.Second
+	cat := New(cfg, catalog.New(testDB.DB()), catalog.NewSyncStore(testDB.DB(), cfg.SyncLockTimeout), &mockEngine{sessions: map[string]*mockInstanceSession{
+		"large": instanceSession,
+	}})
+
+	got, _, err := cat.ListDatabases(
+		context.Background(),
+		resource.NewInstanceName("large"),
+		aip.Params{PageSize: 10},
+	)
+	require.NoError(t, err)
+	assert.Len(t, got, 10)
+	assert.Equal(t, 2, instanceSession.listDBCalls)
 }
 
 func TestIntegrationGetDatabase(t *testing.T) { //nolint:tparallel // subtests share a sync lock and must run sequentially
