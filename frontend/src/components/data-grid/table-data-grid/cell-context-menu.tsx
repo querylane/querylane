@@ -39,6 +39,32 @@ function CellContextMenu({
     onClose();
   }
 
+  function closeAndMoveFocus(backward: boolean) {
+    const elements = Array.from(document.querySelectorAll<HTMLElement>("*"));
+    const direction = backward ? -1 : 1;
+    const invokingIndex = elements.indexOf(returnFocusTo);
+    let next: HTMLElement | undefined;
+    for (
+      let index = invokingIndex + direction;
+      index >= 0 && index < elements.length;
+      index += direction
+    ) {
+      const candidate = elements[index];
+      if (
+        candidate &&
+        candidate.tabIndex >= 0 &&
+        !candidate.matches(":disabled") &&
+        !candidate.closest("[hidden], [inert]") &&
+        !menuRef.current?.contains(candidate)
+      ) {
+        next = candidate;
+        break;
+      }
+    }
+    onClose();
+    (next ?? returnFocusTo).focus();
+  }
+
   function handleMenuKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const items = menuItems();
     const activeElement =
@@ -65,7 +91,8 @@ function CellContextMenu({
         closeAndRestoreFocus();
         return;
       case "Tab":
-        onClose();
+        event.preventDefault();
+        closeAndMoveFocus(event.shiftKey);
         return;
       default:
         return;

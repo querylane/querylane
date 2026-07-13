@@ -13,7 +13,7 @@ function ReferenceButton({
   return (
     <Button
       className={cn(
-        "text-reference underline decoration-dotted underline-offset-4 hover:text-foreground hover:underline",
+        "text-reference underline decoration-dotted underline-offset-4 hover:underline hover:[color:color-mix(in_oklch,var(--reference)_82%,var(--foreground))]",
         className
       )}
       variant="link"

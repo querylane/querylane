@@ -884,14 +884,21 @@ describe("TableDataGrid row interactions", () => {
     expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull();
   });
 
-  it("closes the cell context menu when focus tabs away", async () => {
+  it("tabs from the invoking cell when the context menu closes", async () => {
     const user = userEvent.setup();
     seedRowsQuery(1);
+    const controls = render(<div />).container;
+    const previousControl = document.createElement("button");
+    const invokingCell = document.createElement("div");
+    const nextControl = document.createElement("button");
+    invokingCell.tabIndex = -1;
+    controls.append(previousControl, invokingCell, nextControl);
+    invokingCell.focus();
 
     render(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
     );
-    openCellContextMenu("email", 0);
+    openCellContextMenu("email", 0, invokingCell);
     await waitFor(() =>
       expect(document.activeElement).toBe(
         screen.getByRole("menuitem", { name: "Copy cell" })
@@ -901,6 +908,19 @@ describe("TableDataGrid row interactions", () => {
     await user.tab();
 
     expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull();
+    expect(document.activeElement).toBe(nextControl);
+
+    invokingCell.focus();
+    openCellContextMenu("email", 0, invokingCell);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("menuitem", { name: "Copy cell" })
+      )
+    );
+    await user.tab({ shift: true });
+
+    expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull();
+    expect(document.activeElement).toBe(previousControl);
   });
 
   it("jumps directly to a typed row number from the row drawer", async () => {

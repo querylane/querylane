@@ -782,6 +782,7 @@ test("foreign key reference popover keeps the source table visible", async () =>
   await carrierLink.hover();
   const carrierLinkHoverStyle = getComputedStyle(carrierLink.element());
   expect(carrierLinkHoverStyle.opacity).toBe("1");
+  expect(carrierLinkHoverStyle.color).not.toBe(frameStyle.color);
   expect(
     colorContrastRatio(carrierLinkHoverStyle.color, frameStyle.backgroundColor)
   ).toBeGreaterThanOrEqual(4.5);
