@@ -1393,7 +1393,7 @@ describe("TableDetail indexes tab", () => {
     expect(screen.getByText("usage stats unavailable")).toBeTruthy();
     expect(
       screen.getByRole("button", {
-        name: "Scans. Usage source: pg_stat_user_indexes.",
+        name: "Scans. PostgreSQL did not return usage data from pg_stat_user_indexes.",
       })
     ).toBeTruthy();
     expect(screen.queryByText("Usage from")).toBeNull();

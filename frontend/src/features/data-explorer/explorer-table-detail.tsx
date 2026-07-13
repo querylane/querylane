@@ -2512,7 +2512,11 @@ function IndexesTab({
               : "usage stats unavailable"
           }
           label="Scans"
-          labelDescription="Usage source: pg_stat_user_indexes."
+          labelDescription={
+            usageStatsAvailable
+              ? "Usage source: pg_stat_user_indexes."
+              : "PostgreSQL did not return usage data from pg_stat_user_indexes."
+          }
           value={
             usageStatsAvailable ? formatCompactInteger(totalScanCount) : "—"
           }
