@@ -1264,6 +1264,91 @@ function seedTypeAnnotationQueries() {
   });
 }
 
+function seedTriggerRedesignQueries() {
+  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
+    columns: [
+      createProto(ColumnSchema, {
+        columnName: "shipment_event_id",
+        dataType: DataType.UUID,
+        isNullable: false,
+        ordinalPosition: 1,
+        rawType: "uuid",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "shipment_id",
+        dataType: DataType.UUID,
+        isNullable: false,
+        ordinalPosition: 2,
+        rawType: "uuid",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "event_type",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 3,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "event_time",
+        dataType: DataType.TIMESTAMP,
+        isNullable: false,
+        ordinalPosition: 4,
+        rawType: "timestamptz",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "metadata",
+        dataType: DataType.JSON,
+        isNullable: true,
+        ordinalPosition: 5,
+        rawType: "jsonb",
+      }),
+    ],
+  });
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    {
+      constraints: [],
+    }
+  );
+  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
+    indexes: [],
+  });
+  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
+    policies: [],
+  });
+  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
+    triggers: [
+      createProto(TableTriggerSchema, {
+        definition:
+          "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event\n  FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location();",
+        enabled: true,
+        events: ["INSERT"],
+        functionName: "shipping.enrich_event_location",
+        timing: "BEFORE",
+        triggerName: "trg_event_enrich",
+      }),
+      createProto(TableTriggerSchema, {
+        definition:
+          "CREATE TRIGGER trg_shipments_notify AFTER UPDATE OF status ON shipping.shipment_event FOR EACH ROW WHEN ((old.status IS DISTINCT FROM new.status)) EXECUTE FUNCTION shipping.notify_status_change()",
+        enabled: false,
+        events: ["UPDATE"],
+        functionName: "notify_status_change",
+        timing: "AFTER",
+        triggerName: "trg_shipments_notify",
+      }),
+      createProto(TableTriggerSchema, {
+        definition:
+          "CREATE TRIGGER trg_event_statement_log AFTER INSERT OR DELETE OR UPDATE ON shipping.shipment_event FOR EACH STATEMENT EXECUTE FUNCTION shipping.log_shipment_event_summary()",
+        enabled: true,
+        events: ["INSERT", "DELETE", "UPDATE"],
+        functionName: "log_shipment_event_summary",
+        timing: "AFTER",
+        triggerName: "trg_event_statement_log",
+      }),
+    ],
+  });
+}
+
 test("data explorer schema detail keeps dense table summaries scannable", async () => {
   renderExplorerSurface(
     <SchemaDetail
@@ -2307,7 +2392,9 @@ test("data explorer table indexes constraints policies and triggers stay readabl
   );
 
   await page.getByRole("tab", { exact: true, name: "Triggers 1" }).click();
-  await expect.element(page.getByText("customers_audit_trigger")).toBeVisible();
+  await expect
+    .element(page.getByText("customers_audit_trigger").first())
+    .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-triggers"
   );
@@ -2735,6 +2822,163 @@ test("data explorer table indexes pagination has a visual baseline", async () =>
   await expect(page.getByTestId("indexes-pagination-frame")).toMatchScreenshot(
     "data-explorer-table-indexes-pagination"
   );
+});
+
+test("data explorer table triggers match redesign", async () => {
+  seedTriggerRedesignQueries();
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="triggers"
+      instanceId="prod"
+      schemaName="shipping"
+      table={createProto(TableSchema, {
+        displayName: "shipment_event",
+        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
+        owner: "shipping_owner",
+        rowCount: 18_200_000n,
+        sizeBytes: 21_400_000_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="shipment_event"
+    />
+  );
+
+  const triggerSearch = page.getByRole("textbox", {
+    exact: true,
+    name: "Search triggers…",
+  });
+  const triggerStateFilter = page.getByRole("button", {
+    exact: true,
+    name: "State",
+  });
+  await expect.element(triggerSearch).toBeVisible();
+  await expect.element(triggerStateFilter).toBeVisible();
+  const searchBounds = triggerSearch.element().getBoundingClientRect();
+  const stateBounds = triggerStateFilter.element().getBoundingClientRect();
+  expect(stateBounds.left).toBeGreaterThan(searchBounds.right);
+  expect(Math.abs(stateBounds.top - searchBounds.top)).toBeLessThanOrEqual(1);
+  await expect
+    .element(page.getByText("trg_event_enrich").first())
+    .toBeVisible();
+  await expect
+    .element(page.getByText("→ shipping.enrich_event_location()"))
+    .toBeVisible();
+  await expect.element(page.getByText("ROW").first()).toBeVisible();
+  await expect.element(page.getByText("disabled")).toBeVisible();
+  await expect
+    .element(page.getByText("WHEN ((old.status IS DISTINCT FROM new.status))"))
+    .toBeVisible();
+  await expect.element(page.getByText("STATEMENT").first()).toBeVisible();
+  await document.fonts.ready;
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-triggers-redesign",
+    { timeout: 20_000 }
+  );
+  await expect(
+    page.getByTestId("data-explorer-table-triggers")
+  ).toMatchScreenshot("data-explorer-table-trigger-card-states", {
+    comparatorOptions: { threshold: 0.2 },
+    timeout: 20_000,
+  });
+
+  await triggerStateFilter.click();
+  const disabledOption = page.getByRole("option", {
+    exact: true,
+    name: "Disabled",
+  });
+  await expect.element(disabledOption).toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-trigger-filter-open",
+    { timeout: 20_000 }
+  );
+
+  await disabledOption.click();
+  await expect
+    .element(page.getByText("trg_event_enrich").first())
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByText("trg_shipments_notify").first())
+    .toBeVisible();
+  await page
+    .getByRole("button", { exact: true, name: "State Disabled" })
+    .click();
+  await triggerSearch.fill("missing");
+  await expect.element(page.getByText("No triggers found")).toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-table-trigger-filter-empty",
+    { timeout: 20_000 }
+  );
+});
+
+test("data explorer trigger cards paginate dense resources", async () => {
+  seedTriggerRedesignQueries();
+  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
+    triggers: Array.from({ length: 12 }, (_, index) => {
+      const suffix = String(index).padStart(2, "0");
+      return createProto(TableTriggerSchema, {
+        definition: `CREATE TRIGGER trg_bulk_${suffix} AFTER UPDATE ON shipping.shipment_event FOR EACH ROW EXECUTE FUNCTION shipping.handle_bulk_${suffix}()`,
+        enabled: true,
+        events: ["UPDATE"],
+        functionName: `shipping.handle_bulk_${suffix}`,
+        timing: "AFTER",
+        triggerName: `trg_bulk_${suffix}`,
+      });
+    }),
+  });
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="triggers"
+      instanceId="prod"
+      schemaName="shipping"
+      table={createProto(TableSchema, {
+        displayName: "shipment_event",
+        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
+        rowCount: 18_200_000n,
+        sizeBytes: 21_400_000_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="shipment_event"
+    />
+  );
+
+  await expect.element(page.getByText("Page 1 of 2")).toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Triggers per page" }))
+    .toBeVisible();
+  await expect.element(page.getByText("trg_bulk_00").first()).toBeVisible();
+  await expect
+    .element(page.getByText("trg_bulk_10").first())
+    .not.toBeInTheDocument();
+  const pageSizeSelect = page
+    .getByRole("combobox", { name: "Triggers per page" })
+    .element();
+  const paginationFooter = pageSizeSelect.parentElement;
+  if (!paginationFooter) {
+    throw new Error("expected trigger pagination footer");
+  }
+  paginationFooter.scrollIntoView({ block: "center" });
+  await document.fonts.ready;
+  await expect(page.elementLocator(paginationFooter)).toMatchScreenshot(
+    "data-explorer-table-trigger-pagination",
+    {
+      timeout: 20_000,
+    }
+  );
+
+  await page.getByRole("button", { name: "Next page" }).click();
+  await expect.element(page.getByText("Page 2 of 2")).toBeVisible();
+  await expect.element(page.getByText("trg_bulk_10").first()).toBeVisible();
+  await expect
+    .element(page.getByText("trg_bulk_00").first())
+    .not.toBeInTheDocument();
+
+  await page.getByRole("combobox", { name: "Triggers per page" }).click();
+  await page.getByRole("option", { exact: true, name: "25" }).click();
+  await expect.element(page.getByText("Page 1 of 1")).toBeVisible();
+  await expect.element(page.getByText("trg_bulk_00").first()).toBeVisible();
+  await expect.element(page.getByText("trg_bulk_11").first()).toBeVisible();
 });
 
 test("data explorer table data tab has a visual baseline", async () => {

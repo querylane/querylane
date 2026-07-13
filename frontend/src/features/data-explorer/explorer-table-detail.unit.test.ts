@@ -5,7 +5,7 @@ import {
   filterColumnDetailRows,
   filterIndexesByMethod,
   filterPoliciesByMode,
-  filterTriggersByState,
+  filterTableTriggers,
 } from "@/features/data-explorer/explorer-table-detail-filters";
 import {
   ColumnSchema,
@@ -232,7 +232,7 @@ describe("table detail facet filters", () => {
     ).toEqual(["notes"]);
   });
 
-  test("filters metadata rows by index method, policy mode, and trigger state", () => {
+  test("filters metadata rows by index method and policy mode", () => {
     expect(
       filterIndexesByMethod(
         [
@@ -264,18 +264,46 @@ describe("table detail facet filters", () => {
         [PolicyMode.RESTRICTIVE]
       ).map((policy) => policy.policyName)
     ).toEqual(["policy_restrictive"]);
+  });
+
+  test("filters triggers by name and enabled state", () => {
+    const triggers = [
+      create(TableTriggerSchema, {
+        enabled: true,
+        triggerName: "trg_event_enrich",
+      }),
+      create(TableTriggerSchema, {
+        enabled: false,
+        triggerName: "trg_shipments_notify",
+      }),
+    ];
 
     expect(
-      filterTriggersByState(
-        [
-          create(TableTriggerSchema, { enabled: true, triggerName: "audit" }),
-          create(TableTriggerSchema, {
-            enabled: false,
-            triggerName: "disabled",
-          }),
-        ],
-        ["disabled"]
-      ).map((trigger) => trigger.triggerName)
-    ).toEqual(["disabled"]);
+      filterTableTriggers(triggers, { search: "  ENRICH  ", states: [] }).map(
+        (trigger) => trigger.triggerName
+      )
+    ).toEqual(["trg_event_enrich"]);
+    expect(
+      filterTableTriggers(triggers, { search: "", states: ["enabled"] }).map(
+        (trigger) => trigger.triggerName
+      )
+    ).toEqual(["trg_event_enrich"]);
+    expect(
+      filterTableTriggers(triggers, { search: "", states: ["disabled"] }).map(
+        (trigger) => trigger.triggerName
+      )
+    ).toEqual(["trg_shipments_notify"]);
+    expect(
+      filterTableTriggers(triggers, {
+        search: "",
+        states: ["enabled", "disabled"],
+      })
+    ).toEqual(triggers);
+    expect(
+      filterTableTriggers(triggers, {
+        search: "enrich",
+        states: ["disabled"],
+      })
+    ).toEqual([]);
   });
 });
