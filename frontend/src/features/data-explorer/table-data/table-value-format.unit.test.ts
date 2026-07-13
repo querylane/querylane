@@ -102,10 +102,10 @@ describe("formatTableCell", () => {
   test("distinguishes date timestamps from timestamp values", () => {
     expect(
       formatTableCell(
-        cell({ case: "timestampValue", value: "2026-05-20T10:11:12" }),
+        cell({ case: "timestampValue", value: "2026-05-20T00:00:00Z" }),
         column(DataType.DATE)
       )
-    ).toMatchObject({ display: "2026-05-20 10:11:12", kind: "date" });
+    ).toMatchObject({ display: "2026-05-20", kind: "date" });
 
     expect(
       formatTableCell(
@@ -142,13 +142,37 @@ describe("formatTableCell", () => {
   test("does not invent a zone for timestamp without time zone values", () => {
     expect(
       formatTableCell(
-        cell({ case: "timestampValue", value: "2026-05-20T10:11:12" }),
-        column(DataType.TIMESTAMP, "timestamp without time zone")
+        cell({ case: "timestampValue", value: "2026-05-20T10:11:12Z" }),
+        column(DataType.TIMESTAMP, "timestamp(3)")
       )
     ).toMatchObject({
       display: "2026-05-20 10:11:12",
       kind: "timestamp",
       timezoneLabel: undefined,
+    });
+  });
+
+  test("formats time-only values without inventing date or zone context", () => {
+    expect(
+      formatTableCell(
+        cell({ case: "timestampValue", value: "12:34:56.123456" }),
+        column(DataType.TIME, "time(6)")
+      )
+    ).toMatchObject({
+      display: "12:34:56.123456",
+      kind: "timestamp",
+      timezoneLabel: undefined,
+    });
+
+    expect(
+      formatTableCell(
+        cell({ case: "timestampValue", value: "12:34:56+05:30" }),
+        column(DataType.TIME, "timetz")
+      )
+    ).toMatchObject({
+      display: "12:34:56 UTC+05:30",
+      kind: "timestamp",
+      timezoneLabel: "UTC+05:30",
     });
   });
 

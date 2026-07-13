@@ -2,11 +2,19 @@ package postgres
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 
 	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
+)
+
+const (
+	dateLayout               = "2006-01-02"
+	timeLayout               = "15:04:05.999999999"
+	timeWithZoneLayout       = "15:04:05.999999999Z07:00"
+	timestampWithoutTZLayout = "2006-01-02T15:04:05.999999999"
 )
 
 func convertToCell(v any) *api.TableCell {
@@ -112,9 +120,20 @@ func convertToValueTyped(v any, col *api.TableResultColumn) *api.TableValue {
 			return &api.TableValue{Kind: &api.TableValue_BytesValue{BytesValue: []byte(n)}}
 		}
 	case api.DataType_DATA_TYPE_DATE, api.DataType_DATA_TYPE_TIME, api.DataType_DATA_TYPE_TIMESTAMP:
-		if t, ok := v.(time.Time); ok {
-			return &api.TableValue{Kind: &api.TableValue_TimestampValue{TimestampValue: t.Format(time.RFC3339Nano)}}
+		var temporal string
+
+		switch value := v.(type) {
+		case time.Time:
+			temporal = formatTemporalValue(value, col)
+		case string:
+			temporal = value
+		case []byte:
+			temporal = string(value)
+		default:
+			return convertToValue(v)
 		}
+
+		return &api.TableValue{Kind: &api.TableValue_TimestampValue{TimestampValue: temporal}}
 	case api.DataType_DATA_TYPE_STRING:
 		switch n := v.(type) {
 		case string:
@@ -126,6 +145,33 @@ func convertToValueTyped(v any, col *api.TableResultColumn) *api.TableValue {
 
 	// Fall back to Go-type-driven conversion for ARRAY/GEOMETRY/UNKNOWN/etc.
 	return convertToValue(v)
+}
+
+func formatTemporalValue(value time.Time, col *api.TableResultColumn) string {
+	switch col.GetDataType() { //nolint:exhaustive // caller only passes temporal data types
+	case api.DataType_DATA_TYPE_DATE:
+		return value.Format(dateLayout)
+	case api.DataType_DATA_TYPE_TIME:
+		if temporalTypeHasTimeZone(col.GetRawType()) {
+			return value.Format(timeWithZoneLayout)
+		}
+
+		return value.Format(timeLayout)
+	case api.DataType_DATA_TYPE_TIMESTAMP:
+		if col.GetRawType() != "" && !temporalTypeHasTimeZone(col.GetRawType()) {
+			return value.Format(timestampWithoutTZLayout)
+		}
+	}
+
+	return value.Format(time.RFC3339Nano)
+}
+
+func temporalTypeHasTimeZone(rawType string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(rawType))
+
+	return strings.HasPrefix(normalized, "timestamptz") ||
+		strings.HasPrefix(normalized, "timetz") ||
+		strings.Contains(normalized, "with time zone")
 }
 
 // extractTableValues turns proto TableValue oneofs into Go scalars suitable
