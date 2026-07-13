@@ -11,6 +11,7 @@ import {
   keyPostgresArrayItems,
   parsePostgresArrayLiteral,
 } from "@/features/data-explorer/table-data/postgres-array";
+import { formatCellForClipboard } from "@/features/data-explorer/table-data/selection-formatters";
 import {
   type FormattedCell,
   formatTableCell,
@@ -49,7 +50,7 @@ function RecordField({
     if (!canCopy) {
       return;
     }
-    writeClipboard(formatted.display);
+    writeClipboard(formatCellForClipboard(effectiveCell));
   }
   function handleLoadFullValue() {
     if (!(effectiveCell && canExpand)) {

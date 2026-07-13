@@ -226,6 +226,62 @@ function seedRowsQuery(
   });
 }
 
+function seedRowsQueryWithRawClipboardValues() {
+  tableApi.useListTableColumnsQuery.mockReturnValue({
+    data: create(ListTableColumnsResponseSchema, { columns: [] }),
+    error: null,
+    isError: false,
+  });
+  tableDataApi.useReadRowsQuery.mockReturnValue({
+    data: create(ReadRowsResponseSchema, {
+      resultSet: create(TableResultSetSchema, {
+        columns: [
+          create(TableResultColumnSchema, {
+            columnName: "measurement",
+            dataType: DataType.FLOAT,
+            rawType: "double precision",
+          }),
+          create(TableResultColumnSchema, {
+            columnName: "observed_at",
+            dataType: DataType.TIMESTAMP,
+            rawType: "timestamptz",
+          }),
+        ],
+        rows: [
+          create(TableResultRowSchema, {
+            rowKey: "row-0",
+            values: [
+              create(TableCellSchema, {
+                value: create(TableValueSchema, {
+                  kind: { case: "doubleValue", value: 1234.567_891_23 },
+                }),
+              }),
+              create(TableCellSchema, {
+                value: create(TableValueSchema, {
+                  kind: {
+                    case: "timestampValue",
+                    value: "2024-01-01 12:00:00.123456+00",
+                  },
+                }),
+              }),
+            ],
+          }),
+        ],
+      }),
+    }),
+    dataUpdatedAt: 0,
+    error: null,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  });
+  tableDataApi.useReadCellValueMutation.mockReturnValue({
+    isError: false,
+    isPending: false,
+    mutate: vi.fn(),
+  });
+}
+
 function seedRowsQueryWithExpandableValues() {
   tableApi.useListTableColumnsQuery.mockReturnValue({
     data: create(ListTableColumnsResponseSchema, { columns: [] }),
@@ -830,6 +886,27 @@ describe("TableDataGrid row interactions", () => {
 
     expect(writeClipboardMock).toHaveBeenCalledWith(
       `INSERT INTO "public"."customers" ("email") VALUES\n  ('user-0');\n`
+    );
+  });
+
+  it("copies raw cell and row values without display formatting", async () => {
+    const user = userEvent.setup();
+    seedRowsQueryWithRawClipboardValues();
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
+    );
+
+    openCellContextMenu("measurement", 0);
+    await user.click(screen.getByRole("menuitem", { name: "Copy cell" }));
+
+    expect(writeClipboardMock).toHaveBeenLastCalledWith("1234.56789123");
+
+    openCellContextMenu("measurement", 0);
+    await user.click(screen.getByRole("menuitem", { name: "Copy row" }));
+
+    expect(writeClipboardMock).toHaveBeenLastCalledWith(
+      "1234.56789123\t2024-01-01 12:00:00.123456+00"
     );
   });
 

@@ -174,6 +174,10 @@ function rawCellText(value: RawCellValue): string {
   }
 }
 
+function formatCellForClipboard(cell: TableCell | undefined): string {
+  return rawCellText(rawCellValue(cell));
+}
+
 function formatCsvRow(row: SelectedRow, columns: TableResultColumn[]): string {
   const cells = columns.map((column) =>
     escapeCsv(rawCellText(rawCellValue(row.cells.get(column.columnName))))
@@ -523,4 +527,9 @@ export type {
   ExportResult,
   SelectedRow,
 };
-export { buildExport, createChunkedExportBuilder, getExportFileDetails };
+export {
+  buildExport,
+  createChunkedExportBuilder,
+  formatCellForClipboard,
+  getExportFileDetails,
+};
