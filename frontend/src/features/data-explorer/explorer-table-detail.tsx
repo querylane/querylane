@@ -58,19 +58,13 @@ import {
 } from "@/components/ui/data-table-faceted-filter";
 import { Input } from "@/components/ui/input";
 import { RefreshControl } from "@/components/ui/refresh-control";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -109,7 +103,6 @@ import {
   columnNullability,
   columnTypeCategory,
   filterColumnDetailRows,
-  filterConstraintsByKind,
   filterIndexesByMethod,
   filterPoliciesByMode,
   filterTableTriggers,
@@ -2556,6 +2549,7 @@ function IndexesTab({
   );
   const hasPreviousPage = currentPageIndex > 0;
   const hasNextPage = currentPageIndex < pageCount - 1;
+  const PaginationContainer = pageCount > 1 ? "nav" : "div";
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -2625,8 +2619,8 @@ function IndexesTab({
               totalScanCount={totalScanCount}
             />
           ))}
-          <nav
-            aria-label="Indexes pagination"
+          <PaginationContainer
+            aria-label={pageCount > 1 ? "Indexes pagination" : undefined}
             className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs"
           >
             <Select
@@ -2709,7 +2703,7 @@ function IndexesTab({
                 </div>
               </>
             ) : null}
-          </nav>
+          </PaginationContainer>
         </div>
       ) : (
         <SearchEmptyState className="border" resourceName="indexes" />

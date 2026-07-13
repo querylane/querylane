@@ -1397,6 +1397,28 @@ describe("TableDetail indexes pagination", () => {
     ).toBe(true);
   });
 
+  it("keeps the page-size control without an empty pagination landmark", () => {
+    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
+      indexes: [
+        create(TableIndexSchema, {
+          indexName: "orders_pkey",
+          isValid: true,
+          keyColumns: ["id"],
+          keyParts: ["id"],
+          method: "btree",
+        }),
+      ],
+    });
+    renderPaginatedIndexes();
+
+    expect(
+      screen.getByRole("combobox", { name: "Indexes per page" })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("navigation", { name: "Indexes pagination" })
+    ).toBeNull();
+  });
+
   it("paginates index cards with the shared 10-item default", async () => {
     const user = userEvent.setup();
     seedPaginatedIndexes();
