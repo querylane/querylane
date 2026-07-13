@@ -159,8 +159,11 @@ const SHIPMENT_STATUS_BUTTON_RE = /shipping\.shipment_status/i;
 const ROUTINES_BUTTON_RE = /^Routines 1$/;
 const REPLICATION_BUTTON_RE = /^Replication 1$/;
 const RESTRICTED_INTERVAL_BUTTON_RE = /restricted-interval/;
+const ROUTINES_INFO_RE = /Functions and procedures/;
+const ROUTINES_OPTION_RE = /^Routines/;
 const SEQUENCES_BUTTON_RE = /^Sequences 1$/;
 const TRUNCATED_INVENTORY_RE = /Showing a partial inventory/;
+const CRON_JOBS_OPTION_RE = /^Jobs · pg_cron/;
 
 afterEach(() => {
   cleanup();
@@ -201,6 +204,77 @@ describe("OtherDatabaseObjectsPanel", () => {
 
     expect(screen.getByText("case_insensitive")).toBeTruthy();
     expect(screen.queryByText("shipping.shipment_status")).toBeNull();
+  });
+
+  it("lists only categories that contain objects", async () => {
+    const user = userEvent.setup();
+    render(<OtherDatabaseObjectsPanel isLoading={false} objects={objects} />);
+
+    await user.click(
+      screen.getByRole("button", { name: CATEGORY_TYPES_FILTER_RE })
+    );
+
+    expect(screen.getByRole("option", { name: "Types 2" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Collations 1" })).toBeTruthy();
+    expect(
+      screen.queryByRole("option", { name: ROUTINES_OPTION_RE })
+    ).toBeNull();
+    expect(
+      screen.queryByRole("option", { name: CRON_JOBS_OPTION_RE })
+    ).toBeNull();
+  });
+
+  it("uses placeholders instead of empty categories while loading", () => {
+    render(<OtherDatabaseObjectsPanel isLoading={true} objects={[]} />);
+
+    expect(
+      screen.getByRole("status", { name: "Loading object filters" })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("searchbox", {
+        name: "Search other database objects",
+      })
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: CATEGORY_FILTER_RE })
+    ).toBeNull();
+    expect(screen.queryByText(CUSTOM_TYPES_INFO_RE)).toBeNull();
+  });
+
+  it("hides category controls when the database has no objects", () => {
+    render(<OtherDatabaseObjectsPanel isLoading={false} objects={[]} />);
+
+    expect(
+      screen.getByRole("searchbox", {
+        name: "Search other database objects",
+      })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: CATEGORY_FILTER_RE })
+    ).toBeNull();
+    expect(screen.queryByText(ROUTINES_INFO_RE)).toBeNull();
+    expect(screen.getByText("None in this database.")).toBeTruthy();
+  });
+
+  it("falls back when a selected category is no longer present", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <OtherDatabaseObjectsPanel isLoading={false} objects={objects} />
+    );
+
+    await selectCategory(user, COLLATIONS_BUTTON_RE);
+    rerender(
+      <OtherDatabaseObjectsPanel
+        isLoading={false}
+        objects={objects.filter((object) => object.category === "types")}
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: CATEGORY_TYPES_FILTER_RE })
+    ).toBeTruthy();
+    expect(screen.getByText("shipping.shipment_status")).toBeTruthy();
+    expect(screen.queryByText("Matches exist in other categories.")).toBeNull();
   });
 
   it("renders the category filter and type cards", () => {

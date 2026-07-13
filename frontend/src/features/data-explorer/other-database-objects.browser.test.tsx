@@ -251,6 +251,23 @@ test("other database objects matches the design's compact type inventory", async
   );
 });
 
+test("other database objects keeps its filter layout stable while loading", async () => {
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1060px] rounded-2xl border border-border bg-background p-8 text-foreground">
+        <OtherDatabaseObjectsPanel isLoading={true} objects={[]} />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await expect
+    .element(page.getByRole("status", { name: "Loading object filters" }))
+    .toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-explorer-other-database-objects-loading"
+  );
+});
+
 test("other database objects matches the design's pg cron run history view", async () => {
   renderPanel(designJobObjects);
 

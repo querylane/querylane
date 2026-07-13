@@ -92,6 +92,7 @@ const ALL_CATEGORIES_DESCRIPTION =
 const COPY_NOTICE_DURATION_MS = 2000;
 
 type OtherObjectCategory = (typeof OTHER_OBJECT_CATEGORIES)[number]["key"];
+type OtherObjectCategoryMeta = (typeof OTHER_OBJECT_CATEGORIES)[number];
 
 interface OtherDatabaseObject {
   badge: string;
@@ -121,16 +122,6 @@ interface OtherObjectCardProps {
   onToggle: () => void;
 }
 
-function firstPopulatedCategory(
-  objects: OtherDatabaseObject[]
-): OtherObjectCategory {
-  return (
-    OTHER_OBJECT_CATEGORIES.find((category) =>
-      objects.some((object) => object.category === category.key)
-    )?.key ?? "routines"
-  );
-}
-
 function countByCategory(
   objects: OtherDatabaseObject[]
 ): Record<OtherObjectCategory, number> {
@@ -154,6 +145,21 @@ function selectedCategoryMeta(category: OtherObjectCategory) {
 
 function isOtherObjectCategory(value: string): value is OtherObjectCategory {
   return OTHER_OBJECT_CATEGORIES.some((category) => category.key === value);
+}
+
+function resolveSelectedCategory(
+  requestedCategories: OtherObjectCategory[] | null,
+  presentCategories: OtherObjectCategoryMeta[]
+): OtherObjectCategory | undefined {
+  if (requestedCategories?.length === 0) {
+    return;
+  }
+  const requestedCategory =
+    requestedCategories?.length === 1 ? requestedCategories[0] : undefined;
+  return (
+    presentCategories.find((category) => category.key === requestedCategory)
+      ?.key ?? presentCategories[0]?.key
+  );
 }
 
 function preventSearchSubmit(event: FormEvent<HTMLFormElement>) {
@@ -816,6 +822,92 @@ function OtherObjectsLoading() {
   );
 }
 
+function OtherObjectsFiltersLoading() {
+  return (
+    <>
+      <div
+        aria-label="Loading object filters"
+        className="flex min-w-0 items-center gap-2"
+        role="status"
+      >
+        <Skeleton className="h-8 min-w-0 flex-1 sm:max-w-64" />
+        <Skeleton className="h-8 w-28 shrink-0" />
+      </div>
+      <Skeleton className="mt-3 h-[38px] w-full rounded-[9px]" />
+    </>
+  );
+}
+
+function OtherObjectsFilters({
+  categoryDescription,
+  counts,
+  isLoading,
+  onCategoryChange,
+  onQueryChange,
+  presentCategories,
+  query,
+  selectedCategories,
+}: {
+  categoryDescription: string;
+  counts: Record<OtherObjectCategory, number>;
+  isLoading: boolean;
+  onCategoryChange: (categories: OtherObjectCategory[]) => void;
+  onQueryChange: (query: string) => void;
+  presentCategories: OtherObjectCategoryMeta[];
+  query: string;
+  selectedCategories: OtherObjectCategory[];
+}) {
+  if (isLoading) {
+    return <OtherObjectsFiltersLoading />;
+  }
+
+  return (
+    <>
+      <form
+        aria-label="Filter other database objects"
+        className="flex min-w-0 items-center gap-2"
+        onSubmit={preventSearchSubmit}
+      >
+        <div className="relative min-w-0 flex-1 sm:max-w-64">
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            aria-label="Search other database objects"
+            className="h-8 pl-8 text-sm"
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Search objects…"
+            type="search"
+            value={query}
+          />
+        </div>
+        {presentCategories.length > 0 ? (
+          <DataTableFacetedFilter
+            onSelectedValuesChange={(values) =>
+              onCategoryChange(values.filter(isOtherObjectCategory))
+            }
+            options={presentCategories.map((category) => ({
+              count: counts[category.key],
+              label: category.label,
+              value: category.key,
+            }))}
+            selectedValues={selectedCategories}
+            singleSelect={true}
+            title="Category"
+          />
+        ) : null}
+      </form>
+
+      {presentCategories.length > 0 ? (
+        <div className="mt-3 flex items-center gap-2 rounded-[9px] border border-border bg-muted/40 px-3 py-2">
+          <Info className="size-3.5 shrink-0 text-muted-foreground" />
+          <p className="min-w-0 flex-1 text-[12px] text-muted-foreground leading-5">
+            {categoryDescription}
+          </p>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function OtherObjectsError({
   onRetry,
 }: {
@@ -888,11 +980,14 @@ function OtherDatabaseObjectsPanel({
     objectMatchesSearch(object, query)
   );
   const counts = countByCategory(searchedObjects);
-  const selectedCategories = requestedCategories ?? [
-    firstPopulatedCategory(objects),
-  ];
-  const selectedCategory =
-    selectedCategories.length === 1 ? selectedCategories[0] : undefined;
+  const presentCategories = OTHER_OBJECT_CATEGORIES.filter((category) =>
+    objects.some((object) => object.category === category.key)
+  );
+  const selectedCategory = resolveSelectedCategory(
+    requestedCategories,
+    presentCategories
+  );
+  const selectedCategories = selectedCategory ? [selectedCategory] : [];
   const categoryDescription = selectedCategory
     ? selectedCategoryMeta(selectedCategory).description
     : ALL_CATEGORIES_DESCRIPTION;
@@ -1016,47 +1111,22 @@ function OtherDatabaseObjectsPanel({
       </header>
 
       <div className="min-h-72 border-border border-t p-4">
-        <form
-          aria-label="Filter other database objects"
-          className="flex min-w-0 items-center gap-2"
-          onSubmit={preventSearchSubmit}
-        >
-          <div className="relative min-w-0 flex-1 sm:max-w-64">
-            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              aria-label="Search other database objects"
-              className="h-8 pl-8 text-sm"
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setExpandedObjectKey(null);
-              }}
-              placeholder="Search objects…"
-              type="search"
-              value={query}
-            />
-          </div>
-          <DataTableFacetedFilter
-            onSelectedValuesChange={(values) => {
-              setRequestedCategories(values.filter(isOtherObjectCategory));
-              setExpandedObjectKey(null);
-            }}
-            options={OTHER_OBJECT_CATEGORIES.map((category) => ({
-              count: counts[category.key],
-              label: category.label,
-              value: category.key,
-            }))}
-            selectedValues={selectedCategories}
-            singleSelect={true}
-            title="Category"
-          />
-        </form>
-
-        <div className="mt-3 flex items-center gap-2 rounded-[9px] border border-border bg-muted/40 px-3 py-2">
-          <Info className="size-3.5 shrink-0 text-muted-foreground" />
-          <p className="min-w-0 flex-1 text-[12px] text-muted-foreground leading-5">
-            {categoryDescription}
-          </p>
-        </div>
+        <OtherObjectsFilters
+          categoryDescription={categoryDescription}
+          counts={counts}
+          isLoading={isLoading}
+          onCategoryChange={(categories) => {
+            setRequestedCategories(categories);
+            setExpandedObjectKey(null);
+          }}
+          onQueryChange={(nextQuery) => {
+            setQuery(nextQuery);
+            setExpandedObjectKey(null);
+          }}
+          presentCategories={presentCategories}
+          query={query}
+          selectedCategories={selectedCategories}
+        />
 
         {copyNotice ? (
           <p className="mt-3 text-muted-foreground text-sm" role="status">
