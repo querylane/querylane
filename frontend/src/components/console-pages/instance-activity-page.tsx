@@ -3,6 +3,8 @@
 import {
   Activity,
   AlertTriangle,
+  Copy,
+  Eye,
   LockKeyhole,
   MoreHorizontal,
   SearchX,
@@ -17,12 +19,26 @@ import {
   presentActivitySessionRows,
   presentActivityStats,
 } from "@/components/console-pages/instance-activity-model";
+import { writeClipboard } from "@/components/data-grid/table-data-grid/grid-clipboard";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableFilter } from "@/components/ui/data-table";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import {
   Table,
@@ -213,27 +229,105 @@ function BlockingChainCard({ chains }: { chains: BlockingChain[] }) {
   );
 }
 
-function SessionActionsButton({ pid }: { pid: number }) {
+function SessionActionsButton({
+  onSelectSession,
+  row,
+}: {
+  onSelectSession: (row: ActivitySessionRow) => void;
+  row: ActivitySessionRow;
+}) {
   return (
-    <Button
-      aria-label={`Open session actions for pid ${pid}`}
-      disabled={true}
-      size="icon-xs"
-      title="Session actions need a backend action API"
-      type="button"
-      variant="ghost"
-    >
-      <MoreHorizontal className="size-3.5" />
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            aria-label={`Open session actions for pid ${row.pid}`}
+            size="icon-xs"
+            type="button"
+            variant="ghost"
+          >
+            <MoreHorizontal className="size-3.5" />
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="end" className="w-36">
+        <DropdownMenuItem onClick={() => onSelectSession(row)}>
+          <Eye />
+          View details
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => writeClipboard(String(row.pid))}>
+          <Copy />
+          Copy PID
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => writeClipboard(row.query)}>
+          <Copy />
+          Copy query
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function SessionDetails({ row }: { row: ActivitySessionRow }) {
+  const facts = [
+    { label: "User", value: row.user },
+    { label: "Application", value: row.app },
+    { label: "Database", value: row.database },
+    { label: "State", value: row.state },
+    { label: "Duration", value: row.duration },
+    { label: "Wait event", value: row.wait || "Not waiting" },
+    ...(row.blockedByPid > 0
+      ? [{ label: "Blocked by", value: `PID ${row.blockedByPid}` }]
+      : []),
+  ];
+
+  return (
+    <>
+      <SheetHeader className="border-border border-b pr-12">
+        <SheetTitle className="font-mono font-semibold text-sm">
+          Session {row.pid}
+        </SheetTitle>
+        <SheetDescription>
+          Live PostgreSQL session details from pg_stat_activity.
+        </SheetDescription>
+      </SheetHeader>
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
+        <dl className="grid grid-cols-2 gap-2">
+          {facts.map((fact) => (
+            <div
+              className="rounded-lg border border-border p-3"
+              key={fact.label}
+            >
+              <dt className="font-semibold text-[0.65rem] text-muted-foreground uppercase tracking-wide">
+                {fact.label}
+              </dt>
+              <dd className="mt-1 break-words font-mono text-sm">
+                {fact.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <div className="space-y-2">
+          <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
+            Query
+          </h3>
+          <SqlCodeBlock sql={row.query} wrap={true} />
+        </div>
+      </div>
+    </>
   );
 }
 
 function ActivitySessionsTable({
+  onSelectSession,
   rows,
   search,
+  selectedPid,
 }: {
+  onSelectSession: (row: ActivitySessionRow) => void;
   rows: ActivitySessionRow[];
   search: string;
+  selectedPid: number | undefined;
 }) {
   if (rows.length === 0) {
     return (
@@ -277,12 +371,22 @@ function ActivitySessionsTable({
           {rows.map((row) => (
             <TableRow
               className={cn(
+                "relative cursor-pointer",
                 row.blockedByPid > 0 && "bg-muted/40",
                 blockerPids.has(row.pid) && "bg-amber-500/5"
               )}
               key={row.pid}
             >
               <TableCell className="pl-[18px] font-mono text-xs tabular-nums">
+                <Button
+                  aria-expanded={selectedPid === row.pid}
+                  aria-haspopup="dialog"
+                  aria-label={`View session ${row.pid} details`}
+                  className="absolute inset-0 z-10 h-full w-full rounded-none border-0 bg-transparent shadow-none hover:bg-transparent focus-visible:ring-inset"
+                  onClick={() => onSelectSession(row)}
+                  type="button"
+                  variant="ghost"
+                />
                 {row.pid}
               </TableCell>
               <TableCell>
@@ -315,8 +419,11 @@ function ActivitySessionsTable({
                   variant="inline"
                 />
               </TableCell>
-              <TableCell className="pr-2 text-right">
-                <SessionActionsButton pid={row.pid} />
+              <TableCell className="relative z-20 pr-2 text-right">
+                <SessionActionsButton
+                  onSelectSession={onSelectSession}
+                  row={row}
+                />
               </TableCell>
             </TableRow>
           ))}
@@ -378,6 +485,8 @@ function InstanceActivityPage({
   const [databaseFilter, setDatabaseFilter] = useState<string[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_ACTIVITY_PAGE_SIZE);
+  const [selectedSession, setSelectedSession] =
+    useState<ActivitySessionRow | null>(null);
   const stats = presentActivityStats(
     connectionStatus === "connected" ? activity : undefined
   );
@@ -446,7 +555,11 @@ function InstanceActivityPage({
   }
 
   return (
-    <section aria-label="Activity" className="flex flex-col gap-[18px]">
+    <section
+      aria-busy={refreshing}
+      aria-label="Activity"
+      className="flex flex-col gap-[18px]"
+    >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div>
           <h2 className="font-bold text-[22px] tracking-[-0.01em]">Activity</h2>
@@ -471,9 +584,7 @@ function InstanceActivityPage({
         }
         hasContent={hasActivity}
         isPending={connectionStatus === "connected" && pending}
-        isRefreshing={refreshing}
         loadingMessage="Loading activity..."
-        refreshingMessage="Refreshing activity..."
       >
         {blockingChains.length > 0 ? (
           <BlockingChainCard chains={blockingChains} />
@@ -536,7 +647,12 @@ function InstanceActivityPage({
               ) : null}
             </div>
           </div>
-          <ActivitySessionsTable rows={pageRows} search={search} />
+          <ActivitySessionsTable
+            onSelectSession={setSelectedSession}
+            rows={pageRows}
+            search={search}
+            selectedPid={selectedSession?.pid}
+          />
           {allRows.length > 0 ? (
             <div className="overflow-x-auto border-border border-t px-[18px] py-1.5">
               <div className="flex min-w-[680px] items-center gap-4">
@@ -568,6 +684,21 @@ function InstanceActivityPage({
           ) : null}
         </div>
       </AsyncSectionState>
+      <Sheet
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedSession(null);
+          }
+        }}
+        open={selectedSession !== null}
+      >
+        <SheetContent
+          className="w-[min(34rem,calc(100vw-1rem))] gap-0 overflow-hidden p-0 sm:max-w-[34rem]"
+          side="right"
+        >
+          {selectedSession ? <SessionDetails row={selectedSession} /> : null}
+        </SheetContent>
+      </Sheet>
     </section>
   );
 }
