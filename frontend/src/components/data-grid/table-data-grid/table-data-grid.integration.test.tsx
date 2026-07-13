@@ -890,9 +890,11 @@ describe("TableDataGrid row interactions", () => {
     const controls = render(<div />).container;
     const previousControl = document.createElement("button");
     const invokingCell = document.createElement("div");
+    const hiddenControl = document.createElement("button");
     const nextControl = document.createElement("button");
     invokingCell.tabIndex = -1;
-    controls.append(previousControl, invokingCell, nextControl);
+    hiddenControl.style.display = "none";
+    controls.append(previousControl, invokingCell, hiddenControl, nextControl);
     invokingCell.focus();
 
     render(

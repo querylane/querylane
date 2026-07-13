@@ -44,17 +44,23 @@ function CellContextMenu({
     const direction = backward ? -1 : 1;
     const invokingIndex = elements.indexOf(returnFocusTo);
     let next: HTMLElement | undefined;
+    // Project lint disallows positive tabindex, so DOM order is tab order.
     for (
       let index = invokingIndex + direction;
       index >= 0 && index < elements.length;
       index += direction
     ) {
       const candidate = elements[index];
+      if (!candidate) {
+        continue;
+      }
+      const style = getComputedStyle(candidate);
       if (
-        candidate &&
         candidate.tabIndex >= 0 &&
         !candidate.matches(":disabled") &&
         !candidate.closest("[hidden], [inert]") &&
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
         !menuRef.current?.contains(candidate)
       ) {
         next = candidate;
