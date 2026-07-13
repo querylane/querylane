@@ -21,7 +21,6 @@ import {
   listAllDatabasesQueryOptions,
 } from "@/hooks/api/database";
 import {
-  refreshAllInstancesCache,
   useCreateInstanceMutation,
   useTestInstanceConnectionMutation,
 } from "@/hooks/api/instance";
@@ -113,30 +112,13 @@ function nonBlockingErrorPayload(error: unknown) {
 }
 
 function logCreateInstanceNonBlockingFailure(
-  step: "refresh-instances" | "list-databases" | "navigate",
+  step: "list-databases" | "navigate",
   error: unknown
 ) {
   logger.warn("Non-blocking create instance follow-up failed", {
     error: nonBlockingErrorPayload(error),
     step,
   });
-}
-
-async function refreshInstancesCacheBestEffort({
-  queryClient,
-  transport,
-}: {
-  queryClient: ReturnType<typeof useQueryClient>;
-  transport: ReturnType<typeof useTransport>;
-}) {
-  try {
-    await refreshAllInstancesCache({
-      queryClient,
-      transport,
-    });
-  } catch (error) {
-    logCreateInstanceNonBlockingFailure("refresh-instances", error);
-  }
 }
 
 async function fetchCreatedInstanceDatabases({
@@ -223,10 +205,6 @@ async function createInstanceAndNavigate({
     const response = await mutateAsync(
       buildCreateInstanceRequest(formState, false)
     );
-    refreshInstancesCacheBestEffort({
-      queryClient,
-      transport,
-    });
     const fallbackDatabases = [
       {
         name: formState.database,

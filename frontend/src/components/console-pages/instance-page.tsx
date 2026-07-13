@@ -65,7 +65,6 @@ import {
   useListAllExtensionsQuery,
 } from "@/hooks/api/extension";
 import {
-  refreshAllInstancesCache,
   useCheckInstanceActivityQuery,
   useCheckInstanceHealthQuery,
   useDeleteInstanceMutation,
@@ -85,7 +84,6 @@ import {
   formatUptime,
 } from "@/lib/console-resources";
 import { useDb } from "@/lib/db-context";
-import { logger } from "@/lib/diagnostics";
 import {
   getMetricPartialErrors,
   type MetricPartialErrors,
@@ -221,42 +219,11 @@ function getInstanceDeleteDestination({
   return "/new-instance";
 }
 
-function nonBlockingFollowUpErrorPayload(error: unknown) {
-  if (error instanceof Error) {
-    return {
-      message: error.message,
-      name: error.name,
-    };
-  }
-
-  return {
-    message: String(error),
-    name: typeof error,
-  };
-}
-
-function reportInstanceMutationFollowUpFailure(
-  step: "navigate-home" | "refresh-instances",
-  error: unknown
-) {
-  logger.warn("Non-blocking instance mutation follow-up failed", {
-    error: nonBlockingFollowUpErrorPayload(error),
-    step,
-  });
-}
-
-function runInstanceMutationFollowUp(
-  step: "navigate-home" | "refresh-instances",
-  promise: Promise<unknown>
-) {
+function runDeleteNavigationFollowUp(promise: Promise<unknown>) {
   promise.catch((error) => {
-    if (step === "navigate-home") {
-      handleNavigationError(error, {
-        area: "console.instance.delete.navigate-home",
-      });
-      return;
-    }
-    reportInstanceMutationFollowUpFailure(step, error);
+    handleNavigationError(error, {
+      area: "console.instance.delete.navigate-home",
+    });
   });
 }
 
@@ -1156,10 +1123,8 @@ async function saveInstanceConfiguration(
     isConfigManaged,
     isConnected,
     overviewQuery,
-    queryClient,
     setConfigFormResetKey,
     setFormNotice,
-    transport,
     updateInstanceMutation,
   }: {
     instance: InstanceRecord | undefined;
@@ -1167,10 +1132,8 @@ async function saveInstanceConfiguration(
     isConfigManaged: boolean;
     isConnected: boolean;
     overviewQuery: RefetchableQuery;
-    queryClient: ReturnType<typeof useQueryClient>;
     setConfigFormResetKey: Dispatch<SetStateAction<number>>;
     setFormNotice: Dispatch<SetStateAction<FormNotice>>;
-    transport: ReturnType<typeof useTransport>;
     updateInstanceMutation: ReturnType<typeof useUpdateInstanceMutation>;
   }
 ): Promise<InstanceSaveResult> {
@@ -1207,14 +1170,6 @@ async function saveInstanceConfiguration(
       variant: "success",
     });
     toast.success("Instance configuration saved");
-    // Keep the header instance switcher in sync with the saved changes.
-    runInstanceMutationFollowUp(
-      "refresh-instances",
-      refreshAllInstancesCache({
-        queryClient,
-        transport,
-      })
-    );
     await instanceQuery.refetch();
     // Remount the configuration form from the refetched instance so the
     // redacted password returns to blank and dirty state clears.
@@ -1252,10 +1207,8 @@ async function deleteInstanceFromPage({
   instance,
   isConfigManaged,
   navigate,
-  queryClient,
   setFormNotice,
   setIsDeleteDialogOpen,
-  transport,
 }: {
   deleteDestination: "/" | "/new-instance";
   deleteDisabledReason: string | null;
@@ -1263,10 +1216,8 @@ async function deleteInstanceFromPage({
   instance: InstanceRecord | undefined;
   isConfigManaged: boolean;
   navigate: ReturnType<typeof useNavigate>;
-  queryClient: ReturnType<typeof useQueryClient>;
   setFormNotice: Dispatch<SetStateAction<FormNotice>>;
   setIsDeleteDialogOpen: Dispatch<SetStateAction<boolean>>;
-  transport: ReturnType<typeof useTransport>;
 }) {
   if (!instance || isConfigManaged) {
     return;
@@ -1284,18 +1235,10 @@ async function deleteInstanceFromPage({
     await deleteInstanceMutation.mutateAsync({
       name: instance.name,
     });
-    runInstanceMutationFollowUp(
-      "navigate-home",
+    runDeleteNavigationFollowUp(
       navigate({
         replace: true,
         to: deleteDestination,
-      })
-    );
-    runInstanceMutationFollowUp(
-      "refresh-instances",
-      refreshAllInstancesCache({
-        queryClient,
-        transport,
       })
     );
   } catch (error) {
@@ -1552,10 +1495,8 @@ function BackendInstancePage({
       isConfigManaged,
       isConnected,
       overviewQuery,
-      queryClient,
       setConfigFormResetKey,
       setFormNotice,
-      transport,
       updateInstanceMutation,
     });
   const handleDelete = () =>
@@ -1566,10 +1507,8 @@ function BackendInstancePage({
       instance,
       isConfigManaged,
       navigate,
-      queryClient,
       setFormNotice,
       setIsDeleteDialogOpen,
-      transport,
     });
   const databasesUnavailable =
     queryStates.databases.isSuppressed && !queryStates.databases.hasData;

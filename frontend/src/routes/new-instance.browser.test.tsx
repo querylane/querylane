@@ -57,7 +57,6 @@ vi.mock("@/hooks/api/console", () => ({
 }));
 
 vi.mock("@/hooks/api/instance", () => ({
-  refreshAllInstancesCache: vi.fn(async () => undefined),
   useCreateInstanceMutation: () => ({
     isPending: false,
     mutateAsync: routeState.createInstance,

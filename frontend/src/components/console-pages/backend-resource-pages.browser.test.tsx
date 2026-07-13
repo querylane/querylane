@@ -271,7 +271,6 @@ vi.mock("@/hooks/api/extension", () => ({
 }));
 
 vi.mock("@/hooks/api/instance", () => ({
-  refreshAllInstancesCache: vi.fn(async () => ({ instances: [] })),
   useCheckInstanceActivityQuery: () => ({
     data: state.healthQuery.data
       ? {

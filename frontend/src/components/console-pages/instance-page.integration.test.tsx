@@ -13,7 +13,6 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { BackendInstancePage } from "@/components/console-pages/instance-page";
-import type { refreshAllInstancesCache as refreshAllInstancesCacheFn } from "@/hooks/api/instance";
 import type {
   PostgresDatabase,
   PostgresInstance,
@@ -51,10 +50,6 @@ import {
   ServerInfoSchema,
   StatsAccessHealthSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
-
-type RefreshAllInstancesCacheInput = Parameters<
-  typeof refreshAllInstancesCacheFn
->[0];
 
 interface InstanceUpdateInput {
   instance: {
@@ -110,9 +105,6 @@ const state = vi.hoisted(() => ({
   },
   refetchExtensions: vi.fn(async () => ({})),
   refetchInstance: vi.fn(async () => ({})),
-  refreshAllInstancesCache: vi.fn(
-    async (_input: RefreshAllInstancesCacheInput) => undefined
-  ),
   retryInstanceCatalog: vi.fn(async () => undefined),
   selectedInstanceStatus: "disconnected" as
     | "connected"
@@ -214,8 +206,6 @@ vi.mock("@/hooks/api/metrics", () => ({
 }));
 
 vi.mock("@/hooks/api/instance", () => ({
-  refreshAllInstancesCache: (input: RefreshAllInstancesCacheInput) =>
-    state.refreshAllInstancesCache(input),
   useCheckInstanceActivityQuery: (
     _input: unknown,
     options: Record<string, unknown>
@@ -574,8 +564,6 @@ beforeEach(() => {
     state.instanceData = instanceResponse();
     return Promise.resolve({});
   });
-  state.refreshAllInstancesCache.mockReset();
-  state.refreshAllInstancesCache.mockResolvedValue(undefined);
   state.retryInstanceCatalog.mockReset();
   state.retryInstanceCatalog.mockResolvedValue(undefined);
   state.selectedInstanceStatus = "disconnected";
@@ -655,24 +643,6 @@ describe("backend instance configuration save", () => {
     expect(state.updateInstance.mock.calls[0]?.[0]?.updateMask.paths).toEqual([
       "config",
     ]);
-  });
-
-  test("refreshes the all-instances cache after a successful update", async () => {
-    const user = userEvent.setup();
-    renderInstanceConfiguration();
-
-    setFieldValue("Display name", "Production Writer");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-    await waitFor(() => {
-      expect(state.updateInstance).toHaveBeenCalledTimes(1);
-    });
-    await waitFor(() => {
-      expect(state.refreshAllInstancesCache).toHaveBeenCalledWith({
-        queryClient: state.queryClient,
-        transport: state.transport,
-      });
-    });
   });
 
   test("trims text fields before building the update payload", async () => {
