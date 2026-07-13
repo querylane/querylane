@@ -840,6 +840,33 @@ function OtherObjectsError({
   );
 }
 
+function OtherObjectsEmptyState({
+  hasActiveFilters,
+  hasMatchesInOtherCategories,
+}: {
+  hasActiveFilters: boolean;
+  hasMatchesInOtherCategories: boolean;
+}) {
+  let description: string | undefined;
+  let title = "None in this database.";
+
+  if (hasMatchesInOtherCategories) {
+    title = "Matches exist in other categories.";
+    description =
+      "Choose a category with matches or clear the category filter.";
+  } else if (hasActiveFilters) {
+    title = "No objects match your filters.";
+    description = "Clear the search or category filter to see more objects.";
+  }
+
+  return (
+    <div className="rounded-[10px] border border-border border-dashed p-6 text-center text-muted-foreground text-sm">
+      <p>{title}</p>
+      {description ? <p className="mt-1 text-xs">{description}</p> : null}
+    </div>
+  );
+}
+
 function OtherDatabaseObjectsPanel({
   error,
   isLoading,
@@ -878,6 +905,10 @@ function OtherDatabaseObjectsPanel({
   const hasActiveFilters =
     query.trim().length > 0 ||
     (requestedCategories !== null && selectedCategory !== undefined);
+  const hasMatchesInOtherCategories =
+    visibleObjects.length === 0 &&
+    selectedCategory !== undefined &&
+    searchedObjects.some((object) => object.category !== selectedCategory);
 
   useEffect(function clearCopyNoticeTimeoutOnUnmount() {
     return () => window.clearTimeout(copyNoticeTimeout.current);
@@ -965,18 +996,10 @@ function OtherDatabaseObjectsPanel({
     );
   } else {
     objectListContent = (
-      <div className="rounded-[10px] border border-border border-dashed p-6 text-center text-muted-foreground text-sm">
-        {hasActiveFilters ? (
-          <>
-            <p>No objects match your filters.</p>
-            <p className="mt-1 text-xs">
-              Clear the search or category filter to see more objects.
-            </p>
-          </>
-        ) : (
-          "None in this database."
-        )}
-      </div>
+      <OtherObjectsEmptyState
+        hasActiveFilters={hasActiveFilters}
+        hasMatchesInOtherCategories={hasMatchesInOtherCategories}
+      />
     );
   }
 

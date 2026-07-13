@@ -219,7 +219,7 @@ describe("OtherDatabaseObjectsPanel", () => {
     expect(screen.getByText("shipping.weight_class")).toBeTruthy();
   });
 
-  it("updates category counts to reflect the active search", async () => {
+  it("keeps search result counts and the selected-category state consistent", async () => {
     const user = userEvent.setup();
     render(<OtherDatabaseObjectsPanel isLoading={false} objects={objects} />);
 
@@ -233,6 +233,7 @@ describe("OtherDatabaseObjectsPanel", () => {
       screen.getByRole("button", { name: CATEGORY_TYPES_FILTER_RE })
     );
 
+    expect(screen.getByText("Matches exist in other categories.")).toBeTruthy();
     expect(screen.getByRole("option", { name: "Types 0" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "Collations 1" })).toBeTruthy();
   });
@@ -253,10 +254,10 @@ describe("OtherDatabaseObjectsPanel", () => {
       }),
       "refresh_routes"
     );
-    expect(screen.getByText("No objects match your filters.")).toBeTruthy();
+    expect(screen.getByText("Matches exist in other categories.")).toBeTruthy();
     expect(
       screen.getByText(
-        "Clear the search or category filter to see more objects."
+        "Choose a category with matches or clear the category filter."
       )
     ).toBeTruthy();
   });
