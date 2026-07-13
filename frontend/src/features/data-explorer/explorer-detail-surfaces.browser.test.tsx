@@ -1185,10 +1185,11 @@ test("data explorer schema map emphasizes incoming and outgoing relationships", 
 
   for (const connected of [outgoing, incoming]) {
     expect(connected.getAttribute("stroke-dasharray")).toBe("7 5");
-    expect(getComputedStyle(connected).animationName).toBe(
-      "schema-map-edge-dash"
-    );
-    expect(getComputedStyle(connected).opacity).toBe("0.95");
+    const style = getComputedStyle(connected);
+    expect(style.animationName).not.toBe("none");
+    expect(style.animationDuration).toBe("0.5s");
+    expect(style.animationIterationCount).toBe("infinite");
+    expect(style.opacity).toBe("0.95");
   }
 
   await page.getByRole("button", { name: "shipping.carriers" }).click();

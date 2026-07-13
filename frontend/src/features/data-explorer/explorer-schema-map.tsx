@@ -43,6 +43,7 @@ import {
   listTables,
 } from "@/protogen/querylane/console/v1alpha1/table-TableService_connectquery";
 import { listViews } from "@/protogen/querylane/console/v1alpha1/view-ViewService_connectquery";
+import styles from "./explorer-schema-map.module.css";
 
 const ALL_SCHEMAS = "All";
 const DEFAULT_ZOOM = 94;
@@ -606,8 +607,7 @@ function SchemaMapCanvas({
                 "fill-none",
                 TONE_CLASSES[edge.tone].edge,
                 selectedTable === null && "opacity-50",
-                isConnected &&
-                  "animate-[schema-map-edge-dash_0.5s_linear_infinite] opacity-95 motion-reduce:animate-none",
+                isConnected && `${styles["connected-edge"]} opacity-95`,
                 isDimmed && "opacity-10"
               )}
               d={edge.d}
