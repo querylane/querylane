@@ -17,6 +17,7 @@ import { EmptyStatePanel } from "@/components/empty-state-panel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 import { Input } from "@/components/ui/input";
 import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model";
 import {
@@ -50,7 +51,7 @@ const MAX_ZOOM = 130;
 const ZOOM_STEP = 8;
 const PERCENT_SCALE = 100;
 const HULL_LABEL_OFFSET_X = 18;
-const HULL_LABEL_OFFSET_Y = 6;
+const HULL_LABEL_GAP_Y = 10;
 const MINIMAP_WIDTH = 132;
 const MINIMAP_HEIGHT = 92;
 const MINIMAP_NODE_RADIUS = 4;
@@ -222,36 +223,6 @@ function useSchemaMapCatalog({
   };
 }
 
-function SchemaChip({
-  active,
-  count,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  count: number;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      aria-pressed={active}
-      className={cn("h-7 gap-1.5 rounded-full px-3 font-mono", {
-        "bg-primary text-primary-foreground hover:bg-primary/90": active,
-      })}
-      onClick={onClick}
-      size="sm"
-      type="button"
-      variant={active ? "default" : "outline"}
-    >
-      {label}
-      <span className={cn("text-xs", active ? "opacity-80" : "opacity-60")}>
-        {count.toLocaleString()}
-      </span>
-    </Button>
-  );
-}
-
 function SchemaMapToolbar({
   databaseLabel,
   model,
@@ -286,17 +257,16 @@ function SchemaMapToolbar({
           {databaseLabel}
         </Badge>
       </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        {model.chips.map((chip) => (
-          <SchemaChip
-            active={selectedSchema === chip.value}
-            count={chip.count}
-            key={chip.value}
-            label={chip.label}
-            onClick={() => onSchemaChange(chip.value)}
-          />
-        ))}
-      </div>
+      <DataTableFacetedFilter
+        onSelectedValuesChange={(values) =>
+          onSchemaChange(values[0] ?? ALL_SCHEMAS)
+        }
+        options={model.schemaOptions}
+        searchPlaceholder="Find a schema…"
+        selectedValues={selectedSchema === ALL_SCHEMAS ? [] : [selectedSchema]}
+        singleSelect={true}
+        title="Schema"
+      />
       <div className="hidden h-5 w-px bg-border sm:block" />
       <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
         <div className="relative min-w-48 flex-1 sm:w-72">
@@ -608,11 +578,14 @@ function SchemaMapCanvas({
             />
             <text
               className={cn(
-                "fill-current font-mono font-semibold text-[12px]",
+                "fill-current stroke-background font-mono font-semibold text-[12px]",
                 TONE_CLASSES[hull.tone].text
               )}
+              paintOrder="stroke"
+              strokeLinejoin="round"
+              strokeWidth={6}
               x={hull.x + HULL_LABEL_OFFSET_X}
-              y={hull.y + HULL_LABEL_OFFSET_Y}
+              y={hull.y - HULL_LABEL_GAP_Y}
             >
               {hull.label}
             </text>

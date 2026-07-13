@@ -43,7 +43,7 @@ const SCHEMA_TONES = [
 
 type SchemaMapTone = (typeof SCHEMA_TONES)[number];
 
-interface SchemaMapChip {
+interface SchemaMapSchemaOption {
   count: number;
   label: string;
   value: string;
@@ -103,10 +103,10 @@ interface SchemaMapHull {
 }
 
 interface SchemaMapModel {
-  chips: SchemaMapChip[];
   edges: SchemaMapEdge[];
   hulls: SchemaMapHull[];
   nodes: SchemaMapNode[];
+  schemaOptions: SchemaMapSchemaOption[];
   stats: string;
   viewBox: string;
   viewNodes: SchemaMapViewNode[];
@@ -168,7 +168,7 @@ function buildSchemaMapModel({
     )
   );
   const viewInfos = views.map(viewInfo);
-  const chips = schemaChips(schemaOrder, tableInfos);
+  const schemaOptions = buildSchemaOptions(schemaOrder, tableInfos);
   const normalizedQuery = filter.query.trim().toLowerCase();
   const activeSchema =
     filter.schemaName && filter.schemaName !== "All" ? filter.schemaName : "";
@@ -200,10 +200,10 @@ function buildSchemaMapModel({
   const keyWord = edges.length === 1 ? "foreign key" : "foreign keys";
 
   return {
-    chips,
     edges,
     hulls: layout.hulls,
     nodes: layout.nodes,
+    schemaOptions,
     stats: `${layout.nodes.length.toLocaleString()} ${tableWord} · ${edges.length.toLocaleString()} ${keyWord}`,
     viewBox: `0 0 ${layout.worldWidth} ${layout.worldHeight}`,
     viewNodes: layout.viewNodes,
@@ -231,22 +231,19 @@ function buildSchemaOrder(
   return Array.from(ordered);
 }
 
-function schemaChips(
+function buildSchemaOptions(
   schemaOrder: string[],
   tableInfos: ReturnType<typeof tableInfo>[]
-): SchemaMapChip[] {
+): SchemaMapSchemaOption[] {
   const counts = new Map(schemaOrder.map((schema) => [schema, 0]));
   for (const table of tableInfos) {
     counts.set(table.schemaName, (counts.get(table.schemaName) ?? 0) + 1);
   }
-  return [
-    { count: tableInfos.length, label: "All", value: "All" },
-    ...schemaOrder.map((schema) => ({
-      count: counts.get(schema) ?? 0,
-      label: schema,
-      value: schema,
-    })),
-  ];
+  return schemaOrder.map((schema) => ({
+    count: counts.get(schema) ?? 0,
+    label: schema,
+    value: schema,
+  }));
 }
 
 function tableInfo(
@@ -836,11 +833,11 @@ function edgeAnchorY(node: SchemaMapNode, columnName: string): number {
 
 export type {
   BuildSchemaMapModelInput,
-  SchemaMapChip,
   SchemaMapEdge,
   SchemaMapHull,
   SchemaMapModel,
   SchemaMapNode,
+  SchemaMapSchemaOption,
   SchemaMapTone,
   SchemaMapViewNode,
 };

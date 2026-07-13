@@ -76,8 +76,7 @@ describe("buildSchemaMapModel", () => {
       views: [],
     });
 
-    expect(model.chips).toEqual([
-      { count: 3, label: "All", value: "All" },
+    expect(model.schemaOptions).toEqual([
       { count: 2, label: "shipping", value: "shipping" },
       { count: 1, label: "catalog", value: "catalog" },
     ]);

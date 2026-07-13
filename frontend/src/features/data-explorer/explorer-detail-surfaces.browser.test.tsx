@@ -36,8 +36,8 @@ const ACTIVE_OWNER_FILTER_RE = /^Owner.*analytics_owner/;
 const KIND_FILTER_RE = /^Kind$/;
 const OWNER_FILTER_RE = /^Owner$/;
 const SCHEMA_MAP_ALL_CHIP_RE = /^All 7$/;
-const SCHEMA_MAP_CATALOG_CHIP_RE = /^catalog 2$/;
-const SCHEMA_MAP_SHIPPING_CHIP_RE = /^shipping 4$/;
+const SCHEMA_MAP_FILTER_RE = /^Schema$/;
+const SCHEMA_MAP_ACTIVE_FILTER_RE = /^Schema.*catalog/;
 const DEFAULT_BROWSER_VIEWPORT = { height: 1000, width: 1280 } as const;
 const SCHEMA_MAP_BROWSER_VIEWPORT = { height: 1400, width: 2048 } as const;
 
@@ -953,10 +953,7 @@ test("data explorer schema map tab matches the redesign relationship map", async
       .toBeVisible();
     await expect.element(page.getByText("logistics")).toBeVisible();
     await expect
-      .element(page.getByRole("button", { name: SCHEMA_MAP_ALL_CHIP_RE }))
-      .toBeVisible();
-    await expect
-      .element(page.getByRole("button", { name: SCHEMA_MAP_SHIPPING_CHIP_RE }))
+      .element(page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }))
       .toBeVisible();
     await expect.element(page.getByText("shipment_event")).toBeVisible();
     await expect.element(page.getByText("shipments")).toBeVisible();
@@ -977,9 +974,8 @@ test("data explorer schema map tab matches the redesign relationship map", async
       metadataParents.every((parent) => parent.includes("/schemas/shipping/"))
     ).toBe(true);
 
-    await page
-      .getByRole("button", { name: SCHEMA_MAP_CATALOG_CHIP_RE })
-      .click();
+    await page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }).click();
+    await page.getByText("catalog").last().click();
     expect(
       schemaMapCatalog.observedQueries.some(
         ({ methodName, parent }) =>
@@ -987,7 +983,10 @@ test("data explorer schema map tab matches the redesign relationship map", async
           parent.includes("/schemas/catalog/")
       )
     ).toBe(true);
-    await page.getByRole("button", { name: SCHEMA_MAP_ALL_CHIP_RE }).click();
+    await expect
+      .element(page.getByRole("button", { name: SCHEMA_MAP_ACTIVE_FILTER_RE }))
+      .toBeVisible();
+    await page.getByRole("button", { name: "Reset" }).click();
 
     const map = document.querySelector<SVGElement>(
       'svg[data-testid="schema-map-canvas"]'
@@ -1025,6 +1024,83 @@ test("data explorer schema map tab matches the redesign relationship map", async
     );
   }
 }, 30_000);
+
+test("data explorer schema map uses a compact schema filter at narrow widths", async () => {
+  const catalog = seedSchemaMapVisualCatalog();
+
+  await page.viewport(900, 1000);
+  try {
+    render(
+      <ScreenshotFrame>
+        <div className="flex h-[900px] w-[680px] bg-background text-foreground">
+          <ExplorerSchemaMap
+            activeSchemaName="shipping"
+            databaseId="logistics"
+            enabled={true}
+            instanceId="prod"
+            onSelectTable={() => undefined}
+            schemas={catalog.schemas}
+          />
+        </div>
+      </ScreenshotFrame>
+    );
+
+    await expect
+      .element(page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: SCHEMA_MAP_ALL_CHIP_RE }))
+      .not.toBeInTheDocument();
+
+    await page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }).click();
+    await page.getByText("catalog").last().click();
+
+    await expect.element(page.getByText("ports")).toBeVisible();
+    await expect.element(page.getByText("shipments")).not.toBeInTheDocument();
+    await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+      "data-explorer-schema-map-compact-toolbar"
+    );
+  } finally {
+    await page.viewport(
+      DEFAULT_BROWSER_VIEWPORT.width,
+      DEFAULT_BROWSER_VIEWPORT.height
+    );
+  }
+});
+
+test("data explorer schema map keeps schema labels clear of group borders", async () => {
+  const catalog = seedSchemaMapVisualCatalog();
+
+  render(
+    <ExplorerSchemaMap
+      activeSchemaName="shipping"
+      databaseId="logistics"
+      enabled={true}
+      instanceId="prod"
+      onSelectTable={() => undefined}
+      schemas={catalog.schemas}
+    />
+  );
+
+  await expect.element(page.getByTestId("schema-map-canvas")).toBeVisible();
+
+  const canvas = document.querySelector('svg[data-testid="schema-map-canvas"]');
+  const firstSchemaGroup = canvas?.querySelector("g");
+  const firstHull = firstSchemaGroup?.querySelector("rect");
+  const shippingLabel = firstSchemaGroup?.querySelector("text");
+  if (
+    !(
+      firstHull instanceof SVGRectElement &&
+      shippingLabel instanceof SVGGraphicsElement
+    )
+  ) {
+    throw new Error("Expected the shipping schema label and hull to render.");
+  }
+
+  const labelBox = shippingLabel.getBBox();
+  const borderY = Number(firstHull.getAttribute("y"));
+  expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(borderY - 4);
+});
 
 test("data explorer schema map surfaces partial catalog failures and truncation", async () => {
   const catalog = seedSchemaMapVisualCatalog();
