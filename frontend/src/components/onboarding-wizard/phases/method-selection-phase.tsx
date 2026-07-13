@@ -169,8 +169,8 @@ export function MethodSelectionPhase() {
     (state) => state.selectedMethod
   );
   const selectMethod = useOnboardingWizardStore((state) => state.selectMethod);
-  const advanceToConfigure = useOnboardingWizardStore(
-    (state) => state.advanceToConfigure
+  const goToConfigure = useOnboardingWizardStore(
+    (state) => state.goToConfigure
   );
   const methods = getConfigMethods(availableMethods);
 
@@ -202,7 +202,7 @@ export function MethodSelectionPhase() {
             disabled={
               selectedMethod === null || !methods.includes(selectedMethod)
             }
-            onClick={advanceToConfigure}
+            onClick={goToConfigure}
           >
             Continue
             <ChevronRight className="size-4" />

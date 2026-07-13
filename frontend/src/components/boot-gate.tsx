@@ -63,7 +63,6 @@ function FullscreenMessage({
 export function BootGate({ children }: { children: React.ReactNode }) {
   const bootError = useSetupStore((state) => state.bootError);
   const bootstrap = useSetupStore((state) => state.bootstrap);
-  const retryBootstrap = useSetupStore((state) => state.retryBootstrap);
   const status = useSetupStore((state) => state.status);
   const blockingError = useBlockingErrorStore((state) => state.blockingError);
   const bootstrappedRef = useRef(false);
@@ -84,7 +83,7 @@ export function BootGate({ children }: { children: React.ReactNode }) {
     status === "boot_error" ? (bootError ?? fallbackBootError) : null;
   const { displayedError, retry } = useRetainedRetryError({
     error: activeBootError,
-    onRetry: retryBootstrap,
+    onRetry: bootstrap,
   });
 
   // allow-useEffect: initialize app on mount

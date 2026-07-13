@@ -27,11 +27,11 @@ function useWizardSessionState() {
     applyProgressEvent: useOnboardingWizardStore(
       (state) => state.applyProgressEvent
     ),
-    goBackToConfigureStateAction: useOnboardingWizardStore(
-      (state) => state.goBackToConfigure
-    ),
     goBackToMethodSelectionStateAction: useOnboardingWizardStore(
       (state) => state.goBackToMethodSelection
+    ),
+    goToConfigureStateAction: useOnboardingWizardStore(
+      (state) => state.goToConfigure
     ),
     markSetupSuccess: useOnboardingWizardStore(
       (state) => state.markSetupSuccess
@@ -60,7 +60,7 @@ export function useOnboardingWizardController({
 }: UseOnboardingWizardControllerOptions): OnboardingWizardController {
   const {
     applyProgressEvent,
-    goBackToConfigureStateAction,
+    goToConfigureStateAction,
     goBackToMethodSelectionStateAction,
     markSetupSuccess,
     phase,
@@ -114,7 +114,7 @@ export function useOnboardingWizardController({
 
   const goBackToConfigure = () => {
     abortSetup();
-    goBackToConfigureStateAction();
+    goToConfigureStateAction();
   };
 
   const goBackToMethodSelection = () => {

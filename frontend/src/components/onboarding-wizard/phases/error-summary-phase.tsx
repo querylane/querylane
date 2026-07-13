@@ -31,8 +31,8 @@ function isLikelyConfigurationError(errorMessage: string): boolean {
   return CONFIG_ERROR_PATTERNS.some((pattern) => pattern.test(errorMessage));
 }
 export function ErrorSummaryPhase() {
-  const goBackToConfigure = useOnboardingWizardStore(
-    (state) => state.goBackToConfigure
+  const goToConfigure = useOnboardingWizardStore(
+    (state) => state.goToConfigure
   );
   const goBackToMethodSelection = useOnboardingWizardStore(
     (state) => state.goBackToMethodSelection
@@ -82,7 +82,7 @@ export function ErrorSummaryPhase() {
               className="h-10 rounded-xl border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
               onClick={() => {
                 clearStreamFailure();
-                goBackToConfigure();
+                goToConfigure();
               }}
               variant="ghost"
             >

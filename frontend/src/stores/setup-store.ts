@@ -28,7 +28,6 @@ interface SetupState {
   bootstrap: () => Promise<void>;
   onboardingState: GetOnboardingStateResponse | null;
   refreshOnboardingState: () => Promise<void>;
-  retryBootstrap: () => Promise<void>;
   setSetupRequired: () => void;
   showDegradedBanner: boolean;
   showWizardErrorBanner: boolean;
@@ -116,15 +115,23 @@ function applyOnboardingState(
 
 function createRefreshOnboardingStateAction(
   dependencies: SetupStoreDependencies,
-  set: SetupStoreSet
+  set: SetupStoreSet,
+  requestSequence: { current: number }
 ): SetupState["refreshOnboardingState"] {
   return async () => {
+    const requestId = ++requestSequence.current;
     try {
       const response = await dependencies.onboardingClient.getOnboardingState(
         {}
       );
+      if (requestId !== requestSequence.current) {
+        return;
+      }
       applyOnboardingState(set, response);
     } catch (error) {
+      if (requestId !== requestSequence.current) {
+        return;
+      }
       setBootError(set, error, {
         action: "refreshOnboardingState",
         source: "boot",
@@ -147,17 +154,10 @@ function createBootstrapAction(
   };
 }
 
-function createRetryBootstrapAction(
-  get: SetupStoreGet
-): SetupState["retryBootstrap"] {
-  return async () => {
-    await get().bootstrap();
-  };
-}
-
 function createVerifyAfterSetupAction(
   dependencies: SetupStoreDependencies,
-  set: SetupStoreSet
+  set: SetupStoreSet,
+  requestSequence: { current: number }
 ): SetupState["verifyAfterSetup"] {
   return async () => {
     set({
@@ -165,12 +165,19 @@ function createVerifyAfterSetupAction(
       status: "verifying",
     });
 
+    const requestId = ++requestSequence.current;
     try {
       const response = await dependencies.onboardingClient.getOnboardingState(
         {}
       );
+      if (requestId !== requestSequence.current) {
+        return;
+      }
       applyOnboardingState(set, response);
     } catch (error) {
+      if (requestId !== requestSequence.current) {
+        return;
+      }
       setBootError(set, error, {
         action: "verifyAfterSetup",
         source: "setup",
@@ -201,20 +208,26 @@ function createSetSetupRequiredAction(
 function createSetupStore(
   dependencies: SetupStoreDependencies = defaultDependencies
 ) {
+  const requestSequence = { current: 0 };
+
   return create<SetupState>()((set, get) => ({
     bootError: null,
     bootstrap: createBootstrapAction(set, get),
     onboardingState: null,
     refreshOnboardingState: createRefreshOnboardingStateAction(
       dependencies,
-      set
+      set,
+      requestSequence
     ),
-    retryBootstrap: createRetryBootstrapAction(get),
     setSetupRequired: createSetSetupRequiredAction(set, get),
     showDegradedBanner: false,
     showWizardErrorBanner: false,
     status: "booting",
-    verifyAfterSetup: createVerifyAfterSetupAction(dependencies, set),
+    verifyAfterSetup: createVerifyAfterSetupAction(
+      dependencies,
+      set,
+      requestSequence
+    ),
     warningCode: null,
   }));
 }

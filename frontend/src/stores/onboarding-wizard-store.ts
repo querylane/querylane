@@ -25,11 +25,10 @@ interface OnboardingWizardSessionState {
 }
 
 interface OnboardingWizardStore extends OnboardingWizardSessionState {
-  advanceToConfigure: () => void;
   applyProgressEvent: (event: SetupProgressEvent) => void;
   clearStreamFailure: () => void;
-  goBackToConfigure: () => void;
   goBackToMethodSelection: () => void;
+  goToConfigure: () => void;
   markSetupSuccess: () => void;
   resetSession: () => void;
   retryFromErrorSummary: () => void;
@@ -105,13 +104,6 @@ export function createOnboardingWizardStore() {
   return create<OnboardingWizardStore>()((set, get) => ({
     ...DEFAULT_WIZARD_SESSION_STATE,
 
-    advanceToConfigure: () => {
-      set((state) => ({
-        configureError: null,
-        phase: getConfigurePhaseForMethod(state.selectedMethod),
-      }));
-    },
-
     applyProgressEvent: (event) => {
       set((state) => ({
         failedEvent:
@@ -126,18 +118,18 @@ export function createOnboardingWizardStore() {
       });
     },
 
-    goBackToConfigure: () => {
-      set((state) => ({
-        configureError: null,
-        phase: getConfigurePhaseForMethod(state.selectedMethod),
-      }));
-    },
-
     goBackToMethodSelection: () => {
       set({
         configureError: null,
         phase: "method_selection",
       });
+    },
+
+    goToConfigure: () => {
+      set((state) => ({
+        configureError: null,
+        phase: getConfigurePhaseForMethod(state.selectedMethod),
+      }));
     },
 
     markSetupSuccess: () => {
