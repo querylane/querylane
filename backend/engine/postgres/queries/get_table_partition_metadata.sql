@@ -28,7 +28,12 @@ child_partitions AS (
 	SELECT
 		child_ns.nspname,
 		child_class.relname,
-		COALESCE(pg_catalog.pg_get_expr(child_class.relpartbound, child_class.oid), '') AS partition_bound
+		COALESCE(pg_catalog.pg_get_expr(child_class.relpartbound, child_class.oid), '') AS partition_bound,
+		GREATEST(child_class.reltuples, 0)::bigint AS estimated_rows,
+		CASE
+			WHEN child_class.relkind IN ('r', 'p', 'm', 't') THEN pg_catalog.pg_total_relation_size(child_class.oid)::bigint
+			ELSE 0::bigint
+		END AS total_size_bytes
 	FROM target t
 	JOIN pg_catalog.pg_inherits inh ON inh.inhparent = t.oid
 	JOIN pg_catalog.pg_class child_class ON child_class.oid = inh.inhrelid
@@ -43,5 +48,7 @@ SELECT
 	COALESCE((SELECT array_agg(nspname ORDER BY nspname, relname) FROM child_partitions), '{}'::text[]) AS child_schema_names,
 	COALESCE((SELECT array_agg(relname ORDER BY nspname, relname) FROM child_partitions), '{}'::text[]) AS child_table_names,
 	COALESCE((SELECT array_agg(partition_bound ORDER BY nspname, relname) FROM child_partitions), '{}'::text[]) AS child_partition_bounds,
+	COALESCE((SELECT json_agg(estimated_rows ORDER BY nspname, relname) FROM child_partitions), '[]'::json) AS child_estimated_rows,
+	COALESCE((SELECT json_agg(total_size_bytes ORDER BY nspname, relname) FROM child_partitions), '[]'::json) AS child_total_size_bytes,
 	(SELECT COUNT(*)::int FROM child_partitions) AS partition_count
 FROM target t

@@ -1025,6 +1025,10 @@ func (s *PostgresEngineIntegrationTestSuite) TestGetTablePartitionMetadata() {
 			FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
 		CREATE TABLE partitions.events_2025 PARTITION OF partitions.events
 			FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
+		INSERT INTO partitions.events (id, occurred_at)
+		VALUES (1, '2024-02-01'), (2, '2024-05-01'), (3, '2025-02-01');
+		ANALYZE partitions.events_2024;
+		ANALYZE partitions.events_2025;
 		CREATE TABLE partitions.notes (
 			id integer PRIMARY KEY,
 			body text NOT NULL
@@ -1042,6 +1046,8 @@ func (s *PostgresEngineIntegrationTestSuite) TestGetTablePartitionMetadata() {
 	s.Equal("partitions", parent.ChildPartitions[0].SchemaName)
 	s.Equal("events_2024", parent.ChildPartitions[0].TableName)
 	s.Contains(parent.ChildPartitions[0].PartitionBound, "FOR VALUES FROM ('2024-01-01')")
+	s.GreaterOrEqual(parent.ChildPartitions[0].EstimatedRows, int64(2))
+	s.Positive(parent.ChildPartitions[0].TotalSizeBytes)
 
 	child, err := s.eng.GetTablePartitionMetadata(ctx, testDB, "partitions", "events_2024")
 	s.Require().NoError(err)

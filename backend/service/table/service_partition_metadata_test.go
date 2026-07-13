@@ -56,6 +56,49 @@ func TestGetTablePartitionMetadataHandlesCatalogResponses(t *testing.T) {
 	}
 }
 
+func TestGetTablePartitionMetadataMapsPartitionStats(t *testing.T) {
+	t.Parallel()
+
+	if !testing.Short() {
+		t.Skip("unit test: run with -short")
+	}
+
+	svc := NewService(partitionMetadataCatalogStub{
+		partitionMetadata: &engine.TablePartitionMetadata{
+			ChildPartitions: []engine.TablePartition{
+				{
+					EstimatedRows:  1_020_000,
+					PartitionBound: "FOR VALUES FROM ('2026-01-01') TO ('2026-04-01')",
+					SchemaName:     "audit",
+					TableName:      "change_log_2026_q1",
+					TotalSizeBytes: 960_000_000,
+				},
+				{
+					EstimatedRows:  1_940_000,
+					PartitionBound: "DEFAULT",
+					SchemaName:     "audit",
+					TableName:      "change_log_archive",
+					TotalSizeBytes: 1_800_000_000,
+				},
+			},
+			PartitionCount: 2,
+			PartitionKey:   "RANGE (recorded_at)",
+		},
+	})
+
+	resp, err := svc.GetTablePartitionMetadata(context.Background(), connect.NewRequest(&v1alpha1.GetTablePartitionMetadataRequest{
+		Name: "instances/prod/databases/app/schemas/audit/tables/change_log",
+	}))
+	require.NoError(t, err)
+
+	partitions := resp.Msg.GetPartitionMetadata().GetChildPartitions()
+	require.Len(t, partitions, 2)
+	require.Equal(t, int64(1_020_000), partitions[0].GetEstimatedRows())
+	require.Equal(t, int64(960_000_000), partitions[0].GetSizeBytes())
+	require.Equal(t, int64(1_940_000), partitions[1].GetEstimatedRows())
+	require.Equal(t, int64(1_800_000_000), partitions[1].GetSizeBytes())
+}
+
 type partitionMetadataCatalogStub struct {
 	partitionMetadata *engine.TablePartitionMetadata
 	partitionErr      error

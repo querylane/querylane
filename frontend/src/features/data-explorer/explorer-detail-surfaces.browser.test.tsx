@@ -75,6 +75,16 @@ const ID_PRIMARY_KEY_CELL_RE = /id\s+Primary key\s+Surrogate key/;
 const JSONB_TYPE_TITLE_RE = /JSON.*binary JSON/;
 const NUMERIC_TYPE_TITLE_RE = /Decimal.*Exact decimal/;
 const PARTITION_2024_BOUND_RE = /FOR VALUES FROM \('2024-01-01'\)/;
+const PARTITION_Q1_ROW_RE = /change_log_2026_q1.*1\.02M/;
+const PARTITION_Q2_ROW_RE = /change_log_2026_q2.*1\.18M/;
+const PARTITION_Q3_ROW_RE = /change_log_2026_q3 CURRENT.*48k/;
+const PARTITION_DEFAULT_ROW_RE = /change_log_archive DEFAULT.*1\.94M/;
+const PARTITION_DEFAULT_FILTER_RE = /^Bound kind.*Default/;
+const PARTITION_PAGE_FOUR_RE = /Showing 1–4 of 4/;
+const PARTITION_PAGE_ONE_RE = /Showing 1–10 of 12/;
+const PARTITION_PAGE_TWO_RE = /Showing 11–12 of 12/;
+const PARTITION_PAGE_ALL_RE = /Showing 1–12 of 12/;
+const PARTITION_REDESIGN_FETCHED_AT = Date.parse("2026-07-07T22:51:48Z");
 const LAST_FETCHED_11_PM_RE = /Last fetched 11:00:00 PM/;
 const POLICIES_ONE_TAB_RE = /^Policies\s+1$/;
 const TABLE_COLUMNS_LAST_FETCHED_RE = /11 columns · base table · Last fetched/;
@@ -2580,34 +2590,126 @@ test("data explorer table empty resource tabs use shared empty panels", async ()
   ).not.toBeNull();
 });
 
-test("data explorer table partitions show parent and child metadata", async () => {
+test("data explorer table partitions matches the imported redesign fixture", async () => {
   seedTableDetailQueries();
+  tableQueries.partitionMetadata.dataUpdatedAt = PARTITION_REDESIGN_FETCHED_AT;
+  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
+    columns: [
+      createProto(ColumnSchema, {
+        columnName: "id",
+        dataType: DataType.INTEGER,
+        isNullable: false,
+        isPrimaryKey: true,
+        ordinalPosition: 1,
+        rawType: "int8",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "table_name",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 2,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "op",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 3,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "actor",
+        dataType: DataType.STRING,
+        isNullable: false,
+        ordinalPosition: 4,
+        rawType: "text",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "diff",
+        dataType: DataType.JSON,
+        isNullable: false,
+        ordinalPosition: 5,
+        rawType: "jsonb",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "recorded_at",
+        dataType: DataType.TIMESTAMP,
+        isNullable: false,
+        ordinalPosition: 6,
+        rawType: "timestamptz",
+      }),
+    ],
+  });
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    {
+      constraints: [
+        createProto(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "change_log_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+      ],
+    }
+  );
+  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
+    indexes: [
+      createProto(TableIndexSchema, {
+        indexName: "change_log_pkey",
+        isUnique: true,
+        keyColumns: ["id"],
+        method: "btree",
+        sizeBytes: 67_108_864n,
+      }),
+    ],
+  });
+  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
+    policies: [],
+  });
+  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
+    triggers: [],
+  });
   tableQueries.partitionMetadata.data = {
     partitionMetadata: {
       childPartitions: [
         {
-          displayName: "events_2024",
-          partitionBound: "FOR VALUES FROM ('2024-01-01') TO ('2025-01-01')",
+          displayName: "change_log_2026_q1",
+          estimatedRows: 1_020_000n,
+          partitionBound: "FOR VALUES FROM ('2026-01-01') TO ('2026-04-01')",
+          sizeBytes: 960n * 1024n * 1024n,
           table:
-            "instances/prod/databases/app/schemas/analytics/tables/events_2024",
+            "instances/prod/databases/app/schemas/audit/tables/change_log_2026_q1",
         },
         {
-          displayName: "events_enterprise",
-          partitionBound: "FOR VALUES IN ('enterprise')",
+          displayName: "change_log_2026_q2",
+          estimatedRows: 1_180_000n,
+          partitionBound: "FOR VALUES FROM ('2026-04-01') TO ('2026-07-01')",
+          sizeBytes: 1_181_116_006n,
           table:
-            "instances/prod/databases/app/schemas/archive/tables/events_enterprise",
+            "instances/prod/databases/app/schemas/audit/tables/change_log_2026_q2",
         },
         {
-          displayName: "events_default",
+          displayName: "change_log_2026_q3",
+          estimatedRows: 48_000n,
+          partitionBound: "FOR VALUES FROM ('2026-07-01') TO ('2026-10-01')",
+          sizeBytes: 44n * 1024n * 1024n,
+          table:
+            "instances/prod/databases/app/schemas/audit/tables/change_log_2026_q3",
+        },
+        {
+          displayName: "change_log_archive",
+          estimatedRows: 1_940_000n,
           partitionBound: "DEFAULT",
+          sizeBytes: 1_932_735_283n,
           table:
-            "instances/prod/databases/app/schemas/analytics/tables/events_default",
+            "instances/prod/databases/app/schemas/audit/tables/change_log_archive",
         },
       ],
       parentTable: "",
       partitionBound: "",
-      partitionCount: 3,
-      partitionKey: "RANGE (occurred_at)",
+      partitionCount: 4,
+      partitionKey: "RANGE (recorded_at)",
     },
   };
 
@@ -2616,38 +2718,69 @@ test("data explorer table partitions show parent and child metadata", async () =
       databaseId="app"
       initialTab="partitions"
       instanceId="prod"
-      schemaName="analytics"
+      schemaName="audit"
       table={createProto(TableSchema, {
-        displayName: "events",
-        name: "instances/prod/databases/app/schemas/analytics/tables/events",
+        displayName: "change_log",
+        name: "instances/prod/databases/app/schemas/audit/tables/change_log",
         owner: "app_owner",
-        rowCount: 0n,
-        sizeBytes: 4096n,
+        rowCount: 4_200_000n,
+        sizeBytes: 4_187_590_000n,
         tableType: Table_TableType.BASE_TABLE,
       })}
-      tableName="events"
+      tableName="change_log"
     />
   );
 
-  await expect.element(page.getByText("Partition key")).toBeVisible();
-  await expect.element(page.getByText("RANGE (occurred_at)")).toBeVisible();
-  await expect.element(page.getByText("Direct partitions")).toBeVisible();
-  await expect.element(page.getByText("analytics.events_2024")).toBeVisible();
   await expect
-    .element(page.getByText("archive.events_enterprise"))
+    .element(page.getByText("Partition by RANGE (recorded_at)"))
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByText("PostgreSQL statistics"))
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByText("4 partitions · pruning on", { exact: false }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("button", { exact: true, name: "Refresh" }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("heading", { name: "Rows per partition" }))
     .toBeVisible();
   await expect
-    .element(page.getByText("analytics.events_default"))
+    .element(
+      page.getByText(
+        "equal time ranges · bar height = rows · click a bar to highlight it below"
+      )
+    )
     .toBeVisible();
-  await expect.element(page.getByText(PARTITION_2024_BOUND_RE)).toBeVisible();
+  await expect
+    .element(
+      page.getByRole("button", {
+        name: "change_log_2026_q1, 1.02M estimated rows",
+      })
+    )
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("row", { name: PARTITION_Q1_ROW_RE }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("row", { name: PARTITION_Q2_ROW_RE }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("row", { name: PARTITION_Q3_ROW_RE }))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("CURRENT · dashed = projected month-end"))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("row", { name: PARTITION_DEFAULT_ROW_RE }))
+    .toBeVisible();
   const partitionSearchInput = page
     .getByRole("textbox", { name: "Search partitions…" })
     .element();
   const partitionFilterBar = requireFacetFilterBar("partition facet filters");
+  expect(partitionFilterBar.textContent).toContain("Schema");
   expect(partitionFilterBar.textContent).toContain("Bound kind");
-  expect(partitionFilterBar.parentElement?.className).not.toContain(
-    "rounded-lg"
-  );
   expect(partitionFilterBar.getBoundingClientRect().left).toBeGreaterThan(
     partitionSearchInput.getBoundingClientRect().right
   );
@@ -2657,24 +2790,120 @@ test("data explorer table partitions show parent and child metadata", async () =
         partitionSearchInput.getBoundingClientRect().top
     )
   ).toBeLessThanOrEqual(4);
+
+  await page
+    .getByRole("textbox", { name: "Search partitions…" })
+    .fill("archive");
+  await expect
+    .element(page.getByRole("row", { name: PARTITION_Q1_ROW_RE }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("row", { name: PARTITION_DEFAULT_ROW_RE }))
+    .toBeVisible();
+  await page.getByRole("textbox", { name: "Search partitions…" }).fill("");
+  await page.getByRole("button", { exact: true, name: "Bound kind" }).click();
+  await page.getByRole("option", { exact: true, name: "Default" }).click();
+  await expect
+    .element(page.getByRole("button", { name: PARTITION_DEFAULT_FILTER_RE }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("row", { name: PARTITION_Q1_ROW_RE }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("row", { name: PARTITION_DEFAULT_ROW_RE }))
+    .toBeVisible();
+  await page.getByRole("button", { exact: true, name: "Reset" }).click();
+  await expect
+    .element(page.getByRole("row", { name: PARTITION_Q1_ROW_RE }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("combobox", { name: "Rows per page" }))
+    .toBeVisible();
+  await expect.element(page.getByText(PARTITION_PAGE_FOUR_RE)).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Previous page" }))
+    .toBeDisabled();
+  await expect
+    .element(page.getByRole("button", { name: "Next page" }))
+    .toBeDisabled();
+  await expect
+    .element(
+      page.getByText("The DEFAULT partition still holds", { exact: false })
+    )
+    .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-partitions"
   );
+});
 
-  await page.getByRole("button", { exact: true, name: "Schema" }).click();
-  await page.getByRole("option", { exact: true, name: "archive" }).click();
+test("data explorer table partitions paginate large partition lists", async () => {
+  seedTableDetailQueries();
+  tableQueries.partitionMetadata.dataUpdatedAt = PARTITION_REDESIGN_FETCHED_AT;
+  tableQueries.partitionMetadata.data = {
+    partitionMetadata: {
+      childPartitions: Array.from({ length: 12 }, (_, index) => {
+        const month = index + 1;
+        const nextMonth = month === 12 ? 1 : month + 1;
+        const nextYear = month === 12 ? 2027 : 2026;
+        return {
+          displayName: `change_log_2026_m${String(month).padStart(2, "0")}`,
+          estimatedRows: BigInt(month * 1000),
+          partitionBound: `FOR VALUES FROM ('2026-${String(month).padStart(
+            2,
+            "0"
+          )}-01') TO ('${nextYear}-${String(nextMonth).padStart(2, "0")}-01')`,
+          sizeBytes: BigInt(month * 1024 * 1024),
+          table: `instances/prod/databases/app/schemas/audit/tables/change_log_2026_m${String(
+            month
+          ).padStart(2, "0")}`,
+        };
+      }),
+      parentTable: "",
+      partitionBound: "",
+      partitionCount: 12,
+      partitionKey: "RANGE (recorded_at)",
+    },
+  };
+
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="app"
+      initialTab="partitions"
+      instanceId="prod"
+      schemaName="audit"
+      table={createProto(TableSchema, {
+        displayName: "change_log",
+        name: "instances/prod/databases/app/schemas/audit/tables/change_log",
+        owner: "app_owner",
+        rowCount: 78_000n,
+        sizeBytes: 78n * 1024n * 1024n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="change_log"
+    />
+  );
+
   await expect
-    .element(page.getByText("archive.events_enterprise"))
+    .element(page.getByRole("combobox", { name: "Rows per page" }))
     .toBeVisible();
+  await expect.element(page.getByText(PARTITION_PAGE_ONE_RE)).toBeVisible();
+  await expect.element(page.getByText("change_log_2026_m01")).toBeVisible();
   await expect
-    .element(page.getByText("analytics.events_2024"))
+    .element(page.getByText("change_log_2026_m11"))
     .not.toBeInTheDocument();
 
-  await page.getByRole("button", { exact: true, name: "Bound kind" }).click();
-  await page.getByRole("option", { exact: true, name: "List" }).click();
+  await page.getByRole("button", { name: "Next page" }).click();
+  await expect.element(page.getByText(PARTITION_PAGE_TWO_RE)).toBeVisible();
+  await expect.element(page.getByText("change_log_2026_m11")).toBeVisible();
   await expect
-    .element(page.getByText("archive.events_enterprise"))
-    .toBeVisible();
+    .element(page.getByText("change_log_2026_m01"))
+    .not.toBeInTheDocument();
+
+  await page.getByRole("combobox", { name: "Rows per page" }).click();
+  await page.getByRole("option", { exact: true, name: "25" }).click();
+  await expect.element(page.getByText(PARTITION_PAGE_ALL_RE)).toBeVisible();
+  await expect.element(page.getByText("change_log_2026_m01")).toBeVisible();
+  await expect.element(page.getByText("change_log_2026_m11")).toBeVisible();
 });
 
 test("data explorer table child partition shows parent metadata", async () => {

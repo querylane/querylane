@@ -301,7 +301,9 @@ func convertPartitionMetadata(metadata engine.TablePartitionMetadata, schemaRes 
 				child.TableName,
 			).String(),
 			DisplayName:    child.TableName,
+			EstimatedRows:  child.EstimatedRows,
 			PartitionBound: child.PartitionBound,
+			SizeBytes:      child.TotalSizeBytes,
 		})
 	}
 

@@ -904,8 +904,12 @@ type TablePartition struct {
 	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// Output-only. Bound expression for this child partition.
 	PartitionBound string `protobuf:"bytes,3,opt,name=partition_bound,json=partitionBound,proto3" json:"partition_bound,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Output-only. Estimated live rows for this child partition from PostgreSQL statistics.
+	EstimatedRows int64 `protobuf:"varint,4,opt,name=estimated_rows,json=estimatedRows,proto3" json:"estimated_rows,omitempty"`
+	// Output-only. Total relation size in bytes for this child partition.
+	SizeBytes     int64 `protobuf:"varint,5,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TablePartition) Reset() {
@@ -957,6 +961,20 @@ func (x *TablePartition) GetPartitionBound() string {
 		return x.PartitionBound
 	}
 	return ""
+}
+
+func (x *TablePartition) GetEstimatedRows() int64 {
+	if x != nil {
+		return x.EstimatedRows
+	}
+	return 0
+}
+
+func (x *TablePartition) GetSizeBytes() int64 {
+	if x != nil {
+		return x.SizeBytes
+	}
+	return 0
 }
 
 type ListTablesRequest struct {
@@ -2249,12 +2267,15 @@ const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\fparent_table\x18\x03 \x01(\tB#\xe0A\x03\xfaA\x1d\n" +
 	"\x1bconsole.querylane.dev/TableR\vparentTable\x12Z\n" +
 	"\x10child_partitions\x18\x04 \x03(\v2*.querylane.console.v1alpha1.TablePartitionB\x03\xe0A\x03R\x0fchildPartitions\x12,\n" +
-	"\x0fpartition_count\x18\x05 \x01(\x05B\x03\xe0A\x03R\x0epartitionCount\"\xa1\x01\n" +
+	"\x0fpartition_count\x18\x05 \x01(\x05B\x03\xe0A\x03R\x0epartitionCount\"\xf1\x01\n" +
 	"\x0eTablePartition\x129\n" +
 	"\x05table\x18\x01 \x01(\tB#\xe0A\x03\xfaA\x1d\n" +
 	"\x1bconsole.querylane.dev/TableR\x05table\x12&\n" +
 	"\fdisplay_name\x18\x02 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12,\n" +
-	"\x0fpartition_bound\x18\x03 \x01(\tB\x03\xe0A\x03R\x0epartitionBound\"\xb4\x02\n" +
+	"\x0fpartition_bound\x18\x03 \x01(\tB\x03\xe0A\x03R\x0epartitionBound\x12*\n" +
+	"\x0eestimated_rows\x18\x04 \x01(\x03B\x03\xe0A\x03R\restimatedRows\x12\"\n" +
+	"\n" +
+	"size_bytes\x18\x05 \x01(\x03B\x03\xe0A\x03R\tsizeBytes\"\xb4\x02\n" +
 	"\x11ListTablesRequest\x12\x91\x01\n" +
 	"\x06parent\x18\x01 \x01(\tBy\xe0A\x02\xfaA\x1e\n" +
 	"\x1cconsole.querylane.dev/Schema\xbaHRrP2N^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+$R\x06parent\x12*\n" +

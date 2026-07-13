@@ -505,6 +505,10 @@ func (m *TablePartition) validate(all bool) error {
 
 	// no validation rules for PartitionBound
 
+	// no validation rules for EstimatedRows
+
+	// no validation rules for SizeBytes
+
 	if len(errors) > 0 {
 		return TablePartitionMultiError(errors)
 	}
