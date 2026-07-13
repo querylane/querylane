@@ -959,7 +959,7 @@ function ColumnsInventoryTable({
         columns={columnInventoryColumns}
         data={visibleRows}
         emptyResourceName="columns"
-        pageSize={25}
+        pageSize={10}
         tableClassName="text-sm"
         tableKey="data-explorer-table-columns"
       />

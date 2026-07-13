@@ -1697,9 +1697,18 @@ test("data explorer table columns match the redesign inventory", async () => {
   await expect
     .element(page.getByRole("tab", { exact: true, name: "Columns 11" }))
     .toBeVisible();
+  await expect.element(page.getByText("Showing 1–10 of 11")).toBeVisible();
+  await expect.element(page.getByText("Page 1 of 2")).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Next page" }))
+    .toBeEnabled();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-columns"
   );
+  await page.getByRole("button", { name: "Next page" }).click();
+  await expect.element(page.getByText("created_at")).toBeVisible();
+  await expect.element(page.getByText("Showing 11–11 of 11")).toBeVisible();
+  await page.getByRole("button", { name: "Previous page" }).click();
   await page
     .getByRole("button", { exact: true, name: "Column, not sorted" })
     .click();
