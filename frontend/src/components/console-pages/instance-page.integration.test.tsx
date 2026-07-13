@@ -1383,8 +1383,9 @@ describe("backend instance activity", () => {
       )
     ).toBeTruthy();
     expect(
-      screen.queryByRole("combobox", { name: "Rows per page" })
-    ).toBeNull();
+      screen.getByRole("combobox", { name: "Rows per page" })
+    ).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
   });
 
   test("shows unavailable placeholders and the activity partial error", () => {

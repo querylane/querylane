@@ -492,6 +492,10 @@ describe("TableDataGrid query setup", () => {
         .getByText("No rows found")
         .closest('[data-slot="empty-state-panel"]')
     ).toBeTruthy();
+    expect(
+      screen.getByRole("combobox", { name: "Rows per page" })
+    ).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
   });
 
   it("gives the virtualized grid a bounded scroll viewport", () => {

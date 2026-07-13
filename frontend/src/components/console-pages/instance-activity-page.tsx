@@ -49,6 +49,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { DbConnectionStatus } from "@/lib/console-resources";
+import {
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZE_OPTIONS,
+  pageIndexForPageSizeChange,
+} from "@/lib/pagination";
 import { useUrlTableSearch } from "@/lib/url-search-state";
 import { cn } from "@/lib/utils";
 import type { Status } from "@/protogen/google/rpc/status_pb";
@@ -59,15 +64,6 @@ type ActivitySessionRow = ReturnType<typeof presentActivitySessionRows>[number];
 type BlockingChain = ReturnType<typeof getActivityBlockingChains>[number];
 
 type FilterKey = "app" | "database" | "state";
-
-const DEFAULT_ACTIVITY_PAGE_SIZE = 10;
-const MEDIUM_ACTIVITY_PAGE_SIZE = 25;
-const MAX_ACTIVITY_PAGE_SIZE = 50;
-const ACTIVITY_PAGE_SIZE_OPTIONS = [
-  DEFAULT_ACTIVITY_PAGE_SIZE,
-  MEDIUM_ACTIVITY_PAGE_SIZE,
-  MAX_ACTIVITY_PAGE_SIZE,
-] as const;
 
 function activityPaginationSummary({
   filteredCount,
@@ -484,7 +480,7 @@ function InstanceActivityPage({
   const [appFilter, setAppFilter] = useState<string[]>([]);
   const [databaseFilter, setDatabaseFilter] = useState<string[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(DEFAULT_ACTIVITY_PAGE_SIZE);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [selectedSession, setSelectedSession] =
     useState<ActivitySessionRow | null>(null);
   const stats = presentActivityStats(
@@ -550,7 +546,13 @@ function InstanceActivityPage({
   }
 
   function handlePageSizeChange(nextPageSize: number) {
-    resetPage();
+    setPageIndex(
+      pageIndexForPageSizeChange({
+        nextPageSize,
+        pageIndex: currentPageIndex,
+        pageSize,
+      })
+    );
     setPageSize(nextPageSize);
   }
 
@@ -653,9 +655,9 @@ function InstanceActivityPage({
             search={search}
             selectedPid={selectedSession?.pid}
           />
-          {allRows.length > 0 ? (
-            <div className="overflow-x-auto border-border border-t px-[18px] py-1.5">
-              <div className="flex min-w-[680px] items-center gap-4">
+          <div className="overflow-x-auto border-border border-t px-[18px] py-1.5">
+            <div className="flex min-w-[680px] items-center gap-4">
+              {rows.length > 0 ? (
                 <span className="shrink-0 text-muted-foreground text-xs">
                   {activityPaginationSummary({
                     filteredCount: rows.length,
@@ -666,21 +668,21 @@ function InstanceActivityPage({
                     totalConnections: activity?.totalConnections ?? 0,
                   })}
                 </span>
-                <div className="min-w-0 flex-1">
-                  <PaginationFooter
-                    hasNext={currentPageIndex < pageCount - 1}
-                    hasPrev={currentPageIndex > 0}
-                    onNext={() => setPageIndex(currentPageIndex + 1)}
-                    onPageSizeChange={handlePageSizeChange}
-                    onPrev={() => setPageIndex(currentPageIndex - 1)}
-                    pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
-                    pageSize={pageSize}
-                    pageSizeOptions={ACTIVITY_PAGE_SIZE_OPTIONS}
-                  />
-                </div>
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <PaginationFooter
+                  hasNext={currentPageIndex < pageCount - 1}
+                  hasPrev={currentPageIndex > 0}
+                  onNext={() => setPageIndex(currentPageIndex + 1)}
+                  onPageSizeChange={handlePageSizeChange}
+                  onPrev={() => setPageIndex(currentPageIndex - 1)}
+                  pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
+                  pageSize={pageSize}
+                  pageSizeOptions={PAGE_SIZE_OPTIONS}
+                />
               </div>
             </div>
-          ) : null}
+          </div>
         </div>
       </AsyncSectionState>
       <Sheet

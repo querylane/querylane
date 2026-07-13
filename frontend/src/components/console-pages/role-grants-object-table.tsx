@@ -36,7 +36,6 @@ const GRANT_TYPE_ORDER: GrantObjectType[] = [
   GrantObjectType.LARGE_OBJECT,
 ];
 
-const GRANT_PAGE_SIZE = 15;
 // Em dash as a JS expression (not JSX text) so it renders as the "no value"
 // glyph without tripping the no-em-dash-in-prose lint.
 const EM_DASH = "—";
@@ -106,7 +105,6 @@ function KindFilteredTable<T extends RowData>({
   kindOf,
   onKindChange,
   onSearchChange,
-  pageSize,
   search,
   searchPlaceholder,
   tableKey,
@@ -120,7 +118,6 @@ function KindFilteredTable<T extends RowData>({
   kindOf: (row: T) => GrantObjectType;
   onKindChange: (slug: string) => void;
   onSearchChange: (value: string) => void;
-  pageSize: number;
   search: string;
   searchPlaceholder: string;
   tableKey: string;
@@ -176,7 +173,6 @@ function KindFilteredTable<T extends RowData>({
         filterValue={deferredSearch}
         initialSorting={initialSorting}
         onFilterChange={onSearchChange}
-        pageSize={pageSize}
         tableKey={tableKey}
       />
     </div>
@@ -252,7 +248,6 @@ function GrantedObjectsTable({
       kindOf={(object) => object.objectType}
       onKindChange={onKindChange}
       onSearchChange={onSearchChange}
-      pageSize={GRANT_PAGE_SIZE}
       search={search}
       searchPlaceholder="Search objects…"
       tableKey="role-grants-objects"

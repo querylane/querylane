@@ -276,7 +276,6 @@ export function InstanceRolesPage({
               { area: "roles.open-detail" }
             )
           }
-          pageSize={15}
           tableKey="instance-roles"
         />
       )}

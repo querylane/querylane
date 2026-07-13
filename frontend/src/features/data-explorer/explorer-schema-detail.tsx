@@ -48,7 +48,6 @@ import {
 
 const ZERO_BYTES = BigInt(0);
 const ZERO_ROWS = BigInt(0);
-const OBJECTS_PAGE_SIZE = 15;
 const EM_DASH = "—";
 const NO_OWNER_FILTER_LABEL = "No owner";
 
@@ -393,7 +392,6 @@ function SchemaObjectsTable({
             ? onSelectTable(row.resourceName)
             : onSelectView(row.resourceName)
         }
-        pageSize={OBJECTS_PAGE_SIZE}
         tableKey="schema-objects"
       />
     </div>

@@ -83,6 +83,7 @@ import {
 import { useStreamRowsExporter } from "@/hooks/api/table-data";
 import { parseTableQualifiedName } from "@/lib/console-resources";
 import { downloadBlob } from "@/lib/download-blob";
+import { HIGH_VOLUME_PAGE_SIZE_OPTIONS } from "@/lib/pagination";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import type {
   ReadRowsRequest,
@@ -814,6 +815,7 @@ function TableDataGridChrome({
         onPrev={onPrev}
         pageLabel={state.pageLabel}
         pageSize={state.pageSize}
+        pageSizeOptions={HIGH_VOLUME_PAGE_SIZE_OPTIONS}
       />
     </>
   );
@@ -1469,11 +1471,14 @@ function TableDataGrid({
     sortColumns: controller.sortColumns,
   });
 
-  const pageLabel = buildPageLabel({
-    pageIndex: controller.currentPageIndex,
-    pageSize: controller.pageSize,
-    rowCount,
-  });
+  const pageLabel =
+    resultRows.length === 0
+      ? "Page 1 of 1"
+      : buildPageLabel({
+          pageIndex: controller.currentPageIndex,
+          pageSize: controller.pageSize,
+          rowCount,
+        });
   const hasNext = (data?.nextPageToken ?? "") !== "" && !isFetching;
   const statusItems = data?.resultSet
     ? buildGridStatusItems({

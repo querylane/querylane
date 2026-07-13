@@ -24,12 +24,10 @@ import {
   ArrowDown,
   ArrowUp,
   ChevronsUpDown,
-  ChevronLeft,
-  ChevronRight,
   Search,
 } from "lucide-react";
+import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { SearchEmptyState } from "@/components/search-empty-state";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RefreshControl } from "@/components/ui/refresh-control";
 import {
@@ -40,6 +38,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZE_OPTIONS,
+  type PageSize,
+} from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 
 interface DataTableColumnMeta {
@@ -125,7 +128,7 @@ interface DataTableProps<TData extends RowData> {
   lastFetchedLabel?: string;
   onRefresh?: () => Promise<unknown> | undefined;
   onRowClick?: (row: TData) => void;
-  pageSize?: number | undefined;
+  pageSize?: PageSize | undefined;
   renderToolbarFilters?: (() => React.ReactNode) | undefined;
   tableClassName?: string | undefined;
   tableKey?: string;
@@ -203,7 +206,7 @@ function DataTable<TData extends RowData>({
   lastFetchedLabel,
   onRefresh,
   onRowClick,
-  pageSize = 10,
+  pageSize = DEFAULT_PAGE_SIZE,
   renderToolbarFilters,
   tableClassName,
   tableKey,
@@ -257,12 +260,11 @@ function DataTable<TData extends RowData>({
     [controlled, controlledFilterValue, filterColumn, table]
   );
 
-  const pageCount = table.getPageCount();
+  const pageCount = Math.max(1, table.getPageCount());
   const totalRows = table.getFilteredRowModel().rows.length;
   const { pageIndex, pageSize: currentPageSize } = table.state.pagination;
   const start = pageIndex * currentPageSize + 1;
   const end = Math.min((pageIndex + 1) * currentPageSize, totalRows);
-
   const quicksearch =
     filterColumn && !controlled ? (
       <DataTableFilter
@@ -404,36 +406,25 @@ function DataTable<TData extends RowData>({
         </Table>
       </div>
 
-      {pageCount > 1 && (
-        <div className="flex items-center justify-between text-muted-foreground text-xs">
-          <span className="tabular-nums">
+      <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-xs">
+        {totalRows > 0 ? (
+          <span className="shrink-0 tabular-nums">
             Showing {start}&ndash;{end} of {totalRows}
           </span>
-          <div className="flex items-center gap-2">
-            <span className="tabular-nums">
-              Page {pageIndex + 1} of {pageCount}
-            </span>
-            <Button
-              aria-label="Previous page"
-              disabled={!table.getCanPreviousPage()}
-              onClick={() => table.previousPage()}
-              size="icon-sm"
-              variant="outline"
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <Button
-              aria-label="Next page"
-              disabled={!table.getCanNextPage()}
-              onClick={() => table.nextPage()}
-              size="icon-sm"
-              variant="outline"
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <PaginationFooter
+            hasNext={table.getCanNextPage()}
+            hasPrev={table.getCanPreviousPage()}
+            onNext={() => table.nextPage()}
+            onPageSizeChange={(nextPageSize) => table.setPageSize(nextPageSize)}
+            onPrev={() => table.previousPage()}
+            pageLabel={`Page ${pageIndex + 1} of ${pageCount}`}
+            pageSize={currentPageSize}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+          />
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -924,7 +924,54 @@ describe("TableDetail tab routing", () => {
   });
 });
 
+describe("TableDetail partitions pagination", () => {
+  it("keeps standard page-size and pagination controls with no child partitions", async () => {
+    const user = userEvent.setup();
+    tableQueries.partitionMetadata.data = create(
+      GetTablePartitionMetadataResponseSchema,
+      {
+        partitionMetadata: {
+          partitionCount: 0,
+          partitionKey: "RANGE (created_at)",
+        },
+      }
+    );
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="partitions"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema, {
+          tableType: Table_TableType.PARTITIONED,
+        })}
+        tableName="events"
+      />
+    );
+
+    expect(
+      screen.getByRole("combobox", { name: "Rows per page" })
+    ).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+
+    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent)
+    ).toEqual(["10", "25", "50"]);
+  });
+});
+
 describe("TableDetail constraints pagination", () => {
+  it("keeps page-size and pagination controls with no constraints", () => {
+    renderConstraintsTab();
+
+    expect(
+      screen.getByRole("combobox", { name: "Constraints per page" })
+    ).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+  });
+
   it("paginates constraint cards after ten results", async () => {
     const user = userEvent.setup();
     tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
@@ -1536,6 +1583,25 @@ function renderPaginatedIndexes() {
 }
 
 describe("TableDetail indexes pagination", () => {
+  it("keeps page-size and pagination controls with no indexes", () => {
+    renderPaginatedIndexes();
+
+    expect(
+      screen.getByRole("combobox", { name: "Indexes per page" })
+    ).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "Previous indexes page" })
+        .hasAttribute("disabled")
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole("button", { name: "Next indexes page" })
+        .hasAttribute("disabled")
+    ).toBe(true);
+  });
+
   it("places the page-size control in the bottom pager", () => {
     seedPaginatedIndexes();
     renderPaginatedIndexes();
@@ -1547,7 +1613,7 @@ describe("TableDetail indexes pagination", () => {
     ).toBe(true);
   });
 
-  it("keeps the page-size control without an empty pagination landmark", () => {
+  it("keeps page-size and pagination controls for one index", () => {
     tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
       indexes: [
         create(TableIndexSchema, {
@@ -1565,8 +1631,9 @@ describe("TableDetail indexes pagination", () => {
       screen.getByRole("combobox", { name: "Indexes per page" })
     ).toBeTruthy();
     expect(
-      screen.queryByRole("navigation", { name: "Indexes pagination" })
-    ).toBeNull();
+      screen.getByRole("navigation", { name: "Indexes pagination" })
+    ).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
   });
 
   it("paginates index cards with the shared 10-item default", async () => {
@@ -1585,11 +1652,18 @@ describe("TableDetail indexes pagination", () => {
     expect(
       screen.getByRole("combobox", { name: "Indexes per page" }).textContent
     ).toContain("10");
+    await user.click(
+      screen.getByRole("combobox", { name: "Indexes per page" })
+    );
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent)
+    ).toEqual(["10", "25", "50"]);
+    await user.keyboard("{Escape}");
     expect(
       screen
         .getByRole("button", { name: "Previous indexes page" })
-        .getAttribute("aria-disabled")
-    ).toBe("true");
+        .hasAttribute("disabled")
+    ).toBe(true);
 
     await user.click(screen.getByRole("button", { name: "Next indexes page" }));
 
@@ -1606,7 +1680,7 @@ describe("TableDetail indexes pagination", () => {
     expect(screen.getByText("Page 2 of 2")).toBeTruthy();
   });
 
-  it("changes the number of index cards shown per page", async () => {
+  it("changes index page size without losing the first visible index", async () => {
     const user = userEvent.setup();
     seedPaginatedIndexes();
     renderPaginatedIndexes();
@@ -1615,16 +1689,16 @@ describe("TableDetail indexes pagination", () => {
     await user.click(
       screen.getByRole("combobox", { name: "Indexes per page" })
     );
-    await user.click(screen.getByRole("option", { name: "5" }));
+    await user.click(screen.getByRole("option", { name: "25" }));
 
+    expect(
+      screen.queryAllByText("orders_idx_11", { exact: true }).length
+    ).toBeGreaterThan(0);
     expect(
       screen.queryAllByText("orders_idx_5", { exact: true }).length
     ).toBeGreaterThan(0);
-    expect(screen.queryAllByText("orders_idx_6", { exact: true })).toHaveLength(
-      0
-    );
-    expect(screen.getByText("Showing 1–5 of 12 indexes")).toBeTruthy();
-    expect(screen.getByText("Page 1 of 3")).toBeTruthy();
+    expect(screen.getByText("Showing 1–12 of 12 indexes")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
   });
 
   it("returns to the first indexes page when search changes", async () => {
@@ -1665,7 +1739,7 @@ describe("TableDetail indexes pagination", () => {
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
   });
 
-  it("keeps pager focus at page boundaries", async () => {
+  it("disables pager controls at page boundaries", async () => {
     const user = userEvent.setup();
     seedPaginatedIndexes();
     renderPaginatedIndexes();
@@ -1675,9 +1749,7 @@ describe("TableDetail indexes pagination", () => {
     });
     await user.click(nextPage);
 
-    expect(document.activeElement).toBe(nextPage);
-    expect(nextPage.hasAttribute("disabled")).toBe(false);
-    expect(nextPage.getAttribute("aria-disabled")).toBe("true");
+    expect(nextPage.hasAttribute("disabled")).toBe(true);
   });
 
   it("announces indexes page changes", async () => {
@@ -1998,6 +2070,24 @@ describe("TableDetail indexes tab", () => {
 });
 
 describe("TableDetail triggers tab", () => {
+  it("keeps page-size and pagination controls with no triggers", () => {
+    render(
+      <TableDetail
+        databaseId="warehouse"
+        initialTab="triggers"
+        instanceId="prod"
+        schemaName="shipping"
+        table={create(TableSchema)}
+        tableName="shipment_event"
+      />
+    );
+
+    expect(
+      screen.getByRole("combobox", { name: "Triggers per page" })
+    ).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+  });
+
   it("paginates filtered trigger cards and changes page size", async () => {
     const user = userEvent.setup();
     tableQueries.triggers.data = create(ListTableTriggersResponseSchema, {
@@ -2402,20 +2492,29 @@ function createPolicies(count: number): TablePolicy[] {
 }
 
 describe("TableDetail policies tab pagination", () => {
-  it("paginates policy cards six at a time", async () => {
+  it("keeps page-size and pagination controls with no policies", () => {
+    renderPoliciesTab([]);
+
+    expect(
+      screen.getByRole("combobox", { name: "Rows per page" })
+    ).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+  });
+
+  it("paginates policy cards ten at a time", async () => {
     const user = userEvent.setup();
-    renderPoliciesTab(createPolicies(7));
+    renderPoliciesTab(createPolicies(11));
 
     expect(
       screen.getByRole("heading", { name: "invoices_policy_1" })
     ).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "invoices_policy_7" })
+      screen.queryByRole("heading", { name: "invoices_policy_11" })
     ).toBeNull();
-    expect(screen.getByText("Showing 1–6 of 7 policies")).toBeTruthy();
+    expect(screen.getByText("Showing 1–10 of 11 policies")).toBeTruthy();
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
     expect(screen.getByRole("status").textContent).toBe(
-      "Showing 1–6 of 7 policies. Page 1 of 2."
+      "Showing 1–10 of 11 policies. Page 1 of 2."
     );
 
     await user.click(
@@ -2426,12 +2525,12 @@ describe("TableDetail policies tab pagination", () => {
       screen.queryByRole("heading", { name: "invoices_policy_1" })
     ).toBeNull();
     expect(
-      screen.getByRole("heading", { name: "invoices_policy_7" })
+      screen.getByRole("heading", { name: "invoices_policy_11" })
     ).toBeTruthy();
-    expect(screen.getByText("Showing 7–7 of 7 policies")).toBeTruthy();
+    expect(screen.getByText("Showing 11–11 of 11 policies")).toBeTruthy();
     expect(screen.getByText("Page 2 of 2")).toBeTruthy();
     expect(screen.getByRole("status").textContent).toBe(
-      "Showing 7–7 of 7 policies. Page 2 of 2."
+      "Showing 11–11 of 11 policies. Page 2 of 2."
     );
   });
 
@@ -2454,30 +2553,27 @@ describe("TableDetail policies tab pagination", () => {
     expect(
       within(pageNavigation).queryByRole("combobox", { name: "Rows per page" })
     ).toBeNull();
-    expect(pageSizeSelect.textContent).toContain("6");
+    expect(pageSizeSelect.textContent).toContain("10");
 
     await user.click(pageSizeSelect);
-    expect(screen.getByRole("option", { name: "6" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "12" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "24" })).toBeTruthy();
-    await user.click(screen.getByRole("option", { name: "12" }));
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent)
+    ).toEqual(["10", "25", "50"]);
+    await user.click(screen.getByRole("option", { name: "25" }));
 
     expect(
       screen.getByRole("heading", { name: "invoices_policy_1" })
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "invoices_policy_12" })
+      screen.getByRole("heading", { name: "invoices_policy_13" })
     ).toBeTruthy();
-    expect(
-      screen.queryByRole("heading", { name: "invoices_policy_13" })
-    ).toBeNull();
-    expect(screen.getByText("Showing 1–12 of 13 policies")).toBeTruthy();
-    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+    expect(screen.getByText("Showing 1–13 of 13 policies")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
   });
 
   it("returns to the first policy page when search changes", async () => {
     const user = userEvent.setup();
-    renderPoliciesTab(createPolicies(7));
+    renderPoliciesTab(createPolicies(11));
 
     await user.click(
       screen.getByRole("button", { name: "Next policies page" })
@@ -2490,7 +2586,7 @@ describe("TableDetail policies tab pagination", () => {
       screen.getByRole("heading", { name: "invoices_policy_1" })
     ).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "invoices_policy_7" })
+      screen.queryByRole("heading", { name: "invoices_policy_11" })
     ).toBeNull();
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
   });
@@ -2498,10 +2594,10 @@ describe("TableDetail policies tab pagination", () => {
   it("returns to the first policy page when mode filters change", async () => {
     const user = userEvent.setup();
     renderPoliciesTab(
-      Array.from({ length: 7 }, (_, index) =>
+      Array.from({ length: 11 }, (_, index) =>
         create(TablePolicySchema, {
           command: PolicyCommand.SELECT,
-          mode: index === 6 ? PolicyMode.RESTRICTIVE : PolicyMode.PERMISSIVE,
+          mode: index === 10 ? PolicyMode.RESTRICTIVE : PolicyMode.PERMISSIVE,
           policyName: `invoices_policy_${index + 1}`,
           roles: ["app_reader"],
           usingExpression: `tenant_id = ${index + 1}`,
@@ -2520,27 +2616,26 @@ describe("TableDetail policies tab pagination", () => {
       screen.getByRole("heading", { name: "invoices_policy_1" })
     ).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "invoices_policy_7" })
+      screen.queryByRole("heading", { name: "invoices_policy_11" })
     ).toBeNull();
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
   });
 
   it("navigates from the clamped page after refreshed policies shrink", async () => {
     const user = userEvent.setup();
-    const { rerender } = renderPoliciesTab(createPolicies(25));
+    const { rerender } = renderPoliciesTab(createPolicies(35));
     const nextPage = screen.getByRole("button", {
       name: "Next policies page",
     });
     await user.click(nextPage);
     await user.click(nextPage);
     await user.click(nextPage);
-    await user.click(nextPage);
     expect(
-      screen.getByRole("heading", { name: "invoices_policy_25" })
+      screen.getByRole("heading", { name: "invoices_policy_35" })
     ).toBeTruthy();
 
     tableQueries.policies.data = create(ListTablePoliciesResponseSchema, {
-      policies: createPolicies(7),
+      policies: createPolicies(11),
     });
     rerender(
       <TableDetail
@@ -2561,7 +2656,7 @@ describe("TableDetail policies tab pagination", () => {
       screen.getByRole("heading", { name: "invoices_policy_1" })
     ).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "invoices_policy_7" })
+      screen.queryByRole("heading", { name: "invoices_policy_11" })
     ).toBeNull();
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
   });

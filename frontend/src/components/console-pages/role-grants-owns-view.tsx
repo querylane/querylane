@@ -211,7 +211,6 @@ function OwnedObjectsTable({ objects }: { objects: OwnedObject[] }) {
         kindOf={(object) => object.objectType}
         onKindChange={setActiveKind}
         onSearchChange={setSearch}
-        pageSize={15}
         search={search}
         searchPlaceholder="Search owned objects…"
         tableKey="role-owned-objects"

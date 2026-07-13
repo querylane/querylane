@@ -19,10 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  JOB_QUEUE_PAGE_SIZE,
-  useAdminRunnerExecutionsInfiniteQuery,
-} from "@/hooks/api/admin";
+import { useAdminRunnerExecutionsInfiniteQuery } from "@/hooks/api/admin";
 import {
   ALL_RUNNERS_FILTER_VALUE,
   buildRunnerFilter,
@@ -31,12 +28,6 @@ import {
   KNOWN_RUNNER_NAMES,
 } from "@/lib/admin-ops";
 import type { AdminRunnerExecution } from "@/protogen/querylane/console/v1alpha1/admin_pb";
-
-/**
- * The client DataTable pages at the server fetch size (JOB_QUEUE_PAGE_SIZE) so
- * it never paginates below a fetched server page — one "page" per Load more.
- */
-const JOB_QUEUE_TABLE_PAGE_SIZE = JOB_QUEUE_PAGE_SIZE;
 
 const JOB_QUEUE_COLUMNS: DataTableColumnDef<AdminRunnerExecution>[] = [
   {
@@ -154,7 +145,6 @@ export function JobQueueSection() {
               columns={JOB_QUEUE_COLUMNS}
               data={executions}
               emptyResourceName="runner executions"
-              pageSize={JOB_QUEUE_TABLE_PAGE_SIZE}
               tableKey="admin-job-queue"
               toolbarFilters={
                 <RunnerFilterSelect

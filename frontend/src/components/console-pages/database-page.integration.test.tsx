@@ -1395,19 +1395,8 @@ describe("database query insights resilience", () => {
     expect(
       screen.getByRole("combobox", { name: "Rows per page" })
     ).toBeTruthy();
-    expect(screen.getByText("Showing 1–5 of 12")).toBeTruthy();
-    expect(screen.getByText("Page 1 of 3")).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: QUERY_PAGE_SIX_BUTTON_RE })
-    ).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: QUERY_PAGE_ELEVEN_BUTTON_RE })
-    ).toBeNull();
-
-    await user.click(screen.getByRole("button", { name: "Next page" }));
-
-    expect(screen.getByText("Showing 6–10 of 12")).toBeTruthy();
-    expect(screen.getByText("Page 2 of 3")).toBeTruthy();
+    expect(screen.getByText("Showing 1–10 of 12")).toBeTruthy();
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
     expect(
       screen.getByRole("button", { name: QUERY_PAGE_SIX_BUTTON_RE })
     ).toBeTruthy();
@@ -1418,12 +1407,15 @@ describe("database query insights resilience", () => {
     await user.click(screen.getByRole("button", { name: "Next page" }));
 
     expect(screen.getByText("Showing 11–12 of 12")).toBeTruthy();
-    expect(screen.getByText("Page 3 of 3")).toBeTruthy();
+    expect(screen.getByText("Page 2 of 2")).toBeTruthy();
     expect(
       screen.getByRole("button", { name: QUERY_PAGE_ELEVEN_BUTTON_RE })
     ).toBeTruthy();
 
     await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent)
+    ).toEqual(["10", "25", "50"]);
     await user.click(screen.getByRole("option", { name: "25" }));
 
     expect(screen.getByText("Showing 1–12 of 12")).toBeTruthy();
@@ -1443,6 +1435,10 @@ describe("database query insights resilience", () => {
 
     expect(screen.getByText("No matching query runtime data.")).toBeTruthy();
     expect(screen.queryByText(EMPTY_PAGINATION_RANGE_RE)).toBeNull();
+    expect(
+      screen.getByRole("combobox", { name: "Rows per page" })
+    ).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
   });
 
   test("renders unavailable, table-stats-missing, and error states", () => {

@@ -151,6 +151,12 @@ import {
   tryParseTableQualifiedName,
 } from "@/lib/console-resources";
 import {
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZE_OPTIONS,
+  type PageSize,
+  pageIndexForPageSizeChange,
+} from "@/lib/pagination";
+import {
   formatPolicyCommand,
   formatPolicyMode,
   formatReferentialAction,
@@ -181,29 +187,17 @@ const TABLE_METADATA_QUERY_OPTIONS = {
 } as const;
 const UNAVAILABLE_COLUMN_STATISTIC_LABEL =
   "Not available from the current column metadata API";
-const SMALL_INDEX_PAGE_SIZE = 5;
-const DEFAULT_INDEX_PAGE_SIZE = 10;
-const LARGE_INDEX_PAGE_SIZE = 25;
-const INDEX_PAGE_SIZE_OPTIONS = [
-  SMALL_INDEX_PAGE_SIZE,
-  DEFAULT_INDEX_PAGE_SIZE,
-  LARGE_INDEX_PAGE_SIZE,
-] as const;
+const DEFAULT_INDEX_PAGE_SIZE = DEFAULT_PAGE_SIZE;
+const INDEX_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS;
 const SKELETON_ROW_COUNT = 6;
-const CONSTRAINTS_DEFAULT_PAGE_SIZE = 10;
-const CONSTRAINTS_MEDIUM_PAGE_SIZE = 25;
-const CONSTRAINTS_LARGE_PAGE_SIZE = 50;
-const CONSTRAINTS_PAGE_SIZE_OPTIONS = [
-  CONSTRAINTS_DEFAULT_PAGE_SIZE,
-  CONSTRAINTS_MEDIUM_PAGE_SIZE,
-  CONSTRAINTS_LARGE_PAGE_SIZE,
-] as const;
+const CONSTRAINTS_DEFAULT_PAGE_SIZE = DEFAULT_PAGE_SIZE;
+const CONSTRAINTS_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS;
 const SKELETON_ROW_IDS = Array.from(
   { length: SKELETON_ROW_COUNT },
   (_, index) => `skeleton-row-${index}`
 );
 
-type IndexPageSize = (typeof INDEX_PAGE_SIZE_OPTIONS)[number];
+type IndexPageSize = PageSize;
 
 function isIndexPageSize(value: number): value is IndexPageSize {
   return INDEX_PAGE_SIZE_OPTIONS.some((pageSize) => pageSize === value);
@@ -306,14 +300,7 @@ const TRIGGER_STATE_FILTER_LABELS: Record<TriggerStateFilter, string> = {
   disabled: "Disabled",
   enabled: "Enabled",
 };
-const SMALL_TRIGGER_PAGE_SIZE = 10;
-const MEDIUM_TRIGGER_PAGE_SIZE = 25;
-const LARGE_TRIGGER_PAGE_SIZE = 50;
-const TRIGGER_PAGE_SIZE_OPTIONS = [
-  SMALL_TRIGGER_PAGE_SIZE,
-  MEDIUM_TRIGGER_PAGE_SIZE,
-  LARGE_TRIGGER_PAGE_SIZE,
-] as const;
+const TRIGGER_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS;
 const DEFAULT_TRIGGER_PAGE_SIZE = TRIGGER_PAGE_SIZE_OPTIONS[0];
 const PARTITION_BOUND_KIND_ORDER = [
   "range",
@@ -670,7 +657,6 @@ function MetadataTabResult<Row extends RowData>({
   filterPlaceholder,
   filters,
   hasUnfilteredData = data.length > 0,
-  pageSize,
   tableClassName,
   tableKey,
   toolbar,
@@ -682,7 +668,6 @@ function MetadataTabResult<Row extends RowData>({
   filterPlaceholder: string;
   filters?: React.ReactNode;
   hasUnfilteredData?: boolean | undefined;
-  pageSize?: number | undefined;
   tableClassName?: string | undefined;
   tableKey: string;
   toolbar: MetadataToolbar;
@@ -700,7 +685,6 @@ function MetadataTabResult<Row extends RowData>({
         isRefreshing={toolbar.isRefreshing}
         lastFetchedLabel={toolbar.lastFetchedLabel}
         onRefresh={toolbar.handleRefresh}
-        pageSize={pageSize}
         tableClassName={tableClassName}
         tableKey={tableKey}
         toolbarFilters={filters}
@@ -1002,7 +986,6 @@ function ColumnsInventoryTable({
         columns={columnInventoryColumns}
         data={visibleRows}
         emptyResourceName="columns"
-        pageSize={10}
         tableClassName="text-sm"
         tableKey="data-explorer-table-columns"
       />
@@ -1496,18 +1479,9 @@ const PARTITION_SHARE_TONE_CLASSES: Record<
   normal: "bg-muted-foreground/45",
   selected: "bg-primary",
 };
-const PARTITION_PAGE_SIZE_10 = 10;
-const PARTITION_PAGE_SIZE_25 = 25;
-const PARTITION_PAGE_SIZE_50 = 50;
-const PARTITION_PAGE_SIZE_100 = 100;
-const DEFAULT_PARTITION_PAGE_SIZE = PARTITION_PAGE_SIZE_10;
-const PARTITION_PAGE_SIZE_OPTIONS = [
-  PARTITION_PAGE_SIZE_10,
-  PARTITION_PAGE_SIZE_25,
-  PARTITION_PAGE_SIZE_50,
-  PARTITION_PAGE_SIZE_100,
-] as const;
-type PartitionPageSize = (typeof PARTITION_PAGE_SIZE_OPTIONS)[number];
+const DEFAULT_PARTITION_PAGE_SIZE = DEFAULT_PAGE_SIZE;
+const PARTITION_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS;
+type PartitionPageSize = PageSize;
 
 function isPartitionPageSize(value: number): value is PartitionPageSize {
   return PARTITION_PAGE_SIZE_OPTIONS.some((pageSize) => pageSize === value);
@@ -1813,6 +1787,7 @@ function PartitionPaginationFooter({
 }) {
   const firstRow = rowCount === 0 ? 0 : pageIndex * pageSize + 1;
   const lastRow = Math.min((pageIndex + 1) * pageSize, rowCount);
+  const pageCount = Math.max(1, Math.ceil(rowCount / pageSize));
 
   return (
     <div className="flex h-8 items-center gap-2 text-muted-foreground text-xs">
@@ -1853,8 +1828,13 @@ function PartitionPaginationFooter({
         >
           <ChevronLeft className="size-3" />
         </Button>
+        {rowCount > 0 ? (
+          <span className="px-1 font-mono tabular-nums">
+            Showing {firstRow}–{lastRow} of {rowCount}
+          </span>
+        ) : null}
         <span className="px-1 font-mono tabular-nums">
-          Showing {firstRow}–{lastRow} of {rowCount}
+          Page {pageIndex + 1} of {pageCount}
         </span>
         <Button
           aria-label="Next page"
@@ -1968,8 +1948,14 @@ function PartitionsTab({
     setPartitionPageIndex(0);
   }
   function handlePartitionPageSizeChange(value: PartitionPageSize) {
+    setPartitionPageIndex(
+      pageIndexForPageSizeChange({
+        nextPageSize: value,
+        pageIndex: currentPartitionPageIndex,
+        pageSize: partitionPageSize,
+      })
+    );
     setPartitionPageSize(value);
-    setPartitionPageIndex(0);
   }
   const summaryItems = [
     metadata.partitionKey
@@ -2028,22 +2014,6 @@ function PartitionsTab({
             totalRowsLabel={filteredPartitionSummary.totalRowsLabel}
             totalSizeLabel={filteredPartitionSummary.totalSizeLabel}
           />
-          <PartitionPaginationFooter
-            hasNext={currentPartitionPageIndex + 1 < partitionPageCount}
-            hasPrevious={currentPartitionPageIndex > 0}
-            onNext={() => {
-              setPartitionPageIndex((current) =>
-                Math.min(current + 1, partitionPageCount - 1)
-              );
-            }}
-            onPageSizeChange={handlePartitionPageSizeChange}
-            onPrevious={() => {
-              setPartitionPageIndex((current) => Math.max(current - 1, 0));
-            }}
-            pageIndex={currentPartitionPageIndex}
-            pageSize={partitionPageSize}
-            rowCount={filteredPartitionRows.length}
-          />
           {filteredDefaultPartition ? (
             <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-3 text-sm leading-relaxed">
               <AlertTriangle
@@ -2060,6 +2030,22 @@ function PartitionsTab({
           ) : null}
         </>
       ) : null}
+      <PartitionPaginationFooter
+        hasNext={currentPartitionPageIndex + 1 < partitionPageCount}
+        hasPrevious={currentPartitionPageIndex > 0}
+        onNext={() => {
+          setPartitionPageIndex((current) =>
+            Math.min(current + 1, partitionPageCount - 1)
+          );
+        }}
+        onPageSizeChange={handlePartitionPageSizeChange}
+        onPrevious={() => {
+          setPartitionPageIndex((current) => Math.max(current - 1, 0));
+        }}
+        pageIndex={currentPartitionPageIndex}
+        pageSize={partitionPageSize}
+        rowCount={filteredPartitionRows.length}
+      />
     </div>
   );
 }
@@ -2550,9 +2536,6 @@ function IndexesTab({
     return <TabSkeleton />;
   }
   const indexes = query.data.indexes;
-  if (indexes.length === 0) {
-    return <TableResourceEmptyState category="indexes" toolbar={toolbar} />;
-  }
   const totalSizeBytes = sumIndexSizeBytes(indexes);
   const totalScanCount = sumIndexScans(indexes);
   const usageStatsAvailable = hasIndexUsageStats(indexes);
@@ -2577,7 +2560,6 @@ function IndexesTab({
   );
   const hasPreviousPage = currentPageIndex > 0;
   const hasNextPage = currentPageIndex < pageCount - 1;
-  const PaginationContainer = pageCount > 1 ? "nav" : "div";
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -2647,95 +2629,93 @@ function IndexesTab({
               totalScanCount={totalScanCount}
             />
           ))}
-          <PaginationContainer
-            aria-label={pageCount > 1 ? "Indexes pagination" : undefined}
-            className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs"
-          >
-            <Select
-              onValueChange={(value) => {
-                if (typeof value !== "string") {
-                  return;
-                }
-                const nextPageSize = Number(value);
-                if (isIndexPageSize(nextPageSize)) {
-                  setPageIndex(0);
-                  setPageSize(nextPageSize);
-                }
-              }}
-              value={String(pageSize)}
-            >
-              <SelectTrigger
-                aria-label="Indexes per page"
-                className="h-8 w-28"
-                size="sm"
-              >
-                <span className="text-muted-foreground">Per page</span>
-                <span>{pageSize}</span>
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                {INDEX_PAGE_SIZE_OPTIONS.map((option) => (
-                  <SelectItem
-                    key={option}
-                    label={String(option)}
-                    value={String(option)}
-                  >
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {pageCount > 1 ? (
-              <>
-                <span className="ml-1 tabular-nums" role="status">
-                  Showing {firstPageIndex}&ndash;{lastPageIndex} of{" "}
-                  {filteredIndexes.length} indexes
-                </span>
-                <div className="ml-auto flex items-center gap-2">
-                  <span className="tabular-nums">
-                    Page {currentPageIndex + 1} of {pageCount}
-                  </span>
-                  <Button
-                    aria-disabled={!hasPreviousPage}
-                    aria-label="Previous indexes page"
-                    className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
-                    onClick={() => {
-                      if (!hasPreviousPage) {
-                        return;
-                      }
-                      setPageIndex(Math.max(0, currentPageIndex - 1));
-                    }}
-                    size="icon-sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    <ChevronLeft aria-hidden="true" className="size-4" />
-                  </Button>
-                  <Button
-                    aria-disabled={!hasNextPage}
-                    aria-label="Next indexes page"
-                    className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
-                    onClick={() => {
-                      if (!hasNextPage) {
-                        return;
-                      }
-                      setPageIndex(
-                        Math.min(pageCount - 1, currentPageIndex + 1)
-                      );
-                    }}
-                    size="icon-sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    <ChevronRight aria-hidden="true" className="size-4" />
-                  </Button>
-                </div>
-              </>
-            ) : null}
-          </PaginationContainer>
         </div>
-      ) : (
+      ) : null}
+      {indexes.length === 0 ? (
+        <TableResourceEmptyState category="indexes" toolbar={toolbar} />
+      ) : null}
+      {indexes.length > 0 && filteredIndexes.length === 0 ? (
         <SearchEmptyState className="border" resourceName="indexes" />
-      )}
+      ) : null}
+      <nav
+        aria-label="Indexes pagination"
+        className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs"
+      >
+        <Select
+          onValueChange={(value) => {
+            if (typeof value !== "string") {
+              return;
+            }
+            const nextPageSize = Number(value);
+            if (isIndexPageSize(nextPageSize)) {
+              setPageIndex(
+                pageIndexForPageSizeChange({
+                  nextPageSize,
+                  pageIndex: currentPageIndex,
+                  pageSize,
+                })
+              );
+              setPageSize(nextPageSize);
+            }
+          }}
+          value={String(pageSize)}
+        >
+          <SelectTrigger
+            aria-label="Indexes per page"
+            className="h-8 w-28"
+            size="sm"
+          >
+            <span className="text-muted-foreground">Per page</span>
+            <span>{pageSize}</span>
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger={false}>
+            {INDEX_PAGE_SIZE_OPTIONS.map((option) => (
+              <SelectItem
+                key={option}
+                label={String(option)}
+                value={String(option)}
+              >
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {filteredIndexes.length > 0 ? (
+          <span className="ml-1 tabular-nums" role="status">
+            Showing {firstPageIndex}&ndash;{lastPageIndex} of{" "}
+            {filteredIndexes.length} indexes
+          </span>
+        ) : null}
+        <div className="ml-auto flex items-center gap-2">
+          <span className="tabular-nums">
+            Page {currentPageIndex + 1} of {pageCount}
+          </span>
+          <Button
+            aria-label="Previous indexes page"
+            disabled={!hasPreviousPage}
+            onClick={() => {
+              setPageIndex(Math.max(0, currentPageIndex - 1));
+            }}
+            size="icon-sm"
+            type="button"
+            variant="outline"
+          >
+            <ChevronLeft aria-hidden="true" className="size-4" />
+          </Button>
+          <Button
+            aria-label="Next indexes page"
+            disabled={!hasNextPage}
+            onClick={() => {
+              setPageIndex(Math.min(pageCount - 1, currentPageIndex + 1));
+            }}
+            size="icon-sm"
+            type="button"
+            variant="outline"
+          >
+            <ChevronRight aria-hidden="true" className="size-4" />
+          </Button>
+        </div>
+      </nav>
     </div>
   );
 }
@@ -3022,9 +3002,6 @@ function ConstraintsTab({
     return <TabSkeleton />;
   }
   const constraints = query.data.constraints;
-  if (constraints.length === 0) {
-    return <TableResourceEmptyState category="constraints" toolbar={toolbar} />;
-  }
   const normalizedSearch = search.trim().toLowerCase();
   const visibleConstraints = constraints.filter(
     (constraint) =>
@@ -3099,9 +3076,13 @@ function ConstraintsTab({
         </div>
         <MetadataRefreshControl toolbar={toolbar} />
       </div>
-      {visibleConstraints.length === 0 ? (
+      {constraints.length === 0 ? (
+        <TableResourceEmptyState category="constraints" toolbar={toolbar} />
+      ) : null}
+      {constraints.length > 0 && visibleConstraints.length === 0 ? (
         <SearchEmptyState resourceName="constraints" />
-      ) : (
+      ) : null}
+      {visibleConstraints.length > 0 ? (
         <>
           <ConstraintSection
             constraints={keyConstraints}
@@ -3131,36 +3112,42 @@ function ConstraintsTab({
             instanceId={instanceId}
             title="Other constraints"
           />
-          {constraints.length > CONSTRAINTS_DEFAULT_PAGE_SIZE ? (
-            <nav
-              aria-label="Constraints pagination"
-              className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs"
-            >
-              <span className="tabular-nums" role="status">
-                Showing {pageStart + 1}&ndash;
-                {Math.min(pageStart + pageSize, visibleConstraints.length)} of{" "}
-                {visibleConstraints.length}
-              </span>
-              <div className="ml-auto">
-                <PaginationFooter
-                  hasNext={currentPageIndex < pageCount - 1}
-                  hasPrev={currentPageIndex > 0}
-                  onNext={() => setPageIndex(currentPageIndex + 1)}
-                  onPageSizeChange={(nextPageSize) => {
-                    setPageSize(nextPageSize);
-                    setPageIndex(0);
-                  }}
-                  onPrev={() => setPageIndex(currentPageIndex - 1)}
-                  pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
-                  pageSize={pageSize}
-                  pageSizeLabel="Constraints per page"
-                  pageSizeOptions={CONSTRAINTS_PAGE_SIZE_OPTIONS}
-                />
-              </div>
-            </nav>
-          ) : null}
         </>
-      )}
+      ) : null}
+      <nav
+        aria-label="Constraints pagination"
+        className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs"
+      >
+        {visibleConstraints.length > 0 ? (
+          <span className="tabular-nums" role="status">
+            Showing {pageStart + 1}&ndash;
+            {Math.min(pageStart + pageSize, visibleConstraints.length)} of{" "}
+            {visibleConstraints.length}
+          </span>
+        ) : null}
+        <div className="ml-auto">
+          <PaginationFooter
+            hasNext={currentPageIndex < pageCount - 1}
+            hasPrev={currentPageIndex > 0}
+            onNext={() => setPageIndex(currentPageIndex + 1)}
+            onPageSizeChange={(nextPageSize) => {
+              setPageIndex(
+                pageIndexForPageSizeChange({
+                  nextPageSize,
+                  pageIndex: currentPageIndex,
+                  pageSize,
+                })
+              );
+              setPageSize(nextPageSize);
+            }}
+            onPrev={() => setPageIndex(currentPageIndex - 1)}
+            pageLabel={`Page ${currentPageIndex + 1} of ${Math.max(1, pageCount)}`}
+            pageSize={pageSize}
+            pageSizeLabel="Constraints per page"
+            pageSizeOptions={CONSTRAINTS_PAGE_SIZE_OPTIONS}
+          />
+        </div>
+      </nav>
     </div>
   );
 }
@@ -3210,15 +3197,8 @@ function collectPolicyRoles(policies: TablePolicy[]) {
   return roles.length > 0 ? roles : ["public"];
 }
 
-const SMALL_POLICY_PAGE_SIZE = 6;
-const MEDIUM_POLICY_PAGE_SIZE = 12;
-const LARGE_POLICY_PAGE_SIZE = 24;
-const POLICY_PAGE_SIZE_OPTIONS = [
-  SMALL_POLICY_PAGE_SIZE,
-  MEDIUM_POLICY_PAGE_SIZE,
-  LARGE_POLICY_PAGE_SIZE,
-] as const;
-type PolicyPageSize = (typeof POLICY_PAGE_SIZE_OPTIONS)[number];
+const POLICY_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS;
+type PolicyPageSize = PageSize;
 
 function isPolicyPageSize(value: number): value is PolicyPageSize {
   return POLICY_PAGE_SIZE_OPTIONS.some((pageSize) => pageSize === value);
@@ -3556,9 +3536,7 @@ function PoliciesTab({
   const [policySearch, setPolicySearch] = useState("");
   const [modeFilters, setModeFilters] = useState<string[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState<PolicyPageSize>(
-    SMALL_POLICY_PAGE_SIZE
-  );
+  const [pageSize, setPageSize] = useState<PolicyPageSize>(DEFAULT_PAGE_SIZE);
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
     return (
@@ -3579,9 +3557,6 @@ function PoliciesTab({
     return <TabSkeleton />;
   }
   const policies = query.data.policies;
-  if (policies.length === 0) {
-    return <TableResourceEmptyState category="policies" toolbar={toolbar} />;
-  }
   const normalizedSearch = policySearch.trim().toLocaleLowerCase();
   const visiblePolicies = filterPoliciesByMode(
     policies,
@@ -3652,96 +3627,105 @@ function PoliciesTab({
             <PolicyCard key={policy.policyName} policy={policy} />
           ))}
         </div>
-      ) : (
-        <SearchEmptyState className="border" resourceName="policies" />
-      )}
-      {visiblePolicies.length > 0 ? (
-        <fieldset
-          aria-label="Policies pagination"
-          className="m-0 flex min-h-8 min-w-0 flex-wrap items-center gap-2 border-0 p-0 text-muted-foreground text-xs"
-        >
-          <span className="text-[11px]">Rows per page</span>
-          <Select
-            onValueChange={(nextValue) => {
-              if (typeof nextValue !== "string") {
-                return;
-              }
-              const nextPageSize = Number(nextValue);
-              if (isPolicyPageSize(nextPageSize)) {
-                setPageIndex(0);
-                setPageSize(nextPageSize);
-              }
-            }}
-            value={String(pageSize)}
-          >
-            <SelectTrigger
-              aria-label="Rows per page"
-              className="h-7 w-16"
-              size="sm"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent alignItemWithTrigger={false}>
-              {POLICY_PAGE_SIZE_OPTIONS.map((size) => (
-                <SelectItem
-                  key={size}
-                  label={String(size)}
-                  value={String(size)}
-                >
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="tabular-nums">
-            Showing {firstPolicy}&ndash;{lastPolicy} of {visiblePolicies.length}{" "}
-            policies
-          </span>
-          <span
-            aria-atomic="true"
-            aria-live="polite"
-            className="sr-only"
-            role="status"
-          >
-            Showing {firstPolicy}&ndash;{lastPolicy} of {visiblePolicies.length}{" "}
-            policies. Page {currentPageIndex + 1} of {pageCount}.
-          </span>
-          <nav
-            aria-label="Policy pages"
-            className="ml-auto flex items-center gap-2"
-          >
-            <Button
-              aria-label="Previous policies page"
-              className="size-7 p-0"
-              disabled={currentPageIndex === 0}
-              onClick={() => {
-                setPageIndex(Math.max(0, currentPageIndex - 1));
-              }}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <ChevronLeft className="size-3" />
-            </Button>
-            <span className="font-mono text-xs">
-              Page {currentPageIndex + 1} of {pageCount}
-            </span>
-            <Button
-              aria-label="Next policies page"
-              className="size-7 p-0"
-              disabled={currentPageIndex >= pageCount - 1}
-              onClick={() => {
-                setPageIndex(Math.min(pageCount - 1, currentPageIndex + 1));
-              }}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <ChevronRight className="size-3" />
-            </Button>
-          </nav>
-        </fieldset>
       ) : null}
+      {policies.length === 0 ? (
+        <TableResourceEmptyState category="policies" toolbar={toolbar} />
+      ) : null}
+      {policies.length > 0 && pagePolicies.length === 0 ? (
+        <SearchEmptyState className="border" resourceName="policies" />
+      ) : null}
+      <fieldset
+        aria-label="Policies pagination"
+        className="m-0 flex min-h-8 min-w-0 flex-wrap items-center gap-2 border-0 p-0 text-muted-foreground text-xs"
+      >
+        <span className="text-[11px]">Rows per page</span>
+        <Select
+          onValueChange={(nextValue) => {
+            if (typeof nextValue !== "string") {
+              return;
+            }
+            const nextPageSize = Number(nextValue);
+            if (isPolicyPageSize(nextPageSize)) {
+              setPageIndex(
+                pageIndexForPageSizeChange({
+                  nextPageSize,
+                  pageIndex: currentPageIndex,
+                  pageSize,
+                })
+              );
+              setPageSize(nextPageSize);
+            }
+          }}
+          value={String(pageSize)}
+        >
+          <SelectTrigger
+            aria-label="Rows per page"
+            className="h-7 w-16"
+            size="sm"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger={false}>
+            {POLICY_PAGE_SIZE_OPTIONS.map((size) => (
+              <SelectItem key={size} label={String(size)} value={String(size)}>
+                {size}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {visiblePolicies.length > 0 ? (
+          <>
+            <span className="tabular-nums">
+              Showing {firstPolicy}&ndash;{lastPolicy} of{" "}
+              {visiblePolicies.length} policies
+            </span>
+            <span
+              aria-atomic="true"
+              aria-live="polite"
+              className="sr-only"
+              role="status"
+            >
+              Showing {firstPolicy}&ndash;{lastPolicy} of{" "}
+              {visiblePolicies.length} policies. Page {currentPageIndex + 1} of{" "}
+              {pageCount}.
+            </span>
+          </>
+        ) : null}
+        <nav
+          aria-label="Policy pages"
+          className="ml-auto flex items-center gap-2"
+        >
+          <Button
+            aria-label="Previous policies page"
+            className="size-7 p-0"
+            disabled={currentPageIndex === 0}
+            onClick={() => {
+              setPageIndex(Math.max(0, currentPageIndex - 1));
+            }}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <ChevronLeft className="size-3" />
+          </Button>
+          <span className="font-mono text-xs">
+            Page {currentPageIndex + 1} of {pageCount}
+          </span>
+          <Button
+            aria-label="Next policies page"
+            className="size-7 p-0"
+            disabled={currentPageIndex >= pageCount - 1}
+            onClick={() => {
+              setPageIndex(Math.min(pageCount - 1, currentPageIndex + 1));
+            }}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <ChevronRight className="size-3" />
+          </Button>
+        </nav>
+      </fieldset>
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <RlsCombinationGuide />
         <RlsPreview policies={policies} />
@@ -4036,9 +4020,6 @@ function TriggersTab({
     return <TabSkeleton />;
   }
   const triggers = query.data.triggers;
-  if (triggers.length === 0) {
-    return <TableResourceEmptyState category="triggers" toolbar={toolbar} />;
-  }
   const filteredTriggers = filterTableTriggers(triggers, {
     search,
     states: stateFilters.filter(isTriggerStateFilter),
@@ -4062,8 +4043,14 @@ function TriggersTab({
   }
 
   function handlePageSizeChange(nextPageSize: number) {
+    setPageIndex(
+      pageIndexForPageSizeChange({
+        nextPageSize,
+        pageIndex: currentPageIndex,
+        pageSize,
+      })
+    );
     setPageSize(nextPageSize);
-    setPageIndex(0);
   }
 
   return (
@@ -4098,43 +4085,42 @@ function TriggersTab({
           onRefresh={toolbar.handleRefresh}
         />
       </div>
-      {filteredTriggers.length === 0 ? (
+      {triggers.length === 0 ? (
+        <TableResourceEmptyState category="triggers" toolbar={toolbar} />
+      ) : null}
+      {triggers.length > 0 && filteredTriggers.length === 0 ? (
         <SearchEmptyState
           className="rounded-[10px] border"
           resourceName="triggers"
         />
-      ) : (
-        <>
-          <div className="flex flex-col gap-2.5">
-            {paginatedTriggers.map((trigger) => (
-              <TriggerCard
-                key={trigger.triggerName}
-                schemaName={schemaName}
-                tableName={tableName}
-                trigger={trigger}
-              />
-            ))}
-          </div>
-          {/* Keep the selector available after choosing a larger page size. */}
-          {filteredTriggers.length > DEFAULT_TRIGGER_PAGE_SIZE ? (
-            <PaginationFooter
-              hasNext={currentPageIndex < pageCount - 1}
-              hasPrev={currentPageIndex > 0}
-              onNext={() => {
-                setPageIndex(Math.min(currentPageIndex + 1, pageCount - 1));
-              }}
-              onPageSizeChange={handlePageSizeChange}
-              onPrev={() => {
-                setPageIndex(Math.max(currentPageIndex - 1, 0));
-              }}
-              pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
-              pageSize={pageSize}
-              pageSizeLabel="Triggers per page"
-              pageSizeOptions={TRIGGER_PAGE_SIZE_OPTIONS}
+      ) : null}
+      {filteredTriggers.length > 0 ? (
+        <div className="flex flex-col gap-2.5">
+          {paginatedTriggers.map((trigger) => (
+            <TriggerCard
+              key={trigger.triggerName}
+              schemaName={schemaName}
+              tableName={tableName}
+              trigger={trigger}
             />
-          ) : null}
-        </>
-      )}
+          ))}
+        </div>
+      ) : null}
+      <PaginationFooter
+        hasNext={currentPageIndex < pageCount - 1}
+        hasPrev={currentPageIndex > 0}
+        onNext={() => {
+          setPageIndex(Math.min(currentPageIndex + 1, pageCount - 1));
+        }}
+        onPageSizeChange={handlePageSizeChange}
+        onPrev={() => {
+          setPageIndex(Math.max(currentPageIndex - 1, 0));
+        }}
+        pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
+        pageSize={pageSize}
+        pageSizeLabel="Triggers per page"
+        pageSizeOptions={TRIGGER_PAGE_SIZE_OPTIONS}
+      />
     </div>
   );
 }

@@ -7,19 +7,8 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import { PAGE_SIZE_OPTIONS } from "@/lib/pagination";
 
-const PAGE_SIZE_25 = 25;
-const PAGE_SIZE_50 = 50;
-const PAGE_SIZE_100 = 100;
-const PAGE_SIZE_250 = 250;
-const PAGE_SIZE_500 = 500;
-const PAGE_SIZE_OPTIONS = [
-  PAGE_SIZE_25,
-  PAGE_SIZE_50,
-  PAGE_SIZE_100,
-  PAGE_SIZE_250,
-  PAGE_SIZE_500,
-];
 interface PaginationFooterProps {
   hasNext: boolean;
   hasPrev: boolean;

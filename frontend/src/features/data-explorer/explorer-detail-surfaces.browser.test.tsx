@@ -2875,13 +2875,13 @@ test("data explorer table indexes match the redesign complex usage scenario", as
 test("data explorer table indexes pagination has a visual baseline", async () => {
   seedShipmentIndexesRedesignQueries();
   tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
-    indexes: Array.from({ length: 6 }, (_, index) =>
+    indexes: Array.from({ length: 11 }, (_, index) =>
       createProto(TableIndexSchema, {
         indexName: `shipments_route_${index + 1}_idx`,
         isValid: true,
         keyColumns: ["route_id"],
         keyParts: ["route_id"],
-        method: index === 5 ? "gin" : "btree",
+        method: index === 10 ? "gin" : "btree",
         sizeBytes: BigInt(index + 1) * 1024n * 1024n,
       })
     ),
@@ -2904,12 +2904,12 @@ test("data explorer table indexes pagination has a visual baseline", async () =>
     />
   );
 
-  await page.getByRole("combobox", { name: "Indexes per page" }).click();
-  await page.getByRole("option", { name: "5" }).click();
+  await page.getByRole("button", { name: "Next indexes page" }).click();
 
   await expect
     .element(page.getByRole("status"))
-    .toHaveTextContent("Showing 1–5 of 6 indexes");
+    .toHaveTextContent("Showing 11–11 of 11 indexes");
+  await expect.element(page.getByText("Page 2 of 2")).toBeVisible();
   await expect
     .element(page.getByRole("navigation", { name: "Indexes pagination" }))
     .toBeVisible();

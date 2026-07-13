@@ -36,18 +36,13 @@ import {
   extensionsForDatabaseQueryInput,
   useListAllExtensionsQuery,
 } from "@/hooks/api/extension";
+import {
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZE_OPTIONS,
+  pageIndexForPageSizeChange,
+} from "@/lib/pagination";
 import { useUrlTableSearch } from "@/lib/url-search-state";
 import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_pb";
-
-const SMALL_EXTENSIONS_PAGE_SIZE = 6;
-const MEDIUM_EXTENSIONS_PAGE_SIZE = 12;
-const LARGE_EXTENSIONS_PAGE_SIZE = 24;
-const DEFAULT_EXTENSIONS_PAGE_SIZE = SMALL_EXTENSIONS_PAGE_SIZE;
-const EXTENSION_PAGE_SIZE_OPTIONS = [
-  SMALL_EXTENSIONS_PAGE_SIZE,
-  MEDIUM_EXTENSIONS_PAGE_SIZE,
-  LARGE_EXTENSIONS_PAGE_SIZE,
-] as const;
 
 interface ExtensionFacetFilterProps<Value extends string> {
   label: string;
@@ -300,7 +295,7 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
   const [scope, setScope] = useState<ExtensionScopeFilter>("All");
   const [category, setCategory] = useState<ExtensionCategoryFilter>("All");
   const [source, setSource] = useState<ExtensionSourceFilter>("All");
-  const [pageSize, setPageSize] = useState(DEFAULT_EXTENSIONS_PAGE_SIZE);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [pageIndex, setPageIndex] = useState(0);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
@@ -361,7 +356,13 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
   }
 
   function handlePageSizeChange(nextPageSize: number) {
-    resetPage();
+    setPageIndex(
+      pageIndexForPageSizeChange({
+        nextPageSize,
+        pageIndex: currentPageIndex,
+        pageSize,
+      })
+    );
     setSelectedKey(null);
     setPageSize(nextPageSize);
   }
@@ -422,8 +423,8 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
               ))}
             </div>
           )}
-          {filteredExtensions.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
+          <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
+            {filteredExtensions.length > 0 ? (
               <span className="shrink-0">
                 {paginationLabel({
                   filteredCount: filteredExtensions.length,
@@ -431,21 +432,21 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
                   pageSize,
                 })}
               </span>
-              <div className="w-full sm:min-w-0 sm:flex-1">
-                <PaginationFooter
-                  hasNext={currentPageIndex < pageCount - 1}
-                  hasPrev={currentPageIndex > 0}
-                  onNext={handleNextPage}
-                  onPageSizeChange={handlePageSizeChange}
-                  onPrev={handlePreviousPage}
-                  pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
-                  pageSize={pageSize}
-                  pageSizeLabel="Extensions per page"
-                  pageSizeOptions={EXTENSION_PAGE_SIZE_OPTIONS}
-                />
-              </div>
+            ) : null}
+            <div className="w-full sm:min-w-0 sm:flex-1">
+              <PaginationFooter
+                hasNext={currentPageIndex < pageCount - 1}
+                hasPrev={currentPageIndex > 0}
+                onNext={handleNextPage}
+                onPageSizeChange={handlePageSizeChange}
+                onPrev={handlePreviousPage}
+                pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
+                pageSize={pageSize}
+                pageSizeLabel="Extensions per page"
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
+              />
             </div>
-          ) : null}
+          </div>
         </div>
       </div>
       <Sheet

@@ -65,8 +65,6 @@ import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb"
 
 type DatabaseSection = "overview";
 
-const OBJECTS_PAGE_SIZE = 15;
-const SCHEMAS_PAGE_SIZE = 15;
 const EXPLORER_ROUTE =
   "/instances/$instanceId/databases/$databaseId/explorer" as const;
 const LOADING_ROW_COUNT = 5;
@@ -615,7 +613,6 @@ function LargestObjectsSection({
               to: EXPLORER_ROUTE,
             });
           }}
-          pageSize={OBJECTS_PAGE_SIZE}
           tableKey="database-objects"
         />
       )}
@@ -698,7 +695,6 @@ function SchemasSection({
               to: EXPLORER_ROUTE,
             });
           }}
-          pageSize={SCHEMAS_PAGE_SIZE}
           tableKey="database-schemas"
         />
       )}
