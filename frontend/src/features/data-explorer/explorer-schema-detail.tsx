@@ -23,9 +23,13 @@ import {
   type FacetedFilterOption,
 } from "@/components/ui/data-table-faceted-filter";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CatalogSyncNotice } from "@/features/data-explorer/catalog-sync-notice";
+import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model";
+import { ExplorerSchemaMap } from "@/features/data-explorer/explorer-schema-map";
 import { HeaderStat } from "@/features/data-explorer/explorer-shared-ui";
 import { formatRows } from "@/features/data-explorer/format-rows";
+import type { SchemaDetailTab } from "@/features/data-explorer/schema-detail-tab";
 import type { catalogSyncNotice } from "@/features/data-explorer/use-data-explorer-state";
 import {
   formatBytes,
@@ -399,6 +403,11 @@ const LOADING_SKELETON_KEYS = Array.from(
   { length: 8 },
   (_, index) => `schema-object-skeleton-${index + 1}`
 );
+const EMPTY_SCHEMA_SUMMARIES: SchemaSummary[] = [];
+
+function noopSchemaTabChange(_tab: SchemaDetailTab) {
+  return;
+}
 
 function SchemaObjectsLoading() {
   return (
@@ -416,11 +425,17 @@ function SchemaObjectsLoading() {
 }
 
 function SchemaDetail({
+  activeTab = "objects",
+  databaseId = "",
   hasMoreTables = false,
   hasMoreViews = false,
+  instanceId = "",
   onSelectTable,
+  onSelectTableInSchema,
   onSelectView,
+  onTabChange = noopSchemaTabChange,
   owner,
+  schemas = EMPTY_SCHEMA_SUMMARIES,
   schemaName,
   tables,
   tablesError,
@@ -430,11 +445,17 @@ function SchemaDetail({
   viewsError,
   viewsLoading,
 }: {
+  activeTab?: SchemaDetailTab;
+  databaseId?: string;
   hasMoreTables?: boolean;
   hasMoreViews?: boolean;
+  instanceId?: string;
   onSelectTable: (name: string) => void;
+  onSelectTableInSchema?: (schemaName: string, name: string) => void;
   onSelectView: (name: string) => void;
+  onTabChange?: (tab: SchemaDetailTab) => void;
   owner: string;
+  schemas?: SchemaSummary[];
   schemaName: string;
   tables: Table[];
   tablesError: unknown;
@@ -459,6 +480,13 @@ function SchemaDetail({
     tables.length === 0 &&
     views.length === 0 &&
     !(tablesError || viewsError);
+  const mapSchemas =
+    schemas.length > 0
+      ? schemas
+      : [{ id: schemaName, name: schemaName, owner }];
+  const handleSelectTableInSchema =
+    onSelectTableInSchema ??
+    ((_schemaName: string, name: string) => onSelectTable(name));
 
   return (
     <div className="flex flex-col gap-5">
@@ -516,16 +544,45 @@ function SchemaDetail({
         </div>
       ) : null}
 
-      {isLoading ? (
-        <SchemaObjectsLoading />
-      ) : (
-        <SchemaObjectsTable
-          onSelectTable={onSelectTable}
-          onSelectView={onSelectView}
-          tables={tables}
-          views={views}
-        />
-      )}
+      <Tabs
+        className="min-h-0"
+        onValueChange={(next) => {
+          if (next === "objects" || next === "map") {
+            onTabChange(next);
+          }
+        }}
+        value={activeTab}
+      >
+        <TabsList className="w-fit">
+          <TabsTrigger value="objects">Objects</TabsTrigger>
+          <TabsTrigger value="map">Schema map</TabsTrigger>
+        </TabsList>
+        <TabsContent className="mt-4" value="objects">
+          {isLoading ? (
+            <SchemaObjectsLoading />
+          ) : (
+            <SchemaObjectsTable
+              onSelectTable={onSelectTable}
+              onSelectView={onSelectView}
+              tables={tables}
+              views={views}
+            />
+          )}
+        </TabsContent>
+        <TabsContent className="mt-4" value="map">
+          {activeTab === "map" ? (
+            <ExplorerSchemaMap
+              activeSchemaName={schemaName}
+              databaseId={databaseId}
+              enabled={true}
+              instanceId={instanceId}
+              key={schemaName}
+              onSelectTable={handleSelectTableInSchema}
+              schemas={mapSchemas}
+            />
+          ) : null}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

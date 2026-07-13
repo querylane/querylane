@@ -1,0 +1,15 @@
+@keyframes edge-dash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+.connected-edge {
+  animation: edge-dash 0.5s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connected-edge {
+    animation: none;
+  }
+}

@@ -21,6 +21,10 @@ import {
 } from "@/features/data-explorer/data-explorer-table-list-sort";
 import type { CategoryKey } from "@/features/data-explorer/data-explorer-types";
 import {
+  isSchemaDetailTab,
+  type SchemaDetailTab,
+} from "@/features/data-explorer/schema-detail-tab";
+import {
   isTableDetailTab,
   type TableDetailTab,
 } from "@/features/data-explorer/table-detail-tab";
@@ -240,6 +244,9 @@ function useDataExplorerPageController({
     onResourceIntent,
     onRetryTables,
     onRetryViews,
+    onSchemaTabChange: (next: SchemaDetailTab) => {
+      updateSearch({ tab: next === "objects" ? undefined : next });
+    },
     onSelectResource: (category: CategoryKey, name: string) => {
       updateSearch({
         category,
@@ -256,7 +263,7 @@ function useDataExplorerPageController({
         category: undefined,
         name: undefined,
         schema: schema.name,
-        tab: undefined,
+        tab: isSchemaDetailTab(search.tab) ? search.tab : undefined,
       });
     },
     onSelectSchemaOverview: () => {
@@ -264,6 +271,14 @@ function useDataExplorerPageController({
         category: undefined,
         name: undefined,
         schema: activeSchemaName,
+        tab: isSchemaDetailTab(search.tab) ? search.tab : undefined,
+      });
+    },
+    onSelectTableInSchema: (schemaName: string, name: string) => {
+      updateSearch({
+        category: "tables",
+        name,
+        schema: schemaName,
         tab: undefined,
       });
     },
@@ -305,6 +320,7 @@ function useDataExplorerPageController({
     schemasSyncNotice: catalogSyncNotice(
       schemasQuery.data?.pages.at(-1)?.syncMetadata
     ),
+    schemaTab: isSchemaDetailTab(search.tab) ? search.tab : "objects",
     selectedResourceError:
       selectedSchemaError ??
       selectedResourceQueryError({
@@ -340,7 +356,7 @@ interface ExplorerSearchPatch {
   name?: string | undefined;
   q?: string | undefined;
   schema?: string | undefined;
-  tab?: TableDetailTab | undefined;
+  tab?: SchemaDetailTab | TableDetailTab | undefined;
 }
 
 function prefetchTableDetails({
