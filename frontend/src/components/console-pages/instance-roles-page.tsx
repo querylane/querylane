@@ -11,6 +11,7 @@ import {
   type InstanceRolesSearch,
   type InstanceRolesTab,
   isInstanceRolesTab,
+  isInstanceRolesType,
 } from "@/components/console-pages/instance-roles-search";
 import { RoleAvatar } from "@/components/console-pages/role-avatar";
 import { RoleKindBadge } from "@/components/console-pages/role-kind-badge";
@@ -20,13 +21,13 @@ import {
   type RoleMapKindVisibility,
 } from "@/components/console-pages/roles-access-map-model";
 import { SearchEmptyState } from "@/components/search-empty-state";
-import { Button } from "@/components/ui/button";
 import {
   DataTable,
   type DataTableColumnDef,
   DataTableFilter,
   SortableHeader,
 } from "@/components/ui/data-table";
+import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   rolesForInstanceQueryInput,
@@ -55,33 +56,12 @@ const DEFAULT_ROLE_MAP_KIND_VISIBILITY = {
   super: true,
 } satisfies RoleMapKindVisibility;
 
-const KIND_FILTERS: { id: KindFilter; label: string; tip: string }[] = [
-  { id: "all", label: "All", tip: "Every role on this database" },
-  {
-    id: "login",
-    label: "Users",
-    tip: "Roles that can connect (LOGIN, not SUPERUSER)",
-  },
-  {
-    id: "super",
-    label: "Superusers",
-    tip: "Roles with SUPERUSER — bypass all checks",
-  },
-  {
-    id: "group",
-    label: "Groups",
-    tip: "NOLOGIN roles used to bundle privileges",
-  },
-  {
-    id: "repl",
-    label: "Replicators",
-    tip: "Roles with REPLICATION (no superuser)",
-  },
-  {
-    id: "builtin",
-    label: "Built-in",
-    tip: "Predefined pg_* roles — grant implicit privileges to their members",
-  },
+const ROLE_TYPE_FILTERS: { id: RoleKind; label: string }[] = [
+  { id: "login", label: "Users" },
+  { id: "super", label: "Superusers" },
+  { id: "group", label: "Groups" },
+  { id: "repl", label: "Replicators" },
+  { id: "builtin", label: "Built-in" },
 ];
 
 function roleMapVisibilityForType(type: RoleKind | undefined) {
@@ -350,39 +330,33 @@ export function InstanceRolesPage({
           onValueChange={handleRolesTabChange}
           value={activeTab}
         >
-          <div className="flex flex-wrap items-center gap-2">
-            <TabsList className="mr-2">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <TabsList className="shrink-0">
               <TabsTrigger value="details">Table</TabsTrigger>
               <TabsTrigger value="map">Access map</TabsTrigger>
             </TabsList>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {KIND_FILTERS.map((entry) => {
-                const active =
-                  entry.id === "all" ? type === undefined : type === entry.id;
-                const nextType = entry.id === "all" ? undefined : entry.id;
-                return (
-                  <Button
-                    key={entry.id}
-                    onClick={() => handleRoleTypeChange(nextType)}
-                    size="sm"
-                    title={entry.tip}
-                    type="button"
-                    variant={active ? "secondary" : "outline"}
-                  >
-                    {entry.label}
-                    <span className="text-muted-foreground text-xs tabular-nums">
-                      {counts[entry.id]}
-                    </span>
-                  </Button>
-                );
-              })}
+            <div className="flex min-w-0 items-center gap-2 sm:ml-auto">
+              <div className="min-w-0 flex-1 sm:flex-none">
+                <DataTableFilter
+                  onChange={setFilter}
+                  placeholder="Search roles…"
+                  value={filter}
+                />
+              </div>
+              <DataTableFacetedFilter
+                onSelectedValuesChange={(values) =>
+                  handleRoleTypeChange(values.find(isInstanceRolesType))
+                }
+                options={ROLE_TYPE_FILTERS.map((entry) => ({
+                  count: counts[entry.id],
+                  label: entry.label,
+                  value: entry.id,
+                }))}
+                selectedValues={[type].filter(isInstanceRolesType)}
+                singleSelect={true}
+                title="Type"
+              />
             </div>
-            <div className="min-w-52 flex-1" />
-            <DataTableFilter
-              onChange={setFilter}
-              placeholder="Search roles…"
-              value={filter}
-            />
           </div>
           <TabsContent className="mt-4" value="details">
             {rolesDetailsContent}

@@ -22,9 +22,6 @@ import {
   GrantObjectType,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const ALL_ROLES_CHIP_NAME = /All/;
-const SUPERUSERS_CHIP_NAME = /Superusers/;
-
 const roleApiState = vi.hoisted(() => ({
   accessMapResources: null as null | {
     publicAccess: unknown[];
@@ -608,7 +605,7 @@ test("console resource overview keeps dense metadata readable", async () => {
   );
 });
 
-test("console roles list shows kind chips, sortable columns, and role rows", async () => {
+test("console roles list shows an inline type filter, sortable columns, and role rows", async () => {
   renderConsoleSurface(<InstanceRolesPage instanceId="prod" />);
 
   await expect
@@ -618,19 +615,25 @@ test("console roles list shows kind chips, sortable columns, and role rows", asy
   await expect
     .element(page.getByRole("tab", { name: "Access map" }))
     .toBeVisible();
-  await expect
-    .element(page.getByRole("button", { name: ALL_ROLES_CHIP_NAME }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("button", { name: SUPERUSERS_CHIP_NAME }))
-    .toBeVisible();
+  const search = page.getByPlaceholder("Search roles…").element();
+  const typeFilter = page.getByRole("button", { name: "Type" }).element();
+  await expect.element(typeFilter).toBeVisible();
+  expect(typeFilter.getBoundingClientRect().left).toBeGreaterThan(
+    search.getBoundingClientRect().right
+  );
+  expect(
+    Math.abs(
+      typeFilter.getBoundingClientRect().top -
+        search.getBoundingClientRect().top
+    )
+  ).toBeLessThanOrEqual(1);
   await expect
     .element(page.getByText("postgres", { exact: true }))
     .toBeVisible();
   await expect
     .element(page.getByText("app_user", { exact: true }))
     .toBeVisible();
-  await expect.element(page.getByPlaceholder("Search roles…")).toBeVisible();
+  await expect.element(search).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "console-roles-table"
   );
