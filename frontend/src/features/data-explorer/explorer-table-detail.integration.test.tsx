@@ -1443,11 +1443,17 @@ describe("TableDetail indexes tab", () => {
     );
 
     const search = screen.getByRole("textbox", { name: "Search indexes…" });
+    const indexesSummary = screen.getByText("Indexes", {
+      selector: "p",
+    }).parentElement;
+    if (!indexesSummary) {
+      throw new Error("Expected the indexes summary card to render.");
+    }
     await user.type(search, "payload");
 
     expect(document.body.textContent).toContain("orders_payload_idx");
     expect(document.body.textContent).not.toContain("orders_pkey");
-    expect(screen.getAllByText("2").length).toBeGreaterThan(0);
+    expect(within(indexesSummary).getByText("2")).toBeTruthy();
 
     await user.clear(search);
 
@@ -1459,12 +1465,18 @@ describe("TableDetail indexes tab", () => {
 
     expect(document.body.textContent).toContain("orders_payload_idx");
     expect(document.body.textContent).not.toContain("orders_pkey");
-    expect(screen.getAllByText("2").length).toBeGreaterThan(0);
+    expect(within(indexesSummary).getByText("2")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Reset" }));
 
     expect(document.body.textContent).toContain("orders_payload_idx");
     expect(document.body.textContent).toContain("orders_pkey");
+
+    await user.type(search, "missing");
+
+    expect(screen.getByText("No indexes found")).toBeTruthy();
+    expect(screen.getByText("Try a different search or filter.")).toBeTruthy();
+    expect(within(indexesSummary).getByText("2")).toBeTruthy();
   });
 
   it("renders usage stats, partial indexes, expression indexes, and unused warnings", () => {

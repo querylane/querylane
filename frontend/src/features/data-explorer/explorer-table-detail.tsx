@@ -65,7 +65,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -2554,20 +2553,11 @@ function IndexesTab({
         />
       </div>
       <div className="flex min-h-8 flex-wrap items-center gap-2">
-        <div className="relative w-52 max-w-full shrink-0">
-          <Search
-            aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            aria-label="Search indexes…"
-            className="h-8 pl-8 text-sm"
-            name="index-filter"
-            onChange={(event) => setSearchFilter(event.target.value)}
-            placeholder="Search indexes…"
-            value={searchFilter}
-          />
-        </div>
+        <DataTableFilter
+          onChange={setSearchFilter}
+          placeholder="Search indexes…"
+          value={searchFilter}
+        />
         <FacetFilterBar
           filters={[
             {
