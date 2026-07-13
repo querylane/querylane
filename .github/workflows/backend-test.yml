@@ -7,6 +7,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - backend/**
+      - Dockerfile
       - .github/workflows/backend-test.yml
       - taskfiles/backend.yaml
       - taskfiles/dev.yaml
@@ -52,6 +53,8 @@ jobs:
           exit "$TEST_EXIT_CODE"
       - name: Verify development reflection build
         run: go test -short -tags querylane_dev ./cmd/server
+      - name: Run stock image unit tests
+        run: go test -short -tags no_embedded_postgres ./cmd/server ./service/onboarding
 
   integration-tests:
     name: Integration Tests

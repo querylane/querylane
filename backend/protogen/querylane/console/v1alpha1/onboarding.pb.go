@@ -218,6 +218,71 @@ func (SetupMethod) EnumDescriptor() ([]byte, []int) {
 	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{2}
 }
 
+// SetupMethodAvailability describes whether a setup method can be used in the
+// current environment and explains why when it cannot.
+type SetupMethodAvailability struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output-only. Setup method described by this entry.
+	Method SetupMethod `protobuf:"varint,1,opt,name=method,proto3,enum=querylane.console.v1alpha1.SetupMethod" json:"method,omitempty"`
+	// Output-only. Whether the method can be used in the current environment.
+	Available bool `protobuf:"varint,2,opt,name=available,proto3" json:"available,omitempty"`
+	// Output-only. User-facing explanation when the method is unavailable.
+	UnavailableReason string `protobuf:"bytes,3,opt,name=unavailable_reason,json=unavailableReason,proto3" json:"unavailable_reason,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *SetupMethodAvailability) Reset() {
+	*x = SetupMethodAvailability{}
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetupMethodAvailability) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetupMethodAvailability) ProtoMessage() {}
+
+func (x *SetupMethodAvailability) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetupMethodAvailability.ProtoReflect.Descriptor instead.
+func (*SetupMethodAvailability) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *SetupMethodAvailability) GetMethod() SetupMethod {
+	if x != nil {
+		return x.Method
+	}
+	return SetupMethod_SETUP_METHOD_UNSPECIFIED
+}
+
+func (x *SetupMethodAvailability) GetAvailable() bool {
+	if x != nil {
+		return x.Available
+	}
+	return false
+}
+
+func (x *SetupMethodAvailability) GetUnavailableReason() string {
+	if x != nil {
+		return x.UnavailableReason
+	}
+	return ""
+}
+
 // SetupProgressEvent reports the state of a single step in the database setup
 // pipeline. Both streaming RPCs return the same event type.
 //
@@ -242,7 +307,7 @@ type SetupProgressEvent struct {
 
 func (x *SetupProgressEvent) Reset() {
 	*x = SetupProgressEvent{}
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[0]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -254,7 +319,7 @@ func (x *SetupProgressEvent) String() string {
 func (*SetupProgressEvent) ProtoMessage() {}
 
 func (x *SetupProgressEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[0]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -267,7 +332,7 @@ func (x *SetupProgressEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetupProgressEvent.ProtoReflect.Descriptor instead.
 func (*SetupProgressEvent) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{0}
+	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *SetupProgressEvent) GetStepId() SetupStep {
@@ -312,7 +377,7 @@ type EmbeddedSetupConfig struct {
 
 func (x *EmbeddedSetupConfig) Reset() {
 	*x = EmbeddedSetupConfig{}
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[1]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -324,7 +389,7 @@ func (x *EmbeddedSetupConfig) String() string {
 func (*EmbeddedSetupConfig) ProtoMessage() {}
 
 func (x *EmbeddedSetupConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[1]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -337,7 +402,7 @@ func (x *EmbeddedSetupConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EmbeddedSetupConfig.ProtoReflect.Descriptor instead.
 func (*EmbeddedSetupConfig) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{1}
+	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *EmbeddedSetupConfig) GetPort() int32 {
@@ -362,7 +427,7 @@ type GetOnboardingStateRequest struct {
 
 func (x *GetOnboardingStateRequest) Reset() {
 	*x = GetOnboardingStateRequest{}
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[2]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -374,7 +439,7 @@ func (x *GetOnboardingStateRequest) String() string {
 func (*GetOnboardingStateRequest) ProtoMessage() {}
 
 func (x *GetOnboardingStateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[2]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -387,7 +452,7 @@ func (x *GetOnboardingStateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOnboardingStateRequest.ProtoReflect.Descriptor instead.
 func (*GetOnboardingStateRequest) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{2}
+	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{3}
 }
 
 type GetOnboardingStateResponse struct {
@@ -406,13 +471,16 @@ type GetOnboardingStateResponse struct {
 	ConfigFilePath string `protobuf:"bytes,6,opt,name=config_file_path,json=configFilePath,proto3" json:"config_file_path,omitempty"`
 	// Output-only. Absolute path to the embedded PostgreSQL data directory.
 	EmbeddedDataPath string `protobuf:"bytes,7,opt,name=embedded_data_path,json=embeddedDataPath,proto3" json:"embedded_data_path,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Output-only. Availability details for every known setup method in stable
+	// UI, manual YAML, embedded order.
+	SetupMethodAvailabilities []*SetupMethodAvailability `protobuf:"bytes,8,rep,name=setup_method_availabilities,json=setupMethodAvailabilities,proto3" json:"setup_method_availabilities,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *GetOnboardingStateResponse) Reset() {
 	*x = GetOnboardingStateResponse{}
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[3]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -424,7 +492,7 @@ func (x *GetOnboardingStateResponse) String() string {
 func (*GetOnboardingStateResponse) ProtoMessage() {}
 
 func (x *GetOnboardingStateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[3]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -437,7 +505,7 @@ func (x *GetOnboardingStateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOnboardingStateResponse.ProtoReflect.Descriptor instead.
 func (*GetOnboardingStateResponse) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{3}
+	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetOnboardingStateResponse) GetIsConfigured() bool {
@@ -489,6 +557,13 @@ func (x *GetOnboardingStateResponse) GetEmbeddedDataPath() string {
 	return ""
 }
 
+func (x *GetOnboardingStateResponse) GetSetupMethodAvailabilities() []*SetupMethodAvailability {
+	if x != nil {
+		return x.SetupMethodAvailabilities
+	}
+	return nil
+}
+
 type SetupAppDatabaseRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. The setup configuration — either external PostgreSQL connection
@@ -505,7 +580,7 @@ type SetupAppDatabaseRequest struct {
 
 func (x *SetupAppDatabaseRequest) Reset() {
 	*x = SetupAppDatabaseRequest{}
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[4]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -517,7 +592,7 @@ func (x *SetupAppDatabaseRequest) String() string {
 func (*SetupAppDatabaseRequest) ProtoMessage() {}
 
 func (x *SetupAppDatabaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[4]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -530,7 +605,7 @@ func (x *SetupAppDatabaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetupAppDatabaseRequest.ProtoReflect.Descriptor instead.
 func (*SetupAppDatabaseRequest) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{4}
+	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *SetupAppDatabaseRequest) GetSetup() isSetupAppDatabaseRequest_Setup {
@@ -586,7 +661,7 @@ type SetupAppDatabaseResponse struct {
 
 func (x *SetupAppDatabaseResponse) Reset() {
 	*x = SetupAppDatabaseResponse{}
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[5]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -598,7 +673,7 @@ func (x *SetupAppDatabaseResponse) String() string {
 func (*SetupAppDatabaseResponse) ProtoMessage() {}
 
 func (x *SetupAppDatabaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[5]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -611,7 +686,7 @@ func (x *SetupAppDatabaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetupAppDatabaseResponse.ProtoReflect.Descriptor instead.
 func (*SetupAppDatabaseResponse) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{5}
+	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *SetupAppDatabaseResponse) GetEvent() *SetupProgressEvent {
@@ -629,7 +704,7 @@ type WatchConfigChangesRequest struct {
 
 func (x *WatchConfigChangesRequest) Reset() {
 	*x = WatchConfigChangesRequest{}
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[6]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -641,7 +716,7 @@ func (x *WatchConfigChangesRequest) String() string {
 func (*WatchConfigChangesRequest) ProtoMessage() {}
 
 func (x *WatchConfigChangesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[6]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -654,7 +729,7 @@ func (x *WatchConfigChangesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchConfigChangesRequest.ProtoReflect.Descriptor instead.
 func (*WatchConfigChangesRequest) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{6}
+	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{7}
 }
 
 type WatchConfigChangesResponse struct {
@@ -667,7 +742,7 @@ type WatchConfigChangesResponse struct {
 
 func (x *WatchConfigChangesResponse) Reset() {
 	*x = WatchConfigChangesResponse{}
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[7]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -679,7 +754,7 @@ func (x *WatchConfigChangesResponse) String() string {
 func (*WatchConfigChangesResponse) ProtoMessage() {}
 
 func (x *WatchConfigChangesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[7]
+	mi := &file_querylane_console_v1alpha1_onboarding_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -692,7 +767,7 @@ func (x *WatchConfigChangesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchConfigChangesResponse.ProtoReflect.Descriptor instead.
 func (*WatchConfigChangesResponse) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{7}
+	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *WatchConfigChangesResponse) GetEvent() *SetupProgressEvent {
@@ -706,7 +781,12 @@ var File_querylane_console_v1alpha1_onboarding_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_onboarding_proto_rawDesc = "" +
 	"\n" +
-	"+querylane/console/v1alpha1/onboarding.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a(querylane/console/v1alpha1/console.proto\x1a)querylane/console/v1alpha1/instance.proto\"\xde\x01\n" +
+	"+querylane/console/v1alpha1/onboarding.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a(querylane/console/v1alpha1/console.proto\x1a)querylane/console/v1alpha1/instance.proto\"\xe6\x02\n" +
+	"\x17SetupMethodAvailability\x12N\n" +
+	"\x06method\x18\x01 \x01(\x0e2'.querylane.console.v1alpha1.SetupMethodB\r\xe0A\x03\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06method\x12!\n" +
+	"\tavailable\x18\x02 \x01(\bB\x03\xe0A\x03R\tavailable\x122\n" +
+	"\x12unavailable_reason\x18\x03 \x01(\tB\x03\xe0A\x03R\x11unavailableReason:\xa3\x01\xbaH\x9f\x01\x1a\x9c\x01\n" +
+	" setup_method_availability_reason\x12Eunavailable_reason must be empty exactly when the method is available\x1a1this.available == (this.unavailable_reason == '')\"\xde\x01\n" +
 	"\x12SetupProgressEvent\x12C\n" +
 	"\astep_id\x18\x01 \x01(\x0e2%.querylane.console.v1alpha1.SetupStepB\x03\xe0A\x03R\x06stepId\x12&\n" +
 	"\fdisplay_name\x18\x02 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12@\n" +
@@ -716,7 +796,7 @@ const file_querylane_console_v1alpha1_onboarding_proto_rawDesc = "" +
 	"\x04port\x18\x01 \x01(\x05B\x12\xe0A\x01\xbaH\f\xd8\x01\x01\x1a\a\x18\xff\xff\x03(\x80\bR\x04port\x126\n" +
 	"\x04mode\x18\x02 \x01(\tB\"\xe0A\x01\xbaH\x1c\xd8\x01\x01r\x17R\n" +
 	"persistentR\tephemeralR\x04mode\"\x1b\n" +
-	"\x19GetOnboardingStateRequest\"\xc5\x03\n" +
+	"\x19GetOnboardingStateRequest\"\xbf\x04\n" +
 	"\x1aGetOnboardingStateResponse\x12(\n" +
 	"\ris_configured\x18\x01 \x01(\bB\x03\xe0A\x03R\fisConfigured\x12b\n" +
 	"\x13app_database_status\x18\x02 \x01(\v2-.querylane.console.v1alpha1.AppDatabaseStatusB\x03\xe0A\x03R\x11appDatabaseStatus\x12 \n" +
@@ -725,7 +805,8 @@ const file_querylane_console_v1alpha1_onboarding_proto_rawDesc = "" +
 	"\x11available_methods\x18\x05 \x03(\x0e2'.querylane.console.v1alpha1.SetupMethodB\x10\xe0A\x03\xbaH\n" +
 	"\x92\x01\a\"\x05\x82\x01\x02\x10\x01R\x10availableMethods\x12-\n" +
 	"\x10config_file_path\x18\x06 \x01(\tB\x03\xe0A\x03R\x0econfigFilePath\x121\n" +
-	"\x12embedded_data_path\x18\a \x01(\tB\x03\xe0A\x03R\x10embeddedDataPath\"\xd5\x01\n" +
+	"\x12embedded_data_path\x18\a \x01(\tB\x03\xe0A\x03R\x10embeddedDataPath\x12x\n" +
+	"\x1bsetup_method_availabilities\x18\b \x03(\v23.querylane.console.v1alpha1.SetupMethodAvailabilityB\x03\xe0A\x03R\x19setupMethodAvailabilities\"\xd5\x01\n" +
 	"\x17SetupAppDatabaseRequest\x12U\n" +
 	"\x0fpostgres_config\x18\x01 \x01(\v2*.querylane.console.v1alpha1.PostgresConfigH\x00R\x0epostgresConfig\x12Z\n" +
 	"\x0fembedded_config\x18\x02 \x01(\v2/.querylane.console.v1alpha1.EmbeddedSetupConfigH\x00R\x0eembeddedConfigB\a\n" +
@@ -774,42 +855,45 @@ func file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP() []byte {
 }
 
 var file_querylane_console_v1alpha1_onboarding_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_querylane_console_v1alpha1_onboarding_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_querylane_console_v1alpha1_onboarding_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_querylane_console_v1alpha1_onboarding_proto_goTypes = []any{
 	(StepState)(0),                     // 0: querylane.console.v1alpha1.StepState
 	(SetupStep)(0),                     // 1: querylane.console.v1alpha1.SetupStep
 	(SetupMethod)(0),                   // 2: querylane.console.v1alpha1.SetupMethod
-	(*SetupProgressEvent)(nil),         // 3: querylane.console.v1alpha1.SetupProgressEvent
-	(*EmbeddedSetupConfig)(nil),        // 4: querylane.console.v1alpha1.EmbeddedSetupConfig
-	(*GetOnboardingStateRequest)(nil),  // 5: querylane.console.v1alpha1.GetOnboardingStateRequest
-	(*GetOnboardingStateResponse)(nil), // 6: querylane.console.v1alpha1.GetOnboardingStateResponse
-	(*SetupAppDatabaseRequest)(nil),    // 7: querylane.console.v1alpha1.SetupAppDatabaseRequest
-	(*SetupAppDatabaseResponse)(nil),   // 8: querylane.console.v1alpha1.SetupAppDatabaseResponse
-	(*WatchConfigChangesRequest)(nil),  // 9: querylane.console.v1alpha1.WatchConfigChangesRequest
-	(*WatchConfigChangesResponse)(nil), // 10: querylane.console.v1alpha1.WatchConfigChangesResponse
-	(*AppDatabaseStatus)(nil),          // 11: querylane.console.v1alpha1.AppDatabaseStatus
-	(*PostgresConfig)(nil),             // 12: querylane.console.v1alpha1.PostgresConfig
+	(*SetupMethodAvailability)(nil),    // 3: querylane.console.v1alpha1.SetupMethodAvailability
+	(*SetupProgressEvent)(nil),         // 4: querylane.console.v1alpha1.SetupProgressEvent
+	(*EmbeddedSetupConfig)(nil),        // 5: querylane.console.v1alpha1.EmbeddedSetupConfig
+	(*GetOnboardingStateRequest)(nil),  // 6: querylane.console.v1alpha1.GetOnboardingStateRequest
+	(*GetOnboardingStateResponse)(nil), // 7: querylane.console.v1alpha1.GetOnboardingStateResponse
+	(*SetupAppDatabaseRequest)(nil),    // 8: querylane.console.v1alpha1.SetupAppDatabaseRequest
+	(*SetupAppDatabaseResponse)(nil),   // 9: querylane.console.v1alpha1.SetupAppDatabaseResponse
+	(*WatchConfigChangesRequest)(nil),  // 10: querylane.console.v1alpha1.WatchConfigChangesRequest
+	(*WatchConfigChangesResponse)(nil), // 11: querylane.console.v1alpha1.WatchConfigChangesResponse
+	(*AppDatabaseStatus)(nil),          // 12: querylane.console.v1alpha1.AppDatabaseStatus
+	(*PostgresConfig)(nil),             // 13: querylane.console.v1alpha1.PostgresConfig
 }
 var file_querylane_console_v1alpha1_onboarding_proto_depIdxs = []int32{
-	1,  // 0: querylane.console.v1alpha1.SetupProgressEvent.step_id:type_name -> querylane.console.v1alpha1.SetupStep
-	0,  // 1: querylane.console.v1alpha1.SetupProgressEvent.state:type_name -> querylane.console.v1alpha1.StepState
-	11, // 2: querylane.console.v1alpha1.GetOnboardingStateResponse.app_database_status:type_name -> querylane.console.v1alpha1.AppDatabaseStatus
-	2,  // 3: querylane.console.v1alpha1.GetOnboardingStateResponse.available_methods:type_name -> querylane.console.v1alpha1.SetupMethod
-	12, // 4: querylane.console.v1alpha1.SetupAppDatabaseRequest.postgres_config:type_name -> querylane.console.v1alpha1.PostgresConfig
-	4,  // 5: querylane.console.v1alpha1.SetupAppDatabaseRequest.embedded_config:type_name -> querylane.console.v1alpha1.EmbeddedSetupConfig
-	3,  // 6: querylane.console.v1alpha1.SetupAppDatabaseResponse.event:type_name -> querylane.console.v1alpha1.SetupProgressEvent
-	3,  // 7: querylane.console.v1alpha1.WatchConfigChangesResponse.event:type_name -> querylane.console.v1alpha1.SetupProgressEvent
-	5,  // 8: querylane.console.v1alpha1.OnboardingService.GetOnboardingState:input_type -> querylane.console.v1alpha1.GetOnboardingStateRequest
-	7,  // 9: querylane.console.v1alpha1.OnboardingService.SetupAppDatabase:input_type -> querylane.console.v1alpha1.SetupAppDatabaseRequest
-	9,  // 10: querylane.console.v1alpha1.OnboardingService.WatchConfigChanges:input_type -> querylane.console.v1alpha1.WatchConfigChangesRequest
-	6,  // 11: querylane.console.v1alpha1.OnboardingService.GetOnboardingState:output_type -> querylane.console.v1alpha1.GetOnboardingStateResponse
-	8,  // 12: querylane.console.v1alpha1.OnboardingService.SetupAppDatabase:output_type -> querylane.console.v1alpha1.SetupAppDatabaseResponse
-	10, // 13: querylane.console.v1alpha1.OnboardingService.WatchConfigChanges:output_type -> querylane.console.v1alpha1.WatchConfigChangesResponse
-	11, // [11:14] is the sub-list for method output_type
-	8,  // [8:11] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	2,  // 0: querylane.console.v1alpha1.SetupMethodAvailability.method:type_name -> querylane.console.v1alpha1.SetupMethod
+	1,  // 1: querylane.console.v1alpha1.SetupProgressEvent.step_id:type_name -> querylane.console.v1alpha1.SetupStep
+	0,  // 2: querylane.console.v1alpha1.SetupProgressEvent.state:type_name -> querylane.console.v1alpha1.StepState
+	12, // 3: querylane.console.v1alpha1.GetOnboardingStateResponse.app_database_status:type_name -> querylane.console.v1alpha1.AppDatabaseStatus
+	2,  // 4: querylane.console.v1alpha1.GetOnboardingStateResponse.available_methods:type_name -> querylane.console.v1alpha1.SetupMethod
+	3,  // 5: querylane.console.v1alpha1.GetOnboardingStateResponse.setup_method_availabilities:type_name -> querylane.console.v1alpha1.SetupMethodAvailability
+	13, // 6: querylane.console.v1alpha1.SetupAppDatabaseRequest.postgres_config:type_name -> querylane.console.v1alpha1.PostgresConfig
+	5,  // 7: querylane.console.v1alpha1.SetupAppDatabaseRequest.embedded_config:type_name -> querylane.console.v1alpha1.EmbeddedSetupConfig
+	4,  // 8: querylane.console.v1alpha1.SetupAppDatabaseResponse.event:type_name -> querylane.console.v1alpha1.SetupProgressEvent
+	4,  // 9: querylane.console.v1alpha1.WatchConfigChangesResponse.event:type_name -> querylane.console.v1alpha1.SetupProgressEvent
+	6,  // 10: querylane.console.v1alpha1.OnboardingService.GetOnboardingState:input_type -> querylane.console.v1alpha1.GetOnboardingStateRequest
+	8,  // 11: querylane.console.v1alpha1.OnboardingService.SetupAppDatabase:input_type -> querylane.console.v1alpha1.SetupAppDatabaseRequest
+	10, // 12: querylane.console.v1alpha1.OnboardingService.WatchConfigChanges:input_type -> querylane.console.v1alpha1.WatchConfigChangesRequest
+	7,  // 13: querylane.console.v1alpha1.OnboardingService.GetOnboardingState:output_type -> querylane.console.v1alpha1.GetOnboardingStateResponse
+	9,  // 14: querylane.console.v1alpha1.OnboardingService.SetupAppDatabase:output_type -> querylane.console.v1alpha1.SetupAppDatabaseResponse
+	11, // 15: querylane.console.v1alpha1.OnboardingService.WatchConfigChanges:output_type -> querylane.console.v1alpha1.WatchConfigChangesResponse
+	13, // [13:16] is the sub-list for method output_type
+	10, // [10:13] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_onboarding_proto_init() }
@@ -819,7 +903,7 @@ func file_querylane_console_v1alpha1_onboarding_proto_init() {
 	}
 	file_querylane_console_v1alpha1_console_proto_init()
 	file_querylane_console_v1alpha1_instance_proto_init()
-	file_querylane_console_v1alpha1_onboarding_proto_msgTypes[4].OneofWrappers = []any{
+	file_querylane_console_v1alpha1_onboarding_proto_msgTypes[5].OneofWrappers = []any{
 		(*SetupAppDatabaseRequest_PostgresConfig)(nil),
 		(*SetupAppDatabaseRequest_EmbeddedConfig)(nil),
 	}
@@ -829,7 +913,7 @@ func file_querylane_console_v1alpha1_onboarding_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_querylane_console_v1alpha1_onboarding_proto_rawDesc), len(file_querylane_console_v1alpha1_onboarding_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

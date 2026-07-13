@@ -20,7 +20,11 @@ import (
 	"github.com/querylane/querylane/backend/service/internal/pgconv"
 )
 
-const progressEventBufferCapacity = 32
+const (
+	progressEventBufferCapacity = 32
+	homeNotWritableReason       = "Querylane cannot save setup because its home directory is not writable."
+	embeddedUnavailableReason   = "Embedded PostgreSQL is not available in this environment."
+)
 
 // DatabaseInitializer is used by the OnboardingService to trigger database
 // initialization and observe progress.
@@ -45,6 +49,7 @@ type Service struct {
 	configManager   *config.Manager[*serverconfig.Config]
 	dbInitializer   DatabaseInitializer
 	embeddedManager EmbeddedManager // nil if unavailable
+	embeddedReason  string
 }
 
 // NewService creates a new onboarding service. embeddedMgr may be nil.
@@ -52,10 +57,12 @@ func NewService(
 	cfgMgr *config.Manager[*serverconfig.Config],
 	dbInit DatabaseInitializer,
 	embeddedMgr *embeddedpg.Manager,
+	embeddedReason string,
 ) *Service {
 	s := &Service{
-		configManager: cfgMgr,
-		dbInitializer: dbInit,
+		configManager:  cfgMgr,
+		dbInitializer:  dbInit,
+		embeddedReason: embeddedReason,
 	}
 	if embeddedMgr != nil {
 		s.embeddedManager = embeddedMgr
@@ -73,18 +80,8 @@ func (s *Service) GetOnboardingState(
 	homePath := s.configManager.StandardHomePath()
 	isWritable := s.configManager.CanWriteConfig()
 
-	// Compute available methods.
-	methods := []v1alpha1.SetupMethod{
-		v1alpha1.SetupMethod_SETUP_METHOD_MANUAL_YAML, // always available
-	}
-
-	if isWritable {
-		methods = append(methods, v1alpha1.SetupMethod_SETUP_METHOD_UI_CONFIGURED)
-
-		if s.embeddedManager != nil {
-			methods = append(methods, v1alpha1.SetupMethod_SETUP_METHOD_EMBEDDED)
-		}
-	}
+	methodAvailabilities := s.setupMethodAvailabilities(isWritable)
+	methods := availableSetupMethods(methodAvailabilities)
 
 	configFilePath := s.configManager.ConfigFilePath()
 	if configFilePath == "" {
@@ -97,11 +94,12 @@ func (s *Service) GetOnboardingState(
 			s.dbInitializer.IsDatabaseInitialized(),
 			s.dbInitializer.DatabaseInitError(),
 		),
-		HomePath:         homePath,
-		IsHomeWritable:   isWritable,
-		AvailableMethods: methods,
-		ConfigFilePath:   configFilePath,
-		EmbeddedDataPath: filepath.Join(homePath, "pgdata"),
+		HomePath:                  homePath,
+		IsHomeWritable:            isWritable,
+		AvailableMethods:          methods,
+		SetupMethodAvailabilities: methodAvailabilities,
+		ConfigFilePath:            configFilePath,
+		EmbeddedDataPath:          filepath.Join(homePath, "pgdata"),
 	}
 
 	return connect.NewResponse(res), nil
@@ -148,7 +146,7 @@ func (s *Service) setupAppDatabase(
 			errors.New("database is already configured"))
 	}
 
-	path, err := resolveSetupPath(msg, s.embeddedManager != nil)
+	path, err := resolveSetupPath(msg, s.setupMethodAvailabilities(s.configManager.CanWriteConfig()))
 	if err != nil {
 		return err
 	}
@@ -306,6 +304,51 @@ func (s *Service) watchConfigChanges(ctx context.Context, sendEvent func(dbsetup
 	}
 }
 
+func (s *Service) setupMethodAvailabilities(isHomeWritable bool) []*v1alpha1.SetupMethodAvailability {
+	ui := &v1alpha1.SetupMethodAvailability{
+		Method:    v1alpha1.SetupMethod_SETUP_METHOD_UI_CONFIGURED,
+		Available: isHomeWritable,
+	}
+	if !ui.Available {
+		ui.UnavailableReason = homeNotWritableReason
+	}
+
+	embedded := &v1alpha1.SetupMethodAvailability{
+		Method:    v1alpha1.SetupMethod_SETUP_METHOD_EMBEDDED,
+		Available: isHomeWritable && s.embeddedManager != nil,
+	}
+	if !embedded.Available {
+		switch {
+		case s.embeddedManager == nil && s.embeddedReason != "":
+			embedded.UnavailableReason = s.embeddedReason
+		case s.embeddedManager == nil:
+			embedded.UnavailableReason = embeddedUnavailableReason
+		default:
+			embedded.UnavailableReason = homeNotWritableReason
+		}
+	}
+
+	return []*v1alpha1.SetupMethodAvailability{
+		ui,
+		{
+			Method:    v1alpha1.SetupMethod_SETUP_METHOD_MANUAL_YAML,
+			Available: true,
+		},
+		embedded,
+	}
+}
+
+func availableSetupMethods(availabilities []*v1alpha1.SetupMethodAvailability) []v1alpha1.SetupMethod {
+	methods := make([]v1alpha1.SetupMethod, 0, len(availabilities))
+	for _, availability := range availabilities {
+		if availability.Available {
+			methods = append(methods, availability.Method)
+		}
+	}
+
+	return methods
+}
+
 func hasAppDatabaseConfig(cfg *serverconfig.Config) bool {
 	return cfg != nil && (cfg.Database != nil || cfg.Embedded != nil)
 }
@@ -320,9 +363,16 @@ type setupPath struct {
 // resolveSetupPath parses the oneof in SetupAppDatabaseRequest and returns
 // the database config, persist config, and ordered steps. It is a pure
 // function — no side effects, easy to table-test.
-func resolveSetupPath(msg *v1alpha1.SetupAppDatabaseRequest, embeddedAvailable bool) (*setupPath, error) {
+func resolveSetupPath(
+	msg *v1alpha1.SetupAppDatabaseRequest,
+	availabilities []*v1alpha1.SetupMethodAvailability,
+) (*setupPath, error) {
 	switch setup := msg.Setup.(type) {
 	case *v1alpha1.SetupAppDatabaseRequest_PostgresConfig:
+		if err := requireSetupMethodAvailable(availabilities, v1alpha1.SetupMethod_SETUP_METHOD_UI_CONFIGURED); err != nil {
+			return nil, err
+		}
+
 		pgCfg := setup.PostgresConfig
 		dbCfg := &serverconfig.Database{
 			Host:           pgCfg.Host,
@@ -346,9 +396,8 @@ func resolveSetupPath(msg *v1alpha1.SetupAppDatabaseRequest, embeddedAvailable b
 		}, nil
 
 	case *v1alpha1.SetupAppDatabaseRequest_EmbeddedConfig:
-		if !embeddedAvailable {
-			return nil, connect.NewError(connect.CodeFailedPrecondition,
-				errors.New("embedded PostgreSQL is not available in this environment"))
+		if err := requireSetupMethodAvailable(availabilities, v1alpha1.SetupMethod_SETUP_METHOD_EMBEDDED); err != nil {
+			return nil, err
 		}
 
 		return &setupPath{
@@ -366,6 +415,25 @@ func resolveSetupPath(msg *v1alpha1.SetupAppDatabaseRequest, embeddedAvailable b
 		return nil, connect.NewError(connect.CodeInvalidArgument,
 			errors.New("setup must specify either postgres_config or embedded_config"))
 	}
+}
+
+func requireSetupMethodAvailable(
+	availabilities []*v1alpha1.SetupMethodAvailability,
+	method v1alpha1.SetupMethod,
+) error {
+	for _, availability := range availabilities {
+		if availability.Method != method {
+			continue
+		}
+
+		if availability.Available {
+			return nil
+		}
+
+		return connect.NewError(connect.CodeFailedPrecondition, errors.New(availability.UnavailableReason))
+	}
+
+	return connect.NewError(connect.CodeFailedPrecondition, errors.New("setup method is not available in this environment"))
 }
 
 // startEmbedded starts embedded PostgreSQL and reports progress via sendEvent.

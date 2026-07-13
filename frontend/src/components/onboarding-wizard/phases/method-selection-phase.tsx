@@ -14,7 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatSetupMethod } from "@/lib/protobuf-enums";
 import { cn } from "@/lib/utils";
-import type { SetupMethod } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
+import type {
+  SetupMethod,
+  SetupMethodAvailability,
+} from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
 
@@ -45,41 +48,80 @@ const METHOD_CONTENT: Record<
   },
 };
 
-function getConfigMethods(
-  availableMethods: readonly SetupMethod[]
-): ConfigMethod[] {
-  return availableMethods.reduce<ConfigMethod[]>((methods, setupMethod) => {
-    const method = formatSetupMethod(setupMethod);
-    if (method) {
-      methods.push(method);
+const METHOD_ORDER: ConfigMethod[] = [
+  "ui_configured",
+  "manual_yaml",
+  "embedded",
+];
+
+interface MethodAvailability {
+  available: boolean;
+  method: ConfigMethod;
+  unavailableReason: string;
+}
+
+function getMethodAvailabilities({
+  availableMethods,
+  setupMethodAvailabilities,
+}: {
+  availableMethods: readonly SetupMethod[];
+  setupMethodAvailabilities: readonly SetupMethodAvailability[];
+}): MethodAvailability[] {
+  const reportedAvailabilities =
+    setupMethodAvailabilities.length > 0
+      ? setupMethodAvailabilities
+      : availableMethods.map((method) => ({
+          available: true,
+          method,
+          unavailableReason: "",
+        }));
+
+  return METHOD_ORDER.reduce<MethodAvailability[]>((methods, method) => {
+    const availability = reportedAvailabilities.find(
+      (reported) => formatSetupMethod(reported.method) === method
+    );
+    if (availability) {
+      methods.push({
+        available: availability.available,
+        method,
+        unavailableReason: availability.unavailableReason,
+      });
     }
     return methods;
   }, []);
 }
 
 function MethodOption({
+  availability,
   isSelected,
-  method,
   onKeyDown,
   onSelect,
 }: {
+  availability: MethodAvailability;
   isSelected: boolean;
-  method: ConfigMethod;
   onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
   onSelect: (method: ConfigMethod) => void;
 }) {
+  const { available, method, unavailableReason } = availability;
   const content = METHOD_CONTENT[method];
   const Icon = content.icon;
+  const reasonId = `setup-method-${method}-unavailable-reason`;
   return (
     <Button
       aria-checked={isSelected}
+      aria-describedby={available ? undefined : reasonId}
+      aria-disabled={!available}
       className={cn(
-        "group flex h-auto w-full min-w-0 items-start gap-4 overflow-hidden whitespace-normal rounded-2xl border px-4 py-4 text-left transition-all duration-150",
-        isSelected
-          ? "border-blue-400 bg-blue-500/[0.08] ring-1 ring-blue-400/20"
-          : "border-white/10 bg-white/[0.03] hover:border-white/18 hover:bg-white/[0.05]"
+        "group flex h-auto w-full min-w-0 items-start gap-4 overflow-hidden whitespace-normal rounded-2xl border px-4 py-4 text-left transition-all duration-150 disabled:opacity-100",
+        isSelected &&
+          "border-blue-400 bg-blue-500/[0.08] ring-1 ring-blue-400/20",
+        available &&
+          !isSelected &&
+          "border-white/10 bg-white/[0.03] hover:border-white/18 hover:bg-white/[0.05]",
+        !available && "border-white/8 bg-white/[0.02]"
       )}
       data-setup-method-card={method}
+      disabled={!available}
       onClick={() => onSelect(method)}
       onKeyDown={onKeyDown}
       role="radio"
@@ -89,9 +131,11 @@ function MethodOption({
       <span
         className={cn(
           "mt-0.5 flex size-12 shrink-0 items-center justify-center rounded-2xl border",
-          isSelected
-            ? "border-blue-400/40 bg-blue-500/10 text-blue-300"
-            : "border-white/10 bg-white/[0.06] text-white/70"
+          isSelected && "border-blue-400/40 bg-blue-500/10 text-blue-300",
+          available &&
+            !isSelected &&
+            "border-white/10 bg-white/[0.06] text-white/70",
+          !available && "border-white/8 bg-white/[0.03] text-white/38"
         )}
       >
         <Icon className="size-6" />
@@ -101,7 +145,7 @@ function MethodOption({
           <span className="min-w-0 break-words font-semibold text-lg text-white [overflow-wrap:anywhere] md:text-xl">
             {getMethodLabel(method)}
           </span>
-          {content.badge ? (
+          {available && content.badge ? (
             <Badge
               className="max-w-full shrink-0 border-white/10 bg-white/[0.07] px-2.5 py-0.5 text-[11px] text-white/72"
               variant="outline"
@@ -109,17 +153,33 @@ function MethodOption({
               {content.badge}
             </Badge>
           ) : null}
+          {available ? null : (
+            <Badge
+              className="max-w-full shrink-0 border-white/10 bg-white/[0.05] px-2.5 py-0.5 text-[11px] text-white/62"
+              variant="outline"
+            >
+              Unavailable
+            </Badge>
+          )}
         </span>
         <span className="block max-w-3xl break-words text-sm text-white/58 leading-6 [overflow-wrap:anywhere] md:text-base">
           {content.description}
         </span>
+        {available ? null : (
+          <span
+            className="block max-w-3xl break-words text-sm text-white/68 leading-6 [overflow-wrap:anywhere]"
+            id={reasonId}
+          >
+            {unavailableReason}
+          </span>
+        )}
       </span>
       <span
         className={cn(
           "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border",
-          isSelected
-            ? "border-blue-400 bg-blue-500/20 text-blue-300"
-            : "border-white/12 text-white/30"
+          isSelected && "border-blue-400 bg-blue-500/20 text-blue-300",
+          available && !isSelected && "border-white/12 text-white/30",
+          !available && "border-white/8 text-white/18"
         )}
       >
         <Circle className={cn("size-3.5", isSelected && "fill-current")} />
@@ -162,9 +222,7 @@ function getNextMethodFromKey({
 }
 
 export function MethodSelectionPhase() {
-  const availableMethods = useSetupStore(
-    (state) => state.onboardingState?.availableMethods ?? []
-  );
+  const onboardingState = useSetupStore((state) => state.onboardingState);
   const selectedMethod = useOnboardingWizardStore(
     (state) => state.selectedMethod
   );
@@ -172,13 +230,29 @@ export function MethodSelectionPhase() {
   const goToConfigure = useOnboardingWizardStore(
     (state) => state.goToConfigure
   );
-  const methods = getConfigMethods(availableMethods);
+  const methods = getMethodAvailabilities({
+    availableMethods: onboardingState?.availableMethods ?? [],
+    setupMethodAvailabilities: onboardingState?.setupMethodAvailabilities ?? [],
+  });
+  const availableMethods = methods.reduce<ConfigMethod[]>(
+    (available, availability) => {
+      if (availability.available) {
+        available.push(availability.method);
+      }
+      return available;
+    },
+    []
+  );
+  const currentMethod =
+    selectedMethod && availableMethods.includes(selectedMethod)
+      ? selectedMethod
+      : null;
 
   const handleMethodKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     const nextMethod = getNextMethodFromKey({
-      currentMethod: selectedMethod,
+      currentMethod,
       key: event.key,
-      methods,
+      methods: availableMethods,
     });
     if (!nextMethod) {
       return;
@@ -199,9 +273,7 @@ export function MethodSelectionPhase() {
         <div className="flex justify-end">
           <Button
             className="h-10 rounded-xl bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
-            disabled={
-              selectedMethod === null || !methods.includes(selectedMethod)
-            }
+            disabled={currentMethod === null}
             onClick={goToConfigure}
           >
             Continue
@@ -224,11 +296,11 @@ export function MethodSelectionPhase() {
             </p>
           </div>
         ) : (
-          methods.map((method) => (
+          methods.map((availability) => (
             <MethodOption
-              isSelected={selectedMethod === method}
-              key={method}
-              method={method}
+              availability={availability}
+              isSelected={currentMethod === availability.method}
+              key={availability.method}
               onKeyDown={handleMethodKeyDown}
               onSelect={selectMethod}
             />

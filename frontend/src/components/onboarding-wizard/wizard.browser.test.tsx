@@ -13,6 +13,7 @@ import {
 import {
   GetOnboardingStateResponseSchema,
   SetupMethod,
+  SetupMethodAvailabilitySchema,
   SetupProgressEventSchema,
   SetupStep,
   StepState,
@@ -21,6 +22,7 @@ import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
 
 const ADVANCED_CONNECTION_OPTIONS_RE = /Advanced connection options/;
+const EMBEDDED_METHOD_RE = /Use embedded database/;
 const INVALID_CONNECTION_STRING_RE = /Invalid connection string/;
 
 vi.mock("@/hooks/api/instance", () => ({
@@ -44,6 +46,27 @@ function onboardingState() {
     homePath: "/Users/you/.querylane",
     isConfigured: false,
     isHomeWritable: true,
+  });
+}
+
+function onboardingStateWithUnavailableEmbedded() {
+  return createProto(GetOnboardingStateResponseSchema, {
+    ...onboardingState(),
+    setupMethodAvailabilities: [
+      createProto(SetupMethodAvailabilitySchema, {
+        available: true,
+        method: SetupMethod.UI_CONFIGURED,
+      }),
+      createProto(SetupMethodAvailabilitySchema, {
+        available: true,
+        method: SetupMethod.MANUAL_YAML,
+      }),
+      createProto(SetupMethodAvailabilitySchema, {
+        method: SetupMethod.EMBEDDED,
+        unavailableReason:
+          "Embedded PostgreSQL is unavailable in this Querylane image.",
+      }),
+    ],
   });
 }
 
@@ -198,6 +221,29 @@ describe("Onboarding wizard — browser visuals", () => {
       .toBeVisible();
     await expect.element(page.getByText("Use embedded database")).toBeVisible();
     await expect.element(page.getByTestId("onboarding-panel")).toBeVisible();
+  });
+
+  test("method selection explains unavailable embedded setup", async () => {
+    useSetupStore.setState({
+      onboardingState: onboardingStateWithUnavailableEmbedded(),
+    });
+    renderWizard();
+
+    await expect.element(page.getByText("Unavailable")).toBeVisible();
+    await expect
+      .element(
+        page.getByText(
+          "Embedded PostgreSQL is unavailable in this Querylane image."
+        )
+      )
+      .toBeVisible();
+    const embeddedMethod = page.getByRole("radio", {
+      name: EMBEDDED_METHOD_RE,
+    });
+    await expect.element(embeddedMethod).toBeDisabled();
+    await expect(embeddedMethod).toMatchScreenshot(
+      "onboarding-embedded-unavailable-method"
+    );
   });
 
   test("UI-configured path renders the default connection fields", async () => {

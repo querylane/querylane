@@ -32,7 +32,7 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist/
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldflags="-s -w" -tags embed_frontend -o /querylane .
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldflags="-s -w" -tags "embed_frontend,no_embedded_postgres" -o /querylane .
 
 # =============================================================================
 # Stage 3: Runtime

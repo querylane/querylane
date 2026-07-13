@@ -54,10 +54,11 @@ import (
 // so transitioning between stages is just "set state → ask App for new Routes
 // → swap into DelegatingHandler".
 type App struct {
-	configManager         *config.Manager[*serverconfig.Config]
-	validationInterceptor *validate.Interceptor
-	embeddedManager       *embeddedpg.Manager
-	progressBroadcaster   *dbsetup.Broadcaster
+	configManager             *config.Manager[*serverconfig.Config]
+	validationInterceptor     *validate.Interceptor
+	embeddedManager           *embeddedpg.Manager
+	embeddedUnavailableReason string
+	progressBroadcaster       *dbsetup.Broadcaster
 
 	dbInitMu  sync.Mutex
 	state     atomic.Pointer[dbState]
@@ -75,15 +76,17 @@ func NewApp(
 	cfgMgr *config.Manager[*serverconfig.Config],
 	validationInterceptor *validate.Interceptor,
 	embeddedMgr *embeddedpg.Manager,
+	embeddedUnavailableReason string,
 	broadcaster *dbsetup.Broadcaster,
 	onReady func(ctx context.Context, state *dbState),
 ) *App {
 	return &App{
-		configManager:         cfgMgr,
-		validationInterceptor: validationInterceptor,
-		embeddedManager:       embeddedMgr,
-		progressBroadcaster:   broadcaster,
-		onReady:               onReady,
+		configManager:             cfgMgr,
+		validationInterceptor:     validationInterceptor,
+		embeddedManager:           embeddedMgr,
+		embeddedUnavailableReason: embeddedUnavailableReason,
+		progressBroadcaster:       broadcaster,
+		onReady:                   onReady,
 	}
 }
 
@@ -189,7 +192,12 @@ func (a *App) Routes(ctx context.Context) http.Handler {
 
 	// OnboardingService is live in every stage; it is how the wizard reaches
 	// IsDatabaseInitialized/SetupAppDatabase on this App.
-	mux.Handle(v1alpha1connect.NewOnboardingServiceHandler(onboarding.NewService(a.configManager, a, a.embeddedManager), commonOpts...))
+	mux.Handle(v1alpha1connect.NewOnboardingServiceHandler(onboarding.NewService(
+		a.configManager,
+		a,
+		a.embeddedManager,
+		a.embeddedUnavailableReason,
+	), commonOpts...))
 
 	// DB-dependent services: real handlers when state exists, stubs otherwise.
 	// ConsoleService is special — once config exists it is live (the service

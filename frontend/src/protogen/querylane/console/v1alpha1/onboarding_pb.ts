@@ -16,7 +16,43 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file querylane/console/v1alpha1/onboarding.proto.
  */
 export const file_querylane_console_v1alpha1_onboarding: GenFile = /*@__PURE__*/
-  fileDesc("CitxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS9vbmJvYXJkaW5nLnByb3RvEhpxdWVyeWxhbmUuY29uc29sZS52MWFscGhhMSK7AQoSU2V0dXBQcm9ncmVzc0V2ZW50EjsKB3N0ZXBfaWQYASABKA4yJS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5TZXR1cFN0ZXBCA+BBAxIZCgxkaXNwbGF5X25hbWUYAiABKAlCA+BBAxI5CgVzdGF0ZRgDIAEoDjIlLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlN0ZXBTdGF0ZUID4EEDEhIKBWVycm9yGAQgASgJQgPgQQMiaQoTRW1iZWRkZWRTZXR1cENvbmZpZxIgCgRwb3J0GAEgASgFQhLgQQG6SAzYAQEaBxj//wMogAgSMAoEbW9kZRgCIAEoCUIi4EEBukgc2AEBchdSCnBlcnNpc3RlbnRSCWVwaGVtZXJhbCIbChlHZXRPbmJvYXJkaW5nU3RhdGVSZXF1ZXN0ItYCChpHZXRPbmJvYXJkaW5nU3RhdGVSZXNwb25zZRIaCg1pc19jb25maWd1cmVkGAEgASgIQgPgQQMSTwoTYXBwX2RhdGFiYXNlX3N0YXR1cxgCIAEoCzItLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkFwcERhdGFiYXNlU3RhdHVzQgPgQQMSFgoJaG9tZV9wYXRoGAMgASgJQgPgQQMSHQoQaXNfaG9tZV93cml0YWJsZRgEIAEoCEID4EEDElQKEWF2YWlsYWJsZV9tZXRob2RzGAUgAygOMicucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuU2V0dXBNZXRob2RCEOBBA7pICpIBByIFggECEAESHQoQY29uZmlnX2ZpbGVfcGF0aBgGIAEoCUID4EEDEh8KEmVtYmVkZGVkX2RhdGFfcGF0aBgHIAEoCUID4EEDIrUBChdTZXR1cEFwcERhdGFiYXNlUmVxdWVzdBJFCg9wb3N0Z3Jlc19jb25maWcYASABKAsyKi5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5Qb3N0Z3Jlc0NvbmZpZ0gAEkoKD2VtYmVkZGVkX2NvbmZpZxgCIAEoCzIvLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkVtYmVkZGVkU2V0dXBDb25maWdIAEIHCgVzZXR1cCJeChhTZXR1cEFwcERhdGFiYXNlUmVzcG9uc2USQgoFZXZlbnQYASABKAsyLi5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5TZXR1cFByb2dyZXNzRXZlbnRCA+BBAyIbChlXYXRjaENvbmZpZ0NoYW5nZXNSZXF1ZXN0ImAKGldhdGNoQ29uZmlnQ2hhbmdlc1Jlc3BvbnNlEkIKBWV2ZW50GAEgASgLMi4ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuU2V0dXBQcm9ncmVzc0V2ZW50QgPgQQMqjAEKCVN0ZXBTdGF0ZRIaChZTVEVQX1NUQVRFX1VOU1BFQ0lGSUVEEAASFgoSU1RFUF9TVEFURV9QRU5ESU5HEAESGgoWU1RFUF9TVEFURV9JTl9QUk9HUkVTUxACEhgKFFNURVBfU1RBVEVfU1VDQ0VFREVEEAMSFQoRU1RFUF9TVEFURV9GQUlMRUQQBCqJAgoJU2V0dXBTdGVwEhoKFlNFVFVQX1NURVBfVU5TUEVDSUZJRUQQABIgChxTRVRVUF9TVEVQX1NUQVJUSU5HX0VNQkVEREVEEAESGQoVU0VUVVBfU1RFUF9DT05ORUNUSU5HEAISGAoUU0VUVVBfU1RFUF9NSUdSQVRJTkcQAxIkCiBTRVRVUF9TVEVQX0lOSVRJQUxJWklOR19TRVJWSUNFUxAEEiAKHFNFVFVQX1NURVBfUEVSU0lTVElOR19DT05GSUcQBRIhCh1TRVRVUF9TVEVQX1dBSVRJTkdfRk9SX0NPTkZJRxAGEh4KGlNFVFVQX1NURVBfQ09ORklHX0RFVEVDVEVEEAcqhAEKC1NldHVwTWV0aG9kEhwKGFNFVFVQX01FVEhPRF9VTlNQRUNJRklFRBAAEh4KGlNFVFVQX01FVEhPRF9VSV9DT05GSUdVUkVEEAESHAoYU0VUVVBfTUVUSE9EX01BTlVBTF9ZQU1MEAISGQoVU0VUVVBfTUVUSE9EX0VNQkVEREVEEAMyqQMKEU9uYm9hcmRpbmdTZXJ2aWNlEoUBChJHZXRPbmJvYXJkaW5nU3RhdGUSNS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5HZXRPbmJvYXJkaW5nU3RhdGVSZXF1ZXN0GjYucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuR2V0T25ib2FyZGluZ1N0YXRlUmVzcG9uc2UiABKBAQoQU2V0dXBBcHBEYXRhYmFzZRIzLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlNldHVwQXBwRGF0YWJhc2VSZXF1ZXN0GjQucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuU2V0dXBBcHBEYXRhYmFzZVJlc3BvbnNlIgAwARKHAQoSV2F0Y2hDb25maWdDaGFuZ2VzEjUucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuV2F0Y2hDb25maWdDaGFuZ2VzUmVxdWVzdBo2LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLldhdGNoQ29uZmlnQ2hhbmdlc1Jlc3BvbnNlIgAwAUKXAgoeY29tLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExQg9PbmJvYXJkaW5nUHJvdG9QAVpaZ2l0aHViLmNvbS9xdWVyeWxhbmUvcXVlcnlsYW5lL2JhY2tlbmQvcHJvdG9nZW4vcXVlcnlsYW5lL2NvbnNvbGUvdjFhbHBoYTE7Y29uc29sZXYxYWxwaGExogIDUUNYqgIaUXVlcnlsYW5lLkNvbnNvbGUuVjFhbHBoYTHKAhpRdWVyeWxhbmVcQ29uc29sZVxWMWFscGhhMeICJlF1ZXJ5bGFuZVxDb25zb2xlXFYxYWxwaGExXEdQQk1ldGFkYXRh6gIcUXVlcnlsYW5lOjpDb25zb2xlOjpWMWFscGhhMWIGcHJvdG8z", [file_buf_validate_validate, file_google_api_field_behavior, file_querylane_console_v1alpha1_console, file_querylane_console_v1alpha1_instance]);
+  fileDesc("CitxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS9vbmJvYXJkaW5nLnByb3RvEhpxdWVyeWxhbmUuY29uc29sZS52MWFscGhhMSLAAgoXU2V0dXBNZXRob2RBdmFpbGFiaWxpdHkSRgoGbWV0aG9kGAEgASgOMicucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuU2V0dXBNZXRob2RCDeBBA7pIB4IBBBABIAASFgoJYXZhaWxhYmxlGAIgASgIQgPgQQMSHwoSdW5hdmFpbGFibGVfcmVhc29uGAMgASgJQgPgQQM6owG6SJ8BGpwBCiBzZXR1cF9tZXRob2RfYXZhaWxhYmlsaXR5X3JlYXNvbhJFdW5hdmFpbGFibGVfcmVhc29uIG11c3QgYmUgZW1wdHkgZXhhY3RseSB3aGVuIHRoZSBtZXRob2QgaXMgYXZhaWxhYmxlGjF0aGlzLmF2YWlsYWJsZSA9PSAodGhpcy51bmF2YWlsYWJsZV9yZWFzb24gPT0gJycpIrsBChJTZXR1cFByb2dyZXNzRXZlbnQSOwoHc3RlcF9pZBgBIAEoDjIlLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlNldHVwU3RlcEID4EEDEhkKDGRpc3BsYXlfbmFtZRgCIAEoCUID4EEDEjkKBXN0YXRlGAMgASgOMiUucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuU3RlcFN0YXRlQgPgQQMSEgoFZXJyb3IYBCABKAlCA+BBAyJpChNFbWJlZGRlZFNldHVwQ29uZmlnEiAKBHBvcnQYASABKAVCEuBBAbpIDNgBARoHGP//AyiACBIwCgRtb2RlGAIgASgJQiLgQQG6SBzYAQFyF1IKcGVyc2lzdGVudFIJZXBoZW1lcmFsIhsKGUdldE9uYm9hcmRpbmdTdGF0ZVJlcXVlc3QitQMKGkdldE9uYm9hcmRpbmdTdGF0ZVJlc3BvbnNlEhoKDWlzX2NvbmZpZ3VyZWQYASABKAhCA+BBAxJPChNhcHBfZGF0YWJhc2Vfc3RhdHVzGAIgASgLMi0ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuQXBwRGF0YWJhc2VTdGF0dXNCA+BBAxIWCglob21lX3BhdGgYAyABKAlCA+BBAxIdChBpc19ob21lX3dyaXRhYmxlGAQgASgIQgPgQQMSVAoRYXZhaWxhYmxlX21ldGhvZHMYBSADKA4yJy5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5TZXR1cE1ldGhvZEIQ4EEDukgKkgEHIgWCAQIQARIdChBjb25maWdfZmlsZV9wYXRoGAYgASgJQgPgQQMSHwoSZW1iZWRkZWRfZGF0YV9wYXRoGAcgASgJQgPgQQMSXQobc2V0dXBfbWV0aG9kX2F2YWlsYWJpbGl0aWVzGAggAygLMjMucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuU2V0dXBNZXRob2RBdmFpbGFiaWxpdHlCA+BBAyK1AQoXU2V0dXBBcHBEYXRhYmFzZVJlcXVlc3QSRQoPcG9zdGdyZXNfY29uZmlnGAEgASgLMioucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuUG9zdGdyZXNDb25maWdIABJKCg9lbWJlZGRlZF9jb25maWcYAiABKAsyLy5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5FbWJlZGRlZFNldHVwQ29uZmlnSABCBwoFc2V0dXAiXgoYU2V0dXBBcHBEYXRhYmFzZVJlc3BvbnNlEkIKBWV2ZW50GAEgASgLMi4ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuU2V0dXBQcm9ncmVzc0V2ZW50QgPgQQMiGwoZV2F0Y2hDb25maWdDaGFuZ2VzUmVxdWVzdCJgChpXYXRjaENvbmZpZ0NoYW5nZXNSZXNwb25zZRJCCgVldmVudBgBIAEoCzIuLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlNldHVwUHJvZ3Jlc3NFdmVudEID4EEDKowBCglTdGVwU3RhdGUSGgoWU1RFUF9TVEFURV9VTlNQRUNJRklFRBAAEhYKElNURVBfU1RBVEVfUEVORElORxABEhoKFlNURVBfU1RBVEVfSU5fUFJPR1JFU1MQAhIYChRTVEVQX1NUQVRFX1NVQ0NFRURFRBADEhUKEVNURVBfU1RBVEVfRkFJTEVEEAQqiQIKCVNldHVwU3RlcBIaChZTRVRVUF9TVEVQX1VOU1BFQ0lGSUVEEAASIAocU0VUVVBfU1RFUF9TVEFSVElOR19FTUJFRERFRBABEhkKFVNFVFVQX1NURVBfQ09OTkVDVElORxACEhgKFFNFVFVQX1NURVBfTUlHUkFUSU5HEAMSJAogU0VUVVBfU1RFUF9JTklUSUFMSVpJTkdfU0VSVklDRVMQBBIgChxTRVRVUF9TVEVQX1BFUlNJU1RJTkdfQ09ORklHEAUSIQodU0VUVVBfU1RFUF9XQUlUSU5HX0ZPUl9DT05GSUcQBhIeChpTRVRVUF9TVEVQX0NPTkZJR19ERVRFQ1RFRBAHKoQBCgtTZXR1cE1ldGhvZBIcChhTRVRVUF9NRVRIT0RfVU5TUEVDSUZJRUQQABIeChpTRVRVUF9NRVRIT0RfVUlfQ09ORklHVVJFRBABEhwKGFNFVFVQX01FVEhPRF9NQU5VQUxfWUFNTBACEhkKFVNFVFVQX01FVEhPRF9FTUJFRERFRBADMqkDChFPbmJvYXJkaW5nU2VydmljZRKFAQoSR2V0T25ib2FyZGluZ1N0YXRlEjUucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuR2V0T25ib2FyZGluZ1N0YXRlUmVxdWVzdBo2LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkdldE9uYm9hcmRpbmdTdGF0ZVJlc3BvbnNlIgASgQEKEFNldHVwQXBwRGF0YWJhc2USMy5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5TZXR1cEFwcERhdGFiYXNlUmVxdWVzdBo0LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlNldHVwQXBwRGF0YWJhc2VSZXNwb25zZSIAMAEShwEKEldhdGNoQ29uZmlnQ2hhbmdlcxI1LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLldhdGNoQ29uZmlnQ2hhbmdlc1JlcXVlc3QaNi5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5XYXRjaENvbmZpZ0NoYW5nZXNSZXNwb25zZSIAMAFClwIKHmNvbS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMUIPT25ib2FyZGluZ1Byb3RvUAFaWmdpdGh1Yi5jb20vcXVlcnlsYW5lL3F1ZXJ5bGFuZS9iYWNrZW5kL3Byb3RvZ2VuL3F1ZXJ5bGFuZS9jb25zb2xlL3YxYWxwaGExO2NvbnNvbGV2MWFscGhhMaICA1FDWKoCGlF1ZXJ5bGFuZS5Db25zb2xlLlYxYWxwaGExygIaUXVlcnlsYW5lXENvbnNvbGVcVjFhbHBoYTHiAiZRdWVyeWxhbmVcQ29uc29sZVxWMWFscGhhMVxHUEJNZXRhZGF0YeoCHFF1ZXJ5bGFuZTo6Q29uc29sZTo6VjFhbHBoYTFiBnByb3RvMw", [file_buf_validate_validate, file_google_api_field_behavior, file_querylane_console_v1alpha1_console, file_querylane_console_v1alpha1_instance]);
+
+/**
+ * SetupMethodAvailability describes whether a setup method can be used in the
+ * current environment and explains why when it cannot.
+ *
+ * @generated from message querylane.console.v1alpha1.SetupMethodAvailability
+ */
+export type SetupMethodAvailability = Message<"querylane.console.v1alpha1.SetupMethodAvailability"> & {
+  /**
+   * Output-only. Setup method described by this entry.
+   *
+   * @generated from field: querylane.console.v1alpha1.SetupMethod method = 1;
+   */
+  method: SetupMethod;
+
+  /**
+   * Output-only. Whether the method can be used in the current environment.
+   *
+   * @generated from field: bool available = 2;
+   */
+  available: boolean;
+
+  /**
+   * Output-only. User-facing explanation when the method is unavailable.
+   *
+   * @generated from field: string unavailable_reason = 3;
+   */
+  unavailableReason: string;
+};
+
+/**
+ * Describes the message querylane.console.v1alpha1.SetupMethodAvailability.
+ * Use `create(SetupMethodAvailabilitySchema)` to create a new message.
+ */
+export const SetupMethodAvailabilitySchema: GenMessage<SetupMethodAvailability> = /*@__PURE__*/
+  messageDesc(file_querylane_console_v1alpha1_onboarding, 0);
 
 /**
  * SetupProgressEvent reports the state of a single step in the database setup
@@ -65,7 +101,7 @@ export type SetupProgressEvent = Message<"querylane.console.v1alpha1.SetupProgre
  * Use `create(SetupProgressEventSchema)` to create a new message.
  */
 export const SetupProgressEventSchema: GenMessage<SetupProgressEvent> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_onboarding, 0);
+  messageDesc(file_querylane_console_v1alpha1_onboarding, 1);
 
 /**
  * EmbeddedSetupConfig holds optional overrides for the embedded PostgreSQL
@@ -94,7 +130,7 @@ export type EmbeddedSetupConfig = Message<"querylane.console.v1alpha1.EmbeddedSe
  * Use `create(EmbeddedSetupConfigSchema)` to create a new message.
  */
 export const EmbeddedSetupConfigSchema: GenMessage<EmbeddedSetupConfig> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_onboarding, 1);
+  messageDesc(file_querylane_console_v1alpha1_onboarding, 2);
 
 /**
  * @generated from message querylane.console.v1alpha1.GetOnboardingStateRequest
@@ -107,7 +143,7 @@ export type GetOnboardingStateRequest = Message<"querylane.console.v1alpha1.GetO
  * Use `create(GetOnboardingStateRequestSchema)` to create a new message.
  */
 export const GetOnboardingStateRequestSchema: GenMessage<GetOnboardingStateRequest> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_onboarding, 2);
+  messageDesc(file_querylane_console_v1alpha1_onboarding, 3);
 
 /**
  * @generated from message querylane.console.v1alpha1.GetOnboardingStateResponse
@@ -161,6 +197,14 @@ export type GetOnboardingStateResponse = Message<"querylane.console.v1alpha1.Get
    * @generated from field: string embedded_data_path = 7;
    */
   embeddedDataPath: string;
+
+  /**
+   * Output-only. Availability details for every known setup method in stable
+   * UI, manual YAML, embedded order.
+   *
+   * @generated from field: repeated querylane.console.v1alpha1.SetupMethodAvailability setup_method_availabilities = 8;
+   */
+  setupMethodAvailabilities: SetupMethodAvailability[];
 };
 
 /**
@@ -168,7 +212,7 @@ export type GetOnboardingStateResponse = Message<"querylane.console.v1alpha1.Get
  * Use `create(GetOnboardingStateResponseSchema)` to create a new message.
  */
 export const GetOnboardingStateResponseSchema: GenMessage<GetOnboardingStateResponse> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_onboarding, 3);
+  messageDesc(file_querylane_console_v1alpha1_onboarding, 4);
 
 /**
  * @generated from message querylane.console.v1alpha1.SetupAppDatabaseRequest
@@ -204,7 +248,7 @@ export type SetupAppDatabaseRequest = Message<"querylane.console.v1alpha1.SetupA
  * Use `create(SetupAppDatabaseRequestSchema)` to create a new message.
  */
 export const SetupAppDatabaseRequestSchema: GenMessage<SetupAppDatabaseRequest> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_onboarding, 4);
+  messageDesc(file_querylane_console_v1alpha1_onboarding, 5);
 
 /**
  * @generated from message querylane.console.v1alpha1.SetupAppDatabaseResponse
@@ -223,7 +267,7 @@ export type SetupAppDatabaseResponse = Message<"querylane.console.v1alpha1.Setup
  * Use `create(SetupAppDatabaseResponseSchema)` to create a new message.
  */
 export const SetupAppDatabaseResponseSchema: GenMessage<SetupAppDatabaseResponse> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_onboarding, 5);
+  messageDesc(file_querylane_console_v1alpha1_onboarding, 6);
 
 /**
  * @generated from message querylane.console.v1alpha1.WatchConfigChangesRequest
@@ -236,7 +280,7 @@ export type WatchConfigChangesRequest = Message<"querylane.console.v1alpha1.Watc
  * Use `create(WatchConfigChangesRequestSchema)` to create a new message.
  */
 export const WatchConfigChangesRequestSchema: GenMessage<WatchConfigChangesRequest> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_onboarding, 6);
+  messageDesc(file_querylane_console_v1alpha1_onboarding, 7);
 
 /**
  * @generated from message querylane.console.v1alpha1.WatchConfigChangesResponse
@@ -255,7 +299,7 @@ export type WatchConfigChangesResponse = Message<"querylane.console.v1alpha1.Wat
  * Use `create(WatchConfigChangesResponseSchema)` to create a new message.
  */
 export const WatchConfigChangesResponseSchema: GenMessage<WatchConfigChangesResponse> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_onboarding, 7);
+  messageDesc(file_querylane_console_v1alpha1_onboarding, 8);
 
 /**
  * StepState represents the lifecycle state of a single setup step.

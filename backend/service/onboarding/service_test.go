@@ -18,6 +18,89 @@ import (
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
+func TestGetOnboardingStateReportsEverySetupMethodAvailability(t *testing.T) { //nolint:paralleltest // changes HOME
+	const (
+		unwritableReason = "Querylane cannot save setup because its home directory is not writable."
+		imageReason      = "Embedded PostgreSQL is unavailable in this Querylane image."
+	)
+
+	tests := []struct {
+		name           string
+		configManager  func(t *testing.T) *config.Manager[*serverconfig.Config]
+		embedded       *embeddedpg.Manager
+		embeddedReason string
+		want           []*v1alpha1.SetupMethodAvailability
+	}{
+		{
+			name: "writable native build",
+			configManager: func(t *testing.T) *config.Manager[*serverconfig.Config] {
+				t.Helper()
+
+				return newTestConfigManager(t, "")
+			},
+			embedded: embeddedpg.NewManager(embeddedpg.Config{}),
+			want: []*v1alpha1.SetupMethodAvailability{
+				{Method: v1alpha1.SetupMethod_SETUP_METHOD_UI_CONFIGURED, Available: true},
+				{Method: v1alpha1.SetupMethod_SETUP_METHOD_MANUAL_YAML, Available: true},
+				{Method: v1alpha1.SetupMethod_SETUP_METHOD_EMBEDDED, Available: true},
+			},
+		},
+		{
+			name:          "unwritable native build",
+			configManager: newUnwritableTestConfigManager,
+			embedded:      embeddedpg.NewManager(embeddedpg.Config{}),
+			want: []*v1alpha1.SetupMethodAvailability{
+				{Method: v1alpha1.SetupMethod_SETUP_METHOD_UI_CONFIGURED, UnavailableReason: unwritableReason},
+				{Method: v1alpha1.SetupMethod_SETUP_METHOD_MANUAL_YAML, Available: true},
+				{Method: v1alpha1.SetupMethod_SETUP_METHOD_EMBEDDED, UnavailableReason: unwritableReason},
+			},
+		},
+		{
+			name: "writable image without embedded support",
+			configManager: func(t *testing.T) *config.Manager[*serverconfig.Config] {
+				t.Helper()
+
+				return newTestConfigManager(t, "")
+			},
+			embeddedReason: imageReason,
+			want: []*v1alpha1.SetupMethodAvailability{
+				{Method: v1alpha1.SetupMethod_SETUP_METHOD_UI_CONFIGURED, Available: true},
+				{Method: v1alpha1.SetupMethod_SETUP_METHOD_MANUAL_YAML, Available: true},
+				{Method: v1alpha1.SetupMethod_SETUP_METHOD_EMBEDDED, UnavailableReason: imageReason},
+			},
+		},
+	}
+
+	for _, tt := range tests { //nolint:paralleltest // one case changes HOME
+		t.Run(tt.name, func(t *testing.T) {
+			cfgMgr := tt.configManager(t)
+			t.Cleanup(cfgMgr.Stop)
+
+			svc := NewService(cfgMgr, newFakeDatabaseInitializer(), tt.embedded, tt.embeddedReason)
+			resp, err := svc.GetOnboardingState(t.Context(), connect.NewRequest(&v1alpha1.GetOnboardingStateRequest{}))
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.want, resp.Msg.SetupMethodAvailabilities)
+
+			availableMethods := make([]v1alpha1.SetupMethod, 0, len(tt.want))
+
+			seenMethods := make(map[v1alpha1.SetupMethod]struct{}, len(tt.want))
+			for _, availability := range resp.Msg.SetupMethodAvailabilities {
+				_, duplicate := seenMethods[availability.Method]
+				assert.False(t, duplicate, "method %s must appear exactly once", availability.Method)
+				seenMethods[availability.Method] = struct{}{}
+				assert.Equal(t, availability.Available, availability.UnavailableReason == "")
+
+				if availability.Available {
+					availableMethods = append(availableMethods, availability.Method)
+				}
+			}
+
+			assert.Equal(t, availableMethods, resp.Msg.AvailableMethods)
+		})
+	}
+}
+
 func Test_resolveSetupPath(t *testing.T) {
 	t.Parallel()
 
@@ -145,7 +228,7 @@ func Test_resolveSetupPath(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			path, err := resolveSetupPath(tt.msg, tt.embeddedAvailable)
+			path, err := resolveSetupPath(tt.msg, testSetupMethodAvailabilities(tt.embeddedAvailable))
 
 			if tt.wantErr {
 				require.Error(t, err)
@@ -161,6 +244,94 @@ func Test_resolveSetupPath(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, path)
 			tt.validate(t, path)
+		})
+	}
+}
+
+func testSetupMethodAvailabilities(embeddedAvailable bool) []*v1alpha1.SetupMethodAvailability {
+	embeddedReason := ""
+	if !embeddedAvailable {
+		embeddedReason = embeddedUnavailableReason
+	}
+
+	return []*v1alpha1.SetupMethodAvailability{
+		{Method: v1alpha1.SetupMethod_SETUP_METHOD_UI_CONFIGURED, Available: true},
+		{Method: v1alpha1.SetupMethod_SETUP_METHOD_MANUAL_YAML, Available: true},
+		{
+			Method:            v1alpha1.SetupMethod_SETUP_METHOD_EMBEDDED,
+			Available:         embeddedAvailable,
+			UnavailableReason: embeddedReason,
+		},
+	}
+}
+
+func TestSetupAppDatabaseRejectsUnavailableMethodBeforeSideEffects(t *testing.T) { //nolint:paralleltest // changes HOME
+	const (
+		unwritableReason = "Querylane cannot save setup because its home directory is not writable."
+		imageReason      = "Embedded PostgreSQL is unavailable in this Querylane image."
+	)
+
+	tests := []struct {
+		name           string
+		configManager  func(t *testing.T) *config.Manager[*serverconfig.Config]
+		embedded       *embeddedpg.Manager
+		embeddedReason string
+		request        *v1alpha1.SetupAppDatabaseRequest
+		wantReason     string
+	}{
+		{
+			name:          "UI setup when home is not writable",
+			configManager: newUnwritableTestConfigManager,
+			embedded:      embeddedpg.NewManager(embeddedpg.Config{}),
+			request: &v1alpha1.SetupAppDatabaseRequest{
+				Setup: &v1alpha1.SetupAppDatabaseRequest_PostgresConfig{
+					PostgresConfig: &v1alpha1.PostgresConfig{
+						Host:     "localhost",
+						Port:     5432,
+						Database: "querylane",
+						Username: "querylane",
+					},
+				},
+			},
+			wantReason: unwritableReason,
+		},
+		{
+			name: "embedded setup in unsupported image",
+			configManager: func(t *testing.T) *config.Manager[*serverconfig.Config] {
+				t.Helper()
+
+				return newTestConfigManager(t, "")
+			},
+			embeddedReason: imageReason,
+			request: &v1alpha1.SetupAppDatabaseRequest{
+				Setup: &v1alpha1.SetupAppDatabaseRequest_EmbeddedConfig{
+					EmbeddedConfig: &v1alpha1.EmbeddedSetupConfig{},
+				},
+			},
+			wantReason: imageReason,
+		},
+	}
+
+	for _, tt := range tests { //nolint:paralleltest // changes HOME
+		t.Run(tt.name, func(t *testing.T) {
+			cfgMgr := tt.configManager(t)
+			t.Cleanup(cfgMgr.Stop)
+
+			initializer := newFakeDatabaseInitializer()
+			svc := NewService(cfgMgr, initializer, tt.embedded, tt.embeddedReason)
+			events := 0
+
+			err := svc.setupAppDatabase(t.Context(), tt.request, func(dbsetup.ProgressEvent) error {
+				events++
+				return nil
+			})
+
+			var connectErr *connect.Error
+			require.ErrorAs(t, err, &connectErr)
+			assert.Equal(t, connect.CodeFailedPrecondition, connectErr.Code())
+			assert.Equal(t, tt.wantReason, connectErr.Message())
+			assert.Zero(t, events)
+			assert.Zero(t, initializer.initializeCalls)
 		})
 	}
 }
@@ -402,7 +573,7 @@ func TestWatchConfigChanges(t *testing.T) {
 
 			cfgMgr := newTestConfigManager(t, tt.configYAML)
 			init := newFakeDatabaseInitializer()
-			svc := NewService(cfgMgr, init, nil)
+			svc := NewService(cfgMgr, init, nil, "")
 
 			recorder, stop := startWatchConfigChanges(t, svc)
 			defer stop()
@@ -423,7 +594,7 @@ func TestWatchConfigChangesCompletesWhenTerminalEventFillsBuffer(t *testing.T) {
   dsn: "postgres://user:pass@localhost:5432/querylane?sslmode=disable"
 `)
 	init := newFakeDatabaseInitializer()
-	svc := NewService(cfgMgr, init, nil)
+	svc := NewService(cfgMgr, init, nil, "")
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
@@ -489,7 +660,7 @@ func TestSetupAppDatabasePersistsConfigWhenClientDisconnects(t *testing.T) {
 
 	cfgMgr := newTestConfigManager(t, "")
 	init := newBlockingDatabaseInitializer()
-	svc := NewService(cfgMgr, init, nil)
+	svc := NewService(cfgMgr, init, nil, "")
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
@@ -562,7 +733,7 @@ func TestPersistConfigPreservesExistingHTTPConfig(t *testing.T) {
     allowed_origins:
       - "https://example.com"
 `)
-	svc := NewService(cfgMgr, newFakeDatabaseInitializer(), nil)
+	svc := NewService(cfgMgr, newFakeDatabaseInitializer(), nil, "")
 
 	noopSend := func(dbsetup.ProgressEvent) error { return nil }
 	persistCfg := &serverconfig.Config{
@@ -629,7 +800,8 @@ func (f *blockingDatabaseInitializer) ProgressBroadcaster() *dbsetup.Broadcaster
 }
 
 type fakeDatabaseInitializer struct {
-	broadcaster *dbsetup.Broadcaster
+	broadcaster     *dbsetup.Broadcaster
+	initializeCalls int
 }
 
 func newFakeDatabaseInitializer() *fakeDatabaseInitializer {
@@ -637,6 +809,8 @@ func newFakeDatabaseInitializer() *fakeDatabaseInitializer {
 }
 
 func (f *fakeDatabaseInitializer) InitializeDatabaseWithConfig(context.Context, *serverconfig.Config) error {
+	f.initializeCalls++
+
 	return nil
 }
 
@@ -660,6 +834,21 @@ func newTestConfigManager(t *testing.T, yaml string) *config.Manager[*serverconf
 
 	cfgMgr, err := config.NewConfigManager(t.Context(), &serverconfig.Config{}, config.WithConfigFile(configPath))
 	require.NoError(t, err)
+
+	return cfgMgr
+}
+
+func newUnwritableTestConfigManager(t *testing.T) *config.Manager[*serverconfig.Config] {
+	t.Helper()
+
+	homePath := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(homePath, ".querylane"), []byte("not a directory"), 0o600))
+	t.Setenv("HOME", homePath)
+	t.Setenv("USERPROFILE", homePath)
+
+	cfgMgr, err := config.NewConfigManager(t.Context(), &serverconfig.Config{})
+	require.NoError(t, err)
+	require.False(t, cfgMgr.CanWriteConfig())
 
 	return cfgMgr
 }

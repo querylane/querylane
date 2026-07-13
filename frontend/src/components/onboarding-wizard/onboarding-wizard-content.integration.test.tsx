@@ -29,6 +29,7 @@ import {
 import {
   GetOnboardingStateResponseSchema,
   SetupMethod,
+  SetupMethodAvailabilitySchema,
   SetupProgressEventSchema,
   SetupStep,
   StepState,
@@ -98,9 +99,9 @@ function installLocalStorageStub() {
 }
 
 function createOnboardingState(
-  overrides: Partial<
-    Parameters<typeof createProto<typeof GetOnboardingStateResponseSchema>>[1]
-  > = {}
+  overrides: Parameters<
+    typeof createProto<typeof GetOnboardingStateResponseSchema>
+  >[1] = {}
 ) {
   return createProto(GetOnboardingStateResponseSchema, {
     appDatabaseStatus: createProto(AppDatabaseStatusSchema, {
@@ -118,6 +119,28 @@ function createOnboardingState(
     isHomeWritable: true,
     ...overrides,
   });
+}
+
+function createMethodAvailability(method: SetupMethod, unavailableReason = "") {
+  return createProto(SetupMethodAvailabilitySchema, {
+    available: unavailableReason === "",
+    method,
+    unavailableReason,
+  });
+}
+
+function createMethodAvailabilities({
+  embeddedReason = "",
+  uiReason = "",
+}: {
+  embeddedReason?: string;
+  uiReason?: string;
+} = {}) {
+  return [
+    createMethodAvailability(SetupMethod.UI_CONFIGURED, uiReason),
+    createMethodAvailability(SetupMethod.MANUAL_YAML),
+    createMethodAvailability(SetupMethod.EMBEDDED, embeddedReason),
+  ];
 }
 
 function createController(
@@ -211,7 +234,7 @@ afterEach(() => {
   });
 });
 
-describe("onboarding wizard content integration", () => {
+describe("onboarding wizard setup configuration", () => {
   it("renders loading state and refresh action before onboarding state exists", async () => {
     const user = userEvent.setup();
     const refreshOnboardingState = vi.fn(async () => undefined);
@@ -253,7 +276,164 @@ describe("onboarding wizard content integration", () => {
       screen.getAllByText("Postgres server to manage").length
     ).toBeGreaterThan(0);
   });
+});
 
+describe("onboarding wizard setup method availability", () => {
+  it("explains and blocks an unavailable embedded setup method", async () => {
+    const user = userEvent.setup();
+    const unavailableReason =
+      "Embedded PostgreSQL is unavailable in this Querylane image.";
+    useSetupStore.setState({
+      onboardingState: createOnboardingState({
+        setupMethodAvailabilities: createMethodAvailabilities({
+          embeddedReason: unavailableReason,
+        }),
+      }),
+      status: "onboarding",
+    });
+
+    renderWizard();
+
+    const embeddedMethod = screen.getByRole<HTMLButtonElement>("radio", {
+      name: EMBEDDED_RE,
+    });
+    expect(embeddedMethod.disabled).toBe(true);
+    expect(embeddedMethod.getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getByText("Unavailable")).toBeTruthy();
+    const reason = screen.getByText(unavailableReason);
+    expect(embeddedMethod.getAttribute("aria-describedby")).toBe(reason.id);
+
+    await user.click(embeddedMethod);
+
+    expect(useOnboardingWizardStore.getState().selectedMethod).toBeNull();
+  });
+
+  it("skips unavailable setup methods during arrow-key navigation", async () => {
+    const user = userEvent.setup();
+    useSetupStore.setState({
+      onboardingState: createOnboardingState({
+        setupMethodAvailabilities: createMethodAvailabilities({
+          embeddedReason: "Embedded PostgreSQL is unavailable here.",
+        }),
+      }),
+      status: "onboarding",
+    });
+
+    renderWizard();
+
+    const uiMethod = screen.getByRole("radio", { name: CONFIGURE_UI_RE });
+    const yamlMethod = screen.getByRole("radio", { name: CONFIGURE_YAML_RE });
+    await user.click(uiMethod);
+    await user.keyboard("{ArrowDown}");
+
+    expect(yamlMethod.getAttribute("aria-checked")).toBe("true");
+    await waitFor(() => expect(document.activeElement).toBe(yamlMethod));
+
+    await user.keyboard("{ArrowDown}");
+
+    expect(uiMethod.getAttribute("aria-checked")).toBe("true");
+    await waitFor(() => expect(document.activeElement).toBe(uiMethod));
+  });
+
+  it("explains and blocks unavailable UI setup", async () => {
+    const user = userEvent.setup();
+    const unavailableReason =
+      "Querylane cannot save setup because its home directory is not writable.";
+    useSetupStore.setState({
+      onboardingState: createOnboardingState({
+        setupMethodAvailabilities: createMethodAvailabilities({
+          uiReason: unavailableReason,
+        }),
+      }),
+      status: "onboarding",
+    });
+
+    renderWizard();
+
+    const uiMethod = screen.getByRole<HTMLButtonElement>("radio", {
+      name: CONFIGURE_UI_RE,
+    });
+    expect(uiMethod.disabled).toBe(true);
+    expect(screen.getByText(unavailableReason)).toBeTruthy();
+
+    await user.click(uiMethod);
+
+    expect(useOnboardingWizardStore.getState().selectedMethod).toBeNull();
+  });
+
+  it("falls back to setup methods reported by an older server", () => {
+    useSetupStore.setState({
+      onboardingState: createOnboardingState({
+        availableMethods: [SetupMethod.MANUAL_YAML],
+        setupMethodAvailabilities: [],
+      }),
+      status: "onboarding",
+    });
+
+    renderWizard();
+
+    expect(screen.getByRole("radio", { name: CONFIGURE_YAML_RE })).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: CONFIGURE_UI_RE })).toBeNull();
+    expect(screen.queryByRole("radio", { name: EMBEDDED_RE })).toBeNull();
+  });
+
+  it("renders new setup availability entries in the stable method order", () => {
+    useSetupStore.setState({
+      onboardingState: createOnboardingState({
+        setupMethodAvailabilities: [
+          createMethodAvailability(SetupMethod.EMBEDDED),
+          createMethodAvailability(SetupMethod.UI_CONFIGURED),
+          createMethodAvailability(SetupMethod.MANUAL_YAML),
+        ],
+      }),
+      status: "onboarding",
+    });
+
+    renderWizard();
+
+    expect(
+      screen.getAllByRole("radio").map((method) => method.textContent)
+    ).toEqual([
+      expect.stringContaining("Configure via UI"),
+      expect.stringContaining("Configure YAML manually"),
+      expect.stringContaining("Use embedded database"),
+    ]);
+  });
+
+  it("blocks progression when the selected method becomes unavailable", async () => {
+    const user = userEvent.setup();
+    useSetupStore.setState({
+      onboardingState: createOnboardingState({
+        setupMethodAvailabilities: createMethodAvailabilities(),
+      }),
+      status: "onboarding",
+    });
+
+    renderWizard();
+
+    const uiMethod = screen.getByRole("radio", { name: CONFIGURE_UI_RE });
+    const continueButton = screen.getByRole<HTMLButtonElement>("button", {
+      name: "Continue",
+    });
+    await user.click(uiMethod);
+    expect(continueButton.disabled).toBe(false);
+
+    act(() => {
+      useSetupStore.setState({
+        onboardingState: createOnboardingState({
+          setupMethodAvailabilities: createMethodAvailabilities({
+            uiReason: "Querylane home is no longer writable.",
+          }),
+        }),
+      });
+    });
+
+    expect(uiMethod.getAttribute("aria-checked")).toBe("false");
+    expect(continueButton.disabled).toBe(true);
+  });
+});
+
+describe("onboarding wizard content integration", () => {
   it("explains when no setup methods are available", () => {
     useSetupStore.setState({
       onboardingState: createOnboardingState({ availableMethods: [] }),

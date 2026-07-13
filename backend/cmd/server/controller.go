@@ -60,10 +60,11 @@ func (d *DelegatingHandler) Set(h http.Handler) {
 // installs its initial Routes, and rebuilds + swaps Routes whenever App's
 // state transitions (after onboarding or a successful retry).
 type Controller struct {
-	configManager         *config.Manager[*serverconfig.Config]
-	embeddedManager       *embeddedpg.Manager
-	validationInterceptor *validate.Interceptor
-	progressBroadcaster   *dbsetup.Broadcaster
+	configManager                   *config.Manager[*serverconfig.Config]
+	embeddedManager                 *embeddedpg.Manager
+	embeddedManagerUnavailableError error
+	validationInterceptor           *validate.Interceptor
+	progressBroadcaster             *dbsetup.Broadcaster
 
 	delegatingHandler *DelegatingHandler
 	server            *http.Server
@@ -78,7 +79,7 @@ type Controller struct {
 
 	retryDatabaseInitInterval  time.Duration
 	currentConfigFunc          func() *serverconfig.Config
-	resolveEffectiveConfigFunc func(context.Context, *serverconfig.Config) *serverconfig.Config
+	resolveEffectiveConfigFunc func(context.Context, *serverconfig.Config) (*serverconfig.Config, error)
 	buildDatabaseFunc          func(context.Context, *serverconfig.Config, *dbsetup.Broadcaster) (*dbState, error)
 	installReadyStateFunc      func(context.Context, *dbState)
 }
@@ -88,15 +89,20 @@ type embeddedEffectiveConfigManager interface {
 	DatabaseConfig() *serverconfig.Database
 }
 
+var errDatabaseConfigNotPresent = errors.New("database configuration is not present")
+
 // NewController creates a new controller.
 func NewController(configManager *config.Manager[*serverconfig.Config]) *Controller {
+	embeddedManager, embeddedManagerUnavailableError := newEmbeddedManager()
+
 	return &Controller{
-		configManager:             configManager,
-		embeddedManager:           embeddedpg.NewManager(embeddedpg.Config{}),
-		progressBroadcaster:       dbsetup.NewBroadcaster(),
-		delegatingHandler:         &DelegatingHandler{},
-		retryDatabaseInitInterval: 5 * time.Second,
-		buildDatabaseFunc:         buildDatabase,
+		configManager:                   configManager,
+		embeddedManager:                 embeddedManager,
+		embeddedManagerUnavailableError: embeddedManagerUnavailableError,
+		progressBroadcaster:             dbsetup.NewBroadcaster(),
+		delegatingHandler:               &DelegatingHandler{},
+		retryDatabaseInitInterval:       5 * time.Second,
+		buildDatabaseFunc:               buildDatabase,
 	}
 }
 
@@ -124,10 +130,16 @@ func (c *Controller) Run(ctx context.Context) error {
 
 	cfg := c.configManager.CurrentConfig()
 
+	embeddedUnavailableReason := ""
+	if c.embeddedManagerUnavailableError != nil {
+		embeddedUnavailableReason = c.embeddedManagerUnavailableError.Error()
+	}
+
 	c.app = NewApp(
 		c.configManager,
 		c.validationInterceptor,
 		c.embeddedManager,
+		embeddedUnavailableReason,
 		c.progressBroadcaster,
 		c.onAppReady,
 	)
@@ -205,9 +217,22 @@ func (c *Controller) bootBootstrapStage(ctx context.Context) {
 
 		// Route through resolveEffectiveConfig so an `embedded:` YAML edit also
 		// starts the embedded server and produces a Database config before
-		// init. A bare config (neither Database nor Embedded) is ignored.
-		effectiveCfg := c.resolveEffectiveConfig(ctx, newCfg)
-		if effectiveCfg == nil {
+		// init. A bare config (neither Database nor Embedded) restores the
+		// bootstrap routes and clears any stale initialization error.
+		effectiveCfg, err := c.resolveEffectiveConfig(ctx, newCfg)
+		if errors.Is(err, errDatabaseConfigNotPresent) {
+			c.app.clearDatabaseInitError()
+			c.delegatingHandler.Set(c.app.Routes(ctx))
+
+			return
+		}
+
+		if err != nil {
+			slog.WarnContext(ctx, "database configuration after config change is unavailable",
+				slog.Any("error", err))
+			c.app.markDatabaseInitError(err.Error())
+			c.delegatingHandler.Set(c.app.Routes(ctx))
+
 			return
 		}
 
@@ -224,11 +249,16 @@ func (c *Controller) bootBootstrapStage(ctx context.Context) {
 // the database, and mounts the main routes. If the DB is unreachable, the App
 // is mounted in degraded mode and retries happen in the background.
 func (c *Controller) bootMainStage(ctx context.Context, cfg *serverconfig.Config) {
-	effectiveCfg := c.resolveEffectiveConfig(ctx, cfg)
-	if effectiveCfg == nil {
+	effectiveCfg, resolveErr := c.resolveEffectiveConfig(ctx, cfg)
+	if resolveErr != nil {
+		if errors.Is(resolveErr, errDatabaseConfigNotPresent) {
+			resolveErr = errors.New("database configuration is present but not currently usable")
+		}
+
 		// Embedded PG failed to start or no usable config — mount degraded.
-		slog.WarnContext(ctx, "no usable database configuration, starting in degraded mode")
-		c.app.markDatabaseInitError("database configuration is present but not currently usable")
+		slog.WarnContext(ctx, "no usable database configuration, starting in degraded mode",
+			slog.Any("error", resolveErr))
+		c.app.markDatabaseInitError(resolveErr.Error())
 		c.delegatingHandler.Set(c.app.Routes(ctx))
 
 		go c.retryDatabaseInit(ctx)
@@ -268,35 +298,40 @@ func (c *Controller) currentConfig() *serverconfig.Config {
 	return c.configManager.CurrentConfig()
 }
 
-func (c *Controller) resolveEffectiveConfig(ctx context.Context, cfg *serverconfig.Config) *serverconfig.Config {
+func (c *Controller) resolveEffectiveConfig(ctx context.Context, cfg *serverconfig.Config) (*serverconfig.Config, error) {
 	if c.resolveEffectiveConfigFunc != nil {
 		return c.resolveEffectiveConfigFunc(ctx, cfg)
 	}
 
 	if cfg.Database != nil {
-		return cfg
+		return cfg, nil
 	}
 
 	if cfg.Embedded != nil {
+		if c.embeddedManager == nil {
+			if c.embeddedManagerUnavailableError != nil {
+				return nil, c.embeddedManagerUnavailableError
+			}
+
+			return nil, errors.New("embedded PostgreSQL is not available in this environment")
+		}
+
 		return resolveEmbeddedEffectiveConfig(ctx, cfg, c.embeddedManager)
 	}
 
-	return nil
+	return nil, errDatabaseConfigNotPresent
 }
 
 func resolveEmbeddedEffectiveConfig(
 	ctx context.Context,
 	cfg *serverconfig.Config,
 	manager embeddedEffectiveConfigManager,
-) *serverconfig.Config {
+) (*serverconfig.Config, error) {
 	slog.InfoContext(ctx, "starting embedded PostgreSQL from config")
 
 	if err := manager.StartWithConfig(ctx, embeddedpg.ConfigFromServerConfig(cfg.Embedded)); err != nil {
 		if !errors.Is(err, embeddedpg.ErrAlreadyRunning) {
-			slog.WarnContext(ctx, "embedded postgres startup failed",
-				slog.Any("error", err))
-
-			return nil
+			return nil, fmt.Errorf("start embedded PostgreSQL: %w", err)
 		}
 
 		slog.InfoContext(ctx, "embedded PostgreSQL already running, reusing connection config")
@@ -306,7 +341,7 @@ func resolveEmbeddedEffectiveConfig(
 		HTTP:      cfg.HTTP,
 		Database:  manager.DatabaseConfig(),
 		Instances: cfg.Instances,
-	}
+	}, nil
 }
 
 func (c *Controller) buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Broadcaster) (*dbState, error) {
@@ -373,11 +408,23 @@ func (c *Controller) retryDatabaseInit(ctx context.Context) {
 				return
 			}
 
-			effectiveCfg := c.resolveEffectiveConfig(ctx, c.currentConfig())
-			if effectiveCfg == nil {
-				slog.WarnContext(ctx, "database retry could not resolve usable configuration")
+			effectiveCfg, resolveErr := c.resolveEffectiveConfig(ctx, c.currentConfig())
+			if errors.Is(resolveErr, errDatabaseConfigNotPresent) {
+				if c.app.DatabaseInitError() != "" {
+					c.app.clearDatabaseInitError()
+					c.delegatingHandler.Set(c.app.Routes(ctx))
+				}
 
-				c.app.markDatabaseInitError("database configuration is present but not currently usable")
+				continue
+			}
+
+			if resolveErr != nil {
+				if c.app.DatabaseInitError() != resolveErr.Error() {
+					slog.WarnContext(ctx, "database retry could not resolve usable configuration",
+						slog.Any("error", resolveErr))
+					c.app.markDatabaseInitError(resolveErr.Error())
+					c.delegatingHandler.Set(c.app.Routes(ctx))
+				}
 
 				continue
 			}
@@ -386,7 +433,12 @@ func (c *Controller) retryDatabaseInit(ctx context.Context) {
 			if err != nil {
 				slog.WarnContext(ctx, "database retry failed", slog.Any("error", err))
 
+				previousError := c.app.DatabaseInitError()
 				c.app.markDatabaseInitFailure(err)
+
+				if c.app.DatabaseInitError() != previousError && c.delegatingHandler != nil {
+					c.delegatingHandler.Set(c.app.Routes(ctx))
+				}
 
 				continue
 			}
@@ -441,8 +493,10 @@ func (c *Controller) stop(ctx context.Context) {
 	}
 	c.mu.Unlock()
 
-	if err := c.embeddedManager.Stop(ctx); err != nil {
-		slog.ErrorContext(ctx, "failed to stop embedded postgres", slog.Any("error", err))
+	if c.embeddedManager != nil {
+		if err := c.embeddedManager.Stop(ctx); err != nil {
+			slog.ErrorContext(ctx, "failed to stop embedded postgres", slog.Any("error", err))
+		}
 	}
 }
 

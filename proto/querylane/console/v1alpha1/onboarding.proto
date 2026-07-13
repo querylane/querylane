@@ -101,6 +101,31 @@ enum SetupMethod {
 // Shared Messages
 // --------------------------------------------------------------------------
 
+// SetupMethodAvailability describes whether a setup method can be used in the
+// current environment and explains why when it cannot.
+message SetupMethodAvailability {
+  option (buf.validate.message).cel = {
+    id: "setup_method_availability_reason"
+    message: "unavailable_reason must be empty exactly when the method is available"
+    expression: "this.available == (this.unavailable_reason == '')"
+  };
+
+  // Output-only. Setup method described by this entry.
+  SetupMethod method = 1 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).enum = {
+      defined_only: true
+      not_in: [0]
+    }
+  ];
+
+  // Output-only. Whether the method can be used in the current environment.
+  bool available = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. User-facing explanation when the method is unavailable.
+  string unavailable_reason = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
 // SetupProgressEvent reports the state of a single step in the database setup
 // pipeline. Both streaming RPCs return the same event type.
 //
@@ -181,6 +206,10 @@ message GetOnboardingStateResponse {
 
   // Output-only. Absolute path to the embedded PostgreSQL data directory.
   string embedded_data_path = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Availability details for every known setup method in stable
+  // UI, manual YAML, embedded order.
+  repeated SetupMethodAvailability setup_method_availabilities = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // --- SetupAppDatabase RPC ---

@@ -2,14 +2,19 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"connectrpc.com/validate"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
 
+	"github.com/querylane/querylane/backend/config"
 	serverconfig "github.com/querylane/querylane/backend/config/server"
 	"github.com/querylane/querylane/backend/dbsetup"
 	"github.com/querylane/querylane/backend/embeddedpg"
@@ -51,8 +56,9 @@ func TestResolveEmbeddedEffectiveConfigReusesAlreadyRunningPostgres(t *testing.T
 		Instances: []*serverconfig.InstanceConfig{{ID: "demo"}},
 	}
 
-	resolved := resolveEmbeddedEffectiveConfig(t.Context(), cfg, manager)
+	resolved, err := resolveEmbeddedEffectiveConfig(t.Context(), cfg, manager)
 
+	require.NoError(t, err)
 	require.NotNil(t, resolved)
 	require.Same(t, dbCfg, resolved.Database)
 	require.Equal(t, cfg.Instances, resolved.Instances)
@@ -74,15 +80,15 @@ func TestRetryDatabaseInitResolvesEffectiveConfigEachAttempt(t *testing.T) {
 		retryDatabaseInitInterval: time.Millisecond,
 		app:                       &App{},
 		currentConfigFunc:         func() *serverconfig.Config { return cfg },
-		resolveEffectiveConfigFunc: func(_ context.Context, got *serverconfig.Config) *serverconfig.Config {
+		resolveEffectiveConfigFunc: func(_ context.Context, got *serverconfig.Config) (*serverconfig.Config, error) {
 			require.Same(t, cfg, got)
 
 			resolveCalls++
 			if resolveCalls == 1 {
-				return nil
+				return nil, errDatabaseConfigNotPresent
 			}
 
-			return resolvedCfg
+			return resolvedCfg, nil
 		},
 		buildDatabaseFunc: func(_ context.Context, got *serverconfig.Config, _ *dbsetup.Broadcaster) (*dbState, error) {
 			require.Same(t, resolvedCfg, got)
@@ -123,8 +129,8 @@ func TestRetryDatabaseInitRedactsDatabaseInitErrorBetweenAttempts(t *testing.T) 
 		retryDatabaseInitInterval: time.Millisecond,
 		app:                       app,
 		currentConfigFunc:         func() *serverconfig.Config { return &serverconfig.Config{} },
-		resolveEffectiveConfigFunc: func(_ context.Context, cfg *serverconfig.Config) *serverconfig.Config {
-			return cfg
+		resolveEffectiveConfigFunc: func(_ context.Context, cfg *serverconfig.Config) (*serverconfig.Config, error) {
+			return cfg, nil
 		},
 		buildDatabaseFunc: func(context.Context, *serverconfig.Config, *dbsetup.Broadcaster) (*dbState, error) {
 			buildCalls++
@@ -178,14 +184,14 @@ func TestRetryDatabaseInitUsesLatestConfigEachAttempt(t *testing.T) {
 
 			return freshCfg
 		},
-		resolveEffectiveConfigFunc: func(_ context.Context, got *serverconfig.Config) *serverconfig.Config {
+		resolveEffectiveConfigFunc: func(_ context.Context, got *serverconfig.Config) (*serverconfig.Config, error) {
 			if got == staleCfg {
-				return nil // still unusable
+				return nil, errDatabaseConfigNotPresent // still unusable
 			}
 
 			require.Same(t, freshCfg, got, "loop must resolve the corrected config, not a boot snapshot")
 
-			return resolvedCfg
+			return resolvedCfg, nil
 		},
 		buildDatabaseFunc: func(_ context.Context, got *serverconfig.Config, _ *dbsetup.Broadcaster) (*dbState, error) {
 			require.Same(t, resolvedCfg, got)
@@ -208,6 +214,79 @@ func TestRetryDatabaseInitUsesLatestConfigEachAttempt(t *testing.T) {
 	require.GreaterOrEqual(t, configReads, 2, "config must be re-read each attempt")
 	require.Equal(t, 1, buildCalls)
 	require.Equal(t, 1, installCalls)
+}
+
+func TestRetryDatabaseInitRecoversAfterUnsupportedEmbeddedConfigIsEdited(t *testing.T) {
+	t.Parallel()
+
+	const unavailableReason = "Embedded PostgreSQL is unavailable in this Querylane image."
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	embeddedCfg := &serverconfig.Config{Embedded: &serverconfig.EmbeddedDatabase{}}
+	externalCfg := &serverconfig.Config{Database: &serverconfig.Database{}}
+	configReads := 0
+	buildCalls := 0
+	installCalls := 0
+	errorBeforeRecovery := ""
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	require.NoError(t, os.WriteFile(configPath, nil, 0o600))
+	configManager, err := config.NewConfigManager(
+		t.Context(),
+		&serverconfig.Config{},
+		config.WithConfigFile(configPath),
+	)
+	require.NoError(t, err)
+	t.Cleanup(configManager.Stop)
+	app := NewApp(
+		configManager,
+		validate.NewInterceptor(),
+		nil,
+		unavailableReason,
+		dbsetup.NewBroadcaster(),
+		nil,
+	)
+	controller := &Controller{
+		embeddedManagerUnavailableError: errors.New(unavailableReason),
+		retryDatabaseInitInterval:       time.Millisecond,
+		app:                             app,
+		delegatingHandler:               &DelegatingHandler{},
+		currentConfigFunc: func() *serverconfig.Config {
+			configReads++
+			if configReads == 1 {
+				return embeddedCfg
+			}
+
+			return externalCfg
+		},
+		buildDatabaseFunc: func(_ context.Context, got *serverconfig.Config, _ *dbsetup.Broadcaster) (*dbState, error) {
+			require.Same(t, externalCfg, got)
+
+			buildCalls++
+
+			return &dbState{}, nil
+		},
+		installReadyStateFunc: func(_ context.Context, state *dbState) {
+			require.NotNil(t, state)
+
+			errorBeforeRecovery = app.DatabaseInitError()
+			app.setState(state)
+			app.clearDatabaseInitError()
+
+			installCalls++
+
+			cancel()
+		},
+	}
+
+	controller.retryDatabaseInit(ctx)
+
+	require.GreaterOrEqual(t, configReads, 2)
+	require.Equal(t, 1, buildCalls)
+	require.Equal(t, 1, installCalls)
+	require.Equal(t, unavailableReason, errorBeforeRecovery)
+	require.Empty(t, app.DatabaseInitError())
 }
 
 // TestRetryDatabaseInitStopsWhenStateAlreadyInstalled is the regression guard
@@ -233,10 +312,10 @@ func TestRetryDatabaseInitStopsWhenStateAlreadyInstalled(t *testing.T) {
 		retryDatabaseInitInterval: time.Millisecond,
 		app:                       app,
 		currentConfigFunc:         func() *serverconfig.Config { return &serverconfig.Config{} },
-		resolveEffectiveConfigFunc: func(_ context.Context, cfg *serverconfig.Config) *serverconfig.Config {
+		resolveEffectiveConfigFunc: func(_ context.Context, cfg *serverconfig.Config) (*serverconfig.Config, error) {
 			resolveCalls++
 
-			return cfg
+			return cfg, nil
 		},
 		buildDatabaseFunc: func(_ context.Context, _ *serverconfig.Config, _ *dbsetup.Broadcaster) (*dbState, error) {
 			buildCalls++
@@ -276,8 +355,8 @@ func TestRetryDatabaseInitClosesStateWhenInstalledDuringBuild(t *testing.T) {
 		retryDatabaseInitInterval: time.Millisecond,
 		app:                       app,
 		currentConfigFunc:         func() *serverconfig.Config { return &serverconfig.Config{} },
-		resolveEffectiveConfigFunc: func(_ context.Context, cfg *serverconfig.Config) *serverconfig.Config {
-			return cfg
+		resolveEffectiveConfigFunc: func(_ context.Context, cfg *serverconfig.Config) (*serverconfig.Config, error) {
+			return cfg, nil
 		},
 		buildDatabaseFunc: func(_ context.Context, _ *serverconfig.Config, _ *dbsetup.Broadcaster) (*dbState, error) {
 			// The wizard wins the race while this build is in flight.

@@ -30,6 +30,7 @@ func TestAppRoutesGatesReflectionByBuild(t *testing.T) {
 		cfgMgr,
 		validate.NewInterceptor(),
 		nil,
+		"",
 		dbsetup.NewBroadcaster(),
 		nil,
 	)
