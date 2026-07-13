@@ -153,6 +153,35 @@ test("create instance form keeps DSN-prefilled advanced fields readable", async 
   ).toMatchScreenshot("create-instance-dsn-advanced");
 });
 
+test("create instance form warns about DSN parameters it cannot apply", async () => {
+  renderCreateInstance();
+
+  await page
+    .getByLabelText("Connection string")
+    .fill(
+      "postgresql://postgres:secret@[2001:db8::1]/postgres?sslmode=require&channel_binding=require"
+    );
+  await page.getByRole("button", { name: "Apply DSN" }).click();
+
+  await expect.element(page.getByLabelText("Host")).toHaveValue("2001:db8::1");
+  expect(
+    page
+      .getByLabelText("SSL mode")
+      .element()
+      .querySelector('[data-slot="ssl-mode-icon"][data-mode="require"]')
+  ).not.toBeNull();
+  await expect
+    .element(page.getByRole("status"))
+    .toHaveTextContent("DSN parameters not applied: channel_binding.");
+
+  await page
+    .getByLabelText("Connection string")
+    .fill("postgres://postgres:secret@localhost/postgres");
+  await expect
+    .element(page.getByRole("status"))
+    .toHaveTextContent("DSN parameters not applied: channel_binding.");
+});
+
 test("create instance SSL mode menu keeps descriptions readable", async () => {
   renderCreateInstance();
 

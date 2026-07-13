@@ -1,6 +1,11 @@
 const DEFAULT_POSTGRES_PORT = 5432;
 const MAX_POSTGRES_PORT = 65_535;
 const LEADING_SLASH = /^\//;
+const SUPPORTED_QUERY_PARAMETERS = new Set([
+  "ssl",
+  "sslmode",
+  "sslnegotiation",
+]);
 
 type PostgresSslModeValue =
   | "allow"
@@ -18,13 +23,18 @@ interface ParsedPostgresConnectionString {
   port: number;
   sslMode: PostgresSslModeValue;
   sslNegotiation: PostgresSslNegotiationValue;
+  unsupportedParameters: string[];
   username: string;
 }
 
 function normalizePostgresSslMode(
   value: string | null | undefined
-): PostgresSslModeValue {
+): PostgresSslModeValue | null {
   switch (value?.toLowerCase()) {
+    case undefined:
+    case "":
+    case "prefer":
+      return "prefer";
     case "disable":
       return "disable";
     case "allow":
@@ -36,8 +46,58 @@ function normalizePostgresSslMode(
     case "verify-full":
       return "verify-full";
     default:
-      return "prefer";
+      return null;
   }
+}
+
+function getPostgresSslMode(searchParams: URLSearchParams) {
+  const sslMode = normalizePostgresSslMode(searchParams.get("sslmode"));
+  if (!sslMode) {
+    return null;
+  }
+
+  const sslAlias = searchParams.get("ssl");
+  if (sslAlias === null) {
+    return sslMode;
+  }
+  if (sslAlias.toLowerCase() !== "true") {
+    return null;
+  }
+  return searchParams.has("sslmode") ? sslMode : "require";
+}
+
+function normalizePostgresHost(hostname: string) {
+  if (hostname.startsWith("[") && hostname.endsWith("]")) {
+    return hostname.slice(1, -1);
+  }
+  return hostname || "localhost";
+}
+
+function getUnsupportedParameters(searchParams: URLSearchParams) {
+  return [
+    ...new Set(
+      [...searchParams.keys()].filter(
+        (parameter) => !SUPPORTED_QUERY_PARAMETERS.has(parameter)
+      )
+    ),
+  ].sort();
+}
+
+function hasAmbiguousSslParameters(searchParams: URLSearchParams) {
+  return (
+    (searchParams.has("ssl") && searchParams.has("sslmode")) ||
+    [...SUPPORTED_QUERY_PARAMETERS].some(
+      (parameter) => searchParams.getAll(parameter).length > 1
+    )
+  );
+}
+
+function formatUnsupportedPostgresConnectionParameters(
+  parameters: readonly string[]
+) {
+  return parameters.length > 0
+    ? `DSN parameters not applied: ${parameters.join(", ")}.`
+    : null;
 }
 
 function normalizePostgresSslNegotiation(
@@ -67,6 +127,9 @@ export function parsePostgresConnectionString(
 
   try {
     const url = new URL(trimmed);
+    if (hasAmbiguousSslParameters(url.searchParams)) {
+      return null;
+    }
     const port = url.port
       ? Number.parseInt(url.port, 10)
       : DEFAULT_POSTGRES_PORT;
@@ -82,16 +145,29 @@ export function parsePostgresConnectionString(
       return null;
     }
 
+    const sslMode = getPostgresSslMode(url.searchParams);
+    if (!sslMode) {
+      return null;
+    }
+
+    const username = decodeURIComponent(url.username || "");
+    const database = decodeURIComponent(
+      url.pathname.replace(LEADING_SLASH, "")
+    );
+
     return {
-      database: decodeURIComponent(url.pathname.replace(LEADING_SLASH, "")),
-      host: url.hostname || "localhost",
+      database: database || username,
+      host: normalizePostgresHost(url.hostname),
       password: decodeURIComponent(url.password || ""),
       port,
-      sslMode: normalizePostgresSslMode(url.searchParams.get("sslmode")),
+      sslMode,
       sslNegotiation,
-      username: decodeURIComponent(url.username || ""),
+      unsupportedParameters: getUnsupportedParameters(url.searchParams),
+      username,
     };
   } catch {
     return null;
   }
 }
+
+export { formatUnsupportedPostgresConnectionParameters };

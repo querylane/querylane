@@ -13,7 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectTrigger } from "@/components/ui/select";
 import type { CreateInstanceFormState } from "@/features/new-instance-workflow";
-import { parsePostgresConnectionString } from "@/lib/postgres-connection-string";
+import {
+  formatUnsupportedPostgresConnectionParameters,
+  parsePostgresConnectionString,
+} from "@/lib/postgres-connection-string";
 import type {
   CreateInstanceFieldName,
   CreateInstanceFormErrors,
@@ -25,6 +28,38 @@ function getCreateInstanceFieldErrorDescription(
   id: string
 ) {
   return formErrors[field] ? `${id}-error` : undefined;
+}
+
+function ConnectionStringFeedback({
+  error,
+  errorId,
+  warning,
+}: {
+  error: string | null;
+  errorId: string;
+  warning: string | null;
+}) {
+  if (!(error || warning)) {
+    return (
+      <p className="text-muted-foreground text-xs">
+        You’ll still pick a display name separately.
+      </p>
+    );
+  }
+  return (
+    <>
+      {error ? (
+        <p className="text-destructive text-sm" id={errorId} role="alert">
+          {error}
+        </p>
+      ) : null}
+      {warning ? (
+        <p className="text-amber-700 text-sm dark:text-amber-300" role="status">
+          {warning}
+        </p>
+      ) : null}
+    </>
+  );
 }
 
 function CreateInstanceConnectionFields({
@@ -47,6 +82,9 @@ function CreateInstanceConnectionFields({
   const [connectionStringError, setConnectionStringError] = useState<
     string | null
   >(null);
+  const [connectionStringWarning, setConnectionStringWarning] = useState<
+    string | null
+  >(null);
   const [connectionStringValue, setConnectionStringValue] = useState("");
   const handleApplyConnectionString = () => {
     const parsed = parsePostgresConnectionString(connectionStringValue);
@@ -57,6 +95,11 @@ function CreateInstanceConnectionFields({
       return;
     }
     setConnectionStringError(null);
+    setConnectionStringWarning(
+      formatUnsupportedPostgresConnectionParameters(
+        parsed.unsupportedParameters
+      )
+    );
     updateField("host", parsed.host);
     updateField("port", String(parsed.port));
     updateField("database", parsed.database);
@@ -112,19 +155,11 @@ function CreateInstanceConnectionFields({
             Apply DSN
           </Button>
         </div>
-        {connectionStringError ? (
-          <p
-            className="text-destructive text-sm"
-            id={connectionStringErrorId}
-            role="alert"
-          >
-            {connectionStringError}
-          </p>
-        ) : (
-          <p className="text-muted-foreground text-xs">
-            You’ll still pick a display name separately.
-          </p>
-        )}
+        <ConnectionStringFeedback
+          error={connectionStringError}
+          errorId={connectionStringErrorId}
+          warning={connectionStringWarning}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

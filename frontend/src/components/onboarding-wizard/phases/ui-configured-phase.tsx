@@ -34,7 +34,10 @@ import {
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectTrigger } from "@/components/ui/select";
-import { parsePostgresConnectionString } from "@/lib/postgres-connection-string";
+import {
+  formatUnsupportedPostgresConnectionParameters,
+  parsePostgresConnectionString,
+} from "@/lib/postgres-connection-string";
 import {
   formatSslMode,
   formatSslNegotiation,
@@ -341,6 +344,10 @@ function ConnectionStringPasteForm({
 }
 
 type ParsedStringField = "database" | "host" | "password" | "username";
+interface ConnectionStringFeedback {
+  error: string | null;
+  warning: string | null;
+}
 
 export function UiConfiguredPhase() {
   const connectionStringId = useId();
@@ -386,9 +393,8 @@ export function UiConfiguredPhase() {
   );
   const [connectionStringMode, setConnectionStringMode] = useState(false);
   const [connectionStringValue, setConnectionStringValue] = useState("");
-  const [connectionStringError, setConnectionStringError] = useState<
-    string | null
-  >(null);
+  const [connectionStringFeedback, setConnectionStringFeedback] =
+    useState<ConnectionStringFeedback>({ error: null, warning: null });
   const [advancedConnectionOptionsOpen, setAdvancedConnectionOptionsOpen] =
     useState(false);
   const connectionTest = useConnectionTest();
@@ -404,12 +410,17 @@ export function UiConfiguredPhase() {
   const handleConnectionStringApply = () => {
     const parsed = parsePostgresConnectionString(connectionStringValue);
     if (!parsed) {
-      setConnectionStringError(
-        "Invalid connection string. Expected format: postgres://user:password@host:port/database"
-      );
+      setConnectionStringFeedback((current) => ({
+        ...current,
+        error:
+          "Invalid connection string. Expected format: postgres://user:password@host:port/database",
+      }));
       return;
     }
-    setConnectionStringError(null);
+    const warning = formatUnsupportedPostgresConnectionParameters(
+      parsed.unsupportedParameters
+    );
+    setConnectionStringFeedback({ error: null, warning });
     const setValueOptions = {
       shouldDirty: true,
       shouldValidate: true,
@@ -497,7 +508,10 @@ export function UiConfiguredPhase() {
             className="h-9 rounded-lg border-white/10 px-3.5 text-sm text-white/68 hover:bg-white/[0.04] hover:text-white"
             onClick={() => {
               setConnectionStringMode((prev) => !prev);
-              setConnectionStringError(null);
+              setConnectionStringFeedback((current) => ({
+                ...current,
+                error: null,
+              }));
               if (!connectionStringMode) {
                 requestAnimationFrame(() => {
                   connectionStringInputRef.current?.focus();
@@ -513,16 +527,32 @@ export function UiConfiguredPhase() {
           </Button>
         </div>
 
+        {connectionStringFeedback.warning ? (
+          <p
+            className="rounded-xl border border-amber-300/20 bg-amber-300/[0.07] px-4 py-3 text-amber-100/90 text-sm"
+            role="status"
+          >
+            {connectionStringFeedback.warning}
+          </p>
+        ) : null}
+
         {connectionStringMode ? (
           <ConnectionStringPasteForm
-            connectionStringError={connectionStringError}
+            connectionStringError={connectionStringFeedback.error}
             connectionStringErrorId={connectionStringErrorId}
             connectionStringId={connectionStringId}
             connectionStringInputRef={connectionStringInputRef}
             connectionStringValue={connectionStringValue}
             onApply={handleConnectionStringApply}
-            onErrorReset={() => setConnectionStringError(null)}
-            onValueChange={setConnectionStringValue}
+            onErrorReset={() =>
+              setConnectionStringFeedback((current) => ({
+                ...current,
+                error: null,
+              }))
+            }
+            onValueChange={(value) => {
+              setConnectionStringValue(value);
+            }}
           />
         ) : (
           <>

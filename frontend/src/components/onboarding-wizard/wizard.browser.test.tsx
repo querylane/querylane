@@ -290,6 +290,30 @@ describe("Onboarding wizard — browser visuals", () => {
     );
   });
 
+  test("UI-configured path warns about DSN parameters it cannot apply", async () => {
+    openConfigurePhase("ui_configured");
+
+    await page.getByRole("button", { name: "Paste connection string" }).click();
+    await page
+      .getByLabelText("Connection string")
+      .fill(
+        "postgres://admin:secret@db.internal/querylane?sslmode=require&options=project%3Dquerylane"
+      );
+    await page.getByRole("button", { name: "Apply" }).click();
+
+    await expect
+      .element(page.getByRole("status"))
+      .toHaveTextContent("DSN parameters not applied: options.");
+    expect(
+      page.getByRole("status").element().getBoundingClientRect().bottom
+    ).toBeLessThanOrEqual(window.innerHeight);
+
+    await page.getByRole("button", { name: "Paste connection string" }).click();
+    await expect
+      .element(page.getByRole("status"))
+      .toHaveTextContent("DSN parameters not applied: options.");
+  });
+
   test("manual YAML path shows copyable configuration", async () => {
     openConfigurePhase("manual_yaml");
 
