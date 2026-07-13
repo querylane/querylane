@@ -1531,12 +1531,9 @@ describe("TableDetail triggers tab", () => {
       />
     );
 
+    const triggersTab = screen.getByTestId("data-explorer-table-triggers");
     const search = screen.getByRole("textbox", { name: "Search triggers…" });
-    const filterRail = search.parentElement?.parentElement;
-    if (!filterRail) {
-      throw new Error("Missing trigger filter rail");
-    }
-    const stateFilter = within(filterRail).getByRole("button", {
+    const stateFilter = within(triggersTab).getByRole("button", {
       name: "State",
     });
     expect(search.compareDocumentPosition(stateFilter)).toBe(
