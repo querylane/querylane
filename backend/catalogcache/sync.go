@@ -59,7 +59,37 @@ func (c *Catalog) ensureFreshUncached(ctx context.Context, scope string, syncFn 
 		return nil // recent refresh failure — serve stale data during cooldown
 	}
 
+	if state != nil && state.LastSyncedAt != nil {
+		return c.refreshStaleInBackground(ctx, scope, syncFn)
+	}
+
 	return c.claimAndSync(ctx, scope, syncFn)
+}
+
+// refreshStaleInBackground claims the distributed sync lock before returning,
+// then refreshes on a detached, bounded context while the caller reads the
+// existing catalog rows. Cold misses and force refreshes stay synchronous.
+func (c *Catalog) refreshStaleInBackground(ctx context.Context, scope string, syncFn func(ctx context.Context) error) error {
+	claimed, err := c.claimSync(ctx, scope)
+	if err != nil {
+		return err
+	}
+
+	if !claimed {
+		return c.waitIfColdMiss(ctx, scope, syncFn)
+	}
+
+	backgroundCtx := context.WithoutCancel(ctx)
+
+	go func() {
+		if err := c.runClaimedSync(backgroundCtx, scope, syncFn); err != nil {
+			slog.ErrorContext(backgroundCtx, "background catalog sync failed",
+				slog.String("scope", scope),
+				slog.String("error", err.Error()))
+		}
+	}()
+
+	return nil
 }
 
 // claimAndSync tries to acquire the sync lock for the scope and run the sync.
@@ -67,18 +97,31 @@ func (c *Catalog) ensureFreshUncached(ctx context.Context, scope string, syncFn 
 //   - If stale data exists (LastSyncedAt != nil): returns nil (stale-while-revalidate).
 //   - If no data exists (cold miss): polls until the winner finishes syncing.
 func (c *Catalog) claimAndSync(ctx context.Context, scope string, syncFn func(ctx context.Context) error) error {
-	claimed, err := c.syncStore.ClaimSync(ctx, scope, catalog.SyncClaimOptions{
-		Force:       isForceRefresh(ctx),
-		StaleBefore: time.Now().Add(-c.config.StalenessThreshold),
-	})
+	claimed, err := c.claimSync(ctx, scope)
 	if err != nil {
-		return fmt.Errorf("claim sync lock: %w", err)
+		return err
 	}
 
 	if !claimed {
 		return c.waitIfColdMiss(ctx, scope, syncFn)
 	}
 
+	return c.runClaimedSync(ctx, scope, syncFn)
+}
+
+func (c *Catalog) claimSync(ctx context.Context, scope string) (bool, error) {
+	claimed, err := c.syncStore.ClaimSync(ctx, scope, catalog.SyncClaimOptions{
+		Force:       isForceRefresh(ctx),
+		StaleBefore: time.Now().Add(-c.config.StalenessThreshold),
+	})
+	if err != nil {
+		return false, fmt.Errorf("claim sync lock: %w", err)
+	}
+
+	return claimed, nil
+}
+
+func (c *Catalog) runClaimedSync(ctx context.Context, scope string, syncFn func(ctx context.Context) error) error {
 	// Detach from the caller's context so the sync completes even if the
 	// original RPC is canceled (e.g. client disconnect, React StrictMode
 	// unmount). Other callers may be polling for this sync to finish.

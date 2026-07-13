@@ -61,6 +61,23 @@ func (b *catalogSpoolByteBudget) release(bytes int64) {
 	b.used -= bytes
 }
 
+func (b *catalogSpoolByteBudget) accountExisting(bytes int64) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if bytes <= 0 || b.used >= b.max {
+		return
+	}
+
+	if bytes >= b.max-b.used {
+		b.used = b.max
+
+		return
+	}
+
+	b.used += bytes
+}
+
 type budgetedCatalogSpoolWriter struct {
 	file     *os.File
 	budget   *catalogSpoolByteBudget
@@ -81,14 +98,18 @@ func (w *budgetedCatalogSpoolWriter) Write(data []byte) (int, error) {
 }
 
 func cleanupStaleCatalogSpools() {
-	paths, err := filepath.Glob(filepath.Join(os.TempDir(), "querylane-catalog-pages-*"))
+	initializeCatalogSpoolBudget(os.TempDir(), time.Now(), activeCatalogSpoolBudget)
+}
+
+func initializeCatalogSpoolBudget(tempDir string, now time.Time, budget *catalogSpoolByteBudget) {
+	paths, err := filepath.Glob(filepath.Join(tempDir, "querylane-catalog-pages-*"))
 	if err != nil {
 		slog.Warn("failed to list stale catalog page spools")
 
 		return
 	}
 
-	cutoff := time.Now().Add(-staleCatalogSpoolAge)
+	cutoff := now.Add(-staleCatalogSpoolAge)
 
 	for _, path := range paths {
 		info, err := os.Stat(path)
@@ -97,10 +118,15 @@ func cleanupStaleCatalogSpools() {
 		}
 
 		if info.ModTime().Before(cutoff) {
-			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-				slog.Warn("failed to remove stale catalog page spool")
+			removeErr := os.Remove(path)
+			if removeErr == nil || errors.Is(removeErr, os.ErrNotExist) {
+				continue
 			}
+
+			slog.Warn("failed to remove stale catalog page spool")
 		}
+
+		budget.accountExisting(info.Size())
 	}
 }
 
@@ -111,17 +137,34 @@ type catalogPageSpool[Row any] struct {
 	path     string
 	syncedAt time.Time
 	bytes    int64
-	released sync.Once
+	budget   *catalogSpoolByteBudget
+	mu       sync.Mutex
+	removed  bool
 }
 
 func (s *catalogPageSpool[Row]) remove() {
-	s.released.Do(func() {
-		if err := os.Remove(s.path); err != nil && !errors.Is(err, os.ErrNotExist) {
-			slog.Warn("failed to remove catalog page spool")
-		}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-		activeCatalogSpoolBudget.release(s.bytes)
-	})
+	if s.removed {
+		return
+	}
+
+	if removeCatalogSpool(s.path, s.bytes, s.budget) {
+		s.removed = true
+	}
+}
+
+func removeCatalogSpool(path string, bytes int64, budget *catalogSpoolByteBudget) bool {
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		slog.Warn("failed to remove catalog page spool")
+
+		return false
+	}
+
+	budget.release(bytes)
+
+	return true
 }
 
 func (s *catalogPageSpool[Row]) pages() iter.Seq2[[]Row, error] {
@@ -189,9 +232,7 @@ func spoolCatalogPages[Source, Row any](
 
 	defer func() {
 		if removeOnError {
-			_ = os.Remove(path)
-
-			activeCatalogSpoolBudget.release(writer.reserved)
+			removeCatalogSpool(path, writer.reserved, activeCatalogSpoolBudget)
 		}
 	}()
 
@@ -231,5 +272,10 @@ func spoolCatalogPages[Source, Row any](
 
 	removeOnError = false
 
-	return &catalogPageSpool[Row]{path: path, syncedAt: syncedAt, bytes: writer.reserved}, nil
+	return &catalogPageSpool[Row]{
+		path:     path,
+		syncedAt: syncedAt,
+		bytes:    writer.reserved,
+		budget:   activeCatalogSpoolBudget,
+	}, nil
 }

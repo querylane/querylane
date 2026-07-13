@@ -28,7 +28,7 @@ func TestIntegrationListTablesWithSyncMetadata(t *testing.T) {
 		run  func(t *testing.T)
 	}{
 		{
-			name: "serves stale cache on refresh error",
+			name: "serves stale cache while refresh fails",
 			run: func(t *testing.T) {
 				t.Helper()
 
@@ -60,12 +60,38 @@ func TestIntegrationListTablesWithSyncMetadata(t *testing.T) {
 				_, err = testDB.DB().ExecContext(ctx, "UPDATE catalog_sync_state SET last_synced_at = now() - interval '2 hours' WHERE scope = $1", scope)
 				require.NoError(t, err)
 
+				refreshStarted := make(chan struct{})
+				releaseRefresh := make(chan struct{})
 				dbSession.listTablesErr = errors.New("upstream unavailable")
+				dbSession.tableStartedCh = refreshStarted
+				dbSession.tableSyncCh = releaseRefresh
 
 				tables, _, metadata, err = cat.ListTablesWithSyncMetadata(ctx, schema, aip.Params{PageSize: 10})
 				require.NoError(t, err)
 				require.Len(t, tables, 1, "stale cached rows should remain visible")
 				assert.Equal(t, "users", tables[0].Name)
+				assert.Equal(t, CatalogSyncStatusSyncing, metadata.Status)
+				assert.True(t, metadata.IsStale)
+				assert.Nil(t, metadata.SyncError)
+
+				select {
+				case <-refreshStarted:
+				case <-time.After(2 * time.Second):
+					close(releaseRefresh)
+					t.Fatal("background refresh did not start")
+				}
+
+				close(releaseRefresh)
+
+				require.Eventually(t, func() bool {
+					state, stateErr := syncStore.GetSyncState(ctx, scope)
+
+					return stateErr == nil && state != nil && state.Status == catalog.SyncStatusError
+				}, 5*time.Second, 10*time.Millisecond)
+
+				tables, _, metadata, err = cat.ListTablesWithSyncMetadata(ctx, schema, aip.Params{PageSize: 10})
+				require.NoError(t, err)
+				require.Len(t, tables, 1, "stale cached rows should remain visible after refresh failure")
 				assert.Equal(t, CatalogSyncStatusError, metadata.Status)
 				assert.True(t, metadata.IsStale)
 				require.NotNil(t, metadata.SyncError)

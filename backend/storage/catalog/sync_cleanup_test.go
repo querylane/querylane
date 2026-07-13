@@ -118,8 +118,21 @@ func TestIntegrationCatalogRepositorySyncTablePagesBatchesLargeDepartedCatalog(t
 	`)
 	require.NoError(t, err)
 
+	_, err = testDB.DB().ExecContext(ctx, `
+		INSERT INTO catalog_sync_state (scope, status, last_synced_at)
+		SELECT 'instances/inst1/databases/db1/schemas/public/tables/table-' || i || '/columns',
+		       'synced', NOW()
+		FROM generate_series(1, 66000) AS i
+	`)
+	require.NoError(t, err)
+
+	// Production allows 30 seconds for the whole sync, including live fetch and
+	// spooling. Keep cleanup below 20 seconds so it cannot consume that budget.
+	syncCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+
 	require.NoError(t, repo.SyncTablePages(
-		ctx,
+		syncCtx,
 		"inst1",
 		"db1",
 		"public",
@@ -127,6 +140,7 @@ func TestIntegrationCatalogRepositorySyncTablePagesBatchesLargeDepartedCatalog(t
 		oneCatalogPage([]model.CatalogTable{}),
 	))
 	require.Equal(t, 0, countRows(t, ctx, testDB.DB(), "catalog_table", "instance_id = $1", "inst1"))
+	require.Equal(t, 0, countRows(t, ctx, testDB.DB(), "catalog_sync_state", "scope LIKE $1", "instances/inst1/databases/db1/schemas/public/tables/%"))
 }
 
 func TestIntegrationCatalogRepositorySyncTablePagesEscapesWildcardScopes(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -332,11 +333,11 @@ func (m *mockDatabaseSession) Close() error { return nil }
 // mockEngine implements instanceSessionOpener for testing.
 type mockEngine struct {
 	sessions  map[string]*mockInstanceSession
-	callCount int
+	callCount atomic.Int64
 }
 
 func (m *mockEngine) OpenInstance(_ context.Context, name resource.InstanceName) (engine.InstanceSession, error) {
-	m.callCount++
+	m.callCount.Add(1)
 
 	if s, ok := m.sessions[name.InstanceID]; ok {
 		return s, nil
@@ -393,18 +394,18 @@ func TestIntegrationListDatabases(t *testing.T) {
 	assert.True(t, databases[1].IsSystemDatabase)
 
 	// Second call uses cache (engine should not be called again)
-	initialCallCount := eng.callCount
+	initialCallCount := eng.callCount.Load()
 	databases, _, err = cat.ListDatabases(ctx, resource.NewInstanceName("inst1"), aip.Params{PageSize: 10})
 	require.NoError(t, err)
 	assert.Len(t, databases, 2)
-	assert.Equal(t, initialCallCount, eng.callCount)
+	assert.Equal(t, initialCallCount, eng.callCount.Load())
 
 	// Force refresh bypasses cache
 	refreshCtx := WithForceRefresh(ctx)
 	databases, _, err = cat.ListDatabases(refreshCtx, resource.NewInstanceName("inst1"), aip.Params{PageSize: 10})
 	require.NoError(t, err)
 	assert.Len(t, databases, 2)
-	assert.Greater(t, eng.callCount, initialCallCount)
+	assert.Greater(t, eng.callCount.Load(), initialCallCount)
 }
 
 func TestIntegrationListDatabasesSpoolsLargeCatalogInBoundedPages(t *testing.T) {
@@ -906,10 +907,10 @@ func TestIntegrationInvalidateInstance(t *testing.T) {
 	require.NoError(t, err)
 
 	// Next call should trigger a fresh sync (engine called again)
-	callsBefore := eng.callCount
+	callsBefore := eng.callCount.Load()
 	_, _, err = cat.ListDatabases(ctx, resource.NewInstanceName("inst1"), aip.Params{PageSize: 10})
 	require.NoError(t, err)
-	assert.Greater(t, eng.callCount, callsBefore, "should have re-synced after invalidation")
+	assert.Greater(t, eng.callCount.Load(), callsBefore, "should have re-synced after invalidation")
 }
 
 func TestIntegrationStalenessTriggersResync(t *testing.T) {
@@ -942,7 +943,7 @@ func TestIntegrationStalenessTriggersResync(t *testing.T) {
 	_, _, err := cat.ListDatabases(ctx, resource.NewInstanceName("inst1"), aip.Params{PageSize: 10})
 	require.NoError(t, err)
 
-	callsAfterFirst := eng.callCount
+	callsAfterFirst := eng.callCount.Load()
 
 	// Wait for staleness
 	time.Sleep(5 * time.Millisecond)
@@ -950,7 +951,12 @@ func TestIntegrationStalenessTriggersResync(t *testing.T) {
 	// Second call should trigger re-sync
 	_, _, err = cat.ListDatabases(ctx, resource.NewInstanceName("inst1"), aip.Params{PageSize: 10})
 	require.NoError(t, err)
-	assert.Greater(t, eng.callCount, callsAfterFirst, "should have re-synced after staleness")
+	require.Eventually(t, func() bool {
+		state, stateErr := cat.syncStore.GetSyncState(ctx, resource.NewInstanceName("inst1").String()+"/databases")
+
+		return stateErr == nil && state != nil && state.Status == catalog.SyncStatusSynced
+	}, 5*time.Second, 10*time.Millisecond)
+	assert.Greater(t, eng.callCount.Load(), callsAfterFirst, "should have re-synced after staleness")
 }
 
 func TestIntegrationEagerCleanup(t *testing.T) {

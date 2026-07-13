@@ -197,10 +197,16 @@ func deleteDepartedTables(
 
 		departedNames := make([]postgres.Expression, len(departedRows))
 
-		departedRoots := make([]string, len(departedRows))
+		departedScopes := make([]postgres.Expression, 0, len(departedRows)*(len(catalogChildScopeSuffixes)+1))
 		for i, r := range departedRows {
 			departedNames[i] = postgres.String(r.Name)
-			departedRoots[i] = scopeTable(instanceID, databaseName, schemaName, r.Name)
+			departedScopes = appendTableSubtreeScopeExpressions(
+				departedScopes,
+				instanceID,
+				databaseName,
+				schemaName,
+				r.Name,
+			)
 		}
 
 		instStr := postgres.String(instanceID)
@@ -239,7 +245,7 @@ func deleteDepartedTables(
 			return fmt.Errorf("delete departed tables: %w", err)
 		}
 
-		if err := deleteSyncStateSubtrees(ctx, tx, departedRoots); err != nil {
+		if err := deleteSyncStateScopes(ctx, tx, departedScopes); err != nil {
 			return fmt.Errorf("delete departed child sync states: %w", err)
 		}
 	}
