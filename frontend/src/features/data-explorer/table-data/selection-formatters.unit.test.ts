@@ -26,6 +26,14 @@ function stringCell(value: string, truncated = false) {
   });
 }
 
+function nullCell() {
+  return create(TableCellSchema, {
+    value: create(TableValueSchema, {
+      kind: { case: "nullValue", value: 0 },
+    }),
+  });
+}
+
 function nameColumn(name: string) {
   return create(TableResultColumnSchema, {
     columnName: name,
@@ -200,6 +208,22 @@ describe("buildExport formatting", () => {
       'plain,needs_quote\nok,"line 1\n""line,2"""\n'
     );
   });
+
+  test("CSV distinguishes SQL NULL from an empty string", () => {
+    const columns = [nameColumn("id"), nameColumn("value")];
+    const rows: SelectedRow[] = [
+      row({ id: stringCell("1"), value: nullCell() }),
+      row({ id: stringCell("2"), value: stringCell("") }),
+    ];
+
+    const result = buildExport("csv", rows, columns, RESOURCE);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.payload.contents).toBe('id,value\n1,\n2,""\n');
+  });
 });
 
 describe("buildExport raw value fidelity", () => {
@@ -328,6 +352,26 @@ describe("createChunkedExportBuilder", () => {
       "1,hello",
       "\n",
       "2,world",
+      "\n",
+    ]);
+  });
+
+  test("preserves SQL NULL and empty strings in CSV chunks", () => {
+    const builder = createChunkedExportBuilder("csv", columns, RESOURCE);
+
+    builder.addRows([
+      row({ body: nullCell(), id: stringCell("1") }),
+      row({ body: stringCell(""), id: stringCell("2") }),
+    ]);
+
+    const result = builder.finish();
+
+    expect(result.ok && result.payload.contents).toEqual([
+      "id,body",
+      "\n",
+      "1,",
+      "\n",
+      '2,""',
       "\n",
     ]);
   });

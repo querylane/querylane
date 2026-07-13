@@ -106,7 +106,7 @@ function getExportFileDetails(
 }
 
 function escapeCsv(value: string): string {
-  if (CSV_QUOTE_REQUIRED_PATTERN.test(value)) {
+  if (value === "" || CSV_QUOTE_REQUIRED_PATTERN.test(value)) {
     return `"${value.replace(CSV_QUOTE_PATTERN, '""')}"`;
   }
   return value;
@@ -175,9 +175,10 @@ function rawCellText(value: RawCellValue): string {
 }
 
 function formatCsvRow(row: SelectedRow, columns: TableResultColumn[]): string {
-  const cells = columns.map((column) =>
-    escapeCsv(rawCellText(rawCellValue(row.cells.get(column.columnName))))
-  );
+  const cells = columns.map((column) => {
+    const raw = rawCellValue(row.cells.get(column.columnName));
+    return raw.kind === "null" ? "" : escapeCsv(rawCellText(raw));
+  });
   return cells.join(",");
 }
 
