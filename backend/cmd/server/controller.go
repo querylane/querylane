@@ -19,6 +19,7 @@ import (
 	serverconfig "github.com/querylane/querylane/backend/config/server"
 	"github.com/querylane/querylane/backend/dbsetup"
 	"github.com/querylane/querylane/backend/embeddedpg"
+	"github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 )
 
 // DelegatingHandler is an http.Handler whose underlying handler can be
@@ -36,6 +37,15 @@ func (d *DelegatingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h == nil {
 		http.Error(w, "server initializing", http.StatusServiceUnavailable)
 		return
+	}
+
+	if r.Method == http.MethodPost && r.URL.Path == consolev1alpha1connect.TableDataServiceStreamRowsProcedure {
+		if err := http.NewResponseController(w).SetWriteDeadline(time.Time{}); err != nil {
+			slog.ErrorContext(r.Context(), "disabling StreamRows write deadline failed", slog.Any("error", err))
+			http.Error(w, "streaming response unavailable", http.StatusInternalServerError)
+
+			return
+		}
 	}
 
 	(*h).ServeHTTP(w, r)
