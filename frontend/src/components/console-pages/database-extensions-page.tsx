@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Info,
-  PackageOpen,
-} from "lucide-react";
+import { Check, Info, PackageOpen } from "lucide-react";
 import { useState } from "react";
 import {
   PageHeader,
@@ -24,16 +18,12 @@ import {
   type PresentedExtension,
   presentExtensions,
 } from "@/components/console-pages/database-extensions-filters";
+import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableFilter } from "@/components/ui/data-table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
+import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 import {
   Sheet,
   SheetContent,
@@ -58,150 +48,44 @@ const EXTENSION_PAGE_SIZE_OPTIONS = [
   MEDIUM_EXTENSIONS_PAGE_SIZE,
   LARGE_EXTENSIONS_PAGE_SIZE,
 ] as const;
-type ExtensionPageSize = (typeof EXTENSION_PAGE_SIZE_OPTIONS)[number];
 
-interface ExtensionSelectProps<Value extends string> {
+interface ExtensionFacetFilterProps<Value extends string> {
   label: string;
-  onValueChange: (value: Value) => void;
+  onValueChange: (value: Value | "All") => void;
   options: ExtensionFilterOption<Value>[];
-  value: Value;
+  value: Value | "All";
 }
 
-function isSelectOptionValue<Value extends string>(
-  value: string,
-  options: ExtensionFilterOption<Value>[]
-): value is Value {
-  return options.some((option) => option.value === value);
-}
-
-function allOption<Value extends string>(): ExtensionFilterOption<
-  Value | "All"
-> {
-  return { label: "all", value: "All" };
-}
-
-function ExtensionSelect<Value extends string>({
+function ExtensionFacetFilter<Value extends string>({
   label,
   onValueChange,
   options,
   value,
-}: ExtensionSelectProps<Value>) {
-  const selectedOption = options.find((option) => option.value === value);
-
+}: ExtensionFacetFilterProps<Value>) {
   return (
-    <Select
-      onValueChange={(nextValue) => {
-        if (
-          typeof nextValue === "string" &&
-          isSelectOptionValue(nextValue, options)
-        ) {
-          onValueChange(nextValue);
-        }
+    <DataTableFacetedFilter
+      onSelectedValuesChange={(selectedValues) => {
+        const selectedOption = options.find(
+          (option) => option.value === selectedValues[0]
+        );
+        onValueChange(selectedOption?.value ?? "All");
       }}
-      value={value}
-    >
-      <SelectTrigger aria-label={label} className="h-8 min-w-32" size="sm">
-        <span className="text-muted-foreground">{label}: </span>
-        <span>{selectedOption?.label ?? value}</span>
-      </SelectTrigger>
-      <SelectContent alignItemWithTrigger={false}>
-        {options.map((option) => (
-          <SelectItem
-            key={option.value}
-            label={option.label}
-            value={option.value}
-          >
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      options={options}
+      selectedValues={value === "All" ? [] : [value]}
+      singleSelect={true}
+      title={label}
+    />
   );
-}
-
-function isExtensionPageSize(value: number): value is ExtensionPageSize {
-  return EXTENSION_PAGE_SIZE_OPTIONS.some((pageSize) => pageSize === value);
-}
-
-function PageSizeSelect({
-  onValueChange,
-  value,
-}: {
-  onValueChange: (value: number) => void;
-  value: number;
-}) {
-  const selectedLabel = String(value);
-  const options = EXTENSION_PAGE_SIZE_OPTIONS.map((pageSize) => ({
-    label: String(pageSize),
-    value: String(pageSize),
-  }));
-
-  return (
-    <Select
-      onValueChange={(nextValue) => {
-        if (typeof nextValue !== "string") {
-          return;
-        }
-        const nextPageSize = Number(nextValue);
-        if (isExtensionPageSize(nextPageSize)) {
-          onValueChange(nextPageSize);
-        }
-      }}
-      value={String(value)}
-    >
-      <SelectTrigger aria-label="Per page" className="h-8 w-28" size="sm">
-        <span className="text-muted-foreground">Per page </span>
-        <span>{selectedLabel}</span>
-      </SelectTrigger>
-      <SelectContent alignItemWithTrigger={false}>
-        {options.map((option) => (
-          <SelectItem
-            key={option.value}
-            label={option.label}
-            value={option.value}
-          >
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-function statusOptions(
-  options: ExtensionFilterOption<Exclude<ExtensionStatusFilter, "All">>[]
-): ExtensionFilterOption<ExtensionStatusFilter>[] {
-  return [allOption<Exclude<ExtensionStatusFilter, "All">>(), ...options];
-}
-
-function scopeOptions(
-  options: ExtensionFilterOption<Exclude<ExtensionScopeFilter, "All">>[]
-): ExtensionFilterOption<ExtensionScopeFilter>[] {
-  return [allOption<Exclude<ExtensionScopeFilter, "All">>(), ...options];
-}
-
-function sourceOptions(
-  options: ExtensionFilterOption<Exclude<ExtensionSourceFilter, "All">>[]
-): ExtensionFilterOption<ExtensionSourceFilter>[] {
-  return [allOption<Exclude<ExtensionSourceFilter, "All">>(), ...options];
-}
-
-function categoryOptions(
-  options: ExtensionFilterOption<Exclude<ExtensionCategoryFilter, "All">>[]
-): ExtensionFilterOption<ExtensionCategoryFilter>[] {
-  return [allOption<Exclude<ExtensionCategoryFilter, "All">>(), ...options];
 }
 
 function ExtensionFilterBar({
   category,
   categoryFilterOptions,
   onCategoryChange,
-  onPageSizeChange,
   onScopeChange,
   onSearchChange,
   onSourceChange,
   onStatusChange,
-  pageSize,
   scope,
   search,
   scopeFilterOptions,
@@ -215,12 +99,10 @@ function ExtensionFilterBar({
     Exclude<ExtensionCategoryFilter, "All">
   >[];
   onCategoryChange: (value: ExtensionCategoryFilter) => void;
-  onPageSizeChange: (value: number) => void;
   onScopeChange: (value: ExtensionScopeFilter) => void;
   onSearchChange: (value: string) => void;
   onSourceChange: (value: ExtensionSourceFilter) => void;
   onStatusChange: (value: ExtensionStatusFilter) => void;
-  pageSize: number;
   scope: ExtensionScopeFilter;
   search: string;
   scopeFilterOptions: ExtensionFilterOption<
@@ -245,31 +127,30 @@ function ExtensionFilterBar({
         placeholder="Search extensions..."
         value={search}
       />
-      <ExtensionSelect
+      <ExtensionFacetFilter
         label="Status"
         onValueChange={onStatusChange}
-        options={statusOptions(statusFilterOptions)}
+        options={statusFilterOptions}
         value={status}
       />
-      <ExtensionSelect
+      <ExtensionFacetFilter
         label="Scope"
         onValueChange={onScopeChange}
-        options={scopeOptions(scopeFilterOptions)}
+        options={scopeFilterOptions}
         value={scope}
       />
-      <ExtensionSelect
+      <ExtensionFacetFilter
         label="Category"
         onValueChange={onCategoryChange}
-        options={categoryOptions(categoryFilterOptions)}
+        options={categoryFilterOptions}
         value={category}
       />
-      <ExtensionSelect
+      <ExtensionFacetFilter
         label="Source"
         onValueChange={onSourceChange}
-        options={sourceOptions(sourceFilterOptions)}
+        options={sourceFilterOptions}
         value={source}
       />
-      <PageSizeSelect onValueChange={onPageSizeChange} value={pageSize} />
     </div>
   );
 }
@@ -509,12 +390,10 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
         category={category}
         categoryFilterOptions={filterOptions.categories}
         onCategoryChange={handleCategoryChange}
-        onPageSizeChange={handlePageSizeChange}
         onScopeChange={handleScopeChange}
         onSearchChange={handleSearchChange}
         onSourceChange={handleSourceChange}
         onStatusChange={handleStatusChange}
-        pageSize={pageSize}
         scope={scope}
         scopeFilterOptions={filterOptions.scopes}
         search={search}
@@ -544,38 +423,26 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
             </div>
           )}
           {filteredExtensions.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
-              <span>
+            <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
+              <span className="shrink-0">
                 {paginationLabel({
                   filteredCount: filteredExtensions.length,
                   pageIndex: currentPageIndex,
                   pageSize,
                 })}
               </span>
-              <div className="ml-auto flex items-center gap-2">
-                <Button
-                  aria-label="Previous extensions page"
-                  disabled={currentPageIndex === 0}
-                  onClick={handlePreviousPage}
-                  size="icon-xs"
-                  type="button"
-                  variant="outline"
-                >
-                  <ChevronLeft />
-                </Button>
-                <span className="font-mono text-xs">
-                  Page {currentPageIndex + 1} of {pageCount}
-                </span>
-                <Button
-                  aria-label="Next extensions page"
-                  disabled={currentPageIndex >= pageCount - 1}
-                  onClick={handleNextPage}
-                  size="icon-xs"
-                  type="button"
-                  variant="outline"
-                >
-                  <ChevronRight />
-                </Button>
+              <div className="w-full sm:min-w-0 sm:flex-1">
+                <PaginationFooter
+                  hasNext={currentPageIndex < pageCount - 1}
+                  hasPrev={currentPageIndex > 0}
+                  onNext={handleNextPage}
+                  onPageSizeChange={handlePageSizeChange}
+                  onPrev={handlePreviousPage}
+                  pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
+                  pageSize={pageSize}
+                  pageSizeLabel="Extensions per page"
+                  pageSizeOptions={EXTENSION_PAGE_SIZE_OPTIONS}
+                />
               </div>
             </div>
           ) : null}

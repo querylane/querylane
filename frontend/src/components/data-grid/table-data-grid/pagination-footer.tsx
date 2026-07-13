@@ -43,30 +43,34 @@ export function PaginationFooter({
   pageSizeOptions = PAGE_SIZE_OPTIONS,
 }: PaginationFooterProps) {
   return (
-    <div className="flex h-8 items-center gap-2 text-muted-foreground text-xs">
-      <span className="text-[11px]">{pageSizeLabel}</span>
-      <Select
-        onValueChange={(value) => {
-          if (!value) {
-            return;
-          }
-          onPageSizeChange(Number.parseInt(value, 10));
-        }}
-        value={String(pageSize)}
-      >
-        <SelectTrigger aria-label={pageSizeLabel} className="h-7" size="sm">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent alignItemWithTrigger={false}>
-          {pageSizeOptions.map((size) => (
-            <SelectItem key={size} label={String(size)} value={String(size)}>
-              {size}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <div className="ml-auto flex items-center gap-1">
+    <div
+      className="flex min-h-8 flex-wrap items-center justify-end gap-x-2 gap-y-1 text-muted-foreground text-xs"
+      data-slot="pagination-footer"
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-[11px]">{pageSizeLabel}</span>
+        <Select
+          onValueChange={(value) => {
+            if (!value) {
+              return;
+            }
+            onPageSizeChange(Number.parseInt(value, 10));
+          }}
+          value={String(pageSize)}
+        >
+          <SelectTrigger aria-label={pageSizeLabel} className="h-7" size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger={false}>
+            {pageSizeOptions.map((size) => (
+              <SelectItem key={size} label={String(size)} value={String(size)}>
+                {size}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex items-center gap-1">
         <Button
           aria-label="Previous page"
           className="size-7 p-0"

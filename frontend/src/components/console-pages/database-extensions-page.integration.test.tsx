@@ -188,7 +188,7 @@ describe("database extensions page", () => {
     expect(state.updateTableSearch).toHaveBeenCalledWith("p");
   });
 
-  test("places extension search on the left beside redesign filters", () => {
+  test("uses shared list filters beside search and keeps page size in the footer", () => {
     render(
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
@@ -207,15 +207,21 @@ describe("database extensions page", () => {
     expect(filterBar.className).toContain("justify-start");
     expect(
       within(filterBar)
-        .getAllByRole("combobox")
-        .map((button) => button.textContent?.replace(/▼/g, ""))
-    ).toEqual([
-      "Status: all",
-      "Scope: all",
-      "Category: all",
-      "Source: all",
-      "Per page 6",
-    ]);
+        .getAllByRole("button")
+        .map((button) => button.textContent)
+    ).toEqual(["Status", "Scope", "Category", "Source"]);
+    expect(within(filterBar).queryByRole("combobox")).toBeNull();
+
+    const pageLabel = screen.getByText("Page 1 of 1");
+    const pagination = pageLabel.closest('[data-slot="pagination-footer"]');
+    if (!(pagination instanceof HTMLElement)) {
+      throw new Error("Missing shared pagination footer");
+    }
+    expect(
+      within(pagination).getByRole("combobox", {
+        name: "Extensions per page",
+      })
+    ).toBeTruthy();
   });
 
   test("filters extensions by status and source facets", async () => {
@@ -227,7 +233,7 @@ describe("database extensions page", () => {
       />
     );
 
-    await user.click(screen.getByRole("combobox", { name: "Status" }));
+    await user.click(screen.getByRole("button", { name: "Status" }));
     await user.click(screen.getByRole("option", { name: "Available" }));
 
     expect(screen.getByText("uuid-ossp")).toBeTruthy();
@@ -242,7 +248,7 @@ describe("database extensions page", () => {
       />
     );
 
-    await user.click(screen.getByRole("combobox", { name: "Source" }));
+    await user.click(screen.getByRole("button", { name: "Source" }));
     await user.click(screen.getByRole("option", { name: "Core contrib" }));
 
     expect(screen.getByText("pg_trgm")).toBeTruthy();

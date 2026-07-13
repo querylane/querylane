@@ -2951,7 +2951,9 @@ test("data explorer trigger cards paginate dense resources", async () => {
   const pageSizeSelect = page
     .getByRole("combobox", { name: "Triggers per page" })
     .element();
-  const paginationFooter = pageSizeSelect.parentElement;
+  const paginationFooter = pageSizeSelect.closest(
+    '[data-slot="pagination-footer"]'
+  );
   if (!paginationFooter) {
     throw new Error("expected trigger pagination footer");
   }
