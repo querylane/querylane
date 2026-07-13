@@ -89,6 +89,9 @@ function DataExplorerPage({
   const isTableResource =
     explorer.selection.kind === "resource" &&
     explorer.selection.category === "tables";
+  const isSchemaMap =
+    explorer.selection.kind === "schema" && explorer.schemaTab === "map";
+  const fillsDetailArea = isTableResource || isSchemaMap;
   const handleSelectResource = explorer.onSelectResource;
   const handleSchemaTabChange = explorer.onSchemaTabChange;
   const handleSelectTableInSchema = explorer.onSelectTableInSchema;
@@ -143,13 +146,13 @@ function DataExplorerPage({
           <div
             className={cn(
               "w-full",
-              isTableResource && "flex h-full min-h-0 flex-col"
+              fillsDetailArea && "flex h-full min-h-0 flex-col"
             )}
           >
             <div
               className={cn(
                 "min-w-0",
-                isTableResource
+                fillsDetailArea
                   ? "flex min-h-0 w-full flex-1 flex-col p-3 sm:p-4 lg:p-6"
                   : "mx-auto max-w-[900px] p-4 sm:p-6 lg:p-8"
               )}
