@@ -42,6 +42,7 @@ jobs:
           # Presence-only signals — never expose secret VALUES to the gate.
           HAS_PLAN: ${{ secrets.PLAN_RECAP_TOKEN != '' }}
           HAS_ANTHROPIC: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          HAS_ANTHROPIC_FALLBACK: ${{ secrets.ANTHROPIC_API_KEY_FALLBACK != '' }}
           HAS_CLAUDE_CODE_OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
           HAS_OPENAI: ${{ secrets.OPENAI_API_KEY != '' }}
           AGENT: ${{ env.VISUAL_RECAP_AGENT }}
@@ -90,8 +91,12 @@ jobs:
             } else if (agent === 'codex') {
               if (process.env.HAS_OPENAI !== 'true') reasons.push('OPENAI_API_KEY not configured (codex backend)');
             } else {
-              if (process.env.HAS_ANTHROPIC !== 'true' && process.env.HAS_CLAUDE_CODE_OAUTH !== 'true') {
-                reasons.push('ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN not configured (claude backend)');
+              if (
+                process.env.HAS_ANTHROPIC !== 'true' &&
+                process.env.HAS_ANTHROPIC_FALLBACK !== 'true' &&
+                process.env.HAS_CLAUDE_CODE_OAUTH !== 'true'
+              ) {
+                reasons.push('Anthropic API key or Claude Code OAuth token not configured (claude backend)');
               }
             }
 
@@ -105,7 +110,6 @@ jobs:
             if (!['auto', 'latest', 'repo'].includes(skillSource)) {
               reasons.push('invalid VISUAL_RECAP_SKILL_SOURCE value (expected "auto", "latest", or "repo")');
             }
-            const usesRepoSkill = skillSource === 'repo';
 
             const timeoutSeconds = Number(process.env.VISUAL_RECAP_AGENT_TIMEOUT_SECONDS || '300');
             if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 60 || timeoutSeconds > 900) {
@@ -123,7 +127,7 @@ jobs:
             // Trusted write actors may edit recap-control files as normal
             // reviewable content; running the recap is useful signal for those
             // changes.
-            if (pr && usesRepoSkill) {
+            if (pr) {
               try {
                 const files = await github.paginate(github.rest.pulls.listFiles, {
                   owner: context.repo.owner,
@@ -135,6 +139,7 @@ jobs:
                   /(^|\/)skills\/visual-(recap|plan|plans)\//.test(p) ||
                   p.startsWith('.agents/skills/visual-') ||
                   p.startsWith('.agents/commands/visual-') ||
+                  p === '.agents/visual-recap-querylane.md' ||
                   p === '.github/workflows/pr-visual-recap.yml' ||
                   p.startsWith('.claude/') ||
                   p === 'CLAUDE.md' ||
@@ -458,6 +463,8 @@ jobs:
           if [ "${IS_FORK:-}" = "true" ]; then ARGS+=(--fork-pr true); fi
           if [ -n "${PREV_PLAN_ID:-}" ]; then ARGS+=(--prev-plan-id "$PREV_PLAN_ID"); fi
           $RECAP_CLI recap build-prompt "${ARGS[@]}"
+          printf '\n\n# Querylane repository guidance\n\n' >> recap-prompt.md
+          cat .agents/visual-recap-querylane.md >> recap-prompt.md
 
       - name: Run agent (Claude Code)
         id: claude
@@ -465,6 +472,7 @@ jobs:
         continue-on-error: true
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY_FALLBACK: ${{ secrets.ANTHROPIC_API_KEY_FALLBACK }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
           set -uo pipefail
@@ -473,8 +481,19 @@ jobs:
           if [ -n "${VISUAL_RECAP_MODEL:-}" ]; then CLAUDE_ARGS+=(--model "$VISUAL_RECAP_MODEL"); fi
           rm -f recap-source.json recap-url.txt recap-url-reason.txt claude-result.json claude-stderr.log
           run_claude() {
+            local api_key="${1:-}"
+            rm -f recap-source.json claude-result.json claude-stderr.log
             set +e
-            timeout --foreground "${VISUAL_RECAP_AGENT_TIMEOUT_SECONDS:-300}" npx -y @anthropic-ai/claude-code@2 "${CLAUDE_ARGS[@]}" > claude-result.json 2> claude-stderr.log
+            if [ -n "$api_key" ]; then
+              env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY_FALLBACK \
+                ANTHROPIC_API_KEY="$api_key" \
+                timeout --foreground "${VISUAL_RECAP_AGENT_TIMEOUT_SECONDS:-300}" \
+                npx -y @anthropic-ai/claude-code@2 "${CLAUDE_ARGS[@]}" > claude-result.json 2> claude-stderr.log
+            else
+              env -u ANTHROPIC_API_KEY -u ANTHROPIC_API_KEY_FALLBACK \
+                timeout --foreground "${VISUAL_RECAP_AGENT_TIMEOUT_SECONDS:-300}" \
+                npx -y @anthropic-ai/claude-code@2 "${CLAUDE_ARGS[@]}" > claude-result.json 2> claude-stderr.log
+            fi
             CLAUDE_STATUS="$?"
             set -e
             if [ "$CLAUDE_STATUS" = "124" ]; then
@@ -482,13 +501,52 @@ jobs:
             fi
             echo "$CLAUDE_STATUS" > claude-exit-code.txt
           }
-          run_claude
+
+          claude_auth_or_rate_limit_failure() {
+            [ "$(cat claude-exit-code.txt)" != "0" ] &&
+              [ "$(cat claude-exit-code.txt)" != "124" ] &&
+              grep -Eiq 'authentication_error|invalid[ _-]?(api|x-api)[ _-]?key|api key.*(invalid|expired|disabled)|rate[_ -]?limit|too many requests|credit balance|(http|status)[^0-9]*(401|429)' claude-stderr.log claude-result.json
+          }
+
+          if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+            CLAUDE_ACTIVE_API_KEY="$ANTHROPIC_API_KEY"
+            CLAUDE_AUTH_SOURCE=primary
+          elif [ -n "${ANTHROPIC_API_KEY_FALLBACK:-}" ]; then
+            CLAUDE_ACTIVE_API_KEY="$ANTHROPIC_API_KEY_FALLBACK"
+            CLAUDE_AUTH_SOURCE=fallback
+          else
+            CLAUDE_ACTIVE_API_KEY=""
+            CLAUDE_AUTH_SOURCE=oauth
+          fi
+
+          run_claude "$CLAUDE_ACTIVE_API_KEY"
+          if [ "$CLAUDE_AUTH_SOURCE" = primary ] && claude_auth_or_rate_limit_failure; then
+            if [ -n "${ANTHROPIC_API_KEY_FALLBACK:-}" ]; then
+              echo "::warning::Claude Code failed with the primary Anthropic key; retrying once with the fallback key."
+              CLAUDE_ACTIVE_API_KEY="$ANTHROPIC_API_KEY_FALLBACK"
+              CLAUDE_AUTH_SOURCE=fallback
+              run_claude "$CLAUDE_ACTIVE_API_KEY"
+            elif [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+              echo "::warning::Claude Code failed with the primary Anthropic key; retrying once with Claude Code OAuth."
+              CLAUDE_ACTIVE_API_KEY=""
+              CLAUDE_AUTH_SOURCE=oauth
+              run_claude "$CLAUDE_ACTIVE_API_KEY"
+            fi
+          fi
+          if [ "$CLAUDE_AUTH_SOURCE" = fallback ] && [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] &&
+            claude_auth_or_rate_limit_failure; then
+            echo "::warning::Claude Code failed with the fallback Anthropic key; retrying once with Claude Code OAuth."
+            CLAUDE_ACTIVE_API_KEY=""
+            CLAUDE_AUTH_SOURCE=oauth
+            run_claude "$CLAUDE_ACTIVE_API_KEY"
+          fi
+
           # Retry only a clean-but-empty agent exit. Never double-spend time on
           # timeout/auth/tool failures; later steps post the failure summary.
           if [ "$(cat claude-exit-code.txt)" = "0" ] && [ ! -s recap-source.json ]; then
             echo "::warning::recap-source.json missing after the agent run; retrying the agent once."
             sleep 5
-            run_claude
+            run_claude "$CLAUDE_ACTIVE_API_KEY"
           fi
 
       - name: Run agent (Codex)

@@ -22,3 +22,4 @@ task backend:test:integration task proto:generate
 - NEVER edit `backend/protogen/` or `frontend/src/protogen/` — run `task proto:generate`.
 - API follows Google AIP guidelines (AIP-132 pagination, AIP-161 field masks).
 - Review guidance lives in `REVIEW.md`.
+- Visual recaps must apply `.agents/visual-recap-querylane.md`.
