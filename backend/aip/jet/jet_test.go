@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/go-jet/jet/v2/postgres"
+	"github.com/stretchr/testify/require"
 
 	"github.com/querylane/querylane/backend/aip"
 	aipjet "github.com/querylane/querylane/backend/aip/jet"
@@ -48,13 +49,9 @@ func TestBindPanicsOnInvalidBindings(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			defer func() {
-				if recovered := recover(); recovered == nil {
-					t.Fatal("Bind() did not panic")
-				}
-			}()
-
-			aipjet.Bind(bindTestSchema(), test.columns)
+			require.Panics(t, func() {
+				aipjet.Bind(bindTestSchema(), test.columns)
+			})
 		})
 	}
 }
