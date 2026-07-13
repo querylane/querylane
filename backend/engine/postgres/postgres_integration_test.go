@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 	"github.com/stretchr/testify/suite"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/querylane/querylane/backend/aip"
 	"github.com/querylane/querylane/backend/engine"
@@ -817,6 +818,56 @@ func (s *PostgresEngineIntegrationTestSuite) TestExecuteQueryCapturesPostgresWar
 	s.Require().NoError(stream.Close())
 	s.Equal(1, rows)
 	s.Contains(strings.Join(stream.Stats().Notices, "\n"), "WARNING 01000: querylane warning: execute")
+}
+
+func (s *PostgresEngineIntegrationTestSuite) TestExecuteQueryPreservesTypedValuesLikeReadRows() {
+	ctx := context.Background()
+
+	testDB := s.getTestDBConnection()
+	defer testDB.Close()
+
+	_, err := testDB.ExecContext(ctx, `
+		CREATE TABLE typed_query_values (
+			row_id integer PRIMARY KEY,
+			amount numeric NOT NULL,
+			identifier uuid NOT NULL,
+			payload jsonb NOT NULL
+		);
+		INSERT INTO typed_query_values (row_id, amount, identifier, payload)
+		VALUES (1, 19.99, '12345678-1234-5678-9abc-def012345678', '{"a":1}');
+	`)
+	s.Require().NoError(err)
+
+	readResult, err := s.eng.ReadRows(ctx, testDB, engine.ReadRowsParams{
+		ResourceName:    "instances/test/databases/" + s.testDBName + "/schemas/public/tables/typed_query_values",
+		SchemaName:      "public",
+		TableName:       "typed_query_values",
+		PageSize:        10,
+		SelectedColumns: []string{"amount", "identifier", "payload"},
+		CellValueMode:   api.CellValueMode_CELL_VALUE_MODE_FULL,
+	})
+	s.Require().NoError(err)
+	s.Require().Len(readResult.Rows, 1)
+
+	stream, err := s.eng.ExecuteQuery(ctx, testDB, engine.ExecuteQueryParams{
+		Statement: "SELECT amount, identifier, payload FROM typed_query_values",
+		Timeout:   5 * time.Second,
+	})
+	s.Require().NoError(err)
+	s.Require().True(stream.Next())
+
+	executeRow := stream.Row()
+	s.Require().False(stream.Next())
+	s.Require().NoError(stream.Err())
+	s.Require().NoError(stream.Close())
+
+	readValues := readResult.Rows[0].GetValues()
+	executeValues := executeRow.GetValues()
+	s.Require().Len(executeValues, len(readValues))
+
+	for i := range readValues {
+		s.True(proto.Equal(readValues[i].GetValue(), executeValues[i].GetValue()), "cell %d differs", i)
+	}
 }
 
 func (s *PostgresEngineIntegrationTestSuite) TestExplainQueryCapturesPostgresWarnings() {

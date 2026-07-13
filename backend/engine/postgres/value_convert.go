@@ -17,13 +17,8 @@ const (
 	timestampWithoutTZLayout = "2006-01-02T15:04:05.999999999"
 )
 
-func convertToCell(v any) *api.TableCell {
-	return &api.TableCell{Value: convertToValue(v)}
-}
-
-// convertToValue handles values without column metadata. Used by the SQL
-// editor stream and as a fallback for the data-grid path. Prefer
-// convertToValueTyped when the column's data_type is known.
+// convertToValue handles values without column metadata and is the fallback
+// for types convertToValueTyped does not recognize.
 func convertToValue(v any) *api.TableValue {
 	if v == nil {
 		return &api.TableValue{Kind: &api.TableValue_NullValue{}}
