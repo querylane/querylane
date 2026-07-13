@@ -271,11 +271,12 @@ function ActivitySessionsTable({
     );
   }
 
-  const blockerPids = new Set(
-    rows
-      .filter((candidate) => candidate.blockedByPid > 0)
-      .map((candidate) => candidate.blockedByPid)
-  );
+  const blockerPids = new Set<number>();
+  for (const candidate of rows) {
+    if (candidate.blockedByPid > 0) {
+      blockerPids.add(candidate.blockedByPid);
+    }
+  }
 
   return (
     <div className="overflow-x-auto">
@@ -424,13 +425,13 @@ function InstanceActivityPage({
         <div>
           <h2 className="font-bold text-[22px] tracking-[-0.01em]">Activity</h2>
           <p className="mt-1 text-muted-foreground text-sm">
-            Live sessions from pg_stat_activity — refreshed every 5 s
+            Live sessions from pg_stat_activity, refreshed every 5 s
           </p>
         </div>
         <div className="hidden flex-1 lg:block" />
         <div className="flex flex-wrap gap-2 lg:justify-end">
           {stats.map((stat) => (
-            <ActivityHeaderStat key={stat.label} {...stat} />
+            <ActivityHeaderStat {...stat} key={stat.label} />
           ))}
         </div>
       </div>

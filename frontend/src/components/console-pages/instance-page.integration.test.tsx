@@ -899,7 +899,7 @@ describe("backend instance activity", () => {
     const activity = screen.getByRole("region", { name: "Activity" });
     expect(
       within(activity).getByText(
-        "Live sessions from pg_stat_activity — refreshed every 5 s"
+        "Live sessions from pg_stat_activity, refreshed every 5 s"
       )
     ).toBeTruthy();
     expect(within(activity).getAllByText("4m 12s").length).toBeGreaterThan(0);
