@@ -1114,7 +1114,19 @@ test("data explorer constraints tab matches redesign card groups", async () => {
   await expect
     .element(page.getByRole("button", { name: "Refresh" }))
     .toBeVisible();
-  expect(document.querySelector('[data-slot="facet-filter-bar"]')).toBeNull();
+  await expect
+    .element(
+      page.getByRole("textbox", {
+        name: "Search constraints…",
+      })
+    )
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: KIND_FILTER_RE }))
+    .toBeVisible();
+  expect(
+    document.querySelector('[data-slot="facet-filter-bar"]')
+  ).not.toBeNull();
   expect(document.querySelector("table")).toBeNull();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-constraints-redesign"

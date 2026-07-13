@@ -68,6 +68,7 @@ const CHILD_PARTITION_SQL_RE =
   /CREATE TABLE "archive"\."events_2025" PARTITION OF "public"\."events"\s+FOR VALUES FROM \('2025-01-01'\) TO \('2026-01-01'\);/;
 const COLUMN_COMMENT_SQL_RE =
   /COMMENT ON COLUMN "public"\."customers"\."display name" IS 'Owner''s name';/;
+const KIND_FILTER_RE = /^Kind$/;
 const LAST_FETCHED_RE = /^Last fetched/;
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -889,6 +890,73 @@ describe("TableDetail tab routing", () => {
 });
 
 describe("TableDetail constraints tab", () => {
+  it("keeps search left of the inline kind filter and combines both", async () => {
+    const user = userEvent.setup();
+    tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      constraints: [
+        create(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "customers_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
+        }),
+        create(TableConstraintSchema, {
+          columnNames: ["account_id"],
+          constraintName: "customers_account_id_fkey",
+          definition: "FOREIGN KEY (account_id) REFERENCES public.accounts(id)",
+          type: ConstraintType.FOREIGN_KEY,
+        }),
+        create(TableConstraintSchema, {
+          columnNames: ["status"],
+          constraintName: "customers_status_check",
+          definition: "CHECK (status <> '')",
+          type: ConstraintType.CHECK,
+        }),
+      ],
+    });
+
+    render(
+      <TableDetail
+        databaseId="app"
+        initialTab="constraints"
+        instanceId="prod"
+        schemaName="public"
+        table={create(TableSchema)}
+        tableName="customers"
+      />
+    );
+
+    const search = screen.getByRole("textbox", {
+      name: "Search constraints…",
+    });
+    const kindFilter = screen.getByRole("button", { name: KIND_FILTER_RE });
+    const filterControls = search.closest(
+      '[data-slot="constraints-filter-controls"]'
+    );
+
+    expect(filterControls).not.toBeNull();
+    expect(filterControls?.contains(kindFilter)).toBe(true);
+    expect(filterControls?.firstElementChild?.contains(search)).toBe(true);
+    expect(filterControls?.lastElementChild?.contains(kindFilter)).toBe(true);
+
+    await user.type(search, "account_id");
+
+    expect(screen.getByText("customers_account_id_fkey")).toBeTruthy();
+    expect(screen.queryByText("customers_pkey")).toBeNull();
+    expect(screen.queryByText("customers_status_check")).toBeNull();
+
+    await user.click(kindFilter);
+    await user.click(screen.getByRole("option", { name: "CHECK" }));
+
+    expect(screen.getByText("No constraints found")).toBeTruthy();
+
+    await user.clear(search);
+
+    expect(screen.getByText("customers_status_check")).toBeTruthy();
+    expect(screen.queryByText("customers_pkey")).toBeNull();
+    expect(screen.queryByText("customers_account_id_fkey")).toBeNull();
+  });
+
   it("groups keys and outbound foreign keys as constraint cards", async () => {
     const user = userEvent.setup();
     tableQueries.constraints.dataUpdatedAt = Date.UTC(2026, 0, 1, 23);

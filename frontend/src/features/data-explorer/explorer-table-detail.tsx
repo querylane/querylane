@@ -28,6 +28,7 @@ import { useEffect, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
+import { SearchEmptyState } from "@/components/search-empty-state";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ import { CopyIconButton } from "@/components/ui/copy-icon-button";
 import {
   DataTable,
   type DataTableColumnDef,
+  DataTableFilter,
   SortableHeader,
 } from "@/components/ui/data-table";
 import {
@@ -261,6 +263,18 @@ function presentIndexMethodOptions(
   return Array.from(options.entries())
     .sort((left, right) => left[1].localeCompare(right[1]))
     .map(([value, label]) => ({ label, value }));
+}
+function presentConstraintKindOptions(
+  constraints: TableConstraint[]
+): FacetedFilterOption[] {
+  return Array.from(new Set(constraints.map((constraint) => constraint.type)))
+    .sort((left, right) =>
+      CONSTRAINT_TYPE_LABELS[left].localeCompare(CONSTRAINT_TYPE_LABELS[right])
+    )
+    .map((type) => ({
+      label: CONSTRAINT_TYPE_LABELS[type],
+      value: String(type),
+    }));
 }
 function presentPolicyModeOptions(
   policies: TablePolicy[]
@@ -1735,6 +1749,8 @@ function ConstraintsTab({
   instanceId: string;
   query: ReturnType<typeof useListTableConstraintsQuery>;
 }) {
+  const [kindFilters, setKindFilters] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
     return (
@@ -1758,12 +1774,22 @@ function ConstraintsTab({
   if (constraints.length === 0) {
     return <TableResourceEmptyState category="constraints" toolbar={toolbar} />;
   }
-  const keyConstraints = constraints.filter(isKeyConstraint);
-  const foreignKeyConstraints = constraints.filter(isForeignKeyConstraint);
-  const checkConstraints = constraints.filter(
+  const normalizedSearch = search.trim().toLowerCase();
+  const visibleConstraints = constraints.filter(
+    (constraint) =>
+      (normalizedSearch.length === 0 ||
+        constraint.constraintName.toLowerCase().includes(normalizedSearch)) &&
+      (kindFilters.length === 0 ||
+        kindFilters.includes(String(constraint.type)))
+  );
+  const keyConstraints = visibleConstraints.filter(isKeyConstraint);
+  const foreignKeyConstraints = visibleConstraints.filter(
+    isForeignKeyConstraint
+  );
+  const checkConstraints = visibleConstraints.filter(
     (constraint) => constraint.type === ConstraintType.CHECK
   );
-  const otherConstraints = constraints.filter(
+  const otherConstraints = visibleConstraints.filter(
     (constraint) =>
       !(
         isKeyConstraint(constraint) ||
@@ -1773,37 +1799,63 @@ function ConstraintsTab({
   );
   return (
     <div className="space-y-3.5" data-slot="constraints-card-list">
-      <div className="flex justify-end">
+      <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+        <div
+          className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+          data-slot="constraints-filter-controls"
+        >
+          <DataTableFilter
+            onChange={setSearch}
+            placeholder="Search constraints…"
+            value={search}
+          />
+          <FacetFilterBar
+            filters={[
+              {
+                handleSelectedValuesChange: setKindFilters,
+                label: "Kind",
+                options: presentConstraintKindOptions(constraints),
+                selectedValues: kindFilters,
+              },
+            ]}
+          />
+        </div>
         <MetadataRefreshControl toolbar={toolbar} />
       </div>
-      <ConstraintSection
-        constraints={keyConstraints}
-        databaseId={databaseId}
-        description="primary key and uniqueness"
-        instanceId={instanceId}
-        title="Keys"
-      />
-      <ConstraintSection
-        constraints={foreignKeyConstraints}
-        databaseId={databaseId}
-        description="outbound references from this table"
-        instanceId={instanceId}
-        title="Foreign keys"
-      />
-      <ConstraintSection
-        constraints={checkConstraints}
-        databaseId={databaseId}
-        description="row-level validation rules"
-        instanceId={instanceId}
-        title="Checks"
-      />
-      <ConstraintSection
-        constraints={otherConstraints}
-        databaseId={databaseId}
-        description="exclusion and other rules"
-        instanceId={instanceId}
-        title="Other constraints"
-      />
+      {visibleConstraints.length === 0 ? (
+        <SearchEmptyState resourceName="constraints" />
+      ) : (
+        <>
+          <ConstraintSection
+            constraints={keyConstraints}
+            databaseId={databaseId}
+            description="primary key and uniqueness"
+            instanceId={instanceId}
+            title="Keys"
+          />
+          <ConstraintSection
+            constraints={foreignKeyConstraints}
+            databaseId={databaseId}
+            description="outbound references from this table"
+            instanceId={instanceId}
+            title="Foreign keys"
+          />
+          <ConstraintSection
+            constraints={checkConstraints}
+            databaseId={databaseId}
+            description="row-level validation rules"
+            instanceId={instanceId}
+            title="Checks"
+          />
+          <ConstraintSection
+            constraints={otherConstraints}
+            databaseId={databaseId}
+            description="exclusion and other rules"
+            instanceId={instanceId}
+            title="Other constraints"
+          />
+        </>
+      )}
     </div>
   );
 }
