@@ -860,7 +860,7 @@ function OtherDatabaseObjectsPanel({
   const searchedObjects = objects.filter((object) =>
     objectMatchesSearch(object, query)
   );
-  const counts = countByCategory(objects);
+  const counts = countByCategory(searchedObjects);
   const selectedCategories = requestedCategories ?? [
     firstPopulatedCategory(objects),
   ];
@@ -875,6 +875,9 @@ function OtherDatabaseObjectsPanel({
         selectedCategory === undefined || object.category === selectedCategory
     )
     .sort((left, right) => left.sortKey.localeCompare(right.sortKey));
+  const hasActiveFilters =
+    query.trim().length > 0 ||
+    (requestedCategories !== null && selectedCategory !== undefined);
 
   useEffect(function clearCopyNoticeTimeoutOnUnmount() {
     return () => window.clearTimeout(copyNoticeTimeout.current);
@@ -963,7 +966,16 @@ function OtherDatabaseObjectsPanel({
   } else {
     objectListContent = (
       <div className="rounded-[10px] border border-border border-dashed p-6 text-center text-muted-foreground text-sm">
-        None in this database.
+        {hasActiveFilters ? (
+          <>
+            <p>No objects match your filters.</p>
+            <p className="mt-1 text-xs">
+              Clear the search or category filter to see more objects.
+            </p>
+          </>
+        ) : (
+          "None in this database."
+        )}
       </div>
     );
   }

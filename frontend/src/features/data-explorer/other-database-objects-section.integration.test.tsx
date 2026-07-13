@@ -219,9 +219,29 @@ describe("OtherDatabaseObjectsPanel", () => {
     expect(screen.getByText("shipping.weight_class")).toBeTruthy();
   });
 
-  it("switches categories and filters objects with the section search", async () => {
+  it("updates category counts to reflect the active search", async () => {
     const user = userEvent.setup();
     render(<OtherDatabaseObjectsPanel isLoading={false} objects={objects} />);
+
+    await user.type(
+      screen.getByRole("searchbox", {
+        name: "Search other database objects",
+      }),
+      "case_insensitive"
+    );
+    await user.click(
+      screen.getByRole("button", { name: CATEGORY_TYPES_FILTER_RE })
+    );
+
+    expect(screen.getByRole("option", { name: "Types 0" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Collations 1" })).toBeTruthy();
+  });
+
+  it("guides users when search has no matches in the selected category", async () => {
+    const user = userEvent.setup();
+    render(
+      <OtherDatabaseObjectsPanel isLoading={false} objects={variantObjects} />
+    );
 
     await selectCategory(user, COLLATIONS_BUTTON_RE);
     expect(screen.getByText("case_insensitive")).toBeTruthy();
@@ -231,9 +251,14 @@ describe("OtherDatabaseObjectsPanel", () => {
       screen.getByRole("searchbox", {
         name: "Search other database objects",
       }),
-      "phonebook"
+      "refresh_routes"
     );
-    expect(screen.getByText("None in this database.")).toBeTruthy();
+    expect(screen.getByText("No objects match your filters.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Clear the search or category filter to see more objects."
+      )
+    ).toBeTruthy();
   });
 
   it("copies the selected object's SQL", async () => {
