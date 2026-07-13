@@ -1103,7 +1103,9 @@ test("data explorer constraints tab matches redesign card groups", async () => {
       })
     )
     .toBeVisible();
-  await expect.element(page.getByText("ON DELETE CASCADE")).toBeVisible();
+  await expect
+    .element(page.getByText("ON DELETE CASCADE").first())
+    .toBeVisible();
   await expect.element(page.getByText("validated")).toBeVisible();
   await expect.element(page.getByText("shipping.shipments ↗")).toBeVisible();
   expect(document.querySelector('[data-slot="facet-filter-bar"]')).toBeNull();
@@ -1171,9 +1173,13 @@ test("data explorer constraints tab covers validation and action states", async 
     />
   );
 
-  await expect.element(page.getByText("ON UPDATE SET NULL")).toBeVisible();
-  await expect.element(page.getByText("ON DELETE RESTRICT")).toBeVisible();
-  await expect.element(page.getByText("NOT VALID")).toBeVisible();
+  await expect
+    .element(page.getByText("ON UPDATE SET NULL").first())
+    .toBeVisible();
+  await expect
+    .element(page.getByText("ON DELETE RESTRICT").first())
+    .toBeVisible();
+  await expect.element(page.getByText("NOT VALID").first()).toBeVisible();
   await expect
     .element(
       page.getByRole("heading", {

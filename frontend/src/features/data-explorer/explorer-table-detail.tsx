@@ -1623,6 +1623,11 @@ function ConstraintCard({
   instanceId: string;
 }) {
   const isForeignKey = isForeignKeyConstraint(constraint);
+  const definition =
+    constraint.definition ||
+    `${CONSTRAINT_TYPE_LABELS[constraint.type]} (${formatConstraintColumns(
+      constraint.columnNames
+    )})`;
   return (
     <article
       className={cn(
@@ -1664,12 +1669,11 @@ function ConstraintCard({
           />
         ) : null}
       </div>
-      <p className="mt-[7px] break-words font-mono text-[11.5px] text-muted-foreground leading-[1.55] [overflow-wrap:anywhere]">
-        {constraint.definition ||
-          `${CONSTRAINT_TYPE_LABELS[constraint.type]} (${formatConstraintColumns(
-            constraint.columnNames
-          )})`}
-      </p>
+      <SqlCodeBlock
+        className="mt-[7px] whitespace-pre-wrap rounded-none border-0 bg-transparent p-0 pr-0 text-[11.5px] text-muted-foreground leading-[1.55] [overflow-wrap:anywhere]"
+        copyable={false}
+        sql={definition}
+      />
     </article>
   );
 }

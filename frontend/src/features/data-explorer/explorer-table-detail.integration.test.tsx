@@ -909,7 +909,7 @@ describe("TableDetail constraints tab", () => {
       ],
     });
 
-    render(
+    const { container } = render(
       <TableDetail
         databaseId="app"
         initialTab="constraints"
@@ -931,9 +931,12 @@ describe("TableDetail constraints tab", () => {
       })
     ).toBeTruthy();
     expect(screen.getByText("shipment_event_pkey")).toBeTruthy();
-    expect(screen.getByText("PRIMARY KEY (id)")).toBeTruthy();
     expect(screen.getByText("shipment_event_shipment_id_fkey")).toBeTruthy();
-    expect(screen.getByText("ON DELETE CASCADE")).toBeTruthy();
+    expect(
+      screen.getByText("ON DELETE CASCADE", {
+        selector: '[data-slot="badge"]',
+      })
+    ).toBeTruthy();
     expect(
       screen
         .getByRole("link", { name: "shipping.shipments" })
@@ -941,6 +944,19 @@ describe("TableDetail constraints tab", () => {
     ).toBe(
       "/instances/prod/databases/app/explorer?schema=shipping&category=tables&name=shipments"
     );
+    const highlightedDefinitions = Array.from(
+      container.querySelectorAll(
+        'code.language-sql[data-syntax-highlighter="shiki"]'
+      )
+    );
+    expect(highlightedDefinitions.map((code) => code.textContent)).toEqual([
+      "PRIMARY KEY (id)",
+      "FOREIGN KEY (shipment_id) REFERENCES shipping.shipments(id) ON DELETE CASCADE",
+    ]);
+    expect(
+      container.querySelectorAll("[data-shiki-token]").length
+    ).toBeGreaterThan(8);
+    expect(screen.queryByRole("button", { name: "Copy SQL" })).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
   });
 
@@ -978,7 +994,11 @@ describe("TableDetail constraints tab", () => {
       />
     );
 
-    expect(screen.getByText("ON DELETE RESTRICT")).toBeTruthy();
+    expect(
+      screen.getByText("ON DELETE RESTRICT", {
+        selector: '[data-slot="badge"]',
+      })
+    ).toBeTruthy();
     expect(screen.getAllByText("validated")).toHaveLength(2);
     expect(
       screen.getByRole("heading", {
@@ -1033,7 +1053,9 @@ describe("TableDetail constraints tab", () => {
       within(validatedCard as HTMLElement).queryByText("NOT VALID")
     ).toBeNull();
     expect(
-      within(notValidCard as HTMLElement).getByText("NOT VALID")
+      within(notValidCard as HTMLElement).getByText("NOT VALID", {
+        selector: '[data-slot="badge"]',
+      })
     ).toBeTruthy();
     expect(
       within(notValidCard as HTMLElement).queryByText("validated")
