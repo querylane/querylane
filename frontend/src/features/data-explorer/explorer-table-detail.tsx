@@ -5,6 +5,8 @@ import type { RowData } from "@tanstack/react-table";
 import {
   Binary,
   Boxes,
+  ChevronLeft,
+  ChevronRight,
   Columns3,
   FileCode2,
   GitBranch,
@@ -51,6 +53,13 @@ import {
   DataTableFacetedFilter,
   type FacetedFilterOption,
 } from "@/components/ui/data-table-faceted-filter";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -131,7 +140,8 @@ import type {
 import {
   ConstraintType,
   IdentityGeneration,
-  type PolicyMode,
+  PolicyCommand,
+  PolicyMode,
   ReferentialAction,
   Table_TableType,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
@@ -1925,76 +1935,401 @@ function ConstraintsTab({
     </div>
   );
 }
-const policyColumns: DataTableColumnDef<TablePolicy>[] = [
-  {
-    accessorKey: "policyName",
-    cell: ({ row }) => row.original.policyName,
-    header: ({ column }) => (
-      <SortableHeader column={column}>Name</SortableHeader>
-    ),
-    meta: {
-      cellClassName: "font-mono text-xs",
-      headerClassName: "pl-3",
-    },
-  },
-  {
-    accessorFn: (row) => formatPolicyMode(row.mode),
-    cell: ({ row }) => (
-      <Badge className="font-mono text-[10px]" variant="outline">
-        {formatPolicyMode(row.original.mode)}
-      </Badge>
-    ),
-    header: ({ column }) => (
-      <SortableHeader column={column}>Mode</SortableHeader>
-    ),
-    id: "mode",
-  },
-  {
-    accessorFn: (row) => formatPolicyCommand(row.command),
-    cell: ({ row }) => formatPolicyCommand(row.original.command),
-    header: ({ column }) => (
-      <SortableHeader column={column}>Command</SortableHeader>
-    ),
-    id: "command",
-    meta: {
-      cellClassName: "font-mono text-muted-foreground text-xs",
-    },
-  },
-  {
-    accessorFn: (row) => row.roles.join(", "),
-    cell: ({ row }) =>
-      row.original.roles.length > 0 ? row.original.roles.join(", ") : "—",
-    header: "Roles",
-    id: "roles",
-    meta: {
-      cellClassName: "font-mono text-muted-foreground text-xs",
-    },
-  },
-  {
-    accessorKey: "usingExpression",
-    cell: ({ row }) => row.original.usingExpression || "—",
-    header: "Using",
-    id: "usingExpression",
-    meta: {
-      cellClassName: "font-mono text-muted-foreground text-xs",
-    },
-  },
-  {
-    accessorKey: "checkExpression",
-    cell: ({ row }) => row.original.checkExpression || "—",
-    header: "Check",
-    id: "checkExpression",
-    meta: {
-      cellClassName: "font-mono text-muted-foreground text-xs",
-    },
-  },
+const PREVIEW_POLICY_COMMANDS: PolicyCommand[] = [
+  PolicyCommand.SELECT,
+  PolicyCommand.INSERT,
+  PolicyCommand.UPDATE,
+  PolicyCommand.DELETE,
 ];
+
+function policyModeLabel(mode: PolicyMode) {
+  switch (mode) {
+    case PolicyMode.RESTRICTIVE:
+      return "RESTRICTIVE";
+    case PolicyMode.PERMISSIVE:
+      return "PERMISSIVE";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+function policyModeBadgeClassName(mode: PolicyMode) {
+  return mode === PolicyMode.RESTRICTIVE
+    ? "border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-300"
+    : "border-transparent bg-muted text-muted-foreground";
+}
+
+function policyRoles(policy: TablePolicy) {
+  return policy.roles.length > 0 ? policy.roles : ["public"];
+}
+
+function formatPolicyRoles(policy: TablePolicy) {
+  return policyRoles(policy).join(", ");
+}
+
+function collectPolicyRoles(policies: TablePolicy[]) {
+  const roles: string[] = [];
+  const seen = new Set<string>();
+  for (const policy of policies) {
+    for (const role of policyRoles(policy)) {
+      if (!seen.has(role)) {
+        seen.add(role);
+        roles.push(role);
+      }
+    }
+  }
+  return roles.length > 0 ? roles : ["public"];
+}
+
+const SMALL_POLICY_PAGE_SIZE = 6;
+const MEDIUM_POLICY_PAGE_SIZE = 12;
+const LARGE_POLICY_PAGE_SIZE = 24;
+const POLICY_PAGE_SIZE_OPTIONS = [
+  SMALL_POLICY_PAGE_SIZE,
+  MEDIUM_POLICY_PAGE_SIZE,
+  LARGE_POLICY_PAGE_SIZE,
+] as const;
+type PolicyPageSize = (typeof POLICY_PAGE_SIZE_OPTIONS)[number];
+
+function isPolicyPageSize(value: number): value is PolicyPageSize {
+  return POLICY_PAGE_SIZE_OPTIONS.some((pageSize) => pageSize === value);
+}
+
+function policyAppliesToRole(policy: TablePolicy, role: string) {
+  const roles = policyRoles(policy);
+  return roles.includes("public") || roles.includes(role);
+}
+
+function policyAppliesToCommand(policy: TablePolicy, command: PolicyCommand) {
+  return policy.command === PolicyCommand.ALL || policy.command === command;
+}
+
+function policyPredicateForCommand(
+  policy: TablePolicy,
+  command: PolicyCommand
+) {
+  const usingExpression = policy.usingExpression.trim();
+  const checkExpression = policy.checkExpression.trim();
+  switch (command) {
+    case PolicyCommand.INSERT:
+      return checkExpression || usingExpression || "true";
+    case PolicyCommand.UPDATE:
+    case PolicyCommand.DELETE:
+    case PolicyCommand.SELECT:
+      return usingExpression || "true";
+    default:
+      return usingExpression || checkExpression || "true";
+  }
+}
+
+function wrapPolicyPredicate(predicate: string) {
+  return predicate === "true" ? predicate : `(${predicate})`;
+}
+
+function joinPolicyPredicates(predicates: string[], operator: "AND" | "OR") {
+  return predicates.map(wrapPolicyPredicate).join(`\n${operator} `);
+}
+
+interface RlsPreviewModel {
+  appliedPolicies: TablePolicy[];
+  hasRows: boolean;
+  predicate: string;
+  verdict: string;
+}
+
+function deriveRlsPreview({
+  command,
+  policies,
+  role,
+}: {
+  command: PolicyCommand;
+  policies: TablePolicy[];
+  role: string;
+}): RlsPreviewModel {
+  const matchingPolicies = policies.filter(
+    (policy) =>
+      policyAppliesToRole(policy, role) &&
+      policyAppliesToCommand(policy, command)
+  );
+  const permissivePolicies = matchingPolicies.filter(
+    (policy) => policy.mode !== PolicyMode.RESTRICTIVE
+  );
+  const restrictivePolicies = matchingPolicies.filter(
+    (policy) => policy.mode === PolicyMode.RESTRICTIVE
+  );
+  if (permissivePolicies.length === 0) {
+    return {
+      appliedPolicies: matchingPolicies,
+      hasRows: false,
+      predicate: "",
+      verdict:
+        command === PolicyCommand.INSERT
+          ? `No permissive policy applies — RLS rejects every INSERT by ${role}.`
+          : `No permissive policy applies — RLS returns zero rows for ${role} running ${formatPolicyCommand(command)}.`,
+    };
+  }
+
+  const permissivePredicate = joinPolicyPredicates(
+    permissivePolicies.map((policy) =>
+      policyPredicateForCommand(policy, command)
+    ),
+    "OR"
+  );
+  const restrictivePredicates = restrictivePolicies.map((policy) =>
+    policyPredicateForCommand(policy, command)
+  );
+  const predicate =
+    restrictivePredicates.length > 0
+      ? [
+          permissivePolicies.length === 1
+            ? permissivePredicate
+            : `(${permissivePredicate})`,
+          ...restrictivePredicates.map(wrapPolicyPredicate),
+        ].join("\nAND ")
+      : permissivePredicate;
+  const permissiveLabel =
+    permissivePolicies.length === 1
+      ? "1 permissive policy applies"
+      : `${permissivePolicies.length.toLocaleString()} permissive policies apply`;
+  const rowSubject = command === PolicyCommand.INSERT ? "a new row" : "a row";
+  const matchCondition =
+    permissivePolicies.length === 1 ? "if it matches" : "if any one matches";
+  const passCopy = `${rowSubject} passes ${matchCondition}`;
+  const restrictiveCopy =
+    restrictivePolicies.length > 0
+      ? ` ${restrictivePolicies.length.toLocaleString()} restrictive ${
+          restrictivePolicies.length === 1 ? "policy" : "policies"
+        } must also pass.`
+      : "";
+
+  return {
+    appliedPolicies: matchingPolicies,
+    hasRows: true,
+    predicate,
+    verdict: `${permissiveLabel} — ${passCopy}.${restrictiveCopy} ${
+      command === PolicyCommand.INSERT
+        ? `New rows inserted by ${role} must satisfy:`
+        : `Rows visible to ${role} are those where:`
+    }`,
+  };
+}
+
+function PolicyExpression({ expression }: { expression: string }) {
+  return (
+    <SqlCodeBlock
+      className="mt-1"
+      copyable={false}
+      sql={expression}
+      variant="compact"
+    />
+  );
+}
+
+function PolicyCard({ policy }: { policy: TablePolicy }) {
+  return (
+    <article className="rounded-lg border bg-card p-3 shadow-xs">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="font-mono font-semibold text-sm">{policy.policyName}</h2>
+        <Badge className="h-[18px] font-mono text-[10px]" variant="outline">
+          FOR {formatPolicyCommand(policy.command)}
+        </Badge>
+        <Badge
+          className={cn(
+            "h-[18px] font-mono text-[10px]",
+            policyModeBadgeClassName(policy.mode)
+          )}
+          variant="secondary"
+        >
+          {policyModeLabel(policy.mode)}
+        </Badge>
+        <span className="ml-auto font-mono text-muted-foreground text-xs">
+          TO {formatPolicyRoles(policy)}
+        </span>
+      </div>
+      {policy.usingExpression ? (
+        <div className="mt-3">
+          <div className="font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
+            USING
+          </div>
+          <PolicyExpression expression={policy.usingExpression} />
+        </div>
+      ) : null}
+      {policy.checkExpression ? (
+        <div className="mt-2">
+          <div className="font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
+            WITH CHECK
+          </div>
+          <PolicyExpression expression={policy.checkExpression} />
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function RlsCombinationGuide() {
+  return (
+    <section className="rounded-lg border bg-card p-4 shadow-xs">
+      <h2 className="font-semibold text-sm">How the server combines these</h2>
+      <ol className="mt-3 flex list-none flex-col gap-2 pl-0 text-muted-foreground text-sm leading-relaxed">
+        <li>
+          <span className="font-medium text-foreground">1 · Grants first.</span>{" "}
+          A role with no SELECT grant sees nothing; RLS never even runs.
+        </li>
+        <li>
+          <span className="font-medium text-foreground">
+            2 · PERMISSIVE policies OR together.
+          </span>{" "}
+          A row is visible if any one matches.
+        </li>
+        <li>
+          <span className="font-medium text-foreground">
+            3 · RESTRICTIVE policies AND on top.
+          </span>{" "}
+          Every one must also pass.
+        </li>
+        <li>
+          <span className="font-medium text-foreground">
+            4 · No matching policy = zero rows.
+          </span>{" "}
+          RLS is default-deny, not default-allow.
+        </li>
+        <li>
+          <span className="font-medium text-foreground">
+            5 · Owner and BYPASSRLS skip it
+          </span>{" "}
+          unless FORCE ROW LEVEL SECURITY is set.
+        </li>
+      </ol>
+    </section>
+  );
+}
+
+function RlsPreview({ policies }: { policies: TablePolicy[] }) {
+  const roleOptions = collectPolicyRoles(policies);
+  const [selectedRole, setSelectedRole] = useState(roleOptions[0] ?? "public");
+  const [selectedCommand, setSelectedCommand] = useState(PolicyCommand.SELECT);
+  const activeRole = roleOptions.includes(selectedRole)
+    ? selectedRole
+    : (roleOptions[0] ?? "public");
+  const previewCommand = PREVIEW_POLICY_COMMANDS.includes(selectedCommand)
+    ? selectedCommand
+    : PolicyCommand.SELECT;
+  const preview = deriveRlsPreview({
+    command: previewCommand,
+    policies,
+    role: activeRole,
+  });
+  function handleRoleChange(value: string | null) {
+    if (value) {
+      setSelectedRole(value);
+    }
+  }
+  function handleCommandChange(value: string | null) {
+    if (value) {
+      setSelectedCommand(Number(value) as PolicyCommand);
+    }
+  }
+
+  return (
+    <section className="rounded-lg border bg-card p-4 shadow-xs">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="font-semibold text-sm">Preview visibility as</h2>
+        <Select onValueChange={handleRoleChange} value={activeRole}>
+          <SelectTrigger
+            aria-label="Policy role"
+            className="h-8 min-w-44 font-mono"
+            size="sm"
+          >
+            <SelectValue>{activeRole}</SelectValue>
+          </SelectTrigger>
+          <SelectContent align="start">
+            {roleOptions.map((role) => (
+              <SelectItem key={role} label={role} value={role}>
+                {role}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-muted-foreground text-sm">running</span>
+        <Select
+          onValueChange={handleCommandChange}
+          value={String(previewCommand)}
+        >
+          <SelectTrigger
+            aria-label="Policy command"
+            className="h-8 min-w-32 font-mono"
+            size="sm"
+          >
+            <SelectValue>{formatPolicyCommand(previewCommand)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent align="start">
+            {PREVIEW_POLICY_COMMANDS.map((command) => (
+              <SelectItem
+                key={command}
+                label={formatPolicyCommand(command)}
+                value={String(command)}
+              >
+                {formatPolicyCommand(command)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div aria-atomic="true" aria-live="polite">
+        <div
+          className={cn(
+            "mt-4 flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm leading-relaxed",
+            preview.hasRows
+              ? "bg-emerald-500/10 text-foreground"
+              : "bg-amber-500/10 text-foreground"
+          )}
+        >
+          <span
+            aria-hidden="true"
+            className={cn(
+              "mt-1.5 size-2 shrink-0 rounded-full",
+              preview.hasRows ? "bg-emerald-500" : "bg-amber-500"
+            )}
+          />
+          <span>{preview.verdict}</span>
+        </div>
+
+        {preview.hasRows ? (
+          <>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
+                Applied
+              </span>
+              {preview.appliedPolicies.map((policy) => (
+                <Badge
+                  className="h-5 font-mono text-[10px]"
+                  key={policy.policyName}
+                  variant="secondary"
+                >
+                  {policy.policyName}
+                </Badge>
+              ))}
+            </div>
+            <PolicyExpression expression={preview.predicate} />
+          </>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 function PoliciesTab({
   query,
 }: {
   query: ReturnType<typeof useListTablePoliciesQuery>;
 }) {
+  const [policySearch, setPolicySearch] = useState("");
   const [modeFilters, setModeFilters] = useState<string[]>([]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState<PolicyPageSize>(
+    SMALL_POLICY_PAGE_SIZE
+  );
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
     return (
@@ -2015,33 +2350,174 @@ function PoliciesTab({
     return <TabSkeleton />;
   }
   const policies = query.data.policies;
-  const filteredPolicies = filterPoliciesByMode(
+  if (policies.length === 0) {
+    return <TableResourceEmptyState category="policies" toolbar={toolbar} />;
+  }
+  const normalizedSearch = policySearch.trim().toLocaleLowerCase();
+  const visiblePolicies = filterPoliciesByMode(
     policies,
     modeFilters.map(Number) as PolicyMode[]
+  ).filter((policy) =>
+    policy.policyName.toLocaleLowerCase().includes(normalizedSearch)
   );
+  const pageCount = Math.max(1, Math.ceil(visiblePolicies.length / pageSize));
+  const currentPageIndex = Math.min(pageIndex, pageCount - 1);
+  const pagePolicies = visiblePolicies.slice(
+    currentPageIndex * pageSize,
+    (currentPageIndex + 1) * pageSize
+  );
+  const firstPolicy = currentPageIndex * pageSize + 1;
+  const lastPolicy = Math.min(
+    (currentPageIndex + 1) * pageSize,
+    visiblePolicies.length
+  );
+
+  function handlePolicySearchChange(nextSearch: string) {
+    setPageIndex(0);
+    setPolicySearch(nextSearch);
+  }
+
+  function handlePolicyModeFiltersChange(nextModeFilters: string[]) {
+    setPageIndex(0);
+    setModeFilters(nextModeFilters);
+  }
+
   return (
-    <MetadataTabResult
-      category="policies"
-      columns={policyColumns}
-      data={filteredPolicies}
-      filterColumn="policyName"
-      filterPlaceholder="Search policies…"
-      filters={
+    <div className="flex flex-col gap-3" data-slot="policies-tab">
+      <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-xs">
+        <span
+          aria-hidden="true"
+          className="size-2 rounded-full bg-emerald-500"
+        />
+        <p className="font-medium text-sm">
+          This table defines row-level security policies; table owners and
+          BYPASSRLS roles may bypass them
+        </p>
+        <span
+          aria-live="polite"
+          className="ml-auto text-muted-foreground text-xs"
+        >
+          {toolbar.lastFetchedLabel}
+        </span>
+      </div>
+      <div className="flex min-h-8 flex-wrap items-center gap-2">
+        <DataTableFilter
+          onChange={handlePolicySearchChange}
+          placeholder="Search policies…"
+          value={policySearch}
+        />
         <FacetFilterBar
           filters={[
             {
-              handleSelectedValuesChange: setModeFilters,
+              handleSelectedValuesChange: handlePolicyModeFiltersChange,
               label: "Mode",
               options: presentPolicyModeOptions(policies),
               selectedValues: modeFilters,
             },
           ]}
         />
-      }
-      hasUnfilteredData={policies.length > 0}
-      tableKey="data-explorer-table-policies"
-      toolbar={toolbar}
-    />
+      </div>
+      {pagePolicies.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          {pagePolicies.map((policy) => (
+            <PolicyCard key={policy.policyName} policy={policy} />
+          ))}
+        </div>
+      ) : (
+        <SearchEmptyState className="border" resourceName="policies" />
+      )}
+      {visiblePolicies.length > 0 ? (
+        <fieldset
+          aria-label="Policies pagination"
+          className="m-0 flex min-h-8 min-w-0 flex-wrap items-center gap-2 border-0 p-0 text-muted-foreground text-xs"
+        >
+          <span className="text-[11px]">Rows per page</span>
+          <Select
+            onValueChange={(nextValue) => {
+              if (typeof nextValue !== "string") {
+                return;
+              }
+              const nextPageSize = Number(nextValue);
+              if (isPolicyPageSize(nextPageSize)) {
+                setPageIndex(0);
+                setPageSize(nextPageSize);
+              }
+            }}
+            value={String(pageSize)}
+          >
+            <SelectTrigger
+              aria-label="Rows per page"
+              className="h-7 w-16"
+              size="sm"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              {POLICY_PAGE_SIZE_OPTIONS.map((size) => (
+                <SelectItem
+                  key={size}
+                  label={String(size)}
+                  value={String(size)}
+                >
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="tabular-nums">
+            Showing {firstPolicy}&ndash;{lastPolicy} of {visiblePolicies.length}{" "}
+            policies
+          </span>
+          <span
+            aria-atomic="true"
+            aria-live="polite"
+            className="sr-only"
+            role="status"
+          >
+            Showing {firstPolicy}&ndash;{lastPolicy} of {visiblePolicies.length}{" "}
+            policies. Page {currentPageIndex + 1} of {pageCount}.
+          </span>
+          <nav
+            aria-label="Policy pages"
+            className="ml-auto flex items-center gap-2"
+          >
+            <Button
+              aria-label="Previous policies page"
+              className="size-7 p-0"
+              disabled={currentPageIndex === 0}
+              onClick={() => {
+                setPageIndex(Math.max(0, currentPageIndex - 1));
+              }}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <ChevronLeft className="size-3" />
+            </Button>
+            <span className="font-mono text-xs">
+              Page {currentPageIndex + 1} of {pageCount}
+            </span>
+            <Button
+              aria-label="Next policies page"
+              className="size-7 p-0"
+              disabled={currentPageIndex >= pageCount - 1}
+              onClick={() => {
+                setPageIndex(Math.min(pageCount - 1, currentPageIndex + 1));
+              }}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <ChevronRight className="size-3" />
+            </Button>
+          </nav>
+        </fieldset>
+      ) : null}
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+        <RlsCombinationGuide />
+        <RlsPreview policies={policies} />
+      </div>
+    </div>
   );
 }
 const triggerColumns: DataTableColumnDef<TableTrigger>[] = [

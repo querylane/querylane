@@ -59,4 +59,20 @@ SELECT 'active' AS status;`;
     );
     expect(code?.textContent).toBe("—");
   });
+
+  test("renders compact expressions without the default bordered gutter", () => {
+    const { container } = render(
+      <SqlCodeBlock
+        copyable={false}
+        sql="tenant_id = current_setting('app.tenant')"
+        variant="compact"
+      />
+    );
+
+    const pre = container.querySelector("pre");
+    expect(pre?.className).toContain("border-0");
+    expect(pre?.className).toContain("bg-muted/55");
+    expect(pre?.className).toContain("px-3");
+    expect(pre?.className).not.toContain("pr-10");
+  });
 });
