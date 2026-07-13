@@ -65,7 +65,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
+import {
+  SqlCodeBlock,
+  SqlSyntaxHighlight,
+} from "@/components/ui/sql-code-block";
 import {
   Table,
   TableBody,
@@ -3412,7 +3415,7 @@ function TriggerCard({
       ) : null}
       <div className="mt-[9px] flex items-start gap-2 border-t pt-2">
         <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-[11px] leading-[1.55]">
-          <code>{formatTriggerSqlForDisplay(sql)}</code>
+          <SqlSyntaxHighlight sql={formatTriggerSqlForDisplay(sql)} />
         </pre>
         <TriggerSqlCopyButton sql={sql} triggerName={trigger.triggerName} />
       </div>

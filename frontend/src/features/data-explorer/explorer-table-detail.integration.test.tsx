@@ -45,8 +45,6 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
-const TRIGGER_CREATE_SQL_RE =
-  /CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping\.shipment_event/;
 const COLUMNS_TAB_RE = /^Columns/;
 const CREATE_TABLE_RE = /CREATE TABLE/;
 const CREATE_INDEX_RE = /CREATE (?:UNIQUE )?INDEX/;
@@ -1550,9 +1548,9 @@ describe("TableDetail triggers tab", () => {
         />
       );
 
-      expect(screen.getByText("trg_event_enrich")).toBeTruthy();
-      expect(screen.getByText("BEFORE")).toBeTruthy();
-      expect(screen.getByText("INSERT")).toBeTruthy();
+      expect(screen.getAllByText("trg_event_enrich").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("BEFORE").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("INSERT").length).toBeGreaterThan(0);
       expect(screen.getAllByText("ROW").length).toBeGreaterThan(0);
       expect(
         screen.getByText("→ shipping.enrich_event_location()")
@@ -1561,7 +1559,23 @@ describe("TableDetail triggers tab", () => {
       expect(
         screen.getByText("WHEN ((old.status IS DISTINCT FROM new.status))")
       ).toBeTruthy();
-      expect(screen.getByText(TRIGGER_CREATE_SQL_RE)).toBeTruthy();
+      const highlightedDefinitions = Array.from(
+        screen
+          .getByTestId("data-explorer-table-triggers")
+          .querySelectorAll(
+            'code.language-sql[data-syntax-highlighter="shiki"]'
+          )
+      );
+      expect(highlightedDefinitions).toHaveLength(2);
+      expect(highlightedDefinitions[0]?.textContent).toBe(
+        "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event\n  FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location();"
+      );
+      expect(
+        highlightedDefinitions.every(
+          (definition) =>
+            definition.querySelectorAll("[data-shiki-token]").length > 5
+        )
+      ).toBe(true);
       expect(screen.getAllByRole("status")).toHaveLength(2);
       expect(
         screen

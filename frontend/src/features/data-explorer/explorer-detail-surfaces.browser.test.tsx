@@ -2045,7 +2045,9 @@ test("data explorer table indexes constraints policies and triggers stay readabl
   );
 
   await page.getByRole("tab", { exact: true, name: "Triggers 1" }).click();
-  await expect.element(page.getByText("customers_audit_trigger")).toBeVisible();
+  await expect
+    .element(page.getByText("customers_audit_trigger").first())
+    .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-triggers"
   );
@@ -2392,7 +2394,9 @@ test("data explorer table triggers match redesign", async () => {
     />
   );
 
-  await expect.element(page.getByText("trg_event_enrich")).toBeVisible();
+  await expect
+    .element(page.getByText("trg_event_enrich").first())
+    .toBeVisible();
   await expect
     .element(page.getByText("→ shipping.enrich_event_location()"))
     .toBeVisible();
@@ -2401,7 +2405,7 @@ test("data explorer table triggers match redesign", async () => {
   await expect
     .element(page.getByText("WHEN ((old.status IS DISTINCT FROM new.status))"))
     .toBeVisible();
-  await expect.element(page.getByText("STATEMENT")).toBeVisible();
+  await expect.element(page.getByText("STATEMENT").first()).toBeVisible();
   await document.fonts.ready;
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-triggers-redesign",
