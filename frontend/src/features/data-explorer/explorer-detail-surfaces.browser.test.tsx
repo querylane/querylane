@@ -1177,7 +1177,13 @@ test("data explorer constraints tab paginates dense card groups", async () => {
     .element(page.getByRole("combobox", { name: "Constraints per page" }))
     .toBeVisible();
   await expect.element(page.getByText("Page 1 of 2")).toBeVisible();
-  await expect(pagination).toMatchScreenshot(
+  await page.getByRole("button", { name: "Next page" }).click();
+  await expect
+    .element(page.getByText("shipment_event_status_11_check"))
+    .toBeVisible();
+  await expect.element(page.getByText("Showing 11–11 of 11")).toBeVisible();
+  await expect.element(page.getByText("Page 2 of 2")).toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-constraints-pagination"
   );
 });

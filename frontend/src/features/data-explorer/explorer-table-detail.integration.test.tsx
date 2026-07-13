@@ -34,8 +34,8 @@ import {
   PolicyCommand,
   PolicyMode,
   ReferentialAction,
-  TableConstraintSchema,
   Table_TableType,
+  TableConstraintSchema,
   TableSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
