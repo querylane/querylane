@@ -43,6 +43,27 @@ describe("onboarding-wizard-store", () => {
     expect(useStore.getState().phase).toBe("progress_running");
   });
 
+  it("startProgress increments the setup run token", () => {
+    const useStore = createOnboardingWizardStore();
+
+    expect(useStore.getState().setupRunToken).toBe(0);
+
+    useStore.getState().startProgress();
+    expect(useStore.getState().setupRunToken).toBe(1);
+
+    useStore.getState().startProgress();
+    expect(useStore.getState().setupRunToken).toBe(2);
+  });
+
+  it("resetSession preserves the setup run token", () => {
+    const useStore = createOnboardingWizardStore();
+
+    useStore.getState().startProgress();
+    useStore.getState().resetSession();
+
+    expect(useStore.getState().setupRunToken).toBe(1);
+  });
+
   it("startProgress uses the waiting progress phase for manual yaml", () => {
     const useStore = createOnboardingWizardStore();
 

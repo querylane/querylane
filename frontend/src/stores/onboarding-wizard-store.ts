@@ -38,6 +38,7 @@ interface OnboardingWizardStore extends OnboardingWizardSessionState {
   setStreamFailure: (error: AppUiError) => void;
   setSubmittedEmbeddedConfig: (config: EmbeddedSetupConfig) => void;
   setSubmittedPostgresConfig: (config: PostgresConfig) => void;
+  setupRunToken: number;
   setWatchNotice: (notice: string | null) => void;
   startProgress: () => void;
 }
@@ -182,6 +183,7 @@ export function createOnboardingWizardStore() {
     setSubmittedPostgresConfig: (config) => {
       set({ submittedPostgresConfig: config });
     },
+    setupRunToken: 0,
 
     setWatchNotice: (notice) => {
       set({
@@ -195,6 +197,7 @@ export function createOnboardingWizardStore() {
         failedEvent: null,
         phase: getProgressPhaseForMethod(state.selectedMethod),
         progressEvents: [],
+        setupRunToken: state.setupRunToken + 1,
         streamError: null,
         watchNotice: null,
       }));
