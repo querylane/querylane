@@ -12,7 +12,10 @@ import { cn } from "@/lib/utils";
 
 type SqlCodeBlockProps = {
   className?: string;
+  copyable?: boolean;
   sql: string;
+  variant?: "block" | "inline";
+  wrap?: boolean;
 };
 
 type ShikiTokenStyle = CSSProperties & {
@@ -55,14 +58,30 @@ function tokenStyle(token: ThemedTokenWithVariants): ShikiTokenStyle | undefined
   return style;
 }
 
-export function SqlCodeBlock({ className, sql: sqlText }: SqlCodeBlockProps) {
+export function SqlCodeBlock({
+  className,
+  copyable = true,
+  sql: sqlText,
+  variant = "block",
+  wrap = false,
+}: SqlCodeBlockProps) {
   const tokenLines = highlightSql(sqlText);
+  const inline = variant === "inline";
 
   return (
-    <div className="relative">
+    <div className={cn("relative min-w-0 max-w-full", inline && "w-full")}>
       <pre
         className={cn(
-          "overflow-x-auto rounded-md border bg-muted/40 p-3 pr-10 font-mono text-foreground text-xs leading-relaxed",
+          inline
+            ? "min-w-0 max-w-full truncate font-mono text-[12px] leading-normal"
+            : "min-w-0 max-w-full rounded-md border bg-muted/40 p-3 font-mono text-foreground text-xs leading-relaxed",
+          !inline &&
+            (wrap
+              ? cn(
+                  "overflow-x-hidden whitespace-pre-wrap break-words",
+                  copyable && "pr-14"
+                )
+              : cn("overflow-x-auto", copyable && "pr-10")),
           className
         )}
       >
@@ -88,11 +107,13 @@ export function SqlCodeBlock({ className, sql: sqlText }: SqlCodeBlockProps) {
           ))}
         </code>
       </pre>
-      <CopyIconButton
-        ariaLabel="Copy SQL"
-        className="absolute top-2 right-2"
-        value={sqlText}
-      />
+      {copyable ? (
+        <CopyIconButton
+          ariaLabel="Copy SQL"
+          className="absolute top-2 right-2"
+          value={sqlText}
+        />
+      ) : null}
     </div>
   );
 }

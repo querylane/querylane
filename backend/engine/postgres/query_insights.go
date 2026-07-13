@@ -163,7 +163,12 @@ func redactQueryPreview(queryText sql.NullString) string {
 		return ""
 	}
 
-	query := strings.Join(strings.Fields(queryText.String), " ")
+	lines := strings.Split(strings.ReplaceAll(queryText.String, "\r\n", "\n"), "\n")
+	for index, line := range lines {
+		lines[index] = strings.Join(strings.Fields(line), " ")
+	}
+
+	query := strings.TrimSpace(strings.Join(lines, "\n"))
 	if query == "" {
 		return ""
 	}

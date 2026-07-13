@@ -28,6 +28,7 @@ describe("buildSidebarPaths", () => {
     expect(paths).toEqual({
       databaseExplorer: "/instances/prod/databases/app/explorer",
       databaseExtensions: "/instances/prod/databases/app/extensions",
+      databaseInsights: "/instances/prod/databases/app/insights",
       databaseOverview: "/instances/prod/databases/app",
       instanceConfiguration: "/instances/prod/configuration",
       instanceOverview: "/instances/prod",
@@ -53,6 +54,7 @@ describe("buildNavActiveState", () => {
     expect(active).toEqual({
       databaseExplorer: false,
       databaseExtensions: false,
+      databaseInsights: false,
       databaseOverview: false,
       instanceConfiguration: false,
       instanceOverview: false,
@@ -112,6 +114,7 @@ describe("buildNavActiveState", () => {
     expect(active.databaseOverview).toBe(true);
     expect(active.databaseExplorer).toBe(false);
     expect(active.databaseExtensions).toBe(false);
+    expect(active.databaseInsights).toBe(false);
   });
 
   test("databaseExtensions is active on exact match", () => {
@@ -123,6 +126,18 @@ describe("buildNavActiveState", () => {
 
     expect(active.databaseExtensions).toBe(true);
     expect(active.databaseExplorer).toBe(false);
+    expect(active.databaseInsights).toBe(false);
+    expect(active.databaseOverview).toBe(false);
+  });
+
+  test("databaseInsights is active on exact match", () => {
+    const paths = buildSidebarPaths({ databaseId: "app", instanceId: "prod" });
+    const active = buildNavActiveState({
+      pathname: "/instances/prod/databases/app/insights",
+      paths,
+    });
+
+    expect(active.databaseInsights).toBe(true);
     expect(active.databaseOverview).toBe(false);
   });
 
@@ -145,6 +160,7 @@ describe("buildNavActiveState", () => {
     expect(active).toEqual({
       databaseExplorer: false,
       databaseExtensions: false,
+      databaseInsights: false,
       databaseOverview: false,
       instanceConfiguration: false,
       instanceOverview: false,

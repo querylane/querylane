@@ -25,6 +25,7 @@ function buildDatabasePaths(databaseBase?: string): SidebarPaths {
   return {
     databaseExplorer: `${databaseBase}/explorer`,
     databaseExtensions: `${databaseBase}/extensions`,
+    databaseInsights: `${databaseBase}/insights`,
     databaseOverview: databaseBase,
   };
 }
@@ -53,6 +54,7 @@ interface NavigationIds {
 interface SidebarPaths {
   databaseExplorer?: string | undefined;
   databaseExtensions?: string | undefined;
+  databaseInsights?: string | undefined;
   databaseOverview?: string | undefined;
   instanceConfiguration?: string | undefined;
   instanceOverview?: string | undefined;
@@ -62,6 +64,7 @@ interface SidebarPaths {
 interface NavActiveState {
   databaseExplorer: boolean;
   databaseExtensions: boolean;
+  databaseInsights: boolean;
   databaseOverview: boolean;
   instanceConfiguration: boolean;
   instanceOverview: boolean;
@@ -94,6 +97,7 @@ function buildNavActiveState({
   return {
     databaseExplorer: matchesPath(pathname, paths.databaseExplorer),
     databaseExtensions: matchesPath(pathname, paths.databaseExtensions),
+    databaseInsights: matchesPath(pathname, paths.databaseInsights),
     databaseOverview: matchesPath(pathname, paths.databaseOverview),
     instanceConfiguration: matchesPath(pathname, paths.instanceConfiguration),
     instanceOverview: matchesPath(pathname, paths.instanceOverview),

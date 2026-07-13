@@ -183,3 +183,14 @@ func TestRedactQueryPreviewBoundsAndRedactsLiteralText(t *testing.T) {
 	assert.Equal(t, "SELECT * FROM accounts WHERE email = ? AND account_id = $1", preview)
 	assert.Empty(t, redactQueryPreview(sql.NullString{}))
 }
+
+func TestRedactQueryPreviewPreservesLineCommentBoundary(t *testing.T) {
+	t.Parallel()
+
+	preview := redactQueryPreview(sql.NullString{
+		String: "-- trace: worker\nUPDATE events SET processed_at = now()",
+		Valid:  true,
+	})
+
+	assert.Equal(t, "-- trace: worker\nUPDATE events SET processed_at = now()", preview)
+}

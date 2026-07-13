@@ -60,6 +60,13 @@ type CanonicalAdminPageTarget =
         databaseId: string;
         instanceId: string;
       };
+      to: "/instances/$instanceId/databases/$databaseId/insights";
+    }
+  | {
+      params: {
+        databaseId: string;
+        instanceId: string;
+      };
       to: "/instances/$instanceId/databases/$databaseId/explorer";
     };
 
@@ -154,6 +161,14 @@ function resolveCanonicalDatabasePageTarget({
           instanceId: ids.instanceId,
         },
         to: "/instances/$instanceId/databases/$databaseId/extensions",
+      };
+    case "database.insights":
+      return {
+        params: {
+          databaseId: ids.databaseId,
+          instanceId: ids.instanceId,
+        },
+        to: "/instances/$instanceId/databases/$databaseId/insights",
       };
     case "database.explorer":
       return {

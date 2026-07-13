@@ -22,6 +22,7 @@ import {
 } from "@/components/console-pages/database-overview-filters";
 import { EmptyState } from "@/components/empty-state";
 import { Progress } from "@/components/querylane-ui/progress";
+import { WarningBadge } from "@/components/querylane-ui/warning-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -61,6 +62,14 @@ import {
   formatTimestampLabel,
   normalizeEstimatedRowCount,
 } from "@/lib/console-resources";
+import {
+  formatInsightInteger,
+  formatInsightMs,
+  formatInsightPercent,
+  formatQualifiedTable,
+  insightProgressValue,
+  queryInsightLabel,
+} from "@/lib/query-insights";
 import { createResourceLoader } from "@/lib/resource-loader";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
@@ -77,8 +86,6 @@ type DatabaseSection = "overview";
 
 const OBJECTS_PAGE_SIZE = 15;
 const SCHEMAS_PAGE_SIZE = 15;
-const MILLISECONDS_PER_SECOND = 1000;
-const PERCENT_RATIO_MULTIPLIER = 100;
 const CACHE_HIT_WARNING_THRESHOLD = 0.9;
 const EXPLORER_ROUTE =
   "/instances/$instanceId/databases/$databaseId/explorer" as const;
@@ -395,59 +402,6 @@ function schemaColumns(): DataTableColumnDef<CatalogSchema>[] {
   ];
 }
 
-function formatInsightInteger(value: bigint | number) {
-  return value.toLocaleString();
-}
-
-function formatInsightMs(value: number) {
-  if (!Number.isFinite(value) || value < 0) {
-    return "—";
-  }
-
-  if (value >= MILLISECONDS_PER_SECOND) {
-    return `${(value / MILLISECONDS_PER_SECOND).toFixed(1)} s`;
-  }
-
-  if (value >= 10) {
-    return `${Math.round(value).toLocaleString()} ms`;
-  }
-
-  return `${value.toFixed(1)} ms`;
-}
-
-function formatInsightPercent(value: number) {
-  if (!Number.isFinite(value) || value < 0) {
-    return "—";
-  }
-
-  return `${Math.round(value * PERCENT_RATIO_MULTIPLIER).toLocaleString()}%`;
-}
-
-function formatQualifiedTable(schemaName: string, tableName: string) {
-  return `${schemaName}.${tableName}`;
-}
-
-function insightProgressValue(ratio: number) {
-  if (!Number.isFinite(ratio) || ratio <= 0) {
-    return 0;
-  }
-
-  return Math.min(ratio * PERCENT_RATIO_MULTIPLIER, PERCENT_RATIO_MULTIPLIER);
-}
-
-function queryInsightLabel(query: QueryRuntimeInsight) {
-  const queryText = query.query.trim();
-  if (queryText) {
-    return queryText;
-  }
-
-  if (query.queryId !== 0n) {
-    return `Query ID ${query.queryId.toString()}`;
-  }
-
-  return "Query text unavailable";
-}
-
 function QueryInsightPanel({
   children,
   title,
@@ -568,14 +522,7 @@ function TableCacheHitItem({ cacheHit }: { cacheHit: TableCacheHitInsight }) {
           {formatQualifiedTable(cacheHit.schemaName, cacheHit.tableName)}
         </span>
         <div className="flex items-center gap-2">
-          {warning ? (
-            <Badge
-              className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-              variant="outline"
-            >
-              Low cache hit
-            </Badge>
-          ) : null}
+          {warning ? <WarningBadge>Low cache hit</WarningBadge> : null}
           <span
             className={cn(
               "text-xs tabular-nums",
