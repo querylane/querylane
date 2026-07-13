@@ -474,7 +474,7 @@ test("admin shell shows selected instance, database, scoped navigation, and acti
   );
 });
 
-test("command palette opens from the admin header", async () => {
+test("command palette opens over the full admin layout", async () => {
   await page.viewport(1280, 800);
   renderAdminShell();
 
@@ -489,7 +489,7 @@ test("command palette opens from the admin header", async () => {
       page.getByText("customer_events_with_long_identifier.public.shipments")
     )
     .toBeVisible();
-  await expect(dialog).toMatchScreenshot("admin-command-palette-open");
+  await expect(page).toMatchScreenshot("admin-command-palette-layout-open");
 });
 
 test("sidebar footer omits global settings", async () => {
