@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitializeCatalogSpoolBudgetCountsRecentOrphans(t *testing.T) {
+func TestCatalogSpoolBudgetReconcilesRemovedOrphan(t *testing.T) {
 	t.Parallel()
 
 	tempDir := t.TempDir()
@@ -20,11 +20,30 @@ func TestInitializeCatalogSpoolBudgetCountsRecentOrphans(t *testing.T) {
 	budget := newCatalogSpoolByteBudget(5)
 	initializeCatalogSpoolBudget(tempDir, time.Now(), budget)
 
-	assert.True(t, budget.reserve(2))
-	assert.False(t, budget.reserve(1), "recent orphan bytes must reduce the available budget")
+	assert.False(t, budget.reserve(3), "recent orphan bytes must reduce the available budget")
+
+	require.NoError(t, os.Remove(orphanPath))
+	budget.cleanupRetained(time.Now())
+	assert.True(t, budget.reserve(5), "removed orphan bytes must return to the budget")
 }
 
-func TestCatalogPageSpoolRemoveRetainsBudgetUntilDeletionSucceeds(t *testing.T) {
+func TestCatalogSpoolBudgetRemovesOrphanAfterRetentionWindow(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	orphanPath := filepath.Join(tempDir, "querylane-catalog-pages-recent")
+	require.NoError(t, os.WriteFile(orphanPath, []byte("123"), 0o600))
+
+	now := time.Now()
+	budget := newCatalogSpoolByteBudget(5)
+	initializeCatalogSpoolBudget(tempDir, now, budget)
+
+	budget.cleanupRetained(now.Add(staleCatalogSpoolAge + time.Second))
+	assert.NoFileExists(t, orphanPath)
+	assert.True(t, budget.reserve(5), "expired orphan bytes must return to the budget")
+}
+
+func TestCatalogPageSpoolRetriesFailedRemovalDuringCleanup(t *testing.T) {
 	t.Parallel()
 
 	spoolDir := t.TempDir()
@@ -39,8 +58,8 @@ func TestCatalogPageSpoolRemoveRetainsBudgetUntilDeletionSucceeds(t *testing.T) 
 	assert.False(t, budget.reserve(1), "failed deletion must retain its reservation")
 
 	require.NoError(t, os.Remove(childPath))
-	spool.remove()
-	assert.True(t, budget.reserve(5), "a later successful deletion must release its reservation")
+	budget.cleanupRetained(time.Now())
+	assert.True(t, budget.reserve(5), "cleanup must retry deletion and release its reservation")
 }
 
 func TestCatalogSpoolByteBudgetBoundsActiveBytes(t *testing.T) {

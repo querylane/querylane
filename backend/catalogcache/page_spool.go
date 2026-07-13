@@ -35,10 +35,21 @@ type catalogSpoolByteBudget struct {
 	mu   sync.Mutex
 	used int64
 	max  int64
+	// retained owns cleanup for files whose bytes are already included in
+	// used, either from startup accounting or a failed active-spool removal.
+	retained map[string]retainedCatalogSpool
+}
+
+type retainedCatalogSpool struct {
+	bytes       int64
+	removeAfter time.Time
 }
 
 func newCatalogSpoolByteBudget(maxBytes int64) *catalogSpoolByteBudget {
-	return &catalogSpoolByteBudget{max: maxBytes}
+	return &catalogSpoolByteBudget{
+		max:      maxBytes,
+		retained: make(map[string]retainedCatalogSpool),
+	}
 }
 
 func (b *catalogSpoolByteBudget) reserve(bytes int64) bool {
@@ -61,21 +72,79 @@ func (b *catalogSpoolByteBudget) release(bytes int64) {
 	b.used -= bytes
 }
 
-func (b *catalogSpoolByteBudget) accountExisting(bytes int64) {
+func (b *catalogSpoolByteBudget) accountRetained(path string, bytes int64, removeAfter time.Time) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if bytes <= 0 || b.used >= b.max {
-		return
+	if previous, ok := b.retained[path]; ok {
+		b.used -= previous.bytes
 	}
 
-	if bytes >= b.max-b.used {
-		b.used = b.max
-
-		return
-	}
-
+	b.retained[path] = retainedCatalogSpool{bytes: bytes, removeAfter: removeAfter}
 	b.used += bytes
+}
+
+func (b *catalogSpoolByteBudget) retainReserved(path string, bytes int64) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if _, ok := b.retained[path]; ok {
+		return
+	}
+
+	b.retained[path] = retainedCatalogSpool{bytes: bytes}
+}
+
+func (b *catalogSpoolByteBudget) releaseRemoved(path string, bytes int64) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if retained, ok := b.retained[path]; ok {
+		b.used -= retained.bytes
+		delete(b.retained, path)
+
+		return
+	}
+
+	b.used -= bytes
+}
+
+func (b *catalogSpoolByteBudget) cleanupRetained(now time.Time) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	for path, retained := range b.retained {
+		info, err := os.Stat(path)
+		if errors.Is(err, os.ErrNotExist) {
+			b.used -= retained.bytes
+			delete(b.retained, path)
+
+			continue
+		}
+
+		if err != nil {
+			slog.Warn("failed to inspect retained catalog page spool")
+
+			continue
+		}
+
+		b.used += info.Size() - retained.bytes
+		retained.bytes = info.Size()
+		b.retained[path] = retained
+
+		if now.Before(retained.removeAfter) {
+			continue
+		}
+
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			slog.Warn("failed to remove retained catalog page spool")
+
+			continue
+		}
+
+		b.used -= retained.bytes
+		delete(b.retained, path)
+	}
 }
 
 type budgetedCatalogSpoolWriter struct {
@@ -126,7 +195,7 @@ func initializeCatalogSpoolBudget(tempDir string, now time.Time, budget *catalog
 			slog.Warn("failed to remove stale catalog page spool")
 		}
 
-		budget.accountExisting(info.Size())
+		budget.accountRetained(path, info.Size(), info.ModTime().Add(staleCatalogSpoolAge))
 	}
 }
 
@@ -134,37 +203,35 @@ func initializeCatalogSpoolBudget(tempDir string, now time.Time, budget *catalog
 // lets storage reconcile it atomically without holding a meta DB transaction
 // open across network calls to the user instance.
 type catalogPageSpool[Row any] struct {
-	path     string
-	syncedAt time.Time
-	bytes    int64
-	budget   *catalogSpoolByteBudget
-	mu       sync.Mutex
-	removed  bool
+	path           string
+	syncedAt       time.Time
+	bytes          int64
+	budget         *catalogSpoolByteBudget
+	mu             sync.Mutex
+	cleanupHandled bool
 }
 
 func (s *catalogPageSpool[Row]) remove() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.removed {
+	if s.cleanupHandled {
 		return
 	}
 
-	if removeCatalogSpool(s.path, s.bytes, s.budget) {
-		s.removed = true
-	}
+	removeCatalogSpool(s.path, s.bytes, s.budget)
+	s.cleanupHandled = true
 }
 
-func removeCatalogSpool(path string, bytes int64, budget *catalogSpoolByteBudget) bool {
+func removeCatalogSpool(path string, bytes int64, budget *catalogSpoolByteBudget) {
 	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 		slog.Warn("failed to remove catalog page spool")
+		budget.retainReserved(path, bytes)
 
-		return false
+		return
 	}
 
-	budget.release(bytes)
-
-	return true
+	budget.releaseRemoved(path, bytes)
 }
 
 func (s *catalogPageSpool[Row]) pages() iter.Seq2[[]Row, error] {
@@ -220,6 +287,7 @@ func spoolCatalogPages[Source, Row any](
 	syncedAt := time.Now()
 
 	staleCatalogSpoolCleanup.Do(cleanupStaleCatalogSpools)
+	activeCatalogSpoolBudget.cleanupRetained(time.Now())
 
 	file, err := os.CreateTemp("", "querylane-catalog-pages-*")
 	if err != nil {
