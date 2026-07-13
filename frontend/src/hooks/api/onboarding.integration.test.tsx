@@ -118,6 +118,14 @@ function succeededEvent() {
   });
 }
 
+function setupCompletedEvent() {
+  return create(SetupProgressEventSchema, {
+    displayName: "Saving configuration",
+    state: StepState.SUCCEEDED,
+    stepId: SetupStep.PERSISTING_CONFIG,
+  });
+}
+
 function failedEvent() {
   return create(SetupProgressEventSchema, {
     displayName: "Running migrations",
@@ -206,7 +214,7 @@ describe("useSetupAppDatabaseMutation", () => {
         requests.push(request);
         return streamOf(
           setupResponse(connectingEvent()),
-          setupResponse(succeededEvent())
+          setupResponse(setupCompletedEvent())
         );
       },
     });
@@ -235,7 +243,7 @@ describe("useSetupAppDatabaseMutation", () => {
 
   test("resolves without options when the stream completes", async () => {
     const transport = createOnboardingTransport({
-      setupAppDatabase: () => streamOf(setupResponse(succeededEvent())),
+      setupAppDatabase: () => streamOf(setupResponse(setupCompletedEvent())),
     });
     const { result } = renderHook(() => useSetupAppDatabaseMutation(), {
       wrapper: createWrapper(transport),

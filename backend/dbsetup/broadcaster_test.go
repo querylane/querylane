@@ -126,6 +126,21 @@ func TestBroadcaster(t *testing.T) {
 		default:
 		}
 	})
+
+	t.Run("SubscribeChan preserves terminal failure when buffer is full", func(t *testing.T) {
+		t.Parallel()
+
+		bc := dbsetup.NewBroadcaster()
+
+		ch, subID := bc.SubscribeChan(1)
+		defer bc.Unsubscribe(subID)
+
+		bc.Send(dbsetup.NewEvent(dbsetup.StepConnecting, dbsetup.StateInProgress))
+		failure := dbsetup.NewErrorEvent(dbsetup.StepConnecting, "connection refused")
+		bc.Send(failure)
+
+		assert.Equal(t, failure, <-ch)
+	})
 }
 
 func TestNewEvent(t *testing.T) {

@@ -5,6 +5,7 @@ import { PostgresConfigSchema } from "@/protogen/querylane/console/v1alpha1/inst
 import {
   SetupAppDatabaseResponseSchema,
   SetupProgressEventSchema,
+  SetupStep,
   StepState,
   WatchConfigChangesResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
@@ -30,14 +31,24 @@ function buildPostgresConfig() {
   });
 }
 
-function buildSetupResponse(state: StepState, error = "", displayName = "") {
+function buildSetupResponse(
+  state: StepState,
+  error = "",
+  displayName = "",
+  stepId = SetupStep.UNSPECIFIED
+) {
   return createProto(SetupAppDatabaseResponseSchema, {
     event: createProto(SetupProgressEventSchema, {
       displayName,
       error,
       state,
+      stepId,
     }),
   });
+}
+
+function buildSucceededSetupResponse(stepId: SetupStep) {
+  return buildSetupResponse(StepState.SUCCEEDED, "", "", stepId);
 }
 
 function buildWatchResponse(state: StepState, error = "", displayName = "") {
@@ -152,6 +163,16 @@ describe("setup request builders", () => {
 });
 
 describe("setup stream consumption", () => {
+  it("rejects when the stream closes before config persistence succeeds", async () => {
+    const stream = buildAsyncStream([
+      buildSucceededSetupResponse(SetupStep.INITIALIZING_SERVICES),
+    ]);
+
+    await expect(
+      consumeSetupStreamWithProgress(stream, () => undefined)
+    ).rejects.toThrow("Database setup stream ended before setup completed");
+  });
+
   it("extracts failure message from a failed setup event", async () => {
     const responses = [
       buildSetupResponse(
@@ -188,7 +209,7 @@ describe("setup stream consumption", () => {
     const responses = [
       buildSetupResponse(StepState.PENDING),
       buildSetupResponse(StepState.IN_PROGRESS),
-      buildSetupResponse(StepState.SUCCEEDED),
+      buildSucceededSetupResponse(SetupStep.PERSISTING_CONFIG),
     ];
     const stream = buildAsyncStream(responses);
     const events: StepState[] = [];
@@ -228,7 +249,7 @@ describe("setup stream consumption", () => {
     await flushMicrotasks();
     expect(states).toEqual([StepState.PENDING, StepState.IN_PROGRESS]);
 
-    controlled.push(buildSetupResponse(StepState.SUCCEEDED));
+    controlled.push(buildSucceededSetupResponse(SetupStep.PERSISTING_CONFIG));
     await flushMicrotasks();
     expect(states).toEqual([
       StepState.PENDING,
