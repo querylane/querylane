@@ -183,6 +183,65 @@ vi.mock("@/hooks/api/github", () => ({
   useGithubRepoStarsQuery: () => ({ data: "1.2k" }),
 }));
 
+vi.mock("@/hooks/api/database-catalog", () => ({
+  useDatabaseCatalogQuery: () => ({
+    data: {
+      objects: [
+        {
+          kind: "table",
+          objectId: "shipments",
+          rowCount: 2_400_000n,
+          schemaId: "public",
+        },
+        {
+          kind: "table",
+          objectId: "shipment_event",
+          rowCount: 18_200_000n,
+          schemaId: "public",
+        },
+        {
+          kind: "table",
+          objectId: "carriers",
+          rowCount: 312n,
+          schemaId: "public",
+        },
+        {
+          kind: "table",
+          objectId: "containers",
+          rowCount: 88_000n,
+          schemaId: "public",
+        },
+        {
+          kind: "view",
+          objectId: "active_shipments",
+          rowCount: 0n,
+          schemaId: "public",
+        },
+      ],
+    },
+    error: null,
+    isPending: false,
+  }),
+}));
+
+vi.mock("@/hooks/api/role", () => ({
+  rolesForInstanceQueryInput: (instanceId: string) => ({ instanceId }),
+  useListAllRolesQuery: () => ({
+    data: {
+      roles: [
+        {
+          attributes: { canLogin: true },
+          isSystemRole: false,
+          name: "instances/prod-analytics/roles/app-reader",
+          roleName: "app_reader",
+        },
+      ],
+    },
+    error: null,
+    isPending: false,
+  }),
+}));
+
 function applyFixtureManagedScreenshotScale() {
   const frameElement = window.frameElement;
   if (frameElement?.tagName !== "IFRAME") {
@@ -413,6 +472,24 @@ test("admin shell shows selected instance, database, scoped navigation, and acti
   await expect(page.getByTestId("admin-shell-visual-root")).toMatchScreenshot(
     "admin-shell-database-scope"
   );
+});
+
+test("command palette opens over the full admin layout", async () => {
+  await page.viewport(1280, 800);
+  renderAdminShell();
+
+  await page.getByRole("button", { name: "Search or jump to" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Search or jump to" });
+  await expect.element(dialog).toBeVisible();
+  await expect.element(page.getByText("Go to")).toBeVisible();
+  await expect.element(page.getByText("Tables")).toBeVisible();
+  await expect
+    .element(
+      page.getByText("customer_events_with_long_identifier.public.shipments")
+    )
+    .toBeVisible();
+  await expect(page).toMatchScreenshot("admin-command-palette-layout-open");
 });
 
 test("sidebar footer omits global settings", async () => {

@@ -5,6 +5,7 @@ import { ChevronsUpDown, Lock, Monitor, Plus } from "lucide-react";
 import React from "react";
 import { RoleKindBadge } from "@/components/console-pages/role-kind-badge";
 import { Logo } from "@/components/logo";
+import { AdminCommandPalette } from "@/components/querylane-ui/admin-command-palette";
 import { SidebarTrigger } from "@/components/querylane-ui/sidebar";
 import { SearchEmptyState } from "@/components/search-empty-state";
 import { ThemeModeMenu } from "@/components/theme-mode-menu";
@@ -661,6 +662,7 @@ function AdminHeaderActions({
 }) {
   return (
     <div className="ml-0 flex shrink-0 items-center gap-1 lg:ml-auto lg:gap-2">
+      <AdminCommandPalette />
       <Separator className="hidden h-14 lg:block" orientation="vertical" />
       <a
         className={cn(
