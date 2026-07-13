@@ -5,7 +5,6 @@ import type {
   RenderOpenReferencedTableLink,
 } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import { RecordField } from "@/components/data-grid/table-data-grid/record-field";
-import { ReferenceButton } from "@/components/querylane-ui/reference-button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -250,13 +249,14 @@ function ForeignKeyDataCell({
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger
         render={
-          <ReferenceButton
+          <Button
             aria-label={`Open ${column.columnName} reference ${formatted.display}`}
             className="h-auto max-w-full justify-start p-0 font-mono text-xs"
             onClick={(event) => event.stopPropagation()}
             size="xs"
             title={`Open referenced row for ${column.columnName}`}
             type="button"
+            variant="reference"
           />
         }
       >
