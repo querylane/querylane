@@ -26,7 +26,6 @@ import {
   type SchemaMapNode,
   type SchemaMapTone,
   type SchemaMapViewNode,
-  selectSchemaMapMetadataTableNames,
   VIEW_NODE_WIDTH,
 } from "@/features/data-explorer/explorer-schema-map-model";
 import { tablesForSchemaQueryInput } from "@/hooks/api/table";
@@ -56,7 +55,6 @@ const HULL_LABEL_GAP_Y = 10;
 const MINIMAP_WIDTH = 132;
 const MINIMAP_HEIGHT = 92;
 const MINIMAP_NODE_RADIUS = 4;
-const MAX_AUTO_METADATA_TABLES = 24;
 const EDGE_STROKE_WIDTH = 1.5;
 const SELECTED_EDGE_STROKE_WIDTH = 2;
 
@@ -117,17 +115,11 @@ function useSchemaMapCatalog({
   databaseId,
   enabled,
   instanceId,
-  metadataQuery,
-  metadataSchemaNames,
-  selectedTableName,
   schemas,
 }: {
   databaseId: string;
   enabled: boolean;
   instanceId: string;
-  metadataQuery: string;
-  metadataSchemaNames: string[];
-  selectedTableName: string | null;
   schemas: SchemaSummary[];
 }) {
   const transport = useTransport();
@@ -163,13 +155,7 @@ function useSchemaMapCatalog({
   });
   const tables = tableQueries.flatMap((query) => query.data?.tables ?? []);
   const views = viewQueries.flatMap((query) => query.data?.views ?? []);
-  const tableNames = selectSchemaMapMetadataTableNames({
-    limit: MAX_AUTO_METADATA_TABLES,
-    query: metadataQuery,
-    schemaNames: metadataSchemaNames,
-    selectedTableName,
-    tables,
-  });
+  const tableNames = tables.map((table) => table.name);
   const columnQueries = useQueries({
     queries: tableNames.map((tableName) => ({
       ...createQueryOptions(
@@ -194,7 +180,12 @@ function useSchemaMapCatalog({
   });
   const columnsByTable: Record<string, Column[]> = {};
   const constraintsByTable: Record<string, TableConstraint[]> = {};
+  const failedTableNames = new Set<string>();
   tableNames.forEach((tableName, index) => {
+    if (columnQueries[index]?.error || constraintQueries[index]?.error) {
+      failedTableNames.add(tableName);
+      return;
+    }
     columnsByTable[tableName] = columnQueries[index]?.data?.columns ?? [];
     constraintsByTable[tableName] =
       constraintQueries[index]?.data?.constraints ?? [];
@@ -210,18 +201,15 @@ function useSchemaMapCatalog({
     columnsByTable,
     constraintsByTable,
     errorCount: queryErrors.length,
-    isInitialLoading:
-      (tableQueries.some((query) => query.isLoading) ||
-        viewQueries.some((query) => query.isLoading)) &&
-      tables.length === 0 &&
-      views.length === 0,
-    isMetadataLoading:
+    isLoading:
+      tableQueries.some((query) => query.isLoading) ||
+      viewQueries.some((query) => query.isLoading) ||
       columnQueries.some((query) => query.isLoading) ||
       constraintQueries.some((query) => query.isLoading),
     isTruncated:
       tableQueries.some((query) => Boolean(query.data?.nextPageToken)) ||
       viewQueries.some((query) => Boolean(query.data?.nextPageToken)),
-    tables,
+    tables: tables.filter((table) => !failedTableNames.has(table.name)),
     views,
   };
 }
@@ -347,9 +335,6 @@ function TableNode({
   selected: boolean;
 }) {
   const tone = TONE_CLASSES[node.tone];
-  const emptyColumnsLabel = node.columnsLoaded
-    ? "No columns found."
-    : "Select table to load details.";
 
   return (
     <foreignObject
@@ -419,7 +404,7 @@ function TableNode({
             ))
           ) : (
             <span className="block p-3 text-muted-foreground text-xs">
-              {emptyColumnsLabel}
+              No columns found.
             </span>
           )}
           {node.truncatedColumnCount > 0 ? (
@@ -695,9 +680,6 @@ function ExplorerSchemaMap({
   schemas: SchemaSummary[];
 }) {
   const [selectedSchema, setSelectedSchema] = useState(ALL_SCHEMAS);
-  const [metadataSchemaNames, setMetadataSchemaNames] = useState([
-    activeSchemaName,
-  ]);
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
@@ -706,10 +688,7 @@ function ExplorerSchemaMap({
     databaseId,
     enabled,
     instanceId,
-    metadataQuery: deferredQuery,
-    metadataSchemaNames,
     schemas,
-    selectedTableName: selectedTable,
   });
   const filterSchema = selectedSchema || ALL_SCHEMAS;
   const model = buildSchemaMapModel({
@@ -743,12 +722,6 @@ function ExplorerSchemaMap({
           onSchemaChange={(schemaName) => {
             setSelectedSchema(schemaName);
             setSelectedTable(null);
-            if (
-              schemaName !== ALL_SCHEMAS &&
-              !metadataSchemaNames.includes(schemaName)
-            ) {
-              setMetadataSchemaNames((current) => [...current, schemaName]);
-            }
           }}
           onZoomIn={() =>
             setZoom((current) => Math.min(MAX_ZOOM, current + ZOOM_STEP))
@@ -769,7 +742,7 @@ function ExplorerSchemaMap({
             </AlertDescription>
           </Alert>
         ) : null}
-        {catalog.isInitialLoading ? (
+        {catalog.isLoading ? (
           <div
             aria-label="Loading schema map"
             className="flex min-h-[26rem] items-center justify-center text-muted-foreground"
@@ -787,11 +760,6 @@ function ExplorerSchemaMap({
             zoom={zoom}
           />
         )}
-        {catalog.isMetadataLoading ? (
-          <p className="border-t px-3 py-2 text-muted-foreground text-xs">
-            Loading columns and foreign keys…
-          </p>
-        ) : null}
       </div>
     </section>
   );

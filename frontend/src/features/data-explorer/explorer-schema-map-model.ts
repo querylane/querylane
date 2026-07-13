@@ -58,7 +58,6 @@ interface SchemaMapColumn {
 
 interface SchemaMapNode {
   columns: SchemaMapColumn[];
-  columnsLoaded: boolean;
   height: number;
   id: string;
   kind: "table";
@@ -128,14 +127,6 @@ interface BuildSchemaMapModelInput {
   views: View[];
 }
 
-interface SelectSchemaMapMetadataTableNamesInput {
-  limit: number;
-  query: string;
-  schemaNames: string[];
-  selectedTableName: string | null;
-  tables: Table[];
-}
-
 type TableInfo = ReturnType<typeof tableInfo>;
 type ViewInfo = ReturnType<typeof viewInfo>;
 
@@ -160,12 +151,7 @@ function buildSchemaMapModel({
     schemaOrder.map((schemaName, index) => [schemaName, schemaToneAt(index)])
   );
   const tableInfos = tables.map((table) =>
-    tableInfo(
-      table,
-      columnsByTable[table.name] ?? [],
-      constraintsByTable,
-      Object.hasOwn(columnsByTable, table.name)
-    )
+    tableInfo(table, columnsByTable[table.name] ?? [], constraintsByTable)
   );
   const viewInfos = views.map(viewInfo);
   const schemaOptions = buildSchemaOptions(schemaOrder, tableInfos);
@@ -249,8 +235,7 @@ function buildSchemaOptions(
 function tableInfo(
   table: Table,
   columns: Column[],
-  constraintsByTable: Record<string, TableConstraint[]>,
-  columnsLoaded: boolean
+  constraintsByTable: Record<string, TableConstraint[]>
 ) {
   const qualified = tableSafeQualifiedName(table.name);
   const foreignKeyColumns = new Set(
@@ -268,7 +253,6 @@ function tableInfo(
     }));
   return {
     columns,
-    columnsLoaded,
     displayName: table.displayName || qualified.table,
     id: table.name,
     rowLabel: rowLabel(table.rowCount),
@@ -290,40 +274,6 @@ function viewInfo(view: View) {
 
 function schemaNameForTable(table: Table): string {
   return tableSafeQualifiedName(table.name).schema;
-}
-
-function selectSchemaMapMetadataTableNames({
-  limit,
-  query,
-  schemaNames,
-  selectedTableName,
-  tables,
-}: SelectSchemaMapMetadataTableNamesInput): string[] {
-  const selectedSchemas = new Set(schemaNames);
-  const normalizedQuery = query.trim().toLowerCase();
-  const tableNames: string[] = [];
-
-  for (const table of tables) {
-    const qualified = tableSafeQualifiedName(table.name);
-    const isSelected = table.name === selectedTableName;
-    if (isSelected) {
-      tableNames.push(table.name);
-      continue;
-    }
-    if (!selectedSchemas.has(qualified.schema)) {
-      continue;
-    }
-    const displayName = table.displayName || qualified.table;
-    const matchesQuery =
-      !normalizedQuery ||
-      displayName.toLowerCase().includes(normalizedQuery) ||
-      qualified.schema.toLowerCase().includes(normalizedQuery);
-    if (matchesQuery && tableNames.length < limit) {
-      tableNames.push(table.name);
-    }
-  }
-
-  return tableNames;
 }
 
 function viewSchemaName(view: View): string {
@@ -677,7 +627,6 @@ function tableNode({
 }): SchemaMapNode {
   return {
     columns: table.visibleColumns,
-    columnsLoaded: table.columnsLoaded,
     height,
     id: table.id,
     kind: "table",
@@ -841,9 +790,4 @@ export type {
   SchemaMapTone,
   SchemaMapViewNode,
 };
-export {
-  buildSchemaMapModel,
-  NODE_WIDTH,
-  selectSchemaMapMetadataTableNames,
-  VIEW_NODE_WIDTH,
-};
+export { buildSchemaMapModel, NODE_WIDTH, VIEW_NODE_WIDTH };
