@@ -2,9 +2,7 @@ import type { ColumnRow } from "@/features/data-explorer/explorer-column-rows";
 import { normalizeIndexMethod } from "@/features/data-explorer/postgres-index-method-display";
 import { describePostgresType } from "@/features/data-explorer/postgres-type-display";
 import type {
-  ConstraintType,
   PolicyMode,
-  TableConstraint,
   TableIndex,
   TablePolicy,
   TableTrigger,
@@ -95,16 +93,6 @@ function filterColumnDetailRows(
   );
 }
 
-function filterConstraintsByKind(
-  constraints: TableConstraint[],
-  kinds: ConstraintType[]
-): TableConstraint[] {
-  if (kinds.length === 0) {
-    return constraints;
-  }
-  return constraints.filter((constraint) => kinds.includes(constraint.type));
-}
-
 function filterIndexesByMethod(
   indexes: TableIndex[],
   methods: string[]
@@ -159,7 +147,6 @@ export {
   columnNullability,
   columnTypeCategory,
   filterColumnDetailRows,
-  filterConstraintsByKind,
   filterIndexesByMethod,
   filterPoliciesByMode,
   filterTableTriggers,

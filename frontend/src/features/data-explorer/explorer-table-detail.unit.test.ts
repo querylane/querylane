@@ -3,7 +3,6 @@ import { describe, expect, test } from "vitest";
 import { deriveColumnRows } from "@/features/data-explorer/explorer-column-rows";
 import {
   filterColumnDetailRows,
-  filterConstraintsByKind,
   filterIndexesByMethod,
   filterPoliciesByMode,
   filterTriggersByState,
@@ -233,7 +232,7 @@ describe("table detail facet filters", () => {
     ).toEqual(["notes"]);
   });
 
-  test("filters metadata rows by index method, constraint kind, policy mode, and trigger state", () => {
+  test("filters metadata rows by index method, policy mode, and trigger state", () => {
     expect(
       filterIndexesByMethod(
         [
@@ -249,22 +248,6 @@ describe("table detail facet filters", () => {
         ["gin"]
       ).map((index) => index.indexName)
     ).toEqual(["idx_gin"]);
-
-    expect(
-      filterConstraintsByKind(
-        [
-          create(TableConstraintSchema, {
-            constraintName: "orders_check",
-            type: ConstraintType.CHECK,
-          }),
-          create(TableConstraintSchema, {
-            constraintName: "orders_pk",
-            type: ConstraintType.PRIMARY_KEY,
-          }),
-        ],
-        [ConstraintType.CHECK]
-      ).map((constraint) => constraint.constraintName)
-    ).toEqual(["orders_check"]);
 
     expect(
       filterPoliciesByMode(
