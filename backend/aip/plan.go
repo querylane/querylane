@@ -16,16 +16,15 @@ type Plan struct {
 	OrderBy      OrderBy
 	CursorValues []any
 
-	// parsedFilter is the validated filter consumed by the backend compilers
+	// parsedFilter is the validated filter consumed by the SQL compiler
 	// via ParsedFilter. It is nil when no fields opt into filtering or the
 	// filter is empty. The exported Filter string is retained for page-token
 	// hashing.
 	parsedFilter FilterExpr
 }
 
-// ParsedFilter returns the validated filter expression tree for backend
-// compilers (aip/jet, aip/rawsql) to translate into predicates. Nil means no
-// filtering.
+// ParsedFilter returns the validated filter expression tree for aip/rawsql to
+// translate into a predicate. Nil means no filtering.
 func (p *Plan) ParsedFilter() FilterExpr {
 	return p.parsedFilter
 }

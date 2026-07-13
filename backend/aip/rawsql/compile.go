@@ -65,10 +65,9 @@ func BuildClauses[Model any](schema *Schema[Model], plan *aip.Plan, placeholderS
 
 // buildFilterPredicate compiles a validated filter expression tree into one
 // parameterized, fully parenthesized predicate. Returns "" for a nil tree.
-// Operands are compiled depth-first left-to-right so bound arguments appear
-// in the same order as the jet backend's. Every returned fragment is wrapped
-// in parentheses, so composing it with AND/OR/NOT or the cursor predicate can
-// never change its precedence.
+// Operands are compiled depth-first left-to-right. Every returned fragment is
+// wrapped in parentheses, so composing it with AND/OR/NOT or the cursor
+// predicate can never change its precedence.
 func buildFilterPredicate(b *argBuilder, exprs Exprs, expr aip.FilterExpr) (string, error) {
 	if expr == nil {
 		return "", nil
@@ -153,8 +152,8 @@ func (b *argBuilder) placeholder(value any) string {
 }
 
 // buildKeysetPredicate builds the WHERE fragment that skips past already-seen
-// rows. Mirrors the jet backend: ROW() tuple comparison for uniform-direction
-// orderings, lexicographic OR-chain for mixed ones.
+// rows. It uses ROW() tuple comparison for uniform-direction orderings and a
+// lexicographic OR-chain for mixed ones.
 func buildKeysetPredicate(b *argBuilder, exprs Exprs, order aip.OrderBy, cursorValues []any) (string, error) {
 	if len(cursorValues) == 0 {
 		return "", nil
@@ -198,8 +197,8 @@ func buildKeysetPredicate(b *argBuilder, exprs Exprs, order aip.OrderBy, cursorV
 }
 
 // buildTupleComparison builds a ROW(col1, col2) > ROW($1, $2) predicate for
-// uniform-direction orderings, matching the jet compiler's fast path so both
-// backends produce index-friendly tuple comparisons.
+// uniform-direction orderings so all callers produce index-friendly tuple
+// comparisons.
 func buildTupleComparison(b *argBuilder, exprs Exprs, order aip.OrderBy, cursorValues []any) (string, error) {
 	cols := make([]string, len(order.Fields))
 	placeholders := make([]string, len(cursorValues))
