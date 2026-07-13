@@ -46,8 +46,7 @@ type TokenCodec struct {
 // unknown key, or has the wrong kind for the verifying call.
 var ErrInvalidToken = errors.New("invalid token")
 
-// NewTokenCodec returns a codec backed by the given HMAC key. Use
-// NewRandomTokenCodec for the v1 process-random key path.
+// NewTokenCodec returns a codec backed by the given HMAC key.
 func NewTokenCodec(key []byte) *TokenCodec {
 	if len(key) == 0 {
 		panic("engine: TokenCodec requires a non-empty key") //nolint:forbidigo // programmer error during DI setup
@@ -59,13 +58,9 @@ func NewTokenCodec(key []byte) *TokenCodec {
 	return &TokenCodec{key: cp}
 }
 
-// NewRandomTokenCodec generates a 32-byte random key from crypto/rand and
-// returns a codec bound to it. Tokens signed by this codec become invalid
-// once the process is restarted; callers tolerate that by treating
-// pagination as best-effort across restarts.
-//
-// TODO(table-data): persist the key in the meta DB so tokens survive
-// restart and an explicit rotation operation can be added later.
+// NewRandomTokenCodec returns an ephemeral codec backed by a 32-byte random
+// key. Production callers that share tokens across processes must persist the
+// key and use NewTokenCodec instead.
 func NewRandomTokenCodec() (*TokenCodec, error) {
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {

@@ -79,6 +79,14 @@ database:
 # Config-managed instances can avoid persistence entirely by using
 # password_env/dsn_env below.
 #
+# Querylane also uses this value to encrypt the token-signing key shared by all
+# backend replicas in the meta database. When the value is unset, the signing
+# key is stored as plaintext so zero-config and config-managed installations
+# keep working. Once the signing key is stored encrypted, every replica and
+# restart must provide the same value or startup fails rather than replacing
+# the key and invalidating active tokens. Adding the value later does not
+# automatically re-encrypt an existing plaintext signing key.
+#
 # Notes:
 # - Existing plaintext instance rows remain readable after upgrade, but are not
 #   encrypted until their credentials are re-saved through the API/UI.

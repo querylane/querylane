@@ -478,6 +478,16 @@ CREATE TABLE public.runner_execution_state (
 
 
 --
+-- Name: token_signing_key; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.token_signing_key (
+    id text NOT NULL,
+    material text NOT NULL
+);
+
+
+--
 -- Name: catalog_column catalog_column_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -651,6 +661,14 @@ ALTER TABLE ONLY public.replica
 
 ALTER TABLE ONLY public.runner_execution_state
     ADD CONSTRAINT runner_execution_state_pkey PRIMARY KEY (runner_name, target_name);
+
+
+--
+-- Name: token_signing_key token_signing_key_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.token_signing_key
+    ADD CONSTRAINT token_signing_key_pkey PRIMARY KEY (id);
 
 
 --
