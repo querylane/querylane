@@ -330,33 +330,31 @@ export function InstanceRolesPage({
           onValueChange={handleRolesTabChange}
           value={activeTab}
         >
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-            <TabsList className="shrink-0">
-              <TabsTrigger value="details">Table</TabsTrigger>
-              <TabsTrigger value="map">Access map</TabsTrigger>
-            </TabsList>
-            <div className="flex min-w-0 items-center gap-2 sm:ml-auto">
-              <div className="min-w-0 flex-1 sm:flex-none">
-                <DataTableFilter
-                  onChange={setFilter}
-                  placeholder="Search roles…"
-                  value={filter}
-                />
-              </div>
-              <DataTableFacetedFilter
-                onSelectedValuesChange={(values) =>
-                  handleRoleTypeChange(values.find(isInstanceRolesType))
-                }
-                options={ROLE_TYPE_FILTERS.map((entry) => ({
-                  count: counts[entry.id],
-                  label: entry.label,
-                  value: entry.id,
-                }))}
-                selectedValues={[type].filter(isInstanceRolesType)}
-                singleSelect={true}
-                title="Type"
+          <TabsList>
+            <TabsTrigger value="details">Table</TabsTrigger>
+            <TabsTrigger value="map">Access map</TabsTrigger>
+          </TabsList>
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="min-w-0 flex-1 sm:flex-none">
+              <DataTableFilter
+                onChange={setFilter}
+                placeholder="Search roles…"
+                value={filter}
               />
             </div>
+            <DataTableFacetedFilter
+              onSelectedValuesChange={(values) =>
+                handleRoleTypeChange(values.find(isInstanceRolesType))
+              }
+              options={ROLE_TYPE_FILTERS.map((entry) => ({
+                count: counts[entry.id],
+                label: entry.label,
+                value: entry.id,
+              }))}
+              selectedValues={[type].filter(isInstanceRolesType)}
+              singleSelect={true}
+              title="Type"
+            />
           </div>
           <TabsContent className="mt-4" value="details">
             {rolesDetailsContent}

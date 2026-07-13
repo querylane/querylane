@@ -615,9 +615,15 @@ test("console roles list shows an inline type filter, sortable columns, and role
   await expect
     .element(page.getByRole("tab", { name: "Access map" }))
     .toBeVisible();
+  const tabList = page.getByRole("tablist").element();
   const search = page.getByPlaceholder("Search roles…").element();
   const typeFilter = page.getByRole("button", { name: "Type" }).element();
   await expect.element(typeFilter).toBeVisible();
+  expect(
+    Math.abs(
+      search.getBoundingClientRect().left - tabList.getBoundingClientRect().left
+    )
+  ).toBeLessThanOrEqual(1);
   expect(typeFilter.getBoundingClientRect().left).toBeGreaterThan(
     search.getBoundingClientRect().right
   );
