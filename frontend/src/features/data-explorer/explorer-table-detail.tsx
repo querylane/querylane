@@ -702,7 +702,7 @@ function ColumnNameCell({ row }: { row: ColumnRow }) {
         {fks.length > 0 ? (
           <span aria-hidden="true" title={foreignKeyTitle}>
             <Pill size="sm" tone="blue">
-              Foreign
+              Foreign key
             </Pill>
           </span>
         ) : null}

@@ -1455,7 +1455,7 @@ describe("TableDetail columns tab", () => {
     expect(screen.getByText("Set NULL once delivered")).toBeTruthy();
     expect(screen.getByText("Primary key")).toBeTruthy();
     expect(screen.getByText("Unique")).toBeTruthy();
-    expect(screen.getByText("Foreign")).toBeTruthy();
+    expect(screen.getByText("Foreign key")).toBeTruthy();
     expect(screen.queryByText("PK")).toBeNull();
     expect(screen.queryByText("UQ")).toBeNull();
     expect(screen.queryByText("FK")).toBeNull();

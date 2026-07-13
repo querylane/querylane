@@ -1607,7 +1607,7 @@ test("data explorer table columns match the redesign inventory", async () => {
     .element(page.getByRole("cell", { name: ID_PRIMARY_KEY_CELL_RE }))
     .toBeVisible();
   await expect.element(page.getByText("Unique")).toBeVisible();
-  await expect.element(page.getByText("Foreign")).toBeVisible();
+  await expect.element(page.getByText("Foreign key")).toBeVisible();
   await expect.element(page.getByText("Index")).toBeVisible();
   await expect
     .element(page.getByText("Human-readable booking reference"))
@@ -1758,6 +1758,12 @@ test("data explorer table columns show generated and identity metadata", async (
   await expect.element(page.getByText("BY DEFAULT")).toBeVisible();
   await expect.element(page.getByText("GENERATED")).toBeVisible();
   await expect.element(page.getByText("AS lower(email)")).toBeVisible();
+
+  const badgeRow = page.getByText("IDENTITY").element().parentElement;
+  if (!badgeRow) {
+    throw new Error("Expected identity badges to render in a row.");
+  }
+  expect(badgeRow.scrollWidth).toBeLessThanOrEqual(badgeRow.clientWidth);
 });
 
 test("data explorer table tabs stay visible when column metadata overflows", async () => {
