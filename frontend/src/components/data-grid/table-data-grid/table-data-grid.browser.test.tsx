@@ -779,11 +779,18 @@ test("foreign key reference popover keeps the source table visible", async () =>
   expect(
     colorContrastRatio(carrierLinkStyle.color, frameStyle.backgroundColor)
   ).toBeGreaterThanOrEqual(4.5);
+  await carrierLink.hover();
+  const carrierLinkHoverStyle = getComputedStyle(carrierLink.element());
+  expect(carrierLinkHoverStyle.opacity).toBe("1");
+  expect(
+    colorContrastRatio(carrierLinkHoverStyle.color, frameStyle.backgroundColor)
+  ).toBeGreaterThanOrEqual(4.5);
 
   const preview = page.getByRole("dialog", {
     name: "public.carriers",
   });
   await expect.element(preview).toBeVisible();
+  await preview.hover();
   expect(preview.element().dataset["slot"]).toBe("popover-content");
   expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull();
   await expect.element(carrierLink).toBeVisible();

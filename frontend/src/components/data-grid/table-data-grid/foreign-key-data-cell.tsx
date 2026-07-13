@@ -1,6 +1,5 @@
 import { create } from "@bufbuild/protobuf";
 import { useState } from "react";
-import { DataCell } from "@/components/data-grid/table-data-grid/data-cell";
 import type {
   ForeignKeyReferencePreview,
   RenderOpenReferencedTableLink,
@@ -60,6 +59,7 @@ function ForeignKeyReferenceQueryState({
   columns,
   error,
   isError,
+  isPaused,
   isPending,
   name,
   onRetry,
@@ -69,12 +69,27 @@ function ForeignKeyReferenceQueryState({
   columns: TableResultColumn[];
   error: unknown;
   isError: boolean;
+  isPaused: boolean;
   isPending: boolean;
   name: string;
   onRetry: () => Promise<unknown>;
   pkColumnSet: Set<string>;
   row: { values: TableCell[] } | undefined;
 }) {
+  if (isPaused) {
+    return (
+      <div
+        aria-label="Waiting for connection"
+        className="space-y-1 py-4 text-center"
+        role="status"
+      >
+        <p className="font-medium">Waiting for connection</p>
+        <p className="text-muted-foreground text-sm">
+          The referenced row will load when the connection returns.
+        </p>
+      </div>
+    );
+  }
   if (isPending) {
     return (
       <div
@@ -199,6 +214,7 @@ function ForeignKeyReferenceContent({
           columns={resultSet?.columns ?? []}
           error={rowsQuery.error}
           isError={rowsQuery.isError}
+          isPaused={rowsQuery.isPending && rowsQuery.fetchStatus === "paused"}
           isPending={rowsQuery.isPending}
           name={name}
           onRetry={handleRetry}
@@ -229,9 +245,6 @@ function ForeignKeyDataCell({
 }) {
   const [open, setOpen] = useState(false);
   const formatted = formatTableCell(cell, column);
-  if (formatted.isNull || formatted.display === "") {
-    return <DataCell cell={cell} column={column} />;
-  }
 
   return (
     <Popover onOpenChange={setOpen} open={open}>

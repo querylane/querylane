@@ -64,6 +64,9 @@ function CellContextMenu({
         event.preventDefault();
         closeAndRestoreFocus();
         return;
+      case "Tab":
+        onClose();
+        return;
       default:
         return;
     }

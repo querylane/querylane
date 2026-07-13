@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildForeignKeyReferencePreview } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import { ROW_KEY_FIELD } from "@/components/data-grid/table-data-grid/grid-row-model";
 import {
+  type TableCell,
   TableCellSchema,
   TableResultColumnSchema,
   type TableValue,
@@ -89,5 +90,37 @@ describe("foreign key reference state", () => {
         "public.accounts"
       )
     ).toBeUndefined();
+  });
+
+  it("degrades an unknown runtime value kind to a plain cell", () => {
+    const column = create(TableResultColumnSchema, {
+      columnName: "account_id",
+      dataType: DataType.STRING,
+      rawType: "text",
+    });
+    const cell = {
+      truncated: false,
+      value: {
+        kind: { case: "futureValue", value: "tenant-a" },
+      },
+    } as unknown as TableCell;
+
+    let preview: ReturnType<typeof buildForeignKeyReferencePreview>;
+    expect(() => {
+      preview = buildForeignKeyReferencePreview({
+        reference: {
+          sourceColumns: ["account_id"],
+          targetColumns: ["id"],
+          targetTableName: TARGET_TABLE,
+        },
+        resultColumns: [column],
+        row: {
+          [ROW_KEY_FIELD]: "event-1",
+          cells: new Map([["account_id", cell]]),
+        },
+        sourceColumn: "account_id",
+      });
+    }).not.toThrow();
+    expect(preview).toBeUndefined();
   });
 });

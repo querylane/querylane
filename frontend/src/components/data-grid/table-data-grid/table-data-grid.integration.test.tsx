@@ -793,8 +793,9 @@ describe("TableDataGrid foreign key references", () => {
     targetQueryState = "paused";
     await user.click(trigger);
     expect(
-      screen.getByRole("status", { name: "Loading referenced row" })
+      screen.getByRole("status", { name: "Waiting for connection" })
     ).toBeTruthy();
+    expect(screen.getByText("Waiting for connection")).toBeTruthy();
     expect(screen.queryByText("Referenced row not found.")).toBeNull();
     await user.keyboard("{Escape}");
 
@@ -880,6 +881,25 @@ describe("TableDataGrid row interactions", () => {
     expect(document.activeElement).toBe(items[2]);
     await user.keyboard("{Escape}");
     expect(document.activeElement).toBe(invokingCell);
+    expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull();
+  });
+
+  it("closes the cell context menu when focus tabs away", async () => {
+    const user = userEvent.setup();
+    seedRowsQuery(1);
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+    openCellContextMenu("email", 0);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("menuitem", { name: "Copy cell" })
+      )
+    );
+
+    await user.tab();
+
     expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull();
   });
 

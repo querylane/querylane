@@ -36,8 +36,8 @@ interface ForeignKeyReferencePreview {
   targetLabel: string;
 }
 
-function assertNeverTableValueKind(value: never): never {
-  throw new Error(`Unhandled TableValue kind: ${String(value)}`);
+function ignoreUnknownTableValueKind(_value: never): undefined {
+  return;
 }
 
 function tableCellValueToFilterValue(
@@ -68,7 +68,7 @@ function tableCellValueToFilterValue(
     case "timestampValue":
       return cell.value;
     default:
-      return assertNeverTableValueKind(value);
+      return ignoreUnknownTableValueKind(value);
   }
 }
 
