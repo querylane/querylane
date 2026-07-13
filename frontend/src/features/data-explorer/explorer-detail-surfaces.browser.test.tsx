@@ -1149,6 +1149,32 @@ test("data explorer schema map does not clip table card decoration", async () =>
   expect(getComputedStyle(cardBoundary).overflow).toBe("visible");
 });
 
+test("data explorer schema map places controls directly after the schema filter", async () => {
+  const catalog = seedSchemaMapVisualCatalog();
+
+  render(
+    <ExplorerSchemaMap
+      activeSchemaName="shipping"
+      databaseId="logistics"
+      enabled={true}
+      instanceId="prod"
+      onSelectTable={() => undefined}
+      schemas={catalog.schemas}
+    />
+  );
+
+  const schemaFilterLocator = page.getByRole("button", {
+    name: SCHEMA_MAP_FILTER_RE,
+  });
+  await expect.element(schemaFilterLocator).toBeVisible();
+  const schemaFilter = schemaFilterLocator.element();
+  expect(
+    schemaFilter.nextElementSibling?.querySelector(
+      'input[aria-label="Find a table"]'
+    )
+  ).not.toBeNull();
+});
+
 test("data explorer schema map surfaces partial catalog failures and truncation", async () => {
   const catalog = seedSchemaMapVisualCatalog();
   schemaMapCatalog.errorMethods = ["ListViews"];

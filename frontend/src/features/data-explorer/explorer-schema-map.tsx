@@ -267,7 +267,6 @@ function SchemaMapToolbar({
         singleSelect={true}
         title="Schema"
       />
-      <div className="hidden h-5 w-px bg-border sm:block" />
       <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
         <div className="relative min-w-48 flex-1 sm:w-72">
           <Search
