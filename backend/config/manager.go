@@ -517,15 +517,9 @@ func (cm *Manager[T]) notifySubscribers(oldCfg, newCfg T) {
 	}
 
 	cm.subscribersMu.RLock()
+	defer cm.subscribersMu.RUnlock()
 
-	subscribers := make([]*changeSubscriber[T], 0, len(cm.subscribers))
 	for _, subscriber := range cm.subscribers {
-		subscribers = append(subscribers, subscriber)
-	}
-
-	cm.subscribersMu.RUnlock()
-
-	for _, subscriber := range subscribers {
 		subscriber.enqueue(oldCfg, newCfg)
 	}
 }

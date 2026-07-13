@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -21,10 +22,9 @@ func (reloadSequenceConfig) Validate() error { return nil }
 func (reloadSequenceConfig) OnLoadingComplete(context.Context) {}
 
 type blockingReloadLoader struct {
-	calls         atomic.Int32
-	firstStarted  chan struct{}
-	releaseFirst  chan struct{}
-	secondStarted chan struct{}
+	calls        atomic.Int32
+	firstStarted chan struct{}
+	releaseFirst chan struct{}
 }
 
 func (loader *blockingReloadLoader) Load(context.Context, ...Source) (reloadSequenceConfig, error) {
@@ -34,10 +34,6 @@ func (loader *blockingReloadLoader) Load(context.Context, ...Source) (reloadSequ
 		<-loader.releaseFirst
 	}
 
-	if call == 2 {
-		close(loader.secondStarted)
-	}
-
 	return reloadSequenceConfig{revision: int(call)}, nil
 }
 
@@ -45,9 +41,8 @@ func TestManager_ReloadsAreSerialized(t *testing.T) {
 	t.Parallel()
 
 	loader := &blockingReloadLoader{
-		firstStarted:  make(chan struct{}),
-		releaseFirst:  make(chan struct{}),
-		secondStarted: make(chan struct{}),
+		firstStarted: make(chan struct{}),
+		releaseFirst: make(chan struct{}),
 	}
 	manager := &Manager[reloadSequenceConfig]{
 		loader:        loader,
@@ -72,21 +67,77 @@ func TestManager_ReloadsAreSerialized(t *testing.T) {
 
 	requireTestSignal(t, loader.firstStarted, "first reload did not start")
 
-	secondErr := reload()
-	secondOvertookFirst := false
+	secondAttempted := make(chan struct{})
+	secondErr := make(chan error, 1)
 
-	select {
-	case <-loader.secondStarted:
-		secondOvertookFirst = true
-	case <-time.After(100 * time.Millisecond):
+	go func() {
+		close(secondAttempted)
+
+		secondErr <- manager.reloadConfiguration(context.Background())
+	}()
+
+	requireTestSignal(t, secondAttempted, "second reload did not reach the manager")
+
+	reloadLockHeld := !manager.reloadMu.TryLock()
+	if !reloadLockHeld {
+		manager.reloadMu.Unlock()
 	}
 
 	close(loader.releaseFirst)
 	requireTestError(t, firstErr)
 	requireTestError(t, secondErr)
 
-	assert.False(t, secondOvertookFirst, "second reload must wait for the first transition")
+	assert.True(t, reloadLockHeld, "reload lock must cover the full configuration transition")
 	assert.Equal(t, 2, manager.CurrentConfig().revision)
+}
+
+func TestChangeSubscriber_QueuesChangesDuringCallback(t *testing.T) {
+	t.Parallel()
+
+	firstStarted := make(chan struct{})
+	releaseFirst := make(chan struct{})
+	secondFinished := make(chan struct{})
+
+	var (
+		mu    sync.Mutex
+		trace []int
+	)
+
+	subscriber := &changeSubscriber[int]{callback: func(_, newConfig int) {
+		if newConfig == 1 {
+			close(firstStarted)
+			<-releaseFirst
+		}
+
+		mu.Lock()
+
+		trace = append(trace, newConfig)
+		mu.Unlock()
+
+		if newConfig == 2 {
+			close(secondFinished)
+		}
+	}}
+
+	subscriber.enqueue(0, 1)
+	requireTestSignal(t, firstStarted, "first notification did not start")
+	subscriber.enqueue(1, 2)
+
+	subscriber.mu.Lock()
+	dispatching := subscriber.dispatching
+	pending := append([]configChange[int](nil), subscriber.pending...)
+	subscriber.mu.Unlock()
+
+	assert.True(t, dispatching)
+	require.Len(t, pending, 1)
+	assert.Equal(t, configChange[int]{oldConfig: 1, newConfig: 2}, pending[0])
+
+	close(releaseFirst)
+	requireTestSignal(t, secondFinished, "second notification did not finish")
+
+	mu.Lock()
+	assert.Equal(t, []int{1, 2}, trace)
+	mu.Unlock()
 }
 
 func TestChangeSubscribersRunIndependently(t *testing.T) {

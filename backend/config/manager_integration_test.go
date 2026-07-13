@@ -390,19 +390,10 @@ func TestManager_ChangeNotificationsAreDeliveredSequentially(t *testing.T) {
 	secondErr := update("second-change")
 	waitForUpdate(secondErr)
 
-	secondOvertookFirst := false
-
-	select {
-	case <-secondStarted:
-		secondOvertookFirst = true
-	case <-time.After(100 * time.Millisecond):
-	}
-
 	close(releaseFirst)
 	waitForSignal(firstFinished, "timed out waiting for first notification to finish")
 	waitForSignal(secondStarted, "timed out waiting for second notification")
 
-	assert.False(t, secondOvertookFirst, "second notification must wait for the first callback")
 	assert.Equal(t, []string{"first-change", "second-change"}, notifications)
 }
 
