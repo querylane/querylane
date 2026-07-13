@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 type SqlCodeBlockProps = {
   className?: string;
   sql: string;
+  wrap?: boolean;
 };
 
 type ShikiTokenStyle = CSSProperties & {
@@ -55,14 +56,21 @@ function tokenStyle(token: ThemedTokenWithVariants): ShikiTokenStyle | undefined
   return style;
 }
 
-export function SqlCodeBlock({ className, sql: sqlText }: SqlCodeBlockProps) {
+export function SqlCodeBlock({
+  className,
+  sql: sqlText,
+  wrap = false,
+}: SqlCodeBlockProps) {
   const tokenLines = highlightSql(sqlText);
 
   return (
     <div className="relative min-w-0 max-w-full">
       <pre
         className={cn(
-          "min-w-0 max-w-full overflow-x-auto rounded-md border bg-muted/40 p-3 pr-10 font-mono text-foreground text-xs leading-relaxed",
+          "min-w-0 max-w-full rounded-md border bg-muted/40 p-3 font-mono text-foreground text-xs leading-relaxed",
+          wrap
+            ? "overflow-x-hidden whitespace-pre-wrap break-words pr-14"
+            : "overflow-x-auto pr-10",
           className
         )}
       >

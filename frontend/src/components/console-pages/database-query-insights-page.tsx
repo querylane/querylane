@@ -1,13 +1,7 @@
 "use client";
 
 import { anyUnpack } from "@bufbuild/protobuf/wkt";
-import {
-  ChartNoAxesColumnIncreasing,
-  CircleOff,
-  Filter,
-  Search,
-  X,
-} from "lucide-react";
+import { ChartNoAxesColumnIncreasing, CircleOff, X } from "lucide-react";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { ResourcePageState } from "@/components/console-pages/console-layout";
@@ -21,7 +15,6 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -30,11 +23,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DataTableFilter } from "@/components/ui/data-table";
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import {
   Table,
@@ -48,11 +44,7 @@ import {
   useGetDatabaseQuery,
   useGetDatabaseQueryInsightsQuery,
 } from "@/hooks/api/database";
-import {
-  buildDatabaseName,
-  formatBytes,
-  formatTimestampLabel,
-} from "@/lib/console-resources";
+import { buildDatabaseName, formatBytes } from "@/lib/console-resources";
 import {
   formatInsightInteger,
   formatInsightMs,
@@ -75,6 +67,14 @@ import type {
 
 const CACHE_HIT_WARNING_THRESHOLD = 0.9;
 const QUERY_KIND_FILTERS = ["all", "reads", "writes"] as const;
+
+type QueryKindFilter = (typeof QUERY_KIND_FILTERS)[number];
+
+const QUERY_KIND_FILTER_OPTIONS = [
+  { label: "All queries", value: "all" },
+  { label: "Read queries", value: "reads" },
+  { label: "Write queries", value: "writes" },
+] satisfies { label: string; value: QueryKindFilter }[];
 const LEADING_EXPLAIN_RE = /^EXPLAIN\b\s*(?:\([^)]*\)\s*)?/i;
 const LEADING_EXPLAIN_FLAG_RE = /^(?:(?:ANALYZE|VERBOSE)\b\s*)+/i;
 const WITH_QUERY_RE = /^WITH\b/i;
@@ -89,14 +89,17 @@ const COPY_KEYWORD_RE = /^COPY\b/i;
 const DOLLAR_QUOTE_DELIMITER_RE = /^\$[A-Za-z_0-9]*\$/;
 const SQL_WORD_START_RE = /[A-Za-z_]/;
 const SQL_WORD_RE = /^[A-Za-z_][A-Za-z_0-9$]*/;
-const MEAN_FILTERS = [
-  { label: "Mean: any", value: 0 },
-  { label: "> 5 ms", value: 5 },
-  { label: "> 10 ms", value: 10 },
-  { label: "> 30 ms", value: 30 },
+const MEAN_FILTER_OPTIONS = [
+  { label: "Mean: any", threshold: 0, value: "any" },
+  { label: "Mean > 5 ms", threshold: 5, value: "5" },
+  { label: "Mean > 10 ms", threshold: 10, value: "10" },
+  { label: "Mean > 30 ms", threshold: 30, value: "30" },
 ] as const;
+const MEAN_FILTER_SELECT_ITEMS = MEAN_FILTER_OPTIONS.map(
+  ({ label, value }) => ({ label, value })
+);
 
-type QueryKindFilter = (typeof QUERY_KIND_FILTERS)[number];
+type MeanFilterValue = (typeof MEAN_FILTER_OPTIONS)[number]["value"];
 type QueryClassification = "read" | "write" | "other";
 type QueryInsightMetric = "query_stats" | "table_stats";
 type QueryInsightPartialErrors = Partial<Record<QueryInsightMetric, Status>>;
@@ -110,6 +113,27 @@ interface IndexedQueryRuntimeInsight {
 interface QuerySelection {
   selectionKey: string;
   snapshotSource: QueryRuntimeInsight[] | null;
+}
+
+function isQueryKindFilter(value: string): value is QueryKindFilter {
+  switch (value) {
+    case "all":
+    case "reads":
+    case "writes":
+      return true;
+    default:
+      return false;
+  }
+}
+
+function isMeanFilterValue(value: string): value is MeanFilterValue {
+  return MEAN_FILTER_OPTIONS.some((filter) => filter.value === value);
+}
+
+function meanFilterThreshold(value: MeanFilterValue) {
+  return (
+    MEAN_FILTER_OPTIONS.find((filter) => filter.value === value)?.threshold ?? 0
+  );
 }
 
 function getQueryInsightPartialErrors(partialErrors: Status[]) {
@@ -421,103 +445,71 @@ function MetricUnavailableNotice({
   );
 }
 
-function FilterButton({
-  label,
-  onClick,
-  selected,
-}: {
-  label: string;
-  onClick: () => void;
-  selected: boolean;
-}) {
-  return (
-    <Button
-      aria-pressed={selected}
-      className="h-7 rounded-full px-3 text-xs"
-      onClick={onClick}
-      size="sm"
-      type="button"
-      variant={selected ? "default" : "outline"}
-    >
-      {label}
-    </Button>
-  );
-}
-
 function QueryToolbar({
   kind,
-  meanThreshold,
+  meanFilter,
   onKindChange,
-  onMeanThresholdChange,
+  onMeanFilterChange,
   onSearchChange,
   search,
 }: {
   kind: QueryKindFilter;
-  meanThreshold: number;
+  meanFilter: MeanFilterValue;
   onKindChange: (kind: QueryKindFilter) => void;
-  onMeanThresholdChange: (value: number) => void;
+  onMeanFilterChange: (value: MeanFilterValue) => void;
   onSearchChange: (value: string) => void;
   search: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <InputGroup className="h-8 w-full sm:w-64">
-        <InputGroupAddon>
-          <Search aria-hidden="true" className="size-3.5" />
-        </InputGroupAddon>
-        <InputGroupInput
-          aria-label="Search top queries"
-          className="h-8 text-sm"
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search queries..."
-          type="search"
-          value={search}
-        />
-        {search.trim() ? (
-          <InputGroupAddon align="inline-end">
-            <Button
-              aria-label="Clear query search"
-              onClick={() => onSearchChange("")}
-              size="icon-xs"
-              type="button"
-              variant="ghost"
-            >
-              <X className="size-3" />
-            </Button>
-          </InputGroupAddon>
-        ) : null}
-      </InputGroup>
-      <div className="flex flex-wrap items-center gap-2">
-        <FilterButton
-          label="All"
-          onClick={() => onKindChange("all")}
-          selected={kind === "all"}
-        />
-        <FilterButton
-          label="Reads"
-          onClick={() => onKindChange("reads")}
-          selected={kind === "reads"}
-        />
-        <FilterButton
-          label="Writes"
-          onClick={() => onKindChange("writes")}
-          selected={kind === "writes"}
-        />
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1 text-muted-foreground text-xs">
-          <Filter aria-hidden="true" className="size-3" />
-          Mean
-        </span>
-        {MEAN_FILTERS.map((filter) => (
-          <FilterButton
-            key={filter.value}
-            label={filter.label}
-            onClick={() => onMeanThresholdChange(filter.value)}
-            selected={meanThreshold === filter.value}
-          />
-        ))}
-      </div>
+    <div
+      className="flex min-w-0 flex-wrap items-center justify-start gap-2"
+      data-slot="query-insights-filter-bar"
+    >
+      <DataTableFilter
+        onChange={onSearchChange}
+        placeholder="Search queries..."
+        value={search}
+      />
+      <Select
+        items={QUERY_KIND_FILTER_OPTIONS}
+        onValueChange={(value) => {
+          if (value != null && isQueryKindFilter(value)) {
+            onKindChange(value);
+          }
+        }}
+        value={kind}
+      >
+        <SelectTrigger aria-label="Query type" size="sm">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {QUERY_KIND_FILTER_OPTIONS.map((filter) => (
+            <SelectItem key={filter.value} value={filter.value}>
+              {filter.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        items={MEAN_FILTER_SELECT_ITEMS}
+        onValueChange={(value) => {
+          if (value != null && isMeanFilterValue(value)) {
+            onMeanFilterChange(value);
+          }
+        }}
+        value={meanFilter}
+      >
+        <SelectTrigger aria-label="Mean runtime" size="sm">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {MEAN_FILTER_OPTIONS.map((filter) => (
+            <SelectItem key={filter.value} value={filter.value}>
+              {filter.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -681,12 +673,12 @@ function QueryDetailPanel({
           </div>
         </CardHeader>
         <CardContent className="grid min-w-0 gap-4 py-4">
-          <SqlCodeBlock className="max-h-56" sql={queryInsightLabel(query)} />
+          <SqlCodeBlock
+            className="max-h-56"
+            sql={queryInsightLabel(query)}
+            wrap={true}
+          />
           <QueryStatsGrid query={query} />
-          <div className="rounded-lg bg-muted/50 p-3 text-muted-foreground text-xs leading-relaxed">
-            Statistics are cumulative since PostgreSQL last reset the
-            pg_stat_statements counters.
-          </div>
         </CardContent>
       </CardShell>
     </section>
@@ -708,10 +700,10 @@ function TopQueriesCard({
 }) {
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState<QueryKindFilter>("all");
-  const [meanThreshold, setMeanThreshold] = useState(0);
+  const [meanFilter, setMeanFilter] = useState<MeanFilterValue>("any");
   const queries = filterQueries({
     kind,
-    meanThreshold,
+    meanThreshold: meanFilterThreshold(meanFilter),
     queries: insights.topQueries,
     search,
   });
@@ -723,8 +715,8 @@ function TopQueriesCard({
     setKind(value);
     onSelectQuery(null);
   };
-  const handleMeanThresholdChange = (value: number) => {
-    setMeanThreshold(value);
+  const handleMeanFilterChange = (value: MeanFilterValue) => {
+    setMeanFilter(value);
     onSelectQuery(null);
   };
 
@@ -742,9 +734,9 @@ function TopQueriesCard({
         {insights.queryStatsAvailable ? (
           <QueryToolbar
             kind={kind}
-            meanThreshold={meanThreshold}
+            meanFilter={meanFilter}
             onKindChange={handleKindChange}
-            onMeanThresholdChange={handleMeanThresholdChange}
+            onMeanFilterChange={handleMeanFilterChange}
             onSearchChange={handleSearchChange}
             search={search}
           />
@@ -779,7 +771,7 @@ function SequentialScanHotspotsCard({
       <CardHeader className="py-4">
         <CardTitle>Sequential scan hotspots</CardTitle>
         <CardDescription>
-          Large tables read without an index since stats reset.
+          Large tables read without matching index usage.
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0 pb-2">
@@ -910,12 +902,10 @@ function QueryInsightsEmptyState() {
 
 function QueryInsightsContent({
   insights,
-  observedAtLabel,
   onRetry,
   partialErrors,
 }: {
   insights: DatabaseQueryInsights;
-  observedAtLabel: string;
   onRetry: () => Promise<unknown>;
   partialErrors: QueryInsightPartialErrors;
 }) {
@@ -952,12 +942,6 @@ function QueryInsightsContent({
             From pg_stat_statements and pg_stat_user_tables, read-only
             observability.
           </p>
-        </div>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Badge variant="outline">Since stats reset</Badge>
-          <Badge className="font-mono" variant="secondary">
-            Observed {observedAtLabel}
-          </Badge>
         </div>
       </div>
       <div className="min-w-0 lg:col-start-1">
@@ -1089,7 +1073,6 @@ function BackendDatabaseQueryInsightsPage({
   const partialErrors = getQueryInsightPartialErrors(
     queryInsightsQuery.data?.partialErrors ?? []
   );
-  const observedAtLabel = formatTimestampLabel(insights?.observedAt);
   const handleRetryQueryInsights = () => queryInsightsQuery.refetch();
   let pageContent: ReactNode;
 
@@ -1105,7 +1088,6 @@ function BackendDatabaseQueryInsightsPage({
         <QueryInsightsContent
           insights={insights}
           key={databaseName}
-          observedAtLabel={observedAtLabel}
           onRetry={handleRetryQueryInsights}
           partialErrors={partialErrors}
         />

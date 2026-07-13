@@ -63,6 +63,8 @@ const COPY_TO_QUERY_BUTTON_RE = /COPY events TO STDOUT/i;
 const COPY_FROM_QUERY_BUTTON_RE = /COPY events FROM STDIN/i;
 const COPY_SELECT_TO_QUERY_BUTTON_RE =
   /COPY \(SELECT \* FROM events\) TO STDOUT/i;
+const OBSERVED_TIMESTAMP_RE = /Observed/;
+const CUMULATIVE_STATS_NOTE_RE = /Statistics are cumulative/;
 const COPY_TO_PATH_WITH_FROM_BUTTON_RE =
   /COPY events TO '\/tmp\/from\/archive\.csv'/i;
 const COPY_FROM_PROGRAM_WITH_TO_BUTTON_RE =
@@ -790,7 +792,8 @@ describe("backend database overview", () => {
       })
     ).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Writes" }));
+    await user.click(screen.getByRole("combobox", { name: "Query type" }));
+    await user.click(screen.getByRole("option", { name: "Write queries" }));
 
     expect(
       screen.queryByRole("button", {
@@ -814,6 +817,18 @@ describe("backend database overview", () => {
     expect(within(detail).getByText("queryid 456")).toBeTruthy();
     expect(within(detail).getByText("21")).toBeTruthy();
     expect(within(detail).getByText("12 ms")).toBeTruthy();
+    expect(screen.queryByText("Since stats reset")).toBeNull();
+    expect(screen.queryByText(OBSERVED_TIMESTAMP_RE)).toBeNull();
+    expect(within(detail).queryByText(CUMULATIVE_STATS_NOTE_RE)).toBeNull();
+    expect(
+      within(detail).getByText(
+        (_content, element) =>
+          element?.tagName.toLowerCase() === "pre" &&
+          element.textContent?.includes(
+            "UPDATE events SET processed_at = now()"
+          ) === true
+      ).className
+    ).toContain("whitespace-pre-wrap");
   });
 
   test("navigates largest objects and schemas with stable explorer params", async () => {
@@ -925,7 +940,8 @@ describe("backend database query insights page", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: "Writes" }));
+    await user.click(screen.getByRole("combobox", { name: "Query type" }));
+    await user.click(screen.getByRole("option", { name: "Write queries" }));
 
     expect(
       screen.getByRole("button", { name: WITH_UPDATE_QUERY_BUTTON_RE })
@@ -957,7 +973,8 @@ describe("backend database query insights page", () => {
       screen.queryByRole("button", { name: "Query text unavailable" })
     ).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Reads" }));
+    await user.click(screen.getByRole("combobox", { name: "Query type" }));
+    await user.click(screen.getByRole("option", { name: "Read queries" }));
 
     expect(
       screen.getByRole("button", { name: TABLE_EVENTS_QUERY_BUTTON_RE })
@@ -1164,7 +1181,7 @@ describe("database query insights resilience", () => {
     expect(within(freshDetail).getByText("queryid 123")).toBeTruthy();
   });
 
-  test("filters query insights by search text and mean runtime", async () => {
+  test("filters query insights with table-style search and select dropdowns", async () => {
     const user = userEvent.setup();
     state.queryInsightsQuery = {
       data: queryInsightsResponseWithSearchableQueries(),
@@ -1177,10 +1194,44 @@ describe("database query insights resilience", () => {
       />
     );
 
-    await user.type(
-      screen.getByRole("searchbox", { name: "Search top queries" }),
-      "update"
+    const searchInput = screen.getByRole("textbox", {
+      name: "Search queries...",
+    });
+    const filterBar = searchInput.closest(
+      '[data-slot="query-insights-filter-bar"]'
     );
+    if (!(filterBar instanceof HTMLElement)) {
+      throw new Error("Missing query insights filter bar");
+    }
+
+    expect(filterBar.className).toContain("justify-start");
+    expect(filterBar.firstElementChild?.contains(searchInput)).toBe(true);
+    expect(
+      within(filterBar).getByRole("combobox", { name: "Query type" })
+        .textContent
+    ).toContain("All queries");
+    expect(
+      within(filterBar).getByRole("combobox", { name: "Mean runtime" })
+        .textContent
+    ).toContain("Mean: any");
+    expect(
+      within(filterBar).queryByRole("button", { name: "Reads" })
+    ).toBeNull();
+
+    await user.type(searchInput, "update");
+
+    expect(
+      screen.getByRole("button", { name: UPDATE_EVENTS_QUERY_BUTTON_RE })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: SELECT_EVENTS_QUERY_BUTTON_RE })
+    ).toBeNull();
+
+    await user.clear(searchInput);
+    await user.click(
+      within(filterBar).getByRole("combobox", { name: "Query type" })
+    );
+    await user.click(screen.getByRole("option", { name: "Write queries" }));
 
     expect(
       screen.getByRole("button", { name: UPDATE_EVENTS_QUERY_BUTTON_RE })
@@ -1190,9 +1241,13 @@ describe("database query insights resilience", () => {
     ).toBeNull();
 
     await user.click(
-      screen.getByRole("button", { name: "Clear query search" })
+      within(filterBar).getByRole("combobox", { name: "Query type" })
     );
-    await user.click(screen.getByRole("button", { name: "> 30 ms" }));
+    await user.click(screen.getByRole("option", { name: "All queries" }));
+    await user.click(
+      within(filterBar).getByRole("combobox", { name: "Mean runtime" })
+    );
+    await user.click(screen.getByRole("option", { name: "Mean > 30 ms" }));
 
     expect(
       screen.getByRole("button", { name: SLOW_COUNT_QUERY_BUTTON_RE })
@@ -1246,7 +1301,7 @@ describe("database query insights resilience", () => {
     );
     expect(screen.getByText(QUERY_STATS_UNAVAILABLE_RE)).toBeTruthy();
     expect(
-      screen.queryByRole("searchbox", { name: "Search top queries" })
+      screen.queryByRole("textbox", { name: "Search queries..." })
     ).toBeNull();
 
     state.queryInsightsQuery = {
