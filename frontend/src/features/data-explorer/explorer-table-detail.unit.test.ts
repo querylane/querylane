@@ -11,6 +11,8 @@ import {
 import {
   ColumnSchema,
   ConstraintType,
+  DataType,
+  IdentityGeneration,
   PolicyMode,
   TableConstraintSchema,
   TableIndexSchema,
@@ -139,6 +141,96 @@ describe("table detail facet filters", () => {
     expect(filterColumnDetailRows(rows, { typeCategories: ["JSON"] })).toEqual([
       rows[1],
     ]);
+  });
+
+  test("filters columns by unique, index, nullability, default, and generation", () => {
+    const rows = deriveColumnRows(
+      [
+        create(ColumnSchema, {
+          columnName: "id",
+          dataType: DataType.INTEGER,
+          identityGeneration: IdentityGeneration.BY_DEFAULT,
+          isIdentity: true,
+          isPrimaryKey: true,
+          rawType: "int8",
+        }),
+        create(ColumnSchema, {
+          columnName: "reference",
+          dataType: DataType.STRING,
+          isUnique: true,
+          rawType: "text",
+        }),
+        create(ColumnSchema, {
+          columnName: "status",
+          dataType: DataType.STRING,
+          defaultValue: "'pending'::text",
+          rawType: "text",
+        }),
+        create(ColumnSchema, {
+          columnName: "total_with_tax",
+          dataType: DataType.FLOAT,
+          isGenerated: true,
+          rawType: "numeric(12,2)",
+        }),
+        create(ColumnSchema, {
+          columnName: "notes",
+          dataType: DataType.STRING,
+          isNullable: true,
+          rawType: "text",
+        }),
+      ],
+      [],
+      [
+        create(TableIndexSchema, {
+          indexName: "orders_reference_key",
+          isUnique: true,
+          keyColumns: ["reference"],
+        }),
+        create(TableIndexSchema, {
+          indexName: "orders_status_index",
+          keyColumns: ["status"],
+        }),
+      ]
+    );
+
+    expect(
+      filterColumnDetailRows(rows, { keyKinds: ["unique"] }).map(
+        (row) => row.column.columnName
+      )
+    ).toEqual(["reference"]);
+    expect(
+      filterColumnDetailRows(rows, { keyKinds: ["index"] }).map(
+        (row) => row.column.columnName
+      )
+    ).toEqual(["status"]);
+    expect(
+      filterColumnDetailRows(rows, { nullability: ["nullable"] }).map(
+        (row) => row.column.columnName
+      )
+    ).toEqual(["notes"]);
+    expect(
+      filterColumnDetailRows(rows, { defaultKinds: ["has-default"] }).map(
+        (row) => row.column.columnName
+      )
+    ).toEqual(["status"]);
+    expect(
+      filterColumnDetailRows(rows, { generationKinds: ["identity"] }).map(
+        (row) => row.column.columnName
+      )
+    ).toEqual(["id"]);
+    expect(
+      filterColumnDetailRows(rows, { generationKinds: ["generated"] }).map(
+        (row) => row.column.columnName
+      )
+    ).toEqual(["total_with_tax"]);
+    expect(
+      filterColumnDetailRows(rows, {
+        defaultKinds: ["no-default"],
+        generationKinds: ["regular"],
+        nullability: ["nullable"],
+        typeCategories: ["Text"],
+      }).map((row) => row.column.columnName)
+    ).toEqual(["notes"]);
   });
 
   test("filters metadata rows by index method, constraint kind, policy mode, and trigger state", () => {

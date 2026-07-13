@@ -57,8 +57,8 @@ import {
   type FacetedFilterOption,
 } from "@/components/ui/data-table-faceted-filter";
 import { Input } from "@/components/ui/input";
-import { RefreshControl } from "@/components/ui/refresh-control";
 import { Progress } from "@/components/ui/progress";
+import { RefreshControl } from "@/components/ui/refresh-control";
 import {
   Select,
   SelectContent,
