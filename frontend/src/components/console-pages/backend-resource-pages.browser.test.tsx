@@ -91,6 +91,15 @@ const state = vi.hoisted(() => ({
         totalConnections: number;
         waitingForLockConnections: number;
       };
+      replication?: {
+        attachedReplicas: number;
+        maxReplicationLagBytes: bigint;
+        role: ServerInfo_ReplicationRole;
+        status: number;
+        streamingReplicas: number;
+        summary: string;
+        synchronousReplicas: number;
+      };
     };
     partialErrors?: unknown[];
   }>,
@@ -152,6 +161,15 @@ function defaultHealthResponse() {
         totalConnections: 74,
         utilizationRatio: 0.74,
         waitingForLockConnections: 0,
+      },
+      replication: {
+        attachedReplicas: 2,
+        maxReplicationLagBytes: 86_000_000n,
+        role: ServerInfo_ReplicationRole.PRIMARY,
+        status: 1,
+        streamingReplicas: 2,
+        summary: "primary with 2 attached replicas",
+        synchronousReplicas: 0,
       },
     },
     partialErrors: [],
@@ -764,9 +782,37 @@ test("backend instance overview shows live metrics and database catalog together
     .element(page.getByText("Production Analytics Writer"))
     .toBeVisible();
   await expect
-    .element(page.getByText("Primary", { exact: true }))
+    .element(
+      page
+        .getByRole("region", { name: "Replication overview" })
+        .getByText("Primary", { exact: true })
+    )
     .toBeVisible();
   await expect.element(page.getByText("74")).toBeVisible();
+  await expect
+    .element(
+      page
+        .getByRole("region", { name: "Replication overview" })
+        .getByText("Replication", { exact: true })
+    )
+    .toBeVisible();
+  await expect
+    .element(
+      page
+        .getByRole("region", { name: "Replication overview" })
+        .getByText("Streaming replicas")
+    )
+    .toBeVisible();
+  await expect
+    .element(
+      page
+        .getByRole("region", { name: "Replication overview" })
+        .getByText("primary with 2 attached replicas")
+    )
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("region", { name: "Health checks" }))
+    .toBeVisible();
   await expect
     .element(page.getByPlaceholder("Search databases..."))
     .toBeVisible();
@@ -780,9 +826,21 @@ test("backend instance overview shows live metrics and database catalog together
     .element(page.getByRole("button", { exact: true, name: "Owner" }))
     .toBeVisible();
   await expect.element(page.getByText("customer_events")).toBeVisible();
+  const healthTop = page
+    .getByRole("region", { name: "Health checks" })
+    .element()
+    .getBoundingClientRect().top;
+  const replicationTop = page
+    .getByRole("region", { name: "Replication overview" })
+    .element()
+    .getBoundingClientRect().top;
+  expect(healthTop).toBeLessThan(replicationTop);
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-instance-overview"
   );
+  await expect(
+    page.getByRole("region", { name: "Replication overview" })
+  ).toMatchScreenshot("backend-instance-overview-replication");
 });
 
 test("backend instance activity matches the live sessions redesign", async () => {
