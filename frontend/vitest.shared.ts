@@ -50,6 +50,8 @@ export const VITEST_BROWSER_OPTIMIZE_DEPS = [
   "@tanstack/react-query",
   "@tanstack/react-router",
   "@tanstack/react-table",
+  "@tanstack/react-table/experimental-worker-plugin",
+  "@testing-library/dom",
   "chrono-node",
   "cmdk",
   "date-fns",

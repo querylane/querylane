@@ -32,6 +32,7 @@
     "changeset:version": "changeset version",
     "changeset:tag": "changeset tag",
     "check": "bun run lint",
+    "benchmark:data-explorer-worker": "NODE_OPTIONS=--disable-warning=DEP0205 TZ=GMT vitest run --config vitest.browser.config.ts --mode benchmark src/features/data-explorer/data-table-worker-benchmark.browser.test.tsx --reporter=verbose --testTimeout=120000",
     "fix": "bun run lint:fix",
     "budget:check": "bun run scripts/check-bundle-budget.ts",
     "perf:check": "bun run scripts/perf-budgets.ts",

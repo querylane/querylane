@@ -12,6 +12,7 @@ bun run perf:lighthouse:public    # one run, upload public Google report links
 bun run test:e2e -- --grep @perf  # mocked task-level Data Explorer budgets
 bun run build:profile             # Rsdoctor route chunk analysis
 bun run doctor:full               # React Doctor full health gate
+bun run benchmark:data-explorer-worker # opt-in TanStack Table worker lab
 ```
 
 Lighthouse HTML and JSON reports are written to `frontend/dist/lighthouse`.
@@ -56,6 +57,19 @@ Current route-level coverage:
 - React health gates: React Doctor changed-file checks in `frontend-ci`.
 
 The Lighthouse command uses three desktop runs and median assertions against a mocked Data Explorer route. The mock API is served only by `scripts/lighthouse-mock-server.ts`; production transport has no public perf-demo flag or fixture branch. Lighthouse uses actual local Chrome timings, not simulated throttling, then writes HTML/JSON reports with performance, accessibility, best practices, SEO, first contentful paint, largest contentful paint, speed index, total blocking time, time to interactive, and cumulative layout shift.
+
+## TanStack Table worker experiment
+
+`bun run benchmark:data-explorer-worker` runs an opt-in Chromium comparison of
+main-thread and experimental Web Worker row models with Data Explorer-shaped
+rows at 10,000, 100,000, and 500,000 rows. It verifies filtering and sorting
+parity, then prints setup time, operation time, maximum animation-frame gap,
+and the worker's compute and round-trip timings as JSON.
+
+The benchmark is not a CI gate and does not add a production route. Querylane's
+table-data grid remains server-paginated, filtered, and sorted; use this lab to
+evaluate future fully client-side inventories that can realistically exceed
+100,000 loaded rows.
 
 ## Current thresholds
 
