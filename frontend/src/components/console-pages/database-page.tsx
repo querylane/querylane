@@ -77,6 +77,22 @@ interface CatalogLoadingColumn {
   label: string;
 }
 
+interface LargestObjectsFilterState {
+  filter: string;
+  kindFilters: string[];
+  ownerFilters: string[];
+  schemaFilters: string[];
+  systemFilters: string[];
+}
+
+const EMPTY_LARGEST_OBJECT_FILTERS: LargestObjectsFilterState = {
+  filter: "",
+  kindFilters: [],
+  ownerFilters: [],
+  schemaFilters: [],
+  systemFilters: [],
+};
+
 const OBJECT_LOADING_COLUMNS: CatalogLoadingColumn[] = [
   { label: "Object" },
   { label: "Kind" },
@@ -462,55 +478,57 @@ function LargestObjectsSection({
   instanceId: string;
   isPending: boolean;
 }) {
-  const [filter, setFilter] = useState("");
-  const [kindFilters, setKindFilters] = useState<string[]>([]);
-  const [ownerFilters, setOwnerFilters] = useState<string[]>([]);
-  const [schemaFilters, setSchemaFilters] = useState<string[]>([]);
-  const [systemFilters, setSystemFilters] = useState<string[]>([]);
+  const [filterState, setFilterState] = useState<LargestObjectsFilterState>(
+    EMPTY_LARGEST_OBJECT_FILTERS
+  );
   const navigate = useNavigate();
   const objects = catalog?.objects ?? [];
   const filteredObjects = filterCatalogObjectsByFacets({
-    kindFilters,
+    kindFilters: filterState.kindFilters,
     objects,
-    ownerFilters,
-    schemaFilters,
-    systemFilters,
+    ownerFilters: filterState.ownerFilters,
+    schemaFilters: filterState.schemaFilters,
+    systemFilters: filterState.systemFilters,
   });
 
   function handleClearAll() {
-    setFilter("");
-    setKindFilters([]);
-    setOwnerFilters([]);
-    setSchemaFilters([]);
-    setSystemFilters([]);
+    setFilterState(EMPTY_LARGEST_OBJECT_FILTERS);
+  }
+
+  function handleFilterChange(filter: string) {
+    setFilterState((current) => ({ ...current, filter }));
   }
 
   const objectFacetFilters = [
     {
       label: "Kind",
-      onChange: setKindFilters,
+      onChange: (kindFilters: string[]) =>
+        setFilterState((current) => ({ ...current, kindFilters })),
       options: presentCatalogObjectKindOptions(objects),
       searchable: false,
-      selected: kindFilters,
+      selected: filterState.kindFilters,
     },
     {
       label: "Schema",
-      onChange: setSchemaFilters,
+      onChange: (schemaFilters: string[]) =>
+        setFilterState((current) => ({ ...current, schemaFilters })),
       options: presentCatalogObjectSchemaOptions(objects),
-      selected: schemaFilters,
+      selected: filterState.schemaFilters,
     },
     {
       label: "Owner",
-      onChange: setOwnerFilters,
+      onChange: (ownerFilters: string[]) =>
+        setFilterState((current) => ({ ...current, ownerFilters })),
       options: presentCatalogObjectOwnerOptions(objects),
-      selected: ownerFilters,
+      selected: filterState.ownerFilters,
     },
     {
       label: "System",
-      onChange: setSystemFilters,
+      onChange: (systemFilters: string[]) =>
+        setFilterState((current) => ({ ...current, systemFilters })),
       options: presentCatalogObjectSystemOptions(objects),
       searchable: false,
-      selected: systemFilters,
+      selected: filterState.systemFilters,
     },
   ] satisfies DataTableFilterFacet[];
   return (
@@ -530,9 +548,9 @@ function LargestObjectsSection({
           dataSlot="largest-object-filter-bar"
           facets={objectFacetFilters}
           onClearAll={handleClearAll}
-          onSearchChange={setFilter}
+          onSearchChange={handleFilterChange}
           searchPlaceholder="Search objects..."
-          searchValue={filter}
+          searchValue={filterState.filter}
         />
       )}
       {isPending ? (
@@ -546,9 +564,9 @@ function LargestObjectsSection({
           data={filteredObjects}
           emptyResourceName="objects"
           filterColumn="object"
-          filterValue={filter}
+          filterValue={filterState.filter}
           initialSorting={[{ desc: true, id: "size" }]}
-          onFilterChange={setFilter}
+          onFilterChange={handleFilterChange}
           onRowClick={(row) => {
             navigate({
               params: { databaseId, instanceId },
