@@ -74,6 +74,20 @@ function FilterToolbarFixture({
 }
 
 describe("data table filter toolbar", () => {
+  it("keeps a default accessible search label when no placeholder is provided", () => {
+    render(
+      <DataTableFilterToolbar
+        facets={[]}
+        onClearAll={() => undefined}
+        onSearchChange={() => undefined}
+        searchValue=""
+      />
+    );
+
+    const search = screen.getByRole("textbox", { name: "Filter..." });
+    expect(search.getAttribute("placeholder")).toBe("Filter...");
+  });
+
   it("renders search first, ordered useful facets, and an active sparse facet", () => {
     render(<FilterToolbarFixture />);
 

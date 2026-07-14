@@ -39,7 +39,7 @@ function DataTableFilterToolbar({
   facets,
   onClearAll,
   onSearchChange,
-  searchPlaceholder,
+  searchPlaceholder = "Filter...",
   searchValue,
 }: DataTableFilterToolbarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
