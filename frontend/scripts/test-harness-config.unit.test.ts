@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import packageJson from "../package.json" with { type: "json" };
 import browserAllConfig from "../vitest.browser.all.config";
@@ -20,6 +22,7 @@ const { scripts } = packageJson;
 const VITEST_BETA_VERSION_PATTERN = /^5\.0\.0-beta\.\d+$/u;
 const PLAYWRIGHT_PRERELEASE_VERSION_PATTERN =
   /^1\.62\.0-(alpha|beta|rc)[\w.-]*$/u;
+const TYPESCRIPT_7_VERSION_PATTERN = /^7\.\d+\.\d+$/u;
 
 function getAllowWrite(api: unknown) {
   if (
@@ -131,6 +134,29 @@ describe("test harness config", () => {
     );
   });
 
+  test("uses stable TypeScript 7", () => {
+    const { devDependencies } = packageJson;
+
+    expect(devDependencies).not.toHaveProperty("@typescript/native-preview");
+    expect(devDependencies.typescript).toMatch(TYPESCRIPT_7_VERSION_PATTERN);
+
+    for (const scriptName of [
+      "type:check",
+      "type:check:ui",
+      "postinstall",
+    ] as const) {
+      expect(scripts[scriptName]).not.toContain("tsgo");
+    }
+
+    const frontendRoot = join(import.meta.dirname, "..");
+    const compilerVersion = execFileSync("bun", ["run", "tsc", "--version"], {
+      cwd: frontendRoot,
+      encoding: "utf8",
+    }).trim();
+
+    expect(compilerVersion).toBe(`Version ${devDependencies.typescript}`);
+  });
+
   test("prebundles direct browser-test dependencies", () => {
     expect([...VITEST_BROWSER_OPTIMIZE_DEPS]).toEqual(
       expect.arrayContaining([
@@ -182,7 +208,6 @@ describe("test harness config", () => {
 
   test("keeps unused registry components out of the app", async () => {
     const { existsSync } = await import("node:fs");
-    const { join } = await import("node:path");
     const unusedUiFiles = [
       "aspect-ratio.tsx",
       "breadcrumb.tsx",

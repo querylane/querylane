@@ -25,7 +25,7 @@ npx opensrc <owner>/<repo>      # GitHub repo (e.g., npx opensrc vercel/ai)
 ## Toolchain
 
 - Use `bun` as package manager (not npm/npx)
-- Use `tsgo` for type checking (not tsc)
+- Use TypeScript 7's `tsc` for type checking
 - Do not install eslint or prettier (this project uses Biome)
 - Do not use `rm -rf` except for: node_modules, dist, .next, build, .cache, .turbo, coverage
 - Do not use `git push --force` (use `--force-with-lease`)
