@@ -1,7 +1,7 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import type { ReactNode } from "react";
 import { expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { SchemaDetail } from "@/features/data-explorer/explorer-schema-detail";
@@ -3109,6 +3109,73 @@ test("data explorer table data tab has a visual baseline", async () => {
 });
 
 test("data explorer table definition tab has a visual baseline", async () => {
+  await page.viewport(1280, 1800);
+  try {
+    seedDefinitionDesignQueries();
+    renderExplorerSurface(
+      <TableDetail
+        databaseId="logistics"
+        initialTab="definition"
+        instanceId="prod"
+        schemaName="audit"
+        table={createProto(TableSchema, {
+          displayName: "change_log",
+          name: "instances/prod/databases/logistics/schemas/audit/tables/change_log",
+          owner: "app_owner",
+          rowCount: 4_200_000n,
+          sizeBytes: 4_187_000_000n,
+          tableType: Table_TableType.BASE_TABLE,
+        })}
+        tableName="change_log"
+      />
+    );
+
+    await expect
+      .element(page.getByRole("heading", { name: "Create table" }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("tab", { name: POLICIES_ONE_TAB_RE }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("tab", { name: TRIGGERS_ONE_TAB_RE }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("heading", { name: "Reproduce locally" }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("heading", { name: "Policies" }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("heading", { name: "Triggers" }))
+      .toBeVisible();
+    await expect
+      .element(page.getByText("Copy all steps", { exact: true }))
+      .toBeVisible();
+    expect(
+      document.querySelectorAll(
+        'code.language-sql[data-syntax-highlighter="shiki"]'
+      ).length
+    ).toBeGreaterThan(2);
+    const dumpCommand = page
+      .getByRole("region", { name: "Dump schema only command" })
+      .element();
+    const dumpCommandCode = dumpCommand.querySelector("pre");
+    if (!dumpCommandCode) {
+      throw new Error("Expected the highlighted dump command to render.");
+    }
+    expect(getComputedStyle(dumpCommandCode).whiteSpace).toBe("pre");
+    await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+      "data-explorer-table-definition"
+    );
+  } finally {
+    await page.viewport(
+      DEFAULT_BROWSER_VIEWPORT.width,
+      DEFAULT_BROWSER_VIEWPORT.height
+    );
+  }
+}, 10_000);
+
+test("data explorer table definition stays a full-width vertical flow", async () => {
   seedDefinitionDesignQueries();
   renderExplorerSurface(
     <TableDetail
@@ -3117,52 +3184,52 @@ test("data explorer table definition tab has a visual baseline", async () => {
       instanceId="prod"
       schemaName="audit"
       table={createProto(TableSchema, {
-        displayName: "change_log",
-        name: "instances/prod/databases/logistics/schemas/audit/tables/change_log",
-        owner: "app_owner",
-        rowCount: 4_200_000n,
-        sizeBytes: 4_187_000_000n,
         tableType: Table_TableType.BASE_TABLE,
       })}
       tableName="change_log"
     />,
-    "h-[950px] w-[1100px] overflow-hidden"
+    "w-[1100px]"
   );
 
   await expect
-    .element(page.getByRole("heading", { name: "Create table" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("tab", { name: POLICIES_ONE_TAB_RE }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("tab", { name: TRIGGERS_ONE_TAB_RE }))
+    .element(page.getByRole("heading", { name: "Referenced tables" }))
     .toBeVisible();
   await expect
     .element(page.getByRole("heading", { name: "Reproduce locally" }))
     .toBeVisible();
-  await expect
-    .element(page.getByRole("heading", { name: "Policies" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("heading", { name: "Triggers" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByText("Copy all steps", { exact: true }))
-    .toBeVisible();
+
+  function cardForHeading(name: string) {
+    const card = page
+      .getByRole("heading", { name })
+      .element()
+      .closest<HTMLElement>('[data-slot="card"]');
+    if (!card) {
+      throw new Error(`Expected the ${name} card to render.`);
+    }
+    return card;
+  }
+
+  const createTableCard = cardForHeading("Create table");
+  const triggersCard = cardForHeading("Triggers");
+  const referencedTablesCard = cardForHeading("Referenced tables");
+  const reproduceCard = cardForHeading("Reproduce locally");
+  const createTableRect = createTableCard.getBoundingClientRect();
+  const referencedTablesRect = referencedTablesCard.getBoundingClientRect();
+  const reproduceRect = reproduceCard.getBoundingClientRect();
+
+  expect(Math.abs(createTableRect.left - reproduceRect.left)).toBeLessThan(2);
+  expect(Math.abs(createTableRect.width - reproduceRect.width)).toBeLessThan(2);
   expect(
-    document.querySelectorAll(
-      'code.language-sql[data-syntax-highlighter="shiki"]'
-    ).length
-  ).toBeGreaterThan(2);
-  const dumpCommand = page
-    .getByRole("textbox", { name: "Dump schema only command" })
-    .element();
-  expect(getComputedStyle(dumpCommand).whiteSpace).toBe("pre");
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-definition"
+    Math.abs(createTableRect.width - referencedTablesRect.width)
+  ).toBeLessThan(2);
+  expect(referencedTablesRect.top).toBeGreaterThan(
+    triggersCard.getBoundingClientRect().bottom
   );
-}, 10_000);
+  expect(reproduceRect.top).toBeGreaterThan(referencedTablesRect.bottom);
+
+  const frame = page.getByTestId("screenshot-frame").element();
+  expect(frame.scrollWidth).toBeLessThanOrEqual(frame.clientWidth + 1);
+});
 
 test("data explorer definition toolbar keeps refresh reachable when narrow", async () => {
   seedDefinitionDesignQueries();
@@ -3199,6 +3266,61 @@ test("data explorer definition toolbar keeps refresh reachable when narrow", asy
   expect(refresh.getBoundingClientRect().right).toBeLessThanOrEqual(
     toolbar.getBoundingClientRect().right + 1
   );
+  const highlightedCommand = page
+    .getByRole("region", { name: "Dump schema only command" })
+    .element();
+  const reproduceCard = page
+    .getByRole("heading", { name: "Reproduce locally" })
+    .element()
+    .closest<HTMLElement>('[data-slot="card"]');
+  const definitionFlow = reproduceCard?.parentElement;
+  if (!(reproduceCard && definitionFlow)) {
+    throw new Error("Expected the highlighted definition flow to render.");
+  }
+  expect(definitionFlow.scrollWidth).toBeLessThanOrEqual(
+    definitionFlow.clientWidth + 1
+  );
+  expect(highlightedCommand.scrollWidth).toBeGreaterThan(
+    highlightedCommand.clientWidth
+  );
+  expect(getComputedStyle(highlightedCommand).overflowX).toBe("auto");
+  expect(document.activeElement).not.toBe(highlightedCommand);
+  await expect(page.elementLocator(reproduceCard)).toMatchScreenshot(
+    "data-explorer-table-definition-reproduce-narrow"
+  );
+});
+
+test("data explorer definition commands are keyboard reachable", async () => {
+  seedDefinitionDesignQueries();
+  renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="definition"
+      instanceId="prod"
+      schemaName="audit"
+      table={createProto(TableSchema, {
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="change_log"
+    />,
+    "w-[420px]"
+  );
+
+  await expect
+    .element(page.getByRole("heading", { name: "Reproduce locally" }))
+    .toBeVisible();
+  const highlightedCommand = page
+    .getByRole("region", { name: "Dump schema only command" })
+    .element();
+  expect(highlightedCommand.scrollWidth).toBeGreaterThan(
+    highlightedCommand.clientWidth
+  );
+  page
+    .getByRole("button", { name: "Copy dump schema only command" })
+    .element()
+    .focus();
+  await userEvent.tab();
+  expect(document.activeElement).toBe(highlightedCommand);
 });
 
 test("data explorer index cards keep SQL inside narrow surfaces", async () => {

@@ -75,6 +75,7 @@ const COLUMN_COMMENT_SQL_RE =
   /COMMENT ON COLUMN "public"\."customers"\."display name" IS 'Owner''s name';/;
 const KIND_FILTER_RE = /^Kind$/;
 const LAST_FETCHED_RE = /^Last fetched/;
+const COMMAND_REGION_RE = /command$/;
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual =
@@ -500,7 +501,7 @@ describe("TableDetail definition document", () => {
       ],
     });
 
-    render(
+    const { container } = render(
       <TableDetail
         databaseId="app"
         initialTab="definition"
@@ -537,6 +538,29 @@ describe("TableDetail definition document", () => {
     expect(
       screen.getByRole("heading", { name: "Reproduce locally" })
     ).toBeTruthy();
+    const highlightedCommands = Array.from(
+      container.querySelectorAll(
+        'pre code.language-bash[data-syntax-highlighter="shiki"]'
+      )
+    );
+    expect(highlightedCommands).toHaveLength(3);
+    const commandRegions = screen.getAllByRole("region", {
+      name: COMMAND_REGION_RE,
+    });
+    expect(commandRegions).toHaveLength(3);
+    expect(
+      highlightedCommands.every(
+        (command) => command.querySelectorAll("[data-shiki-token]").length > 3
+      )
+    ).toBe(true);
+    expect(highlightedCommands[0]?.textContent).toBe(
+      `pg_dump -h "$POSTGRES_HOST" \\\n  -U "$POSTGRES_ROLE" -d "\${DATABASE_NAME:-app}" \\\n  --schema-only --no-owner --no-privileges \\\n  --table='"public"."customers"' > 'customers.sql'`
+    );
+    expect(
+      screen.getByRole("heading", { name: "Referenced tables" })
+    ).toBeTruthy();
+    expect(screen.getByText("No referenced tables")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Dependencies" })).toBeNull();
     expect(
       screen.queryByRole("heading", { name: "Drift detection" })
     ).toBeNull();
