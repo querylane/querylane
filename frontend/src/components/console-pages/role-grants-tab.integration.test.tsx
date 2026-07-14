@@ -48,6 +48,40 @@ function renderPartialFacet(
 }
 
 describe("GrantsSection partial empty states", () => {
+  test("shows loading instead of an empty database state while grants resolve", () => {
+    render(
+      <GrantsSection
+        builtinInfo={null}
+        databaseName={undefined}
+        databases={[]}
+        defaultPrivileges={[]}
+        defaultPrivilegesPartial={false}
+        error={null}
+        facetStates={{
+          defaults: "loading",
+          owned: "loading",
+          publicGrants: "loading",
+        }}
+        grantsPartial={false}
+        grantsView={{ kind: "overview" }}
+        isPending={true}
+        kind="login"
+        objects={[]}
+        onNavigateGrants={vi.fn()}
+        onSelectDatabase={vi.fn()}
+        ownedObjects={[]}
+        ownedPartial={false}
+        publicGrants={[]}
+        publicGrantsPartial={false}
+        roleName="app_user"
+        selectedDatabaseId={undefined}
+      />
+    );
+
+    expect(screen.getByText("Loading grants…")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "No databases" })).toBeNull();
+  });
+
   test("keeps an empty direct-grant page inconclusive", () => {
     renderPartialFacet({ kind: "overview" });
 

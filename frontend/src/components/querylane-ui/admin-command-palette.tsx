@@ -82,28 +82,72 @@ function matchesQuery(value: string, query: string): boolean {
   return query.length === 0 || value.toLowerCase().includes(query);
 }
 
-function CatalogQueryStatus({
+function PaletteQueryStatus({
   error,
+  errorMessage,
   isPending,
+  loadingMessage,
 }: {
   error: unknown;
+  errorMessage: string;
   isPending: boolean;
+  loadingMessage: string;
 }) {
   if (isPending) {
     return (
       <output className="block px-4 py-3 text-muted-foreground text-xs">
-        Loading database objects…
+        {loadingMessage}
       </output>
     );
   }
   if (error) {
-    return (
-      <p className="px-4 py-3 text-destructive text-xs">
-        Could not load database objects
-      </p>
-    );
+    return <p className="px-4 py-3 text-destructive text-xs">{errorMessage}</p>;
   }
   return null;
+}
+
+function PaletteSearchFeedback({
+  catalogError,
+  catalogIsPending,
+  hasDatabaseScope,
+  hasRoleSearch,
+  rolesError,
+  rolesIsPending,
+}: {
+  catalogError: unknown;
+  catalogIsPending: boolean;
+  hasDatabaseScope: boolean;
+  hasRoleSearch: boolean;
+  rolesError: unknown;
+  rolesIsPending: boolean;
+}) {
+  const catalogPending = hasDatabaseScope && catalogIsPending;
+  const rolesPending = hasRoleSearch && rolesIsPending;
+  const catalogFailed = hasDatabaseScope && Boolean(catalogError);
+  const rolesFailed = hasRoleSearch && Boolean(rolesError);
+  const searchIncomplete =
+    catalogPending || rolesPending || catalogFailed || rolesFailed;
+  return (
+    <>
+      {searchIncomplete ? null : (
+        <CommandEmpty>No matches — try a table or role name</CommandEmpty>
+      )}
+      <PaletteQueryStatus
+        error={hasDatabaseScope ? catalogError : null}
+        errorMessage="Could not load database objects"
+        isPending={catalogPending}
+        loadingMessage="Loading database objects…"
+      />
+      {hasRoleSearch ? (
+        <PaletteQueryStatus
+          error={rolesError}
+          errorMessage="Could not load roles"
+          isPending={rolesPending}
+          loadingMessage="Loading roles…"
+        />
+      ) : null}
+    </>
+  );
 }
 
 function AdminCommandPaletteContent({
@@ -118,6 +162,7 @@ function AdminCommandPaletteContent({
   const databaseId = navigationIds.databaseId ?? "";
   const hasDatabaseScope = Boolean(instanceId && databaseId);
   const normalizedQuery = query.trim().toLowerCase();
+  const hasRoleSearch = normalizedQuery.length > 0;
   const catalogQuery = useDatabaseCatalogQuery({
     databaseId,
     enabled: hasDatabaseScope,
@@ -148,7 +193,7 @@ function AdminCommandPaletteContent({
         ? SEARCH_DATABASE_OBJECT_LIMIT
         : DEFAULT_DATABASE_OBJECT_LIMIT
     );
-  const roles = normalizedQuery
+  const roles = hasRoleSearch
     ? (rolesQuery.data?.roles ?? [])
         .filter((role) => matchesQuery(role.roleName, normalizedQuery))
         .slice(0, SEARCH_ROLE_LIMIT)
@@ -230,8 +275,6 @@ function AdminCommandPaletteContent({
         </kbd>
       </div>
       <CommandList className="max-h-[380px] pb-1.5">
-        <CommandEmpty>No matches — try a table or role name</CommandEmpty>
-
         {navigationTargets.length > 0 ? (
           <CommandGroup className={COMMAND_GROUP_CLASS_NAME} heading="Go to">
             {navigationTargets.map((target) => (
@@ -295,9 +338,13 @@ function AdminCommandPaletteContent({
           </CommandGroup>
         ) : null}
 
-        <CatalogQueryStatus
-          error={hasDatabaseScope ? catalogQuery.error : null}
-          isPending={hasDatabaseScope && catalogQuery.isPending}
+        <PaletteSearchFeedback
+          catalogError={catalogQuery.error}
+          catalogIsPending={catalogQuery.isPending}
+          hasDatabaseScope={hasDatabaseScope}
+          hasRoleSearch={hasRoleSearch}
+          rolesError={rolesQuery.error}
+          rolesIsPending={rolesQuery.isPending}
         />
       </CommandList>
     </Command>
