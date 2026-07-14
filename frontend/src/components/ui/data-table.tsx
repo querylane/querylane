@@ -12,11 +12,13 @@ import {
   createFilteredRowModel,
   createPaginatedRowModel,
   createSortedRowModel,
-  filterFns,
+  filterFn_includesString,
   metaHelper,
   rowPaginationFeature,
   rowSortingFeature,
-  sortFns,
+  sortFn_alphanumeric,
+  sortFn_basic,
+  sortFn_text,
   tableFeatures,
   useTable,
 } from "@tanstack/react-table";
@@ -56,10 +58,14 @@ const dataTableFeatures = tableFeatures({
   rowPaginationFeature,
   rowSortingFeature,
   filteredRowModel: createFilteredRowModel(),
-  filterFns,
+  filterFns: { includesString: filterFn_includesString },
   paginatedRowModel: createPaginatedRowModel(),
   sortedRowModel: createSortedRowModel(),
-  sortFns,
+  sortFns: {
+    alphanumeric: sortFn_alphanumeric,
+    basic: sortFn_basic,
+    text: sortFn_text,
+  },
 });
 
 type DataTableFeatures = typeof dataTableFeatures;
