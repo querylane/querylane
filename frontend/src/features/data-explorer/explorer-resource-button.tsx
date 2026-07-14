@@ -20,6 +20,49 @@ function resolveResourceIcon(
     : categoryIcon;
 }
 
+function ResourceMetadata({
+  isItemSelected,
+  item,
+}: {
+  isItemSelected: boolean;
+  item: ResourceItem;
+}) {
+  if (!(item.badge || item.sizeLabel)) {
+    return null;
+  }
+  return (
+    <span className="ml-auto flex shrink-0 items-center gap-1.5">
+      {item.badge ? (
+        <span
+          className={cn(
+            "shrink-0 rounded border px-1.5 py-px font-mono text-[10px] uppercase tracking-wider",
+            item.badge.tone === "amber" &&
+              "border-amber-400/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+            item.badge.tone === "blue" &&
+              "border-blue-400/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+            item.badge.tone === "muted" &&
+              "border-border bg-muted text-muted-foreground",
+            item.badge.tone === "violet" &&
+              "border-violet-400/40 bg-violet-500/10 text-violet-600 dark:text-violet-400"
+          )}
+        >
+          {item.badge.label}
+        </span>
+      ) : null}
+      {item.sizeLabel ? (
+        <span
+          className={cn(
+            "@max-[15rem]/object-browser:hidden w-16 text-right font-mono text-[11px] tabular-nums",
+            isItemSelected ? "text-foreground/80" : "text-muted-foreground"
+          )}
+        >
+          {item.sizeLabel}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export function ExplorerResourceButton({
   category,
   icon: Icon,
@@ -58,37 +101,7 @@ export function ExplorerResourceButton({
       <span className="min-w-0 flex-1 truncate text-left">
         {highlightMatch(item.name, query)}
       </span>
-      {item.badge || item.sizeLabel ? (
-        <span className="ml-auto flex shrink-0 items-center gap-1.5">
-          {item.badge ? (
-            <span
-              className={cn(
-                "shrink-0 rounded border px-1.5 py-px font-mono text-[10px] uppercase tracking-wider",
-                item.badge.tone === "amber" &&
-                  "border-amber-400/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-                item.badge.tone === "blue" &&
-                  "border-blue-400/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-                item.badge.tone === "muted" &&
-                  "border-border bg-muted text-muted-foreground",
-                item.badge.tone === "violet" &&
-                  "border-violet-400/40 bg-violet-500/10 text-violet-600 dark:text-violet-400"
-              )}
-            >
-              {item.badge.label}
-            </span>
-          ) : null}
-          {item.sizeLabel ? (
-            <span
-              className={cn(
-                "@max-[15rem]/object-browser:hidden w-16 text-right font-mono text-[11px] tabular-nums",
-                isItemSelected ? "text-foreground/80" : "text-muted-foreground"
-              )}
-            >
-              {item.sizeLabel}
-            </span>
-          ) : null}
-        </span>
-      ) : null}
+      <ResourceMetadata isItemSelected={isItemSelected} item={item} />
     </Button>
   );
 }

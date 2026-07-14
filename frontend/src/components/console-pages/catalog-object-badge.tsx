@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { allPredicates } from "@/lib/predicates";
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 /**
@@ -41,12 +42,15 @@ export function CatalogKindBadge({
       </Badge>
       {isSystem ? (
         <Badge className="font-mono text-[10px]" variant="ghost">
-          SYS
+          {"SYS"}
         </Badge>
       ) : null}
-      {isMaterialized && !isPopulated ? (
+      {allPredicates(
+        () => isMaterialized,
+        () => !isPopulated
+      ) ? (
         <span className="font-mono text-[10px] text-muted-foreground uppercase">
-          unpopulated
+          {"unpopulated"}
         </span>
       ) : null}
     </span>

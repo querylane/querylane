@@ -28,7 +28,7 @@ test("feedback states cover loading, refreshing, empty, and config-managed guida
   renderFeedbackSurface(
     <div className="grid gap-6 md:grid-cols-2">
       <div className="space-y-4 rounded-xl border border-border p-5">
-        <h2 className="font-semibold text-lg">Section states</h2>
+        <h2 className="font-semibold text-lg">{"Section states"}</h2>
         <AsyncSectionState
           hasContent={false}
           isPending={true}
@@ -40,7 +40,7 @@ test("feedback states cover loading, refreshing, empty, and config-managed guida
           refreshingMessage="Refreshing table statistics…"
         >
           <div className="rounded-lg border border-border bg-card p-4 text-sm">
-            Existing content stays visible while fresh metadata loads.
+            {"Existing content stays visible while fresh metadata loads."}
           </div>
         </AsyncSectionState>
       </div>
@@ -49,7 +49,7 @@ test("feedback states cover loading, refreshing, empty, and config-managed guida
         <EmptyState
           action={
             <Button size="sm" type="button">
-              Add instance
+              {"Add instance"}
             </Button>
           }
           description="Connect a PostgreSQL instance before browsing schemas, tables, or query history."
@@ -81,9 +81,9 @@ function FormRecoveryDangerSurface() {
     <div className="space-y-6">
       <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="space-y-3 rounded-xl border border-border p-5">
-          <h2 className="font-semibold text-lg">Connection credentials</h2>
+          <h2 className="font-semibold text-lg">{"Connection credentials"}</h2>
           <div className="grid gap-2 text-sm">
-            <Label htmlFor={passwordId}>Password</Label>
+            <Label htmlFor={passwordId}>{"Password"}</Label>
             <PasswordInput
               defaultValue="correct-horse-battery-staple"
               id={passwordId}

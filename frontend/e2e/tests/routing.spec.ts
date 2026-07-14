@@ -76,7 +76,11 @@ test("home: instance catalog failure shows a release-blocking error screen", {
 }, async ({ page }) => {
   await mockReadyOnboarding(page);
   await mockApiManagedReadyConsole(page);
-  await mockRpcError(page, "InstanceService/ListInstances", "catalog offline");
+  await mockRpcError({
+    page,
+    method: "InstanceService/ListInstances",
+    message: "catalog offline",
+  });
 
   await page.goto("/");
 

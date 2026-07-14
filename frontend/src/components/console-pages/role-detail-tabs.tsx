@@ -24,11 +24,12 @@ function RoleAccessMapFallback() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Loader2 className="size-4 animate-spin" /> Loading access map
+          <Loader2 className="size-4 animate-spin" />
+          {" Loading access map"}
         </CardTitle>
       </CardHeader>
       <CardContent className="text-muted-foreground text-sm">
-        Loading role access visualization.
+        {"Loading role access visualization."}
       </CardContent>
     </Card>
   );
@@ -54,9 +55,9 @@ function OrdinaryRoleTabs(props: RoleDetailViewProps) {
       value={section}
     >
       <TabsList>
-        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="overview">{"Overview"}</TabsTrigger>
         <TabsTrigger value="grants">
-          Grants
+          {"Grants"}
           {grantsReady && (grantObjects.length > 0 || grantsPartial) ? (
             <span className="text-muted-foreground text-xs tabular-nums">
               {grantObjects.length}
@@ -65,15 +66,15 @@ function OrdinaryRoleTabs(props: RoleDetailViewProps) {
           ) : null}
         </TabsTrigger>
         <TabsTrigger value="members">
-          Membership
+          {"Membership"}
           {belongsTo.length + memberRows.length > 0 ? (
             <span className="text-muted-foreground text-xs tabular-nums">
               {belongsTo.length + memberRows.length}
             </span>
           ) : null}
         </TabsTrigger>
-        <TabsTrigger value="access-map">Access map</TabsTrigger>
-        <TabsTrigger value="definition">Definition</TabsTrigger>
+        <TabsTrigger value="access-map">{"Access map"}</TabsTrigger>
+        <TabsTrigger value="definition">{"Definition"}</TabsTrigger>
       </TabsList>
 
       <TabsContent className="mt-3" value="overview">

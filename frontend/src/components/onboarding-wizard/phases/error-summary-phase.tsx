@@ -76,7 +76,7 @@ export function ErrorSummaryPhase() {
               variant="ghost"
             >
               <ArrowLeft className="size-4" />
-              Start over
+              {"Start over"}
             </Button>
             <Button
               className="h-10 rounded-xl border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
@@ -87,7 +87,7 @@ export function ErrorSummaryPhase() {
               variant="ghost"
             >
               <Settings2 className="size-4" />
-              Reconfigure
+              {"Reconfigure"}
             </Button>
           </div>
           <RetryActionButton
@@ -112,11 +112,14 @@ export function ErrorSummaryPhase() {
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
             <div className="space-y-1">
               <div className="font-medium text-amber-100 text-base">
-                Likely a configuration issue
+                {"Likely a configuration issue"}
               </div>
               <p className="text-amber-100/70 text-sm">
-                This error usually means the connection details need adjusting.
-                Click <strong>Reconfigure</strong> to update your settings.
+                {
+                  "This error usually means the connection details need adjusting. Click "
+                }
+                <strong>{"Reconfigure"}</strong>
+                {" to update your settings."}
               </p>
             </div>
           </div>
@@ -125,12 +128,12 @@ export function ErrorSummaryPhase() {
             <RefreshCw className="mt-0.5 size-4 shrink-0 text-blue-400" />
             <div className="space-y-1">
               <div className="font-medium text-base text-blue-100">
-                May be a transient issue
+                {"May be a transient issue"}
               </div>
               <p className="text-blue-100/70 text-sm">
-                This could be a temporary problem. Try clicking{" "}
-                <strong>Retry</strong> first. If it persists, reconfigure your
-                connection.
+                {"This could be a temporary problem. Try clicking"}{" "}
+                <strong>{"Retry"}</strong>
+                {" first. If it persists, reconfigure your connection."}
               </p>
             </div>
           </div>
@@ -142,7 +145,7 @@ export function ErrorSummaryPhase() {
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <span className="rounded-full bg-red-500/18 px-3 py-1 font-medium text-red-200 text-sm">
-                  Failed step
+                  {"Failed step"}
                 </span>
                 <span className="font-medium text-base text-white">
                   {failedStepName}

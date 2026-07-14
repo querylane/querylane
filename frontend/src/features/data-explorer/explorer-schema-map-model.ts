@@ -5,6 +5,7 @@ import {
   parseResourceLeafId,
   parseTableQualifiedName,
 } from "@/lib/console-resources";
+import { allPredicates } from "@/lib/predicates";
 import type {
   Column,
   Table,
@@ -234,11 +235,14 @@ function tableInfo(
   constraintsByTable: Record<string, TableConstraint[]>
 ) {
   const qualified = tableSafeQualifiedName(table.name);
-  const foreignKeyColumns = new Set(
-    (constraintsByTable[table.name] ?? [])
-      .filter((constraint) => constraint.type === ConstraintType.FOREIGN_KEY)
-      .flatMap((constraint) => constraint.columnNames)
-  );
+  const foreignKeyColumns = new Set<string>();
+  for (const constraint of constraintsByTable[table.name] ?? []) {
+    if (constraint.type === ConstraintType.FOREIGN_KEY) {
+      for (const columnName of constraint.columnNames) {
+        foreignKeyColumns.add(columnName);
+      }
+    }
+  }
   const visibleColumns = columns
     .slice(0, MAX_VISIBLE_COLUMNS)
     .map((column) => ({
@@ -573,7 +577,7 @@ function tablesGroupedByDepth(
 }
 
 function sortedDepthEntries(tablesByDepth: Map<number, TableInfo[]>) {
-  return [...tablesByDepth].sort(([left], [right]) => left - right);
+  return Array.from(tablesByDepth).toSorted(([left], [right]) => left - right);
 }
 
 function tableColumnNodes({
@@ -669,8 +673,10 @@ function tableDepths(
     let depth = 0;
     for (const constraint of constraintsByTable[tableId] ?? []) {
       if (
-        constraint.type === ConstraintType.FOREIGN_KEY &&
-        tableIds.has(constraint.referencedTable)
+        allPredicates(
+          () => constraint.type === ConstraintType.FOREIGN_KEY,
+          () => tableIds.has(constraint.referencedTable)
+        )
       ) {
         depth = Math.max(depth, depthFor(constraint.referencedTable) + 1);
       }
@@ -687,6 +693,42 @@ function tableDepths(
   return memo;
 }
 
+function edgesForTable({
+  constraints,
+  nodeById,
+  schemaTone,
+  table,
+}: {
+  constraints: TableConstraint[];
+  nodeById: Map<string, SchemaMapNode>;
+  schemaTone: Map<string, SchemaMapTone>;
+  table: ReturnType<typeof tableInfo>;
+}): SchemaMapEdge[] {
+  const source = nodeById.get(table.id);
+  if (!source) {
+    return [];
+  }
+  const edges: SchemaMapEdge[] = [];
+  for (const constraint of constraints) {
+    if (constraint.type !== ConstraintType.FOREIGN_KEY) {
+      continue;
+    }
+    const target = nodeById.get(constraint.referencedTable);
+    if (!target) {
+      continue;
+    }
+    edges.push(
+      edgeForConstraint({
+        constraint,
+        source,
+        target,
+        tone: schemaTone.get(source.schemaName) ?? source.tone,
+      })
+    );
+  }
+  return edges;
+}
+
 function buildEdges({
   constraintsByTable,
   nodeById,
@@ -698,31 +740,14 @@ function buildEdges({
   schemaTone: Map<string, SchemaMapTone>;
   tableInfos: ReturnType<typeof tableInfo>[];
 }): SchemaMapEdge[] {
-  const edges: SchemaMapEdge[] = [];
-  for (const table of tableInfos) {
-    const source = nodeById.get(table.id);
-    if (!source) {
-      continue;
-    }
-    for (const constraint of constraintsByTable[table.id] ?? []) {
-      if (constraint.type !== ConstraintType.FOREIGN_KEY) {
-        continue;
-      }
-      const target = nodeById.get(constraint.referencedTable);
-      if (!target) {
-        continue;
-      }
-      edges.push(
-        edgeForConstraint({
-          constraint,
-          source,
-          target,
-          tone: schemaTone.get(source.schemaName) ?? source.tone,
-        })
-      );
-    }
-  }
-  return edges;
+  return tableInfos.flatMap((table) =>
+    edgesForTable({
+      constraints: constraintsByTable[table.id] ?? [],
+      nodeById,
+      schemaTone,
+      table,
+    })
+  );
 }
 
 function edgeForConstraint({

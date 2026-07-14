@@ -16,6 +16,8 @@ import type { TableFilterRule } from "@/features/data-explorer/table-data/filter
 import { TableResultColumnSchema } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
+const TEST_NUMBER_250 = 250;
+
 const columns = [
   create(TableResultColumnSchema, {
     columnName: "email",
@@ -338,7 +340,7 @@ describe("FilterRow value editing", () => {
     );
 
     act(() => {
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(TEST_NUMBER_250);
     });
 
     expect(onChange).not.toHaveBeenCalled();

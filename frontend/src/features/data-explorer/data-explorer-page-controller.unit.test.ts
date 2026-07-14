@@ -8,6 +8,8 @@ import {
   RESOURCE_QUERY_OPTIONS,
 } from "@/lib/query-policy";
 
+const TEST_NUMBER_6 = 6;
+
 const transport = {} as Transport;
 
 async function runIntentPrefetchTimers() {
@@ -75,7 +77,7 @@ describe("prefetchTableDetails", () => {
     await runIntentPrefetchTimers();
 
     // columns, indexes, constraints, policies, triggers, partition metadata
-    expect(calls).toHaveLength(6);
+    expect(calls).toHaveLength(TEST_NUMBER_6);
     for (const call of calls) {
       expect(call).toMatchObject({
         meta: { appErrorSurface: "silent" },
@@ -105,7 +107,7 @@ describe("prefetchTableDetails", () => {
 
     await runIntentPrefetchTimers();
 
-    expect(calls).toHaveLength(6);
+    expect(calls).toHaveLength(TEST_NUMBER_6);
     // Verify query keys include the resolved tableId "users", not the display name
     for (const call of calls as Array<{ queryKey: unknown[] }>) {
       const keyStr = JSON.stringify(call.queryKey);
@@ -161,6 +163,6 @@ describe("prefetchTableDetails", () => {
     await runIntentPrefetchTimers();
 
     // Each query key is deduped.
-    expect(calls).toHaveLength(6);
+    expect(calls).toHaveLength(TEST_NUMBER_6);
   });
 });

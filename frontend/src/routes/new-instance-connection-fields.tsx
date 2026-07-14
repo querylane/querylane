@@ -1,4 +1,5 @@
 import { Link2 } from "lucide-react";
+import type { ChangeEvent } from "react";
 import { useId, useState } from "react";
 import { PasswordInput } from "@/components/password-input";
 import {
@@ -42,7 +43,7 @@ function ConnectionStringFeedback({
   if (!(error || warning)) {
     return (
       <p className="text-muted-foreground text-xs">
-        You’ll still pick a display name separately.
+        {"You’ll still pick a display name separately."}
       </p>
     );
   }
@@ -59,6 +60,58 @@ function ConnectionStringFeedback({
         </p>
       ) : null}
     </>
+  );
+}
+
+function CreateInstanceTextField({
+  field,
+  formErrors,
+  formState,
+  id,
+  label,
+  placeholder,
+  type = "text",
+  updateField,
+}: {
+  field: CreateInstanceFieldName;
+  formErrors: CreateInstanceFormErrors;
+  formState: CreateInstanceFormState;
+  id: string;
+  label: string;
+  placeholder?: string | undefined;
+  type?: "password" | "text" | undefined;
+  updateField: (field: CreateInstanceFieldName, value: string) => void;
+}) {
+  const error = formErrors[field];
+  const sharedProps = {
+    "aria-describedby": getCreateInstanceFieldErrorDescription(
+      formErrors,
+      field,
+      id
+    ),
+    "aria-invalid": error ? true : undefined,
+    id,
+    onChange: (event: ChangeEvent<HTMLInputElement>) =>
+      updateField(field, event.target.value),
+    placeholder,
+    value: formState[field],
+  };
+  return (
+    <div className="space-y-2">
+      <label className="text-sm" htmlFor={id}>
+        {label}
+      </label>
+      {type === "password" ? (
+        <PasswordInput {...sharedProps} />
+      ) : (
+        <Input {...sharedProps} />
+      )}
+      {error ? (
+        <p className="text-destructive text-sm" id={`${id}-error`}>
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -117,15 +170,18 @@ function CreateInstanceConnectionFields({
             <Link2 className="size-4" />
           </div>
           <div className="space-y-1">
-            <div className="font-medium text-sm">Paste a DSN to prefill</div>
+            <div className="font-medium text-sm">
+              {"Paste a DSN to prefill"}
+            </div>
             <p className="text-muted-foreground text-sm">
-              Querylane will fill the host, port, database, username, password,
-              and SSL mode from your PostgreSQL connection string.
+              {
+                "Querylane will fill the host, port, database, username, password, and SSL mode from your PostgreSQL connection string."
+              }
             </p>
           </div>
         </div>
         <label className="text-sm" htmlFor={connectionStringId}>
-          Connection string
+          {"Connection string"}
         </label>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Input
@@ -152,7 +208,7 @@ function CreateInstanceConnectionFields({
             type="button"
             variant="outline"
           >
-            Apply DSN
+            {"Apply DSN"}
           </Button>
         </div>
         <ConnectionStringFeedback
@@ -163,137 +219,57 @@ function CreateInstanceConnectionFields({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-2">
-          <label className="text-sm" htmlFor={displayNameId}>
-            Display name
-          </label>
-          <Input
-            aria-describedby={getCreateInstanceFieldErrorDescription(
-              formErrors,
-              "displayName",
-              displayNameId
-            )}
-            aria-invalid={formErrors.displayName ? true : undefined}
-            id={displayNameId}
-            onChange={(event) => updateField("displayName", event.target.value)}
-            placeholder="Customer Analytics DB"
-            value={formState.displayName}
-          />
-          {formErrors.displayName ? (
-            <p
-              className="text-destructive text-sm"
-              id={`${displayNameId}-error`}
-            >
-              {formErrors.displayName}
-            </p>
-          ) : null}
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm" htmlFor={hostId}>
-            Host
-          </label>
-          <Input
-            aria-describedby={getCreateInstanceFieldErrorDescription(
-              formErrors,
-              "host",
-              hostId
-            )}
-            aria-invalid={formErrors.host ? true : undefined}
-            id={hostId}
-            onChange={(event) => updateField("host", event.target.value)}
-            placeholder="localhost"
-            value={formState.host}
-          />
-          {formErrors.host ? (
-            <p className="text-destructive text-sm" id={`${hostId}-error`}>
-              {formErrors.host}
-            </p>
-          ) : null}
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm" htmlFor={portId}>
-            Port
-          </label>
-          <Input
-            aria-describedby={getCreateInstanceFieldErrorDescription(
-              formErrors,
-              "port",
-              portId
-            )}
-            aria-invalid={formErrors.port ? true : undefined}
-            id={portId}
-            onChange={(event) => updateField("port", event.target.value)}
-            value={formState.port}
-          />
-          {formErrors.port ? (
-            <p className="text-destructive text-sm" id={`${portId}-error`}>
-              {formErrors.port}
-            </p>
-          ) : null}
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm" htmlFor={databaseId}>
-            Default database
-          </label>
-          <Input
-            aria-describedby={getCreateInstanceFieldErrorDescription(
-              formErrors,
-              "database",
-              databaseId
-            )}
-            aria-invalid={formErrors.database ? true : undefined}
-            id={databaseId}
-            onChange={(event) => updateField("database", event.target.value)}
-            value={formState.database}
-          />
-          {formErrors.database ? (
-            <p className="text-destructive text-sm" id={`${databaseId}-error`}>
-              {formErrors.database}
-            </p>
-          ) : null}
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm" htmlFor={usernameId}>
-            Username
-          </label>
-          <Input
-            aria-describedby={getCreateInstanceFieldErrorDescription(
-              formErrors,
-              "username",
-              usernameId
-            )}
-            aria-invalid={formErrors.username ? true : undefined}
-            id={usernameId}
-            onChange={(event) => updateField("username", event.target.value)}
-            value={formState.username}
-          />
-          {formErrors.username ? (
-            <p className="text-destructive text-sm" id={`${usernameId}-error`}>
-              {formErrors.username}
-            </p>
-          ) : null}
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm" htmlFor={passwordId}>
-            Password
-          </label>
-          <PasswordInput
-            aria-describedby={getCreateInstanceFieldErrorDescription(
-              formErrors,
-              "password",
-              passwordId
-            )}
-            aria-invalid={formErrors.password ? true : undefined}
-            id={passwordId}
-            onChange={(event) => updateField("password", event.target.value)}
-            value={formState.password}
-          />
-          {formErrors.password ? (
-            <p className="text-destructive text-sm" id={`${passwordId}-error`}>
-              {formErrors.password}
-            </p>
-          ) : null}
-        </div>
+        <CreateInstanceTextField
+          field="displayName"
+          formErrors={formErrors}
+          formState={formState}
+          id={displayNameId}
+          label="Display name"
+          placeholder="Customer Analytics DB"
+          updateField={updateField}
+        />
+        <CreateInstanceTextField
+          field="host"
+          formErrors={formErrors}
+          formState={formState}
+          id={hostId}
+          label="Host"
+          placeholder="localhost"
+          updateField={updateField}
+        />
+        <CreateInstanceTextField
+          field="port"
+          formErrors={formErrors}
+          formState={formState}
+          id={portId}
+          label="Port"
+          updateField={updateField}
+        />
+        <CreateInstanceTextField
+          field="database"
+          formErrors={formErrors}
+          formState={formState}
+          id={databaseId}
+          label="Default database"
+          updateField={updateField}
+        />
+        <CreateInstanceTextField
+          field="username"
+          formErrors={formErrors}
+          formState={formState}
+          id={usernameId}
+          label="Username"
+          updateField={updateField}
+        />
+        <CreateInstanceTextField
+          field="password"
+          formErrors={formErrors}
+          formState={formState}
+          id={passwordId}
+          label="Password"
+          type="password"
+          updateField={updateField}
+        />
         <CreateInstanceSslModeField
           formErrors={formErrors}
           formState={formState}
@@ -322,7 +298,7 @@ function CreateInstanceSslModeField({
   return (
     <div className="space-y-2">
       <label className="text-sm" htmlFor={sslModeId}>
-        SSL mode
+        {"SSL mode"}
       </label>
       <Select
         onValueChange={(value) => {
@@ -370,7 +346,7 @@ function CreateInstanceSslNegotiationField({
   return (
     <div className="space-y-2">
       <label className="text-sm" htmlFor={sslNegotiationId}>
-        SSL negotiation
+        {"SSL negotiation"}
       </label>
       <Select
         onValueChange={(value) => {

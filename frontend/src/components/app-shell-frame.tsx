@@ -38,7 +38,7 @@ export function AppShellFrame({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2.5">
           <Logo className="size-8" logoStyle="flat" />
           <span className="font-semibold text-sm tracking-tight">
-            Querylane
+            {"Querylane"}
           </span>
         </div>
         <ThemeModeMenu resolvedTheme={resolvedTheme} setTheme={setTheme} />

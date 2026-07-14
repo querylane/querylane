@@ -32,7 +32,7 @@ function RulesEditor({
     <div className="flex flex-col gap-2">
       {rules.length === 0 ? (
         <p className="text-muted-foreground text-xs">
-          No columns are available to filter.
+          {"No columns are available to filter."}
         </p>
       ) : (
         <ul className="flex max-h-[min(48vh,22rem)] flex-col gap-2 overflow-auto">
@@ -43,7 +43,7 @@ function RulesEditor({
             >
               {index === 0 ? (
                 <span className="text-right text-muted-foreground text-xs">
-                  where
+                  {"where"}
                 </span>
               ) : (
                 <Button
@@ -78,7 +78,7 @@ function RulesEditor({
           variant="ghost"
         >
           <Plus data-icon="inline-start" />
-          Add rule
+          {"Add rule"}
         </Button>
       </div>
     </div>

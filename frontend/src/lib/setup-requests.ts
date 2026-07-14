@@ -1,6 +1,7 @@
 import { create as createProto } from "@bufbuild/protobuf";
 
 import { buildTestInstanceConnectionRequest as buildStandaloneTestConnectionRequest } from "@/lib/instance-connection";
+import { allPredicates } from "@/lib/predicates";
 import { attachAppUiErrorContext } from "@/lib/ui-error";
 import type { PostgresConfig } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import { PostgresConfigSchema } from "@/protogen/querylane/console/v1alpha1/instance_pb";
@@ -100,8 +101,10 @@ async function consumeSetupStreamWithProgress(
     if (event) {
       onProgress(event);
       if (
-        event.stepId === SetupStep.PERSISTING_CONFIG &&
-        event.state === StepState.SUCCEEDED
+        allPredicates(
+          () => event.stepId === SetupStep.PERSISTING_CONFIG,
+          () => event.state === StepState.SUCCEEDED
+        )
       ) {
         setupCompleted = true;
       }

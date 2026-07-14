@@ -199,16 +199,18 @@ function filterChildPartitions(
 ): TablePartition[] {
   const schemaNames = filters.schemaNames ?? [];
   const boundKinds = filters.boundKinds ?? [];
+  const schemaNameSet = new Set(schemaNames);
+  const boundKindSet = new Set(boundKinds);
   return partitions.filter((partition) => {
     if (
       schemaNames.length > 0 &&
-      !schemaNames.includes(partitionSchemaName(partition))
+      !schemaNameSet.has(partitionSchemaName(partition))
     ) {
       return false;
     }
     if (
       boundKinds.length > 0 &&
-      !boundKinds.includes(partitionBoundKind(partition))
+      !boundKindSet.has(partitionBoundKind(partition))
     ) {
       return false;
     }
@@ -223,12 +225,14 @@ function filterPartitionDisplayRows(
   const search = filters.search?.trim().toLocaleLowerCase() ?? "";
   const schemaNames = filters.schemaNames ?? [];
   const boundKinds = filters.boundKinds ?? [];
+  const schemaNameSet = new Set(schemaNames);
+  const boundKindSet = new Set(boundKinds);
 
   return rows.filter((row) => {
-    if (schemaNames.length > 0 && !schemaNames.includes(row.schemaName)) {
+    if (schemaNames.length > 0 && !schemaNameSet.has(row.schemaName)) {
       return false;
     }
-    if (boundKinds.length > 0 && !boundKinds.includes(row.boundKind)) {
+    if (boundKinds.length > 0 && !boundKindSet.has(row.boundKind)) {
       return false;
     }
     if (!search) {
@@ -487,6 +491,81 @@ function percentOfMax(value: number, max: number): number {
   return Math.max(MIN_BAR_HEIGHT_PERCENT, (value / max) * PERCENT_FACTOR);
 }
 
+function buildPartitionDisplayRow({
+  currentDate,
+  currentPartition,
+  maxProjectedRows,
+  maxRows,
+  partition,
+  rowCount,
+  selectedPartition,
+  size,
+  totalRows,
+}: {
+  currentDate: Date;
+  currentPartition: string | undefined;
+  maxProjectedRows: number;
+  maxRows: number;
+  partition: TablePartition;
+  rowCount: number;
+  selectedPartition: string | undefined;
+  size: number;
+  totalRows: number;
+}): PartitionDisplayRow {
+  const boundKind = partitionBoundKind(partition);
+  const share = totalRows > 0 ? rowCount / totalRows : 0;
+  const isSelected = selectedPartition === partition.table;
+  const isDefault = boundKind === "default";
+  const isCurrent = !isDefault && currentPartition === partition.table;
+  const projected = projectedRows({
+    currentDate,
+    isCurrent,
+    partitionBound: partition.partitionBound,
+    rows: rowCount,
+  });
+  const barHeightPercent = percentOfMax(rowCount, maxProjectedRows || maxRows);
+  const projectedHeightPercent = percentOfMax(projected, maxProjectedRows);
+  const projectedExtraHeightPercent = Math.max(
+    projectedHeightPercent - barHeightPercent,
+    0
+  );
+  return {
+    axisLabel: rangeAxisLabel(partition.partitionBound, boundKind),
+    barHeightClassName: widthClassForRatio(
+      barHeightPercent / PERCENT_FACTOR,
+      PARTITION_BAR_HEIGHT_CLASSES
+    ),
+    barHeightPercent,
+    barTone: partitionBarTone({ isCurrent, isDefault, isSelected }),
+    boundKind,
+    boundLabel: partitionBoundLabel(partition.partitionBound),
+    estimatedRows: rowCount,
+    hasProjection: isCurrent && projected > rowCount,
+    isCurrent,
+    isDefault,
+    name: partitionDisplayName(partition),
+    partitionBound: partition.partitionBound,
+    projectedHeightClassName: widthClassForRatio(
+      projectedExtraHeightPercent / PERCENT_FACTOR,
+      PARTITION_BAR_HEIGHT_CLASSES
+    ),
+    projectedHeightPercent,
+    projectedRowsLabel:
+      projected > rowCount ? formatPartitionRows(projected) : "—",
+    resourceLabel: formatPartitionResourceLabel(partition.table),
+    rowsLabel: rowCount > 0 ? formatPartitionRows(rowCount) : "—",
+    schemaName: partitionSchemaName(partition),
+    shareLabel: totalRows > 0 ? `${Math.round(share * PERCENT_FACTOR)}%` : "—",
+    shareWidthClassName: widthClassForRatio(
+      share,
+      PARTITION_SHARE_WIDTH_CLASSES
+    ),
+    sizeBytes: size,
+    sizeLabel: size > 0 ? formatBytes(size) : "—",
+    table: partition.table,
+  };
+}
+
 function derivePartitionViewModel({
   currentDate = new Date(),
   partitionKey,
@@ -524,66 +603,19 @@ function derivePartitionViewModel({
     ),
     0
   );
-  const rows = rowsWithNumbers.map(({ partition, rows: rowCount, size }) => {
-    const boundKind = partitionBoundKind(partition);
-    const name = partitionDisplayName(partition);
-    const share = totalRows > 0 ? rowCount / totalRows : 0;
-    const isSelected = selectedPartition === partition.table;
-    const isDefault = boundKind === "default";
-    const isCurrent = !isDefault && currentPartition === partition.table;
-    const projected = projectedRows({
+  const rows = rowsWithNumbers.map(({ partition, rows: rowCount, size }) =>
+    buildPartitionDisplayRow({
       currentDate,
-      isCurrent,
-      partitionBound: partition.partitionBound,
-      rows: rowCount,
-    });
-    const barHeightPercent = percentOfMax(
+      currentPartition,
+      maxProjectedRows,
+      maxRows,
+      partition,
       rowCount,
-      maxProjectedRows || maxRows
-    );
-    const projectedHeightPercent = percentOfMax(projected, maxProjectedRows);
-    const projectedExtraHeightPercent = Math.max(
-      projectedHeightPercent - barHeightPercent,
-      0
-    );
-
-    return {
-      axisLabel: rangeAxisLabel(partition.partitionBound, boundKind),
-      barHeightClassName: widthClassForRatio(
-        barHeightPercent / PERCENT_FACTOR,
-        PARTITION_BAR_HEIGHT_CLASSES
-      ),
-      barHeightPercent,
-      barTone: partitionBarTone({ isCurrent, isDefault, isSelected }),
-      boundKind,
-      boundLabel: partitionBoundLabel(partition.partitionBound),
-      estimatedRows: rowCount,
-      hasProjection: isCurrent && projected > rowCount,
-      isCurrent,
-      isDefault,
-      name,
-      partitionBound: partition.partitionBound,
-      projectedHeightClassName: widthClassForRatio(
-        projectedExtraHeightPercent / PERCENT_FACTOR,
-        PARTITION_BAR_HEIGHT_CLASSES
-      ),
-      projectedHeightPercent,
-      projectedRowsLabel:
-        projected > rowCount ? formatPartitionRows(projected) : "—",
-      resourceLabel: formatPartitionResourceLabel(partition.table),
-      rowsLabel: rowCount > 0 ? formatPartitionRows(rowCount) : "—",
-      schemaName: partitionSchemaName(partition),
-      shareLabel:
-        totalRows > 0 ? `${Math.round(share * PERCENT_FACTOR)}%` : "—",
-      shareWidthClassName: widthClassForRatio(
-        share,
-        PARTITION_SHARE_WIDTH_CLASSES
-      ),
-      sizeBytes: size,
-      sizeLabel: size > 0 ? formatBytes(size) : "—",
-      table: partition.table,
-    } satisfies PartitionDisplayRow;
-  });
+      selectedPartition,
+      size,
+      totalRows,
+    })
+  );
 
   return {
     defaultPartition: rows.find((row) => row.isDefault),

@@ -25,6 +25,8 @@ const LINTABLE_EXTENSIONS = new Set([
 
 const GENERATED_OR_REGISTRY_PREFIXES = ["src/components/ui/", "src/protogen/"];
 const GENERATED_FILES = new Set(["src/routeTree.gen.ts"]);
+const FULL_STATIC_ANALYSIS_PATH_PATTERN =
+  /^(?:\.github\/workflows\/frontend-ci\.yml|frontend\/(?:biome\.jsonc|bun\.lock|doctor\.config\.ts|package\.json|react-doctor\.config\.json|tsconfig(?:\.[^/]+)?\.json|scripts\/(?:lint-changed|run-react-doctor-ci|strict-tooling-policy\.unit\.test)\.ts))$/u;
 
 interface FileSystemAccess {
   existsSync: (path: string) => boolean;
@@ -79,6 +81,16 @@ function isGeneratedOrRegistryPath(path: string) {
   return (
     GENERATED_FILES.has(path) ||
     GENERATED_OR_REGISTRY_PREFIXES.some((prefix) => path.startsWith(prefix))
+  );
+}
+
+function requiresFullStaticAnalysis(repoPaths: readonly string[]) {
+  return repoPaths.some((path) => FULL_STATIC_ANALYSIS_PATH_PATTERN.test(path));
+}
+
+function requiresFullStaticAnalysisFromBase(baseRef: string) {
+  return requiresFullStaticAnalysis(
+    changedRepoFiles(baseRef, childProcessRunner)
   );
 }
 
@@ -153,10 +165,14 @@ function runChangedLint({
   runner?: CommandRunner;
 } = {}) {
   const baseRef = baseRefFromEnvironment(environment);
-  const files = lintableChangedFiles(
-    changedRepoFiles(baseRef, runner),
-    fileSystem
-  );
+  const repoFiles = changedRepoFiles(baseRef, runner);
+  if (requiresFullStaticAnalysis(repoFiles)) {
+    console.log("Tooling policy changed; linting the full frontend.");
+    const result = spawnSync("ultracite", ["check"], { stdio: "inherit" });
+    return result.status ?? FAILURE_EXIT_CODE;
+  }
+
+  const files = lintableChangedFiles(repoFiles, fileSystem);
 
   if (files.length === 0) {
     console.log(`No changed frontend files to lint against ${baseRef}.`);
@@ -179,5 +195,7 @@ export {
   changedRepoFiles,
   frontendRelativePath,
   lintableChangedFiles,
+  requiresFullStaticAnalysis,
+  requiresFullStaticAnalysisFromBase,
   runChangedLint,
 };

@@ -13,6 +13,8 @@ import {
   sampleInstance,
 } from "./helpers";
 
+const TEST_NUMBER_500 = 500;
+
 const INVALID_DSN_RE = /Invalid DSN/i;
 const NEW_INSTANCE_URL_RE = /\/new-instance$/;
 const PRODUCTION_APPDB_EXPLORER_URL_RE =
@@ -215,14 +217,14 @@ test("new instance: test connection API error stays on form", {
     await fulfillJson(
       route,
       { code: "internal", message: "connection refused" },
-      500
+      TEST_NUMBER_500
     );
   });
   await page.route("**.TestInstanceConnection", async (route) => {
     await fulfillJson(
       route,
       { code: "internal", message: "connection refused" },
-      500
+      TEST_NUMBER_500
     );
   });
 
@@ -242,14 +244,14 @@ test("new instance: API error keeps user on form with retryable feedback", {
     await fulfillJson(
       route,
       { code: "internal", message: "duplicate instance" },
-      500
+      TEST_NUMBER_500
     );
   });
   await page.route("**.CreateInstance", async (route) => {
     await fulfillJson(
       route,
       { code: "internal", message: "duplicate instance" },
-      500
+      TEST_NUMBER_500
     );
   });
 

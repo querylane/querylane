@@ -33,6 +33,35 @@ import {
   ViewSchema,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
+const TEST_BIGINT_312 = 312n;
+const TEST_BIGINT_2400000 = 2_400_000n;
+const TEST_BIGINT_18200000 = 18_200_000n;
+const TEST_BIGINT_88000 = 88_000n;
+const TEST_BIGINT_642 = 642n;
+const TEST_BIGINT_1800 = 1_800n;
+const TEST_BIGINT_4200000 = 4_200_000n;
+const TEST_BIGINT_1024 = 1024n;
+const TEST_BIGINT_18 = 18n;
+const TEST_BIGINT_52 = 52n;
+const TEST_BIGINT_96 = 96n;
+const TEST_NUMBER_8 = 8;
+const TEST_NUMBER_30000 = 30_000;
+const TEST_NUMBER_900 = 900;
+const TEST_NUMBER_1000 = 1000;
+const TEST_NUMBER_4 = 4;
+const TEST_NUMBER_1280 = 1280;
+const TEST_NUMBER_1300 = 1300;
+const TEST_NUMBER_28 = 28;
+const TEST_NUMBER_1800 = 1800;
+const TEST_NUMBER_10000 = 10_000;
+const TEST_BIGINT_960 = 960n;
+const TEST_BIGINT_44 = 44n;
+const TEST_NUMBER_12 = 12;
+const TEST_NUMBER_2027 = 2027;
+const TEST_NUMBER_2026 = 2026;
+const TEST_NUMBER_1024 = 1024;
+const TEST_BIGINT_78 = 78n;
+
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@tanstack/react-router")>();
@@ -197,7 +226,7 @@ vi.mock("@/components/data-grid/table-data-grid/table-data-grid", () =>
       }) => {
         const grid = (
           <div className="rounded-lg border border-border bg-muted/20 p-4 text-muted-foreground text-sm">
-            Data grid visual covered separately.
+            {"Data grid visual covered separately."}
           </div>
         );
 
@@ -458,13 +487,17 @@ function seedSchemaMapVisualCatalog() {
       type: ConstraintType.FOREIGN_KEY,
     });
 
-  const carriers = table("shipping", "carriers", 312n);
-  const shipments = table("shipping", "shipments", 2_400_000n);
-  const shipmentEvent = table("shipping", "shipment_event", 18_200_000n);
-  const containers = table("shipping", "containers", 88_000n);
-  const ports = table("catalog", "ports", 642n);
-  const routes = table("catalog", "routes", 1_800n);
-  const changeLog = table("audit", "change_log", 4_200_000n);
+  const carriers = table("shipping", "carriers", TEST_BIGINT_312);
+  const shipments = table("shipping", "shipments", TEST_BIGINT_2400000);
+  const shipmentEvent = table(
+    "shipping",
+    "shipment_event",
+    TEST_BIGINT_18200000
+  );
+  const containers = table("shipping", "containers", TEST_BIGINT_88000);
+  const ports = table("catalog", "ports", TEST_BIGINT_642);
+  const routes = table("catalog", "routes", TEST_BIGINT_1800);
+  const changeLog = table("audit", "change_log", TEST_BIGINT_4200000);
 
   schemaMapCatalog.tablesBySchema = {
     audit: [changeLog],
@@ -1131,7 +1164,7 @@ function seedShipmentIndexesRedesignQueries() {
         keyParts: ["id"],
         method: "btree",
         scanCount: 48_100_000n,
-        sizeBytes: 312n * 1024n * 1024n,
+        sizeBytes: TEST_BIGINT_312 * TEST_BIGINT_1024 * TEST_BIGINT_1024,
         tuplesFetched: 48_100_000n,
         tuplesRead: 48_400_000n,
       }),
@@ -1148,7 +1181,7 @@ function seedShipmentIndexesRedesignQueries() {
         method: "btree",
         predicate: "status <> 'delivered'",
         scanCount: 9_400_000n,
-        sizeBytes: 18n * 1024n * 1024n,
+        sizeBytes: TEST_BIGINT_18 * TEST_BIGINT_1024 * TEST_BIGINT_1024,
         tuplesFetched: 9_300_000n,
         tuplesRead: 11_200_000n,
       }),
@@ -1164,7 +1197,7 @@ function seedShipmentIndexesRedesignQueries() {
         keyParts: ["carrier_id"],
         method: "btree",
         scanCount: 1_200_000n,
-        sizeBytes: 52n * 1024n * 1024n,
+        sizeBytes: TEST_BIGINT_52 * TEST_BIGINT_1024 * TEST_BIGINT_1024,
         tuplesFetched: 1_200_000n,
         tuplesRead: 2_800_000n,
       }),
@@ -1177,7 +1210,7 @@ function seedShipmentIndexesRedesignQueries() {
         isValid: true,
         keyParts: ["lower(ref)"],
         method: "btree",
-        sizeBytes: 96n * 1024n * 1024n,
+        sizeBytes: TEST_BIGINT_96 * TEST_BIGINT_1024 * TEST_BIGINT_1024,
       }),
     ],
   });
@@ -1444,7 +1477,7 @@ test("data explorer schema detail keeps dense table summaries scannable", async 
   expect(
     searchInput.getBoundingClientRect().left -
       objectTable.getBoundingClientRect().left
-  ).toBeLessThanOrEqual(8);
+  ).toBeLessThanOrEqual(TEST_NUMBER_8);
   await expect.element(page.getByText("MATERIALIZED")).toBeVisible();
   // The size column is right-aligned: the formatted cell sits flush to the
   // right edge of its cell.
@@ -1551,111 +1584,117 @@ test("data explorer schema detail scopes the map to the selected schema", async 
   );
 });
 
-test("data explorer schema map shows relationships without a floating help overlay", async () => {
-  const catalog = seedSchemaMapVisualCatalog();
-  const onSelectTable = vi.fn();
+test(
+  "data explorer schema map shows relationships without a floating help overlay",
+  async () => {
+    const catalog = seedSchemaMapVisualCatalog();
+    const onSelectTable = vi.fn();
 
-  await page.viewport(
-    SCHEMA_MAP_BROWSER_VIEWPORT.width,
-    SCHEMA_MAP_BROWSER_VIEWPORT.height
-  );
-  try {
-    render(
-      <ScreenshotFrame>
-        <div className="flex h-[1320px] w-[1132px] bg-background text-foreground">
-          <ExplorerSchemaMap
-            activeSchemaName="shipping"
-            databaseId="logistics"
-            enabled={true}
-            instanceId="prod"
-            onSelectTable={onSelectTable}
-            schemas={catalog.schemas}
-          />
-        </div>
-      </ScreenshotFrame>
-    );
-
-    await expect
-      .element(page.getByRole("heading", { name: "Schema map" }))
-      .toBeVisible();
-    await expect.element(page.getByText("logistics")).toBeVisible();
-    await expect
-      .element(page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }))
-      .toBeVisible();
-    await expect.element(page.getByText("shipment_event")).toBeVisible();
-    await expect.element(page.getByText("shipments")).toBeVisible();
-    await expect.element(page.getByText("carriers")).toBeVisible();
-    await expect.element(page.getByText("change_log")).toBeVisible();
-    await expect
-      .element(page.getByRole("searchbox", { name: "Find a table" }))
-      .toBeVisible();
-    await expect
-      .element(page.getByText("Curved lines show foreign keys."))
-      .not.toBeInTheDocument();
-    await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-      "data-explorer-schema-map"
-    );
-
-    const metadataParents = schemaMapCatalog.observedQueries
-      .filter(({ methodName }) => methodName === "ListTableColumns")
-      .map(({ parent }) => parent);
-    expect(new Set(metadataParents)).toEqual(
-      new Set([...Object.keys(schemaMapCatalog.columnsByTable)])
-    );
-
-    await page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }).click();
-    await page.getByText("catalog").last().click();
-    expect(
-      schemaMapCatalog.observedQueries.some(
-        ({ methodName, parent }) =>
-          methodName === "ListTableColumns" &&
-          parent.includes("/schemas/catalog/")
-      )
-    ).toBe(true);
-    await expect
-      .element(page.getByRole("button", { name: SCHEMA_MAP_ACTIVE_FILTER_RE }))
-      .toBeVisible();
-    await page.getByRole("button", { name: "Reset" }).click();
-
-    const map = document.querySelector<SVGElement>(
-      'svg[data-testid="schema-map-canvas"]'
-    );
-    const initialWidth = Number(map?.getAttribute("width"));
-    await page.getByRole("button", { name: "Zoom in" }).click();
-    expect(Number(map?.getAttribute("width"))).toBeGreaterThan(initialWidth);
-
-    await page.getByRole("button", { name: "shipping.shipments" }).click();
-    await expect
-      .element(page.getByRole("button", { name: "Open data" }))
-      .toBeVisible();
-    await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-      "data-explorer-schema-map-selected-table"
-    );
-    await page.getByRole("button", { name: "Open data" }).click();
-    expect(onSelectTable).toHaveBeenCalledWith("shipping", "shipments");
-
-    onSelectTable.mockClear();
-    const shipmentsButton = page
-      .getByRole("button", { name: "shipping.shipments" })
-      .element();
-    shipmentsButton.focus();
-    shipmentsButton.dispatchEvent(
-      new KeyboardEvent("keydown", { bubbles: true, key: "Enter" })
-    );
-    expect(onSelectTable).toHaveBeenCalledWith("shipping", "shipments");
-
-    await page
-      .getByRole("searchbox", { name: "Find a table" })
-      .fill("change_log");
-    await expect.element(page.getByText("change_log")).toBeVisible();
-    await expect.element(page.getByText("shipments")).not.toBeInTheDocument();
-  } finally {
     await page.viewport(
-      DEFAULT_BROWSER_VIEWPORT.width,
-      DEFAULT_BROWSER_VIEWPORT.height
+      SCHEMA_MAP_BROWSER_VIEWPORT.width,
+      SCHEMA_MAP_BROWSER_VIEWPORT.height
     );
-  }
-}, 30_000);
+    try {
+      render(
+        <ScreenshotFrame>
+          <div className="flex h-[1320px] w-[1132px] bg-background text-foreground">
+            <ExplorerSchemaMap
+              activeSchemaName="shipping"
+              databaseId="logistics"
+              enabled={true}
+              instanceId="prod"
+              onSelectTable={onSelectTable}
+              schemas={catalog.schemas}
+            />
+          </div>
+        </ScreenshotFrame>
+      );
+
+      await expect
+        .element(page.getByRole("heading", { name: "Schema map" }))
+        .toBeVisible();
+      await expect.element(page.getByText("logistics")).toBeVisible();
+      await expect
+        .element(page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }))
+        .toBeVisible();
+      await expect.element(page.getByText("shipment_event")).toBeVisible();
+      await expect.element(page.getByText("shipments")).toBeVisible();
+      await expect.element(page.getByText("carriers")).toBeVisible();
+      await expect.element(page.getByText("change_log")).toBeVisible();
+      await expect
+        .element(page.getByRole("searchbox", { name: "Find a table" }))
+        .toBeVisible();
+      await expect
+        .element(page.getByText("Curved lines show foreign keys."))
+        .not.toBeInTheDocument();
+      await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+        "data-explorer-schema-map"
+      );
+
+      const metadataParents = schemaMapCatalog.observedQueries
+        .filter(({ methodName }) => methodName === "ListTableColumns")
+        .map(({ parent }) => parent);
+      expect(new Set(metadataParents)).toEqual(
+        new Set([...Object.keys(schemaMapCatalog.columnsByTable)])
+      );
+
+      await page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }).click();
+      await page.getByText("catalog").last().click();
+      expect(
+        schemaMapCatalog.observedQueries.some(
+          ({ methodName, parent }) =>
+            methodName === "ListTableColumns" &&
+            parent.includes("/schemas/catalog/")
+        )
+      ).toBe(true);
+      await expect
+        .element(
+          page.getByRole("button", { name: SCHEMA_MAP_ACTIVE_FILTER_RE })
+        )
+        .toBeVisible();
+      await page.getByRole("button", { name: "Reset" }).click();
+
+      const map = document.querySelector<SVGElement>(
+        'svg[data-testid="schema-map-canvas"]'
+      );
+      const initialWidth = Number(map?.getAttribute("width"));
+      await page.getByRole("button", { name: "Zoom in" }).click();
+      expect(Number(map?.getAttribute("width"))).toBeGreaterThan(initialWidth);
+
+      await page.getByRole("button", { name: "shipping.shipments" }).click();
+      await expect
+        .element(page.getByRole("button", { name: "Open data" }))
+        .toBeVisible();
+      await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+        "data-explorer-schema-map-selected-table"
+      );
+      await page.getByRole("button", { name: "Open data" }).click();
+      expect(onSelectTable).toHaveBeenCalledWith("shipping", "shipments");
+
+      onSelectTable.mockClear();
+      const shipmentsButton = page
+        .getByRole("button", { name: "shipping.shipments" })
+        .element();
+      shipmentsButton.focus();
+      shipmentsButton.dispatchEvent(
+        new KeyboardEvent("keydown", { bubbles: true, key: "Enter" })
+      );
+      expect(onSelectTable).toHaveBeenCalledWith("shipping", "shipments");
+
+      await page
+        .getByRole("searchbox", { name: "Find a table" })
+        .fill("change_log");
+      await expect.element(page.getByText("change_log")).toBeVisible();
+      await expect.element(page.getByText("shipments")).not.toBeInTheDocument();
+    } finally {
+      await page.viewport(
+        DEFAULT_BROWSER_VIEWPORT.width,
+        DEFAULT_BROWSER_VIEWPORT.height
+      );
+    }
+  },
+  TEST_NUMBER_30000
+);
 
 test("data explorer schema map loads table details without selection", async () => {
   const catalog = seedSchemaMapVisualCatalog();
@@ -1728,7 +1767,7 @@ test("data explorer schema map selection does not move nodes", async () => {
 test("data explorer schema map uses a compact schema filter at narrow widths", async () => {
   const catalog = seedSchemaMapVisualCatalog();
 
-  await page.viewport(900, 1000);
+  await page.viewport(TEST_NUMBER_900, TEST_NUMBER_1000);
   try {
     render(
       <ScreenshotFrame>
@@ -1799,7 +1838,9 @@ test("data explorer schema map keeps schema labels clear of group borders", asyn
 
   const labelBox = shippingLabel.getBBox();
   const borderY = Number(firstHull.getAttribute("y"));
-  expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(borderY - 4);
+  expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(
+    borderY - TEST_NUMBER_4
+  );
 });
 
 test("data explorer schema map spells out uppercase key labels", async () => {
@@ -2152,7 +2193,7 @@ test("data explorer table columns match the redesign inventory", async () => {
       filterBar.getBoundingClientRect().top -
         searchInput.getBoundingClientRect().top
     )
-  ).toBeLessThanOrEqual(4);
+  ).toBeLessThanOrEqual(TEST_NUMBER_4);
 
   await page.getByRole("button", { exact: true, name: "Key" }).click();
   await Promise.all(
@@ -2795,7 +2836,7 @@ test("data explorer constraints tab covers validation and action states", async 
 });
 
 test("data explorer table policies explain RLS composition", async () => {
-  await page.viewport(1280, 1300);
+  await page.viewport(TEST_NUMBER_1280, TEST_NUMBER_1300);
   seedTableDetailQueries();
   seedInvoicePolicies();
   renderExplorerSurface(
@@ -2831,19 +2872,19 @@ test("data explorer table policies explain RLS composition", async () => {
     .getByRole("combobox", { name: "Rows per page" })
     .element()
     .getBoundingClientRect().height;
-  expect(pageSizeHeight).toBeGreaterThanOrEqual(28);
+  expect(pageSizeHeight).toBeGreaterThanOrEqual(TEST_NUMBER_28);
   expect(
     page
       .getByRole("button", { name: "Previous policies page" })
       .element()
       .getBoundingClientRect().height
-  ).toBe(28);
+  ).toBe(TEST_NUMBER_28);
   expect(
     page
       .getByRole("button", { name: "Next policies page" })
       .element()
       .getBoundingClientRect().height
-  ).toBe(28);
+  ).toBe(TEST_NUMBER_28);
   await expect
     .element(page.getByText("2 permissive policies apply", { exact: false }))
     .toBeVisible();
@@ -2919,7 +2960,7 @@ test("data explorer table indexes pagination has a visual baseline", async () =>
         keyColumns: ["route_id"],
         keyParts: ["route_id"],
         method: index === 10 ? "gin" : "btree",
-        sizeBytes: BigInt(index + 1) * 1024n * 1024n,
+        sizeBytes: BigInt(index + 1) * TEST_BIGINT_1024 * TEST_BIGINT_1024,
       })
     ),
   });
@@ -3145,72 +3186,76 @@ test("data explorer table data tab has a visual baseline", async () => {
   );
 });
 
-test("data explorer table definition tab has a visual baseline", async () => {
-  await page.viewport(1280, 1800);
-  try {
-    seedDefinitionDesignQueries();
-    renderExplorerSurface(
-      <TableDetail
-        databaseId="logistics"
-        initialTab="definition"
-        instanceId="prod"
-        schemaName="audit"
-        table={createProto(TableSchema, {
-          displayName: "change_log",
-          name: "instances/prod/databases/logistics/schemas/audit/tables/change_log",
-          owner: "app_owner",
-          rowCount: 4_200_000n,
-          sizeBytes: 4_187_000_000n,
-          tableType: Table_TableType.BASE_TABLE,
-        })}
-        tableName="change_log"
-      />
-    );
+test(
+  "data explorer table definition tab has a visual baseline",
+  async () => {
+    await page.viewport(TEST_NUMBER_1280, TEST_NUMBER_1800);
+    try {
+      seedDefinitionDesignQueries();
+      renderExplorerSurface(
+        <TableDetail
+          databaseId="logistics"
+          initialTab="definition"
+          instanceId="prod"
+          schemaName="audit"
+          table={createProto(TableSchema, {
+            displayName: "change_log",
+            name: "instances/prod/databases/logistics/schemas/audit/tables/change_log",
+            owner: "app_owner",
+            rowCount: 4_200_000n,
+            sizeBytes: 4_187_000_000n,
+            tableType: Table_TableType.BASE_TABLE,
+          })}
+          tableName="change_log"
+        />
+      );
 
-    await expect
-      .element(page.getByRole("heading", { name: "Create table" }))
-      .toBeVisible();
-    await expect
-      .element(page.getByRole("tab", { name: POLICIES_ONE_TAB_RE }))
-      .toBeVisible();
-    await expect
-      .element(page.getByRole("tab", { name: TRIGGERS_ONE_TAB_RE }))
-      .toBeVisible();
-    await expect
-      .element(page.getByRole("heading", { name: "Reproduce locally" }))
-      .toBeVisible();
-    await expect
-      .element(page.getByRole("heading", { name: "Policies" }))
-      .toBeVisible();
-    await expect
-      .element(page.getByRole("heading", { name: "Triggers" }))
-      .toBeVisible();
-    await expect
-      .element(page.getByText("Copy all steps", { exact: true }))
-      .toBeVisible();
-    expect(
-      document.querySelectorAll(
-        'code.language-sql[data-syntax-highlighter="shiki"]'
-      ).length
-    ).toBeGreaterThan(2);
-    const dumpCommand = page
-      .getByRole("region", { name: "Dump schema only command" })
-      .element();
-    const dumpCommandCode = dumpCommand.querySelector("pre");
-    if (!dumpCommandCode) {
-      throw new Error("Expected the highlighted dump command to render.");
+      await expect
+        .element(page.getByRole("heading", { name: "Create table" }))
+        .toBeVisible();
+      await expect
+        .element(page.getByRole("tab", { name: POLICIES_ONE_TAB_RE }))
+        .toBeVisible();
+      await expect
+        .element(page.getByRole("tab", { name: TRIGGERS_ONE_TAB_RE }))
+        .toBeVisible();
+      await expect
+        .element(page.getByRole("heading", { name: "Reproduce locally" }))
+        .toBeVisible();
+      await expect
+        .element(page.getByRole("heading", { name: "Policies" }))
+        .toBeVisible();
+      await expect
+        .element(page.getByRole("heading", { name: "Triggers" }))
+        .toBeVisible();
+      await expect
+        .element(page.getByText("Copy all steps", { exact: true }))
+        .toBeVisible();
+      expect(
+        document.querySelectorAll(
+          'code.language-sql[data-syntax-highlighter="shiki"]'
+        ).length
+      ).toBeGreaterThan(2);
+      const dumpCommand = page
+        .getByRole("region", { name: "Dump schema only command" })
+        .element();
+      const dumpCommandCode = dumpCommand.querySelector("pre");
+      if (!dumpCommandCode) {
+        throw new Error("Expected the highlighted dump command to render.");
+      }
+      expect(getComputedStyle(dumpCommandCode).whiteSpace).toBe("pre");
+      await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+        "data-explorer-table-definition"
+      );
+    } finally {
+      await page.viewport(
+        DEFAULT_BROWSER_VIEWPORT.width,
+        DEFAULT_BROWSER_VIEWPORT.height
+      );
     }
-    expect(getComputedStyle(dumpCommandCode).whiteSpace).toBe("pre");
-    await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-      "data-explorer-table-definition"
-    );
-  } finally {
-    await page.viewport(
-      DEFAULT_BROWSER_VIEWPORT.width,
-      DEFAULT_BROWSER_VIEWPORT.height
-    );
-  }
-}, 10_000);
+  },
+  TEST_NUMBER_10000
+);
 
 test("data explorer table definition stays a full-width vertical flow", async () => {
   seedDefinitionDesignQueries();
@@ -3628,7 +3673,7 @@ test("data explorer table partitions matches the imported redesign fixture", asy
           displayName: "change_log_2026_q1",
           estimatedRows: 1_020_000n,
           partitionBound: "FOR VALUES FROM ('2026-01-01') TO ('2026-04-01')",
-          sizeBytes: 960n * 1024n * 1024n,
+          sizeBytes: TEST_BIGINT_960 * TEST_BIGINT_1024 * TEST_BIGINT_1024,
           table:
             "instances/prod/databases/app/schemas/audit/tables/change_log_2026_q1",
         },
@@ -3644,7 +3689,7 @@ test("data explorer table partitions matches the imported redesign fixture", asy
           displayName: "change_log_2026_q3",
           estimatedRows: 48_000n,
           partitionBound: "FOR VALUES FROM ('2026-07-01') TO ('2026-10-01')",
-          sizeBytes: 44n * 1024n * 1024n,
+          sizeBytes: TEST_BIGINT_44 * TEST_BIGINT_1024 * TEST_BIGINT_1024,
           table:
             "instances/prod/databases/app/schemas/audit/tables/change_log_2026_q3",
         },
@@ -3740,7 +3785,7 @@ test("data explorer table partitions matches the imported redesign fixture", asy
       partitionFilterBar.getBoundingClientRect().top -
         partitionSearchInput.getBoundingClientRect().top
     )
-  ).toBeLessThanOrEqual(4);
+  ).toBeLessThanOrEqual(TEST_NUMBER_4);
 
   await page
     .getByRole("textbox", { name: "Search partitions…" })
@@ -3794,16 +3839,17 @@ test("data explorer table partitions paginate large partition lists", async () =
     partitionMetadata: {
       childPartitions: Array.from({ length: 12 }, (_, index) => {
         const month = index + 1;
-        const nextMonth = month === 12 ? 1 : month + 1;
-        const nextYear = month === 12 ? 2027 : 2026;
+        const nextMonth = month === TEST_NUMBER_12 ? 1 : month + 1;
+        const nextYear =
+          month === TEST_NUMBER_12 ? TEST_NUMBER_2027 : TEST_NUMBER_2026;
         return {
           displayName: `change_log_2026_m${String(month).padStart(2, "0")}`,
-          estimatedRows: BigInt(month * 1000),
+          estimatedRows: BigInt(month * TEST_NUMBER_1000),
           partitionBound: `FOR VALUES FROM ('2026-${String(month).padStart(
             2,
             "0"
           )}-01') TO ('${nextYear}-${String(nextMonth).padStart(2, "0")}-01')`,
-          sizeBytes: BigInt(month * 1024 * 1024),
+          sizeBytes: BigInt(month * TEST_NUMBER_1024 * TEST_NUMBER_1024),
           table: `instances/prod/databases/app/schemas/audit/tables/change_log_2026_m${String(
             month
           ).padStart(2, "0")}`,
@@ -3827,7 +3873,7 @@ test("data explorer table partitions paginate large partition lists", async () =
         name: "instances/prod/databases/app/schemas/audit/tables/change_log",
         owner: "app_owner",
         rowCount: 78_000n,
-        sizeBytes: 78n * 1024n * 1024n,
+        sizeBytes: TEST_BIGINT_78 * TEST_BIGINT_1024 * TEST_BIGINT_1024,
         tableType: Table_TableType.BASE_TABLE,
       })}
       tableName="change_log"

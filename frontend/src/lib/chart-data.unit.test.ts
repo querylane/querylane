@@ -1,13 +1,18 @@
 import { describe, expect, test } from "vitest";
 import { downsampleTrend } from "@/lib/chart-data";
 
+const TEST_NUMBER_1000 = 1000;
+const TEST_NUMBER_3 = 3;
+const TEST_NUMBER_0_POINT_5 = 0.5;
+const TEST_NUMBER_99000 = 99_000;
+
 function rows(values: (number | null)[]): { time: number; v: number | null }[] {
-  return values.map((v, index) => ({ time: index * 1000, v }));
+  return values.map((v, index) => ({ time: index * TEST_NUMBER_1000, v }));
 }
 
 describe("downsampleTrend", () => {
   test("returns data unchanged at or under the budget", () => {
-    const data = rows([1, 2, 3]);
+    const data = rows([1, 2, TEST_NUMBER_3]);
     expect(downsampleTrend(data, "v", 24)).toBe(data);
   });
 
@@ -17,7 +22,7 @@ describe("downsampleTrend", () => {
 
     expect(sampled.length).toBeLessThanOrEqual(24);
     for (const row of sampled) {
-      expect(row["v"]).toBe(0.5);
+      expect(row["v"]).toBe(TEST_NUMBER_0_POINT_5);
     }
   });
 
@@ -31,7 +36,7 @@ describe("downsampleTrend", () => {
       );
     }
     expect(sampled[0]?.time).toBeGreaterThanOrEqual(0);
-    expect(sampled.at(-1)?.time).toBeLessThanOrEqual(99_000);
+    expect(sampled.at(-1)?.time).toBeLessThanOrEqual(TEST_NUMBER_99000);
   });
 
   test("a bucket with no finite values stays a gap", () => {

@@ -26,6 +26,9 @@ import {
   StatsAccessHealthSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
+const TEST_NUMBER_18 = 18;
+const TEST_NUMBER_90 = 90;
+
 const MS_PER_MINUTE = 60_000;
 const UPTIME_FACT_PATTERN = /^up /;
 
@@ -142,7 +145,7 @@ describe("buildLiveHealthRows", () => {
 
   test("prefers backend summaries and includes autovacuum detail", () => {
     const lastRun = timestampFromDate(
-      new Date(Date.now() - 18 * MS_PER_MINUTE)
+      new Date(Date.now() - TEST_NUMBER_18 * MS_PER_MINUTE)
     );
     const health = createProto(InstanceHealthSchema, {
       autovacuum: createProto(AutovacuumHealthSchema, {
@@ -293,7 +296,9 @@ describe("buildInstanceFacts", () => {
   test("builds version, uptime, platform, extension, and limit facts", () => {
     const serverInfo = createProto(ServerInfoSchema, {
       maxConnections: 100,
-      startedAt: timestampFromDate(new Date(Date.now() - 90 * MS_PER_MINUTE)),
+      startedAt: timestampFromDate(
+        new Date(Date.now() - TEST_NUMBER_90 * MS_PER_MINUTE)
+      ),
       version:
         "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc, 64-bit",
       versionShort: "17.9",

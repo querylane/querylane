@@ -16,6 +16,9 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
+const TEST_NUMBER_3 = 3;
+const TEST_NUMBER_4 = 4;
+
 const columns = [
   { columnName: "id", dataType: DataType.INTEGER },
   { columnName: "email", dataType: DataType.STRING },
@@ -209,7 +212,7 @@ describe("buildRowFilter", () => {
     }
     const group = filter.node.value;
     expect(group).toMatchObject({ logic: RowFilterGroup_Logic.AND });
-    expect(group.children).toHaveLength(3);
+    expect(group.children).toHaveLength(TEST_NUMBER_3);
     expect(group.children[0]?.node.value).toMatchObject({
       column: "id",
       operator: RowPredicate_Operator.GREATER_THAN_OR_EQUAL,
@@ -326,7 +329,7 @@ describe("buildRowFilter", () => {
       throw new Error("expected group filter");
     }
     expect(filter.node.value.logic).toBe(RowFilterGroup_Logic.AND);
-    expect(filter.node.value.children).toHaveLength(4);
+    expect(filter.node.value.children).toHaveLength(TEST_NUMBER_4);
     expect(filter.node.value.children[0]?.node.value).toMatchObject({
       column: "status",
       operator: RowPredicate_Operator.IN,

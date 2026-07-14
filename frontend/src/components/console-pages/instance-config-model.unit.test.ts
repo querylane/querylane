@@ -16,6 +16,8 @@ import {
   PostgresConfigSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
+const TEST_NUMBER_5432 = 5432;
+
 function label(
   key: string,
   value: string,
@@ -79,7 +81,7 @@ describe("instance config validation", () => {
     expect(parseInstanceFormPort("5432abc")).toBeNull();
     expect(parseInstanceFormPort("0")).toBeNull();
     expect(parseInstanceFormPort("65536")).toBeNull();
-    expect(parseInstanceFormPort(" 5432 ")).toBe(5432);
+    expect(parseInstanceFormPort(" 5432 ")).toBe(TEST_NUMBER_5432);
   });
 
   it("requires complete label keys", () => {

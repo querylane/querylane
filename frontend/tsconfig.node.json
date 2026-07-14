@@ -1,25 +1,32 @@
 {
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "composite": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "moduleDetection": "force",
     "target": "ESNext",
     "lib": ["ESNext", "DOM"],
     "types": ["@rsbuild/core/types", "node"],
+    "paths": {
+      "@farmfe/core": ["./scripts/type-stubs/farmfe-core.ts"],
+      "bun": ["./scripts/type-stubs/bun.ts"]
+    },
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "outDir": "./node_modules/.tmp/tsconfig.node",
-    "emitDeclarationOnly": true,
+    "noEmit": true,
     "strict": true,
     "allowJs": false,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
     "alwaysStrict": true,
+    "erasableSyntaxOnly": false,
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
+    "noCheck": false,
+    "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
     "noImplicitOverride": true,
@@ -36,7 +43,7 @@
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
     "useUnknownInCatchVariables": true,
-    "skipLibCheck": true
+    "skipLibCheck": false
   },
   "include": [
     "src/import-meta-env.d.ts",

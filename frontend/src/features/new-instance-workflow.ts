@@ -4,6 +4,7 @@ import {
   buildTestInstanceConnectionRequest,
   getPostgresConfigFingerprint,
 } from "@/lib/instance-connection";
+import { anyPredicate } from "@/lib/predicates";
 import {
   SSL_MODE_OPTIONS,
   SSL_NEGOTIATION_OPTIONS,
@@ -135,6 +136,33 @@ function createCreateInstanceWorkflowState(
     : emptyState;
 }
 
+function updateWorkflowField(
+  state: CreateInstanceWorkflowState,
+  action: Extract<CreateInstanceWorkflowAction, { type: "updateField" }>
+): CreateInstanceWorkflowState {
+  const { [action.field]: _clearedError, ...remainingErrors } =
+    state.formErrors;
+  const connectionFieldChanged = isConnectionField(action.field);
+  return {
+    ...state,
+    firstInvalidField:
+      state.firstInvalidField === action.field ? null : state.firstInvalidField,
+    formErrors: remainingErrors,
+    formNotice: null,
+    formState: {
+      ...state.formState,
+      [action.field]: normalizeCreateInstanceFieldValue(
+        action.field,
+        action.value
+      ),
+    },
+    lastSuccessfulConnectionFingerprint: connectionFieldChanged
+      ? null
+      : state.lastSuccessfulConnectionFingerprint,
+    testResult: connectionFieldChanged ? null : state.testResult,
+  };
+}
+
 function createInstanceWorkflowReducer(
   state: CreateInstanceWorkflowState,
   action: CreateInstanceWorkflowAction
@@ -147,10 +175,12 @@ function createInstanceWorkflowReducer(
         formErrors: action.formErrors,
         // Instance ID errors only come from the server, so always surface
         // them; labels expand only when they are the field to focus.
-        showAdvanced:
-          action.firstInvalidField === "labels" || action.formErrors.instanceId
-            ? true
-            : state.showAdvanced,
+        showAdvanced: anyPredicate(
+          () => action.firstInvalidField === "labels",
+          () => action.formErrors.instanceId
+        )
+          ? true
+          : state.showAdvanced,
         validationAttempt: state.validationAttempt + 1,
       };
     case "setFormNotice":
@@ -176,30 +206,8 @@ function createInstanceWorkflowReducer(
       };
     case "toggleAdvanced":
       return { ...state, showAdvanced: !state.showAdvanced };
-    case "updateField": {
-      const { [action.field]: _clearedError, ...remainingErrors } =
-        state.formErrors;
-      return {
-        ...state,
-        firstInvalidField:
-          state.firstInvalidField === action.field
-            ? null
-            : state.firstInvalidField,
-        formErrors: remainingErrors,
-        formNotice: null,
-        formState: {
-          ...state.formState,
-          [action.field]: normalizeCreateInstanceFieldValue(
-            action.field,
-            action.value
-          ),
-        },
-        lastSuccessfulConnectionFingerprint: isConnectionField(action.field)
-          ? null
-          : state.lastSuccessfulConnectionFingerprint,
-        testResult: isConnectionField(action.field) ? null : state.testResult,
-      };
-    }
+    case "updateField":
+      return updateWorkflowField(state, action);
     default:
       return state;
   }

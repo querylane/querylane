@@ -15,7 +15,7 @@ function PartialKpiValue({
       {value}
       {partial ? (
         <span className="font-normal text-muted-foreground text-xs">
-          Partial
+          {"Partial"}
         </span>
       ) : null}
     </span>

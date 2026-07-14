@@ -56,6 +56,10 @@ function useWizardSessionState() {
   };
 }
 
+function getFailedOnboardingEvent() {
+  return useOnboardingWizardStore.getState().failedEvent;
+}
+
 export function useOnboardingWizardController({
   onFinish,
 }: UseOnboardingWizardControllerOptions): OnboardingWizardController {
@@ -86,7 +90,6 @@ export function useOnboardingWizardController({
     };
   }, [resetSession]);
 
-  const getFailedEvent = () => useOnboardingWizardStore.getState().failedEvent;
   const manualWatchEnabled =
     phase === "progress_waiting_for_config" && selectedMethod === "manual_yaml";
 
@@ -103,7 +106,7 @@ export function useOnboardingWizardController({
   });
 
   const { abortSetup, setupRunning } = useSetupExecution({
-    getFailedEvent,
+    getFailedEvent: getFailedOnboardingEvent,
     onSuccess: markSetupSuccess,
     phase,
     runSetupMutation: setupMutation.mutateAsync,

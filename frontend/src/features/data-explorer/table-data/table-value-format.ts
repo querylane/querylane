@@ -216,6 +216,30 @@ function formatExtendedKnownValueCell({
   }
 }
 
+function formatBooleanValue(value: unknown): FormattedCell {
+  return createFormattedCell({
+    display: value === true ? "true" : "false",
+    isTruncated: false,
+    kind: "bool",
+  });
+}
+
+function formatDoubleValue(value: unknown): FormattedCell {
+  return createFormattedCell({
+    display: typeof value === "number" ? formatNumber(value) : String(value),
+    isTruncated: false,
+    kind: "number",
+  });
+}
+
+function formatIntegerValue(value: unknown): FormattedCell {
+  return createFormattedCell({
+    display: typeof value === "bigint" ? value.toString() : String(value),
+    isTruncated: false,
+    kind: "number",
+  });
+}
+
 function formatKnownValueCell(
   cell: TableCell,
   column: TableResultColumn
@@ -230,26 +254,13 @@ function formatKnownValueCell(
 
   switch (kind.case) {
     case "boolValue":
-      return createFormattedCell({
-        display: value === true ? "true" : "false",
-        isTruncated: false,
-        kind: "bool",
-      });
+      return formatBooleanValue(value);
     case "bytesValue":
       return formatBytesCell(cell, value);
     case "doubleValue":
-      return createFormattedCell({
-        display:
-          typeof value === "number" ? formatNumber(value) : String(value),
-        isTruncated: false,
-        kind: "number",
-      });
+      return formatDoubleValue(value);
     case "int64Value":
-      return createFormattedCell({
-        display: typeof value === "bigint" ? value.toString() : String(value),
-        isTruncated: false,
-        kind: "number",
-      });
+      return formatIntegerValue(value);
     case "numericValue":
       return createFormattedCell({
         display: String(value ?? ""),

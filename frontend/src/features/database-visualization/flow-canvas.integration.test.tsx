@@ -7,6 +7,8 @@ import type {
   VisualizationNode,
 } from "@/features/database-visualization/graph-model";
 
+const TEST_NUMBER_0_POINT_1 = 0.1;
+
 type CapturedControlsStyle = React.CSSProperties & {
   "--xy-controls-button-background-color"?: string | undefined;
   "--xy-controls-button-background-color-hover"?: string | undefined;
@@ -29,8 +31,8 @@ const {
 }));
 
 vi.mock("@xyflow/react", () => ({
-  ["Background"]: () => <div data-testid="flow-background" />,
-  ["Controls"]: ({
+  Background: () => <div data-testid="flow-background" />,
+  Controls: ({
     className,
     style,
   }: {
@@ -43,18 +45,18 @@ vi.mock("@xyflow/react", () => ({
     }
     return <div data-testid="flow-controls" />;
   },
-  ["Handle"]: () => null,
-  ["MarkerType"]: { ["ArrowClosed"]: "arrowclosed" },
-  ["MiniMap"]: () => <div aria-label="Canvas minimap" role="img" />,
-  ["Panel"]: ({
+  Handle: () => null,
+  MarkerType: { ArrowClosed: "arrowclosed" },
+  MiniMap: () => <div aria-label="Canvas minimap" role="img" />,
+  Panel: ({
     children,
   }: {
     children: React.ReactNode;
     className?: string | undefined;
     position?: string | undefined;
   }) => <div data-testid="flow-panel">{children}</div>,
-  ["Position"]: { ["Left"]: "left", ["Right"]: "right" },
-  ["ReactFlow"]: ({
+  Position: { Left: "left", Right: "right" },
+  ReactFlow: ({
     children,
     edges,
     minZoom,
@@ -78,7 +80,7 @@ vi.mock("@xyflow/react", () => ({
       </section>
     );
   },
-  ["useReactFlow"]: () => ({ fitView: fitViewMock }),
+  useReactFlow: () => ({ fitView: fitViewMock }),
 }));
 
 function node(id: string): VisualizationNode {
@@ -149,7 +151,7 @@ describe("FlowCanvas", () => {
       .getAttribute("data-min-zoom");
 
     expect(minZoom).not.toBeNull();
-    expect(Number(minZoom)).toBeLessThan(0.1);
+    expect(Number(minZoom)).toBeLessThan(TEST_NUMBER_0_POINT_1);
   });
 
   test("uses orthogonal step edges so dense relationship lines cross at right angles", () => {
@@ -195,7 +197,7 @@ describe("FlowCanvas", () => {
   test("renders custom canvas actions inside a React Flow panel", () => {
     render(
       <FlowCanvas
-        actionPanel={<Button type="button">Map actions</Button>}
+        actionPanel={<Button type="button">{"Map actions"}</Button>}
         direction="LR"
         edges={[]}
         nodes={[firstNode]}

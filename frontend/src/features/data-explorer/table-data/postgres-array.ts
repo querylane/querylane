@@ -1,3 +1,5 @@
+import { anyPredicate } from "@/lib/predicates";
+
 interface PostgresArrayItem {
   display: string;
   isNull: boolean;
@@ -111,7 +113,12 @@ function scanArrayItems(inner: string): PostgresArrayParseResult {
     state.buffer += char;
   }
 
-  if (state.inQuotes || state.depth !== 0) {
+  if (
+    anyPredicate(
+      () => state.inQuotes,
+      () => state.depth !== 0
+    )
+  ) {
     return { ok: false };
   }
 

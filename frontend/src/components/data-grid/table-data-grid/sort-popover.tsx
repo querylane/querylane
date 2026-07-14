@@ -106,7 +106,7 @@ function SortPopover({
         render={
           <Button size="sm" type="button" variant="outline">
             <ArrowDownUp className="size-3.5" />
-            Sort
+            {"Sort"}
             {sortColumns.length > 0 ? (
               <Badge
                 className="ml-0.5 h-4 px-1 font-mono text-[10px]"
@@ -125,7 +125,7 @@ function SortPopover({
         style={popoverStyle}
       >
         <div className="flex items-center justify-between text-xs">
-          <span className="font-medium">Sort by</span>
+          <span className="font-medium">{"Sort by"}</span>
           {sortColumns.length > 0 ? (
             <Button
               className="h-6 px-2 text-[11px]"
@@ -134,14 +134,14 @@ function SortPopover({
               type="button"
               variant="ghost"
             >
-              Clear all
+              {"Clear all"}
             </Button>
           ) : null}
         </div>
 
         {sortColumns.length === 0 ? (
           <p className="text-muted-foreground text-xs">
-            No sort applied. Add a column or click a header in the grid.
+            {"No sort applied. Add a column or click a header in the grid."}
           </p>
         ) : (
           <ul className="w-fit max-w-full space-y-1.5">
@@ -182,7 +182,9 @@ function SortPopover({
         </Select>
         {sortColumns.length >= MAX_SORT_COLUMNS ? (
           <p className="text-[11px] text-muted-foreground">
-            Maximum {MAX_SORT_COLUMNS} sort columns.
+            {"Maximum "}
+            {MAX_SORT_COLUMNS}
+            {" sort columns."}
           </p>
         ) : null}
       </DataGridPopoverContent>
@@ -307,10 +309,10 @@ function SortRow({
         </SelectTrigger>
         <SelectContent>
           <SelectItem label="ASC" value="ASC">
-            ASC
+            {"ASC"}
           </SelectItem>
           <SelectItem label="DESC" value="DESC">
-            DESC
+            {"DESC"}
           </SelectItem>
         </SelectContent>
       </Select>

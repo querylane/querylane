@@ -9,6 +9,7 @@ import {
   formatUptime,
 } from "@/lib/console-resources";
 import { parsePostgresPlatform } from "@/lib/postgres-platform";
+import { allPredicates } from "@/lib/predicates";
 import {
   formatReplicationRole,
   formatSslMode,
@@ -63,6 +64,28 @@ function isHealthCheckKey(value: string | undefined): value is HealthCheckKey {
   return HEALTH_CHECK_KEYS.some((key) => key === value);
 }
 
+function getHealthCheckKeyFromDetail(
+  detail: Status["details"][number]
+): HealthCheckKey | undefined {
+  try {
+    const errorInfo = anyUnpack(detail, ErrorInfoSchema);
+    const check = errorInfo?.metadata["check"];
+    return isHealthCheckKey(check) ? check : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveReportedReplicationRole(
+  healthRole: ServerInfo_ReplicationRole,
+  serverRole: ServerInfo_ReplicationRole | undefined
+): ServerInfo_ReplicationRole {
+  return serverRole === undefined ||
+    serverRole === ServerInfo_ReplicationRole.UNSPECIFIED
+    ? healthRole
+    : serverRole;
+}
+
 /**
  * Maps CheckInstanceHealth partial errors to their category via the
  * google.rpc.ErrorInfo "check" metadata key, keeping the human message.
@@ -74,14 +97,8 @@ function getHealthCheckPartialReasons(
 
   for (const partialError of partialErrors ?? []) {
     for (const detail of partialError.details) {
-      let errorInfo: ReturnType<typeof anyUnpack<typeof ErrorInfoSchema>>;
-      try {
-        errorInfo = anyUnpack(detail, ErrorInfoSchema);
-      } catch {
-        errorInfo = undefined;
-      }
-      const check = errorInfo?.metadata["check"];
-      if (isHealthCheckKey(check)) {
+      const check = getHealthCheckKeyFromDetail(detail);
+      if (check) {
         reasons[check] = partialError.message || "Check unavailable";
       }
     }
@@ -222,11 +239,10 @@ function buildReplicationRow(
     return unavailableRow({ id: "replication", label: "Replication", reason });
   }
 
-  const reportedServerRole =
-    serverReplicationRole === undefined ||
-    serverReplicationRole === ServerInfo_ReplicationRole.UNSPECIFIED
-      ? replication.role
-      : serverReplicationRole;
+  const reportedServerRole = resolveReportedReplicationRole(
+    replication.role,
+    serverReplicationRole
+  );
   const rolesDisagree = reportedServerRole !== replication.role;
   const healthRoleLabel = formatReplicationRole(replication.role);
   const roleLabel = formatReplicationRole(reportedServerRole);
@@ -273,10 +289,12 @@ function buildReplicationRow(
     id: "replication",
     label: "Replication",
     summary,
-    tone:
-      rolesDisagree && replication.status !== HealthCheckStatus.ERROR
-        ? "warning"
-        : toneFromHealthCheckStatus(replication.status),
+    tone: allPredicates(
+      () => rolesDisagree,
+      () => replication.status !== HealthCheckStatus.ERROR
+    )
+      ? "warning"
+      : toneFromHealthCheckStatus(replication.status),
   };
 }
 

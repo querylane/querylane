@@ -75,7 +75,8 @@ function RowNumberNavigator({
         className="font-mono text-muted-foreground text-xs"
         htmlFor={inputId}
       >
-        Row<span className="sr-only"> number</span>
+        {"Row"}
+        <span className="sr-only">{" number"}</span>
       </FieldLabel>
       <InputGroup className="h-8 w-14" data-disabled={rowCount <= 1}>
         <InputGroupInput
@@ -94,7 +95,8 @@ function RowNumberNavigator({
         />
       </InputGroup>
       <span className="font-mono text-muted-foreground text-xs">
-        of {rowCount.toLocaleString()}
+        {"of "}
+        {rowCount.toLocaleString()}
       </span>
     </Field>
   );
@@ -140,13 +142,18 @@ function RecordDetailDrawer({
       >
         <SheetHeader className="gap-2 border-b px-5 py-4 pr-14">
           <SheetTitle className="break-all font-mono text-base leading-snug">
-            {tableName.schema}.{tableName.table}
+            {tableName.schema}
+            {"."}
+            {tableName.table}
           </SheetTitle>
           <SheetDescription className="sr-only">
-            Row {rowIndex + 1} of {rowCount.toLocaleString()}
+            {"Row "}
+            {rowIndex + 1}
+            {" of "}
+            {rowCount.toLocaleString()}
           </SheetDescription>
           <fieldset className="flex flex-wrap items-center gap-1.5 text-muted-foreground text-xs">
-            <legend className="sr-only">Row navigation</legend>
+            <legend className="sr-only">{"Row navigation"}</legend>
             <RowNumberNavigator
               onRowIndexChange={onRowIndexChange}
               rowCount={rowCount}
@@ -162,7 +169,7 @@ function RecordDetailDrawer({
               variant="ghost"
             >
               <ChevronUp data-icon="inline-start" />
-              Previous
+              {"Previous"}
             </Button>
             <Button
               aria-label="Next row"
@@ -173,7 +180,7 @@ function RecordDetailDrawer({
               type="button"
               variant="ghost"
             >
-              Next
+              {"Next"}
               <ChevronDown data-icon="inline-end" />
             </Button>
           </fieldset>

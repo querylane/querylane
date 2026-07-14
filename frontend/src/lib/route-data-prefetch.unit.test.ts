@@ -10,6 +10,8 @@ import {
   prefetchRouteData,
 } from "@/lib/route-data-prefetch";
 
+const TEST_NUMBER_3 = 3;
+
 const transport = {} as Transport;
 
 function makeQueryClientStub(
@@ -46,7 +48,7 @@ describe("route data prefetch registry", () => {
       transport,
     });
 
-    expect(queries).toHaveLength(3);
+    expect(queries).toHaveLength(TEST_NUMBER_3);
     expect(queries.map((query) => query.staleTime)).toEqual([
       RESOURCE_QUERY_OPTIONS.instanceList.staleTime,
       RESOURCE_QUERY_OPTIONS.instanceDetail.staleTime,
@@ -118,7 +120,7 @@ describe("route data prefetch registry", () => {
     });
 
     // selectedDatabase + visible columns header/query validation + first rows page.
-    expect(queries).toHaveLength(3);
+    expect(queries).toHaveLength(TEST_NUMBER_3);
     expect(queries.map((query) => query.staleTime)).toEqual([
       RESOURCE_QUERY_OPTIONS.selectedDatabase.staleTime,
       RESOURCE_QUERY_OPTIONS.tableMetadata.staleTime,

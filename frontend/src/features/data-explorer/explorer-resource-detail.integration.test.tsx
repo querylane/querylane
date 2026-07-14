@@ -17,12 +17,15 @@ describe("ResourceDetail", () => {
     vi.doMock("@/features/data-explorer/explorer-table-detail", () => {
       loadedTableDetail = true;
       return {
-        [TABLE_DETAIL_EXPORT]: () => <div>Table detail</div>,
+        [TABLE_DETAIL_EXPORT]: () => <div>{"Table detail"}</div>,
       };
     });
     vi.doMock("@/features/data-explorer/explorer-view-detail", () => ({
       [VIEW_DETAIL_EXPORT]: ({ viewName }: { viewName: string }) => (
-        <div>View detail: {viewName}</div>
+        <div>
+          {"View detail: "}
+          {viewName}
+        </div>
       ),
     }));
     const { ResourceDetail } = await import(

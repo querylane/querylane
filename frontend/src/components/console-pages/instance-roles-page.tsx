@@ -125,14 +125,14 @@ function LoginCell({ role }: { role: Role }) {
     return (
       <span className="inline-flex items-center gap-1.5">
         <span className="size-1.5 rounded-full bg-emerald-500" />
-        Yes
+        {"Yes"}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1.5 text-muted-foreground">
       <span className="size-1.5 rounded-full bg-muted-foreground/35" />
-      <span>No</span>
+      <span>{"No"}</span>
     </span>
   );
 }
@@ -142,7 +142,7 @@ const COLUMNS: DataTableColumnDef<Role>[] = [
     accessorKey: "roleName",
     cell: ({ row }) => <NameCell role={row.original} />,
     header: ({ column }) => (
-      <SortableHeader column={column}>Role</SortableHeader>
+      <SortableHeader column={column}>{"Role"}</SortableHeader>
     ),
     meta: { headerClassName: "pl-3" },
   },
@@ -160,7 +160,7 @@ const COLUMNS: DataTableColumnDef<Role>[] = [
       </span>
     ),
     header: ({ column }) => (
-      <SortableHeader column={column}>Conn limit</SortableHeader>
+      <SortableHeader column={column}>{"Conn limit"}</SortableHeader>
     ),
     id: "connLimit",
     sortFn: "basic",
@@ -180,6 +180,44 @@ function accessMapResultIsPartial(
       (result?.budgetSkippedRequestCount ?? 0) >
     0
   );
+}
+
+function summarizeRoles(roles: Role[]) {
+  const counts: Record<KindFilter, number> = {
+    all: roles.length,
+    builtin: 0,
+    group: 0,
+    login: 0,
+    repl: 0,
+    super: 0,
+  };
+  let loginCount = 0;
+  const kinds = roles.map((role) => {
+    const kind = deriveRoleKind(role);
+    counts[kind] += 1;
+    if (role.attributes?.canLogin) {
+      loginCount += 1;
+    }
+    return kind;
+  });
+  return { counts, kinds, loginCount };
+}
+
+function rolesDescription(
+  counts: Record<KindFilter, number>,
+  loginCount: number
+): string {
+  const roleUnit = counts.all === 1 ? "role" : "roles";
+  const groupUnit = counts.group === 1 ? "group" : "groups";
+  return `${counts.all} ${roleUnit} · ${loginCount} can log in · ${counts.group} ${groupUnit} · ${counts.builtin} built-in`;
+}
+
+function hasNoMatchingRoles(visibleRoleCount: number, roleCount: number) {
+  return visibleRoleCount === 0 && roleCount > 0;
+}
+
+function shouldLoadAccessMap(activeTab: InstanceRolesTab, roleCount: number) {
+  return activeTab === "map" && roleCount > 0;
 }
 
 export function InstanceRolesPage({
@@ -206,23 +244,7 @@ export function InstanceRolesPage({
   );
   const roles = rolesQuery.data?.roles ?? [];
 
-  const counts: Record<KindFilter, number> = {
-    all: roles.length,
-    builtin: 0,
-    group: 0,
-    login: 0,
-    repl: 0,
-    super: 0,
-  };
-  let loginCount = 0;
-  const kinds = roles.map((role) => {
-    const kind = deriveRoleKind(role);
-    counts[kind] += 1;
-    if (role.attributes?.canLogin) {
-      loginCount += 1;
-    }
-    return kind;
-  });
+  const { counts, kinds, loginCount } = summarizeRoles(roles);
 
   const kindFiltered =
     type === undefined
@@ -234,7 +256,7 @@ export function InstanceRolesPage({
   );
   const accessMapResourcesQuery = useRolesAccessMapResourcesQuery(
     { instanceId, roles: accessMapRoles },
-    { enabled: activeTab === "map" && roles.length > 0 }
+    { enabled: shouldLoadAccessMap(activeTab, roles.length) }
   );
   const accessMapIsPartial = accessMapResultIsPartial(
     accessMapResourcesQuery.data
@@ -290,7 +312,7 @@ export function InstanceRolesPage({
 
   const rolesDetailsContent = (
     <div className="flex flex-col gap-4">
-      {kindFiltered.length === 0 && roles.length > 0 ? (
+      {hasNoMatchingRoles(kindFiltered.length, roles.length) ? (
         <SearchEmptyState resourceName="roles" />
       ) : (
         <DataTable
@@ -321,12 +343,13 @@ export function InstanceRolesPage({
     <div className="grid gap-3">
       {accessMapResourcesQuery.isPending ? (
         <p className="text-muted-foreground text-sm" role="status">
-          Loading role object access.
+          {"Loading role object access."}
         </p>
       ) : null}
       {accessMapResourcesQuery.error ? (
         <p className="text-destructive text-sm" role="alert">
-          Object access failed to load: {accessMapResourcesQuery.error.message}
+          {"Object access failed to load: "}
+          {accessMapResourcesQuery.error.message}
         </p>
       ) : null}
       <RolesAccessMapNotice
@@ -362,7 +385,7 @@ export function InstanceRolesPage({
     >
       <div className="mx-auto flex w-full max-w-[980px] flex-col gap-6">
         <PageHeader
-          description={`${counts.all} role${counts.all === 1 ? "" : "s"} · ${loginCount} can log in · ${counts.group} group${counts.group === 1 ? "" : "s"} · ${counts.builtin} built-in`}
+          description={rolesDescription(counts, loginCount)}
           eyebrow="Instance"
           title="Roles"
         />
@@ -373,8 +396,8 @@ export function InstanceRolesPage({
           value={activeTab}
         >
           <TabsList>
-            <TabsTrigger value="details">Table</TabsTrigger>
-            <TabsTrigger value="map">Access map</TabsTrigger>
+            <TabsTrigger value="details">{"Table"}</TabsTrigger>
+            <TabsTrigger value="map">{"Access map"}</TabsTrigger>
           </TabsList>
           <div className="flex min-w-0 items-center gap-2">
             <div className="min-w-0 flex-1 sm:flex-none">

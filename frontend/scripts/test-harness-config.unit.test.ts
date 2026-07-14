@@ -16,6 +16,9 @@ import {
 } from "../vitest.shared";
 import unitConfig from "../vitest.unit.config";
 
+const TEST_NUMBER_10000 = 10_000;
+const TEST_NUMBER_0_POINT_05 = 0.05;
+
 const { scripts } = packageJson;
 const VITEST_BETA_VERSION_PATTERN = /^5\.0\.0-beta\.\d+$/u;
 const PLAYWRIGHT_PRERELEASE_VERSION_PATTERN =
@@ -82,8 +85,12 @@ describe("test harness config", () => {
   });
 
   test("keeps browser checks fast, deterministic, and Chromium only", () => {
-    expect(browserLightConfig.test?.testTimeout).toBeLessThanOrEqual(10_000);
-    expect(browserDarkConfig.test?.testTimeout).toBeLessThanOrEqual(10_000);
+    expect(browserLightConfig.test?.testTimeout).toBeLessThanOrEqual(
+      TEST_NUMBER_10000
+    );
+    expect(browserDarkConfig.test?.testTimeout).toBeLessThanOrEqual(
+      TEST_NUMBER_10000
+    );
     expect(browserLightConfig.test?.browser?.viewport).toEqual({
       height: 1000,
       width: 1280,
@@ -98,7 +105,7 @@ describe("test harness config", () => {
       throw new Error("Expected browser screenshot comparator options.");
     }
     expect(comparatorOptions.allowedMismatchedPixelRatio).toBeLessThanOrEqual(
-      0.05
+      TEST_NUMBER_0_POINT_05
     );
     expect(
       browserLightConfig.test?.browser?.expect?.toMatchScreenshot

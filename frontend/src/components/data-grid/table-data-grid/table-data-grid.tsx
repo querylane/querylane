@@ -299,18 +299,11 @@ function useResetSelectionOnNavigation({
   resetSelection: () => void;
   sortColumns: SortColumn[];
 }) {
-  const resetSelectionRef = useRef(resetSelection);
+  const resetCurrentSelection = useEffectEvent(resetSelection);
   const navigationStateKey = `${name}:${currentPageIndex}:${pageSize}:${
     serializeTableFilterSearch({ logic: filterLogic, rules: filterRules }) ?? ""
   }:${serializeSortSearch(sortColumns) ?? ""}`;
   const previousNavigationStateKeyRef = useRef(navigationStateKey);
-
-  useEffect(
-    function syncResetSelection() {
-      resetSelectionRef.current = resetSelection;
-    },
-    [resetSelection]
-  );
 
   // Selection and the open record drawer are page-scoped: prior keys don't map
   // across page/sort changes. Compare committed navigation keys so StrictMode's
@@ -322,7 +315,7 @@ function useResetSelectionOnNavigation({
         return;
       }
       previousNavigationStateKeyRef.current = navigationStateKey;
-      resetSelectionRef.current();
+      resetCurrentSelection();
     },
     [navigationStateKey]
   );
@@ -644,7 +637,7 @@ function TableDataGridAlerts({
     return (
       <Alert variant="destructive">
         <AlertTitle aria-level={2} role="heading">
-          Filter not applied
+          {"Filter not applied"}
         </AlertTitle>
         <AlertDescription>
           <ul className="list-disc space-y-1 pl-4">
@@ -659,7 +652,7 @@ function TableDataGridAlerts({
             type="button"
             variant="outline"
           >
-            Clear filters
+            {"Clear filters"}
           </Button>
         </AlertDescription>
       </Alert>
@@ -855,7 +848,7 @@ function ExpandedDataGridDialog({
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="!flex !max-w-[calc(100vw-1rem)] sm:!max-w-[calc(100vw-2rem)] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] flex-col gap-3 overflow-hidden p-3 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:p-4">
-        <DialogTitle className="sr-only">Expanded data grid</DialogTitle>
+        <DialogTitle className="sr-only">{"Expanded data grid"}</DialogTitle>
         <div className="flex min-h-0 flex-1 flex-col gap-2">
           <TableDataGridChrome
             {...chromeProps}
@@ -941,7 +934,12 @@ function useSelectionActions({
       for (const column of resultColumns) {
         cells.set(column.columnName, getGridCell(row, column));
       }
-      const result = buildExport("sql", [{ cells }], resultColumns, name);
+      const result = buildExport({
+        exportFormat: "sql",
+        rows: [{ cells }],
+        columns: resultColumns,
+        resourceName: name,
+      });
       if (!result.ok) {
         reportTruncatedExport(result);
         return;
@@ -963,12 +961,12 @@ function useSelectionActions({
       if (selectedForExport.length === 0) {
         return;
       }
-      const result = buildExport(
+      const result = buildExport({
         exportFormat,
-        selectedForExport,
-        resultColumns,
-        name
-      );
+        rows: selectedForExport,
+        columns: resultColumns,
+        resourceName: name,
+      });
       if (!result.ok) {
         reportTruncatedExport(result);
         return;
@@ -980,12 +978,12 @@ function useSelectionActions({
       if (selectedForExport.length === 0) {
         return;
       }
-      const result = buildExport(
+      const result = buildExport({
         exportFormat,
-        selectedForExport,
-        resultColumns,
-        name
-      );
+        rows: selectedForExport,
+        columns: resultColumns,
+        resourceName: name,
+      });
       if (!result.ok) {
         reportTruncatedExport(result);
         return;
@@ -1044,23 +1042,7 @@ function useServerRowExport(request: ReadRowsRequest) {
       }
       showExportCompleteToasts(toastId, result.rowCount, result.truncated);
     } catch (error) {
-      if (isExportCanceled(error, abortController.signal)) {
-        toast.dismiss(toastId);
-        return;
-      }
-
-      const uiError = normalizeAppUiError(error, {
-        action: "stream_rows",
-        area: "data-explorer.table-data-grid.export",
-        endpoint: "StreamRows",
-        source: "connect",
-        surface: "toast",
-      });
-
-      toast.error(uiError.title, {
-        description: uiError.retryGuidance ?? uiError.message,
-        id: toastId,
-      });
+      showExportFailure({ abortController, error, toastId });
     } finally {
       if (activeAbortControllerRef.current === abortController) {
         activeAbortControllerRef.current = null;
@@ -1070,6 +1052,32 @@ function useServerRowExport(request: ReadRowsRequest) {
   }
 
   return { handleExportRows, isExportingRows };
+}
+
+function showExportFailure({
+  abortController,
+  error,
+  toastId,
+}: {
+  abortController: AbortController;
+  error: unknown;
+  toastId: string | number;
+}) {
+  if (isExportCanceled(error, abortController.signal)) {
+    toast.dismiss(toastId);
+    return;
+  }
+  const uiError = normalizeAppUiError(error, {
+    action: "stream_rows",
+    area: "data-explorer.table-data-grid.export",
+    endpoint: "StreamRows",
+    source: "connect",
+    surface: "toast",
+  });
+  toast.error(uiError.title, {
+    description: uiError.retryGuidance ?? uiError.message,
+    id: toastId,
+  });
 }
 
 function showExportProgressToast(toastId: string | number, rowCount: bigint) {

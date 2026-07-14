@@ -79,12 +79,12 @@ function useTableColumnLayout({
 
   function reorderColumns(sourceColumnKey: string, targetColumnKey: string) {
     setColumnOrder(
-      reorderVisibleTableColumns(
-        layout.order,
-        layout.hiddenColumns,
+      reorderVisibleTableColumns({
+        hiddenColumns: layout.hiddenColumns,
+        order: layout.order,
         sourceColumnKey,
-        targetColumnKey
-      )
+        targetColumnKey,
+      })
     );
   }
 

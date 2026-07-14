@@ -58,10 +58,13 @@ function RolePartialAccessAlert({ databaseName }: { databaseName: string }) {
   return (
     <Alert role="status">
       <TriangleAlert aria-hidden="true" className="size-4" />
-      <AlertTitle>Some access data is not shown</AlertTitle>
+      <AlertTitle>{"Some access data is not shown"}</AlertTitle>
       <AlertDescription>
-        One or more access categories for {databaseName} exceed the 1,000-result
-        limit. Counts and relationships may be incomplete.
+        {"One or more access categories for "}
+        {databaseName}
+        {
+          " exceed the 1,000-result limit. Counts and relationships may be incomplete."
+        }
       </AlertDescription>
     </Alert>
   );
@@ -130,7 +133,7 @@ function CapabilityMarker({ cap }: { cap: Capability }) {
   }
   return (
     <span className="shrink-0 text-[10px] text-muted-foreground/50 uppercase tracking-wide">
-      Off
+      {"Off"}
     </span>
   );
 }
@@ -210,7 +213,12 @@ function AccessItem({
                 {option.label}
               </Badge>
             ))}
-            {related.grantor ? <span>by {related.grantor}</span> : null}
+            {related.grantor ? (
+              <span>
+                {"by "}
+                {related.grantor}
+              </span>
+            ) : null}
           </div>
         ) : null}
       </ItemContent>
@@ -268,7 +276,7 @@ function RoleNotFound({ instanceId }: { instanceId: string }) {
         to="/instances/$instanceId/roles"
       >
         <ChevronLeft className="size-4 shrink-0" />
-        <span>All roles</span>
+        <span>{"All roles"}</span>
       </Link>
       <EmptyState
         description="This role is no longer available on the instance."

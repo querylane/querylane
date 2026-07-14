@@ -14,6 +14,8 @@ import {
   OtherDatabaseObjectsSection,
 } from "@/features/data-explorer/other-database-objects-section";
 
+const TEST_NUMBER_2000 = 2000;
+
 const otherObjectsQuery = vi.hoisted(() => ({
   data: { isTruncated: false, objects: [] },
   error: null,
@@ -369,7 +371,9 @@ describe("OtherDatabaseObjectsPanel", () => {
       )
     ).toBeTruthy();
   });
+});
 
+describe("OtherDatabaseObjectsPanel details", () => {
   it("copies the selected object's SQL", async () => {
     const writeText = vi.fn(() => Promise.resolve());
     const user = userEvent.setup({ writeToClipboard: false });
@@ -522,7 +526,7 @@ describe("OtherDatabaseObjectsPanel", () => {
     let clearNotice: (() => void) | undefined;
     vi.spyOn(globalThis, "setTimeout").mockImplementation(
       (handler, timeout, ...args) => {
-        if (timeout === 2000) {
+        if (timeout === TEST_NUMBER_2000) {
           clearNotice = () => handler(...args);
           return nativeSetTimeout(() => undefined, 0);
         }

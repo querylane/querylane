@@ -67,6 +67,27 @@ function getRpcEndpoint(req: unknown): string {
   return `${serviceName}/${methodName}`;
 }
 
+async function applyBlockingDecision(
+  decision: ReturnType<typeof decideBlockingAppState>,
+  endpoint: string,
+  dependencies: SetupInterceptorDependencies
+) {
+  if (decision.setupRequired) {
+    dependencies.logger.info("Setup required detected from API response", {
+      endpoint,
+    });
+    dependencies.markSetupRequired();
+  }
+
+  if (decision.blockingError) {
+    const { useBlockingErrorStore } =
+      await dependencies.loadBlockingErrorStore();
+    useBlockingErrorStore
+      .getState()
+      .setBlockingError(decision.blockingError, decision.returnTo);
+  }
+}
+
 function createSetupInterceptor(
   dependencies: SetupInterceptorDependencies = defaultSetupInterceptorDependencies
 ): Interceptor {
@@ -88,25 +109,7 @@ function createSetupInterceptor(
         currentHref: dependencies.getCurrentHref(),
         error: uiError,
       });
-
-      if (blockingDecision.setupRequired) {
-        dependencies.logger.info("Setup required detected from API response", {
-          endpoint,
-        });
-
-        dependencies.markSetupRequired();
-      }
-
-      if (blockingDecision.blockingError) {
-        const { useBlockingErrorStore } =
-          await dependencies.loadBlockingErrorStore();
-        useBlockingErrorStore
-          .getState()
-          .setBlockingError(
-            blockingDecision.blockingError,
-            blockingDecision.returnTo
-          );
-      }
+      await applyBlockingDecision(blockingDecision, endpoint, dependencies);
 
       reportAppUiError(uiError, {
         expected: endpoint === EXPECTED_FAILURE_RPC_PATH,

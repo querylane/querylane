@@ -8,6 +8,9 @@ import {
   presentSessionTimeline,
 } from "@/components/console-pages/instance-activity-model";
 
+const TEST_NUMBER_3661 = 3661;
+const TEST_NUMBER_100 = 100;
+
 describe("instance activity model", () => {
   test("presents connection stats from pg_stat_activity health", () => {
     const stats = presentActivityStats({
@@ -29,7 +32,7 @@ describe("instance activity model", () => {
 
   test("formats zero and long durations without empty output", () => {
     expect(formatActivityDuration(0)).toBe("0s");
-    expect(formatActivityDuration(3661)).toBe("1h 1m");
+    expect(formatActivityDuration(TEST_NUMBER_3661)).toBe("1h 1m");
   });
 
   test("presents unavailable stats as placeholders", () => {
@@ -253,14 +256,20 @@ describe("instance activity model", () => {
       { app: null, database: null, search: "", state: null }
     );
 
-    expect(presentSessionTimeline(rows[0]!)).toEqual([
+    expect(rows).toHaveLength(3);
+    const [activeRow, idleInTransactionRow, idleRow] = rows;
+    if (!(activeRow && idleInTransactionRow && idleRow)) {
+      throw new Error("Expected three activity session rows");
+    }
+
+    expect(presentSessionTimeline(activeRow)).toEqual([
       { hot: false, label: "Connected", muted: false, value: "1h 0m ago" },
       { hot: false, label: "Transaction", muted: false, value: "open for 38s" },
       { hot: false, label: "Query", muted: false, value: "running for 38s" },
     ]);
     // A long-open transaction heats up; an idle session's last query reads
     // as history rather than live work.
-    expect(presentSessionTimeline(rows[1]!)).toEqual([
+    expect(presentSessionTimeline(idleInTransactionRow)).toEqual([
       { hot: false, label: "Connected", muted: false, value: "2h 0m ago" },
       {
         hot: true,
@@ -275,7 +284,7 @@ describe("instance activity model", () => {
         value: "last started 3m ago",
       },
     ]);
-    expect(presentSessionTimeline(rows[2]!)).toEqual([
+    expect(presentSessionTimeline(idleRow)).toEqual([
       { hot: false, label: "Connected", muted: true, value: "—" },
       { hot: false, label: "Transaction", muted: true, value: "none open" },
       { hot: false, label: "Last query", muted: true, value: "none yet" },
@@ -323,6 +332,6 @@ describe("instance activity model", () => {
       "All",
       "api",
     ]);
-    expect(literalAllRows.map((row) => row.pid)).toEqual([100]);
+    expect(literalAllRows.map((row) => row.pid)).toEqual([TEST_NUMBER_100]);
   });
 });

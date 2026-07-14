@@ -22,6 +22,12 @@ import {
   GrantObjectType,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
+const TEST_NUMBER_355 = 355;
+const TEST_NUMBER_812 = 812;
+const TEST_NUMBER_1280 = 1280;
+const TEST_NUMBER_1000 = 1000;
+const TEST_NUMBER_5 = 5;
+
 const roleApiState = vi.hoisted(() => ({
   accessMapPending: false,
   accessMapResources: null as null | {
@@ -794,7 +800,7 @@ test("console roles access map does not show an empty state while loading", asyn
 });
 
 test("console roles access filters contain their switches on narrow viewports", async () => {
-  await page.viewport(355, 812);
+  await page.viewport(TEST_NUMBER_355, TEST_NUMBER_812);
   try {
     setRolesAccessMapDesignFixture();
     renderConsoleSurface(<InstanceRolesPage instanceId="prod" tab="map" />);
@@ -819,7 +825,7 @@ test("console roles access filters contain their switches on narrow viewports", 
       );
     }
   } finally {
-    await page.viewport(1280, 1000);
+    await page.viewport(TEST_NUMBER_1280, TEST_NUMBER_1000);
   }
 });
 
@@ -964,7 +970,7 @@ test("console empty states distinguish config-managed and user-actionable gaps",
       <EmptyState
         action={
           <Button size="sm" type="button">
-            Create database
+            {"Create database"}
           </Button>
         }
         description="No databases have been discovered for this instance yet. Refresh metadata or create the first database."
@@ -997,7 +1003,7 @@ test("console page error keeps recovery actions and diagnostics scannable", asyn
       actions={
         <Button size="sm" type="button" variant="outline">
           <ServerOff className="size-4" />
-          Check backend
+          {"Check backend"}
         </Button>
       }
       error={error}
@@ -1097,7 +1103,9 @@ test("console role detail access map keeps partial counts qualified", async () =
   await expect
     .element(page.getByText("Some access data is not shown"))
     .toBeVisible();
-  expect(page.getByText("Partial", { exact: true }).elements()).toHaveLength(5);
+  expect(page.getByText("Partial", { exact: true }).elements()).toHaveLength(
+    TEST_NUMBER_5
+  );
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "console-role-detail-access-map-partial"
   );

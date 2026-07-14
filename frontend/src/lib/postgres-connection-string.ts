@@ -1,3 +1,5 @@
+import { anyPredicate } from "@/lib/predicates";
+
 const DEFAULT_POSTGRES_PORT = 5432;
 const MAX_POSTGRES_PORT = 65_535;
 const LEADING_SLASH = /^\//;
@@ -115,13 +117,15 @@ function normalizePostgresSslNegotiation(
   }
 }
 
+function hasPostgresProtocol(value: string): boolean {
+  return value.startsWith("postgres://") || value.startsWith("postgresql://");
+}
+
 export function parsePostgresConnectionString(
   input: string
 ): ParsedPostgresConnectionString | null {
   const trimmed = input.trim();
-  if (
-    !(trimmed.startsWith("postgres://") || trimmed.startsWith("postgresql://"))
-  ) {
+  if (!hasPostgresProtocol(trimmed)) {
     return null;
   }
 
@@ -134,7 +138,13 @@ export function parsePostgresConnectionString(
       ? Number.parseInt(url.port, 10)
       : DEFAULT_POSTGRES_PORT;
 
-    if (!Number.isInteger(port) || port <= 0 || port > MAX_POSTGRES_PORT) {
+    if (
+      anyPredicate(
+        () => !Number.isInteger(port),
+        () => port <= 0,
+        () => port > MAX_POSTGRES_PORT
+      )
+    ) {
       return null;
     }
 

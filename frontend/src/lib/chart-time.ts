@@ -108,6 +108,30 @@ function dayAlignedTicks(
   return ticks;
 }
 
+function createSubdayCursor(minMs: number, unit: TickStep["unit"]): Date {
+  const cursor = new Date(minMs);
+  if (unit === "minute") {
+    cursor.setSeconds(0, 0);
+    if (cursor.getTime() < minMs) {
+      cursor.setMinutes(cursor.getMinutes() + 1);
+    }
+    return cursor;
+  }
+  cursor.setMinutes(0, 0, 0);
+  if (cursor.getTime() < minMs) {
+    cursor.setHours(cursor.getHours() + 1);
+  }
+  return cursor;
+}
+
+function advanceSubdayCursor(cursor: Date, unit: TickStep["unit"]): void {
+  if (unit === "minute") {
+    cursor.setMinutes(cursor.getMinutes() + 1);
+    return;
+  }
+  cursor.setHours(cursor.getHours() + 1);
+}
+
 /**
  * Sub-day ticks aligned to the LOCAL calendar: walk whole local minutes or
  * hours and keep multiples of the step (d3-time's filter semantics). Epoch
@@ -119,18 +143,7 @@ function localAlignedTicks(
   maxMs: number,
   step: TickStep
 ): number[] {
-  const cursor = new Date(minMs);
-  if (step.unit === "minute") {
-    cursor.setSeconds(0, 0);
-    if (cursor.getTime() < minMs) {
-      cursor.setMinutes(cursor.getMinutes() + 1);
-    }
-  } else {
-    cursor.setMinutes(0, 0, 0);
-    if (cursor.getTime() < minMs) {
-      cursor.setHours(cursor.getHours() + 1);
-    }
-  }
+  const cursor = createSubdayCursor(minMs, step.unit);
 
   const ticks: number[] = [];
   while (cursor.getTime() <= maxMs) {
@@ -139,11 +152,7 @@ function localAlignedTicks(
     if (field % step.count === 0) {
       ticks.push(cursor.getTime());
     }
-    if (step.unit === "minute") {
-      cursor.setMinutes(cursor.getMinutes() + 1);
-    } else {
-      cursor.setHours(cursor.getHours() + 1);
-    }
+    advanceSubdayCursor(cursor, step.unit);
   }
 
   return ticks;

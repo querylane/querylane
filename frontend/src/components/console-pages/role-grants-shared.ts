@@ -127,6 +127,34 @@ function schemaScopeBreakdownLabel(group: SchemaGrantGroup): string {
   return parts.join(" · ");
 }
 
+function addObjectPrivilegeCounts(
+  counts: Record<string, number>,
+  object: GrantedObject
+) {
+  const seen = new Set<string>();
+  for (const privilege of object.privileges) {
+    if (seen.has(privilege.name)) {
+      continue;
+    }
+    seen.add(privilege.name);
+    if (privilege.name in counts) {
+      counts[privilege.name] = (counts[privilege.name] ?? 0) + 1;
+    }
+  }
+}
+
+function presentOwnedStat(type: GrantObjectType, names: string[]): OwnedStat {
+  const extra = names.length - EXAMPLE_LIMIT;
+  const examples =
+    names.slice(0, EXAMPLE_LIMIT).join(", ") + (extra > 0 ? ` +${extra}` : "");
+  return {
+    count: names.length,
+    examples,
+    label: `${getObjectTypeLabel(type).toLowerCase()}${names.length === 1 ? "" : "s"}`,
+    type,
+  };
+}
+
 // ───────── Access-facet load state ─────────
 
 // The owned-objects / PUBLIC-grants / default-privileges facets are fetched as
@@ -167,6 +195,7 @@ export const TABLE_LIKE_TYPES = new Set<GrantObjectType>([
 // privilege), so insertion order yields a schema-grouped display order.
 export function aggregateGrants(grants: ObjectGrant[]): GrantedObject[] {
   const objects = new Map<string, GrantedObject>();
+  const grantorsByObject = new Map<string, Set<string>>();
   for (const grant of grants) {
     // Tuple key, not a delimiter-joined string: Postgres identifiers can contain
     // spaces, so a JSON array keeps distinct (type, schema, object) triples apart.
@@ -186,12 +215,15 @@ export function aggregateGrants(grants: ObjectGrant[]): GrantedObject[] {
         schemaName: grant.schemaName,
       };
       objects.set(key, object);
+      grantorsByObject.set(key, new Set());
     }
     object.privileges.push({
       grantable: grant.withGrantOption,
       name: grant.privilege,
     });
-    if (grant.grantor && !object.grantors.includes(grant.grantor)) {
+    const grantors = grantorsByObject.get(key);
+    if (grant.grantor && grantors && !grantors.has(grant.grantor)) {
+      grantors.add(grant.grantor);
       object.grantors.push(grant.grantor);
     }
   }
@@ -463,9 +495,11 @@ export function columnsFor(
   objects: GrantedObject[]
 ): string[] {
   const columns = [...(GRANT_VOCAB[type] ?? [])];
+  const columnSet = new Set(columns);
   for (const object of objects) {
     for (const privilege of object.privileges) {
-      if (!columns.includes(privilege.name)) {
+      if (!columnSet.has(privilege.name)) {
+        columnSet.add(privilege.name);
         columns.push(privilege.name);
       }
     }
@@ -478,23 +512,11 @@ export function densityCounts(
   objects: GrantedObject[],
   columns: string[]
 ): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const column of columns) {
-    out[column] = 0;
-  }
+  const counts = Object.fromEntries(columns.map((column) => [column, 0]));
   for (const object of objects) {
-    const seen = new Set<string>();
-    for (const privilege of object.privileges) {
-      if (seen.has(privilege.name)) {
-        continue;
-      }
-      seen.add(privilege.name);
-      if (privilege.name in out) {
-        out[privilege.name] = (out[privilege.name] ?? 0) + 1;
-      }
-    }
+    addObjectPrivilegeCounts(counts, object);
   }
-  return out;
+  return counts;
 }
 
 export type PillState = "held" | "full" | "partial" | "none";
@@ -524,12 +546,17 @@ export function groupBySchema(
   return [...map.entries()];
 }
 
-export function objectMatchesFilters(
-  object: GrantedObject,
-  needle: string,
-  grantOnly: boolean,
-  activePrivs: string[]
-): boolean {
+export function objectMatchesFilters({
+  object,
+  needle,
+  grantOnly,
+  activePrivs,
+}: {
+  object: GrantedObject;
+  needle: string;
+  grantOnly: boolean;
+  activePrivs: string[];
+}): boolean {
   if (needle && !objectDisplayName(object).toLowerCase().includes(needle)) {
     return false;
   }
@@ -650,19 +677,14 @@ export function ownedStats(objects: OwnedObject[]): OwnedStat[] {
       byType.set(object.objectType, [name]);
     }
   }
-  return OWNED_TYPE_ORDER.filter((type) => byType.has(type)).map((type) => {
-    const names = byType.get(type) ?? [];
-    const extra = names.length - EXAMPLE_LIMIT;
-    const examples =
-      names.slice(0, EXAMPLE_LIMIT).join(", ") +
-      (extra > 0 ? ` +${extra}` : "");
-    return {
-      count: names.length,
-      examples,
-      label: `${getObjectTypeLabel(type).toLowerCase()}${names.length === 1 ? "" : "s"}`,
-      type,
-    };
-  });
+  const stats: OwnedStat[] = [];
+  for (const type of OWNED_TYPE_ORDER) {
+    if (!byType.has(type)) {
+      continue;
+    }
+    stats.push(presentOwnedStat(type, byType.get(type) ?? []));
+  }
+  return stats;
 }
 
 // ───────── Default privileges ─────────

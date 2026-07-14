@@ -53,6 +53,7 @@ import type {
 } from "@/features/database-visualization/graph-model";
 import { assertNever } from "@/lib/assert-never";
 import { parseResourceLeafId } from "@/lib/console-resources";
+import { allPredicates } from "@/lib/predicates";
 import {
   DefaultPrivilegeObjectType,
   GrantObjectType,
@@ -251,11 +252,12 @@ function AccessMapLoadingCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Loader2 className="size-4 animate-spin" /> Loading access map
+          <Loader2 className="size-4 animate-spin" />
+          {" Loading access map"}
         </CardTitle>
       </CardHeader>
       <CardContent className="text-muted-foreground text-sm">
-        Preparing the role access canvas.
+        {"Preparing the role access canvas."}
       </CardContent>
     </Card>
   );
@@ -273,7 +275,7 @@ function AccessMapKpiCount({
       {count}
       {partial ? (
         <span className="font-normal text-muted-foreground text-xs">
-          Partial
+          {"Partial"}
         </span>
       ) : null}
     </p>
@@ -356,17 +358,18 @@ function AccessMapCanvasActions({
         type="button"
         variant="outline"
       >
-        Switch to {direction === "LR" ? "vertical" : "horizontal"}
+        {"Switch to "}
+        {direction === "LR" ? "vertical" : "horizontal"}
       </Button>
       <Button onClick={onLoadFullMap} size="sm" type="button" variant="outline">
-        Load full map
+        {"Load full map"}
       </Button>
       <Popover>
         <PopoverTrigger
           render={
             <Button size="sm" type="button" variant="outline">
               <SlidersHorizontal className="size-3.5" />
-              Resource filters
+              {"Resource filters"}
               {hiddenFacetCount > 0 ? (
                 <span
                   aria-hidden="true"
@@ -383,9 +386,9 @@ function AccessMapCanvasActions({
           className="w-80 max-w-[calc(100vw-2rem)] gap-3 p-3"
         >
           <PopoverHeader>
-            <PopoverTitle>Access filters</PopoverTitle>
+            <PopoverTitle>{"Access filters"}</PopoverTitle>
             <PopoverDescription>
-              Add or remove access facets from this role map.
+              {"Add or remove access facets from this role map."}
             </PopoverDescription>
           </PopoverHeader>
           <div className="grid gap-2">
@@ -426,12 +429,12 @@ function AccessMapCanvasActions({
         {isExpanded ? (
           <>
             <Minimize2 className="size-3.5" />
-            Collapse
+            {"Collapse"}
           </>
         ) : (
           <>
             <Maximize2 className="size-3.5" />
-            Expand
+            {"Expand"}
           </>
         )}
       </Button>
@@ -568,14 +571,17 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
       <header className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-xl tracking-tight">Access map</h2>
+            <h2 className="font-semibold text-xl tracking-tight">
+              {"Access map"}
+            </h2>
             <Badge variant="secondary">
               {props.effectiveDb?.name ?? "No database"}
             </Badge>
           </div>
           <p className="mt-1 max-w-2xl text-muted-foreground text-sm">
-            Shows role membership, direct grants, owned objects, PUBLIC access,
-            and default privileges in one canvas.
+            {
+              "Shows role membership, direct grants, owned objects, PUBLIC access, and default privileges in one canvas."
+            }
           </p>
         </div>
       </header>
@@ -586,7 +592,7 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
             <ShieldCheck className="size-5 text-primary" />
             <div>
               <p className="text-muted-foreground text-xs uppercase tracking-wider">
-                Parents
+                {"Parents"}
               </p>
               <p className="font-semibold text-lg tabular-nums">
                 {model.summary.parentRoleCount}
@@ -599,7 +605,7 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
             <KeyRound className="size-5 text-primary" />
             <div>
               <p className="text-muted-foreground text-xs uppercase tracking-wider">
-                Direct grants
+                {"Direct grants"}
               </p>
               <AccessMapKpiCount
                 count={model.summary.directGrantCount}
@@ -613,7 +619,7 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
             <GitBranch className="size-5 text-primary" />
             <div>
               <p className="text-muted-foreground text-xs uppercase tracking-wider">
-                Owned objects
+                {"Owned objects"}
               </p>
               <AccessMapKpiCount
                 count={model.summary.ownedObjectCount}
@@ -627,7 +633,7 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
             <AlertCircle className="size-5 text-primary" />
             <div>
               <p className="text-muted-foreground text-xs uppercase tracking-wider">
-                PUBLIC grants
+                {"PUBLIC grants"}
               </p>
               <AccessMapKpiCount
                 count={model.summary.publicGrantCount}
@@ -638,7 +644,10 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
         </Card>
       </div>
 
-      {props.partialAccess && !isMapExpanded ? (
+      {allPredicates(
+        () => props.partialAccess,
+        () => !isMapExpanded
+      ) ? (
         <RolePartialAccessAlert
           databaseName={props.effectiveDb?.name ?? "the selected database"}
         />
@@ -647,16 +656,16 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
       {props.grantsError ? (
         <Alert variant="destructive">
           <AlertCircle className="size-4" />
-          <AlertTitle>Access data failed to load</AlertTitle>
+          <AlertTitle>{"Access data failed to load"}</AlertTitle>
           <AlertDescription>{errorMessage(props.grantsError)}</AlertDescription>
         </Alert>
       ) : null}
       {loading ? (
         <Alert>
           <Loader2 className="size-4 animate-spin" />
-          <AlertTitle>Loading access facets</AlertTitle>
+          <AlertTitle>{"Loading access facets"}</AlertTitle>
           <AlertDescription>
-            The map updates as grants and ownership data arrive.
+            {"The map updates as grants and ownership data arrive."}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -676,10 +685,11 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
         <DialogContent className="h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] grid-rows-[auto_minmax(0,1fr)] p-4 sm:max-w-[calc(100vw-2rem)]">
           <div className="grid gap-3">
             <DialogHeader>
-              <DialogTitle>Expanded access map</DialogTitle>
+              <DialogTitle>{"Expanded access map"}</DialogTitle>
               <DialogDescription>
-                Explore role membership, ownership, direct grants, PUBLIC
-                grants, and default privileges with more room.
+                {
+                  "Explore role membership, ownership, direct grants, PUBLIC grants, and default privileges with more room."
+                }
               </DialogDescription>
             </DialogHeader>
             {props.partialAccess ? (

@@ -88,9 +88,9 @@ function ForeignKeyReferenceQueryState({
         className="space-y-1 py-4 text-center"
         role="status"
       >
-        <p className="font-medium">Waiting for connection</p>
+        <p className="font-medium">{"Waiting for connection"}</p>
         <p className="text-muted-foreground text-sm">
-          The referenced row will load when the connection returns.
+          {"The referenced row will load when the connection returns."}
         </p>
       </div>
     );
@@ -111,7 +111,7 @@ function ForeignKeyReferenceQueryState({
   if (isError) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Couldn’t load referenced row</AlertTitle>
+        <AlertTitle>{"Couldn’t load referenced row"}</AlertTitle>
         <AlertDescription>
           <p>
             {
@@ -131,7 +131,7 @@ function ForeignKeyReferenceQueryState({
             type="button"
             variant="outline"
           >
-            Retry
+            {"Retry"}
           </Button>
         </AlertDescription>
       </Alert>
@@ -145,7 +145,7 @@ function ForeignKeyReferenceQueryState({
           className="sr-only"
           role="status"
         >
-          Referenced row loaded.
+          {"Referenced row loaded."}
         </span>
         <ReferencedRowFields
           columns={columns}
@@ -158,7 +158,7 @@ function ForeignKeyReferenceQueryState({
   }
   return (
     <p className="py-6 text-center text-muted-foreground text-sm" role="status">
-      Referenced row not found.
+      {"Referenced row not found."}
     </p>
   );
 }
@@ -198,11 +198,13 @@ function ForeignKeyReferenceContent({
             "Referenced by the matching composite key."
           ) : (
             <>
-              Referenced by {preview.sourceColumn} ={" "}
+              {"Referenced by "}
+              {preview.sourceColumn}
+              {" ="}{" "}
               <code className="break-all rounded bg-muted px-1 py-0.5 font-mono text-xs">
                 {preview.displayValue}
               </code>
-              .
+              {"."}
             </>
           )}
         </PopoverDescription>

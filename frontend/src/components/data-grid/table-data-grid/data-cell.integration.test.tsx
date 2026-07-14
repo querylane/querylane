@@ -10,6 +10,9 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
+const TEST_NUMBER_2000 = 2000;
+const TEST_NUMBER_1001 = 1001;
+
 const DIMENSIONS_OBJECT_RE = /"dimensions": \{/;
 
 afterEach(() => cleanup());
@@ -53,7 +56,7 @@ describe("DataCell", () => {
       dataType: DataType.JSON,
       rawType: "jsonb",
     });
-    const raw = `{"payload":"${"x".repeat(2000)}"}`;
+    const raw = `{"payload":"${"x".repeat(TEST_NUMBER_2000)}"}`;
     const cell = create(TableCellSchema, {
       value: create(TableValueSchema, {
         kind: {
@@ -66,7 +69,9 @@ describe("DataCell", () => {
     render(<DataCell cell={cell} column={column} />);
 
     const preview = screen.getByTestId("metadata-json-preview");
-    expect(preview.getAttribute("title")?.length).toBeLessThanOrEqual(1001);
+    expect(preview.getAttribute("title")?.length).toBeLessThanOrEqual(
+      TEST_NUMBER_1001
+    );
     expect(preview.getAttribute("title")?.endsWith("…")).toBe(true);
   });
 

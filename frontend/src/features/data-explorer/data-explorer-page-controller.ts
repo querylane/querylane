@@ -64,7 +64,18 @@ function useDataExplorerPageController({
   const queryClient = useQueryClient();
   const transport = useTransport();
   const { selectedDatabase } = useDb();
-  const [query, setQuery] = useState(() => search.q ?? "");
+  const [queryState, setQueryState] = useState(() => ({
+    source: search.q,
+    value: search.q ?? "",
+  }));
+  if (queryState.source !== search.q) {
+    setQueryState({ source: search.q, value: search.q ?? "" });
+  }
+  const query =
+    queryState.source === search.q ? queryState.value : (search.q ?? "");
+  const setQuery = (value: string) => {
+    setQueryState({ source: search.q, value });
+  };
   const [tableListSort, setTableListSort] = useState<TableListSort>(
     DEFAULT_TABLE_LIST_SORT
   );
@@ -128,13 +139,6 @@ function useDataExplorerPageController({
       { area: "data-explorer.search" }
     );
   };
-
-  useEffect(
-    function syncSidebarSearchFromUrl() {
-      setQuery(search.q ?? "");
-    },
-    [search.q]
-  );
 
   useEffect(
     function flushSidebarSearchToUrl() {

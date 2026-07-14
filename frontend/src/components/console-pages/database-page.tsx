@@ -133,24 +133,24 @@ function DatabaseOverviewHeader({
         </h1>
         <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
           <span className="text-foreground">{database.owner || "—"}</span>
-          <span className="text-border">|</span>
+          <span className="text-border">{"|"}</span>
           <span>{database.characterSet || "—"}</span>
-          <span className="text-border">|</span>
+          <span className="text-border">{"|"}</span>
           <span>{database.collation || "—"}</span>
-          <span className="text-border">|</span>
+          <span className="text-border">{"|"}</span>
           <span>{kindLabel}</span>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button onClick={onViewQueryInsights} type="button" variant="outline">
-          View query insights
+          {"View query insights"}
         </Button>
         <Link
           className={cn(buttonVariants({ variant: "outline" }))}
           params={{ databaseId, instanceId }}
           to={EXPLORER_ROUTE}
         >
-          Open data explorer
+          {"Open data explorer"}
         </Link>
       </div>
     </div>
@@ -235,7 +235,8 @@ function objectColumns(): DataTableColumnDef<CatalogObject>[] {
             />
             <span className="min-w-0 truncate font-mono text-sm">
               <span className="text-muted-foreground">
-                {row.original.schemaId}.
+                {row.original.schemaId}
+                {"."}
               </span>
               {row.original.objectId}
             </span>
@@ -243,7 +244,7 @@ function objectColumns(): DataTableColumnDef<CatalogObject>[] {
         );
       },
       header: ({ column }) => (
-        <SortableHeader column={column}>Object</SortableHeader>
+        <SortableHeader column={column}>{"Object"}</SortableHeader>
       ),
       id: "object",
     },
@@ -259,7 +260,7 @@ function objectColumns(): DataTableColumnDef<CatalogObject>[] {
         />
       ),
       header: ({ column }) => (
-        <SortableHeader column={column}>Kind</SortableHeader>
+        <SortableHeader column={column}>{"Kind"}</SortableHeader>
       ),
       id: "kind",
     },
@@ -267,7 +268,7 @@ function objectColumns(): DataTableColumnDef<CatalogObject>[] {
       accessorFn: (row) => row.owner,
       cell: ({ row }) => row.original.owner || "—",
       header: ({ column }) => (
-        <SortableHeader column={column}>Owner</SortableHeader>
+        <SortableHeader column={column}>{"Owner"}</SortableHeader>
       ),
       id: "owner",
       meta: {
@@ -279,7 +280,7 @@ function objectColumns(): DataTableColumnDef<CatalogObject>[] {
       cell: ({ row }) =>
         formatRows(normalizeEstimatedRowCount(row.original.rowCount)),
       header: ({ column }) => (
-        <SortableHeader column={column}>Est. rows</SortableHeader>
+        <SortableHeader column={column}>{"Est. rows"}</SortableHeader>
       ),
       id: "estRows",
       meta: {
@@ -291,7 +292,7 @@ function objectColumns(): DataTableColumnDef<CatalogObject>[] {
       accessorFn: (row) => Number(row.sizeBytes),
       cell: ({ row }) => formatBytes(row.original.sizeBytes),
       header: ({ column }) => (
-        <SortableHeader column={column}>Size</SortableHeader>
+        <SortableHeader column={column}>{"Size"}</SortableHeader>
       ),
       id: "size",
       meta: {
@@ -314,14 +315,14 @@ function schemaColumns(): DataTableColumnDef<CatalogSchema>[] {
           />
           <span className="font-medium text-sm">{row.original.schemaId}</span>
           {row.original.isSystemSchema ? (
-            <Badge variant="outline">System</Badge>
+            <Badge variant="outline">{"System"}</Badge>
           ) : (
-            <Badge variant="secondary">User</Badge>
+            <Badge variant="secondary">{"User"}</Badge>
           )}
         </span>
       ),
       header: ({ column }) => (
-        <SortableHeader column={column}>Schema</SortableHeader>
+        <SortableHeader column={column}>{"Schema"}</SortableHeader>
       ),
       id: "schema",
     },
@@ -329,7 +330,7 @@ function schemaColumns(): DataTableColumnDef<CatalogSchema>[] {
       accessorFn: (row) => row.owner,
       cell: ({ row }) => row.original.owner || "—",
       header: ({ column }) => (
-        <SortableHeader column={column}>Owner</SortableHeader>
+        <SortableHeader column={column}>{"Owner"}</SortableHeader>
       ),
       id: "owner",
       meta: {
@@ -339,7 +340,7 @@ function schemaColumns(): DataTableColumnDef<CatalogSchema>[] {
     {
       accessorFn: (row) => row.tableCount,
       header: ({ column }) => (
-        <SortableHeader column={column}>Tables</SortableHeader>
+        <SortableHeader column={column}>{"Tables"}</SortableHeader>
       ),
       id: "tables",
       meta: {
@@ -350,7 +351,7 @@ function schemaColumns(): DataTableColumnDef<CatalogSchema>[] {
     {
       accessorFn: (row) => row.viewCount,
       header: ({ column }) => (
-        <SortableHeader column={column}>Views</SortableHeader>
+        <SortableHeader column={column}>{"Views"}</SortableHeader>
       ),
       id: "views",
       meta: {
@@ -362,7 +363,7 @@ function schemaColumns(): DataTableColumnDef<CatalogSchema>[] {
       accessorFn: (row) => Number(row.totalSizeBytes),
       cell: ({ row }) => formatBytes(row.original.totalSizeBytes),
       header: ({ column }) => (
-        <SortableHeader column={column}>Size</SortableHeader>
+        <SortableHeader column={column}>{"Size"}</SortableHeader>
       ),
       id: "size",
       meta: {
@@ -374,7 +375,7 @@ function schemaColumns(): DataTableColumnDef<CatalogSchema>[] {
       accessorFn: (row) => row.estimatedRows,
       cell: ({ row }) => formatRows(row.original.estimatedRows),
       header: ({ column }) => (
-        <SortableHeader column={column}>Est. rows</SortableHeader>
+        <SortableHeader column={column}>{"Est. rows"}</SortableHeader>
       ),
       id: "estRows",
       meta: {
@@ -449,7 +450,8 @@ function CatalogLoadingTable({
                   aria-label={`Loading ${resourceName}`}
                   className="sr-only"
                 >
-                  Loading {resourceName}
+                  {"Loading "}
+                  {resourceName}
                 </output>
                 {LOADING_ROW_KEYS.map((key) => (
                   <Skeleton
@@ -533,7 +535,7 @@ function LargestObjectsSection({
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <h2 className="font-semibold text-base text-foreground">
-          Largest objects
+          {"Largest objects"}
         </h2>
         {isPending ? null : (
           <span className="text-muted-foreground text-xs tabular-nums">
@@ -628,7 +630,7 @@ function SchemasSection({
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <h2 className="font-semibold text-base text-foreground">Schemas</h2>
+        <h2 className="font-semibold text-base text-foreground">{"Schemas"}</h2>
         {isPending ? null : (
           <span className="text-muted-foreground text-xs tabular-nums">
             {filteredSchemas.length}

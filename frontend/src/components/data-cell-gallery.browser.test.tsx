@@ -13,6 +13,9 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
+const TEST_NUMBER_3 = 3;
+const TEST_NUMBER_4 = 4;
+
 const EXAMPLE_COLUMNS = [
   { columnName: "Text", dataType: DataType.STRING },
   { columnName: "Integer", dataType: DataType.INTEGER },
@@ -58,7 +61,10 @@ const EXAMPLE_CELLS = [
     { truncated: true }
   ),
   cell(
-    { case: "bytesValue", value: new Uint8Array([1, 2, 3, 4]) },
+    {
+      case: "bytesValue",
+      value: new Uint8Array([1, 2, TEST_NUMBER_3, TEST_NUMBER_4]),
+    },
     { fullSizeBytes: 4096n, truncated: true }
   ),
   cell({ case: "timestampValue", value: "2026-05-20T11:45:00Z" }),
@@ -72,16 +78,17 @@ function renderCellGallery() {
       <div className="w-[1100px] rounded-2xl border border-border bg-background p-8 text-foreground">
         <div className="space-y-6">
           <div>
-            <h1 className="font-semibold text-2xl">Data cell rendering</h1>
+            <h1 className="font-semibold text-2xl">{"Data cell rendering"}</h1>
             <p className="mt-1 text-muted-foreground text-sm">
-              Typed PostgreSQL values should stay aligned, scannable, and
-              visibly distinct.
+              {
+                "Typed PostgreSQL values should stay aligned, scannable, and visibly distinct."
+              }
             </p>
           </div>
           <div className="overflow-hidden rounded-xl border border-border">
             <div className="grid grid-cols-[180px_minmax(0,1fr)] border-border border-b bg-muted/30 px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
-              <div>Type</div>
-              <div>Rendered value</div>
+              <div>{"Type"}</div>
+              <div>{"Rendered value"}</div>
             </div>
             {EXAMPLE_COLUMNS.map((example, index) => (
               <div

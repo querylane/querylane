@@ -40,6 +40,15 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 import { listRoles } from "@/protogen/querylane/console/v1alpha1/role-RoleService_connectquery";
 
+const TEST_NUMBER_1000 = 1000;
+const TEST_NUMBER_4 = 4;
+const TEST_NUMBER_100 = 100;
+const TEST_NUMBER_66 = 66;
+const TEST_NUMBER_298 = 298;
+const TEST_NUMBER_102 = 102;
+const TEST_NUMBER_5 = 5;
+const TEST_NUMBER_6 = 6;
+
 const ROLE_ID = "YWxpY2U";
 const DATABASE_SCOPE = {
   databaseId: "postgres",
@@ -199,7 +208,7 @@ describe("useListAllRolesQuery", () => {
     expect(requests).toHaveLength(1);
     expect(requests[0]?.parent).toBe("instances/local");
     expect(requests[0]?.orderBy).toBe("name asc");
-    expect(requests[0]?.pageSize).toBe(1000);
+    expect(requests[0]?.pageSize).toBe(TEST_NUMBER_1000);
   });
 
   test("skips fetching roles when disabled", async () => {
@@ -258,7 +267,7 @@ describe("useListRoleGrantsQuery", () => {
     expect(requests).toHaveLength(1);
     expect(requests[0]?.parent).toBe(`instances/local/roles/${ROLE_ID}`);
     expect(requests[0]?.database).toBe("instances/local/databases/postgres");
-    expect(requests[0]?.pageSize).toBe(1000);
+    expect(requests[0]?.pageSize).toBe(TEST_NUMBER_1000);
     expect(requests[0]?.pageToken).toBe("");
     expect(result.current.data?.grants.map((grant) => grant.privilege)).toEqual(
       ["SELECT"]
@@ -323,7 +332,7 @@ describe("useListRoleOwnedObjectsQuery", () => {
     });
     expect(requests).toHaveLength(1);
     expect(requests[0]?.parent).toBe(`instances/local/roles/${ROLE_ID}`);
-    expect(requests[0]?.pageSize).toBe(1000);
+    expect(requests[0]?.pageSize).toBe(TEST_NUMBER_1000);
     expect(requests[0]?.pageToken).toBe("");
     expect(
       result.current.data?.ownedObjects.map((owned) => owned.objectName)
@@ -390,7 +399,7 @@ describe("useListRoleDefaultPrivilegesQuery", () => {
     });
     expect(requests).toHaveLength(1);
     expect(requests[0]?.parent).toBe(`instances/local/roles/${ROLE_ID}`);
-    expect(requests[0]?.pageSize).toBe(1000);
+    expect(requests[0]?.pageSize).toBe(TEST_NUMBER_1000);
     expect(requests[0]?.pageToken).toBe("");
     expect(
       result.current.data?.defaultPrivileges.map(
@@ -557,7 +566,7 @@ describe("useRolesAccessMapResourcesQuery", () => {
       grantRequests[0],
       ownedObjectRequests[0],
     ]) {
-      expect(request?.pageSize).toBe(1000);
+      expect(request?.pageSize).toBe(TEST_NUMBER_1000);
       expect(request?.pageToken).toBe("");
     }
     expect(defaultPrivilegeRequests[0]?.database).toBe(
@@ -576,7 +585,7 @@ describe("useRolesAccessMapResourcesQuery", () => {
     expect(result.current.data?.roleAccess[0]?.grants).toHaveLength(1);
     expect(result.current.data?.roleAccess[0]?.ownedObjects).toHaveLength(1);
     expect(result.current.data?.failedRequestCount).toBe(0);
-    expect(result.current.data?.truncatedRequestCount).toBe(4);
+    expect(result.current.data?.truncatedRequestCount).toBe(TEST_NUMBER_4);
     expect(result.current.data?.budgetSkippedRequestCount).toBe(0);
   });
 
@@ -784,20 +793,24 @@ describe("useRolesAccessMapResourcesQuery request budget", () => {
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
-    expect(publicGrantRequests).toHaveLength(100);
-    expect(defaultPrivilegeRequests).toHaveLength(66);
-    expect(grantRequests).toHaveLength(66);
-    expect(ownedObjectRequests).toHaveLength(66);
-    expect(callOrder).toHaveLength(298);
+    expect(publicGrantRequests).toHaveLength(TEST_NUMBER_100);
+    expect(defaultPrivilegeRequests).toHaveLength(TEST_NUMBER_66);
+    expect(grantRequests).toHaveLength(TEST_NUMBER_66);
+    expect(ownedObjectRequests).toHaveLength(TEST_NUMBER_66);
+    expect(callOrder).toHaveLength(TEST_NUMBER_298);
     expect(
-      callOrder.slice(0, 100).every((call) => call.startsWith("public:"))
+      callOrder
+        .slice(0, TEST_NUMBER_100)
+        .every((call) => call.startsWith("public:"))
     ).toBe(true);
-    expect(result.current.data?.publicAccess).toHaveLength(100);
-    expect(result.current.data?.roleAccess).toHaveLength(66);
+    expect(result.current.data?.publicAccess).toHaveLength(TEST_NUMBER_100);
+    expect(result.current.data?.roleAccess).toHaveLength(TEST_NUMBER_66);
     expect(result.current.data?.roleAccess[65]?.grants).toHaveLength(1);
     expect(result.current.data?.failedRequestCount).toBe(0);
     expect(result.current.data?.truncatedRequestCount).toBe(2);
-    expect(result.current.data?.budgetSkippedRequestCount).toBe(102);
+    expect(result.current.data?.budgetSkippedRequestCount).toBe(
+      TEST_NUMBER_102
+    );
   });
 
   test("bounds concurrent access requests across role and database pairs", async () => {
@@ -871,8 +884,8 @@ describe("useRolesAccessMapResourcesQuery request budget", () => {
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
-    expect(result.current.data?.roleAccess).toHaveLength(5);
-    expect(maximumActiveRequests).toBeLessThanOrEqual(6);
+    expect(result.current.data?.roleAccess).toHaveLength(TEST_NUMBER_5);
+    expect(maximumActiveRequests).toBeLessThanOrEqual(TEST_NUMBER_6);
   });
 
   test("starts the next role while an earlier access request is still pending", async () => {
@@ -982,7 +995,7 @@ describe("useListPublicGrantsQuery", () => {
     });
     expect(requests).toHaveLength(1);
     expect(requests[0]?.parent).toBe("instances/local/databases/postgres");
-    expect(requests[0]?.pageSize).toBe(1000);
+    expect(requests[0]?.pageSize).toBe(TEST_NUMBER_1000);
     expect(requests[0]?.pageToken).toBe("");
     expect(result.current.data?.grants.map((grant) => grant.privilege)).toEqual(
       ["SELECT"]

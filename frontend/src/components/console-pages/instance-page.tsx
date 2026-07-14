@@ -417,6 +417,22 @@ function CoreInstanceStatsBar({
   );
 }
 
+function ReplicationRoleBadge({
+  serverInfo,
+}: {
+  serverInfo: ServerInfo | undefined;
+}) {
+  const role = serverInfo?.replicationRole;
+  if (role === undefined || role === ServerInfo_ReplicationRole.UNSPECIFIED) {
+    return null;
+  }
+  return (
+    <Badge className="px-2.5 py-0.5 text-xs" variant="default">
+      {formatReplicationRole(role)}
+    </Badge>
+  );
+}
+
 function InstancePageHeader({
   connectionStatus,
   databasesState,
@@ -458,13 +474,7 @@ function InstancePageHeader({
               {instance.displayName}
             </h1>
             <div className="flex flex-wrap items-center gap-2">
-              {serverInfo &&
-              serverInfo.replicationRole !==
-                ServerInfo_ReplicationRole.UNSPECIFIED ? (
-                <Badge className="px-2.5 py-0.5 text-xs" variant="default">
-                  {formatReplicationRole(serverInfo.replicationRole)}
-                </Badge>
-              ) : null}
+              <ReplicationRoleBadge serverInfo={serverInfo} />
               <Badge
                 className="px-2.5 py-0.5 text-xs"
                 variant={
@@ -508,23 +518,23 @@ function InstancePageHeader({
                 host={instance.config.host}
                 port={instance.config.port}
               />
-              <span className="text-border">|</span>
+              <span className="text-border">{"|"}</span>
             </>
           ) : null}
           {serverInfo?.versionShort ? (
             <>
               <span>
-                PostgreSQL{" "}
+                {"PostgreSQL"}{" "}
                 <span className="text-foreground tabular-nums">
                   {serverInfo.versionShort}
                 </span>
               </span>
-              <span className="text-border">|</span>
+              <span className="text-border">{"|"}</span>
             </>
           ) : null}
           {serverInfo?.startedAt ? (
             <span>
-              Up{" "}
+              {"Up"}{" "}
               <span className="text-foreground tabular-nums">
                 {formatUptime(serverInfo.startedAt)}
               </span>
@@ -534,9 +544,9 @@ function InstancePageHeader({
         {serverInfoNotice ? (
           <Alert>
             <TriangleAlert aria-hidden="true" />
-            <AlertTitle>Server info unavailable</AlertTitle>
+            <AlertTitle>{"Server info unavailable"}</AlertTitle>
             <AlertDescription>
-              Querylane is connected, but couldn’t load live server details:{" "}
+              {"Querylane is connected, but couldn’t load live server details:"}{" "}
               {serverInfoNotice}
             </AlertDescription>
           </Alert>
@@ -544,7 +554,8 @@ function InstancePageHeader({
         {connectionError ? (
           <div className="flex max-w-3xl items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
             <span className="min-w-0 flex-1 truncate">
-              Connection error: {connectionError}
+              {"Connection error: "}
+              {connectionError}
             </span>
             <CopyIconButton
               ariaLabel="Copy connection error"
@@ -584,7 +595,7 @@ const databaseColumns: DataTableColumnDef<DatabaseRow>[] = [
       );
     },
     header: ({ column }) => (
-      <SortableHeader column={column}>Name</SortableHeader>
+      <SortableHeader column={column}>{"Name"}</SortableHeader>
     ),
     meta: {
       cellClassName: "relative",
@@ -595,7 +606,7 @@ const databaseColumns: DataTableColumnDef<DatabaseRow>[] = [
     accessorKey: "owner",
     cell: ({ row }) => row.original.owner || "—",
     header: ({ column }) => (
-      <SortableHeader column={column}>Owner</SortableHeader>
+      <SortableHeader column={column}>{"Owner"}</SortableHeader>
     ),
     meta: {
       cellClassName: "text-sm text-muted-foreground",
@@ -613,7 +624,7 @@ const databaseColumns: DataTableColumnDef<DatabaseRow>[] = [
       />
     ),
     header: ({ column }) => (
-      <SortableHeader column={column}>Encoding</SortableHeader>
+      <SortableHeader column={column}>{"Encoding"}</SortableHeader>
     ),
     id: "encoding",
     meta: {
@@ -624,12 +635,12 @@ const databaseColumns: DataTableColumnDef<DatabaseRow>[] = [
     accessorFn: (row) => (row.isSystemDatabase ? "system" : "user"),
     cell: ({ row }) =>
       row.original.isSystemDatabase ? (
-        <Badge variant="outline">System</Badge>
+        <Badge variant="outline">{"System"}</Badge>
       ) : (
-        <Badge variant="secondary">User</Badge>
+        <Badge variant="secondary">{"User"}</Badge>
       ),
     header: ({ column }) => (
-      <SortableHeader column={column}>Kind</SortableHeader>
+      <SortableHeader column={column}>{"Kind"}</SortableHeader>
     ),
     id: "kind",
   },
@@ -640,7 +651,9 @@ function InstanceDatabasesSectionHeader({ count }: { count: number | null }) {
     <div className="flex items-end justify-between gap-4">
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <h2 className="font-semibold text-base text-foreground">Databases</h2>
+          <h2 className="font-semibold text-base text-foreground">
+            {"Databases"}
+          </h2>
           {count === null ? null : (
             <span className="text-muted-foreground text-xs tabular-nums">
               {count}
@@ -648,7 +661,7 @@ function InstanceDatabasesSectionHeader({ count }: { count: number | null }) {
           )}
         </div>
         <p className="-mt-0.5 text-[13px] text-muted-foreground">
-          Databases returned by the backend for this instance.
+          {"Databases returned by the backend for this instance."}
         </p>
       </div>
     </div>
@@ -1219,28 +1232,28 @@ function BackendInstancePage({
   const [metricsAnchorMs, setMetricsAnchorMs] = useState(
     quantizedMetricsAnchor
   );
-  const metricsQuery = useInstanceMetricsQuery(
+  const metricsQuery = useInstanceMetricsQuery({
     instanceId,
-    metricsAnchorMs,
-    metricsRangeHours,
-    {
+    anchorMs: metricsAnchorMs,
+    rangeHours: metricsRangeHours,
+    options: {
       enabled: liveDataVisibility.overview,
       // Hold the previous window's charts (dimmed) while a range switch loads,
       // instead of flashing the skeleton and jumping layout.
       placeholderData: (previous) => previous,
       refetchOnWindowFocus: false,
-    }
-  );
-  const previousMetricsQuery = useInstancePreviousMetricsQuery(
+    },
+  });
+  const previousMetricsQuery = useInstancePreviousMetricsQuery({
     instanceId,
-    metricsAnchorMs,
-    metricsRangeHours,
-    {
+    anchorMs: metricsAnchorMs,
+    rangeHours: metricsRangeHours,
+    options: {
       enabled: liveDataVisibility.overview,
       placeholderData: (previous) => previous,
       refetchOnWindowFocus: false,
-    }
-  );
+    },
+  });
   const healthQuery = useCheckInstanceHealthQuery(
     {
       name: instanceName,

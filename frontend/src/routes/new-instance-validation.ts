@@ -1,3 +1,4 @@
+import { allPredicates, anyPredicate } from "@/lib/predicates";
 import { isDirectSslNegotiationMode } from "@/lib/ssl-modes";
 
 const MIN_POSTGRES_PORT = 1;
@@ -58,9 +59,12 @@ function validateCreateInstanceForm(
   const normalizedPort = formState.port.trim();
   const port = Number(normalizedPort);
   if (
-    !(POSTGRES_PORT_PATTERN.test(normalizedPort) && Number.isInteger(port)) ||
-    port < MIN_POSTGRES_PORT ||
-    port > MAX_POSTGRES_PORT
+    anyPredicate(
+      () =>
+        !(POSTGRES_PORT_PATTERN.test(normalizedPort) && Number.isInteger(port)),
+      () => port < MIN_POSTGRES_PORT,
+      () => port > MAX_POSTGRES_PORT
+    )
   ) {
     errors.port = `Port must be between ${MIN_POSTGRES_PORT} and ${MAX_POSTGRES_PORT}.`;
   }
@@ -74,8 +78,10 @@ function validateCreateInstanceForm(
     errors.password = "Password is required.";
   }
   if (
-    formState.sslNegotiation === "direct" &&
-    !isDirectSslNegotiationMode(formState.sslMode)
+    allPredicates(
+      () => formState.sslNegotiation === "direct",
+      () => !isDirectSslNegotiationMode(formState.sslMode)
+    )
   ) {
     errors.sslNegotiation =
       "Direct SSL negotiation requires SSL mode require, verify-ca, or verify-full.";

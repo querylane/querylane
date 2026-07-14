@@ -223,7 +223,7 @@ function FilterPopover({
         render={
           <Button size="sm" type="button" variant="outline">
             <Funnel data-icon="inline-start" />
-            Filter
+            {"Filter"}
             {rules.length > 0 ? (
               <Badge
                 className="ml-0.5 h-4 px-1 font-mono text-[10px]"
@@ -267,10 +267,10 @@ function FilterPopover({
             </span>
             <TabsList className="h-8 rounded-lg bg-muted p-0.5">
               <TabsTrigger className="px-2.5 text-xs" value="rules">
-                Rules
+                {"Rules"}
               </TabsTrigger>
               <TabsTrigger className="px-2.5 text-xs" value="sql">
-                SQL WHERE
+                {"SQL WHERE"}
               </TabsTrigger>
             </TabsList>
           </div>
@@ -315,7 +315,7 @@ function FilterPopover({
                 type="button"
                 variant="ghost"
               >
-                Clear
+                {"Clear"}
               </Button>
               <Button
                 disabled={draftMode === "sql" && hasUnsupportedSqlRules}
@@ -323,7 +323,7 @@ function FilterPopover({
                 size="sm"
                 type="button"
               >
-                Apply
+                {"Apply"}
               </Button>
             </div>
           </div>

@@ -3,6 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { appendFileSync, readFileSync } from "node:fs";
 import { env, exit, stderr, stdout } from "node:process";
+import { requiresFullStaticAnalysisFromBase } from "./lint-changed";
 
 interface DoctorDiagnostic {
   category?: string;
@@ -262,6 +263,10 @@ async function publishGitHubResult(report: DoctorReport, markdown: string) {
   }
 }
 
+const qualityBaseRef = getEnv("QUALITY_BASE_REF") ?? "origin/main";
+const fullScanRequired = requiresFullStaticAnalysisFromBase(qualityBaseRef);
+const analysisScope = fullScanRequired ? "full" : "changed";
+
 const result = spawnSync(
   "bun",
   [
@@ -269,12 +274,13 @@ const result = spawnSync(
     ".",
     "-y",
     "--scope",
-    "changed",
-    "--base",
-    getEnv("QUALITY_BASE_REF") ?? "origin/main",
+    analysisScope,
+    ...(fullScanRequired ? [] : ["--base", qualityBaseRef]),
     "--blocking",
     "warning",
     "--no-respect-inline-disables",
+    "--supply-chain",
+    "--no-score",
     "--json",
     "--json-compact",
   ],

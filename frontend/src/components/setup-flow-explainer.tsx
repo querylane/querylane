@@ -97,7 +97,7 @@ export function SetupFlowExplainer({
           {copy.firstKicker}
         </div>
         <div className={cn("mt-2", classes.title)}>
-          QueryLane internal storage
+          {"QueryLane internal storage"}
         </div>
         <p className={cn("mt-1 text-sm leading-6", classes.body)}>
           {copy.firstDescription}
@@ -119,7 +119,7 @@ export function SetupFlowExplainer({
           {copy.secondKicker}
         </div>
         <div className={cn("mt-2", classes.title)}>
-          Postgres server to manage
+          {"Postgres server to manage"}
         </div>
         <p className={cn("mt-1 text-sm leading-6", classes.body)}>
           {copy.secondDescription}

@@ -8,6 +8,11 @@ import { DataExplorerPage } from "@/features/data-explorer/data-explorer-page";
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
 import { createTestQueryClient } from "@/test/query-client";
 
+const TEST_NUMBER_64 = 64;
+const TEST_NUMBER_80 = 80;
+const TEST_NUMBER_1200 = 1200;
+const TEST_NUMBER_900 = 900;
+
 interface SchemaFixture {
   displayName: string;
   name: string;
@@ -379,8 +384,8 @@ test("data explorer table grid uses width immediately beside object browser", as
   expect(sidebarRect.width).toBeGreaterThanOrEqual(railRect.width - 2);
   expect(tabsListRect.left).toBeGreaterThanOrEqual(railRect.right - 1);
   expect(gridRect.left).toBeGreaterThanOrEqual(railRect.right - 1);
-  expect(gapBetweenRailAndGrid).toBeLessThanOrEqual(64);
-  expect(unusedRightSpace).toBeLessThanOrEqual(64);
+  expect(gapBetweenRailAndGrid).toBeLessThanOrEqual(TEST_NUMBER_64);
+  expect(unusedRightSpace).toBeLessThanOrEqual(TEST_NUMBER_64);
 
   const filterInput = sidebar.querySelector("[data-slot='input']");
   const schemaNode = Array.from(sidebar.querySelectorAll("button")).find(
@@ -413,7 +418,7 @@ test("data explorer table grid uses width immediately beside object browser", as
   }
   const tableNameRect = tableName.getBoundingClientRect();
   const sizeLabelRect = sizeLabel.getBoundingClientRect();
-  expect(tableNameRect.width).toBeGreaterThan(80);
+  expect(tableNameRect.width).toBeGreaterThan(TEST_NUMBER_80);
   expect(sizeLabelRect.right).toBeLessThanOrEqual(
     sidebar.getBoundingClientRect().right
   );
@@ -449,13 +454,13 @@ test("data explorer schema map fills the available detail area", async () => {
   const mapRect = map.getBoundingClientRect();
   const canvasRect = canvas.getBoundingClientRect();
 
-  expect(mapRect.width).toBeGreaterThan(1200);
+  expect(mapRect.width).toBeGreaterThan(TEST_NUMBER_1200);
   expect(mapRect.left).toBeGreaterThanOrEqual(railRect.right);
-  expect(mapRect.left - railRect.right).toBeLessThanOrEqual(64);
+  expect(mapRect.left - railRect.right).toBeLessThanOrEqual(TEST_NUMBER_64);
   expect(mapRect.right).toBeLessThanOrEqual(shellRect.right);
-  expect(shellRect.right - mapRect.right).toBeLessThanOrEqual(64);
+  expect(shellRect.right - mapRect.right).toBeLessThanOrEqual(TEST_NUMBER_64);
   expect(mapRect.bottom).toBeLessThanOrEqual(shellRect.bottom);
-  expect(shellRect.bottom - mapRect.bottom).toBeLessThanOrEqual(64);
+  expect(shellRect.bottom - mapRect.bottom).toBeLessThanOrEqual(TEST_NUMBER_64);
   expect(canvasRect.bottom).toBeLessThanOrEqual(mapRect.bottom);
 });
 
@@ -483,6 +488,6 @@ test("data explorer schema objects stay centered at wide widths", async () => {
   const availableCenter = (railRect.right + shellRect.right) / 2;
   const contentCenter = (contentRect.left + contentRect.right) / 2;
 
-  expect(contentRect.width).toBeLessThanOrEqual(900);
+  expect(contentRect.width).toBeLessThanOrEqual(TEST_NUMBER_900);
   expect(Math.abs(contentCenter - availableCenter)).toBeLessThanOrEqual(1);
 });

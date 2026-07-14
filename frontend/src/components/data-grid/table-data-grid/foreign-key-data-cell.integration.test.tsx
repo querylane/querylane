@@ -13,6 +13,10 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
+const TEST_NUMBER_50 = 50;
+const TEST_NUMBER_75 = 75;
+const TEST_NUMBER_25 = 25;
+
 const tableDataApi = vi.hoisted(() => {
   const queryActions = {
     fetch: vi.fn(() => Promise.resolve()),
@@ -65,7 +69,7 @@ function renderForeignKeyCell() {
   render(
     <>
       <ForeignKeyDataCell cell={cell} column={column} preview={preview} />
-      <p>Other surface</p>
+      <p>{"Other surface"}</p>
     </>
   );
   return screen.getByRole("button", {
@@ -109,17 +113,25 @@ describe("ForeignKeyDataCell intent prefetch", () => {
 
     await user.hover(trigger);
     await new Promise((resolve) =>
-      globalThis.setTimeout(resolve, INTENT_PREFETCH_POLICY.delayMs - 50)
+      globalThis.setTimeout(
+        resolve,
+        INTENT_PREFETCH_POLICY.delayMs - TEST_NUMBER_50
+      )
     );
     expect(tableDataApi.queryActions.prefetch).not.toHaveBeenCalled();
 
     await user.unhover(trigger);
-    await new Promise((resolve) => globalThis.setTimeout(resolve, 75));
+    await new Promise((resolve) =>
+      globalThis.setTimeout(resolve, TEST_NUMBER_75)
+    );
     expect(tableDataApi.queryActions.prefetch).not.toHaveBeenCalled();
 
     await user.hover(trigger);
     await new Promise((resolve) =>
-      globalThis.setTimeout(resolve, INTENT_PREFETCH_POLICY.delayMs + 25)
+      globalThis.setTimeout(
+        resolve,
+        INTENT_PREFETCH_POLICY.delayMs + TEST_NUMBER_25
+      )
     );
     expect(tableDataApi.queryActions.prefetch).toHaveBeenCalledTimes(1);
   });

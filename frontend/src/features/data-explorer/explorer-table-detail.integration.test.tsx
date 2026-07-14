@@ -48,6 +48,26 @@ import {
   TableTriggerSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
+const TEST_NUMBER_2026 = 2026;
+const TEST_NUMBER_5 = 5;
+const TEST_NUMBER_14 = 14;
+const TEST_NUMBER_30 = 30;
+const TEST_NUMBER_15 = 15;
+const TEST_NUMBER_3 = 3;
+const TEST_NUMBER_11 = 11;
+const TEST_NUMBER_26 = 26;
+const TEST_NUMBER_23 = 23;
+const TEST_NUMBER_8 = 8;
+const TEST_NUMBER_12 = 12;
+const TEST_NUMBER_16 = 16;
+const TEST_BIGINT_312 = 312n;
+const TEST_BIGINT_1024 = 1024n;
+const TEST_BIGINT_18 = 18n;
+const TEST_BIGINT_52 = 52n;
+const TEST_BIGINT_96 = 96n;
+const TEST_NUMBER_13 = 13;
+const TEST_NUMBER_35 = 35;
+
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
 const COLUMNS_TAB_RE = /^Columns/;
 const CREATE_TABLE_RE = /CREATE TABLE/;
@@ -386,7 +406,14 @@ describe("TableDetail header", () => {
           rows: [],
         }),
       }),
-      dataUpdatedAt: Date.UTC(2026, 5, 14, 10, 30, 15),
+      dataUpdatedAt: Date.UTC(
+        TEST_NUMBER_2026,
+        TEST_NUMBER_5,
+        TEST_NUMBER_14,
+        10,
+        TEST_NUMBER_30,
+        TEST_NUMBER_15
+      ),
       error: null,
       isFetching: false,
       isLoading: false,
@@ -578,14 +605,15 @@ describe("TableDetail definition document", () => {
         'pre code.language-bash[data-syntax-highlighter="shiki"]'
       )
     );
-    expect(highlightedCommands).toHaveLength(3);
+    expect(highlightedCommands).toHaveLength(TEST_NUMBER_3);
     const commandRegions = screen.getAllByRole("region", {
       name: COMMAND_REGION_RE,
     });
-    expect(commandRegions).toHaveLength(3);
+    expect(commandRegions).toHaveLength(TEST_NUMBER_3);
     expect(
       highlightedCommands.every(
-        (command) => command.querySelectorAll("[data-shiki-token]").length > 3
+        (command) =>
+          command.querySelectorAll("[data-shiki-token]").length > TEST_NUMBER_3
       )
     ).toBe(true);
     expect(highlightedCommands[0]?.textContent).toBe(
@@ -1034,7 +1062,7 @@ describe("TableDetail constraints pagination", () => {
   it("paginates constraint cards after ten results", async () => {
     const user = userEvent.setup();
     tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
-      constraints: createCheckConstraints(11),
+      constraints: createCheckConstraints(TEST_NUMBER_11),
     });
     renderConstraintsTab();
 
@@ -1081,7 +1109,7 @@ describe("TableDetail constraints pagination", () => {
   it("changes the constraint page size", async () => {
     const user = userEvent.setup();
     tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
-      constraints: createCheckConstraints(26),
+      constraints: createCheckConstraints(TEST_NUMBER_26),
     });
     renderConstraintsTab();
 
@@ -1102,7 +1130,7 @@ describe("TableDetail constraints pagination", () => {
   it("returns to the first page when constraint search changes", async () => {
     const user = userEvent.setup();
     tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
-      constraints: createCheckConstraints(11),
+      constraints: createCheckConstraints(TEST_NUMBER_11),
     });
     renderConstraintsTab();
 
@@ -1147,7 +1175,7 @@ describe("TableDetail constraints pagination", () => {
   it("keeps a valid page when refreshed constraints shrink", async () => {
     const user = userEvent.setup();
     tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
-      constraints: createCheckConstraints(11),
+      constraints: createCheckConstraints(TEST_NUMBER_11),
     });
     const { rerender } = renderConstraintsTab();
 
@@ -1248,7 +1276,12 @@ describe("TableDetail constraints tab", () => {
 
   it("groups keys and outbound foreign keys as constraint cards", async () => {
     const user = userEvent.setup();
-    tableQueries.constraints.dataUpdatedAt = Date.UTC(2026, 0, 1, 23);
+    tableQueries.constraints.dataUpdatedAt = Date.UTC(
+      TEST_NUMBER_2026,
+      0,
+      1,
+      TEST_NUMBER_23
+    );
     tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
       constraints: [
         create(TableConstraintSchema, {
@@ -1317,7 +1350,7 @@ describe("TableDetail constraints tab", () => {
     ]);
     expect(
       container.querySelectorAll("[data-shiki-token]").length
-    ).toBeGreaterThan(8);
+    ).toBeGreaterThan(TEST_NUMBER_8);
     expect(screen.queryByRole("button", { name: "Copy SQL" })).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.getByText(LAST_FETCHED_RE)).toBeTruthy();
@@ -1531,9 +1564,27 @@ describe("TableDetail columns tab", () => {
         }),
       ],
     });
-    tableQueries.columns.dataUpdatedAt = Date.UTC(2026, 5, 30, 3, 12);
-    tableQueries.constraints.dataUpdatedAt = Date.UTC(2026, 5, 30, 3, 12);
-    tableQueries.indexes.dataUpdatedAt = Date.UTC(2026, 5, 30, 3, 12);
+    tableQueries.columns.dataUpdatedAt = Date.UTC(
+      TEST_NUMBER_2026,
+      TEST_NUMBER_5,
+      TEST_NUMBER_30,
+      TEST_NUMBER_3,
+      TEST_NUMBER_12
+    );
+    tableQueries.constraints.dataUpdatedAt = Date.UTC(
+      TEST_NUMBER_2026,
+      TEST_NUMBER_5,
+      TEST_NUMBER_30,
+      TEST_NUMBER_3,
+      TEST_NUMBER_12
+    );
+    tableQueries.indexes.dataUpdatedAt = Date.UTC(
+      TEST_NUMBER_2026,
+      TEST_NUMBER_5,
+      TEST_NUMBER_30,
+      TEST_NUMBER_3,
+      TEST_NUMBER_12
+    );
 
     render(
       <TableDetail
@@ -1582,12 +1633,12 @@ describe("TableDetail columns tab", () => {
     expect(screen.queryByText("UQ")).toBeNull();
     expect(screen.queryByText("FK")).toBeNull();
     expect(screen.getByText("YES")).toBeTruthy();
-    expect(screen.getAllByText("NO")).toHaveLength(3);
-    expect(screen.getAllByText("0%")).toHaveLength(3);
+    expect(screen.getAllByText("NO")).toHaveLength(TEST_NUMBER_3);
+    expect(screen.getAllByText("0%")).toHaveLength(TEST_NUMBER_3);
     expect(screen.getByText("gen_random_uuid()")).toBeTruthy();
     expect(
       screen.getAllByTitle("Not available from the current column metadata API")
-    ).toHaveLength(16);
+    ).toHaveLength(TEST_NUMBER_16);
 
     await user.click(screen.getByRole("button", { name: "Nullability" }));
     await user.click(screen.getByRole("option", { name: "Nullable" }));
@@ -1967,7 +2018,7 @@ describe("TableDetail indexes tab", () => {
           keyParts: ["id"],
           method: "btree",
           scanCount: 48_100_000n,
-          sizeBytes: 312n * 1024n * 1024n,
+          sizeBytes: TEST_BIGINT_312 * TEST_BIGINT_1024 * TEST_BIGINT_1024,
           tuplesFetched: 48_100_000n,
           tuplesRead: 48_400_000n,
         }),
@@ -1984,7 +2035,7 @@ describe("TableDetail indexes tab", () => {
           method: "btree",
           predicate: "status <> 'delivered'",
           scanCount: 9_400_000n,
-          sizeBytes: 18n * 1024n * 1024n,
+          sizeBytes: TEST_BIGINT_18 * TEST_BIGINT_1024 * TEST_BIGINT_1024,
           tuplesFetched: 9_300_000n,
           tuplesRead: 11_200_000n,
         }),
@@ -2000,7 +2051,7 @@ describe("TableDetail indexes tab", () => {
           keyParts: ["carrier_id"],
           method: "btree",
           scanCount: 1_200_000n,
-          sizeBytes: 52n * 1024n * 1024n,
+          sizeBytes: TEST_BIGINT_52 * TEST_BIGINT_1024 * TEST_BIGINT_1024,
           tuplesFetched: 1_200_000n,
           tuplesRead: 2_800_000n,
         }),
@@ -2013,7 +2064,7 @@ describe("TableDetail indexes tab", () => {
           isValid: true,
           keyParts: ["lower(ref)"],
           method: "btree",
-          sizeBytes: 96n * 1024n * 1024n,
+          sizeBytes: TEST_BIGINT_96 * TEST_BIGINT_1024 * TEST_BIGINT_1024,
         }),
       ],
     });
@@ -2338,7 +2389,8 @@ describe("TableDetail triggers tab", () => {
       expect(
         highlightedDefinitions.every(
           (definition) =>
-            definition.querySelectorAll("[data-shiki-token]").length > 5
+            definition.querySelectorAll("[data-shiki-token]").length >
+            TEST_NUMBER_5
         )
       ).toBe(true);
       expect(screen.getAllByRole("status")).toHaveLength(2);
@@ -2581,7 +2633,7 @@ describe("TableDetail policies tab pagination", () => {
 
   it("paginates policy cards ten at a time", async () => {
     const user = userEvent.setup();
-    renderPoliciesTab(createPolicies(11));
+    renderPoliciesTab(createPolicies(TEST_NUMBER_11));
 
     expect(
       screen.getByRole("heading", { name: "invoices_policy_1" })
@@ -2614,7 +2666,7 @@ describe("TableDetail policies tab pagination", () => {
 
   it("changes policy page size from the pagination footer", async () => {
     const user = userEvent.setup();
-    renderPoliciesTab(createPolicies(13));
+    renderPoliciesTab(createPolicies(TEST_NUMBER_13));
 
     await user.click(
       screen.getByRole("button", { name: "Next policies page" })
@@ -2651,7 +2703,7 @@ describe("TableDetail policies tab pagination", () => {
 
   it("returns to the first policy page when search changes", async () => {
     const user = userEvent.setup();
-    renderPoliciesTab(createPolicies(11));
+    renderPoliciesTab(createPolicies(TEST_NUMBER_11));
 
     await user.click(
       screen.getByRole("button", { name: "Next policies page" })
@@ -2701,7 +2753,7 @@ describe("TableDetail policies tab pagination", () => {
 
   it("navigates from the clamped page after refreshed policies shrink", async () => {
     const user = userEvent.setup();
-    const { rerender } = renderPoliciesTab(createPolicies(35));
+    const { rerender } = renderPoliciesTab(createPolicies(TEST_NUMBER_35));
     const nextPage = screen.getByRole("button", {
       name: "Next policies page",
     });
@@ -2713,7 +2765,7 @@ describe("TableDetail policies tab pagination", () => {
     ).toBeTruthy();
 
     tableQueries.policies.data = create(ListTablePoliciesResponseSchema, {
-      policies: createPolicies(11),
+      policies: createPolicies(TEST_NUMBER_11),
     });
     rerender(
       <TableDetail
@@ -2793,7 +2845,7 @@ describe("TableDetail policies tab", () => {
       })
     ).toBeTruthy();
     expect(screen.getAllByText("FOR SELECT")).toHaveLength(2);
-    expect(screen.getAllByText("PERMISSIVE")).toHaveLength(3);
+    expect(screen.getAllByText("PERMISSIVE")).toHaveLength(TEST_NUMBER_3);
     expect(screen.getAllByText("TO app_readwrite")).toHaveLength(2);
     expect(screen.getByText("WITH CHECK")).toBeTruthy();
     expect(screen.getByText("How the server combines these")).toBeTruthy();
@@ -2803,7 +2855,7 @@ describe("TableDetail policies tab", () => {
       ),
       (code) => code.textContent
     );
-    expect(sqlExpressions).toHaveLength(5);
+    expect(sqlExpressions).toHaveLength(TEST_NUMBER_5);
     expect(sqlExpressions).toContain(
       "customer = current_setting('app.tenant')"
     );

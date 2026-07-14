@@ -19,6 +19,29 @@ interface AccessSourceRow {
   tone: "danger" | "active";
 }
 
+function accessIconClassName(row: AccessSourceRow): string {
+  return cn(
+    "flex size-8 shrink-0 items-center justify-center rounded-md",
+    row.active &&
+      row.tone === "danger" &&
+      "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    row.active &&
+      row.tone === "active" &&
+      "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    !row.active && "bg-muted text-muted-foreground/40"
+  );
+}
+
+function accessBadgeClassName(row: AccessSourceRow): string {
+  return cn(
+    "shrink-0 rounded-sm font-medium text-[10.5px] uppercase tabular-nums tracking-wide",
+    row.active &&
+      row.tone === "danger" &&
+      "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    !row.active && "text-muted-foreground/50"
+  );
+}
+
 function AccessSummaryRow({
   onJump,
   row,
@@ -29,18 +52,7 @@ function AccessSummaryRow({
   const { icon: Icon, jump } = row;
   const inner = (
     <>
-      <span
-        className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-md",
-          row.active &&
-            row.tone === "danger" &&
-            "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-          row.active &&
-            row.tone === "active" &&
-            "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-          !row.active && "bg-muted text-muted-foreground/40"
-        )}
-      >
+      <span className={accessIconClassName(row)}>
         <Icon className="size-4" />
       </span>
       <div className="min-w-0 flex-1 text-left">
@@ -64,13 +76,7 @@ function AccessSummaryRow({
         </p>
       </div>
       <Badge
-        className={cn(
-          "shrink-0 rounded-sm font-medium text-[10.5px] uppercase tabular-nums tracking-wide",
-          row.active &&
-            row.tone === "danger" &&
-            "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-          !row.active && "text-muted-foreground/50"
-        )}
+        className={accessBadgeClassName(row)}
         variant={row.active ? "secondary" : "outline"}
       >
         {row.status}
@@ -177,7 +183,7 @@ function AccessSummary({
           label={
             databaseName ? (
               <>
-                In
+                {"In"}
                 <Database
                   aria-hidden="true"
                   className="size-3 shrink-0 text-muted-foreground"

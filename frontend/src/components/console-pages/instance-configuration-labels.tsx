@@ -26,9 +26,9 @@ export function InstanceConfigurationLabels({
     <div className="mt-6 space-y-3 border-t pt-4">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="font-medium text-sm">Labels</h4>
+          <h4 className="font-medium text-sm">{"Labels"}</h4>
           <p className="text-muted-foreground text-xs">
-            Key-value pairs for organizing and filtering instances.
+            {"Key-value pairs for organizing and filtering instances."}
           </p>
         </div>
         {isConfigManaged ? null : (
@@ -47,7 +47,7 @@ export function InstanceConfigurationLabels({
             variant="outline"
           >
             <Plus className="size-3" />
-            Add label
+            {"Add label"}
           </Button>
         )}
       </div>
@@ -116,14 +116,16 @@ export function InstanceConfigurationLabels({
                   variant="ghost"
                 >
                   <X className="size-4" />
-                  <span className="sr-only">Remove label</span>
+                  <span className="sr-only">{"Remove label"}</span>
                 </Button>
               )}
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-muted-foreground text-xs">No labels configured.</p>
+        <p className="text-muted-foreground text-xs">
+          {"No labels configured."}
+        </p>
       )}
       <FieldError error={formErrors.labels} />
     </div>

@@ -31,7 +31,7 @@ function LabelsEditor({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm">Labels</span>
+        <span className="text-sm">{"Labels"}</span>
         <Button
           onClick={() => onChange([...labels, createInstanceLabel()])}
           size="sm"
@@ -39,7 +39,7 @@ function LabelsEditor({
           variant="outline"
         >
           <Plus className="size-3" />
-          Add label
+          {"Add label"}
         </Button>
       </div>
       {labels.length > 0 ? (
@@ -77,14 +77,15 @@ function LabelsEditor({
                 type="button"
                 variant="ghost"
               >
-                <span className="sr-only">Remove</span>×
+                <span className="sr-only">{"Remove"}</span>
+                {"×"}
               </Button>
             </div>
           ))}
         </div>
       ) : (
         <p className="text-muted-foreground text-xs">
-          No labels. Labels help organize and filter instances.
+          {"No labels. Labels help organize and filter instances."}
         </p>
       )}
       {error ? (
@@ -100,15 +101,16 @@ export function CreateInstancePageHeader({ onBack }: { onBack: () => void }) {
     <div className="flex items-center gap-3">
       <Button aria-label="Back" onClick={onBack} size="icon" variant="ghost">
         <ArrowLeft className="size-4" />
-        <span className="sr-only">Back</span>
+        <span className="sr-only">{"Back"}</span>
       </Button>
       <div>
         <h1 className="font-semibold text-2xl tracking-tight">
-          Postgres server to manage
+          {"Postgres server to manage"}
         </h1>
         <p className="text-muted-foreground text-sm">
-          Step 2: connect an application, production, or analytics PostgreSQL
-          server for Querylane to administer.
+          {
+            "Step 2: connect an application, production, or analytics PostgreSQL server for Querylane to administer."
+          }
         </p>
       </div>
     </div>
@@ -146,12 +148,13 @@ export function CreateInstanceAdvancedSection({
     >
       <AccordionItem value="advanced-options">
         <AccordionTrigger className="py-4">
-          {showAdvanced ? "Hide" : "Show"} advanced options
+          {showAdvanced ? "Hide" : "Show"}
+          {" advanced options"}
         </AccordionTrigger>
         <AccordionContent className="space-y-4">
           <div className="space-y-2">
             <label className="text-sm" htmlFor={instanceIdInputId}>
-              Instance ID (optional)
+              {"Instance ID (optional)"}
             </label>
             <Input
               aria-describedby={`${instanceIdInputId}-help${
@@ -169,8 +172,9 @@ export function CreateInstanceAdvancedSection({
               className="text-muted-foreground text-xs"
               id={`${instanceIdInputId}-help`}
             >
-              Must start with a letter, may contain letters, digits, hyphens,
-              and underscores.
+              {
+                "Must start with a letter, may contain letters, digits, hyphens, and underscores."
+              }
             </p>
             {formErrors.instanceId ? (
               <p
@@ -236,7 +240,7 @@ export function CreateInstanceActions({
         ) : (
           <Unplug className="size-4" />
         )}
-        Test connection
+        {"Test connection"}
       </Button>
       <Button
         aria-describedby={canCreate ? undefined : createInstanceTestHintId}
@@ -248,11 +252,11 @@ export function CreateInstanceActions({
         ) : (
           <Plus className="size-4" />
         )}
-        Create instance
+        {"Create instance"}
       </Button>
       {canCreate ? null : (
         <span className="sr-only" id={createInstanceTestHintId}>
-          Test this connection before creating the instance.
+          {"Test this connection before creating the instance."}
         </span>
       )}
     </div>

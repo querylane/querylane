@@ -32,7 +32,7 @@ function DangerZoneSection({
       <CardHeader className="gap-2">
         <div className="space-y-1">
           <h2 className="font-medium text-base text-destructive">
-            Danger zone
+            {"Danger zone"}
           </h2>
           {description ? (
             <p className="max-w-3xl text-muted-foreground text-sm">

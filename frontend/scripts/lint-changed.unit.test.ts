@@ -4,6 +4,7 @@ import {
   changedRepoFiles,
   frontendRelativePath,
   lintableChangedFiles,
+  requiresFullStaticAnalysis,
 } from "./lint-changed";
 
 const fileSystem = {
@@ -78,5 +79,25 @@ describe("changed-file lint selection", () => {
         fileSystem
       )
     ).toEqual(["src/app.tsx"]);
+  });
+
+  test("requires a full scan when tool policy or versions change", () => {
+    for (const path of [
+      ".github/workflows/frontend-ci.yml",
+      "frontend/biome.jsonc",
+      "frontend/bun.lock",
+      "frontend/doctor.config.ts",
+      "frontend/package.json",
+      "frontend/react-doctor.config.json",
+      "frontend/scripts/lint-changed.ts",
+      "frontend/scripts/run-react-doctor-ci.ts",
+      "frontend/scripts/strict-tooling-policy.unit.test.ts",
+      "frontend/tsconfig.json",
+    ]) {
+      expect(requiresFullStaticAnalysis([path])).toBe(true);
+    }
+    expect(
+      requiresFullStaticAnalysis(["frontend/src/components/admin-header.tsx"])
+    ).toBe(false);
   });
 });

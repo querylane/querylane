@@ -86,17 +86,17 @@ function RecordField({
           <span className="inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
             <KeyRound aria-hidden={true} className="size-3" />
             <span className="font-medium text-[10px] uppercase tracking-wide">
-              PK
+              {"PK"}
             </span>
           </span>
         ) : null}
         {column.isNullable ? (
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-            nullable
+            {"nullable"}
           </span>
         ) : (
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-            not null
+            {"not null"}
           </span>
         )}
       </div>
@@ -137,7 +137,7 @@ function RecordField({
       </div>
       {fullValueMutation.isError ? (
         <p className="text-[10px] text-destructive-foreground/80">
-          Failed to load full value
+          {"Failed to load full value"}
         </p>
       ) : null}
     </div>
@@ -145,7 +145,9 @@ function RecordField({
 }
 function RecordFieldValue({ formatted }: { formatted: FormattedCell }) {
   if (formatted.kind === "text" && formatted.display === "") {
-    return <span className="text-muted-foreground text-xs">Empty string</span>;
+    return (
+      <span className="text-muted-foreground text-xs">{"Empty string"}</span>
+    );
   }
   if (formatted.isNull) {
     return (
@@ -233,7 +235,7 @@ function ArrayValue({ raw }: { raw: string }) {
         </span>
       </div>
       {count === 0 ? (
-        <span className="text-muted-foreground text-xs">Empty array</span>
+        <span className="text-muted-foreground text-xs">{"Empty array"}</span>
       ) : (
         <ol className="max-h-96 w-full overflow-auto rounded-md border bg-background/60">
           {keyedItems.map(({ item, key, position }) => (
@@ -246,7 +248,7 @@ function ArrayValue({ raw }: { raw: string }) {
               </span>
               {item.isNull ? (
                 <span className="text-muted-foreground text-xs italic">
-                  SQL NULL
+                  {"SQL NULL"}
                 </span>
               ) : (
                 <code className="break-all font-mono text-sky-700 text-xs dark:text-sky-300">

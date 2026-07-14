@@ -156,6 +156,7 @@ import {
   type PageSize,
   pageIndexForPageSizeChange,
 } from "@/lib/pagination";
+import { allPredicates } from "@/lib/predicates";
 import {
   formatPolicyCommand,
   formatPolicyMode,
@@ -428,7 +429,7 @@ function FacetFilterBar({ filters }: { filters: FacetFilterDefinition[] }) {
           variant="ghost"
         >
           <X data-icon="inline-start" />
-          Reset
+          {"Reset"}
         </Button>
       ) : null}
     </div>
@@ -596,7 +597,7 @@ function MetadataRefreshControl({ toolbar }: { toolbar: MetadataToolbar }) {
             toolbar.isRefreshing && "animate-spin motion-reduce:animate-none"
           )}
         />
-        Refresh
+        {"Refresh"}
       </Button>
     </div>
   );
@@ -638,7 +639,7 @@ function TableResourceEmptyState({
                   "animate-spin motion-reduce:animate-none"
               )}
             />
-            Refresh
+            {"Refresh"}
           </Button>
           <span aria-live="polite" className="text-muted-foreground text-xs">
             {toolbar.lastFetchedLabel}
@@ -709,15 +710,19 @@ function columnSearchText(row: ColumnRow) {
     .toLocaleLowerCase();
 }
 
+function columnMatchesSearch(row: ColumnRow, needle: string) {
+  return columnSearchText(row).includes(needle);
+}
+
 function filterColumnRowsBySearch(rows: ColumnRow[], searchValue: string) {
   const needle = searchValue.trim().toLocaleLowerCase();
   if (!needle) {
     return rows;
   }
-  return rows.filter((row) => columnSearchText(row).includes(needle));
+  return rows.filter((row) => columnMatchesSearch(row, needle));
 }
 
-function ColumnNameCell({ row }: { row: ColumnRow }) {
+function ColumnBadges({ row }: { row: ColumnRow }) {
   const { column, fks, isIndexed } = row;
   const identityLabel = IDENTITY_GENERATION_LABELS[column.identityGeneration];
   const foreignKeyTitle = fks
@@ -726,48 +731,60 @@ function ColumnNameCell({ row }: { row: ColumnRow }) {
   const showIndexedBadge =
     isIndexed && !(column.isPrimaryKey || column.isUnique || fks.length > 0);
   return (
+    <>
+      {column.isPrimaryKey ? (
+        <Pill size="sm" tone="amber">
+          {"Primary key"}
+        </Pill>
+      ) : null}
+      {column.isUnique ? (
+        <Pill size="sm" tone="emerald">
+          {"Unique"}
+        </Pill>
+      ) : null}
+      {fks.length > 0 ? (
+        <span aria-hidden="true" title={foreignKeyTitle}>
+          <Pill size="sm" tone="blue">
+            {"Foreign key"}
+          </Pill>
+        </span>
+      ) : null}
+      {showIndexedBadge ? (
+        <Pill size="sm" tone="violet">
+          {"Index"}
+        </Pill>
+      ) : null}
+      {column.isGenerated ? (
+        <Pill size="sm" tone="emerald">
+          {"GENERATED"}
+        </Pill>
+      ) : null}
+      {column.isIdentity ? (
+        <Pill size="sm" tone="amber">
+          {"IDENTITY"}
+        </Pill>
+      ) : null}
+      {identityLabel ? (
+        <Pill size="sm" tone="amber">
+          {identityLabel}
+        </Pill>
+      ) : null}
+    </>
+  );
+}
+
+function ColumnNameCell({ row }: { row: ColumnRow }) {
+  const { column, fks } = row;
+  const foreignKeyTitle = fks
+    .map((fk) => `References ${fk.table}.${fk.column}`)
+    .join("; ");
+  return (
     <div className="min-w-[14rem]">
       <div className="flex min-w-0 items-center gap-1.5">
         <span className="truncate font-mono font-semibold text-foreground text-xs">
           {column.columnName}
         </span>
-        {column.isPrimaryKey ? (
-          <Pill size="sm" tone="amber">
-            Primary key
-          </Pill>
-        ) : null}
-        {column.isUnique ? (
-          <Pill size="sm" tone="emerald">
-            Unique
-          </Pill>
-        ) : null}
-        {fks.length > 0 ? (
-          <span aria-hidden="true" title={foreignKeyTitle}>
-            <Pill size="sm" tone="blue">
-              Foreign key
-            </Pill>
-          </span>
-        ) : null}
-        {showIndexedBadge ? (
-          <Pill size="sm" tone="violet">
-            Index
-          </Pill>
-        ) : null}
-        {column.isGenerated ? (
-          <Pill size="sm" tone="emerald">
-            GENERATED
-          </Pill>
-        ) : null}
-        {column.isIdentity ? (
-          <Pill size="sm" tone="amber">
-            IDENTITY
-          </Pill>
-        ) : null}
-        {identityLabel ? (
-          <Pill size="sm" tone="amber">
-            {identityLabel}
-          </Pill>
-        ) : null}
+        <ColumnBadges row={row} />
       </div>
       {column.comment ? (
         <div className="mt-1 max-w-[22rem] truncate text-muted-foreground text-xs">
@@ -779,7 +796,8 @@ function ColumnNameCell({ row }: { row: ColumnRow }) {
           className="mt-1 max-w-[22rem] truncate font-mono text-[11px] text-muted-foreground"
           title={column.generationExpression}
         >
-          AS {column.generationExpression}
+          {"AS "}
+          {column.generationExpression}
         </div>
       ) : null}
       {foreignKeyTitle ? (
@@ -813,7 +831,7 @@ function ColumnNullFraction({ column }: { column: TableColumn }) {
 function UnavailableColumnStatistic() {
   return (
     <span title={UNAVAILABLE_COLUMN_STATISTIC_LABEL}>
-      <span aria-hidden="true">-</span>
+      <span aria-hidden="true">{"-"}</span>
       <span className="sr-only">{UNAVAILABLE_COLUMN_STATISTIC_LABEL}</span>
     </span>
   );
@@ -832,8 +850,8 @@ const columnInventoryColumns: DataTableColumnDef<ColumnRow>[] = [
     accessorFn: (row) => row.column.ordinalPosition,
     header: () => (
       <span>
-        <span aria-hidden="true">#</span>
-        <span className="sr-only">Ordinal position</span>
+        <span aria-hidden="true">{"#"}</span>
+        <span className="sr-only">{"Ordinal position"}</span>
       </span>
     ),
     id: "ordinalPosition",
@@ -846,7 +864,7 @@ const columnInventoryColumns: DataTableColumnDef<ColumnRow>[] = [
     accessorFn: (row) => row.column.columnName,
     cell: ({ row }) => <ColumnNameCell row={row.original} />,
     header: ({ column }) => (
-      <SortableHeader column={column}>Column</SortableHeader>
+      <SortableHeader column={column}>{"Column"}</SortableHeader>
     ),
     id: "columnName",
     meta: {
@@ -857,7 +875,7 @@ const columnInventoryColumns: DataTableColumnDef<ColumnRow>[] = [
     accessorFn: (row) => row.column.rawType,
     cell: ({ row }) => <ColumnInventoryTypeCell column={row.original.column} />,
     header: ({ column }) => (
-      <SortableHeader column={column}>Type</SortableHeader>
+      <SortableHeader column={column}>{"Type"}</SortableHeader>
     ),
     id: "type",
     meta: {
@@ -895,7 +913,7 @@ const columnInventoryColumns: DataTableColumnDef<ColumnRow>[] = [
     enableSorting: false,
     header: () => (
       <UnavailableColumnStatisticHeader>
-        Storage
+        {"Storage"}
       </UnavailableColumnStatisticHeader>
     ),
     id: "storage",
@@ -908,7 +926,7 @@ const columnInventoryColumns: DataTableColumnDef<ColumnRow>[] = [
     enableSorting: false,
     header: () => (
       <UnavailableColumnStatisticHeader>
-        Distinct
+        {"Distinct"}
       </UnavailableColumnStatisticHeader>
     ),
     id: "distinct",
@@ -932,7 +950,7 @@ const columnInventoryColumns: DataTableColumnDef<ColumnRow>[] = [
     enableSorting: false,
     header: () => (
       <UnavailableColumnStatisticHeader>
-        Avg width
+        {"Avg width"}
       </UnavailableColumnStatisticHeader>
     ),
     id: "averageWidth",
@@ -972,8 +990,8 @@ function ColumnsInventoryTable({
         {filters}
         <div className="flex-1" />
         <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-          <span>Catalog metadata</span>
-          <span aria-hidden="true">·</span>
+          <span>{"Catalog metadata"}</span>
+          <span aria-hidden="true">{"·"}</span>
           <RefreshControl
             isRefreshing={toolbar.isRefreshing}
             labelClassName="not-sr-only"
@@ -1042,14 +1060,17 @@ function TableDetailHeader({
         </div>
         <div className="min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
-            Table
+            {"Table"}
           </p>
           <h1
             aria-label={`${schemaName}.${tableName}`}
             className="truncate font-mono font-semibold text-xl"
             title={`${schemaName}.${tableName}`}
           >
-            <span className="text-muted-foreground">{schemaName}.</span>
+            <span className="text-muted-foreground">
+              {schemaName}
+              {"."}
+            </span>
             {tableName}
           </h1>
           {headerDetails.length > 0 ? (
@@ -1355,7 +1376,7 @@ const keyColumns: DataTableColumnDef<TableKeyRow>[] = [
       </Badge>
     ),
     header: ({ column }) => (
-      <SortableHeader column={column}>Kind</SortableHeader>
+      <SortableHeader column={column}>{"Kind"}</SortableHeader>
     ),
     id: "kind",
   },
@@ -1363,7 +1384,7 @@ const keyColumns: DataTableColumnDef<TableKeyRow>[] = [
     accessorKey: "name",
     cell: ({ row }) => row.original.name,
     header: ({ column }) => (
-      <SortableHeader column={column}>Name</SortableHeader>
+      <SortableHeader column={column}>{"Name"}</SortableHeader>
     ),
     meta: {
       cellClassName: "font-mono text-xs",
@@ -1424,10 +1445,11 @@ function KeysTab({
   ) {
     return <TabSkeleton />;
   }
+  const kindFilterSet = new Set(kindFilters);
   const filteredRows =
     kindFilters.length === 0
       ? rows
-      : rows.filter((row) => kindFilters.includes(row.kind));
+      : rows.filter((row) => kindFilterSet.has(row.kind));
   return (
     <MetadataTabResult
       category="keys"
@@ -1581,11 +1603,12 @@ function PartitionRowsChart({
     >
       <div className="flex flex-wrap items-baseline gap-2">
         <h3 className="font-semibold text-sm" id={headingId}>
-          Rows per partition
+          {"Rows per partition"}
         </h3>
         <p className="text-muted-foreground text-xs">
-          equal time ranges · bar height = rows · click a bar to highlight it
-          below
+          {
+            "equal time ranges · bar height = rows · click a bar to highlight it below"
+          }
         </p>
       </div>
       <div className="mt-4 flex h-32 items-end gap-2">
@@ -1640,7 +1663,7 @@ function PartitionRowsChart({
           aria-hidden="true"
           className="size-3 rounded border border-emerald-500"
         />
-        CURRENT · dashed = projected month-end
+        {"CURRENT · dashed = projected month-end"}
       </p>
     </section>
   );
@@ -1658,7 +1681,7 @@ function DefaultPartitionCard({
   return (
     <aside className="flex w-full flex-none flex-col rounded-lg border border-amber-500/50 bg-amber-500/5 p-4 shadow-xs md:w-64">
       <div className="flex items-center gap-2">
-        <StatusBadge variant="warning">DEFAULT</StatusBadge>
+        <StatusBadge variant="warning">{"DEFAULT"}</StatusBadge>
         <span className="truncate font-mono text-muted-foreground text-xs">
           {partition.name}
         </span>
@@ -1667,11 +1690,15 @@ function DefaultPartitionCard({
         {partition.shareLabel}
       </div>
       <p className="text-muted-foreground text-xs uppercase tracking-wider">
-        Of estimated rows · {partition.rowsLabel} · {partition.sizeLabel}
+        {"Of estimated rows · "}
+        {partition.rowsLabel}
+        {" · "}
+        {partition.sizeLabel}
       </p>
       <p className="mt-auto pt-6 text-muted-foreground text-xs leading-relaxed">
-        Catches rows outside every defined range. Review before detaching or
-        dropping old ranges.
+        {
+          "Catches rows outside every defined range. Review before detaching or dropping old ranges."
+        }
       </p>
     </aside>
   );
@@ -1693,11 +1720,11 @@ function PartitionRowsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="pl-4">Partition</TableHead>
-            <TableHead>Bounds</TableHead>
-            <TableHead className="text-right">Est. rows</TableHead>
-            <TableHead className="text-right">Size</TableHead>
-            <TableHead className="w-48">Share of rows</TableHead>
+            <TableHead className="pl-4">{"Partition"}</TableHead>
+            <TableHead>{"Bounds"}</TableHead>
+            <TableHead className="text-right">{"Est. rows"}</TableHead>
+            <TableHead className="text-right">{"Size"}</TableHead>
+            <TableHead className="w-48">{"Share of rows"}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -1712,10 +1739,10 @@ function PartitionRowsTable({
                     {row.name}
                   </span>
                   {row.isCurrent ? (
-                    <StatusBadge variant="success">CURRENT</StatusBadge>
+                    <StatusBadge variant="success">{"CURRENT"}</StatusBadge>
                   ) : null}
                   {row.isDefault ? (
-                    <StatusBadge variant="warning">DEFAULT</StatusBadge>
+                    <StatusBadge variant="warning">{"DEFAULT"}</StatusBadge>
                   ) : null}
                 </div>
               </TableCell>
@@ -1750,7 +1777,9 @@ function PartitionRowsTable({
         <TableFooter>
           <TableRow>
             <TableCell className="pl-4 text-muted-foreground" colSpan={2}>
-              Total · {totalPartitionCount.toLocaleString()} partitions
+              {"Total · "}
+              {totalPartitionCount.toLocaleString()}
+              {" partitions"}
             </TableCell>
             <TableCell className="text-right font-mono">
               {totalRowsLabel}
@@ -1791,7 +1820,7 @@ function PartitionPaginationFooter({
 
   return (
     <div className="flex h-8 items-center gap-2 text-muted-foreground text-xs">
-      <span className="text-[11px]">Rows per page</span>
+      <span className="text-[11px]">{"Rows per page"}</span>
       <Select
         onValueChange={(value) => {
           if (typeof value !== "string") {
@@ -1830,11 +1859,19 @@ function PartitionPaginationFooter({
         </Button>
         {rowCount > 0 ? (
           <span className="px-1 font-mono tabular-nums">
-            Showing {firstRow}–{lastRow} of {rowCount}
+            {"Showing "}
+            {firstRow}
+            {"–"}
+            {lastRow}
+            {" of "}
+            {rowCount}
           </span>
         ) : null}
         <span className="px-1 font-mono tabular-nums">
-          Page {pageIndex + 1} of {pageCount}
+          {"Page "}
+          {pageIndex + 1}
+          {" of "}
+          {pageCount}
         </span>
         <Button
           aria-label="Next page"
@@ -1850,6 +1887,27 @@ function PartitionPaginationFooter({
       </div>
     </div>
   );
+}
+
+function partitionSummaryItems(metadata: TablePartitionMetadata) {
+  return [
+    metadata.partitionKey
+      ? { label: "Partition key", value: metadata.partitionKey }
+      : null,
+    metadata.partitionBound
+      ? { label: "Partition bound", value: metadata.partitionBound }
+      : null,
+    metadata.parentTable
+      ? {
+          label: "Parent table",
+          value: formatPartitionResourceLabel(metadata.parentTable),
+        }
+      : null,
+    {
+      label: "Direct partitions",
+      value: metadata.partitionCount.toLocaleString(),
+    },
+  ].filter((item): item is { label: string; value: string } => item !== null);
 }
 
 function PartitionsTab({
@@ -1957,24 +2015,7 @@ function PartitionsTab({
     );
     setPartitionPageSize(value);
   }
-  const summaryItems = [
-    metadata.partitionKey
-      ? { label: "Partition key", value: metadata.partitionKey }
-      : null,
-    metadata.partitionBound
-      ? { label: "Partition bound", value: metadata.partitionBound }
-      : null,
-    metadata.parentTable
-      ? {
-          label: "Parent table",
-          value: formatPartitionResourceLabel(metadata.parentTable),
-        }
-      : null,
-    {
-      label: "Direct partitions",
-      value: metadata.partitionCount.toLocaleString(),
-    },
-  ].filter((item): item is { label: string; value: string } => item !== null);
+  const summaryItems = partitionSummaryItems(metadata);
 
   return (
     <div className="flex flex-col gap-3">
@@ -2021,10 +2062,11 @@ function PartitionsTab({
                 className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-300"
               />
               <span>
-                The DEFAULT partition still holds{" "}
-                {filteredDefaultPartition.shareLabel} of estimated rows. Rows
-                outside every declared bound land there until a matching
-                partition exists.
+                {"The DEFAULT partition still holds"}{" "}
+                {filteredDefaultPartition.shareLabel}
+                {
+                  " of estimated rows. Rows outside every declared bound land there until a matching partition exists."
+                }
               </span>
             </div>
           ) : null}
@@ -2328,7 +2370,7 @@ function IndexColumnPills({ index }: { index: TableIndex }) {
   const keyParts = getIndexKeyParts(index);
   if (keyParts.length === 0 && index.includedColumns.length === 0) {
     return (
-      <span className="font-mono text-muted-foreground text-sm">none</span>
+      <span className="font-mono text-muted-foreground text-sm">{"none"}</span>
     );
   }
   return (
@@ -2348,7 +2390,8 @@ function IndexColumnPills({ index }: { index: TableIndex }) {
           key={`include-${column}`}
           variant="outline"
         >
-          INCLUDE {column}
+          {"INCLUDE "}
+          {column}
         </Badge>
       ))}
     </div>
@@ -2445,7 +2488,7 @@ function IndexCard({
               className="rounded-full px-2 py-1 font-semibold text-[11px]"
               variant="secondary"
             >
-              UNIQUE
+              {"UNIQUE"}
             </Badge>
           ) : null}
           {index.predicate ? (
@@ -2453,7 +2496,7 @@ function IndexCard({
               className="rounded-full px-2 py-1 font-semibold text-[11px]"
               variant="outline"
             >
-              PARTIAL
+              {"PARTIAL"}
             </Badge>
           ) : null}
           {indexHasExpression(index) ? (
@@ -2461,12 +2504,12 @@ function IndexCard({
               className="rounded-full px-2 py-1 font-semibold text-[11px]"
               variant="outline"
             >
-              EXPRESSION
+              {"EXPRESSION"}
             </Badge>
           ) : null}
           {unused ? (
             <Badge className="rounded-full bg-amber-500/20 px-2 py-1 font-semibold text-[11px] text-amber-700 dark:text-amber-300">
-              UNUSED
+              {"UNUSED"}
             </Badge>
           ) : null}
           <span className="ml-auto font-mono text-muted-foreground text-sm">
@@ -2474,10 +2517,13 @@ function IndexCard({
           </span>
         </div>
         <CardDescription className="mt-3 flex flex-wrap items-center gap-2">
-          <span>Columns</span>
+          <span>{"Columns"}</span>
           <IndexColumnPills index={index} />
           {index.predicate ? (
-            <span className="font-mono text-xs">WHERE {index.predicate}</span>
+            <span className="font-mono text-xs">
+              {"WHERE "}
+              {index.predicate}
+            </span>
           ) : null}
         </CardDescription>
       </CardHeader>
@@ -2490,7 +2536,7 @@ function IndexCard({
               className="gap-0 [&_[data-slot=progress-indicator]]:bg-muted-foreground/70 [&_[data-slot=progress-track]]:h-2"
               value={scanBarWidth}
             />
-            <p className="text-muted-foreground text-xs">share of scans</p>
+            <p className="text-muted-foreground text-xs">{"share of scans"}</p>
           </div>
           <IndexMetrics index={index} />
         </div>
@@ -2499,6 +2545,31 @@ function IndexCard({
     </Card>
   );
 }
+function IndexUsageSummary({
+  totalScanCount,
+  usageStatsAvailable,
+}: {
+  totalScanCount: bigint;
+  usageStatsAvailable: boolean;
+}) {
+  return (
+    <IndexSummaryCard
+      detail={
+        usageStatsAvailable
+          ? "since last stats reset"
+          : "usage stats unavailable"
+      }
+      label="Scans"
+      labelDescription={
+        usageStatsAvailable
+          ? "Usage source: pg_stat_user_indexes."
+          : "PostgreSQL did not return usage data from pg_stat_user_indexes."
+      }
+      value={usageStatsAvailable ? formatCompactInteger(totalScanCount) : "—"}
+    />
+  );
+}
+
 function IndexesTab({
   query,
   schemaName,
@@ -2573,21 +2644,9 @@ function IndexesTab({
           label="Total size"
           value={formatBytes(totalSizeBytes)}
         />
-        <IndexSummaryCard
-          detail={
-            usageStatsAvailable
-              ? "since last stats reset"
-              : "usage stats unavailable"
-          }
-          label="Scans"
-          labelDescription={
-            usageStatsAvailable
-              ? "Usage source: pg_stat_user_indexes."
-              : "PostgreSQL did not return usage data from pg_stat_user_indexes."
-          }
-          value={
-            usageStatsAvailable ? formatCompactInteger(totalScanCount) : "—"
-          }
+        <IndexUsageSummary
+          totalScanCount={totalScanCount}
+          usageStatsAvailable={usageStatsAvailable}
         />
         <IndexSummaryCard
           detail={formatValidityDetail(indexes)}
@@ -2634,7 +2693,10 @@ function IndexesTab({
       {indexes.length === 0 ? (
         <TableResourceEmptyState category="indexes" toolbar={toolbar} />
       ) : null}
-      {indexes.length > 0 && filteredIndexes.length === 0 ? (
+      {allPredicates(
+        () => indexes.length > 0,
+        () => filteredIndexes.length === 0
+      ) ? (
         <SearchEmptyState className="border" resourceName="indexes" />
       ) : null}
       <nav
@@ -2665,7 +2727,7 @@ function IndexesTab({
             className="h-8 w-28"
             size="sm"
           >
-            <span className="text-muted-foreground">Per page</span>
+            <span className="text-muted-foreground">{"Per page"}</span>
             <span>{pageSize}</span>
           </SelectTrigger>
           <SelectContent alignItemWithTrigger={false}>
@@ -2682,13 +2744,20 @@ function IndexesTab({
         </Select>
         {filteredIndexes.length > 0 ? (
           <span className="ml-1 tabular-nums" role="status">
-            Showing {firstPageIndex}&ndash;{lastPageIndex} of{" "}
-            {filteredIndexes.length} indexes
+            {"Showing "}
+            {firstPageIndex}
+            {"–"}
+            {lastPageIndex}
+            {" of"} {filteredIndexes.length}
+            {" indexes"}
           </span>
         ) : null}
         <div className="ml-auto flex items-center gap-2">
           <span className="tabular-nums">
-            Page {currentPageIndex + 1} of {pageCount}
+            {"Page "}
+            {currentPageIndex + 1}
+            {" of "}
+            {pageCount}
           </span>
           <Button
             aria-label="Previous indexes page"
@@ -2800,7 +2869,7 @@ function ReferencedTableTarget({
       to="/instances/$instanceId/databases/$databaseId/explorer"
     >
       {target.label}
-      <span aria-hidden="true">&nbsp;↗</span>
+      <span aria-hidden="true">{" ↗"}</span>
     </Link>
   );
 }
@@ -2842,7 +2911,8 @@ function ReferentialActionPill({
     <ConstraintBadge
       tone={action === ReferentialAction.CASCADE ? "warning" : "outline"}
     >
-      ON {label.toUpperCase()} {actionLabel}
+      {"ON "}
+      {label.toUpperCase()} {actionLabel}
     </ConstraintBadge>
   );
 }
@@ -2905,10 +2975,10 @@ function ConstraintCard({
           </>
         ) : null}
         {hasNotValidDefinition(constraint) ? (
-          <ConstraintBadge tone="warning">NOT VALID</ConstraintBadge>
+          <ConstraintBadge tone="warning">{"NOT VALID"}</ConstraintBadge>
         ) : null}
         {shouldShowValidatedPill(constraint) ? (
-          <ConstraintBadge tone="ghost">validated</ConstraintBadge>
+          <ConstraintBadge tone="ghost">{"validated"}</ConstraintBadge>
         ) : null}
         {isForeignKey ? (
           <ReferencedTableTarget
@@ -3003,12 +3073,12 @@ function ConstraintsTab({
   }
   const { constraints } = query.data;
   const normalizedSearch = search.trim().toLowerCase();
+  const kindFilterSet = new Set(kindFilters);
   const visibleConstraints = constraints.filter(
     (constraint) =>
       (normalizedSearch.length === 0 ||
         constraint.constraintName.toLowerCase().includes(normalizedSearch)) &&
-      (kindFilters.length === 0 ||
-        kindFilters.includes(String(constraint.type)))
+      (kindFilters.length === 0 || kindFilterSet.has(String(constraint.type)))
   );
   const orderedConstraints = [
     ...visibleConstraints.filter(isKeyConstraint),
@@ -3120,9 +3190,11 @@ function ConstraintsTab({
       >
         {visibleConstraints.length > 0 ? (
           <span className="tabular-nums" role="status">
-            Showing {pageStart + 1}&ndash;
-            {Math.min(pageStart + pageSize, visibleConstraints.length)} of{" "}
-            {visibleConstraints.length}
+            {"Showing "}
+            {pageStart + 1}
+            {"–"}
+            {Math.min(pageStart + pageSize, visibleConstraints.length)}
+            {" of"} {visibleConstraints.length}
           </span>
         ) : null}
         <div className="ml-auto">
@@ -3246,6 +3318,78 @@ interface RlsPreviewModel {
   verdict: string;
 }
 
+function emptyRlsPreview(
+  command: PolicyCommand,
+  role: string,
+  matchingPolicies: TablePolicy[]
+): RlsPreviewModel {
+  return {
+    appliedPolicies: matchingPolicies,
+    hasRows: false,
+    predicate: "",
+    verdict:
+      command === PolicyCommand.INSERT
+        ? `No permissive policy applies — RLS rejects every INSERT by ${role}.`
+        : `No permissive policy applies — RLS returns zero rows for ${role} running ${formatPolicyCommand(command)}.`,
+  };
+}
+
+function combineRlsPredicates(
+  permissivePolicies: TablePolicy[],
+  restrictivePolicies: TablePolicy[],
+  command: PolicyCommand
+): string {
+  const permissivePredicate = joinPolicyPredicates(
+    permissivePolicies.map((policy) =>
+      policyPredicateForCommand(policy, command)
+    ),
+    "OR"
+  );
+  const restrictivePredicates = restrictivePolicies.map((policy) =>
+    policyPredicateForCommand(policy, command)
+  );
+  if (restrictivePredicates.length === 0) {
+    return permissivePredicate;
+  }
+  return [
+    permissivePolicies.length === 1
+      ? permissivePredicate
+      : `(${permissivePredicate})`,
+    ...restrictivePredicates.map(wrapPolicyPredicate),
+  ].join("\nAND ");
+}
+
+function rlsPreviewVerdict({
+  command,
+  permissiveCount,
+  restrictiveCount,
+  role,
+}: {
+  command: PolicyCommand;
+  permissiveCount: number;
+  restrictiveCount: number;
+  role: string;
+}): string {
+  const permissiveLabel =
+    permissiveCount === 1
+      ? "1 permissive policy applies"
+      : `${permissiveCount.toLocaleString()} permissive policies apply`;
+  const rowSubject = command === PolicyCommand.INSERT ? "a new row" : "a row";
+  const matchCondition =
+    permissiveCount === 1 ? "if it matches" : "if any one matches";
+  const restrictiveCopy =
+    restrictiveCount > 0
+      ? ` ${restrictiveCount.toLocaleString()} restrictive ${
+          restrictiveCount === 1 ? "policy" : "policies"
+        } must also pass.`
+      : "";
+  const resultDescription =
+    command === PolicyCommand.INSERT
+      ? `New rows inserted by ${role} must satisfy:`
+      : `Rows visible to ${role} are those where:`;
+  return `${permissiveLabel} — ${rowSubject} passes ${matchCondition}.${restrictiveCopy} ${resultDescription}`;
+}
+
 function deriveRlsPreview({
   command,
   policies,
@@ -3267,59 +3411,23 @@ function deriveRlsPreview({
     (policy) => policy.mode === PolicyMode.RESTRICTIVE
   );
   if (permissivePolicies.length === 0) {
-    return {
-      appliedPolicies: matchingPolicies,
-      hasRows: false,
-      predicate: "",
-      verdict:
-        command === PolicyCommand.INSERT
-          ? `No permissive policy applies — RLS rejects every INSERT by ${role}.`
-          : `No permissive policy applies — RLS returns zero rows for ${role} running ${formatPolicyCommand(command)}.`,
-    };
+    return emptyRlsPreview(command, role, matchingPolicies);
   }
-
-  const permissivePredicate = joinPolicyPredicates(
-    permissivePolicies.map((policy) =>
-      policyPredicateForCommand(policy, command)
-    ),
-    "OR"
-  );
-  const restrictivePredicates = restrictivePolicies.map((policy) =>
-    policyPredicateForCommand(policy, command)
-  );
-  const predicate =
-    restrictivePredicates.length > 0
-      ? [
-          permissivePolicies.length === 1
-            ? permissivePredicate
-            : `(${permissivePredicate})`,
-          ...restrictivePredicates.map(wrapPolicyPredicate),
-        ].join("\nAND ")
-      : permissivePredicate;
-  const permissiveLabel =
-    permissivePolicies.length === 1
-      ? "1 permissive policy applies"
-      : `${permissivePolicies.length.toLocaleString()} permissive policies apply`;
-  const rowSubject = command === PolicyCommand.INSERT ? "a new row" : "a row";
-  const matchCondition =
-    permissivePolicies.length === 1 ? "if it matches" : "if any one matches";
-  const passCopy = `${rowSubject} passes ${matchCondition}`;
-  const restrictiveCopy =
-    restrictivePolicies.length > 0
-      ? ` ${restrictivePolicies.length.toLocaleString()} restrictive ${
-          restrictivePolicies.length === 1 ? "policy" : "policies"
-        } must also pass.`
-      : "";
 
   return {
     appliedPolicies: matchingPolicies,
     hasRows: true,
-    predicate,
-    verdict: `${permissiveLabel} — ${passCopy}.${restrictiveCopy} ${
-      command === PolicyCommand.INSERT
-        ? `New rows inserted by ${role} must satisfy:`
-        : `Rows visible to ${role} are those where:`
-    }`,
+    predicate: combineRlsPredicates(
+      permissivePolicies,
+      restrictivePolicies,
+      command
+    ),
+    verdict: rlsPreviewVerdict({
+      command,
+      permissiveCount: permissivePolicies.length,
+      restrictiveCount: restrictivePolicies.length,
+      role,
+    }),
   };
 }
 
@@ -3340,7 +3448,8 @@ function PolicyCard({ policy }: { policy: TablePolicy }) {
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-mono font-semibold text-sm">{policy.policyName}</h2>
         <Badge className="h-[18px] font-mono text-[10px]" variant="outline">
-          FOR {formatPolicyCommand(policy.command)}
+          {"FOR "}
+          {formatPolicyCommand(policy.command)}
         </Badge>
         <Badge
           className={cn(
@@ -3352,13 +3461,14 @@ function PolicyCard({ policy }: { policy: TablePolicy }) {
           {policyModeLabel(policy.mode)}
         </Badge>
         <span className="ml-auto font-mono text-muted-foreground text-xs">
-          TO {formatPolicyRoles(policy)}
+          {"TO "}
+          {formatPolicyRoles(policy)}
         </span>
       </div>
       {policy.usingExpression ? (
         <div className="mt-3">
           <div className="font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
-            USING
+            {"USING"}
           </div>
           <PolicyExpression expression={policy.usingExpression} />
         </div>
@@ -3366,7 +3476,7 @@ function PolicyCard({ policy }: { policy: TablePolicy }) {
       {policy.checkExpression ? (
         <div className="mt-2">
           <div className="font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
-            WITH CHECK
+            {"WITH CHECK"}
           </div>
           <PolicyExpression expression={policy.checkExpression} />
         </div>
@@ -3378,35 +3488,39 @@ function PolicyCard({ policy }: { policy: TablePolicy }) {
 function RlsCombinationGuide() {
   return (
     <section className="rounded-lg border bg-card p-4 shadow-xs">
-      <h2 className="font-semibold text-sm">How the server combines these</h2>
+      <h2 className="font-semibold text-sm">
+        {"How the server combines these"}
+      </h2>
       <ol className="mt-3 flex list-none flex-col gap-2 pl-0 text-muted-foreground text-sm leading-relaxed">
         <li>
-          <span className="font-medium text-foreground">1 · Grants first.</span>{" "}
-          A role with no SELECT grant sees nothing; RLS never even runs.
+          <span className="font-medium text-foreground">
+            {"1 · Grants first."}
+          </span>{" "}
+          {"A role with no SELECT grant sees nothing; RLS never even runs."}
         </li>
         <li>
           <span className="font-medium text-foreground">
-            2 · PERMISSIVE policies OR together.
+            {"2 · PERMISSIVE policies OR together."}
           </span>{" "}
-          A row is visible if any one matches.
+          {"A row is visible if any one matches."}
         </li>
         <li>
           <span className="font-medium text-foreground">
-            3 · RESTRICTIVE policies AND on top.
+            {"3 · RESTRICTIVE policies AND on top."}
           </span>{" "}
-          Every one must also pass.
+          {"Every one must also pass."}
         </li>
         <li>
           <span className="font-medium text-foreground">
-            4 · No matching policy = zero rows.
+            {"4 · No matching policy = zero rows."}
           </span>{" "}
-          RLS is default-deny, not default-allow.
+          {"RLS is default-deny, not default-allow."}
         </li>
         <li>
           <span className="font-medium text-foreground">
-            5 · Owner and BYPASSRLS skip it
+            {"5 · Owner and BYPASSRLS skip it"}
           </span>{" "}
-          unless FORCE ROW LEVEL SECURITY is set.
+          {"unless FORCE ROW LEVEL SECURITY is set."}
         </li>
       </ol>
     </section>
@@ -3442,7 +3556,7 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
   return (
     <section className="rounded-lg border bg-card p-4 shadow-xs">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="font-semibold text-sm">Preview visibility as</h2>
+        <h2 className="font-semibold text-sm">{"Preview visibility as"}</h2>
         <Select onValueChange={handleRoleChange} value={activeRole}>
           <SelectTrigger
             aria-label="Policy role"
@@ -3459,7 +3573,7 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
             ))}
           </SelectContent>
         </Select>
-        <span className="text-muted-foreground text-sm">running</span>
+        <span className="text-muted-foreground text-sm">{"running"}</span>
         <Select
           onValueChange={handleCommandChange}
           value={String(previewCommand)}
@@ -3508,7 +3622,7 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
           <>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <span className="font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
-                Applied
+                {"Applied"}
               </span>
               {preview.appliedPolicies.map((policy) => (
                 <Badge
@@ -3594,8 +3708,9 @@ function PoliciesTab({
           className="size-2 rounded-full bg-emerald-500"
         />
         <p className="font-medium text-sm">
-          This table defines row-level security policies; table owners and
-          BYPASSRLS roles may bypass them
+          {
+            "This table defines row-level security policies; table owners and BYPASSRLS roles may bypass them"
+          }
         </p>
         <span
           aria-live="polite"
@@ -3638,7 +3753,7 @@ function PoliciesTab({
         aria-label="Policies pagination"
         className="m-0 flex min-h-8 min-w-0 flex-wrap items-center gap-2 border-0 p-0 text-muted-foreground text-xs"
       >
-        <span className="text-[11px]">Rows per page</span>
+        <span className="text-[11px]">{"Rows per page"}</span>
         <Select
           onValueChange={(nextValue) => {
             if (typeof nextValue !== "string") {
@@ -3676,8 +3791,12 @@ function PoliciesTab({
         {visiblePolicies.length > 0 ? (
           <>
             <span className="tabular-nums">
-              Showing {firstPolicy}&ndash;{lastPolicy} of{" "}
-              {visiblePolicies.length} policies
+              {"Showing "}
+              {firstPolicy}
+              {"–"}
+              {lastPolicy}
+              {" of"} {visiblePolicies.length}
+              {" policies"}
             </span>
             <span
               aria-atomic="true"
@@ -3685,9 +3804,15 @@ function PoliciesTab({
               className="sr-only"
               role="status"
             >
-              Showing {firstPolicy}&ndash;{lastPolicy} of{" "}
-              {visiblePolicies.length} policies. Page {currentPageIndex + 1} of{" "}
-              {pageCount}.
+              {"Showing "}
+              {firstPolicy}
+              {"–"}
+              {lastPolicy}
+              {" of"} {visiblePolicies.length}
+              {" policies. Page "}
+              {currentPageIndex + 1}
+              {" of"} {pageCount}
+              {"."}
             </span>
           </>
         ) : null}
@@ -3709,7 +3834,10 @@ function PoliciesTab({
             <ChevronLeft className="size-3" />
           </Button>
           <span className="font-mono text-xs">
-            Page {currentPageIndex + 1} of {pageCount}
+            {"Page "}
+            {currentPageIndex + 1}
+            {" of "}
+            {pageCount}
           </span>
           <Button
             aria-label="Next policies page"
@@ -3967,7 +4095,7 @@ function TriggerCard({
               PILL_TONE_CLASSES.amber
             )}
           >
-            disabled
+            {"disabled"}
           </span>
         )}
         <span className="ml-auto truncate font-mono text-[11px] text-muted-foreground">
@@ -3976,7 +4104,9 @@ function TriggerCard({
       </div>
       {whenExpression ? (
         <div className="mt-[7px] font-mono text-[11px] text-muted-foreground">
-          WHEN ({whenExpression})
+          {"WHEN ("}
+          {whenExpression}
+          {")"}
         </div>
       ) : null}
       <div className="mt-[9px] flex items-start gap-2 border-t pt-2">
@@ -4319,6 +4449,31 @@ function triggerSql(triggers: TableTrigger[], qualifiedTableName: string) {
     .join("\n");
 }
 
+function appendPolicyDefinitionSection(
+  sections: DefinitionSection[],
+  policies: TablePolicy[]
+) {
+  if (policies.length > 0) {
+    sections.push({
+      content:
+        "Policy definitions are available, but row-level security enablement and forced mode are not. Use the pg_dump command to reproduce policies safely.",
+      detail: `${policies.length.toLocaleString()} policies require table-level RLS state`,
+      id: "policies",
+      kind: "note",
+      title: "Policies",
+    });
+    return;
+  }
+  sections.push({
+    content:
+      "No row-level policies are returned for this table. Visibility is governed by grants unless row-level security is enabled outside this metadata response.",
+    detail: "no policies returned",
+    id: "row-level-security",
+    kind: "note",
+    title: "Row-level security",
+  });
+}
+
 function deriveDefinitionSections({
   columns,
   constraints,
@@ -4410,26 +4565,7 @@ function deriveDefinitionSections({
       title: "Comments",
     });
   }
-  if (policies.length > 0) {
-    sections.push({
-      content:
-        "Policy definitions are available, but row-level security enablement and forced mode are not. Use the pg_dump command to reproduce policies safely.",
-      detail: `${policies.length.toLocaleString()} policies require table-level RLS state`,
-      id: "policies",
-      kind: "note",
-      title: "Policies",
-    });
-  }
-  if (policies.length === 0) {
-    sections.push({
-      content:
-        "No row-level policies are returned for this table. Visibility is governed by grants unless row-level security is enabled outside this metadata response.",
-      detail: "no policies returned",
-      id: "row-level-security",
-      kind: "note",
-      title: "Row-level security",
-    });
-  }
+  appendPolicyDefinitionSection(sections, policies);
   const triggerText = triggerSql(triggers, qualifiedTableName);
   if (triggerText) {
     sections.push({
@@ -4515,7 +4651,7 @@ function ReferencedTablesCard({ references }: { references: string[] }) {
       <CardHeader className={cn("py-3", references.length > 0 && "border-b")}>
         <h2 className="flex items-center gap-2 font-medium text-sm">
           <Layers aria-hidden="true" className="size-4 text-muted-foreground" />
-          Referenced tables
+          {"Referenced tables"}
         </h2>
         <CardDescription>
           {references.length > 0
@@ -4628,7 +4764,7 @@ function ReproduceLocallyCard({
           value={allSteps}
           variant="outline"
         >
-          Copy all steps
+          {"Copy all steps"}
         </CopyIconButton>
       }
       icon={Terminal}
@@ -4652,7 +4788,7 @@ function ReproduceLocallyCard({
           </TabsList>
         </Tabs>
         <div className="flex min-h-8 items-center rounded-lg border bg-background px-3 py-1.5 text-sm">
-          <span>Template: pg_dump, schema only (SQL)</span>
+          <span>{"Template: pg_dump, schema only (SQL)"}</span>
         </div>
         <DefinitionCommandStep
           command={command}
@@ -4671,8 +4807,9 @@ function ReproduceLocallyCard({
         />
         <Alert className="px-3 py-2">
           <AlertDescription className="text-[11px] leading-relaxed">
-            Related foreign key targets are not included with --table; dump the
-            schema scope if you need them.
+            {
+              "Related foreign key targets are not included with --table; dump the schema scope if you need them."
+            }
           </AlertDescription>
         </Alert>
       </div>
@@ -4824,13 +4961,13 @@ function DefinitionTab({
         />
       ) : null}
       <div className="flex w-full min-w-0 flex-wrap items-center gap-2 text-muted-foreground text-sm">
-        <span>Schema document</span>
-        <span aria-hidden="true">·</span>
+        <span>{"Schema document"}</span>
+        <span aria-hidden="true">{"·"}</span>
         <span>
-          generated live from{" "}
-          <code className="rounded bg-muted px-1 py-0.5">pg_catalog</code>
+          {"generated live from"}{" "}
+          <code className="rounded bg-muted px-1 py-0.5">{"pg_catalog"}</code>
         </span>
-        <span aria-hidden="true">·</span>
+        <span aria-hidden="true">{"·"}</span>
         <span>{toolbar.lastFetchedLabel}</span>
         <div className="ml-auto shrink-0">
           <Button
@@ -4849,7 +4986,7 @@ function DefinitionTab({
               )}
               data-icon="inline-start"
             />
-            Refresh
+            {"Refresh"}
           </Button>
         </div>
       </div>
@@ -4864,8 +5001,9 @@ function DefinitionTab({
         tableName={tableName}
       />
       <p className="px-1 text-muted-foreground text-xs leading-relaxed">
-        Definition is generated from pg_catalog on each visit; Querylane never
-        stores or mutates schema.
+        {
+          "Definition is generated from pg_catalog on each visit; Querylane never stores or mutates schema."
+        }
       </p>
     </div>
   );
@@ -4922,12 +5060,12 @@ function TableDetail({
     }
     onTabChange?.(next);
   }
-  const tableResourceName = buildTableName(
+  const tableResourceName = buildTableName({
     instanceId,
     databaseId,
-    schemaName,
-    tableName
-  );
+    schemaId: schemaName,
+    tableId: tableName,
+  });
 
   // Fetch table metadata up front so tabs can show stable resource counts.
   // The same queries back the tab panels, so counts cannot drift from content.
@@ -4989,7 +5127,7 @@ function TableDetail({
         })}
         to="/instances/$instanceId/databases/$databaseId/explorer"
       >
-        Open table
+        {"Open table"}
       </Link>
     );
   }

@@ -15,7 +15,7 @@ function SqlWhereEditor({ onChange, value }: SqlWhereEditorProps) {
           className="text-right font-mono text-muted-foreground text-xs uppercase"
           htmlFor={inputId}
         >
-          WHERE
+          {"WHERE"}
         </label>
         <Input
           aria-label="SQL WHERE clause"
@@ -27,9 +27,9 @@ function SqlWhereEditor({ onChange, value }: SqlWhereEditorProps) {
         />
       </div>
       <p className="pl-[3.75rem] text-[11px] text-muted-foreground leading-relaxed">
-        Supports column comparisons joined with AND: =, &lt;&gt;, &gt;, &lt;,
-        &gt;=, &lt;=, LIKE/ILIKE with %, IS [NOT] NULL. Runs as a parameterized
-        WHERE clause, still through the read guard.
+        {
+          "Supports column comparisons joined with AND: =, <>, >, <, >=, <=, LIKE/ILIKE with %, IS [NOT] NULL. Runs as a parameterized WHERE clause, still through the read guard."
+        }
       </p>
     </div>
   );

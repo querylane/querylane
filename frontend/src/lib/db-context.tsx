@@ -199,6 +199,66 @@ function shouldHydrateSelectedDatabase(
   return !databases.some((database) => database.id === effectiveDatabaseId);
 }
 
+function usePersistedNavigationSelections() {
+  const [store, setStore] = React.useState<PersistedNavigationSelectionStore>(
+    () => readPersistedNavigationSelectionStore()
+  );
+  const persistSelection = (ids: RouteSelectionIds) => {
+    if (!ids.instanceId) {
+      return;
+    }
+    const nextSelection: PersistedNavigationSelection = {
+      databaseId: ids.databaseId,
+    };
+    const instanceKey = ids.instanceId;
+    setStore((previous) => {
+      const currentSelection = previous[instanceKey] ?? {};
+      if (arePersistedSelectionsEqual(currentSelection, nextSelection)) {
+        return previous;
+      }
+      const nextStore = { ...previous, [instanceKey]: nextSelection };
+      writePersistedNavigationSelectionStore(nextStore);
+      return nextStore;
+    });
+  };
+  return { persistSelection, store };
+}
+
+function getPersistedSelection(
+  store: PersistedNavigationSelectionStore,
+  instanceId: string | undefined
+): PersistedNavigationSelection {
+  return instanceId ? (store[instanceId] ?? {}) : {};
+}
+
+function deriveInstanceQueryPolicy({
+  effectiveInstanceId,
+  routeInstanceId,
+  selectedInstancePending,
+  selectedInstanceStatus,
+}: {
+  effectiveInstanceId: string | undefined;
+  routeInstanceId: string | undefined;
+  selectedInstancePending: boolean;
+  selectedInstanceStatus: PostgresInstance["status"] | undefined;
+}) {
+  const selectedInstanceResolved =
+    selectedInstanceStatus !== undefined ||
+    !routeInstanceId ||
+    !selectedInstancePending;
+  const suppressChildAutoQueries =
+    selectedInstanceResolved && selectedInstanceStatus !== "connected";
+  return {
+    databasesQueryEnabled: Boolean(
+      effectiveInstanceId && selectedInstanceStatus === "connected"
+    ),
+    selectedInstanceResolved,
+    suppressDatabasesQuery: Boolean(
+      effectiveInstanceId && suppressChildAutoQueries
+    ),
+  };
+}
+
 function useDbProviderValue() {
   const navigate = useNavigate();
   const location = useLocation({
@@ -214,36 +274,8 @@ function useDbProviderValue() {
     scope: viewLevel,
     value: location.search.page,
   });
-  const [
-    persistedNavigationSelectionStore,
-    setPersistedNavigationSelectionStore,
-  ] = React.useState<PersistedNavigationSelectionStore>(() =>
-    readPersistedNavigationSelectionStore()
-  );
-  const persistSelection = (ids: RouteSelectionIds) => {
-    if (!ids.instanceId) {
-      return;
-    }
-
-    const nextSelection: PersistedNavigationSelection = {
-      databaseId: ids.databaseId,
-    };
-
-    const instanceKey = ids.instanceId;
-    setPersistedNavigationSelectionStore((previous) => {
-      const currentSelection = previous[instanceKey] ?? {};
-      if (arePersistedSelectionsEqual(currentSelection, nextSelection)) {
-        return previous;
-      }
-
-      const nextStore = {
-        ...previous,
-        [instanceKey]: nextSelection,
-      };
-      writePersistedNavigationSelectionStore(nextStore);
-      return nextStore;
-    });
-  };
+  const { persistSelection, store: persistedNavigationSelectionStore } =
+    usePersistedNavigationSelections();
 
   const instancesQuery = useListAllInstancesQuery(
     DEFAULT_ALL_INSTANCES_QUERY_INPUT,
@@ -270,23 +302,21 @@ function useDbProviderValue() {
       instances,
       routeInstanceId,
     });
-  const persistedSelection =
-    routeInstanceId && persistedNavigationSelectionStore[routeInstanceId]
-      ? persistedNavigationSelectionStore[routeInstanceId]
-      : {};
+  const persistedSelection = getPersistedSelection(
+    persistedNavigationSelectionStore,
+    routeInstanceId
+  );
   const selectedInstanceStatus = selectedInstance?.status;
-  const selectedInstanceResolved = Boolean(
-    selectedInstance || !routeInstanceId || !selectedInstanceQuery.isPending
-  );
-  const suppressChildAutoQueries = Boolean(
-    selectedInstanceResolved && selectedInstanceStatus !== "connected"
-  );
-  const suppressDatabasesQuery = Boolean(
-    effectiveInstanceId && suppressChildAutoQueries
-  );
-  const databasesQueryEnabled = Boolean(
-    effectiveInstanceId && selectedInstanceStatus === "connected"
-  );
+  const {
+    databasesQueryEnabled,
+    selectedInstanceResolved,
+    suppressDatabasesQuery,
+  } = deriveInstanceQueryPolicy({
+    effectiveInstanceId,
+    routeInstanceId,
+    selectedInstancePending: selectedInstanceQuery.isPending,
+    selectedInstanceStatus,
+  });
   const databasesQuery = useListAllDatabasesQuery(
     effectiveInstanceId
       ? databasesForInstanceQueryInput(effectiveInstanceId)

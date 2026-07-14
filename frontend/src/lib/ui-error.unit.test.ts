@@ -16,6 +16,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
+const MALFORMED_PROTO_BYTE = 0xff;
 const AFTER_CORRECTION = "Correct the issue before retrying.";
 const IMMEDIATELY = "Retry the request.";
 const LATER = "Retry later.";
@@ -329,7 +330,7 @@ describe("PostgreSQL structured error rendering", () => {
     error.details = [
       {
         type: POSTGRES_DETAIL_TYPE,
-        value: new Uint8Array([0xff]),
+        value: new Uint8Array([MALFORMED_PROTO_BYTE]),
       },
     ];
 

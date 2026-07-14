@@ -304,7 +304,7 @@ function ObjectDefinition({
           variant="outline"
         >
           <Clipboard data-icon="inline-start" />
-          Copy SQL
+          {"Copy SQL"}
         </Button>
         {extra}
       </div>
@@ -349,7 +349,9 @@ function TypeObjectCard({
             ))}
             {hiddenChipCount > 0 ? (
               <li className="inline-flex h-6 items-center rounded-full border border-border px-2.5 text-[11px] text-muted-foreground">
-                +{hiddenChipCount} more
+                {"+"}
+                {hiddenChipCount}
+                {" more"}
               </li>
             ) : null}
           </ol>
@@ -393,7 +395,10 @@ function RoutineObjectCard(props: OtherObjectCardProps) {
           <span className="font-bold">{routineName}</span>
           <span className="text-muted-foreground">{routineArgs}</span>
           {returnType ? (
-            <span className="text-primary"> → {returnType}</span>
+            <span className="text-primary">
+              {" → "}
+              {returnType}
+            </span>
           ) : null}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -429,7 +434,7 @@ function SequenceObjectCard(props: OtherObjectCardProps) {
           {summaryParts[0]?.replace("last ", "") || "—"}
         </div>
         <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
-          Last value
+          {"Last value"}
         </div>
         {summaryParts.length > 1 ? (
           <p className="mt-2 text-[11px] text-muted-foreground">
@@ -719,7 +724,9 @@ function CronObjectCard(props: OtherObjectCardProps) {
           </div>
           <div className="mt-3 flex flex-wrap items-baseline gap-2">
             <span className="font-semibold text-sm">
-              “{cronSentence(schedule)}”
+              {"“"}
+              {cronSentence(schedule)}
+              {"”"}
             </span>
           </div>
           <ObjectDefinition object={object} onCopySql={onCopySql} />
@@ -909,7 +916,7 @@ function OtherObjectsError({
     <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
       <div className="flex items-start gap-2 text-destructive">
         <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-        <span>Failed to load other database objects.</span>
+        <span>{"Failed to load other database objects."}</span>
       </div>
       {onRetry ? (
         <RetryActionButton
@@ -948,6 +955,119 @@ function OtherObjectsEmptyState({
       <p>{title}</p>
       {description ? <p className="mt-1 text-xs">{description}</p> : null}
     </div>
+  );
+}
+
+function GroupedOtherObjectCards({
+  expandedObjectKey,
+  objects,
+  onCopySql,
+  onToggle,
+  titleId,
+}: {
+  expandedObjectKey: string | null;
+  objects: OtherDatabaseObject[];
+  onCopySql: (definition: string) => void;
+  onToggle: (key: string) => void;
+  titleId: string;
+}) {
+  return (
+    <div className="space-y-5">
+      {OTHER_OBJECT_CATEGORIES.map((category) => {
+        const categoryObjects = objects.filter(
+          (object) => object.category === category.key
+        );
+        if (categoryObjects.length === 0) {
+          return null;
+        }
+        return (
+          <section
+            aria-labelledby={`${titleId}-${category.key}`}
+            key={category.key}
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <h3
+                className="font-medium text-sm"
+                id={`${titleId}-${category.key}`}
+              >
+                {category.label}
+              </h3>
+              <span className="font-mono text-muted-foreground text-xs tabular-nums">
+                {categoryObjects.length}
+              </span>
+            </div>
+            <OtherObjectCards
+              category={category.key}
+              expandedObjectKey={expandedObjectKey}
+              objects={categoryObjects}
+              onCopySql={onCopySql}
+              onToggle={onToggle}
+            />
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function OtherObjectListContent({
+  error,
+  expandedObjectKey,
+  hasActiveFilters,
+  hasMatchesInOtherCategories,
+  isLoading,
+  objects,
+  onCopySql,
+  onRetry,
+  onToggle,
+  selectedCategory,
+  titleId,
+}: {
+  error: unknown;
+  expandedObjectKey: string | null;
+  hasActiveFilters: boolean;
+  hasMatchesInOtherCategories: boolean;
+  isLoading: boolean;
+  objects: OtherDatabaseObject[];
+  onCopySql: (definition: string) => void;
+  onRetry: (() => Promise<unknown>) | undefined;
+  onToggle: (key: string) => void;
+  selectedCategory: OtherObjectCategory | undefined;
+  titleId: string;
+}) {
+  if (error) {
+    return <OtherObjectsError onRetry={onRetry} />;
+  }
+  if (isLoading) {
+    return <OtherObjectsLoading />;
+  }
+  if (objects.length === 0) {
+    return (
+      <OtherObjectsEmptyState
+        hasActiveFilters={hasActiveFilters}
+        hasMatchesInOtherCategories={hasMatchesInOtherCategories}
+      />
+    );
+  }
+  if (selectedCategory) {
+    return (
+      <OtherObjectCards
+        category={selectedCategory}
+        expandedObjectKey={expandedObjectKey}
+        objects={objects}
+        onCopySql={onCopySql}
+        onToggle={onToggle}
+      />
+    );
+  }
+  return (
+    <GroupedOtherObjectCards
+      expandedObjectKey={expandedObjectKey}
+      objects={objects}
+      onCopySql={onCopySql}
+      onToggle={onToggle}
+      titleId={titleId}
+    />
   );
 }
 
@@ -1029,66 +1149,6 @@ function OtherDatabaseObjectsPanel({
   const toggleObject = (key: string) =>
     setExpandedObjectKey(expandedObjectKey === key ? null : key);
 
-  let objectListContent: ReactNode;
-  if (error) {
-    objectListContent = <OtherObjectsError onRetry={onRetry} />;
-  } else if (isLoading) {
-    objectListContent = <OtherObjectsLoading />;
-  } else if (visibleObjects.length > 0) {
-    objectListContent = selectedCategory ? (
-      <OtherObjectCards
-        category={selectedCategory}
-        expandedObjectKey={expandedObjectKey}
-        objects={visibleObjects}
-        onCopySql={copySql}
-        onToggle={toggleObject}
-      />
-    ) : (
-      <div className="space-y-5">
-        {OTHER_OBJECT_CATEGORIES.map((category) => {
-          const categoryObjects = visibleObjects.filter(
-            (object) => object.category === category.key
-          );
-          if (categoryObjects.length === 0) {
-            return null;
-          }
-          return (
-            <section
-              aria-labelledby={`${titleId}-${category.key}`}
-              key={category.key}
-            >
-              <div className="mb-2 flex items-center gap-2">
-                <h3
-                  className="font-medium text-sm"
-                  id={`${titleId}-${category.key}`}
-                >
-                  {category.label}
-                </h3>
-                <span className="font-mono text-muted-foreground text-xs tabular-nums">
-                  {categoryObjects.length}
-                </span>
-              </div>
-              <OtherObjectCards
-                category={category.key}
-                expandedObjectKey={expandedObjectKey}
-                objects={categoryObjects}
-                onCopySql={copySql}
-                onToggle={toggleObject}
-              />
-            </section>
-          );
-        })}
-      </div>
-    );
-  } else {
-    objectListContent = (
-      <OtherObjectsEmptyState
-        hasActiveFilters={hasActiveFilters}
-        hasMatchesInOtherCategories={hasMatchesInOtherCategories}
-      />
-    );
-  }
-
   return (
     <section
       aria-labelledby={titleId}
@@ -1096,7 +1156,7 @@ function OtherDatabaseObjectsPanel({
     >
       <header className="p-4">
         <h2 className="font-semibold text-sm" id={titleId}>
-          Other database objects
+          {"Other database objects"}
         </h2>
         <p className="mt-2 text-muted-foreground text-xs">{INTRO_COPY}</p>
       </header>
@@ -1129,12 +1189,27 @@ function OtherDatabaseObjectsPanel({
 
         {isTruncated ? (
           <p className="mt-3 text-amber-700 text-xs dark:text-amber-300">
-            This database has more than 1,000 other objects. Showing a partial
-            inventory.
+            {
+              "This database has more than 1,000 other objects. Showing a partial inventory."
+            }
           </p>
         ) : null}
 
-        <div className="mt-3">{objectListContent}</div>
+        <div className="mt-3">
+          <OtherObjectListContent
+            error={error}
+            expandedObjectKey={expandedObjectKey}
+            hasActiveFilters={hasActiveFilters}
+            hasMatchesInOtherCategories={hasMatchesInOtherCategories}
+            isLoading={isLoading}
+            objects={visibleObjects}
+            onCopySql={copySql}
+            onRetry={onRetry}
+            onToggle={toggleObject}
+            selectedCategory={selectedCategory}
+            titleId={titleId}
+          />
+        </div>
       </div>
     </section>
   );

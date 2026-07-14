@@ -15,7 +15,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("@/features/database-visualization/flow-canvas", () => ({
-  ["FlowCanvas"]: ({
+  FlowCanvas: ({
     actionPanel,
     nodes,
     selectedNodeId,
@@ -26,8 +26,12 @@ vi.mock("@/features/database-visualization/flow-canvas", () => ({
   }) => (
     <section aria-label="Flow canvas mock">
       <fieldset aria-label="Canvas map controls">{actionPanel}</fieldset>
-      Selected node {selectedNodeId ?? "none"}
-      <span>Node ids {nodes.map((node) => node.id).join(",")}</span>
+      {"Selected node "}
+      {selectedNodeId ?? "none"}
+      <span>
+        {"Node ids "}
+        {nodes.map((node) => node.id).join(",")}
+      </span>
     </section>
   ),
 }));

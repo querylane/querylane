@@ -76,7 +76,7 @@ export function SummaryCountValue({
     return (
       <span className="flex items-center gap-2 text-muted-foreground text-sm">
         <Spinner className="size-4" />
-        <span>Loading…</span>
+        <span>{"Loading…"}</span>
       </span>
     );
   }

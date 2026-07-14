@@ -14,6 +14,9 @@ import {
   PostgresConfigSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
+const TEST_NUMBER_320 = 320;
+const TEST_NUMBER_900 = 900;
+
 function createInstance() {
   return createProto(InstanceSchema, {
     config: createProto(PostgresConfigSchema, {
@@ -215,7 +218,7 @@ test("instance delete dialog and danger zone make destructive actions explicit",
 });
 
 test("credential recovery action does not overlap the alert copy on phones", async () => {
-  await page.viewport(320, 900);
+  await page.viewport(TEST_NUMBER_320, TEST_NUMBER_900);
   render(
     <ScreenshotFrame>
       <div className="w-[240px] rounded-2xl border border-border bg-background p-2 text-foreground">

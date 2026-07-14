@@ -58,7 +58,7 @@ function CopyErrorDetailsButton({ error }: { error: AppUiError }) {
         variant="outline"
       >
         <Copy className="size-4" />
-        Copy details
+        {"Copy details"}
       </Button>
       <p
         aria-live="polite"
@@ -78,7 +78,9 @@ function ErrorBadge({ label, value }: { label: string; value: string | null }) {
 
   return (
     <div className="rounded-full border border-border px-3 py-1 font-mono text-[11px] text-muted-foreground">
-      {label}: {value}
+      {label}
+      {": "}
+      {value}
     </div>
   );
 }
@@ -139,7 +141,7 @@ function ErrorDetailsDialog({
             variant={triggerVariant}
           >
             <SearchCode className="size-4" />
-            Error details
+            {"Error details"}
           </Button>
         }
       />
@@ -152,7 +154,7 @@ function ErrorDetailsDialog({
           <ErrorBadgeList error={error} retryAvailable={retryAvailable} />
           <CopyErrorDetailsButton error={error} key={error.technicalDetails} />
           <div className="space-y-2">
-            <h3 className="font-medium text-sm">Technical details</h3>
+            <h3 className="font-medium text-sm">{"Technical details"}</h3>
             <Textarea
               aria-label="Technical details JSON"
               className="h-96 max-h-96 resize-none whitespace-pre bg-muted/40 font-mono text-muted-foreground text-xs"

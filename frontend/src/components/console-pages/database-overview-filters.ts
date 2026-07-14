@@ -1,4 +1,5 @@
 import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter";
+import { allPredicates } from "@/lib/predicates";
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 type CatalogObjectKindFilter =
@@ -160,28 +161,40 @@ function filterCatalogObjectsByFacets<RowType extends CatalogObjectFacetRow>({
   schemaFilters,
   systemFilters,
 }: CatalogObjectFacetFilters & { objects: RowType[] }): RowType[] {
+  const kindFilterSet = new Set(kindFilters);
+  const ownerFilterSet = new Set(ownerFilters);
+  const schemaFilterSet = new Set(schemaFilters);
+  const systemFilterSet = new Set(systemFilters);
   return objects.filter((object) => {
     if (
-      kindFilters.length > 0 &&
-      !kindFilters.includes(catalogObjectKindValue(object))
+      allPredicates(
+        () => kindFilters.length > 0,
+        () => !kindFilterSet.has(catalogObjectKindValue(object))
+      )
     ) {
       return false;
     }
     if (
-      systemFilters.length > 0 &&
-      !systemFilters.includes(catalogObjectSystemValue(object))
+      allPredicates(
+        () => systemFilters.length > 0,
+        () => !systemFilterSet.has(catalogObjectSystemValue(object))
+      )
     ) {
       return false;
     }
     if (
-      schemaFilters.length > 0 &&
-      !schemaFilters.includes(schemaFilterValue(object))
+      allPredicates(
+        () => schemaFilters.length > 0,
+        () => !schemaFilterSet.has(schemaFilterValue(object))
+      )
     ) {
       return false;
     }
     if (
-      ownerFilters.length > 0 &&
-      !ownerFilters.includes(ownerFilterValue(object))
+      allPredicates(
+        () => ownerFilters.length > 0,
+        () => !ownerFilterSet.has(ownerFilterValue(object))
+      )
     ) {
       return false;
     }
@@ -194,16 +207,18 @@ function filterCatalogSchemasByFacets<RowType extends CatalogSchemaFacetRow>({
   ownerFilters,
   schemas,
 }: CatalogSchemaFacetFilters & { schemas: RowType[] }): RowType[] {
+  const kindFilterSet = new Set(kindFilters);
+  const ownerFilterSet = new Set(ownerFilters);
   return schemas.filter((schema) => {
     if (
       kindFilters.length > 0 &&
-      !kindFilters.includes(catalogSchemaKindValue(schema))
+      !kindFilterSet.has(catalogSchemaKindValue(schema))
     ) {
       return false;
     }
     if (
       ownerFilters.length > 0 &&
-      !ownerFilters.includes(ownerFilterValue(schema))
+      !ownerFilterSet.has(ownerFilterValue(schema))
     ) {
       return false;
     }

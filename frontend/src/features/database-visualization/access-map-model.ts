@@ -185,12 +185,17 @@ function upsertObjectNode({
   });
 }
 
-function appendParentRoleNodes(
-  input: AccessMapModelInput,
-  selectedRoleId: string,
-  nodes: VisualizationNode[],
-  edges: VisualizationEdge[]
-) {
+function appendParentRoleNodes({
+  input,
+  selectedRoleId,
+  nodes,
+  edges,
+}: {
+  input: AccessMapModelInput;
+  selectedRoleId: string;
+  nodes: VisualizationNode[];
+  edges: VisualizationEdge[];
+}) {
   for (const parent of input.parentRoles) {
     const id = `parent:${parent.roleId}`;
     nodes.push({
@@ -212,12 +217,17 @@ function appendParentRoleNodes(
   }
 }
 
-function appendMemberRoleNodes(
-  input: AccessMapModelInput,
-  selectedRoleId: string,
-  nodes: VisualizationNode[],
-  edges: VisualizationEdge[]
-) {
+function appendMemberRoleNodes({
+  input,
+  selectedRoleId,
+  nodes,
+  edges,
+}: {
+  input: AccessMapModelInput;
+  selectedRoleId: string;
+  nodes: VisualizationNode[];
+  edges: VisualizationEdge[];
+}) {
   for (const member of input.members) {
     const id = `member:${member.roleId}`;
     nodes.push({
@@ -277,13 +287,30 @@ function appendOwnedObjectNodes(context: AccessMapBuildContext) {
   }
 }
 
-function appendPublicGrantNodes(
-  input: AccessMapModelInput,
-  selectedRoleId: string,
-  nodes: VisualizationNode[],
-  edges: VisualizationEdge[]
+function appendUniqueLine(
+  lineSet: Set<string> | undefined,
+  lines: string[],
+  line: string
 ) {
+  if (lineSet && !lineSet.has(line)) {
+    lineSet.add(line);
+    lines.push(line);
+  }
+}
+
+function appendPublicGrantNodes({
+  input,
+  selectedRoleId,
+  nodes,
+  edges,
+}: {
+  input: AccessMapModelInput;
+  selectedRoleId: string;
+  nodes: VisualizationNode[];
+  edges: VisualizationEdge[];
+}) {
   const publicNodes = new Map<string, VisualizationNode>();
+  const linesByNode = new Map<string, Set<string>>();
   for (const [index, grant] of input.publicGrants.entries()) {
     const id = objectNodeId("public", grant);
     let node = publicNodes.get(id);
@@ -302,14 +329,13 @@ function appendPublicGrantNodes(
         kind: "public",
       };
       publicNodes.set(id, node);
+      linesByNode.set(id, new Set());
       nodes.push(node);
     }
     const privilegeLine = grant.withGrantOption
       ? `${grant.privilege} with grant option`
       : grant.privilege;
-    if (!node.data.lines.includes(privilegeLine)) {
-      node.data.lines.push(privilegeLine);
-    }
+    appendUniqueLine(linesByNode.get(id), node.data.lines, privilegeLine);
     edges.push({
       id: `${id}->${selectedRoleId}:${grant.privilege}:${index}`,
       label: `PUBLIC ${grant.privilege}`,
@@ -319,13 +345,19 @@ function appendPublicGrantNodes(
   }
 }
 
-function appendDefaultPrivilegeNodes(
-  input: AccessMapModelInput,
-  selectedRoleId: string,
-  nodes: VisualizationNode[],
-  edges: VisualizationEdge[]
-) {
+function appendDefaultPrivilegeNodes({
+  input,
+  selectedRoleId,
+  nodes,
+  edges,
+}: {
+  input: AccessMapModelInput;
+  selectedRoleId: string;
+  nodes: VisualizationNode[];
+  edges: VisualizationEdge[];
+}) {
   const defaultNodes = new Map<string, VisualizationNode>();
+  const linesByNode = new Map<string, Set<string>>();
   for (const privilege of input.defaultPrivileges) {
     const id = `defaults:${privilege.creatorRoleName}:${privilege.objectType}:${privilege.schemaName}:${privilege.privilege}`;
     let node = defaultNodes.get(id);
@@ -346,6 +378,7 @@ function appendDefaultPrivilegeNodes(
         kind: "default",
       };
       defaultNodes.set(id, node);
+      linesByNode.set(id, new Set(node.data.lines));
       nodes.push(node);
       edges.push({
         id: `${id}->${selectedRoleId}`,
@@ -358,9 +391,7 @@ function appendDefaultPrivilegeNodes(
     const grantOptionLine = privilege.withGrantOption
       ? "With grant option"
       : "Without grant option";
-    if (!node.data.lines.includes(grantOptionLine)) {
-      node.data.lines.push(grantOptionLine);
-    }
+    appendUniqueLine(linesByNode.get(id), node.data.lines, grantOptionLine);
   }
 }
 
@@ -394,13 +425,13 @@ function buildAccessMapModel(input: AccessMapModelInput): AccessMapModel {
   const edges: VisualizationEdge[] = [];
   const seenObjects = new Set<string>();
 
-  appendParentRoleNodes(input, selectedRoleId, nodes, edges);
-  appendMemberRoleNodes(input, selectedRoleId, nodes, edges);
+  appendParentRoleNodes({ input, selectedRoleId, nodes, edges });
+  appendMemberRoleNodes({ input, selectedRoleId, nodes, edges });
   const context = { edges, input, nodes, seenObjects, selectedRoleId };
   appendDirectGrantNodes(context);
   appendOwnedObjectNodes(context);
-  appendPublicGrantNodes(input, selectedRoleId, nodes, edges);
-  appendDefaultPrivilegeNodes(input, selectedRoleId, nodes, edges);
+  appendPublicGrantNodes({ input, selectedRoleId, nodes, edges });
+  appendDefaultPrivilegeNodes({ input, selectedRoleId, nodes, edges });
 
   return { edges, nodes, summary: buildAccessSummary(input) };
 }

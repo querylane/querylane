@@ -96,6 +96,69 @@ function focusInstanceConfigurationInvalidField(
   });
 }
 
+function getInstanceSaveDisabledReason({
+  credentialKeyMissing,
+  hasUnsavedChanges,
+  needsReplacementPassword,
+  pending,
+}: {
+  credentialKeyMissing: boolean;
+  hasUnsavedChanges: boolean;
+  needsReplacementPassword: boolean;
+  pending: boolean;
+}): string | null {
+  if (credentialKeyMissing) {
+    return "Configure QUERYLANE_INSTANCE_SECRET_KEY and restart Querylane before saving.";
+  }
+  if (needsReplacementPassword) {
+    return "Re-enter the password before saving.";
+  }
+  return hasUnsavedChanges || pending ? null : "No changes to save.";
+}
+
+function InstanceCredentialAlert({
+  credentialGuidanceId,
+  credentialKeyMissing,
+  credentialsUnreadable,
+  instance,
+}: {
+  credentialGuidanceId: string;
+  credentialKeyMissing: boolean;
+  credentialsUnreadable: boolean;
+  instance: InstanceRecord;
+}) {
+  if (!credentialsUnreadable) {
+    return null;
+  }
+  const description = credentialKeyMissing
+    ? instance.credentialError ||
+      "Configure QUERYLANE_INSTANCE_SECRET_KEY and restart Querylane before replacing the password."
+    : "Stored credentials can’t be read. Enter the password again to restore access.";
+  return (
+    <Alert
+      className="has-data-[slot=alert-action]:pr-4 sm:has-data-[slot=alert-action]:pr-44"
+      variant="destructive"
+    >
+      <AlertCircle aria-hidden="true" />
+      <AlertTitle>{"Credentials need attention"}</AlertTitle>
+      <AlertDescription id={credentialGuidanceId}>
+        {description}
+      </AlertDescription>
+      {credentialKeyMissing ? null : (
+        <AlertAction className="static col-start-2 mt-2 justify-self-start sm:absolute sm:mt-0">
+          <Button
+            onClick={() => focusInstanceConfigurationInvalidField("password")}
+            size="sm"
+            variant="outline"
+          >
+            {"Re-enter password"}
+          </Button>
+        </AlertAction>
+      )}
+    </Alert>
+  );
+}
+
 function InstanceConfigurationSection({
   formNotice,
   instance,
@@ -141,14 +204,12 @@ function InstanceConfigurationSection({
   const needsReplacementPassword =
     instance.credentialState === Instance_CredentialState.UNREADABLE &&
     !formState.dirtyFields?.password;
-  let saveDisabledReason =
-    hasUnsavedChanges || pending ? null : "No changes to save.";
-  if (credentialKeyMissing) {
-    saveDisabledReason =
-      "Configure QUERYLANE_INSTANCE_SECRET_KEY and restart Querylane before saving.";
-  } else if (needsReplacementPassword) {
-    saveDisabledReason = "Re-enter the password before saving.";
-  }
+  const saveDisabledReason = getInstanceSaveDisabledReason({
+    credentialKeyMissing,
+    hasUnsavedChanges,
+    needsReplacementPassword,
+    pending,
+  });
   const handleSaveClick = async () => {
     const validation = validateInstanceForm(formState);
     setFormErrors(validation.errors);
@@ -176,7 +237,7 @@ function InstanceConfigurationSection({
             size="sm"
           >
             <Save className="size-4" />
-            Save changes
+            {"Save changes"}
           </DisabledReasonButton>
         )
       }
@@ -187,34 +248,12 @@ function InstanceConfigurationSection({
       }
       title="Configuration"
     >
-      {credentialsUnreadable ? (
-        <Alert
-          className="has-data-[slot=alert-action]:pr-4 sm:has-data-[slot=alert-action]:pr-44"
-          variant="destructive"
-        >
-          <AlertCircle aria-hidden="true" />
-          <AlertTitle>Credentials need attention</AlertTitle>
-          <AlertDescription id={credentialGuidanceId}>
-            {credentialKeyMissing
-              ? instance.credentialError ||
-                "Configure QUERYLANE_INSTANCE_SECRET_KEY and restart Querylane before replacing the password."
-              : "Stored credentials can’t be read. Enter the password again to restore access."}
-          </AlertDescription>
-          {credentialKeyMissing ? null : (
-            <AlertAction className="static col-start-2 mt-2 justify-self-start sm:absolute sm:mt-0">
-              <Button
-                onClick={() =>
-                  focusInstanceConfigurationInvalidField("password")
-                }
-                size="sm"
-                variant="outline"
-              >
-                Re-enter password
-              </Button>
-            </AlertAction>
-          )}
-        </Alert>
-      ) : null}
+      <InstanceCredentialAlert
+        credentialGuidanceId={credentialGuidanceId}
+        credentialKeyMissing={credentialKeyMissing}
+        credentialsUnreadable={credentialsUnreadable}
+        instance={instance}
+      />
 
       <InstanceConfigurationFields
         databaseId={databaseId}
@@ -286,7 +325,7 @@ function InstanceConfigurationFields({
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="space-y-2">
         <label className="text-sm" htmlFor={displayNameId}>
-          Display name
+          {"Display name"}
         </label>
         <Input
           aria-invalid={Boolean(formErrors.displayName)}
@@ -306,7 +345,7 @@ function InstanceConfigurationFields({
       </div>
       <div className="space-y-2">
         <label className="text-sm" htmlFor={hostId}>
-          Host
+          {"Host"}
         </label>
         <Input
           aria-invalid={Boolean(formErrors.host)}
@@ -326,7 +365,7 @@ function InstanceConfigurationFields({
       </div>
       <div className="space-y-2">
         <label className="text-sm" htmlFor={portId}>
-          Port
+          {"Port"}
         </label>
         <Input
           aria-invalid={Boolean(formErrors.port)}
@@ -346,7 +385,7 @@ function InstanceConfigurationFields({
       </div>
       <div className="space-y-2">
         <label className="text-sm" htmlFor={databaseId}>
-          Default database
+          {"Default database"}
         </label>
         <Input
           aria-invalid={Boolean(formErrors.database)}
@@ -366,7 +405,7 @@ function InstanceConfigurationFields({
       </div>
       <div className="space-y-2">
         <label className="text-sm" htmlFor={usernameId}>
-          Username
+          {"Username"}
         </label>
         <Input
           aria-invalid={Boolean(formErrors.username)}
@@ -386,7 +425,7 @@ function InstanceConfigurationFields({
       </div>
       <div className="space-y-2">
         <label className="text-sm" htmlFor={passwordId}>
-          Password
+          {"Password"}
         </label>
         <PasswordInput
           aria-describedby={passwordDescriptionId}
@@ -408,7 +447,7 @@ function InstanceConfigurationFields({
       <div className="grid gap-4 lg:col-span-2 lg:grid-cols-2">
         <div className="space-y-2">
           <label className="text-sm" htmlFor={sslModeId}>
-            SSL mode
+            {"SSL mode"}
           </label>
           <Select
             disabled={isConfigManaged}
@@ -439,7 +478,7 @@ function InstanceConfigurationFields({
         </div>
         <div className="space-y-2">
           <label className="text-sm" htmlFor={sslNegotiationId}>
-            SSL negotiation
+            {"SSL negotiation"}
           </label>
           <Select
             disabled={isConfigManaged}

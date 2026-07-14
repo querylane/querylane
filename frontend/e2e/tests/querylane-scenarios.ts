@@ -45,11 +45,11 @@ export async function mockOnboardingRequiredScenario(page: Page) {
 }
 
 export async function mockOnboardingUnavailableScenario(page: Page) {
-  await mockRpcError(
+  await mockRpcError({
     page,
-    "OnboardingService/GetOnboardingState",
-    "Meta database is unavailable"
-  );
+    method: "OnboardingService/GetOnboardingState",
+    message: "Meta database is unavailable",
+  });
   await mockApiManagedConsoleConfig(page);
   await mockEmptyInstanceCatalog(page);
 }

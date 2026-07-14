@@ -17,6 +17,16 @@ import {
 } from "@/lib/console-resources";
 import { Instance_ConnectionState } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
+const TEST_NUMBER_512 = 512;
+const TEST_NUMBER_1536 = 1536;
+const TEST_BIGINT_1024 = 1024n;
+const TEST_BIGINT_5 = 5n;
+const TEST_NUMBER_1048575 = 1_048_575;
+const TEST_NUMBER_1023_POINT_6 = 1023.6;
+const TEST_NUMBER_512_POINT_345 = 512.345;
+const TEST_NUMBER_1024 = 1024;
+const TEST_NUMBER_5 = 5;
+
 const KNOWN_ROW_COUNT = 128;
 
 describe("row count normalization", () => {
@@ -63,13 +73,25 @@ describe("resource names", () => {
     expect(buildSchemaName("i1", "app", "public")).toBe(
       "instances/i1/databases/app/schemas/public"
     );
-    expect(buildTableName("i1", "app", "public", "events")).toBe(
-      "instances/i1/databases/app/schemas/public/tables/events"
-    );
+    expect(
+      buildTableName({
+        instanceId: "i1",
+        databaseId: "app",
+        schemaId: "public",
+        tableId: "events",
+      })
+    ).toBe("instances/i1/databases/app/schemas/public/tables/events");
   });
 
   it("escapes slash and percent in PostgreSQL identifier resource segments", () => {
-    expect(buildTableName("i1", "app/db", "weird/schema", "rate%history")).toBe(
+    expect(
+      buildTableName({
+        instanceId: "i1",
+        databaseId: "app/db",
+        schemaId: "weird/schema",
+        tableId: "rate%history",
+      })
+    ).toBe(
       "instances/i1/databases/app%2Fdb/schemas/weird%2Fschema/tables/rate%25history"
     );
     expect(
@@ -131,13 +153,18 @@ describe("resource names", () => {
     view,
   }) => {
     const schemaName = buildSchemaName("seed-edgecases", "normal_db", schema);
-    const tableName = buildTableName(
-      "seed-edgecases",
-      "normal_db",
-      schema,
-      table
-    );
-    const viewName = buildViewName("seed-edgecases", "normal_db", schema, view);
+    const tableName = buildTableName({
+      instanceId: "seed-edgecases",
+      databaseId: "normal_db",
+      schemaId: schema,
+      tableId: table,
+    });
+    const viewName = buildViewName({
+      instanceId: "seed-edgecases",
+      databaseId: "normal_db",
+      schemaId: schema,
+      viewId: view,
+    });
 
     expect(schemaName).toBe(
       `instances/seed-edgecases/databases/normal_db/schemas/${schema}`
@@ -174,9 +201,11 @@ describe("resource names", () => {
 describe("formatBytes", () => {
   it("formats byte values across units", () => {
     expect(formatBytes(0)).toBe("0 B");
-    expect(formatBytes(512)).toBe("512 B");
-    expect(formatBytes(1536)).toBe("1.5 KB");
-    expect(formatBytes(1024n * 1024n * 5n)).toBe("5 MB");
+    expect(formatBytes(TEST_NUMBER_512)).toBe("512 B");
+    expect(formatBytes(TEST_NUMBER_1536)).toBe("1.5 KB");
+    expect(
+      formatBytes(TEST_BIGINT_1024 * TEST_BIGINT_1024 * TEST_BIGINT_5)
+    ).toBe("5 MB");
   });
 
   it("returns an em dash for absent or invalid sizes", () => {
@@ -190,16 +219,16 @@ describe("formatBytes", () => {
 
   it("rolls display rounding at a unit boundary into the next unit", () => {
     // 1048575/1024 = 1023.999 KB would display-round to "1,024 KB".
-    expect(formatBytes(1_048_575)).toBe("1 MB");
-    expect(formatBytes(1023.6)).toBe("1 KB");
+    expect(formatBytes(TEST_NUMBER_1048575)).toBe("1 MB");
+    expect(formatBytes(TEST_NUMBER_1023_POINT_6)).toBe("1 KB");
   });
 
   it("rounds fractional bytes instead of leaking float precision", () => {
-    expect(formatBytes(512.345)).toBe("512 B");
+    expect(formatBytes(TEST_NUMBER_512_POINT_345)).toBe("512 B");
   });
 
   it("scales beyond terabytes", () => {
-    expect(formatBytes(1024 ** 5)).toBe("1 PB");
+    expect(formatBytes(TEST_NUMBER_1024 ** TEST_NUMBER_5)).toBe("1 PB");
   });
 });
 

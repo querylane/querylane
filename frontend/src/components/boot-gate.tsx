@@ -9,6 +9,7 @@ import { AppShellFrame } from "@/components/app-shell-frame";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
 import { useRetainedRetryError } from "@/components/use-retained-retry-error";
 import { captureException } from "@/lib/diagnostics";
+import { allPredicates } from "@/lib/predicates";
 import { getBlockingRoutePath, normalizeAppUiError } from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { useBlockingErrorStore } from "@/stores/blocking-error-store";
@@ -95,7 +96,13 @@ export function BootGate({ children }: { children: React.ReactNode }) {
     bootstrap().catch((error) => captureException(error));
   }, [bootstrap]);
 
-  if (status === "boot_error" && blockingRoute && pathname === blockingRoute) {
+  if (
+    allPredicates(
+      () => status === "boot_error",
+      () => blockingRoute,
+      () => pathname === blockingRoute
+    )
+  ) {
     return children;
   }
 

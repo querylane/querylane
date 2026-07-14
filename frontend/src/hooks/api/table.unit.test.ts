@@ -7,6 +7,8 @@ import {
 } from "@/hooks/api/table";
 import { QUERY_STALE_TIME } from "@/lib/query-policy";
 
+const TEST_NUMBER_6 = 6;
+
 const TABLE_NAME =
   "instances/local/databases/postgres/schemas/public/tables/orders";
 
@@ -52,11 +54,11 @@ describe("table query option helpers", () => {
       transport,
     });
 
-    expect(options).toHaveLength(6);
+    expect(options).toHaveLength(TEST_NUMBER_6);
     const serializedKeys = options.map((option) =>
       JSON.stringify(option.queryKey)
     );
-    expect(new Set(serializedKeys).size).toBe(6);
+    expect(new Set(serializedKeys).size).toBe(TEST_NUMBER_6);
     for (const [index, option] of options.entries()) {
       expect(option.staleTime).toBe(QUERY_STALE_TIME.tableMetadata);
       expect(serializedKeys[index]).toContain(TABLE_NAME);

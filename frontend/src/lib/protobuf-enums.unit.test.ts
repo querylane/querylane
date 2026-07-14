@@ -31,6 +31,8 @@ import {
   toSslNegotiation,
 } from "./protobuf-enums";
 
+const TEST_NUMBER_999 = 999;
+
 describe("formatConstraintType", () => {
   test("formats primary key", () => {
     expect(formatConstraintType(ConstraintType.PRIMARY_KEY)).toBe(
@@ -57,7 +59,9 @@ describe("formatConstraintType", () => {
   });
 
   test("returns Unknown for unrecognized value", () => {
-    expect(formatConstraintType(999 as ConstraintType)).toBe("Unknown");
+    expect(formatConstraintType(TEST_NUMBER_999 as ConstraintType)).toBe(
+      "Unknown"
+    );
   });
 });
 
@@ -71,7 +75,7 @@ describe("formatPolicyMode", () => {
   });
 
   test("defaults to Permissive for unrecognized value", () => {
-    expect(formatPolicyMode(999 as PolicyMode)).toBe("Permissive");
+    expect(formatPolicyMode(TEST_NUMBER_999 as PolicyMode)).toBe("Permissive");
   });
 });
 
@@ -87,7 +91,9 @@ describe("formatPolicyCommand", () => {
   });
 
   test("returns UNKNOWN for unrecognized value", () => {
-    expect(formatPolicyCommand(999 as PolicyCommand)).toBe("UNKNOWN");
+    expect(formatPolicyCommand(TEST_NUMBER_999 as PolicyCommand)).toBe(
+      "UNKNOWN"
+    );
   });
 });
 
@@ -103,7 +109,9 @@ describe("formatReferentialAction", () => {
   });
 
   test("returns dash for unrecognized value", () => {
-    expect(formatReferentialAction(999 as ReferentialAction)).toBe("—");
+    expect(formatReferentialAction(TEST_NUMBER_999 as ReferentialAction)).toBe(
+      "—"
+    );
   });
 });
 
@@ -118,7 +126,7 @@ describe("formatTableType", () => {
   });
 
   test("returns Unknown for unrecognized value", () => {
-    expect(formatTableType(999 as Table_TableType)).toBe("Unknown");
+    expect(formatTableType(TEST_NUMBER_999 as Table_TableType)).toBe("Unknown");
   });
 });
 
@@ -132,7 +140,7 @@ describe("formatViewType", () => {
   });
 
   test("returns Unknown for unrecognized value", () => {
-    expect(formatViewType(999 as View_ViewType)).toBe("Unknown");
+    expect(formatViewType(TEST_NUMBER_999 as View_ViewType)).toBe("Unknown");
   });
 });
 
@@ -149,7 +157,9 @@ describe("formatSslMode", () => {
   });
 
   test("defaults to prefer for unrecognized value", () => {
-    expect(formatSslMode(999 as PostgresConfig_SslMode)).toBe("prefer");
+    expect(formatSslMode(TEST_NUMBER_999 as PostgresConfig_SslMode)).toBe(
+      "prefer"
+    );
   });
 });
 
@@ -195,9 +205,9 @@ describe("formatSslNegotiation", () => {
   });
 
   test("defaults to postgres for unrecognized value", () => {
-    expect(formatSslNegotiation(999 as PostgresConfig_SslNegotiation)).toBe(
-      "postgres"
-    );
+    expect(
+      formatSslNegotiation(TEST_NUMBER_999 as PostgresConfig_SslNegotiation)
+    ).toBe("postgres");
   });
 });
 
@@ -256,9 +266,9 @@ describe("formatReplicationRole", () => {
   });
 
   test("returns Unknown for unrecognized value", () => {
-    expect(formatReplicationRole(999 as ServerInfo_ReplicationRole)).toBe(
-      "Unknown"
-    );
+    expect(
+      formatReplicationRole(TEST_NUMBER_999 as ServerInfo_ReplicationRole)
+    ).toBe("Unknown");
   });
 });
 
@@ -276,7 +286,7 @@ describe("formatSetupMethod", () => {
   });
 
   test("returns null for unrecognized value", () => {
-    expect(formatSetupMethod(999 as SetupMethod)).toBeNull();
+    expect(formatSetupMethod(TEST_NUMBER_999 as SetupMethod)).toBeNull();
   });
 
   test("returns null for UNSPECIFIED", () => {

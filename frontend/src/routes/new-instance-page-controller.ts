@@ -1,6 +1,7 @@
 import { useTransport } from "@connectrpc/connect-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import type { Dispatch } from "react";
 import { useReducer, useRef, useState } from "react";
 import { extractCreateInstanceFieldViolations } from "@/features/create-instance-field-violations";
 import {
@@ -43,6 +44,27 @@ interface CreateInstanceSubmitOutcome {
   fieldErrors: CreateInstanceFormErrors | null;
   firstInvalidField: CreateInstanceInvalidFieldName | null;
   notice: InlineNotice | null;
+}
+
+type WorkflowDispatch = Dispatch<
+  Parameters<typeof createInstanceWorkflowReducer>[1]
+>;
+
+function applyCreateInstanceOutcome(
+  outcome: CreateInstanceSubmitOutcome,
+  dispatch: WorkflowDispatch
+) {
+  if (outcome.fieldErrors && outcome.firstInvalidField) {
+    dispatch({
+      firstInvalidField: outcome.firstInvalidField,
+      formErrors: outcome.fieldErrors,
+      type: "setFormErrors",
+    });
+    focusFirstCreateInstanceInvalidField();
+  }
+  if (outcome.notice) {
+    dispatch({ notice: outcome.notice, type: "setFormNotice" });
+  }
 }
 
 function createInstanceSubmitNoticeOutcome(
@@ -387,20 +409,7 @@ export function useCreateInstancePageController(
       queryClient,
       transport,
     });
-    if (outcome.fieldErrors && outcome.firstInvalidField) {
-      dispatch({
-        firstInvalidField: outcome.firstInvalidField,
-        formErrors: outcome.fieldErrors,
-        type: "setFormErrors",
-      });
-      focusFirstCreateInstanceInvalidField();
-    }
-    if (outcome.notice) {
-      dispatch({
-        notice: outcome.notice,
-        type: "setFormNotice",
-      });
-    }
+    applyCreateInstanceOutcome(outcome, dispatch);
     isSubmittingRef.current = false;
     setIsSubmitting(false);
   };

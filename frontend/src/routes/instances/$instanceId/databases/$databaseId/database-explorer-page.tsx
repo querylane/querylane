@@ -32,7 +32,7 @@ function DatabaseExplorerLoadingShell() {
             <Skeleton className="h-8 rounded-md" />
           </div>
           <p className="px-3 py-6 text-center text-muted-foreground text-sm">
-            Loading schemas…
+            {"Loading schemas…"}
           </p>
         </div>
       </ExplorerSidebarPortal>

@@ -29,12 +29,17 @@ function getComponentStack(errorInfo: {
   return componentStack && componentStack.length > 0 ? componentStack : null;
 }
 
-function reportReactRootError(
-  lifecycle: ReactRootErrorLifecycle,
-  error: unknown,
-  errorInfo: { componentStack?: string | undefined },
-  dependencies: ReactRootErrorReporterDependencies = defaultReactRootErrorReporterDependencies
-) {
+function reportReactRootError({
+  lifecycle,
+  error,
+  errorInfo,
+  dependencies = defaultReactRootErrorReporterDependencies,
+}: {
+  lifecycle: ReactRootErrorLifecycle;
+  error: unknown;
+  errorInfo: { componentStack?: string | undefined };
+  dependencies?: ReactRootErrorReporterDependencies;
+}) {
   const componentStack = getComponentStack(errorInfo);
   const appError = dependencies.normalizeAppUiError(error, {
     action: lifecycle,
@@ -58,15 +63,31 @@ function createReactRootErrorHandlers(
   RootOptions,
   "onCaughtError" | "onRecoverableError" | "onUncaughtError"
 > {
+  const dependencyOptions = dependencies === undefined ? {} : { dependencies };
   return {
     onCaughtError(error: unknown, errorInfo: ReactRootErrorInfo) {
-      reportReactRootError("caught-error", error, errorInfo, dependencies);
+      reportReactRootError({
+        lifecycle: "caught-error",
+        error,
+        errorInfo,
+        ...dependencyOptions,
+      });
     },
     onRecoverableError(error: unknown, errorInfo) {
-      reportReactRootError("recoverable-error", error, errorInfo, dependencies);
+      reportReactRootError({
+        lifecycle: "recoverable-error",
+        error,
+        errorInfo,
+        ...dependencyOptions,
+      });
     },
     onUncaughtError(error: unknown, errorInfo) {
-      reportReactRootError("uncaught-error", error, errorInfo, dependencies);
+      reportReactRootError({
+        lifecycle: "uncaught-error",
+        error,
+        errorInfo,
+        ...dependencyOptions,
+      });
     },
   };
 }

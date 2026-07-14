@@ -277,12 +277,17 @@ function appendSchemaNodes(
   }
 }
 
-function appendTableNodes(
-  tables: StructureMapTable[],
-  nodes: VisualizationNode[],
-  edges: VisualizationEdge[],
-  tableIds: Set<string>
-) {
+function appendTableNodes({
+  tables,
+  nodes,
+  edges,
+  tableIds,
+}: {
+  tables: StructureMapTable[];
+  nodes: VisualizationNode[];
+  edges: VisualizationEdge[];
+  tableIds: Set<string>;
+}) {
   for (const table of tables) {
     const id = tableNodeId(table.schemaName, table.tableName);
     tableIds.add(id);
@@ -443,12 +448,17 @@ function appendKeyOrConstraintNode({
   appendForeignKeyReferenceEdge({ constraint, edges, id, nodes, tableIds });
 }
 
-function appendKeyAndConstraintNodes(
-  tables: StructureMapTable[],
-  nodes: VisualizationNode[],
-  edges: VisualizationEdge[],
-  tableIds: Set<string>
-) {
+function appendKeyAndConstraintNodes({
+  tables,
+  nodes,
+  edges,
+  tableIds,
+}: {
+  tables: StructureMapTable[];
+  nodes: VisualizationNode[];
+  edges: VisualizationEdge[];
+  tableIds: Set<string>;
+}) {
   for (const table of tables) {
     for (const constraint of table.constraints) {
       appendKeyOrConstraintNode({
@@ -554,19 +564,24 @@ function appendTriggerNodes(
   }
 }
 
-function appendTableResourceNodes(
-  tables: StructureMapTable[],
-  nodes: VisualizationNode[],
-  edges: VisualizationEdge[],
-  tableIds: Set<string>
-) {
+function appendTableResourceNodes({
+  tables,
+  nodes,
+  edges,
+  tableIds,
+}: {
+  tables: StructureMapTable[];
+  nodes: VisualizationNode[];
+  edges: VisualizationEdge[];
+  tableIds: Set<string>;
+}) {
   for (const table of tables) {
     appendColumnNodes(table, nodes, edges);
     appendIndexNodes(table, nodes, edges);
     appendPolicyNodes(table, nodes, edges);
     appendTriggerNodes(table, nodes, edges);
   }
-  appendKeyAndConstraintNodes(tables, nodes, edges, tableIds);
+  appendKeyAndConstraintNodes({ tables, nodes, edges, tableIds });
 }
 
 function buildSummary(input: StructureMapModelInput): StructureMapSummary {
@@ -601,8 +616,8 @@ function buildStructureMapModel(
   const tableIds = new Set<string>();
 
   appendSchemaNodes(input, nodes, edges);
-  appendTableNodes(input.tables, nodes, edges, tableIds);
-  appendTableResourceNodes(input.tables, nodes, edges, tableIds);
+  appendTableNodes({ tables: input.tables, nodes, edges, tableIds });
+  appendTableResourceNodes({ tables: input.tables, nodes, edges, tableIds });
   appendViewNodes(input.views, nodes, edges);
 
   return { edges, nodes, summary: buildSummary(input) };

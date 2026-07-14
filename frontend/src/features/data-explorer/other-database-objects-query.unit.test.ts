@@ -12,6 +12,10 @@ import {
   TableValueSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
+const TEST_NUMBER_42 = 42;
+const TEST_NUMBER_3 = 3;
+const TEST_NUMBER_1000 = 1000;
+
 function stringValue(value: string) {
   return create(TableValueSchema, {
     kind: { case: "stringValue", value },
@@ -38,7 +42,7 @@ describe("other database objects query", () => {
     expect(
       tableValueToText(
         create(TableValueSchema, {
-          kind: { case: "int64Value", value: BigInt(42) },
+          kind: { case: "int64Value", value: BigInt(TEST_NUMBER_42) },
         })
       )
     ).toBe("42");
@@ -146,7 +150,35 @@ describe("other database objects query", () => {
       "types",
       "cronJobs",
     ]);
-    expect(execute).toHaveBeenCalledTimes(3);
+    expect(execute).toHaveBeenCalledTimes(TEST_NUMBER_3);
+  });
+
+  it("keeps introspection queries within a single live-query slot", async () => {
+    let resolveMainQuery:
+      | ((rows: Record<string, string>[]) => void)
+      | undefined;
+    const mainRows = new Promise<Record<string, string>[]>((resolve) => {
+      resolveMainQuery = resolve;
+    });
+    const execute = vi.fn(
+      ({ statement }: { parent: string; statement: string }) =>
+        statement.includes("WITH visible_namespaces")
+          ? mainRows
+          : Promise.resolve([{ has_cron_job_table: "false" }])
+    );
+
+    const resultPromise = fetchOtherDatabaseObjects({
+      execute,
+      parent: "instances/i/databases/d",
+    });
+    await Promise.resolve();
+    const callsBeforeMainQueryFinished = execute.mock.calls.length;
+
+    resolveMainQuery?.([typeRow]);
+    await resultPromise;
+
+    expect(callsBeforeMainQueryFinished).toBe(1);
+    expect(execute).toHaveBeenCalledTimes(2);
   });
 
   it("reports and trims inventories over the display limit", async () => {
@@ -171,6 +203,6 @@ describe("other database objects query", () => {
     });
 
     expect(result.isTruncated).toBe(true);
-    expect(result.objects).toHaveLength(1000);
+    expect(result.objects).toHaveLength(TEST_NUMBER_1000);
   });
 });

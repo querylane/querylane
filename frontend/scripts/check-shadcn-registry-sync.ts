@@ -93,12 +93,17 @@ function shadcnBaseArgs() {
   return [SHADCN_BINARY_PATH] as const;
 }
 
-function runRequiredCommand(
-  runner: CommandRunner,
-  command: string,
-  args: readonly string[],
-  label: string
-) {
+function runRequiredCommand({
+  runner,
+  command,
+  args,
+  label,
+}: {
+  runner: CommandRunner;
+  command: string;
+  args: readonly string[];
+  label: string;
+}) {
   const result = runner.run(command, args);
   if (result.status !== SUCCESS_EXIT_CODE) {
     throw new Error(`${label} failed.\n${commandOutput(result)}`.trim());
@@ -179,12 +184,12 @@ function confirmBlockingOverwriteFiles({
   const confirmedBlockingOverwriteFiles: string[] = [];
 
   for (const file of blockingOverwriteFiles) {
-    const diffResult = runRequiredCommand(
+    const diffResult = runRequiredCommand({
       runner,
-      SHADCN_COMMAND,
-      [...baseArgs, "add", ...components, "--diff", file],
-      `shadcn registry diff for ${file}`
-    );
+      command: SHADCN_COMMAND,
+      args: [...baseArgs, "add", ...components, "--diff", file],
+      label: `shadcn registry diff for ${file}`,
+    });
     const diffOutput = commandOutput(diffResult);
     console.log(diffOutput);
 
@@ -206,12 +211,12 @@ function runShadcnRegistrySyncCheck({
   console.log(
     `Validating shadcn registry sync with ${shadcnPackageSpecifier}.`
   );
-  const infoResult = runRequiredCommand(
+  const infoResult = runRequiredCommand({
     runner,
-    SHADCN_COMMAND,
-    [...baseArgs, "info", "--json"],
-    "shadcn info"
-  );
+    command: SHADCN_COMMAND,
+    args: [...baseArgs, "info", "--json"],
+    label: "shadcn info",
+  });
   const components = normalizeShadcnComponents(
     parseShadcnInfoComponents(infoResult.stdout)
   );
@@ -223,12 +228,12 @@ function runShadcnRegistrySyncCheck({
     return FAILURE_EXIT_CODE;
   }
 
-  const dryRunResult = runRequiredCommand(
+  const dryRunResult = runRequiredCommand({
     runner,
-    SHADCN_COMMAND,
-    [...baseArgs, "add", ...components, "--dry-run"],
-    "shadcn registry dry run"
-  );
+    command: SHADCN_COMMAND,
+    args: [...baseArgs, "add", ...components, "--dry-run"],
+    label: "shadcn registry dry run",
+  });
   const dryRunOutput = commandOutput(dryRunResult);
   console.log(dryRunOutput);
 

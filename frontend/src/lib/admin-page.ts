@@ -1,6 +1,7 @@
 "use client";
 
 import { z } from "zod";
+import { allPredicates, anyPredicate } from "@/lib/predicates";
 
 /**
  * Canonical admin page identifiers.
@@ -109,11 +110,21 @@ function resolveImplicitAdminPageFromPathname(
   if (pathname.endsWith("/activity")) {
     return "instance.activity";
   }
-  if (pathname.endsWith("/roles") || pathname.includes("/roles/")) {
+  if (
+    anyPredicate(
+      () => pathname.endsWith("/roles"),
+      () => pathname.includes("/roles/")
+    )
+  ) {
     return "instance.roles";
   }
 
-  if (segments[2] === "databases" && segments[3]) {
+  if (
+    allPredicates(
+      () => segments[2] === "databases",
+      () => segments[3]
+    )
+  ) {
     if (segments[4] === "explorer") {
       return "database.explorer";
     }
@@ -124,7 +135,12 @@ function resolveImplicitAdminPageFromPathname(
   }
   // The instance-scoped admin panel is not an AdminPageId page: it renders
   // app-global backend state and must not resolve to instance.overview.
-  if (segments[2] === "admin" && !segments[3]) {
+  if (
+    allPredicates(
+      () => segments[2] === "admin",
+      () => !segments[3]
+    )
+  ) {
     return;
   }
   return pathname.includes("/instances/") ? "instance.overview" : undefined;

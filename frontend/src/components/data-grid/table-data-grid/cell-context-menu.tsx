@@ -2,6 +2,7 @@ import { Copy, FileCode2, Rows3 } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { allPredicates } from "@/lib/predicates";
 import { cn } from "@/lib/utils";
 
 interface CellContextMenuProps {
@@ -14,6 +15,45 @@ interface CellContextMenuProps {
   top: number;
 }
 const MENU_ITEM_SELECTOR = "[role=menuitem]";
+
+function isFocusableCandidate(
+  candidate: HTMLElement,
+  menu: HTMLDivElement | null
+): boolean {
+  const style = getComputedStyle(candidate);
+  return allPredicates(
+    () => candidate.tabIndex >= 0,
+    () => !candidate.matches(":disabled"),
+    () => !candidate.closest("[hidden], [inert]"),
+    () => style.display !== "none",
+    () => style.visibility !== "hidden",
+    () => !menu?.contains(candidate)
+  );
+}
+
+function findNextFocusableElement(
+  backward: boolean,
+  returnFocusTo: HTMLElement,
+  menu: HTMLDivElement | null
+): HTMLElement {
+  const elements = Array.from(document.querySelectorAll<HTMLElement>("*"));
+  const direction = backward ? -1 : 1;
+  const invokingIndex = elements.indexOf(returnFocusTo);
+  for (
+    let index = invokingIndex + direction;
+    allPredicates(
+      () => index >= 0,
+      () => index < elements.length
+    );
+    index += direction
+  ) {
+    const candidate = elements[index];
+    if (candidate && isFocusableCandidate(candidate, menu)) {
+      return candidate;
+    }
+  }
+  return returnFocusTo;
+}
 
 function CellContextMenu({
   left,
@@ -40,35 +80,13 @@ function CellContextMenu({
   }
 
   function closeAndMoveFocus(backward: boolean) {
-    const elements = Array.from(document.querySelectorAll<HTMLElement>("*"));
-    const direction = backward ? -1 : 1;
-    const invokingIndex = elements.indexOf(returnFocusTo);
-    let next: HTMLElement | undefined;
-    // Project lint disallows positive tabindex, so DOM order is tab order.
-    for (
-      let index = invokingIndex + direction;
-      index >= 0 && index < elements.length;
-      index += direction
-    ) {
-      const candidate = elements[index];
-      if (!candidate) {
-        continue;
-      }
-      const style = getComputedStyle(candidate);
-      if (
-        candidate.tabIndex >= 0 &&
-        !candidate.matches(":disabled") &&
-        !candidate.closest("[hidden], [inert]") &&
-        style.display !== "none" &&
-        style.visibility !== "hidden" &&
-        !menuRef.current?.contains(candidate)
-      ) {
-        next = candidate;
-        break;
-      }
-    }
+    const next = findNextFocusableElement(
+      backward,
+      returnFocusTo,
+      menuRef.current
+    );
     onClose();
-    (next ?? returnFocusTo).focus();
+    next.focus();
   }
 
   function handleMenuKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -159,7 +177,7 @@ function CellContextMenu({
         variant="ghost"
       >
         <Copy className="size-3.5" />
-        Copy cell
+        {"Copy cell"}
       </Button>
       <Button
         className="h-7 justify-start gap-2 px-2 text-xs"
@@ -174,7 +192,7 @@ function CellContextMenu({
         variant="ghost"
       >
         <Rows3 className="size-3.5" />
-        Copy row
+        {"Copy row"}
       </Button>
       <Button
         className="h-7 justify-start gap-2 px-2 text-xs"
@@ -189,7 +207,7 @@ function CellContextMenu({
         variant="ghost"
       >
         <FileCode2 className="size-3.5" />
-        Copy row as INSERT
+        {"Copy row as INSERT"}
       </Button>
     </div>,
     document.body

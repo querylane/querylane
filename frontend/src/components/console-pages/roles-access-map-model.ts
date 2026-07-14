@@ -271,6 +271,38 @@ function membershipTargetRoleId(role: Role["memberOf"][number]): string {
   return role.role ? parseResourceLeafId(role.role) : role.roleName;
 }
 
+function addMembershipEdgesForRole({
+  edgesById,
+  role,
+  roleNodeIds,
+}: {
+  edgesById: Map<string, RolesAccessMapEdge>;
+  role: Role;
+  roleNodeIds: Set<string>;
+}) {
+  const source = `role:${roleIdOf(role)}`;
+  if (!roleNodeIds.has(source)) {
+    return;
+  }
+  for (const membership of role.memberOf) {
+    const targetRoleId = membershipTargetRoleId(membership);
+    if (!targetRoleId) {
+      continue;
+    }
+    const target = `role:${targetRoleId}`;
+    if (!roleNodeIds.has(target)) {
+      continue;
+    }
+    mergeEdge({
+      edgesById,
+      privilege: "member of",
+      source,
+      target,
+      tone: "member",
+    });
+  }
+}
+
 function addMembershipEdges({
   edgesById,
   roleNodeIds,
@@ -281,27 +313,7 @@ function addMembershipEdges({
   roles: Role[];
 }) {
   for (const role of roles) {
-    const source = `role:${roleIdOf(role)}`;
-    if (!roleNodeIds.has(source)) {
-      continue;
-    }
-    for (const membership of role.memberOf) {
-      const targetRoleId = membershipTargetRoleId(membership);
-      if (!targetRoleId) {
-        continue;
-      }
-      const target = `role:${targetRoleId}`;
-      if (!roleNodeIds.has(target)) {
-        continue;
-      }
-      mergeEdge({
-        edgesById,
-        privilege: "member of",
-        source,
-        target,
-        tone: "member",
-      });
-    }
+    addMembershipEdgesForRole({ edgesById, role, roleNodeIds });
   }
 }
 

@@ -42,7 +42,7 @@ export function ChunkLoadRecoveryPage({
           </div>
           <div className="space-y-2">
             <h1 className="font-medium text-xl leading-normal">
-              Querylane was updated
+              {"Querylane was updated"}
             </h1>
             <CardDescription aria-live="polite">
               {autoReloading
@@ -53,14 +53,15 @@ export function ChunkLoadRecoveryPage({
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="rounded-lg border border-border bg-muted/30 p-3 text-muted-foreground text-sm">
-            Your browser tried to open an app file from an older deployment. A
-            refresh loads the newest files and keeps you on this page.
+            {
+              "Your browser tried to open an app file from an older deployment. A refresh loads the newest files and keeps you on this page."
+            }
           </div>
         </CardContent>
         <CardFooter>
           <Button onClick={reloadPage} type="button">
             <RefreshCcw aria-hidden="true" className="size-4" />
-            Refresh now
+            {"Refresh now"}
           </Button>
         </CardFooter>
       </Card>

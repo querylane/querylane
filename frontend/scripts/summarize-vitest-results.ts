@@ -3,34 +3,28 @@ import { relative } from "node:path";
 import process from "node:process";
 import { z } from "zod";
 
-const assertionResultSchema = z
-  .object({
-    ancestorTitles: z.array(z.string()).optional(),
-    duration: z.number().nullable().optional(),
-    failureMessages: z.array(z.string()).optional(),
-    status: z.string().optional(),
-    title: z.string().optional(),
-  })
-  .passthrough();
+const assertionResultSchema = z.looseObject({
+  ancestorTitles: z.array(z.string()).optional(),
+  duration: z.number().nullable().optional(),
+  failureMessages: z.array(z.string()).optional(),
+  status: z.string().optional(),
+  title: z.string().optional(),
+});
 
-const suiteResultSchema = z
-  .object({
-    assertionResults: z.array(assertionResultSchema).optional(),
-    endTime: z.number().optional(),
-    name: z.string().optional(),
-    startTime: z.number().optional(),
-  })
-  .passthrough();
+const suiteResultSchema = z.looseObject({
+  assertionResults: z.array(assertionResultSchema).optional(),
+  endTime: z.number().optional(),
+  name: z.string().optional(),
+  startTime: z.number().optional(),
+});
 
-const vitestJsonResultSchema = z
-  .object({
-    numFailedTests: z.number().optional(),
-    numPassedTests: z.number().optional(),
-    numTotalTests: z.number().optional(),
-    success: z.boolean().optional(),
-    testResults: z.array(suiteResultSchema).optional(),
-  })
-  .passthrough();
+const vitestJsonResultSchema = z.looseObject({
+  numFailedTests: z.number().optional(),
+  numPassedTests: z.number().optional(),
+  numTotalTests: z.number().optional(),
+  success: z.boolean().optional(),
+  testResults: z.array(suiteResultSchema).optional(),
+});
 
 type VitestJsonResult = z.infer<typeof vitestJsonResultSchema>;
 

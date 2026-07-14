@@ -68,12 +68,17 @@ export async function mockRpcOnce(
   });
 }
 
-export async function mockRpcError(
-  page: Page,
-  method: string,
-  message: string,
-  status = 500
-) {
+export async function mockRpcError({
+  page,
+  method,
+  message,
+  status = 500,
+}: {
+  page: Page;
+  method: string;
+  message: string;
+  status?: number;
+}) {
   const body = { code: "internal", message };
   await page.route(`**/${method}`, async (route) =>
     fulfillJson(route, body, status)

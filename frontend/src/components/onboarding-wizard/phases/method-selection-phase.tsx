@@ -12,6 +12,7 @@ import type { ConfigMethod } from "@/components/onboarding-wizard/types";
 import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { anyPredicate } from "@/lib/predicates";
 import { formatSetupMethod } from "@/lib/protobuf-enums";
 import { cn } from "@/lib/utils";
 import type { SetupMethod } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
@@ -144,10 +145,20 @@ function getNextMethodFromKey({
     0,
     currentMethod ? methods.indexOf(currentMethod) : 0
   );
-  if (key === "ArrowDown" || key === "ArrowRight") {
+  if (
+    anyPredicate(
+      () => key === "ArrowDown",
+      () => key === "ArrowRight"
+    )
+  ) {
     return methods[(currentIndex + 1) % methods.length] ?? null;
   }
-  if (key === "ArrowUp" || key === "ArrowLeft") {
+  if (
+    anyPredicate(
+      () => key === "ArrowUp",
+      () => key === "ArrowLeft"
+    )
+  ) {
     return (
       methods[(currentIndex - 1 + methods.length) % methods.length] ?? null
     );
@@ -204,7 +215,7 @@ export function MethodSelectionPhase() {
             }
             onClick={goToConfigure}
           >
-            Continue
+            {"Continue"}
             <ChevronRight className="size-4" />
           </Button>
         </div>
@@ -216,11 +227,12 @@ export function MethodSelectionPhase() {
         {methods.length === 0 ? (
           <div className="rounded-2xl border border-white/12 border-dashed bg-white/[0.03] px-4 py-6 text-center">
             <p className="font-medium text-sm text-white">
-              No setup methods available
+              {"No setup methods available"}
             </p>
             <p className="mx-auto mt-2 max-w-2xl text-sm text-white/58 leading-6">
-              Querylane did not receive any supported setup methods from the
-              server. Refresh the page after checking the server configuration.
+              {
+                "Querylane did not receive any supported setup methods from the server. Refresh the page after checking the server configuration."
+              }
             </p>
           </div>
         ) : (

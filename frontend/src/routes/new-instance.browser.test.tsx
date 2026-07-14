@@ -10,6 +10,9 @@ import type { CreateInstancePageState } from "@/routes/new-instance-page";
 import { CreateInstancePageInner } from "@/routes/new-instance-page";
 import { createTestQueryClient } from "@/test/query-client";
 
+const TEST_NUMBER_350 = 350;
+const TEST_NUMBER_28 = 28;
+
 const MANAGED_NOT_INTERNAL_STORAGE_RE = /not Querylane internal storage/;
 const NAVIGATION_FAILURE_RE = /could not open it automatically/;
 const INVALID_CONFIG_FIELD_RE = /invalid field "config"/;
@@ -25,7 +28,15 @@ const routeState = vi.hoisted(() => ({
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => ({ options }),
   ...Object.fromEntries([
-    ["Navigate", ({ to }: { to: string }) => <div>Redirecting to {to}</div>],
+    [
+      "Navigate",
+      ({ to }: { to: string }) => (
+        <div>
+          {"Redirecting to "}
+          {to}
+        </div>
+      ),
+    ],
   ]),
   useNavigate: () => routeState.navigate,
 }));
@@ -213,8 +224,10 @@ test("create instance SSL mode menu keeps descriptions readable", async () => {
   const popupRect = popup.getBoundingClientRect();
   const descriptionRect = description.getBoundingClientRect();
 
-  expect(popupRect.width).toBeGreaterThanOrEqual(350);
-  expect(descriptionRect.right).toBeLessThanOrEqual(popupRect.right - 28);
+  expect(popupRect.width).toBeGreaterThanOrEqual(TEST_NUMBER_350);
+  expect(descriptionRect.right).toBeLessThanOrEqual(
+    popupRect.right - TEST_NUMBER_28
+  );
 });
 
 test("create instance SSL mode shows icons in the trigger and menu", async () => {

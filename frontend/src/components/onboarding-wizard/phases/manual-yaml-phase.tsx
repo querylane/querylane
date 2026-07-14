@@ -79,13 +79,13 @@ export function ManualYamlPhase() {
             variant="ghost"
           >
             <ArrowLeft className="size-4" />
-            Back
+            {"Back"}
           </Button>
           <Button
             className="h-10 rounded-xl bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
             onClick={startProgress}
           >
-            Continue
+            {"Continue"}
             <ChevronRight className="size-4" />
           </Button>
         </div>
@@ -96,14 +96,14 @@ export function ManualYamlPhase() {
           className="border-emerald-400/28 bg-emerald-500/10 px-3 py-1 text-emerald-200 text-xs"
           variant="outline"
         >
-          Recommended for file-based setups
+          {"Recommended for file-based setups"}
         </Badge>
       }
     >
       <div className="space-y-5">
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
           <div className="font-medium text-base text-white/84">
-            Default path
+            {"Default path"}
           </div>
           <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/8 bg-[#080b12] px-4 py-3">
             <span className="flex-1 font-mono text-sm text-white/92 md:text-base">
@@ -124,21 +124,23 @@ export function ManualYamlPhase() {
             </Button>
           </div>
           <p className="mt-3 text-sm text-white/54 leading-6">
-            Override with{" "}
+            {"Override with"}{" "}
             <code className="rounded bg-white/[0.06] px-2 py-1 text-white/72">
               {"--config <path>"}
             </code>{" "}
-            or{" "}
+            {"or"}{" "}
             <code className="rounded bg-white/[0.06] px-2 py-1 text-white/72">
-              QUERYLANE_CONFIG
+              {"QUERYLANE_CONFIG"}
             </code>
-            .
+            {"."}
           </p>
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
           <div className="flex items-center justify-between border-white/8 border-b px-5 py-4">
-            <div className="font-medium text-lg text-white">config.yaml</div>
+            <div className="font-medium text-lg text-white">
+              {"config.yaml"}
+            </div>
             <Button
               className="h-9 rounded-lg border-white/10 px-3 text-sm text-white/78 hover:bg-white/[0.05] hover:text-white"
               onClick={async () => {
@@ -167,9 +169,9 @@ export function ManualYamlPhase() {
         </div>
 
         <div className="rounded-2xl border border-[#4d72d8]/24 bg-[#0d1324] px-4 py-3 text-sm text-white/70 leading-6">
-          Querylane will begin watching the configured path on step 3. Once the
-          file is saved, it will validate the contents and continue setup
-          automatically.
+          {
+            "Querylane will begin watching the configured path on step 3. Once the file is saved, it will validate the contents and continue setup automatically."
+          }
         </div>
       </div>
     </WizardPage>

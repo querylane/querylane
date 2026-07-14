@@ -10,13 +10,20 @@ const DATA_EXPLORER_OVERVIEW_CLICK_BUDGET_MS = 1000;
 const FAILURE_EXIT_CODE = 1;
 const SUCCESS_EXIT_CODE = 0;
 
-const FRONTEND_PERF_BUDGETS = {
+type PerformanceMetricName =
+  | "build-real-ms"
+  | "data-explorer-cold-payload-gzip-bytes"
+  | "data-explorer-direct-ready-ms"
+  | "data-explorer-overview-click-ms";
+type PerformanceMetricUnit = "bytes" | "ms";
+
+const FRONTEND_PERF_BUDGETS: Readonly<Record<PerformanceMetricName, number>> = {
   "build-real-ms": BUILD_REAL_TIME_BUDGET_MS,
   "data-explorer-cold-payload-gzip-bytes":
     DATA_EXPLORER_COLD_PAYLOAD_BUDGET_KIB * BYTES_PER_KIB,
   "data-explorer-direct-ready-ms": DATA_EXPLORER_DIRECT_READY_BUDGET_MS,
   "data-explorer-overview-click-ms": DATA_EXPLORER_OVERVIEW_CLICK_BUDGET_MS,
-} as const;
+};
 
 const FRONTEND_PERF_LABELS = {
   "build-real-ms": "Frontend build real time",
@@ -31,9 +38,6 @@ const FRONTEND_PERF_UNITS = {
   "data-explorer-direct-ready-ms": "ms",
   "data-explorer-overview-click-ms": "ms",
 } as const satisfies Record<PerformanceMetricName, PerformanceMetricUnit>;
-
-type PerformanceMetricName = keyof typeof FRONTEND_PERF_BUDGETS;
-type PerformanceMetricUnit = "bytes" | "ms";
 
 interface PerformanceBudgetResult {
   actual: number;

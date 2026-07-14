@@ -51,6 +51,13 @@ import {
   StatsAccessHealthSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
+const TEST_NUMBER_90 = 90;
+const TEST_NUMBER_1000 = 1000;
+const TEST_NUMBER_252 = 252;
+const TEST_NUMBER_38 = 38;
+const TEST_NUMBER_5000 = 5000;
+const TEST_NUMBER_5 = 5;
+
 interface InstanceUpdateInput {
   instance: {
     config: {
@@ -371,7 +378,9 @@ function connectedInstanceResponse({
           serverInfo: createProto(ServerInfoSchema, {
             maxConnections: 100,
             replicationRole,
-            startedAt: timestampFromDate(new Date(Date.now() - 90 * 60 * 1000)),
+            startedAt: timestampFromDate(
+              new Date(Date.now() - TEST_NUMBER_90 * 60 * TEST_NUMBER_1000)
+            ),
             version:
               "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc, 64-bit",
             versionShort: "17.9",
@@ -485,7 +494,7 @@ function activityHealthResponse() {
         ],
         idleConnections: 39,
         idleInTransactionConnections: 1,
-        longestTransactionSeconds: BigInt(252),
+        longestTransactionSeconds: BigInt(TEST_NUMBER_252),
         longRunningTransactionConnections: 1,
         maxConnections: 100,
         sessions: [
@@ -495,7 +504,7 @@ function activityHealthResponse() {
             clientAddress: "10.2.0.7",
             clientPort: 51_234,
             databaseName: "logistics",
-            durationSeconds: BigInt(252),
+            durationSeconds: BigInt(TEST_NUMBER_252),
             pid: 4211,
             query:
               "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
@@ -511,7 +520,7 @@ function activityHealthResponse() {
             clientAddress: "10.2.0.8",
             clientPort: 55_432,
             databaseName: "logistics",
-            durationSeconds: BigInt(38),
+            durationSeconds: BigInt(TEST_NUMBER_38),
             pid: 4302,
             query: "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
             queryAgeSeconds: 38n,
@@ -544,7 +553,7 @@ function paginatedActivityHealthResponse() {
         applicationName: "batch-worker",
         databaseName: "logistics",
         durationSeconds: BigInt(index + 1),
-        pid: 5000 + index,
+        pid: TEST_NUMBER_5000 + index,
         query: `SELECT ${index}`,
         state: "active",
         username: "app_readwrite",
@@ -1374,7 +1383,9 @@ describe("backend instance activity", () => {
     expect(within(table).queryByText("5000")).toBeNull();
     expect(nextPage).toHaveProperty("disabled", false);
   });
+});
 
+describe("backend instance activity pagination and states", () => {
   test("clamps the current page when a live sample shrinks", async () => {
     const user = userEvent.setup();
     state.selectedInstanceStatus = "connected";

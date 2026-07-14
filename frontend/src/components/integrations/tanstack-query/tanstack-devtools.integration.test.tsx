@@ -8,11 +8,11 @@ const devtoolsMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@tanstack/react-query-devtools", () => ({
-  ["ReactQueryDevtools"]: devtoolsMocks.reactQueryDevtools,
+  ReactQueryDevtools: devtoolsMocks.reactQueryDevtools,
 }));
 
 vi.mock("@tanstack/react-router-devtools", () => ({
-  ["TanStackRouterDevtools"]: devtoolsMocks.tanStackRouterDevtools,
+  TanStackRouterDevtools: devtoolsMocks.tanStackRouterDevtools,
 }));
 
 afterEach(() => {

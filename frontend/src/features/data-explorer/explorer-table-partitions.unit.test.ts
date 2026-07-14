@@ -16,6 +16,8 @@ import {
   TablePartitionSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
+const TEST_NUMBER_4 = 4;
+
 describe("table partition detail helpers", () => {
   test("detects ordinary tables without partition metadata", () => {
     const metadata = create(TablePartitionMetadataSchema, {});
@@ -198,7 +200,7 @@ describe("table partition detail helpers", () => {
     ).toEqual(["change_log_archive"]);
     expect(
       filterPartitionDisplayRows(model.rows, { schemaNames: ["audit"] })
-    ).toHaveLength(4);
+    ).toHaveLength(TEST_NUMBER_4);
     expect(
       summarizePartitionDisplayRows(
         filterPartitionDisplayRows(model.rows, { search: "archive" })

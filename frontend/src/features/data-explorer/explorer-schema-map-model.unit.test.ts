@@ -9,6 +9,9 @@ import {
   TableSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
+const TEST_NUMBER_8 = 8;
+const TEST_NUMBER_30 = 30;
+
 const schemas: SchemaSummary[] = [
   { id: "shipping", name: "shipping", owner: "app_owner" },
   { id: "catalog", name: "catalog", owner: "app_owner" },
@@ -217,7 +220,8 @@ describe("buildSchemaMapModel", () => {
   test("anchors foreign keys from hidden columns to the truncated footer", () => {
     const columns = Array.from({ length: 9 }, (_, index) =>
       create(ColumnSchema, {
-        columnName: index === 8 ? "carrier_id" : `column_${index + 1}`,
+        columnName:
+          index === TEST_NUMBER_8 ? "carrier_id" : `column_${index + 1}`,
         rawType: "integer",
       })
     );
@@ -255,7 +259,7 @@ describe("buildSchemaMapModel", () => {
 
     const moveY = Number(edge?.d.split(" ")[2]);
     expect(moveY).toBeGreaterThan(
-      (source?.y ?? 0) + (source?.height ?? 0) - 30
+      (source?.y ?? 0) + (source?.height ?? 0) - TEST_NUMBER_30
     );
   });
 

@@ -412,7 +412,7 @@ function assertNeverExecuteResult(_result: never): never {
 }
 
 function queryRowToObject(row: QueryRow): OtherDatabaseObject | null {
-  const category = row["category"];
+  const { category } = row;
   if (!isOtherDatabaseObjectCategory(category)) {
     return null;
   }

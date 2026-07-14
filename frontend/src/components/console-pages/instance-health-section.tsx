@@ -47,7 +47,7 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
       <Collapsible>
         <CollapsibleTrigger
           aria-controls={detailId}
-          className="group/health-row flex w-full items-center gap-3 rounded-md px-2 py-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="group/health-row flex w-full items-center gap-3 rounded-md p-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <span
             aria-hidden="true"
@@ -56,7 +56,10 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
               TONE_DOT_CLASS[row.tone]
             )}
           />
-          <span className="sr-only">{TONE_SR_LABEL[row.tone]}:</span>
+          <span className="sr-only">
+            {TONE_SR_LABEL[row.tone]}
+            {":"}
+          </span>
           <span className="w-32 shrink-0 truncate font-medium text-foreground text-sm sm:w-40">
             {row.label}
           </span>
@@ -117,7 +120,7 @@ function InstanceFactsHeader({ facts }: { facts: string[] }) {
         <span className="inline-flex items-center gap-2" key={fact}>
           {index > 0 ? (
             <span aria-hidden="true" className="text-border">
-              ·
+              {"·"}
             </span>
           ) : null}
           <span className="tabular-nums">{fact}</span>

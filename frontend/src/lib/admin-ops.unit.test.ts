@@ -8,6 +8,8 @@ import {
   shortReplicaId,
 } from "@/lib/admin-ops";
 
+const TEST_NUMBER_60000 = 60_000;
+
 describe("buildRunnerFilter", () => {
   it("returns empty filter for the all-runners sentinel", () => {
     expect(buildRunnerFilter(ALL_RUNNERS_FILTER_VALUE)).toBe("");
@@ -81,7 +83,9 @@ describe("formatRelativeTimestamp", () => {
   });
 
   it("formats a past timestamp relative to now", () => {
-    const timestamp = timestampFromDate(new Date(Date.now() - 60_000));
+    const timestamp = timestampFromDate(
+      new Date(Date.now() - TEST_NUMBER_60000)
+    );
     expect(formatRelativeTimestamp(timestamp)).toContain("minute");
   });
 });

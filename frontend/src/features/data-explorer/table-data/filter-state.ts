@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { z } from "zod";
+import { anyPredicate } from "@/lib/predicates";
 import {
   type RowFilter,
   RowFilterGroup_Logic,
@@ -289,27 +290,32 @@ function isSqlAndAt(value: string, index: number): boolean {
   );
 }
 
+function advancePastQuotedSql(
+  value: string,
+  index: number
+): { next: number } | { next: undefined } | null {
+  const char = value[index];
+  if (char === "'") {
+    return { next: skipSqlQuotedString(value, index) };
+  }
+  if (char === '"') {
+    return { next: skipSqlQuotedIdentifier(value, index) };
+  }
+  return null;
+}
+
 function splitSqlWhereConditions(value: string): string[] | undefined {
   const parts: string[] = [];
   let start = 0;
   let index = 0;
 
   while (index < value.length) {
-    const char = value[index];
-    if (char === "'") {
-      const next = skipSqlQuotedString(value, index);
-      if (!next) {
-        return;
-      }
-      index = next;
-      continue;
+    const quoted = advancePastQuotedSql(value, index);
+    if (quoted !== null && quoted.next === undefined) {
+      return;
     }
-    if (char === '"') {
-      const next = skipSqlQuotedIdentifier(value, index);
-      if (!next) {
-        return;
-      }
-      index = next;
+    if (quoted) {
+      index = quoted.next;
       continue;
     }
 
@@ -327,6 +333,28 @@ function splitSqlWhereConditions(value: string): string[] | undefined {
   return parts;
 }
 
+function readQuotedSqlIdentifier(
+  value: string,
+  start: number
+): { column: string; next: number } | undefined {
+  let column = "";
+  let index = start + 1;
+  while (index < value.length) {
+    const char = value[index];
+    if (char === '"') {
+      if (value[index + 1] === '"') {
+        column += '"';
+        index += 2;
+        continue;
+      }
+      return { column, next: index + 1 };
+    }
+    column += char;
+    index += 1;
+  }
+  return undefined;
+}
+
 function readSqlIdentifier(
   value: string
 ): { column: string; next: number } | undefined {
@@ -335,22 +363,7 @@ function readSqlIdentifier(
     return;
   }
   if (value[trimmedStart] === '"') {
-    let column = "";
-    let index = trimmedStart + 1;
-    while (index < value.length) {
-      const char = value[index];
-      if (char === '"') {
-        if (value[index + 1] === '"') {
-          column += '"';
-          index += 2;
-          continue;
-        }
-        return { column, next: index + 1 };
-      }
-      column += char;
-      index += 1;
-    }
-    return;
+    return readQuotedSqlIdentifier(value, trimmedStart);
   }
 
   const match = SQL_IDENTIFIER_PATTERN.exec(value.slice(trimmedStart));
@@ -358,6 +371,39 @@ function readSqlIdentifier(
     return;
   }
   return { column: match[0], next: trimmedStart + match[0].length };
+}
+
+function parseBooleanTableValue(value: string): TableValue | undefined {
+  const lower = value.toLowerCase();
+  if (lower !== "true" && lower !== "false") {
+    return undefined;
+  }
+  return create(TableValueSchema, {
+    kind: { case: "boolValue", value: lower === "true" },
+  });
+}
+
+function parseFloatTableValue(
+  rawValue: string,
+  value: string
+): TableValue | undefined {
+  if (!FLOAT_LITERAL_PATTERN.test(rawValue)) {
+    return undefined;
+  }
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue)
+    ? create(TableValueSchema, {
+        kind: { case: "doubleValue", value: numberValue },
+      })
+    : undefined;
+}
+
+function parseIntegerTableValue(value: string): TableValue | undefined {
+  return INTEGER_LITERAL_PATTERN.test(value)
+    ? create(TableValueSchema, {
+        kind: { case: "int64Value", value: BigInt(value) },
+      })
+    : undefined;
 }
 
 function readSqlStringLiteral(
@@ -677,7 +723,10 @@ function getInvalidFilterRules(
       if (isIncompleteFilterRule(rule)) {
         return [];
       }
-      if (!getOperatorsForColumn(column).includes(rule.operator)) {
+      if (
+        column.dataType !== DataType.JSON &&
+        rule.operator === "jsonContains"
+      ) {
         return [
           {
             id: rule.id,
@@ -780,6 +829,38 @@ function buildPredicate(
   });
 }
 
+function buildRangeValues(
+  rule: TableFilterRule,
+  dataType: DataType
+): TableValue[] | undefined {
+  const first = parseTableValue(rule.value, dataType, rule.operator);
+  const second = parseTableValue(rule.value2 ?? "", dataType, rule.operator);
+  return first !== undefined && second !== undefined
+    ? [first, second]
+    : undefined;
+}
+
+function buildListValues(
+  rule: TableFilterRule,
+  dataType: DataType
+): TableValue[] | undefined {
+  const parts = rule.value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length === 0) {
+    return;
+  }
+  const values = parts.map((part) =>
+    parseTableValue(part, dataType, rule.operator)
+  );
+  return values.every(
+    (candidate): candidate is TableValue => candidate !== undefined
+  )
+    ? values
+    : undefined;
+}
+
 function buildValues(
   rule: TableFilterRule,
   dataType: DataType,
@@ -789,26 +870,10 @@ function buildValues(
     return [];
   }
   if (valueCount === 2) {
-    const first = parseTableValue(rule.value, dataType, rule.operator);
-    const second = parseTableValue(rule.value2 ?? "", dataType, rule.operator);
-    return first && second ? [first, second] : undefined;
+    return buildRangeValues(rule, dataType);
   }
   if (valueCount === "list") {
-    const parts = rule.value
-      .split(",")
-      .map((part) => part.trim())
-      .filter(Boolean);
-    if (parts.length === 0) {
-      return;
-    }
-    const values = parts.map((part) =>
-      parseTableValue(part, dataType, rule.operator)
-    );
-    return values.every(
-      (candidate): candidate is TableValue => candidate !== undefined
-    )
-      ? values
-      : undefined;
+    return buildListValues(rule, dataType);
   }
   const value = parseTableValue(rule.value, dataType, rule.operator);
   return value ? [value] : undefined;
@@ -823,42 +888,23 @@ function parseTableValue(
   if (!value) {
     return;
   }
-  if (operator === "jsonContains" || dataType === DataType.JSON) {
+  if (
+    anyPredicate(
+      () => operator === "jsonContains",
+      () => dataType === DataType.JSON
+    )
+  ) {
     return create(TableValueSchema, { kind: { case: "jsonValue", value } });
   }
   switch (dataType) {
     case DataType.BOOLEAN: {
-      const lower = value.toLowerCase();
-      if (lower === "true") {
-        return create(TableValueSchema, {
-          kind: { case: "boolValue", value: true },
-        });
-      }
-      if (lower === "false") {
-        return create(TableValueSchema, {
-          kind: { case: "boolValue", value: false },
-        });
-      }
-      return;
+      return parseBooleanTableValue(value);
     }
     case DataType.FLOAT: {
-      if (!FLOAT_LITERAL_PATTERN.test(rawValue)) {
-        return;
-      }
-      const numberValue = Number(value);
-      return Number.isFinite(numberValue)
-        ? create(TableValueSchema, {
-            kind: { case: "doubleValue", value: numberValue },
-          })
-        : undefined;
+      return parseFloatTableValue(rawValue, value);
     }
     case DataType.INTEGER: {
-      if (!INTEGER_LITERAL_PATTERN.test(value)) {
-        return;
-      }
-      return create(TableValueSchema, {
-        kind: { case: "int64Value", value: BigInt(value) },
-      });
+      return parseIntegerTableValue(value);
     }
     case DataType.DATE:
     case DataType.TIME:

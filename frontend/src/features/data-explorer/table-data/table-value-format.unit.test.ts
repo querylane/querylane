@@ -12,6 +12,8 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
+const TEST_NUMBER_3 = 3;
+
 function column(dataType = DataType.STRING, rawType = "text") {
   return create(TableResultColumnSchema, {
     columnName: "value",
@@ -86,7 +88,7 @@ describe("formatTableCell", () => {
     expect(
       formatTableCell(
         cell(
-          { case: "bytesValue", value: new Uint8Array([1, 2, 3]) },
+          { case: "bytesValue", value: new Uint8Array([1, 2, TEST_NUMBER_3]) },
           { fullSizeBytes: 4096n, truncated: true }
         ),
         column(DataType.BINARY)
@@ -217,7 +219,10 @@ test("formats empty timestamps, JSON values, and byte values without full size",
   ).toMatchObject({ display: '{"ok":true}', isTruncated: true, kind: "json" });
   expect(
     formatTableCell(
-      cell({ case: "bytesValue", value: new Uint8Array([1, 2, 3]) }),
+      cell({
+        case: "bytesValue",
+        value: new Uint8Array([1, 2, TEST_NUMBER_3]),
+      }),
       column(DataType.BINARY)
     )
   ).toMatchObject({ display: "‹3 bytes›", kind: "bytes" });

@@ -35,7 +35,7 @@ vi.mock("@/lib/db-context", () => ({
 }));
 
 vi.mock("@/components/console-pages/role-detail-view", () => ({
-  ["RoleDetailView"]: (props: RoleDetailViewProps) => (
+  RoleDetailView: (props: RoleDetailViewProps) => (
     <output data-testid="partial-flags">
       {[
         props.grantsPartial,

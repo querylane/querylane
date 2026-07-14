@@ -5,11 +5,21 @@ import {
   runPerformanceBudgetCli,
 } from "../../scripts/perf-budgets";
 
+const TEST_NUMBER_1200 = 1200;
+const TEST_NUMBER_5501 = 5501;
+const TEST_NUMBER_160 = 160;
+const TEST_NUMBER_1024 = 1024;
+
 describe("frontend performance budgets", () => {
   test("accepts metrics at or below the configured budget", () => {
-    expect(FRONTEND_PERF_BUDGETS["data-explorer-direct-ready-ms"]).toBe(1200);
+    expect(FRONTEND_PERF_BUDGETS["data-explorer-direct-ready-ms"]).toBe(
+      TEST_NUMBER_1200
+    );
     expect(
-      evaluatePerformanceBudget("data-explorer-direct-ready-ms", 1200)
+      evaluatePerformanceBudget(
+        "data-explorer-direct-ready-ms",
+        TEST_NUMBER_1200
+      )
     ).toEqual({
       actual: 1200,
       budget: 1200,
@@ -20,7 +30,9 @@ describe("frontend performance budgets", () => {
   });
 
   test("rejects metrics above the configured budget", () => {
-    expect(evaluatePerformanceBudget("build-real-ms", 5501)).toMatchObject({
+    expect(
+      evaluatePerformanceBudget("build-real-ms", TEST_NUMBER_5501)
+    ).toMatchObject({
       budget: FRONTEND_PERF_BUDGETS["build-real-ms"],
       ok: false,
       unit: "ms",
@@ -42,7 +54,10 @@ describe("frontend performance budgets", () => {
   test("accepts already-sliced CLI args and formats byte budgets", () => {
     const output: string[] = [];
     const exitCode = runPerformanceBudgetCli({
-      argv: ["data-explorer-cold-payload-gzip-bytes", String(160 * 1024)],
+      argv: [
+        "data-explorer-cold-payload-gzip-bytes",
+        String(TEST_NUMBER_160 * TEST_NUMBER_1024),
+      ],
       stderr: () => undefined,
       stdout: (line) => output.push(line),
     });

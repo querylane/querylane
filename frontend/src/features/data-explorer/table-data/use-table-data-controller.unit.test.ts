@@ -16,6 +16,9 @@ import {
   TableValueSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
+const TEST_NUMBER_50 = 50;
+const TEST_NUMBER_100 = 100;
+
 const { setStateMocks, useStateMock } = vi.hoisted(() => ({
   setStateMocks: [] as ReturnType<typeof vi.fn>[],
   useStateMock: vi.fn(),
@@ -102,7 +105,7 @@ describe("useTableDataController", () => {
     });
 
     expect(controller.currentPageIndex).toBe(0);
-    expect(controller.pageSize).toBe(50);
+    expect(controller.pageSize).toBe(TEST_NUMBER_50);
     expect(controller.request).toMatchObject({
       cellValueMode: CellValueMode.PREVIEW,
       name: "instances/i/databases/d/schemas/public/tables/events",
@@ -133,7 +136,7 @@ describe("useTableDataController", () => {
     expect(controller.request.pageToken).toBe("");
     expect(controller.request.filter).toBe(filter);
 
-    controller.setPageSize(50);
+    controller.setPageSize(TEST_NUMBER_50);
     expect(setStateMocks[0]).toHaveBeenCalledWith(
       expect.objectContaining({
         currentPageIndex: 0,
@@ -209,10 +212,10 @@ describe("useTableDataController", () => {
     });
 
     controller.goNext("");
-    controller.setPageSize(100);
+    controller.setPageSize(TEST_NUMBER_100);
 
     expect(setStateMocks[0]).toHaveBeenCalledTimes(1);
-    expect(onPageSizeChange).toHaveBeenCalledWith(100);
+    expect(onPageSizeChange).toHaveBeenCalledWith(TEST_NUMBER_100);
   });
 
   test("pushes next tokens and clamps previous page at zero", () => {

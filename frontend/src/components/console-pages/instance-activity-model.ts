@@ -353,26 +353,32 @@ function presentActivitySessionRows(
   filters: ActivitySessionFilters
 ): ActivitySessionRow[] {
   const normalizedSearch = filters.search.trim().toLowerCase();
-  return (activity?.sessions ?? [])
-    .map(presentActivitySessionRow)
-    .filter(
-      (session) =>
-        matchesFilter(session.state, filters.state) &&
-        matchesFilter(session.app, filters.app) &&
-        matchesFilter(session.database, filters.database) &&
-        (normalizedSearch.length === 0 ||
-          [
-            String(session.pid),
-            session.user,
-            session.app,
-            session.database,
-            session.state,
-            session.query,
-          ]
-            .join(" ")
-            .toLowerCase()
-            .includes(normalizedSearch))
-    );
+  const rows: ActivitySessionRow[] = [];
+  for (const rawSession of activity?.sessions ?? []) {
+    const session = presentActivitySessionRow(rawSession);
+    const matchesSearch =
+      normalizedSearch.length === 0 ||
+      [
+        String(session.pid),
+        session.user,
+        session.app,
+        session.database,
+        session.state,
+        session.query,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearch);
+    if (
+      matchesFilter(session.state, filters.state) &&
+      matchesFilter(session.app, filters.app) &&
+      matchesFilter(session.database, filters.database) &&
+      matchesSearch
+    ) {
+      rows.push(session);
+    }
+  }
+  return rows;
 }
 
 function uniqueSorted(values: Iterable<string>): string[] {

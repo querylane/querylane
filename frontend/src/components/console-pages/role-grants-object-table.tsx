@@ -54,7 +54,10 @@ function ObjectNameCell({ object }: { object: GrantedObject }) {
       <span className="font-mono text-[13px] text-foreground">
         {showSchema ? (
           <>
-            <span className="text-muted-foreground">{object.schemaName}.</span>
+            <span className="text-muted-foreground">
+              {object.schemaName}
+              {"."}
+            </span>
             {object.objectName}
           </>
         ) : (
@@ -200,7 +203,7 @@ function GrantedObjectsTable({
       cell: ({ row }) => <ObjectNameCell object={row.original} />,
       filterFn: "includesString",
       header: ({ column }) => (
-        <SortableHeader column={column}>Object</SortableHeader>
+        <SortableHeader column={column}>{"Object"}</SortableHeader>
       ),
       id: "object",
     },
@@ -210,7 +213,7 @@ function GrantedObjectsTable({
         <GrantObjectKindBadge type={row.original.objectType} />
       ),
       header: ({ column }) => (
-        <SortableHeader column={column}>Kind</SortableHeader>
+        <SortableHeader column={column}>{"Kind"}</SortableHeader>
       ),
       id: "kind",
       meta: { cellClassName: "whitespace-nowrap" },
@@ -219,7 +222,7 @@ function GrantedObjectsTable({
       accessorFn: (row) => grantorSummary(row.grantors)?.text ?? "",
       cell: ({ row }) => <GrantorCell object={row.original} />,
       header: ({ column }) => (
-        <SortableHeader column={column}>Granted by</SortableHeader>
+        <SortableHeader column={column}>{"Granted by"}</SortableHeader>
       ),
       id: "grantor",
       meta: { cellClassName: "whitespace-nowrap" },

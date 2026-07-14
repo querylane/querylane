@@ -48,11 +48,11 @@ export function GridSurface({
                   className="size-5"
                   role="presentation"
                 />
-                Refreshing rows…
+                {"Refreshing rows…"}
               </CardTitle>
               <CardDescription>
                 <span className="block">
-                  Re-evaluating the visible data set.
+                  {"Re-evaluating the visible data set."}
                 </span>
                 {refreshStatusLabel ? (
                   <span className="block">{refreshStatusLabel}</span>

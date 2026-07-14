@@ -108,7 +108,7 @@ export function tableDetailQueryOptions({
   tableId: string;
   transport: Transport;
 }) {
-  const parent = buildTableName(instanceId, databaseId, schemaId, tableId);
+  const parent = buildTableName({ instanceId, databaseId, schemaId, tableId });
   const common = {
     ...RESOURCE_QUERY_OPTIONS.tableMetadata,
   } as const;

@@ -28,6 +28,116 @@ interface ArrayPreviewProps {
   rawType: string;
 }
 
+type ParsedArray = ReturnType<typeof parsePostgresArrayLiteral>;
+type KeyedArrayItem = ReturnType<typeof keyPostgresArrayItems>[number];
+
+function ArrayItemRow({ entry }: { entry: KeyedArrayItem }) {
+  return (
+    <li className="grid grid-cols-[4rem_minmax(0,1fr)] gap-3 px-3 py-2 text-sm">
+      <span className="font-mono text-muted-foreground text-xs tabular-nums">
+        {entry.position}
+      </span>
+      {entry.item.isNull ? (
+        <span className="text-muted-foreground italic">{"SQL NULL"}</span>
+      ) : (
+        <code className="break-all font-mono text-xs">
+          {entry.item.display}
+        </code>
+      )}
+    </li>
+  );
+}
+
+function ArrayItemsContent({
+  keyedItems,
+  parsed,
+  raw,
+}: {
+  keyedItems: KeyedArrayItem[];
+  parsed: ParsedArray;
+  raw: string;
+}) {
+  if (!parsed.ok) {
+    return (
+      <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-all rounded-md border bg-muted/30 p-3 font-mono text-xs">
+        {raw}
+      </pre>
+    );
+  }
+  if (parsed.items.length === 0) {
+    return (
+      <div className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20">
+        <div className="p-4 text-muted-foreground text-sm">{"Empty array"}</div>
+      </div>
+    );
+  }
+  return (
+    <div className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20">
+      <ol className="divide-y">
+        {keyedItems.map((entry) => (
+          <ArrayItemRow entry={entry} key={entry.key} />
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function ArrayPreviewDialog({
+  columnName,
+  isTruncated,
+  keyedItems,
+  onOpenChange,
+  open,
+  parsed,
+  raw,
+  rawType,
+}: ArrayPreviewProps & {
+  keyedItems: KeyedArrayItem[];
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  parsed: ParsedArray;
+}) {
+  if (!open) {
+    return null;
+  }
+  return (
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="!flex !max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] w-[min(56rem,calc(100vw-2rem))] flex-col gap-4 overflow-hidden">
+        <DialogHeader className="shrink-0 pr-10">
+          <DialogTitle>
+            {columnName}
+            {" array"}
+          </DialogTitle>
+          <DialogDescription>
+            {"Formatted "}
+            {rawType}
+            {" value with indexed elements."}
+          </DialogDescription>
+        </DialogHeader>
+        {isTruncated ? (
+          <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700 text-xs dark:text-amber-300">
+            {
+              "This cell preview is truncated. Open the row detail drawer to load the full value."
+            }
+          </p>
+        ) : null}
+        <ArrayItemsContent keyedItems={keyedItems} parsed={parsed} raw={raw} />
+        <div className="flex shrink-0 justify-end">
+          <Button
+            onClick={() => writeClipboard(raw)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <Copy className="size-3.5" />
+            {"Copy array"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ArrayPreview({
   columnName,
   isTruncated,
@@ -83,70 +193,16 @@ function ArrayPreview({
       >
         <Maximize2 className="size-3" />
       </Button>
-      {open ? (
-        <Dialog onOpenChange={onOpenChange} open={open}>
-          <DialogContent className="!flex !max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] w-[min(56rem,calc(100vw-2rem))] flex-col gap-4 overflow-hidden">
-            <DialogHeader className="shrink-0 pr-10">
-              <DialogTitle>{columnName} array</DialogTitle>
-              <DialogDescription>
-                Formatted {rawType} value with indexed elements.
-              </DialogDescription>
-            </DialogHeader>
-            {isTruncated ? (
-              <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700 text-xs dark:text-amber-300">
-                This cell preview is truncated. Open the row detail drawer to
-                load the full value.
-              </p>
-            ) : null}
-            {parsed.ok ? (
-              <div className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20">
-                {parsed.items.length === 0 ? (
-                  <div className="p-4 text-muted-foreground text-sm">
-                    Empty array
-                  </div>
-                ) : (
-                  <ol className="divide-y">
-                    {keyedItems.map(({ item, key, position }) => (
-                      <li
-                        className="grid grid-cols-[4rem_minmax(0,1fr)] gap-3 px-3 py-2 text-sm"
-                        key={key}
-                      >
-                        <span className="font-mono text-muted-foreground text-xs tabular-nums">
-                          {position}
-                        </span>
-                        {item.isNull ? (
-                          <span className="text-muted-foreground italic">
-                            SQL NULL
-                          </span>
-                        ) : (
-                          <code className="break-all font-mono text-xs">
-                            {item.display}
-                          </code>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </div>
-            ) : (
-              <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-all rounded-md border bg-muted/30 p-3 font-mono text-xs">
-                {raw}
-              </pre>
-            )}
-            <div className="flex shrink-0 justify-end">
-              <Button
-                onClick={() => writeClipboard(raw)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <Copy className="size-3.5" />
-                Copy array
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      ) : null}
+      <ArrayPreviewDialog
+        columnName={columnName}
+        isTruncated={isTruncated}
+        keyedItems={keyedItems}
+        onOpenChange={onOpenChange}
+        open={open}
+        parsed={parsed}
+        raw={raw}
+        rawType={rawType}
+      />
     </span>
   );
 }

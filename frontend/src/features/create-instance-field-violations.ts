@@ -54,6 +54,28 @@ interface FieldViolationExtractionResult<FieldName extends string> {
   generalErrors: string[];
 }
 
+function recordFieldViolation<FieldName extends string>({
+  fieldErrors,
+  generalErrors,
+  mapField,
+  violation,
+}: {
+  fieldErrors: Partial<Record<FieldName, string>>;
+  generalErrors: string[];
+  mapField: (field: string) => FieldName | null;
+  violation: { description: string; field: string };
+}) {
+  const formField = mapField(violation.field);
+  const description = violation.description || "Invalid value.";
+  if (formField) {
+    fieldErrors[formField] ??= description;
+    return;
+  }
+  generalErrors.push(
+    violation.field ? `${violation.field}: ${description}` : description
+  );
+}
+
 function extractBadRequestFieldViolations<FieldName extends string>({
   error,
   focusOrder,
@@ -68,17 +90,7 @@ function extractBadRequestFieldViolations<FieldName extends string>({
   const connectError = ConnectError.from(error);
   for (const badRequest of connectError.findDetails(BadRequestSchema)) {
     for (const violation of badRequest.fieldViolations) {
-      const formField = mapField(violation.field);
-      const description = violation.description || "Invalid value.";
-      if (formField) {
-        if (!fieldErrors[formField]) {
-          fieldErrors[formField] = description;
-        }
-        continue;
-      }
-      generalErrors.push(
-        violation.field ? `${violation.field}: ${description}` : description
-      );
+      recordFieldViolation({ fieldErrors, generalErrors, mapField, violation });
     }
   }
 

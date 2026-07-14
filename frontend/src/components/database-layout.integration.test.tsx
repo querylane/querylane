@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DatabaseLayout } from "@/components/database-layout";
 import { useSetupStore } from "@/stores/setup-store";
 
+const TEST_NUMBER_200 = 200;
+
 const routerState = vi.hoisted(() => ({
   isLoading: false,
   pathname: "/instances/prod",
@@ -84,7 +86,7 @@ describe("DatabaseLayout route transitions", () => {
   it("renders the instance shell while the target route stays in instance scope", async () => {
     render(
       <DatabaseLayout>
-        <div>Instance content</div>
+        <div>{"Instance content"}</div>
       </DatabaseLayout>
     );
 
@@ -97,7 +99,7 @@ describe("DatabaseLayout route transitions", () => {
 
     render(
       <DatabaseLayout>
-        <div>Stale instance content</div>
+        <div>{"Stale instance content"}</div>
       </DatabaseLayout>
     );
 
@@ -112,14 +114,14 @@ describe("DatabaseLayout route transitions", () => {
 
     render(
       <DatabaseLayout>
-        <div>Instance content</div>
+        <div>{"Instance content"}</div>
       </DatabaseLayout>
     );
 
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();
 
     act(() => {
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(TEST_NUMBER_200);
     });
 
     const progressbar = screen.getByTestId("route-progress-bar");

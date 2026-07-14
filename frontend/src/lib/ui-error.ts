@@ -58,6 +58,21 @@ const POSTGRES_RETRY_GUIDANCE = {
     "Retry later.",
 } satisfies Record<PostgreSqlErrorRetryGuidance, string | null>;
 
+const BLOCKING_TITLES = {
+  permission_denied: "Access denied",
+  setup_required: "Setup required",
+  unauthenticated: "Authentication required",
+} satisfies Record<BlockingErrorReason, string>;
+
+const CONNECT_CODE_TITLES: Partial<Record<Code, string>> = {
+  [Code.DeadlineExceeded]: "Request timed out",
+  [Code.Internal]: "Unexpected error",
+  [Code.InvalidArgument]: "Request rejected",
+  [Code.NotFound]: "Resource not found",
+  [Code.Unavailable]: "Can't reach the server",
+  [Code.Unknown]: "Unexpected error",
+};
+
 const defaultReportAppUiErrorDependencies: ReportAppUiErrorDependencies = {
   captureException,
   logger,
@@ -153,14 +168,8 @@ function buildTitle({
   postgres: AppUiErrorPostgres | null;
   reason: string | null;
 }): string {
-  if (blockingReason === "setup_required") {
-    return "Setup required";
-  }
-  if (blockingReason === "unauthenticated") {
-    return "Authentication required";
-  }
-  if (blockingReason === "permission_denied") {
-    return "Access denied";
+  if (blockingReason) {
+    return BLOCKING_TITLES[blockingReason];
   }
   if (isAppDatabaseUnavailableReason(reason)) {
     return "Meta database unavailable";
@@ -171,22 +180,9 @@ function buildTitle({
   if (postgres) {
     return POSTGRES_TITLES[postgres.kind] ?? "PostgreSQL error";
   }
-  if (code === Code.DeadlineExceeded) {
-    return "Request timed out";
-  }
-  if (code === Code.Unavailable) {
-    return "Can't reach the server";
-  }
-  if (code === Code.InvalidArgument) {
-    return "Request rejected";
-  }
-  if (code === Code.NotFound) {
-    return "Resource not found";
-  }
-  if (code === Code.Internal || code === Code.Unknown) {
-    return "Unexpected error";
-  }
-  return "Request failed";
+  return (
+    (code === null ? undefined : CONNECT_CODE_TITLES[code]) ?? "Request failed"
+  );
 }
 
 function buildRetryGuidance({
@@ -370,6 +366,34 @@ function shouldReportAppUiError(error: AppUiError, expected: boolean): boolean {
   return true;
 }
 
+function buildSafePostgresContext(postgres: AppUiErrorPostgres | null) {
+  if (!postgres) {
+    return null;
+  }
+
+  return {
+    conditionName: postgres.conditionName,
+    kind: postgres.kind,
+    operation: postgres.operation,
+    retryGuidance: postgres.retryGuidance,
+    sqlstate: postgres.sqlstate,
+    sqlstateClass: postgres.sqlstateClass,
+  };
+}
+
+function reportCaptureTarget(error: AppUiError): Error {
+  if (error.postgres) {
+    return new Error(error.title);
+  }
+  return error.originalError instanceof Error
+    ? error.originalError
+    : new Error(error.message);
+}
+
+function reportMessage(error: AppUiError): string {
+  return error.postgres ? error.title : error.message;
+}
+
 function reportAppUiError(
   error: AppUiError,
   context?: {
@@ -386,25 +410,8 @@ function reportAppUiError(
     postgres_sqlstate: error.postgres?.sqlstate ?? "none",
     postgres_sqlstate_class: error.postgres?.sqlstateClass ?? "none",
   };
-  const safePostgresContext = error.postgres
-    ? {
-        conditionName: error.postgres.conditionName,
-        kind: error.postgres.kind,
-        operation: error.postgres.operation,
-        retryGuidance: error.postgres.retryGuidance,
-        sqlstate: error.postgres.sqlstate,
-        sqlstateClass: error.postgres.sqlstateClass,
-      }
-    : null;
-  let captureTarget: Error;
-  if (error.postgres) {
-    captureTarget = new Error(error.title);
-  } else if (error.originalError instanceof Error) {
-    captureTarget = error.originalError;
-  } else {
-    captureTarget = new Error(error.message);
-  }
-  const reportMessage = error.postgres ? error.title : error.message;
+  const safePostgresContext = buildSafePostgresContext(error.postgres);
+  const captureTarget = reportCaptureTarget(error);
 
   dependencies.captureException(captureTarget, {
     extras: {
@@ -422,7 +429,7 @@ function reportAppUiError(
     },
   });
 
-  dependencies.logger.error(reportMessage, {
+  dependencies.logger.error(reportMessage(error), {
     code: error.codeLabel,
     postgres: safePostgresContext,
     reason: error.connectReason,

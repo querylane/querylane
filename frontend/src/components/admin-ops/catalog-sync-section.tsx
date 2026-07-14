@@ -23,7 +23,7 @@ function SyncStatusCell({ status }: { status: CatalogSyncStatus }) {
       return (
         <span className="inline-flex items-center gap-1.5 text-sm">
           <Spinner className="size-3.5" />
-          Syncing
+          {"Syncing"}
         </span>
       );
     case CatalogSyncStatus.ERROR:

@@ -4,6 +4,7 @@ import {
   TimestampSchema,
   timestampDate,
 } from "@bufbuild/protobuf/wkt";
+import { allPredicates, anyPredicate } from "@/lib/predicates";
 import { Instance_ConnectionState } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
 type DbConnectionStatus = "connected" | "disconnected" | "error";
@@ -17,6 +18,10 @@ interface QualifiedTableName {
 // locale would render "1,5 KB" storage next to "1.5" axis ticks.
 const byteFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 1,
+});
+const timestampFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
 });
 const BYTE_DECIMAL_SCALE = 10;
 const BYTES_PER_KIBIBYTE = 1024;
@@ -73,21 +78,31 @@ export function buildSchemaName(
   return `${buildDatabaseName(instanceId, databaseId)}/schemas/${encodeResourceSegment(schemaId)}`;
 }
 
-export function buildTableName(
-  instanceId: string,
-  databaseId: string,
-  schemaId: string,
-  tableId: string
-): string {
+export function buildTableName({
+  instanceId,
+  databaseId,
+  schemaId,
+  tableId,
+}: {
+  instanceId: string;
+  databaseId: string;
+  schemaId: string;
+  tableId: string;
+}): string {
   return `${buildSchemaName(instanceId, databaseId, schemaId)}/tables/${encodeResourceSegment(tableId)}`;
 }
 
-export function buildViewName(
-  instanceId: string,
-  databaseId: string,
-  schemaId: string,
-  viewId: string
-): string {
+export function buildViewName({
+  instanceId,
+  databaseId,
+  schemaId,
+  viewId,
+}: {
+  instanceId: string;
+  databaseId: string;
+  schemaId: string;
+  viewId: string;
+}): string {
   return `${buildSchemaName(instanceId, databaseId, schemaId)}/views/${encodeResourceSegment(viewId)}`;
 }
 
@@ -121,21 +136,23 @@ export function formatBytes(
   sizeBytes: bigint | number | string | null | undefined
 ): string {
   if (
-    sizeBytes === null ||
-    sizeBytes === undefined ||
-    (typeof sizeBytes === "string" && sizeBytes.trim() === "")
+    anyPredicate(
+      () => sizeBytes === null,
+      () => sizeBytes === undefined,
+      () => typeof sizeBytes === "string" && sizeBytes.trim() === ""
+    )
   ) {
     return "—";
   }
 
-  let numeric: number;
-  if (typeof sizeBytes === "bigint" || typeof sizeBytes === "string") {
-    numeric = Number(sizeBytes);
-  } else {
-    numeric = sizeBytes;
-  }
+  const numeric = Number(sizeBytes);
 
-  if (!Number.isFinite(numeric) || numeric < 0) {
+  if (
+    anyPredicate(
+      () => !Number.isFinite(numeric),
+      () => numeric < 0
+    )
+  ) {
     return "—";
   }
 
@@ -143,7 +160,12 @@ export function formatBytes(
   let unitIndex = 0;
   let value = numeric;
 
-  while (value >= BYTES_PER_KIBIBYTE && unitIndex < units.length - 1) {
+  while (
+    allPredicates(
+      () => value >= BYTES_PER_KIBIBYTE,
+      () => unitIndex < units.length - 1
+    )
+  ) {
     value /= BYTES_PER_KIBIBYTE;
     unitIndex += 1;
   }
@@ -155,7 +177,12 @@ export function formatBytes(
     unitIndex === 0
       ? Math.round(value)
       : Math.round(value * BYTE_DECIMAL_SCALE) / BYTE_DECIMAL_SCALE;
-  if (rounded >= BYTES_PER_KIBIBYTE && unitIndex < units.length - 1) {
+  if (
+    allPredicates(
+      () => rounded >= BYTES_PER_KIBIBYTE,
+      () => unitIndex < units.length - 1
+    )
+  ) {
     rounded /= BYTES_PER_KIBIBYTE;
     unitIndex += 1;
   }
@@ -200,10 +227,7 @@ export function formatTimestampLabel(
   }
 
   try {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(timestampDate(toTimestamp(timestamp)));
+    return timestampFormatter.format(timestampDate(toTimestamp(timestamp)));
   } catch {
     return "—";
   }

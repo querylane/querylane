@@ -122,12 +122,17 @@ function rowMax(
  * in stacked mode, per-series values otherwise) plus any threshold that is
  * allowed to extend the domain.
  */
-function yAxisMax(
-  data: ChartRow[],
-  series: ChartSeries[],
-  stacked: boolean,
-  thresholds: ChartThreshold[] | undefined
-): number {
+function yAxisMax({
+  data,
+  series,
+  stacked,
+  thresholds,
+}: {
+  data: ChartRow[];
+  series: ChartSeries[];
+  stacked: boolean;
+  thresholds: ChartThreshold[] | undefined;
+}): number {
   let max = 0;
   for (const row of data) {
     max = Math.max(max, rowMax(row, series, stacked));
@@ -167,6 +172,35 @@ function thresholdColor(tone: ChartThreshold["tone"]): string {
     : "var(--color-muted-foreground)";
 }
 
+function MetricArea({
+  drawMode,
+  gradientId,
+  item,
+}: {
+  drawMode: MetricTimeChartVariant;
+  gradientId: string;
+  item: ChartSeries;
+}) {
+  const stacked = drawMode === "stacked" && !item.dashed;
+  return (
+    <Area
+      activeDot={ACTIVE_DOT}
+      connectNulls={false}
+      dataKey={item.key}
+      dot={false}
+      fill={stacked ? item.color : `url(#${gradientId}-${item.key})`}
+      fillOpacity={stacked ? STACKED_FILL_OPACITY : 1}
+      isAnimationActive={false}
+      {...(stacked ? { stackId: "stack" } : {})}
+      {...(item.dashed ? { strokeDasharray: DASHED_STROKE } : {})}
+      stroke={item.color}
+      strokeOpacity={item.dashed ? DASHED_STROKE_OPACITY : 1}
+      strokeWidth={item.dashed ? DASHED_STROKE_WIDTH : SOLID_STROKE_WIDTH}
+      type="linear"
+    />
+  );
+}
+
 /**
  * A themed time-series chart on a continuous time axis: calendar-aligned ticks
  * (whole minutes/hours/local midnights), range-adaptive labels, a solid
@@ -201,7 +235,7 @@ function MetricTimeChart({
   const autoTicks = yDomain
     ? null
     : niceAxisTicks(
-        yAxisMax(data, series, drawMode === "stacked", thresholds),
+        yAxisMax({ data, series, stacked: drawMode === "stacked", thresholds }),
         yTickBase
       );
   const autoTop = autoTicks?.at(-1);
@@ -289,29 +323,11 @@ function MetricTimeChart({
           />
         ))}
         {series.map((item) => (
-          <Area
-            activeDot={ACTIVE_DOT}
-            connectNulls={false}
-            dataKey={item.key}
-            dot={false}
-            fill={
-              drawMode === "stacked" && !item.dashed
-                ? item.color
-                : `url(#${gradientId}-${item.key})`
-            }
-            fillOpacity={
-              drawMode === "stacked" && !item.dashed ? STACKED_FILL_OPACITY : 1
-            }
-            isAnimationActive={false}
+          <MetricArea
+            drawMode={drawMode}
+            gradientId={gradientId}
+            item={item}
             key={item.key}
-            {...(drawMode === "stacked" && !item.dashed
-              ? { stackId: "stack" }
-              : {})}
-            {...(item.dashed ? { strokeDasharray: DASHED_STROKE } : {})}
-            stroke={item.color}
-            strokeOpacity={item.dashed ? DASHED_STROKE_OPACITY : 1}
-            strokeWidth={item.dashed ? DASHED_STROKE_WIDTH : SOLID_STROKE_WIDTH}
-            type="linear"
           />
         ))}
         {/* Declared AFTER the series: Recharts paints in JSX order, and inset
