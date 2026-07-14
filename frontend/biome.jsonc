@@ -403,20 +403,6 @@
       }
     },
     {
-      // Re-apply after component-source overrides. This is shadcn registry
-      // hook output, kept exact for future shadcn overwrites.
-      "includes": ["src/hooks/use-mobile.ts"],
-      "linter": {
-        "enabled": false
-      },
-      "formatter": {
-        "enabled": false
-      },
-      "assist": {
-        "enabled": false
-      }
-    },
-    {
       // Re-apply after Fast Refresh component-source overrides. This file keeps
       // one shadcn-derived SelectItem fork for multiline option descriptions.
       "includes": ["src/components/querylane-ui/select.tsx"],

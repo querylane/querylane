@@ -5,7 +5,6 @@ import { describe, expect, test } from "vitest";
 const projectRoot = resolve(import.meta.dirname, "..");
 
 const requiredIgnoredFiles = [
-  "src/components/ui/**",
   "src/components/querylane-ui/**",
   "src/protogen/**",
   "src/routeTree.gen.ts",
@@ -13,6 +12,34 @@ const requiredIgnoredFiles = [
   "**/*.gen.tsx",
   "**/*_pb.ts",
   "**/*_connectquery.ts",
+];
+
+const deadRegistryFiles = new Set([
+  "src/components/ui/calendar.tsx",
+  "src/components/ui/combobox.tsx",
+  "src/components/ui/kbd.tsx",
+]);
+
+// The main tsconfig resolves these imports through emitted declarations, so
+// React Doctor cannot trace source-file reachability. Suppress only that rule.
+const querylaneUiUnusedFileOverrides = [
+  "src/components/ui/copy-icon-button.tsx",
+  "src/components/ui/data-table-faceted-filter.tsx",
+  "src/components/ui/data-table.tsx",
+  "src/components/ui/disabled-reason-button.tsx",
+  "src/components/ui/inline-code.tsx",
+  "src/components/ui/overflow-tooltip.tsx",
+  "src/components/ui/refresh-control.tsx",
+  "src/components/ui/sql-code-block.tsx",
+  "src/components/ui/status-indicator.tsx",
+];
+
+const removedDependencies = [
+  "@tanstack/query-core",
+  "@tanstack/react-store",
+  "@tanstack/store",
+  "bun-types",
+  "react-day-picker",
 ];
 
 const strictCategories = [
@@ -140,7 +167,6 @@ describe("React Doctor policy", () => {
 
     expect(ignoredFiles).toEqual(expect.arrayContaining(requiredIgnoredFiles));
     expect(ignore["rules"] ?? []).toEqual([]);
-    expect(ignore["overrides"] ?? []).toEqual([]);
     expect(ignore["tags"] ?? []).toEqual([]);
 
     for (const category of strictCategories) {
@@ -170,6 +196,73 @@ describe("React Doctor policy", () => {
     for (const surface of strictDesignSurfaces) {
       const controls = getRecordProperty(surfaces, surface);
       expect(getArrayProperty(controls, "includeTags")).toContain("design");
+    }
+  });
+
+  test("runs full dead-code analysis in the frontend static job", () => {
+    const packageJson = readJsonRecord("package.json");
+    const scripts = getRecordProperty(packageJson, "scripts");
+    const frontendWorkflow = readFileSync(
+      resolve(projectRoot, "../.github/workflows/frontend-ci.yml"),
+      "utf8"
+    );
+
+    expect(scripts["doctor:dead-code"]).toBe(
+      "react-doctor . -y --scope full --no-lint --blocking warning --no-respect-inline-disables --no-score"
+    );
+    expect(frontendWorkflow).toContain(
+      "- name: Run React Doctor dead-code analysis\n        run: bun run doctor:dead-code"
+    );
+    expect(frontendWorkflow).toContain(
+      "doctor\\.config\\.ts|react-doctor\\.config\\.json"
+    );
+  });
+
+  test("uses explicit existing UI ignores instead of a blind registry glob", () => {
+    const doctorConfig = readJsonRecord("react-doctor.config.json");
+    const ignore = getRecordProperty(doctorConfig, "ignore");
+    const ignoredFiles = getArrayProperty(ignore, "files").filter(
+      (file): file is string => typeof file === "string"
+    );
+    const ignoredUiFiles = ignoredFiles
+      .filter((file) => file.startsWith("src/components/ui/"))
+      .sort();
+    expect(ignoredFiles).not.toContain("src/components/ui/**");
+    expect(ignoredUiFiles.length).toBeGreaterThan(0);
+    for (const ignoredUiFile of ignoredUiFiles) {
+      expect(existsSync(resolve(projectRoot, ignoredUiFile))).toBe(true);
+    }
+    for (const deadRegistryFile of deadRegistryFiles) {
+      expect(ignoredUiFiles).not.toContain(deadRegistryFile);
+      expect(existsSync(resolve(projectRoot, deadRegistryFile))).toBe(false);
+    }
+    for (const querylaneUiFile of querylaneUiUnusedFileOverrides) {
+      expect(ignoredUiFiles).not.toContain(querylaneUiFile);
+    }
+    expect(ignore["overrides"]).toEqual([
+      {
+        files: querylaneUiUnusedFileOverrides,
+        rules: ["deslop/unused-file"],
+      },
+    ]);
+    expect(existsSync(resolve(projectRoot, "knip.json"))).toBe(false);
+  });
+
+  test("uses the Querylane package identity without dead dependencies", () => {
+    const packageJson = readJsonRecord("package.json");
+    const dependencies = getRecordProperty(packageJson, "dependencies");
+    const devDependencies = getRecordProperty(packageJson, "devDependencies");
+    const changesetReadme = readFileSync(
+      resolve(projectRoot, ".changeset/README.md"),
+      "utf8"
+    );
+
+    expect(packageJson["name"]).toBe("@querylane/frontend");
+    expect(changesetReadme).toContain("@querylane/frontend");
+    expect(changesetReadme).not.toContain("frontend-new");
+    for (const dependency of removedDependencies) {
+      expect(dependencies[dependency]).toBeUndefined();
+      expect(devDependencies[dependency]).toBeUndefined();
     }
   });
 });
