@@ -478,7 +478,7 @@ function MetricUnavailableNotice({
         <RetryActionButton
           label={retryLabel}
           onRetry={onRetry}
-          size="xs"
+          size="default"
           variant="outline"
         />
       </AlertAction>
@@ -1098,7 +1098,12 @@ function QueryInsightsContent({
   }
 
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div
+      className={cn(
+        "grid items-start gap-4",
+        selectedQuery && "lg:grid-cols-[minmax(0,1fr)_360px]"
+      )}
+    >
       <div className="min-w-0 lg:col-start-1">
         <TopQueriesCard
           insights={insights}
