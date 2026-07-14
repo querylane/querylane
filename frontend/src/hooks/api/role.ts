@@ -390,7 +390,7 @@ function useRolesAccessMapResourcesQuery(
   const roleKey = input.roles.map((role) => role.name).join("|");
 
   return useTanstackQuery({
-    enabled: (options?.enabled ?? true) && input.roles.length > 0,
+    enabled: options?.enabled ?? true,
     queryFn: () => fetchRoleAccessMapResources(transport, input),
     queryKey: [
       "console",

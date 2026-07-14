@@ -687,6 +687,9 @@ test("console roles access map matches the design source", async () => {
     .toBeVisible();
   await expect.element(page.getByText("PUBLIC", { exact: true })).toBeVisible();
   await expect
+    .element(page.getByText("pg_monitor", { exact: true }))
+    .not.toBeInTheDocument();
+  await expect
     .element(page.getByText("logistics", { exact: true }))
     .toBeVisible();
   await expect
@@ -694,7 +697,14 @@ test("console roles access map matches the design source", async () => {
     .toBeVisible();
   await page.getByRole("button", { name: "View" }).click();
   await expect.element(page.getByText("Access filters")).toBeVisible();
+  await expect.element(page.getByText("Built-in roles")).toBeVisible();
+  await expect
+    .element(page.getByText("Show 1 PostgreSQL-provided role."))
+    .toBeVisible();
   await expect.element(page.getByText("Default privileges")).toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "console-roles-access-map-view"
+  );
   await page.getByRole("button", { name: "View" }).click();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "console-roles-access-map"

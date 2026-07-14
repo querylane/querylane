@@ -70,12 +70,15 @@ function CanvasHarness({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   return (
     <RolesAccessMapCanvas
+      builtInRoleCount={0}
       failedRequestCount={failedRequestCount}
       isLoading={isLoading}
       model={model}
       onSelectNode={setSelectedNodeId}
+      onShowBuiltInRolesChange={() => undefined}
       partial={partial}
       selectedNodeId={selectedNodeId}
+      showBuiltInRoles={false}
     />
   );
 }
@@ -118,6 +121,13 @@ describe("RolesAccessMapCanvas", () => {
     const selectedNode = screen.getByRole("button", {
       name: "Trace access for app_reader",
     });
+    const mapSvg = container.querySelector<SVGElement>("svg.absolute");
+    const [connectedEdge, unrelatedEdge] = Array.from(
+      mapSvg?.querySelectorAll("path") ?? []
+    );
+
+    expect(connectedEdge?.classList.contains("opacity-15")).toBe(true);
+    expect(unrelatedEdge?.classList.contains("opacity-15")).toBe(true);
 
     selectedNode.focus();
     await user.keyboard("{Enter}");
@@ -125,10 +135,6 @@ describe("RolesAccessMapCanvas", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(selectedNode.getAttribute("aria-pressed")).toBe("true");
 
-    const mapSvg = container.querySelector<SVGElement>("svg.absolute");
-    const [connectedEdge, unrelatedEdge] = Array.from(
-      mapSvg?.querySelectorAll("path") ?? []
-    );
     expect(connectedEdge?.classList.contains("opacity-100")).toBe(true);
     expect(connectedEdge?.getAttribute("stroke-width")).toBe("2");
     expect(unrelatedEdge?.classList.contains("opacity-15")).toBe(true);
@@ -137,7 +143,8 @@ describe("RolesAccessMapCanvas", () => {
     await user.click(selectedNode);
 
     expect(selectedNode.getAttribute("aria-pressed")).toBe("false");
-    expect(unrelatedEdge?.classList.contains("opacity-100")).toBe(true);
+    expect(connectedEdge?.classList.contains("opacity-15")).toBe(true);
+    expect(unrelatedEdge?.classList.contains("opacity-15")).toBe(true);
   });
 
   test("filters visible edge paths", async () => {

@@ -430,6 +430,45 @@ describe("useListRoleDefaultPrivilegesQuery", () => {
 });
 
 describe("useRolesAccessMapResourcesQuery", () => {
+  test("loads PUBLIC grants when no roles are visible", async () => {
+    const transport = createRouterTransport(({ service }) => {
+      service(DatabaseService, {
+        listDatabases() {
+          return create(ListDatabasesResponseSchema, {
+            databases: [
+              {
+                displayName: "logistics",
+                name: "instances/local/databases/logistics",
+              },
+            ],
+          });
+        },
+      });
+      service(RoleService, {
+        listPublicGrants() {
+          return create(ListPublicGrantsResponseSchema, {
+            grants: [{ privilege: "USAGE", schemaName: "public" }],
+          });
+        },
+      });
+    });
+
+    const { result } = renderHook(
+      () =>
+        useRolesAccessMapResourcesQuery(
+          { instanceId: "local", roles: [] },
+          { refetchOnWindowFocus: false }
+        ),
+      { wrapper: createWrapper(transport) }
+    );
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data?.publicAccess).toHaveLength(1);
+    expect(result.current.data?.roleAccess).toEqual([]);
+  });
+
   test("keeps one page per facet and reports truncated access data", async () => {
     const defaultPrivilegeRequests: ListRoleDefaultPrivilegesRequest[] = [];
     const grantRequests: ListRoleGrantsRequest[] = [];
