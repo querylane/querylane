@@ -8,6 +8,8 @@ on:
     paths:
       - backend/**
       - .github/workflows/backend-test.yml
+      - taskfiles/backend.yaml
+      - taskfiles/dev.yaml
 
 concurrency:
   group: backend-test-${{ github.ref }}
@@ -48,6 +50,8 @@ jobs:
           set -o pipefail
           tparse -format markdown -file unit-test-output.json > "$GITHUB_STEP_SUMMARY"
           exit "$TEST_EXIT_CODE"
+      - name: Verify development reflection build
+        run: go test -short -tags querylane_dev ./cmd/server
 
   integration-tests:
     name: Integration Tests

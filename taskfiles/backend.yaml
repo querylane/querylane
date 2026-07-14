@@ -35,7 +35,7 @@ tasks:
       - :install:go
     dir: "{{.BACKEND_ROOT}}"
     cmds:
-      - '{{.PATH_PREFIX}} go run . {{.CLI_ARGS}}'
+      - '{{.PATH_PREFIX}} go run -tags querylane_dev . {{.CLI_ARGS}}'
 
   build:
     desc: Build Go binary with build info

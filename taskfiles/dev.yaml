@@ -36,7 +36,7 @@ tasks:
         echo ""
       - |
         # Start backend in background
-        (cd {{.BACKEND_ROOT}} && {{.PATH_PREFIX}} go run . server start --config={{.DEV_CONFIG}}) &
+        (cd {{.BACKEND_ROOT}} && {{.PATH_PREFIX}} go run -tags querylane_dev . server start --config={{.DEV_CONFIG}}) &
         BACKEND_PID=$!
         
         # Start frontend with bun
@@ -83,7 +83,7 @@ tasks:
     dir: "{{.BACKEND_ROOT}}"
     cmds:
       - echo "🔌 Starting backend server..."
-      - '{{.PATH_PREFIX}} go run . server start --config={{.DEV_CONFIG}}'
+      - '{{.PATH_PREFIX}} go run -tags querylane_dev . server start --config={{.DEV_CONFIG}}'
 
   frontend:
     desc: Start frontend development server
