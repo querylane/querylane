@@ -109,7 +109,7 @@ func TestIntegrationOpenPostgresDBWithBudgetBoundsPoolsTogether(t *testing.T) {
 	for i := range dbs {
 		var err error
 
-		dbs[i], err = openPostgresDBWithBudget(dsn, budget)
+		dbs[i], err = openPostgresDBWithBudget(dsn, budget, nil)
 		require.NoError(t, err)
 		dbs[i].SetMaxOpenConns(2)
 		dbs[i].SetMaxIdleConns(0)
@@ -147,7 +147,7 @@ func TestIntegrationBudgetedPostgresDBSupportsNoticeCapture(t *testing.T) {
 
 	testDB := storage.NewTestDB(t)
 	dsn := ConfigToDSN(testInstance(t, testDB, mustParseInstanceName(t, "instances/budgeted-notices")).GetConfig())
-	db, err := openPostgresDBWithBudget(dsn, newConnectionBudget(1, 0))
+	db, err := openPostgresDBWithBudget(dsn, newConnectionBudget(1, 0), nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, db.Close()) })
 

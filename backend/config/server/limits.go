@@ -8,8 +8,9 @@ import (
 // Limits bounds user-driven work against managed PostgreSQL instances and the
 // connection pools used to reach them.
 type Limits struct {
-	LiveQueries  LiveQueryLimits    `koanf:"live_queries"`
-	PostgresPool PostgresPoolLimits `koanf:"postgres_pool"`
+	LiveQueries     LiveQueryLimits      `koanf:"live_queries"`
+	ConnectionTests ConnectionTestLimits `koanf:"connection_tests"`
+	PostgresPool    PostgresPoolLimits   `koanf:"postgres_pool"`
 }
 
 // LiveQueryLimits controls non-queuing admission for live-query RPCs. Global
@@ -18,6 +19,14 @@ type Limits struct {
 type LiveQueryLimits struct {
 	Global      int `koanf:"global"`
 	PerInstance int `koanf:"per_instance"`
+}
+
+// ConnectionTestLimits bounds caller-driven PostgreSQL connection probes.
+// PerCallerPerMinute is keyed by the direct socket peer address; forwarding
+// headers are deliberately ignored because no trusted-proxy boundary exists.
+type ConnectionTestLimits struct {
+	PerCallerPerMinute int `koanf:"per_caller_per_minute"`
+	Burst              int `koanf:"burst"`
 }
 
 // PostgresPoolLimits bounds physical connections across every pool targeting
@@ -39,6 +48,14 @@ func (l *Limits) SetDefaults() {
 
 	if l.LiveQueries.PerInstance == 0 {
 		l.LiveQueries.PerInstance = 6
+	}
+
+	if l.ConnectionTests.PerCallerPerMinute == 0 {
+		l.ConnectionTests.PerCallerPerMinute = 10
+	}
+
+	if l.ConnectionTests.Burst == 0 {
+		l.ConnectionTests.Burst = 5
 	}
 
 	if l.PostgresPool.MaxOpenConnections == 0 {
@@ -71,6 +88,18 @@ func (l *Limits) Validate() error {
 
 	if l.LiveQueries.PerInstance > l.LiveQueries.Global {
 		return errors.New("live_queries.per_instance must not exceed live_queries.global")
+	}
+
+	if l.ConnectionTests.PerCallerPerMinute <= 0 {
+		return errors.New("connection_tests.per_caller_per_minute must be positive")
+	}
+
+	if l.ConnectionTests.Burst <= 0 {
+		return errors.New("connection_tests.burst must be positive")
+	}
+
+	if l.ConnectionTests.Burst > l.ConnectionTests.PerCallerPerMinute {
+		return errors.New("connection_tests.burst must not exceed per_caller_per_minute")
 	}
 
 	if l.PostgresPool.MaxOpenConnections <= 0 {

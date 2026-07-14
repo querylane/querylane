@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 
+	"github.com/querylane/querylane/backend/engine"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
@@ -45,7 +46,7 @@ func TestConnectionTestErrorPreservesContextSemantics(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := connectionTestError(context.Background(), "config", "", tt.err)
+			err := connectionTestErrorWithDetails(context.Background(), "config", "", tt.err, true)
 			assert.Equal(t, tt.code, err.Code())
 		})
 	}
@@ -138,7 +139,7 @@ func TestConnectionTestErrorClassifiesPostgresSQLStates(t *testing.T) {
 				Message: "server message for " + tt.sqlstate,
 			}
 
-			connectErr := connectionTestError(context.Background(), tt.field, "", fmt.Errorf("probe failed: %w", rawErr))
+			connectErr := connectionTestErrorWithDetails(context.Background(), tt.field, "", fmt.Errorf("probe failed: %w", rawErr), true)
 
 			require.NotNil(t, connectErr)
 			assert.Equal(t, tt.wantCode, connectErr.Code())
@@ -152,10 +153,40 @@ func TestConnectionTestErrorClassifiesPostgresSQLStates(t *testing.T) {
 	}
 }
 
+func TestConnectionTestErrorCoarsensUntrustedFailures(t *testing.T) {
+	t.Parallel()
+
+	errorsToCompare := []error{
+		&pgconn.PgError{Code: "28P01", Message: "password rejected"},
+		&pgconn.PgError{Code: "3D000", Message: "database missing"},
+		&net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")},
+	}
+
+	for _, rawErr := range errorsToCompare {
+		connectErr := connectionTestErrorWithDetails(context.Background(), "config", "", rawErr, false)
+
+		assert.Equal(t, connect.CodeUnavailable, connectErr.Code())
+		assert.Equal(t, "Could not connect to PostgreSQL with these settings.", connectErr.Message())
+		assert.Empty(t, badRequestViolationFields(t, connectErr))
+		assert.NotContains(t, connectErr.Message(), rawErr.Error())
+	}
+}
+
+func TestConnectionTestErrorNeverExposesBlockedTarget(t *testing.T) {
+	t.Parallel()
+
+	rawErr := fmt.Errorf("dial 169.254.169.254: %w", engine.ErrTargetNotAllowed)
+	connectErr := connectionTestErrorWithDetails(context.Background(), "config", "", rawErr, true)
+
+	assert.Equal(t, connect.CodeUnavailable, connectErr.Code())
+	assert.Equal(t, "Could not connect to PostgreSQL with these settings.", connectErr.Message())
+	assert.NotContains(t, connectErr.Message(), "169.254.169.254")
+}
+
 func TestConnectionTestErrorMapsReachabilityFailureToHostAndPort(t *testing.T) {
 	t.Parallel()
 
-	connectErr := connectionTestError(
+	connectErr := connectionTestErrorWithDetails(
 		context.Background(),
 		"spec.config",
 		"",
@@ -164,6 +195,7 @@ func TestConnectionTestErrorMapsReachabilityFailureToHostAndPort(t *testing.T) {
 			Net: "tcp",
 			Err: errors.New("connect: connection refused"),
 		},
+		true,
 	)
 
 	require.NotNil(t, connectErr)

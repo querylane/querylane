@@ -271,7 +271,16 @@ func (a *App) mountDBServices(mux *http.ServeMux, state *dbState, accessLogger *
 	liveSessions := livequery.NewSessionOpener(state.connManager, state.liveQueryLimiter)
 
 	overviewProvider := instance.NewOverviewProvider(liveSessions)
-	instanceSvc := instance.NewService(state.instanceReader, state.instanceRepo, state.connectionRecorder, state.connManager, cat, overviewProvider, state.configManagedInstances)
+	instanceSvc := instance.NewService(
+		state.instanceReader,
+		state.instanceRepo,
+		state.connectionRecorder,
+		state.connManager,
+		cat,
+		overviewProvider,
+		state.configManagedInstances,
+		state.connectionTestGuard,
+	)
 
 	mux.Handle(v1alpha1connect.NewInstanceServiceHandler(instanceSvc, opts...))
 	mux.Handle(v1alpha1connect.NewDatabaseServiceHandler(database.NewService(cat, database.NewQueryInsightsProvider(liveSessions)), opts...))

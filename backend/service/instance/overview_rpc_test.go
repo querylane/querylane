@@ -44,7 +44,7 @@ func TestGetInstanceOverviewIncludesIOMetrics(t *testing.T) {
 				},
 			}, nil
 		},
-	), false)
+	), false, newTestConnectionGuard())
 
 	resp, err := service.GetInstanceOverview(context.Background(), connect.NewRequest(&v1alpha1.GetInstanceOverviewRequest{
 		Name: "instances/prod",
@@ -74,7 +74,7 @@ func TestGetInstanceOverviewReportsIOMetricsUnavailable(t *testing.T) {
 		func(_ context.Context, _ resource.InstanceName) (*engine.InstanceOverview, error) {
 			return &engine.InstanceOverview{}, nil
 		},
-	), false)
+	), false, newTestConnectionGuard())
 
 	resp, err := service.GetInstanceOverview(context.Background(), connect.NewRequest(&v1alpha1.GetInstanceOverviewRequest{
 		Name: "instances/prod",
@@ -123,7 +123,7 @@ func TestGetInstanceOverviewPartialErrorIncludesPostgresSQLMetadata(t *testing.T
 				},
 			}, nil
 		},
-	), false)
+	), false, newTestConnectionGuard())
 
 	resp, err := service.GetInstanceOverview(context.Background(), connect.NewRequest(&v1alpha1.GetInstanceOverviewRequest{
 		Name: "instances/prod",

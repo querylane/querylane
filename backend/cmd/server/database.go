@@ -18,6 +18,7 @@ import (
 	"github.com/querylane/querylane/backend/postgreserrors"
 	"github.com/querylane/querylane/backend/runner"
 	"github.com/querylane/querylane/backend/runner/jobs"
+	instancesvc "github.com/querylane/querylane/backend/service/instance"
 	metricsvc "github.com/querylane/querylane/backend/service/metrics"
 	"github.com/querylane/querylane/backend/storage"
 	"github.com/querylane/querylane/backend/storage/catalog"
@@ -85,6 +86,7 @@ type dbState struct {
 	connectionRecorder     *storage.PGInstanceConnectionRecorder
 	connManager            *engine.SessionResolver
 	liveQueryLimiter       *livequery.Limiter
+	connectionTestGuard    *instancesvc.ConnectionTestGuard
 	catalog                *catalogcache.Catalog
 	runnerExecutionStore   *storage.PGRunnerExecutionStore
 	replicaStore           *storage.PGReplicaStore
@@ -148,6 +150,23 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 		return nil, fmt.Errorf("configure live query limiter: %w", err)
 	}
 
+	targetPolicy, err := engine.NewTargetPolicy(
+		cfg.InstanceTargets.AllowedCIDRs,
+		cfg.InstanceTargets.DeniedCIDRs,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("configure instance target policy: %w", err)
+	}
+
+	connectionTestGuard, err := instancesvc.NewConnectionTestGuard(
+		limits.ConnectionTests.PerCallerPerMinute,
+		limits.ConnectionTests.Burst,
+		targetPolicy.HasExplicitAllowlist(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("configure connection test guard: %w", err)
+	}
+
 	cl, err := storage.NewPostgresDB(ctx, cfg)
 	if err != nil {
 		report(databaseSetupErrorEvent(dbsetup.StepConnecting, err))
@@ -202,7 +221,7 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 	tokenCodec := engine.NewTokenCodec(tokenSigningKey)
 
 	engineImpl := postgres.New(tokenCodec)
-	poolManager := engine.NewManager(connConfig, engineImpl)
+	poolManager := engine.NewManager(connConfig, engineImpl, targetPolicy)
 	connManager := engine.NewSessionResolver(instanceRepo, poolManager)
 	instanceRuntimeStore := storage.NewInstanceRuntimeStateStore(cl)
 	connectionRecorder := storage.NewInstanceConnectionRecorder(cl)
@@ -259,6 +278,7 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 		connectionRecorder:     connectionRecorder,
 		connManager:            connManager,
 		liveQueryLimiter:       liveQueryLimiter,
+		connectionTestGuard:    connectionTestGuard,
 		catalog:                catalogCache,
 		runnerExecutionStore:   runnerExecutionStore,
 		replicaStore:           replicaStore,

@@ -17,10 +17,11 @@ var _ config.Node = (*Config)(nil)
 
 // Config represents the server configuration.
 type Config struct {
-	HTTP     HTTP              `koanf:"http"`
-	Database *Database         `koanf:"database"`
-	Embedded *EmbeddedDatabase `koanf:"embedded"`
-	Limits   Limits            `koanf:"limits"`
+	HTTP            HTTP                 `koanf:"http"`
+	Database        *Database            `koanf:"database"`
+	Embedded        *EmbeddedDatabase    `koanf:"embedded"`
+	Limits          Limits               `koanf:"limits"`
+	InstanceTargets InstanceTargetPolicy `koanf:"instance_targets"`
 
 	// Instances defines managed PostgreSQL instances via config (IaC mode).
 	// When set, instances are read-only through the API — mutations are rejected.
@@ -61,6 +62,10 @@ func (c *Config) Validate() error {
 
 	if err := c.Limits.Validate(); err != nil {
 		return fmt.Errorf("limits: %w", err)
+	}
+
+	if err := c.InstanceTargets.Validate(); err != nil {
+		return fmt.Errorf("instance_targets: %w", err)
 	}
 
 	if c.Database != nil && c.Embedded != nil {

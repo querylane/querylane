@@ -32,16 +32,17 @@ var ErrPostgresNoticeCaptureUnsupported = errors.New("postgres notice capture re
 // not share notices across requests. The router is always attached, but it is
 // a no-op while no request-local collector is installed.
 func OpenPostgresDB(dsn string) (*sql.DB, error) {
-	return openPostgresDBWithBudget(dsn, nil)
+	return openPostgresDBWithBudget(dsn, nil, nil)
 }
 
-func openPostgresDBWithBudget(dsn string, budget *connectionBudget) (*sql.DB, error) {
+func openPostgresDBWithBudget(dsn string, budget *connectionBudget, targetPolicy *TargetPolicy) (*sql.DB, error) {
 	cfg, err := pgx.ParseConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("parse postgres connection config: %w", err)
 	}
 
 	cfg.OnNotice = routePostgresNotice
+	applyTargetPolicy(cfg, targetPolicy)
 
 	connector := stdlib.GetConnector(*cfg, stdlib.OptionAfterConnect(func(_ context.Context, conn *pgx.Conn) error {
 		conn.PgConn().CustomData()[postgresNoticeCollectorKey] = &postgresNoticeSlot{}

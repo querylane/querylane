@@ -86,7 +86,7 @@ func (r *createServiceConnectionRecorder) RecordActive(context.Context, string, 
 }
 
 func newCreateInstanceTestService(repo *createServiceInstanceRepo, connManager *createServiceConnectionManager, recorder *createServiceConnectionRecorder) *Service {
-	return NewService(repo, repo, recorder, connManager, &mockCatalogProvider{}, &mockOverviewFetcher{}, false)
+	return NewService(repo, repo, recorder, connManager, &mockCatalogProvider{}, &mockOverviewFetcher{}, false, newTestConnectionGuard())
 }
 
 func createInstanceTestRequest(validateOnly bool) *v1alpha1.CreateInstanceRequest {
@@ -257,6 +257,131 @@ func TestTestInstanceConnectionFailureReturnsActionableMessage(t *testing.T) {
 	assert.Equal(t, 1, connManager.calls)
 	assert.Equal(t, 0, repo.createCalls)
 	assert.Equal(t, 0, recorder.activeCalls)
+}
+
+func TestTestInstanceConnectionCoarsensDefaultErrors(t *testing.T) {
+	t.Parallel()
+
+	if !testing.Short() {
+		t.Skip("unit test: run with -short")
+	}
+
+	probeErrors := []error{
+		errTestConnectionFailed,
+		&pgconn.PgError{Code: "28P01", Message: "password authentication failed"},
+		&pgconn.PgError{Code: "3D000", Message: "database does not exist"},
+	}
+
+	for _, probeErr := range probeErrors {
+		guard, err := NewConnectionTestGuard(10, 5, false)
+		require.NoError(t, err)
+
+		connManager := &createServiceConnectionManager{err: probeErr}
+		service := NewService(
+			&createServiceInstanceRepo{},
+			&createServiceInstanceRepo{},
+			&createServiceConnectionRecorder{},
+			connManager,
+			&mockCatalogProvider{},
+			&mockOverviewFetcher{},
+			false,
+			guard,
+		)
+
+		res, err := service.TestInstanceConnection(t.Context(), connect.NewRequest(&v1alpha1.TestInstanceConnectionRequest{
+			Config: createInstanceTestRequest(false).GetSpec().GetConfig(),
+		}))
+
+		require.Error(t, err)
+		assert.Nil(t, res)
+
+		var connectErr *connect.Error
+		require.ErrorAs(t, err, &connectErr)
+		assert.Equal(t, connect.CodeUnavailable, connectErr.Code())
+		assert.Equal(t, "Could not connect to PostgreSQL with these settings.", connectErr.Message())
+		assert.Empty(t, badRequestViolationFields(t, connectErr))
+		assert.Equal(t, 1, connManager.calls)
+	}
+}
+
+func TestConnectionTestRateLimitCoversTestCreateAndUpdate(t *testing.T) {
+	t.Parallel()
+
+	if !testing.Short() {
+		t.Skip("unit test: run with -short")
+	}
+
+	tests := []struct {
+		name string
+		call func(*Service) error
+	}{
+		{
+			name: "standalone test",
+			call: func(service *Service) error {
+				_, err := service.TestInstanceConnection(t.Context(), connect.NewRequest(&v1alpha1.TestInstanceConnectionRequest{
+					Config: createInstanceTestRequest(false).GetSpec().GetConfig(),
+				}))
+
+				return err
+			},
+		},
+		{
+			name: "create validation",
+			call: func(service *Service) error {
+				_, err := service.CreateInstance(t.Context(), connect.NewRequest(createInstanceTestRequest(false)))
+
+				return err
+			},
+		},
+		{
+			name: "update validation",
+			call: func(service *Service) error {
+				_, err := service.UpdateInstance(t.Context(), connect.NewRequest(&v1alpha1.UpdateInstanceRequest{
+					Instance: &v1alpha1.Instance{
+						Name: "instances/test-instance",
+						Config: &v1alpha1.PostgresConfig{
+							Host: "database.internal",
+						},
+					},
+					UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"config.host"}},
+				}))
+
+				return err
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			guard, err := NewConnectionTestGuard(1, 1, false)
+			require.NoError(t, err)
+			require.NoError(t, guard.admit(""))
+
+			repo := &createServiceInstanceRepo{}
+			connManager := &createServiceConnectionManager{}
+			service := NewService(
+				repo,
+				repo,
+				&createServiceConnectionRecorder{},
+				connManager,
+				&mockCatalogProvider{},
+				&mockOverviewFetcher{},
+				false,
+				guard,
+			)
+
+			err = tt.call(service)
+			require.Error(t, err)
+
+			var connectErr *connect.Error
+			require.ErrorAs(t, err, &connectErr)
+			assert.Equal(t, connect.CodeResourceExhausted, connectErr.Code())
+			assert.Zero(t, connManager.calls)
+			assert.Zero(t, repo.createCalls)
+		})
+	}
 }
 
 func TestCreateInstancePersistsOnlyAfterSuccessfulConnectionTest(t *testing.T) {

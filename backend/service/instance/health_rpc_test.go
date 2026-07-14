@@ -57,7 +57,7 @@ func TestCheckInstanceActivityReturnsOnlyConnectionActivity(t *testing.T) {
 				{PID: 4211, ApplicationName: "worker-pool", State: "active"},
 			},
 		},
-	}, false)
+	}, false, newTestConnectionGuard())
 
 	resp, err := service.CheckInstanceActivity(context.Background(), connect.NewRequest(&v1alpha1.CheckInstanceActivityRequest{
 		Name: "instances/prod",
@@ -161,7 +161,7 @@ func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) 
 				},
 			}, nil
 		},
-	), false)
+	), false, newTestConnectionGuard())
 
 	resp, err := service.CheckInstanceHealth(context.Background(), connect.NewRequest(&v1alpha1.CheckInstanceHealthRequest{
 		Name: "instances/prod",
@@ -250,7 +250,7 @@ func TestCheckInstanceHealthPartialErrorsUseCheckMetadata(t *testing.T) {
 				},
 			}, nil
 		},
-	), false)
+	), false, newTestConnectionGuard())
 
 	resp, err := service.CheckInstanceHealth(context.Background(), connect.NewRequest(&v1alpha1.CheckInstanceHealthRequest{
 		Name: "instances/prod",

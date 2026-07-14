@@ -572,7 +572,7 @@ func (s *IntegrationTestSuite) TestUpdateInstanceRejectsUntestableConfigIntegrat
 
 	defer instanceRepo.DeleteInstance(ctx, "instances/update-test-bad-config") //nolint:errcheck // test cleanup
 
-	service := NewService(instanceRepo, instanceRepo, &mockConnectionRecorder{}, connManager, &mockCatalogProvider{}, &mockOverviewFetcher{}, false)
+	service := NewService(instanceRepo, instanceRepo, &mockConnectionRecorder{}, connManager, &mockCatalogProvider{}, &mockOverviewFetcher{}, false, newTestConnectionGuard())
 
 	resp, err := service.UpdateInstance(ctx, connect.NewRequest(&v1alpha1.UpdateInstanceRequest{
 		Instance: &v1alpha1.Instance{
@@ -620,7 +620,7 @@ func (s *IntegrationTestSuite) TestUpdateInstanceTestsConfigBeforePersistingInte
 
 	defer instanceRepo.DeleteInstance(ctx, "instances/update-test-good-config") //nolint:errcheck // test cleanup
 
-	service := NewService(instanceRepo, instanceRepo, &mockConnectionRecorder{}, connManager, &mockCatalogProvider{}, &mockOverviewFetcher{}, false)
+	service := NewService(instanceRepo, instanceRepo, &mockConnectionRecorder{}, connManager, &mockCatalogProvider{}, &mockOverviewFetcher{}, false, newTestConnectionGuard())
 
 	resp, err := service.UpdateInstance(ctx, connect.NewRequest(&v1alpha1.UpdateInstanceRequest{
 		Instance: &v1alpha1.Instance{
@@ -644,7 +644,7 @@ func (s *IntegrationTestSuite) TestUpdateInstanceTestsConfigBeforePersistingInte
 func (s *IntegrationTestSuite) TestTestInstanceConnectionIntegration() {
 	ctx := context.Background()
 	connManager := &mockConnectionManager{}
-	service := NewService(nil, nil, &mockConnectionRecorder{}, connManager, &mockCatalogProvider{}, &mockOverviewFetcher{}, false)
+	service := NewService(nil, nil, &mockConnectionRecorder{}, connManager, &mockCatalogProvider{}, &mockOverviewFetcher{}, false, newTestConnectionGuard())
 
 	resp, err := service.TestInstanceConnection(ctx, connect.NewRequest(&v1alpha1.TestInstanceConnectionRequest{
 		Config: &v1alpha1.PostgresConfig{
@@ -720,7 +720,7 @@ func (s *IntegrationTestSuite) setupService(ctx context.Context) (*Service, stor
 	instanceRepo = instanceRepo.WithTx(tx)
 
 	// Create service with mock connection tester
-	service := NewService(instanceRepo, instanceRepo, &mockConnectionRecorder{}, &mockConnectionManager{}, &mockCatalogProvider{}, &mockOverviewFetcher{}, false)
+	service := NewService(instanceRepo, instanceRepo, &mockConnectionRecorder{}, &mockConnectionManager{}, &mockCatalogProvider{}, &mockOverviewFetcher{}, false, newTestConnectionGuard())
 
 	// Cleanup function to rollback transaction
 	cleanup := func() {
@@ -747,7 +747,7 @@ func (s *IntegrationTestSuite) runWithoutTransaction(
 		instanceRepo, err := storage.NewInstanceRepository(s.testDB.DB())
 		s.Require().NoError(err)
 
-		service := NewService(instanceRepo, instanceRepo, &mockConnectionRecorder{}, &mockConnectionManager{}, &mockCatalogProvider{}, &mockOverviewFetcher{}, false)
+		service := NewService(instanceRepo, instanceRepo, &mockConnectionRecorder{}, &mockConnectionManager{}, &mockCatalogProvider{}, &mockOverviewFetcher{}, false, newTestConnectionGuard())
 		testFn(ctx, service, instanceRepo)
 	})
 }
