@@ -234,9 +234,20 @@ func (d *Postgres) CheckInstanceActivity(ctx context.Context, db *sql.DB) (*engi
 	return health, nil
 }
 
+// queryConnectionActivityHealth reads the scalar counts, the by-application
+// breakdown, and the session rows inside one transaction: pg_stat_activity is
+// snapshotted on first access per transaction, so all three views agree on the
+// same set of backends instead of each seeing its own instant.
 func queryConnectionActivityHealth(ctx context.Context, db *sql.DB) (*engine.ConnectionActivityHealth, error) {
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, classifyQueryError("begin connection activity transaction", err)
+	}
+
+	defer func() { _ = tx.Rollback() }()
+
 	var activity engine.ConnectionActivityHealth
-	if err := db.QueryRowContext(ctx, getConnectionActivityHealthQuery).Scan(
+	if err := tx.QueryRowContext(ctx, getConnectionActivityHealthQuery).Scan(
 		&activity.Active,
 		&activity.Idle,
 		&activity.IdleInTransaction,
@@ -252,7 +263,7 @@ func queryConnectionActivityHealth(ctx context.Context, db *sql.DB) (*engine.Con
 
 	activity.Status, activity.Summary = summarizeConnectionActivity(activity)
 
-	byApplication, err := queryConnectionActivityByApplication(ctx, db)
+	byApplication, err := queryConnectionActivityByApplication(ctx, tx)
 	if err != nil {
 		// The per-application breakdown is supplementary; keep the authoritative
 		// scalar counts even when it fails.
@@ -261,7 +272,7 @@ func queryConnectionActivityHealth(ctx context.Context, db *sql.DB) (*engine.Con
 		activity.ByApplication = byApplication
 	}
 
-	sessions, err := queryConnectionActivitySessions(ctx, db)
+	sessions, err := queryConnectionActivitySessions(ctx, tx)
 	if err != nil {
 		// Session rows are supplementary; keep the authoritative scalar counts
 		// even when detail visibility is unavailable.
@@ -273,8 +284,8 @@ func queryConnectionActivityHealth(ctx context.Context, db *sql.DB) (*engine.Con
 	return &activity, nil
 }
 
-func queryConnectionActivityByApplication(ctx context.Context, db *sql.DB) ([]engine.ApplicationConnections, error) {
-	rows, err := db.QueryContext(ctx, getConnectionActivityByApplicationQuery)
+func queryConnectionActivityByApplication(ctx context.Context, tx *sql.Tx) ([]engine.ApplicationConnections, error) {
+	rows, err := tx.QueryContext(ctx, getConnectionActivityByApplicationQuery)
 	if err != nil {
 		return nil, classifyQueryError("query connections by application", err)
 	}
@@ -304,8 +315,8 @@ func queryConnectionActivityByApplication(ctx context.Context, db *sql.DB) ([]en
 	return apps, nil
 }
 
-func queryConnectionActivitySessions(ctx context.Context, db *sql.DB) ([]engine.ConnectionActivitySession, error) {
-	rows, err := db.QueryContext(ctx, getConnectionActivitySessionsQuery)
+func queryConnectionActivitySessions(ctx context.Context, tx *sql.Tx) ([]engine.ConnectionActivitySession, error) {
+	rows, err := tx.QueryContext(ctx, getConnectionActivitySessionsQuery)
 	if err != nil {
 		return nil, classifyQueryError("query activity sessions", err)
 	}
