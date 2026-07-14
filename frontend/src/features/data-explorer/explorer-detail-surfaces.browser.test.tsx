@@ -1513,6 +1513,44 @@ test("data explorer schema detail captures active object filters", async () => {
   );
 });
 
+test("data explorer schema detail scopes the map to the selected schema", async () => {
+  const catalog = seedSchemaMapVisualCatalog();
+
+  render(
+    <SchemaDetail
+      activeTab="map"
+      databaseId="logistics"
+      instanceId="prod"
+      onSelectTable={() => undefined}
+      onSelectTableInSchema={() => undefined}
+      onSelectView={() => undefined}
+      owner="app_owner"
+      schemaName="shipping"
+      schemas={catalog.schemas}
+      tables={catalog.shippingTables}
+      tablesError={null}
+      tablesLoading={false}
+      views={[]}
+      viewsError={null}
+      viewsLoading={false}
+    />
+  );
+
+  await expect.element(page.getByText("shipments")).toBeVisible();
+  await expect.element(page.getByText("ports")).not.toBeInTheDocument();
+  await expect.element(page.getByText("change_log")).not.toBeInTheDocument();
+
+  const schemaListParents = schemaMapCatalog.observedQueries
+    .filter(
+      ({ methodName }) =>
+        methodName === "ListTables" || methodName === "ListViews"
+    )
+    .map(({ parent }) => parent);
+  expect(new Set(schemaListParents)).toEqual(
+    new Set([schemaResource("shipping")])
+  );
+});
+
 test("data explorer schema map tab matches the redesign relationship map", async () => {
   const catalog = seedSchemaMapVisualCatalog();
   const onSelectTable = vi.fn();
