@@ -1,6 +1,6 @@
 import { env as processEnv } from "node:process";
 import { createEnv } from "@t3-oss/env-core";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 const MAX_PORT = 65_535;
 

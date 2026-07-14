@@ -8,7 +8,7 @@ import { RsdoctorRspackPlugin } from "@rsdoctor/rspack-plugin";
 import { createEnv } from "@t3-oss/env-core";
 import { TanStackRouterRspack } from "@tanstack/router-plugin/rspack";
 import { pluginDevtoolsJson } from "rsbuild-plugin-devtools-json";
-import { z } from "zod/v4";
+import { z } from "zod";
 import {
   createBuildCacheDigest,
   createPreconnectOrigins,

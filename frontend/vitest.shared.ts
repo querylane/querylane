@@ -62,7 +62,6 @@ export const VITEST_BROWSER_OPTIMIZE_DEPS = [
   "sonner",
   "vitest-browser-react",
   "zod",
-  "zod/v4",
   "zustand",
   "zustand/middleware",
   "zustand/react/shallow",
