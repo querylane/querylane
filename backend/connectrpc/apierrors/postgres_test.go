@@ -87,6 +87,138 @@ func TestClassifyPostgresErrorRecognizesPostgres16To19Deltas(t *testing.T) {
 	}
 }
 
+func TestPostgresErrorDetailUsesAdapterKindAndRetryPolicy(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		kind          postgreserrors.Kind
+		connectCode   connect.Code
+		reason        consolev1alpha1.ErrorReason
+		detailKind    consolev1alpha1.PostgreSqlErrorKind
+		retryGuidance consolev1alpha1.PostgreSqlErrorRetryGuidance
+	}{
+		{
+			name:          "invalid argument",
+			kind:          postgreserrors.KindInvalidArgument,
+			connectCode:   connect.CodeInvalidArgument,
+			reason:        consolev1alpha1.ErrorReason_INVALID_ARGUMENT,
+			detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT,
+			retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+		},
+		{
+			name:          "failed precondition",
+			kind:          postgreserrors.KindFailedPrecondition,
+			connectCode:   connect.CodeFailedPrecondition,
+			reason:        consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+			detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_FAILED_PRECONDITION,
+			retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+		},
+		{
+			name:          "not found",
+			kind:          postgreserrors.KindNotFound,
+			connectCode:   connect.CodeNotFound,
+			reason:        consolev1alpha1.ErrorReason_RESOURCE_NOT_FOUND,
+			detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_NOT_FOUND,
+			retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+		},
+		{
+			name:          "already exists",
+			kind:          postgreserrors.KindAlreadyExists,
+			connectCode:   connect.CodeAlreadyExists,
+			reason:        consolev1alpha1.ErrorReason_RESOURCE_ALREADY_EXISTS,
+			detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_ALREADY_EXISTS,
+			retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+		},
+		{
+			name:          "permission denied",
+			kind:          postgreserrors.KindPermissionDenied,
+			connectCode:   connect.CodePermissionDenied,
+			reason:        consolev1alpha1.ErrorReason_PERMISSION_DENIED,
+			detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
+			retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+		},
+		{
+			name:          "unauthenticated",
+			kind:          postgreserrors.KindUnauthenticated,
+			connectCode:   connect.CodeUnauthenticated,
+			reason:        consolev1alpha1.ErrorReason_UNAUTHENTICATED,
+			detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_UNAUTHENTICATED,
+			retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+		},
+		{
+			name:          "aborted",
+			kind:          postgreserrors.KindAborted,
+			connectCode:   connect.CodeAborted,
+			reason:        consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+			detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_ABORTED,
+			retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_IMMEDIATELY,
+		},
+		{
+			name:          "timeout",
+			kind:          postgreserrors.KindTimeout,
+			connectCode:   connect.CodeDeadlineExceeded,
+			reason:        consolev1alpha1.ErrorReason_TIMEOUT,
+			detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_TIMEOUT,
+			retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
+		},
+		{
+			name:          "unavailable",
+			kind:          postgreserrors.KindUnavailable,
+			connectCode:   connect.CodeUnavailable,
+			reason:        consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+			detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_UNAVAILABLE,
+			retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
+		},
+		{
+			name:          "resource exhausted",
+			kind:          postgreserrors.KindResourceExhausted,
+			connectCode:   connect.CodeResourceExhausted,
+			reason:        consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+			detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_RESOURCE_EXHAUSTED,
+			retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
+		},
+		{
+			name:          "unimplemented",
+			kind:          postgreserrors.KindUnimplemented,
+			connectCode:   connect.CodeUnimplemented,
+			reason:        consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+			detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_UNIMPLEMENTED,
+			retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+		},
+		{
+			name:          "internal",
+			kind:          postgreserrors.KindInternal,
+			connectCode:   connect.CodeInternal,
+			reason:        consolev1alpha1.ErrorReason_INTERNAL_ERROR,
+			detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_INTERNAL,
+			retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
+		},
+		{
+			name:          "unknown",
+			kind:          postgreserrors.Kind("future_kind"),
+			connectCode:   connect.CodeInternal,
+			reason:        consolev1alpha1.ErrorReason_INTERNAL_ERROR,
+			detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_UNSPECIFIED,
+			retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			classification := adaptPostgresClassification(postgreserrors.Classification{Kind: tt.kind}, "execute_query")
+			detail := postgresErrorDetail(classification, false)
+
+			assert.Equal(t, tt.connectCode, classification.ConnectCode)
+			assert.Equal(t, tt.reason, classification.ErrorReason)
+			assert.Equal(t, tt.detailKind, detail.Kind)
+			assert.Equal(t, tt.retryGuidance, detail.RetryGuidance)
+		})
+	}
+}
+
 func TestNewPostgresErrorAddsSafeConnectDetails(t *testing.T) {
 	t.Parallel()
 
@@ -140,6 +272,12 @@ func TestNewPostgresErrorAddsSafeConnectDetails(t *testing.T) {
 	assert.NotContains(t, info.Metadata, "routine")
 
 	detail := requirePostgresErrorDetail(t, connectErr)
+	assert.Equal(t, consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_ALREADY_EXISTS, detail.Kind)
+	assert.Equal(
+		t,
+		consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+		detail.RetryGuidance,
+	)
 	assert.Equal(t, "23505", detail.Sqlstate)
 	assert.Equal(t, "23", detail.SqlstateClass)
 	assert.Equal(t, "unique_violation", detail.ConditionName)

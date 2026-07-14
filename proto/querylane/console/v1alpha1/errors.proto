@@ -44,6 +44,42 @@ enum ErrorReason {
   LIVE_QUERY_LIMIT_EXCEEDED = 103;
 }
 
+// PostgreSqlErrorKind identifies the transport-neutral PostgreSQL error
+// category selected by the backend.
+enum PostgreSqlErrorKind {
+  // The backend did not provide a recognized PostgreSQL error category.
+  POSTGRESQL_ERROR_KIND_UNSPECIFIED = 0;
+
+  POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT = 1;
+  POSTGRESQL_ERROR_KIND_FAILED_PRECONDITION = 2;
+  POSTGRESQL_ERROR_KIND_NOT_FOUND = 3;
+  POSTGRESQL_ERROR_KIND_ALREADY_EXISTS = 4;
+  POSTGRESQL_ERROR_KIND_PERMISSION_DENIED = 5;
+  POSTGRESQL_ERROR_KIND_UNAUTHENTICATED = 6;
+  POSTGRESQL_ERROR_KIND_ABORTED = 7;
+  POSTGRESQL_ERROR_KIND_TIMEOUT = 8;
+  POSTGRESQL_ERROR_KIND_UNAVAILABLE = 9;
+  POSTGRESQL_ERROR_KIND_RESOURCE_EXHAUSTED = 10;
+  POSTGRESQL_ERROR_KIND_UNIMPLEMENTED = 11;
+  POSTGRESQL_ERROR_KIND_INTERNAL = 12;
+}
+
+// PostgreSqlErrorRetryGuidance tells clients when a manual retry may be useful.
+// It is advisory and never requests an automatic retry.
+enum PostgreSqlErrorRetryGuidance {
+  // The backend did not provide retry guidance.
+  POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED = 0;
+
+  // Retry only after correcting the request or PostgreSQL state.
+  POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION = 1;
+
+  // The same request may be retried immediately.
+  POSTGRESQL_ERROR_RETRY_GUIDANCE_IMMEDIATELY = 2;
+
+  // Retry later, after the transient condition may have cleared.
+  POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER = 3;
+}
+
 // PostgreSqlErrorDetail carries PostgreSQL SQLSTATE metadata for Connect error
 // clients. For user-managed instances, server_fields can contain bounded,
 // untrusted message, detail, hint, severity, position, schema_name, table_name,
@@ -67,4 +103,10 @@ message PostgreSqlErrorDetail {
 
   // Bounded server fields approved for the current database trust boundary.
   map<string, string> server_fields = 5;
+
+  // The backend-owned PostgreSQL error category.
+  PostgreSqlErrorKind kind = 6;
+
+  // Advisory guidance for a user-initiated retry.
+  PostgreSqlErrorRetryGuidance retry_guidance = 7;
 }

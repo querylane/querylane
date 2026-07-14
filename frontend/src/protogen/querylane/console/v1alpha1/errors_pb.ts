@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file querylane/console/v1alpha1/errors.proto.
  */
 export const file_querylane_console_v1alpha1_errors: GenFile = /*@__PURE__*/
-  fileDesc("CidxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS9lcnJvcnMucHJvdG8SGnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExIv0BChVQb3N0Z3JlU3FsRXJyb3JEZXRhaWwSEAoIc3Fsc3RhdGUYASABKAkSFgoOc3Fsc3RhdGVfY2xhc3MYAiABKAkSFgoOY29uZGl0aW9uX25hbWUYAyABKAkSEQoJb3BlcmF0aW9uGAQgASgJEloKDXNlcnZlcl9maWVsZHMYBSADKAsyQy5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5Qb3N0Z3JlU3FsRXJyb3JEZXRhaWwuU2VydmVyRmllbGRzRW50cnkaMwoRU2VydmVyRmllbGRzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASq6AgoLRXJyb3JSZWFzb24SHAoYRVJST1JfUkVBU09OX1VOU1BFQ0lGSUVEEAASFgoSUkVTT1VSQ0VfTk9UX0ZPVU5EEAESGwoXUkVTT1VSQ0VfQUxSRUFEWV9FWElTVFMQAhIUChBJTlZBTElEX0FSR1VNRU5UEAMSEgoOSU5URVJOQUxfRVJST1IQBxILCgdUSU1FT1VUEAkSFwoTRkFJTEVEX1BSRUNPTkRJVElPThAKEhMKD1VOQVVUSEVOVElDQVRFRBALEhUKEVBFUk1JU1NJT05fREVOSUVEEAwSHwobQVBQX0RBVEFCQVNFX05PVF9DT05GSUdVUkVEEGUSHAoYQVBQX0RBVEFCQVNFX1VOQVZBSUxBQkxFEGYSHQoZTElWRV9RVUVSWV9MSU1JVF9FWENFRURFRBBnQpMCCh5jb20ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTFCC0Vycm9yc1Byb3RvUAFaWmdpdGh1Yi5jb20vcXVlcnlsYW5lL3F1ZXJ5bGFuZS9iYWNrZW5kL3Byb3RvZ2VuL3F1ZXJ5bGFuZS9jb25zb2xlL3YxYWxwaGExO2NvbnNvbGV2MWFscGhhMaICA1FDWKoCGlF1ZXJ5bGFuZS5Db25zb2xlLlYxYWxwaGExygIaUXVlcnlsYW5lXENvbnNvbGVcVjFhbHBoYTHiAiZRdWVyeWxhbmVcQ29uc29sZVxWMWFscGhhMVxHUEJNZXRhZGF0YeoCHFF1ZXJ5bGFuZTo6Q29uc29sZTo6VjFhbHBoYTFiBnByb3RvMw");
+  fileDesc("CidxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS9lcnJvcnMucHJvdG8SGnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExIo4DChVQb3N0Z3JlU3FsRXJyb3JEZXRhaWwSEAoIc3Fsc3RhdGUYASABKAkSFgoOc3Fsc3RhdGVfY2xhc3MYAiABKAkSFgoOY29uZGl0aW9uX25hbWUYAyABKAkSEQoJb3BlcmF0aW9uGAQgASgJEloKDXNlcnZlcl9maWVsZHMYBSADKAsyQy5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5Qb3N0Z3JlU3FsRXJyb3JEZXRhaWwuU2VydmVyRmllbGRzRW50cnkSPQoEa2luZBgGIAEoDjIvLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlBvc3RncmVTcWxFcnJvcktpbmQSUAoOcmV0cnlfZ3VpZGFuY2UYByABKA4yOC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5Qb3N0Z3JlU3FsRXJyb3JSZXRyeUd1aWRhbmNlGjMKEVNlcnZlckZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEqugIKC0Vycm9yUmVhc29uEhwKGEVSUk9SX1JFQVNPTl9VTlNQRUNJRklFRBAAEhYKElJFU09VUkNFX05PVF9GT1VORBABEhsKF1JFU09VUkNFX0FMUkVBRFlfRVhJU1RTEAISFAoQSU5WQUxJRF9BUkdVTUVOVBADEhIKDklOVEVSTkFMX0VSUk9SEAcSCwoHVElNRU9VVBAJEhcKE0ZBSUxFRF9QUkVDT05ESVRJT04QChITCg9VTkFVVEhFTlRJQ0FURUQQCxIVChFQRVJNSVNTSU9OX0RFTklFRBAMEh8KG0FQUF9EQVRBQkFTRV9OT1RfQ09ORklHVVJFRBBlEhwKGEFQUF9EQVRBQkFTRV9VTkFWQUlMQUJMRRBmEh0KGUxJVkVfUVVFUllfTElNSVRfRVhDRUVERUQQZyqmBAoTUG9zdGdyZVNxbEVycm9yS2luZBIlCiFQT1NUR1JFU1FMX0VSUk9SX0tJTkRfVU5TUEVDSUZJRUQQABIqCiZQT1NUR1JFU1FMX0VSUk9SX0tJTkRfSU5WQUxJRF9BUkdVTUVOVBABEi0KKVBPU1RHUkVTUUxfRVJST1JfS0lORF9GQUlMRURfUFJFQ09ORElUSU9OEAISIwofUE9TVEdSRVNRTF9FUlJPUl9LSU5EX05PVF9GT1VORBADEigKJFBPU1RHUkVTUUxfRVJST1JfS0lORF9BTFJFQURZX0VYSVNUUxAEEisKJ1BPU1RHUkVTUUxfRVJST1JfS0lORF9QRVJNSVNTSU9OX0RFTklFRBAFEikKJVBPU1RHUkVTUUxfRVJST1JfS0lORF9VTkFVVEhFTlRJQ0FURUQQBhIhCh1QT1NUR1JFU1FMX0VSUk9SX0tJTkRfQUJPUlRFRBAHEiEKHVBPU1RHUkVTUUxfRVJST1JfS0lORF9USU1FT1VUEAgSJQohUE9TVEdSRVNRTF9FUlJPUl9LSU5EX1VOQVZBSUxBQkxFEAkSLAooUE9TVEdSRVNRTF9FUlJPUl9LSU5EX1JFU09VUkNFX0VYSEFVU1RFRBAKEicKI1BPU1RHUkVTUUxfRVJST1JfS0lORF9VTklNUExFTUVOVEVEEAsSIgoeUE9TVEdSRVNRTF9FUlJPUl9LSU5EX0lOVEVSTkFMEAwq4QEKHFBvc3RncmVTcWxFcnJvclJldHJ5R3VpZGFuY2USLworUE9TVEdSRVNRTF9FUlJPUl9SRVRSWV9HVUlEQU5DRV9VTlNQRUNJRklFRBAAEjQKMFBPU1RHUkVTUUxfRVJST1JfUkVUUllfR1VJREFOQ0VfQUZURVJfQ09SUkVDVElPThABEi8KK1BPU1RHUkVTUUxfRVJST1JfUkVUUllfR1VJREFOQ0VfSU1NRURJQVRFTFkQAhIpCiVQT1NUR1JFU1FMX0VSUk9SX1JFVFJZX0dVSURBTkNFX0xBVEVSEANCkwIKHmNvbS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMUILRXJyb3JzUHJvdG9QAVpaZ2l0aHViLmNvbS9xdWVyeWxhbmUvcXVlcnlsYW5lL2JhY2tlbmQvcHJvdG9nZW4vcXVlcnlsYW5lL2NvbnNvbGUvdjFhbHBoYTE7Y29uc29sZXYxYWxwaGExogIDUUNYqgIaUXVlcnlsYW5lLkNvbnNvbGUuVjFhbHBoYTHKAhpRdWVyeWxhbmVcQ29uc29sZVxWMWFscGhhMeICJlF1ZXJ5bGFuZVxDb25zb2xlXFYxYWxwaGExXEdQQk1ldGFkYXRh6gIcUXVlcnlsYW5lOjpDb25zb2xlOjpWMWFscGhhMWIGcHJvdG8z");
 
 /**
  * PostgreSqlErrorDetail carries PostgreSQL SQLSTATE metadata for Connect error
@@ -59,6 +59,20 @@ export type PostgreSqlErrorDetail = Message<"querylane.console.v1alpha1.PostgreS
    * @generated from field: map<string, string> server_fields = 5;
    */
   serverFields: { [key: string]: string };
+
+  /**
+   * The backend-owned PostgreSQL error category.
+   *
+   * @generated from field: querylane.console.v1alpha1.PostgreSqlErrorKind kind = 6;
+   */
+  kind: PostgreSqlErrorKind;
+
+  /**
+   * Advisory guidance for a user-initiated retry.
+   *
+   * @generated from field: querylane.console.v1alpha1.PostgreSqlErrorRetryGuidance retry_guidance = 7;
+   */
+  retryGuidance: PostgreSqlErrorRetryGuidance;
 };
 
 /**
@@ -165,4 +179,127 @@ export enum ErrorReason {
  */
 export const ErrorReasonSchema: GenEnum<ErrorReason> = /*@__PURE__*/
   enumDesc(file_querylane_console_v1alpha1_errors, 0);
+
+/**
+ * PostgreSqlErrorKind identifies the transport-neutral PostgreSQL error
+ * category selected by the backend.
+ *
+ * @generated from enum querylane.console.v1alpha1.PostgreSqlErrorKind
+ */
+export enum PostgreSqlErrorKind {
+  /**
+   * The backend did not provide a recognized PostgreSQL error category.
+   *
+   * @generated from enum value: POSTGRESQL_ERROR_KIND_UNSPECIFIED = 0;
+   */
+  POSTGRESQL_ERROR_KIND_UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT = 1;
+   */
+  POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT = 1,
+
+  /**
+   * @generated from enum value: POSTGRESQL_ERROR_KIND_FAILED_PRECONDITION = 2;
+   */
+  POSTGRESQL_ERROR_KIND_FAILED_PRECONDITION = 2,
+
+  /**
+   * @generated from enum value: POSTGRESQL_ERROR_KIND_NOT_FOUND = 3;
+   */
+  POSTGRESQL_ERROR_KIND_NOT_FOUND = 3,
+
+  /**
+   * @generated from enum value: POSTGRESQL_ERROR_KIND_ALREADY_EXISTS = 4;
+   */
+  POSTGRESQL_ERROR_KIND_ALREADY_EXISTS = 4,
+
+  /**
+   * @generated from enum value: POSTGRESQL_ERROR_KIND_PERMISSION_DENIED = 5;
+   */
+  POSTGRESQL_ERROR_KIND_PERMISSION_DENIED = 5,
+
+  /**
+   * @generated from enum value: POSTGRESQL_ERROR_KIND_UNAUTHENTICATED = 6;
+   */
+  POSTGRESQL_ERROR_KIND_UNAUTHENTICATED = 6,
+
+  /**
+   * @generated from enum value: POSTGRESQL_ERROR_KIND_ABORTED = 7;
+   */
+  POSTGRESQL_ERROR_KIND_ABORTED = 7,
+
+  /**
+   * @generated from enum value: POSTGRESQL_ERROR_KIND_TIMEOUT = 8;
+   */
+  POSTGRESQL_ERROR_KIND_TIMEOUT = 8,
+
+  /**
+   * @generated from enum value: POSTGRESQL_ERROR_KIND_UNAVAILABLE = 9;
+   */
+  POSTGRESQL_ERROR_KIND_UNAVAILABLE = 9,
+
+  /**
+   * @generated from enum value: POSTGRESQL_ERROR_KIND_RESOURCE_EXHAUSTED = 10;
+   */
+  POSTGRESQL_ERROR_KIND_RESOURCE_EXHAUSTED = 10,
+
+  /**
+   * @generated from enum value: POSTGRESQL_ERROR_KIND_UNIMPLEMENTED = 11;
+   */
+  POSTGRESQL_ERROR_KIND_UNIMPLEMENTED = 11,
+
+  /**
+   * @generated from enum value: POSTGRESQL_ERROR_KIND_INTERNAL = 12;
+   */
+  POSTGRESQL_ERROR_KIND_INTERNAL = 12,
+}
+
+/**
+ * Describes the enum querylane.console.v1alpha1.PostgreSqlErrorKind.
+ */
+export const PostgreSqlErrorKindSchema: GenEnum<PostgreSqlErrorKind> = /*@__PURE__*/
+  enumDesc(file_querylane_console_v1alpha1_errors, 1);
+
+/**
+ * PostgreSqlErrorRetryGuidance tells clients when a manual retry may be useful.
+ * It is advisory and never requests an automatic retry.
+ *
+ * @generated from enum querylane.console.v1alpha1.PostgreSqlErrorRetryGuidance
+ */
+export enum PostgreSqlErrorRetryGuidance {
+  /**
+   * The backend did not provide retry guidance.
+   *
+   * @generated from enum value: POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED = 0;
+   */
+  POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED = 0,
+
+  /**
+   * Retry only after correcting the request or PostgreSQL state.
+   *
+   * @generated from enum value: POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION = 1;
+   */
+  POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION = 1,
+
+  /**
+   * The same request may be retried immediately.
+   *
+   * @generated from enum value: POSTGRESQL_ERROR_RETRY_GUIDANCE_IMMEDIATELY = 2;
+   */
+  POSTGRESQL_ERROR_RETRY_GUIDANCE_IMMEDIATELY = 2,
+
+  /**
+   * Retry later, after the transient condition may have cleared.
+   *
+   * @generated from enum value: POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER = 3;
+   */
+  POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER = 3,
+}
+
+/**
+ * Describes the enum querylane.console.v1alpha1.PostgreSqlErrorRetryGuidance.
+ */
+export const PostgreSqlErrorRetryGuidanceSchema: GenEnum<PostgreSqlErrorRetryGuidance> = /*@__PURE__*/
+  enumDesc(file_querylane_console_v1alpha1_errors, 2);
 

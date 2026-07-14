@@ -57,7 +57,7 @@ func adaptPostgresClassification(
 	classification postgreserrors.Classification,
 	operation PostgresOperationLabel,
 ) PostgresErrorClassification {
-	code, reason := postgresConnectMapping(classification.Kind)
+	policy := postgresAdapterPolicyFor(classification.Kind)
 
 	return PostgresErrorClassification{
 		SQLState:      classification.SQLState,
@@ -66,8 +66,8 @@ func adaptPostgresClassification(
 		Operation:     operation,
 		Profile:       classification.Profile,
 		Kind:          classification.Kind,
-		ConnectCode:   code,
-		ErrorReason:   reason,
+		ConnectCode:   policy.connectCode,
+		ErrorReason:   policy.errorReason,
 		ClientFields:  classification.ClientFields,
 	}
 }
@@ -199,6 +199,8 @@ func postgresErrorDetail(
 	classification PostgresErrorClassification,
 	exposeClientFields bool,
 ) *consolev1alpha1.PostgreSqlErrorDetail {
+	policy := postgresAdapterPolicyFor(classification.Kind)
+
 	var serverFields map[string]string
 	if exposeClientFields {
 		serverFields = postgresClientServerFields(classification.ClientFields)
@@ -210,6 +212,8 @@ func postgresErrorDetail(
 		ConditionName: classification.ConditionName,
 		Operation:     string(classification.Operation),
 		ServerFields:  serverFields,
+		Kind:          policy.detailKind,
+		RetryGuidance: policy.retryGuidance,
 	}
 }
 
@@ -302,33 +306,98 @@ func addPostgresField(fields map[string]string, key string, value string) {
 	}
 }
 
-func postgresConnectMapping(kind postgreserrors.Kind) (connect.Code, consolev1alpha1.ErrorReason) {
-	switch kind {
-	case postgreserrors.KindInvalidArgument:
-		return connect.CodeInvalidArgument, consolev1alpha1.ErrorReason_INVALID_ARGUMENT
-	case postgreserrors.KindFailedPrecondition:
-		return connect.CodeFailedPrecondition, consolev1alpha1.ErrorReason_FAILED_PRECONDITION
-	case postgreserrors.KindNotFound:
-		return connect.CodeNotFound, consolev1alpha1.ErrorReason_RESOURCE_NOT_FOUND
-	case postgreserrors.KindAlreadyExists:
-		return connect.CodeAlreadyExists, consolev1alpha1.ErrorReason_RESOURCE_ALREADY_EXISTS
-	case postgreserrors.KindPermissionDenied:
-		return connect.CodePermissionDenied, consolev1alpha1.ErrorReason_PERMISSION_DENIED
-	case postgreserrors.KindUnauthenticated:
-		return connect.CodeUnauthenticated, consolev1alpha1.ErrorReason_UNAUTHENTICATED
-	case postgreserrors.KindAborted:
-		return connect.CodeAborted, consolev1alpha1.ErrorReason_FAILED_PRECONDITION
-	case postgreserrors.KindTimeout:
-		return connect.CodeDeadlineExceeded, consolev1alpha1.ErrorReason_TIMEOUT
-	case postgreserrors.KindUnavailable:
-		return connect.CodeUnavailable, consolev1alpha1.ErrorReason_FAILED_PRECONDITION
-	case postgreserrors.KindResourceExhausted:
-		return connect.CodeResourceExhausted, consolev1alpha1.ErrorReason_FAILED_PRECONDITION
-	case postgreserrors.KindUnimplemented:
-		return connect.CodeUnimplemented, consolev1alpha1.ErrorReason_FAILED_PRECONDITION
-	case postgreserrors.KindInternal:
-		return connect.CodeInternal, consolev1alpha1.ErrorReason_INTERNAL_ERROR
-	default:
-		return connect.CodeInternal, consolev1alpha1.ErrorReason_INTERNAL_ERROR
+type postgresAdapterPolicy struct {
+	connectCode   connect.Code
+	errorReason   consolev1alpha1.ErrorReason
+	detailKind    consolev1alpha1.PostgreSqlErrorKind
+	retryGuidance consolev1alpha1.PostgreSqlErrorRetryGuidance
+}
+
+var postgresAdapterPolicies = map[postgreserrors.Kind]postgresAdapterPolicy{
+	postgreserrors.KindInvalidArgument: {
+		connectCode:   connect.CodeInvalidArgument,
+		errorReason:   consolev1alpha1.ErrorReason_INVALID_ARGUMENT,
+		detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT,
+		retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+	},
+	postgreserrors.KindFailedPrecondition: {
+		connectCode:   connect.CodeFailedPrecondition,
+		errorReason:   consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+		detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_FAILED_PRECONDITION,
+		retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+	},
+	postgreserrors.KindNotFound: {
+		connectCode:   connect.CodeNotFound,
+		errorReason:   consolev1alpha1.ErrorReason_RESOURCE_NOT_FOUND,
+		detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_NOT_FOUND,
+		retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+	},
+	postgreserrors.KindAlreadyExists: {
+		connectCode:   connect.CodeAlreadyExists,
+		errorReason:   consolev1alpha1.ErrorReason_RESOURCE_ALREADY_EXISTS,
+		detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_ALREADY_EXISTS,
+		retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+	},
+	postgreserrors.KindPermissionDenied: {
+		connectCode:   connect.CodePermissionDenied,
+		errorReason:   consolev1alpha1.ErrorReason_PERMISSION_DENIED,
+		detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
+		retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+	},
+	postgreserrors.KindUnauthenticated: {
+		connectCode:   connect.CodeUnauthenticated,
+		errorReason:   consolev1alpha1.ErrorReason_UNAUTHENTICATED,
+		detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_UNAUTHENTICATED,
+		retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+	},
+	postgreserrors.KindAborted: {
+		connectCode:   connect.CodeAborted,
+		errorReason:   consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+		detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_ABORTED,
+		retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_IMMEDIATELY,
+	},
+	postgreserrors.KindTimeout: {
+		connectCode:   connect.CodeDeadlineExceeded,
+		errorReason:   consolev1alpha1.ErrorReason_TIMEOUT,
+		detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_TIMEOUT,
+		retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
+	},
+	postgreserrors.KindUnavailable: {
+		connectCode:   connect.CodeUnavailable,
+		errorReason:   consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+		detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_UNAVAILABLE,
+		retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
+	},
+	postgreserrors.KindResourceExhausted: {
+		connectCode:   connect.CodeResourceExhausted,
+		errorReason:   consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+		detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_RESOURCE_EXHAUSTED,
+		retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
+	},
+	postgreserrors.KindUnimplemented: {
+		connectCode:   connect.CodeUnimplemented,
+		errorReason:   consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+		detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_UNIMPLEMENTED,
+		retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+	},
+	postgreserrors.KindInternal: {
+		connectCode:   connect.CodeInternal,
+		errorReason:   consolev1alpha1.ErrorReason_INTERNAL_ERROR,
+		detailKind:    consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_INTERNAL,
+		retryGuidance: consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
+	},
+}
+
+var unknownPostgresAdapterPolicy = postgresAdapterPolicy{
+	connectCode: connect.CodeInternal,
+	errorReason: consolev1alpha1.ErrorReason_INTERNAL_ERROR,
+}
+
+func postgresAdapterPolicyFor(kind postgreserrors.Kind) postgresAdapterPolicy {
+	policy, ok := postgresAdapterPolicies[kind]
+	if !ok {
+		return unknownPostgresAdapterPolicy
 	}
+
+	return policy
 }
