@@ -73,21 +73,26 @@ function createWrapper(transport: Transport) {
 }
 
 async function flushMicrotasks(ticks = 10) {
-  for (let tick = 0; tick < ticks; tick += 1) {
-    await act(async () => {
-      await Promise.resolve();
-    });
+  if (ticks <= 0) {
+    return;
   }
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+  await flushMicrotasks(ticks - 1);
 }
 
 afterEach(async () => {
   cleanup();
   // Drop cached queries so pending garbage-collection timers do not outlive
   // the test.
-  for (const queryClient of activeQueryClients.splice(0)) {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-  }
+  await Promise.all(
+    activeQueryClients.splice(0).map(async (queryClient) => {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+    })
+  );
 });
 
 describe("useListAllRolesQuery", () => {

@@ -386,7 +386,7 @@ async function executeRows({
     rowLimit: OTHER_DATABASE_OBJECTS_ROW_LIMIT,
     statement,
   })) {
-    const result = response.result;
+    const { result } = response;
     if (result.case === undefined) {
       continue;
     }

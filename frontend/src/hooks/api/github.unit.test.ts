@@ -104,7 +104,7 @@ describe("useGithubRepoStarsQuery", () => {
   it("passes abort signal through to decorative GitHub fetches", async () => {
     useGithubRepoStarsQuery(" querylane/querylane ");
     const options = useQueryMock.mock.calls[0]?.[0];
-    const signal = new AbortController().signal;
+    const { signal } = new AbortController();
     const fetchMock = vi.fn(() =>
       Promise.resolve(
         new Response(JSON.stringify({ stargazers_count: 42 }), { status: 200 })

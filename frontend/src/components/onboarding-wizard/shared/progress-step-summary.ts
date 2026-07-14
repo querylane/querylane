@@ -57,7 +57,7 @@ export function getProgressSummary(events: SetupProgressEvent[]) {
 
     if (event.state === StepState.SUCCEEDED) {
       completedWeight += weight;
-      succeededSteps++;
+      succeededSteps += 1;
     } else if (event.state === StepState.IN_PROGRESS) {
       completedWeight += weight * IN_PROGRESS_FRACTION;
     }

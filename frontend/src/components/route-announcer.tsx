@@ -3,7 +3,7 @@
 import { useLocation } from "@tanstack/react-router";
 
 function instancePageName(segments: string[]): string {
-  const sub = segments[2];
+  const [, , sub] = segments;
   if (!sub) {
     return "Instance overview";
   }

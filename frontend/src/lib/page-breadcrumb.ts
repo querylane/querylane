@@ -49,8 +49,9 @@ export function resolveBreadcrumbTail(pathname: string): BreadcrumbTail {
     case "database.explorer":
       return { kind: "page", label: "Data Explorer" };
     case "instance.roles": {
-      const segments = pathname.split("/").filter(Boolean);
-      const roleSegment = segments[2] === "roles" ? segments[3] : undefined;
+      const roleSegments = pathname.split("/").filter(Boolean);
+      const roleSegment =
+        roleSegments[2] === "roles" ? roleSegments[3] : undefined;
       if (roleSegment) {
         return {
           instanceId,

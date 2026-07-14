@@ -150,11 +150,13 @@
         "noPlaywrightWaitForSelector": "error",
         "noPlaywrightWaitForTimeout": "error",
         "noReactStringRefs": "error",
+        "noRestrictedDependencies": "error",
         "noUnsafePlusOperands": "error",
         "useDomNodeTextContent": "error",
         "useExhaustiveSwitchCases": "error",
         "useIncludes": "error",
         "useNullishCoalescing": "error",
+        "useReactFunctionComponentDefinition": "error",
         "useRegexpTest": "error",
         "useSortedClasses": "error",
         "useStringStartsEndsWith": "error",
@@ -166,6 +168,8 @@
         "noAccumulatingSpread": "error",
         "noDelete": "error",
         "noDynamicNamespaceImportAccess": "error",
+        // React Compiler stabilizes JSX callbacks without manual extraction.
+        "noJsxPropsBind": "off",
         "noReExportAll": "error",
         "useTopLevelRegex": "error"
       },

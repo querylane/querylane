@@ -453,21 +453,23 @@ describe("transport snapshots", () => {
   });
 
   it("does not snapshot empty, bodyless, or valid connect responses", async () => {
-    for (const response of [
-      new Response(null, { status: 204 }),
-      new Response("", { status: 500 }),
-      new Response("{}", {
-        headers: { "content-type": "application/connect+json" },
-        status: 200,
-      }),
-    ]) {
-      const observedFetch = createObservedConnectFetch(async () => response);
-      const observed = await observedFetch("http://localhost:8080/test");
-      expect(
-        observed.headers.get(CONNECT_ERROR_SNAPSHOT_BODY_HEADER)
-      ).toBeNull();
-      await observed.text();
-    }
+    await Promise.all(
+      [
+        new Response(null, { status: 204 }),
+        new Response("", { status: 500 }),
+        new Response("{}", {
+          headers: { "content-type": "application/connect+json" },
+          status: 200,
+        }),
+      ].map(async (response) => {
+        const observedFetch = createObservedConnectFetch(async () => response);
+        const observed = await observedFetch("http://localhost:8080/test");
+        expect(
+          observed.headers.get(CONNECT_ERROR_SNAPSHOT_BODY_HEADER)
+        ).toBeNull();
+        await observed.text();
+      })
+    );
   });
 
   it("preserves empty failed response status for semantic mapping", async () => {

@@ -126,11 +126,11 @@ function edgePath({
   targetRoleIndex: number | null;
 }): string {
   const startY = roleY(roleIndex) + ROLE_NODE_HEIGHT / 2;
-  if (targetRoleIndex != null) {
+  if (targetRoleIndex !== null) {
     const endY = roleY(targetRoleIndex) + ROLE_NODE_HEIGHT / 2;
     return `M ${ROLE_ANCHOR_X} ${startY} C ${ROLE_MEMBER_CURVE_X} ${startY}, ${ROLE_MEMBER_CURVE_X} ${endY}, ${ROLE_ANCHOR_X} ${endY}`;
   }
-  if (objectIndex == null) {
+  if (objectIndex === null) {
     return "";
   }
   const endY = objectY(objectIndex) + OBJECT_NODE_HEIGHT / 2;
@@ -180,7 +180,7 @@ function edgeIsActive({
   selectedNodeId: string | null;
 }): boolean {
   return (
-    selectedNodeId == null ||
+    selectedNodeId === null ||
     edge.source === selectedNodeId ||
     edge.target === selectedNodeId
   );
@@ -364,7 +364,7 @@ function RolesAccessMapCanvas({
   );
   const visibleEdges = model.edges.filter((edge) => edgeVisibility[edge.tone]);
   const adjacentNodeIds = new Set(
-    selectedNodeId == null
+    selectedNodeId === null
       ? []
       : visibleEdges.flatMap((edge) =>
           edge.source === selectedNodeId || edge.target === selectedNodeId
@@ -403,7 +403,7 @@ function RolesAccessMapCanvas({
 
   function nodeIsDimmed(nodeId: string): boolean {
     return (
-      selectedNodeId != null &&
+      selectedNodeId !== null &&
       selectedNodeId !== nodeId &&
       !adjacentNodeIds.has(nodeId)
     );
@@ -514,10 +514,10 @@ function RolesAccessMapCanvas({
                 const roleIndex = roleIndexById.get(edge.source);
                 const targetRoleIndex = roleIndexById.get(edge.target) ?? null;
                 const objectIndex = objectIndexById.get(edge.target) ?? null;
-                if (roleIndex == null) {
+                if (roleIndex === undefined) {
                   return null;
                 }
-                if (targetRoleIndex == null && objectIndex == null) {
+                if (targetRoleIndex === null && objectIndex === null) {
                   return null;
                 }
                 const active = edgeIsActive({ edge, selectedNodeId });
@@ -563,10 +563,11 @@ function RolesAccessMapCanvas({
       </div>
     </div>
   );
+  const collapsedMapSurface = isExpanded ? null : mapSurface;
 
   return (
     <section aria-label="Role access map" className="grid gap-3">
-      {isExpanded ? null : mapSurface}
+      {collapsedMapSurface}
       <Dialog onOpenChange={setIsExpanded} open={isExpanded}>
         <DialogContent className="!flex !max-w-[calc(100vw-2rem)] h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col gap-4 overflow-hidden p-4">
           <DialogHeader>

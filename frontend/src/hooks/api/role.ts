@@ -95,10 +95,15 @@ async function mapWithConcurrency<T, Result>(
   const results: Result[] = [];
   const entries = items.entries();
 
-  async function worker() {
-    for (const [index, item] of entries) {
-      results[index] = await mapItem(item);
+  async function worker(): Promise<void> {
+    const entry = entries.next();
+    if (entry.done) {
+      return;
     }
+
+    const [index, item] = entry.value;
+    results[index] = await mapItem(item);
+    await worker();
   }
 
   await Promise.all(

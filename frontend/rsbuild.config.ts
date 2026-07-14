@@ -1,12 +1,12 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
-import { env } from "node:process";
+import process, { env } from "node:process";
 import { defineConfig } from "@rsbuild/core";
 import { pluginReact } from "@rsbuild/plugin-react";
 import { pluginTailwindcss } from "@rsbuild/plugin-tailwindcss";
 import { RsdoctorRspackPlugin } from "@rsdoctor/rspack-plugin";
 import { createEnv } from "@t3-oss/env-core";
 import { TanStackRouterRspack } from "@tanstack/router-plugin/rspack";
-import dotenv from "dotenv";
 import { pluginDevtoolsJson } from "rsbuild-plugin-devtools-json";
 import { z } from "zod/v4";
 import {
@@ -35,7 +35,9 @@ type RsdoctorPluginOptions = NonNullable<
   ConstructorParameters<typeof RsdoctorRspackPlugin<[]>>[0]
 >;
 
-dotenv.config();
+if (existsSync(".env") && typeof process.loadEnvFile === "function") {
+  process.loadEnvFile();
+}
 
 const buildEnv = createEnv({
   isServer: true,

@@ -86,7 +86,7 @@ function cleanSqlIdentifier(identifier: string) {
 function sourceRelationsFromDefinition(definition: string) {
   const sources = new Set<string>();
   for (const match of definition.matchAll(SQL_SOURCE_PATTERN)) {
-    const source = match[1];
+    const [, source] = match;
     if (!source) {
       continue;
     }

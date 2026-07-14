@@ -332,21 +332,15 @@ function createSetupInterceptor(
     try {
       return await next(req);
     } catch (err) {
-      const request: AppUiErrorRequestContext | undefined =
-        await buildRequestContext(req).catch(
-          (
-            requestContextError: unknown
-          ): AppUiErrorRequestContext | undefined => {
-            dependencies.logger.warn(
-              "Failed to build API error request context",
-              {
-                endpoint,
-                error: requestContextError,
-              }
-            );
-            return;
-          }
-        );
+      let request: AppUiErrorRequestContext | undefined;
+      try {
+        request = await buildRequestContext(req);
+      } catch (requestContextError) {
+        dependencies.logger.warn("Failed to build API error request context", {
+          endpoint,
+          error: requestContextError,
+        });
+      }
       attachAppUiErrorContext(err, {
         area: "transport",
         endpoint,
@@ -407,18 +401,18 @@ interface ConnectBaseUrlOptions {
 function resolveConnectBaseUrl({
   configuredBaseUrl,
   isDevelopment,
-  locationOrigin,
+  locationOrigin: currentOrigin,
 }: ConnectBaseUrlOptions): string {
   const trimmedBaseUrl = configuredBaseUrl.trim();
   if (trimmedBaseUrl) {
     return trimmedBaseUrl;
   }
 
-  if (isDevelopment || !locationOrigin) {
+  if (isDevelopment || !currentOrigin) {
     return "http://localhost:8080";
   }
 
-  return locationOrigin;
+  return currentOrigin;
 }
 
 /**

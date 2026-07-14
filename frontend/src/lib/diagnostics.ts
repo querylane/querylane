@@ -12,8 +12,8 @@ interface DiagnosticLogger {
   warn: (message: string, payload?: LogPayload) => void;
 }
 
-function ignoreLog(_message: string, _payload?: LogPayload) {
-  return;
+function ignoreLog(_message: string, _payload?: LogPayload): null {
+  return null;
 }
 
 const logger: DiagnosticLogger = {

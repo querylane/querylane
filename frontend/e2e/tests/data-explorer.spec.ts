@@ -92,11 +92,15 @@ async function collectTabFocusSnapshots(
     tagName: string;
   }> = [];
 
-  for (let index = 0; index < steps; index += 1) {
+  async function collectNextSnapshot(remainingSteps: number): Promise<void> {
+    if (remainingSteps <= 0) {
+      return;
+    }
+
     await page.keyboard.press("Tab");
     snapshots.push(
       await page.evaluate(() => {
-        const activeElement = document.activeElement;
+        const { activeElement } = document;
         if (!(activeElement instanceof HTMLElement)) {
           return {
             isInObjectBrowser: false,
@@ -120,7 +124,10 @@ async function collectTabFocusSnapshots(
         };
       })
     );
+    await collectNextSnapshot(remainingSteps - 1);
   }
+
+  await collectNextSnapshot(steps);
 
   return snapshots;
 }

@@ -38,7 +38,7 @@ describe("downloadBlob", () => {
     let capturedAnchor: HTMLAnchorElement | null = null;
 
     appendChildSpy.mockImplementation((...nodes: (Node | string)[]) => {
-      const node = nodes[0];
+      const [node] = nodes;
       if (node instanceof HTMLAnchorElement) {
         capturedAnchor = node;
         clickSpy = vi.spyOn(node, "click").mockReturnValue(undefined);
@@ -61,7 +61,7 @@ describe("downloadBlob", () => {
 
   test("revokes the object URL after a setTimeout(0) delay", () => {
     appendChildSpy.mockImplementation((...nodes: (Node | string)[]) => {
-      const node = nodes[0];
+      const [node] = nodes;
       if (node instanceof HTMLAnchorElement) {
         vi.spyOn(node, "click").mockReturnValue(undefined);
         vi.spyOn(node, "remove").mockReturnValue(undefined);
@@ -82,7 +82,7 @@ describe("downloadBlob", () => {
     const BlobSpy = vi.spyOn(globalThis, "Blob");
 
     appendChildSpy.mockImplementation((...nodes: (Node | string)[]) => {
-      const node = nodes[0];
+      const [node] = nodes;
       if (node instanceof HTMLAnchorElement) {
         vi.spyOn(node, "click").mockReturnValue(undefined);
         vi.spyOn(node, "remove").mockReturnValue(undefined);
@@ -100,7 +100,7 @@ describe("downloadBlob", () => {
     const BlobSpy = vi.spyOn(globalThis, "Blob");
 
     appendChildSpy.mockImplementation((...nodes: (Node | string)[]) => {
-      const node = nodes[0];
+      const [node] = nodes;
       if (node instanceof HTMLAnchorElement) {
         vi.spyOn(node, "click").mockReturnValue(undefined);
         vi.spyOn(node, "remove").mockReturnValue(undefined);

@@ -17,7 +17,8 @@ const LIGHTHOUSE_CONFIG_PATH = join(FRONTEND_ROOT, "lighthouserc.cjs");
 const FAILURE_EXIT_CODE = 1;
 
 function getChromePath() {
-  return env["CHROME_PATH"]?.trim() || chromium.executablePath();
+  const { CHROME_PATH: chromePath } = env;
+  return chromePath?.trim() || chromium.executablePath();
 }
 
 function runLighthouseCi() {

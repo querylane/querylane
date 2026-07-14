@@ -225,7 +225,7 @@ function formatKnownValueCell(
     return null;
   }
 
-  const value = kind.value;
+  const { value } = kind;
   const truncated = cell.truncated === true;
 
   switch (kind.case) {

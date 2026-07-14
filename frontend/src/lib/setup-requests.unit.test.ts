@@ -67,12 +67,16 @@ function buildAsyncStream<T>(items: T[]): AsyncIterable<T> {
       let index = 0;
 
       return {
-        next: () =>
-          Promise.resolve(
-            index < items.length
-              ? { done: false as const, value: items[index++] as T }
-              : { done: true as const, value: undefined }
-          ),
+        next: () => {
+          const isDone = index >= items.length;
+          const item = items[index];
+          index += 1;
+          return Promise.resolve(
+            isDone
+              ? { done: true as const, value: undefined }
+              : { done: false as const, value: item as T }
+          );
+        },
       };
     },
   };
@@ -81,39 +85,41 @@ function buildAsyncStream<T>(items: T[]): AsyncIterable<T> {
 function createControlledAsyncStream<T>() {
   const queue: T[] = [];
   let isClosed = false;
-  let wakeReader: (() => void) | null = null;
+  let wakeReader: ((result: IteratorResult<T>) => void) | null = null;
 
-  const notifyReader = () => {
-    const reader = wakeReader;
-    wakeReader = null;
-    reader?.();
+  const readNext = (): Promise<IteratorResult<T>> => {
+    if (queue.length > 0) {
+      return Promise.resolve({ done: false, value: queue.shift() as T });
+    }
+
+    if (isClosed) {
+      return Promise.resolve({ done: true, value: undefined });
+    }
+
+    return new Promise((resolve) => {
+      wakeReader = resolve;
+    });
   };
 
   return {
     close: () => {
       isClosed = true;
-      notifyReader();
+      const reader = wakeReader;
+      wakeReader = null;
+      reader?.({ done: true, value: undefined });
     },
     push: (item: T) => {
+      const reader = wakeReader;
+      wakeReader = null;
+      if (reader) {
+        reader({ done: false, value: item });
+        return;
+      }
       queue.push(item);
-      notifyReader();
     },
     stream: {
-      async *[Symbol.asyncIterator]() {
-        for (;;) {
-          if (queue.length > 0) {
-            yield queue.shift() as T;
-            continue;
-          }
-
-          if (isClosed) {
-            return;
-          }
-
-          await new Promise<void>((resolve) => {
-            wakeReader = resolve;
-          });
-        }
+      [Symbol.asyncIterator]() {
+        return { next: readNext };
       },
     } as AsyncIterable<T>,
   };

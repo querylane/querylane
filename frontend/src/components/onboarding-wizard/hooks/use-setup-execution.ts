@@ -158,11 +158,11 @@ function useSetupExecution({
     setupAbortRef.current?.abort();
   };
 
-  const handleSetupSuccess = useEffectEvent(function handleSetupSuccess() {
+  const handleSetupSuccess = useEffectEvent(function notifySetupSuccess() {
     onSuccess();
   });
 
-  const handleSetupFailure = useEffectEvent(function handleSetupFailure(
+  const handleSetupFailure = useEffectEvent(function resolveSetupFailure(
     error: unknown
   ) {
     const resolution = resolveSetupFailureAction({

@@ -96,7 +96,7 @@ async function consumeSetupStreamWithProgress(
   let setupCompleted = false;
 
   for await (const response of stream) {
-    const event = response.event;
+    const { event } = response;
     if (event) {
       onProgress(event);
       if (
@@ -131,7 +131,7 @@ async function consumeWatchStreamWithProgress(
   let failureMessage: SetupStreamFailure | null = null;
 
   for await (const response of stream) {
-    const event = response.event;
+    const { event } = response;
     if (event) {
       onProgress(event);
     }

@@ -125,6 +125,7 @@ function useCalmLoadingPhase(isLoading: boolean): LoadingPhase {
 
   useEffect(
     function paceLoadingSkeleton() {
+      let cleanup: (() => void) | undefined;
       if (isLoading) {
         setPhase((previous) =>
           previous === "skeleton" ? "skeleton" : "pending"
@@ -133,20 +134,22 @@ function useCalmLoadingPhase(isLoading: boolean): LoadingPhase {
           shownAtRef.current = Date.now();
           setPhase("skeleton");
         }, SKELETON_APPEAR_DELAY_MS);
-        return () => clearTimeout(timer);
-      }
-      const remainingVisible =
-        shownAtRef.current + SKELETON_MIN_VISIBLE_MS - Date.now();
-      if (shownAtRef.current > 0 && remainingVisible > 0) {
-        const timer = setTimeout(() => {
+        cleanup = () => clearTimeout(timer);
+      } else {
+        const remainingVisible =
+          shownAtRef.current + SKELETON_MIN_VISIBLE_MS - Date.now();
+        if (shownAtRef.current > 0 && remainingVisible > 0) {
+          const timer = setTimeout(() => {
+            shownAtRef.current = 0;
+            setPhase("idle");
+          }, remainingVisible);
+          cleanup = () => clearTimeout(timer);
+        } else {
           shownAtRef.current = 0;
           setPhase("idle");
-        }, remainingVisible);
-        return () => clearTimeout(timer);
+        }
       }
-      shownAtRef.current = 0;
-      setPhase("idle");
-      return;
+      return cleanup;
     },
     [isLoading]
   );
@@ -440,7 +443,7 @@ function useResourceListVirtualizer({
   items: VirtualResourceListItem[];
   scrollElement: HTMLDivElement | null;
 }): Virtualizer<HTMLDivElement, Element> {
-  const rerender = useReducer((tick: number) => tick + 1, 0)[1];
+  const [, rerender] = useReducer((tick: number) => tick + 1, 0);
   const virtualizerRef = useRef<Virtualizer<HTMLDivElement, Element> | null>(
     null
   );

@@ -380,8 +380,7 @@ export function UiConfiguredPhase() {
     mode: "all",
   });
   const { control, formState, register, setValue } = form;
-  const isValid = formState.isValid;
-  const errors = formState.errors;
+  const { errors, isValid } = formState;
   const watchedValues = useWatch({ control });
   const sslMode = useWatch({ control, name: "sslMode" });
   const sslModeValue = formatSslMode(

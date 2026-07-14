@@ -346,7 +346,7 @@ function rangeAxisLabel(partitionBound: string, kind: PartitionBoundKind) {
   if (!(start?.[1] && start[2])) {
     return "range";
   }
-  const startYear = start[1];
+  const [, startYear] = start;
   const startMonth = Number.parseInt(start[2], 10);
   if (
     bounds?.[1] &&
@@ -514,20 +514,20 @@ function derivePartitionViewModel({
       isDateInsideRange(partition.partitionBound, currentDate)
     )?.partition.table ?? nonDefaultRows.at(-1)?.partition.table;
   const maxProjectedRows = Math.max(
-    ...rowsWithNumbers.map(({ partition, rows }) =>
+    ...rowsWithNumbers.map(({ partition, rows: rowCount }) =>
       projectedRows({
         currentDate,
         isCurrent: currentPartition === partition.table,
         partitionBound: partition.partitionBound,
-        rows,
+        rows: rowCount,
       })
     ),
     0
   );
-  const rows = rowsWithNumbers.map(({ partition, rows, size }) => {
+  const rows = rowsWithNumbers.map(({ partition, rows: rowCount, size }) => {
     const boundKind = partitionBoundKind(partition);
     const name = partitionDisplayName(partition);
-    const share = totalRows > 0 ? rows / totalRows : 0;
+    const share = totalRows > 0 ? rowCount / totalRows : 0;
     const isSelected = selectedPartition === partition.table;
     const isDefault = boundKind === "default";
     const isCurrent = !isDefault && currentPartition === partition.table;
@@ -535,9 +535,12 @@ function derivePartitionViewModel({
       currentDate,
       isCurrent,
       partitionBound: partition.partitionBound,
-      rows,
+      rows: rowCount,
     });
-    const barHeightPercent = percentOfMax(rows, maxProjectedRows || maxRows);
+    const barHeightPercent = percentOfMax(
+      rowCount,
+      maxProjectedRows || maxRows
+    );
     const projectedHeightPercent = percentOfMax(projected, maxProjectedRows);
     const projectedExtraHeightPercent = Math.max(
       projectedHeightPercent - barHeightPercent,
@@ -554,8 +557,8 @@ function derivePartitionViewModel({
       barTone: partitionBarTone({ isCurrent, isDefault, isSelected }),
       boundKind,
       boundLabel: partitionBoundLabel(partition.partitionBound),
-      estimatedRows: rows,
-      hasProjection: isCurrent && projected > rows,
+      estimatedRows: rowCount,
+      hasProjection: isCurrent && projected > rowCount,
       isCurrent,
       isDefault,
       name,
@@ -566,9 +569,9 @@ function derivePartitionViewModel({
       ),
       projectedHeightPercent,
       projectedRowsLabel:
-        projected > rows ? formatPartitionRows(projected) : "—",
+        projected > rowCount ? formatPartitionRows(projected) : "—",
       resourceLabel: formatPartitionResourceLabel(partition.table),
-      rowsLabel: rows > 0 ? formatPartitionRows(rows) : "—",
+      rowsLabel: rowCount > 0 ? formatPartitionRows(rowCount) : "—",
       schemaName: partitionSchemaName(partition),
       shareLabel:
         totalRows > 0 ? `${Math.round(share * PERCENT_FACTOR)}%` : "—",

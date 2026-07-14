@@ -47,7 +47,7 @@ function parsePostgresPlatform(
   }
 
   const segments = triple.split("-");
-  const arch = segments[0];
+  const [arch] = segments;
   if (!arch) {
     return null;
   }

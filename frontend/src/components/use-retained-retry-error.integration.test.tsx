@@ -26,7 +26,7 @@ describe("useRetainedRetryError", () => {
 
     expect(result.current.displayedError).toBe("Cannot connect");
 
-    const retry = result.current.retry;
+    const { retry } = result.current;
     if (!retry) {
       throw new Error("Expected retry handler.");
     }
@@ -55,7 +55,7 @@ describe("useRetainedRetryError", () => {
       }
     );
 
-    const retry = result.current.retry;
+    const { retry } = result.current;
     if (!retry) {
       throw new Error("Expected retry handler.");
     }

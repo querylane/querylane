@@ -52,7 +52,7 @@ const SERVER_POWERS: AttributeBadge[] = [
 ];
 
 function isServerPowerGranted(role: Role, key: string): boolean {
-  const attributes = role.attributes;
+  const { attributes } = role;
   switch (key) {
     case "superuser":
       return Boolean(attributes?.isSuperuser);
@@ -93,11 +93,11 @@ function countPasswordExpiry(
   let expired = 0;
   let soon = 0;
   for (const role of roles) {
-    const attributes = role.attributes;
+    const { attributes } = role;
     if (!(attributes?.canLogin && attributes.validUntil)) {
       continue;
     }
-    const state = passwordExpiryStatus(attributes.validUntil, now).state;
+    const { state } = passwordExpiryStatus(attributes.validUntil, now);
     if (state === "expired") {
       expired += 1;
     } else if (state === "soon") {
@@ -355,7 +355,7 @@ export function deriveRoleKind(role: Role): RoleKind {
   if (role.isSystemRole || isPredefinedRoleName(role.roleName)) {
     return "builtin";
   }
-  const attributes = role.attributes;
+  const { attributes } = role;
   if (attributes?.isSuperuser) {
     return "super";
   }
@@ -437,7 +437,7 @@ export function roleCapabilityMatrix(role: Role): CapabilityState[] {
 export function roleRiskNotice(
   role: Role
 ): { description: string; title: string } | null {
-  const attributes = role.attributes;
+  const { attributes } = role;
   if (attributes?.isSuperuser) {
     return {
       description:

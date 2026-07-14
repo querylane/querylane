@@ -49,7 +49,7 @@ describe("InstanceConfigurationLabels", () => {
       name: "Remove label",
     });
     expect(removeButtons).toHaveLength(2);
-    const secondRemoveButton = removeButtons[1];
+    const [, secondRemoveButton] = removeButtons;
     if (!secondRemoveButton) {
       throw new Error("Expected a second remove label button");
     }

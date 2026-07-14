@@ -260,17 +260,19 @@ function skipSqlQuotedIdentifier(
   start: number
 ): number | undefined {
   let index = start + 1;
+  let closingIndex: number | undefined;
   while (index < value.length) {
     if (value[index] === '"') {
       if (value[index + 1] === '"') {
         index += 2;
         continue;
       }
-      return index + 1;
+      closingIndex = index + 1;
+      break;
     }
     index += 1;
   }
-  return;
+  return closingIndex;
 }
 
 function skipSqlQuotedString(value: string, start: number): number | undefined {
@@ -363,6 +365,7 @@ function readSqlStringLiteral(
 ): { next: number; value: string } | undefined {
   let literal = "";
   let index = 1;
+  let result: { next: number; value: string } | undefined;
   while (index < value.length) {
     const char = value[index];
     if (char === "'") {
@@ -371,12 +374,13 @@ function readSqlStringLiteral(
         index += 2;
         continue;
       }
-      return { next: index + 1, value: literal };
+      result = { next: index + 1, value: literal };
+      break;
     }
     literal += char;
     index += 1;
   }
-  return;
+  return result;
 }
 
 function readSqlLiteral(
@@ -800,7 +804,9 @@ function buildValues(
     const values = parts.map((part) =>
       parseTableValue(part, dataType, rule.operator)
     );
-    return values.every((value): value is TableValue => value !== undefined)
+    return values.every(
+      (candidate): candidate is TableValue => candidate !== undefined
+    )
       ? values
       : undefined;
   }

@@ -56,8 +56,7 @@ export function EmbeddedPhase() {
     mode: "all",
   });
   const { control, formState, register, setValue } = form;
-  const isValid = formState.isValid;
-  const errors = formState.errors;
+  const { errors, isValid } = formState;
   const mode = useWatch({ control, name: "mode" });
   const handleContinue = () => {
     const values = form.getValues();

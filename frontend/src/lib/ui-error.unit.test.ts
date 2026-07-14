@@ -1298,7 +1298,7 @@ describe("normalizeAppUiError defensive fallbacks", () => {
     reportAppUiError(error, undefined, dependencies);
 
     expect(captureCalls).toHaveLength(2);
-    const firstCaptured = captureCalls[0];
+    const [firstCaptured] = captureCalls;
     expect(firstCaptured).toBeInstanceOf(Error);
     if (!(firstCaptured instanceof Error)) {
       throw new TypeError("expected captured error to be an Error instance");
@@ -1337,7 +1337,6 @@ describe("reportAppUiError monitoring payload", () => {
             context: context ?? {},
             error: capturedError,
           });
-          return;
         },
         logger: {
           error: (message, payload) => {
@@ -1371,12 +1370,16 @@ describe("reportAppUiError monitoring payload", () => {
     );
 
     expect(loggerCalls).toHaveLength(1);
-    expect(loggerCalls[0]?.message).toBe("permission denied");
-    expect(loggerCalls[0]?.payload["appUiErrorTranscript"]).toBe(
+    const [loggerCall] = loggerCalls;
+    if (!loggerCall) {
+      throw new Error("Expected the UI error to be logged.");
+    }
+    expect(loggerCall.message).toBe("permission denied");
+    expect(loggerCall.payload["appUiErrorTranscript"]).toBe(
       error.technicalDetailsText
     );
     expect(
-      (loggerCalls[0]?.payload["appUiError"] as Record<string, unknown>)["code"]
+      (loggerCall.payload["appUiError"] as Record<string, unknown>)["code"]
     ).toBe("PermissionDenied");
 
     parseSpy.mockRestore();

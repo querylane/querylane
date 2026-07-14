@@ -266,15 +266,15 @@ export function useCreateInstancePageController(
   const [state, dispatch] = useReducer(
     createInstanceWorkflowReducer,
     initialState,
-    (state) => {
+    (partialState) => {
       const emptyState = createCreateInstanceWorkflowState();
-      return state
+      return partialState
         ? {
             ...emptyState,
-            ...state,
+            ...partialState,
             formState: {
               ...emptyState.formState,
-              ...state.formState,
+              ...partialState.formState,
             },
           }
         : emptyState;

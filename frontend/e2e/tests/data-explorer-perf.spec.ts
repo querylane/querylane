@@ -16,7 +16,7 @@ function isScriptOrStyleResponse(response: Response): boolean {
     return false;
   }
 
-  const pathname = new URL(response.url()).pathname;
+  const { pathname } = new URL(response.url());
   return pathname.endsWith(".js") || pathname.endsWith(".css");
 }
 

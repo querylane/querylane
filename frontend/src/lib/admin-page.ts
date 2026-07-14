@@ -127,10 +127,7 @@ function resolveImplicitAdminPageFromPathname(
   if (segments[2] === "admin" && !segments[3]) {
     return;
   }
-  if (pathname.includes("/instances/")) {
-    return "instance.overview";
-  }
-  return;
+  return pathname.includes("/instances/") ? "instance.overview" : undefined;
 }
 
 function resolveImplicitAdminPageFromRouteId(

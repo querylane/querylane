@@ -35,7 +35,7 @@ test("browser test environment loads app styles and deterministic visual-test CS
     ""
   );
 
-  const frameElement = window.frameElement;
+  const { frameElement } = window;
   if (frameElement?.tagName !== "IFRAME") {
     throw new Error("Expected browser tests to run inside the Vitest iframe.");
   }

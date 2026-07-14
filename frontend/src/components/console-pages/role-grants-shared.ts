@@ -222,7 +222,7 @@ export const GRANT_OBJECT_META: Record<
   [GrantObjectType.LARGE_OBJECT]: { icon: Box, label: "Large object" },
 };
 
-export const OBJECT_TYPE_LABEL = (objectType: GrantObjectType): string =>
+export const getObjectTypeLabel = (objectType: GrantObjectType): string =>
   (
     GRANT_OBJECT_META[objectType] ??
     GRANT_OBJECT_META[GrantObjectType.UNSPECIFIED]
@@ -325,12 +325,9 @@ export const SLUG_TO_OBJECT_TYPE: Record<GrantsType, GrantObjectType> = {
 export function slugForObjectType(
   type: GrantObjectType
 ): GrantsType | undefined {
-  for (const slug of Object.keys(SLUG_TO_OBJECT_TYPE) as GrantsType[]) {
-    if (SLUG_TO_OBJECT_TYPE[slug] === type) {
-      return slug;
-    }
-  }
-  return;
+  return (Object.keys(SLUG_TO_OBJECT_TYPE) as GrantsType[]).find(
+    (slug) => SLUG_TO_OBJECT_TYPE[slug] === type
+  );
 }
 
 // A schema at or under this size opens inline; above it stays collapsed and
@@ -662,7 +659,7 @@ export function ownedStats(objects: OwnedObject[]): OwnedStat[] {
     return {
       count: names.length,
       examples,
-      label: `${OBJECT_TYPE_LABEL(type).toLowerCase()}${names.length === 1 ? "" : "s"}`,
+      label: `${getObjectTypeLabel(type).toLowerCase()}${names.length === 1 ? "" : "s"}`,
       type,
     };
   });

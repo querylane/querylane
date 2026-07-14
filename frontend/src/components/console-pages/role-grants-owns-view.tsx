@@ -14,7 +14,7 @@ import {
 import {
   GRANT_OBJECT_META,
   type GrantedObject,
-  OBJECT_TYPE_LABEL,
+  getObjectTypeLabel,
   OWNED_TYPE_ORDER,
   ownedObjectName,
   PRIV_TONE_CLASS,
@@ -182,7 +182,7 @@ function OwnedObjectsTable({ objects }: { objects: OwnedObject[] }) {
       id: "object",
     },
     {
-      accessorFn: (object) => OBJECT_TYPE_LABEL(object.objectType),
+      accessorFn: (object) => getObjectTypeLabel(object.objectType),
       cell: ({ row }) => (
         <GrantObjectKindBadge type={row.original.objectType} />
       ),

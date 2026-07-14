@@ -304,7 +304,7 @@ function mergeTableMetadata(
     constraints:
       metadata?.constraints.flatMap((constraint) => {
         const kind = constraintKind(constraint.type);
-        if (kind == null) {
+        if (kind === null) {
           return [];
         }
         return [
@@ -594,7 +594,7 @@ function useStructureMapData({
 
   return {
     error,
-    hasPartialData: reason != null,
+    hasPartialData: reason !== undefined,
     inspectedTableCount: detailTables.length,
     isLoading,
     schemas,

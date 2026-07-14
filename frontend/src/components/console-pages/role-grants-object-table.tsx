@@ -7,8 +7,8 @@ import {
   columnsFor,
   GRANT_OBJECT_META,
   type GrantedObject,
+  getObjectTypeLabel,
   grantorSummary,
-  OBJECT_TYPE_LABEL,
   objectDisplayName,
   RELATION_TYPES,
   slugForObjectType,
@@ -71,7 +71,7 @@ function GrantObjectKindBadge({ type }: { type: GrantObjectType }) {
   return (
     <Badge className="gap-1.5 rounded-sm px-1.5" variant="secondary">
       <meta.icon className="size-3" />
-      {OBJECT_TYPE_LABEL(type)}
+      {getObjectTypeLabel(type)}
     </Badge>
   );
 }
@@ -155,7 +155,7 @@ function KindFilteredTable<T extends RowData>({
           options={presentKinds.flatMap((type) => {
             const slug = slugForObjectType(type);
             return slug
-              ? [{ label: OBJECT_TYPE_LABEL(type), value: slug }]
+              ? [{ label: getObjectTypeLabel(type), value: slug }]
               : [];
           })}
           selectedValues={activeKind === "all" ? [] : [activeKind]}
@@ -205,7 +205,7 @@ function GrantedObjectsTable({
       id: "object",
     },
     {
-      accessorFn: (row) => OBJECT_TYPE_LABEL(row.objectType),
+      accessorFn: (row) => getObjectTypeLabel(row.objectType),
       cell: ({ row }) => (
         <GrantObjectKindBadge type={row.original.objectType} />
       ),

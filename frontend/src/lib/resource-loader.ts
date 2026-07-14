@@ -30,7 +30,7 @@ export function createResourceLoader<T>(
   query: QueryLike<T>,
   area: string
 ): ResourceLoader<T> {
-  const hasData = query.data != null;
+  const hasData = query.data !== null && query.data !== undefined;
 
   const retry = () =>
     query.refetch().catch((error: unknown) => {

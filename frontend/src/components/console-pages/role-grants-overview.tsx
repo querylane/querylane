@@ -64,7 +64,7 @@ function ownsPreview(objects: OwnedObject[]): string {
 }
 
 function defaultsPreview(rules: DefaultPrivilegeRule[]): string {
-  const first = rules[0];
+  const [first] = rules;
   if (!first) {
     return "No future-grant rules.";
   }
@@ -133,7 +133,7 @@ function SectionHead({
   return (
     <div className="flex items-baseline gap-2.5 px-0.5">
       <span className="font-semibold text-foreground text-sm">{title}</span>
-      {count == null ? null : (
+      {count === undefined ? null : (
         <span className="inline-flex h-[18px] items-center rounded-full border border-border bg-secondary px-[7px] font-mono text-[11px] text-muted-foreground tracking-[0.02em]">
           {count.toLocaleString()}
         </span>

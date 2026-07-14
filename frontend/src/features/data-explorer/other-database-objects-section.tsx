@@ -548,11 +548,7 @@ function cronSchedule(object: OtherDatabaseObject): string {
 function cronHuman(object: OtherDatabaseObject): string {
   const schedule = cronSchedule(object);
   const parts = schedule.split(CRON_PARTS_RE);
-  const minute = parts[0];
-  const hour = parts[1];
-  const dayOfMonth = parts[2];
-  const month = parts[3];
-  const dayOfWeek = parts[4];
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
 
   if (
     minute?.startsWith("*/") &&

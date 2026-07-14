@@ -250,7 +250,7 @@ describe("buildSchemaMapModel", () => {
     });
 
     const source = model.nodes.find((node) => node.name === "shipments");
-    const edge = model.edges[0];
+    const [edge] = model.edges;
     expect(source).toBeDefined();
     expect(edge).toBeDefined();
 
