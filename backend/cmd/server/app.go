@@ -10,7 +10,6 @@ import (
 	"sync/atomic"
 
 	"connectrpc.com/connect"
-	"connectrpc.com/grpcreflect"
 	"connectrpc.com/validate"
 
 	"github.com/querylane/querylane/backend/config"
@@ -179,21 +178,7 @@ func (a *App) Routes(ctx context.Context) http.Handler {
 
 	mux := http.NewServeMux()
 
-	reflector := grpcreflect.NewStaticReflector(
-		v1alpha1connect.OnboardingServiceName,
-		v1alpha1connect.ConsoleServiceName,
-		v1alpha1connect.InstanceServiceName,
-		v1alpha1connect.DatabaseServiceName,
-		v1alpha1connect.RoleServiceName,
-		v1alpha1connect.SchemaServiceName,
-		v1alpha1connect.ExtensionServiceName,
-		v1alpha1connect.TableServiceName,
-		v1alpha1connect.ViewServiceName,
-		v1alpha1connect.TableDataServiceName,
-		v1alpha1connect.SQLServiceName,
-	)
-	mux.Handle(grpcreflect.NewHandlerV1(reflector))
-	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+	registerGRPCReflection(mux)
 
 	var accessLogger *interceptor.AccessLogger
 	if cfg.HTTP.AccessLogEnabled() {
