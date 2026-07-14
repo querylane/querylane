@@ -232,7 +232,7 @@ function useRoleFacets({
     ownedObjects: ownedObjectsQuery.data?.ownedObjects ?? [],
     ownedPartial:
       facetsEnabled && Boolean(ownedObjectsQuery.data?.nextPageToken),
-    ownedReady: facetStates.owned === "ready",
+    ownedReady: facetsEnabled && facetStates.owned === "ready",
     publicGrants: publicGrantsQuery.data?.grants ?? [],
     publicGrantsPartial:
       facetsEnabled && Boolean(publicGrantsQuery.data?.nextPageToken),
