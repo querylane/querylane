@@ -702,6 +702,9 @@ test("console roles access map matches the design source", async () => {
     .element(page.getByText("Show 1 PostgreSQL-provided role."))
     .toBeVisible();
   await expect.element(page.getByText("Default privileges")).toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "console-roles-access-map-view"
+  );
   await page.getByRole("button", { name: "View" }).click();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "console-roles-access-map"
