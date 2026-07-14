@@ -18,6 +18,7 @@ import {
   useListAllRolesQuery,
   useRolesAccessMapResourcesQuery,
 } from "@/hooks/api/role";
+import { createConnectListAllQueryKey } from "@/lib/connect-query-key";
 import {
   DatabaseService,
   ListDatabasesResponseSchema,
@@ -37,6 +38,13 @@ import {
   RoleSchema,
   RoleService,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
+import {
+  listPublicGrants,
+  listRoleDefaultPrivileges,
+  listRoleGrants,
+  listRoleOwnedObjects,
+  listRoles,
+} from "@/protogen/querylane/console/v1alpha1/role-RoleService_connectquery";
 
 const ROLE_ID = "YWxpY2U";
 const DATABASE_SCOPE = {
@@ -52,13 +60,15 @@ const activeQueryClients: QueryClient[] = [];
 // the cache instead.
 const TEST_GC_TIME = Number.POSITIVE_INFINITY;
 
-function createWrapper(transport: Transport) {
-  const queryClient = new QueryClient({
+function createWrapper(
+  transport: Transport,
+  queryClient = new QueryClient({
     defaultOptions: {
       mutations: { gcTime: TEST_GC_TIME, retry: false },
       queries: { gcTime: TEST_GC_TIME, retry: false },
     },
-  });
+  })
+) {
   activeQueryClients.push(queryClient);
 
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -88,6 +98,70 @@ afterEach(async () => {
     await queryClient.cancelQueries();
     queryClient.clear();
   }
+});
+
+describe("aggregate role query keys", () => {
+  test("derive every list-all cache from its Connect Query method", () => {
+    const transport = createRouterTransport(() => undefined);
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { gcTime: TEST_GC_TIME, retry: false },
+      },
+    });
+    const rolesInput = rolesForInstanceQueryInput("local");
+    const grantsInput = roleGrantsForDatabaseQueryInput(DATABASE_SCOPE);
+    const ownedObjectsInput =
+      roleOwnedObjectsForDatabaseQueryInput(DATABASE_SCOPE);
+    const defaultPrivilegesInput =
+      roleDefaultPrivilegesForDatabaseQueryInput(DATABASE_SCOPE);
+    const publicGrantsInput = publicGrantsForDatabaseQueryInput(DATABASE_SCOPE);
+
+    renderHook(
+      () => {
+        useListAllRolesQuery(rolesInput, { enabled: false });
+        useListAllRoleGrantsQuery(grantsInput, { enabled: false });
+        useListAllRoleOwnedObjectsQuery(ownedObjectsInput, { enabled: false });
+        useListAllRoleDefaultPrivilegesQuery(defaultPrivilegesInput, {
+          enabled: false,
+        });
+        useListAllPublicGrantsQuery(publicGrantsInput, { enabled: false });
+      },
+      { wrapper: createWrapper(transport, queryClient) }
+    );
+
+    expect(
+      queryClient
+        .getQueryCache()
+        .getAll()
+        .map((query) => query.queryKey)
+    ).toEqual([
+      createConnectListAllQueryKey({
+        input: rolesInput,
+        method: listRoles,
+        transport,
+      }),
+      createConnectListAllQueryKey({
+        input: grantsInput,
+        method: listRoleGrants,
+        transport,
+      }),
+      createConnectListAllQueryKey({
+        input: ownedObjectsInput,
+        method: listRoleOwnedObjects,
+        transport,
+      }),
+      createConnectListAllQueryKey({
+        input: defaultPrivilegesInput,
+        method: listRoleDefaultPrivileges,
+        transport,
+      }),
+      createConnectListAllQueryKey({
+        input: publicGrantsInput,
+        method: listPublicGrants,
+        transport,
+      }),
+    ]);
+  });
 });
 
 describe("useListAllRolesQuery", () => {

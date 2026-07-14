@@ -6,6 +6,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -95,5 +96,22 @@ describe("url table search state", () => {
     await waitFor(() => expect(router.history.location.search).toBe(""));
     expect(router.history.location.pathname).toBe("/instances/prod/roles");
     expect(onReplace).toHaveBeenLastCalledWith("");
+  });
+
+  it("syncs the input when browser history changes q", async () => {
+    const router = renderSearchHarness("/instances/prod/roles?q=first");
+    const input =
+      await screen.findByLabelText<HTMLInputElement>("Filter roles...");
+
+    await act(() =>
+      router.navigate({ href: "/instances/prod/roles?q=second" })
+    );
+    await waitFor(() => expect(input.value).toBe("second"));
+
+    act(() => router.history.back());
+    await waitFor(() => expect(input.value).toBe("first"));
+
+    act(() => router.history.forward());
+    await waitFor(() => expect(input.value).toBe("second"));
   });
 });

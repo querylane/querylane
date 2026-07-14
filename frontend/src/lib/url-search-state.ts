@@ -1,5 +1,6 @@
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { handleNavigationError } from "@/lib/navigation-errors";
 
 export function normalizeSearchText(value: string): string {
   return value.trim() === "" ? "" : value;
@@ -17,15 +18,22 @@ export function useUrlTableSearch(): [
   const location = useLocation({
     select: ({ hash, pathname, searchStr }) => ({ hash, pathname, searchStr }),
   });
-  const pendingTextRef = useRef<string | null>(null);
+  const pendingNavigationRef = useRef<{
+    settledRevisionAtStart: number;
+    text: string;
+  } | null>(null);
+  const settledRouteRevisionRef = useRef(0);
+  const settledRouteSearchTextRef = useRef(routeSearchText);
   const [draftSearchText, setDraftSearchText] = useState(routeSearchText);
 
   useEffect(
     function syncDraftFromSettledUrl() {
-      if (pendingTextRef.current === routeSearchText) {
-        pendingTextRef.current = null;
+      settledRouteRevisionRef.current += 1;
+      settledRouteSearchTextRef.current = routeSearchText;
+      if (pendingNavigationRef.current?.text === routeSearchText) {
+        pendingNavigationRef.current = null;
       }
-      if (pendingTextRef.current !== null) {
+      if (pendingNavigationRef.current !== null) {
         return;
       }
       setDraftSearchText(routeSearchText);
@@ -35,7 +43,11 @@ export function useUrlTableSearch(): [
 
   function setUrlSearchText(value: string): Promise<void> {
     const nextValue = normalizeSearchText(value);
-    pendingTextRef.current = nextValue;
+    const pendingNavigation = {
+      settledRevisionAtStart: settledRouteRevisionRef.current,
+      text: nextValue,
+    };
+    pendingNavigationRef.current = pendingNavigation;
     setDraftSearchText(nextValue);
 
     const params = new URLSearchParams(location.searchStr);
@@ -50,13 +62,28 @@ export function useUrlTableSearch(): [
 
     return navigate({
       href: `${location.pathname}${nextSearch ? `?${nextSearch}` : ""}${nextHash}`,
+      ignoreBlocker: true,
       replace: true,
       resetScroll: false,
-    }).finally(() => {
-      if (pendingTextRef.current === nextValue) {
-        pendingTextRef.current = null;
-      }
-    });
+    })
+      .then(() => {
+        if (pendingNavigationRef.current === pendingNavigation) {
+          pendingNavigationRef.current = null;
+          if (
+            settledRouteRevisionRef.current !==
+            pendingNavigation.settledRevisionAtStart
+          ) {
+            setDraftSearchText(settledRouteSearchTextRef.current);
+          }
+        }
+      })
+      .catch((error: unknown) => {
+        handleNavigationError(error, { area: "url-table-search" });
+        if (pendingNavigationRef.current === pendingNavigation) {
+          pendingNavigationRef.current = null;
+          setDraftSearchText(settledRouteSearchTextRef.current);
+        }
+      });
   }
 
   return [draftSearchText, setUrlSearchText];

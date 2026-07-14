@@ -1194,6 +1194,7 @@ describe("backend instance activity", () => {
     ).toBeNull();
     expect(state.navigate).toHaveBeenLastCalledWith({
       href: "/?q=4302",
+      ignoreBlocker: true,
       replace: true,
       resetScroll: false,
     });

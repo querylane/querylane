@@ -7,6 +7,7 @@ import {
   refreshAllInstancesCache,
   selectedInstanceQueryOptions,
 } from "@/hooks/api/instance";
+import { createConnectListAllQueryKey } from "@/lib/connect-query-key";
 import { QUERY_STALE_TIME } from "@/lib/query-policy";
 import {
   GetInstanceResponseSchema,
@@ -14,6 +15,7 @@ import {
   type ListInstancesRequest,
   ListInstancesResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import { listInstances } from "@/protogen/querylane/console/v1alpha1/instance-InstanceService_connectquery";
 import { createTestQueryClient } from "@/test/query-client";
 
 async function disposeTestQueryClient(
@@ -49,6 +51,18 @@ describe("instance query option helpers", () => {
       orderBy: "display_name asc",
       pageSize: 1000,
     });
+  });
+
+  test("uses the Connect Query ListInstances key for the aggregate cache", () => {
+    const transport = createRouterTransport(() => undefined);
+
+    expect(listAllInstancesQueryOptions({ transport }).queryKey).toEqual(
+      createConnectListAllQueryKey({
+        input: DEFAULT_ALL_INSTANCES_QUERY_INPUT,
+        method: listInstances,
+        transport,
+      })
+    );
   });
 
   test("collects every instance page into a single list response", async () => {

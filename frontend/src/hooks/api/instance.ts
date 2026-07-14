@@ -10,11 +10,16 @@ import {
 import type { SkipToken } from "@connectrpc/connect-query-core";
 import { createQueryOptions } from "@connectrpc/connect-query-core";
 import {
+  hashKey,
   type QueryClient,
   queryOptions,
   useQueryClient,
   useQuery as useTanStackQuery,
 } from "@tanstack/react-query";
+import {
+  createConnectListAllQueryKey,
+  createConnectMethodQueryKey,
+} from "@/lib/connect-query-key";
 import { buildInstanceName } from "@/lib/console-resources";
 import { logger } from "@/lib/diagnostics";
 import { paginateAll } from "@/lib/paginate-all";
@@ -32,7 +37,7 @@ import {
   deleteInstance,
   getInstance,
   getInstanceOverview,
-  type listInstances,
+  listInstances,
   testInstanceConnection,
   updateInstance,
 } from "@/protogen/querylane/console/v1alpha1/instance-InstanceService_connectquery";
@@ -47,12 +52,6 @@ const DEFAULT_ALL_INSTANCES_QUERY_INPUT = {
   orderBy: "display_name asc",
   pageSize: 1000,
 } as const satisfies MessageInitShape<(typeof listInstances)["input"]>;
-
-function getListAllInstancesQueryKey(
-  input?: MessageInitShape<(typeof listInstances)["input"]>
-) {
-  return ["console", "instances", "list-all", input ?? null] as const;
-}
 
 async function fetchAllInstances(
   transport: Transport,
@@ -94,6 +93,22 @@ function queryKeyReferencesInstanceResource(
   return false;
 }
 
+function queryKeyIsUnscopedOrUsesTransport(
+  value: unknown,
+  transportKey: string | undefined
+): boolean {
+  if (!Array.isArray(value) || value[0] !== "connect-query") {
+    return true;
+  }
+  const options = value[1];
+  return (
+    options !== null &&
+    typeof options === "object" &&
+    "transport" in options &&
+    options.transport === transportKey
+  );
+}
+
 function orderInstancesByDisplayName(first: Instance, second: Instance) {
   return (
     first.displayName.localeCompare(second.displayName) ||
@@ -108,6 +123,46 @@ function upsertInstance(instances: Instance[], instance: Instance) {
   ].sort(orderInstancesByDisplayName);
 }
 
+async function refreshInstanceMutationCaches({
+  activeDescendantQueryHashes,
+  canonicalQueryHash,
+  methodQueryKey,
+  queryClient,
+  transport,
+}: {
+  activeDescendantQueryHashes: ReadonlySet<string>;
+  canonicalQueryHash: string;
+  methodQueryKey: readonly unknown[];
+  queryClient: QueryClient;
+  transport: Transport;
+}) {
+  const activeNoncanonicalListFilters = {
+    predicate: (query: { queryHash: string }) =>
+      query.queryHash !== canonicalQueryHash,
+    queryKey: methodQueryKey,
+    type: "active" as const,
+  };
+  const activeDescendantFilters = {
+    predicate: (query: { queryHash: string }) =>
+      activeDescendantQueryHashes.has(query.queryHash),
+    type: "active" as const,
+  };
+
+  await Promise.all([
+    queryClient.cancelQueries(activeNoncanonicalListFilters, { silent: true }),
+    queryClient.cancelQueries(activeDescendantFilters, { silent: true }),
+  ]);
+  await Promise.all([
+    queryClient.refetchQueries(activeNoncanonicalListFilters, {
+      throwOnError: true,
+    }),
+    queryClient.refetchQueries(activeDescendantFilters, {
+      throwOnError: true,
+    }),
+    refreshAllInstancesCache({ queryClient, transport }),
+  ]);
+}
+
 function runInstanceMutationCacheFollowUp({
   instanceName,
   queryClient,
@@ -119,26 +174,94 @@ function runInstanceMutationCacheFollowUp({
   transport: Transport;
   updateInstances: ((instances: Instance[]) => Instance[]) | undefined;
 }) {
+  const canonicalQueryKey = listAllInstancesQueryOptions({
+    transport,
+  }).queryKey;
+  const canonicalData =
+    queryClient.getQueryData<ListInstancesResponse>(canonicalQueryKey);
+  let canonicalDataToRestore = canonicalData;
+  if (canonicalData && updateInstances) {
+    canonicalDataToRestore = create(ListInstancesResponseSchema, {
+      instances: updateInstances(canonicalData.instances),
+      nextPageToken: canonicalData.nextPageToken,
+    });
+  }
+  const methodQueryKey = createConnectMethodQueryKey({
+    method: listInstances,
+    transport,
+  });
+  const canonicalQueryHash = hashKey(canonicalQueryKey);
+  const methodQueries = queryClient
+    .getQueryCache()
+    .findAll({ queryKey: methodQueryKey });
+  const methodQueryHashes = new Set(
+    methodQueries.map((query) => query.queryHash)
+  );
+  const descendantQueries = instanceName
+    ? queryClient.getQueryCache().findAll({
+        predicate: (query) =>
+          !methodQueryHashes.has(query.queryHash) &&
+          queryKeyIsUnscopedOrUsesTransport(
+            query.queryKey,
+            methodQueryKey[1].transport
+          ) &&
+          queryKeyReferencesInstanceResource(query.queryKey, instanceName),
+      })
+    : [];
+  const activeDescendantQueryHashes = new Set(
+    descendantQueries
+      .filter((query) => query.isActive())
+      .map((query) => query.queryHash)
+  );
+  const disabledObservedDescendantQueryHashes = new Set(
+    descendantQueries
+      .filter((query) => query.getObserversCount() > 0 && !query.isActive())
+      .map((query) => query.queryHash)
+  );
+
+  queryClient.removeQueries({
+    predicate: (query) => query.getObserversCount() === 0,
+    queryKey: methodQueryKey,
+  });
+
   if (instanceName) {
     queryClient.removeQueries({
       predicate: (query) =>
+        !methodQueryHashes.has(query.queryHash) &&
+        query.getObserversCount() === 0 &&
+        queryKeyIsUnscopedOrUsesTransport(
+          query.queryKey,
+          methodQueryKey[1].transport
+        ) &&
         queryKeyReferencesInstanceResource(query.queryKey, instanceName),
     });
   }
 
-  if (updateInstances) {
-    const queryKey = listAllInstancesQueryOptions({ transport }).queryKey;
-    queryClient.setQueryData<ListInstancesResponse>(queryKey, (current) =>
-      current
-        ? create(ListInstancesResponseSchema, {
-            instances: updateInstances(current.instances),
-            nextPageToken: current.nextPageToken,
-          })
-        : current
-    );
+  if (canonicalDataToRestore) {
+    queryClient.setQueryData(canonicalQueryKey, canonicalDataToRestore);
   }
 
-  refreshAllInstancesCache({ queryClient, transport }).catch((error) => {
+  queryClient.invalidateQueries({
+    predicate: (query) =>
+      query.queryHash !== canonicalQueryHash &&
+      query.getObserversCount() > 0 &&
+      !query.isActive(),
+    queryKey: methodQueryKey,
+    refetchType: "none",
+  });
+  queryClient.invalidateQueries({
+    predicate: (query) =>
+      disabledObservedDescendantQueryHashes.has(query.queryHash),
+    refetchType: "none",
+  });
+
+  refreshInstanceMutationCaches({
+    activeDescendantQueryHashes,
+    canonicalQueryHash,
+    methodQueryKey,
+    queryClient,
+    transport,
+  }).catch((error) => {
     logger.warn("Instance mutation cache refresh failed", {
       error: error instanceof Error ? error.message : String(error),
       instanceName,
@@ -155,7 +278,11 @@ export function listAllInstancesQueryOptions({
 }) {
   return queryOptions({
     queryFn: () => fetchAllInstances(transport, input),
-    queryKey: getListAllInstancesQueryKey(input),
+    queryKey: createConnectListAllQueryKey({
+      input,
+      method: listInstances,
+      transport,
+    }),
     ...RESOURCE_QUERY_OPTIONS.instanceList,
   });
 }
