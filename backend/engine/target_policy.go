@@ -19,6 +19,7 @@ var defaultBlockedTargetPrefixes = []netip.Prefix{
 	netip.MustParsePrefix("0.0.0.0/32"),
 	netip.MustParsePrefix("127.0.0.0/8"),
 	netip.MustParsePrefix("169.254.0.0/16"),
+	netip.MustParsePrefix("fd00:ec2::254/128"),
 	netip.MustParsePrefix("::/128"),
 	netip.MustParsePrefix("::1/128"),
 	netip.MustParsePrefix("fe80::/10"),

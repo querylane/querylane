@@ -91,7 +91,7 @@ limits:
 # PostgreSQL socket dial, preventing DNS rebinding from bypassing the policy.
 # By default Querylane allows public and private targets, but blocks IPv4/IPv6
 # loopback, unspecified, and link-local addresses. This includes cloud metadata
-# endpoints such as 169.254.169.254.
+# endpoints such as 169.254.169.254 and fd00:ec2::254.
 #
 # A nonempty allowlist becomes strict and is the only way to permit a default-
 # blocked address. Custom deny entries always win. Detailed connection errors

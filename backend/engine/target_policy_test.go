@@ -22,6 +22,7 @@ func TestTargetPolicyDefaultBlocksHostLocalDestinations(t *testing.T) {
 		"0.0.0.0",
 		"127.0.0.1",
 		"169.254.169.254",
+		"fd00:ec2::254",
 		"::",
 		"::1",
 		"fe80::1",
