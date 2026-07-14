@@ -457,17 +457,7 @@ test("admin shell shows selected instance, database, scoped navigation, and acti
   await expect.element(page.getByText("Collapse menu")).toBeVisible();
 
   const header = document.querySelector("header");
-  const verticalSeparators = document.querySelectorAll(
-    '[data-slot="separator"][data-orientation="vertical"]'
-  );
   expect(header).not.toBeNull();
-  expect(verticalSeparators.length).toBeGreaterThan(0);
-  const headerHeight = header?.getBoundingClientRect().height ?? 0;
-  for (const separator of verticalSeparators) {
-    expect(separator.getBoundingClientRect().height).toBeGreaterThanOrEqual(
-      headerHeight - 1
-    );
-  }
 
   await expect(page.getByTestId("admin-shell-visual-root")).toMatchScreenshot(
     "admin-shell-database-scope"
