@@ -36,11 +36,6 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
-const TEST_NUMBER_120 = 120;
-const TEST_NUMBER_10000 = 10_000;
-const TEST_NUMBER_1200 = 1200;
-const TEST_NUMBER_20 = 20;
-
 interface QueryState<T> {
   data?: T;
   error?: unknown;
@@ -215,7 +210,7 @@ function QueryInsightsDrawerForTest({
 }) {
   return (
     <dialog aria-label="Query insights" open={true}>
-      <h1>{"Query insights"}</h1>
+      <h1>Query insights</h1>
       <DatabaseQueryInsightsContent
         databaseId={databaseId}
         instanceId={instanceId}
@@ -487,12 +482,12 @@ function queryInsightsResponseWithManyQueries() {
     topQueries: Array.from({ length: 12 }, (_, index) => {
       const sequence = index + 1;
       return queryRuntimeInsight({
-        calls: BigInt(TEST_NUMBER_120 - sequence),
+        calls: BigInt(120 - sequence),
         meanTimeMs: sequence,
         query: `SELECT * FROM events WHERE sequence = ${sequence}`,
-        queryId: BigInt(TEST_NUMBER_10000 + sequence),
-        totalTimeMs: TEST_NUMBER_1200 - sequence,
-        totalTimeRatio: 1 - index / TEST_NUMBER_20,
+        queryId: BigInt(10_000 + sequence),
+        totalTimeMs: 1200 - sequence,
+        totalTimeRatio: 1 - index / 20,
       });
     }),
   });

@@ -42,7 +42,7 @@ export function CatalogKindBadge({
       </Badge>
       {isSystem ? (
         <Badge className="font-mono text-[10px]" variant="ghost">
-          {"SYS"}
+          SYS
         </Badge>
       ) : null}
       {allPredicates(
@@ -50,7 +50,7 @@ export function CatalogKindBadge({
         () => !isPopulated
       ) ? (
         <span className="font-mono text-[10px] text-muted-foreground uppercase">
-          {"unpopulated"}
+          unpopulated
         </span>
       ) : null}
     </span>

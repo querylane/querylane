@@ -41,14 +41,6 @@ import {
   StorageMetricsSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
-const TEST_NUMBER_2026 = 2026;
-const TEST_NUMBER_4 = 4;
-const TEST_NUMBER_20 = 20;
-const TEST_NUMBER_12 = 12;
-const TEST_NUMBER_8 = 8;
-const TEST_NUMBER_32 = 32;
-const TEST_NUMBER_36 = 36;
-
 const BLOCKED_ACTIVITY_ROW_NAME =
   /4302.*api-gateway.*UPDATE shipping\.shipments/;
 
@@ -867,14 +859,7 @@ async function openQueryInsightsDrawer(
 test("backend instance overview shows live metrics and database catalog together", async () => {
   state.instanceQuery = {
     data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(
-      TEST_NUMBER_2026,
-      TEST_NUMBER_4,
-      TEST_NUMBER_20,
-      TEST_NUMBER_12,
-      0,
-      0
-    ),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
   };
   state.overviewQuery = { data: overviewResponse() };
   state.extensionQuery = { data: extensionInventoryResponse() };
@@ -928,14 +913,7 @@ test("backend instance overview shows live metrics and database catalog together
 test("backend instance activity matches the live sessions redesign", async () => {
   state.instanceQuery = {
     data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(
-      TEST_NUMBER_2026,
-      TEST_NUMBER_4,
-      TEST_NUMBER_20,
-      TEST_NUMBER_12,
-      0,
-      0
-    ),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
   };
   state.healthQuery = { data: activityHealthResponse() };
   state.overviewQuery = { data: overviewResponse() };
@@ -1000,7 +978,7 @@ test("backend instance activity matches the live sessions redesign", async () =>
     document.querySelectorAll(
       'code.language-sql[data-syntax-highlighter="shiki"]'
     )
-  ).toHaveLength(TEST_NUMBER_8);
+  ).toHaveLength(8);
   const waitingSql = page
     .getByText("waiting · pid 4302")
     .element()
@@ -1059,14 +1037,7 @@ test("backend instance activity matches the live sessions redesign", async () =>
 test("background activity refresh keeps the table fixed in place", async () => {
   state.instanceQuery = {
     data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(
-      TEST_NUMBER_2026,
-      TEST_NUMBER_4,
-      TEST_NUMBER_20,
-      TEST_NUMBER_12,
-      0,
-      0
-    ),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
   };
   state.healthQuery = {
     data: activityHealthResponse(),
@@ -1104,14 +1075,7 @@ test("background activity refresh keeps the table fixed in place", async () => {
 test("backend instance activity empty state matches", async () => {
   state.instanceQuery = {
     data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(
-      TEST_NUMBER_2026,
-      TEST_NUMBER_4,
-      TEST_NUMBER_20,
-      TEST_NUMBER_12,
-      0,
-      0
-    ),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
   };
   state.healthQuery = { data: defaultHealthResponse() };
   state.overviewQuery = { data: overviewResponse() };
@@ -1144,14 +1108,7 @@ test("backend instance activity empty state matches", async () => {
 test("backend instance activity unavailable state matches", async () => {
   state.instanceQuery = {
     data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(
-      TEST_NUMBER_2026,
-      TEST_NUMBER_4,
-      TEST_NUMBER_20,
-      TEST_NUMBER_12,
-      0,
-      0
-    ),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
   };
   state.healthQuery = {
     data: {
@@ -1182,14 +1139,7 @@ test("backend instance activity disconnected state matches", async () => {
   state.selectedInstanceStatus = "disconnected";
   state.instanceQuery = {
     data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(
-      TEST_NUMBER_2026,
-      TEST_NUMBER_4,
-      TEST_NUMBER_20,
-      TEST_NUMBER_12,
-      0,
-      0
-    ),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
   };
   state.healthQuery = { data: activityHealthResponse(), isPending: false };
   state.overviewQuery = { data: overviewResponse() };
@@ -1296,7 +1246,7 @@ test("partial query insights use the full drawer content width", async () => {
 
   const drawerBox = drawer.element().getBoundingClientRect();
   const cardBox = topQueriesCard.getBoundingClientRect();
-  expect(drawerBox.right - cardBox.right).toBeLessThanOrEqual(TEST_NUMBER_32);
+  expect(drawerBox.right - cardBox.right).toBeLessThanOrEqual(32);
 });
 
 test("query statistics retry uses the default button size", async () => {
@@ -1309,9 +1259,7 @@ test("query statistics retry uses the default button size", async () => {
     name: "Retry query statistics",
   });
   await expect.element(retryButton).toBeVisible();
-  expect(retryButton.element().getBoundingClientRect().height).toBe(
-    TEST_NUMBER_36
-  );
+  expect(retryButton.element().getBoundingClientRect().height).toBe(36);
 });
 
 test("backend database extensions page matches design source", async () => {
@@ -1442,14 +1390,7 @@ test("backend database extensions available drawer matches design source", async
 test("backend instance delete navigates without waiting for catalog refresh", async () => {
   state.instanceQuery = {
     data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(
-      TEST_NUMBER_2026,
-      TEST_NUMBER_4,
-      TEST_NUMBER_20,
-      TEST_NUMBER_12,
-      0,
-      0
-    ),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
   };
   state.overviewQuery = { data: overviewResponse() };
 

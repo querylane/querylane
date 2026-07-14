@@ -6,12 +6,6 @@ import {
   refreshValueToIntervalMs,
 } from "@/features/user-settings/refresh-settings";
 
-const TEST_NUMBER_60000 = 60_000;
-const TEST_NUMBER_90000 = 90_000;
-const TEST_NUMBER_7 = 7;
-const TEST_NUMBER_86400000 = 86_400_000;
-const TEST_NUMBER_50012022 = 50_012_022;
-
 describe("refresh settings", () => {
   it("keeps never as the default refresh cadence", () => {
     expect(refreshValueToIntervalMs("never")).toBeNull();
@@ -19,8 +13,8 @@ describe("refresh settings", () => {
   });
 
   it("allows one minute as the fastest auto-refresh interval", () => {
-    expect(refreshValueToIntervalMs("60000")).toBe(TEST_NUMBER_60000);
-    expect(refreshIntervalMsToValue(TEST_NUMBER_60000)).toBe("60000");
+    expect(refreshValueToIntervalMs("60000")).toBe(60_000);
+    expect(refreshIntervalMsToValue(60_000)).toBe("60000");
   });
 
   it("rejects sub-minute or unknown refresh intervals", () => {
@@ -64,7 +58,7 @@ describe("refresh settings", () => {
       if (result.intervalMs === null) {
         throw new Error("Expected absolute date input to become an interval.");
       }
-      expect(result.intervalMs % TEST_NUMBER_60000).toBe(0);
+      expect(result.intervalMs % 60_000).toBe(0);
       expect(formatRefreshIntervalLabel(result.intervalMs)).not.toContain(
         "millisecond"
       );
@@ -85,14 +79,12 @@ describe("refresh settings", () => {
   });
 
   it("formats custom intervals", () => {
-    expect(formatRefreshIntervalLabel(TEST_NUMBER_90000)).toBe(
+    expect(formatRefreshIntervalLabel(90_000)).toBe(
       "Every 1 minute 30 seconds"
     );
-    expect(formatRefreshIntervalLabel(TEST_NUMBER_7 * TEST_NUMBER_60000)).toBe(
-      "Every 7 minutes"
-    );
-    expect(formatRefreshIntervalLabel(TEST_NUMBER_86400000)).toBe("Every day");
-    expect(formatRefreshIntervalLabel(TEST_NUMBER_50012022)).toBe(
+    expect(formatRefreshIntervalLabel(7 * 60_000)).toBe("Every 7 minutes");
+    expect(formatRefreshIntervalLabel(86_400_000)).toBe("Every day");
+    expect(formatRefreshIntervalLabel(50_012_022)).toBe(
       "Every 13 hours 54 minutes"
     );
   });

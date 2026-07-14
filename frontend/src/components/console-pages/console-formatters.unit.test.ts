@@ -12,10 +12,6 @@ import {
   buildTruncatedTextPreview,
 } from "./console-formatters";
 
-const TEST_NUMBER_120 = 120;
-const TEST_NUMBER_130 = 130;
-const TEST_NUMBER_5 = 5;
-
 describe("buildTruncatedTextPreview", () => {
   test("returns dash for empty string", () => {
     const result = buildTruncatedTextPreview("");
@@ -45,7 +41,7 @@ describe("buildTruncatedTextPreview", () => {
   });
 
   test("returns value unchanged when exactly at limit", () => {
-    const value = "a".repeat(TEST_NUMBER_120);
+    const value = "a".repeat(120);
     const result = buildTruncatedTextPreview(value);
     expect(result).toEqual({
       displayValue: value,
@@ -55,15 +51,15 @@ describe("buildTruncatedTextPreview", () => {
   });
 
   test("truncates and adds ellipsis when over limit", () => {
-    const value = "a".repeat(TEST_NUMBER_130);
+    const value = "a".repeat(130);
     const result = buildTruncatedTextPreview(value);
-    expect(result.displayValue).toBe(`${"a".repeat(TEST_NUMBER_120)}…`);
+    expect(result.displayValue).toBe(`${"a".repeat(120)}…`);
     expect(result.forceTooltip).toBe(true);
     expect(result.tooltipContent).toBe(value);
   });
 
   test("respects custom maxLength", () => {
-    const result = buildTruncatedTextPreview("abcdefghij", TEST_NUMBER_5);
+    const result = buildTruncatedTextPreview("abcdefghij", 5);
     expect(result.displayValue).toBe("abcde…");
     expect(result.forceTooltip).toBe(true);
     expect(result.tooltipContent).toBe("abcdefghij");
@@ -71,7 +67,7 @@ describe("buildTruncatedTextPreview", () => {
 
   test("trims trailing whitespace from truncated portion", () => {
     // "abc  " (5 chars) + more => truncate at 5 => "abc  " trimEnd => "abc"
-    const result = buildTruncatedTextPreview("abc  defgh", TEST_NUMBER_5);
+    const result = buildTruncatedTextPreview("abc  defgh", 5);
     expect(result.displayValue).toBe("abc…");
   });
 });

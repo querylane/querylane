@@ -11,11 +11,6 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
-const testHexDe = 0xde;
-const testHexAd = 0xad;
-const testHexBe = 0xbe;
-const testHexEf = 0xef;
-
 const TARGET_TABLE =
   "instances/prod/databases/app/schemas/public/tables/accounts";
 
@@ -64,7 +59,7 @@ describe("foreign key reference state", () => {
       label: "binary foreign key",
       value: {
         case: "bytesValue",
-        value: new Uint8Array([testHexDe, testHexAd, testHexBe, testHexEf]),
+        value: new Uint8Array([0xde, 0xad, 0xbe, 0xef]),
       } as const,
     },
   ])("preserves $label in the required predicate", ({ value }) => {

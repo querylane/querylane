@@ -11,9 +11,6 @@ import {
   ExplorerSidebar,
 } from "@/features/data-explorer/explorer-sidebar";
 
-const TEST_NUMBER_4 = 4;
-const TEST_NUMBER_350 = 350;
-
 type IntersectionCallback = (
   entries: Array<{ isIntersecting: boolean }>
 ) => void;
@@ -270,7 +267,7 @@ describe("ExplorerSidebar schema overview label", () => {
 describe("ExplorerSidebar search empty state", () => {
   it("keeps large object lists bounded to the visible window", async () => {
     const largeTables = Array.from({ length: 1000 }, (_, index) => ({
-      name: `table_${index.toString().padStart(TEST_NUMBER_4, "0")}`,
+      name: `table_${index.toString().padStart(4, "0")}`,
       sizeLabel: `${index + 1} KB`,
     }));
 
@@ -341,7 +338,7 @@ describe("ExplorerSidebar search empty state", () => {
       expect(screen.queryByTestId("resource-list-loading")).toBeNull();
 
       act(() => {
-        vi.advanceTimersByTime(TEST_NUMBER_350);
+        vi.advanceTimersByTime(350);
       });
 
       expect(screen.getByTestId("resource-list-loading")).toBeTruthy();

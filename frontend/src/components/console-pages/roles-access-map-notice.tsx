@@ -26,11 +26,10 @@ function RolesAccessMapNotice(props: RolesAccessMapNoticeProps) {
   return (
     <Alert role="status">
       <TriangleAlert aria-hidden="true" />
-      <AlertTitle>{"Some access data is not shown"}</AlertTitle>
+      <AlertTitle>Some access data is not shown</AlertTitle>
       <AlertDescription>
-        {
-          "The access map reached a result or request limit. It shows available results; counts and relationships may be incomplete."
-        }
+        The access map reached a result or request limit. It shows available
+        results; counts and relationships may be incomplete.
       </AlertDescription>
     </Alert>
   );

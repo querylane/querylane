@@ -8,8 +8,6 @@ import {
   writePersistedNavigationSelectionStore,
 } from "./db-persistence";
 
-const TEST_NUMBER_42 = 42;
-
 function createSessionStorage(values: Map<string, string>): Storage {
   return {
     clear: () => values.clear(),
@@ -37,7 +35,7 @@ describe("normalizePersistedNavigationSelection", () => {
   });
 
   test("returns empty object for non-object values", () => {
-    expect(normalizePersistedNavigationSelection(TEST_NUMBER_42)).toEqual({});
+    expect(normalizePersistedNavigationSelection(42)).toEqual({});
     expect(normalizePersistedNavigationSelection("string")).toEqual({});
     expect(normalizePersistedNavigationSelection(undefined)).toEqual({});
   });

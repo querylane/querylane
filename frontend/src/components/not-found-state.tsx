@@ -36,9 +36,9 @@ export function NotFoundState({ containerClassName }: NotFoundStateProps) {
         <EmptyState
           action={
             <div className="flex flex-wrap justify-center gap-2">
-              <Button onClick={handleGoHome}>{"Go to home"}</Button>
+              <Button onClick={handleGoHome}>Go to home</Button>
               <Button onClick={handleGoBack} variant="outline">
-                {"Go back"}
+                Go back
               </Button>
             </div>
           }

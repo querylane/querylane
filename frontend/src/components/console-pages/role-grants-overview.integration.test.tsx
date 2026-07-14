@@ -13,8 +13,6 @@ import {
   OwnedObjectSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const TEST_NUMBER_5 = 5;
-
 const MAINTAIN_PUBLIC_PREVIEW_RE = /MAINTAIN on 1 table/;
 const STALE_SELECT_PUBLIC_PREVIEW_RE = /SELECT on 1 table/;
 const DEMO_ECOMMERCE_RE = /demo_ecommerce/i;
@@ -191,5 +189,5 @@ it("qualifies every truncated facet count as partial", () => {
     />
   );
 
-  expect(screen.getAllByText("Partial")).toHaveLength(TEST_NUMBER_5);
+  expect(screen.getAllByText("Partial")).toHaveLength(5);
 });

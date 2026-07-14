@@ -26,7 +26,7 @@ describe("EmptyStatePanel", () => {
         description="Try another schema."
         title="No tables found"
       >
-        <span>{"Clear filters to show all tables."}</span>
+        <span>Clear filters to show all tables.</span>
       </EmptyStatePanel>
     );
 

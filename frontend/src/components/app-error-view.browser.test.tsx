@@ -100,12 +100,11 @@ test("common PostgreSQL errors keep concise guidance on the main surface", async
       <div className="w-[1100px] space-y-5 rounded-2xl border border-border bg-background p-6 text-foreground">
         <header className="space-y-1">
           <h1 className="font-semibold text-2xl tracking-tight">
-            {"Common PostgreSQL errors"}
+            Common PostgreSQL errors
           </h1>
           <p className="text-muted-foreground text-sm">
-            {
-              "The summary and recommendation stay visible. SQLSTATE and the PostgreSQL server message are available in Error details."
-            }
+            The summary and recommendation stay visible. SQLSTATE and the
+            PostgreSQL server message are available in Error details.
           </p>
         </header>
 

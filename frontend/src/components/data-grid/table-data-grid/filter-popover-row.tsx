@@ -192,7 +192,7 @@ function FilterRow({ columns, onChange, onRemove, rule }: FilterRowProps) {
 
       {operatorMeta.valueCount === 0 ? (
         <div className="flex h-8 items-center rounded-md border border-dashed px-2 text-muted-foreground text-xs">
-          {"No value needed"}
+          No value needed
         </div>
       ) : (
         <div

@@ -157,7 +157,7 @@ describe("app error view integration", () => {
 
     render(
       <AppErrorView
-        actions={<Button type="button">{"Go home"}</Button>}
+        actions={<Button type="button">Go home</Button>}
         error={createBootError()}
       />
     );

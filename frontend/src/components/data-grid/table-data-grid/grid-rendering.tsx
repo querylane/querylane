@@ -93,7 +93,7 @@ function GridBody({
     if (hasActiveFilter) {
       return <SearchEmptyState className="border" resourceName="rows" />;
     }
-    return <EmptyStatePanel icon={Rows3}>{"No rows found"}</EmptyStatePanel>;
+    return <EmptyStatePanel icon={Rows3}>No rows found</EmptyStatePanel>;
   }
   return (
     <div className="contents" data-keyboard-shortcut-scope="grid">

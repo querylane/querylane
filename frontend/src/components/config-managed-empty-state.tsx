@@ -59,16 +59,16 @@ export function ConfigManagedEmptyState({
             type="button"
             variant="outline"
           >
-            {"Copy YAML snippet"}
+            Copy YAML snippet
           </Button>
           {copyState === "copied" ? (
             <span className="text-muted-foreground text-xs">
-              {"Copied YAML snippet."}
+              Copied YAML snippet.
             </span>
           ) : null}
           {copyState === "error" ? (
             <span className="text-destructive text-xs" role="alert">
-              {"Could not copy YAML snippet."}
+              Could not copy YAML snippet.
             </span>
           ) : null}
         </div>

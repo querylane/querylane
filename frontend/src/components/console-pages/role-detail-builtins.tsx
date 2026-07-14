@@ -57,12 +57,11 @@ function BuiltinPowersCard({
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-[15px] tracking-tight">
-            {"What members can do"}
+            What members can do
           </h3>
           <p className="mt-1 text-[13px] text-muted-foreground leading-relaxed">
-            {
-              "Powers this role grants automatically: the same everywhere in the cluster."
-            }
+            Powers this role grants automatically: the same everywhere in the
+            cluster.
           </p>
         </div>
       </div>
@@ -70,7 +69,7 @@ function BuiltinPowersCard({
       <div className="flex items-center gap-2.5 px-6 pb-3">
         <span className="flex items-center gap-1.5 font-medium text-[11px] text-muted-foreground/70 uppercase tracking-wider">
           <Globe className="size-3 text-muted-foreground" />
-          {"Cluster-wide"}
+          Cluster-wide
         </span>
         <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
         {builtinCapabilities.length > 0 ? (
@@ -94,16 +93,16 @@ function BuiltinPowersCard({
               <span className="min-w-0 flex-1 font-medium text-sm">{line}</span>
               <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 font-medium text-[11px] text-amber-700 dark:text-amber-400">
                 <Lock className="size-3" />
-                {"Can't revoke"}
+                Can&apos;t revoke
               </span>
             </div>
           ))}
         </div>
       ) : (
         <p className="px-6 text-muted-foreground text-sm">
-          {
-            "Grants implicit privileges to its members. This role isn't in our catalogue, so the exact set isn't listed here; check the PostgreSQL documentation for your server version."
-          }
+          Grants implicit privileges to its members. This role isn&apos;t in our
+          catalogue, so the exact set isn&apos;t listed here; check the
+          PostgreSQL documentation for your server version.
         </p>
       )}
 
@@ -111,7 +110,7 @@ function BuiltinPowersCard({
         <div className="mt-3 flex flex-col gap-2 px-6">
           <span className="flex items-center gap-1.5 font-medium text-[11px] text-muted-foreground/70 uppercase tracking-wider">
             <Network className="size-3 text-muted-foreground" />
-            {"Also inherits via membership"}
+            Also inherits via membership
           </span>
           {parents.map((parent) => (
             <Link
@@ -137,11 +136,8 @@ function BuiltinPowersCard({
             </Link>
           ))}
           <p className="text-muted-foreground text-xs">
-            {"Real "}
-            <span className="font-mono">{"pg_auth_members"}</span>
-            {
-              " grants: members of this role transitively receive their powers too."
-            }
+            Real <span className="font-mono">pg_auth_members</span> grants:
+            members of this role transitively receive their powers too.
           </p>
         </div>
       ) : null}
@@ -152,30 +148,28 @@ function BuiltinPowersCard({
           <div className="min-w-0">
             <p className="text-muted-foreground text-xs leading-relaxed">
               <span className="font-medium text-foreground">
-                {"Built-in privilege."}
+                Built-in privilege.
               </span>{" "}
-              {"Enforced by PostgreSQL's"}{" "}
+              Enforced by PostgreSQL&apos;s{" "}
               <span className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
-                {"has_*_privilege()"}
+                has_*_privilege()
               </span>{" "}
-              {"checks, not"}{" "}
+              checks, not{" "}
               <span className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
-                {"GRANT"}
+                GRANT
               </span>{" "}
-              {
-                "rows, so there's nothing to inspect or revoke. Membership is the only switch."
-              }
+              rows, so there&apos;s nothing to inspect or revoke. Membership is
+              the only switch.
             </p>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {builtinInfo ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2 py-1 text-[11px] text-muted-foreground">
                   <span className="size-1.5 rounded-full bg-violet-500" />
-                  {builtinInfo.since}
-                  {"+"}
+                  {builtinInfo.since}+
                 </span>
               ) : null}
               <span className="rounded-full border border-border bg-muted/40 px-2 py-1 text-[11px] text-muted-foreground">
-                {"Exact set varies by server version"}
+                Exact set varies by server version
               </span>
             </div>
           </div>
@@ -199,11 +193,10 @@ function BuiltinMembersCard({
   if (isDatabaseOwner) {
     body = (
       <p className="text-muted-foreground text-sm">
-        {
-          "Membership is implicit: whoever owns the current database is treated as a member, with no row in"
-        }{" "}
-        <span className="font-mono">{"pg_auth_members"}</span>
-        {". There is nothing to list here."}
+        Membership is implicit: whoever owns the current database is treated as
+        a member, with no row in{" "}
+        <span className="font-mono">pg_auth_members</span>. There is nothing to
+        list here.
       </p>
     );
   } else if (members.length === 0) {
@@ -263,7 +256,7 @@ function BuiltinExtraGrantsCard({
 }) {
   let body: React.ReactNode;
   if (isPending) {
-    body = <p className="text-muted-foreground text-sm">{"Loading grants…"}</p>;
+    body = <p className="text-muted-foreground text-sm">Loading grants…</p>;
   } else if (databases.length === 0) {
     body = (
       <EmptyState
@@ -275,18 +268,17 @@ function BuiltinExtraGrantsCard({
   } else if (error) {
     body = (
       <p className="text-destructive text-sm">
-        {"Could not load grants for"}{" "}
-        <span className="font-mono">{databaseName}</span>
-        {"."}
+        Could not load grants for{" "}
+        <span className="font-mono">{databaseName}</span>.
       </p>
     );
   } else if (objects.length === 0) {
     body = (
       <p className="text-muted-foreground text-sm">
-        {"Nothing has been granted directly to"}{" "}
-        <span className="font-mono">{roleName}</span>
-        {" in"} <span className="font-mono">{databaseName}</span>
-        {". Its access here comes entirely from the built-in powers above."}
+        Nothing has been granted directly to{" "}
+        <span className="font-mono">{roleName}</span> in{" "}
+        <span className="font-mono">{databaseName}</span>. Its access here comes
+        entirely from the built-in powers above.
       </p>
     );
   } else {

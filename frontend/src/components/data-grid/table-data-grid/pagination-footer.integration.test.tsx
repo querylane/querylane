@@ -3,9 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 
-const TEST_NUMBER_25 = 25;
-const TEST_NUMBER_50 = 50;
-
 afterEach(() => cleanup());
 
 describe("PaginationFooter", () => {
@@ -23,7 +20,7 @@ describe("PaginationFooter", () => {
         pageLabel="Page 1 of 2"
         pageSize={10}
         pageSizeLabel="Triggers per page"
-        pageSizeOptions={[10, TEST_NUMBER_25, TEST_NUMBER_50]}
+        pageSizeOptions={[10, 25, 50]}
       />
     );
 
@@ -46,7 +43,7 @@ describe("PaginationFooter", () => {
       screen.getAllByRole("option").map((option) => option.textContent)
     ).toEqual(["10", "25", "50"]);
     await user.click(screen.getByRole("option", { name: "25" }));
-    expect(onPageSizeChange).toHaveBeenCalledWith(TEST_NUMBER_25);
+    expect(onPageSizeChange).toHaveBeenCalledWith(25);
   });
 
   it("uses a stable rows-per-page select label", () => {

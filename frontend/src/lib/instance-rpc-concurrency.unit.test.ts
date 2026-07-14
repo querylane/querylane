@@ -24,8 +24,6 @@ import {
   SchemaService,
 } from "@/protogen/querylane/console/v1alpha1/schema_pb";
 
-const TEST_NUMBER_3 = 3;
-
 const generatedProtoModules = import.meta.glob<Record<string, unknown>>(
   "@/protogen/querylane/console/v1alpha1/*_pb.ts",
   { eager: true }
@@ -196,7 +194,7 @@ describe("createKeyedRpcSemaphore", () => {
       return release;
     });
     const third = semaphore.acquire("instances/a").then((release) => {
-      order.push(TEST_NUMBER_3);
+      order.push(3);
       return release;
     });
 
@@ -206,7 +204,7 @@ describe("createKeyedRpcSemaphore", () => {
     const releaseThird = await third;
     releaseThird();
 
-    expect(order).toEqual([2, TEST_NUMBER_3]);
+    expect(order).toEqual([2, 3]);
   });
 
   it("rejects queued acquisitions when their signal aborts", async () => {

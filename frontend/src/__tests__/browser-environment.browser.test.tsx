@@ -7,7 +7,7 @@ test("browser test environment loads app styles and deterministic visual-test CS
   render(
     <ScreenshotFrame>
       <div className="rounded-xl bg-primary p-4 text-primary-foreground">
-        {"Styled browser frame"}
+        Styled browser frame
       </div>
     </ScreenshotFrame>
   );

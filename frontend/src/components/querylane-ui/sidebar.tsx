@@ -35,12 +35,8 @@ import {
 import { anyPredicate } from "@/lib/predicates";
 import { cn } from "@/lib/utils";
 
-const SIDEBAR_COOKIE_MAX_AGE_DAYS = 7;
-const SKELETON_MIN_WIDTH_PERCENT = 50;
-const SKELETON_WIDTH_VARIANCE_PERCENT = 40;
-
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * SIDEBAR_COOKIE_MAX_AGE_DAYS;
+const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
@@ -485,10 +481,8 @@ function Sidebar({
           }
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>{"Sidebar"}</SheetTitle>
-            <SheetDescription>
-              {"Displays the mobile sidebar."}
-            </SheetDescription>
+            <SheetTitle>Sidebar</SheetTitle>
+            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
@@ -579,7 +573,7 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon />
-      <span className="sr-only">{"Toggle Sidebar"}</span>
+      <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );
 }
@@ -906,9 +900,7 @@ function SidebarMenuSkeleton({
   showIcon?: boolean;
 }) {
   // Random width between 50 to 90%.
-  const width = useRef(
-    `${Math.floor(Math.random() * SKELETON_WIDTH_VARIANCE_PERCENT) + SKELETON_MIN_WIDTH_PERCENT}%`
-  ).current;
+  const width = useRef(`${Math.floor(Math.random() * 40) + 50}%`).current;
 
   return (
     <div

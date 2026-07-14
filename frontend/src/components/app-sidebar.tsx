@@ -217,10 +217,10 @@ function SidebarFooterContent({
               }
             >
               <AlertTriangle className="size-4" />
-              <span className="sr-only">{"Build metadata error"}</span>
+              <span className="sr-only">Build metadata error</span>
             </TooltipTrigger>
             <TooltipContent align="center" side="right">
-              {"Expand menu to inspect build metadata error"}
+              Expand menu to inspect build metadata error
             </TooltipContent>
           </Tooltip>
         ) : null}
@@ -233,7 +233,7 @@ function SidebarFooterContent({
             />
           </TooltipTrigger>
           <TooltipContent align="center" side="right">
-            {"Expand menu"}
+            Expand menu
           </TooltipContent>
         </Tooltip>
 
@@ -250,26 +250,26 @@ function SidebarFooterContent({
             }
           >
             <InfoIcon className="size-4" />
-            <span className="sr-only">{"About Querylane"}</span>
+            <span className="sr-only">About Querylane</span>
           </TooltipTrigger>
           <TooltipContent align="center" side="right">
-            {"About Querylane"}
+            About Querylane
           </TooltipContent>
         </Tooltip>
       </div>
 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{"About Querylane"}</DialogTitle>
+          <DialogTitle>About Querylane</DialogTitle>
           <DialogDescription>
-            {"Version and build metadata for this Querylane instance."}
+            Version and build metadata for this Querylane instance.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <Logo className="size-10 shrink-0 rounded-md" />
-            <p className="font-medium text-base">{"Querylane"}</p>
+            <p className="font-medium text-base">Querylane</p>
           </div>
 
           <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-2">
@@ -312,7 +312,7 @@ function ExplorerRailContent({
               className="text-sidebar-foreground/70 hover:text-sidebar-foreground"
             >
               <ArrowLeftIcon className="size-4 shrink-0" />
-              <span>{"Back to workspace"}</span>
+              <span>Back to workspace</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -374,7 +374,7 @@ function SidebarNavigationContent({
       {sections.length === 0 && (
         <div className="flex flex-1 items-center justify-center px-4 group-data-[collapsible=icon]:hidden">
           <p className="text-center text-muted-foreground text-sm leading-relaxed">
-            {"Select an instance to get started"}
+            Select an instance to get started
           </p>
         </div>
       )}

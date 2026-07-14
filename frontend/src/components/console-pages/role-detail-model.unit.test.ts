@@ -25,10 +25,6 @@ import {
   RoleSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const TEST_NUMBER_25 = 25;
-const TEST_NUMBER_2027 = 2027;
-const TEST_NUMBER_15 = 15;
-
 function attributes(
   init: MessageInitShape<typeof RoleAttributesSchema>
 ): RoleAttributes {
@@ -114,7 +110,7 @@ describe("connLimitDisplay", () => {
   });
 
   test("shows the numeric limit when positive", () => {
-    expect(connLimitDisplay(TEST_NUMBER_25)).toBe("Limit 25");
+    expect(connLimitDisplay(25)).toBe("Limit 25");
   });
 });
 
@@ -263,9 +259,7 @@ describe("capabilities", () => {
   });
 
   test("marks VALID UNTIL as a dated danger when an expiry is set", () => {
-    const validUntil = timestampFromDate(
-      new Date(TEST_NUMBER_2027, 0, TEST_NUMBER_15)
-    );
+    const validUntil = timestampFromDate(new Date(2027, 0, 15));
     const expiry = capabilityByKeyword(
       capabilities(attributes({ validUntil })),
       "VALID UNTIL"

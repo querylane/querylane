@@ -19,9 +19,6 @@ import {
   sampleInstance,
 } from "./helpers";
 
-const TEST_NUMBER_404 = 404;
-const TEST_NUMBER_500 = 500;
-
 const NEW_INSTANCE_URL_RE = /\/new-instance$/;
 const REPLICATOR_ROLE_RE = /replicator/;
 const AUDITOR_ROLE_RE = /auditor/;
@@ -209,14 +206,14 @@ test("database overview: not found keeps database route context", {
     await fulfillJson(
       route,
       { code: "not_found", message: "database not found" },
-      TEST_NUMBER_404
+      404
     );
   });
   await page.route("**.DatabaseService/GetDatabase", async (route) => {
     await fulfillJson(
       route,
       { code: "not_found", message: "database not found" },
-      TEST_NUMBER_404
+      404
     );
   });
 
@@ -277,14 +274,14 @@ test("database overview: backend error renders retryable route error", {
     await fulfillJson(
       route,
       { code: "internal", message: "database metadata offline" },
-      TEST_NUMBER_500
+      500
     );
   });
   await page.route("**.DatabaseService/GetDatabase", async (route) => {
     await fulfillJson(
       route,
       { code: "internal", message: "database metadata offline" },
-      TEST_NUMBER_500
+      500
     );
   });
 
@@ -433,11 +430,7 @@ test("instance configuration: API error stays inline and keeps form editable", {
 }, async ({ page }) => {
   await mockReadyAppWithInstance(page);
   await routeRpcMethod(page, "UpdateInstance", async (route) => {
-    await fulfillJson(
-      route,
-      { code: "internal", message: "save failed" },
-      TEST_NUMBER_500
-    );
+    await fulfillJson(route, { code: "internal", message: "save failed" }, 500);
   });
 
   await page.goto("/instances/production/configuration");
@@ -552,7 +545,7 @@ test("instance configuration: delete API error keeps instance page open", {
     await fulfillJson(
       route,
       { code: "internal", message: "delete failed" },
-      TEST_NUMBER_500
+      500
     );
   });
 

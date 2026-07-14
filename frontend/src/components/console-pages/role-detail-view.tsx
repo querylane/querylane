@@ -33,8 +33,7 @@ function OwnerBadge({ count, partial }: { count: number; partial: boolean }) {
       variant="outline"
     >
       <Crown className="size-3" />
-      {"OWNER · "}
-      {count}
+      OWNER · {count}
       {partial ? " Partial" : null}
     </Badge>
   );
@@ -80,8 +79,7 @@ function RoleHero({
               title={`Available since ${builtinInfo.since}`}
               variant="outline"
             >
-              {builtinInfo.since}
-              {"+"}
+              {builtinInfo.since}+
             </Badge>
           ) : null}
           <OwnerBadge count={ownedCount} partial={ownedPartial} />
@@ -134,7 +132,7 @@ function RoleDetailView(props: RoleDetailViewProps) {
         to="/instances/$instanceId/roles"
       >
         <ChevronLeft className="size-4 shrink-0" />
-        <span>{"All roles"}</span>
+        <span>All roles</span>
       </Link>
 
       <RoleHero

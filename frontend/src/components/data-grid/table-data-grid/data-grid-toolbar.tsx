@@ -93,7 +93,7 @@ function ActiveSortSummary({ summary }: { summary: string | null }) {
       title={`Active sort: ${summary}`}
       variant="outline"
     >
-      <span className="shrink-0 font-medium text-foreground">{"Sort"}</span>
+      <span className="shrink-0 font-medium text-foreground">Sort</span>
       <span className="min-w-0 truncate font-mono text-xs">{summary}</span>
     </Badge>
   );
@@ -114,8 +114,7 @@ function SelectionSummary({
   return (
     <>
       <span className="font-medium text-foreground">
-        {selectedCount.toLocaleString()}
-        {" selected"}
+        {selectedCount.toLocaleString()} selected
       </span>
       <Button
         aria-label="Clear selection"

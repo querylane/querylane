@@ -55,7 +55,7 @@ export function AccessDeniedRoutePage() {
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <ShieldX className="size-5" />
             <span className="font-medium text-sm">
-              {"Blocking navigation until access is restored"}
+              Blocking navigation until access is restored
             </span>
           </div>
 
@@ -76,7 +76,7 @@ export function AccessDeniedRoutePage() {
                 size="sm"
                 variant="secondary"
               >
-                {"Go home"}
+                Go home
               </Button>
             }
             error={error}

@@ -44,12 +44,12 @@ function renderCell(
             aria-label="true"
             className="size-3 text-emerald-500 dark:text-emerald-400"
           />
-          <span>{"true"}</span>
+          <span>true</span>
         </span>
       ) : (
         <span className="inline-flex items-center gap-1.5 font-mono text-muted-foreground">
           <Minus aria-label="false" className="size-3" />
-          <span>{"false"}</span>
+          <span>false</span>
         </span>
       );
     case "number":

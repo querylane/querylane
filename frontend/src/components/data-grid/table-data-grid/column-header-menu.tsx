@@ -94,19 +94,19 @@ function ColumnHeaderMenu({
           onClick={handleSortAsc}
         >
           <ArrowUp className="size-3.5" />
-          {"Sort ascending"}
+          Sort ascending
         </DropdownMenuCheckboxItem>
         <DropdownMenuCheckboxItem
           checked={sortDirection === "DESC"}
           onClick={handleSortDesc}
         >
           <ArrowDown className="size-3.5" />
-          {"Sort descending"}
+          Sort descending
         </DropdownMenuCheckboxItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onCopyName}>
           <Copy className="size-3.5" />
-          {"Copy name"}
+          Copy name
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onToggleFreeze}>
           {isFrozen ? (

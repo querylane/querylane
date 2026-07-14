@@ -140,7 +140,7 @@ function InstanceCredentialAlert({
       variant="destructive"
     >
       <AlertCircle aria-hidden="true" />
-      <AlertTitle>{"Credentials need attention"}</AlertTitle>
+      <AlertTitle>Credentials need attention</AlertTitle>
       <AlertDescription id={credentialGuidanceId}>
         {description}
       </AlertDescription>
@@ -151,7 +151,7 @@ function InstanceCredentialAlert({
             size="sm"
             variant="outline"
           >
-            {"Re-enter password"}
+            Re-enter password
           </Button>
         </AlertAction>
       )}
@@ -237,7 +237,7 @@ function InstanceConfigurationSection({
             size="sm"
           >
             <Save className="size-4" />
-            {"Save changes"}
+            Save changes
           </DisabledReasonButton>
         )
       }
@@ -325,7 +325,7 @@ function InstanceConfigurationFields({
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="space-y-2">
         <label className="text-sm" htmlFor={displayNameId}>
-          {"Display name"}
+          Display name
         </label>
         <Input
           aria-invalid={Boolean(formErrors.displayName)}
@@ -345,7 +345,7 @@ function InstanceConfigurationFields({
       </div>
       <div className="space-y-2">
         <label className="text-sm" htmlFor={hostId}>
-          {"Host"}
+          Host
         </label>
         <Input
           aria-invalid={Boolean(formErrors.host)}
@@ -365,7 +365,7 @@ function InstanceConfigurationFields({
       </div>
       <div className="space-y-2">
         <label className="text-sm" htmlFor={portId}>
-          {"Port"}
+          Port
         </label>
         <Input
           aria-invalid={Boolean(formErrors.port)}
@@ -385,7 +385,7 @@ function InstanceConfigurationFields({
       </div>
       <div className="space-y-2">
         <label className="text-sm" htmlFor={databaseId}>
-          {"Default database"}
+          Default database
         </label>
         <Input
           aria-invalid={Boolean(formErrors.database)}
@@ -405,7 +405,7 @@ function InstanceConfigurationFields({
       </div>
       <div className="space-y-2">
         <label className="text-sm" htmlFor={usernameId}>
-          {"Username"}
+          Username
         </label>
         <Input
           aria-invalid={Boolean(formErrors.username)}
@@ -425,7 +425,7 @@ function InstanceConfigurationFields({
       </div>
       <div className="space-y-2">
         <label className="text-sm" htmlFor={passwordId}>
-          {"Password"}
+          Password
         </label>
         <PasswordInput
           aria-describedby={passwordDescriptionId}
@@ -447,7 +447,7 @@ function InstanceConfigurationFields({
       <div className="grid gap-4 lg:col-span-2 lg:grid-cols-2">
         <div className="space-y-2">
           <label className="text-sm" htmlFor={sslModeId}>
-            {"SSL mode"}
+            SSL mode
           </label>
           <Select
             disabled={isConfigManaged}
@@ -478,7 +478,7 @@ function InstanceConfigurationFields({
         </div>
         <div className="space-y-2">
           <label className="text-sm" htmlFor={sslNegotiationId}>
-            {"SSL negotiation"}
+            SSL negotiation
           </label>
           <Select
             disabled={isConfigManaged}

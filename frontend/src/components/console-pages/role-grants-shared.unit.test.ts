@@ -36,10 +36,6 @@ import {
   RoleDefaultPrivilegeSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const TEST_NUMBER_3 = 3;
-const TEST_NUMBER_99 = 99;
-const TEST_NUMBER_5 = 5;
-
 function grant(init: {
   grantor?: string;
   objectName?: string;
@@ -118,7 +114,7 @@ describe("aggregateGrants", () => {
       }),
     ]);
 
-    expect(result).toHaveLength(TEST_NUMBER_3);
+    expect(result).toHaveLength(3);
   });
 
   test("collects distinct grantors and skips empty grantor strings", () => {
@@ -149,9 +145,7 @@ describe("getObjectTypeLabel", () => {
 
   test("falls back to the generic label for an unknown enum value", () => {
     // Proto3 enums are open: the wire can carry values this client predates.
-    expect(getObjectTypeLabel(TEST_NUMBER_99 as GrantObjectType)).toBe(
-      "Object"
-    );
+    expect(getObjectTypeLabel(99 as GrantObjectType)).toBe("Object");
   });
 });
 
@@ -420,15 +414,15 @@ describe("densityCounts", () => {
 
 describe("densityState", () => {
   test("maps zero to none", () => {
-    expect(densityState(0, TEST_NUMBER_5)).toBe("none");
+    expect(densityState(0, 5)).toBe("none");
   });
 
   test("maps a full count to full", () => {
-    expect(densityState(TEST_NUMBER_5, TEST_NUMBER_5)).toBe("full");
+    expect(densityState(5, 5)).toBe("full");
   });
 
   test("maps a partial count to partial", () => {
-    expect(densityState(TEST_NUMBER_3, TEST_NUMBER_5)).toBe("partial");
+    expect(densityState(3, 5)).toBe("partial");
   });
 });
 
@@ -839,7 +833,7 @@ describe("groupDefaultPrivileges", () => {
       }),
     ]);
 
-    expect(rules).toHaveLength(TEST_NUMBER_3);
+    expect(rules).toHaveLength(3);
     expect(rules[0]).toMatchObject({
       creatorRoleName: "owner_a",
       objectType: DefaultPrivilegeObjectType.TABLES,

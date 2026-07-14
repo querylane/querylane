@@ -96,9 +96,7 @@ function RunnerFilterSelect({
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={ALL_RUNNERS_FILTER_VALUE}>
-          {"All runners"}
-        </SelectItem>
+        <SelectItem value={ALL_RUNNERS_FILTER_VALUE}>All runners</SelectItem>
         {KNOWN_RUNNER_NAMES.map((runnerName) => (
           <SelectItem key={runnerName} value={runnerName}>
             {runnerName}

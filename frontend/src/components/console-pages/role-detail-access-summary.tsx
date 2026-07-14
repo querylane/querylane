@@ -183,7 +183,7 @@ function AccessSummary({
           label={
             databaseName ? (
               <>
-                {"In"}
+                In
                 <Database
                   aria-hidden="true"
                   className="size-3 shrink-0 text-muted-foreground"

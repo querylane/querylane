@@ -38,7 +38,7 @@ function ArrayItemRow({ entry }: { entry: KeyedArrayItem }) {
         {entry.position}
       </span>
       {entry.item.isNull ? (
-        <span className="text-muted-foreground italic">{"SQL NULL"}</span>
+        <span className="text-muted-foreground italic">SQL NULL</span>
       ) : (
         <code className="break-all font-mono text-xs">
           {entry.item.display}
@@ -67,7 +67,7 @@ function ArrayItemsContent({
   if (parsed.items.length === 0) {
     return (
       <div className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20">
-        <div className="p-4 text-muted-foreground text-sm">{"Empty array"}</div>
+        <div className="p-4 text-muted-foreground text-sm">Empty array</div>
       </div>
     );
   }
@@ -104,21 +104,15 @@ function ArrayPreviewDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="!flex !max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] w-[min(56rem,calc(100vw-2rem))] flex-col gap-4 overflow-hidden">
         <DialogHeader className="shrink-0 pr-10">
-          <DialogTitle>
-            {columnName}
-            {" array"}
-          </DialogTitle>
+          <DialogTitle>{columnName} array</DialogTitle>
           <DialogDescription>
-            {"Formatted "}
-            {rawType}
-            {" value with indexed elements."}
+            Formatted {rawType} value with indexed elements.
           </DialogDescription>
         </DialogHeader>
         {isTruncated ? (
           <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700 text-xs dark:text-amber-300">
-            {
-              "This cell preview is truncated. Open the row detail drawer to load the full value."
-            }
+            This cell preview is truncated. Open the row detail drawer to load
+            the full value.
           </p>
         ) : null}
         <ArrayItemsContent keyedItems={keyedItems} parsed={parsed} raw={raw} />
@@ -130,7 +124,7 @@ function ArrayPreviewDialog({
             variant="outline"
           >
             <Copy className="size-3.5" />
-            {"Copy array"}
+            Copy array
           </Button>
         </div>
       </DialogContent>

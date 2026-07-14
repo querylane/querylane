@@ -5,8 +5,6 @@ import { brotliCompressSync, gzipSync } from "node:zlib";
 import { afterEach, describe, expect, test } from "vitest";
 import { collectBundleBudgetStats } from "./check-bundle-budget";
 
-const TEST_NUMBER_20 = 20;
-
 const tempDirs: string[] = [];
 
 function createDistDir() {
@@ -131,10 +129,8 @@ describe("collectBundleBudgetStats", () => {
     const indexHtmlPath = join(distDir, "index.html");
     const indexHtml =
       '<script type="module" src="/static/js/index.js"></script><link rel="stylesheet" href="/static/css/index.css">';
-    const initialScript = "console.info('boot');".repeat(TEST_NUMBER_20);
-    const initialStyle = ".app{color:var(--foreground);}".repeat(
-      TEST_NUMBER_20
-    );
+    const initialScript = "console.info('boot');".repeat(20);
+    const initialStyle = ".app{color:var(--foreground);}".repeat(20);
     const asyncScript = "console.info('async');".repeat(10);
 
     writeFileSync(indexHtmlPath, indexHtml);

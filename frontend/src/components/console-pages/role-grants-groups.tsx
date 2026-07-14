@@ -42,10 +42,7 @@ function GrantRowName({ object }: { object: GrantedObject }) {
   if (RELATION_TYPES.has(object.objectType) && object.schemaName) {
     return (
       <span className="truncate font-mono text-[12.5px]">
-        <span className="text-muted-foreground">
-          {object.schemaName}
-          {"."}
-        </span>
+        <span className="text-muted-foreground">{object.schemaName}.</span>
         {object.objectName}
       </span>
     );
@@ -87,15 +84,11 @@ function ObjectRow({
         />
         <GrantRowName object={object} />
         <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-[11px] text-muted-foreground">
-          {heldCount}
-          {" priv"}
-          {heldCount === 1 ? "" : "s"}
+          {heldCount} priv{heldCount === 1 ? "" : "s"}
           {grantCount > 0 ? (
             <span className="text-amber-600/90 dark:text-amber-400/90">
               {" "}
-              {"· "}
-              {grantCount}
-              {"+"}
+              · {grantCount}+
             </span>
           ) : null}
         </span>
@@ -104,14 +97,14 @@ function ObjectRow({
         <div className="mt-1 flex flex-col gap-1.5 border-border/60 border-t border-dashed py-2 pr-1.5 pl-[26px]">
           <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-[11.5px]">
             <span className="text-[11px] text-muted-foreground">
-              {"privileges"}
+              privileges
             </span>
             <HeldPillStrip columns={columns} object={object} />
           </div>
           {grantor ? (
             <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-[11.5px]">
               <span className="text-[11px] text-muted-foreground">
-                {"granted by"}
+                granted by
               </span>
               <span
                 className="font-mono text-[12px] text-foreground/85"
@@ -202,14 +195,12 @@ function SchemaFilterBar({
             type="button"
             variant="ghost"
           >
-            {"clear"}
+            clear
           </Button>
         ) : null}
         {filterActive ? (
           <span className="ml-auto font-mono text-[10.5px] text-muted-foreground tracking-[0.02em]">
-            {matchCount.toLocaleString()}
-            {" match"}
-            {matchCount === 1 ? "" : "es"}
+            {matchCount.toLocaleString()} match{matchCount === 1 ? "" : "es"}
           </span>
         ) : null}
       </div>
@@ -257,7 +248,7 @@ function SchemaSectionHeader({
         </span>
         {grantor ? (
           <span className="truncate text-[10.5px] text-muted-foreground leading-tight">
-            {"granted by"}{" "}
+            granted by{" "}
             <span className="font-mono text-[11px] text-foreground/75">
               {grantor}
             </span>
@@ -362,9 +353,7 @@ function SchemaSectionBody({
             () => overflow > 0
           ) ? (
             <span className="ml-1.5 text-muted-foreground/70">
-              {"· +"}
-              {overflow.toLocaleString()}
-              {" hidden"}
+              · +{overflow.toLocaleString()} hidden
             </span>
           ) : null}
         </Button>
@@ -637,7 +626,7 @@ function FlatGroup({
                       className="truncate text-[10.5px] text-muted-foreground leading-tight"
                       title={grantor.title}
                     >
-                      {"granted by"}{" "}
+                      granted by{" "}
                       <span className="font-mono text-[11px] text-foreground/75">
                         {grantor.text}
                       </span>

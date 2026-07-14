@@ -140,7 +140,7 @@ function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
       cell: ({ row }) => <ObjectNameCell row={row.original} />,
       filterFn: "includesString",
       header: ({ column }) => (
-        <SortableHeader column={column}>{"Name"}</SortableHeader>
+        <SortableHeader column={column}>Name</SortableHeader>
       ),
       id: "name",
     },
@@ -156,7 +156,7 @@ function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
         />
       ),
       header: ({ column }) => (
-        <SortableHeader column={column}>{"Kind"}</SortableHeader>
+        <SortableHeader column={column}>Kind</SortableHeader>
       ),
       id: "kind",
       meta: { cellClassName: "whitespace-nowrap" },
@@ -166,7 +166,7 @@ function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
       cell: ({ row }) => formatBytes(row.original.sizeBytes),
       header: ({ column }) => (
         <SortableHeader className="ml-auto" column={column}>
-          {"Size"}
+          Size
         </SortableHeader>
       ),
       id: "size",
@@ -183,7 +183,7 @@ function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
           : formatRows(normalizeEstimatedRowCount(row.original.rowCount)),
       header: ({ column }) => (
         <SortableHeader className="ml-auto" column={column}>
-          {"Rows"}
+          Rows
         </SortableHeader>
       ),
       id: "rows",
@@ -203,7 +203,7 @@ function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
           <span className="text-muted-foreground">{EM_DASH}</span>
         ),
       header: ({ column }) => (
-        <SortableHeader column={column}>{"Owner"}</SortableHeader>
+        <SortableHeader column={column}>Owner</SortableHeader>
       ),
       id: "owner",
       meta: { cellClassName: "whitespace-nowrap" },
@@ -219,7 +219,7 @@ function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
           <span className="text-muted-foreground">{EM_DASH}</span>
         ),
       header: ({ column }) => (
-        <SortableHeader column={column}>{"Comment"}</SortableHeader>
+        <SortableHeader column={column}>Comment</SortableHeader>
       ),
       id: "comment",
       meta: { cellClassName: "max-w-[20rem] truncate" },
@@ -326,7 +326,7 @@ function SchemaObjectFilterBar({
           variant="ghost"
         >
           <X data-icon="inline-start" />
-          {"Reset"}
+          Reset
         </Button>
       ) : null}
     </div>
@@ -416,7 +416,7 @@ function SchemaObjectsLoading() {
       className="flex flex-col gap-2 rounded-lg border border-border p-3"
       role="status"
     >
-      <span className="sr-only">{"Loading objects"}</span>
+      <span className="sr-only">Loading objects</span>
       {LOADING_SKELETON_KEYS.map((key) => (
         <Skeleton aria-hidden="true" className="h-7 w-full" key={key} />
       ))}
@@ -532,15 +532,14 @@ function SchemaDetail({
           </div>
           <div className="min-w-0">
             <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
-              {"Schema"}
+              Schema
             </p>
             <h1 className="truncate font-mono font-semibold text-xl">
               {schemaName}
             </h1>
             {owner ? (
               <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-                {"owner: "}
-                {owner}
+                owner: {owner}
               </p>
             ) : null}
           </div>
@@ -578,9 +577,8 @@ function SchemaDetail({
         () => viewsError
       ) ? (
         <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
-          {
-            "Failed to load some objects in this schema. Refresh the page to try again."
-          }
+          Failed to load some objects in this schema. Refresh the page to try
+          again.
         </div>
       ) : null}
 
@@ -594,8 +592,8 @@ function SchemaDetail({
         value={activeTab}
       >
         <TabsList className="w-fit">
-          <TabsTrigger value="objects">{"Objects"}</TabsTrigger>
-          <TabsTrigger value="map">{"Schema map"}</TabsTrigger>
+          <TabsTrigger value="objects">Objects</TabsTrigger>
+          <TabsTrigger value="map">Schema map</TabsTrigger>
         </TabsList>
         <TabsContent className="mt-4 space-y-6" value="objects">
           {isLoading ? (

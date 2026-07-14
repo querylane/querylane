@@ -134,7 +134,7 @@ function ConnectionTestResult({
       <div className="rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.08] px-4 py-3 text-emerald-100/92 text-sm">
         <div className="flex items-center gap-3">
           <Check className="size-4 shrink-0 text-emerald-400" />
-          {"Connection successful. Ready to continue."}
+          Connection successful. Ready to continue.
         </div>
       </div>
     );
@@ -149,7 +149,7 @@ function ConnectionTestResult({
         <div className="flex items-start gap-3">
           <X className="mt-0.5 size-4 shrink-0 text-red-400" />
           <div className="space-y-1">
-            <div className="font-medium">{"Connection failed"}</div>
+            <div className="font-medium">Connection failed</div>
             <div className="text-red-200/78 text-sm">{errorMessage}</div>
           </div>
         </div>
@@ -185,14 +185,14 @@ function InternalStorageSslOptions({
     <Collapsible onOpenChange={onOpenChange} open={open}>
       <div className="relative space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4">
         <label className="font-medium text-base text-white" htmlFor={modeId}>
-          {"SSL mode"}
+          SSL mode
         </label>
         <CollapsibleTrigger
           aria-controls={contentId}
           aria-label="Advanced connection options"
           className="group/advanced-connection absolute top-4 right-5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm text-white/58 outline-none transition-colors hover:text-white focus-visible:border-[#4b73d7] focus-visible:ring-3 focus-visible:ring-[#4b73d7]/25"
         >
-          {"Advanced"}
+          Advanced
           <ChevronRight className="size-3.5 shrink-0 transition-transform group-aria-expanded/advanced-connection:rotate-90" />
         </CollapsibleTrigger>
         <Select
@@ -223,9 +223,7 @@ function InternalStorageSslOptions({
           </SelectContent>
         </Select>
         <p className="text-sm text-white/56 leading-6">
-          {
-            "Choose how Querylane negotiates TLS for its internal storage database."
-          }
+          Choose how Querylane negotiates TLS for its internal storage database.
         </p>
         {open ? (
           <CollapsibleContent className="pt-2">
@@ -235,7 +233,7 @@ function InternalStorageSslOptions({
                   className="font-medium text-sm text-white"
                   htmlFor={sslNegotiationId}
                 >
-                  {"SSL negotiation"}
+                  SSL negotiation
                 </label>
                 <Select
                   onValueChange={(nextValue) => {
@@ -257,7 +255,7 @@ function InternalStorageSslOptions({
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-white/56">
-                  {"Use direct only when the server expects TLS immediately."}
+                  Use direct only when the server expects TLS immediately.
                 </p>
               </div>
             </section>
@@ -294,7 +292,7 @@ function ConnectionStringPasteForm({
           className="font-medium text-base text-white"
           htmlFor={connectionStringId}
         >
-          {"Connection string"}
+          Connection string
         </label>
         <div className="flex gap-3">
           <Input
@@ -324,7 +322,7 @@ function ConnectionStringPasteForm({
             disabled={connectionStringValue.trim().length === 0}
             onClick={onApply}
           >
-            {"Apply"}
+            Apply
           </Button>
         </div>
         {connectionStringError ? (
@@ -337,9 +335,8 @@ function ConnectionStringPasteForm({
           </p>
         ) : (
           <p className="text-sm text-white/44">
-            {
-              "Supported: postgres://user:password@host:port/database?sslmode=require"
-            }
+            Supported:
+            postgres://user:password@host:port/database?sslmode=require
           </p>
         )}
       </div>
@@ -495,7 +492,7 @@ export function UiConfiguredPhase() {
             variant="ghost"
           >
             <ArrowLeft className="size-4" />
-            {"Back"}
+            Back
           </Button>
           <div className="flex items-center gap-3">
             <ConnectionTestButton
@@ -512,7 +509,7 @@ export function UiConfiguredPhase() {
               disabled={!canContinue}
               onClick={handleContinue}
             >
-              {"Continue"}
+              Continue
               <ChevronRight className="size-4" />
             </Button>
           </div>

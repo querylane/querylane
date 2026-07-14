@@ -35,7 +35,7 @@ describe("BootGate", () => {
   test("renders the verifying state with a real ellipsis character", () => {
     render(
       <BootGate>
-        <div>{"app"}</div>
+        <div>app</div>
       </BootGate>
     );
 

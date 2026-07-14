@@ -16,9 +16,6 @@ import {
   TableValueSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
-const TEST_NUMBER_3 = 3;
-const TEST_NUMBER_4 = 4;
-
 function resultColumn(columnName: string) {
   return create(TableResultColumnSchema, { columnName });
 }
@@ -72,9 +69,7 @@ describe("grid cell access", () => {
     // PostgreSQL identifiers cannot contain a NUL byte, so namespaced keys
     // are guaranteed collision-free.
     expect(EXPAND_COLUMN_KEY).toContain("\u0000");
-    expect(fallbackRowKey(TEST_NUMBER_3)).toContain("\u0000");
-    expect(fallbackRowKey(TEST_NUMBER_3)).not.toBe(
-      fallbackRowKey(TEST_NUMBER_4)
-    );
+    expect(fallbackRowKey(3)).toContain("\u0000");
+    expect(fallbackRowKey(3)).not.toBe(fallbackRowKey(4));
   });
 });

@@ -45,20 +45,17 @@ export function InstanceDeleteDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{"Delete instance?"}</AlertDialogTitle>
+          <AlertDialogTitle>Delete instance?</AlertDialogTitle>
           <AlertDialogDescription>
-            {"Delete instance "}
-            <InlineCode>{instanceDisplayName}</InlineCode>
-            {" from Querylane? Confirm the stable resource"}{" "}
-            <InlineCode>{instanceResourceName}</InlineCode>
-            {". This action cannot be undone."}
+            Delete instance <InlineCode>{instanceDisplayName}</InlineCode> from
+            Querylane? Confirm the stable resource{" "}
+            <InlineCode>{instanceResourceName}</InlineCode>. This action cannot
+            be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-2">
           <label className="text-sm" htmlFor={confirmationInputId}>
-            {"Type "}
-            {instanceResourceName}
-            {" to confirm"}
+            Type {instanceResourceName} to confirm
           </label>
           <Input
             autoComplete="off"
@@ -69,14 +66,14 @@ export function InstanceDeleteDialog({
           />
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>{"Cancel"}</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             disabled={pending || !isConfirmed}
             onClick={onConfirm}
             variant="destructive"
           >
             <Trash2 className="size-4" />
-            {"Delete instance"}
+            Delete instance
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

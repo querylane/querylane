@@ -202,14 +202,14 @@ function ExtensionDetails({ extension }: { extension: PresentedExtension }) {
         <div className="flex min-w-0 items-center gap-2">
           <SheetTitle className="truncate font-mono font-semibold text-sm">
             {extension.displayName}
-            <span className="sr-only">{" details"}</span>
+            <span className="sr-only"> details</span>
           </SheetTitle>
           <Badge variant={extension.badgeVariant}>
             {extension.statusLabel}
           </Badge>
         </div>
         <SheetDescription>
-          {"Read-only PostgreSQL extension details and safe example SQL."}
+          Read-only PostgreSQL extension details and safe example SQL.
         </SheetDescription>
       </SheetHeader>
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
@@ -236,13 +236,13 @@ function ExtensionDetails({ extension }: { extension: PresentedExtension }) {
           </div>
           {extension.statusFilter === "available" && extension.installSql ? (
             <div className="space-y-2 rounded-lg bg-muted/50 p-3 text-muted-foreground text-xs leading-relaxed">
-              <p>{"A superuser can install it with:"}</p>
+              <p>A superuser can install it with:</p>
               <SqlCodeBlock sql={extension.installSql} />
             </div>
           ) : null}
           <section className="space-y-2">
             <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-              {"What it gives you"}
+              What it gives you
             </h3>
             <div className="space-y-2">
               {extension.provides.map((item) => (
@@ -252,8 +252,7 @@ function ExtensionDetails({ extension }: { extension: PresentedExtension }) {
                     <span className="font-medium font-mono text-xs">
                       {item.label}
                     </span>{" "}
-                    {": "}
-                    {item.value}
+                    : {item.value}
                   </p>
                 </div>
               ))}
@@ -262,10 +261,10 @@ function ExtensionDetails({ extension }: { extension: PresentedExtension }) {
           <section className="space-y-2">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-                {"Try it"}
+                Try it
               </h3>
               <span className="text-muted-foreground text-xs">
-                {"read-only, safe to run"}
+                read-only, safe to run
               </span>
             </div>
             <SqlCodeBlock sql={extension.exampleSql} />
@@ -385,10 +384,8 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-muted-foreground text-sm">
-        {extensionInventorySummary(presentedExtensions)}
-        {
-          "; installation requires a superuser connection; Querylane only reads what is there"
-        }
+        {extensionInventorySummary(presentedExtensions)}; installation requires
+        a superuser connection; Querylane only reads what is there
       </p>
       <ExtensionFilterBar
         category={category}

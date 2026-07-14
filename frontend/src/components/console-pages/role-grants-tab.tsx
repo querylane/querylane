@@ -70,11 +70,11 @@ function DefaultsBody({
           "No default privileges are shown in the available results."
         ) : (
           <>
-            {"No"}{" "}
+            No{" "}
             <span className="font-mono text-foreground/80">
-              {"ALTER DEFAULT PRIVILEGES"}
+              ALTER DEFAULT PRIVILEGES
             </span>{" "}
-            {"rules apply to this role."}
+            rules apply to this role.
           </>
         )}
       </GrantsEmptyState>
@@ -88,28 +88,28 @@ function DefaultsBody({
           key={rule.key}
         >
           <span className="leading-relaxed">
-            <span className="text-muted-foreground">{"When "}</span>
+            <span className="text-muted-foreground">When </span>
             <span className="font-mono text-[12.5px] text-foreground/85">
               {rule.creatorRoleName}
             </span>
-            <span className="text-muted-foreground">{" creates new "}</span>
+            <span className="text-muted-foreground"> creates new </span>
             <strong className="font-medium">
               {DEFAULT_PRIV_OBJECT_LABEL[rule.objectType]}
             </strong>
-            <span className="text-muted-foreground">{" in "}</span>
+            <span className="text-muted-foreground"> in </span>
             <span className="font-mono text-[12.5px] text-foreground/85">
               {rule.schemaName || "any schema"}
             </span>
-            <span className="text-muted-foreground">{" → grant "}</span>
+            <span className="text-muted-foreground"> → grant </span>
             {rule.privileges.map((privilege, index) => (
               <Fragment key={privilege.name}>
                 <strong className="font-medium">{privilege.name}</strong>
                 {index < rule.privileges.length - 1 ? (
-                  <span className="text-muted-foreground">{", "}</span>
+                  <span className="text-muted-foreground">, </span>
                 ) : null}
               </Fragment>
             ))}
-            <span className="text-muted-foreground">{" to this role."}</span>
+            <span className="text-muted-foreground"> to this role.</span>
           </span>
           <span className="flex shrink-0 items-center gap-1">
             {rule.privileges.map((privilege) => (
@@ -148,9 +148,9 @@ function DefaultsDrillView({
       />
       <div className="-mt-3.5 pb-3.5 text-muted-foreground text-xs">
         <span className="font-mono text-foreground/75">
-          {"ALTER DEFAULT PRIVILEGES"}
+          ALTER DEFAULT PRIVILEGES
         </span>{" "}
-        {"rules that grant privileges on objects that don't exist yet."}
+        rules that grant privileges on objects that don&apos;t exist yet.
       </div>
       <DefaultsBody partial={partial} rules={rules} />
     </div>
@@ -176,9 +176,8 @@ function PublicDrillView({
         title="Granted to PUBLIC"
       />
       <div className="-mt-3.5 pb-3.5 text-muted-foreground text-xs">
-        {
-          "Granted to every role in this database, including this one. Not unique to this role."
-        }
+        Granted to every role in this database, including this one. Not unique
+        to this role.
       </div>
       {objects.length === 0 ? (
         <GrantsEmptyState
@@ -188,9 +187,9 @@ function PublicDrillView({
             "No PUBLIC grants are shown in the available results."
           ) : (
             <>
-              {"No grants to"}{" "}
-              <span className="font-mono text-foreground/80">{"PUBLIC"}</span>
-              {" are visible from this role."}
+              No grants to{" "}
+              <span className="font-mono text-foreground/80">PUBLIC</span> are
+              visible from this role.
             </>
           )}
         </GrantsEmptyState>
@@ -340,13 +339,11 @@ function CharacterBanner({
       <Alert>
         <ShieldCheck aria-hidden="true" />
         <AlertTitle>
-          {"Built-in role: grants implicit privileges to its members"}
+          Built-in role: grants implicit privileges to its members
         </AlertTitle>
         <AlertDescription>
-          <span className="font-mono">{roleName}</span>
-          {
-            " ships with Postgres; there are no GRANT rows. Members automatically receive:"
-          }
+          <span className="font-mono">{roleName}</span> ships with Postgres;
+          there are no GRANT rows. Members automatically receive:
           {builtinInfo ? (
             <ul className="mt-1.5 list-disc pl-4">
               {builtinInfo.implicit.map((line) => (
@@ -356,9 +353,8 @@ function CharacterBanner({
           ) : (
             <span>
               {" "}
-              {
-                "its hard-coded privileges (the exact set depends on the PostgreSQL version)."
-              }
+              its hard-coded privileges (the exact set depends on the PostgreSQL
+              version).
             </span>
           )}
         </AlertDescription>
@@ -369,12 +365,12 @@ function CharacterBanner({
     return (
       <Alert>
         <ShieldAlert aria-hidden="true" />
-        <AlertTitle>{"Superuser: object grants don't gate access"}</AlertTitle>
+        <AlertTitle>Superuser: object grants don&apos;t gate access</AlertTitle>
         <AlertDescription>
-          <span className="font-mono">{roleName}</span>
-          {
-            " bypasses every permission check, so these grants don't determine what it can do. The grants below are shown for audit. Revoke SUPERUSER for grant-level control."
-          }
+          <span className="font-mono">{roleName}</span> bypasses every
+          permission check, so these grants don&apos;t determine what it can do.
+          The grants below are shown for audit. Revoke SUPERUSER for grant-level
+          control.
         </AlertDescription>
       </Alert>
     );
@@ -384,12 +380,12 @@ function CharacterBanner({
       <Alert>
         <Copy aria-hidden="true" />
         <AlertTitle>
-          {"Replication role: uses publications, not table grants"}
+          Replication role: uses publications, not table grants
         </AlertTitle>
         <AlertDescription>
-          {
-            "Streaming and logical replication are configured via CREATE PUBLICATION and CREATE SUBSCRIPTION, not GRANT. Per-object grants are not how access is controlled for this role."
-          }
+          Streaming and logical replication are configured via CREATE
+          PUBLICATION and CREATE SUBSCRIPTION, not GRANT. Per-object grants are
+          not how access is controlled for this role.
         </AlertDescription>
       </Alert>
     );
@@ -411,7 +407,7 @@ function grantsLoadState({
   isPending: boolean;
 }): ReactNode {
   if (isPending) {
-    return <p className="text-muted-foreground text-sm">{"Loading grants…"}</p>;
+    return <p className="text-muted-foreground text-sm">Loading grants…</p>;
   }
   if (databases.length === 0) {
     return (
@@ -425,9 +421,8 @@ function grantsLoadState({
   if (error) {
     return (
       <p className="text-destructive text-sm">
-        {"Could not load grants for"}{" "}
-        <span className="font-mono">{databaseName}</span>
-        {"."}
+        Could not load grants for{" "}
+        <span className="font-mono">{databaseName}</span>.
       </p>
     );
   }
@@ -723,7 +718,7 @@ function GrantsSection({
       ) : null}
       {showOverviewChrome && kind === "group" ? (
         <p className="text-muted-foreground text-sm">
-          {"This role can't log in; its members inherit these grants."}
+          This role can&apos;t log in; its members inherit these grants.
         </p>
       ) : null}
       {loadState ?? (

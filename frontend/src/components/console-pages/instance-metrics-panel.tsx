@@ -82,7 +82,7 @@ function PanelHeader({
   return (
     <div className="flex items-center justify-between gap-2 border-border border-b px-4 py-2.5">
       <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-        {"Metrics"}
+        Metrics
       </span>
       {/* A clock icon frames the segmented picker as a trailing time window
           (the Grafana/Datadog convention); the comparison control lives on the
@@ -136,10 +136,7 @@ function TabTrigger({
           {trend.direction === "up" ? <ArrowUp className="size-3" /> : null}
           {trend.direction === "down" ? <ArrowDown className="size-3" /> : null}
           {trend.label}
-          <span className="text-muted-foreground">
-            {" · "}
-            {range.shortLabel}
-          </span>
+          <span className="text-muted-foreground"> · {range.shortLabel}</span>
         </span>
       ) : (
         <span className="text-muted-foreground text-xs">
@@ -179,7 +176,7 @@ function CollectingStat({
           aria-hidden="true"
           className="size-1.5 animate-pulse rounded-full bg-success"
         />
-        {"collecting"}
+        collecting
       </span>
     </div>
   );

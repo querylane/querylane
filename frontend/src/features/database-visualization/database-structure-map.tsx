@@ -213,12 +213,11 @@ function DatabaseMapLoadingCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Loader2 className="size-4 animate-spin" />
-          {" Loading database map"}
+          <Loader2 className="size-4 animate-spin" /> Loading database map
         </CardTitle>
       </CardHeader>
       <CardContent className="text-muted-foreground text-sm">
-        {"Collecting catalog metadata in the browser."}
+        Collecting catalog metadata in the browser.
       </CardContent>
     </Card>
   );
@@ -304,8 +303,7 @@ function DatabaseMapCanvasActions({
         type="button"
         variant="outline"
       >
-        {"Switch to "}
-        {direction === "LR" ? "vertical" : "horizontal"}
+        Switch to {direction === "LR" ? "vertical" : "horizontal"}
       </Button>
       <Button
         disabled={isSelectedSchemaDisabled}
@@ -314,7 +312,7 @@ function DatabaseMapCanvasActions({
         type="button"
         variant="outline"
       >
-        {"Current schema"}
+        Current schema
       </Button>
       <Button
         disabled={isFullMapDisabled}
@@ -323,14 +321,14 @@ function DatabaseMapCanvasActions({
         type="button"
         variant="outline"
       >
-        {"Load full map"}
+        Load full map
       </Button>
       <Popover>
         <PopoverTrigger
           render={
             <Button size="sm" type="button" variant="outline">
               <SlidersHorizontal className="size-3.5" />
-              {"Resource filters"}
+              Resource filters
               {hiddenNodeKindCount > 0 ? (
                 <span
                   aria-hidden="true"
@@ -347,9 +345,9 @@ function DatabaseMapCanvasActions({
           className="w-80 max-w-[calc(100vw-2rem)] gap-3 p-3"
         >
           <PopoverHeader>
-            <PopoverTitle>{"Resource filters"}</PopoverTitle>
+            <PopoverTitle>Resource filters</PopoverTitle>
             <PopoverDescription>
-              {"Add or remove database resource types from this map."}
+              Add or remove database resource types from this map.
             </PopoverDescription>
           </PopoverHeader>
           <div className="grid gap-2">
@@ -385,7 +383,7 @@ function DatabaseMapCanvasActions({
             type="button"
             variant="outline"
           >
-            {"Show all resources"}
+            Show all resources
           </Button>
         </PopoverContent>
       </Popover>
@@ -401,12 +399,12 @@ function DatabaseMapCanvasActions({
         {isExpanded ? (
           <>
             <Minimize2 className="size-3.5" />
-            {"Collapse"}
+            Collapse
           </>
         ) : (
           <>
             <Maximize2 className="size-3.5" />
-            {"Expand"}
+            Expand
           </>
         )}
       </Button>
@@ -671,7 +669,7 @@ function DatabaseStructureMap({
       <header className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">
-            {"Database map"}
+            Database map
           </h1>
           <p className="mt-1 max-w-2xl text-muted-foreground text-sm">
             {focusedResourceLabel
@@ -708,14 +706,14 @@ function DatabaseStructureMap({
       {data.error ? (
         <Alert variant="destructive">
           <AlertCircle className="size-4" />
-          <AlertTitle>{"Map data failed to load"}</AlertTitle>
+          <AlertTitle>Map data failed to load</AlertTitle>
           <AlertDescription>{errorMessage(data.error)}</AlertDescription>
         </Alert>
       ) : null}
       {data.truncatedReason ? (
         <Alert>
           <AlertCircle className="size-4" />
-          <AlertTitle>{"Partial map"}</AlertTitle>
+          <AlertTitle>Partial map</AlertTitle>
           <AlertDescription>{data.truncatedReason}</AlertDescription>
         </Alert>
       ) : null}
@@ -734,11 +732,10 @@ function DatabaseStructureMap({
       <Dialog onOpenChange={setIsMapExpanded} open={isMapExpanded}>
         <DialogContent className="!flex !max-w-[calc(100vw-1rem)] sm:!max-w-[calc(100vw-2rem)] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] flex-col gap-3 overflow-hidden p-3 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:p-4">
           <DialogHeader className="shrink-0 pr-10">
-            <DialogTitle>{"Expanded database map"}</DialogTitle>
+            <DialogTitle>Expanded database map</DialogTitle>
             <DialogDescription>
-              {
-                "Use the same schema scope, layout, and selected resource with more room for the visual canvas."
-              }
+              Use the same schema scope, layout, and selected resource with more
+              room for the visual canvas.
             </DialogDescription>
           </DialogHeader>
           <div className="flex min-h-0 flex-1 flex-col gap-2">

@@ -55,7 +55,7 @@ function AdminPageFallback() {
         <div className="h-28 rounded-xl border bg-card" />
         <div className="h-28 rounded-xl border bg-card" />
       </div>
-      <span className="sr-only">{"Loading page content"}</span>
+      <span className="sr-only">Loading page content</span>
     </div>
   );
 }

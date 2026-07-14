@@ -26,14 +26,8 @@ function SearchEmptyState({
         <EmptyMedia variant="icon">
           <SearchX aria-hidden={true} />
         </EmptyMedia>
-        <EmptyTitle>
-          {"No "}
-          {resourceName}
-          {" found"}
-        </EmptyTitle>
-        <EmptyDescription>
-          {"Try a different search or filter."}
-        </EmptyDescription>
+        <EmptyTitle>No {resourceName} found</EmptyTitle>
+        <EmptyDescription>Try a different search or filter.</EmptyDescription>
       </EmptyHeader>
     </Empty>
   );

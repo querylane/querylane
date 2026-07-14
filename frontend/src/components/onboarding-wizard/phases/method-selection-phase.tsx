@@ -215,7 +215,7 @@ export function MethodSelectionPhase() {
             }
             onClick={goToConfigure}
           >
-            {"Continue"}
+            Continue
             <ChevronRight className="size-4" />
           </Button>
         </div>
@@ -227,12 +227,11 @@ export function MethodSelectionPhase() {
         {methods.length === 0 ? (
           <div className="rounded-2xl border border-white/12 border-dashed bg-white/[0.03] px-4 py-6 text-center">
             <p className="font-medium text-sm text-white">
-              {"No setup methods available"}
+              No setup methods available
             </p>
             <p className="mx-auto mt-2 max-w-2xl text-sm text-white/58 leading-6">
-              {
-                "Querylane did not receive any supported setup methods from the server. Refresh the page after checking the server configuration."
-              }
+              Querylane did not receive any supported setup methods from the
+              server. Refresh the page after checking the server configuration.
             </p>
           </div>
         ) : (

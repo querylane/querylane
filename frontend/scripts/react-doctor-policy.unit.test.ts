@@ -50,8 +50,6 @@ const overrideRationales = {
 const disabledReactDoctorRuleRationales = {
   "react-doctor/jsx-boolean-value":
     "Biome's all preset canonicalizes true JSX attributes to explicit values.",
-  "react-doctor/jsx-curly-brace-presence":
-    "Biome noJsxLiterals requires the braces React Doctor asks us to remove.",
   "react-doctor/jsx-no-constructed-context-values":
     "React Compiler stabilizes context values and repo policy bans manual memoization.",
   "react-doctor/jsx-props-no-spreading":

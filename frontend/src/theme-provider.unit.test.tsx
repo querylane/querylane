@@ -127,13 +127,13 @@ function ThemeProbe() {
       <output data-testid="theme">{theme}</output>
       <output data-testid="resolved-theme">{resolvedTheme}</output>
       <Button onClick={() => setTheme("light")} type="button">
-        {"Light"}
+        Light
       </Button>
       <Button onClick={() => setTheme("dark")} type="button">
-        {"Dark"}
+        Dark
       </Button>
       <Button onClick={() => setTheme("system")} type="button">
-        {"System"}
+        System
       </Button>
     </div>
   );

@@ -12,10 +12,6 @@ import {
   TableValueSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
-const TEST_NUMBER_42 = 42;
-const TEST_NUMBER_3 = 3;
-const TEST_NUMBER_1000 = 1000;
-
 function stringValue(value: string) {
   return create(TableValueSchema, {
     kind: { case: "stringValue", value },
@@ -42,7 +38,7 @@ describe("other database objects query", () => {
     expect(
       tableValueToText(
         create(TableValueSchema, {
-          kind: { case: "int64Value", value: BigInt(TEST_NUMBER_42) },
+          kind: { case: "int64Value", value: BigInt(42) },
         })
       )
     ).toBe("42");
@@ -150,7 +146,7 @@ describe("other database objects query", () => {
       "types",
       "cronJobs",
     ]);
-    expect(execute).toHaveBeenCalledTimes(TEST_NUMBER_3);
+    expect(execute).toHaveBeenCalledTimes(3);
   });
 
   it("keeps introspection queries within a single live-query slot", async () => {
@@ -203,6 +199,6 @@ describe("other database objects query", () => {
     });
 
     expect(result.isTruncated).toBe(true);
-    expect(result.objects).toHaveLength(TEST_NUMBER_1000);
+    expect(result.objects).toHaveLength(1000);
   });
 });

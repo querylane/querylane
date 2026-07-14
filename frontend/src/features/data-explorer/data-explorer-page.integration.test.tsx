@@ -11,8 +11,6 @@ import {
   useExplorerSidebarSlotRegistration,
 } from "@/lib/explorer-sidebar-slot";
 
-const TEST_NUMBER_6 = 6;
-
 const ACCOUNTS_BUTTON_NAME = /^accounts 48 KB$/i;
 
 function ExplorerRailSlotTarget() {
@@ -393,9 +391,7 @@ describe("DataExplorerPage", () => {
       screen.getByRole("button", { name: ACCOUNTS_BUTTON_NAME })
     );
 
-    expect(mocks.prefetchRouteQueryOnIntent).toHaveBeenCalledTimes(
-      TEST_NUMBER_6
-    );
+    expect(mocks.prefetchRouteQueryOnIntent).toHaveBeenCalledTimes(6);
     for (const queryKey of [
       ["columns"],
       ["indexes"],

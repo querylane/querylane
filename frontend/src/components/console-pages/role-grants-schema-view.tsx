@@ -60,9 +60,8 @@ function SchemaGrantBody({
   if (partialTypeMissing) {
     return (
       <GrantsEmptyState title="Grant type results are incomplete">
-        {
-          "The requested grant type is not shown in the available direct grant results."
-        }
+        The requested grant type is not shown in the available direct grant
+        results.
       </GrantsEmptyState>
     );
   }
@@ -70,7 +69,7 @@ function SchemaGrantBody({
     <>
       {grantor ? (
         <div className="-mt-3.5 pb-3.5 text-muted-foreground text-xs">
-          {"granted by"}{" "}
+          granted by{" "}
           <span className="font-mono text-foreground/75">{grantor}</span>
         </div>
       ) : null}

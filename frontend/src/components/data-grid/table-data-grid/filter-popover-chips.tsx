@@ -52,7 +52,7 @@ function FilterChips({ logic, onChange, rules }: FilterChipsProps) {
         type="button"
         variant="ghost"
       >
-        {"Clear"}
+        Clear
       </Button>
     </div>
   );

@@ -42,9 +42,9 @@ function PurposeCard({ view }: { view: View }) {
     <Card size="sm">
       <CardHeader>
         <CardTitle aria-level={2} role="heading">
-          {"Purpose"}
+          Purpose
         </CardTitle>
-        <CardDescription>{"Catalog comment for this view."}</CardDescription>
+        <CardDescription>Catalog comment for this view.</CardDescription>
       </CardHeader>
       <CardContent>
         <p className="text-sm">
@@ -62,10 +62,10 @@ function SourceRelationsCard({ definition }: { definition: string }) {
     <Card size="sm">
       <CardHeader>
         <CardTitle aria-level={2} role="heading">
-          {"Source relations"}
+          Source relations
         </CardTitle>
         <CardDescription>
-          {"Relations referenced by FROM and JOIN."}
+          Relations referenced by FROM and JOIN.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -79,7 +79,7 @@ function SourceRelationsCard({ definition }: { definition: string }) {
           </div>
         ) : (
           <EmptyStatePanel className="min-h-24 rounded-md px-4 py-6" icon={Eye}>
-            {"No source relations could be inferred from the definition."}
+            No source relations could be inferred from the definition.
           </EmptyStatePanel>
         )}
       </CardContent>
@@ -92,11 +92,9 @@ function QueryShapeCard({ definition }: { definition: string }) {
     <Card size="sm">
       <CardHeader>
         <CardTitle aria-level={2} role="heading">
-          {"Query shape"}
+          Query shape
         </CardTitle>
-        <CardDescription>
-          {"What this view does to matching rows."}
-        </CardDescription>
+        <CardDescription>What this view does to matching rows.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-2">
@@ -116,10 +114,10 @@ function DefinitionCard({ definition }: { definition: string }) {
     <Card size="sm">
       <CardHeader>
         <CardTitle aria-level={2} role="heading">
-          {"SQL definition"}
+          SQL definition
         </CardTitle>
         <CardDescription>
-          {"Copy-pasteable SQL for recreating the view definition."}
+          Copy-pasteable SQL for recreating the view definition.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -127,7 +125,7 @@ function DefinitionCard({ definition }: { definition: string }) {
           <SqlCodeBlock sql={definition} />
         ) : (
           <p className="text-muted-foreground text-sm">
-            {"Full SQL definition was not returned for this view."}
+            Full SQL definition was not returned for this view.
           </p>
         )}
       </CardContent>
@@ -166,11 +164,10 @@ function ViewNoticeCheck({ view, viewName }: { view: View; viewName: string }) {
     <div className="space-y-3 rounded-xl border bg-card p-4 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-medium">{"Database notices"}</p>
+          <p className="font-medium">Database notices</p>
           <p className="text-muted-foreground">
-            {
-              "Run a read-only view plan check and show PostgreSQL notices returned by the SQL service."
-            }
+            Run a read-only view plan check and show PostgreSQL notices returned
+            by the SQL service.
           </p>
         </div>
         <Button
@@ -190,9 +187,9 @@ function ViewNoticeCheck({ view, viewName }: { view: View; viewName: string }) {
       </div>
       {enabled && noticesQuery.error ? (
         <Alert variant="destructive">
-          <AlertTitle>{"Could not check database notices"}</AlertTitle>
+          <AlertTitle>Could not check database notices</AlertTitle>
           <AlertDescription>
-            {"Querylane could not fetch planner notices for this view."}
+            Querylane could not fetch planner notices for this view.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -200,9 +197,7 @@ function ViewNoticeCheck({ view, viewName }: { view: View; viewName: string }) {
       !noticesQuery.error &&
       !noticesQuery.isFetching &&
       !hasVisibleNotices ? (
-        <p className="text-muted-foreground">
-          {"No database notices returned."}
-        </p>
+        <p className="text-muted-foreground">No database notices returned.</p>
       ) : null}
       {enabled ? (
         <SqlNotices notices={notices} title="Returned notices" />
@@ -238,8 +233,7 @@ function ViewDetail({
             </h1>
             {view?.owner ? (
               <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-                {"owner: "}
-                {view.owner}
+                owner: {view.owner}
               </p>
             ) : null}
           </div>

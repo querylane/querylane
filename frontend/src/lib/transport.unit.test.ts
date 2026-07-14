@@ -25,9 +25,6 @@ import {
   TestInstanceConnectionRequestSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
-const TEST_NUMBER_30000 = 30_000;
-const TEST_NUMBER_90000 = 90_000;
-
 type SetupInterceptorDependencies = NonNullable<
   Parameters<typeof createSetupInterceptor>[0]
 >;
@@ -150,8 +147,8 @@ describe("transport configuration", () => {
   });
 
   test("keeps the established deadline tiers", () => {
-    expect(DEFAULT_RPC_TIMEOUT_MS).toBe(TEST_NUMBER_30000);
-    expect(LONG_RUNNING_RPC_TIMEOUT_MS).toBe(TEST_NUMBER_90000);
+    expect(DEFAULT_RPC_TIMEOUT_MS).toBe(30_000);
+    expect(LONG_RUNNING_RPC_TIMEOUT_MS).toBe(90_000);
     expect(LONG_RUNNING_RPC_TIMEOUT_MS).toBeGreaterThan(DEFAULT_RPC_TIMEOUT_MS);
   });
 });

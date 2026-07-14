@@ -43,7 +43,7 @@ function ConnectionStringFeedback({
   if (!(error || warning)) {
     return (
       <p className="text-muted-foreground text-xs">
-        {"You’ll still pick a display name separately."}
+        You’ll still pick a display name separately.
       </p>
     );
   }
@@ -170,18 +170,15 @@ function CreateInstanceConnectionFields({
             <Link2 className="size-4" />
           </div>
           <div className="space-y-1">
-            <div className="font-medium text-sm">
-              {"Paste a DSN to prefill"}
-            </div>
+            <div className="font-medium text-sm">Paste a DSN to prefill</div>
             <p className="text-muted-foreground text-sm">
-              {
-                "Querylane will fill the host, port, database, username, password, and SSL mode from your PostgreSQL connection string."
-              }
+              Querylane will fill the host, port, database, username, password,
+              and SSL mode from your PostgreSQL connection string.
             </p>
           </div>
         </div>
         <label className="text-sm" htmlFor={connectionStringId}>
-          {"Connection string"}
+          Connection string
         </label>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Input
@@ -208,7 +205,7 @@ function CreateInstanceConnectionFields({
             type="button"
             variant="outline"
           >
-            {"Apply DSN"}
+            Apply DSN
           </Button>
         </div>
         <ConnectionStringFeedback
@@ -298,7 +295,7 @@ function CreateInstanceSslModeField({
   return (
     <div className="space-y-2">
       <label className="text-sm" htmlFor={sslModeId}>
-        {"SSL mode"}
+        SSL mode
       </label>
       <Select
         onValueChange={(value) => {
@@ -346,7 +343,7 @@ function CreateInstanceSslNegotiationField({
   return (
     <div className="space-y-2">
       <label className="text-sm" htmlFor={sslNegotiationId}>
-        {"SSL negotiation"}
+        SSL negotiation
       </label>
       <Select
         onValueChange={(value) => {

@@ -8,9 +8,6 @@ import {
   presentSessionTimeline,
 } from "@/components/console-pages/instance-activity-model";
 
-const TEST_NUMBER_3661 = 3661;
-const TEST_NUMBER_100 = 100;
-
 describe("instance activity model", () => {
   test("presents connection stats from pg_stat_activity health", () => {
     const stats = presentActivityStats({
@@ -32,7 +29,7 @@ describe("instance activity model", () => {
 
   test("formats zero and long durations without empty output", () => {
     expect(formatActivityDuration(0)).toBe("0s");
-    expect(formatActivityDuration(TEST_NUMBER_3661)).toBe("1h 1m");
+    expect(formatActivityDuration(3661)).toBe("1h 1m");
   });
 
   test("presents unavailable stats as placeholders", () => {
@@ -332,6 +329,6 @@ describe("instance activity model", () => {
       "All",
       "api",
     ]);
-    expect(literalAllRows.map((row) => row.pid)).toEqual([TEST_NUMBER_100]);
+    expect(literalAllRows.map((row) => row.pid)).toEqual([100]);
   });
 });

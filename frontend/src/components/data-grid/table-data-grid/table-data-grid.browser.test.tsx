@@ -33,33 +33,6 @@ import {
 
 import "@/components/data-grid/table-data-grid/data-grid-theme.css";
 
-const TEST_NUMBER_56 = 56;
-const TEST_NUMBER_255 = 255;
-const TEST_NUMBER_3 = 3;
-const TEST_NUMBER_0_POINT_04045 = 0.040_45;
-const TEST_NUMBER_12_POINT_92 = 12.92;
-const TEST_NUMBER_0_POINT_055 = 0.055;
-const TEST_NUMBER_1_POINT_055 = 1.055;
-const TEST_NUMBER_2_POINT_4 = 2.4;
-const TEST_NUMBER_0_POINT_2126 = 0.2126;
-const TEST_NUMBER_0_POINT_7152 = 0.7152;
-const TEST_NUMBER_0_POINT_0722 = 0.0722;
-const TEST_NUMBER_0_POINT_05 = 0.05;
-const TEST_NUMBER_0_POINT_7 = 0.7;
-const TEST_NUMBER_8 = 8;
-const TEST_NUMBER_4_POINT_5 = 4.5;
-const TEST_NUMBER_390 = 390;
-const TEST_NUMBER_844 = 844;
-const TEST_NUMBER_1280 = 1280;
-const TEST_NUMBER_1000 = 1000;
-const TEST_NUMBER_4 = 4;
-const TEST_NUMBER_5 = 5;
-const TEST_NUMBER_140 = 140;
-const TEST_NUMBER_100 = 100;
-const TEST_NUMBER_80 = 80;
-const TEST_NUMBER_260 = 260;
-const TEST_NUMBER_72 = 72;
-
 const tableApi = vi.hoisted(() => ({
   useListTableColumnsQuery: vi.fn((_input: { parent: string }) => ({
     data: undefined as unknown,
@@ -105,7 +78,7 @@ const shipmentsName =
   "instances/prod/databases/app/schemas/shipping/tables/shipments";
 const carriersName =
   "instances/prod/databases/app/schemas/public/tables/carriers";
-const longSchemaName = `schema_${"x".repeat(TEST_NUMBER_56)}`;
+const longSchemaName = `schema_${"x".repeat(56)}`;
 const longCarriersName = `instances/prod/databases/app/schemas/${longSchemaName}/tables/carriers`;
 
 function browserColorChannels(color: string) {
@@ -125,9 +98,9 @@ function colorContrastRatio(first: string, second: string) {
   function compositeColor(foreground: string, background: string) {
     const foregroundChannels = browserColorChannels(foreground);
     const backgroundChannels = browserColorChannels(background);
-    const alpha = (foregroundChannels[3] ?? TEST_NUMBER_255) / TEST_NUMBER_255;
+    const alpha = (foregroundChannels[3] ?? 255) / 255;
     return foregroundChannels
-      .slice(0, TEST_NUMBER_3)
+      .slice(0, 3)
       .map(
         (channel, index) =>
           channel * alpha + (backgroundChannels[index] ?? 0) * (1 - alpha)
@@ -135,25 +108,24 @@ function colorContrastRatio(first: string, second: string) {
   }
   function relativeLuminance(channels: number[]) {
     const linearChannels = channels.map((channel) => {
-      const normalized = channel / TEST_NUMBER_255;
-      return normalized <= TEST_NUMBER_0_POINT_04045
-        ? normalized / TEST_NUMBER_12_POINT_92
-        : ((normalized + TEST_NUMBER_0_POINT_055) / TEST_NUMBER_1_POINT_055) **
-            TEST_NUMBER_2_POINT_4;
+      const normalized = channel / 255;
+      return normalized <= 0.040_45
+        ? normalized / 12.92
+        : ((normalized + 0.055) / 1.055) ** 2.4;
     });
     return (
-      TEST_NUMBER_0_POINT_2126 * (linearChannels[0] ?? 0) +
-      TEST_NUMBER_0_POINT_7152 * (linearChannels[1] ?? 0) +
-      TEST_NUMBER_0_POINT_0722 * (linearChannels[2] ?? 0)
+      0.2126 * (linearChannels[0] ?? 0) +
+      0.7152 * (linearChannels[1] ?? 0) +
+      0.0722 * (linearChannels[2] ?? 0)
     );
   }
   const firstLuminance = relativeLuminance(compositeColor(first, second));
   const secondLuminance = relativeLuminance(
-    browserColorChannels(second).slice(0, TEST_NUMBER_3)
+    browserColorChannels(second).slice(0, 3)
   );
   const lighter = Math.max(firstLuminance, secondLuminance);
   const darker = Math.min(firstLuminance, secondLuminance);
-  return (lighter + TEST_NUMBER_0_POINT_05) / (darker + TEST_NUMBER_0_POINT_05);
+  return (lighter + 0.05) / (darker + 0.05);
 }
 
 function column(name: string, rawType: string, dataType: DataType) {
@@ -346,13 +318,10 @@ function renderDataExplorerSurfaces() {
       <div className="w-[1120px] space-y-5 rounded-2xl border border-border bg-background p-6 text-foreground">
         <section className="rounded-xl border border-border bg-card p-4">
           <div className="mb-3">
-            <h1 className="font-semibold text-xl">
-              {"Data explorer controls"}
-            </h1>
+            <h1 className="font-semibold text-xl">Data explorer controls</h1>
             <p className="text-muted-foreground text-sm">
-              {
-                "Selection, sorting, refresh, row counts, and pagination must stay compact while the data area scales."
-              }
+              Selection, sorting, refresh, row counts, and pagination must stay
+              compact while the data area scales.
             </p>
           </div>
           <DataGridToolbar
@@ -472,13 +441,10 @@ function renderFilteredToolbar() {
       <div className="w-[900px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <section className="rounded-xl border border-border bg-card p-4">
           <div className="mb-3">
-            <h1 className="font-semibold text-xl">
-              {"Filtered data explorer"}
-            </h1>
+            <h1 className="font-semibold text-xl">Filtered data explorer</h1>
             <p className="text-muted-foreground text-sm">
-              {
-                "Active server-side filters stay visible beside sort and refresh controls."
-              }
+              Active server-side filters stay visible beside sort and refresh
+              controls.
             </p>
           </div>
           <DataGridToolbar
@@ -628,7 +594,7 @@ function renderRefreshingGridSurface() {
       <div className="w-[720px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <GridSurface busy={true} loading={true}>
           <div className="flex min-h-[400px] items-center justify-center rounded-xl border bg-muted/30 text-muted-foreground text-sm">
-            {"Existing rows stay visible behind the refresh treatment."}
+            Existing rows stay visible behind the refresh treatment.
           </div>
         </GridSurface>
       </div>
@@ -660,14 +626,14 @@ function renderSelectedHeaderEdgeFixture() {
         <thead>
           <tr className="rdg-header-row">
             <th className="rdg-cell" scope="col">
-              {"name"}
+              name
             </th>
             <th
               aria-selected="true"
               className="rdg-cell rounded-selected-header-cell"
               scope="col"
             >
-              {"created_at"}
+              created_at
             </th>
           </tr>
         </thead>
@@ -682,12 +648,12 @@ function renderSelectableDataCellFixture() {
       <div className="querylane-data-grid">
         <div className="rdg-header-row">
           <div className="rdg-cell" data-testid="header-cell">
-            {"name"}
+            name
           </div>
         </div>
         <div className="rdg-row">
           <div className="rdg-cell" data-testid="data-cell">
-            <span data-testid="data-cell-text">{"Laptop Pro 15"}</span>
+            <span data-testid="data-cell-text">Laptop Pro 15</span>
           </div>
         </div>
       </div>
@@ -713,20 +679,19 @@ function renderDataValueDialogGuardFixture() {
       <DataValueDialogProvider>
         <section className="w-[920px] rounded-2xl border border-border bg-background p-6 text-foreground">
           <h1 className="mb-1 font-semibold text-lg">
-            {"Data value dialog guard"}
+            Data value dialog guard
           </h1>
           <p className="mb-4 text-muted-foreground text-sm">
-            {
-              "Expanding a second value keeps the current dialog as the only active layer."
-            }
+            Expanding a second value keeps the current dialog as the only active
+            layer.
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div className="min-w-0 rounded-lg border bg-card p-3">
-              <p className="mb-2 font-medium text-sm">{"metadata"}</p>
+              <p className="mb-2 font-medium text-sm">metadata</p>
               <DataCell cell={metadataCell} column={metadataColumn} />
             </div>
             <div className="min-w-0 rounded-lg border bg-card p-3">
-              <p className="mb-2 font-medium text-sm">{"tags"}</p>
+              <p className="mb-2 font-medium text-sm">tags</p>
               <DataCell cell={tagsCell} column={tagsColumn} />
             </div>
           </div>
@@ -813,7 +778,7 @@ function renderForeignKeyReferenceGrid(
           initialPageSize={10}
           name={shipmentsName}
           renderOpenReferencedTableLink={() => (
-            <a href="/explorer?schema=public&table=carriers">{"Open table"}</a>
+            <a href="/explorer?schema=public&table=carriers">Open table</a>
           )}
         />
       </div>
@@ -848,7 +813,7 @@ test("expanded data grid prioritizes space for rows", async () => {
     .getByTestId("grid-refresh-surface")
     .element()
     .getBoundingClientRect().height;
-  expect(gridHeight / dialogHeight).toBeGreaterThan(TEST_NUMBER_0_POINT_7);
+  expect(gridHeight / dialogHeight).toBeGreaterThan(0.7);
 });
 
 test("expanded data grid keeps close and refresh actions separate", async () => {
@@ -866,7 +831,7 @@ test("expanded data grid keeps close and refresh actions separate", async () => 
 
   const closeBox = closeButton.element().getBoundingClientRect();
   const refreshBox = refreshButton.element().getBoundingClientRect();
-  expect(refreshBox.right).toBeLessThanOrEqual(closeBox.left - TEST_NUMBER_8);
+  expect(refreshBox.right).toBeLessThanOrEqual(closeBox.left - 8);
 });
 
 test("column headers reorder while layout controls stay compact", async () => {
@@ -964,14 +929,14 @@ test("foreign key reference popover keeps the source table visible", async () =>
   );
   expect(
     colorContrastRatio(carrierLinkStyle.color, frameStyle.backgroundColor)
-  ).toBeGreaterThanOrEqual(TEST_NUMBER_4_POINT_5);
+  ).toBeGreaterThanOrEqual(4.5);
   await carrierLink.hover();
   const carrierLinkHoverStyle = getComputedStyle(carrierLink.element());
   expect(carrierLinkHoverStyle.opacity).toBe("1");
   expect(carrierLinkHoverStyle.color).not.toBe(frameStyle.color);
   expect(
     colorContrastRatio(carrierLinkHoverStyle.color, frameStyle.backgroundColor)
-  ).toBeGreaterThanOrEqual(TEST_NUMBER_4_POINT_5);
+  ).toBeGreaterThanOrEqual(4.5);
 
   const preview = page.getByRole("dialog", {
     name: "public.carriers",
@@ -988,7 +953,7 @@ test("foreign key reference popover keeps the source table visible", async () =>
       getComputedStyle(typeMetadata.element()).color,
       getComputedStyle(preview.element()).backgroundColor
     )
-  ).toBeGreaterThanOrEqual(TEST_NUMBER_4_POINT_5);
+  ).toBeGreaterThanOrEqual(4.5);
   await expect
     .element(page.getByRole("link", { name: "Open table" }))
     .toBeVisible();
@@ -1039,7 +1004,7 @@ test("foreign key reference waits for first-load data before opening", async () 
 });
 
 test("foreign key reference popover fits a narrow viewport", async () => {
-  await page.viewport(TEST_NUMBER_390, TEST_NUMBER_844);
+  await page.viewport(390, 844);
   try {
     renderForeignKeyReferenceGrid(
       "h-[700px] w-full rounded-xl border border-border bg-background p-3 text-foreground",
@@ -1053,7 +1018,7 @@ test("foreign key reference popover fits a narrow viewport", async () => {
     await expect.element(preview).toBeVisible();
     const previewBox = preview.element().getBoundingClientRect();
     expect(previewBox.left).toBeGreaterThanOrEqual(0);
-    expect(previewBox.right).toBeLessThanOrEqual(TEST_NUMBER_390);
+    expect(previewBox.right).toBeLessThanOrEqual(390);
     const title = preview
       .element()
       .querySelector<HTMLElement>('[data-slot="popover-title"]');
@@ -1065,7 +1030,7 @@ test("foreign key reference popover fits a narrow viewport", async () => {
       "foreign-key-reference-popover-narrow-layout"
     );
   } finally {
-    await page.viewport(TEST_NUMBER_1280, TEST_NUMBER_1000);
+    await page.viewport(1280, 1000);
   }
 });
 
@@ -1166,7 +1131,7 @@ test("row detail drawer wraps dense catalog fields without visual collisions", a
   await expect.element(closeButton).toBeVisible();
   const titleBox = title.element().getBoundingClientRect();
   const closeBox = closeButton.element().getBoundingClientRect();
-  expect(titleBox.right).toBeLessThanOrEqual(closeBox.left - TEST_NUMBER_4);
+  expect(titleBox.right).toBeLessThanOrEqual(closeBox.left - 4);
 
   const rowNavigation = page.getByRole("group", { name: "Row navigation" });
   await expect
@@ -1197,7 +1162,7 @@ test("row detail drawer wraps dense catalog fields without visual collisions", a
   const valueBoxes = Array.from(
     document.querySelectorAll<HTMLElement>('[data-slot="record-field-value"]')
   );
-  expect(valueBoxes).toHaveLength(TEST_NUMBER_5);
+  expect(valueBoxes).toHaveLength(5);
   const widths = valueBoxes.map((box) => box.getBoundingClientRect().width);
   expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
 });
@@ -1233,7 +1198,7 @@ test("filter popover keeps multiple rules compact and aligned", async () => {
     .getByRole("button", { name: "Add filter" })
     .element()
     .getBoundingClientRect();
-  expect(addFilterBox.width).toBeLessThanOrEqual(TEST_NUMBER_140);
+  expect(addFilterBox.width).toBeLessThanOrEqual(140);
 
   const rows = Array.from(popover.querySelectorAll("li"));
   expect(rows).toHaveLength(2);
@@ -1366,7 +1331,7 @@ test("page size select shows every option when the footer is near the viewport e
   }
 
   await page.getByRole("option", { exact: true, name: "100" }).click();
-  expect(onPageSizeChange).toHaveBeenCalledWith(TEST_NUMBER_100);
+  expect(onPageSizeChange).toHaveBeenCalledWith(100);
 });
 
 test("filter popover stays inside the data-grid boundary when the grid is offset", async () => {
@@ -1430,7 +1395,7 @@ test("sort popover keeps every row control aligned", async () => {
   }
 
   const rows = Array.from(popover.querySelectorAll("li"));
-  expect(rows).toHaveLength(TEST_NUMBER_5);
+  expect(rows).toHaveLength(5);
   const rowBoxes = rows.map((row) => {
     const triggers = row.querySelectorAll<HTMLElement>(
       '[data-slot="select-trigger"]'
@@ -1448,7 +1413,7 @@ test("sort popover keeps every row control aligned", async () => {
   });
 
   for (const rowBox of rowBoxes) {
-    expect(rowBox.column.width).toBeGreaterThan(TEST_NUMBER_80);
+    expect(rowBox.column.width).toBeGreaterThan(80);
     expect(rowBox.direction.width).toBeGreaterThan(60);
     expect(rowBox.column.left).toBeGreaterThan(rowBox.row.left);
     expect(rowBox.direction.left).toBeGreaterThan(rowBox.column.left);
@@ -1529,8 +1494,8 @@ test("data grid refresh treatment is centered and readable", async () => {
   const statusCenterX = statusBox.left + statusBox.width / 2;
   const statusCenterY = statusBox.top + statusBox.height / 2;
 
-  expect(statusBox.width).toBeGreaterThan(TEST_NUMBER_260);
-  expect(statusBox.height).toBeGreaterThan(TEST_NUMBER_72);
+  expect(statusBox.width).toBeGreaterThan(260);
+  expect(statusBox.height).toBeGreaterThan(72);
   expect(Math.abs(statusCenterX - surfaceCenterX)).toBeLessThan(2);
   expect(Math.abs(statusCenterY - surfaceCenterY)).toBeLessThan(2);
 });

@@ -20,14 +20,15 @@ const allowedDisabledBiomeRules = [
   "noConsole",
   "noDefaultExport",
   "noDocumentCookie",
+  "noJsxLiterals",
   "noJsxPropsBind",
+  "noMagicNumbers",
   "noNodejsModules",
   "noProcessEnv",
   "noSecrets",
   "noSolidDestructuredProps",
   "noUselessUndefined",
   "useComponentExportOnlyModules",
-  "useConsistentCurlyBraces",
   "useLiteralKeys",
   "useMaxParams",
   "useQwikValidLexicalScope",
@@ -127,7 +128,7 @@ describe("strict tooling policy", () => {
     }
   });
 
-  test("keeps every Biome rule enabled except classified collisions", () => {
+  test("keeps every Biome rule enabled except classified exceptions", () => {
     const biomeConfig = readFileSync(
       resolve(projectRoot, "biome.jsonc"),
       "utf8"

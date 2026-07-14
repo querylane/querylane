@@ -22,9 +22,6 @@ import {
   sampleInstance,
 } from "./helpers";
 
-const TEST_NUMBER_30 = 30;
-const TEST_NUMBER_6 = 6;
-
 declare global {
   interface Window {
     querylaneE2eClipboard?: string;
@@ -266,16 +263,13 @@ test("data explorer: Lighthouse route covers manual accessibility contracts", {
   await filterInput.focus();
   await expect(filterInput).toBeFocused();
 
-  const tabFocusSnapshots = await collectTabFocusSnapshots(
-    page,
-    TEST_NUMBER_30
-  );
+  const tabFocusSnapshots = await collectTabFocusSnapshots(page, 30);
   const meaningfulFocusTargets = tabFocusSnapshots.filter(
     (snapshot) =>
       snapshot.label || snapshot.role || snapshot.tagName === "input"
   );
 
-  expect(meaningfulFocusTargets.length).toBeGreaterThanOrEqual(TEST_NUMBER_6);
+  expect(meaningfulFocusTargets.length).toBeGreaterThanOrEqual(6);
   expect(tabFocusSnapshots.some((snapshot) => snapshot.isInObjectBrowser)).toBe(
     true
   );

@@ -75,7 +75,7 @@ function StepStateBadge({ state }: { state: StepState }) {
   if (state === StepState.SUCCEEDED) {
     return (
       <Badge className="border-emerald-400/40 bg-emerald-500/14 px-4 text-emerald-200">
-        {"Done"}
+        Done
       </Badge>
     );
   }
@@ -85,7 +85,7 @@ function StepStateBadge({ state }: { state: StepState }) {
         className="border-white/16 bg-white/10 px-4 text-white"
         variant="outline"
       >
-        {"Running"}
+        Running
       </Badge>
     );
   }
@@ -95,7 +95,7 @@ function StepStateBadge({ state }: { state: StepState }) {
         className="border-red-400/35 bg-red-500/14 px-4 text-red-100"
         variant="outline"
       >
-        {"Failed"}
+        Failed
       </Badge>
     );
   }
@@ -104,7 +104,7 @@ function StepStateBadge({ state }: { state: StepState }) {
       className="border-white/10 bg-white/[0.04] px-4 text-white/62"
       variant="outline"
     >
-      {"Pending"}
+      Pending
     </Badge>
   );
 }
@@ -112,7 +112,7 @@ export function ProgressStepList({ events }: { events: SetupProgressEvent[] }) {
   if (events.length === 0) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/55">
-        {"Waiting for setup progress…"}
+        Waiting for setup progress…
       </div>
     );
   }

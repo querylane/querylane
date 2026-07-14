@@ -23,7 +23,7 @@ describe("async and managed state integration", () => {
         isPending={true}
         loadingMessage="Loading databases..."
       >
-        <div>{"database rows"}</div>
+        <div>database rows</div>
       </AsyncSectionState>
     );
 
@@ -58,7 +58,7 @@ describe("async and managed state integration", () => {
         isRefreshing={true}
         refreshingMessage="Refreshing roles..."
       >
-        <div>{"replicator"}</div>
+        <div>replicator</div>
       </AsyncSectionState>
     );
 
@@ -92,7 +92,7 @@ describe("async and managed state integration", () => {
       <EmptyState
         action={
           <Button onClick={onRegister} type="button">
-            {"Register instance"}
+            Register instance
           </Button>
         }
         description="Connect a PostgreSQL server before browsing databases."

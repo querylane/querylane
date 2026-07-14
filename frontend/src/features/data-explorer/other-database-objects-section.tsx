@@ -304,7 +304,7 @@ function ObjectDefinition({
           variant="outline"
         >
           <Clipboard data-icon="inline-start" />
-          {"Copy SQL"}
+          Copy SQL
         </Button>
         {extra}
       </div>
@@ -349,9 +349,7 @@ function TypeObjectCard({
             ))}
             {hiddenChipCount > 0 ? (
               <li className="inline-flex h-6 items-center rounded-full border border-border px-2.5 text-[11px] text-muted-foreground">
-                {"+"}
-                {hiddenChipCount}
-                {" more"}
+                +{hiddenChipCount} more
               </li>
             ) : null}
           </ol>
@@ -395,10 +393,7 @@ function RoutineObjectCard(props: OtherObjectCardProps) {
           <span className="font-bold">{routineName}</span>
           <span className="text-muted-foreground">{routineArgs}</span>
           {returnType ? (
-            <span className="text-primary">
-              {" → "}
-              {returnType}
-            </span>
+            <span className="text-primary"> → {returnType}</span>
           ) : null}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -434,7 +429,7 @@ function SequenceObjectCard(props: OtherObjectCardProps) {
           {summaryParts[0]?.replace("last ", "") || "—"}
         </div>
         <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
-          {"Last value"}
+          Last value
         </div>
         {summaryParts.length > 1 ? (
           <p className="mt-2 text-[11px] text-muted-foreground">
@@ -724,9 +719,7 @@ function CronObjectCard(props: OtherObjectCardProps) {
           </div>
           <div className="mt-3 flex flex-wrap items-baseline gap-2">
             <span className="font-semibold text-sm">
-              {"“"}
-              {cronSentence(schedule)}
-              {"”"}
+              “{cronSentence(schedule)}”
             </span>
           </div>
           <ObjectDefinition object={object} onCopySql={onCopySql} />
@@ -916,7 +909,7 @@ function OtherObjectsError({
     <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
       <div className="flex items-start gap-2 text-destructive">
         <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-        <span>{"Failed to load other database objects."}</span>
+        <span>Failed to load other database objects.</span>
       </div>
       {onRetry ? (
         <RetryActionButton
@@ -1156,7 +1149,7 @@ function OtherDatabaseObjectsPanel({
     >
       <header className="p-4">
         <h2 className="font-semibold text-sm" id={titleId}>
-          {"Other database objects"}
+          Other database objects
         </h2>
         <p className="mt-2 text-muted-foreground text-xs">{INTRO_COPY}</p>
       </header>
@@ -1189,9 +1182,8 @@ function OtherDatabaseObjectsPanel({
 
         {isTruncated ? (
           <p className="mt-3 text-amber-700 text-xs dark:text-amber-300">
-            {
-              "This database has more than 1,000 other objects. Showing a partial inventory."
-            }
+            This database has more than 1,000 other objects. Showing a partial
+            inventory.
           </p>
         ) : null}
 

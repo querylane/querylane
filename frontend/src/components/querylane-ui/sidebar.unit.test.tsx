@@ -9,11 +9,6 @@ import {
 } from "@/components/querylane-ui/sidebar";
 import { Button } from "@/components/ui/button";
 
-const TEST_NUMBER_100 = 100;
-const TEST_NUMBER_8 = 8;
-const TEST_NUMBER_400 = 400;
-const TEST_NUMBER_50 = 50;
-
 function stubDesktopHoverViewport(canHover = true) {
   Object.defineProperty(window, "innerWidth", {
     configurable: true,
@@ -36,7 +31,7 @@ function dispatchPointerMove(
   const event = new Event("pointermove");
   Object.defineProperties(event, {
     clientX: { value: clientX },
-    clientY: { value: options.clientY ?? TEST_NUMBER_100 },
+    clientY: { value: options.clientY ?? 100 },
     pointerType: { value: options.pointerType ?? "mouse" },
   });
   window.dispatchEvent(event);
@@ -57,10 +52,10 @@ function renderCollapsedOffcanvasSidebar() {
   render(
     <SidebarProvider defaultOpen={false}>
       <Sidebar collapsible="offcanvas" data-testid="sidebar-panel">
-        <SidebarMenuButton>{"Hidden navigation"}</SidebarMenuButton>
+        <SidebarMenuButton>Hidden navigation</SidebarMenuButton>
       </Sidebar>
       <SidebarInset>
-        <Button type="button">{"Main action"}</Button>
+        <Button type="button">Main action</Button>
       </SidebarInset>
     </SidebarProvider>
   );
@@ -77,7 +72,7 @@ describe("Sidebar hover reveal", () => {
 
     expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("closed");
 
-    act(() => dispatchPointerMove(TEST_NUMBER_8));
+    act(() => dispatchPointerMove(8));
 
     await waitFor(() => {
       expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("open");
@@ -88,12 +83,12 @@ describe("Sidebar hover reveal", () => {
     stubDesktopHoverViewport();
     const sidebarPanel = renderCollapsedOffcanvasSidebar();
 
-    act(() => dispatchPointerMove(TEST_NUMBER_8));
+    act(() => dispatchPointerMove(8));
     await waitFor(() => {
       expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("open");
     });
 
-    act(() => dispatchPointerMove(TEST_NUMBER_400));
+    act(() => dispatchPointerMove(400));
 
     await waitFor(() => {
       expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("closed");
@@ -104,12 +99,12 @@ describe("Sidebar hover reveal", () => {
     stubDesktopHoverViewport();
     const sidebarPanel = renderCollapsedOffcanvasSidebar();
 
-    act(() => dispatchPointerMove(TEST_NUMBER_8, { clientY: 100 }));
+    act(() => dispatchPointerMove(8, { clientY: 100 }));
     await waitFor(() => {
       expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("open");
     });
 
-    act(() => dispatchPointerMove(TEST_NUMBER_50, { clientY: 20 }));
+    act(() => dispatchPointerMove(50, { clientY: 20 }));
 
     await waitFor(() => {
       expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("closed");
@@ -153,7 +148,7 @@ describe("Sidebar hover reveal", () => {
     stubDesktopHoverViewport(false);
     const sidebarPanel = renderCollapsedOffcanvasSidebar();
 
-    act(() => dispatchPointerMove(TEST_NUMBER_8, { pointerType: "mouse" }));
+    act(() => dispatchPointerMove(8, { pointerType: "mouse" }));
 
     await waitFor(() => {
       expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("open");

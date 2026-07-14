@@ -14,8 +14,6 @@ import {
   OtherDatabaseObjectsSection,
 } from "@/features/data-explorer/other-database-objects-section";
 
-const TEST_NUMBER_2000 = 2000;
-
 const otherObjectsQuery = vi.hoisted(() => ({
   data: { isTruncated: false, objects: [] },
   error: null,
@@ -526,7 +524,7 @@ describe("OtherDatabaseObjectsPanel details", () => {
     let clearNotice: (() => void) | undefined;
     vi.spyOn(globalThis, "setTimeout").mockImplementation(
       (handler, timeout, ...args) => {
-        if (timeout === TEST_NUMBER_2000) {
+        if (timeout === 2000) {
           clearNotice = () => handler(...args);
           return nativeSetTimeout(() => undefined, 0);
         }

@@ -315,9 +315,7 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
           ))}
           {extraCount > 0 ? (
             <p className="text-[11px] text-muted-foreground">
-              {"+"}
-              {extraCount}
-              {" more"}
+              +{extraCount} more
             </p>
           ) : null}
         </div>

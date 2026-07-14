@@ -786,7 +786,7 @@ function SchemaLoadingRows() {
           <Skeleton className={cn("h-3.5", row.width)} />
         </div>
       ))}
-      <span className="sr-only">{"Loading schemas"}</span>
+      <span className="sr-only">Loading schemas</span>
     </div>
   );
 }
@@ -839,9 +839,7 @@ function ResourceListItem({
     case "empty":
       return (
         <NestedTreeRow>
-          <p className="px-3 py-1 text-muted-foreground text-xs">
-            {"No objects"}
-          </p>
+          <p className="px-3 py-1 text-muted-foreground text-xs">No objects</p>
         </NestedTreeRow>
       );
     default:

@@ -7,8 +7,6 @@ import type {
   VisualizationNode,
 } from "@/features/database-visualization/graph-model";
 
-const TEST_NUMBER_0_POINT_1 = 0.1;
-
 type CapturedControlsStyle = React.CSSProperties & {
   "--xy-controls-button-background-color"?: string | undefined;
   "--xy-controls-button-background-color-hover"?: string | undefined;
@@ -151,7 +149,7 @@ describe("FlowCanvas", () => {
       .getAttribute("data-min-zoom");
 
     expect(minZoom).not.toBeNull();
-    expect(Number(minZoom)).toBeLessThan(TEST_NUMBER_0_POINT_1);
+    expect(Number(minZoom)).toBeLessThan(0.1);
   });
 
   test("uses orthogonal step edges so dense relationship lines cross at right angles", () => {
@@ -197,7 +195,7 @@ describe("FlowCanvas", () => {
   test("renders custom canvas actions inside a React Flow panel", () => {
     render(
       <FlowCanvas
-        actionPanel={<Button type="button">{"Map actions"}</Button>}
+        actionPanel={<Button type="button">Map actions</Button>}
         direction="LR"
         edges={[]}
         nodes={[firstNode]}

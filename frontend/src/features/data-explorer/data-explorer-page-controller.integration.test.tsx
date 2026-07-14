@@ -6,9 +6,6 @@ import { useDataExplorerPageController } from "@/features/data-explorer/data-exp
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
 import { createTestQueryClient } from "@/test/query-client";
 
-const TEST_NUMBER_200 = 200;
-const TEST_NUMBER_250 = 250;
-
 interface TableListData {
   pages: Array<{
     syncMetadata?: undefined;
@@ -224,7 +221,7 @@ describe("data explorer search navigation", () => {
     expect(mocks.navigate).not.toHaveBeenCalled();
 
     act(() => {
-      vi.advanceTimersByTime(TEST_NUMBER_200);
+      vi.advanceTimersByTime(200);
     });
 
     expect(mocks.navigate).toHaveBeenCalledWith(
@@ -278,7 +275,7 @@ describe("schema overview stats", () => {
       result.current.setQuery("acc");
     });
     act(() => {
-      vi.advanceTimersByTime(TEST_NUMBER_250);
+      vi.advanceTimersByTime(250);
     });
 
     // The sidebar list honors the typed filter…

@@ -74,14 +74,14 @@ export function EmbeddedPhase() {
             variant="ghost"
           >
             <ArrowLeft className="size-4" />
-            {"Back"}
+            Back
           </Button>
           <Button
             className="h-10 rounded-xl bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
             disabled={!isValid}
             onClick={handleContinue}
           >
-            {"Continue"}
+            Continue
             <ChevronRight className="size-4" />
           </Button>
         </div>
@@ -104,7 +104,7 @@ export function EmbeddedPhase() {
               className="font-medium text-base text-white"
               htmlFor={modeId}
             >
-              {"Persistence mode"}
+              Persistence mode
             </Label>
             <Select
               onValueChange={(value) => {
@@ -151,13 +151,13 @@ export function EmbeddedPhase() {
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
           <div className="grid gap-4 text-sm text-white/62 md:grid-cols-[200px_minmax(0,1fr)]">
-            <div>{"Data path"}</div>
+            <div>Data path</div>
             <div className="font-mono text-white/88">{embeddedDataPath}</div>
-            <div>{"Runtime"}</div>
-            <div className="text-white/88">{"Embedded PostgreSQL"}</div>
-            <div>{"Managed by"}</div>
+            <div>Runtime</div>
+            <div className="text-white/88">Embedded PostgreSQL</div>
+            <div>Managed by</div>
             <div className="text-white/88">
-              {"Querylane startup and setup workflow"}
+              Querylane startup and setup workflow
             </div>
           </div>
         </div>

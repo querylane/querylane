@@ -177,7 +177,7 @@ function CellContextMenu({
         variant="ghost"
       >
         <Copy className="size-3.5" />
-        {"Copy cell"}
+        Copy cell
       </Button>
       <Button
         className="h-7 justify-start gap-2 px-2 text-xs"
@@ -192,7 +192,7 @@ function CellContextMenu({
         variant="ghost"
       >
         <Rows3 className="size-3.5" />
-        {"Copy row"}
+        Copy row
       </Button>
       <Button
         className="h-7 justify-start gap-2 px-2 text-xs"
@@ -207,7 +207,7 @@ function CellContextMenu({
         variant="ghost"
       >
         <FileCode2 className="size-3.5" />
-        {"Copy row as INSERT"}
+        Copy row as INSERT
       </Button>
     </div>,
     document.body

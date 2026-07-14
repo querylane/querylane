@@ -17,9 +17,8 @@ function RoleOverviewTab({
   return (
     <div className="flex flex-col gap-4">
       <p className="text-muted-foreground text-sm">
-        {
-          "A role's power has two sources: the access it's granted, and the attributes it holds itself."
-        }
+        A role&apos;s power has two sources: the access it&apos;s granted, and
+        the attributes it holds itself.
       </p>
       <AccessSummary
         databaseName={effectiveDb?.name}

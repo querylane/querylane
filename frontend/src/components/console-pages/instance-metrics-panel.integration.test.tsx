@@ -15,15 +15,7 @@ import {
   QueryMetricsResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
-const TEST_NUMBER_3600 = 3600;
-const TEST_NUMBER_5 = 5;
-const TEST_NUMBER_11 = 11;
-const TEST_NUMBER_12 = 12;
-const TEST_NUMBER_3 = 3;
-const TEST_NUMBER_6 = 6;
-const TEST_NUMBER_4 = 4;
-
-const DAY_SECONDS = 24 * TEST_NUMBER_3600;
+const DAY_SECONDS = 24 * 3600;
 const DAY_INTERVAL = {
   endTime: { nanos: 0, seconds: BigInt(DAY_SECONDS) },
   startTime: { nanos: 0, seconds: 0n },
@@ -49,10 +41,10 @@ function nascentResponse(): QueryMetricsResponse {
         points: {
           startTime: {
             nanos: 0,
-            seconds: BigInt(DAY_SECONDS - TEST_NUMBER_5 * 60),
+            seconds: BigInt(DAY_SECONDS - 5 * 60),
           },
           step: { nanos: 0, seconds: 60n },
-          values: [TEST_NUMBER_11, TEST_NUMBER_12],
+          values: [11, 12],
         },
         unit: MetricUnit.COUNT,
       },
@@ -72,7 +64,7 @@ function fullResponse(previousAvailable: boolean): QueryMetricsResponse {
         points: {
           startTime: { nanos: 0, seconds: 0n },
           step: { nanos: 0, seconds: 1800n },
-          values: Array.from({ length: 49 }, () => TEST_NUMBER_12),
+          values: Array.from({ length: 49 }, () => 12),
         },
         unit: MetricUnit.COUNT,
       },
@@ -92,10 +84,10 @@ function threePointResponse(): QueryMetricsResponse {
         points: {
           startTime: {
             nanos: 0,
-            seconds: BigInt(DAY_SECONDS - TEST_NUMBER_3 * 60),
+            seconds: BigInt(DAY_SECONDS - 3 * 60),
           },
           step: { nanos: 0, seconds: 60n },
-          values: [10, TEST_NUMBER_11, TEST_NUMBER_12],
+          values: [10, 11, 12],
         },
         unit: MetricUnit.COUNT,
       },
@@ -145,7 +137,7 @@ describe("InstanceMetricsPanel range picker", () => {
     const { onRangeChange } = renderPanel({ response: fullResponse(true) });
 
     fireEvent.click(screen.getByRole("button", { name: "6h" }));
-    expect(onRangeChange).toHaveBeenCalledWith(TEST_NUMBER_6);
+    expect(onRangeChange).toHaveBeenCalledWith(6);
   });
 
   test("keeps the picker visible while collecting", () => {
@@ -170,7 +162,7 @@ describe("InstanceMetricsPanel trend labels", () => {
 
   test("falls back to a range-aware no-comparison caption", () => {
     renderPanel({
-      range: metricRangeByHours(TEST_NUMBER_6),
+      range: metricRangeByHours(6),
       response: fullResponse(false),
     });
 
@@ -211,13 +203,13 @@ describe("InstanceMetricsPanel nascent coverage", () => {
     // No chart tabs while collecting; stat tiles stay static with live values.
     expect(screen.queryByRole("tab")).toBeNull();
     expect(screen.getByText("12")).toBeTruthy();
-    expect(screen.getAllByText("collecting")).toHaveLength(TEST_NUMBER_4);
+    expect(screen.getAllByText("collecting")).toHaveLength(4);
   });
 
   test("draws the tabbed charts once three points exist", () => {
     renderPanel({ response: threePointResponse() });
 
     expect(screen.queryByText("Collecting metrics")).toBeNull();
-    expect(screen.getAllByRole("tab")).toHaveLength(TEST_NUMBER_4);
+    expect(screen.getAllByRole("tab")).toHaveLength(4);
   });
 });

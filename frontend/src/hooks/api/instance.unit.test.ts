@@ -18,9 +18,6 @@ import {
 import { listInstances } from "@/protogen/querylane/console/v1alpha1/instance-InstanceService_connectquery";
 import { createTestQueryClient } from "@/test/query-client";
 
-const TEST_NUMBER_1000 = 1000;
-const TEST_NUMBER_4 = 4;
-
 async function disposeTestQueryClient(
   queryClient: ReturnType<typeof createTestQueryClient>
 ) {
@@ -78,7 +75,7 @@ describe("instance query option helpers", () => {
 
     expect(requests).toHaveLength(2);
     expect(requests[0]?.orderBy).toBe("display_name asc");
-    expect(requests[0]?.pageSize).toBe(TEST_NUMBER_1000);
+    expect(requests[0]?.pageSize).toBe(1000);
     expect(requests[1]?.pageToken).toBe("page-2");
     expect(response.instances.map((instance) => instance.name)).toEqual([
       "instances/local",
@@ -137,7 +134,7 @@ describe("instance query option helpers", () => {
       transport,
     });
 
-    expect(requests).toHaveLength(TEST_NUMBER_4);
+    expect(requests).toHaveLength(4);
     await disposeTestQueryClient(queryClient);
   });
 });

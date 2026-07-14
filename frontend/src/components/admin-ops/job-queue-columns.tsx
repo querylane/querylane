@@ -17,7 +17,7 @@ export function JobStatusCell({ status }: { status: JobExecutionStatus }) {
     return (
       <span className="inline-flex items-center gap-1.5 text-sm">
         <Spinner className="size-3.5" />
-        {"Running"}
+        Running
       </span>
     );
   }
@@ -41,8 +41,8 @@ export function LeaseCell({ execution }: { execution: AdminRunnerExecution }) {
         {owner.hostname || "unknown host"}
       </span>
       <span className="font-mono text-muted-foreground text-xs">
-        {shortReplicaId(owner.replicaId)}
-        {" · expires"} {formatRelativeTimestamp(execution.leaseExpiresAt)}
+        {shortReplicaId(owner.replicaId)} · expires{" "}
+        {formatRelativeTimestamp(execution.leaseExpiresAt)}
       </span>
     </span>
   );

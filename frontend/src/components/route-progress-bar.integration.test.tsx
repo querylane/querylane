@@ -2,10 +2,6 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RouteProgressBar } from "@/components/route-progress-bar";
 
-const TEST_NUMBER_199 = 199;
-const TEST_NUMBER_200 = 200;
-const TEST_NUMBER_399 = 399;
-
 const routerState = vi.hoisted(() => ({
   isLoading: false,
   isTransitioning: false,
@@ -48,7 +44,7 @@ describe("RouteProgressBar", () => {
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();
 
     act(() => {
-      vi.advanceTimersByTime(TEST_NUMBER_199);
+      vi.advanceTimersByTime(199);
     });
 
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();
@@ -75,7 +71,7 @@ describe("RouteProgressBar", () => {
     const { rerender } = render(<RouteProgressBar />);
 
     act(() => {
-      vi.advanceTimersByTime(TEST_NUMBER_199);
+      vi.advanceTimersByTime(199);
     });
 
     routerState.isLoading = false;
@@ -94,7 +90,7 @@ describe("RouteProgressBar", () => {
     const { rerender } = render(<RouteProgressBar />);
 
     act(() => {
-      vi.advanceTimersByTime(TEST_NUMBER_200);
+      vi.advanceTimersByTime(200);
     });
 
     expect(screen.getByTestId("route-progress-bar")).toBeTruthy();
@@ -103,7 +99,7 @@ describe("RouteProgressBar", () => {
     rerender(<RouteProgressBar />);
 
     act(() => {
-      vi.advanceTimersByTime(TEST_NUMBER_399);
+      vi.advanceTimersByTime(399);
     });
 
     expect(screen.getByTestId("route-progress-bar")).toBeTruthy();
@@ -122,7 +118,7 @@ describe("RouteProgressBar", () => {
     render(<RouteProgressBar />);
 
     act(() => {
-      vi.advanceTimersByTime(TEST_NUMBER_200);
+      vi.advanceTimersByTime(200);
     });
 
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();

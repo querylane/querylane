@@ -193,9 +193,11 @@
         "noCommonJs": "error",
         "noDefaultExport": "error",
         "noEnum": "error",
-        "noJsxLiterals": "error",
+        // Plain JSX text is clearer than redundant string expressions.
+        "noJsxLiterals": "off",
         "noImplicitBoolean": "error",
-        "noMagicNumbers": "error",
+        // Numeric literals are clearer when extracting them adds no domain meaning.
+        "noMagicNumbers": "off",
         "noNamespace": "error",
         "noNestedTernary": "error",
         "noNonNullAssertion": "error",
@@ -231,8 +233,7 @@
           }
         },
         "useConsistentArrayType": "error",
-        // noJsxLiterals requires braces around every JSX string literal.
-        "useConsistentCurlyBraces": "off",
+        "useConsistentCurlyBraces": "error",
         "useDefaultParameterLast": "error",
         "useErrorCause": "error",
         "useExportType": "error",

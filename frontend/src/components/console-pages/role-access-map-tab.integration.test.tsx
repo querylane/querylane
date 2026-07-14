@@ -38,10 +38,7 @@ vi.mock("@/features/database-visualization/flow-canvas", () => ({
   }) => (
     <section aria-label="Access flow canvas">
       <fieldset aria-label="Access canvas controls">{actionPanel}</fieldset>
-      <span>
-        {"Node ids "}
-        {nodes.map((node) => node.id).join(",")}
-      </span>
+      <span>Node ids {nodes.map((node) => node.id).join(",")}</span>
     </section>
   ),
 }));

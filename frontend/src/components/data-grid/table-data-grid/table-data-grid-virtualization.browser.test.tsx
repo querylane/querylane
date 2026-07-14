@@ -25,24 +25,9 @@ import {
 
 import "@/components/data-grid/table-data-grid/data-grid-theme.css";
 
-const TEST_NUMBER_2026 = 2026;
-const TEST_NUMBER_4 = 4;
-const TEST_NUMBER_20 = 20;
-const TEST_NUMBER_11 = 11;
-const TEST_NUMBER_30 = 30;
-const TEST_NUMBER_500 = 500;
-const TEST_NUMBER_1100 = 1100;
-const TEST_NUMBER_420 = 420;
-
 const metadataQuery = (data: unknown) => ({
   data,
-  dataUpdatedAt: Date.UTC(
-    TEST_NUMBER_2026,
-    TEST_NUMBER_4,
-    TEST_NUMBER_20,
-    TEST_NUMBER_11,
-    TEST_NUMBER_30
-  ),
+  dataUpdatedAt: Date.UTC(2026, 4, 20, 11, 30),
   error: null,
   isFetching: false,
   isLoading: false,
@@ -161,13 +146,7 @@ function seedTableDetailRows(rowCount = 500) {
         ),
       }),
     }),
-    dataUpdatedAt: Date.UTC(
-      TEST_NUMBER_2026,
-      TEST_NUMBER_4,
-      TEST_NUMBER_20,
-      TEST_NUMBER_11,
-      TEST_NUMBER_30
-    ),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 11, 30),
     error: null,
     isFetching: false,
     isLoading: false,
@@ -177,7 +156,7 @@ function seedTableDetailRows(rowCount = 500) {
 }
 
 test("table detail uses available height while keeping 500-row pages virtualized", async () => {
-  seedTableDetailRows(TEST_NUMBER_500);
+  seedTableDetailRows(500);
 
   render(
     <ScreenshotFrame>
@@ -197,7 +176,7 @@ test("table detail uses available height while keeping 500-row pages virtualized
   expect(
     document.querySelector(".querylane-data-grid")?.getBoundingClientRect()
       .height ?? 0
-  ).toBeGreaterThan(TEST_NUMBER_1100);
+  ).toBeGreaterThan(1100);
   await expect
     .poll(
       () => document.querySelectorAll(".querylane-data-grid .rdg-row").length
@@ -205,6 +184,6 @@ test("table detail uses available height while keeping 500-row pages virtualized
     .toBeLessThanOrEqual(60);
   expect(
     document.querySelectorAll(".querylane-data-grid .rdg-cell").length
-  ).toBeLessThanOrEqual(TEST_NUMBER_420);
+  ).toBeLessThanOrEqual(420);
   expect(page.getByText("user-499@example.com")).not.toBeInTheDocument();
 });

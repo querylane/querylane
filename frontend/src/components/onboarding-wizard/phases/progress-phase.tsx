@@ -57,9 +57,8 @@ function WaitingForConfigBody({
           )}
         </Button>
         <p className="max-w-2xl text-sm text-white/56 leading-6 md:text-base">
-          {
-            "Querylane is watching this path. Save a valid config file and it will continue setup automatically."
-          }
+          Querylane is watching this path. Save a valid config file and it will
+          continue setup automatically.
         </p>
         <Button
           className="h-10 rounded-xl border border-white/10 bg-white/[0.04] px-4 font-medium text-sm text-white hover:bg-white/[0.07]"
@@ -94,12 +93,11 @@ function SuccessCallout() {
         </span>
         <div className="min-w-0 space-y-2">
           <div className="font-medium text-emerald-100 text-xl">
-            {"Ready to go!"}
+            Ready to go!
           </div>
           <p className="max-w-4xl text-emerald-50/90 text-sm leading-6 md:text-base">
-            {
-              "Querylane is now configured and ready to manage your PostgreSQL instances. Click finish to start exploring."
-            }
+            Querylane is now configured and ready to manage your PostgreSQL
+            instances. Click finish to start exploring.
           </p>
         </div>
       </div>
@@ -149,8 +147,7 @@ export function ProgressPhase() {
         <div className="flex items-center justify-between gap-4 text-sm md:text-base">
           <span className="text-white/70">{summary.statusLabel}</span>
           <span className="font-medium text-white/72">
-            {summary.percentage}
-            {"%"}
+            {summary.percentage}%
           </span>
         </div>
         <progress
@@ -174,14 +171,14 @@ export function ProgressPhase() {
             variant="ghost"
           >
             <ArrowLeft className="size-4" />
-            {"Back"}
+            Back
           </Button>
           <Button
             className="h-10 rounded-xl bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90 disabled:bg-white/18 disabled:text-white/38"
             disabled={!isSuccess}
             onClick={finishWizard}
           >
-            {"Finish"}
+            Finish
           </Button>
         </div>
       }

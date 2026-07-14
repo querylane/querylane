@@ -69,7 +69,7 @@
     "react-doctor/forbid-component-props": "error",
     "react-doctor/hook-use-state": "error",
     "react-doctor/jsx-boolean-value": "off",
-    "react-doctor/jsx-curly-brace-presence": "off",
+    "react-doctor/jsx-curly-brace-presence": "error",
     "react-doctor/jsx-filename-extension": "error",
     "react-doctor/jsx-fragments": "error",
     "react-doctor/jsx-handler-names": "error",

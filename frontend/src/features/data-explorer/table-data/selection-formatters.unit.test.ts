@@ -15,9 +15,6 @@ import {
   type SelectedRow,
 } from "./selection-formatters";
 
-const TEST_NUMBER_1234567_POINT_8912345 = 1_234_567.891_234_5;
-const TEST_NUMBER_1_POINT_5 = 1.5;
-
 const RESOURCE = "instances/i/databases/d/schemas/public/tables/events";
 
 const DANGEROUS_CSV_VALUES = [
@@ -328,7 +325,7 @@ describe("buildExport raw value fidelity", () => {
   test("exports non-integer doubles without locale grouping or rounding", () => {
     const columns = [typedColumn("amount", DataType.FLOAT, "double precision")];
     const rows: SelectedRow[] = [
-      row({ amount: doubleCell(TEST_NUMBER_1234567_POINT_8912345) }),
+      row({ amount: doubleCell(1_234_567.891_234_5) }),
     ];
 
     const csv = buildExport({
@@ -359,9 +356,7 @@ describe("buildExport raw value fidelity", () => {
 
   test("preserves typed negative numbers in CSV", () => {
     const columns = [typedColumn("amount", DataType.FLOAT, "double precision")];
-    const rows: SelectedRow[] = [
-      row({ amount: doubleCell(-TEST_NUMBER_1_POINT_5) }),
-    ];
+    const rows: SelectedRow[] = [row({ amount: doubleCell(-1.5) })];
 
     const csv = buildExport({
       exportFormat: "csv",

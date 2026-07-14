@@ -243,7 +243,7 @@ function ApplicationLabel({ name }: { name: string }) {
         className="w-24 shrink-0 truncate text-muted-foreground text-xs italic"
         title="Clients that don't set application_name"
       >
-        {"no name set"}
+        no name set
       </span>
     );
   }
@@ -290,7 +290,7 @@ function ByApplication({ apps }: { apps: ApplicationConnections[] }) {
     // card distributes its sections instead of pooling empty space below.
     <div className="mt-auto space-y-3">
       <span className="text-muted-foreground text-xs uppercase tracking-wide">
-        {"By application"}
+        By application
       </span>
       <div className="space-y-2">
         {apps.map((app) => (
@@ -362,7 +362,7 @@ export function InstanceConnectionsCard({
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>{"Connections"}</CardTitle>
+        <CardTitle>Connections</CardTitle>
         <CardAction className="-my-1.5">
           <Link
             className={cn(
@@ -372,7 +372,7 @@ export function InstanceConnectionsCard({
             params={{ instanceId }}
             to="/instances/$instanceId/activity"
           >
-            {"Activity"}
+            Activity
             <ChevronRight aria-hidden="true" className="size-3.5" />
           </Link>
         </CardAction>

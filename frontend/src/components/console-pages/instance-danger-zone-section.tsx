@@ -20,9 +20,8 @@ export function InstanceDangerZoneSection({
           actionLabel: "Delete instance",
           description: (
             <>
-              {"Permanently remove "}
-              <InlineCode>{instanceDisplayName}</InlineCode>
-              {"from Querylane. This action cannot be undone."}
+              Permanently remove <InlineCode>{instanceDisplayName}</InlineCode>
+              from Querylane. This action cannot be undone.
               {deleteDisabledReason ? (
                 <span className="mt-2 block text-destructive">
                   {deleteDisabledReason}

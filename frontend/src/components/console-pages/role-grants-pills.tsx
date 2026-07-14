@@ -59,7 +59,7 @@ export function AbbrPill({
       <TooltipTrigger render={<span className={className} />}>
         {abbr}
         {state !== "none" && grantable ? (
-          <span className="font-bold leading-none">{"+"}</span>
+          <span className="font-bold leading-none">+</span>
         ) : null}
         {state !== "none" && count !== undefined ? (
           <span className="text-[9px] opacity-80">
@@ -120,7 +120,7 @@ export function HeldPillStrip({
   if (ordered.length === 0) {
     return (
       <span className="font-mono text-[11px] text-muted-foreground/50 italic">
-        {"no privileges"}
+        no privileges
       </span>
     );
   }
@@ -179,7 +179,7 @@ export function CountPill({
           {value === 1 ? "" : "s"}
         </span>
       ) : null}
-      {partial ? <span className="font-sans">{"Partial"}</span> : null}
+      {partial ? <span className="font-sans">Partial</span> : null}
     </span>
   );
 }
@@ -195,7 +195,7 @@ export function BackBar({ onBack }: { onBack: () => void }) {
       variant="ghost"
     >
       <ChevronLeft className="size-3.5" />
-      {"Grants"}
+      Grants
     </Button>
   );
 }

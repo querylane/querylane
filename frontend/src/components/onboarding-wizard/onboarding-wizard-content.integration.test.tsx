@@ -41,8 +41,6 @@ import { useSetupStore } from "@/stores/setup-store";
 import { createTestQueryClient } from "@/test/query-client";
 import { ThemeProvider } from "@/theme-provider";
 
-const TEST_NUMBER_5433 = 5433;
-
 const CONFIGURE_UI_RE = /Configure via UI/;
 const CONFIGURE_YAML_RE = /Configure YAML manually/;
 const EMBEDDED_RE = /Use embedded database/;
@@ -570,7 +568,7 @@ describe("onboarding wizard setup progression", () => {
 
     const state = useOnboardingWizardStore.getState();
     expect(state.phase).toBe("progress_running");
-    expect(state.submittedEmbeddedConfig?.port).toBe(TEST_NUMBER_5433);
+    expect(state.submittedEmbeddedConfig?.port).toBe(5433);
     expect(state.submittedEmbeddedConfig?.mode).toBe("persistent");
   });
 

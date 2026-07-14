@@ -169,7 +169,7 @@ function TotalBadge({
           {unit}
           {value === 1 ? "" : "s"}
         </span>
-        {partial ? <span>{"Partial"}</span> : null}
+        {partial ? <span>Partial</span> : null}
       </span>
     </span>
   );
@@ -306,16 +306,16 @@ function DirectGrantSchemaScope({
     return null;
   }
   if (grantsPartial) {
-    return <> {"across available schemas"}</>;
+    return <> across available schemas</>;
   }
   return (
     <>
-      {" across"}{" "}
+      {" "}
+      across{" "}
       <strong className="font-medium text-foreground">
         {schemaCount.toLocaleString()}
       </strong>{" "}
-      {"schema"}
-      {schemaCount === 1 ? "" : "s"}
+      schema{schemaCount === 1 ? "" : "s"}
     </>
   );
 }
@@ -346,9 +346,9 @@ function DirectGrantsLede({
         schemaCount={schemaCount}
       />
       {grantsPartial ? (
-        <span className="font-medium text-foreground">{" · Partial"}</span>
+        <span className="font-medium text-foreground"> · Partial</span>
       ) : null}
-      {"."}
+      .
     </>
   );
 }
@@ -376,13 +376,11 @@ function OverviewLede({
       {indirectPaths > 0 ? (
         <>
           {" "}
-          {"Reachable via"}{" "}
+          Reachable via{" "}
           <strong className="font-medium text-foreground">
             {indirectPaths}
           </strong>{" "}
-          {"indirect path"}
-          {indirectPaths === 1 ? "" : "s"}
-          {"."}
+          indirect path{indirectPaths === 1 ? "" : "s"}.
         </>
       ) : null}
     </p>
@@ -444,11 +442,9 @@ function DirectGrantsSection({
         "No direct grants are shown in the available results."
       ) : (
         <>
-          {"This role has no explicit"}{" "}
-          <span className="font-mono text-foreground/80">{"GRANT"}</span>
-          {"s on"}{" "}
-          <span className="font-mono text-foreground/80">{databaseName}</span>
-          {"."}
+          This role has no explicit{" "}
+          <span className="font-mono text-foreground/80">GRANT</span>s on{" "}
+          <span className="font-mono text-foreground/80">{databaseName}</span>.
           {indirectPaths > 0
             ? " It may still be reachable via the indirect paths below."
             : ""}

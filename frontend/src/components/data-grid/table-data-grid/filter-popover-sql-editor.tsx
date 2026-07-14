@@ -15,7 +15,7 @@ function SqlWhereEditor({ onChange, value }: SqlWhereEditorProps) {
           className="text-right font-mono text-muted-foreground text-xs uppercase"
           htmlFor={inputId}
         >
-          {"WHERE"}
+          WHERE
         </label>
         <Input
           aria-label="SQL WHERE clause"

@@ -4,8 +4,6 @@ import {
   registerSetupRequiredHandler,
 } from "@/stores/setup-required-signal";
 
-const TEST_NUMBER_3 = 3;
-
 // The module uses a module-level variable, so we must isolate tests
 // by re-registering (or clearing) the handler in each test.
 
@@ -38,7 +36,7 @@ describe("setup-required-signal", () => {
     markSetupRequired();
     markSetupRequired();
 
-    expect(handler).toHaveBeenCalledTimes(TEST_NUMBER_3);
+    expect(handler).toHaveBeenCalledTimes(3);
   });
 
   test("registering a new handler replaces the previous one", () => {

@@ -304,13 +304,13 @@ function AccessFiltersPopover({
         render={
           <Button size="sm" type="button" variant="outline">
             <SlidersHorizontal className="size-3.5" />
-            {"View"}
+            View
           </Button>
         }
       />
       <PopoverContent align="start" className="w-72 gap-3 p-3">
         <PopoverHeader>
-          <PopoverTitle>{"Access filters"}</PopoverTitle>
+          <PopoverTitle>Access filters</PopoverTitle>
         </PopoverHeader>
         <div className="grid gap-2">
           {builtInRoleCount > 0 ? (
@@ -467,7 +467,7 @@ function RolesAccessMapCanvas({
         />
         <div className="flex-1" />
         <fieldset className="flex items-center rounded-lg border bg-background p-0.5 shadow-sm">
-          <legend className="sr-only">{"Role access map zoom controls"}</legend>
+          <legend className="sr-only">Role access map zoom controls</legend>
           <Button
             aria-label="Zoom out"
             onClick={zoomOut}
@@ -478,8 +478,7 @@ function RolesAccessMapCanvas({
             <Minus className="size-4" />
           </Button>
           <span className="min-w-10 text-center font-mono text-[10.5px] text-muted-foreground tabular-nums">
-            {Math.round(zoom * ZOOM_PERCENT_FACTOR)}
-            {"%"}
+            {Math.round(zoom * ZOOM_PERCENT_FACTOR)}%
           </span>
           <Button
             aria-label="Zoom in"
@@ -492,7 +491,7 @@ function RolesAccessMapCanvas({
           </Button>
           <div className="mx-1 h-4 w-px bg-border" />
           <Button onClick={fitZoom} size="sm" type="button" variant="ghost">
-            {"Fit"}
+            Fit
           </Button>
           <div className="mx-1 h-4 w-px bg-border" />
           <Button
@@ -514,7 +513,7 @@ function RolesAccessMapCanvas({
           </Button>
         </fieldset>
         <span className="text-[11.5px] text-muted-foreground">
-          {"Click a node to highlight its access paths."}
+          Click a node to highlight its access paths.
         </span>
       </div>
       <div
@@ -540,13 +539,13 @@ function RolesAccessMapCanvas({
               className="absolute top-2 font-semibold text-[10.5px] text-muted-foreground uppercase tracking-[0.06em]"
               style={{ left: ROLE_X }}
             >
-              {"Roles"}
+              Roles
             </div>
             <div
               className="absolute top-2 font-semibold text-[10.5px] text-muted-foreground uppercase tracking-[0.06em]"
               style={{ left: OBJECT_X }}
             >
-              {"Objects"}
+              Objects
             </div>
             <svg
               aria-hidden="true"
@@ -623,9 +622,9 @@ function RolesAccessMapCanvas({
       <Dialog onOpenChange={setIsExpanded} open={isExpanded}>
         <DialogContent className="!flex !max-w-[calc(100vw-2rem)] h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col gap-4 overflow-hidden p-4">
           <DialogHeader>
-            <DialogTitle>{"Expanded role access map"}</DialogTitle>
+            <DialogTitle>Expanded role access map</DialogTitle>
             <DialogDescription>
-              {"Trace role membership and object access with more room."}
+              Trace role membership and object access with more room.
             </DialogDescription>
           </DialogHeader>
           <RolesAccessMapNotice

@@ -9,12 +9,12 @@ export function ConfigManagedNotice() {
       />
       <div className="space-y-0.5">
         <p className="font-medium text-amber-900 text-sm dark:text-amber-200">
-          {"Managed via configuration file"}
+          Managed via configuration file
         </p>
         <p className="text-amber-800/90 text-sm dark:text-amber-300/90">
-          {
-            "This instance is defined in the server configuration file and cannot be edited from the UI. Update your config and restart the server to change these settings."
-          }
+          This instance is defined in the server configuration file and cannot
+          be edited from the UI. Update your config and restart the server to
+          change these settings.
         </p>
       </div>
     </div>

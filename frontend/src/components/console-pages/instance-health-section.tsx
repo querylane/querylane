@@ -56,10 +56,7 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
               TONE_DOT_CLASS[row.tone]
             )}
           />
-          <span className="sr-only">
-            {TONE_SR_LABEL[row.tone]}
-            {":"}
-          </span>
+          <span className="sr-only">{TONE_SR_LABEL[row.tone]}:</span>
           <span className="w-32 shrink-0 truncate font-medium text-foreground text-sm sm:w-40">
             {row.label}
           </span>
@@ -120,7 +117,7 @@ function InstanceFactsHeader({ facts }: { facts: string[] }) {
         <span className="inline-flex items-center gap-2" key={fact}>
           {index > 0 ? (
             <span aria-hidden="true" className="text-border">
-              {"·"}
+              ·
             </span>
           ) : null}
           <span className="tabular-nums">{fact}</span>

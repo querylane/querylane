@@ -22,8 +22,6 @@ import {
   RoleSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const TEST_NUMBER_5 = 5;
-
 const NOW = new Date("2026-05-22T00:00:00Z");
 
 function makeRole({
@@ -323,7 +321,7 @@ describe("roleCapabilityMatrix", () => {
   it("marks every power not granted for a plain role", () => {
     const matrix = roleCapabilityMatrix(makeRole({ roleName: "plain" }));
     expect(matrix.every((c) => !c.granted)).toBe(true);
-    expect(matrix).toHaveLength(TEST_NUMBER_5);
+    expect(matrix).toHaveLength(5);
   });
 });
 
@@ -396,8 +394,6 @@ describe("formatConnectionLimit", () => {
     expect(formatConnectionLimit(-1)).toBe("Unlimited");
     expect(formatConnectionLimit(0)).toBe("No connections allowed (0)");
     expect(formatConnectionLimit(1)).toBe("1 concurrent connection");
-    expect(formatConnectionLimit(TEST_NUMBER_5)).toBe(
-      "5 concurrent connections"
-    );
+    expect(formatConnectionLimit(5)).toBe("5 concurrent connections");
   });
 });

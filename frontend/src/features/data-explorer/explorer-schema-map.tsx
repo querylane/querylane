@@ -243,9 +243,7 @@ function SchemaMapToolbar({
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2">
       <div className="mr-1 flex items-center gap-2">
         <Network aria-hidden="true" className="size-4 text-primary" />
-        <h2 className="font-semibold text-base tracking-tight">
-          {"Schema map"}
-        </h2>
+        <h2 className="font-semibold text-base tracking-tight">Schema map</h2>
         <Badge className="h-5 font-mono text-[11px]" variant="outline">
           {databaseLabel}
         </Badge>
@@ -287,8 +285,7 @@ function SchemaMapToolbar({
             <Minus aria-hidden="true" className="size-4" />
           </Button>
           <span className="w-12 text-center font-mono text-muted-foreground text-xs">
-            {zoom}
-            {"%"}
+            {zoom}%
           </span>
           <Button
             aria-label="Zoom in"
@@ -309,7 +306,7 @@ function SchemaMapToolbar({
           variant="outline"
         >
           <Expand aria-hidden="true" className="size-4" />
-          {"Fit"}
+          Fit
         </Button>
         <Button
           className="h-8"
@@ -319,7 +316,7 @@ function SchemaMapToolbar({
           variant="outline"
         >
           <RotateCcw aria-hidden="true" className="size-4" />
-          {"Reset"}
+          Reset
         </Button>
       </div>
     </div>
@@ -388,7 +385,7 @@ function TableNode({
                       className="h-4 shrink-0 bg-chart-4/15 px-1 text-[9px] text-chart-4"
                       variant="secondary"
                     >
-                      {"PRIMARY KEY"}
+                      PRIMARY KEY
                     </Badge>
                   ) : null}
                   {column.isForeignKey ? (
@@ -396,7 +393,7 @@ function TableNode({
                       className="h-4 shrink-0 bg-chart-1/15 px-1 text-[9px] text-chart-1"
                       variant="secondary"
                     >
-                      {"FOREIGN KEY"}
+                      FOREIGN KEY
                     </Badge>
                   ) : null}
                 </span>
@@ -407,14 +404,12 @@ function TableNode({
             ))
           ) : (
             <span className="block p-3 text-muted-foreground text-xs">
-              {"No columns found."}
+              No columns found.
             </span>
           )}
           {node.truncatedColumnCount > 0 ? (
             <span className="block px-3 font-mono text-[11px] text-muted-foreground">
-              {"+ "}
-              {node.truncatedColumnCount.toLocaleString()}
-              {" more"}
+              + {node.truncatedColumnCount.toLocaleString()} more
             </span>
           ) : null}
         </span>
@@ -439,7 +434,7 @@ function ViewNode({ node }: { node: SchemaMapViewNode }) {
             {node.name}
           </span>
           <Badge className="ml-auto h-4 px-1 text-[9px]" variant="outline">
-            {"View"}
+            View
           </Badge>
         </div>
         <p className="mt-2 line-clamp-2 font-mono text-[10px] text-muted-foreground">
@@ -466,7 +461,7 @@ function SchemaMapMinimap({
         viewBox={model.viewBox}
         width={MINIMAP_WIDTH}
       >
-        <title>{"Schema map minimap"}</title>
+        <title>Schema map minimap</title>
         {model.hulls.map((hull) => (
           <rect
             className={cn(
@@ -534,7 +529,7 @@ function SchemaMapCanvas({
     return (
       <div className="flex min-h-[26rem] items-center justify-center p-8">
         <EmptyStatePanel className="min-h-56" icon={Network}>
-          {"No tables match this schema map filter."}
+          No tables match this schema map filter.
         </EmptyStatePanel>
       </div>
     );
@@ -553,7 +548,7 @@ function SchemaMapCanvas({
         viewBox={model.viewBox}
         width={renderedWidth}
       >
-        <title>{"Schema relationship map canvas"}</title>
+        <title>Schema relationship map canvas</title>
         {model.hulls.map((hull) => (
           <g key={hull.label}>
             <rect
@@ -627,13 +622,10 @@ function SchemaMapCanvas({
       {activeNode ? (
         <div className="absolute top-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border bg-popover px-3 py-1.5 text-sm shadow-md">
           <span className="font-mono font-semibold">
-            {activeNode.schemaName}
-            {"."}
-            {activeNode.name}
+            {activeNode.schemaName}.{activeNode.name}
           </span>
           <span className="text-muted-foreground">
-            {activeNode.rowLabel}
-            {" rows"}
+            {activeNode.rowLabel} rows
           </span>
           <Button
             onClick={() => onOpenTable(activeNode.schemaName, activeNode.name)}
@@ -641,7 +633,7 @@ function SchemaMapCanvas({
             type="button"
             variant="outline"
           >
-            {"Open data"}
+            Open data
           </Button>
           <Button
             aria-label="Clear selected table"
@@ -656,9 +648,7 @@ function SchemaMapCanvas({
       ) : null}
       {catalogTruncated ? (
         <p className="absolute right-3 bottom-28 rounded-lg border bg-background/90 px-3 py-2 text-muted-foreground text-xs shadow-sm">
-          {
-            "Some schemas have more objects. This map shows the first loaded page."
-          }
+          Some schemas have more objects. This map shows the first loaded page.
         </p>
       ) : null}
     </section>
@@ -736,10 +726,10 @@ function ExplorerSchemaMap({
         />
         {catalog.errorCount > 0 ? (
           <Alert className="m-3 mb-0" variant="destructive">
-            <AlertTitle>{"Some schema metadata could not load"}</AlertTitle>
+            <AlertTitle>Some schema metadata could not load</AlertTitle>
             <AlertDescription>
-              {catalog.errorCount.toLocaleString()}
-              {" map requests failed. Loaded tables remain visible."}
+              {catalog.errorCount.toLocaleString()} map requests failed. Loaded
+              tables remain visible.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -749,7 +739,7 @@ function ExplorerSchemaMap({
             className="flex min-h-[26rem] items-center justify-center text-muted-foreground"
             role="status"
           >
-            {"Loading schema map…"}
+            Loading schema map…
           </div>
         ) : (
           <SchemaMapCanvas

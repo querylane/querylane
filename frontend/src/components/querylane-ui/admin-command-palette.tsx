@@ -279,7 +279,7 @@ function PaletteSearchFeedback({
   return (
     <>
       {searchIncomplete ? null : (
-        <CommandEmpty>{"No matches — try a table or role name"}</CommandEmpty>
+        <CommandEmpty>No matches: try a table or role name</CommandEmpty>
       )}
       <PaletteQueryStatus
         error={hasDatabaseScope ? catalogError : null}
@@ -405,7 +405,7 @@ function AdminCommandPaletteContent({
           value={query}
         />
         <kbd className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 rounded-md bg-muted px-2 py-1 font-mono text-muted-foreground text-xs">
-          {"esc"}
+          esc
         </kbd>
       </div>
       <CommandList className="max-h-[380px] pb-1.5">
@@ -451,13 +451,13 @@ function AdminCommandPalette() {
         variant="outline"
       >
         <Search className="size-3.5" />
-        <span className="truncate text-[13px]">{"Search or jump to…"}</span>
+        <span className="truncate text-[13px]">Search or jump to…</span>
         <span aria-hidden="true" className="ml-auto flex gap-0.5">
           <kbd className="flex size-5 items-center justify-center rounded bg-background/70 font-mono text-[10px]">
-            {"⌘"}
+            ⌘
           </kbd>
           <kbd className="flex size-5 items-center justify-center rounded bg-background/70 font-mono text-[10px]">
-            {"K"}
+            K
           </kbd>
         </span>
       </Button>

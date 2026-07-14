@@ -46,18 +46,6 @@ import {
   ListTableColumnsResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
-const TEST_NUMBER_12 = 12;
-const TEST_NUMBER_50 = 50;
-const TEST_NUMBER_3 = 3;
-const TEST_NUMBER_2026 = 2026;
-const TEST_NUMBER_5 = 5;
-const TEST_NUMBER_14 = 14;
-const TEST_NUMBER_30 = 30;
-const TEST_NUMBER_15 = 15;
-const TEST_NUMBER_60000 = 60_000;
-const TEST_NUMBER_59999 = 59_999;
-const TEST_NUMBER_100 = 100;
-
 const RETRY_BUTTON_RE = /retry/i;
 const LAST_FETCHED_RE = /Last fetched/;
 const FILTER_BUTTON_RE = /Filter/;
@@ -850,7 +838,7 @@ describe("TableDataGrid foreign key references", () => {
               onNavigate?.();
             }}
           >
-            {"Open table"}
+            Open table
           </a>
         )}
       />
@@ -1066,7 +1054,7 @@ describe("TableDataGrid row interactions", () => {
 
   it("jumps directly to a typed row number from the row drawer", async () => {
     const user = userEvent.setup();
-    seedRowsQuery(TEST_NUMBER_12);
+    seedRowsQuery(12);
 
     render(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
@@ -1098,7 +1086,7 @@ describe("TableDataGrid row interactions", () => {
 
   it("keeps the row drawer number field digit-only without inline steppers", async () => {
     const user = userEvent.setup();
-    seedRowsQuery(TEST_NUMBER_12);
+    seedRowsQuery(12);
 
     render(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
@@ -1128,7 +1116,7 @@ describe("TableDataGrid row interactions", () => {
   });
 
   it("keeps virtualization enabled for large table pages", () => {
-    seedRowsQuery(TEST_NUMBER_50);
+    seedRowsQuery(50);
 
     render(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
@@ -1142,7 +1130,7 @@ describe("TableDataGrid row interactions", () => {
 
   it("automatically fits columns in default and expanded views", async () => {
     const user = userEvent.setup();
-    seedRowsQuery(TEST_NUMBER_3);
+    seedRowsQuery(3);
 
     render(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
@@ -1181,14 +1169,7 @@ describe("TableDataGrid row interactions", () => {
 
   it("keeps last fetch time in refresh status without showing toolbar text", () => {
     seedRowsQuery(1, {
-      dataUpdatedAt: Date.UTC(
-        TEST_NUMBER_2026,
-        TEST_NUMBER_5,
-        TEST_NUMBER_14,
-        10,
-        TEST_NUMBER_30,
-        TEST_NUMBER_15
-      ),
+      dataUpdatedAt: Date.UTC(2026, 5, 14, 10, 30, 15),
     });
 
     render(
@@ -1202,7 +1183,7 @@ describe("TableDataGrid row interactions", () => {
   it("auto refreshes on the global interval and resets after manual refresh", async () => {
     vi.useFakeTimers();
     const refetch = vi.fn().mockResolvedValue(undefined);
-    useRefreshSettingsStore.getState().setRefreshIntervalMs(TEST_NUMBER_60000);
+    useRefreshSettingsStore.getState().setRefreshIntervalMs(60_000);
     seedRowsQuery(1, {
       dataUpdatedAt: Date.now(),
       refetch,
@@ -1212,7 +1193,7 @@ describe("TableDataGrid row interactions", () => {
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
     );
 
-    await vi.advanceTimersByTimeAsync(TEST_NUMBER_59999);
+    await vi.advanceTimersByTimeAsync(59_999);
     expect(refetch).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);
@@ -1221,11 +1202,11 @@ describe("TableDataGrid row interactions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Refresh rows" }));
     expect(refetch).toHaveBeenCalledTimes(2);
 
-    await vi.advanceTimersByTimeAsync(TEST_NUMBER_59999);
+    await vi.advanceTimersByTimeAsync(59_999);
     expect(refetch).toHaveBeenCalledTimes(2);
 
     await vi.advanceTimersByTimeAsync(1);
-    expect(refetch).toHaveBeenCalledTimes(TEST_NUMBER_3);
+    expect(refetch).toHaveBeenCalledTimes(3);
   });
 
   it("does not overwrite an active text selection when copying from the grid", () => {
@@ -1472,14 +1453,7 @@ describe("TableDataGrid toolbar", () => {
 
   it("orders toolbar actions with refresh after the main controls", () => {
     seedRowsQuery(1, {
-      dataUpdatedAt: Date.UTC(
-        TEST_NUMBER_2026,
-        TEST_NUMBER_5,
-        TEST_NUMBER_14,
-        10,
-        TEST_NUMBER_30,
-        TEST_NUMBER_15
-      ),
+      dataUpdatedAt: Date.UTC(2026, 5, 14, 10, 30, 15),
     });
 
     render(
@@ -1526,14 +1500,7 @@ describe("TableDataGrid toolbar", () => {
 
   it("places row export beside expand and keeps fetch time out of the visible toolbar", () => {
     seedRowsQuery(1, {
-      dataUpdatedAt: Date.UTC(
-        TEST_NUMBER_2026,
-        TEST_NUMBER_5,
-        TEST_NUMBER_14,
-        10,
-        TEST_NUMBER_30,
-        TEST_NUMBER_15
-      ),
+      dataUpdatedAt: Date.UTC(2026, 5, 14, 10, 30, 15),
     });
 
     render(
@@ -1822,7 +1789,7 @@ describe("TableDataGrid URL state", () => {
 
   it("keeps page size interactive when no router callback owns the URL state", async () => {
     const user = userEvent.setup();
-    seedRowsQuery(TEST_NUMBER_3);
+    seedRowsQuery(3);
 
     render(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
@@ -1842,7 +1809,7 @@ describe("TableDataGrid URL state", () => {
 
   it("keeps frozen columns interactive when no router callback owns the URL state", async () => {
     const user = userEvent.setup();
-    seedRowsQuery(TEST_NUMBER_3);
+    seedRowsQuery(3);
 
     render(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
@@ -1867,7 +1834,7 @@ describe("TableDataGrid URL state", () => {
   it("emits URL resets once and only after navigation in StrictMode", async () => {
     const onOpenRowSearchChange = vi.fn();
     const onSelectedRowsSearchChange = vi.fn();
-    seedRowsQuery(TEST_NUMBER_3);
+    seedRowsQuery(3);
 
     const { rerender } = render(
       <StrictMode>
@@ -1911,7 +1878,7 @@ describe("TableDataGrid URL state", () => {
     const onOpenRowSearchChange = vi.fn();
     const onPageSizeSearchChange = vi.fn();
     const onSelectedRowsSearchChange = vi.fn();
-    seedRowsQuery(TEST_NUMBER_3);
+    seedRowsQuery(3);
 
     render(
       <TableDataGrid
@@ -1958,7 +1925,7 @@ describe("TableDataGrid URL state", () => {
     await user.click(screen.getByRole("combobox"));
     await user.click(screen.getByRole("option", { name: "100" }));
 
-    expect(onPageSizeSearchChange).toHaveBeenCalledWith(TEST_NUMBER_100);
+    expect(onPageSizeSearchChange).toHaveBeenCalledWith(100);
 
     const firstExpandButton = screen
       .getAllByRole("button", { name: "Expand row" })
@@ -1974,7 +1941,7 @@ describe("TableDataGrid URL state", () => {
   });
 
   it("keeps selected-row actions limited to copy and export", () => {
-    seedRowsQuery(TEST_NUMBER_3);
+    seedRowsQuery(3);
 
     render(
       <TableDataGrid

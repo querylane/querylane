@@ -29,21 +29,18 @@ function TableDetailLoadingFallback({
         />
         <div className="min-w-0">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
-            {"Table"}
+            Table
           </p>
           <h1
             aria-label={`${schemaName}.${tableName}`}
             className="truncate font-mono font-semibold text-xl"
             title={`${schemaName}.${tableName}`}
           >
-            <span className="text-muted-foreground">
-              {schemaName}
-              {"."}
-            </span>
+            <span className="text-muted-foreground">{schemaName}.</span>
             {tableName}
           </h1>
           <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-            {"Loading table details…"}
+            Loading table details…
           </p>
         </div>
       </div>

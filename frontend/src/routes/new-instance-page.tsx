@@ -58,12 +58,11 @@ export function CreateInstancePageInner({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Database className="size-4" />
-              {"Managed Postgres connection"}
+              Managed Postgres connection
             </CardTitle>
             <CardDescription>
-              {
-                "This is the Postgres server you want Querylane to manage, not Querylane internal storage from setup."
-              }
+              This is the Postgres server you want Querylane to manage, not
+              Querylane internal storage from setup.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

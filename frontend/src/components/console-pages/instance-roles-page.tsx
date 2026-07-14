@@ -125,14 +125,14 @@ function LoginCell({ role }: { role: Role }) {
     return (
       <span className="inline-flex items-center gap-1.5">
         <span className="size-1.5 rounded-full bg-emerald-500" />
-        {"Yes"}
+        Yes
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1.5 text-muted-foreground">
       <span className="size-1.5 rounded-full bg-muted-foreground/35" />
-      <span>{"No"}</span>
+      <span>No</span>
     </span>
   );
 }
@@ -142,7 +142,7 @@ const COLUMNS: DataTableColumnDef<Role>[] = [
     accessorKey: "roleName",
     cell: ({ row }) => <NameCell role={row.original} />,
     header: ({ column }) => (
-      <SortableHeader column={column}>{"Role"}</SortableHeader>
+      <SortableHeader column={column}>Role</SortableHeader>
     ),
     meta: { headerClassName: "pl-3" },
   },
@@ -160,7 +160,7 @@ const COLUMNS: DataTableColumnDef<Role>[] = [
       </span>
     ),
     header: ({ column }) => (
-      <SortableHeader column={column}>{"Conn limit"}</SortableHeader>
+      <SortableHeader column={column}>Conn limit</SortableHeader>
     ),
     id: "connLimit",
     sortFn: "basic",
@@ -343,13 +343,12 @@ export function InstanceRolesPage({
     <div className="grid gap-3">
       {accessMapResourcesQuery.isPending ? (
         <p className="text-muted-foreground text-sm" role="status">
-          {"Loading role object access."}
+          Loading role object access.
         </p>
       ) : null}
       {accessMapResourcesQuery.error ? (
         <p className="text-destructive text-sm" role="alert">
-          {"Object access failed to load: "}
-          {accessMapResourcesQuery.error.message}
+          Object access failed to load: {accessMapResourcesQuery.error.message}
         </p>
       ) : null}
       <RolesAccessMapNotice
@@ -396,8 +395,8 @@ export function InstanceRolesPage({
           value={activeTab}
         >
           <TabsList>
-            <TabsTrigger value="details">{"Table"}</TabsTrigger>
-            <TabsTrigger value="map">{"Access map"}</TabsTrigger>
+            <TabsTrigger value="details">Table</TabsTrigger>
+            <TabsTrigger value="map">Access map</TabsTrigger>
           </TabsList>
           <div className="flex min-w-0 items-center gap-2">
             <div className="min-w-0 flex-1 sm:flex-none">

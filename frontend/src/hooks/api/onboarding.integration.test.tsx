@@ -31,12 +31,6 @@ import {
   WatchConfigChangesResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 
-const TEST_NUMBER_500 = 500;
-const TEST_NUMBER_1000 = 1000;
-const TEST_NUMBER_2000 = 2000;
-const TEST_NUMBER_4 = 4;
-const TEST_NUMBER_5 = 5;
-
 // Production builds run useOnboardingStreamingClient through the React
 // Compiler, which memoizes the createClient(OnboardingService, transport)
 // call per transport. Vitest compiles with esbuild only, so without this
@@ -71,11 +65,7 @@ vi.mock("@connectrpc/connect", async (importOriginal) => {
   return { ...actual, createClient };
 });
 
-const WATCH_BACKOFF_SCHEDULE_MS = [
-  TEST_NUMBER_500,
-  TEST_NUMBER_1000,
-  TEST_NUMBER_2000,
-] as const;
+const WATCH_BACKOFF_SCHEDULE_MS = [500, 1000, 2000] as const;
 
 type OnboardingImplementation = Partial<ServiceImpl<typeof OnboardingService>>;
 
@@ -421,7 +411,7 @@ describe("useWatchConfigChanges", () => {
     const transport = createOnboardingTransport({
       watchConfigChanges() {
         attempts += 1;
-        if (attempts <= TEST_NUMBER_4) {
+        if (attempts <= 4) {
           throw new ConnectError("watch unavailable", Code.Unavailable);
         }
         return streamOf(watchResponse(succeededEvent()));
@@ -454,7 +444,7 @@ describe("useWatchConfigChanges", () => {
 
     await flushUntil(() => result.current.manualRetryRequired);
 
-    expect(attempts).toBe(TEST_NUMBER_4);
+    expect(attempts).toBe(4);
     expect(onError).toHaveBeenCalledTimes(1);
     expect(ConnectError.from(onError.mock.calls[0]?.[0]).rawMessage).toBe(
       "watch unavailable"
@@ -472,7 +462,7 @@ describe("useWatchConfigChanges", () => {
     const transport = createOnboardingTransport({
       watchConfigChanges() {
         attempts += 1;
-        if (attempts <= TEST_NUMBER_4) {
+        if (attempts <= 4) {
           throw new ConnectError("watch unavailable", Code.Unavailable);
         }
         return streamOf(watchResponse(succeededEvent()));
@@ -506,7 +496,7 @@ describe("useWatchConfigChanges", () => {
     });
     await flushUntil(() => result.current.isRunning === false);
 
-    expect(attempts).toBe(TEST_NUMBER_5);
+    expect(attempts).toBe(5);
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(result.current.retryPending).toBe(false);
     expect(result.current.manualRetryRequired).toBe(false);
@@ -579,7 +569,7 @@ describe("useWatchConfigChanges", () => {
     rerender({ enabled: false });
 
     // Flushing the pending backoff timer must not start another attempt.
-    await advanceTimers(TEST_NUMBER_500);
+    await advanceTimers(500);
     await flushMicrotasks();
 
     expect(attempts).toBe(1);
@@ -640,7 +630,7 @@ describe("useWatchConfigChanges", () => {
     await advanceWatchBackoffs();
     await flushUntil(() => result.current.manualRetryRequired);
 
-    expect(attempts).toBe(TEST_NUMBER_4);
+    expect(attempts).toBe(4);
     expect(onError).toHaveBeenCalledTimes(1);
     expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
     expect(onError.mock.calls[0]?.[0].message).toBe(

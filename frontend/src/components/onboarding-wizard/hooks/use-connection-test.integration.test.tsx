@@ -9,8 +9,6 @@ import {
   PostgresConfigSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
-const TEST_NUMBER_4000 = 4000;
-
 const { mutateAsyncMock } = vi.hoisted(() => ({
   mutateAsyncMock: vi.fn(),
 }));
@@ -63,7 +61,7 @@ describe("useConnectionTest", () => {
     expect(result.current.errorMessage).toBeNull();
 
     act(() => {
-      vi.advanceTimersByTime(TEST_NUMBER_4000);
+      vi.advanceTimersByTime(4000);
     });
 
     expect(result.current.status).toBe("idle");
@@ -95,7 +93,7 @@ describe("useConnectionTest", () => {
 
     act(() => {
       result.current.resetTest();
-      vi.advanceTimersByTime(TEST_NUMBER_4000);
+      vi.advanceTimersByTime(4000);
     });
 
     expect(result.current.status).toBe("idle");

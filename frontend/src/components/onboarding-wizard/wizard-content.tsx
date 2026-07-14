@@ -129,29 +129,25 @@ function ConfigRail({ compact = false }: { compact?: boolean }) {
         <div className="mx-auto w-[82%] rounded-[22px] border border-white/14 bg-white/[0.08] px-5 py-4 backdrop-blur-md">
           <div className="mb-3 flex items-center gap-2.5 text-white/56">
             <Sparkles className="size-[18px] text-blue-300" />
-            <span className="font-mono text-sm">{"config.yaml"}</span>
+            <span className="font-mono text-sm">config.yaml</span>
           </div>
           <div className="space-y-2.5 font-mono text-sm leading-6">
-            <div className="text-fuchsia-300">{"database:"}</div>
+            <div className="text-fuchsia-300">database:</div>
             <div className="text-blue-300">
               {" "}
-              {"host: "}
-              <span className="text-white">{"localhost"}</span>
+              host: <span className="text-white">localhost</span>
             </div>
             <div className="text-blue-300">
               {" "}
-              {"port: "}
-              <span className="text-amber-200">{"5432"}</span>
+              port: <span className="text-amber-200">5432</span>
             </div>
             <div className="text-blue-300">
               {" "}
-              {"database: "}
-              <span className="text-amber-200">{"querylane"}</span>
+              database: <span className="text-amber-200">querylane</span>
             </div>
             <div className="text-blue-300">
               {" "}
-              {"ssl_mode: "}
-              <span className="text-white">{"disable"}</span>
+              ssl_mode: <span className="text-white">disable</span>
             </div>
           </div>
         </div>
@@ -162,21 +158,21 @@ function ConfigRail({ compact = false }: { compact?: boolean }) {
             </div>
             <div className="space-y-1">
               <div className="font-medium text-lg text-white">
-                {"Metadata setup"}
+                Metadata setup
               </div>
               <div className="text-sm text-white/52">
-                {"Schema, migrations, configuration"}
+                Schema, migrations, configuration
               </div>
             </div>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-[16px] border border-white/8 bg-white/[0.05] px-3 py-4 text-center">
-              <div className="font-semibold text-2xl text-white">{"4"}</div>
-              <div className="text-white/45 text-xs">{"steps"}</div>
+              <div className="font-semibold text-2xl text-white">4</div>
+              <div className="text-white/45 text-xs">steps</div>
             </div>
             <div className="rounded-[16px] border border-white/8 bg-white/[0.05] px-3 py-4 text-center">
-              <div className="font-semibold text-2xl text-white">{"OK"}</div>
-              <div className="text-white/45 text-xs">{"status"}</div>
+              <div className="font-semibold text-2xl text-white">OK</div>
+              <div className="text-white/45 text-xs">status</div>
             </div>
           </div>
         </div>
@@ -293,7 +289,7 @@ function LoadingContent({ onRefresh }: { onRefresh: () => Promise<void> }) {
               onRefresh().catch((error) => captureException(error));
             }}
           >
-            {"Refresh"}
+            Refresh
             <ChevronRight className="size-4" />
           </Button>
         </div>
@@ -303,7 +299,7 @@ function LoadingContent({ onRefresh }: { onRefresh: () => Promise<void> }) {
       <div className="flex h-full items-center justify-center">
         <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/68">
           <Spinner className="size-4" />
-          {"Checking Querylane setup prerequisites…"}
+          Checking Querylane setup prerequisites…
         </div>
       </div>
     </WizardPage>
@@ -357,7 +353,7 @@ function OnboardingStageContent({
       {showPreviousErrorBanner ? (
         <div className="rounded-2xl border border-amber-400/18 bg-amber-500/[0.08] px-4 py-3">
           <div className="font-medium text-amber-50 text-base">
-            {"Previous setup attempt failed"}
+            Previous setup attempt failed
           </div>
           <p className="mt-1.5 text-amber-50/78 text-sm leading-6">
             {wizardStateError}

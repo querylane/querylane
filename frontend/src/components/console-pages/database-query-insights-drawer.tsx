@@ -20,7 +20,7 @@ function QueryInsightsDrawerFallback() {
     <div className="grid gap-4">
       <div className="h-80 rounded-xl border bg-card" />
       <div className="h-48 rounded-xl border bg-card" />
-      <span className="sr-only">{"Loading query insights"}</span>
+      <span className="sr-only">Loading query insights</span>
     </div>
   );
 }
@@ -43,9 +43,9 @@ function DatabaseQueryInsightsDrawer({
         side="right"
       >
         <SheetHeader className="shrink-0 border-b px-5 py-4 pr-14">
-          <SheetTitle>{"Query insights"}</SheetTitle>
+          <SheetTitle>Query insights</SheetTitle>
           <SheetDescription>
-            {"PostgreSQL query and table statistics for this database."}
+            PostgreSQL query and table statistics for this database.
           </SheetDescription>
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">

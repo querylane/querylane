@@ -565,7 +565,7 @@ function QueryToolbar({
           variant="ghost"
         >
           <X data-icon="inline-start" />
-          {"Reset"}
+          Reset
         </Button>
       ) : null}
     </div>
@@ -584,7 +584,7 @@ function TopQueriesTable({
   if (queries.length === 0) {
     return (
       <div className="px-5 py-8 text-muted-foreground text-sm">
-        {"No matching query runtime data."}
+        No matching query runtime data.
       </div>
     );
   }
@@ -594,19 +594,19 @@ function TopQueriesTable({
       <TableHeader>
         <TableRow className="hover:bg-transparent">
           <TableHead className="pl-5 text-muted-foreground text-xs">
-            {"Query"}
+            Query
           </TableHead>
           <TableHead className="text-right text-muted-foreground text-xs">
-            {"Calls"}
+            Calls
           </TableHead>
           <TableHead className="text-right text-muted-foreground text-xs">
-            {"Mean"}
+            Mean
           </TableHead>
           <TableHead className="text-right text-muted-foreground text-xs">
-            {"Total"}
+            Total
           </TableHead>
           <TableHead className="w-28 text-muted-foreground text-xs">
-            {"Relative"}
+            Relative
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -690,15 +690,10 @@ function QueryPaginationFooter({
     >
       {totalRows > 0 ? (
         <span className="tabular-nums">
-          {"Showing "}
-          {start}
-          {"–"}
-          {end}
-          {" of "}
-          {totalRows}
+          Showing {start}–{end} of {totalRows}
         </span>
       ) : null}
-      <span className="ml-2 text-[11px]">{"Rows per page"}</span>
+      <span className="ml-2 text-[11px]">Rows per page</span>
       <Select
         onValueChange={(value) => {
           if (!value) {
@@ -735,10 +730,7 @@ function QueryPaginationFooter({
           <ChevronLeft className="size-3" />
         </Button>
         <span className="px-1 font-mono tabular-nums">
-          {"Page "}
-          {pageIndex + 1}
-          {" of "}
-          {pageCount}
+          Page {pageIndex + 1} of {pageCount}
         </span>
         <Button
           aria-label="Next page"
@@ -811,10 +803,9 @@ function QueryDetailPanel({
         <CardHeader className="border-b py-4">
           <div className="flex items-start gap-3">
             <div className="min-w-0">
-              <CardTitle>{"Query detail"}</CardTitle>
+              <CardTitle>Query detail</CardTitle>
               <CardDescription className="font-mono text-xs">
-                {"queryid "}
-                {query.queryId.toString()}
+                queryid {query.queryId.toString()}
               </CardDescription>
             </div>
             <Button
@@ -911,9 +902,9 @@ function TopQueriesCard({
       <CardHeader className="gap-3 py-4">
         <div className="flex flex-wrap items-start gap-3">
           <div>
-            <CardTitle>{"Top queries by total time"}</CardTitle>
+            <CardTitle>Top queries by total time</CardTitle>
             <CardDescription>
-              {"pg_stat_statements entries sorted by cumulative runtime."}
+              pg_stat_statements entries sorted by cumulative runtime.
             </CardDescription>
           </div>
         </div>
@@ -966,9 +957,9 @@ function SequentialScanHotspotsCard({
   return (
     <CardShell>
       <CardHeader className="py-4">
-        <CardTitle>{"Sequential scan hotspots"}</CardTitle>
+        <CardTitle>Sequential scan hotspots</CardTitle>
         <CardDescription>
-          {"Large tables read without matching index usage."}
+          Large tables read without matching index usage.
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0 pb-2">
@@ -999,12 +990,11 @@ function SequentialScanHotspotsCard({
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground text-xs">
                   <span>{formatBytes(hotspot.totalSizeBytes)}</span>
                   <span>
-                    {formatInsightInteger(hotspot.sequentialScans)}
-                    {" sequential scans"}
+                    {formatInsightInteger(hotspot.sequentialScans)} sequential
+                    scans
                   </span>
                   <span>
-                    {formatInsightInteger(hotspot.indexScans)}
-                    {" index scans"}
+                    {formatInsightInteger(hotspot.indexScans)} index scans
                   </span>
                 </div>
               </div>
@@ -1012,7 +1002,7 @@ function SequentialScanHotspotsCard({
           </div>
         ) : (
           <p className="px-5 pb-5 text-muted-foreground text-sm">
-            {"No sequential scan pressure reported yet."}
+            No sequential scan pressure reported yet.
           </p>
         )}
       </CardContent>
@@ -1028,9 +1018,9 @@ function TableCacheHitCard({
   return (
     <CardShell>
       <CardHeader className="py-4">
-        <CardTitle>{"Cache hit by table"}</CardTitle>
+        <CardTitle>Cache hit by table</CardTitle>
         <CardDescription>
-          {"Heap blocks served from shared buffers."}
+          Heap blocks served from shared buffers.
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0 pb-2">
@@ -1050,7 +1040,7 @@ function TableCacheHitCard({
                     </span>
                     {warning ? (
                       <span className="ml-auto">
-                        <WarningBadge>{"Low cache hit"}</WarningBadge>
+                        <WarningBadge>Low cache hit</WarningBadge>
                       </span>
                     ) : null}
                     <span className="font-mono text-xs tabular-nums">
@@ -1065,12 +1055,10 @@ function TableCacheHitCard({
                   />
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground text-xs">
                     <span>
-                      {formatInsightInteger(cacheHit.heapBlocksHit)}
-                      {" heap hits"}
+                      {formatInsightInteger(cacheHit.heapBlocksHit)} heap hits
                     </span>
                     <span>
-                      {formatInsightInteger(cacheHit.heapBlocksRead)}
-                      {" heap reads"}
+                      {formatInsightInteger(cacheHit.heapBlocksRead)} heap reads
                     </span>
                     <span>{formatBytes(cacheHit.totalSizeBytes)}</span>
                   </div>
@@ -1080,7 +1068,7 @@ function TableCacheHitCard({
           </div>
         ) : (
           <p className="px-5 pb-5 text-muted-foreground text-sm">
-            {"No table cache data yet."}
+            No table cache data yet.
           </p>
         )}
       </CardContent>
@@ -1219,7 +1207,7 @@ function DatabaseInsightsLoadingState() {
         <div className="h-48 rounded-xl border bg-card" />
         <div className="h-48 rounded-xl border bg-card" />
       </div>
-      <span className="sr-only">{"Loading query insights"}</span>
+      <span className="sr-only">Loading query insights</span>
     </div>
   );
 }

@@ -8,9 +8,6 @@ import {
 } from "@/features/data-explorer/data-explorer-types";
 import { ExplorerSidebar } from "@/features/data-explorer/explorer-sidebar";
 
-const TEST_NUMBER_4 = 4;
-const TEST_NUMBER_48 = 48;
-
 const defaultSchema = {
   id: "schema-pg-catalog",
   name: "pg_catalog",
@@ -33,7 +30,7 @@ function categoryPagination() {
 
 function renderLargeExplorerSidebar() {
   const tables = Array.from({ length: 1000 }, (_, index) => ({
-    name: `table_${index.toString().padStart(TEST_NUMBER_4, "0")}`,
+    name: `table_${index.toString().padStart(4, "0")}`,
     sizeLabel: `${index + 1} KB`,
   }));
 
@@ -112,7 +109,7 @@ test("virtualized object list keeps fast bottom scroll filled from the top", asy
     .element(page.getByRole("button", { name: LAST_TABLE_BUTTON_RE }))
     .toBeVisible();
 
-  expect(firstVisibleResourceGap(scrollRoot)).toBeLessThan(TEST_NUMBER_48);
+  expect(firstVisibleResourceGap(scrollRoot)).toBeLessThan(48);
 });
 
 test("virtualized object list commits a fast bottom scroll after the next frame", async () => {
@@ -132,5 +129,5 @@ test("virtualized object list commits a fast bottom scroll after the next frame"
   await expect
     .element(page.getByRole("button", { name: LAST_TABLE_BUTTON_RE }))
     .toBeVisible();
-  expect(firstVisibleResourceGap(scrollRoot)).toBeLessThan(TEST_NUMBER_48);
+  expect(firstVisibleResourceGap(scrollRoot)).toBeLessThan(48);
 });
