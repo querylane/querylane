@@ -2,7 +2,7 @@
 
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -19,6 +19,7 @@ import {
   rolesForInstanceQueryInput,
   useListAllRolesQuery,
 } from "@/hooks/api/role";
+import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 import {
   buildCanonicalAdminSearch,
   resolveCanonicalAdminPageTarget,
@@ -354,17 +355,9 @@ function AdminCommandPaletteContent({
 function AdminCommandPalette() {
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setOpen((currentOpen) => !currentOpen);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  useKeyboardShortcut("palette.open", () =>
+    setOpen((currentOpen) => !currentOpen)
+  );
 
   return (
     <>

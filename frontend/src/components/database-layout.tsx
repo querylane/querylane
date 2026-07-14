@@ -3,6 +3,8 @@
 import { CatchBoundary, useLocation } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { AdminHeader } from "@/components/admin-header";
+import { AdminKeyboardShortcuts } from "@/components/admin-keyboard-shortcuts";
+import { KeyboardShortcutsProvider } from "@/components/keyboard-shortcuts";
 import {
   SidebarInset,
   SidebarProvider,
@@ -103,51 +105,54 @@ export function DatabaseLayout({
     : "overflow-auto";
   const isWideRoute = isExplorerRoute;
   return (
-    <SidebarProvider className="!h-svh !max-h-svh flex-col">
-      <AdminHeader />
-      <ExplorerSidebarSlotProvider>
-        <div
-          className={cn(
-            "flex min-h-0 flex-1",
-            // With the object tree living in the single rail, give the
-            // explorer a wider rail than the 16rem workspace default.
-            isExplorerRoute && "[--sidebar-width:19rem]"
-          )}
-        >
-          <Suspense
-            fallback={<SidebarFallback isExplorerRoute={isExplorerRoute} />}
+    <KeyboardShortcutsProvider>
+      <SidebarProvider className="!h-svh !max-h-svh flex-col">
+        <AdminKeyboardShortcuts />
+        <AdminHeader />
+        <ExplorerSidebarSlotProvider>
+          <div
+            className={cn(
+              "flex min-h-0 flex-1",
+              // With the object tree living in the single rail, give the
+              // explorer a wider rail than the 16rem workspace default.
+              isExplorerRoute && "[--sidebar-width:19rem]"
+            )}
           >
-            <AppSidebar page={page} />
-          </Suspense>
-          <SidebarInset className="relative min-w-0">
-            <RouteProgressBar />
-            {showDegradedBanner ? (
-              <output className="block border-amber-400/40 border-b bg-amber-500/10 px-4 py-2 text-amber-700 text-xs dark:text-amber-300">
-                Meta-database unreachable. Running in degraded mode.
-              </output>
-            ) : null}
-            <main
-              className={cn(
-                // `relative` keeps absolutely-positioned descendants (e.g.
-                // sr-only labels) anchored inside this scroll container
-                // instead of escaping it and stretching the document.
-                "relative min-w-0 flex-1",
-                mainOverflowClass,
-                mainPaddingClass
-              )}
+            <Suspense
+              fallback={<SidebarFallback isExplorerRoute={isExplorerRoute} />}
             >
-              <div
+              <AppSidebar page={page} />
+            </Suspense>
+            <SidebarInset className="relative min-w-0">
+              <RouteProgressBar />
+              {showDegradedBanner ? (
+                <output className="block border-amber-400/40 border-b bg-amber-500/10 px-4 py-2 text-amber-700 text-xs dark:text-amber-300">
+                  Meta-database unreachable. Running in degraded mode.
+                </output>
+              ) : null}
+              <main
                 className={cn(
-                  "w-full",
-                  isWideRoute ? "h-full max-w-none" : "mx-auto max-w-[1200px]"
+                  // `relative` keeps absolutely-positioned descendants (e.g.
+                  // sr-only labels) anchored inside this scroll container
+                  // instead of escaping it and stretching the document.
+                  "relative min-w-0 flex-1",
+                  mainOverflowClass,
+                  mainPaddingClass
                 )}
               >
-                <ShellContentBoundary>{children}</ShellContentBoundary>
-              </div>
-            </main>
-          </SidebarInset>
-        </div>
-      </ExplorerSidebarSlotProvider>
-    </SidebarProvider>
+                <div
+                  className={cn(
+                    "w-full",
+                    isWideRoute ? "h-full max-w-none" : "mx-auto max-w-[1200px]"
+                  )}
+                >
+                  <ShellContentBoundary>{children}</ShellContentBoundary>
+                </div>
+              </main>
+            </SidebarInset>
+          </div>
+        </ExplorerSidebarSlotProvider>
+      </SidebarProvider>
+    </KeyboardShortcutsProvider>
   );
 }

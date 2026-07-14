@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, test, vi } from "vitest";
+import { KeyboardShortcutsProvider } from "@/components/keyboard-shortcuts";
 import { AdminCommandPalette } from "@/components/querylane-ui/admin-command-palette";
 
 const navigateMock = vi.fn(() => Promise.resolve());
@@ -69,9 +70,17 @@ beforeEach(() => {
   commandPaletteMockState.rolesQuery.isPending = false;
 });
 
+function renderAdminCommandPalette() {
+  return render(
+    <KeyboardShortcutsProvider>
+      <AdminCommandPalette />
+    </KeyboardShortcutsProvider>
+  );
+}
+
 test("Cmd+K searches and jumps to a table", async () => {
   const user = userEvent.setup();
-  render(<AdminCommandPalette />);
+  renderAdminCommandPalette();
 
   await user.keyboard("{Meta>}k{/Meta}");
   await user.type(
@@ -111,7 +120,7 @@ test("role search jumps to the selected role", async () => {
     },
   ];
   const user = userEvent.setup();
-  render(<AdminCommandPalette />);
+  renderAdminCommandPalette();
 
   await user.click(screen.getByRole("button", { name: "Search or jump to" }));
   await user.type(
@@ -133,7 +142,7 @@ test("role search jumps to the selected role", async () => {
 
 test("screen selection jumps to the current database overview", async () => {
   const user = userEvent.setup();
-  render(<AdminCommandPalette />);
+  renderAdminCommandPalette();
 
   await user.click(screen.getByRole("button", { name: "Search or jump to" }));
   await user.click(await screen.findByText("Overview"));
@@ -153,7 +162,7 @@ test("screen selection jumps to the current database overview", async () => {
 test("catalog loading remains visible beside available screen targets", async () => {
   commandPaletteMockState.catalogQuery.isPending = true;
   const user = userEvent.setup();
-  render(<AdminCommandPalette />);
+  renderAdminCommandPalette();
 
   await user.click(screen.getByRole("button", { name: "Search or jump to" }));
 
@@ -164,7 +173,7 @@ test("catalog loading remains visible beside available screen targets", async ()
 test("role loading replaces the no-matches state while search resolves", async () => {
   commandPaletteMockState.rolesQuery.isPending = true;
   const user = userEvent.setup();
-  render(<AdminCommandPalette />);
+  renderAdminCommandPalette();
 
   await user.click(screen.getByRole("button", { name: "Search or jump to" }));
   await user.type(
@@ -183,7 +192,7 @@ test("role loading replaces the no-matches state while search resolves", async (
 test("role errors replace the no-matches state when search cannot resolve", async () => {
   commandPaletteMockState.rolesQuery.error = new Error("roles offline");
   const user = userEvent.setup();
-  render(<AdminCommandPalette />);
+  renderAdminCommandPalette();
 
   await user.click(screen.getByRole("button", { name: "Search or jump to" }));
   await user.type(
@@ -202,7 +211,7 @@ test("role errors replace the no-matches state when search cannot resolve", asyn
 test("catalog errors remain visible beside available screen targets", async () => {
   commandPaletteMockState.catalogQuery.error = new Error("catalog offline");
   const user = userEvent.setup();
-  render(<AdminCommandPalette />);
+  renderAdminCommandPalette();
 
   await user.click(screen.getByRole("button", { name: "Search or jump to" }));
 
@@ -214,7 +223,7 @@ test("catalog errors remain visible beside available screen targets", async () =
 
 test("view selection jumps to the Data Explorer view category", async () => {
   const user = userEvent.setup();
-  render(<AdminCommandPalette />);
+  renderAdminCommandPalette();
 
   await user.click(screen.getByRole("button", { name: "Search or jump to" }));
   await user.click(
