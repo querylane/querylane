@@ -1,6 +1,6 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -231,7 +231,14 @@ describe("app error view integration", () => {
       navigator,
       "clipboard"
     );
-    const writeText = vi.fn(() => Promise.resolve());
+    let resolveSecondCopy: () => void = () => undefined;
+    const secondCopy = new Promise<void>((resolve) => {
+      resolveSecondCopy = resolve;
+    });
+    const writeText = vi
+      .fn<() => Promise<void>>()
+      .mockResolvedValueOnce()
+      .mockReturnValueOnce(secondCopy);
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
@@ -246,6 +253,49 @@ describe("app error view integration", () => {
 
       expect(writeText).toHaveBeenCalledWith(error.technicalDetails);
       expect(screen.getByRole("status").textContent).toBe("Details copied");
+
+      await user.click(screen.getByRole("button", { name: "Copy details" }));
+
+      expect(screen.getByRole("status").textContent).toBe("");
+
+      resolveSecondCopy();
+      await waitFor(() => {
+        expect(screen.getByRole("status").textContent).toBe("Details copied");
+      });
+      expect(writeText).toHaveBeenCalledTimes(2);
+    } finally {
+      if (originalClipboard) {
+        Object.defineProperty(navigator, "clipboard", originalClipboard);
+      } else {
+        Reflect.deleteProperty(navigator, "clipboard");
+      }
+    }
+  });
+
+  it("clears stale copy feedback when the displayed error changes", async () => {
+    const user = userEvent.setup();
+    const originalClipboard = Object.getOwnPropertyDescriptor(
+      navigator,
+      "clipboard"
+    );
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn(() => Promise.resolve()) },
+    });
+
+    try {
+      const { rerender } = render(<AppErrorView error={createBootError()} />);
+
+      await openErrorDetailsDialog(user);
+      await user.click(screen.getByRole("button", { name: "Copy details" }));
+      expect(screen.getByRole("status").textContent).toBe("Details copied");
+
+      const nextError = normalizeAppUiError(
+        new ConnectError("A different request failed", Code.Internal)
+      );
+      rerender(<AppErrorView error={nextError} />);
+
+      expect(screen.getByRole("status").textContent).toBe("");
     } finally {
       if (originalClipboard) {
         Object.defineProperty(navigator, "clipboard", originalClipboard);

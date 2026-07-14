@@ -62,6 +62,34 @@ function createPostgresFailure({
   return error;
 }
 
+function createDebugPostgresFailure({
+  kind,
+  retryGuidance,
+}: {
+  kind: number;
+  retryGuidance: number;
+}) {
+  const error = new ConnectError(
+    "PostgreSQL rejected the request",
+    Code.Unknown
+  );
+  error.details = [
+    {
+      debug: {
+        conditionName: "syntax_error",
+        kind,
+        operation: "execute_query",
+        retryGuidance,
+        sqlstate: "42601",
+        sqlstateClass: "42",
+      },
+      type: POSTGRES_DETAIL_TYPE,
+      value: new Uint8Array(),
+    },
+  ];
+  return error;
+}
+
 function createReportingDependencies() {
   return {
     captureException: vi.fn(),
@@ -166,48 +194,75 @@ describe("PostgreSQL structured error rendering", () => {
     expect(normalized.retryGuidance).toBe(guidance);
   });
 
-  test.each([
-    {
-      expectedGuidance: null,
-      expectedTitle: "PostgreSQL error",
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED,
-      name: "missing enums",
-      retry:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
-    },
-    {
-      expectedGuidance: null,
-      expectedTitle: "PostgreSQL error",
-      kind: 99 as PostgreSqlErrorKind,
-      name: "unknown enums",
-      retry: 99 as PostgreSqlErrorRetryGuidance,
-    },
-    {
-      expectedGuidance: null,
-      expectedTitle: "PostgreSQL permission denied",
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
-      name: "known kind with unknown retry",
-      retry: 99 as PostgreSqlErrorRetryGuidance,
-    },
-    {
-      expectedGuidance: LATER,
-      expectedTitle: "PostgreSQL error",
-      kind: 99 as PostgreSqlErrorKind,
-      name: "unknown kind with known retry",
-      retry: PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
-    },
-  ])("uses compatibility fallback for $name", ({
-    expectedGuidance,
-    expectedTitle,
-    kind,
-    retry,
-  }) => {
+  test("uses the generic fallback for missing enums", () => {
     const normalized = normalizeAppUiError(
-      createPostgresFailure({ kind, retryGuidance: retry })
+      createPostgresFailure({
+        kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED,
+        retryGuidance:
+          PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
+      })
     );
 
-    expect(normalized.title).toBe(expectedTitle);
-    expect(normalized.retryGuidance).toBe(expectedGuidance);
+    expect(normalized.title).toBe("PostgreSQL error");
+    expect(normalized.retryGuidance).toBeNull();
+  });
+
+  test.each([
+    {
+      expectedGuidance:
+        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
+      expectedKind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED,
+      kind: 99,
+      name: "unknown enums",
+      retryGuidance: 99,
+    },
+    {
+      expectedGuidance:
+        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
+      expectedKind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED,
+      kind: Number.NaN,
+      name: "non-finite enums",
+      retryGuidance: Number.POSITIVE_INFINITY,
+    },
+    {
+      expectedGuidance:
+        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
+      expectedKind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED,
+      kind: 1.5,
+      name: "fractional enums",
+      retryGuidance: 2.5,
+    },
+    {
+      expectedGuidance:
+        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
+      expectedKind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
+      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
+      name: "known kind with unknown retry",
+      retryGuidance: 99,
+    },
+    {
+      expectedGuidance:
+        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
+      expectedKind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED,
+      kind: 99,
+      name: "unknown kind with known retry",
+      retryGuidance:
+        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
+    },
+  ])("normalizes $name to generated enum members", ({
+    expectedGuidance,
+    expectedKind,
+    kind,
+    retryGuidance,
+  }) => {
+    const normalized = normalizeAppUiError(
+      createDebugPostgresFailure({ kind, retryGuidance })
+    );
+
+    expect(normalized.postgres).toMatchObject({
+      kind: expectedKind,
+      retryGuidance: expectedGuidance,
+    });
   });
 
   test("uses native structured details instead of SQLSTATE or Connect code", () => {

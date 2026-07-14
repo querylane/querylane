@@ -43,6 +43,7 @@ function CopyErrorDetailsButton({ error }: { error: AppUiError }) {
     <div className="flex items-center gap-2">
       <Button
         onClick={async () => {
+          setFeedback("idle");
           try {
             if (!navigator.clipboard) {
               throw new Error("Clipboard unavailable");
@@ -149,7 +150,7 @@ function ErrorDetailsDialog({
         </DialogHeader>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           <ErrorBadgeList error={error} retryAvailable={retryAvailable} />
-          <CopyErrorDetailsButton error={error} />
+          <CopyErrorDetailsButton error={error} key={error.technicalDetails} />
           <div className="space-y-2">
             <h3 className="font-medium text-sm">Technical details</h3>
             <Textarea

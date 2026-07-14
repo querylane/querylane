@@ -19,7 +19,8 @@ import {
 const APP_UI_ERROR_CONTEXT = Symbol.for("querylane.app-ui-error-context");
 const APP_UI_ERROR_REPORTED = Symbol.for("querylane.app-ui-error-reported");
 
-const POSTGRES_TITLES: Partial<Record<PostgreSqlErrorKind, string>> = {
+const POSTGRES_TITLES = {
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED]: "PostgreSQL error",
   [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT]:
     "PostgreSQL request rejected",
   [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_FAILED_PRECONDITION]:
@@ -44,18 +45,18 @@ const POSTGRES_TITLES: Partial<Record<PostgreSqlErrorKind, string>> = {
     "PostgreSQL feature not supported",
   [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_INTERNAL]:
     "PostgreSQL internal error",
-};
+} satisfies Record<PostgreSqlErrorKind, string>;
 
-const POSTGRES_RETRY_GUIDANCE: Partial<
-  Record<PostgreSqlErrorRetryGuidance, string>
-> = {
+const POSTGRES_RETRY_GUIDANCE = {
+  [PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED]:
+    null,
   [PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION]:
     "Correct the issue before retrying.",
   [PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_IMMEDIATELY]:
     "Retry the request.",
   [PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER]:
     "Retry later.",
-};
+} satisfies Record<PostgreSqlErrorRetryGuidance, string | null>;
 
 const defaultReportAppUiErrorDependencies: ReportAppUiErrorDependencies = {
   captureException,

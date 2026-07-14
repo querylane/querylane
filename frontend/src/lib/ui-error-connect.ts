@@ -9,7 +9,9 @@ import { isRecord } from "@/lib/ui-error-types";
 import {
   PostgreSqlErrorDetailSchema,
   PostgreSqlErrorKind,
+  PostgreSqlErrorKindSchema,
   PostgreSqlErrorRetryGuidance,
+  PostgreSqlErrorRetryGuidanceSchema,
 } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 
 const REDACTED_METADATA_KEYS = new Set([
@@ -23,6 +25,17 @@ const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
 const SQLSTATE_CLASS_PATTERN = /^[0-9A-Z]{2}$/u;
 const SQLSTATE_PATTERN = /^[0-9A-Z]{5}$/u;
 const SAFE_IDENTIFIER_PATTERN = /^[a-z][a-z0-9_]{0,79}$/u;
+
+interface NormalizedConnectErrorState {
+  code: Code | null;
+  codeLabel: string | null;
+  details: AppUiErrorDetail[];
+  domain: string | null;
+  message: string;
+  metadata: Record<string, string[]>;
+  postgres: AppUiErrorPostgres | null;
+  reason: string | null;
+}
 
 function getCodeLabel(code: Code | null): string | null {
   if (code === null) {
@@ -73,6 +86,22 @@ function normalizeServerFields(value: unknown): Record<string, string> {
   );
 }
 
+function isPostgreSqlErrorKind(value: unknown): value is PostgreSqlErrorKind {
+  return (
+    typeof value === "number" &&
+    Object.hasOwn(PostgreSqlErrorKindSchema.value, value)
+  );
+}
+
+function isPostgreSqlErrorRetryGuidance(
+  value: unknown
+): value is PostgreSqlErrorRetryGuidance {
+  return (
+    typeof value === "number" &&
+    Object.hasOwn(PostgreSqlErrorRetryGuidanceSchema.value, value)
+  );
+}
+
 function normalizePostgresRecord(
   record: Record<string, unknown>,
   typedDetail: boolean
@@ -103,15 +132,13 @@ function normalizePostgresRecord(
 
   return {
     conditionName,
-    kind:
-      typeof rawKind === "number"
-        ? (rawKind as PostgreSqlErrorKind)
-        : PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED,
+    kind: isPostgreSqlErrorKind(rawKind)
+      ? rawKind
+      : PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED,
     operation,
-    retryGuidance:
-      typeof rawRetryGuidance === "number"
-        ? (rawRetryGuidance as PostgreSqlErrorRetryGuidance)
-        : PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
+    retryGuidance: isPostgreSqlErrorRetryGuidance(rawRetryGuidance)
+      ? rawRetryGuidance
+      : PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
     serverFields: normalizeServerFields(
       record["serverFields"] ?? record["server_fields"]
     ),
@@ -288,15 +315,15 @@ function extractPostgres(
 function normalizeConnectErrorState(
   connectError: ConnectError | null,
   rawMessage: string
-) {
+): NormalizedConnectErrorState {
   if (connectError === null) {
     return {
       code: null,
       codeLabel: null,
-      details: [] as AppUiErrorDetail[],
+      details: [],
       domain: null,
       message: rawMessage.length > 0 ? rawMessage : "Unknown error",
-      metadata: {} as Record<string, string[]>,
+      metadata: {},
       postgres: null,
       reason: null,
     };
