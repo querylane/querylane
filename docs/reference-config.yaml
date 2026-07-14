@@ -66,6 +66,13 @@ limits:
     # Shared by every database in one managed PostgreSQL instance.
     per_instance: 6
 
+  # Process-local token bucket for connection tests, creates, and connection
+  # config updates. Callers are keyed by their direct socket IP; forwarding
+  # headers are not trusted. Behind a reverse proxy, callers share its bucket.
+  connection_tests:
+    per_caller_per_minute: 10
+    burst: 5
+
   # Shared physical-connection budget across all pools targeting one endpoint.
   # Database-specific pools retain one connection for one second so paged
   # reads can reuse it without hoarding capacity across many databases.
@@ -75,6 +82,31 @@ limits:
     max_idle_connections: 2       # 0 disables idle connections
     idle_timeout: "5m"             # 0 disables idle expiry
     connection_max_lifetime: "30m" # 0 disables lifetime expiry
+
+
+# -----------------------------------------------------------------------------
+# Managed PostgreSQL target policy
+#
+# CIDRs are checked against the resolved IP immediately before every managed
+# PostgreSQL socket dial, preventing DNS rebinding from bypassing the policy.
+# By default Querylane allows public and private targets, but blocks IPv4/IPv6
+# loopback, unspecified, and link-local addresses. This includes cloud metadata
+# endpoints such as 169.254.169.254 and fd00:ec2::254.
+#
+# A nonempty allowlist becomes strict and is the only way to permit a default-
+# blocked address. Custom deny entries always win. Detailed connection errors
+# are returned only when a strict allowlist is configured; otherwise callers
+# receive one generic connection failure.
+# -----------------------------------------------------------------------------
+
+# instance_targets:
+#   allowed_cidrs:
+#     - "10.0.0.0/8"
+#     # Explicit opt-in for PostgreSQL running on the Querylane host:
+#     # - "127.0.0.0/8"
+#     # - "::1/128"
+#   denied_cidrs:
+#     - "10.10.0.0/16"
 
 
 # -----------------------------------------------------------------------------

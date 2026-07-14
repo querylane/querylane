@@ -47,7 +47,17 @@ func TestResolveEmbeddedEffectiveConfigReusesAlreadyRunningPostgres(t *testing.T
 		startErr:       embeddedpg.ErrAlreadyRunning,
 	}
 	cfg := &serverconfig.Config{
-		Embedded:  &serverconfig.EmbeddedDatabase{},
+		Embedded: &serverconfig.EmbeddedDatabase{},
+		Limits: serverconfig.Limits{
+			ConnectionTests: serverconfig.ConnectionTestLimits{
+				PerCallerPerMinute: 2,
+				Burst:              1,
+			},
+		},
+		InstanceTargets: serverconfig.InstanceTargetPolicy{
+			AllowedCIDRs: []string{"10.0.0.0/8"},
+			DeniedCIDRs:  []string{"10.1.0.0/16"},
+		},
 		Instances: []*serverconfig.InstanceConfig{{ID: "demo"}},
 	}
 
@@ -55,6 +65,8 @@ func TestResolveEmbeddedEffectiveConfigReusesAlreadyRunningPostgres(t *testing.T
 
 	require.NotNil(t, resolved)
 	require.Same(t, dbCfg, resolved.Database)
+	require.Equal(t, cfg.Limits, resolved.Limits)
+	require.Equal(t, cfg.InstanceTargets, resolved.InstanceTargets)
 	require.Equal(t, cfg.Instances, resolved.Instances)
 	require.Equal(t, 1, manager.startCalls)
 }

@@ -69,7 +69,7 @@ func TestGetInstanceReportsServerInfoPartialError(t *testing.T) {
 			Message: "permission denied for view pg_settings",
 		}, postgreserrors.ProfileDefault, "query server info"),
 	}
-	service := NewService(reader, nil, nil, nil, catalog, nil, false)
+	service := NewService(reader, nil, nil, nil, catalog, nil, false, newTestConnectionGuard())
 
 	resp, err := service.GetInstance(context.Background(), connect.NewRequest(&v1alpha1.GetInstanceRequest{
 		Name: "instances/prod",

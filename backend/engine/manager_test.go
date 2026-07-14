@@ -124,7 +124,17 @@ func (d *countingHealthDriver) calls() int {
 }
 
 func newHealthOnlyManager(health healthDriver) *Manager {
-	return newManagerWithDrivers(DefaultPoolConfig(), managerDrivers{healthDriver: health})
+	return newManagerWithDrivers(
+		DefaultPoolConfig(),
+		managerDrivers{healthDriver: health},
+		newTestLoopbackTargetPolicy(),
+	)
+}
+
+func newTestLoopbackTargetPolicy() *TargetPolicy {
+	policy, _ := NewTargetPolicy([]string{"127.0.0.0/8", "::1/128"}, nil)
+
+	return policy
 }
 
 func newHealthOnlyResolver(repo storage.InstanceRepository, health healthDriver) *SessionResolver {
@@ -207,6 +217,21 @@ func TestManager_TestConnection(t *testing.T) {
 	})
 }
 
+func TestManagerTestConnectionEnforcesDefaultTargetPolicy(t *testing.T) {
+	t.Parallel()
+
+	mgr := newManagerWithDrivers(DefaultPoolConfig(), managerDrivers{healthDriver: &testHealthDriver{}}, nil)
+
+	t.Cleanup(func() { require.NoError(t, mgr.Close()) })
+
+	probe := lifecycleTestInstance("")
+	probe.Config.Host = "169.254.169.254"
+
+	err := mgr.TestConnection(t.Context(), probe)
+	require.ErrorIs(t, err, ErrTargetNotAllowed)
+	require.Zero(t, managerBudgetCount(mgr))
+}
+
 func TestIntegrationManager_TestConnection_WithEmbeddedPostgres(t *testing.T) {
 	t.Parallel()
 
@@ -240,7 +265,7 @@ func TestIntegrationManager_UnnamedTestConnectionSharesEndpointBudget(t *testing
 	poolConfig := DefaultPoolConfig()
 	poolConfig.MaxOpenConns = 1
 	poolConfig.MaxIdleConns = 0
-	mgr := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: &testHealthDriver{}})
+	mgr := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: &testHealthDriver{}}, newTestLoopbackTargetPolicy())
 
 	t.Cleanup(func() { require.NoError(t, mgr.Close()) })
 
@@ -279,7 +304,7 @@ func TestIntegrationManager_InstanceNamesShareEndpointBudget(t *testing.T) {
 	poolConfig := DefaultPoolConfig()
 	poolConfig.MaxOpenConns = 1
 	poolConfig.MaxIdleConns = 0
-	mgr := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: &testHealthDriver{}})
+	mgr := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: &testHealthDriver{}}, newTestLoopbackTargetPolicy())
 
 	t.Cleanup(func() { require.NoError(t, mgr.Close()) })
 
@@ -365,7 +390,7 @@ func TestManager_TestConnectionAdmissionBoundsArbitraryEndpoints(t *testing.T) {
 		started: make(chan struct{}, 3),
 		release: make(chan struct{}),
 	}
-	mgr := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: driver})
+	mgr := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: driver}, newTestLoopbackTargetPolicy())
 
 	t.Cleanup(func() { require.NoError(t, mgr.Close()) })
 
@@ -409,7 +434,7 @@ func TestIntegrationManager_EndpointIdleAllowanceDoesNotStarveAnotherAlias(t *te
 	poolConfig := DefaultPoolConfig()
 	poolConfig.MaxOpenConns = 2
 	poolConfig.MaxIdleConns = 1
-	mgr := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: &testHealthDriver{}})
+	mgr := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: &testHealthDriver{}}, newTestLoopbackTargetPolicy())
 
 	t.Cleanup(func() { require.NoError(t, mgr.Close()) })
 
@@ -653,7 +678,7 @@ func TestIntegrationManager_BoundsPhysicalConnectionsAcrossPools(t *testing.T) {
 	poolConfig := DefaultPoolConfig()
 	poolConfig.MaxOpenConns = 2
 	poolConfig.MaxIdleConns = 0
-	manager := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: &testHealthDriver{}})
+	manager := newManagerWithDrivers(poolConfig, managerDrivers{healthDriver: &testHealthDriver{}}, newTestLoopbackTargetPolicy())
 	resolver := NewSessionResolver(&testInstanceRepo{instance: instance}, manager)
 
 	t.Cleanup(func() { require.NoError(t, manager.Close()) })

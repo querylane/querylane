@@ -19,6 +19,8 @@ func TestLimitsDefaults(t *testing.T) {
 
 	assert.Equal(t, 32, limits.LiveQueries.Global)
 	assert.Equal(t, 6, limits.LiveQueries.PerInstance)
+	assert.Equal(t, 10, limits.ConnectionTests.PerCallerPerMinute)
+	assert.Equal(t, 5, limits.ConnectionTests.Burst)
 	assert.Equal(t, 8, limits.PostgresPool.MaxOpenConnections)
 	assert.Equal(t, 2, limits.PostgresPool.MaxIdleConnections)
 	assert.Equal(t, 5*time.Minute, limits.PostgresPool.IdleTimeout)
@@ -53,6 +55,27 @@ func TestLimitsValidate(t *testing.T) {
 				limits.LiveQueries.PerInstance = limits.LiveQueries.Global + 1
 			},
 			want: "live_queries.per_instance must not exceed live_queries.global",
+		},
+		{
+			name: "connection test rate must be positive",
+			mutate: func(limits *Limits) {
+				limits.ConnectionTests.PerCallerPerMinute = 0
+			},
+			want: "connection_tests.per_caller_per_minute must be positive",
+		},
+		{
+			name: "connection test burst must be positive",
+			mutate: func(limits *Limits) {
+				limits.ConnectionTests.Burst = 0
+			},
+			want: "connection_tests.burst must be positive",
+		},
+		{
+			name: "connection test burst cannot exceed minute rate",
+			mutate: func(limits *Limits) {
+				limits.ConnectionTests.Burst = limits.ConnectionTests.PerCallerPerMinute + 1
+			},
+			want: "connection_tests.burst must not exceed per_caller_per_minute",
 		},
 		{
 			name: "pool max open must be positive",
@@ -129,6 +152,9 @@ func TestLimitsLoadFromConfigFile(t *testing.T) {
   live_queries:
     global: 12
     per_instance: 4
+  connection_tests:
+    per_caller_per_minute: 8
+    burst: 3
   postgres_pool:
     max_open_connections: 5
     max_idle_connections: 0
@@ -144,6 +170,8 @@ func TestLimitsLoadFromConfigFile(t *testing.T) {
 	limits := manager.CurrentConfig().Limits
 	assert.Equal(t, 12, limits.LiveQueries.Global)
 	assert.Equal(t, 4, limits.LiveQueries.PerInstance)
+	assert.Equal(t, 8, limits.ConnectionTests.PerCallerPerMinute)
+	assert.Equal(t, 3, limits.ConnectionTests.Burst)
 	assert.Equal(t, 5, limits.PostgresPool.MaxOpenConnections)
 	assert.Equal(t, 0, limits.PostgresPool.MaxIdleConnections)
 	assert.Equal(t, time.Duration(0), limits.PostgresPool.IdleTimeout)

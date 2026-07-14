@@ -89,6 +89,7 @@ type Service struct {
 	health             HealthFetcher
 	activity           ActivityFetcher
 	readOnly           bool
+	connectionTests    *ConnectionTestGuard
 }
 
 // NewService creates a new instance of the instance service.
@@ -102,7 +103,12 @@ func NewService(
 	catalog CatalogProvider,
 	overview OverviewFetcher,
 	readOnly bool,
+	connectionTests *ConnectionTestGuard,
 ) *Service {
+	if connectionTests == nil {
+		panic("instance.NewService: connection test guard is required") //nolint:forbidigo // programmer error in dependency wiring
+	}
+
 	health, _ := overview.(HealthFetcher)
 	activity, _ := overview.(ActivityFetcher)
 
@@ -116,6 +122,7 @@ func NewService(
 		health:             health,
 		activity:           activity,
 		readOnly:           readOnly,
+		connectionTests:    connectionTests,
 	}
 }
 
@@ -130,6 +137,10 @@ func (s *Service) CreateInstance(ctx context.Context, req *connect.Request[v1alp
 		return nil, err
 	}
 
+	if err := s.connectionTests.admit(req.Peer().Addr); err != nil {
+		return nil, err
+	}
+
 	instanceID := req.Msg.GetInstanceId()
 
 	responseInstanceID := instanceID
@@ -140,7 +151,7 @@ func (s *Service) CreateInstance(ctx context.Context, req *connect.Request[v1alp
 	// Both validate_only and real creation require a successful connection test
 	// before proceeding.
 	if err := s.connManager.TestConnection(ctx, createBody.instance); err != nil {
-		return nil, connectionTestError(ctx, createBody.configField, "", err)
+		return nil, s.connectionTestError(ctx, createBody.configField, "", err)
 	}
 
 	if req.Msg.GetValidateOnly() {
@@ -196,15 +207,15 @@ func (s *Service) CreateInstance(ctx context.Context, req *connect.Request[v1alp
 // TestInstanceConnection validates PostgreSQL connection details without
 // creating or updating an instance resource.
 func (s *Service) TestInstanceConnection(ctx context.Context, req *connect.Request[v1alpha1.TestInstanceConnectionRequest]) (*connect.Response[v1alpha1.TestInstanceConnectionResponse], error) {
+	if err := s.connectionTests.admit(req.Peer().Addr); err != nil {
+		return nil, err
+	}
+
 	if err := s.connManager.TestConnection(ctx, &v1alpha1.Instance{Config: req.Msg.GetConfig()}); err != nil {
-		return nil, connectionProbeError(ctx, err)
+		return nil, s.connectionTestError(ctx, "config", "", err)
 	}
 
 	return connect.NewResponse(&v1alpha1.TestInstanceConnectionResponse{}), nil
-}
-
-func connectionProbeError(ctx context.Context, err error) *connect.Error {
-	return connectionTestError(ctx, "config", "", err)
 }
 
 func validatePostgresConfigSSLNegotiation(config *v1alpha1.PostgresConfig, fieldPath string) *connect.Error {
@@ -345,6 +356,10 @@ func (s *Service) UpdateInstance(ctx context.Context, req *connect.Request[v1alp
 	)
 
 	if updateMaskTouchesConfig(mask) {
+		if err := s.connectionTests.admit(req.Peer().Addr); err != nil {
+			return nil, err
+		}
+
 		updatedInstance, err = s.instanceRepo.UpdateInstanceWithValidation(
 			ctx,
 			instance,
@@ -355,7 +370,7 @@ func (s *Service) UpdateInstance(ctx context.Context, req *connect.Request[v1alp
 				}
 
 				if err := s.connManager.TestConnection(ctx, mergedInstance); err != nil {
-					return connectionTestError(ctx, "instance.config", instance.GetName(), err)
+					return s.connectionTestError(ctx, "instance.config", instance.GetName(), err)
 				}
 
 				return nil
@@ -934,7 +949,13 @@ func replicationRoleFromRecovery(isInRecovery bool) v1alpha1.ServerInfo_Replicat
 
 const instanceConnectionTestOperation = apierrors.PostgresOperationLabel("test_instance_connection")
 
-func connectionTestError(ctx context.Context, field string, instanceName string, err error) *connect.Error {
+const genericConnectionTestMessage = "Could not connect to PostgreSQL with these settings."
+
+func (s *Service) connectionTestError(ctx context.Context, field string, instanceName string, err error) *connect.Error {
+	return connectionTestErrorWithDetails(ctx, field, instanceName, err, s.connectionTests.exposeDetailedErrors)
+}
+
+func connectionTestErrorWithDetails(ctx context.Context, field string, instanceName string, err error, exposeDetails bool) *connect.Error {
 	attrs := []any{slog.String("field", field), slog.String("error", connectionTestLogError(err))}
 	if instanceName != "" {
 		attrs = append(attrs, slog.String("instance", instanceName))
@@ -948,6 +969,10 @@ func connectionTestError(ctx context.Context, field string, instanceName string,
 
 	if errors.Is(err, context.DeadlineExceeded) {
 		return connect.NewError(connect.CodeDeadlineExceeded, err)
+	}
+
+	if !exposeDetails || errors.Is(err, engine.ErrTargetNotAllowed) {
+		return genericConnectionTestError()
 	}
 
 	var pgErr *pgconn.PgError
@@ -971,6 +996,18 @@ func connectionTestError(ctx context.Context, field string, instanceName string,
 
 	return apierrors.NewInvalidArgumentError(
 		apierrors.NewFieldViolation(field, message),
+	)
+}
+
+func genericConnectionTestError() *connect.Error {
+	return apierrors.NewConnectError(
+		connect.CodeUnavailable,
+		fmt.Errorf("%s", genericConnectionTestMessage),
+		apierrors.NewErrorInfo(
+			apierrors.DomainConsole,
+			v1alpha1.ErrorReason_FAILED_PRECONDITION,
+			apierrors.KeyVal{Key: "operation", Value: string(instanceConnectionTestOperation)},
+		),
 	)
 }
 

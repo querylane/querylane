@@ -41,15 +41,16 @@ type pendingDBPool struct {
 // instancePool holds the instance-level connection pool and all database-level
 // pools opened through it.
 type instancePool struct {
-	mu      sync.Mutex
-	db      *sql.DB
-	dbPools map[string]*sql.DB
-	pending map[string]*pendingDBPool
-	config  PoolConfig
-	driver  healthDriver
-	secrets SecretResolver
-	budget  *connectionBudget
-	lease   *endpointBudgetLease
+	mu           sync.Mutex
+	db           *sql.DB
+	dbPools      map[string]*sql.DB
+	pending      map[string]*pendingDBPool
+	config       PoolConfig
+	driver       healthDriver
+	secrets      SecretResolver
+	budget       *connectionBudget
+	lease        *endpointBudgetLease
+	targetPolicy *TargetPolicy
 
 	// closed marks the pool as terminally shut down. It guards against a
 	// concurrent getOrCreateDBPool finishing its dial after eviction and
@@ -237,7 +238,7 @@ func (p *instancePool) openEphemeralDatabasePool(
 		return nil, nil, errors.New("invalid engine connection config")
 	}
 
-	db, err := openPostgresDBWithBudget(dsn, p.budget)
+	db, err := openPostgresDBWithBudget(dsn, p.budget, p.targetPolicy)
 	if err != nil {
 		probeLease.Release()
 		return nil, nil, fmt.Errorf("open engine connection: %w", err)
@@ -277,7 +278,7 @@ func (p *instancePool) openDatabasePool(ctx context.Context, cfg *api.PostgresCo
 		return nil, errors.New("invalid engine connection config")
 	}
 
-	db, err := openPostgresDBWithBudget(dsn, p.budget)
+	db, err := openPostgresDBWithBudget(dsn, p.budget, p.targetPolicy)
 	if err != nil {
 		return nil, fmt.Errorf("open engine connection: %w", err)
 	}
@@ -359,6 +360,7 @@ type Manager struct {
 	queryDriver           queryDriver
 	config                PoolConfig
 	secrets               SecretResolver
+	targetPolicy          *TargetPolicy
 }
 
 type managerDrivers struct {
@@ -372,7 +374,7 @@ type managerDrivers struct {
 }
 
 // NewManager creates a new connection manager with the provided configuration.
-func NewManager(config PoolConfig, driver adminDriver) *Manager {
+func NewManager(config PoolConfig, driver adminDriver, targetPolicy *TargetPolicy) *Manager {
 	return newManagerWithDrivers(config, managerDrivers{
 		healthDriver:          driver,
 		probeDriver:           driver,
@@ -381,10 +383,14 @@ func NewManager(config PoolConfig, driver adminDriver) *Manager {
 		tablePartitionDriver:  driver,
 		tableDataDriver:       driver,
 		queryDriver:           driver,
-	})
+	}, targetPolicy)
 }
 
-func newManagerWithDrivers(config PoolConfig, drivers managerDrivers) *Manager {
+func newManagerWithDrivers(config PoolConfig, drivers managerDrivers, targetPolicy *TargetPolicy) *Manager {
+	if targetPolicy == nil {
+		targetPolicy = &TargetPolicy{}
+	}
+
 	return &Manager{
 		pools:                 make(map[resource.InstanceName]*instancePool),
 		budgets:               make(map[postgresEndpoint]*managedEndpointBudget),
@@ -398,6 +404,7 @@ func newManagerWithDrivers(config PoolConfig, drivers managerDrivers) *Manager {
 		queryDriver:           drivers.queryDriver,
 		config:                config,
 		secrets:               LocalSecretResolver{},
+		targetPolicy:          targetPolicy,
 	}
 }
 
@@ -451,7 +458,7 @@ func (m *Manager) TestConnection(ctx context.Context, instance *api.Instance) er
 	}
 	defer lease.Release()
 
-	db, err := openPostgresDBWithBudget(dsn, lease.entry.budget)
+	db, err := openPostgresDBWithBudget(dsn, lease.entry.budget, m.targetPolicy)
 	if err != nil {
 		return fmt.Errorf("failed to open connection: %w", err)
 	}
@@ -587,15 +594,16 @@ func (m *Manager) getOrCreatePool(ctx context.Context, instanceName resource.Ins
 	}
 
 	pool = &instancePool{
-		db:          db,
-		dbPools:     make(map[string]*sql.DB),
-		pending:     make(map[string]*pendingDBPool),
-		config:      m.config,
-		driver:      m.healthDriver,
-		secrets:     m.secrets,
-		budget:      lease.entry.budget,
-		lease:       lease,
-		fingerprint: fingerprint,
+		db:           db,
+		dbPools:      make(map[string]*sql.DB),
+		pending:      make(map[string]*pendingDBPool),
+		config:       m.config,
+		driver:       m.healthDriver,
+		secrets:      m.secrets,
+		budget:       lease.entry.budget,
+		lease:        lease,
+		targetPolicy: m.targetPolicy,
+		fingerprint:  fingerprint,
 	}
 	m.pools[instanceName] = pool
 
@@ -719,7 +727,7 @@ func (m *Manager) resolveInstanceDSN(ctx context.Context, instance *api.Instance
 
 // openPool opens and configures a database connection pool.
 func (m *Manager) openPool(ctx context.Context, dsn string, budget *connectionBudget) (*sql.DB, error) {
-	db, err := openPostgresDBWithBudget(dsn, budget)
+	db, err := openPostgresDBWithBudget(dsn, budget, m.targetPolicy)
 	if err != nil {
 		return nil, fmt.Errorf("open connection: %w", err)
 	}

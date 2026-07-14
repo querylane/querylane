@@ -51,6 +51,8 @@ const (
 	ErrorReason_APP_DATABASE_UNAVAILABLE ErrorReason = 102
 	// Querylane's live-query admission limit is currently saturated.
 	ErrorReason_LIVE_QUERY_LIMIT_EXCEEDED ErrorReason = 103
+	// The caller exceeded the managed PostgreSQL connection-test rate.
+	ErrorReason_CONNECTION_TEST_RATE_LIMIT_EXCEEDED ErrorReason = 104
 )
 
 // Enum value maps for ErrorReason.
@@ -68,20 +70,22 @@ var (
 		101: "APP_DATABASE_NOT_CONFIGURED",
 		102: "APP_DATABASE_UNAVAILABLE",
 		103: "LIVE_QUERY_LIMIT_EXCEEDED",
+		104: "CONNECTION_TEST_RATE_LIMIT_EXCEEDED",
 	}
 	ErrorReason_value = map[string]int32{
-		"ERROR_REASON_UNSPECIFIED":    0,
-		"RESOURCE_NOT_FOUND":          1,
-		"RESOURCE_ALREADY_EXISTS":     2,
-		"INVALID_ARGUMENT":            3,
-		"INTERNAL_ERROR":              7,
-		"TIMEOUT":                     9,
-		"FAILED_PRECONDITION":         10,
-		"UNAUTHENTICATED":             11,
-		"PERMISSION_DENIED":           12,
-		"APP_DATABASE_NOT_CONFIGURED": 101,
-		"APP_DATABASE_UNAVAILABLE":    102,
-		"LIVE_QUERY_LIMIT_EXCEEDED":   103,
+		"ERROR_REASON_UNSPECIFIED":            0,
+		"RESOURCE_NOT_FOUND":                  1,
+		"RESOURCE_ALREADY_EXISTS":             2,
+		"INVALID_ARGUMENT":                    3,
+		"INTERNAL_ERROR":                      7,
+		"TIMEOUT":                             9,
+		"FAILED_PRECONDITION":                 10,
+		"UNAUTHENTICATED":                     11,
+		"PERMISSION_DENIED":                   12,
+		"APP_DATABASE_NOT_CONFIGURED":         101,
+		"APP_DATABASE_UNAVAILABLE":            102,
+		"LIVE_QUERY_LIMIT_EXCEEDED":           103,
+		"CONNECTION_TEST_RATE_LIMIT_EXCEEDED": 104,
 	}
 )
 
@@ -374,7 +378,7 @@ const file_querylane_console_v1alpha1_errors_proto_rawDesc = "" +
 	"\x0eretry_guidance\x18\a \x01(\x0e28.querylane.console.v1alpha1.PostgreSqlErrorRetryGuidanceR\rretryGuidance\x1a?\n" +
 	"\x11ServerFieldsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xba\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xe3\x02\n" +
 	"\vErrorReason\x12\x1c\n" +
 	"\x18ERROR_REASON_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12RESOURCE_NOT_FOUND\x10\x01\x12\x1b\n" +
@@ -388,7 +392,8 @@ const file_querylane_console_v1alpha1_errors_proto_rawDesc = "" +
 	"\x11PERMISSION_DENIED\x10\f\x12\x1f\n" +
 	"\x1bAPP_DATABASE_NOT_CONFIGURED\x10e\x12\x1c\n" +
 	"\x18APP_DATABASE_UNAVAILABLE\x10f\x12\x1d\n" +
-	"\x19LIVE_QUERY_LIMIT_EXCEEDED\x10g*\xa6\x04\n" +
+	"\x19LIVE_QUERY_LIMIT_EXCEEDED\x10g\x12'\n" +
+	"#CONNECTION_TEST_RATE_LIMIT_EXCEEDED\x10h*\xa6\x04\n" +
 	"\x13PostgreSqlErrorKind\x12%\n" +
 	"!POSTGRESQL_ERROR_KIND_UNSPECIFIED\x10\x00\x12*\n" +
 	"&POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT\x10\x01\x12-\n" +

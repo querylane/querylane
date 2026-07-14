@@ -42,6 +42,9 @@ enum ErrorReason {
 
   // Querylane's live-query admission limit is currently saturated.
   LIVE_QUERY_LIMIT_EXCEEDED = 103;
+
+  // The caller exceeded the managed PostgreSQL connection-test rate.
+  CONNECTION_TEST_RATE_LIMIT_EXCEEDED = 104;
 }
 
 // PostgreSqlErrorKind identifies the transport-neutral PostgreSQL error

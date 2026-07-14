@@ -95,6 +95,10 @@ func (s *RPCSuite) SetupSuite() {
   username: testuser
   password: testpass
   ssl_mode: disable
+instance_targets:
+  allowed_cidrs:
+    - 0.0.0.0/0
+    - ::/0
 `, host, port, metaDBName)
 
 	configDir := t.TempDir()
