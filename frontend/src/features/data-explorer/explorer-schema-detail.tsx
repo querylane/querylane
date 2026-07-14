@@ -479,10 +479,13 @@ function SchemaDetail({
     tables.length === 0 &&
     views.length === 0 &&
     !(tablesError || viewsError);
-  const mapSchemas =
-    schemas.length > 0
-      ? schemas
-      : [{ id: schemaName, name: schemaName, owner }];
+  const mapSchemas = [
+    schemas.find((schema) => schema.name === schemaName) ?? {
+      id: schemaName,
+      name: schemaName,
+      owner,
+    },
+  ];
   const handleSelectTableInSchema =
     onSelectTableInSchema ??
     ((_schemaName: string, name: string) => onSelectTable(name));
