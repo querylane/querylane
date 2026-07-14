@@ -23,7 +23,6 @@ const mocks = vi.hoisted(() => ({
 }));
 
 const SUPERUSERS_FILTER_OPTION_NAME = /Superusers 1/;
-const BUILT_IN_FILTER_OPTION_NAME = /Built-in 1/;
 const TYPE_FILTER_BUTTON_NAME = /^Type/;
 
 vi.mock("@tanstack/react-router", () => ({
@@ -242,17 +241,29 @@ describe("InstanceRolesPage", () => {
     });
   });
 
-  test("shows built-in roles in the redesigned access map by default", async () => {
+  test("hides built-in roles until they are enabled from the map view", async () => {
     const user = userEvent.setup();
 
     render(<InstanceRolesPage instanceId="prod" tab="map" />);
 
     const canvas = screen.getByLabelText("Role access map");
+    expect(canvas.textContent).not.toContain("pg_read_all_data");
+    expect(mocks.accessMapRoleNames).not.toContain("pg_read_all_data");
+
+    await user.click(screen.getByRole("button", { name: "View" }));
+    await user.click(screen.getByRole("switch", { name: "Built-in roles" }));
+
     expect(canvas.textContent).toContain("pg_read_all_data");
-    await user.click(screen.getByRole("button", { name: "Type" }));
-    expect(
-      screen.getByRole("option", { name: BUILT_IN_FILTER_OPTION_NAME })
-    ).toBeTruthy();
+    expect(mocks.accessMapRoleNames).toContain("pg_read_all_data");
+  });
+
+  test("shows built-in roles when the type filter explicitly selects them", () => {
+    render(<InstanceRolesPage instanceId="prod" tab="map" type="builtin" />);
+
+    expect(screen.getByLabelText("Role access map").textContent).toContain(
+      "pg_read_all_data"
+    );
+    expect(mocks.accessMapRoleNames).toEqual(["pg_read_all_data"]);
   });
 
   test("keeps partial access data visible with a warning", () => {

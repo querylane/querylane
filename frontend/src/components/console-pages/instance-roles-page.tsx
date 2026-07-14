@@ -50,7 +50,7 @@ type KindFilter = "all" | RoleKind;
 type RolesNavigateSearch = Record<string, unknown> & InstanceRolesSearch;
 
 const DEFAULT_ROLE_MAP_KIND_VISIBILITY = {
-  builtin: true,
+  builtin: false,
   group: true,
   login: true,
   repl: true,
@@ -65,9 +65,15 @@ const ROLE_TYPE_FILTERS: { id: RoleKind; label: string }[] = [
   { id: "builtin", label: "Built-in" },
 ];
 
-function roleMapVisibilityForType(type: RoleKind | undefined) {
+function roleMapVisibilityForType(
+  type: RoleKind | undefined,
+  showBuiltInRoles: boolean
+) {
   if (type === undefined) {
-    return DEFAULT_ROLE_MAP_KIND_VISIBILITY;
+    return {
+      ...DEFAULT_ROLE_MAP_KIND_VISIBILITY,
+      builtin: showBuiltInRoles,
+    };
   }
   return {
     builtin: type === "builtin",
@@ -189,6 +195,7 @@ export function InstanceRolesPage({
   const [roleSelectedNodeId, setRoleSelectedNodeId] = useState<string | null>(
     null
   );
+  const [showBuiltInRoles, setShowBuiltInRoles] = useState(false);
   const navigate = useNavigate({ from: "/instances/$instanceId/roles/" });
   const [optimisticTab, setOptimisticTab] =
     useState<InstanceRolesTab>("details");
@@ -221,8 +228,12 @@ export function InstanceRolesPage({
     type === undefined
       ? roles
       : roles.filter((_, index) => kinds[index] === type);
+  const roleMapVisibility = roleMapVisibilityForType(type, showBuiltInRoles);
+  const accessMapRoles = roles.filter(
+    (role) => roleMapVisibility[deriveRoleKind(role)]
+  );
   const accessMapResourcesQuery = useRolesAccessMapResourcesQuery(
-    { instanceId, roles: kindFiltered },
+    { instanceId, roles: accessMapRoles },
     { enabled: activeTab === "map" && roles.length > 0 }
   );
   const accessMapIsPartial = accessMapResultIsPartial(
@@ -233,8 +244,13 @@ export function InstanceRolesPage({
     roleAccess: accessMapResourcesQuery.data?.roleAccess ?? [],
     roles,
     search: filter,
-    visibleKinds: roleMapVisibilityForType(type),
+    visibleKinds: roleMapVisibility,
   });
+
+  function handleBuiltInRolesVisibilityChange(visible: boolean) {
+    setShowBuiltInRoles(visible);
+    setRoleSelectedNodeId(null);
+  }
 
   function handleRolesTabChange(next: string) {
     if (!isInstanceRolesTab(next)) {
@@ -321,14 +337,17 @@ export function InstanceRolesPage({
       />
       <RolesAccessMapNotice kind="partial" visible={accessMapIsPartial} />
       <RolesAccessMapCanvas
+        builtInRoleCount={type === undefined ? counts.builtin : 0}
         failedRequestCount={
           accessMapResourcesQuery.data?.failedRequestCount ?? 0
         }
         isLoading={accessMapResourcesQuery.isPending}
         model={roleMapModel}
         onSelectNode={setRoleSelectedNodeId}
+        onShowBuiltInRolesChange={handleBuiltInRolesVisibilityChange}
         partial={accessMapIsPartial}
         selectedNodeId={roleSelectedNodeId}
+        showBuiltInRoles={roleMapVisibility.builtin}
       />
     </div>
   );

@@ -8,7 +8,7 @@ import {
   Plus,
   SlidersHorizontal,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type {
   RolesAccessMapEdge,
   RolesAccessMapEdgeTone,
@@ -181,9 +181,8 @@ function edgeIsActive({
   selectedNodeId: string | null;
 }): boolean {
   return (
-    selectedNodeId === null ||
-    edge.source === selectedNodeId ||
-    edge.target === selectedNodeId
+    selectedNodeId !== null &&
+    (edge.source === selectedNodeId || edge.target === selectedNodeId)
   );
 }
 
@@ -285,12 +284,19 @@ function EmptyObjects({ incomplete }: { incomplete: boolean }) {
 }
 
 function AccessFiltersPopover({
+  builtInRoleCount,
   edgeVisibility,
+  onShowBuiltInRolesChange,
   onToggle,
+  showBuiltInRoles,
 }: {
+  builtInRoleCount: number;
   edgeVisibility: Record<RolesAccessMapEdgeTone, boolean>;
+  onShowBuiltInRolesChange: (visible: boolean) => void;
   onToggle: (tone: RolesAccessMapEdgeTone, visible: boolean) => void;
+  showBuiltInRoles: boolean;
 }) {
+  const builtInRolesSwitchId = useId();
   return (
     <Popover>
       <PopoverTrigger
@@ -306,6 +312,25 @@ function AccessFiltersPopover({
           <PopoverTitle>Access filters</PopoverTitle>
         </PopoverHeader>
         <div className="grid gap-2">
+          {builtInRoleCount > 0 ? (
+            <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg p-2 hover:bg-muted">
+              <div className="min-w-0">
+                <Label className="text-xs" htmlFor={builtInRolesSwitchId}>
+                  Built-in roles
+                </Label>
+                <p className="truncate text-[11px] text-muted-foreground">
+                  Show {builtInRoleCount} PostgreSQL-provided role
+                  {builtInRoleCount === 1 ? "" : "s"}.
+                </p>
+              </div>
+              <Switch
+                checked={showBuiltInRoles}
+                id={builtInRolesSwitchId}
+                onCheckedChange={onShowBuiltInRolesChange}
+                size="sm"
+              />
+            </div>
+          ) : null}
           {EDGE_FILTERS.map((filter) => {
             const switchId = `role-access-map-${filter.tone}`;
             return (
@@ -346,19 +371,25 @@ function AccessFiltersPopover({
 }
 
 function RolesAccessMapCanvas({
+  builtInRoleCount,
   failedRequestCount,
   isLoading,
   model,
+  onShowBuiltInRolesChange,
   onSelectNode,
   partial,
   selectedNodeId,
+  showBuiltInRoles,
 }: {
+  builtInRoleCount: number;
   failedRequestCount: number;
   isLoading: boolean;
   model: RolesAccessMapModel;
+  onShowBuiltInRolesChange: (visible: boolean) => void;
   onSelectNode: (nodeId: string | null) => void;
   partial: boolean;
   selectedNodeId: string | null;
+  showBuiltInRoles: boolean;
 }) {
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -427,8 +458,11 @@ function RolesAccessMapCanvas({
     >
       <div className="flex flex-wrap items-center gap-3">
         <AccessFiltersPopover
+          builtInRoleCount={builtInRoleCount}
           edgeVisibility={edgeVisibility}
+          onShowBuiltInRolesChange={onShowBuiltInRolesChange}
           onToggle={toggleEdgeTone}
+          showBuiltInRoles={showBuiltInRoles}
         />
         <div className="flex-1" />
         <fieldset className="flex items-center rounded-lg border bg-background p-0.5 shadow-sm">
