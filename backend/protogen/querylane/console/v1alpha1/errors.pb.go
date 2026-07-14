@@ -112,6 +112,146 @@ func (ErrorReason) EnumDescriptor() ([]byte, []int) {
 	return file_querylane_console_v1alpha1_errors_proto_rawDescGZIP(), []int{0}
 }
 
+// PostgreSqlErrorKind identifies the transport-neutral PostgreSQL error
+// category selected by the backend.
+type PostgreSqlErrorKind int32
+
+const (
+	// The backend did not provide a recognized PostgreSQL error category.
+	PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_UNSPECIFIED         PostgreSqlErrorKind = 0
+	PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT    PostgreSqlErrorKind = 1
+	PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_FAILED_PRECONDITION PostgreSqlErrorKind = 2
+	PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_NOT_FOUND           PostgreSqlErrorKind = 3
+	PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_ALREADY_EXISTS      PostgreSqlErrorKind = 4
+	PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_PERMISSION_DENIED   PostgreSqlErrorKind = 5
+	PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_UNAUTHENTICATED     PostgreSqlErrorKind = 6
+	PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_ABORTED             PostgreSqlErrorKind = 7
+	PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_TIMEOUT             PostgreSqlErrorKind = 8
+	PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_UNAVAILABLE         PostgreSqlErrorKind = 9
+	PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_RESOURCE_EXHAUSTED  PostgreSqlErrorKind = 10
+	PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_UNIMPLEMENTED       PostgreSqlErrorKind = 11
+	PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_INTERNAL            PostgreSqlErrorKind = 12
+)
+
+// Enum value maps for PostgreSqlErrorKind.
+var (
+	PostgreSqlErrorKind_name = map[int32]string{
+		0:  "POSTGRESQL_ERROR_KIND_UNSPECIFIED",
+		1:  "POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT",
+		2:  "POSTGRESQL_ERROR_KIND_FAILED_PRECONDITION",
+		3:  "POSTGRESQL_ERROR_KIND_NOT_FOUND",
+		4:  "POSTGRESQL_ERROR_KIND_ALREADY_EXISTS",
+		5:  "POSTGRESQL_ERROR_KIND_PERMISSION_DENIED",
+		6:  "POSTGRESQL_ERROR_KIND_UNAUTHENTICATED",
+		7:  "POSTGRESQL_ERROR_KIND_ABORTED",
+		8:  "POSTGRESQL_ERROR_KIND_TIMEOUT",
+		9:  "POSTGRESQL_ERROR_KIND_UNAVAILABLE",
+		10: "POSTGRESQL_ERROR_KIND_RESOURCE_EXHAUSTED",
+		11: "POSTGRESQL_ERROR_KIND_UNIMPLEMENTED",
+		12: "POSTGRESQL_ERROR_KIND_INTERNAL",
+	}
+	PostgreSqlErrorKind_value = map[string]int32{
+		"POSTGRESQL_ERROR_KIND_UNSPECIFIED":         0,
+		"POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT":    1,
+		"POSTGRESQL_ERROR_KIND_FAILED_PRECONDITION": 2,
+		"POSTGRESQL_ERROR_KIND_NOT_FOUND":           3,
+		"POSTGRESQL_ERROR_KIND_ALREADY_EXISTS":      4,
+		"POSTGRESQL_ERROR_KIND_PERMISSION_DENIED":   5,
+		"POSTGRESQL_ERROR_KIND_UNAUTHENTICATED":     6,
+		"POSTGRESQL_ERROR_KIND_ABORTED":             7,
+		"POSTGRESQL_ERROR_KIND_TIMEOUT":             8,
+		"POSTGRESQL_ERROR_KIND_UNAVAILABLE":         9,
+		"POSTGRESQL_ERROR_KIND_RESOURCE_EXHAUSTED":  10,
+		"POSTGRESQL_ERROR_KIND_UNIMPLEMENTED":       11,
+		"POSTGRESQL_ERROR_KIND_INTERNAL":            12,
+	}
+)
+
+func (x PostgreSqlErrorKind) Enum() *PostgreSqlErrorKind {
+	p := new(PostgreSqlErrorKind)
+	*p = x
+	return p
+}
+
+func (x PostgreSqlErrorKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PostgreSqlErrorKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_querylane_console_v1alpha1_errors_proto_enumTypes[1].Descriptor()
+}
+
+func (PostgreSqlErrorKind) Type() protoreflect.EnumType {
+	return &file_querylane_console_v1alpha1_errors_proto_enumTypes[1]
+}
+
+func (x PostgreSqlErrorKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PostgreSqlErrorKind.Descriptor instead.
+func (PostgreSqlErrorKind) EnumDescriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_errors_proto_rawDescGZIP(), []int{1}
+}
+
+// PostgreSqlErrorRetryGuidance tells clients when a manual retry may be useful.
+// It is advisory and never requests an automatic retry.
+type PostgreSqlErrorRetryGuidance int32
+
+const (
+	// The backend did not provide retry guidance.
+	PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED PostgreSqlErrorRetryGuidance = 0
+	// Retry only after correcting the request or PostgreSQL state.
+	PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION PostgreSqlErrorRetryGuidance = 1
+	// The same request may be retried immediately.
+	PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_IMMEDIATELY PostgreSqlErrorRetryGuidance = 2
+	// Retry later, after the transient condition may have cleared.
+	PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER PostgreSqlErrorRetryGuidance = 3
+)
+
+// Enum value maps for PostgreSqlErrorRetryGuidance.
+var (
+	PostgreSqlErrorRetryGuidance_name = map[int32]string{
+		0: "POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED",
+		1: "POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION",
+		2: "POSTGRESQL_ERROR_RETRY_GUIDANCE_IMMEDIATELY",
+		3: "POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER",
+	}
+	PostgreSqlErrorRetryGuidance_value = map[string]int32{
+		"POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED":      0,
+		"POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION": 1,
+		"POSTGRESQL_ERROR_RETRY_GUIDANCE_IMMEDIATELY":      2,
+		"POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER":            3,
+	}
+)
+
+func (x PostgreSqlErrorRetryGuidance) Enum() *PostgreSqlErrorRetryGuidance {
+	p := new(PostgreSqlErrorRetryGuidance)
+	*p = x
+	return p
+}
+
+func (x PostgreSqlErrorRetryGuidance) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PostgreSqlErrorRetryGuidance) Descriptor() protoreflect.EnumDescriptor {
+	return file_querylane_console_v1alpha1_errors_proto_enumTypes[2].Descriptor()
+}
+
+func (PostgreSqlErrorRetryGuidance) Type() protoreflect.EnumType {
+	return &file_querylane_console_v1alpha1_errors_proto_enumTypes[2]
+}
+
+func (x PostgreSqlErrorRetryGuidance) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PostgreSqlErrorRetryGuidance.Descriptor instead.
+func (PostgreSqlErrorRetryGuidance) EnumDescriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_errors_proto_rawDescGZIP(), []int{2}
+}
+
 // PostgreSqlErrorDetail carries PostgreSQL SQLSTATE metadata for Connect error
 // clients. For user-managed instances, server_fields can contain bounded,
 // untrusted message, detail, hint, severity, position, schema_name, table_name,
@@ -131,7 +271,11 @@ type PostgreSqlErrorDetail struct {
 	// The backend operation that was running when PostgreSQL returned the error.
 	Operation string `protobuf:"bytes,4,opt,name=operation,proto3" json:"operation,omitempty"`
 	// Bounded server fields approved for the current database trust boundary.
-	ServerFields  map[string]string `protobuf:"bytes,5,rep,name=server_fields,json=serverFields,proto3" json:"server_fields,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ServerFields map[string]string `protobuf:"bytes,5,rep,name=server_fields,json=serverFields,proto3" json:"server_fields,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// The backend-owned PostgreSQL error category.
+	Kind PostgreSqlErrorKind `protobuf:"varint,6,opt,name=kind,proto3,enum=querylane.console.v1alpha1.PostgreSqlErrorKind" json:"kind,omitempty"`
+	// Advisory guidance for a user-initiated retry.
+	RetryGuidance PostgreSqlErrorRetryGuidance `protobuf:"varint,7,opt,name=retry_guidance,json=retryGuidance,proto3,enum=querylane.console.v1alpha1.PostgreSqlErrorRetryGuidance" json:"retry_guidance,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -201,17 +345,33 @@ func (x *PostgreSqlErrorDetail) GetServerFields() map[string]string {
 	return nil
 }
 
+func (x *PostgreSqlErrorDetail) GetKind() PostgreSqlErrorKind {
+	if x != nil {
+		return x.Kind
+	}
+	return PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_UNSPECIFIED
+}
+
+func (x *PostgreSqlErrorDetail) GetRetryGuidance() PostgreSqlErrorRetryGuidance {
+	if x != nil {
+		return x.RetryGuidance
+	}
+	return PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED
+}
+
 var File_querylane_console_v1alpha1_errors_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_errors_proto_rawDesc = "" +
 	"\n" +
-	"'querylane/console/v1alpha1/errors.proto\x12\x1aquerylane.console.v1alpha1\"\xca\x02\n" +
+	"'querylane/console/v1alpha1/errors.proto\x12\x1aquerylane.console.v1alpha1\"\xf0\x03\n" +
 	"\x15PostgreSqlErrorDetail\x12\x1a\n" +
 	"\bsqlstate\x18\x01 \x01(\tR\bsqlstate\x12%\n" +
 	"\x0esqlstate_class\x18\x02 \x01(\tR\rsqlstateClass\x12%\n" +
 	"\x0econdition_name\x18\x03 \x01(\tR\rconditionName\x12\x1c\n" +
 	"\toperation\x18\x04 \x01(\tR\toperation\x12h\n" +
-	"\rserver_fields\x18\x05 \x03(\v2C.querylane.console.v1alpha1.PostgreSqlErrorDetail.ServerFieldsEntryR\fserverFields\x1a?\n" +
+	"\rserver_fields\x18\x05 \x03(\v2C.querylane.console.v1alpha1.PostgreSqlErrorDetail.ServerFieldsEntryR\fserverFields\x12C\n" +
+	"\x04kind\x18\x06 \x01(\x0e2/.querylane.console.v1alpha1.PostgreSqlErrorKindR\x04kind\x12_\n" +
+	"\x0eretry_guidance\x18\a \x01(\x0e28.querylane.console.v1alpha1.PostgreSqlErrorRetryGuidanceR\rretryGuidance\x1a?\n" +
 	"\x11ServerFieldsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xba\x02\n" +
@@ -228,7 +388,27 @@ const file_querylane_console_v1alpha1_errors_proto_rawDesc = "" +
 	"\x11PERMISSION_DENIED\x10\f\x12\x1f\n" +
 	"\x1bAPP_DATABASE_NOT_CONFIGURED\x10e\x12\x1c\n" +
 	"\x18APP_DATABASE_UNAVAILABLE\x10f\x12\x1d\n" +
-	"\x19LIVE_QUERY_LIMIT_EXCEEDED\x10gB\x93\x02\n" +
+	"\x19LIVE_QUERY_LIMIT_EXCEEDED\x10g*\xa6\x04\n" +
+	"\x13PostgreSqlErrorKind\x12%\n" +
+	"!POSTGRESQL_ERROR_KIND_UNSPECIFIED\x10\x00\x12*\n" +
+	"&POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT\x10\x01\x12-\n" +
+	")POSTGRESQL_ERROR_KIND_FAILED_PRECONDITION\x10\x02\x12#\n" +
+	"\x1fPOSTGRESQL_ERROR_KIND_NOT_FOUND\x10\x03\x12(\n" +
+	"$POSTGRESQL_ERROR_KIND_ALREADY_EXISTS\x10\x04\x12+\n" +
+	"'POSTGRESQL_ERROR_KIND_PERMISSION_DENIED\x10\x05\x12)\n" +
+	"%POSTGRESQL_ERROR_KIND_UNAUTHENTICATED\x10\x06\x12!\n" +
+	"\x1dPOSTGRESQL_ERROR_KIND_ABORTED\x10\a\x12!\n" +
+	"\x1dPOSTGRESQL_ERROR_KIND_TIMEOUT\x10\b\x12%\n" +
+	"!POSTGRESQL_ERROR_KIND_UNAVAILABLE\x10\t\x12,\n" +
+	"(POSTGRESQL_ERROR_KIND_RESOURCE_EXHAUSTED\x10\n" +
+	"\x12'\n" +
+	"#POSTGRESQL_ERROR_KIND_UNIMPLEMENTED\x10\v\x12\"\n" +
+	"\x1ePOSTGRESQL_ERROR_KIND_INTERNAL\x10\f*\xe1\x01\n" +
+	"\x1cPostgreSqlErrorRetryGuidance\x12/\n" +
+	"+POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED\x10\x00\x124\n" +
+	"0POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION\x10\x01\x12/\n" +
+	"+POSTGRESQL_ERROR_RETRY_GUIDANCE_IMMEDIATELY\x10\x02\x12)\n" +
+	"%POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER\x10\x03B\x93\x02\n" +
 	"\x1ecom.querylane.console.v1alpha1B\vErrorsProtoP\x01ZZgithub.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1;consolev1alpha1\xa2\x02\x03QCX\xaa\x02\x1aQuerylane.Console.V1alpha1\xca\x02\x1aQuerylane\\Console\\V1alpha1\xe2\x02&Querylane\\Console\\V1alpha1\\GPBMetadata\xea\x02\x1cQuerylane::Console::V1alpha1b\x06proto3"
 
 var (
@@ -243,20 +423,24 @@ func file_querylane_console_v1alpha1_errors_proto_rawDescGZIP() []byte {
 	return file_querylane_console_v1alpha1_errors_proto_rawDescData
 }
 
-var file_querylane_console_v1alpha1_errors_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_querylane_console_v1alpha1_errors_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_querylane_console_v1alpha1_errors_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_querylane_console_v1alpha1_errors_proto_goTypes = []any{
-	(ErrorReason)(0),              // 0: querylane.console.v1alpha1.ErrorReason
-	(*PostgreSqlErrorDetail)(nil), // 1: querylane.console.v1alpha1.PostgreSqlErrorDetail
-	nil,                           // 2: querylane.console.v1alpha1.PostgreSqlErrorDetail.ServerFieldsEntry
+	(ErrorReason)(0),                  // 0: querylane.console.v1alpha1.ErrorReason
+	(PostgreSqlErrorKind)(0),          // 1: querylane.console.v1alpha1.PostgreSqlErrorKind
+	(PostgreSqlErrorRetryGuidance)(0), // 2: querylane.console.v1alpha1.PostgreSqlErrorRetryGuidance
+	(*PostgreSqlErrorDetail)(nil),     // 3: querylane.console.v1alpha1.PostgreSqlErrorDetail
+	nil,                               // 4: querylane.console.v1alpha1.PostgreSqlErrorDetail.ServerFieldsEntry
 }
 var file_querylane_console_v1alpha1_errors_proto_depIdxs = []int32{
-	2, // 0: querylane.console.v1alpha1.PostgreSqlErrorDetail.server_fields:type_name -> querylane.console.v1alpha1.PostgreSqlErrorDetail.ServerFieldsEntry
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	4, // 0: querylane.console.v1alpha1.PostgreSqlErrorDetail.server_fields:type_name -> querylane.console.v1alpha1.PostgreSqlErrorDetail.ServerFieldsEntry
+	1, // 1: querylane.console.v1alpha1.PostgreSqlErrorDetail.kind:type_name -> querylane.console.v1alpha1.PostgreSqlErrorKind
+	2, // 2: querylane.console.v1alpha1.PostgreSqlErrorDetail.retry_guidance:type_name -> querylane.console.v1alpha1.PostgreSqlErrorRetryGuidance
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_errors_proto_init() }
@@ -269,7 +453,7 @@ func file_querylane_console_v1alpha1_errors_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_querylane_console_v1alpha1_errors_proto_rawDesc), len(file_querylane_console_v1alpha1_errors_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      3,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,

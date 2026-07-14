@@ -67,6 +67,10 @@ func (m *PostgreSqlErrorDetail) validate(all bool) error {
 
 	// no validation rules for ServerFields
 
+	// no validation rules for Kind
+
+	// no validation rules for RetryGuidance
+
 	if len(errors) > 0 {
 		return PostgreSqlErrorDetailMultiError(errors)
 	}

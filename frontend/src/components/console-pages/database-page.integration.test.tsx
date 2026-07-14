@@ -29,7 +29,11 @@ import {
   type TableCacheHitInsight,
   TableCacheHitInsightSchema,
 } from "@/protogen/querylane/console/v1alpha1/database_pb";
-import { PostgreSqlErrorDetailSchema } from "@/protogen/querylane/console/v1alpha1/errors_pb";
+import {
+  PostgreSqlErrorDetailSchema,
+  PostgreSqlErrorKind,
+  PostgreSqlErrorRetryGuidance,
+} from "@/protogen/querylane/console/v1alpha1/errors_pb";
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 interface QueryState<T> {
@@ -170,7 +174,10 @@ function createCatalogPostgresError() {
         PostgreSqlErrorDetailSchema,
         createProto(PostgreSqlErrorDetailSchema, {
           conditionName: "invalid_password",
+          kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNAUTHENTICATED,
           operation: "list_views",
+          retryGuidance:
+            PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
           serverFields: { severity: "ERROR" },
           sqlstate: "28P01",
           sqlstateClass: "28",

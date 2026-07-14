@@ -3,12 +3,6 @@ import { toast } from "sonner";
 
 import { captureException, logger } from "@/lib/diagnostics";
 import { normalizeConnectErrorState } from "@/lib/ui-error-connect";
-import { buildReproduction } from "@/lib/ui-error-reproduction";
-import {
-  buildTechnicalDetailsObject,
-  buildTechnicalDetailsText,
-  resolveUnderlyingCause,
-} from "@/lib/ui-error-sections";
 import type {
   AppErrorSource,
   AppUiError,
@@ -17,137 +11,52 @@ import type {
   BlockingErrorReason,
   ReportAppUiErrorDependencies,
 } from "@/lib/ui-error-types";
+import {
+  PostgreSqlErrorKind,
+  PostgreSqlErrorRetryGuidance,
+} from "@/protogen/querylane/console/v1alpha1/errors_pb";
 
 const APP_UI_ERROR_CONTEXT = Symbol.for("querylane.app-ui-error-context");
 const APP_UI_ERROR_REPORTED = Symbol.for("querylane.app-ui-error-reported");
-const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
-const POSTGRES_WIRE_MESSAGE_PATTERN =
-  /^PostgreSQL(?: ([0-9A-Z]{5}))?(?::| error(?:$|\s))/;
-type PostgresUiErrorKind =
-  | "authentication_failed"
-  | "constraint_violation"
-  | "failed_precondition"
-  | "generic"
-  | "internal"
-  | "invalid"
-  | "not_found"
-  | "permission_denied"
-  | "resource_exhausted"
-  | "retryable"
-  | "timeout"
-  | "unsupported"
-  | "unavailable";
 
-const POSTGRES_TITLES: Record<PostgresUiErrorKind, string> = {
-  authentication_failed: "PostgreSQL authentication failed",
-  constraint_violation: "PostgreSQL constraint violation",
-  failed_precondition: "PostgreSQL precondition failed",
-  generic: "PostgreSQL error",
-  internal: "PostgreSQL internal error",
-  invalid: "PostgreSQL request rejected",
-  not_found: "PostgreSQL resource not found",
-  permission_denied: "PostgreSQL permission denied",
-  resource_exhausted: "PostgreSQL resources exhausted",
-  retryable: "PostgreSQL transaction needs retry",
-  timeout: "PostgreSQL query timed out",
-  unavailable: "PostgreSQL unavailable",
-  unsupported: "PostgreSQL feature not supported",
-};
+const POSTGRES_TITLES = {
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED]: "PostgreSQL error",
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT]:
+    "PostgreSQL request rejected",
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_FAILED_PRECONDITION]:
+    "PostgreSQL precondition failed",
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_NOT_FOUND]:
+    "PostgreSQL resource not found",
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_ALREADY_EXISTS]:
+    "PostgreSQL resource already exists",
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED]:
+    "PostgreSQL permission denied",
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNAUTHENTICATED]:
+    "PostgreSQL authentication failed",
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_ABORTED]:
+    "PostgreSQL transaction conflict",
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_TIMEOUT]:
+    "PostgreSQL query timed out",
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNAVAILABLE]:
+    "PostgreSQL unavailable",
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_RESOURCE_EXHAUSTED]:
+    "PostgreSQL resource limit reached",
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNIMPLEMENTED]:
+    "PostgreSQL feature not supported",
+  [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_INTERNAL]:
+    "PostgreSQL internal error",
+} satisfies Record<PostgreSqlErrorKind, string>;
 
-const POSTGRES_RETRY_GUIDANCE: Record<PostgresUiErrorKind, string> = {
-  authentication_failed:
-    "Retry after checking the database credentials or authentication configuration.",
-  constraint_violation: "Fix the constraint violation before retrying.",
-  failed_precondition:
-    "Fix the PostgreSQL state or request precondition before retrying.",
-  generic: "Retry after checking the PostgreSQL condition.",
-  internal: "Retry later. If it continues, share the technical details.",
-  invalid: "Fix the SQL or request fields before retrying.",
-  not_found: "Refresh metadata or choose an existing PostgreSQL resource.",
-  permission_denied: "Retry after checking the role or grants.",
-  resource_exhausted:
-    "Retry after reducing load or increasing PostgreSQL resources.",
-  retryable:
-    "Retry the request. PostgreSQL canceled this attempt to protect consistency.",
-  timeout: "Retry after the query finishes or reduce the work requested.",
-  unavailable: "Retry after the PostgreSQL server is available.",
-  unsupported:
-    "Use a PostgreSQL-supported feature or adjust the request before retrying.",
-};
-
-const POSTGRES_TIMEOUT_SQLSTATES = new Set(["25P04", "57014"]);
-const POSTGRES_NOT_FOUND_SQLSTATES = new Set(["3D000", "3F000"]);
-const POSTGRES_AMBIGUOUS_NOT_FOUND_SQLSTATES = new Set(["42703", "42P01"]);
-const POSTGRES_NOT_FOUND_CONDITIONS = new Set([
-  "invalid_catalog_name",
-  "invalid_schema_name",
-]);
-const POSTGRES_AMBIGUOUS_NOT_FOUND_CONDITIONS = new Set([
-  "undefined_column",
-  "undefined_table",
-]);
-const POSTGRES_RESOURCE_EXHAUSTED_CLASSES = new Set(["53", "54"]);
-const POSTGRES_RESOURCE_EXHAUSTED_CONDITIONS = new Set([
-  "insufficient_resources",
-  "program_limit_exceeded",
-  "too_many_connections",
-]);
-const POSTGRES_AUTHENTICATION_CONDITIONS = new Set([
-  "invalid_authorization_specification",
-  "invalid_password",
-]);
-const POSTGRES_RETRYABLE_CONDITIONS = new Set([
-  "deadlock_detected",
-  "lock_not_available",
-  "serialization_failure",
-  "transaction_rollback",
-]);
-const POSTGRES_UNAVAILABLE_CONDITIONS = new Set([
-  "cannot_connect_now",
-  "connection_exception",
-  "connection_failure",
-  "fdw_error",
-  "foreign_data_wrapper_error",
-  "operator_intervention",
-]);
-const POSTGRES_CONSTRAINT_CONDITIONS = new Set([
-  "check_violation",
-  "exclusion_violation",
-  "foreign_key_violation",
-  "integrity_constraint_violation",
-  "not_null_violation",
-  "restrict_violation",
-  "unique_violation",
-]);
-const POSTGRES_FAILED_PRECONDITION_CONDITIONS = new Set([
-  "invalid_transaction_state",
-  "object_not_in_prerequisite_state",
-  "plpgsql_error",
-  "read_only_sql_transaction",
-]);
-const POSTGRES_INVALID_CONDITIONS = new Set([
-  "ambiguous_column",
-  "cardinality_violation",
-  "data_exception",
-  "datatype_mismatch",
-  "division_by_zero",
-  "duplicate_alias",
-  "indeterminate_datatype",
-  "invalid_argument_for_xquery",
-  "invalid_text_representation",
-  "syntax_error",
-  "syntax_error_or_access_rule_violation",
-  "undefined_function",
-  "undefined_parameter",
-]);
-const POSTGRES_INTERNAL_CONDITIONS = new Set([
-  "internal_error",
-  "system_error",
-]);
-const POSTGRES_FAILED_PRECONDITION_CLASSES = new Set(["25", "55", "P0"]);
-const POSTGRES_INVALID_CLASSES = new Set(["21", "22", "42"]);
-const POSTGRES_INTERNAL_CLASSES = new Set(["58", "XX"]);
-const POSTGRES_UNAVAILABLE_CLASSES = new Set(["08", "57", "HV"]);
+const POSTGRES_RETRY_GUIDANCE = {
+  [PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED]:
+    null,
+  [PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION]:
+    "Correct the issue before retrying.",
+  [PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_IMMEDIATELY]:
+    "Retry the request.",
+  [PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER]:
+    "Retry later.",
+} satisfies Record<PostgreSqlErrorRetryGuidance, string | null>;
 
 const defaultReportAppUiErrorDependencies: ReportAppUiErrorDependencies = {
   captureException,
@@ -155,18 +64,16 @@ const defaultReportAppUiErrorDependencies: ReportAppUiErrorDependencies = {
   toast,
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
   return typeof value === "object" && value !== null;
 }
 
 function readAttachedContext(error: unknown): AppUiErrorContext {
-  if (!(typeof error === "object" && error !== null)) {
+  if (!isRecord(error)) {
     return {};
   }
 
-  const attached = (error as Record<PropertyKey, unknown>)[
-    APP_UI_ERROR_CONTEXT
-  ];
+  const attached = error[APP_UI_ERROR_CONTEXT];
   return isRecord(attached) ? (attached as AppUiErrorContext) : {};
 }
 
@@ -174,15 +81,28 @@ function attachAppUiErrorContext(
   error: unknown,
   context: AppUiErrorContext
 ): void {
-  if (!(typeof error === "object" && error !== null)) {
+  if (!isRecord(error)) {
     return;
   }
 
-  const existing = readAttachedContext(error);
-  (error as Record<PropertyKey, unknown>)[APP_UI_ERROR_CONTEXT] = {
-    ...existing,
+  error[APP_UI_ERROR_CONTEXT] = {
+    ...readAttachedContext(error),
     ...context,
   };
+}
+
+function isAppDatabaseUnavailableReason(reason: string | null): boolean {
+  return (
+    reason === "APP_DATABASE_UNAVAILABLE" ||
+    reason === "ERROR_REASON_APP_DATABASE_UNAVAILABLE"
+  );
+}
+
+function isLiveQueryLimitReason(reason: string | null): boolean {
+  return (
+    reason === "LIVE_QUERY_LIMIT_EXCEEDED" ||
+    reason === "ERROR_REASON_LIVE_QUERY_LIMIT_EXCEEDED"
+  );
 }
 
 function classifyBlockingReason({
@@ -222,221 +142,54 @@ function classifyBlockingReason({
   return null;
 }
 
-function isAppDatabaseUnavailableReason(reason: string | null): boolean {
-  return (
-    reason === "APP_DATABASE_UNAVAILABLE" ||
-    reason === "ERROR_REASON_APP_DATABASE_UNAVAILABLE"
-  );
-}
-
-function isLiveQueryLimitReason(reason: string | null): boolean {
-  return (
-    reason === "LIVE_QUERY_LIMIT_EXCEEDED" ||
-    reason === "ERROR_REASON_LIVE_QUERY_LIMIT_EXCEEDED"
-  );
-}
-
 function buildTitle({
   blockingReason,
   code,
-  postgresKind,
+  postgres,
   reason,
 }: {
   blockingReason: BlockingErrorReason | null;
   code: Code | null;
-  postgresKind: PostgresUiErrorKind | null;
+  postgres: AppUiErrorPostgres | null;
   reason: string | null;
 }): string {
   if (blockingReason === "setup_required") {
     return "Setup required";
   }
-
   if (blockingReason === "unauthenticated") {
     return "Authentication required";
   }
-
   if (blockingReason === "permission_denied") {
     return "Access denied";
   }
-
   if (isAppDatabaseUnavailableReason(reason)) {
     return "Meta database unavailable";
   }
-
   if (isLiveQueryLimitReason(reason)) {
     return "Query limit reached";
   }
-
-  if (postgresKind) {
-    return POSTGRES_TITLES[postgresKind];
+  if (postgres) {
+    return POSTGRES_TITLES[postgres.kind] ?? "PostgreSQL error";
   }
-
   if (code === Code.DeadlineExceeded) {
     return "Request timed out";
   }
-
   if (code === Code.Unavailable) {
     return "Can't reach the server";
   }
-
   if (code === Code.InvalidArgument) {
     return "Request rejected";
   }
-
   if (code === Code.NotFound) {
     return "Resource not found";
   }
-
   if (code === Code.Internal || code === Code.Unknown) {
     return "Unexpected error";
   }
-
   return "Request failed";
 }
 
-interface PostgresClassifierInput {
-  code: Code | null;
-  conditionName: string | null;
-  reason: string | null;
-  sqlstate: string | null;
-  sqlstateClass: string | null;
-}
-
-interface PostgresClassifier {
-  kind: PostgresUiErrorKind;
-  matches: (input: PostgresClassifierInput) => boolean;
-}
-
-function hasSetValue(values: ReadonlySet<string>, value: string | null) {
-  return value !== null && values.has(value);
-}
-
-function isPostgresTimeout(input: PostgresClassifierInput): boolean {
-  return (
-    input.code === Code.DeadlineExceeded ||
-    input.reason === "TIMEOUT" ||
-    input.reason === "ERROR_REASON_TIMEOUT" ||
-    hasSetValue(POSTGRES_TIMEOUT_SQLSTATES, input.sqlstate) ||
-    input.conditionName === "query_canceled" ||
-    input.conditionName === "transaction_timeout"
-  );
-}
-
-function isPostgresUnavailable(input: PostgresClassifierInput): boolean {
-  return (
-    input.code === Code.Unavailable ||
-    hasSetValue(POSTGRES_UNAVAILABLE_CLASSES, input.sqlstateClass) ||
-    hasSetValue(POSTGRES_UNAVAILABLE_CONDITIONS, input.conditionName)
-  );
-}
-
-function isPostgresAuthenticationFailed(
-  input: PostgresClassifierInput
-): boolean {
-  return (
-    input.code === Code.Unauthenticated ||
-    input.sqlstateClass === "28" ||
-    hasSetValue(POSTGRES_AUTHENTICATION_CONDITIONS, input.conditionName)
-  );
-}
-
-function isPostgresRetryable(input: PostgresClassifierInput): boolean {
-  return (
-    input.code === Code.Aborted ||
-    input.sqlstateClass === "40" ||
-    input.sqlstate === "55P03" ||
-    hasSetValue(POSTGRES_RETRYABLE_CONDITIONS, input.conditionName)
-  );
-}
-
-function isPostgresPermissionDenied(input: PostgresClassifierInput): boolean {
-  return (
-    input.code === Code.PermissionDenied ||
-    input.conditionName === "insufficient_privilege"
-  );
-}
-
-function isPostgresResourceExhausted(input: PostgresClassifierInput): boolean {
-  return (
-    input.code === Code.ResourceExhausted ||
-    hasSetValue(POSTGRES_RESOURCE_EXHAUSTED_CLASSES, input.sqlstateClass) ||
-    hasSetValue(POSTGRES_RESOURCE_EXHAUSTED_CONDITIONS, input.conditionName)
-  );
-}
-
-function isPostgresUnsupported(input: PostgresClassifierInput): boolean {
-  return (
-    input.code === Code.Unimplemented ||
-    input.sqlstateClass === "0A" ||
-    input.conditionName === "feature_not_supported"
-  );
-}
-
-function isPostgresNotFound(input: PostgresClassifierInput): boolean {
-  if (input.code === Code.InvalidArgument) {
-    return false;
-  }
-
-  return (
-    input.code === Code.NotFound ||
-    hasSetValue(POSTGRES_NOT_FOUND_SQLSTATES, input.sqlstate) ||
-    hasSetValue(POSTGRES_AMBIGUOUS_NOT_FOUND_SQLSTATES, input.sqlstate) ||
-    hasSetValue(POSTGRES_NOT_FOUND_CONDITIONS, input.conditionName) ||
-    hasSetValue(POSTGRES_AMBIGUOUS_NOT_FOUND_CONDITIONS, input.conditionName)
-  );
-}
-
-function isPostgresConstraintViolation(
-  input: PostgresClassifierInput
-): boolean {
-  return (
-    input.code === Code.AlreadyExists ||
-    input.sqlstateClass === "23" ||
-    hasSetValue(POSTGRES_CONSTRAINT_CONDITIONS, input.conditionName)
-  );
-}
-
-function isPostgresFailedPrecondition(input: PostgresClassifierInput): boolean {
-  return (
-    input.code === Code.FailedPrecondition ||
-    hasSetValue(POSTGRES_FAILED_PRECONDITION_CLASSES, input.sqlstateClass) ||
-    hasSetValue(POSTGRES_FAILED_PRECONDITION_CONDITIONS, input.conditionName)
-  );
-}
-
-function isPostgresInvalid(input: PostgresClassifierInput): boolean {
-  return (
-    input.code === Code.InvalidArgument ||
-    hasSetValue(POSTGRES_INVALID_CLASSES, input.sqlstateClass) ||
-    hasSetValue(POSTGRES_INVALID_CONDITIONS, input.conditionName)
-  );
-}
-
-function isPostgresInternal(input: PostgresClassifierInput): boolean {
-  return (
-    input.code === Code.Internal ||
-    input.code === Code.Unknown ||
-    hasSetValue(POSTGRES_INTERNAL_CLASSES, input.sqlstateClass) ||
-    hasSetValue(POSTGRES_INTERNAL_CONDITIONS, input.conditionName)
-  );
-}
-
-const POSTGRES_CLASSIFIERS: PostgresClassifier[] = [
-  { kind: "timeout", matches: isPostgresTimeout },
-  { kind: "unavailable", matches: isPostgresUnavailable },
-  { kind: "authentication_failed", matches: isPostgresAuthenticationFailed },
-  { kind: "retryable", matches: isPostgresRetryable },
-  { kind: "permission_denied", matches: isPostgresPermissionDenied },
-  { kind: "resource_exhausted", matches: isPostgresResourceExhausted },
-  { kind: "unsupported", matches: isPostgresUnsupported },
-  { kind: "not_found", matches: isPostgresNotFound },
-  { kind: "constraint_violation", matches: isPostgresConstraintViolation },
-  { kind: "failed_precondition", matches: isPostgresFailedPrecondition },
-  { kind: "invalid", matches: isPostgresInvalid },
-  { kind: "internal", matches: isPostgresInternal },
-];
-
-function classifyPostgresUiError({
+function buildRetryGuidance({
   code,
   postgres,
   reason,
@@ -444,70 +197,81 @@ function classifyPostgresUiError({
   code: Code | null;
   postgres: AppUiErrorPostgres | null;
   reason: string | null;
-}): PostgresUiErrorKind | null {
-  if (!postgres) {
-    return null;
-  }
-
-  const input = {
-    code,
-    conditionName: postgres.conditionName,
-    reason,
-    sqlstate: postgres.sqlstate,
-    sqlstateClass: postgres.sqlstateClass,
-  };
-
-  for (const classifier of POSTGRES_CLASSIFIERS) {
-    if (classifier.matches(input)) {
-      return classifier.kind;
-    }
-  }
-
-  return "generic";
-}
-
-function buildRetryGuidance({
-  code,
-  postgresKind,
-  reason,
-}: {
-  code: Code | null;
-  postgresKind: PostgresUiErrorKind | null;
-  reason: string | null;
 }): string | null {
   if (isAppDatabaseUnavailableReason(reason)) {
     return "Retry after the meta database is available.";
   }
-
   if (isLiveQueryLimitReason(reason)) {
     return "Another query or export is using the available capacity. Try again when it finishes.";
   }
-
-  if (postgresKind) {
-    return POSTGRES_RETRY_GUIDANCE[postgresKind];
+  if (postgres) {
+    return POSTGRES_RETRY_GUIDANCE[postgres.retryGuidance] ?? null;
   }
-
   if (code === Code.DeadlineExceeded || code === Code.Unavailable) {
     return "The database instance may still be starting. Retry in a moment.";
   }
-
   return null;
+}
+
+function buildSummary(postgres: AppUiErrorPostgres | null, message: string) {
+  if (!postgres) {
+    return message;
+  }
+
+  const condition = postgres.conditionName;
+  if (condition && postgres.operation) {
+    return `PostgreSQL ${condition} during ${postgres.operation}`;
+  }
+  if (condition) {
+    return `PostgreSQL ${condition}`;
+  }
+  return "PostgreSQL error";
 }
 
 function isManualRetryableError(source: AppErrorSource): boolean {
   return !["mutation", "runtime", "unknown"].includes(source);
 }
 
+function buildTechnicalDetails(error: {
+  codeLabel: string | null;
+  connectDomain: string | null;
+  connectReason: string | null;
+  context: AppUiErrorContext;
+  details: AppUiError["details"];
+  message: string;
+  metadata: Record<string, string[]>;
+  postgres: AppUiErrorPostgres | null;
+  source: AppErrorSource;
+  stack: string | null;
+  title: string;
+}) {
+  return JSON.stringify(
+    {
+      code: error.codeLabel,
+      connect: {
+        domain: error.connectDomain,
+        reason: error.connectReason,
+      },
+      context: error.context,
+      details: error.details,
+      message: error.message,
+      metadata: error.metadata,
+      postgres: error.postgres,
+      source: error.source,
+      stack: error.stack,
+      title: error.title,
+    },
+    null,
+    2
+  );
+}
+
 function normalizeAppUiError(
   error: unknown,
   context?: AppUiErrorContext
 ): AppUiError {
-  const attachedContext = readAttachedContext(error);
-  const baseContext = {
-    ...attachedContext,
-    ...context,
-  };
-  const source = baseContext.source ?? "unknown";
+  const mergedContext = { ...readAttachedContext(error), ...context };
+  const source = mergedContext.source ?? "unknown";
   const connectError = error instanceof ConnectError ? error : null;
   const rawMessage =
     connectError?.rawMessage ??
@@ -523,65 +287,24 @@ function normalizeAppUiError(
     metadata,
     postgres,
     reason,
-    response,
   } = normalizeConnectErrorState(connectError, rawMessage);
-  const mergedContext = response
-    ? {
-        ...baseContext,
-        response,
-      }
-    : baseContext;
   const blockingReason = classifyBlockingReason({ code, postgres, reason });
-  const manualRetryable = isManualRetryableError(source);
-  const postgresKind = classifyPostgresUiError({
-    code,
-    postgres,
-    reason,
-  });
-  const title = buildTitle({ blockingReason, code, postgresKind, reason });
-  const retryGuidance = buildRetryGuidance({
-    code,
-    postgresKind,
-    reason,
-  });
+  const title = buildTitle({ blockingReason, code, postgres, reason });
+  const retryGuidance = buildRetryGuidance({ code, postgres, reason });
+  const summary = buildSummary(postgres, message);
   const stack = error instanceof Error ? (error.stack ?? null) : null;
-  const underlyingCause = resolveUnderlyingCause(error);
-  const technicalDetailsInput = {
-    blockingReason,
+  const technicalDetails = buildTechnicalDetails({
     codeLabel,
     connectDomain: domain,
     connectReason: reason,
     context: mergedContext,
     details,
-    manualRetryable,
     message,
     metadata,
     postgres,
-    rawMessage,
-    retryGuidance,
     source,
     stack,
     title,
-    underlyingCause,
-  };
-  const technicalDetailsObject = buildTechnicalDetailsObject(
-    technicalDetailsInput
-  );
-  const technicalDetails = JSON.stringify(technicalDetailsObject, null, 2);
-  const technicalDetailsText = buildTechnicalDetailsText({
-    codeLabel,
-    connectDomain: domain,
-    connectReason: reason,
-    context: mergedContext,
-    details,
-    message,
-    metadata,
-    postgres,
-    rawMessage,
-    retryGuidance,
-    source,
-    stack,
-    underlyingCause,
   });
 
   return {
@@ -592,47 +315,32 @@ function normalizeAppUiError(
     connectReason: reason,
     context: mergedContext,
     details,
-    manualRetryable,
+    manualRetryable: isManualRetryableError(source),
     message,
     metadata,
     originalError: error,
     postgres,
     rawMessage,
-    reproduction: buildReproduction({
-      hasConnectError: connectError !== null,
-      message,
-      request: mergedContext.request,
-      source,
-      technicalDetails,
-      technicalDetailsText,
-      title,
-    }),
     retryGuidance,
     source,
     stack,
+    summary,
     technicalDetails,
-    technicalDetailsObject,
-    technicalDetailsText,
     title,
   };
 }
 
 function isAppDatabaseUnavailableError(error: unknown): boolean {
-  // DbProvider calls this on every render; skip building a fully normalized
-  // error object when there is no error to inspect.
   if (error === null || error === undefined) {
     return false;
   }
 
-  const { connectReason } = normalizeAppUiError(error, {
-    area: "query",
-    source: "query",
-    surface: "silent",
-  });
-
-  return (
-    connectReason === "APP_DATABASE_UNAVAILABLE" ||
-    connectReason === "ERROR_REASON_APP_DATABASE_UNAVAILABLE"
+  return isAppDatabaseUnavailableReason(
+    normalizeAppUiError(error, {
+      area: "query",
+      source: "query",
+      surface: "silent",
+    }).connectReason
   );
 }
 
@@ -640,116 +348,26 @@ function isExpectedAppUiError(error: AppUiError): boolean {
   return (
     error.code === Code.Canceled ||
     error.blockingReason === "setup_required" ||
-    (typeof error.originalError === "object" &&
-      error.originalError !== null &&
-      Reflect.get(error.originalError, "name") === "AbortError")
+    (isRecord(error.originalError) &&
+      error.originalError["name"] === "AbortError")
   );
 }
 
 function shouldReportAppUiError(error: AppUiError, expected: boolean): boolean {
-  const { originalError } = error;
-  if (!(typeof originalError === "object" && originalError !== null)) {
+  if (!isRecord(error.originalError)) {
     return !(expected || isExpectedAppUiError(error));
   }
 
-  const errorRecord = originalError as Record<PropertyKey, unknown>;
-
   if (expected || isExpectedAppUiError(error)) {
-    errorRecord[APP_UI_ERROR_REPORTED] = true;
+    error.originalError[APP_UI_ERROR_REPORTED] = true;
+    return false;
+  }
+  if (error.originalError[APP_UI_ERROR_REPORTED] === true) {
     return false;
   }
 
-  if (errorRecord[APP_UI_ERROR_REPORTED] === true) {
-    return false;
-  }
-
-  errorRecord[APP_UI_ERROR_REPORTED] = true;
+  error.originalError[APP_UI_ERROR_REPORTED] = true;
   return true;
-}
-
-function buildPostgresTelemetrySummary(
-  error: AppUiError,
-  matchesPostgresWireMessage: boolean
-): Record<string, unknown> | null {
-  const hasPostgresDetail = error.details.some(
-    (detail) => detail.type === POSTGRES_DETAIL_TYPE
-  );
-  if (!(error.postgres || hasPostgresDetail || matchesPostgresWireMessage)) {
-    return null;
-  }
-
-  return {
-    blockingReason: error.blockingReason,
-    code: error.codeLabel,
-    connect: {
-      domain: error.connectDomain,
-      reason: error.connectReason,
-    },
-    detailsCount: error.details.length,
-    postgres: error.postgres,
-    source: error.source,
-    title: error.title,
-  };
-}
-
-function postgresWireSqlstate(message: string): string | null | undefined {
-  const match = POSTGRES_WIRE_MESSAGE_PATTERN.exec(message);
-  if (!match) {
-    return;
-  }
-
-  return match[1] ?? null;
-}
-
-function postgresTelemetryMessage(
-  error: AppUiError,
-  wireSqlstate: string | null | undefined
-): string {
-  const sqlstate = error.postgres?.sqlstate ?? wireSqlstate;
-  const condition = error.postgres?.conditionName;
-
-  if (sqlstate && condition) {
-    return `PostgreSQL ${sqlstate} ${condition}`;
-  }
-
-  if (sqlstate) {
-    return `PostgreSQL ${sqlstate}`;
-  }
-
-  return "PostgreSQL error";
-}
-
-function buildAppUiErrorTelemetry(error: AppUiError) {
-  const wireSqlstate = postgresWireSqlstate(error.message);
-  const postgresSummary = buildPostgresTelemetrySummary(
-    error,
-    wireSqlstate !== undefined
-  );
-  if (postgresSummary) {
-    const dump = JSON.stringify(postgresSummary);
-    const message = postgresTelemetryMessage(error, wireSqlstate);
-
-    return {
-      captureTarget: new Error(message),
-      dump,
-      loggerDetails: postgresSummary,
-      message,
-      transcript: dump,
-    };
-  }
-
-  const captureTarget =
-    error.originalError instanceof Error
-      ? error.originalError
-      : new Error(error.message);
-
-  return {
-    captureTarget,
-    dump: error.technicalDetails,
-    loggerDetails: error.technicalDetailsObject,
-    message: error.message,
-    transcript: error.technicalDetailsText,
-  };
 }
 
 function reportAppUiError(
@@ -764,39 +382,56 @@ function reportAppUiError(
     return;
   }
 
-  const telemetry = buildAppUiErrorTelemetry(error);
+  const postgresTags = {
+    postgres_sqlstate: error.postgres?.sqlstate ?? "none",
+    postgres_sqlstate_class: error.postgres?.sqlstateClass ?? "none",
+  };
+  const safePostgresContext = error.postgres
+    ? {
+        conditionName: error.postgres.conditionName,
+        kind: error.postgres.kind,
+        operation: error.postgres.operation,
+        retryGuidance: error.postgres.retryGuidance,
+        sqlstate: error.postgres.sqlstate,
+        sqlstateClass: error.postgres.sqlstateClass,
+      }
+    : null;
+  let captureTarget: Error;
+  if (error.postgres) {
+    captureTarget = new Error(error.title);
+  } else if (error.originalError instanceof Error) {
+    captureTarget = error.originalError;
+  } else {
+    captureTarget = new Error(error.message);
+  }
+  const reportMessage = error.postgres ? error.title : error.message;
 
-  dependencies.captureException(telemetry.captureTarget, {
+  dependencies.captureException(captureTarget, {
     extras: {
       app_ui_error_details_count: error.details.length,
-      app_ui_error_dump: telemetry.dump,
-      app_ui_error_request_host: error.context.request?.host ?? null,
-      app_ui_error_rpc_path: error.context.request?.rpcPath ?? null,
-      app_ui_error_transcript: telemetry.transcript,
+      app_ui_error_postgres: safePostgresContext,
     },
     tags: {
       area: error.context.area ?? error.source,
       blocking_reason: error.blockingReason ?? "none",
       connect_code: error.codeLabel ?? "none",
       connect_reason: error.connectReason ?? "none",
-      postgres_sqlstate: error.postgres?.sqlstate ?? "none",
-      postgres_sqlstate_class: error.postgres?.sqlstateClass ?? "none",
       source: error.source,
+      ...postgresTags,
       ...(context?.tags ?? {}),
     },
   });
 
-  dependencies.logger.error(telemetry.message, {
-    appUiError: telemetry.loggerDetails,
-    appUiErrorTranscript: telemetry.transcript,
-    postgresSqlstate: error.postgres?.sqlstate ?? null,
-    postgresSqlstateClass: error.postgres?.sqlstateClass ?? null,
+  dependencies.logger.error(reportMessage, {
+    code: error.codeLabel,
+    postgres: safePostgresContext,
+    reason: error.connectReason,
+    source: error.source,
+    title: error.title,
   });
 
   if (error.context.surface === "toast") {
-    dependencies.toast.error(error.title, {
-      description: error.message,
-    });
+    dependencies.toast.error(error.title, { description: error.summary });
   }
 }
 
@@ -806,14 +441,12 @@ function getBlockingRoutePath(
   if (blockingReason === "setup_required") {
     return "/setup";
   }
-
   if (
     blockingReason === "permission_denied" ||
     blockingReason === "unauthenticated"
   ) {
     return "/access-denied";
   }
-
   return null;
 }
 

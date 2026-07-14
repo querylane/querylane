@@ -457,5 +457,11 @@ func TestMapRepoErrRedactsMetaDatabasePostgresFields(t *testing.T) {
 	assert.NotContains(t, info.Metadata, "constraint_name")
 
 	detail := requirePostgresErrorDetail(t, connectErr)
+	assert.Equal(t, consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_ALREADY_EXISTS, detail.Kind)
+	assert.Equal(
+		t,
+		consolev1alpha1.PostgreSqlErrorRetryGuidance_POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+		detail.RetryGuidance,
+	)
 	assert.Empty(t, detail.ServerFields)
 }

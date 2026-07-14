@@ -23,13 +23,11 @@ function createAppUiError(
     originalError: new Error("failed"),
     postgres: null,
     rawMessage: "failed",
-    reproduction: null,
     retryGuidance: null,
     source: "connect",
     stack: null,
+    summary: "failed",
     technicalDetails: "{}",
-    technicalDetailsObject: {},
-    technicalDetailsText: "failed",
     title: "Request failed",
   };
 }

@@ -1,22 +1,10 @@
 "use client";
 
-import {
-  AlertTriangle,
-  ChevronDown,
-  Copy,
-  Download,
-  SearchCode,
-  Terminal,
-} from "lucide-react";
-import { lazy, Suspense, useEffect, useId, useState } from "react";
+import { AlertTriangle, Copy, SearchCode } from "lucide-react";
+import { useState } from "react";
 import { RetryActionButton } from "@/components/retry-action-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -25,20 +13,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
 
 type AppErrorViewVariant = "inline" | "page";
-const COPY_RESET_DELAY_MS = 1500;
-const REPRODUCTION_HELPER_TEXT =
-  "Reproduction actions require a captured API request.";
-const TECHNICAL_DETAILS_REGION_LABEL = "Technical details";
+type CopyFeedback = "error" | "idle" | "success";
 
-const AppErrorTechnicalDetails = lazy(() =>
-  import("@/components/app-error-technical-details").then((module) => ({
-    default: module.AppErrorTechnicalDetails,
-  }))
-);
+const COPY_FEEDBACK_MESSAGES: Record<CopyFeedback, string> = {
+  error: "Couldn't copy details",
+  idle: "",
+  success: "Details copied",
+};
 
 interface AppErrorViewProps {
   actions?: React.ReactNode | undefined;
@@ -49,130 +35,54 @@ interface AppErrorViewProps {
   retryLabel?: string | undefined;
   variant?: AppErrorViewVariant | undefined;
 }
-function getErrorSummaryMessage(error: AppUiError): string {
-  if (!error.postgres) {
-    return error.message;
-  }
 
-  const condition = error.postgres.conditionName ?? "postgresql_error";
-  return error.postgres.operation
-    ? `PostgreSQL ${condition} during ${error.postgres.operation}`
-    : `PostgreSQL ${condition}`;
-}
-function useTransientFeedbackState() {
-  const [active, setActive] = useState(false);
-
-  useEffect(
-    function resetTransientFeedbackAfterDelay() {
-      if (!active) {
-        return;
-      }
-      const timeout = window.setTimeout(() => {
-        setActive(false);
-      }, COPY_RESET_DELAY_MS);
-      return () => {
-        window.clearTimeout(timeout);
-      };
-    },
-    [active]
-  );
-  return [active, () => setActive(true)] as const;
-}
-async function copyText(value: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-function downloadJsonFile(filename: string, payload: unknown): boolean {
-  if (typeof document === "undefined" || typeof URL === "undefined") {
-    return false;
-  }
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.download = filename;
-  anchor.href = url;
-  anchor.click();
-  URL.revokeObjectURL(url);
-  return true;
-}
 function CopyErrorDetailsButton({ error }: { error: AppUiError }) {
-  const [copied, markCopied] = useTransientFeedbackState();
+  const [feedback, setFeedback] = useState<CopyFeedback>("idle");
+
   return (
-    <Button
-      onClick={async () => {
-        if (await copyText(error.technicalDetailsText)) {
-          markCopied();
-        }
-      }}
-      size="sm"
-      variant="outline"
-    >
-      <Copy className="size-4" />
-      {copied ? "Copied" : "Copy details"}
-    </Button>
+    <div className="flex items-center gap-2">
+      <Button
+        onClick={async () => {
+          setFeedback("idle");
+          try {
+            if (!navigator.clipboard) {
+              throw new Error("Clipboard unavailable");
+            }
+            await navigator.clipboard.writeText(error.technicalDetails);
+            setFeedback("success");
+          } catch {
+            setFeedback("error");
+          }
+        }}
+        size="sm"
+        variant="outline"
+      >
+        <Copy className="size-4" />
+        Copy details
+      </Button>
+      <p
+        aria-live="polite"
+        className="text-muted-foreground text-xs"
+        role="status"
+      >
+        {COPY_FEEDBACK_MESSAGES[feedback]}
+      </p>
+    </div>
   );
 }
-function CopyAsCurlButton({ error }: { error: AppUiError }) {
-  const [copied, markCopied] = useTransientFeedbackState();
-  return (
-    <Button
-      disabled={!error.reproduction}
-      onClick={async () => {
-        if (!error.reproduction) {
-          return;
-        }
-        if (await copyText(error.reproduction.curlCommand)) {
-          markCopied();
-        }
-      }}
-      size="sm"
-      variant="outline"
-    >
-      <Terminal className="size-4" />
-      {copied ? "Copied" : "Copy as cURL"}
-    </Button>
-  );
-}
-function DownloadReproductionButton({ error }: { error: AppUiError }) {
-  const [downloaded, markDownloaded] = useTransientFeedbackState();
-  return (
-    <Button
-      disabled={!error.reproduction}
-      onClick={() => {
-        if (
-          error.reproduction &&
-          downloadJsonFile(
-            error.reproduction.downloadFilename,
-            error.reproduction.downloadPayload
-          )
-        ) {
-          markDownloaded();
-        }
-      }}
-      size="sm"
-      variant="outline"
-    >
-      <Download className="size-4" />
-      {downloaded ? "Downloaded" : "Download"}
-    </Button>
-  );
-}
+
 function ErrorBadge({ label, value }: { label: string; value: string | null }) {
   if (!value) {
     return null;
   }
+
   return (
     <div className="rounded-full border border-border px-3 py-1 font-mono text-[11px] text-muted-foreground">
       {label}: {value}
     </div>
   );
 }
+
 function ErrorBadgeList({
   error,
   retryAvailable,
@@ -205,49 +115,7 @@ function ErrorBadgeList({
     </div>
   );
 }
-function TechnicalDetailsSection({ error }: { error: AppUiError }) {
-  const technicalDetailsId = useId();
-  const [technicalDetailsExpanded, setTechnicalDetailsExpanded] =
-    useState(true);
-  return (
-    <div className="rounded-lg border border-border bg-muted/20 p-3">
-      <Collapsible
-        onOpenChange={setTechnicalDetailsExpanded}
-        open={technicalDetailsExpanded}
-      >
-        <CollapsibleTrigger
-          aria-controls={technicalDetailsId}
-          className={cn(
-            "group/technical-details-trigger flex w-full items-center justify-between gap-3 rounded-md text-left outline-none transition-all hover:underline focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          )}
-        >
-          <span className="font-medium text-sm">
-            {TECHNICAL_DETAILS_REGION_LABEL}
-          </span>
-          <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-aria-expanded/technical-details-trigger:rotate-180" />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2">
-          <section
-            aria-label={TECHNICAL_DETAILS_REGION_LABEL}
-            id={technicalDetailsId}
-          >
-            {technicalDetailsExpanded ? (
-              <Suspense
-                fallback={
-                  <div className="text-muted-foreground text-sm">
-                    Loading technical details…
-                  </div>
-                }
-              >
-                <AppErrorTechnicalDetails error={error} />
-              </Suspense>
-            ) : null}
-          </section>
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
-  );
-}
+
 function ErrorDetailsDialog({
   error,
   retryAvailable,
@@ -282,24 +150,24 @@ function ErrorDetailsDialog({
         </DialogHeader>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           <ErrorBadgeList error={error} retryAvailable={retryAvailable} />
+          <CopyErrorDetailsButton error={error} key={error.technicalDetails} />
           <div className="space-y-2">
-            <div className="flex flex-wrap gap-2">
-              <CopyErrorDetailsButton error={error} />
-              <CopyAsCurlButton error={error} />
-              <DownloadReproductionButton error={error} />
-            </div>
-            {error.reproduction ? null : (
-              <p className="text-muted-foreground text-xs">
-                {REPRODUCTION_HELPER_TEXT}
-              </p>
-            )}
+            <h3 className="font-medium text-sm">Technical details</h3>
+            <Textarea
+              aria-label="Technical details JSON"
+              className="h-96 max-h-96 resize-none whitespace-pre bg-muted/40 font-mono text-muted-foreground text-xs"
+              readOnly={true}
+              spellCheck={false}
+              value={error.technicalDetails}
+              wrap="off"
+            />
           </div>
-          <TechnicalDetailsSection error={error} key={error.technicalDetails} />
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
 function AppPageError({
   actions,
   className,
@@ -308,8 +176,6 @@ function AppPageError({
   onRetry,
   retryLabel,
 }: Omit<AppErrorViewProps, "variant"> & { retryLabel: string }) {
-  const summaryMessage = getErrorSummaryMessage(error);
-
   return (
     <div
       className={cn("flex items-center justify-center p-4", containerClassName)}
@@ -326,7 +192,7 @@ function AppPageError({
             <h2 className="font-semibold text-lg tracking-tight">
               {error.title}
             </h2>
-            <p className="text-muted-foreground text-sm">{summaryMessage}</p>
+            <p className="text-muted-foreground text-sm">{error.summary}</p>
             {error.retryGuidance ? (
               <p className="text-sm">{error.retryGuidance}</p>
             ) : null}
@@ -347,6 +213,7 @@ function AppPageError({
     </div>
   );
 }
+
 function AppCompactError({
   actions,
   className,
@@ -355,8 +222,6 @@ function AppCompactError({
   onRetry,
   retryLabel,
 }: Omit<AppErrorViewProps, "variant"> & { retryLabel: string }) {
-  const summaryMessage = getErrorSummaryMessage(error);
-
   return (
     <div className={cn("w-full", containerClassName)}>
       <div
@@ -371,7 +236,7 @@ function AppCompactError({
           <div className="min-w-0 flex-1 space-y-1">
             <p className="font-medium text-sm leading-snug">{error.title}</p>
             <p className="line-clamp-3 break-words text-muted-foreground text-xs">
-              {summaryMessage}
+              {error.summary}
             </p>
             {error.retryGuidance ? (
               <p className="text-xs">{error.retryGuidance}</p>
@@ -399,6 +264,7 @@ function AppCompactError({
     </div>
   );
 }
+
 export function AppErrorView({
   variant = "inline",
   retryLabel = "Retry",
@@ -409,6 +275,7 @@ export function AppErrorView({
   }
   return <AppCompactError {...props} retryLabel={retryLabel} />;
 }
+
 export function AppInlineError(props: Omit<AppErrorViewProps, "variant">) {
   return <AppErrorView {...props} variant="inline" />;
 }

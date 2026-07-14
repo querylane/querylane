@@ -976,15 +976,7 @@ test("console page error keeps recovery actions and diagnostics scannable", asyn
     new Error("connection refused while loading instance metadata"),
     {
       area: "console.instance",
-      request: {
-        host: "api.querylane.local",
-        plaintext: false,
-        requestJson: null,
-        requestJsonNote: null,
-        requestMethod: "POST",
-        rpcPath: "/querylane.console.v1alpha1.InstanceService/GetInstance",
-        url: "https://api.querylane.local/querylane.console.v1alpha1.InstanceService/GetInstance",
-      },
+      endpoint: "/querylane.console.v1alpha1.InstanceService/GetInstance",
       source: "query",
       surface: "route",
     }
@@ -1019,8 +1011,11 @@ test("console page error keeps recovery actions and diagnostics scannable", asyn
   await page.getByRole("button", { name: "Error details" }).click();
   await expect.element(page.getByText("Technical details")).toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: "Copy as cURL" }))
+    .element(page.getByRole("button", { name: "Copy details" }))
     .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Copy as cURL" }))
+    .not.toBeInTheDocument();
 });
 
 test("console role detail overview shows access sources and attributes", async () => {

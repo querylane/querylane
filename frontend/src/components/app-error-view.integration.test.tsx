@@ -1,15 +1,21 @@
+import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AppErrorView } from "@/components/app-error-view";
 import { Button } from "@/components/ui/button";
 import { normalizeAppUiError } from "@/lib/ui-error";
+import {
+  PostgreSqlErrorDetailSchema,
+  PostgreSqlErrorKind,
+  PostgreSqlErrorRetryGuidance,
+} from "@/protogen/querylane/console/v1alpha1/errors_pb";
 
 const BOOTSTRAP_RPC_PATH =
   "/querylane.console.v1alpha1.OnboardingService/Bootstrap";
-const BOOTSTRAP_URL = `http://localhost:8080${BOOTSTRAP_RPC_PATH}`;
+const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
 
 function createBootError() {
   return normalizeAppUiError(
@@ -17,16 +23,6 @@ function createBootError() {
     {
       area: "boot-gate",
       endpoint: BOOTSTRAP_RPC_PATH,
-      request: {
-        headers: { "connect-protocol-version": ["1"] },
-        host: "localhost:8080",
-        plaintext: true,
-        requestJson: "{}",
-        requestJsonNote: null,
-        requestMethod: "POST",
-        rpcPath: BOOTSTRAP_RPC_PATH,
-        url: BOOTSTRAP_URL,
-      },
       source: "boot",
       surface: "route",
     }
@@ -40,18 +36,19 @@ function createPostgresPermissionError() {
   );
   error.details = [
     {
-      debug: {
-        domain: "console.querylane.dev",
-        metadata: {
-          condition_name: "insufficient_privilege",
+      type: POSTGRES_DETAIL_TYPE,
+      value: toBinary(
+        PostgreSqlErrorDetailSchema,
+        create(PostgreSqlErrorDetailSchema, {
+          conditionName: "insufficient_privilege",
+          kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
           operation: "read_rows",
+          retryGuidance:
+            PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
           sqlstate: "42501",
-          sqlstate_class: "42",
-        },
-        reason: "PERMISSION_DENIED",
-      },
-      type: "google.rpc.ErrorInfo",
-      value: new Uint8Array([1]),
+          sqlstateClass: "42",
+        })
+      ),
     },
   ];
 
@@ -68,18 +65,19 @@ function createPostgresAuthorizationSpecError() {
   );
   error.details = [
     {
-      debug: {
-        domain: "console.querylane.dev",
-        metadata: {
-          condition_name: "invalid_authorization_specification",
+      type: POSTGRES_DETAIL_TYPE,
+      value: toBinary(
+        PostgreSqlErrorDetailSchema,
+        create(PostgreSqlErrorDetailSchema, {
+          conditionName: "invalid_authorization_specification",
+          kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNAUTHENTICATED,
           operation: "list_views",
+          retryGuidance:
+            PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
           sqlstate: "28000",
-          sqlstate_class: "28",
-        },
-        reason: "INVALID_ARGUMENT",
-      },
-      type: "google.rpc.ErrorInfo",
-      value: new Uint8Array([1]),
+          sqlstateClass: "28",
+        })
+      ),
     },
   ];
 
@@ -140,6 +138,7 @@ describe("app error view integration", () => {
     screen.getByText("Source: boot");
     screen.getByText("Retry available: yes");
     screen.getByText("Technical details");
+    screen.getByRole("textbox", { name: "Technical details JSON" });
   });
 
   it("runs the provided retry action from the integrated retry button", async () => {
@@ -206,10 +205,10 @@ describe("app error view integration", () => {
     );
 
     screen.getByText("PostgreSQL permission denied");
-    screen.getByText("Retry after checking the role or grants.");
+    screen.getByText("Correct the issue before retrying.");
   });
 
-  it("classifies PostgreSQL SQLSTATE class 28 as authentication failure", async () => {
+  it("renders the structured PostgreSQL authentication kind", async () => {
     const user = userEvent.setup();
 
     render(<AppErrorView error={createPostgresAuthorizationSpecError()} />);
@@ -226,72 +225,114 @@ describe("app error view integration", () => {
     screen.getByText("Condition: invalid_authorization_specification");
   });
 
-  it("keeps reproduction actions available when request context is captured", async () => {
+  it("announces successful detail copies", async () => {
     const user = userEvent.setup();
+    const originalClipboard = Object.getOwnPropertyDescriptor(
+      navigator,
+      "clipboard"
+    );
+    let resolveSecondCopy: () => void = () => undefined;
+    const secondCopy = new Promise<void>((resolve) => {
+      resolveSecondCopy = resolve;
+    });
+    const writeText = vi
+      .fn<() => Promise<void>>()
+      .mockResolvedValueOnce()
+      .mockReturnValueOnce(secondCopy);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
 
-    render(<AppErrorView error={createBootError()} />);
+    try {
+      const error = createBootError();
+      render(<AppErrorView error={error} />);
 
-    await openErrorDetailsDialog(user);
+      await openErrorDetailsDialog(user);
+      await user.click(screen.getByRole("button", { name: "Copy details" }));
 
-    expect(
-      (
-        screen.getByRole("button", {
-          name: "Copy details",
-        }) as HTMLButtonElement
-      ).disabled
-    ).toBe(false);
-    expect(
-      (
-        screen.getByRole("button", {
-          name: "Copy as cURL",
-        }) as HTMLButtonElement
-      ).disabled
-    ).toBe(false);
-    expect(
-      (screen.getByRole("button", { name: "Download" }) as HTMLButtonElement)
-        .disabled
-    ).toBe(false);
-    expect(
-      screen.queryByText("Reproduction actions require a captured API request.")
-    ).toBeNull();
+      expect(writeText).toHaveBeenCalledWith(error.technicalDetails);
+      expect(screen.getByRole("status").textContent).toBe("Details copied");
+
+      await user.click(screen.getByRole("button", { name: "Copy details" }));
+
+      expect(screen.getByRole("status").textContent).toBe("");
+
+      resolveSecondCopy();
+      await waitFor(() => {
+        expect(screen.getByRole("status").textContent).toBe("Details copied");
+      });
+      expect(writeText).toHaveBeenCalledTimes(2);
+    } finally {
+      if (originalClipboard) {
+        Object.defineProperty(navigator, "clipboard", originalClipboard);
+      } else {
+        Reflect.deleteProperty(navigator, "clipboard");
+      }
+    }
   });
 
-  it("disables reproduction actions when the captured request cannot be replayed", async () => {
+  it("clears stale copy feedback when the displayed error changes", async () => {
     const user = userEvent.setup();
-    const error = normalizeAppUiError(
-      new ConnectError("plain failure", Code.Unavailable),
-      {
-        area: "boot-gate",
-        request: {
-          headers: { "connect-protocol-version": ["1"] },
-          host: null,
-          plaintext: false,
-          requestJson: null,
-          requestJsonNote: null,
-          requestMethod: null,
-          rpcPath: null,
-          url: null,
-        },
-        source: "boot",
-        surface: "route",
-      }
+    const originalClipboard = Object.getOwnPropertyDescriptor(
+      navigator,
+      "clipboard"
     );
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn(() => Promise.resolve()) },
+    });
 
-    render(<AppErrorView error={error} />);
+    try {
+      const { rerender } = render(<AppErrorView error={createBootError()} />);
 
-    await openErrorDetailsDialog(user);
+      await openErrorDetailsDialog(user);
+      await user.click(screen.getByRole("button", { name: "Copy details" }));
+      expect(screen.getByRole("status").textContent).toBe("Details copied");
 
-    expect(
-      (
-        screen.getByRole("button", {
-          name: "Copy as cURL",
-        }) as HTMLButtonElement
-      ).disabled
-    ).toBe(true);
-    expect(
-      (screen.getByRole("button", { name: "Download" }) as HTMLButtonElement)
-        .disabled
-    ).toBe(true);
-    screen.getByText("Reproduction actions require a captured API request.");
+      const nextError = normalizeAppUiError(
+        new ConnectError("A different request failed", Code.Internal)
+      );
+      rerender(<AppErrorView error={nextError} />);
+
+      expect(screen.getByRole("status").textContent).toBe("");
+    } finally {
+      if (originalClipboard) {
+        Object.defineProperty(navigator, "clipboard", originalClipboard);
+      } else {
+        Reflect.deleteProperty(navigator, "clipboard");
+      }
+    }
+  });
+
+  it("announces failed detail copies", async () => {
+    const user = userEvent.setup();
+    const originalClipboard = Object.getOwnPropertyDescriptor(
+      navigator,
+      "clipboard"
+    );
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: vi.fn(() => Promise.reject(new Error("denied"))),
+      },
+    });
+
+    try {
+      render(<AppErrorView error={createBootError()} />);
+
+      await openErrorDetailsDialog(user);
+      await user.click(screen.getByRole("button", { name: "Copy details" }));
+
+      expect(screen.getByRole("status").textContent).toBe(
+        "Couldn't copy details"
+      );
+    } finally {
+      if (originalClipboard) {
+        Object.defineProperty(navigator, "clipboard", originalClipboard);
+      } else {
+        Reflect.deleteProperty(navigator, "clipboard");
+      }
+    }
   });
 });
