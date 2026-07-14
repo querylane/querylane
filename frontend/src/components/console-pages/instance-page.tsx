@@ -785,6 +785,7 @@ function InstanceOverviewContent({
   databases,
   extensionsInstalledCount,
   instance,
+  instanceId,
   isUnavailable,
   liveData,
   navigateToDatabase,
@@ -796,6 +797,7 @@ function InstanceOverviewContent({
   databases: DatabaseRow[];
   extensionsInstalledCount: number | undefined;
   instance: InstanceRecord;
+  instanceId: string;
   isUnavailable: boolean;
   liveData: OverviewLiveData;
   navigateToDatabase: ReturnType<typeof useDb>["navigateToDatabase"];
@@ -806,7 +808,10 @@ function InstanceOverviewContent({
   return (
     <>
       {connectionStatus === "connected" ? (
-        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+        // Fixed side-column width: the connections card keeps one internal
+        // layout at every two-column viewport instead of shrinking
+        // fractionally; below xl it stacks full-width.
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
           <InstanceMetricsPanel
             connectionsLimit={liveData.connectionsMax}
             isError={liveData.metricsError}
@@ -819,6 +824,7 @@ function InstanceOverviewContent({
           />
           <InstanceConnectionsCard
             activity={liveData.health?.connectionActivity}
+            instanceId={instanceId}
             isPending={liveData.healthPending}
           />
         </div>
@@ -1371,6 +1377,7 @@ function BackendInstancePage({
             ),
             formNotice,
             instance,
+            instanceId,
             isConfigManaged,
             isDeleteDialogOpen,
             isInstanceMutationPending,
@@ -1431,6 +1438,7 @@ function renderLoadedInstancePageContent({
   extensionsInstalledCount,
   formNotice,
   instance,
+  instanceId,
   isConfigManaged,
   isDeleteDialogOpen,
   isInstanceMutationPending,
@@ -1459,6 +1467,7 @@ function renderLoadedInstancePageContent({
   extensionsInstalledCount: number | undefined;
   formNotice: { message: string; variant: "error" | "success" } | null;
   instance: InstanceRecord;
+  instanceId: string;
   isConfigManaged: boolean;
   isDeleteDialogOpen: boolean;
   isInstanceMutationPending: boolean;
@@ -1519,6 +1528,7 @@ function renderLoadedInstancePageContent({
         databases={databases}
         extensionsInstalledCount={extensionsInstalledCount}
         instance={instance}
+        instanceId={instanceId}
         isUnavailable={databasesUnavailable}
         liveData={liveData}
         navigateToDatabase={navigateToDatabase}

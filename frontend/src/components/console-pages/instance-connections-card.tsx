@@ -1,6 +1,14 @@
-import { Lock, Timer, Users } from "lucide-react";
-import { SectionCard } from "@/components/console-pages/console-layout";
+import { Link } from "@tanstack/react-router";
+import { ChevronRight, Lock, Timer, Users } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { formatElapsedDuration } from "@/lib/metrics";
 import { cn } from "@/lib/utils";
 import type {
@@ -10,6 +18,7 @@ import type {
 
 interface InstanceConnectionsCardProps {
   activity: ConnectionActivityHealth | undefined;
+  instanceId: string;
   isPending: boolean;
 }
 
@@ -97,53 +106,59 @@ function SegmentedBar({
   );
 }
 
-function StateLegend({ activity }: { activity: ConnectionActivityHealth }) {
+/**
+ * The hero: a composition bar over the connections that exist right now
+ * (denominator = total), so it is always fully filled. Capacity ("n of
+ * max_connections") is the header stat tile's job — repeating it here left a
+ * nearly empty track at typical single-digit utilization.
+ */
+function CompositionBar({ activity }: { activity: ConnectionActivityHealth }) {
+  const parts = CONNECTION_STATES.map(
+    (state) => `${activity[state.key]} ${state.label.toLowerCase()}`
+  ).join(", ");
+
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-      {CONNECTION_STATES.map((state) => (
-        <span className="flex items-center gap-1.5 text-xs" key={state.key}>
-          <span
-            aria-hidden="true"
-            className={cn("size-2 rounded-[3px]", state.className)}
-          />
-          <span className="text-muted-foreground">{state.label}</span>
-          <span className="font-medium tabular-nums">
-            {activity[state.key]}
-          </span>
-        </span>
-      ))}
+    <div
+      aria-label={`${activity.totalConnections} connections: ${parts}`}
+      role="img"
+    >
+      <SegmentedBar
+        className="h-2.5"
+        counts={activity}
+        denominator={Math.max(activity.totalConnections, 1)}
+      />
     </div>
   );
 }
 
-/**
- * The hero: a meter whose full track is max_connections, filled with the live
- * state composition. The bar itself answers "how close to the limit, and what
- * is the usage made of" with a single denominator.
- */
-function CapacityMeter({ activity }: { activity: ConnectionActivityHealth }) {
-  const denominator = Math.max(
-    activity.maxConnections,
-    activity.totalConnections,
-    1
-  );
-  const free = Math.max(0, activity.maxConnections - activity.totalConnections);
-
+/** Compact legend items; one line at the card's fixed column width. */
+function StateLegend({ activity }: { activity: ConnectionActivityHealth }) {
   return (
-    <div className="space-y-2.5">
-      <SegmentedBar
-        className="h-2.5"
-        counts={activity}
-        denominator={denominator}
-      />
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <StateLegend activity={activity} />
-        {activity.maxConnections > 0 ? (
-          <span className="text-muted-foreground text-xs tabular-nums">
-            {free} free · max {activity.maxConnections}
+    <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1">
+      {CONNECTION_STATES.map((state) => {
+        const count = activity[state.key];
+        return (
+          <span className="flex items-center gap-1.5 text-xs" key={state.key}>
+            <span
+              aria-hidden="true"
+              className={cn(
+                "size-2 rounded-[3px]",
+                state.className,
+                count === 0 && "opacity-40"
+              )}
+            />
+            <span className="text-muted-foreground">{state.label}</span>
+            <span
+              className={cn(
+                "font-medium tabular-nums",
+                count === 0 && "text-muted-foreground/60"
+              )}
+            >
+              {count}
+            </span>
           </span>
-        ) : null}
-      </div>
+        );
+      })}
     </div>
   );
 }
@@ -191,8 +206,8 @@ function collectAlerts(activity: ConnectionActivityHealth): ActivityAlert[] {
 }
 
 /**
- * Lock waits and long-running transactions overlap the state counts above, so
- * they render as standalone signals — loud when present, absent when healthy.
+ * Lock waits and long-running transactions overlap the state counts, so they
+ * render as standalone signals — loud when present, absent when healthy.
  */
 function ActivityAlerts({ activity }: { activity: ConnectionActivityHealth }) {
   const alerts = collectAlerts(activity);
@@ -225,7 +240,7 @@ function ApplicationLabel({ name }: { name: string }) {
   if (name === UNNAMED_APPLICATION) {
     return (
       <span
-        className="w-36 shrink-0 truncate text-muted-foreground text-xs italic"
+        className="w-24 shrink-0 truncate text-muted-foreground text-xs italic"
         title="Clients that don't set application_name"
       >
         no name set
@@ -234,7 +249,7 @@ function ApplicationLabel({ name }: { name: string }) {
   }
 
   return (
-    <span className="w-36 shrink-0 truncate font-mono text-xs" title={name}>
+    <span className="w-24 shrink-0 truncate font-mono text-xs" title={name}>
       {name}
     </span>
   );
@@ -264,81 +279,42 @@ function ApplicationRow({
   );
 }
 
-/**
- * With a single application a ranking bar is a chart with nothing to compare
- * — its one bar is always full width. A sentence carries the same fact
- * honestly, and spells out what an unnamed application means.
- */
-function SingleApplicationSummary({ app }: { app: ApplicationConnections }) {
-  const count = app.totalConnections;
-  const subject =
-    count === 1 ? "The only connection" : `All ${count} connections`;
-  const verb = count === 1 ? "comes" : "come";
-
-  if (app.applicationName === UNNAMED_APPLICATION) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        {subject} {verb} from clients that don't set an application name.
-      </p>
-    );
-  }
-
-  return (
-    <p className="text-muted-foreground text-sm">
-      {subject} {verb} from{" "}
-      <span className="font-mono text-foreground text-xs">
-        {app.applicationName}
-      </span>
-      .
-    </p>
-  );
-}
-
 function ByApplication({ apps }: { apps: ApplicationConnections[] }) {
   const maxTotal = apps.reduce(
     (max, app) => Math.max(max, app.totalConnections),
     0
   );
-  const [onlyApp] = apps;
 
   return (
-    <div className="space-y-3">
+    // mt-auto pins this section to the card's bottom edge, so a stretched
+    // card distributes its sections instead of pooling empty space below.
+    <div className="mt-auto space-y-3">
       <span className="text-muted-foreground text-xs uppercase tracking-wide">
         By application
       </span>
-      {apps.length === 1 && onlyApp ? (
-        <SingleApplicationSummary app={onlyApp} />
-      ) : (
-        <div className="space-y-2">
-          {apps.map((app) => (
-            <ApplicationRow
-              app={app}
-              key={app.applicationName}
-              maxTotal={maxTotal}
-            />
-          ))}
-        </div>
-      )}
+      <div className="space-y-2">
+        {apps.map((app) => (
+          <ApplicationRow
+            app={app}
+            key={app.applicationName}
+            maxTotal={maxTotal}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
-/**
- * Live connection pressure from a pg_stat_activity snapshot
- * (CheckInstanceHealth). One visual language throughout: every bar is
- * connections colored by state, first at instance capacity, then per
- * application. Overlapping signals (lock waits, long transactions) render as
- * alert pills rather than stack segments.
- */
-export function InstanceConnectionsCard({
+function ConnectionsCardBody({
   activity,
   isPending,
-}: InstanceConnectionsCardProps) {
+}: {
+  activity: ConnectionActivityHealth | undefined;
+  isPending: boolean;
+}) {
   if (isPending && !activity) {
     return (
-      <SectionCard title="Connections">
-        <div className="h-40 w-full animate-pulse rounded-lg bg-muted/40" />
-      </SectionCard>
+      <div className="h-full min-h-40 animate-pulse rounded-lg bg-muted/40" />
     );
   }
 
@@ -347,25 +323,63 @@ export function InstanceConnectionsCard({
   // the instance is disconnected.
   if (!activity) {
     return (
-      <SectionCard title="Connections">
-        <EmptyState
-          description="The health check did not return connection activity. Refresh to retry; if it keeps failing, the monitoring role may lack access to pg_stat_activity."
-          icon={Users}
-          title="Connection activity unavailable"
-        />
-      </SectionCard>
+      <EmptyState
+        description="The health check did not return connection activity. Refresh to retry; if it keeps failing, the monitoring role may lack access to pg_stat_activity."
+        icon={Users}
+        title="Connection activity unavailable"
+      />
     );
   }
 
   return (
-    <SectionCard title="Connections">
-      <div className="space-y-5">
-        <CapacityMeter activity={activity} />
-        <ActivityAlerts activity={activity} />
-        {activity.byApplication.length > 0 ? (
-          <ByApplication apps={activity.byApplication} />
-        ) : null}
+    <>
+      <div className="space-y-2.5">
+        <CompositionBar activity={activity} />
+        <StateLegend activity={activity} />
       </div>
-    </SectionCard>
+      <ActivityAlerts activity={activity} />
+      {activity.byApplication.length > 0 ? (
+        <ByApplication apps={activity.byApplication} />
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * Live connection composition from a pg_stat_activity snapshot
+ * (CheckInstanceHealth). One visual language throughout: every bar is the
+ * current connections colored by state, first for the whole instance, then
+ * per application. Capacity vs max_connections lives in the header stat
+ * tile, not here. Overlapping signals (lock waits, long transactions) render
+ * as alert pills rather than stack segments. The header action routes to the
+ * Activity page, where sessions are listed live.
+ */
+export function InstanceConnectionsCard({
+  activity,
+  instanceId,
+  isPending,
+}: InstanceConnectionsCardProps) {
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>Connections</CardTitle>
+        <CardAction className="-my-1.5">
+          <Link
+            className={cn(
+              buttonVariants({ size: "sm", variant: "ghost" }),
+              "text-muted-foreground"
+            )}
+            params={{ instanceId }}
+            to="/instances/$instanceId/activity"
+          >
+            Activity
+            <ChevronRight aria-hidden="true" className="size-3.5" />
+          </Link>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-5">
+        <ConnectionsCardBody activity={activity} isPending={isPending} />
+      </CardContent>
+    </Card>
   );
 }
