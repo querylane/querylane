@@ -63,6 +63,7 @@ interface GridBodyProps {
     args: CellCopyArgs<GridRow>,
     event: ClipboardEvent<HTMLDivElement>
   ) => void;
+  onColumnsReorder: (sourceColumnKey: string, targetColumnKey: string) => void;
   onSelectedCellChange: (args: CellSelectArgs<GridRow>) => void;
   onSelectedRowsChange: (next: ReadonlySet<string>) => void;
   onSortChange: (next: SortColumn[]) => void;
@@ -77,6 +78,7 @@ function GridBody({
   isLoading,
   onCellContextMenu,
   onCellCopy,
+  onColumnsReorder,
   onSelectedCellChange,
   onSelectedRowsChange,
   onSortChange,
@@ -104,6 +106,7 @@ function GridBody({
       headerRowHeight={36}
       onCellContextMenu={onCellContextMenu}
       onCellCopy={onCellCopy}
+      onColumnsReorder={onColumnsReorder}
       onSelectedCellChange={onSelectedCellChange}
       onSelectedRowsChange={onSelectedRowsChange}
       onSortColumnsChange={onSortChange}

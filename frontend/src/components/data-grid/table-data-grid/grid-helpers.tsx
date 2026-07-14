@@ -17,10 +17,12 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 interface BuildColumnArgs {
+  canHide: boolean;
   column: TableResultColumn;
   foreignKeyReferences?: readonly TableForeignKeyReference[] | undefined;
   isFrozen: boolean;
   onCopyName: () => void;
+  onHide: () => void;
   onSortAsc: () => void;
   onSortDesc: () => void;
   onToggleFreeze: () => void;
@@ -34,10 +36,12 @@ interface BuildColumnArgs {
 const MIN_COLUMN_WIDTH = 140;
 
 function buildColumn({
+  canHide,
   column,
   foreignKeyReferences = [],
   isFrozen,
   onCopyName,
+  onHide,
   onSortAsc,
   onSortDesc,
   onToggleFreeze,
@@ -55,6 +59,7 @@ function buildColumn({
   );
   return {
     cellClass: "",
+    draggable: true,
     frozen: isFrozen,
     key: columnKey,
     minWidth: MIN_COLUMN_WIDTH,
@@ -93,10 +98,12 @@ function buildColumn({
     },
     renderHeaderCell: () => (
       <ColumnHeader
+        canHide={canHide}
         column={column}
         isFrozen={isFrozen}
         isPrimaryKey={isPrimaryKey}
         onCopyName={onCopyName}
+        onHide={onHide}
         onSortAsc={onSortAsc}
         onSortDesc={onSortDesc}
         onToggleFreeze={onToggleFreeze}

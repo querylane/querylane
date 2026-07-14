@@ -51,6 +51,7 @@ import { GridStatusBar } from "@/components/data-grid/table-data-grid/grid-statu
 import { GridSurface } from "@/components/data-grid/table-data-grid/grid-surface";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { RecordDetailDrawer } from "@/components/data-grid/table-data-grid/record-detail-drawer";
+import { useTableColumnLayout } from "@/components/data-grid/table-data-grid/use-table-column-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -668,11 +669,14 @@ function TableDataGridAlerts({
 }
 
 interface TableDataGridChromeProps {
+  columnOrder: readonly string[];
   columns: Column<GridRow>[];
   filterLogic: TableFilterLogic;
   filterRules: TableFilterRule[];
   filterTitle: string;
+  hiddenColumnKeys: ReadonlySet<string>;
   invalidFilterRules: Array<{ id: string; message: string }>;
+  isColumnLayoutCustomized: boolean;
   lastFetchedLabel: string;
   onCellContextMenu: (
     args: CellMouseArgs<GridRow>,
@@ -684,6 +688,10 @@ interface TableDataGridChromeProps {
   ) => void;
   onClearFilters: () => void;
   onClearSelection: () => void;
+  onColumnLayoutReset: () => void;
+  onColumnOrderChange: (columnOrder: string[]) => void;
+  onColumnsReorder: (sourceColumnKey: string, targetColumnKey: string) => void;
+  onColumnVisibilityChange: (columnKey: string, visible: boolean) => void;
   onCopySelection: (format: ExportFormat) => void;
   onExportRows: (format: ExportFormat) => void;
   onExportSelection: (format: ExportFormat) => void;
@@ -720,16 +728,23 @@ interface TableDataGridChromeProps {
 }
 
 function TableDataGridChrome({
+  columnOrder,
   columns,
   filterLogic,
   filterRules,
   filterTitle,
   invalidFilterRules,
+  hiddenColumnKeys,
+  isColumnLayoutCustomized,
   lastFetchedLabel,
   onCellContextMenu,
   onCellCopy,
   onClearFilters,
   onClearSelection,
+  onColumnOrderChange,
+  onColumnLayoutReset,
+  onColumnsReorder,
+  onColumnVisibilityChange,
   onCopySelection,
   onExportRows,
   onExportSelection,
@@ -755,6 +770,7 @@ function TableDataGridChrome({
     <>
       <DataGridToolbar
         className={state.variant === "expanded" ? "pr-12" : undefined}
+        columnOrder={columnOrder}
         columns={resultColumns}
         exportRowsDisabled={
           state.isExportingRows || invalidFilterRules.length > 0
@@ -762,10 +778,15 @@ function TableDataGridChrome({
         filterLogic={filterLogic}
         filterRules={filterRules}
         filterTitle={filterTitle}
+        hiddenColumnKeys={hiddenColumnKeys}
+        isColumnLayoutCustomized={isColumnLayoutCustomized}
         isExpanded={state.variant === "expanded"}
         isFetching={state.isFetching}
         lastFetchedLabel={lastFetchedLabel}
         onClearSelection={onClearSelection}
+        onColumnLayoutReset={onColumnLayoutReset}
+        onColumnOrderChange={onColumnOrderChange}
+        onColumnVisibilityChange={onColumnVisibilityChange}
         onCopySelection={onCopySelection}
         onExportRows={onExportRows}
         onExportSelection={onExportSelection}
@@ -796,6 +817,7 @@ function TableDataGridChrome({
           isLoading={state.gridLoading}
           onCellContextMenu={onCellContextMenu}
           onCellCopy={onCellCopy}
+          onColumnsReorder={onColumnsReorder}
           onSelectedCellChange={onSelectedCellChange}
           onSelectedRowsChange={onSelectedRowsChange}
           onSortChange={onSortChange}
@@ -1082,9 +1104,11 @@ function isExportCanceled(error: unknown, signal: AbortSignal): boolean {
 }
 
 function useGridColumns({
+  displayColumns,
   foreignKeyReferences,
   frozenColumns,
   onFrozenColumnsChange,
+  onHideColumn,
   renderOpenReferencedTableLink,
   resultColumns,
   rowIdentity,
@@ -1092,9 +1116,11 @@ function useGridColumns({
   setSortColumns,
   sortColumns,
 }: {
+  displayColumns: TableResultColumn[];
   foreignKeyReferences: readonly TableForeignKeyReference[];
   frozenColumns: ReadonlySet<string>;
   onFrozenColumnsChange: (next: ReadonlySet<string>) => void;
+  onHideColumn: (columnKey: string) => void;
   renderOpenReferencedTableLink?: RenderOpenReferencedTableLink | undefined;
   resultColumns: TableResultColumn[];
   rowIdentity:
@@ -1134,7 +1160,9 @@ function useGridColumns({
   // Pin the action region only when at least one data column is frozen, so the
   // sticky region stays a contiguous block (select → expand → frozen data) and
   // the default layout (no frozen columns) keeps its normal scroll behavior.
-  const hasFrozenDataColumns = frozenColumns.size > 0;
+  const hasFrozenDataColumns = displayColumns.some((column) =>
+    frozenColumns.has(column.columnName)
+  );
   const columns: Column<GridRow>[] = [
     {
       ...SelectColumn,
@@ -1167,16 +1195,18 @@ function useGridColumns({
       sortable: false,
       width: EXPAND_COLUMN_WIDTH,
     },
-    ...resultColumns.map((column) => {
+    ...displayColumns.map((column) => {
       const sortIndex = sortColumns.findIndex(
         (sc) => sc.columnKey === column.columnName
       );
       const sortEntry = sortIndex === -1 ? undefined : sortColumns[sortIndex];
       return buildColumn({
+        canHide: displayColumns.length > 1,
         column,
         foreignKeyReferences,
         isFrozen: frozenColumns.has(column.columnName),
         onCopyName: () => writeClipboard(column.columnName),
+        onHide: () => onHideColumn(column.columnName),
         onSortAsc: () => toggleColumnSort(column.columnName, "ASC"),
         onSortDesc: () => toggleColumnSort(column.columnName, "DESC"),
         onToggleFreeze: () => toggleColumnFreeze(column.columnName),
@@ -1459,10 +1489,19 @@ function TableDataGrid({
     onFrozenColumnsSearchChange,
   });
 
+  const columnLayout = useTableColumnLayout({
+    columns: resultColumns,
+    hasResultSet: data?.resultSet !== undefined,
+    tableName: name,
+  });
+
   const { columns, pkColumnSet } = useGridColumns({
+    displayColumns: columnLayout.displayColumns,
     foreignKeyReferences,
     frozenColumns,
     onFrozenColumnsChange: setFrozenColumns,
+    onHideColumn: (columnKey) =>
+      columnLayout.setColumnVisibility(columnKey, false),
     renderOpenReferencedTableLink,
     resultColumns,
     rowIdentity: data?.resultSet?.rowIdentity,
@@ -1524,16 +1563,23 @@ function TableDataGrid({
     );
   const clearFilters = () => setEffectiveFilterSearch(undefined);
   const chromeProps: TableDataGridChromeProps = {
+    columnOrder: columnLayout.columnOrder,
     columns,
     filterLogic,
     filterRules,
     filterTitle: `Filter ${tableQualifiedName.schema}.${tableQualifiedName.table}`,
+    hiddenColumnKeys: columnLayout.hiddenColumnKeys,
     invalidFilterRules,
+    isColumnLayoutCustomized: columnLayout.isCustomized,
     lastFetchedLabel: refreshState.lastFetchedLabel,
     onCellContextMenu: cellHandlers.handleCellContextMenu,
     onCellCopy: selectionActions.handleCellCopy,
     onClearFilters: clearFilters,
     onClearSelection: selectionActions.clearSelection,
+    onColumnLayoutReset: columnLayout.reset,
+    onColumnOrderChange: columnLayout.setColumnOrder,
+    onColumnsReorder: columnLayout.reorderColumns,
+    onColumnVisibilityChange: columnLayout.setColumnVisibility,
     onCopySelection: selectionActions.handleCopySelection,
     onExportRows: handleExportRows,
     onExportSelection: selectionActions.handleExportSelection,

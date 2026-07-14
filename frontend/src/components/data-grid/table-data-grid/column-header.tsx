@@ -6,10 +6,12 @@ import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/ta
 type SortDirection = "ASC" | "DESC";
 
 interface ColumnHeaderProps {
+  canHide: boolean;
   column: TableResultColumn;
   isFrozen: boolean;
   isPrimaryKey: boolean;
   onCopyName: () => void;
+  onHide: () => void;
   onSortAsc: () => void;
   onSortDesc: () => void;
   onToggleFreeze: () => void;
@@ -18,10 +20,12 @@ interface ColumnHeaderProps {
 }
 
 function ColumnHeader({
+  canHide,
   column,
   isFrozen,
   isPrimaryKey,
   onCopyName,
+  onHide,
   onSortAsc,
   onSortDesc,
   onToggleFreeze,
@@ -71,10 +75,12 @@ function ColumnHeader({
       </div>
       <span className="ml-auto shrink-0">
         <ColumnHeaderMenu
+          canHide={canHide}
           columnName={column.columnName}
           columnRawType={column.rawType}
           isFrozen={isFrozen}
           onCopyName={onCopyName}
+          onHide={onHide}
           onSortAsc={onSortAsc}
           onSortDesc={onSortDesc}
           onToggleFreeze={onToggleFreeze}

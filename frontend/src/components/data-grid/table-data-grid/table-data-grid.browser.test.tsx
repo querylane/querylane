@@ -1,7 +1,7 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { afterEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
-import { render } from "vitest-browser-react";
+import { cleanup, render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { ColumnHeader } from "@/components/data-grid/table-data-grid/column-header";
 import { DataCell } from "@/components/data-grid/table-data-grid/data-cell";
@@ -12,11 +12,13 @@ import { GridSurface } from "@/components/data-grid/table-data-grid/grid-surface
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { RecordDetailDrawer } from "@/components/data-grid/table-data-grid/record-detail-drawer";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
+import { useTableColumnLayoutSettingsStore } from "@/features/user-settings/table-column-layout-settings";
 import { HIGH_VOLUME_PAGE_SIZE_OPTIONS } from "@/lib/pagination";
 import {
   ReadRowsResponseSchema,
   type TableCell,
   TableCellSchema,
+  type TableResultColumn,
   TableResultColumnSchema,
   TableResultRowSchema,
   TableResultSetSchema,
@@ -63,7 +65,10 @@ vi.mock("@/hooks/api/table-data", () => ({
 }));
 
 const SQL_WHERE_HELP_RE = /Supports column comparisons joined with AND/;
-afterEach(() => {
+afterEach(async () => {
+  await cleanup();
+  useTableColumnLayoutSettingsStore.setState({ layouts: {} });
+  localStorage.removeItem("querylane-table-column-layouts");
   tableApi.useListTableColumnsQuery.mockReset();
   tableDataApi.useReadRowsQueryActions.mockReset();
   tableDataApi.useReadRowsQuery.mockReset();
@@ -131,6 +136,17 @@ function column(name: string, rawType: string, dataType: DataType) {
     mayTruncate: name === "email" || name === "metadata",
     rawType,
   });
+}
+
+function columnLayoutProps(columns: TableResultColumn[]) {
+  return {
+    columnOrder: columns.map((resultColumn) => resultColumn.columnName),
+    hiddenColumnKeys: new Set<string>(),
+    isColumnLayoutCustomized: false,
+    onColumnLayoutReset: vi.fn(),
+    onColumnOrderChange: vi.fn(),
+    onColumnVisibilityChange: vi.fn(),
+  };
 }
 
 function cell(value: TableValue["kind"], truncated = false) {
@@ -309,6 +325,7 @@ function renderDataExplorerSurfaces() {
             </p>
           </div>
           <DataGridToolbar
+            {...columnLayoutProps(resultColumns)}
             columns={resultColumns}
             filterLogic="and"
             filterRules={[
@@ -431,6 +448,7 @@ function renderFilteredToolbar() {
             </p>
           </div>
           <DataGridToolbar
+            {...columnLayoutProps(resultColumns)}
             columns={resultColumns}
             filterLogic="or"
             filterRules={[
@@ -468,6 +486,7 @@ function renderEmptyFilterToolbar() {
     <ScreenshotFrame>
       <div className="w-[900px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <DataGridToolbar
+          {...columnLayoutProps(resultColumns)}
           columns={resultColumns}
           filterLogic="and"
           filterRules={[]}
@@ -492,6 +511,7 @@ function renderSqlWhereFilterToolbar() {
     <ScreenshotFrame>
       <div className="w-[1100px] rounded-2xl border border-border bg-background p-4 text-foreground">
         <DataGridToolbar
+          {...columnLayoutProps(resultColumns)}
           columns={resultColumns}
           filterLogic="and"
           filterRules={[]}
@@ -517,6 +537,7 @@ function renderSortableToolbar() {
     <ScreenshotFrame>
       <div className="w-[900px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <DataGridToolbar
+          {...columnLayoutProps(sortableColumns)}
           columns={sortableColumns}
           filterLogic="and"
           filterRules={[]}
@@ -689,10 +710,12 @@ function renderNarrowColumnHeader() {
           data-testid="narrow-column-header"
         >
           <ColumnHeader
+            canHide={true}
             column={column("aggfnoid", "regproc", DataType.STRING)}
             isFrozen={false}
             isPrimaryKey={true}
             onCopyName={vi.fn()}
+            onHide={vi.fn()}
             onSortAsc={vi.fn()}
             onSortDesc={vi.fn()}
             onToggleFreeze={vi.fn()}
@@ -809,6 +832,64 @@ test("expanded data grid keeps close and refresh actions separate", async () => 
   const closeBox = closeButton.element().getBoundingClientRect();
   const refreshBox = refreshButton.element().getBoundingClientRect();
   expect(refreshBox.right).toBeLessThanOrEqual(closeBox.left - 8);
+});
+
+test("column headers reorder while layout controls stay compact", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
+  );
+
+  const statusHeader = page.getByRole("columnheader").filter({
+    has: page.getByRole("button", {
+      name: "Open options for column status",
+    }),
+  });
+  const carrierHeader = page.getByRole("columnheader").filter({
+    has: page.getByRole("button", {
+      name: "Open options for column carrier_id",
+    }),
+  });
+  await expect.element(statusHeader).toHaveAttribute("draggable", "true");
+  const dataTransfer = new DataTransfer();
+  statusHeader
+    .element()
+    .dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer }));
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+  carrierHeader
+    .element()
+    .dispatchEvent(new DragEvent("dragover", { bubbles: true, dataTransfer }));
+  carrierHeader
+    .element()
+    .dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer }));
+  statusHeader
+    .element()
+    .dispatchEvent(new DragEvent("dragend", { bubbles: true, dataTransfer }));
+
+  await page.getByRole("button", { name: "Columns" }).click();
+  const popover = page.getByRole("dialog", { name: "Manage columns" });
+  await expect.element(popover).toBeVisible();
+  const statusToggle = popover.getByRole("checkbox", { name: "status" });
+  const carrierToggle = popover.getByRole("checkbox", { name: "carrier_id" });
+  expect(statusToggle.element().getBoundingClientRect().top).toBeLessThan(
+    carrierToggle.element().getBoundingClientRect().top
+  );
+  await carrierToggle.click();
+
+  await expect
+    .element(
+      page.getByRole("button", { name: "Open options for column status" })
+    )
+    .toBeVisible();
+  await expect
+    .element(
+      page.getByRole("button", {
+        name: "Open options for column carrier_id",
+      })
+    )
+    .not.toBeInTheDocument();
+  await expect(page).toMatchScreenshot("data-grid-native-column-layout");
 });
 
 async function openForeignKeyReference() {
@@ -981,6 +1062,7 @@ test("toolbar shows active sort summary beside the maximize action", async () =>
     <ScreenshotFrame>
       <div className="w-[1040px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <DataGridToolbar
+          {...columnLayoutProps(resultColumns)}
           columns={resultColumns}
           filterLogic="and"
           filterRules={[]}
@@ -1241,6 +1323,7 @@ test("filter popover stays inside the data-grid boundary when the grid is offset
       <div className="pl-[320px]">
         <div className="w-[420px] rounded-2xl border border-border bg-background p-6 text-foreground">
           <DataGridToolbar
+            {...columnLayoutProps(resultColumns)}
             columns={resultColumns}
             filterLogic="and"
             filterRules={[
@@ -1327,6 +1410,7 @@ test("sort popover stays inside the data-grid boundary when the grid is offset",
       <div className="pl-[320px]">
         <div className="w-[560px] rounded-2xl border border-border bg-background p-6 text-foreground">
           <DataGridToolbar
+            {...columnLayoutProps(sortableColumns)}
             columns={sortableColumns}
             filterLogic="and"
             filterRules={[]}
