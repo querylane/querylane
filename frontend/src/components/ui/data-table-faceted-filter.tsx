@@ -57,12 +57,17 @@ function DataTableFacetedFilter({
   const notIncludedDescriptionId = useId();
   const selected = new Set(selectedValues);
   const availableValues = new Set(options.map((option) => option.value));
-  const selectedOptions = [
-    ...options.filter((option) => selected.has(option.value)),
-    ...Array.from(selected)
-      .filter((value) => !availableValues.has(value))
-      .map((value) => ({ label: "Unavailable", value })),
-  ];
+  const selectedOptions: FacetedFilterOption[] = [];
+  for (const option of options) {
+    if (selected.has(option.value)) {
+      selectedOptions.push(option);
+    }
+  }
+  for (const value of selected) {
+    if (!availableValues.has(value)) {
+      selectedOptions.push({ label: "Unavailable", value });
+    }
+  }
 
   function toggle(value: string) {
     if (singleSelect) {
