@@ -2,12 +2,9 @@ import { create as createProto } from "@bufbuild/protobuf";
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  AppDatabaseStatus_State,
-  AppDatabaseStatusSchema,
-} from "@/protogen/querylane/console/v1alpha1/console_pb";
-import {
   type GetOnboardingStateResponse,
   GetOnboardingStateResponseSchema,
+  OnboardingState,
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 import {
   createSetupStore,
@@ -15,17 +12,15 @@ import {
 } from "@/stores/setup-store";
 
 function buildOnboardingState({
-  isConfigured,
+  error = "",
   state,
 }: {
-  isConfigured: boolean;
-  state: AppDatabaseStatus_State;
+  error?: string;
+  state: OnboardingState;
 }) {
   return createProto(GetOnboardingStateResponseSchema, {
-    appDatabaseStatus: createProto(AppDatabaseStatusSchema, {
-      state,
-    }),
-    isConfigured,
+    error,
+    state,
   });
 }
 
@@ -61,8 +56,7 @@ describe("setup-store bootstrap flow", () => {
     const { useSetupStore } = createTestStore(() =>
       Promise.resolve(
         buildOnboardingState({
-          isConfigured: false,
-          state: AppDatabaseStatus_State.NOT_CONFIGURED,
+          state: OnboardingState.BOOTSTRAP,
         })
       )
     );
@@ -71,12 +65,11 @@ describe("setup-store bootstrap flow", () => {
     expect(useSetupStore.getState().onboardingState).toBeNull();
   });
 
-  it("bootstrap routes to ready when configured", async () => {
+  it("bootstrap routes from the authoritative onboarding state", async () => {
     const { useSetupStore } = createTestStore(() =>
       Promise.resolve(
         buildOnboardingState({
-          isConfigured: true,
-          state: AppDatabaseStatus_State.READY,
+          state: OnboardingState.READY,
         })
       )
     );
@@ -91,8 +84,7 @@ describe("setup-store bootstrap flow", () => {
     const { useSetupStore } = createTestStore(() =>
       Promise.resolve(
         buildOnboardingState({
-          isConfigured: false,
-          state: AppDatabaseStatus_State.NOT_CONFIGURED,
+          state: OnboardingState.BOOTSTRAP,
         })
       )
     );
@@ -119,16 +111,15 @@ describe("setup-store setup-required transition", () => {
     const { useSetupStore } = createTestStore(() =>
       Promise.resolve(
         buildOnboardingState({
-          isConfigured: false,
-          state: AppDatabaseStatus_State.ERROR,
+          error: "database setup failed",
+          state: OnboardingState.BOOTSTRAP,
         })
       )
     );
 
     useSetupStore.setState({
       onboardingState: buildOnboardingState({
-        isConfigured: true,
-        state: AppDatabaseStatus_State.READY,
+        state: OnboardingState.READY,
       }),
       status: "ready",
     });
@@ -137,7 +128,9 @@ describe("setup-store setup-required transition", () => {
     await Promise.resolve();
 
     expect(useSetupStore.getState().status).toBe("onboarding");
-    expect(useSetupStore.getState().onboardingState?.isConfigured).toBe(false);
+    expect(useSetupStore.getState().onboardingState?.state).toBe(
+      OnboardingState.BOOTSTRAP
+    );
     expect(useSetupStore.getState().showWizardErrorBanner).toBe(true);
   });
 });
@@ -147,8 +140,7 @@ describe("setup-store verify flow", () => {
     const { useSetupStore } = createTestStore(() =>
       Promise.resolve(
         buildOnboardingState({
-          isConfigured: true,
-          state: AppDatabaseStatus_State.READY,
+          state: OnboardingState.READY,
         })
       )
     );
@@ -162,8 +154,7 @@ describe("setup-store verify flow", () => {
     const { useSetupStore } = createTestStore(() =>
       Promise.resolve(
         buildOnboardingState({
-          isConfigured: false,
-          state: AppDatabaseStatus_State.NOT_CONFIGURED,
+          state: OnboardingState.BOOTSTRAP,
         })
       )
     );
@@ -194,8 +185,7 @@ describe("setup-store request sequencing", () => {
 
     newerRequest.resolve(
       buildOnboardingState({
-        isConfigured: true,
-        state: AppDatabaseStatus_State.READY,
+        state: OnboardingState.READY,
       })
     );
     await newerVerify;
@@ -203,14 +193,15 @@ describe("setup-store request sequencing", () => {
 
     olderRequest.resolve(
       buildOnboardingState({
-        isConfigured: false,
-        state: AppDatabaseStatus_State.NOT_CONFIGURED,
+        state: OnboardingState.BOOTSTRAP,
       })
     );
     await olderRefresh;
 
     expect(useSetupStore.getState().status).toBe("ready");
-    expect(useSetupStore.getState().onboardingState?.isConfigured).toBe(true);
+    expect(useSetupStore.getState().onboardingState?.state).toBe(
+      OnboardingState.READY
+    );
   });
 
   it("keeps a newer setup-required response when an older verify resolves last", async () => {
@@ -222,26 +213,26 @@ describe("setup-store request sequencing", () => {
 
     newerRequest.resolve(
       buildOnboardingState({
-        isConfigured: false,
-        state: AppDatabaseStatus_State.NOT_CONFIGURED,
+        state: OnboardingState.BOOTSTRAP,
       })
     );
     await vi.waitFor(() => {
-      expect(useSetupStore.getState().onboardingState?.isConfigured).toBe(
-        false
+      expect(useSetupStore.getState().onboardingState?.state).toBe(
+        OnboardingState.BOOTSTRAP
       );
     });
 
     olderRequest.resolve(
       buildOnboardingState({
-        isConfigured: true,
-        state: AppDatabaseStatus_State.READY,
+        state: OnboardingState.READY,
       })
     );
     await olderVerify;
 
     expect(useSetupStore.getState().status).toBe("onboarding");
-    expect(useSetupStore.getState().onboardingState?.isConfigured).toBe(false);
+    expect(useSetupStore.getState().onboardingState?.state).toBe(
+      OnboardingState.BOOTSTRAP
+    );
   });
 
   it("ignores an older failure after a newer request succeeds", async () => {
@@ -253,8 +244,7 @@ describe("setup-store request sequencing", () => {
 
     newerRequest.resolve(
       buildOnboardingState({
-        isConfigured: true,
-        state: AppDatabaseStatus_State.READY,
+        state: OnboardingState.READY,
       })
     );
     await newerVerify;
@@ -267,29 +257,26 @@ describe("setup-store request sequencing", () => {
   });
 });
 
-it("records warning codes for inconsistent configured state", async () => {
+it("routes degraded state to the app with a degraded banner", async () => {
   const { useSetupStore } = createTestStore(() =>
     Promise.resolve(
       buildOnboardingState({
-        isConfigured: true,
-        state: AppDatabaseStatus_State.NOT_CONFIGURED,
+        state: OnboardingState.DEGRADED,
       })
     )
   );
 
   await useSetupStore.getState().bootstrap();
 
-  expect(useSetupStore.getState().warningCode).toBe(
-    "INCONSISTENT_NOT_CONFIGURED_WHILE_CONFIGURED"
-  );
+  expect(useSetupStore.getState().status).toBe("ready");
+  expect(useSetupStore.getState().showDegradedBanner).toBe(true);
 });
 
 it("setSetupRequired swallows async refresh rejections", async () => {
   const { useSetupStore } = createTestStore(() =>
     Promise.resolve(
       buildOnboardingState({
-        isConfigured: false,
-        state: AppDatabaseStatus_State.NOT_CONFIGURED,
+        state: OnboardingState.BOOTSTRAP,
       })
     )
   );

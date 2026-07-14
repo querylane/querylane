@@ -132,11 +132,12 @@ func TestIntegration_SetupAppDatabase_ExternalPostgres(t *testing.T) { //nolint:
 		assert.True(t, succeededSteps[stepID], "step %v should have reached SUCCEEDED", stepID)
 	}
 
-	// Post-setup: GetOnboardingState should show configured.
+	// Post-setup: GetOnboardingState should show ready.
 	stateResp, err := onboardingClient.GetOnboardingState(ctx,
 		connect.NewRequest(&consolev1alpha1.GetOnboardingStateRequest{}))
 	require.NoError(t, err)
-	assert.True(t, stateResp.Msg.IsConfigured, "should be configured after setup")
+	assert.Equal(t, consolev1alpha1.OnboardingState_ONBOARDING_STATE_READY,
+		stateResp.Msg.State, "should be ready after setup")
 
 	// Post-setup: ConsoleService should work (MainApp routes swapped in).
 	consoleClient := newConsoleClient(serverURL)
@@ -443,17 +444,14 @@ func TestIntegration_MainAppMode_AlreadyConfigured(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
-	t.Run("GetOnboardingState shows configured", func(t *testing.T) { //nolint:paralleltest // shares server
+	t.Run("GetOnboardingState shows ready", func(t *testing.T) { //nolint:paralleltest // shares server
 		onboardingClient := newOnboardingClient(serverURL)
 
 		resp, err := onboardingClient.GetOnboardingState(ctx,
 			connect.NewRequest(&consolev1alpha1.GetOnboardingStateRequest{}))
 		require.NoError(t, err)
-		assert.True(t, resp.Msg.IsConfigured, "should be configured in MainApp mode")
-
-		require.NotNil(t, resp.Msg.AppDatabaseStatus)
-		assert.Equal(t, consolev1alpha1.AppDatabaseStatus_STATE_READY,
-			resp.Msg.AppDatabaseStatus.State, "database should be READY")
+		assert.Equal(t, consolev1alpha1.OnboardingState_ONBOARDING_STATE_READY,
+			resp.Msg.State, "database should be ready")
 	})
 
 	t.Run("ConsoleService works", func(t *testing.T) { //nolint:paralleltest // shares server

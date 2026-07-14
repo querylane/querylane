@@ -6,14 +6,18 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
 
+	"github.com/querylane/querylane/backend/config"
 	serverconfig "github.com/querylane/querylane/backend/config/server"
 	"github.com/querylane/querylane/backend/dbsetup"
+	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
 // stubConnector is a driver.Connector that never produces connections. It
@@ -44,6 +48,60 @@ func requireDBClosed(t *testing.T, db *sql.DB) {
 func requireDBOpen(t *testing.T, db *sql.DB) {
 	t.Helper()
 	require.EqualError(t, db.PingContext(t.Context()), "stub: no connections")
+}
+
+func TestAppOnboardingState(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		configYAML string
+		hasState   bool
+		wantState  v1alpha1.OnboardingState
+	}{
+		{
+			name:      "bootstrap without configuration or database state",
+			wantState: v1alpha1.OnboardingState_ONBOARDING_STATE_BOOTSTRAP,
+		},
+		{
+			name:       "degraded with configuration but no database state",
+			configYAML: "database:\n  dsn: postgres://user:pass@localhost:5432/querylane?sslmode=disable\n",
+			wantState:  v1alpha1.OnboardingState_ONBOARDING_STATE_DEGRADED,
+		},
+		{
+			name:       "degraded with embedded configuration but no database state",
+			configYAML: "embedded:\n  mode: persistent\n",
+			wantState:  v1alpha1.OnboardingState_ONBOARDING_STATE_DEGRADED,
+		},
+		{
+			name:      "ready when database state is installed before configuration persists",
+			hasState:  true,
+			wantState: v1alpha1.OnboardingState_ONBOARDING_STATE_READY,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			configPath := filepath.Join(t.TempDir(), "config.yaml")
+			require.NoError(t, os.WriteFile(configPath, []byte(tt.configYAML), 0o644))
+
+			cfgMgr, err := config.NewConfigManager(
+				t.Context(),
+				&serverconfig.Config{},
+				config.WithConfigFile(configPath),
+			)
+			require.NoError(t, err)
+
+			app := &App{configManager: cfgMgr}
+			if tt.hasState {
+				app.setState(&dbState{})
+			}
+
+			require.Equal(t, tt.wantState, app.OnboardingState())
+		})
+	}
 }
 
 // TestAppSetStateClosesPreviousState is the regression guard for the
