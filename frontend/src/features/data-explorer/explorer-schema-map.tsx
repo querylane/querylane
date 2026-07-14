@@ -618,15 +618,6 @@ function SchemaMapCanvas({
           />
         ))}
       </svg>
-      <div className="absolute bottom-3 left-3 rounded-lg border bg-background/85 px-3 py-2 text-muted-foreground text-xs shadow-sm backdrop-blur">
-        <div className="flex flex-wrap items-center gap-3">
-          <span>Curved lines show foreign keys.</span>
-          <span>{model.stats}</span>
-        </div>
-        <p className="mt-1">
-          Press Space to select, or Enter or double-click to open data.
-        </p>
-      </div>
       <SchemaMapMinimap model={model} />
       {activeNode ? (
         <div className="absolute top-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border bg-popover px-3 py-1.5 text-sm shadow-md">

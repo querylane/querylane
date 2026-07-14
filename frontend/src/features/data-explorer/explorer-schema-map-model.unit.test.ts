@@ -212,7 +212,6 @@ describe("buildSchemaMapModel", () => {
     });
 
     expect(model.nodes.map((node) => node.name)).toEqual(["ports"]);
-    expect(model.stats).toBe("1 table · 0 foreign keys");
   });
 
   test("anchors foreign keys from hidden columns to the truncated footer", () => {
