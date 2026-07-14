@@ -302,11 +302,11 @@ func resolveEmbeddedEffectiveConfig(
 		slog.InfoContext(ctx, "embedded PostgreSQL already running, reusing connection config")
 	}
 
-	return &serverconfig.Config{
-		HTTP:      cfg.HTTP,
-		Database:  manager.DatabaseConfig(),
-		Instances: cfg.Instances,
-	}
+	effectiveCfg := *cfg
+	effectiveCfg.Database = manager.DatabaseConfig()
+	effectiveCfg.Embedded = nil
+
+	return &effectiveCfg
 }
 
 func (c *Controller) buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Broadcaster) (*dbState, error) {
