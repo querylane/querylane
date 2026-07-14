@@ -734,6 +734,18 @@ function queryInsightsResponse() {
   });
 }
 
+function queryInsightsWithoutQueryStatsResponse() {
+  const response = queryInsightsResponse();
+  const insights = response.queryInsights;
+  if (!insights) {
+    throw new Error("Expected query insights fixture");
+  }
+
+  insights.queryStatsAvailable = false;
+  insights.topQueries = [];
+  return response;
+}
+
 function catalogResult() {
   return {
     objects: [
@@ -799,6 +811,25 @@ function catalogResult() {
       viewCount: 1,
     },
   };
+}
+
+async function openQueryInsightsDrawer(
+  queryInsights: GetDatabaseQueryInsightsResponse
+) {
+  state.databaseQuery = { data: databaseResponse() };
+  state.catalogQuery = { data: catalogResult() };
+  state.queryInsightsQuery = { data: queryInsights };
+
+  render(
+    <BackendDatabasePage
+      databaseId="customer-events"
+      instanceId="prod"
+      section="overview"
+    />
+  );
+
+  await page.getByRole("button", { name: "View query insights" }).click();
+  return page.getByRole("dialog", { name: "Query insights" });
 }
 
 test("backend instance overview shows live metrics and database catalog together", async () => {
@@ -1164,6 +1195,44 @@ test("backend database overview opens the query insights drawer", async () => {
   await expect(drawer).toMatchScreenshot(
     "backend-database-query-insights-drawer"
   );
+});
+
+test("query insights drawer caps its width at 64rem", async () => {
+  const drawer = await openQueryInsightsDrawer(queryInsightsResponse());
+  await expect.element(drawer).toBeVisible();
+  expect(getComputedStyle(drawer.element()).maxWidth).toBe("1024px");
+});
+
+test("partial query insights use the full drawer content width", async () => {
+  const drawer = await openQueryInsightsDrawer(
+    queryInsightsWithoutQueryStatsResponse()
+  );
+  await expect.element(drawer).toBeVisible();
+
+  const topQueriesCard = page
+    .getByText("Top queries by total time")
+    .element()
+    .closest('[data-slot="card"]');
+  if (!(topQueriesCard instanceof HTMLElement)) {
+    throw new Error("Expected top queries card");
+  }
+
+  const drawerBox = drawer.element().getBoundingClientRect();
+  const cardBox = topQueriesCard.getBoundingClientRect();
+  expect(drawerBox.right - cardBox.right).toBeLessThanOrEqual(32);
+});
+
+test("query statistics retry uses the default button size", async () => {
+  const drawer = await openQueryInsightsDrawer(
+    queryInsightsWithoutQueryStatsResponse()
+  );
+  await expect.element(drawer).toBeVisible();
+
+  const retryButton = page.getByRole("button", {
+    name: "Retry query statistics",
+  });
+  await expect.element(retryButton).toBeVisible();
+  expect(retryButton.element().getBoundingClientRect().height).toBe(36);
 });
 
 test("backend database extensions page matches design source", async () => {

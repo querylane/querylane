@@ -39,7 +39,7 @@ function DatabaseQueryInsightsDrawer({
   return (
     <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetContent
-        className="!w-screen !max-w-none sm:!w-[80vw] sm:!max-w-[80rem] gap-0 overflow-hidden p-0"
+        className="!w-screen !max-w-none sm:!w-[80vw] sm:!max-w-5xl gap-0 overflow-hidden p-0"
         side="right"
       >
         <SheetHeader className="shrink-0 border-b px-5 py-4 pr-14">

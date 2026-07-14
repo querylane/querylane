@@ -805,7 +805,7 @@ describe("backend database overview", () => {
     });
     expect(drawer.className).toContain("!w-screen");
     expect(drawer.className).toContain("sm:!w-[80vw]");
-    expect(drawer.className).toContain("sm:!max-w-[80rem]");
+    expect(drawer.className).toContain("sm:!max-w-5xl");
     expect(
       await within(drawer).findByText("Top queries by total time")
     ).toBeTruthy();
