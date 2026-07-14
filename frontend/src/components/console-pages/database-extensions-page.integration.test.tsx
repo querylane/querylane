@@ -151,6 +151,10 @@ describe("database extensions page", () => {
     );
 
     expect(screen.getAllByText("No extensions match")).toHaveLength(1);
+    expect(
+      screen.getByRole("combobox", { name: "Extensions per page" })
+    ).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
   });
 
   test("restores the table filter from URL search state", () => {
@@ -188,7 +192,8 @@ describe("database extensions page", () => {
     expect(state.updateTableSearch).toHaveBeenCalledWith("p");
   });
 
-  test("uses shared list filters beside search and keeps page size in the footer", () => {
+  test("uses shared list filters beside search and standard page sizes in the footer", async () => {
+    const user = userEvent.setup();
     render(
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
@@ -217,11 +222,15 @@ describe("database extensions page", () => {
     if (!(pagination instanceof HTMLElement)) {
       throw new Error("Missing shared pagination footer");
     }
+    const pageSize = within(pagination).getByRole("combobox", {
+      name: "Extensions per page",
+    });
+    expect(pageSize).toBeTruthy();
+
+    await user.click(pageSize);
     expect(
-      within(pagination).getByRole("combobox", {
-        name: "Extensions per page",
-      })
-    ).toBeTruthy();
+      screen.getAllByRole("option").map((option) => option.textContent)
+    ).toEqual(["10", "25", "50"]);
   });
 
   test("filters extensions by status and source facets", async () => {

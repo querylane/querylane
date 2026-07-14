@@ -12,6 +12,7 @@ import { GridSurface } from "@/components/data-grid/table-data-grid/grid-surface
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { RecordDetailDrawer } from "@/components/data-grid/table-data-grid/record-detail-drawer";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
+import { HIGH_VOLUME_PAGE_SIZE_OPTIONS } from "@/lib/pagination";
 import {
   ReadRowsResponseSchema,
   type TableCell,
@@ -1206,6 +1207,7 @@ test("page size select shows every option when the footer is near the viewport e
           onPrev={vi.fn()}
           pageLabel="Page 1"
           pageSize={50}
+          pageSizeOptions={HIGH_VOLUME_PAGE_SIZE_OPTIONS}
         />
       </div>
     </ScreenshotFrame>

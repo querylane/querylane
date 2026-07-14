@@ -40,6 +40,12 @@ const rows: InstanceRow[] = [
   { name: "warehouse", owner: "platform", status: "error" },
 ];
 
+const manyRows: InstanceRow[] = Array.from({ length: 30 }, (_, index) => ({
+  name: `instance-${String(index + 1).padStart(2, "0")}`,
+  owner: "platform",
+  status: "connected",
+}));
+
 
 afterEach(() => {
   cleanup();
@@ -111,6 +117,26 @@ describe("data table integration", () => {
     render(<DataTable columns={columns} data={[]} />);
 
     expect(screen.getByText("No results found")).toBeTruthy();
+    expect(
+      screen.getByRole("combobox", { name: "Rows per page" })
+    ).toBeTruthy();
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+    expect(screen.queryByText(/Showing/)).toBeNull();
+  });
+
+  it("offers standard page sizes for a single page of rows", async () => {
+    const user = userEvent.setup();
+
+    render(<DataTable columns={columns} data={rows} />);
+
+    const pageSize = screen.getByRole("combobox", { name: "Rows per page" });
+    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+
+    await user.click(pageSize);
+
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent)
+    ).toEqual(["10", "25", "50"]);
   });
 
   it("renders specific empty copy when local search has no matches", async () => {
@@ -140,23 +166,38 @@ describe("data table integration", () => {
     render(
       <DataTable
         columns={columns}
-        data={rows}
+        data={manyRows}
         filterColumn="name"
         filterPlaceholder="Filter instances..."
-        pageSize={2}
       />
     );
 
     await user.click(screen.getByRole("button", { name: "Next page" }));
-    expect(screen.getByText("warehouse")).toBeTruthy();
+    expect(screen.getByText("instance-11")).toBeTruthy();
 
     await user.type(
       screen.getByRole("textbox", { name: "Filter instances..." }),
-      "analytics"
+      "instance-01"
     );
 
-    expect(await screen.findByText("analytics")).toBeTruthy();
-    expect(screen.queryByText("warehouse")).toBeNull();
+    expect(await screen.findByText("instance-01")).toBeTruthy();
+    expect(screen.queryByText("instance-11")).toBeNull();
+  });
+
+  it("keeps the first visible row in view when page size changes", async () => {
+    const user = userEvent.setup();
+
+    render(<DataTable columns={columns} data={manyRows} pageSize={25} />);
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+    expect(screen.getByText("instance-26")).toBeTruthy();
+
+    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
+    await user.click(screen.getByRole("option", { name: "10" }));
+
+    expect(screen.getByText("instance-26")).toBeTruthy();
+    expect(screen.queryByText("instance-01")).toBeNull();
+    expect(screen.getByText("Page 3 of 3")).toBeTruthy();
   });
 
   it("emits the original Querylane row when an interactive row is selected", async () => {

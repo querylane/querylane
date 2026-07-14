@@ -70,7 +70,6 @@ function renderDataTableFixture({
           data={rows}
           filterColumn="name"
           filterPlaceholder="Filter instances..."
-          pageSize={3}
           {...controlledFilterProps}
           {...initialSortingProps}
         />

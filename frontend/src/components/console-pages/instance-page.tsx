@@ -809,7 +809,6 @@ function InstanceOverviewSection({
             overridePage: "database.overview",
           })
         }
-        pageSize={10}
         tableKey="instance-databases"
       />
     );

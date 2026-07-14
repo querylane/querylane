@@ -71,4 +71,26 @@ describe("PaginationFooter", () => {
       screen.queryByRole("combobox", { name: "Rows per page: 100" })
     ).toBeNull();
   });
+
+  it("uses the standard page sizes by default", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PaginationFooter
+        hasNext={false}
+        hasPrev={false}
+        onNext={vi.fn()}
+        onPageSizeChange={vi.fn()}
+        onPrev={vi.fn()}
+        pageLabel="Page 1 of 1"
+        pageSize={10}
+      />
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
+
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent)
+    ).toEqual(["10", "25", "50"]);
+  });
 });

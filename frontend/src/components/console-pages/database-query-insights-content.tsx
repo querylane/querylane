@@ -48,6 +48,13 @@ import {
 import { useGetDatabaseQueryInsightsQuery } from "@/hooks/api/database";
 import { buildDatabaseName, formatBytes } from "@/lib/console-resources";
 import {
+  DEFAULT_PAGE_SIZE,
+  isPageSize,
+  PAGE_SIZE_OPTIONS,
+  type PageSize,
+  pageIndexForPageSizeChange,
+} from "@/lib/pagination";
+import {
   formatInsightInteger,
   formatInsightMs,
   formatInsightPercent,
@@ -67,21 +74,7 @@ import type {
 } from "@/protogen/querylane/console/v1alpha1/database_pb";
 
 const CACHE_HIT_WARNING_THRESHOLD = 0.9;
-const QUERY_PAGE_SIZE_5 = 5;
-const QUERY_PAGE_SIZE_10 = 10;
-const QUERY_PAGE_SIZE_25 = 25;
-const QUERY_PAGE_SIZE_50 = 50;
-const QUERY_PAGE_SIZE_100 = 100;
-const QUERY_PAGE_SIZE_DEFAULT = QUERY_PAGE_SIZE_5;
-const QUERY_PAGE_SIZE_OPTIONS = [
-  QUERY_PAGE_SIZE_5,
-  QUERY_PAGE_SIZE_10,
-  QUERY_PAGE_SIZE_25,
-  QUERY_PAGE_SIZE_50,
-  QUERY_PAGE_SIZE_100,
-] as const;
-
-type QueryPageSize = (typeof QUERY_PAGE_SIZE_OPTIONS)[number];
+type QueryPageSize = PageSize;
 type QueryKindFilter = "all" | "reads" | "writes";
 
 const QUERY_KIND_FILTER_OPTIONS = [
@@ -167,7 +160,7 @@ function queryPageCount(totalRows: number, pageSize: number) {
 
 function queryPageSizeFromValue(value: string): QueryPageSize | null {
   const pageSize = Number.parseInt(value, 10);
-  return QUERY_PAGE_SIZE_OPTIONS.find((option) => option === pageSize) ?? null;
+  return isPageSize(pageSize) ? pageSize : null;
 }
 
 function queryPaginationRange({
@@ -663,14 +656,6 @@ function QueryPaginationFooter({
   pageSize: QueryPageSize;
   totalRows: number;
 }) {
-  const shouldRender =
-    totalRows > 0 &&
-    (totalRows > QUERY_PAGE_SIZE_DEFAULT ||
-      pageSize !== QUERY_PAGE_SIZE_DEFAULT);
-  if (!shouldRender) {
-    return null;
-  }
-
   const { end, start } = queryPaginationRange({
     pageIndex,
     pageSize,
@@ -681,9 +666,11 @@ function QueryPaginationFooter({
       className="flex min-h-10 flex-wrap items-center gap-2 border-t px-5 py-2 text-muted-foreground text-xs"
       data-slot="query-insights-pagination"
     >
-      <span className="tabular-nums">
-        Showing {start}&ndash;{end} of {totalRows}
-      </span>
+      {totalRows > 0 ? (
+        <span className="tabular-nums">
+          Showing {start}&ndash;{end} of {totalRows}
+        </span>
+      ) : null}
       <span className="ml-2 text-[11px]">Rows per page</span>
       <Select
         onValueChange={(value) => {
@@ -701,7 +688,7 @@ function QueryPaginationFooter({
           <SelectValue />
         </SelectTrigger>
         <SelectContent alignItemWithTrigger={false}>
-          {QUERY_PAGE_SIZE_OPTIONS.map((size) => (
+          {PAGE_SIZE_OPTIONS.map((size) => (
             <SelectItem key={size} label={String(size)} value={String(size)}>
               {size}
             </SelectItem>
@@ -841,9 +828,7 @@ function TopQueriesCard({
   const [kind, setKind] = useState<QueryKindFilter>("all");
   const [meanFilter, setMeanFilter] = useState<MeanFilterValue>("any");
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState<QueryPageSize>(
-    QUERY_PAGE_SIZE_DEFAULT
-  );
+  const [pageSize, setPageSize] = useState<QueryPageSize>(DEFAULT_PAGE_SIZE);
   const queries = filterQueries({
     kind,
     meanThreshold: meanFilterThreshold(meanFilter),
@@ -871,8 +856,14 @@ function TopQueriesCard({
     onSelectQuery(null);
   };
   const handlePageSizeChange = (value: QueryPageSize) => {
+    setPageIndex(
+      pageIndexForPageSizeChange({
+        nextPageSize: value,
+        pageIndex: safePageIndex,
+        pageSize,
+      })
+    );
     setPageSize(value);
-    setPageIndex(0);
     onSelectQuery(null);
   };
   const handlePreviousPage = () => {
