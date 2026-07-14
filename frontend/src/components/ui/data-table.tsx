@@ -1,6 +1,6 @@
 "use client";
 
-import { type Ref, useEffect, useId } from "react";
+import { useEffect, useId } from "react";
 import {
   type Column,
   type ColumnDef,
@@ -76,14 +76,12 @@ interface DataTableState {
 }
 
 interface DataTableFilterProps {
-  inputRef?: Ref<HTMLInputElement> | undefined;
   onChange: (value: string) => void;
-  placeholder?: string | undefined;
+  placeholder?: string;
   value: string;
 }
 
 function DataTableFilter({
-  inputRef,
   onChange,
   placeholder = "Filter...",
   value,
@@ -100,7 +98,6 @@ function DataTableFilter({
         name="table-filter"
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        ref={inputRef}
         value={value}
       />
     </div>

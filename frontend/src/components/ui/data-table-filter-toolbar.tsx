@@ -1,13 +1,13 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DataTableFacetedFilter,
   type FacetedFilterOption,
 } from "@/components/ui/data-table-faceted-filter";
-import { DataTableFilter } from "@/components/ui/data-table";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface DataTableFilterFacet {
@@ -70,12 +70,21 @@ function DataTableFilterToolbar({
       )}
       data-slot={dataSlot}
     >
-      <DataTableFilter
-        inputRef={searchInputRef}
-        onChange={onSearchChange}
-        placeholder={searchPlaceholder}
-        value={searchValue}
-      />
+      <div className="relative w-52 max-w-full shrink-0">
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+        />
+        <Input
+          aria-label={searchPlaceholder}
+          className="h-8 pl-8 text-sm"
+          name="table-filter"
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder={searchPlaceholder}
+          ref={searchInputRef}
+          value={searchValue}
+        />
+      </div>
       {visibleFacets.map((facet) => (
         <DataTableFacetedFilter
           key={facet.label}
