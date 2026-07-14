@@ -14,6 +14,7 @@ import {
 import { lazy, Suspense, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import type { RoleDetailViewProps } from "@/components/console-pages/role-detail-model";
+import { RolePartialAccessAlert } from "@/components/console-pages/role-detail-shared";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -257,6 +258,25 @@ function AccessMapLoadingCard() {
         Preparing the role access canvas.
       </CardContent>
     </Card>
+  );
+}
+
+function AccessMapKpiCount({
+  count,
+  partial,
+}: {
+  count: number;
+  partial: boolean;
+}) {
+  return (
+    <p className="flex items-baseline gap-2 font-semibold text-lg tabular-nums">
+      {count}
+      {partial ? (
+        <span className="font-normal text-muted-foreground text-xs">
+          Partial
+        </span>
+      ) : null}
+    </p>
   );
 }
 
@@ -581,9 +601,10 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
               <p className="text-muted-foreground text-xs uppercase tracking-wider">
                 Direct grants
               </p>
-              <p className="font-semibold text-lg tabular-nums">
-                {model.summary.directGrantCount}
-              </p>
+              <AccessMapKpiCount
+                count={model.summary.directGrantCount}
+                partial={props.grantsPartial}
+              />
             </div>
           </CardContent>
         </Card>
@@ -594,9 +615,10 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
               <p className="text-muted-foreground text-xs uppercase tracking-wider">
                 Owned objects
               </p>
-              <p className="font-semibold text-lg tabular-nums">
-                {model.summary.ownedObjectCount}
-              </p>
+              <AccessMapKpiCount
+                count={model.summary.ownedObjectCount}
+                partial={props.ownedPartial}
+              />
             </div>
           </CardContent>
         </Card>
@@ -607,13 +629,20 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
               <p className="text-muted-foreground text-xs uppercase tracking-wider">
                 PUBLIC grants
               </p>
-              <p className="font-semibold text-lg tabular-nums">
-                {model.summary.publicGrantCount}
-              </p>
+              <AccessMapKpiCount
+                count={model.summary.publicGrantCount}
+                partial={props.publicGrantsPartial}
+              />
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {props.partialAccess && !isMapExpanded ? (
+        <RolePartialAccessAlert
+          databaseName={props.effectiveDb?.name ?? "the selected database"}
+        />
+      ) : null}
 
       {props.grantsError ? (
         <Alert variant="destructive">
@@ -645,13 +674,22 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
       </Suspense>
       <Dialog onOpenChange={setIsMapExpanded} open={isMapExpanded}>
         <DialogContent className="h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] grid-rows-[auto_minmax(0,1fr)] p-4 sm:max-w-[calc(100vw-2rem)]">
-          <DialogHeader>
-            <DialogTitle>Expanded access map</DialogTitle>
-            <DialogDescription>
-              Explore role membership, ownership, direct grants, PUBLIC grants,
-              and default privileges with more room.
-            </DialogDescription>
-          </DialogHeader>
+          <div className="grid gap-3">
+            <DialogHeader>
+              <DialogTitle>Expanded access map</DialogTitle>
+              <DialogDescription>
+                Explore role membership, ownership, direct grants, PUBLIC
+                grants, and default privileges with more room.
+              </DialogDescription>
+            </DialogHeader>
+            {props.partialAccess ? (
+              <RolePartialAccessAlert
+                databaseName={
+                  props.effectiveDb?.name ?? "the selected database"
+                }
+              />
+            ) : null}
+          </div>
           <Suspense fallback={<AccessMapLoadingCard />}>
             <FlowCanvas
               actionPanel={expandedCanvasActions}

@@ -11,11 +11,11 @@ import {
   roleGrantsForDatabaseQueryInput,
   roleOwnedObjectsForDatabaseQueryInput,
   rolesForInstanceQueryInput,
-  useListAllPublicGrantsQuery,
-  useListAllRoleDefaultPrivilegesQuery,
-  useListAllRoleGrantsQuery,
-  useListAllRoleOwnedObjectsQuery,
   useListAllRolesQuery,
+  useListPublicGrantsQuery,
+  useListRoleDefaultPrivilegesQuery,
+  useListRoleGrantsQuery,
+  useListRoleOwnedObjectsQuery,
   useRolesAccessMapResourcesQuery,
 } from "@/hooks/api/role";
 import { createConnectListAllQueryKey } from "@/lib/connect-query-key";
@@ -38,13 +38,7 @@ import {
   RoleSchema,
   RoleService,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
-import {
-  listPublicGrants,
-  listRoleDefaultPrivileges,
-  listRoleGrants,
-  listRoleOwnedObjects,
-  listRoles,
-} from "@/protogen/querylane/console/v1alpha1/role-RoleService_connectquery";
+import { listRoles } from "@/protogen/querylane/console/v1alpha1/role-RoleService_connectquery";
 
 const ROLE_ID = "YWxpY2U";
 const DATABASE_SCOPE = {
@@ -106,7 +100,7 @@ afterEach(async () => {
 });
 
 describe("aggregate role query keys", () => {
-  test("derive every list-all cache from its Connect Query method", () => {
+  test("derives the list-all roles cache from its Connect Query method", () => {
     const transport = createRouterTransport(() => undefined);
     const queryClient = new QueryClient({
       defaultOptions: {
@@ -114,22 +108,10 @@ describe("aggregate role query keys", () => {
       },
     });
     const rolesInput = rolesForInstanceQueryInput("local");
-    const grantsInput = roleGrantsForDatabaseQueryInput(DATABASE_SCOPE);
-    const ownedObjectsInput =
-      roleOwnedObjectsForDatabaseQueryInput(DATABASE_SCOPE);
-    const defaultPrivilegesInput =
-      roleDefaultPrivilegesForDatabaseQueryInput(DATABASE_SCOPE);
-    const publicGrantsInput = publicGrantsForDatabaseQueryInput(DATABASE_SCOPE);
 
     renderHook(
       () => {
         useListAllRolesQuery(rolesInput, { enabled: false });
-        useListAllRoleGrantsQuery(grantsInput, { enabled: false });
-        useListAllRoleOwnedObjectsQuery(ownedObjectsInput, { enabled: false });
-        useListAllRoleDefaultPrivilegesQuery(defaultPrivilegesInput, {
-          enabled: false,
-        });
-        useListAllPublicGrantsQuery(publicGrantsInput, { enabled: false });
       },
       { wrapper: createWrapper(transport, queryClient) }
     );
@@ -143,26 +125,6 @@ describe("aggregate role query keys", () => {
       createConnectListAllQueryKey({
         input: rolesInput,
         method: listRoles,
-        transport,
-      }),
-      createConnectListAllQueryKey({
-        input: grantsInput,
-        method: listRoleGrants,
-        transport,
-      }),
-      createConnectListAllQueryKey({
-        input: ownedObjectsInput,
-        method: listRoleOwnedObjects,
-        transport,
-      }),
-      createConnectListAllQueryKey({
-        input: defaultPrivilegesInput,
-        method: listRoleDefaultPrivileges,
-        transport,
-      }),
-      createConnectListAllQueryKey({
-        input: publicGrantsInput,
-        method: listPublicGrants,
         transport,
       }),
     ]);
@@ -269,22 +231,16 @@ describe("useListAllRolesQuery", () => {
   });
 });
 
-describe("useListAllRoleGrantsQuery", () => {
-  test("collects every page of grants for the database-scoped input", async () => {
+describe("useListRoleGrantsQuery", () => {
+  test("keeps the first page and continuation token for role grants", async () => {
     const requests: ListRoleGrantsRequest[] = [];
     const transport = createRouterTransport(({ service }) => {
       service(RoleService, {
         listRoleGrants(request) {
           requests.push(request);
-          if (request.pageToken === "") {
-            return create(ListRoleGrantsResponseSchema, {
-              grants: [{ objectName: "orders", privilege: "SELECT" }],
-              nextPageToken: "page-2",
-            });
-          }
           return create(ListRoleGrantsResponseSchema, {
-            grants: [{ objectName: "orders", privilege: "UPDATE" }],
-            nextPageToken: "",
+            grants: [{ objectName: "orders", privilege: "SELECT" }],
+            nextPageToken: "page-2",
           });
         },
       });
@@ -292,22 +248,22 @@ describe("useListAllRoleGrantsQuery", () => {
 
     const { result } = renderHook(
       () =>
-        useListAllRoleGrantsQuery(
-          roleGrantsForDatabaseQueryInput(DATABASE_SCOPE)
-        ),
+        useListRoleGrantsQuery(roleGrantsForDatabaseQueryInput(DATABASE_SCOPE)),
       { wrapper: createWrapper(transport) }
     );
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(1);
     expect(requests[0]?.parent).toBe(`instances/local/roles/${ROLE_ID}`);
     expect(requests[0]?.database).toBe("instances/local/databases/postgres");
+    expect(requests[0]?.pageSize).toBe(1000);
+    expect(requests[0]?.pageToken).toBe("");
     expect(result.current.data?.grants.map((grant) => grant.privilege)).toEqual(
-      ["SELECT", "UPDATE"]
+      ["SELECT"]
     );
-    expect(result.current.data?.nextPageToken).toBe("");
+    expect(result.current.data?.nextPageToken).toBe("page-2");
   });
 
   test("skips fetching grants when disabled", async () => {
@@ -326,7 +282,7 @@ describe("useListAllRoleGrantsQuery", () => {
 
     const { result } = renderHook(
       () =>
-        useListAllRoleGrantsQuery(
+        useListRoleGrantsQuery(
           roleGrantsForDatabaseQueryInput(DATABASE_SCOPE),
           { enabled: false, refetchOnWindowFocus: false }
         ),
@@ -339,22 +295,16 @@ describe("useListAllRoleGrantsQuery", () => {
   });
 });
 
-describe("useListAllRoleOwnedObjectsQuery", () => {
-  test("collects every page of owned objects for the database-scoped input", async () => {
+describe("useListRoleOwnedObjectsQuery", () => {
+  test("keeps the first page and continuation token for owned objects", async () => {
     const requests: ListRoleOwnedObjectsRequest[] = [];
     const transport = createRouterTransport(({ service }) => {
       service(RoleService, {
         listRoleOwnedObjects(request) {
           requests.push(request);
-          if (request.pageToken === "") {
-            return create(ListRoleOwnedObjectsResponseSchema, {
-              nextPageToken: "page-2",
-              ownedObjects: [{ objectName: "orders", schemaName: "public" }],
-            });
-          }
           return create(ListRoleOwnedObjectsResponseSchema, {
-            nextPageToken: "",
-            ownedObjects: [{ objectName: "invoices", schemaName: "public" }],
+            nextPageToken: "page-2",
+            ownedObjects: [{ objectName: "orders", schemaName: "public" }],
           });
         },
       });
@@ -362,7 +312,7 @@ describe("useListAllRoleOwnedObjectsQuery", () => {
 
     const { result } = renderHook(
       () =>
-        useListAllRoleOwnedObjectsQuery(
+        useListRoleOwnedObjectsQuery(
           roleOwnedObjectsForDatabaseQueryInput(DATABASE_SCOPE)
         ),
       { wrapper: createWrapper(transport) }
@@ -371,11 +321,14 @@ describe("useListAllRoleOwnedObjectsQuery", () => {
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(1);
     expect(requests[0]?.parent).toBe(`instances/local/roles/${ROLE_ID}`);
+    expect(requests[0]?.pageSize).toBe(1000);
+    expect(requests[0]?.pageToken).toBe("");
     expect(
       result.current.data?.ownedObjects.map((owned) => owned.objectName)
-    ).toEqual(["orders", "invoices"]);
+    ).toEqual(["orders"]);
+    expect(result.current.data?.nextPageToken).toBe("page-2");
   });
 
   test("skips fetching owned objects when disabled", async () => {
@@ -394,7 +347,7 @@ describe("useListAllRoleOwnedObjectsQuery", () => {
 
     const { result } = renderHook(
       () =>
-        useListAllRoleOwnedObjectsQuery(
+        useListRoleOwnedObjectsQuery(
           roleOwnedObjectsForDatabaseQueryInput(DATABASE_SCOPE),
           { enabled: false, refetchOnWindowFocus: false }
         ),
@@ -407,26 +360,18 @@ describe("useListAllRoleOwnedObjectsQuery", () => {
   });
 });
 
-describe("useListAllRoleDefaultPrivilegesQuery", () => {
-  test("collects every page of default privileges for the database-scoped input", async () => {
+describe("useListRoleDefaultPrivilegesQuery", () => {
+  test("keeps the first page and continuation token for default privileges", async () => {
     const requests: ListRoleDefaultPrivilegesRequest[] = [];
     const transport = createRouterTransport(({ service }) => {
       service(RoleService, {
         listRoleDefaultPrivileges(request) {
           requests.push(request);
-          if (request.pageToken === "") {
-            return create(ListRoleDefaultPrivilegesResponseSchema, {
-              defaultPrivileges: [
-                { creatorRoleName: "owner", privilege: "SELECT" },
-              ],
-              nextPageToken: "page-2",
-            });
-          }
           return create(ListRoleDefaultPrivilegesResponseSchema, {
             defaultPrivileges: [
-              { creatorRoleName: "owner", privilege: "INSERT" },
+              { creatorRoleName: "owner", privilege: "SELECT" },
             ],
-            nextPageToken: "",
+            nextPageToken: "page-2",
           });
         },
       });
@@ -434,7 +379,7 @@ describe("useListAllRoleDefaultPrivilegesQuery", () => {
 
     const { result } = renderHook(
       () =>
-        useListAllRoleDefaultPrivilegesQuery(
+        useListRoleDefaultPrivilegesQuery(
           roleDefaultPrivilegesForDatabaseQueryInput(DATABASE_SCOPE)
         ),
       { wrapper: createWrapper(transport) }
@@ -443,13 +388,16 @@ describe("useListAllRoleDefaultPrivilegesQuery", () => {
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(1);
     expect(requests[0]?.parent).toBe(`instances/local/roles/${ROLE_ID}`);
+    expect(requests[0]?.pageSize).toBe(1000);
+    expect(requests[0]?.pageToken).toBe("");
     expect(
       result.current.data?.defaultPrivileges.map(
         (privilege) => privilege.privilege
       )
-    ).toEqual(["SELECT", "INSERT"]);
+    ).toEqual(["SELECT"]);
+    expect(result.current.data?.nextPageToken).toBe("page-2");
   });
 
   test("skips fetching default privileges when disabled", async () => {
@@ -468,7 +416,7 @@ describe("useListAllRoleDefaultPrivilegesQuery", () => {
 
     const { result } = renderHook(
       () =>
-        useListAllRoleDefaultPrivilegesQuery(
+        useListRoleDefaultPrivilegesQuery(
           roleDefaultPrivilegesForDatabaseQueryInput(DATABASE_SCOPE),
           { enabled: false, refetchOnWindowFocus: false }
         ),
@@ -482,8 +430,11 @@ describe("useListAllRoleDefaultPrivilegesQuery", () => {
 });
 
 describe("useRolesAccessMapResourcesQuery", () => {
-  test("collects default privileges beside grants and owned objects for the map", async () => {
+  test("keeps one page per facet and reports truncated access data", async () => {
     const defaultPrivilegeRequests: ListRoleDefaultPrivilegesRequest[] = [];
+    const grantRequests: ListRoleGrantsRequest[] = [];
+    const ownedObjectRequests: ListRoleOwnedObjectsRequest[] = [];
+    const publicGrantRequests: ListPublicGrantsRequest[] = [];
     const transport = createRouterTransport(({ service }) => {
       service(DatabaseService, {
         listDatabases() {
@@ -500,10 +451,11 @@ describe("useRolesAccessMapResourcesQuery", () => {
         },
       });
       service(RoleService, {
-        listPublicGrants() {
+        listPublicGrants(request) {
+          publicGrantRequests.push(request);
           return create(ListPublicGrantsResponseSchema, {
-            grants: [],
-            nextPageToken: "",
+            grants: [{ privilege: "USAGE", schemaName: "shipping" }],
+            nextPageToken: "more-public-grants",
           });
         },
         listRoleDefaultPrivileges(request) {
@@ -516,19 +468,21 @@ describe("useRolesAccessMapResourcesQuery", () => {
                 schemaName: "shipping",
               },
             ],
-            nextPageToken: "",
+            nextPageToken: "more-default-privileges",
           });
         },
-        listRoleGrants() {
+        listRoleGrants(request) {
+          grantRequests.push(request);
           return create(ListRoleGrantsResponseSchema, {
-            grants: [],
-            nextPageToken: "",
+            grants: [{ objectName: "orders", privilege: "SELECT" }],
+            nextPageToken: "more-role-grants",
           });
         },
-        listRoleOwnedObjects() {
+        listRoleOwnedObjects(request) {
+          ownedObjectRequests.push(request);
           return create(ListRoleOwnedObjectsResponseSchema, {
-            nextPageToken: "",
-            ownedObjects: [],
+            nextPageToken: "more-owned-objects",
+            ownedObjects: [{ objectName: "orders", schemaName: "shipping" }],
           });
         },
       });
@@ -554,7 +508,19 @@ describe("useRolesAccessMapResourcesQuery", () => {
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
+    expect(publicGrantRequests).toHaveLength(1);
     expect(defaultPrivilegeRequests).toHaveLength(1);
+    expect(grantRequests).toHaveLength(1);
+    expect(ownedObjectRequests).toHaveLength(1);
+    for (const request of [
+      publicGrantRequests[0],
+      defaultPrivilegeRequests[0],
+      grantRequests[0],
+      ownedObjectRequests[0],
+    ]) {
+      expect(request?.pageSize).toBe(1000);
+      expect(request?.pageToken).toBe("");
+    }
     expect(defaultPrivilegeRequests[0]?.database).toBe(
       "instances/local/databases/logistics"
     );
@@ -567,6 +533,12 @@ describe("useRolesAccessMapResourcesQuery", () => {
           `${privilege.creatorRoleName}:${privilege.schemaName}:${privilege.privilege}`
       )
     ).toEqual(["app_owner:shipping:SELECT"]);
+    expect(result.current.data?.publicAccess[0]?.grants).toHaveLength(1);
+    expect(result.current.data?.roleAccess[0]?.grants).toHaveLength(1);
+    expect(result.current.data?.roleAccess[0]?.ownedObjects).toHaveLength(1);
+    expect(result.current.data?.failedRequestCount).toBe(0);
+    expect(result.current.data?.truncatedRequestCount).toBe(4);
+    expect(result.current.data?.budgetSkippedRequestCount).toBe(0);
   });
 
   test("keeps partial map data when one access request fails", async () => {
@@ -630,8 +602,163 @@ describe("useRolesAccessMapResourcesQuery", () => {
       expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.failedRequestCount).toBe(1);
+    expect(result.current.data?.truncatedRequestCount).toBe(0);
+    expect(result.current.data?.budgetSkippedRequestCount).toBe(0);
     expect(result.current.data?.roleAccess[0]?.grants).toEqual([]);
     expect(result.current.data?.roleAccess[0]?.ownedObjects).toHaveLength(1);
+  });
+});
+
+describe("useRolesAccessMapResourcesQuery request budget", () => {
+  test("does not build the full role and database pair cross-product", async () => {
+    const roles = [
+      create(RoleSchema, {
+        name: `instances/local/roles/${ROLE_ID}`,
+        roleName: "app_readonly",
+      }),
+    ];
+    Object.defineProperty(roles, "flatMap", {
+      value: () => {
+        throw new Error("Role/database pairs must stay budget-bounded");
+      },
+    });
+    const transport = createRouterTransport(({ service }) => {
+      service(DatabaseService, {
+        listDatabases() {
+          return create(ListDatabasesResponseSchema, {
+            databases: [
+              {
+                displayName: "logistics",
+                name: "instances/local/databases/logistics",
+              },
+            ],
+          });
+        },
+      });
+      service(RoleService, {
+        listPublicGrants() {
+          return create(ListPublicGrantsResponseSchema, { grants: [] });
+        },
+        listRoleDefaultPrivileges() {
+          return create(ListRoleDefaultPrivilegesResponseSchema, {
+            defaultPrivileges: [],
+          });
+        },
+        listRoleGrants() {
+          return create(ListRoleGrantsResponseSchema, { grants: [] });
+        },
+        listRoleOwnedObjects() {
+          return create(ListRoleOwnedObjectsResponseSchema, {
+            ownedObjects: [],
+          });
+        },
+      });
+    });
+
+    const { result } = renderHook(
+      () =>
+        useRolesAccessMapResourcesQuery(
+          { instanceId: "local", roles },
+          { refetchOnWindowFocus: false }
+        ),
+      { wrapper: createWrapper(transport) }
+    );
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+  });
+
+  test("caps access requests without materializing skipped role data", async () => {
+    const callOrder: string[] = [];
+    const defaultPrivilegeRequests: ListRoleDefaultPrivilegesRequest[] = [];
+    const grantRequests: ListRoleGrantsRequest[] = [];
+    const ownedObjectRequests: ListRoleOwnedObjectsRequest[] = [];
+    const publicGrantRequests: ListPublicGrantsRequest[] = [];
+    const databases = Array.from({ length: 100 }, (_, index) => ({
+      displayName: `database-${index}`,
+      isSystemDatabase: false,
+      name: `instances/local/databases/database-${index}`,
+    }));
+
+    const transport = createRouterTransport(({ service }) => {
+      service(DatabaseService, {
+        listDatabases() {
+          return create(ListDatabasesResponseSchema, { databases });
+        },
+      });
+      service(RoleService, {
+        listPublicGrants(request) {
+          publicGrantRequests.push(request);
+          callOrder.push(`public:${request.parent}`);
+          return create(ListPublicGrantsResponseSchema, {
+            grants: [],
+            nextPageToken: request.parent.endsWith("database-0")
+              ? "more-public-grants"
+              : "",
+          });
+        },
+        listRoleDefaultPrivileges(request) {
+          defaultPrivilegeRequests.push(request);
+          callOrder.push(`default:${request.database}`);
+          return create(ListRoleDefaultPrivilegesResponseSchema, {
+            defaultPrivileges: [],
+          });
+        },
+        listRoleGrants(request) {
+          grantRequests.push(request);
+          callOrder.push(`grant:${request.database}`);
+          return create(ListRoleGrantsResponseSchema, {
+            grants: [{ objectName: request.database, privilege: "SELECT" }],
+            nextPageToken: request.database.endsWith("database-0")
+              ? "more-role-grants"
+              : "",
+          });
+        },
+        listRoleOwnedObjects(request) {
+          ownedObjectRequests.push(request);
+          callOrder.push(`owned:${request.database}`);
+          return create(ListRoleOwnedObjectsResponseSchema, {
+            ownedObjects: [],
+          });
+        },
+      });
+    });
+
+    const { result } = renderHook(
+      () =>
+        useRolesAccessMapResourcesQuery(
+          {
+            instanceId: "local",
+            roles: [
+              create(RoleSchema, {
+                name: `instances/local/roles/${ROLE_ID}`,
+                roleName: "app_readonly",
+              }),
+            ],
+          },
+          { refetchOnWindowFocus: false }
+        ),
+      { wrapper: createWrapper(transport) }
+    );
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(publicGrantRequests).toHaveLength(100);
+    expect(defaultPrivilegeRequests).toHaveLength(66);
+    expect(grantRequests).toHaveLength(66);
+    expect(ownedObjectRequests).toHaveLength(66);
+    expect(callOrder).toHaveLength(298);
+    expect(
+      callOrder.slice(0, 100).every((call) => call.startsWith("public:"))
+    ).toBe(true);
+    expect(result.current.data?.publicAccess).toHaveLength(100);
+    expect(result.current.data?.roleAccess).toHaveLength(66);
+    expect(result.current.data?.roleAccess[65]?.grants).toHaveLength(1);
+    expect(result.current.data?.failedRequestCount).toBe(0);
+    expect(result.current.data?.truncatedRequestCount).toBe(2);
+    expect(result.current.data?.budgetSkippedRequestCount).toBe(102);
   });
 
   test("bounds concurrent access requests across role and database pairs", async () => {
@@ -785,22 +912,16 @@ describe("useRolesAccessMapResourcesQuery", () => {
   });
 });
 
-describe("useListAllPublicGrantsQuery", () => {
-  test("collects every page of public grants for the database input", async () => {
+describe("useListPublicGrantsQuery", () => {
+  test("keeps the first page and continuation token for public grants", async () => {
     const requests: ListPublicGrantsRequest[] = [];
     const transport = createRouterTransport(({ service }) => {
       service(RoleService, {
         listPublicGrants(request) {
           requests.push(request);
-          if (request.pageToken === "") {
-            return create(ListPublicGrantsResponseSchema, {
-              grants: [{ objectName: "orders", privilege: "SELECT" }],
-              nextPageToken: "page-2",
-            });
-          }
           return create(ListPublicGrantsResponseSchema, {
-            grants: [{ privilege: "USAGE", schemaName: "public" }],
-            nextPageToken: "",
+            grants: [{ objectName: "orders", privilege: "SELECT" }],
+            nextPageToken: "page-2",
           });
         },
       });
@@ -808,7 +929,7 @@ describe("useListAllPublicGrantsQuery", () => {
 
     const { result } = renderHook(
       () =>
-        useListAllPublicGrantsQuery(
+        useListPublicGrantsQuery(
           publicGrantsForDatabaseQueryInput({
             databaseId: "postgres",
             instanceId: "local",
@@ -820,11 +941,14 @@ describe("useListAllPublicGrantsQuery", () => {
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(1);
     expect(requests[0]?.parent).toBe("instances/local/databases/postgres");
+    expect(requests[0]?.pageSize).toBe(1000);
+    expect(requests[0]?.pageToken).toBe("");
     expect(result.current.data?.grants.map((grant) => grant.privilege)).toEqual(
-      ["SELECT", "USAGE"]
+      ["SELECT"]
     );
+    expect(result.current.data?.nextPageToken).toBe("page-2");
   });
 
   test("skips fetching public grants when disabled", async () => {
@@ -843,7 +967,7 @@ describe("useListAllPublicGrantsQuery", () => {
 
     const { result } = renderHook(
       () =>
-        useListAllPublicGrantsQuery(
+        useListPublicGrantsQuery(
           publicGrantsForDatabaseQueryInput({
             databaseId: "postgres",
             instanceId: "local",

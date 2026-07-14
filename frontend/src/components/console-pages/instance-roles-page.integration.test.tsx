@@ -14,9 +14,11 @@ import {
 
 const mocks = vi.hoisted(() => ({
   accessMapRoleNames: [] as string[],
+  budgetSkippedRequestCount: 0,
   failedRequestCount: 0,
   navigate: vi.fn(),
   tableSearch: "",
+  truncatedRequestCount: 0,
 }));
 
 const SUPERUSERS_FILTER_OPTION_NAME = /Superusers 1/;
@@ -87,6 +89,7 @@ vi.mock("@/hooks/api/role", () => ({
     mocks.accessMapRoleNames = input.roles.map((role) => role.roleName);
     return {
       data: {
+        budgetSkippedRequestCount: mocks.budgetSkippedRequestCount,
         failedRequestCount: mocks.failedRequestCount,
         publicAccess: [
           {
@@ -123,6 +126,7 @@ vi.mock("@/hooks/api/role", () => ({
             roleName: "app_user",
           },
         ],
+        truncatedRequestCount: mocks.truncatedRequestCount,
       },
       error: null,
       isPending: false,
@@ -132,10 +136,12 @@ vi.mock("@/hooks/api/role", () => ({
 
 afterEach(() => {
   mocks.accessMapRoleNames = [];
+  mocks.budgetSkippedRequestCount = 0;
   mocks.failedRequestCount = 0;
   cleanup();
   vi.clearAllMocks();
   mocks.tableSearch = "";
+  mocks.truncatedRequestCount = 0;
 });
 
 describe("InstanceRolesPage", () => {
@@ -241,6 +247,30 @@ describe("InstanceRolesPage", () => {
         "2 access requests could not be loaded. The map shows the available data."
       )
     ).toBeTruthy();
+    expect(screen.getByText("orders")).toBeTruthy();
+  });
+
+  test("warns when access results are truncated and keeps the map visible", () => {
+    mocks.truncatedRequestCount = 1;
+
+    render(<InstanceRolesPage instanceId="prod" tab="map" />);
+
+    const warning = screen.getByRole("status");
+    expect(warning.textContent).toContain("Some access data is not shown");
+    expect(warning.textContent).toContain(
+      "The access map reached a result or request limit. It shows available results; counts and relationships may be incomplete."
+    );
+    expect(screen.getByText("orders")).toBeTruthy();
+  });
+
+  test("warns when the access-map request budget skips results", () => {
+    mocks.budgetSkippedRequestCount = 1;
+
+    render(<InstanceRolesPage instanceId="prod" tab="map" />);
+
+    expect(screen.getByRole("status").textContent).toContain(
+      "Some access data is not shown"
+    );
     expect(screen.getByText("orders")).toBeTruthy();
   });
 });

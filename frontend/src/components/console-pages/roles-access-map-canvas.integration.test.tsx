@@ -56,12 +56,22 @@ const MODEL: RolesAccessMapModel = {
   ],
 };
 
-function CanvasHarness({ model = MODEL }: { model?: RolesAccessMapModel }) {
+function CanvasHarness({
+  failedRequestCount = 0,
+  model = MODEL,
+  partial = false,
+}: {
+  failedRequestCount?: number;
+  model?: RolesAccessMapModel;
+  partial?: boolean;
+}) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   return (
     <RolesAccessMapCanvas
+      failedRequestCount={failedRequestCount}
       model={model}
       onSelectNode={setSelectedNodeId}
+      partial={partial}
       selectedNodeId={selectedNodeId}
     />
   );
@@ -148,5 +158,67 @@ describe("RolesAccessMapCanvas", () => {
         "No object grants found for the visible roles."
       )
     ).toBeTruthy();
+  });
+
+  test("keeps partial empty results qualified in the expanded dialog", async () => {
+    const user = userEvent.setup();
+    render(
+      <CanvasHarness
+        model={{ ...MODEL, edges: [], objects: [] }}
+        partial={true}
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Maximize role access map" })
+    );
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Expanded role access map",
+    });
+    expect(within(dialog).getByRole("status")).toBeTruthy();
+    expect(
+      within(dialog).getByText(
+        "Object grants may exist beyond the available results."
+      )
+    ).toBeTruthy();
+    expect(
+      within(dialog).queryByText(
+        "No object grants found for the visible roles."
+      )
+    ).toBeNull();
+  });
+
+  test("keeps failed-only empty results qualified in the expanded dialog", async () => {
+    const user = userEvent.setup();
+    render(
+      <CanvasHarness
+        failedRequestCount={1}
+        model={{ ...MODEL, edges: [], objects: [] }}
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Maximize role access map" })
+    );
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Expanded role access map",
+    });
+    expect(
+      within(dialog).getByText(
+        "1 access request could not be loaded. The map shows the available data."
+      )
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByText(
+        "Object grants may exist beyond the available results."
+      )
+    ).toBeTruthy();
+    expect(
+      within(dialog).queryByText(
+        "No object grants found for the visible roles."
+      )
+    ).toBeNull();
   });
 });

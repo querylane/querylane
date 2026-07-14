@@ -16,6 +16,7 @@ import type {
   RolesAccessMapObjectNode,
   RolesAccessMapRoleNode,
 } from "@/components/console-pages/roles-access-map-model";
+import { RolesAccessMapNotice } from "@/components/console-pages/roles-access-map-notice";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -270,13 +271,15 @@ function ObjectNodeButton({
   );
 }
 
-function EmptyObjects() {
+function EmptyObjects({ incomplete }: { incomplete: boolean }) {
   return (
     <div
       className="absolute flex h-36 items-center justify-center rounded-xl border border-dashed bg-background/70 text-center text-muted-foreground text-sm"
       style={{ left: OBJECT_X, top: OBJECT_TOP, width: OBJECT_NODE_WIDTH }}
     >
-      No object grants found for the visible roles.
+      {incomplete
+        ? "Object grants may exist beyond the available results."
+        : "No object grants found for the visible roles."}
     </div>
   );
 }
@@ -343,12 +346,16 @@ function AccessFiltersPopover({
 }
 
 function RolesAccessMapCanvas({
+  failedRequestCount,
   model,
   onSelectNode,
+  partial,
   selectedNodeId,
 }: {
+  failedRequestCount: number;
   model: RolesAccessMapModel;
   onSelectNode: (nodeId: string | null) => void;
+  partial: boolean;
   selectedNodeId: string | null;
 }) {
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
@@ -547,7 +554,9 @@ function RolesAccessMapCanvas({
                 top={roleY(index)}
               />
             ))}
-            {model.objects.length === 0 ? <EmptyObjects /> : null}
+            {model.objects.length === 0 ? (
+              <EmptyObjects incomplete={partial || failedRequestCount > 0} />
+            ) : null}
             {model.objects.map((node, index) => (
               <ObjectNodeButton
                 dimmed={nodeIsDimmed(node.id)}
@@ -576,6 +585,11 @@ function RolesAccessMapCanvas({
               Trace role membership and object access with more room.
             </DialogDescription>
           </DialogHeader>
+          <RolesAccessMapNotice
+            failedRequestCount={failedRequestCount}
+            kind="failed"
+          />
+          <RolesAccessMapNotice kind="partial" visible={partial} />
           <div className="min-h-0 flex-1">{isExpanded ? mapSurface : null}</div>
         </DialogContent>
       </Dialog>

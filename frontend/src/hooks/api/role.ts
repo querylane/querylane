@@ -1,7 +1,13 @@
 import { create, type MessageInitShape } from "@bufbuild/protobuf";
 import { createClient, type Transport } from "@connectrpc/connect";
-import { useTransport } from "@connectrpc/connect-query";
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import {
+  useQuery as useConnectQuery,
+  useTransport,
+} from "@connectrpc/connect-query";
+import {
+  queryOptions,
+  useQuery as useTanstackQuery,
+} from "@tanstack/react-query";
 import { createConnectListAllQueryKey } from "@/lib/connect-query-key";
 import {
   buildDatabaseName,
@@ -16,10 +22,6 @@ import {
   DatabaseService,
 } from "@/protogen/querylane/console/v1alpha1/database_pb";
 import {
-  ListPublicGrantsResponseSchema,
-  ListRoleDefaultPrivilegesResponseSchema,
-  ListRoleGrantsResponseSchema,
-  ListRoleOwnedObjectsResponseSchema,
   ListRolesResponseSchema,
   type ObjectGrant,
   type OwnedObject,
@@ -36,8 +38,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/role-RoleService_connectquery";
 
 // Non-exported types and fetch helpers come first; all exports follow (per the
-// useExportsLast lint rule). Each fetch helper paginates the backend list RPC to
-// completion via paginateAll — see role-lists fetch-all notes in query-policy.
+// useExportsLast lint rule).
 
 interface ListAllQueryOptions {
   enabled?: boolean;
@@ -75,19 +76,29 @@ interface PublicAccessMapResource {
 }
 
 interface RoleAccessMapResourcesResult {
+  budgetSkippedRequestCount: number;
   failedRequestCount: number;
   publicAccess: PublicAccessMapResource[];
   roleAccess: RoleAccessMapResource[];
+  truncatedRequestCount: number;
 }
 
 interface PartialAccessResult<T> {
   failedRequestCount: number;
+  truncatedRequestCount: number;
   value: T;
+}
+
+interface RoleDatabasePair {
+  database: Database;
+  role: Role;
 }
 
 // A role/database pair starts three facet requests. Two pairs keep scheduling
 // bounded while the transport's per-instance semaphore caps active RPCs at 4.
 const ACCESS_MAP_RESOURCE_CONCURRENCY = 2;
+const ACCESS_MAP_REQUEST_BUDGET = 300;
+const ACCESS_MAP_ROLE_FACET_REQUEST_COUNT = 3;
 
 async function mapWithConcurrency<T, Result>(
   items: T[],
@@ -116,14 +127,40 @@ async function mapWithConcurrency<T, Result>(
   return results;
 }
 
-async function keepPartialAccess<T>(
-  request: Promise<T[]>
+function takeRoleDatabasePairs({
+  databases,
+  limit,
+  roles,
+}: {
+  databases: Database[];
+  limit: number;
+  roles: Role[];
+}): RoleDatabasePair[] {
+  const pairs: RoleDatabasePair[] = [];
+  for (const role of roles) {
+    for (const database of databases) {
+      if (pairs.length === limit) {
+        return pairs;
+      }
+      pairs.push({ database, role });
+    }
+  }
+  return pairs;
+}
+
+async function keepPartialAccess<Response extends { nextPageToken: string }, T>(
+  request: Promise<Response>,
+  selectItems: (response: Response) => T[]
 ): Promise<PartialAccessResult<T[]>> {
   const [result] = await Promise.allSettled([request]);
   if (result.status === "fulfilled") {
-    return { failedRequestCount: 0, value: result.value };
+    return {
+      failedRequestCount: 0,
+      truncatedRequestCount: result.value.nextPageToken ? 1 : 0,
+      value: selectItems(result.value),
+    };
   }
-  return { failedRequestCount: 1, value: [] };
+  return { failedRequestCount: 1, truncatedRequestCount: 0, value: [] };
 }
 
 async function fetchAllRoles(
@@ -143,77 +180,6 @@ async function fetchAllRoles(
   return create(ListRolesResponseSchema, {
     nextPageToken: "",
     roles,
-  });
-}
-
-async function fetchAllRoleGrants(
-  transport: Transport,
-  input: ListRoleGrantsInput
-) {
-  const client = createClient(RoleService, transport);
-  const grants = await paginateAll(
-    (pageToken) =>
-      client.listRoleGrants({ ...input, pageToken: pageToken ?? "" }),
-    (response) => response.grants
-  );
-
-  return create(ListRoleGrantsResponseSchema, {
-    grants,
-    nextPageToken: "",
-  });
-}
-
-async function fetchAllRoleOwnedObjects(
-  transport: Transport,
-  input: ListRoleOwnedObjectsInput
-) {
-  const client = createClient(RoleService, transport);
-  const ownedObjects = await paginateAll(
-    (pageToken) =>
-      client.listRoleOwnedObjects({ ...input, pageToken: pageToken ?? "" }),
-    (response) => response.ownedObjects
-  );
-
-  return create(ListRoleOwnedObjectsResponseSchema, {
-    nextPageToken: "",
-    ownedObjects,
-  });
-}
-
-async function fetchAllRoleDefaultPrivileges(
-  transport: Transport,
-  input: ListRoleDefaultPrivilegesInput
-) {
-  const client = createClient(RoleService, transport);
-  const defaultPrivileges = await paginateAll(
-    (pageToken) =>
-      client.listRoleDefaultPrivileges({
-        ...input,
-        pageToken: pageToken ?? "",
-      }),
-    (response) => response.defaultPrivileges
-  );
-
-  return create(ListRoleDefaultPrivilegesResponseSchema, {
-    defaultPrivileges,
-    nextPageToken: "",
-  });
-}
-
-async function fetchAllPublicGrants(
-  transport: Transport,
-  input: ListPublicGrantsInput
-) {
-  const client = createClient(RoleService, transport);
-  const grants = await paginateAll(
-    (pageToken) =>
-      client.listPublicGrants({ ...input, pageToken: pageToken ?? "" }),
-    (response) => response.grants
-  );
-
-  return create(ListPublicGrantsResponseSchema, {
-    grants,
-    nextPageToken: "",
   });
 }
 
@@ -238,24 +204,26 @@ async function fetchRoleAccessMapResources(
   );
   const mapDatabases = userDatabases.length > 0 ? userDatabases : databases;
 
+  const scheduledPublicRequestCount = Math.min(
+    ACCESS_MAP_REQUEST_BUDGET,
+    mapDatabases.length
+  );
   const publicResults = await mapWithConcurrency(
-    mapDatabases,
+    mapDatabases.slice(0, scheduledPublicRequestCount),
     async (database) => {
       const databaseId = databaseIdOf(database);
       const grants = await keepPartialAccess(
-        paginateAll(
-          (pageToken) =>
-            roleClient.listPublicGrants({
-              orderBy: "schema_name asc, object_name asc, privilege asc",
-              pageSize: 1000,
-              pageToken: pageToken ?? "",
-              parent: buildDatabaseName(input.instanceId, databaseId),
-            }),
-          (response) => response.grants
-        )
+        roleClient.listPublicGrants({
+          orderBy: "schema_name asc, object_name asc, privilege asc",
+          pageSize: 1000,
+          pageToken: "",
+          parent: buildDatabaseName(input.instanceId, databaseId),
+        }),
+        (response) => response.grants
       );
       return {
         failedRequestCount: grants.failedRequestCount,
+        truncatedRequestCount: grants.truncatedRequestCount,
         value: {
           databaseId,
           databaseName: databaseDisplayName(database),
@@ -264,11 +232,19 @@ async function fetchRoleAccessMapResources(
       };
     }
   );
-  const roleDatabasePairs = input.roles.flatMap((role) =>
-    mapDatabases.map((database) => ({ database, role }))
+  const roleDatabasePairCount = input.roles.length * mapDatabases.length;
+  const remainingRequestBudget =
+    ACCESS_MAP_REQUEST_BUDGET - scheduledPublicRequestCount;
+  const scheduledRolePairCount = Math.min(
+    roleDatabasePairCount,
+    Math.floor(remainingRequestBudget / ACCESS_MAP_ROLE_FACET_REQUEST_COUNT)
   );
   const roleResults = await mapWithConcurrency(
-    roleDatabasePairs,
+    takeRoleDatabasePairs({
+      databases: mapDatabases,
+      limit: scheduledRolePairCount,
+      roles: input.roles,
+    }),
     async ({ database, role }) => {
       const roleId = roleResourceIdOf(role);
       const parent = buildRoleName(input.instanceId, roleId);
@@ -277,44 +253,35 @@ async function fetchRoleAccessMapResources(
       const databaseResource = buildDatabaseName(input.instanceId, databaseId);
       const [defaultPrivileges, grants, ownedObjects] = await Promise.all([
         keepPartialAccess(
-          paginateAll(
-            (pageToken) =>
-              roleClient.listRoleDefaultPrivileges({
-                database: databaseResource,
-                orderBy:
-                  "creator_role_name asc, schema_name asc, object_type asc, privilege asc",
-                pageSize: 1000,
-                pageToken: pageToken ?? "",
-                parent,
-              }),
-            (response) => response.defaultPrivileges
-          )
+          roleClient.listRoleDefaultPrivileges({
+            database: databaseResource,
+            orderBy:
+              "creator_role_name asc, schema_name asc, object_type asc, privilege asc",
+            pageSize: 1000,
+            pageToken: "",
+            parent,
+          }),
+          (response) => response.defaultPrivileges
         ),
         keepPartialAccess(
-          paginateAll(
-            (pageToken) =>
-              roleClient.listRoleGrants({
-                database: databaseResource,
-                orderBy: "schema_name asc, object_name asc, privilege asc",
-                pageSize: 1000,
-                pageToken: pageToken ?? "",
-                parent,
-              }),
-            (response) => response.grants
-          )
+          roleClient.listRoleGrants({
+            database: databaseResource,
+            orderBy: "schema_name asc, object_name asc, privilege asc",
+            pageSize: 1000,
+            pageToken: "",
+            parent,
+          }),
+          (response) => response.grants
         ),
         keepPartialAccess(
-          paginateAll(
-            (pageToken) =>
-              roleClient.listRoleOwnedObjects({
-                database: databaseResource,
-                orderBy: "schema_name asc, object_name asc",
-                pageSize: 1000,
-                pageToken: pageToken ?? "",
-                parent,
-              }),
-            (response) => response.ownedObjects
-          )
+          roleClient.listRoleOwnedObjects({
+            database: databaseResource,
+            orderBy: "schema_name asc, object_name asc",
+            pageSize: 1000,
+            pageToken: "",
+            parent,
+          }),
+          (response) => response.ownedObjects
         ),
       ]);
       return {
@@ -322,6 +289,10 @@ async function fetchRoleAccessMapResources(
           defaultPrivileges.failedRequestCount +
           grants.failedRequestCount +
           ownedObjects.failedRequestCount,
+        truncatedRequestCount:
+          defaultPrivileges.truncatedRequestCount +
+          grants.truncatedRequestCount +
+          ownedObjects.truncatedRequestCount,
         value: {
           databaseId,
           databaseName,
@@ -334,14 +305,22 @@ async function fetchRoleAccessMapResources(
       };
     }
   );
-
   return {
+    budgetSkippedRequestCount:
+      mapDatabases.length -
+      scheduledPublicRequestCount +
+      (roleDatabasePairCount - scheduledRolePairCount) *
+        ACCESS_MAP_ROLE_FACET_REQUEST_COUNT,
     failedRequestCount: [...publicResults, ...roleResults].reduce(
       (total, result) => total + result.failedRequestCount,
       0
     ),
     publicAccess: publicResults.map((result) => result.value),
     roleAccess: roleResults.map((result) => result.value),
+    truncatedRequestCount: [...publicResults, ...roleResults].reduce(
+      (total, result) => total + result.truncatedRequestCount,
+      0
+    ),
   };
 }
 
@@ -391,7 +370,7 @@ function useListAllRolesQuery(
 ) {
   const transport = useTransport();
 
-  return useQuery({
+  return useTanstackQuery({
     ...listAllRolesQueryOptions({
       ...(input === undefined ? {} : { input }),
       transport,
@@ -410,7 +389,7 @@ function useRolesAccessMapResourcesQuery(
   const transport = useTransport();
   const roleKey = input.roles.map((role) => role.name).join("|");
 
-  return useQuery({
+  return useTanstackQuery({
     enabled: (options?.enabled ?? true) && input.roles.length > 0,
     queryFn: () => fetchRoleAccessMapResources(transport, input),
     queryKey: [
@@ -443,24 +422,13 @@ export function roleGrantsForDatabaseQueryInput({
   } as const satisfies ListRoleGrantsInput;
 }
 
-export function useListAllRoleGrantsQuery(
+export function useListRoleGrantsQuery(
   input: ListRoleGrantsInput,
   options?: ListAllQueryOptions
 ) {
-  const transport = useTransport();
-
-  return useQuery({
-    enabled: options?.enabled ?? true,
-    queryFn: () => fetchAllRoleGrants(transport, input),
-    queryKey: createConnectListAllQueryKey({
-      input,
-      method: listRoleGrants,
-      transport,
-    }),
+  return useConnectQuery(listRoleGrants, input, {
     ...RESOURCE_QUERY_OPTIONS.roleGrants,
-    ...(options?.refetchOnWindowFocus === undefined
-      ? {}
-      : { refetchOnWindowFocus: options.refetchOnWindowFocus }),
+    ...options,
   });
 }
 
@@ -481,24 +449,13 @@ export function roleOwnedObjectsForDatabaseQueryInput({
   } as const satisfies ListRoleOwnedObjectsInput;
 }
 
-export function useListAllRoleOwnedObjectsQuery(
+export function useListRoleOwnedObjectsQuery(
   input: ListRoleOwnedObjectsInput,
   options?: ListAllQueryOptions
 ) {
-  const transport = useTransport();
-
-  return useQuery({
-    enabled: options?.enabled ?? true,
-    queryFn: () => fetchAllRoleOwnedObjects(transport, input),
-    queryKey: createConnectListAllQueryKey({
-      input,
-      method: listRoleOwnedObjects,
-      transport,
-    }),
+  return useConnectQuery(listRoleOwnedObjects, input, {
     ...RESOURCE_QUERY_OPTIONS.roleOwnedObjects,
-    ...(options?.refetchOnWindowFocus === undefined
-      ? {}
-      : { refetchOnWindowFocus: options.refetchOnWindowFocus }),
+    ...options,
   });
 }
 
@@ -520,24 +477,13 @@ export function roleDefaultPrivilegesForDatabaseQueryInput({
   } as const satisfies ListRoleDefaultPrivilegesInput;
 }
 
-export function useListAllRoleDefaultPrivilegesQuery(
+export function useListRoleDefaultPrivilegesQuery(
   input: ListRoleDefaultPrivilegesInput,
   options?: ListAllQueryOptions
 ) {
-  const transport = useTransport();
-
-  return useQuery({
-    enabled: options?.enabled ?? true,
-    queryFn: () => fetchAllRoleDefaultPrivileges(transport, input),
-    queryKey: createConnectListAllQueryKey({
-      input,
-      method: listRoleDefaultPrivileges,
-      transport,
-    }),
+  return useConnectQuery(listRoleDefaultPrivileges, input, {
     ...RESOURCE_QUERY_OPTIONS.roleDefaultPrivileges,
-    ...(options?.refetchOnWindowFocus === undefined
-      ? {}
-      : { refetchOnWindowFocus: options.refetchOnWindowFocus }),
+    ...options,
   });
 }
 
@@ -555,24 +501,13 @@ export function publicGrantsForDatabaseQueryInput({
   } as const satisfies ListPublicGrantsInput;
 }
 
-export function useListAllPublicGrantsQuery(
+export function useListPublicGrantsQuery(
   input: ListPublicGrantsInput,
   options?: ListAllQueryOptions
 ) {
-  const transport = useTransport();
-
-  return useQuery({
-    enabled: options?.enabled ?? true,
-    queryFn: () => fetchAllPublicGrants(transport, input),
-    queryKey: createConnectListAllQueryKey({
-      input,
-      method: listPublicGrants,
-      transport,
-    }),
+  return useConnectQuery(listPublicGrants, input, {
     ...RESOURCE_QUERY_OPTIONS.publicGrants,
-    ...(options?.refetchOnWindowFocus === undefined
-      ? {}
-      : { refetchOnWindowFocus: options.refetchOnWindowFocus }),
+    ...options,
   });
 }
 
