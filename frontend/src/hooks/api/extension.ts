@@ -2,6 +2,7 @@ import { create, type MessageInitShape } from "@bufbuild/protobuf";
 import { createClient, type Transport } from "@connectrpc/connect";
 import { useTransport } from "@connectrpc/connect-query";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { createConnectListAllQueryKey } from "@/lib/connect-query-key";
 import { buildDatabaseName } from "@/lib/console-resources";
 import { paginateAll } from "@/lib/paginate-all";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
@@ -9,7 +10,7 @@ import {
   ExtensionService,
   ListExtensionsResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/extension_pb";
-import type { listExtensions } from "@/protogen/querylane/console/v1alpha1/extension-ExtensionService_connectquery";
+import { listExtensions } from "@/protogen/querylane/console/v1alpha1/extension-ExtensionService_connectquery";
 
 interface ListAllQueryOptions {
   enabled?: boolean;
@@ -19,10 +20,6 @@ interface ListAllQueryOptions {
 type ListExtensionsInput = MessageInitShape<(typeof listExtensions)["input"]>;
 
 const EXTENSION_LIST_PAGE_SIZE = 50;
-
-function getListAllExtensionsQueryKey(input: ListExtensionsInput) {
-  return ["console", "extensions", "list-all", input] as const;
-}
 
 async function fetchAllExtensions(
   transport: Transport,
@@ -50,7 +47,11 @@ function listAllExtensionsQueryOptions({
 }) {
   return queryOptions({
     queryFn: () => fetchAllExtensions(transport, input),
-    queryKey: getListAllExtensionsQueryKey(input),
+    queryKey: createConnectListAllQueryKey({
+      input,
+      method: listExtensions,
+      transport,
+    }),
     ...RESOURCE_QUERY_OPTIONS.extensionList,
   });
 }

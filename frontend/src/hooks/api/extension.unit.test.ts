@@ -5,12 +5,14 @@ import {
   extensionsForDatabaseQueryInput,
   listAllExtensionsQueryOptions,
 } from "@/hooks/api/extension";
+import { createConnectListAllQueryKey } from "@/lib/connect-query-key";
 import { QUERY_STALE_TIME } from "@/lib/query-policy";
 import {
   ExtensionService,
   type ListExtensionsRequest,
   ListExtensionsResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/extension_pb";
+import { listExtensions } from "@/protogen/querylane/console/v1alpha1/extension-ExtensionService_connectquery";
 import { createTestQueryClient } from "@/test/query-client";
 
 async function disposeTestQueryClient(
@@ -32,6 +34,24 @@ describe("extension query option helpers", () => {
       pageSize: 50,
       parent: "instances/local/databases/postgres",
     });
+  });
+
+  test("uses the Connect Query ListExtensions key for the aggregate cache", () => {
+    const transport = createRouterTransport(() => undefined);
+    const input = extensionsForDatabaseQueryInput({
+      databaseId: "postgres",
+      instanceId: "local",
+    });
+
+    expect(
+      listAllExtensionsQueryOptions({ input, transport }).queryKey
+    ).toEqual(
+      createConnectListAllQueryKey({
+        input,
+        method: listExtensions,
+        transport,
+      })
+    );
   });
 
   test("collects every extension page into a single list response", async () => {

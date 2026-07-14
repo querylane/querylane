@@ -2,6 +2,7 @@ import { create, type MessageInitShape } from "@bufbuild/protobuf";
 import { createClient, type Transport } from "@connectrpc/connect";
 import { useTransport } from "@connectrpc/connect-query";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { createConnectListAllQueryKey } from "@/lib/connect-query-key";
 import {
   buildDatabaseName,
   buildInstanceName,
@@ -26,7 +27,7 @@ import {
   type RoleDefaultPrivilege,
   RoleService,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
-import type {
+import {
   listPublicGrants,
   listRoleDefaultPrivileges,
   listRoleGrants,
@@ -125,12 +126,6 @@ async function keepPartialAccess<T>(
   return { failedRequestCount: 1, value: [] };
 }
 
-function getListAllRolesQueryKey(
-  input?: MessageInitShape<(typeof listRoles)["input"]>
-) {
-  return ["console", "roles", "list-all", input ?? null] as const;
-}
-
 async function fetchAllRoles(
   transport: Transport,
   input?: MessageInitShape<(typeof listRoles)["input"]>
@@ -149,10 +144,6 @@ async function fetchAllRoles(
     nextPageToken: "",
     roles,
   });
-}
-
-function getListAllRoleGrantsQueryKey(input: ListRoleGrantsInput) {
-  return ["console", "role-grants", "list-all", input] as const;
 }
 
 async function fetchAllRoleGrants(
@@ -385,7 +376,11 @@ function listAllRolesQueryOptions({
 }) {
   return queryOptions({
     queryFn: () => fetchAllRoles(transport, input),
-    queryKey: getListAllRolesQueryKey(input),
+    queryKey: createConnectListAllQueryKey({
+      input,
+      method: listRoles,
+      transport,
+    }),
     ...RESOURCE_QUERY_OPTIONS.roleList,
   });
 }
@@ -457,7 +452,11 @@ export function useListAllRoleGrantsQuery(
   return useQuery({
     enabled: options?.enabled ?? true,
     queryFn: () => fetchAllRoleGrants(transport, input),
-    queryKey: getListAllRoleGrantsQueryKey(input),
+    queryKey: createConnectListAllQueryKey({
+      input,
+      method: listRoleGrants,
+      transport,
+    }),
     ...RESOURCE_QUERY_OPTIONS.roleGrants,
     ...(options?.refetchOnWindowFocus === undefined
       ? {}
@@ -491,7 +490,11 @@ export function useListAllRoleOwnedObjectsQuery(
   return useQuery({
     enabled: options?.enabled ?? true,
     queryFn: () => fetchAllRoleOwnedObjects(transport, input),
-    queryKey: ["console", "role-owned-objects", "list-all", input] as const,
+    queryKey: createConnectListAllQueryKey({
+      input,
+      method: listRoleOwnedObjects,
+      transport,
+    }),
     ...RESOURCE_QUERY_OPTIONS.roleOwnedObjects,
     ...(options?.refetchOnWindowFocus === undefined
       ? {}
@@ -526,12 +529,11 @@ export function useListAllRoleDefaultPrivilegesQuery(
   return useQuery({
     enabled: options?.enabled ?? true,
     queryFn: () => fetchAllRoleDefaultPrivileges(transport, input),
-    queryKey: [
-      "console",
-      "role-default-privileges",
-      "list-all",
+    queryKey: createConnectListAllQueryKey({
       input,
-    ] as const,
+      method: listRoleDefaultPrivileges,
+      transport,
+    }),
     ...RESOURCE_QUERY_OPTIONS.roleDefaultPrivileges,
     ...(options?.refetchOnWindowFocus === undefined
       ? {}
@@ -562,7 +564,11 @@ export function useListAllPublicGrantsQuery(
   return useQuery({
     enabled: options?.enabled ?? true,
     queryFn: () => fetchAllPublicGrants(transport, input),
-    queryKey: ["console", "public-grants", "list-all", input] as const,
+    queryKey: createConnectListAllQueryKey({
+      input,
+      method: listPublicGrants,
+      transport,
+    }),
     ...RESOURCE_QUERY_OPTIONS.publicGrants,
     ...(options?.refetchOnWindowFocus === undefined
       ? {}
