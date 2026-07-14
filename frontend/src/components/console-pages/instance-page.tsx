@@ -3,13 +3,7 @@
 import { useTransport } from "@connectrpc/connect-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  ChevronRight,
-  Database,
-  RefreshCw,
-  TriangleAlert,
-  X,
-} from "lucide-react";
+import { ChevronRight, Database, RefreshCw, TriangleAlert } from "lucide-react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AsyncSectionState } from "@/components/async-section-state";
@@ -55,13 +49,12 @@ import { CopyIconButton } from "@/components/ui/copy-icon-button";
 import {
   DataTable,
   type DataTableColumnDef,
-  DataTableFilter,
   SortableHeader,
 } from "@/components/ui/data-table";
 import {
-  DataTableFacetedFilter,
-  type FacetedFilterOption,
-} from "@/components/ui/data-table-faceted-filter";
+  type DataTableFilterFacet,
+  DataTableFilterToolbar,
+} from "@/components/ui/data-table-filter-toolbar";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { extractInstanceConfigFieldViolations } from "@/features/create-instance-field-violations";
 import { useIsConfigManagedInstances } from "@/hooks/api/console";
@@ -155,13 +148,6 @@ interface OverviewLiveData {
   previousMetricsResponse: QueryMetricsResponse | undefined;
 }
 type DatabaseRow = ReturnType<typeof useDb>["databases"][number];
-interface DatabaseFacetFilter {
-  handleSelectedValuesChange: (values: string[]) => void;
-  label: string;
-  options: FacetedFilterOption[];
-  selectedValues: string[];
-}
-
 const TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
   hour: "2-digit",
   minute: "2-digit",
@@ -669,56 +655,6 @@ function InstanceDatabasesSectionHeader({ count }: { count: number | null }) {
   );
 }
 
-function InstanceDatabaseFilterBar({
-  dbFilter,
-  filters,
-  onFilterChange,
-}: {
-  dbFilter: string;
-  filters: DatabaseFacetFilter[];
-  onFilterChange: (value: string) => void;
-}) {
-  const visibleFilters = filters.filter((filter) => filter.options.length > 0);
-  const hasActiveFacet = visibleFilters.some(
-    (filter) => filter.selectedValues.length > 0
-  );
-
-  return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
-      <DataTableFilter
-        onChange={onFilterChange}
-        placeholder="Search databases..."
-        value={dbFilter}
-      />
-      {visibleFilters.map((filter) => (
-        <DataTableFacetedFilter
-          key={filter.label}
-          onSelectedValuesChange={filter.handleSelectedValuesChange}
-          options={filter.options}
-          selectedValues={filter.selectedValues}
-          title={filter.label}
-        />
-      ))}
-      {hasActiveFacet ? (
-        <Button
-          className="h-8 px-2 text-xs"
-          onClick={() => {
-            for (const filter of visibleFilters) {
-              filter.handleSelectedValuesChange([]);
-            }
-          }}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <X data-icon="inline-start" />
-          Reset
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
 function InstanceOverviewSection({
   databases,
   isUnavailable = false,
@@ -746,26 +682,35 @@ function InstanceOverviewSection({
     kindFilters,
     ownerFilters,
   });
+
+  function handleClearAll() {
+    setDbFilter("");
+    setEncodingFilters([]);
+    setKindFilters([]);
+    setOwnerFilters([]);
+  }
+
   const databaseFacetFilters = [
     {
-      handleSelectedValuesChange: setOwnerFilters,
-      label: "Owner",
-      options: presentDatabaseOwnerOptions(databases),
-      selectedValues: ownerFilters,
-    },
-    {
-      handleSelectedValuesChange: setEncodingFilters,
-      label: "Encoding",
-      options: presentDatabaseEncodingOptions(databases),
-      selectedValues: encodingFilters,
-    },
-    {
-      handleSelectedValuesChange: setKindFilters,
       label: "Kind",
+      onChange: setKindFilters,
       options: presentDatabaseKindOptions(databases),
-      selectedValues: kindFilters,
+      searchable: false,
+      selected: kindFilters,
     },
-  ] satisfies DatabaseFacetFilter[];
+    {
+      label: "Owner",
+      onChange: setOwnerFilters,
+      options: presentDatabaseOwnerOptions(databases),
+      selected: ownerFilters,
+    },
+    {
+      label: "Encoding",
+      onChange: setEncodingFilters,
+      options: presentDatabaseEncodingOptions(databases),
+      selected: encodingFilters,
+    },
+  ] satisfies DataTableFilterFacet[];
   let databasesContent: React.ReactNode;
   if (isUnavailableEmpty) {
     databasesContent = (
@@ -821,10 +766,13 @@ function InstanceOverviewSection({
         }
       />
       {isUnavailableEmpty || isLoading ? null : (
-        <InstanceDatabaseFilterBar
-          dbFilter={dbFilter}
-          filters={databaseFacetFilters}
-          onFilterChange={setDbFilter}
+        <DataTableFilterToolbar
+          dataSlot="instance-database-filter-bar"
+          facets={databaseFacetFilters}
+          onClearAll={handleClearAll}
+          onSearchChange={setDbFilter}
+          searchPlaceholder="Search databases..."
+          searchValue={dbFilter}
         />
       )}
       {databasesContent}

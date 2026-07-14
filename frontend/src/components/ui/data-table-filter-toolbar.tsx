@@ -1,0 +1,107 @@
+"use client";
+
+import { X } from "lucide-react";
+import { useRef } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  DataTableFacetedFilter,
+  type FacetedFilterOption,
+} from "@/components/ui/data-table-faceted-filter";
+import { DataTableFilter } from "@/components/ui/data-table";
+import { cn } from "@/lib/utils";
+
+interface DataTableFilterFacet {
+  label: string;
+  onChange: (values: string[]) => void;
+  options: FacetedFilterOption[];
+  searchable?: boolean | undefined;
+  selected: string[];
+  singleSelect?: boolean | undefined;
+}
+
+interface DataTableFilterToolbarProps {
+  className?: string | undefined;
+  dataSlot?: string | undefined;
+  facets: DataTableFilterFacet[];
+  onClearAll: () => void;
+  onSearchChange: (value: string) => void;
+  searchPlaceholder?: string | undefined;
+  searchValue: string;
+}
+
+function hasMultipleMeaningfulOptions(facet: DataTableFilterFacet) {
+  return new Set(facet.options.map((option) => option.value)).size >= 2;
+}
+
+function DataTableFilterToolbar({
+  className,
+  dataSlot = "data-table-filter-toolbar",
+  facets,
+  onClearAll,
+  onSearchChange,
+  searchPlaceholder,
+  searchValue,
+}: DataTableFilterToolbarProps) {
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const visibleFacets = facets.filter(
+    (facet) =>
+      facet.selected.length > 0 || hasMultipleMeaningfulOptions(facet)
+  );
+  const hasActiveFilters =
+    Boolean(searchValue) || facets.some((facet) => facet.selected.length > 0);
+
+  function handleClearAll() {
+    onClearAll();
+    searchInputRef.current?.focus();
+  }
+
+  function handleFacetChange(facet: DataTableFilterFacet, values: string[]) {
+    if (values.length === 0 && !hasMultipleMeaningfulOptions(facet)) {
+      searchInputRef.current?.focus();
+    }
+    facet.onChange(values);
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 flex-wrap items-center justify-start gap-2",
+        className
+      )}
+      data-slot={dataSlot}
+    >
+      <DataTableFilter
+        inputRef={searchInputRef}
+        onChange={onSearchChange}
+        placeholder={searchPlaceholder}
+        value={searchValue}
+      />
+      {visibleFacets.map((facet) => (
+        <DataTableFacetedFilter
+          key={facet.label}
+          onSelectedValuesChange={(values) => handleFacetChange(facet, values)}
+          options={facet.options}
+          searchable={facet.searchable}
+          selectedValues={facet.selected}
+          singleSelect={facet.singleSelect}
+          title={facet.label}
+        />
+      ))}
+      {hasActiveFilters ? (
+        <Button
+          className="h-8 px-2 text-xs"
+          onClick={handleClearAll}
+          size="sm"
+          type="button"
+          variant="ghost"
+        >
+          <X data-icon="inline-start" />
+          Clear all
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+export type { DataTableFilterFacet, DataTableFilterToolbarProps };
+export { DataTableFilterToolbar };

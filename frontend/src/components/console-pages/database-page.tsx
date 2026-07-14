@@ -1,7 +1,7 @@
 "use client";
 
 import { Link, useNavigate } from "@tanstack/react-router";
-import { CircleOff, Eye, FolderTree, Table2, X } from "lucide-react";
+import { CircleOff, Eye, FolderTree, Table2 } from "lucide-react";
 import { useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { CatalogKindBadge } from "@/components/console-pages/catalog-object-badge";
@@ -27,13 +27,12 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DataTable,
   type DataTableColumnDef,
-  DataTableFilter,
   SortableHeader,
 } from "@/components/ui/data-table";
 import {
-  DataTableFacetedFilter,
-  type FacetedFilterOption,
-} from "@/components/ui/data-table-faceted-filter";
+  type DataTableFilterFacet,
+  DataTableFilterToolbar,
+} from "@/components/ui/data-table-filter-toolbar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -76,13 +75,6 @@ const LOADING_ROW_KEYS = Array.from(
 interface CatalogLoadingColumn {
   headerClassName?: string;
   label: string;
-}
-
-interface DatabaseOverviewFacetFilter {
-  handleSelectedValuesChange: (values: string[]) => void;
-  label: string;
-  options: FacetedFilterOption[];
-  selectedValues: string[];
 }
 
 const OBJECT_LOADING_COLUMNS: CatalogLoadingColumn[] = [
@@ -459,63 +451,6 @@ function CatalogLoadingTable({
   );
 }
 
-function DatabaseOverviewFilterBar({
-  dataSlot,
-  filters,
-  onSearchChange,
-  search,
-  searchPlaceholder,
-}: {
-  dataSlot: string;
-  filters: DatabaseOverviewFacetFilter[];
-  onSearchChange: (value: string) => void;
-  search: string;
-  searchPlaceholder: string;
-}) {
-  const visibleFilters = filters.filter((filter) => filter.options.length > 0);
-  const hasActiveFacet = visibleFilters.some(
-    (filter) => filter.selectedValues.length > 0
-  );
-
-  return (
-    <div
-      className="flex min-w-0 flex-wrap items-center justify-start gap-2"
-      data-slot={dataSlot}
-    >
-      <DataTableFilter
-        onChange={onSearchChange}
-        placeholder={searchPlaceholder}
-        value={search}
-      />
-      {visibleFilters.map((filter) => (
-        <DataTableFacetedFilter
-          key={filter.label}
-          onSelectedValuesChange={filter.handleSelectedValuesChange}
-          options={filter.options}
-          selectedValues={filter.selectedValues}
-          title={filter.label}
-        />
-      ))}
-      {hasActiveFacet ? (
-        <Button
-          className="h-8 px-2 text-xs"
-          onClick={() => {
-            for (const filter of visibleFilters) {
-              filter.handleSelectedValuesChange([]);
-            }
-          }}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <X data-icon="inline-start" />
-          Reset
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
 function LargestObjectsSection({
   catalog,
   databaseId,
@@ -541,32 +476,43 @@ function LargestObjectsSection({
     schemaFilters,
     systemFilters,
   });
+
+  function handleClearAll() {
+    setFilter("");
+    setKindFilters([]);
+    setOwnerFilters([]);
+    setSchemaFilters([]);
+    setSystemFilters([]);
+  }
+
   const objectFacetFilters = [
     {
-      handleSelectedValuesChange: setKindFilters,
       label: "Kind",
+      onChange: setKindFilters,
       options: presentCatalogObjectKindOptions(objects),
-      selectedValues: kindFilters,
+      searchable: false,
+      selected: kindFilters,
     },
     {
-      handleSelectedValuesChange: setSystemFilters,
-      label: "System",
-      options: presentCatalogObjectSystemOptions(objects),
-      selectedValues: systemFilters,
-    },
-    {
-      handleSelectedValuesChange: setOwnerFilters,
-      label: "Owner",
-      options: presentCatalogObjectOwnerOptions(objects),
-      selectedValues: ownerFilters,
-    },
-    {
-      handleSelectedValuesChange: setSchemaFilters,
       label: "Schema",
+      onChange: setSchemaFilters,
       options: presentCatalogObjectSchemaOptions(objects),
-      selectedValues: schemaFilters,
+      selected: schemaFilters,
     },
-  ] satisfies DatabaseOverviewFacetFilter[];
+    {
+      label: "Owner",
+      onChange: setOwnerFilters,
+      options: presentCatalogObjectOwnerOptions(objects),
+      selected: ownerFilters,
+    },
+    {
+      label: "System",
+      onChange: setSystemFilters,
+      options: presentCatalogObjectSystemOptions(objects),
+      searchable: false,
+      selected: systemFilters,
+    },
+  ] satisfies DataTableFilterFacet[];
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -580,12 +526,13 @@ function LargestObjectsSection({
         )}
       </div>
       {isPending ? null : (
-        <DatabaseOverviewFilterBar
+        <DataTableFilterToolbar
           dataSlot="largest-object-filter-bar"
-          filters={objectFacetFilters}
+          facets={objectFacetFilters}
+          onClearAll={handleClearAll}
           onSearchChange={setFilter}
-          search={filter}
           searchPlaceholder="Search objects..."
+          searchValue={filter}
         />
       )}
       {isPending ? (
@@ -641,20 +588,28 @@ function SchemasSection({
     ownerFilters,
     schemas,
   });
+
+  function handleClearAll() {
+    setFilter("");
+    setKindFilters([]);
+    setOwnerFilters([]);
+  }
+
   const schemaFacetFilters = [
     {
-      handleSelectedValuesChange: setKindFilters,
       label: "System",
+      onChange: setKindFilters,
       options: presentCatalogSchemaKindOptions(schemas),
-      selectedValues: kindFilters,
+      searchable: false,
+      selected: kindFilters,
     },
     {
-      handleSelectedValuesChange: setOwnerFilters,
       label: "Owner",
+      onChange: setOwnerFilters,
       options: presentCatalogSchemaOwnerOptions(schemas),
-      selectedValues: ownerFilters,
+      selected: ownerFilters,
     },
-  ] satisfies DatabaseOverviewFacetFilter[];
+  ] satisfies DataTableFilterFacet[];
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -666,12 +621,13 @@ function SchemasSection({
         )}
       </div>
       {isPending ? null : (
-        <DatabaseOverviewFilterBar
+        <DataTableFilterToolbar
           dataSlot="schema-filter-bar"
-          filters={schemaFacetFilters}
+          facets={schemaFacetFilters}
+          onClearAll={handleClearAll}
           onSearchChange={setFilter}
-          search={filter}
           searchPlaceholder="Search schemas..."
+          searchValue={filter}
         />
       )}
       {isPending ? (

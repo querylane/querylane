@@ -1642,7 +1642,7 @@ describe("backend instance database list", () => {
       within(filterRail)
         .getAllByRole("button")
         .map((button) => button.textContent)
-    ).toEqual(["Owner", "Encoding", "Kind"]);
+    ).toEqual(["Kind", "Owner", "Encoding"]);
 
     await user.type(search, "customer");
 
@@ -1661,6 +1661,19 @@ describe("backend instance database list", () => {
     ).toBeTruthy();
     expect(screen.queryByText("customer_events")).toBeNull();
     expect(screen.queryByText("analytics_archive")).toBeNull();
+
+    await user.click(
+      within(filterRail).getByRole("button", { name: "Clear all" })
+    );
+
+    expect(document.activeElement).toBe(search);
+    expect(await screen.findByText("customer_events")).toBeTruthy();
+    expect(screen.getByText("analytics_archive")).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: "postgres postgres UTF8 C System",
+      })
+    ).toBeTruthy();
   });
 
   test("opens database overview when a database row is selected", async () => {

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { useState } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
@@ -139,6 +139,46 @@ function SingleSelectFilterFixture() {
   );
 }
 
+function FixedEnumFilterFixture() {
+  const [selectedValues, setSelectedValues] = useState<string[]>([]);
+  return (
+    <ScreenshotFrame>
+      <DataTableFacetedFilter
+        onSelectedValuesChange={setSelectedValues}
+        options={[
+          { label: "Active", value: "active" },
+          { label: "Paused", value: "paused" },
+        ]}
+        searchable={false}
+        selectedValues={selectedValues}
+        title="Status"
+      />
+    </ScreenshotFrame>
+  );
+}
+
+function SelectedBadgeOrderFixture() {
+  return (
+    <ScreenshotFrame>
+      <DataTableFacetedFilter
+        onSelectedValuesChange={() => undefined}
+        options={[
+          { label: "Primary", value: "primary" },
+          { label: "Replica", value: "replica" },
+        ]}
+        selectedValues={["replica", "primary"]}
+        title="Mode"
+      />
+      <DataTableFacetedFilter
+        onSelectedValuesChange={() => undefined}
+        options={[]}
+        selectedValues={["internal-stale-id"]}
+        title="Status"
+      />
+    </ScreenshotFrame>
+  );
+}
+
 test("selected filter checkbox checkmark remains visible while hovered", async () => {
   renderSelectedOwnerFilter();
 
@@ -150,6 +190,11 @@ test("selected filter checkbox checkmark remains visible while hovered", async (
   await selectedOption.hover();
 
   const optionElement = selectedOption.element();
+  expect(optionElement.getAttribute("aria-checked")).toBeNull();
+  const selectedDescription = document.getElementById(
+    optionElement.getAttribute("aria-describedby") ?? ""
+  );
+  expect(selectedDescription?.textContent).toBe("Included in filter");
   expect(optionElement.dataset["selected"]).toBe("true");
 
   const checkbox = optionElement.querySelector(
@@ -187,5 +232,74 @@ test("single-select filter replaces the previous option and shows counts", async
     .element(page.getByRole("button", { name: /Type.*Superuser/ }))
     .toBeVisible();
   await expect.element(page.getByRole("button", { name: /Type.*User/ }))
+    .not.toBeInTheDocument();
+});
+
+test("fixed enum filters omit search without changing option behavior", async () => {
+  render(<FixedEnumFilterFixture />);
+
+  await page.getByRole("button", { name: "Status" }).click();
+
+  await expect.element(page.getByRole("option", { name: "Active" })).toBeVisible();
+  await expect.element(page.getByRole("option", { name: "Paused" })).toBeVisible();
+  const activeOption = page.getByRole("option", { name: "Active" }).element();
+  const activeDescription = document.getElementById(
+    activeOption.getAttribute("aria-describedby") ?? ""
+  );
+  expect(activeDescription?.textContent).toBe("Not included in filter");
+  await expect.element(page.getByRole("combobox")).not.toBeInTheDocument();
+
+  await page.getByRole("option", { name: "Active" }).click();
+  await expect
+    .element(page.getByRole("button", { name: /Status.*Active/ }))
+    .toBeVisible();
+});
+
+test("fixed enum filters support keyboard selection and restore trigger focus", async () => {
+  render(<FixedEnumFilterFixture />);
+
+  const trigger = page.getByRole("button", { name: "Status" });
+  await expect.element(trigger).toBeVisible();
+  const triggerElement = trigger.element();
+  triggerElement.focus();
+  await userEvent.keyboard("{Enter}");
+  await expect.element(page.getByRole("option", { name: "Active" })).toBeVisible();
+  const listbox = page.getByRole("listbox", { name: "Status options" });
+  await expect.element(listbox).toBeVisible();
+  const listboxElement = listbox.element();
+  expect(document.activeElement).toBe(listboxElement);
+  const initialActiveDescendant = listboxElement.getAttribute(
+    "aria-activedescendant"
+  );
+
+  await userEvent.keyboard("{ArrowDown}");
+  await expect
+    .poll(() => listboxElement.getAttribute("aria-activedescendant"))
+    .not.toBe(initialActiveDescendant);
+  const nextActiveDescendant = listboxElement.getAttribute(
+    "aria-activedescendant"
+  );
+  expect(document.getElementById(nextActiveDescendant ?? "")?.textContent)
+    .toContain("Paused");
+  await userEvent.keyboard("{Enter}");
+
+  await expect
+    .element(page.getByRole("button", { name: /Status.*Paused/ }))
+    .toBeVisible();
+  await userEvent.keyboard("{Escape}");
+  await expect.poll(() => document.activeElement).toBe(triggerElement);
+});
+
+test("selected badges follow option order and hide stale values", async () => {
+  render(<SelectedBadgeOrderFixture />);
+
+  await expect
+    .element(page.getByRole("button", { name: "Mode Primary Replica" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Status Unavailable" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: /internal-stale-id/ }))
     .not.toBeInTheDocument();
 });
