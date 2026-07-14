@@ -8,6 +8,7 @@ import {
 import type { SkipToken } from "@connectrpc/connect-query-core";
 import { createQueryOptions } from "@connectrpc/connect-query-core";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { createConnectListAllQueryKey } from "@/lib/connect-query-key";
 import { buildDatabaseName, buildInstanceName } from "@/lib/console-resources";
 import { paginateAll } from "@/lib/paginate-all";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
@@ -18,18 +19,12 @@ import {
 import {
   getDatabase,
   getDatabaseQueryInsights,
-  type listDatabases,
+  listDatabases,
 } from "@/protogen/querylane/console/v1alpha1/database-DatabaseService_connectquery";
 
 interface ListAllQueryOptions {
   enabled?: boolean;
   refetchOnWindowFocus?: boolean;
-}
-
-function getListAllDatabasesQueryKey(
-  input?: MessageInitShape<(typeof listDatabases)["input"]>
-) {
-  return ["console", "databases", "list-all", input ?? null] as const;
 }
 
 async function fetchAllDatabases(
@@ -61,7 +56,11 @@ export function listAllDatabasesQueryOptions({
 }) {
   return queryOptions({
     queryFn: () => fetchAllDatabases(transport, input),
-    queryKey: getListAllDatabasesQueryKey(input),
+    queryKey: createConnectListAllQueryKey({
+      input,
+      method: listDatabases,
+      transport,
+    }),
     ...RESOURCE_QUERY_OPTIONS.databaseList,
   });
 }

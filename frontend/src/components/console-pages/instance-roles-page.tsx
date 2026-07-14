@@ -20,6 +20,7 @@ import {
   buildRolesAccessMapModel,
   type RoleMapKindVisibility,
 } from "@/components/console-pages/roles-access-map-model";
+import { RolesAccessMapNotice } from "@/components/console-pages/roles-access-map-notice";
 import { SearchEmptyState } from "@/components/search-empty-state";
 import {
   DataTable,
@@ -160,6 +161,21 @@ const COLUMNS: DataTableColumnDef<Role>[] = [
   },
 ];
 
+function accessMapResultIsPartial(
+  result:
+    | {
+        budgetSkippedRequestCount: number;
+        truncatedRequestCount: number;
+      }
+    | undefined
+) {
+  return (
+    (result?.truncatedRequestCount ?? 0) +
+      (result?.budgetSkippedRequestCount ?? 0) >
+    0
+  );
+}
+
 export function InstanceRolesPage({
   instanceId,
   tab,
@@ -208,6 +224,9 @@ export function InstanceRolesPage({
   const accessMapResourcesQuery = useRolesAccessMapResourcesQuery(
     { instanceId, roles: kindFiltered },
     { enabled: activeTab === "map" && roles.length > 0 }
+  );
+  const accessMapIsPartial = accessMapResultIsPartial(
+    accessMapResourcesQuery.data
   );
   const roleMapModel = buildRolesAccessMapModel({
     publicAccess: accessMapResourcesQuery.data?.publicAccess ?? [],
@@ -294,16 +313,20 @@ export function InstanceRolesPage({
           Object access failed to load: {accessMapResourcesQuery.error.message}
         </p>
       ) : null}
-      {accessMapResourcesQuery.data?.failedRequestCount ? (
-        <p className="text-amber-700 text-sm dark:text-amber-300" role="status">
-          {`${accessMapResourcesQuery.data.failedRequestCount} access request${
-            accessMapResourcesQuery.data.failedRequestCount === 1 ? "" : "s"
-          } could not be loaded. The map shows the available data.`}
-        </p>
-      ) : null}
+      <RolesAccessMapNotice
+        failedRequestCount={
+          accessMapResourcesQuery.data?.failedRequestCount ?? 0
+        }
+        kind="failed"
+      />
+      <RolesAccessMapNotice kind="partial" visible={accessMapIsPartial} />
       <RolesAccessMapCanvas
+        failedRequestCount={
+          accessMapResourcesQuery.data?.failedRequestCount ?? 0
+        }
         model={roleMapModel}
         onSelectNode={setRoleSelectedNodeId}
+        partial={accessMapIsPartial}
         selectedNodeId={roleSelectedNodeId}
       />
     </div>

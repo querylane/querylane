@@ -55,6 +55,7 @@ interface RoleDetailViewProps {
   connLimitSub: string | undefined;
   databases: { id: string; name: string }[];
   defaultPrivileges: RoleDefaultPrivilege[];
+  defaultPrivilegesPartial: boolean;
   directGrantsSub: string | undefined;
   effectiveDb: { id: string; name: string } | null;
   effectiveDbId: string | null;
@@ -62,6 +63,7 @@ interface RoleDetailViewProps {
   facetStates: FacetStates;
   grantObjects: GrantedObject[];
   grantsError: unknown;
+  grantsPartial: boolean;
   grantsPending: boolean;
   grantsReady: boolean;
   grantsView: GrantsView;
@@ -72,9 +74,12 @@ interface RoleDetailViewProps {
   onNavigateGrants: (next: GrantsView) => void;
   onSelectGrantsDatabase: (next: string) => void;
   ownedObjects: OwnedObject[];
+  ownedPartial: boolean;
   ownedReady: boolean;
   ownedSub: string | undefined;
+  partialAccess: boolean;
   publicGrants: ObjectGrant[];
+  publicGrantsPartial: boolean;
   rlsNote: string | null;
   role: Role;
   section: Section;

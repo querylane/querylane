@@ -7,7 +7,10 @@ import type {
   GrantsView,
 } from "@/components/console-pages/role-detail-search";
 import { GrantedObjectsTable } from "@/components/console-pages/role-grants-object-table";
-import { ContentHead } from "@/components/console-pages/role-grants-pills";
+import {
+  ContentHead,
+  GrantsEmptyState,
+} from "@/components/console-pages/role-grants-pills";
 import {
   dominantGrantor,
   type SchemaGrantGroup,
@@ -26,16 +29,21 @@ export function SchemaGrantsView({
   databaseName,
   group,
   onNavigate,
+  partial,
   type,
 }: {
   databaseName: string | undefined;
   group: SchemaGrantGroup;
   onNavigate: (next: GrantsView) => void;
+  partial: boolean;
   type: GrantsType | undefined;
 }) {
   const [search, setSearch] = useState("");
   // Ignore a type that isn't present in this schema (e.g. a stale deep link).
   const requestedType = type ? SLUG_TO_OBJECT_TYPE[type] : undefined;
+  const requestedTypeMissingFromPartialResults = Boolean(
+    partial && requestedType !== undefined && !group.byType.has(requestedType)
+  );
   const activeType =
     requestedType !== undefined && group.byType.has(requestedType)
       ? requestedType
@@ -53,36 +61,46 @@ export function SchemaGrantsView({
         count={group.total}
         countUnit="grant"
         icon={group.database ? Database : FolderTree}
+        partial={partial}
         title={
           group.database ? (databaseName ?? "Database scope") : group.schema
         }
       />
-      {grantor ? (
-        <div className="-mt-3.5 pb-3.5 text-muted-foreground text-xs">
-          granted by{" "}
-          <span className="font-mono text-foreground/75">{grantor}</span>
-        </div>
-      ) : null}
-      <GrantedObjectsTable
-        activeKind={activeKind}
-        objects={group.objects}
-        onKindChange={(slug) => {
-          setSearch("");
-          if (slug === "all") {
-            onNavigate({ kind: "schema", schema: routeSchema });
-            return;
-          }
-          if (isGrantsType(slug)) {
-            onNavigate({
-              kind: "schema",
-              schema: routeSchema,
-              type: slug,
-            });
-          }
-        }}
-        onSearchChange={setSearch}
-        search={search}
-      />
+      {requestedTypeMissingFromPartialResults ? (
+        <GrantsEmptyState title="Grant type results are incomplete">
+          The requested grant type is not shown in the available direct grant
+          results.
+        </GrantsEmptyState>
+      ) : (
+        <>
+          {grantor ? (
+            <div className="-mt-3.5 pb-3.5 text-muted-foreground text-xs">
+              granted by{" "}
+              <span className="font-mono text-foreground/75">{grantor}</span>
+            </div>
+          ) : null}
+          <GrantedObjectsTable
+            activeKind={activeKind}
+            objects={group.objects}
+            onKindChange={(slug) => {
+              setSearch("");
+              if (slug === "all") {
+                onNavigate({ kind: "schema", schema: routeSchema });
+                return;
+              }
+              if (isGrantsType(slug)) {
+                onNavigate({
+                  kind: "schema",
+                  schema: routeSchema,
+                  type: slug,
+                });
+              }
+            }}
+            onSearchChange={setSearch}
+            search={search}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { RoleAvatar } from "@/components/console-pages/role-avatar";
 import { BuiltinRoleBody } from "@/components/console-pages/role-detail-builtins";
 import { OrdinaryRoleKpis } from "@/components/console-pages/role-detail-kpis";
 import type { RoleDetailViewProps } from "@/components/console-pages/role-detail-model";
+import { RolePartialAccessAlert } from "@/components/console-pages/role-detail-shared";
 import { OrdinaryRoleTabs } from "@/components/console-pages/role-detail-tabs";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,6 +18,27 @@ import {
 } from "@/lib/role-display";
 import type { RoleAttributes } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
+function OwnerBadge({ count, partial }: { count: number; partial: boolean }) {
+  if (count === 0) {
+    return null;
+  }
+
+  const title = partial
+    ? `Showing ${count} owned object${count === 1 ? "" : "s"} from available results; more may exist`
+    : `Owns ${count} object${count === 1 ? "" : "s"} — implicit full privileges on each`;
+  return (
+    <Badge
+      className="gap-1 border-amber-500/30 text-amber-700 dark:text-amber-400"
+      title={title}
+      variant="outline"
+    >
+      <Crown className="size-3" />
+      OWNER · {count}
+      {partial ? " Partial" : null}
+    </Badge>
+  );
+}
+
 function RoleHero({
   attributes,
   builtinInfo,
@@ -25,6 +47,7 @@ function RoleHero({
   isSystem,
   kind,
   ownedCount,
+  ownedPartial,
   roleName,
 }: {
   attributes: RoleAttributes | undefined;
@@ -34,6 +57,7 @@ function RoleHero({
   isSystem: boolean;
   kind: ReturnType<typeof deriveRoleKind>;
   ownedCount: number;
+  ownedPartial: boolean;
   roleName: string;
 }) {
   const systemDescription =
@@ -58,16 +82,7 @@ function RoleHero({
               {builtinInfo.since}+
             </Badge>
           ) : null}
-          {ownedCount > 0 ? (
-            <Badge
-              className="gap-1 border-amber-500/30 text-amber-700 dark:text-amber-400"
-              title={`Owns ${ownedCount} object${ownedCount === 1 ? "" : "s"} — implicit full privileges on each`}
-              variant="outline"
-            >
-              <Crown className="size-3" />
-              OWNER · {ownedCount}
-            </Badge>
-          ) : null}
+          <OwnerBadge count={ownedCount} partial={ownedPartial} />
           {attributes?.validUntil ? (
             <Badge className={expiryToneClass(expiry.state)} variant="outline">
               {expiry.label}
@@ -128,8 +143,16 @@ function RoleDetailView(props: RoleDetailViewProps) {
         isSystem={isSystem}
         kind={props.kind}
         ownedCount={props.ownedObjects.length}
+        ownedPartial={props.ownedPartial}
         roleName={role.roleName}
       />
+
+      {props.partialAccess &&
+      (props.isSystem || props.section !== "access-map") ? (
+        <RolePartialAccessAlert
+          databaseName={effectiveDb?.name ?? "the selected database"}
+        />
+      ) : null}
 
       {isSystem ? (
         <BuiltinRoleBody

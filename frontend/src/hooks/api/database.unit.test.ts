@@ -6,6 +6,7 @@ import {
   listAllDatabasesQueryOptions,
   selectedDatabaseQueryOptions,
 } from "@/hooks/api/database";
+import { createConnectListAllQueryKey } from "@/lib/connect-query-key";
 import { QUERY_STALE_TIME } from "@/lib/query-policy";
 import {
   DatabaseService,
@@ -13,6 +14,7 @@ import {
   type ListDatabasesRequest,
   ListDatabasesResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/database_pb";
+import { listDatabases } from "@/protogen/querylane/console/v1alpha1/database-DatabaseService_connectquery";
 import { createTestQueryClient } from "@/test/query-client";
 
 async function disposeTestQueryClient(
@@ -30,6 +32,19 @@ describe("database query option helpers", () => {
       pageSize: 1000,
       parent: "instances/local",
     });
+  });
+
+  test("uses the Connect Query ListDatabases key for the aggregate cache", () => {
+    const transport = createRouterTransport(() => undefined);
+    const input = databasesForInstanceQueryInput("local");
+
+    expect(listAllDatabasesQueryOptions({ input, transport }).queryKey).toEqual(
+      createConnectListAllQueryKey({
+        input,
+        method: listDatabases,
+        transport,
+      })
+    );
   });
 
   test("collects every database page into a single list response", async () => {

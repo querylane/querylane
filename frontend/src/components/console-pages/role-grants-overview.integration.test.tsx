@@ -1,3 +1,4 @@
+import { create } from "@bufbuild/protobuf";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
@@ -9,6 +10,7 @@ import {
 import {
   DefaultPrivilegeObjectType,
   GrantObjectType,
+  OwnedObjectSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 const MAINTAIN_PUBLIC_PREVIEW_RE = /MAINTAIN on 1 table/;
@@ -23,6 +25,7 @@ it("renders no-direct-grants prose as one description", () => {
   render(
     <GrantsOverview
       databaseName="demo_ecommerce"
+      defaultPrivilegesPartial={false}
       defaultRules={[
         {
           creatorRoleName: "owner",
@@ -37,9 +40,12 @@ it("renders no-direct-grants prose as one description", () => {
         owned: "ready",
         publicGrants: "ready",
       }}
+      grantsPartial={false}
       objects={[]}
       onNavigate={vi.fn()}
       ownedObjects={[]}
+      ownedPartial={false}
+      publicGrantsPartial={false}
       publicObjects={[]}
       schemaIndex={[]}
     />
@@ -71,15 +77,19 @@ it("summarizes MAINTAIN in PUBLIC table grant previews", () => {
   render(
     <GrantsOverview
       databaseName="demo_ecommerce"
+      defaultPrivilegesPartial={false}
       defaultRules={[]}
       facetStates={{
         defaults: "ready",
         owned: "ready",
         publicGrants: "ready",
       }}
+      grantsPartial={false}
       objects={[]}
       onNavigate={vi.fn()}
       ownedObjects={[]}
+      ownedPartial={false}
+      publicGrantsPartial={false}
       publicObjects={publicObjects}
       schemaIndex={[]}
     />
@@ -106,15 +116,19 @@ it("uses the database name when navigating to database-scope grants", async () =
   render(
     <GrantsOverview
       databaseName="demo_ecommerce"
+      defaultPrivilegesPartial={false}
       defaultRules={[]}
       facetStates={{
         defaults: "ready",
         owned: "ready",
         publicGrants: "ready",
       }}
+      grantsPartial={false}
       objects={objects}
       onNavigate={onNavigate}
       ownedObjects={[]}
+      ownedPartial={false}
+      publicGrantsPartial={false}
       publicObjects={[]}
       schemaIndex={buildSchemaIndex(objects)}
     />
@@ -126,4 +140,54 @@ it("uses the database name when navigating to database-scope grants", async () =
     kind: "schema",
     schema: "demo_ecommerce",
   });
+});
+
+it("qualifies every truncated facet count as partial", () => {
+  const directObjects: GrantedObject[] = [
+    {
+      grantors: ["postgres"],
+      key: "direct-orders",
+      objectName: "orders",
+      objectType: GrantObjectType.TABLE,
+      privileges: [{ grantable: false, name: "SELECT" }],
+      schemaName: "public",
+    },
+  ];
+
+  render(
+    <GrantsOverview
+      databaseName="demo_ecommerce"
+      defaultPrivilegesPartial={true}
+      defaultRules={[
+        {
+          creatorRoleName: "owner",
+          key: "owner:public:tables",
+          objectType: DefaultPrivilegeObjectType.TABLES,
+          privileges: [],
+          schemaName: "public",
+        },
+      ]}
+      facetStates={{
+        defaults: "ready",
+        owned: "ready",
+        publicGrants: "ready",
+      }}
+      grantsPartial={true}
+      objects={directObjects}
+      onNavigate={vi.fn()}
+      ownedObjects={[
+        create(OwnedObjectSchema, {
+          objectName: "owned_orders",
+          objectType: GrantObjectType.TABLE,
+          schemaName: "public",
+        }),
+      ]}
+      ownedPartial={true}
+      publicGrantsPartial={true}
+      publicObjects={directObjects}
+      schemaIndex={buildSchemaIndex(directObjects)}
+    />
+  );
+
+  expect(screen.getAllByText("Partial")).toHaveLength(5);
 });

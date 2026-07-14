@@ -54,15 +54,29 @@ import {
 
 // ───────── Default privileges (sentence list) ─────────
 
-function DefaultsBody({ rules }: { rules: DefaultPrivilegeRule[] }) {
+function DefaultsBody({
+  partial,
+  rules,
+}: {
+  partial: boolean;
+  rules: DefaultPrivilegeRule[];
+}) {
   if (rules.length === 0) {
     return (
-      <GrantsEmptyState>
-        No{" "}
-        <span className="font-mono text-foreground/80">
-          ALTER DEFAULT PRIVILEGES
-        </span>{" "}
-        rules apply to this role.
+      <GrantsEmptyState
+        title={partial ? "Default privilege results are incomplete" : undefined}
+      >
+        {partial ? (
+          "No default privileges are shown in the available results."
+        ) : (
+          <>
+            No{" "}
+            <span className="font-mono text-foreground/80">
+              ALTER DEFAULT PRIVILEGES
+            </span>{" "}
+            rules apply to this role.
+          </>
+        )}
       </GrantsEmptyState>
     );
   }
@@ -115,12 +129,21 @@ function DefaultsBody({ rules }: { rules: DefaultPrivilegeRule[] }) {
 
 // ───────── Reach drill-in wrappers ─────────
 
-function DefaultsDrillView({ rules }: { rules: DefaultPrivilegeRule[] }) {
+function DefaultsDrillView({
+  partial,
+  rules,
+}: {
+  partial: boolean;
+  rules: DefaultPrivilegeRule[];
+}) {
   return (
     <div className="flex flex-col">
       <ContentHead
+        count={rules.length}
+        countUnit="rule"
         icon={Clock}
         iconClassName="text-violet-600 dark:text-violet-300"
+        partial={partial}
         title="Default privileges"
       />
       <div className="-mt-3.5 pb-3.5 text-muted-foreground text-xs">
@@ -129,12 +152,18 @@ function DefaultsDrillView({ rules }: { rules: DefaultPrivilegeRule[] }) {
         </span>{" "}
         rules that grant privileges on objects that don&apos;t exist yet.
       </div>
-      <DefaultsBody rules={rules} />
+      <DefaultsBody partial={partial} rules={rules} />
     </div>
   );
 }
 
-function PublicDrillView({ objects }: { objects: GrantedObject[] }) {
+function PublicDrillView({
+  objects,
+  partial,
+}: {
+  objects: GrantedObject[];
+  partial: boolean;
+}) {
   const [activeKind, setActiveKind] = useState("all");
   const [search, setSearch] = useState("");
   return (
@@ -143,6 +172,7 @@ function PublicDrillView({ objects }: { objects: GrantedObject[] }) {
         count={objects.length}
         icon={Globe}
         iconClassName="text-sky-600 dark:text-sky-400"
+        partial={partial}
         title="Granted to PUBLIC"
       />
       <div className="-mt-3.5 pb-3.5 text-muted-foreground text-xs">
@@ -150,10 +180,18 @@ function PublicDrillView({ objects }: { objects: GrantedObject[] }) {
         to this role.
       </div>
       {objects.length === 0 ? (
-        <GrantsEmptyState>
-          No grants to{" "}
-          <span className="font-mono text-foreground/80">PUBLIC</span> are
-          visible from this role.
+        <GrantsEmptyState
+          title={partial ? "PUBLIC grant results are incomplete" : undefined}
+        >
+          {partial ? (
+            "No PUBLIC grants are shown in the available results."
+          ) : (
+            <>
+              No grants to{" "}
+              <span className="font-mono text-foreground/80">PUBLIC</span> are
+              visible from this role.
+            </>
+          )}
         </GrantsEmptyState>
       ) : (
         <GrantedObjectsTable
@@ -398,6 +436,7 @@ function grantsLoadState({
 // across every view so the database can always be changed.
 function GrantsTopBar({
   databases,
+  grantsPartial,
   kind,
   left,
   objects,
@@ -406,6 +445,7 @@ function GrantsTopBar({
   showBadge,
 }: {
   databases: { id: string; name: string }[];
+  grantsPartial: boolean;
   kind: RoleKind;
   left: ReactNode;
   objects: GrantedObject[];
@@ -418,7 +458,9 @@ function GrantsTopBar({
       <div className="min-w-0 flex-1">{left}</div>
       {databases.length > 0 ? (
         <div className="flex shrink-0 items-center gap-2">
-          {showBadge ? <HeadlineBadge kind={kind} objects={objects} /> : null}
+          {showBadge && !grantsPartial ? (
+            <HeadlineBadge kind={kind} objects={objects} />
+          ) : null}
           <DatabaseSelect
             databases={databases}
             onChange={onSelectDatabase}
@@ -434,6 +476,7 @@ function GrantsTopBar({
 // drill-in, nothing while loading.
 function GrantsHeaderLeft({
   defaultRules,
+  grantsPartial,
   isOverview,
   loading,
   onBack,
@@ -443,6 +486,7 @@ function GrantsHeaderLeft({
   totalDirect,
 }: {
   defaultRules: DefaultPrivilegeRule[];
+  grantsPartial: boolean;
   isOverview: boolean;
   loading: boolean;
   onBack: () => void;
@@ -464,6 +508,7 @@ function GrantsHeaderLeft({
     (publicObjects.length > 0 ? 1 : 0);
   return (
     <OverviewLede
+      grantsPartial={grantsPartial}
       indirectPaths={indirectPaths}
       schemaCount={schemaCount}
       totalDirect={totalDirect}
@@ -474,26 +519,34 @@ function GrantsHeaderLeft({
 // Picks the view for the resolved drill-in selection.
 function GrantsViewBody({
   databaseName,
+  defaultPrivilegesPartial,
   defaultRules,
   facetStates,
+  grantsPartial,
   kind,
   objects,
   onNavigateGrants,
   ownedObjects,
+  ownedPartial,
   publicObjects,
+  publicGrantsPartial,
   roleName,
   schemaGroup,
   schemaIndex,
   view,
 }: {
   databaseName: string | undefined;
+  defaultPrivilegesPartial: boolean;
   defaultRules: DefaultPrivilegeRule[];
   facetStates: FacetStates;
+  grantsPartial: boolean;
   kind: RoleKind;
   objects: GrantedObject[];
   onNavigateGrants: (next: GrantsView) => void;
   ownedObjects: OwnedObject[];
+  ownedPartial: boolean;
   publicObjects: GrantedObject[];
+  publicGrantsPartial: boolean;
   roleName: string;
   schemaGroup: SchemaGrantGroup | null;
   schemaIndex: SchemaGrantGroup[];
@@ -505,8 +558,16 @@ function GrantsViewBody({
         databaseName={databaseName}
         group={schemaGroup}
         onNavigate={onNavigateGrants}
+        partial={grantsPartial}
         type={view.type}
       />
+    );
+  }
+  if (view.kind === "schema") {
+    return (
+      <GrantsEmptyState title="Grant results are incomplete">
+        {`${view.schema} is not shown in the available direct grant results.`}
+      </GrantsEmptyState>
     );
   }
   if (view.kind === "reach" && view.reach === "owns") {
@@ -516,24 +577,36 @@ function GrantsViewBody({
         directGrants={objects}
         kind={kind}
         ownedObjects={ownedObjects}
+        partial={ownedPartial}
         roleName={roleName}
       />
     );
   }
   if (view.kind === "reach" && view.reach === "defaults") {
-    return <DefaultsDrillView rules={defaultRules} />;
+    return (
+      <DefaultsDrillView
+        partial={defaultPrivilegesPartial}
+        rules={defaultRules}
+      />
+    );
   }
   if (view.kind === "reach" && view.reach === "public") {
-    return <PublicDrillView objects={publicObjects} />;
+    return (
+      <PublicDrillView objects={publicObjects} partial={publicGrantsPartial} />
+    );
   }
   return (
     <GrantsOverview
       databaseName={databaseName}
+      defaultPrivilegesPartial={defaultPrivilegesPartial}
       defaultRules={defaultRules}
       facetStates={facetStates}
+      grantsPartial={grantsPartial}
       objects={objects}
       onNavigate={onNavigateGrants}
       ownedObjects={ownedObjects}
+      ownedPartial={ownedPartial}
+      publicGrantsPartial={publicGrantsPartial}
       publicObjects={publicObjects}
       schemaIndex={schemaIndex}
     />
@@ -544,9 +617,11 @@ function GrantsSection({
   builtinInfo,
   databaseName,
   databases,
+  defaultPrivilegesPartial,
   defaultPrivileges,
   error,
   facetStates,
+  grantsPartial,
   grantsView,
   isPending,
   kind,
@@ -554,16 +629,20 @@ function GrantsSection({
   onNavigateGrants,
   onSelectDatabase,
   ownedObjects,
+  ownedPartial,
   publicGrants,
+  publicGrantsPartial,
   roleName,
   selectedDatabaseId,
 }: {
   builtinInfo: PredefinedRoleInfo | null;
   databaseName: string | undefined;
   databases: { id: string; name: string }[];
+  defaultPrivilegesPartial: boolean;
   defaultPrivileges: RoleDefaultPrivilege[];
   error: unknown;
   facetStates: FacetStates;
+  grantsPartial: boolean;
   grantsView: GrantsView;
   isPending: boolean;
   kind: RoleKind;
@@ -571,7 +650,9 @@ function GrantsSection({
   onNavigateGrants: (next: GrantsView) => void;
   onSelectDatabase: (value: string) => void;
   ownedObjects: OwnedObject[];
+  ownedPartial: boolean;
   publicGrants: ObjectGrant[];
+  publicGrantsPartial: boolean;
   roleName: string;
   selectedDatabaseId: string | undefined;
 }) {
@@ -585,8 +666,8 @@ function GrantsSection({
   const defaultRules = groupDefaultPrivileges(defaultPrivileges);
   const schemaIndex = buildSchemaIndex(objects);
 
-  // A drilled-in schema that has no matching data (e.g. a stale deep link) falls
-  // back to the overview rather than rendering an empty shell.
+  // A missing schema is stale only when the result is complete. Partial results
+  // keep the deep link and explain that its rows may be beyond the first page.
   const requestedSchema =
     grantsView.kind === "schema" ? grantsView.schema : null;
   const schemaGroup =
@@ -598,7 +679,7 @@ function GrantsSection({
             (group.database && databaseName === requestedSchema)
         ) ?? null);
   const view: GrantsView =
-    requestedSchema !== null && schemaGroup === null
+    requestedSchema !== null && schemaGroup === null && !grantsPartial
       ? { kind: "overview" }
       : grantsView;
   const isOverview = view.kind === "overview";
@@ -608,10 +689,12 @@ function GrantsSection({
     <div className="flex flex-col gap-6">
       <GrantsTopBar
         databases={databases}
+        grantsPartial={grantsPartial}
         kind={kind}
         left={
           <GrantsHeaderLeft
             defaultRules={defaultRules}
+            grantsPartial={grantsPartial}
             isOverview={isOverview}
             loading={Boolean(loadState)}
             onBack={() => onNavigateGrants({ kind: "overview" })}
@@ -641,12 +724,16 @@ function GrantsSection({
       {loadState ?? (
         <GrantsViewBody
           databaseName={databaseName}
+          defaultPrivilegesPartial={defaultPrivilegesPartial}
           defaultRules={defaultRules}
           facetStates={facetStates}
+          grantsPartial={grantsPartial}
           kind={kind}
           objects={objects}
           onNavigateGrants={onNavigateGrants}
           ownedObjects={ownedObjects}
+          ownedPartial={ownedPartial}
+          publicGrantsPartial={publicGrantsPartial}
           publicObjects={publicObjects}
           roleName={roleName}
           schemaGroup={schemaGroup}
