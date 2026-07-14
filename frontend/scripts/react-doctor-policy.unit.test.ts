@@ -25,6 +25,7 @@ const deadRegistryFiles = new Set([
 const querylaneUiUnusedFileOverrides = [
   "src/components/ui/copy-icon-button.tsx",
   "src/components/ui/data-table-faceted-filter.tsx",
+  "src/components/ui/data-table-filter-toolbar.tsx",
   "src/components/ui/data-table.tsx",
   "src/components/ui/disabled-reason-button.tsx",
   "src/components/ui/inline-code.tsx",

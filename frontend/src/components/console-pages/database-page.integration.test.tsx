@@ -723,7 +723,7 @@ describe("backend database overview", () => {
       within(filterBar)
         .getAllByRole("button")
         .map((button) => button.textContent)
-    ).toEqual(["Kind", "System", "Owner", "Schema"]);
+    ).toEqual(["Kind", "Schema", "Owner", "System"]);
 
     await user.click(within(filterBar).getByRole("button", { name: "Kind" }));
     await user.click(
@@ -738,6 +738,16 @@ describe("backend database overview", () => {
 
     expect(screen.getByText("daily_rollup")).toBeTruthy();
     expect(screen.queryByText("pg_class")).toBeNull();
+
+    await user.type(search, "daily");
+    await user.click(
+      within(filterBar).getByRole("button", { name: "Clear all" })
+    );
+
+    expect((search as HTMLInputElement).value).toBe("");
+    expect(document.activeElement).toBe(search);
+    expect(screen.getByText("events")).toBeTruthy();
+    expect(screen.getByText("pg_class")).toBeTruthy();
   });
 
   test("places schema search on the left with kind and owner filters", async () => {

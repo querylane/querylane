@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, ListFilter } from "lucide-react";
+import { useId, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,7 @@ function DataTableFacetedFilter({
   emptyText = "No options found.",
   onSelectedValuesChange,
   options,
+  searchable = true,
   searchPlaceholder,
   selectedValues,
   singleSelect = false,
@@ -44,12 +46,28 @@ function DataTableFacetedFilter({
   emptyText?: string;
   onSelectedValuesChange: (values: string[]) => void;
   options: FacetedFilterOption[];
+  searchable?: boolean | undefined;
   searchPlaceholder?: string;
   selectedValues: string[];
-  singleSelect?: boolean;
+  singleSelect?: boolean | undefined;
   title: string;
 }) {
+  const commandListRef = useRef<HTMLDivElement>(null);
+  const includedDescriptionId = useId();
+  const notIncludedDescriptionId = useId();
   const selected = new Set(selectedValues);
+  const availableValues = new Set(options.map((option) => option.value));
+  const selectedOptions: FacetedFilterOption[] = [];
+  for (const option of options) {
+    if (selected.has(option.value)) {
+      selectedOptions.push(option);
+    }
+  }
+  for (const value of selected) {
+    if (!availableValues.has(value)) {
+      selectedOptions.push({ label: "Unavailable", value });
+    }
+  }
 
   function toggle(value: string) {
     if (singleSelect) {
@@ -99,9 +117,7 @@ function DataTableFacetedFilter({
                       {selected.size} selected
                     </Badge>
                   ) : (
-                    options
-                      .filter((option) => selected.has(option.value))
-                      .map((option) => (
+                    selectedOptions.map((option) => (
                         <Badge
                           className="rounded-sm px-1 font-normal"
                           key={option.value}
@@ -117,16 +133,33 @@ function DataTableFacetedFilter({
           </Button>
         }
       />
-      <PopoverContent align="start" className="w-[220px] p-0">
+      <PopoverContent
+        align="start"
+        className="w-[220px] p-0"
+        initialFocus={searchable ? undefined : commandListRef}
+      >
+        <span className="sr-only" id={includedDescriptionId}>
+          Included in filter
+        </span>
+        <span className="sr-only" id={notIncludedDescriptionId}>
+          Not included in filter
+        </span>
         <Command>
-          <CommandInput placeholder={searchPlaceholder ?? title} />
-          <CommandList>
+          {searchable ? (
+            <CommandInput placeholder={searchPlaceholder ?? title} />
+          ) : null}
+          <CommandList label={`${title} options`} ref={commandListRef}>
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
                 const isSelected = selected.has(option.value);
                 return (
                   <CommandItem
+                    aria-describedby={
+                      isSelected
+                        ? includedDescriptionId
+                        : notIncludedDescriptionId
+                    }
                     key={option.value}
                     onSelect={() => toggle(option.value)}
                     value={option.label}
