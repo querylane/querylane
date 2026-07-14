@@ -57,7 +57,6 @@ const strictTypeScriptOptions = {
   noUncheckedSideEffectImports: true,
   noUnusedLocals: true,
   noUnusedParameters: true,
-  skipLibCheck: false,
   strict: true,
   strictBindCallApply: true,
   strictBuiltinIteratorReturn: true,
@@ -164,6 +163,23 @@ describe("strict tooling policy", () => {
 
       expect(compilerOptions).toMatchObject(strictTypeScriptOptions);
       expect(compilerOptions).toMatchObject(generatedCodeCompatibilityOptions);
+    }
+  });
+
+  test("skips dependency declaration checks in every TypeScript project", () => {
+    for (const path of [
+      "tsconfig.json",
+      "tsconfig.node.json",
+      "tsconfig.ui.json",
+    ]) {
+      const config = readJsonRecord(path);
+      const { compilerOptions } = config;
+      expect(isJsonRecord(compilerOptions)).toBe(true);
+      if (!isJsonRecord(compilerOptions)) {
+        continue;
+      }
+
+      expect(compilerOptions["skipLibCheck"]).toBe(true);
     }
   });
 

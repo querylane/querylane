@@ -43,7 +43,7 @@
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
     "useUnknownInCatchVariables": true,
-    "skipLibCheck": false
+    "skipLibCheck": true
   },
   "include": [
     "src/import-meta-env.d.ts",

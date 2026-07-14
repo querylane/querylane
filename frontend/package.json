@@ -140,10 +140,5 @@
     "ultracite": "7.9.4",
     "vitest": "5.0.0-beta.6",
     "vitest-browser-react": "2.2.0"
-  },
-  "patchedDependencies": {
-    "@reduxjs/toolkit@2.12.0": "patches/@reduxjs%2Ftoolkit@2.12.0.patch",
-    "immer@11.1.11": "patches/immer@11.1.11.patch",
-    "@xyflow/system@0.0.79": "patches/@xyflow%2Fsystem@0.0.79.patch"
   }
 }

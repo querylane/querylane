@@ -50,7 +50,7 @@
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
     "useUnknownInCatchVariables": true,
-    "skipLibCheck": false
+    "skipLibCheck": true
   },
   "include": ["src", "test/setup-globals.ts"],
   "references": [

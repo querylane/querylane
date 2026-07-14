@@ -81,11 +81,6 @@
       },
     },
   },
-  "patchedDependencies": {
-    "immer@11.1.11": "patches/immer@11.1.11.patch",
-    "@xyflow/system@0.0.79": "patches/@xyflow%2Fsystem@0.0.79.patch",
-    "@reduxjs/toolkit@2.12.0": "patches/@reduxjs%2Ftoolkit@2.12.0.patch",
-  },
   "packages": {
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
 
