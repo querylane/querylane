@@ -41,6 +41,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -4468,10 +4469,12 @@ function DefinitionSectionCard({ section }: { section: DefinitionSection }) {
 }
 
 function DefinitionSideCard({
+  action,
   children,
   icon: Icon,
   title,
 }: {
+  action?: React.ReactNode;
   children: React.ReactNode;
   icon: LucideIcon;
   title: string;
@@ -4483,6 +4486,7 @@ function DefinitionSideCard({
           <Icon aria-hidden="true" className="size-4 text-muted-foreground" />
           {title}
         </h2>
+        {action ? <CardAction>{action}</CardAction> : null}
       </CardHeader>
       <CardContent className="py-3">{children}</CardContent>
     </Card>
@@ -4616,19 +4620,37 @@ function ReproduceLocallyCard({
   ].join("\n");
 
   return (
-    <DefinitionSideCard icon={Terminal} title="Reproduce locally">
+    <DefinitionSideCard
+      action={
+        <CopyIconButton
+          ariaLabel="Copy all steps"
+          size="sm"
+          value={allSteps}
+          variant="outline"
+        >
+          Copy all steps
+        </CopyIconButton>
+      }
+      icon={Terminal}
+      title="Reproduce locally"
+    >
       <div className="min-w-0 space-y-3">
-        <div className="grid min-w-0 grid-cols-3 gap-1 rounded-lg bg-muted p-1 text-center font-mono text-[11px]">
-          <span className="truncate rounded-md bg-background px-2 py-1 shadow-sm">
-            {tableName}
-          </span>
-          <span className="truncate px-2 py-1 text-muted-foreground">
-            {schemaName}
-          </span>
-          <span className="truncate px-2 py-1 text-muted-foreground">
-            {databaseId}
-          </span>
-        </div>
+        <Tabs defaultValue="table">
+          <TabsList
+            aria-label="Reproduction scope"
+            className="grid w-full grid-cols-3"
+          >
+            <TabsTrigger className="min-w-0 truncate" value="table">
+              {tableName}
+            </TabsTrigger>
+            <TabsTrigger className="min-w-0 truncate" value="schema">
+              {schemaName}
+            </TabsTrigger>
+            <TabsTrigger className="min-w-0 truncate" value="database">
+              {databaseId}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <div className="flex min-h-8 items-center rounded-lg border bg-background px-3 py-1.5 text-sm">
           <span>Template: pg_dump, schema only (SQL)</span>
         </div>
@@ -4653,15 +4675,6 @@ function ReproduceLocallyCard({
             schema scope if you need them.
           </AlertDescription>
         </Alert>
-        <CopyIconButton
-          ariaLabel="Copy all steps"
-          className="w-full"
-          size="sm"
-          value={allSteps}
-          variant="outline"
-        >
-          Copy all steps
-        </CopyIconButton>
       </div>
     </DefinitionSideCard>
   );
