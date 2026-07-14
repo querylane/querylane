@@ -1,88 +1,57 @@
 "use client";
 
-import { Monitor, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { Theme, useTheme } from "@/theme-provider";
-
-const THEME_OPTIONS: Array<{ label: string; value: Theme }> = [
-  { label: "Light", value: "light" },
-  { label: "Dark", value: "dark" },
-  { label: "System", value: "system" },
-];
-
-function ThemeModeIcon({ theme }: { theme: Theme }) {
-  if (theme === "light") {
-    return <Sun className="size-4" />;
-  }
-
-  if (theme === "dark") {
-    return <Moon className="size-4" />;
-  }
-
-  return <Monitor className="size-4" />;
-}
+import type { useTheme } from "@/theme-provider";
 
 export function ThemeModeMenu({
   resolvedTheme,
   setTheme,
-  theme,
 }: {
   resolvedTheme: ReturnType<typeof useTheme>["resolvedTheme"];
   setTheme: ReturnType<typeof useTheme>["setTheme"];
-  theme: ReturnType<typeof useTheme>["theme"];
 }) {
-  const themeLabel = `Theme: ${theme} (resolved: ${resolvedTheme})`;
+  const nextTheme = resolvedTheme === "dark" ? "light" : "dark";
+  const label = `Switch to ${nextTheme} mode`;
 
   return (
-    <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  aria-label={themeLabel}
-                  className="size-8"
-                  size="icon"
-                  type="button"
-                  variant="ghost"
-                >
-                  <ThemeModeIcon theme={theme} />
-                  <span className="sr-only">Change theme</span>
-                </Button>
-              }
-            />
-          }
-        />
-        <TooltipContent>{themeLabel}</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent align="end" className="w-36">
-        {THEME_OPTIONS.map((option) => (
-          <DropdownMenuItem
-            aria-checked={theme === option.value}
-            key={option.value}
-            onClick={() => setTheme(option.value)}
-            role="menuitemradio"
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            aria-label={label}
+            className="size-8"
+            onClick={() => setTheme(nextTheme)}
+            size="icon"
+            type="button"
+            variant="ghost"
           >
-            <ThemeModeIcon theme={option.value} />
-            <span>{option.label}</span>
-            {theme === option.value ? (
-              <span className="ml-auto text-muted-foreground">✓</span>
-            ) : null}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+            <svg
+              aria-hidden="true"
+              className="size-4"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M0 0h24v24H0z" fill="none" stroke="none" />
+              <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+              <path d="M12 3l0 18" />
+              <path d="M12 9l4.65 -4.65" />
+              <path d="M12 14.3l7.37 -7.37" />
+              <path d="M12 19.6l8.85 -8.85" />
+            </svg>
+          </Button>
+        }
+      />
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }

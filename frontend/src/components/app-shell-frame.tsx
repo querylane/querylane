@@ -30,7 +30,7 @@ function SidebarRailPlaceholder() {
 }
 
 export function AppShellFrame({ children }: { children: React.ReactNode }) {
-  const { resolvedTheme, setTheme, theme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
 
   return (
     <div className="flex h-svh max-h-svh flex-col bg-background">
@@ -41,11 +41,7 @@ export function AppShellFrame({ children }: { children: React.ReactNode }) {
             Querylane
           </span>
         </div>
-        <ThemeModeMenu
-          resolvedTheme={resolvedTheme}
-          setTheme={setTheme}
-          theme={theme}
-        />
+        <ThemeModeMenu resolvedTheme={resolvedTheme} setTheme={setTheme} />
       </header>
       <div className="flex min-h-0 flex-1">
         <SidebarRailPlaceholder />

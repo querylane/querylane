@@ -33,7 +33,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Tooltip,
@@ -652,18 +651,15 @@ function AdminHeaderActions({
   resolvedTheme,
   stars,
   setTheme,
-  theme,
 }: {
   githubUrl: string;
   resolvedTheme: ReturnType<typeof useTheme>["resolvedTheme"];
   stars: string | null;
   setTheme: ReturnType<typeof useTheme>["setTheme"];
-  theme: ReturnType<typeof useTheme>["theme"];
 }) {
   return (
     <div className="ml-0 flex shrink-0 items-center gap-1 lg:ml-auto lg:gap-2">
       <AdminCommandPalette />
-      <Separator className="hidden h-14 lg:block" orientation="vertical" />
       <a
         className={cn(
           buttonVariants({
@@ -689,12 +685,7 @@ function AdminHeaderActions({
           </span>
         )}
       </a>
-      <Separator className="hidden h-14 lg:block" orientation="vertical" />
-      <ThemeModeMenu
-        resolvedTheme={resolvedTheme}
-        setTheme={setTheme}
-        theme={theme}
-      />
+      <ThemeModeMenu resolvedTheme={resolvedTheme} setTheme={setTheme} />
     </div>
   );
 }
@@ -708,7 +699,7 @@ export function AdminHeader() {
     navigateToInstance,
     navigateToDatabase,
   } = useDb();
-  const { resolvedTheme, setTheme, theme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const githubRepo = env.PUBLIC_GITHUB_REPO?.trim();
   const { data: starsResult } = useGithubRepoStarsQuery(githubRepo);
   const stars = starsResult ?? null;
@@ -767,7 +758,6 @@ export function AdminHeader() {
         resolvedTheme={resolvedTheme}
         setTheme={setTheme}
         stars={stars}
-        theme={theme}
       />
     </header>
   );
