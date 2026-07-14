@@ -58,10 +58,12 @@ const MODEL: RolesAccessMapModel = {
 
 function CanvasHarness({
   failedRequestCount = 0,
+  isLoading = false,
   model = MODEL,
   partial = false,
 }: {
   failedRequestCount?: number;
+  isLoading?: boolean;
   model?: RolesAccessMapModel;
   partial?: boolean;
 }) {
@@ -69,6 +71,7 @@ function CanvasHarness({
   return (
     <RolesAccessMapCanvas
       failedRequestCount={failedRequestCount}
+      isLoading={isLoading}
       model={model}
       onSelectNode={setSelectedNodeId}
       partial={partial}

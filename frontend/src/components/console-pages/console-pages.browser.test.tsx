@@ -23,6 +23,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 const roleApiState = vi.hoisted(() => ({
+  accessMapPending: false,
   accessMapResources: null as null | {
     budgetSkippedRequestCount: number;
     failedRequestCount: number;
@@ -536,7 +537,7 @@ vi.mock("@/hooks/api/role", () => ({
       truncatedRequestCount: 0,
     },
     error: null,
-    isPending: false,
+    isPending: roleApiState.accessMapPending,
   }),
 }));
 
@@ -755,6 +756,31 @@ test("console roles access map keeps failed requests visible when expanded", asy
       )
     )
     .toBeVisible();
+});
+
+test("console roles access map does not show an empty state while loading", async () => {
+  const previousResources = roleApiState.accessMapResources;
+  roleApiState.accessMapPending = true;
+  roleApiState.accessMapResources = {
+    budgetSkippedRequestCount: 0,
+    failedRequestCount: 0,
+    publicAccess: [],
+    roleAccess: [],
+    truncatedRequestCount: 0,
+  };
+  try {
+    renderConsoleSurface(<InstanceRolesPage instanceId="prod" tab="map" />);
+
+    await expect
+      .element(page.getByText("Loading role object access."))
+      .toBeVisible();
+    await expect
+      .element(page.getByText("No object grants found for the visible roles."))
+      .not.toBeInTheDocument();
+  } finally {
+    roleApiState.accessMapPending = false;
+    roleApiState.accessMapResources = previousResources;
+  }
 });
 
 test("console roles access filters contain their switches on narrow viewports", async () => {
