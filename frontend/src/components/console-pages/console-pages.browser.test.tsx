@@ -24,13 +24,20 @@ import {
 
 const roleApiState = vi.hoisted(() => ({
   accessMapResources: null as null | {
+    budgetSkippedRequestCount: number;
+    failedRequestCount: number;
     publicAccess: unknown[];
     roleAccess: unknown[];
+    truncatedRequestCount: number;
   },
   defaultPrivileges: [] as unknown[],
+  defaultPrivilegesNextPageToken: "",
   grants: [] as unknown[],
+  grantsNextPageToken: "",
   ownedObjects: [] as unknown[],
+  ownedObjectsNextPageToken: "",
   publicGrants: [] as unknown[],
+  publicGrantsNextPageToken: "",
   roles: [] as unknown[],
 }));
 
@@ -66,6 +73,10 @@ function roleFixture(overrides: Record<string, unknown> = {}) {
 }
 
 function setRoleDetailFixture() {
+  roleApiState.defaultPrivilegesNextPageToken = "";
+  roleApiState.grantsNextPageToken = "";
+  roleApiState.ownedObjectsNextPageToken = "";
+  roleApiState.publicGrantsNextPageToken = "";
   roleApiState.roles = [
     roleFixture(),
     roleFixture({
@@ -236,6 +247,8 @@ function setRolesAccessMapDesignFixture() {
     }),
   ];
   roleApiState.accessMapResources = {
+    budgetSkippedRequestCount: 0,
+    failedRequestCount: 0,
     publicAccess: [
       {
         databaseId: "functions",
@@ -396,6 +409,7 @@ function setRolesAccessMapDesignFixture() {
         roleName: "cloud_admin",
       },
     ],
+    truncatedRequestCount: 0,
   };
 }
 
@@ -453,26 +467,6 @@ vi.mock("@/hooks/api/role", () => ({
     pageSize: 1000,
     parent: `instances/${instanceId}`,
   }),
-  useListAllPublicGrantsQuery: () => ({
-    data: { grants: roleApiState.publicGrants },
-    error: null,
-    isPending: false,
-  }),
-  useListAllRoleDefaultPrivilegesQuery: () => ({
-    data: { defaultPrivileges: roleApiState.defaultPrivileges },
-    error: null,
-    isPending: false,
-  }),
-  useListAllRoleGrantsQuery: () => ({
-    data: { grants: roleApiState.grants },
-    error: null,
-    isPending: false,
-  }),
-  useListAllRoleOwnedObjectsQuery: () => ({
-    data: { ownedObjects: roleApiState.ownedObjects },
-    error: null,
-    isPending: false,
-  }),
   useListAllRolesQuery: () => ({
     data: {
       roles:
@@ -501,10 +495,45 @@ vi.mock("@/hooks/api/role", () => ({
     isPending: false,
     refetch: vi.fn(async () => undefined),
   }),
+  useListPublicGrantsQuery: () => ({
+    data: {
+      grants: roleApiState.publicGrants,
+      nextPageToken: roleApiState.publicGrantsNextPageToken,
+    },
+    error: null,
+    isPending: false,
+  }),
+  useListRoleDefaultPrivilegesQuery: () => ({
+    data: {
+      defaultPrivileges: roleApiState.defaultPrivileges,
+      nextPageToken: roleApiState.defaultPrivilegesNextPageToken,
+    },
+    error: null,
+    isPending: false,
+  }),
+  useListRoleGrantsQuery: () => ({
+    data: {
+      grants: roleApiState.grants,
+      nextPageToken: roleApiState.grantsNextPageToken,
+    },
+    error: null,
+    isPending: false,
+  }),
+  useListRoleOwnedObjectsQuery: () => ({
+    data: {
+      nextPageToken: roleApiState.ownedObjectsNextPageToken,
+      ownedObjects: roleApiState.ownedObjects,
+    },
+    error: null,
+    isPending: false,
+  }),
   useRolesAccessMapResourcesQuery: () => ({
     data: roleApiState.accessMapResources ?? {
+      budgetSkippedRequestCount: 0,
+      failedRequestCount: 0,
       publicAccess: [],
       roleAccess: [],
+      truncatedRequestCount: 0,
     },
     error: null,
     isPending: false,
@@ -676,6 +705,56 @@ test("console roles access map matches the design source", async () => {
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "console-roles-access-map-selected-node"
   );
+});
+
+test("console roles access map keeps partial results visibly qualified", async () => {
+  setRolesAccessMapDesignFixture();
+  if (!roleApiState.accessMapResources) {
+    throw new Error("Expected the access map fixture.");
+  }
+  roleApiState.accessMapResources.truncatedRequestCount = 2;
+
+  renderConsoleSurface(<InstanceRolesPage instanceId="prod" tab="map" />);
+
+  await expect
+    .element(page.getByText("Some access data is not shown"))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("shipping", { exact: true }))
+    .toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "console-roles-access-map-partial"
+  );
+
+  await page.getByRole("button", { name: "Maximize role access map" }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Expanded role access map",
+  });
+  await expect
+    .element(dialog.getByText("Some access data is not shown"))
+    .toBeVisible();
+});
+
+test("console roles access map keeps failed requests visible when expanded", async () => {
+  setRolesAccessMapDesignFixture();
+  if (!roleApiState.accessMapResources) {
+    throw new Error("Expected the access map fixture.");
+  }
+  roleApiState.accessMapResources.failedRequestCount = 1;
+
+  renderConsoleSurface(<InstanceRolesPage instanceId="prod" tab="map" />);
+
+  await page.getByRole("button", { name: "Maximize role access map" }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Expanded role access map",
+  });
+  await expect
+    .element(
+      dialog.getByText(
+        "1 access request could not be loaded. The map shows the available data."
+      )
+    )
+    .toBeVisible();
 });
 
 test("console roles access filters contain their switches on narrow viewports", async () => {
@@ -955,6 +1034,39 @@ test("console role detail grants overview keeps access sources scannable", async
     .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "console-role-detail-grants-overview"
+  );
+});
+
+test("console role detail access map keeps partial counts qualified", async () => {
+  setRoleDetailFixture();
+  roleApiState.grantsNextPageToken = "more-grants";
+  roleApiState.ownedObjectsNextPageToken = "more-owned-objects";
+  roleApiState.publicGrantsNextPageToken = "more-public-grants";
+
+  renderConsoleSurface(
+    <RoleDetailPage
+      grantsReach={undefined}
+      grantsSchema={undefined}
+      grantsType={undefined}
+      instanceId="prod"
+      roleId="app_user"
+      tab="access-map"
+    />
+  );
+
+  await expect
+    .element(page.getByText("Some access data is not shown"))
+    .toBeVisible();
+  expect(page.getByText("Partial", { exact: true }).elements()).toHaveLength(5);
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "console-role-detail-access-map-partial"
+  );
+
+  await page.getByRole("button", { name: "Expand access map" }).click();
+  const dialog = page.getByRole("dialog", { name: "Expanded access map" });
+  await expect.element(dialog).toBeVisible();
+  await expect(dialog).toMatchScreenshot(
+    "console-role-detail-access-map-partial-expanded"
   );
 });
 

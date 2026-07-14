@@ -10,7 +10,10 @@ import {
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import type { GrantsView } from "@/components/console-pages/role-detail-search";
-import { GrantsEmptyState } from "@/components/console-pages/role-grants-pills";
+import {
+  CountPill,
+  GrantsEmptyState,
+} from "@/components/console-pages/role-grants-pills";
 import {
   DEFAULT_PRIV_OBJECT_LABEL,
   type DefaultPrivilegeRule,
@@ -124,20 +127,18 @@ function publicPrivilegeSummary(objects: GrantedObject[]): string {
 function SectionHead({
   count,
   hint,
+  partial = false,
   title,
 }: {
   count?: number;
   hint?: string;
+  partial?: boolean;
   title: string;
 }) {
   return (
     <div className="flex items-baseline gap-2.5 px-0.5">
       <span className="font-semibold text-foreground text-sm">{title}</span>
-      {count == null ? null : (
-        <span className="inline-flex h-[18px] items-center rounded-full border border-border bg-secondary px-[7px] font-mono text-[11px] text-muted-foreground tracking-[0.02em]">
-          {count.toLocaleString()}
-        </span>
-      )}
+      {count == null ? null : <CountPill partial={partial} value={count} />}
       {hint ? (
         <span className="ml-auto text-[11.5px] text-muted-foreground">
           {hint}
@@ -147,15 +148,26 @@ function SectionHead({
   );
 }
 
-function TotalBadge({ unit, value }: { unit: string; value: number }) {
+function TotalBadge({
+  partial = false,
+  unit,
+  value,
+}: {
+  partial?: boolean;
+  unit: string;
+  value: number;
+}) {
   return (
     <span className="flex flex-col items-end whitespace-nowrap">
       <span className="font-medium font-mono text-[15px] text-foreground leading-tight tracking-tight">
         {value.toLocaleString()}
       </span>
-      <span className="text-[10.5px] text-muted-foreground">
-        {unit}
-        {value === 1 ? "" : "s"}
+      <span className="flex items-center gap-1 text-[10.5px] text-muted-foreground">
+        <span>
+          {unit}
+          {value === 1 ? "" : "s"}
+        </span>
+        {partial ? <span>Partial</span> : null}
       </span>
     </span>
   );
@@ -185,10 +197,12 @@ function SchemaListRow({
   databaseName,
   group,
   onNavigate,
+  partial,
 }: {
   databaseName: string | undefined;
   group: SchemaGrantGroup;
   onNavigate: (next: GrantsView) => void;
+  partial: boolean;
 }) {
   const Icon = group.database ? Database : FolderTree;
   const name = group.database
@@ -207,10 +221,12 @@ function SchemaListRow({
           {name}
         </span>
         <span className="truncate text-muted-foreground text-xs">
-          {schemaBreakdownLabel(group)}
+          {partial
+            ? "Available direct grant results"
+            : schemaBreakdownLabel(group)}
         </span>
       </span>
-      <TotalBadge unit="grant" value={group.total} />
+      <TotalBadge partial={partial} unit="grant" value={group.total} />
     </DrillRow>
   );
 }
@@ -222,6 +238,7 @@ function ReachRow({
   iconClassName,
   name,
   onClick,
+  partial,
   state,
   unit,
 }: {
@@ -231,6 +248,7 @@ function ReachRow({
   iconClassName: string;
   name: string;
   onClick: () => void;
+  partial: boolean;
   state: LoadedFacetState;
   unit: string;
 }) {
@@ -248,7 +266,7 @@ function ReachRow({
     </span>
   );
   if (state === "ready" && count > 0) {
-    total = <TotalBadge unit={unit} value={count} />;
+    total = <TotalBadge partial={partial} unit={unit} value={count} />;
   } else if (state !== "ready") {
     total = null;
   }
@@ -275,40 +293,71 @@ function ReachRow({
 
 // ───────── Overview ─────────
 
-// The grants summary line. Lives in the tab header next to the database
-// selector (which already names the database), so it doesn't repeat it.
-export function OverviewLede({
-  indirectPaths,
+function DirectGrantsLede({
+  grantsPartial,
   schemaCount,
   totalDirect,
 }: {
-  indirectPaths: number;
+  grantsPartial: boolean;
   schemaCount: number;
   totalDirect: number;
 }) {
+  if (totalDirect === 0) {
+    return grantsPartial
+      ? "No direct grants are shown in the available results."
+      : "No direct grants in this database.";
+  }
   return (
-    <p className="text-muted-foreground text-sm leading-relaxed">
-      {totalDirect === 0 ? (
-        "No direct grants in this database."
-      ) : (
+    <>
+      <strong className="font-medium text-foreground">
+        {totalDirect.toLocaleString()}
+      </strong>{" "}
+      {grantsPartial ? "available direct grant" : "direct grant"}
+      {totalDirect === 1 ? "" : "s"}
+      {schemaCount > 0 ? (
         <>
-          <strong className="font-medium text-foreground">
-            {totalDirect.toLocaleString()}
-          </strong>{" "}
-          direct grant{totalDirect === 1 ? "" : "s"}
-          {schemaCount > 0 ? (
+          {" "}
+          {grantsPartial ? (
+            "across available schemas"
+          ) : (
             <>
-              {" "}
               across{" "}
               <strong className="font-medium text-foreground">
                 {schemaCount.toLocaleString()}
               </strong>{" "}
               schema{schemaCount === 1 ? "" : "s"}
             </>
-          ) : null}
-          .
+          )}
         </>
-      )}
+      ) : null}
+      {grantsPartial ? (
+        <span className="font-medium text-foreground"> · Partial</span>
+      ) : null}
+      .
+    </>
+  );
+}
+
+// The grants summary line. Lives in the tab header next to the database
+// selector (which already names the database), so it doesn't repeat it.
+function OverviewLede({
+  grantsPartial,
+  indirectPaths,
+  schemaCount,
+  totalDirect,
+}: {
+  grantsPartial: boolean;
+  indirectPaths: number;
+  schemaCount: number;
+  totalDirect: number;
+}) {
+  return (
+    <p className="text-muted-foreground text-sm leading-relaxed">
+      <DirectGrantsLede
+        grantsPartial={grantsPartial}
+        schemaCount={schemaCount}
+        totalDirect={totalDirect}
+      />
       {indirectPaths > 0 ? (
         <>
           {" "}
@@ -323,27 +372,101 @@ export function OverviewLede({
   );
 }
 
-export function GrantsOverview({
+function DirectGrantsSection({
   databaseName,
+  grantsPartial,
+  indirectPaths,
+  onNavigate,
+  schemaIndex,
+  totalDirect,
+}: {
+  databaseName: string | undefined;
+  grantsPartial: boolean;
+  indirectPaths: number;
+  onNavigate: (next: GrantsView) => void;
+  schemaIndex: SchemaGrantGroup[];
+  totalDirect: number;
+}) {
+  if (schemaIndex.length > 0) {
+    const schemaCount = schemaIndex.filter((group) => !group.database).length;
+    return (
+      <section className="flex flex-col gap-3">
+        <SectionHead
+          count={totalDirect}
+          hint={
+            grantsPartial
+              ? "Available schemas"
+              : `${schemaCount} schema${schemaCount === 1 ? "" : "s"}`
+          }
+          partial={grantsPartial}
+          title="Direct grants"
+        />
+        <div className="overflow-hidden rounded-md border border-border">
+          {schemaIndex.map((group) => (
+            <SchemaListRow
+              databaseName={databaseName}
+              group={group}
+              key={group.database ? "__database" : group.schema}
+              onNavigate={onNavigate}
+              partial={grantsPartial}
+            />
+          ))}
+        </div>
+      </section>
+    );
+  }
+  return (
+    <GrantsEmptyState
+      title={
+        grantsPartial
+          ? "Direct grant results are incomplete"
+          : "No direct grants"
+      }
+    >
+      {grantsPartial ? (
+        "No direct grants are shown in the available results."
+      ) : (
+        <>
+          This role has no explicit{" "}
+          <span className="font-mono text-foreground/80">GRANT</span>s on{" "}
+          <span className="font-mono text-foreground/80">{databaseName}</span>.
+          {indirectPaths > 0
+            ? " It may still be reachable via the indirect paths below."
+            : ""}
+        </>
+      )}
+    </GrantsEmptyState>
+  );
+}
+
+function GrantsOverview({
+  databaseName,
+  defaultPrivilegesPartial,
   defaultRules,
   facetStates,
+  grantsPartial,
   objects,
   onNavigate,
+  ownedPartial,
   ownedObjects,
+  publicGrantsPartial,
   publicObjects,
   schemaIndex,
 }: {
   databaseName: string | undefined;
+  defaultPrivilegesPartial: boolean;
   defaultRules: DefaultPrivilegeRule[];
   facetStates: FacetStates;
+  grantsPartial: boolean;
   objects: GrantedObject[];
   onNavigate: (next: GrantsView) => void;
+  ownedPartial: boolean;
   ownedObjects: OwnedObject[];
+  publicGrantsPartial: boolean;
   publicObjects: GrantedObject[];
   schemaIndex: SchemaGrantGroup[];
 }) {
   const totalDirect = objects.length;
-  const schemaCount = schemaIndex.filter((group) => !group.database).length;
   const indirectPaths =
     (ownedObjects.length > 0 ? 1 : 0) +
     (defaultRules.length > 0 ? 1 : 0) +
@@ -351,34 +474,14 @@ export function GrantsOverview({
 
   return (
     <div className="flex flex-col gap-8">
-      {schemaIndex.length > 0 ? (
-        <section className="flex flex-col gap-3">
-          <SectionHead
-            count={totalDirect}
-            hint={`${schemaCount} schema${schemaCount === 1 ? "" : "s"}`}
-            title="Direct grants"
-          />
-          <div className="overflow-hidden rounded-md border border-border">
-            {schemaIndex.map((group) => (
-              <SchemaListRow
-                databaseName={databaseName}
-                group={group}
-                key={group.database ? "__database" : group.schema}
-                onNavigate={onNavigate}
-              />
-            ))}
-          </div>
-        </section>
-      ) : (
-        <GrantsEmptyState title="No direct grants">
-          This role has no explicit{" "}
-          <span className="font-mono text-foreground/80">GRANT</span>s on{" "}
-          <span className="font-mono text-foreground/80">{databaseName}</span>.
-          {indirectPaths > 0
-            ? " It may still be reachable via the indirect paths below."
-            : ""}
-        </GrantsEmptyState>
-      )}
+      <DirectGrantsSection
+        databaseName={databaseName}
+        grantsPartial={grantsPartial}
+        indirectPaths={indirectPaths}
+        onNavigate={onNavigate}
+        schemaIndex={schemaIndex}
+        totalDirect={totalDirect}
+      />
 
       <section className="flex flex-col gap-3">
         <SectionHead
@@ -388,31 +491,46 @@ export function GrantsOverview({
         <div className="overflow-hidden rounded-md border border-border">
           <ReachRow
             count={ownedObjects.length}
-            desc={ownsPreview(ownedObjects)}
+            desc={
+              ownedPartial
+                ? "Available ownership results are incomplete."
+                : ownsPreview(ownedObjects)
+            }
             icon={Crown}
             iconClassName="text-amber-600 dark:text-amber-400"
             name="Owns"
             onClick={() => onNavigate({ kind: "reach", reach: "owns" })}
+            partial={ownedPartial}
             state={loadedFacetState(facetStates.owned)}
             unit="object"
           />
           <ReachRow
             count={defaultRules.length}
-            desc={defaultsPreview(defaultRules)}
+            desc={
+              defaultPrivilegesPartial
+                ? "Available default privilege results are incomplete."
+                : defaultsPreview(defaultRules)
+            }
             icon={Clock}
             iconClassName="text-violet-600 dark:text-violet-300"
             name="Default privileges"
             onClick={() => onNavigate({ kind: "reach", reach: "defaults" })}
+            partial={defaultPrivilegesPartial}
             state={loadedFacetState(facetStates.defaults)}
             unit="rule"
           />
           <ReachRow
             count={publicObjects.length}
-            desc={publicPreview(publicObjects)}
+            desc={
+              publicGrantsPartial
+                ? "Available PUBLIC grant results are incomplete."
+                : publicPreview(publicObjects)
+            }
             icon={Globe}
             iconClassName="text-sky-600 dark:text-sky-400"
             name="Granted to PUBLIC"
             onClick={() => onNavigate({ kind: "reach", reach: "public" })}
+            partial={publicGrantsPartial}
             state={loadedFacetState(facetStates.publicGrants)}
             unit="grant"
           />
@@ -421,3 +539,5 @@ export function GrantsOverview({
     </div>
   );
 }
+
+export { GrantsOverview, OverviewLede };

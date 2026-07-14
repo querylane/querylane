@@ -4,6 +4,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  TriangleAlert,
   UserRound,
   Users,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import type {
 import { capabilities } from "@/components/console-pages/role-detail-model";
 import { EmptyState } from "@/components/empty-state";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -49,6 +51,19 @@ function KpiCard({
         ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+function RolePartialAccessAlert({ databaseName }: { databaseName: string }) {
+  return (
+    <Alert role="status">
+      <TriangleAlert aria-hidden="true" className="size-4" />
+      <AlertTitle>Some access data is not shown</AlertTitle>
+      <AlertDescription>
+        One or more access categories for {databaseName} exceed the 1,000-result
+        limit. Counts and relationships may be incomplete.
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -274,4 +289,5 @@ export {
   KpiCard,
   RoleAttributesCard,
   RoleNotFound,
+  RolePartialAccessAlert,
 };

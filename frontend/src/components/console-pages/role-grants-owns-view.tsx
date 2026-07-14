@@ -167,7 +167,13 @@ function OwnedObjectCell({ object }: { object: OwnedObject }) {
   );
 }
 
-function OwnedObjectsTable({ objects }: { objects: OwnedObject[] }) {
+function OwnedObjectsTable({
+  objects,
+  partial,
+}: {
+  objects: OwnedObject[];
+  partial: boolean;
+}) {
   const [activeKind, setActiveKind] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -200,7 +206,7 @@ function OwnedObjectsTable({ objects }: { objects: OwnedObject[] }) {
         <span className="font-semibold text-foreground text-sm">
           Owned objects
         </span>
-        <CountPill value={objects.length} />
+        <CountPill partial={partial} value={objects.length} />
       </div>
       <KindFilteredTable
         activeKind={activeKind}
@@ -222,7 +228,15 @@ function OwnedObjectsTable({ objects }: { objects: OwnedObject[] }) {
 
 // ───────── Cleanup card ─────────
 
-function CleanupCard({ count, roleName }: { count: number; roleName: string }) {
+function CleanupCard({
+  count,
+  partial,
+  roleName,
+}: {
+  count: number;
+  partial: boolean;
+  roleName: string;
+}) {
   // Quote the identifier so the copy-paste SQL is valid for role names needing
   // quoting (uppercase, spaces, special chars). Display-only, never executed.
   const quoted = `"${roleName.replaceAll('"', '""')}"`;
@@ -236,7 +250,9 @@ DROP OWNED BY ${quoted};`;
           Before dropping this role
         </span>
         <span className="ml-auto text-[11.5px] text-muted-foreground">
-          {count.toLocaleString()} object{count === 1 ? "" : "s"} would block{" "}
+          {partial
+            ? "Available owned objects would block "
+            : `${count.toLocaleString()} object${count === 1 ? "" : "s"} would block `}
           <span className="font-mono">DROP ROLE</span>
         </span>
       </div>
@@ -264,11 +280,13 @@ function OwnsDescription({
   databaseName,
   isEmpty,
   isSuper,
+  partial,
   roleName,
 }: {
   databaseName: string | undefined;
   isEmpty: boolean;
   isSuper: boolean;
+  partial: boolean;
   roleName: string;
 }) {
   if (isSuper) {
@@ -278,6 +296,9 @@ function OwnsDescription({
         informational.
       </>
     );
+  }
+  if (isEmpty && partial) {
+    return "No owned objects are shown in the available results.";
   }
   if (isEmpty) {
     return (
@@ -304,12 +325,14 @@ export function OwnsGrantsView({
   directGrants,
   kind,
   ownedObjects,
+  partial,
   roleName,
 }: {
   databaseName: string | undefined;
   directGrants: GrantedObject[];
   kind: RoleKind;
   ownedObjects: OwnedObject[];
+  partial: boolean;
   roleName: string;
 }) {
   const isSuper = kind === "super";
@@ -331,6 +354,7 @@ export function OwnsGrantsView({
         countUnit="object"
         icon={Crown}
         iconClassName="text-amber-500 dark:text-amber-400"
+        partial={partial}
         title="Owns"
       >
         <ImplicitTag />
@@ -340,6 +364,7 @@ export function OwnsGrantsView({
           databaseName={databaseName}
           isEmpty={isEmpty}
           isSuper={isSuper}
+          partial={partial}
           roleName={roleName}
         />
       </p>
@@ -350,17 +375,31 @@ export function OwnsGrantsView({
         ) : null}
 
         {isEmpty ? (
-          <GrantsEmptyState>
-            No owned objects in{" "}
-            <span className="font-mono text-foreground/80">{databaseName}</span>
-            .
+          <GrantsEmptyState
+            title={partial ? "Owned object results are incomplete" : undefined}
+          >
+            {partial ? (
+              "No owned objects are shown in the available results."
+            ) : (
+              <>
+                No owned objects in{" "}
+                <span className="font-mono text-foreground/80">
+                  {databaseName}
+                </span>
+                .
+              </>
+            )}
           </GrantsEmptyState>
         ) : (
-          <OwnedObjectsTable objects={ownedObjects} />
+          <OwnedObjectsTable objects={ownedObjects} partial={partial} />
         )}
 
         {isEmpty || isSuper ? null : (
-          <CleanupCard count={ownedObjects.length} roleName={roleName} />
+          <CleanupCard
+            count={ownedObjects.length}
+            partial={partial}
+            roleName={roleName}
+          />
         )}
       </div>
     </div>

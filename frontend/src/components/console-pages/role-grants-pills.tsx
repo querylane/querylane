@@ -161,10 +161,25 @@ export function FilterChip({
   );
 }
 
-export function CountPill({ value }: { value: number }) {
+export function CountPill({
+  partial = false,
+  unit,
+  value,
+}: {
+  partial?: boolean;
+  unit?: string | undefined;
+  value: number;
+}) {
   return (
-    <span className="inline-flex h-[18px] items-center rounded-full border border-border bg-secondary px-[7px] font-medium font-mono text-[11px] text-muted-foreground tracking-[0.02em]">
+    <span className="inline-flex h-[18px] items-center gap-1 rounded-full border border-border bg-secondary px-[7px] font-medium font-mono text-[11px] text-muted-foreground tracking-[0.02em]">
       {value.toLocaleString()}
+      {unit ? (
+        <span className="font-normal">
+          {unit}
+          {value === 1 ? "" : "s"}
+        </span>
+      ) : null}
+      {partial ? <span className="font-sans">Partial</span> : null}
     </span>
   );
 }
@@ -192,7 +207,7 @@ export function ContentHead({
   countUnit,
   icon: Icon,
   iconClassName,
-
+  partial = false,
   title,
 }: {
   children?: ReactNode;
@@ -200,7 +215,7 @@ export function ContentHead({
   countUnit?: string;
   icon: ComponentType<{ className?: string }>;
   iconClassName?: string;
-
+  partial?: boolean;
   title: string;
 }) {
   return (
@@ -210,15 +225,7 @@ export function ContentHead({
         <h2 className="font-semibold text-xl tracking-tight">{title}</h2>
         {children}
         {count == null ? null : (
-          <span className="inline-flex h-[18px] items-center rounded-full border border-border bg-secondary px-[7px] font-medium font-mono text-[11px] text-muted-foreground tracking-[0.02em]">
-            {count.toLocaleString()}
-            {countUnit ? (
-              <span className="ml-1 font-normal">
-                {countUnit}
-                {count === 1 ? "" : "s"}
-              </span>
-            ) : null}
-          </span>
+          <CountPill partial={partial} unit={countUnit} value={count} />
         )}
       </div>
     </div>
@@ -231,7 +238,7 @@ export function GrantsEmptyState({
   title,
 }: {
   children: ReactNode;
-  title?: string;
+  title?: string | undefined;
 }) {
   return (
     <EmptyStatePanel

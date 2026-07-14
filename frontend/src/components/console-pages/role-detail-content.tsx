@@ -31,10 +31,10 @@ import {
   roleDefaultPrivilegesForDatabaseQueryInput,
   roleGrantsForDatabaseQueryInput,
   roleOwnedObjectsForDatabaseQueryInput,
-  useListAllPublicGrantsQuery,
-  useListAllRoleDefaultPrivilegesQuery,
-  useListAllRoleGrantsQuery,
-  useListAllRoleOwnedObjectsQuery,
+  useListPublicGrantsQuery,
+  useListRoleDefaultPrivilegesQuery,
+  useListRoleGrantsQuery,
+  useListRoleOwnedObjectsQuery,
 } from "@/hooks/api/role";
 import { parseResourceLeafId } from "@/lib/console-resources";
 import { useDb } from "@/lib/db-context";
@@ -82,7 +82,7 @@ function useRoleGrants({
   roleId: string;
 }) {
   const queryEnabled = effectiveDbId != null && loadGrants;
-  const grantsQuery = useListAllRoleGrantsQuery(
+  const grantsQuery = useListRoleGrantsQuery(
     roleGrantsForDatabaseQueryInput({
       databaseId: effectiveDbId ?? "",
       instanceId,
@@ -103,6 +103,8 @@ function useRoleGrants({
     grantsDeferred:
       effectiveDbId != null && !loadGrants && grantsQuery.data == null,
     grantsError: grantsQuery.error,
+    grantsPartial:
+      effectiveDbId != null && Boolean(grantsQuery.data?.nextPageToken),
     grantsPending: grantsQuery.isPending,
     grantsReady:
       effectiveDbId != null &&
@@ -131,15 +133,15 @@ function useRoleFacets({
   const facetsEnabled = effectiveDbId != null && !isSystem;
   const queryEnabled = facetsEnabled && loadFacets;
   const databaseId = effectiveDbId ?? "";
-  const ownedObjectsQuery = useListAllRoleOwnedObjectsQuery(
+  const ownedObjectsQuery = useListRoleOwnedObjectsQuery(
     roleOwnedObjectsForDatabaseQueryInput({ databaseId, instanceId, roleId }),
     { enabled: queryEnabled }
   );
-  const publicGrantsQuery = useListAllPublicGrantsQuery(
+  const publicGrantsQuery = useListPublicGrantsQuery(
     publicGrantsForDatabaseQueryInput({ databaseId, instanceId }),
     { enabled: queryEnabled }
   );
-  const defaultPrivilegesQuery = useListAllRoleDefaultPrivilegesQuery(
+  const defaultPrivilegesQuery = useListRoleDefaultPrivilegesQuery(
     roleDefaultPrivilegesForDatabaseQueryInput({
       databaseId,
       instanceId,
@@ -154,6 +156,8 @@ function useRoleFacets({
     !ownedObjectsQuery.error;
   return {
     defaultPrivileges: defaultPrivilegesQuery.data?.defaultPrivileges ?? [],
+    defaultPrivilegesPartial:
+      facetsEnabled && Boolean(defaultPrivilegesQuery.data?.nextPageToken),
     facetStates: {
       defaults: facetStateOf(facetsEnabled, defaultPrivilegesQuery, {
         deferred:
@@ -170,8 +174,12 @@ function useRoleFacets({
     } satisfies FacetStates,
     ownedError: ownedObjectsQuery.error,
     ownedObjects: ownedObjectsQuery.data?.ownedObjects ?? [],
+    ownedPartial:
+      facetsEnabled && Boolean(ownedObjectsQuery.data?.nextPageToken),
     ownedReady,
     publicGrants: publicGrantsQuery.data?.grants ?? [],
+    publicGrantsPartial:
+      facetsEnabled && Boolean(publicGrantsQuery.data?.nextPageToken),
   };
 }
 
@@ -281,6 +289,7 @@ function RoleDetailContent({
     grantSchemaCount,
     grantsDeferred,
     grantsError,
+    grantsPartial,
     grantsPending,
     grantsReady,
   } = useRoleGrants({
@@ -304,11 +313,14 @@ function RoleDetailContent({
   // default.
   const {
     defaultPrivileges,
+    defaultPrivilegesPartial,
     facetStates,
     ownedError,
     ownedObjects,
+    ownedPartial,
     ownedReady,
     publicGrants,
+    publicGrantsPartial,
   } = useRoleFacets({
     effectiveDbId,
     instanceId,
@@ -324,6 +336,11 @@ function RoleDetailContent({
     ownedCount: ownedObjects.length,
     ownedReady,
   });
+  const partialAccess =
+    grantsPartial ||
+    ownedPartial ||
+    publicGrantsPartial ||
+    defaultPrivilegesPartial;
 
   const belongsTo: RelatedRole[] = role.memberOf.map((membership) => ({
     grantor: membership.grantor || undefined,
@@ -394,6 +411,7 @@ function RoleDetailContent({
       connLimitSub={connLimitSub}
       databases={databases}
       defaultPrivileges={defaultPrivileges}
+      defaultPrivilegesPartial={defaultPrivilegesPartial}
       directGrantsSub={directGrantsSub}
       effectiveDb={effectiveDb}
       effectiveDbId={effectiveDbId}
@@ -401,6 +419,7 @@ function RoleDetailContent({
       facetStates={facetStates}
       grantObjects={grantObjects}
       grantsError={grantsError}
+      grantsPartial={grantsPartial}
       grantsPending={grantsPending}
       grantsReady={grantsReady}
       grantsView={grantsView}
@@ -411,9 +430,12 @@ function RoleDetailContent({
       onNavigateGrants={onNavigateGrants}
       onSelectGrantsDatabase={onSelectGrantsDatabase}
       ownedObjects={ownedObjects}
+      ownedPartial={ownedPartial}
       ownedReady={ownedReady}
       ownedSub={ownedSub}
+      partialAccess={partialAccess}
       publicGrants={publicGrants}
+      publicGrantsPartial={publicGrantsPartial}
       rlsNote={rlsNote}
       role={role}
       section={section}

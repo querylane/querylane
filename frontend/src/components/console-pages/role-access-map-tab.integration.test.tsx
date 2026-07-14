@@ -22,6 +22,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 const navigateMock = vi.hoisted(() => vi.fn());
+const COUNT_WITH_PLUS = /\d\+/;
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigateMock,
@@ -79,6 +80,7 @@ function accessMapProps(): RoleDetailViewProps {
         withGrantOption: false,
       }),
     ],
+    defaultPrivilegesPartial: false,
     directGrantsSub: undefined,
     effectiveDb: { id: "appdb", name: "appdb" },
     effectiveDbId: "appdb",
@@ -86,6 +88,7 @@ function accessMapProps(): RoleDetailViewProps {
     facetStates: { defaults: "ready", owned: "ready", publicGrants: "ready" },
     grantObjects: [grantObject()],
     grantsError: null,
+    grantsPartial: false,
     grantsPending: false,
     grantsReady: true,
     grantsView: { kind: "overview" },
@@ -102,8 +105,10 @@ function accessMapProps(): RoleDetailViewProps {
         schemaName: "internal",
       }),
     ],
+    ownedPartial: false,
     ownedReady: true,
     ownedSub: undefined,
+    partialAccess: false,
     publicGrants: [
       create(ObjectGrantSchema, {
         objectName: "",
@@ -113,6 +118,7 @@ function accessMapProps(): RoleDetailViewProps {
         withGrantOption: false,
       }),
     ],
+    publicGrantsPartial: false,
     rlsNote: null,
     role: create(RoleSchema, {
       attributes,
@@ -186,5 +192,74 @@ describe("RoleAccessMapTab", () => {
       search: { tab: "map" },
       to: "/instances/$instanceId/roles",
     });
+  });
+
+  test("warns that access counts are partial without qualifying parent roles", () => {
+    const props = accessMapProps();
+
+    render(
+      <RoleAccessMapTab
+        {...props}
+        grantsPartial={true}
+        partialAccess={true}
+        publicGrantsPartial={true}
+      />
+    );
+
+    const warning = screen.getByRole("status");
+    expect(
+      within(warning).getByText("Some access data is not shown")
+    ).toBeTruthy();
+    expect(
+      within(warning).getByText(
+        "One or more access categories for appdb exceed the 1,000-result limit. Counts and relationships may be incomplete."
+      )
+    ).toBeTruthy();
+
+    const parents = screen.getByText("Parents").parentElement;
+    const directGrants = screen.getByText("Direct grants").parentElement;
+    const ownedObjects = screen.getByText("Owned objects").parentElement;
+    const publicGrants = screen.getByText("PUBLIC grants").parentElement;
+
+    expect(parents).not.toBeNull();
+    expect(directGrants).not.toBeNull();
+    expect(ownedObjects).not.toBeNull();
+    expect(publicGrants).not.toBeNull();
+    expect(within(parents as HTMLElement).queryByText("Partial")).toBeNull();
+    expect(
+      within(directGrants as HTMLElement).getByText("Partial")
+    ).toBeTruthy();
+    expect(
+      within(ownedObjects as HTMLElement).queryByText("Partial")
+    ).toBeNull();
+    expect(
+      within(publicGrants as HTMLElement).getByText("Partial")
+    ).toBeTruthy();
+    expect(screen.queryByText(COUNT_WITH_PLUS)).toBeNull();
+  });
+
+  test("moves the partial-data warning into the expanded dialog", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <RoleAccessMapTab
+        {...accessMapProps()}
+        grantsPartial={true}
+        partialAccess={true}
+      />
+    );
+
+    await user.click(
+      within(await screen.findByLabelText("Access canvas controls")).getByRole(
+        "button",
+        { name: "Expand access map" }
+      )
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "Expanded access map",
+    });
+    expect(within(dialog).getByRole("status")).toBeTruthy();
+    expect(screen.getAllByRole("status")).toHaveLength(1);
   });
 });
