@@ -12,6 +12,7 @@ interface LinearRgb {
 }
 
 const MINIMUM_NON_TEXT_CONTRAST_RATIO = 3;
+const MAXIMUM_INLINE_COUNT_GAP_PX = 12;
 
 function clampChannel(channel: number) {
   return Math.min(1, Math.max(0, channel));
@@ -233,6 +234,23 @@ test("single-select filter replaces the previous option and shows counts", async
     .toBeVisible();
   await expect.element(page.getByRole("button", { name: /Type.*User/ }))
     .not.toBeInTheDocument();
+});
+
+test("filter option counts stay beside their labels", async () => {
+  render(<SingleSelectFilterFixture />);
+
+  await page.getByRole("button", { name: /Type.*User/ }).click();
+  const option = page.getByRole("option", { name: /Superuser\s+1/ });
+  await expect.element(option).toBeVisible();
+
+  const [label, count] = option.element().querySelectorAll(":scope > span");
+  if (!(label && count)) {
+    throw new Error("Expected the filter option to render a label and count.");
+  }
+
+  const gap =
+    count.getBoundingClientRect().left - label.getBoundingClientRect().right;
+  expect(gap).toBeLessThanOrEqual(MAXIMUM_INLINE_COUNT_GAP_PX);
 });
 
 test("fixed enum filters omit search without changing option behavior", async () => {

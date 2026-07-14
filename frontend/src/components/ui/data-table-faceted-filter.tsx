@@ -181,7 +181,7 @@ function DataTableFacetedFilter({
                     </div>
                     <span>{option.label}</span>
                     {option.count !== undefined ? (
-                      <span className="ml-auto font-mono text-muted-foreground text-xs tabular-nums">
+                      <span className="font-mono text-muted-foreground text-xs tabular-nums">
                         {option.count}
                       </span>
                     ) : null}
