@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
@@ -85,7 +86,7 @@ func (d *Postgres) ReadCellValue(ctx context.Context, db *sql.DB, params engine.
 
 	defer func() { _ = tx.Rollback() }()
 
-	if err := setStatementTimeout(ctx, tx, defaultReadTimeout); err != nil {
+	if err := setStatementTimeout(ctx, tx, defaultReadTimeout, postgreserrors.ProfileDefault); err != nil {
 		return nil, err
 	}
 

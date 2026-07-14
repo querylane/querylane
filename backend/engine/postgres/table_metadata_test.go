@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 )
 
 type tableMetadataErrorDriver struct{ err error }
@@ -129,15 +129,14 @@ func TestTableMetadataLiveQueriesClassifyPostgresSQLErrors(t *testing.T) {
 			defer db.Close()
 
 			err := tt.invoke(context.Background(), &Postgres{}, db)
-			require.ErrorIs(t, err, engine.ErrQueryPermissionDenied)
 
-			var pgErr *engine.PostgresSQLError
+			var pgErr *postgreserrors.Error
 			require.ErrorAs(t, err, &pgErr)
-			assert.Equal(t, engine.PostgresSQLKindPermissionDenied, pgErr.Kind)
-			assert.Equal(t, pgerrcode.InsufficientPrivilege, pgErr.SQLState)
-			assert.Equal(t, tt.op, pgErr.Operation)
-			assert.Equal(t, "public", pgErr.SafeFields["schema_name"])
-			assert.Equal(t, "secret", pgErr.SafeFields["table_name"])
+			assert.Equal(t, postgreserrors.KindPermissionDenied, pgErr.Classification().Kind)
+			assert.Equal(t, pgerrcode.InsufficientPrivilege, pgErr.Classification().SQLState)
+			assert.Equal(t, tt.op, pgErr.Operation())
+			assert.Equal(t, "public", pgErr.Classification().ClientFields.SchemaName)
+			assert.Equal(t, "secret", pgErr.Classification().ClientFields.TableName)
 		})
 	}
 }

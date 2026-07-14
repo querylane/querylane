@@ -122,8 +122,13 @@ func NewDatabaseRequired() *connect.Error {
 // NewDatabaseUnavailable returns an Unavailable error when the app database
 // cannot be reached during normal operation.
 func NewDatabaseUnavailable(innerErr error) *connect.Error {
-	if innerErr == nil {
-		innerErr = errors.New("the application database is temporarily unavailable")
+	if connectErr, ok := newMetaDatabaseUnavailablePostgresError(innerErr); ok {
+		return connectErr
+	}
+
+	innerErr = postgresWireError{
+		message: "the application database is temporarily unavailable",
+		cause:   innerErr,
 	}
 
 	return NewConnectError(

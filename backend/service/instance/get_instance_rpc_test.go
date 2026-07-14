@@ -5,10 +5,12 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
 )
@@ -62,14 +64,10 @@ func TestGetInstanceReportsServerInfoPartialError(t *testing.T) {
 		},
 	}
 	catalog := &getInstanceCatalogStub{
-		err: &engine.PostgresSQLError{
-			Kind:          engine.PostgresSQLKindPermissionDenied,
-			SQLState:      "42501",
-			SQLStateClass: "42",
-			ConditionName: "insufficient_privilege",
-			Operation:     "query server info",
-			Sentinel:      engine.ErrQueryPermissionDenied,
-		},
+		err: postgreserrors.Wrap(&pgconn.PgError{
+			Code:    "42501",
+			Message: "permission denied for view pg_settings",
+		}, postgreserrors.ProfileDefault, "query server info"),
 	}
 	service := NewService(reader, nil, nil, nil, catalog, nil, false)
 
@@ -86,7 +84,7 @@ func TestGetInstanceReportsServerInfoPartialError(t *testing.T) {
 
 	serverInfoError := requireMetricPartialError(t, resp.Msg.GetPartialErrors(), "server_info")
 	assert.Equal(t, int32(connect.CodePermissionDenied), serverInfoError.GetCode())
-	assert.Equal(t, "failed to query server info", serverInfoError.GetMessage())
+	assert.Equal(t, "PostgreSQL 42501: permission denied for view pg_settings", serverInfoError.GetMessage())
 
 	info := requireStatusErrorInfo(t, serverInfoError)
 	assert.Equal(t, "METRIC_UNAVAILABLE", info.GetReason())

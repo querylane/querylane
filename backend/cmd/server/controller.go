@@ -240,7 +240,7 @@ func (c *Controller) bootMainStage(ctx context.Context, cfg *serverconfig.Config
 	if err != nil {
 		slog.WarnContext(ctx, "database initialization failed, starting in degraded mode",
 			slog.Any("error", err))
-		c.app.markDatabaseInitError(err.Error())
+		c.app.markDatabaseInitFailure(err)
 		c.delegatingHandler.Set(c.app.Routes(ctx))
 
 		go c.retryDatabaseInit(ctx)
@@ -386,7 +386,7 @@ func (c *Controller) retryDatabaseInit(ctx context.Context) {
 			if err != nil {
 				slog.WarnContext(ctx, "database retry failed", slog.Any("error", err))
 
-				c.app.markDatabaseInitError(err.Error())
+				c.app.markDatabaseInitFailure(err)
 
 				continue
 			}

@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/querylane/querylane/backend/postgreserrors"
 	consolev1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
 	"github.com/querylane/querylane/backend/storage"
@@ -69,13 +70,17 @@ func mapRepoPostgresDetails(classification PostgresErrorClassification, rctx Res
 func MapRepoErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Error {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
-		classification := ClassifyPostgresError(pgErr, PostgresOperationLabel(rctx.Op))
+		classification := ClassifyPostgresError(
+			pgErr,
+			PostgresOperationLabel(rctx.Op),
+			postgreserrors.ProfileDefault,
+		)
 		classification = mapMetaDatabasePostgresClassification(classification)
+		classification = mapStoragePostgresClassification(err, classification)
 
 		return newPostgresErrorFromClassification(
 			pgErr,
 			classification,
-			"",
 			nil,
 			mapRepoPostgresDetails(classification, rctx)...,
 		)
@@ -201,4 +206,30 @@ func MapRepoErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Error
 			errorInfo,
 		)
 	}
+}
+
+func mapStoragePostgresClassification(
+	err error,
+	classification PostgresErrorClassification,
+) PostgresErrorClassification {
+	switch {
+	case errors.Is(err, storage.ErrAlreadyExists):
+		classification.Kind = postgreserrors.KindAlreadyExists
+		classification.ConnectCode = connect.CodeAlreadyExists
+		classification.ErrorReason = consolev1alpha1.ErrorReason_RESOURCE_ALREADY_EXISTS
+	case errors.Is(err, storage.ErrInvalidReference):
+		classification.Kind = postgreserrors.KindFailedPrecondition
+		classification.ConnectCode = connect.CodeFailedPrecondition
+		classification.ErrorReason = consolev1alpha1.ErrorReason_INVALID_ARGUMENT
+	case errors.Is(err, storage.ErrInvalidInput):
+		classification.Kind = postgreserrors.KindInvalidArgument
+		classification.ConnectCode = connect.CodeInvalidArgument
+		classification.ErrorReason = consolev1alpha1.ErrorReason_INVALID_ARGUMENT
+	case errors.Is(err, storage.ErrConcurrentModification):
+		classification.Kind = postgreserrors.KindAborted
+		classification.ConnectCode = connect.CodeAborted
+		classification.ErrorReason = consolev1alpha1.ErrorReason_FAILED_PRECONDITION
+	}
+
+	return classification
 }

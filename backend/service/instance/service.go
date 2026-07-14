@@ -22,6 +22,7 @@ import (
 
 	"github.com/querylane/querylane/backend/connectrpc/apierrors"
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	"github.com/querylane/querylane/backend/resource"
@@ -848,16 +849,17 @@ func metricPartialError(metric, message string, err error) *rpcstatus.Status {
 
 	var postgresDetail *v1alpha1.PostgreSqlErrorDetail
 
-	var pgSQLErr *engine.PostgresSQLError
-	if errors.As(err, &pgSQLErr) {
-		code = apierrors.PostgresSQLKindConnectCode(pgSQLErr.Kind)
-		for key, value := range apierrors.PostgresSQLErrorMetadata(pgSQLErr, pgSQLErr.Operation) {
+	if response, ok := apierrors.PostgresErrorResponseFromError(err, ""); ok {
+		code = response.ConnectCode
+
+		message = response.Message
+		for key, value := range response.Metadata {
 			if value != "" {
 				metadata[key] = value
 			}
 		}
 
-		postgresDetail = apierrors.NewPostgresSQLErrorDetail(pgSQLErr, pgSQLErr.Operation)
+		postgresDetail = response.Detail
 	}
 
 	info := &errdetails.ErrorInfo{
@@ -933,7 +935,7 @@ func replicationRoleFromRecovery(isInRecovery bool) v1alpha1.ServerInfo_Replicat
 const instanceConnectionTestOperation = apierrors.PostgresOperationLabel("test_instance_connection")
 
 func connectionTestError(ctx context.Context, field string, instanceName string, err error) *connect.Error {
-	attrs := []any{slog.String("field", field), slog.String("error", err.Error())}
+	attrs := []any{slog.String("field", field), slog.String("error", connectionTestLogError(err))}
 	if instanceName != "" {
 		attrs = append(attrs, slog.String("instance", instanceName))
 	}
@@ -972,40 +974,45 @@ func connectionTestError(ctx context.Context, field string, instanceName string,
 	)
 }
 
+func connectionTestLogError(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return postgreserrors.Wrap(
+			pgErr,
+			postgreserrors.ProfileDefault,
+			string(instanceConnectionTestOperation),
+		).Error()
+	}
+
+	return err.Error()
+}
+
 func postgresConnectionTestError(field string, pgErr *pgconn.PgError) *connect.Error {
-	classification := apierrors.ClassifyPostgresError(pgErr, instanceConnectionTestOperation)
-	message := postgresConnectionTestMessage(classification)
+	classification := apierrors.ClassifyPostgresError(
+		pgErr,
+		instanceConnectionTestOperation,
+		postgreserrors.ProfileDefault,
+	)
 	violations := postgresConnectionFieldViolations(field, classification)
 
 	if len(violations) == 0 {
-		return apierrors.NewPostgresErrorWithMessage(pgErr, instanceConnectionTestOperation, message)
+		return apierrors.NewPostgresError(
+			pgErr,
+			instanceConnectionTestOperation,
+			postgreserrors.ProfileDefault,
+		)
 	}
 
-	return apierrors.NewPostgresErrorWithMessage(
+	return apierrors.NewPostgresError(
 		pgErr,
 		instanceConnectionTestOperation,
-		message,
+		postgreserrors.ProfileDefault,
 		apierrors.NewBadRequest(violations...),
 	)
-}
-
-func postgresConnectionTestMessage(classification apierrors.PostgresErrorClassification) string {
-	switch {
-	case classification.SQLState == "28P01":
-		return "PostgreSQL rejected this password. Check the password, then try again."
-	case classification.SQLStateClass == "28":
-		return "PostgreSQL rejected these credentials. Check the username and password, then try again."
-	case classification.SQLState == "3D000":
-		return "PostgreSQL could not find the database. Check the database name, then try again."
-	case classification.SQLStateClass == "08":
-		return "PostgreSQL is unreachable with these connection settings. Check the host and port, then try again."
-	case classification.SQLState == "53300":
-		return "PostgreSQL has too many active connections. Retry later or increase the server connection limit."
-	case classification.SQLState == "57P03":
-		return "PostgreSQL cannot accept connections right now. Retry after the server finishes starting or recovery."
-	default:
-		return "Could not connect to PostgreSQL with these settings. Check the host, port, database, username, password, and SSL mode."
-	}
 }
 
 func postgresConnectionFieldViolations(field string, classification apierrors.PostgresErrorClassification) []*errdetails.BadRequest_FieldViolation {

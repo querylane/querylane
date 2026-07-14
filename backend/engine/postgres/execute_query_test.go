@@ -12,9 +12,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 )
 
 type executeQueryFakeDriver struct {
@@ -24,6 +27,7 @@ type executeQueryFakeDriver struct {
 type executeQueryFakeState struct {
 	values     []int64
 	nextErrAt  int
+	queryErr   error
 	rowsClosed atomic.Bool
 	txRolled   atomic.Bool
 }
@@ -73,6 +77,10 @@ func (c *executeQueryFakeConn) ExecContext(context.Context, string, []driver.Nam
 }
 
 func (c *executeQueryFakeConn) QueryContext(context.Context, string, []driver.NamedValue) (driver.Rows, error) {
+	if c.state.queryErr != nil {
+		return nil, c.state.queryErr
+	}
+
 	return &executeQueryFakeRows{state: c.state}, nil
 }
 func (tx *executeQueryFakeTx) Commit() error      { return nil }
@@ -113,6 +121,50 @@ func TestExecuteQueryStreamCloseFinalizesPartialRead(t *testing.T) {
 	require.NoError(t, stream.Err())
 	require.Equal(t, int64(1), stream.Stats().RowCount)
 	require.False(t, stream.Stats().Truncated)
+}
+
+func TestExecuteQueryUsesSQLConsolePostgresProfile(t *testing.T) {
+	t.Parallel()
+
+	db, state := openExecuteQueryFakeDB(t)
+	defer db.Close()
+
+	state.queryErr = &pgconn.PgError{
+		Code:    pgerrcode.UniqueViolation,
+		Message: "duplicate key value violates unique constraint",
+	}
+
+	_, err := (&Postgres{}).ExecuteQuery(context.Background(), db, engine.ExecuteQueryParams{
+		Statement: "insert into users values (1)",
+		Timeout:   time.Second,
+	})
+
+	var classified *postgreserrors.Error
+	require.ErrorAs(t, err, &classified)
+	require.Equal(t, postgreserrors.ProfileSQLConsole, classified.Classification().Profile)
+	require.Equal(t, postgreserrors.KindInvalidArgument, classified.Classification().Kind)
+}
+
+func TestExplainQueryUsesSQLConsolePostgresProfile(t *testing.T) {
+	t.Parallel()
+
+	db, state := openExecuteQueryFakeDB(t)
+	defer db.Close()
+
+	state.queryErr = &pgconn.PgError{
+		Code:    pgerrcode.UniqueViolation,
+		Message: "duplicate key value violates unique constraint",
+	}
+
+	_, err := (&Postgres{}).ExplainQuery(context.Background(), db, engine.ExplainQueryParams{
+		Statement: "insert into users values (1)",
+		Timeout:   time.Second,
+	})
+
+	var classified *postgreserrors.Error
+	require.ErrorAs(t, err, &classified)
+	require.Equal(t, postgreserrors.ProfileSQLConsole, classified.Classification().Profile)
+	require.Equal(t, postgreserrors.KindInvalidArgument, classified.Classification().Kind)
 }
 
 func TestExecuteQueryStreamTruncationStats(t *testing.T) {

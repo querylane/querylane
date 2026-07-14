@@ -288,7 +288,7 @@ func TestMapRepoErr_PostgresSQLStateDetails(t *testing.T) {
 			name:          "invalid reference foreign key",
 			inputErr:      storage.ParsePostgresError(&pgconn.PgError{Code: pgerrcode.ForeignKeyViolation}, storage.ErrAlreadyExists),
 			wantCode:      connect.CodeFailedPrecondition,
-			wantReason:    consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+			wantReason:    consolev1alpha1.ErrorReason_INVALID_ARGUMENT,
 			wantSQLState:  pgerrcode.ForeignKeyViolation,
 			wantCondition: "foreign_key_violation",
 		},
@@ -296,7 +296,7 @@ func TestMapRepoErr_PostgresSQLStateDetails(t *testing.T) {
 			name:          "invalid reference restrict",
 			inputErr:      storage.ParsePostgresError(&pgconn.PgError{Code: pgerrcode.RestrictViolation}, storage.ErrAlreadyExists),
 			wantCode:      connect.CodeFailedPrecondition,
-			wantReason:    consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+			wantReason:    consolev1alpha1.ErrorReason_INVALID_ARGUMENT,
 			wantSQLState:  pgerrcode.RestrictViolation,
 			wantCondition: "restrict_violation",
 		},
@@ -312,26 +312,34 @@ func TestMapRepoErr_PostgresSQLStateDetails(t *testing.T) {
 		{
 			name:          "check violation",
 			inputErr:      storage.ParsePostgresError(&pgconn.PgError{Code: pgerrcode.CheckViolation}, storage.ErrAlreadyExists),
-			wantCode:      connect.CodeFailedPrecondition,
-			wantReason:    consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+			wantCode:      connect.CodeInvalidArgument,
+			wantReason:    consolev1alpha1.ErrorReason_INVALID_ARGUMENT,
 			wantSQLState:  pgerrcode.CheckViolation,
 			wantCondition: "check_violation",
 		},
 		{
 			name:          "not null violation",
 			inputErr:      storage.ParsePostgresError(&pgconn.PgError{Code: pgerrcode.NotNullViolation}, storage.ErrAlreadyExists),
-			wantCode:      connect.CodeFailedPrecondition,
-			wantReason:    consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+			wantCode:      connect.CodeInvalidArgument,
+			wantReason:    consolev1alpha1.ErrorReason_INVALID_ARGUMENT,
 			wantSQLState:  pgerrcode.NotNullViolation,
 			wantCondition: "not_null_violation",
 		},
 		{
 			name:          "exclusion violation",
 			inputErr:      storage.ParsePostgresError(&pgconn.PgError{Code: pgerrcode.ExclusionViolation}, storage.ErrAlreadyExists),
-			wantCode:      connect.CodeFailedPrecondition,
-			wantReason:    consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+			wantCode:      connect.CodeInvalidArgument,
+			wantReason:    consolev1alpha1.ErrorReason_INVALID_ARGUMENT,
 			wantSQLState:  pgerrcode.ExclusionViolation,
 			wantCondition: "exclusion_violation",
+		},
+		{
+			name:          "unknown integrity violation keeps storage domain override",
+			inputErr:      storage.ParsePostgresError(&pgconn.PgError{Code: "23ZZZ"}, storage.ErrAlreadyExists),
+			wantCode:      connect.CodeInvalidArgument,
+			wantReason:    consolev1alpha1.ErrorReason_INVALID_ARGUMENT,
+			wantSQLState:  "23ZZZ",
+			wantCondition: "integrity_constraint_violation",
 		},
 		{
 			name:          "serialization failure",
@@ -419,4 +427,35 @@ func TestMapRepoErr_PostgresSQLStateDetails(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMapRepoErrRedactsMetaDatabasePostgresFields(t *testing.T) {
+	t.Parallel()
+
+	connectErr := MapRepoErr(
+		context.Background(),
+		&pgconn.PgError{
+			Code:           pgerrcode.UniqueViolation,
+			Message:        "duplicate api_key=secret",
+			Detail:         "internal row contains customer data",
+			Hint:           "inspect private_table",
+			SchemaName:     "querylane_internal",
+			TableName:      "credentials",
+			ConstraintName: "credentials_key",
+		},
+		ResourceCtx{Type: resource.TypeInstance, Name: "instances/prod", Op: "create_instance"},
+	)
+
+	assert.Equal(t, connect.CodeAlreadyExists, connectErr.Code())
+	assert.Equal(t, "PostgreSQL 23505 during create_instance", connectErr.Message())
+	assert.NotContains(t, connectErr.Message(), "secret")
+
+	info := requireErrorInfo(t, connectErr)
+	assert.Equal(t, "23505", info.Metadata["sqlstate"])
+	assert.NotContains(t, info.Metadata, "message")
+	assert.NotContains(t, info.Metadata, "table_name")
+	assert.NotContains(t, info.Metadata, "constraint_name")
+
+	detail := requirePostgresErrorDetail(t, connectErr)
+	assert.Empty(t, detail.ServerFields)
 }

@@ -35,7 +35,7 @@ function createBootError() {
 
 function createPostgresPermissionError() {
   const error = new ConnectError(
-    "PostgreSQL insufficient_privilege during read_rows",
+    "PostgreSQL 42501: permission denied for table invoices",
     Code.PermissionDenied
   );
   error.details = [
@@ -181,6 +181,23 @@ describe("app error view integration", () => {
     screen.getByText("SQLSTATE: 42501");
     screen.getByText("SQLSTATE class: 42");
     screen.getByText("Condition: insufficient_privilege");
+  });
+
+  it("keeps the PostgreSQL server message behind the error details action", async () => {
+    const user = userEvent.setup();
+
+    render(<AppErrorView error={createPostgresPermissionError()} />);
+
+    screen.getByText("PostgreSQL insufficient_privilege during read_rows");
+    expect(
+      screen.queryByText(
+        "PostgreSQL 42501: permission denied for table invoices"
+      )
+    ).toBeNull();
+
+    await openErrorDetailsDialog(user);
+
+    screen.getByText("PostgreSQL 42501: permission denied for table invoices");
   });
 
   it("shows retry guidance on the page surface for PostgreSQL errors", () => {

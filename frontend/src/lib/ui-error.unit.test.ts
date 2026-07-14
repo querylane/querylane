@@ -36,6 +36,7 @@ function encodeBinaryDetail(value: Uint8Array): string {
 function encodePostgresErrorDetail(input: {
   conditionName: string;
   operation: string;
+  serverFields?: Record<string, string>;
   sqlstate: string;
   sqlstateClass: string;
 }): Uint8Array {
@@ -260,7 +261,7 @@ describe("normalizeAppUiError", () => {
 describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
   it("promotes decoded PostgreSQL details into title, badges, and safe monitoring tags", () => {
     const error = new ConnectError(
-      "PostgreSQL query_canceled during execute_query",
+      "PostgreSQL 57014: query contains api_key=secret",
       Code.DeadlineExceeded
     );
     error.details = [
@@ -279,10 +280,26 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
         value: new Uint8Array([1]),
       },
       {
+        debug: {
+          conditionName: "query_canceled",
+          operation: "execute_query",
+          serverFields: {
+            detail: "api_key=secret",
+            hint: "connect to private.example.com",
+            message: "query contains api_key=secret",
+          },
+          sqlstate: "57014",
+          sqlstateClass: "57",
+        },
         type: POSTGRES_DETAIL_TYPE,
         value: encodePostgresErrorDetail({
           conditionName: "query_canceled",
           operation: "execute_query",
+          serverFields: {
+            detail: "api_key=secret",
+            hint: "connect to private.example.com",
+            message: "query contains api_key=secret",
+          },
           sqlstate: "57014",
           sqlstateClass: "57",
         }),
@@ -292,6 +309,7 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
     const normalized = normalizeAppUiError(error, { source: "connect" });
     const sections = buildAppUiErrorTechnicalSections(normalized);
     const captureCalls: Array<{
+      capturedError: unknown;
       context: {
         extras?: Record<string, unknown> | undefined;
         tags?: Record<string, string> | undefined;
@@ -302,8 +320,8 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
     }> = [];
 
     reportAppUiError(normalized, undefined, {
-      captureException: (_capturedError, context) => {
-        captureCalls.push({ context });
+      captureException: (capturedError, context) => {
+        captureCalls.push({ capturedError, context });
       },
       logger: {
         error: (_message, payload) => {
@@ -315,6 +333,9 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
     const errorSection = sections.find((section) => section.id === "error");
 
     expect(normalized.title).toBe("PostgreSQL query timed out");
+    expect(normalized.message).toContain("api_key=secret");
+    expect(normalized.technicalDetails).toContain("api_key=secret");
+    expect(normalized.technicalDetails).toContain("private.example.com");
     expect(normalized.postgres).toEqual({
       conditionName: "query_canceled",
       operation: "execute_query",
@@ -349,6 +370,35 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
       postgresSqlstate: "57014",
       postgresSqlstateClass: "57",
     });
+    expect(JSON.stringify(captureCalls)).not.toContain("api_key=secret");
+    expect(JSON.stringify(captureCalls)).not.toContain("private.example.com");
+    expect(JSON.stringify(loggerCalls)).not.toContain("api_key=secret");
+    expect(JSON.stringify(loggerCalls)).not.toContain("private.example.com");
+  });
+
+  it("redacts PostgreSQL wire messages when typed details are unavailable", () => {
+    const error = new ConnectError(
+      "PostgreSQL 57014: query contains api_key=secret",
+      Code.DeadlineExceeded
+    );
+    const normalized = normalizeAppUiError(error, { source: "connect" });
+    const dependencies = {
+      captureException: vi.fn(),
+      logger: { error: vi.fn() },
+      toast: { error: vi.fn() },
+    };
+
+    reportAppUiError(normalized, undefined, dependencies);
+
+    const capturedError = dependencies.captureException.mock.calls[0]?.[0];
+    expect(capturedError).toBeInstanceOf(Error);
+    expect((capturedError as Error).message).toBe("PostgreSQL 57014");
+    expect(
+      JSON.stringify(dependencies.captureException.mock.calls)
+    ).not.toContain("api_key=secret");
+    expect(JSON.stringify(dependencies.logger.error.mock.calls)).not.toContain(
+      "api_key=secret"
+    );
   });
 
   it("keeps SQLSTATE operation labels that use backend casing", () => {
@@ -369,6 +419,33 @@ describe("normalizeAppUiError PostgreSQL SQLSTATE", () => {
     ];
 
     expect(normalizeAppUiError(error).postgres?.operation).toBe("1BatchLoad");
+  });
+
+  it("keeps operation-only ErrorInfo on the generic telemetry path", () => {
+    const error = new ConnectError(
+      "the request deadline elapsed",
+      Code.DeadlineExceeded
+    );
+    error.details = [
+      {
+        debug: {
+          metadata: { operation: "list_databases" },
+        },
+        type: "google.rpc.ErrorInfo",
+        value: new Uint8Array([1]),
+      },
+    ];
+    const normalized = normalizeAppUiError(error);
+    const dependencies = {
+      captureException: vi.fn(),
+      logger: { error: vi.fn() },
+      toast: { error: vi.fn() },
+    };
+
+    reportAppUiError(normalized, undefined, dependencies);
+
+    expect(normalized.postgres).toBeNull();
+    expect(dependencies.captureException.mock.calls[0]?.[0]).toBe(error);
   });
 
   it("uses meta database copy for app database outages with SQLSTATE details", () => {
@@ -734,6 +811,7 @@ describe("normalizeAppUiError PostgreSQL classification", () => {
     }> = [
       {
         code: Code.AlreadyExists,
+        conditionName: "unique_violation",
         title: "PostgreSQL constraint violation",
       },
       {

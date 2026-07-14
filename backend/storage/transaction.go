@@ -9,6 +9,8 @@ import (
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/querylane/querylane/backend/postgreserrors"
 )
 
 // RunInTransaction executes the given function within a database transaction.
@@ -55,7 +57,9 @@ func ParsePostgresError(err error, uniqueViolationErr error) error {
 		return err
 	}
 
-	mappedErr := postgresDomainError(pgxErr.Code, uniqueViolationErr)
+	classification := postgreserrors.Classify(pgxErr, postgreserrors.ProfileDefault)
+
+	mappedErr := postgresDomainError(classification, uniqueViolationErr)
 	if mappedErr == nil {
 		return err
 	}
@@ -80,29 +84,19 @@ func (e mappedPostgresError) As(target any) bool {
 	return errors.As(e.cause, target)
 }
 
-// postgresErrorClass keeps future or extension class-level SQLSTATEs mapped even
-// when pgerrcode only enumerates known exact codes for that class.
-func postgresErrorClass(code string) string {
-	if len(code) < 2 {
-		return ""
-	}
-
-	return code[:2]
-}
-
-func postgresDomainError(code string, uniqueViolationErr error) error {
+func postgresDomainError(classification postgreserrors.Classification, uniqueViolationErr error) error {
 	switch {
-	case code == pgerrcode.UniqueViolation:
+	case classification.SQLState == pgerrcode.UniqueViolation:
 		if uniqueViolationErr != nil {
 			return uniqueViolationErr
 		}
 
 		return ErrAlreadyExists
-	case code == pgerrcode.ForeignKeyViolation || code == pgerrcode.RestrictViolation:
+	case classification.SQLState == pgerrcode.ForeignKeyViolation || classification.SQLState == pgerrcode.RestrictViolation:
 		return ErrInvalidReference
-	case pgerrcode.IsIntegrityConstraintViolation(code) || postgresErrorClass(code) == "23":
+	case classification.Class == "23":
 		return ErrInvalidInput
-	case pgerrcode.IsTransactionRollback(code):
+	case classification.Class == "40":
 		return ErrConcurrentModification
 	}
 

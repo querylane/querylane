@@ -51,6 +51,18 @@ func TestConnectionTestErrorPreservesContextSemantics(t *testing.T) {
 	}
 }
 
+func TestConnectionTestLogErrorRedactsPostgresMessage(t *testing.T) {
+	t.Parallel()
+
+	value := connectionTestLogError(&pgconn.PgError{
+		Code:    "28P01",
+		Message: "password authentication failed api_key=secret",
+	})
+
+	assert.Contains(t, value, "28P01")
+	assert.NotContains(t, value, "api_key=secret")
+}
+
 func TestConnectionTestErrorClassifiesPostgresSQLStates(t *testing.T) {
 	t.Parallel()
 
@@ -69,7 +81,7 @@ func TestConnectionTestErrorClassifiesPostgresSQLStates(t *testing.T) {
 			sqlstate:    "28P01",
 			wantCode:    connect.CodeUnauthenticated,
 			wantReason:  v1alpha1.ErrorReason_UNAUTHENTICATED,
-			wantMessage: "PostgreSQL rejected this password",
+			wantMessage: "PostgreSQL 28P01: server message for 28P01",
 			wantViolationPaths: []string{
 				"spec.config.password",
 			},
@@ -80,7 +92,7 @@ func TestConnectionTestErrorClassifiesPostgresSQLStates(t *testing.T) {
 			sqlstate:    "3D000",
 			wantCode:    connect.CodeNotFound,
 			wantReason:  v1alpha1.ErrorReason_RESOURCE_NOT_FOUND,
-			wantMessage: "PostgreSQL could not find the database",
+			wantMessage: "PostgreSQL 3D000: server message for 3D000",
 			wantViolationPaths: []string{
 				"config.database",
 			},
@@ -91,7 +103,7 @@ func TestConnectionTestErrorClassifiesPostgresSQLStates(t *testing.T) {
 			sqlstate:    "08006",
 			wantCode:    connect.CodeUnavailable,
 			wantReason:  v1alpha1.ErrorReason_FAILED_PRECONDITION,
-			wantMessage: "PostgreSQL is unreachable",
+			wantMessage: "PostgreSQL 08006: server message for 08006",
 			wantViolationPaths: []string{
 				"instance.config.host",
 				"instance.config.port",
@@ -103,7 +115,7 @@ func TestConnectionTestErrorClassifiesPostgresSQLStates(t *testing.T) {
 			sqlstate:           "53300",
 			wantCode:           connect.CodeResourceExhausted,
 			wantReason:         v1alpha1.ErrorReason_FAILED_PRECONDITION,
-			wantMessage:        "PostgreSQL has too many active connections",
+			wantMessage:        "PostgreSQL 53300: server message for 53300",
 			wantViolationPaths: nil,
 		},
 		{
@@ -112,7 +124,7 @@ func TestConnectionTestErrorClassifiesPostgresSQLStates(t *testing.T) {
 			sqlstate:           "57P03",
 			wantCode:           connect.CodeUnavailable,
 			wantReason:         v1alpha1.ErrorReason_FAILED_PRECONDITION,
-			wantMessage:        "PostgreSQL cannot accept connections right now",
+			wantMessage:        "PostgreSQL 57P03: server message for 57P03",
 			wantViolationPaths: nil,
 		},
 	}
@@ -123,7 +135,7 @@ func TestConnectionTestErrorClassifiesPostgresSQLStates(t *testing.T) {
 
 			rawErr := &pgconn.PgError{
 				Code:    tt.sqlstate,
-				Message: "raw server message password=super-secret",
+				Message: "server message for " + tt.sqlstate,
 			}
 
 			connectErr := connectionTestError(context.Background(), tt.field, "", fmt.Errorf("probe failed: %w", rawErr))
@@ -131,7 +143,6 @@ func TestConnectionTestErrorClassifiesPostgresSQLStates(t *testing.T) {
 			require.NotNil(t, connectErr)
 			assert.Equal(t, tt.wantCode, connectErr.Code())
 			assert.Contains(t, connectErr.Message(), tt.wantMessage)
-			assert.NotContains(t, connectErr.Message(), "super-secret")
 			assert.ElementsMatch(t, tt.wantViolationPaths, badRequestViolationFields(t, connectErr))
 
 			info := requireConnectionErrorInfo(t, connectErr)

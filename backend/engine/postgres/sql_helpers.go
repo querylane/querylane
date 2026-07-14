@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 )
 
 // argList accumulates parameterised SQL arguments and hands out the
@@ -60,16 +61,24 @@ func columnRef(name string) string {
 
 // setStatementTimeout applies a per-statement timeout to the transaction.
 // PostgreSQL accepts only integer milliseconds for statement_timeout.
-func setStatementTimeout(ctx context.Context, tx *sql.Tx, d time.Duration) error {
+func setStatementTimeout(ctx context.Context, tx *sql.Tx, d time.Duration, profile postgreserrors.Profile) error {
 	stmt := fmt.Sprintf("SET LOCAL statement_timeout = '%dms'", d.Milliseconds())
 	if _, err := tx.ExecContext(ctx, stmt); err != nil {
-		return classifyQueryError("set statement_timeout", err)
+		return classifyQueryErrorWithProfile("set statement_timeout", err, profile)
 	}
 
 	return nil
 }
 
 func classifyQueryError(op string, err error) error {
+	return classifyQueryErrorWithProfile(op, err, postgreserrors.ProfileDefault)
+}
+
+func classifySQLConsoleError(op string, err error) error {
+	return classifyQueryErrorWithProfile(op, err, postgreserrors.ProfileSQLConsole)
+}
+
+func classifyQueryErrorWithProfile(op string, err error, profile postgreserrors.Profile) error {
 	if err == nil {
 		return nil
 	}
@@ -83,9 +92,7 @@ func classifyQueryError(op string, err error) error {
 
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
-		if classified := classifyPostgresError(op, pgErr); classified != nil {
-			return classified
-		}
+		return postgreserrors.Wrap(pgErr, profile, op)
 	}
 
 	return fmt.Errorf("%s: %w", op, err)

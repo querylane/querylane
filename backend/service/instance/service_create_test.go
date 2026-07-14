@@ -146,7 +146,7 @@ func TestCreateInstanceValidateOnlyAuthenticationFailureReturnsCredentialFields(
 	repo := &createServiceInstanceRepo{}
 	connManager := &createServiceConnectionManager{err: fmt.Errorf("probe failed: %w", &pgconn.PgError{
 		Code:    "28P01",
-		Message: "password authentication failed for user postgres password=secret",
+		Message: `password authentication failed for user "postgres"`,
 	})}
 	recorder := &createServiceConnectionRecorder{}
 	service := newCreateInstanceTestService(repo, connManager, recorder)
@@ -159,8 +159,7 @@ func TestCreateInstanceValidateOnlyAuthenticationFailureReturnsCredentialFields(
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeUnauthenticated, connectErr.Code())
-	assert.Contains(t, connectErr.Message(), "PostgreSQL rejected this password")
-	assert.NotContains(t, connectErr.Message(), "secret")
+	assert.Equal(t, `PostgreSQL 28P01: password authentication failed for user "postgres"`, connectErr.Message())
 	assert.ElementsMatch(t, []string{
 		"spec.config.password",
 	}, badRequestViolationFields(t, connectErr))

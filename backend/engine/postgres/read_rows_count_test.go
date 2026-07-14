@@ -3,8 +3,11 @@ package postgres
 import (
 	"testing"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/querylane/querylane/backend/postgreserrors"
 	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
@@ -47,4 +50,22 @@ func TestBuildExactRowCountFromStats(t *testing.T) {
 			assert.Equal(t, tt.wantValue, rowCount.GetValue())
 		})
 	}
+}
+
+func TestIsExactRowCountTimeoutUsesPostgresClassification(t *testing.T) {
+	t.Parallel()
+
+	timeoutErr := postgreserrors.Wrap(
+		&pgconn.PgError{Code: pgerrcode.QueryCanceled},
+		postgreserrors.ProfileDefault,
+		"exact row count",
+	)
+	permissionErr := postgreserrors.Wrap(
+		&pgconn.PgError{Code: pgerrcode.InsufficientPrivilege},
+		postgreserrors.ProfileDefault,
+		"exact row count",
+	)
+
+	assert.True(t, isExactRowCountTimeout(timeoutErr))
+	assert.False(t, isExactRowCountTimeout(permissionErr))
 }

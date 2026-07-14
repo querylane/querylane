@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/querylane/querylane/backend/engine"
 	"github.com/querylane/querylane/backend/livequery"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	consolev1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
 )
@@ -39,6 +39,10 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 	// Hierarchy not-found sentinels win before generic SQLSTATE mapping so
 	// clients get the actionable database/schema/table resource that is missing.
 	if resourceType, name, ok := notFoundResource(err, rctx); ok {
+		if classification, found := postgresClassificationFromError(err, rctx.Op); found {
+			return newPostgresHierarchyNotFoundError(err, classification, resourceType, name)
+		}
+
 		return newResourceNotFoundErrorWithDetails(
 			resourceType,
 			name,
@@ -47,26 +51,63 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 		)
 	}
 
-	var pgSQLErr *engine.PostgresSQLError
-	if errors.As(err, &pgSQLErr) {
-		return mapPostgresSQLError(err, pgSQLErr, rctx)
+	var classifiedPostgresErr *postgreserrors.Error
+	if errors.As(err, &classifiedPostgresErr) {
+		classification := adaptPostgresClassification(
+			classifiedPostgresErr.Classification(),
+			PostgresOperationLabel(rctx.Op),
+		)
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if resourceType, name, ok := rawPostgresHierarchyNotFoundResource(pgErr, rctx); ok {
+				return newPostgresHierarchyNotFoundError(
+					err,
+					classification,
+					resourceType,
+					name,
+				)
+			}
+		}
+
+		details := make([]proto.Message, 0, 1)
+		if classification.Kind == postgreserrors.KindInvalidArgument {
+			details = append(details, NewBadRequest(
+				NewFieldViolation(
+					postgresSQLRequestField(rctx.Op),
+					postgresUserErrorMessage(classification),
+				),
+			))
+		}
+
+		return newPostgresError(
+			err,
+			classification,
+			postgresUserErrorMessage(classification),
+			true,
+			nil,
+			details...,
+		)
 	}
 
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		if resourceType, name, ok := rawPostgresHierarchyNotFoundResource(pgErr, rctx); ok {
-			classification := ClassifyPostgresError(pgErr, PostgresOperationLabel(rctx.Op))
-			serverFields := postgresSafeServerFields(pgErr)
+			classification := ClassifyPostgresError(
+				pgErr,
+				PostgresOperationLabel(rctx.Op),
+				postgreserrors.ProfileDefault,
+			)
 
-			return newResourceNotFoundErrorWithDetails(
+			return newPostgresHierarchyNotFoundError(
+				err,
+				classification,
 				resourceType,
 				name,
-				postgresErrorInfoMetadata(classification, serverFields),
-				postgresErrorDetail(classification, serverFields),
 			)
 		}
 
-		return NewPostgresError(pgErr, PostgresOperationLabel(rctx.Op))
+		return NewPostgresError(pgErr, PostgresOperationLabel(rctx.Op), postgreserrors.ProfileDefault)
 	}
 
 	switch {
@@ -162,6 +203,26 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 	)
 }
 
+func newPostgresHierarchyNotFoundError(
+	cause error,
+	classification PostgresErrorClassification,
+	resourceType resource.Type,
+	name string,
+) *connect.Error {
+	classification.Kind = postgreserrors.KindNotFound
+	classification.ConnectCode = connect.CodeNotFound
+	classification.ErrorReason = consolev1alpha1.ErrorReason_RESOURCE_NOT_FOUND
+
+	return newPostgresError(
+		cause,
+		classification,
+		postgresUserErrorMessage(classification),
+		true,
+		[]KeyVal{{Key: "resourceName", Value: name}},
+		NewResourceInfo(resourceType, name),
+	)
+}
+
 func newResourceNotFoundErrorWithDetails(
 	resourceType resource.Type,
 	name string,
@@ -219,174 +280,21 @@ func rawPostgresHierarchyNotFoundResource(pgErr *pgconn.PgError, rctx ResourceCt
 }
 
 func postgresSQLErrorInfoMetadata(err error, rctx ResourceCtx) []KeyVal {
-	var pgSQLErr *engine.PostgresSQLError
-	if errors.As(err, &pgSQLErr) {
-		return postgresSQLMetadata(pgSQLErr, rctx)
+	classification, ok := postgresClassificationFromError(err, rctx.Op)
+	if !ok {
+		return nil
 	}
 
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		classification := ClassifyPostgresError(pgErr, PostgresOperationLabel(rctx.Op))
-		return postgresErrorInfoMetadata(classification, postgresSafeServerFields(pgErr))
-	}
-
-	return nil
+	return postgresErrorInfoMetadata(classification)
 }
 
 func postgresSQLErrorDetail(err error, operation string) *consolev1alpha1.PostgreSqlErrorDetail {
-	var pgSQLErr *engine.PostgresSQLError
-	if errors.As(err, &pgSQLErr) {
-		return NewPostgresSQLErrorDetail(pgSQLErr, operation)
-	}
-
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		classification := ClassifyPostgresError(pgErr, PostgresOperationLabel(operation))
-		return postgresErrorDetail(classification, postgresSafeServerFields(pgErr))
-	}
-
-	return nil
-}
-
-func mapPostgresSQLError(err error, pgSQLErr *engine.PostgresSQLError, rctx ResourceCtx) *connect.Error {
-	code, reason := postgresSQLConnectMapping(pgSQLErr.Kind)
-	errorInfo := NewErrorInfo(
-		DomainConsole,
-		reason,
-		postgresSQLMetadata(pgSQLErr, rctx)...,
-	)
-	detail := NewPostgresSQLErrorDetail(pgSQLErr, rctx.Op)
-
-	if pgSQLErr.Kind == engine.PostgresSQLKindInvalidArgument {
-		badRequest := NewBadRequest(
-			NewFieldViolation(postgresSQLRequestField(rctx.Op), err.Error()),
-		)
-
-		return NewConnectError(code, err, errorInfo, detail, badRequest)
-	}
-
-	return NewConnectError(code, err, errorInfo, detail)
-}
-
-// PostgresSQLKindConnectCode maps the engine-level PostgreSQL classification
-// to the Connect code used at RPC boundaries.
-func PostgresSQLKindConnectCode(kind engine.PostgresSQLKind) connect.Code {
-	code, _ := postgresSQLConnectMapping(kind)
-
-	return code
-}
-
-func postgresSQLConnectMapping(kind engine.PostgresSQLKind) (connect.Code, consolev1alpha1.ErrorReason) {
-	// ErrorReason is intentionally coarser than Connect code for retry,
-	// unavailable, and resource exhaustion cases. Clients that need fine-grained
-	// SQL handling should use Connect code plus sqlstate, sqlstate_class, and
-	// condition_name metadata.
-	switch kind {
-	case engine.PostgresSQLKindInvalidArgument:
-		return connect.CodeInvalidArgument, consolev1alpha1.ErrorReason_INVALID_ARGUMENT
-	case engine.PostgresSQLKindFailedPrecondition:
-		return connect.CodeFailedPrecondition, consolev1alpha1.ErrorReason_FAILED_PRECONDITION
-	case engine.PostgresSQLKindNotFound:
-		// Today SQLSTATE-backed hierarchy not-found errors are mapped earlier
-		// from ErrDatabaseNotFound/ErrSchemaNotFound sentinels so ResourceInfo
-		// is preserved. Add ResourceInfo before introducing non-sentinel
-		// PostgresSQLKindNotFound errors.
-		return connect.CodeNotFound, consolev1alpha1.ErrorReason_RESOURCE_NOT_FOUND
-	case engine.PostgresSQLKindPermissionDenied:
-		return connect.CodePermissionDenied, consolev1alpha1.ErrorReason_PERMISSION_DENIED
-	case engine.PostgresSQLKindUnauthenticated:
-		return connect.CodeUnauthenticated, consolev1alpha1.ErrorReason_UNAUTHENTICATED
-	case engine.PostgresSQLKindAborted:
-		return connect.CodeAborted, consolev1alpha1.ErrorReason_FAILED_PRECONDITION
-	case engine.PostgresSQLKindTimeout:
-		return connect.CodeDeadlineExceeded, consolev1alpha1.ErrorReason_TIMEOUT
-	case engine.PostgresSQLKindUnavailable:
-		return connect.CodeUnavailable, consolev1alpha1.ErrorReason_FAILED_PRECONDITION
-	case engine.PostgresSQLKindResourceExhausted:
-		return connect.CodeResourceExhausted, consolev1alpha1.ErrorReason_FAILED_PRECONDITION
-	case engine.PostgresSQLKindInternal:
-		return connect.CodeInternal, consolev1alpha1.ErrorReason_INTERNAL_ERROR
-	default:
-		return connect.CodeInternal, consolev1alpha1.ErrorReason_INTERNAL_ERROR
-	}
-}
-
-func postgresSQLMetadata(pgSQLErr *engine.PostgresSQLError, rctx ResourceCtx) []KeyVal {
-	metadata := PostgresSQLErrorMetadata(pgSQLErr, rctx.Op)
-
-	keys := make([]string, 0, len(metadata))
-	for key := range metadata {
-		keys = append(keys, key)
-	}
-
-	slices.Sort(keys)
-
-	out := make([]KeyVal, 0, len(keys))
-	for _, key := range keys {
-		out = append(out, KeyVal{Key: key, Value: metadata[key]})
-	}
-
-	return out
-}
-
-// PostgresSQLErrorMetadata builds safe snake_case ErrorInfo metadata for an
-// engine PostgreSQL error. The operation argument is the wire/RPC operation
-// label; if empty, pgSQLErr.Operation is used.
-func PostgresSQLErrorMetadata(pgSQLErr *engine.PostgresSQLError, operation string) map[string]string {
-	if pgSQLErr == nil {
+	classification, ok := postgresClassificationFromError(err, operation)
+	if !ok {
 		return nil
 	}
 
-	if operation == "" {
-		operation = pgSQLErr.Operation
-	}
-
-	metadata := map[string]string{
-		// Wire metadata uses the RPC-level operation. pgSQLErr.Operation remains
-		// in the error string for internal logs, such as "scan row".
-		"operation": operation,
-	}
-
-	if pgSQLErr.SQLState != "" {
-		metadata["sqlstate"] = pgSQLErr.SQLState
-	}
-
-	if pgSQLErr.SQLStateClass != "" {
-		metadata["sqlstate_class"] = pgSQLErr.SQLStateClass
-	}
-
-	if pgSQLErr.ConditionName != "" {
-		metadata["condition_name"] = pgSQLErr.ConditionName
-	}
-
-	for key, value := range pgSQLErr.SafeFields {
-		if value != "" {
-			metadata[key] = value
-		}
-	}
-
-	return metadata
-}
-
-// NewPostgresSQLErrorDetail builds the typed PostgreSQL error detail for an
-// engine-classified PostgreSQL error. The operation argument is the wire/RPC
-// operation label; if empty, pgSQLErr.Operation is used.
-func NewPostgresSQLErrorDetail(pgSQLErr *engine.PostgresSQLError, operation string) *consolev1alpha1.PostgreSqlErrorDetail {
-	if pgSQLErr == nil {
-		return nil
-	}
-
-	if operation == "" {
-		operation = pgSQLErr.Operation
-	}
-
-	return &consolev1alpha1.PostgreSqlErrorDetail{
-		Sqlstate:      pgSQLErr.SQLState,
-		SqlstateClass: pgSQLErr.SQLStateClass,
-		ConditionName: pgSQLErr.ConditionName,
-		Operation:     operation,
-		ServerFields:  pgSQLErr.SafeFields,
-	}
+	return postgresErrorDetail(classification, true)
 }
 
 func postgresSQLRequestField(op string) string {

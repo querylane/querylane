@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 )
 
 func TestGetInstanceOverviewClassifiesPartialMetricPostgresSQLErrors(t *testing.T) {
@@ -28,14 +29,13 @@ func TestGetInstanceOverviewClassifiesPartialMetricPostgresSQLErrors(t *testing.
 	require.Nil(t, overview.Storage)
 
 	metricErr := requireOverviewMetricError(t, overview.PartialErrors, "storage")
-	require.ErrorIs(t, metricErr.Err, engine.ErrQueryPermissionDenied)
 
-	var pgErr *engine.PostgresSQLError
+	var pgErr *postgreserrors.Error
 	require.ErrorAs(t, metricErr.Err, &pgErr)
-	assert.Equal(t, engine.PostgresSQLKindPermissionDenied, pgErr.Kind)
-	assert.Equal(t, pgerrcode.InsufficientPrivilege, pgErr.SQLState)
-	assert.Equal(t, "query storage metrics", pgErr.Operation)
-	assert.Equal(t, "pg_catalog", pgErr.SafeFields["schema_name"])
+	assert.Equal(t, postgreserrors.KindPermissionDenied, pgErr.Classification().Kind)
+	assert.Equal(t, pgerrcode.InsufficientPrivilege, pgErr.Classification().SQLState)
+	assert.Equal(t, "query storage metrics", pgErr.Operation())
+	assert.Equal(t, "pg_catalog", pgErr.Classification().ClientFields.SchemaName)
 }
 
 func requireOverviewMetricError(t *testing.T, partialErrors []engine.OverviewMetricError, metric string) engine.OverviewMetricError {

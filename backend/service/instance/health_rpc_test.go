@@ -6,11 +6,13 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
 )
@@ -240,11 +242,10 @@ func TestCheckInstanceHealthPartialErrorsUseCheckMetadata(t *testing.T) {
 				PartialErrors: []engine.OverviewMetricError{
 					{
 						Metric: "pg_stat_statements",
-						Err: &engine.PostgresSQLError{
-							Kind:      engine.PostgresSQLKindUnavailable,
-							Operation: "query pg_stat_statements stats",
-							Sentinel:  engine.ErrQueryUnavailable,
-						},
+						Err: postgreserrors.Wrap(&pgconn.PgError{
+							Code:    "57P03",
+							Message: "the database system is starting up",
+						}, postgreserrors.ProfileDefault, "query pg_stat_statements stats"),
 					},
 				},
 			}, nil
@@ -259,6 +260,7 @@ func TestCheckInstanceHealthPartialErrorsUseCheckMetadata(t *testing.T) {
 	require.Len(t, resp.Msg.GetPartialErrors(), 5)
 
 	pgStatStatementsError := requireCheckPartialError(t, resp.Msg.GetPartialErrors(), "pg_stat_statements")
+	assert.Equal(t, "PostgreSQL 57P03: the database system is starting up", pgStatStatementsError.GetMessage())
 	info := requireStatusErrorInfo(t, pgStatStatementsError)
 	assert.Equal(t, "CHECK_UNAVAILABLE", info.GetReason())
 	assert.Equal(t, "pg_stat_statements", info.GetMetadata()["check"])

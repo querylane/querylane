@@ -20,6 +20,9 @@ import type {
 
 const APP_UI_ERROR_CONTEXT = Symbol.for("querylane.app-ui-error-context");
 const APP_UI_ERROR_REPORTED = Symbol.for("querylane.app-ui-error-reported");
+const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
+const POSTGRES_WIRE_MESSAGE_PATTERN =
+  /^PostgreSQL(?: ([0-9A-Z]{5}))?(?::| error(?:$|\s))/;
 type PostgresUiErrorKind =
   | "authentication_failed"
   | "constraint_violation"
@@ -664,6 +667,91 @@ function shouldReportAppUiError(error: AppUiError, expected: boolean): boolean {
   return true;
 }
 
+function buildPostgresTelemetrySummary(
+  error: AppUiError,
+  matchesPostgresWireMessage: boolean
+): Record<string, unknown> | null {
+  const hasPostgresDetail = error.details.some(
+    (detail) => detail.type === POSTGRES_DETAIL_TYPE
+  );
+  if (!(error.postgres || hasPostgresDetail || matchesPostgresWireMessage)) {
+    return null;
+  }
+
+  return {
+    blockingReason: error.blockingReason,
+    code: error.codeLabel,
+    connect: {
+      domain: error.connectDomain,
+      reason: error.connectReason,
+    },
+    detailsCount: error.details.length,
+    postgres: error.postgres,
+    source: error.source,
+    title: error.title,
+  };
+}
+
+function postgresWireSqlstate(message: string): string | null | undefined {
+  const match = POSTGRES_WIRE_MESSAGE_PATTERN.exec(message);
+  if (!match) {
+    return;
+  }
+
+  return match[1] ?? null;
+}
+
+function postgresTelemetryMessage(
+  error: AppUiError,
+  wireSqlstate: string | null | undefined
+): string {
+  const sqlstate = error.postgres?.sqlstate ?? wireSqlstate;
+  const condition = error.postgres?.conditionName;
+
+  if (sqlstate && condition) {
+    return `PostgreSQL ${sqlstate} ${condition}`;
+  }
+
+  if (sqlstate) {
+    return `PostgreSQL ${sqlstate}`;
+  }
+
+  return "PostgreSQL error";
+}
+
+function buildAppUiErrorTelemetry(error: AppUiError) {
+  const wireSqlstate = postgresWireSqlstate(error.message);
+  const postgresSummary = buildPostgresTelemetrySummary(
+    error,
+    wireSqlstate !== undefined
+  );
+  if (postgresSummary) {
+    const dump = JSON.stringify(postgresSummary);
+    const message = postgresTelemetryMessage(error, wireSqlstate);
+
+    return {
+      captureTarget: new Error(message),
+      dump,
+      loggerDetails: postgresSummary,
+      message,
+      transcript: dump,
+    };
+  }
+
+  const captureTarget =
+    error.originalError instanceof Error
+      ? error.originalError
+      : new Error(error.message);
+
+  return {
+    captureTarget,
+    dump: error.technicalDetails,
+    loggerDetails: error.technicalDetailsObject,
+    message: error.message,
+    transcript: error.technicalDetailsText,
+  };
+}
+
 function reportAppUiError(
   error: AppUiError,
   context?: {
@@ -676,18 +764,15 @@ function reportAppUiError(
     return;
   }
 
-  const captureTarget =
-    error.originalError instanceof Error
-      ? error.originalError
-      : new Error(error.message);
+  const telemetry = buildAppUiErrorTelemetry(error);
 
-  dependencies.captureException(captureTarget, {
+  dependencies.captureException(telemetry.captureTarget, {
     extras: {
       app_ui_error_details_count: error.details.length,
-      app_ui_error_dump: error.technicalDetails,
+      app_ui_error_dump: telemetry.dump,
       app_ui_error_request_host: error.context.request?.host ?? null,
       app_ui_error_rpc_path: error.context.request?.rpcPath ?? null,
-      app_ui_error_transcript: error.technicalDetailsText,
+      app_ui_error_transcript: telemetry.transcript,
     },
     tags: {
       area: error.context.area ?? error.source,
@@ -701,9 +786,9 @@ function reportAppUiError(
     },
   });
 
-  dependencies.logger.error(error.message, {
-    appUiError: error.technicalDetailsObject,
-    appUiErrorTranscript: error.technicalDetailsText,
+  dependencies.logger.error(telemetry.message, {
+    appUiError: telemetry.loggerDetails,
+    appUiErrorTranscript: telemetry.transcript,
     postgresSqlstate: error.postgres?.sqlstate ?? null,
     postgresSqlstateClass: error.postgres?.sqlstateClass ?? null,
   });

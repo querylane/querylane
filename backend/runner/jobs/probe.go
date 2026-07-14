@@ -8,7 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	"github.com/querylane/querylane/backend/resource"
 	"github.com/querylane/querylane/backend/runner"
 )
@@ -165,7 +168,7 @@ func (j *databaseProbeJob) Run(ctx context.Context, target string) (runner.RunRe
 		slog.DebugContext(ctx, "probe: database session open failed",
 			slog.String("probe", j.probe.Config.Name),
 			slog.String("target", target),
-			slog.String("error", err.Error()))
+			slog.String("error", probeLogError(err)))
 
 		return runner.RunResult{}, nil
 	}
@@ -189,7 +192,7 @@ func openProbeSession(ctx context.Context, sessions InstanceSessionOpener, probe
 		slog.DebugContext(ctx, "probe: session open failed",
 			slog.String("probe", probeName),
 			slog.String("instance", instanceName.InstanceID),
-			slog.String("error", err.Error()))
+			slog.String("error", probeLogError(err)))
 
 		return nil, false
 	}
@@ -239,7 +242,7 @@ func (c *serverVersionCache) supports(ctx context.Context, prober engine.Instanc
 			slog.WarnContext(ctx, "probe: server version lookup failed",
 				slog.String("probe", probeName),
 				slog.String("instance", instanceID),
-				slog.String("error", err.Error()))
+				slog.String("error", probeLogError(err)))
 
 			return false
 		}
@@ -314,7 +317,12 @@ func (c *capabilitySkipCache) skip(target string) bool {
 // other failure is transient (a lock timeout, a momentary permission blip) and
 // still logs at WARN every cycle.
 func (c *capabilitySkipCache) recordFailure(ctx context.Context, probeName, target string, err error) {
-	if errors.Is(err, engine.ErrQueryInvalid) {
+	if errors.Is(err, engine.ErrQueryInvalid) || postgreserrors.IsCondition(
+		err,
+		"undefined_table",
+		"undefined_function",
+		"undefined_column",
+	) {
 		c.mu.Lock()
 		c.skipped[target] = time.Now()
 		c.mu.Unlock()
@@ -323,7 +331,7 @@ func (c *capabilitySkipCache) recordFailure(ctx context.Context, probeName, targ
 			slog.String("probe", probeName),
 			slog.String("target", target),
 			slog.Duration("retry_after", capabilitySkipTTL),
-			slog.String("error", err.Error()))
+			slog.String("error", probeLogError(err)))
 
 		return
 	}
@@ -331,5 +339,19 @@ func (c *capabilitySkipCache) recordFailure(ctx context.Context, probeName, targ
 	slog.WarnContext(ctx, "probe: collection failed",
 		slog.String("probe", probeName),
 		slog.String("target", target),
-		slog.String("error", err.Error()))
+		slog.String("error", probeLogError(err)))
+}
+
+func probeLogError(err error) string {
+	var classified *postgreserrors.Error
+	if errors.As(err, &classified) {
+		return classified.Error()
+	}
+
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return postgreserrors.Wrap(pgErr, postgreserrors.ProfileDefault, "").Error()
+	}
+
+	return err.Error()
 }
