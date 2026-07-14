@@ -49,6 +49,16 @@ interface AppErrorViewProps {
   retryLabel?: string | undefined;
   variant?: AppErrorViewVariant | undefined;
 }
+function getErrorSummaryMessage(error: AppUiError): string {
+  if (!error.postgres) {
+    return error.message;
+  }
+
+  const condition = error.postgres.conditionName ?? "postgresql_error";
+  return error.postgres.operation
+    ? `PostgreSQL ${condition} during ${error.postgres.operation}`
+    : `PostgreSQL ${condition}`;
+}
 function useTransientFeedbackState() {
   const [active, setActive] = useState(false);
 
@@ -298,6 +308,8 @@ function AppPageError({
   onRetry,
   retryLabel,
 }: Omit<AppErrorViewProps, "variant"> & { retryLabel: string }) {
+  const summaryMessage = getErrorSummaryMessage(error);
+
   return (
     <div
       className={cn("flex items-center justify-center p-4", containerClassName)}
@@ -314,7 +326,7 @@ function AppPageError({
             <h2 className="font-semibold text-lg tracking-tight">
               {error.title}
             </h2>
-            <p className="text-muted-foreground text-sm">{error.message}</p>
+            <p className="text-muted-foreground text-sm">{summaryMessage}</p>
             {error.retryGuidance ? (
               <p className="text-sm">{error.retryGuidance}</p>
             ) : null}
@@ -343,6 +355,8 @@ function AppCompactError({
   onRetry,
   retryLabel,
 }: Omit<AppErrorViewProps, "variant"> & { retryLabel: string }) {
+  const summaryMessage = getErrorSummaryMessage(error);
+
   return (
     <div className={cn("w-full", containerClassName)}>
       <div
@@ -357,7 +371,7 @@ function AppCompactError({
           <div className="min-w-0 flex-1 space-y-1">
             <p className="font-medium text-sm leading-snug">{error.title}</p>
             <p className="line-clamp-3 break-words text-muted-foreground text-xs">
-              {error.message}
+              {summaryMessage}
             </p>
             {error.retryGuidance ? (
               <p className="text-xs">{error.retryGuidance}</p>
@@ -375,6 +389,7 @@ function AppCompactError({
               <ErrorDetailsDialog
                 error={error}
                 retryAvailable={Boolean(onRetry)}
+                triggerClassName={onRetry || actions ? undefined : "-ml-2.5"}
                 triggerVariant="ghost"
               />
             </div>

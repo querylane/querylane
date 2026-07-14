@@ -54,22 +54,19 @@ const POSTGRES_ERROR_EXAMPLES = [
 
 function createPostgresError(
   example: PostgresErrorExample,
-  version: "before" | "now"
+  captureRequest = false
 ) {
-  const wireMessage =
-    version === "before"
-      ? `PostgreSQL ${example.conditionName} during ${example.operation}`
-      : `PostgreSQL ${example.sqlstate}: ${example.message}`;
-  const error = new ConnectError(wireMessage, example.code);
+  const error = new ConnectError(
+    `PostgreSQL ${example.sqlstate}: ${example.message}`,
+    example.code
+  );
 
   error.details = [
     {
       debug: {
         conditionName: example.conditionName,
         operation: example.operation,
-        ...(version === "now"
-          ? { serverFields: { message: example.message } }
-          : {}),
+        serverFields: { message: example.message },
         sqlstate: example.sqlstate,
         sqlstateClass: example.sqlstate.slice(0, 2),
       },
@@ -79,12 +76,24 @@ function createPostgresError(
   ];
 
   return normalizeAppUiError(error, {
+    request: captureRequest
+      ? {
+          headers: { "connect-protocol-version": ["1"] },
+          host: "database.example.test:443",
+          plaintext: false,
+          requestJson: '{"table":"invoices"}',
+          requestJsonNote: null,
+          requestMethod: "POST",
+          rpcPath: "/querylane.console.v1alpha1.RowService/ReadRows",
+          url: "https://database.example.test/querylane.console.v1alpha1.RowService/ReadRows",
+        }
+      : undefined,
     source: "connect",
     surface: "inline",
   });
 }
 
-test("common PostgreSQL errors show the before and now user experience", async () => {
+test("common PostgreSQL errors keep concise guidance on the main surface", async () => {
   render(
     <ScreenshotFrame>
       <div className="w-[1100px] space-y-5 rounded-2xl border border-border bg-background p-6 text-foreground">
@@ -93,36 +102,19 @@ test("common PostgreSQL errors show the before and now user experience", async (
             Common PostgreSQL errors
           </h1>
           <p className="text-muted-foreground text-sm">
-            Before, users saw the condition and operation. Now, they see the
-            exact SQLSTATE and PostgreSQL message.
+            The summary and recommendation stay visible. SQLSTATE and the
+            PostgreSQL server message are available in Error details.
           </p>
         </header>
 
-        <div className="grid grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)] gap-4 px-1 font-medium text-sm">
-          <span aria-hidden="true" />
-          <span>Before — condition only</span>
-          <span>Now — SQLSTATE and message</span>
-        </div>
-
-        <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
           {POSTGRES_ERROR_EXAMPLES.map((example) => (
             <section
-              className="grid grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)] items-stretch gap-4 rounded-xl border border-border bg-muted/20 p-4"
+              className="space-y-2 rounded-xl border border-border bg-muted/20 p-4"
               key={example.sqlstate}
             >
-              <div className="pt-3">
-                <h2 className="font-medium text-sm">{example.label}</h2>
-              </div>
-              <AppErrorView
-                className="h-full"
-                containerClassName="h-full"
-                error={createPostgresError(example, "before")}
-              />
-              <AppErrorView
-                className="h-full"
-                containerClassName="h-full"
-                error={createPostgresError(example, "now")}
-              />
+              <h2 className="font-medium text-sm">{example.label}</h2>
+              <AppErrorView error={createPostgresError(example)} />
             </section>
           ))}
         </div>
@@ -138,13 +130,54 @@ test("common PostgreSQL errors show the before and now user experience", async (
         )
       )
       .toBeVisible();
-    await expect
-      .element(
-        page.getByText(`PostgreSQL ${example.sqlstate}: ${example.message}`)
-      )
-      .toBeVisible();
   }
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "postgres-errors-before-now"
+    "postgres-error-summaries"
   );
+});
+
+test("PostgreSQL error details expose diagnostics and support actions", async () => {
+  const permissionError = POSTGRES_ERROR_EXAMPLES.find(
+    (example) => example.sqlstate === "42501"
+  );
+  if (!permissionError) {
+    throw new Error("Expected a permission error visual fixture.");
+  }
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[720px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <AppErrorView
+          error={createPostgresError(permissionError, true)}
+          onRetry={async () => undefined}
+          retryLabel="Retry query"
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await page.getByRole("button", { name: "Error details" }).click();
+
+  const dialog = page.getByRole("dialog", {
+    name: "PostgreSQL permission denied",
+  });
+  await expect.element(dialog).toBeVisible();
+  await expect
+    .element(page.getByText("SQLSTATE: 42501", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(
+      page.getByText("Condition: insufficient_privilege", { exact: true })
+    )
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Copy details" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Copy as cURL" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Download" }))
+    .toBeVisible();
+  await expect(dialog).toMatchScreenshot("postgres-error-details");
 });
