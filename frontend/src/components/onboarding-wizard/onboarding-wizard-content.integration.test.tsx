@@ -18,16 +18,13 @@ import type { OnboardingWizardController } from "@/components/onboarding-wizard/
 import { OnboardingWizardContent } from "@/components/onboarding-wizard/wizard-content";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import {
-  AppDatabaseStatus_State,
-  AppDatabaseStatusSchema,
-} from "@/protogen/querylane/console/v1alpha1/console_pb";
-import {
   InstanceService,
   PostgresConfig_SslMode,
   PostgresConfig_SslNegotiation,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import {
   GetOnboardingStateResponseSchema,
+  OnboardingState,
   SetupMethod,
   SetupProgressEventSchema,
   SetupStep,
@@ -98,14 +95,13 @@ function installLocalStorageStub() {
 }
 
 function createOnboardingState(
-  overrides: Partial<
-    Parameters<typeof createProto<typeof GetOnboardingStateResponseSchema>>[1]
-  > = {}
+  overrides: {
+    availableMethods?: SetupMethod[];
+    error?: string;
+    state?: OnboardingState;
+  } = {}
 ) {
   return createProto(GetOnboardingStateResponseSchema, {
-    appDatabaseStatus: createProto(AppDatabaseStatusSchema, {
-      state: AppDatabaseStatus_State.NOT_CONFIGURED,
-    }),
     availableMethods: [
       SetupMethod.UI_CONFIGURED,
       SetupMethod.MANUAL_YAML,
@@ -114,8 +110,8 @@ function createOnboardingState(
     configFilePath: "/tmp/querylane/config.yaml",
     embeddedDataPath: "/tmp/querylane/embedded-postgres",
     homePath: "/tmp/querylane",
-    isConfigured: false,
     isHomeWritable: true,
+    state: OnboardingState.BOOTSTRAP,
     ...overrides,
   });
 }
@@ -207,7 +203,6 @@ afterEach(() => {
     showDegradedBanner: false,
     showWizardErrorBanner: false,
     status: "booting",
-    warningCode: null,
   });
 });
 
@@ -297,10 +292,8 @@ describe("onboarding wizard content integration", () => {
   it("surfaces previous setup failures while keeping method selection available", () => {
     useSetupStore.setState({
       onboardingState: createOnboardingState({
-        appDatabaseStatus: createProto(AppDatabaseStatusSchema, {
-          error: "migration failed",
-          state: AppDatabaseStatus_State.ERROR,
-        }),
+        error: "migration failed",
+        state: OnboardingState.BOOTSTRAP,
       }),
       showWizardErrorBanner: true,
       status: "onboarding",

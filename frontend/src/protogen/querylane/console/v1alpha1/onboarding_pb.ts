@@ -6,8 +6,6 @@ import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobu
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
 import { file_google_api_field_behavior } from "../../../google/api/field_behavior_pb";
-import type { AppDatabaseStatus } from "./console_pb";
-import { file_querylane_console_v1alpha1_console } from "./console_pb";
 import type { PostgresConfig } from "./instance_pb";
 import { file_querylane_console_v1alpha1_instance } from "./instance_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -16,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file querylane/console/v1alpha1/onboarding.proto.
  */
 export const file_querylane_console_v1alpha1_onboarding: GenFile = /*@__PURE__*/
-  fileDesc("CitxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS9vbmJvYXJkaW5nLnByb3RvEhpxdWVyeWxhbmUuY29uc29sZS52MWFscGhhMSK7AQoSU2V0dXBQcm9ncmVzc0V2ZW50EjsKB3N0ZXBfaWQYASABKA4yJS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5TZXR1cFN0ZXBCA+BBAxIZCgxkaXNwbGF5X25hbWUYAiABKAlCA+BBAxI5CgVzdGF0ZRgDIAEoDjIlLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlN0ZXBTdGF0ZUID4EEDEhIKBWVycm9yGAQgASgJQgPgQQMiaQoTRW1iZWRkZWRTZXR1cENvbmZpZxIgCgRwb3J0GAEgASgFQhLgQQG6SAzYAQEaBxj//wMogAgSMAoEbW9kZRgCIAEoCUIi4EEBukgc2AEBchdSCnBlcnNpc3RlbnRSCWVwaGVtZXJhbCIbChlHZXRPbmJvYXJkaW5nU3RhdGVSZXF1ZXN0ItYCChpHZXRPbmJvYXJkaW5nU3RhdGVSZXNwb25zZRIaCg1pc19jb25maWd1cmVkGAEgASgIQgPgQQMSTwoTYXBwX2RhdGFiYXNlX3N0YXR1cxgCIAEoCzItLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkFwcERhdGFiYXNlU3RhdHVzQgPgQQMSFgoJaG9tZV9wYXRoGAMgASgJQgPgQQMSHQoQaXNfaG9tZV93cml0YWJsZRgEIAEoCEID4EEDElQKEWF2YWlsYWJsZV9tZXRob2RzGAUgAygOMicucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuU2V0dXBNZXRob2RCEOBBA7pICpIBByIFggECEAESHQoQY29uZmlnX2ZpbGVfcGF0aBgGIAEoCUID4EEDEh8KEmVtYmVkZGVkX2RhdGFfcGF0aBgHIAEoCUID4EEDIrUBChdTZXR1cEFwcERhdGFiYXNlUmVxdWVzdBJFCg9wb3N0Z3Jlc19jb25maWcYASABKAsyKi5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5Qb3N0Z3Jlc0NvbmZpZ0gAEkoKD2VtYmVkZGVkX2NvbmZpZxgCIAEoCzIvLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkVtYmVkZGVkU2V0dXBDb25maWdIAEIHCgVzZXR1cCJeChhTZXR1cEFwcERhdGFiYXNlUmVzcG9uc2USQgoFZXZlbnQYASABKAsyLi5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5TZXR1cFByb2dyZXNzRXZlbnRCA+BBAyIbChlXYXRjaENvbmZpZ0NoYW5nZXNSZXF1ZXN0ImAKGldhdGNoQ29uZmlnQ2hhbmdlc1Jlc3BvbnNlEkIKBWV2ZW50GAEgASgLMi4ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuU2V0dXBQcm9ncmVzc0V2ZW50QgPgQQMqjAEKCVN0ZXBTdGF0ZRIaChZTVEVQX1NUQVRFX1VOU1BFQ0lGSUVEEAASFgoSU1RFUF9TVEFURV9QRU5ESU5HEAESGgoWU1RFUF9TVEFURV9JTl9QUk9HUkVTUxACEhgKFFNURVBfU1RBVEVfU1VDQ0VFREVEEAMSFQoRU1RFUF9TVEFURV9GQUlMRUQQBCqJAgoJU2V0dXBTdGVwEhoKFlNFVFVQX1NURVBfVU5TUEVDSUZJRUQQABIgChxTRVRVUF9TVEVQX1NUQVJUSU5HX0VNQkVEREVEEAESGQoVU0VUVVBfU1RFUF9DT05ORUNUSU5HEAISGAoUU0VUVVBfU1RFUF9NSUdSQVRJTkcQAxIkCiBTRVRVUF9TVEVQX0lOSVRJQUxJWklOR19TRVJWSUNFUxAEEiAKHFNFVFVQX1NURVBfUEVSU0lTVElOR19DT05GSUcQBRIhCh1TRVRVUF9TVEVQX1dBSVRJTkdfRk9SX0NPTkZJRxAGEh4KGlNFVFVQX1NURVBfQ09ORklHX0RFVEVDVEVEEAcqhAEKC1NldHVwTWV0aG9kEhwKGFNFVFVQX01FVEhPRF9VTlNQRUNJRklFRBAAEh4KGlNFVFVQX01FVEhPRF9VSV9DT05GSUdVUkVEEAESHAoYU0VUVVBfTUVUSE9EX01BTlVBTF9ZQU1MEAISGQoVU0VUVVBfTUVUSE9EX0VNQkVEREVEEAMyqQMKEU9uYm9hcmRpbmdTZXJ2aWNlEoUBChJHZXRPbmJvYXJkaW5nU3RhdGUSNS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5HZXRPbmJvYXJkaW5nU3RhdGVSZXF1ZXN0GjYucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuR2V0T25ib2FyZGluZ1N0YXRlUmVzcG9uc2UiABKBAQoQU2V0dXBBcHBEYXRhYmFzZRIzLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlNldHVwQXBwRGF0YWJhc2VSZXF1ZXN0GjQucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuU2V0dXBBcHBEYXRhYmFzZVJlc3BvbnNlIgAwARKHAQoSV2F0Y2hDb25maWdDaGFuZ2VzEjUucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuV2F0Y2hDb25maWdDaGFuZ2VzUmVxdWVzdBo2LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLldhdGNoQ29uZmlnQ2hhbmdlc1Jlc3BvbnNlIgAwAUKXAgoeY29tLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExQg9PbmJvYXJkaW5nUHJvdG9QAVpaZ2l0aHViLmNvbS9xdWVyeWxhbmUvcXVlcnlsYW5lL2JhY2tlbmQvcHJvdG9nZW4vcXVlcnlsYW5lL2NvbnNvbGUvdjFhbHBoYTE7Y29uc29sZXYxYWxwaGExogIDUUNYqgIaUXVlcnlsYW5lLkNvbnNvbGUuVjFhbHBoYTHKAhpRdWVyeWxhbmVcQ29uc29sZVxWMWFscGhhMeICJlF1ZXJ5bGFuZVxDb25zb2xlXFYxYWxwaGExXEdQQk1ldGFkYXRh6gIcUXVlcnlsYW5lOjpDb25zb2xlOjpWMWFscGhhMWIGcHJvdG8z", [file_buf_validate_validate, file_google_api_field_behavior, file_querylane_console_v1alpha1_console, file_querylane_console_v1alpha1_instance]);
+  fileDesc("CitxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS9vbmJvYXJkaW5nLnByb3RvEhpxdWVyeWxhbmUuY29uc29sZS52MWFscGhhMSK7AQoSU2V0dXBQcm9ncmVzc0V2ZW50EjsKB3N0ZXBfaWQYASABKA4yJS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5TZXR1cFN0ZXBCA+BBAxIZCgxkaXNwbGF5X25hbWUYAiABKAlCA+BBAxI5CgVzdGF0ZRgDIAEoDjIlLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlN0ZXBTdGF0ZUID4EEDEhIKBWVycm9yGAQgASgJQgPgQQMiaQoTRW1iZWRkZWRTZXR1cENvbmZpZxIgCgRwb3J0GAEgASgFQhLgQQG6SAzYAQEaBxj//wMogAgSMAoEbW9kZRgCIAEoCUIi4EEBukgc2AEBchdSCnBlcnNpc3RlbnRSCWVwaGVtZXJhbCIbChlHZXRPbmJvYXJkaW5nU3RhdGVSZXF1ZXN0IvgCChpHZXRPbmJvYXJkaW5nU3RhdGVSZXNwb25zZRIWCglob21lX3BhdGgYAyABKAlCA+BBAxIdChBpc19ob21lX3dyaXRhYmxlGAQgASgIQgPgQQMSVAoRYXZhaWxhYmxlX21ldGhvZHMYBSADKA4yJy5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5TZXR1cE1ldGhvZEIQ4EEDukgKkgEHIgWCAQIQARIdChBjb25maWdfZmlsZV9wYXRoGAYgASgJQgPgQQMSHwoSZW1iZWRkZWRfZGF0YV9wYXRoGAcgASgJQgPgQQMSSQoFc3RhdGUYCCABKA4yKy5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5PbmJvYXJkaW5nU3RhdGVCDeBBA7pIB4IBBBABIAASEgoFZXJyb3IYCSABKAlCA+BBA0oECAEQAkoECAIQA1INaXNfY29uZmlndXJlZFITYXBwX2RhdGFiYXNlX3N0YXR1cyK1AQoXU2V0dXBBcHBEYXRhYmFzZVJlcXVlc3QSRQoPcG9zdGdyZXNfY29uZmlnGAEgASgLMioucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuUG9zdGdyZXNDb25maWdIABJKCg9lbWJlZGRlZF9jb25maWcYAiABKAsyLy5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5FbWJlZGRlZFNldHVwQ29uZmlnSABCBwoFc2V0dXAiXgoYU2V0dXBBcHBEYXRhYmFzZVJlc3BvbnNlEkIKBWV2ZW50GAEgASgLMi4ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuU2V0dXBQcm9ncmVzc0V2ZW50QgPgQQMiGwoZV2F0Y2hDb25maWdDaGFuZ2VzUmVxdWVzdCJgChpXYXRjaENvbmZpZ0NoYW5nZXNSZXNwb25zZRJCCgVldmVudBgBIAEoCzIuLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlNldHVwUHJvZ3Jlc3NFdmVudEID4EEDKowBCglTdGVwU3RhdGUSGgoWU1RFUF9TVEFURV9VTlNQRUNJRklFRBAAEhYKElNURVBfU1RBVEVfUEVORElORxABEhoKFlNURVBfU1RBVEVfSU5fUFJPR1JFU1MQAhIYChRTVEVQX1NUQVRFX1NVQ0NFRURFRBADEhUKEVNURVBfU1RBVEVfRkFJTEVEEAQqiQIKCVNldHVwU3RlcBIaChZTRVRVUF9TVEVQX1VOU1BFQ0lGSUVEEAASIAocU0VUVVBfU1RFUF9TVEFSVElOR19FTUJFRERFRBABEhkKFVNFVFVQX1NURVBfQ09OTkVDVElORxACEhgKFFNFVFVQX1NURVBfTUlHUkFUSU5HEAMSJAogU0VUVVBfU1RFUF9JTklUSUFMSVpJTkdfU0VSVklDRVMQBBIgChxTRVRVUF9TVEVQX1BFUlNJU1RJTkdfQ09ORklHEAUSIQodU0VUVVBfU1RFUF9XQUlUSU5HX0ZPUl9DT05GSUcQBhIeChpTRVRVUF9TVEVQX0NPTkZJR19ERVRFQ1RFRBAHKoQBCgtTZXR1cE1ldGhvZBIcChhTRVRVUF9NRVRIT0RfVU5TUEVDSUZJRUQQABIeChpTRVRVUF9NRVRIT0RfVUlfQ09ORklHVVJFRBABEhwKGFNFVFVQX01FVEhPRF9NQU5VQUxfWUFNTBACEhkKFVNFVFVQX01FVEhPRF9FTUJFRERFRBADKo4BCg9PbmJvYXJkaW5nU3RhdGUSIAocT05CT0FSRElOR19TVEFURV9VTlNQRUNJRklFRBAAEh4KGk9OQk9BUkRJTkdfU1RBVEVfQk9PVFNUUkFQEAESHQoZT05CT0FSRElOR19TVEFURV9ERUdSQURFRBACEhoKFk9OQk9BUkRJTkdfU1RBVEVfUkVBRFkQAzKpAwoRT25ib2FyZGluZ1NlcnZpY2UShQEKEkdldE9uYm9hcmRpbmdTdGF0ZRI1LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkdldE9uYm9hcmRpbmdTdGF0ZVJlcXVlc3QaNi5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5HZXRPbmJvYXJkaW5nU3RhdGVSZXNwb25zZSIAEoEBChBTZXR1cEFwcERhdGFiYXNlEjMucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuU2V0dXBBcHBEYXRhYmFzZVJlcXVlc3QaNC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5TZXR1cEFwcERhdGFiYXNlUmVzcG9uc2UiADABEocBChJXYXRjaENvbmZpZ0NoYW5nZXMSNS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5XYXRjaENvbmZpZ0NoYW5nZXNSZXF1ZXN0GjYucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuV2F0Y2hDb25maWdDaGFuZ2VzUmVzcG9uc2UiADABQpcCCh5jb20ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTFCD09uYm9hcmRpbmdQcm90b1ABWlpnaXRodWIuY29tL3F1ZXJ5bGFuZS9xdWVyeWxhbmUvYmFja2VuZC9wcm90b2dlbi9xdWVyeWxhbmUvY29uc29sZS92MWFscGhhMTtjb25zb2xldjFhbHBoYTGiAgNRQ1iqAhpRdWVyeWxhbmUuQ29uc29sZS5WMWFscGhhMcoCGlF1ZXJ5bGFuZVxDb25zb2xlXFYxYWxwaGEx4gImUXVlcnlsYW5lXENvbnNvbGVcVjFhbHBoYTFcR1BCTWV0YWRhdGHqAhxRdWVyeWxhbmU6OkNvbnNvbGU6OlYxYWxwaGExYgZwcm90bzM", [file_buf_validate_validate, file_google_api_field_behavior, file_querylane_console_v1alpha1_instance]);
 
 /**
  * SetupProgressEvent reports the state of a single step in the database setup
@@ -114,20 +112,6 @@ export const GetOnboardingStateRequestSchema: GenMessage<GetOnboardingStateReque
  */
 export type GetOnboardingStateResponse = Message<"querylane.console.v1alpha1.GetOnboardingStateResponse"> & {
   /**
-   * Output-only. Whether a database configuration already exists.
-   *
-   * @generated from field: bool is_configured = 1;
-   */
-  isConfigured: boolean;
-
-  /**
-   * Output-only. Current status of the application database.
-   *
-   * @generated from field: querylane.console.v1alpha1.AppDatabaseStatus app_database_status = 2;
-   */
-  appDatabaseStatus?: AppDatabaseStatus;
-
-  /**
    * Output-only. Absolute path to the querylane home directory (~/.querylane).
    *
    * @generated from field: string home_path = 3;
@@ -161,6 +145,20 @@ export type GetOnboardingStateResponse = Message<"querylane.console.v1alpha1.Get
    * @generated from field: string embedded_data_path = 7;
    */
   embeddedDataPath: string;
+
+  /**
+   * Output-only. Authoritative application lifecycle stage for routing.
+   *
+   * @generated from field: querylane.console.v1alpha1.OnboardingState state = 8;
+   */
+  state: OnboardingState;
+
+  /**
+   * Output-only. Database initialization error, empty when no error is known.
+   *
+   * @generated from field: string error = 9;
+   */
+  error: string;
 };
 
 /**
@@ -417,6 +415,48 @@ export enum SetupMethod {
  */
 export const SetupMethodSchema: GenEnum<SetupMethod> = /*@__PURE__*/
   enumDesc(file_querylane_console_v1alpha1_onboarding, 2);
+
+/**
+ * OnboardingState is the authoritative application lifecycle stage used for
+ * frontend routing.
+ *
+ * @generated from enum querylane.console.v1alpha1.OnboardingState
+ */
+export enum OnboardingState {
+  /**
+   * Default value, should not be used.
+   *
+   * @generated from enum value: ONBOARDING_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * No database configuration or initialized application state exists.
+   *
+   * @generated from enum value: ONBOARDING_STATE_BOOTSTRAP = 1;
+   */
+  BOOTSTRAP = 1,
+
+  /**
+   * Database configuration exists, but the application database is unavailable.
+   *
+   * @generated from enum value: ONBOARDING_STATE_DEGRADED = 2;
+   */
+  DEGRADED = 2,
+
+  /**
+   * The application database is initialized and all services are available.
+   *
+   * @generated from enum value: ONBOARDING_STATE_READY = 3;
+   */
+  READY = 3,
+}
+
+/**
+ * Describes the enum querylane.console.v1alpha1.OnboardingState.
+ */
+export const OnboardingStateSchema: GenEnum<OnboardingState> = /*@__PURE__*/
+  enumDesc(file_querylane_console_v1alpha1_onboarding, 3);
 
 /**
  * OnboardingService guides first-time users through configuring the application
