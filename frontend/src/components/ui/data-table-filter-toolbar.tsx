@@ -14,7 +14,6 @@ interface DataTableFilterFacet {
   label: string;
   onChange: (values: string[]) => void;
   options: FacetedFilterOption[];
-  searchable?: boolean | undefined;
   selected: string[];
   singleSelect?: boolean | undefined;
 }
@@ -90,7 +89,6 @@ function DataTableFilterToolbar({
           key={facet.label}
           onSelectedValuesChange={(values) => handleFacetChange(facet, values)}
           options={facet.options}
-          searchable={facet.searchable}
           selectedValues={facet.selected}
           singleSelect={facet.singleSelect}
           title={facet.label}

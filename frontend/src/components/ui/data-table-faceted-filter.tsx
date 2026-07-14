@@ -30,6 +30,9 @@ interface FacetedFilterOption {
 // single "{n} selected" badge so the button stays compact.
 const MAX_INLINE_BADGES = 2;
 const CLEAR_ITEM_VALUE = "__clear-faceted-filter__";
+// Show the search box only when the option set is large enough to warrant it.
+// Bounded facets of 6 or fewer items scan faster by eye than by typing.
+const SEARCH_MIN_OPTIONS = 6;
 
 // Shadcn data-table faceted filter: a dashed-border trigger with a filter icon
 // and the facet title, opening a searchable command list of controlled options.
@@ -37,7 +40,6 @@ function DataTableFacetedFilter({
   emptyText = "No options found.",
   onSelectedValuesChange,
   options,
-  searchable = true,
   searchPlaceholder,
   selectedValues,
   singleSelect = false,
@@ -46,12 +48,12 @@ function DataTableFacetedFilter({
   emptyText?: string;
   onSelectedValuesChange: (values: string[]) => void;
   options: FacetedFilterOption[];
-  searchable?: boolean | undefined;
   searchPlaceholder?: string;
   selectedValues: string[];
   singleSelect?: boolean | undefined;
   title: string;
 }) {
+  const showSearch = options.length > SEARCH_MIN_OPTIONS;
   const commandListRef = useRef<HTMLDivElement>(null);
   const includedDescriptionId = useId();
   const notIncludedDescriptionId = useId();
@@ -136,7 +138,7 @@ function DataTableFacetedFilter({
       <PopoverContent
         align="start"
         className="w-[220px] p-0"
-        initialFocus={searchable ? undefined : commandListRef}
+        initialFocus={showSearch ? undefined : commandListRef}
       >
         <span className="sr-only" id={includedDescriptionId}>
           Included in filter
@@ -145,7 +147,7 @@ function DataTableFacetedFilter({
           Not included in filter
         </span>
         <Command>
-          {searchable ? (
+          {showSearch ? (
             <CommandInput placeholder={searchPlaceholder ?? title} />
           ) : null}
           <CommandList label={`${title} options`} ref={commandListRef}>
@@ -166,8 +168,7 @@ function DataTableFacetedFilter({
                   >
                     <div
                       className={cn(
-                        "flex size-4 items-center justify-center border",
-                        singleSelect ? "rounded-full" : "rounded-sm",
+                        "flex size-4 items-center justify-center rounded-sm border",
                         isSelected
                           ? "border-foreground/70 bg-background text-foreground [&_svg]:text-foreground"
                           : "border-primary opacity-50 [&_svg]:invisible"

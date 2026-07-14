@@ -150,7 +150,6 @@ function FixedEnumFilterFixture() {
           { label: "Active", value: "active" },
           { label: "Paused", value: "paused" },
         ]}
-        searchable={false}
         selectedValues={selectedValues}
         title="Status"
       />

@@ -505,7 +505,6 @@ function LargestObjectsSection({
       onChange: (kindFilters: string[]) =>
         setFilterState((current) => ({ ...current, kindFilters })),
       options: presentCatalogObjectKindOptions(objects),
-      searchable: false,
       selected: filterState.kindFilters,
     },
     {
@@ -527,7 +526,6 @@ function LargestObjectsSection({
       onChange: (systemFilters: string[]) =>
         setFilterState((current) => ({ ...current, systemFilters })),
       options: presentCatalogObjectSystemOptions(objects),
-      searchable: false,
       selected: filterState.systemFilters,
     },
   ] satisfies DataTableFilterFacet[];
@@ -618,7 +616,6 @@ function SchemasSection({
       label: "System",
       onChange: setKindFilters,
       options: presentCatalogSchemaKindOptions(schemas),
-      searchable: false,
       selected: kindFilters,
     },
     {

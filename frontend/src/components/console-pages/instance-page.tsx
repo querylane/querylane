@@ -695,7 +695,6 @@ function InstanceOverviewSection({
       label: "Kind",
       onChange: setKindFilters,
       options: presentDatabaseKindOptions(databases),
-      searchable: false,
       selected: kindFilters,
     },
     {

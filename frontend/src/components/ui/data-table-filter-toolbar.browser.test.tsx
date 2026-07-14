@@ -31,7 +31,6 @@ function ActiveFilterToolbarFixture() {
                 { count: 3, label: "Regular", value: "regular" },
                 { count: 1, label: "Template", value: "template" },
               ],
-              searchable: false,
               selected: kind,
               singleSelect: true,
             },

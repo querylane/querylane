@@ -39,7 +39,6 @@ function FilterToolbarFixture({
             { label: "Active", value: "active" },
             { label: "Paused", value: "paused" },
           ],
-          searchable: false,
           selected: statuses,
           singleSelect: true,
         },
@@ -154,7 +153,10 @@ describe("data table filter toolbar", () => {
     const schema = screen.getByRole("button", { name: /Schema.*Unavailable/ });
     schema.focus();
     await user.keyboard("{Enter}");
-    expect(await screen.findByRole("combobox")).toBeTruthy();
+    // A sparse facet (no selectable options) omits the search box, so the
+    // command list takes focus and the auto-highlighted "Clear filter" item is
+    // what a subsequent Enter acts on.
+    expect(await screen.findByRole("option", { name: "Clear filter" })).toBeTruthy();
     await user.keyboard("{Enter}");
 
     const search = screen.getByRole("textbox", {
