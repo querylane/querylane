@@ -347,12 +347,14 @@ function AccessFiltersPopover({
 
 function RolesAccessMapCanvas({
   failedRequestCount,
+  isLoading,
   model,
   onSelectNode,
   partial,
   selectedNodeId,
 }: {
   failedRequestCount: number;
+  isLoading: boolean;
   model: RolesAccessMapModel;
   onSelectNode: (nodeId: string | null) => void;
   partial: boolean;
@@ -554,7 +556,7 @@ function RolesAccessMapCanvas({
                 top={roleY(index)}
               />
             ))}
-            {model.objects.length === 0 ? (
+            {model.objects.length === 0 && !isLoading ? (
               <EmptyObjects incomplete={partial || failedRequestCount > 0} />
             ) : null}
             {model.objects.map((node, index) => (

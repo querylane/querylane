@@ -324,6 +324,7 @@ export function InstanceRolesPage({
         failedRequestCount={
           accessMapResourcesQuery.data?.failedRequestCount ?? 0
         }
+        isLoading={accessMapResourcesQuery.isPending}
         model={roleMapModel}
         onSelectNode={setRoleSelectedNodeId}
         partial={accessMapIsPartial}

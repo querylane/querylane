@@ -13,6 +13,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 const mocks = vi.hoisted(() => ({
+  accessMapPending: false,
   accessMapRoleNames: [] as string[],
   budgetSkippedRequestCount: 0,
   failedRequestCount: 0,
@@ -87,7 +88,7 @@ vi.mock("@/hooks/api/role", () => ({
     roles: { roleName: string }[];
   }) => {
     mocks.accessMapRoleNames = input.roles.map((role) => role.roleName);
-    return {
+    const result = {
       data: {
         budgetSkippedRequestCount: mocks.budgetSkippedRequestCount,
         failedRequestCount: mocks.failedRequestCount,
@@ -129,12 +130,18 @@ vi.mock("@/hooks/api/role", () => ({
         truncatedRequestCount: mocks.truncatedRequestCount,
       },
       error: null,
-      isPending: false,
+      isPending: mocks.accessMapPending,
     };
+    if (mocks.accessMapPending) {
+      result.data.publicAccess = [];
+      result.data.roleAccess = [];
+    }
+    return result;
   },
 }));
 
 afterEach(() => {
+  mocks.accessMapPending = false;
   mocks.accessMapRoleNames = [];
   mocks.budgetSkippedRequestCount = 0;
   mocks.failedRequestCount = 0;
@@ -197,6 +204,17 @@ describe("InstanceRolesPage", () => {
       tab: undefined,
       type: "login",
     });
+  });
+
+  test("does not show the empty grants state while object access is loading", () => {
+    mocks.accessMapPending = true;
+
+    render(<InstanceRolesPage instanceId="prod" tab="map" />);
+
+    expect(screen.getByText("Loading role object access.")).toBeTruthy();
+    expect(
+      screen.queryByText("No object grants found for the visible roles.")
+    ).toBeNull();
   });
 
   test("filters roles by URL type with the shared type filter", async () => {
