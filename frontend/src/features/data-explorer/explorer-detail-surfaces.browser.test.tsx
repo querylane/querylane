@@ -3472,6 +3472,12 @@ test("data explorer table empty resource tabs use shared empty panels", async ()
       '[data-empty-category="policies"] [data-slot="empty-state-panel"]'
     )
   ).not.toBeNull();
+  await expect
+    .element(page.getByText("How the server combines these"))
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByText("Preview visibility as"))
+    .not.toBeInTheDocument();
 
   await page.getByRole("tab", { exact: true, name: "Triggers 0" }).click();
   await expect

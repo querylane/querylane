@@ -3725,10 +3725,12 @@ function PoliciesTab({
           </Button>
         </nav>
       </fieldset>
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-        <RlsCombinationGuide />
-        <RlsPreview policies={policies} />
-      </div>
+      {policies.length > 0 ? (
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+          <RlsCombinationGuide />
+          <RlsPreview policies={policies} />
+        </div>
+      ) : null}
     </div>
   );
 }
