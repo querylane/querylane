@@ -220,11 +220,23 @@ function shouldLoadAccessMap(activeTab: InstanceRolesTab, roleCount: number) {
   return activeTab === "map" && roleCount > 0;
 }
 
-function builtInRoleCountForTypeFilter(
-  type: RoleKind | undefined,
-  builtInRoleCount: number
-): number {
-  return type === undefined ? builtInRoleCount : 0;
+function selectRoleMapData({
+  builtInRoleCount,
+  roles,
+  showBuiltInRoles,
+  type,
+}: {
+  builtInRoleCount: number;
+  roles: Role[];
+  showBuiltInRoles: boolean;
+  type: RoleKind | undefined;
+}) {
+  const visibility = roleMapVisibilityForType(type, showBuiltInRoles);
+  return {
+    builtInRoleCount: type === undefined ? builtInRoleCount : 0,
+    roles: roles.filter((role) => visibility[deriveRoleKind(role)]),
+    visibility,
+  };
 }
 
 export function InstanceRolesPage({
@@ -257,10 +269,16 @@ export function InstanceRolesPage({
     type === undefined
       ? roles
       : roles.filter((_, index) => kinds[index] === type);
-  const roleMapVisibility = roleMapVisibilityForType(type, showBuiltInRoles);
-  const accessMapRoles = roles.filter(
-    (role) => roleMapVisibility[deriveRoleKind(role)]
-  );
+  const {
+    builtInRoleCount,
+    roles: accessMapRoles,
+    visibility: roleMapVisibility,
+  } = selectRoleMapData({
+    builtInRoleCount: counts.builtin,
+    roles,
+    showBuiltInRoles,
+    type,
+  });
   const accessMapResourcesQuery = useRolesAccessMapResourcesQuery(
     { instanceId, roles: accessMapRoles },
     { enabled: shouldLoadAccessMap(activeTab, roles.length) }
@@ -366,7 +384,7 @@ export function InstanceRolesPage({
       />
       <RolesAccessMapNotice kind="partial" visible={accessMapIsPartial} />
       <RolesAccessMapCanvas
-        builtInRoleCount={builtInRoleCountForTypeFilter(type, counts.builtin)}
+        builtInRoleCount={builtInRoleCount}
         failedRequestCount={
           accessMapResourcesQuery.data?.failedRequestCount ?? 0
         }

@@ -51,33 +51,6 @@ import {
 } from "@/lib/role-display";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-function facetDeferred(
-  facetsEnabled: boolean,
-  loadFacets: boolean,
-  data: unknown
-): boolean {
-  return facetsEnabled && !loadFacets && data === undefined;
-}
-
-function facetReady(
-  facetsEnabled: boolean,
-  query: { data: unknown; error: unknown; isPending: boolean }
-): boolean {
-  return (
-    facetsEnabled &&
-    query.data !== undefined &&
-    !query.isPending &&
-    !query.error
-  );
-}
-
-function facetPartial(
-  facetsEnabled: boolean,
-  nextPageToken: string | undefined
-): boolean {
-  return facetsEnabled && Boolean(nextPageToken);
-}
-
 function roleSectionSearch(
   previous: RoleDetailSearch,
   next: Section
@@ -99,27 +72,11 @@ function hasReadWriteBuiltin(role: Role): boolean {
   ].some((name) => name === "pg_read_all_data" || name === "pg_write_all_data");
 }
 
-function hasPartialAccess(...partialStates: boolean[]): boolean {
-  return partialStates.some(Boolean);
-}
-
 function connectionLimitSubText(role: Role): string | undefined {
   if (!role.attributes?.canLogin) {
     return undefined;
   }
   return connLimitDisplay(role.attributes.connectionLimit);
-}
-
-function hasTableAccess({
-  hasTableGrants,
-  ownedCount,
-  readWriteBuiltin,
-}: {
-  hasTableGrants: boolean;
-  ownedCount: number;
-  readWriteBuiltin: boolean;
-}): boolean {
-  return hasTableGrants || ownedCount > 0 || readWriteBuiltin;
 }
 
 function resolveGrantsView({
@@ -143,6 +100,39 @@ function resolveGrantsView({
     return { kind: "schema", schema: grantsSchema, type: grantsType };
   }
   return { kind: "overview" };
+}
+
+interface RoleFacetQueryState {
+  data: unknown;
+  error: unknown;
+  isPending: boolean;
+}
+
+function buildRoleFacetStates({
+  defaultPrivilegesQuery,
+  facetsEnabled,
+  loadFacets,
+  ownedObjectsQuery,
+  publicGrantsQuery,
+}: {
+  defaultPrivilegesQuery: RoleFacetQueryState;
+  facetsEnabled: boolean;
+  loadFacets: boolean;
+  ownedObjectsQuery: RoleFacetQueryState;
+  publicGrantsQuery: RoleFacetQueryState;
+}): FacetStates {
+  const deferred = facetsEnabled && !loadFacets;
+  return {
+    defaults: facetStateOf(facetsEnabled, defaultPrivilegesQuery, {
+      deferred: deferred && defaultPrivilegesQuery.data === undefined,
+    }),
+    owned: facetStateOf(facetsEnabled, ownedObjectsQuery, {
+      deferred: deferred && ownedObjectsQuery.data === undefined,
+    }),
+    publicGrants: facetStateOf(facetsEnabled, publicGrantsQuery, {
+      deferred: deferred && publicGrantsQuery.data === undefined,
+    }),
+  };
 }
 
 // Direct object grants for the selected database, aggregated to one entry per
@@ -226,48 +216,26 @@ function useRoleFacets({
     }),
     { enabled: queryEnabled }
   );
-  const ownedReady = facetReady(facetsEnabled, ownedObjectsQuery);
+  const facetStates = buildRoleFacetStates({
+    defaultPrivilegesQuery,
+    facetsEnabled,
+    loadFacets,
+    ownedObjectsQuery,
+    publicGrantsQuery,
+  });
   return {
     defaultPrivileges: defaultPrivilegesQuery.data?.defaultPrivileges ?? [],
-    defaultPrivilegesPartial: facetPartial(
-      facetsEnabled,
-      defaultPrivilegesQuery.data?.nextPageToken
-    ),
-    facetStates: {
-      defaults: facetStateOf(facetsEnabled, defaultPrivilegesQuery, {
-        deferred: facetDeferred(
-          facetsEnabled,
-          loadFacets,
-          defaultPrivilegesQuery.data
-        ),
-      }),
-      owned: facetStateOf(facetsEnabled, ownedObjectsQuery, {
-        deferred: facetDeferred(
-          facetsEnabled,
-          loadFacets,
-          ownedObjectsQuery.data
-        ),
-      }),
-      publicGrants: facetStateOf(facetsEnabled, publicGrantsQuery, {
-        deferred: facetDeferred(
-          facetsEnabled,
-          loadFacets,
-          publicGrantsQuery.data
-        ),
-      }),
-    } satisfies FacetStates,
+    defaultPrivilegesPartial:
+      facetsEnabled && Boolean(defaultPrivilegesQuery.data?.nextPageToken),
+    facetStates,
     ownedError: ownedObjectsQuery.error,
     ownedObjects: ownedObjectsQuery.data?.ownedObjects ?? [],
-    ownedPartial: facetPartial(
-      facetsEnabled,
-      ownedObjectsQuery.data?.nextPageToken
-    ),
-    ownedReady,
+    ownedPartial:
+      facetsEnabled && Boolean(ownedObjectsQuery.data?.nextPageToken),
+    ownedReady: facetStates.owned === "ready",
     publicGrants: publicGrantsQuery.data?.grants ?? [],
-    publicGrantsPartial: facetPartial(
-      facetsEnabled,
-      publicGrantsQuery.data?.nextPageToken
-    ),
+    publicGrantsPartial:
+      facetsEnabled && Boolean(publicGrantsQuery.data?.nextPageToken),
   };
 }
 
@@ -417,12 +385,12 @@ function RoleDetailContent({
     ownedCount: ownedObjects.length,
     ownedReady,
   });
-  const partialAccess = hasPartialAccess(
+  const partialAccess = [
     grantsPartial,
     ownedPartial,
     publicGrantsPartial,
-    defaultPrivilegesPartial
-  );
+    defaultPrivilegesPartial,
+  ].some(Boolean);
 
   const belongsTo: RelatedRole[] = role.memberOf.map((membership) => ({
     grantor: membership.grantor || undefined,
@@ -451,11 +419,8 @@ function RoleDetailContent({
   const hasTableGrants = grantObjects.some((object) =>
     TABLE_LIKE_TYPES.has(object.objectType)
   );
-  const tableAccessActive = hasTableAccess({
-    hasTableGrants,
-    ownedCount: ownedObjects.length,
-    readWriteBuiltin,
-  });
+  const tableAccessActive =
+    hasTableGrants || ownedObjects.length > 0 || readWriteBuiltin;
 
   const rlsNote = rlsNoteText({ bypassesRls, isSuperuser, tableAccessActive });
 
