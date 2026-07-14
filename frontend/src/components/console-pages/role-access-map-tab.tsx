@@ -172,7 +172,7 @@ function defaultObjectType(
 function directGrantRows(props: RoleDetailViewProps): AccessGrant[] {
   return props.grantObjects.flatMap((object) => {
     const objectType = grantObjectType(object.objectType);
-    if (objectType == null) {
+    if (objectType === null) {
       return [];
     }
     return object.privileges.map((privilege) => ({
@@ -188,7 +188,7 @@ function directGrantRows(props: RoleDetailViewProps): AccessGrant[] {
 function ownedObjectRows(props: RoleDetailViewProps): AccessGrant[] {
   return props.ownedObjects.flatMap((object) => {
     const objectType = grantObjectType(object.objectType);
-    if (objectType == null) {
+    if (objectType === null) {
       return [];
     }
     return [
@@ -206,7 +206,7 @@ function ownedObjectRows(props: RoleDetailViewProps): AccessGrant[] {
 function publicGrantRows(props: RoleDetailViewProps): AccessGrant[] {
   return props.publicGrants.flatMap((grant) => {
     const objectType = grantObjectType(grant.objectType);
-    if (objectType == null) {
+    if (objectType === null) {
       return [];
     }
     return [
@@ -226,7 +226,7 @@ function defaultPrivilegeRows(
 ): AccessDefaultPrivilege[] {
   return props.defaultPrivileges.flatMap((privilege) => {
     const objectType = defaultObjectType(privilege.objectType);
-    if (objectType == null) {
+    if (objectType === null) {
       return [];
     }
     return [
@@ -295,7 +295,7 @@ function filterAccessMapModel({
 }): { edges: VisualizationEdge[]; nodes: VisualizationNode[] } {
   const visibleNodes = nodes.filter((node) => {
     const facet = accessMapFacetForNode(node);
-    return facet == null || visibleFacets[facet];
+    return facet === null || visibleFacets[facet];
   });
   const visibleNodeIds = new Set(visibleNodes.map((node) => node.id));
   return {

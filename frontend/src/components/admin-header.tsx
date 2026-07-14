@@ -279,8 +279,8 @@ function BreadcrumbDropdown({
       </PopoverTrigger>
       <PopoverContent align="start" className={`${contentWidth} gap-0 p-0`}>
         <Command
-          filter={(value, search) =>
-            value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+          filter={(optionValue, search) =>
+            optionValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
           }
         >
           <CommandInput placeholder={`Search ${label.toLowerCase()}…`} />

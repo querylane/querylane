@@ -52,7 +52,7 @@ export function useConnectionTest() {
       if (error instanceof ConnectError) {
         message = error.rawMessage;
       } else if (error instanceof Error) {
-        message = error.message;
+        ({ message } = error);
       }
       setStatus("error");
       setErrorMessage(message);

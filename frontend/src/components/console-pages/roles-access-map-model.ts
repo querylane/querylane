@@ -179,7 +179,7 @@ function grantObjectKey(input: {
   schemaName: string;
 }): string | null {
   const kind = grantObjectKind(input.objectType);
-  if (kind == null) {
+  if (kind === null) {
     return null;
   }
   const objectLabel = grantObjectTitle({
@@ -224,7 +224,7 @@ function addObjectNode(
 ): string | null {
   const kind = grantObjectKind(input.objectType);
   const id = grantObjectKey(input);
-  if (kind == null || id == null) {
+  if (kind === null || id === null) {
     return null;
   }
   if (!objectsById.has(id)) {

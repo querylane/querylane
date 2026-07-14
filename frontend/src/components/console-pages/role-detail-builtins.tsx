@@ -48,7 +48,7 @@ function BuiltinPowersCard({
   instanceId: string;
   parents: BuiltinParent[];
 }) {
-  const capabilities = builtinInfo?.implicit ?? [];
+  const builtinCapabilities = builtinInfo?.implicit ?? [];
   return (
     <Card className="gap-0 border-border py-0">
       <div className="flex items-start gap-3.5 px-6 pt-6 pb-4">
@@ -72,17 +72,17 @@ function BuiltinPowersCard({
           Cluster-wide
         </span>
         <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
-        {capabilities.length > 0 ? (
+        {builtinCapabilities.length > 0 ? (
           <span className="text-[11px] text-muted-foreground/70 tabular-nums">
-            {capabilities.length}{" "}
-            {capabilities.length === 1 ? "capability" : "capabilities"}
+            {builtinCapabilities.length}{" "}
+            {builtinCapabilities.length === 1 ? "capability" : "capabilities"}
           </span>
         ) : null}
       </div>
 
-      {capabilities.length > 0 ? (
+      {builtinCapabilities.length > 0 ? (
         <div className="flex flex-col gap-2 px-6">
-          {capabilities.map((line) => (
+          {builtinCapabilities.map((line) => (
             <div
               className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-3.5 py-3"
               key={line}

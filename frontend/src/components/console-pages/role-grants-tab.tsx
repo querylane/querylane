@@ -264,7 +264,7 @@ function DatabaseSelect({
         value: database.id,
       }))}
       onValueChange={(next) => {
-        if (next != null) {
+        if (next !== null) {
           onChange(next);
         }
       }}
@@ -590,7 +590,7 @@ function GrantsSection({
   const requestedSchema =
     grantsView.kind === "schema" ? grantsView.schema : null;
   const schemaGroup =
-    requestedSchema == null
+    requestedSchema === null
       ? null
       : (schemaIndex.find(
           (group) =>
@@ -598,7 +598,7 @@ function GrantsSection({
             (group.database && databaseName === requestedSchema)
         ) ?? null);
   const view: GrantsView =
-    requestedSchema != null && schemaGroup == null
+    requestedSchema !== null && schemaGroup === null
       ? { kind: "overview" }
       : grantsView;
   const isOverview = view.kind === "overview";

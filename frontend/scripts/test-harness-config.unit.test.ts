@@ -16,7 +16,7 @@ import {
 } from "../vitest.shared";
 import unitConfig from "../vitest.unit.config";
 
-const scripts = packageJson.scripts;
+const { scripts } = packageJson;
 const VITEST_BETA_VERSION_PATTERN = /^5\.0\.0-beta\.\d+$/u;
 const PLAYWRIGHT_PRERELEASE_VERSION_PATTERN =
   /^1\.62\.0-(alpha|beta|rc)[\w.-]*$/u;
@@ -117,7 +117,7 @@ describe("test harness config", () => {
   });
 
   test("uses one requested prerelease Vitest browser dependency set", () => {
-    const devDependencies = packageJson.devDependencies;
+    const { devDependencies } = packageJson;
     const vitestVersion = devDependencies.vitest;
 
     expect(vitestVersion).toMatch(VITEST_BETA_VERSION_PATTERN);

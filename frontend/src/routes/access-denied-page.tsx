@@ -81,17 +81,19 @@ export function AccessDeniedRoutePage() {
             }
             error={error}
             onRetry={() =>
-              waitForNextFrame().then(() => {
-                clearBlockingError();
-                return navigate({
-                  href: search.returnTo ?? "/",
-                  replace: true,
-                }).catch((navigationError: unknown) =>
+              waitForNextFrame()
+                .then(() => {
+                  clearBlockingError();
+                  return navigate({
+                    href: search.returnTo ?? "/",
+                    replace: true,
+                  });
+                })
+                .catch((navigationError: unknown) =>
                   handleNavigationError(navigationError, {
                     area: "access-denied.retry",
                   })
-                );
-              })
+                )
             }
             retryLabel="Retry"
             variant="page"

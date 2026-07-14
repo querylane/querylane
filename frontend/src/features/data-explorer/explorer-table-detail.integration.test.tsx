@@ -2471,7 +2471,12 @@ describe("TableDetail metadata errors", () => {
     expect(detailButtons).toHaveLength(2);
 
     const endpoints = new Set<string>();
-    for (const detailButton of detailButtons) {
+    async function collectEndpoint(index: number): Promise<void> {
+      const detailButton = detailButtons[index];
+      if (!detailButton) {
+        return;
+      }
+
       await user.click(detailButton);
       for (const endpoint of ["ListTableConstraints", "ListTableIndexes"]) {
         if (screen.queryByText(`Endpoint: ${endpoint}`)) {
@@ -2480,7 +2485,11 @@ describe("TableDetail metadata errors", () => {
       }
       expect(screen.queryByText("Endpoint: TableDetail/columns")).toBeNull();
       await user.keyboard("{Escape}");
+
+      await collectEndpoint(index + 1);
     }
+
+    await collectEndpoint(0);
     expect(endpoints).toEqual(
       new Set(["ListTableConstraints", "ListTableIndexes"])
     );

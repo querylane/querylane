@@ -92,10 +92,10 @@ interface PreconnectOriginInput {
   isProduction: boolean;
 }
 
-function httpOrigin(rawValue: string | undefined) {
+function httpOrigin(rawValue: string | undefined): string | null {
   const trimmedValue = rawValue?.trim();
   if (!trimmedValue) {
-    return;
+    return null;
   }
 
   try {
@@ -104,10 +104,9 @@ function httpOrigin(rawValue: string | undefined) {
       return url.origin;
     }
   } catch {
-    return;
+    // Ignore invalid origins and fall through to the null result.
   }
-
-  return;
+  return null;
 }
 
 function createBuildCacheDigest({

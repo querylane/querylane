@@ -158,7 +158,7 @@ function DatabaseStatItemValue({
 }) {
   return (
     <span className="font-bold font-mono text-xl tabular-nums tracking-tight">
-      {isPending ? "—" : value}
+      {isPending ? "—" : String(value)}
     </span>
   );
 }

@@ -268,7 +268,7 @@ const serializedMockResponses = new Map(
 function findLighthouseMockBody(url: string): string | undefined {
   let pathname: string;
   try {
-    pathname = new URL(url).pathname;
+    ({ pathname } = new URL(url));
   } catch {
     return;
   }
@@ -349,7 +349,7 @@ function shouldServeSpaFallback(request: Request) {
   }
 
   const acceptHeader = request.headers.get("accept") ?? "";
-  const pathname = new URL(request.url).pathname;
+  const { pathname } = new URL(request.url);
   return acceptHeader.includes("text/html") || !pathname.includes(".");
 }
 
@@ -468,7 +468,7 @@ function createStaticResponse(
     return;
   }
 
-  const pathname = new URL(request.url).pathname;
+  const { pathname } = new URL(request.url);
   const filePath = resolveDistFilePath(distDir, pathname);
   if (filePath && existsSync(filePath)) {
     return createStaticFileResponse({
@@ -538,7 +538,8 @@ function primeStaticResponseCache(distDir = DEFAULT_DIST_DIR) {
 }
 
 function readPort() {
-  const rawPort = env["PORT"]?.trim();
+  const { PORT: runtimePort } = env;
+  const rawPort = runtimePort?.trim();
   if (!rawPort) {
     return DEFAULT_PORT;
   }

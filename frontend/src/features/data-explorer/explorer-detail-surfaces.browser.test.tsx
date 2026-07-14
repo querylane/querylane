@@ -249,7 +249,7 @@ vi.mock("@tanstack/react-query", async () => {
   }
 
   function schemaMapQuery(query: unknown) {
-    const queryKey = (query as { queryKey?: readonly unknown[] }).queryKey;
+    const { queryKey } = query as { queryKey?: readonly unknown[] };
     const descriptor = queryKey?.[1] as
       | { input?: { parent?: string }; methodName?: string }
       | undefined;
@@ -2114,17 +2114,13 @@ test("data explorer table columns match the redesign inventory", async () => {
   ).toBeLessThanOrEqual(4);
 
   await page.getByRole("button", { exact: true, name: "Key" }).click();
-  for (const option of [
-    "Primary key",
-    "Foreign key",
-    "Unique",
-    "Index",
-    "No key",
-  ]) {
-    await expect
-      .element(page.getByRole("option", { exact: true, name: option }))
-      .toBeVisible();
-  }
+  await Promise.all(
+    ["Primary key", "Foreign key", "Unique", "Index", "No key"].map((option) =>
+      expect
+        .element(page.getByRole("option", { exact: true, name: option }))
+        .toBeVisible()
+    )
+  );
   await page.getByRole("button", { exact: true, name: "Key" }).click();
 
   await page.getByRole("button", { exact: true, name: "Generation" }).click();

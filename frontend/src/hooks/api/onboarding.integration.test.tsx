@@ -148,8 +148,9 @@ function watchResponse(event: SetupProgressEvent) {
 // synchronous functions.
 function streamOf<T>(...items: T[]): AsyncIterable<T> {
   return (async function* stream() {
+    await Promise.resolve();
     for (const item of items) {
-      yield await Promise.resolve(item);
+      yield item;
     }
   })();
 }
@@ -170,23 +171,26 @@ function buildEmbeddedSetupRequest() {
 // never schedules macrotasks) without advancing fake timers, so backoff
 // timers only fire when a test advances them explicitly.
 async function flushMicrotasks(ticks = 20) {
-  for (let tick = 0; tick < ticks; tick += 1) {
-    await act(async () => {
-      await Promise.resolve();
-    });
+  if (ticks <= 0) {
+    return;
   }
+  await act(async () => {
+    await Promise.resolve();
+  });
+  await flushMicrotasks(ticks - 1);
 }
 
 async function flushUntil(condition: () => boolean, maxTicks = 200) {
-  for (let tick = 0; tick < maxTicks; tick += 1) {
-    if (condition()) {
-      return;
-    }
-    await act(async () => {
-      await Promise.resolve();
-    });
+  if (condition()) {
+    return;
   }
-  throw new Error("condition was not met within the microtask budget");
+  if (maxTicks <= 0) {
+    throw new Error("condition was not met within the microtask budget");
+  }
+  await act(async () => {
+    await Promise.resolve();
+  });
+  await flushUntil(condition, maxTicks - 1);
 }
 
 async function advanceTimers(ms: number) {
@@ -195,14 +199,25 @@ async function advanceTimers(ms: number) {
   });
 }
 
+async function advanceWatchBackoffs(index = 0): Promise<void> {
+  const backoffMs = WATCH_BACKOFF_SCHEDULE_MS[index];
+  if (backoffMs === undefined) {
+    return;
+  }
+  await advanceTimers(backoffMs);
+  await advanceWatchBackoffs(index + 1);
+}
+
 afterEach(async () => {
   cleanup();
   // Drop cached mutations so pending garbage-collection timers do not
   // outlive the test.
-  for (const queryClient of activeQueryClients.splice(0)) {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-  }
+  await Promise.all(
+    activeQueryClients.splice(0).map(async (queryClient) => {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+    })
+  );
   vi.useRealTimers();
 });
 
@@ -283,7 +298,7 @@ describe("useSetupAppDatabaseMutation", () => {
       expect(result.current.isError).toBe(true);
     });
     expect(result.current.error?.message).toBe("migration failed");
-    const error = result.current.error;
+    const { error } = result.current;
     expect(error !== null && "failedEvent" in error).toBe(true);
     expect(onError).toHaveBeenCalledTimes(1);
     // The failed event is still surfaced to onProgress before rejection.
@@ -411,7 +426,11 @@ describe("useWatchConfigChanges", () => {
 
     await flushUntil(() => attempts === 1);
 
-    for (const [index, backoffMs] of WATCH_BACKOFF_SCHEDULE_MS.entries()) {
+    async function advanceFailedAttempts(index = 0): Promise<void> {
+      const backoffMs = WATCH_BACKOFF_SCHEDULE_MS[index];
+      if (backoffMs === undefined) {
+        return;
+      }
       // The next attempt only starts once the full backoff has elapsed.
       await advanceTimers(backoffMs - 1);
       await flushMicrotasks();
@@ -419,7 +438,9 @@ describe("useWatchConfigChanges", () => {
 
       await advanceTimers(1);
       await flushUntil(() => attempts === index + 2);
+      await advanceFailedAttempts(index + 1);
     }
+    await advanceFailedAttempts();
 
     await flushUntil(() => result.current.manualRetryRequired);
 
@@ -455,9 +476,7 @@ describe("useWatchConfigChanges", () => {
     );
 
     await flushUntil(() => attempts === 1);
-    for (const backoffMs of WATCH_BACKOFF_SCHEDULE_MS) {
-      await advanceTimers(backoffMs);
-    }
+    await advanceWatchBackoffs();
     await flushUntil(() => result.current.manualRetryRequired);
 
     let retryPromise: Promise<void> | undefined;
@@ -608,9 +627,7 @@ describe("useWatchConfigChanges", () => {
     );
 
     await flushUntil(() => attempts === 1);
-    for (const backoffMs of WATCH_BACKOFF_SCHEDULE_MS) {
-      await advanceTimers(backoffMs);
-    }
+    await advanceWatchBackoffs();
     await flushUntil(() => result.current.manualRetryRequired);
 
     expect(attempts).toBe(4);
@@ -646,9 +663,7 @@ describe("useWatchConfigChanges", () => {
     );
 
     await flushUntil(() => attempts === 1);
-    for (const backoffMs of WATCH_BACKOFF_SCHEDULE_MS) {
-      await advanceTimers(backoffMs);
-    }
+    await advanceWatchBackoffs();
     await flushUntil(() => onError.mock.calls.length === 2);
 
     // Current behavior: a throwing onError consumer is reported a second

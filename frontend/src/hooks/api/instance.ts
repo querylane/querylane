@@ -127,7 +127,7 @@ function runInstanceMutationCacheFollowUp({
   }
 
   if (updateInstances) {
-    const queryKey = listAllInstancesQueryOptions({ transport }).queryKey;
+    const { queryKey } = listAllInstancesQueryOptions({ transport });
     queryClient.setQueryData<ListInstancesResponse>(queryKey, (current) =>
       current
         ? create(ListInstancesResponseSchema, {
@@ -186,16 +186,16 @@ export async function refreshAllInstancesCache({
   queryClient: QueryClient;
   transport: Transport;
 }) {
-  const queryOptions = listAllInstancesQueryOptions({
+  const cacheQueryOptions = listAllInstancesQueryOptions({
     input: input ?? DEFAULT_ALL_INSTANCES_QUERY_INPUT,
     transport,
   });
   await queryClient.cancelQueries(
-    { exact: true, queryKey: queryOptions.queryKey },
+    { exact: true, queryKey: cacheQueryOptions.queryKey },
     { revert: false, silent: true }
   );
   return await queryClient.fetchQuery({
-    ...queryOptions,
+    ...cacheQueryOptions,
     staleTime: QUERY_STALE_TIME.immediate,
   });
 }

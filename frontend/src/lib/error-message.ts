@@ -5,7 +5,7 @@ function errorMessageOf(error: unknown): string {
   if (typeof error === "string") {
     return error;
   }
-  if (error == null) {
+  if (error === null || error === undefined) {
     return "Unknown error";
   }
   try {

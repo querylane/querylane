@@ -18,7 +18,7 @@ function SslNegotiationSelectValue({
   const option = getSslNegotiationOption(value);
   return (
     <SelectValue placeholder={placeholder}>
-      {option ? option.value : placeholder}
+      {option?.value ?? placeholder}
     </SelectValue>
   );
 }

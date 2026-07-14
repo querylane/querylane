@@ -92,7 +92,7 @@ function capabilityValueClass(cap: Capability): string {
 // The trailing marker: a concrete value when one exists, else a check (on) or
 // an "Off" label. Split out as early-returns so CapabilityTile stays simple.
 function CapabilityMarker({ cap }: { cap: Capability }) {
-  if (cap.value != null) {
+  if (cap.value !== undefined) {
     return (
       <span
         className={cn("shrink-0 font-mono text-xs", capabilityValueClass(cap))}

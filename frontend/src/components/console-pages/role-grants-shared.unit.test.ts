@@ -10,10 +10,10 @@ import {
   densityState,
   dominantGrantor,
   type GrantedObject,
+  getObjectTypeLabel,
   grantorSummary,
   groupBySchema,
   groupDefaultPrivileges,
-  OBJECT_TYPE_LABEL,
   objectDisplayName,
   objectMatchesFilters,
   ownedObjectName,
@@ -133,19 +133,19 @@ describe("aggregateGrants", () => {
   });
 });
 
-describe("OBJECT_TYPE_LABEL", () => {
+describe("getObjectTypeLabel", () => {
   test("returns the metadata label for a known object type", () => {
-    expect(OBJECT_TYPE_LABEL(GrantObjectType.MATERIALIZED_VIEW)).toBe(
+    expect(getObjectTypeLabel(GrantObjectType.MATERIALIZED_VIEW)).toBe(
       "Materialized view"
     );
-    expect(OBJECT_TYPE_LABEL(GrantObjectType.LARGE_OBJECT)).toBe(
+    expect(getObjectTypeLabel(GrantObjectType.LARGE_OBJECT)).toBe(
       "Large object"
     );
   });
 
   test("falls back to the generic label for an unknown enum value", () => {
     // Proto3 enums are open: the wire can carry values this client predates.
-    expect(OBJECT_TYPE_LABEL(99 as GrantObjectType)).toBe("Object");
+    expect(getObjectTypeLabel(99 as GrantObjectType)).toBe("Object");
   });
 });
 

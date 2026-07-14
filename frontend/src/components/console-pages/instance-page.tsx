@@ -655,7 +655,7 @@ function InstanceDatabasesSectionHeader({ count }: { count: number | null }) {
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <h2 className="font-semibold text-base text-foreground">Databases</h2>
-          {count == null ? null : (
+          {count === null ? null : (
             <span className="text-muted-foreground text-xs tabular-nums">
               {count}
             </span>
@@ -1038,6 +1038,7 @@ async function saveInstanceConfiguration(
     return;
   }
   setFormNotice(null);
+  let saveResult: InstanceSaveResult;
   try {
     await updateInstanceMutation.mutateAsync(
       buildInstanceUpdateInput({
@@ -1064,22 +1065,21 @@ async function saveInstanceConfiguration(
       getInstanceConfigSaveFieldViolationOutcome(error);
     if (fieldViolationOutcome) {
       setFormNotice(fieldViolationOutcome.notice);
-      return {
+      saveResult = {
         fieldErrors: fieldViolationOutcome.fieldErrors,
         firstInvalidField: fieldViolationOutcome.firstInvalidField,
       };
+    } else {
+      const uiError = normalizeAppUiError(error, {
+        action: "save instance configuration",
+        area: "console.instance.configuration",
+        source: "mutation",
+        surface: "inline",
+      });
+      setFormNotice({ message: uiError.message, variant: "error" });
     }
-
-    const uiError = normalizeAppUiError(error, {
-      action: "save instance configuration",
-      area: "console.instance.configuration",
-      source: "mutation",
-      surface: "inline",
-    });
-    setFormNotice({ message: uiError.message, variant: "error" });
   }
-
-  return;
+  return saveResult;
 }
 
 async function deleteInstanceFromPage({

@@ -152,7 +152,7 @@ async function buildStreamRowsExportPayloadUnsafe({
   for await (const response of stream) {
     switch (response.event.case) {
       case "metadata":
-        columns = response.event.value.columns;
+        ({ columns } = response.event.value);
         builder = createChunkedExportBuilder(
           exportFormat,
           columns,
@@ -176,8 +176,7 @@ async function buildStreamRowsExportPayloadUnsafe({
         break;
       }
       case "stats":
-        rowCount = response.event.value.rowCount;
-        truncated = response.event.value.truncated;
+        ({ rowCount, truncated } = response.event.value);
         onProgress?.({ rowCount, truncated });
         break;
       case undefined:
@@ -228,8 +227,7 @@ async function createBrowserFileSink(
     return;
   }
 
-  const showSaveFilePicker = (window as WindowWithSaveFilePicker)
-    .showSaveFilePicker;
+  const { showSaveFilePicker } = window as WindowWithSaveFilePicker;
   if (!showSaveFilePicker) {
     return;
   }
@@ -248,14 +246,23 @@ async function createBrowserFileSink(
     ],
   });
   const writable = await handle.createWritable();
+
+  async function writeChunks(
+    chunks: readonly BlobPart[],
+    index = 0
+  ): Promise<void> {
+    const chunk = chunks[index];
+    if (chunk === undefined) {
+      return;
+    }
+    await writable.write(chunk);
+    await writeChunks(chunks, index + 1);
+  }
+
   return {
     abort: () => writable.abort?.(),
     close: () => writable.close(),
-    write: async (chunks) => {
-      for (const chunk of chunks) {
-        await writable.write(chunk);
-      }
-    },
+    write: writeChunks,
   };
 }
 

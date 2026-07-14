@@ -814,7 +814,12 @@ test("console SQLSTATE error surfaces keep common PostgreSQL failures scannable"
     .element(page.getByRole("heading", { name: "SQLSTATE diagnostics" }))
     .toBeVisible();
 
-  for (const scenario of scenarios) {
+  async function captureScenario(index: number): Promise<void> {
+    const scenario = scenarios[index];
+    if (!scenario) {
+      return;
+    }
+
     const section = page.getByTestId(`sqlstate-scenario-${scenario.slug}`);
     await expect(section).toMatchScreenshot(
       `console-sqlstate-${scenario.slug}`
@@ -830,7 +835,11 @@ test("console SQLSTATE error surfaces keep common PostgreSQL failures scannable"
     await expect
       .element(page.getByText(`SQLSTATE: ${scenario.sqlstate}`))
       .not.toBeInTheDocument();
+
+    await captureScenario(index + 1);
   }
+
+  await captureScenario(0);
 });
 
 test("console empty states distinguish config-managed and user-actionable gaps", async () => {

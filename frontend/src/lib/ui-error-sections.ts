@@ -469,7 +469,7 @@ function buildMetadataSectionContent(
 function buildResponseBodySection(
   error: AppUiError
 ): AppUiErrorTechnicalSection | null {
-  const response = error.context.response;
+  const { response } = error.context;
   if (!response?.bodyText) {
     return null;
   }

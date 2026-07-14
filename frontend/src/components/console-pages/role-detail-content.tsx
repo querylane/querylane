@@ -81,7 +81,7 @@ function useRoleGrants({
   loadGrants: boolean;
   roleId: string;
 }) {
-  const queryEnabled = effectiveDbId != null && loadGrants;
+  const queryEnabled = effectiveDbId !== null && loadGrants;
   const grantsQuery = useListAllRoleGrantsQuery(
     roleGrantsForDatabaseQueryInput({
       databaseId: effectiveDbId ?? "",
@@ -101,12 +101,12 @@ function useRoleGrants({
     grantObjects,
     grantSchemaCount: grantSchemaNames.size,
     grantsDeferred:
-      effectiveDbId != null && !loadGrants && grantsQuery.data == null,
+      effectiveDbId !== null && !loadGrants && grantsQuery.data === undefined,
     grantsError: grantsQuery.error,
     grantsPending: grantsQuery.isPending,
     grantsReady:
-      effectiveDbId != null &&
-      grantsQuery.data != null &&
+      effectiveDbId !== null &&
+      grantsQuery.data !== undefined &&
       !grantsQuery.isPending &&
       !grantsQuery.error,
   };
@@ -128,7 +128,7 @@ function useRoleFacets({
   loadFacets: boolean;
   roleId: string;
 }) {
-  const facetsEnabled = effectiveDbId != null && !isSystem;
+  const facetsEnabled = effectiveDbId !== null && !isSystem;
   const queryEnabled = facetsEnabled && loadFacets;
   const databaseId = effectiveDbId ?? "";
   const ownedObjectsQuery = useListAllRoleOwnedObjectsQuery(
@@ -149,7 +149,7 @@ function useRoleFacets({
   );
   const ownedReady =
     facetsEnabled &&
-    ownedObjectsQuery.data != null &&
+    ownedObjectsQuery.data !== undefined &&
     !ownedObjectsQuery.isPending &&
     !ownedObjectsQuery.error;
   return {
@@ -157,15 +157,17 @@ function useRoleFacets({
     facetStates: {
       defaults: facetStateOf(facetsEnabled, defaultPrivilegesQuery, {
         deferred:
-          facetsEnabled && !loadFacets && defaultPrivilegesQuery.data == null,
+          facetsEnabled &&
+          !loadFacets &&
+          defaultPrivilegesQuery.data === undefined,
       }),
       owned: facetStateOf(facetsEnabled, ownedObjectsQuery, {
         deferred:
-          facetsEnabled && !loadFacets && ownedObjectsQuery.data == null,
+          facetsEnabled && !loadFacets && ownedObjectsQuery.data === undefined,
       }),
       publicGrants: facetStateOf(facetsEnabled, publicGrantsQuery, {
         deferred:
-          facetsEnabled && !loadFacets && publicGrantsQuery.data == null,
+          facetsEnabled && !loadFacets && publicGrantsQuery.data === undefined,
       }),
     } satisfies FacetStates,
     ownedError: ownedObjectsQuery.error,
@@ -265,7 +267,7 @@ function RoleDetailContent({
     grantsSchema,
     grantsType
   );
-  const attributes = role.attributes;
+  const { attributes } = role;
   const kind = deriveRoleKind(role);
   const isSystem = role.isSystemRole || isPredefinedRoleName(role.roleName);
   const builtinInfo = predefinedRoleInfo(role.roleName);
@@ -364,7 +366,7 @@ function RoleDetailContent({
   const rlsNote = rlsNoteText({ bypassesRls, isSuperuser, tableAccessActive });
 
   const builtinDetail = builtinDetailText(builtinInfo, builtinParents);
-  const builtinActive = builtinInfo != null || builtinParents.length > 0;
+  const builtinActive = builtinInfo !== null || builtinParents.length > 0;
 
   const accessRows = buildAccessRows({
     belongsTo,

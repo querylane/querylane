@@ -119,7 +119,8 @@ function createRefreshOnboardingStateAction(
   requestSequence: { current: number }
 ): SetupState["refreshOnboardingState"] {
   return async () => {
-    const requestId = ++requestSequence.current;
+    requestSequence.current += 1;
+    const requestId = requestSequence.current;
     try {
       const response = await dependencies.onboardingClient.getOnboardingState(
         {}
@@ -165,7 +166,8 @@ function createVerifyAfterSetupAction(
       status: "verifying",
     });
 
-    const requestId = ++requestSequence.current;
+    requestSequence.current += 1;
+    const requestId = requestSequence.current;
     try {
       const response = await dependencies.onboardingClient.getOnboardingState(
         {}

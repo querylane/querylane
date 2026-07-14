@@ -1077,7 +1077,7 @@ function QueryInsightsContent({
 }) {
   const [selectedQuerySelection, setSelectedQuerySelection] =
     useState<QuerySelection | null>(() => {
-      const firstQuery = indexQueries(insights.topQueries)[0];
+      const [firstQuery] = indexQueries(insights.topQueries);
       return firstQuery
         ? createQuerySelection(firstQuery, insights.topQueries)
         : null;

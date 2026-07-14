@@ -114,7 +114,7 @@ function initialAssetPaths(indexHtml: string): string[] {
   for (const match of indexHtml.matchAll(
     /<(?:script|link)\b[^>]+(?:src|href)="([^"]+)"/g
   )) {
-    const assetPath = match[1];
+    const [, assetPath] = match;
     if (!assetPath) {
       continue;
     }
@@ -246,7 +246,7 @@ function collectBundleBudgetStats({
   const initialScriptRaw = initialAssets
     .filter((asset) => asset.path.endsWith(".js"))
     .reduce((sum, asset) => sum + asset.raw, 0);
-  const maxAsyncScript = asyncScripts.toSorted((a, b) => b.gzip - a.gzip)[0];
+  const [maxAsyncScript] = asyncScripts.toSorted((a, b) => b.gzip - a.gzip);
   const totalGzip = allAssets.reduce((sum, asset) => sum + asset.gzip, 0);
   const totalBrotli = allAssets.reduce((sum, asset) => sum + asset.brotli, 0);
   const totalRaw = allAssets.reduce((sum, asset) => sum + asset.raw, 0);
@@ -419,7 +419,7 @@ function runBundleBudgetCheck() {
 }
 
 function isMainModule() {
-  const entryPath = process.argv[1];
+  const [, entryPath] = process.argv;
   return entryPath
     ? resolve(entryPath) === fileURLToPath(import.meta.url)
     : false;

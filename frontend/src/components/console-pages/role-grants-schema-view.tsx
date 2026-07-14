@@ -37,11 +37,11 @@ export function SchemaGrantsView({
   // Ignore a type that isn't present in this schema (e.g. a stale deep link).
   const requestedType = type ? SLUG_TO_OBJECT_TYPE[type] : undefined;
   const activeType =
-    requestedType != null && group.byType.has(requestedType)
+    requestedType !== undefined && group.byType.has(requestedType)
       ? requestedType
       : undefined;
   const activeKind =
-    activeType == null ? "all" : (slugForObjectType(activeType) ?? "all");
+    activeType === undefined ? "all" : (slugForObjectType(activeType) ?? "all");
   const grantor = dominantGrantor(group.objects);
   const routeSchema = group.database
     ? (databaseName ?? group.schema)

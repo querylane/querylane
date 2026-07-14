@@ -79,9 +79,9 @@ export function RetryActionButton({
         ) : (
           <RefreshCw className="size-4" />
         )}
-        {retryPending ? pendingLabel : label}
+        {String(retryPending ? pendingLabel : label)}
       </Button>
-      {retryError ? (
+      {retryError === null ? null : (
         <span
           className="text-destructive text-xs"
           id={retryErrorId}
@@ -89,7 +89,7 @@ export function RetryActionButton({
         >
           {retryError}
         </span>
-      ) : null}
+      )}
     </span>
   );
 }

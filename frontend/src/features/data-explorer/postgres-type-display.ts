@@ -510,17 +510,16 @@ function describeCharacterType(
       summary: "Fixed-length, blank-padded character string.",
     });
   }
-  if (VARIABLE_CHARACTER_TYPES.has(normalized)) {
-    return withDisplay(column, {
-      badges: [
-        "variable length",
-        length > 0 ? `limit ${length} chars` : "unbounded",
-      ],
-      category: "Text",
-      summary: "Variable-length character string.",
-    });
-  }
-  return;
+  return VARIABLE_CHARACTER_TYPES.has(normalized)
+    ? withDisplay(column, {
+        badges: [
+          "variable length",
+          length > 0 ? `limit ${length} chars` : "unbounded",
+        ],
+        category: "Text",
+        summary: "Variable-length character string.",
+      })
+    : undefined;
 }
 
 function describeIntervalVariantType(

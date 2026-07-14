@@ -300,7 +300,7 @@ const TRIGGER_STATE_FILTER_LABELS: Record<TriggerStateFilter, string> = {
   enabled: "Enabled",
 };
 const TRIGGER_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS;
-const DEFAULT_TRIGGER_PAGE_SIZE = TRIGGER_PAGE_SIZE_OPTIONS[0];
+const [DEFAULT_TRIGGER_PAGE_SIZE] = TRIGGER_PAGE_SIZE_OPTIONS;
 const PARTITION_BOUND_KIND_ORDER = [
   "range",
   "list",
@@ -875,7 +875,7 @@ const columnInventoryColumns: DataTableColumnDef<ColumnRow>[] = [
   {
     accessorFn: (row) => row.column.defaultValue,
     cell: ({ row }) => {
-      const defaultValue = row.original.column.defaultValue;
+      const { defaultValue } = row.original.column;
       return defaultValue ? (
         <span title={defaultValue}>{defaultValue}</span>
       ) : (
@@ -1896,7 +1896,7 @@ function PartitionsTab({
     return <TableResourceEmptyState category="partitions" toolbar={toolbar} />;
   }
 
-  const childPartitions = metadata.childPartitions;
+  const { childPartitions } = metadata;
   const partitionModel = derivePartitionViewModel({
     currentDate: new Date(query.dataUpdatedAt),
     partitionKey: metadata.partitionKey,
@@ -2534,7 +2534,7 @@ function IndexesTab({
   if (!query.data || query.isLoading) {
     return <TabSkeleton />;
   }
-  const indexes = query.data.indexes;
+  const { indexes } = query.data;
   const totalSizeBytes = sumIndexSizeBytes(indexes);
   const totalScanCount = sumIndexScans(indexes);
   const usageStatsAvailable = hasIndexUsageStats(indexes);
@@ -3000,7 +3000,7 @@ function ConstraintsTab({
   if (!query.data || query.isLoading) {
     return <TabSkeleton />;
   }
-  const constraints = query.data.constraints;
+  const { constraints } = query.data;
   const normalizedSearch = search.trim().toLowerCase();
   const visibleConstraints = constraints.filter(
     (constraint) =>
@@ -3555,7 +3555,7 @@ function PoliciesTab({
   if (!query.data || query.isLoading) {
     return <TabSkeleton />;
   }
-  const policies = query.data.policies;
+  const { policies } = query.data;
   const normalizedSearch = policySearch.trim().toLocaleLowerCase();
   const visiblePolicies = filterPoliciesByMode(
     policies,
@@ -4018,7 +4018,7 @@ function TriggersTab({
   if (!query.data || query.isLoading) {
     return <TabSkeleton />;
   }
-  const triggers = query.data.triggers;
+  const { triggers } = query.data;
   const filteredTriggers = filterTableTriggers(triggers, {
     search,
     states: stateFilters.filter(isTriggerStateFilter),

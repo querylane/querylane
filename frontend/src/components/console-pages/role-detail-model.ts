@@ -165,10 +165,7 @@ function facetAccessActive(state: FacetState, count: number): boolean {
 }
 
 function facetAccessJump(state: FacetState, count: number) {
-  if (state === "idle" || count > 0) {
-    return GRANTS_JUMP;
-  }
-  return;
+  return state === "idle" || count > 0 ? GRANTS_JUMP : undefined;
 }
 
 function facetAccessStatus(state: FacetState, count: number): string {
@@ -346,7 +343,7 @@ function directGrantsSubText({
   grantSchemaCount: number;
   grantsReady: boolean;
 }): string | undefined {
-  if (effectiveDbId == null) {
+  if (effectiveDbId === null) {
     return "No databases";
   }
   if (error) {
@@ -355,10 +352,9 @@ function directGrantsSubText({
   if (deferred) {
     return "Open Grants to load direct grants";
   }
-  if (grantsReady) {
-    return `objects across ${grantSchemaCount} schema${grantSchemaCount === 1 ? "" : "s"}`;
-  }
-  return;
+  return grantsReady
+    ? `objects across ${grantSchemaCount} schema${grantSchemaCount === 1 ? "" : "s"}`
+    : undefined;
 }
 
 // KPI sub-label for the Owns tile, mirroring directGrantsSubText's states.
@@ -377,7 +373,7 @@ function ownedSubText({
   ownedCount: number;
   ownedReady: boolean;
 }): string | undefined {
-  if (effectiveDbId == null) {
+  if (effectiveDbId === null) {
     return "No databases";
   }
   if (error) {
@@ -386,12 +382,11 @@ function ownedSubText({
   if (deferred) {
     return "Open Grants to load ownership";
   }
-  if (ownedReady) {
-    return ownedCount > 0
+  const ownedSummary =
+    ownedCount > 0
       ? `object${ownedCount === 1 ? "" : "s"} in ${databaseName ?? "db"}`
       : "no owned objects";
-  }
-  return;
+  return ownedReady ? ownedSummary : undefined;
 }
 
 // The RLS caveat shown under the access summary: superuser/BYPASSRLS overrides
@@ -487,7 +482,7 @@ function buildAccessRows({
       // Self-built-in is explained by the Capabilities card; via-membership jumps
       // to the Membership tab where the parent role is listed.
       jump:
-        builtinInfo == null && builtinParents.length > 0
+        builtinInfo === null && builtinParents.length > 0
           ? { label: "Membership", section: "members" }
           : undefined,
       label: "Built-in role powers",

@@ -404,8 +404,8 @@ const LOADING_SKELETON_KEYS = Array.from(
 );
 const EMPTY_SCHEMA_SUMMARIES: SchemaSummary[] = [];
 
-function noopSchemaTabChange(_tab: SchemaDetailTab) {
-  return;
+function noopSchemaTabChange(_tab: SchemaDetailTab): null {
+  return null;
 }
 
 function SchemaObjectsLoading() {

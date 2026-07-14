@@ -92,7 +92,7 @@ function RunnerFilterSelect({
     >
       <SelectTrigger aria-label="Filter by runner" className="h-8 w-56">
         <SelectValue>
-          {value === ALL_RUNNERS_FILTER_VALUE ? "All runners" : value}
+          {value === ALL_RUNNERS_FILTER_VALUE ? "All runners" : String(value)}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>

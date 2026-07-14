@@ -36,8 +36,8 @@ interface ForeignKeyReferencePreview {
   targetLabel: string;
 }
 
-function ignoreUnknownTableValueKind(_value: never): undefined {
-  return;
+function ignoreUnknownTableValueKind(value: never): void {
+  Boolean(value);
 }
 
 function tableCellValueToFilterValue(
@@ -50,26 +50,29 @@ function tableCellValueToFilterValue(
   if (!value) {
     return;
   }
+  let filterValue: TableValue | undefined;
   switch (value.case) {
     case undefined:
     case "nullValue":
-      return;
+      break;
     case "bytesValue":
     case "doubleValue":
-      if (value.case === "doubleValue" && !Number.isFinite(value.value)) {
-        return;
+      if (value.case !== "doubleValue" || Number.isFinite(value.value)) {
+        filterValue = cell.value;
       }
-      return cell.value;
+      break;
     case "boolValue":
     case "int64Value":
     case "jsonValue":
     case "numericValue":
     case "stringValue":
     case "timestampValue":
-      return cell.value;
+      filterValue = cell.value;
+      break;
     default:
-      return ignoreUnknownTableValueKind(value);
+      ignoreUnknownTableValueKind(value);
   }
+  return filterValue;
 }
 
 function foreignKeyReferencesForColumn(

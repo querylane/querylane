@@ -52,7 +52,7 @@ export function AbbrPill({
           state === "partial"
             ? PRIV_TONE_PARTIAL_CLASS[tone]
             : PRIV_TONE_CLASS[tone],
-          count != null && "min-w-[2.75rem]"
+          count !== undefined && "min-w-[2.75rem]"
         );
   return (
     <Tooltip>
@@ -61,7 +61,7 @@ export function AbbrPill({
         {state !== "none" && grantable ? (
           <span className="font-bold leading-none">+</span>
         ) : null}
-        {state !== "none" && count != null ? (
+        {state !== "none" && count !== undefined ? (
           <span className="text-[9px] opacity-80">
             {count.toLocaleString()}
           </span>
@@ -209,7 +209,7 @@ export function ContentHead({
         <Icon className={cn("size-4 text-muted-foreground", iconClassName)} />
         <h2 className="font-semibold text-xl tracking-tight">{title}</h2>
         {children}
-        {count == null ? null : (
+        {count === undefined ? null : (
           <span className="inline-flex h-[18px] items-center rounded-full border border-border bg-secondary px-[7px] font-medium font-mono text-[11px] text-muted-foreground tracking-[0.02em]">
             {count.toLocaleString()}
             {countUnit ? (

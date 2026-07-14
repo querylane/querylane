@@ -62,11 +62,14 @@ const EXPORT_FORMAT_SAVE_PICKER_CASES = [
 }>;
 
 function streamOf<T>(...items: T[]): AsyncIterable<T> {
-  return (async function* stream() {
-    for (const item of items) {
-      yield await Promise.resolve(item);
-    }
-  })();
+  return {
+    [Symbol.asyncIterator]() {
+      const iterator = items[Symbol.iterator]();
+      return {
+        next: () => Promise.resolve(iterator.next()),
+      };
+    },
+  };
 }
 
 function column(name: string) {

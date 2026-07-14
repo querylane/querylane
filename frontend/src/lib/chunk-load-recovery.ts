@@ -72,11 +72,13 @@ function getChunkLoadSessionStorage(): Storage | undefined {
     return;
   }
 
+  let storage: Storage | undefined;
   try {
-    return window.sessionStorage;
+    storage = window.sessionStorage;
   } catch {
-    return;
+    // Session storage can be unavailable in privacy-restricted contexts.
   }
+  return storage;
 }
 
 function reloadChunkLoadErrorOnce({

@@ -243,7 +243,7 @@ vi.mock("@/hooks/api/role", () => ({
 }));
 
 function applyFixtureManagedScreenshotScale() {
-  const frameElement = window.frameElement;
+  const { frameElement } = window;
   if (frameElement?.tagName !== "IFRAME") {
     return;
   }

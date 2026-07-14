@@ -1113,8 +1113,7 @@ test("filter popover keeps multiple rules compact and aligned", async () => {
     const removeButton = row.querySelector<HTMLElement>(
       'button[aria-label="Remove filter"]'
     );
-    const columnTrigger = triggers[0];
-    const operatorTrigger = triggers[1];
+    const [columnTrigger, operatorTrigger] = triggers;
     if (!(columnTrigger && operatorTrigger && valueInput && removeButton)) {
       throw new Error("expected complete filter row controls");
     }
@@ -1126,7 +1125,7 @@ test("filter popover keeps multiple rules compact and aligned", async () => {
     };
   });
 
-  const first = rowBoxes[0];
+  const [first] = rowBoxes;
   if (!first) {
     throw new Error("expected filter row boxes");
   }
@@ -1302,8 +1301,7 @@ test("sort popover keeps every row control aligned", async () => {
       '[data-slot="select-trigger"]'
     );
     expect(triggers).toHaveLength(2);
-    const columnTrigger = triggers[0];
-    const directionTrigger = triggers[1];
+    const [columnTrigger, directionTrigger] = triggers;
     if (!(columnTrigger && directionTrigger)) {
       throw new Error("expected sort row controls");
     }

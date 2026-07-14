@@ -1167,7 +1167,7 @@ describe("backend database query insights drawer", () => {
     const unavailableQueryButtons = screen.getAllByRole("button", {
       name: "Query text unavailable",
     });
-    const firstUnavailableQueryButton = unavailableQueryButtons[0];
+    const [firstUnavailableQueryButton] = unavailableQueryButtons;
     if (!firstUnavailableQueryButton) {
       throw new Error("Expected an unavailable query button");
     }

@@ -14,7 +14,11 @@ function fakePaginator(pages: FakePage[]) {
   let call = 0;
   return {
     calls: () => call,
-    load: () => Promise.resolve(pages[call++] ?? { items: [] }),
+    load: () => {
+      const page = pages[call];
+      call += 1;
+      return Promise.resolve(page ?? { items: [] });
+    },
   };
 }
 
@@ -64,7 +68,7 @@ describe("paginateAll", () => {
     let call = 0;
     await expect(
       paginateAll(() => {
-        call++;
+        call += 1;
         return Promise.resolve({
           items: [`item${call}`],
           nextPageToken: "stuck",
@@ -100,7 +104,7 @@ describe("paginateAll", () => {
     let call = 0;
     await expect(
       paginateAll(() => {
-        call++;
+        call += 1;
         if (call === 2) {
           throw new Error("page 2 failed");
         }
@@ -128,7 +132,7 @@ describe("paginateAllWithLastResponse", () => {
 
     await expect(
       paginateAllWithLastResponse(() => {
-        call++;
+        call += 1;
         return Promise.resolve({
           items: [`item${call}`],
           nextPageToken: "stuck",

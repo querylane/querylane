@@ -26,8 +26,7 @@ function AccessSummaryRow({
   onJump: (section: Section) => void;
   row: AccessSourceRow;
 }) {
-  const Icon = row.icon;
-  const jump = row.jump;
+  const { icon: Icon, jump } = row;
   const inner = (
     <>
       <span

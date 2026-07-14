@@ -117,7 +117,7 @@ export function InstanceStatItem({
           </div>
         ) : null}
       </div>
-      {progress == null ? null : (
+      {progress === undefined ? null : (
         <Progress className="gap-0" value={progress} />
       )}
       {notice ? (

@@ -227,7 +227,7 @@ describe("useTableDataController", () => {
     controller.goNext("page-2");
     controller.goPrev();
 
-    const pageTokenSetter = setStateMocks[0];
+    const [pageTokenSetter] = setStateMocks;
     if (!pageTokenSetter) {
       throw new Error("expected page token setter");
     }
@@ -271,7 +271,7 @@ describe("useTableDataController", () => {
 
     controller.goNext("page-2");
 
-    const pageTokenSetter = setStateMocks[0];
+    const [pageTokenSetter] = setStateMocks;
     if (!pageTokenSetter) {
       throw new Error("expected page token setter");
     }

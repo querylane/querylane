@@ -56,7 +56,7 @@ function countRowsWithTruncatedCells(
   for (const row of rows) {
     for (const column of columns) {
       if (row.cells.get(column.columnName)?.truncated === true) {
-        count++;
+        count += 1;
         break;
       }
     }
@@ -339,7 +339,7 @@ function appendJsonRows(
     chunks.push(
       indentJsonChunk(JSON.stringify(formatJsonRecord(row, columns), null, 2))
     );
-    appended++;
+    appended += 1;
   }
   return appended;
 }
@@ -378,7 +378,7 @@ function appendSqlRows({
     }
 
     chunks.push(formatSqlValueRow(row, columns));
-    appended++;
+    appended += 1;
   }
   return appended;
 }

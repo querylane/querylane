@@ -134,12 +134,9 @@ function objectNavigation(
       to: "explorer" as const,
     };
   }
-  if (grant.schemaName) {
-    return { schema: grant.schemaName, to: "explorer" as const };
-  }
-  // Large objects are intentionally non-navigable: Querylane surfaces their
-  // grants by OID but does not include a large-object browser/editor.
-  return;
+  return grant.schemaName
+    ? { schema: grant.schemaName, to: "explorer" as const }
+    : undefined;
 }
 
 function defaultPrivilegeScopeLine(privilege: AccessDefaultPrivilege): string {

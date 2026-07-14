@@ -114,7 +114,6 @@ async function runWatchStreamWithRetries({
         return;
       }
       onComplete?.();
-      return;
     } catch (error) {
       if (isCancelled()) {
         return;
@@ -129,7 +128,6 @@ async function runWatchStreamWithRetries({
 
       setManualRetryRequired(true);
       onError?.(toError(error), "stream_error");
-      return;
     }
   };
 

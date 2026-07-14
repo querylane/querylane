@@ -21,7 +21,7 @@ function parseRouteIdsFromPathname(pathname: string): RouteIds {
     return {};
   }
 
-  const instanceId = segments[1];
+  const [, instanceId] = segments;
   if (!instanceId) {
     return {};
   }
@@ -34,7 +34,7 @@ function parseRouteIdsFromPathname(pathname: string): RouteIds {
     return routeIds;
   }
 
-  const databaseId = segments[3];
+  const [, , , databaseId] = segments;
   if (!databaseId) {
     return routeIds;
   }

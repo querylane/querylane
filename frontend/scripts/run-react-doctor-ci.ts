@@ -50,9 +50,10 @@ const GITHUB_API_VERSION = "2022-11-28";
 const GITHUB_JSON_MEDIA_TYPE = "application/vnd.github+json";
 const MAX_COMMENT_DIAGNOSTICS = 20;
 const SHORT_SHA_LENGTH = 7;
+const runtimeEnv = new Map(Object.entries(env));
 
 function getEnv(name: string) {
-  return env[name];
+  return runtimeEnv.get(name);
 }
 
 function readPullRequestEvent() {
@@ -286,23 +287,23 @@ if (result.stderr) {
   stderr.write(result.stderr);
 }
 
-const report = readReport(result.stdout);
-if (!report) {
+const doctorReport = readReport(result.stdout);
+if (!doctorReport) {
   stdout.write(result.stdout);
   exit(result.status ?? 1);
 }
 
 const event = readPullRequestEvent();
-const commitSha = event?.pull_request?.head?.sha ?? getEnv("GITHUB_SHA");
-const markdown = renderMarkdown(report, commitSha);
+const headCommitSha = event?.pull_request?.head?.sha ?? getEnv("GITHUB_SHA");
+const summaryMarkdown = renderMarkdown(doctorReport, headCommitSha);
 const stepSummaryPath = getEnv("GITHUB_STEP_SUMMARY");
 if (stepSummaryPath) {
-  appendFileSync(stepSummaryPath, markdown);
+  appendFileSync(stepSummaryPath, summaryMarkdown);
 }
-stdout.write(markdown);
+stdout.write(summaryMarkdown);
 
 try {
-  await publishGitHubResult(report, markdown);
+  await publishGitHubResult(doctorReport, summaryMarkdown);
 } catch (error) {
   stderr.write(
     `Could not publish React Doctor GitHub result: ${String(error)}\n`
@@ -310,4 +311,4 @@ try {
   exit(1);
 }
 
-exit(result.status ?? (report.ok === false ? 1 : 0));
+exit(result.status ?? (doctorReport.ok === false ? 1 : 0));

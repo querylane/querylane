@@ -28,25 +28,23 @@ export async function paginateAllWithLastResponse<
 ): Promise<{ items: Item[]; lastResponse: Response | undefined }> {
   const items: Item[] = [];
   const seenPageTokens = new Set<string>();
-  let pageToken: string | undefined;
-  let lastResponse: Response | undefined;
 
-  while (true) {
+  async function collectPage(pageToken?: string): Promise<Response> {
     const response = await loadPage(pageToken);
-    lastResponse = response;
     items.push(...selectItems(response));
 
-    const nextPageToken = response.nextPageToken;
+    const { nextPageToken } = response;
     if (nextPageToken === undefined || nextPageToken === "") {
-      break;
+      return response;
     }
     if (seenPageTokens.has(nextPageToken)) {
       throw new Error("pagination returned a repeated next page token");
     }
 
     seenPageTokens.add(nextPageToken);
-    pageToken = nextPageToken;
+    return collectPage(nextPageToken);
   }
 
+  const lastResponse = await collectPage();
   return { items, lastResponse };
 }
