@@ -535,9 +535,34 @@ describe("TableDetail definition document", () => {
     expect(getSqlCodeBlock(TRIGGER_SQL_RE)).toBeTruthy();
     expect(getSqlCodeBlock(FULL_TRIGGER_STATEMENTS_SQL_RE)).toBeTruthy();
     expect(getSqlCodeBlock(SNIPPET_TRIGGER_UNAVAILABLE_RE)).toBeTruthy();
+    const reproduceHeading = screen.getByRole("heading", {
+      name: "Reproduce locally",
+    });
+    const reproduceCard =
+      reproduceHeading.closest<HTMLElement>('[data-slot="card"]');
+    if (!reproduceCard) {
+      throw new Error("Expected the reproduce locally card to render.");
+    }
+    const reproduceCardQueries = within(reproduceCard);
+    const scopeTabs = reproduceCardQueries.getByRole("tablist", {
+      name: "Reproduction scope",
+    });
+    expect(scopeTabs.getAttribute("data-variant")).toBe("default");
     expect(
-      screen.getByRole("heading", { name: "Reproduce locally" })
+      reproduceCardQueries.getByRole("tab", { name: "customers" })
     ).toBeTruthy();
+    expect(
+      reproduceCardQueries.getByRole("tab", { name: "public" })
+    ).toBeTruthy();
+    expect(reproduceCardQueries.getByRole("tab", { name: "app" })).toBeTruthy();
+    const copyAllSteps = reproduceCardQueries.getByRole("button", {
+      name: "Copy all steps",
+    });
+    expect(
+      reproduceHeading
+        .closest('[data-slot="card-header"]')
+        ?.contains(copyAllSteps)
+    ).toBe(true);
     const highlightedCommands = Array.from(
       container.querySelectorAll(
         'pre code.language-bash[data-syntax-highlighter="shiki"]'
