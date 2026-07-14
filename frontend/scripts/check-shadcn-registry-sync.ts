@@ -21,9 +21,12 @@ const FILES_SUMMARY_PATTERN =
   /^\s*(?:[├+|]\s*)?Files\s*\(\d+\)(?<summary>[^\n]*)$/mu;
 const OVERWRITE_SUMMARY_PATTERN = /~(?<count>\d+)\s+overwrite\b/u;
 const NO_CHANGES_PATTERN = /\bNo changes\./u;
-// This is a deliberate strict TypeScript compatibility patch against shadcn
-// output: sonner sanitizes the resolved theme before passing it to Sonner.
-const ALLOWED_STRICT_TYPESCRIPT_DRIFT_FILES = new Set([
+// Deliberate patches against shadcn output: interactive items use the pointer
+// cursor, and sonner sanitizes the resolved theme before passing it to Sonner.
+const ALLOWED_REGISTRY_DRIFT_FILES = new Set([
+  "src/components/ui/command.tsx",
+  "src/components/ui/dropdown-menu.tsx",
+  "src/components/ui/select.tsx",
   "src/components/ui/sonner.tsx",
 ]);
 
@@ -251,14 +254,14 @@ function runShadcnRegistrySyncCheck({
   }
 
   const blockingOverwriteFiles = overwriteFiles.filter(
-    (file) => !ALLOWED_STRICT_TYPESCRIPT_DRIFT_FILES.has(file)
+    (file) => !ALLOWED_REGISTRY_DRIFT_FILES.has(file)
   );
   const allowedOverwriteFiles = overwriteFiles.filter((file) =>
-    ALLOWED_STRICT_TYPESCRIPT_DRIFT_FILES.has(file)
+    ALLOWED_REGISTRY_DRIFT_FILES.has(file)
   );
 
   if (allowedOverwriteFiles.length > 0) {
-    console.log("Allowed strict TypeScript compatibility patches:");
+    console.log("Allowed deliberate registry patches:");
     for (const file of allowedOverwriteFiles) {
       console.log(`- ${file}`);
     }
