@@ -255,7 +255,9 @@ function BuiltinExtraGrantsCard({
   selectedDatabaseId: string | undefined;
 }) {
   let body: React.ReactNode;
-  if (databases.length === 0) {
+  if (isPending) {
+    body = <p className="text-muted-foreground text-sm">Loading grants…</p>;
+  } else if (databases.length === 0) {
     body = (
       <EmptyState
         description="This instance has no databases to inspect for object privileges."
@@ -263,8 +265,6 @@ function BuiltinExtraGrantsCard({
         title="No databases"
       />
     );
-  } else if (isPending) {
-    body = <p className="text-muted-foreground text-sm">Loading grants…</p>;
   } else if (error) {
     body = (
       <p className="text-destructive text-sm">

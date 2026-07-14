@@ -161,6 +161,44 @@ test("catalog loading remains visible beside available screen targets", async ()
   expect(screen.getByText("Overview")).toBeDefined();
 });
 
+test("role loading replaces the no-matches state while search resolves", async () => {
+  commandPaletteMockState.rolesQuery.isPending = true;
+  const user = userEvent.setup();
+  render(<AdminCommandPalette />);
+
+  await user.click(screen.getByRole("button", { name: "Search or jump to" }));
+  await user.type(
+    await screen.findByRole("combobox", {
+      name: "Search tables, screens, roles, or saved queries",
+    }),
+    "unresolved-role"
+  );
+
+  expect(await screen.findByText("Loading roles…")).toBeDefined();
+  expect(
+    screen.queryByText("No matches — try a table or role name")
+  ).toBeNull();
+});
+
+test("role errors replace the no-matches state when search cannot resolve", async () => {
+  commandPaletteMockState.rolesQuery.error = new Error("roles offline");
+  const user = userEvent.setup();
+  render(<AdminCommandPalette />);
+
+  await user.click(screen.getByRole("button", { name: "Search or jump to" }));
+  await user.type(
+    await screen.findByRole("combobox", {
+      name: "Search tables, screens, roles, or saved queries",
+    }),
+    "unresolved-role"
+  );
+
+  expect(await screen.findByText("Could not load roles")).toBeDefined();
+  expect(
+    screen.queryByText("No matches — try a table or role name")
+  ).toBeNull();
+});
+
 test("catalog errors remain visible beside available screen targets", async () => {
   commandPaletteMockState.catalogQuery.error = new Error("catalog offline");
   const user = userEvent.setup();

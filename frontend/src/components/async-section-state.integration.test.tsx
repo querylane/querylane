@@ -31,6 +31,26 @@ describe("async and managed state integration", () => {
     expect(screen.queryByText("database rows")).toBeNull();
   });
 
+  it("never renders an empty state while content is unresolved", () => {
+    render(
+      <AsyncSectionState
+        emptyState={
+          <EmptyState
+            description="No databases returned."
+            icon={Database}
+            title="No databases"
+          />
+        }
+        hasContent={false}
+        isPending={true}
+        loadingMessage="Loading databases..."
+      />
+    );
+
+    expect(screen.getByText("Loading databases...")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "No databases" })).toBeNull();
+  });
+
   it("keeps stale content visible while announcing background refresh", () => {
     render(
       <AsyncSectionState

@@ -406,6 +406,9 @@ function grantsLoadState({
   error: unknown;
   isPending: boolean;
 }): ReactNode {
+  if (isPending) {
+    return <p className="text-muted-foreground text-sm">Loading grants…</p>;
+  }
   if (databases.length === 0) {
     return (
       <EmptyState
@@ -414,9 +417,6 @@ function grantsLoadState({
         title="No databases"
       />
     );
-  }
-  if (isPending) {
-    return <p className="text-muted-foreground text-sm">Loading grants…</p>;
   }
   if (error) {
     return (
