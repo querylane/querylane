@@ -34,7 +34,6 @@ interface BrowserScreenshotDirectoryInput {
 
 const browserPolicy = getBrowserPolicy({
   argv: process.argv,
-  isCi: process.env["CI"] === "true",
   platform: process.platform,
 });
 

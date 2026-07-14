@@ -21,35 +21,22 @@ describe("browser policy", () => {
     });
   });
 
-  it("does not allow write API during normal local browser runs", () => {
+  it("allows write API during normal local browser runs", () => {
     expect(
       getBrowserPolicy({ argv: ["vitest", "run"], platform: "linux" })
-    ).toMatchObject({
-      canWriteBrowserArtifacts: false,
-    });
-  });
-
-  it("allows write API during Linux CI browser runs for failure artifacts", () => {
-    expect(
-      getBrowserPolicy({
-        argv: ["vitest", "run"],
-        isCi: true,
-        platform: "linux",
-      })
     ).toMatchObject({
       canWriteBrowserArtifacts: true,
     });
   });
 
-  it("blocks write API during non-Linux CI browser runs", () => {
+  it("allows write API during normal non-Linux browser runs", () => {
     expect(
       getBrowserPolicy({
         argv: ["vitest", "run"],
-        isCi: true,
         platform: "darwin",
       })
     ).toMatchObject({
-      canWriteBrowserArtifacts: false,
+      canWriteBrowserArtifacts: true,
     });
   });
 
@@ -58,7 +45,7 @@ describe("browser policy", () => {
       getBrowserPolicy({ argv: ["vitest", "--ui"], platform: "linux" })
     ).toMatchObject({
       canRunBrowserTestsFromUi: true,
-      canWriteBrowserArtifacts: false,
+      canWriteBrowserArtifacts: true,
     });
   });
 });
