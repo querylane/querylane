@@ -24,7 +24,7 @@ import (
 // Usage:
 //
 //	testDB := storage.NewTestDB(t)
-//	repo := storage.NewInstanceRepository(testDB.DB())
+//	repo := storage.NewInstanceRepository(t.Context(), testDB.DB())
 //	// Run tests with any repository...
 //
 // Each test function gets a completely fresh database with migrations applied.

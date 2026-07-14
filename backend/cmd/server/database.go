@@ -195,7 +195,7 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 	if configManaged {
 		instanceRepo = storage.NewConfigInstanceRepository(cfg.Instances)
 	} else {
-		pgInstanceRepo, err := storage.NewInstanceRepository(cl)
+		pgInstanceRepo, err := storage.NewInstanceRepository(ctx, cl)
 		if err != nil {
 			report(databaseSetupErrorEvent(dbsetup.StepInitializingServices, err))
 

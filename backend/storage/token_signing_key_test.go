@@ -153,6 +153,45 @@ func TestIntegrationTokenSigningKey(t *testing.T) {
 		assert.Equal(t, originalKey, recoveredKey)
 	})
 
+	t.Run("rotates encrypted material with previous instance secret", func(t *testing.T) {
+		reset(t)
+
+		const (
+			originalSecret = "0123456789abcdef0123456789abcdef"
+			rotatedSecret  = "abcdef0123456789abcdef0123456789"
+		)
+
+		t.Setenv("QUERYLANE_INSTANCE_SECRET_KEY", originalSecret)
+		originalKey, err := storage.LoadOrCreateTokenSigningKey(t.Context(), testDB.DB())
+		require.NoError(t, err)
+
+		var originalMaterial string
+		require.NoError(t, testDB.DB().QueryRowContext(
+			t.Context(),
+			"SELECT material FROM token_signing_key WHERE id = 'v1'",
+		).Scan(&originalMaterial))
+
+		t.Setenv("QUERYLANE_INSTANCE_SECRET_KEY", rotatedSecret)
+		t.Setenv("QUERYLANE_INSTANCE_SECRET_KEY_PREVIOUS", originalSecret)
+
+		rotatedKey, err := storage.LoadOrCreateTokenSigningKey(t.Context(), testDB.DB())
+		require.NoError(t, err)
+		assert.Equal(t, originalKey, rotatedKey)
+
+		var rotatedMaterial string
+		require.NoError(t, testDB.DB().QueryRowContext(
+			t.Context(),
+			"SELECT material FROM token_signing_key WHERE id = 'v1'",
+		).Scan(&rotatedMaterial))
+		assert.NotEqual(t, originalMaterial, rotatedMaterial)
+		assert.True(t, strings.HasPrefix(rotatedMaterial, "qlenc:v1:"))
+
+		t.Setenv("QUERYLANE_INSTANCE_SECRET_KEY_PREVIOUS", "")
+		currentKey, err := storage.LoadOrCreateTokenSigningKey(t.Context(), testDB.DB())
+		require.NoError(t, err)
+		assert.Equal(t, originalKey, currentKey)
+	})
+
 	t.Run("rejects corrupt material", func(t *testing.T) {
 		reset(t)
 		t.Setenv("QUERYLANE_INSTANCE_SECRET_KEY", "")

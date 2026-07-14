@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -30,7 +31,7 @@ func TestIntegrationInstanceRepository_CreateInstanceEncryptsPasswordAtRest(t *t
 
 			withInstanceSecretKey(t, "0123456789abcdef0123456789abcdef", func() {
 				testDB := NewTestDB(t)
-				repo, err := NewInstanceRepository(testDB.DB())
+				repo, err := NewInstanceRepository(t.Context(), testDB.DB())
 				require.NoError(t, err)
 
 				created, err := repo.CreateInstance(t.Context(), &api.Instance{
@@ -64,6 +65,174 @@ func TestIntegrationInstanceRepository_CreateInstanceEncryptsPasswordAtRest(t *t
 			})
 		})
 	}
+}
+
+func TestIntegrationInstanceRepository_MigratesLegacyPlaintextCredentialsAtStartup(t *testing.T) {
+	t.Parallel()
+
+	withInstanceSecretKey(t, "0123456789abcdef0123456789abcdef", func() {
+		testDB := NewTestDB(t)
+		_, err := testDB.DB().ExecContext(t.Context(), `
+			INSERT INTO instance (id, display_name, engine, config)
+			VALUES (
+				'legacy',
+				'Legacy',
+				'DATABASE_ENGINE_POSTGRESQL',
+				'{"host":"db.internal","port":5432,"database":"postgres","username":"querylane","password":"legacy-password","passwordSource":{"inline":"legacy-inline"}}'
+			)
+		`)
+		require.NoError(t, err)
+
+		repo, err := NewInstanceRepository(t.Context(), testDB.DB())
+		require.NoError(t, err)
+
+		var rawConfig string
+		require.NoError(t, testDB.DB().QueryRowContext(
+			t.Context(),
+			`SELECT config FROM instance WHERE id = 'legacy'`,
+		).Scan(&rawConfig))
+		assert.NotContains(t, rawConfig, "legacy-password")
+		assert.NotContains(t, rawConfig, "legacy-inline")
+		assert.Equal(t, 2, strings.Count(rawConfig, encryptedSecretPrefix))
+
+		loaded, err := repo.GetInstance(t.Context(), "instances/legacy")
+		require.NoError(t, err)
+		assert.Equal(t, "legacy-password", loaded.GetConfig().GetPassword())
+		assert.Equal(t, "legacy-inline", loaded.GetConfig().GetPasswordSource().GetInline())
+	})
+}
+
+func TestIntegrationInstanceRepository_RotatesCredentialsAtStartup(t *testing.T) {
+	t.Parallel()
+
+	const (
+		oldKey         = "0123456789abcdef0123456789abcdef"
+		newKey         = "abcdef0123456789abcdef0123456789"
+		previousKeyEnv = "QUERYLANE_INSTANCE_SECRET_KEY_PREVIOUS"
+	)
+
+	withInstanceSecretKey(t, oldKey, func() {
+		testDB := NewTestDB(t)
+		originalRepo, err := NewInstanceRepository(t.Context(), testDB.DB())
+		require.NoError(t, err)
+
+		_, err = originalRepo.CreateInstance(t.Context(), &api.Instance{
+			DisplayName: "Production",
+			Config: &api.PostgresConfig{
+				Host:     "db.internal",
+				Port:     5432,
+				Database: "postgres",
+				Username: "querylane",
+				Password: "rotate-password",
+				PasswordSource: &api.SecretSource{
+					Source: &api.SecretSource_Inline{Inline: "rotate-inline"},
+				},
+			},
+		}, "prod")
+		require.NoError(t, err)
+
+		var originalConfig string
+		require.NoError(t, testDB.DB().QueryRowContext(
+			t.Context(),
+			`SELECT config FROM instance WHERE id = 'prod'`,
+		).Scan(&originalConfig))
+
+		require.NoError(t, os.Setenv(instanceSecretKeyEnv, newKey)) //nolint:usetesting // Protected by instanceSecretKeyEnvMu.
+		require.NoError(t, os.Setenv(previousKeyEnv, oldKey))       //nolint:usetesting // Protected by instanceSecretKeyEnvMu.
+
+		defer func() {
+			require.NoError(t, os.Unsetenv(previousKeyEnv))
+		}()
+
+		const replicas = 4
+
+		rotatedRepos := make([]*PGInstanceRepository, replicas)
+		rotationErrs := make([]error, replicas)
+
+		var rotations sync.WaitGroup
+		rotations.Add(replicas)
+
+		for i := range replicas {
+			go func() {
+				defer rotations.Done()
+
+				rotatedRepos[i], rotationErrs[i] = NewInstanceRepository(t.Context(), testDB.DB())
+			}()
+		}
+
+		rotations.Wait()
+
+		for _, rotationErr := range rotationErrs {
+			require.NoError(t, rotationErr)
+		}
+
+		rotatedRepo := rotatedRepos[0]
+
+		var rotatedConfig string
+		require.NoError(t, testDB.DB().QueryRowContext(
+			t.Context(),
+			`SELECT config FROM instance WHERE id = 'prod'`,
+		).Scan(&rotatedConfig))
+		assert.NotEqual(t, originalConfig, rotatedConfig)
+		assert.NotContains(t, rotatedConfig, "rotate-password")
+		assert.NotContains(t, rotatedConfig, "rotate-inline")
+
+		loaded, err := rotatedRepo.GetInstance(t.Context(), "instances/prod")
+		require.NoError(t, err)
+		assert.Equal(t, "rotate-password", loaded.GetConfig().GetPassword())
+		assert.Equal(t, "rotate-inline", loaded.GetConfig().GetPasswordSource().GetInline())
+
+		require.NoError(t, os.Unsetenv(previousKeyEnv))
+		_, err = NewInstanceRepository(t.Context(), testDB.DB())
+		require.NoError(t, err)
+	})
+}
+
+func TestIntegrationInstanceRepository_FailedRotationLeavesCredentialsUnchanged(t *testing.T) {
+	t.Parallel()
+
+	const (
+		oldKey = "0123456789abcdef0123456789abcdef"
+		newKey = "abcdef0123456789abcdef0123456789"
+	)
+
+	withInstanceSecretKey(t, oldKey, func() {
+		testDB := NewTestDB(t)
+		repo, err := NewInstanceRepository(t.Context(), testDB.DB())
+		require.NoError(t, err)
+
+		_, err = repo.CreateInstance(t.Context(), &api.Instance{
+			DisplayName: "Production",
+			Config: &api.PostgresConfig{
+				Host:     "db.internal",
+				Port:     5432,
+				Database: "postgres",
+				Username: "querylane",
+				Password: "old-password",
+			},
+		}, "prod")
+		require.NoError(t, err)
+
+		var originalConfig string
+		require.NoError(t, testDB.DB().QueryRowContext(
+			t.Context(),
+			`SELECT config FROM instance WHERE id = 'prod'`,
+		).Scan(&originalConfig))
+
+		require.NoError(t, os.Setenv(instanceSecretKeyEnv, newKey)) //nolint:usetesting // Protected by instanceSecretKeyEnvMu.
+		require.NoError(t, os.Unsetenv(previousInstanceSecretKeyEnv))
+
+		_, err = NewInstanceRepository(t.Context(), testDB.DB())
+		require.ErrorIs(t, err, ErrUnreadableInstanceCredentials)
+		assert.Contains(t, err.Error(), previousInstanceSecretKeyEnv)
+
+		var unchangedConfig string
+		require.NoError(t, testDB.DB().QueryRowContext(
+			t.Context(),
+			`SELECT config FROM instance WHERE id = 'prod'`,
+		).Scan(&unchangedConfig))
+		assert.Equal(t, originalConfig, unchangedConfig)
+	})
 }
 
 func TestIntegrationInstanceRepository_ListInstancesKeepsRowsWithUnreadableCredentials(t *testing.T) {
@@ -103,7 +272,7 @@ func TestIntegrationInstanceRepository_ListInstancesKeepsRowsWithUnreadableCrede
 
 			withInstanceSecretKey(t, "0123456789abcdef0123456789abcdef", func() {
 				testDB := NewTestDB(t)
-				originalRepo, err := NewInstanceRepository(testDB.DB())
+				originalRepo, err := NewInstanceRepository(t.Context(), testDB.DB())
 				require.NoError(t, err)
 
 				_, err = originalRepo.CreateInstance(t.Context(), &api.Instance{
@@ -195,12 +364,12 @@ func TestIntegrationInstanceRepository_ListInstancesKeepsRowsWithUnreadableCrede
 	}
 }
 
-func TestIntegrationInstanceRepository_MissingKeyRequiresOperatorRecovery(t *testing.T) {
+func TestIntegrationInstanceRepository_MissingKeyFailsFast(t *testing.T) {
 	t.Parallel()
 
 	withInstanceSecretKey(t, "0123456789abcdef0123456789abcdef", func() {
 		testDB := NewTestDB(t)
-		originalRepo, err := NewInstanceRepository(testDB.DB())
+		originalRepo, err := NewInstanceRepository(t.Context(), testDB.DB())
 		require.NoError(t, err)
 
 		_, err = originalRepo.CreateInstance(t.Context(), &api.Instance{
@@ -216,26 +385,9 @@ func TestIntegrationInstanceRepository_MissingKeyRequiresOperatorRecovery(t *tes
 		require.NoError(t, err)
 		require.NoError(t, os.Unsetenv(instanceSecretKeyEnv))
 
-		missingKeyRepo, err := NewInstanceRepository(testDB.DB())
-		require.NoError(t, err)
-
-		loaded, err := missingKeyRepo.GetInstance(t.Context(), "instances/prod")
-		require.NoError(t, err)
-		assert.Equal(t, api.Instance_CREDENTIAL_STATE_KEY_MISSING, loaded.GetCredentialState())
-		assert.Contains(t, loaded.GetCredentialError(), instanceSecretKeyEnv)
-		assert.Empty(t, loaded.GetConfig().GetPassword())
-
-		_, err = missingKeyRepo.UpdateInstance(t.Context(), &api.Instance{
-			Name: "instances/prod",
-			Config: &api.PostgresConfig{
-				Host:     "db.internal",
-				Port:     5432,
-				Database: "postgres",
-				Username: "querylane",
-				Password: "replacement-secret",
-			},
-		}, &fieldmaskpb.FieldMask{Paths: []string{"config"}})
-		assert.ErrorIs(t, err, ErrMissingInstanceSecretKey)
+		_, err = NewInstanceRepository(t.Context(), testDB.DB())
+		require.ErrorIs(t, err, ErrMissingInstanceSecretKey)
+		assert.Contains(t, err.Error(), instanceSecretKeyEnv)
 	})
 }
 
@@ -244,7 +396,7 @@ func TestIntegrationInstanceRepository_UpdateInstanceReplacesConfig(t *testing.T
 
 	withInstanceSecretKey(t, "0123456789abcdef0123456789abcdef", func() {
 		testDB := NewTestDB(t)
-		repo, err := NewInstanceRepository(testDB.DB())
+		repo, err := NewInstanceRepository(t.Context(), testDB.DB())
 		require.NoError(t, err)
 
 		_, err = repo.CreateInstance(t.Context(), &api.Instance{
@@ -298,7 +450,7 @@ func TestIntegrationInstanceRepository_UpdateInstanceUsesWithTxExecutor(t *testi
 
 	withInstanceSecretKey(t, "0123456789abcdef0123456789abcdef", func() {
 		testDB := NewTestDB(t)
-		repo, err := NewInstanceRepository(testDB.DB())
+		repo, err := NewInstanceRepository(t.Context(), testDB.DB())
 		require.NoError(t, err)
 
 		tx, err := testDB.DB().BeginTx(t.Context(), nil)
@@ -352,7 +504,7 @@ func TestNewInstanceRepositoryRejectsMalformedSecretKey(t *testing.T) {
 	t.Parallel()
 
 	withInstanceSecretKey(t, "not-a-valid-key", func() {
-		_, err := NewInstanceRepository(nil)
+		_, err := NewInstanceRepository(t.Context(), nil)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, instanceSecretKeyEnv)
 	})

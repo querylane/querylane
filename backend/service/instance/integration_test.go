@@ -562,7 +562,7 @@ func (s *IntegrationTestSuite) TestUpdateInstanceRejectsUntestableConfigIntegrat
 	testDB := storage.NewTestDB(s.T())
 	defer testDB.Close()
 
-	instanceRepo, err := storage.NewInstanceRepository(testDB.DB())
+	instanceRepo, err := storage.NewInstanceRepository(ctx, testDB.DB())
 	s.Require().NoError(err)
 
 	connManager := &mockConnectionManager{testErr: errors.New("dial tcp: connection refused")}
@@ -610,7 +610,7 @@ func (s *IntegrationTestSuite) TestUpdateInstanceTestsConfigBeforePersistingInte
 	testDB := storage.NewTestDB(s.T())
 	defer testDB.Close()
 
-	instanceRepo, err := storage.NewInstanceRepository(testDB.DB())
+	instanceRepo, err := storage.NewInstanceRepository(ctx, testDB.DB())
 	s.Require().NoError(err)
 
 	connManager := &mockConnectionManager{}
@@ -714,7 +714,7 @@ func (s *IntegrationTestSuite) setupService(ctx context.Context) (*Service, stor
 	s.Require().NoError(err)
 
 	// Create repositories using the transaction
-	instanceRepo, err := storage.NewInstanceRepository(s.testDB.DB())
+	instanceRepo, err := storage.NewInstanceRepository(ctx, s.testDB.DB())
 	s.Require().NoError(err)
 
 	instanceRepo = instanceRepo.WithTx(tx)
@@ -744,7 +744,7 @@ func (s *IntegrationTestSuite) runWithoutTransaction(
 		defer cancel()
 
 		// Create non-transactional repositories that use the connection pool
-		instanceRepo, err := storage.NewInstanceRepository(s.testDB.DB())
+		instanceRepo, err := storage.NewInstanceRepository(ctx, s.testDB.DB())
 		s.Require().NoError(err)
 
 		service := NewService(instanceRepo, instanceRepo, &mockConnectionRecorder{}, &mockConnectionManager{}, &mockCatalogProvider{}, &mockOverviewFetcher{}, false, newTestConnectionGuard())

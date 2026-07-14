@@ -21,8 +21,7 @@ const (
 
 // instanceMapper handles conversion between storage and protobuf types for instances.
 type instanceMapper struct {
-	secrets    *secretCipher
-	secretsErr error
+	secrets *secretCipher
 }
 
 func (m instanceMapper) storageToProto(inst model.Instance) (*api.Instance, error) {
@@ -155,20 +154,12 @@ func (m instanceMapper) encryptSecret(value string) (string, error) {
 		return value, nil
 	}
 
-	if m.secretsErr != nil {
-		return "", m.secretsErr
-	}
-
 	return m.secrets.encrypt(value)
 }
 
 func (m instanceMapper) decryptSecret(value string) (string, error) {
 	if value == "" || !looksLikeEncryptedSecret(value) {
 		return value, nil
-	}
-
-	if m.secretsErr != nil {
-		return "", m.secretsErr
 	}
 
 	decrypted, err := m.secrets.decrypt(value)

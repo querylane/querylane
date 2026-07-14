@@ -86,20 +86,24 @@ type PGInstanceRepository struct {
 }
 
 // NewInstanceRepository creates a new postgres repository for instance resources.
-func NewInstanceRepository(db *sql.DB) (*PGInstanceRepository, error) {
-	secrets, err := newSecretCipherFromEnv()
-	if errors.Is(err, ErrMissingInstanceSecretKey) {
-		err = nil
+func NewInstanceRepository(ctx context.Context, db *sql.DB) (*PGInstanceRepository, error) {
+	keyring, err := newSecretKeyringFromEnv(true)
+	if err != nil {
+		if errors.Is(err, ErrMissingInstanceSecretKey) {
+			return nil, fmt.Errorf("initialize instance credential encryption: %w: set %s", err, instanceSecretKeyEnv)
+		}
+
+		return nil, fmt.Errorf("initialize instance credential encryption: %w", err)
 	}
 
-	if err != nil {
+	if err := migrateInstanceSecrets(ctx, db, keyring); err != nil {
 		return nil, err
 	}
 
 	return &PGInstanceRepository{
 		db:     db,
 		exec:   db,
-		mapper: instanceMapper{secrets: secrets},
+		mapper: instanceMapper{secrets: keyring.current},
 	}, nil
 }
 

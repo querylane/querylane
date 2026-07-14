@@ -113,8 +113,8 @@ limits:
 # API-managed instance secrets
 #
 # When managing instances through the UI/API, Querylane encrypts stored instance
-# passwords before writing them to the meta database. Set this process env var
-# in production and keep it stable across restarts:
+# passwords before writing them to the meta database. This process env var is
+# required at startup in API-managed mode and must stay stable across restarts:
 #
 #   QUERYLANE_INSTANCE_SECRET_KEY=<base64-encoded 32-byte key>
 #
@@ -136,6 +136,21 @@ limits:
 # Config-managed instances can avoid persistence entirely by using
 # password_env/dsn_env below.
 #
+# On startup, API-managed mode encrypts any legacy plaintext values in
+# config.password and password_source.inline before serving requests.
+#
+# To rotate the key:
+# 1. Stop every Querylane replica so no process can write with the old key.
+# 2. Set QUERYLANE_INSTANCE_SECRET_KEY to the new key on every replica.
+# 3. Set QUERYLANE_INSTANCE_SECRET_KEY_PREVIOUS to the old key temporarily.
+# 4. Start every replica. Startup re-encrypts instance credentials and any
+#    encrypted token-signing material with the new key.
+# 5. Remove QUERYLANE_INSTANCE_SECRET_KEY_PREVIOUS and restart every replica.
+#
+# Rotation fails startup without changing stored data when a credential matches
+# neither key. Never remove the old key until every replica has started
+# successfully with both values configured.
+#
 # Querylane also uses this value to encrypt the token-signing key shared by all
 # backend replicas in the meta database. When the value is unset, the signing
 # key is stored as plaintext so zero-config and config-managed installations
@@ -144,11 +159,9 @@ limits:
 # the key and invalidating active tokens. Adding the value later does not
 # automatically re-encrypt an existing plaintext signing key.
 #
-# Notes:
-# - Existing plaintext instance rows remain readable after upgrade, but are not
-#   encrypted until their credentials are re-saved through the API/UI.
-# - Key rotation is not currently supported; changing the key makes existing
-#   encrypted rows undecryptable.
+# Config-file-managed mode can still run without either key. In that mode, a
+# token-signing key created without QUERYLANE_INSTANCE_SECRET_KEY remains stored
+# as plaintext so zero-config installations keep working.
 # -----------------------------------------------------------------------------
 
 

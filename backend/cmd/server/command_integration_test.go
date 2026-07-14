@@ -71,10 +71,17 @@ func writeTestConfigYAML(t *testing.T, dir string, info testutil.ConnectionInfo)
 	return configPath
 }
 
+func setInstanceSecretKey(t *testing.T) {
+	t.Helper()
+	t.Setenv("QUERYLANE_INSTANCE_SECRET_KEY", "0123456789abcdef0123456789abcdef")
+}
+
 func TestIntegration_SetupAppDatabase_ExternalPostgres(t *testing.T) { //nolint:paralleltest // uses t.Setenv
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
+
+	setInstanceSecretKey(t)
 
 	pgInfo := testutil.NewTestPostgres(t)
 	serverURL, _ := startBootstrapServer(t)
@@ -150,6 +157,8 @@ func TestIntegration_SetupAppDatabase_ConfigWrittenCorrectly(t *testing.T) { //n
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
+
+	setInstanceSecretKey(t)
 
 	pgInfo := testutil.NewTestPostgres(t)
 	serverURL, configDir := startBootstrapServer(t)
@@ -295,6 +304,8 @@ func TestIntegration_WatchConfigChanges_ManualYAMLEdit(t *testing.T) { //nolint:
 		t.Skip("skipping integration test in short mode")
 	}
 
+	setInstanceSecretKey(t)
+
 	pgInfo := testutil.NewTestPostgres(t)
 
 	// Create temp home with an HTTP-only config (no database section).
@@ -429,6 +440,8 @@ func TestIntegration_MainAppMode_AlreadyConfigured(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
+
+	setInstanceSecretKey(t)
 
 	pgInfo := testutil.NewTestPostgres(t)
 

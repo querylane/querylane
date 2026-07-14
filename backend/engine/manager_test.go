@@ -863,7 +863,7 @@ func TestIntegrationManager_CheckInstanceConnection_PingsCachedPool(t *testing.T
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	repo, err := storage.NewInstanceRepository(testDB.DB())
+	repo, err := storage.NewInstanceRepository(ctx, testDB.DB())
 	require.NoError(t, err)
 
 	instanceName := mustParseInstanceName(t, "instances/refresh-one")
