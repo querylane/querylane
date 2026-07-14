@@ -47,6 +47,12 @@ func (s *Service) ExecuteQuery(ctx context.Context, req *connect.Request[v1alpha
 		return connErr
 	}
 
+	if err := validateReadOnlyStatement(req.Msg.GetStatement()); err != nil {
+		return apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
+			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: "execute_query",
+		})
+	}
+
 	instSession, err := s.connManager.OpenInstance(ctx, dbRes.Instance())
 	if err != nil {
 		return apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
@@ -162,6 +168,12 @@ func (s *Service) ExplainQuery(ctx context.Context, req *connect.Request[v1alpha
 	dbRes, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseDatabaseName)
 	if connErr != nil {
 		return nil, connErr
+	}
+
+	if err := validateReadOnlyStatement(req.Msg.GetStatement()); err != nil {
+		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
+			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: "explain_query",
+		})
 	}
 
 	instSession, err := s.connManager.OpenInstance(ctx, dbRes.Instance())
