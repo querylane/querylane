@@ -5,8 +5,11 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"fmt"
 	"testing"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
 
 	serverconfig "github.com/querylane/querylane/backend/config/server"
@@ -106,4 +109,25 @@ func TestAppInitializeDatabaseWithConfigClosesStateWhenInstalledDuringBuild(t *t
 	requireDBClosed(t, loserDB)
 	require.Same(t, wizardState, app.state.Load())
 	require.Zero(t, onReadyCalls)
+}
+
+func TestAppInitializeDatabaseWithConfigRedactsDatabaseInitError(t *testing.T) {
+	t.Parallel()
+
+	pgErr := &pgconn.PgError{
+		Code:    pgerrcode.InvalidPassword,
+		Message: "password for meta_user contains api_key=secret",
+	}
+	app := &App{
+		buildDatabaseFunc: func(context.Context, *serverconfig.Config, *dbsetup.Broadcaster) (*dbState, error) {
+			return nil, fmt.Errorf("initialize database: %w", pgErr)
+		},
+	}
+
+	err := app.InitializeDatabaseWithConfig(t.Context(), &serverconfig.Config{})
+
+	require.ErrorContains(t, err, "api_key=secret")
+	require.Contains(t, app.DatabaseInitError(), pgerrcode.InvalidPassword)
+	require.NotContains(t, app.DatabaseInitError(), "meta_user")
+	require.NotContains(t, app.DatabaseInitError(), "api_key=secret")
 }

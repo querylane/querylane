@@ -123,6 +123,18 @@ func postgresClassificationFromError(err error, operation string) (PostgresError
 	return PostgresErrorClassification{}, false
 }
 
+func newMetaDatabaseUnavailablePostgresError(err error) (*connect.Error, bool) {
+	classification, ok := postgresClassificationFromError(err, "check_application_database")
+	if !ok {
+		return nil, false
+	}
+
+	classification.ConnectCode = connect.CodeUnavailable
+	classification.ErrorReason = consolev1alpha1.ErrorReason_APP_DATABASE_UNAVAILABLE
+
+	return newPostgresErrorFromClassification(err, classification, nil), true
+}
+
 // NewPostgresError builds a Connect error for a user-managed PostgreSQL
 // instance. Bounded message/detail/hint fields are client-visible but remain
 // excluded from ErrorInfo metadata.
@@ -147,13 +159,13 @@ func NewPostgresError(
 // newPostgresErrorFromClassification builds a redacted meta-database error.
 // Meta-database fields describe Querylane internals and must not cross the wire.
 func newPostgresErrorFromClassification(
-	pgErr *pgconn.PgError,
+	cause error,
 	classification PostgresErrorClassification,
 	extraMetadata []KeyVal,
 	otherDetails ...proto.Message,
 ) *connect.Error {
 	return newPostgresError(
-		pgErr,
+		cause,
 		classification,
 		postgresRedactedErrorMessage(classification),
 		false,

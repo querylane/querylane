@@ -22,6 +22,7 @@ import (
 	"github.com/querylane/querylane/backend/interceptor"
 	"github.com/querylane/querylane/backend/livequery"
 	"github.com/querylane/querylane/backend/middleware"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	v1alpha1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	adminsvc "github.com/querylane/querylane/backend/service/admin"
 	"github.com/querylane/querylane/backend/service/console"
@@ -110,8 +111,7 @@ func (a *App) InitializeDatabaseWithConfig(ctx context.Context, cfg *serverconfi
 
 	state, err := a.buildDatabase(ctx, cfg, a.progressBroadcaster)
 	if err != nil {
-		errMsg := err.Error()
-		a.dbInitErr.Store(&errMsg)
+		a.markDatabaseInitFailure(err)
 
 		return err
 	}
@@ -390,6 +390,10 @@ func (a *App) markDatabaseInitError(errMsg string) {
 	// paths may update it independently. The App state pointer remains the
 	// source of truth for readiness; this error only explains non-ready states.
 	a.dbInitErr.Store(&errMsg)
+}
+
+func (a *App) markDatabaseInitFailure(err error) {
+	a.markDatabaseInitError(postgreserrors.RedactedMessage(err, "initialize_application_database"))
 }
 
 func (a *App) clearDatabaseInitError() {

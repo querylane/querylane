@@ -2,9 +2,12 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
 
 	serverconfig "github.com/querylane/querylane/backend/config/server"
@@ -102,6 +105,45 @@ func TestRetryDatabaseInitResolvesEffectiveConfigEachAttempt(t *testing.T) {
 	require.GreaterOrEqual(t, resolveCalls, 2)
 	require.Equal(t, 1, buildCalls)
 	require.Equal(t, 1, installCalls)
+}
+
+func TestRetryDatabaseInitRedactsDatabaseInitErrorBetweenAttempts(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	app := &App{}
+	buildCalls := 0
+	pgErr := &pgconn.PgError{
+		Code:    pgerrcode.InvalidPassword,
+		Message: "password for meta_user contains api_key=secret",
+	}
+	controller := &Controller{
+		retryDatabaseInitInterval: time.Millisecond,
+		app:                       app,
+		currentConfigFunc:         func() *serverconfig.Config { return &serverconfig.Config{} },
+		resolveEffectiveConfigFunc: func(_ context.Context, cfg *serverconfig.Config) *serverconfig.Config {
+			return cfg
+		},
+		buildDatabaseFunc: func(context.Context, *serverconfig.Config, *dbsetup.Broadcaster) (*dbState, error) {
+			buildCalls++
+			if buildCalls == 1 {
+				return nil, fmt.Errorf("initialize database: %w", pgErr)
+			}
+
+			require.Contains(t, app.DatabaseInitError(), pgerrcode.InvalidPassword)
+			require.NotContains(t, app.DatabaseInitError(), "meta_user")
+			require.NotContains(t, app.DatabaseInitError(), "api_key=secret")
+
+			return &dbState{}, nil
+		},
+		installReadyStateFunc: func(context.Context, *dbState) { cancel() },
+	}
+
+	controller.retryDatabaseInit(ctx)
+
+	require.Equal(t, 2, buildCalls)
 }
 
 // TestRetryDatabaseInitUsesLatestConfigEachAttempt is the regression guard for

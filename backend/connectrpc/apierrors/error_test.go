@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	consolev1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
@@ -13,9 +14,13 @@ import (
 func TestNewDatabaseUnavailableReportsAppDatabaseUnavailable(t *testing.T) {
 	t.Parallel()
 
-	connectErr := NewDatabaseUnavailable(errors.New("dial tcp: connection refused"))
+	cause := errors.New("dial tcp private-db: connection refused")
+	connectErr := NewDatabaseUnavailable(cause)
 
 	assert.Equal(t, connect.CodeUnavailable, connectErr.Code())
+	assert.Equal(t, "the application database is temporarily unavailable", connectErr.Message())
+	assert.NotContains(t, connectErr.Message(), "private-db")
+	require.ErrorIs(t, connectErr, cause)
 
 	info := requireErrorInfo(t, connectErr)
 	assert.Equal(t, consolev1alpha1.ErrorReason_APP_DATABASE_UNAVAILABLE.String(), info.Reason)

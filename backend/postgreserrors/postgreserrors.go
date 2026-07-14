@@ -193,16 +193,36 @@ func (e *Error) Error() string {
 		return "postgres error: <nil>"
 	}
 
+	return redactedMessage(e.classification, e.operation)
+}
+
+// RedactedMessage returns a client- and telemetry-safe description of err.
+// operation must be a trusted internal label, never user input.
+func RedactedMessage(err error, operation string) string {
+	var classified *Error
+	if errors.As(err, &classified) {
+		return redactedMessage(classified.Classification(), operation)
+	}
+
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return redactedMessage(Classify(pgErr, ProfileDefault), operation)
+	}
+
+	return redactedMessage(Classification{Kind: KindInternal}, operation)
+}
+
+func redactedMessage(classification Classification, operation string) string {
 	message := "postgres error"
-	if e.classification.SQLState != "" {
-		message = "postgres SQLSTATE " + e.classification.SQLState
-		if e.classification.Condition != "" {
-			message += " " + e.classification.Condition
+	if classification.SQLState != "" {
+		message = "postgres SQLSTATE " + classification.SQLState
+		if classification.Condition != "" {
+			message += " " + classification.Condition
 		}
 	}
 
-	if e.operation != "" {
-		return e.operation + ": " + message
+	if operation != "" {
+		return operation + ": " + message
 	}
 
 	return message

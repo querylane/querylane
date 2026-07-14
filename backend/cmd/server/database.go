@@ -15,6 +15,7 @@ import (
 	"github.com/querylane/querylane/backend/engine"
 	"github.com/querylane/querylane/backend/engine/postgres"
 	"github.com/querylane/querylane/backend/livequery"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	"github.com/querylane/querylane/backend/runner"
 	"github.com/querylane/querylane/backend/runner/jobs"
 	metricsvc "github.com/querylane/querylane/backend/service/metrics"
@@ -96,6 +97,10 @@ type dbState struct {
 	sampleStores           metricsvc.Stores
 }
 
+func databaseSetupErrorEvent(step dbsetup.StepID, err error) dbsetup.ProgressEvent {
+	return dbsetup.NewErrorEvent(step, postgreserrors.RedactedMessage(err, string(step)))
+}
+
 func (d *dbState) close() {
 	if d == nil {
 		return
@@ -145,7 +150,7 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 
 	cl, err := storage.NewPostgresDB(ctx, cfg)
 	if err != nil {
-		report(dbsetup.NewErrorEvent(dbsetup.StepConnecting, err.Error()))
+		report(databaseSetupErrorEvent(dbsetup.StepConnecting, err))
 		return nil, err
 	}
 
@@ -154,7 +159,7 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 	report(dbsetup.NewEvent(dbsetup.StepMigrating, dbsetup.StateInProgress))
 
 	if _, err := storage.MigrateDB(ctx, cl); err != nil {
-		report(dbsetup.NewErrorEvent(dbsetup.StepMigrating, err.Error()))
+		report(databaseSetupErrorEvent(dbsetup.StepMigrating, err))
 
 		_ = cl.Close()
 
@@ -173,7 +178,7 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 	} else {
 		pgInstanceRepo, err := storage.NewInstanceRepository(cl)
 		if err != nil {
-			report(dbsetup.NewErrorEvent(dbsetup.StepInitializingServices, err.Error()))
+			report(databaseSetupErrorEvent(dbsetup.StepInitializingServices, err))
 
 			_ = cl.Close()
 
@@ -187,7 +192,7 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 
 	tokenSigningKey, err := storage.LoadOrCreateTokenSigningKey(ctx, cl)
 	if err != nil {
-		report(dbsetup.NewErrorEvent(dbsetup.StepInitializingServices, err.Error()))
+		report(databaseSetupErrorEvent(dbsetup.StepInitializingServices, err))
 
 		_ = cl.Close()
 
