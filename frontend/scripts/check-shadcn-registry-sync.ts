@@ -21,11 +21,9 @@ const FILES_SUMMARY_PATTERN =
   /^\s*(?:[├+|]\s*)?Files\s*\(\d+\)(?<summary>[^\n]*)$/mu;
 const OVERWRITE_SUMMARY_PATTERN = /~(?<count>\d+)\s+overwrite\b/u;
 const NO_CHANGES_PATTERN = /\bNo changes\./u;
-// These are deliberate strict TypeScript compatibility patches against
-// shadcn output: calendar keeps safer DayPicker modifier access and sonner
-// sanitizes the resolved theme before passing it to Sonner.
+// This is a deliberate strict TypeScript compatibility patch against shadcn
+// output: sonner sanitizes the resolved theme before passing it to Sonner.
 const ALLOWED_STRICT_TYPESCRIPT_DRIFT_FILES = new Set([
-  "src/components/ui/calendar.tsx",
   "src/components/ui/sonner.tsx",
 ]);
 

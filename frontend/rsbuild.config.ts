@@ -76,9 +76,9 @@ const rsdoctorPluginOptions = {
   linter: {
     rules: {
       // The app itself is intentionally split by TanStack Router route chunks;
-      // Rsdoctor models local src files as the frontend-new package and reports
-      // expected route CSS duplication as cross-package duplication. The rule's
-      // ignore option is currently not applied by Rsdoctor, so disable it.
+      // Rsdoctor models local src files as the Querylane frontend package and
+      // reports expected route CSS duplication as cross-package duplication.
+      // The rule's ignore option is currently not applied by Rsdoctor, so disable it.
       "cross-chunks-package": "off",
       // Ignore patch-level transitive duplicates; those are package manager
       // resolution noise, while minor/major duplicates remain visible.

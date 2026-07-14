@@ -56,6 +56,8 @@ jobs:
         env:
           QUALITY_BASE_REF: origin/${{ github.base_ref }}
         run: bun run lint:changed
+      - name: Run React Doctor dead-code analysis
+        run: bun run doctor:dead-code
       - name: Type check
         run: bun run type:check
       - name: Verify shadcn registry sync
@@ -95,7 +97,7 @@ jobs:
         run: |
           set -euo pipefail
           changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|postcss\.config\.mjs|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(doctor\.config\.ts|react-doctor\.config\.json|package\.json|bun\.lock|postcss\.config\.mjs|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|react-doctor-policy|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
             bun run test:unit -- --reporter=verbose
           else
             bun run test:unit:changed -- --reporter=verbose

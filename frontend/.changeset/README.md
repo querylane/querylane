@@ -16,7 +16,7 @@ From `frontend/`, run:
 bunx changeset add
 ```
 
-Pick the appropriate bump level for `frontend-new` and write a short, user-focused summary.
+Pick the appropriate bump level for `@querylane/frontend` and write a short, user-focused summary.
 
 ## Summary quality expectations
 

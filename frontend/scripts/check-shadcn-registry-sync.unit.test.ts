@@ -95,21 +95,45 @@ describe("shadcn registry sync check", () => {
           return {
             status: 0,
             stderr: "",
-            stdout: JSON.stringify({ components: ["calendar", "sonner"] }),
+            stdout: JSON.stringify({ components: ["sonner"] }),
           };
         }
 
         return {
           status: 0,
           stderr: "",
-          stdout: `├ Files (2) ~2 overwrite
-│ ~ src/components/ui/calendar.tsx overwrite
+          stdout: `├ Files (1) ~1 overwrite
 │ ~ src/components/ui/sonner.tsx overwrite`,
         };
       },
     };
 
     expect(runShadcnRegistrySyncCheck({ runner })).toBe(0);
+  });
+
+  test("does not allow drift for the deleted calendar component", () => {
+    const consoleError = mockExpectedConsoleError();
+    const runner = {
+      run: (_command: string, args: readonly string[]) => {
+        if (args.includes("info")) {
+          return {
+            status: 0,
+            stderr: "",
+            stdout: JSON.stringify({ components: ["calendar"] }),
+          };
+        }
+
+        return {
+          status: 0,
+          stderr: "",
+          stdout: `├ Files (1) ~1 overwrite
+│ ~ src/components/ui/calendar.tsx overwrite`,
+        };
+      },
+    };
+
+    expect(runShadcnRegistrySyncCheck({ runner })).toBe(1);
+    expect(consoleError).toHaveBeenCalled();
   });
 
   test("fails on non-allowlisted registry drift", () => {
@@ -188,7 +212,7 @@ describe("shadcn registry sync check", () => {
           return {
             status: 0,
             stderr: "",
-            stdout: JSON.stringify({ components: ["calendar", "button"] }),
+            stdout: JSON.stringify({ components: ["sonner", "button"] }),
           };
         }
 
@@ -196,7 +220,7 @@ describe("shadcn registry sync check", () => {
           status: 0,
           stderr: "",
           stdout: `├ Files (2) ~2 overwrite
-│ ~ src/components/ui/calendar.tsx overwrite
+│ ~ src/components/ui/sonner.tsx overwrite
 │ ~ src/components/ui/button.tsx overwrite`,
         };
       },
