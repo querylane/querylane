@@ -17,13 +17,11 @@ function makeFakeError(message: string): AppUiError {
     originalError: new Error(message),
     postgres: null,
     rawMessage: message,
-    reproduction: null,
     retryGuidance: null,
     source: "unknown",
     stack: null,
+    summary: message,
     technicalDetails: "",
-    technicalDetailsObject: {},
-    technicalDetailsText: "",
     title: "Test error",
   };
 }

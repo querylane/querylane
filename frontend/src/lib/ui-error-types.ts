@@ -1,4 +1,8 @@
 import type { Code } from "@connectrpc/connect";
+import type {
+  PostgreSqlErrorKind,
+  PostgreSqlErrorRetryGuidance,
+} from "@/protogen/querylane/console/v1alpha1/errors_pb";
 
 type AppErrorSource =
   | "boot"
@@ -18,60 +22,11 @@ type BlockingErrorReason =
 
 type AppErrorSurface = "inline" | "route" | "silent" | "toast";
 
-interface AppUiErrorRequestContext {
-  headers?: Record<string, string[]> | null | undefined;
-  host: string | null;
-  plaintext: boolean;
-  requestJson: string | null;
-  requestJsonNote: string | null;
-  requestMethod: string | null;
-  rpcPath: string | null;
-  url: string | null;
-}
-
-interface AppUiErrorResponseContext {
-  bodyJson: unknown;
-  bodyText: string | null;
-  contentType: string | null;
-  decodedConnectCode: Code | null;
-  decodedConnectCodeLabel: string | null;
-  decodedConnectDetails: AppUiErrorDetail[];
-  decodedConnectMessage: string | null;
-  status: number | null;
-  statusText: string | null;
-  truncated: boolean;
-}
-
-interface AppUiErrorReproductionRequest {
-  body: string;
-  headers: Record<string, string[]>;
-  method: string;
-  rpcPath: string;
-  url: string;
-}
-
-interface AppUiErrorReproductionDownloadPayload {
-  message: string;
-  request: AppUiErrorReproductionRequest;
-  technicalDetails: string;
-  title: string;
-  transcript: string;
-  version: 1;
-}
-
-interface AppUiErrorReproduction {
-  curlCommand: string;
-  downloadFilename: typeof REQUEST_FAILED_REPRO_DOWNLOAD_FILENAME;
-  downloadPayload: AppUiErrorReproductionDownloadPayload;
-}
-
 interface AppUiErrorContext {
   action?: string | undefined;
   area?: string | undefined;
   componentStack?: string | null | undefined;
   endpoint?: string | undefined;
-  request?: AppUiErrorRequestContext | undefined;
-  response?: AppUiErrorResponseContext | undefined;
   routeId?: string | undefined;
   source?: AppErrorSource | undefined;
   stepDisplayName?: string | undefined;
@@ -81,7 +36,6 @@ interface AppUiErrorContext {
 
 interface AppUiErrorDetail {
   debug: unknown;
-  hasRawValue: boolean;
   postgres?: AppUiErrorPostgres | undefined;
   summary: string;
   type: string;
@@ -89,19 +43,13 @@ interface AppUiErrorDetail {
 
 interface AppUiErrorPostgres {
   conditionName: string | null;
+  kind: PostgreSqlErrorKind;
   operation: string | null;
+  retryGuidance: PostgreSqlErrorRetryGuidance;
+  serverFields: Record<string, string>;
   sqlstate: string | null;
   sqlstateClass: string | null;
 }
-
-interface AppUiErrorTechnicalSection {
-  content: string;
-  id: string;
-  language: string;
-  title: string;
-}
-
-type AppUiErrorTechnicalDetailsObject = Record<string, unknown>;
 
 interface AppUiError {
   blockingReason: BlockingErrorReason | null;
@@ -117,13 +65,11 @@ interface AppUiError {
   originalError: unknown;
   postgres: AppUiErrorPostgres | null;
   rawMessage: string;
-  reproduction: AppUiErrorReproduction | null;
   retryGuidance: string | null;
   source: AppErrorSource;
   stack: string | null;
+  summary: string;
   technicalDetails: string;
-  technicalDetailsObject: AppUiErrorTechnicalDetailsObject;
-  technicalDetailsText: string;
   title: string;
 }
 
@@ -141,21 +87,6 @@ interface ReportAppUiErrorDependencies {
   };
 }
 
-const CONNECT_ERROR_SNAPSHOT_BODY_HEADER = "x-querylane-error-body-bin";
-const CONNECT_ERROR_SNAPSHOT_CONTENT_TYPE_HEADER =
-  "x-querylane-error-content-type";
-const CONNECT_ERROR_SNAPSHOT_STATUS_HEADER = "x-querylane-error-status";
-const CONNECT_ERROR_SNAPSHOT_STATUS_TEXT_HEADER =
-  "x-querylane-error-status-text";
-const CONNECT_ERROR_SNAPSHOT_TRUNCATED_HEADER =
-  "x-querylane-error-body-truncated";
-
-const REQUEST_PAYLOAD_SERIALIZATION_FAILURE_MESSAGE =
-  "Request payload could not be serialized.";
-const STREAMING_INPUT_REQUEST_MESSAGE =
-  "Request payload omitted because the RPC uses streaming input.";
-const REQUEST_FAILED_REPRO_DOWNLOAD_FILENAME = "request-failed-repro.json";
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -167,22 +98,7 @@ export type {
   AppUiErrorContext,
   AppUiErrorDetail,
   AppUiErrorPostgres,
-  AppUiErrorReproduction,
-  AppUiErrorRequestContext,
-  AppUiErrorResponseContext,
-  AppUiErrorTechnicalDetailsObject,
-  AppUiErrorTechnicalSection,
   BlockingErrorReason,
   ReportAppUiErrorDependencies,
 };
-export {
-  CONNECT_ERROR_SNAPSHOT_BODY_HEADER,
-  CONNECT_ERROR_SNAPSHOT_CONTENT_TYPE_HEADER,
-  CONNECT_ERROR_SNAPSHOT_STATUS_HEADER,
-  CONNECT_ERROR_SNAPSHOT_STATUS_TEXT_HEADER,
-  CONNECT_ERROR_SNAPSHOT_TRUNCATED_HEADER,
-  isRecord,
-  REQUEST_FAILED_REPRO_DOWNLOAD_FILENAME,
-  REQUEST_PAYLOAD_SERIALIZATION_FAILURE_MESSAGE,
-  STREAMING_INPUT_REQUEST_MESSAGE,
-};
+export { isRecord };

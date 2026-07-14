@@ -24,7 +24,11 @@ import {
 } from "@/components/data-grid/table-data-grid/grid-row-model";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { useRefreshSettingsStore } from "@/features/user-settings/refresh-settings";
-import { PostgreSqlErrorDetailSchema } from "@/protogen/querylane/console/v1alpha1/errors_pb";
+import {
+  PostgreSqlErrorDetailSchema,
+  PostgreSqlErrorKind,
+  PostgreSqlErrorRetryGuidance,
+} from "@/protogen/querylane/console/v1alpha1/errors_pb";
 import {
   ReadRowsResponseSchema,
   RowPredicate_Operator,
@@ -412,7 +416,10 @@ function createPostgresRowsError() {
         PostgreSqlErrorDetailSchema,
         create(PostgreSqlErrorDetailSchema, {
           conditionName: "query_canceled",
+          kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_TIMEOUT,
           operation: "read_rows",
+          retryGuidance:
+            PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
           sqlstate: "57014",
           sqlstateClass: "57",
         })
@@ -1714,11 +1721,7 @@ describe("TableDataGrid error recovery", () => {
     );
 
     expect(screen.getByText("PostgreSQL query timed out")).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Retry after the query finishes or reduce the work requested."
-      )
-    ).toBeTruthy();
+    expect(screen.getByText("Retry later.")).toBeTruthy();
     expect(screen.getByRole("button", { name: RETRY_BUTTON_RE })).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Error details" }));

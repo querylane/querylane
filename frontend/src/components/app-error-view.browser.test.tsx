@@ -1,3 +1,4 @@
+import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { expect, test } from "vitest";
 import { page } from "vitest/browser";
@@ -5,12 +6,18 @@ import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { AppErrorView } from "@/components/app-error-view";
 import { normalizeAppUiError } from "@/lib/ui-error";
+import {
+  PostgreSqlErrorDetailSchema,
+  PostgreSqlErrorKind,
+  PostgreSqlErrorRetryGuidance,
+} from "@/protogen/querylane/console/v1alpha1/errors_pb";
 
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
 
 interface PostgresErrorExample {
   code: Code;
   conditionName: string;
+  kind: PostgreSqlErrorKind;
   label: string;
   message: string;
   operation: string;
@@ -21,6 +28,7 @@ const POSTGRES_ERROR_EXAMPLES = [
   {
     code: Code.Unauthenticated,
     conditionName: "invalid_password",
+    kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNAUTHENTICATED,
     label: "Invalid password",
     message: 'password authentication failed for user "reporting"',
     operation: "connect",
@@ -29,6 +37,7 @@ const POSTGRES_ERROR_EXAMPLES = [
   {
     code: Code.PermissionDenied,
     conditionName: "insufficient_privilege",
+    kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
     label: "Permission denied",
     message: "permission denied for table invoices",
     operation: "read_rows",
@@ -37,6 +46,7 @@ const POSTGRES_ERROR_EXAMPLES = [
   {
     code: Code.InvalidArgument,
     conditionName: "syntax_error",
+    kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT,
     label: "SQL syntax error",
     message: 'syntax error at or near "FROM"',
     operation: "execute_query",
@@ -45,6 +55,7 @@ const POSTGRES_ERROR_EXAMPLES = [
   {
     code: Code.AlreadyExists,
     conditionName: "unique_violation",
+    kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_ALREADY_EXISTS,
     label: "Unique constraint violation",
     message: 'duplicate key value violates unique constraint "users_email_key"',
     operation: "create_user",
@@ -52,10 +63,7 @@ const POSTGRES_ERROR_EXAMPLES = [
   },
 ] satisfies readonly PostgresErrorExample[];
 
-function createPostgresError(
-  example: PostgresErrorExample,
-  captureRequest = false
-) {
+function createPostgresError(example: PostgresErrorExample) {
   const error = new ConnectError(
     `PostgreSQL ${example.sqlstate}: ${example.message}`,
     example.code
@@ -63,31 +71,24 @@ function createPostgresError(
 
   error.details = [
     {
-      debug: {
-        conditionName: example.conditionName,
-        operation: example.operation,
-        serverFields: { message: example.message },
-        sqlstate: example.sqlstate,
-        sqlstateClass: example.sqlstate.slice(0, 2),
-      },
       type: POSTGRES_DETAIL_TYPE,
-      value: new Uint8Array([1]),
+      value: toBinary(
+        PostgreSqlErrorDetailSchema,
+        create(PostgreSqlErrorDetailSchema, {
+          conditionName: example.conditionName,
+          kind: example.kind,
+          operation: example.operation,
+          retryGuidance:
+            PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+          serverFields: { message: example.message },
+          sqlstate: example.sqlstate,
+          sqlstateClass: example.sqlstate.slice(0, 2),
+        })
+      ),
     },
   ];
 
   return normalizeAppUiError(error, {
-    request: captureRequest
-      ? {
-          headers: { "connect-protocol-version": ["1"] },
-          host: "database.example.test:443",
-          plaintext: false,
-          requestJson: '{"table":"invoices"}',
-          requestJsonNote: null,
-          requestMethod: "POST",
-          rpcPath: "/querylane.console.v1alpha1.RowService/ReadRows",
-          url: "https://database.example.test/querylane.console.v1alpha1.RowService/ReadRows",
-        }
-      : undefined,
     source: "connect",
     surface: "inline",
   });
@@ -122,15 +123,17 @@ test("common PostgreSQL errors keep concise guidance on the main surface", async
     </ScreenshotFrame>
   );
 
-  for (const example of POSTGRES_ERROR_EXAMPLES) {
-    await expect
-      .element(
-        page.getByText(
-          `PostgreSQL ${example.conditionName} during ${example.operation}`
+  await Promise.all(
+    POSTGRES_ERROR_EXAMPLES.map((example) =>
+      expect
+        .element(
+          page.getByText(
+            `PostgreSQL ${example.conditionName} during ${example.operation}`
+          )
         )
-      )
-      .toBeVisible();
-  }
+        .toBeVisible()
+    )
+  );
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "postgres-error-summaries"
   );
@@ -148,7 +151,7 @@ test("PostgreSQL error details expose diagnostics and support actions", async ()
     <ScreenshotFrame>
       <div className="w-[720px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <AppErrorView
-          error={createPostgresError(permissionError, true)}
+          error={createPostgresError(permissionError)}
           onRetry={async () => undefined}
           retryLabel="Retry query"
         />
@@ -175,9 +178,9 @@ test("PostgreSQL error details expose diagnostics and support actions", async ()
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: "Copy as cURL" }))
-    .toBeVisible();
+    .not.toBeInTheDocument();
   await expect
     .element(page.getByRole("button", { name: "Download" }))
-    .toBeVisible();
+    .not.toBeInTheDocument();
   await expect(dialog).toMatchScreenshot("postgres-error-details");
 });

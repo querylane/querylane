@@ -137,15 +137,7 @@ function renderFailedProgress() {
     ],
     selectedMethod: "ui_configured",
     streamError: normalizeAppUiError(new Error(errorMessage), {
-      request: {
-        host: "localhost:8080",
-        plaintext: true,
-        requestJson: "{}",
-        requestJsonNote: null,
-        requestMethod: "POST",
-        rpcPath: "/querylane.console.v1alpha1.ConsoleService/Setup",
-        url: "http://localhost:8080/querylane.console.v1alpha1.ConsoleService/Setup",
-      },
+      endpoint: "/querylane.console.v1alpha1.ConsoleService/Setup",
       source: "setup_stream",
     }),
   });

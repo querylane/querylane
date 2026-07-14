@@ -14,7 +14,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GridRow } from "@/components/data-grid/table-data-grid/grid-row-model";
 import { ROW_KEY_FIELD } from "@/components/data-grid/table-data-grid/grid-row-model";
 import { TableDetail } from "@/features/data-explorer/explorer-table-detail";
-import { PostgreSqlErrorDetailSchema } from "@/protogen/querylane/console/v1alpha1/errors_pb";
+import {
+  PostgreSqlErrorDetailSchema,
+  PostgreSqlErrorKind,
+  PostgreSqlErrorRetryGuidance,
+} from "@/protogen/querylane/console/v1alpha1/errors_pb";
 import {
   ReadRowsResponseSchema,
   RowCount_Status,
@@ -281,17 +285,21 @@ function seedSuccessfulMetadataQueries() {
 function createMetadataError({
   code,
   conditionName,
+  kind,
   message,
   operation,
   reason,
+  retryGuidance,
   sqlstate,
   sqlstateClass,
 }: {
   code: Code;
   conditionName: string;
+  kind: PostgreSqlErrorKind;
   message: string;
   operation: string;
   reason: string;
+  retryGuidance: PostgreSqlErrorRetryGuidance;
   sqlstate: string;
   sqlstateClass: string;
 }) {
@@ -320,7 +328,9 @@ function createMetadataError({
         PostgreSqlErrorDetailSchema,
         create(PostgreSqlErrorDetailSchema, {
           conditionName,
+          kind,
           operation,
+          retryGuidance,
           sqlstate,
           sqlstateClass,
         })
@@ -2393,9 +2403,12 @@ describe("TableDetail metadata errors", () => {
     tableQueries.indexes.error = createMetadataError({
       code: Code.PermissionDenied,
       conditionName: "insufficient_privilege",
+      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
       message: "missing index access",
       operation: "list_indexes",
       reason: "PERMISSION_DENIED",
+      retryGuidance:
+        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
       sqlstate: "42501",
       sqlstateClass: "42",
     });
@@ -2422,9 +2435,12 @@ describe("TableDetail metadata errors", () => {
     tableQueries.indexes.error = createMetadataError({
       code: Code.PermissionDenied,
       conditionName: "insufficient_privilege",
+      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
       message: "missing index access",
       operation: "list_indexes",
       reason: "PERMISSION_DENIED",
+      retryGuidance:
+        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
       sqlstate: "42501",
       sqlstateClass: "42",
     });
@@ -2442,9 +2458,7 @@ describe("TableDetail metadata errors", () => {
     );
 
     expect(screen.getByText("PostgreSQL permission denied")).toBeTruthy();
-    expect(
-      screen.getByText("Retry after checking the role or grants.")
-    ).toBeTruthy();
+    expect(screen.getByText("Correct the issue before retrying.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Error details" }));
@@ -2461,9 +2475,12 @@ describe("TableDetail metadata errors", () => {
     tableQueries.constraints.error = createMetadataError({
       code: Code.PermissionDenied,
       conditionName: "insufficient_privilege",
+      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
       message: "missing constraint access",
       operation: "list_constraints",
       reason: "PERMISSION_DENIED",
+      retryGuidance:
+        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
       sqlstate: "42501",
       sqlstateClass: "42",
     });
@@ -2471,9 +2488,12 @@ describe("TableDetail metadata errors", () => {
     tableQueries.indexes.error = createMetadataError({
       code: Code.Unavailable,
       conditionName: "cannot_connect_now",
+      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNAVAILABLE,
       message: "server unavailable",
       operation: "list_indexes",
       reason: "UNAVAILABLE",
+      retryGuidance:
+        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
       sqlstate: "57P03",
       sqlstateClass: "57",
     });
