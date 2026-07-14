@@ -1,6 +1,5 @@
 import { format } from "date-fns";
 import { parseTableQualifiedName } from "@/lib/console-resources";
-import { anyPredicate } from "@/lib/predicates";
 import type {
   TableCell,
   TableResultColumn,
@@ -389,6 +388,10 @@ function appendSqlRows({
   return appended;
 }
 
+function hasNoSqlRows(rowCount: number, columnCount: number): boolean {
+  return rowCount === 0 || columnCount === 0;
+}
+
 function createChunkedExportBuilder(
   exportFormat: ExportFormat,
   columns: TableResultColumn[],
@@ -475,12 +478,7 @@ function createChunkedExportBuilder(
           },
         };
       case "sql":
-        if (
-          anyPredicate(
-            () => rowCount === 0,
-            () => columns.length === 0
-          )
-        ) {
+        if (hasNoSqlRows(rowCount, columns.length)) {
           return {
             ok: true,
             payload: {

@@ -1,5 +1,4 @@
 import type { ChartRow } from "@/components/charts/chart-context";
-import { anyPredicate } from "@/lib/predicates";
 
 function averageBucket(bucket: ChartRow[], seriesKey: string): number | null {
   let sum = 0;
@@ -26,12 +25,7 @@ export function downsampleTrend(
   seriesKey: string,
   maxPoints: number
 ): ChartRow[] {
-  if (
-    anyPredicate(
-      () => data.length <= maxPoints,
-      () => maxPoints <= 0
-    )
-  ) {
+  if (data.length <= maxPoints || maxPoints <= 0) {
     return data;
   }
 

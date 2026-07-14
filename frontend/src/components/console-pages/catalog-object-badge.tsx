@@ -1,6 +1,12 @@
 import { Badge } from "@/components/ui/badge";
-import { allPredicates } from "@/lib/predicates";
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
+
+function shouldShowUnpopulatedStatus(
+  isMaterialized: boolean,
+  isPopulated: boolean
+): boolean {
+  return isMaterialized && !isPopulated;
+}
 
 /**
  * Kind badge for a catalog object (table or view), shared by the database
@@ -45,10 +51,7 @@ export function CatalogKindBadge({
           SYS
         </Badge>
       ) : null}
-      {allPredicates(
-        () => isMaterialized,
-        () => !isPopulated
-      ) ? (
+      {shouldShowUnpopulatedStatus(isMaterialized, isPopulated) ? (
         <span className="font-mono text-[10px] text-muted-foreground uppercase">
           unpopulated
         </span>

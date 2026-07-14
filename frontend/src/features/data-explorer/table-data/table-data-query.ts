@@ -13,7 +13,6 @@ import {
 import { useTableDataController } from "@/features/data-explorer/table-data/use-table-data-controller";
 import { useListTableColumnsQuery } from "@/hooks/api/table";
 import { useReadRowsQuery } from "@/hooks/api/table-data";
-import { anyPredicate } from "@/lib/predicates";
 import { QUERY_STALE_TIME } from "@/lib/query-policy";
 
 interface TableDataSearchState {
@@ -45,6 +44,10 @@ function decodeSortColumnKey(value: string): string {
   return new URLSearchParams(`column=${querySafeValue}`).get("column") ?? "";
 }
 
+function hasInvalidSortSeparator(separator: number, valueLength: number) {
+  return separator <= 0 || separator === valueLength - 1;
+}
+
 function parseSortSearch(value: string | undefined): SortColumn[] {
   if (!value) {
     return [];
@@ -60,12 +63,7 @@ function parseSortSearch(value: string | undefined): SortColumn[] {
     }
 
     const separator = raw.lastIndexOf(":");
-    if (
-      anyPredicate(
-        () => separator <= 0,
-        () => separator === raw.length - 1
-      )
-    ) {
+    if (hasInvalidSortSeparator(separator, raw.length)) {
       continue;
     }
 

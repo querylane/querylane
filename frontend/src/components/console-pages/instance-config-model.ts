@@ -1,6 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import type { useGetInstanceQuery } from "@/hooks/api/instance";
-import { allPredicates } from "@/lib/predicates";
 import { createProtoStandardSchema } from "@/lib/proto-standard-schema";
 import {
   normalizeSslNegotiation,
@@ -201,10 +200,8 @@ function getSslNegotiationErrors(
   formState: InstanceFormState
 ): InstanceFormErrors {
   if (
-    allPredicates(
-      () => formState.sslNegotiation === "direct",
-      () => !isDirectSslNegotiationMode(formState.sslMode)
-    )
+    formState.sslNegotiation === "direct" &&
+    !isDirectSslNegotiationMode(formState.sslMode)
   ) {
     return {
       sslNegotiation: getInstanceFormErrorMessage("sslNegotiation"),
@@ -292,10 +289,8 @@ function buildInstanceConfigUpdatePaths({
   nextPort: number;
 }) {
   if (
-    allPredicates(
-      () => instance.credentialState === Instance_CredentialState.UNREADABLE,
-      () => formState.dirtyFields?.password
-    )
+    instance.credentialState === Instance_CredentialState.UNREADABLE &&
+    formState.dirtyFields?.password
   ) {
     return ["config"];
   }

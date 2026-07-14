@@ -4,7 +4,6 @@ import {
   TimestampSchema,
   timestampDate,
 } from "@bufbuild/protobuf/wkt";
-import { allPredicates, anyPredicate } from "@/lib/predicates";
 import { Instance_ConnectionState } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
 type DbConnectionStatus = "connected" | "disconnected" | "error";
@@ -136,23 +135,16 @@ export function formatBytes(
   sizeBytes: bigint | number | string | null | undefined
 ): string {
   if (
-    anyPredicate(
-      () => sizeBytes === null,
-      () => sizeBytes === undefined,
-      () => typeof sizeBytes === "string" && sizeBytes.trim() === ""
-    )
+    sizeBytes === null ||
+    sizeBytes === undefined ||
+    (typeof sizeBytes === "string" && sizeBytes.trim() === "")
   ) {
     return "—";
   }
 
   const numeric = Number(sizeBytes);
 
-  if (
-    anyPredicate(
-      () => !Number.isFinite(numeric),
-      () => numeric < 0
-    )
-  ) {
+  if (!Number.isFinite(numeric) || numeric < 0) {
     return "—";
   }
 
@@ -160,12 +152,7 @@ export function formatBytes(
   let unitIndex = 0;
   let value = numeric;
 
-  while (
-    allPredicates(
-      () => value >= BYTES_PER_KIBIBYTE,
-      () => unitIndex < units.length - 1
-    )
-  ) {
+  while (value >= BYTES_PER_KIBIBYTE && unitIndex < units.length - 1) {
     value /= BYTES_PER_KIBIBYTE;
     unitIndex += 1;
   }
@@ -177,12 +164,7 @@ export function formatBytes(
     unitIndex === 0
       ? Math.round(value)
       : Math.round(value * BYTE_DECIMAL_SCALE) / BYTE_DECIMAL_SCALE;
-  if (
-    allPredicates(
-      () => rounded >= BYTES_PER_KIBIBYTE,
-      () => unitIndex < units.length - 1
-    )
-  ) {
+  if (rounded >= BYTES_PER_KIBIBYTE && unitIndex < units.length - 1) {
     rounded /= BYTES_PER_KIBIBYTE;
     unitIndex += 1;
   }

@@ -196,8 +196,7 @@
         // Plain JSX text is clearer than redundant string expressions.
         "noJsxLiterals": "off",
         "noImplicitBoolean": "error",
-        // Numeric literals are clearer when extracting them adds no domain meaning.
-        "noMagicNumbers": "off",
+        "noMagicNumbers": "error",
         "noNamespace": "error",
         "noNestedTernary": "error",
         "noNonNullAssertion": "error",
@@ -455,6 +454,7 @@
             "noSecrets": "off"
           },
           "style": {
+            "noMagicNumbers": "off",
             "useComponentExportOnlyModules": "off"
           }
         }
@@ -467,6 +467,9 @@
         "rules": {
           "security": {
             "noSecrets": "off"
+          },
+          "style": {
+            "noMagicNumbers": "off"
           },
           "suspicious": {
             "noDocumentCookie": "off"

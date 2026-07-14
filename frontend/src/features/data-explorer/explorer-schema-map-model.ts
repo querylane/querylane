@@ -5,7 +5,6 @@ import {
   parseResourceLeafId,
   parseTableQualifiedName,
 } from "@/lib/console-resources";
-import { allPredicates } from "@/lib/predicates";
 import type {
   Column,
   Table,
@@ -652,6 +651,16 @@ function tableNodeHeight(table: ReturnType<typeof tableInfo>): number {
   );
 }
 
+function referencesKnownTable(
+  constraint: TableConstraint,
+  tableIds: Set<string>
+): boolean {
+  return (
+    constraint.type === ConstraintType.FOREIGN_KEY &&
+    tableIds.has(constraint.referencedTable)
+  );
+}
+
 function tableDepths(
   tables: ReturnType<typeof tableInfo>[],
   constraintsByTable: Record<string, TableConstraint[]>
@@ -672,12 +681,7 @@ function tableDepths(
     visiting.add(tableId);
     let depth = 0;
     for (const constraint of constraintsByTable[tableId] ?? []) {
-      if (
-        allPredicates(
-          () => constraint.type === ConstraintType.FOREIGN_KEY,
-          () => tableIds.has(constraint.referencedTable)
-        )
-      ) {
+      if (referencesKnownTable(constraint, tableIds)) {
         depth = Math.max(depth, depthFor(constraint.referencedTable) + 1);
       }
     }

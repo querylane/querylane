@@ -35,7 +35,6 @@ import {
 } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { assertNever } from "@/lib/assert-never";
-import { allPredicates } from "@/lib/predicates";
 import { cn } from "@/lib/utils";
 
 const CANVAS_WIDTH = 920;
@@ -184,6 +183,40 @@ function edgeIsActive({
   return (
     selectedNodeId !== null &&
     (edge.source === selectedNodeId || edge.target === selectedNodeId)
+  );
+}
+
+function AccessMapEdgePath({
+  edge,
+  objectIndexById,
+  roleIndexById,
+  selectedNodeId,
+}: {
+  edge: RolesAccessMapEdge;
+  objectIndexById: Map<string, number>;
+  roleIndexById: Map<string, number>;
+  selectedNodeId: string | null;
+}) {
+  const roleIndex = roleIndexById.get(edge.source);
+  const targetRoleIndex = roleIndexById.get(edge.target) ?? null;
+  const objectIndex = objectIndexById.get(edge.target) ?? null;
+  if (roleIndex === undefined) {
+    return null;
+  }
+  if (targetRoleIndex === null && objectIndex === null) {
+    return null;
+  }
+  const active = edgeIsActive({ edge, selectedNodeId });
+  return (
+    <path
+      className={cn(
+        "fill-none transition-opacity",
+        edgeToneClass(edge.tone),
+        active ? "opacity-100" : "opacity-15"
+      )}
+      d={edgePath({ objectIndex, roleIndex, targetRoleIndex })}
+      strokeWidth={active ? EDGE_ACTIVE_WIDTH : EDGE_DEFAULT_WIDTH}
+    />
   );
 }
 
@@ -554,37 +587,15 @@ function RolesAccessMapCanvas({
               viewBox={`0 0 ${CANVAS_WIDTH} ${height}`}
               width={CANVAS_WIDTH}
             >
-              {visibleEdges.map((edge) => {
-                const roleIndex = roleIndexById.get(edge.source);
-                const targetRoleIndex = roleIndexById.get(edge.target) ?? null;
-                const objectIndex = objectIndexById.get(edge.target) ?? null;
-                if (roleIndex === undefined) {
-                  return null;
-                }
-                if (
-                  allPredicates(
-                    () => targetRoleIndex === null,
-                    () => objectIndex === null
-                  )
-                ) {
-                  return null;
-                }
-                const active = edgeIsActive({ edge, selectedNodeId });
-                return (
-                  <path
-                    className={cn(
-                      "fill-none transition-opacity",
-                      edgeToneClass(edge.tone),
-                      active ? "opacity-100" : "opacity-15"
-                    )}
-                    d={edgePath({ objectIndex, roleIndex, targetRoleIndex })}
-                    key={edge.id}
-                    strokeWidth={
-                      active ? EDGE_ACTIVE_WIDTH : EDGE_DEFAULT_WIDTH
-                    }
-                  />
-                );
-              })}
+              {visibleEdges.map((edge) => (
+                <AccessMapEdgePath
+                  edge={edge}
+                  key={edge.id}
+                  objectIndexById={objectIndexById}
+                  roleIndexById={roleIndexById}
+                  selectedNodeId={selectedNodeId}
+                />
+              ))}
             </svg>
             {model.roles.map((node, index) => (
               <RoleNodeButton

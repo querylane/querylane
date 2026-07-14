@@ -9,6 +9,8 @@ const functionLinesLimitPattern = /"maxLines":\s*250/;
 const parameterLimitPattern = /"max":\s*3/;
 const routeFastRefreshOverridePattern =
   /"includes":\s*\["src\/routes\/\*\*\/\*"\][\s\S]*?"useComponentExportOnlyModules":\s*"off"/;
+const magicNumbersEnabledPattern = /"noMagicNumbers":\s*"error"/;
+const magicNumbersDisabledPattern = /"noMagicNumbers":\s*"off"/;
 const allAssistsPresetPattern = /"preset":\s*"all"/g;
 const unsafeAssistPatterns = [
   /"useSortedEnumMembers":\s*"off"/,
@@ -86,6 +88,15 @@ function readJsonRecord(path: string) {
   return parsed;
 }
 
+function biomeOverrideBlock(config: string, includeMarker: string): string {
+  const start = config.indexOf(includeMarker);
+  if (start < 0) {
+    throw new Error(`Missing Biome override for ${includeMarker}.`);
+  }
+  const nextOverride = config.indexOf("\n    {", start);
+  return config.slice(start, nextOverride < 0 ? undefined : nextOverride);
+}
+
 describe("strict tooling policy", () => {
   test("pins every audited static-analysis release", () => {
     const packageJson = readJsonRecord("package.json");
@@ -141,6 +152,29 @@ describe("strict tooling policy", () => {
     ].sort();
 
     expect(disabledRules).toEqual(allowedDisabledBiomeRules);
+  });
+
+  test("limits magic-number exceptions to tests and the sidebar", () => {
+    const biomeConfig = readFileSync(
+      resolve(projectRoot, "biome.jsonc"),
+      "utf8"
+    );
+    const globalConfig = biomeConfig.slice(
+      0,
+      biomeConfig.indexOf('"overrides"')
+    );
+    const testOverride = biomeOverrideBlock(
+      biomeConfig,
+      "// Fake credentials and high-entropy fixtures are required test inputs;"
+    );
+    const sidebarOverride = biomeOverrideBlock(
+      biomeConfig,
+      '"src/components/querylane-ui/sidebar.tsx"'
+    );
+
+    expect(globalConfig).toMatch(magicNumbersEnabledPattern);
+    expect(testOverride).toMatch(magicNumbersDisabledPattern);
+    expect(sidebarOverride).toMatch(magicNumbersDisabledPattern);
   });
 
   test("preserves TanStack Router route code splitting", () => {

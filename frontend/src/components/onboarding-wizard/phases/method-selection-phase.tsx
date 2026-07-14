@@ -12,7 +12,6 @@ import type { ConfigMethod } from "@/components/onboarding-wizard/types";
 import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { anyPredicate } from "@/lib/predicates";
 import { formatSetupMethod } from "@/lib/protobuf-enums";
 import { cn } from "@/lib/utils";
 import type { SetupMethod } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
@@ -129,6 +128,9 @@ function MethodOption({
   );
 }
 
+const NEXT_METHOD_KEYS = new Set(["ArrowDown", "ArrowRight"]);
+const PREVIOUS_METHOD_KEYS = new Set(["ArrowUp", "ArrowLeft"]);
+
 function getNextMethodFromKey({
   currentMethod,
   key,
@@ -145,20 +147,10 @@ function getNextMethodFromKey({
     0,
     currentMethod ? methods.indexOf(currentMethod) : 0
   );
-  if (
-    anyPredicate(
-      () => key === "ArrowDown",
-      () => key === "ArrowRight"
-    )
-  ) {
+  if (NEXT_METHOD_KEYS.has(key)) {
     return methods[(currentIndex + 1) % methods.length] ?? null;
   }
-  if (
-    anyPredicate(
-      () => key === "ArrowUp",
-      () => key === "ArrowLeft"
-    )
-  ) {
+  if (PREVIOUS_METHOD_KEYS.has(key)) {
     return (
       methods[(currentIndex - 1 + methods.length) % methods.length] ?? null
     );

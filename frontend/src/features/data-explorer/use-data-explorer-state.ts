@@ -6,7 +6,6 @@ import {
 } from "@/features/data-explorer/data-explorer-types";
 import { isSchemaDetailTab } from "@/features/data-explorer/schema-detail-tab";
 import { isTableDetailTab } from "@/features/data-explorer/table-detail-tab";
-import { allPredicates } from "@/lib/predicates";
 import {
   type CatalogSyncMetadata,
   CatalogSyncStatus,
@@ -49,20 +48,10 @@ function normalizeExplorerDetailTab({
   hasTableSelection: boolean;
   tab: DataExplorerSearch["tab"];
 }): DataExplorerSearch["tab"] {
-  if (
-    allPredicates(
-      () => hasTableSelection,
-      () => isTableDetailTab(tab)
-    )
-  ) {
+  if (hasTableSelection && isTableDetailTab(tab)) {
     return tab === "data" ? undefined : tab;
   }
-  if (
-    allPredicates(
-      () => !hasResourceSelection,
-      () => isSchemaDetailTab(tab)
-    )
-  ) {
+  if (!hasResourceSelection && isSchemaDetailTab(tab)) {
     return tab === "objects" ? undefined : tab;
   }
   return undefined;

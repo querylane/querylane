@@ -220,6 +220,13 @@ function shouldLoadAccessMap(activeTab: InstanceRolesTab, roleCount: number) {
   return activeTab === "map" && roleCount > 0;
 }
 
+function builtInRoleCountForTypeFilter(
+  type: RoleKind | undefined,
+  builtInRoleCount: number
+): number {
+  return type === undefined ? builtInRoleCount : 0;
+}
+
 export function InstanceRolesPage({
   instanceId,
   tab,
@@ -359,7 +366,7 @@ export function InstanceRolesPage({
       />
       <RolesAccessMapNotice kind="partial" visible={accessMapIsPartial} />
       <RolesAccessMapCanvas
-        builtInRoleCount={type === undefined ? counts.builtin : 0}
+        builtInRoleCount={builtInRoleCountForTypeFilter(type, counts.builtin)}
         failedRequestCount={
           accessMapResourcesQuery.data?.failedRequestCount ?? 0
         }

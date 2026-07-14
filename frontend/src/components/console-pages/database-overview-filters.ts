@@ -1,5 +1,4 @@
 import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter";
-import { allPredicates } from "@/lib/predicates";
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 type CatalogObjectKindFilter =
@@ -154,6 +153,14 @@ function presentCatalogSchemaOwnerOptions(schemas: CatalogSchemaFacetRow[]) {
   return uniqueSortedOptions(schemas.map(ownerFilterValue), ownerFilterLabel);
 }
 
+function matchesSelectedFacet(
+  selectedValues: Set<string>,
+  selectedValueCount: number,
+  value: string
+): boolean {
+  return selectedValueCount === 0 || selectedValues.has(value);
+}
+
 function filterCatalogObjectsByFacets<RowType extends CatalogObjectFacetRow>({
   kindFilters,
   objects,
@@ -166,39 +173,27 @@ function filterCatalogObjectsByFacets<RowType extends CatalogObjectFacetRow>({
   const schemaFilterSet = new Set(schemaFilters);
   const systemFilterSet = new Set(systemFilters);
   return objects.filter((object) => {
-    if (
-      allPredicates(
-        () => kindFilters.length > 0,
-        () => !kindFilterSet.has(catalogObjectKindValue(object))
-      )
-    ) {
-      return false;
-    }
-    if (
-      allPredicates(
-        () => systemFilters.length > 0,
-        () => !systemFilterSet.has(catalogObjectSystemValue(object))
-      )
-    ) {
-      return false;
-    }
-    if (
-      allPredicates(
-        () => schemaFilters.length > 0,
-        () => !schemaFilterSet.has(schemaFilterValue(object))
-      )
-    ) {
-      return false;
-    }
-    if (
-      allPredicates(
-        () => ownerFilters.length > 0,
-        () => !ownerFilterSet.has(ownerFilterValue(object))
-      )
-    ) {
-      return false;
-    }
-    return true;
+    const matchesKind = matchesSelectedFacet(
+      kindFilterSet,
+      kindFilters.length,
+      catalogObjectKindValue(object)
+    );
+    const matchesSystem = matchesSelectedFacet(
+      systemFilterSet,
+      systemFilters.length,
+      catalogObjectSystemValue(object)
+    );
+    const matchesSchema = matchesSelectedFacet(
+      schemaFilterSet,
+      schemaFilters.length,
+      schemaFilterValue(object)
+    );
+    const matchesOwner = matchesSelectedFacet(
+      ownerFilterSet,
+      ownerFilters.length,
+      ownerFilterValue(object)
+    );
+    return matchesKind && matchesSystem && matchesSchema && matchesOwner;
   });
 }
 

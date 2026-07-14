@@ -32,7 +32,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { anyPredicate } from "@/lib/predicates";
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
@@ -403,6 +402,12 @@ function isSidebarOffcanvasHidden(
   );
 }
 
+function hasFloatingSidebarLayout(
+  variant: "sidebar" | "floating" | "inset"
+): boolean {
+  return variant === "floating" || variant === "inset";
+}
+
 function Sidebar({
   side = "left",
   variant = "sidebar",
@@ -505,10 +510,7 @@ function Sidebar({
           "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
-          anyPredicate(
-            () => variant === "floating",
-            () => variant === "inset"
-          )
+          hasFloatingSidebarLayout(variant)
             ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)"
         )}
@@ -519,10 +521,7 @@ function Sidebar({
         className={cn(
           "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[transform,width] duration-200 ease-linear data-[side=right]:right-0 data-[side=left]:left-0 group-data-[collapsible=offcanvas]:pointer-events-none data-[side=left]:group-data-[collapsible=offcanvas]:data-[hover-reveal=open]:translate-x-0 data-[side=right]:group-data-[collapsible=offcanvas]:data-[hover-reveal=open]:translate-x-0 group-data-[collapsible=offcanvas]:data-[hover-reveal=open]:pointer-events-auto group-data-[collapsible=offcanvas]:data-[hover-reveal=open]:z-30 data-[side=left]:group-data-[collapsible=offcanvas]:-translate-x-full data-[side=right]:group-data-[collapsible=offcanvas]:translate-x-full group-data-[collapsible=offcanvas]:data-[hover-reveal=open]:shadow-2xl lg:flex",
           // Adjust the padding for floating and inset variants.
-          anyPredicate(
-            () => variant === "floating",
-            () => variant === "inset"
-          )
+          hasFloatingSidebarLayout(variant)
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
           className

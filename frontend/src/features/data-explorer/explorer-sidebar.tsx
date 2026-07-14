@@ -43,7 +43,6 @@ import {
 } from "@/features/data-explorer/data-explorer-types";
 import { ExplorerResourceButton } from "@/features/data-explorer/explorer-resource-button";
 import type { catalogSyncNotice } from "@/features/data-explorer/use-data-explorer-state";
-import { allPredicates, anyPredicate } from "@/lib/predicates";
 import { cn } from "@/lib/utils";
 
 interface CategoryPaginationState {
@@ -506,6 +505,17 @@ function observeResourceListRect(
   });
 }
 
+function hasMoreCategoryItems(pagination: CategoryPaginationState): boolean {
+  return pagination.hasNextPage || pagination.isFetchingNextPage;
+}
+
+function shouldSkipCategory(
+  items: ResourceItem[],
+  pagination: CategoryPaginationState
+): boolean {
+  return items.length === 0 && !hasMoreCategoryItems(pagination);
+}
+
 function flattenActiveSchemaItems({
   categoryPagination,
   expandedCategories,
@@ -519,12 +529,7 @@ function flattenActiveSchemaItems({
   for (const category of CATEGORY_ORDER) {
     const allItems = itemsByCategory[category];
     const pagination = categoryPagination[category];
-    if (
-      allPredicates(
-        () => allItems.length === 0,
-        () => !(pagination.hasNextPage || pagination.isFetchingNextPage)
-      )
-    ) {
+    if (shouldSkipCategory(allItems, pagination)) {
       continue;
     }
     flatItems.push({
@@ -543,12 +548,7 @@ function flattenActiveSchemaItems({
         kind: "resource",
       });
     }
-    if (
-      anyPredicate(
-        () => pagination.hasNextPage,
-        () => pagination.isFetchingNextPage
-      )
-    ) {
+    if (hasMoreCategoryItems(pagination)) {
       flatItems.push({
         category,
         hasNextPage: pagination.hasNextPage,

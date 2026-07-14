@@ -4,7 +4,6 @@ import {
   buildTestInstanceConnectionRequest,
   getPostgresConfigFingerprint,
 } from "@/lib/instance-connection";
-import { anyPredicate } from "@/lib/predicates";
 import {
   SSL_MODE_OPTIONS,
   SSL_NEGOTIATION_OPTIONS,
@@ -175,12 +174,10 @@ function createInstanceWorkflowReducer(
         formErrors: action.formErrors,
         // Instance ID errors only come from the server, so always surface
         // them; labels expand only when they are the field to focus.
-        showAdvanced: anyPredicate(
-          () => action.firstInvalidField === "labels",
-          () => action.formErrors.instanceId
-        )
-          ? true
-          : state.showAdvanced,
+        showAdvanced:
+          action.firstInvalidField === "labels" || action.formErrors.instanceId
+            ? true
+            : state.showAdvanced,
         validationAttempt: state.validationAttempt + 1,
       };
     case "setFormNotice":

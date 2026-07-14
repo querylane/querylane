@@ -1,5 +1,3 @@
-import { anyPredicate } from "@/lib/predicates";
-
 const DEFAULT_POSTGRES_PORT = 5432;
 const MAX_POSTGRES_PORT = 65_535;
 const LEADING_SLASH = /^\//;
@@ -121,6 +119,10 @@ function hasPostgresProtocol(value: string): boolean {
   return value.startsWith("postgres://") || value.startsWith("postgresql://");
 }
 
+function isInvalidPostgresPort(port: number): boolean {
+  return !Number.isInteger(port) || port <= 0 || port > MAX_POSTGRES_PORT;
+}
+
 export function parsePostgresConnectionString(
   input: string
 ): ParsedPostgresConnectionString | null {
@@ -138,13 +140,7 @@ export function parsePostgresConnectionString(
       ? Number.parseInt(url.port, 10)
       : DEFAULT_POSTGRES_PORT;
 
-    if (
-      anyPredicate(
-        () => !Number.isInteger(port),
-        () => port <= 0,
-        () => port > MAX_POSTGRES_PORT
-      )
-    ) {
+    if (isInvalidPostgresPort(port)) {
       return null;
     }
 

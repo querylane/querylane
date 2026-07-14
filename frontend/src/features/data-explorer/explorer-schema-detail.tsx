@@ -37,7 +37,6 @@ import {
   normalizeEstimatedRowCount,
   parseResourceLeafId,
 } from "@/lib/console-resources";
-import { allPredicates, anyPredicate } from "@/lib/predicates";
 import {
   type Table,
   Table_TableType,
@@ -447,6 +446,20 @@ function isSchemaDetailLoading({
   );
 }
 
+function hasSchemaLoadError(
+  tablesError: unknown,
+  viewsError: unknown
+): boolean {
+  return Boolean(tablesError || viewsError);
+}
+
+function canLoadOtherDatabaseObjects(
+  databaseId: string,
+  instanceId: string
+): boolean {
+  return databaseId.length > 0 && instanceId.length > 0;
+}
+
 function SchemaDetail({
   activeTab = "objects",
   databaseId = "",
@@ -572,10 +585,7 @@ function SchemaDetail({
         <CatalogSyncNotice notice={tablesSyncNotice} surface="detail" />
       ) : null}
 
-      {anyPredicate(
-        () => tablesError,
-        () => viewsError
-      ) ? (
+      {hasSchemaLoadError(tablesError, viewsError) ? (
         <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
           Failed to load some objects in this schema. Refresh the page to try
           again.
@@ -606,10 +616,7 @@ function SchemaDetail({
               views={views}
             />
           )}
-          {allPredicates(
-            () => databaseId,
-            () => instanceId
-          ) ? (
+          {canLoadOtherDatabaseObjects(databaseId, instanceId) ? (
             <OtherDatabaseObjectsSection
               databaseId={databaseId}
               instanceId={instanceId}

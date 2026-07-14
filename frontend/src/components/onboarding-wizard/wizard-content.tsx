@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { captureException } from "@/lib/diagnostics";
-import { anyPredicate } from "@/lib/predicates";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
@@ -326,6 +325,16 @@ function renderWizardPhase(phase: WizardPhase) {
   }
 }
 
+const CONFIGURE_PHASES = new Set<WizardPhase>([
+  "configure_ui",
+  "configure_yaml",
+  "configure_embedded",
+]);
+
+function isConfigurePhase(phase: WizardPhase): boolean {
+  return CONFIGURE_PHASES.has(phase);
+}
+
 function OnboardingStageContent({
   configureError,
   phase,
@@ -341,13 +350,7 @@ function OnboardingStageContent({
     showWizardErrorBanner &&
     Boolean(wizardStateError) &&
     phase === "method_selection";
-  const showConfigureError =
-    Boolean(configureError) &&
-    anyPredicate(
-      () => phase === "configure_ui",
-      () => phase === "configure_yaml",
-      () => phase === "configure_embedded"
-    );
+  const showConfigureError = Boolean(configureError) && isConfigurePhase(phase);
   return (
     <>
       {showPreviousErrorBanner ? (

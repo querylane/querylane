@@ -53,7 +53,6 @@ import type {
 } from "@/features/database-visualization/graph-model";
 import { assertNever } from "@/lib/assert-never";
 import { parseResourceLeafId } from "@/lib/console-resources";
-import { allPredicates } from "@/lib/predicates";
 import {
   DefaultPrivilegeObjectType,
   GrantObjectType,
@@ -440,6 +439,13 @@ function AccessMapCanvasActions({
   );
 }
 
+function shouldShowPartialAccessAlert(
+  partialAccess: boolean,
+  isMapExpanded: boolean
+): boolean {
+  return partialAccess && !isMapExpanded;
+}
+
 function RoleAccessMapTab(props: RoleDetailViewProps) {
   const navigate = useNavigate({
     from: "/instances/$instanceId/roles/$roleId",
@@ -639,10 +645,7 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
         </Card>
       </div>
 
-      {allPredicates(
-        () => props.partialAccess,
-        () => !isMapExpanded
-      ) ? (
+      {shouldShowPartialAccessAlert(props.partialAccess, isMapExpanded) ? (
         <RolePartialAccessAlert
           databaseName={props.effectiveDb?.name ?? "the selected database"}
         />

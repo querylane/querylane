@@ -9,7 +9,6 @@ import { AppShellFrame } from "@/components/app-shell-frame";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
 import { useRetainedRetryError } from "@/components/use-retained-retry-error";
 import { captureException } from "@/lib/diagnostics";
-import { allPredicates } from "@/lib/predicates";
 import { getBlockingRoutePath, normalizeAppUiError } from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { useBlockingErrorStore } from "@/stores/blocking-error-store";
@@ -61,6 +60,14 @@ function FullscreenMessage({
   );
 }
 
+function shouldRenderBlockingRoute(
+  hasBootError: boolean,
+  blockingRoute: string | null,
+  pathname: string
+): boolean {
+  return hasBootError && blockingRoute !== null && pathname === blockingRoute;
+}
+
 export function BootGate({ children }: { children: React.ReactNode }) {
   const bootError = useSetupStore((state) => state.bootError);
   const bootstrap = useSetupStore((state) => state.bootstrap);
@@ -97,11 +104,7 @@ export function BootGate({ children }: { children: React.ReactNode }) {
   }, [bootstrap]);
 
   if (
-    allPredicates(
-      () => status === "boot_error",
-      () => blockingRoute,
-      () => pathname === blockingRoute
-    )
+    shouldRenderBlockingRoute(status === "boot_error", blockingRoute, pathname)
   ) {
     return children;
   }

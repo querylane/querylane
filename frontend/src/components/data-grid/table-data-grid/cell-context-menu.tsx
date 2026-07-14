@@ -2,7 +2,6 @@ import { Copy, FileCode2, Rows3 } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { allPredicates } from "@/lib/predicates";
 import { cn } from "@/lib/utils";
 
 interface CellContextMenuProps {
@@ -21,13 +20,13 @@ function isFocusableCandidate(
   menu: HTMLDivElement | null
 ): boolean {
   const style = getComputedStyle(candidate);
-  return allPredicates(
-    () => candidate.tabIndex >= 0,
-    () => !candidate.matches(":disabled"),
-    () => !candidate.closest("[hidden], [inert]"),
-    () => style.display !== "none",
-    () => style.visibility !== "hidden",
-    () => !menu?.contains(candidate)
+  return (
+    candidate.tabIndex >= 0 &&
+    !candidate.matches(":disabled") &&
+    !candidate.closest("[hidden], [inert]") &&
+    style.display !== "none" &&
+    style.visibility !== "hidden" &&
+    !menu?.contains(candidate)
   );
 }
 
@@ -41,10 +40,7 @@ function findNextFocusableElement(
   const invokingIndex = elements.indexOf(returnFocusTo);
   for (
     let index = invokingIndex + direction;
-    allPredicates(
-      () => index >= 0,
-      () => index < elements.length
-    );
+    index >= 0 && index < elements.length;
     index += direction
   ) {
     const candidate = elements[index];

@@ -156,7 +156,6 @@ import {
   type PageSize,
   pageIndexForPageSizeChange,
 } from "@/lib/pagination";
-import { allPredicates } from "@/lib/predicates";
 import {
   formatPolicyCommand,
   formatPolicyMode,
@@ -2669,10 +2668,7 @@ function IndexesTab({
       {indexes.length === 0 ? (
         <TableResourceEmptyState category="indexes" toolbar={toolbar} />
       ) : null}
-      {allPredicates(
-        () => indexes.length > 0,
-        () => filteredIndexes.length === 0
-      ) ? (
+      {indexes.length > 0 && filteredIndexes.length === 0 ? (
         <SearchEmptyState className="border" resourceName="indexes" />
       ) : null}
       <nav

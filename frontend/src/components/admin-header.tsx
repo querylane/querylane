@@ -49,7 +49,6 @@ import {
 import { useDb } from "@/lib/db-context";
 import { handleNavigationError } from "@/lib/navigation-errors";
 import { resolveBreadcrumbTail } from "@/lib/page-breadcrumb";
-import { anyPredicate } from "@/lib/predicates";
 import { roleIdOf } from "@/lib/role-display";
 import { useCurrentRouteIds } from "@/lib/route-ids";
 import { cn } from "@/lib/utils";
@@ -187,6 +186,13 @@ function BreadcrumbDropdownList({
   );
 }
 
+function shouldShowBreadcrumbSpinner(
+  loading: boolean,
+  refreshing: boolean
+): boolean {
+  return loading || refreshing;
+}
+
 function BreadcrumbDropdown({
   children,
   contentWidth,
@@ -237,10 +243,7 @@ function BreadcrumbDropdown({
         >
           {triggerValue}
         </OverflowAwareText>
-        {anyPredicate(
-          () => loading,
-          () => refreshing
-        ) ? (
+        {shouldShowBreadcrumbSpinner(loading, refreshing) ? (
           <Spinner className="size-3 shrink-0 text-muted-foreground" />
         ) : null}
         <ChevronsUpDown

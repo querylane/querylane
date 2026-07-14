@@ -1,6 +1,5 @@
 import { create } from "@bufbuild/protobuf";
 import { z } from "zod";
-import { anyPredicate } from "@/lib/predicates";
 import {
   type RowFilter,
   RowFilterGroup_Logic,
@@ -888,12 +887,7 @@ function parseTableValue(
   if (!value) {
     return;
   }
-  if (
-    anyPredicate(
-      () => operator === "jsonContains",
-      () => dataType === DataType.JSON
-    )
-  ) {
+  if (operator === "jsonContains" || dataType === DataType.JSON) {
     return create(TableValueSchema, { kind: { case: "jsonValue", value } });
   }
   switch (dataType) {

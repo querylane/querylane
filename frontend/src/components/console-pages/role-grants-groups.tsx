@@ -34,7 +34,6 @@ import {
 import { SearchEmptyState } from "@/components/search-empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { allPredicates } from "@/lib/predicates";
 import { cn } from "@/lib/utils";
 import { GrantObjectType } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
@@ -267,6 +266,13 @@ function SchemaSectionHeader({
   );
 }
 
+function shouldShowHiddenObjectCount(
+  showAll: boolean,
+  overflow: number
+): boolean {
+  return !showAll && overflow > 0;
+}
+
 function SchemaSectionBody({
   columns,
   counts,
@@ -348,10 +354,7 @@ function SchemaSectionBody({
           {showAll
             ? "Show fewer"
             : `Show all ${filtered.length.toLocaleString()} ${unit}s${filterActive ? " matching filters" : ""}`}
-          {allPredicates(
-            () => !showAll,
-            () => overflow > 0
-          ) ? (
+          {shouldShowHiddenObjectCount(showAll, overflow) ? (
             <span className="ml-1.5 text-muted-foreground/70">
               · +{overflow.toLocaleString()} hidden
             </span>

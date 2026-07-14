@@ -5,6 +5,12 @@ import { env, exit } from "node:process";
 const DEFAULT_BASE_REF = "origin/main";
 const FRONTEND_PREFIX = "frontend/";
 const FRONTEND_GIT_PATHSPEC = ":(top)frontend";
+const FRONTEND_WORKFLOW_GIT_PATHSPEC =
+  ":(top).github/workflows/frontend-ci.yml";
+const STATIC_ANALYSIS_GIT_PATHSPECS = [
+  FRONTEND_GIT_PATHSPEC,
+  FRONTEND_WORKFLOW_GIT_PATHSPEC,
+];
 const FAILURE_EXIT_CODE = 1;
 const SUCCESS_EXIT_CODE = 0;
 const EXTENSION_PATTERN = /\.[^.]+$/u;
@@ -70,7 +76,9 @@ function frontendRelativePath(repoPath: string): string | null {
   if (repoPath.startsWith(FRONTEND_PREFIX)) {
     return repoPath.slice(FRONTEND_PREFIX.length);
   }
-  return repoPath.startsWith("../") ? null : repoPath;
+  return repoPath.startsWith("../") || repoPath.startsWith(".github/")
+    ? null
+    : repoPath;
 }
 
 function hasLintableExtension(path: string) {
@@ -88,10 +96,11 @@ function requiresFullStaticAnalysis(repoPaths: readonly string[]) {
   return repoPaths.some((path) => FULL_STATIC_ANALYSIS_PATH_PATTERN.test(path));
 }
 
-function requiresFullStaticAnalysisFromBase(baseRef: string) {
-  return requiresFullStaticAnalysis(
-    changedRepoFiles(baseRef, childProcessRunner)
-  );
+function requiresFullStaticAnalysisFromBase(
+  baseRef: string,
+  runner: CommandRunner = childProcessRunner
+) {
+  return requiresFullStaticAnalysis(changedRepoFiles(baseRef, runner));
 }
 
 function lintableChangedFiles(
@@ -128,7 +137,7 @@ function changedRepoFiles(baseRef: string, runner: CommandRunner) {
     diffBase,
     "HEAD",
     "--",
-    FRONTEND_GIT_PATHSPEC,
+    ...STATIC_ANALYSIS_GIT_PATHSPECS,
   ]);
 
   if (diffResult.status !== SUCCESS_EXIT_CODE) {
@@ -140,7 +149,7 @@ function changedRepoFiles(baseRef: string, runner: CommandRunner) {
     "--others",
     "--exclude-standard",
     "--",
-    FRONTEND_GIT_PATHSPEC,
+    ...STATIC_ANALYSIS_GIT_PATHSPECS,
   ]);
   const untrackedFiles =
     untrackedResult.status === SUCCESS_EXIT_CODE

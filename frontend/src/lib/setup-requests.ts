@@ -1,7 +1,6 @@
 import { create as createProto } from "@bufbuild/protobuf";
 
 import { buildTestInstanceConnectionRequest as buildStandaloneTestConnectionRequest } from "@/lib/instance-connection";
-import { allPredicates } from "@/lib/predicates";
 import { attachAppUiErrorContext } from "@/lib/ui-error";
 import type { PostgresConfig } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import { PostgresConfigSchema } from "@/protogen/querylane/console/v1alpha1/instance_pb";
@@ -89,6 +88,13 @@ function createSetupStreamFailureError(failure: SetupStreamFailure) {
   });
 }
 
+function isSetupCompletionEvent(event: SetupProgressEvent): boolean {
+  return (
+    event.stepId === SetupStep.PERSISTING_CONFIG &&
+    event.state === StepState.SUCCEEDED
+  );
+}
+
 async function consumeSetupStreamWithProgress(
   stream: AsyncIterable<SetupAppDatabaseResponse>,
   onProgress: StepProgressCallback
@@ -100,12 +106,7 @@ async function consumeSetupStreamWithProgress(
     const { event } = response;
     if (event) {
       onProgress(event);
-      if (
-        allPredicates(
-          () => event.stepId === SetupStep.PERSISTING_CONFIG,
-          () => event.state === StepState.SUCCEEDED
-        )
-      ) {
+      if (isSetupCompletionEvent(event)) {
         setupCompleted = true;
       }
     }

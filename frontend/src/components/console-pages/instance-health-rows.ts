@@ -9,7 +9,6 @@ import {
   formatUptime,
 } from "@/lib/console-resources";
 import { parsePostgresPlatform } from "@/lib/postgres-platform";
-import { allPredicates } from "@/lib/predicates";
 import {
   formatReplicationRole,
   formatSslMode,
@@ -289,12 +288,10 @@ function buildReplicationRow(
     id: "replication",
     label: "Replication",
     summary,
-    tone: allPredicates(
-      () => rolesDisagree,
-      () => replication.status !== HealthCheckStatus.ERROR
-    )
-      ? "warning"
-      : toneFromHealthCheckStatus(replication.status),
+    tone:
+      rolesDisagree && replication.status !== HealthCheckStatus.ERROR
+        ? "warning"
+        : toneFromHealthCheckStatus(replication.status),
   };
 }
 

@@ -31,7 +31,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
-import { anyPredicate } from "@/lib/predicates";
 import type { RoleKind } from "@/lib/role-display";
 import { cn } from "@/lib/utils";
 import {
@@ -410,10 +409,7 @@ export function OwnsGrantsView({
           partial={partial}
         />
 
-        {anyPredicate(
-          () => isEmpty,
-          () => isSuper
-        ) ? null : (
+        {isEmpty || isSuper ? null : (
           <CleanupCard
             count={ownedObjects.length}
             partial={partial}

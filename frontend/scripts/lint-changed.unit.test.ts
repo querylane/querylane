@@ -5,6 +5,7 @@ import {
   frontendRelativePath,
   lintableChangedFiles,
   requiresFullStaticAnalysis,
+  requiresFullStaticAnalysisFromBase,
 } from "./lint-changed";
 
 const fileSystem = {
@@ -61,6 +62,7 @@ describe("changed-file lint selection", () => {
       "HEAD",
       "--",
       ":(top)frontend",
+      ":(top).github/workflows/frontend-ci.yml",
     ]);
   });
 
@@ -99,5 +101,33 @@ describe("changed-file lint selection", () => {
     expect(
       requiresFullStaticAnalysis(["frontend/src/components/admin-header.tsx"])
     ).toBe(false);
+  });
+
+  test("discovers workflow policy changes through the git runner", () => {
+    const calls: { command: string; args: string[] }[] = [];
+    const runner = {
+      run: (command: string, args: string[]) => {
+        calls.push({ args, command });
+        if (args[0] === "merge-base") {
+          return { status: 0, stdout: "abc123\n" };
+        }
+        if (args[0] === "diff") {
+          return {
+            status: 0,
+            stdout: ".github/workflows/frontend-ci.yml\nfrontend/src/app.tsx\n",
+          };
+        }
+        return { status: 0, stdout: "" };
+      },
+    };
+
+    expect(requiresFullStaticAnalysisFromBase("origin/main", runner)).toBe(
+      true
+    );
+    const diffCall = calls.find((call) => call.args[0] === "diff");
+    expect(diffCall?.args.slice(-2)).toEqual([
+      ":(top)frontend",
+      ":(top).github/workflows/frontend-ci.yml",
+    ]);
   });
 });
