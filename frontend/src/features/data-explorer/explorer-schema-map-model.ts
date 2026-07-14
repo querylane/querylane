@@ -106,7 +106,6 @@ interface SchemaMapModel {
   hulls: SchemaMapHull[];
   nodes: SchemaMapNode[];
   schemaOptions: SchemaMapSchemaOption[];
-  stats: string;
   viewBox: string;
   viewNodes: SchemaMapViewNode[];
   worldHeight: number;
@@ -182,15 +181,12 @@ function buildSchemaMapModel({
     schemaTone,
     tableInfos: visibleTables,
   });
-  const tableWord = layout.nodes.length === 1 ? "table" : "tables";
-  const keyWord = edges.length === 1 ? "foreign key" : "foreign keys";
 
   return {
     edges,
     hulls: layout.hulls,
     nodes: layout.nodes,
     schemaOptions,
-    stats: `${layout.nodes.length.toLocaleString()} ${tableWord} · ${edges.length.toLocaleString()} ${keyWord}`,
     viewBox: `0 0 ${layout.worldWidth} ${layout.worldHeight}`,
     viewNodes: layout.viewNodes,
     worldHeight: layout.worldHeight,

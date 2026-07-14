@@ -1551,7 +1551,7 @@ test("data explorer schema detail scopes the map to the selected schema", async 
   );
 });
 
-test("data explorer schema map tab matches the redesign relationship map", async () => {
+test("data explorer schema map shows relationships without a floating help overlay", async () => {
   const catalog = seedSchemaMapVisualCatalog();
   const onSelectTable = vi.fn();
 
@@ -1589,6 +1589,9 @@ test("data explorer schema map tab matches the redesign relationship map", async
     await expect
       .element(page.getByRole("searchbox", { name: "Find a table" }))
       .toBeVisible();
+    await expect
+      .element(page.getByText("Curved lines show foreign keys."))
+      .not.toBeInTheDocument();
     await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
       "data-explorer-schema-map"
     );
