@@ -614,6 +614,17 @@ message ConnectionActivitySession {
   string wait_event_type = 8;
   string wait_event = 9;
   int32 blocked_by_pid = 10 [(buf.validate.field).int32.gte = 0];
+  // Seconds since backend_start; how long this client has been connected.
+  int64 backend_age_seconds = 11 [(buf.validate.field).int64.gte = 0];
+  // Seconds since xact_start. Unset when no transaction is open.
+  optional int64 transaction_age_seconds = 12 [(buf.validate.field).int64.gte = 0];
+  // Seconds since query_start: the current query's age for active sessions,
+  // the most recent query's otherwise. Unset when none was run yet.
+  optional int64 query_age_seconds = 13 [(buf.validate.field).int64.gte = 0];
+  // Client origin from client_addr/client_port. Empty address and zero port
+  // when the client connected via unix socket.
+  string client_address = 14;
+  int32 client_port = 15 [(buf.validate.field).int32.gte = 0];
 }
 
 // Replication health from pg_is_in_recovery, pg_stat_replication, and

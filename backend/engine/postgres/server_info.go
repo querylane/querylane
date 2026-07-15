@@ -325,7 +325,11 @@ func queryConnectionActivitySessions(ctx context.Context, tx *sql.Tx) ([]engine.
 	var sessions []engine.ConnectionActivitySession
 
 	for rows.Next() {
-		var session engine.ConnectionActivitySession
+		var (
+			session                  engine.ConnectionActivitySession
+			transactionAge, queryAge sql.NullInt64
+		)
+
 		if err := rows.Scan(
 			&session.PID,
 			&session.Username,
@@ -337,8 +341,21 @@ func queryConnectionActivitySessions(ctx context.Context, tx *sql.Tx) ([]engine.
 			&session.WaitEventType,
 			&session.WaitEvent,
 			&session.BlockedByPID,
+			&session.BackendAgeSeconds,
+			&transactionAge,
+			&queryAge,
+			&session.ClientAddress,
+			&session.ClientPort,
 		); err != nil {
 			return nil, classifyQueryError("scan activity sessions", err)
+		}
+
+		if transactionAge.Valid {
+			session.TransactionAgeSeconds = &transactionAge.Int64
+		}
+
+		if queryAge.Valid {
+			session.QueryAgeSeconds = &queryAge.Int64
 		}
 
 		sessions = append(sessions, session)

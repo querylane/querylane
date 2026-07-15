@@ -2137,8 +2137,19 @@ type ConnectionActivitySession struct {
 	WaitEventType   string                 `protobuf:"bytes,8,opt,name=wait_event_type,json=waitEventType,proto3" json:"wait_event_type,omitempty"`
 	WaitEvent       string                 `protobuf:"bytes,9,opt,name=wait_event,json=waitEvent,proto3" json:"wait_event,omitempty"`
 	BlockedByPid    int32                  `protobuf:"varint,10,opt,name=blocked_by_pid,json=blockedByPid,proto3" json:"blocked_by_pid,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Seconds since backend_start; how long this client has been connected.
+	BackendAgeSeconds int64 `protobuf:"varint,11,opt,name=backend_age_seconds,json=backendAgeSeconds,proto3" json:"backend_age_seconds,omitempty"`
+	// Seconds since xact_start. Unset when no transaction is open.
+	TransactionAgeSeconds *int64 `protobuf:"varint,12,opt,name=transaction_age_seconds,json=transactionAgeSeconds,proto3,oneof" json:"transaction_age_seconds,omitempty"`
+	// Seconds since query_start: the current query's age for active sessions,
+	// the most recent query's otherwise. Unset when none was run yet.
+	QueryAgeSeconds *int64 `protobuf:"varint,13,opt,name=query_age_seconds,json=queryAgeSeconds,proto3,oneof" json:"query_age_seconds,omitempty"`
+	// Client origin from client_addr/client_port. Empty address and zero port
+	// when the client connected via unix socket.
+	ClientAddress string `protobuf:"bytes,14,opt,name=client_address,json=clientAddress,proto3" json:"client_address,omitempty"`
+	ClientPort    int32  `protobuf:"varint,15,opt,name=client_port,json=clientPort,proto3" json:"client_port,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ConnectionActivitySession) Reset() {
@@ -2237,6 +2248,41 @@ func (x *ConnectionActivitySession) GetWaitEvent() string {
 func (x *ConnectionActivitySession) GetBlockedByPid() int32 {
 	if x != nil {
 		return x.BlockedByPid
+	}
+	return 0
+}
+
+func (x *ConnectionActivitySession) GetBackendAgeSeconds() int64 {
+	if x != nil {
+		return x.BackendAgeSeconds
+	}
+	return 0
+}
+
+func (x *ConnectionActivitySession) GetTransactionAgeSeconds() int64 {
+	if x != nil && x.TransactionAgeSeconds != nil {
+		return *x.TransactionAgeSeconds
+	}
+	return 0
+}
+
+func (x *ConnectionActivitySession) GetQueryAgeSeconds() int64 {
+	if x != nil && x.QueryAgeSeconds != nil {
+		return *x.QueryAgeSeconds
+	}
+	return 0
+}
+
+func (x *ConnectionActivitySession) GetClientAddress() string {
+	if x != nil {
+		return x.ClientAddress
+	}
+	return ""
+}
+
+func (x *ConnectionActivitySession) GetClientPort() int32 {
+	if x != nil {
+		return x.ClientPort
 	}
 	return 0
 }
@@ -3195,7 +3241,7 @@ const file_querylane_console_v1alpha1_instance_proto_rawDesc = "" +
 	"\x12active_connections\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x11activeConnections\x122\n" +
 	"\x10idle_connections\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x0fidleConnections\x12N\n" +
 	"\x1fidle_in_transaction_connections\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x1cidleInTransactionConnections\x124\n" +
-	"\x11total_connections\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x10totalConnections\"\xf8\x02\n" +
+	"\x11total_connections\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x10totalConnections\"\xb4\x05\n" +
 	"\x19ConnectionActivitySession\x12\x19\n" +
 	"\x03pid\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x03pid\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12)\n" +
@@ -3208,7 +3254,15 @@ const file_querylane_console_v1alpha1_instance_proto_rawDesc = "" +
 	"\n" +
 	"wait_event\x18\t \x01(\tR\twaitEvent\x12-\n" +
 	"\x0eblocked_by_pid\x18\n" +
-	" \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\fblockedByPid\"\x95\x04\n" +
+	" \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\fblockedByPid\x127\n" +
+	"\x13backend_age_seconds\x18\v \x01(\x03B\a\xbaH\x04\"\x02(\x00R\x11backendAgeSeconds\x12D\n" +
+	"\x17transaction_age_seconds\x18\f \x01(\x03B\a\xbaH\x04\"\x02(\x00H\x00R\x15transactionAgeSeconds\x88\x01\x01\x128\n" +
+	"\x11query_age_seconds\x18\r \x01(\x03B\a\xbaH\x04\"\x02(\x00H\x01R\x0fqueryAgeSeconds\x88\x01\x01\x12%\n" +
+	"\x0eclient_address\x18\x0e \x01(\tR\rclientAddress\x12(\n" +
+	"\vclient_port\x18\x0f \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\n" +
+	"clientPortB\x1a\n" +
+	"\x18_transaction_age_secondsB\x14\n" +
+	"\x12_query_age_seconds\"\x95\x04\n" +
 	"\x11ReplicationHealth\x12E\n" +
 	"\x06status\x18\x01 \x01(\x0e2-.querylane.console.v1alpha1.HealthCheckStatusR\x06status\x12\x18\n" +
 	"\asummary\x18\x02 \x01(\tR\asummary\x12J\n" +
@@ -3453,6 +3507,7 @@ func file_querylane_console_v1alpha1_instance_proto_init() {
 		(*SecretSource_Env)(nil),
 		(*SecretSource_Ref)(nil),
 	}
+	file_querylane_console_v1alpha1_instance_proto_msgTypes[26].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

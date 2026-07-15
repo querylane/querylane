@@ -54,7 +54,16 @@ func TestCheckInstanceActivityReturnsOnlyConnectionActivity(t *testing.T) {
 			WaitingForLocks:  1,
 			LongestTxSeconds: 90,
 			Sessions: []engine.ConnectionActivitySession{
-				{PID: 4211, ApplicationName: "worker-pool", State: "active"},
+				{
+					PID:                   4211,
+					ApplicationName:       "worker-pool",
+					State:                 "active",
+					BackendAgeSeconds:     7200,
+					TransactionAgeSeconds: new(int64(240)),
+					QueryAgeSeconds:       new(int64(35)),
+					ClientAddress:         "10.0.0.12",
+					ClientPort:            53411,
+				},
 			},
 		},
 	}, false, newTestConnectionGuard())
@@ -67,7 +76,15 @@ func TestCheckInstanceActivityReturnsOnlyConnectionActivity(t *testing.T) {
 	require.NotNil(t, resp.Msg.GetActivity())
 	assert.Equal(t, int32(2), resp.Msg.GetActivity().GetActiveConnections())
 	require.Len(t, resp.Msg.GetActivity().GetSessions(), 1)
-	assert.Equal(t, int32(4211), resp.Msg.GetActivity().GetSessions()[0].GetPid())
+	session := resp.Msg.GetActivity().GetSessions()[0]
+	assert.Equal(t, int32(4211), session.GetPid())
+	assert.Equal(t, int64(7200), session.GetBackendAgeSeconds())
+	require.NotNil(t, session.TransactionAgeSeconds)
+	assert.Equal(t, int64(240), session.GetTransactionAgeSeconds())
+	require.NotNil(t, session.QueryAgeSeconds)
+	assert.Equal(t, int64(35), session.GetQueryAgeSeconds())
+	assert.Equal(t, "10.0.0.12", session.GetClientAddress())
+	assert.Equal(t, int32(53411), session.GetClientPort())
 }
 
 func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) {

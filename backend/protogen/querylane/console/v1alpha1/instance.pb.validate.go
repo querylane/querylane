@@ -3824,6 +3824,20 @@ func (m *ConnectionActivitySession) validate(all bool) error {
 
 	// no validation rules for BlockedByPid
 
+	// no validation rules for BackendAgeSeconds
+
+	// no validation rules for ClientAddress
+
+	// no validation rules for ClientPort
+
+	if m.TransactionAgeSeconds != nil {
+		// no validation rules for TransactionAgeSeconds
+	}
+
+	if m.QueryAgeSeconds != nil {
+		// no validation rules for QueryAgeSeconds
+	}
+
 	if len(errors) > 0 {
 		return ConnectionActivitySessionMultiError(errors)
 	}

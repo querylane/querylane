@@ -89,6 +89,16 @@ type ConnectionActivitySession struct {
 	WaitEventType   string
 	WaitEvent       string
 	BlockedByPID    int32
+	// BackendAgeSeconds is how long this client has been connected.
+	BackendAgeSeconds int64
+	// TransactionAgeSeconds is nil when no transaction is open.
+	TransactionAgeSeconds *int64
+	// QueryAgeSeconds is the age of the current query for active sessions and
+	// of the most recent query otherwise. Nil when none was run yet.
+	QueryAgeSeconds *int64
+	// ClientAddress and ClientPort are empty/zero for unix-socket clients.
+	ClientAddress string
+	ClientPort    int32
 }
 
 type ReplicationRole string

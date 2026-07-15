@@ -697,16 +697,21 @@ func connectionActivitySessionsToProto(sessions []engine.ConnectionActivitySessi
 	proto := make([]*v1alpha1.ConnectionActivitySession, 0, len(sessions))
 	for _, session := range sessions {
 		proto = append(proto, &v1alpha1.ConnectionActivitySession{
-			Pid:             session.PID,
-			Username:        session.Username,
-			ApplicationName: session.ApplicationName,
-			DatabaseName:    session.DatabaseName,
-			State:           session.State,
-			DurationSeconds: session.DurationSeconds,
-			Query:           session.Query,
-			WaitEventType:   session.WaitEventType,
-			WaitEvent:       session.WaitEvent,
-			BlockedByPid:    session.BlockedByPID,
+			Pid:                   session.PID,
+			Username:              session.Username,
+			ApplicationName:       session.ApplicationName,
+			DatabaseName:          session.DatabaseName,
+			State:                 session.State,
+			DurationSeconds:       session.DurationSeconds,
+			Query:                 session.Query,
+			WaitEventType:         session.WaitEventType,
+			WaitEvent:             session.WaitEvent,
+			BlockedByPid:          session.BlockedByPID,
+			BackendAgeSeconds:     session.BackendAgeSeconds,
+			TransactionAgeSeconds: session.TransactionAgeSeconds,
+			QueryAgeSeconds:       session.QueryAgeSeconds,
+			ClientAddress:         session.ClientAddress,
+			ClientPort:            session.ClientPort,
 		})
 	}
 
