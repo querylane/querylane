@@ -892,6 +892,23 @@ test("column headers reorder while layout controls stay compact", async () => {
   await expect(page).toMatchScreenshot("data-grid-native-column-layout");
 });
 
+test("select-all tooltip stays open while its checkbox is hovered", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
+  );
+
+  const selectAllCheckbox = page.getByRole("checkbox", { name: "Select All" });
+  await expect.element(selectAllCheckbox).toBeVisible();
+  await selectAllCheckbox.hover();
+
+  const tooltip = page.getByText("Select all rows on this page");
+  await expect.element(tooltip).toBeVisible();
+
+  await new Promise((resolve) => setTimeout(resolve, 350));
+
+  await expect.element(tooltip).toBeVisible();
+});
+
 async function openForeignKeyReference() {
   const carrierLink = page.getByRole("button", {
     name: "Open carrier_id reference 214",
