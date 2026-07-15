@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTargetPolicyDefaultBlocksHostLocalDestinations(t *testing.T) {
+func TestTargetPolicyDefaultBlocksUnsafeDestinations(t *testing.T) {
 	t.Parallel()
 
 	policy, err := NewTargetPolicy(nil, nil)
@@ -20,13 +20,10 @@ func TestTargetPolicyDefaultBlocksHostLocalDestinations(t *testing.T) {
 
 	for _, raw := range []string{
 		"0.0.0.0",
-		"127.0.0.1",
 		"169.254.169.254",
 		"fd00:ec2::254",
 		"::",
-		"::1",
 		"fe80::1",
-		"::ffff:127.0.0.1",
 	} {
 		t.Run(raw, func(t *testing.T) {
 			t.Parallel()
@@ -37,13 +34,22 @@ func TestTargetPolicyDefaultBlocksHostLocalDestinations(t *testing.T) {
 	}
 }
 
-func TestTargetPolicyDefaultAllowsPrivateAndPublicDestinations(t *testing.T) {
+func TestTargetPolicyDefaultAllowsLoopbackPrivateAndPublicDestinations(t *testing.T) {
 	t.Parallel()
 
 	policy, err := NewTargetPolicy(nil, nil)
 	require.NoError(t, err)
 
-	for _, raw := range []string{"10.0.0.1", "172.16.0.1", "192.168.0.1", "8.8.8.8", "2001:db8::1"} {
+	for _, raw := range []string{
+		"127.0.0.1",
+		"::1",
+		"::ffff:127.0.0.1",
+		"10.0.0.1",
+		"172.16.0.1",
+		"192.168.0.1",
+		"8.8.8.8",
+		"2001:db8::1",
+	} {
 		t.Run(raw, func(t *testing.T) {
 			t.Parallel()
 			require.NoError(t, policy.Check(netip.MustParseAddr(raw)))
@@ -96,7 +102,7 @@ func TestApplyTargetPolicyChecksResolvedAddressBeforeDial(t *testing.T) {
 	require.ErrorIs(t, err, ErrTargetNotAllowed)
 	assert.Zero(t, dialCalls)
 
-	_, err = cfg.DialFunc(t.Context(), "tcp", "10.0.0.8:5432")
+	_, err = cfg.DialFunc(t.Context(), "tcp", "127.0.0.1:5432")
 	require.ErrorIs(t, err, wantDialErr)
 	assert.Equal(t, 1, dialCalls)
 }

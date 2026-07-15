@@ -7,7 +7,7 @@ import (
 
 // InstanceTargetPolicy controls which resolved IP addresses managed
 // PostgreSQL connections may dial. An empty allowlist permits addresses other
-// than the built-in host-local blocks; a nonempty allowlist becomes strict.
+// than built-in unsafe targets; a nonempty allowlist becomes strict.
 type InstanceTargetPolicy struct {
 	AllowedCIDRs []string `koanf:"allowed_cidrs"`
 	DeniedCIDRs  []string `koanf:"denied_cidrs"`
