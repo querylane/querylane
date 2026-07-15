@@ -1,6 +1,7 @@
 import { Maximize2, Minimize2, X } from "lucide-react";
 import { useState } from "react";
 import type { SortColumn } from "react-data-grid";
+import { ColumnsPopover } from "@/components/data-grid/table-data-grid/columns-popover";
 import { FilterPopover } from "@/components/data-grid/table-data-grid/filter-popover";
 import { FilterChips } from "@/components/data-grid/table-data-grid/filter-popover-chips";
 import {
@@ -21,15 +22,21 @@ import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/ta
 
 interface DataGridToolbarProps {
   className?: string | undefined;
+  columnOrder: readonly string[];
   columns: TableResultColumn[];
   exportRowsDisabled?: boolean | undefined;
   filterLogic: TableFilterLogic;
   filterRules: TableFilterRule[];
   filterTitle?: string | undefined;
+  hiddenColumnKeys: ReadonlySet<string>;
+  isColumnLayoutCustomized: boolean;
   isExpanded?: boolean | undefined;
   isFetching: boolean;
   lastFetchedLabel?: string | undefined;
   onClearSelection: () => void;
+  onColumnLayoutReset: () => void;
+  onColumnOrderChange: (columnOrder: string[]) => void;
+  onColumnVisibilityChange: (columnKey: string, visible: boolean) => void;
   onCopySelection: (format: ExportFormat) => void;
   onExportRows?: ((format: ExportFormat) => void) | undefined;
   onExportSelection: (format: ExportFormat) => void;
@@ -46,7 +53,10 @@ interface DataGridToolbarProps {
 
 function DataGridToolbar({
   className,
+  columnOrder,
   columns,
+  hiddenColumnKeys,
+  isColumnLayoutCustomized,
   exportRowsDisabled = false,
   filterTitle,
   filterLogic,
@@ -55,10 +65,13 @@ function DataGridToolbar({
   isFetching,
   lastFetchedLabel = "Not fetched yet",
   onClearSelection,
+  onColumnVisibilityChange,
   onCopySelection,
   onExportRows,
   onExportSelection,
   onFilterChange,
+  onColumnOrderChange,
+  onColumnLayoutReset,
   onRefresh,
   onSortChange,
   onToggleExpanded,
@@ -98,6 +111,16 @@ function DataGridToolbar({
           onChange={onSortChange}
           popoverBoundary={popoverBoundary}
           sortColumns={sortColumns}
+        />
+        <ColumnsPopover
+          columnOrder={columnOrder}
+          columns={columns}
+          hiddenColumnKeys={hiddenColumnKeys}
+          isCustomized={isColumnLayoutCustomized}
+          onOrderChange={onColumnOrderChange}
+          onReset={onColumnLayoutReset}
+          onVisibilityChange={onColumnVisibilityChange}
+          popoverBoundary={popoverBoundary}
         />
         {onToggleExpanded ? (
           <Button

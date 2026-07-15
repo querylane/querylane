@@ -121,9 +121,11 @@ describe("grid helpers", () => {
 
   test("builds renderable grid columns around table cells", () => {
     const column = buildColumn({
+      canHide: true,
       column: testColumn(),
       isFrozen: true,
       onCopyName: vi.fn(),
+      onHide: vi.fn(),
       onSortAsc: vi.fn(),
       onSortDesc: vi.fn(),
       onToggleFreeze: vi.fn(),
@@ -151,6 +153,7 @@ describe("grid helpers", () => {
     const carrierColumn = testColumn("carrier_id", DataType.INTEGER, "int4");
     const tenantColumn = testColumn("tenant_id", DataType.INTEGER, "int4");
     const column = buildColumn({
+      canHide: true,
       column: carrierColumn,
       foreignKeyReferences: [
         {
@@ -162,6 +165,7 @@ describe("grid helpers", () => {
       ],
       isFrozen: false,
       onCopyName: vi.fn(),
+      onHide: vi.fn(),
       onSortAsc: vi.fn(),
       onSortDesc: vi.fn(),
       onToggleFreeze: vi.fn(),
@@ -188,8 +192,10 @@ describe("grid helpers", () => {
     const textColumn = testColumn("external_id", DataType.STRING, "text");
     const bytesColumn = testColumn("fingerprint", DataType.BINARY, "bytea");
     const commonArgs = {
+      canHide: true,
       isFrozen: false,
       onCopyName: vi.fn(),
+      onHide: vi.fn(),
       onSortAsc: vi.fn(),
       onSortDesc: vi.fn(),
       onToggleFreeze: vi.fn(),
@@ -267,8 +273,10 @@ describe("grid helpers", () => {
     const textColumn = testColumn("external_id", DataType.STRING, "text");
     const doubleColumn = testColumn("weight", DataType.FLOAT, "float8");
     const commonArgs = {
+      canHide: true,
       isFrozen: false,
       onCopyName: vi.fn(),
+      onHide: vi.fn(),
       onSortAsc: vi.fn(),
       onSortDesc: vi.fn(),
       onToggleFreeze: vi.fn(),
@@ -341,9 +349,11 @@ describe("grid helpers", () => {
 
   test("renders a frozen indicator in the column header", () => {
     const column = buildColumn({
+      canHide: true,
       column: testColumn(),
       isFrozen: true,
       onCopyName: vi.fn(),
+      onHide: vi.fn(),
       onSortAsc: vi.fn(),
       onSortDesc: vi.fn(),
       onToggleFreeze: vi.fn(),

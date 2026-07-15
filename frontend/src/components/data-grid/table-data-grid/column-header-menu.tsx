@@ -3,6 +3,7 @@ import {
   ArrowUp,
   ChevronDown,
   Copy,
+  EyeOff,
   Lock,
   Unlock,
 } from "lucide-react";
@@ -25,20 +26,24 @@ function stopHeaderClick(event: MouseEvent | PointerEvent) {
 }
 
 interface ColumnHeaderMenuProps {
+  canHide: boolean;
   columnName: string;
   columnRawType: string;
   isFrozen: boolean;
   onCopyName: () => void;
+  onHide: () => void;
   onSortAsc: () => void;
   onSortDesc: () => void;
   onToggleFreeze: () => void;
   sortDirection?: "ASC" | "DESC" | undefined;
 }
 function ColumnHeaderMenu({
+  canHide,
   columnName,
   columnRawType,
   isFrozen,
   onCopyName,
+  onHide,
   onSortAsc,
   onSortDesc,
   onToggleFreeze,
@@ -110,6 +115,10 @@ function ColumnHeaderMenu({
             <Lock className="size-3.5" />
           )}
           {isFrozen ? "Unfreeze column" : "Freeze column"}
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={!canHide} onClick={onHide}>
+          <EyeOff className="size-3.5" />
+          Hide column
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

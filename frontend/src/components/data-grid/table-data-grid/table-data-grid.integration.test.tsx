@@ -18,12 +18,14 @@ import {
 import type { DefaultColumnOptions, Renderers } from "react-data-grid";
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import {
+  EXPAND_COLUMN_KEY,
   fallbackRowKey,
   type GridRow,
   ROW_KEY_FIELD,
 } from "@/components/data-grid/table-data-grid/grid-row-model";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { useRefreshSettingsStore } from "@/features/user-settings/refresh-settings";
+import { useTableColumnLayoutSettingsStore } from "@/features/user-settings/table-column-layout-settings";
 import {
   PostgreSqlErrorDetailSchema,
   PostgreSqlErrorKind,
@@ -76,6 +78,7 @@ const toastMock = vi.hoisted(() => ({
 }));
 
 interface MockGridColumn {
+  draggable?: boolean;
   frozen?: boolean;
   key: string;
   renderCell?: (args: { row: GridRow; rowIdx: number }) => ReactNode;
@@ -99,6 +102,7 @@ interface MockGridProps {
     args: { column: MockGridColumn; row: GridRow },
     event: ReactClipboardEvent<HTMLDivElement>
   ) => void;
+  onColumnsReorder?: (sourceColumnKey: string, targetColumnKey: string) => void;
   onSelectedCellChange?: (args: {
     column: MockGridColumn;
     row: GridRow | undefined;
@@ -468,6 +472,7 @@ function teardownTableDataGridIntegrationTest() {
   vi.clearAllMocks();
   vi.useRealTimers();
   useRefreshSettingsStore.getState().setRefreshIntervalMs(null);
+  useTableColumnLayoutSettingsStore.setState({ layouts: {} });
 }
 
 describe("TableDataGrid query setup", () => {
@@ -1457,6 +1462,7 @@ describe("TableDataGrid toolbar", () => {
 
     const filterButton = screen.getByRole("button", { name: FILTER_BUTTON_RE });
     const sortButton = screen.getByRole("button", { name: "Sort" });
+    const columnsButton = screen.getByRole("button", { name: "Columns" });
     const expandButton = screen.getByRole("button", {
       name: "Expand data grid",
     });
@@ -1468,7 +1474,10 @@ describe("TableDataGrid toolbar", () => {
     expect(filterButton.compareDocumentPosition(sortButton)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING
     );
-    expect(sortButton.compareDocumentPosition(expandButton)).toBe(
+    expect(sortButton.compareDocumentPosition(columnsButton)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+    expect(columnsButton.compareDocumentPosition(expandButton)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING
     );
     expect(expandButton.compareDocumentPosition(refreshButton)).toBe(
@@ -1516,6 +1525,259 @@ describe("TableDataGrid toolbar", () => {
     );
     expect(fetchStatus.className).toContain("sr-only");
     expect(fetchStatus.className).not.toContain("not-sr-only");
+  });
+});
+
+describe("TableDataGrid column layout", () => {
+  beforeEach(setupTableDataGridIntegrationTest);
+  afterEach(teardownTableDataGridIntegrationTest);
+
+  it("hides a data column from the Columns popover", async () => {
+    const user = userEvent.setup();
+    seedRowsQueryWithRawClipboardValues();
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
+    );
+
+    expect(
+      reactDataGrid.dataGrid.mock.calls
+        .at(-1)?.[0]
+        ?.columns?.map((column) => column.key)
+    ).toEqual(["__select", EXPAND_COLUMN_KEY, "measurement", "observed_at"]);
+
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("checkbox", { name: "measurement" }));
+
+    await waitFor(() => {
+      expect(
+        reactDataGrid.dataGrid.mock.calls
+          .at(-1)?.[0]
+          ?.columns?.map((column) => column.key)
+      ).toEqual(["__select", EXPAND_COLUMN_KEY, "observed_at"]);
+    });
+    expect(
+      screen
+        .getByRole("checkbox", { name: "observed_at" })
+        .getAttribute("aria-disabled")
+    ).toBe("true");
+  });
+
+  it("persists layout for one table without leaking it to another", async () => {
+    const user = userEvent.setup();
+    const measurements =
+      "instances/prod/databases/app/schemas/public/tables/measurements";
+    seedRowsQueryWithRawClipboardValues();
+    const firstRender = render(<TableDataGrid name={measurements} />);
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("checkbox", { name: "measurement" }));
+    firstRender.unmount();
+
+    const secondRender = render(<TableDataGrid name={measurements} />);
+    expect(
+      reactDataGrid.dataGrid.mock.calls
+        .at(-1)?.[0]
+        ?.columns?.map((column) => column.key)
+    ).toEqual(["__select", EXPAND_COLUMN_KEY, "observed_at"]);
+    secondRender.unmount();
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/other_measurements" />
+    );
+    expect(
+      reactDataGrid.dataGrid.mock.calls
+        .at(-1)?.[0]
+        ?.columns?.map((column) => column.key)
+    ).toEqual(["__select", EXPAND_COLUMN_KEY, "measurement", "observed_at"]);
+  });
+
+  it("reorders columns with keyboard-accessible controls", async () => {
+    const user = userEvent.setup();
+    seedRowsQueryWithRawClipboardValues();
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(
+      screen.getByRole("button", { name: "Move observed_at up" })
+    );
+
+    await waitFor(() => {
+      expect(
+        reactDataGrid.dataGrid.mock.calls
+          .at(-1)?.[0]
+          ?.columns?.map((column) => column.key)
+      ).toEqual(["__select", EXPAND_COLUMN_KEY, "observed_at", "measurement"]);
+    });
+  });
+
+  it("reorders and persists columns dragged by their grid headers", async () => {
+    const tableName =
+      "instances/prod/databases/app/schemas/public/tables/measurements";
+    seedRowsQueryWithRawClipboardValues();
+    render(<TableDataGrid name={tableName} />);
+    const gridProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
+
+    expect(
+      gridProps?.columns?.slice(2).map((column) => column.draggable)
+    ).toEqual([true, true]);
+    expect(gridProps?.onColumnsReorder).toBeTypeOf("function");
+
+    act(() => {
+      gridProps?.onColumnsReorder?.("observed_at", "measurement");
+    });
+
+    await waitFor(() => {
+      expect(
+        reactDataGrid.dataGrid.mock.calls
+          .at(-1)?.[0]
+          ?.columns?.map((column) => column.key)
+      ).toEqual(["__select", EXPAND_COLUMN_KEY, "observed_at", "measurement"]);
+    });
+    expect(
+      useTableColumnLayoutSettingsStore.getState().layouts[tableName]?.order
+    ).toEqual(["observed_at", "measurement"]);
+  });
+
+  it("resets visibility and order to the database layout", async () => {
+    const user = userEvent.setup();
+    seedRowsQueryWithRawClipboardValues();
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
+    );
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("checkbox", { name: "measurement" }));
+    await user.click(
+      screen.getByRole("button", { name: "Move observed_at up" })
+    );
+
+    await user.click(screen.getByRole("button", { name: "Reset columns" }));
+
+    await waitFor(() => {
+      expect(
+        reactDataGrid.dataGrid.mock.calls
+          .at(-1)?.[0]
+          ?.columns?.map((column) => column.key)
+      ).toEqual(["__select", EXPAND_COLUMN_KEY, "measurement", "observed_at"]);
+    });
+  });
+
+  it("hides a column from its header menu", async () => {
+    const user = userEvent.setup();
+    seedRowsQueryWithRawClipboardValues();
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Open options for column measurement",
+      })
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Hide column" }));
+
+    await waitFor(() => {
+      expect(
+        reactDataGrid.dataGrid.mock.calls
+          .at(-1)?.[0]
+          ?.columns?.map((column) => column.key)
+      ).toEqual(["__select", EXPAND_COLUMN_KEY, "observed_at"]);
+    });
+  });
+
+  it("keeps saved layout while row metadata is unavailable", async () => {
+    const tableName =
+      "instances/prod/databases/app/schemas/public/tables/measurements";
+    useTableColumnLayoutSettingsStore.getState().setLayout(tableName, {
+      hiddenColumns: ["measurement"],
+      order: ["observed_at", "measurement"],
+    });
+    seedRowsQueryError(new Error("rows unavailable"));
+
+    render(<TableDataGrid name={tableName} />);
+
+    await waitFor(() => {
+      expect(
+        useTableColumnLayoutSettingsStore.getState().layouts[tableName]
+      ).toEqual({
+        hiddenColumns: ["measurement"],
+        order: ["observed_at", "measurement"],
+      });
+    });
+  });
+
+  it("keeps hidden values in row copy output", async () => {
+    const user = userEvent.setup();
+    seedRowsQueryWithRawClipboardValues();
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
+    );
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("checkbox", { name: "measurement" }));
+    await user.keyboard("{Escape}");
+
+    openCellContextMenu("observed_at", 0);
+    await user.click(screen.getByRole("menuitem", { name: "Copy row" }));
+
+    expect(writeClipboardMock).toHaveBeenLastCalledWith(
+      "1234.56789123\t2024-01-01 12:00:00.123456+00"
+    );
+  });
+
+  it("keeps hidden columns available to filters and sorts", async () => {
+    const user = userEvent.setup();
+    seedRowsQueryWithRawClipboardValues();
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
+    );
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("checkbox", { name: "measurement" }));
+    await user.keyboard("{Escape}");
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.click(screen.getByRole("combobox", { name: "Filter column" }));
+    expect(screen.getByRole("option", { name: "measurement" })).toBeTruthy();
+    await user.keyboard("{Escape}{Escape}");
+
+    await user.click(screen.getByRole("button", { name: "Sort" }));
+    await user.click(screen.getByRole("combobox", { name: "Add sort column" }));
+    expect(screen.getByRole("option", { name: "measurement" })).toBeTruthy();
+  });
+
+  it("restores a frozen column without freezing actions while it is hidden", async () => {
+    const user = userEvent.setup();
+    seedRowsQueryWithRawClipboardValues();
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
+    );
+    const openMeasurementOptions = () =>
+      user.click(
+        screen.getByRole("button", {
+          name: "Open options for column measurement",
+        })
+      );
+    await openMeasurementOptions();
+    await user.click(screen.getByRole("menuitem", { name: "Freeze column" }));
+    await openMeasurementOptions();
+    await user.click(screen.getByRole("menuitem", { name: "Hide column" }));
+
+    expect(
+      reactDataGrid.dataGrid.mock.calls
+        .at(-1)?.[0]
+        ?.columns?.find((column) => column.key === "__select")?.frozen
+    ).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("checkbox", { name: "measurement" }));
+
+    await waitFor(() => {
+      expect(
+        reactDataGrid.dataGrid.mock.calls
+          .at(-1)?.[0]
+          ?.columns?.find((column) => column.key === "measurement")?.frozen
+      ).toBe(true);
+    });
   });
 });
 
