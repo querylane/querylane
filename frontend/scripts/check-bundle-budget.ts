@@ -327,12 +327,17 @@ function collectBundleBudgetStats({
   };
 }
 
-function check(
-  failures: string[],
-  label: string,
-  actual: number,
-  budget: number
-) {
+function check({
+  failures,
+  label,
+  actual,
+  budget,
+}: {
+  failures: string[];
+  label: string;
+  actual: number;
+  budget: number;
+}) {
   if (actual > budget) {
     failures.push(`${label}: ${formatKiB(actual)} > ${formatKiB(budget)}`);
   }
@@ -342,49 +347,49 @@ function runBundleBudgetCheck() {
   const stats = collectBundleBudgetStats();
   const failures: string[] = [];
 
-  check(
+  check({
     failures,
-    "initial gzip",
-    stats.initialGzip,
-    budgets.maxInitialGzipBytes
-  );
-  check(
+    label: "initial gzip",
+    actual: stats.initialGzip,
+    budget: budgets.maxInitialGzipBytes,
+  });
+  check({
     failures,
-    "initial script gzip",
-    stats.initialScriptGzip,
-    budgets.maxInitialScriptGzipBytes
-  );
-  check(
+    label: "initial script gzip",
+    actual: stats.initialScriptGzip,
+    budget: budgets.maxInitialScriptGzipBytes,
+  });
+  check({
     failures,
-    "core total gzip",
-    stats.coreTotalGzip,
-    budgets.maxTotalGzipBytes
-  );
-  check(
+    label: "core total gzip",
+    actual: stats.coreTotalGzip,
+    budget: budgets.maxTotalGzipBytes,
+  });
+  check({
     failures,
-    "deferred visualization gzip",
-    stats.deferredVisualizationGzip,
-    budgets.maxDeferredVisualizationGzipBytes
-  );
-  check(
+    label: "deferred visualization gzip",
+    actual: stats.deferredVisualizationGzip,
+    budget: budgets.maxDeferredVisualizationGzipBytes,
+  });
+  check({
     failures,
-    "deferred SQL highlighter gzip",
-    stats.deferredSqlHighlighterGzip,
-    budgets.maxDeferredSqlHighlighterGzipBytes
-  );
-  check(
+    label: "deferred SQL highlighter gzip",
+    actual: stats.deferredSqlHighlighterGzip,
+    budget: budgets.maxDeferredSqlHighlighterGzipBytes,
+  });
+  check({
     failures,
-    "deferred charts gzip",
-    stats.deferredChartsGzip,
-    budgets.maxDeferredChartsGzipBytes
-  );
+    label: "deferred charts gzip",
+    actual: stats.deferredChartsGzip,
+    budget: budgets.maxDeferredChartsGzipBytes,
+  });
   if (stats.maxAsyncScript) {
-    check(
+    check({
       failures,
-      `largest async script (${stats.maxAsyncScript.path})`,
-      stats.maxAsyncScript.gzip,
-      budgets.maxAsyncScriptGzipBytes
-    );
+      label: `largest async script (${stats.maxAsyncScript.path})`,
+      actual: stats.maxAsyncScript.gzip,
+      budget: budgets.maxAsyncScriptGzipBytes,
+    });
   }
 
   console.log(

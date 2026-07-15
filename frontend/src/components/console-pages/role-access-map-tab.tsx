@@ -439,6 +439,13 @@ function AccessMapCanvasActions({
   );
 }
 
+function shouldShowPartialAccessAlert(
+  partialAccess: boolean,
+  isMapExpanded: boolean
+): boolean {
+  return partialAccess && !isMapExpanded;
+}
+
 function RoleAccessMapTab(props: RoleDetailViewProps) {
   const navigate = useNavigate({
     from: "/instances/$instanceId/roles/$roleId",
@@ -638,7 +645,7 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
         </Card>
       </div>
 
-      {props.partialAccess && !isMapExpanded ? (
+      {shouldShowPartialAccessAlert(props.partialAccess, isMapExpanded) ? (
         <RolePartialAccessAlert
           databaseName={props.effectiveDb?.name ?? "the selected database"}
         />

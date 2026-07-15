@@ -31,12 +31,17 @@ function buildPostgresConfig() {
   });
 }
 
-function buildSetupResponse(
-  state: StepState,
+function buildSetupResponse({
+  state,
   error = "",
   displayName = "",
-  stepId = SetupStep.UNSPECIFIED
-) {
+  stepId = SetupStep.UNSPECIFIED,
+}: {
+  state: StepState;
+  error?: string;
+  displayName?: string;
+  stepId?: SetupStep;
+}) {
   return createProto(SetupAppDatabaseResponseSchema, {
     event: createProto(SetupProgressEventSchema, {
       displayName,
@@ -48,7 +53,12 @@ function buildSetupResponse(
 }
 
 function buildSucceededSetupResponse(stepId: SetupStep) {
-  return buildSetupResponse(StepState.SUCCEEDED, "", "", stepId);
+  return buildSetupResponse({
+    state: StepState.SUCCEEDED,
+    error: "",
+    displayName: "",
+    stepId,
+  });
 }
 
 function buildWatchResponse(state: StepState, error = "", displayName = "") {
@@ -181,11 +191,11 @@ describe("setup stream consumption", () => {
 
   it("extracts failure message from a failed setup event", async () => {
     const responses = [
-      buildSetupResponse(
-        StepState.FAILED,
-        "permission denied",
-        "Initialize services"
-      ),
+      buildSetupResponse({
+        state: StepState.FAILED,
+        error: "permission denied",
+        displayName: "Initialize services",
+      }),
     ];
     const stream = buildAsyncStream(responses);
 
@@ -198,9 +208,9 @@ describe("setup stream consumption", () => {
 
   it("consumes setup stream and returns the last failure message", async () => {
     const responses = [
-      buildSetupResponse(StepState.IN_PROGRESS),
-      buildSetupResponse(StepState.FAILED, "first"),
-      buildSetupResponse(StepState.FAILED, "second"),
+      buildSetupResponse({ state: StepState.IN_PROGRESS }),
+      buildSetupResponse({ state: StepState.FAILED, error: "first" }),
+      buildSetupResponse({ state: StepState.FAILED, error: "second" }),
     ];
     const stream = buildAsyncStream(responses);
 
@@ -213,8 +223,8 @@ describe("setup stream consumption", () => {
 
   it("consumes setup stream and forwards progress events", async () => {
     const responses = [
-      buildSetupResponse(StepState.PENDING),
-      buildSetupResponse(StepState.IN_PROGRESS),
+      buildSetupResponse({ state: StepState.PENDING }),
+      buildSetupResponse({ state: StepState.IN_PROGRESS }),
       buildSucceededSetupResponse(SetupStep.PERSISTING_CONFIG),
     ];
     const stream = buildAsyncStream(responses);
@@ -247,11 +257,11 @@ describe("setup stream consumption", () => {
     await flushMicrotasks();
     expect(states).toEqual([]);
 
-    controlled.push(buildSetupResponse(StepState.PENDING));
+    controlled.push(buildSetupResponse({ state: StepState.PENDING }));
     await flushMicrotasks();
     expect(states).toEqual([StepState.PENDING]);
 
-    controlled.push(buildSetupResponse(StepState.IN_PROGRESS));
+    controlled.push(buildSetupResponse({ state: StepState.IN_PROGRESS }));
     await flushMicrotasks();
     expect(states).toEqual([StepState.PENDING, StepState.IN_PROGRESS]);
 

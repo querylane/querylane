@@ -37,12 +37,12 @@ describe("table column layout settings", () => {
 
   it("reorders visible columns while hidden columns keep their slots", () => {
     expect(
-      reorderVisibleTableColumns(
-        ["id", "internal_note", "email", "created_at"],
-        ["internal_note"],
-        "created_at",
-        "id"
-      )
+      reorderVisibleTableColumns({
+        hiddenColumns: ["internal_note"],
+        order: ["id", "internal_note", "email", "created_at"],
+        sourceColumnKey: "created_at",
+        targetColumnKey: "id",
+      })
     ).toEqual(["created_at", "internal_note", "id", "email"]);
   });
 

@@ -60,6 +60,14 @@ function FullscreenMessage({
   );
 }
 
+function shouldRenderBlockingRoute(
+  hasBootError: boolean,
+  blockingRoute: string | null,
+  pathname: string
+): boolean {
+  return hasBootError && blockingRoute !== null && pathname === blockingRoute;
+}
+
 export function BootGate({ children }: { children: React.ReactNode }) {
   const bootError = useSetupStore((state) => state.bootError);
   const bootstrap = useSetupStore((state) => state.bootstrap);
@@ -95,7 +103,9 @@ export function BootGate({ children }: { children: React.ReactNode }) {
     bootstrap().catch((error) => captureException(error));
   }, [bootstrap]);
 
-  if (status === "boot_error" && blockingRoute && pathname === blockingRoute) {
+  if (
+    shouldRenderBlockingRoute(status === "boot_error", blockingRoute, pathname)
+  ) {
     return children;
   }
 

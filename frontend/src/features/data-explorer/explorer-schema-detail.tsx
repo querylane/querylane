@@ -423,6 +423,43 @@ function SchemaObjectsLoading() {
   );
 }
 
+function isSchemaDetailLoading({
+  tableCount,
+  tablesError,
+  tablesLoading,
+  viewCount,
+  viewsError,
+  viewsLoading,
+}: {
+  tableCount: number;
+  tablesError: unknown;
+  tablesLoading: boolean;
+  viewCount: number;
+  viewsError: unknown;
+  viewsLoading: boolean;
+}): boolean {
+  return (
+    (tablesLoading || viewsLoading) &&
+    tableCount === 0 &&
+    viewCount === 0 &&
+    !(tablesError || viewsError)
+  );
+}
+
+function hasSchemaLoadError(
+  tablesError: unknown,
+  viewsError: unknown
+): boolean {
+  return Boolean(tablesError || viewsError);
+}
+
+function canLoadOtherDatabaseObjects(
+  databaseId: string,
+  instanceId: string
+): boolean {
+  return databaseId.length > 0 && instanceId.length > 0;
+}
+
 function SchemaDetail({
   activeTab = "objects",
   databaseId = "",
@@ -474,11 +511,14 @@ function SchemaDetail({
     (sum, table) => sum + normalizeEstimatedRowCount(table.rowCount),
     0
   );
-  const isLoading =
-    (tablesLoading || viewsLoading) &&
-    tables.length === 0 &&
-    views.length === 0 &&
-    !(tablesError || viewsError);
+  const isLoading = isSchemaDetailLoading({
+    tableCount: tables.length,
+    tablesError,
+    tablesLoading,
+    viewCount: views.length,
+    viewsError,
+    viewsLoading,
+  });
   const mapSchemas = [
     schemas.find((schema) => schema.name === schemaName) ?? {
       id: schemaName,
@@ -545,7 +585,7 @@ function SchemaDetail({
         <CatalogSyncNotice notice={tablesSyncNotice} surface="detail" />
       ) : null}
 
-      {tablesError || viewsError ? (
+      {hasSchemaLoadError(tablesError, viewsError) ? (
         <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
           Failed to load some objects in this schema. Refresh the page to try
           again.
@@ -576,7 +616,7 @@ function SchemaDetail({
               views={views}
             />
           )}
-          {databaseId && instanceId ? (
+          {canLoadOtherDatabaseObjects(databaseId, instanceId) ? (
             <OtherDatabaseObjectsSection
               databaseId={databaseId}
               instanceId={instanceId}

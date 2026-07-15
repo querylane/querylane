@@ -91,22 +91,25 @@ function filterDatabasesByFacets<RowType extends DatabaseFacetRow>({
   kindFilters,
   ownerFilters,
 }: DatabaseFacetFilters & { databases: RowType[] }): RowType[] {
+  const encodingFilterSet = new Set(encodingFilters);
+  const kindFilterSet = new Set(kindFilters);
+  const ownerFilterSet = new Set(ownerFilters);
   return databases.filter((database) => {
     if (
       kindFilters.length > 0 &&
-      !kindFilters.includes(databaseKindFilterValue(database))
+      !kindFilterSet.has(databaseKindFilterValue(database))
     ) {
       return false;
     }
     if (
       encodingFilters.length > 0 &&
-      !encodingFilters.includes(databaseEncodingFilterValue(database))
+      !encodingFilterSet.has(databaseEncodingFilterValue(database))
     ) {
       return false;
     }
     if (
       ownerFilters.length > 0 &&
-      !ownerFilters.includes(databaseOwnerFilterValue(database))
+      !ownerFilterSet.has(databaseOwnerFilterValue(database))
     ) {
       return false;
     }

@@ -29,7 +29,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("@/features/database-visualization/flow-canvas", () => ({
-  ["FlowCanvas"]: ({
+  FlowCanvas: ({
     actionPanel,
     nodes,
   }: {

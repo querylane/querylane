@@ -135,6 +135,33 @@ function createCreateInstanceWorkflowState(
     : emptyState;
 }
 
+function updateWorkflowField(
+  state: CreateInstanceWorkflowState,
+  action: Extract<CreateInstanceWorkflowAction, { type: "updateField" }>
+): CreateInstanceWorkflowState {
+  const { [action.field]: _clearedError, ...remainingErrors } =
+    state.formErrors;
+  const connectionFieldChanged = isConnectionField(action.field);
+  return {
+    ...state,
+    firstInvalidField:
+      state.firstInvalidField === action.field ? null : state.firstInvalidField,
+    formErrors: remainingErrors,
+    formNotice: null,
+    formState: {
+      ...state.formState,
+      [action.field]: normalizeCreateInstanceFieldValue(
+        action.field,
+        action.value
+      ),
+    },
+    lastSuccessfulConnectionFingerprint: connectionFieldChanged
+      ? null
+      : state.lastSuccessfulConnectionFingerprint,
+    testResult: connectionFieldChanged ? null : state.testResult,
+  };
+}
+
 function createInstanceWorkflowReducer(
   state: CreateInstanceWorkflowState,
   action: CreateInstanceWorkflowAction
@@ -176,30 +203,8 @@ function createInstanceWorkflowReducer(
       };
     case "toggleAdvanced":
       return { ...state, showAdvanced: !state.showAdvanced };
-    case "updateField": {
-      const { [action.field]: _clearedError, ...remainingErrors } =
-        state.formErrors;
-      return {
-        ...state,
-        firstInvalidField:
-          state.firstInvalidField === action.field
-            ? null
-            : state.firstInvalidField,
-        formErrors: remainingErrors,
-        formNotice: null,
-        formState: {
-          ...state.formState,
-          [action.field]: normalizeCreateInstanceFieldValue(
-            action.field,
-            action.value
-          ),
-        },
-        lastSuccessfulConnectionFingerprint: isConnectionField(action.field)
-          ? null
-          : state.lastSuccessfulConnectionFingerprint,
-        testResult: isConnectionField(action.field) ? null : state.testResult,
-      };
-    }
+    case "updateField":
+      return updateWorkflowField(state, action);
     default:
       return state;
   }

@@ -28,10 +28,10 @@ describe("waitForNextFrame (DOM environment: window is defined)", () => {
   });
 
   test("does not resolve before requestAnimationFrame fires", async () => {
-    let rafCallback: FrameRequestCallback | null = null;
+    const rafState: { callback?: FrameRequestCallback } = {};
 
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
-      rafCallback = cb;
+      rafState.callback = cb;
       return 0;
     });
 
@@ -44,7 +44,7 @@ describe("waitForNextFrame (DOM environment: window is defined)", () => {
     expect(resolved).toBe(false);
 
     // fire the frame
-    rafCallback!(0);
+    rafState.callback?.(0);
     await promise;
 
     expect(resolved).toBe(true);

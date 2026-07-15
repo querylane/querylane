@@ -81,6 +81,10 @@ function isArrayItemSeparator(char: string, state: ArrayScanState): boolean {
   return !state.inQuotes && state.depth === 0 && char === ",";
 }
 
+function hasUnclosedArrayItem(state: ArrayScanState): boolean {
+  return state.inQuotes || state.depth !== 0;
+}
+
 function scanArrayItems(inner: string): PostgresArrayParseResult {
   const state: ArrayScanState = {
     buffer: "",
@@ -111,7 +115,7 @@ function scanArrayItems(inner: string): PostgresArrayParseResult {
     state.buffer += char;
   }
 
-  if (state.inQuotes || state.depth !== 0) {
+  if (hasUnclosedArrayItem(state)) {
     return { ok: false };
   }
 

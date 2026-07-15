@@ -889,7 +889,9 @@ describe("backend database overview", () => {
       ).toBeNull()
     );
   });
+});
 
+describe("backend database overview query insights", () => {
   test("renders the query insights drawer with filtering and query detail", async () => {
     const user = userEvent.setup();
     state.queryInsightsQuery = { data: queryInsightsResponse() };

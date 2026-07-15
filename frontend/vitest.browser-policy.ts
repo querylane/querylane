@@ -6,7 +6,19 @@ interface BrowserPolicyInput {
   platform: NodeJS.Platform;
 }
 
-export function getBrowserPolicy({ argv, platform }: BrowserPolicyInput) {
+interface BrowserPolicy {
+  canRunBrowserTestsFromUi: boolean;
+  canUpdateSnapshotsInteractively: boolean;
+  canWriteBrowserArtifacts: boolean;
+  isCanonicalScreenshotPlatform: boolean;
+  isUpdatingSnapshots: boolean;
+  shouldBlockSnapshotWrites: boolean;
+}
+
+export function getBrowserPolicy({
+  argv,
+  platform,
+}: BrowserPolicyInput): BrowserPolicy {
   const isUpdatingSnapshots = argv.some((argument) =>
     UPDATE_SNAPSHOT_ARGUMENT_PATTERN.test(argument)
   );

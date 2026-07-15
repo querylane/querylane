@@ -11,17 +11,17 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 vi.mock("@tanstack/react-router", () => ({
-  ["Link"]: ({ children }: { children: React.ReactNode }) => (
+  Link: ({ children }: { children: React.ReactNode }) => (
     <a href="/roles">{children}</a>
   ),
 }));
 
 vi.mock("@/components/console-pages/role-detail-builtins", () => ({
-  ["BuiltinRoleBody"]: () => <div>Built-in role details</div>,
+  BuiltinRoleBody: () => <div>Built-in role details</div>,
 }));
 
 vi.mock("@/components/console-pages/role-detail-tabs", () => ({
-  ["OrdinaryRoleTabs"]: () => <div>Role tabs</div>,
+  OrdinaryRoleTabs: () => <div>Role tabs</div>,
 }));
 
 function roleDetailProps(): RoleDetailViewProps {

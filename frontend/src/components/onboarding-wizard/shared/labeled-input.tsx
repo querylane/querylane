@@ -36,6 +36,8 @@ export function LabeledInput({
     error && ERROR_INPUT_CLASSES,
     inputClassName
   );
+  const errorId = error ? `${id}-error` : undefined;
+  const invalid = error ? true : undefined;
 
   return (
     <div className={cn("space-y-2.5", className)}>
@@ -49,8 +51,8 @@ export function LabeledInput({
       </div>
       {type === "password" ? (
         <PasswordInput
-          aria-describedby={error ? `${id}-error` : undefined}
-          aria-invalid={error ? true : undefined}
+          aria-describedby={errorId}
+          aria-invalid={invalid}
           className={inputCn}
           id={id}
           ref={ref}
@@ -58,8 +60,8 @@ export function LabeledInput({
         />
       ) : (
         <Input
-          aria-describedby={error ? `${id}-error` : undefined}
-          aria-invalid={error ? true : undefined}
+          aria-describedby={errorId}
+          aria-invalid={invalid}
           className={inputCn}
           id={id}
           ref={ref}
@@ -68,7 +70,7 @@ export function LabeledInput({
         />
       )}
       {error ? (
-        <p className="text-red-300/80 text-sm" id={`${id}-error`} role="alert">
+        <p className="text-red-300/80 text-sm" id={errorId} role="alert">
           {error}
         </p>
       ) : null}

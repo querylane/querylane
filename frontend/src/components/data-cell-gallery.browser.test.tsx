@@ -58,7 +58,10 @@ const EXAMPLE_CELLS = [
     { truncated: true }
   ),
   cell(
-    { case: "bytesValue", value: new Uint8Array([1, 2, 3, 4]) },
+    {
+      case: "bytesValue",
+      value: new Uint8Array([1, 2, 3, 4]),
+    },
     { fullSizeBytes: 4096n, truncated: true }
   ),
   cell({ case: "timestampValue", value: "2026-05-20T11:45:00Z" }),

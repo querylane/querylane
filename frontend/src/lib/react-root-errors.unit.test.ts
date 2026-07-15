@@ -39,12 +39,12 @@ describe("react root error handlers", () => {
       createDependencies();
     const error = new Error("render failed");
 
-    reportReactRootError(
-      "uncaught-error",
+    reportReactRootError({
+      lifecycle: "uncaught-error",
       error,
-      { componentStack: "\n    at App" },
-      dependencies
-    );
+      errorInfo: { componentStack: "\n    at App" },
+      dependencies,
+    });
 
     expect(normalizedErrors).toHaveLength(1);
     expect(normalizedErrors[0]?.originalError).toBe(error);
@@ -55,9 +55,13 @@ describe("react root error handlers", () => {
       source: "runtime",
       surface: "silent",
     });
+    const [normalizedError] = normalizedErrors;
+    if (!normalizedError) {
+      throw new Error("Expected a normalized React root error.");
+    }
     expect(reportCalls).toEqual([
       {
-        error: normalizedErrors[0]!,
+        error: normalizedError,
         tags: {
           react_error_lifecycle: "uncaught-error",
           react_has_component_stack: "true",

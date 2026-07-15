@@ -39,6 +39,24 @@ function buildExplorerSearch(
   return { ...previous, ...patch };
 }
 
+function normalizeExplorerDetailTab({
+  hasResourceSelection,
+  hasTableSelection,
+  tab,
+}: {
+  hasResourceSelection: boolean;
+  hasTableSelection: boolean;
+  tab: DataExplorerSearch["tab"];
+}): DataExplorerSearch["tab"] {
+  if (hasTableSelection && isTableDetailTab(tab)) {
+    return tab === "data" ? undefined : tab;
+  }
+  if (!hasResourceSelection && isSchemaDetailTab(tab)) {
+    return tab === "objects" ? undefined : tab;
+  }
+  return undefined;
+}
+
 function normalizeExplorerSearch(
   search: DataExplorerSearch
 ): DataExplorerSearch {
@@ -62,12 +80,11 @@ function normalizeExplorerSearch(
     normalized.category = category;
     normalized.name = search.name;
   }
-  if (hasTableSelection && isTableDetailTab(search.tab)) {
-    normalized.tab = search.tab === "data" ? undefined : search.tab;
-  }
-  if (!hasResourceSelection && isSchemaDetailTab(search.tab)) {
-    normalized.tab = search.tab === "objects" ? undefined : search.tab;
-  }
+  normalized.tab = normalizeExplorerDetailTab({
+    hasResourceSelection,
+    hasTableSelection,
+    tab: search.tab,
+  });
   return normalized;
 }
 function isExplorerSearchNormalized(search: DataExplorerSearch): boolean {

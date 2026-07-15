@@ -333,8 +333,16 @@ test("roles: backend error renders retryable route error", {
   tag: ["@feat:instances", "@flow:error"],
 }, async ({ page }) => {
   await mockReadyAppWithInstance(page);
-  await mockRpcError(page, "RoleService/ListRoles", "roles metadata offline");
-  await mockRpcError(page, "ListRoles", "roles metadata offline");
+  await mockRpcError({
+    page,
+    method: "RoleService/ListRoles",
+    message: "roles metadata offline",
+  });
+  await mockRpcError({
+    page,
+    method: "ListRoles",
+    message: "roles metadata offline",
+  });
 
   await page.goto("/instances/production/roles");
 

@@ -125,7 +125,6 @@ function useCalmLoadingPhase(isLoading: boolean): LoadingPhase {
 
   useEffect(
     function paceLoadingSkeleton() {
-      let cleanup: (() => void) | undefined;
       if (isLoading) {
         setPhase((previous) =>
           previous === "skeleton" ? "skeleton" : "pending"
@@ -134,22 +133,20 @@ function useCalmLoadingPhase(isLoading: boolean): LoadingPhase {
           shownAtRef.current = Date.now();
           setPhase("skeleton");
         }, SKELETON_APPEAR_DELAY_MS);
-        cleanup = () => clearTimeout(timer);
-      } else {
-        const remainingVisible =
-          shownAtRef.current + SKELETON_MIN_VISIBLE_MS - Date.now();
-        if (shownAtRef.current > 0 && remainingVisible > 0) {
-          const timer = setTimeout(() => {
-            shownAtRef.current = 0;
-            setPhase("idle");
-          }, remainingVisible);
-          cleanup = () => clearTimeout(timer);
-        } else {
+        return () => clearTimeout(timer);
+      }
+      const remainingVisible =
+        shownAtRef.current + SKELETON_MIN_VISIBLE_MS - Date.now();
+      if (shownAtRef.current > 0 && remainingVisible > 0) {
+        const timer = setTimeout(() => {
           shownAtRef.current = 0;
           setPhase("idle");
-        }
+        }, remainingVisible);
+        return () => clearTimeout(timer);
       }
-      return cleanup;
+      shownAtRef.current = 0;
+      setPhase("idle");
+      return undefined;
     },
     [isLoading]
   );
@@ -508,6 +505,17 @@ function observeResourceListRect(
   });
 }
 
+function hasMoreCategoryItems(pagination: CategoryPaginationState): boolean {
+  return pagination.hasNextPage || pagination.isFetchingNextPage;
+}
+
+function shouldSkipCategory(
+  items: ResourceItem[],
+  pagination: CategoryPaginationState
+): boolean {
+  return items.length === 0 && !hasMoreCategoryItems(pagination);
+}
+
 function flattenActiveSchemaItems({
   categoryPagination,
   expandedCategories,
@@ -521,10 +529,7 @@ function flattenActiveSchemaItems({
   for (const category of CATEGORY_ORDER) {
     const allItems = itemsByCategory[category];
     const pagination = categoryPagination[category];
-    if (
-      allItems.length === 0 &&
-      !(pagination.hasNextPage || pagination.isFetchingNextPage)
-    ) {
+    if (shouldSkipCategory(allItems, pagination)) {
       continue;
     }
     flatItems.push({
@@ -543,7 +548,7 @@ function flattenActiveSchemaItems({
         kind: "resource",
       });
     }
-    if (pagination.hasNextPage || pagination.isFetchingNextPage) {
+    if (hasMoreCategoryItems(pagination)) {
       flatItems.push({
         category,
         hasNextPage: pagination.hasNextPage,
@@ -814,15 +819,17 @@ function ResourceListItem({
   switch (item.kind) {
     case "schema":
       return <SchemaTreeButton controls={controls} schema={item.schema} />;
-    case "schemas-sentinel":
+    case "schemas-sentinel": {
+      const handleLoadMore = controls.onLoadMoreSchemas;
       return (
         <CategoryInfiniteScrollSentinel
           hasNextPage={item.hasNextPage}
           isFetchingNextPage={item.isFetchingNextPage}
-          onLoadMore={controls.onLoadMoreSchemas}
+          onLoadMore={handleLoadMore}
           scrollRoot={controls.scrollRoot}
         />
       );
+    }
     case "loading":
       return (
         <NestedTreeRow>
@@ -880,18 +887,21 @@ function CategoryListItem({
         </Button>
       );
     }
-    case "resource":
+    case "resource": {
+      const handleResourceIntent = controls.onResourceIntent;
+      const handleSelectResource = controls.onSelectResource;
       return (
         <ExplorerResourceButton
           category={item.category}
           icon={meta.icon}
           item={item.item}
-          onResourceIntent={controls.onResourceIntent}
-          onSelectResource={controls.onSelectResource}
+          onResourceIntent={handleResourceIntent}
+          onSelectResource={handleSelectResource}
           query={controls.query}
           selection={controls.selection}
         />
       );
+    }
     case "sentinel":
       return (
         <CategoryInfiniteScrollSentinel
@@ -932,6 +942,44 @@ function SchemaEmptyPanel({
 
 function schemaOverviewButtonLabel(databaseLabel: string) {
   return `View ${databaseLabel.trim() || "database"} schema overview`;
+}
+
+function hasExplorerResourceLoadError(
+  tablesError: unknown,
+  viewsError: unknown
+): boolean {
+  return tablesError !== null || viewsError !== null;
+}
+
+function SidebarResourceError({
+  activeSchema,
+  error,
+  label,
+  onRetry,
+}: {
+  activeSchema: SchemaSummary | null;
+  error: unknown;
+  label: string;
+  onRetry: () => Promise<unknown>;
+}) {
+  if (!(activeSchema && error)) {
+    return null;
+  }
+  return (
+    <div className="mx-2 mb-2 flex flex-col gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2.5 text-sm">
+      <div className="flex items-start gap-2 text-destructive">
+        <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+        <span>{`Failed to load ${label}.`}</span>
+      </div>
+      <RetryActionButton
+        className="self-start"
+        label="Retry"
+        onRetry={onRetry}
+        size="xs"
+        variant="outline"
+      />
+    </div>
+  );
 }
 
 function ExplorerSidebar({
@@ -991,7 +1039,10 @@ function ExplorerSidebar({
     categoryPagination,
     itemsByCategory,
   });
-  const hasResourceLoadError = tablesError !== null || viewsError !== null;
+  const hasResourceLoadError = hasExplorerResourceLoadError(
+    tablesError,
+    viewsError
+  );
   const hasResourceLoading = hasResourceLoadingState(categoryPagination);
   const hasSchemaNameMatch = anySchemaNameMatches(schemas, query);
   const showSearchEmptyState =
@@ -1058,43 +1109,18 @@ function ExplorerSidebar({
           schemasLoading={schemasLoading}
         />
 
-        {activeSchema && tablesError ? (
-          <div className="mx-2 mb-2 flex flex-col gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2.5 text-sm">
-            <div className="flex items-start gap-2 text-destructive">
-              <AlertTriangle
-                aria-hidden="true"
-                className="mt-0.5 size-4 shrink-0"
-              />
-              <span>Failed to load tables.</span>
-            </div>
-            <RetryActionButton
-              className="self-start"
-              label="Retry"
-              onRetry={onRetryTables}
-              size="xs"
-              variant="outline"
-            />
-          </div>
-        ) : null}
-
-        {activeSchema && viewsError ? (
-          <div className="mx-2 mb-2 flex flex-col gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2.5 text-sm">
-            <div className="flex items-start gap-2 text-destructive">
-              <AlertTriangle
-                aria-hidden="true"
-                className="mt-0.5 size-4 shrink-0"
-              />
-              <span>Failed to load views.</span>
-            </div>
-            <RetryActionButton
-              className="self-start"
-              label="Retry"
-              onRetry={onRetryViews}
-              size="xs"
-              variant="outline"
-            />
-          </div>
-        ) : null}
+        <SidebarResourceError
+          activeSchema={activeSchema}
+          error={tablesError}
+          label="tables"
+          onRetry={onRetryTables}
+        />
+        <SidebarResourceError
+          activeSchema={activeSchema}
+          error={viewsError}
+          label="views"
+          onRetry={onRetryViews}
+        />
 
         {activeSchema && tablesSyncNotice ? (
           <CatalogSyncNotice notice={tablesSyncNotice} surface="sidebar" />

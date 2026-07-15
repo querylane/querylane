@@ -155,6 +155,15 @@ function resolveKeyboardShortcut(
   return hasPrefix ? { status: "prefix" } : null;
 }
 
+function activePendingInputs(
+  pending: PendingKeyboardShortcut | undefined
+): readonly KeyboardShortcutInput[] {
+  if (!pending) {
+    return [];
+  }
+  return pending.expiresAt >= Date.now() ? pending.inputs : [];
+}
+
 function resolveKeyboardShortcutEvent({
   event,
   handlers,
@@ -176,8 +185,7 @@ function resolveKeyboardShortcutEvent({
     handlers,
     resolveKeyboardShortcutScope(event.target)
   );
-  const pendingInputs =
-    pending && pending.expiresAt >= Date.now() ? pending.inputs : [];
+  const pendingInputs = activePendingInputs(pending);
   const sequence = [...pendingInputs, input];
   const sequenceResolution = resolveKeyboardShortcut(
     sequence,
@@ -198,6 +206,30 @@ function resolveKeyboardShortcutEvent({
     };
   }
   return resolution;
+}
+
+function pendingAfterResolution(
+  resolution: KeyboardShortcutEventResolution
+): PendingKeyboardShortcut | undefined {
+  return resolution.status === "prefix" ? resolution.pending : undefined;
+}
+
+function executeKeyboardShortcut({
+  event,
+  handlers,
+  onOpenHelp,
+  shortcut,
+}: {
+  event: KeyboardEvent;
+  handlers: ReadonlyMap<KeyboardShortcutId, () => void>;
+  onOpenHelp: (scope: KeyboardShortcutScope) => void;
+  shortcut: HandledKeyboardShortcut;
+}) {
+  if (shortcut.id === "help.open") {
+    onOpenHelp(resolveKeyboardShortcutScope(event.target));
+    return;
+  }
+  handlers.get(shortcut.id)?.();
 }
 
 function KeyboardShortcutKeys({ keys }: { keys: readonly string[] }) {
@@ -291,13 +323,18 @@ function KeyboardShortcutsProvider({
   useEffect(function listenForKeyboardShortcuts() {
     let pending: PendingKeyboardShortcut | undefined;
 
+    function openHelp(scope: KeyboardShortcutScope) {
+      setHelpScope(scope);
+      setHelpOpen(true);
+    }
+
     function handleKeyDown(event: KeyboardEvent) {
       const resolution = resolveKeyboardShortcutEvent({
         event,
         handlers: handlersRef.current,
         pending,
       });
-      pending = resolution.status === "prefix" ? resolution.pending : undefined;
+      pending = pendingAfterResolution(resolution);
       if (resolution.status === "none") {
         return;
       }
@@ -306,13 +343,12 @@ function KeyboardShortcutsProvider({
       if (resolution.status === "prefix") {
         return;
       }
-
-      if (resolution.shortcut.id === "help.open") {
-        setHelpScope(resolveKeyboardShortcutScope(event.target));
-        setHelpOpen(true);
-        return;
-      }
-      handlersRef.current.get(resolution.shortcut.id)?.();
+      executeKeyboardShortcut({
+        event,
+        handlers: handlersRef.current,
+        onOpenHelp: openHelp,
+        shortcut: resolution.shortcut,
+      });
     }
 
     window.addEventListener("keydown", handleKeyDown);

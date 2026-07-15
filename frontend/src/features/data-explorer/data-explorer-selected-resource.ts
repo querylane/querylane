@@ -58,14 +58,19 @@ function buildSelectedResourceName({
     return;
   }
   if (selection.category === "tables") {
-    return buildTableName(
+    return buildTableName({
       instanceId,
       databaseId,
-      activeSchema.id,
-      selection.name
-    );
+      schemaId: activeSchema.id,
+      tableId: selection.name,
+    });
   }
-  return buildViewName(instanceId, databaseId, activeSchema.id, selection.name);
+  return buildViewName({
+    instanceId,
+    databaseId,
+    schemaId: activeSchema.id,
+    viewId: selection.name,
+  });
 }
 
 function injectSelectedResource<

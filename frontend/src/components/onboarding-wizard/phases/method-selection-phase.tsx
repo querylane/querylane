@@ -128,6 +128,9 @@ function MethodOption({
   );
 }
 
+const NEXT_METHOD_KEYS = new Set(["ArrowDown", "ArrowRight"]);
+const PREVIOUS_METHOD_KEYS = new Set(["ArrowUp", "ArrowLeft"]);
+
 function getNextMethodFromKey({
   currentMethod,
   key,
@@ -144,10 +147,10 @@ function getNextMethodFromKey({
     0,
     currentMethod ? methods.indexOf(currentMethod) : 0
   );
-  if (key === "ArrowDown" || key === "ArrowRight") {
+  if (NEXT_METHOD_KEYS.has(key)) {
     return methods[(currentIndex + 1) % methods.length] ?? null;
   }
-  if (key === "ArrowUp" || key === "ArrowLeft") {
+  if (PREVIOUS_METHOD_KEYS.has(key)) {
     return (
       methods[(currentIndex - 1 + methods.length) % methods.length] ?? null
     );

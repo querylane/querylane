@@ -66,7 +66,12 @@ describe("buildExport", () => {
       row({ body: stringCell("world"), id: stringCell("2") }),
     ];
 
-    const result = buildExport("csv", rows, columns, RESOURCE);
+    const result = buildExport({
+      exportFormat: "csv",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -90,7 +95,12 @@ describe("buildExport", () => {
       }),
     ];
 
-    const result = buildExport("sql", rows, columns, RESOURCE);
+    const result = buildExport({
+      exportFormat: "sql",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
 
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -105,7 +115,12 @@ describe("buildExport", () => {
       row({ body: stringCell("oops", true), id: stringCell("1") }),
     ];
 
-    const result = buildExport("json", rows, columns, RESOURCE);
+    const result = buildExport({
+      exportFormat: "json",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
 
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -122,7 +137,12 @@ describe("buildExport", () => {
       }),
     ];
 
-    const result = buildExport("csv", rows, columns, RESOURCE);
+    const result = buildExport({
+      exportFormat: "csv",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
 
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -156,7 +176,12 @@ describe("buildExport formatting", () => {
       }),
     ];
 
-    const result = buildExport("sql", rows, columns, RESOURCE);
+    const result = buildExport({
+      exportFormat: "sql",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -186,7 +211,12 @@ describe("buildExport formatting", () => {
       }),
     ];
 
-    const result = buildExport("json", rows, columns, RESOURCE);
+    const result = buildExport({
+      exportFormat: "json",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -207,7 +237,12 @@ describe("buildExport formatting", () => {
       }),
     ];
 
-    const result = buildExport("csv", rows, columns, RESOURCE);
+    const result = buildExport({
+      exportFormat: "csv",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -225,7 +260,12 @@ describe("buildExport formatting", () => {
       row({ id: stringCell("2"), value: stringCell("") }),
     ];
 
-    const result = buildExport("csv", rows, columns, RESOURCE);
+    const result = buildExport({
+      exportFormat: "csv",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -240,7 +280,12 @@ describe("buildExport formatting", () => {
       row({ "=value": stringCell(input) })
     );
 
-    const result = buildExport("csv", rows, columns, RESOURCE);
+    const result = buildExport({
+      exportFormat: "csv",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -283,9 +328,24 @@ describe("buildExport raw value fidelity", () => {
       row({ amount: doubleCell(1_234_567.891_234_5) }),
     ];
 
-    const csv = buildExport("csv", rows, columns, RESOURCE);
-    const sql = buildExport("sql", rows, columns, RESOURCE);
-    const json = buildExport("json", rows, columns, RESOURCE);
+    const csv = buildExport({
+      exportFormat: "csv",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
+    const sql = buildExport({
+      exportFormat: "sql",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
+    const json = buildExport({
+      exportFormat: "json",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
 
     expect(csv.ok && csv.payload.contents).toBe("amount\n1234567.8912345\n");
     expect(sql.ok && sql.payload.contents).toContain("(1234567.8912345)");
@@ -298,7 +358,12 @@ describe("buildExport raw value fidelity", () => {
     const columns = [typedColumn("amount", DataType.FLOAT, "double precision")];
     const rows: SelectedRow[] = [row({ amount: doubleCell(-1.5) })];
 
-    const csv = buildExport("csv", rows, columns, RESOURCE);
+    const csv = buildExport({
+      exportFormat: "csv",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
 
     expect(csv.ok && csv.payload.contents).toBe("amount\n-1.5\n");
   });
@@ -310,9 +375,24 @@ describe("buildExport raw value fidelity", () => {
     ];
     const rows: SelectedRow[] = [row({ created_at: timestampCell(raw) })];
 
-    const csv = buildExport("csv", rows, columns, RESOURCE);
-    const sql = buildExport("sql", rows, columns, RESOURCE);
-    const json = buildExport("json", rows, columns, RESOURCE);
+    const csv = buildExport({
+      exportFormat: "csv",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
+    const sql = buildExport({
+      exportFormat: "sql",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
+    const json = buildExport({
+      exportFormat: "json",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
 
     expect(csv.ok && csv.payload.contents).toBe(`created_at\n${raw}\n`);
     expect(sql.ok && sql.payload.contents).toContain(`('${raw}')`);
@@ -333,8 +413,18 @@ describe("buildExport raw value fidelity", () => {
       }),
     ];
 
-    const csv = buildExport("csv", rows, columns, RESOURCE);
-    const sql = buildExport("sql", rows, columns, RESOURCE);
+    const csv = buildExport({
+      exportFormat: "csv",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
+    const sql = buildExport({
+      exportFormat: "sql",
+      rows,
+      columns,
+      resourceName: RESOURCE,
+    });
 
     expect(csv.ok && csv.payload.contents).toBe("id\n9007199254740993\n");
     expect(sql.ok && sql.payload.contents).toContain("(9007199254740993)");
@@ -343,7 +433,12 @@ describe("buildExport raw value fidelity", () => {
 
 describe("buildExport edge cases", () => {
   test("SQL export returns a comment when no rows are selected", () => {
-    const result = buildExport("sql", [], [nameColumn("id")], RESOURCE);
+    const result = buildExport({
+      exportFormat: "sql",
+      rows: [],
+      columns: [nameColumn("id")],
+      resourceName: RESOURCE,
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -356,10 +451,12 @@ describe("buildExport edge cases", () => {
 
   test("unknown export formats fall back to CSV", () => {
     const result: ExportResult = Reflect.apply(buildExport, undefined, [
-      "xml",
-      [row({ body: stringCell("hello"), id: stringCell("1") })],
-      [nameColumn("id"), nameColumn("body")],
-      RESOURCE,
+      {
+        exportFormat: "xml",
+        rows: [row({ body: stringCell("hello"), id: stringCell("1") })],
+        columns: [nameColumn("id"), nameColumn("body")],
+        resourceName: RESOURCE,
+      },
     ]);
 
     expect(result.ok).toBe(true);

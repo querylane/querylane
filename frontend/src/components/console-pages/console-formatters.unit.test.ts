@@ -53,7 +53,7 @@ describe("buildTruncatedTextPreview", () => {
   test("truncates and adds ellipsis when over limit", () => {
     const value = "a".repeat(130);
     const result = buildTruncatedTextPreview(value);
-    expect(result.displayValue).toBe("a".repeat(120) + "…");
+    expect(result.displayValue).toBe(`${"a".repeat(120)}…`);
     expect(result.forceTooltip).toBe(true);
     expect(result.tooltipContent).toBe(value);
   });

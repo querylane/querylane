@@ -47,12 +47,17 @@ function onboardingState() {
   });
 }
 
-function progressEvent(
-  stepId: SetupStep,
-  displayName: string,
-  state: StepState,
-  error = ""
-) {
+function progressEvent({
+  stepId,
+  displayName,
+  state,
+  error = "",
+}: {
+  stepId: SetupStep;
+  displayName: string;
+  state: StepState;
+  error?: string;
+}) {
   return createProto(SetupProgressEventSchema, {
     displayName,
     error,
@@ -91,21 +96,21 @@ function renderRunningProgress() {
   useOnboardingWizardStore.setState({
     phase: "progress_running",
     progressEvents: [
-      progressEvent(
-        SetupStep.CONNECTING,
-        "Connect to PostgreSQL",
-        StepState.SUCCEEDED
-      ),
-      progressEvent(
-        SetupStep.MIGRATING,
-        "Apply migrations",
-        StepState.IN_PROGRESS
-      ),
-      progressEvent(
-        SetupStep.INITIALIZING_SERVICES,
-        "Initialize services",
-        StepState.PENDING
-      ),
+      progressEvent({
+        stepId: SetupStep.CONNECTING,
+        displayName: "Connect to PostgreSQL",
+        state: StepState.SUCCEEDED,
+      }),
+      progressEvent({
+        stepId: SetupStep.MIGRATING,
+        displayName: "Apply migrations",
+        state: StepState.IN_PROGRESS,
+      }),
+      progressEvent({
+        stepId: SetupStep.INITIALIZING_SERVICES,
+        displayName: "Initialize services",
+        state: StepState.PENDING,
+      }),
     ],
     selectedMethod: "ui_configured",
   });
@@ -115,25 +120,25 @@ function renderRunningProgress() {
 function renderFailedProgress() {
   const errorMessage = "password authentication failed for user querylane";
   useOnboardingWizardStore.setState({
-    failedEvent: progressEvent(
-      SetupStep.MIGRATING,
-      "Apply migrations",
-      StepState.FAILED,
-      errorMessage
-    ),
+    failedEvent: progressEvent({
+      stepId: SetupStep.MIGRATING,
+      displayName: "Apply migrations",
+      state: StepState.FAILED,
+      error: errorMessage,
+    }),
     phase: "error_summary",
     progressEvents: [
-      progressEvent(
-        SetupStep.CONNECTING,
-        "Connect to PostgreSQL",
-        StepState.SUCCEEDED
-      ),
-      progressEvent(
-        SetupStep.MIGRATING,
-        "Apply migrations",
-        StepState.FAILED,
-        errorMessage
-      ),
+      progressEvent({
+        stepId: SetupStep.CONNECTING,
+        displayName: "Connect to PostgreSQL",
+        state: StepState.SUCCEEDED,
+      }),
+      progressEvent({
+        stepId: SetupStep.MIGRATING,
+        displayName: "Apply migrations",
+        state: StepState.FAILED,
+        error: errorMessage,
+      }),
     ],
     selectedMethod: "ui_configured",
     streamError: normalizeAppUiError(new Error(errorMessage), {
@@ -148,21 +153,21 @@ function renderSuccessfulProgress() {
   useOnboardingWizardStore.setState({
     phase: "progress_success",
     progressEvents: [
-      progressEvent(
-        SetupStep.CONNECTING,
-        "Connect to PostgreSQL",
-        StepState.SUCCEEDED
-      ),
-      progressEvent(
-        SetupStep.MIGRATING,
-        "Apply migrations",
-        StepState.SUCCEEDED
-      ),
-      progressEvent(
-        SetupStep.INITIALIZING_SERVICES,
-        "Initialize services",
-        StepState.SUCCEEDED
-      ),
+      progressEvent({
+        stepId: SetupStep.CONNECTING,
+        displayName: "Connect to PostgreSQL",
+        state: StepState.SUCCEEDED,
+      }),
+      progressEvent({
+        stepId: SetupStep.MIGRATING,
+        displayName: "Apply migrations",
+        state: StepState.SUCCEEDED,
+      }),
+      progressEvent({
+        stepId: SetupStep.INITIALIZING_SERVICES,
+        displayName: "Initialize services",
+        state: StepState.SUCCEEDED,
+      }),
     ],
     selectedMethod: "ui_configured",
   });

@@ -1,38 +1,19 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { env as processEnvironment } from "node:process";
 import { describe, expect, test } from "vitest";
 
 const projectRoot = resolve(import.meta.dirname, "..");
 
 const requiredIgnoredFiles = [
-  "src/components/querylane-ui/**",
+  "src/components/ui/**",
   "src/protogen/**",
   "src/routeTree.gen.ts",
   "**/*.gen.ts",
   "**/*.gen.tsx",
   "**/*_pb.ts",
   "**/*_connectquery.ts",
-];
-
-const deadRegistryFiles = new Set([
-  "src/components/ui/calendar.tsx",
-  "src/components/ui/combobox.tsx",
-  "src/components/ui/kbd.tsx",
-]);
-
-// The main tsconfig resolves these imports through emitted declarations, so
-// React Doctor cannot trace source-file reachability. Suppress only that rule.
-const querylaneUiUnusedFileOverrides = [
-  "src/components/ui/copy-icon-button.tsx",
-  "src/components/ui/data-table-faceted-filter.tsx",
-  "src/components/ui/data-table-filter-toolbar.tsx",
-  "src/components/ui/data-table.tsx",
-  "src/components/ui/disabled-reason-button.tsx",
-  "src/components/ui/inline-code.tsx",
-  "src/components/ui/overflow-tooltip.tsx",
-  "src/components/ui/refresh-control.tsx",
-  "src/components/ui/sql-code-block.tsx",
-  "src/components/ui/status-indicator.tsx",
 ];
 
 const removedDependencies = [
@@ -52,25 +33,39 @@ const strictCategories = [
 ];
 
 const strictDesignSurfaces = ["prComment", "score", "ciFailure"];
+const MIN_COLLISION_RATIONALE_LENGTH = 50;
+const reactDoctorRuleOverrides = [
+  {
+    files: ["src/features/data-explorer/other-database-objects-query.ts"],
+    rules: ["react-doctor/server-sequential-independent-await"],
+  },
+] as const;
+const overrideRationales = {
+  "react-doctor/server-sequential-independent-await":
+    "Querylane supports a single per-instance live-query slot, so these RPCs must remain sequential.",
+} as const;
 
-const documentedDisabledRuleRationales = {
-  "react-doctor/forbid-component-props":
-    "className is an intentional Tailwind/shadcn styling API.",
+// React Doctor is lowest-priority in the collision order. Every disabled rule
+// must retain a concrete higher-priority or framework-contract rationale.
+const disabledReactDoctorRuleRationales = {
   "react-doctor/jsx-boolean-value":
-    "formatter territory, no correctness signal.",
-  "react-doctor/jsx-handler-names":
-    "false positive for on… props forwarded through a controls/slot object.",
+    "Biome's all preset canonicalizes true JSX attributes to explicit values.",
   "react-doctor/jsx-no-constructed-context-values":
-    "React Compiler auto-memoizes context values; manual useMemo is banned.",
-  "react-doctor/jsx-no-jsx-as-prop":
-    "React Compiler auto-memoizes JSX props; manual memoization is banned.",
+    "React Compiler stabilizes context values and repo policy bans manual memoization.",
   "react-doctor/jsx-props-no-spreading":
-    "typed wrapper components intentionally forward prop surfaces.",
-  "react-doctor/no-adjust-state-on-prop-change":
-    "false positive for intentional setTimeout-based loading debounce.",
+    "Strictly typed generic wrappers and React Hook Form require complete prop forwarding.",
+  "react-doctor/no-pass-data-to-parent":
+    "Canonical TanStack Router search state must be reconciled after async schema loading.",
+  "react-doctor/only-export-components":
+    "TanStack Router file routes must export their generated Route value beside components.",
+  "react-doctor/prefer-dynamic-import":
+    "Recharts modules are already lazy chunks and usePlotArea must remain a synchronous hook.",
   "react-doctor/react-in-jsx-scope":
-    "React 19 automatic JSX runtime does not need React in scope.",
-};
+    "TypeScript's automatic JSX runtime makes React imports unused under noUnusedLocals.",
+} as const;
+const allowedDisabledReactDoctorRules = Object.keys(
+  disabledReactDoctorRuleRationales
+).sort();
 
 const highSignalOptInRules = [
   "react-doctor/design-no-em-dash-in-jsx-text",
@@ -81,7 +76,6 @@ const highSignalOptInRules = [
   "react-doctor/design-no-vague-button-label",
   "react-doctor/display-name",
   "react-doctor/hook-use-state",
-  "react-doctor/jsx-curly-brace-presence",
   "react-doctor/jsx-filename-extension",
   "react-doctor/jsx-fragments",
   "react-doctor/jsx-no-useless-fragment",
@@ -143,6 +137,44 @@ function getArrayProperty(record: JsonRecord, key: string) {
 }
 
 describe("React Doctor policy", () => {
+  test("pins the audited React Doctor release", () => {
+    const packageJson = readJsonRecord("package.json");
+    const devDependencies = getRecordProperty(packageJson, "devDependencies");
+
+    expect(devDependencies["react-doctor"]).toBe("0.7.8");
+  });
+
+  test("runs every non-colliding installed rule at error severity", () => {
+    const result = spawnSync(
+      resolve(projectRoot, "node_modules/.bin/react-doctor"),
+      ["rules", "list", "--json"],
+      {
+        cwd: projectRoot,
+        encoding: "utf8",
+        env: { ...processEnvironment, NO_COLOR: "1" },
+      }
+    );
+
+    expect(result.status).toBe(0);
+
+    const rules: unknown = JSON.parse(result.stdout);
+    expect(Array.isArray(rules)).toBe(true);
+    if (!Array.isArray(rules)) {
+      return;
+    }
+
+    const nonBlockingRules = rules
+      .filter((rule) => isJsonRecord(rule) && rule["severity"] !== "error")
+      .map((rule) => (isJsonRecord(rule) ? rule["id"] : undefined))
+      .filter((rule): rule is string => typeof rule === "string")
+      .sort();
+    expect(nonBlockingRules).toEqual(
+      allowedDisabledReactDoctorRules.map((rule) =>
+        rule.replace("react-doctor/", "")
+      )
+    );
+  });
+
   test("uses the typed config as the active React Doctor config", () => {
     expect(existsSync(resolve(projectRoot, "doctor.config.ts"))).toBe(true);
     expect(existsSync(resolve(projectRoot, "react-doctor.config.json"))).toBe(
@@ -167,8 +199,17 @@ describe("React Doctor policy", () => {
     expect(doctorConfig["respectInlineDisables"]).toBe(false);
 
     expect(ignoredFiles).toEqual(expect.arrayContaining(requiredIgnoredFiles));
+    expect(ignoredFiles).not.toContain("src/components/querylane-ui/**");
     expect(ignore["rules"] ?? []).toEqual([]);
     expect(ignore["tags"] ?? []).toEqual([]);
+    expect(ignore["overrides"]).toEqual(reactDoctorRuleOverrides);
+    for (const override of reactDoctorRuleOverrides) {
+      for (const rule of override.rules) {
+        expect(overrideRationales[rule].length).toBeGreaterThan(
+          MIN_COLLISION_RATIONALE_LENGTH
+        );
+      }
+    }
 
     for (const category of strictCategories) {
       expect(categories[category]).toBe("error");
@@ -179,15 +220,13 @@ describe("React Doctor policy", () => {
       .filter(([, level]) => level === "off")
       .map(([rule]) => rule)
       .sort();
-    expect(disabledRules).toEqual(
-      Object.keys(documentedDisabledRuleRationales).sort()
-    );
+    expect(disabledRules).toEqual(allowedDisabledReactDoctorRules);
     for (const disabledRule of disabledRules) {
       expect(
-        documentedDisabledRuleRationales[
-          disabledRule as keyof typeof documentedDisabledRuleRationales
+        disabledReactDoctorRuleRationales[
+          disabledRule as keyof typeof disabledReactDoctorRuleRationales
         ].length
-      ).toBeGreaterThan(20);
+      ).toBeGreaterThan(MIN_COLLISION_RATIONALE_LENGTH);
     }
     expect(Object.values(rules)).not.toContain("warn");
     for (const optInRule of highSignalOptInRules) {
@@ -219,33 +258,43 @@ describe("React Doctor policy", () => {
     );
   });
 
-  test("uses explicit existing UI ignores instead of a blind registry glob", () => {
+  test("keeps supply-chain checks while disabling score telemetry", () => {
+    const packageJson = readJsonRecord("package.json");
+    const scripts = getRecordProperty(packageJson, "scripts");
+    const ciRunner = readFileSync(
+      resolve(projectRoot, "scripts/run-react-doctor-ci.ts"),
+      "utf8"
+    );
+
+    for (const scriptName of ["doctor", "doctor:changed", "doctor:full"]) {
+      const script = scripts[scriptName];
+      expect(typeof script).toBe("string");
+      expect(script).toContain("--supply-chain");
+      expect(script).toContain("--no-score");
+    }
+    expect(ciRunner).toContain('"--supply-chain"');
+    expect(ciRunner).toContain('"--no-score"');
+  });
+
+  test("runs a full Doctor scan when tool policy changes", () => {
+    const ciRunner = readFileSync(
+      resolve(projectRoot, "scripts/run-react-doctor-ci.ts"),
+      "utf8"
+    );
+
+    expect(ciRunner).toContain("requiresFullStaticAnalysisFromBase");
+    expect(ciRunner).toContain('fullScanRequired ? "full" : "changed"');
+  });
+
+  test("excludes the UI registry without excluding Querylane UI", () => {
     const doctorConfig = readJsonRecord("react-doctor.config.json");
     const ignore = getRecordProperty(doctorConfig, "ignore");
     const ignoredFiles = getArrayProperty(ignore, "files").filter(
       (file): file is string => typeof file === "string"
     );
-    const ignoredUiFiles = ignoredFiles
-      .filter((file) => file.startsWith("src/components/ui/"))
-      .sort();
-    expect(ignoredFiles).not.toContain("src/components/ui/**");
-    expect(ignoredUiFiles.length).toBeGreaterThan(0);
-    for (const ignoredUiFile of ignoredUiFiles) {
-      expect(existsSync(resolve(projectRoot, ignoredUiFile))).toBe(true);
-    }
-    for (const deadRegistryFile of deadRegistryFiles) {
-      expect(ignoredUiFiles).not.toContain(deadRegistryFile);
-      expect(existsSync(resolve(projectRoot, deadRegistryFile))).toBe(false);
-    }
-    for (const querylaneUiFile of querylaneUiUnusedFileOverrides) {
-      expect(ignoredUiFiles).not.toContain(querylaneUiFile);
-    }
-    expect(ignore["overrides"]).toEqual([
-      {
-        files: querylaneUiUnusedFileOverrides,
-        rules: ["deslop/unused-file"],
-      },
-    ]);
+    expect(ignoredFiles).toContain("src/components/ui/**");
+    expect(ignoredFiles).not.toContain("src/components/querylane-ui/**");
+    expect(ignore["overrides"]).toEqual(reactDoctorRuleOverrides);
     expect(existsSync(resolve(projectRoot, "knip.json"))).toBe(false);
   });
 

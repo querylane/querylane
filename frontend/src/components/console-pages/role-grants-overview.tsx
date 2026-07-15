@@ -295,6 +295,31 @@ function ReachRow({
 
 // ───────── Overview ─────────
 
+function DirectGrantSchemaScope({
+  grantsPartial,
+  schemaCount,
+}: {
+  grantsPartial: boolean;
+  schemaCount: number;
+}) {
+  if (schemaCount === 0) {
+    return null;
+  }
+  if (grantsPartial) {
+    return <> across available schemas</>;
+  }
+  return (
+    <>
+      {" "}
+      across{" "}
+      <strong className="font-medium text-foreground">
+        {schemaCount.toLocaleString()}
+      </strong>{" "}
+      schema{schemaCount === 1 ? "" : "s"}
+    </>
+  );
+}
+
 function DirectGrantsLede({
   grantsPartial,
   schemaCount,
@@ -316,22 +341,10 @@ function DirectGrantsLede({
       </strong>{" "}
       {grantsPartial ? "available direct grant" : "direct grant"}
       {totalDirect === 1 ? "" : "s"}
-      {schemaCount > 0 ? (
-        <>
-          {" "}
-          {grantsPartial ? (
-            "across available schemas"
-          ) : (
-            <>
-              across{" "}
-              <strong className="font-medium text-foreground">
-                {schemaCount.toLocaleString()}
-              </strong>{" "}
-              schema{schemaCount === 1 ? "" : "s"}
-            </>
-          )}
-        </>
-      ) : null}
+      <DirectGrantSchemaScope
+        grantsPartial={grantsPartial}
+        schemaCount={schemaCount}
+      />
       {grantsPartial ? (
         <span className="font-medium text-foreground"> · Partial</span>
       ) : null}

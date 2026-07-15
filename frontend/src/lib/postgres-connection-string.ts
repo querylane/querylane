@@ -115,13 +115,19 @@ function normalizePostgresSslNegotiation(
   }
 }
 
+function hasPostgresProtocol(value: string): boolean {
+  return value.startsWith("postgres://") || value.startsWith("postgresql://");
+}
+
+function isInvalidPostgresPort(port: number): boolean {
+  return !Number.isInteger(port) || port <= 0 || port > MAX_POSTGRES_PORT;
+}
+
 export function parsePostgresConnectionString(
   input: string
 ): ParsedPostgresConnectionString | null {
   const trimmed = input.trim();
-  if (
-    !(trimmed.startsWith("postgres://") || trimmed.startsWith("postgresql://"))
-  ) {
+  if (!hasPostgresProtocol(trimmed)) {
     return null;
   }
 
@@ -134,7 +140,7 @@ export function parsePostgresConnectionString(
       ? Number.parseInt(url.port, 10)
       : DEFAULT_POSTGRES_PORT;
 
-    if (!Number.isInteger(port) || port <= 0 || port > MAX_POSTGRES_PORT) {
+    if (isInvalidPostgresPort(port)) {
       return null;
     }
 

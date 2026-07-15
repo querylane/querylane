@@ -27,18 +27,17 @@
   "assist": {
     "actions": {
       "source": {
-        "useSortedKeys": {
-          "level": "on",
-          "options": {
-            "sortOrder": "natural",
-            "groupByNesting": false
-          }
-        }
+        "preset": "all",
+        // These actions can change runtime semantics through insertion order.
+        "useSortedEnumMembers": "off",
+        "useSortedKeys": "off",
+        "useSortedProperties": "off"
       }
     }
   },
   "linter": {
     "rules": {
+      "preset": "all",
       "a11y": {
         "noAriaHiddenOnFocusable": "error",
         "noAutofocus": "error",
@@ -64,31 +63,34 @@
         "noExcessiveCognitiveComplexity": {
           "level": "error",
           "options": {
-            "maxAllowedComplexity": 15
+            "maxAllowedComplexity": 10
           }
         },
         "noExcessiveLinesPerFunction": {
           "level": "error",
           "options": {
-            "maxLines": 300,
+            "maxLines": 250,
             "skipBlankLines": true,
             "skipIifes": true
           }
         },
         "noImplicitCoercions": "error",
         "noImportantStyles": "error",
+        // TypeScript's noImplicitReturns requires explicit undefined returns.
+        "noUselessUndefined": "off",
+        // TypeScript's noPropertyAccessFromIndexSignature requires brackets.
         "useLiteralKeys": "off",
         "useMaxParams": {
           "level": "error",
           "options": {
-            "max": 4
+            "max": 3
           }
         }
       },
       "correctness": {
         "noChildrenProp": "error",
         "noNestedComponentDefinitions": "error",
-        "noNodejsModules": "off",
+        "noNodejsModules": "error",
         "noPrivateImports": {
           "level": "error",
           "options": {
@@ -108,6 +110,8 @@
             }
           }
         },
+        // Solid's destructured-props rule misidentifies React components.
+        "noSolidDestructuredProps": "off",
         "noUndeclaredDependencies": {
           "level": "error",
           "options": {
@@ -140,6 +144,8 @@
         },
         "useJsxKeyInIterable": "error",
         "useJsonImportAttributes": "error",
+        // Qwik's serialization model does not apply to React closures.
+        "useQwikValidLexicalScope": "off",
         "useUniqueElementIds": "error"
       },
       "nursery": {
@@ -171,6 +177,8 @@
         // React Compiler stabilizes JSX callbacks without manual extraction.
         "noJsxPropsBind": "off",
         "noReExportAll": "error",
+        // Solid's <For> component is not valid in this React application.
+        "useSolidForComponent": "off",
         "useTopLevelRegex": "error"
       },
       "security": {
@@ -185,6 +193,7 @@
         "noCommonJs": "error",
         "noDefaultExport": "error",
         "noEnum": "error",
+        // Plain JSX text is clearer than redundant string expressions.
         "noJsxLiterals": "off",
         "noImplicitBoolean": "error",
         "noMagicNumbers": "error",
@@ -205,7 +214,23 @@
         "noRestrictedTypes": "error",
         "useAsConstAssertion": "error",
         "useAtIndex": "error",
-        "useComponentExportOnlyModules": "off",
+        "useComponentExportOnlyModules": {
+          "level": "error",
+          "options": {
+            "allowConstantExport": true,
+            "allowExportNames": [
+              "DatabaseStructureMapTargetResource",
+              "OtherDatabaseObject",
+              "OtherObjectCategory",
+              "Route",
+              "resolveHomeInstanceId",
+              "useDb",
+              "useExplorerSidebarSlotRegistration",
+              "useSidebar",
+              "useTheme"
+            ]
+          }
+        },
         "useConsistentArrayType": "error",
         "useConsistentCurlyBraces": "error",
         "useDefaultParameterLast": "error",
@@ -232,7 +257,12 @@
                 "selector": {
                   "kind": "objectLiteralProperty"
                 },
-                "formats": ["camelCase", "snake_case", "CONSTANT_CASE"]
+                "formats": [
+                  "camelCase",
+                  "PascalCase",
+                  "snake_case",
+                  "CONSTANT_CASE"
+                ]
               },
               {
                 "selector": {
@@ -317,12 +347,31 @@
       }
     },
     {
-      // Command-line scripts intentionally write to stdio.
+      // Command-line scripts run under Bun and intentionally write to stdio.
       "includes": ["scripts/**/*"],
       "linter": {
         "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
           "suspicious": {
             "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      // Playwright, Lighthouse, and Vitest entrypoints run under Node/Bun.
+      "includes": [
+        "e2e/**/*",
+        "lighthouserc.*",
+        "vitest.browser.shared.ts",
+        "vitest.shared.ts"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
           }
         }
       }
@@ -339,6 +388,9 @@
       ],
       "linter": {
         "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
           "style": {
             "noDefaultExport": "off"
           }
@@ -379,22 +431,19 @@
       }
     },
     {
-      // Fast-refresh-oriented component module rule should apply to component source.
-      "includes": [
-        "src/components/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
-        "src/features/**/components/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}"
-      ],
+      // TanStack Router requires route components to stay private for code splitting.
+      "includes": ["src/routes/**/*"],
       "linter": {
         "rules": {
           "style": {
-            "useComponentExportOnlyModules": "error"
+            "useComponentExportOnlyModules": "off"
           }
         }
       }
     },
     {
-      // Test files don't benefit from Fast Refresh constraints and use
-      // literal numbers, test secrets, and non-null assertions freely.
+      // Fake credentials and high-entropy fixtures are required test inputs;
+      // Fast Refresh does not execute test modules.
       "includes": [
         "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
         "**/__tests__/**/*"
@@ -406,48 +455,35 @@
           },
           "style": {
             "noMagicNumbers": "off",
-            "noNonNullAssertion": "off",
-            "useComponentExportOnlyModules": "off",
-            "useTemplate": "off"
+            "useComponentExportOnlyModules": "off"
           }
         }
       }
     },
     {
-      // Re-apply after Fast Refresh component-source overrides. This file keeps
-      // one shadcn-derived SelectItem fork for multiline option descriptions.
-      "includes": ["src/components/querylane-ui/select.tsx"],
-      "linter": {
-        "rules": {
-          "security": {
-            "noSecrets": "off"
-          }
-        }
-      }
-    },
-    {
-      // Re-apply after Fast Refresh component-source overrides. Sidebar has
-      // shadcn internals forked only for Querylane's lg/mobile breakpoint.
+      // These static selectors and Tailwind variants are entropy false positives.
       "includes": ["src/components/querylane-ui/sidebar.tsx"],
       "linter": {
         "rules": {
-          "correctness": {
-            "noRestrictedElements": "off",
-            "useExhaustiveDependencies": "off"
-          },
-          "performance": {
-            "noNamespaceImport": "off"
-          },
           "security": {
             "noSecrets": "off"
           },
           "style": {
-            "noMagicNumbers": "off",
-            "useComponentExportOnlyModules": "off",
-            "useConsistentTypeDefinitions": "off"
+            "noMagicNumbers": "off"
           },
           "suspicious": {
             "noDocumentCookie": "off"
+          }
+        }
+      }
+    },
+    {
+      // TanStack Query owns these four-argument callback signatures.
+      "includes": ["src/hooks/api/instance.ts", "src/lib/query-client.ts"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "useMaxParams": "off"
           }
         }
       }

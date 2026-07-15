@@ -63,13 +63,25 @@ describe("resource names", () => {
     expect(buildSchemaName("i1", "app", "public")).toBe(
       "instances/i1/databases/app/schemas/public"
     );
-    expect(buildTableName("i1", "app", "public", "events")).toBe(
-      "instances/i1/databases/app/schemas/public/tables/events"
-    );
+    expect(
+      buildTableName({
+        instanceId: "i1",
+        databaseId: "app",
+        schemaId: "public",
+        tableId: "events",
+      })
+    ).toBe("instances/i1/databases/app/schemas/public/tables/events");
   });
 
   it("escapes slash and percent in PostgreSQL identifier resource segments", () => {
-    expect(buildTableName("i1", "app/db", "weird/schema", "rate%history")).toBe(
+    expect(
+      buildTableName({
+        instanceId: "i1",
+        databaseId: "app/db",
+        schemaId: "weird/schema",
+        tableId: "rate%history",
+      })
+    ).toBe(
       "instances/i1/databases/app%2Fdb/schemas/weird%2Fschema/tables/rate%25history"
     );
     expect(
@@ -131,13 +143,18 @@ describe("resource names", () => {
     view,
   }) => {
     const schemaName = buildSchemaName("seed-edgecases", "normal_db", schema);
-    const tableName = buildTableName(
-      "seed-edgecases",
-      "normal_db",
-      schema,
-      table
-    );
-    const viewName = buildViewName("seed-edgecases", "normal_db", schema, view);
+    const tableName = buildTableName({
+      instanceId: "seed-edgecases",
+      databaseId: "normal_db",
+      schemaId: schema,
+      tableId: table,
+    });
+    const viewName = buildViewName({
+      instanceId: "seed-edgecases",
+      databaseId: "normal_db",
+      schemaId: schema,
+      viewId: view,
+    });
 
     expect(schemaName).toBe(
       `instances/seed-edgecases/databases/normal_db/schemas/${schema}`

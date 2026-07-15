@@ -186,6 +186,13 @@ function BreadcrumbDropdownList({
   );
 }
 
+function shouldShowBreadcrumbSpinner(
+  loading: boolean,
+  refreshing: boolean
+): boolean {
+  return loading || refreshing;
+}
+
 function BreadcrumbDropdown({
   children,
   contentWidth,
@@ -236,7 +243,7 @@ function BreadcrumbDropdown({
         >
           {triggerValue}
         </OverflowAwareText>
-        {loading || refreshing ? (
+        {shouldShowBreadcrumbSpinner(loading, refreshing) ? (
           <Spinner className="size-3 shrink-0 text-muted-foreground" />
         ) : null}
         <ChevronsUpDown
@@ -333,6 +340,142 @@ function InstanceSelectorEmptyState({
     </Empty>
   );
 }
+
+type DbInstance = ReturnType<typeof useDb>["instances"][number];
+
+function InstanceCommandItem({
+  close,
+  instance,
+  navigateToInstance,
+  selected,
+}: {
+  close: () => void;
+  instance: DbInstance;
+  navigateToInstance: ReturnType<typeof useDb>["navigateToInstance"];
+  selected: boolean;
+}) {
+  const navigate = useNavigate();
+  const handleSelect = () => {
+    if (instance.credentialsUnreadable) {
+      navigate({
+        params: { instanceId: instance.id },
+        to: "/instances/$instanceId/configuration",
+      }).catch((error: unknown) =>
+        handleNavigationError(error, {
+          area: "admin-header.recover-instance-credentials",
+        })
+      );
+      close();
+      return;
+    }
+    navigateToInstance(instance);
+    close();
+  };
+  const statusClassName =
+    instance.status === "error" ? "text-destructive" : "text-muted-foreground";
+  return (
+    <CommandItem
+      data-checked={selected}
+      onSelect={handleSelect}
+      value={`${instance.name} ${instance.host}${instance.credentialsUnreadable ? " credentials need attention review credentials" : ""}`}
+    >
+      <StatusDot status={instance.status} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <OverflowAwareText className="min-w-0 truncate text-sm">
+          {instance.name}
+        </OverflowAwareText>
+        <OverflowAwareText className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
+          {instance.host}:{instance.port}
+        </OverflowAwareText>
+        {instance.credentialsUnreadable ? (
+          <>
+            <span className="truncate text-[11px] text-destructive">
+              Credentials need attention
+            </span>
+            <span className="truncate text-[11px] text-destructive underline underline-offset-2">
+              Review credentials
+            </span>
+          </>
+        ) : null}
+        {!instance.credentialsUnreadable && instance.status !== "connected" ? (
+          <span className={cn("truncate text-[11px]", statusClassName)}>
+            {getConnectionStatusLabel(instance.status)}
+          </span>
+        ) : null}
+      </div>
+    </CommandItem>
+  );
+}
+
+function RegisterInstanceCommand({
+  close,
+  hasInstances,
+  isConfigManaged,
+  isModeLoaded,
+}: {
+  close: () => void;
+  hasInstances: boolean;
+  isConfigManaged: boolean;
+  isModeLoaded: boolean;
+}) {
+  const navigate = useNavigate();
+  if (!hasInstances) {
+    return isModeLoaded ? null : (
+      <CommandItem
+        aria-disabled={true}
+        className="cursor-wait opacity-60"
+        value="register new instance loading"
+      >
+        <Spinner className="size-4 text-muted-foreground" />
+        <span className="text-muted-foreground text-sm">
+          Checking instance management
+        </span>
+      </CommandItem>
+    );
+  }
+  if (!isModeLoaded) {
+    return null;
+  }
+  if (isConfigManaged) {
+    return (
+      <Tooltip>
+        <TooltipTrigger render={<div className="cursor-not-allowed" />}>
+          <CommandItem
+            className="opacity-60"
+            disabled={true}
+            value="register new instance config managed"
+          >
+            <Lock className="size-4 text-muted-foreground" />
+            <span className="text-muted-foreground text-sm">
+              Register instance
+            </span>
+          </CommandItem>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          Instances are managed via the server configuration file. Add them to
+          your config and restart the server.
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  return (
+    <CommandItem
+      onSelect={() => {
+        navigate({ to: "/new-instance" }).catch((error: unknown) =>
+          handleNavigationError(error, {
+            area: "admin-header.register-instance",
+          })
+        );
+        close();
+      }}
+      value="register new instance"
+    >
+      <Plus className="size-4 text-muted-foreground" />
+      <span className="text-muted-foreground text-sm">Register instance</span>
+    </CommandItem>
+  );
+}
+
 function InstanceSelector({
   instances,
   navigateToInstance,
@@ -344,7 +487,6 @@ function InstanceSelector({
   queryState: ReturnType<typeof useDb>["queryStates"]["instances"];
   selectedInstance: ReturnType<typeof useDb>["selectedInstance"];
 }) {
-  const navigate = useNavigate();
   const { isConfigManaged, isLoaded: isModeLoaded } =
     useConfigManagedInstancesStatus();
   const breadcrumbState = getBreadcrumbQueryState(queryState);
@@ -374,118 +516,21 @@ function InstanceSelector({
       {(close) => (
         <>
           {instances.map((instance) => (
-            <CommandItem
-              data-checked={selectedInstance?.id === instance.id}
+            <InstanceCommandItem
+              close={close}
+              instance={instance}
               key={instance.id}
-              onSelect={() => {
-                if (instance.credentialsUnreadable) {
-                  navigate({
-                    params: { instanceId: instance.id },
-                    to: "/instances/$instanceId/configuration",
-                  }).catch((error: unknown) =>
-                    handleNavigationError(error, {
-                      area: "admin-header.recover-instance-credentials",
-                    })
-                  );
-                  close();
-                  return;
-                }
-
-                navigateToInstance(instance);
-                close();
-              }}
-              value={`${instance.name} ${instance.host}${instance.credentialsUnreadable ? " credentials need attention review credentials" : ""}`}
-            >
-              <StatusDot status={instance.status} />
-              <div className="flex min-w-0 flex-1 flex-col">
-                <OverflowAwareText className="min-w-0 truncate text-sm">
-                  {instance.name}
-                </OverflowAwareText>
-                <OverflowAwareText className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
-                  {instance.host}:{instance.port}
-                </OverflowAwareText>
-                {instance.credentialsUnreadable ? (
-                  <>
-                    <span className="truncate text-[11px] text-destructive">
-                      Credentials need attention
-                    </span>
-                    <span className="truncate text-[11px] text-destructive underline underline-offset-2">
-                      Review credentials
-                    </span>
-                  </>
-                ) : null}
-                {!instance.credentialsUnreadable &&
-                instance.status !== "connected" ? (
-                  <span
-                    className={cn(
-                      "truncate text-[11px]",
-                      instance.status === "error"
-                        ? "text-destructive"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {getConnectionStatusLabel(instance.status)}
-                  </span>
-                ) : null}
-              </div>
-            </CommandItem>
+              navigateToInstance={navigateToInstance}
+              selected={selectedInstance?.id === instance.id}
+            />
           ))}
           {hasInstances ? <CommandSeparator className="my-1" /> : null}
-          {hasInstances && isModeLoaded && isConfigManaged ? (
-            <Tooltip>
-              <TooltipTrigger render={<div className="cursor-not-allowed" />}>
-                <CommandItem
-                  className="opacity-60"
-                  disabled={true}
-                  key="__register-instance-disabled"
-                  value="register new instance config managed"
-                >
-                  <Lock className="size-4 text-muted-foreground" />
-                  <span className="text-muted-foreground text-sm">
-                    Register instance
-                  </span>
-                </CommandItem>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                Instances are managed via the server configuration file. Add
-                them to your config and restart the server.
-              </TooltipContent>
-            </Tooltip>
-          ) : null}
-          {hasInstances && isModeLoaded && !isConfigManaged ? (
-            <CommandItem
-              key="__register-instance"
-              onSelect={() => {
-                navigate({
-                  to: "/new-instance",
-                }).catch((error: unknown) =>
-                  handleNavigationError(error, {
-                    area: "admin-header.register-instance",
-                  })
-                );
-                close();
-              }}
-              value="register new instance"
-            >
-              <Plus className="size-4 text-muted-foreground" />
-              <span className="text-muted-foreground text-sm">
-                Register instance
-              </span>
-            </CommandItem>
-          ) : null}
-          {hasInstances || isModeLoaded ? null : (
-            <CommandItem
-              aria-disabled={true}
-              className="cursor-wait opacity-60"
-              key="__register-instance-loading"
-              value="register new instance loading"
-            >
-              <Spinner className="size-4 text-muted-foreground" />
-              <span className="text-muted-foreground text-sm">
-                Checking instance management
-              </span>
-            </CommandItem>
-          )}
+          <RegisterInstanceCommand
+            close={close}
+            hasInstances={hasInstances}
+            isConfigManaged={isConfigManaged}
+            isModeLoaded={isModeLoaded}
+          />
         </>
       )}
     </BreadcrumbDropdown>

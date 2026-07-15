@@ -44,6 +44,10 @@ function decodeSortColumnKey(value: string): string {
   return new URLSearchParams(`column=${querySafeValue}`).get("column") ?? "";
 }
 
+function hasInvalidSortSeparator(separator: number, valueLength: number) {
+  return separator <= 0 || separator === valueLength - 1;
+}
+
 function parseSortSearch(value: string | undefined): SortColumn[] {
   if (!value) {
     return [];
@@ -59,7 +63,7 @@ function parseSortSearch(value: string | undefined): SortColumn[] {
     }
 
     const separator = raw.lastIndexOf(":");
-    if (separator <= 0 || separator === raw.length - 1) {
+    if (hasInvalidSortSeparator(separator, raw.length)) {
       continue;
     }
 

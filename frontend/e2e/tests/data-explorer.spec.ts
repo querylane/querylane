@@ -315,7 +315,11 @@ test("data explorer: table errors and retry stay inside explorer shell", {
   tag: ["@feat:data-explorer", "@flow:error"],
 }, async ({ page }) => {
   await mockExplorerShell(page);
-  await mockRpcError(page, "ListTables", "catalog unavailable");
+  await mockRpcError({
+    page,
+    method: "ListTables",
+    message: "catalog unavailable",
+  });
 
   await page.goto(
     "/instances/production/databases/appdb/explorer?schema=public"
@@ -365,7 +369,7 @@ test("data explorer: row read failure is inline and leaves table context intact"
 }, async ({ page }) => {
   await mockExplorerShell(page);
   await mockTableCatalog(page);
-  await mockRpcError(page, "ReadRows", "read failed");
+  await mockRpcError({ page, method: "ReadRows", message: "read failed" });
 
   await page.goto(
     "/instances/production/databases/appdb/explorer?schema=public&category=tables&name=orders"

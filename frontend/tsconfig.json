@@ -26,9 +26,14 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
     "strict": true,
     "allowJs": false,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
     "alwaysStrict": true,
+    "erasableSyntaxOnly": false,
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
+    "noCheck": false,
+    "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
     "noImplicitOverride": true,
@@ -50,7 +55,7 @@
   "include": ["src", "test/setup-globals.ts"],
   "references": [
     {
-      "path": "./tsconfig.node.json"
+      "path": "./tsconfig.declarations.json"
     }
   ],
   "exclude": ["opensrc", "src/components/ui"]

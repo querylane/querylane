@@ -17,6 +17,18 @@ function isMetricKey(value: string | undefined): value is MetricKey {
   return METRIC_KEYS.some((key) => key === value);
 }
 
+function getMetricKeyFromDetail(
+  detail: Status["details"][number]
+): MetricKey | undefined {
+  try {
+    const errorInfo = anyUnpack(detail, ErrorInfoSchema);
+    const metric = errorInfo?.metadata["metric"];
+    return isMetricKey(metric) ? metric : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function getMetricFromMessage(message: string): MetricKey | undefined {
   const normalizedMessage = message.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
   return METRIC_KEYS.find((key) => normalizedMessage.includes(key));
@@ -32,14 +44,8 @@ function getMetricPartialErrors(partialErrors: Status[]): MetricPartialErrors {
     }
 
     for (const detail of partialError.details) {
-      let errorInfo: ReturnType<typeof anyUnpack<typeof ErrorInfoSchema>>;
-      try {
-        errorInfo = anyUnpack(detail, ErrorInfoSchema);
-      } catch {
-        errorInfo = undefined;
-      }
-      const metric = errorInfo?.metadata["metric"];
-      if (isMetricKey(metric)) {
+      const metric = getMetricKeyFromDetail(detail);
+      if (metric) {
         errors[metric] = partialError;
       }
     }

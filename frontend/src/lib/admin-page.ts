@@ -98,6 +98,18 @@ function resolveRequestedAdminPageForScope(
     : getDefaultAdminPageForScope(scope);
 }
 
+function isRolesPath(pathname: string): boolean {
+  return pathname.endsWith("/roles") || pathname.includes("/roles/");
+}
+
+function isDatabasePath(segments: string[]): boolean {
+  return segments[2] === "databases" && segments[3] !== undefined;
+}
+
+function isInstanceAdminRoot(segments: string[]): boolean {
+  return segments[2] === "admin" && segments[3] === undefined;
+}
+
 function resolveImplicitAdminPageFromPathname(
   pathname: string
 ): AdminPageId | undefined {
@@ -109,11 +121,11 @@ function resolveImplicitAdminPageFromPathname(
   if (pathname.endsWith("/activity")) {
     return "instance.activity";
   }
-  if (pathname.endsWith("/roles") || pathname.includes("/roles/")) {
+  if (isRolesPath(pathname)) {
     return "instance.roles";
   }
 
-  if (segments[2] === "databases" && segments[3]) {
+  if (isDatabasePath(segments)) {
     if (segments[4] === "explorer") {
       return "database.explorer";
     }
@@ -124,7 +136,7 @@ function resolveImplicitAdminPageFromPathname(
   }
   // The instance-scoped admin panel is not an AdminPageId page: it renders
   // app-global backend state and must not resolve to instance.overview.
-  if (segments[2] === "admin" && !segments[3]) {
+  if (isInstanceAdminRoot(segments)) {
     return;
   }
   return pathname.includes("/instances/") ? "instance.overview" : undefined;

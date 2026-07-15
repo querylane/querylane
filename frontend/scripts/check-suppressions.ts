@@ -101,17 +101,32 @@ function findSuppressionViolations({
     if (allowsSuppression(path)) {
       continue;
     }
+    violations.push(
+      ...findFileSuppressionViolations({ absolutePath, path, readFile })
+    );
+  }
 
-    const lines = readFile(absolutePath, "utf8").split("\n");
-    for (const [index, line] of lines.entries()) {
-      for (const pattern of SUPPRESSION_PATTERNS) {
-        if (line.includes(pattern)) {
-          violations.push({ line: index + 1, path, pattern });
-        }
+  return violations;
+}
+
+function findFileSuppressionViolations({
+  absolutePath,
+  path,
+  readFile,
+}: {
+  absolutePath: string;
+  path: string;
+  readFile: (path: string, encoding: BufferEncoding) => string;
+}): SuppressionViolation[] {
+  const violations: SuppressionViolation[] = [];
+  const lines = readFile(absolutePath, "utf8").split("\n");
+  for (const [index, line] of lines.entries()) {
+    for (const pattern of SUPPRESSION_PATTERNS) {
+      if (line.includes(pattern)) {
+        violations.push({ line: index + 1, path, pattern });
       }
     }
   }
-
   return violations;
 }
 

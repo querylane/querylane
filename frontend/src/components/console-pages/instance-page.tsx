@@ -417,6 +417,22 @@ function CoreInstanceStatsBar({
   );
 }
 
+function ReplicationRoleBadge({
+  serverInfo,
+}: {
+  serverInfo: ServerInfo | undefined;
+}) {
+  const role = serverInfo?.replicationRole;
+  if (role === undefined || role === ServerInfo_ReplicationRole.UNSPECIFIED) {
+    return null;
+  }
+  return (
+    <Badge className="px-2.5 py-0.5 text-xs" variant="default">
+      {formatReplicationRole(role)}
+    </Badge>
+  );
+}
+
 function InstancePageHeader({
   connectionStatus,
   databasesState,
@@ -458,13 +474,7 @@ function InstancePageHeader({
               {instance.displayName}
             </h1>
             <div className="flex flex-wrap items-center gap-2">
-              {serverInfo &&
-              serverInfo.replicationRole !==
-                ServerInfo_ReplicationRole.UNSPECIFIED ? (
-                <Badge className="px-2.5 py-0.5 text-xs" variant="default">
-                  {formatReplicationRole(serverInfo.replicationRole)}
-                </Badge>
-              ) : null}
+              <ReplicationRoleBadge serverInfo={serverInfo} />
               <Badge
                 className="px-2.5 py-0.5 text-xs"
                 variant={
@@ -1219,28 +1229,28 @@ function BackendInstancePage({
   const [metricsAnchorMs, setMetricsAnchorMs] = useState(
     quantizedMetricsAnchor
   );
-  const metricsQuery = useInstanceMetricsQuery(
+  const metricsQuery = useInstanceMetricsQuery({
     instanceId,
-    metricsAnchorMs,
-    metricsRangeHours,
-    {
+    anchorMs: metricsAnchorMs,
+    rangeHours: metricsRangeHours,
+    options: {
       enabled: liveDataVisibility.overview,
       // Hold the previous window's charts (dimmed) while a range switch loads,
       // instead of flashing the skeleton and jumping layout.
       placeholderData: (previous) => previous,
       refetchOnWindowFocus: false,
-    }
-  );
-  const previousMetricsQuery = useInstancePreviousMetricsQuery(
+    },
+  });
+  const previousMetricsQuery = useInstancePreviousMetricsQuery({
     instanceId,
-    metricsAnchorMs,
-    metricsRangeHours,
-    {
+    anchorMs: metricsAnchorMs,
+    rangeHours: metricsRangeHours,
+    options: {
       enabled: liveDataVisibility.overview,
       placeholderData: (previous) => previous,
       refetchOnWindowFocus: false,
-    }
-  );
+    },
+  });
   const healthQuery = useCheckInstanceHealthQuery(
     {
       name: instanceName,

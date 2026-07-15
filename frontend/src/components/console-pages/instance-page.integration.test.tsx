@@ -1374,7 +1374,9 @@ describe("backend instance activity", () => {
     expect(within(table).queryByText("5000")).toBeNull();
     expect(nextPage).toHaveProperty("disabled", false);
   });
+});
 
+describe("backend instance activity pagination and states", () => {
   test("clamps the current page when a live sample shrinks", async () => {
     const user = userEvent.setup();
     state.selectedInstanceStatus = "connected";

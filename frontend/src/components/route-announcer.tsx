@@ -2,6 +2,19 @@
 
 import { useLocation } from "@tanstack/react-router";
 
+function databasePageName(segments: string[]): string {
+  if (!segments[3]) {
+    return "Instance overview";
+  }
+  if (segments[4] === "explorer") {
+    return "Data explorer";
+  }
+  if (segments[4] === "extensions") {
+    return "Extensions";
+  }
+  return "Database overview";
+}
+
 function instancePageName(segments: string[]): string {
   const [, , sub] = segments;
   if (!sub) {
@@ -14,16 +27,7 @@ function instancePageName(segments: string[]): string {
     return segments[3] ? "Role detail" : "Roles";
   }
   if (sub === "databases") {
-    if (!segments[3]) {
-      return "Instance overview";
-    }
-    if (segments[4] === "explorer") {
-      return "Data explorer";
-    }
-    if (segments[4] === "extensions") {
-      return "Extensions";
-    }
-    return "Database overview";
+    return databasePageName(segments);
   }
   return "Querylane";
 }

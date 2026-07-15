@@ -94,6 +94,21 @@ const NASCENT_MIN_POINTS = 3;
 /** Minimum finite-valued rows for a time chart to be non-degenerate. */
 const MIN_RENDERABLE_ROWS = 2;
 
+function finiteSeriesStats(series: MetricSeries): {
+  finiteCount: number;
+  firstMs: number | null;
+} {
+  let finiteCount = 0;
+  let firstMs: number | null = null;
+  for (const point of decodePoints(series.points)) {
+    if (point.value !== null) {
+      finiteCount += 1;
+      firstMs = firstMs === null ? point.time : Math.min(firstMs, point.time);
+    }
+  }
+  return { finiteCount, firstMs };
+}
+
 function finiteSampleStats(response: QueryMetricsResponse | undefined): {
   firstMs: number | null;
   maxFinitePoints: number;
@@ -102,14 +117,14 @@ function finiteSampleStats(response: QueryMetricsResponse | undefined): {
   let maxFinitePoints = 0;
 
   for (const series of response?.series ?? []) {
-    let finiteCount = 0;
-    for (const point of decodePoints(series.points)) {
-      if (point.value !== null) {
-        finiteCount += 1;
-        firstMs = firstMs === null ? point.time : Math.min(firstMs, point.time);
-      }
+    const seriesStats = finiteSeriesStats(series);
+    if (seriesStats.firstMs !== null) {
+      firstMs =
+        firstMs === null
+          ? seriesStats.firstMs
+          : Math.min(firstMs, seriesStats.firstMs);
     }
-    maxFinitePoints = Math.max(maxFinitePoints, finiteCount);
+    maxFinitePoints = Math.max(maxFinitePoints, seriesStats.finiteCount);
   }
 
   return { firstMs, maxFinitePoints };

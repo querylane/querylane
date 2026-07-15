@@ -21,9 +21,12 @@ const FILES_SUMMARY_PATTERN =
   /^\s*(?:[├+|]\s*)?Files\s*\(\d+\)(?<summary>[^\n]*)$/mu;
 const OVERWRITE_SUMMARY_PATTERN = /~(?<count>\d+)\s+overwrite\b/u;
 const NO_CHANGES_PATTERN = /\bNo changes\./u;
-// This is a deliberate strict TypeScript compatibility patch against shadcn
-// output: sonner sanitizes the resolved theme before passing it to Sonner.
-const ALLOWED_STRICT_TYPESCRIPT_DRIFT_FILES = new Set([
+// Deliberate patches against shadcn output: interactive items use the pointer
+// cursor, and sonner sanitizes the resolved theme before passing it to Sonner.
+const ALLOWED_REGISTRY_DRIFT_FILES = new Set([
+  "src/components/ui/command.tsx",
+  "src/components/ui/dropdown-menu.tsx",
+  "src/components/ui/select.tsx",
   "src/components/ui/sonner.tsx",
 ]);
 
@@ -93,12 +96,17 @@ function shadcnBaseArgs() {
   return [SHADCN_BINARY_PATH] as const;
 }
 
-function runRequiredCommand(
-  runner: CommandRunner,
-  command: string,
-  args: readonly string[],
-  label: string
-) {
+function runRequiredCommand({
+  runner,
+  command,
+  args,
+  label,
+}: {
+  runner: CommandRunner;
+  command: string;
+  args: readonly string[];
+  label: string;
+}) {
   const result = runner.run(command, args);
   if (result.status !== SUCCESS_EXIT_CODE) {
     throw new Error(`${label} failed.\n${commandOutput(result)}`.trim());
@@ -179,12 +187,12 @@ function confirmBlockingOverwriteFiles({
   const confirmedBlockingOverwriteFiles: string[] = [];
 
   for (const file of blockingOverwriteFiles) {
-    const diffResult = runRequiredCommand(
+    const diffResult = runRequiredCommand({
       runner,
-      SHADCN_COMMAND,
-      [...baseArgs, "add", ...components, "--diff", file],
-      `shadcn registry diff for ${file}`
-    );
+      command: SHADCN_COMMAND,
+      args: [...baseArgs, "add", ...components, "--diff", file],
+      label: `shadcn registry diff for ${file}`,
+    });
     const diffOutput = commandOutput(diffResult);
     console.log(diffOutput);
 
@@ -206,12 +214,12 @@ function runShadcnRegistrySyncCheck({
   console.log(
     `Validating shadcn registry sync with ${shadcnPackageSpecifier}.`
   );
-  const infoResult = runRequiredCommand(
+  const infoResult = runRequiredCommand({
     runner,
-    SHADCN_COMMAND,
-    [...baseArgs, "info", "--json"],
-    "shadcn info"
-  );
+    command: SHADCN_COMMAND,
+    args: [...baseArgs, "info", "--json"],
+    label: "shadcn info",
+  });
   const components = normalizeShadcnComponents(
     parseShadcnInfoComponents(infoResult.stdout)
   );
@@ -223,12 +231,12 @@ function runShadcnRegistrySyncCheck({
     return FAILURE_EXIT_CODE;
   }
 
-  const dryRunResult = runRequiredCommand(
+  const dryRunResult = runRequiredCommand({
     runner,
-    SHADCN_COMMAND,
-    [...baseArgs, "add", ...components, "--dry-run"],
-    "shadcn registry dry run"
-  );
+    command: SHADCN_COMMAND,
+    args: [...baseArgs, "add", ...components, "--dry-run"],
+    label: "shadcn registry dry run",
+  });
   const dryRunOutput = commandOutput(dryRunResult);
   console.log(dryRunOutput);
 
@@ -246,14 +254,14 @@ function runShadcnRegistrySyncCheck({
   }
 
   const blockingOverwriteFiles = overwriteFiles.filter(
-    (file) => !ALLOWED_STRICT_TYPESCRIPT_DRIFT_FILES.has(file)
+    (file) => !ALLOWED_REGISTRY_DRIFT_FILES.has(file)
   );
   const allowedOverwriteFiles = overwriteFiles.filter((file) =>
-    ALLOWED_STRICT_TYPESCRIPT_DRIFT_FILES.has(file)
+    ALLOWED_REGISTRY_DRIFT_FILES.has(file)
   );
 
   if (allowedOverwriteFiles.length > 0) {
-    console.log("Allowed strict TypeScript compatibility patches:");
+    console.log("Allowed deliberate registry patches:");
     for (const file of allowedOverwriteFiles) {
       console.log(`- ${file}`);
     }

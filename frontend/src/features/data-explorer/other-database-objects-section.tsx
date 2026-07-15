@@ -951,6 +951,119 @@ function OtherObjectsEmptyState({
   );
 }
 
+function GroupedOtherObjectCards({
+  expandedObjectKey,
+  objects,
+  onCopySql,
+  onToggle,
+  titleId,
+}: {
+  expandedObjectKey: string | null;
+  objects: OtherDatabaseObject[];
+  onCopySql: (definition: string) => void;
+  onToggle: (key: string) => void;
+  titleId: string;
+}) {
+  return (
+    <div className="space-y-5">
+      {OTHER_OBJECT_CATEGORIES.map((category) => {
+        const categoryObjects = objects.filter(
+          (object) => object.category === category.key
+        );
+        if (categoryObjects.length === 0) {
+          return null;
+        }
+        return (
+          <section
+            aria-labelledby={`${titleId}-${category.key}`}
+            key={category.key}
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <h3
+                className="font-medium text-sm"
+                id={`${titleId}-${category.key}`}
+              >
+                {category.label}
+              </h3>
+              <span className="font-mono text-muted-foreground text-xs tabular-nums">
+                {categoryObjects.length}
+              </span>
+            </div>
+            <OtherObjectCards
+              category={category.key}
+              expandedObjectKey={expandedObjectKey}
+              objects={categoryObjects}
+              onCopySql={onCopySql}
+              onToggle={onToggle}
+            />
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function OtherObjectListContent({
+  error,
+  expandedObjectKey,
+  hasActiveFilters,
+  hasMatchesInOtherCategories,
+  isLoading,
+  objects,
+  onCopySql,
+  onRetry,
+  onToggle,
+  selectedCategory,
+  titleId,
+}: {
+  error: unknown;
+  expandedObjectKey: string | null;
+  hasActiveFilters: boolean;
+  hasMatchesInOtherCategories: boolean;
+  isLoading: boolean;
+  objects: OtherDatabaseObject[];
+  onCopySql: (definition: string) => void;
+  onRetry: (() => Promise<unknown>) | undefined;
+  onToggle: (key: string) => void;
+  selectedCategory: OtherObjectCategory | undefined;
+  titleId: string;
+}) {
+  if (error) {
+    return <OtherObjectsError onRetry={onRetry} />;
+  }
+  if (isLoading) {
+    return <OtherObjectsLoading />;
+  }
+  if (objects.length === 0) {
+    return (
+      <OtherObjectsEmptyState
+        hasActiveFilters={hasActiveFilters}
+        hasMatchesInOtherCategories={hasMatchesInOtherCategories}
+      />
+    );
+  }
+  if (selectedCategory) {
+    return (
+      <OtherObjectCards
+        category={selectedCategory}
+        expandedObjectKey={expandedObjectKey}
+        objects={objects}
+        onCopySql={onCopySql}
+        onToggle={onToggle}
+      />
+    );
+  }
+  return (
+    <GroupedOtherObjectCards
+      expandedObjectKey={expandedObjectKey}
+      objects={objects}
+      onCopySql={onCopySql}
+      onToggle={onToggle}
+      titleId={titleId}
+    />
+  );
+}
+
 function OtherDatabaseObjectsPanel({
   error,
   isLoading,
@@ -1029,66 +1142,6 @@ function OtherDatabaseObjectsPanel({
   const toggleObject = (key: string) =>
     setExpandedObjectKey(expandedObjectKey === key ? null : key);
 
-  let objectListContent: ReactNode;
-  if (error) {
-    objectListContent = <OtherObjectsError onRetry={onRetry} />;
-  } else if (isLoading) {
-    objectListContent = <OtherObjectsLoading />;
-  } else if (visibleObjects.length > 0) {
-    objectListContent = selectedCategory ? (
-      <OtherObjectCards
-        category={selectedCategory}
-        expandedObjectKey={expandedObjectKey}
-        objects={visibleObjects}
-        onCopySql={copySql}
-        onToggle={toggleObject}
-      />
-    ) : (
-      <div className="space-y-5">
-        {OTHER_OBJECT_CATEGORIES.map((category) => {
-          const categoryObjects = visibleObjects.filter(
-            (object) => object.category === category.key
-          );
-          if (categoryObjects.length === 0) {
-            return null;
-          }
-          return (
-            <section
-              aria-labelledby={`${titleId}-${category.key}`}
-              key={category.key}
-            >
-              <div className="mb-2 flex items-center gap-2">
-                <h3
-                  className="font-medium text-sm"
-                  id={`${titleId}-${category.key}`}
-                >
-                  {category.label}
-                </h3>
-                <span className="font-mono text-muted-foreground text-xs tabular-nums">
-                  {categoryObjects.length}
-                </span>
-              </div>
-              <OtherObjectCards
-                category={category.key}
-                expandedObjectKey={expandedObjectKey}
-                objects={categoryObjects}
-                onCopySql={copySql}
-                onToggle={toggleObject}
-              />
-            </section>
-          );
-        })}
-      </div>
-    );
-  } else {
-    objectListContent = (
-      <OtherObjectsEmptyState
-        hasActiveFilters={hasActiveFilters}
-        hasMatchesInOtherCategories={hasMatchesInOtherCategories}
-      />
-    );
-  }
-
   return (
     <section
       aria-labelledby={titleId}
@@ -1134,7 +1187,21 @@ function OtherDatabaseObjectsPanel({
           </p>
         ) : null}
 
-        <div className="mt-3">{objectListContent}</div>
+        <div className="mt-3">
+          <OtherObjectListContent
+            error={error}
+            expandedObjectKey={expandedObjectKey}
+            hasActiveFilters={hasActiveFilters}
+            hasMatchesInOtherCategories={hasMatchesInOtherCategories}
+            isLoading={isLoading}
+            objects={visibleObjects}
+            onCopySql={copySql}
+            onRetry={onRetry}
+            onToggle={toggleObject}
+            selectedCategory={selectedCategory}
+            titleId={titleId}
+          />
+        </div>
       </div>
     </section>
   );

@@ -266,7 +266,7 @@ DROP OWNED BY ${quoted};`;
         <p className="text-[11.5px] text-muted-foreground">
           Or transfer ownership object-by-object:{" "}
           <span className="font-mono text-foreground/75">
-            ALTER … OWNER TO &lt;new_owner&gt;;
+            {"ALTER … OWNER TO <new_owner>;"}
           </span>
         </p>
       </div>
@@ -290,12 +290,7 @@ function OwnsDescription({
   roleName: string;
 }) {
   if (isSuper) {
-    return (
-      <>
-        Superuser bypasses ownership checks anyway; the list below is
-        informational.
-      </>
-    );
+    return "Superuser bypasses ownership checks anyway; the list below is informational.";
   }
   if (isEmpty && partial) {
     return "No owned objects are shown in the available results.";
@@ -304,7 +299,7 @@ function OwnsDescription({
     return (
       <>
         <span className="font-mono text-foreground/80">{roleName}</span>{" "}
-        doesn&apos;t own any objects in{" "}
+        {"doesn't own any objects in"}{" "}
         <span className="font-mono text-foreground/80">{databaseName}</span>{" "}
         today. Ownership still matters: anything this role creates becomes owned
         by it.
@@ -317,6 +312,47 @@ function OwnsDescription({
       or was assigned ownership of these objects. As owner, it implicitly holds
       every privilege on each, none of which appears in the direct grants.
     </>
+  );
+}
+
+function schemasWithCreateGrant(directGrants: GrantedObject[]): string[] {
+  return directGrants.flatMap((object) => {
+    const canCreate = object.privileges.some(
+      (privilege) => privilege.name === "CREATE"
+    );
+    return object.objectType === GrantObjectType.SCHEMA && canCreate
+      ? [object.schemaName || object.objectName]
+      : [];
+  });
+}
+
+function OwnedObjectsContent({
+  databaseName,
+  isEmpty,
+  ownedObjects,
+  partial,
+}: {
+  databaseName: string | undefined;
+  isEmpty: boolean;
+  ownedObjects: OwnedObject[];
+  partial: boolean;
+}) {
+  if (!isEmpty) {
+    return <OwnedObjectsTable objects={ownedObjects} partial={partial} />;
+  }
+  return (
+    <GrantsEmptyState
+      title={partial ? "Owned object results are incomplete" : undefined}
+    >
+      {partial ? (
+        "No owned objects are shown in the available results."
+      ) : (
+        <>
+          No owned objects in{" "}
+          <span className="font-mono text-foreground/80">{databaseName}</span>.
+        </>
+      )}
+    </GrantsEmptyState>
   );
 }
 
@@ -337,15 +373,7 @@ export function OwnsGrantsView({
 }) {
   const isSuper = kind === "super";
   const isEmpty = ownedObjects.length === 0;
-  const createInSchemas: string[] = [];
-  for (const object of directGrants) {
-    if (
-      object.objectType === GrantObjectType.SCHEMA &&
-      object.privileges.some((privilege) => privilege.name === "CREATE")
-    ) {
-      createInSchemas.push(object.schemaName || object.objectName);
-    }
-  }
+  const createInSchemas = schemasWithCreateGrant(directGrants);
 
   return (
     <div className="flex flex-col">
@@ -374,25 +402,12 @@ export function OwnsGrantsView({
           <FutureOwnedNote roleName={roleName} schemas={createInSchemas} />
         ) : null}
 
-        {isEmpty ? (
-          <GrantsEmptyState
-            title={partial ? "Owned object results are incomplete" : undefined}
-          >
-            {partial ? (
-              "No owned objects are shown in the available results."
-            ) : (
-              <>
-                No owned objects in{" "}
-                <span className="font-mono text-foreground/80">
-                  {databaseName}
-                </span>
-                .
-              </>
-            )}
-          </GrantsEmptyState>
-        ) : (
-          <OwnedObjectsTable objects={ownedObjects} partial={partial} />
-        )}
+        <OwnedObjectsContent
+          databaseName={databaseName}
+          isEmpty={isEmpty}
+          ownedObjects={ownedObjects}
+          partial={partial}
+        />
 
         {isEmpty || isSuper ? null : (
           <CleanupCard

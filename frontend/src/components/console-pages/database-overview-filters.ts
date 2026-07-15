@@ -153,6 +153,14 @@ function presentCatalogSchemaOwnerOptions(schemas: CatalogSchemaFacetRow[]) {
   return uniqueSortedOptions(schemas.map(ownerFilterValue), ownerFilterLabel);
 }
 
+function matchesSelectedFacet(
+  selectedValues: Set<string>,
+  selectedValueCount: number,
+  value: string
+): boolean {
+  return selectedValueCount === 0 || selectedValues.has(value);
+}
+
 function filterCatalogObjectsByFacets<RowType extends CatalogObjectFacetRow>({
   kindFilters,
   objects,
@@ -160,32 +168,32 @@ function filterCatalogObjectsByFacets<RowType extends CatalogObjectFacetRow>({
   schemaFilters,
   systemFilters,
 }: CatalogObjectFacetFilters & { objects: RowType[] }): RowType[] {
+  const kindFilterSet = new Set(kindFilters);
+  const ownerFilterSet = new Set(ownerFilters);
+  const schemaFilterSet = new Set(schemaFilters);
+  const systemFilterSet = new Set(systemFilters);
   return objects.filter((object) => {
-    if (
-      kindFilters.length > 0 &&
-      !kindFilters.includes(catalogObjectKindValue(object))
-    ) {
-      return false;
-    }
-    if (
-      systemFilters.length > 0 &&
-      !systemFilters.includes(catalogObjectSystemValue(object))
-    ) {
-      return false;
-    }
-    if (
-      schemaFilters.length > 0 &&
-      !schemaFilters.includes(schemaFilterValue(object))
-    ) {
-      return false;
-    }
-    if (
-      ownerFilters.length > 0 &&
-      !ownerFilters.includes(ownerFilterValue(object))
-    ) {
-      return false;
-    }
-    return true;
+    const matchesKind = matchesSelectedFacet(
+      kindFilterSet,
+      kindFilters.length,
+      catalogObjectKindValue(object)
+    );
+    const matchesSystem = matchesSelectedFacet(
+      systemFilterSet,
+      systemFilters.length,
+      catalogObjectSystemValue(object)
+    );
+    const matchesSchema = matchesSelectedFacet(
+      schemaFilterSet,
+      schemaFilters.length,
+      schemaFilterValue(object)
+    );
+    const matchesOwner = matchesSelectedFacet(
+      ownerFilterSet,
+      ownerFilters.length,
+      ownerFilterValue(object)
+    );
+    return matchesKind && matchesSystem && matchesSchema && matchesOwner;
   });
 }
 
@@ -194,16 +202,18 @@ function filterCatalogSchemasByFacets<RowType extends CatalogSchemaFacetRow>({
   ownerFilters,
   schemas,
 }: CatalogSchemaFacetFilters & { schemas: RowType[] }): RowType[] {
+  const kindFilterSet = new Set(kindFilters);
+  const ownerFilterSet = new Set(ownerFilters);
   return schemas.filter((schema) => {
     if (
       kindFilters.length > 0 &&
-      !kindFilters.includes(catalogSchemaKindValue(schema))
+      !kindFilterSet.has(catalogSchemaKindValue(schema))
     ) {
       return false;
     }
     if (
       ownerFilters.length > 0 &&
-      !ownerFilters.includes(ownerFilterValue(schema))
+      !ownerFilterSet.has(ownerFilterValue(schema))
     ) {
       return false;
     }

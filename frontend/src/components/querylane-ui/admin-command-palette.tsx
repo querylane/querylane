@@ -83,6 +83,154 @@ function matchesQuery(value: string, query: string): boolean {
   return query.length === 0 || value.toLowerCase().includes(query);
 }
 
+type NavigationIds = ReturnType<typeof useDb>["navigationIds"];
+type CatalogObject = NonNullable<
+  ReturnType<typeof useDatabaseCatalogQuery>["data"]
+>["objects"][number];
+type PaletteRole = NonNullable<
+  ReturnType<typeof useListAllRolesQuery>["data"]
+>["roles"][number];
+
+function selectNavigationTargets(ids: NavigationIds, query: string) {
+  const limit = query ? SEARCH_NAVIGATION_LIMIT : DEFAULT_NAVIGATION_LIMIT;
+  return NAVIGATION_TARGETS.filter((target) => {
+    const routeTarget = resolveCanonicalAdminPageTarget({
+      ids,
+      page: target.page,
+    });
+    return Boolean(routeTarget && matchesQuery(target.label, query));
+  }).slice(0, limit);
+}
+
+function selectDatabaseObjects(
+  objects: CatalogObject[],
+  databaseLabel: string,
+  query: string
+) {
+  const limit = query
+    ? SEARCH_DATABASE_OBJECT_LIMIT
+    : DEFAULT_DATABASE_OBJECT_LIMIT;
+  return objects
+    .filter((object) =>
+      matchesQuery(
+        `${databaseLabel}.${object.schemaId}.${object.objectId}`,
+        query
+      )
+    )
+    .slice(0, limit);
+}
+
+function selectRoles(roles: PaletteRole[], query: string) {
+  if (!query) {
+    return [];
+  }
+  return roles
+    .filter((role) => matchesQuery(role.roleName, query))
+    .slice(0, SEARCH_ROLE_LIMIT);
+}
+
+function NavigationTargetGroup({
+  onSelect,
+  targets,
+}: {
+  onSelect: (page: AdminPageId) => void;
+  targets: typeof NAVIGATION_TARGETS;
+}) {
+  if (targets.length === 0) {
+    return null;
+  }
+  return (
+    <CommandGroup className={COMMAND_GROUP_CLASS_NAME} heading="Go to">
+      {targets.map((target) => (
+        <CommandItem
+          className={COMMAND_ITEM_CLASS_NAME}
+          key={target.page}
+          onSelect={() => onSelect(target.page)}
+          value={target.label}
+        >
+          <ChevronRight className="size-3.5 text-muted-foreground" />
+          <span className="text-[13px]">{target.label}</span>
+          <span className="ml-auto text-[11.5px] text-muted-foreground">
+            {target.summary}
+          </span>
+        </CommandItem>
+      ))}
+    </CommandGroup>
+  );
+}
+
+function databaseObjectRowCount(object: CatalogObject): string {
+  const rowCount = normalizeEstimatedRowCount(object.rowCount);
+  return object.kind === "view" && rowCount === 0
+    ? "— rows"
+    : `${formatRows(rowCount)} rows`;
+}
+
+function DatabaseObjectGroup({
+  databaseLabel,
+  objects,
+  onSelect,
+}: {
+  databaseLabel: string;
+  objects: CatalogObject[];
+  onSelect: (object: CatalogObject) => void;
+}) {
+  if (objects.length === 0) {
+    return null;
+  }
+  return (
+    <CommandGroup className={COMMAND_GROUP_CLASS_NAME} heading="Tables">
+      {objects.map((object) => {
+        const label = `${databaseLabel}.${object.schemaId}.${object.objectId}`;
+        return (
+          <CommandItem
+            className={COMMAND_ITEM_CLASS_NAME}
+            key={object.name ?? label}
+            onSelect={() => onSelect(object)}
+            value={label}
+          >
+            <ChevronRight className="size-3.5 text-muted-foreground" />
+            <span className="font-mono text-[13px]">{label}</span>
+            <span className="ml-auto text-[11.5px] text-muted-foreground">
+              {databaseObjectRowCount(object)}
+            </span>
+          </CommandItem>
+        );
+      })}
+    </CommandGroup>
+  );
+}
+
+function RoleCommandGroup({
+  onSelect,
+  roles,
+}: {
+  onSelect: (role: PaletteRole) => void;
+  roles: PaletteRole[];
+}) {
+  if (roles.length === 0) {
+    return null;
+  }
+  return (
+    <CommandGroup className={COMMAND_GROUP_CLASS_NAME} heading="Roles">
+      {roles.map((role) => (
+        <CommandItem
+          className={COMMAND_ITEM_CLASS_NAME}
+          key={role.name}
+          onSelect={() => onSelect(role)}
+          value={role.roleName}
+        >
+          <ChevronRight className="size-3.5 text-muted-foreground" />
+          <span className="font-mono text-[13px]">{role.roleName}</span>
+          <span className="ml-auto text-[11.5px] text-muted-foreground">
+            {ROLE_KIND_LABEL[deriveRoleKind(role)].toLowerCase()}
+          </span>
+        </CommandItem>
+      ))}
+    </CommandGroup>
+  );
+}
+
 function PaletteQueryStatus({
   error,
   errorMessage,
@@ -131,7 +279,7 @@ function PaletteSearchFeedback({
   return (
     <>
       {searchIncomplete ? null : (
-        <CommandEmpty>No matches — try a table or role name</CommandEmpty>
+        <CommandEmpty>No matches: try a table or role name</CommandEmpty>
       )}
       <PaletteQueryStatus
         error={hasDatabaseScope ? catalogError : null}
@@ -173,32 +321,17 @@ function AdminCommandPaletteContent({
     instanceId ? rolesForInstanceQueryInput(instanceId) : undefined,
     { enabled: Boolean(instanceId && normalizedQuery) }
   );
-  const navigationTargets = NAVIGATION_TARGETS.filter((target) => {
-    const routeTarget = resolveCanonicalAdminPageTarget({
-      ids: navigationIds,
-      page: target.page,
-    });
-    return routeTarget && matchesQuery(target.label, normalizedQuery);
-  }).slice(
-    0,
-    normalizedQuery ? SEARCH_NAVIGATION_LIMIT : DEFAULT_NAVIGATION_LIMIT
+  const databaseLabel = selectedDatabase?.name ?? databaseId;
+  const navigationTargets = selectNavigationTargets(
+    navigationIds,
+    normalizedQuery
   );
-  const databaseObjects = (catalogQuery.data?.objects ?? [])
-    .filter((object) => {
-      const label = `${selectedDatabase?.name ?? databaseId}.${object.schemaId}.${object.objectId}`;
-      return matchesQuery(label, normalizedQuery);
-    })
-    .slice(
-      0,
-      normalizedQuery
-        ? SEARCH_DATABASE_OBJECT_LIMIT
-        : DEFAULT_DATABASE_OBJECT_LIMIT
-    );
-  const roles = hasRoleSearch
-    ? (rolesQuery.data?.roles ?? [])
-        .filter((role) => matchesQuery(role.roleName, normalizedQuery))
-        .slice(0, SEARCH_ROLE_LIMIT)
-    : [];
+  const databaseObjects = selectDatabaseObjects(
+    catalogQuery.data?.objects ?? [],
+    databaseLabel,
+    normalizedQuery
+  );
+  const roles = selectRoles(rolesQuery.data?.roles ?? [], normalizedQuery);
 
   function close() {
     onOpenChange(false);
@@ -276,68 +409,16 @@ function AdminCommandPaletteContent({
         </kbd>
       </div>
       <CommandList className="max-h-[380px] pb-1.5">
-        {navigationTargets.length > 0 ? (
-          <CommandGroup className={COMMAND_GROUP_CLASS_NAME} heading="Go to">
-            {navigationTargets.map((target) => (
-              <CommandItem
-                className={COMMAND_ITEM_CLASS_NAME}
-                key={target.page}
-                onSelect={() => navigateToPage(target.page)}
-                value={target.label}
-              >
-                <ChevronRight className="size-3.5 text-muted-foreground" />
-                <span className="text-[13px]">{target.label}</span>
-                <span className="ml-auto text-[11.5px] text-muted-foreground">
-                  {target.summary}
-                </span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        ) : null}
-
-        {databaseObjects.length > 0 ? (
-          <CommandGroup className={COMMAND_GROUP_CLASS_NAME} heading="Tables">
-            {databaseObjects.map((object) => {
-              const label = `${selectedDatabase?.name ?? databaseId}.${object.schemaId}.${object.objectId}`;
-              const rowCount = normalizeEstimatedRowCount(object.rowCount);
-              return (
-                <CommandItem
-                  className={COMMAND_ITEM_CLASS_NAME}
-                  key={object.name ?? label}
-                  onSelect={() => navigateToObject(object)}
-                  value={label}
-                >
-                  <ChevronRight className="size-3.5 text-muted-foreground" />
-                  <span className="font-mono text-[13px]">{label}</span>
-                  <span className="ml-auto text-[11.5px] text-muted-foreground">
-                    {object.kind === "view" && rowCount === 0
-                      ? "— rows"
-                      : `${formatRows(rowCount)} rows`}
-                  </span>
-                </CommandItem>
-              );
-            })}
-          </CommandGroup>
-        ) : null}
-
-        {roles.length > 0 ? (
-          <CommandGroup className={COMMAND_GROUP_CLASS_NAME} heading="Roles">
-            {roles.map((role) => (
-              <CommandItem
-                className={COMMAND_ITEM_CLASS_NAME}
-                key={role.name}
-                onSelect={() => navigateToRole(role)}
-                value={role.roleName}
-              >
-                <ChevronRight className="size-3.5 text-muted-foreground" />
-                <span className="font-mono text-[13px]">{role.roleName}</span>
-                <span className="ml-auto text-[11.5px] text-muted-foreground">
-                  {ROLE_KIND_LABEL[deriveRoleKind(role)].toLowerCase()}
-                </span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        ) : null}
+        <NavigationTargetGroup
+          onSelect={navigateToPage}
+          targets={navigationTargets}
+        />
+        <DatabaseObjectGroup
+          databaseLabel={databaseLabel}
+          objects={databaseObjects}
+          onSelect={navigateToObject}
+        />
+        <RoleCommandGroup onSelect={navigateToRole} roles={roles} />
 
         <PaletteSearchFeedback
           catalogError={catalogQuery.error}

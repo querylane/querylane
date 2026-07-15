@@ -709,15 +709,19 @@ function columnSearchText(row: ColumnRow) {
     .toLocaleLowerCase();
 }
 
+function columnMatchesSearch(row: ColumnRow, needle: string) {
+  return columnSearchText(row).includes(needle);
+}
+
 function filterColumnRowsBySearch(rows: ColumnRow[], searchValue: string) {
   const needle = searchValue.trim().toLocaleLowerCase();
   if (!needle) {
     return rows;
   }
-  return rows.filter((row) => columnSearchText(row).includes(needle));
+  return rows.filter((row) => columnMatchesSearch(row, needle));
 }
 
-function ColumnNameCell({ row }: { row: ColumnRow }) {
+function ColumnBadges({ row }: { row: ColumnRow }) {
   const { column, fks, isIndexed } = row;
   const identityLabel = IDENTITY_GENERATION_LABELS[column.identityGeneration];
   const foreignKeyTitle = fks
@@ -726,48 +730,60 @@ function ColumnNameCell({ row }: { row: ColumnRow }) {
   const showIndexedBadge =
     isIndexed && !(column.isPrimaryKey || column.isUnique || fks.length > 0);
   return (
+    <>
+      {column.isPrimaryKey ? (
+        <Pill size="sm" tone="amber">
+          Primary key
+        </Pill>
+      ) : null}
+      {column.isUnique ? (
+        <Pill size="sm" tone="emerald">
+          Unique
+        </Pill>
+      ) : null}
+      {fks.length > 0 ? (
+        <span aria-hidden="true" title={foreignKeyTitle}>
+          <Pill size="sm" tone="blue">
+            Foreign key
+          </Pill>
+        </span>
+      ) : null}
+      {showIndexedBadge ? (
+        <Pill size="sm" tone="violet">
+          Index
+        </Pill>
+      ) : null}
+      {column.isGenerated ? (
+        <Pill size="sm" tone="emerald">
+          GENERATED
+        </Pill>
+      ) : null}
+      {column.isIdentity ? (
+        <Pill size="sm" tone="amber">
+          IDENTITY
+        </Pill>
+      ) : null}
+      {identityLabel ? (
+        <Pill size="sm" tone="amber">
+          {identityLabel}
+        </Pill>
+      ) : null}
+    </>
+  );
+}
+
+function ColumnNameCell({ row }: { row: ColumnRow }) {
+  const { column, fks } = row;
+  const foreignKeyTitle = fks
+    .map((fk) => `References ${fk.table}.${fk.column}`)
+    .join("; ");
+  return (
     <div className="min-w-[14rem]">
       <div className="flex min-w-0 items-center gap-1.5">
         <span className="truncate font-mono font-semibold text-foreground text-xs">
           {column.columnName}
         </span>
-        {column.isPrimaryKey ? (
-          <Pill size="sm" tone="amber">
-            Primary key
-          </Pill>
-        ) : null}
-        {column.isUnique ? (
-          <Pill size="sm" tone="emerald">
-            Unique
-          </Pill>
-        ) : null}
-        {fks.length > 0 ? (
-          <span aria-hidden="true" title={foreignKeyTitle}>
-            <Pill size="sm" tone="blue">
-              Foreign key
-            </Pill>
-          </span>
-        ) : null}
-        {showIndexedBadge ? (
-          <Pill size="sm" tone="violet">
-            Index
-          </Pill>
-        ) : null}
-        {column.isGenerated ? (
-          <Pill size="sm" tone="emerald">
-            GENERATED
-          </Pill>
-        ) : null}
-        {column.isIdentity ? (
-          <Pill size="sm" tone="amber">
-            IDENTITY
-          </Pill>
-        ) : null}
-        {identityLabel ? (
-          <Pill size="sm" tone="amber">
-            {identityLabel}
-          </Pill>
-        ) : null}
+        <ColumnBadges row={row} />
       </div>
       {column.comment ? (
         <div className="mt-1 max-w-[22rem] truncate text-muted-foreground text-xs">
@@ -1424,10 +1440,11 @@ function KeysTab({
   ) {
     return <TabSkeleton />;
   }
+  const kindFilterSet = new Set(kindFilters);
   const filteredRows =
     kindFilters.length === 0
       ? rows
-      : rows.filter((row) => kindFilters.includes(row.kind));
+      : rows.filter((row) => kindFilterSet.has(row.kind));
   return (
     <MetadataTabResult
       category="keys"
@@ -1852,6 +1869,27 @@ function PartitionPaginationFooter({
   );
 }
 
+function partitionSummaryItems(metadata: TablePartitionMetadata) {
+  return [
+    metadata.partitionKey
+      ? { label: "Partition key", value: metadata.partitionKey }
+      : null,
+    metadata.partitionBound
+      ? { label: "Partition bound", value: metadata.partitionBound }
+      : null,
+    metadata.parentTable
+      ? {
+          label: "Parent table",
+          value: formatPartitionResourceLabel(metadata.parentTable),
+        }
+      : null,
+    {
+      label: "Direct partitions",
+      value: metadata.partitionCount.toLocaleString(),
+    },
+  ].filter((item): item is { label: string; value: string } => item !== null);
+}
+
 function PartitionsTab({
   query,
 }: {
@@ -1957,24 +1995,7 @@ function PartitionsTab({
     );
     setPartitionPageSize(value);
   }
-  const summaryItems = [
-    metadata.partitionKey
-      ? { label: "Partition key", value: metadata.partitionKey }
-      : null,
-    metadata.partitionBound
-      ? { label: "Partition bound", value: metadata.partitionBound }
-      : null,
-    metadata.parentTable
-      ? {
-          label: "Parent table",
-          value: formatPartitionResourceLabel(metadata.parentTable),
-        }
-      : null,
-    {
-      label: "Direct partitions",
-      value: metadata.partitionCount.toLocaleString(),
-    },
-  ].filter((item): item is { label: string; value: string } => item !== null);
+  const summaryItems = partitionSummaryItems(metadata);
 
   return (
     <div className="flex flex-col gap-3">
@@ -2499,6 +2520,31 @@ function IndexCard({
     </Card>
   );
 }
+function IndexUsageSummary({
+  totalScanCount,
+  usageStatsAvailable,
+}: {
+  totalScanCount: bigint;
+  usageStatsAvailable: boolean;
+}) {
+  return (
+    <IndexSummaryCard
+      detail={
+        usageStatsAvailable
+          ? "since last stats reset"
+          : "usage stats unavailable"
+      }
+      label="Scans"
+      labelDescription={
+        usageStatsAvailable
+          ? "Usage source: pg_stat_user_indexes."
+          : "PostgreSQL did not return usage data from pg_stat_user_indexes."
+      }
+      value={usageStatsAvailable ? formatCompactInteger(totalScanCount) : "—"}
+    />
+  );
+}
+
 function IndexesTab({
   query,
   schemaName,
@@ -2573,21 +2619,9 @@ function IndexesTab({
           label="Total size"
           value={formatBytes(totalSizeBytes)}
         />
-        <IndexSummaryCard
-          detail={
-            usageStatsAvailable
-              ? "since last stats reset"
-              : "usage stats unavailable"
-          }
-          label="Scans"
-          labelDescription={
-            usageStatsAvailable
-              ? "Usage source: pg_stat_user_indexes."
-              : "PostgreSQL did not return usage data from pg_stat_user_indexes."
-          }
-          value={
-            usageStatsAvailable ? formatCompactInteger(totalScanCount) : "—"
-          }
+        <IndexUsageSummary
+          totalScanCount={totalScanCount}
+          usageStatsAvailable={usageStatsAvailable}
         />
         <IndexSummaryCard
           detail={formatValidityDetail(indexes)}
@@ -2682,8 +2716,8 @@ function IndexesTab({
         </Select>
         {filteredIndexes.length > 0 ? (
           <span className="ml-1 tabular-nums" role="status">
-            Showing {firstPageIndex}&ndash;{lastPageIndex} of{" "}
-            {filteredIndexes.length} indexes
+            Showing {firstPageIndex}–{lastPageIndex} of {filteredIndexes.length}{" "}
+            indexes
           </span>
         ) : null}
         <div className="ml-auto flex items-center gap-2">
@@ -2800,7 +2834,7 @@ function ReferencedTableTarget({
       to="/instances/$instanceId/databases/$databaseId/explorer"
     >
       {target.label}
-      <span aria-hidden="true">&nbsp;↗</span>
+      <span aria-hidden="true"> ↗</span>
     </Link>
   );
 }
@@ -3003,12 +3037,12 @@ function ConstraintsTab({
   }
   const { constraints } = query.data;
   const normalizedSearch = search.trim().toLowerCase();
+  const kindFilterSet = new Set(kindFilters);
   const visibleConstraints = constraints.filter(
     (constraint) =>
       (normalizedSearch.length === 0 ||
         constraint.constraintName.toLowerCase().includes(normalizedSearch)) &&
-      (kindFilters.length === 0 ||
-        kindFilters.includes(String(constraint.type)))
+      (kindFilters.length === 0 || kindFilterSet.has(String(constraint.type)))
   );
   const orderedConstraints = [
     ...visibleConstraints.filter(isKeyConstraint),
@@ -3120,7 +3154,7 @@ function ConstraintsTab({
       >
         {visibleConstraints.length > 0 ? (
           <span className="tabular-nums" role="status">
-            Showing {pageStart + 1}&ndash;
+            Showing {pageStart + 1}–
             {Math.min(pageStart + pageSize, visibleConstraints.length)} of{" "}
             {visibleConstraints.length}
           </span>
@@ -3246,6 +3280,78 @@ interface RlsPreviewModel {
   verdict: string;
 }
 
+function emptyRlsPreview(
+  command: PolicyCommand,
+  role: string,
+  matchingPolicies: TablePolicy[]
+): RlsPreviewModel {
+  return {
+    appliedPolicies: matchingPolicies,
+    hasRows: false,
+    predicate: "",
+    verdict:
+      command === PolicyCommand.INSERT
+        ? `No permissive policy applies — RLS rejects every INSERT by ${role}.`
+        : `No permissive policy applies — RLS returns zero rows for ${role} running ${formatPolicyCommand(command)}.`,
+  };
+}
+
+function combineRlsPredicates(
+  permissivePolicies: TablePolicy[],
+  restrictivePolicies: TablePolicy[],
+  command: PolicyCommand
+): string {
+  const permissivePredicate = joinPolicyPredicates(
+    permissivePolicies.map((policy) =>
+      policyPredicateForCommand(policy, command)
+    ),
+    "OR"
+  );
+  const restrictivePredicates = restrictivePolicies.map((policy) =>
+    policyPredicateForCommand(policy, command)
+  );
+  if (restrictivePredicates.length === 0) {
+    return permissivePredicate;
+  }
+  return [
+    permissivePolicies.length === 1
+      ? permissivePredicate
+      : `(${permissivePredicate})`,
+    ...restrictivePredicates.map(wrapPolicyPredicate),
+  ].join("\nAND ");
+}
+
+function rlsPreviewVerdict({
+  command,
+  permissiveCount,
+  restrictiveCount,
+  role,
+}: {
+  command: PolicyCommand;
+  permissiveCount: number;
+  restrictiveCount: number;
+  role: string;
+}): string {
+  const permissiveLabel =
+    permissiveCount === 1
+      ? "1 permissive policy applies"
+      : `${permissiveCount.toLocaleString()} permissive policies apply`;
+  const rowSubject = command === PolicyCommand.INSERT ? "a new row" : "a row";
+  const matchCondition =
+    permissiveCount === 1 ? "if it matches" : "if any one matches";
+  const restrictiveCopy =
+    restrictiveCount > 0
+      ? ` ${restrictiveCount.toLocaleString()} restrictive ${
+          restrictiveCount === 1 ? "policy" : "policies"
+        } must also pass.`
+      : "";
+  const resultDescription =
+    command === PolicyCommand.INSERT
+      ? `New rows inserted by ${role} must satisfy:`
+      : `Rows visible to ${role} are those where:`;
+  return `${permissiveLabel} — ${rowSubject} passes ${matchCondition}.${restrictiveCopy} ${resultDescription}`;
+}
+
 function deriveRlsPreview({
   command,
   policies,
@@ -3267,59 +3373,23 @@ function deriveRlsPreview({
     (policy) => policy.mode === PolicyMode.RESTRICTIVE
   );
   if (permissivePolicies.length === 0) {
-    return {
-      appliedPolicies: matchingPolicies,
-      hasRows: false,
-      predicate: "",
-      verdict:
-        command === PolicyCommand.INSERT
-          ? `No permissive policy applies — RLS rejects every INSERT by ${role}.`
-          : `No permissive policy applies — RLS returns zero rows for ${role} running ${formatPolicyCommand(command)}.`,
-    };
+    return emptyRlsPreview(command, role, matchingPolicies);
   }
-
-  const permissivePredicate = joinPolicyPredicates(
-    permissivePolicies.map((policy) =>
-      policyPredicateForCommand(policy, command)
-    ),
-    "OR"
-  );
-  const restrictivePredicates = restrictivePolicies.map((policy) =>
-    policyPredicateForCommand(policy, command)
-  );
-  const predicate =
-    restrictivePredicates.length > 0
-      ? [
-          permissivePolicies.length === 1
-            ? permissivePredicate
-            : `(${permissivePredicate})`,
-          ...restrictivePredicates.map(wrapPolicyPredicate),
-        ].join("\nAND ")
-      : permissivePredicate;
-  const permissiveLabel =
-    permissivePolicies.length === 1
-      ? "1 permissive policy applies"
-      : `${permissivePolicies.length.toLocaleString()} permissive policies apply`;
-  const rowSubject = command === PolicyCommand.INSERT ? "a new row" : "a row";
-  const matchCondition =
-    permissivePolicies.length === 1 ? "if it matches" : "if any one matches";
-  const passCopy = `${rowSubject} passes ${matchCondition}`;
-  const restrictiveCopy =
-    restrictivePolicies.length > 0
-      ? ` ${restrictivePolicies.length.toLocaleString()} restrictive ${
-          restrictivePolicies.length === 1 ? "policy" : "policies"
-        } must also pass.`
-      : "";
 
   return {
     appliedPolicies: matchingPolicies,
     hasRows: true,
-    predicate,
-    verdict: `${permissiveLabel} — ${passCopy}.${restrictiveCopy} ${
-      command === PolicyCommand.INSERT
-        ? `New rows inserted by ${role} must satisfy:`
-        : `Rows visible to ${role} are those where:`
-    }`,
+    predicate: combineRlsPredicates(
+      permissivePolicies,
+      restrictivePolicies,
+      command
+    ),
+    verdict: rlsPreviewVerdict({
+      command,
+      permissiveCount: permissivePolicies.length,
+      restrictiveCount: restrictivePolicies.length,
+      role,
+    }),
   };
 }
 
@@ -3676,8 +3746,8 @@ function PoliciesTab({
         {visiblePolicies.length > 0 ? (
           <>
             <span className="tabular-nums">
-              Showing {firstPolicy}&ndash;{lastPolicy} of{" "}
-              {visiblePolicies.length} policies
+              Showing {firstPolicy}–{lastPolicy} of {visiblePolicies.length}{" "}
+              policies
             </span>
             <span
               aria-atomic="true"
@@ -3685,9 +3755,8 @@ function PoliciesTab({
               className="sr-only"
               role="status"
             >
-              Showing {firstPolicy}&ndash;{lastPolicy} of{" "}
-              {visiblePolicies.length} policies. Page {currentPageIndex + 1} of{" "}
-              {pageCount}.
+              Showing {firstPolicy}–{lastPolicy} of {visiblePolicies.length}{" "}
+              policies. Page {currentPageIndex + 1} of {pageCount}.
             </span>
           </>
         ) : null}
@@ -4319,6 +4388,31 @@ function triggerSql(triggers: TableTrigger[], qualifiedTableName: string) {
     .join("\n");
 }
 
+function appendPolicyDefinitionSection(
+  sections: DefinitionSection[],
+  policies: TablePolicy[]
+) {
+  if (policies.length > 0) {
+    sections.push({
+      content:
+        "Policy definitions are available, but row-level security enablement and forced mode are not. Use the pg_dump command to reproduce policies safely.",
+      detail: `${policies.length.toLocaleString()} policies require table-level RLS state`,
+      id: "policies",
+      kind: "note",
+      title: "Policies",
+    });
+    return;
+  }
+  sections.push({
+    content:
+      "No row-level policies are returned for this table. Visibility is governed by grants unless row-level security is enabled outside this metadata response.",
+    detail: "no policies returned",
+    id: "row-level-security",
+    kind: "note",
+    title: "Row-level security",
+  });
+}
+
 function deriveDefinitionSections({
   columns,
   constraints,
@@ -4410,26 +4504,7 @@ function deriveDefinitionSections({
       title: "Comments",
     });
   }
-  if (policies.length > 0) {
-    sections.push({
-      content:
-        "Policy definitions are available, but row-level security enablement and forced mode are not. Use the pg_dump command to reproduce policies safely.",
-      detail: `${policies.length.toLocaleString()} policies require table-level RLS state`,
-      id: "policies",
-      kind: "note",
-      title: "Policies",
-    });
-  }
-  if (policies.length === 0) {
-    sections.push({
-      content:
-        "No row-level policies are returned for this table. Visibility is governed by grants unless row-level security is enabled outside this metadata response.",
-      detail: "no policies returned",
-      id: "row-level-security",
-      kind: "note",
-      title: "Row-level security",
-    });
-  }
+  appendPolicyDefinitionSection(sections, policies);
   const triggerText = triggerSql(triggers, qualifiedTableName);
   if (triggerText) {
     sections.push({
@@ -4922,12 +4997,12 @@ function TableDetail({
     }
     onTabChange?.(next);
   }
-  const tableResourceName = buildTableName(
+  const tableResourceName = buildTableName({
     instanceId,
     databaseId,
-    schemaName,
-    tableName
-  );
+    schemaId: schemaName,
+    tableId: tableName,
+  });
 
   // Fetch table metadata up front so tabs can show stable resource counts.
   // The same queries back the tab panels, so counts cannot drift from content.

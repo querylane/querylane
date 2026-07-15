@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { flushSync } from "react-dom";
 
 interface UseRetainedRetryErrorOptions<Value> {
   error: Value | null | undefined;
   onRetry?: (() => Promise<unknown> | undefined) | undefined;
+}
+
+interface RetainedRetryState<Value> {
+  displayedError: Value | null;
+  retryInFlight: boolean;
 }
 
 export function useRetainedRetryError<Value>({
@@ -14,10 +18,12 @@ export function useRetainedRetryError<Value>({
 }: UseRetainedRetryErrorOptions<Value>) {
   const latestError = error ?? null;
   const latestErrorRef = useRef<Value | null>(latestError);
-  const [displayedError, setDisplayedError] = useState<Value | null>(
-    latestError
+  const [retryState, setRetryState] = useState<RetainedRetryState<Value>>(
+    () => ({
+      displayedError: latestError,
+      retryInFlight: false,
+    })
   );
-  const [retryInFlight, setRetryInFlight] = useState(false);
 
   // allow-useEffect: keep retry handlers synced with latest error prop
   useEffect(
@@ -30,39 +36,41 @@ export function useRetainedRetryError<Value>({
   // allow-useEffect: retain error state across retries
   useEffect(
     function retainErrorDuringRetry() {
-      if (!retryInFlight) {
-        setDisplayedError(latestError);
+      if (!retryState.retryInFlight) {
+        setRetryState({ displayedError: latestError, retryInFlight: false });
         return;
       }
 
       if (latestError) {
-        setDisplayedError(latestError);
+        setRetryState({ displayedError: latestError, retryInFlight: true });
       }
     },
-    [latestError, retryInFlight]
+    [latestError, retryState.retryInFlight]
   );
 
   const retry = async () => {
-    if (!onRetry || retryInFlight) {
+    if (!onRetry || retryState.retryInFlight) {
       return;
     }
 
-    flushSync(() => {
-      setRetryInFlight(true);
-      setDisplayedError((current) => current ?? latestErrorRef.current);
-    });
+    setRetryState((current) => ({
+      displayedError: current.displayedError ?? latestErrorRef.current,
+      retryInFlight: true,
+    }));
 
     try {
       await onRetry();
     } catch {
       // The owning surface will expose the refreshed error state.
     }
-    setDisplayedError(latestErrorRef.current);
-    setRetryInFlight(false);
+    setRetryState({
+      displayedError: latestErrorRef.current,
+      retryInFlight: false,
+    });
   };
 
   return {
-    displayedError,
+    displayedError: retryState.displayedError,
     retry: onRetry ? retry : undefined,
   };
 }

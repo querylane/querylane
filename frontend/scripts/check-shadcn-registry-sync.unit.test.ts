@@ -111,6 +111,33 @@ describe("shadcn registry sync check", () => {
     expect(runShadcnRegistrySyncCheck({ runner })).toBe(0);
   });
 
+  test("allows intentional pointer cursor patches in registry-owned items", () => {
+    const runner = {
+      run: (_command: string, args: readonly string[]) => {
+        if (args.includes("info")) {
+          return {
+            status: 0,
+            stderr: "",
+            stdout: JSON.stringify({
+              components: ["command", "dropdown-menu", "select"],
+            }),
+          };
+        }
+
+        return {
+          status: 0,
+          stderr: "",
+          stdout: `├ Files (3) ~3 overwrite
+│ ~ src/components/ui/command.tsx overwrite
+│ ~ src/components/ui/dropdown-menu.tsx overwrite
+│ ~ src/components/ui/select.tsx overwrite`,
+        };
+      },
+    };
+
+    expect(runShadcnRegistrySyncCheck({ runner })).toBe(0);
+  });
+
   test("does not allow drift for the deleted calendar component", () => {
     const consoleError = mockExpectedConsoleError();
     const runner = {

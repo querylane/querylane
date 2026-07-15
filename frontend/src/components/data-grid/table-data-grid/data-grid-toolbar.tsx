@@ -51,6 +51,90 @@ interface DataGridToolbarProps {
   sortColumns: SortColumn[];
 }
 
+function DataGridExpandToggle({
+  isExpanded,
+  onToggleExpanded,
+}: {
+  isExpanded: boolean;
+  onToggleExpanded: (() => void) | undefined;
+}) {
+  if (!onToggleExpanded) {
+    return null;
+  }
+  const label = isExpanded ? "Collapse" : "Expand";
+  return (
+    <Button
+      aria-label={`${label} data grid`}
+      onClick={onToggleExpanded}
+      size="sm"
+      title={`${label} data grid`}
+      type="button"
+      variant="outline"
+    >
+      {isExpanded ? (
+        <Minimize2 className="size-3.5" />
+      ) : (
+        <Maximize2 className="size-3.5" />
+      )}
+      {label}
+    </Button>
+  );
+}
+
+function ActiveSortSummary({ summary }: { summary: string | null }) {
+  if (!summary) {
+    return null;
+  }
+  return (
+    <Badge
+      aria-label="Active sort summary"
+      className="@3xl/data-grid-toolbar:inline-flex hidden h-8 min-w-0 max-w-[min(34rem,42cqw)] justify-start gap-1.5 rounded-md border-border bg-muted/40 px-2.5 font-normal text-muted-foreground"
+      role="group"
+      title={`Active sort: ${summary}`}
+      variant="outline"
+    >
+      <span className="shrink-0 font-medium text-foreground">Sort</span>
+      <span className="min-w-0 truncate font-mono text-xs">{summary}</span>
+    </Badge>
+  );
+}
+
+function SelectionSummary({
+  onClearSelection,
+  onCopySelection,
+  onExportSelection,
+  selectedCount,
+}: Pick<
+  DataGridToolbarProps,
+  "onClearSelection" | "onCopySelection" | "onExportSelection" | "selectedCount"
+>) {
+  if (selectedCount === 0) {
+    return null;
+  }
+  return (
+    <>
+      <span className="font-medium text-foreground">
+        {selectedCount.toLocaleString()} selected
+      </span>
+      <Button
+        aria-label="Clear selection"
+        className="size-7 p-0"
+        onClick={onClearSelection}
+        size="sm"
+        type="button"
+        variant="ghost"
+      >
+        <X className="size-3.5" />
+      </Button>
+      <SelectionActions
+        disabled={false}
+        onCopy={onCopySelection}
+        onExport={onExportSelection}
+      />
+    </>
+  );
+}
+
 function DataGridToolbar({
   className,
   columnOrder,
@@ -81,7 +165,6 @@ function DataGridToolbar({
   const [popoverBoundary, setPopoverBoundary] = useState<HTMLDivElement | null>(
     null
   );
-  const hasSelection = selectedCount > 0;
   const sortSummary =
     sortColumns.length > 0
       ? sortColumns
@@ -122,67 +205,25 @@ function DataGridToolbar({
           onVisibilityChange={onColumnVisibilityChange}
           popoverBoundary={popoverBoundary}
         />
-        {onToggleExpanded ? (
-          <Button
-            aria-label={isExpanded ? "Collapse data grid" : "Expand data grid"}
-            onClick={onToggleExpanded}
-            size="sm"
-            title={isExpanded ? "Collapse data grid" : "Expand data grid"}
-            type="button"
-            variant="outline"
-          >
-            {isExpanded ? (
-              <Minimize2 className="size-3.5" />
-            ) : (
-              <Maximize2 className="size-3.5" />
-            )}
-            {isExpanded ? "Collapse" : "Expand"}
-          </Button>
-        ) : null}
+        <DataGridExpandToggle
+          isExpanded={isExpanded}
+          onToggleExpanded={onToggleExpanded}
+        />
         {onExportRows ? (
           <ExportRowsActions
             disabled={exportRowsDisabled || columns.length === 0}
             onExport={onExportRows}
           />
         ) : null}
-        {sortSummary ? (
-          <Badge
-            aria-label="Active sort summary"
-            className="@3xl/data-grid-toolbar:inline-flex hidden h-8 min-w-0 max-w-[min(34rem,42cqw)] justify-start gap-1.5 rounded-md border-border bg-muted/40 px-2.5 font-normal text-muted-foreground"
-            role="group"
-            title={`Active sort: ${sortSummary}`}
-            variant="outline"
-          >
-            <span className="shrink-0 font-medium text-foreground">Sort</span>
-            <span className="min-w-0 truncate font-mono text-xs">
-              {sortSummary}
-            </span>
-          </Badge>
-        ) : null}
+        <ActiveSortSummary summary={sortSummary} />
 
         <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-muted-foreground text-xs">
-          {hasSelection ? (
-            <>
-              <span className="font-medium text-foreground">
-                {selectedCount.toLocaleString()} selected
-              </span>
-              <Button
-                aria-label="Clear selection"
-                className="size-7 p-0"
-                onClick={onClearSelection}
-                size="sm"
-                type="button"
-                variant="ghost"
-              >
-                <X className="size-3.5" />
-              </Button>
-              <SelectionActions
-                disabled={false}
-                onCopy={onCopySelection}
-                onExport={onExportSelection}
-              />
-            </>
-          ) : null}
+          <SelectionSummary
+            onClearSelection={onClearSelection}
+            onCopySelection={onCopySelection}
+            onExportSelection={onExportSelection}
+            selectedCount={selectedCount}
+          />
           <RefreshControl
             ariaLabel="Refresh rows"
             className="-me-1"

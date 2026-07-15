@@ -104,14 +104,17 @@ function labelsEqual(a: InstanceLabelEntry[], b: InstanceLabelEntry[]) {
 
   const sortedA = sortLabels(a);
   const sortedB = sortLabels(b);
-  return sortedA.every((label, index) => {
+  for (const [index, label] of sortedA.entries()) {
     const other = sortedB[index];
-    return (
-      other !== undefined &&
-      label.key === other.key &&
-      label.value === other.value
-    );
-  });
+    if (
+      other === undefined ||
+      label.key !== other.key ||
+      label.value !== other.value
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function parseInstanceFormPort(port: string): number | null {
@@ -193,6 +196,38 @@ function getIssueField(
   }
 }
 
+function getSslNegotiationErrors(
+  formState: InstanceFormState
+): InstanceFormErrors {
+  if (
+    formState.sslNegotiation === "direct" &&
+    !isDirectSslNegotiationMode(formState.sslMode)
+  ) {
+    return {
+      sslNegotiation: getInstanceFormErrorMessage("sslNegotiation"),
+    };
+  }
+  return {};
+}
+
+function collectInstanceFormErrors(
+  formState: InstanceFormState,
+  issues: readonly { path?: readonly unknown[] | undefined }[] | undefined
+): InstanceFormErrors {
+  const errors: InstanceFormErrors = {};
+  for (const issue of issues ?? []) {
+    const field = getIssueField(issue.path ?? []);
+    if (!field) {
+      continue;
+    }
+    if (field === "password" && !formState.dirtyFields?.password) {
+      continue;
+    }
+    errors[field] ??= getInstanceFormErrorMessage(field);
+  }
+  return errors;
+}
+
 function validateInstanceForm(
   formState: InstanceFormState
 ): InstanceValidationResult {
@@ -216,25 +251,8 @@ function validateInstanceForm(
   if (validation instanceof Promise) {
     throw new Error("Instance config validation must be synchronous.");
   }
-  const errors: InstanceFormErrors = {};
-  if (validation.issues) {
-    for (const issue of validation.issues) {
-      const field = getIssueField(issue.path ?? []);
-      if (
-        field &&
-        !(field === "password" && !formState.dirtyFields?.password) &&
-        !errors[field]
-      ) {
-        errors[field] = getInstanceFormErrorMessage(field);
-      }
-    }
-  }
-  if (
-    formState.sslNegotiation === "direct" &&
-    !isDirectSslNegotiationMode(formState.sslMode)
-  ) {
-    errors.sslNegotiation = getInstanceFormErrorMessage("sslNegotiation");
-  }
+  const errors = collectInstanceFormErrors(formState, validation.issues);
+  Object.assign(errors, getSslNegotiationErrors(formState));
 
   return {
     errors,
@@ -277,35 +295,34 @@ function buildInstanceConfigUpdatePaths({
     return ["config"];
   }
 
-  const updatePaths: string[] = [];
-  if (formState.host !== (instance.config?.host ?? "")) {
-    updatePaths.push("config.host");
-  }
-  if (nextPort !== (instance.config?.port ?? DEFAULT_POSTGRES_PORT)) {
-    updatePaths.push("config.port");
-  }
-  if (formState.database !== (instance.config?.database ?? "")) {
-    updatePaths.push("config.database");
-  }
-  if (formState.username !== (instance.config?.username ?? "")) {
-    updatePaths.push("config.username");
-  }
-  if (formState.dirtyFields?.password) {
-    updatePaths.push("config.password");
-  }
-  if (
-    toSslMode(formState.sslMode) !==
-    (instance.config?.sslMode ?? PostgresConfig_SslMode.PREFER)
-  ) {
-    updatePaths.push("config.ssl_mode");
-  }
-  if (
-    toSslNegotiation(formState.sslNegotiation) !==
-    normalizeSslNegotiation(instance.config?.sslNegotiation)
-  ) {
-    updatePaths.push("config.ssl_negotiation");
-  }
-  return updatePaths;
+  const changedPaths: readonly [changed: boolean | undefined, path: string][] =
+    [
+      [formState.host !== (instance.config?.host ?? ""), "config.host"],
+      [
+        nextPort !== (instance.config?.port ?? DEFAULT_POSTGRES_PORT),
+        "config.port",
+      ],
+      [
+        formState.database !== (instance.config?.database ?? ""),
+        "config.database",
+      ],
+      [
+        formState.username !== (instance.config?.username ?? ""),
+        "config.username",
+      ],
+      [formState.dirtyFields?.password, "config.password"],
+      [
+        toSslMode(formState.sslMode) !==
+          (instance.config?.sslMode ?? PostgresConfig_SslMode.PREFER),
+        "config.ssl_mode",
+      ],
+      [
+        toSslNegotiation(formState.sslNegotiation) !==
+          normalizeSslNegotiation(instance.config?.sslNegotiation),
+        "config.ssl_negotiation",
+      ],
+    ];
+  return changedPaths.flatMap(([changed, path]) => (changed ? [path] : []));
 }
 
 function buildInstanceUpdatePaths({

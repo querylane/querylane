@@ -39,7 +39,10 @@ function nascentResponse(): QueryMetricsResponse {
         kind: MetricKind.GAUGE,
         metric: MetricId.CONNECTIONS_TOTAL,
         points: {
-          startTime: { nanos: 0, seconds: BigInt(DAY_SECONDS - 5 * 60) },
+          startTime: {
+            nanos: 0,
+            seconds: BigInt(DAY_SECONDS - 5 * 60),
+          },
           step: { nanos: 0, seconds: 60n },
           values: [11, 12],
         },
@@ -79,7 +82,10 @@ function threePointResponse(): QueryMetricsResponse {
         kind: MetricKind.GAUGE,
         metric: MetricId.CONNECTIONS_TOTAL,
         points: {
-          startTime: { nanos: 0, seconds: BigInt(DAY_SECONDS - 3 * 60) },
+          startTime: {
+            nanos: 0,
+            seconds: BigInt(DAY_SECONDS - 3 * 60),
+          },
           step: { nanos: 0, seconds: 60n },
           values: [10, 11, 12],
         },

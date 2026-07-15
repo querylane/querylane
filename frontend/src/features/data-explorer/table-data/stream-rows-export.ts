@@ -136,6 +136,61 @@ async function writeDrainedFileChunks(
   await writeFileChunks(fileSink, builder.drainChunks());
 }
 
+interface StreamExportState {
+  builder: ChunkedExportBuilder | undefined;
+  columns: TableResultColumn[] | undefined;
+  rowCount: bigint;
+  streamedRowCount: bigint;
+  truncated: boolean;
+}
+
+async function processStreamRowsResponse({
+  exportFormat,
+  fileSink,
+  onProgress,
+  resourceName,
+  response,
+  state,
+}: Omit<StreamRowsExportPayloadArgs, "stream"> & {
+  response: StreamRowsResponse;
+  state: StreamExportState;
+}) {
+  switch (response.event.case) {
+    case "metadata":
+      state.columns = response.event.value.columns;
+      state.builder = createChunkedExportBuilder(
+        exportFormat,
+        state.columns,
+        resourceName
+      );
+      await writeDrainedFileChunks(fileSink, state.builder);
+      break;
+    case "batch": {
+      const { builder, columns } = state;
+      if (!(columns && builder)) {
+        throw new Error("StreamRows batch arrived before metadata");
+      }
+      const selectedRows = response.event.value.rows.map((row) =>
+        rowToSelectedRow(row, columns)
+      );
+      builder.addRows(selectedRows);
+      await writeDrainedFileChunks(fileSink, builder);
+      state.streamedRowCount += BigInt(selectedRows.length);
+      onProgress?.({ rowCount: state.streamedRowCount, truncated: false });
+      break;
+    }
+    case "stats":
+      state.rowCount = response.event.value.rowCount;
+      state.truncated = response.event.value.truncated;
+      onProgress?.({ rowCount: state.rowCount, truncated: state.truncated });
+      break;
+    case undefined:
+      break;
+    default:
+      assertNever(response.event);
+  }
+}
+
 async function buildStreamRowsExportPayloadUnsafe({
   exportFormat,
   fileSink,
@@ -143,58 +198,34 @@ async function buildStreamRowsExportPayloadUnsafe({
   resourceName,
   stream,
 }: StreamRowsExportPayloadArgs): Promise<StreamRowsExportPayloadResult> {
-  let columns: TableResultColumn[] | undefined;
-  let rowCount = 0n;
-  let streamedRowCount = 0n;
-  let truncated = false;
-  let builder: ChunkedExportBuilder | undefined;
+  const state: StreamExportState = {
+    builder: undefined,
+    columns: undefined,
+    rowCount: 0n,
+    streamedRowCount: 0n,
+    truncated: false,
+  };
 
   for await (const response of stream) {
-    switch (response.event.case) {
-      case "metadata":
-        ({ columns } = response.event.value);
-        builder = createChunkedExportBuilder(
-          exportFormat,
-          columns,
-          resourceName
-        );
-        await writeDrainedFileChunks(fileSink, builder);
-        break;
-      case "batch": {
-        const batchColumns = columns;
-        const batchBuilder = builder;
-        if (!(batchColumns && batchBuilder)) {
-          throw new Error("StreamRows batch arrived before metadata");
-        }
-        const selectedRows = response.event.value.rows.map((row) =>
-          rowToSelectedRow(row, batchColumns)
-        );
-        batchBuilder.addRows(selectedRows);
-        await writeDrainedFileChunks(fileSink, batchBuilder);
-        streamedRowCount += BigInt(selectedRows.length);
-        onProgress?.({ rowCount: streamedRowCount, truncated: false });
-        break;
-      }
-      case "stats":
-        ({ rowCount, truncated } = response.event.value);
-        onProgress?.({ rowCount, truncated });
-        break;
-      case undefined:
-        break;
-      default:
-        assertNever(response.event);
-    }
+    await processStreamRowsResponse({
+      exportFormat,
+      fileSink,
+      onProgress,
+      resourceName,
+      response,
+      state,
+    });
   }
 
-  if (!columns) {
+  if (!state.columns) {
     throw new Error("StreamRows did not emit metadata");
   }
 
-  if (!builder) {
+  if (!state.builder) {
     throw new Error("StreamRows did not prepare an export writer");
   }
 
-  const result = builder.finish();
+  const result = state.builder.finish();
   if (!result.ok) {
     throw new Error(
       `Cannot export streamed rows because ${result.truncatedRowCount.toLocaleString()} rows contain truncated values`
@@ -206,17 +237,17 @@ async function buildStreamRowsExportPayloadUnsafe({
     await fileSink.close();
     return {
       payload: { ...result.payload, contents: [] },
-      rowCount,
+      rowCount: state.rowCount,
       savedToFile: true,
-      truncated,
+      truncated: state.truncated,
     };
   }
 
   return {
     payload: result.payload,
-    rowCount,
+    rowCount: state.rowCount,
     savedToFile: false,
-    truncated,
+    truncated: state.truncated,
   };
 }
 

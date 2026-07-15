@@ -369,7 +369,9 @@ describe("OtherDatabaseObjectsPanel", () => {
       )
     ).toBeTruthy();
   });
+});
 
+describe("OtherDatabaseObjectsPanel details", () => {
   it("copies the selected object's SQL", async () => {
     const writeText = vi.fn(() => Promise.resolve());
     const user = userEvent.setup({ writeToClipboard: false });

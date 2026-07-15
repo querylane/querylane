@@ -238,31 +238,35 @@ function summarizeDetail(
     : "Structured detail available";
 }
 
-function normalizeDetails(connectError: ConnectError): AppUiErrorDetail[] {
-  return connectError.details.map((detail) => {
-    if ("desc" in detail) {
-      const postgres =
-        detail.desc.typeName === POSTGRES_DETAIL_TYPE && isRecord(detail.value)
-          ? normalizePostgresRecord(detail.value, true)
-          : null;
-      return {
-        debug: detail.value,
-        postgres: postgres ?? undefined,
-        summary: postgres
-          ? summarizePostgres(postgres)
-          : "Outgoing detail attached locally",
-        type: detail.desc.typeName,
-      };
-    }
-
-    const postgres = extractPostgresDetail(detail);
+function normalizeDetail(
+  detail: ConnectError["details"][number]
+): AppUiErrorDetail {
+  if ("desc" in detail) {
+    const postgres =
+      detail.desc.typeName === POSTGRES_DETAIL_TYPE && isRecord(detail.value)
+        ? normalizePostgresRecord(detail.value, true)
+        : null;
     return {
-      debug: detail.debug,
+      debug: detail.value,
       postgres: postgres ?? undefined,
-      summary: summarizeDetail(detail.type, detail.debug, postgres),
-      type: detail.type,
+      summary: postgres
+        ? summarizePostgres(postgres)
+        : "Outgoing detail attached locally",
+      type: detail.desc.typeName,
     };
-  });
+  }
+
+  const postgres = extractPostgresDetail(detail);
+  return {
+    debug: detail.debug,
+    postgres: postgres ?? undefined,
+    summary: summarizeDetail(detail.type, detail.debug, postgres),
+    type: detail.type,
+  };
+}
+
+function normalizeDetails(connectError: ConnectError): AppUiErrorDetail[] {
+  return connectError.details.map(normalizeDetail);
 }
 
 function extractErrorInfo(details: AppUiErrorDetail[]) {

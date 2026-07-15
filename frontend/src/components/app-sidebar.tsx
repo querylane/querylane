@@ -103,12 +103,17 @@ function useSidebarFooterState() {
     retryFooter: () => refetchConsoleConfig(),
   };
 }
-function resolveActivePage(
-  search: InstanceLayoutSearch,
-  pathname: string,
-  paths: SidebarPaths,
-  viewLevel: ScopeLevel
-): NavActiveState {
+function resolveActivePage({
+  search,
+  pathname,
+  paths,
+  viewLevel,
+}: {
+  search: InstanceLayoutSearch;
+  pathname: string;
+  paths: SidebarPaths;
+  viewLevel: ScopeLevel;
+}): NavActiveState {
   const pageParam = resolveRequestedAdminPageForScope(search.page, viewLevel);
   if (pageParam) {
     const blank: NavActiveState = {
@@ -316,6 +321,45 @@ function ExplorerRailContent({
     </>
   );
 }
+
+function renderSidebarNavigationItem({
+  item,
+  linkProps,
+  sectionTitle,
+}: {
+  item: NavSection["items"][number];
+  linkProps: Partial<Record<NavKey, NavLinkProps>>;
+  sectionTitle: string;
+}) {
+  const itemLinkProps = item.isDisabled ? undefined : linkProps[item.key];
+  const activeProps =
+    item.isActive === undefined ? {} : { isActive: item.isActive };
+  const renderProps = itemLinkProps
+    ? { render: <Link {...itemLinkProps} /> }
+    : {};
+
+  return (
+    <SidebarMenuItem key={item.key}>
+      <SidebarMenuButton
+        disabled={item.isDisabled || !itemLinkProps}
+        {...activeProps}
+        {...renderProps}
+        tooltip={`${sectionTitle} ${item.label}`}
+      >
+        <span className="flex min-w-0 items-center gap-2 overflow-hidden">
+          <item.icon className="size-4 shrink-0" />
+          <OverflowTooltip className="block truncate">
+            {item.label}
+          </OverflowTooltip>
+        </span>
+      </SidebarMenuButton>
+      {item.badge === undefined ? null : (
+        <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
+      )}
+    </SidebarMenuItem>
+  );
+}
+
 function SidebarNavigationContent({
   linkProps,
   nextStepHint,
@@ -344,36 +388,13 @@ function SidebarNavigationContent({
             <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {section.items.map((item) => {
-                  const itemLinkProps = item.isDisabled
-                    ? undefined
-                    : linkProps[item.key];
-
-                  return (
-                    <SidebarMenuItem key={item.key}>
-                      <SidebarMenuButton
-                        disabled={item.isDisabled || !itemLinkProps}
-                        {...(item.isActive === undefined
-                          ? {}
-                          : { isActive: item.isActive })}
-                        {...(itemLinkProps
-                          ? { render: <Link {...itemLinkProps} /> }
-                          : {})}
-                        tooltip={`${section.title} ${item.label}`}
-                      >
-                        <span className="flex min-w-0 items-center gap-2 overflow-hidden">
-                          <item.icon className="size-4 shrink-0" />
-                          <OverflowTooltip className="block truncate">
-                            {item.label}
-                          </OverflowTooltip>
-                        </span>
-                      </SidebarMenuButton>
-                      {item.badge !== undefined && (
-                        <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
-                      )}
-                    </SidebarMenuItem>
-                  );
-                })}
+                {section.items.map((item) =>
+                  renderSidebarNavigationItem({
+                    item,
+                    linkProps,
+                    sectionTitle: section.title,
+                  })
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -401,12 +422,12 @@ export function AppSidebar({ page }: { page?: AdminPageId | undefined }) {
   const { navigationIds, scopeLevel, viewLevel } = useDb();
   const ids: NavigationIds = navigationIds;
   const paths = buildSidebarPaths(ids);
-  const active = resolveActivePage(
-    location.search,
-    location.pathname,
+  const active = resolveActivePage({
+    search: location.search,
+    pathname: location.pathname,
     paths,
-    viewLevel
-  );
+    viewLevel,
+  });
   const currentPage = resolveCurrentAdminPage({
     pathname: location.pathname,
     scope: viewLevel,

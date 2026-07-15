@@ -88,6 +88,13 @@ function createSetupStreamFailureError(failure: SetupStreamFailure) {
   });
 }
 
+function isSetupCompletionEvent(event: SetupProgressEvent): boolean {
+  return (
+    event.stepId === SetupStep.PERSISTING_CONFIG &&
+    event.state === StepState.SUCCEEDED
+  );
+}
+
 async function consumeSetupStreamWithProgress(
   stream: AsyncIterable<SetupAppDatabaseResponse>,
   onProgress: StepProgressCallback
@@ -99,10 +106,7 @@ async function consumeSetupStreamWithProgress(
     const { event } = response;
     if (event) {
       onProgress(event);
-      if (
-        event.stepId === SetupStep.PERSISTING_CONFIG &&
-        event.state === StepState.SUCCEEDED
-      ) {
+      if (isSetupCompletionEvent(event)) {
         setupCompleted = true;
       }
     }

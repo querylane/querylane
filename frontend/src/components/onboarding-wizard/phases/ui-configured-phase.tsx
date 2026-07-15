@@ -9,7 +9,7 @@ import {
   X,
 } from "lucide-react";
 import { type RefObject, useId, useRef, useState } from "react";
-import { useWatch } from "react-hook-form";
+import { type UseFormSetValue, useWatch } from "react-hook-form";
 import {
   type ConnectionTestStatus,
   useConnectionTest,
@@ -46,6 +46,7 @@ import {
 } from "@/lib/protobuf-enums";
 import { useProtoForm } from "@/lib/use-proto-form";
 import {
+  type PostgresConfig,
   PostgresConfig_SslMode,
   PostgresConfig_SslNegotiation,
   PostgresConfigSchema,
@@ -349,6 +350,46 @@ interface ConnectionStringFeedback {
   warning: string | null;
 }
 
+type ParsedConnection = NonNullable<
+  ReturnType<typeof parsePostgresConnectionString>
+>;
+const APPLIED_CONNECTION_FIELD_OPTIONS = {
+  shouldDirty: true,
+  shouldValidate: true,
+} as const;
+
+function applyParsedConnectionFields(
+  parsed: ParsedConnection,
+  setValue: UseFormSetValue<PostgresConfig>
+) {
+  const parsedStringFields: [ParsedStringField, string | undefined][] = [
+    ["host", parsed.host],
+    ["database", parsed.database],
+    ["username", parsed.username],
+    ["password", parsed.password],
+  ];
+  for (const [fieldName, fieldValue] of parsedStringFields) {
+    if (fieldValue !== undefined) {
+      setValue(fieldName, fieldValue, APPLIED_CONNECTION_FIELD_OPTIONS);
+    }
+  }
+  if (parsed.port !== undefined) {
+    setValue("port", parsed.port, APPLIED_CONNECTION_FIELD_OPTIONS);
+  }
+  if (parsed.sslMode !== undefined) {
+    setValue(
+      "sslMode",
+      toSslMode(parsed.sslMode),
+      APPLIED_CONNECTION_FIELD_OPTIONS
+    );
+  }
+  setValue(
+    "sslNegotiation",
+    toSslNegotiation(parsed.sslNegotiation),
+    APPLIED_CONNECTION_FIELD_OPTIONS
+  );
+}
+
 export function UiConfiguredPhase() {
   const connectionStringId = useId();
   const connectionStringErrorId = useId();
@@ -416,37 +457,15 @@ export function UiConfiguredPhase() {
       }));
       return;
     }
+    const parsedConnection = parsed;
     const warning = formatUnsupportedPostgresConnectionParameters(
-      parsed.unsupportedParameters
+      parsedConnection.unsupportedParameters
     );
     setConnectionStringFeedback({ error: null, warning });
-    const setValueOptions = {
-      shouldDirty: true,
-      shouldValidate: true,
-    } as const;
-    const parsedStringFields: [ParsedStringField, string | undefined][] = [
-      ["host", parsed.host],
-      ["database", parsed.database],
-      ["username", parsed.username],
-      ["password", parsed.password],
-    ];
-    for (const [fieldName, fieldValue] of parsedStringFields) {
-      if (fieldValue !== undefined) {
-        setValue(fieldName, fieldValue, setValueOptions);
-      }
-    }
-    if (parsed.port !== undefined) {
-      setValue("port", parsed.port, setValueOptions);
-    }
-    if (parsed.sslMode !== undefined) {
-      setValue("sslMode", toSslMode(parsed.sslMode), setValueOptions);
-    }
-    setValue(
-      "sslNegotiation",
-      toSslNegotiation(parsed.sslNegotiation),
-      setValueOptions
+    applyParsedConnectionFields(parsedConnection, setValue);
+    setAdvancedConnectionOptionsOpen(
+      parsedConnection.sslNegotiation === "direct"
     );
-    setAdvancedConnectionOptionsOpen(parsed.sslNegotiation === "direct");
     setConnectionStringMode(false);
     setConnectionStringValue("");
   };

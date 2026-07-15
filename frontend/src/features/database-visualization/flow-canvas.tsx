@@ -421,12 +421,28 @@ function applyAcyclicRanks({
   }
 
   for (const source of queue) {
-    for (const target of outgoing.get(source) ?? []) {
-      ranks.set(target, childRank(ranks, source, target));
-      incomingCounts.set(target, (incomingCounts.get(target) ?? 1) - 1);
-      if ((incomingCounts.get(target) ?? 0) === 0) {
-        queue.push(target);
-      }
+    applyOutgoingRanks({ incomingCounts, outgoing, queue, ranks, source });
+  }
+}
+
+function applyOutgoingRanks({
+  incomingCounts,
+  outgoing,
+  queue,
+  ranks,
+  source,
+}: {
+  incomingCounts: Map<string, number>;
+  outgoing: Map<string, string[]>;
+  queue: string[];
+  ranks: Map<string, number>;
+  source: string;
+}) {
+  for (const target of outgoing.get(source) ?? []) {
+    ranks.set(target, childRank(ranks, source, target));
+    incomingCounts.set(target, (incomingCounts.get(target) ?? 1) - 1);
+    if ((incomingCounts.get(target) ?? 0) === 0) {
+      queue.push(target);
     }
   }
 }

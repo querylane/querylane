@@ -327,12 +327,17 @@ function appendCsvRows(
   return rows.length;
 }
 
-function appendJsonRows(
-  chunks: string[],
-  rows: SelectedRow[],
-  columns: TableResultColumn[],
-  initialRowCount: number
-): number {
+function appendJsonRows({
+  chunks,
+  rows,
+  columns,
+  initialRowCount,
+}: {
+  chunks: string[];
+  rows: SelectedRow[];
+  columns: TableResultColumn[];
+  initialRowCount: number;
+}): number {
   let appended = 0;
   for (const row of rows) {
     chunks.push(initialRowCount + appended === 0 ? "\n" : ",\n");
@@ -383,6 +388,10 @@ function appendSqlRows({
   return appended;
 }
 
+function hasNoSqlRows(rowCount: number, columnCount: number): boolean {
+  return rowCount === 0 || columnCount === 0;
+}
+
 function createChunkedExportBuilder(
   exportFormat: ExportFormat,
   columns: TableResultColumn[],
@@ -419,7 +428,12 @@ function createChunkedExportBuilder(
     }
 
     if (normalizedFormat === "json") {
-      rowCount += appendJsonRows(chunks, rows, columns, rowCount);
+      rowCount += appendJsonRows({
+        chunks,
+        rows,
+        columns,
+        initialRowCount: rowCount,
+      });
       return;
     }
 
@@ -464,7 +478,7 @@ function createChunkedExportBuilder(
           },
         };
       case "sql":
-        if (rowCount === 0 || columns.length === 0) {
+        if (hasNoSqlRows(rowCount, columns.length)) {
           return {
             ok: true,
             payload: {
@@ -498,12 +512,17 @@ function createChunkedExportBuilder(
   return { addRows, drainChunks, finish };
 }
 
-function buildExport(
-  exportFormat: ExportFormat,
-  rows: SelectedRow[],
-  columns: TableResultColumn[],
-  resourceName: string
-): ExportResult {
+function buildExport({
+  exportFormat,
+  rows,
+  columns,
+  resourceName,
+}: {
+  exportFormat: ExportFormat;
+  rows: SelectedRow[];
+  columns: TableResultColumn[];
+  resourceName: string;
+}): ExportResult {
   const truncatedRowCount = countRowsWithTruncatedCells(rows, columns);
   if (truncatedRowCount > 0) {
     return { ok: false, reason: "truncated", truncatedRowCount };

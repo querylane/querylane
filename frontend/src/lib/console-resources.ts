@@ -18,6 +18,10 @@ interface QualifiedTableName {
 const byteFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 1,
 });
+const timestampFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
 const BYTE_DECIMAL_SCALE = 10;
 const BYTES_PER_KIBIBYTE = 1024;
 const TABLE_RESOURCE_NAME_PATTERN =
@@ -73,21 +77,31 @@ export function buildSchemaName(
   return `${buildDatabaseName(instanceId, databaseId)}/schemas/${encodeResourceSegment(schemaId)}`;
 }
 
-export function buildTableName(
-  instanceId: string,
-  databaseId: string,
-  schemaId: string,
-  tableId: string
-): string {
+export function buildTableName({
+  instanceId,
+  databaseId,
+  schemaId,
+  tableId,
+}: {
+  instanceId: string;
+  databaseId: string;
+  schemaId: string;
+  tableId: string;
+}): string {
   return `${buildSchemaName(instanceId, databaseId, schemaId)}/tables/${encodeResourceSegment(tableId)}`;
 }
 
-export function buildViewName(
-  instanceId: string,
-  databaseId: string,
-  schemaId: string,
-  viewId: string
-): string {
+export function buildViewName({
+  instanceId,
+  databaseId,
+  schemaId,
+  viewId,
+}: {
+  instanceId: string;
+  databaseId: string;
+  schemaId: string;
+  viewId: string;
+}): string {
   return `${buildSchemaName(instanceId, databaseId, schemaId)}/views/${encodeResourceSegment(viewId)}`;
 }
 
@@ -128,12 +142,7 @@ export function formatBytes(
     return "—";
   }
 
-  let numeric: number;
-  if (typeof sizeBytes === "bigint" || typeof sizeBytes === "string") {
-    numeric = Number(sizeBytes);
-  } else {
-    numeric = sizeBytes;
-  }
+  const numeric = Number(sizeBytes);
 
   if (!Number.isFinite(numeric) || numeric < 0) {
     return "—";
@@ -200,10 +209,7 @@ export function formatTimestampLabel(
   }
 
   try {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(timestampDate(toTimestamp(timestamp)));
+    return timestampFormatter.format(timestampDate(toTimestamp(timestamp)));
   } catch {
     return "—";
   }

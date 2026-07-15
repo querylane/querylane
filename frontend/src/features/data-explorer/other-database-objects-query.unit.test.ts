@@ -149,6 +149,34 @@ describe("other database objects query", () => {
     expect(execute).toHaveBeenCalledTimes(3);
   });
 
+  it("keeps introspection queries within a single live-query slot", async () => {
+    let resolveMainQuery:
+      | ((rows: Record<string, string>[]) => void)
+      | undefined;
+    const mainRows = new Promise<Record<string, string>[]>((resolve) => {
+      resolveMainQuery = resolve;
+    });
+    const execute = vi.fn(
+      ({ statement }: { parent: string; statement: string }) =>
+        statement.includes("WITH visible_namespaces")
+          ? mainRows
+          : Promise.resolve([{ has_cron_job_table: "false" }])
+    );
+
+    const resultPromise = fetchOtherDatabaseObjects({
+      execute,
+      parent: "instances/i/databases/d",
+    });
+    await Promise.resolve();
+    const callsBeforeMainQueryFinished = execute.mock.calls.length;
+
+    resolveMainQuery?.([typeRow]);
+    await resultPromise;
+
+    expect(callsBeforeMainQueryFinished).toBe(1);
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+
   it("reports and trims inventories over the display limit", async () => {
     const execute = vi.fn(
       ({ statement }: { parent: string; statement: string }) => {

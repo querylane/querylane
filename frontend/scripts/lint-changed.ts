@@ -5,6 +5,12 @@ import { env, exit } from "node:process";
 const DEFAULT_BASE_REF = "origin/main";
 const FRONTEND_PREFIX = "frontend/";
 const FRONTEND_GIT_PATHSPEC = ":(top)frontend";
+const FRONTEND_WORKFLOW_GIT_PATHSPEC =
+  ":(top).github/workflows/frontend-ci.yml";
+const STATIC_ANALYSIS_GIT_PATHSPECS = [
+  FRONTEND_GIT_PATHSPEC,
+  FRONTEND_WORKFLOW_GIT_PATHSPEC,
+];
 const FAILURE_EXIT_CODE = 1;
 const SUCCESS_EXIT_CODE = 0;
 const EXTENSION_PATTERN = /\.[^.]+$/u;
@@ -25,6 +31,8 @@ const LINTABLE_EXTENSIONS = new Set([
 
 const GENERATED_OR_REGISTRY_PREFIXES = ["src/components/ui/", "src/protogen/"];
 const GENERATED_FILES = new Set(["src/routeTree.gen.ts"]);
+const FULL_STATIC_ANALYSIS_PATH_PATTERN =
+  /^(?:\.github\/workflows\/frontend-ci\.yml|frontend\/(?:biome\.jsonc|bun\.lock|doctor\.config\.ts|package\.json|react-doctor\.config\.json|tsconfig(?:\.[^/]+)?\.json|scripts\/(?:lint-changed|run-react-doctor-ci|strict-tooling-policy\.unit\.test)\.ts))$/u;
 
 interface FileSystemAccess {
   existsSync: (path: string) => boolean;
@@ -68,7 +76,9 @@ function frontendRelativePath(repoPath: string): string | null {
   if (repoPath.startsWith(FRONTEND_PREFIX)) {
     return repoPath.slice(FRONTEND_PREFIX.length);
   }
-  return repoPath.startsWith("../") ? null : repoPath;
+  return repoPath.startsWith("../") || repoPath.startsWith(".github/")
+    ? null
+    : repoPath;
 }
 
 function hasLintableExtension(path: string) {
@@ -80,6 +90,17 @@ function isGeneratedOrRegistryPath(path: string) {
     GENERATED_FILES.has(path) ||
     GENERATED_OR_REGISTRY_PREFIXES.some((prefix) => path.startsWith(prefix))
   );
+}
+
+function requiresFullStaticAnalysis(repoPaths: readonly string[]) {
+  return repoPaths.some((path) => FULL_STATIC_ANALYSIS_PATH_PATTERN.test(path));
+}
+
+function requiresFullStaticAnalysisFromBase(
+  baseRef: string,
+  runner: CommandRunner = childProcessRunner
+) {
+  return requiresFullStaticAnalysis(changedRepoFiles(baseRef, runner));
 }
 
 function lintableChangedFiles(
@@ -116,7 +137,7 @@ function changedRepoFiles(baseRef: string, runner: CommandRunner) {
     diffBase,
     "HEAD",
     "--",
-    FRONTEND_GIT_PATHSPEC,
+    ...STATIC_ANALYSIS_GIT_PATHSPECS,
   ]);
 
   if (diffResult.status !== SUCCESS_EXIT_CODE) {
@@ -128,7 +149,7 @@ function changedRepoFiles(baseRef: string, runner: CommandRunner) {
     "--others",
     "--exclude-standard",
     "--",
-    FRONTEND_GIT_PATHSPEC,
+    ...STATIC_ANALYSIS_GIT_PATHSPECS,
   ]);
   const untrackedFiles =
     untrackedResult.status === SUCCESS_EXIT_CODE
@@ -153,10 +174,14 @@ function runChangedLint({
   runner?: CommandRunner;
 } = {}) {
   const baseRef = baseRefFromEnvironment(environment);
-  const files = lintableChangedFiles(
-    changedRepoFiles(baseRef, runner),
-    fileSystem
-  );
+  const repoFiles = changedRepoFiles(baseRef, runner);
+  if (requiresFullStaticAnalysis(repoFiles)) {
+    console.log("Tooling policy changed; linting the full frontend.");
+    const result = spawnSync("ultracite", ["check"], { stdio: "inherit" });
+    return result.status ?? FAILURE_EXIT_CODE;
+  }
+
+  const files = lintableChangedFiles(repoFiles, fileSystem);
 
   if (files.length === 0) {
     console.log(`No changed frontend files to lint against ${baseRef}.`);
@@ -179,5 +204,7 @@ export {
   changedRepoFiles,
   frontendRelativePath,
   lintableChangedFiles,
+  requiresFullStaticAnalysis,
+  requiresFullStaticAnalysisFromBase,
   runChangedLint,
 };

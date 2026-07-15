@@ -208,16 +208,15 @@ function runInstanceMutationCacheFollowUp({
           queryKeyReferencesInstanceResource(query.queryKey, instanceName),
       })
     : [];
-  const activeDescendantQueryHashes = new Set(
-    descendantQueries
-      .filter((query) => query.isActive())
-      .map((query) => query.queryHash)
-  );
-  const disabledObservedDescendantQueryHashes = new Set(
-    descendantQueries
-      .filter((query) => query.getObserversCount() > 0 && !query.isActive())
-      .map((query) => query.queryHash)
-  );
+  const activeDescendantQueryHashes = new Set<string>();
+  const disabledObservedDescendantQueryHashes = new Set<string>();
+  for (const query of descendantQueries) {
+    if (query.isActive()) {
+      activeDescendantQueryHashes.add(query.queryHash);
+    } else if (query.getObserversCount() > 0) {
+      disabledObservedDescendantQueryHashes.add(query.queryHash);
+    }
+  }
 
   queryClient.removeQueries({
     predicate: (query) => query.getObserversCount() === 0,

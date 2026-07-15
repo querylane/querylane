@@ -266,6 +266,13 @@ function SchemaSectionHeader({
   );
 }
 
+function shouldShowHiddenObjectCount(
+  showAll: boolean,
+  overflow: number
+): boolean {
+  return !showAll && overflow > 0;
+}
+
 function SchemaSectionBody({
   columns,
   counts,
@@ -347,7 +354,7 @@ function SchemaSectionBody({
           {showAll
             ? "Show fewer"
             : `Show all ${filtered.length.toLocaleString()} ${unit}s${filterActive ? " matching filters" : ""}`}
-          {!showAll && overflow > 0 ? (
+          {shouldShowHiddenObjectCount(showAll, overflow) ? (
             <span className="ml-1.5 text-muted-foreground/70">
               · +{overflow.toLocaleString()} hidden
             </span>
@@ -440,7 +447,7 @@ function SchemaSection({
   const needle = search.trim().toLowerCase();
   const filterActive = needle.length > 0 || grantOnly || activePrivs.length > 0;
   const filtered = objects.filter((object) =>
-    objectMatchesFilters(object, needle, grantOnly, activePrivs)
+    objectMatchesFilters({ object, needle, grantOnly, activePrivs })
   );
   const sample = showAll ? filtered : filtered.slice(0, MAX_SAMPLE_ROWS);
 

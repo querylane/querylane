@@ -4,7 +4,7 @@ import {
   type UseMutationOptions as TanStackUseMutationOptions,
   useMutation as useTanStackMutation,
 } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import {
   consumeSetupStreamWithProgress,
@@ -79,59 +79,65 @@ interface WatchStreamRunOptions {
   setManualRetryRequired: (required: boolean) => void;
 }
 
-async function runWatchStreamWithRetries({
-  onboardingStreamingClient,
-  controller,
-  isCancelled,
-  onComplete,
-  onError,
-  onProgress,
-  setManualRetryRequired,
-}: WatchStreamRunOptions): Promise<void> {
-  const runAttempt = async (attempt: number): Promise<void> => {
+async function runWatchStreamWithRetries(
+  options: WatchStreamRunOptions
+): Promise<void> {
+  await runWatchAttempt(options, 0);
+}
+
+async function runWatchAttempt(
+  options: WatchStreamRunOptions,
+  attempt: number
+): Promise<void> {
+  const {
+    onboardingStreamingClient,
+    controller,
+    isCancelled,
+    onComplete,
+    onError,
+    onProgress,
+    setManualRetryRequired,
+  } = options;
+  if (isCancelled()) {
+    return;
+  }
+
+  try {
+    const setupFailedMessage = await consumeWatchStreamWithProgress(
+      onboardingStreamingClient.watchConfigChanges(
+        {},
+        {
+          signal: controller.signal,
+          // Long-lived watch stream; timeoutMs: 0 disables the transport's
+          // default deadline so it is not severed every 30s.
+          timeoutMs: 0,
+        }
+      ),
+      (event) => onProgress?.(event)
+    );
+    if (setupFailedMessage) {
+      onError?.(
+        createSetupStreamFailureError(setupFailedMessage),
+        "failed_step"
+      );
+      return;
+    }
+    onComplete?.();
+  } catch (error) {
     if (isCancelled()) {
       return;
     }
 
-    try {
-      const setupFailedMessage = await consumeWatchStreamWithProgress(
-        onboardingStreamingClient.watchConfigChanges(
-          {},
-          {
-            signal: controller.signal,
-            // Long-lived watch stream; timeoutMs: 0 disables the transport's
-            // default deadline so it is not severed every 30s.
-            timeoutMs: 0,
-          }
-        ),
-        (event) => onProgress?.(event)
-      );
-      if (setupFailedMessage) {
-        onError?.(
-          createSetupStreamFailureError(setupFailedMessage),
-          "failed_step"
-        );
-        return;
-      }
-      onComplete?.();
-    } catch (error) {
-      if (isCancelled()) {
-        return;
-      }
-
-      const waitMs = WATCH_RETRY_BACKOFF_MS[attempt];
-      if (waitMs !== undefined) {
-        await sleep(waitMs);
-        await runAttempt(attempt + 1);
-        return;
-      }
-
-      setManualRetryRequired(true);
-      onError?.(toError(error), "stream_error");
+    const waitMs = WATCH_RETRY_BACKOFF_MS[attempt];
+    if (waitMs !== undefined) {
+      await sleep(waitMs);
+      await runWatchAttempt(options, attempt + 1);
+      return;
     }
-  };
 
-  await runAttempt(0);
+    setManualRetryRequired(true);
+    onError?.(toError(error), "stream_error");
+  }
 }
 
 function settleRetryState({
@@ -195,9 +201,13 @@ function useWatchConfigChanges({
   const retryTickRef = useRef(retryTick);
   const retryPromiseRef = useRef<Promise<void> | null>(null);
   const retryResolveRef = useRef<(() => void) | null>(null);
-  const onCompleteRef = useRef(onComplete);
-  const onErrorRef = useRef(onError);
-  const onProgressRef = useRef(onProgress);
+  const handleComplete = useEffectEvent(() => onComplete?.());
+  const handleError = useEffectEvent((error: Error, reason: WatchErrorReason) =>
+    onError?.(error, reason)
+  );
+  const handleProgress = useEffectEvent(
+    (event: Parameters<StepProgressCallback>[0]) => onProgress?.(event)
+  );
 
   const retry = () => {
     if (retryPromiseRef.current) {
@@ -220,21 +230,6 @@ function useWatchConfigChanges({
   useEffect(() => {
     retryTickRef.current = retryTick;
   }, [retryTick]);
-
-  // allow-useEffect: sync form field from server response
-  useEffect(() => {
-    onCompleteRef.current = onComplete;
-  }, [onComplete]);
-
-  // allow-useEffect: sync form field from server response
-  useEffect(() => {
-    onErrorRef.current = onError;
-  }, [onError]);
-
-  // allow-useEffect: sync form field from server response
-  useEffect(() => {
-    onProgressRef.current = onProgress;
-  }, [onProgress]);
 
   // allow-useEffect: sync form field from server response
   useEffect(() => {
@@ -265,7 +260,7 @@ function useWatchConfigChanges({
           retryResolveRef,
           setRetryPending,
         });
-        onCompleteRef.current?.();
+        handleComplete();
       },
       onError: (error, reason) => {
         settleRetryState({
@@ -273,7 +268,7 @@ function useWatchConfigChanges({
           retryResolveRef,
           setRetryPending,
         });
-        onErrorRef.current?.(error, reason);
+        handleError(error, reason);
       },
       onProgress: (event) => {
         settleRetryState({
@@ -281,7 +276,7 @@ function useWatchConfigChanges({
           retryResolveRef,
           setRetryPending,
         });
-        onProgressRef.current?.(event);
+        handleProgress(event);
       },
       setManualRetryRequired,
     })
@@ -293,7 +288,7 @@ function useWatchConfigChanges({
             retryResolveRef,
             setRetryPending,
           });
-          onErrorRef.current?.(toError(error), "stream_error");
+          handleError(toError(error), "stream_error");
         }
       })
       .finally(() => {

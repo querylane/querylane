@@ -60,7 +60,12 @@ function useTableDataController({
   pageSize,
   sortColumns,
 }: UseTableDataControllerArgs): TableDataController {
-  const queryShapeKey = buildQueryShapeKey(name, sortColumns, filter, pageSize);
+  const queryShapeKey = buildQueryShapeKey({
+    name,
+    sortColumns,
+    filter,
+    pageSize,
+  });
   const [pageTokenState, setPageTokenState] = useState<PageTokenState>(() =>
     resetPageTokenState(queryShapeKey)
   );
@@ -86,14 +91,18 @@ function useTableDataController({
     const clamped = next.slice(-MAX_SORT_COLUMNS);
     onSortColumnsChange(clamped);
     setPageTokenState(
-      resetPageTokenState(buildQueryShapeKey(name, clamped, filter, pageSize))
+      resetPageTokenState(
+        buildQueryShapeKey({ name, sortColumns: clamped, filter, pageSize })
+      )
     );
   }
 
   function setPageSize(next: number) {
     onPageSizeChange(next);
     setPageTokenState(
-      resetPageTokenState(buildQueryShapeKey(name, sortColumns, filter, next))
+      resetPageTokenState(
+        buildQueryShapeKey({ name, sortColumns, filter, pageSize: next })
+      )
     );
   }
 
@@ -144,12 +153,17 @@ function useTableDataController({
   };
 }
 
-function buildQueryShapeKey(
-  name: string,
-  sortColumns: readonly SortColumn[],
-  filter: RowFilter | undefined,
-  pageSize: number
-) {
+function buildQueryShapeKey({
+  name,
+  sortColumns,
+  filter,
+  pageSize,
+}: {
+  name: string;
+  sortColumns: readonly SortColumn[];
+  filter: RowFilter | undefined;
+  pageSize: number;
+}) {
   const sortKey = sortColumns
     .map((sort) => `${sort.columnKey}:${sort.direction}`)
     .join(",");

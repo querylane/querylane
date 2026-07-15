@@ -304,6 +304,37 @@ function LoadingContent({ onRefresh }: { onRefresh: () => Promise<void> }) {
     </WizardPage>
   );
 }
+function renderWizardPhase(phase: WizardPhase) {
+  switch (phase) {
+    case "method_selection":
+      return <MethodSelectionPhase />;
+    case "configure_ui":
+      return <UiConfiguredPhase />;
+    case "configure_yaml":
+      return <ManualYamlPhase />;
+    case "configure_embedded":
+      return <EmbeddedPhase />;
+    case "progress_running":
+    case "progress_waiting_for_config":
+    case "progress_success":
+      return <ProgressPhase />;
+    case "error_summary":
+      return <ErrorSummaryPhase />;
+    default:
+      return phase satisfies never;
+  }
+}
+
+const CONFIGURE_PHASES = new Set<WizardPhase>([
+  "configure_ui",
+  "configure_yaml",
+  "configure_embedded",
+]);
+
+function isConfigurePhase(phase: WizardPhase): boolean {
+  return CONFIGURE_PHASES.has(phase);
+}
+
 function OnboardingStageContent({
   configureError,
   phase,
@@ -319,11 +350,7 @@ function OnboardingStageContent({
     showWizardErrorBanner &&
     Boolean(wizardStateError) &&
     phase === "method_selection";
-  const showConfigureError =
-    Boolean(configureError) &&
-    (phase === "configure_ui" ||
-      phase === "configure_yaml" ||
-      phase === "configure_embedded");
+  const showConfigureError = Boolean(configureError) && isConfigurePhase(phase);
   return (
     <>
       {showPreviousErrorBanner ? (
@@ -341,16 +368,7 @@ function OnboardingStageContent({
         <AppInlineError error={configureError} />
       ) : null}
 
-      {phase === "method_selection" ? <MethodSelectionPhase /> : null}
-      {phase === "configure_ui" ? <UiConfiguredPhase /> : null}
-      {phase === "configure_yaml" ? <ManualYamlPhase /> : null}
-      {phase === "configure_embedded" ? <EmbeddedPhase /> : null}
-      {phase === "progress_running" ||
-      phase === "progress_waiting_for_config" ||
-      phase === "progress_success" ? (
-        <ProgressPhase />
-      ) : null}
-      {phase === "error_summary" ? <ErrorSummaryPhase /> : null}
+      {renderWizardPhase(phase)}
     </>
   );
 }

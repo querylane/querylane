@@ -456,39 +456,79 @@ describe("objectMatchesFilters", () => {
   });
 
   test("matches when no filter is active", () => {
-    expect(objectMatchesFilters(object, "", false, [])).toBe(true);
+    expect(
+      objectMatchesFilters({
+        object,
+        needle: "",
+        grantOnly: false,
+        activePrivs: [],
+      })
+    ).toBe(true);
   });
 
   test("rejects when the needle is not in the display name", () => {
-    expect(objectMatchesFilters(object, "invoices", false, [])).toBe(false);
+    expect(
+      objectMatchesFilters({
+        object,
+        needle: "invoices",
+        grantOnly: false,
+        activePrivs: [],
+      })
+    ).toBe(false);
   });
 
   test("matches the needle against the schema-qualified name", () => {
-    expect(objectMatchesFilters(object, "public.ord", false, [])).toBe(true);
+    expect(
+      objectMatchesFilters({
+        object,
+        needle: "public.ord",
+        grantOnly: false,
+        activePrivs: [],
+      })
+    ).toBe(true);
   });
 
   test("rejects grant-only filter when nothing is grantable", () => {
     expect(
-      objectMatchesFilters(
-        grantedObject({ privileges: [{ grantable: false, name: "SELECT" }] }),
-        "",
-        true,
-        []
-      )
+      objectMatchesFilters({
+        object: grantedObject({
+          privileges: [{ grantable: false, name: "SELECT" }],
+        }),
+        needle: "",
+        grantOnly: true,
+        activePrivs: [],
+      })
     ).toBe(false);
   });
 
   test("passes grant-only filter when any privilege is grantable", () => {
-    expect(objectMatchesFilters(object, "", true, [])).toBe(true);
+    expect(
+      objectMatchesFilters({
+        object,
+        needle: "",
+        grantOnly: true,
+        activePrivs: [],
+      })
+    ).toBe(true);
   });
 
   test("requires every active privilege to be held", () => {
-    expect(objectMatchesFilters(object, "", false, ["SELECT", "DELETE"])).toBe(
-      false
-    );
-    expect(objectMatchesFilters(object, "", false, ["SELECT", "INSERT"])).toBe(
-      true
-    );
+    expect(
+      objectMatchesFilters({
+        object,
+        needle: "",
+        grantOnly: false,
+        activePrivs: ["SELECT", "DELETE"],
+      })
+    ).toBe(false);
+    expect(
+      objectMatchesFilters({
+        object,
+        needle: "",
+        grantOnly: false,
+        activePrivs: ["SELECT", "INSERT"],
+      })
+    ).toBe(true);
   });
 });
 
@@ -578,6 +618,14 @@ describe("buildSchemaIndex", () => {
   });
 });
 
+function requireFirstSchemaGroup(groups: ReturnType<typeof buildSchemaIndex>) {
+  const [group] = groups;
+  if (!group) {
+    throw new Error("Expected at least one schema group.");
+  }
+  return group;
+}
+
 describe("schemaBreakdownLabel", () => {
   test("labels the synthetic database group", () => {
     const groups = buildSchemaIndex([
@@ -588,7 +636,9 @@ describe("schemaBreakdownLabel", () => {
       }),
     ]);
 
-    expect(schemaBreakdownLabel(groups[0]!)).toBe("database-level grant");
+    expect(schemaBreakdownLabel(requireFirstSchemaGroup(groups))).toBe(
+      "database-level grant"
+    );
   });
 
   test("includes large object counts in the database group", () => {
@@ -605,7 +655,9 @@ describe("schemaBreakdownLabel", () => {
       }),
     ]);
 
-    expect(schemaBreakdownLabel(groups[0]!)).toBe("2 large objects");
+    expect(schemaBreakdownLabel(requireFirstSchemaGroup(groups))).toBe(
+      "2 large objects"
+    );
   });
 
   test("lists per-type counts with pluralization in breakdown order", () => {
@@ -622,7 +674,7 @@ describe("schemaBreakdownLabel", () => {
       }),
     ]);
 
-    expect(schemaBreakdownLabel(groups[0]!)).toBe(
+    expect(schemaBreakdownLabel(requireFirstSchemaGroup(groups))).toBe(
       "2 tables · 1 view · 1 sequence"
     );
   });
@@ -637,7 +689,7 @@ describe("schemaBreakdownLabel", () => {
       }),
     ]);
 
-    expect(schemaBreakdownLabel(groups[0]!)).toBe(
+    expect(schemaBreakdownLabel(requireFirstSchemaGroup(groups))).toBe(
       "1 table · schema-level grant"
     );
   });

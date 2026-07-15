@@ -276,6 +276,46 @@ function updateParenthesesDepth(character: string | undefined, depth: number) {
   return depth;
 }
 
+interface CopyScanState {
+  direction: "from" | "to" | null;
+  index: number;
+  parenthesesDepth: number;
+}
+
+function scanCopySegment(
+  statement: string,
+  index: number,
+  parenthesesDepth: number
+): CopyScanState {
+  const protectedSqlEnd = skipProtectedSql(statement, index);
+  if (protectedSqlEnd !== null) {
+    return { direction: null, index: protectedSqlEnd, parenthesesDepth };
+  }
+  const character = statement[index];
+  if (character === undefined) {
+    return { direction: null, index: statement.length, parenthesesDepth };
+  }
+  const nextDepth = updateParenthesesDepth(character, parenthesesDepth);
+  const wordMatch =
+    nextDepth === 0 && SQL_WORD_START_RE.test(character)
+      ? SQL_WORD_RE.exec(statement.slice(index))
+      : null;
+  if (!wordMatch) {
+    return { direction: null, index: index + 1, parenthesesDepth: nextDepth };
+  }
+  const word = wordMatch[0].toLowerCase();
+  const previousNonSpace = statement.slice(0, index).trimEnd().at(-1);
+  const direction =
+    previousNonSpace !== "." && (word === "from" || word === "to")
+      ? word
+      : null;
+  return {
+    direction,
+    index: index + wordMatch[0].length,
+    parenthesesDepth: nextDepth,
+  };
+}
+
 function copyDirection(statement: string): "from" | "to" | null {
   const copyKeyword = COPY_KEYWORD_RE.exec(statement);
   if (!copyKeyword) {
@@ -285,29 +325,11 @@ function copyDirection(statement: string): "from" | "to" | null {
   let parenthesesDepth = 0;
   let index = copyKeyword[0].length;
   while (index < statement.length) {
-    const protectedSqlEnd = skipProtectedSql(statement, index);
-    if (protectedSqlEnd !== null) {
-      index = protectedSqlEnd;
-      continue;
+    const state = scanCopySegment(statement, index, parenthesesDepth);
+    if (state.direction) {
+      return state.direction;
     }
-
-    const character = statement[index];
-    parenthesesDepth = updateParenthesesDepth(character, parenthesesDepth);
-    const wordMatch =
-      parenthesesDepth === 0 && character && SQL_WORD_START_RE.test(character)
-        ? SQL_WORD_RE.exec(statement.slice(index))
-        : null;
-    if (!wordMatch) {
-      index += 1;
-      continue;
-    }
-
-    const word = wordMatch[0].toLowerCase();
-    const previousNonSpace = statement.slice(0, index).trimEnd().at(-1);
-    if (previousNonSpace !== "." && (word === "from" || word === "to")) {
-      return word;
-    }
-    index += wordMatch[0].length;
+    ({ index, parenthesesDepth } = state);
   }
 
   return null;
@@ -668,7 +690,7 @@ function QueryPaginationFooter({
     >
       {totalRows > 0 ? (
         <span className="tabular-nums">
-          Showing {start}&ndash;{end} of {totalRows}
+          Showing {start}–{end} of {totalRows}
         </span>
       ) : null}
       <span className="ml-2 text-[11px]">Rows per page</span>

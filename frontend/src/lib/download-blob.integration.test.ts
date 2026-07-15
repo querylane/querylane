@@ -5,8 +5,8 @@ describe("downloadBlob", () => {
   let createObjectUrlSpy: ReturnType<typeof vi.spyOn>;
   let revokeObjectUrlSpy: ReturnType<typeof vi.spyOn>;
   let appendChildSpy: ReturnType<typeof vi.spyOn>;
-  let clickSpy: ReturnType<typeof vi.spyOn>;
-  let removeSpy: ReturnType<typeof vi.spyOn>;
+  let clickSpy: ReturnType<typeof vi.spyOn> | undefined;
+  let removeSpy: ReturnType<typeof vi.spyOn> | undefined;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -55,8 +55,13 @@ describe("downloadBlob", () => {
     expect(anchor.href).toBe("blob:fake-url");
     expect(anchor.download).toBe("export.csv");
 
-    expect(clickSpy!).toHaveBeenCalledOnce();
-    expect(removeSpy!).toHaveBeenCalledOnce();
+    expect(clickSpy).toBeDefined();
+    expect(removeSpy).toBeDefined();
+    if (!(clickSpy && removeSpy)) {
+      throw new Error("Expected download anchor spies to be installed.");
+    }
+    expect(clickSpy).toHaveBeenCalledOnce();
+    expect(removeSpy).toHaveBeenCalledOnce();
   });
 
   test("revokes the object URL after a setTimeout(0) delay", () => {

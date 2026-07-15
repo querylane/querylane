@@ -1,4 +1,4 @@
-import { createContext, use, useEffect } from "react";
+import { createContext, use, useEffect, useEffectEvent } from "react";
 import type { KeyboardShortcutId } from "@/lib/keyboard-shortcut-registry";
 
 type RegisterKeyboardShortcut = (
@@ -11,6 +11,7 @@ const KeyboardShortcutRegistrationContext =
 
 function useKeyboardShortcut(id: KeyboardShortcutId, handler: () => void) {
   const register = use(KeyboardShortcutRegistrationContext);
+  const runShortcut = useEffectEvent(handler);
   if (!register) {
     throw new Error(
       "useKeyboardShortcut must be used within KeyboardShortcutsProvider."
@@ -19,9 +20,9 @@ function useKeyboardShortcut(id: KeyboardShortcutId, handler: () => void) {
 
   useEffect(
     function registerKeyboardShortcut() {
-      return register(id, handler);
+      return register(id, runShortcut);
     },
-    [handler, id, register]
+    [id, register]
   );
 }
 

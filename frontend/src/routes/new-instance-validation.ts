@@ -45,6 +45,21 @@ const FIELD_FOCUS_ORDER = [
   "labels",
 ] as const satisfies readonly CreateInstanceInvalidFieldName[];
 
+function isInvalidPostgresPort(normalizedPort: string, port: number): boolean {
+  const hasNumericFormat =
+    POSTGRES_PORT_PATTERN.test(normalizedPort) && Number.isInteger(port);
+  return (
+    !hasNumericFormat || port < MIN_POSTGRES_PORT || port > MAX_POSTGRES_PORT
+  );
+}
+
+function hasInvalidDirectSslNegotiation(
+  sslMode: string,
+  sslNegotiation: string
+): boolean {
+  return sslNegotiation === "direct" && !isDirectSslNegotiationMode(sslMode);
+}
+
 function validateCreateInstanceForm(
   formState: CreateInstanceValidationFormState
 ): CreateInstanceValidationResult {
@@ -57,11 +72,7 @@ function validateCreateInstanceForm(
   }
   const normalizedPort = formState.port.trim();
   const port = Number(normalizedPort);
-  if (
-    !(POSTGRES_PORT_PATTERN.test(normalizedPort) && Number.isInteger(port)) ||
-    port < MIN_POSTGRES_PORT ||
-    port > MAX_POSTGRES_PORT
-  ) {
+  if (isInvalidPostgresPort(normalizedPort, port)) {
     errors.port = `Port must be between ${MIN_POSTGRES_PORT} and ${MAX_POSTGRES_PORT}.`;
   }
   if (formState.database.trim().length === 0) {
@@ -74,8 +85,7 @@ function validateCreateInstanceForm(
     errors.password = "Password is required.";
   }
   if (
-    formState.sslNegotiation === "direct" &&
-    !isDirectSslNegotiationMode(formState.sslMode)
+    hasInvalidDirectSslNegotiation(formState.sslMode, formState.sslNegotiation)
   ) {
     errors.sslNegotiation =
       "Direct SSL negotiation requires SSL mode require, verify-ca, or verify-full.";

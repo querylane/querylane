@@ -253,14 +253,20 @@ describe("instance activity model", () => {
       { app: null, database: null, search: "", state: null }
     );
 
-    expect(presentSessionTimeline(rows[0]!)).toEqual([
+    expect(rows).toHaveLength(3);
+    const [activeRow, idleInTransactionRow, idleRow] = rows;
+    if (!(activeRow && idleInTransactionRow && idleRow)) {
+      throw new Error("Expected three activity session rows");
+    }
+
+    expect(presentSessionTimeline(activeRow)).toEqual([
       { hot: false, label: "Connected", muted: false, value: "1h 0m ago" },
       { hot: false, label: "Transaction", muted: false, value: "open for 38s" },
       { hot: false, label: "Query", muted: false, value: "running for 38s" },
     ]);
     // A long-open transaction heats up; an idle session's last query reads
     // as history rather than live work.
-    expect(presentSessionTimeline(rows[1]!)).toEqual([
+    expect(presentSessionTimeline(idleInTransactionRow)).toEqual([
       { hot: false, label: "Connected", muted: false, value: "2h 0m ago" },
       {
         hot: true,
@@ -275,7 +281,7 @@ describe("instance activity model", () => {
         value: "last started 3m ago",
       },
     ]);
-    expect(presentSessionTimeline(rows[2]!)).toEqual([
+    expect(presentSessionTimeline(idleRow)).toEqual([
       { hot: false, label: "Connected", muted: true, value: "—" },
       { hot: false, label: "Transaction", muted: true, value: "none open" },
       { hot: false, label: "Last query", muted: true, value: "none yet" },

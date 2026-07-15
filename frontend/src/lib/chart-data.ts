@@ -1,5 +1,18 @@
 import type { ChartRow } from "@/components/charts/chart-context";
 
+function averageBucket(bucket: ChartRow[], seriesKey: string): number | null {
+  let sum = 0;
+  let finiteCount = 0;
+  for (const row of bucket) {
+    const value = row[seriesKey];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      sum += value;
+      finiteCount += 1;
+    }
+  }
+  return finiteCount > 0 ? sum / finiteCount : null;
+}
+
 /**
  * Downsamples chart rows to at most `maxPoints` by averaging fixed-size
  * buckets (bucket mean, timestamped at the bucket middle). A sparkline-sized
@@ -20,19 +33,10 @@ export function downsampleTrend(
   const sampled: ChartRow[] = [];
   for (let start = 0; start < data.length; start += bucketSize) {
     const bucket = data.slice(start, start + bucketSize);
-    let sum = 0;
-    let finiteCount = 0;
-    for (const row of bucket) {
-      const value = row[seriesKey];
-      if (typeof value === "number" && Number.isFinite(value)) {
-        sum += value;
-        finiteCount += 1;
-      }
-    }
     const middle = bucket[Math.floor(bucket.length / 2)] ?? bucket[0];
     if (middle !== undefined) {
       sampled.push({
-        [seriesKey]: finiteCount > 0 ? sum / finiteCount : null,
+        [seriesKey]: averageBucket(bucket, seriesKey),
         time: middle.time,
       });
     }

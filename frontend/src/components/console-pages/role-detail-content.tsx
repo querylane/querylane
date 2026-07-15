@@ -18,6 +18,7 @@ import type {
   GrantsReach,
   GrantsType,
   GrantsView,
+  RoleDetailSearch,
   RoleTab,
 } from "@/components/console-pages/role-detail-search";
 import { RoleDetailView } from "@/components/console-pages/role-detail-view";
@@ -50,12 +51,45 @@ import {
 } from "@/lib/role-display";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-function resolveGrantsView(
-  section: Section,
-  grantsReach: GrantsReach | undefined,
-  grantsSchema: string | undefined,
-  grantsType: GrantsType | undefined
-): GrantsView {
+function roleSectionSearch(
+  previous: RoleDetailSearch,
+  next: Section
+): RoleDetailSearch {
+  const stayOnGrants = next === "grants";
+  return {
+    ...previous,
+    grantsReach: stayOnGrants ? previous.grantsReach : undefined,
+    grantsSchema: stayOnGrants ? previous.grantsSchema : undefined,
+    grantsType: stayOnGrants ? previous.grantsType : undefined,
+    tab: next === "overview" ? undefined : next,
+  };
+}
+
+function hasReadWriteBuiltin(role: Role): boolean {
+  return [
+    role.roleName,
+    ...role.memberOf.map((membership) => membership.roleName),
+  ].some((name) => name === "pg_read_all_data" || name === "pg_write_all_data");
+}
+
+function connectionLimitSubText(role: Role): string | undefined {
+  if (!role.attributes?.canLogin) {
+    return undefined;
+  }
+  return connLimitDisplay(role.attributes.connectionLimit);
+}
+
+function resolveGrantsView({
+  section,
+  grantsReach,
+  grantsSchema,
+  grantsType,
+}: {
+  section: Section;
+  grantsReach: GrantsReach | undefined;
+  grantsSchema: string | undefined;
+  grantsType: GrantsType | undefined;
+}): GrantsView {
   if (section !== "grants") {
     return { kind: "overview" };
   }
@@ -66,6 +100,39 @@ function resolveGrantsView(
     return { kind: "schema", schema: grantsSchema, type: grantsType };
   }
   return { kind: "overview" };
+}
+
+interface RoleFacetQueryState {
+  data: unknown;
+  error: unknown;
+  isPending: boolean;
+}
+
+function buildRoleFacetStates({
+  defaultPrivilegesQuery,
+  facetsEnabled,
+  loadFacets,
+  ownedObjectsQuery,
+  publicGrantsQuery,
+}: {
+  defaultPrivilegesQuery: RoleFacetQueryState;
+  facetsEnabled: boolean;
+  loadFacets: boolean;
+  ownedObjectsQuery: RoleFacetQueryState;
+  publicGrantsQuery: RoleFacetQueryState;
+}): FacetStates {
+  const deferred = facetsEnabled && !loadFacets;
+  return {
+    defaults: facetStateOf(facetsEnabled, defaultPrivilegesQuery, {
+      deferred: deferred && defaultPrivilegesQuery.data === undefined,
+    }),
+    owned: facetStateOf(facetsEnabled, ownedObjectsQuery, {
+      deferred: deferred && ownedObjectsQuery.data === undefined,
+    }),
+    publicGrants: facetStateOf(facetsEnabled, publicGrantsQuery, {
+      deferred: deferred && publicGrantsQuery.data === undefined,
+    }),
+  };
 }
 
 // Direct object grants for the selected database, aggregated to one entry per
@@ -149,36 +216,23 @@ function useRoleFacets({
     }),
     { enabled: queryEnabled }
   );
-  const ownedReady =
-    facetsEnabled &&
-    ownedObjectsQuery.data !== undefined &&
-    !ownedObjectsQuery.isPending &&
-    !ownedObjectsQuery.error;
+  const facetStates = buildRoleFacetStates({
+    defaultPrivilegesQuery,
+    facetsEnabled,
+    loadFacets,
+    ownedObjectsQuery,
+    publicGrantsQuery,
+  });
   return {
     defaultPrivileges: defaultPrivilegesQuery.data?.defaultPrivileges ?? [],
     defaultPrivilegesPartial:
       facetsEnabled && Boolean(defaultPrivilegesQuery.data?.nextPageToken),
-    facetStates: {
-      defaults: facetStateOf(facetsEnabled, defaultPrivilegesQuery, {
-        deferred:
-          facetsEnabled &&
-          !loadFacets &&
-          defaultPrivilegesQuery.data === undefined,
-      }),
-      owned: facetStateOf(facetsEnabled, ownedObjectsQuery, {
-        deferred:
-          facetsEnabled && !loadFacets && ownedObjectsQuery.data === undefined,
-      }),
-      publicGrants: facetStateOf(facetsEnabled, publicGrantsQuery, {
-        deferred:
-          facetsEnabled && !loadFacets && publicGrantsQuery.data === undefined,
-      }),
-    } satisfies FacetStates,
+    facetStates,
     ownedError: ownedObjectsQuery.error,
     ownedObjects: ownedObjectsQuery.data?.ownedObjects ?? [],
     ownedPartial:
       facetsEnabled && Boolean(ownedObjectsQuery.data?.nextPageToken),
-    ownedReady,
+    ownedReady: facetsEnabled && facetStates.owned === "ready",
     publicGrants: publicGrantsQuery.data?.grants ?? [],
     publicGrantsPartial:
       facetsEnabled && Boolean(publicGrantsQuery.data?.nextPageToken),
@@ -192,18 +246,11 @@ function useGrantsNavigation(setChosenDbId: (next: string) => void) {
     from: "/instances/$instanceId/roles/$roleId",
   });
   const setSection = (next: Section) => {
-    const stayOnGrants = next === "grants";
     navigate({
       replace: true,
-      search: (previous) => ({
-        ...previous,
-        // The grants drill-in is only meaningful on the grants tab; drop it
-        // when leaving so a later visit lands on the grants overview.
-        grantsReach: stayOnGrants ? previous.grantsReach : undefined,
-        grantsSchema: stayOnGrants ? previous.grantsSchema : undefined,
-        grantsType: stayOnGrants ? previous.grantsType : undefined,
-        tab: next === "overview" ? undefined : next,
-      }),
+      // The grants drill-in is only meaningful on the grants tab; drop it
+      // when leaving so a later visit lands on the grants overview.
+      search: (previous) => roleSectionSearch(previous, next),
     }).catch((error: unknown) =>
       handleNavigationError(error, { area: "role-detail.section" })
     );
@@ -269,12 +316,12 @@ function RoleDetailContent({
   const [chosenDbId, setChosenDbId] = useState<string | null>(null);
   const { onNavigateGrants, onSelectGrantsDatabase, setSection } =
     useGrantsNavigation(setChosenDbId);
-  const grantsView = resolveGrantsView(
+  const grantsView = resolveGrantsView({
     section,
     grantsReach,
     grantsSchema,
-    grantsType
-  );
+    grantsType,
+  });
   const { attributes } = role;
   const kind = deriveRoleKind(role);
   const isSystem = role.isSystemRole || isPredefinedRoleName(role.roleName);
@@ -338,11 +385,12 @@ function RoleDetailContent({
     ownedCount: ownedObjects.length,
     ownedReady,
   });
-  const partialAccess =
-    grantsPartial ||
-    ownedPartial ||
-    publicGrantsPartial ||
-    defaultPrivilegesPartial;
+  const partialAccess = [
+    grantsPartial,
+    ownedPartial,
+    publicGrantsPartial,
+    defaultPrivilegesPartial,
+  ].some(Boolean);
 
   const belongsTo: RelatedRole[] = role.memberOf.map((membership) => ({
     grantor: membership.grantor || undefined,
@@ -357,10 +405,7 @@ function RoleDetailContent({
   }));
   const sql = buildRoleSql(role);
 
-  const connLimit = attributes?.connectionLimit ?? -1;
-  const connLimitSub = attributes?.canLogin
-    ? connLimitDisplay(connLimit)
-    : undefined;
+  const connLimitSub = connectionLimitSubText(role);
 
   // Built-in access via membership: a normal role that is a member of a pg_*
   // role (the case users care about). Direct parents only; recursive closure
@@ -370,10 +415,7 @@ function RoleDetailContent({
     deriveBuiltinParents(role);
   const isSuperuser = Boolean(attributes?.isSuperuser);
   const bypassesRls = Boolean(attributes?.bypassesRls);
-  const readWriteBuiltin = [
-    role.roleName,
-    ...role.memberOf.map((membership) => membership.roleName),
-  ].some((name) => name === "pg_read_all_data" || name === "pg_write_all_data");
+  const readWriteBuiltin = hasReadWriteBuiltin(role);
   const hasTableGrants = grantObjects.some((object) =>
     TABLE_LIKE_TYPES.has(object.objectType)
   );

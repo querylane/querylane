@@ -29,8 +29,8 @@ const {
 }));
 
 vi.mock("@xyflow/react", () => ({
-  ["Background"]: () => <div data-testid="flow-background" />,
-  ["Controls"]: ({
+  Background: () => <div data-testid="flow-background" />,
+  Controls: ({
     className,
     style,
   }: {
@@ -43,18 +43,18 @@ vi.mock("@xyflow/react", () => ({
     }
     return <div data-testid="flow-controls" />;
   },
-  ["Handle"]: () => null,
-  ["MarkerType"]: { ["ArrowClosed"]: "arrowclosed" },
-  ["MiniMap"]: () => <div aria-label="Canvas minimap" role="img" />,
-  ["Panel"]: ({
+  Handle: () => null,
+  MarkerType: { ArrowClosed: "arrowclosed" },
+  MiniMap: () => <div aria-label="Canvas minimap" role="img" />,
+  Panel: ({
     children,
   }: {
     children: React.ReactNode;
     className?: string | undefined;
     position?: string | undefined;
   }) => <div data-testid="flow-panel">{children}</div>,
-  ["Position"]: { ["Left"]: "left", ["Right"]: "right" },
-  ["ReactFlow"]: ({
+  Position: { Left: "left", Right: "right" },
+  ReactFlow: ({
     children,
     edges,
     minZoom,
@@ -78,7 +78,7 @@ vi.mock("@xyflow/react", () => ({
       </section>
     );
   },
-  ["useReactFlow"]: () => ({ fitView: fitViewMock }),
+  useReactFlow: () => ({ fitView: fitViewMock }),
 }));
 
 function node(id: string): VisualizationNode {

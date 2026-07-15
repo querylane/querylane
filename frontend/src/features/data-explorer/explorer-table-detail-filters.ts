@@ -67,10 +67,12 @@ function columnNullability(row: ColumnRow): ColumnNullabilityFilter {
   return row.column.isNullable ? "nullable" : "not-null";
 }
 
-function matchesSelected<Value>(selected: Value[], rowValues: Value[]) {
+function matchesSelected<Value>(
+  selected: ReadonlySet<Value>,
+  rowValues: Value[]
+) {
   return (
-    selected.length === 0 ||
-    selected.some((selectedValue) => rowValues.includes(selectedValue))
+    selected.size === 0 || rowValues.some((rowValue) => selected.has(rowValue))
   );
 }
 
@@ -78,11 +80,11 @@ function filterColumnDetailRows(
   rows: ColumnRow[],
   filters: ColumnDetailFilters
 ): ColumnRow[] {
-  const types = filters.typeCategories ?? [];
-  const keys = filters.keyKinds ?? [];
-  const nullability = filters.nullability ?? [];
-  const defaults = filters.defaultKinds ?? [];
-  const generations = filters.generationKinds ?? [];
+  const types = new Set(filters.typeCategories ?? []);
+  const keys = new Set(filters.keyKinds ?? []);
+  const nullability = new Set(filters.nullability ?? []);
+  const defaults = new Set(filters.defaultKinds ?? []);
+  const generations = new Set(filters.generationKinds ?? []);
   return rows.filter(
     (row) =>
       matchesSelected(types, [columnTypeCategory(row)]) &&
@@ -100,8 +102,9 @@ function filterIndexesByMethod(
   if (methods.length === 0) {
     return indexes;
   }
+  const methodSet = new Set(methods);
   return indexes.filter((index) =>
-    methods.includes(normalizeIndexMethod(index.method))
+    methodSet.has(normalizeIndexMethod(index.method))
   );
 }
 
@@ -112,7 +115,8 @@ function filterPoliciesByMode(
   if (modes.length === 0) {
     return policies;
   }
-  return policies.filter((policy) => modes.includes(policy.mode));
+  const modeSet = new Set(modes);
+  return policies.filter((policy) => modeSet.has(policy.mode));
 }
 
 function filterTableTriggers(
@@ -120,6 +124,7 @@ function filterTableTriggers(
   filters: { search: string; states: TriggerStateFilter[] }
 ): TableTrigger[] {
   const search = filters.search.trim().toLowerCase();
+  const stateSet = new Set(filters.states);
   return triggers.filter((trigger) => {
     if (search && !trigger.triggerName.toLowerCase().includes(search)) {
       return false;
@@ -128,7 +133,7 @@ function filterTableTriggers(
       return true;
     }
     const state = trigger.enabled ? "enabled" : "disabled";
-    return filters.states.includes(state);
+    return stateSet.has(state);
   });
 }
 

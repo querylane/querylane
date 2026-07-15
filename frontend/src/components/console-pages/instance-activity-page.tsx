@@ -384,6 +384,78 @@ function SessionPeerCard({
   );
 }
 
+function SessionWaitEvent({ row }: { row: ActivitySessionRow }) {
+  if (row.wait.length === 0) {
+    return null;
+  }
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <div className="font-mono text-sm">{row.wait}</div>
+      {row.waitExplanation ? (
+        <p className="mt-1 text-muted-foreground text-xs">
+          {row.waitExplanation}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function SessionBlocker({
+  blocker,
+  onSelectSession,
+  row,
+}: {
+  blocker: ActivitySessionRow | null;
+  onSelectSession: (pid: number) => void;
+  row: ActivitySessionRow;
+}) {
+  if (row.blockedByPid === 0) {
+    return null;
+  }
+  if (blocker) {
+    return (
+      <SessionPeerCard
+        caption="blocked by"
+        onSelect={onSelectSession}
+        row={blocker}
+      />
+    );
+  }
+  return (
+    <div className="rounded-lg border border-border p-3 text-muted-foreground text-sm">
+      Blocked by PID {row.blockedByPid}, which is not in the session sample.
+    </div>
+  );
+}
+
+function BlockedSessions({
+  onSelectSession,
+  victims,
+}: {
+  onSelectSession: (pid: number) => void;
+  victims: ActivitySessionRow[];
+}) {
+  if (victims.length === 0) {
+    return null;
+  }
+  return (
+    <div className="space-y-2">
+      <p className="text-muted-foreground text-xs">
+        This session is blocking{" "}
+        {victims.length === 1 ? "1 session" : `${victims.length} sessions`}.
+      </p>
+      {victims.map((victim) => (
+        <SessionPeerCard
+          caption="waiting"
+          key={victim.pid}
+          onSelect={onSelectSession}
+          row={victim}
+        />
+      ))}
+    </div>
+  );
+}
+
 function SessionWaitSection({
   onSelectSession,
   row,
@@ -405,44 +477,13 @@ function SessionWaitSection({
   return (
     <section className="space-y-2">
       <InspectorSectionTitle>Locks &amp; waits</InspectorSectionTitle>
-      {row.wait.length > 0 ? (
-        <div className="rounded-lg border border-border p-3">
-          <div className="font-mono text-sm">{row.wait}</div>
-          {row.waitExplanation ? (
-            <p className="mt-1 text-muted-foreground text-xs">
-              {row.waitExplanation}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-      {row.blockedByPid > 0 && blocker ? (
-        <SessionPeerCard
-          caption="blocked by"
-          onSelect={onSelectSession}
-          row={blocker}
-        />
-      ) : null}
-      {row.blockedByPid > 0 && !blocker ? (
-        <div className="rounded-lg border border-border p-3 text-muted-foreground text-sm">
-          Blocked by PID {row.blockedByPid}, which is not in the session sample.
-        </div>
-      ) : null}
-      {victims.length > 0 ? (
-        <div className="space-y-2">
-          <p className="text-muted-foreground text-xs">
-            This session is blocking{" "}
-            {victims.length === 1 ? "1 session" : `${victims.length} sessions`}.
-          </p>
-          {victims.map((victim) => (
-            <SessionPeerCard
-              caption="waiting"
-              key={victim.pid}
-              onSelect={onSelectSession}
-              row={victim}
-            />
-          ))}
-        </div>
-      ) : null}
+      <SessionWaitEvent row={row} />
+      <SessionBlocker
+        blocker={blocker}
+        onSelectSession={onSelectSession}
+        row={row}
+      />
+      <BlockedSessions onSelectSession={onSelectSession} victims={victims} />
     </section>
   );
 }
@@ -612,6 +653,91 @@ function ActivityUnavailable({
   );
 }
 
+function ActivitySessionSheet({
+  onRefresh,
+  onSelectSession,
+  refreshing,
+  selectedPid,
+  selectedSession,
+  rows,
+}: {
+  onRefresh: () => void;
+  onSelectSession: (pid: number | null) => void;
+  refreshing: boolean;
+  selectedPid: number | null;
+  selectedSession: ActivitySessionRow | null;
+  rows: ActivitySessionRow[];
+}) {
+  return (
+    <Sheet
+      onOpenChange={(open) => {
+        if (!open) {
+          onSelectSession(null);
+        }
+      }}
+      open={selectedPid !== null}
+    >
+      <SheetContent
+        className="gap-0 overflow-hidden p-0 data-[side=right]:w-[min(calc(100vw-1rem),clamp(34rem,45vw,60rem))] data-[side=right]:sm:max-w-none"
+        side="right"
+      >
+        <SessionSheetContent
+          onRefresh={onRefresh}
+          onSelectSession={onSelectSession}
+          pid={selectedPid}
+          refreshing={refreshing}
+          row={selectedSession}
+          rows={rows}
+        />
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function ActivityPageHeader({
+  lastRefreshedLabel,
+  onRefresh,
+  refreshing,
+}: {
+  lastRefreshedLabel: string | null;
+  onRefresh: () => void;
+  refreshing: boolean;
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-semibold text-2xl tracking-tight">Activity</h2>
+        <div className="flex shrink-0 items-center gap-2 text-muted-foreground text-xs">
+          {lastRefreshedLabel ? (
+            <span className="hidden sm:inline">{lastRefreshedLabel}</span>
+          ) : null}
+          <Button
+            aria-label="Refresh activity"
+            disabled={refreshing}
+            onClick={onRefresh}
+            size="icon-xs"
+            variant="ghost"
+          >
+            <RefreshCw
+              aria-hidden="true"
+              className={
+                refreshing
+                  ? "size-3.5 animate-spin motion-reduce:animate-none"
+                  : "size-3.5"
+              }
+            />
+          </Button>
+        </div>
+      </div>
+      <p className="max-w-3xl text-muted-foreground text-sm">
+        Shows who is connected to this server right now, what they are running,
+        and whether anything is stuck waiting on a lock. It lists up to 50
+        sessions, riskiest first: refresh to take a new snapshot.
+      </p>
+    </div>
+  );
+}
+
 function InstanceActivityPage({
   activity,
   connectionStatus,
@@ -705,37 +831,11 @@ function InstanceActivityPage({
       aria-label="Activity"
       className="flex flex-col gap-6"
     >
-      <div className="space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="font-semibold text-2xl tracking-tight">Activity</h2>
-          <div className="flex shrink-0 items-center gap-2 text-muted-foreground text-xs">
-            {lastRefreshedLabel ? (
-              <span className="hidden sm:inline">{lastRefreshedLabel}</span>
-            ) : null}
-            <Button
-              aria-label="Refresh activity"
-              disabled={refreshing}
-              onClick={onRefresh}
-              size="icon-xs"
-              variant="ghost"
-            >
-              <RefreshCw
-                aria-hidden="true"
-                className={
-                  refreshing
-                    ? "size-3.5 animate-spin motion-reduce:animate-none"
-                    : "size-3.5"
-                }
-              />
-            </Button>
-          </div>
-        </div>
-        <p className="max-w-3xl text-muted-foreground text-sm">
-          Shows who is connected to this server right now, what they are
-          running, and whether anything is stuck waiting on a lock. It lists up
-          to 50 sessions, riskiest first — refresh to take a new snapshot.
-        </p>
-      </div>
+      <ActivityPageHeader
+        lastRefreshedLabel={lastRefreshedLabel}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+      />
 
       <ActivityStatsBar
         activity={activity}
@@ -778,28 +878,14 @@ function InstanceActivityPage({
         </section>
       </AsyncSectionState>
 
-      <Sheet
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedPid(null);
-          }
-        }}
-        open={selectedPid !== null}
-      >
-        <SheetContent
-          className="gap-0 overflow-hidden p-0 data-[side=right]:w-[min(calc(100vw-1rem),clamp(34rem,45vw,60rem))] data-[side=right]:sm:max-w-none"
-          side="right"
-        >
-          <SessionSheetContent
-            onRefresh={onRefresh}
-            onSelectSession={setSelectedPid}
-            pid={selectedPid}
-            refreshing={refreshing}
-            row={selectedSession}
-            rows={allRows}
-          />
-        </SheetContent>
-      </Sheet>
+      <ActivitySessionSheet
+        onRefresh={onRefresh}
+        onSelectSession={setSelectedPid}
+        refreshing={refreshing}
+        rows={allRows}
+        selectedPid={selectedPid}
+        selectedSession={selectedSession}
+      />
     </section>
   );
 }

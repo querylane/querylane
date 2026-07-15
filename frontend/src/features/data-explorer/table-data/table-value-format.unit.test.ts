@@ -217,7 +217,10 @@ test("formats empty timestamps, JSON values, and byte values without full size",
   ).toMatchObject({ display: '{"ok":true}', isTruncated: true, kind: "json" });
   expect(
     formatTableCell(
-      cell({ case: "bytesValue", value: new Uint8Array([1, 2, 3]) }),
+      cell({
+        case: "bytesValue",
+        value: new Uint8Array([1, 2, 3]),
+      }),
       column(DataType.BINARY)
     )
   ).toMatchObject({ display: "‹3 bytes›", kind: "bytes" });

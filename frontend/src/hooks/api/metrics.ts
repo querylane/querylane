@@ -34,12 +34,17 @@ export function quantizedMetricsAnchor(): number {
  * comparison. Changing `rangeHours` or `anchorMs` rebuilds the request (and
  * its query key) so range switches and refreshes refetch.
  */
-export function useInstanceMetricsQuery(
-  instanceId: string,
-  anchorMs: number,
-  rangeHours: number,
-  options?: ConnectUseQueryOptions<(typeof queryMetrics)["output"]>
-) {
+export function useInstanceMetricsQuery({
+  instanceId,
+  anchorMs,
+  rangeHours,
+  options,
+}: {
+  instanceId: string;
+  anchorMs: number;
+  rangeHours: number;
+  options?: ConnectUseQueryOptions<(typeof queryMetrics)["output"]>;
+}) {
   const input = buildInstanceMetricsInput(
     buildInstanceName(instanceId),
     anchorMs,
@@ -54,12 +59,17 @@ export function useInstanceMetricsQuery(
  * covers, for the comparison overlay. Pass the SAME `anchorMs` as the current
  * window's query so the two windows tile exactly.
  */
-export function useInstancePreviousMetricsQuery(
-  instanceId: string,
-  anchorMs: number,
-  rangeHours: number,
-  options?: ConnectUseQueryOptions<(typeof queryMetrics)["output"]>
-) {
+export function useInstancePreviousMetricsQuery({
+  instanceId,
+  anchorMs,
+  rangeHours,
+  options,
+}: {
+  instanceId: string;
+  anchorMs: number;
+  rangeHours: number;
+  options?: ConnectUseQueryOptions<(typeof queryMetrics)["output"]>;
+}) {
   const input = buildPreviousInstanceMetricsInput(
     buildInstanceName(instanceId),
     anchorMs,

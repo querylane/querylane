@@ -1,11 +1,12 @@
 import { create } from "@bufbuild/protobuf";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { RoleDetailContent } from "@/components/console-pages/role-detail-content";
 import type { RoleDetailViewProps } from "@/components/console-pages/role-detail-model";
 import { RoleSchema } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 const hookMocks = vi.hoisted(() => ({
+  dbContext: vi.fn(),
   defaultPrivileges: vi.fn(),
   grants: vi.fn(),
   owned: vi.fn(),
@@ -28,29 +29,38 @@ vi.mock("@/hooks/api/role", async (importOriginal) => {
 });
 
 vi.mock("@/lib/db-context", () => ({
-  useDb: () => ({
-    databases: [{ id: "appdb", name: "appdb" }],
-    selectedDatabase: { id: "appdb", name: "appdb" },
-  }),
+  useDb: hookMocks.dbContext,
 }));
 
 vi.mock("@/components/console-pages/role-detail-view", () => ({
-  ["RoleDetailView"]: (props: RoleDetailViewProps) => (
-    <output data-testid="partial-flags">
-      {[
-        props.grantsPartial,
-        props.ownedPartial,
-        props.publicGrantsPartial,
-        props.defaultPrivilegesPartial,
-        props.partialAccess,
-      ].join(",")}
-    </output>
+  RoleDetailView: (props: RoleDetailViewProps) => (
+    <>
+      <output data-testid="partial-flags">
+        {[
+          props.grantsPartial,
+          props.ownedPartial,
+          props.publicGrantsPartial,
+          props.defaultPrivilegesPartial,
+          props.partialAccess,
+        ].join(",")}
+      </output>
+      <output data-testid="ready-flags">
+        {[props.grantsReady, props.ownedReady].join(",")}
+      </output>
+    </>
   ),
 }));
 
 function settledQuery(data: object) {
   return { data, error: null, isPending: false };
 }
+
+beforeEach(() => {
+  hookMocks.dbContext.mockReturnValue({
+    databases: [{ id: "appdb", name: "appdb" }],
+    selectedDatabase: { id: "appdb", name: "appdb" },
+  });
+});
 
 afterEach(() => {
   cleanup();
@@ -129,5 +139,36 @@ describe("RoleDetailContent", () => {
     expect(screen.getByTestId("partial-flags").textContent).toBe(
       "true,true,true,true,true"
     );
+  });
+
+  test("keeps grant and ownership counts unavailable without a database", () => {
+    hookMocks.dbContext.mockReturnValue({
+      databases: [],
+      selectedDatabase: null,
+    });
+    hookMocks.grants.mockReturnValue(settledQuery({ grants: [] }));
+    hookMocks.owned.mockReturnValue(settledQuery({ ownedObjects: [] }));
+    hookMocks.publicGrants.mockReturnValue(settledQuery({ grants: [] }));
+    hookMocks.defaultPrivileges.mockReturnValue(
+      settledQuery({ defaultPrivileges: [] })
+    );
+
+    render(
+      <RoleDetailContent
+        grantsReach={undefined}
+        grantsSchema={undefined}
+        grantsType={undefined}
+        instanceId="local-dev"
+        members={[]}
+        role={create(RoleSchema, {
+          name: "instances/local-dev/roles/app_user",
+          roleName: "app_user",
+        })}
+        roleId="app_user"
+        tab="overview"
+      />
+    );
+
+    expect(screen.getByTestId("ready-flags").textContent).toBe("false,false");
   });
 });

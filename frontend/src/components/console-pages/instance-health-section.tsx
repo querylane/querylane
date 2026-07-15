@@ -47,7 +47,7 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
       <Collapsible>
         <CollapsibleTrigger
           aria-controls={detailId}
-          className="group/health-row flex w-full items-center gap-3 rounded-md px-2 py-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="group/health-row flex w-full items-center gap-3 rounded-md p-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <span
             aria-hidden="true"

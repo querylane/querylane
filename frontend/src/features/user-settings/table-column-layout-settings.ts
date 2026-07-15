@@ -95,12 +95,17 @@ function layoutsMatch(
   );
 }
 
-function reorderVisibleTableColumns(
-  order: readonly string[],
-  hiddenColumns: readonly string[],
-  sourceColumnKey: string,
-  targetColumnKey: string
-): string[] {
+function reorderVisibleTableColumns({
+  hiddenColumns,
+  order,
+  sourceColumnKey,
+  targetColumnKey,
+}: {
+  hiddenColumns: readonly string[];
+  order: readonly string[];
+  sourceColumnKey: string;
+  targetColumnKey: string;
+}): string[] {
   const hiddenColumnKeys = new Set(hiddenColumns);
   const visibleOrder = order.filter(
     (columnName) => !hiddenColumnKeys.has(columnName)
