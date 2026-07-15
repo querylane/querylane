@@ -96,27 +96,29 @@ function GridBody({
     return <EmptyStatePanel icon={Rows3}>No rows found</EmptyStatePanel>;
   }
   return (
-    <DataGrid
-      className={cn("querylane-data-grid", "rdg-light dark:rdg-dark")}
-      columns={columns}
-      defaultColumnOptions={DATA_GRID_DEFAULT_COLUMN_OPTIONS}
-      // Keep RDG virtualization on. Wide/complex result sets otherwise mount
-      // every visible-page cell and stall the explorer.
-      enableVirtualization={true}
-      headerRowHeight={36}
-      onCellContextMenu={onCellContextMenu}
-      onCellCopy={onCellCopy}
-      onColumnsReorder={onColumnsReorder}
-      onSelectedCellChange={onSelectedCellChange}
-      onSelectedRowsChange={onSelectedRowsChange}
-      onSortColumnsChange={onSortChange}
-      renderers={DATA_GRID_RENDERERS}
-      rowHeight={32}
-      rowKeyGetter={gridRowKeyGetter}
-      rows={rows}
-      selectedRows={selectedRows}
-      sortColumns={sortColumns}
-    />
+    <div className="contents" data-keyboard-shortcut-scope="grid">
+      <DataGrid
+        className={cn("querylane-data-grid", "rdg-light dark:rdg-dark")}
+        columns={columns}
+        defaultColumnOptions={DATA_GRID_DEFAULT_COLUMN_OPTIONS}
+        // Keep RDG virtualization on. Wide/complex result sets otherwise mount
+        // every visible-page cell and stall the explorer.
+        enableVirtualization={true}
+        headerRowHeight={36}
+        onCellContextMenu={onCellContextMenu}
+        onCellCopy={onCellCopy}
+        onColumnsReorder={onColumnsReorder}
+        onSelectedCellChange={onSelectedCellChange}
+        onSelectedRowsChange={onSelectedRowsChange}
+        onSortColumnsChange={onSortChange}
+        renderers={DATA_GRID_RENDERERS}
+        rowHeight={32}
+        rowKeyGetter={gridRowKeyGetter}
+        rows={rows}
+        selectedRows={selectedRows}
+        sortColumns={sortColumns}
+      />
+    </div>
   );
 }
 

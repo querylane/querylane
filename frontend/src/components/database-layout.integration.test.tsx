@@ -51,6 +51,16 @@ vi.mock("@/components/admin-header", () => {
   return Object.fromEntries([["AdminHeader", MockAdminHeader]]);
 });
 
+vi.mock("@/components/admin-keyboard-shortcuts", () => {
+  function MockAdminKeyboardShortcuts() {
+    return null;
+  }
+
+  return Object.fromEntries([
+    ["AdminKeyboardShortcuts", MockAdminKeyboardShortcuts],
+  ]);
+});
+
 vi.mock("@/components/app-sidebar", () => {
   function MockAppSidebar() {
     return <aside data-testid="app-sidebar" />;

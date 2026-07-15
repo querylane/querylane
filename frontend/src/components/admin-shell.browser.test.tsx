@@ -1,10 +1,11 @@
 import type { AnchorHTMLAttributes, ReactNode, Ref } from "react";
 import { beforeEach, expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { AdminHeader } from "@/components/admin-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DatabaseLayout } from "@/components/database-layout";
+import { KeyboardShortcutsProvider } from "@/components/keyboard-shortcuts";
 import {
   SidebarInset,
   SidebarProvider,
@@ -277,25 +278,27 @@ function renderAdminShell() {
           data-testid="admin-shell-visual-root"
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
-            <SidebarProvider className="h-full max-h-full flex-col">
-              <AdminHeader />
-              <div className="flex min-h-0 flex-1">
-                <AppSidebar />
-                <SidebarInset className="min-w-0">
-                  <main className="p-6">
-                    <div className="rounded-xl border border-border bg-card p-6">
-                      <h1 className="font-semibold text-2xl">
-                        Database overview
-                      </h1>
-                      <p className="mt-2 text-muted-foreground text-sm">
-                        Main content remains visible while the header and
-                        sidebar expose the active instance/database path.
-                      </p>
-                    </div>
-                  </main>
-                </SidebarInset>
-              </div>
-            </SidebarProvider>
+            <KeyboardShortcutsProvider>
+              <SidebarProvider className="h-full max-h-full flex-col">
+                <AdminHeader />
+                <div className="flex min-h-0 flex-1">
+                  <AppSidebar />
+                  <SidebarInset className="min-w-0">
+                    <main className="p-6">
+                      <div className="rounded-xl border border-border bg-card p-6">
+                        <h1 className="font-semibold text-2xl">
+                          Database overview
+                        </h1>
+                        <p className="mt-2 text-muted-foreground text-sm">
+                          Main content remains visible while the header and
+                          sidebar expose the active instance/database path.
+                        </p>
+                      </div>
+                    </main>
+                  </SidebarInset>
+                </div>
+              </SidebarProvider>
+            </KeyboardShortcutsProvider>
           </div>
         </div>
       </TooltipProvider>
@@ -316,25 +319,27 @@ function renderAdminShellAtViewport({ width }: { width: 320 | 768 }) {
           data-testid={`admin-shell-visual-root-${width}`}
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
-            <SidebarProvider className="h-full max-h-full flex-col">
-              <AdminHeader />
-              <div className="flex min-h-0 flex-1">
-                <AppSidebar />
-                <SidebarInset className="min-w-0">
-                  <main className="p-4 sm:p-6">
-                    <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
-                      <h1 className="font-semibold text-2xl">
-                        Database overview
-                      </h1>
-                      <p className="mt-2 text-muted-foreground text-sm">
-                        Main content remains visible while compact navigation
-                        protects smaller viewports from overflow.
-                      </p>
-                    </div>
-                  </main>
-                </SidebarInset>
-              </div>
-            </SidebarProvider>
+            <KeyboardShortcutsProvider>
+              <SidebarProvider className="h-full max-h-full flex-col">
+                <AdminHeader />
+                <div className="flex min-h-0 flex-1">
+                  <AppSidebar />
+                  <SidebarInset className="min-w-0">
+                    <main className="p-4 sm:p-6">
+                      <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
+                        <h1 className="font-semibold text-2xl">
+                          Database overview
+                        </h1>
+                        <p className="mt-2 text-muted-foreground text-sm">
+                          Main content remains visible while compact navigation
+                          protects smaller viewports from overflow.
+                        </p>
+                      </div>
+                    </main>
+                  </SidebarInset>
+                </div>
+              </SidebarProvider>
+            </KeyboardShortcutsProvider>
           </div>
         </div>
       </TooltipProvider>
@@ -480,6 +485,20 @@ test("command palette opens over the full admin layout", async () => {
     )
     .toBeVisible();
   await expect(page).toMatchScreenshot("admin-command-palette-layout-open");
+});
+
+test("keyboard shortcut help opens over the full admin layout", async () => {
+  await page.viewport(1280, 800);
+  renderAdminShell();
+
+  await userEvent.keyboard("{Shift>}?{/Shift}");
+
+  await expect
+    .element(page.getByRole("dialog", { name: "Keyboard shortcuts" }))
+    .toBeVisible();
+  await expect.element(page.getByText("Show keyboard shortcuts")).toBeVisible();
+  await expect.element(page.getByText("Move between cells")).toBeVisible();
+  await expect(page).toMatchScreenshot("keyboard-shortcuts-help-sheet");
 });
 
 test("sidebar footer omits global settings", async () => {
