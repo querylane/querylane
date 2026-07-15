@@ -27,7 +27,6 @@ const progressEventBufferCapacity = 32
 type DatabaseInitializer interface {
 	InitializeDatabaseWithConfig(ctx context.Context, cfg *serverconfig.Config) error
 	IsDatabaseInitialized() bool
-	OnboardingState() v1alpha1.OnboardingState
 	DatabaseInitError() string
 	ProgressBroadcaster() *dbsetup.Broadcaster
 }
@@ -70,6 +69,7 @@ func (s *Service) GetOnboardingState(
 	_ context.Context,
 	_ *connect.Request[v1alpha1.GetOnboardingStateRequest],
 ) (*connect.Response[v1alpha1.GetOnboardingStateResponse], error) {
+	cfg := s.configManager.CurrentConfig()
 	homePath := s.configManager.StandardHomePath()
 	isWritable := s.configManager.CanWriteConfig()
 
@@ -92,8 +92,11 @@ func (s *Service) GetOnboardingState(
 	}
 
 	res := &v1alpha1.GetOnboardingStateResponse{
-		Error:            s.dbInitializer.DatabaseInitError(),
-		State:            s.dbInitializer.OnboardingState(),
+		IsConfigured: cfg.Database != nil || cfg.Embedded != nil,
+		AppDatabaseStatus: pgconv.DatabaseStatusFromInitializer(
+			s.dbInitializer.IsDatabaseInitialized(),
+			s.dbInitializer.DatabaseInitError(),
+		),
 		HomePath:         homePath,
 		IsHomeWritable:   isWritable,
 		AvailableMethods: methods,

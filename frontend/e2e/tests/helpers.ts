@@ -169,11 +169,12 @@ export const sampleRoles: MockRole[] = [
 
 export async function mockReadyOnboarding(page: Page) {
   await mockRpc(page, "OnboardingService/GetOnboardingState", {
+    appDatabaseStatus: { schemaVersion: 1, state: "STATE_READY" },
     availableMethods: [],
     configFilePath: "/tmp/querylane/config.yaml",
     homePath: "/tmp/querylane",
+    isConfigured: true,
     isHomeWritable: true,
-    state: "ONBOARDING_STATE_READY",
   });
 }
 
