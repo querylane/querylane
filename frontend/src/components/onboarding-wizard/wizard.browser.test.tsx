@@ -7,8 +7,11 @@ import type { ConfigMethod } from "@/components/onboarding-wizard/types";
 import { OnboardingWizardContent } from "@/components/onboarding-wizard/wizard-content";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import {
+  AppDatabaseStatus_State,
+  AppDatabaseStatusSchema,
+} from "@/protogen/querylane/console/v1alpha1/console_pb";
+import {
   GetOnboardingStateResponseSchema,
-  OnboardingState,
   SetupMethod,
   SetupProgressEventSchema,
   SetupStep,
@@ -28,6 +31,9 @@ vi.mock("@/hooks/api/instance", () => ({
 
 function onboardingState() {
   return createProto(GetOnboardingStateResponseSchema, {
+    appDatabaseStatus: createProto(AppDatabaseStatusSchema, {
+      state: AppDatabaseStatus_State.NOT_CONFIGURED,
+    }),
     availableMethods: [
       SetupMethod.UI_CONFIGURED,
       SetupMethod.MANUAL_YAML,
@@ -36,8 +42,8 @@ function onboardingState() {
     configFilePath: "/Users/you/.querylane/config.yaml",
     embeddedDataPath: "/Users/you/.querylane/pgdata",
     homePath: "/Users/you/.querylane",
+    isConfigured: false,
     isHomeWritable: true,
-    state: OnboardingState.BOOTSTRAP,
   });
 }
 
@@ -170,6 +176,7 @@ beforeEach(() => {
     showDegradedBanner: false,
     showWizardErrorBanner: false,
     status: "onboarding",
+    warningCode: null,
   });
   useOnboardingWizardStore.getState().resetSession();
 });

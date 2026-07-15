@@ -7,6 +7,7 @@ import {
 } from "./helpers";
 
 const onboardingRequiredState = {
+  appDatabaseStatus: { state: "STATE_NOT_CONFIGURED" },
   availableMethods: [
     "SETUP_METHOD_UI_CONFIGURED",
     "SETUP_METHOD_MANUAL_YAML",
@@ -15,16 +16,17 @@ const onboardingRequiredState = {
   configFilePath: "/tmp/querylane/config.yaml",
   embeddedDataPath: "/tmp/querylane/embedded-postgres",
   homePath: "/tmp/querylane",
+  isConfigured: false,
   isHomeWritable: true,
-  state: "ONBOARDING_STATE_BOOTSTRAP",
 };
 
 const onboardingReadyState = {
+  appDatabaseStatus: { schemaVersion: 1, state: "STATE_READY" },
   availableMethods: [],
   configFilePath: "/tmp/querylane/config.yaml",
   homePath: "/tmp/querylane",
+  isConfigured: true,
   isHomeWritable: true,
-  state: "ONBOARDING_STATE_READY",
 };
 
 const onboardingNoMethodsState = {

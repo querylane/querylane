@@ -1,16 +1,20 @@
 import { createClient } from "@connectrpc/connect";
 import { create, type StateCreator } from "zustand";
 
-import { captureException } from "@/lib/diagnostics";
+import { captureException, logger } from "@/lib/diagnostics";
 import { transport } from "@/lib/transport";
 import { normalizeAppUiError, reportAppUiError } from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";
+import { AppDatabaseStatus_State } from "@/protogen/querylane/console/v1alpha1/console_pb";
 import {
   type GetOnboardingStateResponse,
   OnboardingService,
-  OnboardingState,
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 import { registerSetupRequiredHandler } from "@/stores/setup-required-signal";
+import {
+  type RoutingWarningCode,
+  resolveRoutingDecision,
+} from "@/stores/setup-routing";
 
 type SetupStatus =
   | "booting"
@@ -29,6 +33,7 @@ interface SetupState {
   showWizardErrorBanner: boolean;
   status: SetupStatus;
   verifyAfterSetup: () => Promise<void>;
+  warningCode: RoutingWarningCode | null;
 }
 
 interface SetupStoreDependencies {
@@ -46,6 +51,17 @@ const defaultDependencies: SetupStoreDependencies = {
 type SetupStoreCreator = StateCreator<SetupState>;
 type SetupStoreSet = Parameters<SetupStoreCreator>[0];
 type SetupStoreGet = Parameters<SetupStoreCreator>[1];
+
+function warnIfNeeded(warningCode: RoutingWarningCode | null) {
+  if (!warningCode) {
+    return;
+  }
+
+  logger.warn("Inconsistent onboarding routing state", {
+    area: "setup-store",
+    warningCode,
+  });
+}
 
 function createBootError(
   error: unknown,
@@ -81,36 +97,19 @@ function applyOnboardingState(
   set: SetupStoreSet,
   response: GetOnboardingStateResponse
 ) {
-  let showDegradedBanner = false;
-  let showWizardErrorBanner = false;
-  let status: SetupStatus;
+  const dbState =
+    response.appDatabaseStatus?.state ?? AppDatabaseStatus_State.UNSPECIFIED;
+  const decision = resolveRoutingDecision(response.isConfigured, dbState);
 
-  switch (response.state) {
-    case OnboardingState.BOOTSTRAP:
-      showWizardErrorBanner = response.error !== "";
-      status = "onboarding";
-      break;
-    case OnboardingState.DEGRADED:
-      showDegradedBanner = true;
-      status = "ready";
-      break;
-    case OnboardingState.READY:
-      status = "ready";
-      break;
-    case OnboardingState.UNSPECIFIED:
-      throw new Error("Onboarding state is unspecified");
-    default: {
-      const unknownState: never = response.state;
-      throw new Error(`Unknown onboarding state: ${unknownState}`);
-    }
-  }
+  warnIfNeeded(decision.warningCode);
 
   set({
     bootError: null,
     onboardingState: response,
-    showDegradedBanner,
-    showWizardErrorBanner,
-    status,
+    showDegradedBanner: decision.showDegradedBanner,
+    showWizardErrorBanner: decision.showWizardErrorBanner,
+    status: decision.routeTarget === "ready" ? "ready" : "onboarding",
+    warningCode: decision.warningCode,
   });
 }
 
@@ -199,6 +198,7 @@ function createSetSetupRequiredAction(
       onboardingState: null,
       showWizardErrorBanner: false,
       status: "onboarding",
+      warningCode: null,
     });
 
     get()
@@ -230,6 +230,7 @@ function createSetupStore(
       set,
       requestSequence
     ),
+    warningCode: null,
   }));
 }
 

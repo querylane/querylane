@@ -149,7 +149,12 @@ func TestStartCmd_WithoutConfigFlag(t *testing.T) { //nolint:paralleltest // use
 	require.NoError(t, err, "should call GetOnboardingState in bootstrap mode")
 	require.NotNil(t, resp.Msg)
 
-	assert.Equal(t, consolev1alpha1.OnboardingState_ONBOARDING_STATE_BOOTSTRAP, resp.Msg.State)
+	// Core assertions
+	assert.False(t, resp.Msg.IsConfigured, "database should not be configured in bootstrap mode")
+
+	// AppDatabaseStatus
+	require.NotNil(t, resp.Msg.AppDatabaseStatus)
+	assert.Equal(t, consolev1alpha1.AppDatabaseStatus_STATE_NOT_CONFIGURED, resp.Msg.AppDatabaseStatus.State)
 
 	// Home path and writability
 	assert.NotEmpty(t, resp.Msg.HomePath, "HomePath should be non-empty")

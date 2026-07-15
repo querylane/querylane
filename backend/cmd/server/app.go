@@ -22,7 +22,6 @@ import (
 	"github.com/querylane/querylane/backend/livequery"
 	"github.com/querylane/querylane/backend/middleware"
 	"github.com/querylane/querylane/backend/postgreserrors"
-	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	v1alpha1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	adminsvc "github.com/querylane/querylane/backend/service/admin"
 	"github.com/querylane/querylane/backend/service/console"
@@ -162,22 +161,6 @@ func (a *App) DatabaseInitError() string {
 	}
 
 	return ""
-}
-
-// OnboardingState returns the application's authoritative lifecycle stage.
-// An installed database state wins over configuration presence because setup
-// installs the state before persisting config.yaml.
-func (a *App) OnboardingState() v1alpha1.OnboardingState {
-	if a.state.Load() != nil {
-		return v1alpha1.OnboardingState_ONBOARDING_STATE_READY
-	}
-
-	cfg := a.configManager.CurrentConfig()
-	if cfg.Database != nil || cfg.Embedded != nil {
-		return v1alpha1.OnboardingState_ONBOARDING_STATE_DEGRADED
-	}
-
-	return v1alpha1.OnboardingState_ONBOARDING_STATE_BOOTSTRAP
 }
 
 // ProgressBroadcaster returns the broadcaster that buildDatabase reports to.

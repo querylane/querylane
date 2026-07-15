@@ -369,7 +369,7 @@ export function OnboardingWizardContent() {
   const selectedMethod = useOnboardingWizardStore(
     (state) => state.selectedMethod
   );
-  const wizardStateError = onboardingState?.error;
+  const wizardStateError = onboardingState?.appDatabaseStatus?.error;
   const railModel = getRailModel(phase, selectedMethod);
   const mainContent = onboardingState ? (
     <OnboardingStageContent

@@ -187,11 +187,12 @@ const LIGHTHOUSE_MOCK_RESPONSES = {
     nextPageToken: "",
   },
   "OnboardingService/GetOnboardingState": {
+    appDatabaseStatus: { schemaVersion: 1, state: "STATE_READY" },
     availableMethods: [],
     configFilePath: "/tmp/querylane/config.yaml",
     homePath: "/tmp/querylane",
+    isConfigured: true,
     isHomeWritable: true,
-    state: "ONBOARDING_STATE_READY",
   },
   "SchemaService/GetSchema": { schema: schemaRows[0] },
   "SchemaService/ListSchemas": {

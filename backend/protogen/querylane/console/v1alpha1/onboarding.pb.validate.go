@@ -375,6 +375,37 @@ func (m *GetOnboardingStateResponse) validate(all bool) error {
 
 	var errors []error
 
+	// no validation rules for IsConfigured
+
+	if all {
+		switch v := interface{}(m.GetAppDatabaseStatus()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GetOnboardingStateResponseValidationError{
+					field:  "AppDatabaseStatus",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GetOnboardingStateResponseValidationError{
+					field:  "AppDatabaseStatus",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetAppDatabaseStatus()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GetOnboardingStateResponseValidationError{
+				field:  "AppDatabaseStatus",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
 	// no validation rules for HomePath
 
 	// no validation rules for IsHomeWritable
@@ -382,10 +413,6 @@ func (m *GetOnboardingStateResponse) validate(all bool) error {
 	// no validation rules for ConfigFilePath
 
 	// no validation rules for EmbeddedDataPath
-
-	// no validation rules for State
-
-	// no validation rules for Error
 
 	if len(errors) > 0 {
 		return GetOnboardingStateResponseMultiError(errors)

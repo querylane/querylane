@@ -4,6 +4,7 @@ package querylane.console.v1alpha1;
 
 import "buf/validate/validate.proto";
 import "google/api/field_behavior.proto";
+import "querylane/console/v1alpha1/console.proto";
 import "querylane/console/v1alpha1/instance.proto";
 
 // --------------------------------------------------------------------------
@@ -96,22 +97,6 @@ enum SetupMethod {
   SETUP_METHOD_EMBEDDED = 3;
 }
 
-// OnboardingState is the authoritative application lifecycle stage used for
-// frontend routing.
-enum OnboardingState {
-  // Default value, should not be used.
-  ONBOARDING_STATE_UNSPECIFIED = 0;
-
-  // No database configuration or initialized application state exists.
-  ONBOARDING_STATE_BOOTSTRAP = 1;
-
-  // Database configuration exists, but the application database is unavailable.
-  ONBOARDING_STATE_DEGRADED = 2;
-
-  // The application database is initialized and all services are available.
-  ONBOARDING_STATE_READY = 3;
-}
-
 // --------------------------------------------------------------------------
 // Shared Messages
 // --------------------------------------------------------------------------
@@ -173,8 +158,11 @@ message EmbeddedSetupConfig {
 message GetOnboardingStateRequest {}
 
 message GetOnboardingStateResponse {
-  reserved 1, 2;
-  reserved "is_configured", "app_database_status";
+  // Output-only. Whether a database configuration already exists.
+  bool is_configured = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Current status of the application database.
+  AppDatabaseStatus app_database_status = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output-only. Absolute path to the querylane home directory (~/.querylane).
   string home_path = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -193,18 +181,6 @@ message GetOnboardingStateResponse {
 
   // Output-only. Absolute path to the embedded PostgreSQL data directory.
   string embedded_data_path = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // Output-only. Authoritative application lifecycle stage for routing.
-  OnboardingState state = 8 [
-    (google.api.field_behavior) = OUTPUT_ONLY,
-    (buf.validate.field).enum = {
-      defined_only: true
-      not_in: [0]
-    }
-  ];
-
-  // Output-only. Database initialization error, empty when no error is known.
-  string error = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // --- SetupAppDatabase RPC ---

@@ -18,50 +18,6 @@ import (
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
-func TestGetOnboardingStateReturnsAuthoritativeState(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		error string
-		name  string
-		state v1alpha1.OnboardingState
-	}{
-		{
-			name:  "bootstrap",
-			state: v1alpha1.OnboardingState_ONBOARDING_STATE_BOOTSTRAP,
-		},
-		{
-			error: "connection refused",
-			name:  "degraded",
-			state: v1alpha1.OnboardingState_ONBOARDING_STATE_DEGRADED,
-		},
-		{
-			name:  "ready",
-			state: v1alpha1.OnboardingState_ONBOARDING_STATE_READY,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			initializer := newFakeDatabaseInitializer()
-			initializer.initError = tt.error
-			initializer.onboardingState = tt.state
-			service := NewService(newTestConfigManager(t, ""), initializer, nil)
-
-			response, err := service.GetOnboardingState(
-				t.Context(),
-				connect.NewRequest(&v1alpha1.GetOnboardingStateRequest{}),
-			)
-
-			require.NoError(t, err)
-			require.Equal(t, tt.error, response.Msg.Error)
-			require.Equal(t, tt.state, response.Msg.State)
-		})
-	}
-}
-
 func Test_resolveSetupPath(t *testing.T) {
 	t.Parallel()
 
@@ -666,10 +622,6 @@ func (f *blockingDatabaseInitializer) InitializeDatabaseWithConfig(ctx context.C
 
 func (f *blockingDatabaseInitializer) IsDatabaseInitialized() bool { return false }
 
-func (f *blockingDatabaseInitializer) OnboardingState() v1alpha1.OnboardingState {
-	return v1alpha1.OnboardingState_ONBOARDING_STATE_BOOTSTRAP
-}
-
 func (f *blockingDatabaseInitializer) DatabaseInitError() string { return "" }
 
 func (f *blockingDatabaseInitializer) ProgressBroadcaster() *dbsetup.Broadcaster {
@@ -677,9 +629,7 @@ func (f *blockingDatabaseInitializer) ProgressBroadcaster() *dbsetup.Broadcaster
 }
 
 type fakeDatabaseInitializer struct {
-	broadcaster     *dbsetup.Broadcaster
-	initError       string
-	onboardingState v1alpha1.OnboardingState
+	broadcaster *dbsetup.Broadcaster
 }
 
 func newFakeDatabaseInitializer() *fakeDatabaseInitializer {
@@ -692,11 +642,7 @@ func (f *fakeDatabaseInitializer) InitializeDatabaseWithConfig(context.Context, 
 
 func (f *fakeDatabaseInitializer) IsDatabaseInitialized() bool { return false }
 
-func (f *fakeDatabaseInitializer) OnboardingState() v1alpha1.OnboardingState {
-	return f.onboardingState
-}
-
-func (f *fakeDatabaseInitializer) DatabaseInitError() string { return f.initError }
+func (f *fakeDatabaseInitializer) DatabaseInitError() string { return "" }
 
 func (f *fakeDatabaseInitializer) ProgressBroadcaster() *dbsetup.Broadcaster { return f.broadcaster }
 
