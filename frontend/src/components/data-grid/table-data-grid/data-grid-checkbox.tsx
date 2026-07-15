@@ -40,7 +40,9 @@ function DataGridCheckbox({
 
   return (
     <Tooltip>
-      <TooltipTrigger render={checkbox} />
+      <TooltipTrigger render={<span className="ml-auto inline-flex" />}>
+        {checkbox}
+      </TooltipTrigger>
       <TooltipContent>
         {indeterminate || checked
           ? "Clear selection"
