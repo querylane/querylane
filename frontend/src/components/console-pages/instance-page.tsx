@@ -132,6 +132,7 @@ interface OverviewLiveData {
   activityPartialErrors: Status[] | undefined;
   activityPending: boolean;
   activityRefreshing: boolean;
+  activityUpdatedAt: number;
   /** The server's max_connections, drawn as a threshold on the chart. */
   connectionsMax: number | undefined;
   handleRangeChange: (rangeHours: number) => void;
@@ -153,7 +154,6 @@ const TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
-const ACTIVITY_REFRESH_INTERVAL_MS = 5000;
 const LAST_INSTANCE_DELETE_DISABLED_REASON =
   "Querylane needs at least one registered instance. Add another instance before deleting this one.";
 const EMPTY_INSTANCE_CATALOG_DELETE_DISABLED_REASON =
@@ -1256,7 +1256,6 @@ function BackendInstancePage({
     },
     {
       enabled: liveDataVisibility.activity,
-      refetchInterval: ACTIVITY_REFRESH_INTERVAL_MS,
       refetchOnWindowFocus: false,
     }
   );
@@ -1388,6 +1387,7 @@ function BackendInstancePage({
               activityPending: activityQuery.isPending,
               activityRefreshing:
                 activityQuery.isFetching && !activityQuery.isPending,
+              activityUpdatedAt: activityQuery.dataUpdatedAt,
               connectionsMax: overview?.connections?.maxConnections,
               handleRangeChange: setMetricsRangeHours,
               health: healthQuery.data?.health,
@@ -1515,6 +1515,8 @@ function renderLoadedInstancePageContent({
       <InstanceActivityPage
         activity={liveData.activity}
         connectionStatus={connectionStatus}
+        lastRefreshedLabel={getLastRefreshedLabel(liveData.activityUpdatedAt)}
+        onRefresh={onRefresh}
         partialErrors={liveData.activityPartialErrors}
         pending={liveData.activityPending}
         refreshing={liveData.activityRefreshing}
@@ -1541,23 +1543,28 @@ function renderLoadedInstancePageContent({
   return (
     <>
       <div className="flex flex-col gap-8">
-        <InstancePageHeader
-          connectionStatus={connectionStatus}
-          databasesState={{
-            count: databases.length,
-            error: queryState.error ?? undefined,
-            isPending: queryState.status === "pending",
-            isUnavailable: databasesUnavailable,
-          }}
-          instance={instance}
-          isRefreshing={isRefreshing}
-          lastRefreshedAt={lastRefreshedAt}
-          metricsResponse={liveData.metricsResponse}
-          onRefresh={onRefresh}
-          overview={overview}
-          partialErrors={partialErrors}
-          serverInfo={serverInfo}
-        />
+        {/* The activity view brings its own heading + live stats and refreshes
+            on its own cadence, so the shared instance header (and its KPI bar)
+            would just duplicate that chrome. */}
+        {section === "activity" ? null : (
+          <InstancePageHeader
+            connectionStatus={connectionStatus}
+            databasesState={{
+              count: databases.length,
+              error: queryState.error ?? undefined,
+              isPending: queryState.status === "pending",
+              isUnavailable: databasesUnavailable,
+            }}
+            instance={instance}
+            isRefreshing={isRefreshing}
+            lastRefreshedAt={lastRefreshedAt}
+            metricsResponse={liveData.metricsResponse}
+            onRefresh={onRefresh}
+            overview={overview}
+            partialErrors={partialErrors}
+            serverInfo={serverInfo}
+          />
+        )}
 
         {sectionContent}
       </div>

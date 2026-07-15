@@ -5,6 +5,7 @@ import {
   presentActivityFilterOptions,
   presentActivitySessionRows,
   presentActivityStats,
+  presentSessionTimeline,
 } from "@/components/console-pages/instance-activity-model";
 
 describe("instance activity model", () => {
@@ -157,6 +158,127 @@ describe("instance activity model", () => {
         blocker: null,
         blockerPid: 999,
       },
+    ]);
+  });
+
+  test("presents session ages, client origin, and wait explanation", () => {
+    const rows = presentActivitySessionRows(
+      {
+        sessions: [
+          {
+            applicationName: "api-gateway",
+            backendAgeSeconds: 3600n,
+            clientAddress: "10.2.0.8",
+            clientPort: 55_432,
+            databaseName: "logistics",
+            durationSeconds: 38,
+            pid: 4302,
+            query: "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
+            queryAgeSeconds: 38n,
+            state: "active",
+            transactionAgeSeconds: 38n,
+            username: "app_readwrite",
+            waitEvent: "transactionid",
+            waitEventType: "Lock",
+          },
+          {
+            applicationName: "psql",
+            databaseName: "logistics",
+            durationSeconds: 5,
+            pid: 4400,
+            query: "SELECT 1",
+            state: "idle",
+            username: "postgres",
+          },
+        ],
+      },
+      { app: null, database: null, search: "", state: null }
+    );
+
+    expect(rows[0]).toMatchObject({
+      backendAgeSeconds: 3600,
+      client: "10.2.0.8:55432",
+      queryAgeSeconds: 38,
+      transactionAgeSeconds: 38,
+    });
+    expect(rows[0]?.waitExplanation).toContain("held by another session");
+    expect(rows[1]).toMatchObject({
+      backendAgeSeconds: null,
+      client: "local socket",
+      queryAgeSeconds: null,
+      transactionAgeSeconds: null,
+      waitExplanation: null,
+    });
+  });
+
+  test("builds the session timeline from ages and state", () => {
+    const rows = presentActivitySessionRows(
+      {
+        sessions: [
+          {
+            applicationName: "api-gateway",
+            backendAgeSeconds: 3600n,
+            databaseName: "logistics",
+            durationSeconds: 38,
+            pid: 4302,
+            query: "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
+            queryAgeSeconds: 38n,
+            state: "active",
+            transactionAgeSeconds: 38n,
+            username: "app_readwrite",
+          },
+          {
+            applicationName: "worker-pool",
+            backendAgeSeconds: 7200n,
+            databaseName: "logistics",
+            durationSeconds: 400,
+            pid: 4211,
+            query: "UPDATE shipping.shipments SET status = 'in_transit'",
+            queryAgeSeconds: 180n,
+            state: "idle in transaction",
+            transactionAgeSeconds: 400n,
+            username: "app_readwrite",
+          },
+          {
+            applicationName: "psql",
+            databaseName: "logistics",
+            durationSeconds: 5,
+            pid: 4400,
+            query: "SELECT 1",
+            state: "idle",
+            username: "postgres",
+          },
+        ],
+      },
+      { app: null, database: null, search: "", state: null }
+    );
+
+    expect(presentSessionTimeline(rows[0]!)).toEqual([
+      { hot: false, label: "Connected", muted: false, value: "1h 0m ago" },
+      { hot: false, label: "Transaction", muted: false, value: "open for 38s" },
+      { hot: false, label: "Query", muted: false, value: "running for 38s" },
+    ]);
+    // A long-open transaction heats up; an idle session's last query reads
+    // as history rather than live work.
+    expect(presentSessionTimeline(rows[1]!)).toEqual([
+      { hot: false, label: "Connected", muted: false, value: "2h 0m ago" },
+      {
+        hot: true,
+        label: "Transaction",
+        muted: false,
+        value: "open for 6m 40s",
+      },
+      {
+        hot: false,
+        label: "Last query",
+        muted: false,
+        value: "last started 3m ago",
+      },
+    ]);
+    expect(presentSessionTimeline(rows[2]!)).toEqual([
+      { hot: false, label: "Connected", muted: true, value: "—" },
+      { hot: false, label: "Transaction", muted: true, value: "none open" },
+      { hot: false, label: "Last query", muted: true, value: "none yet" },
     ]);
   });
 

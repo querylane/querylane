@@ -599,56 +599,80 @@ function activityHealthResponse() {
         sessions: [
           {
             applicationName: "worker-pool",
+            backendAgeSeconds: 7200n,
+            clientAddress: "10.2.0.7",
+            clientPort: 51_234,
             databaseName: "logistics",
             durationSeconds: 252n,
             pid: 4211,
             query:
               "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
+            queryAgeSeconds: 180n,
             state: "idle in transaction",
+            transactionAgeSeconds: 252n,
             username: "app_readwrite",
           },
           {
             applicationName: "api-gateway",
+            backendAgeSeconds: 3600n,
             blockedByPid: 4211,
+            clientAddress: "10.2.0.8",
+            clientPort: 55_432,
             databaseName: "logistics",
             durationSeconds: 38n,
             pid: 4302,
             query: "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
+            queryAgeSeconds: 38n,
             state: "active",
+            transactionAgeSeconds: 38n,
             username: "app_readwrite",
             waitEvent: "transactionid",
             waitEventType: "Lock",
           },
           {
             applicationName: "api-gateway",
+            backendAgeSeconds: 1800n,
             blockedByPid: 4211,
+            clientAddress: "10.2.0.9",
+            clientPort: 50_711,
             databaseName: "logistics",
             durationSeconds: 21n,
             pid: 4318,
             query: "SELECT * FROM shipping.shipments WHERE id = $1 FOR UPDATE",
+            queryAgeSeconds: 21n,
             state: "active",
+            transactionAgeSeconds: 21n,
             username: "app_readwrite",
             waitEvent: "tuple",
             waitEventType: "Lock",
           },
           {
             applicationName: "api-gateway",
+            backendAgeSeconds: 60n,
+            clientAddress: "10.2.0.10",
+            clientPort: 49_882,
             databaseName: "logistics",
             durationSeconds: 0n,
             pid: 3987,
             query:
               "SELECT s.*, c.name FROM shipping.shipments s JOIN shipping.carriers c ON c.id = s.carrier_id WHERE s.status = ANY($1)",
+            queryAgeSeconds: 0n,
             state: "active",
             username: "app_readwrite",
           },
           {
             applicationName: "metabase",
+            backendAgeSeconds: 5400n,
+            clientAddress: "10.3.1.4",
+            clientPort: 60_125,
             databaseName: "billing",
             durationSeconds: 2n,
             pid: 4402,
             query:
               "SELECT date_trunc('week', issued_at) AS wk, sum(amount) FROM billing.invoices GROUP BY 1 ORDER BY 1",
+            queryAgeSeconds: 2n,
             state: "active",
+            transactionAgeSeconds: 2n,
             username: "analytics_reader",
           },
         ],
@@ -905,7 +929,7 @@ test("backend instance activity matches the live sessions redesign", async () =>
   await expect
     .element(page.getByRole("heading", { name: "Activity" }))
     .toBeVisible();
-  await expect.element(page.getByText("Blocking chain")).toBeVisible();
+  await expect.element(page.getByText("Blocking chains")).toBeVisible();
   await expect.element(page.getByText("blocker · pid 4211")).toBeVisible();
   await expect.element(page.getByText("PID")).toBeVisible();
   await expect.element(page.getByText("User · app")).toBeVisible();
@@ -931,11 +955,7 @@ test("backend instance activity matches the live sessions redesign", async () =>
   await expect
     .element(page.getByRole("combobox", { name: "Rows per page" }))
     .toBeVisible();
-  await expect
-    .element(
-      page.getByText("Showing 1–5 of 5 sampled sessions · 171 total on server")
-    )
-    .toBeVisible();
+  await expect.element(page.getByText("Showing 1–5 of 5")).toBeVisible();
 
   const searchBox = search.element().getBoundingClientRect();
   const filterBoxes = [stateFilter, appFilter, databaseFilter].map((filter) =>
@@ -949,7 +969,7 @@ test("backend instance activity matches the live sessions redesign", async () =>
   }
   await expect
     .element(
-      page.getByRole("row", {
+      page.getByRole("button", {
         name: BLOCKED_ACTIVITY_ROW_NAME,
       })
     )
@@ -966,11 +986,11 @@ test("backend instance activity matches the live sessions redesign", async () =>
   if (!waitingSql) {
     throw new Error("Missing highlighted waiting-session SQL");
   }
-  const waitingSqlContainer = waitingSql.closest(".opacity-70");
+  const waitingSqlContainer = waitingSql.closest(".opacity-80");
   if (!waitingSqlContainer) {
     throw new Error("Missing muted waiting-session SQL container");
   }
-  expect(getComputedStyle(waitingSqlContainer).opacity).toBe("0.7");
+  expect(getComputedStyle(waitingSqlContainer).opacity).toBe("0.8");
   const tableSql = document.querySelector(
     'table code.language-sql[data-syntax-highlighter="shiki"]'
   );
@@ -993,18 +1013,25 @@ test("backend instance activity matches the live sessions redesign", async () =>
     "backend-instance-activity"
   );
 
-  await page.getByRole("row", { name: BLOCKED_ACTIVITY_ROW_NAME }).click();
+  await page.getByRole("button", { name: BLOCKED_ACTIVITY_ROW_NAME }).click();
+  const inspector = page.getByRole("dialog", { name: "Session 4302" });
+  await expect.element(inspector).toBeVisible();
   await expect
-    .element(page.getByRole("dialog", { name: "Session 4302" }))
+    .element(
+      page.getByText("app_readwrite · api-gateway · logistics · 10.2.0.8:55432")
+    )
     .toBeVisible();
+  await expect.element(page.getByText("1h 0m ago")).toBeVisible();
+  await expect.element(page.getByText("Lock · transactionid")).toBeVisible();
+  await expect.element(page.getByText("blocked by · pid 4211")).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Terminate session…" }))
+    .toBeDisabled();
+  await document.fonts.ready;
+  await expect(inspector).toMatchScreenshot(
+    "backend-instance-activity-inspector"
+  );
   await page.getByRole("button", { name: "Close" }).click();
-
-  await page
-    .getByRole("button", { name: "Open session actions for pid 4302" })
-    .click();
-  await expect
-    .element(page.getByRole("menuitem", { name: "View details" }))
-    .toBeVisible();
 });
 
 test("background activity refresh keeps the table fixed in place", async () => {
@@ -1061,7 +1088,7 @@ test("backend instance activity empty state matches", async () => {
     </ScreenshotFrame>
   );
 
-  await expect.element(page.getByText("No activity sessions")).toBeVisible();
+  await expect.element(page.getByText("No sessions found")).toBeVisible();
   await expect
     .element(page.getByRole("combobox", { name: "Rows per page" }))
     .toBeVisible();

@@ -269,6 +269,14 @@ function DataTable<TData extends RowData>({
   const pageCount = Math.max(1, table.getPageCount());
   const totalRows = table.getFilteredRowModel().rows.length;
   const { pageIndex, pageSize: currentPageSize } = table.state.pagination;
+  useEffect(
+    function clampPageToShrunkData() {
+      if (pageIndex > 0 && pageIndex >= pageCount) {
+        table.setPageIndex(pageCount - 1);
+      }
+    },
+    [pageIndex, pageCount, table]
+  );
   const start = pageIndex * currentPageSize + 1;
   const end = Math.min((pageIndex + 1) * currentPageSize, totalRows);
   const quicksearch =

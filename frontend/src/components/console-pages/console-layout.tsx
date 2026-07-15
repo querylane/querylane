@@ -1,7 +1,7 @@
 "use client";
 
 import { Code } from "@connectrpc/connect";
-import { Database } from "lucide-react";
+import { Database, Info } from "lucide-react";
 import { AppErrorView } from "@/components/app-error-view";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
 import { EmptyState } from "@/components/empty-state";
@@ -11,8 +11,14 @@ import { CopyIconButton } from "@/components/ui/copy-icon-button";
 import { OverflowTooltip } from "@/components/ui/overflow-tooltip";
 import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useRetainedRetryError } from "@/components/use-retained-retry-error";
 import { normalizeAppUiError } from "@/lib/ui-error";
+import { cn } from "@/lib/utils";
 
 interface SummaryCardProps {
   label: string;
@@ -76,15 +82,27 @@ export function SummaryCountValue({
   }
   return count.toLocaleString();
 }
-export function InstanceStatsBar({ children }: { children: React.ReactNode }) {
+export function InstanceStatsBar({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string | undefined;
+}) {
   return (
-    <div className="grid grid-cols-2 divide-x divide-border rounded-lg border border-border lg:grid-cols-4">
+    <div
+      className={cn(
+        "grid grid-cols-2 divide-x divide-border rounded-lg border border-border lg:grid-cols-4",
+        className
+      )}
+    >
       {children}
     </div>
   );
 }
 export function InstanceStatItem({
   children,
+  hint,
   label,
   notice,
   progress,
@@ -92,6 +110,8 @@ export function InstanceStatItem({
   renderTrend,
 }: {
   children: React.ReactNode;
+  /** Optional plain-language explanation shown in a tooltip on the label. */
+  hint?: string | undefined;
   label: string;
   notice?: React.ReactNode | undefined;
   progress?: number | undefined;
@@ -101,7 +121,21 @@ export function InstanceStatItem({
 }) {
   return (
     <div className="flex flex-col gap-1 px-4 py-3.5">
-      <span className="text-muted-foreground text-xs">{label}</span>
+      {hint ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span className="flex w-fit cursor-help items-center gap-1 text-muted-foreground text-xs">
+                {label}
+                <Info aria-hidden="true" className="size-3 opacity-60" />
+              </span>
+            }
+          />
+          <TooltipContent className="max-w-xs">{hint}</TooltipContent>
+        </Tooltip>
+      ) : (
+        <span className="text-muted-foreground text-xs">{label}</span>
+      )}
       <div className="flex min-h-7 items-center gap-1.5">
         <div className="flex items-baseline gap-1.5">
           {children}

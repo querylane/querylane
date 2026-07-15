@@ -75,6 +75,8 @@ const AUTOVACUUM_ROW_NAME = /Autovacuum/;
 const CHARSET_COLUMN_NAME = /^charset/i;
 const COLLATION_COLUMN_NAME = /^collation/i;
 const BLOCKED_ACTIVITY_TABLE_ROW_NAME = /4302/;
+const LOCK_WAIT_HINT_PATTERN = /held by another session/;
+const ACTIVITY_SNAPSHOT_HINT_PATTERN = /refresh to take a new snapshot/;
 const BLOCKER_ACTIVITY_TABLE_ROW_NAME = /4211/;
 const MISSING_INSTANCE_SECRET_KEY_MESSAGE =
   /QUERYLANE_INSTANCE_SECRET_KEY is not configured/;
@@ -489,22 +491,32 @@ function activityHealthResponse() {
         sessions: [
           createProto(ConnectionActivitySessionSchema, {
             applicationName: "worker-pool",
+            backendAgeSeconds: 7200n,
+            clientAddress: "10.2.0.7",
+            clientPort: 51_234,
             databaseName: "logistics",
             durationSeconds: BigInt(252),
             pid: 4211,
             query:
               "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
+            queryAgeSeconds: 180n,
             state: "idle in transaction",
+            transactionAgeSeconds: 252n,
             username: "app_readwrite",
           }),
           createProto(ConnectionActivitySessionSchema, {
             applicationName: "api-gateway",
+            backendAgeSeconds: 3600n,
             blockedByPid: 4211,
+            clientAddress: "10.2.0.8",
+            clientPort: 55_432,
             databaseName: "logistics",
             durationSeconds: BigInt(38),
             pid: 4302,
             query: "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
+            queryAgeSeconds: 38n,
             state: "active",
+            transactionAgeSeconds: 38n,
             username: "app_readwrite",
             waitEvent: "transactionid",
             waitEventType: "Lock",
@@ -904,7 +916,21 @@ describe("backend instance refresh", () => {
 });
 
 describe("backend instance activity interactions", () => {
-  test("opens session details from a table row", async () => {
+  function openBlockedSessionInspector(
+    user: ReturnType<typeof userEvent.setup>
+  ) {
+    const activity = screen.getByRole("region", { name: "Activity" });
+    const table = within(activity).getByRole("table");
+    return user
+      .click(
+        within(table).getByRole("button", {
+          name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
+        })
+      )
+      .then(() => screen.findByRole("dialog", { name: "Session 4302" }));
+  }
+
+  test("opens the session inspector from a table row", async () => {
     const user = userEvent.setup();
     state.selectedInstanceStatus = "connected";
     state.instances = [postgresInstanceFixture("connected")];
@@ -913,60 +939,43 @@ describe("backend instance activity interactions", () => {
 
     renderInstanceActivity();
 
-    const activity = screen.getByRole("region", { name: "Activity" });
-    const blockedSessionRow = within(activity).getByRole("row", {
-      name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-    });
+    const details = await openBlockedSessionInspector(user);
 
-    await user.click(
-      within(blockedSessionRow).getByRole("button", {
-        name: "View session 4302 details",
-      })
-    );
-
-    const details = await screen.findByRole("dialog", {
-      name: "Session 4302",
-    });
-    expect(within(details).getByText("api-gateway")).toBeTruthy();
-    expect(within(details).getByText("Lock · transactionid")).toBeTruthy();
-    expect(within(details).getByRole("code")).toHaveProperty(
-      "textContent",
-      "UPDATE shipping.shipments SET eta = $1 WHERE id = $2"
-    );
-  });
-
-  test("opens session actions from the row menu", async () => {
-    const user = userEvent.setup();
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.instanceData = connectedInstanceResponse();
-    state.healthData = activityHealthResponse();
-
-    renderInstanceActivity();
-
-    const activity = screen.getByRole("region", { name: "Activity" });
-    const blockedSessionRow = within(activity).getByRole("row", {
-      name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-    });
-
-    await user.click(
-      within(blockedSessionRow).getByRole("button", {
-        name: "Open session actions for pid 4302",
-      })
-    );
-
-    expect(screen.getByRole("menuitem", { name: "View details" })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: "Copy PID" })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: "Copy query" })).toBeTruthy();
-
-    await user.click(screen.getByRole("menuitem", { name: "View details" }));
-
+    // Identity line + timeline replace the old duplicated fact tiles.
     expect(
-      await screen.findByRole("dialog", { name: "Session 4302" })
+      within(details).getByText(
+        "app_readwrite · api-gateway · logistics · 10.2.0.8:55432"
+      )
     ).toBeTruthy();
+    expect(within(details).getByText("Timeline")).toBeTruthy();
+    expect(within(details).getByText("1h 0m ago")).toBeTruthy();
+    expect(within(details).getByText("open for 38s")).toBeTruthy();
+    expect(within(details).getByText("running for 38s")).toBeTruthy();
+    expect(within(details).getByText("Lock · transactionid")).toBeTruthy();
+    expect(within(details).getByText(LOCK_WAIT_HINT_PATTERN)).toBeTruthy();
+    expect(within(details).getByText("blocked by · pid 4211")).toBeTruthy();
+    expect(
+      within(details).getByRole("button", { name: "Terminate session…" })
+    ).toHaveProperty("disabled", true);
+    // The sheet is modal, so the inspector carries its own snapshot refresh.
+    expect(
+      within(details).getByRole("button", { name: "Refresh session" })
+    ).toBeTruthy();
+
+    // Jump from the blocked session to its blocker.
+    await user.click(within(details).getByRole("button", { name: "Inspect" }));
+
+    const blockerDetails = await screen.findByRole("dialog", {
+      name: "Session 4211",
+    });
+    expect(
+      within(blockerDetails).getByText("This session is blocking 1 session.")
+    ).toBeTruthy();
+    expect(within(blockerDetails).getByText("waiting · pid 4302")).toBeTruthy();
+    expect(within(blockerDetails).getByText("open for 4m 12s")).toBeTruthy();
   });
 
-  test("copies the session pid and query from the row menu", async () => {
+  test("copies the session pid and query from the inspector", async () => {
     const user = userEvent.setup();
     const originalClipboard = navigator.clipboard;
     const writeText = vi.fn(async () => undefined);
@@ -982,22 +991,18 @@ describe("backend instance activity interactions", () => {
     try {
       renderInstanceActivity();
 
-      const activity = screen.getByRole("region", { name: "Activity" });
-      const blockedSessionRow = within(activity).getByRole("row", {
-        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-      });
-      const actions = within(blockedSessionRow).getByRole("button", {
-        name: "Open session actions for pid 4302",
-      });
+      const details = await openBlockedSessionInspector(user);
 
-      await user.click(actions);
-      await user.click(screen.getByRole("menuitem", { name: "Copy PID" }));
+      await user.click(
+        within(details).getByRole("button", { name: "Copy PID" })
+      );
       await waitFor(() => {
         expect(writeText).toHaveBeenCalledWith("4302");
       });
 
-      await user.click(actions);
-      await user.click(screen.getByRole("menuitem", { name: "Copy query" }));
+      await user.click(
+        within(details).getByRole("button", { name: "Copy SQL" })
+      );
       await waitFor(() => {
         expect(writeText).toHaveBeenCalledWith(
           "UPDATE shipping.shipments SET eta = $1 WHERE id = $2"
@@ -1009,6 +1014,32 @@ describe("backend instance activity interactions", () => {
         value: originalClipboard,
       });
     }
+  });
+
+  test("shows an ended state when the selected session disappears", async () => {
+    const user = userEvent.setup();
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = activityHealthResponse();
+
+    const { rerender } = renderInstanceActivity();
+
+    await openBlockedSessionInspector(user);
+
+    // The next snapshot no longer contains pid 4302.
+    const response = activityHealthResponse();
+    response.health?.connectionActivity?.sessions.splice(1);
+    state.healthData = response;
+    rerender(<BackendInstancePage instanceId="prod" section="activity" />);
+
+    const details = await screen.findByRole("dialog", { name: "Session 4302" });
+    expect(within(details).getByText("Session ended")).toBeTruthy();
+    expect(
+      within(details).getByText(
+        "This session is no longer visible in pg_stat_activity."
+      )
+    ).toBeTruthy();
   });
 });
 
@@ -1128,12 +1159,13 @@ describe("backend instance activity", () => {
 
     const activity = screen.getByRole("region", { name: "Activity" });
     expect(
-      within(activity).getByText(
-        "Live sessions from pg_stat_activity, refreshed every 5 s"
-      )
+      within(activity).getByText(ACTIVITY_SNAPSHOT_HINT_PATTERN)
+    ).toBeTruthy();
+    expect(
+      within(activity).getByRole("button", { name: "Refresh activity" })
     ).toBeTruthy();
     expect(within(activity).getAllByText("4m 12s").length).toBeGreaterThan(0);
-    expect(within(activity).getByText("Blocking chain")).toBeTruthy();
+    expect(within(activity).getByText("Blocking chains")).toBeTruthy();
     expect(within(activity).getByText("blocker · pid 4211")).toBeTruthy();
     expect(within(activity).getByText("PID")).toBeTruthy();
     expect(
@@ -1153,10 +1185,9 @@ describe("backend instance activity", () => {
       "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
       "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
     ]);
-    expect(state.activityQueryOptions).toMatchObject({
-      enabled: true,
-      refetchInterval: 5000,
-    });
+    // The page snapshots on demand now; no background polling interval.
+    expect(state.activityQueryOptions).toMatchObject({ enabled: true });
+    expect(state.activityQueryOptions?.["refetchInterval"]).toBeUndefined();
     expect(state.healthQueryOptions).toMatchObject({ enabled: false });
   });
 
@@ -1180,15 +1211,18 @@ describe("backend instance activity", () => {
     const appFilter = within(activity).getByRole("button", { name: "App" });
 
     expect(appFilter).toBeTruthy();
-    expect(within(activity).getByRole("button", { name: "DB" })).toBeTruthy();
+    // Every fixture session is on "logistics", and single-valued facets hide.
+    expect(within(activity).queryByRole("button", { name: "DB" })).toBeNull();
 
     await user.type(search, "4302");
 
     expect(
-      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+      within(table).getByRole("button", {
+        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
+      })
     ).toBeTruthy();
     expect(
-      within(table).queryByRole("row", {
+      within(table).queryByRole("button", {
         name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
       })
     ).toBeNull();
@@ -1204,34 +1238,44 @@ describe("backend instance activity", () => {
     await user.click(screen.getByRole("option", { name: "active" }));
 
     expect(
-      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+      within(table).getByRole("button", {
+        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
+      })
     ).toBeTruthy();
     expect(
-      within(table).queryByRole("row", {
+      within(table).queryByRole("button", {
         name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
       })
     ).toBeNull();
 
-    await user.click(within(activity).getByRole("button", { name: "Reset" }));
+    await user.click(
+      within(activity).getByRole("button", { name: "Clear all" })
+    );
 
     expect(
-      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+      within(table).getByRole("button", {
+        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
+      })
     ).toBeTruthy();
     expect(
-      within(table).getByRole("row", { name: BLOCKER_ACTIVITY_TABLE_ROW_NAME })
+      within(table).getByRole("button", {
+        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
+      })
     ).toBeTruthy();
     expect(
-      within(activity).queryByRole("button", { name: "Reset" })
+      within(activity).queryByRole("button", { name: "Clear all" })
     ).toBeNull();
 
     await user.click(appFilter);
     await user.click(screen.getByRole("option", { name: "api-gateway" }));
 
     expect(
-      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+      within(table).getByRole("button", {
+        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
+      })
     ).toBeTruthy();
     expect(
-      within(table).queryByRole("row", {
+      within(table).queryByRole("button", {
         name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
       })
     ).toBeNull();
@@ -1239,10 +1283,14 @@ describe("backend instance activity", () => {
     await user.click(screen.getByRole("option", { name: "api-gateway" }));
 
     expect(
-      within(table).getByRole("row", { name: BLOCKED_ACTIVITY_TABLE_ROW_NAME })
+      within(table).getByRole("button", {
+        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
+      })
     ).toBeTruthy();
     expect(
-      within(table).getByRole("row", { name: BLOCKER_ACTIVITY_TABLE_ROW_NAME })
+      within(table).getByRole("button", {
+        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
+      })
     ).toBeTruthy();
   });
 
@@ -1271,14 +1319,14 @@ describe("backend instance activity", () => {
     });
 
     expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
-    expect(within(table).queryByText("5008")).toBeNull();
+    expect(within(table).queryByText("5000")).toBeNull();
     expect(nextPage).toHaveProperty("disabled", false);
     expect(previousPage).toHaveProperty("disabled", true);
 
     await user.click(nextPage);
 
     expect(within(activity).getByText("Page 2 of 2")).toBeTruthy();
-    expect(within(table).getByText("5008")).toBeTruthy();
+    expect(within(table).getByText("5000")).toBeTruthy();
     expect(within(table).queryByText("4211")).toBeNull();
     expect(previousPage).toHaveProperty("disabled", false);
 
@@ -1306,26 +1354,24 @@ describe("backend instance activity", () => {
 
     expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
     expect(within(table).getByText("4302")).toBeTruthy();
-    expect(
-      within(activity).getByText(
-        "Showing 1–10 of 11 matches · 12 sampled sessions · 44 total on server"
-      )
-    ).toBeTruthy();
+    expect(within(activity).getByText("Showing 1–10 of 11")).toBeTruthy();
 
-    await user.click(within(activity).getByRole("button", { name: "Reset" }));
+    await user.click(
+      within(activity).getByRole("button", { name: "Clear all" })
+    );
 
     await user.click(pageSize);
     await user.click(screen.getByRole("option", { name: "25" }));
 
     expect(within(activity).getByText("Page 1 of 1")).toBeTruthy();
-    expect(within(table).getByText("5008")).toBeTruthy();
+    expect(within(table).getByText("5000")).toBeTruthy();
     expect(nextPage).toHaveProperty("disabled", true);
 
     await user.click(pageSize);
     await user.click(screen.getByRole("option", { name: "10" }));
 
     expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
-    expect(within(table).queryByText("5008")).toBeNull();
+    expect(within(table).queryByText("5000")).toBeNull();
     expect(nextPage).toHaveProperty("disabled", false);
   });
 
@@ -1350,7 +1396,7 @@ describe("backend instance activity", () => {
     await user.click(nextPage);
 
     expect(within(activity).getByText("Page 2 of 2")).toBeTruthy();
-    expect(within(table).getByText("5008")).toBeTruthy();
+    expect(within(table).getByText("5000")).toBeTruthy();
 
     state.healthData = activityHealthResponse();
     rerender(<BackendInstancePage instanceId="prod" section="activity" />);
@@ -1358,7 +1404,7 @@ describe("backend instance activity", () => {
     expect(within(activity).getByText("Page 1 of 1")).toBeTruthy();
     expect(within(table).getByText("4211")).toBeTruthy();
     expect(within(table).getByText("4302")).toBeTruthy();
-    expect(within(table).queryByText("5008")).toBeNull();
+    expect(within(table).queryByText("5000")).toBeNull();
     expect(previousPage).toHaveProperty("disabled", true);
     expect(nextPage).toHaveProperty("disabled", true);
   });
@@ -1377,12 +1423,8 @@ describe("backend instance activity", () => {
 
     renderInstanceActivity();
 
-    expect(screen.getByText("No activity sessions")).toBeTruthy();
-    expect(
-      screen.getByText(
-        "No live client sessions are visible from pg_stat_activity yet."
-      )
-    ).toBeTruthy();
+    expect(screen.getByText("No sessions found")).toBeTruthy();
+    expect(screen.getByText("Try a different search or filter.")).toBeTruthy();
     expect(
       screen.getByRole("combobox", { name: "Rows per page" })
     ).toBeTruthy();
@@ -1405,7 +1447,7 @@ describe("backend instance activity", () => {
     renderInstanceActivity();
 
     const activity = screen.getByRole("region", { name: "Activity" });
-    expect(within(activity).getAllByText("—")).toHaveLength(5);
+    expect(within(activity).getAllByText("—")).toHaveLength(6);
     expect(
       within(activity).getByText("Activity data unavailable")
     ).toBeTruthy();
@@ -1420,7 +1462,7 @@ describe("backend instance activity", () => {
     renderInstanceActivity();
 
     const activity = screen.getByRole("region", { name: "Activity" });
-    expect(within(activity).getAllByText("—")).toHaveLength(5);
+    expect(within(activity).getAllByText("—")).toHaveLength(6);
     expect(within(activity).getByText("Activity unavailable")).toBeTruthy();
     expect(
       within(activity).getByText(
@@ -1430,7 +1472,8 @@ describe("backend instance activity", () => {
     expect(within(activity).queryByText("Loading activity...")).toBeNull();
   });
 
-  test("gives blocker highlighting precedence for a chained lock row", () => {
+  test("shows both directions of a chained lock in the inspector", async () => {
+    const user = userEvent.setup();
     state.selectedInstanceStatus = "connected";
     state.instances = [postgresInstanceFixture("connected")];
     state.instanceData = connectedInstanceResponse();
@@ -1451,11 +1494,21 @@ describe("backend instance activity", () => {
 
     renderInstanceActivity();
 
-    const row = screen.getByRole("row", {
-      name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-    });
-    expect(row.className).toContain("bg-amber-500/5");
-    expect(row.className).not.toContain("bg-muted/40");
+    const activity = screen.getByRole("region", { name: "Activity" });
+    const table = within(activity).getByRole("table");
+    await user.click(
+      within(table).getByRole("button", {
+        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
+      })
+    );
+
+    // 4302 sits mid-chain: blocked by 4211 while blocking 4318.
+    const details = await screen.findByRole("dialog", { name: "Session 4302" });
+    expect(within(details).getByText("blocked by · pid 4211")).toBeTruthy();
+    expect(
+      within(details).getByText("This session is blocking 1 session.")
+    ).toBeTruthy();
+    expect(within(details).getByText("waiting · pid 4318")).toBeTruthy();
   });
 });
 
