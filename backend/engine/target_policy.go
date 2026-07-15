@@ -15,13 +15,13 @@ import (
 // wrapped address because it would recreate the network-mapping oracle.
 var ErrTargetNotAllowed = errors.New("managed PostgreSQL target is not allowed")
 
+// Loopback is intentionally absent: local Querylane development commonly
+// reaches PostgreSQL containers through ports published on localhost.
 var defaultBlockedTargetPrefixes = []netip.Prefix{
 	netip.MustParsePrefix("0.0.0.0/32"),
-	netip.MustParsePrefix("127.0.0.0/8"),
 	netip.MustParsePrefix("169.254.0.0/16"),
 	netip.MustParsePrefix("fd00:ec2::254/128"),
 	netip.MustParsePrefix("::/128"),
-	netip.MustParsePrefix("::1/128"),
 	netip.MustParsePrefix("fe80::/10"),
 }
 
@@ -33,7 +33,7 @@ type TargetPolicy struct {
 }
 
 // NewTargetPolicy parses an outbound target policy. A nonempty allowlist is
-// strict and explicitly overrides the built-in host-local blocks. Operator
+// strict and explicitly overrides the built-in unsafe-target blocks. Operator
 // deny entries always take precedence over allow entries.
 func NewTargetPolicy(allowedCIDRs, deniedCIDRs []string) (*TargetPolicy, error) {
 	allowed, err := parseTargetPrefixes("allowed_cidrs", allowedCIDRs)
@@ -79,7 +79,7 @@ func (p *TargetPolicy) Check(addr netip.Addr) error {
 	}
 
 	if prefixContains(defaultBlockedTargetPrefixes, addr) {
-		return fmt.Errorf("%w: %s is host-local", ErrTargetNotAllowed, addr)
+		return fmt.Errorf("%w: %s is blocked by the default policy", ErrTargetNotAllowed, addr)
 	}
 
 	return nil
