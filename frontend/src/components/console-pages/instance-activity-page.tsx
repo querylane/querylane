@@ -38,6 +38,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
+import { useMinimumSpin } from "@/hooks/use-minimum-spin";
 import type { DbConnectionStatus } from "@/lib/console-resources";
 import { useUrlTableSearch } from "@/lib/url-search-state";
 import { cn } from "@/lib/utils";
@@ -501,6 +502,7 @@ function SessionInspector({
   row: ActivitySessionRow;
   rows: ActivitySessionRow[];
 }) {
+  const isSpinning = useMinimumSpin(refreshing);
   return (
     <>
       <SheetHeader className="border-border border-b pr-12">
@@ -526,7 +528,7 @@ function SessionInspector({
             <RefreshCw
               aria-hidden="true"
               className={
-                refreshing
+                isSpinning
                   ? "size-3.5 animate-spin motion-reduce:animate-none"
                   : "size-3.5"
               }
@@ -703,6 +705,7 @@ function ActivityPageHeader({
   onRefresh: () => void;
   refreshing: boolean;
 }) {
+  const isSpinning = useMinimumSpin(refreshing);
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
@@ -721,7 +724,7 @@ function ActivityPageHeader({
             <RefreshCw
               aria-hidden="true"
               className={
-                refreshing
+                isSpinning
                   ? "size-3.5 animate-spin motion-reduce:animate-none"
                   : "size-3.5"
               }
@@ -755,6 +758,7 @@ function InstanceActivityPage({
   pending: boolean;
   refreshing: boolean;
 }) {
+  const isSpinning = useMinimumSpin(refreshing);
   const [search, setSearch] = useUrlTableSearch();
   const [stateFilter, setStateFilter] = useState<string[]>([]);
   const [appFilter, setAppFilter] = useState<string[]>([]);

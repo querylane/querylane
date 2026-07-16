@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useMinimumSpin } from "@/hooks/use-minimum-spin";
 
 interface RetryActionButtonProps {
   className?: string;
@@ -24,6 +25,7 @@ export function RetryActionButton({
   variant = "default",
 }: RetryActionButtonProps) {
   const [retryPending, setRetryPending] = useState(false);
+  const showPending = useMinimumSpin(retryPending);
   const [retryError, setRetryError] = useState<string | null>(null);
   const retryErrorId = useId();
   const mountedRef = useRef(true);
@@ -69,17 +71,17 @@ export function RetryActionButton({
       <Button
         aria-describedby={retryError ? retryErrorId : undefined}
         className={className}
-        disabled={retryPending}
+        disabled={showPending}
         onClick={handleRetry}
         size={size}
         variant={variant}
       >
-        {retryPending ? (
+        {showPending ? (
           <Spinner aria-hidden="true" className="size-4" />
         ) : (
           <RefreshCw className="size-4" />
         )}
-        {String(retryPending ? pendingLabel : label)}
+        {String(showPending ? pendingLabel : label)}
       </Button>
       {retryError === null ? null : (
         <span

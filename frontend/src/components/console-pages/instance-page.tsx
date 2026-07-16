@@ -76,6 +76,7 @@ import {
   useInstanceMetricsQuery,
   useInstancePreviousMetricsQuery,
 } from "@/hooks/api/metrics";
+import { useMinimumSpin } from "@/hooks/use-minimum-spin";
 import type { DbConnectionStatus } from "@/lib/console-resources";
 import {
   buildInstanceName,
@@ -456,6 +457,7 @@ function InstancePageHeader({
   partialErrors: Status[];
   serverInfo?: ServerInfo | undefined;
 }) {
+  const isSpinning = useMinimumSpin(isRefreshing);
   const lastRefreshedLabel = getLastRefreshedLabel(lastRefreshedAt);
   const metricPartialErrors = getMetricPartialErrors(partialErrors);
   const serverInfoNotice = getMetricNotice(metricPartialErrors, "server_info");
@@ -503,7 +505,7 @@ function InstancePageHeader({
               <RefreshCw
                 aria-hidden="true"
                 className={
-                  isRefreshing
+                  isSpinning
                     ? "size-3.5 animate-spin motion-reduce:animate-none"
                     : "size-3.5"
                 }

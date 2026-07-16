@@ -103,6 +103,10 @@ describe("form controls integration", () => {
     await waitFor(() => {
       expect(screen.getByRole("alert").textContent).toBe("Connection failed");
     });
-    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+    // The pending label persists briefly past the rejection: the spinner holds
+    // for a minimum duration so fast failures are still visibly acknowledged.
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+    });
   });
 });
