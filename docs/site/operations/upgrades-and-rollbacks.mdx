@@ -1,0 +1,118 @@
+---
+title: Upgrade and roll back Querylane
+description: Move between pinned Querylane images with migration checks, acceptance tests, and a restore-based rollback plan.
+sidebar:
+  label: Upgrades and rollbacks
+---
+
+Querylane applies pending metadata migrations during startup. Treat an application upgrade and metadata schema change as one operation.
+
+Use immutable image digests. A rolling tag can move between the time you test and the time you deploy.
+
+## Before the maintenance window
+
+1. Read the [release notes](/changelog), including known issues and migration notes.
+2. Resolve the target image to a digest and record the current digest.
+3. Complete a [metadata backup](/operations/backup-and-restore) and verify its checksum.
+4. Confirm that the matching `QUERYLANE_INSTANCE_SECRET_KEY` is recoverable.
+5. Test the target image against a restored copy of production metadata when possible.
+6. Prepare the old image, pre-upgrade backup, and old configuration for rollback.
+
+```sh
+export CURRENT_IMAGE='ghcr.io/querylane/querylane-dev@sha256:current'
+export TARGET_IMAGE='ghcr.io/querylane/querylane-dev@sha256:target'
+
+docker pull "$TARGET_IMAGE"
+docker image inspect --format '{{index .RepoDigests 0}}' "$TARGET_IMAGE"
+```
+
+## Inspect metadata migrations
+
+The Querylane image includes migration diagnostics. Supply the metadata DSN through your normal secret mechanism.
+
+```sh
+docker run --rm \
+  --env QUERYLANE_DATABASE_DSN="$QUERYLANE_DATABASE_DSN" \
+  "$TARGET_IMAGE" \
+  migrate status
+```
+
+You can also print the current version:
+
+```sh
+docker run --rm \
+  --env QUERYLANE_DATABASE_DSN="$QUERYLANE_DATABASE_DSN" \
+  "$TARGET_IMAGE" \
+  migrate version
+```
+
+The server runs forward migrations automatically. Use the standalone migration commands for inspection and recovery, not as a routine extra step before every start.
+
+## Upgrade one replica first
+
+For the safest preview upgrade, use a maintenance window:
+
+1. Stop or drain all current Querylane replicas.
+2. Start one replica with the target image, existing config, metadata DSN, and instance secret key.
+3. Wait for metadata migration and service initialization to finish.
+4. Run the acceptance checks below.
+5. Start the remaining replicas only after the first is healthy.
+6. Keep the pre-upgrade backup until the release has passed your retention window.
+
+Do not assume a zero-downtime rolling upgrade is safe across a metadata schema change. Use one only when the release notes explicitly state that old and new replicas are schema-compatible.
+
+## Acceptance checks
+
+### Application and metadata
+
+```sh
+curl --fail --silent --show-error http://127.0.0.1:8080/ > /dev/null
+
+curl --fail --silent --show-error \
+  --request POST \
+  --header 'Content-Type: application/json' \
+  --header 'Connect-Protocol-Version: 1' \
+  --data '{}' \
+  http://127.0.0.1:8080/querylane.console.v1alpha1.ConsoleService/GetConsoleConfig
+```
+
+Confirm that the response reports the ready state and a migration version.
+
+### Managed instances
+
+- Open one non-critical instance.
+- Confirm connection state, server identity, and database list.
+- Open Activity and a permitted table.
+- Wait for at least one background probe cycle and inspect fresh metrics.
+- Exercise any API client or export workflow your team relies on.
+
+### Operations
+
+- Check structured logs for migration, decryption, runner, or target errors.
+- Confirm ingress authentication and TLS still work.
+- Confirm every replica uses the same instance secret key and metadata database.
+
+## Roll back safely
+
+An old Querylane binary may not understand a schema migrated by a newer version. The default rollback is application plus database recovery, not only an image swap.
+
+1. Stop every Querylane replica that uses the upgraded metadata database.
+2. Preserve the failed database for investigation.
+3. Create a new empty metadata database.
+4. **Restore the pre-upgrade backup** into the new database.
+5. Start the previous pinned image with the previous configuration, matched instance secret key, and restored DSN.
+6. Run the same acceptance checks before reopening ingress.
+
+Querylane provides `migrate down` and `migrate down-to` for targeted migration recovery. Use them only when a release-specific runbook instructs you to do so. A restore gives you a known application and schema pair and retains the failed upgrade for diagnosis.
+
+## Failed migration
+
+If startup reports a migration error:
+
+- keep the service out of rotation;
+- capture the exact image digest, migration output, redacted logs, and PostgreSQL error;
+- run `migrate status` against the affected database;
+- do not repeatedly restart every replica against the same failing schema; and
+- restore the pre-upgrade backup unless a release note provides a corrective path.
+
+Querylane migrations are normally transactional. A provider, connectivity failure, or migration explicitly marked non-transactional can still require operator review.

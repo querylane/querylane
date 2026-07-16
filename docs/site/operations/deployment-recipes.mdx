@@ -1,0 +1,127 @@
+---
+title: Deployment recipes
+description: Adapt the secure Querylane deployment shape to Docker Compose, Caddy, Cloudflare Tunnel, and multi-replica platforms.
+sidebar:
+  label: Deployment recipes
+---
+
+These recipes start after you have prepared external metadata PostgreSQL, generated `QUERYLANE_INSTANCE_SECRET_KEY`, and pinned a Querylane image digest. See [Deploy Querylane](/get-started/production-deployment) for the base configuration.
+
+:::warning
+Querylane does not currently provide built-in authentication. A tunnel or TLS certificate alone does not restrict users. Every public route must have an authentication policy in front of it.
+:::
+
+## Choose a shape
+
+| Shape | Use it when | Authentication boundary |
+| --- | --- | --- |
+| Single host with Docker Compose | One Linux host already runs your reverse proxy | Host reverse proxy, VPN, or private network |
+| Caddy on the host | You want automatic HTTPS and a small reverse-proxy config | Caddy `basic_auth` for a small team, or `forward_auth` to your identity proxy |
+| Cloudflare Tunnel | The host should not accept inbound web traffic | Cloudflare Access policy on the published application |
+| Multiple replicas | Your platform provides scheduling, secrets, health checks, and ingress | Platform ingress or identity-aware proxy |
+
+## Single host with Docker Compose
+
+Bind Querylane to loopback so only host services can reach it:
+
+```yaml
+services:
+  querylane:
+    image: ghcr.io/querylane/querylane-dev@sha256:replace-with-pinned-digest
+    command: ["server", "start", "--config", "/etc/querylane/querylane.yaml"]
+    environment:
+      QUERYLANE_DATABASE_DSN: "${QUERYLANE_DATABASE_DSN}"
+      QUERYLANE_INSTANCE_SECRET_KEY: "${QUERYLANE_INSTANCE_SECRET_KEY}"
+    volumes:
+      - ./querylane.yaml:/etc/querylane/querylane.yaml:ro
+    ports:
+      - "127.0.0.1:8080:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+```
+
+Keep `.env` outside version control with mode `0600`. The Querylane image reads its secrets from environment variables, so use your platform's protected environment injection when available. Docker Compose file secrets cannot replace those variables unless an external entrypoint reads the files first, and the distroless Querylane image does not include a shell.
+
+Start and inspect it:
+
+```sh
+docker compose pull
+docker compose up --detach
+docker compose logs --follow querylane
+```
+
+## Caddy on the same host
+
+Generate a password hash rather than putting a plaintext password in the Caddyfile:
+
+```sh
+caddy hash-password
+```
+
+Use the resulting hash:
+
+```text
+querylane.example.com {
+  encode zstd gzip
+
+  basic_auth {
+    operator $2a$14$replace_with_caddy_hash
+  }
+
+  reverse_proxy 127.0.0.1:8080
+}
+```
+
+Caddy obtains HTTPS certificates for a routable hostname by default. Basic authentication fits a small controlled deployment; use Caddy [`forward_auth`](https://caddyserver.com/docs/caddyfile/directives/forward_auth) with your identity proxy when you need SSO, groups, or centralized revocation.
+
+Reload Caddy, request the hostname in a private browser window, and confirm an unauthenticated request cannot reach either the web application or an API procedure.
+
+## Cloudflare Tunnel and Access
+
+1. In Cloudflare, create a remotely managed tunnel and install its connector on the Querylane host.
+2. Add a published application route for `querylane.example.com` with service URL `http://localhost:8080`.
+3. Create a Cloudflare Access application for the same hostname.
+4. Add an allow policy for the intended identities and a deny-by-default posture.
+5. Run the connector as a managed service using the token Cloudflare provides.
+
+Cloudflare's current [tunnel setup guide](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel/) covers the connector and published route. The route becomes publicly reachable without an Access policy, so configure and test Access before sharing the hostname.
+
+Keep the Compose binding on `127.0.0.1`. The connector reaches Querylane locally, and the host does not need an inbound port for the application.
+
+Verify both paths:
+
+- an allowed identity can load the application and call the API;
+- a signed-out browser receives the Access challenge; and
+- direct requests to the host's public IP cannot reach port `8080`.
+
+## Multiple replicas
+
+Use this shape only with external metadata PostgreSQL. Every replica must receive:
+
+- the same pinned image;
+- the same `QUERYLANE_DATABASE_DSN`;
+- the same `QUERYLANE_INSTANCE_SECRET_KEY`;
+- the same non-secret configuration and target network policy; and
+- network access to the same metadata and managed PostgreSQL endpoints.
+
+Expose port `8080` through an internal service and put the authenticating ingress in front of that service. Use `GET /` for liveness. For readiness, call `ConsoleService.GetConsoleConfig` and require the ready application state rather than treating any HTTP response as ready.
+
+Background work is coordinated through metadata-database leases, but live-query limits apply per process. Multiply per-process limits by the maximum replica count when estimating target PostgreSQL load.
+
+During an upgrade, start one new replica first. Do not mix versions across a metadata migration unless the release notes declare that combination compatible.
+
+## Network checklist
+
+For every recipe:
+
+- allow browser traffic only through the authenticated HTTPS endpoint;
+- block direct public access to Querylane port `8080`;
+- allow metadata PostgreSQL only from Querylane replicas;
+- restrict managed-instance egress with `instance_targets.allowed_cidrs` and network firewalls;
+- use `sslmode=verify-full` where the PostgreSQL provider supports it;
+- set exact CORS origins when browsers cross origins; and
+- collect Querylane and ingress access logs without recording secrets.

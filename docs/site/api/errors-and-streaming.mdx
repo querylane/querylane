@@ -1,0 +1,119 @@
+---
+title: Errors and streaming
+description: Handle Connect error codes, field details, partial responses, deadlines, and server-streaming methods.
+sidebar:
+  label: Errors and streaming
+---
+
+API clients need to distinguish a failed RPC, a successful response with partial errors, and a stream that ends with an error.
+
+## Handle unary errors
+
+A failed Connect JSON unary request returns a JSON error with a stable Connect code and a human-readable message:
+
+```json
+{
+  "code": "invalid_argument",
+  "message": "validation failed",
+  "details": []
+}
+```
+
+Branch on the Connect code, not message text or only the HTTP status.
+
+| Code | Typical Querylane cause | Client action |
+| --- | --- | --- |
+| `invalid_argument` | Bad resource name, filter, field mask, page token, or request validation | Fix the request; show field details when present |
+| `not_found` | The named Querylane or PostgreSQL resource is not visible | Refresh its parent list and confirm the complete resource name |
+| `already_exists` | An instance ID or resource already exists | Reuse a different ID or read the existing resource |
+| `failed_precondition` | Metadata setup is incomplete, credentials are unreadable, or a dependency is not ready | Follow the detail and restore the required state |
+| `permission_denied` | PostgreSQL or an application policy rejected the operation | Do not retry unchanged; review the configured identity |
+| `resource_exhausted` | A rate, concurrency, or result limit was reached | Back off and reduce concurrency or request size |
+| `unavailable` | Querylane metadata or a managed PostgreSQL target is temporarily unavailable | Retry with bounded exponential backoff when the operation is safe |
+| `deadline_exceeded` | Client, server, or PostgreSQL statement deadline elapsed | Reduce scope or raise a justified client deadline |
+| `internal` | Querylane could not classify or complete the operation | Capture the request method, timestamp, digest, and redacted logs |
+
+Generated Connect clients expose the code through `ConnectError`:
+
+```ts
+import { Code, ConnectError } from "@connectrpc/connect";
+
+try {
+  await instances.getInstance({ name: "instances/production" });
+} catch (error) {
+  const connectError = ConnectError.from(error);
+  if (connectError.code === Code.NotFound) {
+    console.info("Instance no longer exists");
+  } else {
+    throw connectError;
+  }
+}
+```
+
+Do not log complete request bodies for methods that accept PostgreSQL passwords, row filters containing sensitive values, or SQL text.
+
+## Read validation details
+
+Validation failures can carry structured `google.rpc.BadRequest` details with one or more field violations. PostgreSQL failures can include Querylane's transport-neutral PostgreSQL detail with SQLSTATE category and safe operation context.
+
+Register the protobuf detail types in clients that decode `google.protobuf.Any`. If a generic client does not know a detail type, keep the top-level Connect code and message useful and retain the raw detail only through an approved diagnostic channel.
+
+## Handle partial responses
+
+Some live overview and insight RPCs return useful data plus `partialErrors`. The RPC itself succeeds because one failed probe should not hide healthy sections.
+
+For each partial error:
+
+1. render or log every entry, not only the first;
+2. associate it with the metric or section named in its detail metadata;
+3. keep successful sections visible; and
+4. offer a targeted retry or permission fix.
+
+Do not convert a missing metric into zero. Zero is an observation; unavailable means Querylane did not obtain one.
+
+## Call a server stream
+
+`TableDataService.StreamRows`, `SQLService.ExecuteQuery`, `OnboardingService.SetupAppDatabase`, and `OnboardingService.WatchConfigChanges` return server streams. Connect streaming uses framed `application/connect+json`, not newline-delimited JSON, so use a generated client.
+
+```ts
+const stream = tableData.streamRows({
+  name: "instances/production/databases/app/schemas/public/tables/orders",
+  selectedColumns: ["id", "created_at"],
+  batchSize: 500,
+  maxRows: 10_000n,
+});
+
+try {
+  for await (const message of stream) {
+    if (message.result.case === "rowBatch") {
+      processRows(message.result.value.rows);
+    }
+  }
+} catch (error) {
+  const connectError = ConnectError.from(error);
+  console.error(connectError.code, connectError.message);
+}
+```
+
+Use the exact generated oneof case names from your client version. The example shows the control flow, not a substitute for generated types.
+
+## Stream lifecycle rules
+
+- Apply a deadline or cancellation signal appropriate to the operation.
+- Process batches incrementally instead of collecting an unbounded stream in memory.
+- Expect headers before the first message and trailers or a final Connect end-stream envelope at completion.
+- A streaming error can arrive in the final envelope while the HTTP response status is `200`.
+- Treat messages processed before a terminal error according to the method's contract. Do not silently present a partial export as complete.
+- Cancel the stream when the user leaves the workflow or the output sink fails.
+
+`ExecuteQuery` and table reads are bounded by Querylane request limits and PostgreSQL read-only transactions. A client cancellation releases server work, but it does not replace database statement timeouts.
+
+## Retry rules
+
+Retry only when all 3 are true:
+
+1. the code is transient, such as `unavailable`;
+2. the operation is safe to repeat; and
+3. the retry has a deadline, maximum attempts, and jittered backoff.
+
+Reads are usually repeatable but can observe newer PostgreSQL state. Mutation and onboarding retries need method-specific idempotency review. Never retry `invalid_argument`, `permission_denied`, or `failed_precondition` without changing the cause.

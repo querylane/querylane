@@ -15,6 +15,7 @@ SQLService exposes ad-hoc read-only query execution. This is intended for the SQ
 - **Source:** [`sql.proto`](https://github.com/querylane/querylane/blob/main/proto/querylane/console/v1alpha1/sql.proto)
 
 The field tables show the top-level wire shape. Follow the source link for nested messages, enums, validation constraints, and resource annotations.
+The JSON examples use protobuf JSON field names and wire encodings. They are request starting points, not production credentials or guaranteed resources.
 
 ## Endpoints
 
@@ -33,6 +34,21 @@ rpc ExecuteQuery(ExecuteQueryRequest) returns (stream ExecuteQueryResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.SQLService/ExecuteQuery`
 - **Mode:** Server stream
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production/databases/app",
+  "statement": "SELECT current_database();",
+  "rowLimit": 100,
+  "batchSize": 500,
+  "timeout": "30s",
+  "defaultSchema": "public"
+}
+```
 
 ### Request
 
@@ -67,6 +83,22 @@ rpc ExplainQuery(ExplainQueryRequest) returns (ExplainQueryResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.SQLService/ExplainQuery`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production/databases/app",
+  "statement": "SELECT current_database();",
+  "format": "FORMAT_TEXT",
+  "analyze": false,
+  "buffers": false,
+  "timeout": "30s",
+  "defaultSchema": "public"
+}
+```
 
 ### Request
 

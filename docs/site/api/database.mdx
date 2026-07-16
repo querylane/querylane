@@ -15,6 +15,7 @@ Service for managing databases within registered Instances. This service provide
 - **Source:** [`database.proto`](https://github.com/querylane/querylane/blob/main/proto/querylane/console/v1alpha1/database.proto)
 
 The field tables show the top-level wire shape. Follow the source link for nested messages, enums, validation constraints, and resource annotations.
+The JSON examples use protobuf JSON field names and wire encodings. They are request starting points, not production credentials or guaranteed resources.
 
 ## Endpoints
 
@@ -34,6 +35,17 @@ rpc ListDatabases(ListDatabasesRequest) returns (ListDatabasesResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.DatabaseService/ListDatabases`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production",
+  "pageSize": 50
+}
+```
 
 ### Request
 
@@ -67,6 +79,16 @@ rpc GetDatabase(GetDatabaseRequest) returns (GetDatabaseResponse)
 - **Procedure:** `POST /querylane.console.v1alpha1.DatabaseService/GetDatabase`
 - **Mode:** Unary
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "name": "instances/production/databases/app"
+}
+```
+
 ### Request
 
 `GetDatabaseRequest`
@@ -93,6 +115,16 @@ rpc GetDatabaseQueryInsights(GetDatabaseQueryInsightsRequest) returns (GetDataba
 
 - **Procedure:** `POST /querylane.console.v1alpha1.DatabaseService/GetDatabaseQueryInsights`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "name": "instances/production/databases/app"
+}
+```
 
 ### Request
 

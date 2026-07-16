@@ -1,0 +1,128 @@
+---
+title: Call the API
+description: Send Connect JSON requests with curl or use generated TypeScript clients for unary and streaming RPCs.
+sidebar:
+  label: Call the API
+---
+
+Querylane serves its web application and API from the same HTTP server. API procedure paths use the fully qualified protobuf service and method:
+
+```text
+/{package}.{Service}/{Method}
+```
+
+For this preview, the package is `querylane.console.v1alpha1`.
+
+:::warning
+Querylane does not currently authenticate API callers. Put the server behind the same authentication and network boundary as the web application before using production instance credentials.
+:::
+
+## Call a unary method with curl
+
+Set the base URL once:
+
+```sh
+export QUERYLANE_URL='http://localhost:8080'
+```
+
+List the first 50 instances:
+
+```sh
+curl --fail-with-body --silent --show-error \
+  --request POST \
+  --header 'Content-Type: application/json' \
+  --header 'Connect-Protocol-Version: 1' \
+  --data '{"pageSize":50}' \
+  "$QUERYLANE_URL/querylane.console.v1alpha1.InstanceService/ListInstances"
+```
+
+Get one resource by its complete name:
+
+```sh
+curl --fail-with-body --silent --show-error \
+  --request POST \
+  --header 'Content-Type: application/json' \
+  --header 'Connect-Protocol-Version: 1' \
+  --data '{"name":"instances/production"}' \
+  "$QUERYLANE_URL/querylane.console.v1alpha1.InstanceService/GetInstance"
+```
+
+Protobuf JSON uses lower camel case field names such as `pageSize` and `displayName`. `int64` and other 64-bit integer fields are encoded as JSON strings. Timestamps use RFC 3339 strings, durations use strings such as `30s`, and enums use their protobuf names.
+
+## Register an instance
+
+`CreateInstance` accepts one of the current `spec` or legacy `instance` request bodies. Prefer `spec`:
+
+```sh
+curl --fail-with-body --silent --show-error \
+  --request POST \
+  --header 'Content-Type: application/json' \
+  --header 'Connect-Protocol-Version: 1' \
+  --data @- \
+  "$QUERYLANE_URL/querylane.console.v1alpha1.InstanceService/CreateInstance" <<'JSON'
+{
+  "spec": {
+    "displayName": "Production",
+    "config": {
+      "host": "db.example.com",
+      "port": 5432,
+      "database": "app",
+      "username": "querylane_reader",
+      "password": "replace-me",
+      "sslMode": "SSL_MODE_VERIFY_FULL"
+    }
+  },
+  "instanceId": "production"
+}
+JSON
+```
+
+The password travels in the request body. Use HTTPS, keep shell history and CI logs clean, and prefer config-managed credentials sourced from environment variables when automation should not send inline passwords.
+
+## Use a generated TypeScript client
+
+Generate protobuf and Connect client code from Querylane's `proto/` contract, then install the Connect runtime packages used by your application. A browser client can use the same pattern as Querylane:
+
+```ts
+import { createClient } from "@connectrpc/connect";
+import { createConnectTransport } from "@connectrpc/connect-web";
+import { InstanceService } from "./gen/querylane/console/v1alpha1/instance_pb";
+
+const transport = createConnectTransport({
+  baseUrl: "https://querylane.example.com",
+});
+const instances = createClient(InstanceService, transport);
+
+const response = await instances.listInstances({ pageSize: 50 });
+for (const instance of response.instances) {
+  console.log(instance.name, instance.displayName);
+}
+```
+
+Use generated clients instead of hand-building JSON when you need compile-time request types, protobuf `Any` details, deadlines, interceptors, or streaming.
+
+## Set a deadline
+
+Connect clients support deadlines directly. For curl, send the timeout in milliseconds:
+
+```sh
+curl --fail-with-body --silent --show-error \
+  --request POST \
+  --header 'Content-Type: application/json' \
+  --header 'Connect-Protocol-Version: 1' \
+  --header 'Connect-Timeout-Ms: 10000' \
+  --data '{}' \
+  "$QUERYLANE_URL/querylane.console.v1alpha1.ConsoleService/GetConsoleConfig"
+```
+
+The client should also have its own network timeout. A server deadline does not guarantee that a disconnected client waits correctly.
+
+## Choose a protocol
+
+The same handlers accept Connect, gRPC, and gRPC-Web. Connect JSON is convenient for unary diagnostics. Generated clients are the default for application integration and required for practical streaming use.
+
+- [Connect protocol specification](https://connectrpc.com/docs/protocol/)
+- [TypeScript client documentation](https://connectrpc.com/docs/web/clients/)
+- [Querylane protobuf source](https://github.com/querylane/querylane/tree/main/proto/querylane/console/v1alpha1)
+
+Continue with [pagination and filtering](/api/pagination-and-filtering) or [errors and streaming](/api/errors-and-streaming).

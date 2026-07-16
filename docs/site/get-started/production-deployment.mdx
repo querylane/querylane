@@ -168,3 +168,10 @@ Multiple replicas must share the same metadata database, `QUERYLANE_INSTANCE_SEC
 Start with a dedicated `LOGIN` role that can connect and read only the databases and schemas you intend to expose. Add PostgreSQL's `pg_monitor` role only when operators need monitoring views that ordinary users cannot read. Avoid superuser, role creation, database creation, replication, and bypass-RLS privileges unless a specific Querylane workflow proves it needs them.
 
 After deployment, [register the first instance](/get-started/register-instance) or define config-managed instances in [manual YAML](/get-started/manual-yaml).
+
+For day-2 operations, continue with the full runbooks:
+
+- [PostgreSQL permissions](/operations/postgresql-permissions)
+- [Backup and restore](/operations/backup-and-restore)
+- [Upgrades and rollbacks](/operations/upgrades-and-rollbacks)
+- [Deployment recipes](/operations/deployment-recipes)

@@ -15,6 +15,7 @@ MetricsService serves the time series collected by querylane's background sampli
 - **Source:** [`metrics.proto`](https://github.com/querylane/querylane/blob/main/proto/querylane/console/v1alpha1/metrics.proto)
 
 The field tables show the top-level wire shape. Follow the source link for nested messages, enums, validation constraints, and resource annotations.
+The JSON examples use protobuf JSON field names and wire encodings. They are request starting points, not production credentials or guaranteed resources.
 
 ## Endpoints
 
@@ -32,6 +33,25 @@ rpc QueryMetrics(QueryMetricsRequest) returns (QueryMetricsResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.MetricsService/QueryMetrics`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "target": "instances/production",
+  "metrics": [
+    "METRIC_ID_CONNECTIONS_ACTIVE"
+  ],
+  "interval": {
+    "endTime": "2026-07-17T12:00:00Z",
+    "startTime": "2026-07-17T11:00:00Z"
+  },
+  "step": "60s",
+  "comparison": "3600s"
+}
+```
 
 ### Request
 

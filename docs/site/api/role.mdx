@@ -15,6 +15,7 @@ Service for viewing PostgreSQL roles available on a registered Instance, includi
 - **Source:** [`role.proto`](https://github.com/querylane/querylane/blob/main/proto/querylane/console/v1alpha1/role.proto)
 
 The field tables show the top-level wire shape. Follow the source link for nested messages, enums, validation constraints, and resource annotations.
+The JSON examples use protobuf JSON field names and wire encodings. They are request starting points, not production credentials or guaranteed resources.
 
 ## Endpoints
 
@@ -37,6 +38,17 @@ rpc ListRoles(ListRolesRequest) returns (ListRolesResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.RoleService/ListRoles`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production",
+  "pageSize": 50
+}
+```
 
 ### Request
 
@@ -70,6 +82,16 @@ rpc GetRole(GetRoleRequest) returns (GetRoleResponse)
 - **Procedure:** `POST /querylane.console.v1alpha1.RoleService/GetRole`
 - **Mode:** Unary
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "name": "instances/production/roles/app_reader"
+}
+```
+
 ### Request
 
 `GetRoleRequest`
@@ -96,6 +118,18 @@ rpc ListRoleGrants(ListRoleGrantsRequest) returns (ListRoleGrantsResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.RoleService/ListRoleGrants`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production/roles/app_reader",
+  "database": "app",
+  "pageSize": 50
+}
+```
 
 ### Request
 
@@ -130,6 +164,18 @@ rpc ListRoleOwnedObjects(ListRoleOwnedObjectsRequest) returns (ListRoleOwnedObje
 - **Procedure:** `POST /querylane.console.v1alpha1.RoleService/ListRoleOwnedObjects`
 - **Mode:** Unary
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production/roles/app_reader",
+  "database": "app",
+  "pageSize": 50
+}
+```
+
 ### Request
 
 `ListRoleOwnedObjectsRequest`
@@ -163,6 +209,18 @@ rpc ListRoleDefaultPrivileges(ListRoleDefaultPrivilegesRequest) returns (ListRol
 - **Procedure:** `POST /querylane.console.v1alpha1.RoleService/ListRoleDefaultPrivileges`
 - **Mode:** Unary
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production/roles/app_reader",
+  "database": "app",
+  "pageSize": 50
+}
+```
+
 ### Request
 
 `ListRoleDefaultPrivilegesRequest`
@@ -195,6 +253,17 @@ rpc ListPublicGrants(ListPublicGrantsRequest) returns (ListPublicGrantsResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.RoleService/ListPublicGrants`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production",
+  "pageSize": 50
+}
+```
 
 ### Request
 

@@ -1,0 +1,69 @@
+---
+title: Export table data safely
+description: Scope, review, and export permitted rows as CSV, JSON, or SQL without treating a preview as a backup.
+sidebar:
+  label: Export data safely
+---
+
+Querylane exports selected rows from the Data Explorer. Use it for bounded investigation and handoff, not for database backup or bulk migration.
+
+## Before you start
+
+- Confirm the managed-instance login is allowed to read the table and intended rows.
+- Treat the browser user as having the same effective read access as Querylane.
+- Decide the minimum columns and rows the recipient needs.
+- Choose a secure destination and retention period before generating the file.
+- Use PostgreSQL backup or `COPY` tooling for large or authoritative datasets.
+
+Row-level security applies to Querylane's registered database role. Querylane does not add a second per-user row policy.
+
+## 1. Narrow the result
+
+Open the table's **Data** tab, then:
+
+1. Add structured filters for the incident, customer, date range, or key set.
+2. Add stable sorts so the result is reviewable.
+3. Hide irrelevant sensitive columns from the working view.
+4. Check the row count, response-cap status, and active filter chips.
+5. Select only the rows to export.
+
+Filtering is server-side. The selected-row export is based on the currently loaded result and selection, not an instruction to dump the whole table.
+
+## 2. Review the selection
+
+Before export:
+
+- open representative rows in the detail drawer;
+- confirm nulls and PostgreSQL types are represented as expected;
+- check whether any displayed cell is truncated; and
+- verify that the selected count matches the intended scope.
+
+Querylane refuses to export selected rows with truncated values because a plausible but incomplete CSV, JSON, or SQL file would be unsafe.
+
+## 3. Choose a format
+
+Select **Export**, then choose:
+
+| Format | Best for | Important behavior |
+| --- | --- | --- |
+| CSV | Spreadsheets and simple interchange | Values that spreadsheet software could interpret as formulas are neutralized |
+| JSON | Typed application handoff and nested values | PostgreSQL values that cannot safely become JSON numbers remain quoted strings |
+| SQL (plain literals) | A reviewed set of illustrative `INSERT` statements | Complex PostgreSQL types do not receive full round-trip casts; review before execution |
+
+The SQL option is not a replacement for `pg_dump`. Never run generated statements against production without review, access controls, and an approved change plan.
+
+## 4. Protect the file
+
+- Save to an encrypted device or approved secure workspace.
+- Do not upload production rows to tickets, chat, or personal cloud storage.
+- Record the source instance, database, table, filters, time, and requesting owner.
+- Delete the file when the stated purpose and retention window end.
+- Prefer identifiers and aggregates over row contents in incident notes.
+
+## What to do next
+
+- **Need every matching row beyond the browser result:** use an approved server-side export such as `COPY` with a dedicated role and auditable query.
+- **Need a recoverable database artifact:** use [database backup tooling](/operations/backup-and-restore), not Data Explorer export.
+- **Need reproducibility:** save the filter definition and source timestamp with the file checksum.
+- **Need to share externally:** complete the required data-classification and redaction review first.
+- **Export is blocked by truncation:** narrow the selected rows or use a database-native export that preserves the complete values.
