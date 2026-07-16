@@ -152,6 +152,25 @@ test("documents the operational lifecycle for self-hosted deployments", async ()
 	expect(upgrades).toContain("Restore the pre-upgrade backup");
 });
 
+test("keeps deployment recipes generic and customer-facing", async () => {
+	const deployment = await readFile(
+		join(root, "docs/site/operations/deployment-recipes.mdx"),
+		"utf8",
+	);
+
+	for (const implementationDetail of [
+		"distroless",
+		"metadata-database leases",
+	]) {
+		expect(deployment.toLowerCase()).not.toContain(implementationDetail);
+	}
+
+	expect(deployment).not.toMatch(
+		/\b100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])(?:\.\d{1,3}){2}\b/u,
+	);
+	expect(deployment).not.toMatch(/[a-z0-9-]+\.ts\.net/iu);
+});
+
 test("provides task-based guides for common PostgreSQL investigations", async () => {
 	const guidesRoot = join(root, "docs/site/guides");
 	const pages = await readdir(guidesRoot);

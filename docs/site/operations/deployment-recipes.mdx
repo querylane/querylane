@@ -7,6 +7,8 @@ sidebar:
 
 These recipes start after you have prepared external metadata PostgreSQL, generated `QUERYLANE_INSTANCE_SECRET_KEY`, and pinned a Querylane image digest. See [Deploy Querylane](/get-started/production-deployment) for the base configuration.
 
+All hostnames, usernames, password hashes, image digests, and network addresses below are examples. Replace them with values from your own environment.
+
 :::warning
 Querylane does not currently provide built-in authentication. A tunnel or TLS certificate alone does not restrict users. Every public route must have an authentication policy in front of it.
 :::
@@ -44,7 +46,7 @@ services:
     restart: unless-stopped
 ```
 
-Keep `.env` outside version control with mode `0600`. The Querylane image reads its secrets from environment variables, so use your platform's protected environment injection when available. Docker Compose file secrets cannot replace those variables unless an external entrypoint reads the files first, and the distroless Querylane image does not include a shell.
+Keep `.env` outside version control with mode `0600`. Querylane reads these secrets from environment variables, so use your platform's protected environment injection when available. Compose `secrets:` mounts files rather than setting environment variables; use it only when your runtime securely maps those files into the required variables.
 
 Start and inspect it:
 
@@ -110,7 +112,7 @@ Use this shape only with external metadata PostgreSQL. Every replica must receiv
 
 Expose port `8080` through an internal service and put the authenticating ingress in front of that service. Use `GET /` for liveness. For readiness, call `ConsoleService.GetConsoleConfig` and require the ready application state rather than treating any HTTP response as ready.
 
-Background work is coordinated through metadata-database leases, but live-query limits apply per process. Multiply per-process limits by the maximum replica count when estimating target PostgreSQL load.
+Estimate worst-case target PostgreSQL load by multiplying each configured live-query limit by the maximum replica count.
 
 During an upgrade, start one new replica first. Do not mix versions across a metadata migration unless the release notes declare that combination compatible.
 
