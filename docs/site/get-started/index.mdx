@@ -5,12 +5,22 @@ sidebar:
   label: Choose your setup
 ---
 
-Querylane onboarding has two separate steps:
+Querylane setup has three separate steps:
 
-1. **Configure Querylane internal storage.** Querylane needs its own PostgreSQL database for metadata, saved connections, and application state.
-2. **Register a PostgreSQL server to manage.** This is your application, production, staging, or analytics server.
+1. **Install Querylane.** Start the preview container or run the application from source.
+2. **Configure Querylane internal storage.** Querylane needs its own PostgreSQL database for metadata, saved connections, and application state.
+3. **Register a PostgreSQL server to manage.** This is your application, production, staging, or analytics server.
 
 The first database belongs to Querylane. The second is an **instance** you ask Querylane to inspect. They can run on the same PostgreSQL server, but they are different resources and should use different databases and credentials.
+
+<CardGroup cols={2}>
+  <Card title="Install Querylane" href="/get-started/install-querylane" icon="download">
+    Start the rolling preview with Docker, or build and run the current source tree.
+  </Card>
+  <Card title="Deploy it durably" href="/get-started/production-deployment" icon="shield-check">
+    Add external PostgreSQL, stable secrets, authenticated ingress, backups, and readiness checks.
+  </Card>
+</CardGroup>
 
 <img
   alt="The first-launch wizard explains Querylane internal storage before a managed PostgreSQL server is added."
@@ -51,4 +61,6 @@ The first database belongs to Querylane. The second is an **instance** you ask Q
 If you want to see Querylane quickly, use **Embedded PostgreSQL**. If you plan to keep the installation, move to **External PostgreSQL** with backups and a stable secret key.
 :::
 
-Already running from source? [Open the local preview guide](/get-started/local-preview). After internal storage is ready, every path continues to [register your first instance](/get-started/register-instance).
+Not installed yet? [Start with the installation guide](/get-started/install-querylane). Already running from source? [Open the local preview guide](/get-started/local-preview). After internal storage is ready, every path continues to [register your first instance](/get-started/register-instance).
+
+If any stage fails, use the [setup troubleshooting guide](/get-started/troubleshooting).

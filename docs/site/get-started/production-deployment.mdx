@@ -1,0 +1,170 @@
+---
+title: Deploy Querylane
+description: Prepare Querylane for a durable deployment with external PostgreSQL, stable secrets, network controls, backups, and readiness checks.
+sidebar:
+  label: Production deployment
+---
+
+Querylane is self-hosted and still a preview. A durable deployment needs more than a running container: an external metadata database, persistent secrets, authenticated ingress, restricted database access, backups, and a pinned image.
+
+:::warning
+Querylane does not currently include built-in authentication. Do not expose it directly to the public internet. Put it behind a trusted network or a reverse proxy that enforces authentication and TLS.
+:::
+
+## Production shape
+
+```text
+Users
+  │ HTTPS + authentication
+  ▼
+Reverse proxy
+  │ private HTTP
+  ▼
+Querylane ─────► Querylane metadata PostgreSQL
+  │
+  └────────────► Managed PostgreSQL instances
+```
+
+The metadata database stores Querylane state and encrypted UI-managed instance credentials. Managed instances are the servers Querylane inspects. Keep their databases and credentials separate.
+
+## 1. Prepare external PostgreSQL
+
+Create a dedicated metadata database and login:
+
+```sql
+CREATE ROLE querylane LOGIN PASSWORD 'replace-me';
+CREATE DATABASE querylane OWNER querylane;
+```
+
+Use a managed or otherwise backed-up PostgreSQL service. Querylane applies its metadata schema during setup and startup, so take a database backup before upgrading the application.
+
+## 2. Create stable secrets
+
+Generate the instance encryption key once:
+
+```sh
+openssl rand -base64 32
+```
+
+Store the exact value in your deployment secret manager as `QUERYLANE_INSTANCE_SECRET_KEY`. Every replica and every restart must use the same key. Key rotation is not currently supported; replacing the value makes existing encrypted instance credentials unreadable and can prevent startup when the shared signing key is encrypted.
+
+Store the metadata connection string separately as `QUERYLANE_DATABASE_DSN`:
+
+```text
+postgresql://querylane:replace-me@metadata-db.example.com:5432/querylane?sslmode=verify-full
+```
+
+## 3. Add production policy
+
+Create `querylane.yaml` with the non-secret settings:
+
+```yaml
+http:
+  host: "0.0.0.0"
+  port: 8080
+  access_log: true
+  cors:
+    allowed_origins:
+      - "https://querylane.example.com"
+
+instance_targets:
+  allowed_cidrs:
+    - "10.0.0.0/8"
+  denied_cidrs:
+    - "10.10.0.0/16"
+
+limits:
+  live_queries:
+    global: 32
+    per_instance: 6
+  connection_tests:
+    per_caller_per_minute: 10
+    burst: 5
+  postgres_pool:
+    max_open_connections: 8
+    max_idle_connections: 2
+    idle_timeout: "5m"
+    connection_max_lifetime: "30m"
+```
+
+A nonempty `allowed_cidrs` list is strict. Querylane resolves the hostname and checks the resolved address before each managed PostgreSQL connection. Custom deny rules always win.
+
+The complete field reference is in [`docs/reference-config.yaml`](https://github.com/querylane/querylane/blob/main/docs/reference-config.yaml).
+
+## 4. Run a pinned container
+
+The project currently publishes the rolling `ghcr.io/querylane/querylane-dev:edge` preview. Resolve and record its digest before deployment:
+
+```sh
+docker pull ghcr.io/querylane/querylane-dev:edge
+docker image inspect \
+  --format='{{index .RepoDigests 0}}' \
+  ghcr.io/querylane/querylane-dev:edge
+```
+
+Use that immutable value in `compose.yaml`:
+
+```yaml
+services:
+  querylane:
+    image: ghcr.io/querylane/querylane-dev@sha256:replace-with-pinned-digest
+    command:
+      - server
+      - start
+      - --config
+      - /etc/querylane/querylane.yaml
+    environment:
+      QUERYLANE_DATABASE_DSN: "${QUERYLANE_DATABASE_DSN}"
+      QUERYLANE_INSTANCE_SECRET_KEY: "${QUERYLANE_INSTANCE_SECRET_KEY}"
+    volumes:
+      - ./querylane.yaml:/etc/querylane/querylane.yaml:ro
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+```
+
+Keep the `.env` file out of version control and restrict it to the deployment user:
+
+```sh
+chmod 600 .env
+chmod 644 querylane.yaml
+docker compose up --detach
+```
+
+The loopback port assumes the reverse proxy runs on the Docker host. If the proxy is another container, remove `ports`, place both services on a private Docker network, and proxy to `querylane:8080`.
+
+## 5. Protect ingress and database egress
+
+- Terminate TLS at the reverse proxy.
+- Require SSO, an identity-aware proxy, a VPN, or another authentication layer.
+- Forward only to port `8080`; do not expose PostgreSQL or the container runtime.
+- Allow Querylane to reach only the metadata database and approved managed-instance networks.
+- Set the exact CORS origin instead of `*` when cross-origin browser access is required.
+- Use a dedicated, least-privilege login for each managed PostgreSQL instance.
+
+Querylane is read-first, but it can expose catalog data, table rows, SQL text, role grants, and live session information to anyone who can reach the application. Treat application access as database access.
+
+## 6. Readiness, backups, and upgrades
+
+Use `GET /` as a liveness check. Use `ConsoleService.GetConsoleConfig` as readiness after metadata setup; the command is in the [installation guide](/get-started/install-querylane#verify-the-server).
+
+Before each upgrade:
+
+1. Read the [release notes](/changelog).
+2. Back up the Querylane metadata database.
+3. Pull and test the new image separately.
+4. Record and deploy its immutable digest.
+5. Verify the Console API, then one non-critical managed instance.
+
+Multiple replicas must share the same metadata database, `QUERYLANE_INSTANCE_SECRET_KEY`, configuration, and target policy. Do not use embedded PostgreSQL for a multi-replica deployment. Remember that live-query limits are process-local, so total capacity grows with the replica count.
+
+## Managed PostgreSQL role
+
+Start with a dedicated `LOGIN` role that can connect and read only the databases and schemas you intend to expose. Add PostgreSQL's `pg_monitor` role only when operators need monitoring views that ordinary users cannot read. Avoid superuser, role creation, database creation, replication, and bypass-RLS privileges unless a specific Querylane workflow proves it needs them.
+
+After deployment, [register the first instance](/get-started/register-instance) or define config-managed instances in [manual YAML](/get-started/manual-yaml).

@@ -1,0 +1,73 @@
+---
+title: Install Querylane
+description: Run the Querylane preview with Docker or build it from source, then verify the first-launch setup.
+sidebar:
+  label: Install Querylane
+---
+
+Querylane currently publishes a rolling preview image. There is no stable tagged release yet, so use the preview to evaluate the product and pin its digest anywhere repeatability matters.
+
+## Fastest path: Docker
+
+You need Docker and a PostgreSQL server that Querylane can reach. Querylane also offers embedded PostgreSQL, but that path is best for a direct host run rather than a container.
+
+Start a disposable preview:
+
+```sh
+docker run --rm \
+  --name querylane \
+  --publish 127.0.0.1:8080:8080 \
+  ghcr.io/querylane/querylane-dev:edge
+```
+
+Open `http://localhost:8080`. A fresh container has no metadata database configuration, so Querylane opens the first-launch wizard.
+
+:::warning
+`querylane-dev:edge` follows the latest build and can change without notice. The command above also removes the container when it stops. Use it for evaluation, not as a durable deployment.
+:::
+
+## Choose Querylane's storage
+
+The wizard is configuring **Querylane's own metadata database**, not the PostgreSQL server you want to inspect. Choose one path:
+
+| Path | Best for | Continue with |
+| --- | --- | --- |
+| Embedded PostgreSQL | A direct local run or disposable demo | [Embedded PostgreSQL](/get-started/embedded-postgresql) |
+| External PostgreSQL | A durable installation | [External PostgreSQL](/get-started/external-postgresql) |
+| Manual YAML | Configuration-as-code and environment-backed secrets | [Manual YAML](/get-started/manual-yaml) |
+
+After that database is ready, [register the PostgreSQL instance](/get-started/register-instance) you want Querylane to inspect.
+
+## Build and run from source
+
+Use the source path for contributor work or when you need an unreleased change. Install Go 1.26, Bun 1.3, [Task](https://taskfile.dev/), and Git.
+
+```sh
+git clone https://github.com/querylane/querylane.git
+cd querylane
+task setup
+task dev:setup
+task dev
+```
+
+The development stack starts its own PostgreSQL database, the backend on port `8080`, and the frontend at the URL printed by Rsbuild. To exercise the actual first-launch wizard instead, use the [local preview guide](/get-started/local-preview).
+
+## Verify the server
+
+A successful `GET /` proves that the process is serving the web application:
+
+```sh
+curl --fail http://localhost:8080/ > /dev/null
+```
+
+After metadata setup is complete, verify the API too:
+
+```sh
+curl --fail --request POST \
+  --header 'Content-Type: application/json' \
+  --header 'Connect-Protocol-Version: 1' \
+  --data '{}' \
+  http://localhost:8080/querylane.console.v1alpha1.ConsoleService/GetConsoleConfig
+```
+
+If the second command reports `failed_precondition`, the server is running but still needs metadata database setup. See [troubleshooting](/get-started/troubleshooting) for startup, connection, and container problems.

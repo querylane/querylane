@@ -4,9 +4,11 @@
 	"packageManager": "bun@1.3.14",
 	"type": "module",
 	"scripts": {
+		"docs:api:generate": "bun scripts/generate-grpc-docs.ts",
 		"docs:build": "blume build --strict",
 		"docs:dev": "blume dev",
-		"docs:test": "bun test scripts/docs-deployment.test.ts",
+		"docs:test": "bun test scripts/docs-*.test.ts",
+		"docs:test:content": "bun test scripts/docs-content.test.ts",
 		"setup:worktree": "bun ./scripts/setup-worktree.mjs"
 	},
 	"devDependencies": {

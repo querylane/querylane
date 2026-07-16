@@ -1,0 +1,118 @@
+---
+title: Troubleshoot setup
+description: Diagnose Querylane startup, metadata setup, PostgreSQL connections, secrets, containers, and API requests.
+sidebar:
+  label: Troubleshooting
+---
+
+Start with the process logs, then separate **Querylane metadata database** problems from **managed PostgreSQL instance** problems. They use different connections and fail at different stages.
+
+## Collect useful evidence
+
+For Docker:
+
+```sh
+docker logs --tail 200 querylane
+docker inspect querylane --format '{{json .State}}'
+```
+
+For a direct run, increase logging before the command:
+
+```sh
+querylane --log-level=debug server start --config /path/to/querylane.yaml
+```
+
+Do not paste DSNs, passwords, `QUERYLANE_INSTANCE_SECRET_KEY`, or unredacted database rows into an issue.
+
+## The browser does not open Querylane
+
+1. Confirm the process is still running.
+2. Confirm it logged `started HTTP server` and the expected address.
+3. Request the web application directly:
+
+```sh
+curl --verbose http://localhost:8080/
+```
+
+If Docker published `127.0.0.1:8080:8080`, the service is reachable only from the Docker host. A reverse proxy in another container must share a Docker network and use `http://querylane:8080` instead.
+
+## The setup wizard does not appear
+
+Querylane skips first launch when a metadata database or embedded database is already configured. Check:
+
+- the explicit `--config` path;
+- `~/.querylane/config.yaml` from an earlier run;
+- `QUERYLANE_DATABASE_DSN` and other `QUERYLANE_DATABASE_*` variables;
+- a mounted configuration file inside the container.
+
+To repeat onboarding, use an empty environment and a new disposable container. Do not delete a durable configuration until you have backed up its metadata database and secrets.
+
+## External metadata setup fails
+
+Check the error in the setup progress view and the server log.
+
+| Symptom | Likely cause | Check |
+| --- | --- | --- |
+| Connection refused or timeout | Wrong host or port, firewall, or PostgreSQL not listening | Test TCP reachability from the Querylane host or container |
+| Password authentication failed | Wrong username/password or `pg_hba.conf` rule | Connect with the same DSN using `psql` |
+| Database does not exist | The DSN names the managed app database instead of a dedicated Querylane database | Create and use the metadata database |
+| Certificate or hostname error | SSL mode and certificate names do not match | Use the correct CA and hostname with `verify-full` |
+| Permission denied during migration | Metadata role does not own or cannot modify its database | Grant ownership or schema migration privileges |
+
+Inside Docker, `localhost` means the Querylane container itself. Use a Compose service name, routable database hostname, or `host.docker.internal` on Docker Desktop when PostgreSQL runs on the Mac host.
+
+## Embedded PostgreSQL fails
+
+Embedded setup needs a writable home and data directory, a free port, and enough disk space. Its default port is `5433` and its persistent data path is `~/.querylane/pgdata`.
+
+Common fixes:
+
+- Stop the process already using port `5433` or choose another port.
+- Correct data-directory ownership and filesystem permissions.
+- Do not mount the Querylane filesystem read-only.
+- Avoid embedded mode inside ephemeral containers or with multiple replicas.
+- Do not delete a partially initialized data directory until you have checked whether it contains state you need.
+
+Use external PostgreSQL for durable container and multi-node deployments.
+
+## Querylane will not restart after changing the secret key
+
+All restarts and replicas must use the exact `QUERYLANE_INSTANCE_SECRET_KEY` that encrypted existing data. Querylane intentionally refuses to replace an encrypted shared signing key with a new one.
+
+Restore the original key from your secret manager. Key rotation is not currently supported. If the original value is lost, encrypted instance credentials cannot be recovered by Querylane.
+
+## A managed instance will not connect
+
+Run the connection test from the registration form and check:
+
+- Querylane can resolve and reach the host and port;
+- the login can connect to the initial database;
+- the password or DSN environment variable is present in the **server** process;
+- SSL mode matches the PostgreSQL server;
+- `instance_targets.allowed_cidrs` includes the resolved address;
+- no custom deny CIDR matches it;
+- PostgreSQL `pg_hba.conf`, firewall, and cloud security-group rules allow the Querylane source address.
+
+Querylane returns a generic connection failure by default to avoid leaking target network details. A strict target allowlist enables more specific operator-facing errors.
+
+## Instance editing is read-only
+
+If the configuration contains an `instances` list, YAML owns those connections and the UI cannot create, update, or delete them. Edit the watched configuration file instead, or remove the entire `instances` section to return ownership to the UI and API.
+
+## An API request returns 404 or 415
+
+Connect procedure paths are case-sensitive and fully qualified:
+
+```text
+/querylane.console.v1alpha1.InstanceService/ListInstances
+```
+
+Unary JSON calls use `POST`, `Content-Type: application/json`, and `Connect-Protocol-Version: 1`. Streaming methods use Connect or gRPC framing, so call them with a generated client rather than plain JSON. See the [API overview](/api).
+
+## An API request returns `failed_precondition`
+
+The HTTP server is available, but Querylane's metadata database is not configured or ready. Complete first launch, correct the database configuration, or restore metadata database availability. `OnboardingService` remains available during this state.
+
+## Still stuck
+
+Capture the Querylane version or image digest, deployment method, redacted configuration, PostgreSQL version, exact timestamp, and relevant structured logs. Then open a [GitHub issue](https://github.com/querylane/querylane/issues) with the smallest reproducible setup.
