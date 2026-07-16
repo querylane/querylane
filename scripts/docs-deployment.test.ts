@@ -3,7 +3,8 @@ import { readFile } from "node:fs/promises";
 
 import config from "../blume.config";
 
-const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+const read = (path: string) =>
+	readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("builds canonical docs URLs for docs.querylane.net", () => {
 	expect(config.deployment).toMatchObject({
@@ -16,6 +17,7 @@ test("ships the static Blume output in a health-checked container", async () => 
 	const dockerfile = await read("Dockerfile.docs");
 
 	expect(dockerfile).toContain("FROM --platform=$BUILDPLATFORM oven/bun:");
+	expect(dockerfile).toContain("RUN bun run docs:test:content");
 	expect(dockerfile).toContain("RUN bun run docs:build");
 	expect(dockerfile).toContain(
 		"COPY --from=builder /app/dist /usr/share/caddy",

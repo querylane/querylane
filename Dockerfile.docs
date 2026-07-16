@@ -11,7 +11,10 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
 COPY blume.config.ts ./
 COPY docs/site ./docs/site
 COPY public ./public
+COPY proto ./proto
+COPY scripts/docs-content.test.ts ./scripts/docs-content.test.ts
 
+RUN bun run docs:test:content
 RUN bun run docs:build
 
 FROM caddy:2.11.4-alpine

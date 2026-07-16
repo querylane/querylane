@@ -6,10 +6,13 @@ export default defineMeta({
 	order: 1,
 	pages: [
 		"index",
+		"install-querylane",
 		"local-preview",
 		"embedded-postgresql",
 		"external-postgresql",
 		"manual-yaml",
 		"register-instance",
+		"production-deployment",
+		"troubleshooting",
 	],
 });
