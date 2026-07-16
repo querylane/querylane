@@ -12,7 +12,10 @@ React + TypeScript app bundled with Rsbuild.
 ## Scripts
 
 - `bun run dev` - start dev server
+- `bun run dev:scan` - start local dev with React Scan and the default global Compiler
+- `bun run dev:scan:control` - start local React Scan with annotation-only Compiler control
 - `bun run build` - build production assets
+- `bun run build:compiler-control` - build the local annotation-only Compiler control
 - `bun run preview` - preview the production build
 - `bun run quality:gate` - run the standard full local gate with React Doctor, typecheck, build, unit tests, and integration tests
 - `bun run quality:changed` - run changed-file Ultracite, React Doctor, typecheck, and changed Vitest suites against `QUALITY_BASE_REF` (defaults to `origin/main`)
