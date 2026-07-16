@@ -20,6 +20,10 @@ __debug_bin*
 # IDE dirs
 .idea
 .vscode
+/node_modules
+/.blume
+/.blume-verify
+/dist
 .codex/*
 !.codex/README.md
 !.codex/config.toml
