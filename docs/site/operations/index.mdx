@@ -1,0 +1,61 @@
+---
+title: Operate Querylane
+description: Secure, back up, upgrade, restore, and monitor a durable Querylane installation.
+sidebar:
+  label: Operations overview
+---
+
+Querylane sits between operators and PostgreSQL. Its operating boundary includes the application, its metadata database, the credentials used for managed instances, and the ingress that protects the web application and API.
+
+<CardGroup cols={2}>
+  <Card title="PostgreSQL permissions" href="/operations/postgresql-permissions" icon="key-round">
+    Give Querylane enough visibility for the workflows you need without using a superuser.
+  </Card>
+  <Card title="Backup and restore" href="/operations/backup-and-restore" icon="database-backup">
+    Protect metadata, encryption keys, configuration, and recovery instructions as one unit.
+  </Card>
+  <Card title="Upgrades and rollbacks" href="/operations/upgrades-and-rollbacks" icon="refresh-cw">
+    Pin releases, inspect migrations, verify a new version, and prepare a restore-based rollback.
+  </Card>
+  <Card title="Deployment recipes" href="/operations/deployment-recipes" icon="blocks">
+    Adapt Querylane to a single host, Caddy, Cloudflare Tunnel, or a multi-replica platform.
+  </Card>
+</CardGroup>
+
+## Responsibility map
+
+| Resource | What it holds | Operator responsibility |
+| --- | --- | --- |
+| Querylane process | Web application, API, catalog reads, and background probes | Pin the image, restrict the network, collect logs, and replace unhealthy replicas |
+| Metadata PostgreSQL | Saved instances, encrypted credentials, catalog state, samples, runner leases, and signing material | Provide availability, backups, restore tests, and migration access |
+| Instance secret key | The key that protects UI-managed instance credentials and shared signing material | Store outside the database, reuse across replicas and restarts, and back it up securely |
+| Managed PostgreSQL instances | The database servers Querylane inspects | Create least-privilege logins, restrict source networks, and review access |
+| Ingress | The route used by browsers and API clients | Require TLS and authentication because Querylane has no built-in authentication yet |
+
+## Operating checklist
+
+### Before first production use
+
+- Use external PostgreSQL for Querylane metadata.
+- Pin the Querylane container by digest.
+- Store `QUERYLANE_INSTANCE_SECRET_KEY` and the metadata DSN in a secret manager.
+- Put Querylane behind an authenticating reverse proxy, identity-aware proxy, or trusted private network.
+- Create a dedicated login for each managed PostgreSQL trust boundary.
+- Back up the metadata database and complete a restore rehearsal.
+
+### Every release
+
+1. Read the [release notes](/changelog).
+2. Back up metadata, configuration, and the instance secret key.
+3. Review pending migrations and save the current image digest.
+4. Upgrade one replica in a maintenance window.
+5. Verify readiness, a non-critical instance, and background samples.
+6. Scale out only after the first replica is healthy.
+
+### Regularly
+
+- Test a restore instead of only checking that backup files exist.
+- Review managed-instance role memberships and `PUBLIC` grants.
+- Check disk growth and metadata sample retention.
+- Remove stale instance credentials and ingress identities.
+- Reconfirm that Querylane can reach only approved PostgreSQL networks.

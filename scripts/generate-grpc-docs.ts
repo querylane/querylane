@@ -1,4 +1,11 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+	mkdir,
+	mkdtemp,
+	readdir,
+	readFile,
+	rm,
+	writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -21,10 +28,18 @@ type FieldDescriptor = {
 	typeName?: string;
 };
 
+type EnumDescriptor = {
+	name: string;
+	value?: Array<{ name: string; number: number }>;
+};
+
 type MessageDescriptor = {
+	enumType?: EnumDescriptor[];
 	field?: FieldDescriptor[];
 	name: string;
+	nestedType?: MessageDescriptor[];
 	oneofDecl?: Array<{ name: string }>;
+	options?: { mapEntry?: boolean };
 };
 
 type MethodDescriptor = {
@@ -41,6 +56,7 @@ type ServiceDescriptor = {
 };
 
 type FileDescriptor = {
+	enumType?: EnumDescriptor[];
 	messageType?: MessageDescriptor[];
 	name: string;
 	package: string;
@@ -59,6 +75,17 @@ type ServicePage = {
 	service: ServiceDescriptor;
 	slug: string;
 };
+
+type DescriptorIndex = {
+	enums: Map<string, EnumDescriptor>;
+	messages: Map<string, MessageDescriptor>;
+};
+
+const apiGuideSlugs = [
+	"calling-the-api",
+	"pagination-and-filtering",
+	"errors-and-streaming",
+];
 
 const scalarTypes: Record<string, string> = {
 	TYPE_BOOL: "bool",
@@ -166,6 +193,317 @@ const fieldBehavior = (
 	return labels.join(", ") || "—";
 };
 
+type JsonValue =
+	| boolean
+	| number
+	| string
+	| null
+	| JsonValue[]
+	| { [key: string]: JsonValue };
+
+const descriptorIndex = (files: FileDescriptor[]): DescriptorIndex => {
+	const index: DescriptorIndex = {
+		enums: new Map(),
+		messages: new Map(),
+	};
+
+	const addMessage = (prefix: string, message: MessageDescriptor) => {
+		const name = `${prefix}.${message.name}`;
+		index.messages.set(name, message);
+		for (const enumType of message.enumType ?? []) {
+			index.enums.set(`${name}.${enumType.name}`, enumType);
+		}
+		for (const nested of message.nestedType ?? []) {
+			addMessage(name, nested);
+		}
+	};
+
+	for (const file of files) {
+		for (const enumType of file.enumType ?? []) {
+			index.enums.set(`${file.package}.${enumType.name}`, enumType);
+		}
+		for (const message of file.messageType ?? []) {
+			addMessage(file.package, message);
+		}
+	}
+
+	return index;
+};
+
+const fieldBehaviors = (field: FieldDescriptor): string[] => {
+	const raw = field.options?.["[google.api.field_behavior]"];
+	return Array.isArray(raw) ? raw.map(String) : [];
+};
+
+const instanceName = "instances/production";
+const databaseName = `${instanceName}/databases/app`;
+const schemaName = `${databaseName}/schemas/public`;
+const tableName = `${schemaName}/tables/orders`;
+const roleName = `${instanceName}/roles/app_reader`;
+const viewName = `${schemaName}/views/active_orders`;
+
+const resourceExample = (requestName: string, fieldName: string): string => {
+	if (fieldName === "target") {
+		return instanceName;
+	}
+	if (fieldName === "database") {
+		return "app";
+	}
+
+	if (fieldName === "parent") {
+		if (
+			/ListTable(?:Columns|Constraints|Indexes|Policies|Triggers)/u.test(
+				requestName,
+			)
+		) {
+			return tableName;
+		}
+		if (/List(?:Tables|Views)/u.test(requestName)) {
+			return schemaName;
+		}
+		if (
+			/ListSchemas|ListExtensions|ExecuteQuery|ExplainQuery/u.test(requestName)
+		) {
+			return databaseName;
+		}
+		if (
+			/ListRole(?:Grants|OwnedObjects|DefaultPrivileges)/u.test(requestName)
+		) {
+			return roleName;
+		}
+		return instanceName;
+	}
+
+	if (/View/u.test(requestName)) {
+		return viewName;
+	}
+	if (/Table|Rows|CellValue/u.test(requestName)) {
+		return tableName;
+	}
+	if (/Schema/u.test(requestName)) {
+		return schemaName;
+	}
+	if (/Role/u.test(requestName)) {
+		return roleName;
+	}
+	if (/Database|Query/u.test(requestName)) {
+		return databaseName;
+	}
+	return instanceName;
+};
+
+const stringExample = (requestName: string, fieldName: string): string => {
+	if (["name", "parent", "target", "database"].includes(fieldName)) {
+		if (requestName === "SetupAppDatabaseRequest" && fieldName === "database") {
+			return "querylane";
+		}
+		return resourceExample(requestName, fieldName);
+	}
+
+	const examples: Record<string, string> = {
+		column: "id",
+		defaultSchema: "public",
+		displayName: "Production",
+		fullValueToken: "replace-with-token-from-read-rows",
+		host: "db.example.com",
+		instanceId: "production",
+		mode: "persistent",
+		password: "replace-me",
+		selectedColumns: "id",
+		statement: "SELECT current_database();",
+		username: "querylane_reader",
+	};
+	if (requestName === "SetupAppDatabaseRequest") {
+		if (fieldName === "host") {
+			return "metadata-db.example.com";
+		}
+		if (fieldName === "username") {
+			return "querylane";
+		}
+	}
+	return examples[fieldName] ?? "example";
+};
+
+const optionalExampleFields = new Set([
+	"analyze",
+	"batchSize",
+	"buffers",
+	"cellValueMode",
+	"comparison",
+	"defaultSchema",
+	"direction",
+	"format",
+	"instanceId",
+	"maxCellBytes",
+	"maxRows",
+	"maxTotalBytes",
+	"nullOrder",
+	"pageSize",
+	"rowCountMode",
+	"rowLimit",
+	"selectedColumns",
+	"spec",
+	"sslMode",
+	"step",
+	"timeout",
+	"validateOnly",
+]);
+
+const shouldIncludeExampleField = (
+	field: FieldDescriptor,
+	message: MessageDescriptor,
+	selectedOneofs: Set<number>,
+): boolean => {
+	const behaviors = fieldBehaviors(field);
+	if (behaviors.includes("OUTPUT_ONLY") && !behaviors.includes("IDENTIFIER")) {
+		return false;
+	}
+	if (behaviors.includes("REQUIRED") || behaviors.includes("INPUT_ONLY")) {
+		return true;
+	}
+	if (behaviors.includes("IDENTIFIER")) {
+		return true;
+	}
+	if (field.oneofIndex !== undefined) {
+		if (selectedOneofs.has(field.oneofIndex)) {
+			return false;
+		}
+		selectedOneofs.add(field.oneofIndex);
+		return true;
+	}
+	if (message.options?.mapEntry) {
+		return true;
+	}
+	const fieldName = field.jsonName ?? field.name;
+	if (fieldName === "orderBy") {
+		return field.type === "TYPE_MESSAGE";
+	}
+	return optionalExampleFields.has(fieldName);
+};
+
+const enumExample = (typeName: string, index: DescriptorIndex): JsonValue => {
+	const descriptor = index.enums.get(typeName.replace(/^\./u, ""));
+	const values = descriptor?.value ?? [];
+	return (
+		values.find(({ name }) => name.endsWith("_VERIFY_FULL"))?.name ??
+		values.find(({ number }) => number !== 0)?.name ??
+		values[0]?.name ??
+		"UNSPECIFIED"
+	);
+};
+
+const messageExample = (
+	typeName: string,
+	requestName: string,
+	index: DescriptorIndex,
+	depth = 0,
+): JsonValue => {
+	const normalizedType = typeName.replace(/^\./u, "");
+	if (normalizedType === "google.protobuf.Duration") {
+		return "30s";
+	}
+	if (normalizedType === "google.protobuf.FieldMask") {
+		return "displayName,config";
+	}
+	if (normalizedType === "google.protobuf.Timestamp") {
+		return "2026-07-17T12:00:00Z";
+	}
+	if (normalizedType === "google.type.Interval") {
+		return {
+			endTime: "2026-07-17T12:00:00Z",
+			startTime: "2026-07-17T11:00:00Z",
+		};
+	}
+	if (depth > 4) {
+		return {};
+	}
+
+	const message = index.messages.get(normalizedType);
+	if (!message) {
+		return {};
+	}
+	const result: Record<string, JsonValue> = {};
+	const selectedOneofs = new Set<number>();
+	for (const field of message.field ?? []) {
+		if (!shouldIncludeExampleField(field, message, selectedOneofs)) {
+			continue;
+		}
+		const fieldName = field.jsonName ?? field.name;
+		let value: JsonValue;
+		if (field.type === "TYPE_MESSAGE" && field.typeName) {
+			if (field.typeName === ".google.protobuf.Duration") {
+				value =
+					fieldName === "step"
+						? "60s"
+						: fieldName === "comparison"
+							? "3600s"
+							: "30s";
+			} else {
+				value = messageExample(field.typeName, requestName, index, depth + 1);
+			}
+		} else if (field.type === "TYPE_ENUM" && field.typeName) {
+			value = enumExample(field.typeName, index);
+		} else {
+			switch (field.type) {
+				case "TYPE_BOOL":
+					value = false;
+					break;
+				case "TYPE_DOUBLE":
+				case "TYPE_FLOAT":
+					value = 1.5;
+					break;
+				case "TYPE_FIXED32":
+				case "TYPE_INT32":
+				case "TYPE_SFIXED32":
+				case "TYPE_SINT32":
+				case "TYPE_UINT32":
+					value =
+						{
+							batchSize: 500,
+							maxCellBytes: 8192,
+							pageSize: 50,
+							port: 5432,
+							rowLimit: 100,
+						}[fieldName] ?? 50;
+					break;
+				case "TYPE_FIXED64":
+				case "TYPE_INT64":
+				case "TYPE_SFIXED64":
+				case "TYPE_SINT64":
+				case "TYPE_UINT64":
+					value =
+						{
+							maxResponseBytes: "8388608",
+							maxRows: "10000",
+							maxTotalBytes: "16777216",
+						}[fieldName] ?? "1048576";
+					break;
+				case "TYPE_BYTES":
+					value = "ZXhhbXBsZQ==";
+					break;
+				default:
+					value = stringExample(requestName, fieldName);
+			}
+		}
+
+		if (field.label === "LABEL_REPEATED") {
+			value = [value];
+		}
+		result[fieldName] = value;
+	}
+	return result;
+};
+
+const requestExample = (
+	method: MethodDescriptor,
+	index: DescriptorIndex,
+): string =>
+	JSON.stringify(
+		messageExample(method.inputType, shortType(method.inputType), index),
+		null,
+		2,
+	);
+
 const messageSection = (
 	file: FileDescriptor,
 	comments: Map<string, string>,
@@ -216,7 +554,10 @@ const rpcSignature = (method: MethodDescriptor): string => {
 	return `rpc ${method.name}(${input}) returns (${output})`;
 };
 
-const renderServicePage = (page: ServicePage): string => {
+const renderServicePage = (
+	page: ServicePage,
+	index: DescriptorIndex,
+): string => {
 	const { file, service } = page;
 	const comments = commentMap(file);
 	const serviceIndex = (file.service ?? []).findIndex(
@@ -243,6 +584,14 @@ const renderServicePage = (page: ServicePage): string => {
 			"",
 			`- **Procedure:** \`POST ${path}\``,
 			`- **Mode:** ${rpcMode(method)}`,
+			"",
+			"### JSON request example",
+			"",
+			"The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.",
+			"",
+			"```json",
+			requestExample(method, index),
+			"```",
 			"",
 			"### Request",
 			"",
@@ -274,6 +623,7 @@ const renderServicePage = (page: ServicePage): string => {
 		`- **Source:** [\`${file.name.split("/").at(-1)}\`](${sourceUrl})`,
 		"",
 		"The field tables show the top-level wire shape. Follow the source link for nested messages, enums, validation constraints, and resource annotations.",
+		"The JSON examples use protobuf JSON field names and wire encodings. They are request starting points, not production credentials or guaranteed resources.",
 		"",
 		"## Endpoints",
 		"",
@@ -305,6 +655,18 @@ const renderIndex = (pages: ServicePage[]): string => {
 		":::warning",
 		"The API is `v1alpha1` and can change before a stable release. Querylane does not currently provide built-in authentication. Keep the server behind a trusted network or an authenticating reverse proxy.",
 		":::",
+		"",
+		"<CardGroup cols={3}>",
+		'  <Card title="Call the API" href="/api/calling-the-api" icon="terminal">',
+		"    Run unary requests with curl or create a generated TypeScript client.",
+		"  </Card>",
+		'  <Card title="Page and filter" href="/api/pagination-and-filtering" icon="list-filter">',
+		"    Traverse list methods with opaque cursors, stable ordering, and bounded filters.",
+		"  </Card>",
+		'  <Card title="Handle failures and streams" href="/api/errors-and-streaming" icon="workflow">',
+		"    Process Connect codes, partial errors, deadlines, and server streams.",
+		"  </Card>",
+		"</CardGroup>",
 		"",
 		"## Call a unary RPC",
 		"",
@@ -341,8 +703,12 @@ const renderMeta = (pages: ServicePage[]): string =>
 		"export default defineMeta({",
 		'\ttitle: "API",',
 		'\ticon: "braces",',
-		"\torder: 4,",
-		`\tpages: ["index", ${pages.map((page) => `"${page.slug}"`).join(", ")}],`,
+		"\torder: 5,",
+		"\tpages: [",
+		'\t\t"index",',
+		...apiGuideSlugs.map((page) => `\t\t"${page}",`),
+		...pages.map((page) => `\t\t"${page.slug}",`),
+		"\t],",
 		"});",
 		"",
 	].join("\n");
@@ -389,15 +755,30 @@ const main = async () => {
 			})
 			.sort((left, right) => left.displayName.localeCompare(right.displayName));
 
-		await rm(outputRoot, { force: true, recursive: true });
 		await mkdir(outputRoot, { recursive: true });
+		for (const entry of await readdir(outputRoot)) {
+			const path = join(outputRoot, entry);
+			if (entry === "meta.ts") {
+				await rm(path, { force: true });
+				continue;
+			}
+			if (
+				entry.endsWith(".mdx") &&
+				(await readFile(path, "utf8")).includes(
+					"Generated by `bun run docs:api:generate`",
+				)
+			) {
+				await rm(path, { force: true });
+			}
+		}
+		const index = descriptorIndex(descriptors.file);
 		await Promise.all([
 			writeFile(join(outputRoot, "index.mdx"), renderIndex(pages)),
 			writeFile(join(outputRoot, "meta.ts"), renderMeta(pages)),
 			...pages.map((page) =>
 				writeFile(
 					join(outputRoot, `${page.slug}.mdx`),
-					renderServicePage(page),
+					renderServicePage(page, index),
 				),
 			),
 		]);

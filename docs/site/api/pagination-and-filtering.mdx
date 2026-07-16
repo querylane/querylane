@@ -1,0 +1,127 @@
+---
+title: Pagination and filtering
+description: Page through list RPCs, preserve token scope, apply supported filters, and use stable ordering.
+sidebar:
+  label: Pagination and filtering
+---
+
+Querylane list RPCs use cursor pagination. Requests provide `pageSize`, `pageToken`, `filter`, and `orderBy` where the endpoint supports them. Responses return a resource array and `nextPageToken`.
+
+## Request the first page
+
+This example lists non-system databases whose resource name contains `app`:
+
+```sh
+curl --fail-with-body --silent --show-error \
+  --request POST \
+  --header 'Content-Type: application/json' \
+  --header 'Connect-Protocol-Version: 1' \
+  --data @- \
+  "$QUERYLANE_URL/querylane.console.v1alpha1.DatabaseService/ListDatabases" <<'JSON'
+{
+  "parent": "instances/production",
+  "pageSize": 50,
+  "filter": "name:\"app\" AND is_system_database = false",
+  "orderBy": "name"
+}
+JSON
+```
+
+Use the endpoint's request table and protobuf source to confirm allowed fields. Filter and ordering allowlists differ by resource.
+
+## Continue with the token
+
+If the response contains `nextPageToken`, send it unchanged with the same parent, filter, and order:
+
+```json
+{
+  "parent": "instances/production",
+  "pageSize": 50,
+  "pageToken": "replace-with-nextPageToken",
+  "filter": "name:\"app\" AND is_system_database = false",
+  "orderBy": "name"
+}
+```
+
+Treat the token as opaque. Do not decode, edit, persist indefinitely, or reuse it with another service or resource scope. Querylane binds cursor state to its resource type and request plan so changed filtering or ordering can return `invalid_argument`.
+
+An empty `nextPageToken` means the list is complete.
+
+## Filter grammar
+
+Endpoints with server-side filtering implement a bounded, AIP-160-inspired subset:
+
+| Expression | Meaning |
+| --- | --- |
+| `field = "value"` | String equality |
+| `field != "value"` | String inequality |
+| `field:"text"` | Case-insensitive string substring |
+| `field = true` | Boolean equality |
+| `condition AND condition` | Combine top-level conditions |
+
+String values can use single or double quotes. Escape the quote style and backslashes inside the value. `OR`, `NOT`, groups, wildcards, comparison operators, field traversal, and arbitrary functions are not supported.
+
+Example catalog filters:
+
+```text
+owner = "app_owner"
+name:"orders"
+is_system_schema = false
+name:"order" AND owner != "postgres"
+table_type = "TABLE_TYPE_PARTITIONED"
+```
+
+Some list methods expose the wire-level `filter` field before a backend filter is enabled. In particular, do not rely on server filtering for `ListInstances` or `ListRoles` in this preview. An unsupported field or expression on an enabled endpoint returns `invalid_argument`; a method without enabled filtering can leave the result unfiltered.
+
+Always verify the returned rows and keep client-side safety checks when filtering affects access or destructive automation.
+
+## Order results
+
+`orderBy` is a comma-separated list of allowlisted protobuf field names with optional direction:
+
+```text
+name
+display_name desc
+owner asc, name asc
+```
+
+Querylane adds a stable tie-breaker when the resource schema requires one. Do not infer a default order across endpoint versions. Send an explicit order when deterministic traversal matters.
+
+Changing `orderBy` while reusing a page token is invalid. Start again without a token.
+
+## Page defensively
+
+A client loop should:
+
+1. set a bounded page size;
+2. process one response before requesting the next;
+3. keep parent, filter, and order unchanged;
+4. stop when the returned token is empty;
+5. discard the token after an error or request-plan change; and
+6. tolerate resources changing between pages.
+
+Cursor pagination provides stable continuation, not a transactionally frozen snapshot of every page. If resources are created, updated, or removed during traversal, restart when a complete point-in-time inventory is required.
+
+## TypeScript loop
+
+```ts
+let pageToken = "";
+
+do {
+  const page = await databases.listDatabases({
+    parent: "instances/production",
+    pageSize: 100,
+    pageToken,
+    filter: 'is_system_database = false',
+    orderBy: "name",
+  });
+
+  for (const database of page.databases) {
+    console.log(database.name);
+  }
+
+  pageToken = page.nextPageToken;
+} while (pageToken);
+```
+
+Handle `invalid_argument` by correcting the request and restarting from the first page, not by retrying the same token.

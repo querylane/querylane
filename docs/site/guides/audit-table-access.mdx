@@ -1,0 +1,88 @@
+---
+title: Audit access to a table
+description: Trace role attributes, memberships, database and schema access, object grants, ownership, and public privileges.
+sidebar:
+  label: Audit table access
+---
+
+Use this workflow to answer why a role can reach a table, why it cannot, or which paths should be reviewed before a grant change.
+
+## Before you start
+
+- Write down the exact PostgreSQL role, instance, database, schema, and table.
+- Decide whether the question is about catalog visibility, row reads, or a specific command such as `UPDATE`.
+- Use a Querylane login with enough catalog access to see the relevant roles and objects.
+- Remember that Querylane's access map explains catalog evidence; PostgreSQL remains the authority.
+
+## 1. Inspect the subject role
+
+Open the instance's **Roles** page, find the role, and check:
+
+- `LOGIN`, `INHERIT`, superuser, replication, and bypass-RLS attributes;
+- direct memberships;
+- inherited memberships;
+- the role definition; and
+- grants grouped by resource.
+
+A direct table grant is only one path. A role can gain access through an inherited group, ownership, `PUBLIC`, or a database and schema combination that leads to an object grant.
+
+## 2. Follow the access map
+
+Open the role's access map and select the role node. Follow the highlighted path through:
+
+1. membership roles;
+2. database access;
+3. schema access; and
+4. the target table or view.
+
+Expand partial groups only when the target can be inside them. Use the graph to find candidate paths, then confirm the exact rows in the role detail panels.
+
+## 3. Check every layer
+
+| Layer | Question |
+| --- | --- |
+| Role | Can the subject log in, and does it inherit memberships? |
+| Membership | Which role supplies the privilege, and is `SET ROLE` required? |
+| Database | Does the role have `CONNECT`, directly or through `PUBLIC`? |
+| Schema | Does it have `USAGE`, and can it resolve the object name? |
+| Table or view | Is the command granted directly, through a role, through `PUBLIC`, or by ownership? |
+| Row-level security | After the object grant passes, which rows does policy allow? |
+| Function or view behavior | Does security-definer or view security context change the effective actor? |
+
+For row visibility, continue with [Inspect row-level security](/guides/inspect-row-level-security).
+
+## 4. Confirm outside the visualization
+
+Use PostgreSQL's privilege functions as the role or through an approved audit session:
+
+```sql
+SELECT
+  has_database_privilege('app_reader', 'app', 'CONNECT') AS database_connect,
+  has_schema_privilege('app_reader', 'app_schema', 'USAGE') AS schema_usage,
+  has_table_privilege('app_reader', 'app_schema.orders', 'SELECT') AS table_select,
+  has_table_privilege('app_reader', 'app_schema.orders', 'UPDATE') AS table_update;
+```
+
+Check ownership and `PUBLIC` separately when the result is surprising. `has_table_privilege` answers the effective privilege, while the Querylane role details help explain the path.
+
+## 5. Record the finding
+
+Capture:
+
+- the effective result;
+- every contributing membership or grant;
+- whether `PUBLIC` or ownership is involved;
+- whether row-level security changes visible rows; and
+- the exact PostgreSQL role and database used for verification.
+
+Avoid screenshots as the only audit record. Privileges can change after the image was captured, and an image does not identify the full verification context.
+
+## What to do next
+
+- **Expected access:** record the approved path and review date.
+- **Unexpected inherited access:** remove or narrow the supplying membership through your change process.
+- **Unexpected `PUBLIC` access:** review the database, schema, or object-level public grant and its blast radius.
+- **Missing access:** grant at the narrowest required layer, then retest the exact command.
+- **Conflicting row result:** inspect policy role matching, permissive and restrictive combinations, and owner or `BYPASSRLS` status.
+
+Querylane is read-only for grants. Apply changes through controlled SQL or your identity-management workflow, then refresh the role and access views.

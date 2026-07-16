@@ -5,6 +5,11 @@ import { basename, join } from "node:path";
 const root = join(import.meta.dir, "..");
 const protoRoot = join(root, "proto/querylane/console/v1alpha1");
 const apiRoot = join(root, "docs/site/api");
+const apiGuidePages = [
+	"calling-the-api.mdx",
+	"pagination-and-filtering.mdx",
+	"errors-and-streaming.mdx",
+];
 
 type ProtoService = {
 	name: string;
@@ -59,7 +64,10 @@ const readProtoServices = async (): Promise<ProtoService[]> => {
 test("documents every gRPC service and RPC from the proto contract", async () => {
 	const services = await readProtoServices();
 	const pages = (await readdir(apiRoot)).filter(
-		(file) => file.endsWith(".mdx") && file !== "index.mdx",
+		(file) =>
+			file.endsWith(".mdx") &&
+			file !== "index.mdx" &&
+			!apiGuidePages.includes(file),
 	);
 
 	expect(services).toHaveLength(14);
@@ -75,6 +83,25 @@ test("documents every gRPC service and RPC from the proto contract", async () =>
 	}
 });
 
+test("adds runnable guidance and JSON examples to the API reference", async () => {
+	const pages = await readdir(apiRoot);
+	for (const page of apiGuidePages) {
+		expect(pages, `missing ${basename(page)}`).toContain(page);
+	}
+
+	const services = await readProtoServices();
+	for (const service of services) {
+		const page = await readFile(join(apiRoot, `${service.slug}.mdx`), "utf8");
+		for (const rpc of service.rpcs) {
+			const section = page.split(`## ${rpc}\n`)[1]?.split(/^## /mu)[0];
+			expect(section, `missing ${rpc} section`).toBeDefined();
+			expect(section, `missing ${rpc} JSON example`).toContain(
+				"### JSON request example",
+			);
+		}
+	}
+});
+
 test("keeps installation and production setup ahead of product guides", async () => {
 	const setupPages = [
 		"install-querylane.mdx",
@@ -85,5 +112,81 @@ test("keeps installation and production setup ahead of product guides", async ()
 
 	for (const page of setupPages) {
 		expect(pages, `missing ${basename(page)}`).toContain(page);
+	}
+});
+
+test("documents the operational lifecycle for self-hosted deployments", async () => {
+	const operationsRoot = join(root, "docs/site/operations");
+	const pages = await readdir(operationsRoot);
+	const expectedPages = [
+		"index.mdx",
+		"postgresql-permissions.mdx",
+		"backup-and-restore.mdx",
+		"upgrades-and-rollbacks.mdx",
+		"deployment-recipes.mdx",
+	];
+
+	for (const page of expectedPages) {
+		expect(pages, `missing ${basename(page)}`).toContain(page);
+	}
+
+	const permissions = await readFile(
+		join(operationsRoot, "postgresql-permissions.mdx"),
+		"utf8",
+	);
+	expect(permissions).toContain("GRANT pg_monitor");
+	expect(permissions).toContain("NOBYPASSRLS");
+
+	const backups = await readFile(
+		join(operationsRoot, "backup-and-restore.mdx"),
+		"utf8",
+	);
+	expect(backups).toContain("pg_dump");
+	expect(backups).toContain("QUERYLANE_INSTANCE_SECRET_KEY");
+
+	const upgrades = await readFile(
+		join(operationsRoot, "upgrades-and-rollbacks.mdx"),
+		"utf8",
+	);
+	expect(upgrades).toContain("migrate status");
+	expect(upgrades).toContain("Restore the pre-upgrade backup");
+});
+
+test("keeps deployment recipes generic and customer-facing", async () => {
+	const deployment = await readFile(
+		join(root, "docs/site/operations/deployment-recipes.mdx"),
+		"utf8",
+	);
+
+	for (const implementationDetail of [
+		"distroless",
+		"metadata-database leases",
+	]) {
+		expect(deployment.toLowerCase()).not.toContain(implementationDetail);
+	}
+
+	expect(deployment).not.toMatch(
+		/\b100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])(?:\.\d{1,3}){2}\b/u,
+	);
+	expect(deployment).not.toMatch(/[a-z0-9-]+\.ts\.net/iu);
+});
+
+test("provides task-based guides for common PostgreSQL investigations", async () => {
+	const guidesRoot = join(root, "docs/site/guides");
+	const pages = await readdir(guidesRoot);
+	const expectedPages = [
+		"investigate-slow-database.mdx",
+		"find-blocking-sessions.mdx",
+		"audit-table-access.mdx",
+		"inspect-row-level-security.mdx",
+		"export-data-safely.mdx",
+		"diagnose-missing-metrics.mdx",
+	];
+
+	for (const page of expectedPages) {
+		expect(pages, `missing ${basename(page)}`).toContain(page);
+		const contents = await readFile(join(guidesRoot, page), "utf8");
+		expect(contents).toContain("## Before you start");
+		expect(contents).toContain("## What to do next");
 	}
 });

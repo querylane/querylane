@@ -15,6 +15,7 @@ Service for viewing PostgreSQL extensions available in a database.
 - **Source:** [`extension.proto`](https://github.com/querylane/querylane/blob/main/proto/querylane/console/v1alpha1/extension.proto)
 
 The field tables show the top-level wire shape. Follow the source link for nested messages, enums, validation constraints, and resource annotations.
+The JSON examples use protobuf JSON field names and wire encodings. They are request starting points, not production credentials or guaranteed resources.
 
 ## Endpoints
 
@@ -32,6 +33,17 @@ rpc ListExtensions(ListExtensionsRequest) returns (ListExtensionsResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.ExtensionService/ListExtensions`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production/databases/app",
+  "pageSize": 50
+}
+```
 
 ### Request
 

@@ -15,6 +15,7 @@ OnboardingService guides first-time users through configuring the application da
 - **Source:** [`onboarding.proto`](https://github.com/querylane/querylane/blob/main/proto/querylane/console/v1alpha1/onboarding.proto)
 
 The field tables show the top-level wire shape. Follow the source link for nested messages, enums, validation constraints, and resource annotations.
+The JSON examples use protobuf JSON field names and wire encodings. They are request starting points, not production credentials or guaranteed resources.
 
 ## Endpoints
 
@@ -34,6 +35,14 @@ rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateRes
 
 - **Procedure:** `POST /querylane.console.v1alpha1.OnboardingService/GetOnboardingState`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{}
+```
 
 ### Request
 
@@ -64,6 +73,23 @@ rpc SetupAppDatabase(SetupAppDatabaseRequest) returns (stream SetupAppDatabaseRe
 - **Procedure:** `POST /querylane.console.v1alpha1.OnboardingService/SetupAppDatabase`
 - **Mode:** Server stream
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "postgresConfig": {
+    "host": "metadata-db.example.com",
+    "port": 5432,
+    "database": "querylane",
+    "username": "querylane",
+    "password": "replace-me",
+    "sslMode": "SSL_MODE_VERIFY_FULL"
+  }
+}
+```
+
 ### Request
 
 `SetupAppDatabaseRequest`
@@ -91,6 +117,14 @@ rpc WatchConfigChanges(WatchConfigChangesRequest) returns (stream WatchConfigCha
 
 - **Procedure:** `POST /querylane.console.v1alpha1.OnboardingService/WatchConfigChanges`
 - **Mode:** Server stream
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{}
+```
 
 ### Request
 

@@ -15,6 +15,7 @@ Service for managing connection records to external database instances.
 - **Source:** [`instance.proto`](https://github.com/querylane/querylane/blob/main/proto/querylane/console/v1alpha1/instance.proto)
 
 The field tables show the top-level wire shape. Follow the source link for nested messages, enums, validation constraints, and resource annotations.
+The JSON examples use protobuf JSON field names and wire encodings. They are request starting points, not production credentials or guaranteed resources.
 
 ## Endpoints
 
@@ -40,6 +41,16 @@ rpc ListInstances(ListInstancesRequest) returns (ListInstancesResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.InstanceService/ListInstances`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "pageSize": 50
+}
+```
 
 ### Request
 
@@ -72,6 +83,16 @@ rpc GetInstance(GetInstanceRequest) returns (GetInstanceResponse)
 - **Procedure:** `POST /querylane.console.v1alpha1.InstanceService/GetInstance`
 - **Mode:** Unary
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "name": "instances/production"
+}
+```
+
 ### Request
 
 `GetInstanceRequest`
@@ -100,6 +121,28 @@ rpc CreateInstance(CreateInstanceRequest) returns (CreateInstanceResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.InstanceService/CreateInstance`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "spec": {
+    "displayName": "Production",
+    "config": {
+      "host": "db.example.com",
+      "port": 5432,
+      "database": "app",
+      "username": "querylane_reader",
+      "password": "replace-me",
+      "sslMode": "SSL_MODE_VERIFY_FULL"
+    }
+  },
+  "instanceId": "production",
+  "validateOnly": false
+}
+```
 
 ### Request
 
@@ -131,6 +174,23 @@ rpc TestInstanceConnection(TestInstanceConnectionRequest) returns (TestInstanceC
 - **Procedure:** `POST /querylane.console.v1alpha1.InstanceService/TestInstanceConnection`
 - **Mode:** Unary
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "config": {
+    "host": "db.example.com",
+    "port": 5432,
+    "database": "app",
+    "username": "querylane_reader",
+    "password": "replace-me",
+    "sslMode": "SSL_MODE_VERIFY_FULL"
+  }
+}
+```
+
 ### Request
 
 `TestInstanceConnectionRequest`
@@ -153,6 +213,28 @@ rpc UpdateInstance(UpdateInstanceRequest) returns (UpdateInstanceResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.InstanceService/UpdateInstance`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "instance": {
+    "name": "instances/production",
+    "displayName": "Production",
+    "config": {
+      "host": "db.example.com",
+      "port": 5432,
+      "database": "app",
+      "username": "querylane_reader",
+      "password": "replace-me",
+      "sslMode": "SSL_MODE_VERIFY_FULL"
+    }
+  },
+  "updateMask": "displayName,config"
+}
+```
 
 ### Request
 
@@ -182,6 +264,16 @@ rpc DeleteInstance(DeleteInstanceRequest) returns (DeleteInstanceResponse)
 - **Procedure:** `POST /querylane.console.v1alpha1.InstanceService/DeleteInstance`
 - **Mode:** Unary
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "name": "instances/production"
+}
+```
+
 ### Request
 
 `DeleteInstanceRequest`
@@ -204,6 +296,16 @@ rpc GetInstanceOverview(GetInstanceOverviewRequest) returns (GetInstanceOverview
 
 - **Procedure:** `POST /querylane.console.v1alpha1.InstanceService/GetInstanceOverview`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "name": "instances/production"
+}
+```
 
 ### Request
 
@@ -233,6 +335,16 @@ rpc CheckInstanceHealth(CheckInstanceHealthRequest) returns (CheckInstanceHealth
 - **Procedure:** `POST /querylane.console.v1alpha1.InstanceService/CheckInstanceHealth`
 - **Mode:** Unary
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "name": "instances/production"
+}
+```
+
 ### Request
 
 `CheckInstanceHealthRequest`
@@ -260,6 +372,16 @@ rpc CheckInstanceActivity(CheckInstanceActivityRequest) returns (CheckInstanceAc
 
 - **Procedure:** `POST /querylane.console.v1alpha1.InstanceService/CheckInstanceActivity`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "name": "instances/production"
+}
+```
 
 ### Request
 

@@ -15,6 +15,7 @@ TableDataService exposes live row reads against a single Table resource. Methods
 - **Source:** [`table_data.proto`](https://github.com/querylane/querylane/blob/main/proto/querylane/console/v1alpha1/table_data.proto)
 
 The field tables show the top-level wire shape. Follow the source link for nested messages, enums, validation constraints, and resource annotations.
+The JSON examples use protobuf JSON field names and wire encodings. They are request starting points, not production credentials or guaranteed resources.
 
 ## Endpoints
 
@@ -34,6 +35,30 @@ rpc ReadRows(ReadRowsRequest) returns (ReadRowsResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.TableDataService/ReadRows`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "name": "instances/production/databases/app/schemas/public/tables/orders",
+  "pageSize": 50,
+  "selectedColumns": [
+    "id"
+  ],
+  "orderBy": [
+    {
+      "column": "id",
+      "direction": "DIRECTION_ASC",
+      "nullOrder": "NULL_ORDER_FIRST"
+    }
+  ],
+  "rowCountMode": "ROW_COUNT_MODE_NONE",
+  "cellValueMode": "CELL_VALUE_MODE_PREVIEW",
+  "maxCellBytes": 8192
+}
+```
 
 ### Request
 
@@ -73,6 +98,31 @@ rpc StreamRows(StreamRowsRequest) returns (stream StreamRowsResponse)
 - **Procedure:** `POST /querylane.console.v1alpha1.TableDataService/StreamRows`
 - **Mode:** Server stream
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "name": "instances/production/databases/app/schemas/public/tables/orders",
+  "selectedColumns": [
+    "id"
+  ],
+  "orderBy": [
+    {
+      "column": "id",
+      "direction": "DIRECTION_ASC",
+      "nullOrder": "NULL_ORDER_FIRST"
+    }
+  ],
+  "cellValueMode": "CELL_VALUE_MODE_PREVIEW",
+  "maxCellBytes": 8192,
+  "maxRows": "10000",
+  "batchSize": 500,
+  "maxTotalBytes": "16777216"
+}
+```
+
 ### Request
 
 `StreamRowsRequest`
@@ -109,6 +159,17 @@ rpc ReadCellValue(ReadCellValueRequest) returns (ReadCellValueResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.TableDataService/ReadCellValue`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "name": "instances/production/databases/app/schemas/public/tables/orders",
+  "fullValueToken": "replace-with-token-from-read-rows"
+}
+```
 
 ### Request
 

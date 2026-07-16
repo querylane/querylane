@@ -15,6 +15,7 @@ Service for managing tables within schemas.
 - **Source:** [`table.proto`](https://github.com/querylane/querylane/blob/main/proto/querylane/console/v1alpha1/table.proto)
 
 The field tables show the top-level wire shape. Follow the source link for nested messages, enums, validation constraints, and resource annotations.
+The JSON examples use protobuf JSON field names and wire encodings. They are request starting points, not production credentials or guaranteed resources.
 
 ## Endpoints
 
@@ -39,6 +40,17 @@ rpc ListTables(ListTablesRequest) returns (ListTablesResponse)
 
 - **Procedure:** `POST /querylane.console.v1alpha1.TableService/ListTables`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production/databases/app/schemas/public",
+  "pageSize": 50
+}
+```
 
 ### Request
 
@@ -73,6 +85,16 @@ rpc GetTable(GetTableRequest) returns (GetTableResponse)
 - **Procedure:** `POST /querylane.console.v1alpha1.TableService/GetTable`
 - **Mode:** Unary
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "name": "instances/production/databases/app/schemas/public/tables/orders"
+}
+```
+
 ### Request
 
 `GetTableRequest`
@@ -99,6 +121,16 @@ rpc GetTablePartitionMetadata(GetTablePartitionMetadataRequest) returns (GetTabl
 
 - **Procedure:** `POST /querylane.console.v1alpha1.TableService/GetTablePartitionMetadata`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "name": "instances/production/databases/app/schemas/public/tables/orders"
+}
+```
 
 ### Request
 
@@ -127,6 +159,16 @@ rpc ListTableColumns(ListTableColumnsRequest) returns (ListTableColumnsResponse)
 - **Procedure:** `POST /querylane.console.v1alpha1.TableService/ListTableColumns`
 - **Mode:** Unary
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production/databases/app/schemas/public/tables/orders"
+}
+```
+
 ### Request
 
 `ListTableColumnsRequest`
@@ -153,6 +195,16 @@ rpc ListTableConstraints(ListTableConstraintsRequest) returns (ListTableConstrai
 
 - **Procedure:** `POST /querylane.console.v1alpha1.TableService/ListTableConstraints`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production/databases/app/schemas/public/tables/orders"
+}
+```
 
 ### Request
 
@@ -181,6 +233,16 @@ rpc ListTableIndexes(ListTableIndexesRequest) returns (ListTableIndexesResponse)
 - **Procedure:** `POST /querylane.console.v1alpha1.TableService/ListTableIndexes`
 - **Mode:** Unary
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production/databases/app/schemas/public/tables/orders"
+}
+```
+
 ### Request
 
 `ListTableIndexesRequest`
@@ -208,6 +270,16 @@ rpc ListTablePolicies(ListTablePoliciesRequest) returns (ListTablePoliciesRespon
 - **Procedure:** `POST /querylane.console.v1alpha1.TableService/ListTablePolicies`
 - **Mode:** Unary
 
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production/databases/app/schemas/public/tables/orders"
+}
+```
+
 ### Request
 
 `ListTablePoliciesRequest`
@@ -234,6 +306,16 @@ rpc ListTableTriggers(ListTableTriggersRequest) returns (ListTableTriggersRespon
 
 - **Procedure:** `POST /querylane.console.v1alpha1.TableService/ListTableTriggers`
 - **Mode:** Unary
+
+### JSON request example
+
+The values are illustrative. Replace resource names, identifiers, and credentials for your deployment.
+
+```json
+{
+  "parent": "instances/production/databases/app/schemas/public/tables/orders"
+}
+```
 
 ### Request
 

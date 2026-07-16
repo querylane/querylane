@@ -1,0 +1,134 @@
+---
+title: Configure PostgreSQL permissions
+description: Create least-privilege roles for managed instances and understand which Querylane features need each grant.
+sidebar:
+  label: PostgreSQL permissions
+---
+
+Use a dedicated PostgreSQL login for Querylane on every managed trust boundary. Do not register an application owner, migration role, or superuser just to make every panel populate.
+
+Querylane uses the registered role's real PostgreSQL visibility. Missing privileges can hide objects, redact other sessions, or make a probe unavailable. That is preferable to bypassing the database's access model.
+
+:::warning
+Querylane has no built-in authentication yet. Anyone who can reach Querylane can use the visibility granted to its managed-instance roles, including catalog details, SQL text, and permitted table rows. Protect the application before adding production credentials.
+:::
+
+## Choose a permission profile
+
+| Profile | Grants | What Querylane can do |
+| --- | --- | --- |
+| Catalog only | `LOGIN`, database `CONNECT`, schema `USAGE`, and any existing object privileges | Discover visible databases, schemas, and objects without granting new row access |
+| Read and export | Catalog-only grants plus `SELECT` on approved tables and views | Read rows, export results, and run permitted statements in the read-only SQL transaction |
+| Operations | Read and export plus `pg_monitor` | See fuller activity, health, database statistics, and query-insight data |
+
+Start with catalog-only access. Add table reads and monitoring only for the operator workflows that need them.
+
+## Create an operations reader
+
+Run the role-level statements as an administrator. Replace the names, schemas, owner, and password for your environment.
+
+```sql
+CREATE ROLE querylane_reader
+  LOGIN
+  PASSWORD 'replace-me'
+  INHERIT
+  NOSUPERUSER
+  NOCREATEDB
+  NOCREATEROLE
+  NOREPLICATION
+  NOBYPASSRLS;
+
+GRANT CONNECT ON DATABASE app TO querylane_reader;
+GRANT pg_monitor TO querylane_reader;
+```
+
+Connect to each approved database before granting schema and object access:
+
+```sql
+GRANT USAGE ON SCHEMA app_schema TO querylane_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA app_schema TO querylane_reader;
+GRANT SELECT ON ALL SEQUENCES IN SCHEMA app_schema TO querylane_reader;
+```
+
+`SELECT` on sequences is optional. Add it only if operators need to inspect sequence values or query views and functions that require it.
+
+Existing grants do not cover objects created later. Default privileges belong to the role that creates those objects, so run this for every relevant owner:
+
+```sql
+ALTER DEFAULT PRIVILEGES FOR ROLE app_owner IN SCHEMA app_schema
+  GRANT SELECT ON TABLES TO querylane_reader;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE app_owner IN SCHEMA app_schema
+  GRANT SELECT ON SEQUENCES TO querylane_reader;
+```
+
+Default privileges do not change existing objects. Keep both the `GRANT ... ON ALL` and `ALTER DEFAULT PRIVILEGES` steps.
+
+## Match grants to features
+
+| Querylane surface | PostgreSQL requirement | If it is missing |
+| --- | --- | --- |
+| Connect and server identity | `LOGIN`, `CONNECT`, and a matching `pg_hba.conf` rule | The instance connection fails |
+| Database sizes | `CONNECT` to each database, or `pg_read_all_stats` on PostgreSQL 14 and later | Inaccessible databases are omitted from totals |
+| Schema and object catalog | Catalog visibility plus `USAGE` and an object privilege or ownership where PostgreSQL requires it | Objects outside the role's visibility are omitted |
+| Table rows and export | Schema `USAGE` and table or view `SELECT` | Data reads fail while metadata can remain visible |
+| SQL and `EXPLAIN` | Privileges required by the submitted statement | PostgreSQL rejects the statement; Querylane still wraps execution in a read-only transaction |
+| Live activity and health | `pg_monitor` is recommended | Other sessions can be redacted and some probes report limited access |
+| Query insights | `pg_stat_statements` configured on the target plus statistics visibility | Query Insights reports the dependency or permission problem |
+| Roles and access | Access to PostgreSQL catalogs and the target database | The map reflects only information visible to the registered login |
+
+`pg_monitor` includes PostgreSQL's predefined statistics-reading roles. Grant it directly instead of combining several catalog-specific grants unless your security policy requires a narrower custom role.
+
+## Keep row-level security meaningful
+
+Querylane does not disable row-level security. Reads use the registered role, so policies can filter or reject table data.
+
+- Do not grant `BYPASSRLS`.
+- Do not use a superuser.
+- Avoid registering the table owner when the goal is to validate an ordinary user's access.
+- Test the role with the same database and schema context that Querylane will use.
+
+A single Querylane login represents one PostgreSQL access perspective. If teams must see different rows or schemas, use separate Querylane deployments or another access boundary until Querylane provides per-user database identity.
+
+## Grants to avoid by default
+
+Do not grant these solely for Querylane:
+
+- `SUPERUSER`
+- `CREATEDB`
+- `CREATEROLE`
+- `REPLICATION`
+- `BYPASSRLS`
+- `pg_read_all_data`
+- ownership of application databases or schemas
+
+`pg_read_all_data` grants broad row access across the server. Prefer explicit `SELECT` grants for the schemas Querylane should expose.
+
+## Verify the role
+
+Connect as the Querylane login before saving it:
+
+```sh
+psql 'postgresql://querylane_reader@db.example.com:5432/app?sslmode=verify-full'
+```
+
+Then inspect the effective attributes and memberships:
+
+```sql
+SELECT current_user;
+SELECT rolname, rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls
+FROM pg_roles
+WHERE rolname = current_user;
+
+SELECT
+  pg_has_role(current_user, 'pg_monitor', 'member') AS has_pg_monitor,
+  has_database_privilege(current_user, current_database(), 'CONNECT') AS can_connect,
+  has_schema_privilege(current_user, 'app_schema', 'USAGE') AS can_use_schema,
+  has_table_privilege(current_user, 'app_schema.orders', 'SELECT') AS can_read_orders;
+```
+
+After registration, verify the instance overview, Activity, Data Explorer, and Query Insights separately. A green connection test proves reachability and credentials, not permission coverage for every feature.
+
+## Metadata database permissions are different
+
+The role above is for managed instances. Querylane's own metadata role must own or be able to migrate its dedicated metadata database. Do not reuse the metadata owner as a managed-instance login, and do not point Querylane metadata storage at an application database.

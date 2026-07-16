@@ -1,0 +1,127 @@
+---
+title: Back up and restore Querylane
+description: Protect Querylane metadata, encryption keys, configuration, and image identity as one recoverable set.
+sidebar:
+  label: Backup and restore
+---
+
+A usable Querylane recovery set has more than a PostgreSQL dump. Back up the metadata database together with the exact encryption key, configuration, secret references, and application image identity needed to read it.
+
+## What to protect
+
+| Item | Why it matters | Storage guidance |
+| --- | --- | --- |
+| Metadata PostgreSQL | Holds UI-managed instances, encrypted passwords, catalog state, metrics samples, runner state, and shared signing material | Use encrypted database backups with a defined retention policy |
+| `QUERYLANE_INSTANCE_SECRET_KEY` | Decrypts UI-managed instance credentials and protected signing material | Keep in a secret manager and a separate recovery escrow |
+| `querylane.yaml` | Defines networking, target policy, limits, metadata mode, and config-managed instances | Version non-secret settings; protect inline secrets and DSNs |
+| Referenced environment secrets | Supply metadata and managed-instance passwords that are not stored in YAML | Back up through the owning secret manager |
+| Image digest and release notes | Recreate the application version that wrote the backup | Record beside the backup manifest |
+
+Losing the instance secret key can make encrypted credentials unrecoverable even when the database dump is intact. Treat the database and key as a matched recovery set.
+
+## Back up external metadata PostgreSQL
+
+Use the PostgreSQL client version recommended by your database provider. A custom-format logical backup supports validation and selective inspection.
+
+```sh
+export QUERYLANE_DATABASE_DSN='postgresql://querylane@metadata.example.com/querylane?sslmode=verify-full'
+backup="querylane-$(date -u +%Y%m%dT%H%M%SZ).dump"
+
+pg_dump \
+  --format=custom \
+  --no-owner \
+  --no-privileges \
+  --file="$backup" \
+  "$QUERYLANE_DATABASE_DSN"
+
+pg_restore --list "$backup" > "$backup.contents"
+sha256sum "$backup" > "$backup.sha256"
+```
+
+A logical dump is transactionally consistent while Querylane runs. Provider snapshots can supplement it, but they should not be the only recovery format unless you have tested their restore process.
+
+Create a small manifest beside each backup:
+
+```text
+created_at_utc=2026-07-17T12:00:00Z
+querylane_image=ghcr.io/querylane/querylane-dev@sha256:replace-me
+metadata_server_version=17
+config_revision=replace-me
+instance_secret_key_version=replace-me
+```
+
+Do not copy the secret value into the manifest.
+
+## Restore into a new database
+
+Restore rehearsals should never overwrite the active metadata database.
+
+<Steps>
+  <Step title="Isolate the restore">
+    Create a new PostgreSQL database and ensure no production Querylane process points to it.
+  </Step>
+  <Step title="Restore the dump">
+    Use a role that owns the new database and can create Querylane's schema objects.
+  </Step>
+  <Step title="Attach the matched secrets">
+    Supply the same `QUERYLANE_INSTANCE_SECRET_KEY`, configuration, and referenced environment secrets used by the backup.
+  </Step>
+  <Step title="Start the recorded image">
+    Run the pinned image in an isolated network. Querylane applies any migrations included in that image at startup.
+  </Step>
+  <Step title="Verify before promotion">
+    Check readiness, list saved instances, test a non-critical target, and confirm recent samples and catalog data.
+  </Step>
+</Steps>
+
+Example restore:
+
+```sh
+createdb --owner=querylane querylane_restore
+
+pg_restore \
+  --exit-on-error \
+  --no-owner \
+  --no-privileges \
+  --dbname='postgresql://querylane@metadata.example.com/querylane_restore?sslmode=verify-full' \
+  querylane-20260717T120000Z.dump
+```
+
+Point an isolated Querylane process at `querylane_restore`. Do not promote it until you have confirmed that the secret key decrypts saved instance credentials.
+
+## Back up embedded PostgreSQL
+
+Embedded mode is intended for local and single-node use. For a cold filesystem backup:
+
+1. Stop Querylane and confirm the embedded PostgreSQL process has exited.
+2. Copy the entire configured `embedded.data_path`, not selected files.
+3. Copy the Querylane config and instance secret key at the same time.
+4. Record the Querylane image or source revision and operating platform.
+5. Restart Querylane and verify readiness.
+
+Never copy an active PostgreSQL data directory as an ordinary filesystem backup. A cold data-directory copy is tied to a compatible PostgreSQL binary and platform, so it is less portable than a logical dump. Move durable installations to external metadata PostgreSQL before backup portability becomes critical.
+
+Ephemeral embedded mode deletes its data directory when Querylane stops. It has no durable recovery expectation.
+
+## Define recovery targets
+
+Choose recovery objectives before an incident:
+
+- **Recovery point objective:** how much saved configuration and sampled history can be lost.
+- **Recovery time objective:** how long operators can work without Querylane.
+- **Retention:** how many daily, weekly, and pre-upgrade backups to keep.
+- **Restore frequency:** how often a fresh database restore is completed and verified.
+
+Querylane does not store the managed databases themselves. Keep their backups, point-in-time recovery, and disaster-recovery runbooks separate.
+
+## Recovery acceptance checklist
+
+A restore is complete only when:
+
+- the Console API reports ready;
+- the expected saved instances are listed;
+- encrypted instance credentials can be used;
+- one non-critical target passes its connection test;
+- the catalog and recent metrics appear for that target;
+- the restored Querylane process cannot reach unintended networks; and
+- the recovery event and new backup baseline are recorded.

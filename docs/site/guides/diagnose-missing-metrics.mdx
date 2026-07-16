@@ -1,0 +1,97 @@
+---
+title: Diagnose missing metrics
+description: Distinguish collection delay, target permissions, PostgreSQL extension setup, and Querylane runner failures.
+sidebar:
+  label: Diagnose missing metrics
+---
+
+Use this workflow when charts are empty, Query insights are unavailable, database sizes are incomplete, or a health check reports limited statistics access.
+
+## Before you start
+
+- Confirm the instance is connected and note when it was registered.
+- Record which surface is missing data: overview charts, database sizes, Query insights, or one table statistic.
+- Check whether the problem affects one instance, one database, or every target.
+- Give background collection enough time to produce its first samples.
+
+Querylane collects different signals at different cadences. Activity can be live while sampled charts are still collecting, and storage or vacuum signals can take several minutes to appear.
+
+## 1. Read the health evidence
+
+On the instance overview, expand the health checks for:
+
+- statistics access;
+- `pg_stat_statements`;
+- autovacuum;
+- connectivity; and
+- connection capacity.
+
+A warning about limited statistics is different from a disconnected instance. Querylane keeps available panels working when one probe cannot run.
+
+## 2. Check the permission profile
+
+For complete activity and monitoring views, grant the dedicated managed-instance login `pg_monitor`:
+
+```sql
+GRANT pg_monitor TO querylane_reader;
+```
+
+Then reconnect or refresh Querylane and verify:
+
+```sql
+SELECT
+  pg_has_role(current_user, 'pg_monitor', 'member') AS has_pg_monitor,
+  has_table_privilege(current_user, 'pg_catalog.pg_stat_activity', 'SELECT') AS activity_access,
+  has_table_privilege(current_user, 'pg_catalog.pg_stat_database', 'SELECT') AS database_stats_access;
+```
+
+Database-size totals include databases the role can connect to. On PostgreSQL 14 and later, membership in `pg_read_all_stats` also permits size visibility. An inaccessible database is omitted rather than failing the complete probe.
+
+See [PostgreSQL permissions](/operations/postgresql-permissions) for the full role recipe.
+
+## 3. Check Query insights dependencies
+
+Query statistics need `pg_stat_statements` installed and queryable in the target database. Confirm it exists:
+
+```sql
+SELECT extname, extversion
+FROM pg_extension
+WHERE extname = 'pg_stat_statements';
+```
+
+The extension also depends on PostgreSQL server configuration. If it was added to `shared_preload_libraries`, a PostgreSQL restart is normally required before creating or using it. Follow your provider's instructions and change process.
+
+Table cache and sequential-scan signals use PostgreSQL table statistics and can still appear when query statistics are unavailable.
+
+## 4. Check collection state
+
+After fixing permissions or extension setup:
+
+1. Refresh the instance overview for live health.
+2. Wait through a background sample cycle.
+3. Generate safe non-production activity if the target has no traffic.
+4. Refresh the affected chart or Query insights page.
+5. Check whether new data appears while the older range stays empty.
+
+Querylane does not reconstruct samples for the period before access was granted or the instance was registered.
+
+## 5. Check Querylane operations
+
+If permissions are correct but every target has stale samples, inspect Querylane logs and the internal **Admin** operations page. Check:
+
+- replica heartbeat;
+- background job lease and last-run state;
+- metrics storage growth and retention;
+- catalog synchronization; and
+- metadata database errors.
+
+In a multi-replica deployment, every replica must share the same metadata database. Background leases coordinate collection through that database.
+
+## What to do next
+
+- **New instance or idle target:** wait for the relevant cadence and create only approved test activity.
+- **Permission warning:** grant the narrow monitoring role, reconnect, and verify again.
+- **Missing `pg_stat_statements`:** schedule extension and server configuration through the database owner.
+- **One probe fails:** capture its health detail and PostgreSQL error while leaving healthy surfaces in use.
+- **All samples are stale:** inspect runner state, metadata availability, and replica logs.
+- **Metrics resumed:** record the first valid sample time so dashboards are not read as if the gap contained zeros.

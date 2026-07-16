@@ -1,0 +1,81 @@
+---
+title: Inspect row-level security
+description: Understand which PostgreSQL policies apply to a role and how permissive and restrictive predicates combine.
+sidebar:
+  label: Inspect row-level security
+---
+
+Use this workflow when a role can select a table but sees unexpected rows, no rows, or different results from another role.
+
+## Before you start
+
+- Confirm the role has the required table privilege. Row-level security runs after ordinary grants.
+- Record the exact table, command, and role you are investigating.
+- Check whether the role owns the table, is a superuser, or has `BYPASSRLS`.
+- Do not use Querylane's own registered login as proof of another role's final row set.
+
+The Querylane preview explains policy composition from catalog definitions. PostgreSQL session context remains the final authority.
+
+## 1. Open the policies
+
+In **Data Explorer**, select the table and open **Policies**. Each policy shows:
+
+- policy name;
+- command such as `SELECT`, `INSERT`, `UPDATE`, `DELETE`, or all commands;
+- permissive or restrictive mode;
+- target roles;
+- `USING` expression; and
+- `WITH CHECK` expression.
+
+No listed policy can mean that row-level security is not configured, the registered login cannot see the metadata, or the table uses a different access mechanism. Check the table definition and PostgreSQL directly when the state is unexpected.
+
+## 2. Preview the composition
+
+Use **Preview visibility as** to choose a role and command. Querylane applies PostgreSQL's combination model:
+
+1. Ordinary object grants must pass first.
+2. Applicable permissive policies combine with `OR`.
+3. Applicable restrictive policies combine with `AND` on top.
+4. With no applicable permissive policy, row-level security denies the rows.
+
+Review the applied policy badges and combined predicate. A preview explains policy logic; it does not execute a row query as the selected role.
+
+## 3. Check bypass conditions
+
+Table owners normally bypass row-level security unless the table uses `FORCE ROW LEVEL SECURITY`. Superusers and roles with `BYPASSRLS` also bypass it.
+
+This explains a common mismatch: an administrator sees rows that an application role cannot. Verify the attributes on the instance's **Roles** page and the table's definition.
+
+## 4. Separate visibility from writes
+
+For `SELECT`, `UPDATE`, and `DELETE`, `USING` controls which existing rows are visible to the command. For `INSERT` and the new row produced by `UPDATE`, `WITH CHECK` controls which new values are accepted.
+
+A policy can therefore allow a role to find an existing row but reject its attempted new values. Inspect the command-specific predicate rather than generalizing from a successful read.
+
+## 5. Verify with PostgreSQL
+
+Use your approved impersonation method in a disposable transaction:
+
+```sql
+BEGIN;
+SET LOCAL ROLE app_reader;
+
+SELECT current_user, session_user;
+SELECT *
+FROM app_schema.orders
+WHERE id = 42;
+
+ROLLBACK;
+```
+
+Only use `SET ROLE` when the audit session is authorized to become that role. Test representative positive and negative rows, and avoid copying sensitive row values into the audit record.
+
+## What to do next
+
+- **No ordinary table grant:** fix that layer before changing a policy.
+- **No matching permissive policy:** add or correct an approved role and command policy.
+- **Restrictive policy filters the row:** review whether its predicate should apply to the subject role.
+- **Owner or bypass mismatch:** test with the application role and avoid using an owner for representative access.
+- **Preview and execution differ:** capture the exact role, session settings, table definition, and policy definitions, then check security-definer functions, views, and session variables used by predicates.
+
+Apply policy changes outside Querylane, then refresh the Policies tab and repeat the PostgreSQL verification.

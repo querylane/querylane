@@ -1,0 +1,86 @@
+---
+title: Investigate a slow database
+description: Move from a server-wide symptom to live sessions, recurring queries, and table-level evidence.
+sidebar:
+  label: Investigate a slow database
+---
+
+Use this workflow when users report latency, throughput drops, or intermittent stalls and you need to narrow the cause without changing the database.
+
+## Before you start
+
+- Confirm Querylane reports the instance as connected.
+- Make sure the managed-instance login has `pg_monitor` and access to the affected database.
+- Enable and make `pg_stat_statements` queryable if you need historical query ranking.
+- Record the incident window, database, application, and a representative slow operation.
+
+Statistics are evidence, not a verdict. PostgreSQL counters can span more time than the incident and can reset after a restart or explicit statistics reset.
+
+## 1. Establish the time window
+
+Open the **instance overview** and select a metric range that includes the reported slowdown. Compare:
+
+- transactions per second;
+- total and active connections;
+- cache-hit ratio;
+- read and write throughput; and
+- storage growth.
+
+Look for a change near the incident start rather than treating any high absolute value as a fault. A flat chart can still hide one slow query, while a connection spike can explain many otherwise ordinary queries.
+
+## 2. Check live work
+
+Open **Activity** and refresh the snapshot.
+
+1. Filter to the affected database and application.
+2. Sort by **Duration** to surface long-running sessions.
+3. Check for `idle in transaction`, lock waits, and old transaction ages.
+4. Open a session to inspect its full query, wait event, client origin, and blocking context.
+
+Activity lists up to 50 sessions, riskiest first. It is a point-in-time view, so refresh and confirm that a session still exists before acting through another tool.
+
+If Querylane shows a blocking chain, continue with [Find blocking sessions](/guides/find-blocking-sessions).
+
+## 3. Rank recurring query cost
+
+Open the affected database's **Query insights** and use **Top queries by total time**.
+
+- Search for a table, query fragment, or operation.
+- Filter by statement kind or mean duration.
+- Compare calls, cumulative time, mean time, rows, and buffer behavior.
+- Open a query row for the bounded SQL preview and detail.
+
+A query can rank highly because it is individually slow, because it runs often, or both. Compare mean time with calls before deciding which pattern matters.
+
+If query statistics are unavailable, open the instance health checks and follow [Diagnose missing metrics](/guides/diagnose-missing-metrics).
+
+## 4. Check table-level signals
+
+On Query insights, review:
+
+- **Sequential scan hotspots** for large tables repeatedly read without matching index usage; and
+- **Cache hit by table** for heap access that frequently reaches beyond PostgreSQL shared buffers.
+
+Then open the table in **Data Explorer**. Inspect its indexes, row estimate, size, partitions, constraints, and relevant relationships. A sequential scan is not automatically wrong: a small table, a query returning most rows, or a stale counter can make it reasonable.
+
+## 5. Form a testable hypothesis
+
+Summarize the evidence in one sentence before changing anything. For example:
+
+> Checkout latency rose while connections waited behind PID 1842, whose transaction stayed open for 11 minutes after updating `orders`.
+
+Or:
+
+> `orders_by_customer` accounts for most cumulative runtime because call volume tripled; its mean time and table cache ratio stayed stable.
+
+The first case points to transaction ownership and blocking. The second points to workload volume rather than a new query regression.
+
+## What to do next
+
+- **Blocking or old transaction:** trace the PID to its application and use your approved cancel or terminate process. Querylane does not terminate sessions.
+- **One recurring query:** reproduce it with representative parameters and review a safe `EXPLAIN` in your SQL tooling.
+- **Sequential scan hotspot:** review predicate selectivity and existing indexes before proposing an index.
+- **Connection pressure:** inspect pool configuration and application connection ownership.
+- **Insufficient evidence:** capture another Querylane snapshot during the next incident and compare it with application traces and PostgreSQL logs.
+
+Record the Querylane snapshot time and PostgreSQL statistics-reset time with the incident notes so later reviewers understand the measurement window.
