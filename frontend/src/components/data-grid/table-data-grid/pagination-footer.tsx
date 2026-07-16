@@ -8,8 +8,10 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { PAGE_SIZE_OPTIONS } from "@/lib/pagination";
+import { cn } from "@/lib/utils";
 
 interface PaginationFooterProps {
+  className?: string | undefined;
   hasNext: boolean;
   hasPrev: boolean;
   onNext: () => void;
@@ -21,6 +23,7 @@ interface PaginationFooterProps {
   pageSizeOptions?: readonly number[];
 }
 export function PaginationFooter({
+  className,
   hasNext,
   hasPrev,
   onNext,
@@ -33,7 +36,10 @@ export function PaginationFooter({
 }: PaginationFooterProps) {
   return (
     <div
-      className="flex min-h-8 flex-wrap items-center justify-end gap-x-2 gap-y-1 text-muted-foreground text-xs"
+      className={cn(
+        "flex min-h-8 flex-wrap items-center justify-end gap-x-2 gap-y-1 text-muted-foreground text-xs",
+        className
+      )}
       data-slot="pagination-footer"
     >
       <div className="flex items-center gap-2">

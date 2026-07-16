@@ -6,8 +6,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { GridStatusItem } from "@/features/data-explorer/table-data/grid-status";
+import { cn } from "@/lib/utils";
 
-function GridStatusBar({ items }: { items: GridStatusItem[] }) {
+function GridStatusBar({
+  className,
+  items,
+}: {
+  className?: string | undefined;
+  items: GridStatusItem[];
+}) {
   if (items.length === 0) {
     return null;
   }
@@ -15,7 +22,10 @@ function GridStatusBar({ items }: { items: GridStatusItem[] }) {
   return (
     <output
       aria-label="Grid status"
-      className="flex min-h-8 flex-wrap items-center gap-1.5 border-t pt-2 text-xs"
+      className={cn(
+        "flex min-h-8 flex-wrap items-center gap-1.5 border-t pt-2 text-xs",
+        className
+      )}
     >
       {items.map((item) => (
         <GridStatusBadge item={item} key={item.id} />

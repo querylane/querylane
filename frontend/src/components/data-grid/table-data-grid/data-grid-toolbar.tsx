@@ -4,10 +4,7 @@ import type { SortColumn } from "react-data-grid";
 import { ColumnsPopover } from "@/components/data-grid/table-data-grid/columns-popover";
 import { FilterPopover } from "@/components/data-grid/table-data-grid/filter-popover";
 import { FilterChips } from "@/components/data-grid/table-data-grid/filter-popover-chips";
-import {
-  ExportRowsActions,
-  SelectionActions,
-} from "@/components/data-grid/table-data-grid/selection-actions";
+import { SelectionActions } from "@/components/data-grid/table-data-grid/selection-actions";
 import { SortPopover } from "@/components/data-grid/table-data-grid/sort-popover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +21,6 @@ interface DataGridToolbarProps {
   className?: string | undefined;
   columnOrder: readonly string[];
   columns: TableResultColumn[];
-  exportRowsDisabled?: boolean | undefined;
   filterLogic: TableFilterLogic;
   filterRules: TableFilterRule[];
   filterTitle?: string | undefined;
@@ -38,7 +34,6 @@ interface DataGridToolbarProps {
   onColumnOrderChange: (columnOrder: string[]) => void;
   onColumnVisibilityChange: (columnKey: string, visible: boolean) => void;
   onCopySelection: (format: ExportFormat) => void;
-  onExportRows?: ((format: ExportFormat) => void) | undefined;
   onExportSelection: (format: ExportFormat) => void;
   onFilterChange: (
     nextRules: TableFilterRule[],
@@ -141,7 +136,6 @@ function DataGridToolbar({
   columns,
   hiddenColumnKeys,
   isColumnLayoutCustomized,
-  exportRowsDisabled = false,
   filterTitle,
   filterLogic,
   filterRules,
@@ -151,7 +145,6 @@ function DataGridToolbar({
   onClearSelection,
   onColumnVisibilityChange,
   onCopySelection,
-  onExportRows,
   onExportSelection,
   onFilterChange,
   onColumnOrderChange,
@@ -174,7 +167,7 @@ function DataGridToolbar({
   return (
     <div
       className={cn(
-        "@container/data-grid-toolbar relative flex min-h-9 flex-col gap-2",
+        "@container/data-grid-toolbar relative flex min-h-9 flex-col justify-center gap-2",
         className
       )}
       data-slot="data-grid-popover-boundary"
@@ -209,12 +202,6 @@ function DataGridToolbar({
           isExpanded={isExpanded}
           onToggleExpanded={onToggleExpanded}
         />
-        {onExportRows ? (
-          <ExportRowsActions
-            disabled={exportRowsDisabled || columns.length === 0}
-            onExport={onExportRows}
-          />
-        ) : null}
         <ActiveSortSummary summary={sortSummary} />
 
         <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-muted-foreground text-xs">

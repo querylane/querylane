@@ -24,6 +24,8 @@ import {
   sourceRelationsFromDefinition,
 } from "@/features/data-explorer/explorer-view-detail-model";
 import { formatRows } from "@/features/data-explorer/format-rows";
+import { ObjectDetailHeader } from "@/features/data-explorer/object-detail-chrome";
+import { OBJECT_DETAIL_PANEL_PADDED_CLASS } from "@/features/data-explorer/object-detail-panel-classes";
 import { viewTypeLabel } from "@/features/data-explorer/view-type-label";
 import { useExplainQuery } from "@/hooks/api/sql";
 import {
@@ -207,9 +209,11 @@ function ViewNoticeCheck({ view, viewName }: { view: View; viewName: string }) {
 }
 
 function ViewDetail({
+  schemaName,
   view,
   viewName,
 }: {
+  schemaName?: string | undefined;
   view: View | undefined;
   viewName: string;
 }) {
@@ -217,58 +221,56 @@ function ViewDetail({
   const copyableDefinition = view
     ? runnableViewDefinition({ definition, view, viewName })
     : "";
+  const qualifiedName = schemaName ? `${schemaName}.${viewName}` : viewName;
+  // The old uppercase kind eyebrow lives on as the subtitle.
+  const subtitleDetails = [viewTypeLabel(view)];
+  if (view?.owner) {
+    subtitleDetails.push(`owner: ${view.owner}`);
+  }
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
-            <Eye className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
-              {viewTypeLabel(view)}
-            </p>
-            <h1 className="truncate font-mono font-semibold text-xl">
-              {viewName}
-            </h1>
-            {view?.owner ? (
-              <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-                owner: {view.owner}
-              </p>
+    <div className="flex h-full min-h-0 flex-col">
+      <ObjectDetailHeader
+        icon={Eye}
+        iconClassName="bg-sky-500/10 text-sky-600 dark:text-sky-400"
+        stats={
+          <>
+            {view?.viewType === View_ViewType.MATERIALIZED ? (
+              <>
+                <HeaderStat
+                  label="Rows"
+                  value={formatRows(normalizeEstimatedRowCount(view.rowCount))}
+                />
+                <HeaderStat label="Size" value={formatBytes(view.sizeBytes)} />
+                <HeaderStat
+                  label="Populated"
+                  value={view.isPopulated ? "Yes" : "No"}
+                />
+              </>
             ) : null}
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-5">
-          {view?.viewType === View_ViewType.MATERIALIZED ? (
-            <>
-              <HeaderStat
-                label="Rows"
-                value={formatRows(normalizeEstimatedRowCount(view.rowCount))}
-              />
-              <HeaderStat label="Size" value={formatBytes(view.sizeBytes)} />
-              <HeaderStat
-                label="Populated"
-                value={view.isPopulated ? "Yes" : "No"}
-              />
-            </>
-          ) : null}
-          <HeaderStat
-            label="Last DDL"
-            value={formatTimestampLabel(view?.lastDdlTime)}
-          />
-        </div>
-      </header>
+            <HeaderStat
+              label="Last DDL"
+              value={formatTimestampLabel(view?.lastDdlTime)}
+            />
+          </>
+        }
+        subtitle={subtitleDetails.join(" · ")}
+        title={viewName}
+        titleAriaLabel={qualifiedName}
+        titlePrefix={schemaName ? `${schemaName}.` : undefined}
+      />
 
       {view ? (
-        <>
-          <div className="grid gap-3 xl:grid-cols-3">
-            <PurposeCard view={view} />
-            <SourceRelationsCard definition={definition} />
-            <QueryShapeCard definition={definition} />
+        <div className={OBJECT_DETAIL_PANEL_PADDED_CLASS}>
+          <div className="flex flex-col gap-5">
+            <div className="grid gap-3 xl:grid-cols-3">
+              <PurposeCard view={view} />
+              <SourceRelationsCard definition={definition} />
+              <QueryShapeCard definition={definition} />
+            </div>
+            <DefinitionCard definition={copyableDefinition} />
+            <ViewNoticeCheck view={view} viewName={viewName} />
           </div>
-          <DefinitionCard definition={copyableDefinition} />
-          <ViewNoticeCheck view={view} viewName={viewName} />
-        </>
+        </div>
       ) : null}
     </div>
   );

@@ -7,7 +7,6 @@ import { useDataExplorerPageController } from "@/features/data-explorer/data-exp
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
 import { ExplorerSidebar } from "@/features/data-explorer/explorer-sidebar";
 import { ExplorerSidebarPortal } from "@/lib/explorer-sidebar-slot";
-import { cn } from "@/lib/utils";
 
 function DataExplorerPage({
   databaseId,
@@ -86,12 +85,6 @@ function DataExplorerPage({
         loading: false,
       }
     : explorer.schemaPageStateProps;
-  const isTableResource =
-    explorer.selection.kind === "resource" &&
-    explorer.selection.category === "tables";
-  const isSchemaMap =
-    explorer.selection.kind === "schema" && explorer.schemaTab === "map";
-  const fillsDetailArea = isTableResource || isSchemaMap;
   const handleSelectResource = explorer.onSelectResource;
   const handleSchemaTabChange = explorer.onSchemaTabChange;
   const handleSelectTableInSchema = explorer.onSelectTableInSchema;
@@ -139,26 +132,17 @@ function DataExplorerPage({
         {schemasFailed ? null : <ExplorerSidebar {...sidebarProps} />}
       </ExplorerSidebarPortal>
       <ResourcePageState {...schemaPageStateProps} title="Loading explorer">
+        {/*
+          Full-bleed detail pane: the object header and tab bar stay pinned
+          while each tab panel scrolls on its own, so the section itself must
+          not scroll. Padding is owned by the individual panels.
+        */}
         <section
           aria-label="Data Explorer details"
-          className="relative h-full min-w-0 overflow-auto"
+          className="relative flex h-full min-w-0 flex-col overflow-hidden"
         >
-          <div
-            className={cn(
-              "w-full",
-              fillsDetailArea && "flex h-full min-h-0 flex-col"
-            )}
-          >
-            <div
-              className={cn(
-                "min-w-0",
-                fillsDetailArea
-                  ? "flex min-h-0 w-full flex-1 flex-col p-3 sm:p-4 lg:p-6"
-                  : "mx-auto max-w-[900px] p-4 sm:p-6 lg:p-8"
-              )}
-            >
-              {detailPane}
-            </div>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {detailPane}
           </div>
         </section>
       </ResourcePageState>

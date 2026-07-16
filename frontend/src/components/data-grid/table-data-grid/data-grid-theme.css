@@ -78,6 +78,14 @@
   border-radius: var(--radius);
 }
 
+/* Full-bleed explorer layout: the grid spans the pane edge-to-edge, so the
+   side borders and rounding are dropped; the top/bottom borders remain as
+   separators against the toolbar and status/pagination bars. */
+.querylane-data-grid-flush {
+  border-inline: none;
+  border-radius: 0;
+}
+
 .dark .querylane-data-grid {
   --querylane-scrollbar-track: color-mix(
     in oklch,

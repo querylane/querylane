@@ -48,22 +48,6 @@ function SelectionActions({
   );
 }
 
-interface ExportRowsActionsProps {
-  disabled: boolean;
-  onExport: (format: ExportFormat) => void;
-}
-
-function ExportRowsActions({ disabled, onExport }: ExportRowsActionsProps) {
-  return (
-    <FormatDropdown
-      disabled={disabled}
-      icon={<Download className="size-3.5" />}
-      label="Export"
-      onSelect={onExport}
-    />
-  );
-}
-
 interface FormatDropdownProps {
   disabled: boolean;
   icon: React.ReactNode;
@@ -102,4 +86,4 @@ function FormatDropdown({
   );
 }
 
-export { ExportRowsActions, SelectionActions };
+export { SelectionActions };

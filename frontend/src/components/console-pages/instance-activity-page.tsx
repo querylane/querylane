@@ -758,7 +758,6 @@ function InstanceActivityPage({
   pending: boolean;
   refreshing: boolean;
 }) {
-  const isSpinning = useMinimumSpin(refreshing);
   const [search, setSearch] = useUrlTableSearch();
   const [stateFilter, setStateFilter] = useState<string[]>([]);
   const [appFilter, setAppFilter] = useState<string[]>([]);

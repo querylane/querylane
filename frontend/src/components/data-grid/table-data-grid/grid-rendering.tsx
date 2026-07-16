@@ -53,6 +53,8 @@ function LoadingSkeleton() {
 
 interface GridBodyProps {
   columns: Column<GridRow>[];
+  /** Full-bleed mode: no side borders/rounding; inset loading/empty panels. */
+  flush?: boolean;
   hasActiveFilter: boolean;
   isLoading: boolean;
   onCellContextMenu: (
@@ -74,6 +76,7 @@ interface GridBodyProps {
 
 function GridBody({
   columns,
+  flush = false,
   hasActiveFilter,
   isLoading,
   onCellContextMenu,
@@ -87,18 +90,31 @@ function GridBody({
   sortColumns,
 }: GridBodyProps) {
   if (isLoading) {
-    return <LoadingSkeleton />;
+    return (
+      <div className={cn(flush && "p-3")}>
+        <LoadingSkeleton />
+      </div>
+    );
   }
   if (rows.length === 0) {
-    if (hasActiveFilter) {
-      return <SearchEmptyState className="border" resourceName="rows" />;
-    }
-    return <EmptyStatePanel icon={Rows3}>No rows found</EmptyStatePanel>;
+    return (
+      <div className={cn(flush && "p-3")}>
+        {hasActiveFilter ? (
+          <SearchEmptyState className="border" resourceName="rows" />
+        ) : (
+          <EmptyStatePanel icon={Rows3}>No rows found</EmptyStatePanel>
+        )}
+      </div>
+    );
   }
   return (
     <div className="contents" data-keyboard-shortcut-scope="grid">
       <DataGrid
-        className={cn("querylane-data-grid", "rdg-light dark:rdg-dark")}
+        className={cn(
+          "querylane-data-grid",
+          "rdg-light dark:rdg-dark",
+          flush && "querylane-data-grid-flush"
+        )}
         columns={columns}
         defaultColumnOptions={DATA_GRID_DEFAULT_COLUMN_OPTIONS}
         // Keep RDG virtualization on. Wide/complex result sets otherwise mount
