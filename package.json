@@ -10,8 +10,5 @@
 	},
 	"devDependencies": {
 		"blume": "1.0.4"
-	},
-	"overrides": {
-		"path-to-regexp": "6.3.0"
 	}
 }
