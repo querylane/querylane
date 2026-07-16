@@ -15,6 +15,7 @@ test("builds canonical docs URLs for docs.querylane.net", () => {
 test("ships the static Blume output in a health-checked container", async () => {
 	const dockerfile = await read("Dockerfile.docs");
 
+	expect(dockerfile).toContain("FROM --platform=$BUILDPLATFORM oven/bun:");
 	expect(dockerfile).toContain("RUN bun run docs:build");
 	expect(dockerfile).toContain(
 		"COPY --from=builder /app/dist /usr/share/caddy",
