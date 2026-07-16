@@ -1,8 +1,10 @@
 "use client";
 
+import { Table2 } from "lucide-react";
 import { lazy, Suspense } from "react";
 import type { CategoryKey } from "@/features/data-explorer/data-explorer-types";
 import { ViewDetail } from "@/features/data-explorer/explorer-view-detail";
+import { ObjectDetailHeader } from "@/features/data-explorer/object-detail-chrome";
 import type { TableDetailTab } from "@/features/data-explorer/table-detail-tab";
 import type { Table } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import type { View } from "@/protogen/querylane/console/v1alpha1/view_pb";
@@ -20,31 +22,19 @@ function TableDetailLoadingFallback({
   schemaName: string;
   tableName: string;
 }) {
+  // Mirrors the loaded TableDetailHeader so the header doesn't jump when the
+  // lazy chunk resolves.
   return (
-    <header className="flex flex-col items-start justify-between gap-3 sm:flex-row">
-      <div className="flex min-w-0 items-center gap-3">
-        <div
-          aria-hidden="true"
-          className="size-10 shrink-0 rounded-lg bg-primary/10"
-        />
-        <div className="min-w-0">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
-            Table
-          </p>
-          <h1
-            aria-label={`${schemaName}.${tableName}`}
-            className="truncate font-mono font-semibold text-xl"
-            title={`${schemaName}.${tableName}`}
-          >
-            <span className="text-muted-foreground">{schemaName}.</span>
-            {tableName}
-          </h1>
-          <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-            Loading table details…
-          </p>
-        </div>
-      </div>
-    </header>
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <ObjectDetailHeader
+        icon={Table2}
+        iconClassName="bg-primary/10 text-primary"
+        subtitle="Loading table details…"
+        title={tableName}
+        titleAriaLabel={`${schemaName}.${tableName}`}
+        titlePrefix={`${schemaName}.`}
+      />
+    </div>
   );
 }
 
@@ -92,7 +82,7 @@ export function ResourceDetail({
     );
   }
   if (category === "views") {
-    return <ViewDetail view={view} viewName={name} />;
+    return <ViewDetail schemaName={schemaName} view={view} viewName={name} />;
   }
   return null;
 }

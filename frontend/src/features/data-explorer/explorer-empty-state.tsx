@@ -8,7 +8,7 @@ export function ExplorerEmptyState({
   hasError?: boolean;
 }) {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
       <DatabaseIcon className="size-10 text-muted-foreground/40" />
       <h2 className="font-semibold text-lg">Data Explorer</h2>
       <p className="max-w-sm text-muted-foreground text-sm">

@@ -1,5 +1,6 @@
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useMinimumSpin } from "@/hooks/use-minimum-spin";
 import { cn } from "@/lib/utils";
 
 interface RefreshControlProps {
@@ -24,6 +25,9 @@ function RefreshControl({
   lastFetchedLabel,
   onRefresh,
 }: RefreshControlProps) {
+  // disabled tracks the real in-flight state; the spin visual is held for a
+  // minimum duration so fast refreshes are still visibly acknowledged.
+  const isSpinning = useMinimumSpin(isRefreshing);
   return (
     <span className={cn("flex shrink-0 items-center gap-1", className)}>
       {/* Default sr-only keeps the polite live region in the a11y tree so the
@@ -52,7 +56,7 @@ function RefreshControl({
           aria-hidden="true"
           className={cn(
             "size-3.5",
-            isRefreshing && "animate-spin motion-reduce:animate-none"
+            isSpinning && "animate-spin motion-reduce:animate-none"
           )}
         />
       </Button>

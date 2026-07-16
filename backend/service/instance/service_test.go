@@ -52,6 +52,28 @@ func TestConnectionTestErrorPreservesContextSemantics(t *testing.T) {
 	}
 }
 
+func TestTestInstanceConnectionRejectedWhenConfigManaged(t *testing.T) {
+	t.Parallel()
+
+	connManager := &createServiceConnectionManager{}
+	service := NewService(nil, nil, nil, connManager, nil, &mockOverviewFetcher{}, true, newTestConnectionGuard())
+
+	_, err := service.TestInstanceConnection(context.Background(), connect.NewRequest(&v1alpha1.TestInstanceConnectionRequest{
+		Config: &v1alpha1.PostgresConfig{
+			Host:     "localhost",
+			Port:     5432,
+			Database: "postgres",
+			Username: "postgres",
+			Password: "secret",
+		},
+	}))
+
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeFailedPrecondition, connectErr.Code())
+	assert.Zero(t, connManager.calls, "config-managed mode must not dial the target")
+}
+
 func TestConnectionTestLogErrorRedactsPostgresMessage(t *testing.T) {
 	t.Parallel()
 

@@ -51,8 +51,9 @@ describe("view detail integration", () => {
     );
 
     expect(screen.getByRole("heading", { name: "daily_revenue" })).toBeTruthy();
-    expect(screen.getByText("Materialized view")).toBeTruthy();
-    expect(screen.getByText("owner: analytics_owner")).toBeTruthy();
+    expect(
+      screen.getByText("Materialized view · owner: analytics_owner")
+    ).toBeTruthy();
     expect(screen.getByText("4 KB")).toBeTruthy();
     expect(screen.getByText("Yes")).toBeTruthy();
     expect(screen.getByText("Precomputed daily revenue totals")).toBeTruthy();
@@ -201,8 +202,7 @@ GROUP BY 1;`,
     expect(
       screen.getByRole("heading", { name: "active_accounts" })
     ).toBeTruthy();
-    expect(screen.getByText("View")).toBeTruthy();
-    expect(screen.getByText("owner: app_owner")).toBeTruthy();
+    expect(screen.getByText("View · owner: app_owner")).toBeTruthy();
     expect(screen.queryByText("Populated")).toBeNull();
     expect(screen.queryByText("Size")).toBeNull();
   });

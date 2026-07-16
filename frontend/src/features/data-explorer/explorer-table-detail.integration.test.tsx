@@ -364,6 +364,52 @@ function renderConstraintsTab() {
   );
 }
 
+function mockClipboardWriteText() {
+  const originalClipboard = Object.getOwnPropertyDescriptor(
+    navigator,
+    "clipboard"
+  );
+  const writeText = vi.fn(() => Promise.resolve());
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText },
+  });
+  return {
+    restore: () => {
+      if (originalClipboard) {
+        Object.defineProperty(navigator, "clipboard", originalClipboard);
+      } else {
+        Reflect.deleteProperty(navigator, "clipboard");
+      }
+    },
+    writeText,
+  };
+}
+
+function getTableRowFor(text: string) {
+  const row = screen.getByText(text).closest("tr");
+  if (!row) {
+    throw new Error(`Expected "${text}" to render inside a table row.`);
+  }
+  return row;
+}
+
+function getIndexSummaryStrip() {
+  const strip = document.querySelector('[data-slot="index-summary-strip"]');
+  if (!strip) {
+    throw new Error("Expected the index summary strip to render.");
+  }
+  return strip;
+}
+
+function getSearchEmptyState() {
+  const emptyState = document.querySelector('[data-slot="search-empty-state"]');
+  if (!emptyState) {
+    throw new Error("Expected the filtered-empty state to render.");
+  }
+  return emptyState;
+}
+
 beforeEach(() => {
   seedSuccessfulMetadataQueries();
 });
@@ -1022,16 +1068,20 @@ describe("TableDetail partitions pagination", () => {
 });
 
 describe("TableDetail constraints pagination", () => {
-  it("keeps page-size and pagination controls with no constraints", () => {
+  it("shows the constraints empty state instead of a pager with no constraints", () => {
     renderConstraintsTab();
 
     expect(
-      screen.getByRole("combobox", { name: "Constraints per page" })
-    ).toBeTruthy();
-    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+      document.querySelector('[data-empty-category="constraints"]')
+    ).not.toBeNull();
+    expect(screen.getByText("No constraints")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
+    expect(
+      screen.queryByRole("combobox", { name: "Rows per page" })
+    ).toBeNull();
   });
 
-  it("paginates constraint cards after ten results", async () => {
+  it("paginates constraint rows with the shared 10-row default", async () => {
     const user = userEvent.setup();
     tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
       constraints: createCheckConstraints(11),
@@ -1044,11 +1094,10 @@ describe("TableDetail constraints pagination", () => {
     expect(screen.getByText("Showing 1–10 of 11")).toBeTruthy();
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
     expect(
-      screen.getByRole("navigation", { name: "Constraints pagination" })
-    ).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toContain(
-      "Showing 1–10 of 11"
-    );
+      screen
+        .getByRole("button", { name: "Previous page" })
+        .hasAttribute("disabled")
+    ).toBe(true);
 
     await user.click(screen.getByRole("button", { name: "Next page" }));
 
@@ -1056,9 +1105,12 @@ describe("TableDetail constraints pagination", () => {
     expect(screen.getByText("customers_status_11_check")).toBeTruthy();
     expect(screen.getByText("Showing 11–11 of 11")).toBeTruthy();
     expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Next page" }).hasAttribute("disabled")
+    ).toBe(true);
   });
 
-  it("paginates constraints in their grouped display order", () => {
+  it("paginates constraints in their kind display order", () => {
     tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
       constraints: [
         ...createCheckConstraints(10),
@@ -1073,7 +1125,8 @@ describe("TableDetail constraints pagination", () => {
 
     renderConstraintsTab();
 
-    expect(screen.getByText("customers_pkey")).toBeTruthy();
+    const [, firstDataRow] = screen.getAllByRole("row");
+    expect(firstDataRow?.textContent).toContain("customers_pkey");
     expect(screen.getByText("customers_status_9_check")).toBeTruthy();
     expect(screen.queryByText("customers_status_10_check")).toBeNull();
   });
@@ -1085,10 +1138,8 @@ describe("TableDetail constraints pagination", () => {
     });
     renderConstraintsTab();
 
-    const pageSize = screen.getByRole("combobox", {
-      name: "Constraints per page",
-    });
-    expect(within(pageSize).getByText("10")).toBeTruthy();
+    const pageSize = screen.getByRole("combobox", { name: "Rows per page" });
+    expect(pageSize.textContent).toContain("10");
 
     await user.click(pageSize);
     await user.click(screen.getByRole("option", { name: "25" }));
@@ -1115,7 +1166,7 @@ describe("TableDetail constraints pagination", () => {
     expect(screen.getByText("customers_status_5_check")).toBeTruthy();
     expect(screen.queryByText("customers_status_11_check")).toBeNull();
     expect(
-      screen.getByRole("combobox", { name: "Constraints per page" })
+      screen.getByRole("combobox", { name: "Rows per page" })
     ).toBeTruthy();
     expect(screen.getByText("Showing 1–1 of 1")).toBeTruthy();
   });
@@ -1179,7 +1230,7 @@ describe("TableDetail constraints pagination", () => {
 });
 
 describe("TableDetail constraints tab", () => {
-  it("keeps search left of the inline kind filter and combines both", async () => {
+  it("combines the quicksearch with the inline kind filter", async () => {
     const user = userEvent.setup();
     tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
       constraints: [
@@ -1219,14 +1270,6 @@ describe("TableDetail constraints tab", () => {
       name: "Search constraints…",
     });
     const kindFilter = screen.getByRole("button", { name: KIND_FILTER_RE });
-    const filterControls = search.closest(
-      '[data-slot="constraints-filter-controls"]'
-    );
-
-    expect(filterControls).not.toBeNull();
-    expect(filterControls?.contains(kindFilter)).toBe(true);
-    expect(filterControls?.firstElementChild?.contains(search)).toBe(true);
-    expect(filterControls?.lastElementChild?.contains(kindFilter)).toBe(true);
 
     await user.type(search, "account_id");
 
@@ -1237,7 +1280,7 @@ describe("TableDetail constraints tab", () => {
     await user.click(kindFilter);
     await user.click(screen.getByRole("option", { name: "CHECK" }));
 
-    expect(screen.getByText("No constraints found")).toBeTruthy();
+    expect(getSearchEmptyState().textContent).toContain("No results found");
 
     await user.clear(search);
 
@@ -1246,17 +1289,12 @@ describe("TableDetail constraints tab", () => {
     expect(screen.queryByText("customers_account_id_fkey")).toBeNull();
   });
 
-  it("groups keys and outbound foreign keys as constraint cards", async () => {
+  it("lists constraints in one sortable table ordered by kind", async () => {
     const user = userEvent.setup();
     tableQueries.constraints.dataUpdatedAt = Date.UTC(2026, 0, 1, 23);
     tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
+      // Foreign key first on purpose: the tab must reorder keys before FKs.
       constraints: [
-        create(TableConstraintSchema, {
-          columnNames: ["id"],
-          constraintName: "shipment_event_pkey",
-          definition: "PRIMARY KEY (id)",
-          type: ConstraintType.PRIMARY_KEY,
-        }),
         create(TableConstraintSchema, {
           columnNames: ["shipment_id"],
           constraintName: "shipment_event_shipment_id_fkey",
@@ -1267,6 +1305,12 @@ describe("TableDetail constraints tab", () => {
           referencedTable:
             "instances/prod/databases/app/schemas/shipping/tables/shipments",
           type: ConstraintType.FOREIGN_KEY,
+        }),
+        create(TableConstraintSchema, {
+          columnNames: ["id"],
+          constraintName: "shipment_event_pkey",
+          definition: "PRIMARY KEY (id)",
+          type: ConstraintType.PRIMARY_KEY,
         }),
       ],
     });
@@ -1282,23 +1326,19 @@ describe("TableDetail constraints tab", () => {
       />
     );
 
-    expect(
-      screen.getByRole("heading", {
-        name: "Keys primary key and uniqueness",
-      })
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("heading", {
-        name: "Foreign keys outbound references from this table",
-      })
-    ).toBeTruthy();
-    expect(screen.getByText("shipment_event_pkey")).toBeTruthy();
-    expect(screen.getByText("shipment_event_shipment_id_fkey")).toBeTruthy();
-    expect(
-      screen.getByText("ON DELETE CASCADE", {
-        selector: '[data-slot="badge"]',
-      })
-    ).toBeTruthy();
+    expect(screen.getByRole("table")).toBeTruthy();
+    const [, firstDataRow, secondDataRow] = screen.getAllByRole("row");
+    expect(firstDataRow?.textContent).toContain("shipment_event_pkey");
+    expect(secondDataRow?.textContent).toContain(
+      "shipment_event_shipment_id_fkey"
+    );
+    expect(screen.getByText("PRIMARY KEY")).toBeTruthy();
+    expect(screen.getByText("FOREIGN KEY")).toBeTruthy();
+    const fkDefinition =
+      "FOREIGN KEY (shipment_id) REFERENCES shipping.shipments(id) ON DELETE CASCADE";
+    expect(screen.getByTitle(fkDefinition).textContent).toContain(
+      "ON DELETE CASCADE"
+    );
     expect(
       screen
         .getByRole("link", { name: "shipping.shipments" })
@@ -1306,20 +1346,21 @@ describe("TableDetail constraints tab", () => {
     ).toBe(
       "/instances/prod/databases/app/explorer?schema=shipping&category=tables&name=shipments"
     );
-    const highlightedDefinitions = Array.from(
+    expect(
+      screen.queryByRole("heading", {
+        name: "Keys primary key and uniqueness",
+      })
+    ).toBeNull();
+    expect(
+      screen.queryByRole("heading", {
+        name: "Foreign keys outbound references from this table",
+      })
+    ).toBeNull();
+    expect(
       container.querySelectorAll(
         'code.language-sql[data-syntax-highlighter="shiki"]'
       )
-    );
-    expect(highlightedDefinitions.map((code) => code.textContent)).toEqual([
-      "PRIMARY KEY (id)",
-      "FOREIGN KEY (shipment_id) REFERENCES shipping.shipments(id) ON DELETE CASCADE",
-    ]);
-    expect(
-      container.querySelectorAll("[data-shiki-token]").length
-    ).toBeGreaterThan(8);
-    expect(screen.queryByRole("button", { name: "Copy SQL" })).toBeNull();
-    expect(screen.queryByRole("table")).toBeNull();
+    ).toHaveLength(0);
     expect(screen.getByText(LAST_FETCHED_RE)).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Refresh" }));
@@ -1352,21 +1393,13 @@ describe("TableDetail constraints tab", () => {
       />
     );
 
-    const card = screen.getByText("orders_order_id_fkey").closest("article");
-    expect(card).not.toBeNull();
-    expect(within(card as HTMLElement).getByText("legacy_orders")).toBeTruthy();
-    expect(
-      within(card as HTMLElement).queryByText(malformedReference)
-    ).toBeNull();
-    expect(
-      within(card as HTMLElement).getByText("FOREIGN KEY (order_id)")
-    ).toBeTruthy();
-    expect(
-      card?.querySelector('code[data-syntax-highlighter="shiki"]')
-    ).toBeNull();
+    const row = getTableRowFor("orders_order_id_fkey");
+    expect(within(row).getByText("legacy_orders")).toBeTruthy();
+    expect(within(row).queryByText(malformedReference)).toBeNull();
+    expect(within(row).getByText("FOREIGN KEY (order_id)")).toBeTruthy();
   });
 
-  it("shows design-export validation badges and check groups", () => {
+  it("shows kind badges and inline definitions without validation chrome", () => {
     tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
       constraints: [
         create(TableConstraintSchema, {
@@ -1400,17 +1433,21 @@ describe("TableDetail constraints tab", () => {
       />
     );
 
+    // Referential actions now live inside the definition cell text only.
     expect(
-      screen.getByText("ON DELETE RESTRICT", {
-        selector: '[data-slot="badge"]',
-      })
-    ).toBeTruthy();
-    expect(screen.getAllByText("validated")).toHaveLength(2);
+      screen.getByTitle(
+        "FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE RESTRICT"
+      ).textContent
+    ).toContain("ON DELETE RESTRICT");
+    expect(screen.getByText("FOREIGN KEY")).toBeTruthy();
+    expect(screen.getByText("CHECK")).toBeTruthy();
+    expect(screen.queryByText("Not valid")).toBeNull();
+    expect(screen.queryByText("validated")).toBeNull();
     expect(
-      screen.getByRole("heading", {
+      screen.queryByRole("heading", {
         name: "Checks row-level validation rules",
       })
-    ).toBeTruthy();
+    ).toBeNull();
     expect(screen.queryByText("Other constraints")).toBeNull();
   });
 
@@ -1443,29 +1480,12 @@ describe("TableDetail constraints tab", () => {
       />
     );
 
-    const validatedCard = screen
-      .getByText("customers_notes_check")
-      .closest("article");
-    const notValidCard = screen
-      .getByText("customers_status_not_valid_check")
-      .closest("article");
+    const validatedRow = getTableRowFor("customers_notes_check");
+    const notValidRow = getTableRowFor("customers_status_not_valid_check");
 
-    expect(validatedCard).not.toBeNull();
-    expect(notValidCard).not.toBeNull();
-    expect(
-      within(validatedCard as HTMLElement).getByText("validated")
-    ).toBeTruthy();
-    expect(
-      within(validatedCard as HTMLElement).queryByText("NOT VALID")
-    ).toBeNull();
-    expect(
-      within(notValidCard as HTMLElement).getByText("NOT VALID", {
-        selector: '[data-slot="badge"]',
-      })
-    ).toBeTruthy();
-    expect(
-      within(notValidCard as HTMLElement).queryByText("validated")
-    ).toBeNull();
+    expect(within(notValidRow).getByText("Not valid")).toBeTruthy();
+    expect(within(validatedRow).queryByText("Not valid")).toBeNull();
+    expect(screen.getAllByText("Not valid")).toHaveLength(1);
   });
 });
 
@@ -1642,121 +1662,68 @@ function renderPaginatedIndexes() {
 }
 
 describe("TableDetail indexes pagination", () => {
-  it("keeps page-size and pagination controls with no indexes", () => {
+  it("shows the indexes empty state instead of a pager with no indexes", () => {
     renderPaginatedIndexes();
 
     expect(
-      screen.getByRole("combobox", { name: "Indexes per page" })
-    ).toBeTruthy();
-    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+      document.querySelector('[data-empty-category="indexes"]')
+    ).not.toBeNull();
+    expect(screen.getByText("No indexes")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
     expect(
-      screen
-        .getByRole("button", { name: "Previous indexes page" })
-        .hasAttribute("disabled")
-    ).toBe(true);
+      screen.queryByRole("combobox", { name: "Rows per page" })
+    ).toBeNull();
     expect(
-      screen
-        .getByRole("button", { name: "Next indexes page" })
-        .hasAttribute("disabled")
-    ).toBe(true);
+      document.querySelector('[data-slot="index-summary-strip"]')
+    ).toBeNull();
   });
 
-  it("places the page-size control in the bottom pager", () => {
-    seedPaginatedIndexes();
-    renderPaginatedIndexes();
-
-    expect(
-      screen
-        .getByRole("navigation", { name: "Indexes pagination" })
-        .contains(screen.getByRole("combobox", { name: "Indexes per page" }))
-    ).toBe(true);
-  });
-
-  it("keeps page-size and pagination controls for one index", () => {
-    tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
-      indexes: [
-        create(TableIndexSchema, {
-          indexName: "orders_pkey",
-          isValid: true,
-          keyColumns: ["id"],
-          keyParts: ["id"],
-          method: "btree",
-        }),
-      ],
-    });
-    renderPaginatedIndexes();
-
-    expect(
-      screen.getByRole("combobox", { name: "Indexes per page" })
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("navigation", { name: "Indexes pagination" })
-    ).toBeTruthy();
-    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
-  });
-
-  it("paginates index cards with the shared 10-item default", async () => {
+  it("paginates index rows with the shared 10-row default", async () => {
     const user = userEvent.setup();
     seedPaginatedIndexes();
     renderPaginatedIndexes();
 
-    expect(
-      screen.queryAllByText("orders_idx_10", { exact: true }).length
-    ).toBeGreaterThan(0);
-    expect(
-      screen.queryAllByText("orders_idx_11", { exact: true })
-    ).toHaveLength(0);
-    expect(screen.getByText("Showing 1–10 of 12 indexes")).toBeTruthy();
+    expect(screen.getByText("orders_idx_10")).toBeTruthy();
+    expect(screen.queryByText("orders_idx_11")).toBeNull();
+    expect(screen.getByText("Showing 1–10 of 12")).toBeTruthy();
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
-    expect(
-      screen.getByRole("combobox", { name: "Indexes per page" }).textContent
-    ).toContain("10");
-    await user.click(
-      screen.getByRole("combobox", { name: "Indexes per page" })
-    );
+    const pageSize = screen.getByRole("combobox", { name: "Rows per page" });
+    expect(pageSize.textContent).toContain("10");
+    await user.click(pageSize);
     expect(
       screen.getAllByRole("option").map((option) => option.textContent)
     ).toEqual(["10", "25", "50"]);
     await user.keyboard("{Escape}");
     expect(
       screen
-        .getByRole("button", { name: "Previous indexes page" })
+        .getByRole("button", { name: "Previous page" })
         .hasAttribute("disabled")
     ).toBe(true);
 
-    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
+    await user.click(screen.getByRole("button", { name: "Next page" }));
 
-    expect(screen.queryAllByText("orders_idx_1", { exact: true })).toHaveLength(
-      0
-    );
-    expect(
-      screen.queryAllByText("orders_idx_11", { exact: true }).length
-    ).toBeGreaterThan(0);
-    expect(
-      screen.queryAllByText("orders_idx_12", { exact: true }).length
-    ).toBeGreaterThan(0);
-    expect(screen.getByText("Showing 11–12 of 12 indexes")).toBeTruthy();
+    expect(screen.queryByText("orders_idx_1")).toBeNull();
+    expect(screen.getByText("orders_idx_11")).toBeTruthy();
+    expect(screen.getByText("orders_idx_12")).toBeTruthy();
+    expect(screen.getByText("Showing 11–12 of 12")).toBeTruthy();
     expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Next page" }).hasAttribute("disabled")
+    ).toBe(true);
   });
 
-  it("changes index page size without losing the first visible index", async () => {
+  it("changes the index page size after paging", async () => {
     const user = userEvent.setup();
     seedPaginatedIndexes();
     renderPaginatedIndexes();
 
-    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
-    await user.click(
-      screen.getByRole("combobox", { name: "Indexes per page" })
-    );
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
     await user.click(screen.getByRole("option", { name: "25" }));
 
-    expect(
-      screen.queryAllByText("orders_idx_11", { exact: true }).length
-    ).toBeGreaterThan(0);
-    expect(
-      screen.queryAllByText("orders_idx_5", { exact: true }).length
-    ).toBeGreaterThan(0);
-    expect(screen.getByText("Showing 1–12 of 12 indexes")).toBeTruthy();
+    expect(screen.getByText("orders_idx_5")).toBeTruthy();
+    expect(screen.getByText("orders_idx_11")).toBeTruthy();
+    expect(screen.getByText("Showing 1–12 of 12")).toBeTruthy();
     expect(screen.getByText("Page 1 of 1")).toBeTruthy();
   });
 
@@ -1765,17 +1732,16 @@ describe("TableDetail indexes pagination", () => {
     seedPaginatedIndexes();
     renderPaginatedIndexes();
 
-    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
+    await user.click(screen.getByRole("button", { name: "Next page" }));
     const search = screen.getByRole("textbox", { name: "Search indexes…" });
     await user.type(search, "orders_idx_2");
+
+    expect(screen.getByText("Showing 1–1 of 1")).toBeTruthy();
+
     await user.clear(search);
 
-    expect(
-      screen.queryAllByText("orders_idx_1", { exact: true }).length
-    ).toBeGreaterThan(0);
-    expect(
-      screen.queryAllByText("orders_idx_11", { exact: true })
-    ).toHaveLength(0);
+    expect(screen.getByText("orders_idx_1")).toBeTruthy();
+    expect(screen.queryByText("orders_idx_11")).toBeNull();
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
   });
 
@@ -1784,52 +1750,21 @@ describe("TableDetail indexes pagination", () => {
     seedPaginatedIndexes((index) => (index < 10 ? "btree" : "gin"));
     renderPaginatedIndexes();
 
-    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
+    await user.click(screen.getByRole("button", { name: "Next page" }));
     await user.click(screen.getByRole("button", { name: "Method" }));
     await user.click(screen.getByRole("option", { name: "GIN" }));
     await user.click(screen.getByRole("button", { name: "Reset" }));
 
-    expect(
-      screen.queryAllByText("orders_idx_1", { exact: true }).length
-    ).toBeGreaterThan(0);
-    expect(
-      screen.queryAllByText("orders_idx_11", { exact: true })
-    ).toHaveLength(0);
+    expect(screen.getByText("orders_idx_1")).toBeTruthy();
+    expect(screen.queryByText("orders_idx_11")).toBeNull();
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
-  });
-
-  it("disables pager controls at page boundaries", async () => {
-    const user = userEvent.setup();
-    seedPaginatedIndexes();
-    renderPaginatedIndexes();
-
-    const nextPage = screen.getByRole("button", {
-      name: "Next indexes page",
-    });
-    await user.click(nextPage);
-
-    expect(nextPage.hasAttribute("disabled")).toBe(true);
-  });
-
-  it("announces indexes page changes", async () => {
-    const user = userEvent.setup();
-    seedPaginatedIndexes();
-    renderPaginatedIndexes();
-
-    expect(screen.getByRole("status").textContent).toBe(
-      "Showing 1–10 of 12 indexes"
-    );
-
-    await user.click(screen.getByRole("button", { name: "Next indexes page" }));
-
-    expect(screen.getByRole("status").textContent).toBe(
-      "Showing 11–12 of 12 indexes"
-    );
   });
 });
 
 describe("TableDetail indexes tab", () => {
-  it("renders index summary cards and copyable SQL instead of a grid", () => {
+  it("renders a dense index table with a summary strip and copyable SQL", async () => {
+    const user = userEvent.setup();
+    const clipboard = mockClipboardWriteText();
     tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
       indexes: [
         create(TableIndexSchema, {
@@ -1844,45 +1779,47 @@ describe("TableDetail indexes tab", () => {
       ],
     });
 
-    render(
-      <TableDetail
-        databaseId="app"
-        initialTab="indexes"
-        instanceId="prod"
-        schemaName="shipping"
-        table={create(TableSchema, {
-          rowCount: 18_200_000n,
-          sizeBytes: 21_400_000_000n,
-        })}
-        tableName="shipment_event"
-      />
-    );
+    try {
+      render(
+        <TableDetail
+          databaseId="app"
+          initialTab="indexes"
+          instanceId="prod"
+          schemaName="shipping"
+          table={create(TableSchema, {
+            rowCount: 18_200_000n,
+            sizeBytes: 21_400_000_000n,
+          })}
+          tableName="shipment_event"
+        />
+      );
 
-    expect(screen.getByText("Total size")).toBeTruthy();
-    expect(screen.getAllByText("Scans").length).toBeGreaterThan(0);
-    expect(document.body.textContent).not.toContain("41d");
-    expect(screen.getByText("Validity")).toBeTruthy();
-    expect(screen.getByText("usage stats unavailable")).toBeTruthy();
-    expect(
-      screen.getByRole("button", {
-        name: "Scans. PostgreSQL did not return usage data from pg_stat_user_indexes.",
-      })
-    ).toBeTruthy();
-    expect(screen.queryByText("Usage from")).toBeNull();
-    expect(screen.getAllByText("shipment_event_pkey").length).toBeGreaterThan(
-      0
-    );
-    expect(screen.getAllByText("btree").length).toBeGreaterThan(0);
-    expect(screen.getByText("UNIQUE")).toBeTruthy();
-    expect(screen.getByText("id")).toBeTruthy();
-    expect(document.body.textContent).toContain(
-      "CREATE UNIQUE INDEX shipment_event_pkey ON shipping.shipment_event USING btree (id)"
-    );
-    expect(screen.getByRole("button", { name: "Copy SQL" })).toBeTruthy();
-    expect(screen.queryByRole("table")).toBeNull();
+      expect(getIndexSummaryStrip().textContent).toBe(
+        "1 index · 16 KB total vs heap 19.9 GB · usage stats unavailable"
+      );
+      expect(screen.getByRole("table")).toBeTruthy();
+      expect(screen.getByText("shipment_event_pkey")).toBeTruthy();
+      expect(screen.getByText("Unique")).toBeTruthy();
+      expect(screen.getByText("btree")).toBeTruthy();
+      expect(screen.getByTitle("(id)")).toBeTruthy();
+      expect(screen.getByText("16 KB")).toBeTruthy();
+      // Scans and cache hit fall back to em dashes without usage stats.
+      const row = getTableRowFor("shipment_event_pkey");
+      expect(within(row).getAllByText("—")).toHaveLength(2);
+
+      await user.click(
+        screen.getByRole("button", { name: "Copy CREATE INDEX SQL" })
+      );
+
+      expect(clipboard.writeText).toHaveBeenCalledWith(
+        "CREATE UNIQUE INDEX shipment_event_pkey ON shipping.shipment_event USING btree (id)"
+      );
+    } finally {
+      clipboard.restore();
+    }
   });
 
-  it("searches and filters index cards without changing summary totals", async () => {
+  it("searches and filters index rows without changing summary strip totals", async () => {
     const user = userEvent.setup();
     tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
       indexes: [
@@ -1915,43 +1852,43 @@ describe("TableDetail indexes tab", () => {
     );
 
     const search = screen.getByRole("textbox", { name: "Search indexes…" });
-    const indexesSummary = screen.getByText("Indexes", {
-      selector: "p",
-    }).parentElement;
-    if (!indexesSummary) {
-      throw new Error("Expected the indexes summary card to render.");
-    }
+    const summaryText = getIndexSummaryStrip().textContent;
+    expect(summaryText).toContain("2 indexes");
+
     await user.type(search, "payload");
 
-    expect(document.body.textContent).toContain("orders_payload_idx");
-    expect(document.body.textContent).not.toContain("orders_pkey");
-    expect(within(indexesSummary).getByText("2")).toBeTruthy();
+    expect(screen.getByText("orders_payload_idx")).toBeTruthy();
+    expect(screen.queryByText("orders_pkey")).toBeNull();
+    expect(getIndexSummaryStrip().textContent).toBe(summaryText);
 
     await user.clear(search);
 
-    expect(document.body.textContent).toContain("orders_payload_idx");
-    expect(document.body.textContent).toContain("orders_pkey");
+    expect(screen.getByText("orders_payload_idx")).toBeTruthy();
+    expect(screen.getByText("orders_pkey")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Method" }));
     await user.click(screen.getByRole("option", { name: "GIN" }));
 
-    expect(document.body.textContent).toContain("orders_payload_idx");
-    expect(document.body.textContent).not.toContain("orders_pkey");
-    expect(within(indexesSummary).getByText("2")).toBeTruthy();
+    expect(screen.getByText("orders_payload_idx")).toBeTruthy();
+    expect(screen.queryByText("orders_pkey")).toBeNull();
+    expect(getIndexSummaryStrip().textContent).toBe(summaryText);
 
     await user.click(screen.getByRole("button", { name: "Reset" }));
 
-    expect(document.body.textContent).toContain("orders_payload_idx");
-    expect(document.body.textContent).toContain("orders_pkey");
+    expect(screen.getByText("orders_payload_idx")).toBeTruthy();
+    expect(screen.getByText("orders_pkey")).toBeTruthy();
 
     await user.type(search, "missing");
 
-    expect(screen.getByText("No indexes found")).toBeTruthy();
-    expect(screen.getByText("Try a different search or filter.")).toBeTruthy();
-    expect(within(indexesSummary).getByText("2")).toBeTruthy();
+    const searchEmpty = getSearchEmptyState();
+    expect(searchEmpty.textContent).toContain("No results found");
+    expect(searchEmpty.textContent).toContain(
+      "Try a different search or filter."
+    );
+    expect(getIndexSummaryStrip().textContent).toBe(summaryText);
   });
 
-  it("renders usage stats, partial indexes, expression indexes, and unused warnings", () => {
+  it("renders usage stats, partial indexes, expression indexes, and unused pills", () => {
     tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
       indexes: [
         create(TableIndexSchema, {
@@ -2032,34 +1969,35 @@ describe("TableDetail indexes tab", () => {
       />
     );
 
-    expect(screen.getAllByText("4").length).toBeGreaterThan(0);
-    expect(screen.getByText("1 unused")).toBeTruthy();
-    expect(screen.getByText("478 MB")).toBeTruthy();
-    expect(screen.getByText("58.7M")).toBeTruthy();
-    expect(screen.getByText("since last stats reset")).toBeTruthy();
-    expect(screen.getByText("all valid")).toBeTruthy();
-    expect(screen.getByText("PARTIAL")).toBeTruthy();
-    expect(screen.getByText("EXPRESSION")).toBeTruthy();
-    expect(screen.getByText("UNUSED")).toBeTruthy();
-    expect(screen.getByText("lower(ref)")).toBeTruthy();
-    expect(screen.getByText("99.7%")).toBeTruthy();
-    expect(screen.getAllByText("0").length).toBeGreaterThan(0);
-    expect(
-      screen.getByRole("progressbar", {
-        name: "shipments_pkey: 82% of index scans",
-      })
-    ).toBeTruthy();
-    const cacheHitHelp = screen
-      .getAllByText("Cache hit")[0]
-      ?.closest('[data-slot="tooltip-trigger"]');
-    expect(cacheHitHelp?.getAttribute("tabindex")).toBe("0");
-    expect(cacheHitHelp?.getAttribute("aria-label")).toContain("shared-buffer");
-    expect(document.body.textContent).toContain(
-      "CREATE INDEX shipments_status_idx ON shipping.shipments USING btree (status) WHERE status <> 'delivered'"
+    expect(getIndexSummaryStrip().textContent).toBe(
+      "4 indexes · 478 MB total vs heap 12.8 GB · 58.7M scans since stats reset · 1 unused"
     );
+    expect(screen.getByText("48.1M")).toBeTruthy();
+    expect(screen.getByText("9.4M")).toBeTruthy();
+    expect(screen.getByText("1.2M")).toBeTruthy();
+    expect(screen.getByText("99.7%")).toBeTruthy();
+    expect(screen.getByText("98.9%")).toBeTruthy();
+    expect(screen.getByText("99.1%")).toBeTruthy();
+    // The predicate and expression are part of the Columns cell now.
+    expect(
+      screen.getByTitle("(status) WHERE status <> 'delivered'").textContent
+    ).toBe("(status) WHERE status <> 'delivered'");
+    expect(screen.getByTitle("(lower(ref))")).toBeTruthy();
+    const unusedRow = getTableRowFor("shipments_legacy_ref_idx");
+    expect(within(unusedRow).getByText("Unused")).toBeTruthy();
+    expect(within(unusedRow).getByText("0")).toBeTruthy();
+    expect(screen.getAllByText("Unused")).toHaveLength(1);
+    // The old badge-and-progressbar chrome is gone.
+    expect(screen.queryByText("PARTIAL")).toBeNull();
+    expect(screen.queryByText("EXPRESSION")).toBeNull();
+    expect(screen.queryByRole("progressbar")).toBeNull();
   });
+});
 
-  it("preserves quoted key parts in fallback index SQL", () => {
+describe("TableDetail indexes tab SQL and stats", () => {
+  it("preserves quoted key parts in fallback index SQL", async () => {
+    const user = userEvent.setup();
+    const clipboard = mockClipboardWriteText();
     tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
       indexes: [
         create(TableIndexSchema, {
@@ -2071,24 +2009,31 @@ describe("TableDetail indexes tab", () => {
       ],
     });
 
-    render(
-      <TableDetail
-        databaseId="app"
-        initialTab="indexes"
-        instanceId="prod"
-        schemaName="sales"
-        table={undefined}
-        tableName="orders"
-      />
-    );
+    try {
+      render(
+        <TableDetail
+          databaseId="app"
+          initialTab="indexes"
+          instanceId="prod"
+          schemaName="sales"
+          table={undefined}
+          tableName="orders"
+        />
+      );
 
-    expect(document.body.textContent).toContain(
-      'CREATE INDEX orders_mixed_case_idx ON sales.orders USING btree ("Order")'
-    );
-    expect(document.body.textContent).not.toContain('"""Order"""');
+      await user.click(
+        screen.getByRole("button", { name: "Copy CREATE INDEX SQL" })
+      );
+
+      expect(clipboard.writeText).toHaveBeenCalledWith(
+        'CREATE INDEX orders_mixed_case_idx ON sales.orders USING btree ("Order")'
+      );
+    } finally {
+      clipboard.restore();
+    }
   });
 
-  it("announces exact tiny scan shares without the visual floor", () => {
+  it("renders exact tiny scan counts in the Scans cell", () => {
     tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
       indexes: [
         create(TableIndexSchema, {
@@ -2121,10 +2066,14 @@ describe("TableDetail indexes tab", () => {
       />
     );
 
-    const tinyShare = screen.getByRole("progressbar", {
-      name: "orders_tiny_idx: 0% of index scans",
-    });
-    expect(tinyShare.getAttribute("aria-valuenow")).toBe("0");
+    // The scan-share progressbar is gone; exact counts render instead.
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(
+      within(getTableRowFor("orders_tiny_idx")).getByText("1")
+    ).toBeTruthy();
+    expect(
+      within(getTableRowFor("orders_busy_idx")).getByText("999")
+    ).toBeTruthy();
   });
 });
 

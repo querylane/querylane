@@ -93,8 +93,9 @@ type Service struct {
 }
 
 // NewService creates a new instance of the instance service.
-// When readOnly is true (config-managed instances), mutation RPCs
-// return FailedPrecondition immediately without doing any work.
+// When readOnly is true (config-managed instances), mutation RPCs and
+// TestInstanceConnection return FailedPrecondition immediately without
+// doing any work.
 func NewService(
 	instanceReader Reader,
 	instanceRepo storage.InstanceRepository,
@@ -205,8 +206,15 @@ func (s *Service) CreateInstance(ctx context.Context, req *connect.Request[v1alp
 }
 
 // TestInstanceConnection validates PostgreSQL connection details without
-// creating or updating an instance resource.
+// creating or updating an instance resource. It is only available when
+// instances can be added through the API: in config-managed mode the endpoint
+// would let callers probe arbitrary network targets without ever being able
+// to create an instance, so it is disabled alongside the mutation RPCs.
 func (s *Service) TestInstanceConnection(ctx context.Context, req *connect.Request[v1alpha1.TestInstanceConnectionRequest]) (*connect.Response[v1alpha1.TestInstanceConnectionResponse], error) {
+	if s.readOnly {
+		return nil, configManagedError()
+	}
+
 	if err := s.connectionTests.admit(req.Peer().Addr); err != nil {
 		return nil, err
 	}

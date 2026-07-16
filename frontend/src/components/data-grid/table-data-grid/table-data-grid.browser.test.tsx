@@ -519,7 +519,6 @@ function renderSqlWhereFilterToolbar() {
           isFetching={false}
           onClearSelection={vi.fn()}
           onCopySelection={vi.fn()}
-          onExportRows={vi.fn()}
           onExportSelection={vi.fn()}
           onFilterChange={vi.fn()}
           onRefresh={vi.fn()}

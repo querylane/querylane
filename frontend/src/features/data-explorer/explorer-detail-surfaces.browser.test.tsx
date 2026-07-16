@@ -57,6 +57,8 @@ const ACTIVE_KIND_FILTER_RE = /^Kind.*Materialized views/;
 const ACTIVE_OWNER_FILTER_RE = /^Owner.*analytics_owner/;
 const KIND_FILTER_RE = /^Kind$/;
 const OWNER_FILTER_RE = /^Owner$/;
+// The Objects tab's accessible name includes its count badge.
+const OBJECTS_TAB_RE = /^Objects/;
 const SCHEMA_MAP_ALL_CHIP_RE = /^All 7$/;
 const SCHEMA_MAP_FILTER_RE = /^Schema$/;
 const SCHEMA_MAP_ACTIVE_FILTER_RE = /^Schema.*catalog/;
@@ -85,10 +87,12 @@ const PARTITION_PAGE_ALL_RE = /Showing 1–12 of 12/;
 const PARTITION_REDESIGN_FETCHED_AT = Date.parse("2026-07-07T22:51:48Z");
 const LAST_FETCHED_11_PM_RE = /Last fetched 11:00:00 PM/;
 const POLICIES_ONE_TAB_RE = /^Policies\s+1$/;
-const TABLE_COLUMNS_LAST_FETCHED_RE = /11 columns · base table · Last fetched/;
+const TABLE_COLUMNS_LAST_FETCHED_RE = /base table · 11 columns · Last fetched/;
 const TIMESTAMPTZ_TYPE_TITLE_RE =
   /Timestamp.*timestamptz.*UTC-normalized instant/;
 const TRIGGERS_ONE_TAB_RE = /^Triggers\s+1$/;
+const CACHE_HIT_HEADER_LABEL =
+  "Cache hit. PostgreSQL shared-buffer hit ratio; operating-system cache reads count as reads.";
 const refreshableQueryFields = vi.hoisted(() => ({
   dataUpdatedAt: 1_704_150_000_000,
   isFetching: false,
@@ -166,6 +170,17 @@ function requireFacetFilterBar(description: string) {
   }
 
   return filterBar;
+}
+
+function requireIndexSummaryStrip() {
+  const strip = document.querySelector<HTMLElement>(
+    '[data-slot="index-summary-strip"]'
+  );
+  if (!strip) {
+    throw new Error("Expected the index summary strip to render.");
+  }
+
+  return strip;
 }
 
 function requireColumnTypeTitle(displayType: string) {
@@ -1434,7 +1449,7 @@ test("data explorer schema detail keeps dense table summaries scannable", async 
     .element(page.getByRole("button", { name: OWNER_FILTER_RE }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("tab", { name: "Objects" }))
+    .element(page.getByRole("tab", { name: OBJECTS_TAB_RE }))
     .toBeVisible();
   await expect
     .element(page.getByRole("tab", { name: "Schema map" }))
@@ -2001,7 +2016,9 @@ test("data explorer materialized view detail stays readable", async () => {
       })
     )
     .toBeVisible();
-  await expect.element(page.getByText("Materialized view")).toBeVisible();
+  await expect
+    .element(page.getByText("Materialized view · owner: analytics_owner"))
+    .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-view-detail"
   );
@@ -2354,7 +2371,7 @@ test("data explorer table tabs stay visible when column metadata overflows", asy
   );
 });
 
-test("data explorer table indexes have a redesigned card baseline", async () => {
+test("data explorer table indexes have a redesigned table baseline", async () => {
   seedTableDetailQueries();
   renderExplorerSurface(
     <TableDetail
@@ -2375,11 +2392,13 @@ test("data explorer table indexes have a redesigned card baseline", async () => 
   );
 
   await expect
-    .element(page.getByText("customers_status_account_idx").first())
+    .element(page.getByText("customers_status_account_idx"))
     .toBeVisible();
   await expect.element(page.getByText("btree").first()).toBeVisible();
   await expect.element(page.getByText("Scans").first()).toBeVisible();
-  await expect.element(page.getByText("since last stats reset")).toBeVisible();
+  expect(requireIndexSummaryStrip().textContent).toBe(
+    "2 indexes · 416 KB total vs heap 40.5 MB · 30 scans since stats reset"
+  );
   const indexSearch = page
     .getByRole("textbox", { name: "Search indexes…" })
     .element();
@@ -2388,42 +2407,25 @@ test("data explorer table indexes have a redesigned card baseline", async () => 
     .element(page.getByRole("button", { exact: true, name: "Method" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("combobox", { name: "Indexes per page" }))
+    .element(page.getByRole("combobox", { name: "Rows per page" }))
     .toBeVisible();
   const searchBox = indexSearch.getBoundingClientRect();
   const filterBox = indexFilterBar.getBoundingClientRect();
   expect(filterBox.left).toBeGreaterThan(searchBox.right);
   expect(Math.abs(filterBox.top - searchBox.top)).toBeLessThanOrEqual(1);
   await expect
-    .element(
-      page.getByRole("button", {
-        name: "Scans. Usage source: pg_stat_user_indexes.",
-      })
-    )
+    .element(page.getByRole("button", { name: CACHE_HIT_HEADER_LABEL }))
     .toBeVisible();
   expect(document.body.textContent).not.toContain("Usage from");
+  // Included columns render inside the Columns cell with the full text in
+  // its title; the CREATE INDEX SQL lives in the per-row copy button value
+  // instead of body text.
   await expect
-    .element(page.getByText("INCLUDE last_seen_at").first())
+    .element(page.getByTitle("(status, account_id) INCLUDE (last_seen_at)"))
     .toBeVisible();
-  expect(document.body.textContent).toContain(
-    "CREATE INDEX customers_status_account_idx ON public.customers USING btree (status, account_id) INCLUDE (last_seen_at)"
-  );
-  expect(document.body.textContent).toContain(
-    "CREATE UNIQUE INDEX customers_pkey ON public.customers USING btree (customer_id)"
-  );
-  const copyButton = page
-    .getByRole("button", { name: "Copy SQL" })
-    .first()
-    .element();
-  const sqlBlock = copyButton.parentElement;
-  if (!sqlBlock) {
-    throw new Error("Expected Copy SQL to render inside its SQL block.");
-  }
-  const copyBox = copyButton.getBoundingClientRect();
-  const sqlBlockBox = sqlBlock.getBoundingClientRect();
-  const copyCenter = copyBox.top + copyBox.height / 2;
-  const sqlBlockCenter = sqlBlockBox.top + sqlBlockBox.height / 2;
-  expect(Math.abs(copyCenter - sqlBlockCenter)).toBeLessThanOrEqual(1);
+  expect(
+    page.getByRole("button", { name: "Copy CREATE INDEX SQL" }).elements()
+  ).toHaveLength(2);
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-indexes"
   );
@@ -2450,55 +2452,39 @@ test("data explorer table indexes constraints policies and triggers stay readabl
   );
 
   await expect
-    .element(page.getByText("customers_status_account_idx").first())
+    .element(page.getByText("customers_status_account_idx"))
     .toBeVisible();
   await expect.element(page.getByText("btree").first()).toBeVisible();
   await expect.element(page.getByText("Scans").first()).toBeVisible();
-  await expect.element(page.getByText("since last stats reset")).toBeVisible();
+  expect(requireIndexSummaryStrip().textContent).toBe(
+    "2 indexes · 416 KB total vs heap 40.5 MB · 30 scans since stats reset"
+  );
   await expect
-    .element(
-      page.getByRole("button", {
-        name: "Scans. Usage source: pg_stat_user_indexes.",
-      })
-    )
+    .element(page.getByRole("button", { name: CACHE_HIT_HEADER_LABEL }))
     .toBeVisible();
   expect(document.body.textContent).not.toContain("Usage from");
   await expect
-    .element(page.getByText("INCLUDE last_seen_at").first())
+    .element(page.getByTitle("(status, account_id) INCLUDE (last_seen_at)"))
     .toBeVisible();
-  expect(document.body.textContent).toContain(
-    "CREATE INDEX customers_status_account_idx ON public.customers USING btree (status, account_id) INCLUDE (last_seen_at)"
-  );
-  expect(document.body.textContent).toContain(
-    "CREATE UNIQUE INDEX customers_pkey ON public.customers USING btree (customer_id)"
-  );
+  expect(
+    page.getByRole("button", { name: "Copy CREATE INDEX SQL" }).elements()
+  ).toHaveLength(2);
 
   await page.getByRole("tab", { exact: true, name: "Constraints 2" }).click();
-  await expect
-    .element(
-      page.getByRole("heading", {
-        exact: true,
-        name: "Keys primary key and uniqueness",
-      })
-    )
-    .toBeVisible();
-  await expect
-    .element(
-      page.getByRole("heading", {
-        exact: true,
-        name: "Foreign keys outbound references from this table",
-      })
-    )
-    .toBeVisible();
   await expect.element(page.getByText("customers_pkey")).toBeVisible();
   await expect
     .element(page.getByText("customers_account_id_fkey"))
     .toBeVisible();
+  await expect.element(page.getByText("PRIMARY KEY")).toBeVisible();
+  await expect.element(page.getByText("FOREIGN KEY")).toBeVisible();
   await expect.element(page.getByText("public.accounts ↗")).toBeVisible();
   expect(
     document.querySelector('[data-slot="facet-filter-bar"]')
   ).not.toBeNull();
-  expect(document.querySelector("table")).toBeNull();
+  expect(document.querySelector("table")).not.toBeNull();
+  expect(document.body.textContent).not.toContain(
+    "Keys primary key and uniqueness"
+  );
 
   await page.getByRole("tab", { exact: true, name: "Policies 1" }).click();
   await expect
@@ -2531,7 +2517,7 @@ test("data explorer table indexes constraints policies and triggers stay readabl
   );
 });
 
-test("data explorer constraints tab matches redesign card groups", async () => {
+test("data explorer constraints tab matches the redesigned table", async () => {
   seedTableDetailQueries();
   tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
     columns: [
@@ -2609,26 +2595,20 @@ test("data explorer constraints tab matches redesign card groups", async () => {
     />
   );
 
+  await expect.element(page.getByText("shipment_event_pkey")).toBeVisible();
+  await expect
+    .element(page.getByText("shipment_event_shipment_id_fkey"))
+    .toBeVisible();
+  await expect.element(page.getByText("PRIMARY KEY")).toBeVisible();
+  await expect.element(page.getByText("FOREIGN KEY")).toBeVisible();
+  // Referential actions live inside the definition cell (full text in title).
   await expect
     .element(
-      page.getByRole("heading", {
-        exact: true,
-        name: "Keys primary key and uniqueness",
-      })
+      page.getByTitle(
+        "FOREIGN KEY (shipment_id) REFERENCES shipping.shipments(id) ON DELETE CASCADE"
+      )
     )
     .toBeVisible();
-  await expect
-    .element(
-      page.getByRole("heading", {
-        exact: true,
-        name: "Foreign keys outbound references from this table",
-      })
-    )
-    .toBeVisible();
-  await expect
-    .element(page.getByText("ON DELETE CASCADE").first())
-    .toBeVisible();
-  await expect.element(page.getByText("validated")).toBeVisible();
   await expect.element(page.getByText("shipping.shipments ↗")).toBeVisible();
   await expect
     .element(page.getByText("Last fetched 11:00:00 PM", { exact: true }))
@@ -2649,13 +2629,17 @@ test("data explorer constraints tab matches redesign card groups", async () => {
   expect(
     document.querySelector('[data-slot="facet-filter-bar"]')
   ).not.toBeNull();
-  expect(document.querySelector("table")).toBeNull();
+  expect(document.querySelector("table")).not.toBeNull();
+  expect(document.body.textContent).not.toContain(
+    "Keys primary key and uniqueness"
+  );
+  expect(document.body.textContent).not.toContain("validated");
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-constraints-redesign"
   );
 });
 
-test("data explorer constraints tab paginates dense card groups", async () => {
+test("data explorer constraints tab paginates the dense table", async () => {
   seedTableDetailQueries();
   tableQueries.constraints.data = createProto(
     ListTableConstraintsResponseSchema,
@@ -2689,13 +2673,10 @@ test("data explorer constraints tab paginates dense card groups", async () => {
     />
   );
 
-  const pagination = page.getByRole("navigation", {
-    name: "Constraints pagination",
-  });
-  await expect.element(pagination).toBeVisible();
   await expect
-    .element(page.getByRole("combobox", { name: "Constraints per page" }))
+    .element(page.getByRole("combobox", { name: "Rows per page" }))
     .toBeVisible();
+  await expect.element(page.getByText("Showing 1–10 of 11")).toBeVisible();
   await expect.element(page.getByText("Page 1 of 2")).toBeVisible();
   await page.getByRole("button", { name: "Next page" }).click();
   await expect
@@ -2766,29 +2747,23 @@ test("data explorer constraints tab covers validation and action states", async 
     />
   );
 
-  await expect
-    .element(page.getByText("ON UPDATE SET NULL").first())
-    .toBeVisible();
-  await expect
-    .element(page.getByText("ON DELETE RESTRICT").first())
-    .toBeVisible();
-  await expect.element(page.getByText("NOT VALID").first()).toBeVisible();
+  // Referential actions render as part of the definition cell text.
   await expect
     .element(
-      page.getByRole("heading", {
-        exact: true,
-        name: "Checks row-level validation rules",
-      })
+      page.getByTitle(
+        "FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON UPDATE SET NULL ON DELETE RESTRICT"
+      )
     )
     .toBeVisible();
-  await expect
-    .element(
-      page.getByRole("heading", {
-        exact: true,
-        name: "Other constraints exclusion and other rules",
-      })
-    )
-    .toBeVisible();
+  await expect.element(page.getByText("Not valid")).toBeVisible();
+  await expect.element(page.getByText("CHECK").first()).toBeVisible();
+  await expect.element(page.getByText("EXCLUSION")).toBeVisible();
+  expect(document.body.textContent).not.toContain(
+    "Checks row-level validation rules"
+  );
+  expect(document.body.textContent).not.toContain(
+    "Other constraints exclusion and other rules"
+  );
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-table-constraint-states"
   );
@@ -2878,20 +2853,25 @@ test("data explorer table indexes match the redesign complex usage scenario", as
   await expect
     .element(page.getByRole("tab", { exact: true, name: "Indexes 4" }))
     .toBeVisible();
-  await expect.element(page.getByText("shipments_pkey").first()).toBeVisible();
+  await expect.element(page.getByText("shipments_pkey")).toBeVisible();
+  await expect.element(page.getByText("shipments_status_idx")).toBeVisible();
   await expect
-    .element(page.getByText("shipments_status_idx").first())
+    .element(page.getByText("shipments_carrier_id_idx"))
     .toBeVisible();
   await expect
-    .element(page.getByText("shipments_carrier_id_idx").first())
+    .element(page.getByText("shipments_legacy_ref_idx"))
     .toBeVisible();
-  await expect
-    .element(page.getByText("shipments_legacy_ref_idx").first())
-    .toBeVisible();
-  await expect.element(page.getByText("1 unused")).toBeVisible();
-  await expect.element(page.getByText("478 MB")).toBeVisible();
-  await expect.element(page.getByText("58.7M")).toBeVisible();
+  expect(requireIndexSummaryStrip().textContent).toBe(
+    "4 indexes · 478 MB total vs heap 12.8 GB · 58.7M scans since stats reset · 1 unused"
+  );
+  await expect.element(page.getByText("48.1M")).toBeVisible();
   await expect.element(page.getByText("99.7%")).toBeVisible();
+  await expect.element(page.getByText("Unused")).toBeVisible();
+  // Predicate and expression details live in the Columns cells.
+  await expect
+    .element(page.getByTitle("(status) WHERE status <> 'delivered'"))
+    .toBeVisible();
+  await expect.element(page.getByTitle("(lower(ref))")).toBeVisible();
   await expect
     .element(page.getByRole("textbox", { name: "Search indexes…" }))
     .toBeVisible();
@@ -2899,11 +2879,11 @@ test("data explorer table indexes match the redesign complex usage scenario", as
     .element(page.getByRole("button", { exact: true, name: "Method" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("combobox", { name: "Indexes per page" }))
+    .element(page.getByRole("combobox", { name: "Rows per page" }))
     .toBeVisible();
-  expect(document.body.textContent).toContain(
-    "CREATE INDEX shipments_legacy_ref_idx ON shipping.shipments USING btree (lower(ref))"
-  );
+  expect(
+    page.getByRole("button", { name: "Copy CREATE INDEX SQL" }).elements()
+  ).toHaveLength(4);
   await expect(page.getByTestId("indexes-complex-frame")).toMatchScreenshot(
     "data-explorer-table-indexes-complex"
   );
@@ -2941,14 +2921,13 @@ test("data explorer table indexes pagination has a visual baseline", async () =>
     />
   );
 
-  await page.getByRole("button", { name: "Next indexes page" }).click();
+  await page.getByRole("button", { name: "Next page" }).click();
 
-  await expect
-    .element(page.getByRole("status"))
-    .toHaveTextContent("Showing 11–11 of 11 indexes");
+  await expect.element(page.getByText("shipments_route_11_idx")).toBeVisible();
+  await expect.element(page.getByText("Showing 11–11 of 11")).toBeVisible();
   await expect.element(page.getByText("Page 2 of 2")).toBeVisible();
   await expect
-    .element(page.getByRole("navigation", { name: "Indexes pagination" }))
+    .element(page.getByRole("combobox", { name: "Rows per page" }))
     .toBeVisible();
   await expect(page.getByTestId("indexes-pagination-frame")).toMatchScreenshot(
     "data-explorer-table-indexes-pagination"
@@ -3360,7 +3339,7 @@ test("data explorer definition commands are keyboard reachable", async () => {
   expect(document.activeElement).toBe(highlightedCommand);
 });
 
-test("data explorer index cards keep SQL inside narrow surfaces", async () => {
+test("data explorer index table stays inside narrow surfaces", async () => {
   seedTableDetailQueries();
   renderExplorerSurface(
     <TableDetail
@@ -3381,31 +3360,26 @@ test("data explorer index cards keep SQL inside narrow surfaces", async () => {
     "w-[560px]"
   );
 
-  const sqlText =
-    "CREATE INDEX customers_status_account_idx ON public.customers USING btree (status, account_id) INCLUDE (last_seen_at)";
   await expect.element(page.getByText("btree").first()).toBeVisible();
-  await expect.element(page.getByText("INCLUDE last_seen_at")).toBeVisible();
-  expect(document.body.textContent).toContain(sqlText);
-
-  const sql = [...document.querySelectorAll('[data-language="sql"]')].find(
-    (element) => element.textContent?.includes(sqlText)
-  );
-  if (!sql) {
-    throw new Error("Expected index SQL to render.");
-  }
-  const card = sql.closest('[data-slot="card"]');
+  // Long definitions no longer render as SQL blocks; the Columns cell
+  // truncates and keeps the full text in its title, and the CREATE INDEX SQL
+  // moves into the per-row copy button value.
+  const columnsCell = page
+    .getByTitle("(status, account_id) INCLUDE (last_seen_at)")
+    .element();
+  const tableContainer = columnsCell.closest('[data-slot="table-container"]');
   const frame = page.getByTestId("screenshot-frame").element();
 
-  if (!(card && frame)) {
-    throw new Error("Expected index SQL to render inside a card.");
+  if (!(tableContainer && frame)) {
+    throw new Error("Expected the index table to render inside the frame.");
   }
 
-  expect(sql.getBoundingClientRect().right).toBeLessThanOrEqual(
-    card.getBoundingClientRect().right + 1
-  );
-  expect(card.getBoundingClientRect().right).toBeLessThanOrEqual(
+  expect(tableContainer.getBoundingClientRect().right).toBeLessThanOrEqual(
     frame.getBoundingClientRect().right + 1
   );
+  expect(
+    page.getByRole("button", { name: "Copy CREATE INDEX SQL" }).elements()
+  ).toHaveLength(2);
 });
 
 test("data explorer table columns explain PostgreSQL type semantics", async () => {

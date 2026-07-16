@@ -11,6 +11,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
 const NO_OBJECTS_RE = /No objects/i;
+const OBJECTS_TAB_RE = /^Objects/;
 const KIND_FILTER_RE = /^Kind$/;
 const OWNER_FILTER_RE = /^Owner$/;
 
@@ -76,7 +77,7 @@ describe("schema detail integration", () => {
     );
 
     expect(screen.getByRole("heading", { name: "public" })).toBeTruthy();
-    expect(screen.getByText("owner: app_owner")).toBeTruthy();
+    expect(screen.getByText("schema · owner: app_owner")).toBeTruthy();
     // Header stats: Tables=3, Views=2, total size 3.5 KB, estimated rows 1.5k.
     expect(screen.getByText("3")).toBeTruthy();
     expect(screen.getByText("7.8 KB")).toBeTruthy();
@@ -102,7 +103,8 @@ describe("schema detail integration", () => {
       />
     );
 
-    expect(screen.getByRole("tab", { name: "Objects" })).toBeTruthy();
+    // The Objects tab's accessible name includes its count badge.
+    expect(screen.getByRole("tab", { name: OBJECTS_TAB_RE })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Schema map" })).toBeTruthy();
     expect(screen.getByRole("button", { name: KIND_FILTER_RE })).toBeTruthy();
     expect(screen.getByRole("button", { name: OWNER_FILTER_RE })).toBeTruthy();

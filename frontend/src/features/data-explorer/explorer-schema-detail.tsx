@@ -23,12 +23,18 @@ import {
   type FacetedFilterOption,
 } from "@/components/ui/data-table-faceted-filter";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { CatalogSyncNotice } from "@/features/data-explorer/catalog-sync-notice";
 import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model";
 import { ExplorerSchemaMap } from "@/features/data-explorer/explorer-schema-map";
 import { HeaderStat } from "@/features/data-explorer/explorer-shared-ui";
 import { formatRows } from "@/features/data-explorer/format-rows";
+import {
+  ObjectDetailHeader,
+  ObjectDetailTabsBar,
+  ObjectDetailTabTrigger,
+} from "@/features/data-explorer/object-detail-chrome";
+import { OBJECT_DETAIL_PANEL_PADDED_CLASS } from "@/features/data-explorer/object-detail-panel-classes";
 import { OtherDatabaseObjectsSection } from "@/features/data-explorer/other-database-objects-section";
 import type { SchemaDetailTab } from "@/features/data-explorer/schema-detail-tab";
 import type { catalogSyncNotice } from "@/features/data-explorer/use-data-explorer-state";
@@ -460,6 +466,31 @@ function canLoadOtherDatabaseObjects(
   return databaseId.length > 0 && instanceId.length > 0;
 }
 
+function SchemaDetailNotices({
+  hasObjectsError,
+  tablesSyncNotice,
+}: {
+  hasObjectsError: boolean;
+  tablesSyncNotice: ReturnType<typeof catalogSyncNotice> | undefined;
+}) {
+  if (!(tablesSyncNotice || hasObjectsError)) {
+    return null;
+  }
+  return (
+    <div className="flex shrink-0 flex-col gap-3 px-4 pt-3 sm:px-5">
+      {tablesSyncNotice ? (
+        <CatalogSyncNotice notice={tablesSyncNotice} surface="detail" />
+      ) : null}
+      {hasObjectsError ? (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
+          Failed to load some objects in this schema. Refresh the page to try
+          again.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function SchemaDetail({
   activeTab = "objects",
   databaseId = "",
@@ -531,69 +562,46 @@ function SchemaDetail({
     ((_schemaName: string, name: string) => onSelectTable(name));
 
   return (
-    <div
-      className={
-        activeTab === "map"
-          ? "flex h-full min-h-0 flex-col gap-5"
-          : "flex flex-col gap-5"
-      }
-    >
-      <header className="flex flex-col items-start justify-between gap-3 sm:flex-row">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <DatabaseIcon className="size-5" />
+    <div className="flex h-full min-h-0 flex-col">
+      <ObjectDetailHeader
+        icon={DatabaseIcon}
+        iconClassName="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+        stats={
+          <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:w-auto sm:shrink-0 sm:items-center sm:gap-5">
+            <HeaderStat
+              label="Tables"
+              loading={isLoading}
+              value={countStat(tables.length, hasMoreTables)}
+            />
+            <HeaderStat
+              label="Views"
+              loading={isLoading}
+              value={countStat(views.length, hasMoreViews)}
+            />
+            <HeaderStat
+              label="Total size"
+              loading={isLoading}
+              value={lowerBoundStat(formatBytes(totalSizeBytes), hasMoreTables)}
+            />
+            <HeaderStat
+              label="Estimated rows"
+              loading={isLoading}
+              value={lowerBoundStat(formatRows(totalRows), hasMoreTables)}
+            />
           </div>
-          <div className="min-w-0">
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
-              Schema
-            </p>
-            <h1 className="truncate font-mono font-semibold text-xl">
-              {schemaName}
-            </h1>
-            {owner ? (
-              <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-                owner: {owner}
-              </p>
-            ) : null}
-          </div>
-        </div>
-        <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:w-auto sm:shrink-0 sm:items-center sm:gap-5">
-          <HeaderStat
-            label="Tables"
-            loading={isLoading}
-            value={countStat(tables.length, hasMoreTables)}
-          />
-          <HeaderStat
-            label="Views"
-            loading={isLoading}
-            value={countStat(views.length, hasMoreViews)}
-          />
-          <HeaderStat
-            label="Total size"
-            loading={isLoading}
-            value={lowerBoundStat(formatBytes(totalSizeBytes), hasMoreTables)}
-          />
-          <HeaderStat
-            label="Estimated rows"
-            loading={isLoading}
-            value={lowerBoundStat(formatRows(totalRows), hasMoreTables)}
-          />
-        </div>
-      </header>
+        }
+        subtitle={owner ? `schema · owner: ${owner}` : "schema"}
+        title={schemaName}
+        titleAriaLabel={schemaName}
+      />
 
-      {tablesSyncNotice ? (
-        <CatalogSyncNotice notice={tablesSyncNotice} surface="detail" />
-      ) : null}
-
-      {hasSchemaLoadError(tablesError, viewsError) ? (
-        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
-          Failed to load some objects in this schema. Refresh the page to try
-          again.
-        </div>
-      ) : null}
+      <SchemaDetailNotices
+        hasObjectsError={hasSchemaLoadError(tablesError, viewsError)}
+        tablesSyncNotice={tablesSyncNotice}
+      />
 
       <Tabs
-        className={activeTab === "map" ? "min-h-0 flex-1" : "min-h-0"}
+        className="min-h-0 flex-1 flex-col gap-0"
         onValueChange={(next) => {
           if (next === "objects" || next === "map") {
             onTabChange(next);
@@ -601,29 +609,41 @@ function SchemaDetail({
         }}
         value={activeTab}
       >
-        <TabsList className="w-fit">
-          <TabsTrigger value="objects">Objects</TabsTrigger>
-          <TabsTrigger value="map">Schema map</TabsTrigger>
-        </TabsList>
-        <TabsContent className="mt-4 space-y-6" value="objects">
-          {isLoading ? (
-            <SchemaObjectsLoading />
-          ) : (
-            <SchemaObjectsTable
-              onSelectTable={onSelectTable}
-              onSelectView={onSelectView}
-              tables={tables}
-              views={views}
-            />
-          )}
-          {canLoadOtherDatabaseObjects(databaseId, instanceId) ? (
-            <OtherDatabaseObjectsSection
-              databaseId={databaseId}
-              instanceId={instanceId}
-            />
-          ) : null}
+        <ObjectDetailTabsBar>
+          <ObjectDetailTabTrigger
+            count={isLoading ? undefined : tables.length + views.length}
+            label="Objects"
+            value="objects"
+          />
+          <ObjectDetailTabTrigger label="Schema map" value="map" />
+        </ObjectDetailTabsBar>
+        <TabsContent
+          className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
+          value="objects"
+        >
+          <div className="space-y-6">
+            {isLoading ? (
+              <SchemaObjectsLoading />
+            ) : (
+              <SchemaObjectsTable
+                onSelectTable={onSelectTable}
+                onSelectView={onSelectView}
+                tables={tables}
+                views={views}
+              />
+            )}
+            {canLoadOtherDatabaseObjects(databaseId, instanceId) ? (
+              <OtherDatabaseObjectsSection
+                databaseId={databaseId}
+                instanceId={instanceId}
+              />
+            ) : null}
+          </div>
         </TabsContent>
-        <TabsContent className="mt-4 min-h-0" value="map">
+        <TabsContent
+          className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4"
+          value="map"
+        >
           {activeTab === "map" ? (
             <ExplorerSchemaMap
               activeSchemaName={schemaName}

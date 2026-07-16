@@ -65,7 +65,6 @@ const tableDataApi = vi.hoisted(() => ({
     getState: vi.fn(() => ({ fetchStatus: "idle", status: "success" })),
     prefetch: vi.fn(),
   })),
-  useStreamRowsExporter: vi.fn(),
 }));
 
 const downloadBlobMock = vi.hoisted(() => vi.fn());
@@ -180,7 +179,6 @@ vi.mock("@/hooks/api/table-data", () => ({
   useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
   useReadRowsQuery: tableDataApi.useReadRowsQuery,
   useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
-  useStreamRowsExporter: tableDataApi.useStreamRowsExporter,
 }));
 
 vi.mock("@/lib/download-blob", () => ({
@@ -453,18 +451,7 @@ function createLiveQueryLimitError() {
 }
 
 function setupTableDataGridIntegrationTest() {
-  tableDataApi.useStreamRowsExporter.mockReturnValue(
-    vi.fn().mockResolvedValue({
-      payload: {
-        contents: ["email\nuser-0\n"],
-        filename: "customers.csv",
-        mimeType: "text/csv;charset=utf-8",
-      },
-      rowCount: 1n,
-      savedToFile: false,
-      truncated: false,
-    })
-  );
+  // No shared query/mutation state needs seeding beyond the vi.mock defaults.
 }
 
 function teardownTableDataGridIntegrationTest() {
@@ -552,66 +539,6 @@ describe("TableDataGrid query setup", () => {
       throw new Error("Expected grid props to include a row.");
     }
     expect(secondProps?.rowKeyGetter?.(firstRow)).toBe("row-0");
-  });
-
-  it("exports the current server-side row stream", async () => {
-    const user = userEvent.setup();
-    const tableName =
-      "instances/prod/databases/app/schemas/public/tables/customers";
-    const exportRows = vi.fn().mockResolvedValue({
-      payload: {
-        contents: ["email\nuser-0\n"],
-        filename: "customers.csv",
-        mimeType: "text/csv;charset=utf-8",
-      },
-      rowCount: 1n,
-      savedToFile: false,
-      truncated: false,
-    });
-    tableDataApi.useStreamRowsExporter.mockReturnValue(exportRows);
-    seedRowsQuery(1);
-    tableApi.useListTableColumnsQuery.mockReturnValue({
-      data: create(ListTableColumnsResponseSchema, {
-        columns: [
-          create(ColumnSchema, {
-            columnName: "email",
-            dataType: DataType.STRING,
-          }),
-        ],
-      }),
-      error: null,
-      isError: false,
-    });
-
-    render(
-      <TableDataGrid
-        name={tableName}
-        onSortSearchChange={vi.fn()}
-        sortSearch="email:asc"
-      />
-    );
-
-    await user.click(screen.getByRole("button", { name: "Export" }));
-    await user.click(await screen.findByRole("menuitem", { name: "CSV" }));
-
-    await waitFor(() => {
-      expect(exportRows).toHaveBeenCalledWith(
-        expect.objectContaining({
-          exportFormat: "csv",
-          onProgress: expect.any(Function),
-          request: expect.objectContaining({
-            name: tableName,
-            orderBy: [expect.objectContaining({ column: "email" })],
-          }),
-          signal: expect.any(AbortSignal),
-        })
-      );
-    });
-    expect(downloadBlobMock).toHaveBeenCalledWith(
-      "customers.csv",
-      ["email\nuser-0\n"],
-      "text/csv;charset=utf-8"
-    );
   });
 
   it("keeps prior rows visible with a refreshing pill while placeholder data is shown", () => {
@@ -1246,21 +1173,6 @@ describe("TableDataGrid row interactions", () => {
 });
 
 describe("TableDataGrid value dialogs", () => {
-  beforeEach(() => {
-    tableDataApi.useStreamRowsExporter.mockReturnValue(
-      vi.fn().mockResolvedValue({
-        payload: {
-          contents: ["email\nuser-0\n"],
-          filename: "customers.csv",
-          mimeType: "text/csv;charset=utf-8",
-        },
-        rowCount: 1n,
-        savedToFile: false,
-        truncated: false,
-      })
-    );
-  });
-
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -1339,118 +1251,6 @@ describe("TableDataGrid toolbar", () => {
     useRefreshSettingsStore.getState().setRefreshIntervalMs(null);
   });
 
-  it("disables server-side row export while the stream is in flight", async () => {
-    const user = userEvent.setup();
-    const tableName =
-      "instances/prod/databases/app/schemas/public/tables/customers";
-    let resolveExport:
-      | ((value: {
-          payload: {
-            contents: string[];
-            filename: string;
-            mimeType: string;
-          };
-          rowCount: bigint;
-          savedToFile: boolean;
-          truncated: boolean;
-        }) => void)
-      | undefined;
-    const exportPromise = new Promise<{
-      payload: {
-        contents: string[];
-        filename: string;
-        mimeType: string;
-      };
-      rowCount: bigint;
-      savedToFile: boolean;
-      truncated: boolean;
-    }>((resolve) => {
-      resolveExport = resolve;
-    });
-    const exportRows = vi.fn(() => exportPromise);
-    tableDataApi.useStreamRowsExporter.mockReturnValue(exportRows);
-    seedRowsQuery(1);
-
-    render(<TableDataGrid name={tableName} />);
-
-    await user.click(screen.getByRole("button", { name: "Export" }));
-    await user.click(await screen.findByRole("menuitem", { name: "CSV" }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Export" })).toHaveProperty(
-        "disabled",
-        true
-      );
-    });
-
-    resolveExport?.({
-      payload: {
-        contents: ["email\nuser-0\n"],
-        filename: "customers.csv",
-        mimeType: "text/csv;charset=utf-8",
-      },
-      rowCount: 1n,
-      savedToFile: false,
-      truncated: false,
-    });
-    await waitFor(() => {
-      expect(downloadBlobMock).toHaveBeenCalledWith(
-        "customers.csv",
-        ["email\nuser-0\n"],
-        "text/csv;charset=utf-8"
-      );
-    });
-  });
-
-  it("shows live-query limit guidance when server-side export is saturated", async () => {
-    const user = userEvent.setup();
-    tableDataApi.useStreamRowsExporter.mockReturnValue(
-      vi.fn().mockRejectedValue(createLiveQueryLimitError())
-    );
-    seedRowsQuery(1);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    await user.click(screen.getByRole("button", { name: "Export" }));
-    await user.click(await screen.findByRole("menuitem", { name: "CSV" }));
-
-    await waitFor(() =>
-      expect(toastMock.error).toHaveBeenCalledWith("Query limit reached", {
-        description:
-          "Another query or export is using the available capacity. Try again when it finishes.",
-        id: "toast-id",
-      })
-    );
-  });
-
-  it("does not create a Blob download when the stream was saved to a file", async () => {
-    const user = userEvent.setup();
-    const exportRows = vi.fn().mockResolvedValue({
-      payload: {
-        contents: [],
-        filename: "customers.csv",
-        mimeType: "text/csv;charset=utf-8",
-      },
-      rowCount: 1n,
-      savedToFile: true,
-      truncated: false,
-    });
-    tableDataApi.useStreamRowsExporter.mockReturnValue(exportRows);
-    seedRowsQuery(1);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    await user.click(screen.getByRole("button", { name: "Export" }));
-    await user.click(await screen.findByRole("menuitem", { name: "CSV" }));
-
-    await waitFor(() => expect(exportRows).toHaveBeenCalledOnce());
-    expect(downloadBlobMock).not.toHaveBeenCalled();
-  });
-
   it("orders toolbar actions with refresh after the main controls", () => {
     seedRowsQuery(1, {
       dataUpdatedAt: Date.UTC(2026, 5, 14, 10, 30, 15),
@@ -1498,7 +1298,7 @@ describe("TableDataGrid toolbar", () => {
     expect(screen.getByText("Filter public.customers")).toBeTruthy();
   });
 
-  it("places row export beside expand and keeps fetch time out of the visible toolbar", () => {
+  it("keeps export out of the toolbar until rows are selected", () => {
     seedRowsQuery(1, {
       dataUpdatedAt: Date.UTC(2026, 5, 14, 10, 30, 15),
     });
@@ -1510,17 +1310,13 @@ describe("TableDataGrid toolbar", () => {
     const expandButton = screen.getByRole("button", {
       name: "Expand data grid",
     });
-    const exportButton = screen.getByRole("button", { name: "Export" });
     const refreshButton = screen.getByRole("button", {
       name: "Refresh rows",
     });
     const fetchStatus = screen.getByText(LAST_FETCHED_RE);
 
-    expect(screen.queryByRole("button", { name: "Export rows" })).toBeNull();
-    expect(expandButton.compareDocumentPosition(exportButton)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING
-    );
-    expect(exportButton.compareDocumentPosition(refreshButton)).toBe(
+    expect(screen.queryByRole("button", { name: "Export" })).toBeNull();
+    expect(expandButton.compareDocumentPosition(refreshButton)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING
     );
     expect(fetchStatus.className).toContain("sr-only");
@@ -1952,7 +1748,7 @@ describe("TableDataGrid URL state", () => {
 
     expect(screen.getByText("1 selected")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: "Export" })).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Export" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: DELETE_BUTTON_RE })).toBeNull();
     expect(screen.queryByRole("button", { name: EDIT_BUTTON_RE })).toBeNull();
   });
@@ -2079,10 +1875,7 @@ describe("TableDataGrid error recovery", () => {
       screen.getByText("active has an invalid filter value.")
     ).toBeTruthy();
     expect(screen.getByText("missing is not available.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Export" })).toHaveProperty(
-      "disabled",
-      true
-    );
+    expect(screen.queryByRole("button", { name: "Export" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Clear filters" }));
 

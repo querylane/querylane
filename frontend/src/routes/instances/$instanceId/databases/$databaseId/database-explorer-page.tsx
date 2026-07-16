@@ -38,9 +38,9 @@ function DatabaseExplorerLoadingShell() {
       </ExplorerSidebarPortal>
       <section
         aria-label="Data Explorer"
-        className="relative h-full min-w-0 overflow-auto"
+        className="relative flex h-full min-w-0 flex-col overflow-hidden"
       >
-        <div className="mx-auto max-w-[900px] p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-1 items-center justify-center p-6">
           <BrandedLoadingState
             description="Preparing data explorer…"
             title="Data Explorer"

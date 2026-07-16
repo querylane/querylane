@@ -27,7 +27,7 @@ import {
   Terminal,
   X,
 } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useDeferredValue, useEffect, useId, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import type { TableForeignKeyReference } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
@@ -45,7 +45,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
 import {
@@ -59,7 +58,6 @@ import {
   type FacetedFilterOption,
 } from "@/components/ui/data-table-faceted-filter";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { RefreshControl } from "@/components/ui/refresh-control";
 import {
   Select,
@@ -122,6 +120,15 @@ import {
 import { formatRows } from "@/features/data-explorer/format-rows";
 import { formatLastFetchedLabel } from "@/features/data-explorer/last-fetched-label";
 import {
+  ObjectDetailHeader,
+  ObjectDetailTabsBar,
+  ObjectDetailTabTrigger,
+} from "@/features/data-explorer/object-detail-chrome";
+import {
+  OBJECT_DETAIL_PANEL_FILL_CLASS,
+  OBJECT_DETAIL_PANEL_PADDED_CLASS,
+} from "@/features/data-explorer/object-detail-panel-classes";
+import {
   describePostgresIndexMethod,
   normalizeIndexMethod,
 } from "@/features/data-explorer/postgres-index-method-display";
@@ -142,6 +149,7 @@ import {
   useListTablePoliciesQuery,
   useListTableTriggersQuery,
 } from "@/hooks/api/table";
+import { useMinimumSpin } from "@/hooks/use-minimum-spin";
 import {
   buildTableName,
   formatBytes,
@@ -156,11 +164,7 @@ import {
   type PageSize,
   pageIndexForPageSizeChange,
 } from "@/lib/pagination";
-import {
-  formatPolicyCommand,
-  formatPolicyMode,
-  formatReferentialAction,
-} from "@/lib/protobuf-enums";
+import { formatPolicyCommand, formatPolicyMode } from "@/lib/protobuf-enums";
 import { QUERY_STALE_TIME } from "@/lib/query-policy";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
@@ -178,7 +182,6 @@ import {
   IdentityGeneration,
   PolicyCommand,
   PolicyMode,
-  ReferentialAction,
   Table_TableType,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
@@ -187,21 +190,12 @@ const TABLE_METADATA_QUERY_OPTIONS = {
 } as const;
 const UNAVAILABLE_COLUMN_STATISTIC_LABEL =
   "Not available from the current column metadata API";
-const DEFAULT_INDEX_PAGE_SIZE = DEFAULT_PAGE_SIZE;
-const INDEX_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS;
 const SKELETON_ROW_COUNT = 6;
-const CONSTRAINTS_DEFAULT_PAGE_SIZE = DEFAULT_PAGE_SIZE;
-const CONSTRAINTS_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS;
 const SKELETON_ROW_IDS = Array.from(
   { length: SKELETON_ROW_COUNT },
   (_, index) => `skeleton-row-${index}`
 );
 
-type IndexPageSize = PageSize;
-
-function isIndexPageSize(value: number): value is IndexPageSize {
-  return INDEX_PAGE_SIZE_OPTIONS.some((pageSize) => pageSize === value);
-}
 type PillTone = "amber" | "blue" | "emerald" | "slate" | "violet";
 const PILL_TONE_CLASSES: Record<PillTone, string> = {
   amber: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
@@ -223,6 +217,8 @@ const IDENTITY_GENERATION_LABELS = {
   [IdentityGeneration.UNSPECIFIED]: "",
 } satisfies Record<IdentityGeneration, string>;
 interface TableDetailTabDefinition {
+  // Icons no longer render in the compact tab triggers, but the per-tab empty
+  // states still use them.
   icon: LucideIcon;
   label: string;
   value: TableDetailTab;
@@ -574,34 +570,6 @@ function deriveMetadataToolbar(
   };
 }
 
-function MetadataRefreshControl({ toolbar }: { toolbar: MetadataToolbar }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span aria-live="polite" className="text-muted-foreground text-xs">
-        {toolbar.lastFetchedLabel}
-      </span>
-      <Button
-        disabled={toolbar.isRefreshing}
-        onClick={() => {
-          toolbar.handleRefresh();
-        }}
-        size="sm"
-        type="button"
-        variant="outline"
-      >
-        <RefreshCw
-          aria-hidden="true"
-          className={cn(
-            "size-3.5",
-            toolbar.isRefreshing && "animate-spin motion-reduce:animate-none"
-          )}
-        />
-        Refresh
-      </Button>
-    </div>
-  );
-}
-
 function TableResourceEmptyState({
   category,
   toolbar,
@@ -609,6 +577,7 @@ function TableResourceEmptyState({
   category: EmptyResourceCategory;
   toolbar: MetadataToolbar;
 }) {
+  const isSpinning = useMinimumSpin(toolbar.isRefreshing);
   const copy = EMPTY_RESOURCE_COPY[category];
   const Icon = TABLE_DETAIL_TAB_DEFINITIONS[category].icon;
   return (
@@ -634,8 +603,7 @@ function TableResourceEmptyState({
               aria-hidden="true"
               className={cn(
                 "size-3.5",
-                toolbar.isRefreshing &&
-                  "animate-spin motion-reduce:animate-none"
+                isSpinning && "animate-spin motion-reduce:animate-none"
               )}
             />
             Refresh
@@ -1040,46 +1008,29 @@ function TableDetailHeader({
     ? `≈${formatRows(normalizeEstimatedRowCount(table.rowCount))}`
     : "—";
   const sizeLabel = formatBytes(table?.sizeBytes);
-  const headerDetails: string[] = [];
+  // The old uppercase "Table" eyebrow lives on as the kind in the subtitle.
+  const headerDetails: string[] = [typeLabel || "table"];
   if (columnCount !== undefined) {
     headerDetails.push(`${columnCount.toLocaleString()} columns`);
-  }
-  if (typeLabel) {
-    headerDetails.push(typeLabel);
   }
   if (lastFetchedLabel) {
     headerDetails.push(lastFetchedLabel);
   }
   return (
-    <header className="flex flex-col items-start justify-between gap-3 sm:flex-row">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Table2 className="size-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
-            Table
-          </p>
-          <h1
-            aria-label={`${schemaName}.${tableName}`}
-            className="truncate font-mono font-semibold text-xl"
-            title={`${schemaName}.${tableName}`}
-          >
-            <span className="text-muted-foreground">{schemaName}.</span>
-            {tableName}
-          </h1>
-          {headerDetails.length > 0 ? (
-            <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-              {headerDetails.join(" · ")}
-            </p>
-          ) : null}
-        </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-5">
-        <HeaderStat label="Rows" value={rowsLabel} />
-        <HeaderStat label="Size" value={sizeLabel} />
-      </div>
-    </header>
+    <ObjectDetailHeader
+      icon={Table2}
+      iconClassName="bg-primary/10 text-primary"
+      stats={
+        <>
+          <HeaderStat label="Rows" value={rowsLabel} />
+          <HeaderStat label="Size" value={sizeLabel} />
+        </>
+      }
+      subtitle={headerDetails.join(" · ")}
+      title={tableName}
+      titleAriaLabel={`${schemaName}.${tableName}`}
+      titlePrefix={`${schemaName}.`}
+    />
   );
 }
 function ColumnsTab({
@@ -2072,15 +2023,6 @@ function PartitionsTab({
 }
 
 const SIMPLE_SQL_IDENTIFIER_PATTERN = /^[a-z_][a-z0-9_]*$/;
-const INDEX_METRIC_LABELS = [
-  "Scans",
-  "Tuples read",
-  "Tuples fetched",
-  "Cache hit",
-] as const;
-const PERCENT_SCALE = 100n;
-const FULL_PERCENT = 100;
-const MIN_VISIBLE_SCAN_SHARE_PERCENT = 2;
 const COMPACT_ONE_DECIMAL_THRESHOLD = 100;
 const ONE_DECIMAL_SCALE = 10;
 const CACHE_PERCENT_TENTHS_SCALE = 1000n;
@@ -2175,48 +2117,6 @@ function isIndexUnused(index: TableIndex) {
 function indexInvalidCount(indexes: TableIndex[]) {
   return indexes.filter((index) => !index.isValid).length;
 }
-function indexScanShare(index: TableIndex, totalScanCount: bigint) {
-  if (!(index.hasUsageStats && index.scanCount > 0n && totalScanCount > 0n)) {
-    return 0;
-  }
-  const percent = Number(
-    (index.scanCount * PERCENT_SCALE + totalScanCount / 2n) / totalScanCount
-  );
-  return Math.min(FULL_PERCENT, percent);
-}
-function uniqueIndexCount(indexes: TableIndex[]) {
-  return indexes.filter((index) => index.isUnique).length;
-}
-function formatIndexCountDetail(indexes: TableIndex[]) {
-  const unusedCount = indexes.filter(isIndexUnused).length;
-  if (indexes.length === 0) {
-    return "no index metadata";
-  }
-  if (hasIndexUsageStats(indexes)) {
-    return unusedCount > 0
-      ? `${unusedCount.toLocaleString()} unused`
-      : "all in use";
-  }
-  const uniqueCount = uniqueIndexCount(indexes);
-  if (uniqueCount === 0) {
-    return "non-unique only";
-  }
-  return `${uniqueCount.toLocaleString()} unique`;
-}
-function formatValidityValue(indexes: TableIndex[]) {
-  const invalidCount = indexInvalidCount(indexes);
-  if (invalidCount === 0) {
-    return "all valid";
-  }
-  return `${invalidCount.toLocaleString()} invalid`;
-}
-function formatValidityDetail(indexes: TableIndex[]) {
-  const invalidCount = indexInvalidCount(indexes);
-  if (invalidCount === 0) {
-    return "no INVALID indexes";
-  }
-  return "needs attention";
-}
 function formatCompactInteger(value: bigint) {
   if (value === 0n) {
     return "0";
@@ -2260,76 +2160,204 @@ function formatCacheHit(index: TableIndex) {
     totalBlocks;
   return `${(Number(tenths) / ONE_DECIMAL_SCALE).toLocaleString()}%`;
 }
-function indexHasExpression(index: TableIndex) {
-  return (
-    index.hasExpression ||
-    getIndexKeyParts(index).some(
-      (keyPart) => !SIMPLE_SQL_IDENTIFIER_PATTERN.test(keyPart)
-    )
-  );
-}
-function getIndexMetricValue(
-  label: (typeof INDEX_METRIC_LABELS)[number],
-  index: TableIndex
-) {
-  switch (label) {
-    case "Scans":
-      return formatMaybeStat(index.scanCount, index.hasUsageStats);
-    case "Tuples read":
-      return formatMaybeStat(index.tuplesRead, index.hasUsageStats);
-    case "Tuples fetched":
-      return formatMaybeStat(index.tuplesFetched, index.hasUsageStats);
-    case "Cache hit":
-      return formatCacheHit(index);
-    default: {
-      const exhaustive: never = label;
-      return exhaustive;
-    }
-  }
-}
-function IndexSummaryCard({
-  detail,
-  label,
-  labelDescription,
-  value,
+function IndexSummaryStrip({
+  heapSizeBytes,
+  indexes,
 }: {
-  detail: string;
-  label: string;
-  labelDescription?: string;
-  value: string;
+  heapSizeBytes: bigint | undefined;
+  indexes: TableIndex[];
 }) {
+  const segments = [
+    `${indexes.length.toLocaleString()} ${indexes.length === 1 ? "index" : "indexes"}`,
+    `${formatBytes(sumIndexSizeBytes(indexes))} total vs heap ${formatBytes(heapSizeBytes)}`,
+  ];
+  if (hasIndexUsageStats(indexes)) {
+    segments.push(
+      `${formatCompactInteger(sumIndexScans(indexes))} scans since stats reset`
+    );
+    const unusedCount = indexes.filter(isIndexUnused).length;
+    if (unusedCount > 0) {
+      segments.push(`${unusedCount.toLocaleString()} unused`);
+    }
+  } else {
+    segments.push("usage stats unavailable");
+  }
+  const invalidCount = indexInvalidCount(indexes);
   return (
-    <Card className="gap-0 py-0" size="sm">
-      <CardContent className="p-4">
-        <p className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
-          {labelDescription ? (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    aria-label={`${label}. ${labelDescription}`}
-                    className="h-auto cursor-help rounded-none p-0 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider underline decoration-dotted underline-offset-2"
-                    size="sm"
-                    type="button"
-                    variant="link"
-                  />
-                }
-              >
-                {label}
-              </TooltipTrigger>
-              <TooltipContent>{labelDescription}</TooltipContent>
-            </Tooltip>
-          ) : (
-            label
-          )}
-        </p>
-        <p className="mt-1 font-mono font-semibold text-2xl leading-none">
-          {value}
-        </p>
-        <p className="mt-2 text-muted-foreground text-xs">{detail}</p>
-      </CardContent>
-    </Card>
+    <p
+      className="font-mono text-muted-foreground text-xs"
+      data-slot="index-summary-strip"
+    >
+      {segments.join(" · ")}
+      {invalidCount > 0 ? (
+        <span className="text-destructive">
+          {` · ${invalidCount.toLocaleString()} INVALID`}
+        </span>
+      ) : null}
+    </p>
   );
+}
+function IndexNameCell({ index }: { index: TableIndex }) {
+  return (
+    <div className="flex min-w-0 items-center gap-1.5">
+      <span className="truncate font-mono font-semibold text-foreground text-xs">
+        {index.indexName || "unnamed_index"}
+      </span>
+      {index.isUnique ? (
+        <Pill size="sm" tone="emerald">
+          Unique
+        </Pill>
+      ) : null}
+      {isIndexUnused(index) ? (
+        <Pill
+          size="sm"
+          title="No scans since the last statistics reset"
+          tone="amber"
+        >
+          Unused
+        </Pill>
+      ) : null}
+      {index.isValid ? null : (
+        <Pill
+          size="sm"
+          title="Index is marked INVALID in pg_index"
+          tone="amber"
+        >
+          Invalid
+        </Pill>
+      )}
+    </div>
+  );
+}
+function formatIndexColumnsLabel(index: TableIndex) {
+  const keyParts = getIndexKeyParts(index);
+  return keyParts.length > 0 ? `(${keyParts.join(", ")})` : "—";
+}
+function IndexColumnsCell({ index }: { index: TableIndex }) {
+  const columnsLabel = formatIndexColumnsLabel(index);
+  const includeLabel =
+    index.includedColumns.length > 0
+      ? ` INCLUDE (${index.includedColumns.join(", ")})`
+      : "";
+  const whereLabel = index.predicate ? ` WHERE ${index.predicate}` : "";
+  return (
+    <span
+      className="block max-w-[28rem] truncate"
+      title={`${columnsLabel}${includeLabel}${whereLabel}`}
+    >
+      {columnsLabel}
+      {includeLabel || whereLabel ? (
+        <span className="text-muted-foreground">
+          {includeLabel}
+          {whereLabel}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+function CacheHitHeader() {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            aria-label={`Cache hit. ${CACHE_HIT_DESCRIPTION}`}
+            className="h-auto cursor-help rounded-none p-0 font-medium text-inherit underline decoration-dotted underline-offset-2"
+            size="sm"
+            type="button"
+            variant="link"
+          />
+        }
+      >
+        Cache hit
+      </TooltipTrigger>
+      <TooltipContent>{CACHE_HIT_DESCRIPTION}</TooltipContent>
+    </Tooltip>
+  );
+}
+function buildIndexInventoryColumns({
+  schemaName,
+  tableName,
+}: {
+  schemaName: string;
+  tableName: string;
+}): DataTableColumnDef<TableIndex>[] {
+  return [
+    {
+      accessorFn: (row) => row.indexName,
+      cell: ({ row }) => <IndexNameCell index={row.original} />,
+      header: ({ column }) => (
+        <SortableHeader column={column}>Name</SortableHeader>
+      ),
+      id: "name",
+    },
+    {
+      accessorFn: (row) => normalizeIndexMethod(row.method),
+      cell: ({ row }) => <IndexMethodBadge method={row.original.method} />,
+      header: ({ column }) => (
+        <SortableHeader column={column}>Method</SortableHeader>
+      ),
+      id: "method",
+    },
+    {
+      accessorFn: (row) => formatIndexColumnsLabel(row),
+      cell: ({ row }) => <IndexColumnsCell index={row.original} />,
+      header: "Columns",
+      id: "columns",
+      meta: {
+        cellClassName: "font-mono text-xs",
+      },
+    },
+    {
+      accessorFn: (row) => (row.hasUsageStats ? Number(row.scanCount) : -1),
+      cell: ({ row }) =>
+        formatMaybeStat(row.original.scanCount, row.original.hasUsageStats),
+      header: ({ column }) => (
+        <SortableHeader column={column}>Scans</SortableHeader>
+      ),
+      id: "scans",
+      meta: {
+        cellClassName: "text-right font-mono text-xs tabular-nums",
+        headerClassName: "text-right",
+      },
+    },
+    {
+      cell: ({ row }) => formatCacheHit(row.original),
+      enableSorting: false,
+      header: () => <CacheHitHeader />,
+      id: "cacheHit",
+      meta: {
+        cellClassName: "text-right font-mono text-muted-foreground text-xs",
+        headerClassName: "text-right",
+      },
+    },
+    {
+      accessorFn: (row) => Number(row.sizeBytes),
+      cell: ({ row }) => formatBytes(row.original.sizeBytes),
+      header: ({ column }) => (
+        <SortableHeader column={column}>Size</SortableHeader>
+      ),
+      id: "size",
+      meta: {
+        cellClassName: "text-right font-mono text-xs tabular-nums",
+        headerClassName: "text-right",
+      },
+    },
+    {
+      cell: ({ row }) => (
+        <CopyIconButton
+          ariaLabel="Copy CREATE INDEX SQL"
+          value={createIndexSql({ index: row.original, schemaName, tableName })}
+        />
+      ),
+      enableSorting: false,
+      header: () => <span className="sr-only">Actions</span>,
+      id: "actions",
+      meta: {
+        cellClassName: "w-10 text-right",
+      },
+    },
+  ];
 }
 function IndexMethodBadge({ method }: { method: string }) {
   const methodMeta = describePostgresIndexMethod(method);
@@ -2345,206 +2373,6 @@ function IndexMethodBadge({ method }: { method: string }) {
     </Badge>
   );
 }
-function IndexColumnPills({ index }: { index: TableIndex }) {
-  const keyParts = getIndexKeyParts(index);
-  if (keyParts.length === 0 && index.includedColumns.length === 0) {
-    return (
-      <span className="font-mono text-muted-foreground text-sm">none</span>
-    );
-  }
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {keyParts.map((column) => (
-        <Badge
-          className="rounded-full font-mono"
-          key={`key-${column}`}
-          variant="secondary"
-        >
-          {column}
-        </Badge>
-      ))}
-      {index.includedColumns.map((column) => (
-        <Badge
-          className="rounded-full font-mono"
-          key={`include-${column}`}
-          variant="outline"
-        >
-          INCLUDE {column}
-        </Badge>
-      ))}
-    </div>
-  );
-}
-function IndexMetrics({ index }: { index: TableIndex }) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-4">
-      {INDEX_METRIC_LABELS.map((label) => {
-        const value = getIndexMetricValue(label, index);
-        return (
-          <div key={label}>
-            <p
-              className={cn(
-                "font-mono font-semibold text-lg leading-none",
-                label === "Cache hit" && value !== "—" && "text-emerald-500"
-              )}
-            >
-              {value}
-            </p>
-            <p className="mt-1 text-[11px] text-muted-foreground uppercase tracking-wider">
-              {label === "Cache hit" ? (
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <Button
-                        aria-label={`Cache hit. ${CACHE_HIT_DESCRIPTION}`}
-                        className="h-auto cursor-help rounded-none p-0 text-[11px] text-muted-foreground uppercase tracking-wider underline decoration-dotted underline-offset-2"
-                        size="sm"
-                        type="button"
-                        variant="link"
-                      />
-                    }
-                  >
-                    {label}
-                  </TooltipTrigger>
-                  <TooltipContent>{CACHE_HIT_DESCRIPTION}</TooltipContent>
-                </Tooltip>
-              ) : (
-                label
-              )}
-            </p>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-function IndexSqlBlock({ sql }: { sql: string }) {
-  return (
-    <div className="border-t bg-muted/20 p-4">
-      <SqlCodeBlock
-        className="whitespace-pre-wrap break-words border-0 bg-transparent p-0 pr-10 text-[12px]"
-        copyButtonClassName="right-0 top-1/2 -translate-y-1/2"
-        sql={sql}
-      />
-    </div>
-  );
-}
-function IndexCard({
-  index,
-  schemaName,
-  tableName,
-  totalScanCount,
-}: {
-  index: TableIndex;
-  schemaName: string;
-  tableName: string;
-  totalScanCount: bigint;
-}) {
-  const sql = createIndexSql({ index, schemaName, tableName });
-  const scanShare = indexScanShare(index, totalScanCount);
-  const scanBarWidth =
-    index.hasUsageStats && index.scanCount > 0n
-      ? Math.max(MIN_VISIBLE_SCAN_SHARE_PERCENT, scanShare)
-      : 0;
-  const unused = isIndexUnused(index);
-  return (
-    <Card
-      className={cn(
-        "gap-0 py-0",
-        unused && "ring-amber-500/70 dark:ring-amber-400/60"
-      )}
-      size="sm"
-    >
-      <CardHeader className="bg-card py-4">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <CardTitle className="break-words font-mono text-base">
-            {index.indexName || "unnamed_index"}
-          </CardTitle>
-          <IndexMethodBadge method={index.method} />
-          {index.isUnique ? (
-            <Badge
-              className="rounded-full px-2 py-1 font-semibold text-[11px]"
-              variant="secondary"
-            >
-              UNIQUE
-            </Badge>
-          ) : null}
-          {index.predicate ? (
-            <Badge
-              className="rounded-full px-2 py-1 font-semibold text-[11px]"
-              variant="outline"
-            >
-              PARTIAL
-            </Badge>
-          ) : null}
-          {indexHasExpression(index) ? (
-            <Badge
-              className="rounded-full px-2 py-1 font-semibold text-[11px]"
-              variant="outline"
-            >
-              EXPRESSION
-            </Badge>
-          ) : null}
-          {unused ? (
-            <Badge className="rounded-full bg-amber-500/20 px-2 py-1 font-semibold text-[11px] text-amber-700 dark:text-amber-300">
-              UNUSED
-            </Badge>
-          ) : null}
-          <span className="ml-auto font-mono text-muted-foreground text-sm">
-            {formatBytes(index.sizeBytes)}
-          </span>
-        </div>
-        <CardDescription className="mt-3 flex flex-wrap items-center gap-2">
-          <span>Columns</span>
-          <IndexColumnPills index={index} />
-          {index.predicate ? (
-            <span className="font-mono text-xs">WHERE {index.predicate}</span>
-          ) : null}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4 p-4">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)]">
-          <div className="min-w-0 space-y-2">
-            <Progress
-              aria-label={`${index.indexName}: ${scanShare}% of index scans`}
-              aria-valuenow={scanShare}
-              className="gap-0 [&_[data-slot=progress-indicator]]:bg-muted-foreground/70 [&_[data-slot=progress-track]]:h-2"
-              value={scanBarWidth}
-            />
-            <p className="text-muted-foreground text-xs">share of scans</p>
-          </div>
-          <IndexMetrics index={index} />
-        </div>
-      </CardContent>
-      <IndexSqlBlock sql={sql} />
-    </Card>
-  );
-}
-function IndexUsageSummary({
-  totalScanCount,
-  usageStatsAvailable,
-}: {
-  totalScanCount: bigint;
-  usageStatsAvailable: boolean;
-}) {
-  return (
-    <IndexSummaryCard
-      detail={
-        usageStatsAvailable
-          ? "since last stats reset"
-          : "usage stats unavailable"
-      }
-      label="Scans"
-      labelDescription={
-        usageStatsAvailable
-          ? "Usage source: pg_stat_user_indexes."
-          : "PostgreSQL did not return usage data from pg_stat_user_indexes."
-      }
-      value={usageStatsAvailable ? formatCompactInteger(totalScanCount) : "—"}
-    />
-  );
-}
-
 function IndexesTab({
   query,
   schemaName,
@@ -2556,11 +2384,6 @@ function IndexesTab({
   table: TableProto | undefined;
   tableName: string;
 }) {
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState<IndexPageSize>(
-    DEFAULT_INDEX_PAGE_SIZE
-  );
-  const [searchFilter, setSearchFilter] = useState("");
   const [methodFilters, setMethodFilters] = useState<string[]>([]);
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
@@ -2582,184 +2405,40 @@ function IndexesTab({
     return <TabSkeleton />;
   }
   const { indexes } = query.data;
-  const totalSizeBytes = sumIndexSizeBytes(indexes);
-  const totalScanCount = sumIndexScans(indexes);
-  const usageStatsAvailable = hasIndexUsageStats(indexes);
-  const normalizedSearch = searchFilter.trim().toLocaleLowerCase();
-  const methodFilteredIndexes = filterIndexesByMethod(indexes, methodFilters);
-  const filteredIndexes =
-    normalizedSearch === ""
-      ? methodFilteredIndexes
-      : methodFilteredIndexes.filter((index) =>
-          index.indexName.toLocaleLowerCase().includes(normalizedSearch)
-        );
-  const pageCount = Math.max(1, Math.ceil(filteredIndexes.length / pageSize));
-  const currentPageIndex = Math.min(pageIndex, pageCount - 1);
-  const pageIndexes = filteredIndexes.slice(
-    currentPageIndex * pageSize,
-    (currentPageIndex + 1) * pageSize
-  );
-  const firstPageIndex = currentPageIndex * pageSize + 1;
-  const lastPageIndex = Math.min(
-    (currentPageIndex + 1) * pageSize,
-    filteredIndexes.length
-  );
-  const hasPreviousPage = currentPageIndex > 0;
-  const hasNextPage = currentPageIndex < pageCount - 1;
+  const filteredIndexes = filterIndexesByMethod(indexes, methodFilters);
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <IndexSummaryCard
-          detail={formatIndexCountDetail(indexes)}
-          label="Indexes"
-          value={indexes.length.toLocaleString()}
-        />
-        <IndexSummaryCard
-          detail={`vs heap ${formatBytes(table?.sizeBytes)}`}
-          label="Total size"
-          value={formatBytes(totalSizeBytes)}
-        />
-        <IndexUsageSummary
-          totalScanCount={totalScanCount}
-          usageStatsAvailable={usageStatsAvailable}
-        />
-        <IndexSummaryCard
-          detail={formatValidityDetail(indexes)}
-          label="Validity"
-          value={formatValidityValue(indexes)}
-        />
-      </div>
-      <div className="flex min-h-8 flex-wrap items-center gap-2">
-        <DataTableFilter
-          onChange={(value) => {
-            setPageIndex(0);
-            setSearchFilter(value);
-          }}
-          placeholder="Search indexes…"
-          value={searchFilter}
-        />
-        <FacetFilterBar
-          filters={[
-            {
-              handleSelectedValuesChange: (values) => {
-                setPageIndex(0);
-                setMethodFilters(values);
+    <div className="flex flex-col gap-3">
+      {indexes.length > 0 ? (
+        <IndexSummaryStrip heapSizeBytes={table?.sizeBytes} indexes={indexes} />
+      ) : null}
+      <MetadataTabResult
+        category="indexes"
+        columns={buildIndexInventoryColumns({ schemaName, tableName })}
+        data={filteredIndexes}
+        filterColumn="name"
+        filterPlaceholder="Search indexes…"
+        filters={
+          <FacetFilterBar
+            filters={[
+              {
+                handleSelectedValuesChange: setMethodFilters,
+                label: "Method",
+                options: presentIndexMethodOptions(indexes),
+                selectedValues: methodFilters,
               },
-              label: "Method",
-              options: presentIndexMethodOptions(indexes),
-              selectedValues: methodFilters,
-            },
-          ]}
-        />
-      </div>
-      {filteredIndexes.length > 0 ? (
-        <div className="space-y-3">
-          {pageIndexes.map((index) => (
-            <IndexCard
-              index={index}
-              key={`${index.indexName}-${index.method}-${index.keyColumns.join(",")}`}
-              schemaName={schemaName}
-              tableName={tableName}
-              totalScanCount={totalScanCount}
-            />
-          ))}
-        </div>
-      ) : null}
-      {indexes.length === 0 ? (
-        <TableResourceEmptyState category="indexes" toolbar={toolbar} />
-      ) : null}
-      {indexes.length > 0 && filteredIndexes.length === 0 ? (
-        <SearchEmptyState className="border" resourceName="indexes" />
-      ) : null}
-      <nav
-        aria-label="Indexes pagination"
-        className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs"
-      >
-        <Select
-          onValueChange={(value) => {
-            if (typeof value !== "string") {
-              return;
-            }
-            const nextPageSize = Number(value);
-            if (isIndexPageSize(nextPageSize)) {
-              setPageIndex(
-                pageIndexForPageSizeChange({
-                  nextPageSize,
-                  pageIndex: currentPageIndex,
-                  pageSize,
-                })
-              );
-              setPageSize(nextPageSize);
-            }
-          }}
-          value={String(pageSize)}
-        >
-          <SelectTrigger
-            aria-label="Indexes per page"
-            className="h-8 w-28"
-            size="sm"
-          >
-            <span className="text-muted-foreground">Per page</span>
-            <span>{pageSize}</span>
-          </SelectTrigger>
-          <SelectContent alignItemWithTrigger={false}>
-            {INDEX_PAGE_SIZE_OPTIONS.map((option) => (
-              <SelectItem
-                key={option}
-                label={String(option)}
-                value={String(option)}
-              >
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {filteredIndexes.length > 0 ? (
-          <span className="ml-1 tabular-nums" role="status">
-            Showing {firstPageIndex}–{lastPageIndex} of {filteredIndexes.length}{" "}
-            indexes
-          </span>
-        ) : null}
-        <div className="ml-auto flex items-center gap-2">
-          <span className="tabular-nums">
-            Page {currentPageIndex + 1} of {pageCount}
-          </span>
-          <Button
-            aria-label="Previous indexes page"
-            disabled={!hasPreviousPage}
-            onClick={() => {
-              setPageIndex(Math.max(0, currentPageIndex - 1));
-            }}
-            size="icon-sm"
-            type="button"
-            variant="outline"
-          >
-            <ChevronLeft aria-hidden="true" className="size-4" />
-          </Button>
-          <Button
-            aria-label="Next indexes page"
-            disabled={!hasNextPage}
-            onClick={() => {
-              setPageIndex(Math.min(pageCount - 1, currentPageIndex + 1));
-            }}
-            size="icon-sm"
-            type="button"
-            variant="outline"
-          >
-            <ChevronRight aria-hidden="true" className="size-4" />
-          </Button>
-        </div>
-      </nav>
+            ]}
+          />
+        }
+        hasUnfilteredData={indexes.length > 0}
+        tableKey="data-explorer-table-indexes"
+        toolbar={toolbar}
+      />
     </div>
   );
 }
 const KEY_CONSTRAINT_TYPES = new Set<ConstraintType>([
   ConstraintType.PRIMARY_KEY,
   ConstraintType.UNIQUE,
-]);
-const VALIDATED_CONSTRAINT_TYPES = new Set<ConstraintType>([
-  ConstraintType.CHECK,
-  ConstraintType.FOREIGN_KEY,
 ]);
 const NOT_VALID_DEFINITION_PATTERN = /(?:^|\s)NOT\s+VALID\s*;?\s*$/i;
 
@@ -2773,13 +2452,6 @@ function isForeignKeyConstraint(constraint: TableConstraint) {
 
 function formatConstraintColumns(columnNames: string[]) {
   return columnNames.length > 0 ? columnNames.join(", ") : "—";
-}
-
-function shouldShowReferentialAction(action: ReferentialAction) {
-  return (
-    action !== ReferentialAction.UNSPECIFIED &&
-    action !== ReferentialAction.NO_ACTION
-  );
 }
 
 function hasNotValidDefinition(constraint: TableConstraint) {
@@ -2796,13 +2468,6 @@ function parseReferencedTableTarget(referencedTable: string) {
   } catch {
     return null;
   }
-}
-
-function shouldShowValidatedPill(constraint: TableConstraint) {
-  return (
-    VALIDATED_CONSTRAINT_TYPES.has(constraint.type) &&
-    !hasNotValidDefinition(constraint)
-  );
 }
 
 function ReferencedTableTarget({
@@ -2861,146 +2526,110 @@ function ConstraintBadge({
   );
 }
 
-function ReferentialActionPill({
-  action,
-  label,
-}: {
-  action: ReferentialAction;
-  label: "delete" | "update";
-}) {
-  if (!shouldShowReferentialAction(action)) {
-    return null;
-  }
-  const actionLabel = formatReferentialAction(action);
-  return (
-    <ConstraintBadge
-      tone={action === ReferentialAction.CASCADE ? "warning" : "outline"}
-    >
-      ON {label.toUpperCase()} {actionLabel}
-    </ConstraintBadge>
-  );
-}
-
-function ConstraintSectionHeading({
-  description,
-  title,
-}: {
-  description: string;
-  title: string;
-}) {
-  return (
-    <h2 className="flex flex-wrap items-baseline gap-2 font-semibold text-[12.5px]">
-      <span>{title}</span>
-      <span className="font-normal text-[11px] text-muted-foreground">
-        {description}
-      </span>
-    </h2>
-  );
-}
-
-function ConstraintCard({
+function ConstraintDefinitionCell({
   constraint,
+}: {
+  constraint: TableConstraint;
+}) {
+  const definition =
+    constraint.definition ||
+    `${CONSTRAINT_TYPE_LABELS[constraint.type]} (${formatConstraintColumns(constraint.columnNames)})`;
+  return (
+    <span className="block max-w-[36rem] truncate" title={definition}>
+      {definition}
+    </span>
+  );
+}
+
+function orderConstraintsByKind(constraints: TableConstraint[]) {
+  return [
+    ...constraints.filter(isKeyConstraint),
+    ...constraints.filter(isForeignKeyConstraint),
+    ...constraints.filter(
+      (constraint) => constraint.type === ConstraintType.CHECK
+    ),
+    ...constraints.filter(
+      (constraint) =>
+        !(
+          isKeyConstraint(constraint) ||
+          isForeignKeyConstraint(constraint) ||
+          constraint.type === ConstraintType.CHECK
+        )
+    ),
+  ];
+}
+
+function buildConstraintInventoryColumns({
   databaseId,
   instanceId,
 }: {
-  constraint: TableConstraint;
   databaseId: string;
   instanceId: string;
-}) {
-  const isForeignKey = isForeignKeyConstraint(constraint);
-  const fallbackDefinition = `${CONSTRAINT_TYPE_LABELS[constraint.type]} (${formatConstraintColumns(
-    constraint.columnNames
-  )})`;
-  return (
-    <article
-      className={cn(
-        "rounded-[10px] border bg-card px-3.5 py-[11px] shadow-xs",
-        hasNotValidDefinition(constraint) &&
-          "border-amber-500/45 dark:border-amber-400/45"
-      )}
-    >
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <h3 className="break-all font-mono font-semibold text-[12.5px]">
-          {constraint.constraintName || "—"}
-        </h3>
+}): DataTableColumnDef<TableConstraint>[] {
+  return [
+    {
+      accessorFn: (row) => row.constraintName,
+      cell: ({ row }) => (
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate font-mono font-semibold text-foreground text-xs">
+            {row.original.constraintName || "—"}
+          </span>
+          {hasNotValidDefinition(row.original) ? (
+            <Pill
+              size="sm"
+              title="Constraint was created NOT VALID and has not been validated yet"
+              tone="amber"
+            >
+              Not valid
+            </Pill>
+          ) : null}
+        </div>
+      ),
+      header: ({ column }) => (
+        <SortableHeader column={column}>Name</SortableHeader>
+      ),
+      id: "name",
+    },
+    {
+      accessorFn: (row) => CONSTRAINT_TYPE_LABELS[row.type],
+      cell: ({ row }) => (
         <ConstraintBadge>
-          {CONSTRAINT_TYPE_LABELS[constraint.type]}
+          {CONSTRAINT_TYPE_LABELS[row.original.type]}
         </ConstraintBadge>
-        {isForeignKey ? (
-          <>
-            <ReferentialActionPill
-              action={constraint.onDelete}
-              label="delete"
-            />
-            <ReferentialActionPill
-              action={constraint.onUpdate}
-              label="update"
-            />
-          </>
-        ) : null}
-        {hasNotValidDefinition(constraint) ? (
-          <ConstraintBadge tone="warning">NOT VALID</ConstraintBadge>
-        ) : null}
-        {shouldShowValidatedPill(constraint) ? (
-          <ConstraintBadge tone="ghost">validated</ConstraintBadge>
-        ) : null}
-        {isForeignKey ? (
+      ),
+      header: ({ column }) => (
+        <SortableHeader column={column}>Kind</SortableHeader>
+      ),
+      id: "kind",
+    },
+    {
+      accessorFn: (row) => row.definition,
+      cell: ({ row }) => <ConstraintDefinitionCell constraint={row.original} />,
+      header: "Definition",
+      id: "definition",
+      meta: {
+        cellClassName: "font-mono text-muted-foreground text-xs",
+      },
+    },
+    {
+      cell: ({ row }) =>
+        isForeignKeyConstraint(row.original) ? (
           <ReferencedTableTarget
             databaseId={databaseId}
             instanceId={instanceId}
-            referencedTable={constraint.referencedTable}
+            referencedTable={row.original.referencedTable}
           />
-        ) : null}
-      </div>
-      {constraint.definition ? (
-        <SqlCodeBlock
-          className="mt-[7px] whitespace-pre-wrap rounded-none border-0 bg-transparent p-0 text-[11.5px] text-muted-foreground leading-[1.55] [overflow-wrap:anywhere]"
-          copyable={false}
-          sql={constraint.definition}
-        />
-      ) : (
-        <p className="mt-[7px] break-words font-mono text-[11.5px] text-muted-foreground leading-[1.55] [overflow-wrap:anywhere]">
-          {fallbackDefinition}
-        </p>
-      )}
-    </article>
-  );
-}
-
-function ConstraintSection({
-  constraints,
-  databaseId,
-  description,
-  instanceId,
-  title,
-}: {
-  constraints: TableConstraint[];
-  databaseId: string;
-  description: string;
-  instanceId: string;
-  title: string;
-}) {
-  if (constraints.length === 0) {
-    return null;
-  }
-  return (
-    <section className="space-y-2">
-      <ConstraintSectionHeading description={description} title={title} />
-      <div className="space-y-2">
-        {constraints.map((constraint, index) => (
-          <ConstraintCard
-            constraint={constraint}
-            databaseId={databaseId}
-            instanceId={instanceId}
-            key={
-              constraint.constraintName ||
-              `${constraint.type}:${constraint.definition}:${index}`
-            }
-          />
-        ))}
-      </div>
-    </section>
-  );
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+      enableSorting: false,
+      header: "References",
+      id: "references",
+      meta: {
+        cellClassName: "font-mono text-xs",
+      },
+    },
+  ];
 }
 
 function ConstraintsTab({
@@ -3013,9 +2642,6 @@ function ConstraintsTab({
   query: ReturnType<typeof useListTableConstraintsQuery>;
 }) {
   const [kindFilters, setKindFilters] = useState<string[]>([]);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(CONSTRAINTS_DEFAULT_PAGE_SIZE);
-  const [search, setSearch] = useState("");
   const toolbar = deriveMetadataToolbar([query]);
   if (query.error) {
     return (
@@ -3036,153 +2662,36 @@ function ConstraintsTab({
     return <TabSkeleton />;
   }
   const { constraints } = query.data;
-  const normalizedSearch = search.trim().toLowerCase();
   const kindFilterSet = new Set(kindFilters);
-  const visibleConstraints = constraints.filter(
-    (constraint) =>
-      (normalizedSearch.length === 0 ||
-        constraint.constraintName.toLowerCase().includes(normalizedSearch)) &&
-      (kindFilters.length === 0 || kindFilterSet.has(String(constraint.type)))
-  );
-  const orderedConstraints = [
-    ...visibleConstraints.filter(isKeyConstraint),
-    ...visibleConstraints.filter(isForeignKeyConstraint),
-    ...visibleConstraints.filter(
-      (constraint) => constraint.type === ConstraintType.CHECK
-    ),
-    ...visibleConstraints.filter(
-      (constraint) =>
-        !(
-          isKeyConstraint(constraint) ||
-          isForeignKeyConstraint(constraint) ||
-          constraint.type === ConstraintType.CHECK
-        )
-    ),
-  ];
-  const pageCount = Math.ceil(visibleConstraints.length / pageSize);
-  const currentPageIndex = Math.min(pageIndex, Math.max(pageCount - 1, 0));
-  const pageStart = currentPageIndex * pageSize;
-  const pageConstraints = orderedConstraints.slice(
-    pageStart,
-    pageStart + pageSize
-  );
-  const keyConstraints = pageConstraints.filter(isKeyConstraint);
-  const foreignKeyConstraints = pageConstraints.filter(isForeignKeyConstraint);
-  const checkConstraints = pageConstraints.filter(
-    (constraint) => constraint.type === ConstraintType.CHECK
-  );
-  const otherConstraints = pageConstraints.filter(
-    (constraint) =>
-      !(
-        isKeyConstraint(constraint) ||
-        isForeignKeyConstraint(constraint) ||
-        constraint.type === ConstraintType.CHECK
-      )
-  );
+  const kindFilteredConstraints =
+    kindFilterSet.size === 0
+      ? constraints
+      : constraints.filter((constraint) =>
+          kindFilterSet.has(String(constraint.type))
+        );
   return (
-    <div className="space-y-3.5" data-slot="constraints-card-list">
-      <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
-        <div
-          className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
-          data-slot="constraints-filter-controls"
-        >
-          <DataTableFilter
-            onChange={(value) => {
-              setSearch(value);
-              setPageIndex(0);
-            }}
-            placeholder="Search constraints…"
-            value={search}
-          />
-          <FacetFilterBar
-            filters={[
-              {
-                handleSelectedValuesChange: (values) => {
-                  setKindFilters(values);
-                  setPageIndex(0);
-                },
-                label: "Kind",
-                options: presentConstraintKindOptions(constraints),
-                selectedValues: kindFilters,
-              },
-            ]}
-          />
-        </div>
-        <MetadataRefreshControl toolbar={toolbar} />
-      </div>
-      {constraints.length === 0 ? (
-        <TableResourceEmptyState category="constraints" toolbar={toolbar} />
-      ) : null}
-      {constraints.length > 0 && visibleConstraints.length === 0 ? (
-        <SearchEmptyState resourceName="constraints" />
-      ) : null}
-      {visibleConstraints.length > 0 ? (
-        <>
-          <ConstraintSection
-            constraints={keyConstraints}
-            databaseId={databaseId}
-            description="primary key and uniqueness"
-            instanceId={instanceId}
-            title="Keys"
-          />
-          <ConstraintSection
-            constraints={foreignKeyConstraints}
-            databaseId={databaseId}
-            description="outbound references from this table"
-            instanceId={instanceId}
-            title="Foreign keys"
-          />
-          <ConstraintSection
-            constraints={checkConstraints}
-            databaseId={databaseId}
-            description="row-level validation rules"
-            instanceId={instanceId}
-            title="Checks"
-          />
-          <ConstraintSection
-            constraints={otherConstraints}
-            databaseId={databaseId}
-            description="exclusion and other rules"
-            instanceId={instanceId}
-            title="Other constraints"
-          />
-        </>
-      ) : null}
-      <nav
-        aria-label="Constraints pagination"
-        className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs"
-      >
-        {visibleConstraints.length > 0 ? (
-          <span className="tabular-nums" role="status">
-            Showing {pageStart + 1}–
-            {Math.min(pageStart + pageSize, visibleConstraints.length)} of{" "}
-            {visibleConstraints.length}
-          </span>
-        ) : null}
-        <div className="ml-auto">
-          <PaginationFooter
-            hasNext={currentPageIndex < pageCount - 1}
-            hasPrev={currentPageIndex > 0}
-            onNext={() => setPageIndex(currentPageIndex + 1)}
-            onPageSizeChange={(nextPageSize) => {
-              setPageIndex(
-                pageIndexForPageSizeChange({
-                  nextPageSize,
-                  pageIndex: currentPageIndex,
-                  pageSize,
-                })
-              );
-              setPageSize(nextPageSize);
-            }}
-            onPrev={() => setPageIndex(currentPageIndex - 1)}
-            pageLabel={`Page ${currentPageIndex + 1} of ${Math.max(1, pageCount)}`}
-            pageSize={pageSize}
-            pageSizeLabel="Constraints per page"
-            pageSizeOptions={CONSTRAINTS_PAGE_SIZE_OPTIONS}
-          />
-        </div>
-      </nav>
-    </div>
+    <MetadataTabResult
+      category="constraints"
+      columns={buildConstraintInventoryColumns({ databaseId, instanceId })}
+      data={orderConstraintsByKind(kindFilteredConstraints)}
+      filterColumn="name"
+      filterPlaceholder="Search constraints…"
+      filters={
+        <FacetFilterBar
+          filters={[
+            {
+              handleSelectedValuesChange: setKindFilters,
+              label: "Kind",
+              options: presentConstraintKindOptions(constraints),
+              selectedValues: kindFilters,
+            },
+          ]}
+        />
+      }
+      hasUnfilteredData={constraints.length > 0}
+      tableKey="data-explorer-table-constraints"
+      toolbar={toolbar}
+    />
   );
 }
 const PREVIEW_POLICY_COMMANDS: PolicyCommand[] = [
@@ -4818,6 +4327,7 @@ function DefinitionTab({
     policiesQuery,
     triggersQuery,
   ]);
+  const isRefreshSpinning = useMinimumSpin(toolbar.isRefreshing);
   const errors = collectQueryErrors(
     {
       endpoint: "ListTableColumns",
@@ -4919,8 +4429,7 @@ function DefinitionTab({
               aria-hidden="true"
               className={cn(
                 "size-3.5",
-                toolbar.isRefreshing &&
-                  "animate-spin motion-reduce:animate-none"
+                isRefreshSpinning && "animate-spin motion-reduce:animate-none"
               )}
               data-icon="inline-start"
             />
@@ -4946,32 +4455,6 @@ function DefinitionTab({
   );
 }
 
-function TableDetailTabTrigger({
-  count,
-  icon: Icon,
-  label,
-  value,
-}: {
-  count?: number | undefined;
-  icon: LucideIcon;
-  label: string;
-  value: TableDetailTab;
-}) {
-  return (
-    <TabsTrigger value={value}>
-      <Icon aria-hidden="true" data-icon="inline-start" />
-      <span>{label}</span>
-      {count === undefined ? null : (
-        <Badge
-          className="h-5 min-w-5 rounded-full px-1.5 font-mono text-[10px]"
-          variant="secondary"
-        >
-          {count.toLocaleString()}
-        </Badge>
-      )}
-    </TabsTrigger>
-  );
-}
 function TableDetail({
   databaseId,
   initialTab = "data",
@@ -4989,12 +4472,26 @@ function TableDetail({
   table: TableProto | undefined;
   tableName: string;
 }) {
-  const resolvedInitialTab = isTableDetailTab(initialTab) ? initialTab : "data";
+  const resolvedUrlTab = isTableDetailTab(initialTab) ? initialTab : "data";
+  // The tab selection is owned locally so a click re-renders the tab bar
+  // immediately; the URL write and the heavy panel mount follow. deferredTab
+  // gates the data grid so the active-tab indicator paints before
+  // react-data-grid mounts instead of blocking on it.
+  const [activeTab, setActiveTab] = useState<TableDetailTab>(resolvedUrlTab);
+  const deferredTab = useDeferredValue(activeTab);
+
+  useEffect(
+    function syncActiveTabWithUrl() {
+      setActiveTab(resolvedUrlTab);
+    },
+    [resolvedUrlTab]
+  );
 
   function handleTabChange(next: string) {
     if (!isTableDetailTab(next)) {
       return;
     }
+    setActiveTab(next);
     onTabChange?.(next);
   }
   const tableResourceName = buildTableName({
@@ -5089,7 +4586,7 @@ function TableDetail({
       renderOpenReferencedTableLink={renderOpenReferencedTableLink}
     >
       {({ grid, lastFetchedLabel }) => (
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-4 pb-6">
+        <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col">
           <TableDetailHeader
             columnCount={columnCount}
             lastFetchedLabel={lastFetchedLabel}
@@ -5099,53 +4596,72 @@ function TableDetail({
           />
 
           <Tabs
-            className="min-h-0 w-full min-w-0 flex-1 flex-col"
-            defaultValue={resolvedInitialTab}
-            key={resolvedInitialTab}
+            className="min-h-0 w-full min-w-0 flex-1 flex-col gap-0"
             onValueChange={handleTabChange}
+            value={activeTab}
           >
-            <div className="-mx-1 shrink-0 overflow-x-auto overflow-y-hidden px-1 pb-1">
-              <TabsList className="h-9 min-w-max">
-                {TABLE_DETAIL_TABS.map((tabDefinition) => (
-                  <TableDetailTabTrigger
-                    count={tabCounts[tabDefinition.value]}
-                    icon={tabDefinition.icon}
-                    key={tabDefinition.value}
-                    label={tabDefinition.label}
-                    value={tabDefinition.value}
-                  />
-                ))}
-              </TabsList>
-            </div>
+            <ObjectDetailTabsBar>
+              {TABLE_DETAIL_TABS.map((tabDefinition) => (
+                <ObjectDetailTabTrigger
+                  count={tabCounts[tabDefinition.value]}
+                  key={tabDefinition.value}
+                  label={tabDefinition.label}
+                  value={tabDefinition.value}
+                />
+              ))}
+            </ObjectDetailTabsBar>
 
-            <TabsContent className="mt-4 min-h-0" value="data">
+            <TabsContent
+              className={OBJECT_DETAIL_PANEL_FILL_CLASS}
+              value="data"
+            >
               {/*
                 Key on the table identity so switching tables remounts the grid:
                 a fresh query observer drops the previous table's placeholder rows
                 and shows the loading skeleton, instead of lingering on stale data.
                 Same-table paging/sort/filter keeps the observer, so placeholderData
                 still holds the prior page while the next loads.
+                deferredTab briefly shows a skeleton so the tab switch paints
+                before the grid mounts.
               */}
-              {grid}
+              {deferredTab === "data" ? (
+                grid
+              ) : (
+                <div className="p-3">
+                  <TabSkeleton />
+                </div>
+              )}
             </TabsContent>
-            <TabsContent className="mt-4" value="columns">
+            <TabsContent
+              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
+              value="columns"
+            >
               <ColumnsTab
                 columnsQuery={columnsQuery}
                 constraintsQuery={constraintsQuery}
                 indexesQuery={indexesQuery}
               />
             </TabsContent>
-            <TabsContent className="mt-4" value="keys">
+            <TabsContent
+              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
+              value="keys"
+            >
               <KeysTab
                 constraintsQuery={constraintsQuery}
                 indexesQuery={indexesQuery}
                 rows={keyRows}
               />
             </TabsContent>
-            <TabsContent className="mt-4" value="partitions">
+            <TabsContent
+              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
+              value="partitions"
+            >
               <PartitionsTab query={partitionMetadataQuery} />
             </TabsContent>
-            <TabsContent className="mt-4" value="indexes">
+            <TabsContent
+              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
+              value="indexes"
+            >
               <IndexesTab
                 query={indexesQuery}
                 schemaName={schemaName}
@@ -5153,24 +4669,36 @@ function TableDetail({
                 tableName={tableName}
               />
             </TabsContent>
-            <TabsContent className="mt-4" value="constraints">
+            <TabsContent
+              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
+              value="constraints"
+            >
               <ConstraintsTab
                 databaseId={databaseId}
                 instanceId={instanceId}
                 query={constraintsQuery}
               />
             </TabsContent>
-            <TabsContent className="mt-4" value="policies">
+            <TabsContent
+              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
+              value="policies"
+            >
               <PoliciesTab query={policiesQuery} />
             </TabsContent>
-            <TabsContent className="mt-4" value="triggers">
+            <TabsContent
+              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
+              value="triggers"
+            >
               <TriggersTab
                 query={triggersQuery}
                 schemaName={schemaName}
                 tableName={tableName}
               />
             </TabsContent>
-            <TabsContent className="mt-4" value="definition">
+            <TabsContent
+              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
+              value="definition"
+            >
               <DefinitionTab
                 columnsQuery={columnsQuery}
                 constraintsQuery={constraintsQuery}

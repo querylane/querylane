@@ -1,6 +1,5 @@
 "use client";
 
-import { Code, ConnectError } from "@connectrpc/connect";
 import { Maximize2 } from "lucide-react";
 import {
   type ClipboardEvent,
@@ -81,13 +80,12 @@ import {
   type RefreshIntervalMs,
   useRefreshSettingsStore,
 } from "@/features/user-settings/refresh-settings";
-import { useStreamRowsExporter } from "@/hooks/api/table-data";
 import { parseTableQualifiedName } from "@/lib/console-resources";
 import { downloadBlob } from "@/lib/download-blob";
 import { HIGH_VOLUME_PAGE_SIZE_OPTIONS } from "@/lib/pagination";
 import { normalizeAppUiError } from "@/lib/ui-error";
+import { cn } from "@/lib/utils";
 import type {
-  ReadRowsRequest,
   TableCell,
   TableResultColumn,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
@@ -686,7 +684,6 @@ interface TableDataGridChromeProps {
   onColumnsReorder: (sourceColumnKey: string, targetColumnKey: string) => void;
   onColumnVisibilityChange: (columnKey: string, visible: boolean) => void;
   onCopySelection: (format: ExportFormat) => void;
-  onExportRows: (format: ExportFormat) => void;
   onExportSelection: (format: ExportFormat) => void;
   onFilterChange: (
     nextRules: TableFilterRule[],
@@ -710,7 +707,6 @@ interface TableDataGridChromeProps {
     currentPageIndex: number;
     gridLoading: boolean;
     hasNext: boolean;
-    isExportingRows: boolean;
     isFetching: boolean;
     isRefetchingRows: boolean;
     pageLabel: string;
@@ -739,7 +735,6 @@ function TableDataGridChrome({
   onColumnsReorder,
   onColumnVisibilityChange,
   onCopySelection,
-  onExportRows,
   onExportSelection,
   onFilterChange,
   onNext,
@@ -759,44 +754,51 @@ function TableDataGridChrome({
   state,
   statusItems,
 }: TableDataGridChromeProps) {
+  // Default variant renders full-bleed inside the explorer pane: the toolbar,
+  // status bar, and pagination become padded bars while the grid itself runs
+  // edge-to-edge. The expanded dialog keeps the inset, rounded look.
+  const isFlush = state.variant !== "expanded";
   return (
     <>
-      <DataGridToolbar
-        className={state.variant === "expanded" ? "pr-12" : undefined}
-        columnOrder={columnOrder}
-        columns={resultColumns}
-        exportRowsDisabled={
-          state.isExportingRows || invalidFilterRules.length > 0
-        }
-        filterLogic={filterLogic}
-        filterRules={filterRules}
-        filterTitle={filterTitle}
-        hiddenColumnKeys={hiddenColumnKeys}
-        isColumnLayoutCustomized={isColumnLayoutCustomized}
-        isExpanded={state.variant === "expanded"}
-        isFetching={state.isFetching}
-        lastFetchedLabel={lastFetchedLabel}
-        onClearSelection={onClearSelection}
-        onColumnLayoutReset={onColumnLayoutReset}
-        onColumnOrderChange={onColumnOrderChange}
-        onColumnVisibilityChange={onColumnVisibilityChange}
-        onCopySelection={onCopySelection}
-        onExportRows={onExportRows}
-        onExportSelection={onExportSelection}
-        onFilterChange={onFilterChange}
-        onRefresh={onRefresh}
-        onSortChange={onSortChange}
-        onToggleExpanded={onToggleExpanded}
-        selectedCount={selectedCount}
-        sortColumns={sortColumns}
-      />
+      <div
+        className={cn(
+          "flex shrink-0 flex-col gap-2",
+          isFlush && "px-3 pt-2 pb-2 sm:px-4"
+        )}
+      >
+        <DataGridToolbar
+          className={state.variant === "expanded" ? "pr-12" : undefined}
+          columnOrder={columnOrder}
+          columns={resultColumns}
+          filterLogic={filterLogic}
+          filterRules={filterRules}
+          filterTitle={filterTitle}
+          hiddenColumnKeys={hiddenColumnKeys}
+          isColumnLayoutCustomized={isColumnLayoutCustomized}
+          isExpanded={state.variant === "expanded"}
+          isFetching={state.isFetching}
+          lastFetchedLabel={lastFetchedLabel}
+          onClearSelection={onClearSelection}
+          onColumnLayoutReset={onColumnLayoutReset}
+          onColumnOrderChange={onColumnOrderChange}
+          onColumnVisibilityChange={onColumnVisibilityChange}
+          onCopySelection={onCopySelection}
+          onExportSelection={onExportSelection}
+          onFilterChange={onFilterChange}
+          onRefresh={onRefresh}
+          onSortChange={onSortChange}
+          onToggleExpanded={onToggleExpanded}
+          selectedCount={selectedCount}
+          sortColumns={sortColumns}
+        />
 
-      <TableDataGridAlerts
-        invalidFilterRules={invalidFilterRules}
-        onClearFilters={onClearFilters}
-        onRetry={onRefresh}
-        queryError={queryError}
-      />
+        <TableDataGridAlerts
+          invalidFilterRules={invalidFilterRules}
+          onClearFilters={onClearFilters}
+          onRetry={onRefresh}
+          queryError={queryError}
+        />
+      </div>
 
       <GridSurface
         busy={state.isRefetchingRows}
@@ -806,6 +808,7 @@ function TableDataGridChrome({
       >
         <GridBody
           columns={columns}
+          flush={isFlush}
           hasActiveFilter={filterRules.length > 0}
           isLoading={state.gridLoading}
           onCellContextMenu={onCellContextMenu}
@@ -820,9 +823,13 @@ function TableDataGridChrome({
         />
       </GridSurface>
 
-      <GridStatusBar items={statusItems} />
+      <GridStatusBar
+        className={isFlush ? "border-t-0 px-3 pt-1.5 sm:px-4" : undefined}
+        items={statusItems}
+      />
 
       <PaginationFooter
+        className={isFlush ? "px-3 py-2 sm:px-4" : undefined}
         hasNext={state.hasNext}
         hasPrev={state.currentPageIndex > 0}
         onNext={onNext}
@@ -997,120 +1004,6 @@ function useSelectionActions({
   };
 }
 
-function useServerRowExport(request: ReadRowsRequest) {
-  const exportRows = useStreamRowsExporter();
-  const activeAbortControllerRef = useRef<AbortController | null>(null);
-  const [isExportingRows, setIsExportingRows] = useState(false);
-  const abortActiveRowExport = useEffectEvent(() => {
-    activeAbortControllerRef.current?.abort();
-    activeAbortControllerRef.current = null;
-  });
-
-  useEffect(function cancelRowExportOnUnmount() {
-    return () => {
-      abortActiveRowExport();
-    };
-  }, []);
-
-  async function handleExportRows(exportFormat: ExportFormat) {
-    if (isExportingRows) {
-      return;
-    }
-
-    const abortController = new AbortController();
-    activeAbortControllerRef.current = abortController;
-    const toastId = toast.loading("Exporting rows", {
-      description: "Choose a destination...",
-    });
-
-    setIsExportingRows(true);
-    try {
-      const result = await exportRows({
-        exportFormat,
-        onProgress: (progress) => {
-          showExportProgressToast(toastId, progress.rowCount);
-        },
-        request,
-        signal: abortController.signal,
-      });
-      if (!result.savedToFile) {
-        downloadBlob(
-          result.payload.filename,
-          result.payload.contents,
-          result.payload.mimeType
-        );
-      }
-      showExportCompleteToasts(toastId, result.rowCount, result.truncated);
-    } catch (error) {
-      showExportFailure({ abortController, error, toastId });
-    } finally {
-      if (activeAbortControllerRef.current === abortController) {
-        activeAbortControllerRef.current = null;
-      }
-      setIsExportingRows(false);
-    }
-  }
-
-  return { handleExportRows, isExportingRows };
-}
-
-function showExportFailure({
-  abortController,
-  error,
-  toastId,
-}: {
-  abortController: AbortController;
-  error: unknown;
-  toastId: string | number;
-}) {
-  if (isExportCanceled(error, abortController.signal)) {
-    toast.dismiss(toastId);
-    return;
-  }
-  const uiError = normalizeAppUiError(error, {
-    action: "stream_rows",
-    area: "data-explorer.table-data-grid.export",
-    endpoint: "StreamRows",
-    source: "connect",
-    surface: "toast",
-  });
-  toast.error(uiError.title, {
-    description: uiError.retryGuidance ?? uiError.message,
-    id: toastId,
-  });
-}
-
-function showExportProgressToast(toastId: string | number, rowCount: bigint) {
-  toast.loading("Exporting rows", {
-    description: `${rowCount.toLocaleString()} rows streamed.`,
-    id: toastId,
-  });
-}
-
-function showExportCompleteToasts(
-  toastId: string | number,
-  rowCount: bigint,
-  truncated: boolean
-) {
-  toast.success("Export ready", {
-    description: `${rowCount.toLocaleString()} rows exported.`,
-    id: toastId,
-  });
-  if (truncated) {
-    toast.warning("Export truncated", {
-      description: `${rowCount.toLocaleString()} rows exported before the server cap was reached.`,
-    });
-  }
-}
-
-function isExportCanceled(error: unknown, signal: AbortSignal): boolean {
-  return (
-    signal.aborted ||
-    ConnectError.from(error).code === Code.Canceled ||
-    (error instanceof DOMException && error.name === "AbortError")
-  );
-}
-
 function useGridColumns({
   displayColumns,
   foreignKeyReferences,
@@ -1264,9 +1157,11 @@ function TableDataGridContent({
   rows: GridRow[];
   setOpenRowIndex: (next: number | null) => void;
 }) {
-  // Parent table tabs own the available height; keep RDG at that finite height so row virtualization stays active.
+  // Parent table tabs own the available height; keep RDG at that finite height
+  // so row virtualization stays active. Spacing between chrome pieces comes
+  // from the flush bars' own padding, not a flex gap.
   return (
-    <div className="flex h-full min-h-[480px] flex-col gap-2">
+    <div className="flex h-full min-h-[480px] flex-col">
       <TableDataGridChrome {...chromeProps} />
       <ExpandedDataGridDialog
         chromeProps={chromeProps}
@@ -1447,9 +1342,6 @@ function TableDataGrid({
     isFetching,
     refetch,
   });
-  const { handleExportRows, isExportingRows } = useServerRowExport(
-    controller.request
-  );
   const gridLoading = isLoading || isQueryStateValidationLoading;
   // A page/sort/filter change starts a new request while `placeholderData`
   // keeps the prior rows on screen (isPlaceholderData). Dim those rows and
@@ -1589,7 +1481,6 @@ function TableDataGrid({
     onColumnsReorder: columnLayout.reorderColumns,
     onColumnVisibilityChange: columnLayout.setColumnVisibility,
     onCopySelection: selectionActions.handleCopySelection,
-    onExportRows: handleExportRows,
     onExportSelection: selectionActions.handleExportSelection,
     onFilterChange: handleFilterChange,
     onNext: handleNext,
@@ -1610,7 +1501,6 @@ function TableDataGrid({
       currentPageIndex: controller.currentPageIndex,
       gridLoading,
       hasNext,
-      isExportingRows,
       isFetching,
       isRefetchingRows,
       pageLabel,

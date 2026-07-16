@@ -459,7 +459,7 @@ test("data explorer schema map fills the available detail area", async () => {
   expect(canvasRect.bottom).toBeLessThanOrEqual(mapRect.bottom);
 });
 
-test("data explorer schema objects stay centered at wide widths", async () => {
+test("data explorer schema objects fill the pane at wide widths", async () => {
   seedAnalyticsSchema();
   renderWideExplorerPage({ schema: "analytics" });
 
@@ -467,8 +467,6 @@ test("data explorer schema objects stay centered at wide widths", async () => {
     .element(page.getByRole("heading", { name: "analytics" }))
     .toBeVisible();
 
-  const shell = page.getByTestId("wide-explorer-shell").element();
-  const rail = page.getByTestId("explorer-rail-slot").element();
   const details = page
     .getByRole("region", { name: "Data Explorer details" })
     .element();
@@ -477,12 +475,14 @@ test("data explorer schema objects stay centered at wide widths", async () => {
     throw new Error("Expected the Data Explorer detail content.");
   }
 
-  const shellRect = shell.getBoundingClientRect();
-  const railRect = rail.getBoundingClientRect();
+  // Full-bleed layout: the detail content spans the whole pane instead of
+  // the old centered max-w-[900px] column.
+  const detailsRect = details.getBoundingClientRect();
   const contentRect = content.getBoundingClientRect();
-  const availableCenter = (railRect.right + shellRect.right) / 2;
-  const contentCenter = (contentRect.left + contentRect.right) / 2;
 
-  expect(contentRect.width).toBeLessThanOrEqual(900);
-  expect(Math.abs(contentCenter - availableCenter)).toBeLessThanOrEqual(1);
+  expect(contentRect.width).toBeGreaterThan(900);
+  expect(Math.abs(contentRect.left - detailsRect.left)).toBeLessThanOrEqual(1);
+  expect(Math.abs(contentRect.right - detailsRect.right)).toBeLessThanOrEqual(
+    1
+  );
 });
