@@ -24,6 +24,49 @@ estimate or production telemetry.
 No compiler-specific correctness defect was reproduced. Every measured journey
 completed five times in the annotation control and five times in infer mode.
 
+## Data Explorer follow-up — 2026-07-17
+
+The seeded `commerce.orders` page was profiled separately after reports that
+selecting every row and resizing the window had become laggy. Seven local React
+Scan samples were recorded before and after the fix on this route:
+
+`/instances/seed-demo-complex/databases/demo_complex/explorer?schema=commerce&category=tables&name=orders`
+
+| Interaction | Metric | Before | After | Change |
+| --- | --- | ---: | ---: | ---: |
+| Select all | React commits | 17 | 6 | **-64.7%** |
+| Select all | React render time | 70.3 ms | 55.9 ms | **-20.5%** |
+| Select all | Main-thread task time | 215.3 ms | 163.1 ms | **-24.2%** |
+| Select all | Interaction duration | 265.2 ms | 211.9 ms | **-20.1%** |
+| Resize sweep | `DataGrid` renders | 68 | 10 | **-85.3%** |
+| Resize sweep | React commits | 105 | 18 | **-82.9%** |
+| Resize sweep | React render time | 113.2 ms | 35.8 ms | **-68.4%** |
+| Resize sweep | Script time | 245.3 ms | 93.2 ms | **-62.0%** |
+| Resize sweep | Main-thread task time | 503.6 ms | 340.3 ms | **-32.4%** |
+| Resize sweep | Long-task time | 51 ms | 0 ms | **-100%** |
+
+The resize sweep changed the viewport from 1,270 px to 900 px in 10 px steps.
+Its wall-clock interaction median moved only 547.4 ms → 532.7 ms because the
+automation still performs all 38 browser viewport changes; the reduced commit,
+render, script, task, and long-task measurements isolate the removed app work.
+
+Three causes were addressed:
+
+- The select-all checkbox mounted an interactive tooltip layer on its pointer
+  hot path. A dynamic native title retains the hint without the extra tooltip
+  lifecycle and commits.
+- Foreign-key previews were reconstructed for every cell render even though
+  result rows are stable. Each column now caches the preview by row lifetime.
+- The pinned data-grid release synchronously committed every
+  `ResizeObserver` delivery. A package patch coalesces continuous notifications
+  into the latest measurement every 50 ms, retaining responsive horizontal
+  virtualization while preventing per-pixel React commits. A browser regression
+  test sends ten observer deliveries: the unpatched grid produced 30 commits;
+  the patched grid produces at most three.
+
+The recorder and raw samples remain local audit artifacts; React Scan is not
+enabled in CI or production.
+
 ## Compatibility audit
 
 - React Doctor full scan: no findings.

@@ -1,10 +1,5 @@
 import type { RenderCheckboxProps } from "react-data-grid";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 const SELECT_ALL_ARIA_LABEL = "Select All";
 
@@ -17,7 +12,15 @@ function DataGridCheckbox({
   onChange,
   tabIndex,
 }: RenderCheckboxProps) {
-  const checkbox = (
+  let selectAllTitle: string | undefined;
+  if (ariaLabel === SELECT_ALL_ARIA_LABEL) {
+    selectAllTitle =
+      indeterminate || checked
+        ? "Clear selection"
+        : "Select all rows on this page";
+  }
+
+  return (
     <Checkbox
       aria-label={ariaLabel}
       aria-labelledby={ariaLabelledBy}
@@ -31,24 +34,8 @@ function DataGridCheckbox({
         onChange(nextChecked, shift);
       }}
       tabIndex={tabIndex}
+      title={selectAllTitle}
     />
-  );
-
-  if (ariaLabel !== SELECT_ALL_ARIA_LABEL) {
-    return checkbox;
-  }
-
-  return (
-    <Tooltip>
-      <TooltipTrigger render={<span className="ml-auto inline-flex" />}>
-        {checkbox}
-      </TooltipTrigger>
-      <TooltipContent>
-        {indeterminate || checked
-          ? "Clear selection"
-          : "Select all rows on this page"}
-      </TooltipContent>
-    </Tooltip>
   );
 }
 

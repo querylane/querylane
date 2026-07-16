@@ -144,5 +144,8 @@
     "ultracite": "7.9.4",
     "vitest": "5.0.0-beta.6",
     "vitest-browser-react": "2.2.0"
+  },
+  "patchedDependencies": {
+    "react-data-grid@7.0.0-beta.59": "patches/react-data-grid@7.0.0-beta.59.patch"
   }
 }
