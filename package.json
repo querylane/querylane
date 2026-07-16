@@ -1,9 +1,15 @@
 {
-  "name": "querylane",
-  "private": true,
-  "packageManager": "bun@1.3.14",
-  "type": "module",
-  "scripts": {
-    "setup:worktree": "bun ./scripts/setup-worktree.mjs"
-  }
+	"name": "querylane",
+	"private": true,
+	"packageManager": "bun@1.3.14",
+	"type": "module",
+	"scripts": {
+		"docs:build": "blume build --strict",
+		"docs:dev": "blume dev",
+		"docs:test": "bun test scripts/docs-deployment.test.ts",
+		"setup:worktree": "bun ./scripts/setup-worktree.mjs"
+	},
+	"devDependencies": {
+		"blume": "1.0.4"
+	}
 }

@@ -1,0 +1,57 @@
+---
+title: Roadmap
+description: "See the sequence Querylane is pursuing: a trustworthy preview, a read-only daily driver, then guarded write workflows."
+sidebar:
+  hidden: true
+---
+
+Querylane is pre-1.0. This roadmap communicates direction, not dates or a contractual commitment. Priorities can change as the product is tested against real PostgreSQL environments.
+
+Last reviewed: **July 16, 2026**.
+
+## Now: safe to evaluate
+
+The current milestone is a preview that people can run, understand, and trust enough to show:
+
+- harden all three onboarding paths and the handoff to the first managed instance;
+- improve packaging, local distribution, authentication, and secure defaults;
+- keep connection testing, target policy, encrypted stored credentials, and error recovery explicit;
+- polish the existing instance, activity, data explorer, role, and database insight surfaces.
+
+Follow the [Safe to Show HN milestone](https://github.com/querylane/querylane/milestone/1).
+
+## Next: read-only daily driver
+
+The next product step is to make Querylane useful for daily investigation without opening a second tool for every query.
+
+### SQL Workbench
+
+A PostgreSQL Workbench is the largest planned addition: an editor with tabs, selected-statement execution, history, cancellation, typed results, export, formatting, and explain output. The first release remains read-only, with backend enforcement rather than a UI-only promise.
+
+Track [SQL editor UI](https://github.com/querylane/querylane/issues/69), [saved query library](https://github.com/querylane/querylane/issues/137), and [EXPLAIN visualization](https://github.com/querylane/querylane/issues/70).
+
+### Fleet and operations
+
+- compare health across all registered instances in a fleet overview;
+- filter larger server lists by environment and other labels;
+- deepen query, replication, maintenance, and activity investigations;
+- add carefully scoped live-session actions.
+
+Track [fleet overview](https://github.com/querylane/querylane/issues/134), [server filtering](https://github.com/querylane/querylane/issues/143), and [live activity actions](https://github.com/querylane/querylane/issues/72).
+
+## Later: write path with safety rails
+
+Querylane will not add broad writes by simply making read-only grids editable. The write milestone starts with controls that make intent, scope, and recovery visible, then builds mutation workflows on top.
+
+Planned areas include:
+
+- an explicit read/write posture and guardrails for dangerous operations;
+- editable table data with validation and recoverable failure states;
+- role, membership, grant, extension, and configuration changes;
+- maintenance actions and additional PostgreSQL object administration.
+
+Track [write safety rails](https://github.com/querylane/querylane/issues/77), [editable grid](https://github.com/querylane/querylane/issues/67), and [role and grant writes](https://github.com/querylane/querylane/issues/75).
+
+## Influence the order
+
+Open a focused [GitHub issue](https://github.com/querylane/querylane/issues/new) with the PostgreSQL version, environment shape, operator question, and current workaround. Concrete workflows are more useful than feature names alone.

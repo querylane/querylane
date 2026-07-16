@@ -1,0 +1,79 @@
+<svg
+  fill="none"
+  height="32"
+  viewBox="0 0 32 32"
+  width="32"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <title>Querylane icon</title>
+  <style>
+    .bg {
+      fill: #18181b;
+    }
+    .fg {
+      fill: #fafafa;
+    }
+    .hl {
+      fill: #fafafa;
+      opacity: 0.1;
+    }
+    .cursor {
+      fill: #60a5fa;
+    }
+    @media (prefers-color-scheme: dark) {
+      .bg {
+        fill: #fafafa;
+      }
+      .fg {
+        fill: #18181b;
+      }
+      .hl {
+        fill: #18181b;
+        opacity: 0.08;
+      }
+      .cursor {
+        fill: #3b82f6;
+      }
+    }
+  </style>
+  <rect class="bg" height="32" rx="7" width="32" />
+  <rect class="hl" height="4.5" rx="1.5" width="26" x="3" y="13" />
+  <rect
+    class="fg"
+    height="2.2"
+    opacity="0.35"
+    rx="1"
+    width="12"
+    x="9"
+    y="6.5"
+  />
+  <rect
+    class="fg"
+    height="2.2"
+    opacity="0.5"
+    rx="1"
+    width="14"
+    x="12"
+    y="10.5"
+  />
+  <rect class="fg" height="2.2" rx="1" width="10" x="12" y="14.2" />
+  <rect
+    class="fg"
+    height="2.2"
+    opacity="0.5"
+    rx="1"
+    width="15"
+    x="12"
+    y="18"
+  />
+  <rect
+    class="fg"
+    height="2.2"
+    opacity="0.35"
+    rx="1"
+    width="8"
+    x="9"
+    y="22"
+  />
+  <path class="cursor" d="M4.5 13.3L8 15.2L4.5 17.1Z" />
+</svg>

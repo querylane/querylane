@@ -1,0 +1,65 @@
+---
+title: Explore schemas, objects, and rows
+description: Move from a database map to table structure, relationships, policies, definitions, and filtered row data.
+sidebar:
+  label: Data explorer
+---
+
+The Data Explorer makes PostgreSQL's catalog navigable without flattening it into a generic table browser. Start with a schema, then move between relationships, object types, and the details of one table or view.
+
+<img
+  alt="A schema map showing the selected table and its foreign-key relationships."
+  className="dark:hidden"
+  height="1360"
+  src="/images/docs/schema-map.png"
+  width="1168"
+/>
+<img
+  alt="A schema map showing the selected table and its foreign-key relationships."
+  className="hidden dark:block"
+  height="1360"
+  src="/images/docs/schema-map-dark.png"
+  width="1168"
+/>
+
+## Navigate a schema
+
+The schema overview summarizes tables, views, and other database objects. Use the map to understand foreign-key relationships, focus one table, and follow connected objects without losing the schema boundary.
+
+The explorer also surfaces routines, sequences, types, collations, foreign-data wrappers and servers, replication objects, event triggers, and `pg_cron` jobs when they exist.
+
+## Inspect a table
+
+Table detail is split by the questions each catalog object answers:
+
+| Tab | Use it for |
+| --- | --- |
+| Data | Read rows, filter and sort them, resize or persist columns, follow foreign keys, and export results |
+| Columns | Check type, nullability, defaults, identity, generated values, and comments |
+| Keys and constraints | Understand primary, unique, foreign, check, and exclusion rules |
+| Indexes | Review index method, columns, predicates, expressions, uniqueness, and validity |
+| Partitions | See partition parents, children, strategies, and bounds |
+| Policies | Understand row-level security policies, roles, commands, and expressions |
+| Triggers | Review trigger timing, events, enablement, functions, and definitions |
+| Definition | Reproduce the object's PostgreSQL definition |
+
+<img
+  alt="A table data view with filter, sort, column, export, and expansion controls."
+  className="dark:hidden"
+  height="816"
+  src="/images/docs/table-data.png"
+  width="1168"
+/>
+<img
+  alt="A table data view with filter, sort, column, export, and expansion controls."
+  className="hidden dark:block"
+  height="816"
+  src="/images/docs/table-data-dark.png"
+  width="1168"
+/>
+
+## Filter and export safely
+
+Combine structured filters and sorts to narrow a page of rows. Querylane preserves PostgreSQL value types and nulls in its results. Export the current result as CSV, JSON, or SQL; CSV export neutralizes values that spreadsheet programs could interpret as formulas.
+
+The current grid is for inspection, not editing. Editable cells and mutation workflows follow the safety-rail work described on the [roadmap](/roadmap).

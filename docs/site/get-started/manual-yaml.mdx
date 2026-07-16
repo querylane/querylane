@@ -1,0 +1,62 @@
+---
+title: Configure Querylane with YAML
+description: Own Querylane metadata and managed-instance configuration in a watched YAML file.
+sidebar:
+  label: Manual YAML
+---
+
+Manual YAML is the operator path. It works without the UI, supports environment-backed secrets, and makes the configuration reviewable as code. Querylane watches the file and applies supported changes without asking you to re-enter them in the browser.
+
+## Configure internal storage
+
+Use a DSN from the environment when possible:
+
+```yaml querylane.yaml
+http:
+  host: "0.0.0.0"
+  port: 8080
+
+database:
+  dsn: "postgres://querylane:replace-me@db.example.com:5432/querylane?sslmode=require"
+```
+
+You can set `QUERYLANE_DATABASE_DSN` instead of placing the metadata DSN in the file. To use embedded storage from YAML:
+
+```yaml querylane.yaml
+embedded:
+  mode: persistent
+  data_path: "~/.querylane/pgdata"
+  port: 5433
+```
+
+Start Querylane with the file:
+
+```sh
+querylane server start --config /path/to/querylane.yaml
+```
+
+## Manage instances from YAML
+
+Add an `instances` list when the same file should own the PostgreSQL servers Querylane inspects:
+
+```yaml querylane.yaml
+instances:
+  - id: production
+    display_name: "Production"
+    host: "db.example.com"
+    port: 5432
+    database: "app"
+    username: "querylane_reader"
+    password_env: "PRODUCTION_DATABASE_PASSWORD"
+    ssl_mode: require
+    labels:
+      env: production
+```
+
+`id` must be stable and contain letters, digits, hyphens, or underscores. `password_env` and `dsn_env` keep secrets out of the file.
+
+:::note
+When `instances` is present, YAML owns instance configuration and the corresponding UI is read-only. Remove that section if you want to create and edit instance connections through the API and browser instead.
+:::
+
+The complete commented example remains in [`docs/reference-config.yaml`](https://github.com/querylane/querylane/blob/main/docs/reference-config.yaml).

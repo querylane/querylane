@@ -1,0 +1,43 @@
+---
+title: Investigate activity and health
+description: Inspect current PostgreSQL sessions, waits, transaction age, client origin, and blocking relationships.
+sidebar:
+  label: Activity and health
+---
+
+The Activity page is a live, read-only view of sessions on an instance. Use it when connection usage rises, a transaction runs too long, or work appears blocked.
+
+<img
+  alt="The activity page lists live sessions with state, duration, client, wait, and query context."
+  className="dark:hidden"
+  height="976"
+  src="/images/docs/instance-activity.png"
+  width="1168"
+/>
+<img
+  alt="The activity page lists live sessions with state, duration, client, wait, and query context."
+  className="hidden dark:block"
+  height="976"
+  src="/images/docs/instance-activity-dark.png"
+  width="1168"
+/>
+
+## Triage the list
+
+- Filter by database, role, application, state, or wait condition.
+- Sort by query or transaction age to find long-running work.
+- Treat **idle in transaction** separately from ordinary idle connections; it can retain locks and prevent cleanup.
+- Look for waiting sessions and the sessions that block them.
+- Use client address and application name to trace work back to a service or operator.
+
+## Open the session inspector
+
+Select a row to inspect the complete query text, backend identifiers, timestamps, transaction state, client origin, wait details, and blocking context. The inspector updates with the live activity snapshot, so confirm that the session still exists before acting outside Querylane.
+
+## Correlate with health
+
+Return to the instance overview to compare a session-level symptom with connection capacity, metric history, and replication health. Inside a database, Query Insights groups query-level behavior over a longer window than the live session list.
+
+:::note
+Querylane does not currently terminate sessions or cancel queries. Use your approved PostgreSQL operational process when an intervention is required. Session actions are tracked on the [roadmap](/roadmap).
+:::

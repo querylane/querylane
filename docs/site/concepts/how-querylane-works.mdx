@@ -1,0 +1,37 @@
+---
+title: How Querylane models PostgreSQL
+description: Learn the difference between Querylane storage, instances, databases, schemas, and live observations.
+sidebar:
+  label: How Querylane works
+---
+
+Querylane keeps its own application state separate from the PostgreSQL servers you ask it to inspect. That boundary prevents the setup database from being confused with customer data.
+
+## Resource model
+
+| Term | Meaning |
+| --- | --- |
+| Querylane metadata database | Querylane's internal PostgreSQL database for configuration, connection records, sampled metrics, and application state |
+| Instance | One user-managed PostgreSQL server connection identified by host, port, and credentials |
+| Database | A PostgreSQL database inside an instance, such as `app`, `analytics`, or `postgres` |
+| Schema | A namespace inside a database, such as `public` or `pg_catalog` |
+| Object | A table, view, routine, sequence, type, collation, foreign server, policy, trigger, and other catalog resource |
+
+One Querylane installation can hold many instances. One instance can expose many databases, and each database owns its schemas and objects.
+
+## Stored configuration and live observations
+
+Querylane combines two kinds of information:
+
+- **Stored configuration** includes the connection record, labels, sampled metrics, and Querylane's own state.
+- **Live observations** come from the managed server's PostgreSQL catalogs and statistics views when you open or refresh a page.
+
+That distinction matters during failures. Querylane can still know an instance exists while showing its live health or catalog as unavailable. Partial errors stay attached to the affected section instead of making the whole server disappear.
+
+## Connection ownership
+
+Instances can be **API-managed** through the browser or **config-managed** through YAML. API-managed credentials are stored in Querylane's metadata database and should be encrypted with a stable `QUERYLANE_INSTANCE_SECRET_KEY`. Config-managed secrets can be read from environment variables and are not written back to YAML.
+
+## Read-first behavior
+
+The current product concentrates on catalog discovery, row inspection, activity, metrics, and access analysis. It does not yet expose a broad mutation surface. This makes its current boundary easy to understand, but it does not remove the need for least-privilege PostgreSQL roles, network policy, backups, or review of the queries operators run.

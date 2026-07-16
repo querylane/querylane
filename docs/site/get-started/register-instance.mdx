@@ -1,0 +1,56 @@
+---
+title: Register your first instance
+description: Connect the PostgreSQL server whose health, activity, access, and data structure you want Querylane to inspect.
+sidebar:
+  label: Register an instance
+---
+
+An **instance** is a PostgreSQL server connection managed by Querylane. It is separate from Querylane's internal metadata database and can contain many databases.
+
+<img
+  alt="The instance form collects a display name and PostgreSQL server connection."
+  className="dark:hidden"
+  height="992"
+  src="/images/docs/register-instance.png"
+  width="1008"
+/>
+<img
+  alt="The instance form collects a display name and PostgreSQL server connection."
+  className="hidden dark:block"
+  height="992"
+  src="/images/docs/register-instance-dark.png"
+  width="1008"
+/>
+
+## Before you connect
+
+- Create a dedicated login with only the access your operators need Querylane to expose.
+- Allow network access from the Querylane process to the PostgreSQL host and port.
+- Choose the required SSL mode. Use certificate verification when your environment supports it.
+- Have the initial database name ready. Querylane uses it to connect and discover the rest of the server.
+
+## Add the server
+
+<Steps>
+  <Step title="Open Add instance">
+    After onboarding, Querylane sends you directly to the instance form. Later, use the instance switcher to add another server.
+  </Step>
+  <Step title="Name the connection">
+    Use a recognizable display name such as **Production analytics**. Labels such as `env: production` help separate similar servers.
+  </Step>
+  <Step title="Enter individual fields or a DSN">
+    Provide host, port, initial database, username, password, and SSL mode. The advanced section accepts a complete PostgreSQL DSN instead.
+  </Step>
+  <Step title="Test the connection">
+    Querylane requires a successful test before registration. A connection change invalidates the old test so stale credentials cannot be saved accidentally.
+  </Step>
+  <Step title="Register the instance">
+    Querylane stores the connection, discovers server information and databases, and opens the instance overview.
+  </Step>
+</Steps>
+
+## If the test fails
+
+Read the structured error beside the affected field. Common causes are an unreachable hostname, a blocked port, a missing database, rejected credentials, or an SSL mode that does not match the server. Querylane intentionally returns a generic connection failure unless an administrator has configured a strict target allowlist.
+
+Continue with the [instance overview](/guides/instance-overview) once the connection succeeds.

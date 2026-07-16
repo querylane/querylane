@@ -1,0 +1,47 @@
+---
+title: Read the instance overview
+description: Use the instance overview to establish connection, capacity, health, and database context before drilling deeper.
+sidebar:
+  label: Instance overview
+---
+
+The instance overview is the starting point for a managed PostgreSQL server. It puts identity, version, connection capacity, sampled metrics, live health, and the database catalog on one page.
+
+<img
+  alt="An instance overview showing server identity, capacity, metrics, connections, and health."
+  className="dark:hidden"
+  height="992"
+  src="/images/docs/instance-overview.png"
+  width="1168"
+/>
+<img
+  alt="An instance overview showing server identity, capacity, metrics, connections, and health."
+  className="hidden dark:block"
+  height="992"
+  src="/images/docs/instance-overview-dark.png"
+  width="1168"
+/>
+
+## Start at the top
+
+Check these signals before investigating a specific database:
+
+1. **Connection state** confirms that Querylane can reach the server with the saved credentials.
+2. **PostgreSQL version** tells you which catalog behavior and features to expect.
+3. **Connections** separates active, idle, and idle-in-transaction sessions and shows remaining capacity.
+4. **Storage and database count** establish the size and shape of the instance.
+5. **Last refreshed** tells you how current the live snapshot is.
+
+## Read sampled metrics
+
+Querylane samples transaction, connection, cache-hit, and disk-I/O signals in the background. Use the time-range control to distinguish a short spike from a persistent pattern. A new instance needs several samples before charts become meaningful.
+
+## Expand health checks
+
+The health section groups live checks for connectivity, connection pressure, and replication. Expand a row for the evidence behind its status. A partial warning is not the same as a disconnected server: Querylane keeps healthy sections usable when one probe fails.
+
+## Move into a database
+
+The database catalog is the handoff from server operations to structure and data. Select a database to open its overview, extensions, query insights, and data explorer.
+
+For current sessions and blockers, continue to [activity and health](/guides/activity-and-health).
