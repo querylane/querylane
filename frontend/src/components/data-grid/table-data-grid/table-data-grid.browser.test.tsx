@@ -865,7 +865,7 @@ test("column headers reorder while layout controls stay compact", async () => {
   await expect(page).toMatchScreenshot("data-grid-native-column-layout");
 });
 
-test("select-all avoids a mounted tooltip layer on the grid hot path", async () => {
+test("select-all stays tooltip-free and preserves native selection behavior", async () => {
   renderForeignKeyReferenceGrid(
     "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
   );
@@ -878,6 +878,24 @@ test("select-all avoids a mounted tooltip layer on the grid hot path", async () 
   await selectAllCheckbox.hover();
 
   await expect.element(page.getByRole("tooltip")).not.toBeInTheDocument();
+
+  await selectAllCheckbox.click();
+  await expect.element(selectAllCheckbox).toBeChecked();
+  await expect
+    .element(selectAllCheckbox)
+    .toHaveAttribute("title", "Clear selection");
+
+  const rowCheckboxes = page.getByRole("checkbox", { name: "Select" });
+  expect(rowCheckboxes.elements()).not.toHaveLength(0);
+  for (const rowCheckbox of rowCheckboxes.elements()) {
+    expect(rowCheckbox).toBeChecked();
+  }
+
+  await selectAllCheckbox.click();
+  await expect.element(selectAllCheckbox).not.toBeChecked();
+  for (const rowCheckbox of rowCheckboxes.elements()) {
+    expect(rowCheckbox).not.toBeChecked();
+  }
 });
 
 async function openForeignKeyReference() {

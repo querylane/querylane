@@ -147,6 +147,7 @@ interface ContextMenuState {
 }
 
 const DEFAULT_PAGE_SIZE = 50;
+const noop = () => undefined;
 
 function decodeUrlList(value: string | undefined): string[] {
   if (!value) {
@@ -1032,6 +1033,8 @@ function useGridColumns({
   setSortColumns: (next: SortColumn[]) => void;
   sortColumns: SortColumn[];
 }): { columns: Column<GridRow>[]; pkColumnSet: Set<string> } {
+  "use memo";
+
   const pkColumnSet = new Set(
     rowIdentity && rowIdentity.source === RowIdentity_Source.PRIMARY_KEY
       ? rowIdentity.columnNames
@@ -1280,13 +1283,13 @@ function TableDataGrid({
   filterSearch,
   frozenColumnsSearch,
   initialPageSize = DEFAULT_PAGE_SIZE,
-  onCellSearchChange = () => undefined,
+  onCellSearchChange = noop,
   onFilterSearchChange,
-  onFrozenColumnsSearchChange = () => undefined,
-  onOpenRowSearchChange = () => undefined,
-  onPageSizeSearchChange = () => undefined,
+  onFrozenColumnsSearchChange = noop,
+  onOpenRowSearchChange = noop,
+  onPageSizeSearchChange = noop,
   renderOpenReferencedTableLink,
-  onSelectedRowsSearchChange = () => undefined,
+  onSelectedRowsSearchChange = noop,
   onSortSearchChange,
   openRowSearch,
   pageSizeSearch,

@@ -1,42 +1,21 @@
-import type { RenderCheckboxProps } from "react-data-grid";
-import { Checkbox } from "@/components/ui/checkbox";
+import { type RenderCheckboxProps, renderCheckbox } from "react-data-grid";
 
 const SELECT_ALL_ARIA_LABEL = "Select All";
 
-function DataGridCheckbox({
-  "aria-label": ariaLabel,
-  "aria-labelledby": ariaLabelledBy,
-  checked,
-  disabled,
-  indeterminate,
-  onChange,
-  tabIndex,
-}: RenderCheckboxProps) {
+function DataGridCheckbox(props: RenderCheckboxProps) {
   let selectAllTitle: string | undefined;
-  if (ariaLabel === SELECT_ALL_ARIA_LABEL) {
+  if (props["aria-label"] === SELECT_ALL_ARIA_LABEL) {
     selectAllTitle =
-      indeterminate || checked
+      props.indeterminate || props.checked
         ? "Clear selection"
         : "Select all rows on this page";
   }
 
-  return (
-    <Checkbox
-      aria-label={ariaLabel}
-      aria-labelledby={ariaLabelledBy}
-      checked={checked ?? false}
-      className="ml-auto"
-      disabled={disabled}
-      indeterminate={indeterminate}
-      onCheckedChange={(nextChecked, details) => {
-        const shift =
-          details.event instanceof MouseEvent ? details.event.shiftKey : false;
-        onChange(nextChecked, shift);
-      }}
-      tabIndex={tabIndex}
-      title={selectAllTitle}
-    />
-  );
+  const checkboxProps: RenderCheckboxProps & { title: string | undefined } = {
+    ...props,
+    title: selectAllTitle,
+  };
+  return renderCheckbox(checkboxProps);
 }
 
 export { DataGridCheckbox };

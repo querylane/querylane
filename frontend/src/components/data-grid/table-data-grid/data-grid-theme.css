@@ -210,6 +210,12 @@
   border-inline-end: 1px solid transparent;
 }
 
+.querylane-data-grid .rdg-checkbox-input {
+  inline-size: 1rem;
+  block-size: 1rem;
+  accent-color: var(--rdg-checkbox-color);
+}
+
 .querylane-data-grid .rdg-cell.rdg-expand-cell {
   padding-inline-start: 0.125rem;
 }

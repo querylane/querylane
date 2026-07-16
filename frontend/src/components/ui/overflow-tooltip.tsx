@@ -1,4 +1,3 @@
-'use no memo';
 "use client"
 
 import * as React from "react"
