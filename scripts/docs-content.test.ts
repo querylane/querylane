@@ -169,6 +169,7 @@ test("keeps deployment recipes generic and customer-facing", async () => {
 		/\b100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])(?:\.\d{1,3}){2}\b/u,
 	);
 	expect(deployment).not.toMatch(/[a-z0-9-]+\.ts\.net/iu);
+	expect(deployment).toContain("```nginx\nquerylane.example.com");
 });
 
 test("provides task-based guides for common PostgreSQL investigations", async () => {
