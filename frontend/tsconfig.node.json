@@ -45,6 +45,7 @@
     "src/import-meta-env.d.ts",
     "rsbuild.config.ts",
     "rsbuild.performance.ts",
+    "scripts/react-performance-mode.ts",
     "vitest.config.ts",
     "vitest.unit.config.ts",
     "vitest.integration.config.ts",

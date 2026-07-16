@@ -15,10 +15,7 @@ import {
   managedSplitChunksConfig,
   productionOptimizationOverrides,
 } from "./rsbuild.performance";
-
-const reactCompilerConfig = {
-  target: "19" as const,
-};
+import { resolveReactPerformanceMode } from "./scripts/react-performance-mode";
 
 const RSPACK_BUILD_CACHE_DIRECTORY = "node_modules/.cache/rsbuild";
 const RSPACK_BUILD_DEPENDENCIES = [
@@ -28,6 +25,7 @@ const RSPACK_BUILD_DEPENDENCIES = [
   path.resolve(import.meta.dirname, "package.json"),
   path.resolve(import.meta.dirname, "postcss.config.mjs"),
   path.resolve(import.meta.dirname, "rsbuild.config.ts"),
+  path.resolve(import.meta.dirname, "scripts/react-performance-mode.ts"),
   path.resolve(import.meta.dirname, "tsconfig.json"),
   path.resolve(import.meta.dirname, "tsconfig.ui.json"),
 ];
@@ -50,11 +48,20 @@ const buildEnv = createEnv({
 });
 
 const enableRsdoctor = Boolean(buildEnv.RSDOCTOR);
-
-const buildCacheDigest = createBuildCacheDigest({
+const isProduction =
+  buildEnv.NODE_ENV === "production" || process.argv.includes("build");
+const reactPerformanceMode = resolveReactPerformanceMode({
   env,
-  rsdoctorEnabled: enableRsdoctor,
+  isProduction,
 });
+
+const buildCacheDigest = [
+  ...createBuildCacheDigest({
+    env,
+    rsdoctorEnabled: enableRsdoctor,
+  }),
+  reactPerformanceMode.buildCacheKey,
+];
 const preconnectOrigins = createPreconnectOrigins({
   apiBaseUrl: buildEnv.PUBLIC_API_BASE_URL,
   isProduction: buildEnv.NODE_ENV === "production",
@@ -115,9 +122,35 @@ export default defineConfig({
     lazyCompilation: false,
   },
   html: {
+    tags: reactPerformanceMode.reactScanEnabled
+      ? [
+          {
+            append: false,
+            attrs: { src: "/react-scan.js" },
+            head: true,
+            publicPath: false,
+            tag: "script",
+          },
+        ]
+      : [],
     template: "./index.html",
   },
   output: {
+    // The explicit Scan command serves the pinned local asset before React.
+    // Normal development and every production build omit it.
+    ...(reactPerformanceMode.reactScanEnabled
+      ? {
+          copy: [
+            {
+              from: path.resolve(
+                import.meta.dirname,
+                "node_modules/react-scan/dist/auto.global.js"
+              ),
+              to: "react-scan.js",
+            },
+          ],
+        }
+      : {}),
     sourceMap: {
       // Bundle budgets classify deferred feature chunks from source maps. Keep
       // maps hidden in production without restoring Sentry upload plumbing.
@@ -140,7 +173,9 @@ export default defineConfig({
   },
   plugins: [
     pluginReact({
-      reactCompiler: reactCompilerConfig,
+      // Global infer compilation is the default. Annotation exists only as a
+      // local measurement control and uses an isolated persistent cache.
+      reactCompiler: reactPerformanceMode.compiler,
     }),
     pluginTailwindcss(),
     pluginDevtoolsJson(),
