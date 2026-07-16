@@ -1,0 +1,56 @@
+---
+title: PostgreSQL operations, in one browser workspace
+description: Querylane brings server health, live activity, access, and database structure together without hiding the PostgreSQL underneath.
+sidebar:
+  label: Overview
+  order: 0
+---
+
+Querylane is a self-hosted, PostgreSQL-first admin workspace for people who need to understand more than one server. It puts the running system and its catalog in the same place: instance health, sessions, roles, databases, schemas, tables, policies, partitions, triggers, and definitions.
+
+<CardGroup cols={3}>
+  <Card title="Try it locally" href="/get-started" icon="rocket">
+    Start with an embedded metadata database, then register your first PostgreSQL server.
+  </Card>
+  <Card title="See what it covers" href="/guides/instance-overview" icon="activity">
+    Tour instance health, activity, data exploration, and access.
+  </Card>
+  <Card title="Why Querylane" href="/why-querylane" icon="git-compare">
+    Compare its focus with pgAdmin, database IDEs, and ORM-oriented studios.
+  </Card>
+</CardGroup>
+
+## One place to answer operational questions
+
+Database tools often split the job in two: a SQL client for structure and data, then a monitoring tool for the live server. Querylane is designed around the questions that cross that boundary.
+
+- Is this instance healthy, connected, and replicating?
+- Which sessions are active, idle in a transaction, waiting, or blocking work?
+- Which roles can reach a database, schema, or table, and through what membership path?
+- How do tables relate, and what constraints, indexes, policies, partitions, and triggers shape them?
+- Can I export or inspect rows without losing the surrounding catalog context?
+
+![An instance overview combining live metrics, connection capacity, and PostgreSQL health checks.](/images/docs/instance-overview.png)
+
+## What works today
+
+| Area | What you can do |
+| --- | --- |
+| Instances | Register multiple PostgreSQL servers, inspect connection state, server details, metrics, and health |
+| Activity | Inspect live sessions, transaction age, client origin, waits, and blocking relationships |
+| Data explorer | Browse schemas and database objects, map table relationships, inspect table metadata, filter rows, and export data |
+| Roles and access | Explore roles, memberships, grants, definitions, and effective access paths |
+| Database insights | Review extensions, database health, and query insights |
+
+## A read-first preview
+
+Querylane is deliberately read-first today. It is useful for inspection and operational understanding, but it does not yet replace a mature SQL IDE or every write-heavy PostgreSQL administration workflow. The planned [SQL Workbench and write path](/roadmap) close those gaps in that order, with safety rails before broad mutation support.
+
+<CardGroup cols={2}>
+  <Card title="Choose an onboarding path" href="/get-started" icon="signpost">
+    Understand Querylane's metadata database, then choose embedded, external, or YAML setup.
+  </Card>
+  <Card title="Follow releases" href="/changelog" icon="history">
+    Read tagged release notes and the changes currently headed for the next version.
+  </Card>
+</CardGroup>

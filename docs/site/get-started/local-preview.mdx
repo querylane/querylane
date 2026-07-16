@@ -1,0 +1,44 @@
+---
+title: Run the preview locally
+description: Start the Querylane backend in onboarding mode and the frontend development server.
+sidebar:
+  label: Run locally
+---
+
+The current preview runs from source. You need Go 1.26, Bun 1.3, and [Task](https://taskfile.dev/). Docker is only required when you choose the repository's external development database instead of embedded PostgreSQL.
+
+## Start the onboarding flow
+
+Clone the repository, then start the backend with the empty onboarding configuration:
+
+```sh Terminal 1
+cd backend
+go run . server start --config=./configs/manual-onboarding.yaml
+```
+
+In another terminal, install and start the frontend:
+
+```sh Terminal 2
+task dev:frontend
+```
+
+Open the URL printed by Rsbuild, normally `http://localhost:3000`. The first-launch wizard should offer all three internal-storage methods.
+
+:::note
+The completed wizard writes the selected setup to Querylane's standard configuration path. To exercise first launch again, stop Querylane and remove that generated file before restarting the onboarding configuration. The wizard reports the exact path during setup.
+:::
+
+## Use the full development stack instead
+
+For contributor work that does not need the first-launch wizard:
+
+```sh
+task dev:setup
+task dev
+```
+
+This starts PostgreSQL on port `5432`, the backend on port `8080`, and the frontend at the URL printed by Rsbuild. Its checked-in development configuration already points Querylane at the development metadata database.
+
+## Next
+
+Choose [embedded PostgreSQL](/get-started/embedded-postgresql), [external PostgreSQL](/get-started/external-postgresql), or [manual YAML](/get-started/manual-yaml), then register the server you want Querylane to inspect.

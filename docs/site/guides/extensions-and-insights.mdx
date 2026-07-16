@@ -1,0 +1,27 @@
+---
+title: Review extensions and query insights
+description: Use database-level pages to understand installed capabilities and recurring query behavior.
+sidebar:
+  label: Extensions and insights
+---
+
+Instance health explains the server. Database-level pages explain what is installed and how a particular database is being used.
+
+## Extensions
+
+The Extensions page lists installed and available PostgreSQL extensions with version and schema context. Search and filter the inventory to answer whether a capability is installed, whether an update is available, and where the extension owns objects.
+
+The current page is an inventory. Install, update, and remove operations remain outside the read-first surface.
+
+## Query Insights
+
+Query Insights groups query behavior so you can move from a database symptom to recurring statement patterns. Open a query to inspect its details without stretching the main table with long SQL text.
+
+Use it with two other views:
+
+- **Activity** shows what is happening right now at session level.
+- **Instance metrics** show whether resource or connection behavior changed over time.
+
+Together they answer whether a problem is one live session, a repeated query pattern, or a server-wide trend.
+
+Query Insights depends on the target PostgreSQL statistics available to Querylane. When data is unavailable, the page reports that state rather than presenting zeros as evidence.

@@ -1,0 +1,37 @@
+---
+title: Use embedded PostgreSQL
+description: Let Querylane create and manage its own local metadata database for the fastest evaluation path.
+sidebar:
+  label: Embedded PostgreSQL
+---
+
+Embedded PostgreSQL is the shortest route from first launch to the product. Querylane starts a PostgreSQL process on the same machine and uses it only for Querylane metadata.
+
+## Configure it
+
+<Steps>
+  <Step title="Choose Use embedded database">
+    Select the embedded option on the first page of the wizard.
+  </Step>
+  <Step title="Choose a storage mode">
+    Use **Persistent** to retain Querylane state across restarts. Use **Ephemeral** only for a disposable evaluation.
+  </Step>
+  <Step title="Confirm the local settings">
+    The defaults use port `5433` and store persistent data under `~/.querylane/pgdata`. Change them if that port or path is unavailable.
+  </Step>
+  <Step title="Start setup">
+    Querylane downloads, initializes, and starts the embedded PostgreSQL runtime, applies its schema, and verifies readiness.
+  </Step>
+</Steps>
+
+## When to use it
+
+Use embedded PostgreSQL for a local demo, a quick evaluation, or a direct single-node run where Querylane can write to a stable host path.
+
+Do not treat it as a substitute for an externally operated PostgreSQL service. It is currently best suited to running Querylane directly on a machine, not inside Docker. Container restarts, read-only filesystems, and multiple Querylane replicas conflict with local process ownership.
+
+:::warning
+Persistent mode protects against normal Querylane restarts, not host loss. Back up the configured data path if the stored connections and metadata matter.
+:::
+
+When setup completes, continue to [register your first managed instance](/get-started/register-instance).

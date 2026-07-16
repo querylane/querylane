@@ -1,0 +1,41 @@
+---
+title: Choose your setup
+description: Set up Querylane's own storage, then connect the PostgreSQL server you want to inspect.
+sidebar:
+  label: Choose your setup
+---
+
+Querylane onboarding has two separate steps:
+
+1. **Configure Querylane internal storage.** Querylane needs its own PostgreSQL database for metadata, saved connections, and application state.
+2. **Register a PostgreSQL server to manage.** This is your application, production, staging, or analytics server.
+
+The first database belongs to Querylane. The second is an **instance** you ask Querylane to inspect. They can run on the same PostgreSQL server, but they are different resources and should use different databases and credentials.
+
+![The first-launch wizard explains Querylane internal storage before a managed PostgreSQL server is added.](/images/docs/onboarding-methods.png)
+
+## Pick one of three paths
+
+<CardGroup cols={3}>
+  <Card title="Embedded PostgreSQL" href="/get-started/embedded-postgresql" icon="package">
+    Fastest local path. Querylane starts and manages its own metadata database on this machine.
+  </Card>
+  <Card title="External PostgreSQL" href="/get-started/external-postgresql" icon="database">
+    Durable setup. Connect an existing PostgreSQL database through the first-launch form.
+  </Card>
+  <Card title="Manual YAML" href="/get-started/manual-yaml" icon="file-code">
+    Operator path. Keep metadata and managed-instance configuration in a watched config file.
+  </Card>
+</CardGroup>
+
+| Choose | When it fits | Main trade-off |
+| --- | --- | --- |
+| Embedded PostgreSQL | A local evaluation, demo, or direct single-node run | Querylane owns the process and local data path; not intended for containerized or multi-node use |
+| External PostgreSQL | A durable installation with an existing PostgreSQL service | You provision the database, credentials, backups, and availability |
+| Manual YAML | Configuration-as-code, secret environment variables, or UI-independent operation | Instance configuration becomes read-only in the UI while YAML owns it |
+
+:::tip
+If you want to see Querylane quickly, use **Embedded PostgreSQL**. If you plan to keep the installation, move to **External PostgreSQL** with backups and a stable secret key.
+:::
+
+Already running from source? [Open the local preview guide](/get-started/local-preview). After internal storage is ready, every path continues to [register your first instance](/get-started/register-instance).

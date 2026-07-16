@@ -1,0 +1,43 @@
+---
+title: Why Querylane
+description: Compare Querylane's PostgreSQL operations focus with pgAdmin, database IDEs, and ORM-oriented studios.
+---
+
+Querylane is not trying to be another generic SQL client. Its bet is that PostgreSQL operators need a browser-first place where server health, live activity, permissions, catalog structure, and rows explain each other across multiple instances.
+
+## Why Querylane wins for PostgreSQL operations
+
+### PostgreSQL depth over database breadth
+
+Querylane models PostgreSQL concepts directly: databases and schemas, roles and memberships, replication health, policies, partitions, triggers, extensions, system activity, and catalog definitions. It does not reduce these to the lowest common denominator shared by many database engines.
+
+### The running server and its catalog stay together
+
+An instance overview leads into live sessions, database insights, roles, schemas, object relationships, and rows. That makes it easier to follow an operational question without switching between a monitoring dashboard and a separate schema client.
+
+### One self-hosted browser surface
+
+Connections live in one Querylane installation rather than in each operator's desktop profile. Operators can open the same browser surface without standardizing an IDE, local driver stack, or plugin set. Authentication and broader team controls are still being hardened before Querylane presents itself as a complete shared operations platform.
+
+### Read-first before broad writes
+
+Querylane is building inspection depth before a large mutation surface. SQL Workbench comes first as a read-only workflow; writes follow explicit safety rails. That sequence is slower than exposing every button, but clearer for production-oriented use.
+
+## How it compares
+
+| Tool | Best when | How Querylane differs |
+| --- | --- | --- |
+| Querylane | You want one PostgreSQL-first browser workspace for multiple servers, operational state, catalog depth, and access analysis | PostgreSQL-only, self-hosted, and currently read-first; SQL Workbench and broad write workflows are not yet released |
+| [pgAdmin 4](https://www.pgadmin.org/docs/pgadmin4/latest/getting_started.html) | You need an established PostgreSQL administration suite with a query tool, backup and restore, schema diff, ERD, and broad object management | Querylane prioritizes a newer cross-instance operational workspace; pgAdmin currently has far broader mature administration coverage |
+| [DBeaver Community](https://dbeaver.io/about/) | You need an open-source desktop tool across many JDBC databases, with SQL editing, data transfer, diagrams, and plugins | Querylane trades multi-engine breadth and desktop extensibility for PostgreSQL-specific operational context in a browser |
+| [DataGrip](https://www.jetbrains.com/datagrip/features/) | You want a database IDE with deep SQL authoring, completion, refactoring, consoles, schema diff, and multi-engine support | Querylane focuses on the state of managed PostgreSQL servers rather than being a developer's general-purpose SQL IDE |
+| [Drizzle Studio](https://orm.drizzle.team/drizzle-studio/overview) | You want a local browser for data managed through a Drizzle project across supported databases | Querylane starts from the PostgreSQL server and its operations, not an ORM configuration, and reaches health, activity, roles, and the wider catalog |
+
+## Choose something else today when
+
+- your main job is writing and refactoring SQL for hours each day;
+- you administer several database engines through one desktop client;
+- you need mature backup, restore, DDL, or bulk mutation workflows now; or
+- your workflow should stay centered on one ORM project.
+
+Querylane becomes the stronger choice when the problem is **understanding a PostgreSQL fleet**, not merely opening a query console. The [roadmap](/roadmap) is intentionally aimed at closing the SQL workflow gap without giving up that focus.

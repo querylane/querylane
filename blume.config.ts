@@ -3,16 +3,26 @@ import { defineConfig } from "blume";
 export default defineConfig({
 	title: "Querylane",
 	description:
-		"Architecture, API, and development references for the Querylane PostgreSQL admin UI.",
+		"Customer guides for exploring and operating PostgreSQL with Querylane.",
 	logo: "/icon.svg",
+	content: {
+		root: "docs/site",
+	},
 	github: {
 		owner: "querylane",
 		repo: "querylane",
 	},
 	navigation: {
+		featured: [
+			{ label: "What's new", href: "/changelog", icon: "sparkles" },
+			{ label: "Roadmap", href: "/roadmap", icon: "map" },
+		],
 		sidebar: {
-			display: "group",
+			display: "flat",
 		},
+	},
+	markdown: {
+		imageZoom: true,
 	},
 	theme: {
 		fonts: {

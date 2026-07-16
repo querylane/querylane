@@ -1,0 +1,32 @@
+---
+title: Understand roles and effective access
+description: Trace PostgreSQL role attributes, memberships, grants, definitions, and paths to database objects.
+sidebar:
+  label: Roles and access
+---
+
+PostgreSQL access is rarely explained by one direct grant. Login attributes, inherited memberships, database access, schema usage, object privileges, ownership, and public grants combine into the effective result.
+
+Querylane keeps the inventory and the relationship graph together.
+
+![The roles access map visualizes how roles and memberships lead to PostgreSQL resources.](/images/docs/roles-access-map.png)
+
+## Start with the roles list
+
+Filter roles by login capability, superuser status, inheritance, replication, or membership. Open a role to inspect:
+
+- login and administrative attributes;
+- direct and inherited memberships;
+- grants grouped by resource;
+- the PostgreSQL definition; and
+- the role's focused access map.
+
+## Read the access map
+
+Select a node to highlight the relevant edges and reduce unrelated paths. Expand partial groups only when you need their members. Use the map to form a hypothesis, then confirm the exact privilege and membership rows in the detail panels.
+
+## Review, do not assume
+
+The access map is an explanation surface, not a policy engine. PostgreSQL ownership, `PUBLIC`, row-level security, default privileges, `SET ROLE`, function security, and superuser behavior can change what a session can do. Validate sensitive decisions with the target server and your organization's access-review process.
+
+The current roles surface is read-only. Grant and membership changes are planned after mutation safety rails.

@@ -1,0 +1,48 @@
+---
+title: Use external PostgreSQL
+description: Store Querylane metadata in a PostgreSQL database you already operate.
+sidebar:
+  label: External PostgreSQL
+---
+
+External PostgreSQL is the durable path. Querylane connects to a database you provision and operate, while the wizard validates the connection and applies Querylane's schema.
+
+This database is for Querylane itself. Do not point the form at the application database you intend to manage unless you have intentionally created a separate database and role for Querylane metadata.
+
+## Prepare the database
+
+Create a dedicated database and login. The exact ownership policy is yours, but the login must be able to connect and create or migrate Querylane's tables.
+
+```sql
+CREATE ROLE querylane LOGIN PASSWORD 'replace-me';
+CREATE DATABASE querylane OWNER querylane;
+```
+
+## Complete the form
+
+<Steps>
+  <Step title="Choose Configure via UI">
+    Select the external PostgreSQL option in the first-launch wizard.
+  </Step>
+  <Step title="Enter the connection">
+    Supply host, port, database, username, password, and SSL mode, or switch to a PostgreSQL DSN.
+  </Step>
+  <Step title="Test before applying">
+    Querylane verifies reachability and credentials. Fix every reported field or connection error before continuing.
+  </Step>
+  <Step title="Apply the configuration">
+    Querylane persists the configuration, initializes its schema, and switches the application into the ready state.
+  </Step>
+</Steps>
+
+## Keep credentials stable
+
+For persistent use, provide a stable `QUERYLANE_INSTANCE_SECRET_KEY` to the Querylane process. Querylane uses it to encrypt UI-managed instance passwords and its shared token-signing key.
+
+```sh
+openssl rand -base64 32
+```
+
+Store the generated value in your process or secret manager and reuse the same value across restarts and replicas. Changing it currently makes existing encrypted instance credentials unreadable.
+
+When setup completes, continue to [register your first managed instance](/get-started/register-instance).
