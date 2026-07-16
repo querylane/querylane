@@ -22,7 +22,7 @@ __debug_bin*
 .vscode
 /node_modules
 /.blume
-/.blume-verify
+.blume-verify/
 /dist
 .codex/*
 !.codex/README.md

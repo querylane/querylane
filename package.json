@@ -6,6 +6,7 @@
 	"scripts": {
 		"docs:build": "blume build --strict",
 		"docs:dev": "blume dev",
+		"docs:test": "bun test scripts/docs-deployment.test.ts",
 		"setup:worktree": "bun ./scripts/setup-worktree.mjs"
 	},
 	"devDependencies": {

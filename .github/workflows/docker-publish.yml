@@ -30,3 +30,14 @@ jobs:
       image: ghcr.io/${{ github.repository }}-dev
       version: ""
       push: true
+
+  publish-docs:
+    uses: ./.github/workflows/_docker-build.yml
+    with:
+      image: ghcr.io/${{ github.repository }}-dev
+      version: ""
+      push: true
+      dockerfile: ./Dockerfile.docs
+      rolling_tag: docs-edge
+      sha_prefix: docs-sha-
+      cache_scope: querylane-docs-publish

@@ -28,6 +28,22 @@ on:
         description: "Push to GHCR. False builds only (validation)."
         type: boolean
         default: true
+      dockerfile:
+        description: "Dockerfile to build."
+        type: string
+        default: "./Dockerfile"
+      rolling_tag:
+        description: "Rolling tag used when version is empty."
+        type: string
+        default: "edge"
+      sha_prefix:
+        description: "Prefix for immutable commit tags."
+        type: string
+        default: "sha-"
+      cache_scope:
+        description: "GitHub Actions build-cache scope."
+        type: string
+        default: "querylane-publish"
 
 env:
   IMAGE: ${{ inputs.image }}
@@ -55,8 +71,8 @@ jobs:
           # Rolling `edge` + immutable `sha-<sha>` for main builds; the exact
           # `<version>` + rolling `latest` for releases.
           tags: |
-            type=raw,value=edge,enable=${{ inputs.version == '' }}
-            type=sha,prefix=sha-,enable=${{ inputs.version == '' }}
+            type=raw,value=${{ inputs.rolling_tag }},enable=${{ inputs.version == '' }}
+            type=sha,prefix=${{ inputs.sha_prefix }},enable=${{ inputs.version == '' }}
             type=raw,value=${{ inputs.version }},enable=${{ inputs.version != '' }}
             type=raw,value=latest,enable=${{ inputs.version != '' }}
 
@@ -75,7 +91,7 @@ jobs:
         uses: docker/build-push-action@v7.3.0
         with:
           context: .
-          file: ./Dockerfile
+          file: ${{ inputs.dockerfile }}
           platforms: ${{ env.PLATFORMS }}
           push: ${{ inputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -85,5 +101,5 @@ jobs:
           # time for a distroless single-binary image. Skipped for PR validation.
           provenance: ${{ inputs.push && 'mode=max' || 'false' }}
           sbom: ${{ inputs.push }}
-          cache-from: type=gha,scope=querylane-publish
-          cache-to: type=gha,mode=max,scope=querylane-publish,ignore-error=true
+          cache-from: type=gha,scope=${{ inputs.cache_scope }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.cache_scope }},ignore-error=true

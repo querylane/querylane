@@ -5,6 +5,10 @@ export default defineConfig({
 	description:
 		"Customer guides for exploring and operating PostgreSQL with Querylane.",
 	logo: "/icon.svg",
+	deployment: {
+		output: "static",
+		site: "https://docs.querylane.net",
+	},
 	content: {
 		root: "docs/site",
 	},
@@ -23,6 +27,11 @@ export default defineConfig({
 	},
 	markdown: {
 		imageZoom: true,
+	},
+	seo: {
+		og: {
+			enabled: false,
+		},
 	},
 	theme: {
 		fonts: {
