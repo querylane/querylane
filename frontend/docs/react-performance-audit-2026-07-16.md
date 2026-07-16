@@ -67,6 +67,42 @@ Three causes were addressed:
 The recorder and raw samples remain local audit artifacts; React Scan is not
 enabled in CI or production.
 
+### Compiler hot-path pass
+
+A second pass found one inference boundary in the selection path.
+`useGridColumns` is named like a hook but intentionally calls no React hooks, so
+infer mode did not transform it. Every selection render consequently rebuilt
+the complete column model and defeated the data grid's cell memoization. A
+targeted `"use memo"` directive now compiles that builder; stable optional
+callbacks keep its cache inputs stable. The generated development bundle was
+also inspected to confirm the compiler runtime cache wraps the function.
+
+The grid selection renderer now delegates to the data grid's native checkbox
+renderer instead of mounting a multi-component headless checkbox tree. It
+preserves all-row selection, clearing, indeterminate state, Shift selection,
+keyboard focus, accessible names, and the dynamic native title while removing
+avoidable component work.
+
+Five before samples and five final samples used the same exact live seeded
+route, 1,000 ms pre-interaction settle, React Scan callbacks, and Chrome
+Performance metrics:
+
+| Select-all metric | Before hot-path pass | Final | Change |
+| --- | ---: | ---: | ---: |
+| Component renders | 1,228 | 188 | **-84.7%** |
+| React commits | 6 | 5 | **-16.7%** |
+| React render time | 16.1 ms | 14.4 ms | **-10.6%** |
+| Script time | 50.5 ms | 27.4 ms | **-45.7%** |
+| Main-thread task time | 145.2 ms | 97.8 ms | **-32.7%** |
+| Long-task time | 63 ms | 0 ms | **-100%** |
+| Interaction duration | 308.4 ms | 271.3 ms | **-12.0%** |
+
+The remaining selection renders are primarily the 23 visible rows and their 26
+selection cells, whose checked and selected states must change. No data cell or
+foreign-key preview subtree renders during select-all. The resize sweep remains
+bounded at a median eight `DataGrid` renders for 38 viewport changes, with no
+long task.
+
 ## Compatibility audit
 
 - React Doctor full scan: no findings.
@@ -81,8 +117,14 @@ enabled in CI or production.
   under infer with no refetch.
 - Router, query, and data grid: the Data Explorer selection reached the expected
   route and row result in every run with two relevant requests in both modes.
-- Compiler directives: no `"use memo"` or `"use no memo"` escape hatches exist
-  in application source.
+- Compiler coverage: the local health check compiled 814 of 814 discovered
+  components, found Strict Mode, and found no incompatible libraries.
+- Manual memo APIs: application source has no `useMemo`, `useCallback`, or
+  `React.memo` call sites outside tests; the compiler owns those caches.
+- Compiler directives: one targeted `"use memo"` forces the non-hook
+  `useGridColumns` builder into infer compilation. The undocumented
+  `"use no memo"` opt-out on `OverflowTooltip` was removed and its generated
+  bundle now contains the compiler runtime cache. No opt-outs remain.
 
 The broad local E2E run against the unchanged application and test source was
 not clean: infer passed 61/82 and the annotation control passed 62/82. Twenty
@@ -101,6 +143,7 @@ as a compiler correctness regression.
 - Playwright: 1.62.0-alpha-2026-07-14
 - Chromium: 151.0.7922.19
 - React Scan: 0.5.7, exact local package asset loaded before React
+- React Compiler health check: 1.0.0, exact local development dependency
 - Control: `compilationMode: "annotation"`, `target: "19"`
 - Candidate/default: `compilationMode: "infer"`, `target: "19"`
 - Dataset: deterministic Playwright RPC mocks
