@@ -10,10 +10,8 @@
   "scripts": {
     "dev": "rsbuild dev",
     "dev:scan": "QUERYLANE_REACT_SCAN=1 bun run dev",
-    "dev:scan:control": "QUERYLANE_REACT_SCAN=1 QUERYLANE_REACT_COMPILER_MODE=annotation bun run dev",
     "type:check": "bun run type:check:ui && tsc -p tsconfig.node.json --pretty false && tsc -b --pretty false",
     "build": "rsbuild build && bun run budget:check",
-    "build:compiler-control": "QUERYLANE_REACT_COMPILER_MODE=annotation bun run build",
     "compiler:check": "react-compiler-healthcheck",
     "preview": "rsbuild preview",
     "doctor": "react-doctor . -y --scope full --blocking warning --no-respect-inline-disables --supply-chain --no-score",
