@@ -119,8 +119,9 @@ long task.
   route and row result in every run with two relevant requests in both modes.
 - Compiler coverage: the local health check compiled 814 of 814 discovered
   components, found Strict Mode, and found no incompatible libraries.
-- Manual memo APIs: application source has no `useMemo`, `useCallback`, or
-  `React.memo` call sites outside tests; the compiler owns those caches.
+- Manual memo APIs: application-owned source has no `useMemo`, `useCallback`,
+  or `React.memo` call sites outside tests; vendored registry components remain
+  byte-for-byte compatible with their upstream source.
 - Compiler directives: one targeted `"use memo"` forces the non-hook
   `useGridColumns` builder into infer compilation. The undocumented
   `"use no memo"` opt-out on `OverflowTooltip` was removed and its generated
