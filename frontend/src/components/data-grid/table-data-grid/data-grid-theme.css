@@ -226,6 +226,15 @@
   opacity: 1;
 }
 
+/* The button only unhides on row-hover, so its ghost hover tint lands on top of
+   the accent-based row-hover highlight and blends in. Reuse the standard muted
+   hover surface at full strength so it reads as a gentle button hover against
+   the highlighted row, in both light and dark themes. */
+.querylane-data-grid .rdg-expand-button:hover,
+.querylane-data-grid .rdg-expand-button[aria-expanded="true"] {
+  background-color: var(--muted);
+}
+
 .querylane-data-grid
   .rdg-cell.rdg-cell-frozen:nth-last-child(1 of .rdg-cell-frozen) {
   border-inline-end: 1px solid var(--querylane-header-border-color);

@@ -618,6 +618,38 @@ export function buildInstanceMetricsInput(
 }
 
 /**
+ * The database-scoped series shown on the database overview's stat strip
+ * sparklines: on-disk size plus live/dead tuple counts.
+ */
+export const DATABASE_OVERVIEW_METRIC_IDS: MetricId[] = [
+  MetricId.DATABASE_SIZE_BYTES,
+  MetricId.DATABASE_LIVE_TUPLES,
+  MetricId.DATABASE_DEAD_TUPLES,
+];
+
+/**
+ * Builds the QueryMetrics request feeding the database overview's stat-strip
+ * sparklines: a trailing `rangeHours` window ending at `anchorMs`, no
+ * comparison (the strip shows shape, not period-over-period trend).
+ */
+export function buildDatabaseMetricsInput(
+  databaseName: string,
+  anchorMs: number,
+  rangeHours: number
+) {
+  const windowMs = rangeHours * SECONDS_PER_HOUR * MS_PER_SECOND;
+
+  return {
+    interval: {
+      endTime: toTimestampInit(anchorMs),
+      startTime: toTimestampInit(anchorMs - windowMs),
+    },
+    metrics: DATABASE_OVERVIEW_METRIC_IDS,
+    target: databaseName,
+  };
+}
+
+/**
  * Builds the QueryMetrics request for the window immediately BEFORE the one
  * `buildInstanceMetricsInput` queries — the comparison overlay's data source.
  * Same length and same anchor, so both windows share a bucket grid and the

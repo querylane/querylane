@@ -1,9 +1,8 @@
 "use client";
 
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Search } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
+import { createContext, use, useState } from "react";
 import {
   Command,
   CommandDialog,
@@ -433,35 +432,34 @@ function AdminCommandPaletteContent({
   );
 }
 
-function AdminCommandPalette() {
+interface CommandPaletteController {
+  openPalette: () => void;
+}
+
+const CommandPaletteContext = createContext<CommandPaletteController | null>(
+  null
+);
+
+/**
+ * Provides a single command-palette dialog for the whole shell and the ⌘K
+ * shortcut that toggles it. Both the sidebar search trigger and any other
+ * caller open it through {@link useCommandPalette}, so there is exactly one
+ * dialog instance regardless of how many triggers exist.
+ */
+function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
 
   useKeyboardShortcut("palette.open", () =>
     setOpen((currentOpen) => !currentOpen)
   );
 
-  return (
-    <>
-      <Button
-        aria-keyshortcuts="Meta+K Control+K"
-        aria-label="Search or jump to"
-        className="hidden h-8 w-[300px] max-w-[24vw] justify-start gap-2 border-border bg-muted px-2.5 font-normal text-muted-foreground shadow-none hover:border-ring hover:bg-muted lg:flex"
-        onClick={() => setOpen(true)}
-        type="button"
-        variant="outline"
-      >
-        <Search className="size-3.5" />
-        <span className="truncate text-[13px]">Search or jump to…</span>
-        <span aria-hidden="true" className="ml-auto flex gap-0.5">
-          <kbd className="flex size-5 items-center justify-center rounded bg-background/70 font-mono text-[10px]">
-            ⌘
-          </kbd>
-          <kbd className="flex size-5 items-center justify-center rounded bg-background/70 font-mono text-[10px]">
-            K
-          </kbd>
-        </span>
-      </Button>
+  const controller: CommandPaletteController = {
+    openPalette: () => setOpen(true),
+  };
 
+  return (
+    <CommandPaletteContext.Provider value={controller}>
+      {children}
       <CommandDialog
         className="top-[14%] w-[600px] max-w-[calc(100%-2.5rem)] gap-0 rounded-[14px]! border border-border p-0 shadow-lg sm:max-w-[600px]"
         description="Search tables, screens, and roles in the current Querylane scope."
@@ -471,8 +469,18 @@ function AdminCommandPalette() {
       >
         {open ? <AdminCommandPaletteContent onOpenChange={setOpen} /> : null}
       </CommandDialog>
-    </>
+    </CommandPaletteContext.Provider>
   );
 }
 
-export { AdminCommandPalette };
+function useCommandPalette(): CommandPaletteController {
+  const controller = use(CommandPaletteContext);
+  if (!controller) {
+    throw new Error(
+      "useCommandPalette must be used within a CommandPaletteProvider."
+    );
+  }
+  return controller;
+}
+
+export { CommandPaletteProvider, useCommandPalette };

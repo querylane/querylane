@@ -4,12 +4,15 @@ import { Link, useLocation } from "@tanstack/react-router";
 import {
   AlertTriangle,
   ArrowLeftIcon,
+  ChevronsUpDown,
+  HardDrive,
   InfoIcon,
-  PanelLeftIcon,
+  Search,
 } from "lucide-react";
 import { Fragment, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { Logo } from "@/components/logo";
+import { useCommandPalette } from "@/components/querylane-ui/admin-command-palette";
 import {
   Sidebar,
   SidebarContent,
@@ -42,6 +45,14 @@ import {
 } from "@/components/sidebar-paths";
 import { Button } from "@/components/ui/button";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -49,6 +60,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { OverflowTooltip } from "@/components/ui/overflow-tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -73,6 +89,7 @@ import type { ScopeLevel } from "@/lib/db-navigation";
 import { useExplorerSidebarSlotRegistration } from "@/lib/explorer-sidebar-slot";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";
+import { cn } from "@/lib/utils";
 import packageJson from "../../package.json" with { type: "json" };
 
 const FRONTEND_PACKAGE_VERSION = packageJson.version;
@@ -159,13 +176,11 @@ function SidebarFooterContent({
   aboutMetadata,
   footerError,
   isCollapsed,
-  isTemporaryReveal,
   onRetryFooter,
 }: {
   aboutMetadata: QuerylaneAboutMetadata;
   footerError: AppUiError | null;
   isCollapsed: boolean;
-  isTemporaryReveal: boolean;
   onRetryFooter: () => Promise<unknown>;
 }) {
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
@@ -180,20 +195,6 @@ function SidebarFooterContent({
             onRetry={onRetryFooter}
           />
         ) : null}
-
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              aria-label={isTemporaryReveal ? "Pin menu open" : "Collapse menu"}
-              onClick={toggleSidebar}
-            >
-              <PanelLeftIcon className="size-4" />
-              <span>
-                {isTemporaryReveal ? "Pin menu open" : "Collapse menu"}
-              </span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
         <OverflowTooltip className="block truncate px-2 text-left font-mono text-[11px] text-muted-foreground">
           {`Querylane ${aboutMetadata.version}`}
         </OverflowTooltip>
@@ -360,6 +361,88 @@ function renderSidebarNavigationItem({
   );
 }
 
+// Compact database switcher that heads the "Database" nav section, mirroring
+// the design's `DbCtxRow`. On lg+ it replaces the topbar's database
+// breadcrumb (which stays lg:hidden for small screens, where this rail is an
+// off-canvas drawer): the database is a child of its instance, so its
+// selector lives with the database-scoped nav rather than in the global
+// topbar.
+function SidebarDatabaseSelector() {
+  const { databases, navigateToDatabase, selectedDatabase } = useDb();
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover onOpenChange={setOpen} open={open}>
+      <PopoverTrigger
+        aria-label={
+          selectedDatabase
+            ? `Database: ${selectedDatabase.name}`
+            : "Select database"
+        }
+        className="flex h-9 w-full items-center gap-2 rounded-md border border-sidebar-border bg-sidebar-accent px-2.5 text-left shadow-sm outline-none transition-colors hover:border-ring focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[popup-open]:border-ring"
+      >
+        <HardDrive
+          aria-hidden="true"
+          className="size-4 shrink-0 text-muted-foreground"
+        />
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate font-medium font-mono text-[13px]",
+            selectedDatabase ? "text-foreground" : "text-muted-foreground"
+          )}
+        >
+          {selectedDatabase?.name ?? "Select database"}
+        </span>
+        <ChevronsUpDown
+          aria-hidden="true"
+          className="size-3.5 shrink-0 text-muted-foreground"
+        />
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-60 p-0">
+        <Command
+          filter={(value, search) =>
+            value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+          }
+        >
+          <CommandInput placeholder="Search databases…" />
+          <CommandList>
+            <CommandEmpty className="py-4 text-center text-muted-foreground text-sm">
+              No databases found
+            </CommandEmpty>
+            <CommandGroup>
+              {databases.map((database) => (
+                <CommandItem
+                  data-checked={selectedDatabase?.id === database.id}
+                  key={database.id}
+                  onSelect={() => {
+                    navigateToDatabase(database);
+                    setOpen(false);
+                  }}
+                  value={database.name}
+                >
+                  <HardDrive
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-muted-foreground"
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="min-w-0 truncate text-sm">
+                      {database.name}
+                    </span>
+                    {database.owner ? (
+                      <span className="min-w-0 truncate text-[11px] text-muted-foreground">
+                        owner {database.owner}
+                      </span>
+                    ) : null}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function SidebarNavigationContent({
   linkProps,
   nextStepHint,
@@ -379,27 +462,38 @@ function SidebarNavigationContent({
         </div>
       )}
 
-      {sections.map((section, sectionIndex) => (
-        <Fragment key={section.title}>
-          {sectionIndex > 0 && (
-            <SidebarSeparator className="hidden group-data-[collapsible=icon]:block" />
-          )}
-          <SidebarGroup>
-            <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {section.items.map((item) =>
-                  renderSidebarNavigationItem({
-                    item,
-                    linkProps,
-                    sectionTitle: section.title,
-                  })
-                )}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </Fragment>
-      ))}
+      {sections.map((section, sectionIndex) => {
+        // The database-scoped section is headed by its own database switcher.
+        const isDatabaseSection = section.items.some((item) =>
+          item.key.startsWith("database.")
+        );
+        return (
+          <Fragment key={section.title}>
+            {sectionIndex > 0 && (
+              <SidebarSeparator className="hidden group-data-[collapsible=icon]:block" />
+            )}
+            <SidebarGroup>
+              <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
+              {isDatabaseSection ? (
+                <div className="pb-1 group-data-[collapsible=icon]:hidden">
+                  <SidebarDatabaseSelector />
+                </div>
+              ) : null}
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {section.items.map((item) =>
+                    renderSidebarNavigationItem({
+                      item,
+                      linkProps,
+                      sectionTitle: section.title,
+                    })
+                  )}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </Fragment>
+        );
+      })}
 
       {nextStepHint && sections.length > 0 && (
         <div className="px-5 py-3 group-data-[collapsible=icon]:hidden">
@@ -411,6 +505,68 @@ function SidebarNavigationContent({
     </SidebarContent>
   );
 }
+function SidebarSearchButton() {
+  const { openPalette } = useCommandPalette();
+  return (
+    <Button
+      aria-keyshortcuts="Meta+K Control+K"
+      aria-label="Search or jump to"
+      className="h-8 w-full justify-start gap-2 border-border bg-background px-2.5 font-normal text-muted-foreground shadow-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      onClick={openPalette}
+      type="button"
+      variant="outline"
+    >
+      <Search className="size-3.5 shrink-0" />
+      <span className="truncate text-[13px]">Search or jump to…</span>
+      <span aria-hidden="true" className="ml-auto flex gap-0.5">
+        <kbd className="flex size-5 items-center justify-center rounded bg-muted font-mono text-[10px]">
+          ⌘
+        </kbd>
+        <kbd className="flex size-5 items-center justify-center rounded bg-muted font-mono text-[10px]">
+          K
+        </kbd>
+      </span>
+    </Button>
+  );
+}
+
+function SidebarBrandHeader() {
+  const { navigateToInstance, selectedInstance } = useDb();
+  return (
+    <div className="flex flex-col">
+      {/* Brand row matches the topbar height so the logo sits level with the
+          topbar content; no divider — the sidebar flows into search + nav. The
+          collapse trigger sits next to the wordmark, mirroring the design. */}
+      <div className="flex h-12 shrink-0 items-center gap-1 pr-1.5 pl-2">
+        <Button
+          aria-label="Go to instance overview"
+          className="size-auto min-w-0 shrink gap-2 rounded-sm px-1.5 py-1"
+          disabled={!selectedInstance}
+          onClick={() => {
+            if (selectedInstance) {
+              navigateToInstance(selectedInstance);
+            }
+          }}
+          type="button"
+          variant="ghost"
+        >
+          <Logo className="size-7 shrink-0" logoStyle="flat" />
+          <span className="truncate font-semibold text-sm tracking-tight">
+            Querylane
+          </span>
+        </Button>
+        <SidebarTrigger
+          aria-label="Collapse sidebar"
+          className="ml-auto shrink-0 text-muted-foreground hover:text-foreground"
+        />
+      </div>
+      <div className="px-2 pb-2">
+        <SidebarSearchButton />
+      </div>
+    </div>
+  );
+}
+
 export function AppSidebar({ page }: { page?: AdminPageId | undefined }) {
   const location = useLocation({
     select: (loc) => ({
@@ -444,10 +600,8 @@ export function AppSidebar({ page }: { page?: AdminPageId | undefined }) {
   const nextStepHint = getNextStepHint(scopeLevel);
   const isExplorerMode = page === "database.explorer";
   return (
-    <Sidebar
-      className="top-14 h-[calc(100svh-3.5rem)] overflow-hidden"
-      collapsible="offcanvas"
-    >
+    <Sidebar className="overflow-hidden" collapsible="offcanvas">
+      <SidebarBrandHeader />
       {isExplorerMode ? (
         <ExplorerRailContent backLink={linkProps["database.overview"]} />
       ) : (
@@ -463,7 +617,6 @@ export function AppSidebar({ page }: { page?: AdminPageId | undefined }) {
           aboutMetadata={aboutMetadata}
           footerError={footerError}
           isCollapsed={isCollapsed}
-          isTemporaryReveal={hoverRevealOpen}
           onRetryFooter={retryFooter}
         />
       </SidebarFooter>

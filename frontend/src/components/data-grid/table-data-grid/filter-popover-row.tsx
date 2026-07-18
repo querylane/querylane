@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useId, useState } from "react";
 import { SelectValue } from "@/components/select-extensions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,8 @@ import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 interface FilterRowProps {
   columns: TableResultColumn[];
+  invalidMessage?: string | undefined;
+  onApplyRequest: () => void;
   onChange: (patch: Partial<TableFilterRule>) => void;
   onRemove: () => void;
   rule: TableFilterRule;
@@ -28,6 +30,16 @@ interface FilterRowProps {
 // Matches the sidebar search debounce so value edits commit one rule change
 // (one server query + one history entry) per typing pause, not per keystroke.
 const FILTER_VALUE_DEBOUNCE_MS = 200;
+
+const DATA_TYPE_PLACEHOLDERS: Partial<Record<DataType, string>> = {
+  [DataType.DATE]: "2026-05-01",
+  [DataType.FLOAT]: "100",
+  [DataType.INTEGER]: "100",
+  [DataType.JSON]: '{"tier":"enterprise"}',
+  [DataType.TIME]: "13:30:00",
+  [DataType.TIMESTAMP]: "2026-05-01 13:30",
+  [DataType.UUID]: "1b4e28ba-2fa1-11d2-883f-0016d3cca427",
+};
 
 function getValuePlaceholder(
   rule: TableFilterRule,
@@ -39,26 +51,13 @@ function getValuePlaceholder(
   if (rule.operator === "like" || rule.operator === "ilike") {
     return "%@acme.com";
   }
-  if (rule.operator === "jsonContains" || column?.dataType === DataType.JSON) {
+  if (rule.operator === "jsonContains") {
     return '{"tier":"enterprise"}';
   }
-  if (column?.dataType === DataType.BOOLEAN) {
-    return "true";
-  }
-  if (
-    column?.dataType === DataType.DATE ||
-    column?.dataType === DataType.TIME ||
-    column?.dataType === DataType.TIMESTAMP
-  ) {
-    return "2026-05-01";
-  }
-  if (
-    column?.dataType === DataType.FLOAT ||
-    column?.dataType === DataType.INTEGER
-  ) {
-    return "100";
-  }
-  return "Value";
+  const typePlaceholder = column
+    ? DATA_TYPE_PLACEHOLDERS[column.dataType]
+    : undefined;
+  return typePlaceholder ?? "Value";
 }
 
 function useDebouncedRuleValue(
@@ -99,7 +98,45 @@ function useDebouncedRuleValue(
   return [draft, setDraft];
 }
 
-function FilterRow({ columns, onChange, onRemove, rule }: FilterRowProps) {
+function BooleanValueSelect({
+  onChange,
+  value,
+}: {
+  onChange: (next: string) => void;
+  value: string;
+}) {
+  return (
+    <Select
+      onValueChange={(next) => {
+        if (next) {
+          onChange(next);
+        }
+      }}
+      value={value}
+    >
+      <SelectTrigger aria-label="Filter value" className="w-full" size="sm">
+        <SelectValue placeholder="Select value" />
+      </SelectTrigger>
+      <SelectContent>
+        {["true", "false"].map((candidate) => (
+          <SelectItem key={candidate} label={candidate} value={candidate}>
+            <span className="font-mono text-xs">{candidate}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function FilterRow({
+  columns,
+  invalidMessage,
+  onApplyRequest,
+  onChange,
+  onRemove,
+  rule,
+}: FilterRowProps) {
+  const messageId = useId();
   const column = columns.find(
     (candidate) => candidate.columnName === rule.column
   );
@@ -124,6 +161,9 @@ function FilterRow({ columns, onChange, onRemove, rule }: FilterRowProps) {
     (next) => onChange({ value2: next }),
     value2ResetKey
   );
+  const invalidInputProps = invalidMessage
+    ? ({ "aria-describedby": messageId, "aria-invalid": true } as const)
+    : {};
 
   function changeColumn(nextColumn: string | null) {
     if (!nextColumn) {
@@ -150,84 +190,157 @@ function FilterRow({ columns, onChange, onRemove, rule }: FilterRowProps) {
     });
   }
 
-  return (
-    <div className="grid grid-cols-[minmax(8rem,1.05fr)_112px_minmax(10rem,1.35fr)_1.75rem] items-center gap-1.5">
-      <Select onValueChange={changeColumn} value={rule.column}>
-        <SelectTrigger aria-label="Filter column" className="h-8 w-full">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {columns.map((candidate) => (
-            <SelectItem
-              key={candidate.columnName}
-              label={candidate.columnName}
-              value={candidate.columnName}
-            >
-              <span className="font-mono text-xs">{candidate.columnName}</span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+  function commitValueDraft() {
+    if (draftValue !== rule.value) {
+      onChange({ value: draftValue });
+    }
+  }
 
-      <Select
-        items={operatorItems}
-        onValueChange={changeOperator}
-        value={rule.operator}
-      >
-        <SelectTrigger aria-label="Filter operator" className="h-8 w-full">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {operators.map((operator) => (
-            <SelectItem
-              key={operator}
-              label={FILTER_OPERATOR_META[operator].label}
-              value={operator}
-            >
-              {FILTER_OPERATOR_META[operator].label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+  function commitValue2Draft() {
+    if (draftValue2 !== (rule.value2 ?? "")) {
+      onChange({ value2: draftValue2 });
+    }
+  }
 
-      {operatorMeta.valueCount === 0 ? (
+  function applyOnEnter(
+    event: React.KeyboardEvent<HTMLInputElement>,
+    commitDraft: () => void
+  ) {
+    if (event.key !== "Enter") {
+      return;
+    }
+    // Commit the local draft ahead of the debounce so the apply that follows
+    // sees the freshly typed value instead of the last committed one.
+    commitDraft();
+    onApplyRequest();
+  }
+
+  function renderValueEditor() {
+    if (operatorMeta.valueCount === 0) {
+      return (
         <div className="flex h-8 items-center rounded-md border border-dashed px-2 text-muted-foreground text-xs">
           No value needed
         </div>
-      ) : (
-        <div
-          className="grid min-w-0 grid-cols-1 gap-1.5 data-[range=true]:grid-cols-2"
-          data-range={operatorMeta.valueCount === 2}
-        >
-          <Input
-            aria-label="Filter value"
-            className="h-8 min-w-0 font-mono text-xs"
-            onChange={(event) => setDraftValue(event.target.value)}
-            placeholder={getValuePlaceholder(rule, column)}
-            value={draftValue}
-          />
-          {operatorMeta.valueCount === 2 ? (
-            <Input
-              aria-label="Filter end value"
-              className="h-8 min-w-0 font-mono text-xs"
-              onChange={(event) => setDraftValue2(event.target.value)}
-              placeholder="And"
-              value={draftValue2}
-            />
-          ) : null}
-        </div>
-      )}
-
-      <Button
-        aria-label="Remove filter"
-        className="size-7 p-0"
-        onClick={onRemove}
-        size="sm"
-        type="button"
-        variant="ghost"
+      );
+    }
+    if (
+      column?.dataType === DataType.BOOLEAN &&
+      operatorMeta.valueCount === 1
+    ) {
+      return (
+        <BooleanValueSelect
+          onChange={(next) => onChange({ value: next })}
+          value={rule.value}
+        />
+      );
+    }
+    return (
+      <div
+        className="grid min-w-0 grid-cols-1 gap-1.5 data-[range=true]:grid-cols-2"
+        data-range={operatorMeta.valueCount === 2}
       >
-        <X />
-      </Button>
+        <Input
+          aria-label="Filter value"
+          className="h-8 min-w-0 font-mono"
+          onBlur={commitValueDraft}
+          onChange={(event) => setDraftValue(event.target.value)}
+          onKeyDown={(event) => applyOnEnter(event, commitValueDraft)}
+          placeholder={getValuePlaceholder(rule, column)}
+          value={draftValue}
+          {...invalidInputProps}
+        />
+        {operatorMeta.valueCount === 2 ? (
+          <Input
+            aria-label="Filter end value"
+            className="h-8 min-w-0 font-mono"
+            onBlur={commitValue2Draft}
+            onChange={(event) => setDraftValue2(event.target.value)}
+            onKeyDown={(event) => applyOnEnter(event, commitValue2Draft)}
+            placeholder="And"
+            value={draftValue2}
+            {...invalidInputProps}
+          />
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <div className="grid grid-cols-[minmax(11rem,1.3fr)_6.75rem_minmax(8.5rem,1fr)_2rem] items-center gap-1.5">
+        <Select onValueChange={changeColumn} value={rule.column}>
+          <SelectTrigger
+            aria-label="Filter column"
+            className="w-full font-mono"
+            size="sm"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="min-w-72">
+            {columns.map((candidate) => (
+              <SelectItem
+                key={candidate.columnName}
+                label={candidate.columnName}
+                value={candidate.columnName}
+              >
+                <span className="flex w-full min-w-0 items-center justify-between gap-3">
+                  <span
+                    className="min-w-0 truncate font-mono text-xs"
+                    title={candidate.columnName}
+                  >
+                    {candidate.columnName}
+                  </span>
+                  <span className="max-w-[45%] shrink-0 truncate font-mono text-[10px] text-muted-foreground uppercase">
+                    {candidate.rawType}
+                  </span>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          items={operatorItems}
+          onValueChange={changeOperator}
+          value={rule.operator}
+        >
+          <SelectTrigger
+            aria-label="Filter operator"
+            className="w-full"
+            size="sm"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {operators.map((operator) => (
+              <SelectItem
+                key={operator}
+                label={FILTER_OPERATOR_META[operator].label}
+                value={operator}
+              >
+                {FILTER_OPERATOR_META[operator].label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {renderValueEditor()}
+
+        <Button
+          aria-label="Remove filter"
+          onClick={onRemove}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+        >
+          <X />
+        </Button>
+      </div>
+      {invalidMessage ? (
+        <p className="pl-1 text-[11px] text-destructive" id={messageId}>
+          {invalidMessage}
+        </p>
+      ) : null}
     </div>
   );
 }

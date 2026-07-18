@@ -1,4 +1,4 @@
-import { Rows3 } from "lucide-react";
+import { Rows3, SearchX } from "lucide-react";
 import type { ClipboardEvent } from "react";
 import {
   type CellCopyArgs,
@@ -16,8 +16,13 @@ import {
   type GridRow,
   ROW_KEY_FIELD,
 } from "@/components/data-grid/table-data-grid/grid-row-model";
-import { EmptyStatePanel } from "@/components/empty-state-panel";
-import { SearchEmptyState } from "@/components/search-empty-state";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +44,36 @@ const DATA_GRID_RENDERERS = {
 
 function gridRowKeyGetter(row: GridRow): string {
   return row[ROW_KEY_FIELD];
+}
+
+/**
+ * Centered message over the empty grid body. The grid itself stays mounted so
+ * the header keeps showing the table's columns and types; this overlay starts
+ * below the 36px header row and ignores pointer events, so header interactions
+ * (resize, reorder, context menus) keep working.
+ */
+function NoRowsOverlay({ hasActiveFilter }: { hasActiveFilter: boolean }) {
+  const Icon = hasActiveFilter ? SearchX : Rows3;
+  return (
+    <div
+      className="pointer-events-none absolute inset-x-0 top-9 bottom-0 flex items-center justify-center p-6"
+      data-slot="grid-no-rows-overlay"
+    >
+      <Empty className="flex-none border-0 p-0">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <Icon aria-hidden={true} className="size-5" />
+          </EmptyMedia>
+          <EmptyTitle className="text-sm">No rows found</EmptyTitle>
+          <EmptyDescription>
+            {hasActiveFilter
+              ? "Try a different search or filter."
+              : "This table is empty."}
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    </div>
+  );
 }
 
 function LoadingSkeleton() {
@@ -96,17 +131,6 @@ function GridBody({
       </div>
     );
   }
-  if (rows.length === 0) {
-    return (
-      <div className={cn(flush && "p-3")}>
-        {hasActiveFilter ? (
-          <SearchEmptyState className="border" resourceName="rows" />
-        ) : (
-          <EmptyStatePanel icon={Rows3}>No rows found</EmptyStatePanel>
-        )}
-      </div>
-    );
-  }
   return (
     <div className="contents" data-keyboard-shortcut-scope="grid">
       <DataGrid
@@ -134,6 +158,9 @@ function GridBody({
         selectedRows={selectedRows}
         sortColumns={sortColumns}
       />
+      {rows.length === 0 ? (
+        <NoRowsOverlay hasActiveFilter={hasActiveFilter} />
+      ) : null}
     </div>
   );
 }

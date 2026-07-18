@@ -1058,22 +1058,20 @@ function useGridColumns({
     onFrozenColumnsChange(next);
   }
 
-  // Pin the action region only when at least one data column is frozen, so the
-  // sticky region stays a contiguous block (select → expand → frozen data) and
-  // the default layout (no frozen columns) keeps its normal scroll behavior.
-  const hasFrozenDataColumns = displayColumns.some((column) =>
-    frozenColumns.has(column.columnName)
-  );
+  // Always pin the action region (select → expand) to the left so the row
+  // checkbox and expand affordance stay reachable while the data columns scroll
+  // horizontally. Frozen data columns, when present, extend the same sticky
+  // block immediately to the right.
   const columns: Column<GridRow>[] = [
     {
       ...SelectColumn,
       cellClass: "rdg-select-cell rdg-checkbox-cell",
-      frozen: hasFrozenDataColumns,
+      frozen: true,
       headerCellClass: "rdg-select-cell rdg-checkbox-cell",
     },
     {
       cellClass: "rdg-select-cell rdg-expand-cell",
-      frozen: hasFrozenDataColumns,
+      frozen: true,
       headerCellClass: "rdg-select-cell rdg-expand-cell",
       key: EXPAND_COLUMN_KEY,
       maxWidth: EXPAND_COLUMN_WIDTH,

@@ -40,6 +40,15 @@
   --chart-3: oklch(0.6 0.14 162);
   --chart-4: oklch(0.64 0.15 75);
   --chart-5: oklch(0.6 0.2 25);
+  /* Categorical palette for schema/storage breakdowns (database overview).
+     Order is CVD-validated for adjacent segments — assign by rank, never re-sort. */
+  --viz-cat-1: #2a78d6;
+  --viz-cat-2: #008300;
+  --viz-cat-3: #e87ba4;
+  --viz-cat-4: #eda100;
+  --viz-cat-5: #1baf7a;
+  --viz-cat-6: #eb6834;
+  --viz-cat-other: oklch(0.708 0 0);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
@@ -101,6 +110,13 @@
   --chart-3: oklch(0.66 0.14 162);
   --chart-4: oklch(0.66 0.14 75);
   --chart-5: oklch(0.64 0.18 25);
+  --viz-cat-1: #3987e5;
+  --viz-cat-2: #008300;
+  --viz-cat-3: #d55181;
+  --viz-cat-4: #c98500;
+  --viz-cat-5: #199e70;
+  --viz-cat-6: #d95926;
+  --viz-cat-other: oklch(0.556 0 0);
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);

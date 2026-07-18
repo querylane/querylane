@@ -1,115 +1,53 @@
 "use client";
 
-import { Link, useNavigate } from "@tanstack/react-router";
-import { CircleOff, Eye, FolderTree, Table2 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { CircleOff, FolderTree, Gauge } from "lucide-react";
 import { useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
-import { CatalogKindBadge } from "@/components/console-pages/catalog-object-badge";
+import { ResourcePageState } from "@/components/console-pages/console-layout";
+import { DatabaseObjectsSection } from "@/components/console-pages/database-objects-section";
+import { toTopObjects } from "@/components/console-pages/database-overview-model";
 import {
-  InstanceStatItem,
-  InstanceStatsBar,
-  ResourcePageState,
-} from "@/components/console-pages/console-layout";
-import {
-  filterCatalogObjectsByFacets,
-  filterCatalogSchemasByFacets,
-  presentCatalogObjectKindOptions,
-  presentCatalogObjectOwnerOptions,
-  presentCatalogObjectSchemaOptions,
-  presentCatalogObjectSystemOptions,
-  presentCatalogSchemaKindOptions,
-  presentCatalogSchemaOwnerOptions,
-} from "@/components/console-pages/database-overview-filters";
+  DatabaseStatStrip,
+  OtherDatabasesCard,
+  SchemasCard,
+  SlowQueriesCard,
+  TopTablesCard,
+} from "@/components/console-pages/database-overview-sections";
 import { DatabaseQueryInsightsDrawer } from "@/components/console-pages/database-query-insights-drawer";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
-  DataTable,
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
+  databasesForInstanceQueryInput,
+  useGetDatabaseQuery,
+  useGetDatabaseQueryInsightsQuery,
+  useListAllDatabasesQuery,
+} from "@/hooks/api/database";
+import { useDatabaseCatalogQuery } from "@/hooks/api/database-catalog";
 import {
-  type DataTableFilterFacet,
-  DataTableFilterToolbar,
-} from "@/components/ui/data-table-filter-toolbar";
-import { Skeleton } from "@/components/ui/skeleton";
+  extensionsForDatabaseQueryInput,
+  useListAllExtensionsQuery,
+} from "@/hooks/api/extension";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { formatRows } from "@/features/data-explorer/format-rows";
-import { useGetDatabaseQuery } from "@/hooks/api/database";
-import {
-  type CatalogObject,
-  type CatalogSchema,
-  type DatabaseCatalogResult,
-  useDatabaseCatalogQuery,
-} from "@/hooks/api/database-catalog";
-import {
-  buildDatabaseName,
-  formatBytes,
-  formatTimestampLabel,
-  normalizeEstimatedRowCount,
-} from "@/lib/console-resources";
+  quantizedMetricsAnchor,
+  useDatabaseMetricsQuery,
+} from "@/hooks/api/metrics";
+import { buildDatabaseName } from "@/lib/console-resources";
 import { createResourceLoader } from "@/lib/resource-loader";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/protogen/querylane/console/v1alpha1/database_pb";
-import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import {
+  MetricId,
+  type MetricSeries,
+} from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
 type DatabaseSection = "overview";
 
 const EXPLORER_ROUTE =
   "/instances/$instanceId/databases/$databaseId/explorer" as const;
-const LOADING_ROW_COUNT = 5;
-const LOADING_ROW_KEYS = Array.from(
-  { length: LOADING_ROW_COUNT },
-  (_, index) => `database-catalog-loading-row-${index + 1}`
-);
-
-interface CatalogLoadingColumn {
-  headerClassName?: string;
-  label: string;
-}
-
-interface LargestObjectsFilterState {
-  filter: string;
-  kindFilters: string[];
-  ownerFilters: string[];
-  schemaFilters: string[];
-  systemFilters: string[];
-}
-
-const EMPTY_LARGEST_OBJECT_FILTERS: LargestObjectsFilterState = {
-  filter: "",
-  kindFilters: [],
-  ownerFilters: [],
-  schemaFilters: [],
-  systemFilters: [],
-};
-
-const OBJECT_LOADING_COLUMNS: CatalogLoadingColumn[] = [
-  { label: "Object" },
-  { label: "Kind" },
-  { label: "Owner" },
-  { headerClassName: "text-right", label: "Est. rows" },
-  { headerClassName: "text-right", label: "Size" },
-];
-
-const SCHEMA_LOADING_COLUMNS: CatalogLoadingColumn[] = [
-  { label: "Schema" },
-  { label: "Owner" },
-  { headerClassName: "text-right", label: "Tables" },
-  { headerClassName: "text-right", label: "Views" },
-  { headerClassName: "text-right", label: "Size" },
-  { headerClassName: "text-right", label: "Est. rows" },
-  { label: "Last DDL" },
-];
+const METRICS_RANGE_HOURS = 24;
 
 function DatabaseOverviewHeader({
   database,
@@ -122,277 +60,49 @@ function DatabaseOverviewHeader({
   instanceId: string;
   onViewQueryInsights: () => void;
 }) {
-  const kindLabel = database.isSystemDatabase
-    ? "System database"
-    : "User database";
+  // Schema/table/view counts live in the stat strip below; the subtitle only
+  // carries properties no card repeats.
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex min-w-0 flex-col gap-2">
-        <h1 className="min-w-0 break-words font-semibold text-2xl text-foreground tracking-tight [overflow-wrap:anywhere]">
-          {database.displayName}
-        </h1>
-        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
-          <span className="text-foreground">{database.owner || "—"}</span>
-          <span className="text-border">|</span>
-          <span>{database.characterSet || "—"}</span>
-          <span className="text-border">|</span>
-          <span>{database.collation || "—"}</span>
-          <span className="text-border">|</span>
-          <span>{kindLabel}</span>
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+          <h1 className="min-w-0 break-words font-mono font-semibold text-2xl text-foreground tracking-tight [overflow-wrap:anywhere]">
+            {database.displayName}
+          </h1>
+          {database.isSystemDatabase ? (
+            <Badge variant="secondary">system</Badge>
+          ) : null}
         </div>
+        <p className="text-muted-foreground text-sm">
+          owned by{" "}
+          <span className="font-mono text-foreground/80">
+            {database.owner || "—"}
+          </span>
+          {` · ${database.characterSet || "—"} · ${database.collation || "—"}`}
+        </p>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={onViewQueryInsights} type="button" variant="outline">
-          View query insights
+      <div className="flex items-center gap-2">
+        <Button
+          className="gap-2"
+          onClick={onViewQueryInsights}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <Gauge aria-hidden="true" className="size-4" />
+          Query insights
         </Button>
         <Link
-          className={cn(buttonVariants({ variant: "outline" }))}
+          className={cn(buttonVariants({ size: "sm" }), "gap-2")}
           params={{ databaseId, instanceId }}
           to={EXPLORER_ROUTE}
         >
-          Open data explorer
+          <FolderTree aria-hidden="true" className="size-4" />
+          Data explorer
         </Link>
       </div>
     </div>
   );
-}
-
-function DatabaseStatItemValue({
-  isPending,
-  value,
-}: {
-  isPending: boolean;
-  value: string | number;
-}) {
-  return (
-    <span className="font-bold font-mono text-xl tabular-nums tracking-tight">
-      {isPending ? "—" : String(value)}
-    </span>
-  );
-}
-
-function DatabaseStatsBar({
-  catalog,
-  isPending,
-}: {
-  catalog: DatabaseCatalogResult | undefined;
-  isPending: boolean;
-}) {
-  const totals = catalog?.totals;
-  return (
-    <InstanceStatsBar>
-      <InstanceStatItem label="Tables">
-        <DatabaseStatItemValue
-          isPending={isPending}
-          value={totals?.tableCount ?? "—"}
-        />
-      </InstanceStatItem>
-      <InstanceStatItem label="Views">
-        <DatabaseStatItemValue
-          isPending={isPending}
-          value={totals?.viewCount ?? "—"}
-        />
-      </InstanceStatItem>
-      <InstanceStatItem label="Total size">
-        <DatabaseStatItemValue
-          isPending={isPending}
-          value={totals ? formatBytes(totals.totalSizeBytes) : "—"}
-        />
-      </InstanceStatItem>
-      <InstanceStatItem label="Est. rows">
-        <DatabaseStatItemValue
-          isPending={isPending}
-          value={totals ? formatRows(totals.estimatedRows) : "—"}
-        />
-      </InstanceStatItem>
-    </InstanceStatsBar>
-  );
-}
-
-function catalogObjectIcon(object: CatalogObject) {
-  if (object.kind === "view") {
-    return Eye;
-  }
-  if (object.tableType === Table_TableType.PARTITIONED) {
-    return FolderTree;
-  }
-  return Table2;
-}
-
-function objectColumns(): DataTableColumnDef<CatalogObject>[] {
-  return [
-    {
-      // Match the displayed "schema.object" so the filter box narrows on the
-      // schema prefix the user sees, not just the bare object name.
-      accessorFn: (row) => `${row.schemaId}.${row.objectId}`,
-      cell: ({ row }) => {
-        const Icon = catalogObjectIcon(row.original);
-        return (
-          <span className="flex min-w-0 items-center gap-2">
-            <Icon
-              aria-hidden="true"
-              className="size-3.5 shrink-0 text-muted-foreground"
-            />
-            <span className="min-w-0 truncate font-mono text-sm">
-              <span className="text-muted-foreground">
-                {row.original.schemaId}.
-              </span>
-              {row.original.objectId}
-            </span>
-          </span>
-        );
-      },
-      header: ({ column }) => (
-        <SortableHeader column={column}>Object</SortableHeader>
-      ),
-      id: "object",
-    },
-    {
-      accessorFn: (row) => row.kind,
-      cell: ({ row }) => (
-        <CatalogKindBadge
-          isMaterialized={row.original.isMaterialized}
-          isPopulated={row.original.isPopulated}
-          isSystem={row.original.isSystem}
-          kind={row.original.kind}
-          tableType={row.original.tableType}
-        />
-      ),
-      header: ({ column }) => (
-        <SortableHeader column={column}>Kind</SortableHeader>
-      ),
-      id: "kind",
-    },
-    {
-      accessorFn: (row) => row.owner,
-      cell: ({ row }) => row.original.owner || "—",
-      header: ({ column }) => (
-        <SortableHeader column={column}>Owner</SortableHeader>
-      ),
-      id: "owner",
-      meta: {
-        cellClassName: "text-sm text-muted-foreground",
-      },
-    },
-    {
-      accessorFn: (row) => normalizeEstimatedRowCount(row.rowCount),
-      cell: ({ row }) =>
-        formatRows(normalizeEstimatedRowCount(row.original.rowCount)),
-      header: ({ column }) => (
-        <SortableHeader column={column}>Est. rows</SortableHeader>
-      ),
-      id: "estRows",
-      meta: {
-        cellClassName: "text-right tabular-nums",
-        headerClassName: "text-right",
-      },
-    },
-    {
-      accessorFn: (row) => Number(row.sizeBytes),
-      cell: ({ row }) => formatBytes(row.original.sizeBytes),
-      header: ({ column }) => (
-        <SortableHeader column={column}>Size</SortableHeader>
-      ),
-      id: "size",
-      meta: {
-        cellClassName: "text-right tabular-nums",
-        headerClassName: "text-right",
-      },
-    },
-  ];
-}
-
-function schemaColumns(): DataTableColumnDef<CatalogSchema>[] {
-  return [
-    {
-      accessorFn: (row) => row.schemaId,
-      cell: ({ row }) => (
-        <span className="flex items-center gap-2">
-          <FolderTree
-            aria-hidden="true"
-            className="size-3.5 shrink-0 text-muted-foreground"
-          />
-          <span className="font-medium text-sm">{row.original.schemaId}</span>
-          {row.original.isSystemSchema ? (
-            <Badge variant="outline">System</Badge>
-          ) : (
-            <Badge variant="secondary">User</Badge>
-          )}
-        </span>
-      ),
-      header: ({ column }) => (
-        <SortableHeader column={column}>Schema</SortableHeader>
-      ),
-      id: "schema",
-    },
-    {
-      accessorFn: (row) => row.owner,
-      cell: ({ row }) => row.original.owner || "—",
-      header: ({ column }) => (
-        <SortableHeader column={column}>Owner</SortableHeader>
-      ),
-      id: "owner",
-      meta: {
-        cellClassName: "text-sm text-muted-foreground",
-      },
-    },
-    {
-      accessorFn: (row) => row.tableCount,
-      header: ({ column }) => (
-        <SortableHeader column={column}>Tables</SortableHeader>
-      ),
-      id: "tables",
-      meta: {
-        cellClassName: "text-right tabular-nums",
-        headerClassName: "text-right",
-      },
-    },
-    {
-      accessorFn: (row) => row.viewCount,
-      header: ({ column }) => (
-        <SortableHeader column={column}>Views</SortableHeader>
-      ),
-      id: "views",
-      meta: {
-        cellClassName: "text-right tabular-nums",
-        headerClassName: "text-right",
-      },
-    },
-    {
-      accessorFn: (row) => Number(row.totalSizeBytes),
-      cell: ({ row }) => formatBytes(row.original.totalSizeBytes),
-      header: ({ column }) => (
-        <SortableHeader column={column}>Size</SortableHeader>
-      ),
-      id: "size",
-      meta: {
-        cellClassName: "text-right tabular-nums",
-        headerClassName: "text-right",
-      },
-    },
-    {
-      accessorFn: (row) => row.estimatedRows,
-      cell: ({ row }) => formatRows(row.original.estimatedRows),
-      header: ({ column }) => (
-        <SortableHeader column={column}>Est. rows</SortableHeader>
-      ),
-      id: "estRows",
-      meta: {
-        cellClassName: "text-right tabular-nums",
-        headerClassName: "text-right",
-      },
-    },
-    {
-      accessorFn: (row) => row.lastDdlTime,
-      cell: ({ row }) => formatTimestampLabel(row.original.lastDdlTime),
-      enableSorting: false,
-      header: () => "Last DDL",
-      id: "lastDdl",
-      meta: {
-        cellClassName: "text-sm text-muted-foreground",
-      },
-    },
-  ];
 }
 
 function CatalogErrorNotice({
@@ -416,261 +126,11 @@ function CatalogErrorNotice({
   );
 }
 
-function CatalogLoadingTable({
-  columns,
-  resourceName,
-}: {
-  columns: CatalogLoadingColumn[];
-  resourceName: string;
-}) {
-  return (
-    <div className="overflow-hidden rounded-lg border border-border">
-      <Table aria-busy={true}>
-        <TableHeader>
-          <TableRow className="border-border hover:bg-transparent">
-            {columns.map((column) => (
-              <TableHead
-                className={cn(
-                  "text-muted-foreground text-xs",
-                  column.headerClassName
-                )}
-                key={column.label}
-              >
-                {column.label}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow className="border-border hover:bg-transparent">
-            <TableCell className="p-0" colSpan={columns.length}>
-              <div className="flex min-h-24 flex-col gap-2 p-3">
-                <output
-                  aria-label={`Loading ${resourceName}`}
-                  className="sr-only"
-                >
-                  Loading {resourceName}
-                </output>
-                {LOADING_ROW_KEYS.map((key) => (
-                  <Skeleton
-                    aria-hidden="true"
-                    className="h-7 w-full"
-                    key={key}
-                  />
-                ))}
-              </div>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
-
-function LargestObjectsSection({
-  catalog,
-  databaseId,
-  instanceId,
-  isPending,
-}: {
-  catalog: DatabaseCatalogResult | undefined;
-  databaseId: string;
-  instanceId: string;
-  isPending: boolean;
-}) {
-  const [filterState, setFilterState] = useState<LargestObjectsFilterState>(
-    EMPTY_LARGEST_OBJECT_FILTERS
-  );
-  const navigate = useNavigate();
-  const objects = catalog?.objects ?? [];
-  const filteredObjects = filterCatalogObjectsByFacets({
-    kindFilters: filterState.kindFilters,
-    objects,
-    ownerFilters: filterState.ownerFilters,
-    schemaFilters: filterState.schemaFilters,
-    systemFilters: filterState.systemFilters,
-  });
-
-  function handleClearAll() {
-    setFilterState(EMPTY_LARGEST_OBJECT_FILTERS);
-  }
-
-  function handleFilterChange(filter: string) {
-    setFilterState((current) => ({ ...current, filter }));
-  }
-
-  const objectFacetFilters = [
-    {
-      label: "Kind",
-      onChange: (kindFilters: string[]) =>
-        setFilterState((current) => ({ ...current, kindFilters })),
-      options: presentCatalogObjectKindOptions(objects),
-      selected: filterState.kindFilters,
-    },
-    {
-      label: "Schema",
-      onChange: (schemaFilters: string[]) =>
-        setFilterState((current) => ({ ...current, schemaFilters })),
-      options: presentCatalogObjectSchemaOptions(objects),
-      selected: filterState.schemaFilters,
-    },
-    {
-      label: "Owner",
-      onChange: (ownerFilters: string[]) =>
-        setFilterState((current) => ({ ...current, ownerFilters })),
-      options: presentCatalogObjectOwnerOptions(objects),
-      selected: filterState.ownerFilters,
-    },
-    {
-      label: "System",
-      onChange: (systemFilters: string[]) =>
-        setFilterState((current) => ({ ...current, systemFilters })),
-      options: presentCatalogObjectSystemOptions(objects),
-      selected: filterState.systemFilters,
-    },
-  ] satisfies DataTableFilterFacet[];
-  return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <h2 className="font-semibold text-base text-foreground">
-          Largest objects
-        </h2>
-        {isPending ? null : (
-          <span className="text-muted-foreground text-xs tabular-nums">
-            {filteredObjects.length}
-          </span>
-        )}
-      </div>
-      {isPending ? null : (
-        <DataTableFilterToolbar
-          dataSlot="largest-object-filter-bar"
-          facets={objectFacetFilters}
-          onClearAll={handleClearAll}
-          onSearchChange={handleFilterChange}
-          searchPlaceholder="Search objects..."
-          searchValue={filterState.filter}
-        />
-      )}
-      {isPending ? (
-        <CatalogLoadingTable
-          columns={OBJECT_LOADING_COLUMNS}
-          resourceName="objects"
-        />
-      ) : (
-        <DataTable
-          columns={objectColumns()}
-          data={filteredObjects}
-          emptyResourceName="objects"
-          filterColumn="object"
-          filterValue={filterState.filter}
-          initialSorting={[{ desc: true, id: "size" }]}
-          onFilterChange={handleFilterChange}
-          onRowClick={(row) => {
-            navigate({
-              params: { databaseId, instanceId },
-              search: {
-                category: row.kind === "table" ? "tables" : "views",
-                name: row.objectId,
-                schema: row.schemaId,
-              },
-              to: EXPLORER_ROUTE,
-            });
-          }}
-          tableKey="database-objects"
-        />
-      )}
-    </section>
-  );
-}
-
-function SchemasSection({
-  catalog,
-  databaseId,
-  instanceId,
-  isPending,
-}: {
-  catalog: DatabaseCatalogResult | undefined;
-  databaseId: string;
-  instanceId: string;
-  isPending: boolean;
-}) {
-  const navigate = useNavigate();
-  const [filter, setFilter] = useState("");
-  const [kindFilters, setKindFilters] = useState<string[]>([]);
-  const [ownerFilters, setOwnerFilters] = useState<string[]>([]);
-  const schemas = catalog?.schemas ?? [];
-  const filteredSchemas = filterCatalogSchemasByFacets({
-    kindFilters,
-    ownerFilters,
-    schemas,
-  });
-
-  function handleClearAll() {
-    setFilter("");
-    setKindFilters([]);
-    setOwnerFilters([]);
-  }
-
-  const schemaFacetFilters = [
-    {
-      label: "System",
-      onChange: setKindFilters,
-      options: presentCatalogSchemaKindOptions(schemas),
-      selected: kindFilters,
-    },
-    {
-      label: "Owner",
-      onChange: setOwnerFilters,
-      options: presentCatalogSchemaOwnerOptions(schemas),
-      selected: ownerFilters,
-    },
-  ] satisfies DataTableFilterFacet[];
-  return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <h2 className="font-semibold text-base text-foreground">Schemas</h2>
-        {isPending ? null : (
-          <span className="text-muted-foreground text-xs tabular-nums">
-            {filteredSchemas.length}
-          </span>
-        )}
-      </div>
-      {isPending ? null : (
-        <DataTableFilterToolbar
-          dataSlot="schema-filter-bar"
-          facets={schemaFacetFilters}
-          onClearAll={handleClearAll}
-          onSearchChange={setFilter}
-          searchPlaceholder="Search schemas..."
-          searchValue={filter}
-        />
-      )}
-      {isPending ? (
-        <CatalogLoadingTable
-          columns={SCHEMA_LOADING_COLUMNS}
-          resourceName="schemas"
-        />
-      ) : (
-        <DataTable
-          columns={schemaColumns()}
-          data={filteredSchemas}
-          emptyResourceName="schemas"
-          filterColumn="schema"
-          filterValue={filter}
-          initialSorting={[{ desc: true, id: "size" }]}
-          onFilterChange={setFilter}
-          onRowClick={(row) => {
-            navigate({
-              params: { databaseId, instanceId },
-              search: { schema: row.schemaId },
-              to: EXPLORER_ROUTE,
-            });
-          }}
-          tableKey="database-schemas"
-        />
-      )}
-    </section>
-  );
+function seriesFor(
+  series: MetricSeries[] | undefined,
+  metric: MetricId
+): MetricSeries | undefined {
+  return series?.find((candidate) => candidate.metric === metric);
 }
 
 function BackendDatabasePage({
@@ -685,22 +145,52 @@ function BackendDatabasePage({
   const [queryInsightsDatabaseName, setQueryInsightsDatabaseName] = useState<
     string | null
   >(null);
+  // The sparklines cover a trailing 24h window anchored at page load;
+  // mirroring the instance page, an explicit catalog retry advances the
+  // window so recovered charts show the newest data.
+  const [metricsAnchorMs, setMetricsAnchorMs] = useState(
+    quantizedMetricsAnchor
+  );
   const queryInsightsOpen = queryInsightsDatabaseName === databaseName;
+  const enabled = Boolean(instanceId && databaseId);
   const databaseQuery = useGetDatabaseQuery(
-    {
-      name: buildDatabaseName(instanceId, databaseId),
-    },
-    {
-      enabled: Boolean(instanceId && databaseId),
-      refetchOnWindowFocus: false,
-    }
+    { name: databaseName },
+    { enabled, refetchOnWindowFocus: false }
   );
   const catalogQuery = useDatabaseCatalogQuery({ databaseId, instanceId });
+  const insightsQuery = useGetDatabaseQueryInsightsQuery(
+    { name: databaseName },
+    { enabled, refetchOnWindowFocus: false }
+  );
+  const extensionsQuery = useListAllExtensionsQuery(
+    extensionsForDatabaseQueryInput({ databaseId, instanceId }),
+    { enabled, refetchOnWindowFocus: false }
+  );
+  const databasesQuery = useListAllDatabasesQuery(
+    databasesForInstanceQueryInput(instanceId),
+    { enabled, refetchOnWindowFocus: false }
+  );
+  const metricsQuery = useDatabaseMetricsQuery({
+    anchorMs: metricsAnchorMs,
+    databaseId,
+    instanceId,
+    options: { enabled, refetchOnWindowFocus: false },
+    rangeHours: METRICS_RANGE_HOURS,
+  });
   const loader = createResourceLoader(databaseQuery, "console.database");
   const database = databaseQuery.data?.database;
   const catalog = catalogQuery.data;
   const catalogPending = catalogQuery.isPending;
-  const handleCatalogRetry = catalogQuery.refetch;
+  const insights = insightsQuery.data?.queryInsights;
+  const insightsPending = insightsQuery.isPending;
+  const extensions = extensionsQuery.data?.extensions ?? [];
+  const metricSeries = metricsQuery.data?.series;
+  const params = { databaseId, instanceId };
+  const openQueryInsights = () => setQueryInsightsDatabaseName(databaseName);
+  const handleCatalogRetry = () => {
+    setMetricsAnchorMs(quantizedMetricsAnchor());
+    return catalogQuery.refetch();
+  };
 
   return (
     <ResourcePageState
@@ -709,33 +199,64 @@ function BackendDatabasePage({
       title="Loading database"
     >
       {database ? (
-        <div className="flex flex-col gap-8">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-5">
           <DatabaseOverviewHeader
             database={database}
             databaseId={databaseId}
             instanceId={instanceId}
-            onViewQueryInsights={() =>
-              setQueryInsightsDatabaseName(databaseName)
-            }
+            onViewQueryInsights={openQueryInsights}
           />
-          <DatabaseStatsBar catalog={catalog} isPending={catalogPending} />
+          <DatabaseStatStrip
+            catalog={catalog}
+            deadTuplesSeries={seriesFor(
+              metricSeries,
+              MetricId.DATABASE_DEAD_TUPLES
+            )}
+            isPending={catalogPending}
+            liveTuplesSeries={seriesFor(
+              metricSeries,
+              MetricId.DATABASE_LIVE_TUPLES
+            )}
+            sizeSeries={seriesFor(metricSeries, MetricId.DATABASE_SIZE_BYTES)}
+          />
           {catalogQuery.error ? (
             <CatalogErrorNotice
               error={catalogQuery.error}
               onRetry={handleCatalogRetry}
             />
           ) : null}
-          <LargestObjectsSection
-            catalog={catalog}
+          <div className="grid items-start gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-5 lg:col-span-2">
+              <SlowQueriesCard
+                insights={insights}
+                isPending={insightsPending}
+                onOpenInsights={openQueryInsights}
+              />
+              <OtherDatabasesCard
+                currentDatabaseId={databaseId}
+                databases={databasesQuery.data?.databases ?? []}
+                instanceId={instanceId}
+                isPending={databasesQuery.isPending}
+              />
+            </div>
+            <div className="flex flex-col gap-5">
+              <TopTablesCard
+                isPending={catalogPending}
+                objects={toTopObjects(catalog)}
+                params={params}
+              />
+              <SchemasCard
+                catalog={catalog}
+                isPending={catalogPending}
+                params={params}
+              />
+            </div>
+          </div>
+          <DatabaseObjectsSection
             databaseId={databaseId}
+            extensions={extensions}
+            extensionsPending={extensionsQuery.isPending}
             instanceId={instanceId}
-            isPending={catalogPending}
-          />
-          <SchemasSection
-            catalog={catalog}
-            databaseId={databaseId}
-            instanceId={instanceId}
-            isPending={catalogPending}
           />
           {queryInsightsOpen ? (
             <DatabaseQueryInsightsDrawer

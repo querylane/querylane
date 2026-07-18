@@ -709,7 +709,7 @@ function QueryPaginationFooter({
         <SelectTrigger aria-label="Rows per page" className="h-7" size="sm">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent alignItemWithTrigger={false}>
+        <SelectContent>
           {PAGE_SIZE_OPTIONS.map((size) => (
             <SelectItem key={size} label={String(size)} value={String(size)}>
               {size}

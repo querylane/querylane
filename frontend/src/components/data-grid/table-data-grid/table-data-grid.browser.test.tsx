@@ -64,7 +64,6 @@ vi.mock("@/hooks/api/table-data", () => ({
   useStreamRowsExporter: tableDataApi.useStreamRowsExporter,
 }));
 
-const SQL_WHERE_HELP_RE = /Supports column comparisons joined with AND/;
 afterEach(async () => {
   await cleanup();
   useTableColumnLayoutSettingsStore.setState({ layouts: {} });
@@ -485,31 +484,6 @@ function renderEmptyFilterToolbar() {
   render(
     <ScreenshotFrame>
       <div className="w-[900px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <DataGridToolbar
-          {...columnLayoutProps(resultColumns)}
-          columns={resultColumns}
-          filterLogic="and"
-          filterRules={[]}
-          filterTitle="Filter shipping.carriers"
-          isFetching={false}
-          onClearSelection={vi.fn()}
-          onCopySelection={vi.fn()}
-          onExportSelection={vi.fn()}
-          onFilterChange={vi.fn()}
-          onRefresh={vi.fn()}
-          onSortChange={vi.fn()}
-          selectedCount={0}
-          sortColumns={[]}
-        />
-      </div>
-    </ScreenshotFrame>
-  );
-}
-
-function renderSqlWhereFilterToolbar() {
-  render(
-    <ScreenshotFrame>
-      <div className="w-[1100px] rounded-2xl border border-border bg-background p-4 text-foreground">
         <DataGridToolbar
           {...columnLayoutProps(resultColumns)}
           columns={resultColumns}
@@ -1184,7 +1158,9 @@ test("filter popover keeps multiple rules compact and aligned", async () => {
   renderFilteredToolbar();
 
   await page.getByRole("button", { name: "Filter 2" }).click();
-  await expect.element(page.getByText("Filter rows")).toBeVisible();
+  await expect
+    .element(page.getByRole("dialog", { name: "Filter rows" }))
+    .toBeVisible();
 
   const popover = document.querySelector<HTMLElement>(
     '[data-slot="popover-content"]'
@@ -1205,8 +1181,10 @@ test("filter popover keeps multiple rules compact and aligned", async () => {
     const triggers = row.querySelectorAll<HTMLElement>(
       '[data-slot="select-trigger"]'
     );
+    // Boolean columns render a true/false select instead of a text input, so
+    // match the value control by its accessible name across both shapes.
     const valueInput = row.querySelector<HTMLElement>(
-      'input[aria-label="Filter value"]'
+      '[aria-label="Filter value"]'
     );
     const removeButton = row.querySelector<HTMLElement>(
       'button[aria-label="Remove filter"]'
@@ -1246,9 +1224,11 @@ test("filter popover starts with an unapplied rule", async () => {
   await expect
     .element(page.getByRole("combobox", { name: "Filter column" }))
     .toBeVisible();
-  await expect.element(page.getByText("No conditions yet")).toBeVisible();
   await expect
     .element(page.getByRole("button", { name: "Add filter" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Apply" }))
     .toBeVisible();
 
   const popover = document.querySelector<HTMLElement>(
@@ -1259,34 +1239,6 @@ test("filter popover starts with an unapplied rule", async () => {
   }
   await expect(page.elementLocator(popover)).toMatchScreenshot(
     "data-explorer-rules-filter-popover"
-  );
-});
-
-test("filter popover exposes SQL WHERE mode", async () => {
-  renderSqlWhereFilterToolbar();
-
-  await page.getByRole("button", { name: "Filter" }).click();
-  await page.getByRole("tab", { name: "SQL WHERE" }).click();
-  await page
-    .getByRole("textbox", { name: "SQL WHERE clause" })
-    .fill("status = 'customs_hold' AND weight_kg > 10000");
-
-  await expect
-    .element(page.getByText("Filter shipping.carriers"))
-    .toBeVisible();
-  await expect.element(page.getByText(SQL_WHERE_HELP_RE)).toBeVisible();
-  await expect
-    .element(page.getByRole("button", { name: "Apply" }))
-    .toBeVisible();
-
-  const popover = document.querySelector<HTMLElement>(
-    '[data-slot="popover-content"]'
-  );
-  if (!popover) {
-    throw new Error("expected SQL WHERE filter popover");
-  }
-  await expect(page.elementLocator(popover)).toMatchScreenshot(
-    "data-explorer-sql-where-filter-popover"
   );
 });
 
@@ -1310,7 +1262,13 @@ test("page size select shows every option when the footer is near the viewport e
     </ScreenshotFrame>
   );
 
-  await page.getByRole("combobox", { name: "Rows per page" }).click();
+  // Wait for the trigger to be interactive before clicking: clicking in the
+  // same tick as the initial render intermittently lands before the select
+  // wires its handlers, leaving the popup closed.
+  const pageSizeTrigger = page.getByRole("combobox", { name: "Rows per page" });
+  await expect.element(pageSizeTrigger).toBeVisible();
+  await pageSizeTrigger.click();
+  await expect.element(page.getByRole("listbox")).toBeVisible();
 
   const selectContent = document.querySelector<HTMLElement>(
     '[data-slot="select-content"]'
@@ -1318,6 +1276,10 @@ test("page size select shows every option when the footer is near the viewport e
   if (!selectContent) {
     throw new Error("expected page size select content");
   }
+  // Popup open animations move the options; measure only at rest.
+  await Promise.all(
+    selectContent.getAnimations().map((animation) => animation.finished)
+  );
   const contentBox = selectContent.getBoundingClientRect();
 
   for (const option of ["25", "50", "100", "250", "500"]) {

@@ -18,9 +18,11 @@ import { cn } from "@/lib/utils";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 const DRAG_DATA_KEY = "application/x-querylane-sort-index";
-const MIN_SORT_COLUMN_WIDTH_CH = 10;
-const MAX_SORT_COLUMN_WIDTH_CH = 24;
-const SORT_COLUMN_WIDTH_PADDING_CH = 3;
+const MIN_SORT_COLUMN_WIDTH_CH = 12;
+const MAX_SORT_COLUMN_WIDTH_CH = 26;
+// Covers the trigger's horizontal padding, value gap, and chevron, measured
+// in mono ch units so the longest sorted column name renders untruncated.
+const SORT_COLUMN_WIDTH_PADDING_CH = 5;
 
 type SortPopoverStyle = CSSProperties & {
   "--sort-column-select-width": string;
@@ -120,17 +122,18 @@ function SortPopover({
       />
       <DataGridPopoverContent
         align="end"
-        className="w-fit min-w-72 max-w-[min(calc(100vw-1rem),var(--available-width))] space-y-2 overflow-hidden p-3"
+        aria-label="Sort rows"
+        className="w-fit min-w-64 max-w-[min(calc(100vw-1rem),var(--available-width))] space-y-1.5 overflow-hidden p-2"
         collisionBoundary={popoverBoundary ?? undefined}
         style={popoverStyle}
       >
-        <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center justify-between gap-4 px-1 text-xs">
           <span className="font-medium">Sort by</span>
           {sortColumns.length > 0 ? (
             <Button
-              className="h-6 px-2 text-[11px]"
+              className="text-muted-foreground"
               onClick={() => onChange([])}
-              size="sm"
+              size="xs"
               type="button"
               variant="ghost"
             >
@@ -140,11 +143,14 @@ function SortPopover({
         </div>
 
         {sortColumns.length === 0 ? (
-          <p className="text-muted-foreground text-xs">
+          // Capped at the popover's min content width (min-w-64 minus p-2) so
+          // the sentence wraps instead of stretching the empty popover wider
+          // than it renders once sort rows exist.
+          <p className="max-w-60 px-1 text-muted-foreground text-xs">
             No sort applied. Add a column or click a header in the grid.
           </p>
         ) : (
-          <ul className="w-fit max-w-full space-y-1.5">
+          <ul className="w-fit max-w-full space-y-1">
             {sortColumns.map((sort, index) => (
               <SortRow
                 columns={columns}
@@ -164,7 +170,11 @@ function SortPopover({
         )}
 
         <Select disabled={!canAddMore} onValueChange={addColumn} value="">
-          <SelectTrigger aria-label="Add sort column" className="h-8 w-full">
+          <SelectTrigger
+            aria-label="Add sort column"
+            className="w-full"
+            size="sm"
+          >
             <Plus className="size-3.5 text-muted-foreground" />
             <SelectValue placeholder="Add sort column" />
           </SelectTrigger>
@@ -175,13 +185,20 @@ function SortPopover({
                 label={column.columnName}
                 value={column.columnName}
               >
-                <span className="font-mono text-xs">{column.columnName}</span>
+                <span className="flex w-full min-w-0">
+                  <span
+                    className="min-w-0 truncate font-mono text-xs"
+                    title={column.columnName}
+                  >
+                    {column.columnName}
+                  </span>
+                </span>
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         {sortColumns.length >= MAX_SORT_COLUMNS ? (
-          <p className="text-[11px] text-muted-foreground">
+          <p className="px-1 text-[11px] text-muted-foreground">
             Maximum {MAX_SORT_COLUMNS} sort columns.
           </p>
         ) : null}
@@ -251,18 +268,19 @@ function SortRow({
   return (
     <li
       className={cn(
-        "group/sort-row flex items-center gap-1.5 rounded-md transition-opacity",
+        "group/sort-row flex items-center gap-1 rounded-md transition-opacity",
         isDragging && "opacity-40"
       )}
     >
       <Button
         aria-label={`Drag sort column ${index + 1} to reorder`}
-        className="size-7 cursor-grab p-0 active:cursor-grabbing"
+        className="cursor-grab active:cursor-grabbing"
         draggable={true}
         onDragEnd={onDragEnd}
         onDragOver={handleSortDragOver}
         onDragStart={handleDragStart}
         onDrop={handleDrop}
+        size="icon-sm"
         title="Drag to reorder"
         type="button"
         variant="ghost"
@@ -272,11 +290,11 @@ function SortRow({
           className="size-3.5 shrink-0 text-muted-foreground/60 group-hover/sort-row:text-foreground"
         />
       </Button>
-      <span className="w-4 text-[10px] text-muted-foreground tabular-nums">
-        {index + 1}
-      </span>
       <Select onValueChange={swapColumn} value={sort.columnKey}>
-        <SelectTrigger className="h-7 w-[min(var(--sort-column-select-width),calc(100vw-13rem))] max-w-full">
+        <SelectTrigger
+          className="w-[min(var(--sort-column-select-width),calc(100vw-12rem))] max-w-full font-mono"
+          size="sm"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -294,7 +312,14 @@ function SortRow({
                 label={column.columnName}
                 value={column.columnName}
               >
-                <span className="font-mono text-xs">{column.columnName}</span>
+                <span className="flex w-full min-w-0">
+                  <span
+                    className="min-w-0 truncate font-mono text-xs"
+                    title={column.columnName}
+                  >
+                    {column.columnName}
+                  </span>
+                </span>
               </SelectItem>
             );
             return items;
@@ -302,7 +327,7 @@ function SortRow({
         </SelectContent>
       </Select>
       <Select onValueChange={swapDirection} value={sort.direction}>
-        <SelectTrigger className="h-7 w-20">
+        <SelectTrigger className="w-20" size="sm">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -316,13 +341,13 @@ function SortRow({
       </Select>
       <Button
         aria-label="Remove sort"
-        className="size-7 shrink-0 p-0"
+        className="shrink-0"
         onClick={onRemove}
-        size="sm"
+        size="icon-sm"
         type="button"
         variant="ghost"
       >
-        <X className="size-3" />
+        <X />
       </Button>
     </li>
   );

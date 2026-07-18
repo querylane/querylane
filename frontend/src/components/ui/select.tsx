@@ -61,7 +61,10 @@ function SelectContent({
   sideOffset = 4,
   align = "center",
   alignOffset = 0,
-  alignItemWithTrigger = true,
+  // Deliberate registry drift: Base UI defaults to macOS-style item
+  // alignment where the popup covers the trigger. Default to the classic
+  // shadcn popper placement below the trigger instead.
+  alignItemWithTrigger = false,
   ...props
 }: SelectPrimitive.Popup.Props &
   Pick<
@@ -120,7 +123,9 @@ function SelectItem({
       )}
       {...props}
     >
-      <SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
+      {/* Deliberate registry drift: allow the item text to shrink so children
+          can opt into truncation (e.g. long column identifiers). */}
+      <SelectPrimitive.ItemText className="flex min-w-0 flex-1 gap-2 whitespace-nowrap">
         {children}
       </SelectPrimitive.ItemText>
       <SelectPrimitive.ItemIndicator

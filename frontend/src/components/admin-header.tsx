@@ -4,12 +4,10 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { ChevronsUpDown, Lock, Monitor, Plus } from "lucide-react";
 import React from "react";
 import { RoleKindBadge } from "@/components/console-pages/role-kind-badge";
-import { Logo } from "@/components/logo";
-import { AdminCommandPalette } from "@/components/querylane-ui/admin-command-palette";
 import { SidebarTrigger } from "@/components/querylane-ui/sidebar";
 import { SearchEmptyState } from "@/components/search-empty-state";
 import { ThemeModeMenu } from "@/components/theme-mode-menu";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -193,6 +191,53 @@ function shouldShowBreadcrumbSpinner(
   return loading || refreshing;
 }
 
+function breadcrumbTriggerAriaLabel(
+  label: string,
+  value: string | null
+): string {
+  return value === null
+    ? `Select ${label.toLowerCase()}`
+    : `${label}: ${value}`;
+}
+
+// Single-row breadcrumb chip content: status dot + value + chevron. The label
+// lives in the trigger's accessible name rather than a stacked eyebrow, keeping
+// the topbar to one slim row.
+function BreadcrumbTriggerBody({
+  disabled,
+  hasValue,
+  loading,
+  refreshing,
+  triggerValue,
+  valuePrefix,
+}: {
+  disabled: boolean;
+  hasValue: boolean;
+  loading: boolean;
+  refreshing: boolean;
+  triggerValue: string;
+  valuePrefix?: React.ReactNode;
+}) {
+  return (
+    <span className="flex min-w-0 items-center gap-1.5">
+      {hasValue ? valuePrefix : null}
+      <OverflowAwareText
+        className={`min-w-0 truncate font-medium text-sm ${hasValue ? "text-foreground" : "text-muted-foreground"}`}
+        disabled={disabled}
+      >
+        {triggerValue}
+      </OverflowAwareText>
+      {shouldShowBreadcrumbSpinner(loading, refreshing) ? (
+        <Spinner className="size-3 shrink-0 text-muted-foreground" />
+      ) : null}
+      <ChevronsUpDown
+        aria-hidden="true"
+        className="size-3 shrink-0 text-muted-foreground"
+      />
+    </span>
+  );
+}
+
 function BreadcrumbDropdown({
   children,
   contentWidth,
@@ -230,28 +275,15 @@ function BreadcrumbDropdown({
   const triggerValue = showLoadingState
     ? (loadingMessage ?? `Loading ${label.toLowerCase()}…`)
     : (value ?? placeholder);
-  const triggerContent = (
-    <>
-      <span className="text-[10px] text-muted-foreground uppercase leading-none tracking-wider">
-        {label}
-      </span>
-      <span className="mt-0.5 flex min-w-0 items-center gap-1">
-        {hasValue ? valuePrefix : null}
-        <OverflowAwareText
-          className={`min-w-0 truncate font-medium text-sm ${hasValue ? "text-foreground" : "text-muted-foreground"}`}
-          disabled={disabled}
-        >
-          {triggerValue}
-        </OverflowAwareText>
-        {shouldShowBreadcrumbSpinner(loading, refreshing) ? (
-          <Spinner className="size-3 shrink-0 text-muted-foreground" />
-        ) : null}
-        <ChevronsUpDown
-          aria-hidden="true"
-          className="size-3 shrink-0 text-muted-foreground"
-        />
-      </span>
-    </>
+  const triggerBody = (
+    <BreadcrumbTriggerBody
+      disabled={disabled}
+      hasValue={hasValue}
+      loading={loading}
+      refreshing={refreshing}
+      triggerValue={triggerValue}
+      valuePrefix={valuePrefix}
+    />
   );
   if (disabled) {
     return (
@@ -260,13 +292,13 @@ function BreadcrumbDropdown({
           render={
             <div
               className={cn(
-                "flex min-w-0 cursor-not-allowed flex-col items-start rounded-md px-2 py-1 opacity-50",
+                "flex min-w-0 cursor-not-allowed items-center gap-1.5 rounded-md px-2 py-1.5 opacity-50",
                 triggerClassName
               )}
             />
           }
         >
-          {triggerContent}
+          {triggerBody}
         </TooltipTrigger>
         <TooltipContent>{disabledReason}</TooltipContent>
       </Tooltip>
@@ -276,12 +308,13 @@ function BreadcrumbDropdown({
   return (
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger
+        aria-label={breadcrumbTriggerAriaLabel(label, value)}
         className={cn(
-          "flex min-w-0 max-w-[12rem] flex-col items-start rounded-md px-2 py-1 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "flex min-w-0 max-w-[14rem] items-center gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           triggerClassName
         )}
       >
-        {triggerContent}
+        {triggerBody}
       </PopoverTrigger>
       <PopoverContent align="start" className={`${contentWidth} gap-0 p-0`}>
         <Command
@@ -575,6 +608,11 @@ function DatabaseSelector({
         refreshing={breadcrumbState.refreshing}
         triggerClassName="max-w-[12rem] sm:max-w-[14rem]"
         value={selectedDatabase?.name ?? null}
+        valuePrefix={
+          <span className="shrink-0 font-medium text-muted-foreground text-sm">
+            DB:
+          </span>
+        }
       >
         {(close) =>
           databases.map((database) => (
@@ -609,7 +647,7 @@ function PathSeparator({ className }: { className?: string | undefined }) {
   return (
     <span
       className={cn(
-        "flex select-none items-center self-stretch font-extralight text-2xl text-muted-foreground/40",
+        "flex select-none items-center font-light text-lg text-muted-foreground/40",
         className
       )}
     >
@@ -618,9 +656,9 @@ function PathSeparator({ className }: { className?: string | undefined }) {
   );
 }
 
-// Role detail breadcrumb: a two-row block mirroring the selector layout — the
-// "Roles" eyebrow (a link back to the list) over the current role name + kind
-// badge. No dropdown; the role isn't a switchable selection.
+// Role detail breadcrumb tail: a "Roles" link back to the list, a separator,
+// then the current role name + kind badge — all on one line to match the slim
+// single-row breadcrumb. No dropdown; the role isn't a switchable selection.
 function RoleBreadcrumbSegment({
   instanceId,
   roleId,
@@ -635,24 +673,25 @@ function RoleBreadcrumbSegment({
     (candidate) => roleIdOf(candidate) === roleId
   );
   return (
-    <div className="hidden min-w-0 flex-col items-start px-2 py-1 lg:flex">
+    <span className="hidden min-w-0 items-center gap-1.5 lg:flex">
       <Link
-        className="rounded-sm text-[10px] text-muted-foreground uppercase leading-none tracking-wider transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="rounded-sm px-1 text-muted-foreground text-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         params={{ instanceId }}
         to="/instances/$instanceId/roles"
       >
         Roles
       </Link>
+      <PathSeparator />
       <span
         aria-current="page"
-        className="mt-0.5 flex min-w-0 items-center gap-1.5"
+        className="flex min-w-0 items-center gap-1.5 px-1"
       >
         <OverflowAwareText className="min-w-0 truncate font-medium font-mono text-foreground text-sm">
           {role?.roleName ?? roleId}
         </OverflowAwareText>
         {role ? <RoleKindBadge role={role} /> : null}
       </span>
-    </div>
+    </span>
   );
 }
 
@@ -703,8 +742,7 @@ function AdminHeaderActions({
   setTheme: ReturnType<typeof useTheme>["setTheme"];
 }) {
   return (
-    <div className="ml-0 flex shrink-0 items-center gap-1 lg:ml-auto lg:gap-2">
-      <AdminCommandPalette />
+    <div className="ml-auto flex shrink-0 items-center gap-1 lg:gap-2">
       <a
         className={cn(
           buttonVariants({
@@ -752,26 +790,11 @@ export function AdminHeader() {
     ? `https://github.com/${githubRepo}`
     : "https://github.com/querylane/querylane";
   return (
-    <header className="z-20 flex h-14 shrink-0 items-center gap-1 overflow-hidden border-border border-b bg-sidebar px-2 sm:gap-2 sm:px-3 lg:gap-3 lg:px-4">
+    <header className="z-20 flex h-12 shrink-0 items-center gap-1 overflow-hidden border-border border-b bg-background px-2 sm:gap-2 sm:px-3 lg:gap-3 lg:px-4">
       <SidebarTrigger
         aria-label="Open navigation menu"
         className="shrink-0 lg:hidden"
       />
-      <Button
-        aria-label="Go to instance overview"
-        className="hidden size-auto shrink-0 cursor-pointer rounded-sm p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:inline-flex"
-        onClick={() => {
-          if (selectedInstance) {
-            navigateToInstance(selectedInstance);
-          }
-        }}
-        type="button"
-        variant="ghost"
-      >
-        <Logo className="size-8" logoStyle="flat" />
-      </Button>
-
-      <PathSeparator className="hidden lg:flex" />
 
       <nav
         aria-label="Breadcrumb"
@@ -787,14 +810,19 @@ export function AdminHeader() {
             selectedInstance={selectedInstance}
           />
         </div>
-        <DatabaseSelector
-          databases={databases}
-          hideLeadingSeparatorOnMobile={Boolean(selectedDatabase)}
-          navigateToDatabase={navigateToDatabase}
-          queryState={queryStates.databases}
-          selectedDatabase={selectedDatabase}
-          selectedInstance={selectedInstance}
-        />
+        {/* On lg+ the sidebar's database switcher replaces this breadcrumb;
+            on smaller screens the rail is an off-canvas drawer, so the topbar
+            keeps the only always-visible database selector. */}
+        <div className="flex min-w-0 items-center gap-1 sm:gap-2 lg:hidden">
+          <DatabaseSelector
+            databases={databases}
+            hideLeadingSeparatorOnMobile={Boolean(selectedDatabase)}
+            navigateToDatabase={navigateToDatabase}
+            queryState={queryStates.databases}
+            selectedDatabase={selectedDatabase}
+            selectedInstance={selectedInstance}
+          />
+        </div>
         <PageBreadcrumb />
       </nav>
 

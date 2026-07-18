@@ -44,16 +44,23 @@ interface QueryState<T> {
   refetch?: () => Promise<unknown>;
 }
 
+const ENCODING_RE = /UTF8/;
+const HEADER_COUNTS_RE = /3 schemas · 3 objects/;
 const state = vi.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
   databaseQuery: {} as QueryState<GetDatabaseResponse>,
+  databasesQuery: {} as { data?: unknown; isPending?: boolean },
+  extensionsQuery: {} as { data?: unknown; isPending?: boolean },
+  metricsQuery: {} as { data?: unknown; isPending?: boolean },
   navigate: vi.fn(async () => undefined),
+  otherObjectsQuery: {} as {
+    data?: unknown;
+    error?: unknown;
+    isLoading?: boolean;
+  },
   queryInsightsHook: vi.fn(),
   queryInsightsQuery: {} as QueryState<GetDatabaseQueryInsightsResponse>,
 }));
-const ANALYTICS_SCHEMA_ROW_RE = /analytics User analytics-owner/;
-const ANALYTICS_DAILY_ROLLUP_ROW_RE = /analytics.*daily_rollup/i;
-const PG_CATALOG_SCHEMA_ROW_RE = /pg_catalog System postgres/i;
 const SELECT_EVENTS_QUERY_BUTTON_RE =
   /SELECT \* FROM events WHERE account_id = \$1/i;
 const UPDATE_EVENTS_QUERY_BUTTON_RE =
@@ -96,11 +103,22 @@ vi.mock("@tanstack/react-router", () => {
     [linkExportName]: ({
       children,
       className,
+      params,
+      search,
+      to,
     }: {
       children: ReactNode;
       className?: string;
+      params?: unknown;
+      search?: unknown;
+      to?: string;
     }) => (
-      <a className={className} href="/">
+      <a
+        className={className}
+        data-link-params={JSON.stringify(params ?? null)}
+        data-link-search={JSON.stringify(search ?? null)}
+        href={to ?? "/"}
+      >
         {children}
       </a>
     ),
@@ -109,6 +127,14 @@ vi.mock("@tanstack/react-router", () => {
 });
 
 vi.mock("@/hooks/api/database", () => ({
+  databasesForInstanceQueryInput: (instanceId: string) => ({
+    parent: instanceId,
+  }),
+  useListAllDatabasesQuery: () => ({
+    data: state.databasesQuery.data,
+    error: null,
+    isPending: state.databasesQuery.isPending ?? false,
+  }),
   useGetDatabaseQuery: () => ({
     data: state.databaseQuery.data,
     error: state.databaseQuery.error ?? null,
@@ -134,6 +160,42 @@ vi.mock("@/hooks/api/database-catalog", () => ({
     error: state.catalogQuery.error ?? null,
     isPending: state.catalogQuery.isPending ?? false,
     refetch: vi.fn(async () => undefined),
+  }),
+}));
+
+vi.mock("@/components/console-pages/other-database-objects-query", () => ({
+  useOtherDatabaseObjectsSummaryQuery: () => ({
+    data: state.otherObjectsQuery.data,
+    error: state.otherObjectsQuery.error ?? null,
+    isLoading: state.otherObjectsQuery.isLoading ?? false,
+    refetch: vi.fn(async () => undefined),
+  }),
+  useOtherObjectsBrowseQuery: () => ({
+    data: { pages: [] },
+    error: null,
+    fetchNextPage: vi.fn(),
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    isLoading: false,
+    refetch: vi.fn(async () => undefined),
+  }),
+}));
+
+vi.mock("@/hooks/api/extension", () => ({
+  extensionsForDatabaseQueryInput: (input: unknown) => input,
+  useListAllExtensionsQuery: () => ({
+    data: state.extensionsQuery.data,
+    error: null,
+    isPending: state.extensionsQuery.isPending ?? false,
+  }),
+}));
+
+vi.mock("@/hooks/api/metrics", () => ({
+  quantizedMetricsAnchor: () => 0,
+  useDatabaseMetricsQuery: () => ({
+    data: state.metricsQuery.data,
+    error: null,
+    isPending: state.metricsQuery.isPending ?? false,
   }),
 }));
 
@@ -199,6 +261,29 @@ function databaseResponse() {
       owner: "data-platform",
     }),
   });
+}
+
+function databasesListResponse() {
+  return {
+    databases: [
+      createProto(DatabaseSchema, {
+        displayName: "customer_events",
+        name: "instances/prod/databases/customer-events",
+        owner: "data-platform",
+      }),
+      createProto(DatabaseSchema, {
+        displayName: "orders",
+        name: "instances/prod/databases/orders",
+        owner: "data-platform",
+      }),
+      createProto(DatabaseSchema, {
+        displayName: "postgres",
+        isSystemDatabase: true,
+        name: "instances/prod/databases/postgres",
+        owner: "postgres",
+      }),
+    ],
+  };
 }
 
 function QueryInsightsDrawerForTest({
@@ -678,8 +763,14 @@ function catalogResult() {
 
 beforeEach(() => {
   state.databaseQuery = { data: databaseResponse() };
+  state.databasesQuery = { data: databasesListResponse() };
   state.catalogQuery = { data: catalogResult() };
+  state.extensionsQuery = { data: { extensions: [] } };
+  state.metricsQuery = { data: { series: [] } };
   state.navigate.mockClear();
+  state.otherObjectsQuery = {
+    data: {},
+  };
   state.queryInsightsHook.mockClear();
   state.queryInsightsQuery = {};
 });
@@ -689,7 +780,7 @@ afterEach(() => {
 });
 
 describe("backend database overview", () => {
-  test("renders mission-control header, stats, and catalog tables", () => {
+  test("renders the mock-derived overview: header, stats, cards", () => {
     render(
       <BackendDatabasePage
         databaseId="customer-events"
@@ -698,67 +789,82 @@ describe("backend database overview", () => {
       />
     );
 
-    expect(screen.getByText("customer_events")).toBeTruthy();
-    expect(screen.getAllByText("data-platform").length).toBeGreaterThan(0);
-    expect(screen.getByText("UTF8")).toBeTruthy();
-    expect(screen.getByText("en_US.UTF-8")).toBeTruthy();
-    expect(screen.getByText("Largest objects")).toBeTruthy();
-    expect(screen.getByText("Schemas")).toBeTruthy();
-    expect(screen.getAllByText("Tables").length).toBeGreaterThan(0);
-    expect(screen.getByText("events")).toBeTruthy();
-  });
-
-  test("places largest-object search on the left with kind and schema filters", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <BackendDatabasePage
-        databaseId="customer-events"
-        instanceId="prod"
-        section="overview"
-      />
-    );
-
-    const search = screen.getByRole("textbox", { name: "Search objects..." });
-    const filterBar = search.closest('[data-slot="largest-object-filter-bar"]');
-    if (!(filterBar instanceof HTMLElement)) {
-      throw new Error("Missing largest object filter bar");
-    }
-
-    expect(filterBar.className).toContain("justify-start");
+    // Header: name, owner, encoding — catalog counts live only in the stat
+    // strip below, never duplicated in the header subtitle.
     expect(
-      within(filterBar)
-        .getAllByRole("button")
-        .map((button) => button.textContent)
-    ).toEqual(["Kind", "Schema", "Owner", "System"]);
+      screen.getByRole("heading", { name: "customer_events" })
+    ).toBeTruthy();
+    expect(screen.queryByText(HEADER_COUNTS_RE)).toBeNull();
+    expect(screen.getByText("data-platform")).toBeTruthy();
+    expect(screen.getByText(ENCODING_RE)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Query insights" })).toBeTruthy();
+    expect(screen.getByText("Data explorer")).toBeTruthy();
 
-    await user.click(within(filterBar).getByRole("button", { name: "Kind" }));
-    await user.click(
-      screen.getByRole("option", { name: "Materialized views" })
-    );
+    // Stat strip
+    expect(screen.getByText("Total size")).toBeTruthy();
+    expect(screen.getByText("3 schemas")).toBeTruthy();
+    expect(screen.getByText("Dead tuples")).toBeTruthy();
 
-    expect(screen.getByText("daily_rollup")).toBeTruthy();
-    expect(screen.queryByText("events")).toBeNull();
+    // Schemas card lists every schema with its inventory
+    expect(screen.getByText("Schemas")).toBeTruthy();
+    expect(screen.getByText("public")).toBeTruthy();
+    expect(screen.getByText("analytics")).toBeTruthy();
+    expect(screen.getByText("pg_catalog")).toBeTruthy();
+    expect(screen.getByText("0 tables · 1 view · 2 MB")).toBeTruthy();
 
-    await user.click(within(filterBar).getByRole("button", { name: "Owner" }));
-    await user.click(screen.getByRole("option", { name: "analytics-owner" }));
-
+    // Top tables exclude system relations
+    expect(screen.getByText("Top tables")).toBeTruthy();
     expect(screen.getByText("daily_rollup")).toBeTruthy();
     expect(screen.queryByText("pg_class")).toBeNull();
 
-    await user.type(search, "daily");
-    await user.click(
-      within(filterBar).getByRole("button", { name: "Clear all" })
-    );
+    // Sibling databases on the instance, current one included
+    expect(screen.getByText("Databases on this instance")).toBeTruthy();
+    expect(screen.getByText("orders")).toBeTruthy();
+    expect(screen.getByText("postgres")).toBeTruthy();
+    expect(screen.getByText("system")).toBeTruthy();
 
-    expect((search as HTMLInputElement).value).toBe("");
-    expect(document.activeElement).toBe(search);
-    expect(screen.getByText("events")).toBeTruthy();
-    expect(screen.getByText("pg_class")).toBeTruthy();
+    // Query stats off → actionable empty state; no extensions installed
+    expect(screen.getByText("Query statistics are off")).toBeTruthy();
+    expect(
+      screen.getByText("CREATE EXTENSION pg_stat_statements;")
+    ).toBeTruthy();
+    expect(
+      screen.getByText("No extensions are installed in this database.")
+    ).toBeTruthy();
   });
 
-  test("places schema search on the left with kind and owner filters", async () => {
-    const user = userEvent.setup();
+  test("keeps the database-objects section with only extensions when the database has no other objects", () => {
+    render(
+      <BackendDatabasePage
+        databaseId="customer-events"
+        instanceId="prod"
+        section="overview"
+      />
+    );
+
+    expect(screen.getByText("Database objects")).toBeTruthy();
+    expect(screen.getByText("Extensions")).toBeTruthy();
+    expect(screen.queryByText("Routines")).toBeNull();
+  });
+
+  test("lists non-relation objects in the database-objects section", () => {
+    state.otherObjectsQuery = {
+      data: {
+        routines: {
+          objects: [
+            {
+              badge: "FUNCTION",
+              category: "routines",
+              detail: "",
+              name: "analytics.rollup_daily()",
+              sortKey: "analytics.rollup_daily",
+              summary: "void · plpgsql · volatile",
+            },
+          ],
+          total: 1,
+        },
+      },
+    };
 
     render(
       <BackendDatabasePage
@@ -768,35 +874,74 @@ describe("backend database overview", () => {
       />
     );
 
-    const search = screen.getByRole("textbox", { name: "Search schemas..." });
-    const schemaSection = search.closest("section");
-    if (!(schemaSection instanceof HTMLElement)) {
-      throw new Error("Missing schema section");
-    }
-    const filterBar = search.closest('[data-slot="schema-filter-bar"]');
-    if (!(filterBar instanceof HTMLElement)) {
-      throw new Error("Missing schema filter bar");
-    }
-
-    expect(filterBar.className).toContain("justify-start");
-    expect(
-      within(filterBar)
-        .getAllByRole("button")
-        .map((button) => button.textContent)
-    ).toEqual(["System", "Owner"]);
-
-    await user.click(within(filterBar).getByRole("button", { name: "Owner" }));
-    await user.click(screen.getByRole("option", { name: "analytics-owner" }));
-
-    expect(
-      within(schemaSection).getByRole("button", {
-        name: ANALYTICS_SCHEMA_ROW_RE,
-      })
-    ).toBeTruthy();
-    expect(within(schemaSection).queryByText("public")).toBeNull();
+    expect(screen.getByText("Database objects")).toBeTruthy();
+    expect(screen.getByText("Routines")).toBeTruthy();
+    expect(screen.getByText("rollup_daily")).toBeTruthy();
+    expect(screen.getByText("→ void")).toBeTruthy();
+    expect(screen.getByText("plpgsql · volatile")).toBeTruthy();
   });
 
-  test("loads query insights only after opening the overview drawer", async () => {
+  test("links schema tiles, top tables, and sibling databases", () => {
+    render(
+      <BackendDatabasePage
+        databaseId="customer-events"
+        instanceId="prod"
+        section="overview"
+      />
+    );
+
+    const schemaLink = screen.getByText("pg_catalog").closest("a");
+    if (!(schemaLink instanceof HTMLAnchorElement)) {
+      throw new Error("Missing schema tile link");
+    }
+    expect(schemaLink.dataset["linkSearch"]).toBe(
+      JSON.stringify({ schema: "pg_catalog" })
+    );
+    expect(schemaLink.dataset["linkParams"]).toBe(
+      JSON.stringify({ databaseId: "customer-events", instanceId: "prod" })
+    );
+    expect(schemaLink.getAttribute("href")).toBe(
+      "/instances/$instanceId/databases/$databaseId/explorer"
+    );
+
+    // Views deep-link into the explorer's views category.
+    const viewLink = screen.getByText("daily_rollup").closest("a");
+    if (!(viewLink instanceof HTMLAnchorElement)) {
+      throw new Error("Missing top table link");
+    }
+    expect(viewLink.dataset["linkSearch"]).toBe(
+      JSON.stringify({
+        category: "views",
+        name: "daily_rollup",
+        schema: "analytics",
+      })
+    );
+
+    const tableLink = screen.getByText("events").closest("a");
+    if (!(tableLink instanceof HTMLAnchorElement)) {
+      throw new Error("Missing top table link");
+    }
+    expect(tableLink.dataset["linkSearch"]).toBe(
+      JSON.stringify({
+        category: "tables",
+        name: "events",
+        schema: "public",
+      })
+    );
+
+    const databaseLink = screen.getByText("orders").closest("a");
+    if (!(databaseLink instanceof HTMLAnchorElement)) {
+      throw new Error("Missing sibling database link");
+    }
+    expect(databaseLink.dataset["linkParams"]).toBe(
+      JSON.stringify({ databaseId: "orders", instanceId: "prod" })
+    );
+    expect(databaseLink.getAttribute("href")).toBe(
+      "/instances/$instanceId/databases/$databaseId"
+    );
+  });
+
+  test("renders eagerly loaded insights and opens the overview drawer", async () => {
     const user = userEvent.setup();
     state.queryInsightsQuery = { data: queryInsightsResponse() };
 
@@ -808,15 +953,22 @@ describe("backend database overview", () => {
       />
     );
 
-    expect(state.queryInsightsHook).not.toHaveBeenCalled();
+    // Insights load with the page: slow-query rows render without opening
+    // the drawer.
+    expect(state.queryInsightsHook).toHaveBeenCalled();
+    expect(screen.getByText("Slowest queries")).toBeTruthy();
+    expect(
+      screen.getByText("SELECT * FROM events WHERE account_id = $1")
+    ).toBeTruthy();
+    expect(screen.getByText("20 ms")).toBeTruthy();
+    expect(screen.getByText("42 calls")).toBeTruthy();
     expect(screen.queryByText("Top queries by total time")).toBeNull();
 
     const trigger = screen.getByRole("button", {
-      name: "View query insights",
+      name: "Query insights",
     });
     await user.click(trigger);
 
-    await waitFor(() => expect(state.queryInsightsHook).toHaveBeenCalledOnce());
     const drawer = await screen.findByRole("dialog", {
       name: "Query insights",
     });
@@ -868,9 +1020,7 @@ describe("backend database overview", () => {
       />
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "View query insights" })
-    );
+    await user.click(screen.getByRole("button", { name: "Query insights" }));
     expect(
       await screen.findByRole("dialog", { name: "Query insights" })
     ).toBeTruthy();
@@ -968,41 +1118,7 @@ describe("backend database overview query insights", () => {
     ).toContain("whitespace-pre-wrap");
   });
 
-  test("navigates largest objects and schemas with stable explorer params", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <BackendDatabasePage
-        databaseId="customer-events"
-        instanceId="prod"
-        section="overview"
-      />
-    );
-
-    const objectButton = screen.getByRole("button", {
-      name: ANALYTICS_DAILY_ROLLUP_ROW_RE,
-    });
-    await user.click(objectButton);
-
-    expect(state.navigate).toHaveBeenCalledWith({
-      params: { databaseId: "customer-events", instanceId: "prod" },
-      search: { category: "views", name: "daily_rollup", schema: "analytics" },
-      to: "/instances/$instanceId/databases/$databaseId/explorer",
-    });
-
-    const schemaButton = screen.getByRole("button", {
-      name: PG_CATALOG_SCHEMA_ROW_RE,
-    });
-    await user.click(schemaButton);
-
-    expect(state.navigate).toHaveBeenLastCalledWith({
-      params: { databaseId: "customer-events", instanceId: "prod" },
-      search: { schema: "pg_catalog" },
-      to: "/instances/$instanceId/databases/$databaseId/explorer",
-    });
-  });
-
-  test("shows loading rows without table progress bars while the catalog is pending", () => {
+  test("shows skeleton rows without progress bars while the catalog is pending", () => {
     state.catalogQuery = { data: undefined, isPending: true };
 
     render(
@@ -1014,19 +1130,12 @@ describe("backend database overview query insights", () => {
     );
 
     expect(
-      screen.getByRole("status", { name: "Loading objects" })
-    ).toBeTruthy();
-    expect(
       screen.getByRole("status", { name: "Loading schemas" })
     ).toBeTruthy();
     expect(
-      screen.queryByRole("progressbar", { name: "Loading objects" })
-    ).toBeNull();
-    expect(
-      screen.queryByRole("progressbar", { name: "Loading schemas" })
-    ).toBeNull();
-    expect(screen.queryByText("No objects found")).toBeNull();
-    expect(screen.queryByText("No schemas found")).toBeNull();
+      screen.getByRole("status", { name: "Loading objects" })
+    ).toBeTruthy();
+    expect(screen.queryByRole("progressbar")).toBeNull();
   });
 
   test("renders PostgreSQL catalog error details from SQLSTATE metadata", async () => {

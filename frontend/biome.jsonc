@@ -224,6 +224,7 @@
               "OtherObjectCategory",
               "Route",
               "resolveHomeInstanceId",
+              "useCommandPalette",
               "useDb",
               "useExplorerSidebarSlotRegistration",
               "useSidebar",

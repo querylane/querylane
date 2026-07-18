@@ -61,6 +61,7 @@ const TIMESCALEDB_BUTTON_NAME = /timescaledb/i;
 const state = vi.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
   databaseQuery: {} as QueryState<GetDatabaseResponse>,
+  databasesQuery: {} as { data?: unknown; isPending?: boolean },
   deleteInstance: vi.fn(async () => undefined),
   extensionQuery: {} as QueryState<ListExtensionsResponse>,
   healthQuery: {} as QueryState<{
@@ -117,8 +118,18 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children, to }: { children: ReactNode; to: string }) => (
-    <a href={to}>{children}</a>
+  Link: ({
+    children,
+    className,
+    to,
+  }: {
+    children: ReactNode;
+    className?: string;
+    to: string;
+  }) => (
+    <a className={className} href={to}>
+      {children}
+    </a>
   ),
   useLocation: ({
     select,
@@ -189,6 +200,7 @@ beforeEach(() => {
   document.documentElement.style.colorScheme = visualTheme;
   state.catalogQuery = {};
   state.databaseQuery = {};
+  state.databasesQuery = { data: databasesListResponse() };
   state.extensionQuery = {};
   state.healthQuery = { data: defaultHealthResponse() };
   state.queryInsightsQuery = {};
@@ -227,8 +239,16 @@ vi.mock("@/hooks/api/console", () => ({
 }));
 
 vi.mock("@/hooks/api/database", () => ({
+  databasesForInstanceQueryInput: (instanceId: string) => ({
+    parent: instanceId,
+  }),
   selectedDatabaseQueryOptions: () => ({
     queryKey: ["browser", "selected-database"],
+  }),
+  useListAllDatabasesQuery: () => ({
+    data: state.databasesQuery.data,
+    error: null,
+    isPending: state.databasesQuery.isPending ?? false,
   }),
   useGetDatabaseQuery: () => ({
     data: state.databaseQuery.data,
@@ -254,6 +274,39 @@ vi.mock("@/hooks/api/database-catalog", () => ({
     refetch: vi.fn(async () => undefined),
   }),
 }));
+
+vi.mock("@/components/console-pages/other-database-objects-query", () => ({
+  useOtherDatabaseObjectsSummaryQuery: () => ({
+    data: {},
+    error: null,
+    isLoading: false,
+    refetch: vi.fn(async () => undefined),
+  }),
+  useOtherObjectsBrowseQuery: () => ({
+    data: { pages: [] },
+    error: null,
+    fetchNextPage: vi.fn(),
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    isLoading: false,
+    refetch: vi.fn(async () => undefined),
+  }),
+}));
+
+vi.mock("@/hooks/api/metrics", async () => {
+  const actual = await vi.importActual<typeof import("@/hooks/api/metrics")>(
+    "@/hooks/api/metrics"
+  );
+  return {
+    ...actual,
+    quantizedMetricsAnchor: () => 0,
+    useDatabaseMetricsQuery: () => ({
+      data: { series: [] },
+      error: null,
+      isPending: false,
+    }),
+  };
+});
 
 vi.mock("@/hooks/api/extension", () => ({
   extensionsForDatabaseQueryInput: (input: {
@@ -700,6 +753,29 @@ function databaseResponse() {
   });
 }
 
+function databasesListResponse() {
+  return {
+    databases: [
+      createProto(DatabaseSchema, {
+        displayName: "customer_events",
+        name: "instances/prod/databases/customer-events",
+        owner: "data-platform",
+      }),
+      createProto(DatabaseSchema, {
+        displayName: "orders",
+        name: "instances/prod/databases/orders",
+        owner: "data-platform",
+      }),
+      createProto(DatabaseSchema, {
+        displayName: "postgres",
+        isSystemDatabase: true,
+        name: "instances/prod/databases/postgres",
+        owner: "postgres",
+      }),
+    ],
+  };
+}
+
 function queryInsightsResponse() {
   return createProto(GetDatabaseQueryInsightsResponseSchema, {
     queryInsights: createProto(DatabaseQueryInsightsSchema, {
@@ -852,7 +928,9 @@ async function openQueryInsightsDrawer(
     />
   );
 
-  await page.getByRole("button", { name: "View query insights" }).click();
+  await page
+    .getByRole("button", { name: "Query insights", exact: true })
+    .click();
   return page.getByRole("dialog", { name: "Query insights" });
 }
 
@@ -1178,10 +1256,19 @@ test("backend database overview shows mission control stats and catalog tables",
     </ScreenshotFrame>
   );
 
-  await expect.element(page.getByText("customer_events")).toBeVisible();
-  await expect.element(page.getByText("Largest objects")).toBeVisible();
-  await expect.element(page.getByText("public.events")).toBeVisible();
-  await expect.element(page.getByText("analytics.daily_rollup")).toBeVisible();
+  await expect
+    .element(page.getByRole("heading", { name: "customer_events" }))
+    .toBeVisible();
+  await expect.element(page.getByText("Top tables")).toBeVisible();
+  await expect.element(page.getByText("daily_rollup")).toBeVisible();
+  await expect.element(page.getByText("Schemas")).toBeVisible();
+  await expect
+    .element(page.getByText("Databases on this instance"))
+    .toBeVisible();
+  await expect.element(page.getByText("orders")).toBeVisible();
+  await expect
+    .element(page.getByText("Query statistics are off"))
+    .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-database-overview"
   );
@@ -1207,7 +1294,9 @@ test("backend database overview opens the query insights drawer", async () => {
   await expect
     .element(page.getByText("Top queries by total time"))
     .not.toBeInTheDocument();
-  await page.getByRole("button", { name: "View query insights" }).click();
+  await page
+    .getByRole("button", { name: "Query insights", exact: true })
+    .click();
 
   const drawer = page.getByRole("dialog", { name: "Query insights" });
   await expect.element(drawer).toBeVisible();

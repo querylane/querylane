@@ -94,7 +94,7 @@ describe("table data query search", () => {
     });
 
     expect(state.invalidFilterRules).toEqual([
-      { id: "id", message: "id has an invalid filter value." },
+      { id: "id", message: "id expects a whole number, like 42." },
     ]);
   });
 });
