@@ -1262,7 +1262,13 @@ test("page size select shows every option when the footer is near the viewport e
     </ScreenshotFrame>
   );
 
-  await page.getByRole("combobox", { name: "Rows per page" }).click();
+  // Wait for the trigger to be interactive before clicking: clicking in the
+  // same tick as the initial render intermittently lands before the select
+  // wires its handlers, leaving the popup closed.
+  const pageSizeTrigger = page.getByRole("combobox", { name: "Rows per page" });
+  await expect.element(pageSizeTrigger).toBeVisible();
+  await pageSizeTrigger.click();
+  await expect.element(page.getByRole("listbox")).toBeVisible();
 
   const selectContent = document.querySelector<HTMLElement>(
     '[data-slot="select-content"]'
@@ -1270,6 +1276,10 @@ test("page size select shows every option when the footer is near the viewport e
   if (!selectContent) {
     throw new Error("expected page size select content");
   }
+  // Popup open animations move the options; measure only at rest.
+  await Promise.all(
+    selectContent.getAnimations().map((animation) => animation.finished)
+  );
   const contentBox = selectContent.getBoundingClientRect();
 
   for (const option of ["25", "50", "100", "250", "500"]) {
