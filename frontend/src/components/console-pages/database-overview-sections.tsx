@@ -11,11 +11,12 @@ import type { ComponentType, ReactNode } from "react";
 import { useId } from "react";
 import {
   formatMs,
+  ratioToPercent,
   toSortedSchemas,
-  widthPercent,
 } from "@/components/console-pages/database-overview-model";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatRows } from "@/features/data-explorer/format-rows";
 import type {
@@ -283,12 +284,11 @@ function SlowQueryRow({
         <span className="font-mono tabular-nums">
           {formatMs(query.totalTimeMs)} total
         </span>
-        <span className="ml-auto @[26rem]:block hidden h-1 w-16 overflow-hidden rounded-full bg-muted">
-          <span
-            className="block h-full rounded-full bg-foreground/35"
-            style={{ width: widthPercent(query.totalTimeRatio) }}
-          />
-        </span>
+        <Progress
+          aria-label="Share of total query time"
+          className="ml-auto @[26rem]:flex hidden w-16"
+          value={ratioToPercent(query.totalTimeRatio)}
+        />
       </span>
     </Button>
   );

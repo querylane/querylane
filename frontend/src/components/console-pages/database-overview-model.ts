@@ -16,7 +16,7 @@ function toTopObjects(
   if (!catalog) {
     return [];
   }
-  return [...catalog.objects]
+  return catalog.objects
     .filter((object) => !object.isSystem)
     .sort((left, right) => Number(right.sizeBytes - left.sizeBytes))
     .slice(0, TOP_OBJECT_ROWS);
@@ -34,8 +34,9 @@ function toSortedSchemas(
   );
 }
 
-function widthPercent(ratio: number): string {
-  return `${Math.max(0, Math.min(1, ratio)) * PERCENT}%`;
+/** Clamped 0-100 share for progress meters. */
+function ratioToPercent(ratio: number): number {
+  return Math.max(0, Math.min(1, ratio)) * PERCENT;
 }
 
 function formatMs(ms: number): string {
@@ -51,4 +52,4 @@ function formatMs(ms: number): string {
   return `${ms.toFixed(2)} ms`;
 }
 
-export { formatMs, toSortedSchemas, toTopObjects, widthPercent };
+export { formatMs, ratioToPercent, toSortedSchemas, toTopObjects };
