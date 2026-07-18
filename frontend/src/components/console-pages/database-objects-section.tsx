@@ -265,7 +265,7 @@ function DatabaseObjectsPanel({
           Database objects
         </h2>
         <p className="text-muted-foreground text-xs">
-          Scoped to this database — roles and tablespaces live at the instance
+          Scoped to this database; roles and tablespaces live at the instance
           level.
         </p>
       </div>

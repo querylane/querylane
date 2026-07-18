@@ -680,9 +680,11 @@ function ActivitySessionSheet({
       open={selectedPid !== null}
     >
       <SheetContent
-        className="gap-0 overflow-hidden p-0"
+        // Registry sheets cap at sm:max-w-sm; the session inspector needs a
+        // wide drawer, and `ui/` must stay native shadcn output, so the width
+        // override lives here.
+        className="gap-0 overflow-hidden p-0 data-[side=right]:w-[min(calc(100vw-1rem),clamp(34rem,45vw,60rem))] data-[side=right]:sm:max-w-none"
         side="right"
-        size="wide"
       >
         <SessionSheetContent
           onRefresh={onRefresh}

@@ -388,7 +388,7 @@ function getInvalidFilterRules(
       if (isIncompleteFilterRule(rule)) {
         return [];
       }
-      if (!getOperatorsForColumn(column).includes(rule.operator)) {
+      if (!isOperatorAllowedForColumn(column, rule.operator)) {
         return [
           {
             id: rule.id,
@@ -460,6 +460,27 @@ const JSON_OPERATORS: readonly FilterOperator[] = [
   "isNull",
   "isNotNull",
 ];
+
+// Set views of the per-type operator lists above (the arrays stay the source
+// of truth because their order drives the operator dropdown), so membership
+// checks inside per-rule loops stay constant-time.
+const OPERATOR_SET_CACHE = new Map<
+  readonly FilterOperator[],
+  ReadonlySet<FilterOperator>
+>();
+
+function isOperatorAllowedForColumn(
+  column: FilterColumnMeta | undefined,
+  operator: FilterOperator
+): boolean {
+  const operators = getOperatorsForColumn(column);
+  let operatorSet = OPERATOR_SET_CACHE.get(operators);
+  if (!operatorSet) {
+    operatorSet = new Set(operators);
+    OPERATOR_SET_CACHE.set(operators, operatorSet);
+  }
+  return operatorSet.has(operator);
+}
 
 function getOperatorsForColumn(
   column: FilterColumnMeta | undefined
@@ -537,7 +558,7 @@ function buildPredicate(
   column: FilterColumnMeta
 ): RowPredicate | undefined {
   const meta = FILTER_OPERATOR_META[rule.operator];
-  if (!getOperatorsForColumn(column).includes(rule.operator)) {
+  if (!isOperatorAllowedForColumn(column, rule.operator)) {
     return;
   }
   const values = buildValues(rule, column.dataType, meta.valueCount);

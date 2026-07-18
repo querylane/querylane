@@ -145,9 +145,12 @@ function BackendDatabasePage({
   const [queryInsightsDatabaseName, setQueryInsightsDatabaseName] = useState<
     string | null
   >(null);
-  // Stable per mount: the sparklines cover a trailing 24h window anchored at
-  // page load; a page refresh advances the window.
-  const [metricsAnchorMs] = useState(quantizedMetricsAnchor);
+  // The sparklines cover a trailing 24h window anchored at page load;
+  // mirroring the instance page, an explicit catalog retry advances the
+  // window so recovered charts show the newest data.
+  const [metricsAnchorMs, setMetricsAnchorMs] = useState(
+    quantizedMetricsAnchor
+  );
   const queryInsightsOpen = queryInsightsDatabaseName === databaseName;
   const enabled = Boolean(instanceId && databaseId);
   const databaseQuery = useGetDatabaseQuery(
@@ -184,6 +187,10 @@ function BackendDatabasePage({
   const metricSeries = metricsQuery.data?.series;
   const params = { databaseId, instanceId };
   const openQueryInsights = () => setQueryInsightsDatabaseName(databaseName);
+  const handleCatalogRetry = () => {
+    setMetricsAnchorMs(quantizedMetricsAnchor());
+    return catalogQuery.refetch();
+  };
 
   return (
     <ResourcePageState
@@ -215,7 +222,7 @@ function BackendDatabasePage({
           {catalogQuery.error ? (
             <CatalogErrorNotice
               error={catalogQuery.error}
-              onRetry={catalogQuery.refetch}
+              onRetry={handleCatalogRetry}
             />
           ) : null}
           <div className="grid items-start gap-5 md:grid-cols-2 lg:grid-cols-3">

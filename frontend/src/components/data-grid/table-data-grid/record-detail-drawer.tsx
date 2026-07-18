@@ -135,9 +135,11 @@ function RecordDetailDrawer({
   return (
     <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetContent
-        className="flex flex-col gap-0 p-0"
+        // Registry sheets cap at sm:max-w-sm; record details need a wide
+        // drawer, and `ui/` must stay native shadcn output, so the width
+        // override lives here.
+        className="flex flex-col gap-0 p-0 data-[side=right]:w-[min(calc(100vw-1rem),clamp(34rem,45vw,60rem))] data-[side=right]:sm:max-w-none"
         side="right"
-        size="wide"
       >
         <SheetHeader className="gap-2 border-b px-5 py-4 pr-14">
           <SheetTitle className="break-all font-mono text-base leading-snug">

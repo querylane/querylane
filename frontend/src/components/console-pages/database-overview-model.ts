@@ -29,7 +29,7 @@ function toSortedSchemas(
   if (!catalog) {
     return [];
   }
-  return [...catalog.schemas].sort((left, right) =>
+  return catalog.schemas.toSorted((left, right) =>
     Number(right.totalSizeBytes - left.totalSizeBytes)
   );
 }
