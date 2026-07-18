@@ -152,15 +152,6 @@ vi.mock("@/hooks/api/view", () => ({
   viewsForSchemaQueryInput: vi.fn((input) => input),
 }));
 
-vi.mock("@/features/data-explorer/other-database-objects-query", () => ({
-  useOtherDatabaseObjectsQuery: () => ({
-    data: { objects: [] },
-    error: null,
-    isLoading: false,
-    refetch: vi.fn(() => Promise.resolve()),
-  }),
-}));
-
 vi.mock("@/lib/db-context", () => ({
   useDb: () => ({ selectedDatabase: { name: "appdb" } }),
 }));

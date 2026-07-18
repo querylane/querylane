@@ -680,8 +680,9 @@ function ActivitySessionSheet({
       open={selectedPid !== null}
     >
       <SheetContent
-        className="gap-0 overflow-hidden p-0 data-[side=right]:w-[min(calc(100vw-1rem),clamp(34rem,45vw,60rem))] data-[side=right]:sm:max-w-none"
+        className="gap-0 overflow-hidden p-0"
         side="right"
+        size="wide"
       >
         <SessionSheetContent
           onRefresh={onRefresh}

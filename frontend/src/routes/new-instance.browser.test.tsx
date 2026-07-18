@@ -210,6 +210,11 @@ test("create instance SSL mode menu keeps descriptions readable", async () => {
     throw new Error("SSL mode menu did not open.");
   }
 
+  // The popper-positioned menu zooms in on open; measure at its final size.
+  await Promise.all(
+    popup.getAnimations().map((animation) => animation.finished)
+  );
+
   const popupRect = popup.getBoundingClientRect();
   const descriptionRect = description.getBoundingClientRect();
 

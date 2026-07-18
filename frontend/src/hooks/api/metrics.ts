@@ -2,8 +2,9 @@ import {
   type UseQueryOptions as ConnectUseQueryOptions,
   useQuery as useConnectQuery,
 } from "@connectrpc/connect-query";
-import { buildInstanceName } from "@/lib/console-resources";
+import { buildDatabaseName, buildInstanceName } from "@/lib/console-resources";
 import {
+  buildDatabaseMetricsInput,
   buildInstanceMetricsInput,
   buildPreviousInstanceMetricsInput,
 } from "@/lib/metrics";
@@ -72,6 +73,33 @@ export function useInstancePreviousMetricsQuery({
 }) {
   const input = buildPreviousInstanceMetricsInput(
     buildInstanceName(instanceId),
+    anchorMs,
+    rangeHours
+  );
+
+  return useConnectQuery(queryMetrics, input, options);
+}
+
+/**
+ * Queries the database-scoped stat-strip series (size, live/dead tuples) for
+ * the database overview over a trailing `rangeHours` window ending at
+ * `anchorMs`.
+ */
+export function useDatabaseMetricsQuery({
+  anchorMs,
+  databaseId,
+  instanceId,
+  options,
+  rangeHours,
+}: {
+  anchorMs: number;
+  databaseId: string;
+  instanceId: string;
+  options?: ConnectUseQueryOptions<(typeof queryMetrics)["output"]>;
+  rangeHours: number;
+}) {
+  const input = buildDatabaseMetricsInput(
+    buildDatabaseName(instanceId, databaseId),
     anchorMs,
     rangeHours
   );

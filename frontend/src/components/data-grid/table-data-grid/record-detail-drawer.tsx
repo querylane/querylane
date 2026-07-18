@@ -135,8 +135,9 @@ function RecordDetailDrawer({
   return (
     <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetContent
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl"
+        className="flex flex-col gap-0 p-0"
         side="right"
+        size="wide"
       >
         <SheetHeader className="gap-2 border-b px-5 py-4 pr-14">
           <SheetTitle className="break-all font-mono text-base leading-snug">

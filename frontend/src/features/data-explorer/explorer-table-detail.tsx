@@ -1775,7 +1775,7 @@ function PartitionPaginationFooter({
         <SelectTrigger aria-label="Rows per page" className="h-7" size="sm">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent alignItemWithTrigger={false}>
+        <SelectContent>
           {PARTITION_PAGE_SIZE_OPTIONS.map((size) => (
             <SelectItem key={size} label={String(size)} value={String(size)}>
               {size}
@@ -3244,7 +3244,7 @@ function PoliciesTab({
           >
             <SelectValue />
           </SelectTrigger>
-          <SelectContent alignItemWithTrigger={false}>
+          <SelectContent>
             {POLICY_PAGE_SIZE_OPTIONS.map((size) => (
               <SelectItem key={size} label={String(size)} value={String(size)}>
                 {size}

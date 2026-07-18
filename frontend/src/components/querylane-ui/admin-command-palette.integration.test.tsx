@@ -2,7 +2,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, test, vi } from "vitest";
 import { KeyboardShortcutsProvider } from "@/components/keyboard-shortcuts";
-import { AdminCommandPalette } from "@/components/querylane-ui/admin-command-palette";
+import {
+  CommandPaletteProvider,
+  useCommandPalette,
+} from "@/components/querylane-ui/admin-command-palette";
+import { Button } from "@/components/ui/button";
 
 const navigateMock = vi.fn(() => Promise.resolve());
 const commandPaletteMockState = vi.hoisted(() => ({
@@ -70,10 +74,21 @@ beforeEach(() => {
   commandPaletteMockState.rolesQuery.isPending = false;
 });
 
+function CommandPaletteTrigger() {
+  const { openPalette } = useCommandPalette();
+  return (
+    <Button aria-label="Search or jump to" onClick={openPalette} type="button">
+      Search or jump to…
+    </Button>
+  );
+}
+
 function renderAdminCommandPalette() {
   return render(
     <KeyboardShortcutsProvider>
-      <AdminCommandPalette />
+      <CommandPaletteProvider>
+        <CommandPaletteTrigger />
+      </CommandPaletteProvider>
     </KeyboardShortcutsProvider>
   );
 }

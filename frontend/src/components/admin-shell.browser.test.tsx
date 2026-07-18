@@ -6,6 +6,7 @@ import { AdminHeader } from "@/components/admin-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DatabaseLayout } from "@/components/database-layout";
 import { KeyboardShortcutsProvider } from "@/components/keyboard-shortcuts";
+import { CommandPaletteProvider } from "@/components/querylane-ui/admin-command-palette";
 import {
   SidebarInset,
   SidebarProvider,
@@ -14,6 +15,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useSetupStore } from "@/stores/setup-store";
 import { ThemeProvider } from "@/theme-provider";
 
+const INSTANCE_SELECTOR_NAME = /^Instance:/;
 const navigateMock = vi.fn(async () => undefined);
 const adminHeaderMockState = vi.hoisted(() => ({
   instanceMode: {
@@ -279,11 +281,11 @@ function renderAdminShell() {
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
             <KeyboardShortcutsProvider>
-              <SidebarProvider className="h-full max-h-full flex-col">
-                <AdminHeader />
-                <div className="flex min-h-0 flex-1">
+              <CommandPaletteProvider>
+                <SidebarProvider className="h-full max-h-full">
                   <AppSidebar />
                   <SidebarInset className="min-w-0">
+                    <AdminHeader />
                     <main className="p-6">
                       <div className="rounded-xl border border-border bg-card p-6">
                         <h1 className="font-semibold text-2xl">
@@ -296,8 +298,8 @@ function renderAdminShell() {
                       </div>
                     </main>
                   </SidebarInset>
-                </div>
-              </SidebarProvider>
+                </SidebarProvider>
+              </CommandPaletteProvider>
             </KeyboardShortcutsProvider>
           </div>
         </div>
@@ -320,11 +322,11 @@ function renderAdminShellAtViewport({ width }: { width: 320 | 768 }) {
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
             <KeyboardShortcutsProvider>
-              <SidebarProvider className="h-full max-h-full flex-col">
-                <AdminHeader />
-                <div className="flex min-h-0 flex-1">
+              <CommandPaletteProvider>
+                <SidebarProvider className="h-full max-h-full">
                   <AppSidebar />
                   <SidebarInset className="min-w-0">
+                    <AdminHeader />
                     <main className="p-4 sm:p-6">
                       <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
                         <h1 className="font-semibold text-2xl">
@@ -337,8 +339,8 @@ function renderAdminShellAtViewport({ width }: { width: 320 | 768 }) {
                       </div>
                     </main>
                   </SidebarInset>
-                </div>
-              </SidebarProvider>
+                </SidebarProvider>
+              </CommandPaletteProvider>
             </KeyboardShortcutsProvider>
           </div>
         </div>
@@ -418,7 +420,9 @@ test("explorer route swaps the workspace nav for a drill-in rail", async () => {
   );
 
   // The rail footer stays available in explorer mode.
-  await expect.element(page.getByText("Collapse menu")).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Collapse sidebar" }))
+    .toBeVisible();
 });
 
 test("degraded mode banner starts after the desktop sidebar", async () => {
@@ -427,7 +431,9 @@ test("degraded mode banner starts after the desktop sidebar", async () => {
 
   const bannerText = "Meta-database unreachable. Running in degraded mode.";
   await expect.element(page.getByText(bannerText)).toBeVisible();
-  await expect.element(page.getByText("Collapse menu")).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Collapse sidebar" }))
+    .toBeVisible();
 
   const banner = document.querySelector("output");
   const sidebar = document.querySelector('[data-slot="sidebar-container"]');
@@ -449,17 +455,21 @@ test("degraded mode banner starts after the desktop sidebar", async () => {
 test("admin shell shows selected instance, database, scoped navigation, and actions", async () => {
   renderAdminShell();
 
-  await expect.element(page.getByText("Instance").first()).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: INSTANCE_SELECTOR_NAME }))
+    .toBeVisible();
   await expect
     .element(
       page.getByText("Production Analytics Writer With Long Display Name")
     )
     .toBeVisible();
   await expect
-    .element(page.getByText("customer_events_with_long_identifier"))
+    .element(page.getByText("customer_events_with_long_identifier").first())
     .toBeVisible();
   await expect.element(page.getByText("Database overview")).toBeVisible();
-  await expect.element(page.getByText("Collapse menu")).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Collapse sidebar" }))
+    .toBeVisible();
 
   const header = document.querySelector("header");
   expect(header).not.toBeNull();
@@ -504,7 +514,9 @@ test("keyboard shortcut help opens over the full admin layout", async () => {
 test("sidebar footer omits global settings", async () => {
   renderAdminShell();
 
-  await expect.element(page.getByText("Collapse menu")).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Collapse sidebar" }))
+    .toBeVisible();
   expect(document.querySelector('[aria-label="Settings"]')).toBeNull();
   await expect
     .element(page.getByRole("button", { name: "Settings" }))
@@ -521,7 +533,7 @@ test("admin header instance selector uses a rich empty state with a create actio
   adminHeaderMockState.selectedInstance = null;
   renderAdminShell();
 
-  await page.getByText("Instance").first().click();
+  await page.getByRole("button", { name: "Select instance" }).click();
 
   await expect
     .element(page.getByRole("heading", { name: "No instances found" }))
@@ -546,7 +558,7 @@ test("admin header routes unreadable credentials to credential recovery", async 
   adminHeaderMockState.selectedInstance = null;
   renderAdminShell();
 
-  await page.getByText("Instance").first().click();
+  await page.getByRole("button", { name: "Select instance" }).click();
   await expect
     .element(page.getByText("Credentials need attention"))
     .toBeVisible();
@@ -561,7 +573,7 @@ test("admin header routes unreadable credentials to credential recovery", async 
 test("admin header keeps the disabled register instance tooltip open while hovered", async () => {
   renderAdminShell();
 
-  await page.getByText("Instance").first().click();
+  await page.getByRole("button", { name: INSTANCE_SELECTOR_NAME }).click();
   const registerInstanceText = page.getByText("Register instance");
   const registerInstanceItem = registerInstanceText
     .element()
@@ -616,7 +628,9 @@ test("admin shell tablet viewport keeps compact header without desktop sidebar",
   await expect
     .element(page.getByText("customer_events_with_long_identifier"))
     .toBeVisible();
-  await expect.element(page.getByText("Collapse menu")).not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("button", { name: "Collapse sidebar" }))
+    .not.toBeInTheDocument();
   await expect
     .element(page.getByTestId("admin-shell-visual-root-768"))
     .toMatchScreenshot("admin-shell-tablet-compact");

@@ -35,7 +35,6 @@ import {
   ObjectDetailTabTrigger,
 } from "@/features/data-explorer/object-detail-chrome";
 import { OBJECT_DETAIL_PANEL_PADDED_CLASS } from "@/features/data-explorer/object-detail-panel-classes";
-import { OtherDatabaseObjectsSection } from "@/features/data-explorer/other-database-objects-section";
 import type { SchemaDetailTab } from "@/features/data-explorer/schema-detail-tab";
 import type { catalogSyncNotice } from "@/features/data-explorer/use-data-explorer-state";
 import {
@@ -459,13 +458,6 @@ function hasSchemaLoadError(
   return Boolean(tablesError || viewsError);
 }
 
-function canLoadOtherDatabaseObjects(
-  databaseId: string,
-  instanceId: string
-): boolean {
-  return databaseId.length > 0 && instanceId.length > 0;
-}
-
 function SchemaDetailNotices({
   hasObjectsError,
   tablesSyncNotice,
@@ -621,24 +613,16 @@ function SchemaDetail({
           className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
           value="objects"
         >
-          <div className="space-y-6">
-            {isLoading ? (
-              <SchemaObjectsLoading />
-            ) : (
-              <SchemaObjectsTable
-                onSelectTable={onSelectTable}
-                onSelectView={onSelectView}
-                tables={tables}
-                views={views}
-              />
-            )}
-            {canLoadOtherDatabaseObjects(databaseId, instanceId) ? (
-              <OtherDatabaseObjectsSection
-                databaseId={databaseId}
-                instanceId={instanceId}
-              />
-            ) : null}
-          </div>
+          {isLoading ? (
+            <SchemaObjectsLoading />
+          ) : (
+            <SchemaObjectsTable
+              onSelectTable={onSelectTable}
+              onSelectView={onSelectView}
+              tables={tables}
+              views={views}
+            />
+          )}
         </TabsContent>
         <TabsContent
           className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4"

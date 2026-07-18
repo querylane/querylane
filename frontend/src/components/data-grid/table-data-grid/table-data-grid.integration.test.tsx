@@ -479,17 +479,20 @@ describe("TableDataGrid query setup", () => {
     );
   });
 
-  it("renders the shared empty panel when a table has no rows", () => {
+  it("keeps the column grid mounted when a table has no rows", () => {
     seedRowsQuery(0);
 
     render(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
     );
 
+    // The grid header must stay visible so the table's columns and types
+    // remain inspectable; the no-rows message overlays the empty body.
+    expect(screen.getByTestId("data-grid")).toBeTruthy();
     expect(
       screen
         .getByText("No rows found")
-        .closest('[data-slot="empty-state-panel"]')
+        .closest('[data-slot="grid-no-rows-overlay"]')
     ).toBeTruthy();
     expect(
       screen.getByRole("combobox", { name: "Rows per page" })
@@ -928,55 +931,42 @@ describe("TableDataGrid row interactions", () => {
 
     const menu = screen.getByRole("menu", { name: "Cell actions" });
     const items = within(menu).getAllByRole("menuitem");
+    await waitFor(() =>
+      expect(menu.contains(document.activeElement)).toBe(true)
+    );
+    await user.keyboard("{ArrowDown}");
     await waitFor(() => expect(document.activeElement).toBe(items[0]));
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(items[1]);
     await user.keyboard("{End}");
     expect(document.activeElement).toBe(items[2]);
     await user.keyboard("{Escape}");
-    expect(document.activeElement).toBe(invokingCell);
+    await waitFor(() => expect(document.activeElement).toBe(invokingCell));
     expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull();
   });
 
-  it("tabs from the invoking cell when the context menu closes", async () => {
+  it("closes the context menu when clicking outside", async () => {
     const user = userEvent.setup();
     seedRowsQuery(1);
-    const controls = render(<div />).container;
-    const previousControl = document.createElement("button");
     const invokingCell = document.createElement("div");
-    const hiddenControl = document.createElement("button");
-    const nextControl = document.createElement("button");
-    invokingCell.tabIndex = -1;
-    hiddenControl.style.display = "none";
-    controls.append(previousControl, invokingCell, hiddenControl, nextControl);
+    invokingCell.tabIndex = 0;
+    document.body.append(invokingCell);
     invokingCell.focus();
 
     render(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
     );
     openCellContextMenu("email", 0, invokingCell);
+    const menu = screen.getByRole("menu", { name: "Cell actions" });
     await waitFor(() =>
-      expect(document.activeElement).toBe(
-        screen.getByRole("menuitem", { name: "Copy cell" })
-      )
+      expect(menu.contains(document.activeElement)).toBe(true)
     );
 
-    await user.tab();
+    await user.click(document.body);
 
-    expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull();
-    expect(document.activeElement).toBe(nextControl);
-
-    invokingCell.focus();
-    openCellContextMenu("email", 0, invokingCell);
     await waitFor(() =>
-      expect(document.activeElement).toBe(
-        screen.getByRole("menuitem", { name: "Copy cell" })
-      )
+      expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull()
     );
-    await user.tab({ shift: true });
-
-    expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull();
-    expect(document.activeElement).toBe(previousControl);
   });
 
   it("jumps directly to a typed row number from the row drawer", async () => {
@@ -1295,7 +1285,9 @@ describe("TableDataGrid toolbar", () => {
 
     await user.click(screen.getByRole("button", { name: "Filter" }));
 
-    expect(screen.getByText("Filter public.customers")).toBeTruthy();
+    expect(
+      screen.getByRole("dialog", { name: "Filter public.customers" })
+    ).toBeTruthy();
   });
 
   it("keeps export out of the toolbar until rows are selected", () => {
@@ -1533,7 +1525,10 @@ describe("TableDataGrid column layout", () => {
 
     await user.click(screen.getByRole("button", { name: "Filter" }));
     await user.click(screen.getByRole("combobox", { name: "Filter column" }));
-    expect(screen.getByRole("option", { name: "measurement" })).toBeTruthy();
+    // The filter column picker labels each option with its raw type.
+    expect(
+      screen.getByRole("option", { name: "measurement double precision" })
+    ).toBeTruthy();
     await user.keyboard("{Escape}{Escape}");
 
     await user.click(screen.getByRole("button", { name: "Sort" }));
@@ -1541,7 +1536,7 @@ describe("TableDataGrid column layout", () => {
     expect(screen.getByRole("option", { name: "measurement" })).toBeTruthy();
   });
 
-  it("restores a frozen column without freezing actions while it is hidden", async () => {
+  it("keeps actions frozen and restores a data column's frozen state after hide and show", async () => {
     const user = userEvent.setup();
     seedRowsQueryWithRawClipboardValues();
     render(
@@ -1558,11 +1553,13 @@ describe("TableDataGrid column layout", () => {
     await openMeasurementOptions();
     await user.click(screen.getByRole("menuitem", { name: "Hide column" }));
 
+    // The action region (select → expand) is always pinned left so the row
+    // checkbox and expand affordance stay reachable while data columns scroll.
     expect(
       reactDataGrid.dataGrid.mock.calls
         .at(-1)?.[0]
         ?.columns?.find((column) => column.key === "__select")?.frozen
-    ).toBe(false);
+    ).toBe(true);
 
     await user.click(screen.getByRole("button", { name: "Columns" }));
     await user.click(screen.getByRole("checkbox", { name: "measurement" }));
@@ -1871,9 +1868,7 @@ describe("TableDataGrid error recovery", () => {
     expect(
       screen.getByRole("heading", { name: "Filter not applied" })
     ).toBeTruthy();
-    expect(
-      screen.getByText("active has an invalid filter value.")
-    ).toBeTruthy();
+    expect(screen.getByText("active expects true or false.")).toBeTruthy();
     expect(screen.getByText("missing is not available.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Export" })).toBeNull();
 

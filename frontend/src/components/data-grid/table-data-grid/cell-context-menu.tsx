@@ -1,8 +1,9 @@
 import { Copy, FileCode2, Rows3 } from "lucide-react";
-import { type KeyboardEvent, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 interface CellContextMenuProps {
   left: number;
@@ -12,43 +13,6 @@ interface CellContextMenuProps {
   onCopyRowAsSql: () => void;
   returnFocusTo: HTMLElement;
   top: number;
-}
-const MENU_ITEM_SELECTOR = "[role=menuitem]";
-
-function isFocusableCandidate(
-  candidate: HTMLElement,
-  menu: HTMLDivElement | null
-): boolean {
-  const style = getComputedStyle(candidate);
-  return (
-    candidate.tabIndex >= 0 &&
-    !candidate.matches(":disabled") &&
-    !candidate.closest("[hidden], [inert]") &&
-    style.display !== "none" &&
-    style.visibility !== "hidden" &&
-    !menu?.contains(candidate)
-  );
-}
-
-function findNextFocusableElement(
-  backward: boolean,
-  returnFocusTo: HTMLElement,
-  menu: HTMLDivElement | null
-): HTMLElement {
-  const elements = Array.from(document.querySelectorAll<HTMLElement>("*"));
-  const direction = backward ? -1 : 1;
-  const invokingIndex = elements.indexOf(returnFocusTo);
-  for (
-    let index = invokingIndex + direction;
-    index >= 0 && index < elements.length;
-    index += direction
-  ) {
-    const candidate = elements[index];
-    if (candidate && isFocusableCandidate(candidate, menu)) {
-      return candidate;
-    }
-  }
-  return returnFocusTo;
 }
 
 function CellContextMenu({
@@ -60,153 +24,52 @@ function CellContextMenu({
   returnFocusTo,
   top,
 }: CellContextMenuProps) {
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  function menuItems() {
-    return Array.from(
-      menuRef.current?.querySelectorAll<HTMLButtonElement>(
-        MENU_ITEM_SELECTOR
-      ) ?? []
-    );
-  }
-
-  function closeAndRestoreFocus() {
-    returnFocusTo.focus();
-    onClose();
-  }
-
-  function closeAndMoveFocus(backward: boolean) {
-    const next = findNextFocusableElement(
-      backward,
-      returnFocusTo,
-      menuRef.current
-    );
-    onClose();
-    next.focus();
-  }
-
-  function handleMenuKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const items = menuItems();
-    const activeElement =
-      document.activeElement instanceof HTMLButtonElement
-        ? document.activeElement
-        : null;
-    const currentIndex = activeElement ? items.indexOf(activeElement) : -1;
-    let nextIndex: number | undefined;
-    switch (event.key) {
-      case "ArrowDown":
-        nextIndex = (currentIndex + 1) % items.length;
-        break;
-      case "ArrowUp":
-        nextIndex = (currentIndex - 1 + items.length) % items.length;
-        break;
-      case "Home":
-        nextIndex = 0;
-        break;
-      case "End":
-        nextIndex = items.length - 1;
-        break;
-      case "Escape":
-        event.preventDefault();
-        closeAndRestoreFocus();
-        return;
-      case "Tab":
-        event.preventDefault();
-        closeAndMoveFocus(event.shiftKey);
-        return;
-      default:
-        return;
-    }
-    event.preventDefault();
-    items[nextIndex]?.focus();
-  }
-
-  useEffect(function focusFirstMenuItem() {
-    menuRef.current
-      ?.querySelector<HTMLButtonElement>(MENU_ITEM_SELECTOR)
-      ?.focus();
-  }, []);
-
-  useEffect(
-    function bindOutsideHandlers() {
-      function handleMouseDown(event: MouseEvent) {
-        const target = event.target as Node | null;
-        if (target && menuRef.current?.contains(target)) {
-          return;
+  // Point anchor at the right-click position; Base UI's positioner keeps the
+  // menu inside the viewport (flip/shift) near window edges.
+  const anchor = {
+    getBoundingClientRect: () => ({
+      bottom: top,
+      height: 0,
+      left,
+      right: left,
+      top,
+      width: 0,
+      x: left,
+      y: top,
+    }),
+  };
+  return (
+    <DropdownMenu
+      modal={false}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
         }
-        onClose();
-      }
-      document.addEventListener("mousedown", handleMouseDown);
-      return () => {
-        document.removeEventListener("mousedown", handleMouseDown);
-      };
-    },
-    [onClose]
-  );
-  return createPortal(
-    <div
-      aria-label="Cell actions"
-      className={cn(
-        "fixed z-50 flex min-w-[160px] flex-col overflow-hidden",
-        "rounded-md border bg-popover p-1 text-popover-foreground text-sm",
-        "shadow-md ring-1 ring-foreground/10"
-      )}
-      onKeyDown={handleMenuKeyDown}
-      ref={menuRef}
-      role="menu"
-      style={{
-        left,
-        top,
       }}
-      tabIndex={-1}
+      open={true}
     >
-      <Button
-        className="h-7 justify-start gap-2 px-2 text-xs"
-        onClick={() => {
-          onCopyCell();
-          closeAndRestoreFocus();
-        }}
-        role="menuitem"
-        size="sm"
-        tabIndex={-1}
-        type="button"
-        variant="ghost"
+      <DropdownMenuContent
+        align="start"
+        anchor={anchor}
+        aria-label="Cell actions"
+        className="w-auto min-w-40"
+        finalFocus={() => returnFocusTo}
+        sideOffset={0}
       >
-        <Copy className="size-3.5" />
-        Copy cell
-      </Button>
-      <Button
-        className="h-7 justify-start gap-2 px-2 text-xs"
-        onClick={() => {
-          onCopyRow();
-          closeAndRestoreFocus();
-        }}
-        role="menuitem"
-        size="sm"
-        tabIndex={-1}
-        type="button"
-        variant="ghost"
-      >
-        <Rows3 className="size-3.5" />
-        Copy row
-      </Button>
-      <Button
-        className="h-7 justify-start gap-2 px-2 text-xs"
-        onClick={() => {
-          onCopyRowAsSql();
-          closeAndRestoreFocus();
-        }}
-        role="menuitem"
-        size="sm"
-        tabIndex={-1}
-        type="button"
-        variant="ghost"
-      >
-        <FileCode2 className="size-3.5" />
-        Copy row as INSERT
-      </Button>
-    </div>,
-    document.body
+        <DropdownMenuItem className="gap-2 text-xs" onClick={onCopyCell}>
+          <Copy className="size-3.5" />
+          Copy cell
+        </DropdownMenuItem>
+        <DropdownMenuItem className="gap-2 text-xs" onClick={onCopyRow}>
+          <Rows3 className="size-3.5" />
+          Copy row
+        </DropdownMenuItem>
+        <DropdownMenuItem className="gap-2 text-xs" onClick={onCopyRowAsSql}>
+          <FileCode2 className="size-3.5" />
+          Copy row as INSERT
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

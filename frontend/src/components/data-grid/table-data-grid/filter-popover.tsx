@@ -1,32 +1,22 @@
-import { Funnel } from "lucide-react";
-import { useReducer } from "react";
+import { Funnel, Plus } from "lucide-react";
+import { useEffect, useEffectEvent, useReducer } from "react";
 import { DataGridPopoverContent } from "@/components/data-grid/table-data-grid/data-grid-popover-content";
-import { FilterErrors } from "@/components/data-grid/table-data-grid/filter-popover-errors";
 import { RulesEditor } from "@/components/data-grid/table-data-grid/filter-popover-rules-editor";
-import { SqlWhereEditor } from "@/components/data-grid/table-data-grid/filter-popover-sql-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   createFilterRule,
   getInvalidFilterRules,
   isFilterLogic,
   isIncompleteFilterRule,
   MAX_FILTER_RULES,
-  parseSqlWhereFilter,
-  serializeSqlWhereFilterRules,
   type TableFilterLogic,
   type TableFilterRule,
 } from "@/features/data-explorer/table-data/filter-state";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 const DEFAULT_FILTER_LOGIC: TableFilterLogic = "and";
-
-type FilterPopoverMode = "rules" | "sql";
-
-const UNSUPPORTED_SQL_RULES_MESSAGE =
-  "Current rules cannot be represented in SQL WHERE. Enter a new SQL WHERE clause or return to Rules.";
 
 interface FilterPopoverProps {
   columns: TableResultColumn[];
@@ -38,13 +28,10 @@ interface FilterPopoverProps {
 }
 
 interface FilterPopoverState {
+  applyRequested: boolean;
   draftLogic: TableFilterLogic;
-  draftMode: FilterPopoverMode;
   draftRules: TableFilterRule[];
-  errors: Array<{ id: string; message: string }>;
-  hasUnsupportedSqlRules: boolean;
   open: boolean;
-  sqlWhere: string;
 }
 
 function mergeFilterPopoverState(
@@ -52,10 +39,6 @@ function mergeFilterPopoverState(
   patch: Partial<FilterPopoverState>
 ): FilterPopoverState {
   return { ...state, ...patch };
-}
-
-function isFilterPopoverMode(value: string): value is FilterPopoverMode {
-  return value === "rules" || value === "sql";
 }
 
 function FilterPopover({
@@ -67,28 +50,24 @@ function FilterPopover({
   title = "Filter rows",
 }: FilterPopoverProps) {
   const [state, updateState] = useReducer(mergeFilterPopoverState, {
+    applyRequested: false,
     draftLogic: DEFAULT_FILTER_LOGIC,
-    draftMode: "rules",
     draftRules: rules,
-    errors: [],
-    hasUnsupportedSqlRules: false,
     open: false,
-    sqlWhere: "",
   });
-  const {
-    draftLogic,
-    draftMode,
-    draftRules,
-    errors,
-    hasUnsupportedSqlRules,
-    open,
-    sqlWhere,
-  } = state;
+  const { applyRequested, draftLogic, draftRules, open } = state;
   const selectedLogic = isFilterLogic(logic) ? logic : DEFAULT_FILTER_LOGIC;
   const canAdd = columns.length > 0 && draftRules.length < MAX_FILTER_RULES;
+  // Validated live against the committed drafts (which trail typing by the
+  // row debounce) so guidance appears as values settle, not per keystroke.
+  const invalidMessages = new Map(
+    getInvalidFilterRules(draftRules, columns).map((rule) => [
+      rule.id,
+      rule.message,
+    ])
+  );
 
   function resetDraftsFromCommitted() {
-    const serializedSqlWhere = serializeSqlWhereFilterRules(rules);
     const firstColumn = columns[0]?.columnName;
     updateState({
       draftLogic: selectedLogic,
@@ -96,11 +75,7 @@ function FilterPopover({
         rules.length > 0 || !firstColumn
           ? rules
           : [createFilterRule(firstColumn)],
-      errors: [],
-      hasUnsupportedSqlRules:
-        serializedSqlWhere === undefined && rules.length > 0,
       open: true,
-      sqlWhere: serializedSqlWhere ?? "",
     });
   }
 
@@ -119,13 +94,13 @@ function FilterPopover({
       return;
     }
     next[index] = { ...current, ...patch };
-    updateState({ draftRules: next, errors: [] });
+    updateState({ draftRules: next });
   }
 
   function removeAt(index: number) {
     const next = draftRules.slice();
     next.splice(index, 1);
-    updateState({ draftRules: next, errors: [] });
+    updateState({ draftRules: next });
   }
 
   function addRule() {
@@ -135,15 +110,7 @@ function FilterPopover({
     }
     updateState({
       draftRules: [...draftRules, createFilterRule(firstColumn)],
-      errors: [],
     });
-  }
-
-  function commitFilterState(next: {
-    logic: TableFilterLogic;
-    rules: TableFilterRule[];
-  }) {
-    onChange(next.rules, next.logic);
   }
 
   function clearFilters() {
@@ -151,71 +118,44 @@ function FilterPopover({
     updateState({
       draftLogic: DEFAULT_FILTER_LOGIC,
       draftRules: firstColumn ? [createFilterRule(firstColumn)] : [],
-      errors: [],
-      hasUnsupportedSqlRules: false,
-      sqlWhere: "",
     });
-    commitFilterState({ logic: DEFAULT_FILTER_LOGIC, rules: [] });
-  }
-
-  function ruleValidationErrors(
-    nextRules: TableFilterRule[]
-  ): Array<{ id: string; message: string }> {
-    return getInvalidFilterRules(nextRules, columns).map((rule) => ({
-      id: rule.id,
-      message: rule.message,
-    }));
+    onChange([], DEFAULT_FILTER_LOGIC);
   }
 
   function applyRules() {
-    const completeRules = draftRules.filter(
-      (rule) => !isIncompleteFilterRule(rule)
+    // Freshly added rows that never got a value are dropped, but a committed
+    // rule whose value was emptied mid-edit is kept (it contributes no
+    // predicate until refilled) instead of being silently deleted.
+    const committedIds = new Set(rules.map((rule) => rule.id));
+    const nextRules = draftRules.filter(
+      (rule) => !isIncompleteFilterRule(rule) || committedIds.has(rule.id)
     );
-    const nextErrors = ruleValidationErrors(completeRules);
-    if (nextErrors.length > 0) {
-      updateState({ errors: nextErrors });
+    // Inline row messages already explain the problem; keep the popover open
+    // until every complete rule parses.
+    if (getInvalidFilterRules(nextRules, columns).length > 0) {
       return;
     }
-    commitFilterState({ logic: draftLogic, rules: completeRules });
+    onChange(nextRules, draftLogic);
     updateState({ open: false });
   }
 
-  function applySqlWhere() {
-    const parsed = parseSqlWhereFilter(sqlWhere);
-    if (!parsed.ok) {
-      updateState({
-        errors: [{ id: "sql-where-parse", message: parsed.error }],
-      });
-      return;
-    }
-    const nextErrors = ruleValidationErrors(parsed.rules);
-    if (nextErrors.length > 0) {
-      updateState({ errors: nextErrors });
-      return;
-    }
-    updateState({
-      draftLogic: DEFAULT_FILTER_LOGIC,
-      draftRules: parsed.rules,
-      open: false,
-    });
-    commitFilterState({ logic: DEFAULT_FILTER_LOGIC, rules: parsed.rules });
-  }
-
-  function applyCurrentDraft() {
-    if (draftMode === "sql") {
-      applySqlWhere();
-      return;
-    }
-    applyRules();
-  }
-
-  const invalidDraftRuleIds = new Set(
-    getInvalidFilterRules(draftRules, columns).map((rule) => rule.id)
+  // Apply runs one render after it is requested so that row value drafts
+  // committed in the same event (Enter in a value input) are visible here.
+  const runRequestedApply = useEffectEvent(applyRules);
+  useEffect(
+    function applyAfterDraftCommit() {
+      if (!applyRequested) {
+        return;
+      }
+      updateState({ applyRequested: false });
+      runRequestedApply();
+    },
+    [applyRequested]
   );
-  const draftConditionCount = draftRules.filter(
-    (rule) =>
-      !(isIncompleteFilterRule(rule) || invalidDraftRuleIds.has(rule.id))
-  ).length;
+
+  function requestApply() {
+    updateState({ applyRequested: true });
+  }
 
   return (
     <Popover onOpenChange={handleOpenChange} open={open}>
@@ -238,77 +178,36 @@ function FilterPopover({
       <DataGridPopoverContent
         align="start"
         aria-label={title}
-        className="w-[min(38.75rem,var(--available-width))] max-w-[calc(100vw-2rem)] gap-0 overflow-hidden rounded-xl border-border bg-popover p-0 shadow-lg"
+        className="w-[min(36rem,var(--available-width))] max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0"
         collisionBoundary={popoverBoundary ?? undefined}
       >
-        <Tabs
-          className="gap-0"
-          onValueChange={(next) => {
-            if (isFilterPopoverMode(next)) {
-              updateState({
-                draftMode: next,
-                errors:
-                  next === "sql" && hasUnsupportedSqlRules
-                    ? [
-                        {
-                          id: "unsupported-sql-rules",
-                          message: UNSUPPORTED_SQL_RULES_MESSAGE,
-                        },
-                      ]
-                    : [],
-              });
-            }
-          }}
-          value={draftMode}
-        >
-          <div className="flex items-center justify-between gap-3 border-b px-3.5 py-2.5">
-            <span className="min-w-0 truncate font-semibold text-xs">
-              {title}
-            </span>
-            <TabsList className="h-8 rounded-lg bg-muted p-0.5">
-              <TabsTrigger className="px-2.5 text-xs" value="rules">
-                Rules
-              </TabsTrigger>
-              <TabsTrigger className="px-2.5 text-xs" value="sql">
-                SQL WHERE
-              </TabsTrigger>
-            </TabsList>
-          </div>
+        <div className="p-2">
+          <RulesEditor
+            columns={columns}
+            invalidMessages={invalidMessages}
+            logic={draftLogic}
+            onApplyRequest={requestApply}
+            onLogicChange={(next) => updateState({ draftLogic: next })}
+            onRemoveRule={removeAt}
+            onUpdateRule={updateAt}
+            rules={draftRules}
+          />
+        </div>
 
-          <TabsContent className="m-0 p-3.5" value="rules">
-            <RulesEditor
-              canAdd={canAdd}
-              columns={columns}
-              logic={draftLogic}
-              onAddRule={addRule}
-              onLogicChange={(next) => updateState({ draftLogic: next })}
-              onRemoveRule={removeAt}
-              onUpdateRule={updateAt}
-              rules={draftRules}
-            />
-          </TabsContent>
-          <TabsContent className="m-0 p-3.5" value="sql">
-            <SqlWhereEditor
-              onChange={(next) => {
-                updateState({
-                  errors: [],
-                  hasUnsupportedSqlRules: false,
-                  sqlWhere: next,
-                });
-              }}
-              value={sqlWhere}
-            />
-          </TabsContent>
-
-          <FilterErrors errors={errors} />
-
-          <div className="flex items-center justify-between gap-4 border-t px-3.5 py-2.5">
-            <span className="text-[11px] text-muted-foreground">
-              {draftConditionCount === 0
-                ? "No conditions yet"
-                : `${draftConditionCount.toLocaleString()} ${draftConditionCount === 1 ? "condition" : "conditions"}`}
-            </span>
-            <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 border-t px-2 py-1.5">
+          <Button
+            aria-label="Add filter"
+            disabled={!canAdd}
+            onClick={addRule}
+            size="sm"
+            type="button"
+            variant="ghost"
+          >
+            <Plus data-icon="inline-start" />
+            Add rule
+          </Button>
+          <div className="flex items-center gap-1.5">
+            {rules.length > 0 ? (
               <Button
                 onClick={clearFilters}
                 size="sm"
@@ -317,17 +216,12 @@ function FilterPopover({
               >
                 Clear
               </Button>
-              <Button
-                disabled={draftMode === "sql" && hasUnsupportedSqlRules}
-                onClick={applyCurrentDraft}
-                size="sm"
-                type="button"
-              >
-                Apply
-              </Button>
-            </div>
+            ) : null}
+            <Button onClick={requestApply} size="sm" type="button">
+              Apply
+            </Button>
           </div>
-        </Tabs>
+        </div>
       </DataGridPopoverContent>
     </Popover>
   );

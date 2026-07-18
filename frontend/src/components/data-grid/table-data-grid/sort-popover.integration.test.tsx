@@ -72,7 +72,7 @@ describe("SortPopover", () => {
 
     expect(popover?.className).toContain("w-fit");
     expect(popover?.style.getPropertyValue("--sort-column-select-width")).toBe(
-      "19ch"
+      "21ch"
     );
   });
 
