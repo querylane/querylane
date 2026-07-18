@@ -2,7 +2,7 @@
 
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
-import { createContext, use, useMemo, useState } from "react";
+import { createContext, use, useState } from "react";
 import {
   Command,
   CommandDialog,
@@ -453,10 +453,9 @@ function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
     setOpen((currentOpen) => !currentOpen)
   );
 
-  const controller = useMemo<CommandPaletteController>(
-    () => ({ openPalette: () => setOpen(true) }),
-    []
-  );
+  const controller: CommandPaletteController = {
+    openPalette: () => setOpen(true),
+  };
 
   return (
     <CommandPaletteContext.Provider value={controller}>
