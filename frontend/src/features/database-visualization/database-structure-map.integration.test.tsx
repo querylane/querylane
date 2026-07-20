@@ -146,12 +146,16 @@ describe("DatabaseStructureMap", () => {
         name: "Switch to vertical",
       })
     ).toBeTruthy();
-    expect(
-      within(canvasControls).getByRole("button", { name: "Current schema" })
-    ).toBeTruthy();
-    expect(
-      within(canvasControls).getByRole("button", { name: "Load full map" })
-    ).toBeTruthy();
+    const currentSchemaButton = within(canvasControls).getByRole("button", {
+      name: "Current schema",
+    });
+    const fullMapButton = within(canvasControls).getByRole("button", {
+      name: "Full map",
+    });
+    expect(currentSchemaButton).toHaveProperty("disabled", false);
+    expect(currentSchemaButton.getAttribute("aria-pressed")).toBe("false");
+    expect(fullMapButton).toHaveProperty("disabled", false);
+    expect(fullMapButton.getAttribute("aria-pressed")).toBe("true");
     expect(
       within(canvasControls).getByRole("button", {
         name: "Expand database map",

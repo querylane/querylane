@@ -267,8 +267,8 @@ function DatabaseMapCanvasActions({
   direction,
   hiddenNodeKindCount,
   isExpanded,
-  isFullMapDisabled,
-  isSelectedSchemaDisabled,
+  isFullMapActive,
+  isSelectedSchemaActive,
   onCollapse,
   onExpand,
   onShowCurrentSchema,
@@ -281,8 +281,8 @@ function DatabaseMapCanvasActions({
   direction: VisualizationDirection;
   hiddenNodeKindCount: number;
   isExpanded: boolean;
-  isFullMapDisabled: boolean;
-  isSelectedSchemaDisabled: boolean;
+  isFullMapActive: boolean;
+  isSelectedSchemaActive: boolean;
   onCollapse: () => void;
   onExpand: () => void;
   onShowCurrentSchema: () => void;
@@ -305,24 +305,29 @@ function DatabaseMapCanvasActions({
       >
         Switch to {direction === "LR" ? "vertical" : "horizontal"}
       </Button>
-      <Button
-        disabled={isSelectedSchemaDisabled}
-        onClick={onShowCurrentSchema}
-        size="sm"
-        type="button"
-        variant="outline"
+      <div
+        className="inline-flex items-center gap-0.5 rounded-md bg-muted/40 p-0.5"
+        data-slot="button-group"
       >
-        Current schema
-      </Button>
-      <Button
-        disabled={isFullMapDisabled}
-        onClick={onShowFullMap}
-        size="sm"
-        type="button"
-        variant="outline"
-      >
-        Load full map
-      </Button>
+        <Button
+          aria-pressed={isSelectedSchemaActive}
+          onClick={onShowCurrentSchema}
+          size="sm"
+          type="button"
+          variant={isSelectedSchemaActive ? "secondary" : "ghost"}
+        >
+          Current schema
+        </Button>
+        <Button
+          aria-pressed={isFullMapActive}
+          onClick={onShowFullMap}
+          size="sm"
+          type="button"
+          variant={isFullMapActive ? "secondary" : "ghost"}
+        >
+          Full map
+        </Button>
+      </div>
       <Popover>
         <PopoverTrigger
           render={
@@ -586,8 +591,8 @@ function DatabaseStructureMap({
       direction={direction}
       hiddenNodeKindCount={hiddenNodeKindCount}
       isExpanded={false}
-      isFullMapDisabled={effectiveDetailScope === "all"}
-      isSelectedSchemaDisabled={
+      isFullMapActive={effectiveDetailScope === "all"}
+      isSelectedSchemaActive={
         effectiveDetailScope === "selected-schema" && !isResourceFocusEnabled
       }
       onCollapse={() => setIsMapExpanded(false)}
@@ -605,8 +610,8 @@ function DatabaseStructureMap({
       direction={direction}
       hiddenNodeKindCount={hiddenNodeKindCount}
       isExpanded={true}
-      isFullMapDisabled={effectiveDetailScope === "all"}
-      isSelectedSchemaDisabled={
+      isFullMapActive={effectiveDetailScope === "all"}
+      isSelectedSchemaActive={
         effectiveDetailScope === "selected-schema" && !isResourceFocusEnabled
       }
       onCollapse={() => setIsMapExpanded(false)}

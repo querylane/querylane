@@ -1102,7 +1102,7 @@ test("backend instance activity matches the live sessions redesign", async () =>
   await expect.element(page.getByText("blocked by · pid 4211")).toBeVisible();
   await expect
     .element(page.getByRole("button", { name: "Terminate session…" }))
-    .toBeDisabled();
+    .not.toBeInTheDocument();
   await document.fonts.ready;
   await expect(inspector).toMatchScreenshot(
     "backend-instance-activity-inspector"

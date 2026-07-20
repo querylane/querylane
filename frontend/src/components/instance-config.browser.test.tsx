@@ -176,7 +176,11 @@ test("config-managed instance configuration disables edits while preserving deta
   );
 
   await expect
-    .element(page.getByText("Connection details registered for this instance."))
+    .element(
+      page.getByText(
+        "Connection details are read-only because this instance is managed in the server configuration file. Update that file and restart Querylane to make changes."
+      )
+    )
     .toBeVisible();
   await expect.element(page.getByLabelText("Username")).toBeDisabled();
   await expect.element(page.getByText("Labels")).toBeVisible();
