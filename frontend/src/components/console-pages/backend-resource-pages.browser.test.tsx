@@ -928,9 +928,7 @@ async function openQueryInsightsDrawer(
     />
   );
 
-  await page
-    .getByRole("button", { name: "Query insights", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Insights", exact: true }).click();
   return page.getByRole("dialog", { name: "Query insights" });
 }
 
@@ -1274,6 +1272,46 @@ test("backend database overview shows mission control stats and catalog tables",
   );
 });
 
+test("disabled Insights explains why statistics are unavailable", async () => {
+  state.databaseQuery = { data: databaseResponse() };
+  state.catalogQuery = { data: catalogResult() };
+  const response = queryInsightsWithoutQueryStatsResponse();
+  const insights = response.queryInsights;
+  if (!insights) {
+    throw new Error("Expected query insights fixture");
+  }
+  insights.sequentialScanHotspots = [];
+  insights.tableCacheHits = [];
+  insights.tableStatsAvailable = false;
+  state.queryInsightsQuery = { data: response };
+
+  render(
+    <BackendDatabasePage
+      databaseId="customer-events"
+      instanceId="prod"
+      section="overview"
+    />
+  );
+
+  const button = page.getByRole("button", { name: "Insights", exact: true });
+  await expect.element(button).toBeDisabled();
+  const tooltipTrigger = button
+    .element()
+    .closest("[data-base-ui-tooltip-trigger]");
+  if (!(tooltipTrigger instanceof HTMLElement)) {
+    throw new Error("Expected Insights tooltip trigger");
+  }
+
+  await page.elementLocator(tooltipTrigger).hover();
+  await expect
+    .element(
+      page.getByText(
+        "Insights are unavailable because PostgreSQL query and table statistics cannot be queried. Install pg_stat_statements or grant statistics access, then refresh."
+      )
+    )
+    .toBeVisible();
+});
+
 test("backend database overview opens the query insights drawer", async () => {
   state.databaseQuery = { data: databaseResponse() };
   state.catalogQuery = { data: catalogResult() };
@@ -1294,9 +1332,7 @@ test("backend database overview opens the query insights drawer", async () => {
   await expect
     .element(page.getByText("Top queries by total time"))
     .not.toBeInTheDocument();
-  await page
-    .getByRole("button", { name: "Query insights", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Insights", exact: true }).click();
 
   const drawer = page.getByRole("dialog", { name: "Query insights" });
   await expect.element(drawer).toBeVisible();

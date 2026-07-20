@@ -797,7 +797,7 @@ describe("backend database overview", () => {
     expect(screen.queryByText(HEADER_COUNTS_RE)).toBeNull();
     expect(screen.getByText("data-platform")).toBeTruthy();
     expect(screen.getByText(ENCODING_RE)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Query insights" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Insights" })).toBeTruthy();
     expect(screen.getByText("Data explorer")).toBeTruthy();
 
     // Stat strip
@@ -965,7 +965,7 @@ describe("backend database overview", () => {
     expect(screen.queryByText("Top queries by total time")).toBeNull();
 
     const trigger = screen.getByRole("button", {
-      name: "Query insights",
+      name: "Insights",
     });
     await user.click(trigger);
 
@@ -1020,7 +1020,7 @@ describe("backend database overview", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: "Query insights" }));
+    await user.click(screen.getByRole("button", { name: "Insights" }));
     expect(
       await screen.findByRole("dialog", { name: "Query insights" })
     ).toBeTruthy();
@@ -1038,6 +1038,38 @@ describe("backend database overview", () => {
         screen.queryByRole("dialog", { name: "Query insights" })
       ).toBeNull()
     );
+  });
+
+  test("disables Insights only when every insight source is unavailable", () => {
+    state.queryInsightsQuery = {
+      data: queryInsightsWithoutQueryStatsResponse(),
+    };
+    const { rerender } = render(
+      <BackendDatabasePage
+        databaseId="customer-events"
+        instanceId="prod"
+        section="overview"
+      />
+    );
+
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", { name: "Insights" })
+        .disabled
+    ).toBe(false);
+
+    state.queryInsightsQuery = { data: unavailableQueryInsightsResponse() };
+    rerender(
+      <BackendDatabasePage
+        databaseId="customer-events"
+        instanceId="prod"
+        section="overview"
+      />
+    );
+
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", { name: "Insights" })
+        .disabled
+    ).toBe(true);
   });
 });
 

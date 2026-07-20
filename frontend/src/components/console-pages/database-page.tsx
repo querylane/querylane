@@ -17,7 +17,8 @@ import {
 import { DatabaseQueryInsightsDrawer } from "@/components/console-pages/database-query-insights-drawer";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { DisabledReasonButton } from "@/components/ui/disabled-reason-button";
 import {
   databasesForInstanceQueryInput,
   useGetDatabaseQuery,
@@ -52,11 +53,13 @@ const METRICS_RANGE_HOURS = 24;
 function DatabaseOverviewHeader({
   database,
   databaseId,
+  insightsUnavailable,
   instanceId,
   onViewQueryInsights,
 }: {
   database: Database;
   databaseId: string;
+  insightsUnavailable: boolean;
   instanceId: string;
   onViewQueryInsights: () => void;
 }) {
@@ -82,16 +85,22 @@ function DatabaseOverviewHeader({
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <Button
+        <DisabledReasonButton
           className="gap-2"
+          disabled={insightsUnavailable}
+          disabledReason={
+            insightsUnavailable
+              ? "Insights are unavailable because PostgreSQL query and table statistics cannot be queried. Install pg_stat_statements or grant statistics access, then refresh."
+              : null
+          }
           onClick={onViewQueryInsights}
           size="sm"
           type="button"
           variant="outline"
         >
           <Gauge aria-hidden="true" className="size-4" />
-          Query insights
-        </Button>
+          Insights
+        </DisabledReasonButton>
         <Link
           className={cn(buttonVariants({ size: "sm" }), "gap-2")}
           params={{ databaseId, instanceId }}
@@ -182,6 +191,9 @@ function BackendDatabasePage({
   const catalog = catalogQuery.data;
   const catalogPending = catalogQuery.isPending;
   const insights = insightsQuery.data?.queryInsights;
+  const insightsUnavailable = Boolean(
+    insights && !insights.queryStatsAvailable && !insights.tableStatsAvailable
+  );
   const insightsPending = insightsQuery.isPending;
   const extensions = extensionsQuery.data?.extensions ?? [];
   const metricSeries = metricsQuery.data?.series;
@@ -203,6 +215,7 @@ function BackendDatabasePage({
           <DatabaseOverviewHeader
             database={database}
             databaseId={databaseId}
+            insightsUnavailable={insightsUnavailable}
             instanceId={instanceId}
             onViewQueryInsights={openQueryInsights}
           />
