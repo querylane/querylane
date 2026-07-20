@@ -37,7 +37,6 @@ function DataExplorerPage({
       tables: explorer.tablesPagination,
       views: explorer.viewsPagination,
     },
-    databaseLabel: explorer.databaseLabel,
     expandedCategories: explorer.expandedCategories,
     itemsByCategory: explorer.itemsByCategory,
     onLoadMoreCategory: explorer.onLoadMoreCategory,
@@ -54,10 +53,6 @@ function DataExplorerPage({
     },
     onSelectSchema: (schema: Parameters<typeof explorer.onSelectSchema>[0]) => {
       explorer.onSelectSchema(schema);
-      closeMobileSidebar();
-    },
-    onSelectSchemaOverview: () => {
-      explorer.onSelectSchemaOverview();
       closeMobileSidebar();
     },
     query: explorer.query,

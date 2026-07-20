@@ -19,7 +19,6 @@ const FIRST_VIRTUAL_TABLE_RE = /table_0000/i;
 const LAST_VIRTUAL_TABLE_RE = /table_0999/i;
 const VIRTUAL_TABLE_BUTTON_RE = /^table_/i;
 const LONG_TABLE_BUTTON_RE = /this_is_a_very_long/;
-const DOUBLE_SPACE_SCHEMA_OVERVIEW_RE = /View {2}schema overview/;
 
 class MockIntersectionObserver {
   static instances: MockIntersectionObserver[] = [];
@@ -92,7 +91,6 @@ function explorerSidebarProps(
       schemas: { hasNextPage: false, isFetchingNextPage: false },
       ...categoryPagination(),
     },
-    databaseLabel: "demo_ecommerce",
     expandedCategories: new Set(CATEGORY_ORDER),
     itemsByCategory: {
       tables: [{ name: "orders", sizeLabel: "12 KB" }],
@@ -104,7 +102,6 @@ function explorerSidebarProps(
     onRetryViews: vi.fn(),
     onSelectResource: vi.fn(),
     onSelectSchema: vi.fn(),
-    onSelectSchemaOverview: vi.fn(),
     query: "",
     schemaSelectionError: null,
     schemas: [defaultSchema],
@@ -248,19 +245,6 @@ describe("CategoryInfiniteScrollSentinel", () => {
     );
 
     expect(liveObserver().root).toBe(scrollRoot);
-  });
-});
-
-describe("ExplorerSidebar schema overview label", () => {
-  it("falls back when the database label is empty", () => {
-    renderExplorerSidebar({ databaseLabel: "" });
-
-    expect(
-      screen.getByRole("button", { name: "View database schema overview" })
-    ).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: DOUBLE_SPACE_SCHEMA_OVERVIEW_RE })
-    ).toBeNull();
   });
 });
 

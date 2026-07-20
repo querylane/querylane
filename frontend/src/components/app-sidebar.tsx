@@ -304,7 +304,7 @@ function ExplorerRailContent({
   const registerSlotTarget = useExplorerSidebarSlotRegistration();
   return (
     <>
-      <div className="border-sidebar-border border-b p-2">
+      <div className="flex flex-col gap-2 border-sidebar-border border-b p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -317,6 +317,10 @@ function ExplorerRailContent({
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        {/* The explorer rail replaces the normal database-scoped nav, so it
+            carries its own copy of the database switcher — otherwise switching
+            databases is impossible from inside the explorer on lg+. */}
+        <SidebarDatabaseSelector />
       </div>
       <div className="flex min-h-0 flex-1 flex-col" ref={registerSlotTarget} />
     </>

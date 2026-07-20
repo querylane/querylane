@@ -43,7 +43,6 @@ function renderLargeExplorerSidebar() {
             schemas: { hasNextPage: false, isFetchingNextPage: false },
             ...categoryPagination(),
           }}
-          databaseLabel="demo_ecommerce"
           expandedCategories={new Set(["tables"])}
           itemsByCategory={{
             tables,
@@ -55,7 +54,6 @@ function renderLargeExplorerSidebar() {
           onRetryViews={vi.fn()}
           onSelectResource={vi.fn()}
           onSelectSchema={vi.fn()}
-          onSelectSchemaOverview={vi.fn()}
           query=""
           schemaSelectionError={null}
           schemas={[defaultSchema]}

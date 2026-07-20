@@ -816,10 +816,11 @@ export function AdminHeader() {
             selectedInstance={selectedInstance}
           />
         </div>
-        {/* On lg+ the sidebar's database switcher replaces this breadcrumb;
-            on smaller screens the rail is an off-canvas drawer, so the topbar
-            keeps the only always-visible database selector. */}
-        <div className="flex min-w-0 items-center gap-1 sm:gap-2 lg:hidden">
+        {/* The database switcher stays in the topbar at every breakpoint so it
+            is always reachable, including in the data explorer where the
+            sidebar rail is swapped for the schema tree. The sidebar's own
+            database switcher mirrors it on lg+ for the non-explorer nav. */}
+        <div className="flex min-w-0 items-center gap-1 sm:gap-2">
           <DatabaseSelector
             databases={databases}
             hideLeadingSeparatorOnMobile={Boolean(selectedDatabase)}

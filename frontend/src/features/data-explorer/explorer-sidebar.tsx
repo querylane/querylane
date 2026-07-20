@@ -7,14 +7,7 @@ import {
   type Rect,
   Virtualizer,
 } from "@tanstack/virtual-core";
-import {
-  AlertTriangle,
-  ChevronRight,
-  Database as DatabaseIcon,
-  Folder,
-  Search,
-  X,
-} from "lucide-react";
+import { AlertTriangle, ChevronRight, Folder, Search, X } from "lucide-react";
 import {
   type ReactNode,
   useEffect,
@@ -962,10 +955,6 @@ function SchemaEmptyPanel({
   );
 }
 
-function schemaOverviewButtonLabel(databaseLabel: string) {
-  return `View ${databaseLabel.trim() || "database"} schema overview`;
-}
-
 function hasExplorerResourceLoadError(
   tablesError: unknown,
   viewsError: unknown
@@ -1006,7 +995,6 @@ function SidebarResourceError({
 
 function ExplorerSidebar({
   activeSchema,
-  databaseLabel,
   expandedCategories,
   itemsByCategory,
   categoryPagination,
@@ -1014,7 +1002,6 @@ function ExplorerSidebar({
   onLoadMoreSchemas,
   onRetryTables,
   onRetryViews,
-  onSelectSchemaOverview,
   onResourceIntent,
   onSelectResource,
   onSelectSchema,
@@ -1031,7 +1018,6 @@ function ExplorerSidebar({
   viewsError,
 }: {
   activeSchema: SchemaSummary | null;
-  databaseLabel: string;
   expandedCategories: Set<CategoryKey>;
   itemsByCategory: Record<CategoryKey, ResourceItem[]> | null;
   categoryPagination: Record<CategoryKey | "schemas", CategoryPaginationState>;
@@ -1042,7 +1028,6 @@ function ExplorerSidebar({
   onResourceIntent?: (category: CategoryKey, name: string) => void;
   onSelectResource: (category: CategoryKey, name: string) => void;
   onSelectSchema: (schema: SchemaSummary) => void;
-  onSelectSchemaOverview: () => void;
   query: string;
   schemaSelectionError: unknown;
   schemasLoading: boolean;
@@ -1086,18 +1071,6 @@ function ExplorerSidebar({
       className="@container/object-browser flex h-full min-h-0 w-full flex-1 flex-col"
     >
       <div className="flex flex-col gap-1.5 @max-[14rem]/object-browser:px-2 px-2 pt-2 pb-1.5">
-        <Button
-          aria-label={schemaOverviewButtonLabel(databaseLabel)}
-          className={cn(
-            "h-auto justify-start @max-[14rem]/object-browser:gap-1.5 gap-2 px-1.5 py-1",
-            selection.kind === "schema" && "bg-accent"
-          )}
-          onClick={onSelectSchemaOverview}
-          variant="ghost"
-        >
-          <DatabaseIcon className="@max-[14rem]/object-browser:hidden size-4 text-muted-foreground" />
-          <span className="truncate font-medium text-sm">{databaseLabel}</span>
-        </Button>
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
