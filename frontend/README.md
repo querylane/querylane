@@ -12,6 +12,7 @@ React + TypeScript app bundled with Rsbuild.
 ## Scripts
 
 - `bun run dev` - start dev server
+- `bun run dev:scan` - start local dev with React Scan and the default global Compiler
 - `bun run build` - build production assets
 - `bun run preview` - preview the production build
 - `bun run quality:gate` - run the standard full local gate with React Doctor, typecheck, build, unit tests, and integration tests

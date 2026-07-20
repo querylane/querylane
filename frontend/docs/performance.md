@@ -7,12 +7,23 @@ Querylane stays client-side only. Measure performance in four layers instead of 
 ```bash
 cd frontend
 bun run build                    # hard gzip bundle budgets
-bun run perf:lighthouse           # build, run Lighthouse CI, print summary
-bun run perf:lighthouse:public    # one run, upload public Google report links
-bun run test:e2e -- --grep @perf  # mocked task-level Data Explorer budgets
-bun run build:profile             # Rsdoctor route chunk analysis
-bun run doctor:full               # React Doctor full health gate
+bun run dev:scan                 # local React Scan + default global Compiler
+bun run perf:lighthouse          # build, run Lighthouse CI, print summary
+bun run perf:lighthouse:public   # one run, upload public Google report links
+bun run test:e2e -- --grep @perf # mocked task-level Data Explorer budgets
+bun run build:profile            # Rsdoctor route chunk analysis
+bun run doctor:full              # React Doctor full health gate
 ```
+
+React Scan is local-only and opt-in. `dev:scan` serves the exact pinned package
+asset before React; normal development and production builds omit it. A build
+with `QUERYLANE_REACT_SCAN=1` is rejected. React Compiler runs globally in
+`infer` mode by default. For one-off local comparisons, set
+`QUERYLANE_REACT_COMPILER_MODE=annotation` on `dev` or `build` directly.
+Verify compilation through the production build output and React DevTools.
+
+See the [2026-07-16 React performance audit](react-performance-audit-2026-07-16.md)
+for the five-run baseline, compatibility findings, and raw measurements.
 
 Lighthouse HTML and JSON reports are written to `frontend/dist/lighthouse`.
 Public report links use Lighthouse CI temporary public storage. Those links are

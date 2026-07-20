@@ -4,10 +4,10 @@ import {
   type CellCopyArgs,
   type CellMouseArgs,
   type CellMouseEvent,
-  type CellSelectArgs,
   type Column,
   DataGrid,
   type DefaultColumnOptions,
+  type PositionChangeArgs,
   type Renderers,
   type SortColumn,
 } from "react-data-grid";
@@ -92,6 +92,7 @@ interface GridBodyProps {
   flush?: boolean;
   hasActiveFilter: boolean;
   isLoading: boolean;
+  onActivePositionChange: (args: PositionChangeArgs<GridRow>) => void;
   onCellContextMenu: (
     args: CellMouseArgs<GridRow>,
     event: CellMouseEvent
@@ -101,7 +102,6 @@ interface GridBodyProps {
     event: ClipboardEvent<HTMLDivElement>
   ) => void;
   onColumnsReorder: (sourceColumnKey: string, targetColumnKey: string) => void;
-  onSelectedCellChange: (args: CellSelectArgs<GridRow>) => void;
   onSelectedRowsChange: (next: ReadonlySet<string>) => void;
   onSortChange: (next: SortColumn[]) => void;
   rows: GridRow[];
@@ -117,7 +117,7 @@ function GridBody({
   onCellContextMenu,
   onCellCopy,
   onColumnsReorder,
-  onSelectedCellChange,
+  onActivePositionChange,
   onSelectedRowsChange,
   onSortChange,
   rows,
@@ -135,9 +135,8 @@ function GridBody({
     <div className="contents" data-keyboard-shortcut-scope="grid">
       <DataGrid
         className={cn(
-          "querylane-data-grid",
-          "rdg-light dark:rdg-dark",
-          flush && "querylane-data-grid-flush"
+          "rdg-light dark:rdg-dark [&_.rdg-checkbox-input]:size-4! [&_.rdg-checkbox-input]:accent-primary",
+          flush && "rounded-none! border-x-0!"
         )}
         columns={columns}
         defaultColumnOptions={DATA_GRID_DEFAULT_COLUMN_OPTIONS}
@@ -145,10 +144,10 @@ function GridBody({
         // every visible-page cell and stall the explorer.
         enableVirtualization={true}
         headerRowHeight={36}
+        onActivePositionChange={onActivePositionChange}
         onCellContextMenu={onCellContextMenu}
         onCellCopy={onCellCopy}
         onColumnsReorder={onColumnsReorder}
-        onSelectedCellChange={onSelectedCellChange}
         onSelectedRowsChange={onSelectedRowsChange}
         onSortColumnsChange={onSortChange}
         renderers={DATA_GRID_RENDERERS}

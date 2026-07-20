@@ -57,6 +57,37 @@ function buildColumn({
     foreignKeyReferences,
     columnKey
   );
+  const previewByRow = new WeakMap<
+    GridRow,
+    ForeignKeyReferencePreview | null
+  >();
+
+  function getForeignKeyPreview(row: GridRow) {
+    const cachedPreview = previewByRow.get(row);
+    if (cachedPreview !== undefined) {
+      return cachedPreview;
+    }
+
+    let preview: ForeignKeyReferencePreview | null = null;
+    // PostgreSQL allows a column to participate in multiple FK constraints.
+    // Render the first one that can produce a safe equality filter so the
+    // cell never shows a dead link for nullable, truncated, or binary values.
+    for (const reference of columnForeignKeyReferences) {
+      preview =
+        buildForeignKeyReferencePreview({
+          reference,
+          resultColumns,
+          row,
+          sourceColumn: columnKey,
+        }) ?? null;
+      if (preview) {
+        break;
+      }
+    }
+    previewByRow.set(row, preview);
+    return preview;
+  }
+
   return {
     cellClass: "",
     draggable: true,
@@ -69,21 +100,7 @@ function buildColumn({
       if (cell === undefined) {
         return null;
       }
-      let foreignKeyPreview: ForeignKeyReferencePreview | undefined;
-      // PostgreSQL allows a column to participate in multiple FK constraints.
-      // Render the first one that can produce a safe equality filter so the
-      // cell never shows a dead link for nullable, truncated, or binary values.
-      for (const reference of columnForeignKeyReferences) {
-        foreignKeyPreview = buildForeignKeyReferencePreview({
-          reference,
-          resultColumns,
-          row,
-          sourceColumn: columnKey,
-        });
-        if (foreignKeyPreview) {
-          break;
-        }
-      }
+      const foreignKeyPreview = getForeignKeyPreview(row);
       if (foreignKeyPreview) {
         return (
           <ForeignKeyDataCell
