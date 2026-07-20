@@ -4,7 +4,7 @@
 	"packageManager": "bun@1.3.14",
 	"type": "module",
 	"scripts": {
-		"docs:api:generate": "bun scripts/generate-grpc-docs.ts",
+		"docs:api:generate": "buf generate --template buf.openapi.gen.yaml && bun scripts/finalize-openapi.ts",
 		"docs:build": "blume build --strict",
 		"docs:dev": "blume dev",
 		"docs:test": "bun test scripts/docs-*.test.ts",

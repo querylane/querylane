@@ -1,0 +1,13 @@
+version: v2
+
+plugins:
+  - remote: buf.build/community/sudorandom-connect-openapi:v0.25.7
+    out: docs/generated
+    opt:
+      - path=querylane.openapi.yaml
+      - content-types=json
+      - features=connectrpc;protovalidate
+      - short-operation-ids
+      - short-service-tags
+      - trim-unused-types
+      - with-streaming

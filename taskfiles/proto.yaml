@@ -30,5 +30,6 @@ tasks:
       - task: lint
       - task: format
       - PATH={{.BUILD_ROOT}}/bin:$PATH buf generate --clean
+      - PATH={{.BUILD_ROOT}}/bin:$PATH bun run docs:api:generate
       - task: :backend:fmt
       - if [[ $CI == "true" ]]; then git diff --exit-code; fi

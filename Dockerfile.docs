@@ -12,6 +12,7 @@ COPY blume.config.ts ./
 COPY components.ts ./
 COPY components ./components
 COPY theme.css ./
+COPY docs/generated ./docs/generated
 COPY docs/site ./docs/site
 COPY public ./public
 COPY proto ./proto

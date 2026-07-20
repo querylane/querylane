@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
 import { readdir, readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
+import config from "../blume.config";
 
 const root = join(import.meta.dir, "..");
 const protoRoot = join(root, "proto/querylane/console/v1alpha1");
-const apiRoot = join(root, "docs/site/api");
+const apiGuideRoot = join(root, "docs/site/guides/api");
 const apiGuidePages = [
 	"calling-the-api.mdx",
 	"pagination-and-filtering.mdx",
@@ -61,44 +62,93 @@ const readProtoServices = async (): Promise<ProtoService[]> => {
 	return services.sort((left, right) => left.name.localeCompare(right.name));
 };
 
-test("documents every gRPC service and RPC from the proto contract", async () => {
+test("generates an OpenAPI path for every service and RPC", async () => {
 	const services = await readProtoServices();
-	const pages = (await readdir(apiRoot)).filter(
-		(file) =>
-			file.endsWith(".mdx") &&
-			file !== "index.mdx" &&
-			!apiGuidePages.includes(file),
+	const openapi = await readFile(
+		join(root, "docs/generated/querylane.openapi.yaml"),
+		"utf8",
 	);
 
 	expect(services).toHaveLength(14);
-	expect(pages.sort()).toEqual(
-		services.map(({ slug }) => `${slug}.mdx`).sort(),
+	expect(openapi).toContain("openapi: 3.1.0");
+	expect(openapi).toContain(
+		"info:\n  title: Querylane API\n  version: v1alpha1",
 	);
 
 	for (const service of services) {
-		const page = await readFile(join(apiRoot, `${service.slug}.mdx`), "utf8");
 		for (const rpc of service.rpcs) {
-			expect(page).toContain(`/${service.packageName}.${service.name}/${rpc}`);
+			expect(openapi).toContain(
+				`  /${service.packageName}.${service.name}/${rpc}:`,
+			);
+			expect(openapi).toContain(`operationId: ${service.name}_${rpc}`);
 		}
 	}
 });
 
-test("adds runnable guidance and JSON examples to the API reference", async () => {
-	const pages = await readdir(apiRoot);
+test("serves the generated spec through Blume's native API reference", () => {
+	expect(config.openapi).toEqual({
+		enabled: true,
+		sources: [
+			{
+				label: "Querylane API",
+				route: "/api",
+				spec: "./docs/generated/querylane.openapi.yaml",
+			},
+		],
+	});
+});
+
+test("exposes the API reference as its own navigation tab", () => {
+	expect(config.navigation?.tabs).toEqual([
+		{ label: "Docs", path: "/" },
+		{ label: "API", path: "/api" },
+	]);
+});
+
+test("redirects the previous API pages", async () => {
+	const redirects = config.redirects ?? [];
+	for (const page of apiGuidePages) {
+		const slug = page.replace(/\.mdx$/u, "");
+		expect(redirects).toContainEqual({
+			from: `/api/${slug}`,
+			status: 301,
+			to: `/guides/api/${slug}`,
+		});
+	}
+
+	for (const service of await readProtoServices()) {
+		expect(redirects).toContainEqual({
+			from: `/api/${service.slug}`,
+			status: 301,
+			to: "/api",
+		});
+	}
+});
+
+test("keeps API usage guidance alongside the generated reference", async () => {
+	const pages = await readdir(apiGuideRoot);
 	for (const page of apiGuidePages) {
 		expect(pages, `missing ${basename(page)}`).toContain(page);
 	}
 
-	const services = await readProtoServices();
-	for (const service of services) {
-		const page = await readFile(join(apiRoot, `${service.slug}.mdx`), "utf8");
-		for (const rpc of service.rpcs) {
-			const section = page.split(`## ${rpc}\n`)[1]?.split(/^## /mu)[0];
-			expect(section, `missing ${rpc} section`).toBeDefined();
-			expect(section, `missing ${rpc} JSON example`).toContain(
-				"### JSON request example",
-			);
-		}
+	const calling = await readFile(
+		join(apiGuideRoot, "calling-the-api.mdx"),
+		"utf8",
+	);
+	expect(calling).toContain("curl --fail-with-body");
+	expect(calling).toContain("createClient");
+
+	const streaming = await readFile(
+		join(apiGuideRoot, "errors-and-streaming.mdx"),
+		"utf8",
+	);
+	for (const rpc of [
+		"TableDataService.StreamRows",
+		"SQLService.ExecuteQuery",
+		"OnboardingService.SetupAppDatabase",
+		"OnboardingService.WatchConfigChanges",
+	]) {
+		expect(streaming).toContain(rpc);
 	}
 });
 
