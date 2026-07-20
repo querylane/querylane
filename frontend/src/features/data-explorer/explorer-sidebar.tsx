@@ -394,7 +394,7 @@ function ObjectTreeList({
     selection,
     toggleCategory,
   };
-  const virtualizer = useResourceListVirtualizer({
+  const { totalSize, virtualizer } = useResourceListVirtualizer({
     items: flatItems,
     scrollElement,
   });
@@ -408,7 +408,7 @@ function ObjectTreeList({
     >
       <ul
         className="relative m-0 w-full list-none p-0"
-        style={{ height: `${virtualizer.getTotalSize()}px` }}
+        style={{ height: `${totalSize}px` }}
       >
         {visibleItems.map((virtualItem) => {
           const listItem = flatItems[virtualItem.index];
@@ -439,7 +439,10 @@ function useResourceListVirtualizer({
 }: {
   items: VirtualResourceListItem[];
   scrollElement: HTMLDivElement | null;
-}): Virtualizer<HTMLDivElement, Element> {
+}): {
+  totalSize: number;
+  virtualizer: Virtualizer<HTMLDivElement, Element>;
+} {
   const [, rerender] = useReducer((tick: number) => tick + 1, 0);
   const virtualizerRef = useRef<Virtualizer<HTMLDivElement, Element> | null>(
     null
@@ -474,12 +477,31 @@ function useResourceListVirtualizer({
     scrollToFn: elementScroll,
   });
 
+  // The container height must never come from virtualizer.getTotalSize():
+  // with the async onChange above, the notify that follows a late internal
+  // recompute can be dropped, leaving a committed height that is permanently
+  // out of sync with the rendered rows. Summing the estimates over the
+  // current items is always consistent with this render.
+  const totalSize = items.reduce(
+    (sum, item) => sum + estimateResourceListItemSize(item),
+    0
+  );
+
   useIsomorphicLayoutEffect(() => virtualizer._didMount(), [virtualizer]);
   useIsomorphicLayoutEffect(() => {
     virtualizer._willUpdate();
   });
+  // Force a full re-measure whenever the item set changes shape (schemas
+  // loading in, a schema expanding, categories toggling). setOptions alone
+  // does not reliably invalidate the internal measurement cache for the
+  // render that commits, and a stale range renders blank rows or an
+  // unreachable tail. Keyed on primitives so the follow-up notify cannot
+  // re-trigger the effect.
+  useIsomorphicLayoutEffect(() => {
+    virtualizer.measure();
+  }, [virtualizer, items.length, totalSize]);
 
-  return virtualizer;
+  return { totalSize, virtualizer };
 }
 
 function observeResourceListRect(
