@@ -9,6 +9,9 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
 	bun install --frozen-lockfile --ignore-scripts
 
 COPY blume.config.ts ./
+COPY components.ts ./
+COPY components ./components
+COPY theme.css ./
 COPY docs/site ./docs/site
 COPY public ./public
 COPY proto ./proto

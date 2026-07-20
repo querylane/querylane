@@ -1,0 +1,70 @@
+---
+---
+
+<dialog
+	aria-label="Expanded Mermaid diagram"
+	data-mermaid-fullscreen
+>
+	<button
+		aria-label="Close expanded diagram"
+		autofocus
+		data-mermaid-fullscreen-close
+		type="button"
+	>
+		Close
+	</button>
+	<div data-mermaid-fullscreen-canvas></div>
+</dialog>
+
+<script>
+	const dialog = document.querySelector<HTMLDialogElement>(
+		"[data-mermaid-fullscreen]",
+	);
+	const canvas = dialog?.querySelector<HTMLElement>(
+		"[data-mermaid-fullscreen-canvas]",
+	);
+	const closeButton = dialog?.querySelector<HTMLButtonElement>(
+		"[data-mermaid-fullscreen-close]",
+	);
+	let activeTrigger: HTMLButtonElement | null = null;
+
+	if (dialog && canvas && closeButton) {
+		closeButton.addEventListener("click", () => dialog.close());
+		dialog.addEventListener("close", () => {
+			canvas.replaceChildren();
+			activeTrigger?.focus();
+			activeTrigger = null;
+		});
+
+		const enhanceDiagrams = () => {
+			for (const diagram of document.querySelectorAll<HTMLElement>(
+				"article blume-mermaid",
+			)) {
+				const source = diagram.dataset.source;
+				if (!source?.trim() || diagram.querySelector("[data-mermaid-expand]")) {
+					continue;
+				}
+
+				const button = document.createElement("button");
+				button.type = "button";
+				button.dataset.mermaidExpand = "";
+				button.setAttribute("aria-label", "Expand diagram");
+				button.textContent = "Expand";
+				button.addEventListener("click", () => {
+					if (dialog.open) {
+						return;
+					}
+
+					const expandedDiagram = document.createElement("blume-mermaid");
+					expandedDiagram.dataset.source = source;
+					canvas.replaceChildren(expandedDiagram);
+					activeTrigger = button;
+					dialog.showModal();
+				});
+				diagram.append(button);
+			}
+		};
+
+		customElements.whenDefined("blume-mermaid").then(enhanceDiagrams);
+	}
+</script>
