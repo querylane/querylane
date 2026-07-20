@@ -8,7 +8,6 @@ Querylane stays client-side only. Measure performance in four layers instead of 
 cd frontend
 bun run build                    # hard gzip bundle budgets
 bun run dev:scan                 # local React Scan + default global Compiler
-bun run compiler:check           # local Compiler coverage and compatibility
 bun run perf:lighthouse          # build, run Lighthouse CI, print summary
 bun run perf:lighthouse:public   # one run, upload public Google report links
 bun run test:e2e -- --grep @perf # mocked task-level Data Explorer budgets
@@ -21,8 +20,7 @@ asset before React; normal development and production builds omit it. A build
 with `QUERYLANE_REACT_SCAN=1` is rejected. React Compiler runs globally in
 `infer` mode by default. For one-off local comparisons, set
 `QUERYLANE_REACT_COMPILER_MODE=annotation` on `dev` or `build` directly.
-`compiler:check` verifies discovered component coverage and incompatible
-libraries locally; it is intentionally not a CI command.
+Verify compilation through the production build output and React DevTools.
 
 See the [2026-07-16 React performance audit](react-performance-audit-2026-07-16.md)
 for the five-run baseline, compatibility findings, and raw measurements.

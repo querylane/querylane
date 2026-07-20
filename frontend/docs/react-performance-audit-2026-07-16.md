@@ -117,8 +117,9 @@ long task.
   under infer with no refetch.
 - Router, query, and data grid: the Data Explorer selection reached the expected
   route and row result in every run with two relevant requests in both modes.
-- Compiler coverage: the local health check compiled 814 of 814 discovered
-  components, found Strict Mode, and found no incompatible libraries.
+- Compiler coverage: a one-off local health check compiled 814 of 814
+  discovered components, found Strict Mode, and found no incompatible
+  libraries.
 - Manual memo APIs: application-owned source has no `useMemo`, `useCallback`,
   or `React.memo` call sites outside tests; vendored registry components remain
   byte-for-byte compatible with their upstream source.
