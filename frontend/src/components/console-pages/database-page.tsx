@@ -17,8 +17,12 @@ import {
 import { DatabaseQueryInsightsDrawer } from "@/components/console-pages/database-query-insights-drawer";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import { DisabledReasonButton } from "@/components/ui/disabled-reason-button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   databasesForInstanceQueryInput,
   useGetDatabaseQuery,
@@ -65,6 +69,20 @@ function DatabaseOverviewHeader({
 }) {
   // Schema/table/view counts live in the stat strip below; the subtitle only
   // carries properties no card repeats.
+  const insightsButton = (
+    <Button
+      className="gap-2"
+      disabled={insightsUnavailable}
+      onClick={onViewQueryInsights}
+      size="sm"
+      type="button"
+      variant="outline"
+    >
+      <Gauge aria-hidden="true" className="size-4" />
+      Insights
+    </Button>
+  );
+
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="flex min-w-0 flex-col gap-1.5">
@@ -85,22 +103,22 @@ function DatabaseOverviewHeader({
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <DisabledReasonButton
-          className="gap-2"
-          disabled={insightsUnavailable}
-          disabledReason={
-            insightsUnavailable
-              ? "Insights are unavailable because PostgreSQL query and table statistics cannot be queried. Install pg_stat_statements or grant statistics access, then refresh."
-              : null
-          }
-          onClick={onViewQueryInsights}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          <Gauge aria-hidden="true" className="size-4" />
-          Insights
-        </DisabledReasonButton>
+        {insightsUnavailable ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={<span className="inline-flex cursor-not-allowed" />}
+            >
+              {insightsButton}
+            </TooltipTrigger>
+            <TooltipContent>
+              Insights are unavailable because PostgreSQL query and table
+              statistics cannot be queried. Install pg_stat_statements or grant
+              statistics access, then refresh.
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          insightsButton
+        )}
         <Link
           className={cn(buttonVariants({ size: "sm" }), "gap-2")}
           params={{ databaseId, instanceId }}
