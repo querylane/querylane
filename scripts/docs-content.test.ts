@@ -201,6 +201,11 @@ test("keeps API usage guidance alongside the generated reference", async () => {
 	);
 	expect(calling).toContain("curl --fail-with-body");
 	expect(calling).toContain("createClient");
+	expect(calling).toContain("grpcurl -plaintext");
+	expect(calling).toContain("buf build -o /tmp/querylane.protoset");
+	expect(calling).toContain(
+		"Packaged builds do not expose gRPC server reflection",
+	);
 
 	const streaming = await readFile(
 		join(apiGuideRoot, "errors-and-streaming.mdx"),

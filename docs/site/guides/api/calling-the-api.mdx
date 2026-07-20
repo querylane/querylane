@@ -1,6 +1,6 @@
 ---
 title: Call the experimental API
-description: Send alpha Connect JSON requests with curl or use generated TypeScript clients for unary and streaming RPCs.
+description: Send alpha Connect and gRPC requests with curl, grpcurl, or generated TypeScript clients.
 sidebar:
   label: Call the API
 ---
@@ -52,6 +52,40 @@ curl --fail-with-body --silent --show-error \
 ```
 
 Protobuf JSON uses lower camel case field names such as `pageSize` and `displayName`. `int64` and other 64-bit integer fields are encoded as JSON strings. Timestamps use RFC 3339 strings, durations use strings such as `30s`, and enums use their protobuf names.
+
+## Call gRPC with grpcurl
+
+[`grpcurl`](https://github.com/fullstorydev/grpcurl) is useful for testing native gRPC, including server streams, without generating a client. It needs the protobuf service descriptors to encode request JSON and decode responses.
+
+Packaged builds do not expose gRPC server reflection. From a Querylane source checkout, build a reusable descriptor set with Buf:
+
+```sh
+buf build -o /tmp/querylane.protoset
+```
+
+Set a gRPC target without an `http://` or `https://` scheme, then call the same unary method:
+
+```sh
+export QUERYLANE_GRPC_TARGET='localhost:8080'
+
+grpcurl -plaintext \
+  -protoset /tmp/querylane.protoset \
+  -d '{"pageSize":50}' \
+  "$QUERYLANE_GRPC_TARGET" \
+  querylane.console.v1alpha1.InstanceService/ListInstances
+```
+
+Use `-plaintext` only for an unencrypted HTTP/2 endpoint such as the default local server. Omit it when the target has trusted TLS.
+
+Local source builds started through Querylane's development tasks do expose reflection. In that environment, you can inspect a service without a descriptor set:
+
+```sh
+grpcurl -plaintext \
+  "$QUERYLANE_GRPC_TARGET" \
+  list querylane.console.v1alpha1.InstanceService
+```
+
+Do not rely on reflection in deployed automation. Generate the protoset from the same Querylane revision as the server.
 
 ## Register an instance
 
