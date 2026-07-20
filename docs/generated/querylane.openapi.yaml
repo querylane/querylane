@@ -2469,7 +2469,8 @@ components:
 
              If specified, a Timestamp matching this interval will have to be the same
              or after the start.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         endTime:
           title: end_time
           description: |-
@@ -2477,7 +2478,8 @@ components:
 
              If specified, a Timestamp matching this interval will have to be before the
              end.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
       title: Interval
       additionalProperties: false
       description: |-
@@ -2519,21 +2521,25 @@ components:
           description: |-
             Output-only. When the currently held lease expires. Unset when no live
              lease.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         lastStartedAt:
           title: last_started_at
           description: Output-only. When the most recent run started.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         lastFinishedAt:
           title: last_finished_at
           description: Output-only. When the most recent run finished, successfully or not.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         lastSuccessAt:
           title: last_success_at
           description: |-
             Output-only. When the runner last completed successfully for this
              target.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         lastError:
           type: string
           title: last_error
@@ -2627,7 +2633,8 @@ components:
           description: |-
             Most recent autovacuum/autoanalyze across the CONNECTED database's tables.
              Unset when nothing has been auto-maintained yet. Not cluster-wide.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
       title: AutovacuumHealth
       additionalProperties: false
       description: |-
@@ -2647,7 +2654,8 @@ components:
         builtAt:
           title: built_at
           description: Output-only. The timestamp when the binary was built.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         gitBranch:
           type: string
           title: git_branch
@@ -2696,7 +2704,8 @@ components:
         lastSyncedAt:
           title: last_synced_at
           description: Output-only. Last time the listed scope completed a successful sync.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         isStale:
           type: boolean
           title: is_stale
@@ -2724,7 +2733,8 @@ components:
         lastSyncedAt:
           title: last_synced_at
           description: Output-only. Last time the scope completed a successful sync.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         syncError:
           type: string
           title: sync_error
@@ -2734,7 +2744,8 @@ components:
         updatedAt:
           title: updated_at
           description: Output-only. When the sync state row last changed.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
       title: CatalogSyncState
       additionalProperties: false
       description: |-
@@ -3233,7 +3244,8 @@ components:
         lastDdlTime:
           title: last_ddl_time
           description: Output-only. The last time a DDL operation was performed on this database.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         isSystemDatabase:
           type: boolean
           title: is_system_database
@@ -3243,7 +3255,8 @@ components:
         createTime:
           title: create_time
           description: Output-only. The time when the database was created.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
       title: Database
       additionalProperties: false
       description: |-
@@ -3276,7 +3289,8 @@ components:
         observedAt:
           title: observed_at
           description: Timestamp when the metrics were observed.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         queryStatsAvailable:
           type: boolean
           title: query_stats_available
@@ -3382,7 +3396,8 @@ components:
         timeout:
           title: timeout
           description: Optional. Statement timeout. The server should clamp this to a safe max.
-          $ref: '#/components/schemas/google.protobuf.Duration'
+          type: string
+          format: duration
         defaultSchema:
           type: string
           title: default_schema
@@ -3445,7 +3460,8 @@ components:
           title: buffers
         timeout:
           title: timeout
-          $ref: '#/components/schemas/google.protobuf.Duration'
+          type: string
+          format: duration
         defaultSchema:
           type: string
           title: default_schema
@@ -3475,7 +3491,8 @@ components:
         latency:
           title: latency
           description: Output-only. Explain latency.
-          $ref: '#/components/schemas/google.protobuf.Duration'
+          type: string
+          format: duration
       title: ExplainQueryResponse
       additionalProperties: false
     querylane.console.v1alpha1.Extension:
@@ -3691,7 +3708,8 @@ components:
           description: |-
             Output-only. Maximum age of retained samples; older rows are pruned by
              the sample_retention runner.
-          $ref: '#/components/schemas/google.protobuf.Duration'
+          type: string
+          format: duration
       title: GetMetricsStorageStatsResponse
       additionalProperties: false
     querylane.console.v1alpha1.GetOnboardingStateRequest:
@@ -3996,17 +4014,20 @@ components:
         createTime:
           title: create_time
           description: Output-only. The time at which the instance record was created.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         updateTime:
           title: update_time
           description: Output-only. The time at which the instance record was last updated.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         lastConnectionCheckTime:
           title: last_connection_check_time
           description: |-
             Output-only. The time of the most recent live connection probe for this
              instance, regardless of whether it succeeded or failed.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         credentialState:
           title: credential_state
           description: Output-only. Whether stored inline credentials can be read by Querylane.
@@ -4058,7 +4079,8 @@ components:
         observedAt:
           title: observed_at
           description: Timestamp when the checks were observed.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         connectionActivity:
           title: connection_activity
           description: |-
@@ -4112,7 +4134,8 @@ components:
         observedAt:
           title: observed_at
           description: Timestamp when the metrics were observed.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         ioMetrics:
           title: io_metrics
           description: |-
@@ -5318,7 +5341,8 @@ components:
           format: int64
         statsResetAt:
           title: stats_reset_at
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
       title: PgStatStatementsHealth
       additionalProperties: false
       description: |-
@@ -5330,13 +5354,15 @@ components:
         startTime:
           title: start_time
           description: The timestamp of `values[0]`.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         step:
           title: step
           description: |-
             The spacing between consecutive values. At least QueryMetricsResponse.step;
              coarser when this metric's probe cadence is coarser than the finest series.
-          $ref: '#/components/schemas/google.protobuf.Duration'
+          type: string
+          format: duration
         values:
           type: array
           items:
@@ -5489,7 +5515,8 @@ components:
              ceiling; each series echoes the width it actually used in Points.step.
              When unset the server picks a width that yields a chart-friendly number of
              points.
-          $ref: '#/components/schemas/google.protobuf.Duration'
+          type: string
+          format: duration
         comparison:
           title: comparison
           description: |-
@@ -5498,7 +5525,8 @@ components:
              same-length window shifted back by this offset. The previous-period line
              itself is not returned; a client that wants to overlay it issues a second
              QueryMetrics with the interval shifted back by the same offset.
-          $ref: '#/components/schemas/google.protobuf.Duration'
+          type: string
+          format: duration
       title: QueryMetricsRequest
       additionalProperties: false
     querylane.console.v1alpha1.QueryMetricsResponse:
@@ -5518,7 +5546,8 @@ components:
             The finest bucket width used across the returned series. Each series'
              Points.step is authoritative: a metric with a coarser probe cadence uses a
              coarser width.
-          $ref: '#/components/schemas/google.protobuf.Duration'
+          type: string
+          format: duration
         series:
           type: array
           items:
@@ -5607,7 +5636,8 @@ components:
         latency:
           title: latency
           description: Output-only. Query execution latency.
-          $ref: '#/components/schemas/google.protobuf.Duration'
+          type: string
+          format: duration
         notices:
           type: array
           items:
@@ -5794,11 +5824,13 @@ components:
         startedAt:
           title: started_at
           description: Output-only. When the replica process started heartbeating.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         lastSeenAt:
           title: last_seen_at
           description: Output-only. When the replica last heartbeated.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         active:
           type: boolean
           title: active
@@ -5918,7 +5950,8 @@ components:
           format: int32
         queryTimeout:
           title: query_timeout
-          $ref: '#/components/schemas/google.protobuf.Duration'
+          type: string
+          format: duration
       title: ResponseLimits
       additionalProperties: false
       description: |-
@@ -6015,7 +6048,8 @@ components:
             Output-only. The time after which the role's password is no longer valid
              (rolvaliduntil). Unset when there is no expiry, including when the catalog
              stores 'infinity'.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         configParameters:
           type: array
           items:
@@ -6329,18 +6363,21 @@ components:
         lastStartedAt:
           title: last_started_at
           description: Output-only. When the most recent run started.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         lastFinishedAt:
           title: last_finished_at
           description: Output-only. When the most recent run finished, successfully or not.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         lastSuccessAt:
           title: last_success_at
           description: |-
             Output-only. When the runner last completed successfully for this
              target. A stale value relative to the runner's cadence means sampling
              for this target is unhealthy.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         lastError:
           type: string
           title: last_error
@@ -6384,13 +6421,15 @@ components:
           description: |-
             Output-only. Observation time of the oldest retained sample. Unset
              when the table is empty.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         newestSampleAt:
           title: newest_sample_at
           description: |-
             Output-only. Observation time of the newest sample. Unset when the
              table is empty.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
       title: SampleTableStats
       additionalProperties: false
       description: SampleTableStats is the storage footprint of one metrics sample table.
@@ -6420,11 +6459,13 @@ components:
         lastDdlTime:
           title: last_ddl_time
           description: Output-only. The last time a DDL operation was performed on this schema.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         createTime:
           title: create_time
           description: Output-only. The time when the schema was created.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
       title: Schema
       additionalProperties: false
       description: A Schema represents a namespace for tables within a Database.
@@ -6549,7 +6590,8 @@ components:
         startedAt:
           title: started_at
           description: The time the PostgreSQL server was started.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         replicationRole:
           title: replication_role
           description: The replication role of the server.
@@ -6736,7 +6778,8 @@ components:
         observedAt:
           title: observed_at
           description: Output-only.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         limits:
           title: limits
           description: Output-only.
@@ -6855,7 +6898,8 @@ components:
         latency:
           title: latency
           description: Output-only. End-to-end latency.
-          $ref: '#/components/schemas/google.protobuf.Duration'
+          type: string
+          format: duration
         truncated:
           type: boolean
           title: truncated
@@ -6916,11 +6960,13 @@ components:
         createTime:
           title: create_time
           description: Output-only. The time when the table was created.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         lastDdlTime:
           title: last_ddl_time
           description: Output-only. The last time a DDL operation was performed on this table.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
       title: Table
       additionalProperties: false
       description: A Table represents a table within a Schema.
@@ -7329,7 +7375,8 @@ components:
         observedAt:
           title: observed_at
           description: Output-only. Snapshot timestamp; same for every row in this page.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
       title: TableResultSet
       additionalProperties: false
       description: TableResultSet is a complete result set with metadata.
@@ -7520,7 +7567,7 @@ components:
           description: |
             Required. The list of fields to be updated.
             update_mask_non_empty // update_mask must specify at least one field
-          $ref: '#/components/schemas/google.protobuf.FieldMask'
+          type: string
       title: UpdateInstanceRequest
       required:
         - updateMask
@@ -7588,11 +7635,13 @@ components:
         createTime:
           title: create_time
           description: Output-only. View creation time when available.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
         lastDdlTime:
           title: last_ddl_time
           description: Output-only. Time of the last DDL change when available.
-          $ref: '#/components/schemas/google.protobuf.Timestamp'
+          type: string
+          format: date-time
       title: View
       additionalProperties: false
       description: A View represents a standard or materialized view within a Schema.

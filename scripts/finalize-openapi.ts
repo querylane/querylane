@@ -17,9 +17,39 @@ info:
     authenticating reverse proxy.
 `;
 
+const wellKnownScalars = new Map([
+	["google.protobuf.Duration", ["type: string", "format: duration"]],
+	["google.protobuf.FieldMask", ["type: string"]],
+	["google.protobuf.Timestamp", ["type: string", "format: date-time"]],
+]);
+
+const inlineWellKnownScalars = (source: string): string => {
+	let result = source;
+
+	for (const [schema, definition] of wellKnownScalars) {
+		const reference = `$ref: '#/components/schemas/${schema}'`;
+		result = result
+			.split("\n")
+			.flatMap((line) => {
+				if (line.trim() !== reference) {
+					return line;
+				}
+
+				const indentation = line.slice(0, line.indexOf("$ref"));
+				return definition.map((entry) => `${indentation}${entry}`);
+			})
+			.join("\n");
+	}
+
+	return result;
+};
+
 const generated = await readFile(specPath, "utf8");
 if (!generated.startsWith(generatedHeader)) {
 	throw new Error("generated OpenAPI header changed");
 }
 
-await writeFile(specPath, generated.replace(generatedHeader, publishedHeader));
+const published = inlineWellKnownScalars(
+	generated.replace(generatedHeader, publishedHeader),
+);
+await writeFile(specPath, published);

@@ -85,6 +85,28 @@ test("generates an OpenAPI path for every service and RPC", async () => {
 	}
 });
 
+test("renders protobuf well-known scalars as concise OpenAPI strings", async () => {
+	const openapi = await readFile(
+		join(root, "docs/generated/querylane.openapi.yaml"),
+		"utf8",
+	);
+
+	for (const schema of ["Duration", "FieldMask", "Timestamp"]) {
+		expect(openapi).not.toContain(
+			`$ref: '#/components/schemas/google.protobuf.${schema}'`,
+		);
+	}
+
+	const retentionPeriod = openapi.match(
+		/ {8}retentionPeriod:\n([\s\S]*?)\n {6}title: GetMetricsStorageStatsResponse/u,
+	)?.[1];
+	expect(retentionPeriod).toContain(
+		"Output-only. Maximum age of retained samples",
+	);
+	expect(retentionPeriod).toContain("          type: string");
+	expect(retentionPeriod).toContain("          format: duration");
+});
+
 test("serves the generated spec through Blume's native API reference", () => {
 	expect(config.openapi).toEqual({
 		enabled: true,
