@@ -155,10 +155,15 @@ test("keeps installation and production setup ahead of product guides", async ()
 		"production-deployment.mdx",
 		"troubleshooting.mdx",
 	];
-	const pages = await readdir(join(root, "docs/site/get-started"));
+	const pages = await readdir(join(root, "docs/site/get-started"), {
+		recursive: true,
+	});
 
 	for (const page of setupPages) {
-		expect(pages, `missing ${basename(page)}`).toContain(page);
+		expect(
+			pages.some((candidate) => basename(candidate) === page),
+			`missing ${basename(page)}`,
+		).toBe(true);
 	}
 });
 
@@ -166,17 +171,21 @@ test("guides a new user through a successful first session", async () => {
 	const getStartedRoot = join(root, "docs/site/get-started");
 	const [home, meta, firstSession, apiMeta, callingApi] = await Promise.all([
 		readFile(join(root, "docs/site/index.mdx"), "utf8"),
-		readFile(join(getStartedRoot, "meta.ts"), "utf8"),
-		readFile(join(getStartedRoot, "first-successful-session.mdx"), "utf8"),
+		readFile(join(getStartedRoot, "(connect-and-explore)/meta.ts"), "utf8"),
+		readFile(
+			join(
+				getStartedRoot,
+				"(connect-and-explore)/first-successful-session.mdx",
+			),
+			"utf8",
+		),
 		readFile(join(apiGuideRoot, "meta.ts"), "utf8"),
 		readFile(join(apiGuideRoot, "calling-the-api.mdx"), "utf8"),
 	]);
 
 	expect(config.description).toContain("getting started");
 	expect(home).toContain("/get-started/first-successful-session");
-	expect(meta).toContain(
-		'"register-instance",\n\t\t"first-successful-session"',
-	);
+	expect(meta).toMatch(/"register-instance",\s*"first-successful-session"/u);
 	for (const destination of [
 		"/guides/instance-overview",
 		"/guides/find-blocking-sessions",
@@ -188,6 +197,53 @@ test("guides a new user through a successful first session", async () => {
 	expect(firstSession).toContain("## You are successful when");
 	expect(apiMeta).toContain('title: "Experimental API"');
 	expect(callingApi).toContain("alpha integration surface");
+});
+
+test("groups getting-started pages into an ordered hierarchy", async () => {
+	const getStartedRoot = join(root, "docs/site/get-started");
+	const groups = [
+		{
+			folder: "(install-and-run)",
+			key: "install-and-run",
+			pages: ["install-querylane", "local-preview"],
+			title: "Install and run",
+		},
+		{
+			folder: "(configure-storage)",
+			key: "configure-storage",
+			pages: ["embedded-postgresql", "external-postgresql", "manual-yaml"],
+			title: "Configure storage",
+		},
+		{
+			folder: "(connect-and-explore)",
+			key: "connect-and-explore",
+			pages: ["register-instance", "first-successful-session"],
+			title: "Connect and explore",
+		},
+		{
+			folder: "(deploy-and-maintain)",
+			key: "deploy-and-maintain",
+			pages: ["production-deployment", "troubleshooting"],
+			title: "Deploy and maintain",
+		},
+	];
+
+	expect(config.navigation?.sidebar).toMatchObject({ display: "group" });
+
+	const parentMeta = await readFile(join(getStartedRoot, "meta.ts"), "utf8");
+	for (const group of groups) {
+		expect(parentMeta).toContain(`"${group.key}"`);
+		const [groupMeta, files] = await Promise.all([
+			readFile(join(getStartedRoot, group.folder, "meta.ts"), "utf8"),
+			readdir(join(getStartedRoot, group.folder)),
+		]);
+
+		expect(groupMeta).toContain(`title: "${group.title}"`);
+		for (const page of group.pages) {
+			expect(groupMeta).toContain(`"${page}"`);
+			expect(files).toContain(`${page}.mdx`);
+		}
+	}
 });
 
 test("documents the operational lifecycle for self-hosted deployments", async () => {

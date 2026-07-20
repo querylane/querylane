@@ -69,7 +69,7 @@ export default defineConfig({
 			{ label: "Roadmap", href: "/roadmap", icon: "map" },
 		],
 		sidebar: {
-			display: "flat",
+			display: "group",
 		},
 	},
 	markdown: {
