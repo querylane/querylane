@@ -17,6 +17,7 @@ test("ships the static Blume output in a health-checked container", async () => 
 	const dockerfile = await read("Dockerfile.docs");
 
 	expect(dockerfile).toContain("FROM --platform=$BUILDPLATFORM oven/bun:");
+	expect(dockerfile).toContain("COPY docs/components ./docs/components");
 	expect(dockerfile).toContain("COPY docs/generated ./docs/generated");
 	expect(dockerfile).toContain("RUN bun run docs:test:content");
 	expect(dockerfile).toContain("RUN bun run docs:build");
