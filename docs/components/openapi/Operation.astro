@@ -11,6 +11,7 @@ import ParametersTable from "blume/components/openapi/ParametersTable.astro";
 import RequestBody from "blume/components/openapi/RequestBody.astro";
 import RequestPanel from "blume/components/openapi/RequestPanel.astro";
 import Responses from "blume/components/openapi/Responses.astro";
+import { visibleOperationParameters } from "./parameters.ts";
 import RpcBadge from "./RpcBadge.astro";
 import { querylaneSampleLanguages } from "./request-samples.ts";
 import { rpcPresentationForReference } from "./rpc-kind.ts";
@@ -76,6 +77,7 @@ const params = mergeParameters(
   operation?.parameters,
   components
 );
+const visibleParams = visibleOperationParameters(params);
 const requestBody = operation?.requestBody
   ? resolveComponentRef(operation.requestBody, components, "requestBodies")
   : undefined;
@@ -120,7 +122,7 @@ const presentation = ref
       </div>
       <div class="grid grid-cols-1 items-start gap-x-10 gap-y-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
         <div>
-          <ParametersTable parameters={params} schemas={schemas} />
+          <ParametersTable parameters={visibleParams} schemas={schemas} />
           {requestBody && (
             <RequestBody
               expandAll={spec.expandSchemas}

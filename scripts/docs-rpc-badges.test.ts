@@ -1,10 +1,25 @@
 import { expect, test } from "bun:test";
+import { visibleOperationParameters } from "../docs/components/openapi/parameters";
 import {
 	type RpcKind,
 	rpcPresentation,
 	rpcPresentationForReference,
 	withRpcBadges,
 } from "../docs/components/openapi/rpc-kind";
+
+test("hides standard Connect transport headers from operation details", () => {
+	const applicationHeader = { in: "header", name: "X-Querylane-Tenant" };
+	const queryParameter = { in: "query", name: "filter" };
+
+	expect(
+		visibleOperationParameters([
+			{ in: "header", name: "Connect-Protocol-Version" },
+			{ in: "header", name: "Connect-Timeout-Ms" },
+			applicationHeader,
+			queryParameter,
+		]),
+	).toEqual([applicationHeader, queryParameter]);
+});
 
 test("presents protobuf method cardinality instead of the shared POST transport", () => {
 	const expected = new Map<RpcKind, string>([
