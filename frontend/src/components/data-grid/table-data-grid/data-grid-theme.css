@@ -2,7 +2,6 @@
   --rdg-color: var(--foreground);
   --rdg-background-color: var(--card);
   --rdg-header-background-color: var(--card);
-  --rdg-header-row-color: var(--muted-foreground);
   --rdg-row-hover-background-color: color-mix(
     in oklch,
     var(--accent) 60%,
@@ -24,12 +23,6 @@
     var(--foreground) 16%,
     transparent
   );
-  --rdg-checkbox-color: var(--primary);
-  --rdg-checkbox-disabled-border-color: var(--border);
-  --rdg-checkbox-disabled-background-color: var(--muted);
-  --rdg-cell-frozen-background-color: var(--card);
-  --rdg-cell-frozen-box-shadow: 2px 0 6px -2px
-    color-mix(in oklch, var(--foreground) 18%, transparent);
   --rdg-font-size: 12px;
   --querylane-scrollbar-size: 0.625rem;
   --querylane-scrollbar-track: color-mix(

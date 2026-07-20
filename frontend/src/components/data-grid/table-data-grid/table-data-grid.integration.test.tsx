@@ -87,6 +87,11 @@ interface MockGridColumn {
 interface MockGridProps {
   columns?: MockGridColumn[];
   defaultColumnOptions?: DefaultColumnOptions<GridRow, unknown>;
+  onActivePositionChange?: (args: {
+    column: MockGridColumn | undefined;
+    row: GridRow | undefined;
+    rowIdx: number;
+  }) => void;
   onCellContextMenu?: (
     args: { column: MockGridColumn; row: GridRow; rowIdx: number },
     event: {
@@ -102,11 +107,6 @@ interface MockGridProps {
     event: ReactClipboardEvent<HTMLDivElement>
   ) => void;
   onColumnsReorder?: (sourceColumnKey: string, targetColumnKey: string) => void;
-  onSelectedCellChange?: (args: {
-    column: MockGridColumn;
-    row: GridRow | undefined;
-    rowIdx: number;
-  }) => void;
   onSelectedRowsChange?: (selectedRows: Set<string>) => void;
   renderers?: Renderers<GridRow, unknown>;
   rowKeyGetter?: (row: GridRow) => string;
@@ -1692,7 +1692,7 @@ describe("TableDataGrid URL state", () => {
     if (
       !(
         gridProps?.onSelectedRowsChange &&
-        gridProps.onSelectedCellChange &&
+        gridProps.onActivePositionChange &&
         firstRow &&
         emailColumn
       )
@@ -1701,7 +1701,7 @@ describe("TableDataGrid URL state", () => {
     }
 
     gridProps.onSelectedRowsChange(new Set(["row-0"]));
-    gridProps.onSelectedCellChange({
+    gridProps.onActivePositionChange({
       column: emailColumn,
       row: firstRow,
       rowIdx: 0,
@@ -1731,6 +1731,13 @@ describe("TableDataGrid URL state", () => {
     expect(onSelectedRowsSearchChange).toHaveBeenCalledWith("row-0");
     expect(onCellSearchChange).toHaveBeenCalledWith("row-0:email");
     expect(onOpenRowSearchChange).toHaveBeenCalledWith("row-0");
+
+    gridProps.onActivePositionChange({
+      column: undefined,
+      row: firstRow,
+      rowIdx: 0,
+    });
+    expect(onCellSearchChange).toHaveBeenLastCalledWith(undefined);
   });
 
   it("keeps selected-row actions limited to copy and export", () => {

@@ -1,5 +1,5 @@
 import { Profiler } from "react";
-import { type Column, DataGrid } from "react-data-grid";
+import type { Column } from "react-data-grid";
 import { afterEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
@@ -22,7 +22,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-test("coalesces continuous grid resizes", async () => {
+test("batches continuous grid resizes", async () => {
   const profilerId = crypto.randomUUID();
   let deliverResize: ((inlineSize: number) => void) | undefined;
 
@@ -66,6 +66,7 @@ test("coalesces continuous grid resizes", async () => {
   }
 
   vi.stubGlobal("ResizeObserver", TestResizeObserver);
+  const { DataGrid } = await import("react-data-grid");
 
   let resizeCommitCount = 0;
   render(

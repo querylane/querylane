@@ -57,12 +57,12 @@ Three causes were addressed:
   lifecycle and commits.
 - Foreign-key previews were reconstructed for every cell render even though
   result rows are stable. Each column now caches the preview by row lifetime.
-- The pinned data-grid release synchronously committed every
-  `ResizeObserver` delivery. A package patch coalesces continuous notifications
-  into the latest measurement every 50 ms, retaining responsive horizontal
-  virtualization while preventing per-pixel React commits. A browser regression
-  test sends ten observer deliveries: the unpatched grid produced 30 commits;
-  the patched grid produces at most three.
+- `react-data-grid` beta.59 synchronously committed every `ResizeObserver`
+  delivery. Beta.61 replaces that path with a store-backed subscription, so
+  React batches continuous notifications while retaining responsive horizontal
+  virtualization. A browser regression test sends ten observer deliveries:
+  beta.59 without a patch produced 30 commits; beta.61 without a patch produces
+  at most three. The local package patch is no longer needed.
 
 The recorder and raw samples remain local audit artifacts; React Scan is not
 enabled in CI or production.

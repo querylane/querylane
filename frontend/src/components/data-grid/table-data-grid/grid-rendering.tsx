@@ -4,10 +4,10 @@ import {
   type CellCopyArgs,
   type CellMouseArgs,
   type CellMouseEvent,
-  type CellSelectArgs,
   type Column,
   DataGrid,
   type DefaultColumnOptions,
+  type PositionChangeArgs,
   type Renderers,
   type SortColumn,
 } from "react-data-grid";
@@ -92,6 +92,7 @@ interface GridBodyProps {
   flush?: boolean;
   hasActiveFilter: boolean;
   isLoading: boolean;
+  onActivePositionChange: (args: PositionChangeArgs<GridRow>) => void;
   onCellContextMenu: (
     args: CellMouseArgs<GridRow>,
     event: CellMouseEvent
@@ -101,7 +102,6 @@ interface GridBodyProps {
     event: ClipboardEvent<HTMLDivElement>
   ) => void;
   onColumnsReorder: (sourceColumnKey: string, targetColumnKey: string) => void;
-  onSelectedCellChange: (args: CellSelectArgs<GridRow>) => void;
   onSelectedRowsChange: (next: ReadonlySet<string>) => void;
   onSortChange: (next: SortColumn[]) => void;
   rows: GridRow[];
@@ -117,7 +117,7 @@ function GridBody({
   onCellContextMenu,
   onCellCopy,
   onColumnsReorder,
-  onSelectedCellChange,
+  onActivePositionChange,
   onSelectedRowsChange,
   onSortChange,
   rows,
@@ -144,10 +144,10 @@ function GridBody({
         // every visible-page cell and stall the explorer.
         enableVirtualization={true}
         headerRowHeight={36}
+        onActivePositionChange={onActivePositionChange}
         onCellContextMenu={onCellContextMenu}
         onCellCopy={onCellCopy}
         onColumnsReorder={onColumnsReorder}
-        onSelectedCellChange={onSelectedCellChange}
         onSelectedRowsChange={onSelectedRowsChange}
         onSortColumnsChange={onSortChange}
         renderers={DATA_GRID_RENDERERS}

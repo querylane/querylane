@@ -251,56 +251,6 @@
     paint-order: stroke;
   }
 
-  .ql-rdg {
-    --rdg-background-color: var(--background);
-    --rdg-border-color: color-mix(in oklch, var(--border) 100%, transparent);
-    --rdg-border-width: 1px;
-    --rdg-cell-frozen-box-shadow: 2px 0 0 0 var(--border);
-    --rdg-checkbox-focus-color: var(--ring);
-    --rdg-color: var(--foreground);
-    --rdg-color-scheme: light;
-    --rdg-font-size: 0.875rem;
-    --rdg-header-background-color: color-mix(
-      in oklch,
-      var(--muted) 78%,
-      var(--background)
-    );
-    --rdg-header-draggable-background-color: var(--accent);
-    --rdg-row-hover-background-color: color-mix(
-      in oklch,
-      var(--muted) 55%,
-      var(--background)
-    );
-    --rdg-row-selected-background-color: color-mix(
-      in oklch,
-      var(--accent) 65%,
-      var(--background)
-    );
-    --rdg-row-selected-hover-background-color: color-mix(
-      in oklch,
-      var(--accent) 78%,
-      var(--background)
-    );
-    --rdg-selection-color: var(--ring);
-    --rdg-selection-width: 2px;
-    --rdg-summary-border-color: var(--border);
-    --rdg-summary-border-width: 1px;
-    color: var(--foreground);
-  }
-
-  .dark .ql-rdg {
-    --rdg-color-scheme: dark;
-    --rdg-cell-frozen-box-shadow: 2px 0 0 0 var(--border);
-  }
-
-  .ql-rdg [role="columnheader"] {
-    @apply bg-muted/60 text-muted-foreground;
-  }
-
-  .ql-rdg [role="gridcell"] {
-    @apply text-foreground;
-  }
-
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
