@@ -19,6 +19,7 @@ test("renders the select-all indeterminate state without a tooltip layer", async
 
   const checkbox = page.getByRole("checkbox", { name: "Select All" });
   await expect.element(checkbox).toBeVisible();
+  expect(checkbox.element().classList).toContain("rdg-checkbox-input");
   expect((checkbox.element() as HTMLInputElement).indeterminate).toBe(true);
   await expect.element(checkbox).toHaveAttribute("title", "Clear selection");
   await expect.element(page.getByRole("tooltip")).not.toBeInTheDocument();

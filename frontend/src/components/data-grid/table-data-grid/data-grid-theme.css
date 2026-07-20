@@ -1,4 +1,4 @@
-.querylane-data-grid {
+.rdg {
   --rdg-color: var(--foreground);
   --rdg-background-color: var(--card);
   --rdg-header-background-color: var(--card);
@@ -78,15 +78,7 @@
   border-radius: var(--radius);
 }
 
-/* Full-bleed explorer layout: the grid spans the pane edge-to-edge, so the
-   side borders and rounding are dropped; the top/bottom borders remain as
-   separators against the toolbar and status/pagination bars. */
-.querylane-data-grid-flush {
-  border-inline: none;
-  border-radius: 0;
-}
-
-.dark .querylane-data-grid {
+.dark .rdg {
   --querylane-scrollbar-track: color-mix(
     in oklch,
     var(--card) 92%,
@@ -105,30 +97,30 @@
   color-scheme: dark;
 }
 
-.querylane-data-grid::-webkit-scrollbar {
+.rdg::-webkit-scrollbar {
   width: var(--querylane-scrollbar-size);
   height: var(--querylane-scrollbar-size);
 }
 
-.querylane-data-grid::-webkit-scrollbar-track {
+.rdg::-webkit-scrollbar-track {
   background-color: var(--querylane-scrollbar-track);
 }
 
-.querylane-data-grid::-webkit-scrollbar-thumb {
+.rdg::-webkit-scrollbar-thumb {
   background-color: var(--querylane-scrollbar-thumb);
   border: 2px solid var(--querylane-scrollbar-track);
   border-radius: 999px;
 }
 
-.querylane-data-grid::-webkit-scrollbar-thumb:hover {
+.rdg::-webkit-scrollbar-thumb:hover {
   background-color: var(--querylane-scrollbar-thumb-hover);
 }
 
-.querylane-data-grid::-webkit-scrollbar-corner {
+.rdg::-webkit-scrollbar-corner {
   background-color: var(--querylane-scrollbar-track);
 }
 
-.querylane-data-grid .rdg-cell {
+.rdg .rdg-cell {
   display: flex;
   align-items: center;
   padding-block: 0;
@@ -139,96 +131,78 @@
   border-inline-end: 1px solid var(--querylane-column-border-color);
 }
 
-.querylane-data-grid .rdg-header-row .rdg-cell {
+.rdg .rdg-header-row .rdg-cell {
   font-weight: 500;
   user-select: none;
   border-block-end: 1px solid var(--querylane-header-border-color);
   border-inline-end: 1px solid var(--querylane-column-border-color);
 }
 
-.querylane-data-grid .rdg-row .rdg-cell:last-child {
+.rdg .rdg-row .rdg-cell:last-child {
   border-inline-end: 1px solid transparent;
 }
 
-.querylane-data-grid .rdg-select-cell *,
-.querylane-data-grid .rdg-expand-cell * {
+.rdg .rdg-select-cell *,
+.rdg .rdg-expand-cell * {
   -webkit-user-select: none;
   user-select: none;
 }
 
-.querylane-data-grid .rdg-header-row .rdg-cell * {
+.rdg .rdg-header-row .rdg-cell * {
   -webkit-user-select: none;
   user-select: none;
 }
 
-.querylane-data-grid
-  .rdg-row
-  .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell) {
+.rdg .rdg-row .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell) {
   -webkit-user-select: text;
   user-select: text;
 }
 
-.querylane-data-grid
-  .rdg-row
-  .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell)
-  * {
+.rdg .rdg-row .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell) * {
   -webkit-user-select: text;
   user-select: text;
 }
 
-.querylane-data-grid
-  .rdg-row
-  .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell)
-  button,
-.querylane-data-grid
-  .rdg-row
-  .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell)
-  button
-  * {
+.rdg .rdg-row .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell) button,
+.rdg .rdg-row .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell) button * {
   -webkit-user-select: none;
   user-select: none;
 }
 
-.querylane-data-grid .rdg-cell[aria-selected="true"] {
+.rdg .rdg-cell[aria-selected="true"] {
   outline: none;
   border-radius: 0;
   box-shadow: inset 0 0 0 2px var(--ring);
 }
 
-.querylane-data-grid .rdg-cell.rdg-select-cell[aria-selected="true"] {
+.rdg .rdg-cell.rdg-select-cell[aria-selected="true"] {
   outline: none;
   background-color: inherit;
   box-shadow: none;
 }
 
-.querylane-data-grid .rdg-cell.rdg-select-cell {
+.rdg .rdg-cell.rdg-select-cell {
   padding-inline: 0.25rem;
 }
 
-.querylane-data-grid .rdg-cell.rdg-checkbox-cell {
+.rdg .rdg-cell.rdg-checkbox-cell {
   padding-inline-end: 0.125rem;
   border-inline-end: 1px solid transparent;
 }
 
-.querylane-data-grid .rdg-checkbox-input {
-  inline-size: 1rem;
-  block-size: 1rem;
-  accent-color: var(--rdg-checkbox-color);
-}
-
-.querylane-data-grid .rdg-cell.rdg-expand-cell {
+.rdg .rdg-cell.rdg-expand-cell {
   padding-inline-start: 0.125rem;
 }
 
-.querylane-data-grid .rdg-expand-button {
+.rdg .rdg-expand-button {
   opacity: 0;
   transition: opacity 0.1s ease-out;
 }
 
-.querylane-data-grid .rdg-row:hover .rdg-expand-button,
-.querylane-data-grid .rdg-row[aria-selected="true"] .rdg-expand-button,
-.querylane-data-grid .rdg-expand-button:focus-visible,
-.querylane-data-grid .rdg-expand-button[aria-expanded="true"] {
+.rdg .rdg-row:hover .rdg-expand-button,
+.rdg .rdg-row[aria-selected="true"] .rdg-expand-button,
+.rdg .rdg-expand-button:focus-visible,
+.rdg .rdg-expand-button[aria-expanded="true"] {
   opacity: 1;
 }
 
@@ -236,12 +210,11 @@
    the accent-based row-hover highlight and blends in. Reuse the standard muted
    hover surface at full strength so it reads as a gentle button hover against
    the highlighted row, in both light and dark themes. */
-.querylane-data-grid .rdg-expand-button:hover,
-.querylane-data-grid .rdg-expand-button[aria-expanded="true"] {
+.rdg .rdg-expand-button:hover,
+.rdg .rdg-expand-button[aria-expanded="true"] {
   background-color: var(--muted);
 }
 
-.querylane-data-grid
-  .rdg-cell.rdg-cell-frozen:nth-last-child(1 of .rdg-cell-frozen) {
+.rdg .rdg-cell.rdg-cell-frozen:nth-last-child(1 of .rdg-cell-frozen) {
   border-inline-end: 1px solid var(--querylane-header-border-color);
 }

@@ -509,7 +509,7 @@ describe("TableDataGrid query setup", () => {
 
     expect(reactDataGrid.dataGrid).toHaveBeenCalledWith(
       expect.objectContaining({
-        className: expect.stringContaining("querylane-data-grid"),
+        className: expect.stringContaining("rdg-light"),
         defaultColumnOptions: expect.objectContaining({ minWidth: 80 }),
         rowHeight: 32,
       }),

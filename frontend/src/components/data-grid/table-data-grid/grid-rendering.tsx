@@ -135,9 +135,8 @@ function GridBody({
     <div className="contents" data-keyboard-shortcut-scope="grid">
       <DataGrid
         className={cn(
-          "querylane-data-grid",
-          "rdg-light dark:rdg-dark",
-          flush && "querylane-data-grid-flush"
+          "rdg-light dark:rdg-dark [&_.rdg-checkbox-input]:size-4! [&_.rdg-checkbox-input]:accent-primary",
+          flush && "rounded-none! border-x-0!"
         )}
         columns={columns}
         defaultColumnOptions={DATA_GRID_DEFAULT_COLUMN_OPTIONS}

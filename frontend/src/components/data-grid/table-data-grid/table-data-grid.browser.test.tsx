@@ -595,7 +595,7 @@ function renderSelectedHeaderEdgeFixture() {
           }
         `}
       </style>
-      <table className="querylane-data-grid selected-header-edge-fixture">
+      <table className="rdg selected-header-edge-fixture">
         <thead>
           <tr className="rdg-header-row">
             <th className="rdg-cell" scope="col">
@@ -618,7 +618,7 @@ function renderSelectedHeaderEdgeFixture() {
 function renderSelectableDataCellFixture() {
   render(
     <ScreenshotFrame>
-      <div className="querylane-data-grid">
+      <div className="rdg">
         <div className="rdg-header-row">
           <div className="rdg-cell" data-testid="header-cell">
             name
@@ -872,6 +872,10 @@ test("select-all stays tooltip-free and preserves native selection behavior", as
 
   const selectAllCheckbox = page.getByRole("checkbox", { name: "Select All" });
   await expect.element(selectAllCheckbox).toBeVisible();
+  const selectAllStyle = getComputedStyle(selectAllCheckbox.element());
+  expect(selectAllStyle.inlineSize).toBe("16px");
+  expect(selectAllStyle.blockSize).toBe("16px");
+  expect(selectAllStyle.accentColor).not.toBe("auto");
   await expect
     .element(selectAllCheckbox)
     .toHaveAttribute("title", "Select all rows on this page");
@@ -1487,7 +1491,7 @@ test("selected edge header cell keeps a continuous square border", async () => {
   expect(selectedHeaderStyle.borderTopRightRadius).toBe("0px");
   expect(selectedHeaderStyle.borderBottomRightRadius).toBe("0px");
 
-  const grid = document.querySelector<HTMLElement>(".querylane-data-grid");
+  const grid = document.querySelector<HTMLElement>(".rdg");
   if (!grid) {
     throw new Error("expected grid fixture");
   }
@@ -1501,9 +1505,7 @@ test("data grid scrollbars use theme colors in dark mode", async () => {
     const createdHeader = page.getByText("created_at");
     await expect.element(createdHeader).toBeVisible();
 
-    const grid = createdHeader
-      .element()
-      .closest<HTMLElement>(".querylane-data-grid");
+    const grid = createdHeader.element().closest<HTMLElement>(".rdg");
     if (!grid) {
       throw new Error("expected grid fixture");
     }
