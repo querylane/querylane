@@ -6,12 +6,13 @@ import {
   resolveComponentRef,
   type SchemaLike,
 } from "blume/components/openapi/helpers.ts";
-import { buildRequestSample, sampleLanguages } from "blume/components/openapi/snippets.ts";
+import { buildRequestSample } from "blume/components/openapi/snippets.ts";
 import ParametersTable from "blume/components/openapi/ParametersTable.astro";
 import RequestBody from "blume/components/openapi/RequestBody.astro";
 import RequestPanel from "blume/components/openapi/RequestPanel.astro";
 import Responses from "blume/components/openapi/Responses.astro";
 import RpcBadge from "./RpcBadge.astro";
+import { querylaneSampleLanguages } from "./request-samples.ts";
 import { rpcPresentationForReference } from "./rpc-kind.ts";
 
 interface Props {
@@ -95,7 +96,7 @@ const sample =
         schemas
       )
     : null;
-const languages = sampleLanguages(spec?.codeSamples ?? []);
+const languages = querylaneSampleLanguages(spec?.codeSamples ?? []);
 const presentation = ref
   ? rpcPresentationForReference(spec?.document, ref)
   : undefined;

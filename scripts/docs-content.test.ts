@@ -153,6 +153,7 @@ test("renders protobuf well-known scalars as concise OpenAPI strings", async () 
 
 test("serves the generated spec through Blume's native API reference", () => {
 	expect(config.openapi).toEqual({
+		codeSamples: ["curl", "js", "go"],
 		enabled: true,
 		sources: [
 			{

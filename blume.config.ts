@@ -17,6 +17,7 @@ export default defineConfig({
 		repo: "querylane",
 	},
 	openapi: {
+		codeSamples: ["curl", "js", "go"],
 		enabled: true,
 		sources: [
 			{
