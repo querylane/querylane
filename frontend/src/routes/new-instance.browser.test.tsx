@@ -281,9 +281,22 @@ test("connection test validation shows per-field errors and focuses first invali
 test("new instance creation is gated on successful connection test", async () => {
   renderCreateInstance();
 
+  const createButton = page.getByRole("button", { name: "Create instance" });
+  await expect.element(createButton).toBeDisabled();
+  const tooltipTrigger = createButton
+    .element()
+    .closest("[data-base-ui-tooltip-trigger]");
+  if (!(tooltipTrigger instanceof HTMLElement)) {
+    throw new Error("Expected Create instance tooltip trigger");
+  }
+  await page.elementLocator(tooltipTrigger).hover();
   await expect
-    .element(page.getByRole("button", { name: "Create instance" }))
-    .toBeDisabled();
+    .element(
+      page
+        .getByText("Test this connection before creating the instance.")
+        .last()
+    )
+    .toBeVisible();
 
   await fillRequiredConnectionFields();
   await page.getByRole("button", { name: "Test connection" }).click();

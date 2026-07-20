@@ -9,6 +9,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   type CreateInstanceFormState,
   type CreateInstanceLabel,
   createInstanceLabel,
@@ -230,6 +235,21 @@ export function CreateInstanceActions({
   isTesting: boolean;
 }) {
   const createInstanceTestHintId = useId();
+  const showCreateDisabledReason = !(canCreate || isPending || isTesting);
+  const createButton = (
+    <Button
+      aria-describedby={canCreate ? undefined : createInstanceTestHintId}
+      disabled={isPending || isTesting || !canCreate}
+      onClick={handleCreate}
+    >
+      {isPending ? (
+        <Loader2 className="size-4 animate-spin" />
+      ) : (
+        <Plus className="size-4" />
+      )}
+      Create instance
+    </Button>
+  );
   return (
     <div className="flex items-center justify-end gap-2 border-t pt-4">
       <Button
@@ -244,18 +264,20 @@ export function CreateInstanceActions({
         )}
         Test connection
       </Button>
-      <Button
-        aria-describedby={canCreate ? undefined : createInstanceTestHintId}
-        disabled={isPending || isTesting || !canCreate}
-        onClick={handleCreate}
-      >
-        {isPending ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <Plus className="size-4" />
-        )}
-        Create instance
-      </Button>
+      {showCreateDisabledReason ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={<span className="inline-flex cursor-not-allowed" />}
+          >
+            {createButton}
+          </TooltipTrigger>
+          <TooltipContent>
+            Test this connection before creating the instance.
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        createButton
+      )}
       {canCreate ? null : (
         <span className="sr-only" id={createInstanceTestHintId}>
           Test this connection before creating the instance.
