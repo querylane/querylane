@@ -13,7 +13,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - AdminService
+        - Admin
       summary: GetMetricsStorageStats
       description: |-
         Reports storage consumed by the metrics sample tables and the
@@ -52,7 +52,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - AdminService
+        - Admin
       summary: ListAdminRunnerExecutions
       description: |-
         Lists background runner executions with lease ownership details. The
@@ -92,7 +92,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - AdminService
+        - Admin
       summary: ListCatalogSyncStates
       description: Lists catalog sync state per scope with raw, unsanitized errors.
       operationId: AdminService_ListCatalogSyncStates
@@ -129,7 +129,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - AdminService
+        - Admin
       summary: ListReplicas
       description: Lists querylane backend replicas known from their heartbeats.
       operationId: AdminService_ListReplicas
@@ -166,7 +166,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - ConsoleService
+        - Console
       summary: GetConsoleConfig
       description: |-
         Retrieves static, server-provided configuration and metadata about the
@@ -205,7 +205,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - DatabaseService
+        - Database
       summary: GetDatabase
       description: Gets the details of a specific Database.
       operationId: DatabaseService_GetDatabase
@@ -242,7 +242,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - DatabaseService
+        - Database
       summary: GetDatabaseQueryInsights
       description: Returns live query optimization signals for a Database.
       operationId: DatabaseService_GetDatabaseQueryInsights
@@ -279,7 +279,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - DatabaseService
+        - Database
       summary: ListDatabases
       description: |-
         Lists databases available in a given Instance.
@@ -319,7 +319,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - ExtensionService
+        - Extension
       summary: ListExtensions
       description: |-
         Lists extensions available in a given Database, including whether each
@@ -358,7 +358,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - InstanceService
+        - Instance
       summary: CheckInstanceActivity
       description: Checks only live connection activity for high-frequency session polling.
       operationId: InstanceService_CheckInstanceActivity
@@ -395,7 +395,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - InstanceService
+        - Instance
       summary: CheckInstanceHealth
       description: |-
         Checks live PostgreSQL health signals that are inexpensive and directly
@@ -434,7 +434,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - InstanceService
+        - Instance
       summary: CreateInstance
       description: |-
         Registers a new external database instance with the platform.
@@ -473,7 +473,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - InstanceService
+        - Instance
       summary: DeleteInstance
       description: |-
         De-registers an Instance, removing its connection record from the platform.
@@ -512,7 +512,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - InstanceService
+        - Instance
       summary: GetInstance
       description: Gets the details of a registered Instance.
       operationId: InstanceService_GetInstance
@@ -549,7 +549,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - InstanceService
+        - Instance
       summary: GetInstanceOverview
       description: |-
         Returns a live health overview for a PostgreSQL instance.
@@ -588,7 +588,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - InstanceService
+        - Instance
       summary: ListInstances
       description: Lists registered Instances.
       operationId: InstanceService_ListInstances
@@ -625,7 +625,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - InstanceService
+        - Instance
       summary: TestInstanceConnection
       description: Tests PostgreSQL connection details without creating or updating an Instance.
       operationId: InstanceService_TestInstanceConnection
@@ -662,7 +662,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - InstanceService
+        - Instance
       summary: UpdateInstance
       description: Updates the connection details for a registered Instance.
       operationId: InstanceService_UpdateInstance
@@ -699,7 +699,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - MetricsService
+        - Metrics
       summary: QueryMetrics
       description: |-
         QueryMetrics returns one time series per requested metric for a target
@@ -738,7 +738,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - OnboardingService
+        - Onboarding
       summary: GetOnboardingState
       description: |-
         Returns the current onboarding state including available setup methods,
@@ -777,7 +777,7 @@ paths:
     post:
       x-connectrpc-method-kind: server-streaming
       tags:
-        - OnboardingService
+        - Onboarding
       summary: SetupAppDatabase
       description: |-
         Configures and initializes the application database using the provided
@@ -880,7 +880,7 @@ paths:
     post:
       x-connectrpc-method-kind: server-streaming
       tags:
-        - OnboardingService
+        - Onboarding
       summary: WatchConfigChanges
       description: |-
         Subscribes to database setup progress triggered by external config changes
@@ -983,7 +983,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - RoleService
+        - Role
       summary: GetRole
       description: Gets the details of a specific Role.
       operationId: RoleService_GetRole
@@ -1020,7 +1020,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - RoleService
+        - Role
       summary: ListPublicGrants
       description: |-
         Lists the privileges available to PUBLIC within a Database — privileges
@@ -1065,7 +1065,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - RoleService
+        - Role
       summary: ListRoleDefaultPrivileges
       description: |-
         Lists the default privileges (ALTER DEFAULT PRIVILEGES) that grant access
@@ -1105,7 +1105,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - RoleService
+        - Role
       summary: ListRoleGrants
       description: |-
         Lists the object-level privileges granted directly to a Role within a
@@ -1144,7 +1144,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - RoleService
+        - Role
       summary: ListRoleOwnedObjects
       description: |-
         Lists the objects a Role owns within a specific Database. Owners hold every
@@ -1184,7 +1184,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - RoleService
+        - Role
       summary: ListRoles
       description: Lists server-level PostgreSQL roles available in a given Instance.
       operationId: RoleService_ListRoles
@@ -1221,7 +1221,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - RunnerService
+        - Runner
       summary: ListRunnerExecutions
       description: 'Lists background runner executions: one entry per (runner, target) pair.'
       operationId: RunnerService_ListRunnerExecutions
@@ -1258,7 +1258,7 @@ paths:
     post:
       x-connectrpc-method-kind: server-streaming
       tags:
-        - SQLService
+        - SQL
       summary: ExecuteQuery
       description: Executes a single read-only SQL query and streams results in batches.
       operationId: SQLService_ExecuteQuery
@@ -1358,7 +1358,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - SQLService
+        - SQL
       summary: ExplainQuery
       description: Produces an EXPLAIN plan for a single query.
       operationId: SQLService_ExplainQuery
@@ -1395,7 +1395,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - SchemaService
+        - Schema
       summary: GetSchema
       description: Gets the details of a specific Schema.
       operationId: SchemaService_GetSchema
@@ -1432,7 +1432,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - SchemaService
+        - Schema
       summary: ListSchemas
       description: Lists schemas available in a given Database.
       operationId: SchemaService_ListSchemas
@@ -1469,7 +1469,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - TableDataService
+        - TableData
       summary: ReadCellValue
       description: |-
         Reads the full value of a single cell, identified by an opaque token
@@ -1509,7 +1509,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - TableDataService
+        - TableData
       summary: ReadRows
       description: Reads a single bounded page of rows. Intended for the interactive grid.
       operationId: TableDataService_ReadRows
@@ -1546,7 +1546,7 @@ paths:
     post:
       x-connectrpc-method-kind: server-streaming
       tags:
-        - TableDataService
+        - TableData
       summary: StreamRows
       description: |-
         Streams rows for export and bulk processing. Emits metadata first,
@@ -1648,7 +1648,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - TableService
+        - Table
       summary: GetTable
       description: |-
         Gets the details of a specific Table.
@@ -1687,7 +1687,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - TableService
+        - Table
       summary: GetTablePartitionMetadata
       description: Gets PostgreSQL partition metadata for a specific Table.
       operationId: TableService_GetTablePartitionMetadata
@@ -1724,7 +1724,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - TableService
+        - Table
       summary: ListTableColumns
       description: |-
         Lists columns for a specific Table.
@@ -1763,7 +1763,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - TableService
+        - Table
       summary: ListTableConstraints
       description: Lists constraints (primary key, unique, foreign key, check, exclusion) for a table.
       operationId: TableService_ListTableConstraints
@@ -1800,7 +1800,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - TableService
+        - Table
       summary: ListTableIndexes
       description: Lists indexes for a table.
       operationId: TableService_ListTableIndexes
@@ -1837,7 +1837,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - TableService
+        - Table
       summary: ListTablePolicies
       description: Lists row-level security policies for a table.
       operationId: TableService_ListTablePolicies
@@ -1874,7 +1874,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - TableService
+        - Table
       summary: ListTableTriggers
       description: Lists triggers for a table.
       operationId: TableService_ListTableTriggers
@@ -1911,7 +1911,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - TableService
+        - Table
       summary: ListTables
       description: Lists tables available in a given Schema.
       operationId: TableService_ListTables
@@ -1948,7 +1948,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - ViewService
+        - View
       summary: GetView
       description: Gets a single view.
       operationId: ViewService_GetView
@@ -1985,7 +1985,7 @@ paths:
     post:
       x-connectrpc-method-kind: unary
       tags:
-        - ViewService
+        - View
       summary: ListViews
       description: Lists views and materialized views in a schema.
       operationId: ViewService_ListViews
@@ -7722,7 +7722,7 @@ components:
       additionalProperties: false
 security: []
 tags:
-  - name: AdminService
+  - name: Admin
     description: |-
       AdminService exposes operational introspection of querylane's own backend:
        live replicas, the background runner job queue including lease ownership,
@@ -7730,20 +7730,20 @@ tags:
        surface for operators ("why don't my metrics show up?") and is not yet
        gated by authorization; once authn/authz lands, access will be restricted
        to admins at the service level.
-  - name: ConsoleService
+  - name: Console
     description: |-
       ConsoleService provides methods to retrieve metadata about the Querylane
        Console application itself.
-  - name: DatabaseService
+  - name: Database
     description: |-
       Service for managing databases within registered Instances.
        This service provides access to database metadata for building
        visual database browsers and workspace tools.
-  - name: ExtensionService
+  - name: Extension
     description: Service for viewing PostgreSQL extensions available in a database.
-  - name: InstanceService
+  - name: Instance
     description: Service for managing connection records to external database instances.
-  - name: MetricsService
+  - name: Metrics
     description: |-
       MetricsService serves the time series collected by querylane's background
        sampling probes, turned into chart-ready shape: samples are bucketed to a
@@ -7753,26 +7753,26 @@ tags:
        It is a read API over the meta database's sample tables; it never touches the
        managed instances. The live single-point equivalents live on
        InstanceService.GetInstanceOverview.
-  - name: OnboardingService
+  - name: Onboarding
     description: |-
       OnboardingService guides first-time users through configuring the application
        database. It exposes the available setup methods, executes setup, and streams
        real-time progress events back to the client.
-  - name: RoleService
+  - name: Role
     description: |-
       Service for viewing PostgreSQL roles available on a registered Instance,
        including direct memberships sourced from pg_auth_members.
-  - name: RunnerService
+  - name: Runner
     description: |-
       RunnerService exposes the scheduling state of querylane's background jobs:
        the sampling probes and maintenance jobs that run against registered
        instances. It answers "is sampling healthy?" — which probes ran, when they
        last succeeded per target, and what the last failure was.
-  - name: SchemaService
+  - name: Schema
     description: Service for managing schemas within databases.
-  - name: TableService
+  - name: Table
     description: Service for managing tables within schemas.
-  - name: TableDataService
+  - name: TableData
     description: |-
       TableDataService exposes live row reads against a single Table resource.
 
@@ -7780,9 +7780,9 @@ tags:
        `name`, not `parent`. Distinct from TableService (catalog) and SQLService
        (ad-hoc SQL) because the three surfaces have different cost, timeout,
        pooling, and authorization profiles.
-  - name: SQLService
+  - name: SQL
     description: |-
       SQLService exposes ad-hoc read-only query execution.
        This is intended for the SQL editor, not for grid-style table browsing.
-  - name: ViewService
+  - name: View
     description: ViewService exposes views as a separate resource hierarchy.

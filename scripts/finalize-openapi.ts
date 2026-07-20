@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { shortenServiceTags } from "./openapi-labels";
 
 const specPath = new URL(
 	"../docs/generated/querylane.openapi.yaml",
@@ -169,7 +170,9 @@ if (!generated.startsWith(generatedHeader)) {
 }
 
 const published = annotateRpcKinds(
-	inlineWellKnownScalars(generated.replace(generatedHeader, publishedHeader)),
+	shortenServiceTags(
+		inlineWellKnownScalars(generated.replace(generatedHeader, publishedHeader)),
+	),
 	readRpcKinds(),
 );
 await writeFile(specPath, published);
