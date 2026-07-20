@@ -14,6 +14,7 @@ import {
   createInstanceLabel,
   type InlineNotice,
 } from "@/features/new-instance-workflow";
+import { cn } from "@/lib/utils";
 import type {
   CreateInstanceFieldName,
   CreateInstanceFormErrors,
@@ -203,7 +204,12 @@ export function CreateInstanceInlineNotice({
   return (
     <div
       aria-live={notice.variant === "success" ? "polite" : "assertive"}
-      className={`rounded-md px-3 py-2 text-sm ${notice.variant === "success" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-destructive/10 text-destructive"}`}
+      className={cn(
+        "rounded-md px-3 py-2 text-sm",
+        notice.variant === "success"
+          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+          : "bg-destructive/10 text-destructive"
+      )}
       role={notice.variant === "success" ? "status" : "alert"}
     >
       {notice.message}
