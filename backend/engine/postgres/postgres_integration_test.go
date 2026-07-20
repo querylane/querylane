@@ -458,6 +458,46 @@ func (s *PostgresEngineIntegrationTestSuite) TestListSchemas() {
 	}
 }
 
+// TestListSchemasExcludesTempSchemas verifies session-scoped temp namespaces
+// (pg_temp_N, pg_toast_temp_N) never surface in schema listings.
+func (s *PostgresEngineIntegrationTestSuite) TestListSchemasExcludesTempSchemas() {
+	ctx := context.Background()
+
+	testDB := s.getTestDBConnection()
+	defer testDB.Close()
+
+	// Pin one session so its temp namespace stays alive for the assertions.
+	conn, err := testDB.Conn(ctx)
+	s.Require().NoError(err)
+
+	defer conn.Close()
+
+	_, err = conn.ExecContext(ctx, "CREATE TEMP TABLE temp_schema_probe (v text)")
+	s.Require().NoError(err)
+
+	var tempSchemaCount int
+	s.Require().NoError(conn.QueryRowContext(ctx,
+		`SELECT count(*) FROM pg_namespace WHERE nspname LIKE 'pg\_temp\_%'`,
+	).Scan(&tempSchemaCount))
+	s.Require().Positive(tempSchemaCount, "expected the session temp namespace to exist")
+
+	schemas, _, err := s.eng.ListSchemas(ctx, testDB, aip.Params{})
+	s.Require().NoError(err)
+
+	foundPublic := false
+
+	for _, schema := range schemas {
+		if schema.Name == "public" {
+			foundPublic = true
+		}
+
+		s.False(strings.HasPrefix(schema.Name, "pg_temp_"), "temp schema %s should be hidden", schema.Name)
+		s.False(strings.HasPrefix(schema.Name, "pg_toast_temp_"), "toast temp schema %s should be hidden", schema.Name)
+	}
+
+	s.True(foundPublic, "expected public schema to remain listed")
+}
+
 // TestListTables tests table listing functionality.
 func (s *PostgresEngineIntegrationTestSuite) TestListTables() {
 	tests := []struct {

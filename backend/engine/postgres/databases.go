@@ -82,6 +82,7 @@ func (d *Postgres) GetDatabase(ctx context.Context, db *sql.DB, databaseName str
 func (d *Postgres) ListSchemas(ctx context.Context, db *sql.DB, params aip.Params) ([]engine.Schema, string, error) {
 	return rawsql.Execute(ctx, schemaSchema, params, withPostgresErrorClassifier(rawsql.Query{
 		BaseQuery: schemaListQuery,
+		HasWhere:  true,
 	}, "list schemas"), scanSchema, db)
 }
 

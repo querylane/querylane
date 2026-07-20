@@ -80,8 +80,6 @@ const PARTITION_Q1_ROW_RE = /change_log_2026_q1.*1\.02M/;
 const PARTITION_Q2_ROW_RE = /change_log_2026_q2.*1\.18M/;
 const PARTITION_Q3_ROW_RE = /change_log_2026_q3 CURRENT.*48k/;
 const PARTITION_DEFAULT_ROW_RE = /change_log_archive DEFAULT.*1\.94M/;
-const PARTITION_DEFAULT_FILTER_RE = /^Bound kind.*Default/;
-const PARTITION_PAGE_FOUR_RE = /Showing 1–4 of 4/;
 const PARTITION_PAGE_ONE_RE = /Showing 1–10 of 12/;
 const PARTITION_PAGE_TWO_RE = /Showing 11–12 of 12/;
 const PARTITION_PAGE_ALL_RE = /Showing 1–12 of 12/;
@@ -3661,9 +3659,6 @@ test("data explorer table partitions matches the imported redesign fixture", asy
   );
 
   await expect
-    .element(page.getByText("Partition by RANGE (recorded_at)"))
-    .not.toBeInTheDocument();
-  await expect
     .element(page.getByText("PostgreSQL statistics"))
     .not.toBeInTheDocument();
   await expect
@@ -3674,21 +3669,11 @@ test("data explorer table partitions matches the imported redesign fixture", asy
     .not.toBeInTheDocument();
   await expect
     .element(page.getByRole("heading", { name: "Rows per partition" }))
-    .toBeVisible();
+    .not.toBeInTheDocument();
   await expect
-    .element(
-      page.getByText(
-        "equal time ranges · bar height = rows · click a bar to highlight it below"
-      )
-    )
+    .element(page.getByText("Partitioned by", { exact: false }))
     .toBeVisible();
-  await expect
-    .element(
-      page.getByRole("button", {
-        name: "change_log_2026_q1, 1.02M estimated rows",
-      })
-    )
-    .toBeVisible();
+  await expect.element(page.getByText("RANGE (recorded_at)")).toBeVisible();
   await expect
     .element(page.getByRole("row", { name: PARTITION_Q1_ROW_RE }))
     .toBeVisible();
@@ -3699,26 +3684,15 @@ test("data explorer table partitions matches the imported redesign fixture", asy
     .element(page.getByRole("row", { name: PARTITION_Q3_ROW_RE }))
     .toBeVisible();
   await expect
-    .element(page.getByText("CURRENT · dashed = projected month-end"))
-    .toBeVisible();
-  await expect
     .element(page.getByRole("row", { name: PARTITION_DEFAULT_ROW_RE }))
     .toBeVisible();
-  const partitionSearchInput = page
-    .getByRole("textbox", { name: "Search partitions…" })
-    .element();
-  const partitionFilterBar = requireFacetFilterBar("partition facet filters");
-  expect(partitionFilterBar.textContent).toContain("Schema");
-  expect(partitionFilterBar.textContent).toContain("Bound kind");
-  expect(partitionFilterBar.getBoundingClientRect().left).toBeGreaterThan(
-    partitionSearchInput.getBoundingClientRect().right
-  );
-  expect(
-    Math.abs(
-      partitionFilterBar.getBoundingClientRect().top -
-        partitionSearchInput.getBoundingClientRect().top
-    )
-  ).toBeLessThanOrEqual(4);
+  await expect.element(page.getByText("2026-01-01 → 2026-04-01")).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { exact: true, name: "Schema" }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("button", { exact: true, name: "Bound kind" }))
+    .not.toBeInTheDocument();
 
   await page
     .getByRole("textbox", { name: "Search partitions…" })
@@ -3730,34 +3704,15 @@ test("data explorer table partitions matches the imported redesign fixture", asy
     .element(page.getByRole("row", { name: PARTITION_DEFAULT_ROW_RE }))
     .toBeVisible();
   await page.getByRole("textbox", { name: "Search partitions…" }).fill("");
-  await page.getByRole("button", { exact: true, name: "Bound kind" }).click();
-  await page.getByRole("option", { exact: true, name: "Default" }).click();
-  await expect
-    .element(page.getByRole("button", { name: PARTITION_DEFAULT_FILTER_RE }))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("row", { name: PARTITION_Q1_ROW_RE }))
-    .not.toBeInTheDocument();
-  await expect
-    .element(page.getByRole("row", { name: PARTITION_DEFAULT_ROW_RE }))
-    .toBeVisible();
-  await page.getByRole("button", { exact: true, name: "Reset" }).click();
   await expect
     .element(page.getByRole("row", { name: PARTITION_Q1_ROW_RE }))
     .toBeVisible();
   await expect
     .element(page.getByRole("combobox", { name: "Rows per page" }))
-    .toBeVisible();
-  await expect.element(page.getByText(PARTITION_PAGE_FOUR_RE)).toBeVisible();
-  await expect
-    .element(page.getByRole("button", { name: "Previous page" }))
-    .toBeDisabled();
-  await expect
-    .element(page.getByRole("button", { name: "Next page" }))
-    .toBeDisabled();
+    .not.toBeInTheDocument();
   await expect
     .element(
-      page.getByText("The DEFAULT partition still holds", { exact: false })
+      page.getByText("The DEFAULT partition holds 46%", { exact: false })
     )
     .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(

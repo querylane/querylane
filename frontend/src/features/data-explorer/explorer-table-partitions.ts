@@ -5,29 +5,15 @@ import type {
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 type PartitionBoundKind = "default" | "hash" | "list" | "other" | "range";
-type PartitionBarTone = "current" | "default" | "normal" | "selected";
-
-interface ChildPartitionFilters {
-  boundKinds?: PartitionBoundKind[] | undefined;
-  schemaNames?: string[] | undefined;
-}
 
 interface PartitionDisplayRow {
-  axisLabel: string;
-  barHeightClassName: string;
-  barHeightPercent: number;
-  barTone: PartitionBarTone;
   boundKind: PartitionBoundKind;
   boundLabel: string;
   estimatedRows: number;
-  hasProjection: boolean;
   isCurrent: boolean;
   isDefault: boolean;
   name: string;
   partitionBound: string;
-  projectedHeightClassName: string;
-  projectedHeightPercent: number;
-  projectedRowsLabel: string;
   resourceLabel: string;
   rowsLabel: string;
   schemaName: string;
@@ -38,12 +24,6 @@ interface PartitionDisplayRow {
   table: string;
 }
 
-interface PartitionRowFilters {
-  boundKinds?: PartitionBoundKind[] | undefined;
-  schemaNames?: string[] | undefined;
-  search?: string | undefined;
-}
-
 interface PartitionRowsSummary {
   totalRowsLabel: string;
   totalSizeLabel: string;
@@ -51,8 +31,6 @@ interface PartitionRowsSummary {
 
 interface PartitionViewModel {
   defaultPartition: PartitionDisplayRow | undefined;
-  partitionExpressionLabel: string;
-  partitionStrategyLabel: string;
   rows: PartitionDisplayRow[];
   totalRowsLabel: string;
   totalSizeLabel: string;
@@ -73,64 +51,16 @@ const PARTITION_SHARE_WIDTH_CLASSES = [
   "w-11/12",
   "w-full",
 ] as const;
-const PARTITION_BAR_HEIGHT_CLASSES = [
-  "h-0",
-  "h-1/12",
-  "h-2/12",
-  "h-3/12",
-  "h-4/12",
-  "h-5/12",
-  "h-6/12",
-  "h-7/12",
-  "h-8/12",
-  "h-9/12",
-  "h-10/12",
-  "h-11/12",
-  "h-full",
-] as const;
-const MONTH_LABELS = [
-  "",
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
-const PARTITION_BOUND_KIND_AXIS_LABELS: Record<PartitionBoundKind, string> = {
-  default: "default",
-  hash: "hash",
-  list: "list",
-  other: "other",
-  range: "range",
-};
-const RANGE_START_PATTERN = /FROM \('(\d{4})-(\d{2})-(\d{2})'\)/i;
+// Range bounds may carry a time-of-day suffix, e.g. FROM ('2026-01-01 00:00:00+00').
 const RANGE_BOUNDS_PATTERN =
-  /FROM \('(\d{4})-(\d{2})-(\d{2})'\) TO \('(\d{4})-(\d{2})-(\d{2})'\)/i;
-const PARTITION_KEY_EXPRESSION_PATTERN = /^[A-Z]+\s*\((.+)\)$/i;
+  /FROM \('(\d{4}-\d{2}-\d{2})[^']*'\) TO \('(\d{4}-\d{2}-\d{2})[^']*'\)/i;
+const FOR_VALUES_PREFIX_PATTERN = /^FOR VALUES\s+/i;
 const TRAILING_ZERO_DECIMAL = /\.0+$/;
 const TRAILING_DECIMAL_ZEROES = /(\.\d*?)0+$/;
 const THOUSAND = 1000;
 const MILLION = 1_000_000;
 const BILLION = 1_000_000_000;
 const PERCENT_FACTOR = 100;
-const MONTHS_PER_QUARTER = 3;
-const MIN_BAR_HEIGHT_PERCENT = 3;
-const HOURS_PER_DAY = 24;
-const MINUTES_PER_HOUR = 60;
-const SECONDS_PER_MINUTE = 60;
-const MILLISECONDS_PER_SECOND = 1000;
-const DAY_MILLISECONDS =
-  HOURS_PER_DAY *
-  MINUTES_PER_HOUR *
-  SECONDS_PER_MINUTE *
-  MILLISECONDS_PER_SECOND;
 
 function hasPartitionMetadata(
   metadata: TablePartitionMetadata | undefined
@@ -193,67 +123,27 @@ function partitionBoundKind(partition: TablePartition): PartitionBoundKind {
   return "other";
 }
 
-function filterChildPartitions(
-  partitions: TablePartition[],
-  filters: ChildPartitionFilters
-): TablePartition[] {
-  const schemaNames = filters.schemaNames ?? [];
-  const boundKinds = filters.boundKinds ?? [];
-  const schemaNameSet = new Set(schemaNames);
-  const boundKindSet = new Set(boundKinds);
-  return partitions.filter((partition) => {
-    if (
-      schemaNames.length > 0 &&
-      !schemaNameSet.has(partitionSchemaName(partition))
-    ) {
-      return false;
-    }
-    if (
-      boundKinds.length > 0 &&
-      !boundKindSet.has(partitionBoundKind(partition))
-    ) {
-      return false;
-    }
-    return true;
-  });
-}
-
 function filterPartitionDisplayRows(
   rows: PartitionDisplayRow[],
-  filters: PartitionRowFilters
+  search: string
 ): PartitionDisplayRow[] {
-  const search = filters.search?.trim().toLocaleLowerCase() ?? "";
-  const schemaNames = filters.schemaNames ?? [];
-  const boundKinds = filters.boundKinds ?? [];
-  const schemaNameSet = new Set(schemaNames);
-  const boundKindSet = new Set(boundKinds);
+  const query = search.trim().toLocaleLowerCase();
+  if (!query) {
+    return rows;
+  }
 
-  return rows.filter((row) => {
-    if (schemaNames.length > 0 && !schemaNameSet.has(row.schemaName)) {
-      return false;
-    }
-    if (boundKinds.length > 0 && !boundKindSet.has(row.boundKind)) {
-      return false;
-    }
-    if (!search) {
-      return true;
-    }
-
-    return [
+  return rows.filter((row) =>
+    [
       row.name,
       row.resourceLabel,
       row.schemaName,
       row.partitionBound,
       row.boundLabel,
-      row.axisLabel,
-      row.rowsLabel,
-      row.sizeLabel,
-      row.shareLabel,
     ]
       .join(" ")
       .toLocaleLowerCase()
-      .includes(search);
-  });
+      .includes(query)
+  );
 }
 
 function summarizePartitionDisplayRows(
@@ -333,92 +223,41 @@ function partitionDisplayName(partition: TablePartition): string {
   }
 }
 
-function partitionExpressionLabel(partitionKey: string): string {
-  const expression = PARTITION_KEY_EXPRESSION_PATTERN.exec(partitionKey)?.[1];
-  return expression?.trim() || partitionKey || "partition key";
-}
-
-function rangeAxisLabel(partitionBound: string, kind: PartitionBoundKind) {
-  if (kind === "default") {
-    return "default";
-  }
-  if (kind !== "range") {
-    return PARTITION_BOUND_KIND_AXIS_LABELS[kind];
-  }
+function rangeBoundDayLabels(partitionBound: string) {
   const bounds = RANGE_BOUNDS_PATTERN.exec(partitionBound);
-  const start = RANGE_START_PATTERN.exec(partitionBound);
-  if (!(start?.[1] && start[2])) {
-    return "range";
+  const start = bounds?.[1];
+  const end = bounds?.[2];
+  if (!(start && end)) {
+    return;
   }
-  const [, startYear] = start;
-  const startMonth = Number.parseInt(start[2], 10);
-  if (
-    bounds?.[1] &&
-    bounds[2] &&
-    bounds[4] &&
-    bounds[5] &&
-    Number.parseInt(bounds[5], 10) - Number.parseInt(bounds[2], 10) ===
-      MONTHS_PER_QUARTER
-  ) {
-    const quarter = Math.floor((startMonth - 1) / MONTHS_PER_QUARTER) + 1;
-    return `Q${quarter} ${startYear.slice(2)}`;
-  }
-  return `${MONTH_LABELS[startMonth] ?? "range"} ${startYear.slice(2)}`;
+  return { end, start };
 }
 
-function partitionBarTone({
-  isCurrent,
-  isDefault,
-  isSelected,
-}: {
-  isCurrent: boolean;
-  isDefault: boolean;
-  isSelected: boolean;
-}): PartitionBarTone {
-  if (isSelected) {
-    return "selected";
-  }
-  if (isDefault) {
-    return "default";
-  }
-  if (isCurrent) {
-    return "current";
-  }
-  return "normal";
-}
-
-function partitionBoundLabel(partitionBound: string): string {
-  if (partitionBound === "DEFAULT") {
+function partitionBoundLabel(
+  partitionBound: string,
+  kind: PartitionBoundKind
+): string {
+  if (kind === "default") {
     return "DEFAULT — catches rows outside every range";
   }
-  return partitionBound || "—";
+  if (kind === "range") {
+    const bounds = rangeBoundDayLabels(partitionBound);
+    if (bounds) {
+      return `${bounds.start} → ${bounds.end}`;
+    }
+  }
+  const withoutPrefix = partitionBound.replace(FOR_VALUES_PREFIX_PATTERN, "");
+  return withoutPrefix || "—";
 }
 
 function rangeBoundDates(partitionBound: string) {
-  const bounds = RANGE_BOUNDS_PATTERN.exec(partitionBound);
-  if (
-    !(
-      bounds?.[1] &&
-      bounds[2] &&
-      bounds[3] &&
-      bounds[4] &&
-      bounds[5] &&
-      bounds[6]
-    )
-  ) {
+  const bounds = rangeBoundDayLabels(partitionBound);
+  if (!bounds) {
     return;
   }
 
-  const start = Date.UTC(
-    Number.parseInt(bounds[1], 10),
-    Number.parseInt(bounds[2], 10) - 1,
-    Number.parseInt(bounds[3], 10)
-  );
-  const end = Date.UTC(
-    Number.parseInt(bounds[4], 10),
-    Number.parseInt(bounds[5], 10) - 1,
-    Number.parseInt(bounds[6], 10)
-  );
+  const start = Date.parse(`${bounds.start}T00:00:00Z`);
+  const end = Date.parse(`${bounds.end}T00:00:00Z`);
   if (!(Number.isFinite(start) && Number.isFinite(end)) || end <= start) {
     return;
   }
@@ -443,115 +282,30 @@ function isDateInsideRange(partitionBound: string, currentDate: Date): boolean {
   return current >= bounds.start && current < bounds.end;
 }
 
-function elapsedRangeRatio(partitionBound: string, currentDate: Date): number {
-  const bounds = rangeBoundDates(partitionBound);
-  if (!bounds) {
-    return 0;
-  }
-
-  const current = utcDay(currentDate);
-  const elapsedDays = Math.max(
-    1,
-    Math.ceil((current - bounds.start) / DAY_MILLISECONDS)
-  );
-  const totalDays = Math.max(1, (bounds.end - bounds.start) / DAY_MILLISECONDS);
-  return Math.min(Math.max(elapsedDays / totalDays, 0), 1);
-}
-
-function projectedRows({
-  currentDate,
-  isCurrent,
-  partitionBound,
-  rows,
-}: {
-  currentDate: Date;
-  isCurrent: boolean;
-  partitionBound: string;
-  rows: number;
-}): number {
-  if (!(isCurrent && rows > 0)) {
-    return rows;
-  }
-
-  const elapsed = elapsedRangeRatio(partitionBound, currentDate);
-  if (elapsed <= 0) {
-    return rows;
-  }
-  return Math.max(rows, rows / elapsed);
-}
-
-function percentOfMax(value: number, max: number): number {
-  if (
-    !(Number.isFinite(value) && Number.isFinite(max)) ||
-    max <= 0 ||
-    value <= 0
-  ) {
-    return 0;
-  }
-  return Math.max(MIN_BAR_HEIGHT_PERCENT, (value / max) * PERCENT_FACTOR);
-}
-
 function buildPartitionDisplayRow({
-  currentDate,
   currentPartition,
-  maxProjectedRows,
-  maxRows,
   partition,
   rowCount,
-  selectedPartition,
   size,
   totalRows,
 }: {
-  currentDate: Date;
   currentPartition: string | undefined;
-  maxProjectedRows: number;
-  maxRows: number;
   partition: TablePartition;
   rowCount: number;
-  selectedPartition: string | undefined;
   size: number;
   totalRows: number;
 }): PartitionDisplayRow {
   const boundKind = partitionBoundKind(partition);
   const share = totalRows > 0 ? rowCount / totalRows : 0;
-  const isSelected = selectedPartition === partition.table;
   const isDefault = boundKind === "default";
-  const isCurrent = !isDefault && currentPartition === partition.table;
-  const projected = projectedRows({
-    currentDate,
-    isCurrent,
-    partitionBound: partition.partitionBound,
-    rows: rowCount,
-  });
-  const barHeightPercent = percentOfMax(rowCount, maxProjectedRows || maxRows);
-  const projectedHeightPercent = percentOfMax(projected, maxProjectedRows);
-  const projectedExtraHeightPercent = Math.max(
-    projectedHeightPercent - barHeightPercent,
-    0
-  );
   return {
-    axisLabel: rangeAxisLabel(partition.partitionBound, boundKind),
-    barHeightClassName: widthClassForRatio(
-      barHeightPercent / PERCENT_FACTOR,
-      PARTITION_BAR_HEIGHT_CLASSES
-    ),
-    barHeightPercent,
-    barTone: partitionBarTone({ isCurrent, isDefault, isSelected }),
     boundKind,
-    boundLabel: partitionBoundLabel(partition.partitionBound),
+    boundLabel: partitionBoundLabel(partition.partitionBound, boundKind),
     estimatedRows: rowCount,
-    hasProjection: isCurrent && projected > rowCount,
-    isCurrent,
+    isCurrent: !isDefault && currentPartition === partition.table,
     isDefault,
     name: partitionDisplayName(partition),
     partitionBound: partition.partitionBound,
-    projectedHeightClassName: widthClassForRatio(
-      projectedExtraHeightPercent / PERCENT_FACTOR,
-      PARTITION_BAR_HEIGHT_CLASSES
-    ),
-    projectedHeightPercent,
-    projectedRowsLabel:
-      projected > rowCount ? formatPartitionRows(projected) : "—",
     resourceLabel: formatPartitionResourceLabel(partition.table),
     rowsLabel: rowCount > 0 ? formatPartitionRows(rowCount) : "—",
     schemaName: partitionSchemaName(partition),
@@ -568,14 +322,10 @@ function buildPartitionDisplayRow({
 
 function derivePartitionViewModel({
   currentDate = new Date(),
-  partitionKey,
   partitions,
-  selectedPartition,
 }: {
   currentDate?: Date | undefined;
-  partitionKey: string;
   partitions: TablePartition[];
-  selectedPartition?: string | undefined;
 }): PartitionViewModel {
   const rowsWithNumbers = partitions.map((partition) => ({
     partition,
@@ -584,34 +334,14 @@ function derivePartitionViewModel({
   }));
   const totalRows = rowsWithNumbers.reduce((sum, row) => sum + row.rows, 0);
   const totalSize = rowsWithNumbers.reduce((sum, row) => sum + row.size, 0);
-  const maxRows = Math.max(...rowsWithNumbers.map((row) => row.rows), 0);
-  const nonDefaultRows = rowsWithNumbers.filter(
-    ({ partition }) => partitionBoundKind(partition) !== "default"
-  );
-  const currentPartition =
-    nonDefaultRows.find(({ partition }) =>
-      isDateInsideRange(partition.partitionBound, currentDate)
-    )?.partition.table ?? nonDefaultRows.at(-1)?.partition.table;
-  const maxProjectedRows = Math.max(
-    ...rowsWithNumbers.map(({ partition, rows: rowCount }) =>
-      projectedRows({
-        currentDate,
-        isCurrent: currentPartition === partition.table,
-        partitionBound: partition.partitionBound,
-        rows: rowCount,
-      })
-    ),
-    0
-  );
+  const currentPartition = rowsWithNumbers.find(({ partition }) =>
+    isDateInsideRange(partition.partitionBound, currentDate)
+  )?.partition.table;
   const rows = rowsWithNumbers.map(({ partition, rows: rowCount, size }) =>
     buildPartitionDisplayRow({
-      currentDate,
       currentPartition,
-      maxProjectedRows,
-      maxRows,
       partition,
       rowCount,
-      selectedPartition,
       size,
       totalRows,
     })
@@ -619,8 +349,6 @@ function derivePartitionViewModel({
 
   return {
     defaultPartition: rows.find((row) => row.isDefault),
-    partitionExpressionLabel: partitionExpressionLabel(partitionKey),
-    partitionStrategyLabel: partitionKey || "—",
     rows,
     totalRowsLabel: totalRows > 0 ? formatPartitionTotalRows(totalRows) : "—",
     totalSizeLabel: totalSize > 0 ? formatBytes(totalSize) : "—",
@@ -628,18 +356,14 @@ function derivePartitionViewModel({
 }
 
 export type {
-  ChildPartitionFilters,
-  PartitionBarTone,
   PartitionBoundKind,
   PartitionDisplayRow,
-  PartitionRowFilters,
   PartitionRowsSummary,
   PartitionViewModel,
 };
 export {
   derivePartitionTabCount,
   derivePartitionViewModel,
-  filterChildPartitions,
   filterPartitionDisplayRows,
   formatPartitionResourceLabel,
   hasPartitionMetadata,

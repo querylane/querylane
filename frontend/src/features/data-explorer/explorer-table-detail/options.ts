@@ -18,10 +18,6 @@ import type {
   ColumnNullabilityFilter,
   TriggerStateFilter,
 } from "@/features/data-explorer/explorer-table-detail-filters";
-import type {
-  PartitionBoundKind,
-  PartitionDisplayRow,
-} from "@/features/data-explorer/explorer-table-partitions";
 import {
   describePostgresIndexMethod,
   normalizeIndexMethod,
@@ -129,24 +125,10 @@ const COLUMN_NULLABILITY_FILTER_OPTIONS = [
   { label: "Not null", value: "not-null" },
   { label: "Nullable", value: "nullable" },
 ] satisfies ColumnFacetOption<ColumnNullabilityFilter>[];
-const PARTITION_BOUND_KIND_LABELS: Record<PartitionBoundKind, string> = {
-  default: "Default",
-  hash: "Hash",
-  list: "List",
-  other: "Other",
-  range: "Range",
-};
 const TRIGGER_STATE_FILTER_LABELS: Record<TriggerStateFilter, string> = {
   disabled: "Disabled",
   enabled: "Enabled",
 };
-const PARTITION_BOUND_KIND_ORDER = [
-  "range",
-  "list",
-  "hash",
-  "default",
-  "other",
-] satisfies PartitionBoundKind[];
 function uniqueSortedOptions(values: string[]): FacetedFilterOption[] {
   return Array.from(new Set(values.filter(Boolean)))
     .sort((left, right) => left.localeCompare(right))
@@ -192,23 +174,6 @@ function presentPolicyModeOptions(
     )
     .map((mode) => ({ label: formatPolicyMode(mode), value: String(mode) }));
 }
-function presentPartitionSchemaOptions(
-  rows: PartitionDisplayRow[]
-): FacetedFilterOption[] {
-  return uniqueSortedOptions(rows.map((row) => row.schemaName));
-}
-function presentPartitionBoundKindOptions(
-  rows: PartitionDisplayRow[]
-): FacetedFilterOption[] {
-  const present = new Set(rows.map((row) => row.boundKind));
-  const options: FacetedFilterOption[] = [];
-  for (const value of PARTITION_BOUND_KIND_ORDER) {
-    if (present.has(value)) {
-      options.push({ label: PARTITION_BOUND_KIND_LABELS[value], value });
-    }
-  }
-  return options;
-}
 function presentTriggerStateOptions(
   triggers: TableTrigger[]
 ): FacetedFilterOption[] {
@@ -226,9 +191,6 @@ function presentTriggerStateOptions(
 function isTriggerStateFilter(value: string): value is TriggerStateFilter {
   return value === "disabled" || value === "enabled";
 }
-function isPartitionBoundKind(value: string): value is PartitionBoundKind {
-  return PARTITION_BOUND_KIND_ORDER.includes(value as PartitionBoundKind);
-}
 
 // Table-detail metadata RPCs currently expose parent-scoped lists only.
 // These facets intentionally narrow the loaded rows, matching DataTable search.
@@ -241,14 +203,11 @@ export {
   COLUMN_NULLABILITY_FILTER_OPTIONS,
   CONSTRAINT_TYPE_LABELS,
   IDENTITY_GENERATION_LABELS,
-  isPartitionBoundKind,
   isTriggerStateFilter,
   PILL_TONE_CLASSES,
   presentColumnOptions,
   presentConstraintKindOptions,
   presentIndexMethodOptions,
-  presentPartitionBoundKindOptions,
-  presentPartitionSchemaOptions,
   presentPolicyModeOptions,
   presentTriggerStateOptions,
   TABLE_DETAIL_TAB_DEFINITIONS,
