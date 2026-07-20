@@ -8,7 +8,7 @@ import {
   Unlock,
 } from "lucide-react";
 import type { MouseEvent, PointerEvent } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,6 +20,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 function stopHeaderClick(event: MouseEvent | PointerEvent) {
   event.stopPropagation();
@@ -50,6 +55,7 @@ function ColumnHeaderMenu({
   sortDirection,
 }: ColumnHeaderMenuProps) {
   const [open, setOpen] = useState(false);
+  const hideDisabledReasonId = useId();
 
   function handleSortAsc() {
     onSortAsc();
@@ -116,10 +122,31 @@ function ColumnHeaderMenu({
           )}
           {isFrozen ? "Unfreeze column" : "Freeze column"}
         </DropdownMenuItem>
-        <DropdownMenuItem disabled={!canHide} onClick={onHide}>
-          <EyeOff className="size-3.5" />
-          Hide column
-        </DropdownMenuItem>
+        <Tooltip disabled={canHide}>
+          <TooltipTrigger
+            render={
+              <div
+                className={canHide ? undefined : "cursor-not-allowed"}
+                role="none"
+              />
+            }
+          >
+            <DropdownMenuItem
+              aria-describedby={canHide ? undefined : hideDisabledReasonId}
+              disabled={!canHide}
+              onClick={onHide}
+            >
+              <EyeOff className="size-3.5" />
+              Hide column
+            </DropdownMenuItem>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            At least one column must remain visible.
+          </TooltipContent>
+        </Tooltip>
+        <span className="sr-only" id={hideDisabledReasonId}>
+          At least one column must remain visible.
+        </span>
       </DropdownMenuContent>
     </DropdownMenu>
   );

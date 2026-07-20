@@ -245,6 +245,17 @@ describe("Onboarding wizard — browser visuals", () => {
     await expect
       .element(page.getByRole("button", { name: "Continue" }))
       .toBeDisabled();
+    const continueButton = page.getByRole("button", { name: "Continue" });
+    const tooltipTrigger = continueButton
+      .element()
+      .closest("[data-base-ui-tooltip-trigger]");
+    if (!(tooltipTrigger instanceof HTMLElement)) {
+      throw new Error("Expected Continue tooltip trigger");
+    }
+    await page.elementLocator(tooltipTrigger).hover();
+    await expect
+      .element(page.getByText("Test this connection before continuing.").last())
+      .toBeVisible();
 
     await page.getByRole("button", { name: "Test connection" }).click();
 

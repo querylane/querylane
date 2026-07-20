@@ -35,6 +35,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectTrigger } from "@/components/ui/select";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   formatUnsupportedPostgresConnectionParameters,
   parsePostgresConnectionString,
 } from "@/lib/postgres-connection-string";
@@ -390,6 +395,52 @@ function applyParsedConnectionFields(
   );
 }
 
+function UiConfiguredContinueAction({
+  canContinue,
+  isValid,
+  onContinue,
+}: {
+  canContinue: boolean;
+  isValid: boolean;
+  onContinue: () => void;
+}) {
+  const disabledReasonId = useId();
+  const disabledReason = isValid
+    ? "Test this connection before continuing."
+    : "Complete the required connection fields before continuing.";
+  const button = (
+    <Button
+      aria-describedby={canContinue ? undefined : disabledReasonId}
+      className="h-10 rounded-xl bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
+      disabled={!canContinue}
+      onClick={onContinue}
+    >
+      Continue
+      <ChevronRight className="size-4" />
+    </Button>
+  );
+
+  if (canContinue) {
+    return button;
+  }
+
+  return (
+    <>
+      <Tooltip>
+        <TooltipTrigger
+          render={<span className="inline-flex cursor-not-allowed" />}
+        >
+          {button}
+        </TooltipTrigger>
+        <TooltipContent>{disabledReason}</TooltipContent>
+      </Tooltip>
+      <span className="sr-only" id={disabledReasonId}>
+        {disabledReason}
+      </span>
+    </>
+  );
+}
+
 export function UiConfiguredPhase() {
   const connectionStringId = useId();
   const connectionStringErrorId = useId();
@@ -504,14 +555,11 @@ export function UiConfiguredPhase() {
                   : "idle"
               }
             />
-            <Button
-              className="h-10 rounded-xl bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
-              disabled={!canContinue}
-              onClick={handleContinue}
-            >
-              Continue
-              <ChevronRight className="size-4" />
-            </Button>
+            <UiConfiguredContinueAction
+              canContinue={canContinue}
+              isValid={isValid}
+              onContinue={handleContinue}
+            />
           </div>
         </div>
       }

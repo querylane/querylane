@@ -243,7 +243,7 @@ function InstanceConfigurationSection({
       }
       description={
         isConfigManaged
-          ? "Connection details registered for this instance."
+          ? "Connection details are read-only because this instance is managed in the server configuration file. Update that file and restart Querylane to make changes."
           : "Update the registered connection details used by Querylane."
       }
       title="Configuration"

@@ -939,6 +939,7 @@ describe("backend instance activity interactions", () => {
 
     renderInstanceActivity();
 
+    expect(screen.queryByRole("button", { name: "Terminate…" })).toBeNull();
     const details = await openBlockedSessionInspector(user);
 
     // Identity line + timeline replace the old duplicated fact tiles.
@@ -955,8 +956,8 @@ describe("backend instance activity interactions", () => {
     expect(within(details).getByText(LOCK_WAIT_HINT_PATTERN)).toBeTruthy();
     expect(within(details).getByText("blocked by · pid 4211")).toBeTruthy();
     expect(
-      within(details).getByRole("button", { name: "Terminate session…" })
-    ).toHaveProperty("disabled", true);
+      within(details).queryByRole("button", { name: "Terminate session…" })
+    ).toBeNull();
     // The sheet is modal, so the inspector carries its own snapshot refresh.
     expect(
       within(details).getByRole("button", { name: "Refresh session" })

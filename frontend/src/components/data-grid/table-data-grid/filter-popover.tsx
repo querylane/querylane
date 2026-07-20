@@ -1,10 +1,15 @@
 import { Funnel, Plus } from "lucide-react";
-import { useEffect, useEffectEvent, useReducer } from "react";
+import { useEffect, useEffectEvent, useId, useReducer } from "react";
 import { DataGridPopoverContent } from "@/components/data-grid/table-data-grid/data-grid-popover-content";
 import { RulesEditor } from "@/components/data-grid/table-data-grid/filter-popover-rules-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   createFilterRule,
   getInvalidFilterRules,
@@ -49,6 +54,7 @@ function FilterPopover({
   rules,
   title = "Filter rows",
 }: FilterPopoverProps) {
+  const addFilterDisabledReasonId = useId();
   const [state, updateState] = useReducer(mergeFilterPopoverState, {
     applyRequested: false,
     draftLogic: DEFAULT_FILTER_LOGIC,
@@ -58,6 +64,10 @@ function FilterPopover({
   const { applyRequested, draftLogic, draftRules, open } = state;
   const selectedLogic = isFilterLogic(logic) ? logic : DEFAULT_FILTER_LOGIC;
   const canAdd = columns.length > 0 && draftRules.length < MAX_FILTER_RULES;
+  const addFilterDisabledReason =
+    columns.length === 0
+      ? "No columns are available to filter."
+      : `You can add up to ${MAX_FILTER_RULES} filter rules.`;
   // Validated live against the committed drafts (which trail typing by the
   // row debounce) so guidance appears as values settle, not per keystroke.
   const invalidMessages = new Map(
@@ -195,17 +205,43 @@ function FilterPopover({
         </div>
 
         <div className="flex items-center justify-between gap-2 border-t px-2 py-1.5">
-          <Button
-            aria-label="Add filter"
-            disabled={!canAdd}
-            onClick={addRule}
-            size="sm"
-            type="button"
-            variant="ghost"
-          >
-            <Plus data-icon="inline-start" />
-            Add rule
-          </Button>
+          {canAdd ? (
+            <Button
+              aria-label="Add filter"
+              onClick={addRule}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              <Plus data-icon="inline-start" />
+              Add rule
+            </Button>
+          ) : (
+            <>
+              <Tooltip>
+                <TooltipTrigger
+                  render={<span className="inline-flex cursor-not-allowed" />}
+                >
+                  <Button
+                    aria-describedby={addFilterDisabledReasonId}
+                    aria-label="Add filter"
+                    disabled={true}
+                    onClick={addRule}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Plus data-icon="inline-start" />
+                    Add rule
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{addFilterDisabledReason}</TooltipContent>
+              </Tooltip>
+              <span className="sr-only" id={addFilterDisabledReasonId}>
+                {addFilterDisabledReason}
+              </span>
+            </>
+          )}
           <div className="flex items-center gap-1.5">
             {rules.length > 0 ? (
               <Button

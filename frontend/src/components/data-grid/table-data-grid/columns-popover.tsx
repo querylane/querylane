@@ -1,10 +1,16 @@
 import { ArrowDown, ArrowUp, Columns3 } from "lucide-react";
+import { useId } from "react";
 import { DataGridPopoverContent } from "@/components/data-grid/table-data-grid/data-grid-popover-content";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 interface ColumnsPopoverProps {
@@ -28,6 +34,7 @@ function ColumnsPopover({
   onVisibilityChange,
   popoverBoundary,
 }: ColumnsPopoverProps) {
+  const lastVisibleReasonId = useId();
   const visibleCount = columns.length - hiddenColumnKeys.size;
   const columnByName = new Map(
     columns.map((column) => [column.columnName, column])
@@ -93,23 +100,49 @@ function ColumnsPopover({
         <ul className="max-h-80 space-y-1 overflow-y-auto pr-1">
           {orderedColumns.map((column, index) => {
             const visible = !hiddenColumnKeys.has(column.columnName);
+            const isLastVisible = visible && visibleCount === 1;
+            const visibilityControl = (
+              <Label
+                className={`min-w-0 flex-1 gap-2 font-normal ${
+                  isLastVisible ? "cursor-not-allowed" : "cursor-pointer"
+                }`}
+              >
+                <Checkbox
+                  aria-describedby={
+                    isLastVisible ? lastVisibleReasonId : undefined
+                  }
+                  checked={visible}
+                  disabled={isLastVisible}
+                  onCheckedChange={(checked) =>
+                    onVisibilityChange(column.columnName, checked)
+                  }
+                />
+                <span className="min-w-0 truncate font-mono text-xs">
+                  {column.columnName}
+                </span>
+              </Label>
+            );
             return (
               <li
                 className="flex min-h-8 items-center gap-1 rounded-md"
                 key={column.columnName}
               >
-                <Label className="min-w-0 flex-1 cursor-pointer gap-2 font-normal">
-                  <Checkbox
-                    checked={visible}
-                    disabled={visible && visibleCount === 1}
-                    onCheckedChange={(checked) =>
-                      onVisibilityChange(column.columnName, checked)
-                    }
-                  />
-                  <span className="min-w-0 truncate font-mono text-xs">
-                    {column.columnName}
-                  </span>
-                </Label>
+                {isLastVisible ? (
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <span className="flex min-w-0 flex-1 cursor-not-allowed" />
+                      }
+                    >
+                      {visibilityControl}
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      At least one column must remain visible.
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  visibilityControl
+                )}
                 <span className="ml-auto flex shrink-0 items-center gap-0.5">
                   <Button
                     aria-label={`Move ${column.columnName} up`}
@@ -136,6 +169,9 @@ function ColumnsPopover({
             );
           })}
         </ul>
+        <span className="sr-only" id={lastVisibleReasonId}>
+          At least one column must remain visible.
+        </span>
       </DataGridPopoverContent>
     </Popover>
   );

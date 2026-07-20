@@ -1,6 +1,6 @@
 import { ArrowDownUp, GripVertical, Plus, X } from "lucide-react";
 import type { CSSProperties, DragEvent } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { SortColumn } from "react-data-grid";
 import { DataGridPopoverContent } from "@/components/data-grid/table-data-grid/data-grid-popover-content";
 import { SelectValue } from "@/components/select-extensions";
@@ -13,6 +13,11 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { MAX_SORT_COLUMNS } from "@/features/data-explorer/table-data/use-table-data-controller";
 import { cn } from "@/lib/utils";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
@@ -47,6 +52,7 @@ function SortPopover({
   popoverBoundary,
   sortColumns,
 }: SortPopoverProps) {
+  const addSortDisabledReasonId = useId();
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const usedKeys = new Set(sortColumns.map((sort) => sort.columnKey));
   const availableColumns = columns.filter(
@@ -54,6 +60,10 @@ function SortPopover({
   );
   const canAddMore =
     sortColumns.length < MAX_SORT_COLUMNS && availableColumns.length > 0;
+  const addSortDisabledReason =
+    sortColumns.length >= MAX_SORT_COLUMNS
+      ? `You can sort by up to ${MAX_SORT_COLUMNS} columns.`
+      : "Every available column is already sorted.";
   const longestSortedColumnNameLength = Math.max(
     ...sortColumns.map((sort) => sort.columnKey.length),
     MIN_SORT_COLUMN_WIDTH_CH - SORT_COLUMN_WIDTH_PADDING_CH
@@ -102,6 +112,37 @@ function SortPopover({
       },
     ]);
   }
+  const addSortControl = (
+    <Select disabled={!canAddMore} onValueChange={addColumn} value="">
+      <SelectTrigger
+        aria-describedby={canAddMore ? undefined : addSortDisabledReasonId}
+        aria-label="Add sort column"
+        className="w-full"
+        size="sm"
+      >
+        <Plus className="size-3.5 text-muted-foreground" />
+        <SelectValue placeholder="Add sort column" />
+      </SelectTrigger>
+      <SelectContent>
+        {availableColumns.map((column) => (
+          <SelectItem
+            key={column.columnName}
+            label={column.columnName}
+            value={column.columnName}
+          >
+            <span className="flex w-full min-w-0">
+              <span
+                className="min-w-0 truncate font-mono text-xs"
+                title={column.columnName}
+              >
+                {column.columnName}
+              </span>
+            </span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
   return (
     <Popover>
       <PopoverTrigger
@@ -169,39 +210,23 @@ function SortPopover({
           </ul>
         )}
 
-        <Select disabled={!canAddMore} onValueChange={addColumn} value="">
-          <SelectTrigger
-            aria-label="Add sort column"
-            className="w-full"
-            size="sm"
-          >
-            <Plus className="size-3.5 text-muted-foreground" />
-            <SelectValue placeholder="Add sort column" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableColumns.map((column) => (
-              <SelectItem
-                key={column.columnName}
-                label={column.columnName}
-                value={column.columnName}
-              >
-                <span className="flex w-full min-w-0">
-                  <span
-                    className="min-w-0 truncate font-mono text-xs"
-                    title={column.columnName}
-                  >
-                    {column.columnName}
-                  </span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {sortColumns.length >= MAX_SORT_COLUMNS ? (
-          <p className="px-1 text-[11px] text-muted-foreground">
-            Maximum {MAX_SORT_COLUMNS} sort columns.
-          </p>
-        ) : null}
+        {canAddMore ? (
+          addSortControl
+        ) : (
+          <Tooltip>
+            <TooltipTrigger
+              render={<span className="block cursor-not-allowed" />}
+            >
+              {addSortControl}
+            </TooltipTrigger>
+            <TooltipContent>{addSortDisabledReason}</TooltipContent>
+          </Tooltip>
+        )}
+        {canAddMore ? null : (
+          <span className="sr-only" id={addSortDisabledReasonId}>
+            {addSortDisabledReason}
+          </span>
+        )}
       </DataGridPopoverContent>
     </Popover>
   );

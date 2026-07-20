@@ -169,15 +169,6 @@ function BlockingChainGroup({ chain }: { chain: BlockingChain }) {
           {chain.blocker.user} · {chain.blocker.app} · {chain.blocker.state}{" "}
           {chain.blocker.duration}
         </span>
-        <Button
-          className="ml-auto"
-          disabled={true}
-          size="xs"
-          title="Requires a backend action API"
-          variant="destructive"
-        >
-          Terminate…
-        </Button>
       </div>
       <SqlCodeBlock
         className="mt-2 text-xs"
@@ -553,16 +544,6 @@ function SessionInspector({
           <InspectorSectionTitle>Query</InspectorSectionTitle>
           <SqlCodeBlock sql={row.query} wrap={true} />
         </section>
-      </div>
-      <div className="flex justify-end border-border border-t p-4">
-        <Button
-          disabled={true}
-          size="sm"
-          title="Requires a backend action API"
-          variant="destructive"
-        >
-          Terminate session…
-        </Button>
       </div>
     </>
   );
