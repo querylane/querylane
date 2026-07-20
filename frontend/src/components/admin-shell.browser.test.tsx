@@ -12,6 +12,7 @@ import {
   SidebarProvider,
 } from "@/components/querylane-ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { useSetupStore } from "@/stores/setup-store";
 import { ThemeProvider } from "@/theme-provider";
 
@@ -43,12 +44,10 @@ function MockRouterLink({
   return (
     <a
       {...props}
-      className={[
+      className={cn(
         "flex h-8 w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+        className
+      )}
       href={props.href ?? to ?? "/"}
       ref={ref}
     >
@@ -317,7 +316,11 @@ function renderAdminShellAtViewport({ width }: { width: 320 | 768 }) {
     >
       <TooltipProvider>
         <div
-          className={`dark h-[760px] ${widthClassName} origin-top-left overflow-hidden rounded-2xl border border-border bg-background text-foreground`}
+          className={cn(
+            "dark h-[760px]",
+            widthClassName,
+            "origin-top-left overflow-hidden rounded-2xl border border-border bg-background text-foreground"
+          )}
           data-testid={`admin-shell-visual-root-${width}`}
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">

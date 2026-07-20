@@ -92,7 +92,10 @@ function getConnectionStatusLabel(status: ConnectionStatus): string {
 function StatusDot({ status }: { status: ConnectionStatus }) {
   return (
     <span
-      className={`size-2 shrink-0 rounded-full ${getConnectionStatusClass(status)}`}
+      className={cn(
+        "size-2 shrink-0 rounded-full",
+        getConnectionStatusClass(status)
+      )}
       data-status={status}
     />
   );
@@ -222,7 +225,10 @@ function BreadcrumbTriggerBody({
     <span className="flex min-w-0 items-center gap-1.5">
       {hasValue ? valuePrefix : null}
       <OverflowAwareText
-        className={`min-w-0 truncate font-medium text-sm ${hasValue ? "text-foreground" : "text-muted-foreground"}`}
+        className={cn(
+          "min-w-0 truncate font-medium text-sm",
+          hasValue ? "text-foreground" : "text-muted-foreground"
+        )}
         disabled={disabled}
       >
         {triggerValue}
@@ -316,7 +322,7 @@ function BreadcrumbDropdown({
       >
         {triggerBody}
       </PopoverTrigger>
-      <PopoverContent align="start" className={`${contentWidth} gap-0 p-0`}>
+      <PopoverContent align="start" className={cn(contentWidth, "gap-0 p-0")}>
         <Command
           filter={(optionValue, search) =>
             optionValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0

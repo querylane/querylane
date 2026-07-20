@@ -592,7 +592,7 @@ function SchemaMapCanvas({
                 "fill-none",
                 TONE_CLASSES[edge.tone].edge,
                 selectedTable === null && "opacity-50",
-                isConnected && `${styles["connected-edge"]} opacity-95`,
+                isConnected && cn(styles["connected-edge"], "opacity-95"),
                 isDimmed && "opacity-10"
               )}
               d={edge.d}
