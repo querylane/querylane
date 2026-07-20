@@ -27,7 +27,7 @@ import {
   Terminal,
   X,
 } from "lucide-react";
-import { useDeferredValue, useEffect, useId, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import type { TableForeignKeyReference } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
@@ -113,7 +113,6 @@ import {
   filterPartitionDisplayRows,
   formatPartitionResourceLabel,
   hasPartitionMetadata,
-  type PartitionBoundKind,
   type PartitionDisplayRow,
   summarizePartitionDisplayRows,
 } from "@/features/data-explorer/explorer-table-partitions";
@@ -285,26 +284,12 @@ const COLUMN_NULLABILITY_FILTER_OPTIONS = [
   { label: "Not null", value: "not-null" },
   { label: "Nullable", value: "nullable" },
 ] satisfies ColumnFacetOption<ColumnNullabilityFilter>[];
-const PARTITION_BOUND_KIND_LABELS: Record<PartitionBoundKind, string> = {
-  default: "Default",
-  hash: "Hash",
-  list: "List",
-  other: "Other",
-  range: "Range",
-};
 const TRIGGER_STATE_FILTER_LABELS: Record<TriggerStateFilter, string> = {
   disabled: "Disabled",
   enabled: "Enabled",
 };
 const TRIGGER_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS;
 const [DEFAULT_TRIGGER_PAGE_SIZE] = TRIGGER_PAGE_SIZE_OPTIONS;
-const PARTITION_BOUND_KIND_ORDER = [
-  "range",
-  "list",
-  "hash",
-  "default",
-  "other",
-] satisfies PartitionBoundKind[];
 function uniqueSortedOptions(values: string[]): FacetedFilterOption[] {
   return Array.from(new Set(values.filter(Boolean)))
     .sort((left, right) => left.localeCompare(right))
@@ -350,23 +335,6 @@ function presentPolicyModeOptions(
     )
     .map((mode) => ({ label: formatPolicyMode(mode), value: String(mode) }));
 }
-function presentPartitionSchemaOptions(
-  rows: PartitionDisplayRow[]
-): FacetedFilterOption[] {
-  return uniqueSortedOptions(rows.map((row) => row.schemaName));
-}
-function presentPartitionBoundKindOptions(
-  rows: PartitionDisplayRow[]
-): FacetedFilterOption[] {
-  const present = new Set(rows.map((row) => row.boundKind));
-  const options: FacetedFilterOption[] = [];
-  for (const value of PARTITION_BOUND_KIND_ORDER) {
-    if (present.has(value)) {
-      options.push({ label: PARTITION_BOUND_KIND_LABELS[value], value });
-    }
-  }
-  return options;
-}
 function presentTriggerStateOptions(
   triggers: TableTrigger[]
 ): FacetedFilterOption[] {
@@ -383,9 +351,6 @@ function presentTriggerStateOptions(
 }
 function isTriggerStateFilter(value: string): value is TriggerStateFilter {
   return value === "disabled" || value === "enabled";
-}
-function isPartitionBoundKind(value: string): value is PartitionBoundKind {
-  return PARTITION_BOUND_KIND_ORDER.includes(value as PartitionBoundKind);
 }
 // Table-detail metadata RPCs currently expose parent-scoped lists only.
 // These facets intentionally narrow the loaded rows, matching DataTable search.
@@ -1427,26 +1392,15 @@ function KeysTab({
   );
 }
 
-const PARTITION_BAR_TONE_CLASSES: Record<
-  PartitionDisplayRow["barTone"],
-  string
-> = {
-  current:
-    "border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  default:
-    "border-amber-500 bg-amber-500/20 text-amber-700 dark:text-amber-300",
-  normal: "border-border bg-muted/70 text-muted-foreground",
-  selected: "border-primary bg-primary/15 text-primary",
-};
-const PARTITION_SHARE_TONE_CLASSES: Record<
-  PartitionDisplayRow["barTone"],
-  string
-> = {
-  current: "bg-emerald-500",
-  default: "bg-amber-500",
-  normal: "bg-muted-foreground/45",
-  selected: "bg-primary",
-};
+function partitionShareToneClass(row: PartitionDisplayRow): string {
+  if (row.isDefault) {
+    return "bg-amber-500";
+  }
+  if (row.isCurrent) {
+    return "bg-emerald-500";
+  }
+  return "bg-muted-foreground/45";
+}
 const DEFAULT_PARTITION_PAGE_SIZE = DEFAULT_PAGE_SIZE;
 const PARTITION_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS;
 type PartitionPageSize = PageSize;
@@ -1474,21 +1428,13 @@ function PartitionSummaryItem({
   );
 }
 
-function PartitionFilterToolbar({
-  boundKindFilters,
-  onBoundKindFiltersChange,
-  onSchemaFiltersChange,
+function PartitionsToolbar({
   onSearchChange,
-  rows,
-  schemaFilters,
+  partitionKey,
   search,
 }: {
-  boundKindFilters: string[];
-  onBoundKindFiltersChange: (values: string[]) => void;
-  onSchemaFiltersChange: (values: string[]) => void;
   onSearchChange: (value: string) => void;
-  rows: PartitionDisplayRow[];
-  schemaFilters: string[];
+  partitionKey: string;
   search: string;
 }) {
   return (
@@ -1507,141 +1453,13 @@ function PartitionFilterToolbar({
           value={search}
         />
       </div>
-      <FacetFilterBar
-        filters={[
-          {
-            handleSelectedValuesChange: onSchemaFiltersChange,
-            label: "Schema",
-            options: presentPartitionSchemaOptions(rows),
-            selectedValues: schemaFilters,
-          },
-          {
-            handleSelectedValuesChange: onBoundKindFiltersChange,
-            label: "Bound kind",
-            options: presentPartitionBoundKindOptions(rows),
-            selectedValues: boundKindFilters,
-          },
-        ]}
-      />
-    </div>
-  );
-}
-
-function PartitionRowsChart({
-  rows,
-  selectedPartition,
-  onSelectPartition,
-}: {
-  onSelectPartition: (table: string) => void;
-  rows: PartitionDisplayRow[];
-  selectedPartition: string | undefined;
-}) {
-  const headingId = useId();
-  const chartRows = rows.filter((row) => !row.isDefault);
-  if (chartRows.length === 0) {
-    return null;
-  }
-
-  return (
-    <section
-      aria-labelledby={headingId}
-      className="min-w-0 flex-1 rounded-lg border bg-card p-4 shadow-xs"
-    >
-      <div className="flex flex-wrap items-baseline gap-2">
-        <h3 className="font-semibold text-sm" id={headingId}>
-          Rows per partition
-        </h3>
-        <p className="text-muted-foreground text-xs">
-          equal time ranges · bar height = rows · click a bar to highlight it
-          below
+      {partitionKey ? (
+        <p className="ml-auto min-w-0 truncate text-muted-foreground text-xs">
+          Partitioned by{" "}
+          <span className="font-mono text-foreground">{partitionKey}</span>
         </p>
-      </div>
-      <div className="mt-4 flex h-32 items-end gap-2">
-        {chartRows.map((row) => (
-          <Button
-            aria-label={`${row.name}, ${row.rowsLabel} estimated rows`}
-            aria-pressed={selectedPartition === row.table}
-            className="h-full min-w-0 flex-1 flex-col justify-end gap-1 p-0 hover:bg-transparent"
-            key={row.table}
-            onClick={() => onSelectPartition(row.table)}
-            title={`${row.resourceLabel} · ${row.rowsLabel} rows · ${row.sizeLabel}`}
-            type="button"
-            variant="ghost"
-          >
-            <span className="max-w-full truncate font-mono text-[11px] text-muted-foreground">
-              {row.rowsLabel}
-            </span>
-            <span
-              aria-hidden="true"
-              className="flex h-full w-full flex-col justify-end"
-            >
-              {row.hasProjection ? (
-                <span
-                  className={cn(
-                    "w-full rounded-t-md border-2 border-emerald-500/70 border-b-0 border-dashed",
-                    row.projectedHeightClassName
-                  )}
-                />
-              ) : null}
-              <span
-                className={cn(
-                  "w-full border transition-colors",
-                  row.hasProjection ? "rounded-b-md" : "rounded-md",
-                  row.barHeightClassName,
-                  PARTITION_BAR_TONE_CLASSES[row.barTone]
-                )}
-              />
-            </span>
-            <span
-              className={cn(
-                "max-w-full truncate font-mono text-[11px]",
-                row.isCurrent ? "text-emerald-600 dark:text-emerald-300" : ""
-              )}
-            >
-              {row.axisLabel}
-            </span>
-          </Button>
-        ))}
-      </div>
-      <p className="mt-3 flex items-center gap-2 text-muted-foreground text-xs">
-        <span
-          aria-hidden="true"
-          className="size-3 rounded border border-emerald-500"
-        />
-        CURRENT · dashed = projected month-end
-      </p>
-    </section>
-  );
-}
-
-function DefaultPartitionCard({
-  partition,
-}: {
-  partition: PartitionDisplayRow | undefined;
-}) {
-  if (!partition) {
-    return null;
-  }
-
-  return (
-    <aside className="flex w-full flex-none flex-col rounded-lg border border-amber-500/50 bg-amber-500/5 p-4 shadow-xs md:w-64">
-      <div className="flex items-center gap-2">
-        <StatusBadge variant="warning">DEFAULT</StatusBadge>
-        <span className="truncate font-mono text-muted-foreground text-xs">
-          {partition.name}
-        </span>
-      </div>
-      <div className="mt-4 font-mono font-semibold text-3xl">
-        {partition.shareLabel}
-      </div>
-      <p className="text-muted-foreground text-xs uppercase tracking-wider">
-        Of estimated rows · {partition.rowsLabel} · {partition.sizeLabel}
-      </p>
-      <p className="mt-auto pt-6 text-muted-foreground text-xs leading-relaxed">
-        Catches rows outside every defined range. Review before detaching or
-        dropping old ranges.
-      </p>
-    </aside>
+      ) : null}
+    </div>
   );
 }
 
@@ -1670,10 +1488,7 @@ function PartitionRowsTable({
         </TableHeader>
         <TableBody>
           {rows.map((row) => (
-            <TableRow
-              data-state={row.barTone === "selected" ? "selected" : undefined}
-              key={row.table}
-            >
+            <TableRow key={row.table}>
               <TableCell className="pl-4">
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="truncate font-medium font-mono text-sm">
@@ -1687,7 +1502,10 @@ function PartitionRowsTable({
                   ) : null}
                 </div>
               </TableCell>
-              <TableCell className="max-w-[28rem] whitespace-normal break-words font-mono text-muted-foreground text-xs">
+              <TableCell
+                className="max-w-[28rem] whitespace-normal break-words font-mono text-muted-foreground text-xs"
+                title={row.partitionBound}
+              >
                 {row.boundLabel}
               </TableCell>
               <TableCell className="text-right font-mono">
@@ -1703,7 +1521,7 @@ function PartitionRowsTable({
                       className={cn(
                         "h-full rounded-full",
                         row.shareWidthClassName,
-                        PARTITION_SHARE_TONE_CLASSES[row.barTone]
+                        partitionShareToneClass(row)
                       )}
                     />
                   </div>
@@ -1847,16 +1665,7 @@ function PartitionsTab({
   query: ReturnType<typeof useGetTablePartitionMetadataQuery>;
 }) {
   const toolbar = deriveMetadataToolbar([query]);
-  const [selectedPartition, setSelectedPartition] = useState<
-    string | undefined
-  >();
   const [partitionSearch, setPartitionSearch] = useState("");
-  const [partitionSchemaFilters, setPartitionSchemaFilters] = useState<
-    string[]
-  >([]);
-  const [partitionBoundKindFilters, setPartitionBoundKindFilters] = useState<
-    string[]
-  >([]);
   const [partitionPageIndex, setPartitionPageIndex] = useState(0);
   const [partitionPageSize, setPartitionPageSize] = useState<PartitionPageSize>(
     DEFAULT_PARTITION_PAGE_SIZE
@@ -1887,28 +1696,32 @@ function PartitionsTab({
   }
 
   const { childPartitions } = metadata;
+  if (childPartitions.length === 0) {
+    return (
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {partitionSummaryItems(metadata).map((item) => (
+          <PartitionSummaryItem
+            key={item.label}
+            label={item.label}
+            value={item.value}
+          />
+        ))}
+      </div>
+    );
+  }
+
   const partitionModel = derivePartitionViewModel({
     currentDate: new Date(query.dataUpdatedAt),
-    partitionKey: metadata.partitionKey,
     partitions: childPartitions,
-    selectedPartition,
   });
-  const activeBoundKindFilters =
-    partitionBoundKindFilters.filter(isPartitionBoundKind);
   const filteredPartitionRows = filterPartitionDisplayRows(
     partitionModel.rows,
-    {
-      boundKinds: activeBoundKindFilters,
-      schemaNames: partitionSchemaFilters,
-      search: partitionSearch,
-    }
+    partitionSearch
   );
   const filteredPartitionSummary = summarizePartitionDisplayRows(
     filteredPartitionRows
   );
-  const filteredDefaultPartition = filteredPartitionRows.find(
-    (row) => row.isDefault
-  );
+  const { defaultPartition } = partitionModel;
   const partitionPageCount = Math.max(
     1,
     Math.ceil(filteredPartitionRows.length / partitionPageSize)
@@ -1921,19 +1734,10 @@ function PartitionsTab({
     currentPartitionPageIndex * partitionPageSize,
     (currentPartitionPageIndex + 1) * partitionPageSize
   );
-  function handleSelectPartition(table: string) {
-    setSelectedPartition((current) => (current === table ? undefined : table));
-  }
+  const showPaginationFooter =
+    filteredPartitionRows.length > DEFAULT_PARTITION_PAGE_SIZE;
   function handlePartitionSearchChange(value: string) {
     setPartitionSearch(value);
-    setPartitionPageIndex(0);
-  }
-  function handlePartitionSchemaFiltersChange(values: string[]) {
-    setPartitionSchemaFilters(values);
-    setPartitionPageIndex(0);
-  }
-  function handlePartitionBoundKindFiltersChange(values: string[]) {
-    setPartitionBoundKindFilters(values);
     setPartitionPageIndex(0);
   }
   function handlePartitionPageSizeChange(value: PartitionPageSize) {
@@ -1946,78 +1750,51 @@ function PartitionsTab({
     );
     setPartitionPageSize(value);
   }
-  const summaryItems = partitionSummaryItems(metadata);
 
   return (
     <div className="flex flex-col gap-3">
-      {childPartitions.length === 0 ? (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {summaryItems.map((item) => (
-            <PartitionSummaryItem
-              key={item.label}
-              label={item.label}
-              value={item.value}
-            />
-          ))}
+      <PartitionsToolbar
+        onSearchChange={handlePartitionSearchChange}
+        partitionKey={metadata.partitionKey}
+        search={partitionSearch}
+      />
+      <PartitionRowsTable
+        rows={paginatedPartitionRows}
+        totalPartitionCount={filteredPartitionRows.length}
+        totalRowsLabel={filteredPartitionSummary.totalRowsLabel}
+        totalSizeLabel={filteredPartitionSummary.totalSizeLabel}
+      />
+      {defaultPartition && defaultPartition.estimatedRows > 0 ? (
+        <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-3 text-sm leading-relaxed">
+          <AlertTriangle
+            aria-hidden="true"
+            className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-300"
+          />
+          <span>
+            The DEFAULT partition holds {defaultPartition.shareLabel} of
+            estimated rows ({defaultPartition.rowsLabel}). Rows outside every
+            declared range land there until a matching partition exists.
+          </span>
         </div>
       ) : null}
-      {childPartitions.length > 0 ? (
-        <>
-          <PartitionFilterToolbar
-            boundKindFilters={partitionBoundKindFilters}
-            onBoundKindFiltersChange={handlePartitionBoundKindFiltersChange}
-            onSchemaFiltersChange={handlePartitionSchemaFiltersChange}
-            onSearchChange={handlePartitionSearchChange}
-            rows={partitionModel.rows}
-            schemaFilters={partitionSchemaFilters}
-            search={partitionSearch}
-          />
-          <div className="flex flex-col gap-3 md:flex-row">
-            <PartitionRowsChart
-              onSelectPartition={handleSelectPartition}
-              rows={filteredPartitionRows}
-              selectedPartition={selectedPartition}
-            />
-            <DefaultPartitionCard partition={filteredDefaultPartition} />
-          </div>
-          <PartitionRowsTable
-            rows={paginatedPartitionRows}
-            totalPartitionCount={filteredPartitionRows.length}
-            totalRowsLabel={filteredPartitionSummary.totalRowsLabel}
-            totalSizeLabel={filteredPartitionSummary.totalSizeLabel}
-          />
-          {filteredDefaultPartition ? (
-            <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-3 text-sm leading-relaxed">
-              <AlertTriangle
-                aria-hidden="true"
-                className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-300"
-              />
-              <span>
-                The DEFAULT partition still holds{" "}
-                {filteredDefaultPartition.shareLabel} of estimated rows. Rows
-                outside every declared bound land there until a matching
-                partition exists.
-              </span>
-            </div>
-          ) : null}
-        </>
+      {showPaginationFooter ? (
+        <PartitionPaginationFooter
+          hasNext={currentPartitionPageIndex + 1 < partitionPageCount}
+          hasPrevious={currentPartitionPageIndex > 0}
+          onNext={() => {
+            setPartitionPageIndex((current) =>
+              Math.min(current + 1, partitionPageCount - 1)
+            );
+          }}
+          onPageSizeChange={handlePartitionPageSizeChange}
+          onPrevious={() => {
+            setPartitionPageIndex((current) => Math.max(current - 1, 0));
+          }}
+          pageIndex={currentPartitionPageIndex}
+          pageSize={partitionPageSize}
+          rowCount={filteredPartitionRows.length}
+        />
       ) : null}
-      <PartitionPaginationFooter
-        hasNext={currentPartitionPageIndex + 1 < partitionPageCount}
-        hasPrevious={currentPartitionPageIndex > 0}
-        onNext={() => {
-          setPartitionPageIndex((current) =>
-            Math.min(current + 1, partitionPageCount - 1)
-          );
-        }}
-        onPageSizeChange={handlePartitionPageSizeChange}
-        onPrevious={() => {
-          setPartitionPageIndex((current) => Math.max(current - 1, 0));
-        }}
-        pageIndex={currentPartitionPageIndex}
-        pageSize={partitionPageSize}
-        rowCount={filteredPartitionRows.length}
-      />
     </div>
   );
 }

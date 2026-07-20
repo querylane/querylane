@@ -3,7 +3,6 @@ import { describe, expect, test } from "vitest";
 import {
   derivePartitionTabCount,
   derivePartitionViewModel,
-  filterChildPartitions,
   filterPartitionDisplayRows,
   formatPartitionResourceLabel,
   hasPartitionMetadata,
@@ -87,42 +86,7 @@ describe("table partition detail helpers", () => {
     expect(partitionBoundKind(create(TablePartitionSchema, {}))).toBe("other");
   });
 
-  test("filters child partitions by schema and bound kind", () => {
-    const partitions = [
-      create(TablePartitionSchema, {
-        partitionBound: "FOR VALUES FROM ('2024-01-01') TO ('2025-01-01')",
-        table: "instances/i/databases/d/schemas/analytics/tables/events_2024",
-      }),
-      create(TablePartitionSchema, {
-        partitionBound: "FOR VALUES IN ('enterprise')",
-        table:
-          "instances/i/databases/d/schemas/archive/tables/events_enterprise",
-      }),
-      create(TablePartitionSchema, {
-        partitionBound: "FOR VALUES IN ('free')",
-        table: "instances/i/databases/d/schemas/analytics/tables/events_free",
-      }),
-    ];
-
-    expect(
-      filterChildPartitions(partitions, {
-        boundKinds: ["list"],
-        schemaNames: ["analytics"],
-      }).map((partition) => partition.table)
-    ).toEqual(["instances/i/databases/d/schemas/analytics/tables/events_free"]);
-
-    expect(
-      filterChildPartitions(partitions, {
-        boundKinds: ["list", "range"],
-        schemaNames: ["analytics"],
-      }).map((partition) => partition.table)
-    ).toEqual([
-      "instances/i/databases/d/schemas/analytics/tables/events_2024",
-      "instances/i/databases/d/schemas/analytics/tables/events_free",
-    ]);
-  });
-
-  test("derives row and size summaries for the redesigned partitions tab", () => {
+  test("derives row and size summaries for the partitions tab", () => {
     const partitions = [
       create(TablePartitionSchema, {
         estimatedRows: 1_020_000n,
@@ -156,12 +120,9 @@ describe("table partition detail helpers", () => {
 
     const model = derivePartitionViewModel({
       currentDate: new Date("2026-07-07T00:00:00Z"),
-      partitionKey: "RANGE (recorded_at)",
       partitions,
     });
 
-    expect(model.partitionStrategyLabel).toBe("RANGE (recorded_at)");
-    expect(model.partitionExpressionLabel).toBe("recorded_at");
     expect(model.totalRowsLabel).toBe("4.2M");
     expect(model.totalSizeLabel).toBe("3.6 GB");
     expect(model.defaultPartition?.name).toBe("change_log_archive");
@@ -172,36 +133,25 @@ describe("table partition detail helpers", () => {
       "48k",
       "1.94M",
     ]);
-    expect(model.rows.map((row) => row.axisLabel)).toEqual([
-      "Q1 26",
-      "Q2 26",
-      "Q3 26",
-      "default",
+    expect(model.rows.map((row) => row.boundLabel)).toEqual([
+      "2026-01-01 → 2026-04-01",
+      "2026-04-01 → 2026-07-01",
+      "2026-07-01 → 2026-10-01",
+      "DEFAULT — catches rows outside every range",
     ]);
-    expect(model.rows.at(2)?.isCurrent).toBe(true);
-    expect(model.rows.at(2)?.hasProjection).toBe(true);
-    expect(model.rows.at(2)?.projectedRowsLabel).toBe("736k");
-    expect(model.rows.at(2)?.barHeightPercent).toBeLessThan(
-      model.rows.at(2)?.projectedHeightPercent ?? 0
-    );
-    expect(model.rows.at(2)?.barHeightClassName).toBe("h-1/12");
-    expect(model.rows.at(2)?.projectedHeightClassName).toBe("h-4/12");
+    expect(model.rows.map((row) => row.isCurrent)).toEqual([
+      false,
+      false,
+      true,
+      false,
+    ]);
     expect(
-      filterPartitionDisplayRows(model.rows, { search: "archive" }).map(
-        (row) => row.name
-      )
+      filterPartitionDisplayRows(model.rows, "archive").map((row) => row.name)
     ).toEqual(["change_log_archive"]);
-    expect(
-      filterPartitionDisplayRows(model.rows, { boundKinds: ["default"] }).map(
-        (row) => row.name
-      )
-    ).toEqual(["change_log_archive"]);
-    expect(
-      filterPartitionDisplayRows(model.rows, { schemaNames: ["audit"] })
-    ).toHaveLength(4);
+    expect(filterPartitionDisplayRows(model.rows, "")).toHaveLength(4);
     expect(
       summarizePartitionDisplayRows(
-        filterPartitionDisplayRows(model.rows, { search: "archive" })
+        filterPartitionDisplayRows(model.rows, "archive")
       )
     ).toEqual({
       totalRowsLabel: "1.9M",
@@ -212,7 +162,6 @@ describe("table partition detail helpers", () => {
   test("formats whole-million partition row estimates without dangling decimals", () => {
     const model = derivePartitionViewModel({
       currentDate: new Date("2026-01-15T00:00:00Z"),
-      partitionKey: "RANGE (recorded_at)",
       partitions: [
         create(TablePartitionSchema, {
           estimatedRows: 2_000_000n,
@@ -226,31 +175,89 @@ describe("table partition detail helpers", () => {
     expect(model.rows[0]?.rowsLabel).toBe("2M");
   });
 
-  test("selects the active range as current when pg_partman precreates future partitions", () => {
-    const partitions = [
-      create(TablePartitionSchema, {
-        estimatedRows: 48_000n,
-        partitionBound: "FOR VALUES FROM ('2026-07-01') TO ('2026-10-01')",
-        table:
-          "instances/i/databases/d/schemas/audit/tables/change_log_2026_q3",
-      }),
-      create(TablePartitionSchema, {
-        estimatedRows: 0n,
-        partitionBound: "FOR VALUES FROM ('2026-10-01') TO ('2027-01-01')",
-        table:
-          "instances/i/databases/d/schemas/audit/tables/change_log_2026_q4",
-      }),
-    ];
+  test("parses timestamptz range bounds for labels and current detection", () => {
+    const model = derivePartitionViewModel({
+      currentDate: new Date("2026-07-19T10:00:00Z"),
+      partitions: [
+        create(TablePartitionSchema, {
+          estimatedRows: 72_000n,
+          partitionBound:
+            "FOR VALUES FROM ('2026-01-01 00:00:00+00') TO ('2026-07-01 00:00:00+00')",
+          table: "instances/i/databases/d/schemas/commerce/tables/oe_2026_h1",
+        }),
+        create(TablePartitionSchema, {
+          estimatedRows: 0n,
+          partitionBound:
+            "FOR VALUES FROM ('2026-07-01 00:00:00+00') TO ('2027-01-01 00:00:00+00')",
+          table: "instances/i/databases/d/schemas/commerce/tables/oe_2026_h2",
+        }),
+      ],
+    });
 
+    expect(model.rows.map((row) => row.boundLabel)).toEqual([
+      "2026-01-01 → 2026-07-01",
+      "2026-07-01 → 2027-01-01",
+    ]);
+    expect(model.rows.map((row) => row.isCurrent)).toEqual([false, true]);
+  });
+
+  test("shortens non-range bounds instead of repeating the FOR VALUES prefix", () => {
+    const model = derivePartitionViewModel({
+      partitions: [
+        create(TablePartitionSchema, {
+          partitionBound: "FOR VALUES IN ('enterprise', 'trial')",
+          table: "instances/i/databases/d/schemas/crm/tables/accounts_paid",
+        }),
+        create(TablePartitionSchema, {
+          partitionBound: "FOR VALUES WITH (modulus 4, remainder 1)",
+          table: "instances/i/databases/d/schemas/crm/tables/accounts_h1",
+        }),
+      ],
+    });
+
+    expect(model.rows.map((row) => row.boundLabel)).toEqual([
+      "IN ('enterprise', 'trial')",
+      "WITH (modulus 4, remainder 1)",
+    ]);
+    expect(model.rows.map((row) => row.isCurrent)).toEqual([false, false]);
+  });
+
+  test("marks no partition current when pg_partman precreates only future ranges", () => {
     const model = derivePartitionViewModel({
       currentDate: new Date("2026-07-07T00:00:00Z"),
-      partitionKey: "RANGE (recorded_at)",
-      partitions,
+      partitions: [
+        create(TablePartitionSchema, {
+          estimatedRows: 48_000n,
+          partitionBound: "FOR VALUES FROM ('2026-07-01') TO ('2026-10-01')",
+          table:
+            "instances/i/databases/d/schemas/audit/tables/change_log_2026_q3",
+        }),
+        create(TablePartitionSchema, {
+          estimatedRows: 0n,
+          partitionBound: "FOR VALUES FROM ('2026-10-01') TO ('2027-01-01')",
+          table:
+            "instances/i/databases/d/schemas/audit/tables/change_log_2026_q4",
+        }),
+      ],
     });
 
     expect(model.rows.map((row) => [row.name, row.isCurrent])).toEqual([
       ["change_log_2026_q3", true],
       ["change_log_2026_q4", false],
     ]);
+
+    const futureOnly = derivePartitionViewModel({
+      currentDate: new Date("2026-05-01T00:00:00Z"),
+      partitions: [
+        create(TablePartitionSchema, {
+          estimatedRows: 0n,
+          partitionBound: "FOR VALUES FROM ('2026-10-01') TO ('2027-01-01')",
+          table:
+            "instances/i/databases/d/schemas/audit/tables/change_log_2026_q4",
+        }),
+      ],
+    });
+
+    expect(futureOnly.rows.map((row) => row.isCurrent)).toEqual([false]);
   });
 });

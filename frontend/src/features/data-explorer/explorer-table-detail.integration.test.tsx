@@ -1030,8 +1030,7 @@ describe("TableDetail tab routing", () => {
 });
 
 describe("TableDetail partitions pagination", () => {
-  it("keeps standard page-size and pagination controls with no child partitions", async () => {
-    const user = userEvent.setup();
+  it("shows summary cards without pagination chrome when no child partitions load", () => {
     tableQueries.partitionMetadata.data = create(
       GetTablePartitionMetadataResponseSchema,
       {
@@ -1055,15 +1054,12 @@ describe("TableDetail partitions pagination", () => {
       />
     );
 
+    expect(screen.getByText("Partition key")).toBeTruthy();
+    expect(screen.getByText("RANGE (created_at)")).toBeTruthy();
     expect(
-      screen.getByRole("combobox", { name: "Rows per page" })
-    ).toBeTruthy();
-    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
-
-    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
-    expect(
-      screen.getAllByRole("option").map((option) => option.textContent)
-    ).toEqual(["10", "25", "50"]);
+      screen.queryByRole("combobox", { name: "Rows per page" })
+    ).toBeNull();
+    expect(screen.queryByText("Page 1 of 1")).toBeNull();
   });
 });
 
