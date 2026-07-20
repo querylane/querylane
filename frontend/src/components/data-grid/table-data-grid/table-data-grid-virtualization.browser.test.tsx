@@ -174,16 +174,13 @@ test("table detail uses available height while keeping 500-row pages virtualized
 
   await expect.element(page.getByText("user-0@example.com")).toBeVisible();
   expect(
-    document.querySelector(".querylane-data-grid")?.getBoundingClientRect()
-      .height ?? 0
+    document.querySelector(".rdg")?.getBoundingClientRect().height ?? 0
   ).toBeGreaterThan(1100);
   await expect
-    .poll(
-      () => document.querySelectorAll(".querylane-data-grid .rdg-row").length
-    )
+    .poll(() => document.querySelectorAll(".rdg .rdg-row").length)
     .toBeLessThanOrEqual(60);
   expect(
-    document.querySelectorAll(".querylane-data-grid .rdg-cell").length
+    document.querySelectorAll(".rdg .rdg-cell").length
   ).toBeLessThanOrEqual(420);
   expect(page.getByText("user-499@example.com")).not.toBeInTheDocument();
 });

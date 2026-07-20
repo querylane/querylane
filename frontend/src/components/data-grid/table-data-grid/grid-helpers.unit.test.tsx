@@ -1,4 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
+import { isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -188,7 +189,7 @@ describe("grid helpers", () => {
     expect(markup).not.toContain("Open carrier_id reference");
   });
 
-  test("links exact binary foreign keys but rejects truncated values", () => {
+  test("caches linkable foreign keys but rejects truncated values", () => {
     const textColumn = testColumn("external_id", DataType.STRING, "text");
     const bytesColumn = testColumn("fingerprint", DataType.BINARY, "bytea");
     const commonArgs = {
@@ -244,29 +245,39 @@ describe("grid helpers", () => {
         } as never)}
       </span>
     );
-    const bytesMarkup = renderToStaticMarkup(
-      <span>
-        {bytesForeignKeyColumn.renderCell?.({
-          row: {
-            [ROW_KEY_FIELD]: "row-2",
-            cells: new Map([
-              [
-                "fingerprint",
-                testValueCell({
-                  case: "bytesValue",
-                  value: new Uint8Array([1, 2]),
-                }),
-              ],
-            ]),
-          },
-        } as never)}
-      </span>
-    );
+    const bytesRow = {
+      [ROW_KEY_FIELD]: "row-2",
+      cells: new Map([
+        [
+          "fingerprint",
+          testValueCell({
+            case: "bytesValue",
+            value: new Uint8Array([1, 2]),
+          }),
+        ],
+      ]),
+    };
+    const firstBytesCell = bytesForeignKeyColumn.renderCell?.({
+      row: bytesRow,
+    } as never);
+    const secondBytesCell = bytesForeignKeyColumn.renderCell?.({
+      row: bytesRow,
+    } as never);
+    if (
+      !(
+        isValidElement<{ preview: unknown }>(firstBytesCell) &&
+        isValidElement<{ preview: unknown }>(secondBytesCell)
+      )
+    ) {
+      throw new Error("expected a foreign key cell");
+    }
+    const bytesMarkup = renderToStaticMarkup(<span>{firstBytesCell}</span>);
 
     expect(truncatedMarkup).toContain("prefix");
     expect(truncatedMarkup).not.toContain("Open external_id reference");
     expect(bytesMarkup).toContain("bytes");
     expect(bytesMarkup).toContain("Open fingerprint reference");
+    expect(firstBytesCell.props.preview).toBe(secondBytesCell.props.preview);
   });
 
   test("renders a plain cell when a foreign key value cannot survive the reference filter", () => {

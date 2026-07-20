@@ -8,6 +8,7 @@ import { SchemaDetail } from "@/features/data-explorer/explorer-schema-detail";
 import { ExplorerSchemaMap } from "@/features/data-explorer/explorer-schema-map";
 import { TableDetail } from "@/features/data-explorer/explorer-table-detail";
 import { ViewDetail } from "@/features/data-explorer/explorer-view-detail";
+import { cn } from "@/lib/utils";
 import {
   ColumnSchema,
   ConstraintType,
@@ -359,7 +360,10 @@ function renderExplorerSurface(
   render(
     <ScreenshotFrame>
       <div
-        className={`${surfaceWidthClassName} rounded-2xl border border-border bg-background p-8 text-foreground`}
+        className={cn(
+          surfaceWidthClassName,
+          "rounded-2xl border border-border bg-background p-8 text-foreground"
+        )}
       >
         {children}
       </div>

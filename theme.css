@@ -1,0 +1,97 @@
+blume-mermaid {
+	position: relative;
+}
+
+[data-mermaid-expand],
+[data-mermaid-fullscreen-close] {
+	min-width: 44px;
+	min-height: 44px;
+	border: 1px solid var(--blume-border);
+	border-radius: var(--blume-radius);
+	background: var(--blume-background);
+	color: var(--blume-foreground);
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.875rem;
+	padding: 0.5rem 0.75rem;
+}
+
+[data-mermaid-expand] {
+	position: absolute;
+	top: 0;
+	right: 0;
+	z-index: 1;
+}
+
+[data-mermaid-expand]:hover,
+[data-mermaid-fullscreen-close]:hover {
+	background: var(--blume-muted);
+}
+
+[data-mermaid-expand]:focus-visible,
+[data-mermaid-fullscreen-close]:focus-visible {
+	box-shadow:
+		0 0 0 2px var(--blume-background),
+		0 0 0 4px var(--blume-action);
+}
+
+dialog[data-mermaid-fullscreen] {
+	position: fixed;
+	inset: 0;
+	box-sizing: border-box;
+	width: 100dvw;
+	height: 100dvh;
+	max-width: none;
+	max-height: none;
+	margin: 0;
+	border: 0;
+	background: var(--blume-background);
+	color: var(--blume-foreground);
+	overflow: hidden;
+	padding: max(1rem, env(safe-area-inset-top))
+		max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom))
+		max(1rem, env(safe-area-inset-left));
+}
+
+dialog[data-mermaid-fullscreen]::backdrop {
+	background: rgb(0 0 0 / 50%);
+}
+
+[data-mermaid-fullscreen-close] {
+	position: absolute;
+	top: max(1rem, env(safe-area-inset-top));
+	right: max(1rem, env(safe-area-inset-right));
+	z-index: 1;
+}
+
+[data-mermaid-fullscreen-canvas],
+[data-mermaid-fullscreen-canvas] blume-mermaid,
+[data-mermaid-fullscreen-canvas] blume-mermaid > div {
+	width: 100%;
+	height: 100%;
+}
+
+[data-mermaid-fullscreen-canvas] {
+	box-sizing: border-box;
+	display: grid;
+	place-items: center;
+	overflow: auto;
+	padding-top: 3.5rem;
+}
+
+[data-mermaid-fullscreen-canvas] blume-mermaid,
+[data-mermaid-fullscreen-canvas] blume-mermaid > div {
+	display: grid;
+	place-items: center;
+}
+
+[data-mermaid-fullscreen-canvas] svg {
+	/* biome-ignore lint/complexity/noImportantStyles: Override Mermaid's inline SVG width. */
+	width: 100% !important;
+	/* biome-ignore lint/complexity/noImportantStyles: Override Mermaid's inline SVG height. */
+	height: 100% !important;
+	/* biome-ignore lint/complexity/noImportantStyles: Override Mermaid's inline maximum width. */
+	max-width: 100% !important;
+	/* biome-ignore lint/complexity/noImportantStyles: Override Mermaid's inline maximum height. */
+	max-height: 100% !important;
+}

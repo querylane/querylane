@@ -14,8 +14,8 @@ import {
   type CellCopyArgs,
   type CellMouseArgs,
   type CellMouseEvent,
-  type CellSelectArgs,
   type Column,
+  type PositionChangeArgs,
   SELECT_COLUMN_KEY,
   SelectColumn,
   type SortColumn,
@@ -147,6 +147,7 @@ interface ContextMenuState {
 }
 
 const DEFAULT_PAGE_SIZE = 50;
+const noop = () => undefined;
 
 function decodeUrlList(value: string | undefined): string[] {
   if (!value) {
@@ -669,6 +670,7 @@ interface TableDataGridChromeProps {
   invalidFilterRules: Array<{ id: string; message: string }>;
   isColumnLayoutCustomized: boolean;
   lastFetchedLabel: string;
+  onActivePositionChange: (args: PositionChangeArgs<GridRow>) => void;
   onCellContextMenu: (
     args: CellMouseArgs<GridRow>,
     event: CellMouseEvent
@@ -693,7 +695,6 @@ interface TableDataGridChromeProps {
   onPageSizeChange: (next: number) => void;
   onPrev: () => void;
   onRefresh: () => Promise<unknown> | undefined;
-  onSelectedCellChange: (args: CellSelectArgs<GridRow>) => void;
   onSelectedRowsChange: (next: ReadonlySet<string>) => void;
   onSortChange: (next: SortColumn[]) => void;
   onToggleExpanded: () => void;
@@ -741,7 +742,7 @@ function TableDataGridChrome({
   onPageSizeChange,
   onPrev,
   onRefresh,
-  onSelectedCellChange,
+  onActivePositionChange,
   onSelectedRowsChange,
   onSortChange,
   onToggleExpanded,
@@ -811,10 +812,10 @@ function TableDataGridChrome({
           flush={isFlush}
           hasActiveFilter={filterRules.length > 0}
           isLoading={state.gridLoading}
+          onActivePositionChange={onActivePositionChange}
           onCellContextMenu={onCellContextMenu}
           onCellCopy={onCellCopy}
           onColumnsReorder={onColumnsReorder}
-          onSelectedCellChange={onSelectedCellChange}
           onSelectedRowsChange={onSelectedRowsChange}
           onSortChange={onSortChange}
           rows={rows}
@@ -1032,6 +1033,8 @@ function useGridColumns({
   setSortColumns: (next: SortColumn[]) => void;
   sortColumns: SortColumn[];
 }): { columns: Column<GridRow>[]; pkColumnSet: Set<string> } {
+  "use memo";
+
   const pkColumnSet = new Set(
     rowIdentity && rowIdentity.source === RowIdentity_Source.PRIMARY_KEY
       ? rowIdentity.columnNames
@@ -1226,9 +1229,9 @@ function buildCellInteractionHandlers({
     });
   }
 
-  function handleSelectedCellChange(args: CellSelectArgs<GridRow>) {
+  function handleActivePositionChange(args: PositionChangeArgs<GridRow>) {
     if (
-      !args.row ||
+      !(args.row && args.column) ||
       args.column.key === SELECT_COLUMN_KEY ||
       args.column.key === EXPAND_COLUMN_KEY
     ) {
@@ -1269,7 +1272,7 @@ function buildCellInteractionHandlers({
     handleContextMenuCopyCell,
     handleContextMenuCopyRow,
     handleContextMenuCopyRowAsSql,
-    handleSelectedCellChange,
+    handleActivePositionChange,
   };
 }
 
@@ -1280,13 +1283,13 @@ function TableDataGrid({
   filterSearch,
   frozenColumnsSearch,
   initialPageSize = DEFAULT_PAGE_SIZE,
-  onCellSearchChange = () => undefined,
+  onCellSearchChange = noop,
   onFilterSearchChange,
-  onFrozenColumnsSearchChange = () => undefined,
-  onOpenRowSearchChange = () => undefined,
-  onPageSizeSearchChange = () => undefined,
+  onFrozenColumnsSearchChange = noop,
+  onOpenRowSearchChange = noop,
+  onPageSizeSearchChange = noop,
   renderOpenReferencedTableLink,
-  onSelectedRowsSearchChange = () => undefined,
+  onSelectedRowsSearchChange = noop,
   onSortSearchChange,
   openRowSearch,
   pageSizeSearch,
@@ -1485,7 +1488,7 @@ function TableDataGrid({
     onPageSizeChange: controller.setPageSize,
     onPrev: controller.goPrev,
     onRefresh: refreshState.refreshNow,
-    onSelectedCellChange: cellHandlers.handleSelectedCellChange,
+    onActivePositionChange: cellHandlers.handleActivePositionChange,
     onSelectedRowsChange: setSelectedRows,
     onSortChange: handleSortChange,
     onToggleExpanded: () => setIsDataGridExpanded(true),

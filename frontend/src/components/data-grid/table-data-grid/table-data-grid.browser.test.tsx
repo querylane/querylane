@@ -595,7 +595,7 @@ function renderSelectedHeaderEdgeFixture() {
           }
         `}
       </style>
-      <table className="querylane-data-grid selected-header-edge-fixture">
+      <table className="rdg selected-header-edge-fixture">
         <thead>
           <tr className="rdg-header-row">
             <th className="rdg-cell" scope="col">
@@ -618,7 +618,7 @@ function renderSelectedHeaderEdgeFixture() {
 function renderSelectableDataCellFixture() {
   render(
     <ScreenshotFrame>
-      <div className="querylane-data-grid">
+      <div className="rdg">
         <div className="rdg-header-row">
           <div className="rdg-cell" data-testid="header-cell">
             name
@@ -865,21 +865,41 @@ test("column headers reorder while layout controls stay compact", async () => {
   await expect(page).toMatchScreenshot("data-grid-native-column-layout");
 });
 
-test("select-all tooltip stays open while its checkbox is hovered", async () => {
+test("select-all stays tooltip-free and preserves native selection behavior", async () => {
   renderForeignKeyReferenceGrid(
     "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
   );
 
   const selectAllCheckbox = page.getByRole("checkbox", { name: "Select All" });
   await expect.element(selectAllCheckbox).toBeVisible();
+  const selectAllStyle = getComputedStyle(selectAllCheckbox.element());
+  expect(selectAllStyle.inlineSize).toBe("16px");
+  expect(selectAllStyle.blockSize).toBe("16px");
+  expect(selectAllStyle.accentColor).not.toBe("auto");
+  await expect
+    .element(selectAllCheckbox)
+    .toHaveAttribute("title", "Select all rows on this page");
   await selectAllCheckbox.hover();
 
-  const tooltip = page.getByText("Select all rows on this page");
-  await expect.element(tooltip).toBeVisible();
+  await expect.element(page.getByRole("tooltip")).not.toBeInTheDocument();
 
-  await new Promise((resolve) => setTimeout(resolve, 350));
+  await selectAllCheckbox.click();
+  await expect.element(selectAllCheckbox).toBeChecked();
+  await expect
+    .element(selectAllCheckbox)
+    .toHaveAttribute("title", "Clear selection");
 
-  await expect.element(tooltip).toBeVisible();
+  const rowCheckboxes = page.getByRole("checkbox", { name: "Select" });
+  expect(rowCheckboxes.elements()).not.toHaveLength(0);
+  for (const rowCheckbox of rowCheckboxes.elements()) {
+    expect(rowCheckbox).toBeChecked();
+  }
+
+  await selectAllCheckbox.click();
+  await expect.element(selectAllCheckbox).not.toBeChecked();
+  for (const rowCheckbox of rowCheckboxes.elements()) {
+    expect(rowCheckbox).not.toBeChecked();
+  }
 });
 
 async function openForeignKeyReference() {
@@ -1471,7 +1491,7 @@ test("selected edge header cell keeps a continuous square border", async () => {
   expect(selectedHeaderStyle.borderTopRightRadius).toBe("0px");
   expect(selectedHeaderStyle.borderBottomRightRadius).toBe("0px");
 
-  const grid = document.querySelector<HTMLElement>(".querylane-data-grid");
+  const grid = document.querySelector<HTMLElement>(".rdg");
   if (!grid) {
     throw new Error("expected grid fixture");
   }
@@ -1485,9 +1505,7 @@ test("data grid scrollbars use theme colors in dark mode", async () => {
     const createdHeader = page.getByText("created_at");
     await expect.element(createdHeader).toBeVisible();
 
-    const grid = createdHeader
-      .element()
-      .closest<HTMLElement>(".querylane-data-grid");
+    const grid = createdHeader.element().closest<HTMLElement>(".rdg");
     if (!grid) {
       throw new Error("expected grid fixture");
     }

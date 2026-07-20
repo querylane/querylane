@@ -8,10 +8,8 @@ import {
   createContext,
   type RefObject,
   use,
-  useCallback,
   useEffect,
   useId,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -318,48 +316,42 @@ function SidebarProvider({
   // We use openProp and setOpenProp for control from outside the component.
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const open = openProp ?? internalOpen;
-  const setOpen = useCallback(
-    (value: boolean | ((value: boolean) => boolean)) => {
-      const openState = typeof value === "function" ? value(open) : value;
-      if (setOpenProp) {
-        setOpenProp(openState);
-      } else {
-        setInternalOpen(openState);
-      }
+  function setOpen(value: boolean | ((value: boolean) => boolean)) {
+    const openState = typeof value === "function" ? value(open) : value;
+    if (setOpenProp) {
+      setOpenProp(openState);
+    } else {
+      setInternalOpen(openState);
+    }
 
-      // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
-    },
-    [setOpenProp, open]
-  );
+    // This sets the cookie to keep the sidebar state.
+    document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+  }
 
   // Helper to toggle the sidebar.
-  const toggleSidebar = useCallback(
-    () =>
-      isMobile
-        ? setOpenMobile((currentOpen) => !currentOpen)
-        : setOpen((currentOpen) => !currentOpen),
-    [isMobile, setOpen]
-  );
+  function toggleSidebar() {
+    if (isMobile) {
+      setOpenMobile((currentOpen) => !currentOpen);
+    } else {
+      setOpen((currentOpen) => !currentOpen);
+    }
+  }
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
   const state = open ? "expanded" : "collapsed";
 
-  const contextValue = useMemo<SidebarContextProps>(
-    () => ({
-      hoverRevealOpen,
-      isMobile,
-      open,
-      openMobile,
-      setHoverRevealOpen,
-      setOpen,
-      setOpenMobile,
-      state,
-      toggleSidebar,
-    }),
-    [state, open, setOpen, isMobile, hoverRevealOpen, openMobile, toggleSidebar]
-  );
+  const contextValue: SidebarContextProps = {
+    hoverRevealOpen,
+    isMobile,
+    open,
+    openMobile,
+    setHoverRevealOpen,
+    setOpen,
+    setOpenMobile,
+    state,
+    toggleSidebar,
+  };
 
   return (
     <SidebarContext.Provider value={contextValue}>
