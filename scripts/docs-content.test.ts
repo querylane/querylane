@@ -165,8 +165,11 @@ test("serves the generated spec through Blume's native API reference", () => {
 	});
 });
 
-test("keeps the alpha API reference out of the primary navigation", () => {
-	expect(config.navigation?.tabs).toBeUndefined();
+test("surfaces the experimental API in the primary navigation", () => {
+	expect(config.navigation?.tabs).toEqual([
+		{ label: "Docs", path: "/" },
+		{ label: "Experimental API", path: "/api" },
+	]);
 });
 
 test("redirects the previous API pages", async () => {

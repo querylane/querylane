@@ -72,6 +72,10 @@ export default defineConfig({
 		sidebar: {
 			display: "group",
 		},
+		tabs: [
+			{ label: "Docs", path: "/" },
+			{ label: "Experimental API", path: "/api" },
+		],
 	},
 	markdown: {
 		imageZoom: true,
