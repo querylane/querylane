@@ -1,0 +1,32 @@
+---
+import specs from "blume:openapi";
+import NavTree from "blume/components/layout/NavTree.astro";
+import type { UIStrings } from "blume/core/i18n-ui.ts";
+import type { NavNode } from "blume/core/types.ts";
+import {
+  rpcPresentationForReference,
+  withRpcBadges,
+} from "./rpc-kind.ts";
+
+interface Props {
+  items: NavNode[];
+  currentRoute: string;
+  strings?: UIStrings["nav"];
+}
+
+const { items, currentRoute, strings } = Astro.props;
+const labelsByRoute = new Map<string, string>();
+
+for (const spec of Object.values(specs)) {
+  for (const operation of Object.values(spec.operations)) {
+    labelsByRoute.set(
+      operation.route,
+      rpcPresentationForReference(spec.document, operation).label
+    );
+  }
+}
+
+const rpcItems = withRpcBadges(items, labelsByRoute);
+---
+
+<NavTree currentRoute={currentRoute} items={rpcItems} strings={strings} />

@@ -15,7 +15,14 @@ const apiGuidePages = [
 type ProtoService = {
 	name: string;
 	packageName: string;
-	rpcs: string[];
+	rpcs: {
+		kind:
+			| "bidirectional-streaming"
+			| "client-streaming"
+			| "server-streaming"
+			| "unary";
+		name: string;
+	}[];
 	slug: string;
 };
 
@@ -46,9 +53,25 @@ const readProtoServices = async (): Promise<ProtoService[]> => {
 				continue;
 			}
 
-			const rpcs = [...body.matchAll(/^\s*rpc\s+(\w+)\s*\(/gmu)].flatMap(
-				(rpc) => (rpc[1] ? [rpc[1]] : []),
-			);
+			const rpcs = [
+				...body.matchAll(
+					/^\s*rpc\s+(\w+)\s*\(\s*(stream\s+)?[^)]+\)\s*returns\s*\(\s*(stream\s+)?/gmu,
+				),
+			].flatMap((rpc) => {
+				const [, rpcName, clientStream, serverStream] = rpc;
+				if (!rpcName) {
+					return [];
+				}
+
+				const kind = clientStream
+					? serverStream
+						? "bidirectional-streaming"
+						: "client-streaming"
+					: serverStream
+						? "server-streaming"
+						: "unary";
+				return [{ kind, name: rpcName }];
+			});
 
 			services.push({
 				name,
@@ -78,9 +101,30 @@ test("generates an OpenAPI path for every service and RPC", async () => {
 	for (const service of services) {
 		for (const rpc of service.rpcs) {
 			expect(openapi).toContain(
-				`  /${service.packageName}.${service.name}/${rpc}:`,
+				`  /${service.packageName}.${service.name}/${rpc.name}:`,
 			);
-			expect(openapi).toContain(`operationId: ${service.name}_${rpc}`);
+			expect(openapi).toContain(`operationId: ${service.name}_${rpc.name}`);
+		}
+	}
+});
+
+test("labels every generated operation with its RPC shape", async () => {
+	const services = await readProtoServices();
+	const openapi = await readFile(
+		join(root, "docs/generated/querylane.openapi.yaml"),
+		"utf8",
+	);
+
+	for (const service of services) {
+		for (const rpc of service.rpcs) {
+			const operation = openapi.match(
+				new RegExp(
+					`  /${service.packageName}\\.${service.name}/${rpc.name}:\\n([\\s\\S]*?)(?=\\n  /|\\ncomponents:)`,
+					"u",
+				),
+			)?.[1];
+
+			expect(operation).toContain(`x-connectrpc-method-kind: ${rpc.kind}`);
 		}
 	}
 });

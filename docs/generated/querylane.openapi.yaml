@@ -11,6 +11,7 @@ info:
 paths:
   /querylane.console.v1alpha1.AdminService/GetMetricsStorageStats:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - AdminService
       summary: GetMetricsStorageStats
@@ -49,6 +50,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetMetricsStorageStatsResponse'
   /querylane.console.v1alpha1.AdminService/ListAdminRunnerExecutions:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - AdminService
       summary: ListAdminRunnerExecutions
@@ -88,6 +90,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListAdminRunnerExecutionsResponse'
   /querylane.console.v1alpha1.AdminService/ListCatalogSyncStates:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - AdminService
       summary: ListCatalogSyncStates
@@ -124,6 +127,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListCatalogSyncStatesResponse'
   /querylane.console.v1alpha1.AdminService/ListReplicas:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - AdminService
       summary: ListReplicas
@@ -160,6 +164,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListReplicasResponse'
   /querylane.console.v1alpha1.ConsoleService/GetConsoleConfig:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - ConsoleService
       summary: GetConsoleConfig
@@ -198,6 +203,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetConsoleConfigResponse'
   /querylane.console.v1alpha1.DatabaseService/GetDatabase:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - DatabaseService
       summary: GetDatabase
@@ -234,6 +240,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetDatabaseResponse'
   /querylane.console.v1alpha1.DatabaseService/GetDatabaseQueryInsights:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - DatabaseService
       summary: GetDatabaseQueryInsights
@@ -270,6 +277,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetDatabaseQueryInsightsResponse'
   /querylane.console.v1alpha1.DatabaseService/ListDatabases:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - DatabaseService
       summary: ListDatabases
@@ -309,6 +317,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListDatabasesResponse'
   /querylane.console.v1alpha1.ExtensionService/ListExtensions:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - ExtensionService
       summary: ListExtensions
@@ -347,6 +356,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListExtensionsResponse'
   /querylane.console.v1alpha1.InstanceService/CheckInstanceActivity:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - InstanceService
       summary: CheckInstanceActivity
@@ -383,6 +393,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.CheckInstanceActivityResponse'
   /querylane.console.v1alpha1.InstanceService/CheckInstanceHealth:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - InstanceService
       summary: CheckInstanceHealth
@@ -421,6 +432,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.CheckInstanceHealthResponse'
   /querylane.console.v1alpha1.InstanceService/CreateInstance:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - InstanceService
       summary: CreateInstance
@@ -459,6 +471,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.CreateInstanceResponse'
   /querylane.console.v1alpha1.InstanceService/DeleteInstance:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - InstanceService
       summary: DeleteInstance
@@ -497,6 +510,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.DeleteInstanceResponse'
   /querylane.console.v1alpha1.InstanceService/GetInstance:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - InstanceService
       summary: GetInstance
@@ -533,6 +547,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetInstanceResponse'
   /querylane.console.v1alpha1.InstanceService/GetInstanceOverview:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - InstanceService
       summary: GetInstanceOverview
@@ -571,6 +586,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetInstanceOverviewResponse'
   /querylane.console.v1alpha1.InstanceService/ListInstances:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - InstanceService
       summary: ListInstances
@@ -607,6 +623,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListInstancesResponse'
   /querylane.console.v1alpha1.InstanceService/TestInstanceConnection:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - InstanceService
       summary: TestInstanceConnection
@@ -643,6 +660,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.TestInstanceConnectionResponse'
   /querylane.console.v1alpha1.InstanceService/UpdateInstance:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - InstanceService
       summary: UpdateInstance
@@ -679,6 +697,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.UpdateInstanceResponse'
   /querylane.console.v1alpha1.MetricsService/QueryMetrics:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - MetricsService
       summary: QueryMetrics
@@ -717,6 +736,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.QueryMetricsResponse'
   /querylane.console.v1alpha1.OnboardingService/GetOnboardingState:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - OnboardingService
       summary: GetOnboardingState
@@ -755,6 +775,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetOnboardingStateResponse'
   /querylane.console.v1alpha1.OnboardingService/SetupAppDatabase:
     post:
+      x-connectrpc-method-kind: server-streaming
       tags:
         - OnboardingService
       summary: SetupAppDatabase
@@ -857,6 +878,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.SetupAppDatabaseResponse'
   /querylane.console.v1alpha1.OnboardingService/WatchConfigChanges:
     post:
+      x-connectrpc-method-kind: server-streaming
       tags:
         - OnboardingService
       summary: WatchConfigChanges
@@ -959,6 +981,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.WatchConfigChangesResponse'
   /querylane.console.v1alpha1.RoleService/GetRole:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - RoleService
       summary: GetRole
@@ -995,6 +1018,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetRoleResponse'
   /querylane.console.v1alpha1.RoleService/ListPublicGrants:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - RoleService
       summary: ListPublicGrants
@@ -1039,6 +1063,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListPublicGrantsResponse'
   /querylane.console.v1alpha1.RoleService/ListRoleDefaultPrivileges:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - RoleService
       summary: ListRoleDefaultPrivileges
@@ -1078,6 +1103,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListRoleDefaultPrivilegesResponse'
   /querylane.console.v1alpha1.RoleService/ListRoleGrants:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - RoleService
       summary: ListRoleGrants
@@ -1116,6 +1142,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListRoleGrantsResponse'
   /querylane.console.v1alpha1.RoleService/ListRoleOwnedObjects:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - RoleService
       summary: ListRoleOwnedObjects
@@ -1155,6 +1182,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListRoleOwnedObjectsResponse'
   /querylane.console.v1alpha1.RoleService/ListRoles:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - RoleService
       summary: ListRoles
@@ -1191,6 +1219,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListRolesResponse'
   /querylane.console.v1alpha1.RunnerService/ListRunnerExecutions:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - RunnerService
       summary: ListRunnerExecutions
@@ -1227,6 +1256,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListRunnerExecutionsResponse'
   /querylane.console.v1alpha1.SQLService/ExecuteQuery:
     post:
+      x-connectrpc-method-kind: server-streaming
       tags:
         - SQLService
       summary: ExecuteQuery
@@ -1326,6 +1356,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ExecuteQueryResponse'
   /querylane.console.v1alpha1.SQLService/ExplainQuery:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - SQLService
       summary: ExplainQuery
@@ -1362,6 +1393,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ExplainQueryResponse'
   /querylane.console.v1alpha1.SchemaService/GetSchema:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - SchemaService
       summary: GetSchema
@@ -1398,6 +1430,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetSchemaResponse'
   /querylane.console.v1alpha1.SchemaService/ListSchemas:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - SchemaService
       summary: ListSchemas
@@ -1434,6 +1467,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListSchemasResponse'
   /querylane.console.v1alpha1.TableDataService/ReadCellValue:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - TableDataService
       summary: ReadCellValue
@@ -1473,6 +1507,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ReadCellValueResponse'
   /querylane.console.v1alpha1.TableDataService/ReadRows:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - TableDataService
       summary: ReadRows
@@ -1509,6 +1544,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ReadRowsResponse'
   /querylane.console.v1alpha1.TableDataService/StreamRows:
     post:
+      x-connectrpc-method-kind: server-streaming
       tags:
         - TableDataService
       summary: StreamRows
@@ -1610,6 +1646,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.StreamRowsResponse'
   /querylane.console.v1alpha1.TableService/GetTable:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - TableService
       summary: GetTable
@@ -1648,6 +1685,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetTableResponse'
   /querylane.console.v1alpha1.TableService/GetTablePartitionMetadata:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - TableService
       summary: GetTablePartitionMetadata
@@ -1684,6 +1722,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetTablePartitionMetadataResponse'
   /querylane.console.v1alpha1.TableService/ListTableColumns:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - TableService
       summary: ListTableColumns
@@ -1722,6 +1761,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListTableColumnsResponse'
   /querylane.console.v1alpha1.TableService/ListTableConstraints:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - TableService
       summary: ListTableConstraints
@@ -1758,6 +1798,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListTableConstraintsResponse'
   /querylane.console.v1alpha1.TableService/ListTableIndexes:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - TableService
       summary: ListTableIndexes
@@ -1794,6 +1835,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListTableIndexesResponse'
   /querylane.console.v1alpha1.TableService/ListTablePolicies:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - TableService
       summary: ListTablePolicies
@@ -1830,6 +1872,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListTablePoliciesResponse'
   /querylane.console.v1alpha1.TableService/ListTableTriggers:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - TableService
       summary: ListTableTriggers
@@ -1866,6 +1909,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListTableTriggersResponse'
   /querylane.console.v1alpha1.TableService/ListTables:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - TableService
       summary: ListTables
@@ -1902,6 +1946,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListTablesResponse'
   /querylane.console.v1alpha1.ViewService/GetView:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - ViewService
       summary: GetView
@@ -1938,6 +1983,7 @@ paths:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetViewResponse'
   /querylane.console.v1alpha1.ViewService/ListViews:
     post:
+      x-connectrpc-method-kind: unary
       tags:
         - ViewService
       summary: ListViews

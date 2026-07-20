@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 
 const specPath = new URL(
 	"../docs/generated/querylane.openapi.yaml",
@@ -22,6 +23,124 @@ const wellKnownScalars = new Map([
 	["google.protobuf.FieldMask", ["type: string"]],
 	["google.protobuf.Timestamp", ["type: string", "format: date-time"]],
 ]);
+
+type RpcKind =
+	| "bidirectional-streaming"
+	| "client-streaming"
+	| "server-streaming"
+	| "unary";
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
+
+const requiredString = (
+	record: Record<string, unknown>,
+	key: string,
+): string => {
+	const value = record[key];
+	if (typeof value !== "string") {
+		throw new Error(`protobuf descriptor is missing ${key}`);
+	}
+	return value;
+};
+
+const recordsAt = (
+	record: Record<string, unknown>,
+	key: string,
+): Record<string, unknown>[] => {
+	const value = record[key] ?? [];
+	if (!Array.isArray(value) || !value.every(isRecord)) {
+		throw new Error(`protobuf descriptor has invalid ${key}`);
+	}
+	return value;
+};
+
+const rpcKind = (method: Record<string, unknown>): RpcKind => {
+	const clientStreaming = method.clientStreaming === true;
+	const serverStreaming = method.serverStreaming === true;
+
+	if (clientStreaming) {
+		return serverStreaming ? "bidirectional-streaming" : "client-streaming";
+	}
+	return serverStreaming ? "server-streaming" : "unary";
+};
+
+const readRpcKinds = (): Map<string, RpcKind> => {
+	const descriptor = Bun.spawnSync(
+		[
+			"buf",
+			"build",
+			"--as-file-descriptor-set",
+			"--exclude-imports",
+			"-o=-#format=json",
+		],
+		{
+			cwd: fileURLToPath(new URL("..", import.meta.url)),
+			stderr: "pipe",
+			stdout: "pipe",
+		},
+	);
+	if (!descriptor.success) {
+		throw new Error(
+			`could not read protobuf descriptors: ${descriptor.stderr.toString()}`,
+		);
+	}
+
+	const parsed: unknown = JSON.parse(descriptor.stdout.toString());
+	if (!isRecord(parsed)) {
+		throw new Error("protobuf descriptor set is not an object");
+	}
+
+	const kinds = new Map<string, RpcKind>();
+	for (const file of recordsAt(parsed, "file")) {
+		const packageName = requiredString(file, "package");
+		for (const service of recordsAt(file, "service")) {
+			const serviceName = requiredString(service, "name");
+			for (const method of recordsAt(service, "method")) {
+				const methodName = requiredString(method, "name");
+				kinds.set(
+					`/${packageName}.${serviceName}/${methodName}`,
+					rpcKind(method),
+				);
+			}
+		}
+	}
+	return kinds;
+};
+
+const annotateRpcKinds = (
+	source: string,
+	kinds: Map<string, RpcKind>,
+): string => {
+	const annotated = new Set<string>();
+	let pending: { kind: RpcKind; path: string } | undefined;
+	const lines = source.split("\n").flatMap((line) => {
+		const path = line.match(/^ {2}(\/[^:]+):$/u)?.[1];
+		if (path) {
+			const kind = kinds.get(path);
+			pending = kind ? { kind, path } : undefined;
+			return line;
+		}
+
+		if (pending && line === "    post:") {
+			annotated.add(pending.path);
+			const annotation = `      x-connectrpc-method-kind: ${pending.kind}`;
+			pending = undefined;
+			return [line, annotation];
+		}
+
+		return line;
+	});
+
+	const missing = [...kinds.keys()].filter((path) => !annotated.has(path));
+	if (missing.length > 0) {
+		throw new Error(
+			`generated OpenAPI is missing protobuf RPCs: ${missing.join(", ")}`,
+		);
+	}
+
+	return lines.join("\n");
+};
 
 const inlineWellKnownScalars = (source: string): string => {
 	let result = source;
@@ -49,7 +168,8 @@ if (!generated.startsWith(generatedHeader)) {
 	throw new Error("generated OpenAPI header changed");
 }
 
-const published = inlineWellKnownScalars(
-	generated.replace(generatedHeader, publishedHeader),
+const published = annotateRpcKinds(
+	inlineWellKnownScalars(generated.replace(generatedHeader, publishedHeader)),
+	readRpcKinds(),
 );
 await writeFile(specPath, published);
