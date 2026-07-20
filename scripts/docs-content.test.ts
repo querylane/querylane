@@ -72,7 +72,7 @@ test("generates an OpenAPI path for every service and RPC", async () => {
 	expect(services).toHaveLength(14);
 	expect(openapi).toContain("openapi: 3.1.0");
 	expect(openapi).toContain(
-		"info:\n  title: Querylane API\n  version: v1alpha1",
+		"info:\n  title: Querylane experimental API\n  version: v1alpha1",
 	);
 
 	for (const service of services) {
@@ -90,7 +90,7 @@ test("serves the generated spec through Blume's native API reference", () => {
 		enabled: true,
 		sources: [
 			{
-				label: "Querylane API",
+				label: "Experimental API",
 				route: "/api",
 				spec: "./docs/generated/querylane.openapi.yaml",
 			},
@@ -98,11 +98,8 @@ test("serves the generated spec through Blume's native API reference", () => {
 	});
 });
 
-test("exposes the API reference as its own navigation tab", () => {
-	expect(config.navigation?.tabs).toEqual([
-		{ label: "Docs", path: "/" },
-		{ label: "API", path: "/api" },
-	]);
+test("keeps the alpha API reference out of the primary navigation", () => {
+	expect(config.navigation?.tabs).toBeUndefined();
 });
 
 test("redirects the previous API pages", async () => {
@@ -163,6 +160,34 @@ test("keeps installation and production setup ahead of product guides", async ()
 	for (const page of setupPages) {
 		expect(pages, `missing ${basename(page)}`).toContain(page);
 	}
+});
+
+test("guides a new user through a successful first session", async () => {
+	const getStartedRoot = join(root, "docs/site/get-started");
+	const [home, meta, firstSession, apiMeta, callingApi] = await Promise.all([
+		readFile(join(root, "docs/site/index.mdx"), "utf8"),
+		readFile(join(getStartedRoot, "meta.ts"), "utf8"),
+		readFile(join(getStartedRoot, "first-successful-session.mdx"), "utf8"),
+		readFile(join(apiGuideRoot, "meta.ts"), "utf8"),
+		readFile(join(apiGuideRoot, "calling-the-api.mdx"), "utf8"),
+	]);
+
+	expect(config.description).toContain("getting started");
+	expect(home).toContain("/get-started/first-successful-session");
+	expect(meta).toContain(
+		'"register-instance",\n\t\t"first-successful-session"',
+	);
+	for (const destination of [
+		"/guides/instance-overview",
+		"/guides/find-blocking-sessions",
+		"/guides/roles-and-access",
+		"/operations/postgresql-permissions",
+	]) {
+		expect(firstSession).toContain(destination);
+	}
+	expect(firstSession).toContain("## You are successful when");
+	expect(apiMeta).toContain('title: "Experimental API"');
+	expect(callingApi).toContain("alpha integration surface");
 });
 
 test("documents the operational lifecycle for self-hosted deployments", async () => {

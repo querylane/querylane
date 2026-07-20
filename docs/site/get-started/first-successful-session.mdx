@@ -1,0 +1,72 @@
+---
+title: Complete your first successful session
+description: Verify one PostgreSQL connection, learn the Querylane workspace, and answer an operational question you can validate.
+sidebar:
+  label: First successful session
+---
+
+A successful first session is more than a green connection. You should understand where to find health, activity, database structure, and access information, then use one of those views to answer a real question about a server you know.
+
+:::tip
+Start with a non-production instance and a dedicated read-only PostgreSQL login. Familiar data gives you a reliable baseline for deciding whether Querylane's view is accurate and useful.
+:::
+
+## Before you start
+
+You need:
+
+- a completed Querylane storage setup;
+- one [registered PostgreSQL instance](/get-started/register-instance);
+- permission to inspect the databases and schemas relevant to your evaluation;
+- one fact or question you can independently verify, such as current connections, a known table, or a role membership.
+
+## Follow the first-session path
+
+<Steps>
+  <Step title="Confirm the instance baseline">
+    Open the instance overview. Confirm the connection is active, identify the PostgreSQL version, and review connection capacity, health checks, and any visible warnings. Use the [instance overview guide](/guides/instance-overview) to understand each section.
+  </Step>
+  <Step title="Find a database object you know">
+    Open a database, then browse to a familiar schema and table. Check its columns, indexes, constraints, policies, partitions, or triggers in the [data explorer](/guides/data-explorer). This confirms Querylane can see the catalog objects your login should expose.
+  </Step>
+  <Step title="Answer one live question">
+    Open Activity and look for active sessions, long transactions, waits, or blocking relationships. If blocking is the question you chose, follow [Find blocking sessions](/guides/find-blocking-sessions) from symptom to next action.
+  </Step>
+  <Step title="Check the access boundary">
+    Use [Roles and access](/guides/roles-and-access) to find the login Querylane uses and inspect its memberships and grants. Confirm that missing objects are caused by intended PostgreSQL permissions rather than an incomplete connection.
+  </Step>
+  <Step title="Record the result">
+    Write down the server, question, answer, and any warning or missing permission you found. This gives you a concrete evaluation result and a short list of setup changes before connecting another instance.
+  </Step>
+</Steps>
+
+## You are successful when
+
+- The instance remains connected and the overview matches the server you intended to register.
+- You can navigate from the instance to a database, schema, and known object.
+- You can explain at least one current health, activity, structure, or access finding.
+- The finding agrees with another trusted source, such as `psql`, an existing dashboard, or a known catalog definition.
+- You know whether a missing view is expected from the PostgreSQL login's permissions.
+- You have a clear next workflow instead of exploring the interface without a question.
+
+## If something does not look right
+
+| Symptom | Next check |
+| --- | --- |
+| The instance disconnects or health is incomplete | [Troubleshoot the managed instance connection](/get-started/troubleshooting#a-managed-instance-will-not-connect) |
+| Expected databases or objects are missing | Review [PostgreSQL permissions](/operations/postgresql-permissions) and reconnect with the intended login |
+| Activity is empty or incomplete | Confirm the login can read monitoring views, then review [activity and health](/guides/activity-and-health) |
+| Metrics have gaps | Follow [Diagnose missing metrics](/guides/diagnose-missing-metrics) |
+| A finding is surprising | Validate it with `psql` before changing PostgreSQL or Querylane configuration |
+
+## Choose your next workflow
+
+| Goal | Continue with |
+| --- | --- |
+| Investigate performance | [Investigate a slow database](/guides/investigate-slow-database) |
+| Understand live contention | [Find blocking sessions](/guides/find-blocking-sessions) |
+| Review effective access | [Audit table access](/guides/audit-table-access) |
+| Inspect or export rows | [Export data safely](/guides/export-data-safely) |
+| Connect Querylane to a durable environment | [Production deployment](/get-started/production-deployment) |
+
+Before connecting sensitive or production instances, apply the [least-privilege PostgreSQL guidance](/operations/postgresql-permissions), put Querylane behind authenticated ingress, and establish backup and upgrade procedures.

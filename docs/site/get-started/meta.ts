@@ -12,6 +12,7 @@ export default defineMeta({
 		"external-postgresql",
 		"manual-yaml",
 		"register-instance",
+		"first-successful-session",
 		"production-deployment",
 		"troubleshooting",
 	],

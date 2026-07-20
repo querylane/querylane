@@ -1,6 +1,6 @@
 ---
-title: Call the API
-description: Send Connect JSON requests with curl or use generated TypeScript clients for unary and streaming RPCs.
+title: Call the experimental API
+description: Send alpha Connect JSON requests with curl or use generated TypeScript clients for unary and streaming RPCs.
 sidebar:
   label: Call the API
 ---
@@ -14,8 +14,12 @@ Querylane serves its web application and API from the same HTTP server. API proc
 For this preview, the package is `querylane.console.v1alpha1`.
 
 :::warning
+The API is an alpha integration surface and can change without compatibility guarantees. It is not required to evaluate Querylane; start with the [browser-based getting-started path](/get-started).
+
 Querylane does not currently authenticate API callers. Put the server behind the same authentication and network boundary as the web application before using production instance credentials.
 :::
+
+Use the [generated experimental reference](/api) when you need the current method, request, response, or schema details.
 
 ## Call a unary method with curl
 

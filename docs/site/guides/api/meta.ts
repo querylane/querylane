@@ -1,7 +1,7 @@
 import { defineMeta } from "blume";
 
 export default defineMeta({
-	title: "API guides",
+	title: "Experimental API",
 	icon: "braces",
 	pages: [
 		"calling-the-api",

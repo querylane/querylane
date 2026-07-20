@@ -3,7 +3,7 @@ import { defineConfig } from "blume";
 export default defineConfig({
 	title: "Querylane",
 	description:
-		"Customer guides for exploring and operating PostgreSQL with Querylane.",
+		"Guides for getting started, exploring PostgreSQL, and operating Querylane safely.",
 	logo: "/icon.svg",
 	deployment: {
 		output: "static",
@@ -20,7 +20,7 @@ export default defineConfig({
 		enabled: true,
 		sources: [
 			{
-				label: "Querylane API",
+				label: "Experimental API",
 				route: "/api",
 				spec: "./docs/generated/querylane.openapi.yaml",
 			},
@@ -64,10 +64,6 @@ export default defineConfig({
 		})),
 	],
 	navigation: {
-		tabs: [
-			{ label: "Docs", path: "/" },
-			{ label: "API", path: "/api" },
-		],
 		featured: [
 			{ label: "What's new", href: "/changelog", icon: "sparkles" },
 			{ label: "Roadmap", href: "/roadmap", icon: "map" },
