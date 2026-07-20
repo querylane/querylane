@@ -6,7 +6,7 @@ export type RpcKind =
 	| "server-streaming"
 	| "unary";
 
-type RpcPresentation = {
+export type RpcPresentation = {
 	className: string;
 	kind: RpcKind;
 	label: string;

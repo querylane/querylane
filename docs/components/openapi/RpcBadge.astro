@@ -1,9 +1,9 @@
 ---
-import { type rpcPresentation } from "./rpc-kind.ts";
+import type { RpcPresentation } from "./rpc-kind.ts";
 
 interface Props {
-  presentation: ReturnType<typeof rpcPresentation>;
-  class?: string;
+	presentation: RpcPresentation;
+	class?: string;
 }
 
 const { presentation, class: className } = Astro.props;
