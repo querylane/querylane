@@ -1,0 +1,154 @@
+---
+import specs from "blume:openapi";
+import {
+  mergeParameters,
+  type ParameterLike,
+  resolveComponentRef,
+  type SchemaLike,
+} from "blume/components/openapi/helpers.ts";
+import { buildRequestSample } from "blume/components/openapi/snippets.ts";
+import ParametersTable from "blume/components/openapi/ParametersTable.astro";
+import RequestBody from "blume/components/openapi/RequestBody.astro";
+import RequestPanel from "blume/components/openapi/RequestPanel.astro";
+import Responses from "blume/components/openapi/Responses.astro";
+import { visibleOperationParameters } from "./parameters.ts";
+import RpcBadge from "./RpcBadge.astro";
+import { querylaneSampleLanguages } from "./request-samples.ts";
+import { rpcPresentationForReference } from "./rpc-kind.ts";
+
+interface Props {
+  source: string;
+  id: string;
+}
+
+interface MediaTypeLike {
+  schema?: SchemaLike;
+  example?: unknown;
+}
+
+interface RequestBodyLike {
+  $ref?: string;
+  description?: string;
+  required?: boolean;
+  content?: Record<string, MediaTypeLike>;
+}
+
+interface ResponseLike {
+  $ref?: string;
+  description?: string;
+  content?: Record<string, MediaTypeLike>;
+}
+
+interface FullOperation {
+  summary?: string;
+  description?: string;
+  deprecated?: boolean;
+  parameters?: ParameterLike[];
+  requestBody?: RequestBodyLike;
+  responses?: Record<string, ResponseLike>;
+}
+
+const { source, id } = Astro.props;
+const spec = specs[source];
+const ref = spec?.operations[id];
+
+const doc = (spec?.document ?? {}) as {
+  paths?: Record<
+    string,
+    Record<string, unknown> & { parameters?: ParameterLike[] }
+  >;
+  components?: {
+    schemas?: Record<string, SchemaLike>;
+    parameters?: Record<string, ParameterLike>;
+    requestBodies?: Record<string, RequestBodyLike>;
+    responses?: Record<string, ResponseLike>;
+  };
+  servers?: { url?: string }[];
+};
+const pathItem = ref ? doc.paths?.[ref.path] : undefined;
+const operation = (
+  pathItem && ref ? pathItem[ref.method] : undefined
+) as FullOperation | undefined;
+
+const schemas = doc.components?.schemas ?? {};
+const components = doc.components ?? {};
+const params = mergeParameters(
+  pathItem?.parameters,
+  operation?.parameters,
+  components
+);
+const visibleParams = visibleOperationParameters(params);
+const requestBody = operation?.requestBody
+  ? resolveComponentRef(operation.requestBody, components, "requestBodies")
+  : undefined;
+const responses = Object.fromEntries(
+  Object.entries(operation?.responses ?? {}).map(([status, response]) => [
+    status,
+    resolveComponentRef(response, components, "responses"),
+  ])
+);
+
+const sample =
+  ref && operation
+    ? buildRequestSample(
+        { parameters: params, requestBody },
+        ref.method,
+        ref.path,
+        doc.servers ?? [],
+        schemas
+      )
+    : null;
+const languages = querylaneSampleLanguages(spec?.codeSamples ?? []);
+const presentation = ref
+  ? rpcPresentationForReference(spec?.document, ref)
+  : undefined;
+---
+
+{
+  !(spec && ref && operation && presentation) ? (
+    <div class="text-muted-foreground">This API operation could not be found.</div>
+  ) : (
+    <div class="not-prose">
+      <div class="mb-6 flex flex-wrap items-center gap-3">
+        <RpcBadge presentation={presentation} />
+        <code class="break-all font-mono text-foreground text-sm">
+          {ref.path}
+        </code>
+        {operation.deprecated && (
+          <span class="font-medium text-[0.625rem] text-orange-600 uppercase tracking-wide dark:text-orange-400">
+            deprecated
+          </span>
+        )}
+      </div>
+      <div class="grid grid-cols-1 items-start gap-x-10 gap-y-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
+        <div>
+          <ParametersTable parameters={visibleParams} schemas={schemas} />
+          {requestBody && (
+            <RequestBody
+              expandAll={spec.expandSchemas}
+              requestBody={requestBody}
+              schemas={schemas}
+            />
+          )}
+          {operation.responses && (
+            <Responses
+              expandAll={spec.expandSchemas}
+              responses={responses}
+              schemas={schemas}
+            />
+          )}
+        </div>
+        {sample && (
+          <div class="xl:sticky xl:top-24 xl:self-start">
+            <RequestPanel
+              languages={languages}
+              responses={responses}
+              sample={sample}
+              schemas={schemas}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

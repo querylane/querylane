@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
 import { readdir, readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
+import config from "../blume.config";
 
 const root = join(import.meta.dir, "..");
 const protoRoot = join(root, "proto/querylane/console/v1alpha1");
-const apiRoot = join(root, "docs/site/api");
+const apiGuideRoot = join(root, "docs/site/guides/api");
 const apiGuidePages = [
 	"calling-the-api.mdx",
 	"pagination-and-filtering.mdx",
@@ -14,7 +15,14 @@ const apiGuidePages = [
 type ProtoService = {
 	name: string;
 	packageName: string;
-	rpcs: string[];
+	rpcs: {
+		kind:
+			| "bidirectional-streaming"
+			| "client-streaming"
+			| "server-streaming"
+			| "unary";
+		name: string;
+	}[];
 	slug: string;
 };
 
@@ -45,9 +53,25 @@ const readProtoServices = async (): Promise<ProtoService[]> => {
 				continue;
 			}
 
-			const rpcs = [...body.matchAll(/^\s*rpc\s+(\w+)\s*\(/gmu)].flatMap(
-				(rpc) => (rpc[1] ? [rpc[1]] : []),
-			);
+			const rpcs = [
+				...body.matchAll(
+					/^\s*rpc\s+(\w+)\s*\(\s*(stream\s+)?[^)]+\)\s*returns\s*\(\s*(stream\s+)?/gmu,
+				),
+			].flatMap((rpc) => {
+				const [, rpcName, clientStream, serverStream] = rpc;
+				if (!rpcName) {
+					return [];
+				}
+
+				const kind = clientStream
+					? serverStream
+						? "bidirectional-streaming"
+						: "client-streaming"
+					: serverStream
+						? "server-streaming"
+						: "unary";
+				return [{ kind, name: rpcName }];
+			});
 
 			services.push({
 				name,
@@ -61,44 +85,142 @@ const readProtoServices = async (): Promise<ProtoService[]> => {
 	return services.sort((left, right) => left.name.localeCompare(right.name));
 };
 
-test("documents every gRPC service and RPC from the proto contract", async () => {
+test("generates an OpenAPI path for every service and RPC", async () => {
 	const services = await readProtoServices();
-	const pages = (await readdir(apiRoot)).filter(
-		(file) =>
-			file.endsWith(".mdx") &&
-			file !== "index.mdx" &&
-			!apiGuidePages.includes(file),
+	const openapi = await readFile(
+		join(root, "docs/generated/querylane.openapi.yaml"),
+		"utf8",
 	);
 
 	expect(services).toHaveLength(14);
-	expect(pages.sort()).toEqual(
-		services.map(({ slug }) => `${slug}.mdx`).sort(),
+	expect(openapi).toContain("openapi: 3.1.0");
+	expect(openapi).toContain(
+		"info:\n  title: Querylane experimental API\n  version: v1alpha1",
 	);
 
 	for (const service of services) {
-		const page = await readFile(join(apiRoot, `${service.slug}.mdx`), "utf8");
 		for (const rpc of service.rpcs) {
-			expect(page).toContain(`/${service.packageName}.${service.name}/${rpc}`);
+			expect(openapi).toContain(
+				`  /${service.packageName}.${service.name}/${rpc.name}:`,
+			);
+			expect(openapi).toContain(`operationId: ${service.name}_${rpc.name}`);
 		}
 	}
 });
 
-test("adds runnable guidance and JSON examples to the API reference", async () => {
-	const pages = await readdir(apiRoot);
+test("labels every generated operation with its RPC shape", async () => {
+	const services = await readProtoServices();
+	const openapi = await readFile(
+		join(root, "docs/generated/querylane.openapi.yaml"),
+		"utf8",
+	);
+
+	for (const service of services) {
+		for (const rpc of service.rpcs) {
+			const operation = openapi.match(
+				new RegExp(
+					`  /${service.packageName}\\.${service.name}/${rpc.name}:\\n([\\s\\S]*?)(?=\\n  /|\\ncomponents:)`,
+					"u",
+				),
+			)?.[1];
+
+			expect(operation).toContain(`x-connectrpc-method-kind: ${rpc.kind}`);
+		}
+	}
+});
+
+test("renders protobuf well-known scalars as concise OpenAPI strings", async () => {
+	const openapi = await readFile(
+		join(root, "docs/generated/querylane.openapi.yaml"),
+		"utf8",
+	);
+
+	for (const schema of ["Duration", "FieldMask", "Timestamp"]) {
+		expect(openapi).not.toContain(
+			`$ref: '#/components/schemas/google.protobuf.${schema}'`,
+		);
+	}
+
+	const retentionPeriod = openapi.match(
+		/ {8}retentionPeriod:\n([\s\S]*?)\n {6}title: GetMetricsStorageStatsResponse/u,
+	)?.[1];
+	expect(retentionPeriod).toContain(
+		"Output-only. Maximum age of retained samples",
+	);
+	expect(retentionPeriod).toContain("          type: string");
+	expect(retentionPeriod).toContain("          format: duration");
+});
+
+test("serves the generated spec through Blume's native API reference", () => {
+	expect(config.openapi).toEqual({
+		codeSamples: ["curl", "js", "go"],
+		enabled: true,
+		sources: [
+			{
+				label: "Experimental API",
+				route: "/api",
+				spec: "./docs/generated/querylane.openapi.yaml",
+			},
+		],
+	});
+});
+
+test("surfaces the experimental API in the primary navigation", () => {
+	expect(config.navigation?.tabs).toEqual([
+		{ label: "Docs", path: "/" },
+		{ label: "Experimental API", path: "/api" },
+	]);
+});
+
+test("redirects the previous API pages", async () => {
+	const redirects = config.redirects ?? [];
+	for (const page of apiGuidePages) {
+		const slug = page.replace(/\.mdx$/u, "");
+		expect(redirects).toContainEqual({
+			from: `/api/${slug}`,
+			status: 301,
+			to: `/guides/api/${slug}`,
+		});
+	}
+
+	for (const service of await readProtoServices()) {
+		expect(redirects).toContainEqual({
+			from: `/api/${service.slug}`,
+			status: 301,
+			to: "/api",
+		});
+	}
+});
+
+test("keeps API usage guidance alongside the generated reference", async () => {
+	const pages = await readdir(apiGuideRoot);
 	for (const page of apiGuidePages) {
 		expect(pages, `missing ${basename(page)}`).toContain(page);
 	}
 
-	const services = await readProtoServices();
-	for (const service of services) {
-		const page = await readFile(join(apiRoot, `${service.slug}.mdx`), "utf8");
-		for (const rpc of service.rpcs) {
-			const section = page.split(`## ${rpc}\n`)[1]?.split(/^## /mu)[0];
-			expect(section, `missing ${rpc} section`).toBeDefined();
-			expect(section, `missing ${rpc} JSON example`).toContain(
-				"### JSON request example",
-			);
-		}
+	const calling = await readFile(
+		join(apiGuideRoot, "calling-the-api.mdx"),
+		"utf8",
+	);
+	expect(calling).toContain("curl --fail-with-body");
+	expect(calling).toContain("createClient");
+	expect(calling).toContain("grpcurl -plaintext");
+	expect(calling).toContain("buf build -o /tmp/querylane.protoset");
+	expect(calling).toContain(
+		"Packaged builds do not expose gRPC server reflection",
+	);
+
+	const streaming = await readFile(
+		join(apiGuideRoot, "errors-and-streaming.mdx"),
+		"utf8",
+	);
+	for (const rpc of [
+		"TableDataService.StreamRows",
+		"SQLService.ExecuteQuery",
+		"OnboardingService.SetupAppDatabase",
+		"OnboardingService.WatchConfigChanges",
+	]) {
+		expect(streaming).toContain(rpc);
 	}
 });
 
@@ -108,10 +230,94 @@ test("keeps installation and production setup ahead of product guides", async ()
 		"production-deployment.mdx",
 		"troubleshooting.mdx",
 	];
-	const pages = await readdir(join(root, "docs/site/get-started"));
+	const pages = await readdir(join(root, "docs/site/get-started"), {
+		recursive: true,
+	});
 
 	for (const page of setupPages) {
-		expect(pages, `missing ${basename(page)}`).toContain(page);
+		expect(
+			pages.some((candidate) => basename(candidate) === page),
+			`missing ${basename(page)}`,
+		).toBe(true);
+	}
+});
+
+test("guides a new user through a successful first session", async () => {
+	const getStartedRoot = join(root, "docs/site/get-started");
+	const [home, meta, firstSession, apiMeta, callingApi] = await Promise.all([
+		readFile(join(root, "docs/site/index.mdx"), "utf8"),
+		readFile(join(getStartedRoot, "(connect-and-explore)/meta.ts"), "utf8"),
+		readFile(
+			join(
+				getStartedRoot,
+				"(connect-and-explore)/first-successful-session.mdx",
+			),
+			"utf8",
+		),
+		readFile(join(apiGuideRoot, "meta.ts"), "utf8"),
+		readFile(join(apiGuideRoot, "calling-the-api.mdx"), "utf8"),
+	]);
+
+	expect(config.description).toContain("getting started");
+	expect(home).toContain("/get-started/first-successful-session");
+	expect(meta).toMatch(/"register-instance",\s*"first-successful-session"/u);
+	for (const destination of [
+		"/guides/instance-overview",
+		"/guides/find-blocking-sessions",
+		"/guides/roles-and-access",
+		"/operations/postgresql-permissions",
+	]) {
+		expect(firstSession).toContain(destination);
+	}
+	expect(firstSession).toContain("## You are successful when");
+	expect(apiMeta).toContain('title: "Experimental API"');
+	expect(callingApi).toContain("alpha integration surface");
+});
+
+test("groups getting-started pages into an ordered hierarchy", async () => {
+	const getStartedRoot = join(root, "docs/site/get-started");
+	const groups = [
+		{
+			folder: "(install-and-run)",
+			key: "install-and-run",
+			pages: ["install-querylane", "local-preview"],
+			title: "Install and run",
+		},
+		{
+			folder: "(configure-storage)",
+			key: "configure-storage",
+			pages: ["embedded-postgresql", "external-postgresql", "manual-yaml"],
+			title: "Configure storage",
+		},
+		{
+			folder: "(connect-and-explore)",
+			key: "connect-and-explore",
+			pages: ["register-instance", "first-successful-session"],
+			title: "Connect and explore",
+		},
+		{
+			folder: "(deploy-and-maintain)",
+			key: "deploy-and-maintain",
+			pages: ["production-deployment", "troubleshooting"],
+			title: "Deploy and maintain",
+		},
+	];
+
+	expect(config.navigation?.sidebar).toMatchObject({ display: "group" });
+
+	const parentMeta = await readFile(join(getStartedRoot, "meta.ts"), "utf8");
+	for (const group of groups) {
+		expect(parentMeta).toContain(`"${group.key}"`);
+		const [groupMeta, files] = await Promise.all([
+			readFile(join(getStartedRoot, group.folder, "meta.ts"), "utf8"),
+			readdir(join(getStartedRoot, group.folder)),
+		]);
+
+		expect(groupMeta).toContain(`title: "${group.title}"`);
+		for (const page of group.pages) {
+			expect(groupMeta).toContain(`"${page}"`);
+			expect(files).toContain(`${page}.mdx`);
+		}
 	}
 });
 

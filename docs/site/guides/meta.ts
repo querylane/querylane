@@ -16,5 +16,6 @@ export default defineMeta({
 		"roles-and-access",
 		"audit-table-access",
 		"extensions-and-insights",
+		"api",
 	],
 });

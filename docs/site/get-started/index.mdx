@@ -1,15 +1,16 @@
 ---
-title: Choose your setup
-description: Set up Querylane's own storage, then connect the PostgreSQL server you want to inspect.
+title: Get started with Querylane
+description: Install Querylane, connect one PostgreSQL server, and complete a useful first session.
 sidebar:
-  label: Choose your setup
+  label: Start here
 ---
 
-Querylane setup has three separate steps:
+The goal of setup is a useful first session with one PostgreSQL server. Follow four steps:
 
 1. **Install Querylane.** Start the preview container or run the application from source.
 2. **Configure Querylane internal storage.** Querylane needs its own PostgreSQL database for metadata, saved connections, and application state.
 3. **Register a PostgreSQL server to manage.** This is your application, production, staging, or analytics server.
+4. **Answer a real operational question.** Confirm health, inspect activity, explore structure, or review access on a server you understand.
 
 The first database belongs to Querylane. The second is an **instance** you ask Querylane to inspect. They can run on the same PostgreSQL server, but they are different resources and should use different databases and credentials.
 
@@ -17,8 +18,8 @@ The first database belongs to Querylane. The second is an **instance** you ask Q
   <Card title="Install Querylane" href="/get-started/install-querylane" icon="download">
     Start the rolling preview with Docker, or build and run the current source tree.
   </Card>
-  <Card title="Deploy it durably" href="/get-started/production-deployment" icon="shield-check">
-    Add external PostgreSQL, stable secrets, authenticated ingress, backups, and readiness checks.
+  <Card title="Complete your first session" href="/get-started/first-successful-session" icon="circle-check-big">
+    Verify one connection, learn the workspace, and leave with an answer you can validate.
   </Card>
 </CardGroup>
 
@@ -63,4 +64,4 @@ If you want to see Querylane quickly, use **Embedded PostgreSQL**. If you plan t
 
 Not installed yet? [Start with the installation guide](/get-started/install-querylane). Already running from source? [Open the local preview guide](/get-started/local-preview). After internal storage is ready, every path continues to [register your first instance](/get-started/register-instance).
 
-If any stage fails, use the [setup troubleshooting guide](/get-started/troubleshooting).
+After registration, use the [first successful session](/get-started/first-successful-session) to confirm the product is useful with a server you already understand. If any stage fails, use the [setup troubleshooting guide](/get-started/troubleshooting). When you decide to keep Querylane, follow the [production deployment guide](/get-started/production-deployment).

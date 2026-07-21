@@ -1,0 +1,45 @@
+---
+import specs from "blume:openapi";
+import { withBase } from "blume/components/islands/base-path.ts";
+import RpcBadge from "./RpcBadge.astro";
+import { rpcPresentationForReference } from "./rpc-kind.ts";
+
+interface Props {
+  source: string;
+  tag: string;
+}
+
+const { source, tag } = Astro.props;
+const spec = specs[source];
+const operations = Object.values(spec?.operations ?? {}).filter(
+  (operation) => operation.tagSlug === tag
+);
+---
+
+{
+  operations.length > 0 && (
+    <ul class="not-prose my-4 flex list-none flex-col gap-2 p-0">
+      {operations.map((operation) => (
+        <li>
+          <a
+            class="flex items-center gap-3 rounded-blume border border-border p-3 text-inherit no-underline! transition-colors hover:border-accent hover:bg-muted hover:no-underline!"
+            href={withBase(operation.route)}
+          >
+            <RpcBadge
+              presentation={rpcPresentationForReference(
+                spec?.document,
+                operation
+              )}
+            />
+            <span class="min-w-0 flex-1 truncate font-medium text-foreground text-sm">
+              {operation.summary || operation.path}
+            </span>
+            <code class="hidden min-w-0 max-w-[45%] truncate text-muted-foreground text-xs sm:inline">
+              {operation.path}
+            </code>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )
+}
