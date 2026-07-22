@@ -5,6 +5,7 @@ import {
   observeElementOffset,
   observeElementRect,
   type Rect,
+  type VirtualItem,
   Virtualizer,
 } from "@tanstack/virtual-core";
 import { AlertTriangle, ChevronRight, Folder, Search, X } from "lucide-react";
@@ -387,11 +388,10 @@ function ObjectTreeList({
     selection,
     toggleCategory,
   };
-  const { totalSize, virtualizer } = useResourceListVirtualizer({
+  const { totalSize, virtualItems } = useResourceListVirtualizer({
     items: flatItems,
     scrollElement,
   });
-  const visibleItems = virtualizer.getVirtualItems();
 
   return (
     <div
@@ -403,7 +403,7 @@ function ObjectTreeList({
         className="relative m-0 w-full list-none p-0"
         style={{ height: `${totalSize}px` }}
       >
-        {visibleItems.map((virtualItem) => {
+        {virtualItems.map((virtualItem) => {
           const listItem = flatItems[virtualItem.index];
           if (!listItem) {
             return null;
@@ -426,6 +426,15 @@ function ObjectTreeList({
   );
 }
 
+/**
+ * All reads of the mutable Virtualizer instance live in this hook, and only
+ * plain data (totalSize, virtualItems) crosses into compiled components. The
+ * instance mutates internally on scroll without any prop or state changing,
+ * so the React Compiler must not cache anything derived from it: a compiled
+ * caller that invoked getVirtualItems() itself would key the result on the
+ * stable instance identity and serve a frozen row range on every
+ * scroll-triggered re-render (unreachable tail, whitespace, stale gaps).
+ */
 function useResourceListVirtualizer({
   items,
   scrollElement,
@@ -434,8 +443,9 @@ function useResourceListVirtualizer({
   scrollElement: HTMLDivElement | null;
 }): {
   totalSize: number;
-  virtualizer: Virtualizer<HTMLDivElement, Element>;
+  virtualItems: VirtualItem[];
 } {
+  "use no memo";
   const [, rerender] = useReducer((tick: number) => tick + 1, 0);
   const virtualizerRef = useRef<Virtualizer<HTMLDivElement, Element> | null>(
     null
@@ -470,11 +480,10 @@ function useResourceListVirtualizer({
     scrollToFn: elementScroll,
   });
 
-  // The container height must never come from virtualizer.getTotalSize():
-  // with the async onChange above, the notify that follows a late internal
-  // recompute can be dropped, leaving a committed height that is permanently
-  // out of sync with the rendered rows. Summing the estimates over the
-  // current items is always consistent with this render.
+  // The container height comes from the current items, not
+  // virtualizer.getTotalSize(): the sum over the estimates is consistent with
+  // this render by construction, even if the instance's internal measurements
+  // lag a frame behind an item-set change.
   const totalSize = items.reduce(
     (sum, item) => sum + estimateResourceListItemSize(item),
     0
@@ -494,7 +503,7 @@ function useResourceListVirtualizer({
     virtualizer.measure();
   }, [virtualizer, items.length, totalSize]);
 
-  return { totalSize, virtualizer };
+  return { totalSize, virtualItems: virtualizer.getVirtualItems() };
 }
 
 function observeResourceListRect(
