@@ -1,8 +1,6 @@
-// Package rawsql executes aip list plans by generating PostgreSQL clause
-// fragments appended to handwritten SQL. It is the backend for live-instance
-// and system-catalog queries (engine/postgres/): Bind attaches raw SQL
-// expressions to a backend-neutral aip.Schema, and Execute runs the full
-// paginated list query.
+// Package rawsql compiles aip list plans into parameterized PostgreSQL clauses.
+// The jet backend embeds those clauses in go-jet statements; handwritten SQL
+// callers can execute them directly with Execute.
 package rawsql
 
 import (

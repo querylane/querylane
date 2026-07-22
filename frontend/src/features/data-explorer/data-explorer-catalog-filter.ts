@@ -15,11 +15,11 @@ function buildNameContainsFilter(query: string): string | undefined {
     return;
   }
   const escaped = escapeAipFilterString(trimmed);
-  return `name.contains('${escaped}')`;
+  return `name:"${escaped}"`;
 }
 
 function escapeAipFilterString(value: string): string {
-  return value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+  return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
 export {
