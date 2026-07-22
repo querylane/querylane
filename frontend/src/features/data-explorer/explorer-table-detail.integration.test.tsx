@@ -2074,7 +2074,7 @@ describe("TableDetail indexes tab SQL and stats", () => {
 });
 
 describe("TableDetail triggers tab", () => {
-  it("keeps page-size and pagination controls with no triggers", () => {
+  it("shows only the empty state with no triggers", () => {
     render(
       <TableDetail
         databaseId="warehouse"
@@ -2087,9 +2087,15 @@ describe("TableDetail triggers tab", () => {
     );
 
     expect(
-      screen.getByRole("combobox", { name: "Triggers per page" })
+      document.querySelector('[data-empty-category="triggers"]')
     ).toBeTruthy();
-    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+    expect(
+      screen.queryByRole("combobox", { name: "Triggers per page" })
+    ).toBeNull();
+    expect(
+      screen.queryByRole("textbox", { name: "Search triggers…" })
+    ).toBeNull();
+    expect(screen.queryByText("Page 1 of 1")).toBeNull();
   });
 
   it("paginates filtered trigger cards and changes page size", async () => {
@@ -2515,13 +2521,19 @@ function createPolicies(count: number): TablePolicy[] {
 }
 
 describe("TableDetail policies tab pagination", () => {
-  it("keeps page-size and pagination controls with no policies", () => {
+  it("shows only the empty state with no policies", () => {
     renderPoliciesTab([]);
 
     expect(
-      screen.getByRole("combobox", { name: "Rows per page" })
+      document.querySelector('[data-empty-category="policies"]')
     ).toBeTruthy();
-    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+    expect(
+      screen.queryByRole("combobox", { name: "Rows per page" })
+    ).toBeNull();
+    expect(
+      screen.queryByRole("textbox", { name: "Search policies…" })
+    ).toBeNull();
+    expect(screen.queryByText("Page 1 of 1")).toBeNull();
   });
 
   it("paginates policy cards ten at a time", async () => {
