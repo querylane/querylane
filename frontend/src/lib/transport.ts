@@ -10,6 +10,7 @@ import {
   normalizeAppUiError,
   reportAppUiError,
 } from "@/lib/ui-error";
+import { createUnexpectedResponseFetch } from "@/lib/unexpected-response";
 import { file_google_rpc_error_details } from "@/protogen/google/rpc/error_details_pb";
 import { file_querylane_console_v1alpha1_errors } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 import { decideBlockingAppState } from "@/stores/blocking-app-state";
@@ -192,10 +193,18 @@ const errorDetailRegistry = createRegistry(
   file_querylane_console_v1alpha1_errors
 );
 
+/**
+ * Shared fetch wrapper that intercepts non-Connect responses (e.g. HTML from
+ * an auth or gateway proxy) before connect-web fails to parse them, so users
+ * see friendly copy instead of a raw parse error.
+ */
+const appConnectFetch = createUnexpectedResponseFetch();
+
 function createAppConnectTransport(defaultTimeoutMs: number) {
   return createConnectTransport({
     baseUrl: connectBaseUrl,
     defaultTimeoutMs,
+    fetch: appConnectFetch,
     interceptors: [setupInterceptor, instanceRpcConcurrencyInterceptor],
     jsonOptions: { registry: errorDetailRegistry },
   });

@@ -29,6 +29,7 @@ function createAppUiError(
     summary: "failed",
     technicalDetails: "{}",
     title: "Request failed",
+    unexpectedResponse: null,
   };
 }
 

@@ -11,6 +11,11 @@ import type {
   BlockingErrorReason,
   ReportAppUiErrorDependencies,
 } from "@/lib/ui-error-types";
+import type { UnexpectedResponseInfo } from "@/lib/unexpected-response";
+import {
+  describeUnexpectedResponse,
+  findUnexpectedResponse,
+} from "@/lib/unexpected-response";
 import {
   PostgreSqlErrorKind,
   PostgreSqlErrorRetryGuidance,
@@ -18,6 +23,12 @@ import {
 
 const APP_UI_ERROR_CONTEXT = Symbol.for("querylane.app-ui-error-context");
 const APP_UI_ERROR_REPORTED = Symbol.for("querylane.app-ui-error-reported");
+
+/**
+ * Stable toast id so a burst of failing RPCs (e.g. the backend going down
+ * behind a proxy) collapses into one updating toast instead of a storm.
+ */
+const UNEXPECTED_RESPONSE_TOAST_ID = "unexpected-server-response";
 
 const POSTGRES_TITLES = {
   [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED]: "PostgreSQL error",
@@ -240,6 +251,7 @@ function buildTechnicalDetails(error: {
   source: AppErrorSource;
   stack: string | null;
   title: string;
+  unexpectedResponse: UnexpectedResponseInfo | null;
 }) {
   return JSON.stringify(
     {
@@ -256,10 +268,41 @@ function buildTechnicalDetails(error: {
       source: error.source,
       stack: error.stack,
       title: error.title,
+      unexpectedResponse: error.unexpectedResponse,
     },
     null,
     2
   );
+}
+
+/**
+ * Chooses the user-facing copy: proxy/non-Connect responses get their own
+ * status-based presentation; everything else keeps the code/postgres-driven
+ * titles and guidance.
+ */
+function buildErrorPresentation({
+  blockingReason,
+  code,
+  message,
+  postgres,
+  reason,
+  unexpectedResponse,
+}: {
+  blockingReason: BlockingErrorReason | null;
+  code: Code | null;
+  message: string;
+  postgres: AppUiErrorPostgres | null;
+  reason: string | null;
+  unexpectedResponse: UnexpectedResponseInfo | null;
+}): { retryGuidance: string | null; summary: string; title: string } {
+  if (unexpectedResponse) {
+    return describeUnexpectedResponse(unexpectedResponse);
+  }
+  return {
+    retryGuidance: buildRetryGuidance({ code, postgres, reason }),
+    summary: buildSummary(postgres, message),
+    title: buildTitle({ blockingReason, code, postgres, reason }),
+  };
 }
 
 function normalizeAppUiError(
@@ -284,10 +327,16 @@ function normalizeAppUiError(
     postgres,
     reason,
   } = normalizeConnectErrorState(connectError, rawMessage);
+  const unexpectedResponse = findUnexpectedResponse(error);
   const blockingReason = classifyBlockingReason({ code, postgres, reason });
-  const title = buildTitle({ blockingReason, code, postgres, reason });
-  const retryGuidance = buildRetryGuidance({ code, postgres, reason });
-  const summary = buildSummary(postgres, message);
+  const { retryGuidance, summary, title } = buildErrorPresentation({
+    blockingReason,
+    code,
+    message,
+    postgres,
+    reason,
+    unexpectedResponse,
+  });
   const stack = error instanceof Error ? (error.stack ?? null) : null;
   const technicalDetails = buildTechnicalDetails({
     codeLabel,
@@ -301,6 +350,7 @@ function normalizeAppUiError(
     source,
     stack,
     title,
+    unexpectedResponse,
   });
 
   return {
@@ -323,6 +373,7 @@ function normalizeAppUiError(
     summary,
     technicalDetails,
     title,
+    unexpectedResponse,
   };
 }
 
@@ -394,6 +445,33 @@ function reportMessage(error: AppUiError): string {
   return error.postgres ? error.title : error.message;
 }
 
+function buildReportTags(
+  error: AppUiError,
+  extraTags: Record<string, string> | undefined
+): Record<string, string> {
+  return {
+    area: error.context.area ?? error.source,
+    blocking_reason: error.blockingReason ?? "none",
+    connect_code: error.codeLabel ?? "none",
+    connect_reason: error.connectReason ?? "none",
+    postgres_sqlstate: error.postgres?.sqlstate ?? "none",
+    postgres_sqlstate_class: error.postgres?.sqlstateClass ?? "none",
+    source: error.source,
+    unexpected_response_kind: error.unexpectedResponse?.kind ?? "none",
+    ...(extraTags ?? {}),
+  };
+}
+
+function buildToastOptions(error: AppUiError): {
+  description: string;
+  id?: string;
+} {
+  if (error.unexpectedResponse) {
+    return { description: error.summary, id: UNEXPECTED_RESPONSE_TOAST_ID };
+  }
+  return { description: error.summary };
+}
+
 function reportAppUiError(
   error: AppUiError,
   context?: {
@@ -406,10 +484,6 @@ function reportAppUiError(
     return;
   }
 
-  const postgresTags = {
-    postgres_sqlstate: error.postgres?.sqlstate ?? "none",
-    postgres_sqlstate_class: error.postgres?.sqlstateClass ?? "none",
-  };
   const safePostgresContext = buildSafePostgresContext(error.postgres);
   const captureTarget = reportCaptureTarget(error);
 
@@ -418,15 +492,7 @@ function reportAppUiError(
       app_ui_error_details_count: error.details.length,
       app_ui_error_postgres: safePostgresContext,
     },
-    tags: {
-      area: error.context.area ?? error.source,
-      blocking_reason: error.blockingReason ?? "none",
-      connect_code: error.codeLabel ?? "none",
-      connect_reason: error.connectReason ?? "none",
-      source: error.source,
-      ...postgresTags,
-      ...(context?.tags ?? {}),
-    },
+    tags: buildReportTags(error, context?.tags),
   });
 
   dependencies.logger.error(reportMessage(error), {
@@ -438,7 +504,7 @@ function reportAppUiError(
   });
 
   if (error.context.surface === "toast") {
-    dependencies.toast.error(error.title, { description: error.summary });
+    dependencies.toast.error(error.title, buildToastOptions(error));
   }
 }
 
