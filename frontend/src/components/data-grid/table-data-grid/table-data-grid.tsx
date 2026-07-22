@@ -1425,8 +1425,6 @@ function TableDataGrid({
         hasNext,
         limits: data.limits,
         pageSize: controller.pageSize,
-        paginationStrategy: data.resultSet.paginationStrategy,
-        rowIdentity: data.resultSet.rowIdentity,
         rowsReturned: resultRows.length,
       })
     : [];

@@ -1,4 +1,4 @@
-import { AlertTriangle, KeyRound } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -35,30 +35,17 @@ function GridStatusBar({
 }
 
 function GridStatusBadge({ item }: { item: GridStatusItem }) {
-  const icon = getStatusIcon(item);
-  const variant = getStatusBadgeVariant(item);
   return (
     <Tooltip>
       <TooltipTrigger render={<span />}>
-        <Badge className="gap-1.5" variant={variant}>
-          {icon}
+        <Badge className="gap-1.5" variant="destructive">
+          <AlertTriangle className="size-3" />
           {item.label}
         </Badge>
       </TooltipTrigger>
       <TooltipContent>{item.description}</TooltipContent>
     </Tooltip>
   );
-}
-
-function getStatusBadgeVariant(item: GridStatusItem) {
-  return item.tone === "warning" ? "destructive" : "secondary";
-}
-
-function getStatusIcon(item: GridStatusItem) {
-  if (item.id === "no-stable-key" || item.id === "row-actions-limited") {
-    return <KeyRound className="size-3" />;
-  }
-  return <AlertTriangle className="size-3" />;
 }
 
 export { GridStatusBar };

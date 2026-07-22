@@ -543,16 +543,9 @@ function renderGridStatusBar() {
           items={[
             {
               description:
-                "Offset pagination can drift while table data changes.",
-              id: "offset-pagination",
-              label: "Offset pagination",
-              tone: "warning",
-            },
-            {
-              description: "Rows do not have a stable backend identity.",
-              id: "no-stable-key",
-              label: "No stable key",
-              tone: "warning",
+                "The server shortened this page because the response size limit was reached.",
+              id: "response-capped",
+              label: "Response capped",
             },
           ]}
         />
@@ -1451,8 +1444,7 @@ test("grid status bar exposes actionable warning labels as visible UI", async ()
 
   const status = page.getByRole("status", { name: "Grid status" });
   await expect.element(status).toBeVisible();
-  await expect.element(status.getByText("Offset pagination")).toBeVisible();
-  await expect.element(status.getByText("No stable key")).toBeVisible();
+  await expect.element(status.getByText("Response capped")).toBeVisible();
 });
 
 test("data grid refresh treatment is centered and readable", async () => {
