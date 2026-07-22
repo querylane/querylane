@@ -4,7 +4,8 @@ const ROW_KEY_FIELD = "__rowKey";
 // Reserved grid keys are namespaced with a NUL byte: PostgreSQL identifiers
 // cannot contain NUL, so a result column can never collide with them.
 const EXPAND_COLUMN_KEY = "\u0000__expandRow";
-const EXPAND_COLUMN_WIDTH = 36;
+const EXPAND_COLUMN_WIDTH = 30;
+const SELECT_COLUMN_WIDTH = 30;
 const ROW_INDEX_KEY_PREFIX = "\u0000idx-";
 
 interface GridRow {
@@ -29,4 +30,5 @@ export {
   EXPAND_COLUMN_WIDTH,
   fallbackRowKey,
   ROW_KEY_FIELD,
+  SELECT_COLUMN_WIDTH,
 };

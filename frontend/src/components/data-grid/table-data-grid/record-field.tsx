@@ -79,17 +79,20 @@ function RecordField({
         <span className="min-w-0 break-all font-medium font-mono text-foreground text-xs">
           {column.columnName}
         </span>
-        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wide">
-          {column.rawType}
-        </span>
         {isPrimaryKey ? (
-          <span className="inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
-            <KeyRound aria-hidden={true} className="size-3" />
+          <span className="text-amber-600 dark:text-amber-400">
+            <KeyRound
+              aria-hidden={true}
+              className="mr-0.5 inline size-3 align-[-0.15em]"
+            />
             <span className="font-medium text-[10px] uppercase tracking-wide">
               PK
             </span>
           </span>
         ) : null}
+        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wide">
+          {column.rawType}
+        </span>
         {column.isNullable ? (
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
             nullable
@@ -100,21 +103,21 @@ function RecordField({
           </span>
         )}
       </div>
-      <div className="grid grid-cols-[minmax(0,1fr)_3.75rem] items-start gap-1.5">
+      <div className="grid grid-cols-[minmax(0,1fr)_2rem] items-start gap-1">
         <div
-          className="flex min-h-10 min-w-0 items-center overflow-hidden rounded-md border bg-muted/30 px-2.5 py-1.5"
+          className="flex min-h-8 min-w-0 items-center overflow-hidden rounded-md border bg-muted/30 px-2.5 py-1"
           data-slot="record-field-value"
         >
           <RecordFieldValue formatted={formatted} />
         </div>
-        <div className="flex h-10 shrink-0 items-center justify-end gap-1">
+        <div className="flex shrink-0 flex-col items-center gap-0.5">
           {canExpand ? (
             <Button
               aria-label={`Load full value for ${column.columnName}`}
               className="shrink-0 text-muted-foreground"
               disabled={fullValueMutation.isPending}
               onClick={handleLoadFullValue}
-              size="icon-xs"
+              size="icon-sm"
               type="button"
               variant="ghost"
             >
@@ -126,7 +129,7 @@ function RecordField({
               aria-label={`Copy ${column.columnName}`}
               className="shrink-0 text-muted-foreground"
               onClick={handleCopy}
-              size="icon-xs"
+              size="icon-sm"
               type="button"
               variant="ghost"
             >

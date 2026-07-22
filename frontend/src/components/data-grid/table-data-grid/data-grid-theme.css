@@ -179,8 +179,24 @@
 }
 
 .rdg .rdg-cell.rdg-checkbox-cell {
-  padding-inline-end: 0.125rem;
+  padding-inline-end: 0;
   border-inline-end: 1px solid transparent;
+}
+
+/* The visible box is the styled span in data-grid-checkbox.tsx; the native
+   input stays on top as an invisible, slightly enlarged hit target so clicks,
+   focus, and shift-range selection remain native. */
+.rdg .rdg-checkbox-input {
+  position: absolute;
+  inset: -0.375rem;
+  margin: 0;
+  opacity: 0;
+  block-size: auto;
+  inline-size: auto;
+}
+
+.rdg .rdg-checkbox-input:enabled {
+  cursor: pointer;
 }
 
 .rdg .rdg-cell.rdg-expand-cell {

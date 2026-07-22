@@ -865,10 +865,16 @@ test("select-all stays tooltip-free and preserves native selection behavior", as
 
   const selectAllCheckbox = page.getByRole("checkbox", { name: "Select All" });
   await expect.element(selectAllCheckbox).toBeVisible();
-  const selectAllStyle = getComputedStyle(selectAllCheckbox.element());
-  expect(selectAllStyle.inlineSize).toBe("16px");
-  expect(selectAllStyle.blockSize).toBe("16px");
-  expect(selectAllStyle.accentColor).not.toBe("auto");
+  const selectAllBox = selectAllCheckbox
+    .element()
+    .closest('[data-slot="grid-checkbox"]');
+  if (!(selectAllBox instanceof HTMLElement)) {
+    throw new Error("Expected the select-all input inside its styled box.");
+  }
+  const selectAllBoxStyle = getComputedStyle(selectAllBox);
+  expect(selectAllBoxStyle.inlineSize).toBe("16px");
+  expect(selectAllBoxStyle.blockSize).toBe("16px");
+  expect(selectAllBoxStyle.borderRadius).toBe("4px");
   await expect
     .element(selectAllCheckbox)
     .toHaveAttribute("title", "Select all rows on this page");

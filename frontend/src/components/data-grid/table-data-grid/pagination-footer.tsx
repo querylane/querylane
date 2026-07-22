@@ -53,7 +53,7 @@ export function PaginationFooter({
           }}
           value={String(pageSize)}
         >
-          <SelectTrigger aria-label={pageSizeLabel} className="h-7" size="sm">
+          <SelectTrigger aria-label={pageSizeLabel} size="sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -68,26 +68,24 @@ export function PaginationFooter({
       <div className="flex items-center gap-1">
         <Button
           aria-label="Previous page"
-          className="size-7 p-0"
           disabled={!hasPrev}
           onClick={onPrev}
-          size="sm"
+          size="icon-sm"
           type="button"
           variant="outline"
         >
-          <ChevronLeft className="size-3" />
+          <ChevronLeft className="size-3.5" />
         </Button>
         <span className="px-1 font-mono tabular-nums">{pageLabel}</span>
         <Button
           aria-label="Next page"
-          className="size-7 p-0"
           disabled={!hasNext}
           onClick={onNext}
-          size="sm"
+          size="icon-sm"
           type="button"
           variant="outline"
         >
-          <ChevronRight className="size-3" />
+          <ChevronRight className="size-3.5" />
         </Button>
       </div>
     </div>

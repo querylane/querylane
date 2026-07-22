@@ -45,6 +45,7 @@ import {
   fallbackRowKey,
   type GridRow,
   ROW_KEY_FIELD,
+  SELECT_COLUMN_WIDTH,
 } from "@/components/data-grid/table-data-grid/grid-row-model";
 import { GridStatusBar } from "@/components/data-grid/table-data-grid/grid-status-bar";
 import { GridSurface } from "@/components/data-grid/table-data-grid/grid-surface";
@@ -1071,6 +1072,9 @@ function useGridColumns({
       cellClass: "rdg-select-cell rdg-checkbox-cell",
       frozen: true,
       headerCellClass: "rdg-select-cell rdg-checkbox-cell",
+      maxWidth: SELECT_COLUMN_WIDTH,
+      minWidth: SELECT_COLUMN_WIDTH,
+      width: SELECT_COLUMN_WIDTH,
     },
     {
       cellClass: "rdg-select-cell rdg-expand-cell",
@@ -1083,7 +1087,7 @@ function useGridColumns({
       renderCell: ({ rowIdx }) => (
         <Button
           aria-label="Expand row"
-          className="rdg-expand-button mr-auto text-muted-foreground"
+          className="rdg-expand-button text-muted-foreground"
           onClick={() => setOpenRowIndex(rowIdx)}
           size="icon-xs"
           type="button"

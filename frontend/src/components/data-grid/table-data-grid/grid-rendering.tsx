@@ -135,7 +135,7 @@ function GridBody({
     <div className="contents" data-keyboard-shortcut-scope="grid">
       <DataGrid
         className={cn(
-          "rdg-light dark:rdg-dark [&_.rdg-checkbox-input]:size-4! [&_.rdg-checkbox-input]:accent-primary",
+          "rdg-light dark:rdg-dark",
           flush && "rounded-none! border-x-0!"
         )}
         columns={columns}
