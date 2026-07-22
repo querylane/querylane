@@ -101,6 +101,70 @@ describe("DataCell", () => {
     expect(within(dialog).getByText("SQL NULL")).toBeTruthy();
   });
 
+  it("renders long text with an expand button and a full-value dialog", async () => {
+    const user = userEvent.setup();
+    const column = create(TableResultColumnSchema, {
+      columnName: "description",
+      dataType: DataType.STRING,
+      rawType: "text",
+    });
+    const raw = `leading words ${"long text payload ".repeat(20)}trailing words`;
+    const cell = create(TableCellSchema, {
+      value: create(TableValueSchema, {
+        kind: { case: "stringValue", value: raw },
+      }),
+    });
+
+    render(<DataCell cell={cell} column={column} />);
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "View full text for description" })
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "description text" });
+    expect(within(dialog).getByText(raw).textContent).toBe(raw);
+  });
+
+  it("keeps short text plain without an expand button", () => {
+    const column = create(TableResultColumnSchema, {
+      columnName: "city",
+      dataType: DataType.STRING,
+      rawType: "text",
+    });
+    const cell = create(TableCellSchema, {
+      value: create(TableValueSchema, {
+        kind: { case: "stringValue", value: "Tokyo" },
+      }),
+    });
+
+    render(<DataCell cell={cell} column={column} />);
+
+    expect(screen.getByText("Tokyo")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "View full text for city" })
+    ).toBeNull();
+  });
+
+  it("caps text preview titles so large payloads do not become huge DOM attributes", () => {
+    const column = create(TableResultColumnSchema, {
+      columnName: "description",
+      dataType: DataType.STRING,
+      rawType: "text",
+    });
+    const cell = create(TableCellSchema, {
+      value: create(TableValueSchema, {
+        kind: { case: "stringValue", value: "x".repeat(2000) },
+      }),
+    });
+
+    render(<DataCell cell={cell} column={column} />);
+
+    const preview = screen.getByTestId("description-text-preview");
+    expect(preview.getAttribute("title")?.length).toBeLessThanOrEqual(1001);
+    expect(preview.getAttribute("title")?.endsWith("…")).toBe(true);
+  });
+
   it("renders timestamp zones inline for screenshots and narrow grids", () => {
     const column = create(TableResultColumnSchema, {
       columnName: "created_at",

@@ -2,6 +2,8 @@ import { Check, Minus } from "lucide-react";
 import { ArrayPreview } from "@/components/data-grid/table-data-grid/data-cell-array-preview";
 import { ExpandedJsonPreview } from "@/components/data-grid/table-data-grid/data-cell-expanded-json-preview";
 import { JsonPreview } from "@/components/data-grid/table-data-grid/data-cell-json-preview";
+import { TEXT_PREVIEW_EXPAND_MIN_LENGTH } from "@/components/data-grid/table-data-grid/data-cell-preview-format";
+import { TextPreview } from "@/components/data-grid/table-data-grid/data-cell-text-preview";
 import {
   type FormattedCell,
   formatTableCell,
@@ -80,6 +82,19 @@ function renderCell(
         </span>
       );
     default:
+      if (
+        cell.isTruncated ||
+        cell.display.length >= TEXT_PREVIEW_EXPAND_MIN_LENGTH
+      ) {
+        return (
+          <TextPreview
+            columnName={column.columnName}
+            isTruncated={cell.isTruncated}
+            raw={cell.display}
+            rawType={column.rawType}
+          />
+        );
+      }
       return (
         <span className="block w-full truncate" title={cell.display}>
           {cell.display}

@@ -3,6 +3,12 @@ type JsonParseResult =
   | { ok: false; value?: undefined };
 
 const JSON_TITLE_MAX_LENGTH = 1000;
+/**
+ * Minimum display length before a text cell gets the in-cell expand button.
+ * Shorter values fit within the capped column width, so the button would only
+ * add noise there.
+ */
+const TEXT_PREVIEW_EXPAND_MIN_LENGTH = 80;
 const JSON_PREVIEW_PARSE_MIN_LENGTH = 120;
 const JSON_PREVIEW_PARSE_MAX_LENGTH = 50_000;
 const JSON_PREVIEW_MAX_LENGTH = 4000;
@@ -63,5 +69,6 @@ export {
   formatPrettyJson,
   JSON_TITLE_MAX_LENGTH,
   maybeFormatPrettyJson,
+  TEXT_PREVIEW_EXPAND_MIN_LENGTH,
   truncateForAttribute,
 };

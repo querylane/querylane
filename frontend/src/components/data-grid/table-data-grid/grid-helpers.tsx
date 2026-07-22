@@ -34,6 +34,10 @@ interface BuildColumnArgs {
 }
 
 const MIN_COLUMN_WIDTH = 140;
+// Caps `width: "auto"` max-content measurement so a single long value (large
+// JSONB, long text) cannot stretch its column to thousands of pixels. Also the
+// upper bound for manual drag-resize in react-data-grid.
+const MAX_COLUMN_WIDTH = 500;
 
 function buildColumn({
   canHide,
@@ -93,6 +97,7 @@ function buildColumn({
     draggable: true,
     frozen: isFrozen,
     key: columnKey,
+    maxWidth: MAX_COLUMN_WIDTH,
     minWidth: MIN_COLUMN_WIDTH,
     name: columnKey,
     renderCell: ({ row }) => {
