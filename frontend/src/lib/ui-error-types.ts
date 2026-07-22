@@ -1,4 +1,5 @@
 import type { Code } from "@connectrpc/connect";
+import type { UnexpectedResponseInfo } from "@/lib/unexpected-response";
 import type {
   PostgreSqlErrorKind,
   PostgreSqlErrorRetryGuidance,
@@ -71,6 +72,7 @@ interface AppUiError {
   summary: string;
   technicalDetails: string;
   title: string;
+  unexpectedResponse: UnexpectedResponseInfo | null;
 }
 
 interface ReportAppUiErrorDependencies {
@@ -83,7 +85,10 @@ interface ReportAppUiErrorDependencies {
   ) => void;
   logger: { error: (message: string, extra: Record<string, unknown>) => void };
   toast: {
-    error: (message: string, options?: { description?: string }) => void;
+    error: (
+      message: string,
+      options?: { description?: string; id?: string }
+    ) => void;
   };
 }
 

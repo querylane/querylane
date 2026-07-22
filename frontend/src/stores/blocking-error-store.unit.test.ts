@@ -23,6 +23,7 @@ function makeFakeError(message: string): AppUiError {
     summary: message,
     technicalDetails: "",
     title: "Test error",
+    unexpectedResponse: null,
   };
 }
 

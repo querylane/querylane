@@ -9,6 +9,8 @@ import {
   normalizeAppUiError,
   reportAppUiError,
 } from "@/lib/ui-error";
+import type { UnexpectedResponseInfo } from "@/lib/unexpected-response";
+import { UnexpectedResponseError } from "@/lib/unexpected-response";
 import {
   PostgreSqlErrorDetailSchema,
   PostgreSqlErrorKind,
@@ -429,6 +431,92 @@ describe("error routing and reporting", () => {
     expect(dependencies.captureException).not.toHaveBeenCalled();
     expect(dependencies.logger.error).not.toHaveBeenCalled();
     expect(dependencies.toast.error).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    {
+      kind: "redirect",
+      status: 0,
+      summaryFragment: "The request was redirected",
+    },
+    {
+      kind: "auth",
+      status: 401,
+      summaryFragment: "Your session may have expired",
+    },
+    {
+      kind: "server",
+      status: 502,
+      summaryFragment: "may be down or restarting",
+    },
+    {
+      kind: "unexpected",
+      status: 200,
+      summaryFragment: "A proxy in front of Querylane",
+    },
+  ] satisfies Array<{
+    kind: UnexpectedResponseInfo["kind"];
+    status: number;
+    summaryFragment: string;
+  }>)("renders friendly copy for $kind proxy responses", ({
+    kind,
+    status,
+    summaryFragment,
+  }) => {
+    const hostileBody = "<html><body>hostile login page</body></html>";
+    const wrapped = ConnectError.from(
+      new UnexpectedResponseError({
+        bodySnippet: hostileBody,
+        contentType: "text/html",
+        kind,
+        status,
+        url: "https://console.example.test/api/rpc",
+      })
+    );
+
+    const normalized = normalizeAppUiError(wrapped);
+
+    expect(normalized.title).toBe("Unexpected server response");
+    expect(normalized.summary).toContain(summaryFragment);
+    expect(normalized.summary).not.toContain("<html");
+    expect(normalized.retryGuidance).not.toBeNull();
+    expect(normalized.blockingReason).toBeNull();
+    expect(JSON.parse(normalized.technicalDetails)).toMatchObject({
+      unexpectedResponse: {
+        bodySnippet: hostileBody,
+        contentType: "text/html",
+        kind,
+        status,
+        url: "https://console.example.test/api/rpc",
+      },
+    });
+  });
+
+  test("dedupes unexpected-response toasts with a stable id", () => {
+    const wrapped = ConnectError.from(
+      new UnexpectedResponseError({
+        bodySnippet: null,
+        contentType: "text/html",
+        kind: "server",
+        status: 503,
+        url: "https://console.example.test/api/rpc",
+      })
+    );
+    const normalized = normalizeAppUiError(wrapped, {
+      source: "mutation",
+      surface: "toast",
+    });
+    const dependencies = createReportingDependencies();
+
+    reportAppUiError(normalized, undefined, dependencies);
+
+    expect(dependencies.toast.error).toHaveBeenCalledWith(
+      "Unexpected server response",
+      {
+        description: normalized.summary,
+        id: "unexpected-server-response",
+      }
+    );
   });
 
   test("keeps generic non-RPC failures useful", () => {
