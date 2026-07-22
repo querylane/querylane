@@ -316,6 +316,9 @@ function TriggersTab({
     return <TabSkeleton />;
   }
   const { triggers } = query.data;
+  if (triggers.length === 0) {
+    return <TableResourceEmptyState category="triggers" toolbar={toolbar} />;
+  }
   const filteredTriggers = filterTableTriggers(triggers, {
     search,
     states: stateFilters.filter(isTriggerStateFilter),
@@ -381,10 +384,7 @@ function TriggersTab({
           onRefresh={toolbar.handleRefresh}
         />
       </div>
-      {triggers.length === 0 ? (
-        <TableResourceEmptyState category="triggers" toolbar={toolbar} />
-      ) : null}
-      {triggers.length > 0 && filteredTriggers.length === 0 ? (
+      {filteredTriggers.length === 0 ? (
         <SearchEmptyState
           className="rounded-[10px] border"
           resourceName="triggers"

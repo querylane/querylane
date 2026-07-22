@@ -285,6 +285,9 @@ function PoliciesTab({
     return <TabSkeleton />;
   }
   const { policies } = query.data;
+  if (policies.length === 0) {
+    return <TableResourceEmptyState category="policies" toolbar={toolbar} />;
+  }
   const normalizedSearch = policySearch.trim().toLocaleLowerCase();
   const visiblePolicies = filterPoliciesByMode(
     policies,
@@ -356,10 +359,7 @@ function PoliciesTab({
           ))}
         </div>
       ) : null}
-      {policies.length === 0 ? (
-        <TableResourceEmptyState category="policies" toolbar={toolbar} />
-      ) : null}
-      {policies.length > 0 && pagePolicies.length === 0 ? (
+      {pagePolicies.length === 0 ? (
         <SearchEmptyState className="border" resourceName="policies" />
       ) : null}
       <fieldset
@@ -453,12 +453,10 @@ function PoliciesTab({
           </Button>
         </nav>
       </fieldset>
-      {policies.length > 0 ? (
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-          <RlsCombinationGuide />
-          <RlsPreview policies={policies} />
-        </div>
-      ) : null}
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+        <RlsCombinationGuide />
+        <RlsPreview policies={policies} />
+      </div>
     </div>
   );
 }
