@@ -11,6 +11,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 interface ColumnsPopoverProps {
@@ -103,9 +104,10 @@ function ColumnsPopover({
             const isLastVisible = visible && visibleCount === 1;
             const visibilityControl = (
               <Label
-                className={`min-w-0 flex-1 gap-2 font-normal ${
+                className={cn(
+                  "min-w-0 flex-1 gap-2 font-normal",
                   isLastVisible ? "cursor-not-allowed" : "cursor-pointer"
-                }`}
+                )}
               >
                 <Checkbox
                   aria-describedby={
