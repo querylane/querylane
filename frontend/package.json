@@ -84,7 +84,7 @@
     "@tanstack/react-query-devtools": "5.101.2",
     "@tanstack/react-router": "1.170.18",
     "@tanstack/react-router-devtools": "1.167.0",
-    "@tanstack/react-table": "9.0.0-beta.47",
+    "@tanstack/react-table": "9.0.0-beta.55",
     "@tanstack/router-plugin": "1.168.20",
     "@tanstack/virtual-core": "3.17.4",
     "@xyflow/react": "12.11.2",

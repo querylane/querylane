@@ -21,7 +21,7 @@
         "@tanstack/react-query-devtools": "5.101.2",
         "@tanstack/react-router": "1.170.18",
         "@tanstack/react-router-devtools": "1.167.0",
-        "@tanstack/react-table": "9.0.0-beta.47",
+        "@tanstack/react-table": "9.0.0-beta.55",
         "@tanstack/router-plugin": "1.168.20",
         "@tanstack/virtual-core": "3.17.4",
         "@xyflow/react": "12.11.2",
@@ -849,7 +849,7 @@
 
     "@tanstack/react-store": ["@tanstack/react-store@0.9.3", "", { "dependencies": { "@tanstack/store": "0.9.3", "use-sync-external-store": "^1.6.0" }, "peerDependencies": { "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-y2iHd/N9OkoQbFJLUX1T9vbc2O9tjH0pQRgTcx1/Nz4IlwLvkgpuglXUx+mXt0g5ZDFrEeDnONPqkbfxXJKwRg=="],
 
-    "@tanstack/react-table": ["@tanstack/react-table@9.0.0-beta.47", "", { "dependencies": { "@tanstack/react-store": "^0.11.0", "@tanstack/table-core": "9.0.0-beta.47" }, "peerDependencies": { "react": ">=18" } }, "sha512-YTM/QqFmxJaEUECqgTKXffhXxrov1wrZVhqFPpKt2fpa2DS3mtXS7Zhue5g50Z6YbWOHeQdKyKdzNkVcJQCzIw=="],
+    "@tanstack/react-table": ["@tanstack/react-table@9.0.0-beta.55", "", { "dependencies": { "@tanstack/react-store": "^0.11.0", "@tanstack/table-core": "9.0.0-beta.55" }, "peerDependencies": { "react": ">=18" } }, "sha512-ArJtvHdp/PIqw3UJ3UUQMqfGyEM2VBZoIFfQfYlYsh56GFw2xs3DN1WW3dIknYRw9aTYtIHHccPjoLBxPrJrXQ=="],
 
     "@tanstack/router-core": ["@tanstack/router-core@1.171.15", "", { "dependencies": { "@tanstack/history": "1.162.0", "cookie-es": "^3.0.0", "seroval": "^1.5.4", "seroval-plugins": "^1.5.4" } }, "sha512-IILCDcLaItMZQ2jEmCABHY1Nhjjn5XUvwpQp3e4Nmu+vfg0BgYFuu/QASz2SwE2ZNbVMrvt8X/wxa+Gg5aErxA=="],
 
@@ -863,7 +863,7 @@
 
     "@tanstack/store": ["@tanstack/store@0.9.3", "", {}, "sha512-8reSzl/qGWGGVKhBoxXPMWzATSbZLZFWhwBAFO9NAyp0TxzfBP0mIrGb8CP8KrQTmvzXlR/vFPPUrHTLBGyFyw=="],
 
-    "@tanstack/table-core": ["@tanstack/table-core@9.0.0-beta.47", "", { "dependencies": { "@tanstack/store": "^0.11.0" } }, "sha512-KhOa5XxkhhMDVs6zMu6N8U8ex2XgeUZUjEB7Kv3CdhCuyf7mh34gT3JcNVEOaOh8l/sSM1hLbz4+DzdWoaj3yQ=="],
+    "@tanstack/table-core": ["@tanstack/table-core@9.0.0-beta.55", "", { "dependencies": { "@tanstack/store": "^0.11.0" } }, "sha512-kSSWcE+ffHAGoLUGDywYF9mMP15Xb/PNK6LLnYwsgfKURLaqR+HvsGYBes52PytT+zxhf1qMWcDdIqPVG3loIg=="],
 
     "@tanstack/virtual-core": ["@tanstack/virtual-core@3.17.4", "", {}, "sha512-nGm5KteqxasUdThLc2izl6dHUqLv0LQj7Nuyo5gYalTPf/U8a9ermvsl7reT+6ioBW1l8WfpP/mcU338nLXpqw=="],
 

@@ -8,6 +8,7 @@ import {
   type PaginationState,
   type RowData,
   type SortingState,
+  Subscribe,
   columnFilteringFeature,
   createFilteredRowModel,
   createPaginatedRowModel,
@@ -151,49 +152,60 @@ function SortableHeader<TData extends RowData>({
   column: Column<DataTableFeatures, TData, unknown>;
 }) {
   const label = typeof children === "string" ? children : "Column";
-  const sort = column.table.store.state.sorting.find(
-    (sortState) => sortState.id === column.id,
-  );
-  const sorted = sort == null ? false : sort.desc ? "desc" : "asc";
-  const sortStateLabel =
-    sorted === "asc"
-      ? "sorted ascending"
-      : sorted === "desc"
-        ? "sorted descending"
-        : "not sorted";
 
   return (
-    <button
-      aria-label={`${label}, ${sortStateLabel}`}
-      className={cn(
-        "inline-flex cursor-pointer items-center gap-1.5 transition-colors hover:text-foreground",
-        className,
-      )}
-      onClick={() => column.toggleSorting()}
-      title="Sort column"
-      type="button"
+    <Subscribe
+      selector={(sorting) => {
+        const sort = sorting.find(
+          (sortState) => sortState.id === column.id,
+        );
+        return sort == null ? false : sort.desc ? "desc" : "asc";
+      }}
+      source={column.table.atoms.sorting}
     >
-      {children}
-      {sorted === "asc" ? (
-        <ArrowUp
-          aria-hidden="true"
-          className="size-4 text-foreground"
-          data-slot="sort-indicator"
-        />
-      ) : sorted === "desc" ? (
-        <ArrowDown
-          aria-hidden="true"
-          className="size-4 text-foreground"
-          data-slot="sort-indicator"
-        />
-      ) : (
-        <ChevronsUpDown
-          aria-hidden="true"
-          className="size-4 text-muted-foreground/75"
-          data-slot="sort-indicator"
-        />
-      )}
-    </button>
+      {(sorted) => {
+        const sortStateLabel =
+          sorted === "asc"
+            ? "sorted ascending"
+            : sorted === "desc"
+              ? "sorted descending"
+              : "not sorted";
+
+        return (
+          <button
+            aria-label={`${label}, ${sortStateLabel}`}
+            className={cn(
+              "inline-flex cursor-pointer items-center gap-1.5 transition-colors hover:text-foreground",
+              className,
+            )}
+            onClick={() => column.toggleSorting()}
+            title="Sort column"
+            type="button"
+          >
+            {children}
+            {sorted === "asc" ? (
+              <ArrowUp
+                aria-hidden="true"
+                className="size-4 text-foreground"
+                data-slot="sort-indicator"
+              />
+            ) : sorted === "desc" ? (
+              <ArrowDown
+                aria-hidden="true"
+                className="size-4 text-foreground"
+                data-slot="sort-indicator"
+              />
+            ) : (
+              <ChevronsUpDown
+                aria-hidden="true"
+                className="size-4 text-muted-foreground/75"
+                data-slot="sort-indicator"
+              />
+            )}
+          </button>
+        );
+      }}
+    </Subscribe>
   );
 }
 
