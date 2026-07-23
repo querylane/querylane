@@ -51,4 +51,17 @@ describe("setup-required-signal", () => {
     expect(secondHandler).toHaveBeenCalledOnce();
     expect(firstHandler).not.toHaveBeenCalled();
   });
+
+  test("an older cleanup does not unregister a newer handler", () => {
+    const firstHandler = vi.fn();
+    const secondHandler = vi.fn();
+    const unregisterFirst = registerSetupRequiredHandler(firstHandler);
+    registerSetupRequiredHandler(secondHandler);
+
+    unregisterFirst();
+    markSetupRequired();
+
+    expect(secondHandler).toHaveBeenCalledOnce();
+    expect(firstHandler).not.toHaveBeenCalled();
+  });
 });

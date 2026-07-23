@@ -1,11 +1,14 @@
 import { AlertTriangle, ArrowLeft, RefreshCw, Settings2 } from "lucide-react";
 import { AppInlineError } from "@/components/app-error-view";
+import {
+  useOnboardingWizardActions,
+  useOnboardingWizardState,
+} from "@/components/onboarding-wizard/onboarding-wizard-state-context";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import { RetryActionButton } from "@/components/retry-action-button";
 import { Button } from "@/components/ui/button";
 import { waitForNextFrame } from "@/lib/wait-for-next-frame";
 import { StepState } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
-import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 
 /**
  * Patterns that indicate a configuration issue (wrong credentials,
@@ -31,23 +34,14 @@ function isLikelyConfigurationError(errorMessage: string): boolean {
   return CONFIG_ERROR_PATTERNS.some((pattern) => pattern.test(errorMessage));
 }
 export function ErrorSummaryPhase() {
-  const goToConfigure = useOnboardingWizardStore(
-    (state) => state.goToConfigure
-  );
-  const goBackToMethodSelection = useOnboardingWizardStore(
-    (state) => state.goBackToMethodSelection
-  );
-  const retry = useOnboardingWizardStore(
-    (state) => state.retryFromErrorSummary
-  );
-  const clearStreamFailure = useOnboardingWizardStore(
-    (state) => state.clearStreamFailure
-  );
-  const streamError = useOnboardingWizardStore((state) => state.streamError);
-  const failedEvent = useOnboardingWizardStore((state) => state.failedEvent);
-  const progressEvents = useOnboardingWizardStore(
-    (state) => state.progressEvents
-  );
+  const { failedEvent, progressEvents, streamError } =
+    useOnboardingWizardState();
+  const {
+    clearStreamFailure,
+    goBackToMethodSelection,
+    goToConfigure,
+    retryFromErrorSummary: retry,
+  } = useOnboardingWizardActions();
   const failedStepName = failedEvent?.displayName;
   const failedStepError = failedEvent?.error;
   const succeededCount = progressEvents.filter(

@@ -7,6 +7,7 @@ import { BootGate } from "@/components/boot-gate";
 import { NotFoundState } from "@/components/not-found-state";
 import { RouteAnnouncer } from "@/components/route-announcer";
 import { RouteErrorView } from "@/components/route-error-view";
+import { SetupProvider } from "@/components/setup-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DbProvider } from "@/lib/db-context";
 import { ThemeProvider } from "@/theme-provider";
@@ -46,12 +47,14 @@ export function RootComponent() {
     <ThemeProvider defaultTheme="system">
       <TooltipProvider>
         <RouteAnnouncer />
-        <AppErrorRedirectController />
-        <BootGate>
-          <DbProvider>
-            <Outlet />
-          </DbProvider>
-        </BootGate>
+        <SetupProvider>
+          <AppErrorRedirectController />
+          <BootGate>
+            <DbProvider>
+              <Outlet />
+            </DbProvider>
+          </BootGate>
+        </SetupProvider>
         <DeferredToaster />
       </TooltipProvider>
     </ThemeProvider>

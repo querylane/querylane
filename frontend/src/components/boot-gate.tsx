@@ -2,17 +2,15 @@
 
 import { useLocation } from "@tanstack/react-router";
 import type React from "react";
-import { useEffect, useRef } from "react";
 
 import { AppErrorView } from "@/components/app-error-view";
 import { AppShellFrame } from "@/components/app-shell-frame";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
+import { useSetup } from "@/components/setup-context";
 import { useRetainedRetryError } from "@/components/use-retained-retry-error";
-import { captureException } from "@/lib/diagnostics";
 import { getBlockingRoutePath, normalizeAppUiError } from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { useBlockingErrorStore } from "@/stores/blocking-error-store";
-import { useSetupStore } from "@/stores/setup-store";
 
 const GENERIC_ERROR_TITLES = new Set(["Unexpected error", "Request failed"]);
 
@@ -69,11 +67,8 @@ function shouldRenderBlockingRoute(
 }
 
 export function BootGate({ children }: { children: React.ReactNode }) {
-  const bootError = useSetupStore((state) => state.bootError);
-  const bootstrap = useSetupStore((state) => state.bootstrap);
-  const status = useSetupStore((state) => state.status);
+  const { bootError, refreshOnboardingState, status } = useSetup();
   const blockingError = useBlockingErrorStore((state) => state.blockingError);
-  const bootstrappedRef = useRef(false);
   const blockingRoute = getBlockingRoutePath(
     blockingError?.blockingReason ?? null
   );
@@ -91,17 +86,8 @@ export function BootGate({ children }: { children: React.ReactNode }) {
     status === "boot_error" ? (bootError ?? fallbackBootError) : null;
   const { displayedError, retry } = useRetainedRetryError({
     error: activeBootError,
-    onRetry: bootstrap,
+    onRetry: refreshOnboardingState,
   });
-
-  // allow-useEffect: initialize app on mount
-  useEffect(() => {
-    if (bootstrappedRef.current) {
-      return;
-    }
-    bootstrappedRef.current = true;
-    bootstrap().catch((error) => captureException(error));
-  }, [bootstrap]);
 
   if (
     shouldRenderBlockingRoute(status === "boot_error", blockingRoute, pathname)

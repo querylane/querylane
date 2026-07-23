@@ -13,7 +13,6 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { lazy, type ReactNode, Suspense, useState } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,11 +33,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import {
-  useDatabaseVisualizationStore,
-  type VisualizationDetailScope,
-  type VisualizationDirection,
-} from "@/features/database-visualization/database-visualization-store";
 import type {
   VisualizationEdge,
   VisualizationNavigation,
@@ -50,12 +44,15 @@ import {
   type StructureMapTable,
   type StructureMapView,
 } from "@/features/database-visualization/structure-map-model";
+import type { VisualizationDirection } from "@/features/database-visualization/visualization-types";
 
 const FlowCanvas = lazy(() =>
   import("@/features/database-visualization/flow-canvas").then((module) => ({
     default: module.FlowCanvas,
   }))
 );
+
+type VisualizationDetailScope = "all" | "selected-schema";
 
 interface DatabaseStructureMapProps {
   activeSchemaName?: string | undefined;
@@ -522,23 +519,12 @@ function DatabaseStructureMap({
     useState<string | null>(null);
   const [visibleNodeKinds, setVisibleNodeKinds] =
     useState<DatabaseMapNodeVisibility>(DEFAULT_DATABASE_MAP_NODE_VISIBILITY);
-  const {
-    detailScope,
-    direction,
-    databaseSelectedNodeId,
-    setDetailScope,
-    setDirection,
-    setDatabaseSelectedNodeId,
-  } = useDatabaseVisualizationStore(
-    useShallow((state) => ({
-      databaseSelectedNodeId: state.databaseSelectedNodeId,
-      detailScope: state.detailScope,
-      direction: state.direction,
-      setDatabaseSelectedNodeId: state.setDatabaseSelectedNodeId,
-      setDetailScope: state.setDetailScope,
-      setDirection: state.setDirection,
-    }))
-  );
+  const [databaseSelectedNodeId, setDatabaseSelectedNodeId] = useState<
+    string | null
+  >(null);
+  const [detailScope, setDetailScope] =
+    useState<VisualizationDetailScope>("selected-schema");
+  const [direction, setDirection] = useState<VisualizationDirection>("LR");
   const targetNodeId = databaseMapTargetNodeId(targetResource);
   const hasTargetResourceFocus = Boolean(
     targetResource?.category && targetResource.name

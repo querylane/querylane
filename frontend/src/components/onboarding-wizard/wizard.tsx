@@ -2,6 +2,7 @@
 
 import { OnboardingWizardControllerProvider } from "@/components/onboarding-wizard/controller-provider";
 import { useOnboardingWizardController } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller";
+import { OnboardingWizardStateProvider } from "@/components/onboarding-wizard/onboarding-wizard-state-provider";
 import type { OnboardingWizardProps } from "@/components/onboarding-wizard/types";
 import { OnboardingWizardContent } from "@/components/onboarding-wizard/wizard-content";
 
@@ -10,7 +11,11 @@ function OnboardingWizard({ onFinish, open = true }: OnboardingWizardProps) {
     return null;
   }
 
-  return <OnboardingWizardMounted onFinish={onFinish} />;
+  return (
+    <OnboardingWizardStateProvider>
+      <OnboardingWizardMounted onFinish={onFinish} />
+    </OnboardingWizardStateProvider>
+  );
 }
 
 function OnboardingWizardMounted({

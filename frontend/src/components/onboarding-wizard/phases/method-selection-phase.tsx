@@ -7,16 +7,19 @@ import {
 } from "lucide-react";
 import type { KeyboardEvent } from "react";
 import { getMethodLabel } from "@/components/onboarding-wizard/mappers";
+import {
+  useOnboardingWizardActions,
+  useOnboardingWizardState,
+} from "@/components/onboarding-wizard/onboarding-wizard-state-context";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import type { ConfigMethod } from "@/components/onboarding-wizard/types";
+import { useSetup } from "@/components/setup-context";
 import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatSetupMethod } from "@/lib/protobuf-enums";
 import { cn } from "@/lib/utils";
 import type { SetupMethod } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
-import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
-import { useSetupStore } from "@/stores/setup-store";
 
 const METHOD_CONTENT: Record<
   ConfigMethod,
@@ -165,16 +168,10 @@ function getNextMethodFromKey({
 }
 
 export function MethodSelectionPhase() {
-  const availableMethods = useSetupStore(
-    (state) => state.onboardingState?.availableMethods ?? []
-  );
-  const selectedMethod = useOnboardingWizardStore(
-    (state) => state.selectedMethod
-  );
-  const selectMethod = useOnboardingWizardStore((state) => state.selectMethod);
-  const goToConfigure = useOnboardingWizardStore(
-    (state) => state.goToConfigure
-  );
+  const { onboardingState } = useSetup();
+  const availableMethods = onboardingState?.availableMethods ?? [];
+  const { selectedMethod } = useOnboardingWizardState();
+  const { goToConfigure, selectMethod } = useOnboardingWizardActions();
   const methods = getConfigMethods(availableMethods);
 
   const handleMethodKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {

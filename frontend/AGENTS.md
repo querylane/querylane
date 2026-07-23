@@ -87,11 +87,16 @@ All commits must follow: `type(scope): description`
 
 - Use `create<T>()()` double-parens (not `create<T>()`)
 - Use `useShallow` for multi-value selectors
-- Use `persist` middleware instead of direct localStorage
+- Use `persist` middleware for Zustand persistence instead of direct localStorage
 
-## State & Data
+## State Ownership
 
-- Use zustand for client state, TanStack Query for server state
+- Keep transient UI state in the nearest owning component with `useState`
+- Use `useReducer` plus scoped Context for complex state shared within one mounted feature
+- Use TanStack Router params/search for navigation state that belongs in the URL
+- Use Connect Query/TanStack Query for server state; never mirror query data in Zustand
+- Use Zustand only for validated persisted preferences or external stores that must cross React boundaries
+- Do not create a global store when component, route, query, or scoped provider ownership is sufficient
 - Do not use raw `useQuery` / `useMutation` when ConnectRPC is available (exception: `useTransport`/`callUnaryMethod` pattern with `@connectrpc/connect` imports)
 - Protobuf v2: use `create(Schema, { ... })` — do not construct messages as object literals with `$typeName`
 - Protobuf v2: use Standard Schema + protovalidate as react-hook-form resolver instead of duplicating validation in Zod

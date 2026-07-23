@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronRight } from "lucide-react";
 import { useId } from "react";
 import { useWatch } from "react-hook-form";
 import { useOnboardingWizardControllerContext } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller-context";
+import { useOnboardingWizardActions } from "@/components/onboarding-wizard/onboarding-wizard-state-context";
 import { LabeledInput } from "@/components/onboarding-wizard/shared/labeled-input";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import {
@@ -15,12 +16,11 @@ import {
   SelectItemDescription,
   SelectValue,
 } from "@/components/select-extensions";
+import { useSetup } from "@/components/setup-context";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useProtoForm } from "@/lib/use-proto-form";
 import { EmbeddedSetupConfigSchema } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
-import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
-import { useSetupStore } from "@/stores/setup-store";
 
 const PERSISTENCE_MODE_OPTIONS = [
   {
@@ -38,13 +38,9 @@ const PERSISTENCE_MODE_OPTIONS = [
 export function EmbeddedPhase() {
   const portId = useId();
   const modeId = useId();
-  const onboardingState = useSetupStore((state) => state.onboardingState);
-  const startProgress = useOnboardingWizardStore(
-    (state) => state.startProgress
-  );
-  const setSubmittedEmbeddedConfig = useOnboardingWizardStore(
-    (state) => state.setSubmittedEmbeddedConfig
-  );
+  const { onboardingState } = useSetup();
+  const { setSubmittedEmbeddedConfig, startProgress } =
+    useOnboardingWizardActions();
   const { goBackToMethodSelection } = useOnboardingWizardControllerContext();
   const embeddedDataPath =
     onboardingState?.embeddedDataPath ?? "~/.querylane/pgdata";

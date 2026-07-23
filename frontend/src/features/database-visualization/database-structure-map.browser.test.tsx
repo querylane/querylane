@@ -3,7 +3,6 @@ import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { DatabaseStructureMap } from "@/features/database-visualization/database-structure-map";
-import { useDatabaseVisualizationStore } from "@/features/database-visualization/database-visualization-store";
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
@@ -157,12 +156,6 @@ vi.mock("@/features/database-visualization/structure-map-data", () => ({
 }));
 
 function renderComplexDatabaseMap() {
-  useDatabaseVisualizationStore.setState({
-    databaseSelectedNodeId: null,
-    detailScope: "selected-schema",
-    direction: "LR",
-  });
-
   render(
     <ScreenshotFrame>
       <div className="h-[900px] w-[1180px] overflow-hidden rounded-2xl border border-border bg-background p-5 text-foreground">

@@ -3,8 +3,12 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { OnboardingBrowserHarness } from "@/__tests__/browser-test-utils";
+import { SetupTestProvider } from "@/__tests__/setup-test-provider";
+import type { OnboardingWizardState } from "@/components/onboarding-wizard/onboarding-wizard-state";
+import { OnboardingWizardStateProvider } from "@/components/onboarding-wizard/onboarding-wizard-state-provider";
 import type { ConfigMethod } from "@/components/onboarding-wizard/types";
 import { OnboardingWizardContent } from "@/components/onboarding-wizard/wizard-content";
+import type { SetupContextValue } from "@/components/setup-context";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import {
   AppDatabaseStatus_State,
@@ -17,11 +21,11 @@ import {
   SetupStep,
   StepState,
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
-import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
-import { useSetupStore } from "@/stores/setup-store";
 
 const ADVANCED_CONNECTION_OPTIONS_RE = /Advanced connection options/;
 const INVALID_CONNECTION_STRING_RE = /Invalid connection string/;
+let initialWizardState: Partial<OnboardingWizardState> = {};
+let setupValue: SetupContextValue;
 
 vi.mock("@/hooks/api/instance", () => ({
   useTestInstanceConnectionMutation: () => ({
@@ -69,7 +73,11 @@ function progressEvent({
 function renderWizard() {
   render(
     <OnboardingBrowserHarness>
-      <OnboardingWizardContent />
+      <SetupTestProvider value={setupValue}>
+        <OnboardingWizardStateProvider initialState={initialWizardState}>
+          <OnboardingWizardContent />
+        </OnboardingWizardStateProvider>
+      </SetupTestProvider>
     </OnboardingBrowserHarness>
   );
 }
@@ -85,15 +93,15 @@ function getConfigurePhase(method: ConfigMethod) {
 }
 
 function openConfigurePhase(method: ConfigMethod) {
-  useOnboardingWizardStore.setState({
+  initialWizardState = {
     phase: getConfigurePhase(method),
     selectedMethod: method,
-  });
+  };
   renderWizard();
 }
 
 function renderRunningProgress() {
-  useOnboardingWizardStore.setState({
+  initialWizardState = {
     phase: "progress_running",
     progressEvents: [
       progressEvent({
@@ -113,13 +121,13 @@ function renderRunningProgress() {
       }),
     ],
     selectedMethod: "ui_configured",
-  });
+  };
   renderWizard();
 }
 
 function renderFailedProgress() {
   const errorMessage = "password authentication failed for user querylane";
-  useOnboardingWizardStore.setState({
+  initialWizardState = {
     failedEvent: progressEvent({
       stepId: SetupStep.MIGRATING,
       displayName: "Apply migrations",
@@ -145,12 +153,12 @@ function renderFailedProgress() {
       endpoint: "/querylane.console.v1alpha1.ConsoleService/Setup",
       source: "setup_stream",
     }),
-  });
+  };
   renderWizard();
 }
 
 function renderSuccessfulProgress() {
-  useOnboardingWizardStore.setState({
+  initialWizardState = {
     phase: "progress_success",
     progressEvents: [
       progressEvent({
@@ -170,20 +178,22 @@ function renderSuccessfulProgress() {
       }),
     ],
     selectedMethod: "ui_configured",
-  });
+  };
   renderWizard();
 }
 
 beforeEach(() => {
-  useSetupStore.setState({
+  initialWizardState = {};
+  setupValue = {
     bootError: null,
     onboardingState: onboardingState(),
+    refreshOnboardingState: vi.fn(async () => undefined),
     showDegradedBanner: false,
     showWizardErrorBanner: false,
     status: "onboarding",
+    verifyAfterSetup: vi.fn(async () => undefined),
     warningCode: null,
-  });
-  useOnboardingWizardStore.getState().resetSession();
+  };
 });
 
 describe("Onboarding wizard — browser visuals", () => {
@@ -337,10 +347,10 @@ describe("Onboarding wizard — browser visuals", () => {
   });
 
   test("manual YAML path shows the waiting-for-config state", async () => {
-    useOnboardingWizardStore.setState({
+    initialWizardState = {
       phase: "progress_waiting_for_config",
       selectedMethod: "manual_yaml",
-    });
+    };
     renderWizard();
 
     await expect

@@ -1,5 +1,9 @@
 import { createClient } from "@connectrpc/connect";
-import { useTransport } from "@connectrpc/connect-query";
+import {
+  type UseQueryOptions,
+  useQuery,
+  useTransport,
+} from "@connectrpc/connect-query";
 import {
   type UseMutationOptions as TanStackUseMutationOptions,
   useMutation as useTanStackMutation,
@@ -16,6 +20,7 @@ import {
   OnboardingService,
   type SetupAppDatabaseRequest,
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
+import { getOnboardingState } from "@/protogen/querylane/console/v1alpha1/onboarding-OnboardingService_connectquery";
 
 const WATCH_RETRY_BACKOFF_INITIAL_MS = 500;
 const WATCH_RETRY_BACKOFF_SECOND_MS = 1000;
@@ -160,6 +165,12 @@ function settleRetryState({
 function useOnboardingStreamingClient() {
   const transport = useTransport();
   return createClient(OnboardingService, transport);
+}
+
+function useGetOnboardingStateQuery(
+  options?: UseQueryOptions<(typeof getOnboardingState)["output"]>
+) {
+  return useQuery(getOnboardingState, undefined, options);
 }
 
 function useSetupAppDatabaseMutation(
@@ -312,4 +323,8 @@ function useWatchConfigChanges({
 }
 
 export type { SetupAppDatabaseMutationVariables, WatchErrorReason };
-export { useSetupAppDatabaseMutation, useWatchConfigChanges };
+export {
+  useGetOnboardingStateQuery,
+  useSetupAppDatabaseMutation,
+  useWatchConfigChanges,
+};

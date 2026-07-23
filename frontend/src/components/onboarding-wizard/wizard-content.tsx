@@ -2,6 +2,7 @@ import { ChevronRight, Sparkles, Workflow } from "lucide-react";
 import type { ReactNode } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { Logo } from "@/components/logo";
+import { useOnboardingWizardState } from "@/components/onboarding-wizard/onboarding-wizard-state-context";
 import { EmbeddedPhase } from "@/components/onboarding-wizard/phases/embedded-phase";
 import { ErrorSummaryPhase } from "@/components/onboarding-wizard/phases/error-summary-phase";
 import { ManualYamlPhase } from "@/components/onboarding-wizard/phases/manual-yaml-phase";
@@ -13,14 +14,13 @@ import type {
   ConfigMethod,
   WizardPhase,
 } from "@/components/onboarding-wizard/types";
+import { useSetup } from "@/components/setup-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { captureException } from "@/lib/diagnostics";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
-import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
-import { useSetupStore } from "@/stores/setup-store";
 
 const PLACEHOLDER_CARD_IDS = ["queries", "history", "connections"] as const;
 const PROGRESS_RAIL_CARDS = [
@@ -373,20 +373,9 @@ function OnboardingStageContent({
   );
 }
 export function OnboardingWizardContent() {
-  const onboardingState = useSetupStore((state) => state.onboardingState);
-  const refreshOnboardingState = useSetupStore(
-    (state) => state.refreshOnboardingState
-  );
-  const showWizardErrorBanner = useSetupStore(
-    (state) => state.showWizardErrorBanner
-  );
-  const configureError = useOnboardingWizardStore(
-    (state) => state.configureError
-  );
-  const phase = useOnboardingWizardStore((state) => state.phase);
-  const selectedMethod = useOnboardingWizardStore(
-    (state) => state.selectedMethod
-  );
+  const { onboardingState, refreshOnboardingState, showWizardErrorBanner } =
+    useSetup();
+  const { configureError, phase, selectedMethod } = useOnboardingWizardState();
   const wizardStateError = onboardingState?.appDatabaseStatus?.error;
   const railModel = getRailModel(phase, selectedMethod);
   const mainContent = onboardingState ? (
