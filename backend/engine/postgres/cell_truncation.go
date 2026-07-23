@@ -89,6 +89,25 @@ func truncationProjection(col engine.Column, maxChars int) string {
 	return fmt.Sprintf("left((%s)::text, %d) AS %s, octet_length((%s)::text) AS %s", q, maxChars, q, q, sizeAlias)
 }
 
+// previewProjection emits the PREVIEW-mode SELECT expression(s) for a
+// single ReadRows column. Identical to truncationProjection except for
+// BINARY: the UI only ever renders bytea as a size chip, so the preview
+// ships zero content bytes — just octet_length for full_size_bytes plus
+// (via the row scanner) a full_value_token. substring is strict, so NULL
+// stays NULL while empty bytea comes back as an empty, non-truncated
+// value. ReadCellValue keeps using truncationProjection because its
+// callers want actual content up to max_bytes.
+func previewProjection(col engine.Column, maxChars int) string {
+	if col.DataType != api.DataType_DATA_TYPE_BINARY {
+		return truncationProjection(col, maxChars)
+	}
+
+	q := quoteIdent(col.Name)
+	sizeAlias := quoteIdent(col.Name + sizeAliasSuffix)
+
+	return fmt.Sprintf("substring(%s FROM 1 FOR 0) AS %s, octet_length(%s) AS %s", q, q, q, sizeAlias)
+}
+
 // resolveMaxCellChars returns the effective per-cell preview cap (in
 // PostgreSQL characters / bytea bytes), clamped to [1, maxPreviewBytes].
 // Zero or negative input means "use the server default".

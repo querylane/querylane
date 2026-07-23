@@ -5727,7 +5727,8 @@ components:
             Optional. Max bytes to return. 0 = server default (16 MiB), hard cap 64 MiB.
              For text/json/xml the value is interpreted as a character ceiling
              (PostgreSQL substring is character-based); resulting wire bytes may be
-             up to 4× this for multi-byte UTF-8. Byte-exact for bytea.
+             up to 4× this for multi-byte UTF-8. Ignored for bytea under PREVIEW:
+             bytea previews always ship zero content bytes.
       title: ReadCellValueRequest
       additionalProperties: false
     querylane.console.v1alpha1.ReadCellValueResponse:
@@ -5803,7 +5804,8 @@ components:
             Optional. Per-cell preview cap. 0 = server default (8 KiB), hard cap 1 MiB.
              For text/json/xml the value is interpreted as a character ceiling
              (PostgreSQL substring is character-based); resulting wire bytes may be
-             up to 4× this for multi-byte UTF-8. Byte-exact for bytea.
+             up to 4× this for multi-byte UTF-8. Ignored for bytea under PREVIEW:
+             bytea previews always ship zero content bytes.
         maxResponseBytes:
           type:
             - integer

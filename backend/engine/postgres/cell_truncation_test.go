@@ -63,6 +63,53 @@ func TestTrimUTF8(t *testing.T) {
 	}
 }
 
+// TestPreviewProjection confirms BINARY columns project zero content
+// bytes (size companion only) while every other preview-eligible type
+// delegates to truncationProjection unchanged.
+func TestPreviewProjection(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		col  engine.Column
+		want string
+	}{
+		{
+			name: "binary_ships_zero_bytes",
+			col:  engine.Column{Name: "blob", DataType: api.DataType_DATA_TYPE_BINARY},
+			want: `substring("blob" FROM 1 FOR 0) AS "blob", octet_length("blob") AS "blob__qlsize"`,
+		},
+		{
+			name: "string_delegates",
+			col:  engine.Column{Name: "description", DataType: api.DataType_DATA_TYPE_STRING},
+			want: truncationProjection(engine.Column{Name: "description", DataType: api.DataType_DATA_TYPE_STRING}, 64),
+		},
+		{
+			name: "json_delegates",
+			col:  engine.Column{Name: "payload", DataType: api.DataType_DATA_TYPE_JSON},
+			want: truncationProjection(engine.Column{Name: "payload", DataType: api.DataType_DATA_TYPE_JSON}, 64),
+		},
+		{
+			name: "xml_delegates",
+			col:  engine.Column{Name: "doc", DataType: api.DataType_DATA_TYPE_UNKNOWN, RawType: "xml"},
+			want: truncationProjection(engine.Column{Name: "doc", DataType: api.DataType_DATA_TYPE_UNKNOWN, RawType: "xml"}, 64),
+		},
+		{
+			name: "non_eligible_delegates",
+			col:  engine.Column{Name: "id", DataType: api.DataType_DATA_TYPE_INTEGER},
+			want: `"id"`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tc.want, previewProjection(tc.col, 64))
+		})
+	}
+}
+
 // TestApplyEmergencyTruncation_StringPreservesFullSize confirms a cell
 // that wasn't previously preview-truncated gets `full_size_bytes` set
 // from the original byte length.

@@ -19,7 +19,10 @@ import (
 
 type readRowsFakeDriver struct{ state *readRowsFakeState }
 
-type readRowsFakeState struct{ rows [][]driver.Value }
+type readRowsFakeState struct {
+	cols []string
+	rows [][]driver.Value
+}
 
 type readRowsFakeConn struct{ state *readRowsFakeState }
 
@@ -33,8 +36,14 @@ var readRowsFakeDriverSeq atomic.Int64
 func openReadRowsFakeDB(t *testing.T, rows ...[]driver.Value) *sql.DB {
 	t.Helper()
 
+	return openReadRowsFakeDBCols(t, []string{"id", "id__qlcursor"}, rows...)
+}
+
+func openReadRowsFakeDBCols(t *testing.T, cols []string, rows ...[]driver.Value) *sql.DB {
+	t.Helper()
+
 	name := fmt.Sprintf("querylane_read_rows_fake_%d", readRowsFakeDriverSeq.Add(1))
-	sql.Register(name, &readRowsFakeDriver{state: &readRowsFakeState{rows: rows}})
+	sql.Register(name, &readRowsFakeDriver{state: &readRowsFakeState{cols: cols, rows: rows}})
 	db, err := sql.Open(name, "")
 	require.NoError(t, err)
 	db.SetMaxOpenConns(1)
@@ -59,7 +68,7 @@ func (c *readRowsFakeConn) QueryContext(context.Context, string, []driver.NamedV
 	return &readRowsFakeRows{state: c.state}, nil
 }
 
-func (r *readRowsFakeRows) Columns() []string { return []string{"id", "id__qlcursor"} }
+func (r *readRowsFakeRows) Columns() []string { return r.state.cols }
 func (r *readRowsFakeRows) Close() error      { return nil }
 func (r *readRowsFakeRows) Next(dest []driver.Value) error {
 	if r.idx >= len(r.state.rows) {
@@ -70,6 +79,95 @@ func (r *readRowsFakeRows) Next(dest []driver.Value) error {
 	r.idx++
 
 	return nil
+}
+
+// TestRowReaderScanOne_ByteaZeroPreview confirms the scanner turns a
+// zero-byte bytea preview (empty cell + positive __qlsize companion) into
+// truncated=true + full_size_bytes + token, while genuinely empty and
+// NULL bytea stay untruncated with no token.
+func TestRowReaderScanOne_ByteaZeroPreview(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name          string
+		row           []driver.Value // [id, blob, blob__qlsize, id__qlcursor]
+		wantNull      bool
+		wantTruncated bool
+		wantFullSize  int64
+		wantToken     bool
+	}{
+		{
+			name:          "non_empty_bytea_gets_metadata_only",
+			row:           []driver.Value{int64(1), []byte{}, int64(12345), int64(1)},
+			wantTruncated: true,
+			wantFullSize:  12345,
+			wantToken:     true,
+		},
+		{
+			name: "empty_bytea_ships_untruncated",
+			row:  []driver.Value{int64(2), []byte{}, int64(0), int64(2)},
+		},
+		{
+			name:     "null_bytea_stays_null",
+			row:      []driver.Value{int64(3), nil, nil, int64(3)},
+			wantNull: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			db := openReadRowsFakeDBCols(t, []string{"id", "blob", "blob__qlsize", "id__qlcursor"}, tc.row)
+			defer db.Close()
+
+			rows, err := db.QueryContext(context.Background(), "select preview projection")
+			require.NoError(t, err)
+
+			defer rows.Close()
+
+			idCol := engine.Column{Name: "id", DataType: api.DataType_DATA_TYPE_INTEGER, RawType: "int8"}
+			blobCol := engine.Column{Name: "blob", DataType: api.DataType_DATA_TYPE_BINARY, RawType: "bytea"}
+			plan := &paginationPlan{
+				publicColumns:  []engine.Column{idCol, blobCol},
+				cursorColumns:  []engine.Column{idCol},
+				previewMode:    true,
+				previewMask:    []bool{false, true},
+				previewColumns: []int{1},
+			}
+			reader := newRowReader(
+				newTestPostgres(t),
+				engine.ReadRowsParams{ResourceName: "instances/i/databases/d/schemas/public/tables/t"},
+				plan,
+				buildResultColumnsForPlan(plan),
+				&api.RowIdentity{Source: api.RowIdentity_SOURCE_PRIMARY_KEY, ColumnNames: []string{"id"}},
+				1,
+				0,
+			)
+
+			scan, err := reader.collect(rows)
+			require.NoError(t, err)
+			require.Len(t, scan.rows, 1)
+
+			cell := scan.rows[0].GetValues()[1]
+
+			if tc.wantNull {
+				_, isNull := cell.GetValue().GetKind().(*api.TableValue_NullValue)
+				assert.True(t, isNull, "NULL bytea must stay a null value")
+			} else {
+				assert.Empty(t, cell.GetValue().GetBytesValue(), "preview must carry zero content bytes")
+			}
+
+			assert.Equal(t, tc.wantTruncated, cell.GetTruncated())
+			assert.Equal(t, tc.wantFullSize, cell.GetFullSizeBytes())
+
+			if tc.wantToken {
+				assert.NotEmpty(t, cell.GetFullValueToken())
+			} else {
+				assert.Empty(t, cell.GetFullValueToken())
+			}
+		})
+	}
 }
 
 func TestRowReaderCollectScansPublicRowsAndCursorValues(t *testing.T) {

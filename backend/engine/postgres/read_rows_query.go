@@ -11,7 +11,7 @@ import (
 // buildReadRowsQuery produces the SELECT statement that drives ReadRows.
 //
 // Projection layout (left-to-right): public columns (optionally truncated
-// for preview, with size companions appended by truncationProjection), then
+// for preview, with size companions appended by previewProjection), then
 // trailing un-truncated cursor projections — one per ORDER BY column —
 // aliased with cursorAliasSuffix so the row scanner can pick them out.
 //
@@ -28,7 +28,7 @@ func buildReadRowsQuery(params engine.ReadRowsParams, plan *paginationPlan) (str
 
 	for i, c := range plan.publicColumns {
 		if plan.previewMode && i < len(plan.previewMask) && plan.previewMask[i] {
-			projCols = append(projCols, truncationProjection(c, plan.maxCellChars))
+			projCols = append(projCols, previewProjection(c, plan.maxCellChars))
 			continue
 		}
 

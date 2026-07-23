@@ -92,6 +92,9 @@ const (
 	// Server default = PREVIEW.
 	CellValueMode_CELL_VALUE_MODE_UNSPECIFIED CellValueMode = 0
 	// Truncate large cells; carry truncation metadata + a token for ReadCellValue.
+	// Binary (bytea) cells ship zero content bytes in this mode — only
+	// full_size_bytes and a full_value_token; fetch content via ReadCellValue
+	// or use FULL mode.
 	CellValueMode_CELL_VALUE_MODE_PREVIEW CellValueMode = 1
 	// Always return the full cell value. Combine with selected_columns and
 	// small page_size to avoid blowups.
@@ -1462,7 +1465,8 @@ type ReadRowsRequest struct {
 	// Optional. Per-cell preview cap. 0 = server default (8 KiB), hard cap 1 MiB.
 	// For text/json/xml the value is interpreted as a character ceiling
 	// (PostgreSQL substring is character-based); resulting wire bytes may be
-	// up to 4× this for multi-byte UTF-8. Byte-exact for bytea.
+	// up to 4× this for multi-byte UTF-8. Ignored for bytea under PREVIEW:
+	// bytea previews always ship zero content bytes.
 	MaxCellBytes int32 `protobuf:"varint,9,opt,name=max_cell_bytes,json=maxCellBytes,proto3" json:"max_cell_bytes,omitempty"`
 	// Optional. Per-response wire-byte cap. 0 = server default (8 MiB),
 	// hard cap 32 MiB. When hit mid-page the server stops adding rows and
@@ -2049,7 +2053,8 @@ type ReadCellValueRequest struct {
 	// Optional. Max bytes to return. 0 = server default (16 MiB), hard cap 64 MiB.
 	// For text/json/xml the value is interpreted as a character ceiling
 	// (PostgreSQL substring is character-based); resulting wire bytes may be
-	// up to 4× this for multi-byte UTF-8. Byte-exact for bytea.
+	// up to 4× this for multi-byte UTF-8. Ignored for bytea under PREVIEW:
+	// bytea previews always ship zero content bytes.
 	MaxBytes      int64 `protobuf:"varint,3,opt,name=max_bytes,json=maxBytes,proto3" json:"max_bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

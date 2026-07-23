@@ -514,6 +514,87 @@ func (s *RPCSuite) TestReadRows_CellTruncation() {
 	s.Equal(truncated.GetFullSizeBytes(), full.Msg.GetValue().GetFullSizeBytes())
 }
 
+func (s *RPCSuite) TestReadRows_ByteaPreviewShipsNoContent() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	targetDB, err := s.pgContainer.ConnectToDatabase(ctx, externalDBName)
+	s.Require().NoError(err)
+	s.T().Cleanup(func() { s.Require().NoError(targetDB.Close()) })
+
+	seed := make([]byte, 100*1024)
+	for i := range seed {
+		seed[i] = byte(i % 256)
+	}
+
+	_, err = targetDB.ExecContext(ctx, `
+		CREATE TABLE public.bytea_preview (id int PRIMARY KEY, blob bytea)
+	`)
+	s.Require().NoError(err)
+	s.T().Cleanup(func() {
+		_, cleanupErr := targetDB.ExecContext(context.Background(), "DROP TABLE IF EXISTS public.bytea_preview")
+		s.Require().NoError(cleanupErr)
+	})
+
+	_, err = targetDB.ExecContext(ctx, `
+		INSERT INTO public.bytea_preview (id, blob) VALUES (1, $1), (2, '\x'::bytea), (3, NULL)
+	`, seed)
+	s.Require().NoError(err)
+
+	idAsc := []*consolev1alpha1.RowOrder{
+		{Column: "id", Direction: consolev1alpha1.RowOrder_DIRECTION_ASC},
+	}
+
+	// PREVIEW (default mode): non-empty bytea must ship zero content
+	// bytes with size + token, empty stays untruncated, NULL stays NULL.
+	resp, err := s.tableDataClient.ReadRows(ctx, connect.NewRequest(&consolev1alpha1.ReadRowsRequest{
+		Name:    s.tableName("public", "bytea_preview"),
+		OrderBy: idAsc,
+	}))
+	s.Require().NoError(err)
+	s.Require().Len(resp.Msg.GetResultSet().GetRows(), 3)
+
+	rows := resp.Msg.GetResultSet().GetRows()
+
+	filled := rows[0].GetValues()[1]
+	s.Empty(filled.GetValue().GetBytesValue(), "PREVIEW bytea must carry no content bytes")
+	s.True(filled.GetTruncated())
+	s.Equal(int64(len(seed)), filled.GetFullSizeBytes())
+	s.Require().NotEmpty(filled.GetFullValueToken())
+
+	empty := rows[1].GetValues()[1]
+	s.Empty(empty.GetValue().GetBytesValue())
+	s.False(empty.GetTruncated(), "empty bytea is complete, not truncated")
+	s.Empty(empty.GetFullValueToken())
+
+	null := rows[2].GetValues()[1]
+	_, isNull := null.GetValue().GetKind().(*consolev1alpha1.TableValue_NullValue)
+	s.True(isNull, "NULL bytea must stay null")
+	s.False(null.GetTruncated())
+
+	// Token round-trips through ReadCellValue to the exact seeded bytes.
+	full, err := s.tableDataClient.ReadCellValue(ctx, connect.NewRequest(&consolev1alpha1.ReadCellValueRequest{
+		Name:           s.tableName("public", "bytea_preview"),
+		FullValueToken: filled.GetFullValueToken(),
+	}))
+	s.Require().NoError(err)
+	s.False(full.Msg.GetValue().GetTruncated())
+	s.Equal(seed, full.Msg.GetValue().GetValue().GetBytesValue())
+
+	// FULL mode still returns the bytes inline.
+	fullMode, err := s.tableDataClient.ReadRows(ctx, connect.NewRequest(&consolev1alpha1.ReadRowsRequest{
+		Name:          s.tableName("public", "bytea_preview"),
+		OrderBy:       idAsc,
+		CellValueMode: consolev1alpha1.CellValueMode_CELL_VALUE_MODE_FULL,
+	}))
+	s.Require().NoError(err)
+	s.Require().Len(fullMode.Msg.GetResultSet().GetRows(), 3)
+
+	inline := fullMode.Msg.GetResultSet().GetRows()[0].GetValues()[1]
+	s.False(inline.GetTruncated())
+	s.Equal(seed, inline.GetValue().GetBytesValue())
+}
+
 func (s *RPCSuite) TestReadRows_ResponseBudget_StopsEarly() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

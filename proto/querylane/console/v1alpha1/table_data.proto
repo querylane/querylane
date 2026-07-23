@@ -57,6 +57,9 @@ enum CellValueMode {
   // Server default = PREVIEW.
   CELL_VALUE_MODE_UNSPECIFIED = 0;
   // Truncate large cells; carry truncation metadata + a token for ReadCellValue.
+  // Binary (bytea) cells ship zero content bytes in this mode — only
+  // full_size_bytes and a full_value_token; fetch content via ReadCellValue
+  // or use FULL mode.
   CELL_VALUE_MODE_PREVIEW = 1;
   // Always return the full cell value. Combine with selected_columns and
   // small page_size to avoid blowups.
@@ -375,7 +378,8 @@ message ReadRowsRequest {
   // Optional. Per-cell preview cap. 0 = server default (8 KiB), hard cap 1 MiB.
   // For text/json/xml the value is interpreted as a character ceiling
   // (PostgreSQL substring is character-based); resulting wire bytes may be
-  // up to 4× this for multi-byte UTF-8. Byte-exact for bytea.
+  // up to 4× this for multi-byte UTF-8. Ignored for bytea under PREVIEW:
+  // bytea previews always ship zero content bytes.
   int32 max_cell_bytes = 9 [
     (google.api.field_behavior) = OPTIONAL,
     (buf.validate.field).int32 = {
@@ -536,7 +540,8 @@ message ReadCellValueRequest {
   // Optional. Max bytes to return. 0 = server default (16 MiB), hard cap 64 MiB.
   // For text/json/xml the value is interpreted as a character ceiling
   // (PostgreSQL substring is character-based); resulting wire bytes may be
-  // up to 4× this for multi-byte UTF-8. Byte-exact for bytea.
+  // up to 4× this for multi-byte UTF-8. Ignored for bytea under PREVIEW:
+  // bytea previews always ship zero content bytes.
   int64 max_bytes = 3 [
     (google.api.field_behavior) = OPTIONAL,
     (buf.validate.field).int64 = {

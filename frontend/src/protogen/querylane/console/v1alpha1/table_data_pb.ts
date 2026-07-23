@@ -780,7 +780,8 @@ export type ReadRowsRequest = Message<"querylane.console.v1alpha1.ReadRowsReques
    * Optional. Per-cell preview cap. 0 = server default (8 KiB), hard cap 1 MiB.
    * For text/json/xml the value is interpreted as a character ceiling
    * (PostgreSQL substring is character-based); resulting wire bytes may be
-   * up to 4× this for multi-byte UTF-8. Byte-exact for bytea.
+   * up to 4× this for multi-byte UTF-8. Ignored for bytea under PREVIEW:
+   * bytea previews always ship zero content bytes.
    *
    * @generated from field: int32 max_cell_bytes = 9;
    */
@@ -1073,7 +1074,8 @@ export type ReadCellValueRequest = Message<"querylane.console.v1alpha1.ReadCellV
    * Optional. Max bytes to return. 0 = server default (16 MiB), hard cap 64 MiB.
    * For text/json/xml the value is interpreted as a character ceiling
    * (PostgreSQL substring is character-based); resulting wire bytes may be
-   * up to 4× this for multi-byte UTF-8. Byte-exact for bytea.
+   * up to 4× this for multi-byte UTF-8. Ignored for bytea under PREVIEW:
+   * bytea previews always ship zero content bytes.
    *
    * @generated from field: int64 max_bytes = 3;
    */
@@ -1163,6 +1165,9 @@ export enum CellValueMode {
 
   /**
    * Truncate large cells; carry truncation metadata + a token for ReadCellValue.
+   * Binary (bytea) cells ship zero content bytes in this mode — only
+   * full_size_bytes and a full_value_token; fetch content via ReadCellValue
+   * or use FULL mode.
    *
    * @generated from enum value: CELL_VALUE_MODE_PREVIEW = 1;
    */
