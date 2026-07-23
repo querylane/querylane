@@ -11,12 +11,22 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
+  type ComponentProps,
   type ClipboardEvent as ReactClipboardEvent,
   type ReactNode,
   StrictMode,
 } from "react";
 import type { DefaultColumnOptions, Renderers } from "react-data-grid";
-import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  test,
+  vi,
+} from "vitest";
 import {
   EXPAND_COLUMN_KEY,
   fallbackRowKey,
@@ -33,6 +43,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 import {
   ReadRowsResponseSchema,
+  RowOrder_Direction,
   RowPredicate_Operator,
   TableCellSchema,
   TableResultColumnSchema,
@@ -52,6 +63,12 @@ const FILTER_BUTTON_RE = /Filter/;
 const DELETE_BUTTON_RE = /delete/i;
 const EDIT_BUTTON_RE = /edit/i;
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
+
+type TableDataGridProps = ComponentProps<typeof TableDataGrid>;
+type ControlledGridStateProp = Extract<
+  keyof TableDataGridProps,
+  `${string}Search` | `on${string}SearchChange`
+>;
 
 const tableApi = vi.hoisted(() => ({
   useListTableColumnsQuery: vi.fn(),
@@ -87,11 +104,6 @@ interface MockGridColumn {
 interface MockGridProps {
   columns?: MockGridColumn[];
   defaultColumnOptions?: DefaultColumnOptions<GridRow, unknown>;
-  onActivePositionChange?: (args: {
-    column: MockGridColumn | undefined;
-    row: GridRow | undefined;
-    rowIdx: number;
-  }) => void;
   onCellContextMenu?: (
     args: { column: MockGridColumn; row: GridRow; rowIdx: number },
     event: {
@@ -466,6 +478,10 @@ describe("TableDataGrid query setup", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
+  it("keeps URL-controlled state out of the public grid API", () => {
+    expectTypeOf<ControlledGridStateProp>().toEqualTypeOf<never>();
+  });
+
   it("disables column validation with a concrete input instead of skipToken", () => {
     const tableName =
       "instances/prod/databases/app/schemas/public/tables/customers";
@@ -522,16 +538,18 @@ describe("TableDataGrid query setup", () => {
     const tableName =
       "instances/prod/databases/app/schemas/public/tables/customers";
 
-    const { rerender } = render(
-      <TableDataGrid name={tableName} selectedRowsSearch={undefined} />
-    );
+    render(<TableDataGrid name={tableName} />);
     const firstProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
+    if (!firstProps?.onSelectedRowsChange) {
+      throw new Error("Expected the data grid to expose row selection.");
+    }
 
-    rerender(<TableDataGrid name={tableName} selectedRowsSearch="row-0" />);
+    act(() => firstProps.onSelectedRowsChange?.(new Set(["row-0"])));
     const secondProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
 
     expect(firstProps).toBeDefined();
     expect(secondProps).toBeDefined();
+    expect(secondProps?.selectedRows).toEqual(new Set(["row-0"]));
     expect(secondProps?.defaultColumnOptions).toBe(
       firstProps?.defaultColumnOptions
     );
@@ -1574,13 +1592,13 @@ describe("TableDataGrid column layout", () => {
   });
 });
 
-describe("TableDataGrid URL state", () => {
+describe("TableDataGrid local state", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
-  it("keeps page size interactive when no router callback owns the URL state", async () => {
+  it("keeps page size interactive in local state", async () => {
     const user = userEvent.setup();
     seedRowsQuery(3);
 
@@ -1600,7 +1618,7 @@ describe("TableDataGrid URL state", () => {
     });
   });
 
-  it("keeps frozen columns interactive when no router callback owns the URL state", async () => {
+  it("keeps frozen columns interactive in local state", async () => {
     const user = userEvent.setup();
     seedRowsQuery(3);
 
@@ -1624,102 +1642,20 @@ describe("TableDataGrid URL state", () => {
     });
   });
 
-  it("emits URL resets once and only after navigation in StrictMode", async () => {
-    const onOpenRowSearchChange = vi.fn();
-    const onSelectedRowsSearchChange = vi.fn();
+  it("clears local selection and the row drawer after navigation", async () => {
+    const user = userEvent.setup();
     seedRowsQuery(3);
 
     const { rerender } = render(
       <StrictMode>
-        <TableDataGrid
-          name="instances/prod/databases/app/schemas/public/tables/customers"
-          onOpenRowSearchChange={onOpenRowSearchChange}
-          onSelectedRowsSearchChange={onSelectedRowsSearchChange}
-          openRowSearch="row-0"
-          selectedRowsSearch="row-0"
-        />
+        <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
       </StrictMode>
     );
-
-    expect(onOpenRowSearchChange).not.toHaveBeenCalled();
-    expect(onSelectedRowsSearchChange).not.toHaveBeenCalled();
-
-    rerender(
-      <StrictMode>
-        <TableDataGrid
-          name="instances/prod/databases/app/schemas/public/tables/orders"
-          onOpenRowSearchChange={onOpenRowSearchChange}
-          onSelectedRowsSearchChange={onSelectedRowsSearchChange}
-          openRowSearch="row-0"
-          selectedRowsSearch="row-0"
-        />
-      </StrictMode>
-    );
-
-    await waitFor(() => {
-      expect(onOpenRowSearchChange).toHaveBeenCalledTimes(1);
-      expect(onSelectedRowsSearchChange).toHaveBeenCalledTimes(1);
-    });
-    expect(onOpenRowSearchChange).toHaveBeenCalledWith(undefined);
-    expect(onSelectedRowsSearchChange).toHaveBeenCalledWith(undefined);
-  });
-
-  it("emits controlled state for page size, row selection, selected cell, open row, and frozen columns", async () => {
-    const user = userEvent.setup();
-    const onCellSearchChange = vi.fn();
-    const onFrozenColumnsSearchChange = vi.fn();
-    const onOpenRowSearchChange = vi.fn();
-    const onPageSizeSearchChange = vi.fn();
-    const onSelectedRowsSearchChange = vi.fn();
-    seedRowsQuery(3);
-
-    render(
-      <TableDataGrid
-        name="instances/prod/databases/app/schemas/public/tables/customers"
-        onCellSearchChange={onCellSearchChange}
-        onFrozenColumnsSearchChange={onFrozenColumnsSearchChange}
-        onOpenRowSearchChange={onOpenRowSearchChange}
-        onPageSizeSearchChange={onPageSizeSearchChange}
-        onSelectedRowsSearchChange={onSelectedRowsSearchChange}
-      />
-    );
-
     const gridProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
-    const firstRow = gridProps?.rows?.[0];
-    const emailColumn = gridProps?.columns?.find(
-      (column) => column.key === "email"
-    );
-    if (
-      !(
-        gridProps?.onSelectedRowsChange &&
-        gridProps.onActivePositionChange &&
-        firstRow &&
-        emailColumn
-      )
-    ) {
-      throw new Error("Expected grid selection props.");
+    if (!gridProps?.onSelectedRowsChange) {
+      throw new Error("Expected the data grid to expose row selection.");
     }
-
-    gridProps.onSelectedRowsChange(new Set(["row-0"]));
-    gridProps.onActivePositionChange({
-      column: emailColumn,
-      row: firstRow,
-      rowIdx: 0,
-    });
-
-    const freezeButton = screen.getByRole("button", {
-      name: "Open options for column email",
-    });
-    await user.click(freezeButton);
-    await user.click(screen.getByRole("menuitem", { name: "Freeze column" }));
-
-    expect(onFrozenColumnsSearchChange).toHaveBeenCalledWith("email");
-
-    await user.click(screen.getByRole("combobox"));
-    await user.click(screen.getByRole("option", { name: "100" }));
-
-    expect(onPageSizeSearchChange).toHaveBeenCalledWith(100);
-
+    act(() => gridProps.onSelectedRowsChange?.(new Set(["row-0"])));
     const firstExpandButton = screen
       .getAllByRole("button", { name: "Expand row" })
       .at(0);
@@ -1728,27 +1664,98 @@ describe("TableDataGrid URL state", () => {
     }
     await user.click(firstExpandButton);
 
-    expect(onSelectedRowsSearchChange).toHaveBeenCalledWith("row-0");
-    expect(onCellSearchChange).toHaveBeenCalledWith("row-0:email");
-    expect(onOpenRowSearchChange).toHaveBeenCalledWith("row-0");
+    expect(screen.getByText("1 selected")).toBeTruthy();
+    expect(
+      screen.getByRole("dialog", { name: "public.customers" })
+    ).toBeTruthy();
 
-    gridProps.onActivePositionChange({
-      column: undefined,
-      row: firstRow,
-      rowIdx: 0,
+    rerender(
+      <StrictMode>
+        <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/orders" />
+      </StrictMode>
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText("1 selected")).toBeNull();
+      expect(
+        screen.queryByRole("dialog", { name: "public.orders" })
+      ).toBeNull();
     });
-    expect(onCellSearchChange).toHaveBeenLastCalledWith(undefined);
+  });
+
+  it("keeps filters and sorting local to the grid", async () => {
+    const user = userEvent.setup();
+    seedRowsQuery(3);
+    tableApi.useListTableColumnsQuery.mockReturnValue({
+      data: create(ListTableColumnsResponseSchema, {
+        columns: [
+          create(ColumnSchema, {
+            columnName: "email",
+            dataType: DataType.STRING,
+          }),
+        ],
+      }),
+      error: null,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Filter value" }),
+      "alice@example.com{Enter}"
+    );
+    await user.click(screen.getByRole("button", { name: "Sort" }));
+    await user.click(screen.getByRole("combobox", { name: "Add sort column" }));
+    await user.click(screen.getByRole("option", { name: "email" }));
+
+    await waitFor(() => {
+      const request = tableDataApi.useReadRowsQuery.mock.calls.at(-1)?.[0];
+      expect(request.filter?.node.case).toBe("group");
+      expect(request.filter?.node.value).toMatchObject({
+        children: [
+          {
+            node: {
+              case: "predicate",
+              value: {
+                column: "email",
+                operator: RowPredicate_Operator.EQUAL,
+                values: [
+                  {
+                    kind: {
+                      case: "stringValue",
+                      value: "alice@example.com",
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      });
+      expect(request.orderBy).toMatchObject([
+        { column: "email", direction: RowOrder_Direction.ASC },
+      ]);
+    });
+    expect(screen.getByRole("button", { name: "Filter 1" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sort 1" })).toBeTruthy();
   });
 
   it("keeps selected-row actions limited to copy and export", () => {
     seedRowsQuery(3);
 
     render(
-      <TableDataGrid
-        name="instances/prod/databases/app/schemas/public/tables/customers"
-        selectedRowsSearch="row-0"
-      />
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
     );
+    const gridProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
+    if (!gridProps?.onSelectedRowsChange) {
+      throw new Error("Expected the data grid to expose row selection.");
+    }
+    act(() => gridProps.onSelectedRowsChange?.(new Set(["row-0"])));
 
     expect(screen.getByText("1 selected")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
@@ -1840,10 +1847,34 @@ describe("TableDataGrid error recovery", () => {
     await waitFor(() => expect(refetch).toHaveBeenCalledOnce());
   });
 
-  test("shows every invalid filter error and lets users clear filters", async () => {
+  test("lets users clear a local filter invalidated by a schema change", async () => {
     const user = userEvent.setup();
-    const onFilterSearchChange = vi.fn();
     seedRowsQuery(1);
+    tableApi.useListTableColumnsQuery.mockReturnValue({
+      data: create(ListTableColumnsResponseSchema, {
+        columns: [
+          create(ColumnSchema, {
+            columnName: "email",
+            dataType: DataType.STRING,
+          }),
+        ],
+      }),
+      error: null,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    const grid = (
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+    const { rerender } = render(grid);
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Filter value" }),
+      "alice@example.com{Enter}"
+    );
+    expect(screen.getByRole("button", { name: "Filter 1" })).toBeTruthy();
+
     tableApi.useListTableColumnsQuery.mockReturnValue({
       data: create(ListTableColumnsResponseSchema, {
         columns: [
@@ -1857,30 +1888,26 @@ describe("TableDataGrid error recovery", () => {
       isError: false,
       refetch: vi.fn(),
     });
-
-    render(
-      <TableDataGrid
-        filterSearch={JSON.stringify({
-          l: "and",
-          r: [
-            { c: "active", i: "active", o: "eq", v: "maybe" },
-            { c: "missing", i: "missing", o: "eq", v: "x" },
-          ],
-        })}
-        name="instances/prod/databases/app/schemas/public/tables/customers"
-        onFilterSearchChange={onFilterSearchChange}
-      />
+    rerender(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
     );
 
     expect(
       screen.getByRole("heading", { name: "Filter not applied" })
     ).toBeTruthy();
-    expect(screen.getByText("active expects true or false.")).toBeTruthy();
-    expect(screen.getByText("missing is not available.")).toBeTruthy();
+    expect(screen.getByText("email is not available.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Export" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Clear filters" }));
 
-    expect(onFilterSearchChange).toHaveBeenCalledWith(undefined);
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("heading", { name: "Filter not applied" })
+      ).toBeNull();
+      expect(screen.getByRole("button", { name: "Filter" })).toBeTruthy();
+      const request = tableDataApi.useReadRowsQuery.mock.calls.at(-1)?.[0];
+      expect(request).toBeDefined();
+      expect(request?.filter).toBeUndefined();
+    });
   });
 });

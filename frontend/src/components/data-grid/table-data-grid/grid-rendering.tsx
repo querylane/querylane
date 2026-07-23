@@ -7,7 +7,6 @@ import {
   type Column,
   DataGrid,
   type DefaultColumnOptions,
-  type PositionChangeArgs,
   type Renderers,
   type SortColumn,
 } from "react-data-grid";
@@ -92,7 +91,6 @@ interface GridBodyProps {
   flush?: boolean;
   hasActiveFilter: boolean;
   isLoading: boolean;
-  onActivePositionChange: (args: PositionChangeArgs<GridRow>) => void;
   onCellContextMenu: (
     args: CellMouseArgs<GridRow>,
     event: CellMouseEvent
@@ -117,7 +115,6 @@ function GridBody({
   onCellContextMenu,
   onCellCopy,
   onColumnsReorder,
-  onActivePositionChange,
   onSelectedRowsChange,
   onSortChange,
   rows,
@@ -144,7 +141,6 @@ function GridBody({
         // every visible-page cell and stall the explorer.
         enableVirtualization={true}
         headerRowHeight={36}
-        onActivePositionChange={onActivePositionChange}
         onCellContextMenu={onCellContextMenu}
         onCellCopy={onCellCopy}
         onColumnsReorder={onColumnsReorder}

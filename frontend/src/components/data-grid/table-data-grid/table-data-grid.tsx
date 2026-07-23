@@ -15,7 +15,6 @@ import {
   type CellMouseArgs,
   type CellMouseEvent,
   type Column,
-  type PositionChangeArgs,
   SELECT_COLUMN_KEY,
   SelectColumn,
   type SortColumn,
@@ -94,50 +93,16 @@ import { RowIdentity_Source } from "@/protogen/querylane/console/v1alpha1/table_
 
 import "@/components/data-grid/table-data-grid/data-grid-theme.css";
 
-type TableSearchControlProps =
-  | {
-      filterSearch?: never;
-      onFilterSearchChange?: never;
-    }
-  | {
-      filterSearch: string | undefined;
-      onFilterSearchChange: (next: string | undefined) => void;
-    };
-
-type TableSortControlProps =
-  | {
-      onSortSearchChange?: never;
-      sortSearch?: never;
-    }
-  | {
-      onSortSearchChange: (next: string | undefined) => void;
-      sortSearch: string | undefined;
-    };
-
-// These "*Search" props are a controlled-state escape hatch for callers that
-// intentionally own grid state. Data Explorer production wiring omits them:
-// table filters, sort, selected rows, page size, frozen columns, and row drawer
-// state stay local per docs/adr/frontend-url-state-policy.md.
-type TableDataGridProps = {
+interface TableDataGridProps {
   children?: (state: {
     grid: ReactNode;
     lastFetchedLabel: string;
   }) => ReactNode;
   foreignKeyReferences?: readonly TableForeignKeyReference[] | undefined;
-  frozenColumnsSearch?: string | undefined;
   initialPageSize?: number | undefined;
   name: string;
-  onCellSearchChange?: (next: string | undefined) => void;
-  onFrozenColumnsSearchChange?: (next: string | undefined) => void;
-  onOpenRowSearchChange?: (next: string | undefined) => void;
-  onPageSizeSearchChange?: (next: number | undefined) => void;
   renderOpenReferencedTableLink?: RenderOpenReferencedTableLink | undefined;
-  onSelectedRowsSearchChange?: (next: string | undefined) => void;
-  openRowSearch?: string | undefined;
-  pageSizeSearch?: number | undefined;
-  selectedRowsSearch?: string | undefined;
-} & TableSearchControlProps &
-  TableSortControlProps;
+}
 
 interface ContextMenuState {
   columnKey: string;
@@ -148,41 +113,6 @@ interface ContextMenuState {
 }
 
 const DEFAULT_PAGE_SIZE = 50;
-const noop = () => undefined;
-
-function decodeUrlList(value: string | undefined): string[] {
-  if (!value) {
-    return [];
-  }
-  return value.split(",").flatMap((part) => {
-    try {
-      const decoded = decodeURIComponent(part);
-      return decoded ? [decoded] : [];
-    } catch {
-      return [];
-    }
-  });
-}
-
-function encodeUrlList(values: Iterable<string>): string | undefined {
-  const encoded: string[] = [];
-  for (const value of values) {
-    if (value) {
-      encoded.push(encodeURIComponent(value));
-    }
-  }
-  return encoded.length > 0 ? encoded.join(",") : undefined;
-}
-
-function encodeSelectedCellSearch({
-  columnKey,
-  rowKey,
-}: {
-  columnKey: string;
-  rowKey: string;
-}): string {
-  return `${encodeURIComponent(rowKey)}:${encodeURIComponent(columnKey)}`;
-}
 
 function reportAutoRefreshError(error: unknown) {
   toast.error("Auto refresh failed", {
@@ -262,26 +192,6 @@ function useDataGridRefreshState({
   };
 }
 
-function useLocalSearchValue({
-  externalValue,
-  onExternalChange,
-}: {
-  externalValue: string | undefined;
-  onExternalChange: ((next: string | undefined) => void) | undefined;
-}) {
-  const [localValue, setLocalValue] = useState(externalValue);
-
-  function setValue(next: string | undefined) {
-    if (onExternalChange) {
-      onExternalChange(next);
-      return;
-    }
-    setLocalValue(next);
-  }
-
-  return [onExternalChange ? externalValue : localValue, setValue] as const;
-}
-
 function useResetSelectionOnNavigation({
   currentPageIndex,
   filterLogic,
@@ -307,8 +217,8 @@ function useResetSelectionOnNavigation({
 
   // Selection and the open record drawer are page-scoped: prior keys don't map
   // across page/sort changes. Compare committed navigation keys so StrictMode's
-  // mount-effect replay stays a no-op, and keep state/callback refs out of the
-  // navigation dependencies because the URL-sync wrappers change each render.
+  // mount-effect replay stays a no-op, and keep the reset callback out of the
+  // navigation dependencies so selection changes do not retrigger the effect.
   useEffect(
     function resetSelectionOnPageChange() {
       if (previousNavigationStateKeyRef.current === navigationStateKey) {
@@ -321,157 +231,22 @@ function useResetSelectionOnNavigation({
   );
 }
 
-function useSelectedRowsUrlState({
-  onSelectedRowsSearchChange,
-  selectedRowsSearch,
-}: {
-  onSelectedRowsSearchChange: (next: string | undefined) => void;
-  selectedRowsSearch: string | undefined;
-}) {
-  const [selectedRowsState, setSelectedRowsState] = useState<{
-    rows: ReadonlySet<string>;
-    search: string | undefined;
-  }>(() => ({
-    rows: new Set(decodeUrlList(selectedRowsSearch)),
-    search: selectedRowsSearch,
-  }));
-
-  if (selectedRowsState.search !== selectedRowsSearch) {
-    setSelectedRowsState({
-      rows: new Set(decodeUrlList(selectedRowsSearch)),
-      search: selectedRowsSearch,
-    });
-  }
-
-  function setSelectedRows(next: ReadonlySet<string>) {
-    setSelectedRowsState({ rows: next, search: selectedRowsSearch });
-    onSelectedRowsSearchChange(encodeUrlList(next));
-  }
-
-  return {
-    selectedRows: selectedRowsState.rows,
-    setSelectedRows,
-  };
-}
-
-function useFrozenColumnsUrlState({
-  frozenColumnsSearch,
-  onFrozenColumnsSearchChange,
-}: {
-  frozenColumnsSearch: string | undefined;
-  onFrozenColumnsSearchChange: (next: string | undefined) => void;
-}) {
-  const [frozenColumnsState, setFrozenColumnsState] = useState<{
-    columns: ReadonlySet<string>;
-    search: string | undefined;
-  }>(() => ({
-    columns: new Set(decodeUrlList(frozenColumnsSearch)),
-    search: frozenColumnsSearch,
-  }));
-
-  if (frozenColumnsState.search !== frozenColumnsSearch) {
-    setFrozenColumnsState({
-      columns: new Set(decodeUrlList(frozenColumnsSearch)),
-      search: frozenColumnsSearch,
-    });
-  }
-
-  function setFrozenColumns(next: ReadonlySet<string>) {
-    setFrozenColumnsState({ columns: next, search: frozenColumnsSearch });
-    onFrozenColumnsSearchChange(encodeUrlList(next));
-  }
-
-  return {
-    frozenColumns: frozenColumnsState.columns,
-    setFrozenColumns,
-  };
-}
-
-function useOpenRowUrlState({
-  onOpenRowSearchChange,
-  openRowSearch,
-  rows,
-}: {
-  onOpenRowSearchChange: (next: string | undefined) => void;
-  openRowSearch: string | undefined;
-  rows: GridRow[];
-}) {
-  const [openRowState, setOpenRowState] = useState<{
-    rowKey: string | null;
-    search: string | undefined;
-  }>(() => ({
-    rowKey: openRowSearch ?? null,
-    search: openRowSearch,
-  }));
-
-  if (openRowState.search !== openRowSearch) {
-    setOpenRowState({
-      rowKey: openRowSearch ?? null,
-      search: openRowSearch,
-    });
-  }
-
+function useOpenRowState(rows: GridRow[]) {
+  const [openRowKey, setOpenRowKey] = useState<string | null>(null);
   const openRowIndex =
-    openRowState.rowKey === null
+    openRowKey === null
       ? null
-      : rows.findIndex((row) => row[ROW_KEY_FIELD] === openRowState.rowKey);
+      : rows.findIndex((row) => row[ROW_KEY_FIELD] === openRowKey);
   const resolvedOpenRowIndex =
     openRowIndex !== null && openRowIndex >= 0 ? openRowIndex : null;
 
-  function rowKeyAt(index: number | null) {
-    return index === null ? undefined : rows[index]?.[ROW_KEY_FIELD];
-  }
-
   function setOpenRowIndex(next: number | null) {
-    const nextRowKey = rowKeyAt(next);
-    setOpenRowState((previous) => {
-      const rowKey = nextRowKey ?? null;
-      if (previous.rowKey === rowKey && previous.search === openRowSearch) {
-        return previous;
-      }
-      return { rowKey, search: openRowSearch };
-    });
-    onOpenRowSearchChange(nextRowKey);
+    setOpenRowKey(next === null ? null : (rows[next]?.[ROW_KEY_FIELD] ?? null));
   }
 
   return {
     openRowIndex: resolvedOpenRowIndex,
     setOpenRowIndex,
-  };
-}
-
-function usePageSizeUrlState({
-  initialPageSize,
-  onPageSizeSearchChange,
-  pageSizeSearch,
-}: {
-  initialPageSize: number;
-  onPageSizeSearchChange: (next: number | undefined) => void;
-  pageSizeSearch: number | undefined;
-}) {
-  const [pageSizeState, setPageSizeState] = useState<{
-    pageSize: number;
-    search: number | undefined;
-  }>(() => ({
-    pageSize: pageSizeSearch ?? initialPageSize,
-    search: pageSizeSearch,
-  }));
-
-  if (pageSizeState.search !== pageSizeSearch) {
-    setPageSizeState({
-      pageSize: pageSizeSearch ?? initialPageSize,
-      search: pageSizeSearch,
-    });
-  }
-
-  function setPageSize(next: number) {
-    setPageSizeState({ pageSize: next, search: pageSizeSearch });
-    onPageSizeSearchChange(next === DEFAULT_PAGE_SIZE ? undefined : next);
-  }
-
-  return {
-    pageSize: pageSizeState.pageSize,
-    setPageSize,
   };
 }
 
@@ -671,7 +446,6 @@ interface TableDataGridChromeProps {
   invalidFilterRules: Array<{ id: string; message: string }>;
   isColumnLayoutCustomized: boolean;
   lastFetchedLabel: string;
-  onActivePositionChange: (args: PositionChangeArgs<GridRow>) => void;
   onCellContextMenu: (
     args: CellMouseArgs<GridRow>,
     event: CellMouseEvent
@@ -743,7 +517,6 @@ function TableDataGridChrome({
   onPageSizeChange,
   onPrev,
   onRefresh,
-  onActivePositionChange,
   onSelectedRowsChange,
   onSortChange,
   onToggleExpanded,
@@ -813,7 +586,6 @@ function TableDataGridChrome({
           flush={isFlush}
           hasActiveFilter={filterRules.length > 0}
           isLoading={state.gridLoading}
-          onActivePositionChange={onActivePositionChange}
           onCellContextMenu={onCellContextMenu}
           onCellCopy={onCellCopy}
           onColumnsReorder={onColumnsReorder}
@@ -1203,12 +975,10 @@ function TableDataGridContent({
 // TableDataGrid to keep the component itself readable.
 function buildCellInteractionHandlers({
   contextMenu,
-  onCellSearchChange,
   selectionActions,
   setContextMenu,
 }: {
   contextMenu: ContextMenuState | null;
-  onCellSearchChange: (next: string | undefined) => void;
   selectionActions: ReturnType<typeof useSelectionActions>;
   setContextMenu: (next: ContextMenuState | null) => void;
 }) {
@@ -1231,23 +1001,6 @@ function buildCellInteractionHandlers({
       row: args.row,
       top: event.clientY,
     });
-  }
-
-  function handleActivePositionChange(args: PositionChangeArgs<GridRow>) {
-    if (
-      !(args.row && args.column) ||
-      args.column.key === SELECT_COLUMN_KEY ||
-      args.column.key === EXPAND_COLUMN_KEY
-    ) {
-      onCellSearchChange(undefined);
-      return;
-    }
-    onCellSearchChange(
-      encodeSelectedCellSearch({
-        columnKey: args.column.key,
-        rowKey: args.row[ROW_KEY_FIELD],
-      })
-    );
   }
 
   function handleContextMenuCopyCell() {
@@ -1276,7 +1029,6 @@ function buildCellInteractionHandlers({
     handleContextMenuCopyCell,
     handleContextMenuCopyRow,
     handleContextMenuCopyRowAsSql,
-    handleActivePositionChange,
   };
 }
 
@@ -1284,38 +1036,13 @@ function TableDataGrid({
   children,
   foreignKeyReferences = NO_FOREIGN_KEY_REFERENCES,
   name,
-  filterSearch,
-  frozenColumnsSearch,
   initialPageSize = DEFAULT_PAGE_SIZE,
-  onCellSearchChange = noop,
-  onFilterSearchChange,
-  onFrozenColumnsSearchChange = noop,
-  onOpenRowSearchChange = noop,
-  onPageSizeSearchChange = noop,
   renderOpenReferencedTableLink,
-  onSelectedRowsSearchChange = noop,
-  onSortSearchChange,
-  openRowSearch,
-  pageSizeSearch,
-  selectedRowsSearch,
-  sortSearch,
 }: TableDataGridProps) {
   const tableQualifiedName = parseTableQualifiedName(name);
-  const [effectiveFilterSearch, setEffectiveFilterSearch] = useLocalSearchValue(
-    {
-      externalValue: filterSearch,
-      onExternalChange: onFilterSearchChange,
-    }
-  );
-  const [effectiveSortSearch, setEffectiveSortSearch] = useLocalSearchValue({
-    externalValue: sortSearch,
-    onExternalChange: onSortSearchChange,
-  });
-  const { pageSize, setPageSize } = usePageSizeUrlState({
-    initialPageSize,
-    onPageSizeSearchChange,
-    pageSizeSearch,
-  });
+  const [filterSearch, setFilterSearch] = useState<string>();
+  const [sortSearch, setSortSearch] = useState<string>();
+  const [pageSize, setPageSize] = useState(initialPageSize);
   const {
     controller,
     error: queryStateError,
@@ -1326,13 +1053,13 @@ function TableDataGrid({
     refetch,
     rowsQuery,
   } = useTableDataQuery({
-    filterSearch: effectiveFilterSearch,
+    filterSearch,
     name,
-    onFilterSearchChange: setEffectiveFilterSearch,
+    onFilterSearchChange: setFilterSearch,
     onPageSizeChange: setPageSize,
-    onSortSearchChange: setEffectiveSortSearch,
+    onSortSearchChange: setSortSearch,
     pageSize,
-    sortSearch: effectiveSortSearch,
+    sortSearch,
   });
   const {
     data,
@@ -1357,20 +1084,15 @@ function TableDataGrid({
   const isRefetchingRows = isPlaceholderData && !gridLoading;
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [isDataGridExpanded, setIsDataGridExpanded] = useState(false);
-  const { selectedRows, setSelectedRows } = useSelectedRowsUrlState({
-    onSelectedRowsSearchChange,
-    selectedRowsSearch,
-  });
+  const [selectedRows, setSelectedRows] = useState<ReadonlySet<string>>(
+    () => new Set()
+  );
 
   const resultColumns = data?.resultSet?.columns ?? EMPTY_RESULT_COLUMNS;
   const resultRows = data?.resultSet?.rows ?? EMPTY_RESULT_ROWS;
   const rowCount = data?.resultSet?.rowCount;
   const rows = buildGridRows(resultRows, resultColumns);
-  const { openRowIndex, setOpenRowIndex } = useOpenRowUrlState({
-    onOpenRowSearchChange,
-    openRowSearch,
-    rows,
-  });
+  const { openRowIndex, setOpenRowIndex } = useOpenRowState(rows);
 
   useResetSelectionOnNavigation({
     currentPageIndex: controller.currentPageIndex,
@@ -1389,10 +1111,9 @@ function TableDataGrid({
     sortColumns: controller.sortColumns,
   });
 
-  const { frozenColumns, setFrozenColumns } = useFrozenColumnsUrlState({
-    frozenColumnsSearch,
-    onFrozenColumnsSearchChange,
-  });
+  const [frozenColumns, setFrozenColumns] = useState<ReadonlySet<string>>(
+    () => new Set()
+  );
 
   const columnLayout = useTableColumnLayout({
     columns: resultColumns,
@@ -1442,7 +1163,6 @@ function TableDataGrid({
 
   const cellHandlers = buildCellInteractionHandlers({
     contextMenu,
-    onCellSearchChange,
     selectionActions,
     setContextMenu,
   });
@@ -1461,10 +1181,10 @@ function TableDataGrid({
     next: TableFilterRule[],
     nextLogic: TableFilterLogic = filterLogic
   ) =>
-    setEffectiveFilterSearch(
+    setFilterSearch(
       serializeTableFilterSearch({ logic: nextLogic, rules: next })
     );
-  const clearFilters = () => setEffectiveFilterSearch(undefined);
+  const clearFilters = () => setFilterSearch(undefined);
   const chromeProps: TableDataGridChromeProps = {
     columnOrder: columnLayout.columnOrder,
     columns,
@@ -1490,7 +1210,6 @@ function TableDataGrid({
     onPageSizeChange: controller.setPageSize,
     onPrev: controller.goPrev,
     onRefresh: refreshState.refreshNow,
-    onActivePositionChange: cellHandlers.handleActivePositionChange,
     onSelectedRowsChange: setSelectedRows,
     onSortChange: handleSortChange,
     onToggleExpanded: () => setIsDataGridExpanded(true),
