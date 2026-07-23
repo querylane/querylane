@@ -312,6 +312,25 @@ test("roles: mock roles table supports filtering without backend calls", {
   await expect(page.getByText("app_user")).toBeHidden();
 });
 
+test("roles: sortable header announces the current sort direction", {
+  tag: ["@feat:instances", "@flow:query"],
+}, async ({ page }) => {
+  await mockReadyAppWithDeletableInstance(page);
+  await mockRoles(page);
+  await page.goto("/instances/production/roles");
+
+  const ascendingHeader = page.getByRole("button", {
+    name: "Role, sorted ascending",
+  });
+  await expect(ascendingHeader).toBeVisible();
+
+  await ascendingHeader.click();
+
+  await expect(
+    page.getByRole("button", { name: "Role, sorted descending" })
+  ).toBeVisible();
+});
+
 test("roles: empty list renders role-specific empty state", {
   tag: ["@feat:instances", "@flow:query"],
 }, async ({ page }) => {
