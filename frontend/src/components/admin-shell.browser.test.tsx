@@ -2,6 +2,8 @@ import type { AnchorHTMLAttributes, ReactNode, Ref } from "react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
+import { SetupTestProvider } from "@/__tests__/setup-test-provider";
+import { createSetupContextValue } from "@/__tests__/setup-test-utils";
 import { AdminHeader } from "@/components/admin-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DatabaseLayout } from "@/components/database-layout";
@@ -13,7 +15,6 @@ import {
 } from "@/components/querylane-ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useSetupStore } from "@/stores/setup-store";
 import { ThemeProvider } from "@/theme-provider";
 
 const INSTANCE_SELECTOR_NAME = /^Instance:/;
@@ -264,7 +265,6 @@ beforeEach(() => {
   };
   adminHeaderMockState.instances = undefined;
   adminHeaderMockState.selectedInstance = selectedInstance;
-  useSetupStore.setState({ showDegradedBanner: false });
 });
 
 function renderAdminShell() {
@@ -353,8 +353,6 @@ function renderAdminShellAtViewport({ width }: { width: 320 | 768 }) {
 }
 
 function renderDatabaseLayoutWithDegradedBanner() {
-  useSetupStore.setState({ showDegradedBanner: true });
-
   render(
     <ThemeProvider
       defaultTheme="dark"
@@ -366,11 +364,15 @@ function renderDatabaseLayoutWithDegradedBanner() {
           data-testid="admin-shell-visual-root"
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
-            <DatabaseLayout page="database.overview">
-              <div className="rounded-xl border border-border bg-card p-6">
-                <h1 className="font-semibold text-2xl">Database overview</h1>
-              </div>
-            </DatabaseLayout>
+            <SetupTestProvider
+              value={createSetupContextValue({ showDegradedBanner: true })}
+            >
+              <DatabaseLayout page="database.overview">
+                <div className="rounded-xl border border-border bg-card p-6">
+                  <h1 className="font-semibold text-2xl">Database overview</h1>
+                </div>
+              </DatabaseLayout>
+            </SetupTestProvider>
           </div>
         </div>
       </TooltipProvider>
@@ -390,11 +392,13 @@ function renderDatabaseLayoutExplorerMode() {
           data-testid="admin-shell-visual-root"
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
-            <DatabaseLayout page="database.explorer">
-              <div className="rounded-xl border border-border bg-card p-6">
-                <h1 className="font-semibold text-2xl">Explorer detail</h1>
-              </div>
-            </DatabaseLayout>
+            <SetupTestProvider value={createSetupContextValue()}>
+              <DatabaseLayout page="database.explorer">
+                <div className="rounded-xl border border-border bg-card p-6">
+                  <h1 className="font-semibold text-2xl">Explorer detail</h1>
+                </div>
+              </DatabaseLayout>
+            </SetupTestProvider>
           </div>
         </div>
       </TooltipProvider>

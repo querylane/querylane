@@ -12,7 +12,6 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
-import { useShallow } from "zustand/react/shallow";
 import type { RoleDetailViewProps } from "@/components/console-pages/role-detail-model";
 import { RolePartialAccessAlert } from "@/components/console-pages/role-detail-shared";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -42,15 +41,12 @@ import type {
   AccessObjectType,
 } from "@/features/database-visualization/access-map-model";
 import { buildAccessMapModel } from "@/features/database-visualization/access-map-model";
-import {
-  useDatabaseVisualizationStore,
-  type VisualizationDirection,
-} from "@/features/database-visualization/database-visualization-store";
 import type {
   VisualizationEdge,
   VisualizationNavigation,
   VisualizationNode,
 } from "@/features/database-visualization/graph-model";
+import type { VisualizationDirection } from "@/features/database-visualization/visualization-types";
 import { assertNever } from "@/lib/assert-never";
 import { parseResourceLeafId } from "@/lib/console-resources";
 import {
@@ -454,15 +450,10 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
   const [visibleFacets, setVisibleFacets] = useState<AccessMapFacetVisibility>(
     DEFAULT_ACCESS_MAP_FACET_VISIBILITY
   );
-  const { direction, roleSelectedNodeId, setDirection, setRoleSelectedNodeId } =
-    useDatabaseVisualizationStore(
-      useShallow((state) => ({
-        direction: state.direction,
-        roleSelectedNodeId: state.roleSelectedNodeId,
-        setDirection: state.setDirection,
-        setRoleSelectedNodeId: state.setRoleSelectedNodeId,
-      }))
-    );
+  const [direction, setDirection] = useState<VisualizationDirection>("LR");
+  const [roleSelectedNodeId, setRoleSelectedNodeId] = useState<string | null>(
+    null
+  );
   const model = buildAccessMapModel({
     databaseName: props.effectiveDb?.name ?? props.effectiveDbId ?? "database",
     defaultPrivileges: defaultPrivilegeRows(props),

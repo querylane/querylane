@@ -15,6 +15,7 @@ import {
   useConnectionTest,
 } from "@/components/onboarding-wizard/hooks/use-connection-test";
 import { useOnboardingWizardControllerContext } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller-context";
+import { useOnboardingWizardActions } from "@/components/onboarding-wizard/onboarding-wizard-state-context";
 import { LabeledInput } from "@/components/onboarding-wizard/shared/labeled-input";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
@@ -56,7 +57,6 @@ import {
   PostgresConfig_SslNegotiation,
   PostgresConfigSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
-import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 
 function getTestButtonIcon(status: ConnectionTestStatus) {
   switch (status) {
@@ -452,12 +452,8 @@ export function UiConfiguredPhase() {
   const sslModeId = useId();
   const sslNegotiationId = useId();
   const advancedConnectionOptionsId = useId();
-  const startProgress = useOnboardingWizardStore(
-    (state) => state.startProgress
-  );
-  const setSubmittedPostgresConfig = useOnboardingWizardStore(
-    (state) => state.setSubmittedPostgresConfig
-  );
+  const { setSubmittedPostgresConfig, startProgress } =
+    useOnboardingWizardActions();
   const { goBackToMethodSelection } = useOnboardingWizardControllerContext();
   const form = useProtoForm(PostgresConfigSchema, {
     defaultValues: {

@@ -1,7 +1,8 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SetupTestProvider } from "@/__tests__/setup-test-provider";
+import { createSetupContextValue } from "@/__tests__/setup-test-utils";
 import { DatabaseLayout } from "@/components/database-layout";
-import { useSetupStore } from "@/stores/setup-store";
 
 const routerState = vi.hoisted(() => ({
   isLoading: false,
@@ -73,7 +74,6 @@ describe("DatabaseLayout route transitions", () => {
   beforeEach(() => {
     routerState.isLoading = false;
     routerState.pathname = "/instances/prod";
-    useSetupStore.setState({ showDegradedBanner: false });
   });
 
   afterEach(() => {
@@ -83,9 +83,11 @@ describe("DatabaseLayout route transitions", () => {
 
   it("renders the instance shell while the target route stays in instance scope", async () => {
     render(
-      <DatabaseLayout>
-        <div>Instance content</div>
-      </DatabaseLayout>
+      <SetupTestProvider value={createSetupContextValue()}>
+        <DatabaseLayout>
+          <div>Instance content</div>
+        </DatabaseLayout>
+      </SetupTestProvider>
     );
 
     expect(await screen.findByTestId("app-sidebar")).toBeTruthy();
@@ -96,9 +98,11 @@ describe("DatabaseLayout route transitions", () => {
     routerState.pathname = "/new-instance";
 
     render(
-      <DatabaseLayout>
-        <div>Stale instance content</div>
-      </DatabaseLayout>
+      <SetupTestProvider value={createSetupContextValue()}>
+        <DatabaseLayout>
+          <div>Stale instance content</div>
+        </DatabaseLayout>
+      </SetupTestProvider>
     );
 
     expect(await screen.findByTestId("app-sidebar")).toBeTruthy();
@@ -111,9 +115,11 @@ describe("DatabaseLayout route transitions", () => {
     routerState.isLoading = true;
 
     render(
-      <DatabaseLayout>
-        <div>Instance content</div>
-      </DatabaseLayout>
+      <SetupTestProvider value={createSetupContextValue()}>
+        <DatabaseLayout>
+          <div>Instance content</div>
+        </DatabaseLayout>
+      </SetupTestProvider>
     );
 
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();

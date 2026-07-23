@@ -6,9 +6,8 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { DatabaseStructureMap } from "@/features/database-visualization/database-structure-map";
-import { useDatabaseVisualizationStore } from "@/features/database-visualization/database-visualization-store";
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
@@ -116,13 +115,6 @@ vi.mock("@/features/database-visualization/structure-map-data", () => ({
   }),
 }));
 
-beforeEach(() => {
-  useDatabaseVisualizationStore.setState({
-    databaseSelectedNodeId: "table:public.old",
-    detailScope: "all",
-  });
-});
-
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -153,9 +145,9 @@ describe("DatabaseStructureMap", () => {
       name: "Full map",
     });
     expect(currentSchemaButton).toHaveProperty("disabled", false);
-    expect(currentSchemaButton.getAttribute("aria-pressed")).toBe("false");
+    expect(currentSchemaButton.getAttribute("aria-pressed")).toBe("true");
     expect(fullMapButton).toHaveProperty("disabled", false);
-    expect(fullMapButton.getAttribute("aria-pressed")).toBe("true");
+    expect(fullMapButton.getAttribute("aria-pressed")).toBe("false");
     expect(
       within(canvasControls).getByRole("button", {
         name: "Expand database map",
@@ -185,6 +177,39 @@ describe("DatabaseStructureMap", () => {
     expect(screen.getAllByLabelText("Flow canvas mock")).toHaveLength(2);
   });
 
+  test("keeps layout direction local to the mounted map", async () => {
+    const user = userEvent.setup();
+    const firstRender = render(
+      <DatabaseStructureMap
+        activeSchemaName="public"
+        databaseId="postgres"
+        databaseLabel="postgres"
+        instanceId="local-dev"
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Switch to vertical" })
+    );
+    expect(
+      screen.getByRole("button", { name: "Switch to horizontal" })
+    ).toBeTruthy();
+
+    firstRender.unmount();
+    render(
+      <DatabaseStructureMap
+        activeSchemaName="public"
+        databaseId="postgres"
+        databaseLabel="postgres"
+        instanceId="local-dev"
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Switch to vertical" })
+    ).toBeTruthy();
+  });
+
   test("syncs the selected canvas node when the explorer target changes", async () => {
     const { rerender } = render(
       <DatabaseStructureMap
@@ -208,10 +233,6 @@ describe("DatabaseStructureMap", () => {
     expect(screen.getByLabelText("Flow canvas mock").textContent).not.toContain(
       "table:public.audit_log"
     );
-
-    expect(
-      useDatabaseVisualizationStore.getState().databaseSelectedNodeId
-    ).toBe("table:public.old");
 
     rerender(
       <DatabaseStructureMap

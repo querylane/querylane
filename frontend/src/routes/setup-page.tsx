@@ -3,13 +3,13 @@ import { useEffect } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
 import { OnboardingWizard } from "@/components/onboarding-wizard/wizard";
+import { useSetup } from "@/components/setup-context";
 import { useConsoleConfigStatus } from "@/hooks/api/console";
 import { useDb } from "@/lib/db-context";
 import { logger } from "@/lib/diagnostics";
 import { errorMessageOf } from "@/lib/error-message";
 import { handleNavigationError } from "@/lib/navigation-errors";
 import { useBlockingErrorStore } from "@/stores/blocking-error-store";
-import { useSetupStore } from "@/stores/setup-store";
 
 export function SetupRoutePage() {
   const navigate = useNavigate({ from: "/setup" });
@@ -18,8 +18,7 @@ export function SetupRoutePage() {
   const clearBlockingError = useBlockingErrorStore(
     (state) => state.clearBlockingError
   );
-  const status = useSetupStore((state) => state.status);
-  const verifyAfterSetup = useSetupStore((state) => state.verifyAfterSetup);
+  const { status, verifyAfterSetup } = useSetup();
   const { instances, queryStates } = useDb();
   const instancesState = queryStates.instances;
   const { isConfigManaged, isLoaded: isModeLoaded } = useConsoleConfigStatus();

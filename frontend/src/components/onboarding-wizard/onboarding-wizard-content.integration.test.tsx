@@ -13,9 +13,17 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SetupTestProvider } from "@/__tests__/setup-test-provider";
 import { OnboardingWizardControllerProvider } from "@/components/onboarding-wizard/controller-provider";
 import type { OnboardingWizardController } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller";
+import {
+  DEFAULT_WIZARD_SESSION_STATE,
+  type OnboardingWizardState,
+} from "@/components/onboarding-wizard/onboarding-wizard-state";
+import { useOnboardingWizardState } from "@/components/onboarding-wizard/onboarding-wizard-state-context";
+import { OnboardingWizardStateProvider } from "@/components/onboarding-wizard/onboarding-wizard-state-provider";
 import { OnboardingWizardContent } from "@/components/onboarding-wizard/wizard-content";
+import type { SetupContextValue } from "@/components/setup-context";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import {
   AppDatabaseStatus_State,
@@ -33,11 +41,6 @@ import {
   SetupStep,
   StepState,
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
-import {
-  DEFAULT_WIZARD_SESSION_STATE,
-  useOnboardingWizardStore,
-} from "@/stores/onboarding-wizard-store";
-import { useSetupStore } from "@/stores/setup-store";
 import { createTestQueryClient } from "@/test/query-client";
 import { ThemeProvider } from "@/theme-provider";
 
@@ -62,6 +65,24 @@ const SSL_MODE_VALUES = [
 
 let restoreLocalStorage: (() => void) | undefined;
 const renderedQueryClients: QueryClient[] = [];
+let initialWizardState: Partial<OnboardingWizardState> = {};
+let renderedWizardState = DEFAULT_WIZARD_SESSION_STATE;
+const DEFAULT_SETUP_VALUE: SetupContextValue = {
+  bootError: null,
+  onboardingState: null,
+  refreshOnboardingState: vi.fn(async () => undefined),
+  showDegradedBanner: false,
+  showWizardErrorBanner: false,
+  status: "booting",
+  verifyAfterSetup: vi.fn(async () => undefined),
+  warningCode: null,
+};
+let setupValue = DEFAULT_SETUP_VALUE;
+
+function WizardStateObserver() {
+  renderedWizardState = useOnboardingWizardState();
+  return null;
+}
 
 function getRenderedSslModeIconModes() {
   return new Set(
@@ -152,9 +173,14 @@ function renderWizard(controller = createController()) {
       <TransportProvider transport={transport}>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider defaultTheme="dark">
-            <OnboardingWizardControllerProvider controller={controller}>
-              <OnboardingWizardContent />
-            </OnboardingWizardControllerProvider>
+            <SetupTestProvider value={setupValue}>
+              <OnboardingWizardStateProvider initialState={initialWizardState}>
+                <OnboardingWizardControllerProvider controller={controller}>
+                  <WizardStateObserver />
+                  <OnboardingWizardContent />
+                </OnboardingWizardControllerProvider>
+              </OnboardingWizardStateProvider>
+            </SetupTestProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </TransportProvider>
@@ -163,12 +189,13 @@ function renderWizard(controller = createController()) {
 }
 
 function seedOnboardingState() {
-  useSetupStore.setState({
+  setupValue = {
+    ...DEFAULT_SETUP_VALUE,
     onboardingState: createOnboardingState(),
     refreshOnboardingState: vi.fn(async () => undefined),
     showWizardErrorBanner: false,
     status: "onboarding",
-  });
+  };
 }
 
 function setFieldValue(label: string, value: string) {
@@ -182,14 +209,17 @@ function seedWizardPhase(
   selectedMethod: "embedded" | "manual_yaml" | "ui_configured"
 ) {
   seedOnboardingState();
-  useOnboardingWizardStore.setState({
+  initialWizardState = {
     phase,
     selectedMethod,
-  });
+  };
 }
 
 beforeEach(() => {
   restoreLocalStorage = installLocalStorageStub();
+  initialWizardState = {};
+  renderedWizardState = DEFAULT_WIZARD_SESSION_STATE;
+  setupValue = DEFAULT_SETUP_VALUE;
 });
 
 afterEach(() => {
@@ -200,22 +230,16 @@ afterEach(() => {
   renderedQueryClients.length = 0;
   restoreLocalStorage?.();
   restoreLocalStorage = undefined;
-  useOnboardingWizardStore.setState(DEFAULT_WIZARD_SESSION_STATE);
-  useSetupStore.setState({
-    bootError: null,
-    onboardingState: null,
-    showDegradedBanner: false,
-    showWizardErrorBanner: false,
-    status: "booting",
-    warningCode: null,
-  });
 });
 
 describe("onboarding wizard content integration", () => {
   it("renders loading state and refresh action before onboarding state exists", async () => {
     const user = userEvent.setup();
     const refreshOnboardingState = vi.fn(async () => undefined);
-    useSetupStore.setState({ onboardingState: null, refreshOnboardingState });
+    setupValue = {
+      ...DEFAULT_SETUP_VALUE,
+      refreshOnboardingState,
+    };
 
     renderWizard();
 
@@ -255,10 +279,11 @@ describe("onboarding wizard content integration", () => {
   });
 
   it("explains when no setup methods are available", () => {
-    useSetupStore.setState({
+    setupValue = {
+      ...DEFAULT_SETUP_VALUE,
       onboardingState: createOnboardingState({ availableMethods: [] }),
       status: "onboarding",
-    });
+    };
 
     renderWizard();
 
@@ -295,7 +320,8 @@ describe("onboarding wizard content integration", () => {
   });
 
   it("surfaces previous setup failures while keeping method selection available", () => {
-    useSetupStore.setState({
+    setupValue = {
+      ...DEFAULT_SETUP_VALUE,
       onboardingState: createOnboardingState({
         appDatabaseStatus: createProto(AppDatabaseStatusSchema, {
           error: "migration failed",
@@ -304,7 +330,7 @@ describe("onboarding wizard content integration", () => {
       }),
       showWizardErrorBanner: true,
       status: "onboarding",
-    });
+    };
 
     renderWizard();
 
@@ -489,7 +515,7 @@ describe("onboarding wizard content integration", () => {
     });
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    const state = useOnboardingWizardStore.getState();
+    const state = renderedWizardState;
     expect(state.phase).toBe("progress_running");
     expect(state.submittedPostgresConfig?.host).toBe("metadata.internal");
     expect(state.submittedPostgresConfig?.password).toBe("secret");
@@ -533,7 +559,7 @@ describe("onboarding wizard setup progression", () => {
     });
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    const state = useOnboardingWizardStore.getState();
+    const state = renderedWizardState;
     expect(state.submittedPostgresConfig?.sslMode).toBe(
       PostgresConfig_SslMode.REQUIRE
     );
@@ -550,9 +576,7 @@ describe("onboarding wizard setup progression", () => {
 
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(useOnboardingWizardStore.getState().phase).toBe(
-      "progress_waiting_for_config"
-    );
+    expect(renderedWizardState.phase).toBe("progress_waiting_for_config");
     expect(
       screen.getByRole("heading", { name: "Waiting for configuration" })
     ).toBeTruthy();
@@ -566,7 +590,7 @@ describe("onboarding wizard setup progression", () => {
 
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    const state = useOnboardingWizardStore.getState();
+    const state = renderedWizardState;
     expect(state.phase).toBe("progress_running");
     expect(state.submittedEmbeddedConfig?.port).toBe(5433);
     expect(state.submittedEmbeddedConfig?.mode).toBe("persistent");
@@ -574,14 +598,14 @@ describe("onboarding wizard setup progression", () => {
 
   it("renders configure validation errors inline on the relevant configure step", () => {
     seedOnboardingState();
-    useOnboardingWizardStore.setState({
+    initialWizardState = {
       configureError: normalizeAppUiError(new Error("password is required"), {
         area: "onboarding-setup",
         source: "setup",
       }),
       phase: "configure_ui",
       selectedMethod: "ui_configured",
-    });
+    };
 
     renderWizard();
 
@@ -595,11 +619,11 @@ describe("onboarding wizard setup progression", () => {
     const user = userEvent.setup();
     const retryWatch = vi.fn(async () => undefined);
     seedOnboardingState();
-    useOnboardingWizardStore.setState({
+    initialWizardState = {
       phase: "progress_waiting_for_config",
       selectedMethod: "manual_yaml",
       watchNotice: "No valid config detected yet.",
-    });
+    };
 
     renderWizard(createController({ retryWatch }));
 
@@ -619,7 +643,7 @@ describe("onboarding wizard setup progression", () => {
     const user = userEvent.setup();
     const finishWizard = vi.fn();
     seedOnboardingState();
-    useOnboardingWizardStore.setState({
+    initialWizardState = {
       phase: "progress_success",
       progressEvents: [
         createProto(SetupProgressEventSchema, {
@@ -629,7 +653,7 @@ describe("onboarding wizard setup progression", () => {
         }),
       ],
       selectedMethod: "ui_configured",
-    });
+    };
 
     renderWizard(createController({ finishWizard }));
 
@@ -643,7 +667,7 @@ describe("onboarding wizard setup progression", () => {
   it("classifies connection setup failures as reconfigurable", async () => {
     const user = userEvent.setup();
     seedOnboardingState();
-    useOnboardingWizardStore.setState({
+    initialWizardState = {
       failedEvent: createProto(SetupProgressEventSchema, {
         displayName: "Connect to metadata database",
         error: "connection refused",
@@ -664,7 +688,7 @@ describe("onboarding wizard setup progression", () => {
         area: "onboarding-setup",
         source: "setup_stream",
       }),
-    });
+    };
 
     renderWizard();
 

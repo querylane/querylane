@@ -18,13 +18,13 @@ import "@xyflow/react/dist/style.css";
 import { ExternalLink } from "lucide-react";
 import { type CSSProperties, type ReactNode, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import type { VisualizationDirection } from "@/features/database-visualization/database-visualization-store";
 import type {
   VisualizationEdge,
   VisualizationNavigation,
   VisualizationNode,
   VisualizationNodeData,
 } from "@/features/database-visualization/graph-model";
+import type { VisualizationDirection } from "@/features/database-visualization/visualization-types";
 import { cn } from "@/lib/utils";
 
 const MAX_LAYOUT_CACHE_ENTRIES = 100;

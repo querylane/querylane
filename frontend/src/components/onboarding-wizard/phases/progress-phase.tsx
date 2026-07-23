@@ -1,14 +1,14 @@
 import { ArrowLeft, Check, ClipboardCopy, FileCog } from "lucide-react";
 import { useState } from "react";
 import { useOnboardingWizardControllerContext } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller-context";
+import { useOnboardingWizardState } from "@/components/onboarding-wizard/onboarding-wizard-state-context";
 import { ProgressStepList } from "@/components/onboarding-wizard/shared/progress-step-list";
 import { getProgressSummary } from "@/components/onboarding-wizard/shared/progress-step-summary";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
+import { useSetup } from "@/components/setup-context";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { captureException } from "@/lib/diagnostics";
-import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
-import { useSetupStore } from "@/stores/setup-store";
 
 const COPY_RESET_MS = 1500;
 function WaitingForConfigBody({
@@ -105,15 +105,9 @@ function SuccessCallout() {
   );
 }
 export function ProgressPhase() {
-  const phase = useOnboardingWizardStore((state) => state.phase);
-  const progressEvents = useOnboardingWizardStore(
-    (state) => state.progressEvents
-  );
-  const selectedMethod = useOnboardingWizardStore(
-    (state) => state.selectedMethod
-  );
-  const watchNotice = useOnboardingWizardStore((state) => state.watchNotice);
-  const onboardingState = useSetupStore((state) => state.onboardingState);
+  const { phase, progressEvents, selectedMethod, watchNotice } =
+    useOnboardingWizardState();
+  const { onboardingState } = useSetup();
   const {
     finishWizard,
     goBackToConfigure,

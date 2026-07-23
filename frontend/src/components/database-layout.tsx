@@ -12,11 +12,11 @@ import {
 } from "@/components/querylane-ui/sidebar";
 import { RouteErrorView } from "@/components/route-error-view";
 import { RouteProgressBar } from "@/components/route-progress-bar";
+import { useSetup } from "@/components/setup-context";
 import type { AdminPageId } from "@/lib/admin-page";
 import { ExplorerSidebarSlotProvider } from "@/lib/explorer-sidebar-slot";
 import { normalizeAppUiError, reportAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
-import { useSetupStore } from "@/stores/setup-store";
 
 const AppSidebar = lazy(() =>
   import("@/components/app-sidebar").then((module) => ({
@@ -94,7 +94,7 @@ export function DatabaseLayout({
   children: React.ReactNode;
   page?: AdminPageId;
 }) {
-  const showDegradedBanner = useSetupStore((state) => state.showDegradedBanner);
+  const { showDegradedBanner } = useSetup();
 
   // Data Explorer renders its own full-bleed layout with an internal sidebar.
   // Use the committed page match from the parent route so pending navigations

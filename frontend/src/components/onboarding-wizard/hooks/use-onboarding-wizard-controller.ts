@@ -1,10 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { useSetupExecution } from "@/components/onboarding-wizard/hooks/use-setup-execution";
 import { useWizardWatchState } from "@/components/onboarding-wizard/hooks/use-wizard-watch-state";
+import {
+  useOnboardingWizardActions,
+  useOnboardingWizardState,
+} from "@/components/onboarding-wizard/onboarding-wizard-state-context";
+import { useSetup } from "@/components/setup-context";
 import { useSetupAppDatabaseMutation } from "@/hooks/api/onboarding";
-import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
-import { useSetupStore } from "@/stores/setup-store";
+import { StepState } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 
 interface UseOnboardingWizardControllerOptions {
   onFinish?: (() => void) | undefined;
@@ -23,41 +27,30 @@ interface OnboardingWizardController {
 }
 
 function useWizardSessionState() {
-  return {
-    applyProgressEvent: useOnboardingWizardStore(
-      (state) => state.applyProgressEvent
-    ),
-    goBackToMethodSelectionStateAction: useOnboardingWizardStore(
-      (state) => state.goBackToMethodSelection
-    ),
-    goToConfigureStateAction: useOnboardingWizardStore(
-      (state) => state.goToConfigure
-    ),
-    markSetupSuccess: useOnboardingWizardStore(
-      (state) => state.markSetupSuccess
-    ),
-    phase: useOnboardingWizardStore((state) => state.phase),
-    resetSession: useOnboardingWizardStore((state) => state.resetSession),
-    selectedMethod: useOnboardingWizardStore((state) => state.selectedMethod),
-    setConfigureValidationError: useOnboardingWizardStore(
-      (state) => state.setConfigureValidationError
-    ),
-    setStreamFailure: useOnboardingWizardStore(
-      (state) => state.setStreamFailure
-    ),
-    setupRunToken: useOnboardingWizardStore((state) => state.setupRunToken),
-    setWatchNotice: useOnboardingWizardStore((state) => state.setWatchNotice),
-    submittedEmbeddedConfig: useOnboardingWizardStore(
-      (state) => state.submittedEmbeddedConfig
-    ),
-    submittedPostgresConfig: useOnboardingWizardStore(
-      (state) => state.submittedPostgresConfig
-    ),
-  };
-}
+  const state = useOnboardingWizardState();
+  const actions = useOnboardingWizardActions();
+  const failedEventRef = useRef(state.failedEvent);
 
-function getFailedOnboardingEvent() {
-  return useOnboardingWizardStore.getState().failedEvent;
+  useEffect(
+    function syncFailedProgressEvent() {
+      failedEventRef.current = state.failedEvent;
+    },
+    [state.failedEvent]
+  );
+
+  return {
+    ...actions,
+    ...state,
+    applyProgressEvent: (
+      event: Parameters<typeof actions.applyProgressEvent>[0]
+    ) => {
+      if (event.state === StepState.FAILED) {
+        failedEventRef.current = event;
+      }
+      actions.applyProgressEvent(event);
+    },
+    getFailedEvent: () => failedEventRef.current,
+  };
 }
 
 export function useOnboardingWizardController({
@@ -65,8 +58,9 @@ export function useOnboardingWizardController({
 }: UseOnboardingWizardControllerOptions): OnboardingWizardController {
   const {
     applyProgressEvent,
-    goToConfigureStateAction,
-    goBackToMethodSelectionStateAction,
+    getFailedEvent,
+    goBackToMethodSelection: goBackToMethodSelectionStateAction,
+    goToConfigure: goToConfigureStateAction,
     markSetupSuccess,
     phase,
     resetSession,
@@ -78,17 +72,7 @@ export function useOnboardingWizardController({
     submittedEmbeddedConfig,
     submittedPostgresConfig,
   } = useWizardSessionState();
-  const refreshOnboardingState = useSetupStore(
-    (state) => state.refreshOnboardingState
-  );
-
-  // allow-useEffect: sync wizard phase state
-  useEffect(() => {
-    resetSession();
-    return () => {
-      resetSession();
-    };
-  }, [resetSession]);
+  const { refreshOnboardingState } = useSetup();
 
   const manualWatchEnabled =
     phase === "progress_waiting_for_config" && selectedMethod === "manual_yaml";
@@ -106,7 +90,7 @@ export function useOnboardingWizardController({
   });
 
   const { abortSetup, setupRunning } = useSetupExecution({
-    getFailedEvent: getFailedOnboardingEvent,
+    getFailedEvent,
     onSuccess: markSetupSuccess,
     phase,
     runSetupMutation: setupMutation.mutateAsync,

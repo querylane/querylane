@@ -7,12 +7,12 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useOnboardingWizardControllerContext } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller-context";
+import { useOnboardingWizardActions } from "@/components/onboarding-wizard/onboarding-wizard-state-context";
 import { buildConfigPreview } from "@/components/onboarding-wizard/phases/manual-yaml-config-preview";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
+import { useSetup } from "@/components/setup-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
-import { useSetupStore } from "@/stores/setup-store";
 
 const COPY_RESET_DELAY_MS = 1500;
 
@@ -24,10 +24,8 @@ const writeClipboard = async (value: string) => {
 };
 
 export function ManualYamlPhase() {
-  const onboardingState = useSetupStore((state) => state.onboardingState);
-  const startProgress = useOnboardingWizardStore(
-    (state) => state.startProgress
-  );
+  const { onboardingState } = useSetup();
+  const { startProgress } = useOnboardingWizardActions();
   const { goBackToMethodSelection } = useOnboardingWizardControllerContext();
   const configFilePath =
     onboardingState?.configFilePath ?? "~/.querylane/config.yaml";
