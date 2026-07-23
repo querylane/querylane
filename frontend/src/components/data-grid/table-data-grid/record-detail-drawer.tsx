@@ -15,6 +15,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { formatCellForClipboard } from "@/features/data-explorer/table-data/selection-formatters";
 import type { QualifiedTableName } from "@/lib/console-resources";
 import type {
   TableCell,
@@ -160,6 +161,11 @@ function RecordDetailDrawer({
   rowIndex,
   tableName,
 }: RecordDetailDrawerProps) {
+  const pkIdentifier = columns
+    .filter((column) => pkColumnSet.has(column.columnName))
+    .map((column) => formatCellForClipboard(rowCells.get(column.columnName)))
+    .filter((value) => value !== "")
+    .join("-");
   return (
     <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetContent
@@ -197,6 +203,7 @@ function RecordDetailDrawer({
                 column={column}
                 isPrimaryKey={pkColumnSet.has(column.columnName)}
                 key={column.columnName}
+                rowIdentifier={pkIdentifier === "" ? undefined : pkIdentifier}
                 tableName={name}
               />
             ))}

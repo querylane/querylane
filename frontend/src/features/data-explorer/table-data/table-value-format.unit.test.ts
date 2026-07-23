@@ -92,11 +92,29 @@ describe("formatTableCell", () => {
         column(DataType.BINARY)
       )
     ).toEqual({
-      display: "‹4,096 bytes›",
+      display: "‹4 KB›",
       isNull: false,
       isTruncated: true,
       kind: "bytes",
     });
+  });
+
+  test("labels zero-byte bytea previews from full size alone", () => {
+    expect(
+      formatTableCell(
+        cell(
+          { case: "bytesValue", value: new Uint8Array() },
+          { fullSizeBytes: 123_456n, truncated: true }
+        ),
+        column(DataType.BINARY)
+      )
+    ).toMatchObject({ display: "‹120.6 KB›", isTruncated: true });
+    expect(
+      formatTableCell(
+        cell({ case: "bytesValue", value: new Uint8Array() }),
+        column(DataType.BINARY)
+      )
+    ).toMatchObject({ display: "‹0 B›", isTruncated: false });
   });
 
   test("distinguishes date timestamps from timestamp values", () => {
@@ -223,5 +241,5 @@ test("formats empty timestamps, JSON values, and byte values without full size",
       }),
       column(DataType.BINARY)
     )
-  ).toMatchObject({ display: "‹3 bytes›", kind: "bytes" });
+  ).toMatchObject({ display: "‹3 B›", kind: "bytes" });
 });

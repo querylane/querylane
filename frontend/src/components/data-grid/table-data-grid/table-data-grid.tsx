@@ -1,5 +1,6 @@
 "use client";
 
+import { create } from "@bufbuild/protobuf";
 import { Maximize2 } from "lucide-react";
 import {
   type ClipboardEvent,
@@ -33,7 +34,10 @@ import {
   getGridCell,
   setGridCell,
 } from "@/components/data-grid/table-data-grid/grid-cell-access";
-import { writeClipboard } from "@/components/data-grid/table-data-grid/grid-clipboard";
+import {
+  writeClipboard,
+  writeClipboardDeferred,
+} from "@/components/data-grid/table-data-grid/grid-clipboard";
 import {
   buildColumn,
   buildPageLabel,
@@ -62,6 +66,13 @@ import {
   type TableFilterRule,
 } from "@/features/data-explorer/table-data/filter-state";
 import {
+  cellNeedsFullValue,
+  type FetchFullCell,
+  READ_CELL_MAX_BYTES,
+  resolveFullCell,
+  resolveRowCells,
+} from "@/features/data-explorer/table-data/full-cell-resolver";
+import {
   buildGridStatusItems,
   type GridStatusItem,
 } from "@/features/data-explorer/table-data/grid-status";
@@ -81,14 +92,16 @@ import {
   type RefreshIntervalMs,
   useRefreshSettingsStore,
 } from "@/features/user-settings/refresh-settings";
+import { useReadCellValueMutation } from "@/hooks/api/table-data";
 import { parseTableQualifiedName } from "@/lib/console-resources";
 import { downloadBlob } from "@/lib/download-blob";
 import { HIGH_VOLUME_PAGE_SIZE_OPTIONS } from "@/lib/pagination";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
-import type {
-  TableCell,
-  TableResultColumn,
+import {
+  ReadCellValueRequestSchema,
+  type TableCell,
+  type TableResultColumn,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { RowIdentity_Source } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
@@ -870,11 +883,17 @@ function ExpandedDataGridDialog({
   );
 }
 
-function copyCellValue(
-  row: GridRow,
-  resultColumns: TableResultColumn[],
-  columnKey: string
-) {
+function copyCellValue({
+  columnKey,
+  fetchFullCell,
+  resultColumns,
+  row,
+}: {
+  columnKey: string;
+  fetchFullCell: FetchFullCell;
+  resultColumns: TableResultColumn[];
+  row: GridRow;
+}) {
   const meta = resultColumns.find((column) => column.columnName === columnKey);
   if (!meta) {
     return;
@@ -883,14 +902,48 @@ function copyCellValue(
   if (cell === undefined) {
     return;
   }
+  if (cellNeedsFullValue(cell)) {
+    writeClipboardDeferred(async () =>
+      formatCellForClipboard(await resolveFullCell(cell, fetchFullCell))
+    );
+    return;
+  }
   writeClipboard(formatCellForClipboard(cell));
 }
 
-function copyRowValues(row: GridRow, resultColumns: TableResultColumn[]) {
-  const parts = resultColumns.map((meta) =>
-    formatCellForClipboard(getGridCell(row, meta))
-  );
-  writeClipboard(parts.join("\t"));
+function copyRowValues(
+  row: GridRow,
+  resultColumns: TableResultColumn[],
+  fetchFullCell: FetchFullCell
+) {
+  const cells = resultColumns.map((meta) => getGridCell(row, meta));
+  if (cells.some(cellNeedsFullValue)) {
+    writeClipboardDeferred(async () => {
+      const resolved = await Promise.all(
+        cells.map((cell) => resolveFullCell(cell, fetchFullCell))
+      );
+      return resolved.map(formatCellForClipboard).join("\t");
+    });
+    return;
+  }
+  writeClipboard(cells.map(formatCellForClipboard).join("\t"));
+}
+
+// Cap how many ReadCellValue round trips a single selection copy/export may
+// fan out. Beyond this, the toolbar export (StreamRows in FULL mode) is the
+// right tool.
+const MAX_SELECTION_FULL_VALUE_FETCHES = 100;
+
+function countCellsNeedingFullValue(rows: SelectedRow[]): number {
+  let count = 0;
+  for (const row of rows) {
+    for (const cell of row.cells.values()) {
+      if (cellNeedsFullValue(cell)) {
+        count += 1;
+      }
+    }
+  }
+  return count;
 }
 
 function isNodeInside(parent: Node, child: Node | null): boolean {
@@ -934,28 +987,93 @@ function useSelectionActions({
   const selected = () =>
     collectSelectedRows({ resultColumns, rows, selectedRows });
 
+  const readCellValue = useReadCellValueMutation();
+  const fetchFullCell: FetchFullCell = async (fullValueToken) =>
+    (
+      await readCellValue.mutateAsync(
+        create(ReadCellValueRequestSchema, {
+          fullValueToken,
+          maxBytes: READ_CELL_MAX_BYTES,
+          name,
+        })
+      )
+    ).value;
+
+  const resolveSelectedRows = (
+    selectedForExport: SelectedRow[]
+  ): Promise<SelectedRow[]> =>
+    Promise.all(
+      selectedForExport.map(async (row) => ({
+        cells: await resolveRowCells(row.cells, fetchFullCell),
+      }))
+    );
+
+  // Returns null when there is nothing to export or the selection needs
+  // more full-value fetches than the cap allows; the caller must bail.
+  const selectionForFullExport = (): {
+    rows: Promise<SelectedRow[]>;
+  } | null => {
+    const selectedForExport = selected();
+    if (selectedForExport.length === 0) {
+      return null;
+    }
+    const pendingFetches = countCellsNeedingFullValue(selectedForExport);
+    if (pendingFetches > MAX_SELECTION_FULL_VALUE_FETCHES) {
+      toast.error(
+        `Selection has ${pendingFetches} oversized values — use the toolbar export instead`
+      );
+      return null;
+    }
+    return {
+      rows:
+        pendingFetches > 0
+          ? resolveSelectedRows(selectedForExport)
+          : Promise.resolve(selectedForExport),
+    };
+  };
+
+  const buildSelectionExport = (
+    exportFormat: ExportFormat,
+    exportRows: SelectedRow[]
+  ) =>
+    buildExport({
+      exportFormat,
+      rows: exportRows,
+      columns: resultColumns,
+      resourceName: name,
+    });
+
   return {
     clearSelection,
     copyCellValue: (row: GridRow, columnKey: string) =>
-      copyCellValue(row, resultColumns, columnKey),
+      copyCellValue({ columnKey, fetchFullCell, resultColumns, row }),
     copyRowAsSqlInsert: (row: GridRow) => {
       const cells = new Map<string, TableCell | undefined>();
       for (const column of resultColumns) {
         cells.set(column.columnName, getGridCell(row, column));
       }
-      const result = buildExport({
-        exportFormat: "sql",
-        rows: [{ cells }],
-        columns: resultColumns,
-        resourceName: name,
-      });
+      const buildSql = (sqlCells: Map<string, TableCell | undefined>) =>
+        buildSelectionExport("sql", [{ cells: sqlCells }]);
+      if ([...cells.values()].some(cellNeedsFullValue)) {
+        writeClipboardDeferred(async () => {
+          const result = buildSql(await resolveRowCells(cells, fetchFullCell));
+          if (!result.ok) {
+            reportTruncatedExport(result);
+            throw new Error("row contains unrecoverable truncated values");
+          }
+          return result.payload.contents;
+        });
+        return;
+      }
+      const result = buildSql(cells);
       if (!result.ok) {
         reportTruncatedExport(result);
         return;
       }
       writeClipboard(result.payload.contents);
     },
-    copyRowValues: (row: GridRow) => copyRowValues(row, resultColumns),
+    copyRowValues: (row: GridRow) =>
+      copyRowValues(row, resultColumns, fetchFullCell),
     handleCellCopy: (
       { row, column }: CellCopyArgs<GridRow>,
       event?: ClipboardEvent<HTMLDivElement>
@@ -963,45 +1081,46 @@ function useSelectionActions({
       if (hasActiveTextSelectionInsideGrid(event)) {
         return;
       }
-      copyCellValue(row, resultColumns, column.key);
+      copyCellValue({
+        columnKey: column.key,
+        fetchFullCell,
+        resultColumns,
+        row,
+      });
     },
     handleCopySelection: (exportFormat: ExportFormat) => {
-      const selectedForExport = selected();
-      if (selectedForExport.length === 0) {
+      const pending = selectionForFullExport();
+      if (pending === null) {
         return;
       }
-      const result = buildExport({
-        exportFormat,
-        rows: selectedForExport,
-        columns: resultColumns,
-        resourceName: name,
+      writeClipboardDeferred(async () => {
+        const result = buildSelectionExport(exportFormat, await pending.rows);
+        if (!result.ok) {
+          reportTruncatedExport(result);
+          throw new Error("selection contains unrecoverable truncated values");
+        }
+        return result.payload.contents;
       });
-      if (!result.ok) {
-        reportTruncatedExport(result);
-        return;
-      }
-      writeClipboard(result.payload.contents);
     },
     handleExportSelection: (exportFormat: ExportFormat) => {
-      const selectedForExport = selected();
-      if (selectedForExport.length === 0) {
+      const pending = selectionForFullExport();
+      if (pending === null) {
         return;
       }
-      const result = buildExport({
-        exportFormat,
-        rows: selectedForExport,
-        columns: resultColumns,
-        resourceName: name,
-      });
-      if (!result.ok) {
-        reportTruncatedExport(result);
-        return;
-      }
-      downloadBlob(
-        result.payload.filename,
-        result.payload.contents,
-        result.payload.mimeType
-      );
+      pending.rows
+        .then((exportRows) => {
+          const result = buildSelectionExport(exportFormat, exportRows);
+          if (!result.ok) {
+            reportTruncatedExport(result);
+            return;
+          }
+          downloadBlob(
+            result.payload.filename,
+            result.payload.contents,
+            result.payload.mimeType
+          );
+        })
+        .catch(() => toast.error("Couldn't fetch full values for the export"));
     },
   };
 }

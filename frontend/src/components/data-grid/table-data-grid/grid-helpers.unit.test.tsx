@@ -275,7 +275,7 @@ describe("grid helpers", () => {
 
     expect(truncatedMarkup).toContain("prefix");
     expect(truncatedMarkup).not.toContain("Open external_id reference");
-    expect(bytesMarkup).toContain("bytes");
+    expect(bytesMarkup).toContain("‹2 B›");
     expect(bytesMarkup).toContain("Open fingerprint reference");
     expect(firstBytesCell.props.preview).toBe(secondBytesCell.props.preview);
   });

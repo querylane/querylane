@@ -188,9 +188,11 @@ vi.mock("@/lib/download-blob", () => ({
 vi.mock("sonner", () => ({ toast: toastMock }));
 
 const writeClipboardMock = vi.hoisted(() => vi.fn());
+const writeClipboardDeferredMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/components/data-grid/table-data-grid/grid-clipboard", () => ({
   writeClipboard: writeClipboardMock,
+  writeClipboardDeferred: writeClipboardDeferredMock,
 }));
 
 function seedRowsQuery(
@@ -363,6 +365,54 @@ function seedRowsQueryWithExpandableValues() {
     isError: false,
     isPending: false,
     mutate: vi.fn(),
+  });
+}
+
+function seedRowsQueryWithTruncatedCell(mutateAsync: ReturnType<typeof vi.fn>) {
+  tableApi.useListTableColumnsQuery.mockReturnValue({
+    data: create(ListTableColumnsResponseSchema, { columns: [] }),
+    error: null,
+    isError: false,
+  });
+  tableDataApi.useReadRowsQuery.mockReturnValue({
+    data: create(ReadRowsResponseSchema, {
+      resultSet: create(TableResultSetSchema, {
+        columns: [
+          create(TableResultColumnSchema, {
+            columnName: "notes",
+            dataType: DataType.STRING,
+            mayTruncate: true,
+            rawType: "text",
+          }),
+        ],
+        rows: [
+          create(TableResultRowSchema, {
+            rowKey: "row-0",
+            values: [
+              create(TableCellSchema, {
+                fullSizeBytes: 17n,
+                fullValueToken: "token-notes",
+                truncated: true,
+                value: create(TableValueSchema, {
+                  kind: { case: "stringValue", value: "the com" },
+                }),
+              }),
+            ],
+          }),
+        ],
+      }),
+    }),
+    dataUpdatedAt: 0,
+    error: null,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  });
+  tableDataApi.useReadCellValueMutation.mockReturnValue({
+    isError: false,
+    isPending: false,
+    mutate: vi.fn(),
+    mutateAsync,
   });
 }
 
@@ -1159,6 +1209,85 @@ describe("TableDataGrid row interactions", () => {
 
     expect(writeText).not.toHaveBeenCalled();
     selection?.removeAllRanges();
+  });
+});
+
+describe("TableDataGrid truncated-cell copy", () => {
+  beforeEach(setupTableDataGridIntegrationTest);
+  afterEach(teardownTableDataGridIntegrationTest);
+
+  it("fetches the full value before copying a truncated cell", async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi.fn().mockResolvedValue({
+      value: create(TableCellSchema, {
+        value: create(TableValueSchema, {
+          kind: { case: "stringValue", value: "the complete text" },
+        }),
+      }),
+    });
+    seedRowsQueryWithTruncatedCell(mutateAsync);
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+
+    openCellContextMenu("notes", 0);
+    await user.click(screen.getByRole("menuitem", { name: "Copy cell" }));
+
+    expect(writeClipboardMock).not.toHaveBeenCalled();
+    expect(writeClipboardDeferredMock).toHaveBeenCalledTimes(1);
+    const getText = writeClipboardDeferredMock.mock.calls[0]?.[0];
+    await expect(getText()).resolves.toBe("the complete text");
+    expect(mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fullValueToken: "token-notes",
+        name: "instances/prod/databases/app/schemas/public/tables/customers",
+      })
+    );
+  });
+
+  it("surfaces a failed full-value fetch instead of copying the preview", async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi.fn().mockRejectedValue(new Error("token expired"));
+    seedRowsQueryWithTruncatedCell(mutateAsync);
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+
+    openCellContextMenu("notes", 0);
+    await user.click(screen.getByRole("menuitem", { name: "Copy cell" }));
+
+    expect(writeClipboardMock).not.toHaveBeenCalled();
+    const getText = writeClipboardDeferredMock.mock.calls[0]?.[0];
+    await expect(getText()).rejects.toThrow("token expired");
+  });
+
+  it("resolves truncated cells when copying a row as INSERT", async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi.fn().mockResolvedValue({
+      value: create(TableCellSchema, {
+        value: create(TableValueSchema, {
+          kind: { case: "stringValue", value: "the complete text" },
+        }),
+      }),
+    });
+    seedRowsQueryWithTruncatedCell(mutateAsync);
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+
+    openCellContextMenu("notes", 0);
+    await user.click(
+      screen.getByRole("menuitem", { name: "Copy row as INSERT" })
+    );
+
+    expect(writeClipboardDeferredMock).toHaveBeenCalledTimes(1);
+    const getText = writeClipboardDeferredMock.mock.calls[0]?.[0];
+    await expect(getText()).resolves.toBe(
+      `INSERT INTO "public"."customers" ("notes") VALUES\n  ('the complete text');\n`
+    );
   });
 });
 

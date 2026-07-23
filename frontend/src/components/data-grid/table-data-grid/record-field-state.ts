@@ -16,5 +16,28 @@ function resolveEffectiveCell(
   return cell;
 }
 
+const SAFE_FILENAME_PATTERN = /[^a-zA-Z0-9_.-]+/g;
+const ROW_IDENTIFIER_MAX_LENGTH = 40;
+
+function buildByteaDownloadFilename({
+  columnName,
+  rowIdentifier,
+  table,
+}: {
+  columnName: string;
+  rowIdentifier?: string | undefined;
+  table: string;
+}): string {
+  const parts = [table, columnName];
+  if (rowIdentifier !== undefined && rowIdentifier !== "") {
+    parts.push(rowIdentifier.slice(0, ROW_IDENTIFIER_MAX_LENGTH));
+  }
+  const stem = parts
+    .map((part) => part.replace(SAFE_FILENAME_PATTERN, "_"))
+    .filter((part) => part !== "")
+    .join("_");
+  return `${stem === "" ? "value" : stem}.bin`;
+}
+
 export type { ResolvedCell };
-export { resolveEffectiveCell };
+export { buildByteaDownloadFilename, resolveEffectiveCell };

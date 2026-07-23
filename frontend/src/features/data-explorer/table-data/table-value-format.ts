@@ -1,4 +1,5 @@
 import { format, parseISO } from "date-fns";
+import { formatBytes } from "@/lib/console-resources";
 import type {
   TableCell,
   TableResultColumn,
@@ -142,7 +143,7 @@ function formatBytesCell(cell: TableCell, value: unknown): FormattedCell {
   const fullSize = cell.fullSizeBytes;
   const bytes = fullSize > 0n ? Number(fullSize) : length;
   return createFormattedCell({
-    display: `‹${bytes.toLocaleString()} bytes›`,
+    display: `‹${formatBytes(bytes)}›`,
     isTruncated: cell.truncated === true,
     kind: "bytes",
   });

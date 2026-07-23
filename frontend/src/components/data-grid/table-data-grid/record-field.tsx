@@ -1,12 +1,21 @@
 import { create } from "@bufbuild/protobuf";
-import { Check, Copy, Expand, KeyRound, Minus } from "lucide-react";
+import { Check, Copy, Download, Expand, KeyRound, Minus } from "lucide-react";
 import { useState } from "react";
-import { writeClipboard } from "@/components/data-grid/table-data-grid/grid-clipboard";
+import { toast } from "sonner";
 import {
+  writeClipboard,
+  writeClipboardDeferred,
+} from "@/components/data-grid/table-data-grid/grid-clipboard";
+import {
+  buildByteaDownloadFilename,
   type ResolvedCell,
   resolveEffectiveCell,
 } from "@/components/data-grid/table-data-grid/record-field-state";
 import { Button } from "@/components/ui/button";
+import {
+  cellNeedsFullValue,
+  READ_CELL_MAX_BYTES,
+} from "@/features/data-explorer/table-data/full-cell-resolver";
 import {
   keyPostgresArrayItems,
   parsePostgresArrayLiteral,
@@ -17,12 +26,15 @@ import {
   formatTableCell,
 } from "@/features/data-explorer/table-data/table-value-format";
 import { useReadCellValueMutation } from "@/hooks/api/table-data";
+import { parseTableQualifiedName } from "@/lib/console-resources";
+import { downloadBlob } from "@/lib/download-blob";
 import { cn } from "@/lib/utils";
 import {
   ReadCellValueRequestSchema,
   type TableCell,
   type TableResultColumn,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
+import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 const JSON_PRETTY_PARSE_MAX_LENGTH = 100_000;
 
@@ -30,12 +42,14 @@ interface RecordFieldProps {
   cell: TableCell | undefined;
   column: TableResultColumn;
   isPrimaryKey: boolean;
+  rowIdentifier?: string | undefined;
   tableName: string;
 }
 function RecordField({
   cell,
   column,
   isPrimaryKey,
+  rowIdentifier,
   tableName,
 }: RecordFieldProps) {
   const [resolved, setResolved] = useState<ResolvedCell | undefined>(undefined);
@@ -46,11 +60,62 @@ function RecordField({
     effectiveCell?.truncated === true && effectiveCell.fullValueToken !== "";
   const isEmptyString = formatted.kind === "text" && formatted.display === "";
   const canCopy = !(formatted.isNull || isEmptyString);
+  const canDownload = column.dataType === DataType.BINARY && !formatted.isNull;
+  async function fetchFullCell(): Promise<TableCell> {
+    const token = effectiveCell?.fullValueToken ?? "";
+    const response = await fullValueMutation.mutateAsync(
+      create(ReadCellValueRequestSchema, {
+        fullValueToken: token,
+        maxBytes: READ_CELL_MAX_BYTES,
+        name: tableName,
+      })
+    );
+    const full = response.value;
+    if (!full || full.truncated) {
+      throw new Error("Value exceeds the maximum fetchable size");
+    }
+    setResolved({ cell: full, fullValueToken: token });
+    return full;
+  }
   function handleCopy() {
     if (!canCopy) {
       return;
     }
+    if (cellNeedsFullValue(effectiveCell)) {
+      writeClipboardDeferred(async () =>
+        formatCellForClipboard(await fetchFullCell())
+      );
+      return;
+    }
     writeClipboard(formatCellForClipboard(effectiveCell));
+  }
+  function handleDownload() {
+    if (!effectiveCell) {
+      return;
+    }
+    const fullPromise = cellNeedsFullValue(effectiveCell)
+      ? fetchFullCell()
+      : Promise.resolve(effectiveCell);
+    fullPromise
+      .then((full) => {
+        const kind = full.value?.kind;
+        if (kind?.case !== "bytesValue") {
+          return;
+        }
+        const filename = buildByteaDownloadFilename({
+          columnName: column.columnName,
+          rowIdentifier,
+          table: parseTableQualifiedName(tableName).table,
+        });
+        // Copy into a fresh ArrayBuffer-backed view: protobuf-es types its
+        // bytes as Uint8Array<ArrayBufferLike>, which BlobPart rejects.
+        downloadBlob(
+          filename,
+          new Uint8Array(kind.value),
+          "application/octet-stream"
+        );
+      })
+      .catch(() => toast.error("Couldn't download the value"));
   }
   function handleLoadFullValue() {
     if (!(effectiveCell && canExpand)) {
@@ -134,6 +199,19 @@ function RecordField({
               variant="ghost"
             >
               <Copy />
+            </Button>
+          ) : null}
+          {canDownload ? (
+            <Button
+              aria-label={`Download ${column.columnName}`}
+              className="shrink-0 text-muted-foreground"
+              disabled={fullValueMutation.isPending}
+              onClick={handleDownload}
+              size="icon-sm"
+              type="button"
+              variant="ghost"
+            >
+              <Download />
             </Button>
           ) : null}
         </div>
