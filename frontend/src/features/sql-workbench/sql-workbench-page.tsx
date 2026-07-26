@@ -1116,6 +1116,76 @@ function WorkbenchOutput({
   );
 }
 
+function WorkbenchModePanel({
+  mode,
+  modeId,
+  setStatement,
+  statement,
+}: {
+  mode: WorkbenchMode;
+  modeId: string;
+  setStatement: (statement: string) => void;
+  statement: string;
+}) {
+  switch (mode) {
+    case "builder":
+      return (
+        <section
+          aria-labelledby={`${modeId}-builder-tab`}
+          id={`${modeId}-builder-panel`}
+          role="tabpanel"
+        >
+          <VisualBuilderPreview />
+        </section>
+      );
+    case "english":
+      return (
+        <section
+          aria-labelledby={`${modeId}-english-tab`}
+          className="rounded-xl border border-white/10 bg-zinc-900/80 p-5"
+          id={`${modeId}-english-panel`}
+          role="tabpanel"
+        >
+          <div className="flex items-center gap-3 text-lg text-zinc-500">
+            <Sparkles className="size-5 text-blue-400" />
+            Describe what you want to see, for example, shipments held in
+            customs arriving this month
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-semibold text-zinc-500 uppercase tracking-wider">
+              Try
+            </span>
+            {[
+              "shipments held in customs arriving this month",
+              "top 5 carriers by shipment count",
+              "how many overdue shipments",
+              "unpaid invoices over 20k, newest first",
+            ].map((suggestion) => (
+              <span
+                className="rounded-full bg-zinc-950 px-3 py-1.5 text-zinc-400"
+                key={suggestion}
+              >
+                {suggestion}
+              </span>
+            ))}
+          </div>
+        </section>
+      );
+    case "editor":
+      return (
+        <div
+          aria-labelledby={`${modeId}-editor-tab`}
+          id={`${modeId}-editor-panel`}
+          role="tabpanel"
+        >
+          <SqlTextEditor setStatement={setStatement} statement={statement} />
+        </div>
+      );
+    default:
+      return assertNever(mode);
+  }
+}
+
 export function SqlWorkbenchPage({
   databaseId,
   instanceId,
@@ -1222,59 +1292,12 @@ export function SqlWorkbenchPage({
 
           <FileTabs />
 
-          {mode === "builder" ? (
-            <section
-              aria-labelledby={`${modeId}-builder-tab`}
-              id={`${modeId}-builder-panel`}
-              role="tabpanel"
-            >
-              <VisualBuilderPreview />
-            </section>
-          ) : null}
-          {mode === "english" ? (
-            <section
-              aria-labelledby={`${modeId}-english-tab`}
-              className="rounded-xl border border-white/10 bg-zinc-900/80 p-5"
-              id={`${modeId}-english-panel`}
-              role="tabpanel"
-            >
-              <div className="flex items-center gap-3 text-lg text-zinc-500">
-                <Sparkles className="size-5 text-blue-400" />
-                Describe what you want to see, for example, shipments held in
-                customs arriving this month
-              </div>
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-                <span className="font-semibold text-zinc-500 uppercase tracking-wider">
-                  Try
-                </span>
-                {[
-                  "shipments held in customs arriving this month",
-                  "top 5 carriers by shipment count",
-                  "how many overdue shipments",
-                  "unpaid invoices over 20k, newest first",
-                ].map((suggestion) => (
-                  <span
-                    className="rounded-full bg-zinc-950 px-3 py-1.5 text-zinc-400"
-                    key={suggestion}
-                  >
-                    {suggestion}
-                  </span>
-                ))}
-              </div>
-            </section>
-          ) : null}
-          {mode === "editor" ? (
-            <div
-              aria-labelledby={`${modeId}-editor-tab`}
-              id={`${modeId}-editor-panel`}
-              role="tabpanel"
-            >
-              <SqlTextEditor
-                setStatement={setStatement}
-                statement={statement}
-              />
-            </div>
-          ) : null}
+          <WorkbenchModePanel
+            mode={mode}
+            modeId={modeId}
+            setStatement={setStatement}
+            statement={statement}
+          />
 
           <EditorToolbar
             canRun={canRun}
