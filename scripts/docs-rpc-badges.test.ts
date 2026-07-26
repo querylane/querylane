@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { readFile } from "node:fs/promises";
 import { visibleOperationParameters } from "../docs/components/openapi/parameters";
 import {
 	type RpcKind,
@@ -110,4 +111,28 @@ test("replaces HTTP badges only for known RPC navigation routes", () => {
 			label: "Reference",
 		},
 	]);
+});
+
+test("keeps Blume authorization details and request credentials in RPC operations", async () => {
+	const operation = await readFile(
+		new URL("../docs/components/openapi/Operation.astro", import.meta.url),
+		"utf8",
+	);
+
+	expect(operation).toContain("<Authorization security={security} />");
+	expect(operation).toContain("sampleAuth(security)");
+});
+
+test("wraps long RPC summaries and routes in API overview cards", async () => {
+	const overview = await readFile(
+		new URL(
+			"../docs/components/openapi/ApiTagOperations.astro",
+			import.meta.url,
+		),
+		"utf8",
+	);
+
+	expect(overview).not.toContain("truncate");
+	expect(overview).toContain("break-words");
+	expect(overview).toContain("break-all");
 });

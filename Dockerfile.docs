@@ -5,12 +5,14 @@ FROM --platform=$BUILDPLATFORM oven/bun:1.3.14-alpine AS builder
 WORKDIR /app
 
 COPY package.json bun.lock ./
+COPY patches ./patches
 RUN --mount=type=cache,target=/root/.bun/install/cache \
 	bun install --frozen-lockfile --ignore-scripts
 
 COPY blume.config.ts ./
 COPY components.ts ./
 COPY components ./components
+COPY examples ./examples
 COPY theme.css ./
 COPY docs/components ./docs/components
 COPY docs/generated ./docs/generated
@@ -20,13 +22,34 @@ COPY proto ./proto
 COPY scripts/docs-content.test.ts ./scripts/docs-content.test.ts
 
 RUN bun run docs:test:content
+RUN bun run docs:check
 RUN bun run docs:build
+RUN bun run docs:audit
 
-FROM caddy:2.11.4-alpine
+FROM oven/bun:1.3.14-alpine AS runtime-deps
 
-COPY --from=builder /app/dist /usr/share/caddy
+WORKDIR /app
+
+COPY package.json bun.lock ./
+COPY patches ./patches
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+	bun install --frozen-lockfile --ignore-scripts
+
+FROM node:24-alpine
+
+WORKDIR /app
+
+ENV HOST=0.0.0.0
+ENV PORT=80
+
+COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=runtime-deps --chown=node:node /app/node_modules ./node_modules
+
+USER node
 
 EXPOSE 80
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
 	CMD wget -q --spider http://127.0.0.1/ || exit 1
+
+CMD ["node", "./dist/server/entry.mjs"]

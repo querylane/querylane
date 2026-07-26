@@ -21,6 +21,12 @@ Querylane does not currently authenticate API callers. Put the server behind the
 
 Use the [generated experimental reference](/api) when you need the current method, request, response, or schema details.
 
+## Read method shapes
+
+The experimental reference labels each operation by its RPC shape. Unary methods return once, while streaming methods keep one or both sides of the connection open:
+
+<Component path="rpc-method-kinds" />
+
 ## Call a unary method with curl
 
 Set the base URL once:

@@ -1,0 +1,39 @@
+---
+import RpcBadge from "../docs/components/openapi/RpcBadge.astro";
+import { rpcPresentation } from "../docs/components/openapi/rpc-kind.ts";
+
+const methods = [
+	{
+		description: "One request returns one response.",
+		operation: { "x-connectrpc-method-kind": "unary" },
+		title: "Single exchange",
+	},
+	{
+		description: "One request returns a sequence of responses.",
+		operation: { "x-connectrpc-method-kind": "server-streaming" },
+		title: "Streaming responses",
+	},
+	{
+		description: "A sequence of requests produces one response.",
+		operation: { "x-connectrpc-method-kind": "client-streaming" },
+		title: "Streaming requests",
+	},
+	{
+		description: "Requests and responses stream independently.",
+		operation: { "x-connectrpc-method-kind": "bidirectional-streaming" },
+		title: "Two-way stream",
+	},
+] as const;
+---
+
+<ul class="grid gap-3 p-1 sm:grid-cols-2">
+  {methods.map((method) => (
+    <li class="rounded-lg border border-border bg-background p-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <RpcBadge presentation={rpcPresentation(method.operation)} />
+        <span class="font-medium text-foreground text-sm">{method.title}</span>
+      </div>
+      <p class="mt-2 text-muted-foreground text-sm">{method.description}</p>
+    </li>
+  ))}
+</ul>
