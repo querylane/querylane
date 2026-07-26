@@ -5,37 +5,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root';
-import { Route as SetupRouteImport } from './routes/setup';
-import { Route as NewInstanceRouteImport } from './routes/new-instance';
-import { Route as AdminRouteImport } from './routes/admin';
-import { Route as AccessDeniedRouteImport } from './routes/access-denied';
 import { Route as IndexRouteImport } from './routes/index';
+import { Route as AccessDeniedRouteImport } from './routes/access-denied';
+import { Route as AdminRouteImport } from './routes/admin';
+import { Route as NewInstanceRouteImport } from './routes/new-instance';
+import { Route as SetupRouteImport } from './routes/setup';
 import { Route as InstancesInstanceIdRouteRouteImport } from './routes/instances/$instanceId/route';
 import { Route as InstancesInstanceIdIndexRouteImport } from './routes/instances/$instanceId/index';
-import { Route as InstancesInstanceIdConfigurationRouteImport } from './routes/instances/$instanceId/configuration';
-import { Route as InstancesInstanceIdAdminRouteImport } from './routes/instances/$instanceId/admin';
 import { Route as InstancesInstanceIdActivityRouteImport } from './routes/instances/$instanceId/activity';
-import { Route as InstancesInstanceIdRolesRouteRouteImport } from './routes/instances/$instanceId/roles/route';
+import { Route as InstancesInstanceIdAdminRouteImport } from './routes/instances/$instanceId/admin';
+import { Route as InstancesInstanceIdConfigurationRouteImport } from './routes/instances/$instanceId/configuration';
 import { Route as InstancesInstanceIdDatabasesRouteRouteImport } from './routes/instances/$instanceId/databases/route';
+import { Route as InstancesInstanceIdRolesRouteRouteImport } from './routes/instances/$instanceId/roles/route';
 import { Route as InstancesInstanceIdRolesIndexRouteImport } from './routes/instances/$instanceId/roles/index';
 import { Route as InstancesInstanceIdRolesRoleIdRouteImport } from './routes/instances/$instanceId/roles/$roleId';
 import { Route as InstancesInstanceIdDatabasesDatabaseIdIndexRouteImport } from './routes/instances/$instanceId/databases/$databaseId/index';
-import { Route as InstancesInstanceIdDatabasesDatabaseIdExtensionsRouteImport } from './routes/instances/$instanceId/databases/$databaseId/extensions';
 import { Route as InstancesInstanceIdDatabasesDatabaseIdExplorerRouteImport } from './routes/instances/$instanceId/databases/$databaseId/explorer';
+import { Route as InstancesInstanceIdDatabasesDatabaseIdExtensionsRouteImport } from './routes/instances/$instanceId/databases/$databaseId/extensions';
 
-const SetupRoute = SetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
-  getParentRoute: () => rootRouteImport,
-} as any);
-const NewInstanceRoute = NewInstanceRouteImport.update({
-  id: '/new-instance',
-  path: '/new-instance',
-  getParentRoute: () => rootRouteImport,
-} as any);
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any);
 const AccessDeniedRoute = AccessDeniedRouteImport.update({
@@ -43,9 +33,19 @@ const AccessDeniedRoute = AccessDeniedRouteImport.update({
   path: '/access-denied',
   getParentRoute: () => rootRouteImport,
 } as any);
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const NewInstanceRoute = NewInstanceRouteImport.update({
+  id: '/new-instance',
+  path: '/new-instance',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
   getParentRoute: () => rootRouteImport,
 } as any);
 const InstancesInstanceIdRouteRoute =
@@ -60,10 +60,10 @@ const InstancesInstanceIdIndexRoute =
     path: '/',
     getParentRoute: () => InstancesInstanceIdRouteRoute,
   } as any);
-const InstancesInstanceIdConfigurationRoute =
-  InstancesInstanceIdConfigurationRouteImport.update({
-    id: '/configuration',
-    path: '/configuration',
+const InstancesInstanceIdActivityRoute =
+  InstancesInstanceIdActivityRouteImport.update({
+    id: '/activity',
+    path: '/activity',
     getParentRoute: () => InstancesInstanceIdRouteRoute,
   } as any);
 const InstancesInstanceIdAdminRoute =
@@ -72,22 +72,22 @@ const InstancesInstanceIdAdminRoute =
     path: '/admin',
     getParentRoute: () => InstancesInstanceIdRouteRoute,
   } as any);
-const InstancesInstanceIdActivityRoute =
-  InstancesInstanceIdActivityRouteImport.update({
-    id: '/activity',
-    path: '/activity',
-    getParentRoute: () => InstancesInstanceIdRouteRoute,
-  } as any);
-const InstancesInstanceIdRolesRouteRoute =
-  InstancesInstanceIdRolesRouteRouteImport.update({
-    id: '/roles',
-    path: '/roles',
+const InstancesInstanceIdConfigurationRoute =
+  InstancesInstanceIdConfigurationRouteImport.update({
+    id: '/configuration',
+    path: '/configuration',
     getParentRoute: () => InstancesInstanceIdRouteRoute,
   } as any);
 const InstancesInstanceIdDatabasesRouteRoute =
   InstancesInstanceIdDatabasesRouteRouteImport.update({
     id: '/databases',
     path: '/databases',
+    getParentRoute: () => InstancesInstanceIdRouteRoute,
+  } as any);
+const InstancesInstanceIdRolesRouteRoute =
+  InstancesInstanceIdRolesRouteRouteImport.update({
+    id: '/roles',
+    path: '/roles',
     getParentRoute: () => InstancesInstanceIdRouteRoute,
   } as any);
 const InstancesInstanceIdRolesIndexRoute =
@@ -108,16 +108,16 @@ const InstancesInstanceIdDatabasesDatabaseIdIndexRoute =
     path: '/$databaseId/',
     getParentRoute: () => InstancesInstanceIdDatabasesRouteRoute,
   } as any);
-const InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute =
-  InstancesInstanceIdDatabasesDatabaseIdExtensionsRouteImport.update({
-    id: '/$databaseId/extensions',
-    path: '/$databaseId/extensions',
-    getParentRoute: () => InstancesInstanceIdDatabasesRouteRoute,
-  } as any);
 const InstancesInstanceIdDatabasesDatabaseIdExplorerRoute =
   InstancesInstanceIdDatabasesDatabaseIdExplorerRouteImport.update({
     id: '/$databaseId/explorer',
     path: '/$databaseId/explorer',
+    getParentRoute: () => InstancesInstanceIdDatabasesRouteRoute,
+  } as any);
+const InstancesInstanceIdDatabasesDatabaseIdExtensionsRoute =
+  InstancesInstanceIdDatabasesDatabaseIdExtensionsRouteImport.update({
+    id: '/$databaseId/extensions',
+    path: '/$databaseId/extensions',
     getParentRoute: () => InstancesInstanceIdDatabasesRouteRoute,
   } as any);
 
@@ -246,25 +246,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/setup': {
-      id: '/setup';
-      path: '/setup';
-      fullPath: '/setup';
-      preLoaderRoute: typeof SetupRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    '/new-instance': {
-      id: '/new-instance';
-      path: '/new-instance';
-      fullPath: '/new-instance';
-      preLoaderRoute: typeof NewInstanceRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    '/admin': {
-      id: '/admin';
-      path: '/admin';
-      fullPath: '/admin';
-      preLoaderRoute: typeof AdminRouteImport;
+    '/': {
+      id: '/';
+      path: '/';
+      fullPath: '/';
+      preLoaderRoute: typeof IndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/access-denied': {
@@ -274,11 +260,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccessDeniedRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    '/': {
-      id: '/';
-      path: '/';
-      fullPath: '/';
-      preLoaderRoute: typeof IndexRouteImport;
+    '/admin': {
+      id: '/admin';
+      path: '/admin';
+      fullPath: '/admin';
+      preLoaderRoute: typeof AdminRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/new-instance': {
+      id: '/new-instance';
+      path: '/new-instance';
+      fullPath: '/new-instance';
+      preLoaderRoute: typeof NewInstanceRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/setup': {
+      id: '/setup';
+      path: '/setup';
+      fullPath: '/setup';
+      preLoaderRoute: typeof SetupRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/instances/$instanceId': {
@@ -295,11 +295,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InstancesInstanceIdIndexRouteImport;
       parentRoute: typeof InstancesInstanceIdRouteRoute;
     };
-    '/instances/$instanceId/configuration': {
-      id: '/instances/$instanceId/configuration';
-      path: '/configuration';
-      fullPath: '/instances/$instanceId/configuration';
-      preLoaderRoute: typeof InstancesInstanceIdConfigurationRouteImport;
+    '/instances/$instanceId/activity': {
+      id: '/instances/$instanceId/activity';
+      path: '/activity';
+      fullPath: '/instances/$instanceId/activity';
+      preLoaderRoute: typeof InstancesInstanceIdActivityRouteImport;
       parentRoute: typeof InstancesInstanceIdRouteRoute;
     };
     '/instances/$instanceId/admin': {
@@ -309,18 +309,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InstancesInstanceIdAdminRouteImport;
       parentRoute: typeof InstancesInstanceIdRouteRoute;
     };
-    '/instances/$instanceId/activity': {
-      id: '/instances/$instanceId/activity';
-      path: '/activity';
-      fullPath: '/instances/$instanceId/activity';
-      preLoaderRoute: typeof InstancesInstanceIdActivityRouteImport;
-      parentRoute: typeof InstancesInstanceIdRouteRoute;
-    };
-    '/instances/$instanceId/roles': {
-      id: '/instances/$instanceId/roles';
-      path: '/roles';
-      fullPath: '/instances/$instanceId/roles';
-      preLoaderRoute: typeof InstancesInstanceIdRolesRouteRouteImport;
+    '/instances/$instanceId/configuration': {
+      id: '/instances/$instanceId/configuration';
+      path: '/configuration';
+      fullPath: '/instances/$instanceId/configuration';
+      preLoaderRoute: typeof InstancesInstanceIdConfigurationRouteImport;
       parentRoute: typeof InstancesInstanceIdRouteRoute;
     };
     '/instances/$instanceId/databases': {
@@ -328,6 +321,13 @@ declare module '@tanstack/react-router' {
       path: '/databases';
       fullPath: '/instances/$instanceId/databases';
       preLoaderRoute: typeof InstancesInstanceIdDatabasesRouteRouteImport;
+      parentRoute: typeof InstancesInstanceIdRouteRoute;
+    };
+    '/instances/$instanceId/roles': {
+      id: '/instances/$instanceId/roles';
+      path: '/roles';
+      fullPath: '/instances/$instanceId/roles';
+      preLoaderRoute: typeof InstancesInstanceIdRolesRouteRouteImport;
       parentRoute: typeof InstancesInstanceIdRouteRoute;
     };
     '/instances/$instanceId/roles/': {
@@ -351,18 +351,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InstancesInstanceIdDatabasesDatabaseIdIndexRouteImport;
       parentRoute: typeof InstancesInstanceIdDatabasesRouteRoute;
     };
-    '/instances/$instanceId/databases/$databaseId/extensions': {
-      id: '/instances/$instanceId/databases/$databaseId/extensions';
-      path: '/$databaseId/extensions';
-      fullPath: '/instances/$instanceId/databases/$databaseId/extensions';
-      preLoaderRoute: typeof InstancesInstanceIdDatabasesDatabaseIdExtensionsRouteImport;
-      parentRoute: typeof InstancesInstanceIdDatabasesRouteRoute;
-    };
     '/instances/$instanceId/databases/$databaseId/explorer': {
       id: '/instances/$instanceId/databases/$databaseId/explorer';
       path: '/$databaseId/explorer';
       fullPath: '/instances/$instanceId/databases/$databaseId/explorer';
       preLoaderRoute: typeof InstancesInstanceIdDatabasesDatabaseIdExplorerRouteImport;
+      parentRoute: typeof InstancesInstanceIdDatabasesRouteRoute;
+    };
+    '/instances/$instanceId/databases/$databaseId/extensions': {
+      id: '/instances/$instanceId/databases/$databaseId/extensions';
+      path: '/$databaseId/extensions';
+      fullPath: '/instances/$instanceId/databases/$databaseId/extensions';
+      preLoaderRoute: typeof InstancesInstanceIdDatabasesDatabaseIdExtensionsRouteImport;
       parentRoute: typeof InstancesInstanceIdDatabasesRouteRoute;
     };
   }
