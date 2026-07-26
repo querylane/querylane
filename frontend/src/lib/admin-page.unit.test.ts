@@ -132,15 +132,14 @@ describe("resolveCurrentAdminPage", () => {
       pathname: "/instances/x/databases/db",
       scope: "database",
     },
-  ] as const)("implicit from pathname $pathname -> $expected", ({
-    pathname,
-    scope,
-    expected,
-  }) => {
-    expect(resolveCurrentAdminPage({ pathname, scope, value: undefined })).toBe(
-      expected
-    );
-  });
+  ] as const)(
+    "implicit from pathname $pathname -> $expected",
+    ({ pathname, scope, expected }) => {
+      expect(
+        resolveCurrentAdminPage({ pathname, scope, value: undefined })
+      ).toBe(expected);
+    }
+  );
 
   test("explicit value takes priority over pathname", () => {
     expect(

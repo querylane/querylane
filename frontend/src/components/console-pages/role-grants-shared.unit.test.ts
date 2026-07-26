@@ -190,14 +190,12 @@ describe("privTooltip", () => {
 });
 
 describe("privTone", () => {
-  test.each([
-    "SELECT",
-    "USAGE",
-    "CONNECT",
-    "EXECUTE",
-  ])("classifies %s as read", (name) => {
-    expect(privTone(name)).toBe("read");
-  });
+  test.each(["SELECT", "USAGE", "CONNECT", "EXECUTE"])(
+    "classifies %s as read",
+    (name) => {
+      expect(privTone(name)).toBe("read");
+    }
+  );
 
   test.each([
     "INSERT",

@@ -269,88 +269,89 @@ describe("buildStreamRowsExportPayload", () => {
 });
 
 describe("exportStreamRows", () => {
-  test.each(
-    EXPORT_FORMAT_SAVE_PICKER_CASES
-  )("uses a parameter-free $acceptMimeType MIME type for $exportFormat save picker accept options", async ({
-    acceptMimeType,
-    expectedContents,
-    exportFormat,
-    extension,
-    filenamePattern,
-    payloadMimeType,
-  }) => {
-    const columns = [column("id")];
-    const writes: BlobPart[] = [];
-    const writable = {
-      abort: vi.fn(),
-      close: vi.fn(),
-      write: vi.fn((chunk: BlobPart) => {
-        writes.push(chunk);
-      }),
-    };
-    const showSaveFilePicker = vi.fn((options: SaveFilePickerOptions) => {
-      const acceptTypes = options.types.flatMap((type) =>
-        Object.keys(type.accept)
-      );
-      const invalidType = acceptTypes.find((type) => type.includes(";"));
-      if (invalidType) {
-        throw new TypeError(`Invalid type: ${invalidType}`);
-      }
-      return Promise.resolve({
-        createWritable: () => Promise.resolve(writable),
+  test.each(EXPORT_FORMAT_SAVE_PICKER_CASES)(
+    "uses a parameter-free $acceptMimeType MIME type for $exportFormat save picker accept options",
+    async ({
+      acceptMimeType,
+      expectedContents,
+      exportFormat,
+      extension,
+      filenamePattern,
+      payloadMimeType,
+    }) => {
+      const columns = [column("id")];
+      const writes: BlobPart[] = [];
+      const writable = {
+        abort: vi.fn(),
+        close: vi.fn(),
+        write: vi.fn((chunk: BlobPart) => {
+          writes.push(chunk);
+        }),
+      };
+      const showSaveFilePicker = vi.fn((options: SaveFilePickerOptions) => {
+        const acceptTypes = options.types.flatMap((type) =>
+          Object.keys(type.accept)
+        );
+        const invalidType = acceptTypes.find((type) => type.includes(";"));
+        if (invalidType) {
+          throw new TypeError(`Invalid type: ${invalidType}`);
+        }
+        return Promise.resolve({
+          createWritable: () => Promise.resolve(writable),
+        });
       });
-    });
-    Object.defineProperty(window, "showSaveFilePicker", {
-      configurable: true,
-      value: showSaveFilePicker,
-    });
-    const transport = createRouterTransport(({ service }) => {
-      service(TableDataService, {
-        streamRows: () =>
-          streamOf(
-            create(StreamRowsResponseSchema, {
-              event: {
-                case: "metadata",
-                value: create(StreamRowsMetadataSchema, { columns }),
-              },
-            }),
-            create(StreamRowsResponseSchema, {
-              event: {
-                case: "stats",
-                value: create(StreamRowsStatsSchema, {
-                  rowCount: 0n,
-                }),
-              },
-            })
-          ),
+      Object.defineProperty(window, "showSaveFilePicker", {
+        configurable: true,
+        value: showSaveFilePicker,
       });
-    });
-
-    try {
-      const result = await exportStreamRows({
-        exportFormat,
-        request: create(ReadRowsRequestSchema, { name: RESOURCE }),
-        transport,
+      const transport = createRouterTransport(({ service }) => {
+        service(TableDataService, {
+          streamRows: () =>
+            streamOf(
+              create(StreamRowsResponseSchema, {
+                event: {
+                  case: "metadata",
+                  value: create(StreamRowsMetadataSchema, { columns }),
+                },
+              }),
+              create(StreamRowsResponseSchema, {
+                event: {
+                  case: "stats",
+                  value: create(StreamRowsStatsSchema, {
+                    rowCount: 0n,
+                  }),
+                },
+              })
+            ),
+        });
       });
 
-      expect(showSaveFilePicker).toHaveBeenCalledWith(
-        expect.objectContaining({
-          suggestedName: expect.stringMatching(filenamePattern),
-          types: [
-            {
-              accept: { [acceptMimeType]: [extension] },
-              description: "Querylane export",
-            },
-          ],
-        })
-      );
-      expect(result.savedToFile).toBe(true);
-      if (payloadMimeType) {
-        expect(result.payload.mimeType).toBe(payloadMimeType);
+      try {
+        const result = await exportStreamRows({
+          exportFormat,
+          request: create(ReadRowsRequestSchema, { name: RESOURCE }),
+          transport,
+        });
+
+        expect(showSaveFilePicker).toHaveBeenCalledWith(
+          expect.objectContaining({
+            suggestedName: expect.stringMatching(filenamePattern),
+            types: [
+              {
+                accept: { [acceptMimeType]: [extension] },
+                description: "Querylane export",
+              },
+            ],
+          })
+        );
+        expect(result.savedToFile).toBe(true);
+        if (payloadMimeType) {
+          expect(result.payload.mimeType).toBe(payloadMimeType);
+        }
+        expect(writes.join("")).toBe(expectedContents);
+      } finally {
+        Reflect.deleteProperty(window, "showSaveFilePicker");
       }
-      expect(writes.join("")).toBe(expectedContents);
-    } finally {
-      Reflect.deleteProperty(window, "showSaveFilePicker");
     }
-  });
+  );
 });

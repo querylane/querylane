@@ -770,20 +770,23 @@ describe("backend instance credential recovery routing", () => {
   test.each([
     Instance_CredentialState.UNREADABLE,
     Instance_CredentialState.KEY_MISSING,
-  ])("redirects unavailable credential state %s to configuration", async (credentialState) => {
-    state.instanceData = instanceResponse({
-      credentialState,
-    });
-    renderInstanceOverview();
-
-    await waitFor(() => {
-      expect(state.navigate).toHaveBeenCalledWith({
-        params: { instanceId: "prod" },
-        replace: true,
-        to: "/instances/$instanceId/configuration",
+  ])(
+    "redirects unavailable credential state %s to configuration",
+    async (credentialState) => {
+      state.instanceData = instanceResponse({
+        credentialState,
       });
-    });
-  });
+      renderInstanceOverview();
+
+      await waitFor(() => {
+        expect(state.navigate).toHaveBeenCalledWith({
+          params: { instanceId: "prod" },
+          replace: true,
+          to: "/instances/$instanceId/configuration",
+        });
+      });
+    }
+  );
 });
 
 describe("backend instance danger zone", () => {

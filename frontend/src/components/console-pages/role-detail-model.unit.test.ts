@@ -40,14 +40,12 @@ function capabilityByKeyword(list: Capability[], keyword: string): Capability {
 }
 
 describe("isSection", () => {
-  test.each([
-    "definition",
-    "grants",
-    "members",
-    "overview",
-  ])("accepts %s", (value) => {
-    expect(isSection(value)).toBe(true);
-  });
+  test.each(["definition", "grants", "members", "overview"])(
+    "accepts %s",
+    (value) => {
+      expect(isSection(value)).toBe(true);
+    }
+  );
 
   test("rejects unknown values", () => {
     expect(isSection("settings")).toBe(false);

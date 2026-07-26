@@ -137,37 +137,36 @@ describe("resource names", () => {
       table: "monthly report",
       view: "daily view",
     },
-  ])("keeps $label identifier resource segments readable", ({
-    schema,
-    table,
-    view,
-  }) => {
-    const schemaName = buildSchemaName("seed-edgecases", "normal_db", schema);
-    const tableName = buildTableName({
-      instanceId: "seed-edgecases",
-      databaseId: "normal_db",
-      schemaId: schema,
-      tableId: table,
-    });
-    const viewName = buildViewName({
-      instanceId: "seed-edgecases",
-      databaseId: "normal_db",
-      schemaId: schema,
-      viewId: view,
-    });
+  ])(
+    "keeps $label identifier resource segments readable",
+    ({ schema, table, view }) => {
+      const schemaName = buildSchemaName("seed-edgecases", "normal_db", schema);
+      const tableName = buildTableName({
+        instanceId: "seed-edgecases",
+        databaseId: "normal_db",
+        schemaId: schema,
+        tableId: table,
+      });
+      const viewName = buildViewName({
+        instanceId: "seed-edgecases",
+        databaseId: "normal_db",
+        schemaId: schema,
+        viewId: view,
+      });
 
-    expect(schemaName).toBe(
-      `instances/seed-edgecases/databases/normal_db/schemas/${schema}`
-    );
-    expect(tableName).toBe(
-      `instances/seed-edgecases/databases/normal_db/schemas/${schema}/tables/${table}`
-    );
-    expect(viewName).toBe(
-      `instances/seed-edgecases/databases/normal_db/schemas/${schema}/views/${view}`
-    );
-    expect(parseTableQualifiedName(tableName)).toEqual({ schema, table });
-    expect(parseResourceLeafId(viewName)).toBe(view);
-  });
+      expect(schemaName).toBe(
+        `instances/seed-edgecases/databases/normal_db/schemas/${schema}`
+      );
+      expect(tableName).toBe(
+        `instances/seed-edgecases/databases/normal_db/schemas/${schema}/tables/${table}`
+      );
+      expect(viewName).toBe(
+        `instances/seed-edgecases/databases/normal_db/schemas/${schema}/views/${view}`
+      );
+      expect(parseTableQualifiedName(tableName)).toEqual({ schema, table });
+      expect(parseResourceLeafId(viewName)).toBe(view);
+    }
+  );
 
   it("parses leaf ids and qualified table names", () => {
     expect(parseResourceLeafId("/instances/i1/databases/app/")).toBe("app");

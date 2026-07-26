@@ -34,12 +34,12 @@ describe("resolveBreadcrumbTail", () => {
       expected: { kind: "page", label: "Extensions" },
       pathname: "/instances/prod/databases/app/extensions",
     },
-  ] as const)("$pathname -> page '$expected.label'", ({
-    pathname,
-    expected,
-  }) => {
-    expect(resolveBreadcrumbTail(pathname)).toEqual<BreadcrumbTail>(expected);
-  });
+  ] as const)(
+    "$pathname -> page '$expected.label'",
+    ({ pathname, expected }) => {
+      expect(resolveBreadcrumbTail(pathname)).toEqual<BreadcrumbTail>(expected);
+    }
+  );
 
   test("role detail yields a role tail with instance + role ids", () => {
     expect(
