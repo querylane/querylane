@@ -21,6 +21,7 @@ COPY scripts/docs-content.test.ts ./scripts/docs-content.test.ts
 
 RUN bun run docs:test:content
 RUN bun run docs:build
+RUN bun run docs:audit
 
 FROM caddy:2.11.4-alpine
 

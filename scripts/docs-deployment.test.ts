@@ -27,6 +27,18 @@ test("ships the static Blume output in a health-checked container", async () => 
 	expect(dockerfile).toContain("HEALTHCHECK");
 });
 
+test("audits the built docs site in the container", async () => {
+	const [packageFile, dockerfile] = await Promise.all([
+		read("package.json"),
+		read("Dockerfile.docs"),
+	]);
+
+	expect(packageFile).toContain('"docs:audit": "blume audit"');
+	expect(dockerfile).toContain(
+		"RUN bun run docs:build\nRUN bun run docs:audit",
+	);
+});
+
 test("validates and publishes the rolling docs image", async () => {
 	const [ci, publish] = await Promise.all([
 		read(".github/workflows/docker-ci.yml"),
