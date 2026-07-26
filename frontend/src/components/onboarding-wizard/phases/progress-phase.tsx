@@ -73,7 +73,7 @@ function WaitingForConfigBody({
           ) : (
             <FileCog className="size-5" />
           )}
-          {retryPending ? "Checking for config..." : "I've saved the file"}
+          {retryPending ? "Checking for config…" : "I've saved the file"}
         </Button>
       </div>
       {watchNotice ? (

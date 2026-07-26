@@ -58,11 +58,11 @@ function Eyebrow({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <span className="font-medium text-[11px] text-muted-foreground uppercase tracking-[0.08em]">
+      <span className="font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em]">
         {children}
       </span>
       {right ? (
-        <span className="font-mono text-[11px] text-muted-foreground">
+        <span className="font-mono text-[0.6875rem] text-muted-foreground">
           {right}
         </span>
       ) : null}
@@ -148,12 +148,12 @@ function StatCell({
 }) {
   return (
     <div className={cn("flex flex-col gap-1.5 px-5 py-4", className)}>
-      <span className="font-medium text-[11px] text-muted-foreground uppercase tracking-[0.08em]">
+      <span className="font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em]">
         {label}
       </span>
       <div className="flex items-end justify-between gap-3">
         <div className="flex flex-col gap-0.5">
-          <span className="font-mono font-semibold text-[22px] text-foreground tabular-nums leading-none tracking-tight">
+          <span className="font-mono font-semibold text-[1.375rem] text-foreground tabular-nums leading-none tracking-tight">
             {value}
           </span>
           {sub ? (
@@ -244,7 +244,7 @@ function SlowQueriesEmptyState() {
         <p className="font-medium text-foreground text-sm">
           Query statistics are off
         </p>
-        <p className="max-w-sm text-[13px] text-muted-foreground">
+        <p className="max-w-sm text-[0.8125rem] text-muted-foreground">
           Install pg_stat_statements to rank queries by execution time.
         </p>
       </div>
@@ -269,7 +269,7 @@ function SlowQueryRow({
       type="button"
       variant="ghost"
     >
-      <code className="w-full truncate font-mono text-[13px] text-foreground">
+      <code className="w-full truncate font-mono text-[0.8125rem] text-foreground">
         {query.query || "(query text unavailable)"}
       </code>
       <span className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground text-xs">
@@ -387,11 +387,11 @@ function TopTableRow({
         aria-hidden="true"
         className="size-3.5 shrink-0 text-muted-foreground"
       />
-      <code className="min-w-0 flex-1 truncate font-mono text-[13px]">
+      <code className="min-w-0 flex-1 truncate font-mono text-[0.8125rem]">
         <span className="text-muted-foreground">{object.schemaId}.</span>
         <span className="text-foreground">{object.objectId}</span>
       </code>
-      <span className="w-16 shrink-0 text-right font-mono text-[13px] text-foreground tabular-nums">
+      <span className="w-16 shrink-0 text-right font-mono text-[0.8125rem] text-foreground tabular-nums">
         {formatBytes(object.sizeBytes)}
       </span>
     </Link>
@@ -484,7 +484,7 @@ function SchemasCard({
                     aria-hidden="true"
                     className="size-3.5 shrink-0 text-muted-foreground"
                   />
-                  <code className="truncate font-medium font-mono text-[13px] text-foreground">
+                  <code className="truncate font-medium font-mono text-[0.8125rem] text-foreground">
                     {schema.schemaId}
                   </code>
                 </span>
@@ -554,11 +554,11 @@ function OtherDatabaseRow({
         aria-hidden="true"
         className="size-3.5 shrink-0 text-muted-foreground"
       />
-      <code className="min-w-0 flex-1 truncate font-medium font-mono text-[13px] text-foreground">
+      <code className="min-w-0 flex-1 truncate font-medium font-mono text-[0.8125rem] text-foreground">
         {database.displayName}
       </code>
       {database.isSystemDatabase ? (
-        <span className="shrink-0 text-[10px] text-muted-foreground uppercase tracking-wide">
+        <span className="shrink-0 text-[0.625rem] text-muted-foreground uppercase tracking-wide">
           system
         </span>
       ) : null}

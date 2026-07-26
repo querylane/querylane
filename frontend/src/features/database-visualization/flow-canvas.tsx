@@ -262,7 +262,9 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
             <p
               className={cn(
                 "truncate text-muted-foreground uppercase tracking-wider",
-                data.density === "compact" ? "text-[10px]" : "text-[11px]"
+                data.density === "compact"
+                  ? "text-[0.625rem]"
+                  : "text-[0.6875rem]"
               )}
             >
               {data.subtitle}
@@ -288,8 +290,8 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
             <Badge
               className={cn(
                 data.density === "compact"
-                  ? "h-4 px-1 text-[9px]"
-                  : "h-5 px-1.5 text-[10px]"
+                  ? "h-4 px-1 text-[0.5625rem]"
+                  : "h-5 px-1.5 text-[0.625rem]"
               )}
               key={badge}
               variant="secondary"
@@ -305,7 +307,9 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
             <p
               className={cn(
                 "truncate font-mono text-muted-foreground",
-                data.density === "compact" ? "text-[10px]" : "text-[11px]"
+                data.density === "compact"
+                  ? "text-[0.625rem]"
+                  : "text-[0.6875rem]"
               )}
               key={line}
               title={line}
@@ -314,7 +318,7 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
             </p>
           ))}
           {extraCount > 0 ? (
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[0.6875rem] text-muted-foreground">
               +{extraCount} more
             </p>
           ) : null}

@@ -132,7 +132,9 @@ function ObjectNameCell({ row }: { row: SchemaObjectRow }) {
         aria-hidden="true"
         className="size-3.5 shrink-0 text-muted-foreground"
       />
-      <span className="truncate font-mono text-[13px]">{row.displayName}</span>
+      <span className="truncate font-mono text-[0.8125rem]">
+        {row.displayName}
+      </span>
     </span>
   );
 }
@@ -474,7 +476,7 @@ function SchemaDetailNotices({
         <CatalogSyncNotice notice={tablesSyncNotice} surface="detail" />
       ) : null}
       {hasObjectsError ? (
-        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[0.8125rem] text-destructive">
           Failed to load some objects in this schema. Refresh the page to try
           again.
         </div>

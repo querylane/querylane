@@ -50,7 +50,7 @@ export function CreateInstancePageInner({
     updateField,
   } = useCreateInstancePageController(initialState);
   return (
-    <div className="flex min-h-screen items-start justify-center p-6 lg:p-8">
+    <div className="flex min-h-dvh items-start justify-center p-6 lg:p-8">
       <div className="w-full max-w-2xl space-y-6">
         <CreateInstancePageHeader onBack={handleBack} />
 

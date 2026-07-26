@@ -513,7 +513,7 @@ function InstancePageHeader({
             </Button>
           </div>
         </div>
-        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[0.8125rem] text-muted-foreground">
           {instance.config?.host ? (
             <>
               <CopyableHost
@@ -554,7 +554,7 @@ function InstancePageHeader({
           </Alert>
         ) : null}
         {connectionError ? (
-          <div className="flex max-w-3xl items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
+          <div className="flex max-w-3xl items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[0.8125rem] text-destructive">
             <span className="min-w-0 flex-1 truncate">
               Connection error: {connectionError}
             </span>
@@ -659,7 +659,7 @@ function InstanceDatabasesSectionHeader({ count }: { count: number | null }) {
             </span>
           )}
         </div>
-        <p className="-mt-0.5 text-[13px] text-muted-foreground">
+        <p className="-mt-0.5 text-[0.8125rem] text-muted-foreground">
           Databases returned by the backend for this instance.
         </p>
       </div>

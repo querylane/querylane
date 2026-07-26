@@ -46,7 +46,7 @@ function ObjectDetailHeader({
             {title}
           </h1>
           {subtitle ? (
-            <p className="truncate font-mono text-[11px] text-muted-foreground">
+            <p className="truncate font-mono text-[0.6875rem] text-muted-foreground">
               {subtitle}
             </p>
           ) : null}
@@ -95,7 +95,7 @@ function ObjectDetailTabTrigger({
       <span>{label}</span>
       {count === undefined ? null : (
         <Badge
-          className="h-5 min-w-5 rounded-full px-1.5 font-mono text-[10px]"
+          className="h-5 min-w-5 rounded-full px-1.5 font-mono text-[0.625rem]"
           variant="secondary"
         >
           {count.toLocaleString()}

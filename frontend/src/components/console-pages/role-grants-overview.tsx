@@ -142,7 +142,7 @@ function SectionHead({
         <CountPill partial={partial} value={count} />
       )}
       {hint ? (
-        <span className="ml-auto text-[11.5px] text-muted-foreground">
+        <span className="ml-auto text-[0.71875rem] text-muted-foreground">
           {hint}
         </span>
       ) : null}
@@ -161,10 +161,10 @@ function TotalBadge({
 }) {
   return (
     <span className="flex flex-col items-end whitespace-nowrap">
-      <span className="font-medium font-mono text-[15px] text-foreground leading-tight tracking-tight">
+      <span className="font-medium font-mono text-[0.9375rem] text-foreground leading-tight tracking-tight">
         {value.toLocaleString()}
       </span>
-      <span className="flex items-center gap-1 text-[10.5px] text-muted-foreground">
+      <span className="flex items-center gap-1 text-[0.65625rem] text-muted-foreground">
         <span>
           {unit}
           {value === 1 ? "" : "s"}
@@ -219,7 +219,7 @@ function SchemaListRow({
     >
       <Icon className="size-4 shrink-0 text-muted-foreground" />
       <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-        <span className="truncate font-medium font-mono text-[13.5px] text-foreground">
+        <span className="truncate font-medium font-mono text-[0.84375rem] text-foreground">
           {name}
         </span>
         <span className="truncate text-muted-foreground text-xs">
@@ -276,7 +276,7 @@ function ReachRow({
     <DrillRow onClick={onClick}>
       <Icon className={cn("size-4 shrink-0", iconClassName)} />
       <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-        <span className="truncate font-medium font-sans text-[13.5px] text-foreground">
+        <span className="truncate font-medium font-sans text-[0.84375rem] text-foreground">
           {name}
         </span>
         <span

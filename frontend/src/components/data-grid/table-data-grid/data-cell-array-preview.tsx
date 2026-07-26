@@ -156,13 +156,13 @@ function ArrayPreview({
         data-testid={`${columnName}-array-preview`}
         title={title}
       >
-        <span className="shrink-0 rounded-full border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 font-medium text-[10px] text-sky-700 leading-none dark:text-sky-300">
+        <span className="shrink-0 rounded-full border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 font-medium text-[0.625rem] text-sky-700 leading-none dark:text-sky-300">
           {summary}
         </span>
         {firstItems.map(({ item, key }) => (
           <code
             className={cn(
-              "max-w-24 truncate rounded border bg-muted/40 px-1.5 py-0.5 font-mono text-[10px]",
+              "max-w-24 truncate rounded border bg-muted/40 px-1.5 py-0.5 font-mono text-[0.625rem]",
               item.isNull
                 ? "text-muted-foreground italic"
                 : "text-foreground/80"

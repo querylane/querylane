@@ -47,7 +47,7 @@ function FullscreenMessage({
   return (
     <div
       aria-live="polite"
-      className="flex min-h-screen items-center justify-center p-4"
+      className="flex min-h-dvh items-center justify-center p-4"
     >
       <div className="max-w-md space-y-4 text-center">
         <h1 className="font-semibold text-2xl">{title}</h1>

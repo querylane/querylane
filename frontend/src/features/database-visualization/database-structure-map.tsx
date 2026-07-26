@@ -213,7 +213,8 @@ function DatabaseMapLoadingCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Loader2 className="size-4 animate-spin" /> Loading database map
+          <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />{" "}
+          Loading database map
         </CardTitle>
       </CardHeader>
       <CardContent className="text-muted-foreground text-sm">
@@ -337,7 +338,7 @@ function DatabaseMapCanvasActions({
               {hiddenNodeKindCount > 0 ? (
                 <span
                   aria-hidden="true"
-                  className="rounded-full bg-muted px-1.5 font-mono text-[10px] text-muted-foreground"
+                  className="rounded-full bg-muted px-1.5 font-mono text-[0.625rem] text-muted-foreground"
                 >
                   {hiddenNodeKindCount}
                 </span>

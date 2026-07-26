@@ -81,7 +81,7 @@ export function ConfigManagedEmptyState({
 
   if (variant === "fullscreen") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+      <div className="flex min-h-dvh items-center justify-center bg-background p-6">
         <div className="w-full max-w-lg">{emptyState}</div>
       </div>
     );

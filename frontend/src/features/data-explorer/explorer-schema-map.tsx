@@ -244,7 +244,7 @@ function SchemaMapToolbar({
       <div className="mr-1 flex items-center gap-2">
         <Network aria-hidden="true" className="size-4 text-primary" />
         <h2 className="font-semibold text-base tracking-tight">Schema map</h2>
-        <Badge className="h-5 font-mono text-[11px]" variant="outline">
+        <Badge className="h-5 font-mono text-[0.6875rem]" variant="outline">
           {databaseLabel}
         </Badge>
       </div>
@@ -364,10 +364,10 @@ function TableNode({
       >
         <span className="flex h-9 items-center gap-2 border-b bg-muted px-3">
           <span className={cn("size-2 rounded-full", tone.dot)} />
-          <span className="min-w-0 truncate font-mono font-semibold text-[13px]">
+          <span className="min-w-0 truncate font-mono font-semibold text-[0.8125rem]">
             {node.name}
           </span>
-          <span className="ml-auto shrink-0 font-mono text-[11px] text-muted-foreground">
+          <span className="ml-auto shrink-0 font-mono text-[0.6875rem] text-muted-foreground">
             {node.rowLabel}
           </span>
         </span>
@@ -375,14 +375,14 @@ function TableNode({
           {node.columns.length > 0 ? (
             node.columns.map((column) => (
               <span
-                className="flex h-6 items-center justify-between gap-3 px-3 font-mono text-[11px]"
+                className="flex h-6 items-center justify-between gap-3 px-3 font-mono text-[0.6875rem]"
                 key={column.name}
               >
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span className="truncate">{column.name}</span>
                   {column.isPrimaryKey ? (
                     <Badge
-                      className="h-4 shrink-0 bg-chart-4/15 px-1 text-[9px] text-chart-4"
+                      className="h-4 shrink-0 bg-chart-4/15 px-1 text-[0.5625rem] text-chart-4"
                       variant="secondary"
                     >
                       PRIMARY KEY
@@ -390,7 +390,7 @@ function TableNode({
                   ) : null}
                   {column.isForeignKey ? (
                     <Badge
-                      className="h-4 shrink-0 bg-chart-1/15 px-1 text-[9px] text-chart-1"
+                      className="h-4 shrink-0 bg-chart-1/15 px-1 text-[0.5625rem] text-chart-1"
                       variant="secondary"
                     >
                       FOREIGN KEY
@@ -408,7 +408,7 @@ function TableNode({
             </span>
           )}
           {node.truncatedColumnCount > 0 ? (
-            <span className="block px-3 font-mono text-[11px] text-muted-foreground">
+            <span className="block px-3 font-mono text-[0.6875rem] text-muted-foreground">
               + {node.truncatedColumnCount.toLocaleString()} more
             </span>
           ) : null}
@@ -433,11 +433,14 @@ function ViewNode({ node }: { node: SchemaMapViewNode }) {
           <span className="min-w-0 truncate font-mono font-semibold text-xs">
             {node.name}
           </span>
-          <Badge className="ml-auto h-4 px-1 text-[9px]" variant="outline">
+          <Badge
+            className="ml-auto h-4 px-1 text-[0.5625rem]"
+            variant="outline"
+          >
             View
           </Badge>
         </div>
-        <p className="mt-2 line-clamp-2 font-mono text-[10px] text-muted-foreground">
+        <p className="mt-2 line-clamp-2 font-mono text-[0.625rem] text-muted-foreground">
           {node.definitionLabel}
         </p>
       </div>
@@ -566,7 +569,7 @@ function SchemaMapCanvas({
             />
             <text
               className={cn(
-                "fill-current stroke-background font-mono font-semibold text-[12px]",
+                "fill-current stroke-background font-mono font-semibold text-[0.75rem]",
                 TONE_CLASSES[hull.tone].text
               )}
               paintOrder="stroke"

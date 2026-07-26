@@ -1617,7 +1617,7 @@ test("backend database extensions available drawer matches design source", async
   );
 
   await page
-    .getByRole("textbox", { name: "Search extensions..." })
+    .getByRole("textbox", { name: "Search extensions…" })
     .fill("timescaledb");
   await expect.element(page.getByText("Available")).toBeVisible();
   await expect.element(page.getByText("available to install")).toBeVisible();

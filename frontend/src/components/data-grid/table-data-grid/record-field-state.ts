@@ -32,10 +32,14 @@ function buildByteaDownloadFilename({
   if (rowIdentifier !== undefined && rowIdentifier !== "") {
     parts.push(rowIdentifier.slice(0, ROW_IDENTIFIER_MAX_LENGTH));
   }
-  const stem = parts
-    .map((part) => part.replace(SAFE_FILENAME_PATTERN, "_"))
-    .filter((part) => part !== "")
-    .join("_");
+  const sanitizedParts: string[] = [];
+  for (const part of parts) {
+    const sanitizedPart = part.replace(SAFE_FILENAME_PATTERN, "_");
+    if (sanitizedPart !== "") {
+      sanitizedParts.push(sanitizedPart);
+    }
+  }
+  const stem = sanitizedParts.join("_");
   return `${stem === "" ? "value" : stem}.bin`;
 }
 

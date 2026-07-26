@@ -160,7 +160,7 @@ export function JobQueueSection() {
                 size="sm"
                 variant="outline"
               >
-                {isFetchingNextPage ? "Loading..." : "Load more"}
+                {isFetchingNextPage ? "Loading…" : "Load more"}
               </Button>
             ) : null}
           </div>

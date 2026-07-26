@@ -161,11 +161,17 @@ function RecordDetailDrawer({
   rowIndex,
   tableName,
 }: RecordDetailDrawerProps) {
-  const pkIdentifier = columns
-    .filter((column) => pkColumnSet.has(column.columnName))
-    .map((column) => formatCellForClipboard(rowCells.get(column.columnName)))
-    .filter((value) => value !== "")
-    .join("-");
+  const primaryKeyValues: string[] = [];
+  for (const column of columns) {
+    if (!pkColumnSet.has(column.columnName)) {
+      continue;
+    }
+    const value = formatCellForClipboard(rowCells.get(column.columnName));
+    if (value !== "") {
+      primaryKeyValues.push(value);
+    }
+  }
+  const pkIdentifier = primaryKeyValues.join("-");
   return (
     <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetContent

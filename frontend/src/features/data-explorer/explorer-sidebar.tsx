@@ -799,7 +799,7 @@ const SCHEMA_SKELETON_ROWS = [
 function SchemaLoadingRows() {
   return (
     <div
-      className="fade-in animate-in space-y-1 py-1 duration-200"
+      className="fade-in animate-in space-y-1 py-1 duration-200 motion-reduce:animate-none"
       data-testid="schema-list-loading"
       role="status"
     >
@@ -820,7 +820,7 @@ function NestedLoadingRows() {
   // useCalmLoadingPhase; this only softens the skeleton's entrance.
   return (
     <div
-      className="fade-in animate-in space-y-1 py-1 duration-200"
+      className="fade-in animate-in space-y-1 py-1 duration-200 motion-reduce:animate-none"
       data-testid="resource-list-loading"
     >
       {["first", "second", "third"].map((rowId) => (
@@ -905,7 +905,7 @@ function CategoryListItem({
               isOpen && "rotate-90"
             )}
           />
-          <span className="font-medium text-[11px] uppercase tracking-wider">
+          <span className="font-medium text-[0.6875rem] uppercase tracking-wider">
             {meta.label}
           </span>
         </Button>
@@ -1083,7 +1083,7 @@ function ExplorerSidebar({
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            className="h-7 pr-7 pl-8 text-[13px]"
+            className="h-7 pr-7 pl-8 text-[0.8125rem]"
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Filter…"
             value={query}

@@ -131,7 +131,9 @@ function ExtensionsCard({
       <CardContent className="flex flex-col">
         {isPending ? <CardLoadingRows label="Loading extensions" /> : null}
         {emptyText ? (
-          <p className="py-2 text-[13px] text-muted-foreground">{emptyText}</p>
+          <p className="py-2 text-[0.8125rem] text-muted-foreground">
+            {emptyText}
+          </p>
         ) : null}
         {visible.map((extension) => (
           <ExtensionRow extension={extension} key={extension.name} />
@@ -179,7 +181,7 @@ function ObjectsErrorCard({
         <Eyebrow>Other objects</Eyebrow>
       </CardHeader>
       <CardContent className="flex flex-col items-start gap-3">
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-[0.8125rem] text-muted-foreground">
           Failed to load other database objects.
         </p>
         {onRetry ? (

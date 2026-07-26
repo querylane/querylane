@@ -61,7 +61,9 @@ import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 function getTestButtonIcon(status: ConnectionTestStatus) {
   switch (status) {
     case "testing":
-      return <Loader2 className="size-5 animate-spin" />;
+      return (
+        <Loader2 className="size-5 animate-spin motion-reduce:animate-none" />
+      );
     case "success":
       return <Check className="size-5 text-emerald-400" />;
     case "error":

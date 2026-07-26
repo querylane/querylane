@@ -423,21 +423,21 @@ function InstanceCommandItem({
         <OverflowAwareText className="min-w-0 truncate text-sm">
           {instance.name}
         </OverflowAwareText>
-        <OverflowAwareText className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
+        <OverflowAwareText className="min-w-0 truncate font-mono text-[0.6875rem] text-muted-foreground">
           {instance.host}:{instance.port}
         </OverflowAwareText>
         {instance.credentialsUnreadable ? (
           <>
-            <span className="truncate text-[11px] text-destructive">
+            <span className="truncate text-[0.6875rem] text-destructive">
               Credentials need attention
             </span>
-            <span className="truncate text-[11px] text-destructive underline underline-offset-2">
+            <span className="truncate text-[0.6875rem] text-destructive underline underline-offset-2">
               Review credentials
             </span>
           </>
         ) : null}
         {!instance.credentialsUnreadable && instance.status !== "connected" ? (
-          <span className={cn("truncate text-[11px]", statusClassName)}>
+          <span className={cn("truncate text-[0.6875rem]", statusClassName)}>
             {getConnectionStatusLabel(instance.status)}
           </span>
         ) : null}
@@ -636,7 +636,7 @@ function DatabaseSelector({
                   {database.name}
                 </OverflowAwareText>
                 {database.owner ? (
-                  <OverflowAwareText className="min-w-0 truncate text-[11px] text-muted-foreground">
+                  <OverflowAwareText className="min-w-0 truncate text-[0.6875rem] text-muted-foreground">
                     owner {database.owner}
                   </OverflowAwareText>
                 ) : null}

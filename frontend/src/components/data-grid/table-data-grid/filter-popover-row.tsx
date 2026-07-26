@@ -290,7 +290,7 @@ function FilterRow({
                   >
                     {candidate.columnName}
                   </span>
-                  <span className="max-w-[45%] shrink-0 truncate font-mono text-[10px] text-muted-foreground uppercase">
+                  <span className="max-w-[45%] shrink-0 truncate font-mono text-[0.625rem] text-muted-foreground uppercase">
                     {candidate.rawType}
                   </span>
                 </span>
@@ -337,7 +337,7 @@ function FilterRow({
         </Button>
       </div>
       {invalidMessage ? (
-        <p className="pl-1 text-[11px] text-destructive" id={messageId}>
+        <p className="pl-1 text-[0.6875rem] text-destructive" id={messageId}>
           {invalidMessage}
         </p>
       ) : null}

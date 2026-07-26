@@ -195,7 +195,7 @@ function SidebarFooterContent({
             onRetry={onRetryFooter}
           />
         ) : null}
-        <OverflowTooltip className="block truncate px-2 text-left font-mono text-[11px] text-muted-foreground">
+        <OverflowTooltip className="block truncate px-2 text-left font-mono text-[0.6875rem] text-muted-foreground">
           {`Querylane ${aboutMetadata.version}`}
         </OverflowTooltip>
       </div>
@@ -390,7 +390,7 @@ function SidebarDatabaseSelector() {
         />
         <span
           className={cn(
-            "min-w-0 flex-1 truncate font-medium font-mono text-[13px]",
+            "min-w-0 flex-1 truncate font-medium font-mono text-[0.8125rem]",
             selectedDatabase ? "text-foreground" : "text-muted-foreground"
           )}
         >
@@ -432,7 +432,7 @@ function SidebarDatabaseSelector() {
                       {database.name}
                     </span>
                     {database.owner ? (
-                      <span className="min-w-0 truncate text-[11px] text-muted-foreground">
+                      <span className="min-w-0 truncate text-[0.6875rem] text-muted-foreground">
                         owner {database.owner}
                       </span>
                     ) : null}
@@ -521,12 +521,12 @@ function SidebarSearchButton() {
       variant="outline"
     >
       <Search className="size-3.5 shrink-0" />
-      <span className="truncate text-[13px]">Search or jump to…</span>
+      <span className="truncate text-[0.8125rem]">Search or jump to…</span>
       <span aria-hidden="true" className="ml-auto flex gap-0.5">
-        <kbd className="flex size-5 items-center justify-center rounded bg-muted font-mono text-[10px]">
+        <kbd className="flex size-5 items-center justify-center rounded bg-muted font-mono text-[0.625rem]">
           ⌘
         </kbd>
-        <kbd className="flex size-5 items-center justify-center rounded bg-muted font-mono text-[10px]">
+        <kbd className="flex size-5 items-center justify-center rounded bg-muted font-mono text-[0.625rem]">
           K
         </kbd>
       </span>

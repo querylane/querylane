@@ -42,7 +42,7 @@ export function AppShellFrame({ children }: { children: React.ReactNode }) {
       <SidebarRailPlaceholder />
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="z-20 flex h-12 shrink-0 items-center justify-end gap-2 border-border border-b bg-background px-3 lg:px-4">
-          <span className="font-mono text-[11px] text-muted-foreground">
+          <span className="font-mono text-[0.6875rem] text-muted-foreground">
             Querylane {FRONTEND_PACKAGE_VERSION}
           </span>
           <ThemeModeMenu resolvedTheme={resolvedTheme} setTheme={setTheme} />

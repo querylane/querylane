@@ -74,7 +74,7 @@ const DEFAULT_DATABASE_OBJECT_LIMIT = 5;
 const SEARCH_DATABASE_OBJECT_LIMIT = 10;
 const SEARCH_ROLE_LIMIT = 5;
 const COMMAND_GROUP_CLASS_NAME =
-  "p-0 **:[[cmdk-group-heading]]:px-4 **:[[cmdk-group-heading]]:pt-2.5 **:[[cmdk-group-heading]]:pb-1 **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:text-[10.5px] **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-[0.06em]";
+  "p-0 **:[[cmdk-group-heading]]:px-4 **:[[cmdk-group-heading]]:pt-2.5 **:[[cmdk-group-heading]]:pb-1 **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:text-[0.65625rem] **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-[0.06em]";
 const COMMAND_ITEM_CLASS_NAME =
   "rounded-none! px-4 py-2 [&>svg:last-child]:hidden";
 
@@ -148,8 +148,8 @@ function NavigationTargetGroup({
           value={target.label}
         >
           <ChevronRight className="size-3.5 text-muted-foreground" />
-          <span className="text-[13px]">{target.label}</span>
-          <span className="ml-auto text-[11.5px] text-muted-foreground">
+          <span className="text-[0.8125rem]">{target.label}</span>
+          <span className="ml-auto text-[0.71875rem] text-muted-foreground">
             {target.summary}
           </span>
         </CommandItem>
@@ -189,8 +189,8 @@ function DatabaseObjectGroup({
             value={label}
           >
             <ChevronRight className="size-3.5 text-muted-foreground" />
-            <span className="font-mono text-[13px]">{label}</span>
-            <span className="ml-auto text-[11.5px] text-muted-foreground">
+            <span className="font-mono text-[0.8125rem]">{label}</span>
+            <span className="ml-auto text-[0.71875rem] text-muted-foreground">
               {databaseObjectRowCount(object)}
             </span>
           </CommandItem>
@@ -220,8 +220,8 @@ function RoleCommandGroup({
           value={role.roleName}
         >
           <ChevronRight className="size-3.5 text-muted-foreground" />
-          <span className="font-mono text-[13px]">{role.roleName}</span>
-          <span className="ml-auto text-[11.5px] text-muted-foreground">
+          <span className="font-mono text-[0.8125rem]">{role.roleName}</span>
+          <span className="ml-auto text-[0.71875rem] text-muted-foreground">
             {ROLE_KIND_LABEL[deriveRoleKind(role)].toLowerCase()}
           </span>
         </CommandItem>

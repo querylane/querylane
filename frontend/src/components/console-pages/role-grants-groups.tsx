@@ -40,14 +40,14 @@ import { GrantObjectType } from "@/protogen/querylane/console/v1alpha1/role_pb";
 function GrantRowName({ object }: { object: GrantedObject }) {
   if (RELATION_TYPES.has(object.objectType) && object.schemaName) {
     return (
-      <span className="truncate font-mono text-[12.5px]">
+      <span className="truncate font-mono text-[0.78125rem]">
         <span className="text-muted-foreground">{object.schemaName}.</span>
         {object.objectName}
       </span>
     );
   }
   return (
-    <span className="truncate font-mono text-[12.5px]">
+    <span className="truncate font-mono text-[0.78125rem]">
       {objectDisplayName(object)}
     </span>
   );
@@ -82,7 +82,7 @@ function ObjectRow({
           )}
         />
         <GrantRowName object={object} />
-        <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-[11px] text-muted-foreground">
+        <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-[0.6875rem] text-muted-foreground">
           {heldCount} priv{heldCount === 1 ? "" : "s"}
           {grantCount > 0 ? (
             <span className="text-amber-600/90 dark:text-amber-400/90">
@@ -94,19 +94,19 @@ function ObjectRow({
       </Button>
       {open ? (
         <div className="mt-1 flex flex-col gap-1.5 border-border/60 border-t border-dashed py-2 pr-1.5 pl-[26px]">
-          <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-[11.5px]">
-            <span className="text-[11px] text-muted-foreground">
+          <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-[0.71875rem]">
+            <span className="text-[0.6875rem] text-muted-foreground">
               privileges
             </span>
             <HeldPillStrip columns={columns} object={object} />
           </div>
           {grantor ? (
-            <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-[11.5px]">
-              <span className="text-[11px] text-muted-foreground">
+            <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-[0.71875rem]">
+              <span className="text-[0.6875rem] text-muted-foreground">
                 granted by
               </span>
               <span
-                className="font-mono text-[12px] text-foreground/85"
+                className="font-mono text-[0.75rem] text-foreground/85"
                 title={grantor.title}
               >
                 {grantor.text}
@@ -198,7 +198,7 @@ function SchemaFilterBar({
           </Button>
         ) : null}
         {filterActive ? (
-          <span className="ml-auto font-mono text-[10.5px] text-muted-foreground tracking-[0.02em]">
+          <span className="ml-auto font-mono text-[0.65625rem] text-muted-foreground tracking-[0.02em]">
             {matchCount.toLocaleString()} match{matchCount === 1 ? "" : "es"}
           </span>
         ) : null}
@@ -242,19 +242,19 @@ function SchemaSectionHeader({
       />
       <FolderTree className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="flex min-w-0 flex-col items-start">
-        <span className="truncate font-medium font-mono text-[13px] leading-tight">
+        <span className="truncate font-medium font-mono text-[0.8125rem] leading-tight">
           {schema}
         </span>
         {grantor ? (
-          <span className="truncate text-[10.5px] text-muted-foreground leading-tight">
+          <span className="truncate text-[0.65625rem] text-muted-foreground leading-tight">
             granted by{" "}
-            <span className="font-mono text-[11px] text-foreground/75">
+            <span className="font-mono text-[0.6875rem] text-foreground/75">
               {grantor}
             </span>
           </span>
         ) : null}
       </span>
-      <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-[11.5px] text-foreground/[0.78] tracking-[0.02em]">
+      <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-[0.71875rem] text-foreground/[0.78] tracking-[0.02em]">
         <span className="font-medium">{objects.length.toLocaleString()}</span>
         <span className="ml-1 font-normal text-muted-foreground">
           {unit}
@@ -522,7 +522,7 @@ function GroupHeader({
         <Icon className="size-3.5" />
       </span>
       <span className="font-medium text-sm">{title}</span>
-      <span className="font-mono text-[11px] text-muted-foreground tracking-[0.04em]">
+      <span className="font-mono text-[0.6875rem] text-muted-foreground tracking-[0.04em]">
         {count.toLocaleString()}
       </span>
       <span className="ml-auto flex items-center">{density}</span>
@@ -621,16 +621,16 @@ function FlatGroup({
                 key={object.key}
               >
                 <span className="flex min-w-0 flex-col">
-                  <span className="truncate font-mono text-[12.5px] leading-tight">
+                  <span className="truncate font-mono text-[0.78125rem] leading-tight">
                     {objectDisplayName(object)}
                   </span>
                   {grantor ? (
                     <span
-                      className="truncate text-[10.5px] text-muted-foreground leading-tight"
+                      className="truncate text-[0.65625rem] text-muted-foreground leading-tight"
                       title={grantor.title}
                     >
                       granted by{" "}
-                      <span className="font-mono text-[11px] text-foreground/75">
+                      <span className="font-mono text-[0.6875rem] text-foreground/75">
                         {grantor.text}
                       </span>
                     </span>

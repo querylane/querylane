@@ -89,7 +89,7 @@ function DefaultsBody({
         >
           <span className="leading-relaxed">
             <span className="text-muted-foreground">When </span>
-            <span className="font-mono text-[12.5px] text-foreground/85">
+            <span className="font-mono text-[0.78125rem] text-foreground/85">
               {rule.creatorRoleName}
             </span>
             <span className="text-muted-foreground"> creates new </span>
@@ -97,7 +97,7 @@ function DefaultsBody({
               {DEFAULT_PRIV_OBJECT_LABEL[rule.objectType]}
             </strong>
             <span className="text-muted-foreground"> in </span>
-            <span className="font-mono text-[12.5px] text-foreground/85">
+            <span className="font-mono text-[0.78125rem] text-foreground/85">
               {rule.schemaName || "any schema"}
             </span>
             <span className="text-muted-foreground"> → grant </span>

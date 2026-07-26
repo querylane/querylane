@@ -243,7 +243,7 @@ export function CreateInstanceActions({
       onClick={handleCreate}
     >
       {isPending ? (
-        <Loader2 className="size-4 animate-spin" />
+        <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
       ) : (
         <Plus className="size-4" />
       )}
@@ -258,7 +258,7 @@ export function CreateInstanceActions({
         variant="outline"
       >
         {isTesting ? (
-          <Loader2 className="size-4 animate-spin" />
+          <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
         ) : (
           <Unplug className="size-4" />
         )}

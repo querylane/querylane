@@ -79,7 +79,7 @@ function ReferencedTableTarget({
   }
   return (
     <Link
-      className="inline-flex h-[18px] items-center rounded-sm font-mono text-[11.5px] text-blue-700 focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-300"
+      className="inline-flex h-[18px] items-center rounded-sm font-mono text-[0.71875rem] text-blue-700 focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-300"
       params={{ databaseId, instanceId }}
       search={{
         category: "tables",
@@ -104,7 +104,7 @@ function ConstraintBadge({
   return (
     <Badge
       className={cn(
-        "h-[18px] font-mono text-[10px]",
+        "h-[18px] font-mono text-[0.625rem]",
         tone === "ghost" && "border-transparent text-muted-foreground",
         tone === "warning" &&
           "border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-300"

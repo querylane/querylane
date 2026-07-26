@@ -402,12 +402,12 @@ export function OnboardingWizardContent() {
   return (
     <div className="dark w-full">
       <div
-        className="relative min-h-screen overflow-hidden bg-[#03050a] px-4 py-6 sm:px-6 sm:py-8"
+        className="relative min-h-dvh overflow-hidden bg-[#03050a] px-4 py-6 sm:px-6 sm:py-8"
         data-onboarding-shell=""
       >
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(69,98,196,0.12),transparent_32%),radial-gradient(circle_at_50%_45%,rgba(63,93,194,0.12),transparent_28%)]" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] opacity-20 [background-size:40px_40px]" />
-        <div className="relative mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center justify-center xl:max-w-7xl">
+        <div className="relative mx-auto flex min-h-[calc(100dvh-3rem)] w-full max-w-6xl items-center justify-center xl:max-w-7xl">
           <Card
             className="relative w-full overflow-hidden border-white/10 bg-[#05070c] text-white shadow-[0_32px_96px_rgba(0,0,0,0.45)]"
             data-onboarding-panel=""

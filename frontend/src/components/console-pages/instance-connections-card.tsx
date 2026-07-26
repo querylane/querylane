@@ -314,7 +314,7 @@ function ConnectionsCardBody({
 }) {
   if (isPending && !activity) {
     return (
-      <div className="h-full min-h-40 animate-pulse rounded-lg bg-muted/40" />
+      <div className="h-full min-h-40 animate-pulse rounded-lg bg-muted/40 motion-reduce:animate-none" />
     );
   }
 
