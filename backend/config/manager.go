@@ -206,7 +206,19 @@ func (cm *Manager[T]) checkWriteCapability() bool {
 		return false
 	}
 
-	return os.MkdirAll(dir, 0o755) == nil
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return false
+	}
+
+	probe, err := os.CreateTemp(dir, ".querylane-write-check-*")
+	if err != nil {
+		return false
+	}
+
+	closeErr := probe.Close()
+	removeErr := os.Remove(probe.Name()) //nolint:gosec // CreateTemp returns a path inside the checked config directory.
+
+	return closeErr == nil && removeErr == nil
 }
 
 // writeConfig validates, serialises and atomically stores cfg to disk.

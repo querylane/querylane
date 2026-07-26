@@ -269,6 +269,31 @@ describe("onboarding wizard content integration", () => {
     );
   });
 
+  it("explains why only manual YAML setup is available", () => {
+    useSetupStore.setState({
+      onboardingState: createOnboardingState({
+        availableMethods: [SetupMethod.MANUAL_YAML],
+        configFilePath: "/read-only/.querylane/config.yaml",
+        homePath: "/read-only/.querylane",
+        isHomeWritable: false,
+      }),
+      status: "onboarding",
+    });
+
+    renderWizard();
+
+    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.getByText("Automatic setup unavailable")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Querylane cannot write its configuration to /read-only/.querylane/config.yaml, so UI-configured and embedded setup are unavailable. Fix the directory permissions or configure the file manually."
+      )
+    ).toBeTruthy();
+    expect(screen.getByRole("radio", { name: CONFIGURE_YAML_RE })).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: CONFIGURE_UI_RE })).toBeNull();
+    expect(screen.queryByRole("radio", { name: EMBEDDED_RE })).toBeNull();
+  });
+
   it("exposes setup method selection state to assistive tech", async () => {
     const user = userEvent.setup();
     seedOnboardingState();
@@ -678,5 +703,32 @@ describe("onboarding wizard setup progression", () => {
         screen.getByRole("heading", { name: "Querylane internal storage" })
       ).toBeTruthy();
     });
+  });
+
+  it("classifies an embedded port collision as reconfigurable", () => {
+    const error =
+      "embedded postgres port 5433 is already in use; stop the process using it or choose another port";
+    const failedEvent = createProto(SetupProgressEventSchema, {
+      displayName: "Starting embedded PostgreSQL",
+      error,
+      state: StepState.FAILED,
+      stepId: SetupStep.STARTING_EMBEDDED,
+    });
+    seedOnboardingState();
+    useOnboardingWizardStore.setState({
+      failedEvent,
+      phase: "error_summary",
+      progressEvents: [failedEvent],
+      selectedMethod: "embedded",
+      streamError: normalizeAppUiError(new Error(error), {
+        area: "onboarding-setup",
+        source: "setup_stream",
+      }),
+    });
+
+    renderWizard();
+
+    expect(screen.getAllByText(error)).not.toHaveLength(0);
+    expect(screen.getByText("Likely a configuration issue")).toBeTruthy();
   });
 });

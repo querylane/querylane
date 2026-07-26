@@ -23,6 +23,7 @@ const CONFIG_ERROR_PATTERNS = [
   /authentication failed/i,
   /role .+ does not exist/i,
   /database .+ does not exist/i,
+  /port \d+ is already in use/i,
   /ssl.*required/i,
   /certificate/i,
   /timeout/i,

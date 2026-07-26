@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"sync"
 
 	"connectrpc.com/connect"
 
@@ -45,6 +46,7 @@ type Service struct {
 	configManager   *config.Manager[*serverconfig.Config]
 	dbInitializer   DatabaseInitializer
 	embeddedManager EmbeddedManager // nil if unavailable
+	setupMu         sync.Mutex
 }
 
 // NewService creates a new onboarding service. embeddedMgr may be nil.
@@ -143,6 +145,12 @@ func (s *Service) setupAppDatabase(
 	msg *v1alpha1.SetupAppDatabaseRequest,
 	sendEvent func(dbsetup.ProgressEvent) error,
 ) error {
+	if !s.setupMu.TryLock() {
+		return connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("database setup is already in progress"))
+	}
+	defer s.setupMu.Unlock()
+
 	if s.dbInitializer.IsDatabaseInitialized() {
 		return connect.NewError(connect.CodeFailedPrecondition,
 			errors.New("database is already configured"))

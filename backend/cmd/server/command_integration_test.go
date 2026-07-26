@@ -145,6 +145,88 @@ func TestIntegration_SetupAppDatabase_ExternalPostgres(t *testing.T) { //nolint:
 	require.NoError(t, err, "ConsoleService should work after setup")
 }
 
+func TestIntegration_SetupAppDatabase_ExplainsMissingCreatePrivileges(t *testing.T) { //nolint:paralleltest // uses t.Setenv
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	const (
+		limitedUsername = "onboarding_limited"
+		limitedPassword = "limited-pass"
+	)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 60*time.Second)
+	defer cancel()
+
+	pg := testutil.RequirePostgreSQLContainer(ctx, t)
+	t.Cleanup(func() {
+		_ = pg.Cleanup(context.Background())
+	})
+
+	databaseName := testutil.SanitizeDatabaseName("test_" + t.Name())
+	_, err := pg.CreateDatabase(ctx, databaseName)
+	require.NoError(t, err)
+
+	adminDB, err := pg.ConnectToDatabase(ctx, databaseName)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, adminDB.Close())
+	})
+
+	_, err = adminDB.ExecContext(ctx, fmt.Sprintf(`
+CREATE ROLE %s LOGIN PASSWORD '%s';
+GRANT CONNECT ON DATABASE %s TO %s;
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+`, limitedUsername, limitedPassword, databaseName, limitedUsername))
+	require.NoError(t, err)
+
+	host, err := pg.Host(ctx)
+	require.NoError(t, err)
+	portString, err := pg.MappedPort(ctx)
+	require.NoError(t, err)
+	port, err := strconv.Atoi(portString)
+	require.NoError(t, err)
+
+	serverURL, _ := startBootstrapServer(t)
+	onboardingClient := newOnboardingClient(serverURL)
+	stream, err := onboardingClient.SetupAppDatabase(ctx, connect.NewRequest(&consolev1alpha1.SetupAppDatabaseRequest{
+		Setup: &consolev1alpha1.SetupAppDatabaseRequest_PostgresConfig{
+			PostgresConfig: testutil.ConnectionInfo{
+				Host:     host,
+				Port:     port,
+				Database: databaseName,
+				Username: limitedUsername,
+				Password: limitedPassword,
+			}.PostgresProtoConfig(),
+		},
+	}))
+	require.NoError(t, err)
+
+	events, streamErr := collectSetupEvents(stream)
+	require.NoError(t, streamErr)
+
+	require.Contains(t, events, setupEvent{
+		StepID: consolev1alpha1.SetupStep_SETUP_STEP_CONNECTING,
+		State:  consolev1alpha1.StepState_STEP_STATE_SUCCEEDED,
+	})
+
+	var migrationFailure *setupEvent
+
+	for i := range events {
+		if events[i].StepID == consolev1alpha1.SetupStep_SETUP_STEP_MIGRATING &&
+			events[i].State == consolev1alpha1.StepState_STEP_STATE_FAILED {
+			migrationFailure = &events[i]
+			break
+		}
+	}
+
+	require.NotNil(t, migrationFailure)
+	assert.Equal(t,
+		"The PostgreSQL role needs CREATE privileges on the metadata database and schema public. Grant them, then retry setup.",
+		migrationFailure.Error,
+	)
+}
+
 func TestIntegration_SetupAppDatabase_ConfigWrittenCorrectly(t *testing.T) { //nolint:paralleltest // uses t.Setenv
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
