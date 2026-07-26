@@ -44,6 +44,10 @@ on:
         description: "GitHub Actions build-cache scope."
         type: string
         default: "querylane-publish"
+      stamp_version:
+        description: "Pass Querylane build metadata to the Dockerfile."
+        type: boolean
+        default: true
 
 env:
   IMAGE: ${{ inputs.image }}
@@ -62,6 +66,21 @@ jobs:
       - uses: actions/checkout@v7.0.0
         with:
           persist-credentials: false
+
+      - name: Resolve Querylane build arguments
+        id: build-args
+        if: inputs.stamp_version
+        env:
+          VERSION: ${{ inputs.version || 'dev' }}
+        run: |
+          set -euo pipefail
+          {
+            echo "value<<EOF"
+            echo "VERSION=$VERSION"
+            echo "GIT_COMMIT=$(git rev-parse --short=7 HEAD)"
+            echo "BUILT_AT=$(git show -s --format=%cI HEAD)"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Docker metadata
         id: meta
@@ -96,8 +115,7 @@ jobs:
           push: ${{ inputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            VERSION=${{ inputs.version || 'dev' }}
+          build-args: ${{ steps.build-args.outputs.value }}
           # Supply-chain attestations for the public image. BuildKit-native, so
           # they need only `packages: write` (no id-token) and add negligible
           # time for a distroless single-binary image. Skipped for PR validation.

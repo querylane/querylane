@@ -63,7 +63,7 @@ const readProtoServices = async (): Promise<ProtoService[]> => {
 					return [];
 				}
 
-				const kind = clientStream
+				const kind: ProtoService["rpcs"][number]["kind"] = clientStream
 					? serverStream
 						? "bidirectional-streaming"
 						: "client-streaming"

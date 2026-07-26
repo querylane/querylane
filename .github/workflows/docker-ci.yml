@@ -46,3 +46,40 @@ jobs:
       rolling_tag: docs-edge
       sha_prefix: docs-sha-
       cache_scope: querylane-docs-publish
+      stamp_version: false
+
+  validate-version:
+    name: Validate stamped Docker version
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.2.0
+
+      - name: Build version smoke image
+        uses: docker/build-push-action@v7.3.0
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: querylane-version-smoke
+          build-args: |
+            VERSION=9.9.9-test
+            GIT_COMMIT=abcdef1
+            BUILT_AT=2026-07-26T12:34:56Z
+          cache-from: type=gha,scope=querylane-publish
+
+      - name: Verify stamped version
+        run: |
+          set -euo pipefail
+          actual_version="$(docker run --rm querylane-version-smoke --version)"
+          if [ "$actual_version" != "9.9.9-test" ]; then
+            echo "::error::Expected querylane --version to print 9.9.9-test, got $actual_version"
+            exit 1
+          fi
