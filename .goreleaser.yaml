@@ -1,6 +1,7 @@
 version: 2
 
 project_name: querylane
+dist: .build/goreleaser
 
 before:
   hooks:
@@ -33,7 +34,6 @@ builds:
         -X main.version={{ .Version }}
         -X github.com/querylane/querylane/backend/service/console.Version={{ .Version }}
         -X github.com/querylane/querylane/backend/service/console.GitCommit={{ .ShortCommit }}
-        -X github.com/querylane/querylane/backend/service/console.GitBranch=main
         -X github.com/querylane/querylane/backend/service/console.BuiltAt={{ .CommitDate }}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
@@ -52,3 +52,4 @@ checksum:
 
 release:
   mode: keep-existing
+  replace_existing_artifacts: true

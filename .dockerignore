@@ -14,5 +14,6 @@ frontend/dist
 frontend/node_modules
 frontend/playwright-report
 frontend/test-results
+backend/frontend/dist
 
 **/.DS_Store

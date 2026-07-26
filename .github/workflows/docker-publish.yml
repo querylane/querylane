@@ -41,3 +41,4 @@ jobs:
       rolling_tag: docs-edge
       sha_prefix: docs-sha-
       cache_scope: querylane-docs-publish
+      stamp_version: false

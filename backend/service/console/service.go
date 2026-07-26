@@ -160,18 +160,6 @@ func extractBuildInfoFrom(
 		}
 	}
 
-	// If we couldn't get git commit from vcs.revision, try to extract from version
-	if result.GitCommit == "unknown" && result.Version != "unknown" {
-		// Try to extract commit from version strings like "v1.0.0-20231201123456-abcdef123456"
-		if len(result.Version) > 12 {
-			parts := result.Version[len(result.Version)-12:]
-			// Check if it looks like a commit hash (hexadecimal)
-			if _, err := strconv.ParseInt(parts, 16, 64); err == nil {
-				result.GitCommit = parts[:7]
-			}
-		}
-	}
-
 	return result
 }
 
@@ -198,6 +186,14 @@ func applyRuntimeBuildInfo(
 			} else {
 				slog.WarnContext(ctx, "failed to parse build time", "value", setting.Value, "error", err)
 			}
+		}
+	}
+
+	// If vcs.revision is unavailable, try the commit suffix from a Go pseudo-version.
+	if result.GitCommit == "unknown" && result.Version != "unknown" && len(result.Version) > 12 {
+		parts := result.Version[len(result.Version)-12:]
+		if _, err := strconv.ParseInt(parts, 16, 64); err == nil {
+			result.GitCommit = parts[:7]
 		}
 	}
 }
