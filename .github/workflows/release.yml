@@ -122,6 +122,32 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      - name: Create GitHub Release
+        if: steps.release-tags.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.image-version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          notes_file="$(mktemp)"
+          trap 'rm -f "$notes_file"' EXIT
+          bun scripts/extract-release-notes.ts "$VERSION" frontend/CHANGELOG.md > "$notes_file"
+          gh release create "v$VERSION" \
+            --verify-tag \
+            --title "v$VERSION" \
+            --notes-file "$notes_file"
+
+  publish-artifacts:
+    name: Publish release artifacts
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/_release-artifacts.yml
+    with:
+      tag: v${{ needs.release.outputs.version }}
+
   # Docker image pipeline (see .github/workflows/_docker-build.yml): on a real
   # release, publish `<version>` + `latest` to the stable `querylane` package.
   publish-image:
