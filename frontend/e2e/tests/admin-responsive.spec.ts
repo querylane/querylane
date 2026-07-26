@@ -64,11 +64,7 @@ async function expectHeaderChildrenDoNotOverlap(page: Page) {
 }
 
 async function expectResponsiveStylesLoaded(page: Page) {
-  await page.waitForFunction(() => {
-    const header = document.querySelector("header");
-    if (!header) {
-      return false;
-    }
+  await page.locator("header").waitForFunction((header) => {
     const style = getComputedStyle(header);
     return style.display === "flex" && style.overflowX === "hidden";
   });
