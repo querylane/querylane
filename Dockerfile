@@ -21,6 +21,7 @@ FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS backend-builder
 # build platform to each requested target platform (no QEMU emulation).
 ARG TARGETOS
 ARG TARGETARCH
+ARG VERSION=dev
 
 WORKDIR /app/backend
 COPY backend/go.mod backend/go.sum ./
@@ -32,7 +33,9 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist/
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldflags="-s -w" -tags embed_frontend -o /querylane .
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath \
+    -ldflags="-s -w -X main.version=${VERSION} -X github.com/querylane/querylane/backend/service/console.Version=${VERSION}" \
+    -tags embed_frontend -o /querylane .
 
 # =============================================================================
 # Stage 3: Runtime
