@@ -162,6 +162,7 @@ describe("sql workbench model", () => {
   });
 
   test("formats protobuf durations as milliseconds", () => {
+    expect(formatDurationMs(durationFromMs(4.2))).toBe("4.20 ms");
     expect(formatDurationMs(durationFromMs(27.8))).toBe("27.8 ms");
     expect(formatDurationMs(durationFromMs(1250))).toBe("1,250 ms");
   });
