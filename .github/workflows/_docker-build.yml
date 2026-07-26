@@ -96,6 +96,8 @@ jobs:
           push: ${{ inputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ inputs.version || 'dev' }}
           # Supply-chain attestations for the public image. BuildKit-native, so
           # they need only `packages: write` (no id-token) and add negligible
           # time for a distroless single-binary image. Skipped for PR validation.
