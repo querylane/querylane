@@ -1,0 +1,54 @@
+version: 2
+
+project_name: querylane
+
+before:
+  hooks:
+    - ./scripts/build-frontend-for-embed.sh
+
+builds:
+  - id: querylane
+    dir: backend
+    main: .
+    binary: querylane
+    flags:
+      - -trimpath
+    tags:
+      - embed_frontend
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - >-
+        -s -w
+        -X main.version={{ .Version }}
+        -X github.com/querylane/querylane/backend/service/console.Version={{ .Version }}
+        -X github.com/querylane/querylane/backend/service/console.GitCommit={{ .ShortCommit }}
+        -X github.com/querylane/querylane/backend/service/console.GitBranch=main
+        -X github.com/querylane/querylane/backend/service/console.BuiltAt={{ .CommitDate }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - ids:
+      - querylane
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  mode: keep-existing

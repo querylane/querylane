@@ -19,10 +19,21 @@ import (
 
 // Build-time variables injected via -ldflags.
 var (
+	Version   string
+	GitCommit string
+	BuiltAt   string
+
 	// GitBranch is the git branch this binary was built from.
 	// This is populated at build time via -ldflags.
 	GitBranch = "unknown"
 )
+
+type buildStamp struct {
+	version   string
+	gitCommit string
+	gitBranch string
+	builtAt   string
+}
 
 // Ensure Service implements the ConsoleServiceHandler interface at compile time.
 var _ v1connect.ConsoleServiceHandler = (*Service)(nil)
@@ -105,38 +116,47 @@ func (s *Service) getDatabaseStatus(ctx context.Context) *v1alpha1.AppDatabaseSt
 // It attempts to parse version information, git commit SHA, and build timestamp
 // from the embedded build information, and includes the git branch from build-time injection.
 func extractBuildInfo(ctx context.Context, buildInfo *debug.BuildInfo) *v1alpha1.BuildInfo {
+	return extractBuildInfoFrom(ctx, buildInfo, buildStamp{
+		version:   Version,
+		gitCommit: GitCommit,
+		gitBranch: GitBranch,
+		builtAt:   BuiltAt,
+	})
+}
+
+func extractBuildInfoFrom(
+	ctx context.Context,
+	buildInfo *debug.BuildInfo,
+	stamp buildStamp,
+) *v1alpha1.BuildInfo {
 	result := &v1alpha1.BuildInfo{
 		Version:   "unknown",
 		GitCommit: "unknown",
-		GitBranch: GitBranch,
+		GitBranch: "unknown",
 		BuiltAt:   nil,
 	}
 
-	if buildInfo == nil {
-		return result
+	if buildInfo != nil {
+		applyRuntimeBuildInfo(ctx, result, buildInfo)
 	}
 
-	// Extract version from Main module
-	if buildInfo.Main.Version != "" && buildInfo.Main.Version != "(devel)" {
-		result.Version = buildInfo.Main.Version
+	if stamp.version != "" {
+		result.Version = stamp.version
 	}
 
-	// Extract build settings for git commit and build time
-	for _, setting := range buildInfo.Settings {
-		switch setting.Key {
-		case "vcs.revision":
-			if len(setting.Value) >= 7 {
-				// Use short commit SHA (first 7 characters)
-				result.GitCommit = setting.Value[:7]
-			} else {
-				result.GitCommit = setting.Value
-			}
-		case "vcs.time":
-			if buildTime, err := time.Parse(time.RFC3339, setting.Value); err == nil {
-				result.BuiltAt = timestamppb.New(buildTime)
-			} else {
-				slog.WarnContext(ctx, "failed to parse build time", "value", setting.Value, "error", err)
-			}
+	if stamp.gitCommit != "" {
+		result.GitCommit = stamp.gitCommit
+	}
+
+	if stamp.gitBranch != "" {
+		result.GitBranch = stamp.gitBranch
+	}
+
+	if stamp.builtAt != "" {
+		if buildTime, err := time.Parse(time.RFC3339, stamp.builtAt); err == nil {
+			result.BuiltAt = timestamppb.New(buildTime)
+		} else {
+			slog.WarnContext(ctx, "failed to parse stamped build time", "value", stamp.builtAt, "error", err)
 		}
 	}
 
@@ -153,4 +173,31 @@ func extractBuildInfo(ctx context.Context, buildInfo *debug.BuildInfo) *v1alpha1
 	}
 
 	return result
+}
+
+func applyRuntimeBuildInfo(
+	ctx context.Context,
+	result *v1alpha1.BuildInfo,
+	buildInfo *debug.BuildInfo,
+) {
+	if buildInfo.Main.Version != "" && buildInfo.Main.Version != "(devel)" {
+		result.Version = buildInfo.Main.Version
+	}
+
+	for _, setting := range buildInfo.Settings {
+		switch setting.Key {
+		case "vcs.revision":
+			if len(setting.Value) >= 7 {
+				result.GitCommit = setting.Value[:7]
+			} else {
+				result.GitCommit = setting.Value
+			}
+		case "vcs.time":
+			if buildTime, err := time.Parse(time.RFC3339, setting.Value); err == nil {
+				result.BuiltAt = timestamppb.New(buildTime)
+			} else {
+				slog.WarnContext(ctx, "failed to parse build time", "value", setting.Value, "error", err)
+			}
+		}
+	}
 }
