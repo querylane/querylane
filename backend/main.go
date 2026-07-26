@@ -8,6 +8,8 @@ import (
 	"github.com/querylane/querylane/backend/config"
 )
 
+var version = "dev"
+
 type CLI struct {
 	config.Globals
 
@@ -23,7 +25,7 @@ func main() {
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{Compact: false}),
 		kong.Vars{
-			"version": "0.0.1",
+			"version": version,
 		},
 	)
 	err := ctx.Run(&cli.Globals)
