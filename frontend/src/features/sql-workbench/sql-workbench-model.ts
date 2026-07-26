@@ -17,6 +17,14 @@ const NANOSECONDS_PER_MILLISECOND = 1_000_000;
 const WHOLE_MILLISECONDS_THRESHOLD = 100;
 const SMALL_DURATION_THRESHOLD = 10;
 const MILLISECOND_PRECISION_FACTOR = 1_000_000;
+const SMALL_DURATION_MS_FORMATTER = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
+});
+const LARGE_DURATION_MS_FORMATTER = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 1,
+});
 const EXPLAIN_NODE_PATTERN =
   /^(\s*)(?:->\s*)?(.+?)\s+\(cost=[\d.]+\.\.[\d.]+\s+rows=(\d+)\s+width=\d+\)(?:\s+\(actual time=[\d.]+\.\.([\d.]+)\s+rows=(\d+)\s+loops=(\d+)\))?/;
 const PLANNING_TIME_PATTERN = /^Planning Time:\s+([\d.]+)\s+ms$/;
@@ -105,10 +113,11 @@ function formatDurationMs(duration: Duration | undefined): string {
   if (ms >= WHOLE_MILLISECONDS_THRESHOLD) {
     return `${Math.round(ms).toLocaleString()} ms`;
   }
-  return `${new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 2,
-    minimumFractionDigits: ms < SMALL_DURATION_THRESHOLD ? 2 : 1,
-  }).format(ms)} ms`;
+  const formatter =
+    ms < SMALL_DURATION_THRESHOLD
+      ? SMALL_DURATION_MS_FORMATTER
+      : LARGE_DURATION_MS_FORMATTER;
+  return `${formatter.format(ms)} ms`;
 }
 
 async function collectExecuteQueryStream(
