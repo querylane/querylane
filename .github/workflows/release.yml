@@ -130,13 +130,26 @@ jobs:
         run: |
           set -euo pipefail
 
+          tag="v$VERSION"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "GitHub Release $tag already exists."
+            exit 0
+          fi
+
           notes_file="$(mktemp)"
           trap 'rm -f "$notes_file"' EXIT
-          bun scripts/extract-release-notes.ts "$VERSION" frontend/CHANGELOG.md > "$notes_file"
-          gh release create "v$VERSION" \
-            --verify-tag \
-            --title "v$VERSION" \
-            --notes-file "$notes_file"
+          if bun scripts/extract-release-notes.ts "$VERSION" frontend/CHANGELOG.md > "$notes_file"; then
+            gh release create "$tag" \
+              --verify-tag \
+              --title "$tag" \
+              --notes-file "$notes_file"
+          else
+            echo "::warning::Could not extract Changesets notes; using generated release notes."
+            gh release create "$tag" \
+              --verify-tag \
+              --title "$tag" \
+              --generate-notes
+          fi
 
   publish-artifacts:
     name: Publish release artifacts

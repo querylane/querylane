@@ -1,5 +1,9 @@
 name: release-artifacts-ci
 
+env:
+  BUN_VERSION: &bun_version 1.3.14
+  GORELEASER_VERSION: &goreleaser_version v2.17.1
+
 on:
   pull_request:
     branches: [main]
@@ -9,9 +13,17 @@ on:
       - .github/workflows/_release-artifacts.yml
       - .github/workflows/release-artifacts-ci.yml
       - .github/workflows/release.yml
+      - .github/workflows/_docker-build.yml
+      - Dockerfile
+      - backend/main.go
+      - backend/service/console/**
       - scripts/build-frontend-for-embed.sh
       - scripts/extract-release-notes.test.ts
       - scripts/extract-release-notes.ts
+
+concurrency:
+  group: release-artifacts-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -38,7 +50,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: 1.3.14
+          bun-version: *bun_version
 
       - name: Test release notes
         run: bun test scripts/extract-release-notes.test.ts
@@ -47,28 +59,26 @@ jobs:
         uses: goreleaser/goreleaser-action@v7.2.3
         with:
           distribution: goreleaser
-          version: v2.17.1
+          version: *goreleaser_version
           args: release --snapshot --clean
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Verify snapshot
         shell: bash
         run: |
           set -euo pipefail
 
-          version="$(jq -r .version dist/metadata.json)"
-          mapfile -t archives < <(find dist -maxdepth 1 \( -name '*.tar.gz' -o -name '*.zip' \) -print)
+          version="$(jq -r .version .build/goreleaser/metadata.json)"
+          mapfile -t archives < <(find .build/goreleaser -maxdepth 1 \( -name '*.tar.gz' -o -name '*.zip' \) -print)
           if [ "${#archives[@]}" -ne 5 ]; then
             echo "::error::Expected 5 release archives, found ${#archives[@]}"
             exit 1
           fi
 
-          (cd dist && sha256sum --check checksums.txt)
+          (cd .build/goreleaser && sha256sum --check checksums.txt)
 
           extract_dir="$(mktemp -d)"
           trap 'rm -rf "$extract_dir"' EXIT
-          tar -xzf "dist/querylane_${version}_linux_amd64.tar.gz" -C "$extract_dir"
+          tar -xzf ".build/goreleaser/querylane_${version}_linux_amd64.tar.gz" -C "$extract_dir"
 
           actual_version="$("$extract_dir/querylane" --version)"
           if [ "$actual_version" != "$version" ]; then

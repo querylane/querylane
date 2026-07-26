@@ -1,8 +1,11 @@
 {
 	"name": "querylane",
 	"devDependencies": {
+		"@biomejs/biome": "2.5.3",
+		"@types/bun": "1.3.14",
 		"@types/node": "24.13.3",
-		"blume": "1.3.1"
+		"blume": "1.3.1",
+		"typescript": "6.0.3"
 	},
 	"packageManager": "bun@1.3.14",
 	"private": true,
@@ -15,6 +18,10 @@
 		"docs:eval": "blume eval --agent codex --json",
 		"docs:test": "bun test scripts/docs-*.test.ts",
 		"docs:test:content": "bun test scripts/docs-content.test.ts",
+		"scripts:check": "bun run scripts:lint && bun run scripts:type:check && bun run scripts:test",
+		"scripts:lint": "find scripts -name '*.ts' -print0 | xargs -0 biome check",
+		"scripts:test": "bun test scripts/*.test.ts",
+		"scripts:type:check": "tsc -p tsconfig.scripts.json --pretty false",
 		"setup:worktree": "bun ./scripts/setup-worktree.mjs"
 	},
 	"type": "module",

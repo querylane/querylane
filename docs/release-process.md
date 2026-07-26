@@ -55,12 +55,28 @@ Validate the complete archive matrix without publishing:
 goreleaser release --snapshot --clean
 ```
 
+Snapshot output is written under `.build/goreleaser/`, so it does not replace
+the documentation site in `dist/`.
+
 Plain `go install` is unsupported because it does not run the frontend build
 required by the `embed_frontend` build tag.
 
 ## Rerun artifact publishing
 
-Run the `_release-artifacts` workflow manually with an existing `vX.Y.Z` tag.
-This is intended for tags created after the artifact pipeline was introduced;
-the historical `v0.1.0` source does not contain the required version-stamping
-code.
+Run the `_release-artifacts` workflow manually from the default branch with an
+existing `vX.Y.Z` tag. Existing assets are replaced, making partial-upload
+recovery safe.
+
+If the tag exists but release creation failed:
+
+```sh
+gh release create vX.Y.Z --verify-tag --generate-notes
+gh workflow run _release-artifacts.yml -f tag=vX.Y.Z
+```
+
+The stable Docker publisher has no manual dispatch entry point. If its job
+started and failed, rerun the failed jobs in the original Release workflow run.
+
+Artifact reruns are intended for tags created after this pipeline was
+introduced; the historical `v0.1.0` source does not contain the required
+version-stamping code.
