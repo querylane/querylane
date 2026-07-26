@@ -9,10 +9,14 @@
 		"docs:api:generate": "buf generate --template buf.openapi.gen.yaml && bun scripts/finalize-openapi.ts",
 		"docs:audit": "blume audit",
 		"docs:build": "blume build --strict",
+		"docs:check": "blume check --strict",
 		"docs:dev": "blume dev",
 		"docs:test": "bun test scripts/docs-*.test.ts",
 		"docs:test:content": "bun test scripts/docs-content.test.ts",
 		"setup:worktree": "bun ./scripts/setup-worktree.mjs"
 	},
-	"type": "module"
+	"type": "module",
+	"patchedDependencies": {
+		"blume@1.1.4": "patches/blume@1.1.4.patch"
+	}
 }

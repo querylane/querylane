@@ -224,6 +224,23 @@ test("keeps API usage guidance alongside the generated reference", async () => {
 	}
 });
 
+test("explains RPC badges with an agent-readable live example", async () => {
+	const [calling, example] = await Promise.all([
+		readFile(join(apiGuideRoot, "calling-the-api.mdx"), "utf8"),
+		readFile(join(root, "examples/rpc-method-kinds.astro"), "utf8"),
+	]);
+
+	expect(calling).toContain('<Component path="rpc-method-kinds" />');
+	for (const kind of [
+		"bidirectional-streaming",
+		"client-streaming",
+		"server-streaming",
+		"unary",
+	]) {
+		expect(example).toContain(`"x-connectrpc-method-kind": "${kind}"`);
+	}
+});
+
 test("keeps installation and production setup ahead of product guides", async () => {
 	const setupPages = [
 		"install-querylane.mdx",

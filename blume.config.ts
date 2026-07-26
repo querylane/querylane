@@ -6,8 +6,15 @@ export default defineConfig({
 		"Guides for getting started, exploring PostgreSQL, and operating Querylane safely.",
 	logo: "/icon.svg",
 	deployment: {
-		output: "static",
+		adapter: "node",
+		output: "server",
 		site: "https://docs.querylane.net",
+	},
+	ai: {
+		mcp: {
+			enabled: true,
+			route: "/mcp",
+		},
 	},
 	content: {
 		root: "docs/site",
