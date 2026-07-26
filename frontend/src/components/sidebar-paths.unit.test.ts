@@ -21,6 +21,7 @@ describe("buildSidebarPaths", () => {
     expect(paths.databaseExplorer).toBeUndefined();
     expect(paths.databaseExtensions).toBeUndefined();
     expect(paths.databaseOverview).toBeUndefined();
+    expect(paths.databaseWorkbench).toBeUndefined();
   });
 
   test("returns all paths when both instanceId and databaseId are provided", () => {
@@ -30,6 +31,7 @@ describe("buildSidebarPaths", () => {
       databaseExplorer: "/instances/prod/databases/app/explorer",
       databaseExtensions: "/instances/prod/databases/app/extensions",
       databaseOverview: "/instances/prod/databases/app",
+      databaseWorkbench: "/instances/prod/databases/app/workbench",
       instanceActivity: "/instances/prod/activity",
       instanceConfiguration: "/instances/prod/configuration",
       instanceOverview: "/instances/prod",
@@ -43,6 +45,7 @@ describe("buildSidebarPaths", () => {
     expect(paths.databaseExplorer).toBeUndefined();
     expect(paths.databaseExtensions).toBeUndefined();
     expect(paths.databaseOverview).toBeUndefined();
+    expect(paths.databaseWorkbench).toBeUndefined();
     expect(paths.instanceOverview).toBeUndefined();
   });
 });
@@ -56,6 +59,7 @@ describe("buildNavActiveState", () => {
       databaseExplorer: false,
       databaseExtensions: false,
       databaseOverview: false,
+      databaseWorkbench: false,
       instanceActivity: false,
       instanceConfiguration: false,
       instanceOverview: false,
@@ -126,6 +130,7 @@ describe("buildNavActiveState", () => {
     expect(active.databaseOverview).toBe(true);
     expect(active.databaseExplorer).toBe(false);
     expect(active.databaseExtensions).toBe(false);
+    expect(active.databaseWorkbench).toBe(false);
   });
 
   test("databaseExtensions is active on exact match", () => {
@@ -151,6 +156,7 @@ describe("buildNavActiveState", () => {
       databaseExplorer: false,
       databaseExtensions: false,
       databaseOverview: false,
+      databaseWorkbench: false,
       instanceActivity: false,
       instanceConfiguration: false,
       instanceOverview: false,
@@ -168,6 +174,17 @@ describe("buildNavActiveState", () => {
     expect(active.databaseExplorer).toBe(true);
   });
 
+  test("databaseWorkbench is active on exact match", () => {
+    const paths = buildSidebarPaths({ databaseId: "app", instanceId: "prod" });
+    const active = buildNavActiveState({
+      pathname: "/instances/prod/databases/app/workbench",
+      paths,
+    });
+
+    expect(active.databaseWorkbench).toBe(true);
+    expect(active.databaseOverview).toBe(false);
+  });
+
   test("all flags are false when paths object is empty", () => {
     const active = buildNavActiveState({
       pathname: "/instances/prod",
@@ -178,6 +195,7 @@ describe("buildNavActiveState", () => {
       databaseExplorer: false,
       databaseExtensions: false,
       databaseOverview: false,
+      databaseWorkbench: false,
       instanceActivity: false,
       instanceConfiguration: false,
       instanceOverview: false,
