@@ -1,5 +1,11 @@
 import { create } from "@bufbuild/protobuf";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ForeignKeyDataCell } from "@/components/data-grid/table-data-grid/foreign-key-data-cell";
@@ -99,27 +105,30 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 
 describe("ForeignKeyDataCell intent prefetch", () => {
   test("prefetches after hover dwell and cancels when the pointer leaves", async () => {
-    const user = setupUser();
+    vi.useFakeTimers();
     const trigger = renderForeignKeyCell();
 
-    await user.hover(trigger);
-    await new Promise((resolve) =>
-      globalThis.setTimeout(resolve, INTENT_PREFETCH_POLICY.delayMs - 50)
+    fireEvent.pointerEnter(trigger);
+    await act(() =>
+      vi.advanceTimersByTimeAsync(INTENT_PREFETCH_POLICY.delayMs - 1)
     );
     expect(tableDataApi.queryActions.prefetch).not.toHaveBeenCalled();
 
-    await user.unhover(trigger);
-    await new Promise((resolve) => globalThis.setTimeout(resolve, 75));
+    fireEvent.pointerLeave(trigger);
+    await act(() =>
+      vi.advanceTimersByTimeAsync(INTENT_PREFETCH_POLICY.delayMs)
+    );
     expect(tableDataApi.queryActions.prefetch).not.toHaveBeenCalled();
 
-    await user.hover(trigger);
-    await new Promise((resolve) =>
-      globalThis.setTimeout(resolve, INTENT_PREFETCH_POLICY.delayMs + 25)
+    fireEvent.pointerEnter(trigger);
+    await act(() =>
+      vi.advanceTimersByTimeAsync(INTENT_PREFETCH_POLICY.delayMs)
     );
     expect(tableDataApi.queryActions.prefetch).toHaveBeenCalledTimes(1);
   });
@@ -159,11 +168,15 @@ test("clicking outside cancels a delayed popover open", async () => {
 });
 
 test("opens the waiting state when the clicked fetch pauses", async () => {
+  let resolveFetch: (() => void) | undefined;
+  const fetchPromise = new Promise<void>((resolve) => {
+    resolveFetch = resolve;
+  });
   tableDataApi.queryActions.getState.mockReturnValue({
     fetchStatus: "paused",
     status: "pending",
   });
-  tableDataApi.queryActions.fetch.mockReturnValue(new Promise(() => undefined));
+  tableDataApi.queryActions.fetch.mockReturnValue(fetchPromise);
   tableDataApi.useReadRowsQuery.mockReturnValue({
     data: undefined,
     error: null,
@@ -180,6 +193,8 @@ test("opens the waiting state when the clicked fetch pauses", async () => {
   expect(
     screen.getByRole("status", { name: "Waiting for connection" })
   ).toBeTruthy();
+  resolveFetch?.();
+  await act(() => fetchPromise);
 });
 
 test("opens the error state when the clicked fetch fails", async () => {

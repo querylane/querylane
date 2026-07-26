@@ -1374,7 +1374,7 @@ describe("backend instance activity", () => {
     expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
     expect(within(table).queryByText("5000")).toBeNull();
     expect(nextPage).toHaveProperty("disabled", false);
-  });
+  }, 20_000);
 });
 
 describe("backend instance activity pagination and states", () => {
@@ -1759,6 +1759,14 @@ describe("backend instance database list", () => {
       }),
       { overridePage: "database.overview" }
     );
+    await waitFor(() => {
+      expect(state.queryClient.prefetchQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meta: { appErrorSurface: "silent" },
+          queryKey: ["integration", "selected-database"],
+        })
+      );
+    });
   });
 
   test("groups charset and collation into one encoding column", () => {

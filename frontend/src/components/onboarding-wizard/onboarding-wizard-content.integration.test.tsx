@@ -1,5 +1,4 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { createRouterTransport } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -39,6 +38,7 @@ import {
 } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
 import { createTestQueryClient } from "@/test/query-client";
+import { createTestRouterTransport } from "@/test/router-transport";
 import { ThemeProvider } from "@/theme-provider";
 
 const CONFIGURE_UI_RE = /Configure via UI/;
@@ -140,7 +140,7 @@ function createController(
 function renderWizard(controller = createController()) {
   const queryClient = createTestQueryClient();
   renderedQueryClients.push(queryClient);
-  const transport = createRouterTransport(({ service }) => {
+  const transport = createTestRouterTransport(({ service }) => {
     service(InstanceService, {
       testInstanceConnection: vi.fn(async () => ({})),
     });

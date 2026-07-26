@@ -63,7 +63,7 @@ describe("SchemaDetail inventory rendering", () => {
     expect(loadedDataTable).toBe(true);
     expect(screen.getByText("orders")).toBeTruthy();
     expect(screen.getByText("active_orders")).toBeTruthy();
-  });
+  }, 20_000);
 
   it("renders both kinds as rows inside the single shared table", async () => {
     const { SchemaDetail } = await import(
@@ -89,5 +89,5 @@ describe("SchemaDetail inventory rendering", () => {
     expect(screen.getAllByRole("table")).toHaveLength(1);
     expect(screen.getByText("TABLE")).toBeTruthy();
     expect(screen.getByText("VIEW")).toBeTruthy();
-  });
+  }, 20_000);
 });

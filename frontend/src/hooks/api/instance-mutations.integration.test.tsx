@@ -1,10 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import {
-  Code,
-  ConnectError,
-  createRouterTransport,
-  type Transport,
-} from "@connectrpc/connect";
+import { Code, ConnectError, type Transport } from "@connectrpc/connect";
 import {
   TransportProvider,
   useQuery as useConnectQuery,
@@ -44,6 +39,7 @@ import {
   listInstances,
 } from "@/protogen/querylane/console/v1alpha1/instance-InstanceService_connectquery";
 import { createTestQueryClient } from "@/test/query-client";
+import { createTestRouterTransport } from "@/test/router-transport";
 
 const INSTANCE_NAME = "instances/local";
 const OTHER_INSTANCE_NAME = "instances/staging";
@@ -85,7 +81,7 @@ afterEach(() => {
 describe("instance create and update cache invalidation", () => {
   test("create refreshes the instance list", async () => {
     const listRequests: string[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(InstanceService, {
         createInstance() {
           return create(CreateInstanceResponseSchema, {
@@ -130,7 +126,7 @@ describe("instance create and update cache invalidation", () => {
   test("create does not wait for the instance list refresh", async () => {
     const pendingList = deferred<ListInstancesResponse>();
     const listRequests: string[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(InstanceService, {
         createInstance() {
           return create(CreateInstanceResponseSchema, {
@@ -164,7 +160,7 @@ describe("instance create and update cache invalidation", () => {
 
   test("create keeps the canonical list when its response and refresh provide no data", async () => {
     const listRequests: string[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(InstanceService, {
         createInstance() {
           return create(CreateInstanceResponseSchema);
@@ -205,7 +201,7 @@ describe("instance create and update cache invalidation", () => {
 
   test("update removes the instance caches and refreshes the instance list", async () => {
     const listRequests: string[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(InstanceService, {
         listInstances(request) {
           listRequests.push(request.pageToken);
@@ -266,7 +262,7 @@ describe("instance list variant invalidation", () => {
     const canonicalRefresh = deferred<ListInstancesResponse>();
     const alternateRefresh = deferred<ListInstancesResponse>();
     const listRequests: string[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(InstanceService, {
         listInstances(request) {
           listRequests.push(request.orderBy);
@@ -364,7 +360,7 @@ describe("instance list variant invalidation", () => {
   test("supersedes a stale active list request after mutation", async () => {
     const staleRefresh = deferred<ListInstancesResponse>();
     const listRequests: string[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(InstanceService, {
         listInstances(request) {
           listRequests.push(request.orderBy);
@@ -450,7 +446,7 @@ describe("instance list variant invalidation", () => {
   test("supersedes an active initial list request after mutation", async () => {
     const initialList = deferred<ListInstancesResponse>();
     const listRequests: string[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(InstanceService, {
         listInstances(request) {
           listRequests.push(request.orderBy);
@@ -529,7 +525,7 @@ describe("instance list variant cleanup", () => {
       "alternate list unavailable",
       Code.Unavailable
     );
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(InstanceService, {
         listInstances(request) {
           listRequests.push(request.orderBy);
@@ -610,7 +606,7 @@ describe("instance list variant cleanup", () => {
   test("update evicts only current-transport list variants before one canonical refresh", async () => {
     const pendingList = deferred<ListInstancesResponse>();
     const listRequests: string[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(InstanceService, {
         listInstances(request) {
           listRequests.push(request.pageToken);
@@ -623,7 +619,7 @@ describe("instance list variant cleanup", () => {
         },
       });
     });
-    const otherTransport = createRouterTransport(() => undefined);
+    const otherTransport = createTestRouterTransport(() => undefined);
     const { queryClient, wrapper } = createWrapper(transport);
     const canonicalKey = listAllInstancesQueryOptions({ transport }).queryKey;
     const alternateAggregateKey = listAllInstancesQueryOptions({
@@ -733,7 +729,7 @@ describe("instance list variant cleanup", () => {
 describe("instance descendant invalidation", () => {
   test("keeps a mounted instance observer connected and refetches it once", async () => {
     const getRequests: string[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(InstanceService, {
         getInstance(request) {
           getRequests.push(request.name);
@@ -785,7 +781,7 @@ describe("instance descendant invalidation", () => {
 describe("instance deletion cache invalidation", () => {
   test("delete removes the instance caches and refreshes the instance list", async () => {
     const listRequests: string[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(InstanceService, {
         deleteInstance(request) {
           expect(request.name).toBe(INSTANCE_NAME);
@@ -881,7 +877,7 @@ describe("instance deletion cache invalidation", () => {
   test("delete cancels an older in-flight list request before refreshing", async () => {
     const staleList = deferred<ListInstancesResponse>();
     const listRequests: string[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(InstanceService, {
         deleteInstance() {
           return create(DeleteInstanceResponseSchema);
@@ -934,7 +930,7 @@ describe("instance deletion cache invalidation", () => {
   });
 
   test("delete keeps a failed list refresh from restoring the deleted instance", async () => {
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(InstanceService, {
         deleteInstance() {
           return create(DeleteInstanceResponseSchema);

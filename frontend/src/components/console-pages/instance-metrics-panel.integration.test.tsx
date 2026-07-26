@@ -15,6 +15,10 @@ import {
   QueryMetricsResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
+vi.mock("@/components/charts/metric-time-chart", () => ({
+  MetricTimeChart: () => <div data-testid="metric-time-chart" />,
+}));
+
 const DAY_SECONDS = 24 * 3600;
 const DAY_INTERVAL = {
   endTime: { nanos: 0, seconds: BigInt(DAY_SECONDS) },
@@ -176,7 +180,7 @@ describe("InstanceMetricsPanel trend labels", () => {
 });
 
 describe("InstanceMetricsPanel comparison overlay", () => {
-  test("draws the previous-period overlay automatically, with no toggle", () => {
+  test("draws the previous-period overlay automatically, with no toggle", async () => {
     renderPanel({ response: fullResponse(true) });
 
     // The overlay is always on: there is no switch and no toggle label to hunt
@@ -187,6 +191,7 @@ describe("InstanceMetricsPanel comparison overlay", () => {
 
     // And the old header-level "vs previous" button stays gone.
     expect(screen.queryByRole("button", { name: "vs previous" })).toBeNull();
+    await screen.findByTestId("metric-time-chart");
   });
 });
 

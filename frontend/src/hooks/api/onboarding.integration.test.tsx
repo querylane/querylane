@@ -3,12 +3,11 @@ import {
   type Client,
   Code,
   ConnectError,
-  createRouterTransport,
   type ServiceImpl,
   type Transport,
 } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -30,6 +29,8 @@ import {
   StepState,
   WatchConfigChangesResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
+import { createTestQueryClient } from "@/test/query-client";
+import { createTestRouterTransport } from "@/test/router-transport";
 
 // Production builds run useOnboardingStreamingClient through the React
 // Compiler, which memoizes the createClient(OnboardingService, transport)
@@ -70,25 +71,15 @@ const WATCH_BACKOFF_SCHEDULE_MS = [500, 1000, 2000] as const;
 type OnboardingImplementation = Partial<ServiceImpl<typeof OnboardingService>>;
 
 function createOnboardingTransport(implementation: OnboardingImplementation) {
-  return createRouterTransport(({ service }) => {
+  return createTestRouterTransport(({ service }) => {
     service(OnboardingService, implementation);
   });
 }
 
 const activeQueryClients: QueryClient[] = [];
 
-// An infinite gcTime stops TanStack Query from scheduling cache
-// garbage-collection timers that would outlive the test; afterEach clears
-// the cache instead.
-const TEST_GC_TIME = Number.POSITIVE_INFINITY;
-
 function createWrapper(transport: Transport) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      mutations: { gcTime: TEST_GC_TIME, retry: false },
-      queries: { gcTime: TEST_GC_TIME, retry: false },
-    },
-  });
+  const queryClient = createTestQueryClient();
   activeQueryClients.push(queryClient);
 
   return function Wrapper({ children }: { children: ReactNode }) {
