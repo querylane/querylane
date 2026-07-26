@@ -1475,7 +1475,7 @@ describe("backend instance activity pagination and states", () => {
         "Connect the instance before Querylane can read pg_stat_activity."
       )
     ).toBeTruthy();
-    expect(within(activity).queryByText("Loading activity...")).toBeNull();
+    expect(within(activity).queryByText("Loading activity…")).toBeNull();
   });
 
   test("shows both directions of a chained lock in the inspector", async () => {
@@ -1692,7 +1692,7 @@ describe("backend instance database list", () => {
     renderInstanceOverview();
 
     const search = screen.getByRole("textbox", {
-      name: "Search databases...",
+      name: "Search databases…",
     });
     expect(search).toBeTruthy();
     expect(screen.getByRole("button", { name: "Kind" })).toBeTruthy();

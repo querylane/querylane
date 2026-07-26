@@ -275,6 +275,21 @@ async function createInstanceAndNavigate({
     });
   }
 }
+
+async function runWithCleanup({
+  cleanup,
+  execute,
+}: {
+  cleanup: () => void;
+  execute: () => Promise<void>;
+}) {
+  try {
+    await execute();
+  } finally {
+    cleanup();
+  }
+}
+
 export function useCreateInstancePageController(
   initialState?: Partial<CreateInstanceWorkflowState> | undefined
 ) {
@@ -402,16 +417,22 @@ export function useCreateInstancePageController(
     });
     isSubmittingRef.current = true;
     setIsSubmitting(true);
-    const outcome = await createInstanceAndNavigate({
-      formState: state.formState,
-      mutateAsync: createInstanceMutation.mutateAsync,
-      navigate,
-      queryClient,
-      transport,
+    await runWithCleanup({
+      cleanup: () => {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
+      },
+      execute: async () => {
+        const outcome = await createInstanceAndNavigate({
+          formState: state.formState,
+          mutateAsync: createInstanceMutation.mutateAsync,
+          navigate,
+          queryClient,
+          transport,
+        });
+        applyCreateInstanceOutcome(outcome, dispatch);
+      },
     });
-    applyCreateInstanceOutcome(outcome, dispatch);
-    isSubmittingRef.current = false;
-    setIsSubmitting(false);
   };
   return {
     canCreate: canCreateInstance(state),

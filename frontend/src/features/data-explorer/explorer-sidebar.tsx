@@ -799,7 +799,7 @@ const SCHEMA_SKELETON_ROWS = [
 function SchemaLoadingRows() {
   return (
     <div
-      className="fade-in animate-in space-y-1 py-1 duration-200 motion-reduce:animate-none"
+      className="fade-in animation-duration-200 animate-in space-y-1 py-1 motion-reduce:animate-none"
       data-testid="schema-list-loading"
       role="status"
     >
@@ -820,7 +820,7 @@ function NestedLoadingRows() {
   // useCalmLoadingPhase; this only softens the skeleton's entrance.
   return (
     <div
-      className="fade-in animate-in space-y-1 py-1 duration-200 motion-reduce:animate-none"
+      className="fade-in animation-duration-200 animate-in space-y-1 py-1 motion-reduce:animate-none"
       data-testid="resource-list-loading"
     >
       {["first", "second", "third"].map((rowId) => (

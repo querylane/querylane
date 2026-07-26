@@ -20,7 +20,7 @@ export function RetryActionButton({
   className,
   label,
   onRetry,
-  pendingLabel = "Retrying...",
+  pendingLabel = "Retrying…",
   size = "sm",
   variant = "default",
 }: RetryActionButtonProps) {

@@ -1010,7 +1010,7 @@ test("backend instance overview shows live metrics and database catalog together
     .toBeVisible();
   await expect.element(health.getByText("Streaming replicas")).toBeVisible();
   await expect
-    .element(page.getByPlaceholder("Search databases..."))
+    .element(page.getByPlaceholder("Search databases…"))
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { exact: true, name: "Kind" }))
@@ -1310,7 +1310,7 @@ test("backend instance activity disconnected state matches", async () => {
 
   await expect.element(page.getByText("Activity unavailable")).toBeVisible();
   await expect
-    .element(page.getByText("Loading activity..."))
+    .element(page.getByText("Loading activity…"))
     .not.toBeInTheDocument();
   await document.fonts.ready;
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(

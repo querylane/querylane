@@ -47,11 +47,11 @@ describe("form controls integration", () => {
     render(<RetryActionButton label="Retry" onRetry={onRetry} />);
 
     await user.click(screen.getByRole("button", { name: "Retry" }));
-    await user.click(screen.getByRole("button", { name: "Retrying..." }));
+    await user.click(screen.getByRole("button", { name: "Retrying…" }));
 
     expect(onRetry).toHaveBeenCalledTimes(1);
     expect(
-      (screen.getByRole("button", { name: "Retrying..." }) as HTMLButtonElement)
+      (screen.getByRole("button", { name: "Retrying…" }) as HTMLButtonElement)
         .disabled
     ).toBe(true);
 

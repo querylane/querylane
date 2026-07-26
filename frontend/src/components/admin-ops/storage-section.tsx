@@ -92,7 +92,7 @@ export function StorageSection() {
         <AsyncSectionState
           hasContent={data !== undefined}
           isPending={isPending}
-          loadingMessage="Loading storage stats..."
+          loadingMessage="Loading storage stats…"
         >
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-3">

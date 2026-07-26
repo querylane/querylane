@@ -31,7 +31,7 @@ export function ChunkLoadRecoveryPage({
   return (
     <main
       className={cn(
-        "flex min-h-screen items-center justify-center bg-background p-4",
+        "flex min-h-dvh items-center justify-center bg-background p-4",
         containerClassName
       )}
     >

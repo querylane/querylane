@@ -260,7 +260,7 @@ function ReachRow({
   if (state === "error") {
     detail = "Couldn't load — data unavailable";
   } else if (state === "loading") {
-    detail = "Loading...";
+    detail = "Loading…";
   }
   let total: ReactNode = (
     <span className="font-mono text-muted-foreground/50 text-sm">

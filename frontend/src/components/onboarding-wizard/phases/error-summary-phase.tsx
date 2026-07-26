@@ -100,7 +100,7 @@ export function ErrorSummaryPhase() {
                 retry();
               })
             }
-            pendingLabel="Retrying..."
+            pendingLabel="Retrying…"
             variant="default"
           />
         </div>

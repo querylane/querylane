@@ -74,7 +74,7 @@ export function ReplicasSection() {
         <AsyncSectionState
           hasContent={data !== undefined}
           isPending={isPending}
-          loadingMessage="Loading replicas..."
+          loadingMessage="Loading replicas…"
         >
           <DataTable
             columns={REPLICA_COLUMNS}

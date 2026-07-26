@@ -76,10 +76,6 @@
         "rules": ["react-doctor/shadcn-tabs-trigger-requires-list"]
       },
       {
-        "files": ["src/routes/new-instance-page-controller.ts"],
-        "rules": ["react-doctor/no-loading-flag-reset-outside-finally"]
-      },
-      {
         "files": ["src/features/data-explorer/table-data/table-data-query.ts"],
         "rules": ["react-doctor/no-pass-live-state-to-parent"]
       },
@@ -92,10 +88,6 @@
           "src/features/data-explorer/explorer-table-detail/policies-tab.tsx"
         ],
         "rules": ["react-doctor/no-tiny-uppercase-tracked-label"]
-      },
-      {
-        "files": ["src/features/data-explorer/explorer-sidebar.tsx"],
-        "rules": ["react-doctor/no-transition-all"]
       },
       {
         "files": [

@@ -75,7 +75,7 @@ function getTestButtonIcon(status: ConnectionTestStatus) {
 function getTestButtonLabel(status: ConnectionTestStatus) {
   switch (status) {
     case "testing":
-      return "Testing...";
+      return "Testing…";
     case "success":
       return "Connected";
     case "error":

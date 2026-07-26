@@ -171,7 +171,7 @@ function BreadcrumbDropdownList({
           className="flex items-center gap-2 px-3 py-2 text-muted-foreground text-xs"
         >
           <Spinner className="size-3.5" />
-          <span>{`Refreshing ${label.toLowerCase()}...`}</span>
+          <span>{`Refreshing ${label.toLowerCase()}…`}</span>
         </output>
       ) : null}
       <CommandEmpty className="p-0">
@@ -541,7 +541,7 @@ function InstanceSelector({
       emptyResourceName="instances"
       label="Instance"
       loading={breadcrumbState.loading}
-      loadingMessage="Loading instances..."
+      loadingMessage="Loading instances…"
       placeholder="Select instance"
       refreshing={breadcrumbState.refreshing}
       triggerClassName="max-w-[11rem] sm:max-w-[14rem]"
@@ -609,7 +609,7 @@ function DatabaseSelector({
         emptyResourceName="databases"
         label="Database"
         loading={breadcrumbState.loading}
-        loadingMessage="Loading databases..."
+        loadingMessage="Loading databases…"
         placeholder="Select database"
         refreshing={breadcrumbState.refreshing}
         triggerClassName="max-w-[12rem] sm:max-w-[14rem]"

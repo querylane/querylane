@@ -98,14 +98,14 @@ export function CatalogSyncSection() {
         <AsyncSectionState
           hasContent={data !== undefined}
           isPending={isPending}
-          loadingMessage="Loading catalog sync state..."
+          loadingMessage="Loading catalog sync state…"
         >
           <DataTable
             columns={CATALOG_SYNC_COLUMNS}
             data={states}
             emptyResourceName="catalog sync scopes"
             filterColumn="scope"
-            filterPlaceholder="Filter scopes..."
+            filterPlaceholder="Filter scopes…"
             tableKey="admin-catalog-sync"
           />
         </AsyncSectionState>

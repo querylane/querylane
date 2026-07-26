@@ -741,8 +741,8 @@ function InstanceOverviewSection({
         hasContent={false}
         isPending={true}
         isRefreshing={false}
-        loadingMessage="Loading databases..."
-        refreshingMessage="Refreshing databases..."
+        loadingMessage="Loading databases…"
+        refreshingMessage="Refreshing databases…"
       >
         {null}
       </AsyncSectionState>
@@ -782,7 +782,7 @@ function InstanceOverviewSection({
           facets={databaseFacetFilters}
           onClearAll={handleClearAll}
           onSearchChange={setDbFilter}
-          searchPlaceholder="Search databases..."
+          searchPlaceholder="Search databases…"
           searchValue={dbFilter}
         />
       )}

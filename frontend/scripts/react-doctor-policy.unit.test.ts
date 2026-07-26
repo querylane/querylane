@@ -81,10 +81,6 @@ const reactDoctorRuleOverrides = [
     rules: ["react-doctor/shadcn-tabs-trigger-requires-list"],
   },
   {
-    files: ["src/routes/new-instance-page-controller.ts"],
-    rules: ["react-doctor/no-loading-flag-reset-outside-finally"],
-  },
-  {
     files: ["src/features/data-explorer/table-data/table-data-query.ts"],
     rules: ["react-doctor/no-pass-live-state-to-parent"],
   },
@@ -97,10 +93,6 @@ const reactDoctorRuleOverrides = [
       "src/features/data-explorer/explorer-table-detail/policies-tab.tsx",
     ],
     rules: ["react-doctor/no-tiny-uppercase-tracked-label"],
-  },
-  {
-    files: ["src/features/data-explorer/explorer-sidebar.tsx"],
-    rules: ["react-doctor/no-transition-all"],
   },
   {
     files: [
@@ -148,8 +140,6 @@ const overrideRationales = {
     "The onboarding rail grid is part of Querylane's branded visual treatment and remains non-interactive.",
   "react-doctor/no-hairline-border-wide-shadow":
     "The chart tooltip needs both a boundary over plotted data and elevation above overlapping chart marks.",
-  "react-doctor/no-loading-flag-reset-outside-finally":
-    "The awaited create workflow is total: it catches every mutation and navigation failure and returns an outcome.",
   "react-doctor/no-nested-card-surface":
     "These nested surfaces distinguish form inputs, setup alternatives, and status summaries inside larger workflow panels.",
   "react-doctor/no-pass-live-state-to-parent":
@@ -158,8 +148,6 @@ const overrideRationales = {
     "The black shadows belong to the deliberately near-black onboarding surface and preserve its established depth.",
   "react-doctor/no-tiny-uppercase-tracked-label":
     "These compact database metadata and SQL labels intentionally use the established uppercase technical convention.",
-  "react-doctor/no-transition-all":
-    "The flagged classes use Tailwind's keyframe-based animate-in utility and contain no transition-all declaration.",
   "react-doctor/server-sequential-independent-await":
     "Querylane supports a single per-instance live-query slot, so these RPCs must remain sequential.",
   "react-doctor/shadcn-tabs-trigger-requires-list":

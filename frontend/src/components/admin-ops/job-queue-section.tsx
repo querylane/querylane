@@ -138,7 +138,7 @@ export function JobQueueSection() {
         <AsyncSectionState
           hasContent={data !== undefined}
           isPending={isPending}
-          loadingMessage="Loading job queue..."
+          loadingMessage="Loading job queue…"
         >
           <div className="space-y-3">
             <DataTable
