@@ -153,6 +153,7 @@
         "noDuplicateSelectors": "error",
         "noIdenticalTestTitle": "error",
         "noImpliedEval": "error",
+        "noNegationInEqualityCheck": "error",
         "noPlaywrightWaitForSelector": "error",
         "noPlaywrightWaitForTimeout": "error",
         "noReactStringRefs": "error",
