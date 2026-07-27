@@ -17,3 +17,17 @@ export const listViews = ViewService.method.listViews;
  * @generated from rpc querylane.console.v1alpha1.ViewService.GetView
  */
 export const getView = ViewService.method.getView;
+
+/**
+ * Gets relations used by a view and relations that depend on it.
+ *
+ * @generated from rpc querylane.console.v1alpha1.ViewService.GetViewDependencies
+ */
+export const getViewDependencies = ViewService.method.getViewDependencies;
+
+/**
+ * Refreshes a materialized view.
+ *
+ * @generated from rpc querylane.console.v1alpha1.ViewService.RefreshMaterializedView
+ */
+export const refreshMaterializedView = ViewService.method.refreshMaterializedView;

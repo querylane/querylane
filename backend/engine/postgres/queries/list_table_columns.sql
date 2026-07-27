@@ -1,14 +1,8 @@
--- List columns for a specific table.
--- Args: $1 = schema name, $2 = table name.
+-- List columns for a table-like relation, including materialized views.
+-- Args: $1 = schema name, $2 = relation name.
 SELECT
-	c.column_name,
-	c.ordinal_position,
-	-- Canonical PostgreSQL type name (e.g. int4, varchar(255), numeric(10,2),
-	-- timestamptz, text[]) rather than the verbose SQL-standard spelling that
-	-- information_schema.columns.data_type returns ("timestamp with time zone").
-	-- pg_type.typname gives the short name; the parenthetical modifier is taken
-	-- from format_type (computed once) so Postgres formats it precisely; arrays
-	-- use the element name plus a "[]" suffix.
+	pa.attname,
+	pa.attnum,
 	CASE
 		WHEN pt.typcategory = 'A'
 			THEN regexp_replace(COALESCE(pet.typname, pt.typname), '^_', '')
@@ -16,43 +10,27 @@ SELECT
 	END
 		|| COALESCE(substring(pg_catalog.format_type(pa.atttypid, pa.atttypmod) FROM '\(.*\)'), '')
 		|| CASE WHEN pt.typcategory = 'A' THEN '[]' ELSE '' END,
-	CASE WHEN c.is_nullable = 'YES' THEN true ELSE false END,
-	COALESCE(
-		EXISTS(
-			SELECT 1
-			FROM information_schema.table_constraints tc
-			JOIN information_schema.key_column_usage kcu
-				ON tc.constraint_name = kcu.constraint_name
-				AND tc.table_schema = kcu.table_schema
-				AND tc.table_name = kcu.table_name
-			WHERE tc.constraint_type = 'PRIMARY KEY'
-				AND tc.table_schema = c.table_schema
-				AND tc.table_name = c.table_name
-				AND kcu.column_name = c.column_name
-		), false
+	NOT pa.attnotnull,
+	EXISTS (
+		SELECT 1
+		FROM pg_catalog.pg_index idx
+		WHERE idx.indrelid = pcl.oid
+			AND idx.indisprimary
+			AND idx.indisvalid
+			AND pa.attnum = ANY(idx.indkey)
 	),
-	COALESCE(c.column_default, ''),
-	COALESCE(c.character_maximum_length, 0),
-	COALESCE(col_description(
-		(quote_ident(c.table_schema) || '.' || quote_ident(c.table_name))::regclass,
-		c.ordinal_position
-	), ''),
-	COALESCE(
-		EXISTS(
-			SELECT 1
-			FROM information_schema.table_constraints tc
-			JOIN information_schema.key_column_usage kcu
-				ON tc.constraint_name = kcu.constraint_name
-				AND tc.table_schema = kcu.table_schema
-				AND tc.table_name = kcu.table_name
-			WHERE tc.constraint_type = 'UNIQUE'
-				AND tc.table_schema = c.table_schema
-				AND tc.table_name = c.table_name
-				AND kcu.column_name = c.column_name
-		), false
+	COALESCE(pg_catalog.pg_get_expr(pad.adbin, pad.adrelid), ''),
+	COALESCE(info.character_maximum_length, 0),
+	COALESCE(pg_catalog.col_description(pcl.oid, pa.attnum), ''),
+	EXISTS (
+		SELECT 1
+		FROM pg_catalog.pg_index idx
+		WHERE idx.indrelid = pcl.oid
+			AND idx.indisunique
+			AND idx.indisvalid
+			AND idx.indnkeyatts = 1
+			AND pa.attnum = ANY(idx.indkey)
 	),
-	-- Canonical base type name and array flag straight from the catalog, used to
-	-- classify into our abstract DataType enum without re-parsing the display string.
 	pt.typname,
 	pt.typcategory = 'A',
 	pa.attgenerated <> '',
@@ -63,15 +41,13 @@ SELECT
 	END,
 	pa.attidentity <> '',
 	pa.attidentity::text
-FROM information_schema.columns c
+FROM pg_catalog.pg_class pcl
 JOIN pg_catalog.pg_namespace pn
-	ON pn.nspname = c.table_schema
-JOIN pg_catalog.pg_class pcl
-	ON pcl.relname = c.table_name
-	AND pcl.relnamespace = pn.oid
+	ON pn.oid = pcl.relnamespace
 JOIN pg_catalog.pg_attribute pa
 	ON pa.attrelid = pcl.oid
-	AND pa.attname = c.column_name
+	AND pa.attnum > 0
+	AND NOT pa.attisdropped
 JOIN pg_catalog.pg_type pt
 	ON pt.oid = pa.atttypid
 LEFT JOIN pg_catalog.pg_type pet
@@ -79,6 +55,11 @@ LEFT JOIN pg_catalog.pg_type pet
 LEFT JOIN pg_catalog.pg_attrdef pad
 	ON pad.adrelid = pa.attrelid
 	AND pad.adnum = pa.attnum
-WHERE c.table_schema = $1
-	AND c.table_name = $2
-ORDER BY c.ordinal_position
+LEFT JOIN information_schema.columns info
+	ON info.table_schema = pn.nspname
+	AND info.table_name = pcl.relname
+	AND info.column_name = pa.attname
+WHERE pn.nspname = $1
+	AND pcl.relname = $2
+	AND pcl.relkind IN ('r', 'p', 'f', 'm')
+ORDER BY pa.attnum

@@ -509,6 +509,14 @@ type View struct {
 	LastDDLTime  *time.Time
 }
 
+// ViewDependency is a direct upstream or downstream relation dependency.
+type ViewDependency struct {
+	SchemaName   string
+	Name         string
+	Direction    api.ViewDependency_Direction
+	RelationType api.ViewDependency_RelationType
+}
+
 // TableConstraint represents a constraint on a table.
 type TableConstraint struct {
 	Name        string

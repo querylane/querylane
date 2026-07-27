@@ -36,6 +36,9 @@ type tableCatalog interface {
 	ListTableColumns(ctx context.Context, table resource.TableName) ([]engine.Column, error)
 	ListTableConstraints(ctx context.Context, table resource.TableName) ([]engine.TableConstraint, error)
 	ListTableIndexes(ctx context.Context, table resource.TableName) ([]engine.TableIndex, error)
+	ListViewColumns(ctx context.Context, view resource.ViewName) ([]engine.Column, error)
+	ListViewConstraints(ctx context.Context, view resource.ViewName) ([]engine.TableConstraint, error)
+	ListViewIndexes(ctx context.Context, view resource.ViewName) ([]engine.TableIndex, error)
 	ListTablePolicies(ctx context.Context, table resource.TableName) ([]engine.TablePolicy, error)
 	ListTableTriggers(ctx context.Context, table resource.TableName) ([]engine.TableTrigger, error)
 }
@@ -135,16 +138,16 @@ func (s *Service) GetTablePartitionMetadata(ctx context.Context, req *connect.Re
 
 // ListTableColumns returns detailed column information for a specific table.
 func (s *Service) ListTableColumns(ctx context.Context, req *connect.Request[v1alpha1.ListTableColumnsRequest]) (*connect.Response[v1alpha1.ListTableColumnsResponse], error) {
-	tableResource, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseTableName)
+	relation, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseRelationName)
 	if connErr != nil {
 		return nil, connErr
 	}
 
-	columns, err := s.catalog.ListTableColumns(ctx, tableResource)
+	columns, err := s.listRelationColumns(ctx, relation)
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: tableResource.ResourceType(),
-			Name: tableResource.String(),
+			Type: relation.Type,
+			Name: relation.String(),
 			Op:   "list_table_columns",
 		})
 	}
@@ -161,34 +164,34 @@ func (s *Service) ListTableColumns(ctx context.Context, req *connect.Request[v1a
 
 // ListTableConstraints returns constraints for a specific table.
 func (s *Service) ListTableConstraints(ctx context.Context, req *connect.Request[v1alpha1.ListTableConstraintsRequest]) (*connect.Response[v1alpha1.ListTableConstraintsResponse], error) {
-	tableResource, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseTableName)
+	relation, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseRelationName)
 	if connErr != nil {
 		return nil, connErr
 	}
 
-	constraints, err := s.catalog.ListTableConstraints(ctx, tableResource)
+	constraints, err := s.listRelationConstraints(ctx, relation)
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: tableResource.ResourceType(), Name: tableResource.String(), Op: "list_table_constraints",
+			Type: relation.Type, Name: relation.String(), Op: "list_table_constraints",
 		})
 	}
 
 	return connect.NewResponse(&v1alpha1.ListTableConstraintsResponse{
-		Constraints: convertConstraints(constraints, tableResource.Schema()),
+		Constraints: convertConstraints(constraints, relation.Schema()),
 	}), nil
 }
 
 // ListTableIndexes returns indexes for a specific table.
 func (s *Service) ListTableIndexes(ctx context.Context, req *connect.Request[v1alpha1.ListTableIndexesRequest]) (*connect.Response[v1alpha1.ListTableIndexesResponse], error) {
-	tableResource, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseTableName)
+	relation, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseRelationName)
 	if connErr != nil {
 		return nil, connErr
 	}
 
-	indexes, err := s.catalog.ListTableIndexes(ctx, tableResource)
+	indexes, err := s.listRelationIndexes(ctx, relation)
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: tableResource.ResourceType(), Name: tableResource.String(), Op: "list_table_indexes",
+			Type: relation.Type, Name: relation.String(), Op: "list_table_indexes",
 		})
 	}
 
@@ -233,6 +236,42 @@ func (s *Service) ListTableTriggers(ctx context.Context, req *connect.Request[v1
 	return connect.NewResponse(&v1alpha1.ListTableTriggersResponse{
 		Triggers: convertTriggers(triggers),
 	}), nil
+}
+
+func (s *Service) listRelationColumns(ctx context.Context, relation resource.RelationName) ([]engine.Column, error) {
+	if relation.Type == resource.TypeView {
+		return s.catalog.ListViewColumns(ctx, resource.NewViewName(
+			relation.InstanceID, relation.DatabaseID, relation.SchemaID, relation.RelationID,
+		))
+	}
+
+	return s.catalog.ListTableColumns(ctx, resource.NewTableName(
+		relation.InstanceID, relation.DatabaseID, relation.SchemaID, relation.RelationID,
+	))
+}
+
+func (s *Service) listRelationConstraints(ctx context.Context, relation resource.RelationName) ([]engine.TableConstraint, error) {
+	if relation.Type == resource.TypeView {
+		return s.catalog.ListViewConstraints(ctx, resource.NewViewName(
+			relation.InstanceID, relation.DatabaseID, relation.SchemaID, relation.RelationID,
+		))
+	}
+
+	return s.catalog.ListTableConstraints(ctx, resource.NewTableName(
+		relation.InstanceID, relation.DatabaseID, relation.SchemaID, relation.RelationID,
+	))
+}
+
+func (s *Service) listRelationIndexes(ctx context.Context, relation resource.RelationName) ([]engine.TableIndex, error) {
+	if relation.Type == resource.TypeView {
+		return s.catalog.ListViewIndexes(ctx, resource.NewViewName(
+			relation.InstanceID, relation.DatabaseID, relation.SchemaID, relation.RelationID,
+		))
+	}
+
+	return s.catalog.ListTableIndexes(ctx, resource.NewTableName(
+		relation.InstanceID, relation.DatabaseID, relation.SchemaID, relation.RelationID,
+	))
 }
 
 // convertTableToProto converts a connection layer Table to protobuf format.

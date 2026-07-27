@@ -17,6 +17,7 @@ type adminDriver interface {
 	tablePartitionDriver
 	tableDataDriver
 	queryDriver
+	viewDriver
 }
 
 // probeDriver serves the background sampling probes. Its queries run under
@@ -83,4 +84,9 @@ type queryDriver interface {
 	ExecuteQuery(ctx context.Context, db *sql.DB, params ExecuteQueryParams) (ExecuteQueryStream, error)
 	ExplainQuery(ctx context.Context, db *sql.DB, params ExplainQueryParams) (*ExplainQueryResult, error)
 	GetDatabaseQueryInsights(ctx context.Context, db *sql.DB) (*DatabaseQueryInsights, error)
+}
+
+type viewDriver interface {
+	ListViewDependencies(ctx context.Context, db *sql.DB, schemaName, viewName string) ([]ViewDependency, error)
+	RefreshMaterializedView(ctx context.Context, db *sql.DB, schemaName, viewName string, concurrently bool) error
 }

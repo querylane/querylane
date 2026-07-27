@@ -18,6 +18,12 @@ service ViewService {
 
   // Gets a single view.
   rpc GetView(GetViewRequest) returns (GetViewResponse) {}
+
+  // Gets relations used by a view and relations that depend on it.
+  rpc GetViewDependencies(GetViewDependenciesRequest) returns (GetViewDependenciesResponse) {}
+
+  // Refreshes a materialized view.
+  rpc RefreshMaterializedView(RefreshMaterializedViewRequest) returns (RefreshMaterializedViewResponse) {}
 }
 
 // --------------------------------------------------------------------------
@@ -33,6 +39,12 @@ enum ViewView {
 
   // Full projection including view definition.
   VIEW_VIEW_FULL = 2;
+}
+
+enum RefreshMaterializedViewMode {
+  REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED = 0;
+  REFRESH_MATERIALIZED_VIEW_MODE_STANDARD = 1;
+  REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT = 2;
 }
 
 // --------------------------------------------------------------------------
@@ -95,6 +107,39 @@ message View {
   google.protobuf.Timestamp last_ddl_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// A relation connected to a view through PostgreSQL catalog dependencies.
+message ViewDependency {
+  enum Direction {
+    DIRECTION_UNSPECIFIED = 0;
+    DIRECTION_UPSTREAM = 1;
+    DIRECTION_DOWNSTREAM = 2;
+  }
+
+  enum RelationType {
+    RELATION_TYPE_UNSPECIFIED = 0;
+    RELATION_TYPE_TABLE = 1;
+    RELATION_TYPE_VIEW = 2;
+    RELATION_TYPE_MATERIALIZED_VIEW = 3;
+    RELATION_TYPE_FOREIGN_TABLE = 4;
+    RELATION_TYPE_PARTITIONED_TABLE = 5;
+  }
+
+  // Output-only. Canonical table or view resource name.
+  string resource_name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Schema containing the relation.
+  string schema_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Relation display name.
+  string display_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the relation is upstream or downstream of the view.
+  Direction direction = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. PostgreSQL relation kind.
+  RelationType relation_type = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
 // --------------------------------------------------------------------------
 // RPC Messages
 // --------------------------------------------------------------------------
@@ -155,5 +200,38 @@ message GetViewRequest {
 }
 
 message GetViewResponse {
+  View view = 1;
+}
+
+message GetViewDependenciesRequest {
+  // Required. The view whose dependency graph should be returned.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/View"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$"
+  ];
+}
+
+message GetViewDependenciesResponse {
+  repeated ViewDependency dependencies = 1;
+}
+
+message RefreshMaterializedViewRequest {
+  // Required. The materialized view to refresh.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/View"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$"
+  ];
+
+  // Optional. Standard refresh is used when unspecified.
+  RefreshMaterializedViewMode mode = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).enum.defined_only = true
+  ];
+}
+
+message RefreshMaterializedViewResponse {
+  // The refreshed materialized view.
   View view = 1;
 }

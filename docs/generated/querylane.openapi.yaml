@@ -1981,6 +1981,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetViewResponse'
+  /querylane.console.v1alpha1.ViewService/GetViewDependencies:
+    post:
+      x-connectrpc-method-kind: unary
+      tags:
+        - View
+      summary: GetViewDependencies
+      description: Gets relations used by a view and relations that depend on it.
+      operationId: ViewService_GetViewDependencies
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/querylane.console.v1alpha1.GetViewDependenciesRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/querylane.console.v1alpha1.GetViewDependenciesResponse'
   /querylane.console.v1alpha1.ViewService/ListViews:
     post:
       x-connectrpc-method-kind: unary
@@ -2018,6 +2055,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListViewsResponse'
+  /querylane.console.v1alpha1.ViewService/RefreshMaterializedView:
+    post:
+      x-connectrpc-method-kind: unary
+      tags:
+        - View
+      summary: RefreshMaterializedView
+      description: Refreshes a materialized view.
+      operationId: ViewService_RefreshMaterializedView
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/querylane.console.v1alpha1.RefreshMaterializedViewRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/querylane.console.v1alpha1.RefreshMaterializedViewResponse'
 components:
   schemas:
     connect-protocol-version:
@@ -3886,6 +3960,26 @@ components:
           $ref: '#/components/schemas/querylane.console.v1alpha1.Table'
       title: GetTableResponse
       additionalProperties: false
+    querylane.console.v1alpha1.GetViewDependenciesRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$
+          description: Required. The view whose dependency graph should be returned.
+      title: GetViewDependenciesRequest
+      additionalProperties: false
+    querylane.console.v1alpha1.GetViewDependenciesResponse:
+      type: object
+      properties:
+        dependencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/querylane.console.v1alpha1.ViewDependency'
+          title: dependencies
+      title: GetViewDependenciesResponse
+      additionalProperties: false
     querylane.console.v1alpha1.GetViewRequest:
       type: object
       properties:
@@ -4943,10 +5037,8 @@ components:
         parent:
           type: string
           title: parent
-          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$
-          description: |-
-            Required. The parent Table from which to list columns.
-             Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
+          description: Required. The parent table or materialized view from which to list columns.
       title: ListTableColumnsRequest
       additionalProperties: false
     querylane.console.v1alpha1.ListTableColumnsResponse:
@@ -4966,10 +5058,8 @@ components:
         parent:
           type: string
           title: parent
-          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$
-          description: |-
-            Required. The parent Table from which to list constraints.
-             Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
+          description: Required. The parent table or materialized view from which to list constraints.
       title: ListTableConstraintsRequest
       additionalProperties: false
     querylane.console.v1alpha1.ListTableConstraintsResponse:
@@ -4988,10 +5078,8 @@ components:
         parent:
           type: string
           title: parent
-          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$
-          description: |-
-            Required. The parent Table from which to list indexes.
-             Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
+          description: Required. The parent table or materialized view from which to list indexes.
       title: ListTableIndexesRequest
       additionalProperties: false
     querylane.console.v1alpha1.ListTableIndexesResponse:
@@ -5700,10 +5788,8 @@ components:
         name:
           type: string
           title: name
-          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$
-          description: |-
-            Required. The table the cell belongs to.
-             Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
+          description: Required. The table or materialized view the cell belongs to.
         fullValueToken:
           type: string
           title: full_value_token
@@ -5745,10 +5831,8 @@ components:
         name:
           type: string
           title: name
-          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$
-          description: |-
-            Required. The table to read from.
-             Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
+          description: Required. The table or materialized view to read from.
         pageSize:
           type: integer
           title: page_size
@@ -5846,6 +5930,36 @@ components:
         - REFERENTIAL_ACTION_CASCADE
         - REFERENTIAL_ACTION_SET_NULL
         - REFERENTIAL_ACTION_SET_DEFAULT
+    querylane.console.v1alpha1.RefreshMaterializedViewMode:
+      type: string
+      title: RefreshMaterializedViewMode
+      enum:
+        - REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED
+        - REFRESH_MATERIALIZED_VIEW_MODE_STANDARD
+        - REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT
+    querylane.console.v1alpha1.RefreshMaterializedViewRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$
+          description: Required. The materialized view to refresh.
+        mode:
+          title: mode
+          description: Optional. Standard refresh is used when unspecified.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.RefreshMaterializedViewMode'
+      title: RefreshMaterializedViewRequest
+      additionalProperties: false
+    querylane.console.v1alpha1.RefreshMaterializedViewResponse:
+      type: object
+      properties:
+        view:
+          title: view
+          description: The refreshed materialized view.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.View'
+      title: RefreshMaterializedViewResponse
+      additionalProperties: false
     querylane.console.v1alpha1.Replica:
       type: object
       properties:
@@ -6837,7 +6951,7 @@ components:
         name:
           type: string
           title: name
-          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
           description: Required. Same shape as ReadRowsRequest.name.
         selectedColumns:
           type: array
@@ -7698,6 +7812,49 @@ components:
         - VIEW_TYPE_STANDARD
         - VIEW_TYPE_MATERIALIZED
       description: The type of view object.
+    querylane.console.v1alpha1.ViewDependency:
+      type: object
+      properties:
+        resourceName:
+          type: string
+          title: resource_name
+          description: Output-only. Canonical table or view resource name.
+        schemaName:
+          type: string
+          title: schema_name
+          description: Output-only. Schema containing the relation.
+        displayName:
+          type: string
+          title: display_name
+          description: Output-only. Relation display name.
+        direction:
+          title: direction
+          description: Output-only. Whether the relation is upstream or downstream of the view.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.ViewDependency.Direction'
+        relationType:
+          title: relation_type
+          description: Output-only. PostgreSQL relation kind.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.ViewDependency.RelationType'
+      title: ViewDependency
+      additionalProperties: false
+      description: A relation connected to a view through PostgreSQL catalog dependencies.
+    querylane.console.v1alpha1.ViewDependency.Direction:
+      type: string
+      title: Direction
+      enum:
+        - DIRECTION_UNSPECIFIED
+        - DIRECTION_UPSTREAM
+        - DIRECTION_DOWNSTREAM
+    querylane.console.v1alpha1.ViewDependency.RelationType:
+      type: string
+      title: RelationType
+      enum:
+        - RELATION_TYPE_UNSPECIFIED
+        - RELATION_TYPE_TABLE
+        - RELATION_TYPE_VIEW
+        - RELATION_TYPE_MATERIALIZED_VIEW
+        - RELATION_TYPE_FOREIGN_TABLE
+        - RELATION_TYPE_PARTITIONED_TABLE
     querylane.console.v1alpha1.ViewView:
       type: string
       title: ViewView
@@ -7773,9 +7930,9 @@ tags:
     description: Service for managing tables within schemas.
   - name: TableData
     description: |-
-      TableDataService exposes live row reads against a single Table resource.
+      TableDataService exposes live row reads against a table-like Relation resource.
 
-       Methods are AIP-136 custom methods on the Table resource — requests use
+       Methods are AIP-136 custom methods on the Relation resource — requests use
        `name`, not `parent`. Distinct from TableService (catalog) and SQLService
        (ad-hoc SQL) because the three surfaces have different cost, timeout,
        pooling, and authorization profiles.

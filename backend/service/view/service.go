@@ -21,6 +21,8 @@ var _ v1connect.ViewServiceHandler = (*Service)(nil)
 type viewCatalog interface {
 	ListViews(ctx context.Context, schema resource.SchemaName, params aip.Params) ([]engine.View, string, error)
 	GetView(ctx context.Context, view resource.ViewName) (*engine.View, error)
+	ListViewDependencies(ctx context.Context, view resource.ViewName) ([]engine.ViewDependency, error)
+	RefreshMaterializedView(ctx context.Context, view resource.ViewName, concurrently bool) (*engine.View, error)
 }
 
 // Service implements the ViewService RPC handlers.
@@ -87,6 +89,90 @@ func (s *Service) GetView(ctx context.Context, req *connect.Request[v1alpha1.Get
 	return connect.NewResponse(&v1alpha1.GetViewResponse{
 		View: convertViewToProto(*v, viewRes.Schema(), isFull),
 	}), nil
+}
+
+// GetViewDependencies returns direct upstream and downstream relations.
+func (s *Service) GetViewDependencies(ctx context.Context, req *connect.Request[v1alpha1.GetViewDependenciesRequest]) (*connect.Response[v1alpha1.GetViewDependenciesResponse], error) {
+	viewRes, connErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseViewName)
+	if connErr != nil {
+		return nil, connErr
+	}
+
+	dependencies, err := s.catalog.ListViewDependencies(ctx, viewRes)
+	if err != nil {
+		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
+			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: "get_view_dependencies",
+		})
+	}
+
+	pbDependencies := make([]*v1alpha1.ViewDependency, 0, len(dependencies))
+	for _, dependency := range dependencies {
+		pbDependencies = append(pbDependencies, convertDependencyToProto(dependency, viewRes))
+	}
+
+	return connect.NewResponse(&v1alpha1.GetViewDependenciesResponse{
+		Dependencies: pbDependencies,
+	}), nil
+}
+
+// RefreshMaterializedView replaces a materialized view's stored rows.
+func (s *Service) RefreshMaterializedView(ctx context.Context, req *connect.Request[v1alpha1.RefreshMaterializedViewRequest]) (*connect.Response[v1alpha1.RefreshMaterializedViewResponse], error) {
+	viewRes, connErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseViewName)
+	if connErr != nil {
+		return nil, connErr
+	}
+
+	var concurrently bool
+
+	switch req.Msg.GetMode() {
+	case v1alpha1.RefreshMaterializedViewMode_REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED,
+		v1alpha1.RefreshMaterializedViewMode_REFRESH_MATERIALIZED_VIEW_MODE_STANDARD:
+		concurrently = false
+	case v1alpha1.RefreshMaterializedViewMode_REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT:
+		concurrently = true
+	default:
+		return nil, apierrors.MapEngineErr(ctx, engine.NewInvalidQueryError("mode", "unsupported refresh mode"), apierrors.ResourceCtx{
+			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: "refresh_materialized_view",
+		})
+	}
+
+	refreshed, err := s.catalog.RefreshMaterializedView(ctx, viewRes, concurrently)
+	if err != nil {
+		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
+			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: "refresh_materialized_view",
+		})
+	}
+
+	return connect.NewResponse(&v1alpha1.RefreshMaterializedViewResponse{
+		View: convertViewToProto(*refreshed, viewRes.Schema(), true),
+	}), nil
+}
+
+func convertDependencyToProto(dependency engine.ViewDependency, viewRes resource.ViewName) *v1alpha1.ViewDependency {
+	var resourceName string
+
+	switch dependency.RelationType {
+	case v1alpha1.ViewDependency_RELATION_TYPE_VIEW,
+		v1alpha1.ViewDependency_RELATION_TYPE_MATERIALIZED_VIEW:
+		resourceName = resource.NewViewName(
+			viewRes.InstanceID, viewRes.DatabaseID, dependency.SchemaName, dependency.Name,
+		).String()
+	case v1alpha1.ViewDependency_RELATION_TYPE_TABLE,
+		v1alpha1.ViewDependency_RELATION_TYPE_FOREIGN_TABLE,
+		v1alpha1.ViewDependency_RELATION_TYPE_PARTITIONED_TABLE,
+		v1alpha1.ViewDependency_RELATION_TYPE_UNSPECIFIED:
+		resourceName = resource.NewTableName(
+			viewRes.InstanceID, viewRes.DatabaseID, dependency.SchemaName, dependency.Name,
+		).String()
+	}
+
+	return &v1alpha1.ViewDependency{
+		ResourceName: resourceName,
+		SchemaName:   dependency.SchemaName,
+		DisplayName:  dependency.Name,
+		Direction:    dependency.Direction,
+		RelationType: dependency.RelationType,
+	}
 }
 
 func convertViewToProto(v engine.View, schemaRes resource.SchemaName, isFull bool) *v1alpha1.View {

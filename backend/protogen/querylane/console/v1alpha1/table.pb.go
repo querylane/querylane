@@ -1325,8 +1325,7 @@ func (x *GetTablePartitionMetadataResponse) GetPartitionMetadata() *TablePartiti
 
 type ListTableColumnsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Required. The parent Table from which to list columns.
-	// Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+	// Required. The parent table or materialized view from which to list columns.
 	Parent        string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1416,8 +1415,7 @@ func (x *ListTableColumnsResponse) GetColumns() []*Column {
 
 type ListTableConstraintsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Required. The parent Table from which to list constraints.
-	// Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+	// Required. The parent table or materialized view from which to list constraints.
 	Parent        string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1506,8 +1504,7 @@ func (x *ListTableConstraintsResponse) GetConstraints() []*TableConstraint {
 
 type ListTableIndexesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Required. The parent Table from which to list indexes.
-	// Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+	// Required. The parent table or materialized view from which to list indexes.
 	Parent        string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2387,20 +2384,20 @@ const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tB\x88\x01\xe0A\x02\xfaA\x1d\n" +
 	"\x1bconsole.querylane.dev/Table\xbaHb\xc8\x01\x01r]2[^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$R\x04name\"\x86\x01\n" +
 	"!GetTablePartitionMetadataResponse\x12a\n" +
-	"\x12partition_metadata\x18\x01 \x01(\v22.querylane.console.v1alpha1.TablePartitionMetadataR\x11partitionMetadata\"\xba\x01\n" +
-	"\x17ListTableColumnsRequest\x12\x9e\x01\n" +
-	"\x06parent\x18\x01 \x01(\tB\x85\x01\xe0A\x02\xfaA\x1d\n" +
-	"\x1bconsole.querylane.dev/Table\xbaH_r]2[^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$R\x06parent\"X\n" +
+	"\x12partition_metadata\x18\x01 \x01(\v22.querylane.console.v1alpha1.TablePartitionMetadataR\x11partitionMetadata\"\xc5\x01\n" +
+	"\x17ListTableColumnsRequest\x12\xa9\x01\n" +
+	"\x06parent\x18\x01 \x01(\tB\x90\x01\xe0A\x02\xfaA \n" +
+	"\x1econsole.querylane.dev/Relation\xbaHgre2c^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$R\x06parent\"X\n" +
 	"\x18ListTableColumnsResponse\x12<\n" +
-	"\acolumns\x18\x01 \x03(\v2\".querylane.console.v1alpha1.ColumnR\acolumns\"\xbe\x01\n" +
-	"\x1bListTableConstraintsRequest\x12\x9e\x01\n" +
-	"\x06parent\x18\x01 \x01(\tB\x85\x01\xe0A\x02\xfaA\x1d\n" +
-	"\x1bconsole.querylane.dev/Table\xbaH_r]2[^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$R\x06parent\"m\n" +
+	"\acolumns\x18\x01 \x03(\v2\".querylane.console.v1alpha1.ColumnR\acolumns\"\xc9\x01\n" +
+	"\x1bListTableConstraintsRequest\x12\xa9\x01\n" +
+	"\x06parent\x18\x01 \x01(\tB\x90\x01\xe0A\x02\xfaA \n" +
+	"\x1econsole.querylane.dev/Relation\xbaHgre2c^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$R\x06parent\"m\n" +
 	"\x1cListTableConstraintsResponse\x12M\n" +
-	"\vconstraints\x18\x01 \x03(\v2+.querylane.console.v1alpha1.TableConstraintR\vconstraints\"\xba\x01\n" +
-	"\x17ListTableIndexesRequest\x12\x9e\x01\n" +
-	"\x06parent\x18\x01 \x01(\tB\x85\x01\xe0A\x02\xfaA\x1d\n" +
-	"\x1bconsole.querylane.dev/Table\xbaH_r]2[^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$R\x06parent\"\\\n" +
+	"\vconstraints\x18\x01 \x03(\v2+.querylane.console.v1alpha1.TableConstraintR\vconstraints\"\xc5\x01\n" +
+	"\x17ListTableIndexesRequest\x12\xa9\x01\n" +
+	"\x06parent\x18\x01 \x01(\tB\x90\x01\xe0A\x02\xfaA \n" +
+	"\x1econsole.querylane.dev/Relation\xbaHgre2c^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$R\x06parent\"\\\n" +
 	"\x18ListTableIndexesResponse\x12@\n" +
 	"\aindexes\x18\x01 \x03(\v2&.querylane.console.v1alpha1.TableIndexR\aindexes\"\xbb\x01\n" +
 	"\x18ListTablePoliciesRequest\x12\x9e\x01\n" +
@@ -2533,7 +2530,8 @@ const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\x14ListTableConstraints\x127.querylane.console.v1alpha1.ListTableConstraintsRequest\x1a8.querylane.console.v1alpha1.ListTableConstraintsResponse\"\x00\x12\x7f\n" +
 	"\x10ListTableIndexes\x123.querylane.console.v1alpha1.ListTableIndexesRequest\x1a4.querylane.console.v1alpha1.ListTableIndexesResponse\"\x00\x12\x82\x01\n" +
 	"\x11ListTablePolicies\x124.querylane.console.v1alpha1.ListTablePoliciesRequest\x1a5.querylane.console.v1alpha1.ListTablePoliciesResponse\"\x00\x12\x82\x01\n" +
-	"\x11ListTableTriggers\x124.querylane.console.v1alpha1.ListTableTriggersRequest\x1a5.querylane.console.v1alpha1.ListTableTriggersResponse\"\x00B\x92\x02\n" +
+	"\x11ListTableTriggers\x124.querylane.console.v1alpha1.ListTableTriggersRequest\x1a5.querylane.console.v1alpha1.ListTableTriggersResponse\"\x00B\xd1\x03\xeaA\xbb\x01\n" +
+	"\x1econsole.querylane.dev/Relation\x12Linstances/{instance}/databases/{database}/schemas/{schema}/tables/{relation}\x12Kinstances/{instance}/databases/{database}/schemas/{schema}/views/{relation}\n" +
 	"\x1ecom.querylane.console.v1alpha1B\n" +
 	"TableProtoP\x01ZZgithub.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1;consolev1alpha1\xa2\x02\x03QCX\xaa\x02\x1aQuerylane.Console.V1alpha1\xca\x02\x1aQuerylane\\Console\\V1alpha1\xe2\x02&Querylane\\Console\\V1alpha1\\GPBMetadata\xea\x02\x1cQuerylane::Console::V1alpha1b\x06proto3"
 

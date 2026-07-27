@@ -140,6 +140,54 @@ func (d *Postgres) GetView(ctx context.Context, db *sql.DB, schemaName, viewName
 	return &view, nil
 }
 
+// ListViewDependencies returns direct upstream and downstream relation dependencies.
+func (*Postgres) ListViewDependencies(ctx context.Context, db *sql.DB, schemaName, viewName string) ([]engine.ViewDependency, error) {
+	rows, err := db.QueryContext(ctx, listViewDependenciesQuery, schemaName, viewName)
+	if err != nil {
+		return nil, classifyQueryError("list view dependencies", err)
+	}
+	defer rows.Close()
+
+	dependencies := make([]engine.ViewDependency, 0)
+
+	for rows.Next() {
+		var (
+			dependency engine.ViewDependency
+			direction  string
+			relkind    string
+		)
+		if err := rows.Scan(&dependency.SchemaName, &dependency.Name, &direction, &relkind); err != nil {
+			return nil, classifyQueryError("scan view dependency", err)
+		}
+
+		dependency.Direction = mapViewDependencyDirection(direction)
+		dependency.RelationType = mapViewDependencyRelationType(relkind)
+		dependencies = append(dependencies, dependency)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, classifyQueryError("iterate view dependencies", err)
+	}
+
+	return dependencies, nil
+}
+
+// RefreshMaterializedView replaces the stored rows for a materialized view.
+func (*Postgres) RefreshMaterializedView(ctx context.Context, db *sql.DB, schemaName, viewName string, concurrently bool) error {
+	statement := "REFRESH MATERIALIZED VIEW "
+	if concurrently {
+		statement += "CONCURRENTLY "
+	}
+
+	statement += quoteIdent(schemaName) + "." + quoteIdent(viewName)
+
+	if _, err := db.ExecContext(ctx, statement); err != nil {
+		return classifyQueryError("refresh materialized view", err)
+	}
+
+	return nil
+}
+
 func tableExists(ctx context.Context, db *sql.DB, schemaName, tableName string) (bool, error) {
 	var exists bool
 	if err := db.QueryRowContext(ctx, tableExistsQuery, schemaName, tableName).Scan(&exists); err != nil {
@@ -157,6 +205,35 @@ func mapViewType(pgType string) api.View_ViewType {
 		return api.View_VIEW_TYPE_MATERIALIZED
 	default:
 		return api.View_VIEW_TYPE_UNSPECIFIED
+	}
+}
+
+func mapViewDependencyDirection(direction string) api.ViewDependency_Direction {
+	if direction == "DIRECTION_UPSTREAM" {
+		return api.ViewDependency_DIRECTION_UPSTREAM
+	}
+
+	if direction == "DIRECTION_DOWNSTREAM" {
+		return api.ViewDependency_DIRECTION_DOWNSTREAM
+	}
+
+	return api.ViewDependency_DIRECTION_UNSPECIFIED
+}
+
+func mapViewDependencyRelationType(relkind string) api.ViewDependency_RelationType {
+	switch relkind {
+	case "r":
+		return api.ViewDependency_RELATION_TYPE_TABLE
+	case "v":
+		return api.ViewDependency_RELATION_TYPE_VIEW
+	case "m":
+		return api.ViewDependency_RELATION_TYPE_MATERIALIZED_VIEW
+	case "f":
+		return api.ViewDependency_RELATION_TYPE_FOREIGN_TABLE
+	case "p":
+		return api.ViewDependency_RELATION_TYPE_PARTITIONED_TABLE
+	default:
+		return api.ViewDependency_RELATION_TYPE_UNSPECIFIED
 	}
 }
 

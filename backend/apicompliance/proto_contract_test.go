@@ -76,6 +76,10 @@ var aipCompatibilityExceptions = map[string]compatibilityException{
 		category: exceptionResponseWrapper,
 		reason:   "Operational stats method returns a custom aggregate shape (per-table stats plus retention), not a resource.",
 	},
+	"querylane.console.v1alpha1.ViewService.GetViewDependencies.response": {
+		category: exceptionResponseWrapper,
+		reason:   "Dependency inspection returns a bounded graph edge collection rather than a single resource.",
+	},
 	"querylane.console.v1alpha1.ConsoleService.GetConsoleConfig": {
 		category: exceptionCustomGetName,
 		reason:   "Singleton/custom console configuration method has no resource name request field.",

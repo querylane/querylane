@@ -29,6 +29,9 @@ FROM sales.orders o
 GROUP BY DATE(o.created_at)
 WITH DATA;
 
+CREATE UNIQUE INDEX IF NOT EXISTS order_summary_refresh_idx
+ON analytics.order_summary (order_date);
+
 -- =============================================================================
 -- Triggers
 -- =============================================================================

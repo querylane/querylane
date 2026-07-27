@@ -128,6 +128,18 @@ func (partitionMetadataCatalogStub) ListTableIndexes(context.Context, resource.T
 	return nil, nil
 }
 
+func (partitionMetadataCatalogStub) ListViewColumns(context.Context, resource.ViewName) ([]engine.Column, error) {
+	return nil, nil
+}
+
+func (partitionMetadataCatalogStub) ListViewConstraints(context.Context, resource.ViewName) ([]engine.TableConstraint, error) {
+	return nil, nil
+}
+
+func (partitionMetadataCatalogStub) ListViewIndexes(context.Context, resource.ViewName) ([]engine.TableIndex, error) {
+	return nil, nil
+}
+
 func (partitionMetadataCatalogStub) ListTablePolicies(context.Context, resource.TableName) ([]engine.TablePolicy, error) {
 	return nil, nil
 }

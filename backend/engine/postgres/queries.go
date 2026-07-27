@@ -146,6 +146,9 @@ var viewListQuery string
 //go:embed queries/get_view.sql
 var getViewQuery string
 
+//go:embed queries/list_view_dependencies.sql
+var listViewDependenciesQuery string
+
 func hydrateTableQuery(query, tableTypeExpr, tableSizeExpr string) string {
 	query = strings.ReplaceAll(query, tableTypeSQLPlaceholder, tableTypeExpr)
 	query = strings.ReplaceAll(query, tableSizeSQLPlaceholder, tableSizeExpr)

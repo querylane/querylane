@@ -26,6 +26,7 @@ type instanceSession struct {
 	tablePartitionDriver  tablePartitionDriver
 	tableDataDriver       tableDataDriver
 	queryDriver           queryDriver
+	viewDriver            viewDriver
 }
 
 func (s *instanceSession) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
@@ -80,6 +81,7 @@ func (s *instanceSession) newDatabaseSession(db *sql.DB, closeDB func() error) *
 		tablePartitionDriver:  s.tablePartitionDriver,
 		tableDataDriver:       s.tableDataDriver,
 		queryDriver:           s.queryDriver,
+		viewDriver:            s.viewDriver,
 	}
 }
 
@@ -93,6 +95,7 @@ type databaseSession struct {
 	tablePartitionDriver  tablePartitionDriver
 	tableDataDriver       tableDataDriver
 	queryDriver           queryDriver
+	viewDriver            viewDriver
 }
 
 func (s *databaseSession) ListRoleGrants(ctx context.Context, roleName string, params aip.Params) ([]RoleGrant, string, error) {
@@ -161,6 +164,14 @@ func (s *databaseSession) ListViews(ctx context.Context, schemaName string, para
 
 func (s *databaseSession) GetView(ctx context.Context, schemaName, viewName string) (*View, error) {
 	return s.databaseCatalogDriver.GetView(ctx, s.db, schemaName, viewName)
+}
+
+func (s *databaseSession) ListViewDependencies(ctx context.Context, schemaName, viewName string) ([]ViewDependency, error) {
+	return s.viewDriver.ListViewDependencies(ctx, s.db, schemaName, viewName)
+}
+
+func (s *databaseSession) RefreshMaterializedView(ctx context.Context, schemaName, viewName string, concurrently bool) error {
+	return s.viewDriver.RefreshMaterializedView(ctx, s.db, schemaName, viewName, concurrently)
 }
 
 func (s *databaseSession) ReadRows(ctx context.Context, params ReadRowsParams) (*ReadRowsResult, error) {

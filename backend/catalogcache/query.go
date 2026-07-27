@@ -8,6 +8,7 @@ import (
 
 	"github.com/querylane/querylane/backend/aip"
 	"github.com/querylane/querylane/backend/engine"
+	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
 	"github.com/querylane/querylane/backend/storage"
 	"github.com/querylane/querylane/backend/storage/gen/querylane/public/model"
@@ -372,6 +373,101 @@ func (c *Catalog) GetView(ctx context.Context, view resource.ViewName) (*engine.
 		catalogViewToEngine,
 		engine.ErrViewNotFound,
 	)
+}
+
+// EnsureMaterializedViewExists verifies that the view exists and is materialized.
+func (c *Catalog) EnsureMaterializedViewExists(ctx context.Context, view resource.ViewName) error {
+	materializedView, err := c.GetView(ctx, view)
+	if err != nil {
+		return err
+	}
+
+	if materializedView.ViewType != v1alpha1.View_VIEW_TYPE_MATERIALIZED {
+		return engine.NewInvalidQueryError("name", "view is not materialized")
+	}
+
+	return nil
+}
+
+// ListViewColumns reads materialized-view columns directly from PostgreSQL.
+func (c *Catalog) ListViewColumns(ctx context.Context, view resource.ViewName) ([]engine.Column, error) {
+	if err := c.EnsureMaterializedViewExists(ctx, view); err != nil {
+		return nil, err
+	}
+
+	dbSession, closeFn, err := c.openDatabaseSession(ctx, view.Instance(), view.DatabaseID)
+	if err != nil {
+		return nil, err
+	}
+	defer closeFn()
+
+	return dbSession.ListTableColumns(ctx, view.SchemaID, view.ViewID)
+}
+
+// ListViewConstraints reads materialized-view constraints directly from PostgreSQL.
+func (c *Catalog) ListViewConstraints(ctx context.Context, view resource.ViewName) ([]engine.TableConstraint, error) {
+	if err := c.EnsureMaterializedViewExists(ctx, view); err != nil {
+		return nil, err
+	}
+
+	dbSession, closeFn, err := c.openDatabaseSession(ctx, view.Instance(), view.DatabaseID)
+	if err != nil {
+		return nil, err
+	}
+	defer closeFn()
+
+	return dbSession.ListTableConstraints(ctx, view.SchemaID, view.ViewID)
+}
+
+// ListViewIndexes reads materialized-view indexes directly from PostgreSQL.
+func (c *Catalog) ListViewIndexes(ctx context.Context, view resource.ViewName) ([]engine.TableIndex, error) {
+	if err := c.EnsureMaterializedViewExists(ctx, view); err != nil {
+		return nil, err
+	}
+
+	dbSession, closeFn, err := c.openDatabaseSession(ctx, view.Instance(), view.DatabaseID)
+	if err != nil {
+		return nil, err
+	}
+	defer closeFn()
+
+	return dbSession.ListTableIndexes(ctx, view.SchemaID, view.ViewID)
+}
+
+// ListViewDependencies returns direct live dependencies for a view.
+func (c *Catalog) ListViewDependencies(ctx context.Context, view resource.ViewName) ([]engine.ViewDependency, error) {
+	if _, err := c.GetView(ctx, view); err != nil {
+		return nil, err
+	}
+
+	dbSession, closeFn, err := c.openDatabaseSession(ctx, view.Instance(), view.DatabaseID)
+	if err != nil {
+		return nil, err
+	}
+	defer closeFn()
+
+	return dbSession.ListViewDependencies(ctx, view.SchemaID, view.ViewID)
+}
+
+// RefreshMaterializedView refreshes a live materialized view and returns fresh metadata.
+func (c *Catalog) RefreshMaterializedView(ctx context.Context, view resource.ViewName, concurrently bool) (*engine.View, error) {
+	if err := c.EnsureMaterializedViewExists(ctx, view); err != nil {
+		return nil, err
+	}
+
+	dbSession, closeFn, err := c.openDatabaseSession(ctx, view.Instance(), view.DatabaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := dbSession.RefreshMaterializedView(ctx, view.SchemaID, view.ViewID, concurrently); err != nil {
+		closeFn()
+		return nil, err
+	}
+
+	closeFn()
+
+	return c.GetView(WithForceRefresh(ctx), view)
 }
 
 // ListTableColumns returns all columns for a table from the catalog.

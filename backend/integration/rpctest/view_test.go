@@ -69,6 +69,69 @@ func (s *RPCSuite) TestListViews_AnalyticsSchema() {
 	s.True(found, "should contain order_summary materialized view")
 }
 
+func (s *RPCSuite) TestMaterializedViewExposesColumnsAndIndexes() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	name := s.viewName("analytics", "order_summary")
+	columns, err := s.tableClient.ListTableColumns(ctx, connect.NewRequest(&consolev1alpha1.ListTableColumnsRequest{
+		Parent: name,
+	}))
+	s.Require().NoError(err)
+	s.Require().Len(columns.Msg.GetColumns(), 3)
+	s.Equal("order_date", columns.Msg.GetColumns()[0].GetColumnName())
+
+	indexes, err := s.tableClient.ListTableIndexes(ctx, connect.NewRequest(&consolev1alpha1.ListTableIndexesRequest{
+		Parent: name,
+	}))
+	s.Require().NoError(err)
+	s.Require().Len(indexes.Msg.GetIndexes(), 1)
+	s.True(indexes.Msg.GetIndexes()[0].GetIsUnique())
+	s.Equal([]string{"order_date"}, indexes.Msg.GetIndexes()[0].GetKeyColumns())
+}
+
+func (s *RPCSuite) TestReadMaterializedViewRows() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := s.tableDataClient.ReadRows(ctx, connect.NewRequest(&consolev1alpha1.ReadRowsRequest{
+		Name:     s.viewName("analytics", "order_summary"),
+		PageSize: 10,
+	}))
+	s.Require().NoError(err)
+	s.NotEmpty(resp.Msg.GetResultSet().GetColumns())
+	s.NotEmpty(resp.Msg.GetResultSet().GetRows())
+}
+
+func (s *RPCSuite) TestGetMaterializedViewDependencies() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := s.viewClient.GetViewDependencies(ctx, connect.NewRequest(&consolev1alpha1.GetViewDependenciesRequest{
+		Name: s.viewName("analytics", "order_summary"),
+	}))
+	s.Require().NoError(err)
+	s.Require().Len(resp.Msg.GetDependencies(), 1)
+
+	dependency := resp.Msg.GetDependencies()[0]
+	s.Equal(consolev1alpha1.ViewDependency_DIRECTION_UPSTREAM, dependency.GetDirection())
+	s.Equal(consolev1alpha1.ViewDependency_RELATION_TYPE_TABLE, dependency.GetRelationType())
+	s.Equal(s.tableName("sales", "orders"), dependency.GetResourceName())
+}
+
+func (s *RPCSuite) TestRefreshMaterializedViewConcurrently() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := s.viewClient.RefreshMaterializedView(ctx, connect.NewRequest(&consolev1alpha1.RefreshMaterializedViewRequest{
+		Name: s.viewName("analytics", "order_summary"),
+		Mode: consolev1alpha1.RefreshMaterializedViewMode_REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT,
+	}))
+	s.Require().NoError(err)
+	s.True(resp.Msg.GetView().GetIsPopulated())
+	s.NotEmpty(resp.Msg.GetView().GetDefinition())
+}
+
 func (s *RPCSuite) TestListViews_SchemaNotFound() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

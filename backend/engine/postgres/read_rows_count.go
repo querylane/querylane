@@ -99,7 +99,7 @@ func readRowCountStats(ctx context.Context, tx *sql.Tx, params engine.ReadRowsPa
 		JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 		WHERE n.nspname = $1
 			AND c.relname = $2
-			AND c.relkind IN ('r', 'p', 'f')
+			AND c.relkind IN ('r', 'p', 'f', 'm')
 	`, params.SchemaName, params.TableName).Scan(&stats.estimate, &stats.relkind)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

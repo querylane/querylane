@@ -41,6 +41,7 @@ const (
 
 type tableResolver interface {
 	EnsureTableExists(ctx context.Context, table resource.TableName) error
+	EnsureMaterializedViewExists(ctx context.Context, view resource.ViewName) error
 }
 
 type instanceOpener interface {
@@ -70,37 +71,37 @@ func NewService(resolver tableResolver, connManager instanceOpener, tokens *engi
 	return &Service{resolver: resolver, connManager: connManager, tokens: tokens, liveQueries: liveQueries}
 }
 
-// ReadRows reads a single page of rows from a table.
+// ReadRows reads a single page of rows from a table or materialized view.
 func (s *Service) ReadRows(ctx context.Context, req *connect.Request[v1alpha1.ReadRowsRequest]) (*connect.Response[v1alpha1.ReadRowsResponse], error) {
-	tableRes, connErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseTableName)
+	relation, connErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseRelationName)
 	if connErr != nil {
 		return nil, connErr
 	}
 
-	release, err := s.liveQueries.Acquire(tableRes.Instance())
+	release, err := s.liveQueries.Acquire(relation.Instance())
 	if err != nil {
 		return nil, apierrors.MapLiveQueryLimit(err)
 	}
 	defer release()
 
-	if err := s.resolver.EnsureTableExists(ctx, tableRes); err != nil {
+	if err := s.ensureReadableRelationExists(ctx, relation); err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: tableRes.ResourceType(), Name: tableRes.String(), Op: "read_rows",
+			Type: relation.Type, Name: relation.String(), Op: "read_rows",
 		})
 	}
 
-	instSession, err := s.connManager.OpenInstance(ctx, tableRes.Instance())
+	instSession, err := s.connManager.OpenInstance(ctx, relation.Instance())
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: tableRes.ResourceType(), Name: tableRes.String(), Op: "read_rows",
+			Type: relation.Type, Name: relation.String(), Op: "read_rows",
 		})
 	}
 	defer instSession.Close()
 
-	dbSession, err := instSession.OpenDatabase(ctx, tableRes.DatabaseID)
+	dbSession, err := instSession.OpenDatabase(ctx, relation.DatabaseID)
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: tableRes.ResourceType(), Name: tableRes.String(), Op: "read_rows",
+			Type: relation.Type, Name: relation.String(), Op: "read_rows",
 		})
 	}
 	defer dbSession.Close()
@@ -111,9 +112,9 @@ func (s *Service) ReadRows(ctx context.Context, req *connect.Request[v1alpha1.Re
 	}
 
 	result, err := dbSession.ReadRows(ctx, engine.ReadRowsParams{
-		ResourceName:     tableRes.String(),
-		SchemaName:       tableRes.SchemaID,
-		TableName:        tableRes.TableID,
+		ResourceName:     relation.String(),
+		SchemaName:       relation.SchemaID,
+		TableName:        relation.RelationID,
 		PageSize:         pageSize,
 		PageToken:        req.Msg.GetPageToken(),
 		SelectedColumns:  req.Msg.GetSelectedColumns(),
@@ -126,7 +127,7 @@ func (s *Service) ReadRows(ctx context.Context, req *connect.Request[v1alpha1.Re
 	})
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: tableRes.ResourceType(), Name: tableRes.String(), Op: "read_rows",
+			Type: relation.Type, Name: relation.String(), Op: "read_rows",
 		})
 	}
 
@@ -150,12 +151,12 @@ func (s *Service) ReadRows(ctx context.Context, req *connect.Request[v1alpha1.Re
 func (s *Service) StreamRows(ctx context.Context, req *connect.Request[v1alpha1.StreamRowsRequest], stream *connect.ServerStream[v1alpha1.StreamRowsResponse]) error {
 	startedAt := time.Now()
 
-	tableRes, connErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseTableName)
+	relation, connErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseRelationName)
 	if connErr != nil {
 		return connErr
 	}
 
-	release, err := s.liveQueries.Acquire(tableRes.Instance())
+	release, err := s.liveQueries.Acquire(relation.Instance())
 	if err != nil {
 		return apierrors.MapLiveQueryLimit(err)
 	}
@@ -163,21 +164,21 @@ func (s *Service) StreamRows(ctx context.Context, req *connect.Request[v1alpha1.
 
 	mapErr := func(err error) error {
 		return apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: tableRes.ResourceType(), Name: tableRes.String(), Op: "stream_rows",
+			Type: relation.Type, Name: relation.String(), Op: "stream_rows",
 		})
 	}
 
-	if err := s.resolver.EnsureTableExists(ctx, tableRes); err != nil {
+	if err := s.ensureReadableRelationExists(ctx, relation); err != nil {
 		return mapErr(err)
 	}
 
-	instSession, err := s.connManager.OpenInstance(ctx, tableRes.Instance())
+	instSession, err := s.connManager.OpenInstance(ctx, relation.Instance())
 	if err != nil {
 		return mapErr(err)
 	}
 	defer instSession.Close()
 
-	dbSession, err := instSession.OpenDatabase(ctx, tableRes.DatabaseID)
+	dbSession, err := instSession.OpenDatabase(ctx, relation.DatabaseID)
 	if err != nil {
 		return mapErr(err)
 	}
@@ -198,9 +199,9 @@ func (s *Service) StreamRows(ctx context.Context, req *connect.Request[v1alpha1.
 
 	for streamer.canReadMore() {
 		result, err := dbSession.ReadRows(ctx, engine.ReadRowsParams{
-			ResourceName:    tableRes.String(),
-			SchemaName:      tableRes.SchemaID,
-			TableName:       tableRes.TableID,
+			ResourceName:    relation.String(),
+			SchemaName:      relation.SchemaID,
+			TableName:       relation.RelationID,
 			PageSize:        readRowsInternalPageSize,
 			PageToken:       pageToken,
 			SelectedColumns: req.Msg.GetSelectedColumns(),
@@ -379,7 +380,7 @@ func streamRowsBatchResponsePayloadSize(batchPayloadBytes int64) int64 {
 // whose payload table_name does not match req.Name (defense in depth
 // against cross-table replay).
 func (s *Service) ReadCellValue(ctx context.Context, req *connect.Request[v1alpha1.ReadCellValueRequest]) (*connect.Response[v1alpha1.ReadCellValueResponse], error) {
-	tableRes, connErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseTableName)
+	relation, connErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseRelationName)
 	if connErr != nil {
 		return nil, connErr
 	}
@@ -391,9 +392,9 @@ func (s *Service) ReadCellValue(ctx context.Context, req *connect.Request[v1alph
 		)
 	}
 
-	if payload.GetTableName() != tableRes.String() {
+	if payload.GetTableName() != relation.String() {
 		return nil, apierrors.NewInvalidArgumentError(
-			apierrors.NewFieldViolation("full_value_token", "token bound to a different table"),
+			apierrors.NewFieldViolation("full_value_token", "token bound to a different relation"),
 		)
 	}
 
@@ -404,7 +405,7 @@ func (s *Service) ReadCellValue(ctx context.Context, req *connect.Request[v1alph
 		)
 	}
 
-	release, err := s.liveQueries.Acquire(tableRes.Instance())
+	release, err := s.liveQueries.Acquire(relation.Instance())
 	if err != nil {
 		return nil, apierrors.MapLiveQueryLimit(err)
 	}
@@ -412,29 +413,29 @@ func (s *Service) ReadCellValue(ctx context.Context, req *connect.Request[v1alph
 
 	mapErr := func(err error) error {
 		return apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: tableRes.ResourceType(), Name: tableRes.String(), Op: "read_cell_value",
+			Type: relation.Type, Name: relation.String(), Op: "read_cell_value",
 		})
 	}
 
-	if err := s.resolver.EnsureTableExists(ctx, tableRes); err != nil {
+	if err := s.ensureReadableRelationExists(ctx, relation); err != nil {
 		return nil, mapErr(err)
 	}
 
-	instSession, err := s.connManager.OpenInstance(ctx, tableRes.Instance())
+	instSession, err := s.connManager.OpenInstance(ctx, relation.Instance())
 	if err != nil {
 		return nil, mapErr(err)
 	}
 	defer instSession.Close()
 
-	dbSession, err := instSession.OpenDatabase(ctx, tableRes.DatabaseID)
+	dbSession, err := instSession.OpenDatabase(ctx, relation.DatabaseID)
 	if err != nil {
 		return nil, mapErr(err)
 	}
 	defer dbSession.Close()
 
 	result, err := dbSession.ReadCellValue(ctx, engine.ReadCellValueParams{
-		SchemaName:     tableRes.SchemaID,
-		TableName:      tableRes.TableID,
+		SchemaName:     relation.SchemaID,
+		TableName:      relation.RelationID,
 		Column:         payload.GetColumn(),
 		RowIdentity:    payload.GetRowIdentity(),
 		IdentityValues: payload.GetIdentityValues(),
@@ -447,4 +448,16 @@ func (s *Service) ReadCellValue(ctx context.Context, req *connect.Request[v1alph
 	return connect.NewResponse(&v1alpha1.ReadCellValueResponse{
 		Value: result.Cell,
 	}), nil
+}
+
+func (s *Service) ensureReadableRelationExists(ctx context.Context, relation resource.RelationName) error {
+	if relation.Type == resource.TypeView {
+		return s.resolver.EnsureMaterializedViewExists(ctx, resource.NewViewName(
+			relation.InstanceID, relation.DatabaseID, relation.SchemaID, relation.RelationID,
+		))
+	}
+
+	return s.resolver.EnsureTableExists(ctx, resource.NewTableName(
+		relation.InstanceID, relation.DatabaseID, relation.SchemaID, relation.RelationID,
+	))
 }
