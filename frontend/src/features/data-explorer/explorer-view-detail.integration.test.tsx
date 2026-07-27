@@ -5,15 +5,105 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ViewDetail } from "@/features/data-explorer/explorer-view-detail";
 import { ExplainQueryRequest_Format } from "@/protogen/querylane/console/v1alpha1/sql_pb";
 import {
+  ListTableColumnsResponseSchema,
+  ListTableConstraintsResponseSchema,
+  ListTableIndexesResponseSchema,
+  TableIndexSchema,
+} from "@/protogen/querylane/console/v1alpha1/table_pb";
+import {
+  GetViewDependenciesResponseSchema,
+  RefreshMaterializedViewMode,
   View_ViewType,
+  ViewDependency_Direction,
+  ViewDependency_RelationType,
+  ViewDependencySchema,
   ViewSchema,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
 const DATE_TRUNC_PATTERN = /date_trunc/;
 const CREATE_VIEW_PATTERN = /CREATE VIEW "public"\."daily_paid_revenue" AS/;
+const COLUMNS_TAB_PATTERN = /Columns/;
+const DEPENDENCIES_TAB_PATTERN = /Dependencies/;
+const INDEXES_TAB_PATTERN = /Indexes/;
+const SALES_ORDERS_PATTERN = /sales\.orders/;
 
-const { useExplainQueryMock } = vi.hoisted(() => ({
+const { tableApi, useExplainQueryMock, viewApi } = vi.hoisted(() => ({
+  tableApi: {
+    columns: {
+      data: undefined as unknown,
+      error: null as Error | null,
+      isLoading: false,
+      refetch: vi.fn(),
+    },
+    constraints: {
+      data: undefined as unknown,
+      error: null as Error | null,
+      isLoading: false,
+      refetch: vi.fn(),
+    },
+    indexes: {
+      data: undefined as unknown,
+      error: null as Error | null,
+      isLoading: false,
+      refetch: vi.fn(),
+    },
+  },
   useExplainQueryMock: vi.fn(),
+  viewApi: {
+    dependencies: {
+      data: undefined as unknown,
+      error: null as Error | null,
+      isLoading: false,
+      refetch: vi.fn(),
+    },
+    refresh: {
+      error: null as Error | null,
+      isPending: false,
+      mutateAsync: vi.fn(),
+      reset: vi.fn(),
+    },
+  },
+}));
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string | undefined;
+  }) => (
+    <a className={className} href="#dependency">
+      {children}
+    </a>
+  ),
+}));
+
+vi.mock("@/components/data-grid/table-data-grid/table-data-grid", () => ({
+  TableDataGrid: ({
+    children,
+  }: {
+    children?: (state: {
+      grid: React.ReactNode;
+      lastFetchedLabel: string;
+    }) => React.ReactNode;
+  }) => {
+    const grid = <div>Materialized rows</div>;
+    return children
+      ? children({ grid, lastFetchedLabel: "Last fetched just now" })
+      : grid;
+  },
+}));
+
+vi.mock("@/hooks/api/table", () => ({
+  useListTableColumnsQuery: () => tableApi.columns,
+  useListTableConstraintsQuery: () => tableApi.constraints,
+  useListTableIndexesQuery: () => tableApi.indexes,
+}));
+
+vi.mock("@/hooks/api/view", () => ({
+  useGetViewDependenciesQuery: () => viewApi.dependencies,
+  useRefreshMaterializedViewMutation: () => viewApi.refresh,
 }));
 
 vi.mock("@/hooks/api/sql", () => ({
@@ -27,6 +117,45 @@ beforeEach(() => {
     error: null,
     isFetching: false,
   });
+  tableApi.columns.data = createProto(ListTableColumnsResponseSchema, {
+    columns: [],
+  });
+  tableApi.columns.error = null;
+  tableApi.columns.isLoading = false;
+  tableApi.constraints.data = createProto(ListTableConstraintsResponseSchema, {
+    constraints: [],
+  });
+  tableApi.constraints.error = null;
+  tableApi.constraints.isLoading = false;
+  tableApi.indexes.data = createProto(ListTableIndexesResponseSchema, {
+    indexes: [
+      createProto(TableIndexSchema, {
+        indexName: "daily_revenue_refresh_idx",
+        isUnique: true,
+        isValid: true,
+        keyColumns: ["day"],
+      }),
+    ],
+  });
+  tableApi.indexes.error = null;
+  tableApi.indexes.isLoading = false;
+  viewApi.dependencies.data = createProto(GetViewDependenciesResponseSchema, {
+    dependencies: [
+      createProto(ViewDependencySchema, {
+        direction: ViewDependency_Direction.UPSTREAM,
+        displayName: "orders",
+        relationType: ViewDependency_RelationType.TABLE,
+        resourceName:
+          "instances/prod/databases/app/schemas/sales/tables/orders",
+        schemaName: "sales",
+      }),
+    ],
+  });
+  viewApi.refresh.error = null;
+  viewApi.refresh.isPending = false;
+  viewApi.refresh.mutateAsync.mockReset();
+  viewApi.refresh.mutateAsync.mockResolvedValue({});
+  viewApi.refresh.reset.mockReset();
 });
 
 afterEach(() => {
@@ -57,6 +186,122 @@ describe("view detail integration", () => {
     expect(screen.getByText("4 KB")).toBeTruthy();
     expect(screen.getByText("Yes")).toBeTruthy();
     expect(screen.getByText("Precomputed daily revenue totals")).toBeTruthy();
+  });
+
+  it("operates a materialized view through data, metadata, dependencies, definition, and refresh", async () => {
+    const user = userEvent.setup();
+    const name =
+      "instances/prod/databases/app/schemas/public/views/daily_revenue";
+    render(
+      <ViewDetail
+        databaseId="app"
+        instanceId="prod"
+        schemaName="public"
+        view={createProto(ViewSchema, {
+          definition: "SELECT day, total FROM sales.orders",
+          displayName: "daily_revenue",
+          isPopulated: true,
+          name,
+          rowCount: 42n,
+          sizeBytes: 8192n,
+          viewType: View_ViewType.MATERIALIZED,
+        })}
+        viewName="daily_revenue"
+      />
+    );
+
+    expect(screen.getByRole("tab", { name: "Data" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: COLUMNS_TAB_PATTERN })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: INDEXES_TAB_PATTERN })).toBeTruthy();
+    expect(
+      screen.getByRole("tab", { name: DEPENDENCIES_TAB_PATTERN })
+    ).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Definition" })).toBeTruthy();
+    expect(screen.getByText("Concurrent ready")).toBeTruthy();
+    expect(screen.getByText("Materialized rows")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Purpose" })).toBeNull();
+
+    await user.click(
+      screen.getByRole("tab", { name: DEPENDENCIES_TAB_PATTERN })
+    );
+    expect(
+      screen.getByRole("link", { name: SALES_ORDERS_PATTERN })
+    ).toBeTruthy();
+    expect(screen.getByText("Upstream")).toBeTruthy();
+
+    await user.click(
+      screen.getByRole("button", { name: "Refresh materialized view" })
+    );
+    expect(
+      screen.getByRole("heading", { name: "Refresh daily_revenue" })
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: "Refresh concurrently" })
+    );
+    expect(viewApi.refresh.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: RefreshMaterializedViewMode.CONCURRENT,
+        name,
+        signal: expect.any(AbortSignal),
+      })
+    );
+  });
+
+  it("keeps unpopulated views read-safe and disables concurrent refresh", async () => {
+    const user = userEvent.setup();
+    render(
+      <ViewDetail
+        databaseId="app"
+        instanceId="prod"
+        schemaName="public"
+        view={createProto(ViewSchema, {
+          displayName: "empty_rollup",
+          isPopulated: false,
+          name: "instances/prod/databases/app/schemas/public/views/empty_rollup",
+          viewType: View_ViewType.MATERIALIZED,
+        })}
+        viewName="empty_rollup"
+      />
+    );
+
+    expect(screen.getByText("No stored rows")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Refresh this materialized view before reading its stored rows."
+      )
+    ).toBeTruthy();
+    expect(screen.getByText("Standard only")).toBeTruthy();
+    expect(screen.queryByText("Materialized rows")).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: "Refresh materialized view" })
+    );
+    expect(
+      screen.queryByRole("button", { name: "Refresh concurrently" })
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Refresh normally" })
+    ).toBeTruthy();
+  });
+
+  it("does not claim standard-only refresh before index metadata loads", () => {
+    tableApi.indexes.data = undefined;
+    tableApi.indexes.isLoading = true;
+
+    render(
+      <ViewDetail
+        view={createProto(ViewSchema, {
+          displayName: "daily_revenue",
+          isPopulated: true,
+          name: "instances/prod/databases/app/schemas/public/views/daily_revenue",
+          viewType: View_ViewType.MATERIALIZED,
+        })}
+        viewName="daily_revenue"
+      />
+    );
+
+    expect(screen.getByText("Checking…")).toBeTruthy();
+    expect(screen.queryByText("Standard only")).toBeNull();
   });
 
   it("explains a view with purpose, sources, query shape, and SQL definition", () => {

@@ -10,6 +10,7 @@ import {
   formatTimestampLabel,
   formatUptime,
   normalizeEstimatedRowCount,
+  parseRelationQualifiedName,
   parseResourceLeafId,
   parseTableQualifiedName,
   toConnectionStatus,
@@ -184,6 +185,16 @@ describe("resource names", () => {
       )
     ).toEqual({ schema: "public", table: "events" });
     expect(tryParseTableQualifiedName("public.events")).toBeUndefined();
+  });
+});
+
+describe("parseRelationQualifiedName", () => {
+  it("parses materialized-view resource names for shared data-grid labels", () => {
+    expect(
+      parseRelationQualifiedName(
+        "instances/i1/databases/app/schemas/analytics/views/daily_rollup"
+      )
+    ).toEqual({ relation: "daily_rollup", schema: "analytics" });
   });
 });
 

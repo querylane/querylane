@@ -13,6 +13,11 @@ interface QualifiedTableName {
   table: string;
 }
 
+interface QualifiedRelationName {
+  relation: string;
+  schema: string;
+}
+
 // Pinned to en-US like the metric formatters in lib/metrics.ts — a mixed
 // locale would render "1,5 KB" storage next to "1.5" axis ticks.
 const byteFormatter = new Intl.NumberFormat("en-US", {
@@ -26,6 +31,8 @@ const BYTE_DECIMAL_SCALE = 10;
 const BYTES_PER_KIBIBYTE = 1024;
 const TABLE_RESOURCE_NAME_PATTERN =
   /^instances\/[^/]+\/databases\/[^/]+\/schemas\/([^/]+)\/tables\/([^/]+)$/;
+const RELATION_RESOURCE_NAME_PATTERN =
+  /^instances\/[^/]+\/databases\/[^/]+\/schemas\/([^/]+)\/(?:tables|views)\/([^/]+)$/;
 
 // Keep frontend resource names in lockstep with backend/resource/internal.go:
 // resource-name IDs only escape the path separator and escape character.
@@ -116,6 +123,29 @@ export function parseTableQualifiedName(name: string): QualifiedTableName {
     throw new Error(`invalid table resource name: ${name}`);
   }
   return parsed;
+}
+
+export function parseRelationQualifiedName(
+  name: string
+): QualifiedRelationName {
+  const parsed = tryParseRelationQualifiedName(name);
+  if (!parsed) {
+    throw new Error(`invalid table or view resource name: ${name}`);
+  }
+  return parsed;
+}
+
+export function tryParseRelationQualifiedName(
+  name: string
+): QualifiedRelationName | undefined {
+  const match = RELATION_RESOURCE_NAME_PATTERN.exec(name);
+  if (!(match?.[1] && match[2])) {
+    return;
+  }
+  return {
+    relation: decodeResourceSegment(match[2]),
+    schema: decodeResourceSegment(match[1]),
+  };
 }
 
 export function tryParseTableQualifiedName(
@@ -256,4 +286,4 @@ export function formatUptime(
   }
 }
 
-export type { DbConnectionStatus, QualifiedTableName };
+export type { DbConnectionStatus, QualifiedRelationName, QualifiedTableName };

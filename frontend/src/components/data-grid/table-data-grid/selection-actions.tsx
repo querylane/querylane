@@ -9,6 +9,7 @@ import {
 import type { ExportFormat } from "@/features/data-explorer/table-data/selection-formatters";
 
 interface SelectionActionsProps {
+  allowSql?: boolean | undefined;
   disabled: boolean;
   onCopy: (format: ExportFormat) => void;
   onExport: (format: ExportFormat) => void;
@@ -24,6 +25,7 @@ const FORMAT_ITEMS: Array<{ format: ExportFormat; label: string }> = [
 ];
 
 function SelectionActions({
+  allowSql = true,
   disabled,
   onCopy,
   onExport,
@@ -33,12 +35,14 @@ function SelectionActions({
   return (
     <div className="flex items-center gap-1">
       <FormatDropdown
+        allowSql={allowSql}
         disabled={disabled}
         icon={<Copy className="size-3.5" />}
         label="Copy"
         onSelect={onCopy}
       />
       <FormatDropdown
+        allowSql={allowSql}
         disabled={disabled}
         icon={<Download className="size-3.5" />}
         label="Export"
@@ -49,6 +53,7 @@ function SelectionActions({
 }
 
 interface FormatDropdownProps {
+  allowSql: boolean;
   disabled: boolean;
   icon: React.ReactNode;
   label: string;
@@ -56,6 +61,7 @@ interface FormatDropdownProps {
 }
 
 function FormatDropdown({
+  allowSql,
   disabled,
   icon,
   label,
@@ -73,14 +79,16 @@ function FormatDropdown({
         }
       />
       <DropdownMenuContent align="end" className="w-32">
-        {FORMAT_ITEMS.map((item) => (
-          <DropdownMenuItem
-            key={item.format}
-            onClick={() => onSelect(item.format)}
-          >
-            {item.label}
-          </DropdownMenuItem>
-        ))}
+        {FORMAT_ITEMS.filter((item) => allowSql || item.format !== "sql").map(
+          (item) => (
+            <DropdownMenuItem
+              key={item.format}
+              onClick={() => onSelect(item.format)}
+            >
+              {item.label}
+            </DropdownMenuItem>
+          )
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

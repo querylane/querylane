@@ -411,11 +411,13 @@ function IndexMethodBadge({ method }: { method: string }) {
   );
 }
 function IndexesTab({
+  heapSizeBytes,
   query,
   schemaName,
   table,
   tableName,
 }: {
+  heapSizeBytes?: bigint | undefined;
   query: ReturnType<typeof useListTableIndexesQuery>;
   schemaName: string;
   table: TableProto | undefined;
@@ -446,7 +448,10 @@ function IndexesTab({
   return (
     <div className="flex flex-col gap-3">
       {indexes.length > 0 ? (
-        <IndexSummaryStrip heapSizeBytes={table?.sizeBytes} indexes={indexes} />
+        <IndexSummaryStrip
+          heapSizeBytes={heapSizeBytes ?? table?.sizeBytes}
+          indexes={indexes}
+        />
       ) : null}
       <MetadataTabResult
         category="indexes"

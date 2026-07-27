@@ -4,16 +4,23 @@ import {
   useQuery as useConnectQuery,
   useTransport,
 } from "@connectrpc/connect-query";
-import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
+import {
+  type InfiniteData,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { buildSchemaName } from "@/lib/console-resources";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import {
   type ListViewsResponse,
+  type RefreshMaterializedViewMode,
   ViewService,
   ViewView,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 import {
   getView,
+  getViewDependencies,
   type listViews,
 } from "@/protogen/querylane/console/v1alpha1/view-ViewService_connectquery";
 
@@ -43,6 +50,50 @@ function useGetViewQuery(
   return useConnectQuery(getView, name ? { name, view } : undefined, {
     ...RESOURCE_QUERY_OPTIONS.tableMetadata,
     enabled: Boolean(name),
+  });
+}
+
+function useGetViewDependenciesQuery(name: string | undefined) {
+  return useConnectQuery(getViewDependencies, name ? { name } : undefined, {
+    ...RESOURCE_QUERY_OPTIONS.tableMetadata,
+    enabled: Boolean(name),
+  });
+}
+
+function queryKeyContainsResourceName(value: unknown, name: string): boolean {
+  if (value === name) {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    return value.some((item) => queryKeyContainsResourceName(item, name));
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.values(value).some((item) =>
+      queryKeyContainsResourceName(item, name)
+    );
+  }
+  return false;
+}
+
+interface RefreshMaterializedViewInput {
+  mode: RefreshMaterializedViewMode;
+  name: string;
+  signal: AbortSignal;
+}
+
+function useRefreshMaterializedViewMutation() {
+  const queryClient = useQueryClient();
+  const transport = useTransport();
+  const client = createClient(ViewService, transport);
+
+  return useMutation({
+    mutationFn: ({ mode, name, signal }: RefreshMaterializedViewInput) =>
+      client.refreshMaterializedView({ mode, name }, { signal }),
+    onSuccess: (_response, input) =>
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          queryKeyContainsResourceName(query.queryKey, input.name),
+      }),
   });
 }
 
@@ -88,4 +139,10 @@ function viewsForSchemaQueryInput({
   } as const satisfies MessageInitShape<(typeof listViews)["input"]>;
 }
 
-export { useGetViewQuery, useListViewsInfiniteQuery, viewsForSchemaQueryInput };
+export {
+  useGetViewDependenciesQuery,
+  useGetViewQuery,
+  useListViewsInfiniteQuery,
+  useRefreshMaterializedViewMutation,
+  viewsForSchemaQueryInput,
+};

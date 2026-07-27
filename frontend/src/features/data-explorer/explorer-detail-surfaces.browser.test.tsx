@@ -149,6 +149,20 @@ const sqlQueryState = vi.hoisted(() => ({
   isFetching: false,
   refetch: () => Promise.resolve(),
 }));
+const viewQueries = vi.hoisted(() => ({
+  dependencies: {
+    data: { dependencies: [] },
+    error: null,
+    isLoading: false,
+    refetch: () => Promise.resolve(),
+  },
+  refresh: {
+    error: null,
+    isPending: false,
+    mutateAsync: () => Promise.resolve({}),
+    reset: () => undefined,
+  },
+}));
 const schemaMapCatalog = vi.hoisted(() => ({
   columnsByTable: {} as Record<string, unknown[]>,
   constraintsByTable: {} as Record<string, unknown[]>,
@@ -347,6 +361,27 @@ vi.mock("@/hooks/api/table", () => ({
   useListTableIndexesQuery: () => tableQueries.indexes,
   useListTablePoliciesQuery: () => tableQueries.policies,
   useListTableTriggersQuery: () => tableQueries.triggers,
+}));
+
+vi.mock("@/hooks/api/view", () => ({
+  useGetViewDependenciesQuery: () => viewQueries.dependencies,
+  useRefreshMaterializedViewMutation: () => viewQueries.refresh,
+  viewsForSchemaQueryInput: ({
+    databaseId,
+    filter,
+    instanceId,
+    schemaId,
+  }: {
+    databaseId: string;
+    filter?: string | undefined;
+    instanceId: string;
+    schemaId: string;
+  }) => ({
+    ...(filter ? { filter } : {}),
+    orderBy: "name asc",
+    pageSize: 100,
+    parent: `instances/${instanceId}/databases/${databaseId}/schemas/${schemaId}`,
+  }),
 }));
 
 vi.mock("@/hooks/api/sql", () => ({
@@ -1992,6 +2027,44 @@ test("data explorer schema map omits tables whose details fail", async () => {
 
 test("data explorer materialized view detail stays readable", async () => {
   resetSqlQueryState();
+  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
+    columns: [
+      createProto(ColumnSchema, {
+        columnName: "account_id",
+        dataType: DataType.UUID,
+        isNullable: false,
+        ordinalPosition: 1,
+        rawType: "uuid",
+      }),
+      createProto(ColumnSchema, {
+        columnName: "health_score",
+        dataType: DataType.FLOAT,
+        isNullable: false,
+        ordinalPosition: 2,
+        rawType: "numeric",
+      }),
+    ],
+  });
+  tableQueries.constraints.data = createProto(
+    ListTableConstraintsResponseSchema,
+    { constraints: [] }
+  );
+  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
+    indexes: [
+      createProto(TableIndexSchema, {
+        definition:
+          "CREATE UNIQUE INDEX customer_success_daily_rollups_account_idx ON public.customer_success_daily_rollups USING btree (account_id)",
+        indexName: "customer_success_daily_rollups_account_idx",
+        isUnique: true,
+        isValid: true,
+        keyColumns: ["account_id"],
+        keyParts: ["account_id"],
+        method: "btree",
+        sizeBytes: 67_108_864n,
+      }),
+    ],
+  });
+  viewQueries.dependencies.data = { dependencies: [] };
 
   renderExplorerSurface(
     <ViewDetail

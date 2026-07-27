@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 interface DataGridToolbarProps {
+  allowSqlExport?: boolean | undefined;
   className?: string | undefined;
   columnOrder: readonly string[];
   columns: TableResultColumn[];
@@ -95,13 +96,18 @@ function ActiveSortSummary({ summary }: { summary: string | null }) {
 }
 
 function SelectionSummary({
+  allowSqlExport,
   onClearSelection,
   onCopySelection,
   onExportSelection,
   selectedCount,
 }: Pick<
   DataGridToolbarProps,
-  "onClearSelection" | "onCopySelection" | "onExportSelection" | "selectedCount"
+  | "allowSqlExport"
+  | "onClearSelection"
+  | "onCopySelection"
+  | "onExportSelection"
+  | "selectedCount"
 >) {
   if (selectedCount === 0) {
     return null;
@@ -122,6 +128,7 @@ function SelectionSummary({
         <X className="size-3.5" />
       </Button>
       <SelectionActions
+        allowSql={allowSqlExport}
         disabled={false}
         onCopy={onCopySelection}
         onExport={onExportSelection}
@@ -131,6 +138,7 @@ function SelectionSummary({
 }
 
 function DataGridToolbar({
+  allowSqlExport = true,
   className,
   columnOrder,
   columns,
@@ -206,6 +214,7 @@ function DataGridToolbar({
 
         <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-muted-foreground text-xs">
           <SelectionSummary
+            allowSqlExport={allowSqlExport}
             onClearSelection={onClearSelection}
             onCopySelection={onCopySelection}
             onExportSelection={onExportSelection}
