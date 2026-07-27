@@ -57,6 +57,7 @@ const PG_STAT_STATEMENTS_BUTTON_NAME = /pg_stat_statements/i;
 const REPLICATION_ROW_NAME = /Replication/;
 const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/;
 const TIMESCALEDB_BUTTON_NAME = /timescaledb/i;
+const DENSE_SCHEMA_COUNT = 12;
 
 const state = vi.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
@@ -913,6 +914,17 @@ function catalogResult() {
   };
 }
 
+function cardRect(label: string) {
+  const card = page
+    .getByText(label, { exact: true })
+    .element()
+    .closest('[data-slot="card"]');
+  if (!(card instanceof HTMLElement)) {
+    throw new Error(`Expected ${label} card`);
+  }
+  return card.getBoundingClientRect();
+}
+
 async function openQueryInsightsDrawer(
   queryInsights: GetDatabaseQueryInsightsResponse
 ) {
@@ -1267,9 +1279,54 @@ test("backend database overview shows mission control stats and catalog tables",
   await expect
     .element(page.getByText("Query statistics are off"))
     .toBeVisible();
+
+  const slowQueries = cardRect("Slowest queries");
+  const topTables = cardRect("Top tables");
+  const schemas = cardRect("Schemas");
+  const otherDatabases = cardRect("Databases on this instance");
+
+  expect.soft(Math.abs(slowQueries.bottom - topTables.bottom)).toBeLessThan(1);
+  expect.soft(Math.abs(schemas.top - otherDatabases.top)).toBeLessThan(1);
+  expect.soft(Math.abs(schemas.bottom - otherDatabases.bottom)).toBeLessThan(1);
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-database-overview"
   );
+});
+
+test("dense schema inventories use the wide row without layout holes", async () => {
+  const catalog = catalogResult();
+  const [schema] = catalog.schemas;
+  if (!schema) {
+    throw new Error("Expected schema fixture");
+  }
+  catalog.schemas = Array.from({ length: DENSE_SCHEMA_COUNT }, (_, index) => ({
+    ...schema,
+    name: `${schema.name}-${index}`,
+    schemaId: `schema_${index}`,
+  }));
+  catalog.totals.schemaCount = catalog.schemas.length;
+  state.databaseQuery = { data: databaseResponse() };
+  state.catalogQuery = { data: catalog };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendDatabasePage
+          databaseId="customer-events"
+          instanceId="prod"
+          section="overview"
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await expect.element(page.getByText("Schemas")).toBeVisible();
+
+  const schemas = cardRect("Schemas");
+  const otherDatabases = cardRect("Databases on this instance");
+  expect.soft(schemas.width).toBeGreaterThan(otherDatabases.width);
+  expect.soft(Math.abs(schemas.top - otherDatabases.top)).toBeLessThan(1);
+  expect.soft(Math.abs(schemas.bottom - otherDatabases.bottom)).toBeLessThan(1);
 });
 
 test("disabled Insights explains why statistics are unavailable", async () => {

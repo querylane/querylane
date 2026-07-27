@@ -269,7 +269,7 @@ function DatabaseObjectsPanel({
           level.
         </p>
       </div>
-      <div className="grid items-start gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <div className="columns-1 gap-5 md:columns-2 xl:columns-3 [&>[data-slot=card]]:mb-5 [&>[data-slot=card]]:break-inside-avoid">
         <ExtensionsCard extensions={extensions} isPending={extensionsPending} />
         <CategoryCards
           error={error}
