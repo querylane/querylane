@@ -20,7 +20,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 import {
   getView,
-  getViewDependencies,
+  listViewDependencies,
   type listViews,
 } from "@/protogen/querylane/console/v1alpha1/view-ViewService_connectquery";
 
@@ -53,11 +53,15 @@ function useGetViewQuery(
   });
 }
 
-function useGetViewDependenciesQuery(name: string | undefined) {
-  return useConnectQuery(getViewDependencies, name ? { name } : undefined, {
-    ...RESOURCE_QUERY_OPTIONS.tableMetadata,
-    enabled: Boolean(name),
-  });
+function useListViewDependenciesQuery(parent: string | undefined) {
+  return useConnectQuery(
+    listViewDependencies,
+    parent ? { parent } : undefined,
+    {
+      ...RESOURCE_QUERY_OPTIONS.tableMetadata,
+      enabled: Boolean(parent),
+    }
+  );
 }
 
 function queryKeyContainsResourceName(value: unknown, name: string): boolean {
@@ -140,8 +144,8 @@ function viewsForSchemaQueryInput({
 }
 
 export {
-  useGetViewDependenciesQuery,
   useGetViewQuery,
+  useListViewDependenciesQuery,
   useListViewsInfiniteQuery,
   useRefreshMaterializedViewMutation,
   viewsForSchemaQueryInput,

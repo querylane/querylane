@@ -11,7 +11,7 @@ import {
   TableIndexSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import {
-  GetViewDependenciesResponseSchema,
+  ListViewDependenciesResponseSchema,
   RefreshMaterializedViewMode,
   View_ViewType,
   ViewDependency_Direction,
@@ -102,7 +102,7 @@ vi.mock("@/hooks/api/table", () => ({
 }));
 
 vi.mock("@/hooks/api/view", () => ({
-  useGetViewDependenciesQuery: () => viewApi.dependencies,
+  useListViewDependenciesQuery: () => viewApi.dependencies,
   useRefreshMaterializedViewMutation: () => viewApi.refresh,
 }));
 
@@ -139,7 +139,7 @@ beforeEach(() => {
   });
   tableApi.indexes.error = null;
   tableApi.indexes.isLoading = false;
-  viewApi.dependencies.data = createProto(GetViewDependenciesResponseSchema, {
+  viewApi.dependencies.data = createProto(ListViewDependenciesResponseSchema, {
     dependencies: [
       createProto(ViewDependencySchema, {
         direction: ViewDependency_Direction.UPSTREAM,

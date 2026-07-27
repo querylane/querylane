@@ -753,28 +753,28 @@ func (x *GetViewResponse) GetView() *View {
 	return nil
 }
 
-type GetViewDependenciesRequest struct {
+type ListViewDependenciesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Required. The view whose dependency graph should be returned.
-	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Required. The view whose direct dependencies should be returned.
+	Parent        string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetViewDependenciesRequest) Reset() {
-	*x = GetViewDependenciesRequest{}
+func (x *ListViewDependenciesRequest) Reset() {
+	*x = ListViewDependenciesRequest{}
 	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetViewDependenciesRequest) String() string {
+func (x *ListViewDependenciesRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetViewDependenciesRequest) ProtoMessage() {}
+func (*ListViewDependenciesRequest) ProtoMessage() {}
 
-func (x *GetViewDependenciesRequest) ProtoReflect() protoreflect.Message {
+func (x *ListViewDependenciesRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -786,39 +786,39 @@ func (x *GetViewDependenciesRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetViewDependenciesRequest.ProtoReflect.Descriptor instead.
-func (*GetViewDependenciesRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListViewDependenciesRequest.ProtoReflect.Descriptor instead.
+func (*ListViewDependenciesRequest) Descriptor() ([]byte, []int) {
 	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *GetViewDependenciesRequest) GetName() string {
+func (x *ListViewDependenciesRequest) GetParent() string {
 	if x != nil {
-		return x.Name
+		return x.Parent
 	}
 	return ""
 }
 
-type GetViewDependenciesResponse struct {
+type ListViewDependenciesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Dependencies  []*ViewDependency      `protobuf:"bytes,1,rep,name=dependencies,proto3" json:"dependencies,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetViewDependenciesResponse) Reset() {
-	*x = GetViewDependenciesResponse{}
+func (x *ListViewDependenciesResponse) Reset() {
+	*x = ListViewDependenciesResponse{}
 	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetViewDependenciesResponse) String() string {
+func (x *ListViewDependenciesResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetViewDependenciesResponse) ProtoMessage() {}
+func (*ListViewDependenciesResponse) ProtoMessage() {}
 
-func (x *GetViewDependenciesResponse) ProtoReflect() protoreflect.Message {
+func (x *ListViewDependenciesResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -830,12 +830,12 @@ func (x *GetViewDependenciesResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetViewDependenciesResponse.ProtoReflect.Descriptor instead.
-func (*GetViewDependenciesResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListViewDependenciesResponse.ProtoReflect.Descriptor instead.
+func (*ListViewDependenciesResponse) Descriptor() ([]byte, []int) {
 	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *GetViewDependenciesResponse) GetDependencies() []*ViewDependency {
+func (x *ListViewDependenciesResponse) GetDependencies() []*ViewDependency {
 	if x != nil {
 		return x.Dependencies
 	}
@@ -1004,11 +1004,11 @@ const file_querylane_console_v1alpha1_view_proto_rawDesc = "" +
 	"\x1aconsole.querylane.dev/View\xbaH^r\\2Z^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$R\x04name\x12E\n" +
 	"\x04view\x18\x02 \x01(\x0e2$.querylane.console.v1alpha1.ViewViewB\v\xe0A\x01\xbaH\x05\x82\x01\x02\x10\x01R\x04view\"G\n" +
 	"\x0fGetViewResponse\x124\n" +
-	"\x04view\x18\x01 \x01(\v2 .querylane.console.v1alpha1.ViewR\x04view\"\xb7\x01\n" +
-	"\x1aGetViewDependenciesRequest\x12\x98\x01\n" +
-	"\x04name\x18\x01 \x01(\tB\x83\x01\xe0A\x02\xfaA\x1c\n" +
-	"\x1aconsole.querylane.dev/View\xbaH^r\\2Z^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$R\x04name\"m\n" +
-	"\x1bGetViewDependenciesResponse\x12N\n" +
+	"\x04view\x18\x01 \x01(\v2 .querylane.console.v1alpha1.ViewR\x04view\"\xbc\x01\n" +
+	"\x1bListViewDependenciesRequest\x12\x9c\x01\n" +
+	"\x06parent\x18\x01 \x01(\tB\x83\x01\xe0A\x02\xfaA\x1c\n" +
+	"\x1aconsole.querylane.dev/View\xbaH^r\\2Z^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$R\x06parent\"n\n" +
+	"\x1cListViewDependenciesResponse\x12N\n" +
 	"\fdependencies\x18\x01 \x03(\v2*.querylane.console.v1alpha1.ViewDependencyR\fdependencies\"\x95\x02\n" +
 	"\x1eRefreshMaterializedViewRequest\x12\x98\x01\n" +
 	"\x04name\x18\x01 \x01(\tB\x83\x01\xe0A\x02\xfaA\x1c\n" +
@@ -1023,11 +1023,11 @@ const file_querylane_console_v1alpha1_view_proto_rawDesc = "" +
 	"\x1bRefreshMaterializedViewMode\x12.\n" +
 	"*REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED\x10\x00\x12+\n" +
 	"'REFRESH_MATERIALIZED_VIEW_MODE_STANDARD\x10\x01\x12-\n" +
-	")REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT\x10\x022\x81\x04\n" +
+	")REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT\x10\x022\x84\x04\n" +
 	"\vViewService\x12j\n" +
 	"\tListViews\x12,.querylane.console.v1alpha1.ListViewsRequest\x1a-.querylane.console.v1alpha1.ListViewsResponse\"\x00\x12d\n" +
-	"\aGetView\x12*.querylane.console.v1alpha1.GetViewRequest\x1a+.querylane.console.v1alpha1.GetViewResponse\"\x00\x12\x88\x01\n" +
-	"\x13GetViewDependencies\x126.querylane.console.v1alpha1.GetViewDependenciesRequest\x1a7.querylane.console.v1alpha1.GetViewDependenciesResponse\"\x00\x12\x94\x01\n" +
+	"\aGetView\x12*.querylane.console.v1alpha1.GetViewRequest\x1a+.querylane.console.v1alpha1.GetViewResponse\"\x00\x12\x8b\x01\n" +
+	"\x14ListViewDependencies\x127.querylane.console.v1alpha1.ListViewDependenciesRequest\x1a8.querylane.console.v1alpha1.ListViewDependenciesResponse\"\x00\x12\x94\x01\n" +
 	"\x17RefreshMaterializedView\x12:.querylane.console.v1alpha1.RefreshMaterializedViewRequest\x1a;.querylane.console.v1alpha1.RefreshMaterializedViewResponse\"\x00B\x91\x02\n" +
 	"\x1ecom.querylane.console.v1alpha1B\tViewProtoP\x01ZZgithub.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1;consolev1alpha1\xa2\x02\x03QCX\xaa\x02\x1aQuerylane.Console.V1alpha1\xca\x02\x1aQuerylane\\Console\\V1alpha1\xe2\x02&Querylane\\Console\\V1alpha1\\GPBMetadata\xea\x02\x1cQuerylane::Console::V1alpha1b\x06proto3"
 
@@ -1057,8 +1057,8 @@ var file_querylane_console_v1alpha1_view_proto_goTypes = []any{
 	(*ListViewsResponse)(nil),               // 8: querylane.console.v1alpha1.ListViewsResponse
 	(*GetViewRequest)(nil),                  // 9: querylane.console.v1alpha1.GetViewRequest
 	(*GetViewResponse)(nil),                 // 10: querylane.console.v1alpha1.GetViewResponse
-	(*GetViewDependenciesRequest)(nil),      // 11: querylane.console.v1alpha1.GetViewDependenciesRequest
-	(*GetViewDependenciesResponse)(nil),     // 12: querylane.console.v1alpha1.GetViewDependenciesResponse
+	(*ListViewDependenciesRequest)(nil),     // 11: querylane.console.v1alpha1.ListViewDependenciesRequest
+	(*ListViewDependenciesResponse)(nil),    // 12: querylane.console.v1alpha1.ListViewDependenciesResponse
 	(*RefreshMaterializedViewRequest)(nil),  // 13: querylane.console.v1alpha1.RefreshMaterializedViewRequest
 	(*RefreshMaterializedViewResponse)(nil), // 14: querylane.console.v1alpha1.RefreshMaterializedViewResponse
 	(*timestamppb.Timestamp)(nil),           // 15: google.protobuf.Timestamp
@@ -1073,16 +1073,16 @@ var file_querylane_console_v1alpha1_view_proto_depIdxs = []int32{
 	5,  // 6: querylane.console.v1alpha1.ListViewsResponse.views:type_name -> querylane.console.v1alpha1.View
 	0,  // 7: querylane.console.v1alpha1.GetViewRequest.view:type_name -> querylane.console.v1alpha1.ViewView
 	5,  // 8: querylane.console.v1alpha1.GetViewResponse.view:type_name -> querylane.console.v1alpha1.View
-	6,  // 9: querylane.console.v1alpha1.GetViewDependenciesResponse.dependencies:type_name -> querylane.console.v1alpha1.ViewDependency
+	6,  // 9: querylane.console.v1alpha1.ListViewDependenciesResponse.dependencies:type_name -> querylane.console.v1alpha1.ViewDependency
 	1,  // 10: querylane.console.v1alpha1.RefreshMaterializedViewRequest.mode:type_name -> querylane.console.v1alpha1.RefreshMaterializedViewMode
 	5,  // 11: querylane.console.v1alpha1.RefreshMaterializedViewResponse.view:type_name -> querylane.console.v1alpha1.View
 	7,  // 12: querylane.console.v1alpha1.ViewService.ListViews:input_type -> querylane.console.v1alpha1.ListViewsRequest
 	9,  // 13: querylane.console.v1alpha1.ViewService.GetView:input_type -> querylane.console.v1alpha1.GetViewRequest
-	11, // 14: querylane.console.v1alpha1.ViewService.GetViewDependencies:input_type -> querylane.console.v1alpha1.GetViewDependenciesRequest
+	11, // 14: querylane.console.v1alpha1.ViewService.ListViewDependencies:input_type -> querylane.console.v1alpha1.ListViewDependenciesRequest
 	13, // 15: querylane.console.v1alpha1.ViewService.RefreshMaterializedView:input_type -> querylane.console.v1alpha1.RefreshMaterializedViewRequest
 	8,  // 16: querylane.console.v1alpha1.ViewService.ListViews:output_type -> querylane.console.v1alpha1.ListViewsResponse
 	10, // 17: querylane.console.v1alpha1.ViewService.GetView:output_type -> querylane.console.v1alpha1.GetViewResponse
-	12, // 18: querylane.console.v1alpha1.ViewService.GetViewDependencies:output_type -> querylane.console.v1alpha1.GetViewDependenciesResponse
+	12, // 18: querylane.console.v1alpha1.ViewService.ListViewDependencies:output_type -> querylane.console.v1alpha1.ListViewDependenciesResponse
 	14, // 19: querylane.console.v1alpha1.ViewService.RefreshMaterializedView:output_type -> querylane.console.v1alpha1.RefreshMaterializedViewResponse
 	16, // [16:20] is the sub-list for method output_type
 	12, // [12:16] is the sub-list for method input_type

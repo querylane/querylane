@@ -39,9 +39,9 @@ const (
 	ViewServiceListViewsProcedure = "/querylane.console.v1alpha1.ViewService/ListViews"
 	// ViewServiceGetViewProcedure is the fully-qualified name of the ViewService's GetView RPC.
 	ViewServiceGetViewProcedure = "/querylane.console.v1alpha1.ViewService/GetView"
-	// ViewServiceGetViewDependenciesProcedure is the fully-qualified name of the ViewService's
-	// GetViewDependencies RPC.
-	ViewServiceGetViewDependenciesProcedure = "/querylane.console.v1alpha1.ViewService/GetViewDependencies"
+	// ViewServiceListViewDependenciesProcedure is the fully-qualified name of the ViewService's
+	// ListViewDependencies RPC.
+	ViewServiceListViewDependenciesProcedure = "/querylane.console.v1alpha1.ViewService/ListViewDependencies"
 	// ViewServiceRefreshMaterializedViewProcedure is the fully-qualified name of the ViewService's
 	// RefreshMaterializedView RPC.
 	ViewServiceRefreshMaterializedViewProcedure = "/querylane.console.v1alpha1.ViewService/RefreshMaterializedView"
@@ -53,8 +53,8 @@ type ViewServiceClient interface {
 	ListViews(context.Context, *connect.Request[v1alpha1.ListViewsRequest]) (*connect.Response[v1alpha1.ListViewsResponse], error)
 	// Gets a single view.
 	GetView(context.Context, *connect.Request[v1alpha1.GetViewRequest]) (*connect.Response[v1alpha1.GetViewResponse], error)
-	// Gets relations used by a view and relations that depend on it.
-	GetViewDependencies(context.Context, *connect.Request[v1alpha1.GetViewDependenciesRequest]) (*connect.Response[v1alpha1.GetViewDependenciesResponse], error)
+	// Lists direct relation dependencies for a view.
+	ListViewDependencies(context.Context, *connect.Request[v1alpha1.ListViewDependenciesRequest]) (*connect.Response[v1alpha1.ListViewDependenciesResponse], error)
 	// Refreshes a materialized view.
 	RefreshMaterializedView(context.Context, *connect.Request[v1alpha1.RefreshMaterializedViewRequest]) (*connect.Response[v1alpha1.RefreshMaterializedViewResponse], error)
 }
@@ -82,10 +82,10 @@ func NewViewServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(viewServiceMethods.ByName("GetView")),
 			connect.WithClientOptions(opts...),
 		),
-		getViewDependencies: connect.NewClient[v1alpha1.GetViewDependenciesRequest, v1alpha1.GetViewDependenciesResponse](
+		listViewDependencies: connect.NewClient[v1alpha1.ListViewDependenciesRequest, v1alpha1.ListViewDependenciesResponse](
 			httpClient,
-			baseURL+ViewServiceGetViewDependenciesProcedure,
-			connect.WithSchema(viewServiceMethods.ByName("GetViewDependencies")),
+			baseURL+ViewServiceListViewDependenciesProcedure,
+			connect.WithSchema(viewServiceMethods.ByName("ListViewDependencies")),
 			connect.WithClientOptions(opts...),
 		),
 		refreshMaterializedView: connect.NewClient[v1alpha1.RefreshMaterializedViewRequest, v1alpha1.RefreshMaterializedViewResponse](
@@ -101,7 +101,7 @@ func NewViewServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 type viewServiceClient struct {
 	listViews               *connect.Client[v1alpha1.ListViewsRequest, v1alpha1.ListViewsResponse]
 	getView                 *connect.Client[v1alpha1.GetViewRequest, v1alpha1.GetViewResponse]
-	getViewDependencies     *connect.Client[v1alpha1.GetViewDependenciesRequest, v1alpha1.GetViewDependenciesResponse]
+	listViewDependencies    *connect.Client[v1alpha1.ListViewDependenciesRequest, v1alpha1.ListViewDependenciesResponse]
 	refreshMaterializedView *connect.Client[v1alpha1.RefreshMaterializedViewRequest, v1alpha1.RefreshMaterializedViewResponse]
 }
 
@@ -115,9 +115,9 @@ func (c *viewServiceClient) GetView(ctx context.Context, req *connect.Request[v1
 	return c.getView.CallUnary(ctx, req)
 }
 
-// GetViewDependencies calls querylane.console.v1alpha1.ViewService.GetViewDependencies.
-func (c *viewServiceClient) GetViewDependencies(ctx context.Context, req *connect.Request[v1alpha1.GetViewDependenciesRequest]) (*connect.Response[v1alpha1.GetViewDependenciesResponse], error) {
-	return c.getViewDependencies.CallUnary(ctx, req)
+// ListViewDependencies calls querylane.console.v1alpha1.ViewService.ListViewDependencies.
+func (c *viewServiceClient) ListViewDependencies(ctx context.Context, req *connect.Request[v1alpha1.ListViewDependenciesRequest]) (*connect.Response[v1alpha1.ListViewDependenciesResponse], error) {
+	return c.listViewDependencies.CallUnary(ctx, req)
 }
 
 // RefreshMaterializedView calls querylane.console.v1alpha1.ViewService.RefreshMaterializedView.
@@ -131,8 +131,8 @@ type ViewServiceHandler interface {
 	ListViews(context.Context, *connect.Request[v1alpha1.ListViewsRequest]) (*connect.Response[v1alpha1.ListViewsResponse], error)
 	// Gets a single view.
 	GetView(context.Context, *connect.Request[v1alpha1.GetViewRequest]) (*connect.Response[v1alpha1.GetViewResponse], error)
-	// Gets relations used by a view and relations that depend on it.
-	GetViewDependencies(context.Context, *connect.Request[v1alpha1.GetViewDependenciesRequest]) (*connect.Response[v1alpha1.GetViewDependenciesResponse], error)
+	// Lists direct relation dependencies for a view.
+	ListViewDependencies(context.Context, *connect.Request[v1alpha1.ListViewDependenciesRequest]) (*connect.Response[v1alpha1.ListViewDependenciesResponse], error)
 	// Refreshes a materialized view.
 	RefreshMaterializedView(context.Context, *connect.Request[v1alpha1.RefreshMaterializedViewRequest]) (*connect.Response[v1alpha1.RefreshMaterializedViewResponse], error)
 }
@@ -156,10 +156,10 @@ func NewViewServiceHandler(svc ViewServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(viewServiceMethods.ByName("GetView")),
 		connect.WithHandlerOptions(opts...),
 	)
-	viewServiceGetViewDependenciesHandler := connect.NewUnaryHandler(
-		ViewServiceGetViewDependenciesProcedure,
-		svc.GetViewDependencies,
-		connect.WithSchema(viewServiceMethods.ByName("GetViewDependencies")),
+	viewServiceListViewDependenciesHandler := connect.NewUnaryHandler(
+		ViewServiceListViewDependenciesProcedure,
+		svc.ListViewDependencies,
+		connect.WithSchema(viewServiceMethods.ByName("ListViewDependencies")),
 		connect.WithHandlerOptions(opts...),
 	)
 	viewServiceRefreshMaterializedViewHandler := connect.NewUnaryHandler(
@@ -174,8 +174,8 @@ func NewViewServiceHandler(svc ViewServiceHandler, opts ...connect.HandlerOption
 			viewServiceListViewsHandler.ServeHTTP(w, r)
 		case ViewServiceGetViewProcedure:
 			viewServiceGetViewHandler.ServeHTTP(w, r)
-		case ViewServiceGetViewDependenciesProcedure:
-			viewServiceGetViewDependenciesHandler.ServeHTTP(w, r)
+		case ViewServiceListViewDependenciesProcedure:
+			viewServiceListViewDependenciesHandler.ServeHTTP(w, r)
 		case ViewServiceRefreshMaterializedViewProcedure:
 			viewServiceRefreshMaterializedViewHandler.ServeHTTP(w, r)
 		default:
@@ -195,8 +195,8 @@ func (UnimplementedViewServiceHandler) GetView(context.Context, *connect.Request
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("querylane.console.v1alpha1.ViewService.GetView is not implemented"))
 }
 
-func (UnimplementedViewServiceHandler) GetViewDependencies(context.Context, *connect.Request[v1alpha1.GetViewDependenciesRequest]) (*connect.Response[v1alpha1.GetViewDependenciesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("querylane.console.v1alpha1.ViewService.GetViewDependencies is not implemented"))
+func (UnimplementedViewServiceHandler) ListViewDependencies(context.Context, *connect.Request[v1alpha1.ListViewDependenciesRequest]) (*connect.Response[v1alpha1.ListViewDependenciesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("querylane.console.v1alpha1.ViewService.ListViewDependencies is not implemented"))
 }
 
 func (UnimplementedViewServiceHandler) RefreshMaterializedView(context.Context, *connect.Request[v1alpha1.RefreshMaterializedViewRequest]) (*connect.Response[v1alpha1.RefreshMaterializedViewResponse], error) {

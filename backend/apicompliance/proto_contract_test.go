@@ -76,9 +76,9 @@ var aipCompatibilityExceptions = map[string]compatibilityException{
 		category: exceptionResponseWrapper,
 		reason:   "Operational stats method returns a custom aggregate shape (per-table stats plus retention), not a resource.",
 	},
-	"querylane.console.v1alpha1.ViewService.GetViewDependencies.response": {
-		category: exceptionResponseWrapper,
-		reason:   "Dependency inspection returns a bounded graph edge collection rather than a single resource.",
+	"querylane.console.v1alpha1.ViewService.ListViewDependencies": {
+		category: exceptionBoundedMetadataList,
+		reason:   "Direct dependency edges are bounded metadata under a View, not promoted resources requiring AIP pagination.",
 	},
 	"querylane.console.v1alpha1.ConsoleService.GetConsoleConfig": {
 		category: exceptionCustomGetName,
@@ -187,6 +187,46 @@ func TestResourceMessagesHaveAIPResourceAnnotations(t *testing.T) {
 			assertResourceNameFieldBehavior(t, name)
 		})
 	}
+}
+
+func TestFileLevelResourceDefinitionsHaveAIPNames(t *testing.T) {
+	t.Parallel()
+
+	for _, file := range newProtoContract().files {
+		options, ok := file.Options().(*descriptorpb.FileOptions)
+		if !ok || !proto.HasExtension(options, annotations.E_ResourceDefinition) {
+			continue
+		}
+
+		definitions, ok := proto.GetExtension(options, annotations.E_ResourceDefinition).([]*annotations.ResourceDescriptor)
+		require.True(t, ok)
+
+		for _, definition := range definitions {
+			t.Run(definition.GetType(), func(t *testing.T) {
+				t.Parallel()
+				assert.NotEmpty(t, definition.GetPattern())
+				assert.NotEmpty(t, definition.GetSingular())
+				assert.NotEmpty(t, definition.GetPlural())
+			})
+		}
+	}
+}
+
+func TestViewDependencyInspectionUsesBoundedListShape(t *testing.T) {
+	t.Parallel()
+
+	descriptor, err := protoregistry.GlobalFiles.FindDescriptorByName("querylane.console.v1alpha1.ViewService.ListViewDependencies")
+	require.NoError(t, err)
+
+	method, ok := descriptor.(protoreflect.MethodDescriptor)
+	require.True(t, ok)
+
+	parent := method.Input().Fields().ByName("parent")
+	require.NotNil(t, parent)
+	assert.Contains(t, fieldBehaviors(parent), annotations.FieldBehavior_REQUIRED)
+	require.NotNil(t, fieldResourceReference(parent))
+	assert.Equal(t, "console.querylane.dev/View", fieldResourceReference(parent).GetType())
+	assertRepeatedMessageFieldNumberOne(t, method.Output())
 }
 
 func TestNameFieldsAreAIPResourceNamesOrDocumentedCompatibilityExceptions(t *testing.T) {

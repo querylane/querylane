@@ -12,6 +12,8 @@ option (google.api.resource_definition) = {
   type: "console.querylane.dev/Relation"
   pattern: "instances/{instance}/databases/{database}/schemas/{schema}/tables/{relation}"
   pattern: "instances/{instance}/databases/{database}/schemas/{schema}/views/{relation}"
+  plural: "relations"
+  singular: "relation"
 };
 
 // --------------------------------------------------------------------------

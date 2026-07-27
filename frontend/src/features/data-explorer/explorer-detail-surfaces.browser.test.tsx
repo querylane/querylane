@@ -364,7 +364,7 @@ vi.mock("@/hooks/api/table", () => ({
 }));
 
 vi.mock("@/hooks/api/view", () => ({
-  useGetViewDependenciesQuery: () => viewQueries.dependencies,
+  useListViewDependenciesQuery: () => viewQueries.dependencies,
   useRefreshMaterializedViewMutation: () => viewQueries.refresh,
   viewsForSchemaQueryInput: ({
     databaseId,

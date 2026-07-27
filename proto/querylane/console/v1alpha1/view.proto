@@ -19,8 +19,8 @@ service ViewService {
   // Gets a single view.
   rpc GetView(GetViewRequest) returns (GetViewResponse) {}
 
-  // Gets relations used by a view and relations that depend on it.
-  rpc GetViewDependencies(GetViewDependenciesRequest) returns (GetViewDependenciesResponse) {}
+  // Lists direct relation dependencies for a view.
+  rpc ListViewDependencies(ListViewDependenciesRequest) returns (ListViewDependenciesResponse) {}
 
   // Refreshes a materialized view.
   rpc RefreshMaterializedView(RefreshMaterializedViewRequest) returns (RefreshMaterializedViewResponse) {}
@@ -203,16 +203,16 @@ message GetViewResponse {
   View view = 1;
 }
 
-message GetViewDependenciesRequest {
-  // Required. The view whose dependency graph should be returned.
-  string name = 1 [
+message ListViewDependenciesRequest {
+  // Required. The view whose direct dependencies should be returned.
+  string parent = 1 [
     (google.api.field_behavior) = REQUIRED,
     (google.api.resource_reference) = {type: "console.querylane.dev/View"},
     (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$"
   ];
 }
 
-message GetViewDependenciesResponse {
+message ListViewDependenciesResponse {
   repeated ViewDependency dependencies = 1;
 }
 

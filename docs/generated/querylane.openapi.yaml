@@ -1981,14 +1981,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetViewResponse'
-  /querylane.console.v1alpha1.ViewService/GetViewDependencies:
+  /querylane.console.v1alpha1.ViewService/ListViewDependencies:
     post:
       x-connectrpc-method-kind: unary
       tags:
         - View
-      summary: GetViewDependencies
-      description: Gets relations used by a view and relations that depend on it.
-      operationId: ViewService_GetViewDependencies
+      summary: ListViewDependencies
+      description: Lists direct relation dependencies for a view.
+      operationId: ViewService_ListViewDependencies
       parameters:
         - name: Connect-Protocol-Version
           in: header
@@ -2003,7 +2003,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/querylane.console.v1alpha1.GetViewDependenciesRequest'
+              $ref: '#/components/schemas/querylane.console.v1alpha1.ListViewDependenciesRequest'
         required: true
       responses:
         default:
@@ -2017,7 +2017,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/querylane.console.v1alpha1.GetViewDependenciesResponse'
+                $ref: '#/components/schemas/querylane.console.v1alpha1.ListViewDependenciesResponse'
   /querylane.console.v1alpha1.ViewService/ListViews:
     post:
       x-connectrpc-method-kind: unary
@@ -3960,26 +3960,6 @@ components:
           $ref: '#/components/schemas/querylane.console.v1alpha1.Table'
       title: GetTableResponse
       additionalProperties: false
-    querylane.console.v1alpha1.GetViewDependenciesRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          title: name
-          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$
-          description: Required. The view whose dependency graph should be returned.
-      title: GetViewDependenciesRequest
-      additionalProperties: false
-    querylane.console.v1alpha1.GetViewDependenciesResponse:
-      type: object
-      properties:
-        dependencies:
-          type: array
-          items:
-            $ref: '#/components/schemas/querylane.console.v1alpha1.ViewDependency'
-          title: dependencies
-      title: GetViewDependenciesResponse
-      additionalProperties: false
     querylane.console.v1alpha1.GetViewRequest:
       type: object
       properties:
@@ -5208,6 +5188,26 @@ components:
           description: Output-only. Freshness and sync status for this catalog list.
           $ref: '#/components/schemas/querylane.console.v1alpha1.CatalogSyncMetadata'
       title: ListTablesResponse
+      additionalProperties: false
+    querylane.console.v1alpha1.ListViewDependenciesRequest:
+      type: object
+      properties:
+        parent:
+          type: string
+          title: parent
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$
+          description: Required. The view whose direct dependencies should be returned.
+      title: ListViewDependenciesRequest
+      additionalProperties: false
+    querylane.console.v1alpha1.ListViewDependenciesResponse:
+      type: object
+      properties:
+        dependencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/querylane.console.v1alpha1.ViewDependency'
+          title: dependencies
+      title: ListViewDependenciesResponse
       additionalProperties: false
     querylane.console.v1alpha1.ListViewsRequest:
       type: object

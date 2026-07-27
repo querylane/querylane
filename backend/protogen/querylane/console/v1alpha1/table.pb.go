@@ -2530,8 +2530,8 @@ const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\x14ListTableConstraints\x127.querylane.console.v1alpha1.ListTableConstraintsRequest\x1a8.querylane.console.v1alpha1.ListTableConstraintsResponse\"\x00\x12\x7f\n" +
 	"\x10ListTableIndexes\x123.querylane.console.v1alpha1.ListTableIndexesRequest\x1a4.querylane.console.v1alpha1.ListTableIndexesResponse\"\x00\x12\x82\x01\n" +
 	"\x11ListTablePolicies\x124.querylane.console.v1alpha1.ListTablePoliciesRequest\x1a5.querylane.console.v1alpha1.ListTablePoliciesResponse\"\x00\x12\x82\x01\n" +
-	"\x11ListTableTriggers\x124.querylane.console.v1alpha1.ListTableTriggersRequest\x1a5.querylane.console.v1alpha1.ListTableTriggersResponse\"\x00B\xd1\x03\xeaA\xbb\x01\n" +
-	"\x1econsole.querylane.dev/Relation\x12Linstances/{instance}/databases/{database}/schemas/{schema}/tables/{relation}\x12Kinstances/{instance}/databases/{database}/schemas/{schema}/views/{relation}\n" +
+	"\x11ListTableTriggers\x124.querylane.console.v1alpha1.ListTableTriggersRequest\x1a5.querylane.console.v1alpha1.ListTableTriggersResponse\"\x00B\xe6\x03\xeaA\xd0\x01\n" +
+	"\x1econsole.querylane.dev/Relation\x12Linstances/{instance}/databases/{database}/schemas/{schema}/tables/{relation}\x12Kinstances/{instance}/databases/{database}/schemas/{schema}/views/{relation}*\trelations2\brelation\n" +
 	"\x1ecom.querylane.console.v1alpha1B\n" +
 	"TableProtoP\x01ZZgithub.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1;consolev1alpha1\xa2\x02\x03QCX\xaa\x02\x1aQuerylane.Console.V1alpha1\xca\x02\x1aQuerylane\\Console\\V1alpha1\xe2\x02&Querylane\\Console\\V1alpha1\\GPBMetadata\xea\x02\x1cQuerylane::Console::V1alpha1b\x06proto3"
 

@@ -103,12 +103,12 @@ func (s *RPCSuite) TestReadMaterializedViewRows() {
 	s.NotEmpty(resp.Msg.GetResultSet().GetRows())
 }
 
-func (s *RPCSuite) TestGetMaterializedViewDependencies() {
+func (s *RPCSuite) TestListMaterializedViewDependencies() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := s.viewClient.GetViewDependencies(ctx, connect.NewRequest(&consolev1alpha1.GetViewDependenciesRequest{
-		Name: s.viewName("analytics", "order_summary"),
+	resp, err := s.viewClient.ListViewDependencies(ctx, connect.NewRequest(&consolev1alpha1.ListViewDependenciesRequest{
+		Parent: s.viewName("analytics", "order_summary"),
 	}))
 	s.Require().NoError(err)
 	s.Require().Len(resp.Msg.GetDependencies(), 1)

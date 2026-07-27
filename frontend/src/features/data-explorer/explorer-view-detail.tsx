@@ -65,7 +65,7 @@ import {
   useListTableIndexesQuery,
 } from "@/hooks/api/table";
 import {
-  useGetViewDependenciesQuery,
+  useListViewDependenciesQuery,
   useRefreshMaterializedViewMutation,
 } from "@/hooks/api/view";
 import {
@@ -480,7 +480,7 @@ function DependenciesTab({
 }: {
   databaseId: string | undefined;
   instanceId: string | undefined;
-  query: ReturnType<typeof useGetViewDependenciesQuery>;
+  query: ReturnType<typeof useListViewDependenciesQuery>;
 }) {
   if (query.error) {
     return (
@@ -823,7 +823,7 @@ function MaterializedViewTabs({
   constraintsQuery: ReturnType<typeof useListTableConstraintsQuery>;
   copyableDefinition: string;
   databaseId: string | undefined;
-  dependenciesQuery: ReturnType<typeof useGetViewDependenciesQuery>;
+  dependenciesQuery: ReturnType<typeof useListViewDependenciesQuery>;
   grid: ReactNode;
   indexesQuery: ReturnType<typeof useListTableIndexesQuery>;
   instanceId: string | undefined;
@@ -925,7 +925,7 @@ function MaterializedViewSurface({
   constraintsQuery: ReturnType<typeof useListTableConstraintsQuery>;
   copyableDefinition: string;
   databaseId: string | undefined;
-  dependenciesQuery: ReturnType<typeof useGetViewDependenciesQuery>;
+  dependenciesQuery: ReturnType<typeof useListViewDependenciesQuery>;
   grid: ReactNode;
   indexes: readonly TableIndex[];
   indexesQuery: ReturnType<typeof useListTableIndexesQuery>;
@@ -997,7 +997,7 @@ function MaterializedViewDetail({
     relationInput,
     MATERIALIZED_METADATA_QUERY_OPTIONS
   );
-  const dependenciesQuery = useGetViewDependenciesQuery(view.name);
+  const dependenciesQuery = useListViewDependenciesQuery(view.name);
   const indexes = indexesQuery.data?.indexes ?? [];
   const readiness = getConcurrentRefreshReadiness({
     indexes,

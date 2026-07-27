@@ -19,11 +19,11 @@ export const listViews = ViewService.method.listViews;
 export const getView = ViewService.method.getView;
 
 /**
- * Gets relations used by a view and relations that depend on it.
+ * Lists direct relation dependencies for a view.
  *
- * @generated from rpc querylane.console.v1alpha1.ViewService.GetViewDependencies
+ * @generated from rpc querylane.console.v1alpha1.ViewService.ListViewDependencies
  */
-export const getViewDependencies = ViewService.method.getViewDependencies;
+export const listViewDependencies = ViewService.method.listViewDependencies;
 
 /**
  * Refreshes a materialized view.

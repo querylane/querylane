@@ -91,9 +91,9 @@ func (s *Service) GetView(ctx context.Context, req *connect.Request[v1alpha1.Get
 	}), nil
 }
 
-// GetViewDependencies returns direct upstream and downstream relations.
-func (s *Service) GetViewDependencies(ctx context.Context, req *connect.Request[v1alpha1.GetViewDependenciesRequest]) (*connect.Response[v1alpha1.GetViewDependenciesResponse], error) {
-	viewRes, connErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseViewName)
+// ListViewDependencies returns direct upstream and downstream relations.
+func (s *Service) ListViewDependencies(ctx context.Context, req *connect.Request[v1alpha1.ListViewDependenciesRequest]) (*connect.Response[v1alpha1.ListViewDependenciesResponse], error) {
+	viewRes, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseViewName)
 	if connErr != nil {
 		return nil, connErr
 	}
@@ -101,7 +101,7 @@ func (s *Service) GetViewDependencies(ctx context.Context, req *connect.Request[
 	dependencies, err := s.catalog.ListViewDependencies(ctx, viewRes)
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: "get_view_dependencies",
+			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: "list_view_dependencies",
 		})
 	}
 
@@ -110,7 +110,7 @@ func (s *Service) GetViewDependencies(ctx context.Context, req *connect.Request[
 		pbDependencies = append(pbDependencies, convertDependencyToProto(dependency, viewRes))
 	}
 
-	return connect.NewResponse(&v1alpha1.GetViewDependenciesResponse{
+	return connect.NewResponse(&v1alpha1.ListViewDependenciesResponse{
 		Dependencies: pbDependencies,
 	}), nil
 }
