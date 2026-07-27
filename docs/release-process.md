@@ -63,19 +63,33 @@ required by the `embed_frontend` build tag.
 
 ## Rerun artifact publishing
 
+If a Release workflow run fails after pushing its tag, rerun the failed jobs in
+that workflow. On retries, the release job verifies that the expected tag still
+points at the workflow commit, restores the exact Changesets notes, and resumes
+both artifact and stable Docker publishing. Replaying an older release restores
+its versioned image without moving `latest` back from the newest semver tag.
+
 Run the `_release-artifacts` workflow manually from the default branch with an
 existing `vX.Y.Z` tag. Existing assets are replaced, making partial-upload
-recovery safe.
+recovery safe when only the downloadable files need rebuilding. The workflow
+requires the GitHub Release to exist first so GoReleaser cannot create a release
+with a different body.
 
-If the tag exists but release creation failed:
+If the GitHub Release must be created manually, extract the matching Changesets
+section rather than generating different notes:
 
 ```sh
-gh release create vX.Y.Z --verify-tag --generate-notes
-gh workflow run _release-artifacts.yml -f tag=vX.Y.Z
+tag=vX.Y.Z
+version="${tag#v}"
+notes_file="$(mktemp)"
+bun scripts/extract-release-notes.ts "$version" frontend/CHANGELOG.md > "$notes_file"
+gh release create "$tag" --verify-tag --title "$tag" --notes-file "$notes_file"
+rm "$notes_file"
+gh workflow run _release-artifacts.yml -f tag="$tag"
 ```
 
-The stable Docker publisher has no manual dispatch entry point. If its job
-started and failed, rerun the failed jobs in the original Release workflow run.
+The stable Docker publisher has no manual dispatch entry point; recover it by
+rerunning the original Release workflow.
 
 Artifact reruns are intended for tags created after this pipeline was
 introduced; the historical `v0.1.0` source does not contain the required

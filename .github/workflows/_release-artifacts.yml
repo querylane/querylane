@@ -2,7 +2,6 @@ name: _release-artifacts
 
 env:
   BUN_VERSION: &bun_version 1.3.14
-  GORELEASER_VERSION: &goreleaser_version v2.17.1
 
 on:
   workflow_call:
@@ -17,6 +16,10 @@ on:
         description: "Existing release tag to rebuild."
         type: string
         required: true
+
+concurrency:
+  group: release-artifacts-${{ inputs.tag }}
+  cancel-in-progress: false
 
 # The workflow_dispatch entry point needs write access. Reusable-workflow
 # callers must grant the same permission because called workflows cannot
@@ -48,11 +51,21 @@ jobs:
         with:
           bun-version: *bun_version
 
+      - name: Verify GitHub Release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            echo "::error::Create GitHub Release $TAG with exact Changesets notes before publishing artifacts."
+            exit 1
+          fi
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7.2.3
         with:
           distribution: goreleaser
-          version: *goreleaser_version
+          version-file: .tool-versions
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ github.token }}

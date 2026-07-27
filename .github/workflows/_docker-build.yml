@@ -28,6 +28,10 @@ on:
         description: "Push to GHCR. False builds only (validation)."
         type: boolean
         default: true
+      publish_latest:
+        description: "Publish the rolling latest tag for a versioned release."
+        type: boolean
+        default: true
       dockerfile:
         description: "Dockerfile to build."
         type: string
@@ -65,7 +69,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.0
         with:
+          fetch-tags: true
           persist-credentials: false
+
+      - name: Resolve release channel
+        id: release-channel
+        if: inputs.version != ''
+        env:
+          PUBLISH_LATEST: ${{ inputs.publish_latest }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          publish_latest=false
+          if [ "$PUBLISH_LATEST" = "true" ]; then
+            publish_latest="$(bash scripts/is-latest-release.sh "$VERSION")"
+          fi
+          echo "publish_latest=$publish_latest" >> "$GITHUB_OUTPUT"
 
       - name: Resolve Querylane build arguments
         id: build-args
@@ -93,7 +112,7 @@ jobs:
             type=raw,value=${{ inputs.rolling_tag }},enable=${{ inputs.version == '' }}
             type=sha,prefix=${{ inputs.sha_prefix }},enable=${{ inputs.version == '' }}
             type=raw,value=${{ inputs.version }},enable=${{ inputs.version != '' }}
-            type=raw,value=latest,enable=${{ inputs.version != '' }}
+            type=raw,value=latest,enable=${{ inputs.version != '' && steps.release-channel.outputs.publish_latest == 'true' }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.2.0

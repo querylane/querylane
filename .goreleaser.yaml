@@ -31,10 +31,9 @@ builds:
     ldflags:
       - >-
         -s -w
-        -X main.version={{ .Version }}
-        -X github.com/querylane/querylane/backend/service/console.Version={{ .Version }}
-        -X github.com/querylane/querylane/backend/service/console.GitCommit={{ .ShortCommit }}
-        -X github.com/querylane/querylane/backend/service/console.BuiltAt={{ .CommitDate }}
+        -X github.com/querylane/querylane/backend/buildstamp.Version={{ .Version }}
+        -X github.com/querylane/querylane/backend/buildstamp.GitCommit={{ .ShortCommit }}
+        -X github.com/querylane/querylane/backend/buildstamp.BuiltAt={{ .CommitDate }}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:
@@ -53,3 +52,6 @@ checksum:
 release:
   mode: keep-existing
   replace_existing_artifacts: true
+
+changelog:
+  disable: true

@@ -11,6 +11,7 @@ on:
       - .github/workflows/scripts-ci.yml
       - biome.jsonc
       - bun.lock
+      - docs/release-process.md
       - package.json
       - scripts/**/*.ts
       - tsconfig.scripts.json
