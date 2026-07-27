@@ -60,6 +60,7 @@ const ZOOM_STEP = 0.15;
 const ZOOM_PERCENT_FACTOR = 100;
 const EDGE_ACTIVE_WIDTH = 2;
 const EDGE_DEFAULT_WIDTH = 1.5;
+const DENSE_MAP_NODE_THRESHOLD = 20;
 
 const EDGE_FILTERS: {
   description: string;
@@ -98,6 +99,14 @@ const DEFAULT_EDGE_VISIBILITY = {
   direct: true,
   member: true,
   owner: true,
+  public: true,
+} satisfies Record<RolesAccessMapEdgeTone, boolean>;
+
+const DENSE_EDGE_VISIBILITY = {
+  default: true,
+  direct: false,
+  member: false,
+  owner: false,
   public: true,
 } satisfies Record<RolesAccessMapEdgeTone, boolean>;
 
@@ -331,13 +340,36 @@ function AccessFiltersPopover({
   showBuiltInRoles: boolean;
 }) {
   const builtInRolesSwitchId = useId();
+  const hiddenEdgeCount = EDGE_FILTERS.filter(
+    (filter) => !edgeVisibility[filter.tone]
+  ).length;
   return (
     <Popover>
       <PopoverTrigger
         render={
-          <Button size="sm" type="button" variant="outline">
+          <Button
+            aria-label={
+              hiddenEdgeCount > 0
+                ? `View, ${hiddenEdgeCount} ${
+                    hiddenEdgeCount === 1 ? "filter" : "filters"
+                  } hidden`
+                : undefined
+            }
+            className={hiddenEdgeCount > 0 ? "min-w-24" : undefined}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
             <SlidersHorizontal className="size-3.5" />
             View
+            {hiddenEdgeCount > 0 ? (
+              <span
+                aria-hidden="true"
+                className="rounded-full bg-muted px-1.5 font-mono text-[10px] text-muted-foreground"
+              >
+                {hiddenEdgeCount}
+              </span>
+            ) : null}
           </Button>
         }
       />
@@ -404,6 +436,34 @@ function AccessFiltersPopover({
   );
 }
 
+function useAdaptiveEdgeVisibility({
+  isLoading,
+  nodeCount,
+}: {
+  isLoading: boolean;
+  nodeCount: number;
+}) {
+  const adaptiveVisibility =
+    nodeCount >= DENSE_MAP_NODE_THRESHOLD
+      ? DENSE_EDGE_VISIBILITY
+      : DEFAULT_EDGE_VISIBILITY;
+  const [awaitingInitialLoad, setAwaitingInitialLoad] = useState(isLoading);
+  const [edgeVisibility, setEdgeVisibility] =
+    useState<Record<RolesAccessMapEdgeTone, boolean>>(adaptiveVisibility);
+
+  if (awaitingInitialLoad && !isLoading) {
+    setAwaitingInitialLoad(false);
+    setEdgeVisibility(adaptiveVisibility);
+  }
+
+  function toggleEdgeTone(tone: RolesAccessMapEdgeTone, visible: boolean) {
+    setAwaitingInitialLoad(false);
+    setEdgeVisibility((current) => ({ ...current, [tone]: visible }));
+  }
+
+  return { edgeVisibility, toggleEdgeTone };
+}
+
 function RolesAccessMapCanvas({
   builtInRoleCount,
   failedRequestCount,
@@ -425,9 +485,13 @@ function RolesAccessMapCanvas({
   selectedNodeId: string | null;
   showBuiltInRoles: boolean;
 }) {
+  const nodeCount = model.roles.length + model.objects.length;
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [edgeVisibility, setEdgeVisibility] = useState(DEFAULT_EDGE_VISIBILITY);
+  const { edgeVisibility, toggleEdgeTone } = useAdaptiveEdgeVisibility({
+    isLoading,
+    nodeCount,
+  });
   const viewportRef = useRef<HTMLDivElement>(null);
   const height = canvasHeight(model);
   const roleIndexById = new Map(
@@ -465,10 +529,6 @@ function RolesAccessMapCanvas({
     const widthZoom = viewportWidth / CANVAS_WIDTH;
     const heightZoom = viewportHeight > 0 ? viewportHeight / height : MAX_ZOOM;
     setZoom(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, widthZoom, heightZoom)));
-  }
-
-  function toggleEdgeTone(tone: RolesAccessMapEdgeTone, visible: boolean) {
-    setEdgeVisibility((current) => ({ ...current, [tone]: visible }));
   }
 
   function selectNode(nodeId: string) {
