@@ -2809,6 +2809,17 @@ test("data explorer table policies explain RLS composition", async () => {
     .element()
     .getBoundingClientRect().height;
   expect(pageSizeHeight).toBeGreaterThanOrEqual(28);
+  const paginationBox = page
+    .getByRole("group", { name: "Policies pagination" })
+    .element()
+    .getBoundingClientRect();
+  const pageSizeBox = page
+    .getByRole("combobox", { name: "Rows per page" })
+    .element()
+    .getBoundingClientRect();
+  expect(pageSizeBox.left).toBeGreaterThan(
+    paginationBox.left + paginationBox.width / 2
+  );
   expect(
     page
       .getByRole("button", { name: "Previous policies page" })

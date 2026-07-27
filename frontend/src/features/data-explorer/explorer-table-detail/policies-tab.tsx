@@ -364,7 +364,7 @@ function PoliciesTab({
       ) : null}
       <fieldset
         aria-label="Policies pagination"
-        className="m-0 flex min-h-8 min-w-0 flex-wrap items-center gap-2 border-0 p-0 text-muted-foreground text-xs"
+        className="m-0 flex min-h-8 min-w-0 flex-wrap items-center justify-end gap-2 border-0 p-0 text-muted-foreground text-xs"
       >
         <span className="text-[11px]">Rows per page</span>
         <Select
@@ -418,10 +418,7 @@ function PoliciesTab({
             </span>
           </>
         ) : null}
-        <nav
-          aria-label="Policy pages"
-          className="ml-auto flex items-center gap-2"
-        >
+        <nav aria-label="Policy pages" className="flex items-center gap-2">
           <Button
             aria-label="Previous policies page"
             className="size-7 p-0"
