@@ -13,19 +13,9 @@ import (
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/querylane/querylane/backend/buildstamp"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
-)
-
-// Build-time variables injected via -ldflags.
-var (
-	Version   string
-	GitCommit string
-	BuiltAt   string
-
-	// GitBranch is the git branch this binary was built from.
-	// This is populated at build time via -ldflags.
-	GitBranch = "unknown"
 )
 
 type buildStamp struct {
@@ -117,10 +107,10 @@ func (s *Service) getDatabaseStatus(ctx context.Context) *v1alpha1.AppDatabaseSt
 // from the embedded build information, and includes the git branch from build-time injection.
 func extractBuildInfo(ctx context.Context, buildInfo *debug.BuildInfo) *v1alpha1.BuildInfo {
 	return extractBuildInfoFrom(ctx, buildInfo, buildStamp{
-		version:   Version,
-		gitCommit: GitCommit,
-		gitBranch: GitBranch,
-		builtAt:   BuiltAt,
+		version:   buildstamp.Version,
+		gitCommit: buildstamp.GitCommit,
+		gitBranch: buildstamp.GitBranch,
+		builtAt:   buildstamp.BuiltAt,
 	})
 }
 

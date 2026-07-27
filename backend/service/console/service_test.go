@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/querylane/querylane/backend/buildstamp"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
@@ -151,4 +152,37 @@ func TestExtractBuildInfoPrefersStampedMetadata(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExtractBuildInfoUsesSharedBuildStamp(t *testing.T) { //nolint:paralleltest // mutates linker-stamped package variables
+	if !testing.Short() {
+		t.Skip("unit test: run with -short")
+	}
+
+	original := buildStamp{
+		version:   buildstamp.Version,
+		gitCommit: buildstamp.GitCommit,
+		gitBranch: buildstamp.GitBranch,
+		builtAt:   buildstamp.BuiltAt,
+	}
+
+	t.Cleanup(func() {
+		buildstamp.Version = original.version
+		buildstamp.GitCommit = original.gitCommit
+		buildstamp.GitBranch = original.gitBranch
+		buildstamp.BuiltAt = original.builtAt
+	})
+
+	buildstamp.Version = "1.2.3"
+	buildstamp.GitCommit = "abcdef1"
+	buildstamp.GitBranch = "main"
+	buildstamp.BuiltAt = "2026-07-26T12:34:56Z"
+
+	got := extractBuildInfo(context.Background(), nil)
+
+	assert.Equal(t, "1.2.3", got.GetVersion())
+	assert.Equal(t, "abcdef1", got.GetGitCommit())
+	assert.Equal(t, "main", got.GetGitBranch())
+	require.NotNil(t, got.GetBuiltAt())
+	assert.Equal(t, time.Date(2026, time.July, 26, 12, 34, 56, 0, time.UTC), got.GetBuiltAt().AsTime())
 }

@@ -2,24 +2,16 @@ name: release-artifacts-ci
 
 env:
   BUN_VERSION: &bun_version 1.3.14
-  GORELEASER_VERSION: &goreleaser_version v2.17.1
 
 on:
+  # GoReleaser compiles the complete backend and embedded frontend for five
+  # targets, so any product-source change can break the release matrix.
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - .goreleaser.yaml
-      - .github/workflows/_release-artifacts.yml
-      - .github/workflows/release-artifacts-ci.yml
-      - .github/workflows/release.yml
-      - .github/workflows/_docker-build.yml
-      - Dockerfile
-      - backend/main.go
-      - backend/service/console/**
-      - scripts/build-frontend-for-embed.sh
-      - scripts/extract-release-notes.test.ts
-      - scripts/extract-release-notes.ts
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
 
 concurrency:
   group: release-artifacts-ci-${{ github.ref }}
@@ -52,14 +44,14 @@ jobs:
         with:
           bun-version: *bun_version
 
-      - name: Test release notes
-        run: bun test scripts/extract-release-notes.test.ts
+      - name: Test release workflows
+        run: bun test scripts/extract-release-notes.test.ts scripts/release-workflow.test.ts
 
       - name: Build snapshot
         uses: goreleaser/goreleaser-action@v7.2.3
         with:
           distribution: goreleaser
-          version: *goreleaser_version
+          version-file: .tool-versions
           args: release --snapshot --clean
 
       - name: Verify snapshot

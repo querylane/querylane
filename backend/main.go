@@ -3,12 +3,11 @@ package main
 import (
 	"github.com/alecthomas/kong"
 
+	"github.com/querylane/querylane/backend/buildstamp"
 	"github.com/querylane/querylane/backend/cmd/migrate"
 	"github.com/querylane/querylane/backend/cmd/server"
 	"github.com/querylane/querylane/backend/config"
 )
-
-var version = "dev"
 
 type CLI struct {
 	config.Globals
@@ -25,7 +24,7 @@ func main() {
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{Compact: false}),
 		kong.Vars{
-			"version": version,
+			"version": buildstamp.Version,
 		},
 	)
 	err := ctx.Run(&cli.Globals)
