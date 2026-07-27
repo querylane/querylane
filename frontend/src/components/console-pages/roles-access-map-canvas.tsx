@@ -355,6 +355,7 @@ function AccessFiltersPopover({
                   } hidden`
                 : undefined
             }
+            className={hiddenEdgeCount > 0 ? "min-w-24" : undefined}
             size="sm"
             type="button"
             variant="outline"

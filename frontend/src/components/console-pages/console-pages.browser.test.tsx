@@ -193,7 +193,7 @@ function roleMembership(roleName: string) {
   };
 }
 
-function setRolesAccessMapDesignFixture() {
+function setRolesAccessMapDesignFixture(extraDirectGrantCount = 0) {
   // Mirrors the unzipped design source: ROLES screen `AMAP_ROLES`,
   // `AMAP_OBJS`, and `AMAP_EDGES`.
   roleApiState.roles = [
@@ -316,6 +316,13 @@ function setRolesAccessMapDesignFixture() {
             schemaName: "audit",
             withGrantOption: false,
           },
+          ...Array.from({ length: extraDirectGrantCount }, (_, index) => ({
+            objectName: "",
+            objectType: GrantObjectType.SCHEMA,
+            privilege: "USAGE",
+            schemaName: `extra_${index}`,
+            withGrantOption: false,
+          })),
         ],
         ownedObjects: [],
         roleId: "app_readonly",
@@ -716,6 +723,35 @@ test("console roles access map matches the design source", async () => {
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "console-roles-access-map-selected-node"
   );
+});
+
+test("console roles dense access map starts with reduced edge filters", async () => {
+  setRolesAccessMapDesignFixture(5);
+  renderConsoleSurface(<InstanceRolesPage instanceId="prod" tab="map" />);
+
+  const viewButton = page.getByRole("button", {
+    name: "View, 3 filters hidden",
+  });
+  await expect.element(viewButton).toBeVisible();
+  await expect
+    .element(viewButton)
+    .toMatchScreenshot("console-roles-access-map-dense-trigger");
+
+  await viewButton.click();
+  for (const [name, checked] of Object.entries({
+    "Default privileges": "true",
+    "Direct grants": "false",
+    Members: "false",
+    "Owned objects": "false",
+    "Public grants": "true",
+  })) {
+    expect(
+      page.getByRole("switch", { name }).element().getAttribute("aria-checked")
+    ).toBe(checked);
+  }
+  await expect
+    .element(page.getByRole("dialog", { name: "Access filters" }))
+    .toMatchScreenshot("console-roles-access-map-dense-filters");
 });
 
 test("console roles access map keeps partial results visibly qualified", async () => {
