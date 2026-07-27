@@ -58,6 +58,36 @@ const REPLICATION_ROW_NAME = /Replication/;
 const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/;
 const TIMESCALEDB_BUTTON_NAME = /timescaledb/i;
 
+async function getMarkerCenterPixels(marker: HTMLElement) {
+  const screenshot = await page
+    .elementLocator(marker)
+    .screenshot({ base64: true, save: false });
+  const base64 =
+    typeof screenshot === "string" ? screenshot : screenshot.base64;
+  const image = new Image();
+  image.src = base64.startsWith("data:")
+    ? base64
+    : `data:image/png;base64,${base64}`;
+  await image.decode();
+
+  const canvas = document.createElement("canvas");
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Expected a 2D canvas context");
+  }
+  context.drawImage(image, 0, 0);
+
+  const centerX = Math.floor(image.width / 2);
+  const centerY = Math.floor(image.height / 2);
+  const offsetX = Math.min(image.width - 1, centerX + 2);
+  return {
+    center: Array.from(context.getImageData(centerX, centerY, 1, 1).data),
+    offset: Array.from(context.getImageData(offsetX, centerY, 1, 1).data),
+  };
+}
+
 const state = vi.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
   databaseQuery: {} as QueryState<GetDatabaseResponse>,
@@ -1100,6 +1130,44 @@ test("backend instance activity matches the live sessions redesign", async () =>
   await expect.element(page.getByText("1h 0m ago")).toBeVisible();
   await expect.element(page.getByText("Lock · transactionid")).toBeVisible();
   await expect.element(page.getByText("blocked by · pid 4211")).toBeVisible();
+  const timeline = inspector.element().querySelector("ol");
+  if (!timeline) {
+    throw new Error("Missing session timeline");
+  }
+  const timelineRect = timeline.getBoundingClientRect();
+  const timelineStyle = getComputedStyle(timeline);
+  const lineCenter =
+    timelineRect.left + Number.parseFloat(timelineStyle.borderLeftWidth) / 2;
+  let firstMarker: HTMLElement | null = null;
+  for (const item of timeline.children) {
+    const marker = item.querySelector<HTMLElement>('[aria-hidden="true"]');
+    if (!marker) {
+      throw new Error("Missing session timeline marker");
+    }
+    firstMarker ??= marker;
+    const itemRect = item.getBoundingClientRect();
+    const markerRect = marker.getBoundingClientRect();
+    expect(
+      Math.abs(markerRect.left + markerRect.width / 2 - lineCenter)
+    ).toBeLessThanOrEqual(0.1);
+    expect(
+      Math.abs(
+        markerRect.top +
+          markerRect.height / 2 -
+          (itemRect.top + itemRect.height / 2)
+      )
+    ).toBeLessThanOrEqual(0.1);
+  }
+  if (!firstMarker) {
+    throw new Error("Missing session timeline markers");
+  }
+  const markerPixels = await getMarkerCenterPixels(firstMarker);
+  const maxMarkerPixelDifference = Math.max(
+    ...markerPixels.center.map((channel, index) =>
+      Math.abs(channel - (markerPixels.offset[index] ?? 0))
+    )
+  );
+  expect(maxMarkerPixelDifference).toBeLessThanOrEqual(1);
   await expect
     .element(page.getByRole("button", { name: "Terminate session…" }))
     .not.toBeInTheDocument();
