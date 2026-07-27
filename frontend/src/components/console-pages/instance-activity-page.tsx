@@ -317,7 +317,7 @@ function SessionTimelineList({ row }: { row: ActivitySessionRow }) {
           <span
             aria-hidden="true"
             className={cn(
-              "absolute top-1 -left-[21px] size-2 rounded-full",
+              "absolute top-1/2 -left-[20.5px] size-2 -translate-y-1/2 rounded-full",
               item.hot ? "bg-amber-500" : "bg-border"
             )}
           />

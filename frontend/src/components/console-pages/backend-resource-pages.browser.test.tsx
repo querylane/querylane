@@ -1100,6 +1100,32 @@ test("backend instance activity matches the live sessions redesign", async () =>
   await expect.element(page.getByText("1h 0m ago")).toBeVisible();
   await expect.element(page.getByText("Lock · transactionid")).toBeVisible();
   await expect.element(page.getByText("blocked by · pid 4211")).toBeVisible();
+  const timeline = inspector.element().querySelector("ol");
+  if (!timeline) {
+    throw new Error("Missing session timeline");
+  }
+  const timelineRect = timeline.getBoundingClientRect();
+  const timelineStyle = getComputedStyle(timeline);
+  const lineCenter =
+    timelineRect.left + Number.parseFloat(timelineStyle.borderLeftWidth) / 2;
+  for (const item of timeline.children) {
+    const marker = item.querySelector<HTMLElement>('[aria-hidden="true"]');
+    if (!marker) {
+      throw new Error("Missing session timeline marker");
+    }
+    const itemRect = item.getBoundingClientRect();
+    const markerRect = marker.getBoundingClientRect();
+    expect(
+      Math.abs(markerRect.left + markerRect.width / 2 - lineCenter)
+    ).toBeLessThanOrEqual(0.1);
+    expect(
+      Math.abs(
+        markerRect.top +
+          markerRect.height / 2 -
+          (itemRect.top + itemRect.height / 2)
+      )
+    ).toBeLessThanOrEqual(0.1);
+  }
   await expect
     .element(page.getByRole("button", { name: "Terminate session…" }))
     .not.toBeInTheDocument();
