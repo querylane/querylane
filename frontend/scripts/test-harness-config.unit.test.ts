@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { CI_REPORTERS } from "../e2e/reporters";
 import packageJson from "../package.json" with { type: "json" };
 import browserAllConfig from "../vitest.browser.all.config";
 import browserConfig from "../vitest.browser.config";
@@ -18,8 +19,7 @@ import unitConfig from "../vitest.unit.config";
 
 const { scripts } = packageJson;
 const VITEST_BETA_VERSION_PATTERN = /^5\.0\.0-beta\.\d+$/u;
-const PLAYWRIGHT_PRERELEASE_VERSION_PATTERN =
-  /^1\.62\.0-(alpha|beta|rc)[\w.-]*$/u;
+const PLAYWRIGHT_VERSION = "1.62.0";
 
 function getAllowWrite(api: unknown) {
   if (
@@ -125,10 +125,24 @@ describe("test harness config", () => {
     expect(devDependencies["@vitest/browser-playwright"]).toBe(vitestVersion);
     expect(devDependencies["@vitest/coverage-v8"]).toBe(vitestVersion);
     expect(devDependencies["@vitest/ui"]).toBe(vitestVersion);
+  });
+
+  test("pins the stable Playwright package set", () => {
+    const { devDependencies } = packageJson;
+
     expect(devDependencies.playwright).toBe(devDependencies["playwright-core"]);
-    expect(devDependencies.playwright).toMatch(
-      PLAYWRIGHT_PRERELEASE_VERSION_PATTERN
-    );
+    expect(devDependencies.playwright).toBe(PLAYWRIGHT_VERSION);
+  });
+
+  test("groups files in the CI HTML report", () => {
+    expect(CI_REPORTERS).toContainEqual([
+      "html",
+      {
+        mergeFiles: true,
+        open: "never",
+        outputFolder: "playwright-report",
+      },
+    ]);
   });
 
   test("prebundles direct browser-test dependencies", () => {

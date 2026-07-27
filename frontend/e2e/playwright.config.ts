@@ -4,6 +4,7 @@ import {
   type PlaywrightTestConfig,
 } from "playwright/test";
 import { e2eEnv } from "./env";
+import { CI_REPORTERS } from "./reporters";
 
 const DEFAULT_PORT = 4173;
 const EXPECT_TIMEOUT_MS = 5000;
@@ -53,14 +54,7 @@ export default defineConfig({
   ] satisfies PlaywrightTestConfig["projects"],
   // Keep CI logs readable: list prints test names instead of dot progress,
   // GitHub annotations surface failures, and HTML/JSON keep full artifacts off-log.
-  reporter: e2eEnv.CI
-    ? [
-        ["list"],
-        ["github"],
-        ["html", { open: "never", outputFolder: "playwright-report" }],
-        ["json", { outputFile: "test-results/results.json" }],
-      ]
-    : [["./llm-reporter.ts"]],
+  reporter: e2eEnv.CI ? CI_REPORTERS : [["./llm-reporter.ts"]],
   retries: 0,
   snapshotPathTemplate:
     "{testDir}/__screenshots__/{testFileBaseName}/{projectName}/{arg}{ext}",

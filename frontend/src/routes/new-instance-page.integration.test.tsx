@@ -1,5 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { Code, ConnectError, createRouterTransport } from "@connectrpc/connect";
+import { Code, ConnectError } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -15,6 +15,7 @@ import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 import { InstanceService } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import { CreateInstancePageInner } from "@/routes/new-instance-page";
 import { createTestQueryClient } from "@/test/query-client";
+import { createTestRouterTransport } from "@/test/router-transport";
 
 const routeState = vi.hoisted(() => ({
   navigate: vi.fn(async () => undefined),
@@ -64,7 +65,7 @@ function renderCreateInstancePage({
   testInstanceConnection?: () => Promise<Record<string, never>>;
 }) {
   const queryClient = createTestQueryClient();
-  const transport = createRouterTransport(({ service }) => {
+  const transport = createTestRouterTransport(({ service }) => {
     service(InstanceService, {
       createInstance,
       testInstanceConnection,

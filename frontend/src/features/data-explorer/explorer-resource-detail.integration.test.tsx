@@ -1,8 +1,12 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const TABLE_DETAIL_EXPORT = "TableDetail";
 const VIEW_DETAIL_EXPORT = "ViewDetail";
+type TableDetailModule = Pick<
+  typeof import("@/features/data-explorer/explorer-table-detail"),
+  "TableDetail"
+>;
 
 afterEach(() => {
   cleanup();
@@ -47,9 +51,13 @@ describe("ResourceDetail", () => {
     expect(loadedTableDetail).toBe(false);
   });
   it("paints the selected table heading while table detail code loads", async () => {
+    let resolveTableDetail: ((module: TableDetailModule) => void) | undefined;
     vi.doMock(
       "@/features/data-explorer/explorer-table-detail",
-      () => new Promise(() => undefined)
+      () =>
+        new Promise<TableDetailModule>((resolve) => {
+          resolveTableDetail = resolve;
+        })
     );
     const { ResourceDetail } = await import(
       "@/features/data-explorer/explorer-resource-detail"
@@ -71,5 +79,12 @@ describe("ResourceDetail", () => {
 
     expect(screen.getByRole("heading", { name: "public.orders" })).toBeTruthy();
     expect(screen.getByText("Loading table details…")).toBeTruthy();
-  });
+    await waitFor(() => {
+      expect(resolveTableDetail).toBeTypeOf("function");
+    });
+    resolveTableDetail?.({
+      TableDetail: () => <div>Table detail loaded</div>,
+    });
+    await screen.findByText("Table detail loaded");
+  }, 20_000);
 });

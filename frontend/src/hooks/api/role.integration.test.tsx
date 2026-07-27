@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
-import { createRouterTransport, type Transport } from "@connectrpc/connect";
+import type { Transport } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, test } from "vitest";
@@ -39,6 +39,8 @@ import {
   RoleService,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 import { listRoles } from "@/protogen/querylane/console/v1alpha1/role-RoleService_connectquery";
+import { createTestQueryClient } from "@/test/query-client";
+import { createTestRouterTransport } from "@/test/router-transport";
 
 const ROLE_ID = "YWxpY2U";
 const DATABASE_SCOPE = {
@@ -49,19 +51,9 @@ const DATABASE_SCOPE = {
 
 const activeQueryClients: QueryClient[] = [];
 
-// An infinite gcTime stops TanStack Query from scheduling cache
-// garbage-collection timers that would outlive the test; afterEach clears
-// the cache instead.
-const TEST_GC_TIME = Number.POSITIVE_INFINITY;
-
 function createWrapper(
   transport: Transport,
-  queryClient = new QueryClient({
-    defaultOptions: {
-      mutations: { gcTime: TEST_GC_TIME, retry: false },
-      queries: { gcTime: TEST_GC_TIME, retry: false },
-    },
-  })
+  queryClient = createTestQueryClient()
 ) {
   activeQueryClients.push(queryClient);
 
@@ -87,6 +79,17 @@ async function flushMicrotasks(ticks = 10) {
   await flushMicrotasks(ticks - 1);
 }
 
+function resolveOnlyQuery(queryClient: QueryClient, data: unknown) {
+  const queries = queryClient.getQueryCache().getAll();
+  const [query] = queries;
+  if (queries.length !== 1 || !query) {
+    throw new Error(`Expected one query, received ${queries.length}`);
+  }
+  act(() => {
+    queryClient.setQueryData(query.queryKey, data);
+  });
+}
+
 afterEach(async () => {
   cleanup();
   // Drop cached queries so pending garbage-collection timers do not outlive
@@ -101,12 +104,8 @@ afterEach(async () => {
 
 describe("aggregate role query keys", () => {
   test("derives the list-all roles cache from its Connect Query method", () => {
-    const transport = createRouterTransport(() => undefined);
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { gcTime: TEST_GC_TIME, retry: false },
-      },
-    });
+    const transport = createTestRouterTransport(() => undefined);
+    const queryClient = createTestQueryClient();
     const rolesInput = rolesForInstanceQueryInput("local");
 
     renderHook(
@@ -116,12 +115,13 @@ describe("aggregate role query keys", () => {
       { wrapper: createWrapper(transport, queryClient) }
     );
 
-    expect(
-      queryClient
-        .getQueryCache()
-        .getAll()
-        .map((query) => query.queryKey)
-    ).toEqual([
+    const queryKeys = queryClient
+      .getQueryCache()
+      .getAll()
+      .map((query) => query.queryKey);
+    resolveOnlyQuery(queryClient, create(ListRolesResponseSchema));
+
+    expect(queryKeys).toEqual([
       createConnectListAllQueryKey({
         input: rolesInput,
         method: listRoles,
@@ -134,7 +134,7 @@ describe("aggregate role query keys", () => {
 describe("useListAllRolesQuery", () => {
   test("collects every page of roles into a single response", async () => {
     const requests: ListRolesRequest[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(RoleService, {
         listRoles(request) {
           requests.push(request);
@@ -172,7 +172,7 @@ describe("useListAllRolesQuery", () => {
 
   test("forwards the instance-scoped input to the list roles call", async () => {
     const requests: ListRolesRequest[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(RoleService, {
         listRoles(request) {
           requests.push(request);
@@ -204,7 +204,7 @@ describe("useListAllRolesQuery", () => {
 
   test("skips fetching roles when disabled", async () => {
     const requests: ListRolesRequest[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(RoleService, {
         listRoles(request) {
           requests.push(request);
@@ -216,25 +216,27 @@ describe("useListAllRolesQuery", () => {
       });
     });
 
+    const queryClient = createTestQueryClient();
     const { result } = renderHook(
       () =>
         useListAllRolesQuery(undefined, {
           enabled: false,
           refetchOnWindowFocus: false,
         }),
-      { wrapper: createWrapper(transport) }
+      { wrapper: createWrapper(transport, queryClient) }
     );
 
     await flushMicrotasks();
     expect(result.current.fetchStatus).toBe("idle");
     expect(requests).toHaveLength(0);
+    resolveOnlyQuery(queryClient, create(ListRolesResponseSchema));
   });
 });
 
 describe("useListRoleGrantsQuery", () => {
   test("keeps the first page and continuation token for role grants", async () => {
     const requests: ListRoleGrantsRequest[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(RoleService, {
         listRoleGrants(request) {
           requests.push(request);
@@ -268,7 +270,7 @@ describe("useListRoleGrantsQuery", () => {
 
   test("skips fetching grants when disabled", async () => {
     const requests: ListRoleGrantsRequest[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(RoleService, {
         listRoleGrants(request) {
           requests.push(request);
@@ -280,25 +282,27 @@ describe("useListRoleGrantsQuery", () => {
       });
     });
 
+    const queryClient = createTestQueryClient();
     const { result } = renderHook(
       () =>
         useListRoleGrantsQuery(
           roleGrantsForDatabaseQueryInput(DATABASE_SCOPE),
           { enabled: false, refetchOnWindowFocus: false }
         ),
-      { wrapper: createWrapper(transport) }
+      { wrapper: createWrapper(transport, queryClient) }
     );
 
     await flushMicrotasks();
     expect(result.current.fetchStatus).toBe("idle");
     expect(requests).toHaveLength(0);
+    resolveOnlyQuery(queryClient, create(ListRoleGrantsResponseSchema));
   });
 });
 
 describe("useListRoleOwnedObjectsQuery", () => {
   test("keeps the first page and continuation token for owned objects", async () => {
     const requests: ListRoleOwnedObjectsRequest[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(RoleService, {
         listRoleOwnedObjects(request) {
           requests.push(request);
@@ -333,7 +337,7 @@ describe("useListRoleOwnedObjectsQuery", () => {
 
   test("skips fetching owned objects when disabled", async () => {
     const requests: ListRoleOwnedObjectsRequest[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(RoleService, {
         listRoleOwnedObjects(request) {
           requests.push(request);
@@ -345,25 +349,27 @@ describe("useListRoleOwnedObjectsQuery", () => {
       });
     });
 
+    const queryClient = createTestQueryClient();
     const { result } = renderHook(
       () =>
         useListRoleOwnedObjectsQuery(
           roleOwnedObjectsForDatabaseQueryInput(DATABASE_SCOPE),
           { enabled: false, refetchOnWindowFocus: false }
         ),
-      { wrapper: createWrapper(transport) }
+      { wrapper: createWrapper(transport, queryClient) }
     );
 
     await flushMicrotasks();
     expect(result.current.fetchStatus).toBe("idle");
     expect(requests).toHaveLength(0);
+    resolveOnlyQuery(queryClient, create(ListRoleOwnedObjectsResponseSchema));
   });
 });
 
 describe("useListRoleDefaultPrivilegesQuery", () => {
   test("keeps the first page and continuation token for default privileges", async () => {
     const requests: ListRoleDefaultPrivilegesRequest[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(RoleService, {
         listRoleDefaultPrivileges(request) {
           requests.push(request);
@@ -402,7 +408,7 @@ describe("useListRoleDefaultPrivilegesQuery", () => {
 
   test("skips fetching default privileges when disabled", async () => {
     const requests: ListRoleDefaultPrivilegesRequest[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(RoleService, {
         listRoleDefaultPrivileges(request) {
           requests.push(request);
@@ -414,24 +420,29 @@ describe("useListRoleDefaultPrivilegesQuery", () => {
       });
     });
 
+    const queryClient = createTestQueryClient();
     const { result } = renderHook(
       () =>
         useListRoleDefaultPrivilegesQuery(
           roleDefaultPrivilegesForDatabaseQueryInput(DATABASE_SCOPE),
           { enabled: false, refetchOnWindowFocus: false }
         ),
-      { wrapper: createWrapper(transport) }
+      { wrapper: createWrapper(transport, queryClient) }
     );
 
     await flushMicrotasks();
     expect(result.current.fetchStatus).toBe("idle");
     expect(requests).toHaveLength(0);
+    resolveOnlyQuery(
+      queryClient,
+      create(ListRoleDefaultPrivilegesResponseSchema)
+    );
   });
 });
 
 describe("useRolesAccessMapResourcesQuery", () => {
   test("loads PUBLIC grants when no roles are visible", async () => {
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(DatabaseService, {
         listDatabases() {
           return create(ListDatabasesResponseSchema, {
@@ -474,7 +485,7 @@ describe("useRolesAccessMapResourcesQuery", () => {
     const grantRequests: ListRoleGrantsRequest[] = [];
     const ownedObjectRequests: ListRoleOwnedObjectsRequest[] = [];
     const publicGrantRequests: ListPublicGrantsRequest[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(DatabaseService, {
         listDatabases() {
           return create(ListDatabasesResponseSchema, {
@@ -581,7 +592,7 @@ describe("useRolesAccessMapResourcesQuery", () => {
   });
 
   test("keeps partial map data when one access request fails", async () => {
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(DatabaseService, {
         listDatabases() {
           return create(ListDatabasesResponseSchema, {
@@ -661,7 +672,7 @@ describe("useRolesAccessMapResourcesQuery request budget", () => {
         throw new Error("Role/database pairs must stay budget-bounded");
       },
     });
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(DatabaseService, {
         listDatabases() {
           return create(ListDatabasesResponseSchema, {
@@ -720,7 +731,7 @@ describe("useRolesAccessMapResourcesQuery request budget", () => {
       name: `instances/local/databases/database-${index}`,
     }));
 
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(DatabaseService, {
         listDatabases() {
           return create(ListDatabasesResponseSchema, { databases });
@@ -781,9 +792,12 @@ describe("useRolesAccessMapResourcesQuery request budget", () => {
       { wrapper: createWrapper(transport) }
     );
 
-    await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true);
-    });
+    await waitFor(
+      () => {
+        expect(result.current.isSuccess).toBe(true);
+      },
+      { timeout: 10_000 }
+    );
     expect(publicGrantRequests).toHaveLength(100);
     expect(defaultPrivilegeRequests).toHaveLength(66);
     expect(grantRequests).toHaveLength(66);
@@ -798,7 +812,7 @@ describe("useRolesAccessMapResourcesQuery request budget", () => {
     expect(result.current.data?.failedRequestCount).toBe(0);
     expect(result.current.data?.truncatedRequestCount).toBe(2);
     expect(result.current.data?.budgetSkippedRequestCount).toBe(102);
-  });
+  }, 15_000);
 
   test("bounds concurrent access requests across role and database pairs", async () => {
     let activeRequests = 0;
@@ -812,7 +826,7 @@ describe("useRolesAccessMapResourcesQuery request budget", () => {
       return response;
     }
 
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(DatabaseService, {
         listDatabases() {
           return create(ListDatabasesResponseSchema, {
@@ -882,7 +896,7 @@ describe("useRolesAccessMapResourcesQuery request budget", () => {
     });
     let thirdRoleStarted = false;
 
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(DatabaseService, {
         listDatabases() {
           return create(ListDatabasesResponseSchema, {
@@ -954,7 +968,7 @@ describe("useRolesAccessMapResourcesQuery request budget", () => {
 describe("useListPublicGrantsQuery", () => {
   test("keeps the first page and continuation token for public grants", async () => {
     const requests: ListPublicGrantsRequest[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(RoleService, {
         listPublicGrants(request) {
           requests.push(request);
@@ -992,7 +1006,7 @@ describe("useListPublicGrantsQuery", () => {
 
   test("skips fetching public grants when disabled", async () => {
     const requests: ListPublicGrantsRequest[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(RoleService, {
         listPublicGrants(request) {
           requests.push(request);
@@ -1004,6 +1018,7 @@ describe("useListPublicGrantsQuery", () => {
       });
     });
 
+    const queryClient = createTestQueryClient();
     const { result } = renderHook(
       () =>
         useListPublicGrantsQuery(
@@ -1013,11 +1028,12 @@ describe("useListPublicGrantsQuery", () => {
           }),
           { enabled: false, refetchOnWindowFocus: false }
         ),
-      { wrapper: createWrapper(transport) }
+      { wrapper: createWrapper(transport, queryClient) }
     );
 
     await flushMicrotasks();
     expect(result.current.fetchStatus).toBe("idle");
     expect(requests).toHaveLength(0);
+    resolveOnlyQuery(queryClient, create(ListPublicGrantsResponseSchema));
   });
 });

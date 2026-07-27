@@ -68,8 +68,8 @@
         "@vitest/expect": "5.0.0-beta.6",
         "@vitest/ui": "5.0.0-beta.6",
         "happy-dom": "20.10.6",
-        "playwright": "1.62.0-alpha-2026-07-14",
-        "playwright-core": "1.62.0-alpha-2026-07-14",
+        "playwright": "1.62.0",
+        "playwright-core": "1.62.0",
         "react-doctor": "0.7.8",
         "react-scan": "0.5.7",
         "rsbuild-plugin-devtools-json": "1.0.1",
@@ -2049,9 +2049,9 @@
 
     "pkg-up": ["pkg-up@3.1.0", "", { "dependencies": { "find-up": "^3.0.0" } }, "sha512-nDywThFk1i4BQK4twPQ6TA4RT8bDY96yeuCVBWL3ePARCiEKDRSrNGbFIgUJpLp+XeIR65v8ra7WuJOFUBtkMA=="],
 
-    "playwright": ["playwright@1.62.0-alpha-2026-07-14", "", { "dependencies": { "playwright-core": "1.62.0-alpha-2026-07-14" }, "optionalDependencies": { "fsevents": "2.3.2" }, "bin": { "playwright": "cli.js" } }, "sha512-D/w6xB/ehLorIhuTnjIj5TdG/D2+a5MpSMTqVXsEnzx/d3n+QN5OixveKLTLAYzyiWpveVRR+o1+3SB1+qNZFg=="],
+    "playwright": ["playwright@1.62.0", "", { "dependencies": { "playwright-core": "1.62.0" }, "optionalDependencies": { "fsevents": "2.3.2" }, "bin": { "playwright": "cli.js" } }, "sha512-Z14dG305dgaLu6foB1TXQagFiW8JfSUIUaUuPaKQ6NtBPKF1P/qXcqfh6c6K/icPqdy37JmjbiBXf6JNg6Sylw=="],
 
-    "playwright-core": ["playwright-core@1.62.0-alpha-2026-07-14", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-5UoDF7wsgIjMaMBQT+Qm/OczyHCNamxh2Q+JjS0z8YiM6bpwoeojSGpJ7rwLyI4eLo60pKZYb+c0AqLyUZsfcw=="],
+    "playwright-core": ["playwright-core@1.62.0", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-nsNRyq0r2zsG8AcRHWknc9QRA5XCueC7gWMrs+Gx2tlZn9hcl8zudfh00lhJPY1DE7NmZ6bDsT9g2yey8mXljA=="],
 
     "pngjs": ["pngjs@7.0.0", "", {}, "sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow=="],
 

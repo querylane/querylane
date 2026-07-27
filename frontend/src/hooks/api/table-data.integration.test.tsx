@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { createRouterTransport, type Transport } from "@connectrpc/connect";
+import type { Transport } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
@@ -13,6 +13,7 @@ import {
   TableDataService,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { createTestQueryClient } from "@/test/query-client";
+import { createTestRouterTransport } from "@/test/router-transport";
 
 const activeQueryClients: QueryClient[] = [];
 
@@ -42,7 +43,7 @@ afterEach(async () => {
 describe("useReadRowsQuery", () => {
   test("refetches stale table rows once when the query remounts", async () => {
     const requests: ReadRowsRequest[] = [];
-    const transport = createRouterTransport(({ service }) => {
+    const transport = createTestRouterTransport(({ service }) => {
       service(TableDataService, {
         readRows(readRowsRequest) {
           requests.push(readRowsRequest);
@@ -71,8 +72,9 @@ describe("useReadRowsQuery", () => {
 
     await waitFor(() => {
       expect(requests).toHaveLength(2);
-      expect(secondMount.result.current.fetchStatus).toBe("idle");
+      expect(queryClient.isFetching()).toBe(0);
     });
+    expect(secondMount.result.current.fetchStatus).toBe("idle");
     expect(requests.map(({ name }) => name)).toEqual([
       request.name,
       request.name,
