@@ -109,7 +109,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.2-2d3cb18.0",
-    "@biomejs/biome": "2.5.3",
+    "@biomejs/biome": "2.5.5",
     "@changesets/cli": "2.31.0",
     "@lhci/cli": "0.15.1",
     "@rsbuild/core": "2.1.5",

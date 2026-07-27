@@ -69,24 +69,27 @@ test.each([
     { instanceId: "prod-analytics" },
   ],
   ["gi", "/instances/$instanceId", { instanceId: "prod-analytics" }],
-] as const)("%s navigates to its canonical page", async (sequence, to, params) => {
-  const user = userEvent.setup();
-  render(
-    <KeyboardShortcutsProvider>
-      <SidebarProvider>
-        <AdminKeyboardShortcuts />
-      </SidebarProvider>
-    </KeyboardShortcutsProvider>
-  );
+] as const)(
+  "%s navigates to its canonical page",
+  async (sequence, to, params) => {
+    const user = userEvent.setup();
+    render(
+      <KeyboardShortcutsProvider>
+        <SidebarProvider>
+          <AdminKeyboardShortcuts />
+        </SidebarProvider>
+      </KeyboardShortcutsProvider>
+    );
 
-  await user.keyboard(sequence);
+    await user.keyboard(sequence);
 
-  expect(navigateMock).toHaveBeenCalledWith({
-    params,
-    search: expect.any(Function),
-    to,
-  });
-});
+    expect(navigateMock).toHaveBeenCalledWith({
+      params,
+      search: expect.any(Function),
+      to,
+    });
+  }
+);
 
 test("primary-modifier b toggles the sidebar once", async () => {
   const user = userEvent.setup();

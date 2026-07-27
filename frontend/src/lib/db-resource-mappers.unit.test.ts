@@ -53,18 +53,21 @@ describe("mapInstance", () => {
   test.each([
     Instance_CredentialState.UNREADABLE,
     Instance_CredentialState.KEY_MISSING,
-  ])("marks unavailable credential state %s as an actionable instance error", (credentialState) => {
-    const instance = create(InstanceSchema, {
-      credentialError: "Stored credentials cannot be read.",
-      credentialState,
-      name: "instances/broken",
-    });
+  ])(
+    "marks unavailable credential state %s as an actionable instance error",
+    (credentialState) => {
+      const instance = create(InstanceSchema, {
+        credentialError: "Stored credentials cannot be read.",
+        credentialState,
+        name: "instances/broken",
+      });
 
-    expect(mapInstance(instance)).toMatchObject({
-      credentialsUnreadable: true,
-      status: "error",
-    });
-  });
+      expect(mapInstance(instance)).toMatchObject({
+        credentialsUnreadable: true,
+        status: "error",
+      });
+    }
+  );
 });
 
 describe("mapDatabase", () => {

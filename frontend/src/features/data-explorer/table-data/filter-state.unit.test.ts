@@ -310,34 +310,29 @@ describe("buildRowFilter", () => {
     ).toBeUndefined();
   });
 
-  test.each([
-    "0x10",
-    "0b101",
-    " 12 ",
-  ])("rejects non-decimal float literal %j", (value) => {
-    expect(
-      buildRowFilter(
-        [{ column: "rating", id: "float", operator: "eq", value }],
-        columns
-      )
-    ).toBeUndefined();
-  });
+  test.each(["0x10", "0b101", " 12 "])(
+    "rejects non-decimal float literal %j",
+    (value) => {
+      expect(
+        buildRowFilter(
+          [{ column: "rating", id: "float", operator: "eq", value }],
+          columns
+        )
+      ).toBeUndefined();
+    }
+  );
 
-  test.each([
-    "12",
-    "-12.5",
-    ".5",
-    "1.",
-    "1e3",
-    "-1.25E+3",
-  ])("accepts decimal float literal %s", (value) => {
-    expect(
-      getInvalidFilterRules(
-        [{ column: "rating", id: "float", operator: "eq", value }],
-        columns
-      )
-    ).toEqual([]);
-  });
+  test.each(["12", "-12.5", ".5", "1.", "1e3", "-1.25E+3"])(
+    "accepts decimal float literal %s",
+    (value) => {
+      expect(
+        getInvalidFilterRules(
+          [{ column: "rating", id: "float", operator: "eq", value }],
+          columns
+        )
+      ).toEqual([]);
+    }
+  );
 
   test("reports invalid values before applying filters", () => {
     expect(

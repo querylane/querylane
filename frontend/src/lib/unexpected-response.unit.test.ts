@@ -59,17 +59,20 @@ describe("createUnexpectedResponseFetch", () => {
     "application/proto",
     "application/connect+json",
     "application/connect+proto",
-  ])("passes through 200 responses with content type %s", async (contentType) => {
-    const original = createResponse({ body: '{"ok":true}', contentType });
-    const fetchWithDetection = createUnexpectedResponseFetch(
-      createBaseFetch(original)
-    );
+  ])(
+    "passes through 200 responses with content type %s",
+    async (contentType) => {
+      const original = createResponse({ body: '{"ok":true}', contentType });
+      const fetchWithDetection = createUnexpectedResponseFetch(
+        createBaseFetch(original)
+      );
 
-    const response = await fetchWithDetection(RPC_URL);
+      const response = await fetchWithDetection(RPC_URL);
 
-    expect(response).toBe(original);
-    await expect(response.text()).resolves.toBe('{"ok":true}');
-  });
+      expect(response).toBe(original);
+      await expect(response.text()).resolves.toBe('{"ok":true}');
+    }
+  );
 
   test("passes through non-200 Connect error JSON untouched", async () => {
     const original = createResponse({
@@ -132,26 +135,26 @@ describe("createUnexpectedResponseFetch", () => {
     { kind: "server", status: 502 },
     { kind: "server", status: 503 },
     { kind: "unexpected", status: 404 },
-  ])("classifies an HTTP $status HTML page as $kind", async ({
-    kind,
-    status,
-  }) => {
-    const fetchWithDetection = createUnexpectedResponseFetch(
-      createBaseFetch(
-        createResponse({
-          body: HTML_LOGIN_BODY,
-          contentType: "text/html",
-          status,
-        })
-      )
-    );
+  ])(
+    "classifies an HTTP $status HTML page as $kind",
+    async ({ kind, status }) => {
+      const fetchWithDetection = createUnexpectedResponseFetch(
+        createBaseFetch(
+          createResponse({
+            body: HTML_LOGIN_BODY,
+            contentType: "text/html",
+            status,
+          })
+        )
+      );
 
-    const error = await captureUnexpectedResponseError(
-      fetchWithDetection(RPC_URL)
-    );
+      const error = await captureUnexpectedResponseError(
+        fetchWithDetection(RPC_URL)
+      );
 
-    expect(error.info).toMatchObject({ kind, status });
-  });
+      expect(error.info).toMatchObject({ kind, status });
+    }
+  );
 
   test("intercepts responses without a content type", async () => {
     const fetchWithDetection = createUnexpectedResponseFetch(

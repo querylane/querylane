@@ -182,19 +182,17 @@ describe("PostgreSQL structured error rendering", () => {
       retry: PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
       title: "PostgreSQL internal error",
     },
-  ])("renders $title from the backend enums", ({
-    guidance,
-    kind,
-    retry,
-    title,
-  }) => {
-    const normalized = normalizeAppUiError(
-      createPostgresFailure({ kind, retryGuidance: retry })
-    );
+  ])(
+    "renders $title from the backend enums",
+    ({ guidance, kind, retry, title }) => {
+      const normalized = normalizeAppUiError(
+        createPostgresFailure({ kind, retryGuidance: retry })
+      );
 
-    expect(normalized.title).toBe(title);
-    expect(normalized.retryGuidance).toBe(guidance);
-  });
+      expect(normalized.title).toBe(title);
+      expect(normalized.retryGuidance).toBe(guidance);
+    }
+  );
 
   test("uses the generic fallback for missing enums", () => {
     const normalized = normalizeAppUiError(
@@ -251,21 +249,19 @@ describe("PostgreSQL structured error rendering", () => {
       retryGuidance:
         PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
     },
-  ])("normalizes $name to generated enum members", ({
-    expectedGuidance,
-    expectedKind,
-    kind,
-    retryGuidance,
-  }) => {
-    const normalized = normalizeAppUiError(
-      createDebugPostgresFailure({ kind, retryGuidance })
-    );
+  ])(
+    "normalizes $name to generated enum members",
+    ({ expectedGuidance, expectedKind, kind, retryGuidance }) => {
+      const normalized = normalizeAppUiError(
+        createDebugPostgresFailure({ kind, retryGuidance })
+      );
 
-    expect(normalized.postgres).toMatchObject({
-      kind: expectedKind,
-      retryGuidance: expectedGuidance,
-    });
-  });
+      expect(normalized.postgres).toMatchObject({
+        kind: expectedKind,
+        retryGuidance: expectedGuidance,
+      });
+    }
+  );
 
   test("uses native structured details instead of SQLSTATE or Connect code", () => {
     const normalized = normalizeAppUiError(
@@ -458,39 +454,38 @@ describe("error routing and reporting", () => {
     kind: UnexpectedResponseInfo["kind"];
     status: number;
     summaryFragment: string;
-  }>)("renders friendly copy for $kind proxy responses", ({
-    kind,
-    status,
-    summaryFragment,
-  }) => {
-    const hostileBody = "<html><body>hostile login page</body></html>";
-    const wrapped = ConnectError.from(
-      new UnexpectedResponseError({
-        bodySnippet: hostileBody,
-        contentType: "text/html",
-        kind,
-        status,
-        url: "https://console.example.test/api/rpc",
-      })
-    );
+  }>)(
+    "renders friendly copy for $kind proxy responses",
+    ({ kind, status, summaryFragment }) => {
+      const hostileBody = "<html><body>hostile login page</body></html>";
+      const wrapped = ConnectError.from(
+        new UnexpectedResponseError({
+          bodySnippet: hostileBody,
+          contentType: "text/html",
+          kind,
+          status,
+          url: "https://console.example.test/api/rpc",
+        })
+      );
 
-    const normalized = normalizeAppUiError(wrapped);
+      const normalized = normalizeAppUiError(wrapped);
 
-    expect(normalized.title).toBe("Unexpected server response");
-    expect(normalized.summary).toContain(summaryFragment);
-    expect(normalized.summary).not.toContain("<html");
-    expect(normalized.retryGuidance).not.toBeNull();
-    expect(normalized.blockingReason).toBeNull();
-    expect(JSON.parse(normalized.technicalDetails)).toMatchObject({
-      unexpectedResponse: {
-        bodySnippet: hostileBody,
-        contentType: "text/html",
-        kind,
-        status,
-        url: "https://console.example.test/api/rpc",
-      },
-    });
-  });
+      expect(normalized.title).toBe("Unexpected server response");
+      expect(normalized.summary).toContain(summaryFragment);
+      expect(normalized.summary).not.toContain("<html");
+      expect(normalized.retryGuidance).not.toBeNull();
+      expect(normalized.blockingReason).toBeNull();
+      expect(JSON.parse(normalized.technicalDetails)).toMatchObject({
+        unexpectedResponse: {
+          bodySnippet: hostileBody,
+          contentType: "text/html",
+          kind,
+          status,
+          url: "https://console.example.test/api/rpc",
+        },
+      });
+    }
+  );
 
   test("dedupes unexpected-response toasts with a stable id", () => {
     const wrapped = ConnectError.from(
