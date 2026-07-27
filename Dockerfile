@@ -37,7 +37,7 @@ ARG BUILT_AT
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath \
-    -ldflags="-s -w -X main.version=${VERSION} -X github.com/querylane/querylane/backend/service/console.Version=${VERSION} -X github.com/querylane/querylane/backend/service/console.GitCommit=${GIT_COMMIT} -X github.com/querylane/querylane/backend/service/console.BuiltAt=${BUILT_AT}" \
+    -ldflags="-s -w -X github.com/querylane/querylane/backend/buildstamp.Version=${VERSION} -X github.com/querylane/querylane/backend/buildstamp.GitCommit=${GIT_COMMIT} -X github.com/querylane/querylane/backend/buildstamp.BuiltAt=${BUILT_AT}" \
     -tags embed_frontend -o /querylane .
 
 # =============================================================================

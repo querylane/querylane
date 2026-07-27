@@ -24,8 +24,10 @@ jobs:
     timeout-minutes: 5
     if: "!contains(github.event.head_commit.message, 'ci skip') && !contains(github.event.head_commit.message, 'skip ci')"
     outputs:
+      publish_latest: ${{ steps.release-tags.outputs.publish_latest || 'false' }}
       published: ${{ steps.release-tags.outputs.published || 'false' }}
-      version: ${{ steps.image-version.outputs.version }}
+      tag: ${{ steps.release-tags.outputs.tag }}
+      version: ${{ steps.release-tags.outputs.version }}
     steps:
       - name: Checkout repository
         uses: *action_checkout
@@ -76,17 +78,41 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      - name: Resolve release metadata
+        id: release-metadata
+        if: >-
+          steps.changeset-dir.outputs.skip_release != 'true' &&
+          steps.changesets.outputs['has-changesets'] == 'false'
+        run: |
+          set -euo pipefail
+
+          version="$(node -p "require('./frontend/package.json').version")"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Expected a release version in X.Y.Z format, got '$version'"
+            exit 1
+          fi
+
+          {
+            echo "tag=v$version"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Tag released frontend package
         id: release-tags
         if: >-
           steps.changeset-dir.outputs.skip_release != 'true' &&
           steps.changesets.outputs['has-changesets'] == 'false'
+        env:
+          EXPECTED_TAG: ${{ steps.release-metadata.outputs.tag }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          VERSION: ${{ steps.release-metadata.outputs.version }}
         shell: bash
         run: |
           set -euo pipefail
           before_tags="$(mktemp)"
           after_tags="$(mktemp)"
-          trap 'rm -f "$before_tags" "$after_tags"' EXIT
+          state_file="$(mktemp)"
+          trap 'rm -f "$before_tags" "$after_tags" "$state_file"' EXIT
 
           git tag --list | sort > "$before_tags"
           bun run --cwd frontend changeset:tag
@@ -94,61 +120,48 @@ jobs:
 
           mapfile -t tags < <(comm -13 "$before_tags" "$after_tags")
 
-          if [ "${#tags[@]}" -eq 0 ]; then
-            echo "No new release tags."
-            echo "published=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          GITHUB_OUTPUT="$state_file" bash scripts/resolve-release-state.sh \
+            "$EXPECTED_TAG" \
+            "$VERSION" \
+            "$RUN_ATTEMPT" \
+            "${tags[@]}"
+
+          published="$(sed -n 's/^published=//p' "$state_file")"
+          if [ "$published" = "true" ]; then
+            # Fail before the irreversible push unless exact Changesets notes exist.
+            bun scripts/extract-release-notes.ts "$VERSION" frontend/CHANGELOG.md > /dev/null
           fi
 
-          for tag in "${tags[@]}"; do
+          push_tag="$(sed -n 's/^push_tag=//p' "$state_file")"
+          tag="$(sed -n 's/^tag=//p' "$state_file")"
+          if [ "$push_tag" = "true" ]; then
             git push origin "refs/tags/$tag"
-          done
-
-          echo "published=true" >> "$GITHUB_OUTPUT"
-
-      - name: Resolve released version
-        id: image-version
-        if: steps.release-tags.outputs.published == 'true'
-        run: |
-          set -euo pipefail
-          # Source of truth: package.json is already bumped to the released
-          # version by the time changesets publishes. Do NOT read it from
-          # publishedPackages — this repo's tag-only changesets flow leaves that
-          # array empty, which would tag the image `null`.
-          version="$(node -p "require('./frontend/package.json').version")"
-          if [ -z "$version" ] || [ "$version" = "undefined" ]; then
-            echo "::error::Could not resolve released version from frontend/package.json"
-            exit 1
           fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub Release
+          cat "$state_file" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update GitHub Release
         if: steps.release-tags.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.image-version.outputs.version }}
+          TAG: ${{ steps.release-tags.outputs.tag }}
+          VERSION: ${{ steps.release-tags.outputs.version }}
         run: |
           set -euo pipefail
 
-          tag="v$VERSION"
-          if gh release view "$tag" > /dev/null 2>&1; then
-            echo "GitHub Release $tag already exists."
-            exit 0
-          fi
-
           notes_file="$(mktemp)"
           trap 'rm -f "$notes_file"' EXIT
-          if bun scripts/extract-release-notes.ts "$VERSION" frontend/CHANGELOG.md > "$notes_file"; then
-            gh release create "$tag" \
-              --verify-tag \
-              --title "$tag" \
+          bun scripts/extract-release-notes.ts "$VERSION" frontend/CHANGELOG.md > "$notes_file"
+
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release edit "$TAG" \
+              --title "$TAG" \
               --notes-file "$notes_file"
           else
-            echo "::warning::Could not extract Changesets notes; using generated release notes."
-            gh release create "$tag" \
+            gh release create "$TAG" \
               --verify-tag \
-              --title "$tag" \
-              --generate-notes
+              --title "$TAG" \
+              --notes-file "$notes_file"
           fi
 
   publish-artifacts:
@@ -159,10 +172,10 @@ jobs:
       contents: write
     uses: ./.github/workflows/_release-artifacts.yml
     with:
-      tag: v${{ needs.release.outputs.version }}
+      tag: ${{ needs.release.outputs.tag }}
 
   # Docker image pipeline (see .github/workflows/_docker-build.yml): on a real
-  # release, publish `<version>` + `latest` to the stable `querylane` package.
+  # release, publish `<version>` and keep `latest` on the newest semver tag.
   publish-image:
     name: Publish Docker image
     needs: release
@@ -173,5 +186,6 @@ jobs:
     uses: ./.github/workflows/_docker-build.yml
     with:
       image: ghcr.io/${{ github.repository }}
+      publish_latest: ${{ needs.release.outputs.publish_latest == 'true' }}
       version: ${{ needs.release.outputs.version }}
       push: true
