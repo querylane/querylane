@@ -9,11 +9,8 @@ const projectRoot = resolve(import.meta.dirname, "..");
 const requiredIgnoredFiles = [
   "src/components/ui/**",
   "src/protogen/**",
-  "src/routeTree.gen.ts",
   "**/*.gen.ts",
   "**/*.gen.tsx",
-  "**/*_pb.ts",
-  "**/*_connectquery.ts",
 ];
 
 const removedDependencies = [
@@ -367,7 +364,7 @@ describe("React Doctor policy", () => {
     expect(doctorConfig["deadCode"]).toBe(true);
     expect(doctorConfig["respectInlineDisables"]).toBe(false);
 
-    expect(ignoredFiles).toEqual(expect.arrayContaining(requiredIgnoredFiles));
+    expect(ignoredFiles).toEqual(requiredIgnoredFiles);
     expect(ignoredFiles).not.toContain("src/components/querylane-ui/**");
     expect(ignore["rules"] ?? []).toEqual([]);
     expect(ignore["tags"] ?? []).toEqual([]);

@@ -11,22 +11,8 @@
     "files": [
       "src/components/ui/**",
       "src/protogen/**",
-      "src/routeTree.gen.ts",
       "**/*.gen.ts",
-      "**/*.gen.tsx",
-      "**/*_pb.ts",
-      "**/*_pb.js",
-      "**/*_connectquery.ts",
-      "**/*_connectquery.js",
-      "dist/**",
-      "build/**",
-      "out/**",
-      "coverage/**",
-      ".nyc_output/**",
-      "playwright-report/**",
-      "test-results/**",
-      "e2e/playwright-report/**",
-      "e2e/test-results/**"
+      "**/*.gen.tsx"
     ],
     "rules": [],
     "overrides": [
