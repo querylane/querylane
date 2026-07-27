@@ -56,6 +56,30 @@ const MODEL: RolesAccessMapModel = {
   ],
 };
 
+function modelWithNodeCount(nodeCount: number): RolesAccessMapModel {
+  const extraObjectCount =
+    nodeCount - MODEL.roles.length - MODEL.objects.length;
+  return {
+    ...MODEL,
+    objects: [
+      ...MODEL.objects,
+      ...Array.from({ length: extraObjectCount }, (_, index) => ({
+        databaseId: "prod",
+        id: `object:table:prod:public.extra_${index}`,
+        kind: "table" as const,
+        subtitle: "table · public",
+        title: `extra_${index}`,
+      })),
+    ],
+  };
+}
+
+function switchIsChecked(name: string): boolean {
+  return (
+    screen.getByRole("switch", { name }).getAttribute("aria-checked") === "true"
+  );
+}
+
 function CanvasHarness({
   failedRequestCount = 0,
   isLoading = false,
@@ -158,6 +182,71 @@ describe("RolesAccessMapCanvas", () => {
     await user.click(screen.getByRole("switch", { name: "Direct grants" }));
 
     expect(mapSvg?.querySelectorAll("path")).toHaveLength(1);
+  });
+
+  test("shows every edge type by default below the dense map threshold", async () => {
+    const user = userEvent.setup();
+    render(<CanvasHarness model={modelWithNodeCount(19)} />);
+
+    await user.click(screen.getByRole("button", { name: "View" }));
+
+    for (const [name, checked] of Object.entries({
+      "Default privileges": true,
+      "Direct grants": true,
+      Members: true,
+      "Owned objects": true,
+      "Public grants": true,
+    })) {
+      expect(switchIsChecked(name)).toBe(checked);
+    }
+  });
+
+  test("reduces dense map edges when data is already available", () => {
+    render(<CanvasHarness model={modelWithNodeCount(20)} />);
+
+    expect(
+      screen.getByRole("button", { name: "View, 3 filters hidden" })
+    ).toBeTruthy();
+  });
+
+  test("reduces dense map edges after loading without overwriting user choices", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <CanvasHarness
+        isLoading={true}
+        model={{ ...MODEL, edges: [], objects: [] }}
+      />
+    );
+
+    rerender(<CanvasHarness model={modelWithNodeCount(20)} />);
+
+    await user.click(
+      screen.getByRole("button", { name: "View, 3 filters hidden" })
+    );
+    for (const [name, checked] of Object.entries({
+      "Default privileges": true,
+      "Direct grants": false,
+      Members: false,
+      "Owned objects": false,
+      "Public grants": true,
+    })) {
+      expect(switchIsChecked(name)).toBe(checked);
+    }
+
+    await user.click(screen.getByRole("switch", { name: "Direct grants" }));
+    expect(
+      screen.getByRole("button", { name: "View, 2 filters hidden" })
+    ).toBeTruthy();
+    await user.click(screen.getByRole("switch", { name: "Members" }));
+    expect(
+      screen.getByRole("button", { name: "View, 1 filter hidden" })
+    ).toBeTruthy();
+
+    rerender(<CanvasHarness model={modelWithNodeCount(19)} />);
+
+    expect(switchIsChecked("Direct grants")).toBe(true);
+    expect(switchIsChecked("Members")).toBe(true);
+    expect(switchIsChecked("Owned objects")).toBe(false);
   });
 
   test("shows the empty object state", () => {
