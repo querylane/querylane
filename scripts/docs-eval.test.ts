@@ -54,7 +54,9 @@ test("exposes the blocking docs eval as a package script", async () => {
 		scripts?: Record<string, string>;
 	};
 
-	expect(packageFile.scripts?.["docs:eval"]).toBe("blume eval --json");
+	expect(packageFile.scripts?.["docs:eval"]).toBe(
+		"blume eval --agent codex --json",
+	);
 });
 
 test("runs docs evals in isolated CI for same-repository docs changes", async () => {
@@ -67,19 +69,17 @@ test("runs docs evals in isolated CI for same-repository docs changes", async ()
 		"github.event.pull_request.head.repo.full_name == github.repository",
 	);
 	expect(workflow).toContain("bun install --frozen-lockfile --ignore-scripts");
-	expect(workflow).toContain(
-		"npm install --global @anthropic-ai/claude-code@2.1.220",
-	);
-	expect(workflow).toContain(
-		`CLAUDE_CODE_OAUTH_TOKEN: \${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}`,
-	);
-	expect(workflow).toContain("run: bun run docs:eval");
+	expect(workflow).toContain("npm install --global @openai/codex@0.145.0");
+	expect(workflow).toContain(`CODEX_API_KEY: \${{ secrets.OPENAI_API_KEY }}`);
+	expect(workflow).not.toContain("CLAUDE_CODE_OAUTH_TOKEN");
+	expect(workflow).toContain("bun run docs:eval");
 });
 
 test("documents how contributors run the docs eval suite", async () => {
 	const readme = await read("README.md");
 
 	expect(readme).toContain("bun run docs:eval");
-	expect(readme).toContain("bun run docs:eval -- --agent codex");
+	expect(readme).toContain("Codex CLI");
+	expect(readme).toContain("OpenAI API key");
 	expect(readme).toContain("evals.yaml");
 });

@@ -45,10 +45,15 @@ jobs:
       - name: Install docs dependencies
         run: bun install --frozen-lockfile --ignore-scripts
 
-      - name: Install Claude Code
-        run: npm install --global @anthropic-ai/claude-code@2.1.220
+      - name: Install Codex
+        run: npm install --global @openai/codex@0.145.0
 
-      - name: Evaluate docs
-        run: bun run docs:eval
+      - name: Evaluate docs with Codex
         env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CODEX_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$CODEX_API_KEY" ]; then
+            echo "::error::OPENAI_API_KEY secret is not configured."
+            exit 1
+          fi
+          bun run docs:eval
