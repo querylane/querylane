@@ -1,0 +1,95 @@
+version: 1
+questions:
+  - id: quickstart-docker-preview
+    question: What is the quickest way to try Querylane with Docker, and what should I expect on first launch?
+    expected:
+      - run the ghcr.io/querylane/querylane-dev:edge image with host port 127.0.0.1:8080 mapped to container port 8080
+      - open http://localhost:8080
+      - a fresh container opens the first-launch wizard because its metadata database is not configured
+      - the edge image and disposable container command are for evaluation, not durable deployment
+    routes: /get-started/install-querylane
+
+  - id: metadata-storage-choice
+    question: Is the PostgreSQL server I register the same database Querylane uses for its own storage?
+    expected:
+      - Querylane's metadata database is separate from the PostgreSQL instances it inspects
+      - embedded PostgreSQL is best for a direct local run or disposable demo
+      - external PostgreSQL is the durable installation choice
+    routes:
+      - /get-started/install-querylane
+      - /get-started/embedded-postgresql
+      - /get-started/external-postgresql
+
+  - id: instance-secret-key-stability
+    question: How should I manage QUERYLANE_INSTANCE_SECRET_KEY across restarts and replicas?
+    expected:
+      - generate the key once and store it in a secret manager
+      - every restart and replica must use the same exact key
+      - changing or losing the key makes existing encrypted instance credentials unreadable
+      - key rotation is not currently supported
+    routes:
+      - /get-started/external-postgresql
+      - /get-started/production-deployment
+
+  - id: register-instance-test
+    question: What must I provide and verify before Querylane lets me register a PostgreSQL instance?
+    expected:
+      - provide host, port, initial database, username, password, and SSL mode, or a complete PostgreSQL DSN
+      - Querylane requires a successful connection test before registration
+      - changing the connection invalidates the previous test
+      - use a dedicated login with only the access operators need
+    routes: /get-started/register-instance
+
+  - id: production-access-boundary
+    question: Can I expose Querylane directly to the public internet in production?
+    expected:
+      - Querylane does not currently include built-in authentication
+      - do not expose it directly to the public internet
+      - put it behind a trusted network or reverse proxy that enforces authentication and TLS
+      - expose only the Querylane HTTP service on port 8080, not PostgreSQL or the container runtime
+    routes: /get-started/production-deployment
+
+  - id: production-replicas
+    question: What must multiple Querylane replicas share, and can they use embedded PostgreSQL?
+    expected:
+      - replicas must share the same metadata database
+      - replicas must share the same QUERYLANE_INSTANCE_SECRET_KEY, configuration, and target policy
+      - do not use embedded PostgreSQL for a multi-replica deployment
+      - live-query limits are process-local, so total capacity grows with the replica count
+    routes: /get-started/production-deployment
+
+  - id: backup-recovery-set
+    question: What must I back up so a Querylane installation can actually be restored?
+    expected:
+      - back up the metadata PostgreSQL database
+      - preserve the exact matching QUERYLANE_INSTANCE_SECRET_KEY
+      - preserve Querylane configuration, referenced environment secrets, and application image identity
+      - a database dump without the matching key can leave encrypted credentials unrecoverable
+    routes: /operations/backup-and-restore
+
+  - id: upgrade-rollback
+    question: How should I upgrade Querylane, and is switching back to the old image enough to roll back?
+    expected:
+      - back up the metadata database and verify the matching instance secret key before upgrading
+      - inspect migrations and upgrade one replica before the rest
+      - an old binary may not understand a schema migrated by a newer version
+      - the default rollback restores the pre-upgrade database and previous image, configuration, key, and DSN rather than only swapping the image
+    routes: /operations/upgrades-and-rollbacks
+
+  - id: least-privilege-role
+    question: Which PostgreSQL permissions should I give Querylane on a managed instance?
+    expected:
+      - start with a dedicated catalog-only login using database CONNECT and schema USAGE
+      - add SELECT only on approved tables and views when operators need reads and exports
+      - add pg_monitor when operators need fuller activity, health, statistics, and query insights
+      - do not grant superuser or BYPASSRLS solely for Querylane
+    routes: /operations/postgresql-permissions
+
+  - id: safe-data-export
+    question: What safety limits apply when I export rows from Querylane's Data Explorer?
+    expected:
+      - export is limited to selected rows from the currently loaded result, not every matching row
+      - Querylane refuses to export selected rows containing truncated values
+      - CSV values that spreadsheet software could interpret as formulas are neutralized
+      - Data Explorer export is not a database backup or bulk migration tool
+    routes: /guides/export-data-safely
