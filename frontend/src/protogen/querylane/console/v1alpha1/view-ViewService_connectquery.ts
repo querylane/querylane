@@ -26,7 +26,11 @@ export const getView = ViewService.method.getView;
 export const listViewDependencies = ViewService.method.listViewDependencies;
 
 /**
- * Refreshes a materialized view.
+ * Refreshes a materialized view within the configured synchronous timeout,
+ * which is capped at 30 seconds.
+ * Returns INVALID_ARGUMENT for a standard view or unsupported mode,
+ * FAILED_PRECONDITION when concurrent refresh requirements are unmet, and
+ * DEADLINE_EXCEEDED when PostgreSQL cannot finish within the timeout.
  *
  * @generated from rpc querylane.console.v1alpha1.ViewService.RefreshMaterializedView
  */

@@ -1443,6 +1443,8 @@ func (x *TableResultSet) GetObservedAt() *timestamppb.Timestamp {
 type ReadRowsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. The table or materialized view to read from.
+	// aip.dev/not-precedent: This compatibility field accepts either a Table or
+	// View resource. Runtime validation narrows the wildcard to those two types.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Optional. Default 50, hard cap 500.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
@@ -1643,6 +1645,8 @@ func (x *ReadRowsResponse) GetLimits() *ResponseLimits {
 type StreamRowsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. Same shape as ReadRowsRequest.name.
+	// aip.dev/not-precedent: This compatibility field accepts either a Table or
+	// View resource. Runtime validation narrows the wildcard to those two types.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Optional. Subset of columns.
 	SelectedColumns []string `protobuf:"bytes,2,rep,name=selected_columns,json=selectedColumns,proto3" json:"selected_columns,omitempty"`
@@ -2043,6 +2047,8 @@ func (x *StreamRowsStats) GetTruncated() bool {
 type ReadCellValueRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. The table or materialized view the cell belongs to.
+	// aip.dev/not-precedent: This compatibility field accepts either a Table or
+	// View resource. Runtime validation narrows the wildcard to those two types.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Required. Token from a TableCell.full_value_token. The server rejects
 	// a token whose payload table_name does not match `name` — this binds
@@ -2264,10 +2270,10 @@ const file_querylane_console_v1alpha1_table_data_proto_rawDesc = "" +
 	"\frow_identity\x18\x04 \x01(\v2'.querylane.console.v1alpha1.RowIdentityB\x03\xe0A\x03R\vrowIdentity\x12d\n" +
 	"\x13pagination_strategy\x18\x05 \x01(\x0e2..querylane.console.v1alpha1.PaginationStrategyB\x03\xe0A\x03R\x12paginationStrategy\x12@\n" +
 	"\vobserved_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
-	"observedAt\"\x80\x06\n" +
-	"\x0fReadRowsRequest\x12\xa5\x01\n" +
-	"\x04name\x18\x01 \x01(\tB\x90\x01\xe0A\x02\xfaA \n" +
-	"\x1econsole.querylane.dev/Relation\xbaHgre2c^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$R\x04name\x12*\n" +
+	"observedAt\"\xe2\x05\n" +
+	"\x0fReadRowsRequest\x12\x87\x01\n" +
+	"\x04name\x18\x01 \x01(\tBs\xe0A\x02\xfaA\x03\n" +
+	"\x01*\xbaHgre2c^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$R\x04name\x12*\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\r\xe0A\x01\xbaH\a\x1a\x05\x18\xf4\x03(\x00R\bpageSize\x12\"\n" +
 	"\n" +
 	"page_token\x18\x03 \x01(\tB\x03\xe0A\x01R\tpageToken\x124\n" +
@@ -2283,10 +2289,10 @@ const file_querylane_console_v1alpha1_table_data_proto_rawDesc = "" +
 	"\n" +
 	"result_set\x18\x01 \x01(\v2*.querylane.console.v1alpha1.TableResultSetR\tresultSet\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12B\n" +
-	"\x06limits\x18\x03 \x01(\v2*.querylane.console.v1alpha1.ResponseLimitsR\x06limits\"\xaa\x05\n" +
-	"\x11StreamRowsRequest\x12\xa5\x01\n" +
-	"\x04name\x18\x01 \x01(\tB\x90\x01\xe0A\x02\xfaA \n" +
-	"\x1econsole.querylane.dev/Relation\xbaHgre2c^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$R\x04name\x124\n" +
+	"\x06limits\x18\x03 \x01(\v2*.querylane.console.v1alpha1.ResponseLimitsR\x06limits\"\x8c\x05\n" +
+	"\x11StreamRowsRequest\x12\x87\x01\n" +
+	"\x04name\x18\x01 \x01(\tBs\xe0A\x02\xfaA\x03\n" +
+	"\x01*\xbaHgre2c^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$R\x04name\x124\n" +
 	"\x10selected_columns\x18\x02 \x03(\tB\t\xbaH\x06\x92\x01\x03\x10\x80\x02R\x0fselectedColumns\x12I\n" +
 	"\border_by\x18\x03 \x03(\v2$.querylane.console.v1alpha1.RowOrderB\b\xbaH\x05\x92\x01\x02\x10\bR\aorderBy\x12B\n" +
 	"\x06filter\x18\x04 \x01(\v2%.querylane.console.v1alpha1.RowFilterB\x03\xe0A\x01R\x06filter\x12^\n" +
@@ -2313,10 +2319,10 @@ const file_querylane_console_v1alpha1_table_data_proto_rawDesc = "" +
 	"\x0fStreamRowsStats\x12 \n" +
 	"\trow_count\x18\x01 \x01(\x03B\x03\xe0A\x03R\browCount\x128\n" +
 	"\alatency\x18\x02 \x01(\v2\x19.google.protobuf.DurationB\x03\xe0A\x03R\alatency\x12!\n" +
-	"\ttruncated\x18\x03 \x01(\bB\x03\xe0A\x03R\ttruncated\"\xa2\x02\n" +
-	"\x14ReadCellValueRequest\x12\xa5\x01\n" +
-	"\x04name\x18\x01 \x01(\tB\x90\x01\xe0A\x02\xfaA \n" +
-	"\x1econsole.querylane.dev/Relation\xbaHgre2c^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$R\x04name\x124\n" +
+	"\ttruncated\x18\x03 \x01(\bB\x03\xe0A\x03R\ttruncated\"\x84\x02\n" +
+	"\x14ReadCellValueRequest\x12\x87\x01\n" +
+	"\x04name\x18\x01 \x01(\tBs\xe0A\x02\xfaA\x03\n" +
+	"\x01*\xbaHgre2c^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$R\x04name\x124\n" +
 	"\x10full_value_token\x18\x02 \x01(\tB\n" +
 	"\xe0A\x02\xbaH\x04r\x02\x10\x01R\x0efullValueToken\x12,\n" +
 	"\tmax_bytes\x18\x03 \x01(\x03B\x0f\xe0A\x01\xbaH\t\"\a\x18\x80\x80\x80 (\x00R\bmaxBytes\"Y\n" +

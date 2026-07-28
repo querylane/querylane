@@ -13,6 +13,7 @@ import {
 import { buildSchemaName } from "@/lib/console-resources";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import {
+  type ListViewDependenciesResponse,
   type ListViewsResponse,
   type RefreshMaterializedViewMode,
   ViewService,
@@ -20,7 +21,6 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 import {
   getView,
-  listViewDependencies,
   type listViews,
 } from "@/protogen/querylane/console/v1alpha1/view-ViewService_connectquery";
 
@@ -30,6 +30,7 @@ interface ListAllQueryOptions {
 }
 
 const EXPLORER_CATALOG_PAGE_SIZE = 100;
+const VIEW_DEPENDENCY_PAGE_SIZE = 100;
 
 function fetchViewsPage(
   transport: Transport,
@@ -54,14 +55,35 @@ function useGetViewQuery(
 }
 
 function useListViewDependenciesQuery(parent: string | undefined) {
-  return useConnectQuery(
-    listViewDependencies,
-    parent ? { parent } : undefined,
-    {
-      ...RESOURCE_QUERY_OPTIONS.tableMetadata,
-      enabled: Boolean(parent),
-    }
-  );
+  const transport = useTransport();
+
+  return useInfiniteQuery<
+    ListViewDependenciesResponse,
+    Error,
+    InfiniteData<ListViewDependenciesResponse>,
+    readonly ["console", "view-dependencies", "list-pages", string | null],
+    string
+  >({
+    ...RESOURCE_QUERY_OPTIONS.tableMetadata,
+    enabled: Boolean(parent),
+    getNextPageParam: (lastPage) => lastPage.nextPageToken || undefined,
+    initialPageParam: "",
+    queryFn: ({ pageParam }) => {
+      const client = createClient(ViewService, transport);
+      return client.listViewDependencies({
+        orderBy: "direction asc, schema_name asc, display_name asc",
+        pageSize: VIEW_DEPENDENCY_PAGE_SIZE,
+        pageToken: pageParam,
+        parent: parent ?? "",
+      });
+    },
+    queryKey: [
+      "console",
+      "view-dependencies",
+      "list-pages",
+      parent ?? null,
+    ] as const,
+  });
 }
 
 function queryKeyContainsResourceName(value: unknown, name: string): boolean {

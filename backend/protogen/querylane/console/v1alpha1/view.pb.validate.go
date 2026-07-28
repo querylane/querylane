@@ -233,7 +233,9 @@ func (m *ViewDependency) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for ResourceName
+	// no validation rules for Name
+
+	// no validation rules for Relation
 
 	// no validation rules for SchemaName
 
@@ -828,6 +830,14 @@ func (m *ListViewDependenciesRequest) validate(all bool) error {
 
 	// no validation rules for Parent
 
+	// no validation rules for PageSize
+
+	// no validation rules for PageToken
+
+	// no validation rules for Filter
+
+	// no validation rules for OrderBy
+
 	if len(errors) > 0 {
 		return ListViewDependenciesRequestMultiError(errors)
 	}
@@ -931,7 +941,7 @@ func (m *ListViewDependenciesResponse) validate(all bool) error {
 
 	var errors []error
 
-	for idx, item := range m.GetDependencies() {
+	for idx, item := range m.GetViewDependencies() {
 		_, _ = idx, item
 
 		if all {
@@ -939,7 +949,7 @@ func (m *ListViewDependenciesResponse) validate(all bool) error {
 			case interface{ ValidateAll() error }:
 				if err := v.ValidateAll(); err != nil {
 					errors = append(errors, ListViewDependenciesResponseValidationError{
-						field:  fmt.Sprintf("Dependencies[%v]", idx),
+						field:  fmt.Sprintf("ViewDependencies[%v]", idx),
 						reason: "embedded message failed validation",
 						cause:  err,
 					})
@@ -947,7 +957,7 @@ func (m *ListViewDependenciesResponse) validate(all bool) error {
 			case interface{ Validate() error }:
 				if err := v.Validate(); err != nil {
 					errors = append(errors, ListViewDependenciesResponseValidationError{
-						field:  fmt.Sprintf("Dependencies[%v]", idx),
+						field:  fmt.Sprintf("ViewDependencies[%v]", idx),
 						reason: "embedded message failed validation",
 						cause:  err,
 					})
@@ -956,7 +966,7 @@ func (m *ListViewDependenciesResponse) validate(all bool) error {
 		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
 			if err := v.Validate(); err != nil {
 				return ListViewDependenciesResponseValidationError{
-					field:  fmt.Sprintf("Dependencies[%v]", idx),
+					field:  fmt.Sprintf("ViewDependencies[%v]", idx),
 					reason: "embedded message failed validation",
 					cause:  err,
 				}
@@ -964,6 +974,8 @@ func (m *ListViewDependenciesResponse) validate(all bool) error {
 		}
 
 	}
+
+	// no validation rules for NextPageToken
 
 	if len(errors) > 0 {
 		return ListViewDependenciesResponseMultiError(errors)

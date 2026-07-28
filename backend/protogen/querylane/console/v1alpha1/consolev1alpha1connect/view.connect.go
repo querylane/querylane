@@ -55,7 +55,11 @@ type ViewServiceClient interface {
 	GetView(context.Context, *connect.Request[v1alpha1.GetViewRequest]) (*connect.Response[v1alpha1.GetViewResponse], error)
 	// Lists direct relation dependencies for a view.
 	ListViewDependencies(context.Context, *connect.Request[v1alpha1.ListViewDependenciesRequest]) (*connect.Response[v1alpha1.ListViewDependenciesResponse], error)
-	// Refreshes a materialized view.
+	// Refreshes a materialized view within the configured synchronous timeout,
+	// which is capped at 30 seconds.
+	// Returns INVALID_ARGUMENT for a standard view or unsupported mode,
+	// FAILED_PRECONDITION when concurrent refresh requirements are unmet, and
+	// DEADLINE_EXCEEDED when PostgreSQL cannot finish within the timeout.
 	RefreshMaterializedView(context.Context, *connect.Request[v1alpha1.RefreshMaterializedViewRequest]) (*connect.Response[v1alpha1.RefreshMaterializedViewResponse], error)
 }
 
@@ -133,7 +137,11 @@ type ViewServiceHandler interface {
 	GetView(context.Context, *connect.Request[v1alpha1.GetViewRequest]) (*connect.Response[v1alpha1.GetViewResponse], error)
 	// Lists direct relation dependencies for a view.
 	ListViewDependencies(context.Context, *connect.Request[v1alpha1.ListViewDependenciesRequest]) (*connect.Response[v1alpha1.ListViewDependenciesResponse], error)
-	// Refreshes a materialized view.
+	// Refreshes a materialized view within the configured synchronous timeout,
+	// which is capped at 30 seconds.
+	// Returns INVALID_ARGUMENT for a standard view or unsupported mode,
+	// FAILED_PRECONDITION when concurrent refresh requirements are unmet, and
+	// DEADLINE_EXCEEDED when PostgreSQL cannot finish within the timeout.
 	RefreshMaterializedView(context.Context, *connect.Request[v1alpha1.RefreshMaterializedViewRequest]) (*connect.Response[v1alpha1.RefreshMaterializedViewResponse], error)
 }
 

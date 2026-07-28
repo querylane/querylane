@@ -2061,7 +2061,12 @@ paths:
       tags:
         - View
       summary: RefreshMaterializedView
-      description: Refreshes a materialized view.
+      description: |-
+        Refreshes a materialized view within the configured synchronous timeout,
+         which is capped at 30 seconds.
+         Returns INVALID_ARGUMENT for a standard view or unsupported mode,
+         FAILED_PRECONDITION when concurrent refresh requirements are unmet, and
+         DEADLINE_EXCEEDED when PostgreSQL cannot finish within the timeout.
       operationId: ViewService_RefreshMaterializedView
       parameters:
         - name: Connect-Protocol-Version
@@ -5018,7 +5023,10 @@ components:
           type: string
           title: parent
           pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
-          description: Required. The parent table or materialized view from which to list columns.
+          description: |-
+            Required. The parent table or materialized view from which to list columns.
+             aip.dev/not-precedent: This compatibility field accepts either a Table or
+             View resource. Runtime validation narrows the wildcard to those two types.
       title: ListTableColumnsRequest
       additionalProperties: false
     querylane.console.v1alpha1.ListTableColumnsResponse:
@@ -5039,7 +5047,10 @@ components:
           type: string
           title: parent
           pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
-          description: Required. The parent table or materialized view from which to list constraints.
+          description: |-
+            Required. The parent table or materialized view from which to list constraints.
+             aip.dev/not-precedent: This compatibility field accepts either a Table or
+             View resource. Runtime validation narrows the wildcard to those two types.
       title: ListTableConstraintsRequest
       additionalProperties: false
     querylane.console.v1alpha1.ListTableConstraintsResponse:
@@ -5059,7 +5070,10 @@ components:
           type: string
           title: parent
           pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
-          description: Required. The parent table or materialized view from which to list indexes.
+          description: |-
+            Required. The parent table or materialized view from which to list indexes.
+             aip.dev/not-precedent: This compatibility field accepts either a Table or
+             View resource. Runtime validation narrows the wildcard to those two types.
       title: ListTableIndexesRequest
       additionalProperties: false
     querylane.console.v1alpha1.ListTableIndexesResponse:
@@ -5197,18 +5211,50 @@ components:
           title: parent
           pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$
           description: Required. The view whose direct dependencies should be returned.
+        pageSize:
+          type: integer
+          title: page_size
+          minimum: 0
+          format: int32
+          description: |-
+            Optional. Maximum dependencies to return. The server clamps values above
+             1000 and uses 50 when this is unset.
+        pageToken:
+          type: string
+          title: page_token
+          description: Optional. Opaque continuation token from a previous response.
+        filter:
+          type: string
+          title: filter
+          description: |-
+            Optional. Filter expression joined by `AND`. schema_name and display_name
+             support `=`, `!=`, and `:`. direction and relation_type support `=` and
+             `!=` with their enum names.
+        orderBy:
+          type: string
+          title: order_by
+          description: |-
+            Optional. Comma-separated ordering. Supported fields are name,
+             schema_name, display_name, direction, and relation_type.
       title: ListViewDependenciesRequest
       additionalProperties: false
+      description: Request message for ListViewDependencies.
     querylane.console.v1alpha1.ListViewDependenciesResponse:
       type: object
       properties:
-        dependencies:
+        viewDependencies:
           type: array
           items:
             $ref: '#/components/schemas/querylane.console.v1alpha1.ViewDependency'
-          title: dependencies
+          title: view_dependencies
+          description: The dependency edges in this page.
+        nextPageToken:
+          type: string
+          title: next_page_token
+          description: Opaque token for the next page, or empty when this is the final page.
       title: ListViewDependenciesResponse
       additionalProperties: false
+      description: Response message for ListViewDependencies.
     querylane.console.v1alpha1.ListViewsRequest:
       type: object
       properties:
@@ -5789,7 +5835,10 @@ components:
           type: string
           title: name
           pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
-          description: Required. The table or materialized view the cell belongs to.
+          description: |-
+            Required. The table or materialized view the cell belongs to.
+             aip.dev/not-precedent: This compatibility field accepts either a Table or
+             View resource. Runtime validation narrows the wildcard to those two types.
         fullValueToken:
           type: string
           title: full_value_token
@@ -5832,7 +5881,10 @@ components:
           type: string
           title: name
           pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
-          description: Required. The table or materialized view to read from.
+          description: |-
+            Required. The table or materialized view to read from.
+             aip.dev/not-precedent: This compatibility field accepts either a Table or
+             View resource. Runtime validation narrows the wildcard to those two types.
         pageSize:
           type: integer
           title: page_size
@@ -5937,6 +5989,7 @@ components:
         - REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED
         - REFRESH_MATERIALIZED_VIEW_MODE_STANDARD
         - REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT
+      description: RefreshMaterializedViewMode selects the PostgreSQL refresh strategy.
     querylane.console.v1alpha1.RefreshMaterializedViewRequest:
       type: object
       properties:
@@ -5951,6 +6004,7 @@ components:
           $ref: '#/components/schemas/querylane.console.v1alpha1.RefreshMaterializedViewMode'
       title: RefreshMaterializedViewRequest
       additionalProperties: false
+      description: Request message for RefreshMaterializedView.
     querylane.console.v1alpha1.RefreshMaterializedViewResponse:
       type: object
       properties:
@@ -5960,6 +6014,7 @@ components:
           $ref: '#/components/schemas/querylane.console.v1alpha1.View'
       title: RefreshMaterializedViewResponse
       additionalProperties: false
+      description: Response message for RefreshMaterializedView.
     querylane.console.v1alpha1.Replica:
       type: object
       properties:
@@ -6952,7 +7007,10 @@ components:
           type: string
           title: name
           pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
-          description: Required. Same shape as ReadRowsRequest.name.
+          description: |-
+            Required. Same shape as ReadRowsRequest.name.
+             aip.dev/not-precedent: This compatibility field accepts either a Table or
+             View resource. Runtime validation narrows the wildcard to those two types.
         selectedColumns:
           type: array
           items:
@@ -7815,10 +7873,17 @@ components:
     querylane.console.v1alpha1.ViewDependency:
       type: object
       properties:
-        resourceName:
+        name:
           type: string
-          title: resource_name
-          description: Output-only. Canonical table or view resource name.
+          title: name
+          description: The dependency edge resource name.
+        relation:
+          type: string
+          title: relation
+          description: |-
+            Output-only. Canonical Table or View resource attached to this edge.
+             aip.dev/not-precedent: PostgreSQL dependencies can target either resource
+             type. Runtime construction narrows this wildcard to Table or View.
         schemaName:
           type: string
           title: schema_name
@@ -7845,6 +7910,7 @@ components:
         - DIRECTION_UNSPECIFIED
         - DIRECTION_UPSTREAM
         - DIRECTION_DOWNSTREAM
+      description: Direction identifies which side of the selected view contains the relation.
     querylane.console.v1alpha1.ViewDependency.RelationType:
       type: string
       title: RelationType
@@ -7855,6 +7921,7 @@ components:
         - RELATION_TYPE_MATERIALIZED_VIEW
         - RELATION_TYPE_FOREIGN_TABLE
         - RELATION_TYPE_PARTITIONED_TABLE
+      description: RelationType identifies the PostgreSQL catalog kind of the relation.
     querylane.console.v1alpha1.ViewView:
       type: string
       title: ViewView

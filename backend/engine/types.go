@@ -511,6 +511,7 @@ type View struct {
 
 // ViewDependency is a direct upstream or downstream relation dependency.
 type ViewDependency struct {
+	ResourceID   string
 	SchemaName   string
 	Name         string
 	Direction    api.ViewDependency_Direction

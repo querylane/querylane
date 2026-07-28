@@ -435,18 +435,18 @@ func (c *Catalog) ListViewIndexes(ctx context.Context, view resource.ViewName) (
 }
 
 // ListViewDependencies returns direct live dependencies for a view.
-func (c *Catalog) ListViewDependencies(ctx context.Context, view resource.ViewName) ([]engine.ViewDependency, error) {
+func (c *Catalog) ListViewDependencies(ctx context.Context, view resource.ViewName, params aip.Params) ([]engine.ViewDependency, string, error) {
 	if _, err := c.GetView(ctx, view); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	dbSession, closeFn, err := c.openDatabaseSession(ctx, view.Instance(), view.DatabaseID)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer closeFn()
 
-	return dbSession.ListViewDependencies(ctx, view.SchemaID, view.ViewID)
+	return dbSession.ListViewDependencies(ctx, view.SchemaID, view.ViewID, params)
 }
 
 // RefreshMaterializedView refreshes a live materialized view and returns fresh metadata.

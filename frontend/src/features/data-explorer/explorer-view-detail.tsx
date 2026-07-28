@@ -424,13 +424,11 @@ function DependencyLink({
   dependency: ViewDependency;
   instanceId: string | undefined;
 }) {
-  const target = tryParseRelationQualifiedName(dependency.resourceName);
+  const target = tryParseRelationQualifiedName(dependency.relation);
   const label = target
     ? `${target.schema}.${target.relation}`
     : `${dependency.schemaName}.${dependency.displayName}`;
-  const category = dependency.resourceName.includes("/views/")
-    ? "views"
-    : "tables";
+  const category = dependency.relation.includes("/views/") ? "views" : "tables";
   const contents = (
     <>
       <span className="min-w-0 truncate font-mono">{label}</span>
@@ -482,7 +480,7 @@ function DependenciesTab({
   instanceId: string | undefined;
   query: ReturnType<typeof useListViewDependenciesQuery>;
 }) {
-  if (query.error) {
+  if (query.error && !query.data) {
     return (
       <Alert variant="destructive">
         <TriangleAlert />
@@ -506,7 +504,10 @@ function DependenciesTab({
   if (!query.data || query.isLoading) {
     return <TabSkeleton />;
   }
-  if (query.data.dependencies.length === 0) {
+  const dependencies = query.data.pages.flatMap(
+    (page) => page.viewDependencies
+  );
+  if (dependencies.length === 0) {
     return (
       <EmptyStatePanel
         description="PostgreSQL did not report direct upstream or downstream relations."
@@ -517,15 +518,35 @@ function DependenciesTab({
   }
 
   return (
-    <div className="grid gap-2">
-      {query.data.dependencies.map((dependency) => (
-        <DependencyLink
-          databaseId={databaseId}
-          dependency={dependency}
-          instanceId={instanceId}
-          key={`${dependency.direction}-${dependency.resourceName}`}
-        />
-      ))}
+    <div className="grid gap-3">
+      <div className="grid gap-2">
+        {dependencies.map((dependency) => (
+          <DependencyLink
+            databaseId={databaseId}
+            dependency={dependency}
+            instanceId={instanceId}
+            key={dependency.name}
+          />
+        ))}
+      </div>
+      {query.error ? (
+        <Alert variant="destructive">
+          <TriangleAlert />
+          <AlertTitle>Could not load more dependencies</AlertTitle>
+          <AlertDescription>{query.error.message}</AlertDescription>
+        </Alert>
+      ) : null}
+      {query.hasNextPage ? (
+        <Button
+          disabled={query.isFetchingNextPage}
+          onClick={() => query.fetchNextPage()}
+          type="button"
+          variant="outline"
+        >
+          {query.isFetchingNextPage ? <Spinner /> : null}
+          Load more dependencies
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -1010,11 +1031,16 @@ function MaterializedViewDetail({
     view,
     viewName,
   });
+  const dependencies = dependenciesQuery.data?.pages.flatMap(
+    (page) => page.viewDependencies
+  );
   const tabCounts: Record<MaterializedViewTab, number | undefined> = {
     columns: columnsQuery.data?.columns.length,
     data: undefined,
     definition: undefined,
-    dependencies: dependenciesQuery.data?.dependencies.length,
+    dependencies: dependenciesQuery.hasNextPage
+      ? undefined
+      : dependencies?.length,
     indexes: indexesQuery.data?.indexes.length,
   };
   const subtitleDetails = ["Materialized view"];

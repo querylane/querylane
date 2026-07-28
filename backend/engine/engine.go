@@ -68,7 +68,7 @@ type DatabaseSession interface {
 	ListTableTriggers(ctx context.Context, schemaName, tableName string) ([]TableTrigger, error)
 	ListViews(ctx context.Context, schemaName string, params aip.Params) ([]View, string, error)
 	GetView(ctx context.Context, schemaName, viewName string) (*View, error)
-	ListViewDependencies(ctx context.Context, schemaName, viewName string) ([]ViewDependency, error)
+	ListViewDependencies(ctx context.Context, schemaName, viewName string, params aip.Params) ([]ViewDependency, string, error)
 	RefreshMaterializedView(ctx context.Context, schemaName, viewName string, concurrently bool) error
 	ReadRows(ctx context.Context, params ReadRowsParams) (*ReadRowsResult, error)
 	ReadCellValue(ctx context.Context, params ReadCellValueParams) (*ReadCellValueResult, error)

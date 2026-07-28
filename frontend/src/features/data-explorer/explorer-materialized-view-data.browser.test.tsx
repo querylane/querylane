@@ -47,8 +47,11 @@ const tableDataApi = vi.hoisted(() => ({
 }));
 const viewApi = vi.hoisted(() => ({
   useListViewDependenciesQuery: vi.fn(() => ({
-    data: { dependencies: [] },
+    data: { pages: [{ viewDependencies: [] }] },
     error: null,
+    fetchNextPage: vi.fn(),
+    hasNextPage: false,
+    isFetchingNextPage: false,
     isLoading: false,
     refetch: vi.fn(),
   })),

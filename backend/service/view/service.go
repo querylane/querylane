@@ -4,6 +4,9 @@ package view
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -19,17 +22,20 @@ import (
 
 var _ v1connect.ViewServiceHandler = (*Service)(nil)
 
+const maxSynchronousRefreshTimeout = 30 * time.Second
+
 type viewCatalog interface {
 	ListViews(ctx context.Context, schema resource.SchemaName, params aip.Params) ([]engine.View, string, error)
 	GetView(ctx context.Context, view resource.ViewName) (*engine.View, error)
-	ListViewDependencies(ctx context.Context, view resource.ViewName) ([]engine.ViewDependency, error)
+	ListViewDependencies(ctx context.Context, view resource.ViewName, params aip.Params) ([]engine.ViewDependency, string, error)
 	RefreshMaterializedView(ctx context.Context, view resource.ViewName, concurrently bool) (*engine.View, error)
 }
 
 // Service implements the ViewService RPC handlers.
 type Service struct {
-	catalog     viewCatalog
-	liveQueries liveQueryLimiter
+	catalog        viewCatalog
+	liveQueries    liveQueryLimiter
+	refreshTimeout time.Duration
 }
 
 type liveQueryLimiter interface {
@@ -37,12 +43,20 @@ type liveQueryLimiter interface {
 }
 
 // NewService creates a new ViewService.
-func NewService(catalog viewCatalog, liveQueries liveQueryLimiter) *Service {
+func NewService(catalog viewCatalog, liveQueries liveQueryLimiter, refreshTimeout time.Duration) *Service {
 	if liveQueries == nil {
 		panic("view.NewService: live query limiter is required") //nolint:forbidigo // programmer error during DI setup
 	}
 
-	return &Service{catalog: catalog, liveQueries: liveQueries}
+	if refreshTimeout <= 0 {
+		panic("view.NewService: materialized view refresh timeout must be positive") //nolint:forbidigo // programmer error during DI setup
+	}
+
+	if refreshTimeout > maxSynchronousRefreshTimeout {
+		panic("view.NewService: materialized view refresh timeout must not exceed 30s") //nolint:forbidigo // programmer error during DI setup
+	}
+
+	return &Service{catalog: catalog, liveQueries: liveQueries, refreshTimeout: refreshTimeout}
 }
 
 // ListViews lists views in a schema.
@@ -116,7 +130,14 @@ func (s *Service) ListViewDependencies(ctx context.Context, req *connect.Request
 	}
 	defer release()
 
-	dependencies, err := s.catalog.ListViewDependencies(ctx, viewRes)
+	params := aip.Params{
+		PageSize:  req.Msg.GetPageSize(),
+		PageToken: req.Msg.GetPageToken(),
+		Filter:    req.Msg.GetFilter(),
+		OrderBy:   req.Msg.GetOrderBy(),
+	}
+
+	dependencies, nextToken, err := s.catalog.ListViewDependencies(ctx, viewRes, params)
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
 			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: "list_view_dependencies",
@@ -129,7 +150,8 @@ func (s *Service) ListViewDependencies(ctx context.Context, req *connect.Request
 	}
 
 	return connect.NewResponse(&v1alpha1.ListViewDependenciesResponse{
-		Dependencies: pbDependencies,
+		ViewDependencies: pbDependencies,
+		NextPageToken:    nextToken,
 	}), nil
 }
 
@@ -162,9 +184,16 @@ func (s *Service) RefreshMaterializedView(ctx context.Context, req *connect.Requ
 	}
 	defer release()
 
-	refreshed, err := s.catalog.RefreshMaterializedView(ctx, viewRes, concurrently)
+	refreshCtx, cancel := context.WithTimeout(ctx, s.refreshTimeout)
+	defer cancel()
+
+	refreshed, err := s.catalog.RefreshMaterializedView(refreshCtx, viewRes, concurrently)
 	if err != nil {
-		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
+		if errors.Is(err, context.DeadlineExceeded) {
+			err = fmt.Errorf("materialized view refresh exceeded its deadline: %w", engine.ErrQueryTimeout)
+		}
+
+		return nil, apierrors.MapEngineErr(refreshCtx, err, apierrors.ResourceCtx{
 			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: "refresh_materialized_view",
 		})
 	}
@@ -175,25 +204,26 @@ func (s *Service) RefreshMaterializedView(ctx context.Context, req *connect.Requ
 }
 
 func convertDependencyToProto(dependency engine.ViewDependency, viewRes resource.ViewName) *v1alpha1.ViewDependency {
-	var resourceName string
+	var relation string
 
 	switch dependency.RelationType {
 	case v1alpha1.ViewDependency_RELATION_TYPE_VIEW,
 		v1alpha1.ViewDependency_RELATION_TYPE_MATERIALIZED_VIEW:
-		resourceName = resource.NewViewName(
+		relation = resource.NewViewName(
 			viewRes.InstanceID, viewRes.DatabaseID, dependency.SchemaName, dependency.Name,
 		).String()
 	case v1alpha1.ViewDependency_RELATION_TYPE_TABLE,
 		v1alpha1.ViewDependency_RELATION_TYPE_FOREIGN_TABLE,
 		v1alpha1.ViewDependency_RELATION_TYPE_PARTITIONED_TABLE,
 		v1alpha1.ViewDependency_RELATION_TYPE_UNSPECIFIED:
-		resourceName = resource.NewTableName(
+		relation = resource.NewTableName(
 			viewRes.InstanceID, viewRes.DatabaseID, dependency.SchemaName, dependency.Name,
 		).String()
 	}
 
 	return &v1alpha1.ViewDependency{
-		ResourceName: resourceName,
+		Name:         viewRes.String() + "/viewDependencies/" + dependency.ResourceID,
+		Relation:     relation,
 		SchemaName:   dependency.SchemaName,
 		DisplayName:  dependency.Name,
 		Direction:    dependency.Direction,

@@ -332,9 +332,11 @@ message TableResultSet {
 
 message ReadRowsRequest {
   // Required. The table or materialized view to read from.
+  // aip.dev/not-precedent: This compatibility field accepts either a Table or
+  // View resource. Runtime validation narrows the wildcard to those two types.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "console.querylane.dev/Relation"},
+    (google.api.resource_reference) = {type: "*"},
     (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$"
   ];
 
@@ -416,9 +418,11 @@ message ReadRowsResponse {
 
 message StreamRowsRequest {
   // Required. Same shape as ReadRowsRequest.name.
+  // aip.dev/not-precedent: This compatibility field accepts either a Table or
+  // View resource. Runtime validation narrows the wildcard to those two types.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "console.querylane.dev/Relation"},
+    (google.api.resource_reference) = {type: "*"},
     (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$"
   ];
 
@@ -521,9 +525,11 @@ message StreamRowsStats {
 
 message ReadCellValueRequest {
   // Required. The table or materialized view the cell belongs to.
+  // aip.dev/not-precedent: This compatibility field accepts either a Table or
+  // View resource. Runtime validation narrows the wildcard to those two types.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "console.querylane.dev/Relation"},
+    (google.api.resource_reference) = {type: "*"},
     (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$"
   ];
 

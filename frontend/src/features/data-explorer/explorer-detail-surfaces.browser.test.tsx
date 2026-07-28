@@ -151,8 +151,11 @@ const sqlQueryState = vi.hoisted(() => ({
 }));
 const viewQueries = vi.hoisted(() => ({
   dependencies: {
-    data: { dependencies: [] },
+    data: { pages: [{ viewDependencies: [] }] },
     error: null,
+    fetchNextPage: () => Promise.resolve(),
+    hasNextPage: false,
+    isFetchingNextPage: false,
     isLoading: false,
     refetch: () => Promise.resolve(),
   },
@@ -2064,7 +2067,7 @@ test("data explorer materialized view detail stays readable", async () => {
       }),
     ],
   });
-  viewQueries.dependencies.data = { dependencies: [] };
+  viewQueries.dependencies.data = { pages: [{ viewDependencies: [] }] };
 
   renderExplorerSurface(
     <ViewDetail

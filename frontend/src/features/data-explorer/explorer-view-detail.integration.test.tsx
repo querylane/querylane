@@ -53,6 +53,9 @@ const { tableApi, useExplainQueryMock, viewApi } = vi.hoisted(() => ({
     dependencies: {
       data: undefined as unknown,
       error: null as Error | null,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
       isLoading: false,
       refetch: vi.fn(),
     },
@@ -139,18 +142,27 @@ beforeEach(() => {
   });
   tableApi.indexes.error = null;
   tableApi.indexes.isLoading = false;
-  viewApi.dependencies.data = createProto(ListViewDependenciesResponseSchema, {
-    dependencies: [
-      createProto(ViewDependencySchema, {
-        direction: ViewDependency_Direction.UPSTREAM,
-        displayName: "orders",
-        relationType: ViewDependency_RelationType.TABLE,
-        resourceName:
-          "instances/prod/databases/app/schemas/sales/tables/orders",
-        schemaName: "sales",
+  viewApi.dependencies.data = {
+    pages: [
+      createProto(ListViewDependenciesResponseSchema, {
+        viewDependencies: [
+          createProto(ViewDependencySchema, {
+            direction: ViewDependency_Direction.UPSTREAM,
+            displayName: "orders",
+            name: "instances/prod/databases/app/schemas/public/views/daily_revenue/viewDependencies/edge",
+            relation:
+              "instances/prod/databases/app/schemas/sales/tables/orders",
+            relationType: ViewDependency_RelationType.TABLE,
+            schemaName: "sales",
+          }),
+        ],
       }),
     ],
-  });
+  };
+  viewApi.dependencies.fetchNextPage.mockReset();
+  viewApi.dependencies.fetchNextPage.mockResolvedValue({});
+  viewApi.dependencies.hasNextPage = false;
+  viewApi.dependencies.isFetchingNextPage = false;
   viewApi.refresh.error = null;
   viewApi.refresh.isPending = false;
   viewApi.refresh.mutateAsync.mockReset();
@@ -284,6 +296,35 @@ describe("view detail integration", () => {
     ).toBeTruthy();
   });
 
+  it("loads the next dependency page on demand", async () => {
+    const user = userEvent.setup();
+    viewApi.dependencies.hasNextPage = true;
+
+    render(
+      <ViewDetail
+        databaseId="app"
+        instanceId="prod"
+        schemaName="public"
+        view={createProto(ViewSchema, {
+          displayName: "daily_revenue",
+          isPopulated: true,
+          name: "instances/prod/databases/app/schemas/public/views/daily_revenue",
+          viewType: View_ViewType.MATERIALIZED,
+        })}
+        viewName="daily_revenue"
+      />
+    );
+
+    await user.click(
+      screen.getByRole("tab", { name: DEPENDENCIES_TAB_PATTERN })
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Load more dependencies" })
+    );
+
+    expect(viewApi.dependencies.fetchNextPage).toHaveBeenCalledOnce();
+  });
+
   it("does not claim standard-only refresh before index metadata loads", () => {
     tableApi.indexes.data = undefined;
     tableApi.indexes.isLoading = true;
@@ -303,7 +344,9 @@ describe("view detail integration", () => {
     expect(screen.getByText("Checking…")).toBeTruthy();
     expect(screen.queryByText("Standard only")).toBeNull();
   });
+});
 
+describe("standard view detail integration", () => {
   it("explains a view with purpose, sources, query shape, and SQL definition", () => {
     const { container } = render(
       <ViewDetail

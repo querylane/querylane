@@ -166,8 +166,8 @@ func (s *databaseSession) GetView(ctx context.Context, schemaName, viewName stri
 	return s.databaseCatalogDriver.GetView(ctx, s.db, schemaName, viewName)
 }
 
-func (s *databaseSession) ListViewDependencies(ctx context.Context, schemaName, viewName string) ([]ViewDependency, error) {
-	return s.viewDriver.ListViewDependencies(ctx, s.db, schemaName, viewName)
+func (s *databaseSession) ListViewDependencies(ctx context.Context, schemaName, viewName string, params aip.Params) ([]ViewDependency, string, error) {
+	return s.viewDriver.ListViewDependencies(ctx, s.db, schemaName, viewName, params)
 }
 
 func (s *databaseSession) RefreshMaterializedView(ctx context.Context, schemaName, viewName string, concurrently bool) error {

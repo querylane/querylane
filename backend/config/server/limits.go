@@ -5,12 +5,15 @@ import (
 	"time"
 )
 
+const maxMaterializedViewRefreshTimeout = 30 * time.Second
+
 // Limits bounds user-driven work against managed PostgreSQL instances and the
 // connection pools used to reach them.
 type Limits struct {
-	LiveQueries     LiveQueryLimits      `koanf:"live_queries"`
-	ConnectionTests ConnectionTestLimits `koanf:"connection_tests"`
-	PostgresPool    PostgresPoolLimits   `koanf:"postgres_pool"`
+	LiveQueries             LiveQueryLimits              `koanf:"live_queries"`
+	MaterializedViewRefresh MaterializedViewRefreshLimit `koanf:"materialized_view_refresh"`
+	ConnectionTests         ConnectionTestLimits         `koanf:"connection_tests"`
+	PostgresPool            PostgresPoolLimits           `koanf:"postgres_pool"`
 }
 
 // LiveQueryLimits controls non-queuing admission for live-query RPCs. Global
@@ -19,6 +22,12 @@ type Limits struct {
 type LiveQueryLimits struct {
 	Global      int `koanf:"global"`
 	PerInstance int `koanf:"per_instance"`
+}
+
+// MaterializedViewRefreshLimit bounds synchronous refresh work. PostgreSQL
+// statement execution and the RPC context share this deadline.
+type MaterializedViewRefreshLimit struct {
+	Timeout time.Duration `koanf:"timeout"`
 }
 
 // ConnectionTestLimits bounds caller-driven PostgreSQL connection probes.
@@ -48,6 +57,10 @@ func (l *Limits) SetDefaults() {
 
 	if l.LiveQueries.PerInstance == 0 {
 		l.LiveQueries.PerInstance = 6
+	}
+
+	if l.MaterializedViewRefresh.Timeout == 0 {
+		l.MaterializedViewRefresh.Timeout = maxMaterializedViewRefreshTimeout
 	}
 
 	if l.ConnectionTests.PerCallerPerMinute == 0 {
@@ -88,6 +101,14 @@ func (l *Limits) Validate() error {
 
 	if l.LiveQueries.PerInstance > l.LiveQueries.Global {
 		return errors.New("live_queries.per_instance must not exceed live_queries.global")
+	}
+
+	if l.MaterializedViewRefresh.Timeout <= 0 {
+		return errors.New("materialized_view_refresh.timeout must be positive")
+	}
+
+	if l.MaterializedViewRefresh.Timeout > maxMaterializedViewRefreshTimeout {
+		return errors.New("materialized_view_refresh.timeout must not exceed 30s")
 	}
 
 	if l.ConnectionTests.PerCallerPerMinute <= 0 {

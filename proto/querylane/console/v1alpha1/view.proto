@@ -3,6 +3,8 @@ syntax = "proto3";
 package querylane.console.v1alpha1;
 
 import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
 import "google/protobuf/timestamp.proto";
@@ -20,10 +22,23 @@ service ViewService {
   rpc GetView(GetViewRequest) returns (GetViewResponse) {}
 
   // Lists direct relation dependencies for a view.
-  rpc ListViewDependencies(ListViewDependenciesRequest) returns (ListViewDependenciesResponse) {}
+  rpc ListViewDependencies(ListViewDependenciesRequest) returns (ListViewDependenciesResponse) {
+    option (google.api.http) = {get: "/v1alpha1/{parent=instances/*/databases/*/schemas/*/views/*}/viewDependencies"};
+    option (google.api.method_signature) = "parent";
+  }
 
-  // Refreshes a materialized view.
-  rpc RefreshMaterializedView(RefreshMaterializedViewRequest) returns (RefreshMaterializedViewResponse) {}
+  // Refreshes a materialized view within the configured synchronous timeout,
+  // which is capped at 30 seconds.
+  // Returns INVALID_ARGUMENT for a standard view or unsupported mode,
+  // FAILED_PRECONDITION when concurrent refresh requirements are unmet, and
+  // DEADLINE_EXCEEDED when PostgreSQL cannot finish within the timeout.
+  rpc RefreshMaterializedView(RefreshMaterializedViewRequest) returns (RefreshMaterializedViewResponse) {
+    option (google.api.http) = {
+      post: "/v1alpha1/{name=instances/*/databases/*/schemas/*/views/*}:refresh"
+      body: "*"
+    };
+    option (google.api.method_signature) = "name";
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -41,9 +56,16 @@ enum ViewView {
   VIEW_VIEW_FULL = 2;
 }
 
+// RefreshMaterializedViewMode selects the PostgreSQL refresh strategy.
 enum RefreshMaterializedViewMode {
+  // Uses a standard, blocking refresh.
   REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED = 0;
+
+  // Replaces the stored rows while preventing concurrent reads.
   REFRESH_MATERIALIZED_VIEW_MODE_STANDARD = 1;
+
+  // Replaces the stored rows without preventing concurrent reads.
+  // PostgreSQL requires a qualifying unique index.
   REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT = 2;
 }
 
@@ -109,35 +131,68 @@ message View {
 
 // A relation connected to a view through PostgreSQL catalog dependencies.
 message ViewDependency {
+  option (google.api.resource) = {
+    type: "console.querylane.dev/ViewDependency"
+    pattern: "instances/{instance}/databases/{database}/schemas/{schema}/views/{view}/viewDependencies/{view_dependency}"
+    plural: "viewDependencies"
+    singular: "viewDependency"
+  };
+
+  // Direction identifies which side of the selected view contains the relation.
   enum Direction {
+    // The direction is not specified.
     DIRECTION_UNSPECIFIED = 0;
+
+    // The selected view reads from the relation.
     DIRECTION_UPSTREAM = 1;
+
+    // The relation reads from the selected view.
     DIRECTION_DOWNSTREAM = 2;
   }
 
+  // RelationType identifies the PostgreSQL catalog kind of the relation.
   enum RelationType {
+    // The relation type is not specified.
     RELATION_TYPE_UNSPECIFIED = 0;
+
+    // A base table.
     RELATION_TYPE_TABLE = 1;
+
+    // A standard view.
     RELATION_TYPE_VIEW = 2;
+
+    // A materialized view.
     RELATION_TYPE_MATERIALIZED_VIEW = 3;
+
+    // A foreign table.
     RELATION_TYPE_FOREIGN_TABLE = 4;
+
+    // A partitioned table.
     RELATION_TYPE_PARTITIONED_TABLE = 5;
   }
 
-  // Output-only. Canonical table or view resource name.
-  string resource_name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // The dependency edge resource name.
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // Output-only. Canonical Table or View resource attached to this edge.
+  // aip.dev/not-precedent: PostgreSQL dependencies can target either resource
+  // type. Runtime construction narrows this wildcard to Table or View.
+  string relation = 2 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.resource_reference) = {type: "*"}
+  ];
 
   // Output-only. Schema containing the relation.
-  string schema_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string schema_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output-only. Relation display name.
-  string display_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string display_name = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output-only. Whether the relation is upstream or downstream of the view.
-  Direction direction = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  Direction direction = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output-only. PostgreSQL relation kind.
-  RelationType relation_type = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  RelationType relation_type = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // --------------------------------------------------------------------------
@@ -203,6 +258,7 @@ message GetViewResponse {
   View view = 1;
 }
 
+// Request message for ListViewDependencies.
 message ListViewDependenciesRequest {
   // Required. The view whose direct dependencies should be returned.
   string parent = 1 [
@@ -210,12 +266,37 @@ message ListViewDependenciesRequest {
     (google.api.resource_reference) = {type: "console.querylane.dev/View"},
     (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$"
   ];
+
+  // Optional. Maximum dependencies to return. The server clamps values above
+  // 1000 and uses 50 when this is unset.
+  int32 page_size = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32.gte = 0
+  ];
+
+  // Optional. Opaque continuation token from a previous response.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter expression joined by `AND`. schema_name and display_name
+  // support `=`, `!=`, and `:`. direction and relation_type support `=` and
+  // `!=` with their enum names.
+  string filter = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Comma-separated ordering. Supported fields are name,
+  // schema_name, display_name, direction, and relation_type.
+  string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// Response message for ListViewDependencies.
 message ListViewDependenciesResponse {
-  repeated ViewDependency dependencies = 1;
+  // The dependency edges in this page.
+  repeated ViewDependency view_dependencies = 1;
+
+  // Opaque token for the next page, or empty when this is the final page.
+  string next_page_token = 2;
 }
 
+// Request message for RefreshMaterializedView.
 message RefreshMaterializedViewRequest {
   // Required. The materialized view to refresh.
   string name = 1 [
@@ -231,6 +312,7 @@ message RefreshMaterializedViewRequest {
   ];
 }
 
+// Response message for RefreshMaterializedView.
 message RefreshMaterializedViewResponse {
   // The refreshed materialized view.
   View view = 1;

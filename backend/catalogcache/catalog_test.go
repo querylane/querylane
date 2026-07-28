@@ -228,8 +228,8 @@ func (m *mockDatabaseSession) GetView(_ context.Context, _, _ string) (*engine.V
 	return nil, engine.ErrViewNotFound
 }
 
-func (m *mockDatabaseSession) ListViewDependencies(_ context.Context, _, _ string) ([]engine.ViewDependency, error) {
-	return nil, nil
+func (m *mockDatabaseSession) ListViewDependencies(_ context.Context, _, _ string, _ aip.Params) ([]engine.ViewDependency, string, error) {
+	return nil, "", nil
 }
 
 func (m *mockDatabaseSession) RefreshMaterializedView(_ context.Context, _, _ string, _ bool) error {

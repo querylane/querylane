@@ -87,6 +87,6 @@ type queryDriver interface {
 }
 
 type viewDriver interface {
-	ListViewDependencies(ctx context.Context, db *sql.DB, schemaName, viewName string) ([]ViewDependency, error)
+	ListViewDependencies(ctx context.Context, db *sql.DB, schemaName, viewName string, params aip.Params) ([]ViewDependency, string, error)
 	RefreshMaterializedView(ctx context.Context, db *sql.DB, schemaName, viewName string, concurrently bool) error
 }
