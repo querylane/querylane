@@ -11,9 +11,62 @@ import (
 	"github.com/querylane/querylane/backend/aip"
 	"github.com/querylane/querylane/backend/catalogcache"
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/livequery"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
 )
+
+func TestMaterializedViewMetadataHonorsLiveQueryLimit(t *testing.T) {
+	t.Parallel()
+
+	const parent = "instances/prod/databases/app/schemas/public/views/daily_revenue"
+
+	tests := []struct {
+		name string
+		call func(context.Context, *Service) error
+	}{
+		{
+			name: "columns",
+			call: func(ctx context.Context, service *Service) error {
+				_, err := service.ListTableColumns(ctx, connect.NewRequest(&v1alpha1.ListTableColumnsRequest{Parent: parent}))
+
+				return err
+			},
+		},
+		{
+			name: "constraints",
+			call: func(ctx context.Context, service *Service) error {
+				_, err := service.ListTableConstraints(ctx, connect.NewRequest(&v1alpha1.ListTableConstraintsRequest{Parent: parent}))
+
+				return err
+			},
+		},
+		{
+			name: "indexes",
+			call: func(ctx context.Context, service *Service) error {
+				_, err := service.ListTableIndexes(ctx, connect.NewRequest(&v1alpha1.ListTableIndexesRequest{Parent: parent}))
+
+				return err
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			limiter, err := livequery.NewLimiter(1, 1)
+			require.NoError(t, err)
+
+			release, err := limiter.Acquire(resource.NewInstanceName("prod"))
+			require.NoError(t, err)
+			t.Cleanup(release)
+
+			err = tt.call(t.Context(), NewService(partitionMetadataCatalogStub{}, limiter))
+			require.Equal(t, connect.CodeResourceExhausted, connect.CodeOf(err))
+		})
+	}
+}
 
 func TestGetTablePartitionMetadataHandlesCatalogResponses(t *testing.T) {
 	t.Parallel()
@@ -45,7 +98,7 @@ func TestGetTablePartitionMetadataHandlesCatalogResponses(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := NewService(tt.catalog)
+			svc := NewService(tt.catalog, newTableTestLimiter(t))
 
 			_, err := svc.GetTablePartitionMetadata(context.Background(), connect.NewRequest(&v1alpha1.GetTablePartitionMetadataRequest{
 				Name: "instances/prod/databases/app/schemas/public/tables/events",
@@ -84,7 +137,7 @@ func TestGetTablePartitionMetadataMapsPartitionStats(t *testing.T) {
 			PartitionCount: 2,
 			PartitionKey:   "RANGE (recorded_at)",
 		},
-	})
+	}, newTableTestLimiter(t))
 
 	resp, err := svc.GetTablePartitionMetadata(context.Background(), connect.NewRequest(&v1alpha1.GetTablePartitionMetadataRequest{
 		Name: "instances/prod/databases/app/schemas/audit/tables/change_log",
@@ -102,6 +155,15 @@ func TestGetTablePartitionMetadataMapsPartitionStats(t *testing.T) {
 type partitionMetadataCatalogStub struct {
 	partitionMetadata *engine.TablePartitionMetadata
 	partitionErr      error
+}
+
+func newTableTestLimiter(t *testing.T) *livequery.Limiter {
+	t.Helper()
+
+	limiter, err := livequery.NewLimiter(10, 10)
+	require.NoError(t, err)
+
+	return limiter
 }
 
 func (partitionMetadataCatalogStub) ListTablesWithSyncMetadata(context.Context, resource.SchemaName, aip.Params) ([]engine.Table, string, catalogcache.CatalogSyncMetadata, error) {

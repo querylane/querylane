@@ -13,6 +13,7 @@ import (
 	"github.com/querylane/querylane/backend/catalogcache"
 	"github.com/querylane/querylane/backend/connectrpc/apierrors"
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/livequery"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	"github.com/querylane/querylane/backend/resource"
@@ -26,7 +27,12 @@ var _ v1connect.TableServiceHandler = (*Service)(nil)
 // It implements the TableServiceHandler interface and serves table
 // management operations for managed database instances.
 type Service struct {
-	catalog tableCatalog
+	catalog     tableCatalog
+	liveQueries liveQueryLimiter
+}
+
+type liveQueryLimiter interface {
+	Acquire(instance resource.InstanceName) (livequery.Release, error)
 }
 
 type tableCatalog interface {
@@ -44,8 +50,12 @@ type tableCatalog interface {
 }
 
 // NewService creates a new instance of the table service.
-func NewService(catalog tableCatalog) *Service {
-	return &Service{catalog: catalog}
+func NewService(catalog tableCatalog, liveQueries liveQueryLimiter) *Service {
+	if liveQueries == nil {
+		panic("table.NewService: live query limiter is required") //nolint:forbidigo // programmer error during DI setup
+	}
+
+	return &Service{catalog: catalog, liveQueries: liveQueries}
 }
 
 // ListTables returns a paginated list of tables within the specified schema.
@@ -136,7 +146,7 @@ func (s *Service) GetTablePartitionMetadata(ctx context.Context, req *connect.Re
 	}), nil
 }
 
-// ListTableColumns returns detailed column information for a specific table.
+// ListTableColumns returns detailed column information for a table or materialized view.
 func (s *Service) ListTableColumns(ctx context.Context, req *connect.Request[v1alpha1.ListTableColumnsRequest]) (*connect.Response[v1alpha1.ListTableColumnsResponse], error) {
 	relation, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseRelationName)
 	if connErr != nil {
@@ -162,7 +172,7 @@ func (s *Service) ListTableColumns(ctx context.Context, req *connect.Request[v1a
 	return connect.NewResponse(res), nil
 }
 
-// ListTableConstraints returns constraints for a specific table.
+// ListTableConstraints returns constraints for a table or materialized view.
 func (s *Service) ListTableConstraints(ctx context.Context, req *connect.Request[v1alpha1.ListTableConstraintsRequest]) (*connect.Response[v1alpha1.ListTableConstraintsResponse], error) {
 	relation, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseRelationName)
 	if connErr != nil {
@@ -181,7 +191,7 @@ func (s *Service) ListTableConstraints(ctx context.Context, req *connect.Request
 	}), nil
 }
 
-// ListTableIndexes returns indexes for a specific table.
+// ListTableIndexes returns indexes for a table or materialized view.
 func (s *Service) ListTableIndexes(ctx context.Context, req *connect.Request[v1alpha1.ListTableIndexesRequest]) (*connect.Response[v1alpha1.ListTableIndexesResponse], error) {
 	relation, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseRelationName)
 	if connErr != nil {
@@ -240,6 +250,12 @@ func (s *Service) ListTableTriggers(ctx context.Context, req *connect.Request[v1
 
 func (s *Service) listRelationColumns(ctx context.Context, relation resource.RelationName) ([]engine.Column, error) {
 	if relation.Type == resource.TypeView {
+		release, err := s.liveQueries.Acquire(relation.Instance())
+		if err != nil {
+			return nil, err
+		}
+		defer release()
+
 		return s.catalog.ListViewColumns(ctx, resource.NewViewName(
 			relation.InstanceID, relation.DatabaseID, relation.SchemaID, relation.RelationID,
 		))
@@ -252,6 +268,12 @@ func (s *Service) listRelationColumns(ctx context.Context, relation resource.Rel
 
 func (s *Service) listRelationConstraints(ctx context.Context, relation resource.RelationName) ([]engine.TableConstraint, error) {
 	if relation.Type == resource.TypeView {
+		release, err := s.liveQueries.Acquire(relation.Instance())
+		if err != nil {
+			return nil, err
+		}
+		defer release()
+
 		return s.catalog.ListViewConstraints(ctx, resource.NewViewName(
 			relation.InstanceID, relation.DatabaseID, relation.SchemaID, relation.RelationID,
 		))
@@ -264,6 +286,12 @@ func (s *Service) listRelationConstraints(ctx context.Context, relation resource
 
 func (s *Service) listRelationIndexes(ctx context.Context, relation resource.RelationName) ([]engine.TableIndex, error) {
 	if relation.Type == resource.TypeView {
+		release, err := s.liveQueries.Acquire(relation.Instance())
+		if err != nil {
+			return nil, err
+		}
+		defer release()
+
 		return s.catalog.ListViewIndexes(ctx, resource.NewViewName(
 			relation.InstanceID, relation.DatabaseID, relation.SchemaID, relation.RelationID,
 		))

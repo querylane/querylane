@@ -17,6 +17,8 @@ const (
 	tableSizeSQLPlaceholder = "/*QUERYLANE_TABLE_SIZE_SQL*/"
 )
 
+const maxViewDependencies = 100
+
 var (
 	tableTypeSQLExpr = `CASE
 		WHEN c.relpersistence = 't' THEN 'TABLE_TYPE_TEMPORARY'
@@ -142,7 +144,7 @@ func (d *Postgres) GetView(ctx context.Context, db *sql.DB, schemaName, viewName
 
 // ListViewDependencies returns direct upstream and downstream relation dependencies.
 func (*Postgres) ListViewDependencies(ctx context.Context, db *sql.DB, schemaName, viewName string) ([]engine.ViewDependency, error) {
-	rows, err := db.QueryContext(ctx, listViewDependenciesQuery, schemaName, viewName)
+	rows, err := db.QueryContext(ctx, listViewDependenciesQuery, schemaName, viewName, maxViewDependencies+1)
 	if err != nil {
 		return nil, classifyQueryError("list view dependencies", err)
 	}
@@ -167,6 +169,10 @@ func (*Postgres) ListViewDependencies(ctx context.Context, db *sql.DB, schemaNam
 
 	if err := rows.Err(); err != nil {
 		return nil, classifyQueryError("iterate view dependencies", err)
+	}
+
+	if len(dependencies) > maxViewDependencies {
+		return nil, &engine.ViewDependencyLimitExceededError{Limit: maxViewDependencies}
 	}
 
 	return dependencies, nil

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -34,6 +35,19 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 	var liveQueryLimitErr *livequery.LimitExceededError
 	if errors.As(err, &liveQueryLimitErr) {
 		return MapLiveQueryLimit(err)
+	}
+
+	var dependencyLimitErr *engine.ViewDependencyLimitExceededError
+	if errors.As(err, &dependencyLimitErr) {
+		return NewConnectError(
+			connect.CodeResourceExhausted,
+			dependencyLimitErr,
+			NewErrorInfo(
+				DomainConsole,
+				consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
+				KeyVal{Key: "limit", Value: strconv.Itoa(dependencyLimitErr.Limit)},
+			),
+		)
 	}
 
 	// Hierarchy not-found sentinels win before generic SQLSTATE mapping so

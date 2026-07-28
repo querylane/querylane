@@ -1,5 +1,5 @@
-// Package tabledata provides the TableDataService implementation for live
-// row reads against user-managed PostgreSQL tables.
+// Package tabledata provides the TableDataService implementation for live row
+// reads against user-managed PostgreSQL tables and materialized views.
 package tabledata
 
 import (
@@ -376,9 +376,9 @@ func streamRowsBatchResponsePayloadSize(batchPayloadBytes int64) int64 {
 // previously surfaced as TableCell.full_value_token in a ReadRows page.
 //
 // The opaque token decodes to a TableCellFullValueTokenPayload bound to a
-// specific table + column + row identity. The service rejects a token
+// specific relation + column + row identity. The service rejects a token
 // whose payload table_name does not match req.Name (defense in depth
-// against cross-table replay).
+// against cross-relation replay).
 func (s *Service) ReadCellValue(ctx context.Context, req *connect.Request[v1alpha1.ReadCellValueRequest]) (*connect.Response[v1alpha1.ReadCellValueResponse], error) {
 	relation, connErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseRelationName)
 	if connErr != nil {

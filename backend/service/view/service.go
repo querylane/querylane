@@ -11,6 +11,7 @@ import (
 	"github.com/querylane/querylane/backend/aip"
 	"github.com/querylane/querylane/backend/connectrpc/apierrors"
 	"github.com/querylane/querylane/backend/engine"
+	"github.com/querylane/querylane/backend/livequery"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	"github.com/querylane/querylane/backend/resource"
@@ -27,12 +28,21 @@ type viewCatalog interface {
 
 // Service implements the ViewService RPC handlers.
 type Service struct {
-	catalog viewCatalog
+	catalog     viewCatalog
+	liveQueries liveQueryLimiter
+}
+
+type liveQueryLimiter interface {
+	Acquire(instance resource.InstanceName) (livequery.Release, error)
 }
 
 // NewService creates a new ViewService.
-func NewService(catalog viewCatalog) *Service {
-	return &Service{catalog: catalog}
+func NewService(catalog viewCatalog, liveQueries liveQueryLimiter) *Service {
+	if liveQueries == nil {
+		panic("view.NewService: live query limiter is required") //nolint:forbidigo // programmer error during DI setup
+	}
+
+	return &Service{catalog: catalog, liveQueries: liveQueries}
 }
 
 // ListViews lists views in a schema.
@@ -98,6 +108,14 @@ func (s *Service) ListViewDependencies(ctx context.Context, req *connect.Request
 		return nil, connErr
 	}
 
+	release, err := s.liveQueries.Acquire(viewRes.Instance())
+	if err != nil {
+		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
+			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: "list_view_dependencies",
+		})
+	}
+	defer release()
+
 	dependencies, err := s.catalog.ListViewDependencies(ctx, viewRes)
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
@@ -135,6 +153,14 @@ func (s *Service) RefreshMaterializedView(ctx context.Context, req *connect.Requ
 			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: "refresh_materialized_view",
 		})
 	}
+
+	release, err := s.liveQueries.Acquire(viewRes.Instance())
+	if err != nil {
+		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
+			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: "refresh_materialized_view",
+		})
+	}
+	defer release()
 
 	refreshed, err := s.catalog.RefreshMaterializedView(ctx, viewRes, concurrently)
 	if err != nil {

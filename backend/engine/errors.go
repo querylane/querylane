@@ -2,9 +2,20 @@ package engine
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/querylane/querylane/backend/aip"
 )
+
+// ViewDependencyLimitExceededError reports that a direct dependency graph is
+// too large for the bounded metadata response.
+type ViewDependencyLimitExceededError struct {
+	Limit int
+}
+
+func (e *ViewDependencyLimitExceededError) Error() string {
+	return fmt.Sprintf("view has more than %d direct dependencies", e.Limit)
+}
 
 // Structured errors returned by engine implementations.
 var (

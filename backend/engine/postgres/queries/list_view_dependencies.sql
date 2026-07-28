@@ -1,5 +1,5 @@
 -- Direct upstream and downstream relation dependencies for a view.
--- Args: $1 = schema name, $2 = view name.
+-- Args: $1 = schema name, $2 = view name, $3 = maximum rows to return.
 WITH target AS (
 	SELECT c.oid
 	FROM pg_catalog.pg_class c
@@ -43,3 +43,4 @@ WHERE dependent.oid <> target.oid
 	AND dependent.relkind IN ('v', 'm')
 
 ORDER BY 3, 1, 2
+LIMIT $3

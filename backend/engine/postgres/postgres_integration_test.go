@@ -114,6 +114,37 @@ func (s *PostgresEngineIntegrationTestSuite) TestGetInstanceOverviewExposesPgSta
 	s.GreaterOrEqual(overview.IO.Fsyncs, int64(0))
 }
 
+func (s *PostgresEngineIntegrationTestSuite) TestListViewDependenciesRejectsOversizedGraph() {
+	ctx := s.T().Context()
+
+	testDB := s.getTestDBConnection()
+	defer testDB.Close()
+
+	_, err := testDB.ExecContext(ctx, `
+		CREATE TABLE dependency_source (id integer);
+		CREATE VIEW dependency_target AS SELECT * FROM dependency_source;
+		DO $$
+		BEGIN
+			FOR dependency_number IN 1..100 LOOP
+				EXECUTE format(
+					'CREATE VIEW dependency_%s AS SELECT * FROM dependency_target',
+					dependency_number
+				);
+			END LOOP;
+		END
+		$$;
+	`)
+	s.Require().NoError(err)
+
+	dependencies, err := s.eng.ListViewDependencies(ctx, testDB, "public", "dependency_target")
+	s.Require().Error(err)
+	s.Nil(dependencies)
+
+	var limitErr *engine.ViewDependencyLimitExceededError
+	s.Require().ErrorAs(err, &limitErr)
+	s.Equal(100, limitErr.Limit)
+}
+
 func (s *PostgresEngineIntegrationTestSuite) TestProbeMetricsCollectRealSamples() {
 	ctx := context.Background()
 

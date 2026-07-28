@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 
 	"github.com/querylane/querylane/backend/engine"
@@ -243,6 +244,35 @@ func TestMapEngineErrClassifiesUnreachableInstance(t *testing.T) {
 	if strings.Contains(connectErr.Message(), "connection refused") {
 		t.Errorf("message exposes raw connection error: %q", connectErr.Message())
 	}
+}
+
+func TestMapEngineErrViewDependencyLimitExceeded(t *testing.T) {
+	t.Parallel()
+
+	connectErr := MapEngineErr(t.Context(), &engine.ViewDependencyLimitExceededError{Limit: 1000}, ResourceCtx{
+		Type: resource.TypeView,
+		Name: "instances/i1/databases/app/schemas/public/views/daily_revenue",
+		Op:   "list_view_dependencies",
+	})
+	require.Equal(t, connect.CodeResourceExhausted, connectErr.Code())
+	require.Equal(t, "view has more than 1000 direct dependencies", connectErr.Message())
+
+	for _, detail := range connectErr.Details() {
+		value, err := detail.Value()
+		require.NoError(t, err)
+
+		info, ok := value.(*errdetails.ErrorInfo)
+		if !ok {
+			continue
+		}
+
+		require.Equal(t, consolev1alpha1.ErrorReason_FAILED_PRECONDITION.String(), info.GetReason())
+		require.Equal(t, "1000", info.GetMetadata()["limit"])
+
+		return
+	}
+
+	t.Fatal("expected ErrorInfo detail")
 }
 
 func TestMapEngineErrNotFoundSentinelDoesNotAttachPostgresDetail(t *testing.T) {
