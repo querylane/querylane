@@ -24,6 +24,7 @@ const adminHeaderMockState = vi.hoisted(() => ({
     isLoaded: true,
   },
   instances: undefined as unknown,
+  isInstanceRolesRoute: false,
   selectedInstance: undefined as unknown,
 }));
 
@@ -70,11 +71,17 @@ vi.mock("@tanstack/react-router", () => ({
   }: {
     select?: (location: unknown) => unknown;
   } = {}) => {
-    const location = {
-      href: "/instances/prod-analytics/databases/customer-events?page=database.overview",
-      pathname: "/instances/prod-analytics/databases/customer-events",
-      search: { page: "database.overview" },
-    };
+    const location = adminHeaderMockState.isInstanceRolesRoute
+      ? {
+          href: "/instances/prod-analytics/roles",
+          pathname: "/instances/prod-analytics/roles",
+          search: {},
+        }
+      : {
+          href: "/instances/prod-analytics/databases/customer-events?page=database.overview",
+          pathname: "/instances/prod-analytics/databases/customer-events",
+          search: { page: "database.overview" },
+        };
     return select ? select(location) : location;
   },
   useNavigate: () => navigateMock,
@@ -156,7 +163,9 @@ vi.mock("@/lib/db-context", () => ({
     },
     retryInstanceCatalog: vi.fn(async () => undefined),
     scopeLevel: "database",
-    selectedDatabase,
+    selectedDatabase: adminHeaderMockState.isInstanceRolesRoute
+      ? null
+      : selectedDatabase,
     selectedInstance: adminHeaderMockState.selectedInstance,
     viewLevel: "database",
     viewOverview: vi.fn(),
@@ -263,6 +272,7 @@ beforeEach(() => {
     isLoaded: true,
   };
   adminHeaderMockState.instances = undefined;
+  adminHeaderMockState.isInstanceRolesRoute = false;
   adminHeaderMockState.selectedInstance = selectedInstance;
   useSetupStore.setState({ showDegradedBanner: false });
 });
@@ -480,6 +490,58 @@ test("admin shell shows selected instance, database, scoped navigation, and acti
   await expect(page.getByTestId("admin-shell-visual-root")).toMatchScreenshot(
     "admin-shell-database-scope"
   );
+});
+
+test("admin header truncates a long instance name without wrapping and exposes the full name", async () => {
+  const longInstanceName =
+    "katana-mcp (gear profiles + tone presets) with an extra long suffix";
+  adminHeaderMockState.isInstanceRolesRoute = true;
+  adminHeaderMockState.selectedInstance = {
+    ...selectedInstance,
+    name: longInstanceName,
+  };
+  renderAdminShell();
+
+  const instanceSelector = page.getByRole("button", {
+    name: `Instance: ${longInstanceName}`,
+  });
+  const instanceName = instanceSelector.getByText(longInstanceName);
+  const rolesBreadcrumb = page
+    .getByRole("navigation", { name: "Breadcrumb" })
+    .getByText("Roles");
+
+  await expect.element(instanceSelector).toBeVisible();
+  await expect.element(rolesBreadcrumb).toBeVisible();
+
+  const instanceNameElement = instanceName.element();
+  const rolesElement = rolesBreadcrumb.element();
+
+  expect(instanceNameElement.scrollWidth).toBeGreaterThan(
+    instanceNameElement.clientWidth
+  );
+  expect(getComputedStyle(instanceNameElement).whiteSpace).toBe("nowrap");
+  expect(instanceNameElement.getBoundingClientRect().right).toBeLessThanOrEqual(
+    rolesElement.getBoundingClientRect().left
+  );
+
+  const tooltipTrigger = instanceNameElement.closest(
+    '[data-slot="tooltip-trigger"]'
+  );
+  if (!(tooltipTrigger instanceof HTMLElement)) {
+    throw new Error("Expected instance name overflow tooltip trigger");
+  }
+  await instanceName.hover();
+  await expect
+    .poll(() => page.getByText(longInstanceName).elements().length)
+    .toBe(2);
+  const tooltipContent = page
+    .getByText(longInstanceName)
+    .elements()
+    .find((element) => element.closest('[data-slot="tooltip-content"]'));
+  if (!(tooltipContent instanceof HTMLElement)) {
+    throw new Error("Expected instance name overflow tooltip content");
+  }
+  await expect.element(page.elementLocator(tooltipContent)).toBeVisible();
 });
 
 test("command palette opens over the full admin layout", async () => {

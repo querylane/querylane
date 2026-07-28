@@ -77,12 +77,8 @@ function OverflowTooltip({
     </span>
   )
 
-  if (!hasTooltipContent || !isOverflowing) {
-    return trigger
-  }
-
   return (
-    <Tooltip>
+    <Tooltip disabled={!hasTooltipContent || !isOverflowing}>
       <TooltipTrigger render={trigger} />
       <TooltipContent
         className={cn(DEFAULT_TOOLTIP_CLASS_NAME, tooltipClassName)}
