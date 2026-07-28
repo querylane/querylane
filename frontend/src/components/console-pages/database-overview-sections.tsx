@@ -113,7 +113,7 @@ function TrendSparkline({ values }: { values: number[] }) {
   return (
     <svg
       aria-hidden="true"
-      className="h-8 w-16 shrink-0 opacity-60"
+      className="h-8 w-16 shrink-0 text-chart-1 opacity-60"
       fill="none"
       viewBox={`0 0 ${SPARKLINE_WIDTH} ${SPARKLINE_HEIGHT}`}
     >

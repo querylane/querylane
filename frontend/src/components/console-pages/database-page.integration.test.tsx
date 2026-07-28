@@ -34,6 +34,7 @@ import {
   PostgreSqlErrorKind,
   PostgreSqlErrorRetryGuidance,
 } from "@/protogen/querylane/console/v1alpha1/errors_pb";
+import { MetricId } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 interface QueryState<T> {
@@ -831,6 +832,43 @@ describe("backend database overview", () => {
     expect(
       screen.getByText("No extensions are installed in this database.")
     ).toBeTruthy();
+  });
+
+  test("uses the subtle blue chart color for metric sparklines", () => {
+    state.metricsQuery = {
+      data: {
+        series: [
+          {
+            metric: MetricId.DATABASE_SIZE_BYTES,
+            points: { values: [1024, 2048] },
+          },
+          {
+            metric: MetricId.DATABASE_LIVE_TUPLES,
+            points: { values: [12_000, 17_000] },
+          },
+          {
+            metric: MetricId.DATABASE_DEAD_TUPLES,
+            points: { values: [100, 125] },
+          },
+        ],
+      },
+    };
+
+    render(
+      <BackendDatabasePage
+        databaseId="customer-events"
+        instanceId="prod"
+        section="overview"
+      />
+    );
+
+    for (const label of ["Total size", "Est. rows", "Dead tuples"]) {
+      const sparkline = screen
+        .getByText(label)
+        .parentElement?.querySelector("svg");
+
+      expect.soft(sparkline?.getAttribute("class")).toContain("text-chart-1");
+    }
   });
 
   test("keeps the database-objects section with only extensions when the database has no other objects", () => {
