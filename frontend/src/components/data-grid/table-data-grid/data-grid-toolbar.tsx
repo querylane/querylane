@@ -1,6 +1,11 @@
-import { Maximize2, Minimize2, X } from "lucide-react";
-import { useState } from "react";
+import { Copy, Maximize2, Minimize2, X } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { SortColumn } from "react-data-grid";
+import {
+  type CellSelectionStore,
+  type CellSelectionSummary as CellSelectionSummaryValue,
+  getCellSelectionSummary,
+} from "@/components/data-grid/table-data-grid/cell-selection-state";
 import { ColumnsPopover } from "@/components/data-grid/table-data-grid/columns-popover";
 import { FilterPopover } from "@/components/data-grid/table-data-grid/filter-popover";
 import { FilterChips } from "@/components/data-grid/table-data-grid/filter-popover-chips";
@@ -18,6 +23,7 @@ import { cn } from "@/lib/utils";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 interface DataGridToolbarProps {
+  cellSelectionStore: CellSelectionStore;
   className?: string | undefined;
   columnOrder: readonly string[];
   columns: TableResultColumn[];
@@ -33,6 +39,7 @@ interface DataGridToolbarProps {
   onColumnLayoutReset: () => void;
   onColumnOrderChange: (columnOrder: string[]) => void;
   onColumnVisibilityChange: (columnKey: string, visible: boolean) => void;
+  onCopyCellSelection: () => void;
   onCopySelection: (format: ExportFormat) => void;
   onExportSelection: (format: ExportFormat) => void;
   onFilterChange: (
@@ -44,6 +51,116 @@ interface DataGridToolbarProps {
   onToggleExpanded?: (() => void) | undefined;
   selectedCount: number;
   sortColumns: SortColumn[];
+}
+
+function pluralizedCount(
+  count: number,
+  singular: string,
+  plural = `${singular}s`
+): string {
+  return `${count.toLocaleString()} ${count === 1 ? singular : plural}`;
+}
+
+function getCellSelectionVisibleLabel(
+  summary: CellSelectionSummaryValue
+): string {
+  if (summary.rangeCount !== 1) {
+    return `${pluralizedCount(summary.cellCount, "cell")} · ${pluralizedCount(
+      summary.rangeCount,
+      "range"
+    )}`;
+  }
+  return `${pluralizedCount(summary.cellCount, "cell")} · ${
+    summary.rowCount
+  }×${summary.columnCount}`;
+}
+
+function getCellSelectionLiveLabel(summary: CellSelectionSummaryValue): string {
+  if (summary.cellCount === 0) {
+    return "Cell selection cleared.";
+  }
+  if (summary.rangeCount !== 1) {
+    return `${pluralizedCount(
+      summary.cellCount,
+      "cell"
+    )} selected in ${pluralizedCount(summary.rangeCount, "range")}.`;
+  }
+  return `${pluralizedCount(
+    summary.cellCount,
+    "cell"
+  )} selected in ${pluralizedCount(
+    summary.rowCount ?? 0,
+    "row"
+  )} by ${pluralizedCount(summary.columnCount ?? 0, "column")}.`;
+}
+
+function CellSelectionSummary({
+  cellSelectionStore,
+  onCopyCellSelection,
+}: Pick<DataGridToolbarProps, "cellSelectionStore" | "onCopyCellSelection">) {
+  const state = useSyncExternalStore(
+    cellSelectionStore.subscribe,
+    cellSelectionStore.getState,
+    cellSelectionStore.getState
+  );
+  const summary = getCellSelectionSummary(state);
+  const hasHadSelectionRef = useRef(summary.cellCount > 0);
+  const visibleLabel = getCellSelectionVisibleLabel(summary);
+  const liveLabel =
+    state.isDragging || (summary.cellCount === 0 && !hasHadSelectionRef.current)
+      ? ""
+      : getCellSelectionLiveLabel(summary);
+
+  useEffect(
+    function rememberCellSelection() {
+      if (summary.cellCount > 0) {
+        hasHadSelectionRef.current = true;
+      }
+    },
+    [summary.cellCount]
+  );
+
+  return (
+    <>
+      <span
+        aria-label="Cell selection"
+        aria-live="polite"
+        className="sr-only"
+        role="status"
+      >
+        {liveLabel}
+      </span>
+      {summary.cellCount > 0 ? (
+        <div
+          className="flex items-center gap-1 text-foreground"
+          data-slot="cell-selection-summary"
+        >
+          <span className="font-medium">{visibleLabel}</span>
+          <Button
+            aria-label="Copy selected cells"
+            className="h-7 gap-1 px-2"
+            onClick={onCopyCellSelection}
+            size="sm"
+            type="button"
+            variant="ghost"
+          >
+            <Copy className="size-3.5" />
+            Copy
+          </Button>
+          <Button
+            aria-label="Clear cell selection"
+            className="size-7 p-0"
+            onClick={cellSelectionStore.clear}
+            size="sm"
+            type="button"
+            variant="ghost"
+          >
+            <X className="size-3.5" />
+          </Button>
+        </div>
+      ) : null}
+    </>
+  );
 }
 
 function DataGridExpandToggle({
@@ -131,6 +248,7 @@ function SelectionSummary({
 }
 
 function DataGridToolbar({
+  cellSelectionStore,
   className,
   columnOrder,
   columns,
@@ -144,6 +262,7 @@ function DataGridToolbar({
   lastFetchedLabel = "Not fetched yet",
   onClearSelection,
   onColumnVisibilityChange,
+  onCopyCellSelection,
   onCopySelection,
   onExportSelection,
   onFilterChange,
@@ -205,6 +324,10 @@ function DataGridToolbar({
         <ActiveSortSummary summary={sortSummary} />
 
         <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-muted-foreground text-xs">
+          <CellSelectionSummary
+            cellSelectionStore={cellSelectionStore}
+            onCopyCellSelection={onCopyCellSelection}
+          />
           <SelectionSummary
             onClearSelection={onClearSelection}
             onCopySelection={onCopySelection}

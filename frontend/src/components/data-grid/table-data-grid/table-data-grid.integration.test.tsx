@@ -96,6 +96,7 @@ const toastMock = vi.hoisted(() => ({
 interface MockGridColumn {
   draggable?: boolean;
   frozen?: boolean;
+  idx?: number;
   key: string;
   renderCell?: (args: { row: GridRow; rowIdx: number }) => ReactNode;
   renderHeaderCell?: () => ReactNode;
@@ -117,6 +118,39 @@ interface MockGridProps {
   onCellCopy?: (
     args: { column: MockGridColumn; row: GridRow },
     event: ReactClipboardEvent<HTMLDivElement>
+  ) => void;
+  onCellKeyDown?: (
+    args: {
+      column: MockGridColumn;
+      mode: "ACTIVE";
+      row: GridRow;
+      rowIdx: number;
+      setActivePosition: (
+        position: { idx: number; rowIdx: number },
+        options?: { shouldFocus?: boolean }
+      ) => void;
+    },
+    event: {
+      altKey: boolean;
+      ctrlKey: boolean;
+      currentTarget?: HTMLDivElement;
+      key: string;
+      metaKey: boolean;
+      preventDefault: () => void;
+      preventGridDefault: () => void;
+      shiftKey: boolean;
+    }
+  ) => void;
+  onCellMouseDown?: (
+    args: { column: MockGridColumn; row: GridRow; rowIdx: number },
+    event: {
+      button: number;
+      ctrlKey: boolean;
+      metaKey: boolean;
+      preventDefault: () => void;
+      preventGridDefault: () => void;
+      shiftKey: boolean;
+    }
   ) => void;
   onColumnsReorder?: (sourceColumnKey: string, targetColumnKey: string) => void;
   onSelectedRowsChange?: (selectedRows: Set<string>) => void;
@@ -301,6 +335,74 @@ function seedRowsQueryWithRawClipboardValues() {
                     case: "timestampValue",
                     value: "2024-01-01 12:00:00.123456+00",
                   },
+                }),
+              }),
+            ],
+          }),
+        ],
+      }),
+    }),
+    dataUpdatedAt: 0,
+    error: null,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  });
+  tableDataApi.useReadCellValueMutation.mockReturnValue({
+    isError: false,
+    isPending: false,
+    mutate: vi.fn(),
+  });
+}
+
+function seedRowsQueryWithCellSelectionValues() {
+  tableApi.useListTableColumnsQuery.mockReturnValue({
+    data: create(ListTableColumnsResponseSchema, { columns: [] }),
+    error: null,
+    isError: false,
+  });
+  tableDataApi.useReadRowsQuery.mockReturnValue({
+    data: create(ReadRowsResponseSchema, {
+      resultSet: create(TableResultSetSchema, {
+        columns: [
+          create(TableResultColumnSchema, {
+            columnName: "first_name",
+            dataType: DataType.STRING,
+            rawType: "text",
+          }),
+          create(TableResultColumnSchema, {
+            columnName: "last_name",
+            dataType: DataType.STRING,
+            rawType: "text",
+          }),
+        ],
+        rows: [
+          create(TableResultRowSchema, {
+            rowKey: "row-0",
+            values: [
+              create(TableCellSchema, {
+                value: create(TableValueSchema, {
+                  kind: { case: "stringValue", value: "Ada" },
+                }),
+              }),
+              create(TableCellSchema, {
+                value: create(TableValueSchema, {
+                  kind: { case: "stringValue", value: "Lovelace" },
+                }),
+              }),
+            ],
+          }),
+          create(TableResultRowSchema, {
+            rowKey: "row-1",
+            values: [
+              create(TableCellSchema, {
+                value: create(TableValueSchema, {
+                  kind: { case: "stringValue", value: "Grace" },
+                }),
+              }),
+              create(TableCellSchema, {
+                value: create(TableValueSchema, {
+                  kind: { case: "stringValue", value: "Hopper" },
                 }),
               }),
             ],
@@ -1227,6 +1329,395 @@ describe("TableDataGrid row interactions", () => {
 
     expect(writeText).not.toHaveBeenCalled();
     selection?.removeAllRanges();
+  });
+});
+
+describe("TableDataGrid cell selection", () => {
+  beforeEach(setupTableDataGridIntegrationTest);
+  afterEach(teardownTableDataGridIntegrationTest);
+
+  it("copies a shift-extended cell range as TSV", () => {
+    seedRowsQueryWithCellSelectionValues();
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/people" />
+    );
+
+    const gridProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
+    const firstRow = gridProps?.rows?.[0];
+    const secondRow = gridProps?.rows?.[1];
+    const firstNameColumn = gridProps?.columns?.find(
+      (column) => column.key === "first_name"
+    );
+    const lastNameColumn = gridProps?.columns?.find(
+      (column) => column.key === "last_name"
+    );
+    if (
+      !(
+        gridProps?.onCellMouseDown &&
+        gridProps.onCellCopy &&
+        firstRow &&
+        secondRow &&
+        firstNameColumn &&
+        lastNameColumn
+      )
+    ) {
+      throw new Error("Expected cell selection props.");
+    }
+
+    const mouseEvent = {
+      button: 0,
+      ctrlKey: false,
+      metaKey: false,
+      preventDefault: vi.fn(),
+      preventGridDefault: vi.fn(),
+      shiftKey: false,
+    };
+    gridProps.onCellMouseDown(
+      {
+        column: { ...firstNameColumn, idx: 2 },
+        row: firstRow,
+        rowIdx: 0,
+      },
+      mouseEvent
+    );
+    gridProps.onCellMouseDown(
+      {
+        column: { ...lastNameColumn, idx: 3 },
+        row: secondRow,
+        rowIdx: 1,
+      },
+      { ...mouseEvent, shiftKey: true }
+    );
+    gridProps.onCellCopy({ column: lastNameColumn, row: secondRow }, {
+      currentTarget: screen.getByTestId("data-grid"),
+    } as ReactClipboardEvent<HTMLDivElement>);
+
+    expect(writeClipboardMock).toHaveBeenCalledWith(
+      "Ada\tLovelace\nGrace\tHopper"
+    );
+  });
+
+  it("extends cell selection with Shift+Arrow and clears it with Escape", () => {
+    seedRowsQueryWithCellSelectionValues();
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/people" />
+    );
+
+    const gridProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
+    const firstRow = gridProps?.rows?.[0];
+    const secondRow = gridProps?.rows?.[1];
+    const firstNameColumn = gridProps?.columns?.find(
+      (column) => column.key === "first_name"
+    );
+    if (
+      !(
+        gridProps?.onCellMouseDown &&
+        gridProps.onCellKeyDown &&
+        gridProps.onCellCopy &&
+        firstRow &&
+        secondRow &&
+        firstNameColumn
+      )
+    ) {
+      throw new Error("Expected keyboard cell selection props.");
+    }
+
+    const activeColumn = { ...firstNameColumn, idx: 2 };
+    const preventDefault = vi.fn();
+    const preventGridDefault = vi.fn();
+    const setActivePosition = vi.fn();
+    gridProps.onCellMouseDown(
+      { column: activeColumn, row: firstRow, rowIdx: 0 },
+      {
+        button: 0,
+        ctrlKey: false,
+        metaKey: false,
+        preventDefault,
+        preventGridDefault,
+        shiftKey: false,
+      }
+    );
+    gridProps.onCellKeyDown(
+      {
+        column: activeColumn,
+        mode: "ACTIVE",
+        row: firstRow,
+        rowIdx: 0,
+        setActivePosition,
+      },
+      {
+        altKey: false,
+        ctrlKey: false,
+        key: "ArrowDown",
+        metaKey: false,
+        preventDefault,
+        preventGridDefault,
+        shiftKey: true,
+      }
+    );
+    gridProps.onCellCopy({ column: firstNameColumn, row: secondRow }, {
+      currentTarget: screen.getByTestId("data-grid"),
+    } as ReactClipboardEvent<HTMLDivElement>);
+
+    expect(writeClipboardMock).toHaveBeenLastCalledWith("Ada\nGrace");
+    expect(setActivePosition).toHaveBeenCalledWith(
+      { idx: 2, rowIdx: 1 },
+      { shouldFocus: true }
+    );
+
+    gridProps.onCellKeyDown(
+      {
+        column: activeColumn,
+        mode: "ACTIVE",
+        row: secondRow,
+        rowIdx: 1,
+        setActivePosition,
+      },
+      {
+        altKey: false,
+        ctrlKey: false,
+        key: "Escape",
+        metaKey: false,
+        preventDefault,
+        preventGridDefault,
+        shiftKey: false,
+      }
+    );
+    gridProps.onCellCopy({ column: firstNameColumn, row: secondRow }, {
+      currentTarget: screen.getByTestId("data-grid"),
+    } as ReactClipboardEvent<HTMLDivElement>);
+
+    expect(writeClipboardMock).toHaveBeenLastCalledWith("Grace");
+  });
+});
+
+describe("TableDataGrid cell selection navigation", () => {
+  beforeEach(setupTableDataGridIntegrationTest);
+  afterEach(teardownTableDataGridIntegrationTest);
+
+  it("navigates cell selection to row and grid edges", () => {
+    seedRowsQueryWithCellSelectionValues();
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/people" />
+    );
+
+    const gridProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
+    const firstRow = gridProps?.rows?.[0];
+    const secondRow = gridProps?.rows?.[1];
+    const firstNameColumn = gridProps?.columns?.find(
+      (column) => column.key === "first_name"
+    );
+    const lastNameColumn = gridProps?.columns?.find(
+      (column) => column.key === "last_name"
+    );
+    if (
+      !(
+        gridProps?.onCellMouseDown &&
+        gridProps.onCellKeyDown &&
+        gridProps.onCellCopy &&
+        firstRow &&
+        secondRow &&
+        firstNameColumn &&
+        lastNameColumn
+      )
+    ) {
+      throw new Error("Expected edge navigation props.");
+    }
+
+    const preventDefault = vi.fn();
+    const preventGridDefault = vi.fn();
+    const setActivePosition = vi.fn();
+    const firstColumn = { ...firstNameColumn, idx: 2 };
+    const lastColumn = { ...lastNameColumn, idx: 3 };
+    const baseKeyboardEvent = {
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      preventDefault,
+      preventGridDefault,
+      shiftKey: false,
+    };
+    gridProps.onCellMouseDown(
+      { column: firstColumn, row: firstRow, rowIdx: 0 },
+      {
+        button: 0,
+        ctrlKey: false,
+        metaKey: false,
+        preventDefault,
+        preventGridDefault,
+        shiftKey: false,
+      }
+    );
+
+    gridProps.onCellKeyDown(
+      {
+        column: firstColumn,
+        mode: "ACTIVE",
+        row: firstRow,
+        rowIdx: 0,
+        setActivePosition,
+      },
+      { ...baseKeyboardEvent, key: "End" }
+    );
+    gridProps.onCellKeyDown(
+      {
+        column: lastColumn,
+        mode: "ACTIVE",
+        row: firstRow,
+        rowIdx: 0,
+        setActivePosition,
+      },
+      {
+        ...baseKeyboardEvent,
+        ctrlKey: true,
+        key: "ArrowDown",
+        shiftKey: true,
+      }
+    );
+    gridProps.onCellCopy({ column: lastNameColumn, row: secondRow }, {
+      currentTarget: screen.getByTestId("data-grid"),
+    } as ReactClipboardEvent<HTMLDivElement>);
+
+    expect(writeClipboardMock).toHaveBeenLastCalledWith("Lovelace\nHopper");
+
+    gridProps.onCellKeyDown(
+      {
+        column: lastColumn,
+        mode: "ACTIVE",
+        row: secondRow,
+        rowIdx: 1,
+        setActivePosition,
+      },
+      { ...baseKeyboardEvent, ctrlKey: true, key: "Home" }
+    );
+    expect(setActivePosition).toHaveBeenLastCalledWith(
+      { idx: 2, rowIdx: 0 },
+      { shouldFocus: true }
+    );
+  });
+
+  it("extends cell selection by one visible viewport with PageDown", () => {
+    seedRowsQuery(25);
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/people" />
+    );
+
+    const gridProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
+    const firstRow = gridProps?.rows?.[0];
+    const emailColumn = gridProps?.columns?.find(
+      (column) => column.key === "email"
+    );
+    if (
+      !(
+        gridProps?.onCellMouseDown &&
+        gridProps.onCellKeyDown &&
+        firstRow &&
+        emailColumn
+      )
+    ) {
+      throw new Error("Expected page navigation props.");
+    }
+
+    const grid = document.createElement("div");
+    grid.className = "rdg";
+    Object.defineProperty(grid, "clientHeight", { value: 356 });
+    const activeColumn = { ...emailColumn, idx: 2 };
+    const setActivePosition = vi.fn();
+    const preventDefault = vi.fn();
+    const preventGridDefault = vi.fn();
+    gridProps.onCellMouseDown(
+      { column: activeColumn, row: firstRow, rowIdx: 0 },
+      {
+        button: 0,
+        ctrlKey: false,
+        metaKey: false,
+        preventDefault,
+        preventGridDefault,
+        shiftKey: false,
+      }
+    );
+
+    gridProps.onCellKeyDown(
+      {
+        column: activeColumn,
+        mode: "ACTIVE",
+        row: firstRow,
+        rowIdx: 0,
+        setActivePosition,
+      },
+      {
+        altKey: false,
+        ctrlKey: false,
+        currentTarget: grid,
+        key: "PageDown",
+        metaKey: false,
+        preventDefault,
+        preventGridDefault,
+        shiftKey: true,
+      }
+    );
+
+    expect(setActivePosition).toHaveBeenCalledWith(
+      { idx: 2, rowIdx: 10 },
+      { shouldFocus: true }
+    );
+  });
+});
+
+describe("TableDataGrid cell selection full values", () => {
+  beforeEach(setupTableDataGridIntegrationTest);
+  afterEach(teardownTableDataGridIntegrationTest);
+
+  it("resolves truncated values before copying selected cells", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({
+      value: create(TableCellSchema, {
+        value: create(TableValueSchema, {
+          kind: { case: "stringValue", value: "the complete text" },
+        }),
+      }),
+    });
+    seedRowsQueryWithTruncatedCell(mutateAsync);
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
+    );
+
+    const gridProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
+    const row = gridProps?.rows?.[0];
+    const notesColumn = gridProps?.columns?.find(
+      (gridColumn) => gridColumn.key === "notes"
+    );
+    if (
+      !(
+        gridProps?.onCellMouseDown &&
+        gridProps.onCellCopy &&
+        row &&
+        notesColumn
+      )
+    ) {
+      throw new Error("Expected truncated cell selection props.");
+    }
+    gridProps.onCellMouseDown(
+      { column: { ...notesColumn, idx: 2 }, row, rowIdx: 0 },
+      {
+        button: 0,
+        ctrlKey: false,
+        metaKey: false,
+        preventDefault: vi.fn(),
+        preventGridDefault: vi.fn(),
+        shiftKey: false,
+      }
+    );
+    gridProps.onCellCopy({ column: notesColumn, row }, {
+      currentTarget: screen.getByTestId("data-grid"),
+    } as ReactClipboardEvent<HTMLDivElement>);
+
+    const getText = writeClipboardDeferredMock.mock.calls[0]?.[0];
+    await expect(getText()).resolves.toBe("the complete text");
   });
 });
 

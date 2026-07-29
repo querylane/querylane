@@ -13,6 +13,8 @@ import {
 import "react-data-grid/lib/styles.css";
 import {
   type CellCopyArgs,
+  type CellKeyboardEvent,
+  type CellKeyDownArgs,
   type CellMouseArgs,
   type CellMouseEvent,
   type Column,
@@ -23,6 +25,16 @@ import {
 import { toast } from "sonner";
 import { AppInlineError } from "@/components/app-error-view";
 import { CellContextMenu } from "@/components/data-grid/table-data-grid/cell-context-menu";
+import { isCellSelectionInteractiveTarget } from "@/components/data-grid/table-data-grid/cell-selection-interaction";
+import {
+  type CellCoordinate,
+  type CellSelectionClipboardField,
+  type CellSelectionRange,
+  type CellSelectionStore,
+  createCellSelectionStore,
+  formatCellSelectionForClipboard,
+  getCellSelectionBounds,
+} from "@/components/data-grid/table-data-grid/cell-selection-state";
 import { DataGridToolbar } from "@/components/data-grid/table-data-grid/data-grid-toolbar";
 import { DataValueDialogProvider } from "@/components/data-grid/table-data-grid/data-value-dialog-provider";
 import type {
@@ -244,6 +256,39 @@ function useResetSelectionOnNavigation({
   );
 }
 
+function useResetCellSelectionOnLayoutChange({
+  cellSelectionStore,
+  columnKeys,
+  rowKeys,
+}: {
+  cellSelectionStore: CellSelectionStore;
+  columnKeys: string[];
+  rowKeys: string[];
+}) {
+  const layoutKey = JSON.stringify([columnKeys, rowKeys]);
+  const previousLayoutKeyRef = useRef(layoutKey);
+  const clearCellSelection = useEffectEvent(() => cellSelectionStore.clear());
+
+  useEffect(
+    function resetCellSelectionOnLayoutChange() {
+      if (previousLayoutKeyRef.current === layoutKey) {
+        return;
+      }
+      previousLayoutKeyRef.current = layoutKey;
+      clearCellSelection();
+    },
+    [layoutKey]
+  );
+}
+
+function useCellSelectionStore(): CellSelectionStore {
+  const storeRef = useRef<CellSelectionStore | null>(null);
+  if (storeRef.current === null) {
+    storeRef.current = createCellSelectionStore();
+  }
+  return storeRef.current;
+}
+
 function useOpenRowState(rows: GridRow[]) {
   const [openRowKey, setOpenRowKey] = useState<string | null>(null);
   const openRowIndex =
@@ -450,6 +495,7 @@ function TableDataGridAlerts({
 }
 
 interface TableDataGridChromeProps {
+  cellSelectionStore: CellSelectionStore;
   columnOrder: readonly string[];
   columns: Column<GridRow>[];
   filterLogic: TableFilterLogic;
@@ -467,12 +513,21 @@ interface TableDataGridChromeProps {
     args: CellCopyArgs<GridRow>,
     event: ClipboardEvent<HTMLDivElement>
   ) => void;
+  onCellKeyDown: (
+    args: CellKeyDownArgs<GridRow>,
+    event: CellKeyboardEvent
+  ) => void;
+  onCellMouseDown: (
+    args: CellMouseArgs<GridRow>,
+    event: CellMouseEvent
+  ) => void;
   onClearFilters: () => void;
   onClearSelection: () => void;
   onColumnLayoutReset: () => void;
   onColumnOrderChange: (columnOrder: string[]) => void;
   onColumnsReorder: (sourceColumnKey: string, targetColumnKey: string) => void;
   onColumnVisibilityChange: (columnKey: string, visible: boolean) => void;
+  onCopyCellSelection: () => void;
   onCopySelection: (format: ExportFormat) => void;
   onExportSelection: (format: ExportFormat) => void;
   onFilterChange: (
@@ -506,6 +561,7 @@ interface TableDataGridChromeProps {
 }
 
 function TableDataGridChrome({
+  cellSelectionStore,
   columnOrder,
   columns,
   filterLogic,
@@ -517,12 +573,15 @@ function TableDataGridChrome({
   lastFetchedLabel,
   onCellContextMenu,
   onCellCopy,
+  onCellKeyDown,
+  onCellMouseDown,
   onClearFilters,
   onClearSelection,
   onColumnOrderChange,
   onColumnLayoutReset,
   onColumnsReorder,
   onColumnVisibilityChange,
+  onCopyCellSelection,
   onCopySelection,
   onExportSelection,
   onFilterChange,
@@ -555,6 +614,7 @@ function TableDataGridChrome({
         )}
       >
         <DataGridToolbar
+          cellSelectionStore={cellSelectionStore}
           className={state.variant === "expanded" ? "pr-12" : undefined}
           columnOrder={columnOrder}
           columns={resultColumns}
@@ -570,6 +630,7 @@ function TableDataGridChrome({
           onColumnLayoutReset={onColumnLayoutReset}
           onColumnOrderChange={onColumnOrderChange}
           onColumnVisibilityChange={onColumnVisibilityChange}
+          onCopyCellSelection={onCopyCellSelection}
           onCopySelection={onCopySelection}
           onExportSelection={onExportSelection}
           onFilterChange={onFilterChange}
@@ -595,12 +656,15 @@ function TableDataGridChrome({
         variant={state.variant}
       >
         <GridBody
+          cellSelectionStore={cellSelectionStore}
           columns={columns}
           flush={isFlush}
           hasActiveFilter={filterRules.length > 0}
           isLoading={state.gridLoading}
           onCellContextMenu={onCellContextMenu}
           onCellCopy={onCellCopy}
+          onCellKeyDown={onCellKeyDown}
+          onCellMouseDown={onCellMouseDown}
           onColumnsReorder={onColumnsReorder}
           onSelectedRowsChange={onSelectedRowsChange}
           onSortChange={onSortChange}
@@ -640,7 +704,22 @@ function ExpandedDataGridDialog({
   open: boolean;
 }) {
   return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
+    <Dialog
+      onOpenChange={(nextOpen, eventDetails) => {
+        // RDG prevents Escape when it clears a cell range. Honor that handled
+        // key instead of also dismissing the expanded grid.
+        if (
+          !nextOpen &&
+          eventDetails.reason === "escape-key" &&
+          eventDetails.event.defaultPrevented
+        ) {
+          eventDetails.cancel();
+          return;
+        }
+        onOpenChange(nextOpen);
+      }}
+      open={open}
+    >
       <DialogContent className="!flex !max-w-[calc(100vw-1rem)] sm:!max-w-[calc(100vw-2rem)] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] flex-col gap-3 overflow-hidden p-3 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:p-4">
         <DialogTitle className="sr-only">Expanded data grid</DialogTitle>
         <div className="flex min-h-0 flex-1 flex-col gap-2">
@@ -705,6 +784,334 @@ function copyRowValues(
 // fan out. Beyond this, the toolbar export (StreamRows in FULL mode) is the
 // right tool.
 const MAX_SELECTION_FULL_VALUE_FETCHES = 100;
+const DATA_COLUMN_START_INDEX = 2;
+const DATA_GRID_HEADER_ROW_HEIGHT = 36;
+const DATA_GRID_ROW_HEIGHT = 32;
+const DEFAULT_PAGE_NAVIGATION_ROW_COUNT = 10;
+const CELL_ARROW_MOVEMENT: Readonly<Partial<Record<string, CellCoordinate>>> = {
+  ArrowDown: { columnIndex: 0, rowIndex: 1 },
+  ArrowLeft: { columnIndex: -1, rowIndex: 0 },
+  ArrowRight: { columnIndex: 1, rowIndex: 0 },
+  ArrowUp: { columnIndex: 0, rowIndex: -1 },
+};
+const NON_FORMULA_CELL_VALUE_CASES: ReadonlySet<string> = new Set([
+  "boolValue",
+  "doubleValue",
+  "int64Value",
+  "nullValue",
+  "numericValue",
+]);
+
+type CellSelectionBlocks = Array<Array<Array<TableCell | undefined>>>;
+
+function getPageNavigationRowCount(event: CellKeyboardEvent): number {
+  const grid = event.currentTarget.closest<HTMLElement>(".rdg");
+  if (!grid || grid.clientHeight <= DATA_GRID_HEADER_ROW_HEIGHT) {
+    return DEFAULT_PAGE_NAVIGATION_ROW_COUNT;
+  }
+  return Math.max(
+    1,
+    Math.floor(
+      (grid.clientHeight - DATA_GRID_HEADER_ROW_HEIGHT) / DATA_GRID_ROW_HEIGHT
+    )
+  );
+}
+
+function getArrowNavigationDestination({
+  columnIndex,
+  delta,
+  lastColumnIndex,
+  lastRowIndex,
+  moveToGridEdge,
+  rowIndex,
+}: {
+  columnIndex: number;
+  delta: CellCoordinate;
+  lastColumnIndex: number;
+  lastRowIndex: number;
+  moveToGridEdge: boolean;
+  rowIndex: number;
+}): CellCoordinate {
+  const destination = {
+    columnIndex: columnIndex + delta.columnIndex,
+    rowIndex: rowIndex + delta.rowIndex,
+  };
+  if (!moveToGridEdge) {
+    return destination;
+  }
+  if (delta.columnIndex < 0) {
+    destination.columnIndex = DATA_COLUMN_START_INDEX;
+  } else if (delta.columnIndex > 0) {
+    destination.columnIndex = lastColumnIndex;
+  }
+  if (delta.rowIndex < 0) {
+    destination.rowIndex = 0;
+  } else if (delta.rowIndex > 0) {
+    destination.rowIndex = lastRowIndex;
+  }
+  return destination;
+}
+
+function clampCellNavigationDestination(
+  coordinate: CellCoordinate,
+  lastColumnIndex: number,
+  lastRowIndex: number
+): CellCoordinate {
+  return {
+    columnIndex: Math.min(
+      lastColumnIndex,
+      Math.max(DATA_COLUMN_START_INDEX, coordinate.columnIndex)
+    ),
+    rowIndex: Math.min(lastRowIndex, Math.max(0, coordinate.rowIndex)),
+  };
+}
+
+function getCellKeyboardDestination({
+  columnIndex,
+  dataColumnCount,
+  event,
+  rowCount,
+  rowIndex,
+}: {
+  columnIndex: number;
+  dataColumnCount: number;
+  event: CellKeyboardEvent;
+  rowCount: number;
+  rowIndex: number;
+}): CellCoordinate | undefined {
+  if (event.altKey) {
+    return undefined;
+  }
+  const firstColumnIndex = DATA_COLUMN_START_INDEX;
+  const lastColumnIndex = firstColumnIndex + dataColumnCount - 1;
+  const lastRowIndex = rowCount - 1;
+  const moveToGridEdge = event.ctrlKey || event.metaKey;
+  let destination: CellCoordinate;
+
+  switch (event.key) {
+    case "Home":
+      destination = {
+        columnIndex: firstColumnIndex,
+        rowIndex: moveToGridEdge ? 0 : rowIndex,
+      };
+      break;
+    case "End":
+      destination = {
+        columnIndex: lastColumnIndex,
+        rowIndex: moveToGridEdge ? lastRowIndex : rowIndex,
+      };
+      break;
+    case "PageUp":
+      destination = {
+        columnIndex,
+        rowIndex: rowIndex - getPageNavigationRowCount(event),
+      };
+      break;
+    case "PageDown":
+      destination = {
+        columnIndex,
+        rowIndex: rowIndex + getPageNavigationRowCount(event),
+      };
+      break;
+    default: {
+      const delta = CELL_ARROW_MOVEMENT[event.key];
+      if (delta === undefined) {
+        return undefined;
+      }
+      destination = getArrowNavigationDestination({
+        columnIndex,
+        delta,
+        lastColumnIndex,
+        lastRowIndex,
+        moveToGridEdge,
+        rowIndex,
+      });
+    }
+  }
+
+  return clampCellNavigationDestination(
+    destination,
+    lastColumnIndex,
+    lastRowIndex
+  );
+}
+
+function getDisplayedDataColumnKeys(columns: Column<GridRow>[]): string[] {
+  const dataColumns = columns.filter(
+    (column) =>
+      column.key !== SELECT_COLUMN_KEY && column.key !== EXPAND_COLUMN_KEY
+  );
+  return [
+    ...dataColumns.filter((column) => column.frozen === true),
+    ...dataColumns.filter(
+      (column) => column.frozen !== true && column.frozen !== "end"
+    ),
+    ...dataColumns.filter((column) => column.frozen === "end"),
+  ].map((column) => column.key);
+}
+
+function collectCellSelectionBlocks({
+  cellSelectionStore,
+  dataColumnKeys,
+  resultColumns,
+  rows,
+}: {
+  cellSelectionStore: CellSelectionStore;
+  dataColumnKeys: string[];
+  resultColumns: TableResultColumn[];
+  rows: GridRow[];
+}): CellSelectionBlocks {
+  const resultColumnByName = new Map(
+    resultColumns.map((column) => [column.columnName, column])
+  );
+  const lastColumnIndex = DATA_COLUMN_START_INDEX + dataColumnKeys.length - 1;
+  const lastRowIndex = rows.length - 1;
+
+  const blocks: CellSelectionBlocks = [];
+  for (const range of cellSelectionStore.getState().ranges) {
+    const block = collectCellSelectionBlock({
+      dataColumnKeys,
+      lastColumnIndex,
+      lastRowIndex,
+      range,
+      resultColumnByName,
+      rows,
+    });
+    if (block.length > 0 && (block[0]?.length ?? 0) > 0) {
+      blocks.push(block);
+    }
+  }
+  return blocks;
+}
+
+function collectCellSelectionBlock({
+  dataColumnKeys,
+  lastColumnIndex,
+  lastRowIndex,
+  range,
+  resultColumnByName,
+  rows,
+}: {
+  dataColumnKeys: string[];
+  lastColumnIndex: number;
+  lastRowIndex: number;
+  range: CellSelectionRange;
+  resultColumnByName: Map<string, TableResultColumn>;
+  rows: GridRow[];
+}): CellSelectionBlocks[number] {
+  const bounds = getCellSelectionBounds(range);
+  const selectedRows = rows.slice(
+    Math.max(0, bounds.top),
+    Math.min(lastRowIndex, bounds.bottom) + 1
+  );
+  const left = Math.max(DATA_COLUMN_START_INDEX, bounds.left);
+  const right = Math.min(lastColumnIndex, bounds.right);
+  if (left > right) {
+    return [];
+  }
+  const selectedColumnKeys = dataColumnKeys.slice(
+    left - DATA_COLUMN_START_INDEX,
+    right - DATA_COLUMN_START_INDEX + 1
+  );
+  return selectedRows.map((row) =>
+    selectedColumnKeys.map((columnKey) => {
+      const resultColumn = resultColumnByName.get(columnKey);
+      return resultColumn === undefined
+        ? undefined
+        : getGridCell(row, resultColumn);
+    })
+  );
+}
+
+function countCellsNeedingFullValueInBlocks(
+  blocks: CellSelectionBlocks
+): number {
+  let count = 0;
+  for (const block of blocks) {
+    for (const row of block) {
+      for (const cell of row) {
+        if (cellNeedsFullValue(cell)) {
+          count += 1;
+        }
+      }
+    }
+  }
+  return count;
+}
+
+function formatCellSelectionBlocks(blocks: CellSelectionBlocks): string {
+  return formatCellSelectionForClipboard(
+    blocks.map((block) =>
+      block.map((row) =>
+        row.map(
+          (cell): CellSelectionClipboardField => ({
+            neutralizeFormula:
+              cell?.value?.kind.case !== undefined &&
+              !NON_FORMULA_CELL_VALUE_CASES.has(cell.value.kind.case),
+            text: formatCellForClipboard(cell),
+          })
+        )
+      )
+    )
+  );
+}
+
+function isSelectableDataColumn(columnKey: string): boolean {
+  return columnKey !== SELECT_COLUMN_KEY && columnKey !== EXPAND_COLUMN_KEY;
+}
+
+function stopCellKeyboardEvent(event: CellKeyboardEvent) {
+  event.preventDefault();
+  event.preventGridDefault();
+}
+
+function clearNativeTextSelection() {
+  window.getSelection()?.removeAllRanges();
+}
+
+function clearCellSelectionWithKeyboard(
+  cellSelectionStore: CellSelectionStore,
+  event: CellKeyboardEvent
+): boolean {
+  if (
+    event.key !== "Escape" ||
+    cellSelectionStore.getState().ranges.length === 0
+  ) {
+    return false;
+  }
+  stopCellKeyboardEvent(event);
+  cellSelectionStore.clear();
+  return true;
+}
+
+function selectAllCellsWithKeyboard({
+  cellSelectionStore,
+  dataColumnCount,
+  event,
+  rowCount,
+}: {
+  cellSelectionStore: CellSelectionStore;
+  dataColumnCount: number;
+  event: CellKeyboardEvent;
+  rowCount: number;
+}): boolean {
+  if (
+    event.key.toLowerCase() !== "a" ||
+    !(event.ctrlKey || event.metaKey) ||
+    event.altKey
+  ) {
+    return false;
+  }
+  stopCellKeyboardEvent(event);
+  clearNativeTextSelection();
+  cellSelectionStore.selectAll({
+    bottom: rowCount - 1,
+    left: DATA_COLUMN_START_INDEX,
+    right: DATA_COLUMN_START_INDEX + dataColumnCount - 1,
+    top: 0,
+  });
+  return true;
+}
 
 function countCellsNeedingFullValue(rows: SelectedRow[]): number {
   let count = 0;
@@ -743,12 +1150,16 @@ function hasActiveTextSelectionInsideGrid(
 }
 
 function useSelectionActions({
+  cellSelectionStore,
+  columns,
   name,
   resultColumns,
   rows,
   selectedRows,
   setSelectedRows,
 }: {
+  cellSelectionStore: CellSelectionStore;
+  columns: Column<GridRow>[];
   name: string;
   resultColumns: TableResultColumn[];
   rows: GridRow[];
@@ -779,6 +1190,46 @@ function useSelectionActions({
         cells: await resolveRowCells(row.cells, fetchFullCell),
       }))
     );
+
+  const resolveCellSelectionBlocks = (
+    blocks: CellSelectionBlocks
+  ): Promise<CellSelectionBlocks> =>
+    Promise.all(
+      blocks.map((block) =>
+        Promise.all(
+          block.map((row) =>
+            Promise.all(row.map((cell) => resolveFullCell(cell, fetchFullCell)))
+          )
+        )
+      )
+    );
+
+  const copySelectedCells = (): boolean => {
+    const blocks = collectCellSelectionBlocks({
+      cellSelectionStore,
+      dataColumnKeys: getDisplayedDataColumnKeys(columns),
+      resultColumns,
+      rows,
+    });
+    if (blocks.length === 0) {
+      return false;
+    }
+    const pendingFetches = countCellsNeedingFullValueInBlocks(blocks);
+    if (pendingFetches > MAX_SELECTION_FULL_VALUE_FETCHES) {
+      toast.error(
+        `Cell selection has ${pendingFetches} oversized values — narrow the selection before copying`
+      );
+      return true;
+    }
+    if (pendingFetches > 0) {
+      writeClipboardDeferred(async () =>
+        formatCellSelectionBlocks(await resolveCellSelectionBlocks(blocks))
+      );
+      return true;
+    }
+    writeClipboard(formatCellSelectionBlocks(blocks));
+    return true;
+  };
 
   // Returns null when there is nothing to export or the selection needs
   // more full-value fetches than the cap allows; the caller must bail.
@@ -817,6 +1268,9 @@ function useSelectionActions({
 
   return {
     clearSelection,
+    copyCellSelection: () => {
+      copySelectedCells();
+    },
     copyCellValue: (row: GridRow, columnKey: string) =>
       copyCellValue({ columnKey, fetchFullCell, resultColumns, row }),
     copyRowAsSqlInsert: (row: GridRow) => {
@@ -851,6 +1305,9 @@ function useSelectionActions({
       event?: ClipboardEvent<HTMLDivElement>
     ) => {
       if (hasActiveTextSelectionInsideGrid(event)) {
+        return;
+      }
+      if (copySelectedCells()) {
         return;
       }
       copyCellValue({
@@ -1093,14 +1550,91 @@ function TableDataGridContent({
 // per render from the current rows and menu position; hoisted out of
 // TableDataGrid to keep the component itself readable.
 function buildCellInteractionHandlers({
+  cellSelectionStore,
   contextMenu,
+  dataColumnCount,
+  rowCount,
   selectionActions,
   setContextMenu,
 }: {
+  cellSelectionStore: CellSelectionStore;
   contextMenu: ContextMenuState | null;
+  dataColumnCount: number;
+  rowCount: number;
   selectionActions: ReturnType<typeof useSelectionActions>;
   setContextMenu: (next: ContextMenuState | null) => void;
 }) {
+  function handleCellMouseDown(
+    args: CellMouseArgs<GridRow>,
+    event: CellMouseEvent
+  ) {
+    if (
+      event.button !== 0 ||
+      !isSelectableDataColumn(args.column.key) ||
+      isCellSelectionInteractiveTarget(event.target, event.currentTarget)
+    ) {
+      return;
+    }
+    cellSelectionStore.start(
+      {
+        columnIndex: args.column.idx,
+        rowIndex: args.rowIdx,
+      },
+      {
+        additive: event.ctrlKey || event.metaKey,
+        extend: event.shiftKey,
+      }
+    );
+  }
+
+  function handleCellKeyDown(
+    args: CellKeyDownArgs<GridRow>,
+    event: CellKeyboardEvent
+  ) {
+    if (
+      args.mode !== "ACTIVE" ||
+      args.column === undefined ||
+      args.row === undefined ||
+      !isSelectableDataColumn(args.column.key)
+    ) {
+      return;
+    }
+
+    if (clearCellSelectionWithKeyboard(cellSelectionStore, event)) {
+      return;
+    }
+
+    if (
+      selectAllCellsWithKeyboard({
+        cellSelectionStore,
+        dataColumnCount,
+        event,
+        rowCount,
+      })
+    ) {
+      return;
+    }
+
+    const next = getCellKeyboardDestination({
+      columnIndex: args.column.idx,
+      dataColumnCount,
+      event,
+      rowCount,
+      rowIndex: args.rowIdx,
+    });
+    if (next === undefined) {
+      return;
+    }
+    stopCellKeyboardEvent(event);
+    clearNativeTextSelection();
+    cellSelectionStore.start(next, { extend: event.shiftKey });
+    cellSelectionStore.end();
+    args.setActivePosition(
+      { idx: next.columnIndex, rowIdx: next.rowIndex },
+      { shouldFocus: true }
+    );
+  }
+
   function handleCellContextMenu(
     args: CellMouseArgs<GridRow>,
     event: CellMouseEvent
@@ -1145,6 +1679,8 @@ function buildCellInteractionHandlers({
 
   return {
     handleCellContextMenu,
+    handleCellKeyDown,
+    handleCellMouseDown,
     handleContextMenuCopyCell,
     handleContextMenuCopyRow,
     handleContextMenuCopyRowAsSql,
@@ -1206,6 +1742,7 @@ function TableDataGrid({
   const [selectedRows, setSelectedRows] = useState<ReadonlySet<string>>(
     () => new Set()
   );
+  const cellSelectionStore = useCellSelectionStore();
 
   const resultColumns = data?.resultSet?.columns ?? EMPTY_RESULT_COLUMNS;
   const resultRows = data?.resultSet?.rows ?? EMPTY_RESULT_ROWS;
@@ -1220,6 +1757,7 @@ function TableDataGrid({
     name,
     pageSize: controller.pageSize,
     resetSelection: () => {
+      cellSelectionStore.clear();
       if (selectedRows.size > 0) {
         setSelectedRows(new Set());
       }
@@ -1254,6 +1792,12 @@ function TableDataGrid({
     setSortColumns: controller.setSortColumns,
     sortColumns: controller.sortColumns,
   });
+  const displayedDataColumnKeys = getDisplayedDataColumnKeys(columns);
+  useResetCellSelectionOnLayoutChange({
+    cellSelectionStore,
+    columnKeys: displayedDataColumnKeys,
+    rowKeys: rows.map((row) => row[ROW_KEY_FIELD]),
+  });
 
   const pageLabel =
     resultRows.length === 0
@@ -1273,6 +1817,8 @@ function TableDataGrid({
       })
     : [];
   const selectionActions = useSelectionActions({
+    cellSelectionStore,
+    columns,
     name,
     resultColumns,
     rows,
@@ -1281,7 +1827,10 @@ function TableDataGrid({
   });
 
   const cellHandlers = buildCellInteractionHandlers({
+    cellSelectionStore,
     contextMenu,
+    dataColumnCount: displayedDataColumnKeys.length,
+    rowCount: rows.length,
     selectionActions,
     setContextMenu,
   });
@@ -1305,6 +1854,7 @@ function TableDataGrid({
     );
   const clearFilters = () => setFilterSearch(undefined);
   const chromeProps: TableDataGridChromeProps = {
+    cellSelectionStore,
     columnOrder: columnLayout.columnOrder,
     columns,
     filterLogic,
@@ -1316,12 +1866,15 @@ function TableDataGrid({
     lastFetchedLabel: refreshState.lastFetchedLabel,
     onCellContextMenu: cellHandlers.handleCellContextMenu,
     onCellCopy: selectionActions.handleCellCopy,
+    onCellKeyDown: cellHandlers.handleCellKeyDown,
+    onCellMouseDown: cellHandlers.handleCellMouseDown,
     onClearFilters: clearFilters,
     onClearSelection: selectionActions.clearSelection,
     onColumnLayoutReset: columnLayout.reset,
     onColumnOrderChange: columnLayout.setColumnOrder,
     onColumnsReorder: columnLayout.reorderColumns,
     onColumnVisibilityChange: columnLayout.setColumnVisibility,
+    onCopyCellSelection: selectionActions.copyCellSelection,
     onCopySelection: selectionActions.handleCopySelection,
     onExportSelection: selectionActions.handleExportSelection,
     onFilterChange: handleFilterChange,
