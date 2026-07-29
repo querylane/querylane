@@ -36,7 +36,7 @@ function DatabaseEncodingValue({
     >
       {trimmedCharacterSet ? (
         <Badge
-          className="h-6 rounded-md px-2 font-mono text-[11px] tracking-wide"
+          className="h-6 rounded-md px-2 font-mono text-[0.6875rem] tracking-wide"
           variant="outline"
         >
           {trimmedCharacterSet}

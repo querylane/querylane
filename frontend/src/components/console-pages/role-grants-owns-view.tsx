@@ -56,7 +56,7 @@ function OwnershipPill({ name, tone }: { name: string; tone: PrivTone }) {
   return (
     <span
       className={cn(
-        "inline-flex h-[21px] items-center rounded border px-2 font-medium font-mono text-[10px] tracking-[0.06em]",
+        "inline-flex h-[21px] items-center rounded border px-2 font-medium font-mono text-xs tracking-[0.06em]",
         PRIV_TONE_CLASS[tone]
       )}
     >
@@ -71,7 +71,7 @@ function ImplicitTag() {
       <PopoverTrigger
         render={
           <Button
-            className="h-[22px] gap-1 rounded-full border-amber-500/30 px-2 font-normal text-[10.5px] text-amber-600 lowercase hover:bg-amber-500/10 dark:text-amber-400"
+            className="h-[22px] gap-1 rounded-full border-amber-500/30 px-2 font-normal text-amber-600 text-xs lowercase hover:bg-amber-500/10 dark:text-amber-400"
             size="xs"
             type="button"
             variant="outline"
@@ -84,7 +84,7 @@ function ImplicitTag() {
       <PopoverContent align="start" className="w-96 gap-2.5">
         <div className="flex items-center gap-2">
           <Crown className="size-3.5 text-amber-500 dark:text-amber-400" />
-          <span className="font-semibold text-[12.5px] text-foreground">
+          <span className="font-semibold text-[0.78125rem] text-foreground">
             What ownership grants
           </span>
         </div>
@@ -97,7 +97,7 @@ function ImplicitTag() {
             />
           ))}
         </div>
-        <div className="flex items-start gap-1.5 text-[11.5px] text-muted-foreground leading-relaxed">
+        <div className="flex items-start gap-1.5 text-muted-foreground text-xs leading-relaxed">
           <Info className="mt-0.5 size-3 shrink-0" />
           <span>
             Enforced by{" "}
@@ -157,7 +157,7 @@ function OwnedObjectCell({ object }: { object: OwnedObject }) {
   return (
     <span className="flex items-center gap-2">
       <meta.icon className="size-3.5 shrink-0 text-muted-foreground" />
-      <span className="font-mono text-[12.5px]">
+      <span className="font-mono text-[0.78125rem]">
         {showSchema ? (
           <span className="text-muted-foreground">{object.schemaName}.</span>
         ) : null}
@@ -249,7 +249,7 @@ DROP OWNED BY ${quoted};`;
         <span className="font-semibold text-foreground text-sm">
           Before dropping this role
         </span>
-        <span className="ml-auto text-[11.5px] text-muted-foreground">
+        <span className="ml-auto text-muted-foreground text-xs">
           {partial
             ? "Available owned objects would block "
             : `${count.toLocaleString()} object${count === 1 ? "" : "s"} would block `}
@@ -257,13 +257,13 @@ DROP OWNED BY ${quoted};`;
         </span>
       </div>
       <div className="flex flex-col gap-3 rounded-md border border-red-500/25 bg-red-500/[0.04] p-3.5">
-        <p className="text-[12.5px] text-foreground/80 leading-relaxed">
+        <p className="text-[0.78125rem] text-foreground/80 leading-relaxed">
           Postgres refuses <span className="font-mono">DROP ROLE {quoted}</span>{" "}
           while it owns anything. Reassign ownership to another role, then drop
           the leftovers.
         </p>
         <SqlCodeBlock sql={sql} />
-        <p className="text-[11.5px] text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Or transfer ownership object-by-object:{" "}
           <span className="font-mono text-foreground/75">
             {"ALTER … OWNER TO <new_owner>;"}

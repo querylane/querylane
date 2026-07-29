@@ -174,7 +174,7 @@ function CollectingStat({
       <span className="flex items-center gap-1.5 text-muted-foreground text-xs">
         <span
           aria-hidden="true"
-          className="size-1.5 animate-pulse rounded-full bg-success"
+          className="size-1.5 animate-pulse rounded-full bg-success motion-reduce:animate-none"
         />
         collecting
       </span>
@@ -405,7 +405,7 @@ export function InstanceMetricsPanel({
     return (
       <Card className="border-border">
         <CardContent>
-          <div className="h-96 w-full animate-pulse rounded-lg bg-muted/40" />
+          <div className="h-96 w-full animate-pulse rounded-lg bg-muted/40 motion-reduce:animate-none" />
         </CardContent>
       </Card>
     );

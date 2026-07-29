@@ -105,7 +105,7 @@ function MethodOption({
           </span>
           {content.badge ? (
             <Badge
-              className="max-w-full shrink-0 border-white/10 bg-white/[0.07] px-2.5 py-0.5 text-[11px] text-white/72"
+              className="max-w-full shrink-0 border-white/10 bg-white/[0.07] px-2.5 py-0.5 text-[0.6875rem] text-white/72"
               variant="outline"
             >
               {content.badge}

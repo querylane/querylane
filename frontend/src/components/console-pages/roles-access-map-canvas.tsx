@@ -260,10 +260,10 @@ function RoleNodeButton({
         aria-hidden="true"
         className={cn("mr-2 size-2 rounded-full", roleDotClass(node.kind))}
       />
-      <span className="min-w-0 flex-1 truncate font-mono font-semibold text-[11.5px]">
+      <span className="min-w-0 flex-1 truncate font-mono font-semibold text-xs">
         {node.title}
       </span>
-      <span className="ml-2 shrink-0 text-[9.5px] text-muted-foreground">
+      <span className="ml-2 shrink-0 text-muted-foreground text-xs">
         {node.subtitle}
       </span>
     </Button>
@@ -302,10 +302,10 @@ function ObjectNodeButton({
         className="mr-2 size-3.5 shrink-0 text-muted-foreground"
       />
       <span className="min-w-0">
-        <span className="block truncate font-mono font-semibold text-[11.5px] leading-tight">
+        <span className="block truncate font-mono font-semibold text-xs leading-tight">
           {node.title}
         </span>
-        <span className="block truncate text-[9.5px] text-muted-foreground leading-tight">
+        <span className="block truncate text-muted-foreground text-xs leading-tight">
           {node.subtitle}
         </span>
       </span>
@@ -365,7 +365,7 @@ function AccessFiltersPopover({
             {hiddenEdgeCount > 0 ? (
               <span
                 aria-hidden="true"
-                className="rounded-full bg-muted px-1.5 font-mono text-[10px] text-muted-foreground"
+                className="rounded-full bg-muted px-1.5 font-mono text-muted-foreground text-xs"
               >
                 {hiddenEdgeCount}
               </span>
@@ -384,7 +384,7 @@ function AccessFiltersPopover({
                 <Label className="text-xs" htmlFor={builtInRolesSwitchId}>
                   Built-in roles
                 </Label>
-                <p className="truncate text-[11px] text-muted-foreground">
+                <p className="truncate text-muted-foreground text-xs">
                   Show {builtInRoleCount} PostgreSQL-provided role
                   {builtInRoleCount === 1 ? "" : "s"}.
                 </p>
@@ -416,7 +416,7 @@ function AccessFiltersPopover({
                     <Label className="text-xs" htmlFor={switchId}>
                       {filter.label}
                     </Label>
-                    <p className="truncate text-[11px] text-muted-foreground">
+                    <p className="truncate text-muted-foreground text-xs">
                       {filter.description}
                     </p>
                   </div>
@@ -570,7 +570,7 @@ function RolesAccessMapCanvas({
           >
             <Minus className="size-4" />
           </Button>
-          <span className="min-w-10 text-center font-mono text-[10.5px] text-muted-foreground tabular-nums">
+          <span className="min-w-10 text-center font-mono text-muted-foreground text-xs tabular-nums">
             {Math.round(zoom * ZOOM_PERCENT_FACTOR)}%
           </span>
           <Button
@@ -605,7 +605,7 @@ function RolesAccessMapCanvas({
             )}
           </Button>
         </fieldset>
-        <span className="text-[11.5px] text-muted-foreground">
+        <span className="text-muted-foreground text-xs">
           Click a node to highlight its access paths.
         </span>
       </div>
@@ -629,13 +629,13 @@ function RolesAccessMapCanvas({
             }}
           >
             <div
-              className="absolute top-2 font-semibold text-[10.5px] text-muted-foreground uppercase tracking-[0.06em]"
+              className="absolute top-2 font-semibold text-[0.65625rem] text-muted-foreground uppercase tracking-[0.06em]"
               style={{ left: ROLE_X }}
             >
               Roles
             </div>
             <div
-              className="absolute top-2 font-semibold text-[10.5px] text-muted-foreground uppercase tracking-[0.06em]"
+              className="absolute top-2 font-semibold text-[0.65625rem] text-muted-foreground uppercase tracking-[0.06em]"
               style={{ left: OBJECT_X }}
             >
               Objects

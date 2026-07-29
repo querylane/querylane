@@ -23,7 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const PILL_BASE =
-  "inline-flex h-[18px] items-center justify-center gap-0.5 rounded border px-1.5 font-mono text-[10px] leading-none tracking-[0.06em]";
+  "inline-flex h-[18px] items-center justify-center gap-0.5 rounded border px-1.5 font-mono text-xs leading-none tracking-[0.06em]";
 
 export function AbbrPill({
   count,
@@ -62,9 +62,7 @@ export function AbbrPill({
           <span className="font-bold leading-none">+</span>
         ) : null}
         {state !== "none" && count !== undefined ? (
-          <span className="text-[9px] opacity-80">
-            {count.toLocaleString()}
-          </span>
+          <span className="text-xs opacity-80">{count.toLocaleString()}</span>
         ) : null}
       </TooltipTrigger>
       <TooltipContent>{tooltip}</TooltipContent>
@@ -119,7 +117,7 @@ export function HeldPillStrip({
   const ordered = columns.filter((name) => held.has(name));
   if (ordered.length === 0) {
     return (
-      <span className="font-mono text-[11px] text-muted-foreground/50 italic">
+      <span className="font-mono text-muted-foreground/50 text-xs italic">
         no privileges
       </span>
     );
@@ -150,7 +148,7 @@ export function FilterChip({
   return (
     <Button
       aria-pressed={active}
-      className="h-[22px] rounded-full px-2 font-mono text-[10px] tracking-[0.06em]"
+      className="h-[22px] rounded-full px-2 font-mono text-xs tracking-[0.06em]"
       onClick={onToggle}
       size="xs"
       type="button"
@@ -171,7 +169,7 @@ export function CountPill({
   value: number;
 }) {
   return (
-    <span className="inline-flex h-[18px] items-center gap-1 rounded-full border border-border bg-secondary px-[7px] font-medium font-mono text-[11px] text-muted-foreground tracking-[0.02em]">
+    <span className="inline-flex h-[18px] items-center gap-1 rounded-full border border-border bg-secondary px-[7px] font-medium font-mono text-muted-foreground text-xs tracking-[0.02em]">
       {value.toLocaleString()}
       {unit ? (
         <span className="font-normal">

@@ -55,7 +55,7 @@ function ColumnHeader({
         >
           {column.columnName}
         </span>
-        <span className="min-w-0 truncate font-mono text-[10px] text-muted-foreground uppercase tracking-wide">
+        <span className="min-w-0 truncate font-mono text-[0.625rem] text-muted-foreground uppercase tracking-wide">
           {column.rawType}
         </span>
         {sortDirection ? (
@@ -66,7 +66,7 @@ function ColumnHeader({
               <ArrowDown aria-label="Sorted descending" className="size-3" />
             )}
             {sortPriority ? (
-              <span className="font-mono text-[10px] tabular-nums">
+              <span className="font-mono text-xs tabular-nums">
                 {sortPriority}
               </span>
             ) : null}

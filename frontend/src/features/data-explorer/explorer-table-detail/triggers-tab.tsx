@@ -231,25 +231,25 @@ function TriggerCard({
         <span className="sr-only">
           {trigger.enabled ? "Enabled trigger" : "Disabled trigger"}
         </span>
-        <span className="font-mono font-semibold text-[12.5px]">
+        <span className="font-mono font-semibold text-[0.78125rem]">
           {trigger.triggerName}
         </span>
         {trigger.timing ? (
           <Badge
-            className="h-[18px] rounded-full px-2 text-[10px]"
+            className="h-[18px] rounded-full px-2 text-xs"
             variant="secondary"
           >
             {trigger.timing}
           </Badge>
         ) : null}
         <Badge
-          className="h-[18px] rounded-full px-2 font-mono text-[10px]"
+          className="h-[18px] rounded-full px-2 font-mono text-xs"
           variant="outline"
         >
           {triggerEventsLabel(trigger)}
         </Badge>
         <Badge
-          className="h-[18px] rounded-full px-2 text-[10px] text-muted-foreground"
+          className="h-[18px] rounded-full px-2 text-muted-foreground text-xs"
           variant="ghost"
         >
           {triggerLevelLabel(trigger)}
@@ -257,24 +257,24 @@ function TriggerCard({
         {trigger.enabled ? null : (
           <span
             className={cn(
-              "inline-flex h-[18px] items-center rounded-full px-2 font-medium text-[10px]",
+              "inline-flex h-[18px] items-center rounded-full px-2 font-medium text-xs",
               PILL_TONE_CLASSES.amber
             )}
           >
             disabled
           </span>
         )}
-        <span className="ml-auto truncate font-mono text-[11px] text-muted-foreground">
+        <span className="ml-auto truncate font-mono text-muted-foreground text-xs">
           {triggerFunctionLabel(trigger)}
         </span>
       </div>
       {whenExpression ? (
-        <div className="mt-[7px] font-mono text-[11px] text-muted-foreground">
+        <div className="mt-[7px] font-mono text-muted-foreground text-xs">
           WHEN ({whenExpression})
         </div>
       ) : null}
       <div className="mt-[9px] flex items-start gap-2 border-t pt-2">
-        <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-[11px] leading-[1.55]">
+        <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-[0.6875rem] leading-[1.55]">
           <SqlSyntaxHighlight sql={formatTriggerSqlForDisplay(sql)} />
         </pre>
         <TriggerSqlCopyButton sql={sql} triggerName={trigger.triggerName} />

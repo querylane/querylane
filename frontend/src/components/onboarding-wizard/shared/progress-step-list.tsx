@@ -54,7 +54,10 @@ function StepStateIcon({ state }: { state: StepState }) {
   if (state === StepState.IN_PROGRESS) {
     return (
       <span className="flex size-9 items-center justify-center rounded-full border border-white/30 bg-white/8 text-white">
-        <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+        <Loader2
+          aria-hidden="true"
+          className="size-4 animate-spin motion-reduce:animate-none"
+        />
       </span>
     );
   }

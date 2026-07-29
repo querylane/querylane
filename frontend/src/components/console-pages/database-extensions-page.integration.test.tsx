@@ -168,7 +168,7 @@ describe("database extensions page", () => {
     );
 
     const filterInput = screen.getByRole("textbox", {
-      name: "Search extensions...",
+      name: "Search extensions…",
     }) as HTMLInputElement;
     expect(filterInput.value).toBe("trgm");
     expect(screen.getByText("pg_trgm")).toBeTruthy();
@@ -185,7 +185,7 @@ describe("database extensions page", () => {
     );
 
     await user.type(
-      screen.getByRole("textbox", { name: "Search extensions..." }),
+      screen.getByRole("textbox", { name: "Search extensions…" }),
       "p"
     );
 
@@ -202,7 +202,7 @@ describe("database extensions page", () => {
     );
 
     const search = screen.getByRole("textbox", {
-      name: "Search extensions...",
+      name: "Search extensions…",
     });
     const filterBar = search.closest('[data-slot="extension-filter-bar"]');
     if (!(filterBar instanceof HTMLElement)) {

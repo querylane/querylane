@@ -152,7 +152,7 @@ function SortPopover({
             Sort
             {sortColumns.length > 0 ? (
               <Badge
-                className="ml-0.5 h-4 px-1 font-mono text-[10px]"
+                className="ml-0.5 h-4 px-1 font-mono text-xs"
                 variant="secondary"
               >
                 {sortColumns.length}

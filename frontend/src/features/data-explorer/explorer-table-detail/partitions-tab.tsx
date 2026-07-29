@@ -69,7 +69,7 @@ function PartitionSummaryItem({
 }) {
   return (
     <div className="rounded-lg border bg-card/60 p-3">
-      <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
+      <p className="text-[0.6875rem] text-muted-foreground uppercase tracking-wider">
         {label}
       </p>
       <p className="mt-1 break-words font-mono text-foreground text-xs">
@@ -228,7 +228,7 @@ function PartitionPaginationFooter({
 
   return (
     <div className="flex h-8 items-center gap-2 text-muted-foreground text-xs">
-      <span className="text-[11px]">Rows per page</span>
+      <span className="text-xs">Rows per page</span>
       <Select
         onValueChange={(value) => {
           if (typeof value !== "string") {

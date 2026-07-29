@@ -401,7 +401,7 @@ function IndexMethodBadge({ method }: { method: string }) {
   const Icon = INDEX_METHOD_ICONS[normalizeIndexMethod(method)] ?? Table2;
   return (
     <Badge
-      className="gap-1 rounded-full px-2 py-1 font-mono text-[11px]"
+      className="gap-1 rounded-full px-2 py-1 font-mono text-xs"
       title={`${methodMeta.label}. ${methodMeta.summary}`}
       variant="outline"
     >

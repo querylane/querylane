@@ -1010,7 +1010,7 @@ describe("backend database overview", () => {
     const drawer = await screen.findByRole("dialog", {
       name: "Query insights",
     });
-    expect(drawer.className).toContain("!w-screen");
+    expect(drawer.className).toContain("!w-full");
     expect(drawer.className).toContain("sm:!w-[80vw]");
     expect(drawer.className).toContain("sm:!max-w-5xl");
     expect(
@@ -1518,7 +1518,7 @@ describe("database query insights resilience", () => {
     );
 
     const searchInput = screen.getByRole("textbox", {
-      name: "Search queries...",
+      name: "Search queries…",
     });
     const filterBar = searchInput.closest(
       '[data-slot="query-insights-filter-bar"]'
@@ -1627,7 +1627,7 @@ describe("database query insights resilience", () => {
     ).toBe(true);
 
     await user.type(
-      screen.getByRole("textbox", { name: "Search queries..." }),
+      screen.getByRole("textbox", { name: "Search queries…" }),
       "missing query"
     );
 
@@ -1680,7 +1680,7 @@ describe("database query insights resilience", () => {
     );
     expect(screen.getByText(QUERY_STATS_UNAVAILABLE_RE)).toBeTruthy();
     expect(
-      screen.queryByRole("textbox", { name: "Search queries..." })
+      screen.queryByRole("textbox", { name: "Search queries…" })
     ).toBeNull();
 
     state.queryInsightsQuery = {

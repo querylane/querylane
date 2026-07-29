@@ -78,7 +78,7 @@ function ErrorBadge({ label, value }: { label: string; value: string | null }) {
   }
 
   return (
-    <div className="rounded-full border border-border px-3 py-1 font-mono text-[11px] text-muted-foreground">
+    <div className="rounded-full border border-border px-3 py-1 font-mono text-muted-foreground text-xs">
       {label}: {value}
     </div>
   );

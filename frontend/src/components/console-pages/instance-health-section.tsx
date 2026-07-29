@@ -70,7 +70,7 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
           <span className="w-32 shrink-0 truncate font-medium text-foreground text-sm sm:w-40">
             {row.label}
           </span>
-          <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground group-data-[tone=error]/health-check:text-destructive">
+          <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-muted-foreground group-data-[tone=error]/health-check:text-destructive">
             {row.summary}
           </span>
           <ChevronDown
@@ -88,7 +88,7 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
                 <dt className="text-muted-foreground text-xs group-data-[tone=error]/health-check:text-destructive/80">
                   {entry.label}
                 </dt>
-                <dd className="min-w-0 break-words text-[13px] text-foreground tabular-nums [overflow-wrap:anywhere] group-data-[tone=error]/health-check:text-destructive">
+                <dd className="min-w-0 break-words text-[0.8125rem] text-foreground tabular-nums [overflow-wrap:anywhere] group-data-[tone=error]/health-check:text-destructive">
                   {entry.value}
                 </dd>
               </div>
@@ -124,7 +124,7 @@ function HealthRowsSkeleton() {
 
 function InstanceFactsHeader({ facts }: { facts: string[] }) {
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-foreground/90">
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.8125rem] text-foreground/90">
       {facts.map((fact, index) => (
         <span className="inline-flex items-center gap-2" key={fact}>
           {index > 0 ? (

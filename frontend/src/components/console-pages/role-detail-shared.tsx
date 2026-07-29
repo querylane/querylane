@@ -129,7 +129,7 @@ function CapabilityMarker({ cap }: { cap: Capability }) {
     );
   }
   return (
-    <span className="shrink-0 text-[10px] text-muted-foreground/50 uppercase tracking-wide">
+    <span className="shrink-0 text-[0.625rem] text-muted-foreground/50 uppercase tracking-wide">
       Off
     </span>
   );

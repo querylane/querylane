@@ -68,7 +68,7 @@ function ColumnsPopover({
             {hiddenColumnKeys.size > 0 ? (
               <Badge
                 aria-hidden={true}
-                className="ml-0.5 h-4 px-1 font-mono text-[10px]"
+                className="ml-0.5 h-4 px-1 font-mono text-xs"
                 title={`${hiddenColumnKeys.size} hidden`}
                 variant="secondary"
               >
@@ -88,7 +88,7 @@ function ColumnsPopover({
           <p className="font-medium text-xs">Columns</p>
           <Button
             aria-label="Reset columns"
-            className="h-6 px-2 text-[11px]"
+            className="h-6 px-2 text-xs"
             disabled={!isCustomized}
             onClick={onReset}
             size="sm"

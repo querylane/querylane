@@ -25,7 +25,7 @@ test("re-enables the retry button after a failed retry under StrictMode", async 
   button.click();
 
   await waitFor(() => {
-    expect(screen.getByRole("button", { name: "Retrying..." })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Retrying…" })).toBeTruthy();
   });
 
   await waitFor(() => {

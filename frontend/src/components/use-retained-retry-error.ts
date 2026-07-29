@@ -8,7 +8,7 @@ interface UseRetainedRetryErrorOptions<Value> {
 }
 
 interface RetainedRetryState<Value> {
-  displayedError: Value | null;
+  retainedError: Value | null;
   retryInFlight: boolean;
 }
 
@@ -20,7 +20,7 @@ export function useRetainedRetryError<Value>({
   const latestErrorRef = useRef<Value | null>(latestError);
   const [retryState, setRetryState] = useState<RetainedRetryState<Value>>(
     () => ({
-      displayedError: latestError,
+      retainedError: null,
       retryInFlight: false,
     })
   );
@@ -33,28 +33,13 @@ export function useRetainedRetryError<Value>({
     [latestError]
   );
 
-  // allow-useEffect: retain error state across retries
-  useEffect(
-    function retainErrorDuringRetry() {
-      if (!retryState.retryInFlight) {
-        setRetryState({ displayedError: latestError, retryInFlight: false });
-        return;
-      }
-
-      if (latestError) {
-        setRetryState({ displayedError: latestError, retryInFlight: true });
-      }
-    },
-    [latestError, retryState.retryInFlight]
-  );
-
   const retry = async () => {
     if (!onRetry || retryState.retryInFlight) {
       return;
     }
 
     setRetryState((current) => ({
-      displayedError: current.displayedError ?? latestErrorRef.current,
+      retainedError: current.retainedError ?? latestErrorRef.current,
       retryInFlight: true,
     }));
 
@@ -64,13 +49,15 @@ export function useRetainedRetryError<Value>({
       // The owning surface will expose the refreshed error state.
     }
     setRetryState({
-      displayedError: latestErrorRef.current,
+      retainedError: null,
       retryInFlight: false,
     });
   };
 
   return {
-    displayedError: retryState.displayedError,
+    displayedError: retryState.retryInFlight
+      ? (latestError ?? retryState.retainedError)
+      : latestError,
     retry: onRetry ? retry : undefined,
   };
 }

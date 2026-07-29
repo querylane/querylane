@@ -237,7 +237,7 @@ function KeyboardShortcutKeys({ keys }: { keys: readonly string[] }) {
     <span aria-hidden="true" className="flex shrink-0 items-center gap-1">
       {keys.map((key) => (
         <kbd
-          className="flex min-w-6 items-center justify-center rounded-md border bg-muted px-1.5 py-1 font-mono text-[11px] text-muted-foreground shadow-xs"
+          className="flex min-w-6 items-center justify-center rounded-md border bg-muted px-1.5 py-1 font-mono text-[0.6875rem] text-muted-foreground shadow-xs"
           key={key}
         >
           {key}

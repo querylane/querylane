@@ -51,7 +51,7 @@ function ObjectNameCell({ object }: { object: GrantedObject }) {
   return (
     <span className="flex items-center gap-2">
       <meta.icon className="size-3.5 shrink-0 text-muted-foreground" />
-      <span className="font-mono text-[13px] text-foreground">
+      <span className="font-mono text-[0.8125rem] text-foreground">
         {showSchema ? (
           <>
             <span className="text-muted-foreground">{object.schemaName}.</span>
@@ -83,7 +83,7 @@ function GrantorCell({ object }: { object: GrantedObject }) {
   }
   return (
     <span
-      className="font-mono text-[12.5px] text-muted-foreground"
+      className="font-mono text-[0.78125rem] text-muted-foreground"
       title={grantor.title}
     >
       {grantor.text}

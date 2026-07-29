@@ -843,7 +843,7 @@ function InstanceActivityPage({
         }
         hasContent={hasActivity}
         isPending={connectionStatus === "connected" && pending}
-        loadingMessage="Loading activity..."
+        loadingMessage="Loading activity…"
       >
         {blockingChains.length > 0 ? (
           <BlockingChainCard chains={blockingChains} />

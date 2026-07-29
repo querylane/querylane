@@ -20,13 +20,13 @@ function FilterChips({ logic, onChange, rules }: FilterChipsProps) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1">
       {rules.length > 1 ? (
-        <Badge className="font-mono text-[10px]" variant="outline">
+        <Badge className="font-mono text-xs" variant="outline">
           {logic === "or" ? "any" : "all"}
         </Badge>
       ) : null}
       {rules.map((rule) => (
         <Badge
-          className="gap-1 truncate font-mono text-[10px]"
+          className="gap-1 truncate font-mono text-xs"
           key={rule.id}
           variant="secondary"
         >
@@ -46,7 +46,7 @@ function FilterChips({ logic, onChange, rules }: FilterChipsProps) {
         </Badge>
       ))}
       <Button
-        className="h-5 px-1.5 text-[10px]"
+        className="h-5 px-1.5 text-xs"
         onClick={() => onChange([])}
         size="sm"
         type="button"

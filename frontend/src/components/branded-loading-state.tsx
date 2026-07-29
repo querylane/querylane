@@ -8,7 +8,7 @@ interface BrandedLoadingStateProps {
 }
 
 const CONTAINER_CLASS_BY_VARIANT = {
-  fullscreen: "min-h-screen bg-background",
+  fullscreen: "min-h-dvh bg-background",
   section: "min-h-[40vh]",
 } as const;
 

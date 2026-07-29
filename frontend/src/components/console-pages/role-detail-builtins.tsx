@@ -56,10 +56,10 @@ function BuiltinPowersCard({
           <ShieldCheck className="size-[18px]" />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-[15px] tracking-tight">
+          <h3 className="font-semibold text-[0.9375rem] tracking-tight">
             What members can do
           </h3>
-          <p className="mt-1 text-[13px] text-muted-foreground leading-relaxed">
+          <p className="mt-1 text-[0.8125rem] text-muted-foreground leading-relaxed">
             Powers this role grants automatically: the same everywhere in the
             cluster.
           </p>
@@ -67,13 +67,13 @@ function BuiltinPowersCard({
       </div>
 
       <div className="flex items-center gap-2.5 px-6 pb-3">
-        <span className="flex items-center gap-1.5 font-medium text-[11px] text-muted-foreground/70 uppercase tracking-wider">
+        <span className="flex items-center gap-1.5 font-medium text-[0.6875rem] text-muted-foreground/70 uppercase tracking-wider">
           <Globe className="size-3 text-muted-foreground" />
           Cluster-wide
         </span>
-        <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+        <span className="h-px flex-1 bg-linear-to-r from-border to-transparent" />
         {builtinCapabilities.length > 0 ? (
-          <span className="text-[11px] text-muted-foreground/70 tabular-nums">
+          <span className="text-muted-foreground/70 text-xs tabular-nums">
             {builtinCapabilities.length}{" "}
             {builtinCapabilities.length === 1 ? "capability" : "capabilities"}
           </span>
@@ -91,7 +91,7 @@ function BuiltinPowersCard({
                 <Zap className="size-4" />
               </span>
               <span className="min-w-0 flex-1 font-medium text-sm">{line}</span>
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 font-medium text-[11px] text-amber-700 dark:text-amber-400">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 font-medium text-amber-700 text-xs dark:text-amber-400">
                 <Lock className="size-3" />
                 Can&apos;t revoke
               </span>
@@ -108,7 +108,7 @@ function BuiltinPowersCard({
 
       {parents.length > 0 ? (
         <div className="mt-3 flex flex-col gap-2 px-6">
-          <span className="flex items-center gap-1.5 font-medium text-[11px] text-muted-foreground/70 uppercase tracking-wider">
+          <span className="flex items-center gap-1.5 font-medium text-[0.6875rem] text-muted-foreground/70 uppercase tracking-wider">
             <Network className="size-3 text-muted-foreground" />
             Also inherits via membership
           </span>
@@ -151,11 +151,11 @@ function BuiltinPowersCard({
                 Built-in privilege.
               </span>{" "}
               Enforced by PostgreSQL&apos;s{" "}
-              <span className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
+              <span className="rounded bg-muted px-1 py-0.5 font-mono text-foreground text-xs">
                 has_*_privilege()
               </span>{" "}
               checks, not{" "}
-              <span className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-foreground">
+              <span className="rounded bg-muted px-1 py-0.5 font-mono text-foreground text-xs">
                 GRANT
               </span>{" "}
               rows, so there&apos;s nothing to inspect or revoke. Membership is
@@ -163,12 +163,12 @@ function BuiltinPowersCard({
             </p>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {builtinInfo ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2 py-1 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2 py-1 text-muted-foreground text-xs">
                   <span className="size-1.5 rounded-full bg-violet-500" />
                   {builtinInfo.since}+
                 </span>
               ) : null}
-              <span className="rounded-full border border-border bg-muted/40 px-2 py-1 text-[11px] text-muted-foreground">
+              <span className="rounded-full border border-border bg-muted/40 px-2 py-1 text-muted-foreground text-xs">
                 Exact set varies by server version
               </span>
             </div>

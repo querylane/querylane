@@ -155,7 +155,7 @@ export function InstanceStatItem({
         <Progress className="gap-0" value={progress} />
       )}
       {notice ? (
-        <div className="text-[11px] text-amber-600 leading-snug dark:text-amber-400">
+        <div className="text-amber-600 text-xs leading-snug dark:text-amber-400">
           {notice}
         </div>
       ) : null}

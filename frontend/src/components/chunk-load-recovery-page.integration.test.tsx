@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, test, vi } from "vitest";
 
 import { ChunkLoadRecoveryPage } from "@/components/chunk-load-recovery-page";
 
@@ -31,5 +31,15 @@ describe("chunk load recovery page", () => {
     await user.click(screen.getByRole("button", { name: "Refresh now" }));
 
     expect(reloadPage).toHaveBeenCalledTimes(1);
+  });
+
+  // This page replaces the whole app shell, so it must track the dynamic
+  // viewport height instead of `vh`, which mobile browser toolbars overlap.
+  test("sizes the recovery shell against the dynamic viewport", () => {
+    render(<ChunkLoadRecoveryPage />);
+
+    const shell = screen.getByRole("main");
+    expect(shell.className).toContain("min-h-dvh");
+    expect(shell.className).not.toContain("min-h-screen");
   });
 });

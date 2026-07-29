@@ -24,7 +24,8 @@ function RoleAccessMapFallback() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Loader2 className="size-4 animate-spin" /> Loading access map
+          <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />{" "}
+          Loading access map
         </CardTitle>
       </CardHeader>
       <CardContent className="text-muted-foreground text-sm">

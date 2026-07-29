@@ -34,7 +34,7 @@ function accessIconClassName(row: AccessSourceRow): string {
 
 function accessBadgeClassName(row: AccessSourceRow): string {
   return cn(
-    "shrink-0 rounded-sm font-medium text-[10.5px] uppercase tabular-nums tracking-wide",
+    "shrink-0 rounded-sm font-medium text-[0.65625rem] uppercase tabular-nums tracking-wide",
     row.active &&
       row.tone === "danger" &&
       "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
@@ -129,7 +129,7 @@ function ScopeGroup({
   }
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1 px-1 font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+      <div className="flex items-center gap-1 px-1 font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-wide">
         {label}
       </div>
       {rows.map((row) => (

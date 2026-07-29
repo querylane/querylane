@@ -588,7 +588,10 @@ function renderSelectedHeaderEdgeFixture() {
           }
         `}
       </style>
-      <table className="rdg selected-header-edge-fixture">
+      <table
+        aria-label="Selected table header edge fixture"
+        className="rdg selected-header-edge-fixture"
+      >
         <thead>
           <tr className="rdg-header-row">
             <th className="rdg-cell" scope="col">

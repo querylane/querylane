@@ -89,7 +89,7 @@ function ColumnHeaderMenu({
             <span className="truncate font-mono text-foreground">
               {columnName}
             </span>
-            <span className="truncate font-mono text-[11px]">
+            <span className="truncate font-mono text-xs">
               {columnRawType || "unknown type"}
             </span>
           </DropdownMenuLabel>

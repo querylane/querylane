@@ -1010,7 +1010,7 @@ test("backend instance overview shows live metrics and database catalog together
     .toBeVisible();
   await expect.element(health.getByText("Streaming replicas")).toBeVisible();
   await expect
-    .element(page.getByPlaceholder("Search databases..."))
+    .element(page.getByPlaceholder("Search databases…"))
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { exact: true, name: "Kind" }))
@@ -1310,7 +1310,7 @@ test("backend instance activity disconnected state matches", async () => {
 
   await expect.element(page.getByText("Activity unavailable")).toBeVisible();
   await expect
-    .element(page.getByText("Loading activity..."))
+    .element(page.getByText("Loading activity…"))
     .not.toBeInTheDocument();
   await document.fonts.ready;
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
@@ -1512,6 +1512,31 @@ test("query statistics retry uses the default button size", async () => {
   expect(retryButton.element().getBoundingClientRect().height).toBe(36);
 });
 
+test("query statistics retry does not overlap its notice on phones", async () => {
+  await page.viewport(390, 844);
+
+  try {
+    const drawer = await openQueryInsightsDrawer(
+      queryInsightsWithoutQueryStatsResponse()
+    );
+    await expect.element(drawer).toBeVisible();
+
+    const title = page.getByText("Query statistics unavailable", {
+      exact: true,
+    });
+    await expect.element(title).toBeVisible();
+    const titleBox = title.element().getBoundingClientRect();
+    const retryBox = page
+      .getByRole("button", { name: "Retry query statistics" })
+      .element()
+      .getBoundingClientRect();
+
+    expect(retryBox.top).toBeGreaterThanOrEqual(titleBox.bottom);
+  } finally {
+    await page.viewport(1280, 1000);
+  }
+});
+
 test("backend database extensions page matches design source", async () => {
   state.extensionQuery = { data: extensionDesignInventoryResponse() };
 
@@ -1617,7 +1642,7 @@ test("backend database extensions available drawer matches design source", async
   );
 
   await page
-    .getByRole("textbox", { name: "Search extensions..." })
+    .getByRole("textbox", { name: "Search extensions…" })
     .fill("timescaledb");
   await expect.element(page.getByText("Available")).toBeVisible();
   await expect.element(page.getByText("available to install")).toBeVisible();

@@ -119,7 +119,7 @@ function ExtensionFilterBar({
     >
       <DataTableFilter
         onChange={onSearchChange}
-        placeholder="Search extensions..."
+        placeholder="Search extensions…"
         value={search}
       />
       <ExtensionFacetFilter

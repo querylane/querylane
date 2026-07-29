@@ -50,8 +50,8 @@ export function AsyncSectionState({
   hasContent,
   isPending = false,
   isRefreshing = false,
-  loadingMessage = "Loading...",
-  refreshingMessage = "Refreshing...",
+  loadingMessage = "Loading…",
+  refreshingMessage = "Refreshing…",
 }: AsyncSectionStateProps) {
   if (isPending && !hasContent) {
     return <SectionStatusMessage message={loadingMessage} tone="loading" />;

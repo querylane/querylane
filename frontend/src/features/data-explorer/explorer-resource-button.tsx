@@ -35,7 +35,7 @@ function ResourceMetadata({
       {item.badge ? (
         <span
           className={cn(
-            "shrink-0 rounded border px-1.5 py-px font-mono text-[10px] uppercase tracking-wider",
+            "shrink-0 rounded border px-1.5 py-px font-mono text-[0.625rem] uppercase tracking-wider",
             item.badge.tone === "amber" &&
               "border-amber-400/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
             item.badge.tone === "blue" &&
@@ -52,7 +52,7 @@ function ResourceMetadata({
       {item.sizeLabel ? (
         <span
           className={cn(
-            "@max-[15rem]/object-browser:hidden w-16 text-right font-mono text-[11px] tabular-nums",
+            "@max-[15rem]/object-browser:hidden w-16 text-right font-mono text-[0.6875rem] tabular-nums",
             isItemSelected ? "text-foreground/80" : "text-muted-foreground"
           )}
         >
@@ -88,7 +88,7 @@ export function ExplorerResourceButton({
   return (
     <Button
       className={cn(
-        "h-[26px] w-full justify-start @max-[14rem]/object-browser:gap-1.5 gap-2 px-2 py-0 font-normal text-[13px] hover:bg-accent/60",
+        "h-[26px] w-full justify-start @max-[14rem]/object-browser:gap-1.5 gap-2 px-2 py-0 font-normal text-[0.8125rem] hover:bg-accent/60",
         isItemSelected && "bg-accent hover:bg-accent"
       )}
       onClick={() => onSelectResource(category, item.name)}

@@ -171,7 +171,7 @@ function BreadcrumbDropdownList({
           className="flex items-center gap-2 px-3 py-2 text-muted-foreground text-xs"
         >
           <Spinner className="size-3.5" />
-          <span>{`Refreshing ${label.toLowerCase()}...`}</span>
+          <span>{`Refreshing ${label.toLowerCase()}…`}</span>
         </output>
       ) : null}
       <CommandEmpty className="p-0">
@@ -423,21 +423,21 @@ function InstanceCommandItem({
         <OverflowAwareText className="min-w-0 truncate text-sm">
           {instance.name}
         </OverflowAwareText>
-        <OverflowAwareText className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
+        <OverflowAwareText className="min-w-0 truncate font-mono text-muted-foreground text-xs">
           {instance.host}:{instance.port}
         </OverflowAwareText>
         {instance.credentialsUnreadable ? (
           <>
-            <span className="truncate text-[11px] text-destructive">
+            <span className="truncate text-destructive text-xs">
               Credentials need attention
             </span>
-            <span className="truncate text-[11px] text-destructive underline underline-offset-2">
+            <span className="truncate text-destructive text-xs underline underline-offset-2">
               Review credentials
             </span>
           </>
         ) : null}
         {!instance.credentialsUnreadable && instance.status !== "connected" ? (
-          <span className={cn("truncate text-[11px]", statusClassName)}>
+          <span className={cn("truncate text-xs", statusClassName)}>
             {getConnectionStatusLabel(instance.status)}
           </span>
         ) : null}
@@ -541,7 +541,7 @@ function InstanceSelector({
       emptyResourceName="instances"
       label="Instance"
       loading={breadcrumbState.loading}
-      loadingMessage="Loading instances..."
+      loadingMessage="Loading instances…"
       placeholder="Select instance"
       refreshing={breadcrumbState.refreshing}
       triggerClassName="max-w-[11rem] sm:max-w-[14rem]"
@@ -609,7 +609,7 @@ function DatabaseSelector({
         emptyResourceName="databases"
         label="Database"
         loading={breadcrumbState.loading}
-        loadingMessage="Loading databases..."
+        loadingMessage="Loading databases…"
         placeholder="Select database"
         refreshing={breadcrumbState.refreshing}
         triggerClassName="max-w-[12rem] sm:max-w-[14rem]"
@@ -636,7 +636,7 @@ function DatabaseSelector({
                   {database.name}
                 </OverflowAwareText>
                 {database.owner ? (
-                  <OverflowAwareText className="min-w-0 truncate text-[11px] text-muted-foreground">
+                  <OverflowAwareText className="min-w-0 truncate text-muted-foreground text-xs">
                     owner {database.owner}
                   </OverflowAwareText>
                 ) : null}

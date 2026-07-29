@@ -11,28 +11,107 @@
     "files": [
       "src/components/ui/**",
       "src/protogen/**",
-      "src/routeTree.gen.ts",
       "**/*.gen.ts",
-      "**/*.gen.tsx",
-      "**/*_pb.ts",
-      "**/*_pb.js",
-      "**/*_connectquery.ts",
-      "**/*_connectquery.js",
-      "dist/**",
-      "build/**",
-      "out/**",
-      "coverage/**",
-      ".nyc_output/**",
-      "playwright-report/**",
-      "test-results/**",
-      "e2e/playwright-report/**",
-      "e2e/test-results/**"
+      "**/*.gen.tsx"
     ],
     "rules": [],
     "overrides": [
       {
         "files": ["src/features/data-explorer/other-database-objects-query.ts"],
         "rules": ["react-doctor/server-sequential-independent-await"]
+      },
+      {
+        "files": [
+          "src/components/app-error-view.tsx",
+          "src/components/console-pages/roles-access-map-canvas.tsx",
+          "src/features/data-explorer/explorer-schema-map.tsx",
+          "src/features/data-explorer/explorer-table-detail/definition-tab.tsx",
+          "src/features/database-visualization/database-structure-map.tsx"
+        ],
+        "rules": ["react-doctor/no-cramped-container-padding"]
+      },
+      {
+        "files": ["src/components/onboarding-wizard/wizard-content.tsx"],
+        "rules": ["react-doctor/no-decorative-grid-background"]
+      },
+      {
+        "files": ["src/components/charts/chart-tooltip.tsx"],
+        "rules": ["react-doctor/no-hairline-border-wide-shadow"]
+      },
+      {
+        "files": [
+          "src/components/onboarding-wizard/phases/manual-yaml-phase.tsx",
+          "src/components/onboarding-wizard/wizard-content.tsx",
+          "src/routes/new-instance-connection-fields.tsx"
+        ],
+        "rules": ["react-doctor/no-nested-card-surface"]
+      },
+      {
+        "files": [
+          "src/components/onboarding-wizard/phases/embedded-phase.tsx",
+          "src/components/onboarding-wizard/phases/ui-configured-phase.tsx",
+          "src/components/onboarding-wizard/wizard-content.tsx"
+        ],
+        "rules": ["react-doctor/no-pure-black-shadow"]
+      },
+      {
+        "files": [
+          "src/components/console-pages/instance-metrics-panel.tsx",
+          "src/features/data-explorer/object-detail-chrome.tsx"
+        ],
+        "rules": ["react-doctor/shadcn-tabs-trigger-requires-list"]
+      },
+      {
+        "files": ["src/features/data-explorer/table-data/table-data-query.ts"],
+        "rules": ["react-doctor/no-pass-live-state-to-parent"]
+      },
+      {
+        "files": [
+          "src/components/console-pages/database-overview-sections.tsx",
+          "src/components/console-pages/role-detail-builtins.tsx",
+          "src/components/console-pages/role-detail-shared.tsx",
+          "src/components/data-grid/table-data-grid/record-field.tsx",
+          "src/features/data-explorer/explorer-table-detail/policies-tab.tsx"
+        ],
+        "rules": ["react-doctor/no-tiny-uppercase-tracked-label"]
+      },
+      {
+        "files": [
+          "src/components/querylane-ui/sidebar.tsx",
+          "src/features/data-explorer/explorer-sidebar.tsx"
+        ],
+        "rules": ["react-hooks-js/refs"]
+      },
+      {
+        "files": ["src/components/querylane-ui/sidebar.tsx"],
+        "rules": ["react-hooks-js/purity"]
+      },
+      {
+        "files": [
+          "src/components/querylane-ui/use-mobile.ts",
+          "src/components/use-retained-retry-error.ts",
+          "src/features/data-explorer/explorer-sidebar.tsx",
+          "src/features/data-explorer/explorer-table-detail.tsx",
+          "src/hooks/api/onboarding.ts",
+          "src/hooks/use-minimum-spin.ts"
+        ],
+        "rules": ["react-hooks-js/set-state-in-effect"]
+      },
+      {
+        "files": [
+          "src/features/data-explorer/explorer-resource-button.tsx",
+          "src/features/data-explorer/explorer-schema-detail.tsx"
+        ],
+        "rules": ["react-hooks-js/static-components"]
+      },
+      {
+        "files": [
+          "src/components/admin-ops/storage-section.tsx",
+          "src/components/app-error-view.tsx",
+          "src/components/charts/chart-container.tsx",
+          "src/features/data-explorer/explorer-table-detail/shared-ui.tsx"
+        ],
+        "rules": ["react-hooks-js/todo"]
       }
     ],
     "tags": []
@@ -59,15 +138,118 @@
     }
   },
   "rules": {
+    "react-doctor/context-provider-value-from-unmemoized-local-literal": "off",
+    "react-doctor/aria-braille-equivalent": "error",
+    "react-doctor/data-table-requires-accessible-name": "error",
     "react-doctor/design-no-em-dash-in-jsx-text": "error",
     "react-doctor/design-no-redundant-padding-axes": "error",
     "react-doctor/design-no-redundant-size-axes": "error",
     "react-doctor/design-no-space-on-flex-children": "error",
     "react-doctor/design-no-three-period-ellipsis": "error",
     "react-doctor/design-no-vague-button-label": "error",
+    "react-doctor/no-all-caps-body-text": "error",
+    "react-doctor/no-arbitrary-px-font-size": "error",
+    "react-doctor/no-auto-scrolling-content": "error",
+    "react-doctor/no-clipped-overlay": "error",
+    "react-doctor/no-common-root-font": "error",
+    "react-doctor/no-cramped-container-padding": "error",
+    "react-doctor/no-crushed-letter-spacing": "error",
+    "react-doctor/no-decorative-blur-orb": "error",
+    "react-doctor/no-decorative-grid-background": "error",
+    "react-doctor/no-decorative-pulse": "error",
+    "react-doctor/no-decorative-radial-spotlight": "error",
+    "react-doctor/no-default-purple-page-gradient": "error",
+    "react-doctor/no-default-warm-page-surface": "error",
+    "react-doctor/no-deprecated-tailwind-class": "error",
+    "react-doctor/no-dynamic-tailwind-class-fragment": "error",
+    "react-doctor/no-ease-in-motion": "error",
+    "react-doctor/no-emoji-heading-decoration": "error",
+    "react-doctor/no-empty-card-shell": "error",
+    "react-doctor/no-excessive-card-surfaces": "error",
+    "react-doctor/no-excessive-centered-copy": "error",
+    "react-doctor/no-excessive-font-families": "error",
+    "react-doctor/no-excessive-motion-stagger": "error",
+    "react-doctor/no-excessive-pill-treatment": "error",
+    "react-doctor/no-fake-browser-chrome": "error",
+    "react-doctor/no-fixed-inside-transformed-ancestor": "error",
+    "react-doctor/no-flat-page-type-scale": "error",
+    "react-doctor/no-focus-in-animation-completion-handler": "error",
+    "react-doctor/no-full-viewport-centered-hero": "error",
+    "react-doctor/no-full-viewport-width": "error",
+    "react-doctor/no-generic-marketing-copy": "error",
+    "react-doctor/no-generic-purple-blue-icon-gradient": "error",
+    "react-doctor/no-hairline-border-wide-shadow": "error",
+    "react-doctor/no-hero-eyebrow-chip": "error",
+    "react-doctor/no-hover-only-reveal": "error",
+    "react-doctor/no-icon-tile-heading-stack": "error",
+    "react-doctor/no-image-hover-transform": "error",
+    "react-doctor/no-img-without-dimensions": "error",
+    "react-doctor/no-inert-pointer-affordance": "error",
+    "react-doctor/no-inert-sticky-position": "error",
+    "react-doctor/no-invisible-focus-control": "error",
+    "react-doctor/no-italic-serif-display-heading": "error",
+    "react-doctor/no-layout-shifting-interaction-state": "error",
+    "react-doctor/no-low-contrast-inline-style": "error",
+    "react-doctor/no-manufactured-contrast-copy": "error",
+    "react-doctor/no-mixed-animation-owners": "error",
+    "react-doctor/no-mixed-icon-libraries": "error",
+    "react-doctor/no-monotonous-page-spacing": "error",
+    "react-doctor/no-nested-card-surface": "error",
+    "react-doctor/no-numbered-section-markers": "error",
+    "react-doctor/no-overloaded-hover-state": "error",
+    "react-doctor/no-oversized-long-heading": "error",
+    "react-doctor/no-overwide-text-measure": "error",
+    "react-doctor/no-pill-navigation-count": "error",
+    "react-doctor/no-placeholder-persona-copy": "error",
+    "react-doctor/no-pointer-disabled-enabled-control": "error",
+    "react-doctor/no-pure-black-shadow": "error",
+    "react-doctor/no-pulsing-status-dot": "error",
+    "react-doctor/no-radial-halo": "error",
+    "react-doctor/no-redundant-display-class": "error",
+    "react-doctor/no-redundant-title-tooltip": "error",
+    "react-doctor/no-repeated-container-text": "error",
+    "react-doctor/no-repeated-emoji-tiles": "error",
+    "react-doctor/no-repeated-glass-surfaces": "error",
+    "react-doctor/no-repeated-hover-scale": "error",
+    "react-doctor/no-repeated-kicker-labels": "error",
+    "react-doctor/no-repeated-placeholder-navigation": "error",
+    "react-doctor/no-repeated-section-shells": "error",
+    "react-doctor/no-repeating-gradient-decoration": "error",
+    "react-doctor/no-shape-assembled-illustration": "error",
+    "react-doctor/no-small-form-control-text": "error",
+    "react-doctor/no-smooth-scroll-without-reduced-motion": "error",
+    "react-doctor/no-svg-currentcolor-with-fill-class": "error",
+    "react-doctor/no-symmetric-text-button-padding": "error",
+    "react-doctor/no-tailwind-layout-transition": "error",
+    "react-doctor/no-tight-all-caps-heading": "error",
+    "react-doctor/no-tight-body-leading": "error",
+    "react-doctor/no-tight-display-tracking": "error",
+    "react-doctor/no-tiny-uppercase-tracked-label": "error",
+    "react-doctor/no-transitioned-composite-widget-state": "error",
+    "react-doctor/no-transitioned-focus-ring": "error",
+    "react-doctor/no-undersized-icon-button": "error",
+    "react-doctor/no-uniform-feature-card-grid": "error",
+    "react-doctor/no-uppercase-mono-label": "error",
+    "react-doctor/no-uppercase-tracked-navigation-label": "error",
+    "react-doctor/prefer-dvh-over-vh": "error",
+    "react-doctor/prefer-motion-transform-property": "error",
+    "react-doctor/prefer-tabular-numeric-data": "error",
+    "react-doctor/prefer-truncate-shorthand": "error",
+    "react-doctor/require-autoplay-video-poster": "error",
+    "react-doctor/require-scale-reveal-transform-origin": "error",
+    "react-doctor/styled-components-duplicate-css-property-in-block": "error",
+    "react-doctor/details-requires-summary": "error",
     "react-doctor/display-name": "error",
+    "react-doctor/empty-table-header": "error",
+    "react-doctor/fieldset-requires-legend": "error",
     "react-doctor/forbid-component-props": "error",
+    "react-doctor/form-control-requires-name": "error",
     "react-doctor/hook-use-state": "error",
+    "react-doctor/html-xml-lang-mismatch": "error",
+    "react-doctor/iframe-title-unique": "error",
+    "react-doctor/ink-newline-inside-text": "off",
+    "react-doctor/ink-prefer-use-paste": "off",
+    "react-doctor/ink-suspense-requires-concurrent": "off",
     "react-doctor/jsx-boolean-value": "off",
     "react-doctor/jsx-curly-brace-presence": "error",
     "react-doctor/jsx-filename-extension": "error",
@@ -77,22 +259,43 @@
     "react-doctor/jsx-no-useless-fragment": "error",
     "react-doctor/jsx-pascal-case": "error",
     "react-doctor/jsx-props-no-spreading": "off",
+    "react-doctor/loading-action-preserves-trigger": "error",
+    "react-doctor/no-aria-hidden-on-body": "error",
+    "react-doctor/no-aria-invalid-without-description": "error",
     "react-doctor/no-array-index-key": "error",
     "react-doctor/no-cascading-set-state": "error",
     "react-doctor/no-clone-element": "error",
+    "react-doctor/no-collapse-request-error-to-empty-state": "error",
     "react-doctor/no-danger": "error",
     "react-doctor/no-dark-mode-glow": "error",
     "react-doctor/no-default-props": "error",
+    "react-doctor/no-disabled-zoom": "error",
+    "react-doctor/no-duplicate-static-id-reference": "error",
+    "react-doctor/no-focusable-content-in-role-text": "error",
     "react-doctor/no-generic-handler-names": "error",
     "react-doctor/no-gradient-text": "error",
+    "react-doctor/no-gray-on-colored-background": "error",
+    "react-doctor/no-inline-bounce-easing": "error",
+    "react-doctor/no-inline-exhaustive-style": "error",
     "react-doctor/no-justified-text": "error",
+    "react-doctor/no-layout-transition-inline": "error",
+    "react-doctor/no-long-transition-duration": "error",
+    "react-doctor/no-nonresizable-textarea": "error",
+    "react-doctor/no-outline-none": "error",
+    "react-doctor/no-presentation-role-conflict": "error",
     "react-doctor/no-prop-types": "error",
     "react-doctor/no-pure-black-background": "error",
     "react-doctor/no-pass-data-to-parent": "off",
     "react-doctor/no-react-children": "error",
+    "react-doctor/no-reduced-motion-content-removal": "error",
+    "react-doctor/no-server-side-image-map": "error",
     "react-doctor/no-set-state": "error",
     "react-doctor/no-side-tab-border": "error",
+    "react-doctor/no-skipped-heading-level": "error",
+    "react-doctor/no-tiny-text": "error",
+    "react-doctor/no-unbounded-animation-frame-loop": "error",
     "react-doctor/no-unescaped-entities": "error",
+    "react-doctor/no-ungated-tailwind-animation": "error",
     "react-doctor/no-wide-letter-spacing": "error",
     "react-doctor/no-z-index-9999": "error",
     "react-doctor/only-export-components": "off",
@@ -101,8 +304,17 @@
     "react-doctor/prefer-dynamic-import": "off",
     "react-doctor/react-in-jsx-scope": "off",
     "react-doctor/rn-animate-layout-property": "error",
+    "react-doctor/rn-bottom-sheet-no-ignored-scroll-prop": "error",
+    "react-doctor/rn-bottom-sheet-no-state-in-on-animate": "error",
+    "react-doctor/rn-bottom-sheet-use-integrated-scrollable": "error",
+    "react-doctor/rn-platform-shaking-use-direct-import": "error",
     "react-doctor/rn-prefer-content-inset-adjustment": "error",
+    "react-doctor/rn-reanimated-4-no-legacy-spring-thresholds": "error",
+    "react-doctor/rn-reanimated-4-no-removed-api": "error",
+    "react-doctor/rn-reanimated-4-use-worklets-scheduler": "error",
     "react-doctor/self-closing-comp": "error",
-    "react-doctor/state-in-constructor": "error"
+    "react-doctor/shadcn-tabs-trigger-requires-list": "error",
+    "react-doctor/state-in-constructor": "error",
+    "react-doctor/tanstack-start-missing-scripts": "error"
   }
 }
