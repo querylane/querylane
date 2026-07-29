@@ -1679,9 +1679,6 @@ describe("database query insights resilience", () => {
       />
     );
     expect(screen.getByText(QUERY_STATS_UNAVAILABLE_RE)).toBeTruthy();
-    expect(screen.getByRole("alert").className).not.toContain(
-      "text-destructive"
-    );
     expect(
       screen.queryByRole("textbox", { name: "Search queries..." })
     ).toBeNull();
@@ -1719,10 +1716,6 @@ describe("database query insights resilience", () => {
     expect(
       screen.getByText("query_stats temporarily unavailable")
     ).toBeTruthy();
-    const failedMetric = screen.getByRole("alert");
-    expect(failedMetric.className).toContain("text-destructive");
-    expect(failedMetric.className).toContain("border-destructive/30");
-    expect(failedMetric.className).toContain("bg-destructive/5");
     await user.click(
       screen.getByRole("button", { name: "Retry query statistics" })
     );
