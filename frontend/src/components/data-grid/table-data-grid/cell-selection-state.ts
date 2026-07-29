@@ -90,6 +90,84 @@ function cellSelectionBoundsArea(bounds: CellSelectionBounds): number {
   return (bounds.right - bounds.left + 1) * (bounds.bottom - bounds.top + 1);
 }
 
+function cellSelectionRangeFromBounds(
+  bounds: CellSelectionBounds
+): CellSelectionRange {
+  return {
+    anchor: {
+      columnIndex: bounds.left,
+      rowIndex: bounds.top,
+    },
+    focus: {
+      columnIndex: bounds.right,
+      rowIndex: bounds.bottom,
+    },
+  };
+}
+
+function intersectCellSelectionBounds(
+  first: CellSelectionBounds,
+  second: CellSelectionBounds
+): CellSelectionBounds | undefined {
+  const intersection = {
+    bottom: Math.min(first.bottom, second.bottom),
+    left: Math.max(first.left, second.left),
+    right: Math.min(first.right, second.right),
+    top: Math.max(first.top, second.top),
+  };
+  return intersection.left <= intersection.right &&
+    intersection.top <= intersection.bottom
+    ? intersection
+    : undefined;
+}
+
+function subtractCellSelectionRange(
+  range: CellSelectionRange,
+  excludedRange: CellSelectionRange
+): CellSelectionRange[] {
+  const bounds = getCellSelectionBounds(range);
+  const intersection = intersectCellSelectionBounds(
+    bounds,
+    getCellSelectionBounds(excludedRange)
+  );
+  if (!intersection) {
+    return [range];
+  }
+
+  const remainingBounds = [
+    {
+      bottom: intersection.top - 1,
+      left: bounds.left,
+      right: bounds.right,
+      top: bounds.top,
+    },
+    {
+      bottom: bounds.bottom,
+      left: bounds.left,
+      right: bounds.right,
+      top: intersection.bottom + 1,
+    },
+    {
+      bottom: intersection.bottom,
+      left: bounds.left,
+      right: intersection.left - 1,
+      top: intersection.top,
+    },
+    {
+      bottom: intersection.bottom,
+      left: intersection.right + 1,
+      right: bounds.right,
+      top: intersection.top,
+    },
+  ];
+  return remainingBounds
+    .filter(
+      (remaining) =>
+        remaining.left <= remaining.right && remaining.top <= remaining.bottom
+    )
+    .map(cellSelectionRangeFromBounds);
+}
+
 function mergeCellSelectionRanges(
   first: CellSelectionRange,
   second: CellSelectionRange
@@ -121,16 +199,7 @@ function mergeCellSelectionRanges(
   if (cellSelectionBoundsArea(mergedBounds) !== unionArea) {
     return undefined;
   }
-  return {
-    anchor: {
-      columnIndex: mergedBounds.left,
-      rowIndex: mergedBounds.top,
-    },
-    focus: {
-      columnIndex: mergedBounds.right,
-      rowIndex: mergedBounds.bottom,
-    },
-  };
+  return cellSelectionRangeFromBounds(mergedBounds);
 }
 
 function normalizeLatestCellSelectionRange(
@@ -140,7 +209,9 @@ function normalizeLatestCellSelectionRange(
   if (!latestRange) {
     return [];
   }
-  const normalized = ranges.slice(0, -1);
+  const normalized = ranges
+    .slice(0, -1)
+    .flatMap((range) => subtractCellSelectionRange(range, latestRange));
   let mergedRange = latestRange;
   let index = 0;
   while (index < normalized.length) {

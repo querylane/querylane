@@ -141,6 +141,40 @@ describe("cell selection state", () => {
     });
   });
 
+  test("deduplicates overlapping non-rectangular ranges without filling gaps", () => {
+    const store = createCellSelectionStore();
+    store.start({ columnIndex: 2, rowIndex: 1 });
+    store.extendTo({ columnIndex: 3, rowIndex: 2 });
+    store.end();
+
+    store.start({ columnIndex: 3, rowIndex: 2 }, { additive: true });
+    store.extendTo({ columnIndex: 4, rowIndex: 3 });
+    store.end();
+
+    const selectedCoordinates = store.getState().ranges.flatMap((range) => {
+      const bounds = getCellSelectionBounds(range);
+      return Array.from(
+        {
+          length:
+            (bounds.right - bounds.left + 1) * (bounds.bottom - bounds.top + 1),
+        },
+        (_, index) => {
+          const width = bounds.right - bounds.left + 1;
+          return `${bounds.left + (index % width)}:${
+            bounds.top + Math.floor(index / width)
+          }`;
+        }
+      );
+    });
+
+    expect(selectedCoordinates).toHaveLength(7);
+    expect(new Set(selectedCoordinates).size).toBe(7);
+    expect(
+      isCellSelected(store.getState(), { columnIndex: 2, rowIndex: 3 })
+    ).toBe(false);
+    expect(getCellSelectionSummary(store.getState()).cellCount).toBe(7);
+  });
+
   test("selects all cells within the supplied data bounds and clears", () => {
     const store = createCellSelectionStore();
 
