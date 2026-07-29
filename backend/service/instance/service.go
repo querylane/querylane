@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net"
 	"strings"
 	"time"
 
@@ -993,7 +992,7 @@ func connectionTestErrorWithDetails(ctx context.Context, field string, instanceN
 		return postgresConnectionTestError(field, pgErr)
 	}
 
-	if isConnectionReachabilityError(err) {
+	if postgreserrors.IsConnectionReachabilityError(err) {
 		return connectionReachabilityError(field)
 	}
 
@@ -1120,53 +1119,6 @@ func connectionConfigFieldPath(field string, suffix string) string {
 	}
 
 	return field + "." + suffix
-}
-
-func isConnectionReachabilityError(err error) bool {
-	var pgConnectErr *pgconn.ConnectError
-	if errors.As(err, &pgConnectErr) {
-		return true
-	}
-
-	var dnsErr *net.DNSError
-	if errors.As(err, &dnsErr) {
-		return true
-	}
-
-	var opErr *net.OpError
-	if errors.As(err, &opErr) && strings.EqualFold(opErr.Op, "dial") {
-		return true
-	}
-
-	if errors.Is(err, net.ErrClosed) {
-		return true
-	}
-
-	var netErr net.Error
-	if errors.As(err, &netErr) && netErr.Timeout() {
-		return true
-	}
-
-	return isTextOnlyConnectionReachabilityError(err)
-}
-
-func isTextOnlyConnectionReachabilityError(err error) bool {
-	// Last-resort compatibility for driver/test errors that do not expose net
-	// types. Type-based cases above are the primary classification path.
-	message := strings.ToLower(err.Error())
-	for _, marker := range []string{
-		"connection refused",
-		"no such host",
-		"network is unreachable",
-		"dial tcp",
-		"connect: timeout",
-	} {
-		if strings.Contains(message, marker) {
-			return true
-		}
-	}
-
-	return false
 }
 
 func updateMaskTouchesConfig(mask *fieldmaskpb.FieldMask) bool {

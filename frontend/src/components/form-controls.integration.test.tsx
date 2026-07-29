@@ -101,8 +101,11 @@ describe("form controls integration", () => {
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("alert").textContent).toBe("Connection failed");
+      expect(screen.getByRole("alert").textContent).toBe(
+        "Retry failed. Review the error details or try again in a moment."
+      );
     });
+    expect(screen.queryByText("Connection failed")).toBeNull();
     // The pending label persists briefly past the rejection: the spinner holds
     // for a minimum duration so fast failures are still visibly acknowledged.
     await waitFor(() => {

@@ -169,6 +169,29 @@ describe("app error view integration", () => {
     screen.getByText("Retry available: no");
   });
 
+  it("promotes bug reporting only when no recovery action exists", async () => {
+    const user = userEvent.setup();
+
+    const { rerender } = render(<AppErrorView error={createBootError()} />);
+
+    const reportLink = screen.getByRole("link", { name: "Report bug" });
+    expect(reportLink.getAttribute("target")).toBe("_blank");
+    expect(reportLink.getAttribute("rel")).toContain("noreferrer");
+    expect(reportLink.getAttribute("href")).toContain(
+      "github.com/querylane/querylane/issues/new"
+    );
+
+    rerender(
+      <AppErrorView error={createBootError()} onRetry={async () => undefined} />
+    );
+
+    expect(screen.queryByRole("link", { name: "Report bug" })).toBeNull();
+
+    await openErrorDetailsDialog(user);
+
+    screen.getByRole("link", { name: "Report bug" });
+  });
+
   it("shows SQLSTATE badges and retry guidance for PostgreSQL errors in the dialog", async () => {
     const user = userEvent.setup();
 

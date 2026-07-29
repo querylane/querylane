@@ -110,6 +110,18 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 		return NewPostgresError(pgErr, PostgresOperationLabel(rctx.Op), postgreserrors.ProfileDefault)
 	}
 
+	if postgreserrors.IsConnectionReachabilityError(err) {
+		return NewConnectError(
+			connect.CodeUnavailable,
+			errors.New("PostgreSQL instance is unavailable"),
+			NewErrorInfo(
+				DomainConsole,
+				consolev1alpha1.ErrorReason_INSTANCE_UNAVAILABLE,
+				KeyVal{Key: "operation", Value: rctx.Op},
+			),
+		)
+	}
+
 	switch {
 	case errors.Is(err, engine.ErrInvalidOrderBy):
 		return NewInvalidArgumentError(
