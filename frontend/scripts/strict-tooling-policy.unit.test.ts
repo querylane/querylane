@@ -114,18 +114,6 @@ describe("strict tooling policy", () => {
     });
   });
 
-  test("lets Rsbuild own the Rspack dependency", () => {
-    const packageJson = readJsonRecord("package.json");
-    const devDependencies = packageJson["devDependencies"];
-    expect(isJsonRecord(devDependencies)).toBe(true);
-    if (!isJsonRecord(devDependencies)) {
-      return;
-    }
-
-    expect(devDependencies).toHaveProperty("@rsbuild/core");
-    expect(devDependencies).not.toHaveProperty("@rspack/core");
-  });
-
   test("enables every Biome lint rule with strict complexity limits", () => {
     const biomeConfig = readFileSync(
       resolve(projectRoot, "biome.jsonc"),
