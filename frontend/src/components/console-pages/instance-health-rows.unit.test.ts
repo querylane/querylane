@@ -199,7 +199,7 @@ describe("buildLiveHealthRows", () => {
     });
   });
 
-  test("renders a missing category as a muted row with the partial-error reason", () => {
+  test("renders a partial-error reason as an error row", () => {
     const partialError = createProto(StatusSchema, {
       details: [
         anyPack(
@@ -215,7 +215,7 @@ describe("buildLiveHealthRows", () => {
     ]);
     const autovacuum = rows.find((row) => row.id === "autovacuum");
 
-    expect(autovacuum?.tone).toBe("muted");
+    expect(autovacuum?.tone).toBe("error");
     expect(autovacuum?.summary).toBe("autovacuum check timed out");
   });
 

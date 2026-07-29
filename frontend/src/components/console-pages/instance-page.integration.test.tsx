@@ -1611,7 +1611,11 @@ describe("backend instance health checks", () => {
     renderInstanceOverview();
 
     const health = screen.getByRole("region", { name: "Health checks" });
-    expect(within(health).getByText("Autovacuum")).toBeTruthy();
+    expect(
+      within(health).getByRole("button", {
+        name: "Error: Autovacuum permission denied for pg_stat_activity",
+      })
+    ).toBeTruthy();
     expect(
       within(health).getByText("permission denied for pg_stat_activity")
     ).toBeTruthy();

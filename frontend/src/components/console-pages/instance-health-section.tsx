@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { AlertCircle, ChevronDown } from "lucide-react";
 import { SectionCard } from "@/components/console-pages/console-layout";
 import type { InstanceRecord } from "@/components/console-pages/instance-config-model";
 import {
@@ -44,39 +44,51 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
   const detailId = `instance-health-${row.id}-detail`;
   return (
     <li className="list-none">
-      <Collapsible>
+      <Collapsible
+        className="group/health-check rounded-md data-[tone=error]:border data-[tone=error]:border-destructive/30 data-[tone=error]:bg-destructive/5"
+        data-tone={row.tone}
+      >
         <CollapsibleTrigger
           aria-controls={detailId}
-          className="group/health-row flex w-full items-center gap-3 rounded-md p-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="group/health-row flex w-full items-center gap-3 rounded-md p-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 group-data-[tone=error]/health-check:focus-visible:ring-destructive/30 group-data-[tone=error]/health-check:hover:bg-destructive/10"
         >
-          <span
-            aria-hidden="true"
-            className={cn(
-              "size-2 shrink-0 rounded-full",
-              TONE_DOT_CLASS[row.tone]
-            )}
-          />
+          {row.tone === "error" ? (
+            <AlertCircle
+              aria-hidden="true"
+              className="size-4 shrink-0 text-destructive"
+            />
+          ) : (
+            <span
+              aria-hidden="true"
+              className={cn(
+                "size-2 shrink-0 rounded-full",
+                TONE_DOT_CLASS[row.tone]
+              )}
+            />
+          )}
           <span className="sr-only">{TONE_SR_LABEL[row.tone]}:</span>
           <span className="w-32 shrink-0 truncate font-medium text-foreground text-sm sm:w-40">
             {row.label}
           </span>
-          <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">
+          <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground group-data-[tone=error]/health-check:text-destructive">
             {row.summary}
           </span>
           <ChevronDown
             aria-hidden="true"
-            className="size-4 shrink-0 text-muted-foreground/70 transition-transform group-aria-expanded/health-row:rotate-180"
+            className="size-4 shrink-0 text-muted-foreground/70 transition-transform group-aria-expanded/health-row:rotate-180 group-data-[tone=error]/health-check:text-destructive/70"
           />
         </CollapsibleTrigger>
         <CollapsibleContent>
           <dl
-            className="grid gap-x-8 gap-y-2 pt-1 pr-2 pb-3 pl-7 sm:grid-cols-2 lg:grid-cols-3"
+            className="grid gap-x-8 gap-y-2 pt-1 pr-2 pb-3 pl-7 group-data-[tone=error]/health-check:pl-9 sm:grid-cols-2 lg:grid-cols-3"
             id={detailId}
           >
             {row.detail.map((entry) => (
               <div className="flex min-w-0 flex-col gap-0.5" key={entry.label}>
-                <dt className="text-muted-foreground text-xs">{entry.label}</dt>
-                <dd className="min-w-0 break-words text-[13px] text-foreground tabular-nums [overflow-wrap:anywhere]">
+                <dt className="text-muted-foreground text-xs group-data-[tone=error]/health-check:text-destructive/80">
+                  {entry.label}
+                </dt>
+                <dd className="min-w-0 break-words text-[13px] text-foreground tabular-nums [overflow-wrap:anywhere] group-data-[tone=error]/health-check:text-destructive">
                   {entry.value}
                 </dd>
               </div>
