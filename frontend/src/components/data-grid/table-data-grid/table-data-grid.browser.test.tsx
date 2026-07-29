@@ -733,9 +733,6 @@ test("data explorer controls and row detail drawer expose dense table context", 
 test("cell selection summary exposes copy, clear, and live status", async () => {
   const cellSelectionStore = createCellSelectionStore();
   const onCopyCellSelection = vi.fn();
-  cellSelectionStore.start({ columnIndex: 2, rowIndex: 0 });
-  cellSelectionStore.extendTo({ columnIndex: 4, rowIndex: 1 });
-  cellSelectionStore.end();
 
   render(
     <DataGridToolbar
@@ -757,6 +754,17 @@ test("cell selection summary exposes copy, clear, and live status", async () => 
     />
   );
 
+  await expect
+    .element(page.getByRole("status", { name: "Cell selection" }))
+    .toHaveTextContent("");
+
+  cellSelectionStore.start({ columnIndex: 2, rowIndex: 0 });
+  cellSelectionStore.extendTo({ columnIndex: 4, rowIndex: 1 });
+  await expect
+    .element(page.getByRole("status", { name: "Cell selection" }))
+    .toHaveTextContent("");
+
+  cellSelectionStore.end();
   await expect.element(page.getByText("6 cells · 2×3")).toBeVisible();
   await expect
     .element(page.getByRole("status", { name: "Cell selection" }))

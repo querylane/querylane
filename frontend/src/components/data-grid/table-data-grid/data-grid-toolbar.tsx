@@ -1,5 +1,5 @@
 import { Copy, Maximize2, Minimize2, X } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { SortColumn } from "react-data-grid";
 import {
   type CellSelectionStore,
@@ -104,8 +104,21 @@ function CellSelectionSummary({
     cellSelectionStore.getState
   );
   const summary = getCellSelectionSummary(state);
+  const hasHadSelectionRef = useRef(summary.cellCount > 0);
   const visibleLabel = getCellSelectionVisibleLabel(summary);
-  const liveLabel = getCellSelectionLiveLabel(summary);
+  const liveLabel =
+    state.isDragging || (summary.cellCount === 0 && !hasHadSelectionRef.current)
+      ? ""
+      : getCellSelectionLiveLabel(summary);
+
+  useEffect(
+    function rememberCellSelection() {
+      if (summary.cellCount > 0) {
+        hasHadSelectionRef.current = true;
+      }
+    },
+    [summary.cellCount]
+  );
 
   return (
     <>
