@@ -1,24 +1,24 @@
 diff --git a/dist/cli/index.js b/dist/cli/index.js
-index eb5fcc4ac5b1ceb255580c252d059c531881994c..82dc4b42dec22ed8ebeae2c03fd90af7dd8af01a 100755
+index 566e79219a2549e8bcf77127ba6aaf67698564f4..55d4237f46a2c70905d9a54ddf8c949c9e9fccc0 100755
 --- a/dist/cli/index.js
 +++ b/dist/cli/index.js
-@@ -3957,3 +3957,4 @@
+@@ -4024,3 +4024,4 @@
  import type { APIRoute } from "astro";
 +import type { McpData } from "blume/ai/mcp/data.ts";
  import { createMcpFetchHandler } from "blume/ai/mcp/server.ts";
  import data from "${up}generated/mcp-data.json";
-@@ -3963 +3964 @@
+@@ -4030 +4031 @@
 -const handler = createMcpFetchHandler(data);
 +const handler = createMcpFetchHandler(data as McpData);
 diff --git a/src/astro/templates.ts b/src/astro/templates.ts
-index 59ee041ed5a863a729f01a831a8c7c4836f4034a..9ed04734c3c2dfda07cbd99e64bb8d6186004a98 100644
+index 0114bfe32d8953628c0dba6d2b7bad99f974b96e..bc5fb725aabf61b529a9b56f1c679911bd8d15a8 100644
 --- a/src/astro/templates.ts
 +++ b/src/astro/templates.ts
-@@ -1063,3 +1063,4 @@
+@@ -1153,3 +1153,4 @@
  import type { APIRoute } from "astro";
 +import type { McpData } from "blume/ai/mcp/data.ts";
  import { createMcpFetchHandler } from "blume/ai/mcp/server.ts";
  import data from "${up}generated/mcp-data.json";
-@@ -1069 +1070 @@
+@@ -1159 +1160 @@
 -const handler = createMcpFetchHandler(data);
 +const handler = createMcpFetchHandler(data as McpData);
