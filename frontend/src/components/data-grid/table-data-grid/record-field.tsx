@@ -1,7 +1,17 @@
 import { create } from "@bufbuild/protobuf";
-import { Check, Copy, Download, Expand, KeyRound, Minus } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Download,
+  Expand,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Minus,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { BinaryFilePreview } from "@/components/data-grid/table-data-grid/binary-file-preview";
 import {
   writeClipboard,
   writeClipboardDeferred,
@@ -12,6 +22,7 @@ import {
   resolveEffectiveCell,
 } from "@/components/data-grid/table-data-grid/record-field-state";
 import { Button } from "@/components/ui/button";
+import { detectBinaryFile } from "@/features/data-explorer/table-data/binary-file";
 import {
   cellNeedsFullValue,
   READ_CELL_MAX_BYTES,
@@ -45,6 +56,193 @@ interface RecordFieldProps {
   rowIdentifier?: string | undefined;
   tableName: string;
 }
+
+async function requireBinaryPreviewCell(
+  cell: TableCell | undefined,
+  fetchFullCell: () => Promise<TableCell>
+): Promise<TableCell> {
+  const full = cellNeedsFullValue(cell) ? await fetchFullCell() : cell;
+  if (full?.value?.kind.case !== "bytesValue") {
+    throw new Error("The value is not binary data");
+  }
+  return full;
+}
+
+function RecordFieldMetadata({
+  column,
+  isPrimaryKey,
+}: {
+  column: TableResultColumn;
+  isPrimaryKey: boolean;
+}) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+      <span className="min-w-0 break-all font-medium font-mono text-foreground text-xs">
+        {column.columnName}
+      </span>
+      {isPrimaryKey ? (
+        <span className="text-amber-600 dark:text-amber-400">
+          <KeyRound
+            aria-hidden={true}
+            className="mr-0.5 inline size-3 align-[-0.15em]"
+          />
+          <span className="font-medium text-[0.625rem] uppercase tracking-wide">
+            PK
+          </span>
+        </span>
+      ) : null}
+      <span className="font-mono text-[0.625rem] text-muted-foreground uppercase tracking-wide">
+        {column.rawType}
+      </span>
+      <span className="text-[0.625rem] text-muted-foreground uppercase tracking-wide">
+        {column.isNullable ? "nullable" : "not null"}
+      </span>
+    </div>
+  );
+}
+
+interface RecordFieldActionsProps {
+  columnName: string;
+  copyAction: { handleClick: () => void } | null;
+  downloadAction: { handleClick: () => void } | null;
+  isPending: boolean;
+  loadFullValueAction: { handleClick: () => void } | null;
+  previewAction: { handleClick: () => void; isVisible: boolean } | null;
+}
+
+type RecordFieldActionOptions = Omit<
+  RecordFieldActionsProps,
+  "columnName" | "isPending"
+>;
+
+function createRecordFieldActionOptions({
+  canCopy,
+  canDownload,
+  canExpand,
+  canPreviewBinary,
+  isBinaryPreviewVisible,
+  onBinaryPreview,
+  onCopy,
+  onDownload,
+  onLoadFullValue,
+}: {
+  canCopy: boolean;
+  canDownload: boolean;
+  canExpand: boolean;
+  canPreviewBinary: boolean;
+  isBinaryPreviewVisible: boolean;
+  onBinaryPreview: () => void;
+  onCopy: () => void;
+  onDownload: () => void;
+  onLoadFullValue: () => void;
+}): RecordFieldActionOptions {
+  return {
+    copyAction: canCopy ? { handleClick: onCopy } : null,
+    downloadAction: canDownload ? { handleClick: onDownload } : null,
+    loadFullValueAction: canExpand ? { handleClick: onLoadFullValue } : null,
+    previewAction: canPreviewBinary
+      ? {
+          handleClick: onBinaryPreview,
+          isVisible: isBinaryPreviewVisible,
+        }
+      : null,
+  };
+}
+
+function RecordFieldActions({
+  columnName,
+  copyAction,
+  downloadAction,
+  isPending,
+  loadFullValueAction,
+  previewAction,
+}: RecordFieldActionsProps) {
+  return (
+    <div className="flex shrink-0 flex-col items-center gap-0.5">
+      {previewAction ? (
+        <Button
+          aria-label={
+            previewAction.isVisible
+              ? `Hide ${columnName} preview`
+              : `Preview ${columnName}`
+          }
+          className="shrink-0 text-muted-foreground"
+          disabled={isPending}
+          onClick={previewAction.handleClick}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+        >
+          {previewAction.isVisible ? <EyeOff /> : <Eye />}
+        </Button>
+      ) : null}
+      {loadFullValueAction ? (
+        <Button
+          aria-label={`Load full value for ${columnName}`}
+          className="shrink-0 text-muted-foreground"
+          disabled={isPending}
+          onClick={loadFullValueAction.handleClick}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+        >
+          <Expand />
+        </Button>
+      ) : null}
+      {copyAction ? (
+        <Button
+          aria-label={`Copy ${columnName}`}
+          className="shrink-0 text-muted-foreground"
+          onClick={copyAction.handleClick}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+        >
+          <Copy />
+        </Button>
+      ) : null}
+      {downloadAction ? (
+        <Button
+          aria-label={`Download ${columnName}`}
+          className="shrink-0 text-muted-foreground"
+          disabled={isPending}
+          onClick={downloadAction.handleClick}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+        >
+          <Download />
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+function RecordFieldErrors({
+  binaryPreviewError,
+  columnName,
+  fullValueError,
+}: {
+  binaryPreviewError: string;
+  columnName: string;
+  fullValueError: boolean;
+}) {
+  return (
+    <>
+      {fullValueError ? (
+        <p className="text-destructive-foreground/80 text-xs">
+          Couldn’t load the full value. Try again.
+        </p>
+      ) : null}
+      {binaryPreviewError === "" ? null : (
+        <p className="text-destructive-foreground/80 text-xs" role="alert">
+          Couldn’t preview {columnName}: {binaryPreviewError}. Try again.
+        </p>
+      )}
+    </>
+  );
+}
+
 function RecordField({
   cell,
   column,
@@ -53,14 +251,28 @@ function RecordField({
   tableName,
 }: RecordFieldProps) {
   const [resolved, setResolved] = useState<ResolvedCell | undefined>(undefined);
+  const [binaryPreviewCell, setBinaryPreviewCell] = useState<
+    TableCell | undefined
+  >(undefined);
+  const [binaryPreviewError, setBinaryPreviewError] = useState("");
   const fullValueMutation = useReadCellValueMutation();
   const effectiveCell = resolveEffectiveCell(cell, resolved);
   const formatted = formatTableCell(effectiveCell, column);
+  const effectiveKind = effectiveCell?.value?.kind;
+  const binaryBytes =
+    effectiveKind?.case === "bytesValue" ? effectiveKind.value : undefined;
+  const isBinaryPreviewVisible = binaryPreviewCell === cell;
+  const isBinary = column.dataType === DataType.BINARY;
   const canExpand =
-    effectiveCell?.truncated === true && effectiveCell.fullValueToken !== "";
+    !isBinary &&
+    effectiveCell?.truncated === true &&
+    effectiveCell.fullValueToken !== "";
   const isEmptyString = formatted.kind === "text" && formatted.display === "";
   const canCopy = !(formatted.isNull || isEmptyString);
-  const canDownload = column.dataType === DataType.BINARY && !formatted.isNull;
+  const canDownload = isBinary && !formatted.isNull;
+  const canPreviewBinary =
+    canDownload &&
+    (effectiveCell?.truncated === true || (binaryBytes?.length ?? 0) > 0);
   async function fetchFullCell(): Promise<TableCell> {
     const token = effectiveCell?.fullValueToken ?? "";
     const response = await fullValueMutation.mutateAsync(
@@ -102,18 +314,16 @@ function RecordField({
         if (kind?.case !== "bytesValue") {
           return;
         }
+        const file = detectBinaryFile(kind.value);
         const filename = buildByteaDownloadFilename({
           columnName: column.columnName,
+          extension: file.extension,
           rowIdentifier,
           table: parseTableQualifiedName(tableName).table,
         });
         // Copy into a fresh ArrayBuffer-backed view: protobuf-es types its
         // bytes as Uint8Array<ArrayBufferLike>, which BlobPart rejects.
-        downloadBlob(
-          filename,
-          new Uint8Array(kind.value),
-          "application/octet-stream"
-        );
+        downloadBlob(filename, new Uint8Array(kind.value), file.mimeType);
       })
       .catch(() => toast.error("Couldn't download the value"));
   }
@@ -138,89 +348,61 @@ function RecordField({
       }
     );
   }
+  async function handleBinaryPreview() {
+    if (isBinaryPreviewVisible) {
+      setBinaryPreviewCell(undefined);
+      return;
+    }
+    setBinaryPreviewError("");
+    try {
+      await requireBinaryPreviewCell(effectiveCell, fetchFullCell);
+      setBinaryPreviewCell(cell);
+    } catch (error) {
+      setBinaryPreviewError(
+        error instanceof Error ? error.message : "The binary value didn’t load"
+      );
+    }
+  }
+  const actionOptions = createRecordFieldActionOptions({
+    canCopy,
+    canDownload,
+    canExpand,
+    canPreviewBinary,
+    isBinaryPreviewVisible,
+    onBinaryPreview: handleBinaryPreview,
+    onCopy: handleCopy,
+    onDownload: handleDownload,
+    onLoadFullValue: handleLoadFullValue,
+  });
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="min-w-0 break-all font-medium font-mono text-foreground text-xs">
-          {column.columnName}
-        </span>
-        {isPrimaryKey ? (
-          <span className="text-amber-600 dark:text-amber-400">
-            <KeyRound
-              aria-hidden={true}
-              className="mr-0.5 inline size-3 align-[-0.15em]"
-            />
-            <span className="font-medium text-[0.625rem] uppercase tracking-wide">
-              PK
-            </span>
-          </span>
-        ) : null}
-        <span className="font-mono text-[0.625rem] text-muted-foreground uppercase tracking-wide">
-          {column.rawType}
-        </span>
-        {column.isNullable ? (
-          <span className="text-[0.625rem] text-muted-foreground uppercase tracking-wide">
-            nullable
-          </span>
-        ) : (
-          <span className="text-[0.625rem] text-muted-foreground uppercase tracking-wide">
-            not null
-          </span>
-        )}
-      </div>
+      <RecordFieldMetadata column={column} isPrimaryKey={isPrimaryKey} />
       <div className="grid grid-cols-[minmax(0,1fr)_2rem] items-start gap-1">
         <div
           className="flex min-h-8 min-w-0 items-center overflow-hidden rounded-md border bg-muted/30 px-2.5 py-1"
           data-slot="record-field-value"
         >
-          <RecordFieldValue formatted={formatted} />
+          {isBinaryPreviewVisible && binaryBytes ? (
+            <BinaryFilePreview
+              bytes={binaryBytes}
+              columnName={column.columnName}
+              variant="detail"
+            />
+          ) : (
+            <RecordFieldValue formatted={formatted} />
+          )}
         </div>
-        <div className="flex shrink-0 flex-col items-center gap-0.5">
-          {canExpand ? (
-            <Button
-              aria-label={`Load full value for ${column.columnName}`}
-              className="shrink-0 text-muted-foreground"
-              disabled={fullValueMutation.isPending}
-              onClick={handleLoadFullValue}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <Expand />
-            </Button>
-          ) : null}
-          {canCopy ? (
-            <Button
-              aria-label={`Copy ${column.columnName}`}
-              className="shrink-0 text-muted-foreground"
-              onClick={handleCopy}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <Copy />
-            </Button>
-          ) : null}
-          {canDownload ? (
-            <Button
-              aria-label={`Download ${column.columnName}`}
-              className="shrink-0 text-muted-foreground"
-              disabled={fullValueMutation.isPending}
-              onClick={handleDownload}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <Download />
-            </Button>
-          ) : null}
-        </div>
+        <RecordFieldActions
+          {...actionOptions}
+          columnName={column.columnName}
+          isPending={fullValueMutation.isPending}
+        />
       </div>
-      {fullValueMutation.isError ? (
-        <p className="text-destructive-foreground/80 text-xs">
-          Failed to load full value
-        </p>
-      ) : null}
+      <RecordFieldErrors
+        binaryPreviewError={binaryPreviewError}
+        columnName={column.columnName}
+        fullValueError={fullValueMutation.isError}
+      />
     </div>
   );
 }

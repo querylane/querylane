@@ -31,6 +31,7 @@ interface BuildColumnArgs {
   resultColumns?: readonly TableResultColumn[] | undefined;
   sortDirection?: "ASC" | "DESC" | undefined;
   sortPriority?: number | undefined;
+  tableName?: string | undefined;
 }
 
 const MIN_COLUMN_WIDTH = 140;
@@ -54,6 +55,7 @@ function buildColumn({
   renderOpenReferencedTableLink,
   sortDirection,
   sortPriority,
+  tableName,
 }: BuildColumnArgs): Column<GridRow> {
   const columnKey = column.columnName;
   const isPrimaryKey = pkColumnSet.has(columnKey);
@@ -116,7 +118,7 @@ function buildColumn({
           />
         );
       }
-      return <DataCell cell={cell} column={column} />;
+      return <DataCell cell={cell} column={column} tableName={tableName} />;
     },
     renderHeaderCell: () => (
       <ColumnHeader

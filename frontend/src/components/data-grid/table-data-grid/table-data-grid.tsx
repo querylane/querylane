@@ -1358,6 +1358,7 @@ function useGridColumns({
   displayColumns,
   foreignKeyReferences,
   frozenColumns,
+  name,
   onFrozenColumnsChange,
   onHideColumn,
   renderOpenReferencedTableLink,
@@ -1370,6 +1371,7 @@ function useGridColumns({
   displayColumns: TableResultColumn[];
   foreignKeyReferences: readonly TableForeignKeyReference[];
   frozenColumns: ReadonlySet<string>;
+  name: string;
   onFrozenColumnsChange: (next: ReadonlySet<string>) => void;
   onHideColumn: (columnKey: string) => void;
   renderOpenReferencedTableLink?: RenderOpenReferencedTableLink | undefined;
@@ -1472,6 +1474,7 @@ function useGridColumns({
           sortIndex !== -1 && sortColumns.length > 1
             ? sortIndex + 1
             : undefined,
+        tableName: name,
       });
     }),
   ];
@@ -1782,6 +1785,7 @@ function TableDataGrid({
     displayColumns: columnLayout.displayColumns,
     foreignKeyReferences,
     frozenColumns,
+    name,
     onFrozenColumnsChange: setFrozenColumns,
     onHideColumn: (columnKey) =>
       columnLayout.setColumnVisibility(columnKey, false),

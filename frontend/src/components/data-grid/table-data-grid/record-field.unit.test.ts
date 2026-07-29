@@ -70,4 +70,22 @@ describe("buildByteaDownloadFilename", () => {
       "value.bin"
     );
   });
+
+  test("uses a detected extension without allowing filename punctuation", () => {
+    expect(
+      buildByteaDownloadFilename({
+        columnName: "avatar",
+        extension: ".p/n*g",
+        rowIdentifier: "42",
+        table: "users",
+      })
+    ).toBe("users_avatar_42.png");
+    expect(
+      buildByteaDownloadFilename({
+        columnName: "payload",
+        extension: "../",
+        table: "users",
+      })
+    ).toBe("users_payload.bin");
+  });
 });

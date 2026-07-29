@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DataCell } from "@/components/data-grid/table-data-grid/data-cell";
 import {
   TableCellSchema,
@@ -11,8 +11,31 @@ import {
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 const DIMENSIONS_OBJECT_RE = /"dimensions": \{/;
+const BINARY_TABLE_NAME =
+  "instances/demo/databases/app/schemas/public/tables/users";
+const tableDataApi = vi.hoisted(() => ({
+  useReadCellValueMutation: vi.fn(),
+}));
 
-afterEach(() => cleanup());
+vi.mock("@/hooks/api/table-data", () => ({
+  useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
+}));
+
+beforeEach(() => {
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    value: vi.fn(() => "blob:binary-preview"),
+  });
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    value: vi.fn(),
+  });
+});
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
 
 describe("DataCell", () => {
   it("renders JSON as a single-line preview with a formatted full-value dialog", async () => {
@@ -183,5 +206,248 @@ describe("DataCell", () => {
     render(<DataCell cell={cell} column={column} />);
 
     expect(screen.getByText("2026-05-20 10:11:12 UTC")).toBeTruthy();
+  });
+});
+
+describe("DataCell binary previews", () => {
+  it("fetches binary data only after request and renders an image thumbnail", async () => {
+    const user = userEvent.setup();
+    const pngBytes = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+    const mutateAsync = vi.fn().mockResolvedValue({
+      value: create(TableCellSchema, {
+        value: create(TableValueSchema, {
+          kind: { case: "bytesValue", value: pngBytes },
+        }),
+      }),
+    });
+    tableDataApi.useReadCellValueMutation.mockReturnValue({
+      isPending: false,
+      mutateAsync,
+    });
+    const column = create(TableResultColumnSchema, {
+      columnName: "avatar",
+      dataType: DataType.BINARY,
+      rawType: "bytea",
+    });
+    const cell = create(TableCellSchema, {
+      fullSizeBytes: 8n,
+      fullValueToken: "avatar-token",
+      truncated: true,
+      value: create(TableValueSchema, {
+        kind: { case: "bytesValue", value: new Uint8Array() },
+      }),
+    });
+
+    render(
+      <DataCell
+        cell={cell}
+        column={column}
+        tableName="instances/demo/databases/app/schemas/public/tables/users"
+      />
+    );
+
+    expect(mutateAsync).not.toHaveBeenCalled();
+    expect(screen.queryByRole("img", { name: "avatar preview" })).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: "Preview avatar binary data" })
+    );
+
+    expect(mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fullValueToken: "avatar-token",
+        name: "instances/demo/databases/app/schemas/public/tables/users",
+      })
+    );
+    expect(
+      (await screen.findByRole("img", { name: "avatar preview" })).getAttribute(
+        "src"
+      )
+    ).toBe("blob:binary-preview");
+    expect(
+      screen.getByRole("button", { name: "Hide avatar preview" })
+    ).toBeTruthy();
+  });
+
+  it("does not carry a binary preview error into a different row", async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi.fn().mockRejectedValue(new Error("Connection lost"));
+    tableDataApi.useReadCellValueMutation.mockReturnValue({
+      isPending: false,
+      mutateAsync,
+    });
+    const column = create(TableResultColumnSchema, {
+      columnName: "avatar",
+      dataType: DataType.BINARY,
+      rawType: "bytea",
+    });
+    function truncatedCell(token: string) {
+      return create(TableCellSchema, {
+        fullSizeBytes: 42n,
+        fullValueToken: token,
+        truncated: true,
+        value: create(TableValueSchema, {
+          kind: { case: "bytesValue", value: new Uint8Array() },
+        }),
+      });
+    }
+    const firstCell = truncatedCell("row-1-avatar");
+    const secondCell = truncatedCell("row-2-avatar");
+    const view = render(
+      <DataCell
+        cell={firstCell}
+        column={column}
+        tableName="instances/demo/databases/app/schemas/public/tables/users"
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Preview avatar binary data" })
+    );
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Couldn’t preview avatar: Connection lost"
+    );
+    expect(
+      screen.getByRole("button", { name: "Preview avatar binary data" })
+        .textContent
+    ).toContain("Retry");
+
+    view.rerender(
+      <DataCell
+        cell={secondCell}
+        column={column}
+        tableName="instances/demo/databases/app/schemas/public/tables/users"
+      />
+    );
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Preview avatar binary data" })
+        .textContent
+    ).toContain("Preview");
+  });
+
+  it("recovers from a binary fetch failure when the user retries", async () => {
+    const user = userEvent.setup();
+    const pngBytes = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+    const mutateAsync = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Temporary failure"))
+      .mockResolvedValueOnce({
+        value: create(TableCellSchema, {
+          value: create(TableValueSchema, {
+            kind: { case: "bytesValue", value: pngBytes },
+          }),
+        }),
+      });
+    tableDataApi.useReadCellValueMutation.mockReturnValue({
+      isPending: false,
+      mutateAsync,
+    });
+    const column = create(TableResultColumnSchema, {
+      columnName: "avatar",
+      dataType: DataType.BINARY,
+      rawType: "bytea",
+    });
+    const cell = create(TableCellSchema, {
+      fullSizeBytes: 8n,
+      fullValueToken: "avatar-token",
+      truncated: true,
+      value: create(TableValueSchema, {
+        kind: { case: "bytesValue", value: new Uint8Array() },
+      }),
+    });
+    render(
+      <DataCell cell={cell} column={column} tableName={BINARY_TABLE_NAME} />
+    );
+    const previewButton = screen.getByRole("button", {
+      name: "Preview avatar binary data",
+    });
+
+    await user.click(previewButton);
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Temporary failure"
+    );
+    expect(previewButton.textContent).toContain("Retry");
+
+    await user.click(previewButton);
+
+    expect(
+      await screen.findByRole("img", { name: "avatar preview" })
+    ).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(mutateAsync).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects a full-value response that remains truncated", async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi.fn().mockResolvedValue({
+      value: create(TableCellSchema, {
+        truncated: true,
+        value: create(TableValueSchema, {
+          kind: { case: "bytesValue", value: new Uint8Array([0x01]) },
+        }),
+      }),
+    });
+    tableDataApi.useReadCellValueMutation.mockReturnValue({
+      isPending: false,
+      mutateAsync,
+    });
+    const column = create(TableResultColumnSchema, {
+      columnName: "payload",
+      dataType: DataType.BINARY,
+      rawType: "bytea",
+    });
+    const cell = create(TableCellSchema, {
+      fullSizeBytes: 80_000_000n,
+      fullValueToken: "oversized-payload",
+      truncated: true,
+      value: create(TableValueSchema, {
+        kind: { case: "bytesValue", value: new Uint8Array() },
+      }),
+    });
+    render(
+      <DataCell cell={cell} column={column} tableName={BINARY_TABLE_NAME} />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Preview payload binary data" })
+    );
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Value exceeds the maximum fetchable size"
+    );
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
+  it("does not offer a preview for an empty binary value", () => {
+    tableDataApi.useReadCellValueMutation.mockReturnValue({
+      isPending: false,
+      mutateAsync: vi.fn(),
+    });
+    const column = create(TableResultColumnSchema, {
+      columnName: "payload",
+      dataType: DataType.BINARY,
+      rawType: "bytea",
+    });
+    const cell = create(TableCellSchema, {
+      value: create(TableValueSchema, {
+        kind: { case: "bytesValue", value: new Uint8Array() },
+      }),
+    });
+
+    render(
+      <DataCell cell={cell} column={column} tableName={BINARY_TABLE_NAME} />
+    );
+
+    expect(screen.getByText("‹0 B›")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Preview payload binary data" })
+    ).toBeNull();
   });
 });

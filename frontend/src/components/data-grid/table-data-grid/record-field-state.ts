@@ -21,10 +21,12 @@ const ROW_IDENTIFIER_MAX_LENGTH = 40;
 
 function buildByteaDownloadFilename({
   columnName,
+  extension = "bin",
   rowIdentifier,
   table,
 }: {
   columnName: string;
+  extension?: string | undefined;
   rowIdentifier?: string | undefined;
   table: string;
 }): string {
@@ -40,7 +42,10 @@ function buildByteaDownloadFilename({
     }
   }
   const stem = sanitizedParts.join("_");
-  return `${stem === "" ? "value" : stem}.bin`;
+  const sanitizedExtension = extension.replaceAll(/[^a-zA-Z0-9]+/g, "");
+  return `${stem === "" ? "value" : stem}.${
+    sanitizedExtension === "" ? "bin" : sanitizedExtension
+  }`;
 }
 
 export type { ResolvedCell };
