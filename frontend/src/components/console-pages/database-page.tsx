@@ -53,6 +53,7 @@ type DatabaseSection = "overview";
 const EXPLORER_ROUTE =
   "/instances/$instanceId/databases/$databaseId/explorer" as const;
 const METRICS_RANGE_HOURS = 24;
+const MIN_SCHEMAS_FOR_WIDE_LAYOUT = 5;
 
 function DatabaseOverviewHeader({
   database,
@@ -160,6 +161,22 @@ function seriesFor(
   return series?.find((candidate) => candidate.metric === metric);
 }
 
+function overviewGridLayout(schemaCount: number) {
+  if (schemaCount >= MIN_SCHEMAS_FOR_WIDE_LAYOUT) {
+    return {
+      otherDatabasesClassName: "md:col-span-2 lg:col-span-1",
+      schemasClassName: "md:col-span-2",
+      schemasWide: true,
+    } as const;
+  }
+
+  return {
+    otherDatabasesClassName: "md:col-span-2 lg:col-span-2",
+    schemasClassName: "md:col-span-2 lg:col-span-1",
+    schemasWide: false,
+  } as const;
+}
+
 function BackendDatabasePage({
   databaseId,
   instanceId,
@@ -216,6 +233,7 @@ function BackendDatabasePage({
   const extensions = extensionsQuery.data?.extensions ?? [];
   const metricSeries = metricsQuery.data?.series;
   const params = { databaseId, instanceId };
+  const overviewGrid = overviewGridLayout(catalog?.schemas.length ?? 0);
   const openQueryInsights = () => setQueryInsightsDatabaseName(databaseName);
   const handleCatalogRetry = () => {
     setMetricsAnchorMs(quantizedMetricsAnchor());
@@ -256,32 +274,33 @@ function BackendDatabasePage({
               onRetry={handleCatalogRetry}
             />
           ) : null}
-          <div className="grid items-start gap-5 md:grid-cols-2 lg:grid-cols-3">
-            <div className="flex flex-col gap-5 lg:col-span-2">
-              <SlowQueriesCard
-                insights={insights}
-                isPending={insightsPending}
-                onOpenInsights={openQueryInsights}
-              />
-              <OtherDatabasesCard
-                currentDatabaseId={databaseId}
-                databases={databasesQuery.data?.databases ?? []}
-                instanceId={instanceId}
-                isPending={databasesQuery.isPending}
-              />
-            </div>
-            <div className="flex flex-col gap-5">
-              <TopTablesCard
-                isPending={catalogPending}
-                objects={toTopObjects(catalog)}
-                params={params}
-              />
-              <SchemasCard
-                catalog={catalog}
-                isPending={catalogPending}
-                params={params}
-              />
-            </div>
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <SlowQueriesCard
+              className="md:col-span-2"
+              insights={insights}
+              isPending={insightsPending}
+              onOpenInsights={openQueryInsights}
+            />
+            <TopTablesCard
+              className="md:col-span-2 lg:col-span-1"
+              isPending={catalogPending}
+              objects={toTopObjects(catalog)}
+              params={params}
+            />
+            <SchemasCard
+              catalog={catalog}
+              className={overviewGrid.schemasClassName}
+              isPending={catalogPending}
+              params={params}
+              wide={overviewGrid.schemasWide}
+            />
+            <OtherDatabasesCard
+              className={overviewGrid.otherDatabasesClassName}
+              currentDatabaseId={databaseId}
+              databases={databasesQuery.data?.databases ?? []}
+              instanceId={instanceId}
+              isPending={databasesQuery.isPending}
+            />
           </div>
           <DatabaseObjectsSection
             databaseId={databaseId}

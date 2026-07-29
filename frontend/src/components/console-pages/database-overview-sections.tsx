@@ -39,6 +39,7 @@ const SPARKLINE_WIDTH = 64;
 const SPARKLINE_HEIGHT = 32;
 const LOADING_ROW_KEYS = ["first", "second", "third", "fourth"] as const;
 const MAX_DATABASE_ROWS = 8;
+const SCHEMA_WIDE_COLUMN_COUNT = 3;
 
 interface ExplorerParams {
   databaseId: string;
@@ -318,16 +319,18 @@ function SlowQueriesBody({
 }
 
 function SlowQueriesCard({
+  className,
   insights,
   isPending,
   onOpenInsights,
 }: {
+  className?: string | undefined;
   insights: DatabaseQueryInsights | undefined;
   isPending: boolean;
   onOpenInsights: () => void;
 }) {
   return (
-    <Card className="@container flex-1 gap-4">
+    <Card className={cn("@container flex-1 gap-4", className)}>
       <CardHeader>
         <Eyebrow
           right={
@@ -396,16 +399,18 @@ function TopTableRow({
 }
 
 function TopTablesCard({
+  className,
   isPending,
   objects,
   params,
 }: {
+  className?: string | undefined;
   isPending: boolean;
   objects: CatalogObject[];
   params: ExplorerParams;
 }) {
   return (
-    <Card className="gap-4">
+    <Card className={cn("gap-4", className)}>
       <CardHeader>
         <Eyebrow right={isPending ? undefined : "by size"}>Top tables</Eyebrow>
       </CardHeader>
@@ -431,16 +436,24 @@ function TopTablesCard({
 
 function SchemasCard({
   catalog,
+  className,
   isPending,
   params,
+  wide,
 }: {
   catalog: DatabaseCatalogResult | undefined;
+  className?: string | undefined;
   isPending: boolean;
   params: ExplorerParams;
+  wide: boolean;
 }) {
   const schemas = toSortedSchemas(catalog);
+  const twoColumnFillers = schemas.length % 2;
+  const threeColumnFillers =
+    (SCHEMA_WIDE_COLUMN_COUNT - (schemas.length % SCHEMA_WIDE_COLUMN_COUNT)) %
+    SCHEMA_WIDE_COLUMN_COUNT;
   return (
-    <Card className="@container gap-4">
+    <Card className={cn("@container gap-4", className)}>
       <CardHeader>
         <Eyebrow right={isPending ? undefined : String(schemas.length)}>
           Schemas
@@ -452,7 +465,12 @@ function SchemasCard({
             <CardLoadingRows label="Loading schemas" />
           </div>
         ) : (
-          <div className="grid @[21rem]:grid-cols-2 gap-px bg-border/60">
+          <div
+            className={cn(
+              "grid @[21rem]:grid-cols-2 gap-px bg-border/60",
+              wide && "@[42rem]:grid-cols-3"
+            )}
+          >
             {schemas.map((schema) => (
               <Link
                 className="flex flex-col gap-1 bg-card px-6 py-3 transition-colors hover:bg-muted/50 focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -480,12 +498,27 @@ function SchemasCard({
                 </span>
               </Link>
             ))}
-            {schemas.length % 2 === 1 ? (
+            {twoColumnFillers === 1 ? (
               <div
                 aria-hidden="true"
-                className="@[21rem]:block hidden bg-card"
+                className={cn(
+                  "@[21rem]:block hidden bg-card",
+                  wide && "@[42rem]:hidden"
+                )}
               />
             ) : null}
+            {wide
+              ? Array.from(
+                  { length: threeColumnFillers },
+                  (_, index) => `three-column-filler-${index}`
+                ).map((key) => (
+                  <div
+                    aria-hidden="true"
+                    className="@[42rem]:block hidden bg-card"
+                    key={key}
+                  />
+                ))
+              : null}
           </div>
         )}
       </CardContent>
@@ -537,11 +570,13 @@ function OtherDatabaseRow({
 }
 
 function OtherDatabasesCard({
+  className,
   currentDatabaseId,
   databases,
   instanceId,
   isPending,
 }: {
+  className?: string | undefined;
   currentDatabaseId: string;
   databases: Database[];
   instanceId: string;
@@ -551,7 +586,7 @@ function OtherDatabasesCard({
   const visible =
     overflow > 0 ? databases.slice(0, MAX_DATABASE_ROWS) : databases;
   return (
-    <Card className="gap-4">
+    <Card className={cn("gap-4", className)}>
       <CardHeader>
         <Eyebrow right={isPending ? undefined : String(databases.length)}>
           Databases on this instance
