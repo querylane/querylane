@@ -50,7 +50,7 @@ function RulesEditor({
           ) : (
             <Button
               aria-label="Toggle filter logic"
-              className="mt-1 h-6 w-full px-0 font-mono text-[0.625rem]"
+              className="mt-1 h-6 w-full px-0 font-mono text-xs"
               onClick={() => onLogicChange(logic === "and" ? "or" : "and")}
               size="xs"
               type="button"

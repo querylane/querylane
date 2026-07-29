@@ -62,9 +62,7 @@ function Eyebrow({
         {children}
       </span>
       {right ? (
-        <span className="font-mono text-[0.6875rem] text-muted-foreground">
-          {right}
-        </span>
+        <span className="font-mono text-muted-foreground text-xs">{right}</span>
       ) : null}
     </div>
   );

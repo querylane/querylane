@@ -169,7 +169,7 @@ function DefinitionCommandStep({
   return (
     <div className="min-w-0 max-w-full overflow-hidden rounded-lg border">
       <div className="flex items-center gap-2 border-b bg-muted/60 px-3 py-2">
-        <span className="flex size-5 items-center justify-center rounded-full bg-muted-foreground/20 font-mono text-[0.625rem]">
+        <span className="flex size-5 items-center justify-center rounded-full bg-muted-foreground/20 font-mono text-xs">
           {number}
         </span>
         <h3 className="font-medium text-xs">{title}</h3>
@@ -270,7 +270,7 @@ function ReproduceLocallyCard({
           title="Restore"
         />
         <Alert className="px-3 py-2">
-          <AlertDescription className="text-[0.6875rem] leading-relaxed">
+          <AlertDescription className="text-xs leading-relaxed">
             Related foreign key targets are not included with --table; dump the
             schema scope if you need them.
           </AlertDescription>

@@ -142,9 +142,7 @@ function SectionHead({
         <CountPill partial={partial} value={count} />
       )}
       {hint ? (
-        <span className="ml-auto text-[0.71875rem] text-muted-foreground">
-          {hint}
-        </span>
+        <span className="ml-auto text-muted-foreground text-xs">{hint}</span>
       ) : null}
     </div>
   );
@@ -164,7 +162,7 @@ function TotalBadge({
       <span className="font-medium font-mono text-[0.9375rem] text-foreground leading-tight tracking-tight">
         {value.toLocaleString()}
       </span>
-      <span className="flex items-center gap-1 text-[0.65625rem] text-muted-foreground">
+      <span className="flex items-center gap-1 text-muted-foreground text-xs">
         <span>
           {unit}
           {value === 1 ? "" : "s"}

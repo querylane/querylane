@@ -701,7 +701,7 @@ function QueryPaginationFooter({
           Showing {start}–{end} of {totalRows}
         </span>
       ) : null}
-      <span className="ml-2 text-[0.6875rem]">Rows per page</span>
+      <span className="ml-2 text-xs">Rows per page</span>
       <Select
         onValueChange={(value) => {
           if (!value) {

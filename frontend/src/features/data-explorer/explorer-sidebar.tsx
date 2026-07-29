@@ -905,7 +905,7 @@ function CategoryListItem({
               isOpen && "rotate-90"
             )}
           />
-          <span className="font-medium text-[0.6875rem] uppercase tracking-wider">
+          <span className="font-medium text-xs uppercase tracking-wider">
             {meta.label}
           </span>
         </Button>

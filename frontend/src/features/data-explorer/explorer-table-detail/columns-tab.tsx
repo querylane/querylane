@@ -153,7 +153,7 @@ function ColumnNameCell({ row }: { row: ColumnRow }) {
       ) : null}
       {column.generationExpression ? (
         <div
-          className="mt-1 max-w-[22rem] truncate font-mono text-[0.6875rem] text-muted-foreground"
+          className="mt-1 max-w-[22rem] truncate font-mono text-muted-foreground text-xs"
           title={column.generationExpression}
         >
           AS {column.generationExpression}

@@ -27,7 +27,7 @@ const keyColumns: DataTableColumnDef<TableKeyRow>[] = [
   {
     accessorFn: (row) => row.kindLabel,
     cell: ({ row }) => (
-      <Badge className="font-mono text-[0.625rem]" variant="outline">
+      <Badge className="font-mono text-xs" variant="outline">
         {row.original.kindLabel}
       </Badge>
     ),

@@ -67,12 +67,12 @@ function PolicyCard({ policy }: { policy: TablePolicy }) {
     <article className="rounded-lg border bg-card p-3 shadow-xs">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-mono font-semibold text-sm">{policy.policyName}</h2>
-        <Badge className="h-[18px] font-mono text-[0.625rem]" variant="outline">
+        <Badge className="h-[18px] font-mono text-xs" variant="outline">
           FOR {formatPolicyCommand(policy.command)}
         </Badge>
         <Badge
           className={cn(
-            "h-[18px] font-mono text-[0.625rem]",
+            "h-[18px] font-mono text-xs",
             policyModeBadgeClassName(policy.mode)
           )}
           variant="secondary"
@@ -240,7 +240,7 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
               </span>
               {preview.appliedPolicies.map((policy) => (
                 <Badge
-                  className="h-5 font-mono text-[0.625rem]"
+                  className="h-5 font-mono text-xs"
                   key={policy.policyName}
                   variant="secondary"
                 >
@@ -366,7 +366,7 @@ function PoliciesTab({
         aria-label="Policies pagination"
         className="m-0 flex min-h-8 min-w-0 flex-wrap items-center justify-end gap-2 border-0 p-0 text-muted-foreground text-xs"
       >
-        <span className="text-[0.6875rem]">Rows per page</span>
+        <span className="text-xs">Rows per page</span>
         <Select
           onValueChange={(nextValue) => {
             if (typeof nextValue !== "string") {

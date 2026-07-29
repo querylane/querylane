@@ -43,16 +43,16 @@ export function CatalogKindBadge({
 
   return (
     <span className="flex items-center gap-1.5">
-      <Badge className="font-mono text-[0.625rem]" variant={variant}>
+      <Badge className="font-mono text-xs" variant={variant}>
         {label}
       </Badge>
       {isSystem ? (
-        <Badge className="font-mono text-[0.625rem]" variant="ghost">
+        <Badge className="font-mono text-xs" variant="ghost">
           SYS
         </Badge>
       ) : null}
       {shouldShowUnpopulatedStatus(isMaterialized, isPopulated) ? (
-        <span className="font-mono text-[0.625rem] text-muted-foreground uppercase">
+        <span className="font-mono text-muted-foreground text-xs uppercase">
           unpopulated
         </span>
       ) : null}

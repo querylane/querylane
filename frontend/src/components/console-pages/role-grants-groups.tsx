@@ -82,7 +82,7 @@ function ObjectRow({
           )}
         />
         <GrantRowName object={object} />
-        <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-[0.6875rem] text-muted-foreground">
+        <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-muted-foreground text-xs">
           {heldCount} priv{heldCount === 1 ? "" : "s"}
           {grantCount > 0 ? (
             <span className="text-amber-600/90 dark:text-amber-400/90">
@@ -94,17 +94,13 @@ function ObjectRow({
       </Button>
       {open ? (
         <div className="mt-1 flex flex-col gap-1.5 border-border/60 border-t border-dashed py-2 pr-1.5 pl-[26px]">
-          <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-[0.71875rem]">
-            <span className="text-[0.6875rem] text-muted-foreground">
-              privileges
-            </span>
+          <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-xs">
+            <span className="text-muted-foreground text-xs">privileges</span>
             <HeldPillStrip columns={columns} object={object} />
           </div>
           {grantor ? (
-            <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-[0.71875rem]">
-              <span className="text-[0.6875rem] text-muted-foreground">
-                granted by
-              </span>
+            <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-xs">
+              <span className="text-muted-foreground text-xs">granted by</span>
               <span
                 className="font-mono text-[0.75rem] text-foreground/85"
                 title={grantor.title}
@@ -198,7 +194,7 @@ function SchemaFilterBar({
           </Button>
         ) : null}
         {filterActive ? (
-          <span className="ml-auto font-mono text-[0.65625rem] text-muted-foreground tracking-[0.02em]">
+          <span className="ml-auto font-mono text-muted-foreground text-xs tracking-[0.02em]">
             {matchCount.toLocaleString()} match{matchCount === 1 ? "" : "es"}
           </span>
         ) : null}
@@ -246,15 +242,15 @@ function SchemaSectionHeader({
           {schema}
         </span>
         {grantor ? (
-          <span className="truncate text-[0.65625rem] text-muted-foreground leading-tight">
+          <span className="truncate text-muted-foreground text-xs leading-tight">
             granted by{" "}
-            <span className="font-mono text-[0.6875rem] text-foreground/75">
+            <span className="font-mono text-foreground/75 text-xs">
               {grantor}
             </span>
           </span>
         ) : null}
       </span>
-      <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-[0.71875rem] text-foreground/[0.78] tracking-[0.02em]">
+      <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-foreground/[0.78] text-xs tracking-[0.02em]">
         <span className="font-medium">{objects.length.toLocaleString()}</span>
         <span className="ml-1 font-normal text-muted-foreground">
           {unit}
@@ -522,7 +518,7 @@ function GroupHeader({
         <Icon className="size-3.5" />
       </span>
       <span className="font-medium text-sm">{title}</span>
-      <span className="font-mono text-[0.6875rem] text-muted-foreground tracking-[0.04em]">
+      <span className="font-mono text-muted-foreground text-xs tracking-[0.04em]">
         {count.toLocaleString()}
       </span>
       <span className="ml-auto flex items-center">{density}</span>
@@ -626,11 +622,11 @@ function FlatGroup({
                   </span>
                   {grantor ? (
                     <span
-                      className="truncate text-[0.65625rem] text-muted-foreground leading-tight"
+                      className="truncate text-muted-foreground text-xs leading-tight"
                       title={grantor.title}
                     >
                       granted by{" "}
-                      <span className="font-mono text-[0.6875rem] text-foreground/75">
+                      <span className="font-mono text-foreground/75 text-xs">
                         {grantor.text}
                       </span>
                     </span>

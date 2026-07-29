@@ -164,6 +164,8 @@ const overrideRationales = {
 // React Doctor is lowest-priority in the collision order. Every disabled rule
 // must retain a concrete higher-priority, applicability, or framework rationale.
 const disabledReactDoctorRuleRationales = {
+  "react-doctor/context-provider-value-from-unmemoized-local-literal":
+    "React Compiler stabilizes provider values automatically, and repository policy forbids duplicating that memoization manually.",
   "react-doctor/ink-newline-inside-text":
     "Querylane ships browser React only, and upstream marks this Ink diagnostic retired with no change required.",
   "react-doctor/ink-prefer-use-paste":
@@ -211,6 +213,7 @@ const highSignalOptInRules = [
   "react-doctor/jsx-no-useless-fragment",
   "react-doctor/jsx-pascal-case",
   "react-doctor/loading-action-preserves-trigger",
+  "react-doctor/no-auto-scrolling-content",
   "react-doctor/no-aria-hidden-on-body",
   "react-doctor/no-aria-invalid-without-description",
   "react-doctor/no-array-index-key",
@@ -218,6 +221,7 @@ const highSignalOptInRules = [
   "react-doctor/no-collapse-request-error-to-empty-state",
   "react-doctor/no-dark-mode-glow",
   "react-doctor/no-danger",
+  "react-doctor/no-decorative-radial-spotlight",
   "react-doctor/no-default-props",
   "react-doctor/no-disabled-zoom",
   "react-doctor/no-duplicate-static-id-reference",
@@ -234,11 +238,15 @@ const highSignalOptInRules = [
   "react-doctor/no-outline-none",
   "react-doctor/no-presentation-role-conflict",
   "react-doctor/no-prop-types",
+  "react-doctor/no-pulsing-status-dot",
   "react-doctor/no-pure-black-background",
+  "react-doctor/no-radial-halo",
   "react-doctor/no-react-children",
   "react-doctor/no-reduced-motion-content-removal",
+  "react-doctor/no-repeated-container-text",
   "react-doctor/no-server-side-image-map",
   "react-doctor/no-set-state",
+  "react-doctor/no-shape-assembled-illustration",
   "react-doctor/no-side-tab-border",
   "react-doctor/no-skipped-heading-level",
   "react-doctor/no-tiny-text",
@@ -250,10 +258,18 @@ const highSignalOptInRules = [
   "react-doctor/prefer-es6-class",
   "react-doctor/prefer-function-component",
   "react-doctor/rn-animate-layout-property",
+  "react-doctor/rn-bottom-sheet-no-ignored-scroll-prop",
+  "react-doctor/rn-bottom-sheet-no-state-in-on-animate",
+  "react-doctor/rn-bottom-sheet-use-integrated-scrollable",
+  "react-doctor/rn-platform-shaking-use-direct-import",
   "react-doctor/rn-prefer-content-inset-adjustment",
+  "react-doctor/rn-reanimated-4-no-legacy-spring-thresholds",
+  "react-doctor/rn-reanimated-4-no-removed-api",
+  "react-doctor/rn-reanimated-4-use-worklets-scheduler",
   "react-doctor/self-closing-comp",
   "react-doctor/shadcn-tabs-trigger-requires-list",
   "react-doctor/state-in-constructor",
+  "react-doctor/tanstack-start-missing-scripts",
 ];
 
 type JsonRecord = Record<string, unknown>;
@@ -294,8 +310,8 @@ describe("React Doctor policy", () => {
     const devDependencies = getRecordProperty(packageJson, "devDependencies");
     const overrides = getRecordProperty(packageJson, "overrides");
 
-    expect(devDependencies["react-doctor"]).toBe("0.9.1");
-    expect(overrides["react-doctor"]).toBe("0.9.1");
+    expect(devDependencies["react-doctor"]).toBe("0.9.2");
+    expect(overrides["react-doctor"]).toBe("0.9.2");
   });
 
   test("uses the audited release for every locked React Doctor copy", () => {
@@ -307,7 +323,7 @@ describe("React Doctor policy", () => {
       )
     );
 
-    expect(lockedVersions).toEqual(new Set(["0.9.1"]));
+    expect(lockedVersions).toEqual(new Set(["0.9.2"]));
   });
 
   test("runs every non-colliding installed rule at error severity", () => {

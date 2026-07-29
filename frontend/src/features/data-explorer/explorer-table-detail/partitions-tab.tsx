@@ -228,7 +228,7 @@ function PartitionPaginationFooter({
 
   return (
     <div className="flex h-8 items-center gap-2 text-muted-foreground text-xs">
-      <span className="text-[0.6875rem]">Rows per page</span>
+      <span className="text-xs">Rows per page</span>
       <Select
         onValueChange={(value) => {
           if (typeof value !== "string") {

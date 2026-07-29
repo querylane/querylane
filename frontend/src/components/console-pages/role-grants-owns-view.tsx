@@ -56,7 +56,7 @@ function OwnershipPill({ name, tone }: { name: string; tone: PrivTone }) {
   return (
     <span
       className={cn(
-        "inline-flex h-[21px] items-center rounded border px-2 font-medium font-mono text-[0.625rem] tracking-[0.06em]",
+        "inline-flex h-[21px] items-center rounded border px-2 font-medium font-mono text-xs tracking-[0.06em]",
         PRIV_TONE_CLASS[tone]
       )}
     >
@@ -71,7 +71,7 @@ function ImplicitTag() {
       <PopoverTrigger
         render={
           <Button
-            className="h-[22px] gap-1 rounded-full border-amber-500/30 px-2 font-normal text-[0.65625rem] text-amber-600 lowercase hover:bg-amber-500/10 dark:text-amber-400"
+            className="h-[22px] gap-1 rounded-full border-amber-500/30 px-2 font-normal text-amber-600 text-xs lowercase hover:bg-amber-500/10 dark:text-amber-400"
             size="xs"
             type="button"
             variant="outline"
@@ -97,7 +97,7 @@ function ImplicitTag() {
             />
           ))}
         </div>
-        <div className="flex items-start gap-1.5 text-[0.71875rem] text-muted-foreground leading-relaxed">
+        <div className="flex items-start gap-1.5 text-muted-foreground text-xs leading-relaxed">
           <Info className="mt-0.5 size-3 shrink-0" />
           <span>
             Enforced by{" "}
@@ -249,7 +249,7 @@ DROP OWNED BY ${quoted};`;
         <span className="font-semibold text-foreground text-sm">
           Before dropping this role
         </span>
-        <span className="ml-auto text-[0.71875rem] text-muted-foreground">
+        <span className="ml-auto text-muted-foreground text-xs">
           {partial
             ? "Available owned objects would block "
             : `${count.toLocaleString()} object${count === 1 ? "" : "s"} would block `}
@@ -263,7 +263,7 @@ DROP OWNED BY ${quoted};`;
           the leftovers.
         </p>
         <SqlCodeBlock sql={sql} />
-        <p className="text-[0.71875rem] text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Or transfer ownership object-by-object:{" "}
           <span className="font-mono text-foreground/75">
             {"ALTER … OWNER TO <new_owner>;"}

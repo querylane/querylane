@@ -66,7 +66,7 @@ function ColumnHeader({
               <ArrowDown aria-label="Sorted descending" className="size-3" />
             )}
             {sortPriority ? (
-              <span className="font-mono text-[0.625rem] tabular-nums">
+              <span className="font-mono text-xs tabular-nums">
                 {sortPriority}
               </span>
             ) : null}

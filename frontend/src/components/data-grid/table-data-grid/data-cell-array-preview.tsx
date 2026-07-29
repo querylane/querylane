@@ -156,7 +156,7 @@ function ArrayPreview({
         data-testid={`${columnName}-array-preview`}
         title={title}
       >
-        <span className="shrink-0 rounded-full border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 font-medium text-[0.625rem] text-sky-700 leading-none dark:text-sky-300">
+        <span className="shrink-0 rounded-full border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 font-medium text-sky-700 text-xs leading-none dark:text-sky-300">
           {summary}
         </span>
         {firstItems.map(({ item, key }) => (

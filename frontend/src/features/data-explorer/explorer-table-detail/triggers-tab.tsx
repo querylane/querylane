@@ -236,20 +236,20 @@ function TriggerCard({
         </span>
         {trigger.timing ? (
           <Badge
-            className="h-[18px] rounded-full px-2 text-[0.625rem]"
+            className="h-[18px] rounded-full px-2 text-xs"
             variant="secondary"
           >
             {trigger.timing}
           </Badge>
         ) : null}
         <Badge
-          className="h-[18px] rounded-full px-2 font-mono text-[0.625rem]"
+          className="h-[18px] rounded-full px-2 font-mono text-xs"
           variant="outline"
         >
           {triggerEventsLabel(trigger)}
         </Badge>
         <Badge
-          className="h-[18px] rounded-full px-2 text-[0.625rem] text-muted-foreground"
+          className="h-[18px] rounded-full px-2 text-muted-foreground text-xs"
           variant="ghost"
         >
           {triggerLevelLabel(trigger)}
@@ -257,19 +257,19 @@ function TriggerCard({
         {trigger.enabled ? null : (
           <span
             className={cn(
-              "inline-flex h-[18px] items-center rounded-full px-2 font-medium text-[0.625rem]",
+              "inline-flex h-[18px] items-center rounded-full px-2 font-medium text-xs",
               PILL_TONE_CLASSES.amber
             )}
           >
             disabled
           </span>
         )}
-        <span className="ml-auto truncate font-mono text-[0.6875rem] text-muted-foreground">
+        <span className="ml-auto truncate font-mono text-muted-foreground text-xs">
           {triggerFunctionLabel(trigger)}
         </span>
       </div>
       {whenExpression ? (
-        <div className="mt-[7px] font-mono text-[0.6875rem] text-muted-foreground">
+        <div className="mt-[7px] font-mono text-muted-foreground text-xs">
           WHEN ({whenExpression})
         </div>
       ) : null}

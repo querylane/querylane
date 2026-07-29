@@ -217,7 +217,7 @@ function RecordField({
         </div>
       </div>
       {fullValueMutation.isError ? (
-        <p className="text-[0.625rem] text-destructive-foreground/80">
+        <p className="text-destructive-foreground/80 text-xs">
           Failed to load full value
         </p>
       ) : null}
@@ -309,7 +309,7 @@ function ArrayValue({ raw }: { raw: string }) {
   return (
     <div className="flex w-full min-w-0 flex-col gap-2">
       <div className="flex items-center gap-2">
-        <span className="rounded-full border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 font-medium text-[0.625rem] text-sky-700 leading-none dark:text-sky-300">
+        <span className="rounded-full border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 font-medium text-sky-700 text-xs leading-none dark:text-sky-300">
           {count.toLocaleString()} {count === 1 ? "item" : "items"}
         </span>
       </div>
@@ -322,7 +322,7 @@ function ArrayValue({ raw }: { raw: string }) {
               className="grid grid-cols-[3rem_minmax(0,1fr)] gap-2 border-b px-2.5 py-2 last:border-b-0"
               key={key}
             >
-              <span className="font-mono text-[0.625rem] text-muted-foreground tabular-nums">
+              <span className="font-mono text-muted-foreground text-xs tabular-nums">
                 {position}
               </span>
               {item.isNull ? (

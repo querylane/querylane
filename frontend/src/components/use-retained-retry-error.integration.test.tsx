@@ -14,6 +14,26 @@ function createDeferred() {
 }
 
 describe("useRetainedRetryError", () => {
+  test("shows a changed error without a stale intermediate render", () => {
+    const renderedErrors: (string | null)[] = [];
+    const { rerender } = renderHook(
+      ({ error }) => {
+        const retryError = useRetainedRetryError({ error });
+        renderedErrors.push(retryError.displayedError);
+        return retryError;
+      },
+      {
+        initialProps: { error: "Cannot connect" as string | null },
+      }
+    );
+
+    renderedErrors.length = 0;
+    rerender({ error: "Permission denied" });
+
+    expect(renderedErrors).not.toContain("Cannot connect");
+    expect(renderedErrors.at(-1)).toBe("Permission denied");
+  });
+
   test("syncs displayed error to the latest error after a successful retry", async () => {
     const retryAttempt = createDeferred();
     const onRetry = vi.fn(() => retryAttempt.promise);

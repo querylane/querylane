@@ -195,7 +195,7 @@ function SidebarFooterContent({
             onRetry={onRetryFooter}
           />
         ) : null}
-        <OverflowTooltip className="block truncate px-2 text-left font-mono text-[0.6875rem] text-muted-foreground">
+        <OverflowTooltip className="block truncate px-2 text-left font-mono text-muted-foreground text-xs">
           {`Querylane ${aboutMetadata.version}`}
         </OverflowTooltip>
       </div>
@@ -432,7 +432,7 @@ function SidebarDatabaseSelector() {
                       {database.name}
                     </span>
                     {database.owner ? (
-                      <span className="min-w-0 truncate text-[0.6875rem] text-muted-foreground">
+                      <span className="min-w-0 truncate text-muted-foreground text-xs">
                         owner {database.owner}
                       </span>
                     ) : null}
