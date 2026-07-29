@@ -120,6 +120,10 @@ function CellSelectionSummary({
     [summary.cellCount]
   );
 
+  function handleClearCellSelection() {
+    cellSelectionStore.clear();
+  }
+
   return (
     <>
       <span
@@ -150,7 +154,7 @@ function CellSelectionSummary({
           <Button
             aria-label="Clear cell selection"
             className="size-7 p-0"
-            onClick={cellSelectionStore.clear}
+            onClick={handleClearCellSelection}
             size="sm"
             type="button"
             variant="ghost"

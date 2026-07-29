@@ -160,12 +160,11 @@ function subtractCellSelectionRange(
       top: intersection.top,
     },
   ];
-  return remainingBounds
-    .filter(
-      (remaining) =>
-        remaining.left <= remaining.right && remaining.top <= remaining.bottom
-    )
-    .map(cellSelectionRangeFromBounds);
+  return remainingBounds.flatMap((remaining) =>
+    remaining.left <= remaining.right && remaining.top <= remaining.bottom
+      ? [cellSelectionRangeFromBounds(remaining)]
+      : []
+  );
 }
 
 function mergeCellSelectionRanges(
