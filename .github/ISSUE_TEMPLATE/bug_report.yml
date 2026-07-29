@@ -1,0 +1,36 @@
+name: Bug report
+description: Report a problem in Querylane
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Querylane. Review any prefilled diagnostics before submitting.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe what you were doing, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we reproduce it?
+      description: List the smallest set of steps that triggers the problem.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: false
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Querylane prefills redacted error context here when you report from the app.
+      render: json
+    validations:
+      required: false

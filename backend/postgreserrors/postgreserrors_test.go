@@ -3,6 +3,7 @@ package postgreserrors_test
 import (
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -14,6 +15,59 @@ import (
 
 	"github.com/querylane/querylane/backend/postgreserrors"
 )
+
+func TestIsConnectionReachabilityError(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "wrapped dial error",
+			err: fmt.Errorf("open pool: %w", &net.OpError{
+				Op:  "dial",
+				Net: "tcp",
+				Err: errors.New("connect: connection refused"),
+			}),
+			want: true,
+		},
+		{
+			name: "DNS error",
+			err:  &net.DNSError{Err: "no such host", Name: "db.example.test"},
+			want: true,
+		},
+		{
+			name: "driver text fallback",
+			err:  errors.New("connection test failed: dial tcp: connection refused"),
+			want: true,
+		},
+		{
+			name: "PostgreSQL permission error",
+			err:  &pgconn.PgError{Code: "42501", Message: "permission denied"},
+			want: false,
+		},
+		{
+			name: "unrelated error",
+			err:  errors.New("some unknown engine error"),
+			want: false,
+		},
+		{
+			name: "nil",
+			err:  nil,
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.want, postgreserrors.IsConnectionReachabilityError(tt.err))
+		})
+	}
+}
 
 func TestClassifyDefaultExactPolicy(t *testing.T) {
 	t.Parallel()

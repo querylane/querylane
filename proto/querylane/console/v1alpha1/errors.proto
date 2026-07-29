@@ -45,6 +45,9 @@ enum ErrorReason {
 
   // The caller exceeded the managed PostgreSQL connection-test rate.
   CONNECTION_TEST_RATE_LIMIT_EXCEEDED = 104;
+
+  // A user-managed PostgreSQL instance could not be reached.
+  INSTANCE_UNAVAILABLE = 105;
 }
 
 // PostgreSqlErrorKind identifies the transport-neutral PostgreSQL error

@@ -33,5 +33,9 @@ test("re-enables the retry button after a failed retry under StrictMode", async 
     expect(retryButton.hasAttribute("disabled")).toBe(false);
   });
 
+  expect(screen.getByRole("alert").textContent).toBe(
+    "Retry failed. Review the error details or try again in a moment."
+  );
+  expect(screen.queryByText("still unreachable")).toBeNull();
   expect(onRetry).toHaveBeenCalledTimes(1);
 });

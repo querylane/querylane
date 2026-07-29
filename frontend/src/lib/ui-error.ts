@@ -2,6 +2,7 @@ import { Code, ConnectError } from "@connectrpc/connect";
 import { toast } from "sonner";
 
 import { captureException, logger } from "@/lib/diagnostics";
+import { buildGitHubBugReportUrl } from "@/lib/error-report";
 import { normalizeConnectErrorState } from "@/lib/ui-error-connect";
 import type {
   AppErrorSource,
@@ -23,6 +24,7 @@ import {
 
 const APP_UI_ERROR_CONTEXT = Symbol.for("querylane.app-ui-error-context");
 const APP_UI_ERROR_REPORTED = Symbol.for("querylane.app-ui-error-reported");
+const APP_UI_ERROR_SURFACED = Symbol.for("querylane.app-ui-error-surfaced");
 
 /**
  * Stable toast id so a burst of failing RPCs (e.g. the backend going down
@@ -131,6 +133,13 @@ function isLiveQueryLimitReason(reason: string | null): boolean {
   );
 }
 
+function isInstanceUnavailableReason(reason: string | null): boolean {
+  return (
+    reason === "INSTANCE_UNAVAILABLE" ||
+    reason === "ERROR_REASON_INSTANCE_UNAVAILABLE"
+  );
+}
+
 function classifyBlockingReason({
   code,
   postgres,
@@ -188,6 +197,9 @@ function buildTitle({
   if (isLiveQueryLimitReason(reason)) {
     return "Query limit reached";
   }
+  if (isInstanceUnavailableReason(reason)) {
+    return "PostgreSQL instance unavailable";
+  }
   if (postgres) {
     return POSTGRES_TITLES[postgres.kind] ?? "PostgreSQL error";
   }
@@ -211,6 +223,9 @@ function buildRetryGuidance({
   if (isLiveQueryLimitReason(reason)) {
     return "Another query or export is using the available capacity. Try again when it finishes.";
   }
+  if (isInstanceUnavailableReason(reason)) {
+    return "Check that PostgreSQL is running and that the host and port are reachable, then retry.";
+  }
   if (postgres) {
     return POSTGRES_RETRY_GUIDANCE[postgres.retryGuidance] ?? null;
   }
@@ -220,7 +235,18 @@ function buildRetryGuidance({
   return null;
 }
 
-function buildSummary(postgres: AppUiErrorPostgres | null, message: string) {
+function buildSummary({
+  message,
+  postgres,
+  reason,
+}: {
+  message: string;
+  postgres: AppUiErrorPostgres | null;
+  reason: string | null;
+}) {
+  if (isInstanceUnavailableReason(reason)) {
+    return "Querylane couldn't connect to this PostgreSQL instance.";
+  }
   if (!postgres) {
     return message;
   }
@@ -300,7 +326,7 @@ function buildErrorPresentation({
   }
   return {
     retryGuidance: buildRetryGuidance({ code, postgres, reason }),
-    summary: buildSummary(postgres, message),
+    summary: buildSummary({ message, postgres, reason }),
     title: buildTitle({ blockingReason, code, postgres, reason }),
   };
 }
@@ -407,6 +433,7 @@ function shouldReportAppUiError(error: AppUiError, expected: boolean): boolean {
 
   if (expected || isExpectedAppUiError(error)) {
     error.originalError[APP_UI_ERROR_REPORTED] = true;
+    error.originalError[APP_UI_ERROR_SURFACED] = true;
     return false;
   }
   if (error.originalError[APP_UI_ERROR_REPORTED] === true) {
@@ -414,6 +441,29 @@ function shouldReportAppUiError(error: AppUiError, expected: boolean): boolean {
   }
 
   error.originalError[APP_UI_ERROR_REPORTED] = true;
+  return true;
+}
+
+function shouldSurfaceAppUiError(
+  error: AppUiError,
+  expected: boolean
+): boolean {
+  if (
+    error.context.surface !== "toast" ||
+    expected ||
+    isExpectedAppUiError(error)
+  ) {
+    return false;
+  }
+
+  if (!isRecord(error.originalError)) {
+    return true;
+  }
+  if (error.originalError[APP_UI_ERROR_SURFACED] === true) {
+    return false;
+  }
+
+  error.originalError[APP_UI_ERROR_SURFACED] = true;
   return true;
 }
 
@@ -463,13 +513,29 @@ function buildReportTags(
 }
 
 function buildToastOptions(error: AppUiError): {
+  action: { label: string; onClick: () => void };
   description: string;
   id?: string;
 } {
+  const options = {
+    action: {
+      label: "Report bug",
+      onClick: () => {
+        if (typeof window !== "undefined") {
+          window.open(
+            buildGitHubBugReportUrl(error),
+            "_blank",
+            "noopener,noreferrer"
+          );
+        }
+      },
+    },
+    description: error.summary,
+  };
   if (error.unexpectedResponse) {
-    return { description: error.summary, id: UNEXPECTED_RESPONSE_TOAST_ID };
+    return { ...options, id: UNEXPECTED_RESPONSE_TOAST_ID };
   }
-  return { description: error.summary };
+  return options;
 }
 
 function reportAppUiError(
@@ -480,30 +546,32 @@ function reportAppUiError(
   },
   dependencies: ReportAppUiErrorDependencies = defaultReportAppUiErrorDependencies
 ) {
-  if (!shouldReportAppUiError(error, context?.expected ?? false)) {
-    return;
+  const expected = context?.expected ?? false;
+  const shouldReport = shouldReportAppUiError(error, expected);
+  const shouldSurface = shouldSurfaceAppUiError(error, expected);
+
+  if (shouldReport) {
+    const safePostgresContext = buildSafePostgresContext(error.postgres);
+    const captureTarget = reportCaptureTarget(error);
+
+    dependencies.captureException(captureTarget, {
+      extras: {
+        app_ui_error_details_count: error.details.length,
+        app_ui_error_postgres: safePostgresContext,
+      },
+      tags: buildReportTags(error, context?.tags),
+    });
+
+    dependencies.logger.error(reportMessage(error), {
+      code: error.codeLabel,
+      postgres: safePostgresContext,
+      reason: error.connectReason,
+      source: error.source,
+      title: error.title,
+    });
   }
 
-  const safePostgresContext = buildSafePostgresContext(error.postgres);
-  const captureTarget = reportCaptureTarget(error);
-
-  dependencies.captureException(captureTarget, {
-    extras: {
-      app_ui_error_details_count: error.details.length,
-      app_ui_error_postgres: safePostgresContext,
-    },
-    tags: buildReportTags(error, context?.tags),
-  });
-
-  dependencies.logger.error(reportMessage(error), {
-    code: error.codeLabel,
-    postgres: safePostgresContext,
-    reason: error.connectReason,
-    source: error.source,
-    title: error.title,
-  });
-
-  if (error.context.surface === "toast") {
+  if (shouldSurface) {
     dependencies.toast.error(error.title, buildToastOptions(error));
   }
 }

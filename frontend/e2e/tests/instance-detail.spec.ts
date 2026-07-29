@@ -30,6 +30,7 @@ const MISSING_DATABASE_URL_RE =
 const APPDB_EXPLORER_URL_RE =
   /\/instances\/production\/databases\/appdb\/explorer/;
 const LAST_CHECKED_LABEL_RE = /Last checked/;
+const BUG_REPORT_URL_RE = /issues\/new\?.*template=bug_report\.yml/;
 
 const INSTANCE_HEALTH_CHECK_TIME = "2026-05-21T10:15:00Z";
 const METRIC_UNAVAILABLE_ERROR_CODE = 14;
@@ -367,6 +368,14 @@ test("roles: backend error renders retryable route error", {
 
   await expect(page.getByText("roles metadata offline")).toBeVisible();
   await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Report bug" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Error details" }).click();
+
+  await expect(page.getByRole("link", { name: "Report bug" })).toHaveAttribute(
+    "href",
+    BUG_REPORT_URL_RE
+  );
 });
 
 test("roles: renders permissions, special attributes, and memberships", {

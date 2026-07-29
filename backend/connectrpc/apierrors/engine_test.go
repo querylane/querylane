@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -203,6 +205,43 @@ func TestMapEngineErr(t *testing.T) {
 				t.Error("ResourceInfo detail not found")
 			}
 		})
+	}
+}
+
+func TestMapEngineErrClassifiesUnreachableInstance(t *testing.T) {
+	t.Parallel()
+
+	connectErr := MapEngineErr(
+		context.Background(),
+		fmt.Errorf("open instance pool: %w", &net.OpError{
+			Op:  "dial",
+			Net: "tcp",
+			Err: errors.New("connect: connection refused"),
+		}),
+		ResourceCtx{
+			Type: resource.TypeInstance,
+			Name: "instances/production",
+			Op:   "list_roles",
+		},
+	)
+	if connectErr == nil {
+		t.Fatal("expected connect error")
+	}
+
+	if connectErr.Code() != connect.CodeUnavailable {
+		t.Errorf("expected code %v, got %v", connect.CodeUnavailable, connectErr.Code())
+	}
+
+	if connectErr.Message() != "PostgreSQL instance is unavailable" {
+		t.Errorf("unexpected message %q", connectErr.Message())
+	}
+
+	if reason := requireErrorInfo(t, connectErr).Reason; reason != "INSTANCE_UNAVAILABLE" {
+		t.Errorf("expected INSTANCE_UNAVAILABLE reason, got %q", reason)
+	}
+
+	if strings.Contains(connectErr.Message(), "connection refused") {
+		t.Errorf("message exposes raw connection error: %q", connectErr.Message())
 	}
 }
 

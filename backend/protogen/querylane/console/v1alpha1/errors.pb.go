@@ -53,6 +53,8 @@ const (
 	ErrorReason_LIVE_QUERY_LIMIT_EXCEEDED ErrorReason = 103
 	// The caller exceeded the managed PostgreSQL connection-test rate.
 	ErrorReason_CONNECTION_TEST_RATE_LIMIT_EXCEEDED ErrorReason = 104
+	// A user-managed PostgreSQL instance could not be reached.
+	ErrorReason_INSTANCE_UNAVAILABLE ErrorReason = 105
 )
 
 // Enum value maps for ErrorReason.
@@ -71,6 +73,7 @@ var (
 		102: "APP_DATABASE_UNAVAILABLE",
 		103: "LIVE_QUERY_LIMIT_EXCEEDED",
 		104: "CONNECTION_TEST_RATE_LIMIT_EXCEEDED",
+		105: "INSTANCE_UNAVAILABLE",
 	}
 	ErrorReason_value = map[string]int32{
 		"ERROR_REASON_UNSPECIFIED":            0,
@@ -86,6 +89,7 @@ var (
 		"APP_DATABASE_UNAVAILABLE":            102,
 		"LIVE_QUERY_LIMIT_EXCEEDED":           103,
 		"CONNECTION_TEST_RATE_LIMIT_EXCEEDED": 104,
+		"INSTANCE_UNAVAILABLE":                105,
 	}
 )
 
@@ -378,7 +382,7 @@ const file_querylane_console_v1alpha1_errors_proto_rawDesc = "" +
 	"\x0eretry_guidance\x18\a \x01(\x0e28.querylane.console.v1alpha1.PostgreSqlErrorRetryGuidanceR\rretryGuidance\x1a?\n" +
 	"\x11ServerFieldsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xe3\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xfd\x02\n" +
 	"\vErrorReason\x12\x1c\n" +
 	"\x18ERROR_REASON_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12RESOURCE_NOT_FOUND\x10\x01\x12\x1b\n" +
@@ -393,7 +397,8 @@ const file_querylane_console_v1alpha1_errors_proto_rawDesc = "" +
 	"\x1bAPP_DATABASE_NOT_CONFIGURED\x10e\x12\x1c\n" +
 	"\x18APP_DATABASE_UNAVAILABLE\x10f\x12\x1d\n" +
 	"\x19LIVE_QUERY_LIMIT_EXCEEDED\x10g\x12'\n" +
-	"#CONNECTION_TEST_RATE_LIMIT_EXCEEDED\x10h*\xa6\x04\n" +
+	"#CONNECTION_TEST_RATE_LIMIT_EXCEEDED\x10h\x12\x18\n" +
+	"\x14INSTANCE_UNAVAILABLE\x10i*\xa6\x04\n" +
 	"\x13PostgreSqlErrorKind\x12%\n" +
 	"!POSTGRESQL_ERROR_KIND_UNSPECIFIED\x10\x00\x12*\n" +
 	"&POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT\x10\x01\x12-\n" +

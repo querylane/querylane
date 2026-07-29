@@ -50,12 +50,10 @@ export function RetryActionButton({
     setRetryError(null);
     Promise.resolve()
       .then(() => onRetry())
-      .catch((error: unknown) => {
+      .catch(() => {
         if (mountedRef.current) {
           setRetryError(
-            error instanceof Error
-              ? error.message
-              : "Retry failed. Try again or refresh the page."
+            "Retry failed. Review the error details or try again in a moment."
           );
         }
       })

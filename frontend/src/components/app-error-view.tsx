@@ -1,9 +1,9 @@
 "use client";
 
-import { AlertTriangle, Copy, SearchCode } from "lucide-react";
+import { AlertTriangle, Bug, Copy, SearchCode } from "lucide-react";
 import { useState } from "react";
 import { RetryActionButton } from "@/components/retry-action-button";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { buildGitHubBugReportUrl } from "@/lib/error-report";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
 
@@ -116,6 +117,28 @@ function ErrorBadgeList({
   );
 }
 
+function ReportBugLink({
+  error,
+  size = "sm",
+  variant = "outline",
+}: {
+  error: AppUiError;
+  size?: React.ComponentProps<typeof Button>["size"];
+  variant?: React.ComponentProps<typeof Button>["variant"];
+}) {
+  return (
+    <a
+      className={buttonVariants({ size, variant })}
+      href={buildGitHubBugReportUrl(error)}
+      rel="noreferrer"
+      target="_blank"
+    >
+      <Bug className="size-4" />
+      Report bug
+    </a>
+  );
+}
+
 function ErrorDetailsDialog({
   error,
   retryAvailable,
@@ -150,7 +173,13 @@ function ErrorDetailsDialog({
         </DialogHeader>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           <ErrorBadgeList error={error} retryAvailable={retryAvailable} />
-          <CopyErrorDetailsButton error={error} key={error.technicalDetails} />
+          <div className="flex flex-wrap items-start gap-2">
+            <CopyErrorDetailsButton
+              error={error}
+              key={error.technicalDetails}
+            />
+            <ReportBugLink error={error} />
+          </div>
           <div className="space-y-2">
             <h3 className="font-medium text-sm">Technical details</h3>
             <Textarea
@@ -202,10 +231,13 @@ function AppPageError({
               <RetryActionButton label={retryLabel} onRetry={onRetry} />
             ) : null}
             {actions}
+            {onRetry || actions ? null : (
+              <ReportBugLink error={error} variant="default" />
+            )}
             <ErrorDetailsDialog
               error={error}
               retryAvailable={Boolean(onRetry)}
-              triggerVariant={onRetry || actions ? "outline" : "default"}
+              triggerVariant="outline"
             />
           </div>
         </CardContent>
@@ -251,6 +283,9 @@ function AppCompactError({
                 />
               ) : null}
               {actions}
+              {onRetry || actions ? null : (
+                <ReportBugLink error={error} variant="default" />
+              )}
               <ErrorDetailsDialog
                 error={error}
                 retryAvailable={Boolean(onRetry)}

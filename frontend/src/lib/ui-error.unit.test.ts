@@ -341,6 +341,35 @@ describe("PostgreSQL structured error rendering", () => {
 });
 
 describe("error routing and reporting", () => {
+  test("turns an unreachable instance into concise recovery guidance", () => {
+    const error = new ConnectError(
+      "engine list_roles failed: connection refused",
+      Code.Unavailable
+    );
+    error.details = [
+      {
+        debug: {
+          domain: "console.querylane.dev",
+          metadata: { operation: "list_roles" },
+          reason: "INSTANCE_UNAVAILABLE",
+        },
+        type: "google.rpc.ErrorInfo",
+        value: new Uint8Array([1]),
+      },
+    ];
+
+    const normalized = normalizeAppUiError(error);
+
+    expect(normalized).toMatchObject({
+      summary: "Querylane couldn't connect to this PostgreSQL instance.",
+      title: "PostgreSQL instance unavailable",
+    });
+    expect(normalized.retryGuidance).toBe(
+      "Check that PostgreSQL is running and that the host and port are reachable, then retry."
+    );
+    expect(normalized.summary).not.toContain("connection refused");
+  });
+
   test("preserves meta database copy without exposing server fields", () => {
     const error = createPostgresFailure({
       code: Code.Unavailable,
@@ -429,6 +458,54 @@ describe("error routing and reporting", () => {
     expect(dependencies.toast.error).not.toHaveBeenCalled();
   });
 
+  test("surfaces a toast after the transport already captured the error", () => {
+    const original = new Error("save failed");
+    const dependencies = createReportingDependencies();
+
+    reportAppUiError(
+      normalizeAppUiError(original, {
+        area: "transport",
+        source: "connect",
+        surface: "silent",
+      }),
+      undefined,
+      dependencies
+    );
+    reportAppUiError(
+      normalizeAppUiError(original, {
+        area: "instance-settings",
+        source: "mutation",
+        surface: "toast",
+      }),
+      undefined,
+      dependencies
+    );
+
+    expect(dependencies.captureException).toHaveBeenCalledTimes(1);
+    expect(dependencies.logger.error).toHaveBeenCalledTimes(1);
+    expect(dependencies.toast.error).toHaveBeenCalledTimes(1);
+    expect(dependencies.toast.error.mock.calls[0]?.[1]).toMatchObject({
+      action: {
+        label: "Report bug",
+        onClick: expect.any(Function),
+      },
+    });
+  });
+
+  test("shows each error toast once", () => {
+    const original = new Error("save failed");
+    const normalized = normalizeAppUiError(original, {
+      source: "mutation",
+      surface: "toast",
+    });
+    const dependencies = createReportingDependencies();
+
+    reportAppUiError(normalized, undefined, dependencies);
+    reportAppUiError(normalized, undefined, dependencies);
+
+    expect(dependencies.toast.error).toHaveBeenCalledTimes(1);
+  });
+
   test.each([
     {
       kind: "redirect",
@@ -507,10 +584,10 @@ describe("error routing and reporting", () => {
 
     expect(dependencies.toast.error).toHaveBeenCalledWith(
       "Unexpected server response",
-      {
+      expect.objectContaining({
         description: normalized.summary,
         id: "unexpected-server-response",
-      }
+      })
     );
   });
 
@@ -542,8 +619,11 @@ describe("error routing and reporting", () => {
       expect.any(Object)
     );
     expect(dependencies.logger.error).toHaveBeenCalled();
-    expect(dependencies.toast.error).toHaveBeenCalledWith("Request failed", {
-      description: "disk is full",
-    });
+    expect(dependencies.toast.error).toHaveBeenCalledWith(
+      "Request failed",
+      expect.objectContaining({
+        description: "disk is full",
+      })
+    );
   });
 });

@@ -87,7 +87,11 @@ interface ReportAppUiErrorDependencies {
   toast: {
     error: (
       message: string,
-      options?: { description?: string; id?: string }
+      options?: {
+        action?: { label: string; onClick: () => void };
+        description?: string;
+        id?: string;
+      }
     ) => void;
   };
 }
