@@ -202,11 +202,17 @@ func (a *App) Routes(ctx context.Context) http.Handler {
 		a.mountDBServices(mux, state, accessLogger)
 	case hasConfig:
 		mux.Handle(v1alpha1connect.NewConsoleServiceHandler(a.newConsoleService(ctx, nil), commonOpts...))
-		a.mountStubs(mux, accessLogger, dbUnavailableInterceptor())
+		a.mountStubs(mux, accessLogger, dbUnavailableInterceptor(), nil)
 	default:
 		stubOpts := handlerOptions(withOptionalAccessLog(accessLogger, dbNotConfiguredInterceptor())...)
 		mux.Handle(v1alpha1connect.NewConsoleServiceHandler(&v1alpha1connect.UnimplementedConsoleServiceHandler{}, stubOpts...))
-		a.mountStubs(mux, accessLogger, dbNotConfiguredInterceptor())
+
+		bootstrapInstanceService, err := newBootstrapInstanceService(cfg)
+		if err != nil {
+			slog.ErrorContext(ctx, "failed to configure bootstrap connection testing", slog.Any("error", err))
+		}
+
+		a.mountStubs(mux, accessLogger, dbNotConfiguredInterceptor(), bootstrapInstanceService)
 	}
 
 	// Serve embedded frontend assets with SPA fallback when compiled in.
@@ -286,10 +292,27 @@ func (a *App) mountDBServices(mux *http.ServeMux, state *dbState, accessLogger *
 // mountStubs wires Unimplemented handlers for all DB-dependent services. The
 // provided gate interceptor decides the error returned (NotConfigured for the
 // bootstrap stage, Unavailable for the degraded stage).
-func (a *App) mountStubs(mux *http.ServeMux, accessLogger *interceptor.AccessLogger, gate connect.Interceptor) {
+func (a *App) mountStubs(
+	mux *http.ServeMux,
+	accessLogger *interceptor.AccessLogger,
+	gate connect.Interceptor,
+	bootstrapInstanceService v1alpha1connect.InstanceServiceHandler,
+) {
 	opts := handlerOptions(withOptionalAccessLog(accessLogger, gate)...)
 
-	mux.Handle(v1alpha1connect.NewInstanceServiceHandler(&v1alpha1connect.UnimplementedInstanceServiceHandler{}, opts...))
+	if bootstrapInstanceService == nil {
+		mux.Handle(v1alpha1connect.NewInstanceServiceHandler(&v1alpha1connect.UnimplementedInstanceServiceHandler{}, opts...))
+	} else {
+		instanceOpts := handlerOptions(
+			withOptionalAccessLog(
+				accessLogger,
+				bootstrapInstanceInterceptor{},
+				a.validationInterceptor,
+			)...,
+		)
+		mux.Handle(v1alpha1connect.NewInstanceServiceHandler(bootstrapInstanceService, instanceOpts...))
+	}
+
 	mux.Handle(v1alpha1connect.NewDatabaseServiceHandler(&v1alpha1connect.UnimplementedDatabaseServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewRoleServiceHandler(&v1alpha1connect.UnimplementedRoleServiceHandler{}, opts...))
 	mux.Handle(v1alpha1connect.NewRunnerServiceHandler(&v1alpha1connect.UnimplementedRunnerServiceHandler{}, opts...))
@@ -387,6 +410,12 @@ func (a *App) markDatabaseInitError(errMsg string) {
 }
 
 func (a *App) markDatabaseInitFailure(err error) {
+	if isPostgresPermissionDenied(err) {
+		a.markDatabaseInitError(missingCreatePrivilegesMessage)
+
+		return
+	}
+
 	a.markDatabaseInitError(postgreserrors.RedactedMessage(err, "initialize_application_database"))
 }
 

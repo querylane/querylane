@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   AppWindowMac,
   ChevronRight,
   Circle,
@@ -10,6 +11,7 @@ import { getMethodLabel } from "@/components/onboarding-wizard/mappers";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import type { ConfigMethod } from "@/components/onboarding-wizard/types";
 import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatSetupMethod } from "@/lib/protobuf-enums";
@@ -165,9 +167,7 @@ function getNextMethodFromKey({
 }
 
 export function MethodSelectionPhase() {
-  const availableMethods = useSetupStore(
-    (state) => state.onboardingState?.availableMethods ?? []
-  );
+  const onboardingState = useSetupStore((state) => state.onboardingState);
   const selectedMethod = useOnboardingWizardStore(
     (state) => state.selectedMethod
   );
@@ -175,7 +175,11 @@ export function MethodSelectionPhase() {
   const goToConfigure = useOnboardingWizardStore(
     (state) => state.goToConfigure
   );
+  const availableMethods = onboardingState?.availableMethods ?? [];
   const methods = getConfigMethods(availableMethods);
+  const manualSetupReason = onboardingState
+    ? `Querylane cannot write its configuration to ${onboardingState.configFilePath}, so UI-configured and embedded setup are unavailable. Fix the directory permissions or configure the file manually.`
+    : "";
 
   const handleMethodKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     const nextMethod = getNextMethodFromKey({
@@ -215,6 +219,20 @@ export function MethodSelectionPhase() {
       title="How would you like to get started?"
     >
       <SetupFlowExplainer className="mb-5" tone="onboarding" variant="setup" />
+      {onboardingState && !onboardingState.isHomeWritable ? (
+        <Alert
+          className="mb-5 border-amber-400/20 bg-amber-500/[0.06]"
+          role="status"
+        >
+          <AlertTriangle className="text-amber-400" />
+          <AlertTitle className="text-amber-100">
+            Automatic setup unavailable
+          </AlertTitle>
+          <AlertDescription className="text-amber-100/70">
+            {manualSetupReason}
+          </AlertDescription>
+        </Alert>
+      ) : null}
       <div aria-label="Setup method" className="space-y-3" role="radiogroup">
         {methods.length === 0 ? (
           <div className="rounded-2xl border border-white/12 border-dashed bg-white/[0.03] px-4 py-6 text-center">

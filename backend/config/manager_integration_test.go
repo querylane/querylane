@@ -430,6 +430,35 @@ func TestManager_ReadOnlyFileSystemDegradation(t *testing.T) {
 	assert.Equal(t, "updated", updated.Name)
 }
 
+func TestManager_CanWriteConfigRejectsReadOnlyDirectory(t *testing.T) {
+	t.Parallel()
+
+	configDir := t.TempDir()
+	configFile := filepath.Join(configDir, "config.yaml")
+	require.NoError(t, os.WriteFile(configFile, nil, 0o644))
+
+	manager, err := config.NewConfigManager(context.Background(),
+		NewSimpleTestConfig(),
+		config.WithConfigFile(configFile))
+	require.NoError(t, err)
+
+	defer manager.Stop()
+
+	require.NoError(t, os.Chmod(configDir, 0o555))
+	t.Cleanup(func() {
+		require.NoError(t, os.Chmod(configDir, 0o755))
+	})
+
+	probe, probeErr := os.CreateTemp(configDir, ".permission-probe-*")
+	if probeErr == nil {
+		require.NoError(t, probe.Close())
+		require.NoError(t, os.Remove(probe.Name()))
+		t.Skip("current user can write to read-only directories")
+	}
+
+	assert.False(t, manager.CanWriteConfig())
+}
+
 // =============================================================================
 // MARSHAL HELPER TESTS
 // =============================================================================

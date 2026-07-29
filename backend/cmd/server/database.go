@@ -3,10 +3,12 @@ package server
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rs/xid"
 
 	"github.com/querylane/querylane/backend/catalogcache"
@@ -99,7 +101,20 @@ type dbState struct {
 	sampleStores           metricsvc.Stores
 }
 
+const missingCreatePrivilegesMessage = "The PostgreSQL role needs CREATE privileges on the metadata database and schema public. Grant them, then retry setup."
+
+func isPostgresPermissionDenied(err error) bool {
+	var pgErr *pgconn.PgError
+
+	return errors.As(err, &pgErr) &&
+		postgreserrors.Classify(pgErr, postgreserrors.ProfileDefault).Kind == postgreserrors.KindPermissionDenied
+}
+
 func databaseSetupErrorEvent(step dbsetup.StepID, err error) dbsetup.ProgressEvent {
+	if step == dbsetup.StepMigrating && isPostgresPermissionDenied(err) {
+		return dbsetup.NewErrorEvent(step, missingCreatePrivilegesMessage)
+	}
+
 	return dbsetup.NewErrorEvent(step, postgreserrors.RedactedMessage(err, string(step)))
 }
 

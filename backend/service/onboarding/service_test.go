@@ -2,8 +2,10 @@ package onboarding
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -543,6 +545,60 @@ func TestSetupAppDatabasePersistsConfigWhenClientDisconnects(t *testing.T) {
 	assert.Equal(t, "admin", persisted.Database.Username)
 }
 
+func TestSetupAppDatabaseRejectsConcurrentSetup(t *testing.T) {
+	t.Parallel()
+
+	if !testing.Short() {
+		t.Skip("unit test: run with -short")
+	}
+
+	cfgMgr := newTestConfigManager(t, "")
+	init := newBlockingDatabaseInitializer()
+	svc := NewService(cfgMgr, init, nil)
+	msg := &v1alpha1.SetupAppDatabaseRequest{
+		Setup: &v1alpha1.SetupAppDatabaseRequest_PostgresConfig{
+			PostgresConfig: &v1alpha1.PostgresConfig{
+				Host:     "db.example.com",
+				Port:     5432,
+				Database: "querylane",
+				Username: "admin",
+				Password: "secret",
+				SslMode:  v1alpha1.PostgresConfig_SSL_MODE_DISABLED,
+			},
+		},
+	}
+
+	firstDone := make(chan error, 1)
+
+	go func() {
+		firstDone <- svc.setupAppDatabase(t.Context(), msg, func(dbsetup.ProgressEvent) error { return nil })
+	}()
+
+	<-init.started
+
+	secondDone := make(chan error, 1)
+
+	go func() {
+		secondDone <- svc.setupAppDatabase(t.Context(), msg, func(dbsetup.ProgressEvent) error { return nil })
+	}()
+
+	var secondErr error
+	select {
+	case secondErr = <-secondDone:
+	case <-time.After(time.Second):
+		secondErr = errors.New("second setup did not fail while the first setup was in progress")
+	}
+
+	close(init.release)
+	require.NoError(t, <-firstDone)
+
+	var connectErr *connect.Error
+	require.ErrorAs(t, secondErr, &connectErr)
+	assert.Equal(t, connect.CodeFailedPrecondition, connectErr.Code())
+	assert.Equal(t, "database setup is already in progress", connectErr.Message())
+	assert.Equal(t, int32(1), init.calls.Load())
+}
+
 // TestPersistConfigPreservesExistingHTTPConfig is the regression guard for
 // the config-clobbering bug: persisting the onboarding result must not
 // replace pre-existing http/CORS/access_log customization with baked-in
@@ -599,6 +655,7 @@ func TestPersistConfigPreservesExistingHTTPConfig(t *testing.T) {
 // context instead of a detached one.
 type blockingDatabaseInitializer struct {
 	broadcaster       *dbsetup.Broadcaster
+	calls             atomic.Int32
 	started           chan struct{}
 	release           chan struct{}
 	ctxErrAfterCancel error
@@ -613,6 +670,10 @@ func newBlockingDatabaseInitializer() *blockingDatabaseInitializer {
 }
 
 func (f *blockingDatabaseInitializer) InitializeDatabaseWithConfig(ctx context.Context, _ *serverconfig.Config) error {
+	if f.calls.Add(1) != 1 {
+		return nil
+	}
+
 	close(f.started)
 	<-f.release
 	f.ctxErrAfterCancel = ctx.Err()

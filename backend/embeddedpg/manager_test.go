@@ -178,6 +178,20 @@ func TestManager_StartWithConfig_PortInUseFailsBeforeStartup(t *testing.T) {
 	assert.True(t, os.IsNotExist(statErr), "preflight should fail before creating the data directory")
 }
 
+func TestPortHasActiveListener(t *testing.T) {
+	t.Parallel()
+
+	listener, err := net.Listen("tcp4", "127.0.0.1:0") //nolint:noctx // Test owns the listener lifecycle.
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, listener.Close())
+	})
+
+	address, ok := listener.Addr().(*net.TCPAddr)
+	require.True(t, ok)
+	assert.True(t, portHasActiveListener(t.Context(), address.Port))
+}
+
 func TestManager_Logs_Empty(t *testing.T) {
 	t.Parallel()
 

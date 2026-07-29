@@ -131,3 +131,21 @@ func TestAppInitializeDatabaseWithConfigRedactsDatabaseInitError(t *testing.T) {
 	require.NotContains(t, app.DatabaseInitError(), "meta_user")
 	require.NotContains(t, app.DatabaseInitError(), "api_key=secret")
 }
+
+func TestAppInitializeDatabaseWithConfigExplainsMissingCreatePrivileges(t *testing.T) {
+	t.Parallel()
+
+	app := &App{
+		buildDatabaseFunc: func(context.Context, *serverconfig.Config, *dbsetup.Broadcaster) (*dbState, error) {
+			return nil, fmt.Errorf("initialize database: %w", &pgconn.PgError{
+				Code:    pgerrcode.InsufficientPrivilege,
+				Message: "permission denied for schema public",
+			})
+		},
+	}
+
+	err := app.InitializeDatabaseWithConfig(t.Context(), &serverconfig.Config{})
+
+	require.Error(t, err)
+	require.Equal(t, missingCreatePrivilegesMessage, app.DatabaseInitError())
+}
