@@ -57,7 +57,10 @@ test("defines the agreed shortcut set centrally", () => {
     "global:navigation.configuration",
     "global:navigation.instance-overview",
     "grid:grid.move",
+    "grid:grid.extend-selection",
+    "grid:grid.select-all-cells",
     "grid:grid.copy",
+    "grid:grid.clear-selection",
   ]);
 });
 

@@ -1,17 +1,41 @@
 import { Rows3, SearchX } from "lucide-react";
-import type { ClipboardEvent } from "react";
 import {
+  type ClipboardEvent,
+  createContext,
+  type Key,
+  type MouseEvent as ReactMouseEvent,
+  useContext,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
+import {
+  Cell,
   type CellCopyArgs,
+  type CellKeyboardEvent,
+  type CellKeyDownArgs,
   type CellMouseArgs,
   type CellMouseEvent,
+  type CellRendererProps,
   type Column,
   DataGrid,
   type DefaultColumnOptions,
   type Renderers,
+  SELECT_COLUMN_KEY,
   type SortColumn,
 } from "react-data-grid";
+import {
+  CELL_SELECTION_BOTTOM,
+  CELL_SELECTION_LEFT,
+  CELL_SELECTION_RIGHT,
+  CELL_SELECTION_SELECTED,
+  CELL_SELECTION_TOP,
+  type CellSelectionStore,
+  createCellSelectionStore,
+  getCellSelectionAppearance,
+} from "@/components/data-grid/table-data-grid/cell-selection-state";
 import { DataGridCheckbox } from "@/components/data-grid/table-data-grid/data-grid-checkbox";
 import {
+  EXPAND_COLUMN_KEY,
   type GridRow,
   ROW_KEY_FIELD,
 } from "@/components/data-grid/table-data-grid/grid-row-model";
@@ -37,7 +61,74 @@ const DATA_GRID_DEFAULT_COLUMN_OPTIONS = {
   sortable: false,
 } satisfies DefaultColumnOptions<GridRow, unknown>;
 
+const EMPTY_CELL_SELECTION_STORE = createCellSelectionStore();
+const CellSelectionContext = createContext<CellSelectionStore>(
+  EMPTY_CELL_SELECTION_STORE
+);
+
+function isDataCell(columnKey: string): boolean {
+  return columnKey !== SELECT_COLUMN_KEY && columnKey !== EXPAND_COLUMN_KEY;
+}
+
+function hasAppearance(appearance: string, flag: string): true | undefined {
+  return appearance.includes(flag) ? true : undefined;
+}
+
+function CellSelectionCell(props: CellRendererProps<GridRow, unknown>) {
+  const cellSelectionStore = useContext(CellSelectionContext);
+  const coordinate = {
+    columnIndex: props.column.idx,
+    rowIndex: props.rowIdx,
+  };
+  const appearance = useSyncExternalStore(
+    cellSelectionStore.subscribe,
+    () =>
+      isDataCell(props.column.key)
+        ? getCellSelectionAppearance(cellSelectionStore.getState(), coordinate)
+        : "",
+    () => ""
+  );
+  const isSelected = appearance.includes(CELL_SELECTION_SELECTED);
+
+  function handleMouseEnter(event: ReactMouseEvent<HTMLDivElement>) {
+    props.onMouseEnter?.(event);
+    const state = cellSelectionStore.getState();
+    const activeRange = state.isDragging ? state.ranges.at(-1) : undefined;
+    if (!(isDataCell(props.column.key) && state.isDragging && activeRange)) {
+      return;
+    }
+    if (
+      activeRange.focus.columnIndex !== coordinate.columnIndex ||
+      activeRange.focus.rowIndex !== coordinate.rowIndex
+    ) {
+      window.getSelection()?.removeAllRanges();
+    }
+    cellSelectionStore.extendTo(coordinate);
+  }
+
+  return (
+    <Cell
+      {...props}
+      aria-selected={isSelected || props.isCellActive}
+      data-cell-range-active={
+        isSelected && props.isCellActive ? true : undefined
+      }
+      data-cell-range-bottom={hasAppearance(appearance, CELL_SELECTION_BOTTOM)}
+      data-cell-range-left={hasAppearance(appearance, CELL_SELECTION_LEFT)}
+      data-cell-range-right={hasAppearance(appearance, CELL_SELECTION_RIGHT)}
+      data-cell-range-selected={isSelected ? true : undefined}
+      data-cell-range-top={hasAppearance(appearance, CELL_SELECTION_TOP)}
+      onMouseEnter={handleMouseEnter}
+    />
+  );
+}
+
+function renderCell(key: Key, props: CellRendererProps<GridRow, unknown>) {
+  return <CellSelectionCell key={key} {...props} />;
+}
+
 const DATA_GRID_RENDERERS = {
+  renderCell,
   renderCheckbox: DataGridCheckbox,
 } satisfies Renderers<GridRow, unknown>;
 
@@ -86,6 +177,7 @@ function LoadingSkeleton() {
 }
 
 interface GridBodyProps {
+  cellSelectionStore: CellSelectionStore;
   columns: Column<GridRow>[];
   /** Full-bleed mode: no side borders/rounding; inset loading/empty panels. */
   flush?: boolean;
@@ -98,6 +190,14 @@ interface GridBodyProps {
   onCellCopy: (
     args: CellCopyArgs<GridRow>,
     event: ClipboardEvent<HTMLDivElement>
+  ) => void;
+  onCellKeyDown: (
+    args: CellKeyDownArgs<GridRow>,
+    event: CellKeyboardEvent
+  ) => void;
+  onCellMouseDown: (
+    args: CellMouseArgs<GridRow>,
+    event: CellMouseEvent
   ) => void;
   onColumnsReorder: (sourceColumnKey: string, targetColumnKey: string) => void;
   onSelectedRowsChange: (next: ReadonlySet<string>) => void;
@@ -114,13 +214,29 @@ function GridBody({
   isLoading,
   onCellContextMenu,
   onCellCopy,
+  onCellKeyDown,
+  onCellMouseDown,
   onColumnsReorder,
   onSelectedRowsChange,
   onSortChange,
   rows,
+  cellSelectionStore,
   selectedRows,
   sortColumns,
 }: GridBodyProps) {
+  useEffect(
+    function finishCellSelectionOutsideGrid() {
+      const finishSelection = () => cellSelectionStore.end();
+      window.addEventListener("blur", finishSelection);
+      window.addEventListener("mouseup", finishSelection);
+      return () => {
+        window.removeEventListener("blur", finishSelection);
+        window.removeEventListener("mouseup", finishSelection);
+      };
+    },
+    [cellSelectionStore]
+  );
+
   if (isLoading) {
     return (
       <div className={cn(flush && "p-3")}>
@@ -129,34 +245,38 @@ function GridBody({
     );
   }
   return (
-    <div className="contents" data-keyboard-shortcut-scope="grid">
-      <DataGrid
-        className={cn(
-          "rdg-light dark:rdg-dark",
-          flush && "rounded-none! border-x-0!"
-        )}
-        columns={columns}
-        defaultColumnOptions={DATA_GRID_DEFAULT_COLUMN_OPTIONS}
-        // Keep RDG virtualization on. Wide/complex result sets otherwise mount
-        // every visible-page cell and stall the explorer.
-        enableVirtualization={true}
-        headerRowHeight={36}
-        onCellContextMenu={onCellContextMenu}
-        onCellCopy={onCellCopy}
-        onColumnsReorder={onColumnsReorder}
-        onSelectedRowsChange={onSelectedRowsChange}
-        onSortColumnsChange={onSortChange}
-        renderers={DATA_GRID_RENDERERS}
-        rowHeight={32}
-        rowKeyGetter={gridRowKeyGetter}
-        rows={rows}
-        selectedRows={selectedRows}
-        sortColumns={sortColumns}
-      />
-      {rows.length === 0 ? (
-        <NoRowsOverlay hasActiveFilter={hasActiveFilter} />
-      ) : null}
-    </div>
+    <CellSelectionContext value={cellSelectionStore}>
+      <div className="contents" data-keyboard-shortcut-scope="grid">
+        <DataGrid
+          className={cn(
+            "rdg-light dark:rdg-dark",
+            flush && "rounded-none! border-x-0!"
+          )}
+          columns={columns}
+          defaultColumnOptions={DATA_GRID_DEFAULT_COLUMN_OPTIONS}
+          // Keep RDG virtualization on. Wide/complex result sets otherwise mount
+          // every visible-page cell and stall the explorer.
+          enableVirtualization={true}
+          headerRowHeight={36}
+          onCellContextMenu={onCellContextMenu}
+          onCellCopy={onCellCopy}
+          onCellKeyDown={onCellKeyDown}
+          onCellMouseDown={onCellMouseDown}
+          onColumnsReorder={onColumnsReorder}
+          onSelectedRowsChange={onSelectedRowsChange}
+          onSortColumnsChange={onSortChange}
+          renderers={DATA_GRID_RENDERERS}
+          rowHeight={32}
+          rowKeyGetter={gridRowKeyGetter}
+          rows={rows}
+          selectedRows={selectedRows}
+          sortColumns={sortColumns}
+        />
+        {rows.length === 0 ? (
+          <NoRowsOverlay hasActiveFilter={hasActiveFilter} />
+        ) : null}
+      </div>
+    </CellSelectionContext>
   );
 }
 

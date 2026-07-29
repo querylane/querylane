@@ -1,6 +1,6 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { afterEach, expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { ColumnHeader } from "@/components/data-grid/table-data-grid/column-header";
@@ -899,6 +899,92 @@ test("select-all stays tooltip-free and preserves native selection behavior", as
   for (const rowCheckbox of rowCheckboxes.elements()) {
     expect(rowCheckbox).not.toBeChecked();
   }
+});
+
+test("keyboard navigation extends and clears a multi-cell selection", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
+  );
+
+  const referenceValue = page.getByText("ML-2026-048291");
+  await referenceValue.click();
+  const referenceCell = referenceValue.element().closest(".rdg-cell");
+  if (!(referenceCell instanceof HTMLElement)) {
+    throw new Error("Expected the reference value inside a grid cell.");
+  }
+
+  referenceCell.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      bubbles: true,
+      key: "ArrowRight",
+      shiftKey: true,
+    })
+  );
+
+  await vi.waitFor(() => {
+    expect(
+      document.querySelectorAll('[data-cell-range-selected="true"]')
+    ).toHaveLength(2);
+  });
+  const selectedCells = Array.from(
+    document.querySelectorAll<HTMLElement>('[data-cell-range-selected="true"]')
+  );
+  expect(selectedCells[0]).toHaveAttribute("data-cell-range-left", "true");
+  expect(selectedCells[1]).toHaveAttribute("data-cell-range-right", "true");
+  expect(
+    getComputedStyle(selectedCells[0] as HTMLElement).backgroundColor
+  ).not.toBe("rgba(0, 0, 0, 0)");
+
+  const activeCell = document.querySelector<HTMLElement>(
+    '[data-cell-range-active="true"]'
+  );
+  if (!activeCell) {
+    throw new Error("Expected an active selected cell.");
+  }
+  activeCell.dispatchEvent(
+    new KeyboardEvent("keydown", { bubbles: true, key: "Escape" })
+  );
+
+  await vi.waitFor(() => {
+    expect(
+      document.querySelectorAll('[data-cell-range-selected="true"]')
+    ).toHaveLength(0);
+  });
+
+  activeCell.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      bubbles: true,
+      ctrlKey: true,
+      key: "a",
+    })
+  );
+
+  await vi.waitFor(() => {
+    expect(
+      document.querySelectorAll('[data-cell-range-selected="true"]')
+    ).toHaveLength(5);
+  });
+  expect(
+    document.querySelector('.rdg-select-cell[data-cell-range-selected="true"]')
+  ).toBeNull();
+
+  activeCell.dispatchEvent(
+    new KeyboardEvent("keydown", { bubbles: true, key: "Escape" })
+  );
+  const statusCell = page
+    .getByText("in_transit")
+    .element()
+    .closest(".rdg-cell");
+  if (!(statusCell instanceof HTMLElement)) {
+    throw new Error("Expected the status value inside a grid cell.");
+  }
+  await userEvent.dragAndDrop(referenceCell, statusCell);
+
+  await vi.waitFor(() => {
+    expect(
+      document.querySelectorAll('[data-cell-range-selected="true"]')
+    ).toHaveLength(3);
+  });
 });
 
 async function openForeignKeyReference() {
