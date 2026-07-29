@@ -14,18 +14,18 @@ import {
   createPreconnectOrigins,
   managedSplitChunksConfig,
   productionOptimizationOverrides,
-} from "./rsbuild.performance";
-import { resolveReactPerformanceMode } from "./scripts/react-performance-mode";
+} from "./rsbuild.performance.ts";
+import { resolveReactPerformanceMode } from "./scripts/react-performance-mode.ts";
 
 const RSPACK_BUILD_CACHE_DIRECTORY = "node_modules/.cache/rsbuild";
+// Rsbuild tracks this config and its static imports automatically. Keep only
+// additional build inputs here so cache invalidation has one source of truth.
 const RSPACK_BUILD_DEPENDENCIES = [
   path.resolve(import.meta.dirname, ".browserslistrc"),
   path.resolve(import.meta.dirname, "bun.lock"),
   path.resolve(import.meta.dirname, "index.html"),
   path.resolve(import.meta.dirname, "package.json"),
   path.resolve(import.meta.dirname, "postcss.config.mjs"),
-  path.resolve(import.meta.dirname, "rsbuild.config.ts"),
-  path.resolve(import.meta.dirname, "scripts/react-performance-mode.ts"),
   path.resolve(import.meta.dirname, "tsconfig.json"),
   path.resolve(import.meta.dirname, "tsconfig.ui.json"),
 ];
@@ -108,7 +108,9 @@ const rsdoctorPluginOptions = {
   output: {
     mode: "brief",
     options: {
-      type: ["json"],
+      // Keep machine-readable stats and add the self-contained report so local
+      // profiling benefits from Rsdoctor's current visualization client.
+      type: ["html", "json"],
     },
   },
 } satisfies RsdoctorPluginOptions;
