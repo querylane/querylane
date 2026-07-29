@@ -496,7 +496,7 @@ function MetricUnavailableNotice({
   return (
     <Alert
       className={cn(
-        "m-5 w-auto",
+        "m-5 w-auto has-data-[slot=alert-action]:pr-4",
         status && "border-destructive/30 bg-destructive/5"
       )}
       variant={status ? "destructive" : "default"}
@@ -504,7 +504,7 @@ function MetricUnavailableNotice({
       {status ? <AlertCircle aria-hidden="true" /> : null}
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription>{status?.message || fallback}</AlertDescription>
-      <AlertAction>
+      <AlertAction className="static col-span-full mt-2 justify-self-start">
         <RetryActionButton
           label={retryLabel}
           onRetry={onRetry}

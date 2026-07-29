@@ -1512,6 +1512,31 @@ test("query statistics retry uses the default button size", async () => {
   expect(retryButton.element().getBoundingClientRect().height).toBe(36);
 });
 
+test("query statistics retry does not overlap its notice on phones", async () => {
+  await page.viewport(390, 844);
+
+  try {
+    const drawer = await openQueryInsightsDrawer(
+      queryInsightsWithoutQueryStatsResponse()
+    );
+    await expect.element(drawer).toBeVisible();
+
+    const title = page.getByText("Query statistics unavailable", {
+      exact: true,
+    });
+    await expect.element(title).toBeVisible();
+    const titleBox = title.element().getBoundingClientRect();
+    const retryBox = page
+      .getByRole("button", { name: "Retry query statistics" })
+      .element()
+      .getBoundingClientRect();
+
+    expect(retryBox.top).toBeGreaterThanOrEqual(titleBox.bottom);
+  } finally {
+    await page.viewport(1280, 1000);
+  }
+});
+
 test("backend database extensions page matches design source", async () => {
   state.extensionQuery = { data: extensionDesignInventoryResponse() };
 
