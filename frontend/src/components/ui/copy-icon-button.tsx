@@ -102,7 +102,9 @@ function CopyIconButton({
       >
         {content}
       </TooltipTrigger>
-      <TooltipContent>{stateLabel}</TooltipContent>
+      <TooltipContent align={children ? "center" : "end"}>
+        {stateLabel}
+      </TooltipContent>
     </Tooltip>
   );
 }
