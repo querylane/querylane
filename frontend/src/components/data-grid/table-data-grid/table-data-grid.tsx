@@ -699,7 +699,22 @@ function ExpandedDataGridDialog({
   open: boolean;
 }) {
   return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
+    <Dialog
+      onOpenChange={(nextOpen, eventDetails) => {
+        // RDG prevents Escape when it clears a cell range. Honor that handled
+        // key instead of also dismissing the expanded grid.
+        if (
+          !nextOpen &&
+          eventDetails.reason === "escape-key" &&
+          eventDetails.event.defaultPrevented
+        ) {
+          eventDetails.cancel();
+          return;
+        }
+        onOpenChange(nextOpen);
+      }}
+      open={open}
+    >
       <DialogContent className="!flex !max-w-[calc(100vw-1rem)] sm:!max-w-[calc(100vw-2rem)] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] flex-col gap-3 overflow-hidden p-3 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:p-4">
         <DialogTitle className="sr-only">Expanded data grid</DialogTitle>
         <div className="flex min-h-0 flex-1 flex-col gap-2">

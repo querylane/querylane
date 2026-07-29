@@ -800,6 +800,37 @@ test("expanded data grid keeps close and refresh actions separate", async () => 
   expect(refreshBox.right).toBeLessThanOrEqual(closeBox.left - 8);
 });
 
+test("Escape clears cell selection without closing the expanded grid", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
+  );
+
+  await page.getByRole("button", { name: "Expand data grid" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Expanded data grid" });
+  const dialogElement = dialog.element();
+  const referenceValue = dialog.getByText("ML-2026-048291");
+  await referenceValue.click();
+  const referenceCell = referenceValue.element().closest(".rdg-cell");
+  if (!(referenceCell instanceof HTMLElement)) {
+    throw new Error("Expected the reference value inside a grid cell.");
+  }
+  expect(
+    dialogElement.querySelectorAll('[data-cell-range-selected="true"]')
+  ).toHaveLength(1);
+  expect(document.activeElement).toBe(referenceCell);
+
+  await userEvent.keyboard("{Escape}");
+
+  await vi.waitFor(() => {
+    expect(
+      dialogElement.querySelectorAll('[data-cell-range-selected="true"]')
+    ).toHaveLength(0);
+    expect(dialogElement).toHaveAttribute("data-open", "");
+    expect(dialogElement).not.toHaveAttribute("data-closed");
+  });
+});
+
 test("column headers reorder while layout controls stay compact", async () => {
   renderForeignKeyReferenceGrid(
     "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
