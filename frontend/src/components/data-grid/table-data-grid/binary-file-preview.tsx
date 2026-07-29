@@ -145,7 +145,7 @@ function GridBinaryFilePreview({
   );
 }
 
-function BrowserMediaObject({
+function PdfPreviewObject({
   columnName,
   file,
   objectUrl,
@@ -157,15 +157,10 @@ function BrowserMediaObject({
   if (objectUrl === "") {
     return <BinaryMediaLoadingStatus label={file.label} />;
   }
-  const isPdf = file.kind === "pdf";
   return (
     <object
-      aria-label={`${columnName} ${file.kind} preview`}
-      className={
-        isPdf
-          ? "h-[32rem] max-h-[70dvh] w-full rounded-md border bg-background"
-          : "max-h-96 min-h-14 w-full rounded-md border bg-muted"
-      }
+      aria-label={`${columnName} pdf preview`}
+      className="h-[32rem] max-h-[70dvh] w-full rounded-md border bg-background"
       data={objectUrl}
       type={file.mimeType}
     >
@@ -174,6 +169,65 @@ function BrowserMediaObject({
         Download the value instead.
       </p>
     </object>
+  );
+}
+
+function NativeAudioPreview({
+  columnName,
+  file,
+  objectUrl,
+}: {
+  columnName: string;
+  file: BinaryFileMetadata;
+  objectUrl: string;
+}) {
+  if (objectUrl === "") {
+    return <BinaryMediaLoadingStatus label={file.label} />;
+  }
+  return (
+    <audio
+      aria-label={`${columnName} audio preview`}
+      className="min-h-14 w-full"
+      controls={true}
+      preload="metadata"
+    >
+      <source src={objectUrl} type={file.mimeType} />
+      <track kind="captions" label="No captions supplied" srcLang="en" />
+      <p className="p-3 text-muted-foreground text-sm">
+        This browser couldn’t play the {file.label.toLowerCase()}. Download the
+        value instead.
+      </p>
+    </audio>
+  );
+}
+
+function NativeVideoPreview({
+  columnName,
+  file,
+  objectUrl,
+}: {
+  columnName: string;
+  file: BinaryFileMetadata;
+  objectUrl: string;
+}) {
+  if (objectUrl === "") {
+    return <BinaryMediaLoadingStatus label={file.label} />;
+  }
+  return (
+    <video
+      aria-label={`${columnName} video preview`}
+      className="max-h-96 w-full rounded-md border bg-gray-950"
+      controls={true}
+      playsInline={true}
+      preload="auto"
+    >
+      <source src={objectUrl} type={file.mimeType} />
+      <track kind="captions" label="No captions supplied" srcLang="en" />
+      <p className="p-3 text-muted-foreground text-sm">
+        This browser couldn’t play the {file.label.toLowerCase()}. Download the
+        value instead.
+      </p>
+    </video>
   );
 }
 
@@ -255,10 +309,26 @@ function DetailBinaryFilePreview({
       );
       break;
     case "audio":
+      preview = (
+        <NativeAudioPreview
+          columnName={columnName}
+          file={file}
+          objectUrl={objectUrl}
+        />
+      );
+      break;
     case "pdf":
+      preview = (
+        <PdfPreviewObject
+          columnName={columnName}
+          file={file}
+          objectUrl={objectUrl}
+        />
+      );
+      break;
     case "video":
       preview = (
-        <BrowserMediaObject
+        <NativeVideoPreview
           columnName={columnName}
           file={file}
           objectUrl={objectUrl}

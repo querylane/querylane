@@ -3,6 +3,9 @@ import type { TableCell } from "@/protogen/querylane/console/v1alpha1/table_data
 // ReadCellValue's server-side hard cap (64 MiB). Values larger than this
 // cannot be fetched in full through the RPC at all.
 const READ_CELL_MAX_BYTES = 67_108_864n;
+// Previews create browser-managed image/media/PDF resources in addition to the
+// fetched protobuf value, so keep their memory budget below the RPC hard cap.
+const BINARY_PREVIEW_MAX_BYTES = 16_777_216n;
 
 type FetchFullCell = (fullValueToken: string) => Promise<TableCell | undefined>;
 
@@ -43,6 +46,7 @@ async function resolveRowCells(
 }
 
 export {
+  BINARY_PREVIEW_MAX_BYTES,
   cellNeedsFullValue,
   type FetchFullCell,
   READ_CELL_MAX_BYTES,

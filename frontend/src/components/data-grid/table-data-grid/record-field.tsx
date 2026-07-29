@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { detectBinaryFile } from "@/features/data-explorer/table-data/binary-file";
 import {
+  BINARY_PREVIEW_MAX_BYTES,
   cellNeedsFullValue,
   READ_CELL_MAX_BYTES,
 } from "@/features/data-explorer/table-data/full-cell-resolver";
@@ -55,6 +56,21 @@ interface RecordFieldProps {
   isPrimaryKey: boolean;
   rowIdentifier?: string | undefined;
   tableName: string;
+}
+
+function getBinaryPreviewInfo(cell: TableCell | undefined, isBinary: boolean) {
+  const kind = cell?.value?.kind;
+  const bytes = kind?.case === "bytesValue" ? kind.value : undefined;
+  const declaredSize = cell?.fullSizeBytes ?? 0n;
+  const size = declaredSize > 0n ? declaredSize : BigInt(bytes?.length ?? 0);
+  return {
+    bytes,
+    canPreview:
+      isBinary &&
+      size <= BINARY_PREVIEW_MAX_BYTES &&
+      (cell?.truncated === true || (bytes?.length ?? 0) > 0),
+    isTooLarge: isBinary && size > BINARY_PREVIEW_MAX_BYTES,
+  };
 }
 
 async function requireBinaryPreviewCell(
@@ -258,11 +274,9 @@ function RecordField({
   const fullValueMutation = useReadCellValueMutation();
   const effectiveCell = resolveEffectiveCell(cell, resolved);
   const formatted = formatTableCell(effectiveCell, column);
-  const effectiveKind = effectiveCell?.value?.kind;
-  const binaryBytes =
-    effectiveKind?.case === "bytesValue" ? effectiveKind.value : undefined;
   const isBinaryPreviewVisible = binaryPreviewCell === cell;
   const isBinary = column.dataType === DataType.BINARY;
+  const binaryPreview = getBinaryPreviewInfo(effectiveCell, isBinary);
   const canExpand =
     !isBinary &&
     effectiveCell?.truncated === true &&
@@ -270,15 +284,15 @@ function RecordField({
   const isEmptyString = formatted.kind === "text" && formatted.display === "";
   const canCopy = !(formatted.isNull || isEmptyString);
   const canDownload = isBinary && !formatted.isNull;
-  const canPreviewBinary =
-    canDownload &&
-    (effectiveCell?.truncated === true || (binaryBytes?.length ?? 0) > 0);
-  async function fetchFullCell(): Promise<TableCell> {
+  const canPreviewBinary = canDownload && binaryPreview.canPreview;
+  async function fetchFullCell(
+    maxBytes: bigint = READ_CELL_MAX_BYTES
+  ): Promise<TableCell> {
     const token = effectiveCell?.fullValueToken ?? "";
     const response = await fullValueMutation.mutateAsync(
       create(ReadCellValueRequestSchema, {
         fullValueToken: token,
-        maxBytes: READ_CELL_MAX_BYTES,
+        maxBytes,
         name: tableName,
       })
     );
@@ -355,7 +369,9 @@ function RecordField({
     }
     setBinaryPreviewError("");
     try {
-      await requireBinaryPreviewCell(effectiveCell, fetchFullCell);
+      await requireBinaryPreviewCell(effectiveCell, () =>
+        fetchFullCell(BINARY_PREVIEW_MAX_BYTES)
+      );
       setBinaryPreviewCell(cell);
     } catch (error) {
       setBinaryPreviewError(
@@ -382,9 +398,9 @@ function RecordField({
           className="flex min-h-8 min-w-0 items-center overflow-hidden rounded-md border bg-muted/30 px-2.5 py-1"
           data-slot="record-field-value"
         >
-          {isBinaryPreviewVisible && binaryBytes ? (
+          {isBinaryPreviewVisible && binaryPreview.bytes ? (
             <BinaryFilePreview
-              bytes={binaryBytes}
+              bytes={binaryPreview.bytes}
               columnName={column.columnName}
               variant="detail"
             />
@@ -403,6 +419,11 @@ function RecordField({
         columnName={column.columnName}
         fullValueError={fullValueMutation.isError}
       />
+      {binaryPreview.isTooLarge ? (
+        <p className="text-muted-foreground text-xs">
+          Too large to preview. Download the value instead.
+        </p>
+      ) : null}
     </div>
   );
 }

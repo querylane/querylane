@@ -404,7 +404,7 @@ describe("DataCell binary previews", () => {
       rawType: "bytea",
     });
     const cell = create(TableCellSchema, {
-      fullSizeBytes: 80_000_000n,
+      fullSizeBytes: 1_048_576n,
       fullValueToken: "oversized-payload",
       truncated: true,
       value: create(TableValueSchema, {
@@ -423,6 +423,79 @@ describe("DataCell binary previews", () => {
       "Value exceeds the maximum fetchable size"
     );
     expect(screen.queryByRole("img")).toBeNull();
+  });
+
+  it("does not fetch binary values above the preview limit", () => {
+    const mutateAsync = vi.fn();
+    tableDataApi.useReadCellValueMutation.mockReturnValue({
+      isPending: false,
+      mutateAsync,
+    });
+    const column = create(TableResultColumnSchema, {
+      columnName: "payload",
+      dataType: DataType.BINARY,
+      rawType: "bytea",
+    });
+    const cell = create(TableCellSchema, {
+      fullSizeBytes: 16_777_217n,
+      fullValueToken: "large-payload",
+      truncated: true,
+      value: create(TableValueSchema, {
+        kind: { case: "bytesValue", value: new Uint8Array() },
+      }),
+    });
+
+    render(
+      <DataCell cell={cell} column={column} tableName={BINARY_TABLE_NAME} />
+    );
+
+    expect(screen.getByText("Too large to preview")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Preview payload binary data" })
+    ).toBeNull();
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("requests at most 16 MB for a deferred binary preview", async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi.fn().mockResolvedValue({
+      value: create(TableCellSchema, {
+        value: create(TableValueSchema, {
+          kind: { case: "bytesValue", value: new Uint8Array([0x01]) },
+        }),
+      }),
+    });
+    tableDataApi.useReadCellValueMutation.mockReturnValue({
+      isPending: false,
+      mutateAsync,
+    });
+    const column = create(TableResultColumnSchema, {
+      columnName: "payload",
+      dataType: DataType.BINARY,
+      rawType: "bytea",
+    });
+    const cell = create(TableCellSchema, {
+      fullSizeBytes: 16_777_216n,
+      fullValueToken: "preview-limit-payload",
+      truncated: true,
+      value: create(TableValueSchema, {
+        kind: { case: "bytesValue", value: new Uint8Array() },
+      }),
+    });
+
+    render(
+      <DataCell cell={cell} column={column} tableName={BINARY_TABLE_NAME} />
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Preview payload binary data" })
+    );
+
+    expect(mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fullValueToken: "preview-limit-payload",
+        maxBytes: 16_777_216n,
+      })
+    );
   });
 
   it("does not offer a preview for an empty binary value", () => {

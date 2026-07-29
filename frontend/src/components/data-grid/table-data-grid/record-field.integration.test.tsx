@@ -30,22 +30,25 @@ vi.mock("@/hooks/api/table-data", () => ({
   useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
 }));
 
-describe("RecordField", () => {
-  beforeEach(() => {
-    Object.defineProperty(URL, "createObjectURL", {
-      configurable: true,
-      value: vi.fn(() => "blob:record-binary-preview"),
-    });
-    Object.defineProperty(URL, "revokeObjectURL", {
-      configurable: true,
-      value: vi.fn(),
-    });
+function setUpRecordFieldTest() {
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    value: vi.fn(() => "blob:record-binary-preview"),
   });
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    value: vi.fn(),
+  });
+}
 
-  afterEach(() => {
-    cleanup();
-    vi.clearAllMocks();
-  });
+function tearDownRecordFieldTest() {
+  cleanup();
+  vi.clearAllMocks();
+}
+
+describe("RecordField formatted values", () => {
+  beforeEach(setUpRecordFieldTest);
+  afterEach(tearDownRecordFieldTest);
 
   it("renders PostgreSQL arrays as indexed values in the detail drawer", () => {
     tableDataApi.useReadCellValueMutation.mockReturnValue({
@@ -118,6 +121,11 @@ describe("RecordField", () => {
       "2026-05-20T10:11:12+05:30"
     );
   });
+});
+
+describe("RecordField binary actions", () => {
+  beforeEach(setUpRecordFieldTest);
+  afterEach(tearDownRecordFieldTest);
 
   it("downloads a truncated bytea value after fetching it in full", async () => {
     const user = userEvent.setup();
@@ -165,7 +173,10 @@ describe("RecordField", () => {
     await user.click(screen.getByRole("button", { name: "Download avatar" }));
 
     expect(mutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ fullValueToken: "token-1" })
+      expect.objectContaining({
+        fullValueToken: "token-1",
+        maxBytes: 67_108_864n,
+      })
     );
     expect(downloadBlobMock).toHaveBeenCalledWith(
       "widgets_avatar_42.png",
@@ -213,6 +224,101 @@ describe("RecordField", () => {
       "48 69 00 ff"
     );
     expect(screen.getByText("Binary data")).toBeTruthy();
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("uses the smaller fetch budget for a deferred binary preview", async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi.fn().mockResolvedValue({
+      value: create(TableCellSchema, {
+        value: create(TableValueSchema, {
+          kind: { case: "bytesValue", value: new Uint8Array([0x01]) },
+        }),
+      }),
+    });
+    tableDataApi.useReadCellValueMutation.mockReturnValue({
+      isError: false,
+      isPending: false,
+      mutate: vi.fn(),
+      mutateAsync,
+    });
+    const column = create(TableResultColumnSchema, {
+      columnName: "payload",
+      dataType: DataType.BINARY,
+      rawType: "bytea",
+    });
+    const cell = create(TableCellSchema, {
+      fullSizeBytes: 16_777_216n,
+      fullValueToken: "preview-limit-payload",
+      truncated: true,
+      value: create(TableValueSchema, {
+        kind: { case: "bytesValue", value: new Uint8Array() },
+      }),
+    });
+
+    render(
+      <RecordField
+        cell={cell}
+        column={column}
+        isPrimaryKey={false}
+        tableName="instances/demo/databases/app/schemas/public/tables/widgets"
+      />
+    );
+    await user.click(screen.getByRole("button", { name: "Preview payload" }));
+
+    expect(mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fullValueToken: "preview-limit-payload",
+        maxBytes: 16_777_216n,
+      })
+    );
+  });
+});
+
+describe("RecordField binary preview boundaries", () => {
+  beforeEach(setUpRecordFieldTest);
+  afterEach(tearDownRecordFieldTest);
+
+  it("keeps oversized binary values download-only", () => {
+    const mutateAsync = vi.fn();
+    tableDataApi.useReadCellValueMutation.mockReturnValue({
+      isError: false,
+      isPending: false,
+      mutate: vi.fn(),
+      mutateAsync,
+    });
+    const column = create(TableResultColumnSchema, {
+      columnName: "payload",
+      dataType: DataType.BINARY,
+      rawType: "bytea",
+    });
+    const cell = create(TableCellSchema, {
+      fullSizeBytes: 16_777_217n,
+      fullValueToken: "large-payload",
+      truncated: true,
+      value: create(TableValueSchema, {
+        kind: { case: "bytesValue", value: new Uint8Array() },
+      }),
+    });
+
+    render(
+      <RecordField
+        cell={cell}
+        column={column}
+        isPrimaryKey={false}
+        tableName="instances/demo/databases/app/schemas/public/tables/widgets"
+      />
+    );
+
+    expect(
+      screen.getByText("Too large to preview. Download the value instead.")
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Preview payload" })
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Download payload" })
+    ).toBeTruthy();
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 
@@ -264,6 +370,11 @@ describe("RecordField", () => {
       screen.getByRole("button", { name: "Preview payload" })
     ).toBeTruthy();
   });
+});
+
+describe("RecordField deferred text values", () => {
+  beforeEach(setUpRecordFieldTest);
+  afterEach(tearDownRecordFieldTest);
 
   it("fetches the full value before copying a truncated cell", async () => {
     const user = userEvent.setup();

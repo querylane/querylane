@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 describe("BinaryFilePreview", () => {
-  it("embeds detected PDF, audio, and video with browser media controls", async () => {
+  it("uses a PDF object and native audio and video controls", async () => {
     const view = render(
       <BinaryFilePreview
         bytes={new TextEncoder().encode("%PDF-1.7")}
@@ -29,6 +29,7 @@ describe("BinaryFilePreview", () => {
     );
 
     const pdf = await screen.findByLabelText("document pdf preview");
+    expect(pdf.tagName).toBe("OBJECT");
     expect(pdf.getAttribute("type")).toBe("application/pdf");
 
     view.rerender(
@@ -39,7 +40,9 @@ describe("BinaryFilePreview", () => {
       />
     );
     const audio = await screen.findByLabelText("recording audio preview");
-    expect(audio.getAttribute("type")).toBe("audio/mpeg");
+    expect(audio.tagName).toBe("AUDIO");
+    expect(audio.getAttribute("controls")).not.toBeNull();
+    expect(audio.getAttribute("preload")).toBe("metadata");
 
     view.rerender(
       <BinaryFilePreview
@@ -54,7 +57,10 @@ describe("BinaryFilePreview", () => {
       />
     );
     const video = await screen.findByLabelText("clip video preview");
-    expect(video.getAttribute("type")).toBe("video/mp4");
+    expect(video.tagName).toBe("VIDEO");
+    expect(video.getAttribute("controls")).not.toBeNull();
+    expect(video.getAttribute("playsinline")).not.toBeNull();
+    expect(video.getAttribute("preload")).toBe("auto");
   });
 
   it("labels non-image grid previews without allocating unused media URLs", () => {

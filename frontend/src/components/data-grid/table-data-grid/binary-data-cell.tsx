@@ -8,8 +8,8 @@ import {
 } from "@/components/data-grid/table-data-grid/record-field-state";
 import { Button } from "@/components/ui/button";
 import {
+  BINARY_PREVIEW_MAX_BYTES,
   cellNeedsFullValue,
-  READ_CELL_MAX_BYTES,
 } from "@/features/data-explorer/table-data/full-cell-resolver";
 import { useReadCellValueMutation } from "@/hooks/api/table-data";
 import { formatBytes } from "@/lib/console-resources";
@@ -48,6 +48,9 @@ async function resolveBinaryPreview({
   fetchBinaryCell: FetchBinaryCell;
   tableName: string;
 }): Promise<BinaryPreviewResolution> {
+  if (cell.fullSizeBytes > BINARY_PREVIEW_MAX_BYTES) {
+    throw new Error("Value exceeds the binary preview limit");
+  }
   if (!cellNeedsFullValue(cell)) {
     const bytes = getBinaryBytes(cell);
     if (!bytes) {
@@ -59,7 +62,7 @@ async function resolveBinaryPreview({
   const response = await fetchBinaryCell(
     create(ReadCellValueRequestSchema, {
       fullValueToken: token,
-      maxBytes: READ_CELL_MAX_BYTES,
+      maxBytes: BINARY_PREVIEW_MAX_BYTES,
       name: tableName,
     })
   );
@@ -104,49 +107,91 @@ function BinaryPreviewTrigger({
   columnName,
   error,
   isPending,
+  isTooLarge,
   onPreview,
   size,
 }: {
   columnName: string;
   error: string;
   isPending: boolean;
+  isTooLarge: boolean;
   onPreview: () => void;
-  size: number;
+  size: bigint;
 }) {
   return (
     <div className="flex min-w-0 items-center gap-1">
       <span className="shrink-0 text-muted-foreground text-xs">
         ‹{formatBytes(size)}›
       </span>
-      {size > 0 ? (
-        <Button
-          aria-label={`Preview ${columnName} binary data`}
-          className="min-w-0 px-1.5 text-muted-foreground"
-          disabled={isPending}
-          onClick={onPreview}
-          size="xs"
-          title={
-            error === ""
-              ? `Preview ${columnName} binary data`
-              : `Preview failed: ${error}`
-          }
-          type="button"
-          variant="ghost"
-        >
-          {isPending ? (
-            <LoaderCircle className="motion-safe:animate-spin" />
-          ) : (
-            <Eye />
-          )}
-          {error === "" ? "Preview" : "Retry"}
-        </Button>
-      ) : null}
+      <BinaryPreviewAvailability
+        columnName={columnName}
+        error={error}
+        isPending={isPending}
+        isTooLarge={isTooLarge}
+        onPreview={onPreview}
+        size={size}
+      />
       {error === "" ? null : (
         <span className="sr-only" role="alert">
           Couldn’t preview {columnName}: {error}. Try again.
         </span>
       )}
     </div>
+  );
+}
+
+function BinaryPreviewAvailability({
+  columnName,
+  error,
+  isPending,
+  isTooLarge,
+  onPreview,
+  size,
+}: {
+  columnName: string;
+  error: string;
+  isPending: boolean;
+  isTooLarge: boolean;
+  onPreview: () => void;
+  size: bigint;
+}) {
+  if (isTooLarge) {
+    return (
+      <span
+        className="truncate text-muted-foreground text-xs"
+        title={`Binary previews are limited to ${formatBytes(
+          BINARY_PREVIEW_MAX_BYTES
+        )}`}
+      >
+        Too large to preview
+      </span>
+    );
+  }
+  if (size === 0n) {
+    return null;
+  }
+  return (
+    <Button
+      aria-label={`Preview ${columnName} binary data`}
+      className="min-w-0 px-1.5 text-muted-foreground"
+      disabled={isPending}
+      onClick={onPreview}
+      size="xs"
+      title={
+        error === ""
+          ? `Preview ${columnName} binary data`
+          : `Preview failed: ${error}`
+      }
+      type="button"
+      variant="ghost"
+    >
+      {isPending ? (
+        <LoaderCircle className="motion-safe:animate-spin" />
+      ) : (
+        <Eye />
+      )}
+      {error === "" ? "Preview" : "Retry"}
+    </Button>
   );
 }
 
@@ -173,9 +218,9 @@ function BinaryDataCell({
   const bytes = getBinaryBytes(effectiveCell);
   const previewError =
     previewErrorState?.cell === cell ? previewErrorState.message : "";
-  const size = Number(
-    cell.fullSizeBytes > 0n ? cell.fullSizeBytes : BigInt(bytes?.length ?? 0)
-  );
+  const size =
+    cell.fullSizeBytes > 0n ? cell.fullSizeBytes : BigInt(bytes?.length ?? 0);
+  const isTooLarge = size > BINARY_PREVIEW_MAX_BYTES;
 
   async function showPreview() {
     setPreviewErrorState(undefined);
@@ -213,6 +258,7 @@ function BinaryDataCell({
       columnName={columnName}
       error={previewError}
       isPending={fullValueMutation.isPending}
+      isTooLarge={isTooLarge}
       onPreview={showPreview}
       size={size}
     />
