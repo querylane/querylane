@@ -2,6 +2,7 @@
 
 import { anyUnpack } from "@bufbuild/protobuf/wkt";
 import {
+  AlertCircle,
   ChartNoAxesColumnIncreasing,
   ChevronLeft,
   ChevronRight,
@@ -493,7 +494,14 @@ function MetricUnavailableNotice({
   title: string;
 }) {
   return (
-    <Alert className="m-5 w-auto">
+    <Alert
+      className={cn(
+        "m-5 w-auto",
+        status && "border-destructive/30 bg-destructive/5"
+      )}
+      variant={status ? "destructive" : "default"}
+    >
+      {status ? <AlertCircle aria-hidden="true" /> : null}
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription>{status?.message || fallback}</AlertDescription>
       <AlertAction>

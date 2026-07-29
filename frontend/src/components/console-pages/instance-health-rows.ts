@@ -180,7 +180,7 @@ function unavailableRow({
     id,
     label,
     summary: reason?.trim() || "No data",
-    tone: "muted",
+    tone: reason?.trim() ? "error" : "muted",
   };
 }
 
