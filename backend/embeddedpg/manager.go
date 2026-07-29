@@ -12,6 +12,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 
@@ -294,6 +295,13 @@ func (m *Manager) startLockedFromReadyConfig(ctx context.Context) error {
 // startLocked creates and starts the embedded postgres process. The caller
 // must hold m.mu.
 func (m *Manager) startLocked(ctx context.Context) error {
+	if portHasActiveListener(ctx, m.cfg.Port) {
+		return fmt.Errorf(
+			"embedded postgres port %d is already in use; stop the process using it or set embedded.port to another available port",
+			m.cfg.Port,
+		)
+	}
+
 	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp4", fmt.Sprintf("127.0.0.1:%d", m.cfg.Port))
 	if err != nil {
 		if errors.Is(err, syscall.EADDRINUSE) {
@@ -344,6 +352,21 @@ func (m *Manager) startLocked(ctx context.Context) error {
 	slog.DebugContext(ctx, "embedded postgres process started", slog.Int("port", m.cfg.Port))
 
 	return nil
+}
+
+func portHasActiveListener(ctx context.Context, port int) bool {
+	conn, err := (&net.Dialer{Timeout: 250 * time.Millisecond}).DialContext(
+		ctx,
+		"tcp4",
+		fmt.Sprintf("127.0.0.1:%d", port),
+	)
+	if err != nil {
+		return false
+	}
+
+	_ = conn.Close()
+
+	return true
 }
 
 // handleLivePID decides what to do when a postmaster.pid references a

@@ -101,13 +101,18 @@ type dbState struct {
 	sampleStores           metricsvc.Stores
 }
 
-func databaseSetupErrorEvent(step dbsetup.StepID, err error) dbsetup.ProgressEvent {
+const missingCreatePrivilegesMessage = "The PostgreSQL role needs CREATE privileges on the metadata database and schema public. Grant them, then retry setup."
+
+func isPostgresPermissionDenied(err error) bool {
 	var pgErr *pgconn.PgError
-	if step == dbsetup.StepMigrating &&
-		errors.As(err, &pgErr) &&
-		postgreserrors.Classify(pgErr, postgreserrors.ProfileDefault).Kind == postgreserrors.KindPermissionDenied {
-		return dbsetup.NewErrorEvent(step,
-			"The PostgreSQL role needs CREATE privileges on the metadata database and schema public. Grant them, then retry setup.")
+
+	return errors.As(err, &pgErr) &&
+		postgreserrors.Classify(pgErr, postgreserrors.ProfileDefault).Kind == postgreserrors.KindPermissionDenied
+}
+
+func databaseSetupErrorEvent(step dbsetup.StepID, err error) dbsetup.ProgressEvent {
+	if step == dbsetup.StepMigrating && isPostgresPermissionDenied(err) {
+		return dbsetup.NewErrorEvent(step, missingCreatePrivilegesMessage)
 	}
 
 	return dbsetup.NewErrorEvent(step, postgreserrors.RedactedMessage(err, string(step)))

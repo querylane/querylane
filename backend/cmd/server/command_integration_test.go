@@ -145,6 +145,29 @@ func TestIntegration_SetupAppDatabase_ExternalPostgres(t *testing.T) { //nolint:
 	require.NoError(t, err, "ConsoleService should work after setup")
 }
 
+func TestIntegration_BootstrapAllowsConnectionTest(t *testing.T) { //nolint:paralleltest // uses t.Setenv
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	pgInfo := testutil.NewTestPostgres(t)
+	serverURL, _ := startBootstrapServer(t)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	client := newInstanceClient(serverURL)
+	_, err := client.TestInstanceConnection(ctx,
+		connect.NewRequest(&consolev1alpha1.TestInstanceConnectionRequest{
+			Config: pgInfo.PostgresProtoConfig(),
+		}))
+	require.NoError(t, err)
+
+	_, err = client.ListInstances(ctx,
+		connect.NewRequest(&consolev1alpha1.ListInstancesRequest{}))
+	require.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
+}
+
 func TestIntegration_SetupAppDatabase_ExplainsMissingCreatePrivileges(t *testing.T) { //nolint:paralleltest // uses t.Setenv
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")

@@ -101,6 +101,14 @@ func newConsoleClient(serverURL string) consolev1alpha1connect.ConsoleServiceCli
 	)
 }
 
+// newInstanceClient creates a ConnectRPC client for InstanceService.
+func newInstanceClient(serverURL string) consolev1alpha1connect.InstanceServiceClient {
+	return consolev1alpha1connect.NewInstanceServiceClient(
+		&http.Client{Timeout: 5 * time.Second},
+		serverURL,
+	)
+}
+
 // collectSetupEvents reads all events from a SetupAppDatabase server stream.
 func collectSetupEvents(stream *connect.ServerStreamForClient[consolev1alpha1.SetupAppDatabaseResponse]) ([]setupEvent, error) {
 	var events []setupEvent

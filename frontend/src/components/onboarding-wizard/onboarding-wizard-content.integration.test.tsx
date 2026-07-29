@@ -731,4 +731,31 @@ describe("onboarding wizard setup progression", () => {
     expect(screen.getAllByText(error)).not.toHaveLength(0);
     expect(screen.getByText("Likely a configuration issue")).toBeTruthy();
   });
+
+  it("classifies missing metadata CREATE privileges as reconfigurable", () => {
+    const error =
+      "The PostgreSQL role needs CREATE privileges on the metadata database and schema public. Grant them, then retry setup.";
+    const failedEvent = createProto(SetupProgressEventSchema, {
+      displayName: "Running migrations",
+      error,
+      state: StepState.FAILED,
+      stepId: SetupStep.MIGRATING,
+    });
+    seedOnboardingState();
+    useOnboardingWizardStore.setState({
+      failedEvent,
+      phase: "error_summary",
+      progressEvents: [failedEvent],
+      selectedMethod: "ui_configured",
+      streamError: normalizeAppUiError(new Error(error), {
+        area: "onboarding-setup",
+        source: "setup_stream",
+      }),
+    });
+
+    renderWizard();
+
+    expect(screen.getAllByText(error)).not.toHaveLength(0);
+    expect(screen.getByText("Likely a configuration issue")).toBeTruthy();
+  });
 });
