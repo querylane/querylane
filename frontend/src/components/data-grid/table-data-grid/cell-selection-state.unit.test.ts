@@ -9,6 +9,7 @@ import {
   formatCellSelectionForClipboard,
   getCellSelectionAppearance,
   getCellSelectionBounds,
+  getCellSelectionSummary,
   isCellSelected,
 } from "@/components/data-grid/table-data-grid/cell-selection-state";
 
@@ -103,6 +104,43 @@ describe("cell selection state", () => {
     );
   });
 
+  test("merges overlapping rectangular ranges after selection ends", () => {
+    const store = createCellSelectionStore();
+    store.start({ columnIndex: 2, rowIndex: 1 });
+    store.extendTo({ columnIndex: 3, rowIndex: 2 });
+    store.end();
+
+    store.start({ columnIndex: 3, rowIndex: 1 }, { additive: true });
+    store.extendTo({ columnIndex: 4, rowIndex: 2 });
+    store.end();
+
+    expect(store.getState().ranges).toEqual([
+      {
+        anchor: { columnIndex: 2, rowIndex: 1 },
+        focus: { columnIndex: 4, rowIndex: 2 },
+      },
+    ]);
+    expect(getCellSelectionSummary(store.getState()).cellCount).toBe(6);
+  });
+
+  test("keeps non-rectangular unions as separate ranges", () => {
+    const store = createCellSelectionStore();
+    store.start({ columnIndex: 2, rowIndex: 1 });
+    store.extendTo({ columnIndex: 3, rowIndex: 2 });
+    store.end();
+
+    store.start({ columnIndex: 4, rowIndex: 2 }, { additive: true });
+    store.end();
+
+    expect(store.getState().ranges).toHaveLength(2);
+    expect(getCellSelectionSummary(store.getState())).toEqual({
+      cellCount: 5,
+      columnCount: undefined,
+      rangeCount: 2,
+      rowCount: undefined,
+    });
+  });
+
   test("selects all cells within the supplied data bounds and clears", () => {
     const store = createCellSelectionStore();
 
@@ -136,6 +174,20 @@ describe("cell selection state", () => {
     store.end();
 
     expect(notifications).toBe(0);
+  });
+
+  test("summarizes a rectangular selection", () => {
+    const store = createCellSelectionStore();
+
+    store.start({ columnIndex: 2, rowIndex: 1 });
+    store.extendTo({ columnIndex: 4, rowIndex: 2 });
+
+    expect(getCellSelectionSummary(store.getState())).toEqual({
+      cellCount: 6,
+      columnCount: 3,
+      rangeCount: 1,
+      rowCount: 2,
+    });
   });
 });
 

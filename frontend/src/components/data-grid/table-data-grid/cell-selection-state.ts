@@ -20,6 +20,13 @@ interface CellSelectionState {
   ranges: readonly CellSelectionRange[];
 }
 
+interface CellSelectionSummary {
+  cellCount: number;
+  columnCount: number | undefined;
+  rangeCount: number;
+  rowCount: number | undefined;
+}
+
 interface StartCellSelectionOptions {
   additive?: boolean;
   extend?: boolean;
@@ -79,6 +86,82 @@ function getCellSelectionBounds(
   };
 }
 
+function cellSelectionBoundsArea(bounds: CellSelectionBounds): number {
+  return (bounds.right - bounds.left + 1) * (bounds.bottom - bounds.top + 1);
+}
+
+function mergeCellSelectionRanges(
+  first: CellSelectionRange,
+  second: CellSelectionRange
+): CellSelectionRange | undefined {
+  const firstBounds = getCellSelectionBounds(first);
+  const secondBounds = getCellSelectionBounds(second);
+  const mergedBounds = {
+    bottom: Math.max(firstBounds.bottom, secondBounds.bottom),
+    left: Math.min(firstBounds.left, secondBounds.left),
+    right: Math.max(firstBounds.right, secondBounds.right),
+    top: Math.min(firstBounds.top, secondBounds.top),
+  };
+  const overlapWidth = Math.max(
+    0,
+    Math.min(firstBounds.right, secondBounds.right) -
+      Math.max(firstBounds.left, secondBounds.left) +
+      1
+  );
+  const overlapHeight = Math.max(
+    0,
+    Math.min(firstBounds.bottom, secondBounds.bottom) -
+      Math.max(firstBounds.top, secondBounds.top) +
+      1
+  );
+  const unionArea =
+    cellSelectionBoundsArea(firstBounds) +
+    cellSelectionBoundsArea(secondBounds) -
+    overlapWidth * overlapHeight;
+  if (cellSelectionBoundsArea(mergedBounds) !== unionArea) {
+    return undefined;
+  }
+  return {
+    anchor: {
+      columnIndex: mergedBounds.left,
+      rowIndex: mergedBounds.top,
+    },
+    focus: {
+      columnIndex: mergedBounds.right,
+      rowIndex: mergedBounds.bottom,
+    },
+  };
+}
+
+function normalizeLatestCellSelectionRange(
+  ranges: readonly CellSelectionRange[]
+): CellSelectionRange[] {
+  const latestRange = ranges.at(-1);
+  if (!latestRange) {
+    return [];
+  }
+  const normalized = ranges.slice(0, -1);
+  let mergedRange = latestRange;
+  let index = 0;
+  while (index < normalized.length) {
+    const candidate = normalized[index];
+    if (candidate === undefined) {
+      index += 1;
+      continue;
+    }
+    const merged = mergeCellSelectionRanges(candidate, mergedRange);
+    if (merged === undefined) {
+      index += 1;
+      continue;
+    }
+    mergedRange = merged;
+    normalized.splice(index, 1);
+    index = 0;
+  }
+  normalized.push(mergedRange);
+  return normalized;
+}
+
 function isCellSelected(
   state: CellSelectionState,
   coordinate: CellCoordinate
@@ -92,6 +175,31 @@ function isCellSelected(
       coordinate.rowIndex <= bounds.bottom
     );
   });
+}
+
+function getCellSelectionSummary(
+  state: CellSelectionState
+): CellSelectionSummary {
+  const bounds = state.ranges.map(getCellSelectionBounds);
+  const activeBounds = bounds.length === 1 ? bounds[0] : undefined;
+  return {
+    cellCount: bounds.reduce(
+      (count, rangeBounds) =>
+        count +
+        (rangeBounds.right - rangeBounds.left + 1) *
+          (rangeBounds.bottom - rangeBounds.top + 1),
+      0
+    ),
+    columnCount:
+      activeBounds === undefined
+        ? undefined
+        : activeBounds.right - activeBounds.left + 1,
+    rangeCount: bounds.length,
+    rowCount:
+      activeBounds === undefined
+        ? undefined
+        : activeBounds.bottom - activeBounds.top + 1,
+  };
 }
 
 function getCellSelectionAppearance(
@@ -163,6 +271,7 @@ function createCellSelectionStore(): CellSelectionStore {
       setState({
         ...state,
         isDragging: false,
+        ranges: normalizeLatestCellSelectionRange(state.ranges),
       });
     },
     extendTo(coordinate) {
@@ -277,6 +386,7 @@ export type {
   CellSelectionRange,
   CellSelectionState,
   CellSelectionStore,
+  CellSelectionSummary,
 };
 export {
   CELL_SELECTION_BOTTOM,
@@ -288,5 +398,6 @@ export {
   formatCellSelectionForClipboard,
   getCellSelectionAppearance,
   getCellSelectionBounds,
+  getCellSelectionSummary,
   isCellSelected,
 };

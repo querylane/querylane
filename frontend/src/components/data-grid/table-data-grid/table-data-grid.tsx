@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { AppInlineError } from "@/components/app-error-view";
 import { CellContextMenu } from "@/components/data-grid/table-data-grid/cell-context-menu";
+import { isCellSelectionInteractiveTarget } from "@/components/data-grid/table-data-grid/cell-selection-interaction";
 import {
   type CellCoordinate,
   type CellSelectionClipboardField,
@@ -526,6 +527,7 @@ interface TableDataGridChromeProps {
   onColumnOrderChange: (columnOrder: string[]) => void;
   onColumnsReorder: (sourceColumnKey: string, targetColumnKey: string) => void;
   onColumnVisibilityChange: (columnKey: string, visible: boolean) => void;
+  onCopyCellSelection: () => void;
   onCopySelection: (format: ExportFormat) => void;
   onExportSelection: (format: ExportFormat) => void;
   onFilterChange: (
@@ -579,6 +581,7 @@ function TableDataGridChrome({
   onColumnLayoutReset,
   onColumnsReorder,
   onColumnVisibilityChange,
+  onCopyCellSelection,
   onCopySelection,
   onExportSelection,
   onFilterChange,
@@ -611,6 +614,7 @@ function TableDataGridChrome({
         )}
       >
         <DataGridToolbar
+          cellSelectionStore={cellSelectionStore}
           className={state.variant === "expanded" ? "pr-12" : undefined}
           columnOrder={columnOrder}
           columns={resultColumns}
@@ -626,6 +630,7 @@ function TableDataGridChrome({
           onColumnLayoutReset={onColumnLayoutReset}
           onColumnOrderChange={onColumnOrderChange}
           onColumnVisibilityChange={onColumnVisibilityChange}
+          onCopyCellSelection={onCopyCellSelection}
           onCopySelection={onCopySelection}
           onExportSelection={onExportSelection}
           onFilterChange={onFilterChange}
@@ -780,6 +785,9 @@ function copyRowValues(
 // right tool.
 const MAX_SELECTION_FULL_VALUE_FETCHES = 100;
 const DATA_COLUMN_START_INDEX = 2;
+const DATA_GRID_HEADER_ROW_HEIGHT = 36;
+const DATA_GRID_ROW_HEIGHT = 32;
+const DEFAULT_PAGE_NAVIGATION_ROW_COUNT = 10;
 const CELL_ARROW_MOVEMENT: Readonly<Partial<Record<string, CellCoordinate>>> = {
   ArrowDown: { columnIndex: 0, rowIndex: 1 },
   ArrowLeft: { columnIndex: -1, rowIndex: 0 },
@@ -795,6 +803,138 @@ const NON_FORMULA_CELL_VALUE_CASES: ReadonlySet<string> = new Set([
 ]);
 
 type CellSelectionBlocks = Array<Array<Array<TableCell | undefined>>>;
+
+function getPageNavigationRowCount(event: CellKeyboardEvent): number {
+  const grid = event.currentTarget.closest<HTMLElement>(".rdg");
+  if (!grid || grid.clientHeight <= DATA_GRID_HEADER_ROW_HEIGHT) {
+    return DEFAULT_PAGE_NAVIGATION_ROW_COUNT;
+  }
+  return Math.max(
+    1,
+    Math.floor(
+      (grid.clientHeight - DATA_GRID_HEADER_ROW_HEIGHT) / DATA_GRID_ROW_HEIGHT
+    )
+  );
+}
+
+function getArrowNavigationDestination({
+  columnIndex,
+  delta,
+  lastColumnIndex,
+  lastRowIndex,
+  moveToGridEdge,
+  rowIndex,
+}: {
+  columnIndex: number;
+  delta: CellCoordinate;
+  lastColumnIndex: number;
+  lastRowIndex: number;
+  moveToGridEdge: boolean;
+  rowIndex: number;
+}): CellCoordinate {
+  const destination = {
+    columnIndex: columnIndex + delta.columnIndex,
+    rowIndex: rowIndex + delta.rowIndex,
+  };
+  if (!moveToGridEdge) {
+    return destination;
+  }
+  if (delta.columnIndex < 0) {
+    destination.columnIndex = DATA_COLUMN_START_INDEX;
+  } else if (delta.columnIndex > 0) {
+    destination.columnIndex = lastColumnIndex;
+  }
+  if (delta.rowIndex < 0) {
+    destination.rowIndex = 0;
+  } else if (delta.rowIndex > 0) {
+    destination.rowIndex = lastRowIndex;
+  }
+  return destination;
+}
+
+function clampCellNavigationDestination(
+  coordinate: CellCoordinate,
+  lastColumnIndex: number,
+  lastRowIndex: number
+): CellCoordinate {
+  return {
+    columnIndex: Math.min(
+      lastColumnIndex,
+      Math.max(DATA_COLUMN_START_INDEX, coordinate.columnIndex)
+    ),
+    rowIndex: Math.min(lastRowIndex, Math.max(0, coordinate.rowIndex)),
+  };
+}
+
+function getCellKeyboardDestination({
+  columnIndex,
+  dataColumnCount,
+  event,
+  rowCount,
+  rowIndex,
+}: {
+  columnIndex: number;
+  dataColumnCount: number;
+  event: CellKeyboardEvent;
+  rowCount: number;
+  rowIndex: number;
+}): CellCoordinate | undefined {
+  if (event.altKey) {
+    return undefined;
+  }
+  const firstColumnIndex = DATA_COLUMN_START_INDEX;
+  const lastColumnIndex = firstColumnIndex + dataColumnCount - 1;
+  const lastRowIndex = rowCount - 1;
+  const moveToGridEdge = event.ctrlKey || event.metaKey;
+  let destination: CellCoordinate;
+
+  switch (event.key) {
+    case "Home":
+      destination = {
+        columnIndex: firstColumnIndex,
+        rowIndex: moveToGridEdge ? 0 : rowIndex,
+      };
+      break;
+    case "End":
+      destination = {
+        columnIndex: lastColumnIndex,
+        rowIndex: moveToGridEdge ? lastRowIndex : rowIndex,
+      };
+      break;
+    case "PageUp":
+      destination = {
+        columnIndex,
+        rowIndex: rowIndex - getPageNavigationRowCount(event),
+      };
+      break;
+    case "PageDown":
+      destination = {
+        columnIndex,
+        rowIndex: rowIndex + getPageNavigationRowCount(event),
+      };
+      break;
+    default: {
+      const delta = CELL_ARROW_MOVEMENT[event.key];
+      if (delta === undefined) {
+        return undefined;
+      }
+      destination = getArrowNavigationDestination({
+        columnIndex,
+        delta,
+        lastColumnIndex,
+        lastRowIndex,
+        moveToGridEdge,
+        rowIndex,
+      });
+    }
+  }
+
+  return clampCellNavigationDestination(
+    destination,
+    lastColumnIndex,
+    lastRowIndex
+  );
+}
 
 function getDisplayedDataColumnKeys(columns: Column<GridRow>[]): string[] {
   const dataColumns = columns.filter(
@@ -1128,6 +1268,9 @@ function useSelectionActions({
 
   return {
     clearSelection,
+    copyCellSelection: () => {
+      copySelectedCells();
+    },
     copyCellValue: (row: GridRow, columnKey: string) =>
       copyCellValue({ columnKey, fetchFullCell, resultColumns, row }),
     copyRowAsSqlInsert: (row: GridRow) => {
@@ -1425,7 +1568,11 @@ function buildCellInteractionHandlers({
     args: CellMouseArgs<GridRow>,
     event: CellMouseEvent
   ) {
-    if (event.button !== 0 || !isSelectableDataColumn(args.column.key)) {
+    if (
+      event.button !== 0 ||
+      !isSelectableDataColumn(args.column.key) ||
+      isCellSelectionInteractiveTarget(event.target, event.currentTarget)
+    ) {
       return;
     }
     cellSelectionStore.start(
@@ -1468,20 +1615,16 @@ function buildCellInteractionHandlers({
       return;
     }
 
-    const delta = CELL_ARROW_MOVEMENT[event.key];
-    if (delta === undefined) {
+    const next = getCellKeyboardDestination({
+      columnIndex: args.column.idx,
+      dataColumnCount,
+      event,
+      rowCount,
+      rowIndex: args.rowIdx,
+    });
+    if (next === undefined) {
       return;
     }
-    const next = {
-      columnIndex: Math.min(
-        DATA_COLUMN_START_INDEX + dataColumnCount - 1,
-        Math.max(DATA_COLUMN_START_INDEX, args.column.idx + delta.columnIndex)
-      ),
-      rowIndex: Math.min(
-        rowCount - 1,
-        Math.max(0, args.rowIdx + delta.rowIndex)
-      ),
-    };
     stopCellKeyboardEvent(event);
     clearNativeTextSelection();
     cellSelectionStore.start(next, { extend: event.shiftKey });
@@ -1731,6 +1874,7 @@ function TableDataGrid({
     onColumnOrderChange: columnLayout.setColumnOrder,
     onColumnsReorder: columnLayout.reorderColumns,
     onColumnVisibilityChange: columnLayout.setColumnVisibility,
+    onCopyCellSelection: selectionActions.copyCellSelection,
     onCopySelection: selectionActions.handleCopySelection,
     onExportSelection: selectionActions.handleExportSelection,
     onFilterChange: handleFilterChange,

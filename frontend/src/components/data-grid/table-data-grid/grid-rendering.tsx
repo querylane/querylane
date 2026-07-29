@@ -4,8 +4,10 @@ import {
   createContext,
   type Key,
   type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
   useContext,
   useEffect,
+  useRef,
   useSyncExternalStore,
 } from "react";
 import {
@@ -23,12 +25,14 @@ import {
   SELECT_COLUMN_KEY,
   type SortColumn,
 } from "react-data-grid";
+import { isCellSelectionInteractiveTarget } from "@/components/data-grid/table-data-grid/cell-selection-interaction";
 import {
   CELL_SELECTION_BOTTOM,
   CELL_SELECTION_LEFT,
   CELL_SELECTION_RIGHT,
   CELL_SELECTION_SELECTED,
   CELL_SELECTION_TOP,
+  type CellCoordinate,
   type CellSelectionStore,
   createCellSelectionStore,
   getCellSelectionAppearance,
@@ -50,6 +54,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const SKELETON_ROW_COUNT = 8;
+const CELL_SELECTION_AUTO_SCROLL_EDGE_SIZE = 32;
+const CELL_SELECTION_AUTO_SCROLL_MAX_STEP = 18;
+const CELL_SELECTION_CELL_SELECTOR =
+  "[data-cell-selection-column-index][data-cell-selection-row-index]";
 const SKELETON_ROW_IDS = Array.from(
   { length: SKELETON_ROW_COUNT },
   (_, index) => `skeleton-row-${index}`
@@ -72,6 +80,137 @@ function isDataCell(columnKey: string): boolean {
 
 function hasAppearance(appearance: string, flag: string): true | undefined {
   return appearance.includes(flag) ? true : undefined;
+}
+
+function getCellSelectionAutoScrollDelta(
+  position: number,
+  start: number,
+  end: number
+): number {
+  if (position < start + CELL_SELECTION_AUTO_SCROLL_EDGE_SIZE) {
+    return -Math.ceil(
+      (Math.min(
+        CELL_SELECTION_AUTO_SCROLL_EDGE_SIZE,
+        start + CELL_SELECTION_AUTO_SCROLL_EDGE_SIZE - position
+      ) /
+        CELL_SELECTION_AUTO_SCROLL_EDGE_SIZE) *
+        CELL_SELECTION_AUTO_SCROLL_MAX_STEP
+    );
+  }
+  if (position > end - CELL_SELECTION_AUTO_SCROLL_EDGE_SIZE) {
+    return Math.ceil(
+      (Math.min(
+        CELL_SELECTION_AUTO_SCROLL_EDGE_SIZE,
+        position - (end - CELL_SELECTION_AUTO_SCROLL_EDGE_SIZE)
+      ) /
+        CELL_SELECTION_AUTO_SCROLL_EDGE_SIZE) *
+        CELL_SELECTION_AUTO_SCROLL_MAX_STEP
+    );
+  }
+  return 0;
+}
+
+function getCellCoordinateFromElement(
+  cell: HTMLElement
+): CellCoordinate | undefined {
+  const columnIndex = Number(cell.dataset["cellSelectionColumnIndex"]);
+  const rowIndex = Number(cell.dataset["cellSelectionRowIndex"]);
+  if (Number.isNaN(columnIndex) || Number.isNaN(rowIndex)) {
+    return undefined;
+  }
+  return { columnIndex, rowIndex };
+}
+
+function getCellSelectionAutoScroll(
+  grid: HTMLElement,
+  pointerPosition: { clientX: number; clientY: number }
+) {
+  const bounds = grid.getBoundingClientRect();
+  return {
+    left: getCellSelectionAutoScrollDelta(
+      pointerPosition.clientX,
+      bounds.left,
+      bounds.right
+    ),
+    top: getCellSelectionAutoScrollDelta(
+      pointerPosition.clientY,
+      bounds.top,
+      bounds.bottom
+    ),
+  };
+}
+
+function cellCoordinatesEqual(
+  first: CellCoordinate,
+  second: CellCoordinate
+): boolean {
+  return (
+    first.columnIndex === second.columnIndex &&
+    first.rowIndex === second.rowIndex
+  );
+}
+
+function extendCellSelectionToElement({
+  cell,
+  cellSelectionStore,
+  gridRoot,
+}: {
+  cell: HTMLElement | null | undefined;
+  cellSelectionStore: CellSelectionStore;
+  gridRoot: HTMLElement;
+}) {
+  if (!cell) {
+    return;
+  }
+  if (!gridRoot.contains(cell)) {
+    return;
+  }
+  const coordinate = getCellCoordinateFromElement(cell);
+  if (!coordinate) {
+    return;
+  }
+  const focus = cellSelectionStore.getState().ranges.at(-1)?.focus;
+  if (focus && !cellCoordinatesEqual(focus, coordinate)) {
+    window.getSelection()?.removeAllRanges();
+  }
+  cellSelectionStore.extendTo(coordinate);
+}
+
+function hasAutoScrollDelta(delta: { left: number; top: number }): boolean {
+  return delta.left !== 0 || delta.top !== 0;
+}
+
+function runCellSelectionAutoScroll({
+  cellSelectionStore,
+  extendSelectionAtPoint,
+  grid,
+  pointerPosition,
+}: {
+  cellSelectionStore: CellSelectionStore;
+  extendSelectionAtPoint: (clientX: number, clientY: number) => void;
+  grid: HTMLElement;
+  pointerPosition: { clientX: number; clientY: number };
+}): boolean {
+  if (!cellSelectionStore.getState().isDragging) {
+    return false;
+  }
+  const delta = getCellSelectionAutoScroll(grid, pointerPosition);
+  if (!hasAutoScrollDelta(delta)) {
+    return false;
+  }
+  const previousScroll = {
+    left: grid.scrollLeft,
+    top: grid.scrollTop,
+  };
+  grid.scrollBy(delta);
+  const didScroll =
+    grid.scrollLeft !== previousScroll.left ||
+    grid.scrollTop !== previousScroll.top;
+  if (!didScroll) {
+    return false;
+  }
+  extendSelectionAtPoint(pointerPosition.clientX, pointerPosition.clientY);
+  return true;
 }
 
 function CellSelectionCell(props: CellRendererProps<GridRow, unknown>) {
@@ -106,6 +245,25 @@ function CellSelectionCell(props: CellRendererProps<GridRow, unknown>) {
     cellSelectionStore.extendTo(coordinate);
   }
 
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    props.onPointerDown?.(event);
+    if (
+      event.pointerType === "mouse" ||
+      event.button !== 0 ||
+      !isDataCell(props.column.key) ||
+      isCellSelectionInteractiveTarget(event.target, event.currentTarget)
+    ) {
+      return;
+    }
+    cellSelectionStore.start(coordinate, {
+      additive: event.ctrlKey || event.metaKey,
+      extend: event.shiftKey,
+    });
+    if (event.isTrusted) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+  }
+
   return (
     <Cell
       {...props}
@@ -118,7 +276,14 @@ function CellSelectionCell(props: CellRendererProps<GridRow, unknown>) {
       data-cell-range-right={hasAppearance(appearance, CELL_SELECTION_RIGHT)}
       data-cell-range-selected={isSelected ? true : undefined}
       data-cell-range-top={hasAppearance(appearance, CELL_SELECTION_TOP)}
+      data-cell-selection-column-index={
+        isDataCell(props.column.key) ? coordinate.columnIndex : undefined
+      }
+      data-cell-selection-row-index={
+        isDataCell(props.column.key) ? coordinate.rowIndex : undefined
+      }
       onMouseEnter={handleMouseEnter}
+      onPointerDown={handlePointerDown}
     />
   );
 }
@@ -224,17 +389,152 @@ function GridBody({
   selectedRows,
   sortColumns,
 }: GridBodyProps) {
+  const gridRootRef = useRef<HTMLDivElement>(null);
+
   useEffect(
-    function finishCellSelectionOutsideGrid() {
-      const finishSelection = () => cellSelectionStore.end();
+    function trackPointerCellSelection() {
+      if (isLoading) {
+        return;
+      }
+      const gridRoot = gridRootRef.current;
+      if (!gridRoot) {
+        return;
+      }
+      const gridElement = gridRoot.querySelector<HTMLElement>(".rdg");
+      if (!gridElement) {
+        return;
+      }
+      const activeGridRoot: HTMLDivElement = gridRoot;
+      const activeGrid: HTMLElement = gridElement;
+      let activePointerId: number | undefined;
+      let animationFrameId: number | undefined;
+      let pointerPosition: { clientX: number; clientY: number } | undefined;
+
+      function extendSelectionAtPoint(clientX: number, clientY: number) {
+        const cell = document
+          .elementFromPoint(clientX, clientY)
+          ?.closest<HTMLElement>(CELL_SELECTION_CELL_SELECTOR);
+        extendCellSelectionToElement({
+          cell,
+          cellSelectionStore,
+          gridRoot: activeGridRoot,
+        });
+      }
+
+      function extendSelectionAtPointer(event: PointerEvent) {
+        const eventTargetCell =
+          event.target instanceof Element
+            ? event.target.closest<HTMLElement>(CELL_SELECTION_CELL_SELECTOR)
+            : null;
+        const capturedTarget =
+          eventTargetCell?.hasPointerCapture(event.pointerId) === true;
+        const cell =
+          !capturedTarget && eventTargetCell
+            ? eventTargetCell
+            : document
+                .elementFromPoint(event.clientX, event.clientY)
+                ?.closest<HTMLElement>(CELL_SELECTION_CELL_SELECTOR);
+        extendCellSelectionToElement({
+          cell,
+          cellSelectionStore,
+          gridRoot: activeGridRoot,
+        });
+      }
+
+      function autoScrollCellSelection() {
+        animationFrameId = undefined;
+        if (!pointerPosition) {
+          return;
+        }
+        const shouldContinue = runCellSelectionAutoScroll({
+          cellSelectionStore,
+          extendSelectionAtPoint,
+          grid: activeGrid,
+          pointerPosition,
+        });
+        if (!shouldContinue) {
+          return;
+        }
+        animationFrameId = requestAnimationFrame(autoScrollCellSelection);
+      }
+
+      function scheduleAutoScroll() {
+        if (animationFrameId === undefined) {
+          animationFrameId = requestAnimationFrame(autoScrollCellSelection);
+        }
+      }
+
+      function beginPointerSelection(event: PointerEvent) {
+        if (event.button !== 0) {
+          return;
+        }
+        activePointerId = event.pointerId;
+        pointerPosition = {
+          clientX: event.clientX,
+          clientY: event.clientY,
+        };
+      }
+
+      function continuePointerSelection(event: PointerEvent) {
+        if (
+          event.pointerId !== activePointerId ||
+          !cellSelectionStore.getState().isDragging
+        ) {
+          return;
+        }
+        pointerPosition = {
+          clientX: event.clientX,
+          clientY: event.clientY,
+        };
+        extendSelectionAtPointer(event);
+        scheduleAutoScroll();
+      }
+
+      function finishSelection() {
+        activePointerId = undefined;
+        pointerPosition = undefined;
+        if (animationFrameId !== undefined) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = undefined;
+        }
+        cellSelectionStore.end();
+      }
+
+      function finishPointerSelection(event: PointerEvent) {
+        if (
+          activePointerId !== undefined &&
+          event.pointerId !== activePointerId
+        ) {
+          return;
+        }
+        finishSelection();
+      }
+
+      activeGridRoot.addEventListener(
+        "pointerdown",
+        beginPointerSelection,
+        true
+      );
       window.addEventListener("blur", finishSelection);
-      window.addEventListener("mouseup", finishSelection);
+      window.addEventListener("pointercancel", finishPointerSelection);
+      window.addEventListener("pointermove", continuePointerSelection, {
+        passive: true,
+      });
+      window.addEventListener("pointerup", finishPointerSelection);
       return () => {
+        finishSelection();
+        activeGridRoot.removeEventListener(
+          "pointerdown",
+          beginPointerSelection,
+          true
+        );
         window.removeEventListener("blur", finishSelection);
-        window.removeEventListener("mouseup", finishSelection);
+        window.removeEventListener("pointercancel", finishPointerSelection);
+        window.removeEventListener("pointermove", continuePointerSelection);
+        window.removeEventListener("pointerup", finishPointerSelection);
       };
     },
-    [cellSelectionStore]
+    [cellSelectionStore, isLoading]
   );
 
   if (isLoading) {
@@ -246,8 +546,13 @@ function GridBody({
   }
   return (
     <CellSelectionContext value={cellSelectionStore}>
-      <div className="contents" data-keyboard-shortcut-scope="grid">
+      <div
+        className="contents"
+        data-keyboard-shortcut-scope="grid"
+        ref={gridRootRef}
+      >
         <DataGrid
+          aria-label="Table data"
           className={cn(
             "rdg-light dark:rdg-dark",
             flush && "rounded-none! border-x-0!"
