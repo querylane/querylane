@@ -402,7 +402,6 @@ function RecordField({
             <BinaryFilePreview
               bytes={binaryPreview.bytes}
               columnName={column.columnName}
-              variant="detail"
             />
           ) : (
             <RecordFieldValue formatted={formatted} />

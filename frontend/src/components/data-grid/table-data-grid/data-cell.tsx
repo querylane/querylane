@@ -1,5 +1,4 @@
 import { Check, Minus } from "lucide-react";
-import { BinaryDataCell } from "@/components/data-grid/table-data-grid/binary-data-cell";
 import { ArrayPreview } from "@/components/data-grid/table-data-grid/data-cell-array-preview";
 import { ExpandedJsonPreview } from "@/components/data-grid/table-data-grid/data-cell-expanded-json-preview";
 import { JsonPreview } from "@/components/data-grid/table-data-grid/data-cell-json-preview";
@@ -18,7 +17,6 @@ interface DataCellProps {
   cell: TableCell | undefined;
   column: TableResultColumn;
   jsonDisplay?: "compact" | "expanded" | undefined;
-  tableName?: string | undefined;
 }
 
 function renderCell(
@@ -71,7 +69,9 @@ function renderCell(
         />
       );
     case "bytes":
-      return null;
+      return (
+        <span className="truncate text-muted-foreground">{cell.display}</span>
+      );
     case "timestamp":
     case "date":
       return (
@@ -107,24 +107,7 @@ export function DataCell({
   cell,
   column,
   jsonDisplay = "compact",
-  tableName,
 }: DataCellProps) {
   const formatted = formatTableCell(cell, column);
-  if (formatted.kind === "bytes") {
-    if (cell && tableName) {
-      return (
-        <BinaryDataCell
-          cell={cell}
-          columnName={column.columnName}
-          tableName={tableName}
-        />
-      );
-    }
-    return (
-      <span className="truncate text-muted-foreground">
-        {formatted.display}
-      </span>
-    );
-  }
   return renderCell(formatted, column, jsonDisplay);
 }

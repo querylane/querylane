@@ -31,7 +31,6 @@ describe("BinaryFilePreview", () => {
       <BinaryFilePreview
         bytes={new TextEncoder().encode("%PDF-1.7")}
         columnName="document"
-        variant="detail"
       />
     );
 
@@ -43,7 +42,6 @@ describe("BinaryFilePreview", () => {
       <BinaryFilePreview
         bytes={new TextEncoder().encode("ID3\u0004\u0000")}
         columnName="recording"
-        variant="detail"
       />
     );
     const audioPlayer = await screen.findByRole("region", {
@@ -71,7 +69,6 @@ describe("BinaryFilePreview", () => {
           ])
         }
         columnName="clip"
-        variant="detail"
       />
     );
     const video = await screen.findByLabelText("clip video preview");
@@ -79,21 +76,6 @@ describe("BinaryFilePreview", () => {
     expect(video.getAttribute("controls")).not.toBeNull();
     expect(video.getAttribute("playsinline")).not.toBeNull();
     expect(video.getAttribute("preload")).toBe("auto");
-  });
-
-  it("labels non-image grid previews without allocating unused media URLs", () => {
-    render(
-      <BinaryFilePreview
-        bytes={new TextEncoder().encode("%PDF-1.7")}
-        columnName="document"
-        variant="grid"
-      />
-    );
-
-    expect(screen.getByText("PDF document").getAttribute("title")).toBe(
-      "PDF document, 8 B"
-    );
-    expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
 });
 
@@ -104,12 +86,10 @@ describe("BinaryFilePreview audio controls", () => {
         <BinaryFilePreview
           bytes={new TextEncoder().encode("ID3\u0004\u0000first")}
           columnName="first recording"
-          variant="detail"
         />
         <BinaryFilePreview
           bytes={new TextEncoder().encode("ID3\u0004\u0000second")}
           columnName="second recording"
-          variant="detail"
         />
       </>
     );
@@ -147,7 +127,6 @@ describe("BinaryFilePreview audio controls", () => {
       <BinaryFilePreview
         bytes={new TextEncoder().encode("ID3\u0004\u0000")}
         columnName="recording"
-        variant="detail"
       />
     );
 
@@ -210,7 +189,6 @@ describe("BinaryFilePreview audio controls", () => {
       <BinaryFilePreview
         bytes={new TextEncoder().encode("ID3\u0004\u0000first")}
         columnName="recording"
-        variant="detail"
       />
     );
     const firstPlayer = await screen.findByRole("region", {
@@ -236,7 +214,6 @@ describe("BinaryFilePreview audio controls", () => {
       <BinaryFilePreview
         bytes={new TextEncoder().encode("ID3\u0004\u0000second")}
         columnName="recording"
-        variant="detail"
       />
     );
 
@@ -261,7 +238,6 @@ describe("BinaryFilePreview audio controls", () => {
       <BinaryFilePreview
         bytes={new TextEncoder().encode("ID3\u0004\u0000")}
         columnName="recording"
-        variant="detail"
       />
     );
     const player = await screen.findByRole("region", {
@@ -317,7 +293,6 @@ describe("BinaryFilePreview fallbacks", () => {
           '<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>alert(2)</script><rect width="10" height="10" onclick="alert(3)"/><a href="javascript:alert(4)">unsafe</a></svg>'
         )}
         columnName="vector"
-        variant="detail"
       />
     );
 
@@ -338,9 +313,7 @@ describe("BinaryFilePreview fallbacks", () => {
 
   it("shows detected metadata and a bounded hex fallback for unknown data", () => {
     const bytes = Uint8Array.from({ length: 300 }, (_, index) => index % 256);
-    render(
-      <BinaryFilePreview bytes={bytes} columnName="payload" variant="detail" />
-    );
+    render(<BinaryFilePreview bytes={bytes} columnName="payload" />);
 
     expect(screen.getByText("Binary data")).toBeTruthy();
     expect(screen.getByText("application/octet-stream")).toBeTruthy();
@@ -364,7 +337,6 @@ describe("BinaryFilePreview fallbacks", () => {
       <BinaryFilePreview
         bytes={new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])}
         columnName="avatar"
-        variant="detail"
       />
     );
     expect(
@@ -379,7 +351,6 @@ describe("BinaryFilePreview fallbacks", () => {
           '<svg xmlns="http://www.w3.org/2000/svg"></svg>'
         )}
         columnName="vector"
-        variant="detail"
       />
     );
     expect(
@@ -399,7 +370,6 @@ describe("BinaryFilePreview fallbacks", () => {
       <BinaryFilePreview
         bytes={new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])}
         columnName="avatar"
-        variant="detail"
       />
     );
     const image = await screen.findByRole("img", { name: "avatar preview" });

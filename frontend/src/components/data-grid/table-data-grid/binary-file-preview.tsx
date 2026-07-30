@@ -9,7 +9,6 @@ import {
 import { formatBytes } from "@/lib/console-resources";
 
 const HEX_PREVIEW_BYTE_LIMIT = 256;
-const GRID_THUMBNAIL_SIZE = 24;
 const DETAIL_IMAGE_SIZE_HINT = 384;
 const SVG_SANITIZE_CONFIG: Config = {
   FORBID_TAGS: ["foreignobject", "script", "style"],
@@ -96,53 +95,6 @@ function BinaryPreviewMetadata({
       <span className="font-mono text-muted-foreground">{file.mimeType}</span>
       <span className="text-muted-foreground">{formatBytes(byteCount)}</span>
     </div>
-  );
-}
-
-function GridBinaryFilePreview({
-  columnName,
-  file,
-  objectUrl,
-  byteCount,
-}: {
-  byteCount: number;
-  columnName: string;
-  file: BinaryFileMetadata;
-  objectUrl: string;
-}) {
-  const { hasDecodeError, imageRef } = useImageDecodeError(objectUrl);
-  if (file.kind === "image" || file.kind === "svg") {
-    if (objectUrl === "") {
-      return <BinaryMediaLoadingStatus label={file.label} />;
-    }
-    if (hasDecodeError) {
-      return (
-        <span
-          className="truncate text-destructive-foreground text-xs"
-          title={`Couldn’t decode the ${file.label}`}
-        >
-          Preview unavailable
-        </span>
-      );
-    }
-    return (
-      <img
-        alt={`${columnName} preview`}
-        className="size-6 rounded-sm border object-cover"
-        height={GRID_THUMBNAIL_SIZE}
-        ref={imageRef}
-        src={objectUrl}
-        width={GRID_THUMBNAIL_SIZE}
-      />
-    );
-  }
-  return (
-    <span
-      className="max-w-24 truncate text-muted-foreground text-xs"
-      title={`${file.label}, ${formatBytes(byteCount)}`}
-    >
-      {file.label}
-    </span>
   );
 }
 
@@ -356,33 +308,17 @@ function DetailBinaryFilePreview({
 function BinaryFilePreview({
   bytes,
   columnName,
-  variant,
 }: {
   bytes: Uint8Array;
   columnName: string;
-  variant: "detail" | "grid";
 }) {
   const file = detectBinaryFile(bytes);
-  const needsObjectUrl =
-    file.kind === "image" ||
-    file.kind === "svg" ||
-    (variant === "detail" &&
-      (file.kind === "audio" || file.kind === "pdf" || file.kind === "video"));
+  const needsObjectUrl = file.kind !== "generic";
   const objectUrl = useBinaryObjectUrl(
     needsObjectUrl ? bytes : undefined,
     file
   );
 
-  if (variant === "grid") {
-    return (
-      <GridBinaryFilePreview
-        byteCount={bytes.length}
-        columnName={columnName}
-        file={file}
-        objectUrl={objectUrl}
-      />
-    );
-  }
   return (
     <DetailBinaryFilePreview
       bytes={bytes}

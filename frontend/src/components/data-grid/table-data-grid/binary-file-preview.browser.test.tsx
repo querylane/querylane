@@ -4,7 +4,6 @@ import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { BinaryFilePreview } from "@/components/data-grid/table-data-grid/binary-file-preview";
-import { DataCell } from "@/components/data-grid/table-data-grid/data-cell";
 import { RecordField } from "@/components/data-grid/table-data-grid/record-field";
 import {
   TableCellSchema,
@@ -127,17 +126,6 @@ function createBinaryCell(bytes: Uint8Array) {
   });
 }
 
-function createTruncatedBinaryCell(token: string, size: bigint) {
-  return create(TableCellSchema, {
-    fullSizeBytes: size,
-    fullValueToken: token,
-    truncated: true,
-    value: create(TableValueSchema, {
-      kind: { case: "bytesValue", value: new Uint8Array() },
-    }),
-  });
-}
-
 beforeEach(() => {
   tableDataApi.useReadCellValueMutation.mockReturnValue({
     isPending: false,
@@ -155,7 +143,6 @@ test("binary image preview decodes a blob URL in the browser", async () => {
     <BinaryFilePreview
       bytes={decodeBase64Bytes(ONE_PIXEL_PNG_BASE64)}
       columnName="avatar"
-      variant="detail"
     />
   );
 
@@ -176,7 +163,6 @@ test("SVG preview renders only sanitized markup", async () => {
     <BinaryFilePreview
       bytes={new TextEncoder().encode(unsafeSvg)}
       columnName="vector"
-      variant="detail"
     />
   );
 
@@ -201,29 +187,11 @@ test("SVG preview renders only sanitized markup", async () => {
   expect(sanitizedSvg).not.toContain("<iframe");
 });
 
-test("SVG preview renders as a grid thumbnail", async () => {
-  const safeSvg =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="red"/></svg>';
-  render(
-    <BinaryFilePreview
-      bytes={new TextEncoder().encode(safeSvg)}
-      columnName="vector"
-      variant="grid"
-    />
-  );
-
-  const image = page.getByRole("img", { name: "vector preview" });
-  await expect.element(image).toBeVisible();
-  const thumbnail = await decodeImageElement(image.element(), "vector preview");
-  expect(thumbnail.getBoundingClientRect().width).toBe(24);
-});
-
 test("MP4 preview uses the native video element", async () => {
   render(
     <BinaryFilePreview
       bytes={decodeBase64Bytes(SHORT_MP4_BASE64)}
       columnName="clip"
-      variant="detail"
     />
   );
 
@@ -234,11 +202,7 @@ test("MP4 preview uses the native video element", async () => {
 
 test("audio preview loads metadata into custom controls", async () => {
   render(
-    <BinaryFilePreview
-      bytes={createSilentWavBytes()}
-      columnName="recording"
-      variant="detail"
-    />
+    <BinaryFilePreview bytes={createSilentWavBytes()} columnName="recording" />
   );
 
   const player = page.getByRole("region", {
@@ -270,114 +234,6 @@ test("audio preview loads metadata into custom controls", async () => {
     .toBeVisible();
   expect(audio.paused).toBe(true);
   releaseMediaElement(audio);
-});
-
-test("grid binary data stays unloaded until preview is requested", async () => {
-  const pngBytes = decodeBase64Bytes(ONE_PIXEL_PNG_BASE64);
-  const column = createBinaryColumn("avatar");
-  const cell = createBinaryCell(pngBytes);
-  render(
-    <DataCell cell={cell} column={column} tableName={BINARY_TABLE_NAME} />
-  );
-
-  const previewButton = page.getByRole("button", {
-    name: "Preview avatar binary data",
-  });
-  await expect.element(previewButton).toBeVisible();
-  expect(page.getByRole("img", { name: "avatar preview" }).elements()).toEqual(
-    []
-  );
-
-  await previewButton.click();
-
-  const image = page.getByRole("img", { name: "avatar preview" });
-  await expect.element(image).toBeVisible();
-  const thumbnail = await decodeImageElement(image.element(), "avatar preview");
-  expect(thumbnail.getBoundingClientRect().width).toBe(24);
-});
-
-test("binary preview grid lifecycle matches its visual baseline", async () => {
-  const pngBytes = decodeBase64Bytes(ONE_PIXEL_PNG_BASE64);
-  const svgBytes = new TextEncoder().encode(PREVIEW_SVG);
-  const pdfBytes = new TextEncoder().encode("%PDF-1.7");
-  render(
-    <ScreenshotFrame>
-      <section className="w-[960px] rounded-xl border bg-background p-5">
-        <h2 className="font-semibold text-base">Binary grid previews</h2>
-        <p className="mt-1 text-muted-foreground text-sm">
-          Explicit loading keeps large values out of the grid until requested.
-        </p>
-        <div className="mt-5 grid grid-cols-5 gap-3">
-          {[
-            {
-              cell: createBinaryCell(new Uint8Array([0x48, 0x69])),
-              column: createBinaryColumn("raw"),
-              label: "Ready",
-            },
-            {
-              cell: createBinaryCell(pngBytes),
-              column: createBinaryColumn("avatar"),
-              label: "Raster",
-            },
-            {
-              cell: createBinaryCell(svgBytes),
-              column: createBinaryColumn("vector"),
-              label: "Sanitized SVG",
-            },
-            {
-              cell: createBinaryCell(pdfBytes),
-              column: createBinaryColumn("document"),
-              label: "Detected media",
-            },
-            {
-              cell: createTruncatedBinaryCell("failed-payload", 8192n),
-              column: createBinaryColumn("failed"),
-              label: "Retry",
-            },
-          ].map(({ cell, column, label }) => (
-            <div className="min-w-0" key={column.columnName}>
-              <p className="mb-1.5 font-medium text-xs">{label}</p>
-              <div className="flex h-10 min-w-0 items-center rounded-md border bg-muted/30 px-2">
-                <DataCell
-                  cell={cell}
-                  column={column}
-                  tableName={BINARY_TABLE_NAME}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    </ScreenshotFrame>
-  );
-
-  await page
-    .getByRole("button", { name: "Preview avatar binary data" })
-    .click();
-  await page
-    .getByRole("button", { name: "Preview vector binary data" })
-    .click();
-  await page
-    .getByRole("button", { name: "Preview document binary data" })
-    .click();
-  await page
-    .getByRole("button", { name: "Preview failed binary data" })
-    .click();
-
-  const avatar = page.getByRole("img", { name: "avatar preview" });
-  const vector = page.getByRole("img", { name: "vector preview" });
-  await expect.element(avatar).toBeVisible();
-  await expect.element(vector).toBeVisible();
-  await decodeImageElement(avatar.element(), "avatar preview");
-  await decodeImageElement(vector.element(), "vector preview");
-  await expect.element(page.getByText("PDF document")).toBeVisible();
-  await expect
-    .element(page.getByRole("button", { name: "Preview failed binary data" }))
-    .toHaveTextContent("Retry");
-
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "binary-preview-grid-lifecycle"
-  );
 });
 
 test("binary preview details match their visual baseline", async () => {
@@ -445,7 +301,6 @@ test("custom audio controls match their visual baseline", async () => {
           <BinaryFilePreview
             bytes={createSilentWavBytes()}
             columnName="recording"
-            variant="detail"
           />
         </div>
       </section>
