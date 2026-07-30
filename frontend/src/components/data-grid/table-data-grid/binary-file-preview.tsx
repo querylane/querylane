@@ -1,5 +1,6 @@
 import DomPurify, { type Config } from "dompurify";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { AudioPlayer } from "@/components/ui/audio-player";
 import type { BinaryFileMetadata } from "@/features/data-explorer/table-data/binary-file";
 import {
   detectBinaryFile,
@@ -172,7 +173,7 @@ function PdfPreviewObject({
   );
 }
 
-function NativeAudioPreview({
+function AudioPreview({
   columnName,
   file,
   objectUrl,
@@ -185,19 +186,12 @@ function NativeAudioPreview({
     return <BinaryMediaLoadingStatus label={file.label} />;
   }
   return (
-    <audio
-      aria-label={`${columnName} audio preview`}
-      className="min-h-14 w-full"
-      controls={true}
-      preload="metadata"
-    >
-      <source src={objectUrl} type={file.mimeType} />
-      <track kind="captions" label="No captions supplied" srcLang="en" />
-      <p className="p-3 text-muted-foreground text-sm">
-        This browser couldn’t play the {file.label.toLowerCase()}. Download the
-        value instead.
-      </p>
-    </audio>
+    <AudioPlayer
+      key={objectUrl}
+      label={columnName}
+      mimeType={file.mimeType}
+      src={objectUrl}
+    />
   );
 }
 
@@ -310,7 +304,7 @@ function DetailBinaryFilePreview({
       break;
     case "audio":
       preview = (
-        <NativeAudioPreview
+        <AudioPreview
           columnName={columnName}
           file={file}
           objectUrl={objectUrl}

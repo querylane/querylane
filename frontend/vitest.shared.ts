@@ -35,6 +35,7 @@ export const VITEST_BROWSER_OPTIMIZE_DEPS = [
   "@base-ui/react/progress",
   "@base-ui/react/select",
   "@base-ui/react/separator",
+  "@base-ui/react/slider",
   "@base-ui/react/switch",
   "@base-ui/react/tabs",
   "@base-ui/react/tooltip",

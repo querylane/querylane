@@ -213,7 +213,6 @@ describe("test harness config", () => {
       "pagination.tsx",
       "radio-group.tsx",
       "scroll-area.tsx",
-      "slider.tsx",
       "toggle-group.tsx",
       "toggle.tsx",
     ];
