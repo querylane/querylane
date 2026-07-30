@@ -88,9 +88,11 @@ describe("test harness config", () => {
       height: 1000,
       width: 1280,
     });
-    expect(getAllowWrite(browserLightConfig.test?.api)).toBe(
-      getAllowWrite(browserLightConfig.test?.browser?.api)
-    );
+    expect(getAllowWrite(browserLightConfig.test?.api)).toBe(true);
+    expect(browserLightConfig.test?.api).toMatchObject({
+      host: "127.0.0.1",
+    });
+    expect(browserLightConfig.test?.browser).not.toHaveProperty("api");
     const comparatorOptions =
       browserLightConfig.test?.browser?.expect?.toMatchScreenshot
         ?.comparatorOptions;
@@ -145,12 +147,15 @@ describe("test harness config", () => {
     ]);
   });
 
-  test("prebundles direct browser-test dependencies", () => {
+  test("prebundles browser dependencies without late discovery", () => {
+    expect(browserLightConfig.optimizeDeps?.noDiscovery).toBe(true);
     expect([...VITEST_BROWSER_OPTIMIZE_DEPS]).toEqual(
       expect.arrayContaining([
         "lucide-react",
         "react",
         "react-dom",
+        "react/jsx-dev-runtime",
+        "react/jsx-runtime",
         "vitest-browser-react",
       ])
     );
