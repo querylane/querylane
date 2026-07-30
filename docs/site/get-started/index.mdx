@@ -36,6 +36,61 @@ Open `http://localhost:8080`. A fresh container has no metadata database configu
 `docker run --rm` removes the container when it stops, and the quick start hard-codes credentials. Use them for evaluation, not a durable deployment.
 :::
 
+Tagged releases produced by the release pipeline also include self-contained binaries. Until the first binary release is available, use the Docker preview to evaluate the product and pin its digest anywhere repeatability matters.
+
+## Download a release binary
+
+Each tagged binary release includes the compiled web application and needs no separate frontend runtime. Open [Querylane releases](https://github.com/querylane/querylane/releases), choose a version, and select the archive for your system:
+
+| System | Archive suffix |
+| --- | --- |
+| Apple silicon macOS | `darwin_arm64.tar.gz` |
+| Intel macOS | `darwin_amd64.tar.gz` |
+| ARM64 Linux | `linux_arm64.tar.gz` |
+| AMD64 Linux | `linux_amd64.tar.gz` |
+| AMD64 Windows | `windows_amd64.zip` |
+
+On macOS or Linux, replace `1.2.3` below with the release version:
+
+```sh
+set -eu
+
+version="1.2.3"
+
+case "$(uname -s):$(uname -m)" in
+  Darwin:arm64) target="darwin_arm64" ;;
+  Darwin:x86_64) target="darwin_amd64" ;;
+  Linux:aarch64 | Linux:arm64) target="linux_arm64" ;;
+  Linux:x86_64) target="linux_amd64" ;;
+  *) echo "Unsupported system: $(uname -s) $(uname -m)" >&2; exit 1 ;;
+esac
+
+archive="querylane_${version}_${target}.tar.gz"
+release_url="https://github.com/querylane/querylane/releases/download/v${version}"
+curl --fail --location --remote-name "${release_url}/${archive}"
+curl --fail --location --remote-name "${release_url}/checksums.txt"
+
+checksum_line="$(awk -v archive="$archive" '$2 == archive { print }' checksums.txt)"
+if [ -z "$checksum_line" ]; then
+  echo "No checksum found for $archive" >&2
+  exit 1
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+  printf '%s\n' "$checksum_line" | sha256sum --check
+else
+  printf '%s\n' "$checksum_line" | shasum --algorithm 256 --check
+fi
+
+tar --extract --gzip --file "$archive"
+mkdir -p "$HOME/.local/bin"
+install -m 0755 querylane "$HOME/.local/bin/querylane"
+"$HOME/.local/bin/querylane" --version
+"$HOME/.local/bin/querylane" server start --host 127.0.0.1
+```
+
+Add `$HOME/.local/bin` to `PATH` if you want to run `querylane` without its full path. Windows users can verify the downloaded ZIP against `checksums.txt`, extract `querylane.exe`, and place it on `PATH`.
+
 ## 2. Configure Querylane storage
 
 The wizard configures **Querylane's metadata database**. This is separate from the PostgreSQL instance you want Querylane to inspect.
