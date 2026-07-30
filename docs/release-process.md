@@ -31,6 +31,8 @@ compiled frontend.
    stable Docker images.
 2. It does not publish npm packages.
 3. It does not deploy to Vercel.
+4. It does not publish a Homebrew tap or formula. Homebrew publishing remains
+   disabled until the tap repository and its scoped credential exist.
 
 ## Version source of truth
 
@@ -60,6 +62,26 @@ the documentation site in `dist/`.
 
 Plain `go install` is unsupported because it does not run the frontend build
 required by the `embed_frontend` build tag.
+
+### Validate the prepared Homebrew formula
+
+After building a snapshot, validate the unpublished formula through a local git
+tap:
+
+```sh
+bash scripts/validate-homebrew-formula.sh
+```
+
+The validator generates `.context/homebrew-tap/Formula/querylane.rb` from
+GoReleaser's checksums, serves the archives only on loopback, and checks formula
+style, installation, version output, service metadata, and server startup. It
+then removes the Homebrew installation and tap while leaving the local
+`.context/homebrew-tap` repository for inspection.
+
+The generated formula supports macOS and Linux on AMD64 and ARM64. Its service
+binds Querylane to `127.0.0.1` and uses Homebrew-managed working and log
+directories. Release artifact CI runs this validation on both macOS and Linux.
+No token, remote repository, or publication step is part of this validation.
 
 ## Rerun artifact publishing
 

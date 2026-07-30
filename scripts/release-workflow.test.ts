@@ -194,11 +194,13 @@ test("preserves Changesets notes in automatic and manual recovery paths", async 
 });
 
 test("serializes same-tag publishing and validates artifacts for every PR", async () => {
-	const [publisher, validation, goreleaser] = await Promise.all([
-		read(".github/workflows/_release-artifacts.yml"),
-		read(".github/workflows/release-artifacts-ci.yml"),
-		read(".goreleaser.yaml"),
-	]);
+	const [publisher, validation, goreleaser, homebrewValidator] =
+		await Promise.all([
+			read(".github/workflows/_release-artifacts.yml"),
+			read(".github/workflows/release-artifacts-ci.yml"),
+			read(".goreleaser.yaml"),
+			read("scripts/validate-homebrew-formula.sh"),
+		]);
 
 	expect(publisher).toContain(
 		`group: release-artifacts-${actionsExpression("inputs.tag")}`,
@@ -209,8 +211,20 @@ test("serializes same-tag publishing and validates artifacts for every PR", asyn
 	expect(validation).not.toMatch(/^ {4}paths:/mu);
 	expect(validation).toContain("paths-ignore:");
 	expect(validation).toContain(
-		"bun test scripts/extract-release-notes.test.ts scripts/release-workflow.test.ts",
+		"bun test scripts/extract-release-notes.test.ts scripts/generate-homebrew-formula.test.ts scripts/release-workflow.test.ts",
 	);
+	expect(validation).toContain("os: [ubuntu-latest, macos-latest]");
+	expect(validation).toContain(`runs-on: ${actionsExpression("matrix.os")}`);
+	expect(validation).toContain("bash scripts/validate-homebrew-formula.sh");
+	expect(
+		homebrewValidator.match(/brew style querylane\/tap\/querylane/gu),
+	).toHaveLength(2);
+	expect(homebrewValidator).toContain(
+		"brew info querylane/tap/querylane --json=v2",
+	);
+	expect(homebrewValidator).not.toContain("brew services info");
+	expect(publisher).not.toContain("TAP_GITHUB_TOKEN");
+	expect(publisher).not.toContain("homebrew-tap");
 });
 
 test("stamps one build-info source used by the CLI and Console", async () => {

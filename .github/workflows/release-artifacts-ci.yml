@@ -22,10 +22,14 @@ permissions:
 
 jobs:
   validate:
-    name: Validate release artifacts
+    name: Validate release artifacts (${{ matrix.os }})
     if: github.event.pull_request.draft != true
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.0
@@ -45,7 +49,7 @@ jobs:
           bun-version: *bun_version
 
       - name: Test release workflows
-        run: bun test scripts/extract-release-notes.test.ts scripts/release-workflow.test.ts
+        run: bun test scripts/extract-release-notes.test.ts scripts/generate-homebrew-formula.test.ts scripts/release-workflow.test.ts
 
       - name: Build snapshot
         uses: goreleaser/goreleaser-action@v7.2.3
@@ -60,20 +64,43 @@ jobs:
           set -euo pipefail
 
           version="$(jq -r .version .build/goreleaser/metadata.json)"
-          mapfile -t archives < <(find .build/goreleaser -maxdepth 1 \( -name '*.tar.gz' -o -name '*.zip' \) -print)
-          if [ "${#archives[@]}" -ne 5 ]; then
-            echo "::error::Expected 5 release archives, found ${#archives[@]}"
+          archive_count="$(
+            find .build/goreleaser -maxdepth 1 \
+              \( -name '*.tar.gz' -o -name '*.zip' \) -print |
+              wc -l |
+              tr -d '[:space:]'
+          )"
+          if [ "$archive_count" -ne 5 ]; then
+            echo "::error::Expected 5 release archives, found $archive_count"
             exit 1
           fi
 
-          (cd .build/goreleaser && sha256sum --check checksums.txt)
+          if command -v sha256sum >/dev/null 2>&1; then
+            (cd .build/goreleaser && sha256sum --check checksums.txt)
+          else
+            (cd .build/goreleaser && shasum --algorithm 256 --check checksums.txt)
+          fi
+
+          case "$(uname -s):$(uname -m)" in
+            Darwin:arm64) target="darwin_arm64" ;;
+            Darwin:x86_64) target="darwin_amd64" ;;
+            Linux:aarch64 | Linux:arm64) target="linux_arm64" ;;
+            Linux:x86_64) target="linux_amd64" ;;
+            *)
+              echo "::error::Unsupported runner: $(uname -s) $(uname -m)"
+              exit 1
+              ;;
+          esac
 
           extract_dir="$(mktemp -d)"
-          trap 'rm -rf "$extract_dir"' EXIT
-          tar -xzf ".build/goreleaser/querylane_${version}_linux_amd64.tar.gz" -C "$extract_dir"
+          trap 'rm -r "$extract_dir"' EXIT
+          tar -xzf ".build/goreleaser/querylane_${version}_${target}.tar.gz" -C "$extract_dir"
 
           actual_version="$("$extract_dir/querylane" --version)"
           if [ "$actual_version" != "$version" ]; then
             echo "::error::Expected querylane --version to print $version, got $actual_version"
             exit 1
           fi
+
+      - name: Validate local Homebrew formula
+        run: bash scripts/validate-homebrew-formula.sh
