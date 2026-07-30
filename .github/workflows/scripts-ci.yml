@@ -13,6 +13,7 @@ on:
       - bun.lock
       - docs/release-process.md
       - package.json
+      - scripts/**/*.sh
       - scripts/**/*.ts
       - tsconfig.scripts.json
 
@@ -44,3 +45,6 @@ jobs:
 
       - name: Check scripts
         run: bun run scripts:check
+
+      - name: Lint release shell scripts
+        run: shellcheck scripts/build-frontend-for-embed.sh scripts/is-latest-release.sh scripts/resolve-release-state.sh scripts/validate-homebrew-formula.sh

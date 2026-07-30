@@ -23,6 +23,7 @@ __debug_bin*
 /node_modules
 /.blume
 .blume-verify/
+/.context/
 /dist
 .codex/*
 !.codex/README.md
