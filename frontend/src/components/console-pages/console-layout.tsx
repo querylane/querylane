@@ -146,9 +146,7 @@ export function InstanceStatItem({
           ) : null}
         </div>
         {renderTrend ? (
-          <div aria-hidden="true" className="ml-auto h-7 w-20 shrink-0">
-            {renderTrend()}
-          </div>
+          <div className="ml-auto h-7 w-20 shrink-0">{renderTrend()}</div>
         ) : null}
       </div>
       {progress === undefined ? null : (

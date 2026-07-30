@@ -24,6 +24,8 @@ import { type ChartTickBase, niceAxisTicks } from "@/lib/chart-scale";
 import { buildTimeTicks, formatTimeTick } from "@/lib/chart-time";
 
 interface MetricTimeChartProps {
+  /** Disables Recharts keyboard semantics when the chart is a button preview. */
+  accessibilityLayer?: boolean | undefined;
   data: ChartRow[];
   /**
    * Pins the x-axis to a fixed window (epoch ms) so sparse data reads
@@ -209,6 +211,7 @@ function MetricArea({
  * stay visible. This module is intentionally heavy (Recharts) and lazy-loaded.
  */
 function MetricTimeChart({
+  accessibilityLayer = true,
   data,
   domain,
   formatDetailedValue,
@@ -251,6 +254,7 @@ function MetricTimeChart({
       showLegend={showLegend}
     >
       <AreaChart
+        accessibilityLayer={accessibilityLayer}
         data={data}
         margin={yAxisMode === "inset" ? INSET_CHART_MARGIN : CHART_MARGIN}
         {...(syncId === undefined
