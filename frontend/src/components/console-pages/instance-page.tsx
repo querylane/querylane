@@ -358,7 +358,6 @@ function StatSparkline({
           seriesKey="value"
         />
       }
-      previewClassName="pr-5"
       series={[
         {
           color,

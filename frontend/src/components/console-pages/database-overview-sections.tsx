@@ -199,7 +199,6 @@ function DatabaseMetricTrend({
       }
       formatValue={(value) => formatMetricValue(value, series.unit)}
       preview={<TrendSparkline values={values} />}
-      previewClassName="pr-5"
       series={[
         {
           color: color.color,

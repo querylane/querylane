@@ -1072,6 +1072,33 @@ function cardRect(label: string) {
   return card.getBoundingClientRect();
 }
 
+async function expandControlGeometry(trigger: Element) {
+  const preview = trigger.querySelector(
+    ':scope > [data-slot="expand-chart-preview"]'
+  );
+  const icon = trigger.querySelector(
+    ':scope > [data-slot="expand-chart-icon"]'
+  );
+  if (!(preview instanceof HTMLElement && icon instanceof SVGElement)) {
+    throw new Error("Expected chart preview and expand icon");
+  }
+
+  await vi.waitFor(() => {
+    if (!(preview.querySelector("svg") instanceof SVGElement)) {
+      throw new Error("Expected chart SVG");
+    }
+  });
+  const chart = preview.querySelector("svg");
+  if (!(chart instanceof SVGElement)) {
+    throw new Error("Expected chart SVG after loading");
+  }
+
+  return {
+    chartRight: chart.getBoundingClientRect().right,
+    iconLeft: icon.getBoundingClientRect().left,
+  };
+}
+
 async function openQueryInsightsDrawer(
   queryInsights: GetDatabaseQueryInsightsResponse
 ) {
@@ -1168,6 +1195,45 @@ test("expanded instance overview metric matches the desktop layout", async () =>
   await expect.element(dialog).toBeVisible();
   await expect(dialog).toMatchScreenshot(
     "backend-instance-overview-metric-expanded"
+  );
+});
+
+test("instance overview expand control stays outside the chart preview", async () => {
+  state.instanceQuery = { data: instanceResponse() };
+  state.overviewQuery = { data: overviewResponse() };
+  state.instanceMetricsQuery = { data: overviewMetricsResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendInstancePage instanceId="prod" section="overview" />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  const trigger = page.getByRole("button", {
+    name: "Expand Transactions metrics",
+  });
+  await expect.element(trigger).toBeVisible();
+  const mainGeometry = await expandControlGeometry(trigger.element());
+  expect
+    .soft(mainGeometry.chartRight)
+    .toBeLessThanOrEqual(mainGeometry.iconLeft);
+  await expect(trigger).toMatchScreenshot(
+    "backend-instance-overview-chart-expand-trigger"
+  );
+
+  const summaryTrigger = page.getByRole("button", {
+    name: "Expand Connections trend",
+  });
+  await expect.element(summaryTrigger).toBeVisible();
+  const summaryGeometry = await expandControlGeometry(summaryTrigger.element());
+  expect
+    .soft(summaryGeometry.chartRight)
+    .toBeLessThanOrEqual(summaryGeometry.iconLeft);
+  await summaryTrigger.hover();
+  await expect(summaryTrigger).toMatchScreenshot(
+    "backend-instance-overview-summary-expand-trigger"
   );
 });
 
@@ -1533,6 +1599,35 @@ test("expanded database overview trend matches the desktop layout", async () => 
   await expect.element(dialog.getByText("0 B")).not.toBeInTheDocument();
   await expect(dialog).toMatchScreenshot(
     "backend-database-overview-size-expanded"
+  );
+});
+
+test("database overview expand control stays outside the sparkline", async () => {
+  state.databaseQuery = { data: databaseResponse() };
+  state.catalogQuery = { data: catalogResult() };
+  state.databaseMetricsQuery = { data: overviewMetricsResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendDatabasePage
+          databaseId="customer-events"
+          instanceId="prod"
+          section="overview"
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  const trigger = page.getByRole("button", {
+    name: "Expand Total size trend",
+  });
+  await expect.element(trigger).toBeVisible();
+  const geometry = await expandControlGeometry(trigger.element());
+  expect.soft(geometry.chartRight).toBeLessThanOrEqual(geometry.iconLeft);
+  await trigger.hover();
+  await expect(trigger).toMatchScreenshot(
+    "backend-database-overview-expand-trigger"
   );
 });
 

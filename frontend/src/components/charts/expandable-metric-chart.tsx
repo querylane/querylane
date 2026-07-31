@@ -14,7 +14,6 @@ import { cn } from "@/lib/utils";
 
 type ExpandableMetricChartProps = ComponentProps<typeof MetricChart> & {
   preview?: ReactNode;
-  previewClassName?: string | undefined;
   title: string;
   triggerClassName?: string | undefined;
 };
@@ -25,7 +24,6 @@ type ExpandableMetricChartProps = ComponentProps<typeof MetricChart> & {
  */
 function ExpandableMetricChart({
   preview,
-  previewClassName,
   title,
   triggerClassName,
   ...chartProps
@@ -38,18 +36,25 @@ function ExpandableMetricChart({
         render={
           <Button
             aria-label={`Expand ${title}`}
-            className={cn("relative overflow-hidden", triggerClassName)}
+            className={cn(
+              "items-stretch gap-0 overflow-hidden p-0",
+              triggerClassName
+            )}
             type="button"
             variant="ghost"
           >
-            <span className={cn("size-full min-w-0", previewClassName)}>
+            <span
+              className="h-full min-w-0 flex-1 overflow-hidden [&_svg]:max-w-full"
+              data-slot="expand-chart-preview"
+            >
               {preview ?? (
                 <MetricChart {...chartProps} accessibilityLayer={false} />
               )}
             </span>
             <Maximize2
               aria-hidden="true"
-              className="absolute top-2 right-2 size-3.5 text-muted-foreground"
+              className="mx-1 mt-2 size-3.5 self-start text-muted-foreground"
+              data-slot="expand-chart-icon"
             />
           </Button>
         }
