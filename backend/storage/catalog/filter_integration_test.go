@@ -42,12 +42,12 @@ func TestIntegrationCatalogListNameContainsFilterIsCaseInsensitive(t *testing.T)
 		{InstanceID: "inst", DatabaseName: "db", SchemaName: "public", Name: "daily_totals", DisplayName: "daily_totals", ViewType: int32(consolev1alpha1.View_VIEW_TYPE_STANDARD), Owner: "owner", SyncedAt: now},
 	}))
 
-	params := aip.Params{PageSize: 10, Filter: "name.contains('inv')", OrderBy: "name asc"}
+	params := aip.Params{PageSize: 10, Filter: `name:"inv"`, OrderBy: "name asc"}
 	databases, _, err := repo.ListDatabases(ctx, "inst", params)
 	require.NoError(t, err)
 	require.Equal(t, []string{"Inventory"}, namesOfDatabases(databases))
 
-	schemas, _, err := repo.ListSchemas(ctx, "inst", "db", aip.Params{PageSize: 10, Filter: "name.contains('aud')", OrderBy: "name asc"})
+	schemas, _, err := repo.ListSchemas(ctx, "inst", "db", aip.Params{PageSize: 10, Filter: `name:"aud"`, OrderBy: "name asc"})
 	require.NoError(t, err)
 	require.Equal(t, []string{"Audit"}, namesOfSchemas(schemas))
 
@@ -118,8 +118,8 @@ func TestIntegrationCatalogListAIPFilterGrammar(t *testing.T) {
 	_, _, err = repo.ListDatabases(ctx, "inst", aip.Params{PageSize: 10, Filter: `nope = "x"`})
 	require.ErrorIs(t, err, aip.ErrInvalidFilter)
 
-	// Legacy malformed escapes now surface from the engine with the same sentinel.
-	_, _, err = repo.ListDatabases(ctx, "inst", aip.Params{PageSize: 10, Filter: `name.contains('abc\')`})
+	// The current UI emits canonical filters, so the legacy function spelling is rejected.
+	_, _, err = repo.ListDatabases(ctx, "inst", aip.Params{PageSize: 10, Filter: `name.contains('abc')`})
 	require.ErrorIs(t, err, aip.ErrInvalidFilter)
 }
 
