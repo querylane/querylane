@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -62,9 +63,17 @@ function ExpandableMetricChart({
       <DialogContent className="!flex !max-w-none sm:!max-w-[calc(100vw-2rem)] h-dvh max-h-dvh w-full flex-col gap-2 overflow-hidden rounded-none p-2 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:gap-3 sm:rounded-xl sm:p-4 [&_[data-slot=dialog-close]]:top-2 [&_[data-slot=dialog-close]]:right-2 sm:[&_[data-slot=dialog-close]]:top-4 sm:[&_[data-slot=dialog-close]]:right-4">
         <DialogHeader className="min-h-8 shrink-0 justify-center pr-10 sm:min-h-0">
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="text-xs">
+            Drag horizontally across the plot to zoom.
+          </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1">
-          <MetricChart {...chartProps} compact={isMobile} yAxisScale="data" />
+          <MetricChart
+            {...chartProps}
+            compact={isMobile}
+            yAxisScale="data"
+            zoomable={true}
+          />
         </div>
       </DialogContent>
     </Dialog>

@@ -1,8 +1,15 @@
-import { useId } from "react";
+import { RotateCcw } from "lucide-react";
+import {
+  type PointerEvent as ReactPointerEvent,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import {
   Area,
   AreaChart,
   CartesianGrid,
+  ReferenceArea,
   ReferenceLine,
   Tooltip,
   XAxis,
@@ -20,6 +27,8 @@ import type {
   MetricTimeChartVariant,
 } from "@/components/charts/chart-context";
 import { ChartTooltipContent } from "@/components/charts/chart-tooltip";
+import { selectedDataDomain } from "@/components/charts/chart-zoom";
+import { Button } from "@/components/ui/button";
 import {
   type ChartTickBase,
   niceAxisRangeTicks,
@@ -74,6 +83,8 @@ interface MetricTimeChartProps {
    * formatter would render as "48,8 KB". Defaults to decimal steps.
    */
   yTickBase?: ChartTickBase | undefined;
+  /** Enables horizontal drag selection that focuses the chart on a subset. */
+  zoomable?: boolean | undefined;
 }
 
 const CHART_MARGIN = { bottom: 4, left: 8, right: 8, top: 8 };
@@ -103,6 +114,14 @@ const DASHED_STROKE_WIDTH = 1.5;
 const DASHED_STROKE_OPACITY = 0.55;
 /** Fixed-yDomain axes divide into quarters: 0 / 25 / 50 / 75 / 100%. */
 const Y_DOMAIN_SEGMENTS = 4;
+const MIN_ZOOM_DRAG_PX = 8;
+
+interface ChartDragSelection {
+  currentMs: number;
+  pointerId: number;
+  startClientX: number;
+  startMs: number;
+}
 
 interface MetricChartLayout {
   axisMode: "gutter" | "inset";
@@ -150,6 +169,53 @@ function extentOf(data: ChartRow[]): [number, number] {
   const first = data[0]?.time ?? 0;
   const last = data.at(-1)?.time ?? first;
   return [first, last];
+}
+
+function plotBounds(container: HTMLElement): DOMRect | null {
+  const chart = container.querySelector(".recharts-wrapper");
+  if (!(chart instanceof HTMLElement)) {
+    return null;
+  }
+
+  const chartBounds = chart.getBoundingClientRect();
+  const gridLine = chart.querySelector(
+    ".recharts-cartesian-grid-horizontal line"
+  );
+  const surface = chart.querySelector("svg.recharts-surface");
+  if (!(gridLine instanceof SVGElement && surface instanceof SVGElement)) {
+    return chartBounds;
+  }
+
+  const x1 = Number(gridLine.getAttribute("x1"));
+  const x2 = Number(gridLine.getAttribute("x2"));
+  if (!(Number.isFinite(x1) && Number.isFinite(x2) && x2 > x1)) {
+    return chartBounds;
+  }
+
+  const surfaceBounds = surface.getBoundingClientRect();
+  return new DOMRect(
+    surfaceBounds.left + x1,
+    chartBounds.top,
+    x2 - x1,
+    chartBounds.height
+  );
+}
+
+function timeAtPointer(
+  container: HTMLElement,
+  clientX: number,
+  [minMs, maxMs]: [number, number]
+): number | null {
+  const bounds = plotBounds(container);
+  if (!(bounds && bounds.width > 0)) {
+    return null;
+  }
+
+  const ratio = Math.min(
+    1,
+    Math.max(0, (clientX - bounds.left) / bounds.width)
+  );
+  return minMs + (maxMs - minMs) * ratio;
 }
 
 /** A row's largest y-value: the stack sum in stacked mode, else the max. */
@@ -415,9 +481,19 @@ function MetricTimeChart({
   yAxisScale = "zero",
   yDomain,
   yTickBase = 10,
+  zoomable = false,
 }: MetricTimeChartProps) {
   const gradientId = useId().replaceAll(":", "");
-  const [minMs, maxMs] = domain ?? extentOf(data);
+  const dragSelectionRef = useRef<ChartDragSelection | null>(null);
+  const [dragSelection, setDragSelection] = useState<ChartDragSelection | null>(
+    null
+  );
+  const [zoomDomain, setZoomDomain] = useState<[number, number] | null>(null);
+  const fullDomain = domain ?? extentOf(data);
+  const [minMs, maxMs] = zoomDomain ?? fullDomain;
+  const visibleData = zoomDomain
+    ? data.filter((row) => row.time >= minMs && row.time <= maxMs)
+    : data;
   const spanMs = maxMs - minMs;
   const layout = metricChartLayout({ compact, showLegend, yAxisMode });
   const ticks = buildTimeTicks(minMs, maxMs, layout.maxTimeTicks);
@@ -426,8 +502,9 @@ function MetricTimeChart({
   const solidSeriesCount = series.filter((item) => !item.dashed).length;
   const drawMode = resolveVariant(variant, solidSeriesCount);
   const hasGradientFill = drawMode === "area";
+  const selectionColor = series[0]?.color ?? "var(--color-chart-1)";
   const resolvedValueAxisScale = resolveValueAxisScale({
-    data,
+    data: visibleData,
     drawMode,
     formatValue,
     layout,
@@ -438,19 +515,133 @@ function MetricTimeChart({
     yTickBase,
   });
 
+  function startZoomSelection(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!(zoomable && event.button === 0)) {
+      return;
+    }
+    const { target } = event;
+    if (!(target instanceof Element && target.closest(".recharts-wrapper"))) {
+      return;
+    }
+
+    const startMs = timeAtPointer(event.currentTarget, event.clientX, [
+      minMs,
+      maxMs,
+    ]);
+    if (startMs === null) {
+      return;
+    }
+
+    const selection = {
+      currentMs: startMs,
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startMs,
+    };
+    dragSelectionRef.current = selection;
+    setDragSelection(selection);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function updateZoomSelection(event: ReactPointerEvent<HTMLDivElement>) {
+    const selection = dragSelectionRef.current;
+    if (!(selection && selection.pointerId === event.pointerId)) {
+      return;
+    }
+
+    const currentMs = timeAtPointer(event.currentTarget, event.clientX, [
+      minMs,
+      maxMs,
+    ]);
+    if (currentMs === null) {
+      return;
+    }
+
+    const nextSelection = { ...selection, currentMs };
+    dragSelectionRef.current = nextSelection;
+    setDragSelection(nextSelection);
+    event.preventDefault();
+  }
+
+  function finishZoomSelection(event: ReactPointerEvent<HTMLDivElement>) {
+    const selection = dragSelectionRef.current;
+    if (!(selection && selection.pointerId === event.pointerId)) {
+      return;
+    }
+
+    const currentMs = timeAtPointer(event.currentTarget, event.clientX, [
+      minMs,
+      maxMs,
+    ]);
+    dragSelectionRef.current = null;
+    setDragSelection(null);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (
+      currentMs === null ||
+      Math.abs(event.clientX - selection.startClientX) < MIN_ZOOM_DRAG_PX
+    ) {
+      return;
+    }
+
+    const selectedDomain = selectedDataDomain({
+      data: visibleData,
+      firstMs: selection.startMs,
+      secondMs: currentMs,
+      series,
+    });
+    if (selectedDomain) {
+      setZoomDomain(selectedDomain);
+    }
+  }
+
+  function cancelZoomSelection(event: ReactPointerEvent<HTMLDivElement>) {
+    if (dragSelectionRef.current?.pointerId !== event.pointerId) {
+      return;
+    }
+    dragSelectionRef.current = null;
+    setDragSelection(null);
+  }
+
   return (
     <ChartContainer
-      className="cursor-crosshair"
+      className={zoomable ? "cursor-crosshair touch-none" : "cursor-crosshair"}
+      controls={
+        zoomDomain ? (
+          <>
+            <Button
+              aria-label="Reset zoom"
+              className="absolute top-2 left-2 z-10 bg-background/90 shadow-sm backdrop-blur-sm"
+              onClick={() => setZoomDomain(null)}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <RotateCcw aria-hidden="true" />
+              Reset zoom
+            </Button>
+            <p aria-live="polite" className="sr-only" role="status">
+              Chart zoomed. Reset zoom to show the full range.
+            </p>
+          </>
+        ) : null
+      }
       formatDetailedValue={formatDetailedValue}
       formatValue={formatValue}
       insetValueAxis={layout.axisMode === "inset"}
       isRefreshing={isRefreshing}
+      onPointerCancel={cancelZoomSelection}
+      onPointerDown={startZoomSelection}
+      onPointerMove={updateZoomSelection}
+      onPointerUp={finishZoomSelection}
       series={series}
       showLegend={layout.showLegend}
     >
       <AreaChart
         accessibilityLayer={accessibilityLayer}
-        data={data}
+        data={visibleData}
         margin={layout.axisMode === "inset" ? INSET_CHART_MARGIN : CHART_MARGIN}
         {...(syncId === undefined
           ? {}
@@ -529,6 +720,17 @@ function MetricTimeChart({
             key={item.key}
           />
         ))}
+        {dragSelection ? (
+          <ReferenceArea
+            fill={selectionColor}
+            fillOpacity={0.2}
+            ifOverflow="hidden"
+            stroke={selectionColor}
+            strokeOpacity={0.8}
+            x1={dragSelection.startMs}
+            x2={dragSelection.currentMs}
+          />
+        ) : null}
         {/* Declared AFTER the series: Recharts paints in JSX order, and inset
             labels live inside the plot, so the axis must sit on top of the
             data (its surface halo then punches out whatever runs beneath).

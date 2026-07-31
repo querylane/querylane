@@ -1099,6 +1099,44 @@ async function expandControlGeometry(trigger: Element) {
   };
 }
 
+function startChartRangeDrag(
+  dialog: Element,
+  {
+    endRatio = 0.7,
+    pointerType = "mouse",
+    startRatio = 0.25,
+  }: {
+    endRatio?: number;
+    pointerType?: "mouse" | "touch";
+    startRatio?: number;
+  } = {}
+) {
+  const chart = dialog.querySelector('[role="application"]');
+  const wrapper = chart?.closest(".recharts-wrapper");
+  if (!(chart instanceof SVGElement && wrapper instanceof HTMLElement)) {
+    throw new Error("Expected expanded Recharts plot");
+  }
+
+  const bounds = wrapper.getBoundingClientRect();
+  const clientY = bounds.top + bounds.height / 2;
+  const dispatchPointer = (type: string, ratio: number) => {
+    chart.dispatchEvent(
+      new PointerEvent(type, {
+        bubbles: true,
+        button: 0,
+        clientX: bounds.left + bounds.width * ratio,
+        clientY,
+        pointerId: 1,
+        pointerType,
+      })
+    );
+  };
+
+  dispatchPointer("pointerdown", startRatio);
+  dispatchPointer("pointermove", endRatio);
+  return () => dispatchPointer("pointerup", endRatio);
+}
+
 async function openQueryInsightsDrawer(
   queryInsights: GetDatabaseQueryInsightsResponse
 ) {
@@ -1196,6 +1234,53 @@ test("expanded instance overview metric matches the desktop layout", async () =>
   await expect(dialog).toMatchScreenshot(
     "backend-instance-overview-metric-expanded"
   );
+});
+
+test("expanded instance overview metric zooms to a dragged range", async () => {
+  state.instanceQuery = { data: instanceResponse() };
+  state.overviewQuery = { data: overviewResponse() };
+  state.instanceMetricsQuery = { data: overviewMetricsResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendInstancePage instanceId="prod" section="overview" />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await page
+    .getByRole("button", { name: "Expand Transactions metrics" })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "Transactions metrics" });
+  await expect.element(dialog).toBeVisible();
+
+  const finishDrag = startChartRangeDrag(dialog.element());
+  await vi.waitFor(() => {
+    if (
+      !(
+        dialog.element().querySelector(".recharts-reference-area") instanceof
+        SVGElement
+      )
+    ) {
+      throw new Error("Expected zoom selection overlay");
+    }
+  });
+  await expect(dialog).toMatchScreenshot(
+    "backend-instance-overview-metric-selecting"
+  );
+  finishDrag();
+
+  const resetZoom = dialog.getByRole("button", { name: "Reset zoom" });
+  await expect.element(resetZoom).toBeVisible();
+  await expect
+    .element(dialog.getByRole("status"))
+    .toHaveTextContent("Chart zoomed. Reset zoom to show the full range.");
+  await expect(dialog).toMatchScreenshot(
+    "backend-instance-overview-metric-zoomed"
+  );
+  await resetZoom.click();
+  await expect.element(resetZoom).not.toBeInTheDocument();
 });
 
 test("instance overview expand control stays outside the chart preview", async () => {
@@ -1602,6 +1687,40 @@ test("expanded database overview trend matches the desktop layout", async () => 
   );
 });
 
+test("expanded database overview trend zooms to a dragged range", async () => {
+  state.databaseQuery = { data: databaseResponse() };
+  state.catalogQuery = { data: catalogResult() };
+  state.databaseMetricsQuery = { data: overviewMetricsResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendDatabasePage
+          databaseId="customer-events"
+          instanceId="prod"
+          section="overview"
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await page.getByRole("button", { name: "Expand Total size trend" }).click();
+  const dialog = page.getByRole("dialog", { name: "Total size trend" });
+  await expect.element(dialog).toBeVisible();
+
+  startChartRangeDrag(dialog.element(), {
+    endRatio: 0.8,
+    startRatio: 0.4,
+  })();
+
+  await expect
+    .element(dialog.getByRole("button", { name: "Reset zoom" }))
+    .toBeVisible();
+  await expect(dialog).toMatchScreenshot(
+    "backend-database-overview-size-zoomed"
+  );
+});
+
 test("database overview expand control stays outside the sparkline", async () => {
   state.databaseQuery = { data: databaseResponse() };
   state.catalogQuery = { data: catalogResult() };
@@ -1659,6 +1778,42 @@ test("expanded database overview trend stays readable on mobile", async () => {
     await page.getByText("Total size trend", { exact: true }).hover();
     await expect(dialog).toMatchScreenshot(
       "backend-database-overview-size-expanded-mobile"
+    );
+  } finally {
+    await page.viewport(1280, 1000);
+  }
+});
+
+test("expanded database overview trend supports touch zoom on mobile", async () => {
+  await page.viewport(390, 844);
+  try {
+    state.databaseQuery = { data: databaseResponse() };
+    state.catalogQuery = { data: catalogResult() };
+    state.databaseMetricsQuery = { data: overviewMetricsResponse() };
+
+    render(
+      <BackendDatabasePage
+        databaseId="customer-events"
+        instanceId="prod"
+        section="overview"
+      />
+    );
+
+    await page.getByRole("button", { name: "Expand Total size trend" }).click();
+    const dialog = page.getByRole("dialog", { name: "Total size trend" });
+    await expect.element(dialog).toBeVisible();
+
+    startChartRangeDrag(dialog.element(), {
+      endRatio: 0.75,
+      pointerType: "touch",
+      startRatio: 0.2,
+    })();
+
+    await expect
+      .element(dialog.getByRole("button", { name: "Reset zoom" }))
+      .toBeVisible();
+    await expect(dialog).toMatchScreenshot(
+      "backend-database-overview-size-zoomed-mobile"
     );
   } finally {
     await page.viewport(1280, 1000);

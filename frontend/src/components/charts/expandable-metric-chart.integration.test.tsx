@@ -14,15 +14,18 @@ vi.mock("@/components/charts/metric-time-chart", () => ({
     accessibilityLayer,
     compact,
     yAxisScale,
+    zoomable,
   }: {
     accessibilityLayer?: boolean | undefined;
     compact?: boolean | undefined;
     yAxisScale?: "data" | "zero" | undefined;
+    zoomable?: boolean | undefined;
   }) => (
     <div
       data-compact={String(compact)}
       data-testid="metric-time-chart"
       data-y-axis-scale={yAxisScale}
+      data-zoomable={String(zoomable)}
       role={accessibilityLayer === false ? undefined : "application"}
     />
   ),
@@ -67,6 +70,10 @@ test("keeps Recharts keyboard semantics out of the chart button", async () => {
   });
   const expandedChart = within(dialog).getByRole("application");
   expect(expandedChart.dataset["yAxisScale"]).toBe("data");
+  expect(expandedChart.dataset["zoomable"]).toBe("true");
+  expect(
+    within(dialog).getByText("Drag horizontally across the plot to zoom.")
+  ).toBeTruthy();
 });
 
 test("uses a compact chart presentation on mobile", async () => {
