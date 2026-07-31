@@ -25,6 +25,18 @@ test("hosts the docs MCP endpoint", () => {
 	});
 });
 
+test("pins the Blume 1.2 release and its MCP type patch", async () => {
+	const packageFile = JSON.parse(await read("package.json")) as {
+		devDependencies?: Record<string, string>;
+		patchedDependencies?: Record<string, string>;
+	};
+
+	expect(packageFile.devDependencies?.blume).toBe("1.2.1");
+	expect(packageFile.patchedDependencies).toEqual({
+		"blume@1.2.1": "patches/blume@1.2.1.patch",
+	});
+});
+
 test("ships the Blume server in a health-checked container", async () => {
 	const dockerfile = await read("Dockerfile.docs");
 
