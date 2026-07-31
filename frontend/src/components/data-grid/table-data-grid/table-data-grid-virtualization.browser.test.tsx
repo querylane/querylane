@@ -182,5 +182,7 @@ test("table detail uses available height while keeping 500-row pages virtualized
   expect(
     document.querySelectorAll(".rdg .rdg-cell").length
   ).toBeLessThanOrEqual(420);
-  expect(page.getByText("user-499@example.com")).not.toBeInTheDocument();
+  await expect
+    .element(page.getByText("user-499@example.com"))
+    .not.toBeInTheDocument();
 });

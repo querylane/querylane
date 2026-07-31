@@ -97,18 +97,15 @@ function createBrowserConfig(themes: readonly BrowserTheme[]) {
     ...createVitestBaseConfig(),
     optimizeDeps: {
       include: [...VITEST_BROWSER_OPTIMIZE_DEPS],
+      noDiscovery: true,
     },
     test: {
       api: {
         allowExec: browserPolicy.canRunBrowserTestsFromUi,
         allowWrite: browserPolicy.canWriteBrowserArtifacts,
+        host: "127.0.0.1",
       },
       browser: {
-        api: {
-          allowExec: browserPolicy.canRunBrowserTestsFromUi,
-          allowWrite: browserPolicy.canWriteBrowserArtifacts,
-          host: "127.0.0.1",
-        },
         enabled: true,
         expect: {
           toMatchScreenshot: {
