@@ -20,7 +20,11 @@ import type {
   MetricTimeChartVariant,
 } from "@/components/charts/chart-context";
 import { ChartTooltipContent } from "@/components/charts/chart-tooltip";
-import { type ChartTickBase, niceAxisTicks } from "@/lib/chart-scale";
+import {
+  type ChartTickBase,
+  niceAxisRangeTicks,
+  niceAxisTicks,
+} from "@/lib/chart-scale";
 import { buildTimeTicks, formatTimeTick } from "@/lib/chart-time";
 
 interface MetricTimeChartProps {
@@ -52,6 +56,12 @@ interface MetricTimeChartProps {
    * above their gridline and stay legible over data via the halo.
    */
   yAxisMode?: "gutter" | "inset" | undefined;
+  /**
+   * `zero` (default) preserves absolute magnitude. `data` focuses the domain
+   * around the visible values so small changes remain legible in analysis
+   * views. Fixed domains and stacked charts always keep their own baseline.
+   */
+  yAxisScale?: "data" | "zero" | undefined;
   /**
    * Fixed y-axis bounds with evenly divided ticks, for metrics on a naturally
    * bounded scale (a ratio is `[0, 1]`). Without it Recharts "nices" the auto
@@ -100,6 +110,12 @@ interface MetricChartLayout {
   showLegend: boolean | undefined;
   valueAxisSegments: number;
   valueTickCount: number;
+}
+
+interface MetricValueAxisScale {
+  domain?: [number, number];
+  tickCount?: number;
+  ticks?: number[];
 }
 
 function metricChartLayout({
@@ -188,6 +204,33 @@ function yAxisMax({
   return max;
 }
 
+/** Finite value extent, including thresholds explicitly allowed to extend it. */
+function yAxisExtent({
+  data,
+  series,
+  thresholds,
+}: {
+  data: ChartRow[];
+  series: ChartSeries[];
+  thresholds: ChartThreshold[] | undefined;
+}): [number, number] | null {
+  const dataValues = data.flatMap((row) =>
+    series.flatMap((item) => {
+      const value = row[item.key];
+      return typeof value === "number" && Number.isFinite(value) ? [value] : [];
+    })
+  );
+  const thresholdValues = (thresholds ?? []).flatMap((threshold) =>
+    threshold.extendDomain && Number.isFinite(threshold.value)
+      ? [threshold.value]
+      : []
+  );
+  const values = [...dataValues, ...thresholdValues];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  return max > min ? [min, max] : null;
+}
+
 /** Evenly spaced ticks across a fixed domain, endpoints included. */
 function evenTicks(
   [min, max]: [number, number],
@@ -206,6 +249,111 @@ function resolveVariant(
   }
 
   return seriesCount === 1 ? "area" : "line";
+}
+
+function focusedValueAxisTicks({
+  data,
+  drawMode,
+  formatValue,
+  maxSegments,
+  series,
+  thresholds,
+  yAxisScale,
+  yDomain,
+  yTickBase,
+}: {
+  data: ChartRow[];
+  drawMode: "area" | "line" | "stacked";
+  formatValue: (value: number) => string;
+  maxSegments: number;
+  series: ChartSeries[];
+  thresholds: ChartThreshold[] | undefined;
+  yAxisScale: "data" | "zero";
+  yDomain: [number, number] | undefined;
+  yTickBase: ChartTickBase;
+}): number[] | null {
+  if (yDomain || yAxisScale !== "data" || drawMode === "stacked") {
+    return null;
+  }
+
+  const extent = yAxisExtent({ data, series, thresholds });
+  if (!extent) {
+    return null;
+  }
+
+  return niceAxisRangeTicks({
+    formatValue,
+    maxSegments,
+    maxValue: extent[1],
+    minValue: extent[0],
+    tickBase: yTickBase,
+  });
+}
+
+function resolveValueAxisScale({
+  data,
+  drawMode,
+  formatValue,
+  layout,
+  series,
+  thresholds,
+  yAxisScaleMode,
+  yDomain,
+  yTickBase,
+}: {
+  data: ChartRow[];
+  drawMode: "area" | "line" | "stacked";
+  formatValue: (value: number) => string;
+  layout: MetricChartLayout;
+  series: ChartSeries[];
+  thresholds: ChartThreshold[] | undefined;
+  yAxisScaleMode: "data" | "zero";
+  yDomain: [number, number] | undefined;
+  yTickBase: ChartTickBase;
+}): MetricValueAxisScale {
+  if (yDomain) {
+    return {
+      domain: yDomain,
+      ticks: evenTicks(yDomain, layout.valueAxisSegments),
+    };
+  }
+
+  const focusedTicks = focusedValueAxisTicks({
+    data,
+    drawMode,
+    formatValue,
+    maxSegments: layout.valueAxisSegments,
+    series,
+    thresholds,
+    yAxisScale: yAxisScaleMode,
+    yDomain,
+    yTickBase,
+  });
+  const focusedBottom = focusedTicks?.[0];
+  const focusedTop = focusedTicks?.at(-1);
+  if (focusedTicks && focusedBottom !== undefined && focusedTop !== undefined) {
+    return {
+      domain: [focusedBottom, focusedTop],
+      ticks: focusedTicks,
+    };
+  }
+
+  const autoTicks = niceAxisTicks(
+    yAxisMax({
+      data,
+      series,
+      stacked: drawMode === "stacked",
+      thresholds,
+    }),
+    yTickBase,
+    layout.valueAxisSegments
+  );
+  const autoTop = autoTicks?.at(-1);
+  if (autoTicks && autoTop !== undefined) {
+    return { domain: [0, autoTop], ticks: autoTicks };
+  }
+
+  return { tickCount: layout.valueTickCount };
 }
 
 function thresholdColor(tone: ChartThreshold["tone"]): string {
@@ -264,6 +412,7 @@ function MetricTimeChart({
   thresholds,
   variant = "auto",
   yAxisMode = "gutter",
+  yAxisScale = "zero",
   yDomain,
   yTickBase = 10,
 }: MetricTimeChartProps) {
@@ -277,14 +426,17 @@ function MetricTimeChart({
   const solidSeriesCount = series.filter((item) => !item.dashed).length;
   const drawMode = resolveVariant(variant, solidSeriesCount);
   const hasGradientFill = drawMode === "area";
-  const autoTicks = yDomain
-    ? null
-    : niceAxisTicks(
-        yAxisMax({ data, series, stacked: drawMode === "stacked", thresholds }),
-        yTickBase,
-        layout.valueAxisSegments
-      );
-  const autoTop = autoTicks?.at(-1);
+  const resolvedValueAxisScale = resolveValueAxisScale({
+    data,
+    drawMode,
+    formatValue,
+    layout,
+    series,
+    thresholds,
+    yAxisScaleMode: yAxisScale,
+    yDomain,
+    yTickBase,
+  });
 
   return (
     <ChartContainer
@@ -397,18 +549,7 @@ function MetricTimeChart({
                 width: 1,
               }
             : { tickMargin: 6, width: "auto" as const })}
-          {...(yDomain
-            ? {
-                domain: yDomain,
-                ticks: evenTicks(yDomain, layout.valueAxisSegments),
-              }
-            : {})}
-          {...(!yDomain && autoTicks && autoTop !== undefined
-            ? { domain: [0, autoTop] as [number, number], ticks: autoTicks }
-            : {})}
-          {...(yDomain || autoTicks
-            ? {}
-            : { tickCount: layout.valueTickCount })}
+          {...resolvedValueAxisScale}
         />
       </AreaChart>
     </ChartContainer>

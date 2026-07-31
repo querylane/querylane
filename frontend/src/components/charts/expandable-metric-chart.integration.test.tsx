@@ -13,13 +13,16 @@ vi.mock("@/components/charts/metric-time-chart", () => ({
   MetricTimeChart: ({
     accessibilityLayer,
     compact,
+    yAxisScale,
   }: {
     accessibilityLayer?: boolean | undefined;
     compact?: boolean | undefined;
+    yAxisScale?: "data" | "zero" | undefined;
   }) => (
     <div
       data-compact={String(compact)}
       data-testid="metric-time-chart"
+      data-y-axis-scale={yAxisScale}
       role={accessibilityLayer === false ? undefined : "application"}
     />
   ),
@@ -62,7 +65,8 @@ test("keeps Recharts keyboard semantics out of the chart button", async () => {
   const dialog = await screen.findByRole("dialog", {
     name: "Connections metrics",
   });
-  expect(within(dialog).getByRole("application")).toBeTruthy();
+  const expandedChart = within(dialog).getByRole("application");
+  expect(expandedChart.dataset["yAxisScale"]).toBe("data");
 });
 
 test("uses a compact chart presentation on mobile", async () => {

@@ -49,6 +49,9 @@ into `ChartRow[]`/`ChartSeries[]` and passes formatters in.
 - **Axis modes**: `gutter` (default, auto-width right column) or `inset`
   (labels inside the plot on a surface-colored halo — full-bleed plots).
   Edge x-labels anchor inward in both modes.
+- **Scale modes**: overview charts keep the honest zero baseline; expanded
+  analysis views focus on the visible data range with labeled, distinct ticks.
+  Fixed bounded domains and stacked charts keep their natural baseline.
 
 ## Extension points
 
@@ -56,7 +59,7 @@ into `ChartRow[]`/`ChartSeries[]` and passes formatters in.
 `thresholds` (dashed reference lines, optional `extendDomain`), `syncId`
 (shared crosshair across charts), `domain` (pin x to a queried window),
 `yDomain` (fixed bounded scales like ratios), `yTickBase` (10 | 1024),
-`yAxisMode`, `formatDetailedValue`.
+`yAxisMode`, `yAxisScale` (`zero` | `data`), `formatDetailedValue`.
 
 ## Backlog (researched, not yet built)
 

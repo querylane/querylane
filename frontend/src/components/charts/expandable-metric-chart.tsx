@@ -59,7 +59,7 @@ function ExpandableMetricChart({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="min-h-0 flex-1">
-          <MetricChart {...chartProps} compact={isMobile} />
+          <MetricChart {...chartProps} compact={isMobile} yAxisScale="data" />
         </div>
       </DialogContent>
     </Dialog>

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { niceAxisTicks } from "@/lib/chart-scale";
+import { niceAxisRangeTicks, niceAxisTicks } from "@/lib/chart-scale";
 import { formatBytes } from "@/lib/console-resources";
 import { formatCompactNumber } from "@/lib/metrics";
 
@@ -74,6 +74,32 @@ describe("niceAxisTicks (binary)", () => {
         expect(label).not.toMatch(DECIMAL_LABEL_PATTERN);
       }
     }
+  });
+});
+
+describe("niceAxisRangeTicks", () => {
+  test("focuses byte trends on their meaningful range", () => {
+    expect(
+      niceAxisRangeTicks({
+        formatValue: (tick) => formatBytes(tick),
+        maxSegments: 4,
+        maxValue: 60_500_000,
+        minValue: 58_900_000,
+        tickBase: 1024,
+      })
+    ).toEqual([58_880_000, 59_392_000, 59_904_000, 60_416_000, 60_928_000]);
+  });
+
+  test("widens the step until compact labels stay distinct", () => {
+    expect(
+      niceAxisRangeTicks({
+        formatValue: formatCompactNumber,
+        maxSegments: 4,
+        maxValue: 1_270_000,
+        minValue: 1_220_000,
+        tickBase: 10,
+      })
+    ).toEqual([1_200_000, 1_300_000]);
   });
 });
 

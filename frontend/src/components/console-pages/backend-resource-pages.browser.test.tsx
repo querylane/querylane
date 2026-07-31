@@ -1529,6 +1529,8 @@ test("expanded database overview trend matches the desktop layout", async () => 
 
   const dialog = page.getByRole("dialog", { name: "Total size trend" });
   await expect.element(dialog).toBeVisible();
+  await expect.element(dialog.getByText("56.2 MB")).toBeVisible();
+  await expect.element(dialog.getByText("0 B")).not.toBeInTheDocument();
   await expect(dialog).toMatchScreenshot(
     "backend-database-overview-size-expanded"
   );
@@ -1557,6 +1559,8 @@ test("expanded database overview trend stays readable on mobile", async () => {
 
     const dialog = page.getByRole("dialog", { name: "Total size trend" });
     await expect.element(dialog).toBeVisible();
+    await expect.element(dialog.getByText("56 MB")).toBeVisible();
+    await expect.element(dialog.getByText("0 B")).not.toBeInTheDocument();
     await page.getByText("Total size trend", { exact: true }).hover();
     await expect(dialog).toMatchScreenshot(
       "backend-database-overview-size-expanded-mobile"
