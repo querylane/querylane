@@ -31,9 +31,9 @@ test("pins the Blume 1.2 release and its MCP type patch", async () => {
 		patchedDependencies?: Record<string, string>;
 	};
 
-	expect(packageFile.devDependencies?.blume).toBe("1.2.0");
+	expect(packageFile.devDependencies?.blume).toBe("1.2.1");
 	expect(packageFile.patchedDependencies).toEqual({
-		"blume@1.2.0": "patches/blume@1.2.0.patch",
+		"blume@1.2.1": "patches/blume@1.2.1.patch",
 	});
 });
 
