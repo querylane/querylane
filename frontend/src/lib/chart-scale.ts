@@ -67,19 +67,32 @@ export type ChartTickBase = typeof BINARY_BASE | typeof DECIMAL_BASE;
  * units), so every tick is a round number and adjacent ticks always format to
  * distinct labels. The rung is chosen nearest in log space (d3's rounding —
  * max 45 ticks 0..50, not 0..60), then bumped while the tick budget would
- * overflow. Null when there is nothing to scale.
+ * overflow. `maxSegments` applies a strict compact budget; the default keeps
+ * the established d3-like allowance of one extra segment. Null when there is
+ * nothing to scale.
  */
 export function niceAxisTicks(
   maxValue: number,
-  tickBase: ChartTickBase
+  tickBase: ChartTickBase,
+  maxSegments?: number
 ): number[] | null {
   if (!(Number.isFinite(maxValue) && maxValue > 0)) {
     return null;
   }
 
+  const hasExplicitSegmentBudget =
+    maxSegments !== undefined &&
+    Number.isFinite(maxSegments) &&
+    maxSegments > 0;
+  const segmentBudget = hasExplicitSegmentBudget
+    ? Math.floor(maxSegments)
+    : Y_AXIS_SEGMENTS;
+  const segmentLimit = hasExplicitSegmentBudget
+    ? segmentBudget
+    : segmentBudget + 1;
   const ladder =
     tickBase === BINARY_BASE ? BINARY_STEP_LADDER : DECIMAL_STEP_LADDER;
-  const rawStep = maxValue / Y_AXIS_SEGMENTS;
+  const rawStep = maxValue / segmentBudget;
   const magnitude =
     tickBase ** Math.floor(Math.log(rawStep) / Math.log(tickBase));
   const error = rawStep / magnitude;
@@ -90,10 +103,7 @@ export function niceAxisTicks(
 
   let rungIndex = nearestRungIndex(ladder, error);
   let step = (ladder[rungIndex]?.mantissa ?? 1) * magnitude;
-  while (
-    segmentsFor(step) > Y_AXIS_SEGMENTS + 1 &&
-    rungIndex < ladder.length - 1
-  ) {
+  while (segmentsFor(step) > segmentLimit && rungIndex < ladder.length - 1) {
     rungIndex += 1;
     step = (ladder[rungIndex]?.mantissa ?? 1) * magnitude;
   }

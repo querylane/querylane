@@ -26,6 +26,8 @@ import { buildTimeTicks, formatTimeTick } from "@/lib/chart-time";
 interface MetricTimeChartProps {
   /** Disables Recharts keyboard semantics when the chart is a button preview. */
   accessibilityLayer?: boolean | undefined;
+  /** Reduces chart chrome and tick density for narrow expanded views. */
+  compact?: boolean | undefined;
   data: ChartRow[];
   /**
    * Pins the x-axis to a fixed window (epoch ms) so sparse data reads
@@ -68,6 +70,8 @@ const CHART_MARGIN = { bottom: 4, left: 8, right: 8, top: 8 };
 // Inset labels render above the top gridline, so the plot needs headroom.
 const INSET_CHART_MARGIN = { bottom: 4, left: 0, right: 4, top: 18 };
 const Y_AXIS_TICK_COUNT = 4;
+const COMPACT_TIME_TICK_COUNT = 3;
+const COMPACT_VALUE_TICK_COUNT = 4;
 const AREA_FILL_TOP_OPACITY = 0.16;
 const STACKED_FILL_OPACITY = 0.3;
 const ACTIVE_DOT = { r: 4, stroke: "var(--color-card)", strokeWidth: 2 };
@@ -89,6 +93,42 @@ const DASHED_STROKE_WIDTH = 1.5;
 const DASHED_STROKE_OPACITY = 0.55;
 /** Fixed-yDomain axes divide into quarters: 0 / 25 / 50 / 75 / 100%. */
 const Y_DOMAIN_SEGMENTS = 4;
+
+interface MetricChartLayout {
+  axisMode: "gutter" | "inset";
+  maxTimeTicks: number | undefined;
+  showLegend: boolean | undefined;
+  valueAxisSegments: number;
+  valueTickCount: number;
+}
+
+function metricChartLayout({
+  compact,
+  showLegend,
+  yAxisMode,
+}: {
+  compact: boolean;
+  showLegend: boolean | undefined;
+  yAxisMode: "gutter" | "inset";
+}): MetricChartLayout {
+  if (compact) {
+    return {
+      axisMode: "inset",
+      maxTimeTicks: COMPACT_TIME_TICK_COUNT,
+      showLegend: false,
+      valueAxisSegments: COMPACT_VALUE_TICK_COUNT - 1,
+      valueTickCount: COMPACT_VALUE_TICK_COUNT,
+    };
+  }
+
+  return {
+    axisMode: yAxisMode,
+    maxTimeTicks: undefined,
+    showLegend,
+    valueAxisSegments: Y_DOMAIN_SEGMENTS,
+    valueTickCount: Y_AXIS_TICK_COUNT,
+  };
+}
 
 function extentOf(data: ChartRow[]): [number, number] {
   const first = data[0]?.time ?? 0;
@@ -149,12 +189,12 @@ function yAxisMax({
 }
 
 /** Evenly spaced ticks across a fixed domain, endpoints included. */
-function evenTicks([min, max]: [number, number]): number[] {
-  const step = (max - min) / Y_DOMAIN_SEGMENTS;
-  return Array.from(
-    { length: Y_DOMAIN_SEGMENTS + 1 },
-    (_, index) => min + index * step
-  );
+function evenTicks(
+  [min, max]: [number, number],
+  segments: number = Y_DOMAIN_SEGMENTS
+): number[] {
+  const step = (max - min) / segments;
+  return Array.from({ length: segments + 1 }, (_, index) => min + index * step);
 }
 
 function resolveVariant(
@@ -212,6 +252,7 @@ function MetricArea({
  */
 function MetricTimeChart({
   accessibilityLayer = true,
+  compact = false,
   data,
   domain,
   formatDetailedValue,
@@ -229,7 +270,8 @@ function MetricTimeChart({
   const gradientId = useId().replaceAll(":", "");
   const [minMs, maxMs] = domain ?? extentOf(data);
   const spanMs = maxMs - minMs;
-  const ticks = buildTimeTicks(minMs, maxMs);
+  const layout = metricChartLayout({ compact, showLegend, yAxisMode });
+  const ticks = buildTimeTicks(minMs, maxMs, layout.maxTimeTicks);
   // Dashed context series (previous-period overlays) don't count: a lone real
   // series keeps its area fill even with an overlay beside it.
   const solidSeriesCount = series.filter((item) => !item.dashed).length;
@@ -239,7 +281,8 @@ function MetricTimeChart({
     ? null
     : niceAxisTicks(
         yAxisMax({ data, series, stacked: drawMode === "stacked", thresholds }),
-        yTickBase
+        yTickBase,
+        layout.valueAxisSegments
       );
   const autoTop = autoTicks?.at(-1);
 
@@ -248,15 +291,15 @@ function MetricTimeChart({
       className="cursor-crosshair"
       formatDetailedValue={formatDetailedValue}
       formatValue={formatValue}
-      insetValueAxis={yAxisMode === "inset"}
+      insetValueAxis={layout.axisMode === "inset"}
       isRefreshing={isRefreshing}
       series={series}
-      showLegend={showLegend}
+      showLegend={layout.showLegend}
     >
       <AreaChart
         accessibilityLayer={accessibilityLayer}
         data={data}
-        margin={yAxisMode === "inset" ? INSET_CHART_MARGIN : CHART_MARGIN}
+        margin={layout.axisMode === "inset" ? INSET_CHART_MARGIN : CHART_MARGIN}
         {...(syncId === undefined
           ? {}
           : { syncId, syncMethod: "value" as const })}
@@ -303,7 +346,7 @@ function MetricTimeChart({
           type="number"
         />
         <Tooltip
-          content={<ChartTooltipContent />}
+          content={<ChartTooltipContent compact={compact} />}
           cursor={CURSOR}
           isAnimationActive={false}
         />
@@ -343,7 +386,7 @@ function MetricTimeChart({
           orientation="right"
           tickFormatter={(value: number) => formatValue(value)}
           tickLine={false}
-          {...(yAxisMode === "inset"
+          {...(layout.axisMode === "inset"
             ? {
                 mirror: true,
                 tick: (
@@ -354,11 +397,18 @@ function MetricTimeChart({
                 width: 1,
               }
             : { tickMargin: 6, width: "auto" as const })}
-          {...(yDomain ? { domain: yDomain, ticks: evenTicks(yDomain) } : {})}
+          {...(yDomain
+            ? {
+                domain: yDomain,
+                ticks: evenTicks(yDomain, layout.valueAxisSegments),
+              }
+            : {})}
           {...(!yDomain && autoTicks && autoTop !== undefined
             ? { domain: [0, autoTop] as [number, number], ticks: autoTicks }
             : {})}
-          {...(yDomain || autoTicks ? {} : { tickCount: Y_AXIS_TICK_COUNT })}
+          {...(yDomain || autoTicks
+            ? {}
+            : { tickCount: layout.valueTickCount })}
         />
       </AreaChart>
     </ChartContainer>

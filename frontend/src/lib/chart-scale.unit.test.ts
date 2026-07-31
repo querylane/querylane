@@ -16,6 +16,11 @@ describe("niceAxisTicks (decimal)", () => {
     expect(niceAxisTicks(2.9, 10)).toEqual([0, 1, 2, 3]);
   });
 
+  test("honors a compact segment budget", () => {
+    expect(niceAxisTicks(100, 10, 2)).toEqual([0, 50, 100]);
+    expect(niceAxisTicks(60, 10, 2)).toEqual([0, 50, 100]);
+  });
+
   test("sub-integer domains tick on clean fractions", () => {
     expect(niceAxisTicks(0.9, 10)).toEqual([0, 0.2, 0.4, 0.6, 0.8, 1]);
   });

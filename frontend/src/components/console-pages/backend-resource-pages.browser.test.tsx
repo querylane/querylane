@@ -40,6 +40,13 @@ import {
   ServerInfoSchema,
   StorageMetricsSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import {
+  MetricId,
+  MetricKind,
+  MetricUnit,
+  type QueryMetricsResponse,
+  QueryMetricsResponseSchema,
+} from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
 const BLOCKED_ACTIVITY_ROW_NAME =
   /4302.*api-gateway.*UPDATE shipping\.shipments/;
@@ -92,6 +99,7 @@ async function getMarkerCenterPixels(marker: HTMLElement) {
 const state = vi.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
   databaseQuery: {} as QueryState<GetDatabaseResponse>,
+  databaseMetricsQuery: {} as QueryState<QueryMetricsResponse>,
   databasesQuery: {} as { data?: unknown; isPending?: boolean },
   deleteInstance: vi.fn(async () => undefined),
   extensionQuery: {} as QueryState<ListExtensionsResponse>,
@@ -138,8 +146,10 @@ const state = vi.hoisted(() => ({
     partialErrors?: unknown[];
   }>,
   instanceQuery: {} as QueryState<GetInstanceResponse>,
+  instanceMetricsQuery: {} as QueryState<QueryMetricsResponse>,
   navigate: vi.fn(async () => undefined),
   overviewQuery: {} as QueryState<GetInstanceOverviewResponse>,
+  previousInstanceMetricsQuery: {} as QueryState<QueryMetricsResponse>,
   queryClient: {
     getQueryState: vi.fn(() => undefined),
     prefetchQuery: vi.fn(async () => undefined),
@@ -231,13 +241,16 @@ beforeEach(() => {
   document.documentElement.style.colorScheme = visualTheme;
   state.catalogQuery = {};
   state.databaseQuery = {};
+  state.databaseMetricsQuery = {};
   state.databasesQuery = { data: databasesListResponse() };
   state.extensionQuery = {};
   state.healthQuery = { data: defaultHealthResponse() };
   state.queryInsightsQuery = {};
   state.selectedInstanceStatus = "connected";
   state.instanceQuery = {};
+  state.instanceMetricsQuery = {};
   state.overviewQuery = {};
+  state.previousInstanceMetricsQuery = {};
   state.queryClient.getQueryState.mockReset();
   state.queryClient.getQueryState.mockReturnValue(undefined);
   state.queryClient.prefetchQuery.mockReset();
@@ -332,9 +345,24 @@ vi.mock("@/hooks/api/metrics", async () => {
     ...actual,
     quantizedMetricsAnchor: () => 0,
     useDatabaseMetricsQuery: () => ({
-      data: { series: [] },
-      error: null,
-      isPending: false,
+      data: state.databaseMetricsQuery.data ?? { series: [] },
+      error: state.databaseMetricsQuery.error ?? null,
+      isFetching: state.databaseMetricsQuery.isFetching ?? false,
+      isPending: state.databaseMetricsQuery.isPending ?? false,
+    }),
+    useInstanceMetricsQuery: () => ({
+      data: state.instanceMetricsQuery.data,
+      dataUpdatedAt: state.instanceMetricsQuery.dataUpdatedAt ?? 0,
+      error: state.instanceMetricsQuery.error ?? null,
+      isFetching: state.instanceMetricsQuery.isFetching ?? false,
+      isPending: state.instanceMetricsQuery.isPending ?? false,
+      refetch: state.instanceMetricsQuery.refetch ?? vi.fn(async () => ({})),
+    }),
+    useInstancePreviousMetricsQuery: () => ({
+      data: state.previousInstanceMetricsQuery.data,
+      error: state.previousInstanceMetricsQuery.error ?? null,
+      isFetching: state.previousInstanceMetricsQuery.isFetching ?? false,
+      isPending: state.previousInstanceMetricsQuery.isPending ?? false,
     }),
   };
 });
@@ -644,6 +672,95 @@ function overviewResponse() {
         totalSizeBytes: 1_250_000_000_000n,
       }),
     }),
+  });
+}
+
+function overviewMetricUnit(metric: MetricId): MetricUnit {
+  if (metric === MetricId.CACHE_HIT_RATIO) {
+    return MetricUnit.RATIO;
+  }
+  if (
+    metric === MetricId.STORAGE_TOTAL_BYTES ||
+    metric === MetricId.DATABASE_SIZE_BYTES
+  ) {
+    return MetricUnit.BYTES;
+  }
+  if (metric === MetricId.TRANSACTIONS_PER_SECOND) {
+    return MetricUnit.PER_SECOND;
+  }
+  return MetricUnit.COUNT;
+}
+
+function overviewMetricsResponse(): QueryMetricsResponse {
+  const startSeconds = BigInt(Date.UTC(2026, 6, 30, 17, 0) / 1000);
+  const valuesByMetric = new Map<MetricId, number[]>([
+    [
+      MetricId.TRANSACTIONS_PER_SECOND,
+      [0.8, 1.1, 0.7, 1.4, 0.9, 1.2, 0.8, 2.7, 1, 1.3, 0.9, 1.5, 1.1],
+    ],
+    [
+      MetricId.CONNECTIONS_TOTAL,
+      [68, 70, 69, 72, 71, 74, 73, 76, 74, 75, 77, 74, 74],
+    ],
+    [
+      MetricId.CACHE_HIT_RATIO,
+      [
+        0.982, 0.985, 0.981, 0.988, 0.986, 0.989, 0.987, 0.991, 0.99, 0.988,
+        0.992, 0.989, 0.991,
+      ],
+    ],
+    [
+      MetricId.STORAGE_TOTAL_BYTES,
+      [
+        1.17e12, 1.18e12, 1.19e12, 1.2e12, 1.21e12, 1.22e12, 1.23e12, 1.24e12,
+        1.25e12, 1.26e12, 1.27e12, 1.28e12, 1.29e12,
+      ],
+    ],
+    [
+      MetricId.DATABASE_SIZE_BYTES,
+      [
+        58_900_000, 59_000_000, 59_100_000, 59_300_000, 59_500_000, 59_700_000,
+        59_900_000, 60_000_000, 60_100_000, 60_200_000, 60_300_000, 60_400_000,
+        60_500_000,
+      ],
+    ],
+    [
+      MetricId.DATABASE_LIVE_TUPLES,
+      [
+        1_220_000, 1_225_000, 1_228_000, 1_232_000, 1_238_000, 1_241_000,
+        1_245_000, 1_249_000, 1_252_000, 1_257_000, 1_261_000, 1_265_000,
+        1_270_000,
+      ],
+    ],
+    [
+      MetricId.DATABASE_DEAD_TUPLES,
+      [
+        8100, 7900, 7600, 8300, 8800, 8600, 8200, 7800, 7500, 7300, 7100, 6900,
+        6700,
+      ],
+    ],
+  ]);
+
+  return createProto(QueryMetricsResponseSchema, {
+    interval: {
+      endTime: { nanos: 0, seconds: startSeconds + 3600n },
+      startTime: { nanos: 0, seconds: startSeconds },
+    },
+    series: Array.from(valuesByMetric, ([metric, values]) => ({
+      delta: {
+        currentValue: values.at(-1) ?? 0,
+        percentChange: 4.2,
+        previousAvailable: false,
+      },
+      kind: MetricKind.GAUGE,
+      metric,
+      points: {
+        startTime: { nanos: 0, seconds: startSeconds },
+        step: { nanos: 0, seconds: 300n },
+        values,
+      },
+      unit: overviewMetricUnit(metric),
+    })),
   });
 }
 
@@ -1028,6 +1145,32 @@ test("backend instance overview shows live metrics and database catalog together
   await expect(health).toMatchScreenshot("backend-instance-overview-health");
 });
 
+test("expanded instance overview metric matches the desktop layout", async () => {
+  state.instanceQuery = { data: instanceResponse() };
+  state.overviewQuery = { data: overviewResponse() };
+  state.instanceMetricsQuery = { data: overviewMetricsResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendInstancePage instanceId="prod" section="overview" />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  const trigger = page.getByRole("button", {
+    name: "Expand Transactions metrics",
+  });
+  await expect.element(trigger).toBeVisible();
+  await trigger.click();
+
+  const dialog = page.getByRole("dialog", { name: "Transactions metrics" });
+  await expect.element(dialog).toBeVisible();
+  await expect(dialog).toMatchScreenshot(
+    "backend-instance-overview-metric-expanded"
+  );
+});
+
 test("backend instance activity matches the live sessions redesign", async () => {
   state.instanceQuery = {
     data: instanceResponse(),
@@ -1359,6 +1502,68 @@ test("backend database overview shows mission control stats and catalog tables",
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-database-overview"
   );
+});
+
+test("expanded database overview trend matches the desktop layout", async () => {
+  state.databaseQuery = { data: databaseResponse() };
+  state.catalogQuery = { data: catalogResult() };
+  state.databaseMetricsQuery = { data: overviewMetricsResponse() };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <BackendDatabasePage
+          databaseId="customer-events"
+          instanceId="prod"
+          section="overview"
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  const trigger = page.getByRole("button", {
+    name: "Expand Total size trend",
+  });
+  await expect.element(trigger).toBeVisible();
+  await trigger.click();
+
+  const dialog = page.getByRole("dialog", { name: "Total size trend" });
+  await expect.element(dialog).toBeVisible();
+  await expect(dialog).toMatchScreenshot(
+    "backend-database-overview-size-expanded"
+  );
+});
+
+test("expanded database overview trend stays readable on mobile", async () => {
+  await page.viewport(390, 844);
+  try {
+    state.databaseQuery = { data: databaseResponse() };
+    state.catalogQuery = { data: catalogResult() };
+    state.databaseMetricsQuery = { data: overviewMetricsResponse() };
+
+    render(
+      <BackendDatabasePage
+        databaseId="customer-events"
+        instanceId="prod"
+        section="overview"
+      />
+    );
+
+    const trigger = page.getByRole("button", {
+      name: "Expand Total size trend",
+    });
+    await expect.element(trigger).toBeVisible();
+    await trigger.click();
+
+    const dialog = page.getByRole("dialog", { name: "Total size trend" });
+    await expect.element(dialog).toBeVisible();
+    await page.getByText("Total size trend", { exact: true }).hover();
+    await expect(dialog).toMatchScreenshot(
+      "backend-database-overview-size-expanded-mobile"
+    );
+  } finally {
+    await page.viewport(1280, 1000);
+  }
 });
 
 test("dense schema inventories use the wide row without layout holes", async () => {

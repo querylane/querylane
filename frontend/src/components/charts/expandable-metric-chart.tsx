@@ -1,6 +1,7 @@
 import { Maximize2 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { MetricChart } from "@/components/charts/metric-chart";
+import { useIsMobile } from "@/components/querylane-ui/use-mobile";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +30,8 @@ function ExpandableMetricChart({
   triggerClassName,
   ...chartProps
 }: ExpandableMetricChartProps) {
+  const isMobile = useIsMobile();
+
   return (
     <Dialog>
       <DialogTrigger
@@ -51,12 +54,12 @@ function ExpandableMetricChart({
           </Button>
         }
       />
-      <DialogContent className="!flex !max-w-[calc(100vw-1rem)] sm:!max-w-[calc(100vw-2rem)] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] flex-col gap-3 overflow-hidden p-3 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:p-4">
-        <DialogHeader className="shrink-0 pr-10">
+      <DialogContent className="!flex !max-w-none sm:!max-w-[calc(100vw-2rem)] h-dvh max-h-dvh w-full flex-col gap-2 overflow-hidden rounded-none p-2 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:gap-3 sm:rounded-xl sm:p-4 [&_[data-slot=dialog-close]]:top-2 [&_[data-slot=dialog-close]]:right-2 sm:[&_[data-slot=dialog-close]]:top-4 sm:[&_[data-slot=dialog-close]]:right-4">
+        <DialogHeader className="min-h-8 shrink-0 justify-center pr-10 sm:min-h-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="min-h-0 flex-1">
-          <MetricChart {...chartProps} />
+          <MetricChart {...chartProps} compact={isMobile} />
         </div>
       </DialogContent>
     </Dialog>
