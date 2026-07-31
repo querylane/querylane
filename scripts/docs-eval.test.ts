@@ -59,15 +59,11 @@ test("exposes the blocking docs eval as a package script", async () => {
 	);
 });
 
-test("runs docs evals in isolated CI for same-repository docs changes", async () => {
+test("keeps paid docs evals manual-only in isolated CI", async () => {
 	const workflow = await read(".github/workflows/docs-eval.yml");
 
-	expect(workflow).toContain("pull_request:");
-	expect(workflow).toContain("- docs/**");
-	expect(workflow).toContain("- evals.yaml");
-	expect(workflow).toContain(
-		"github.event.pull_request.head.repo.full_name == github.repository",
-	);
+	expect(workflow).toContain("workflow_dispatch:");
+	expect(workflow).not.toContain("pull_request:");
 	expect(workflow).toContain("bun install --frozen-lockfile --ignore-scripts");
 	expect(workflow).toContain("npm install --global @openai/codex@0.145.0");
 	expect(workflow).toContain(`CODEX_API_KEY: \${{ secrets.OPENAI_API_KEY }}`);
@@ -82,4 +78,5 @@ test("documents how contributors run the docs eval suite", async () => {
 	expect(readme).toContain("Codex CLI");
 	expect(readme).toContain("OpenAI API key");
 	expect(readme).toContain("evals.yaml");
+	expect(readme).toContain("manual GitHub Actions workflow");
 });

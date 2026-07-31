@@ -1,23 +1,7 @@
 name: docs-eval
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - .github/workflows/docs-eval.yml
-      - blume.config.ts
-      - bun.lock
-      - components/**
-      - components.ts
-      - docs/**
-      - evals.yaml
-      - examples/**
-      - package.json
-      - patches/**
-      - public/**
-      - scripts/docs-eval.test.ts
-      - theme.css
+  workflow_dispatch:
 
 concurrency:
   group: docs-eval-${{ github.ref }}
@@ -28,9 +12,6 @@ permissions:
 
 jobs:
   eval:
-    if: |
-      github.event.pull_request.draft != true &&
-      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
