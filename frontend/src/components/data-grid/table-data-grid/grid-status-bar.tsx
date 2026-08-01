@@ -38,10 +38,7 @@ function GridStatusBadge({ item }: { item: GridStatusItem }) {
   return (
     <Tooltip>
       <TooltipTrigger render={<span />}>
-        <Badge
-          className="gap-1.5 border-destructive/40 text-destructive"
-          variant="outline"
-        >
+        <Badge className="gap-1.5" variant="destructive">
           <AlertTriangle className="size-3" />
           {item.label}
         </Badge>

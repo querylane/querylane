@@ -174,42 +174,6 @@
   box-shadow: none;
 }
 
-.rdg .rdg-cell[data-cell-range-selected="true"] {
-  --cell-range-top: transparent;
-  --cell-range-right: transparent;
-  --cell-range-bottom: transparent;
-  --cell-range-left: transparent;
-  --cell-range-active: transparent;
-  background-color: color-mix(in oklch, var(--ring) 12%, transparent);
-  touch-action: none;
-  box-shadow:
-    inset 0 2px 0 var(--cell-range-top),
-    inset -2px 0 0 var(--cell-range-right),
-    inset 0 -2px 0 var(--cell-range-bottom),
-    inset 2px 0 0 var(--cell-range-left),
-    inset 0 0 0 1px var(--cell-range-active);
-}
-
-.rdg .rdg-cell[data-cell-range-top="true"] {
-  --cell-range-top: var(--ring);
-}
-
-.rdg .rdg-cell[data-cell-range-right="true"] {
-  --cell-range-right: var(--ring);
-}
-
-.rdg .rdg-cell[data-cell-range-bottom="true"] {
-  --cell-range-bottom: var(--ring);
-}
-
-.rdg .rdg-cell[data-cell-range-left="true"] {
-  --cell-range-left: var(--ring);
-}
-
-.rdg .rdg-cell[data-cell-range-active="true"] {
-  --cell-range-active: color-mix(in oklch, var(--ring) 65%, transparent);
-}
-
 .rdg .rdg-cell.rdg-select-cell {
   padding-inline: 0.25rem;
 }

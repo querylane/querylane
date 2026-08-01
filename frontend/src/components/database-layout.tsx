@@ -132,7 +132,7 @@ export function DatabaseLayout({
                     Meta-database unreachable. Running in degraded mode.
                   </output>
                 ) : null}
-                <div
+                <main
                   className={cn(
                     // `relative` keeps absolutely-positioned descendants (e.g.
                     // sr-only labels) anchored inside this scroll container
@@ -152,7 +152,7 @@ export function DatabaseLayout({
                   >
                     <ShellContentBoundary>{children}</ShellContentBoundary>
                   </div>
-                </div>
+                </main>
               </SidebarInset>
             </div>
           </ExplorerSidebarSlotProvider>

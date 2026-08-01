@@ -57,16 +57,7 @@ test("defines the agreed shortcut set centrally", () => {
     "global:navigation.configuration",
     "global:navigation.instance-overview",
     "grid:grid.move",
-    "grid:grid.move-to-row-edge",
-    "grid:grid.move-to-grid-edge",
-    "grid:grid.move-by-page",
-    "grid:grid.extend-selection",
-    "grid:grid.extend-to-row-edge",
-    "grid:grid.extend-to-grid-edge",
-    "grid:grid.extend-by-page",
-    "grid:grid.select-all-cells",
     "grid:grid.copy",
-    "grid:grid.clear-selection",
   ]);
 });
 
