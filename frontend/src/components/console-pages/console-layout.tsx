@@ -136,7 +136,7 @@ export function InstanceStatItem({
       ) : (
         <span className="text-muted-foreground text-xs">{label}</span>
       )}
-      <div className="flex min-h-7 items-center gap-1.5">
+      <div className="flex min-h-7 items-center gap-1.5 max-sm:flex-col max-sm:items-stretch">
         <div className="flex items-baseline gap-1.5">
           {children}
           {suffix ? (
@@ -146,7 +146,7 @@ export function InstanceStatItem({
           ) : null}
         </div>
         {renderTrend ? (
-          <div aria-hidden="true" className="ml-auto h-7 w-20 shrink-0">
+          <div className="ml-auto h-12 min-w-28 flex-1 empty:hidden max-sm:ml-0 max-sm:w-full max-sm:min-w-0 max-sm:flex-none">
             {renderTrend()}
           </div>
         ) : null}

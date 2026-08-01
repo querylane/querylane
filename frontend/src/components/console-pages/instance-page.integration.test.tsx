@@ -50,6 +50,13 @@ import {
   ServerInfoSchema,
   StatsAccessHealthSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import {
+  MetricId,
+  MetricKind,
+  MetricUnit,
+  type QueryMetricsResponse,
+  QueryMetricsResponseSchema,
+} from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
 interface InstanceUpdateInput {
   instance: {
@@ -99,6 +106,7 @@ const state = vi.hoisted(() => ({
   instanceCatalogIsPending: false,
   instanceData: undefined as GetInstanceResponse | undefined,
   instances: [] as PostgresInstance[],
+  metricsData: undefined as QueryMetricsResponse | undefined,
   navigate: vi.fn(async () => undefined),
   navigateToDatabase: vi.fn(),
   overviewData: undefined as GetInstanceOverviewResponse | undefined,
@@ -116,6 +124,14 @@ const state = vi.hoisted(() => ({
     | "error",
   transport: { tag: "transport" },
   updateInstance: vi.fn(async (_input: InstanceUpdateInput) => undefined),
+}));
+
+vi.mock("@/components/charts/metric-time-chart", () => ({
+  MetricTimeChart: () => <div data-testid="metric-time-chart" />,
+}));
+
+vi.mock("@/components/charts/sparkline-chart", () => ({
+  SparklineChart: () => <div data-testid="metric-sparkline" />,
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -194,10 +210,10 @@ vi.mock("@/hooks/api/extension", () => ({
 vi.mock("@/hooks/api/metrics", () => ({
   quantizedMetricsAnchor: () => 0,
   useInstanceMetricsQuery: () => ({
-    data: undefined,
+    data: state.metricsData,
     error: null,
     isFetching: false,
-    isPending: true,
+    isPending: state.metricsData === undefined,
     refetch: vi.fn(async () => ({})),
   }),
   useInstancePreviousMetricsQuery: () => ({
@@ -555,6 +571,36 @@ function paginatedActivityHealthResponse() {
   return response;
 }
 
+function instanceMetricsResponse(): QueryMetricsResponse {
+  const points = {
+    startTime: { nanos: 0, seconds: 0n },
+    step: { nanos: 0, seconds: 60n },
+    values: [10, 11, 12],
+  };
+  return createProto(QueryMetricsResponseSchema, {
+    series: [
+      {
+        kind: MetricKind.GAUGE,
+        metric: MetricId.CONNECTIONS_TOTAL,
+        points,
+        unit: MetricUnit.COUNT,
+      },
+      {
+        kind: MetricKind.GAUGE,
+        metric: MetricId.CACHE_HIT_RATIO,
+        points: { ...points, values: [0.97, 0.98, 0.99] },
+        unit: MetricUnit.RATIO,
+      },
+      {
+        kind: MetricKind.GAUGE,
+        metric: MetricId.STORAGE_TOTAL_BYTES,
+        points: { ...points, values: [1024, 2048, 4096] },
+        unit: MetricUnit.BYTES,
+      },
+    ],
+  });
+}
+
 beforeEach(() => {
   state.activityQueryOptions = undefined;
   state.databases = [];
@@ -570,6 +616,7 @@ beforeEach(() => {
   state.instanceCatalogIsPending = false;
   state.instanceData = instanceResponse();
   state.instances = [postgresInstanceFixture()];
+  state.metricsData = undefined;
   state.navigate.mockClear();
   state.navigateToDatabase.mockClear();
   state.overviewData = undefined;
@@ -1048,6 +1095,43 @@ describe("backend instance activity interactions", () => {
 });
 
 describe("backend instance overview redesign", () => {
+  test("maximizes every instance summary trend from its graph", async () => {
+    const user = userEvent.setup();
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.metricsData = instanceMetricsResponse();
+
+    renderInstanceOverview();
+
+    const triggerNames = [
+      "Expand Connections trend",
+      "Expand Cache Hit Ratio trend",
+      "Expand Storage trend",
+    ];
+    await screen.findByRole("button", { name: "Expand Connections trend" });
+    for (const name of triggerNames) {
+      expect(screen.getByRole("button", { name })).toBeTruthy();
+    }
+
+    const trigger = screen.getByRole("button", {
+      name: "Expand Cache Hit Ratio trend",
+    });
+    await user.click(trigger);
+
+    expect(
+      await screen.findByRole("dialog", { name: "Cache Hit Ratio trend" })
+    ).toBeTruthy();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: "Cache Hit Ratio trend" })
+      ).toBeNull();
+    });
+    expect(document.activeElement).toBe(trigger);
+  });
+
   test("shows why server info is unavailable while connected", () => {
     state.selectedInstanceStatus = "connected";
     state.instances = [postgresInstanceFixture("connected")];

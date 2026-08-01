@@ -1,5 +1,13 @@
 import { create } from "@bufbuild/protobuf";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { InstanceMetricsPanel } from "@/components/console-pages/instance-metrics-panel";
 import {
@@ -192,6 +200,34 @@ describe("InstanceMetricsPanel comparison overlay", () => {
     // And the old header-level "vs previous" button stays gone.
     expect(screen.queryByRole("button", { name: "vs previous" })).toBeNull();
     await screen.findByTestId("metric-time-chart");
+  });
+});
+
+describe("InstanceMetricsPanel expansion", () => {
+  test("maximizes the selected metric graph and returns focus on close", async () => {
+    const user = userEvent.setup();
+    renderPanel({ response: fullResponse(true) });
+
+    await user.click(
+      screen.getByRole("tab", { name: CONNECTIONS_TAB_PATTERN })
+    );
+    const trigger = await screen.findByRole("button", {
+      name: "Expand Connections metrics",
+    });
+    await user.click(trigger);
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "Connections metrics",
+    });
+    expect(await within(dialog).findByTestId("metric-time-chart")).toBeTruthy();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: "Connections metrics" })
+      ).toBeNull();
+    });
+    expect(document.activeElement).toBe(trigger);
   });
 });
 

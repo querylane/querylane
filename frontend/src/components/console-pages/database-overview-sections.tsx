@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { useId } from "react";
+import { ExpandableMetricChart } from "@/components/charts/expandable-metric-chart";
 import {
   formatMs,
   ratioToPercent,
@@ -24,6 +25,13 @@ import type {
   DatabaseCatalogResult,
 } from "@/hooks/api/database-catalog";
 import { formatBytes, parseResourceLeafId } from "@/lib/console-resources";
+import {
+  CHART_COLORS,
+  decodePoints,
+  formatMetricValue,
+  formatMetricValueDetailed,
+  metricTickBase,
+} from "@/lib/metrics";
 import { cn } from "@/lib/utils";
 import type {
   Database,
@@ -112,8 +120,9 @@ function TrendSparkline({ values }: { values: number[] }) {
   return (
     <svg
       aria-hidden="true"
-      className="h-8 w-16 shrink-0 text-chart-1 opacity-60"
+      className="size-full text-chart-1 opacity-60"
       fill="none"
+      preserveAspectRatio="none"
       viewBox={`0 0 ${SPARKLINE_WIDTH} ${SPARKLINE_HEIGHT}`}
     >
       <defs>
@@ -134,13 +143,13 @@ function TrendSparkline({ values }: { values: number[] }) {
 function StatCell({
   className,
   label,
-  sparklineValues: sparkline,
+  sparklineSeries,
   sub,
   value,
 }: {
   className?: string | undefined;
   label: string;
-  sparklineValues?: number[] | undefined;
+  sparklineSeries?: MetricSeries | undefined;
   sub?: string | undefined;
   value: string;
 }) {
@@ -149,8 +158,13 @@ function StatCell({
       <span className="font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em]">
         {label}
       </span>
-      <div className="flex items-end justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
+      <div
+        className={cn(
+          "flex items-end gap-3 max-sm:flex-col max-sm:items-stretch",
+          sparklineSeries ? "min-h-14" : undefined
+        )}
+      >
+        <div className="flex shrink-0 flex-col gap-0.5">
           <span className="font-mono font-semibold text-[1.375rem] text-foreground tabular-nums leading-none tracking-tight">
             {value}
           </span>
@@ -158,9 +172,51 @@ function StatCell({
             <span className="mt-1 text-muted-foreground text-xs">{sub}</span>
           ) : null}
         </div>
-        {sparkline ? <TrendSparkline values={sparkline} /> : null}
+        {sparklineSeries ? (
+          <DatabaseMetricTrend label={label} series={sparklineSeries} />
+        ) : null}
       </div>
     </div>
+  );
+}
+
+function DatabaseMetricTrend({
+  label,
+  series,
+}: {
+  label: string;
+  series: MetricSeries;
+}) {
+  const values = sparklineValues(series);
+  if (values.length < 2) {
+    return null;
+  }
+
+  const data = decodePoints(series.points).map((point) => ({
+    time: point.time,
+    value: point.value,
+  }));
+  const { 1: color } = CHART_COLORS;
+  return (
+    <ExpandableMetricChart
+      data={data}
+      formatDetailedValue={(value) =>
+        formatMetricValueDetailed(value, series.unit)
+      }
+      formatValue={(value) => formatMetricValue(value, series.unit)}
+      preview={<TrendSparkline values={values} />}
+      series={[
+        {
+          color: color.color,
+          dotClassName: color.dotClassName,
+          key: "value",
+          label,
+        },
+      ]}
+      title={`${label} trend`}
+      triggerClassName="h-14 min-w-28 flex-1 p-0 max-sm:w-full max-sm:min-w-0 max-sm:flex-none [&_[data-slot=expand-chart-icon]]:self-center [&_[data-slot=expand-chart-icon]]:mt-0"
+      yTickBase={metricTickBase(series.unit)}
+    />
   );
 }
 
@@ -197,7 +253,7 @@ function DatabaseStatStrip({
       <StatCell
         className={cellBorders}
         label="Total size"
-        sparklineValues={sparklineValues(sizeSeries)}
+        sparklineSeries={sizeSeries}
         sub={totals ? `${totals.schemaCount} schemas` : undefined}
         value={
           pendingValue ?? (totals ? formatBytes(totals.totalSizeBytes) : "—")
@@ -212,7 +268,7 @@ function DatabaseStatStrip({
       <StatCell
         className={cellBorders}
         label="Est. rows"
-        sparklineValues={sparklineValues(liveTuplesSeries)}
+        sparklineSeries={liveTuplesSeries}
         sub="across user tables"
         value={
           pendingValue ?? (totals ? formatRows(totals.estimatedRows) : "—")
@@ -221,7 +277,7 @@ function DatabaseStatStrip({
       <StatCell
         className={cellBorders}
         label="Dead tuples"
-        sparklineValues={deadValues}
+        sparklineSeries={deadTuplesSeries}
         sub="awaiting vacuum"
         value={deadNow === null ? "—" : formatRows(deadNow)}
       />
