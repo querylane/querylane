@@ -10,7 +10,7 @@ import type {
   ChartThreshold,
 } from "@/components/charts/chart-context";
 import { ChartRangePicker } from "@/components/charts/chart-range-picker";
-import { ExpandableMetricChart } from "@/components/charts/expandable-metric-chart";
+import { MetricChart } from "@/components/charts/metric-chart";
 import { EmptyState } from "@/components/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -322,18 +322,18 @@ function TabChart({
   // Default gutter axis: the plot stops at a reserved right-side column for
   // the y-labels, so dense series never run underneath them.
   return (
-    <ExpandableMetricChart
-      data={mergeSeriesData(dataSeries)}
-      formatDetailedValue={(value) => formatMetricValueDetailed(value, unit)}
-      formatValue={(value) => formatMetricValue(value, unit)}
-      isRefreshing={isRefreshing}
-      series={chartSeries}
-      thresholds={thresholds}
-      title={`${tab.label} metrics`}
-      triggerClassName="h-72 w-full rounded-none p-0 pt-4"
-      {...(unit === MetricUnit.RATIO ? { yDomain: RATIO_Y_DOMAIN } : {})}
-      yTickBase={metricTickBase(unit)}
-    />
+    <div className="h-72 w-full pt-4">
+      <MetricChart
+        data={mergeSeriesData(dataSeries)}
+        formatDetailedValue={(value) => formatMetricValueDetailed(value, unit)}
+        formatValue={(value) => formatMetricValue(value, unit)}
+        isRefreshing={isRefreshing}
+        series={chartSeries}
+        thresholds={thresholds}
+        {...(unit === MetricUnit.RATIO ? { yDomain: RATIO_Y_DOMAIN } : {})}
+        yTickBase={metricTickBase(unit)}
+      />
+    </div>
   );
 }
 

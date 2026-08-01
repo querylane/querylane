@@ -12,7 +12,6 @@ interface ChartTooltipContentProps {
   // Recharts injects `active`, `label`, and `payload` at render time; they are
   // optional here because v3 reads them from context, not the element's props.
   active?: boolean;
-  compact?: boolean | undefined;
   label?: number | string;
   payload?: TooltipEntry[];
 }
@@ -26,7 +25,6 @@ interface ChartTooltipContentProps {
  */
 export function ChartTooltipContent({
   active,
-  compact = false,
   label,
   payload,
 }: ChartTooltipContentProps) {
@@ -44,21 +42,9 @@ export function ChartTooltipContent({
   }
 
   return (
-    <div
-      className={cn(
-        "rounded-lg border border-border/50 bg-popover text-popover-foreground shadow-xl",
-        compact
-          ? "min-w-28 max-w-[calc(100vw-2rem)] px-2 py-1 text-[11px]"
-          : "min-w-36 px-2.5 py-1.5 text-xs"
-      )}
-    >
+    <div className="min-w-36 rounded-lg border border-border/50 bg-popover px-2.5 py-1.5 text-popover-foreground text-xs shadow-xl">
       {typeof label === "number" && (
-        <div
-          className={cn(
-            "font-medium text-muted-foreground",
-            compact ? "mb-1" : "mb-1.5"
-          )}
-        >
+        <div className="mb-1.5 font-medium text-muted-foreground">
           {formatTooltipTime(label)}
         </div>
       )}
@@ -77,20 +63,8 @@ export function ChartTooltipContent({
                   item.dashed && "opacity-50"
                 )}
               />
-              <span
-                className={cn(
-                  "text-muted-foreground",
-                  compact && "max-w-20 truncate"
-                )}
-              >
-                {item.label}
-              </span>
-              <span
-                className={cn(
-                  "ml-auto font-medium font-mono tabular-nums",
-                  compact ? "pl-1.5" : "pl-3"
-                )}
-              >
+              <span className="text-muted-foreground">{item.label}</span>
+              <span className="ml-auto pl-3 font-medium font-mono tabular-nums">
                 {typeof value === "number" ? formatDetailedValue(value) : "—"}
               </span>
             </div>

@@ -7,7 +7,6 @@ import { ChevronRight, Database, RefreshCw, TriangleAlert } from "lucide-react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AsyncSectionState } from "@/components/async-section-state";
-import { ExpandableMetricChart } from "@/components/charts/expandable-metric-chart";
 import { MetricSparkline } from "@/components/charts/metric-chart";
 import { ConfigManagedNotice } from "@/components/config-managed-notice";
 import {
@@ -94,12 +93,9 @@ import {
   type ChartRow,
   DEFAULT_METRIC_RANGE,
   decodePoints,
-  formatMetricValue,
-  formatMetricValueDetailed,
   hasRenderableSpan,
   type MetricRange,
   metricRangeByHours,
-  metricTickBase,
   seriesByMetric,
 } from "@/lib/metrics";
 import { handleNavigationError } from "@/lib/navigation-errors";
@@ -127,7 +123,6 @@ import {
 import {
   MetricId,
   type MetricSeries,
-  MetricUnit,
   type QueryMetricsResponse,
 } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
@@ -322,14 +317,10 @@ function StatValue({ children }: { children: React.ReactNode }) {
  */
 function StatSparkline({
   color,
-  dotClassName,
   series,
-  title,
 }: {
   color: string;
-  dotClassName: string;
   series: MetricSeries | undefined;
-  title: string;
 }) {
   if (!series) {
     return null;
@@ -343,37 +334,7 @@ function StatSparkline({
     return null;
   }
 
-  return (
-    <ExpandableMetricChart
-      data={data}
-      formatDetailedValue={(value) =>
-        formatMetricValueDetailed(value, series.unit)
-      }
-      formatValue={(value) => formatMetricValue(value, series.unit)}
-      preview={
-        <MetricSparkline
-          accessibilityLayer={false}
-          color={color}
-          data={data}
-          seriesKey="value"
-        />
-      }
-      series={[
-        {
-          color,
-          dotClassName,
-          key: "value",
-          label: title,
-        },
-      ]}
-      title={`${title} trend`}
-      triggerClassName="h-full w-full p-0 [&_[data-slot=expand-chart-icon]]:self-center [&_[data-slot=expand-chart-icon]]:mt-0"
-      {...(series.unit === MetricUnit.RATIO
-        ? { yDomain: [0, 1] as [number, number] }
-        : {})}
-      yTickBase={metricTickBase(series.unit)}
-    />
-  );
+  return <MetricSparkline color={color} data={data} seriesKey="value" />;
 }
 
 function CoreInstanceStatsBar({
@@ -398,9 +359,7 @@ function CoreInstanceStatsBar({
         renderTrend={() => (
           <StatSparkline
             color={CHART_COLORS[2].color}
-            dotClassName={CHART_COLORS[2].dotClassName}
             series={metricSeries.get(MetricId.CONNECTIONS_TOTAL)}
-            title="Connections"
           />
         )}
         suffix={
@@ -419,9 +378,7 @@ function CoreInstanceStatsBar({
         renderTrend={() => (
           <StatSparkline
             color={CHART_COLORS[3].color}
-            dotClassName={CHART_COLORS[3].dotClassName}
             series={metricSeries.get(MetricId.CACHE_HIT_RATIO)}
-            title="Cache Hit Ratio"
           />
         )}
       >
@@ -437,9 +394,7 @@ function CoreInstanceStatsBar({
         renderTrend={() => (
           <StatSparkline
             color="var(--color-muted-foreground)"
-            dotClassName="bg-muted-foreground"
             series={metricSeries.get(MetricId.STORAGE_TOTAL_BYTES)}
-            title="Storage"
           />
         )}
       >

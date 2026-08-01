@@ -1,4 +1,4 @@
-import type { PointerEventHandler, ReactElement, ReactNode } from "react";
+import type { ReactElement } from "react";
 import { ResponsiveContainer } from "recharts";
 import {
   ChartContext,
@@ -36,8 +36,6 @@ interface ChartContainerProps {
   /** The Recharts chart element (AreaChart, BarChart, ...). */
   children: ReactElement;
   className?: string;
-  /** HTML controls layered above the responsive SVG chart. */
-  controls?: ReactNode;
   /** Tooltip-grade full-precision formatter; defaults to `formatValue`. */
   formatDetailedValue?: ((value: number) => string) | undefined;
   formatValue: (value: number) => string;
@@ -51,10 +49,6 @@ interface ChartContainerProps {
    * range change never flashes a skeleton or jumps layout.
    */
   isRefreshing?: boolean | undefined;
-  onPointerCancel?: PointerEventHandler<HTMLDivElement> | undefined;
-  onPointerDown?: PointerEventHandler<HTMLDivElement> | undefined;
-  onPointerMove?: PointerEventHandler<HTMLDivElement> | undefined;
-  onPointerUp?: PointerEventHandler<HTMLDivElement> | undefined;
   series: ChartSeries[];
   /** Defaults to showing a legend for >= 2 series; a single series needs none. */
   showLegend?: boolean | undefined;
@@ -71,15 +65,10 @@ interface ChartContainerProps {
 function ChartContainer({
   children,
   className,
-  controls,
   formatDetailedValue,
   formatValue,
   insetValueAxis = false,
   isRefreshing = false,
-  onPointerCancel,
-  onPointerDown,
-  onPointerMove,
-  onPointerUp,
   series,
   showLegend = series.length >= MIN_SERIES_FOR_LEGEND,
 }: ChartContainerProps) {
@@ -93,15 +82,11 @@ function ChartContainer({
     >
       <div
         className={cn(
-          "relative flex size-full flex-col text-xs transition-opacity",
+          "flex size-full flex-col text-xs transition-opacity",
           isRefreshing && "opacity-60",
           className
         )}
         data-slot="chart"
-        onPointerCancel={onPointerCancel}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
         {...(insetValueAxis ? { "data-y-inset": "" } : {})}
       >
         <div className="min-h-0 flex-1">
@@ -116,7 +101,6 @@ function ChartContainer({
         {showLegend && series.length >= MIN_SERIES_FOR_LEGEND && (
           <ChartLegend series={series} />
         )}
-        {controls}
       </div>
     </ChartContext.Provider>
   );

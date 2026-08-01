@@ -13,7 +13,6 @@ hand-assembled Recharts.
 | `chart-context.ts` | Kit types (`ChartRow`, `ChartSeries`, `ChartThreshold`) + React context feeding tooltip/legend |
 | `chart-container.tsx` | Mounting frame: responsive sizing, legend, refresh-dimming, inset-axis halo hook |
 | `chart-tooltip.tsx` | Shared tooltip: timestamp header, one row per series, full-precision values |
-| `chart-zoom.ts` | Drawable-data-aware domain selection for direct plot zoom |
 | `chart-axis-tick.tsx` | Edge-aware x-tick: first/last labels anchor inward so they never clip |
 | `metric-time-chart.tsx` | The time-series chart (lazy-loaded; owns axes/grid/cursor/overlays) |
 | `sparkline-chart.tsx` | Bare trend glyph for stat tiles (lazy-loaded) |
@@ -50,9 +49,6 @@ into `ChartRow[]`/`ChartSeries[]` and passes formatters in.
 - **Axis modes**: `gutter` (default, auto-width right column) or `inset`
   (labels inside the plot on a surface-colored halo — full-bleed plots).
   Edge x-labels anchor inward in both modes.
-- **Scale modes**: overview charts keep the honest zero baseline; expanded
-  analysis views focus on the visible data range with labeled, distinct ticks.
-  Fixed bounded domains and stacked charts keep their natural baseline.
 
 ## Extension points
 
@@ -60,8 +56,7 @@ into `ChartRow[]`/`ChartSeries[]` and passes formatters in.
 `thresholds` (dashed reference lines, optional `extendDomain`), `syncId`
 (shared crosshair across charts), `domain` (pin x to a queried window),
 `yDomain` (fixed bounded scales like ratios), `yTickBase` (10 | 1024),
-`yAxisMode`, `yAxisScale` (`zero` | `data`), `formatDetailedValue`, and
-`zoomable` (horizontal plot selection with a reset control).
+`yAxisMode`, `formatDetailedValue`.
 
 ## Backlog (researched, not yet built)
 

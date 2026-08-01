@@ -4,8 +4,6 @@ import type { ChartRow } from "@/components/charts/chart-context";
 import { downsampleTrend } from "@/lib/chart-data";
 
 interface SparklineChartProps {
-  /** Disables Recharts keyboard semantics when the sparkline is a button preview. */
-  accessibilityLayer?: boolean | undefined;
   /** CSS color for the stroke/fill, e.g. `var(--color-chart-1)`. */
   color: string;
   data: ChartRow[];
@@ -28,12 +26,7 @@ const SPARK_MAX_POINTS = 24;
  * parent, so the parent constrains the size (e.g. `h-8 w-24`). Heavy
  * (Recharts); load via the lazy boundary in metric-chart.tsx.
  */
-function SparklineChart({
-  accessibilityLayer = true,
-  color,
-  data,
-  seriesKey,
-}: SparklineChartProps) {
+function SparklineChart({ color, data, seriesKey }: SparklineChartProps) {
   const gradientId = useId().replaceAll(":", "");
   const trend = downsampleTrend(data, seriesKey, SPARK_MAX_POINTS);
 
@@ -43,11 +36,7 @@ function SparklineChart({
       initialDimension={SPARK_INITIAL_DIMENSION}
       width="100%"
     >
-      <AreaChart
-        accessibilityLayer={accessibilityLayer}
-        data={trend}
-        margin={SPARK_MARGIN}
-      >
+      <AreaChart data={trend} margin={SPARK_MARGIN}>
         <defs>
           <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
             <stop

@@ -34,10 +34,7 @@ import {
   PostgreSqlErrorKind,
   PostgreSqlErrorRetryGuidance,
 } from "@/protogen/querylane/console/v1alpha1/errors_pb";
-import {
-  MetricId,
-  MetricUnit,
-} from "@/protogen/querylane/console/v1alpha1/metrics_pb";
+import { MetricId } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 interface QueryState<T> {
@@ -1111,78 +1108,6 @@ describe("backend database overview", () => {
       screen.getByRole<HTMLButtonElement>("button", { name: "Insights" })
         .disabled
     ).toBe(true);
-  });
-});
-
-describe("database overview metric trend expansion", () => {
-  test("maximizes every trend from its graph", async () => {
-    const user = userEvent.setup();
-    state.metricsQuery = {
-      data: {
-        series: [
-          {
-            metric: MetricId.DATABASE_SIZE_BYTES,
-            points: {
-              startTime: { nanos: 0, seconds: 0n },
-              step: { nanos: 0, seconds: 60n },
-              values: [1024, 2048, 4096],
-            },
-            unit: MetricUnit.BYTES,
-          },
-          {
-            metric: MetricId.DATABASE_LIVE_TUPLES,
-            points: {
-              startTime: { nanos: 0, seconds: 0n },
-              step: { nanos: 0, seconds: 60n },
-              values: [12_000, 15_000, 17_000],
-            },
-            unit: MetricUnit.COUNT,
-          },
-          {
-            metric: MetricId.DATABASE_DEAD_TUPLES,
-            points: {
-              startTime: { nanos: 0, seconds: 0n },
-              step: { nanos: 0, seconds: 60n },
-              values: [100, 110, 125],
-            },
-            unit: MetricUnit.COUNT,
-          },
-        ],
-      },
-    };
-
-    render(
-      <BackendDatabasePage
-        databaseId="customer-events"
-        instanceId="prod"
-        section="overview"
-      />
-    );
-
-    for (const name of [
-      "Expand Total size trend",
-      "Expand Est. rows trend",
-      "Expand Dead tuples trend",
-    ]) {
-      expect(screen.getByRole("button", { name })).toBeTruthy();
-    }
-
-    const trigger = screen.getByRole("button", {
-      name: "Expand Total size trend",
-    });
-    await user.click(trigger);
-
-    expect(
-      await screen.findByRole("dialog", { name: "Total size trend" })
-    ).toBeTruthy();
-
-    await user.keyboard("{Escape}");
-    await waitFor(() => {
-      expect(
-        screen.queryByRole("dialog", { name: "Total size trend" })
-      ).toBeNull();
-    });
-    expect(document.activeElement).toBe(trigger);
   });
 });
 
