@@ -120,8 +120,9 @@ function TrendSparkline({ values }: { values: number[] }) {
   return (
     <svg
       aria-hidden="true"
-      className="h-8 w-16 shrink-0 text-chart-1 opacity-60"
+      className="size-full text-chart-1 opacity-60"
       fill="none"
+      preserveAspectRatio="none"
       viewBox={`0 0 ${SPARKLINE_WIDTH} ${SPARKLINE_HEIGHT}`}
     >
       <defs>
@@ -157,8 +158,13 @@ function StatCell({
       <span className="font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em]">
         {label}
       </span>
-      <div className="flex items-end justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
+      <div
+        className={cn(
+          "flex items-end gap-3 max-sm:flex-col max-sm:items-stretch",
+          sparklineSeries ? "min-h-14" : undefined
+        )}
+      >
+        <div className="flex shrink-0 flex-col gap-0.5">
           <span className="font-mono font-semibold text-[1.375rem] text-foreground tabular-nums leading-none tracking-tight">
             {value}
           </span>
@@ -208,7 +214,7 @@ function DatabaseMetricTrend({
         },
       ]}
       title={`${label} trend`}
-      triggerClassName="h-8 w-20 p-0"
+      triggerClassName="h-14 min-w-28 flex-1 p-0 max-sm:w-full max-sm:min-w-0 max-sm:flex-none [&_[data-slot=expand-chart-icon]]:self-center [&_[data-slot=expand-chart-icon]]:mt-0"
       yTickBase={metricTickBase(series.unit)}
     />
   );

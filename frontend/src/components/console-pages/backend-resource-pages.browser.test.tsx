@@ -1094,8 +1094,12 @@ async function expandControlGeometry(trigger: Element) {
   }
 
   return {
+    chartHeight: chart.getBoundingClientRect().height,
     chartRight: chart.getBoundingClientRect().right,
+    chartWidth: chart.getBoundingClientRect().width,
+    iconHeight: icon.getBoundingClientRect().height,
     iconLeft: icon.getBoundingClientRect().left,
+    iconWidth: icon.getBoundingClientRect().width,
   };
 }
 
@@ -1316,6 +1320,14 @@ test("instance overview expand control stays outside the chart preview", async (
   expect
     .soft(summaryGeometry.chartRight)
     .toBeLessThanOrEqual(summaryGeometry.iconLeft);
+  expect.soft(summaryGeometry.chartWidth).toBeGreaterThanOrEqual(112);
+  expect.soft(summaryGeometry.chartHeight).toBeGreaterThanOrEqual(44);
+  expect
+    .soft(summaryGeometry.chartWidth)
+    .toBeGreaterThanOrEqual(summaryGeometry.iconWidth * 8);
+  expect
+    .soft(summaryGeometry.chartHeight)
+    .toBeGreaterThanOrEqual(summaryGeometry.iconHeight * 3);
   await summaryTrigger.hover();
   await expect(summaryTrigger).toMatchScreenshot(
     "backend-instance-overview-summary-expand-trigger"
@@ -1744,6 +1756,14 @@ test("database overview expand control stays outside the sparkline", async () =>
   await expect.element(trigger).toBeVisible();
   const geometry = await expandControlGeometry(trigger.element());
   expect.soft(geometry.chartRight).toBeLessThanOrEqual(geometry.iconLeft);
+  expect.soft(geometry.chartWidth).toBeGreaterThanOrEqual(112);
+  expect.soft(geometry.chartHeight).toBeGreaterThanOrEqual(44);
+  expect
+    .soft(geometry.chartWidth)
+    .toBeGreaterThanOrEqual(geometry.iconWidth * 8);
+  expect
+    .soft(geometry.chartHeight)
+    .toBeGreaterThanOrEqual(geometry.iconHeight * 3);
   await trigger.hover();
   await expect(trigger).toMatchScreenshot(
     "backend-database-overview-expand-trigger"
@@ -1769,6 +1789,18 @@ test("expanded database overview trend stays readable on mobile", async () => {
       name: "Expand Total size trend",
     });
     await expect.element(trigger).toBeVisible();
+    const geometry = await expandControlGeometry(trigger.element());
+    expect.soft(geometry.chartWidth).toBeGreaterThanOrEqual(112);
+    expect(document.documentElement.scrollWidth).toBe(
+      document.documentElement.clientWidth
+    );
+    const statStrip = trigger.element().closest('[data-slot="card"]');
+    if (!(statStrip instanceof HTMLElement)) {
+      throw new Error("Expected database stat strip");
+    }
+    await expect(page.elementLocator(statStrip)).toMatchScreenshot(
+      "backend-database-overview-stat-strip-mobile"
+    );
     await trigger.click();
 
     const dialog = page.getByRole("dialog", { name: "Total size trend" });

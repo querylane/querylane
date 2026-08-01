@@ -11,6 +11,16 @@ describe("downsampleTrend", () => {
     expect(downsampleTrend(data, "v", 24)).toBe(data);
   });
 
+  test("uses the observed span while preserving gaps inside the trend", () => {
+    expect(
+      downsampleTrend(rows([null, null, 1, null, 2, null]), "v", 24)
+    ).toEqual([
+      { time: 2000, v: 1 },
+      { time: 3000, v: null },
+      { time: 4000, v: 2 },
+    ]);
+  });
+
   test("averages buckets down to the budget", () => {
     const data = rows(Array.from({ length: 240 }, (_, index) => index % 2));
     const sampled = downsampleTrend(data, "v", 24);
@@ -38,6 +48,7 @@ describe("downsampleTrend", () => {
     const data = rows([
       ...Array.from({ length: 50 }, () => 1),
       ...Array.from({ length: 50 }, (): null => null),
+      ...Array.from({ length: 50 }, () => 2),
     ]);
     const sampled = downsampleTrend(data, "v", 10);
 

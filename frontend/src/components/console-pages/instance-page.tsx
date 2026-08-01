@@ -367,7 +367,7 @@ function StatSparkline({
         },
       ]}
       title={`${title} trend`}
-      triggerClassName="h-7 w-20 p-0"
+      triggerClassName="h-full w-full p-0 [&_[data-slot=expand-chart-icon]]:self-center [&_[data-slot=expand-chart-icon]]:mt-0"
       {...(series.unit === MetricUnit.RATIO
         ? { yDomain: [0, 1] as [number, number] }
         : {})}
