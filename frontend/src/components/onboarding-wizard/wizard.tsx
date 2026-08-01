@@ -5,18 +5,28 @@ import { useOnboardingWizardController } from "@/components/onboarding-wizard/ho
 import type { OnboardingWizardProps } from "@/components/onboarding-wizard/types";
 import { OnboardingWizardContent } from "@/components/onboarding-wizard/wizard-content";
 
-function OnboardingWizard({ onFinish, open = true }: OnboardingWizardProps) {
+function OnboardingWizard({
+  initialMethod,
+  onFinish,
+  open = true,
+}: OnboardingWizardProps) {
   if (!open) {
     return null;
   }
 
-  return <OnboardingWizardMounted onFinish={onFinish} />;
+  return (
+    <OnboardingWizardMounted
+      initialMethod={initialMethod}
+      onFinish={onFinish}
+    />
+  );
 }
 
 function OnboardingWizardMounted({
+  initialMethod,
   onFinish,
-}: Pick<OnboardingWizardProps, "onFinish">) {
-  const controller = useOnboardingWizardController({ onFinish });
+}: Pick<OnboardingWizardProps, "initialMethod" | "onFinish">) {
+  const controller = useOnboardingWizardController({ initialMethod, onFinish });
 
   return (
     <OnboardingWizardControllerProvider controller={controller}>

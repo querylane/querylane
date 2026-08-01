@@ -152,7 +152,6 @@ function buildEmbeddedSetupRequest() {
       case: "embeddedConfig",
       value: create(EmbeddedSetupConfigSchema, {
         mode: "persistent",
-        port: 5433,
       }),
     },
   });

@@ -95,7 +95,6 @@ func Test_resolveSetupPath(t *testing.T) {
 			msg: &v1alpha1.SetupAppDatabaseRequest{
 				Setup: &v1alpha1.SetupAppDatabaseRequest_EmbeddedConfig{
 					EmbeddedConfig: &v1alpha1.EmbeddedSetupConfig{
-						Port: 9999,
 						Mode: "ephemeral",
 					},
 				},
@@ -108,7 +107,7 @@ func Test_resolveSetupPath(t *testing.T) {
 
 				require.NotNil(t, path.persistCfg)
 				require.NotNil(t, path.persistCfg.Embedded)
-				assert.Equal(t, 9999, path.persistCfg.Embedded.Port)
+				assert.Equal(t, 0, path.persistCfg.Embedded.Port, "port stays 0 = automatic selection")
 				assert.Equal(t, "ephemeral", path.persistCfg.Embedded.Mode)
 				assert.Nil(t, path.persistCfg.Database)
 
@@ -183,19 +182,8 @@ func Test_buildEmbeddedPersistConfig(t *testing.T) {
 
 				require.NotNil(t, cfg.Embedded)
 				assert.Equal(t, "persistent", cfg.Embedded.Mode)
-				assert.Equal(t, 5433, cfg.Embedded.Port)
+				assert.Equal(t, 0, cfg.Embedded.Port, "port stays 0 = automatic selection")
 				assert.Nil(t, cfg.Database)
-			},
-		},
-		{
-			name:  "custom_port",
-			input: &v1alpha1.EmbeddedSetupConfig{Port: 7777},
-			validate: func(t *testing.T, cfg *serverconfig.Config) {
-				t.Helper()
-
-				require.NotNil(t, cfg.Embedded)
-				assert.Equal(t, 7777, cfg.Embedded.Port)
-				assert.Equal(t, "persistent", cfg.Embedded.Mode)
 			},
 		},
 		{
@@ -206,18 +194,7 @@ func Test_buildEmbeddedPersistConfig(t *testing.T) {
 
 				require.NotNil(t, cfg.Embedded)
 				assert.Equal(t, "ephemeral", cfg.Embedded.Mode)
-				assert.Equal(t, 5433, cfg.Embedded.Port)
-			},
-		},
-		{
-			name:  "all_custom",
-			input: &v1alpha1.EmbeddedSetupConfig{Port: 8888, Mode: "ephemeral"},
-			validate: func(t *testing.T, cfg *serverconfig.Config) {
-				t.Helper()
-
-				require.NotNil(t, cfg.Embedded)
-				assert.Equal(t, 8888, cfg.Embedded.Port)
-				assert.Equal(t, "ephemeral", cfg.Embedded.Mode)
+				assert.Equal(t, 0, cfg.Embedded.Port, "port stays 0 = automatic selection")
 			},
 		},
 	}

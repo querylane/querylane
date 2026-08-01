@@ -174,7 +174,6 @@ it("covers configure navigation and direct setters", () => {
   });
   const embeddedConfig = createProto(EmbeddedSetupConfigSchema, {
     mode: "persistent",
-    port: 5433,
   });
   const postgresConfig = createProto(PostgresConfigSchema, {
     database: "querylane",

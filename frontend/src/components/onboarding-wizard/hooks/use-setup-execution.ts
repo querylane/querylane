@@ -121,7 +121,6 @@ async function executeSetupRequest({
                   submittedEmbeddedConfig.mode === "ephemeral"
                     ? "ephemeral"
                     : "persistent",
-                port: submittedEmbeddedConfig.port || undefined,
               }
             : undefined
         );

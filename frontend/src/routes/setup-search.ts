@@ -8,7 +8,12 @@ const setupReturnToSchema = z
     message: "returnTo must not point back to setup",
   });
 
+const setupMethodSchema = z
+  .optional(z.enum(["embedded", "manual_yaml", "ui_configured"]))
+  .catch(undefined);
+
 const setupSearchSchema = z.object({
+  method: setupMethodSchema,
   returnTo: z.optional(setupReturnToSchema),
 });
 

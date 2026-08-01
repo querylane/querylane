@@ -48,7 +48,7 @@ database:
 # embedded:
 #   mode: "persistent"     # persistent | ephemeral
 #   data_path: "~/.querylane/pgdata"
-#   port: 5433
+#   port: 0                # 0 (default) = automatic: prefer 5433, else next free port. Set to pin a fixed port.
 #   health_check_interval: "10s"
 
 

@@ -300,10 +300,12 @@ func (x *SetupProgressEvent) GetError() string {
 
 // EmbeddedSetupConfig holds optional overrides for the embedded PostgreSQL
 // setup method.
+//
+// The listen port is chosen automatically by the server (5433 when free,
+// otherwise the next available port). Operators can pin a fixed port via
+// `embedded.port` in the configuration file.
 type EmbeddedSetupConfig struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Optional. Port for the embedded PostgreSQL instance. Defaults to 5433.
-	Port int32 `protobuf:"varint,1,opt,name=port,proto3" json:"port,omitempty"`
 	// Optional. Data persistence mode: "persistent" (default) or "ephemeral".
 	Mode          string `protobuf:"bytes,2,opt,name=mode,proto3" json:"mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -338,13 +340,6 @@ func (x *EmbeddedSetupConfig) ProtoReflect() protoreflect.Message {
 // Deprecated: Use EmbeddedSetupConfig.ProtoReflect.Descriptor instead.
 func (*EmbeddedSetupConfig) Descriptor() ([]byte, []int) {
 	return file_querylane_console_v1alpha1_onboarding_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *EmbeddedSetupConfig) GetPort() int32 {
-	if x != nil {
-		return x.Port
-	}
-	return 0
 }
 
 func (x *EmbeddedSetupConfig) GetMode() string {
@@ -711,11 +706,10 @@ const file_querylane_console_v1alpha1_onboarding_proto_rawDesc = "" +
 	"\astep_id\x18\x01 \x01(\x0e2%.querylane.console.v1alpha1.SetupStepB\x03\xe0A\x03R\x06stepId\x12&\n" +
 	"\fdisplay_name\x18\x02 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12@\n" +
 	"\x05state\x18\x03 \x01(\x0e2%.querylane.console.v1alpha1.StepStateB\x03\xe0A\x03R\x05state\x12\x19\n" +
-	"\x05error\x18\x04 \x01(\tB\x03\xe0A\x03R\x05error\"u\n" +
-	"\x13EmbeddedSetupConfig\x12&\n" +
-	"\x04port\x18\x01 \x01(\x05B\x12\xe0A\x01\xbaH\f\xd8\x01\x01\x1a\a\x18\xff\xff\x03(\x80\bR\x04port\x126\n" +
+	"\x05error\x18\x04 \x01(\tB\x03\xe0A\x03R\x05error\"Y\n" +
+	"\x13EmbeddedSetupConfig\x126\n" +
 	"\x04mode\x18\x02 \x01(\tB\"\xe0A\x01\xbaH\x1c\xd8\x01\x01r\x17R\n" +
-	"persistentR\tephemeralR\x04mode\"\x1b\n" +
+	"persistentR\tephemeralR\x04modeJ\x04\b\x01\x10\x02R\x04port\"\x1b\n" +
 	"\x19GetOnboardingStateRequest\"\xc5\x03\n" +
 	"\x1aGetOnboardingStateResponse\x12(\n" +
 	"\ris_configured\x18\x01 \x01(\bB\x03\xe0A\x03R\fisConfigured\x12b\n" +

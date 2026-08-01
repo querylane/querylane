@@ -23,7 +23,7 @@ func TestNewManager(t *testing.T) {
 
 		mgr := NewManager(Config{})
 		assert.Equal(t, ModePersistent, mgr.cfg.Mode)
-		assert.Equal(t, 5433, mgr.cfg.Port)
+		assert.Equal(t, 0, mgr.cfg.Port, "port stays 0 = automatic selection")
 		assert.Equal(t, 10*time.Second, mgr.cfg.HealthCheckInterval)
 		assert.NotEmpty(t, mgr.cfg.DataPath)
 	})
@@ -176,6 +176,54 @@ func TestManager_StartWithConfig_PortInUseFailsBeforeStartup(t *testing.T) {
 
 	_, statErr := os.Stat(dataPath)
 	assert.True(t, os.IsNotExist(statErr), "preflight should fail before creating the data directory")
+}
+
+func TestSelectFreePort(t *testing.T) {
+	t.Parallel()
+
+	t.Run("honors a free preferred port", func(t *testing.T) {
+		t.Parallel()
+
+		listener, err := net.Listen("tcp4", "127.0.0.1:0") //nolint:noctx // Test owns the listener lifecycle.
+		require.NoError(t, err)
+
+		address, ok := listener.Addr().(*net.TCPAddr)
+		require.True(t, ok)
+		require.NoError(t, listener.Close())
+
+		port, err := selectFreePort(t.Context(), address.Port)
+		require.NoError(t, err)
+		assert.Equal(t, address.Port, port)
+	})
+
+	t.Run("skips a busy preferred port", func(t *testing.T) {
+		t.Parallel()
+
+		listener, err := net.Listen("tcp4", "127.0.0.1:0") //nolint:noctx // Test owns the listener lifecycle.
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			require.NoError(t, listener.Close())
+		})
+
+		address, ok := listener.Addr().(*net.TCPAddr)
+		require.True(t, ok)
+
+		port, err := selectFreePort(t.Context(), address.Port)
+		require.NoError(t, err)
+		assert.NotEqual(t, address.Port, port)
+		assert.GreaterOrEqual(t, port, defaultAutoPort)
+		assert.Less(t, port, defaultAutoPort+autoPortRangeSize)
+	})
+
+	t.Run("falls back within the auto range without a preference", func(t *testing.T) {
+		t.Parallel()
+
+		port, err := selectFreePort(t.Context(), 0)
+		require.NoError(t, err)
+		assert.GreaterOrEqual(t, port, defaultAutoPort)
+		assert.Less(t, port, defaultAutoPort+autoPortRangeSize)
+		assert.False(t, portHasActiveListener(t.Context(), port))
+	})
 }
 
 func TestPortHasActiveListener(t *testing.T) {

@@ -70,7 +70,7 @@ export function ErrorSummaryPhase() {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Button
-              className="h-10 rounded-xl border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
+              className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
               onClick={() => {
                 clearStreamFailure();
                 goBackToMethodSelection();
@@ -81,7 +81,7 @@ export function ErrorSummaryPhase() {
               Start over
             </Button>
             <Button
-              className="h-10 rounded-xl border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
+              className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
               onClick={() => {
                 clearStreamFailure();
                 goToConfigure();
@@ -93,7 +93,7 @@ export function ErrorSummaryPhase() {
             </Button>
           </div>
           <RetryActionButton
-            className="h-10 rounded-xl bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
+            className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
             label="Retry"
             onRetry={() =>
               waitForNextFrame().then(() => {
@@ -110,7 +110,7 @@ export function ErrorSummaryPhase() {
       <div className="space-y-5">
         {/* Hint banner for config vs transient errors */}
         {isConfigError ? (
-          <div className="flex items-start gap-4 rounded-2xl border border-amber-400/20 bg-amber-500/[0.06] px-4 py-3">
+          <div className="flex items-start gap-4 rounded-xl border border-amber-400/20 bg-amber-500/[0.06] px-4 py-3">
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
             <div className="space-y-1">
               <div className="font-medium text-amber-100 text-base">
@@ -123,7 +123,7 @@ export function ErrorSummaryPhase() {
             </div>
           </div>
         ) : (
-          <div className="flex items-start gap-4 rounded-2xl border border-blue-400/20 bg-blue-500/[0.06] px-4 py-3">
+          <div className="flex items-start gap-4 rounded-xl border border-blue-400/20 bg-blue-500/[0.06] px-4 py-3">
             <RefreshCw className="mt-0.5 size-4 shrink-0 text-blue-400" />
             <div className="space-y-1">
               <div className="font-medium text-base text-blue-100">
@@ -140,7 +140,7 @@ export function ErrorSummaryPhase() {
 
         {/* Failed step detail */}
         {failedStepName ? (
-          <div className="rounded-2xl border border-red-400/18 bg-red-500/[0.06] px-4 py-3">
+          <div className="rounded-xl border border-red-400/18 bg-red-500/[0.06] px-4 py-3">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <span className="rounded-full bg-red-500/18 px-3 py-1 font-medium text-red-200 text-sm">

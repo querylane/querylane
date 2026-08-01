@@ -74,7 +74,7 @@ export function ManualYamlPhase() {
       footer={
         <div className="flex items-center justify-between gap-4">
           <Button
-            className="h-10 rounded-xl border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
+            className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
             onClick={goBackToMethodSelection}
             variant="ghost"
           >
@@ -82,7 +82,7 @@ export function ManualYamlPhase() {
             Back
           </Button>
           <Button
-            className="h-10 rounded-xl bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
+            className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
             onClick={startProgress}
           >
             Continue
@@ -101,12 +101,12 @@ export function ManualYamlPhase() {
       }
     >
       <div className="space-y-5">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
           <div className="font-medium text-base text-white/84">
             Default path
           </div>
           <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/8 bg-[#080b12] px-4 py-3">
-            <span className="flex-1 font-mono text-sm text-white/92 md:text-base">
+            <span className="min-w-0 flex-1 break-all font-mono text-white/92 text-xs md:text-sm">
               {configFilePath}
             </span>
             <Button
@@ -136,9 +136,9 @@ export function ManualYamlPhase() {
           </p>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+        <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
           <div className="flex items-center justify-between border-white/8 border-b px-5 py-4">
-            <div className="font-medium text-lg text-white">config.yaml</div>
+            <div className="font-medium text-base text-white">config.yaml</div>
             <Button
               className="h-9 rounded-lg border-white/10 px-3 text-sm text-white/78 hover:bg-white/[0.05] hover:text-white"
               onClick={async () => {
@@ -159,14 +159,14 @@ export function ManualYamlPhase() {
               {copyState === "copied" ? "Copied" : "Copy"}
             </Button>
           </div>
-          <pre className="overflow-x-auto p-5 font-mono text-sm text-white/84 leading-7">
+          <pre className="overflow-x-auto p-4 font-mono text-white/84 text-xs leading-6">
             <code data-testid="manual-yaml-config-preview">
               {configPreview}
             </code>
           </pre>
         </div>
 
-        <div className="rounded-2xl border border-[#4d72d8]/24 bg-[#0d1324] px-4 py-3 text-sm text-white/70 leading-6">
+        <div className="rounded-xl border border-[#4d72d8]/24 bg-[#0d1324] px-4 py-3 text-sm text-white/70 leading-6">
           Querylane will begin watching the configured path on step 3. Once the
           file is saved, it will validate the contents and continue setup
           automatically.

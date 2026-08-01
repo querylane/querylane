@@ -15,7 +15,7 @@ interface LabeledInputProps
 }
 
 const BASE_INPUT_CLASSES =
-  "h-11 rounded-xl border-white/10 bg-white/[0.03] px-4 py-0 text-base text-white leading-none placeholder:text-white/32 focus-visible:border-[#4b73d7] focus-visible:ring-[#4b73d7]/25";
+  "h-9 rounded-lg border-white/10 bg-white/[0.03] px-3 py-0 text-sm text-white leading-none placeholder:text-white/32 focus-visible:border-[#4b73d7] focus-visible:ring-[#4b73d7]/25";
 
 const ERROR_INPUT_CLASSES =
   "border-red-400/40 focus-visible:border-red-400/60 focus-visible:ring-red-400/20";
@@ -40,13 +40,13 @@ export function LabeledInput({
   const invalid = error ? true : undefined;
 
   return (
-    <div className={cn("space-y-2.5", className)}>
-      <div className="space-y-1">
-        <Label className="font-medium text-base text-white" htmlFor={id}>
+    <div className={cn("space-y-1.5", className)}>
+      <div className="space-y-0.5">
+        <Label className="font-medium text-sm text-white" htmlFor={id}>
           {label}
         </Label>
         {description ? (
-          <p className="text-sm text-white/50">{description}</p>
+          <p className="text-white/50 text-xs">{description}</p>
         ) : null}
       </div>
       {type === "password" ? (
@@ -70,7 +70,7 @@ export function LabeledInput({
         />
       )}
       {error ? (
-        <p className="text-red-300/80 text-sm" id={errorId} role="alert">
+        <p className="text-red-300/80 text-xs" id={errorId} role="alert">
           {error}
         </p>
       ) : null}

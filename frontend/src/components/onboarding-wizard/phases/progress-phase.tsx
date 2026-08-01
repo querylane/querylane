@@ -38,7 +38,7 @@ function WaitingForConfigBody({
         <div className="relative flex size-44 items-center justify-center rounded-full border border-white/8 bg-[radial-gradient(circle,rgba(98,122,255,0.14),rgba(7,9,15,0)_65%)]">
           <div className="absolute inset-5 rounded-full border border-white/7" />
           <div className="absolute inset-10 rounded-full border border-white/10" />
-          <div className="relative z-10 flex size-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white/78">
+          <div className="relative z-10 flex size-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-white/78">
             <FileCog className="size-7" />
           </div>
         </div>
@@ -61,7 +61,7 @@ function WaitingForConfigBody({
           continue setup automatically.
         </p>
         <Button
-          className="h-10 rounded-xl border border-white/10 bg-white/[0.04] px-4 font-medium text-sm text-white hover:bg-white/[0.07]"
+          className="h-9 rounded-lg border border-white/10 bg-white/[0.04] px-4 font-medium text-sm text-white hover:bg-white/[0.07]"
           disabled={retryPending}
           onClick={() => {
             onRetryWatch().catch((error) => captureException(error));
@@ -77,7 +77,7 @@ function WaitingForConfigBody({
         </Button>
       </div>
       {watchNotice ? (
-        <div className="rounded-2xl border border-amber-400/25 bg-amber-500/[0.08] px-4 py-3 text-amber-50/90 text-sm">
+        <div className="rounded-xl border border-amber-400/25 bg-amber-500/[0.08] px-4 py-3 text-amber-50/90 text-sm">
           {watchNotice}
         </div>
       ) : null}
@@ -86,13 +86,13 @@ function WaitingForConfigBody({
 }
 function SuccessCallout() {
   return (
-    <div className="rounded-2xl border border-emerald-400/32 bg-emerald-500/[0.1] p-5">
+    <div className="rounded-xl border border-emerald-400/32 bg-emerald-500/[0.1] p-4">
       <div className="flex items-start gap-4">
         <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full border border-emerald-400/35 bg-emerald-500/16 text-emerald-100">
           <Check aria-hidden="true" className="size-5" />
         </span>
         <div className="min-w-0 space-y-2">
-          <div className="font-medium text-emerald-100 text-xl">
+          <div className="font-medium text-emerald-100 text-lg">
             Ready to go!
           </div>
           <p className="max-w-4xl text-emerald-50/90 text-sm leading-6 md:text-base">
@@ -165,7 +165,7 @@ export function ProgressPhase() {
       footer={
         <div className="flex items-center justify-between gap-4">
           <Button
-            className="h-10 rounded-xl border-white/10 px-4 text-sm text-white/68 hover:bg-white/[0.04] hover:text-white disabled:text-white/25"
+            className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/68 hover:bg-white/[0.04] hover:text-white disabled:text-white/25"
             disabled={isSuccess || setupRunning}
             onClick={goBackToConfigure}
             variant="ghost"
@@ -174,7 +174,7 @@ export function ProgressPhase() {
             Back
           </Button>
           <Button
-            className="h-10 rounded-xl bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90 disabled:bg-white/18 disabled:text-white/38"
+            className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90 disabled:bg-white/18 disabled:text-white/38"
             disabled={!isSuccess}
             onClick={finishWizard}
           >

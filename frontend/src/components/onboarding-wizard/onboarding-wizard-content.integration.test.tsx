@@ -14,6 +14,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OnboardingWizardControllerProvider } from "@/components/onboarding-wizard/controller-provider";
 import type { OnboardingWizardController } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller";
+import type { ConfigMethod } from "@/components/onboarding-wizard/types";
+import { OnboardingWizard } from "@/components/onboarding-wizard/wizard";
 import { OnboardingWizardContent } from "@/components/onboarding-wizard/wizard-content";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import {
@@ -49,7 +51,9 @@ const DIRECT_SSL_NEGOTIATION_OPTION_RE = /^direct /i;
 const INVALID_CONNECTION_STRING_RE = /Invalid connection string/i;
 const REFRESH_RE = /Refresh/;
 const REQUIRE_SSL_MODE_OPTION_RE = /^require /i;
-const SETUP_INTERNAL_STORAGE_RE = /Step 1 sets up Querylane internal storage/;
+const BACK_RE = /back/i;
+const SETUP_INTERNAL_STORAGE_RE =
+  /Pick how Querylane should store its own metadata/;
 const VERIFY_FULL_RE = /verify-full/;
 const SSL_MODE_VALUES = [
   "disable",
@@ -160,6 +164,26 @@ function renderWizard(controller = createController()) {
       </TransportProvider>
     ),
   };
+}
+
+function renderRealWizard(initialMethod: ConfigMethod) {
+  const queryClient = createTestQueryClient();
+  renderedQueryClients.push(queryClient);
+  const transport = createTestRouterTransport(({ service }) => {
+    service(InstanceService, {
+      testInstanceConnection: vi.fn(async () => ({})),
+    });
+  });
+
+  return render(
+    <TransportProvider transport={transport}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider defaultTheme="dark">
+          <OnboardingWizard initialMethod={initialMethod} />
+        </ThemeProvider>
+      </QueryClientProvider>
+    </TransportProvider>
+  );
 }
 
 function seedOnboardingState() {
@@ -348,16 +372,14 @@ describe("onboarding wizard content integration", () => {
 
     renderWizard();
 
-    await user.click(
-      screen.getByRole("button", { name: "Paste connection string" })
-    );
-    setFieldValue("Connection string", "not-a-dsn");
+    await user.click(screen.getByRole("tab", { name: "Connection string" }));
+    setFieldValue("PostgreSQL connection string", "not-a-dsn");
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
     expect(screen.getByText(INVALID_CONNECTION_STRING_RE)).toBeTruthy();
 
     setFieldValue(
-      "Connection string",
+      "PostgreSQL connection string",
       "postgres://meta:secret@metadata.internal:6543/querylane?sslmode=require&sslnegotiation=direct"
     );
     await user.click(screen.getByRole("button", { name: "Apply" }));
@@ -408,11 +430,9 @@ describe("onboarding wizard content integration", () => {
       ).toBe("true");
     });
 
-    await user.click(
-      screen.getByRole("button", { name: "Paste connection string" })
-    );
+    await user.click(screen.getByRole("tab", { name: "Connection string" }));
     setFieldValue(
-      "Connection string",
+      "PostgreSQL connection string",
       "postgres://meta:secret@metadata.internal:6543/querylane?sslmode=require"
     );
     await user.click(screen.getByRole("button", { name: "Apply" }));
@@ -432,11 +452,9 @@ describe("onboarding wizard content integration", () => {
 
     renderWizard();
 
-    await user.click(
-      screen.getByRole("button", { name: "Paste connection string" })
-    );
+    await user.click(screen.getByRole("tab", { name: "Connection string" }));
     setFieldValue(
-      "Connection string",
+      "PostgreSQL connection string",
       "postgres://meta:secret@metadata.internal:6543/querylane?sslmode=require"
     );
     await user.click(screen.getByRole("button", { name: "Apply" }));
@@ -484,8 +502,38 @@ describe("onboarding wizard content integration", () => {
     expect(
       screen.getByRole("heading", { name: "Embedded PostgreSQL" })
     ).toBeTruthy();
-    expect(screen.getByLabelText("Port")).toHaveProperty("value", "5433");
+    expect(
+      screen.getByText("Persistent — data is kept across restarts")
+    ).toBeTruthy();
     expect(screen.getByText("/tmp/querylane/embedded-postgres")).toBeTruthy();
+    expect(screen.getByText("Local port, chosen automatically")).toBeTruthy();
+  });
+
+  it("warns loudly when embedded persistence is unavailable", async () => {
+    const user = userEvent.setup();
+    useSetupStore.setState({
+      onboardingState: createOnboardingState({ isHomeWritable: false }),
+      refreshOnboardingState: vi.fn(async () => undefined),
+      showWizardErrorBanner: false,
+      status: "onboarding",
+    });
+    useOnboardingWizardStore.setState({
+      phase: "configure_embedded",
+      selectedMethod: "embedded",
+    });
+
+    renderWizard();
+
+    expect(screen.getByText("Data will not persist")).toBeTruthy();
+    expect(
+      screen.getByText("Ephemeral — data is cleared on shutdown")
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(
+      useOnboardingWizardStore.getState().submittedEmbeddedConfig?.mode
+    ).toBe("ephemeral");
   });
 
   it("persists UI metadata database config before entering setup progress", async () => {
@@ -593,7 +641,6 @@ describe("onboarding wizard setup progression", () => {
 
     const state = useOnboardingWizardStore.getState();
     expect(state.phase).toBe("progress_running");
-    expect(state.submittedEmbeddedConfig?.port).toBe(5433);
     expect(state.submittedEmbeddedConfig?.mode).toBe("persistent");
   });
 
@@ -757,5 +804,48 @@ describe("onboarding wizard setup progression", () => {
 
     expect(screen.getAllByText(error)).not.toHaveLength(0);
     expect(screen.getByText("Likely a configuration issue")).toBeTruthy();
+  });
+
+  it("deep links to the configure phase via initialMethod", async () => {
+    const user = userEvent.setup();
+    seedOnboardingState();
+
+    renderRealWizard("ui_configured");
+
+    expect(
+      await screen.findByRole("heading", { name: "Querylane internal storage" })
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: BACK_RE }));
+
+    expect(
+      screen.getByRole("heading", {
+        name: "How would you like to get started?",
+      })
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("radio", { name: CONFIGURE_UI_RE })
+        .getAttribute("aria-checked")
+    ).toBe("true");
+  });
+
+  it("ignores a deep-linked method the server does not offer", () => {
+    useSetupStore.setState({
+      onboardingState: createOnboardingState({
+        availableMethods: [SetupMethod.MANUAL_YAML],
+      }),
+      refreshOnboardingState: vi.fn(async () => undefined),
+      showWizardErrorBanner: false,
+      status: "onboarding",
+    });
+
+    renderRealWizard("embedded");
+
+    expect(
+      screen.getByRole("heading", {
+        name: "How would you like to get started?",
+      })
+    ).toBeTruthy();
   });
 });

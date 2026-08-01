@@ -91,6 +91,7 @@ func (h HealthStatus) String() string {
 // Manager manages the lifecycle of an embedded PostgreSQL instance.
 type Manager struct {
 	cfg          Config
+	autoPort     bool // true when the configured port was 0: pick a free port at start
 	postgres     *embeddedpostgres.EmbeddedPostgres
 	logBuffer    *syncBuffer
 	mu           sync.Mutex // guards postgres, started, adopted, adoptedPID
@@ -249,6 +250,7 @@ func (m *Manager) configureLocked(cfg Config) error {
 	}
 
 	m.cfg = cfg
+	m.autoPort = cfg.Port == 0
 
 	return nil
 }
@@ -268,6 +270,12 @@ func (m *Manager) startLockedFromReadyConfig(ctx context.Context) error {
 	}
 
 	if result.LivePID != 0 {
+		// In automatic port mode, a still-running instance from a previous
+		// boot listens on whatever port that boot chose — adopt it there.
+		if m.autoPort && result.Port != 0 {
+			m.cfg.Port = result.Port
+		}
+
 		if err := m.handleLivePID(ctx, result.LivePID); err != nil {
 			return err
 		}
@@ -295,27 +303,20 @@ func (m *Manager) startLockedFromReadyConfig(ctx context.Context) error {
 // startLocked creates and starts the embedded postgres process. The caller
 // must hold m.mu.
 func (m *Manager) startLocked(ctx context.Context) error {
-	if portHasActiveListener(ctx, m.cfg.Port) {
-		return fmt.Errorf(
-			"embedded postgres port %d is already in use; stop the process using it or set embedded.port to another available port",
-			m.cfg.Port,
-		)
-	}
-
-	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp4", fmt.Sprintf("127.0.0.1:%d", m.cfg.Port))
-	if err != nil {
-		if errors.Is(err, syscall.EADDRINUSE) {
-			return fmt.Errorf(
-				"embedded postgres port %d is already in use; stop the process using it or set embedded.port to another available port",
-				m.cfg.Port,
-			)
+	if m.autoPort {
+		port, err := selectFreePort(ctx, m.cfg.Port)
+		if err != nil {
+			return err
 		}
 
-		return fmt.Errorf("check embedded postgres port %d availability: %w", m.cfg.Port, err)
-	}
+		if port != defaultAutoPort {
+			slog.InfoContext(ctx, "auto-selected embedded postgres port",
+				slog.Int("port", port), slog.Int("preferred", defaultAutoPort))
+		}
 
-	if err := listener.Close(); err != nil {
-		return fmt.Errorf("release embedded postgres port %d after availability check: %w", m.cfg.Port, err)
+		m.cfg.Port = port
+	} else if err := checkPortAvailable(ctx, m.cfg.Port); err != nil {
+		return err
 	}
 
 	if err := os.MkdirAll(m.cfg.DataPath, 0o755); err != nil {
@@ -352,6 +353,84 @@ func (m *Manager) startLocked(ctx context.Context) error {
 	slog.DebugContext(ctx, "embedded postgres process started", slog.Int("port", m.cfg.Port))
 
 	return nil
+}
+
+// defaultAutoPort is the preferred port when the port is selected
+// automatically (Config.Port == 0).
+const defaultAutoPort = 5433
+
+// autoPortRangeSize bounds the upward scan from defaultAutoPort when the
+// preferred port is taken.
+const autoPortRangeSize = 100
+
+// checkPortAvailable verifies nothing listens on the port and that it can be
+// bound, returning the user-facing "already in use" error otherwise.
+func checkPortAvailable(ctx context.Context, port int) error {
+	if portHasActiveListener(ctx, port) {
+		return fmt.Errorf(
+			"embedded postgres port %d is already in use; stop the process using it or set embedded.port to another available port",
+			port,
+		)
+	}
+
+	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp4", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		if errors.Is(err, syscall.EADDRINUSE) {
+			return fmt.Errorf(
+				"embedded postgres port %d is already in use; stop the process using it or set embedded.port to another available port",
+				port,
+			)
+		}
+
+		return fmt.Errorf("check embedded postgres port %d availability: %w", port, err)
+	}
+
+	if err := listener.Close(); err != nil {
+		return fmt.Errorf("release embedded postgres port %d after availability check: %w", port, err)
+	}
+
+	return nil
+}
+
+// selectFreePort returns the first available port, trying preferred first
+// (when non-zero), then defaultAutoPort and the ports above it.
+func selectFreePort(ctx context.Context, preferred int) (int, error) {
+	candidates := make([]int, 0, autoPortRangeSize+1)
+	if preferred != 0 {
+		candidates = append(candidates, preferred)
+	}
+
+	for port := defaultAutoPort; port < defaultAutoPort+autoPortRangeSize; port++ {
+		if port != preferred {
+			candidates = append(candidates, port)
+		}
+	}
+
+	for _, port := range candidates {
+		if portHasActiveListener(ctx, port) {
+			continue
+		}
+
+		listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp4", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			if errors.Is(err, syscall.EADDRINUSE) {
+				continue
+			}
+
+			return 0, fmt.Errorf("check embedded postgres port %d availability: %w", port, err)
+		}
+
+		if err := listener.Close(); err != nil {
+			return 0, fmt.Errorf("release embedded postgres port %d after availability check: %w", port, err)
+		}
+
+		return port, nil
+	}
+
+	return 0, fmt.Errorf(
+		"no free port for embedded postgres in range %d-%d",
+		defaultAutoPort, defaultAutoPort+autoPortRangeSize-1,
+	)
 }
 
 func portHasActiveListener(ctx context.Context, port int) bool {

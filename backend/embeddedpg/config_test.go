@@ -24,7 +24,7 @@ func TestConfig_SetDefaults(t *testing.T) {
 			validate: func(t *testing.T, c Config) {
 				t.Helper()
 				assert.Equal(t, ModePersistent, c.Mode)
-				assert.Equal(t, 5433, c.Port)
+				assert.Equal(t, 0, c.Port, "port stays 0 = automatic selection")
 				assert.Equal(t, 10*time.Second, c.HealthCheckInterval)
 
 				home, err := os.UserHomeDir()
@@ -120,12 +120,18 @@ func TestConfig_Validate(t *testing.T) {
 			errorMsg: "data_path is required",
 		},
 		{
-			name: "port zero",
+			name: "port zero means automatic",
 			modify: func(c *Config) {
 				c.Port = 0
 			},
+		},
+		{
+			name: "negative port",
+			modify: func(c *Config) {
+				c.Port = -1
+			},
 			wantErr:  true,
-			errorMsg: "port must be between 1 and 65535",
+			errorMsg: "port must be 0 (automatic) or between 1 and 65535",
 		},
 		{
 			name: "port too high",
@@ -133,7 +139,7 @@ func TestConfig_Validate(t *testing.T) {
 				c.Port = 70000
 			},
 			wantErr:  true,
-			errorMsg: "port must be between 1 and 65535",
+			errorMsg: "port must be 0 (automatic) or between 1 and 65535",
 		},
 		{
 			name: "negative health check interval",

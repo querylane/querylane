@@ -21,8 +21,9 @@ const (
 // Config holds the configuration for the embedded PostgreSQL manager.
 // This is the manager's internal config — not a koanf deserialization target.
 type Config struct {
-	Mode                Mode
-	DataPath            string
+	Mode     Mode
+	DataPath string
+	// Port 0 means automatic: prefer 5433, otherwise the next free port.
 	Port                int
 	HealthCheckInterval time.Duration
 }
@@ -40,10 +41,6 @@ func (c *Config) SetDefaults() {
 		}
 
 		c.DataPath = filepath.Join(home, ".querylane", "pgdata")
-	}
-
-	if c.Port == 0 {
-		c.Port = 5433
 	}
 
 	if c.HealthCheckInterval == 0 {
@@ -64,8 +61,8 @@ func (c *Config) Validate() error {
 		return errors.New("embedded data_path is required")
 	}
 
-	if c.Port <= 0 || c.Port > 65535 {
-		return errors.New("embedded port must be between 1 and 65535")
+	if c.Port < 0 || c.Port > 65535 {
+		return errors.New("embedded port must be 0 (automatic) or between 1 and 65535")
 	}
 
 	if c.HealthCheckInterval <= 0 {

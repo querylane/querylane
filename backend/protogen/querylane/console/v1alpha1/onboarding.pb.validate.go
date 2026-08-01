@@ -167,8 +167,6 @@ func (m *EmbeddedSetupConfig) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for Port
-
 	// no validation rules for Mode
 
 	if len(errors) > 0 {

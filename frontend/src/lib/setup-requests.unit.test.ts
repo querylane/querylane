@@ -19,8 +19,6 @@ import {
   createSetupStreamFailureError,
 } from "./setup-requests";
 
-const EMBEDDED_TEST_PORT = 5544;
-
 function buildPostgresConfig() {
   return createProto(PostgresConfigSchema, {
     database: "querylane",
@@ -165,7 +163,6 @@ describe("setup request builders", () => {
   it("builds setup requests with embedded config payload", () => {
     const request = buildEmbeddedSetupRequest({
       mode: "ephemeral",
-      port: EMBEDDED_TEST_PORT,
     });
 
     expect(request.setup.case).toBe("embeddedConfig");
@@ -174,7 +171,6 @@ describe("setup request builders", () => {
     }
 
     expect(request.setup.value.mode).toBe("ephemeral");
-    expect(request.setup.value.port).toBe(EMBEDDED_TEST_PORT);
   });
 });
 

@@ -16,7 +16,14 @@ type stalePIDResult struct {
 	// LivePID is non-zero when the PID file references a still-running process.
 	// The caller decides whether to adopt or kill it.
 	LivePID int
+	// Port is the listen port recorded in postmaster.pid, or 0 when the file
+	// does not record one. Only meaningful when LivePID is non-zero.
+	Port int
 }
+
+// postmasterPidPortLine is the 1-based line number of the listen port in a
+// postmaster.pid file (pid, data dir, start time, port, ...).
+const postmasterPidPortLine = 4
 
 // cleanStalePID checks for a stale postmaster.pid file in the data directory
 // and removes it if the referenced process is no longer running. When the
@@ -25,9 +32,9 @@ type stalePIDResult struct {
 func cleanStalePID(ctx context.Context, dataPath string) (stalePIDResult, error) {
 	pidFile := filepath.Join(dataPath, "postmaster.pid")
 
-	// Read the first line and close the file before any removal attempt.
+	// Read the needed lines and close the file before any removal attempt.
 	// On Windows, an open file handle prevents deletion.
-	firstLine, err := readFirstLine(pidFile)
+	lines, err := readLines(pidFile, postmasterPidPortLine)
 	if os.IsNotExist(err) {
 		return stalePIDResult{}, nil
 	}
@@ -36,7 +43,11 @@ func cleanStalePID(ctx context.Context, dataPath string) (stalePIDResult, error)
 		return stalePIDResult{}, fmt.Errorf("read postmaster.pid: %w", err)
 	}
 
-	line := strings.TrimSpace(firstLine)
+	line := ""
+	if len(lines) > 0 {
+		line = strings.TrimSpace(lines[0])
+	}
+
 	if line == "" {
 		slog.InfoContext(ctx, "removing malformed postmaster.pid (empty)")
 
@@ -51,7 +62,7 @@ func cleanStalePID(ctx context.Context, dataPath string) (stalePIDResult, error)
 	}
 
 	if processRunning(pid) {
-		return stalePIDResult{LivePID: pid}, nil
+		return stalePIDResult{LivePID: pid, Port: parsePidFilePort(lines)}, nil
 	}
 
 	slog.InfoContext(ctx, "removing stale postmaster.pid", slog.Int("pid", pid))
@@ -59,20 +70,37 @@ func cleanStalePID(ctx context.Context, dataPath string) (stalePIDResult, error)
 	return stalePIDResult{}, os.Remove(pidFile)
 }
 
-// readFirstLine opens a file, reads the first line, and closes it.
-func readFirstLine(path string) (string, error) {
+// parsePidFilePort extracts the listen port from postmaster.pid lines,
+// returning 0 when the file does not record one.
+func parsePidFilePort(lines []string) int {
+	if len(lines) < postmasterPidPortLine {
+		return 0
+	}
+
+	port, err := strconv.Atoi(strings.TrimSpace(lines[postmasterPidPortLine-1]))
+	if err != nil || port <= 0 || port > 65535 {
+		return 0
+	}
+
+	return port
+}
+
+// readLines opens a file, reads up to maxLines lines, and closes it.
+func readLines(path string, maxLines int) ([]string, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer f.Close()
 
+	lines := make([]string, 0, maxLines)
 	scanner := bufio.NewScanner(f)
-	if !scanner.Scan() {
-		return "", nil
+
+	for len(lines) < maxLines && scanner.Scan() {
+		lines = append(lines, scanner.Text())
 	}
 
-	return scanner.Text(), nil
+	return lines, scanner.Err()
 }
 
 // processRunning checks whether a process with the given PID is alive.

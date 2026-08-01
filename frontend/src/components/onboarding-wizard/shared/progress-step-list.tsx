@@ -114,7 +114,7 @@ function StepStateBadge({ state }: { state: StepState }) {
 export function ProgressStepList({ events }: { events: SetupProgressEvent[] }) {
   if (events.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/55">
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/55">
         Waiting for setup progress…
       </div>
     );
@@ -150,7 +150,7 @@ export function ProgressStepList({ events }: { events: SetupProgressEvent[] }) {
             </div>
             <div className="flex min-w-0 flex-1 items-start justify-between gap-4 pt-1">
               <div className="space-y-2">
-                <div className="font-medium text-lg text-white">
+                <div className="font-medium text-base text-white">
                   {event.displayName}
                 </div>
                 <p className="max-w-3xl text-sm text-white/58 leading-6 md:text-base">

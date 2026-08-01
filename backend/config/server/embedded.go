@@ -11,8 +11,9 @@ import (
 // EmbeddedDatabase represents the configuration for the embedded PostgreSQL mode.
 // Its presence (non-nil pointer in Config) means embedded mode is enabled.
 type EmbeddedDatabase struct {
-	Mode                string        `koanf:"mode"` // "persistent" or "ephemeral"
-	DataPath            string        `koanf:"data_path"`
+	Mode     string `koanf:"mode"` // "persistent" or "ephemeral"
+	DataPath string `koanf:"data_path"`
+	// Port 0 means automatic: prefer 5433, otherwise the next free port.
 	Port                int           `koanf:"port"`
 	HealthCheckInterval time.Duration `koanf:"health_check_interval"`
 }
@@ -30,10 +31,6 @@ func (e *EmbeddedDatabase) SetDefaults() {
 		}
 
 		e.DataPath = filepath.Join(home, ".querylane", "pgdata")
-	}
-
-	if e.Port == 0 {
-		e.Port = 5433
 	}
 
 	if e.HealthCheckInterval == 0 {
@@ -54,8 +51,8 @@ func (e *EmbeddedDatabase) Validate() error {
 		return errors.New("embedded data_path is required")
 	}
 
-	if e.Port <= 0 || e.Port > 65535 {
-		return errors.New("embedded port must be between 1 and 65535")
+	if e.Port < 0 || e.Port > 65535 {
+		return errors.New("embedded port must be 0 (automatic) or between 1 and 65535")
 	}
 
 	if e.HealthCheckInterval <= 0 {

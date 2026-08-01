@@ -485,14 +485,12 @@ func drainEvents(
 
 // buildEmbeddedPersistConfig creates the Config to write to disk for the
 // embedded setup path. Only the Embedded section is persisted — the Database
-// section is derived at runtime from the embedded manager.
+// section is derived at runtime from the embedded manager. The port is left
+// at 0 (automatic): each boot prefers 5433 and falls back to the next free
+// port, so a foreign process squatting on the port never blocks startup.
 func buildEmbeddedPersistConfig(embCfg *v1alpha1.EmbeddedSetupConfig) *serverconfig.Config {
 	embedded := &serverconfig.EmbeddedDatabase{}
 	embedded.SetDefaults()
-
-	if embCfg.Port != 0 {
-		embedded.Port = int(embCfg.Port)
-	}
 
 	if embCfg.Mode != "" {
 		embedded.Mode = embCfg.Mode

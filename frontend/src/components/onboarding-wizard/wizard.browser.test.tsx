@@ -197,7 +197,7 @@ describe("Onboarding wizard — browser visuals", () => {
         })
       )
       .toBeVisible();
-    await expect.element(page.getByText("Recommended")).toBeVisible();
+    await expect.element(page.getByText("Configure via UI")).toBeVisible();
     await expect
       .element(page.getByText("Configure YAML manually"))
       .toBeVisible();
@@ -273,9 +273,9 @@ describe("Onboarding wizard — browser visuals", () => {
   test("UI-configured path applies a pasted connection string", async () => {
     openConfigurePhase("ui_configured");
 
-    await page.getByRole("button", { name: "Paste connection string" }).click();
+    await page.getByRole("tab", { name: "Connection string" }).click();
     await page
-      .getByLabelText("Connection string")
+      .getByLabelText("PostgreSQL connection string")
       .fill("not-a-connection-string");
     await page.getByRole("button", { name: "Apply" }).click();
     await expect
@@ -283,7 +283,7 @@ describe("Onboarding wizard — browser visuals", () => {
       .toBeVisible();
 
     await page
-      .getByLabelText("Connection string")
+      .getByLabelText("PostgreSQL connection string")
       .fill(
         "postgres://admin:secret@db.internal:6432/querylane?sslmode=require"
       );
@@ -301,9 +301,9 @@ describe("Onboarding wizard — browser visuals", () => {
   test("UI-configured path warns about DSN parameters it cannot apply", async () => {
     openConfigurePhase("ui_configured");
 
-    await page.getByRole("button", { name: "Paste connection string" }).click();
+    await page.getByRole("tab", { name: "Connection string" }).click();
     await page
-      .getByLabelText("Connection string")
+      .getByLabelText("PostgreSQL connection string")
       .fill(
         "postgres://admin:secret@db.internal/querylane?sslmode=require&options=project%3Dquerylane"
       );
@@ -316,7 +316,7 @@ describe("Onboarding wizard — browser visuals", () => {
       page.getByRole("status").element().getBoundingClientRect().bottom
     ).toBeLessThanOrEqual(window.innerHeight);
 
-    await page.getByRole("button", { name: "Paste connection string" }).click();
+    await page.getByRole("tab", { name: "Connection string" }).click();
     await expect
       .element(page.getByRole("status"))
       .toHaveTextContent("DSN parameters not applied: options.");
@@ -354,16 +354,22 @@ describe("Onboarding wizard — browser visuals", () => {
     );
   });
 
-  test("embedded path exposes port, persistence, and data-directory details", async () => {
+  test("embedded path shows persistent storage details with automatic port", async () => {
     openConfigurePhase("embedded");
 
     await expect
       .element(page.getByRole("heading", { name: "Embedded PostgreSQL" }))
       .toBeVisible();
-    await expect.element(page.getByLabelText("Port")).toHaveValue("5433");
+    await expect
+      .element(page.getByText("Persistent — data is kept across restarts"))
+      .toBeVisible();
     await expect
       .element(page.getByText("/Users/you/.querylane/pgdata"))
       .toBeVisible();
+    await expect
+      .element(page.getByText("Local port, chosen automatically"))
+      .toBeVisible();
+
     await expect(page.getByTestId("onboarding-panel")).toMatchScreenshot(
       "onboarding-embedded-configuration"
     );

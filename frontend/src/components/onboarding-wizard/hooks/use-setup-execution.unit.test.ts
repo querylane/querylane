@@ -155,7 +155,6 @@ describe("useSetupExecution", () => {
     const options = createSetupOptions({
       submittedEmbeddedConfig: createProto(EmbeddedSetupConfigSchema, {
         mode: "ephemeral",
-        port: 6543,
       }),
     });
 

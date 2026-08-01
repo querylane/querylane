@@ -3391,13 +3391,6 @@ components:
     querylane.console.v1alpha1.EmbeddedSetupConfig:
       type: object
       properties:
-        port:
-          type: integer
-          title: port
-          maximum: 65535
-          minimum: 1024
-          format: int32
-          description: Optional. Port for the embedded PostgreSQL instance. Defaults to 5433.
         mode:
           type: string
           title: mode
@@ -3410,6 +3403,10 @@ components:
       description: |-
         EmbeddedSetupConfig holds optional overrides for the embedded PostgreSQL
          setup method.
+
+         The listen port is chosen automatically by the server (5433 when free,
+         otherwise the next available port). Operators can pin a fixed port via
+         `embedded.port` in the configuration file.
     querylane.console.v1alpha1.ExecuteQueryRequest:
       type: object
       properties:

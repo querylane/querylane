@@ -11,6 +11,7 @@ export type WizardPhase =
 export type ConfigMethod = "embedded" | "manual_yaml" | "ui_configured";
 
 export interface OnboardingWizardProps {
+  initialMethod?: ConfigMethod | undefined;
   onFinish?: (() => void) | undefined;
   open?: boolean | undefined;
 }

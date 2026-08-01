@@ -14,7 +14,6 @@ import {
   type WatchConfigChangesResponse,
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 
-const DEFAULT_EMBEDDED_PORT = 5433;
 type StepProgressCallback = (event: SetupProgressEvent) => void;
 
 interface SetupStreamFailure {
@@ -45,14 +44,12 @@ function buildSetupAppDatabaseRequest(config: PostgresConfig) {
 
 function buildEmbeddedSetupRequest(config?: {
   mode?: "ephemeral" | "persistent" | undefined;
-  port?: number | undefined;
 }) {
   return createProto(SetupAppDatabaseRequestSchema, {
     setup: {
       case: "embeddedConfig",
       value: createProto(EmbeddedSetupConfigSchema, {
         mode: config?.mode ?? "persistent",
-        port: config?.port ?? DEFAULT_EMBEDDED_PORT,
       }),
     },
   });

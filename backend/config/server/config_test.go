@@ -43,7 +43,7 @@ func TestConfigValidateAppliesEmbeddedDefaults(t *testing.T) {
 
 	require.NoError(t, cfg.Validate())
 	assert.NotEmpty(t, cfg.Embedded.DataPath, "default data_path should be applied")
-	assert.Equal(t, 5433, cfg.Embedded.Port, "default port should be applied")
+	assert.Equal(t, 0, cfg.Embedded.Port, "port stays 0 = automatic selection")
 	assert.Positive(t, cfg.Embedded.HealthCheckInterval, "default health_check_interval should be applied")
 }
 

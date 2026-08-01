@@ -24,7 +24,7 @@ func TestEmbeddedDatabase_SetDefaults(t *testing.T) {
 			validate: func(t *testing.T, e EmbeddedDatabase) {
 				t.Helper()
 				assert.Equal(t, "persistent", e.Mode)
-				assert.Equal(t, 5433, e.Port)
+				assert.Equal(t, 0, e.Port, "port stays 0 = automatic selection")
 				assert.Equal(t, 10*time.Second, e.HealthCheckInterval)
 
 				home, err := os.UserHomeDir()
@@ -106,12 +106,18 @@ func TestEmbeddedDatabase_Validate(t *testing.T) {
 			errorMsg: "data_path is required",
 		},
 		{
-			name: "port zero",
+			name: "port zero means automatic",
 			modify: func(e *EmbeddedDatabase) {
 				e.Port = 0
 			},
+		},
+		{
+			name: "negative port",
+			modify: func(e *EmbeddedDatabase) {
+				e.Port = -1
+			},
 			wantErr:  true,
-			errorMsg: "port must be between 1 and 65535",
+			errorMsg: "port must be 0 (automatic) or between 1 and 65535",
 		},
 		{
 			name: "port too high",
@@ -119,7 +125,7 @@ func TestEmbeddedDatabase_Validate(t *testing.T) {
 				e.Port = 70000
 			},
 			wantErr:  true,
-			errorMsg: "port must be between 1 and 65535",
+			errorMsg: "port must be 0 (automatic) or between 1 and 65535",
 		},
 		{
 			name: "negative health check interval",

@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   Check,
   ChevronRight,
-  Link2,
   Loader2,
   Unplug,
   X,
@@ -34,6 +33,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectTrigger } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -62,14 +62,14 @@ function getTestButtonIcon(status: ConnectionTestStatus) {
   switch (status) {
     case "testing":
       return (
-        <Loader2 className="size-5 animate-spin motion-reduce:animate-none" />
+        <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
       );
     case "success":
-      return <Check className="size-5 text-emerald-400" />;
+      return <Check className="size-4 text-emerald-400" />;
     case "error":
-      return <X className="size-5 text-red-400" />;
+      return <X className="size-4 text-red-400" />;
     default:
-      return <Unplug className="size-5" />;
+      return <Unplug className="size-4" />;
   }
 }
 function getTestButtonLabel(status: ConnectionTestStatus) {
@@ -93,7 +93,7 @@ function ConnectionTestButton({
 }) {
   return (
     <Button
-      className="h-10 rounded-xl border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white disabled:text-white/30"
+      className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white disabled:text-white/30"
       disabled={status === "testing"}
       onClick={onClick}
       variant="ghost"
@@ -138,7 +138,7 @@ function ConnectionTestResult({
 }) {
   if (status === "success" && isCurrentConfigVerified) {
     return (
-      <div className="rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.08] px-4 py-3 text-emerald-100/92 text-sm">
+      <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/[0.08] px-4 py-3 text-emerald-100/92 text-sm">
         <div className="flex items-center gap-3">
           <Check className="size-4 shrink-0 text-emerald-400" />
           Connection successful. Ready to continue.
@@ -150,7 +150,7 @@ function ConnectionTestResult({
   if (status === "error" && errorMessage) {
     return (
       <div
-        className="rounded-2xl border border-red-400/20 bg-red-500/[0.08] px-4 py-3 text-red-100/92 text-sm"
+        className="rounded-xl border border-red-400/20 bg-red-500/[0.08] px-4 py-3 text-red-100/92 text-sm"
         role="alert"
       >
         <div className="flex items-start gap-3">
@@ -190,8 +190,8 @@ function InternalStorageSslOptions({
 }) {
   return (
     <Collapsible onOpenChange={onOpenChange} open={open}>
-      <div className="relative space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4">
-        <label className="font-medium text-base text-white" htmlFor={modeId}>
+      <div className="relative space-y-3 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4">
+        <label className="font-medium text-sm text-white" htmlFor={modeId}>
           SSL mode
         </label>
         <CollapsibleTrigger
@@ -212,7 +212,7 @@ function InternalStorageSslOptions({
           value={sslModeValue}
         >
           <SelectTrigger
-            className="h-11 w-full rounded-xl border-white/10 bg-white/[0.03] px-4 py-0 text-base text-white leading-none focus-visible:border-[#4b73d7] focus-visible:ring-[#4b73d7]/25 [&_svg]:size-4 [&_svg]:text-white/68"
+            className="w-full rounded-lg border-white/10 bg-white/[0.03] px-3 py-0 text-sm text-white leading-none focus-visible:border-[#4b73d7] focus-visible:ring-[#4b73d7]/25 [&_svg]:size-4 [&_svg]:text-white/68"
             id={modeId}
           >
             <SslModeSelectValue
@@ -252,7 +252,7 @@ function InternalStorageSslOptions({
                   value={sslNegotiationValue}
                 >
                   <SelectTrigger
-                    className="h-11 w-full rounded-xl border-white/10 bg-white/[0.03] px-4 py-0 text-base text-white leading-none focus-visible:border-[#4b73d7] focus-visible:ring-[#4b73d7]/25 [&_svg]:size-4 [&_svg]:text-white/68"
+                    className="w-full rounded-lg border-white/10 bg-white/[0.03] px-3 py-0 text-sm text-white leading-none focus-visible:border-[#4b73d7] focus-visible:ring-[#4b73d7]/25 [&_svg]:size-4 [&_svg]:text-white/68"
                     id={sslNegotiationId}
                   >
                     <SslNegotiationSelectValue value={sslNegotiationValue} />
@@ -295,11 +295,8 @@ function ConnectionStringPasteForm({
   return (
     <div className="space-y-4">
       <div className="space-y-3">
-        <label
-          className="font-medium text-base text-white"
-          htmlFor={connectionStringId}
-        >
-          Connection string
+        <label className="sr-only" htmlFor={connectionStringId}>
+          PostgreSQL connection string
         </label>
         <div className="flex gap-3">
           <Input
@@ -308,7 +305,7 @@ function ConnectionStringPasteForm({
             }
             aria-invalid={connectionStringError ? true : undefined}
             autoComplete="off"
-            className="h-11 flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-0 font-mono text-sm text-white leading-none placeholder:text-white/32 focus-visible:border-blue-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400/25"
+            className="h-9 flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-4 py-0 font-mono text-sm text-white leading-none placeholder:text-white/32 focus-visible:border-blue-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400/25"
             id={connectionStringId}
             onChange={(e) => {
               onValueChange(e.target.value);
@@ -325,7 +322,7 @@ function ConnectionStringPasteForm({
             value={connectionStringValue}
           />
           <Button
-            className="h-11 rounded-xl bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
+            className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
             disabled={connectionStringValue.trim().length === 0}
             onClick={onApply}
           >
@@ -413,7 +410,7 @@ function UiConfiguredContinueAction({
   const button = (
     <Button
       aria-describedby={canContinue ? undefined : disabledReasonId}
-      className="h-10 rounded-xl bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
+      className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
       disabled={!canContinue}
       onClick={onContinue}
     >
@@ -536,11 +533,11 @@ export function UiConfiguredPhase() {
   };
   return (
     <WizardPage
-      description="Enter credentials for Querylane internal storage: a PostgreSQL database used only for Querylane metadata, saved connection records, and query history. Do not use the application database you want to manage unless you intentionally want it to hold Querylane metadata."
+      description="Connect the PostgreSQL database Querylane uses for its own metadata, saved connections, and query history — not one of the servers you plan to manage."
       footer={
         <div className="flex items-center justify-between gap-4">
           <Button
-            className="h-10 rounded-xl border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
+            className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
             onClick={goBackToMethodSelection}
             variant="ghost"
           >
@@ -567,64 +564,37 @@ export function UiConfiguredPhase() {
       }
       title="Querylane internal storage"
     >
-      <div className="space-y-6">
-        <SetupFlowExplainer tone="onboarding" variant="configure" />
+      <div className="space-y-4">
+        <SetupFlowExplainer
+          layout="compact"
+          tone="onboarding"
+          variant="configure"
+        />
 
-        {/* Connection string toggle */}
-        <div className="flex items-center gap-3">
-          <Button
-            className="h-9 rounded-lg border-white/10 px-3.5 text-sm text-white/68 hover:bg-white/[0.04] hover:text-white"
-            onClick={() => {
-              setConnectionStringMode((prev) => !prev);
-              setConnectionStringFeedback((current) => ({
-                ...current,
-                error: null,
-              }));
-              if (!connectionStringMode) {
-                requestAnimationFrame(() => {
-                  connectionStringInputRef.current?.focus();
-                });
-              }
-            }}
-            variant="ghost"
-          >
-            <Link2 className="size-4" />
-            {connectionStringMode
-              ? "Switch to manual fields"
-              : "Paste connection string"}
-          </Button>
-        </div>
-
-        {connectionStringFeedback.warning ? (
-          <p
-            className="rounded-xl border border-amber-300/20 bg-amber-300/[0.07] px-4 py-3 text-amber-100/90 text-sm"
-            role="status"
-          >
-            {connectionStringFeedback.warning}
-          </p>
-        ) : null}
-
-        {connectionStringMode ? (
-          <ConnectionStringPasteForm
-            connectionStringError={connectionStringFeedback.error}
-            connectionStringErrorId={connectionStringErrorId}
-            connectionStringId={connectionStringId}
-            connectionStringInputRef={connectionStringInputRef}
-            connectionStringValue={connectionStringValue}
-            onApply={handleConnectionStringApply}
-            onErrorReset={() =>
-              setConnectionStringFeedback((current) => ({
-                ...current,
-                error: null,
-              }))
+        <Tabs
+          onValueChange={(value) => {
+            const dsnMode = value === "connection_string";
+            setConnectionStringMode(dsnMode);
+            setConnectionStringFeedback((current) => ({
+              ...current,
+              error: null,
+            }));
+            if (dsnMode) {
+              requestAnimationFrame(() => {
+                connectionStringInputRef.current?.focus();
+              });
             }
-            onValueChange={(value) => {
-              setConnectionStringValue(value);
-            }}
-          />
-        ) : (
-          <>
-            <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_220px]">
+          }}
+          value={connectionStringMode ? "connection_string" : "manual_fields"}
+        >
+          <TabsList>
+            <TabsTrigger value="manual_fields">Manual fields</TabsTrigger>
+            <TabsTrigger value="connection_string">
+              Connection string
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent className="space-y-4 pt-1" value="manual_fields">
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_200px]">
               <LabeledInput
                 error={errors.host?.message}
                 id={hostId}
@@ -640,19 +610,21 @@ export function UiConfiguredPhase() {
                 })}
               />
             </div>
-            <LabeledInput
-              error={errors.database?.message}
-              id={databaseId}
-              label="Database"
-              {...register("database")}
-            />
-            <LabeledInput
-              autoComplete="username"
-              error={errors.username?.message}
-              id={usernameId}
-              label="Username"
-              {...register("username")}
-            />
+            <div className="grid gap-4 md:grid-cols-2">
+              <LabeledInput
+                error={errors.database?.message}
+                id={databaseId}
+                label="Database"
+                {...register("database")}
+              />
+              <LabeledInput
+                autoComplete="username"
+                error={errors.username?.message}
+                id={usernameId}
+                label="Username"
+                {...register("username")}
+              />
+            </div>
             <LabeledInput
               autoComplete="current-password"
               error={errors.password?.message}
@@ -682,8 +654,36 @@ export function UiConfiguredPhase() {
               sslNegotiationId={sslNegotiationId}
               sslNegotiationValue={sslNegotiationValue}
             />
-          </>
-        )}
+          </TabsContent>
+          <TabsContent className="pt-1" value="connection_string">
+            <ConnectionStringPasteForm
+              connectionStringError={connectionStringFeedback.error}
+              connectionStringErrorId={connectionStringErrorId}
+              connectionStringId={connectionStringId}
+              connectionStringInputRef={connectionStringInputRef}
+              connectionStringValue={connectionStringValue}
+              onApply={handleConnectionStringApply}
+              onErrorReset={() =>
+                setConnectionStringFeedback((current) => ({
+                  ...current,
+                  error: null,
+                }))
+              }
+              onValueChange={(value) => {
+                setConnectionStringValue(value);
+              }}
+            />
+          </TabsContent>
+        </Tabs>
+
+        {connectionStringFeedback.warning ? (
+          <p
+            className="rounded-xl border border-amber-300/20 bg-amber-300/[0.07] px-4 py-3 text-amber-100/90 text-sm"
+            role="status"
+          >
+            {connectionStringFeedback.warning}
+          </p>
+        ) : null}
 
         <ConnectionTestResult
           errorMessage={connectionTest.errorMessage}
