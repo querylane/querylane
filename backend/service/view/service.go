@@ -27,6 +27,7 @@ const maxSynchronousRefreshTimeout = 30 * time.Second
 type viewCatalog interface {
 	ListViews(ctx context.Context, schema resource.SchemaName, params aip.Params) ([]engine.View, string, error)
 	GetView(ctx context.Context, view resource.ViewName) (*engine.View, error)
+	GetViewDependency(ctx context.Context, dependency resource.ViewDependencyName) (*engine.ViewDependency, error)
 	ListViewDependencies(ctx context.Context, view resource.ViewName, params aip.Params) ([]engine.ViewDependency, string, error)
 	RefreshMaterializedView(ctx context.Context, view resource.ViewName, concurrently bool) (*engine.View, error)
 }
@@ -113,6 +114,31 @@ func (s *Service) GetView(ctx context.Context, req *connect.Request[v1alpha1.Get
 	return connect.NewResponse(&v1alpha1.GetViewResponse{
 		View: convertViewToProto(*v, viewRes.Schema(), isFull),
 	}), nil
+}
+
+// GetViewDependency retrieves one direct dependency edge.
+func (s *Service) GetViewDependency(ctx context.Context, req *connect.Request[v1alpha1.GetViewDependencyRequest]) (*connect.Response[v1alpha1.ViewDependency], error) {
+	dependencyRes, connErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseViewDependencyName)
+	if connErr != nil {
+		return nil, connErr
+	}
+
+	release, err := s.liveQueries.Acquire(dependencyRes.Instance())
+	if err != nil {
+		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
+			Type: dependencyRes.ResourceType(), Name: dependencyRes.String(), Op: "get_view_dependency",
+		})
+	}
+	defer release()
+
+	dependency, err := s.catalog.GetViewDependency(ctx, dependencyRes)
+	if err != nil {
+		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
+			Type: dependencyRes.ResourceType(), Name: dependencyRes.String(), Op: "get_view_dependency",
+		})
+	}
+
+	return connect.NewResponse(convertDependencyToProto(*dependency, dependencyRes.Parent())), nil
 }
 
 // ListViewDependencies returns direct upstream and downstream relations.

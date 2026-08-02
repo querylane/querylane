@@ -112,8 +112,9 @@ var (
 			"console.querylane.dev/ViewDependency",
 			aip.Fields[engine.ViewDependency]{
 				"name": {
-					Codec:    aip.StringCodec{},
-					GetValue: func(m *engine.ViewDependency) any { return m.ResourceID },
+					Codec:      aip.StringCodec{},
+					GetValue:   func(m *engine.ViewDependency) any { return m.ResourceID },
+					Filterable: true,
 				},
 				"schema_name": {
 					Codec:      aip.StringCodec{},

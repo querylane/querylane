@@ -19,6 +19,14 @@ export const listViews = ViewService.method.listViews;
 export const getView = ViewService.method.getView;
 
 /**
+ * Gets one direct relation dependency edge for a view.
+ * buf:lint:ignore RPC_RESPONSE_STANDARD_NAME: AIP-131 requires returning the resource directly.
+ *
+ * @generated from rpc querylane.console.v1alpha1.ViewService.GetViewDependency
+ */
+export const getViewDependency = ViewService.method.getViewDependency;
+
+/**
  * Lists direct relation dependencies for a view.
  *
  * @generated from rpc querylane.console.v1alpha1.ViewService.ListViewDependencies
@@ -28,6 +36,10 @@ export const listViewDependencies = ViewService.method.listViewDependencies;
 /**
  * Refreshes a materialized view within the configured synchronous timeout,
  * which is capped at 30 seconds.
+ * aip.dev/not-precedent: This alpha, interactive operation remains
+ * synchronous so the UI can report PostgreSQL's immediate result. It fails
+ * at the hard deadline; support for longer refreshes must use a long-running
+ * operation before that deadline is widened.
  * Returns INVALID_ARGUMENT for a standard view or unsupported mode,
  * FAILED_PRECONDITION when concurrent refresh requirements are unmet, and
  * DEADLINE_EXCEEDED when PostgreSQL cannot finish within the timeout.

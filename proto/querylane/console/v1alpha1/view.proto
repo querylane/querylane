@@ -21,6 +21,13 @@ service ViewService {
   // Gets a single view.
   rpc GetView(GetViewRequest) returns (GetViewResponse) {}
 
+  // Gets one direct relation dependency edge for a view.
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME: AIP-131 requires returning the resource directly.
+  rpc GetViewDependency(GetViewDependencyRequest) returns (ViewDependency) {
+    option (google.api.http) = {get: "/v1alpha1/{name=instances/*/databases/*/schemas/*/views/*/viewDependencies/*}"};
+    option (google.api.method_signature) = "name";
+  }
+
   // Lists direct relation dependencies for a view.
   rpc ListViewDependencies(ListViewDependenciesRequest) returns (ListViewDependenciesResponse) {
     option (google.api.http) = {get: "/v1alpha1/{parent=instances/*/databases/*/schemas/*/views/*}/viewDependencies"};
@@ -29,6 +36,10 @@ service ViewService {
 
   // Refreshes a materialized view within the configured synchronous timeout,
   // which is capped at 30 seconds.
+  // aip.dev/not-precedent: This alpha, interactive operation remains
+  // synchronous so the UI can report PostgreSQL's immediate result. It fails
+  // at the hard deadline; support for longer refreshes must use a long-running
+  // operation before that deadline is widened.
   // Returns INVALID_ARGUMENT for a standard view or unsupported mode,
   // FAILED_PRECONDITION when concurrent refresh requirements are unmet, and
   // DEADLINE_EXCEEDED when PostgreSQL cannot finish within the timeout.
@@ -186,6 +197,9 @@ message ViewDependency {
   string schema_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output-only. Relation display name.
+  // aip.dev/not-precedent: PostgreSQL owns this identifier and this API only
+  // mirrors catalog state, so clients cannot mutate display_name as AIP-148
+  // normally recommends.
   string display_name = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output-only. Whether the relation is upstream or downstream of the view.
@@ -258,6 +272,17 @@ message GetViewResponse {
   View view = 1;
 }
 
+// Request message for GetViewDependency.
+message GetViewDependencyRequest {
+  // Required. The dependency edge to retrieve.
+  // Format: instances/{instance}/databases/{database}/schemas/{schema}/views/{view}/viewDependencies/{view_dependency}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/ViewDependency"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+/viewDependencies/[a-z][a-z0-9-]{3,62}$"
+  ];
+}
+
 // Request message for ListViewDependencies.
 message ListViewDependenciesRequest {
   // Required. The view whose direct dependencies should be returned.
@@ -277,13 +302,17 @@ message ListViewDependenciesRequest {
   // Optional. Opaque continuation token from a previous response.
   string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Filter expression joined by `AND`. schema_name and display_name
-  // support `=`, `!=`, and `:`. direction and relation_type support `=` and
-  // `!=` with their enum names.
+  // Optional. Filter expression joined by `AND`. name, schema_name, and
+  // display_name support `=`, `!=`, and `:`. direction and relation_type
+  // support `=` and `!=` with their enum names.
+  // aip.dev/not-precedent: For compatibility with Querylane's existing list
+  // grammar, `:` is a case-insensitive scalar substring operator rather than
+  // AIP-160's collection has operator.
   string filter = 4 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Comma-separated ordering. Supported fields are name,
-  // schema_name, display_name, direction, and relation_type.
+  // schema_name, display_name, direction, and relation_type. The default is
+  // direction asc, schema_name asc, display_name asc, then name asc.
   string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
 }
 

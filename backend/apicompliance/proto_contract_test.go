@@ -247,6 +247,19 @@ func TestViewDependenciesUsePaginatedResourceShape(t *testing.T) {
 	require.NotNil(t, relation)
 	require.NotNil(t, fieldResourceReference(relation))
 	assert.Equal(t, "*", fieldResourceReference(relation).GetType())
+
+	getDescriptor, err := protoregistry.GlobalFiles.FindDescriptorByName("querylane.console.v1alpha1.ViewService.GetViewDependency")
+	require.NoError(t, err)
+
+	getMethod, ok := getDescriptor.(protoreflect.MethodDescriptor)
+	require.True(t, ok)
+	assert.Equal(t, dependency.FullName(), getMethod.Output().FullName())
+
+	name := getMethod.Input().Fields().ByName("name")
+	require.NotNil(t, name)
+	assert.Contains(t, fieldBehaviors(name), annotations.FieldBehavior_REQUIRED)
+	require.NotNil(t, fieldResourceReference(name))
+	assert.Equal(t, resource.GetType(), fieldResourceReference(name).GetType())
 }
 
 func TestNewViewRPCsDeclareHTTPAndMethodSignatures(t *testing.T) {
@@ -257,6 +270,11 @@ func TestNewViewRPCsDeclareHTTPAndMethodSignatures(t *testing.T) {
 		signature  string
 		httpPath   string
 	}{
+		{
+			methodName: "querylane.console.v1alpha1.ViewService.GetViewDependency",
+			signature:  "name",
+			httpPath:   "/v1alpha1/{name=instances/*/databases/*/schemas/*/views/*/viewDependencies/*}",
+		},
 		{
 			methodName: "querylane.console.v1alpha1.ViewService.ListViewDependencies",
 			signature:  "parent",
@@ -283,6 +301,8 @@ func TestNewViewRPCsDeclareHTTPAndMethodSignatures(t *testing.T) {
 		require.True(t, ok, "%s must declare google.api.http", tt.methodName)
 
 		switch tt.methodName {
+		case "querylane.console.v1alpha1.ViewService.GetViewDependency":
+			assert.Equal(t, tt.httpPath, httpRule.GetGet())
 		case "querylane.console.v1alpha1.ViewService.ListViewDependencies":
 			assert.Equal(t, tt.httpPath, httpRule.GetGet())
 		case "querylane.console.v1alpha1.ViewService.RefreshMaterializedView":

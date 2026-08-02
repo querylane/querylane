@@ -23,6 +23,9 @@ var (
 	// ErrViewNotFound indicates the requested view does not exist.
 	ErrViewNotFound = errors.New("view not found")
 
+	// ErrViewDependencyNotFound indicates the requested view dependency edge does not exist.
+	ErrViewDependencyNotFound = errors.New("view dependency not found")
+
 	// ErrRoleNotFound indicates the requested role does not exist.
 	ErrRoleNotFound = errors.New("role not found")
 
@@ -73,6 +76,7 @@ func IsNotFound(err error) bool {
 		errors.Is(err, ErrSchemaNotFound) ||
 		errors.Is(err, ErrTableNotFound) ||
 		errors.Is(err, ErrViewNotFound) ||
+		errors.Is(err, ErrViewDependencyNotFound) ||
 		errors.Is(err, ErrRoleNotFound)
 }
 

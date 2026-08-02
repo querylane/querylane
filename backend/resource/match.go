@@ -6,12 +6,13 @@ import "strings"
 // These can be used with Match to check whether a resource name
 // matches a particular resource type.
 const (
-	InstancePattern = "instances/{instanceID}"
-	RolePattern     = "instances/{instanceID}/roles/{roleID}"
-	DatabasePattern = "instances/{instanceID}/databases/{databaseID}"
-	SchemaPattern   = "instances/{instanceID}/databases/{databaseID}/schemas/{schemaID}"
-	TablePattern    = "instances/{instanceID}/databases/{databaseID}/schemas/{schemaID}/tables/{tableID}"
-	ViewPattern     = "instances/{instanceID}/databases/{databaseID}/schemas/{schemaID}/views/{viewID}"
+	InstancePattern       = "instances/{instanceID}"
+	RolePattern           = "instances/{instanceID}/roles/{roleID}"
+	DatabasePattern       = "instances/{instanceID}/databases/{databaseID}"
+	SchemaPattern         = "instances/{instanceID}/databases/{databaseID}/schemas/{schemaID}"
+	TablePattern          = "instances/{instanceID}/databases/{databaseID}/schemas/{schemaID}/tables/{tableID}"
+	ViewPattern           = "instances/{instanceID}/databases/{databaseID}/schemas/{schemaID}/views/{viewID}"
+	ViewDependencyPattern = "instances/{instanceID}/databases/{databaseID}/schemas/{schemaID}/views/{viewID}/viewDependencies/{viewDependencyID}"
 )
 
 // Match reports whether name matches pattern.

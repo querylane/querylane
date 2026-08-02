@@ -24,6 +24,16 @@ func TestViewLiveOperationsHonorQueryLimit(t *testing.T) {
 		call func(context.Context, *Service) error
 	}{
 		{
+			name: "get dependency",
+			call: func(ctx context.Context, service *Service) error {
+				_, err := service.GetViewDependency(ctx, connect.NewRequest(&v1alpha1.GetViewDependencyRequest{
+					Name: "instances/prod/databases/app/schemas/public/views/daily_revenue/viewDependencies/abc123",
+				}))
+
+				return err
+			},
+		},
+		{
 			name: "list dependencies",
 			call: func(ctx context.Context, service *Service) error {
 				_, err := service.ListViewDependencies(ctx, connect.NewRequest(&v1alpha1.ListViewDependenciesRequest{
@@ -60,10 +70,40 @@ func TestViewLiveOperationsHonorQueryLimit(t *testing.T) {
 			err = tt.call(t.Context(), NewService(catalog, limiter, 30*time.Second))
 
 			require.Equal(t, connect.CodeResourceExhausted, connect.CodeOf(err))
+			require.False(t, catalog.getDependencyCalled)
 			require.False(t, catalog.dependenciesCalled)
 			require.False(t, catalog.refreshCalled)
 		})
 	}
+}
+
+func TestGetViewDependencyReturnsNamedEdge(t *testing.T) {
+	t.Parallel()
+
+	limiter, err := livequery.NewLimiter(1, 1)
+	require.NoError(t, err)
+
+	wantName := resource.NewViewDependencyName("prod", "app", "public", "daily_revenue", "abc123")
+	catalog := &viewCatalogStub{
+		getDependencyFunc: func(_ context.Context, name resource.ViewDependencyName) (*engine.ViewDependency, error) {
+			require.Equal(t, wantName, name)
+
+			return &engine.ViewDependency{
+				ResourceID:   "abc123",
+				SchemaName:   "sales",
+				Name:         "orders",
+				Direction:    v1alpha1.ViewDependency_DIRECTION_UPSTREAM,
+				RelationType: v1alpha1.ViewDependency_RELATION_TYPE_TABLE,
+			}, nil
+		},
+	}
+
+	response, err := NewService(catalog, limiter, 30*time.Second).GetViewDependency(t.Context(), connect.NewRequest(
+		&v1alpha1.GetViewDependencyRequest{Name: wantName.String()},
+	))
+	require.NoError(t, err)
+	require.Equal(t, wantName.String(), response.Msg.GetName())
+	require.Equal(t, "instances/prod/databases/app/schemas/sales/tables/orders", response.Msg.GetRelation())
 }
 
 func TestRefreshMaterializedViewValidatesModeBeforeAdmission(t *testing.T) {
@@ -189,10 +229,12 @@ func TestListViewDependenciesForwardsAIPParameters(t *testing.T) {
 }
 
 type viewCatalogStub struct {
-	dependenciesCalled bool
-	refreshCalled      bool
-	dependenciesFunc   func(context.Context, resource.ViewName, aip.Params) ([]engine.ViewDependency, string, error)
-	refreshFunc        func(context.Context, resource.ViewName, bool) (*engine.View, error)
+	getDependencyCalled bool
+	dependenciesCalled  bool
+	refreshCalled       bool
+	getDependencyFunc   func(context.Context, resource.ViewDependencyName) (*engine.ViewDependency, error)
+	dependenciesFunc    func(context.Context, resource.ViewName, aip.Params) ([]engine.ViewDependency, string, error)
+	refreshFunc         func(context.Context, resource.ViewName, bool) (*engine.View, error)
 }
 
 func (*viewCatalogStub) ListViews(context.Context, resource.SchemaName, aip.Params) ([]engine.View, string, error) {
@@ -201,6 +243,16 @@ func (*viewCatalogStub) ListViews(context.Context, resource.SchemaName, aip.Para
 
 func (*viewCatalogStub) GetView(context.Context, resource.ViewName) (*engine.View, error) {
 	return nil, errors.New("unexpected GetView call")
+}
+
+func (s *viewCatalogStub) GetViewDependency(ctx context.Context, name resource.ViewDependencyName) (*engine.ViewDependency, error) {
+	s.getDependencyCalled = true
+
+	if s.getDependencyFunc != nil {
+		return s.getDependencyFunc(ctx, name)
+	}
+
+	return nil, errors.New("unexpected GetViewDependency call")
 }
 
 func (s *viewCatalogStub) ListViewDependencies(ctx context.Context, name resource.ViewName, params aip.Params) ([]engine.ViewDependency, string, error) {

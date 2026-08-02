@@ -118,6 +118,22 @@ func (s *RPCSuite) TestListMaterializedViewDependencies() {
 	s.Equal(consolev1alpha1.ViewDependency_RELATION_TYPE_TABLE, dependency.GetRelationType())
 	s.Equal(s.tableName("sales", "orders"), dependency.GetRelation())
 	s.NotEmpty(dependency.GetName())
+
+	getResp, err := s.viewClient.GetViewDependency(ctx, connect.NewRequest(&consolev1alpha1.GetViewDependencyRequest{
+		Name: dependency.GetName(),
+	}))
+	s.Require().NoError(err)
+	s.Equal(dependency.GetName(), getResp.Msg.GetName())
+	s.Equal(dependency.GetRelation(), getResp.Msg.GetRelation())
+	s.Equal(dependency.GetSchemaName(), getResp.Msg.GetSchemaName())
+	s.Equal(dependency.GetDisplayName(), getResp.Msg.GetDisplayName())
+	s.Equal(dependency.GetDirection(), getResp.Msg.GetDirection())
+	s.Equal(dependency.GetRelationType(), getResp.Msg.GetRelationType())
+
+	_, err = s.viewClient.GetViewDependency(ctx, connect.NewRequest(&consolev1alpha1.GetViewDependencyRequest{
+		Name: s.viewName("analytics", "order_summary") + "/viewDependencies/d0000000000000000",
+	}))
+	s.Equal(connect.CodeNotFound, connect.CodeOf(err))
 }
 
 func (s *RPCSuite) TestListViewDependenciesPaginates() {

@@ -1238,9 +1238,9 @@ export const PaginationStrategySchema: GenEnum<PaginationStrategy> = /*@__PURE__
   enumDesc(file_querylane_console_v1alpha1_table_data, 2);
 
 /**
- * TableDataService exposes live row reads against a table-like Relation resource.
+ * TableDataService exposes live row reads against a Table or materialized View resource.
  *
- * Methods are AIP-136 custom methods on the Relation resource — requests use
+ * Methods are AIP-136 custom methods on the selected resource — requests use
  * `name`, not `parent`. Distinct from TableService (catalog) and SQLService
  * (ad-hoc SQL) because the three surfaces have different cost, timeout,
  * pooling, and authorization profiles.

@@ -164,6 +164,8 @@ func (s *PostgresEngineIntegrationTestSuite) TestListViewDependenciesPaginatesLa
 	for _, dependency := range dependencies {
 		s.NotEmpty(dependency.ResourceID)
 		s.NotContains(dependency.ResourceID, "/")
+		s.LessOrEqual(len(dependency.ResourceID), 63, "dependency resource IDs must fit the AIP-122 resource ID limit")
+		s.Regexp(`^[a-z][a-z0-9-]{3,62}$`, dependency.ResourceID, "dependency resource IDs must use the AIP-122 identifier shape")
 		resourceIDs[dependency.ResourceID] = struct{}{}
 	}
 

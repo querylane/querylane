@@ -1981,6 +1981,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetViewResponse'
+  /querylane.console.v1alpha1.ViewService/GetViewDependency:
+    post:
+      x-connectrpc-method-kind: unary
+      tags:
+        - View
+      summary: GetViewDependency
+      description: |-
+        Gets one direct relation dependency edge for a view.
+         buf:lint:ignore RPC_RESPONSE_STANDARD_NAME: AIP-131 requires returning the resource directly.
+      operationId: ViewService_GetViewDependency
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/querylane.console.v1alpha1.GetViewDependencyRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/querylane.console.v1alpha1.ViewDependency'
   /querylane.console.v1alpha1.ViewService/ListViewDependencies:
     post:
       x-connectrpc-method-kind: unary
@@ -2064,6 +2103,10 @@ paths:
       description: |-
         Refreshes a materialized view within the configured synchronous timeout,
          which is capped at 30 seconds.
+         aip.dev/not-precedent: This alpha, interactive operation remains
+         synchronous so the UI can report PostgreSQL's immediate result. It fails
+         at the hard deadline; support for longer refreshes must use a long-running
+         operation before that deadline is widened.
          Returns INVALID_ARGUMENT for a standard view or unsupported mode,
          FAILED_PRECONDITION when concurrent refresh requirements are unmet, and
          DEADLINE_EXCEEDED when PostgreSQL cannot finish within the timeout.
@@ -3965,6 +4008,19 @@ components:
           $ref: '#/components/schemas/querylane.console.v1alpha1.Table'
       title: GetTableResponse
       additionalProperties: false
+    querylane.console.v1alpha1.GetViewDependencyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+/viewDependencies/[a-z][a-z0-9-]{3,62}$
+          description: |-
+            Required. The dependency edge to retrieve.
+             Format: instances/{instance}/databases/{database}/schemas/{schema}/views/{view}/viewDependencies/{view_dependency}
+      title: GetViewDependencyRequest
+      additionalProperties: false
+      description: Request message for GetViewDependency.
     querylane.console.v1alpha1.GetViewRequest:
       type: object
       properties:
@@ -5227,15 +5283,19 @@ components:
           type: string
           title: filter
           description: |-
-            Optional. Filter expression joined by `AND`. schema_name and display_name
-             support `=`, `!=`, and `:`. direction and relation_type support `=` and
-             `!=` with their enum names.
+            Optional. Filter expression joined by `AND`. name, schema_name, and
+             display_name support `=`, `!=`, and `:`. direction and relation_type
+             support `=` and `!=` with their enum names.
+             aip.dev/not-precedent: For compatibility with Querylane's existing list
+             grammar, `:` is a case-insensitive scalar substring operator rather than
+             AIP-160's collection has operator.
         orderBy:
           type: string
           title: order_by
           description: |-
             Optional. Comma-separated ordering. Supported fields are name,
-             schema_name, display_name, direction, and relation_type.
+             schema_name, display_name, direction, and relation_type. The default is
+             direction asc, schema_name asc, display_name asc, then name asc.
       title: ListViewDependenciesRequest
       additionalProperties: false
       description: Request message for ListViewDependencies.
@@ -7891,7 +7951,11 @@ components:
         displayName:
           type: string
           title: display_name
-          description: Output-only. Relation display name.
+          description: |-
+            Output-only. Relation display name.
+             aip.dev/not-precedent: PostgreSQL owns this identifier and this API only
+             mirrors catalog state, so clients cannot mutate display_name as AIP-148
+             normally recommends.
         direction:
           title: direction
           description: Output-only. Whether the relation is upstream or downstream of the view.
@@ -7997,9 +8061,9 @@ tags:
     description: Service for managing tables within schemas.
   - name: TableData
     description: |-
-      TableDataService exposes live row reads against a table-like Relation resource.
+      TableDataService exposes live row reads against a Table or materialized View resource.
 
-       Methods are AIP-136 custom methods on the Relation resource — requests use
+       Methods are AIP-136 custom methods on the selected resource — requests use
        `name`, not `parent`. Distinct from TableService (catalog) and SQLService
        (ad-hoc SQL) because the three surfaces have different cost, timeout,
        pooling, and authorization profiles.

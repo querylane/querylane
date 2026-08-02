@@ -12,6 +12,7 @@ WITH target AS (
 ),
 dependency_edges AS (
 	SELECT DISTINCT
+		source.oid AS relation_oid,
 		source_ns.nspname AS schema_name,
 		source.relname AS display_name,
 		'DIRECTION_UPSTREAM' AS direction,
@@ -30,6 +31,7 @@ dependency_edges AS (
 	UNION
 
 	SELECT DISTINCT
+		dependent.oid AS relation_oid,
 		dependent_ns.nspname AS schema_name,
 		dependent.relname AS display_name,
 		'DIRECTION_DOWNSTREAM' AS direction,
@@ -47,10 +49,10 @@ dependency_edges AS (
 ),
 encoded_edges AS (
 	SELECT
-		encode(
-			convert_to(direction || chr(31) || schema_name || chr(31) || display_name, 'UTF8'),
-			'hex'
-		) AS dependency_id,
+		CASE direction
+			WHEN 'DIRECTION_UPSTREAM' THEN 'u'
+			ELSE 'd'
+		END || lpad(to_hex(relation_oid::bigint), 16, '0') AS dependency_id,
 		schema_name,
 		display_name,
 		direction,

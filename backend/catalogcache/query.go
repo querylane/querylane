@@ -449,6 +449,23 @@ func (c *Catalog) ListViewDependencies(ctx context.Context, view resource.ViewNa
 	return dbSession.ListViewDependencies(ctx, view.SchemaID, view.ViewID, params)
 }
 
+// GetViewDependency returns one direct live dependency edge for a view.
+func (c *Catalog) GetViewDependency(ctx context.Context, dependency resource.ViewDependencyName) (*engine.ViewDependency, error) {
+	dependencies, _, err := c.ListViewDependencies(ctx, dependency.Parent(), aip.Params{
+		PageSize: 1,
+		Filter:   fmt.Sprintf("name = %q", dependency.ViewDependencyID),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(dependencies) == 0 {
+		return nil, fmt.Errorf("%w: %s", engine.ErrViewDependencyNotFound, dependency.String())
+	}
+
+	return &dependencies[0], nil
+}
+
 // RefreshMaterializedView refreshes a live materialized view and returns fresh metadata.
 func (c *Catalog) RefreshMaterializedView(ctx context.Context, view resource.ViewName, concurrently bool) (*engine.View, error) {
 	if err := c.EnsureMaterializedViewExists(ctx, view); err != nil {
