@@ -55,6 +55,8 @@ type TableFilterSearchParseResult =
 interface TableFilterRule {
   column: string;
   id: string;
+  /** Joins this rule to the preceding rule. The first rule ignores it. */
+  logic?: TableFilterLogic | undefined;
   operator: FilterOperator;
   value: string;
   value2?: string | undefined;
@@ -76,6 +78,11 @@ interface FilterOperatorMeta {
   label: string;
   proto: RowPredicate_Operator;
   valueCount: 0 | 1 | 2 | "list";
+}
+
+interface FilterChild {
+  filter: RowFilter;
+  logic?: TableFilterLogic | undefined;
 }
 
 const FILTER_OPERATOR_META: Record<FilterOperator, FilterOperatorMeta> = {
@@ -192,10 +199,14 @@ function isFilterLogic(value: string): value is TableFilterLogic {
   return FILTER_LOGIC_SET.has(value);
 }
 
-function createFilterRule(column = ""): TableFilterRule {
+function createFilterRule(
+  column = "",
+  logic?: TableFilterLogic
+): TableFilterRule {
   return {
     column,
     id: crypto.randomUUID?.() ?? `filter-${Date.now()}`,
+    ...(logic === undefined ? {} : { logic }),
     operator: "eq",
     value: "",
   };
@@ -237,6 +248,7 @@ function parseIntegerTableValue(value: string): TableValue | undefined {
 const compactRuleSearchSchema = z.object({
   c: z.string().min(1),
   i: z.string().min(1),
+  l: z.enum(FILTER_LOGICS).optional(),
   o: z.enum(FILTER_OPERATORS),
   v: z.string().default(""),
   v2: z.string().optional(),
@@ -275,6 +287,7 @@ function parseTableFilterSearchResult(
         rules: parsed.data.r.slice(0, MAX_FILTER_RULES).map((rule) => ({
           column: rule.c,
           id: rule.i,
+          ...(rule.l === undefined ? {} : { logic: rule.l }),
           operator: rule.o,
           value: rule.v,
           value2: rule.v2,
@@ -305,6 +318,7 @@ function serializeTableFilterSearch(
     r: state.rules.slice(0, MAX_FILTER_RULES).map((rule) => ({
       c: rule.column,
       i: rule.id,
+      ...(rule.logic === undefined ? {} : { l: rule.logic }),
       o: rule.operator,
       v: rule.value,
       ...(rule.value2 === undefined ? {} : { v2: rule.value2 }),
@@ -520,35 +534,79 @@ function buildRowFilter(
   const columnMap = new Map(
     columns.map((column) => [column.columnName, column])
   );
-  const children: RowFilter[] = [];
-
-  for (const rule of rules.slice(0, MAX_FILTER_RULES)) {
-    const column = columnMap.get(rule.column);
-    if (!column) {
-      continue;
-    }
-    const predicate = buildPredicate(rule, column);
-    if (!predicate) {
-      continue;
-    }
-    children.push(
-      create(RowFilterSchema, {
-        node: { case: "predicate", value: predicate },
-      })
-    );
-  }
-
+  const children = buildFilterChildren(rules, columnMap);
   if (children.length === 0) {
     return;
   }
+  const populatedGroups = groupFilterChildrenByPrecedence(children, logic);
+  if (populatedGroups.length === 1) {
+    return createFilterGroup(
+      populatedGroups[0] ?? [],
+      RowFilterGroup_Logic.AND
+    );
+  }
+  return createFilterGroup(
+    populatedGroups.map(collapseAndFilterGroup),
+    RowFilterGroup_Logic.OR
+  );
+}
+
+function buildFilterChildren(
+  rules: readonly TableFilterRule[],
+  columnMap: ReadonlyMap<string, FilterColumnMeta>
+): FilterChild[] {
+  return rules.slice(0, MAX_FILTER_RULES).flatMap((rule) => {
+    const column = columnMap.get(rule.column);
+    const predicate = column ? buildPredicate(rule, column) : undefined;
+    if (!predicate) {
+      return [];
+    }
+    return [
+      {
+        filter: create(RowFilterSchema, {
+          node: { case: "predicate", value: predicate },
+        }),
+        logic: rule.logic,
+      },
+    ];
+  });
+}
+
+function groupFilterChildrenByPrecedence(
+  children: FilterChild[],
+  fallbackLogic: TableFilterLogic
+): RowFilter[][] {
+  const andGroups: RowFilter[][] = [[]];
+  for (const child of children) {
+    const currentGroup = andGroups.at(-1);
+    if (
+      currentGroup &&
+      currentGroup.length > 0 &&
+      (child.logic ?? fallbackLogic) === "or"
+    ) {
+      andGroups.push([child.filter]);
+    } else {
+      currentGroup?.push(child.filter);
+    }
+  }
+  return andGroups.filter((group) => group.length > 0);
+}
+
+function collapseAndFilterGroup(children: RowFilter[]): RowFilter {
+  const [onlyChild] = children;
+  return children.length === 1 && onlyChild
+    ? onlyChild
+    : createFilterGroup(children, RowFilterGroup_Logic.AND);
+}
+
+function createFilterGroup(
+  children: RowFilter[],
+  logic: RowFilterGroup_Logic
+): RowFilter {
   return create(RowFilterSchema, {
     node: {
       case: "group",
-      value: create(RowFilterGroupSchema, {
-        children,
-        logic:
-          logic === "or" ? RowFilterGroup_Logic.OR : RowFilterGroup_Logic.AND,
-      }),
+      value: create(RowFilterGroupSchema, { children, logic }),
     },
   });
 }

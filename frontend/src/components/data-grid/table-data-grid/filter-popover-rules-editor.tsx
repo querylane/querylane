@@ -11,7 +11,6 @@ interface RulesEditorProps {
   invalidMessages: ReadonlyMap<string, string>;
   logic: TableFilterLogic;
   onApplyRequest: () => void;
-  onLogicChange: (next: TableFilterLogic) => void;
   onRemoveRule: (index: number) => void;
   onUpdateRule: (index: number, patch: Partial<TableFilterRule>) => void;
   rules: TableFilterRule[];
@@ -22,7 +21,6 @@ function RulesEditor({
   invalidMessages,
   logic,
   onApplyRequest,
-  onLogicChange,
   onRemoveRule,
   onUpdateRule,
   rules,
@@ -49,14 +47,19 @@ function RulesEditor({
             </span>
           ) : (
             <Button
-              aria-label="Toggle filter logic"
+              aria-label={`Filter rule ${index + 1} logic`}
               className="mt-1 h-6 w-full px-0 font-mono text-xs"
-              onClick={() => onLogicChange(logic === "and" ? "or" : "and")}
+              onClick={() => {
+                const ruleLogic = rule.logic ?? logic;
+                onUpdateRule(index, {
+                  logic: ruleLogic === "and" ? "or" : "and",
+                });
+              }}
               size="xs"
               type="button"
               variant="outline"
             >
-              {logic.toUpperCase()}
+              {(rule.logic ?? logic).toUpperCase()}
             </Button>
           )}
           <FilterRow

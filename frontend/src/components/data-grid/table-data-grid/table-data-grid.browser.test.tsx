@@ -1170,7 +1170,7 @@ test("data explorer filter controls keep active predicates visible", async () =>
     .element(page.getByText("email ILIKE %@enterprise%"))
     .toBeVisible();
   await expect.element(page.getByText("active = true")).toBeVisible();
-  await expect.element(page.getByText("any")).toBeVisible();
+  await expect.element(page.getByText("OR")).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-filter-controls"
   );

@@ -119,7 +119,7 @@ function FilterPopover({
       return;
     }
     updateState({
-      draftRules: [...draftRules, createFilterRule(firstColumn)],
+      draftRules: [...draftRules, createFilterRule(firstColumn, draftLogic)],
     });
   }
 
@@ -197,7 +197,6 @@ function FilterPopover({
             invalidMessages={invalidMessages}
             logic={draftLogic}
             onApplyRequest={requestApply}
-            onLogicChange={(next) => updateState({ draftLogic: next })}
             onRemoveRule={removeAt}
             onUpdateRule={updateAt}
             rules={draftRules}
