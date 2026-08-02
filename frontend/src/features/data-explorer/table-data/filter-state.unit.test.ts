@@ -41,6 +41,30 @@ describe("table filter search params", () => {
     expect(parseTableFilterSearch(serialized)).toEqual({ logic: "or", rules });
   });
 
+  test("round-trips per-rule match logic", () => {
+    const rules: TableFilterRule[] = [
+      { column: "email", id: "a", operator: "eq", value: "alice" },
+      {
+        column: "status",
+        id: "b",
+        logic: "or",
+        operator: "eq",
+        value: "pending",
+      },
+      {
+        column: "active",
+        id: "c",
+        logic: "and",
+        operator: "eq",
+        value: "true",
+      },
+    ];
+
+    const serialized = serializeTableFilterSearch({ logic: "and", rules });
+
+    expect(parseTableFilterSearch(serialized)).toEqual({ logic: "and", rules });
+  });
+
   test("keeps non-default match logic before a rule is added", () => {
     const serialized = serializeTableFilterSearch({ logic: "or", rules: [] });
 
@@ -149,6 +173,51 @@ describe("buildRowFilter", () => {
     }
     expect(filter.node.value.logic).toBe(RowFilterGroup_Logic.OR);
     expect(filter.node.value.children).toHaveLength(2);
+  });
+
+  test("uses SQL precedence when rules mix OR and AND", () => {
+    const filter = buildRowFilter(
+      [
+        { column: "email", id: "a", operator: "eq", value: "alice" },
+        {
+          column: "status",
+          id: "b",
+          logic: "or",
+          operator: "eq",
+          value: "pending",
+        },
+        {
+          column: "active",
+          id: "c",
+          logic: "and",
+          operator: "eq",
+          value: "true",
+        },
+      ],
+      columns
+    );
+
+    if (filter?.node.case !== "group") {
+      throw new Error("expected OR filter group");
+    }
+    expect(filter.node.value.logic).toBe(RowFilterGroup_Logic.OR);
+    expect(filter.node.value.children).toHaveLength(2);
+    expect(filter.node.value.children[0]?.node.value).toMatchObject({
+      column: "email",
+    });
+
+    const [, andGroup] = filter.node.value.children;
+    if (andGroup?.node.case !== "group") {
+      throw new Error("expected nested AND filter group");
+    }
+    expect(andGroup.node.value.logic).toBe(RowFilterGroup_Logic.AND);
+    expect(andGroup.node.value.children).toHaveLength(2);
+    expect(andGroup.node.value.children[0]?.node.value).toMatchObject({
+      column: "status",
+    });
+    expect(andGroup.node.value.children[1]?.node.value).toMatchObject({
+      column: "active",
+    });
   });
 
   test("supports null, in, between, and json contains value shapes", () => {

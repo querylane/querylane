@@ -73,6 +73,64 @@ describe("FilterPopover match logic", () => {
     expect(screen.queryByText("Match")).toBeNull();
   });
 
+  it("changes match logic for one rule without changing the others", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const rules: TableFilterRule[] = [
+      emailRule("alice@example.com"),
+      {
+        column: "status",
+        id: "rule-2",
+        logic: "and",
+        operator: "eq",
+        value: "pending",
+      },
+      {
+        column: "active",
+        id: "rule-3",
+        logic: "and",
+        operator: "eq",
+        value: "true",
+      },
+    ];
+
+    render(
+      <FilterPopover
+        columns={columns}
+        logic="and"
+        onChange={onChange}
+        rules={rules}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Filter 3" }));
+
+    const secondRuleLogic = screen.getByRole("button", {
+      name: "Filter rule 2 logic",
+    });
+    const thirdRuleLogic = screen.getByRole("button", {
+      name: "Filter rule 3 logic",
+    });
+    expect(secondRuleLogic.textContent).toBe("AND");
+    expect(thirdRuleLogic.textContent).toBe("AND");
+
+    await user.click(secondRuleLogic);
+
+    expect(secondRuleLogic.textContent).toBe("OR");
+    expect(thirdRuleLogic.textContent).toBe("AND");
+
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(onChange).toHaveBeenCalledWith(
+      [
+        rules[0],
+        expect.objectContaining({ id: "rule-2", logic: "or" }),
+        expect.objectContaining({ id: "rule-3", logic: "and" }),
+      ],
+      "and"
+    );
+  });
+
   it("does not apply the blank starter rule", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

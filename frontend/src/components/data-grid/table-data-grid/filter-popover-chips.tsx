@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { Fragment } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,31 +20,32 @@ function FilterChips({ logic, onChange, rules }: FilterChipsProps) {
   }
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1">
-      {rules.length > 1 ? (
-        <Badge className="font-mono text-xs" variant="outline">
-          {logic === "or" ? "any" : "all"}
-        </Badge>
-      ) : null}
-      {rules.map((rule) => (
-        <Badge
-          className="gap-1 truncate font-mono text-xs"
-          key={rule.id}
-          variant="secondary"
-        >
-          <span className="truncate">{buildFilterLabel(rule)}</span>
-          <Button
-            aria-label={`Remove filter ${buildFilterLabel(rule)}`}
-            className="size-4 p-0 text-muted-foreground hover:text-foreground"
-            onClick={() =>
-              onChange(rules.filter((candidate) => candidate.id !== rule.id))
-            }
-            size="sm"
-            type="button"
-            variant="ghost"
+      {rules.map((rule, index) => (
+        <Fragment key={rule.id}>
+          {index > 0 ? (
+            <Badge className="font-mono text-xs" variant="outline">
+              {(rule.logic ?? logic).toUpperCase()}
+            </Badge>
+          ) : null}
+          <Badge
+            className="gap-1 truncate font-mono text-xs"
+            variant="secondary"
           >
-            <X className="size-3" />
-          </Button>
-        </Badge>
+            <span className="truncate">{buildFilterLabel(rule)}</span>
+            <Button
+              aria-label={`Remove filter ${buildFilterLabel(rule)}`}
+              className="size-4 p-0 text-muted-foreground hover:text-foreground"
+              onClick={() =>
+                onChange(rules.filter((candidate) => candidate.id !== rule.id))
+              }
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              <X className="size-3" />
+            </Button>
+          </Badge>
+        </Fragment>
       ))}
       <Button
         className="h-5 px-1.5 text-xs"
