@@ -63,12 +63,12 @@ Inside Docker, `localhost` means the Querylane container itself. Use a Compose s
 
 ## Embedded PostgreSQL fails
 
-Embedded setup needs a writable home and data directory, a free port, and enough disk space. Its default port is `5433` and its persistent data path is `~/.querylane/pgdata`.
+Embedded setup needs a writable data directory, a free local port, and enough disk space. The wizard uses `~/.querylane/pgdata` and scans upward automatically from port `5433` until it finds a free port.
 
 Common fixes:
 
-- Stop the process already using port `5433` or choose another port.
-- Correct data-directory ownership and filesystem permissions.
+- Correct home-directory and data-directory ownership. If Querylane cannot write to its home directory, the wizard warns that it will use ephemeral storage.
+- If manual YAML pins a busy port, stop the conflicting process or set `embedded.port` to `0` for automatic selection.
 - Do not mount the Querylane filesystem read-only.
 - Avoid embedded mode inside ephemeral containers or with multiple replicas.
 - Do not delete a partially initialized data directory until you have checked whether it contains state you need.

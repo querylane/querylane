@@ -13,16 +13,17 @@ Embedded PostgreSQL is the shortest route from first launch to the product. Quer
   <Step title="Choose Use embedded database">
     Select the embedded option on the first page of the wizard.
   </Step>
-  <Step title="Choose a storage mode">
-    Use **Persistent** to retain Querylane state across restarts. Use **Ephemeral** only for a disposable evaluation.
-  </Step>
-  <Step title="Confirm the local settings">
-    The defaults use port `5433` and store persistent data under `~/.querylane/pgdata`. Change them if that port or path is unavailable.
+  <Step title="Review the generated settings">
+    The wizard always creates persistent storage when Querylane can write to its home directory. It uses `~/.querylane/pgdata` and chooses the first free port, starting at `5433`.
   </Step>
   <Step title="Start setup">
     Querylane downloads, initializes, and starts the embedded PostgreSQL runtime, applies its schema, and verifies readiness.
   </Step>
 </Steps>
+
+The wizard does not ask for a storage mode or port. If Querylane cannot write to its home directory, it shows a warning and uses ephemeral storage. Fix the directory permissions before continuing if saved connections and metadata must survive shutdown.
+
+To choose ephemeral storage intentionally, change the data path, or pin a fixed port, use [manual YAML](/get-started/manual-yaml).
 
 ## When to use it
 
@@ -31,7 +32,7 @@ Use embedded PostgreSQL for a local demo, a quick evaluation, or a direct single
 Do not treat it as a substitute for an externally operated PostgreSQL service. It is currently best suited to running Querylane directly on a machine, not inside Docker. Container restarts, read-only filesystems, and multiple Querylane replicas conflict with local process ownership.
 
 :::warning
-Persistent mode protects against normal Querylane restarts, not host loss. Back up the configured data path if the stored connections and metadata matter.
+Persistent storage protects against normal Querylane restarts, not host loss. Back up the configured data path if the stored connections and metadata matter.
 :::
 
 When setup completes, continue to [register your first managed instance](/get-started/register-instance).

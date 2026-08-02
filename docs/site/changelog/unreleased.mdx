@@ -2,7 +2,7 @@
 title: Unreleased
 description: Customer-facing changes on main that are headed for the next Querylane version.
 type: changelog
-date: 2026-07-16
+date: 2026-08-02
 changelog:
   version: Next
   category: In development
@@ -14,6 +14,7 @@ The current main branch turns the initial preview into a much deeper read-side P
 
 - Redesigned the instance overview around live metrics, connection capacity, server information, health checks, and replication context.
 - Added a live Activity page and session inspector with query and transaction age, client origin, wait details, and blocking relationships.
+- Added an Admin operations panel for replica heartbeat, background jobs, catalog synchronization, and metrics storage.
 - Added database Query Insights and improved extension inventory.
 
 ## Data explorer
@@ -21,12 +22,14 @@ The current main branch turns the initial preview into a much deeper read-side P
 - Added schema maps and detailed pages for table data, columns, keys, constraints, indexes, partitions, row-level security policies, triggers, and definitions.
 - Added routines, sequences, types, collations, foreign-data wrappers and servers, replication objects, event triggers, and `pg_cron` discovery.
 - Added SQL-style row filters, sorting, foreign-key navigation, per-table column layout persistence, and CSV, JSON, and SQL exports.
+- Added on-demand full-value reads for copy and selected-row export, plus readable `bytea` sizes and binary downloads from row details.
 - Preserved PostgreSQL result types and null behavior while hardening streamed results and CSV output.
 
 ## Access and workflow
 
 - Redesigned roles, memberships, grants, definitions, and effective-access maps.
 - Added a command palette, keyboard shortcut registry, consistent filter toolbars, pagination, structured PostgreSQL errors, and stronger loading and partial-error states.
+- Streamlined onboarding with shareable setup-method URLs, connection tabs, persistent embedded storage, and automatic embedded-port selection.
 - Hardened onboarding lifecycle behavior, connection tests, credential handling, target policy, and embedded PostgreSQL startup.
 
 ## Documentation

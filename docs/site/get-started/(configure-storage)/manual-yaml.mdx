@@ -26,8 +26,10 @@ You can set `QUERYLANE_DATABASE_DSN` instead of placing the metadata DSN in the 
 embedded:
   mode: persistent
   data_path: "~/.querylane/pgdata"
-  port: 5433
+  port: 0
 ```
+
+`port: 0` lets Querylane choose the first free local port, starting at `5433`. Set a positive port only when the deployment needs a fixed value. A fixed port fails startup when it is unavailable. Manual YAML also remains the way to select `mode: ephemeral` intentionally.
 
 Start Querylane with the file:
 
