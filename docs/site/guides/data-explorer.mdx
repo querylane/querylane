@@ -26,7 +26,7 @@ The Data Explorer makes PostgreSQL's catalog navigable without flattening it int
 
 The schema overview summarizes tables, views, and other database objects. Use the map to understand foreign-key relationships, focus one table, and follow connected objects without losing the schema boundary.
 
-The explorer also surfaces routines, sequences, types, collations, foreign-data wrappers and servers, replication objects, event triggers, and `pg_cron` jobs when they exist.
+The database overview surfaces routines, sequences, types, collations, foreign-data wrappers and servers, replication objects, event triggers, and `pg_cron` jobs when they exist. The explorer sidebar stays focused on schemas, tables, views, and the selected object's detail.
 
 ## Inspect a table
 
@@ -44,19 +44,25 @@ Table detail is split by the questions each catalog object answers:
 | Definition | Reproduce the object's PostgreSQL definition |
 
 <img
-  alt="A table data view with filter, sort, column, export, and expansion controls."
+  alt="A table detail view showing data and PostgreSQL catalog tabs."
   className="dark:hidden"
   height="816"
   src="/images/docs/table-data.png"
   width="1168"
 />
 <img
-  alt="A table data view with filter, sort, column, export, and expansion controls."
+  alt="A table detail view showing data and PostgreSQL catalog tabs."
   className="hidden dark:block"
   height="816"
   src="/images/docs/table-data-dark.png"
   width="1168"
 />
+
+## Inspect complete values
+
+Large text, JSON, and array values can appear as bounded previews in the grid. Copying a cell, row, SQL `INSERT`, or selected rows fetches complete values before writing to the clipboard or an export file. Querylane reports a failed full-value read instead of copying the visible prefix as if it were complete.
+
+Binary `bytea` cells show a readable size instead of sending an unnecessary preview payload. Open the row detail drawer to inspect the field. Download bytea values from the field action as a `.bin` file, or copy them using the same full-value path.
 
 ## Filter and export safely
 

@@ -35,10 +35,10 @@ Before export:
 
 - open representative rows in the detail drawer;
 - confirm nulls and PostgreSQL types are represented as expected;
-- check whether any displayed cell is truncated; and
+- note which displayed cells use an oversized-value preview; and
 - verify that the selected count matches the intended scope.
 
-Querylane refuses to export selected rows with truncated values because a plausible but incomplete CSV, JSON, or SQL file would be unsafe.
+For selection copy and export, Querylane fetches the complete values behind oversized previews before producing output. One action resolves up to 100 oversized cells. If a selection exceeds that limit or a full-value read fails, Querylane stops without producing a plausible but incomplete file. Reduce the selection or use an approved server-side export for the complete result.
 
 ## 3. Choose a format
 
@@ -66,4 +66,5 @@ The SQL option is not a replacement for `pg_dump`. Never run generated statement
 - **Need a recoverable database artifact:** use [database backup tooling](/operations/backup-and-restore), not Data Explorer export.
 - **Need reproducibility:** save the filter definition and source timestamp with the file checksum.
 - **Need to share externally:** complete the required data-classification and redaction review first.
-- **Export is blocked by truncation:** narrow the selected rows or use a database-native export that preserves the complete values.
+- **Full-value resolution exceeds 100 cells:** narrow the selected rows or use a database-native export that preserves the complete values.
+- **Need one binary field:** open the row detail drawer and download the `bytea` value as a `.bin` file.

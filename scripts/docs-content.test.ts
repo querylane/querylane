@@ -414,3 +414,36 @@ test("provides task-based guides for common PostgreSQL investigations", async ()
 		expect(contents).toContain("## What to do next");
 	}
 });
+
+test("documents automatic embedded setup and full-value exports", async () => {
+	const getStartedRoot = join(root, "docs/site/get-started");
+	const guidesRoot = join(root, "docs/site/guides");
+	const [embedded, manualYaml, troubleshooting, dataExplorer, exportGuide] =
+		await Promise.all([
+			readFile(
+				join(getStartedRoot, "(configure-storage)/embedded-postgresql.mdx"),
+				"utf8",
+			),
+			readFile(
+				join(getStartedRoot, "(configure-storage)/manual-yaml.mdx"),
+				"utf8",
+			),
+			readFile(
+				join(getStartedRoot, "(deploy-and-maintain)/troubleshooting.mdx"),
+				"utf8",
+			),
+			readFile(join(guidesRoot, "data-explorer.mdx"), "utf8"),
+			readFile(join(guidesRoot, "export-data-safely.mdx"), "utf8"),
+		]);
+
+	expect(embedded).toContain("chooses the first free port");
+	expect(embedded).toContain("always creates persistent storage");
+	expect(embedded).not.toContain("Choose a storage mode");
+	expect(manualYaml).toContain("port: 0");
+	expect(troubleshooting).toContain("scans upward automatically");
+	expect(dataExplorer).toContain("Download bytea values");
+	expect(exportGuide).toContain("up to 100 oversized cells");
+	expect(exportGuide).not.toContain(
+		"refuses to export selected rows with truncated values",
+	);
+});
