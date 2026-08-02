@@ -33,6 +33,22 @@ Use the endpoint's request table and protobuf source to confirm allowed fields. 
 
 If the response contains `nextPageToken`, send it unchanged with the same parent, filter, and order:
 
+```mermaid
+flowchart TD
+  Start[No page token] --> Request[Send list request]
+  Request --> Result{Response?}
+  Result -->|Page| Process[Process page]
+  Process --> More{Next token empty?}
+  More -->|Yes| Done[Traversal complete]
+  More -->|No| Continue[Copy the token unchanged]
+  Continue --> Keep[Keep request plan]
+  Keep --> Request
+  Result -->|Error| Restart[Fix cause and restart]
+  Restart --> Start
+```
+
+Walk through one complete traversal from the top. The first request has no token. Each non-final response supplies the only token that can continue that request plan. An empty token ends the traversal. An error or a changed parent, filter, or order sends the client back to a fresh first page.
+
 ```json
 {
   "parent": "instances/production",

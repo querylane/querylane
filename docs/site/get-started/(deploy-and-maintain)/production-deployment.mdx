@@ -13,17 +13,21 @@ Querylane does not currently include built-in authentication. Do not expose it d
 
 ## Production shape
 
-```text
-Users
-  │ HTTPS + authentication
-  ▼
-Reverse proxy
-  │ private HTTP
-  ▼
-Querylane ─────► Querylane metadata PostgreSQL
-  │
-  └────────────► Managed PostgreSQL instances
+```mermaid
+flowchart TD
+  Users[Operators] -->|Authenticated HTTPS| Ingress[Trusted ingress]
+  Ingress -->|Private HTTP| Querylane
+  Secrets[Secret manager] -->|DSN and stable key| Querylane
+  Querylane -->|State| Metadata[(Metadata PostgreSQL)]
+  Querylane -->|Read-only inspection| Managed[(Managed instances)]
 ```
+
+Follow one browser request from top to bottom:
+
+1. Trusted ingress authenticates the operator and terminates TLS.
+2. Querylane receives private HTTP traffic and loads its DSN and encryption key from protected environment variables.
+3. Querylane reads application state from metadata PostgreSQL.
+4. Querylane opens separate, least-privilege connections to the managed PostgreSQL instances it inspects.
 
 The metadata database stores Querylane state and encrypted UI-managed instance credentials. Managed instances are the servers Querylane inspects. Keep their databases and credentials separate.
 

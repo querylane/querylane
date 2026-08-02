@@ -75,6 +75,33 @@ Do not convert a missing metric into zero. Zero is an observation; unavailable m
 
 `TableDataService.StreamRows`, `SQLService.ExecuteQuery`, `OnboardingService.SetupAppDatabase`, and `OnboardingService.WatchConfigChanges` return server streams. Connect streaming uses framed `application/connect+json`, not newline-delimited JSON, so use a generated client.
 
+```mermaid
+sequenceDiagram
+  actor Client
+  participant Querylane
+  participant Work as Database or worker
+
+  Client->>Querylane: Start stream with deadline or cancellation signal
+  Querylane->>Work: Start bounded operation
+  Querylane-->>Client: Metadata or progress event
+  loop While results remain
+    Work-->>Querylane: Rows or progress
+    Querylane-->>Client: Framed batch or progress event
+  end
+  alt Operation completes
+    Querylane-->>Client: Stats or final progress event
+    Querylane-->>Client: Clean end of stream
+  else Operation fails
+    Querylane--xClient: Terminal Connect error
+  end
+  opt Client cancels or its sink fails
+    Client--xQuerylane: Cancel stream
+    Querylane--xWork: Release underlying work
+  end
+```
+
+Walk through one successful stream from top to bottom. The client starts the operation once, then consumes framed events incrementally. SQL and table streams read PostgreSQL; onboarding streams report background progress instead. Row streams identify their shape before sending batches and finish with statistics. A terminal error can follow messages already processed, so only a clean end proves that the stream completed.
+
 ```ts
 const stream = tableData.streamRows({
   name: "instances/production/databases/app/schemas/public/tables/orders",

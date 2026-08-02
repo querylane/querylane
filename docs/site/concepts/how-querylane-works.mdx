@@ -19,12 +19,53 @@ Querylane keeps its own application state separate from the PostgreSQL servers y
 
 One Querylane installation can hold many instances. One instance can expose many databases, and each database owns its schemas and objects.
 
+```mermaid
+flowchart TD
+  I[Instance] -->|contains many| D[Database]
+  D -->|contains many| S[Schema]
+  S -->|contains many| O[Objects]
+```
+
+Read the hierarchy from top to bottom:
+
+1. An **instance** tells Querylane how to reach one PostgreSQL server.
+2. That server exposes one or more **databases**.
+3. Each database contains **schemas** that divide its namespace.
+4. Schemas own the **objects** that Querylane lets you inspect.
+
 ## Stored configuration and live observations
 
 Querylane combines two kinds of information:
 
 - **Stored configuration** includes the connection record, labels, sampled metrics, and Querylane's own state.
 - **Live observations** come from the managed server's PostgreSQL catalogs and statistics views when you open or refresh a page.
+
+```mermaid
+sequenceDiagram
+  actor Operator
+  participant Browser
+  participant Querylane
+  participant Metadata as Metadata PostgreSQL
+  participant Managed as Managed PostgreSQL
+
+  Operator->>Browser: Open or refresh a page
+  Browser->>Querylane: Request saved instance state
+  Querylane->>Metadata: Read configuration and samples
+  Metadata-->>Querylane: Stored state
+  Querylane-->>Browser: Saved instance sections
+  Browser->>Querylane: Request live catalog or health data
+  Querylane->>Managed: Read catalogs and statistics
+  alt Live read succeeds
+    Managed-->>Querylane: Current observation
+    Querylane-->>Browser: Live section
+  else One live probe fails
+    Managed--xQuerylane: PostgreSQL error
+    Querylane-->>Browser: Available sections and partial error
+  end
+  Browser-->>Operator: Render every available section
+```
+
+Follow one page load from top to bottom. The browser first asks Querylane for saved state, then requests the live sections needed by the page. Querylane reads its metadata database for the first kind and the managed server for the second. A failed live probe changes only the affected section; it does not erase the saved instance.
 
 That distinction matters during failures. Querylane can still know an instance exists while showing its live health or catalog as unavailable. Partial errors stay attached to the affected section instead of making the whole server disappear.
 
