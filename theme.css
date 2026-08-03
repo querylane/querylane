@@ -2,6 +2,17 @@ blume-mermaid {
 	position: relative;
 }
 
+.docs-diagram-wide {
+	position: relative;
+	left: 50%;
+	width: min(56rem, calc(100vw - 2rem));
+	transform: translateX(-50%);
+}
+
+.docs-diagram-wide blume-mermaid > div {
+	width: calc(100% - 5rem);
+}
+
 [data-mermaid-expand],
 [data-mermaid-fullscreen-close] {
 	min-width: 44px;

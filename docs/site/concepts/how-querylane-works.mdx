@@ -40,6 +40,8 @@ Querylane combines two kinds of information:
 - **Stored configuration** includes the connection record, labels, sampled metrics, and Querylane's own state.
 - **Live observations** come from the managed server's PostgreSQL catalogs and statistics views when you open or refresh a page.
 
+<div class="docs-diagram-wide">
+
 ```mermaid
 sequenceDiagram
   actor Operator
@@ -64,6 +66,8 @@ sequenceDiagram
   end
   Browser-->>Operator: Render every available section
 ```
+
+</div>
 
 Follow one page load from top to bottom. The browser first asks Querylane for saved state, then requests the live sections needed by the page. Querylane reads its metadata database for the first kind and the managed server for the second. A failed live probe changes only the affected section; it does not erase the saved instance.
 
