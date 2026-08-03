@@ -25,15 +25,15 @@ test("hosts the docs MCP endpoint", () => {
 	});
 });
 
-test("pins the Blume 1.2 release and its MCP type patch", async () => {
+test("pins the latest Blume 1.3 release and its MCP type patch", async () => {
 	const packageFile = JSON.parse(await read("package.json")) as {
 		devDependencies?: Record<string, string>;
 		patchedDependencies?: Record<string, string>;
 	};
 
-	expect(packageFile.devDependencies?.blume).toBe("1.2.1");
+	expect(packageFile.devDependencies?.blume).toBe("1.3.1");
 	expect(packageFile.patchedDependencies).toEqual({
-		"blume@1.2.1": "patches/blume@1.2.1.patch",
+		"blume@1.3.1": "patches/blume@1.3.1.patch",
 	});
 });
 
