@@ -1981,6 +1981,82 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.GetViewResponse'
+  /querylane.console.v1alpha1.ViewService/GetViewDependency:
+    post:
+      x-connectrpc-method-kind: unary
+      tags:
+        - View
+      summary: GetViewDependency
+      description: |-
+        Gets one direct relation dependency edge for a view.
+         buf:lint:ignore RPC_RESPONSE_STANDARD_NAME: AIP-131 requires returning the resource directly.
+      operationId: ViewService_GetViewDependency
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/querylane.console.v1alpha1.GetViewDependencyRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/querylane.console.v1alpha1.ViewDependency'
+  /querylane.console.v1alpha1.ViewService/ListViewDependencies:
+    post:
+      x-connectrpc-method-kind: unary
+      tags:
+        - View
+      summary: ListViewDependencies
+      description: Lists direct relation dependencies for a view.
+      operationId: ViewService_ListViewDependencies
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/querylane.console.v1alpha1.ListViewDependenciesRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/querylane.console.v1alpha1.ListViewDependenciesResponse'
   /querylane.console.v1alpha1.ViewService/ListViews:
     post:
       x-connectrpc-method-kind: unary
@@ -2018,6 +2094,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListViewsResponse'
+  /querylane.console.v1alpha1.ViewService/RefreshMaterializedView:
+    post:
+      x-connectrpc-method-kind: unary
+      tags:
+        - View
+      summary: RefreshMaterializedView
+      description: |-
+        Refreshes a materialized view within the configured synchronous timeout,
+         which is capped at 30 seconds.
+         aip.dev/not-precedent: This alpha, interactive operation remains
+         synchronous so the UI can report PostgreSQL's immediate result. It fails
+         at the hard deadline; support for longer refreshes must use a long-running
+         operation before that deadline is widened.
+         Returns INVALID_ARGUMENT for a standard view or unsupported mode,
+         FAILED_PRECONDITION when concurrent refresh requirements are unmet, and
+         DEADLINE_EXCEEDED when PostgreSQL cannot finish within the timeout.
+      operationId: ViewService_RefreshMaterializedView
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/querylane.console.v1alpha1.RefreshMaterializedViewRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/querylane.console.v1alpha1.RefreshMaterializedViewResponse'
 components:
   schemas:
     connect-protocol-version:
@@ -3886,6 +4008,19 @@ components:
           $ref: '#/components/schemas/querylane.console.v1alpha1.Table'
       title: GetTableResponse
       additionalProperties: false
+    querylane.console.v1alpha1.GetViewDependencyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+/viewDependencies/[a-z][a-z0-9-]{3,62}$
+          description: |-
+            Required. The dependency edge to retrieve.
+             Format: instances/{instance}/databases/{database}/schemas/{schema}/views/{view}/viewDependencies/{view_dependency}
+      title: GetViewDependencyRequest
+      additionalProperties: false
+      description: Request message for GetViewDependency.
     querylane.console.v1alpha1.GetViewRequest:
       type: object
       properties:
@@ -4943,10 +5078,11 @@ components:
         parent:
           type: string
           title: parent
-          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
           description: |-
-            Required. The parent Table from which to list columns.
-             Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+            Required. The parent table or materialized view from which to list columns.
+             aip.dev/not-precedent: This compatibility field accepts either a Table or
+             View resource. Runtime validation narrows the wildcard to those two types.
       title: ListTableColumnsRequest
       additionalProperties: false
     querylane.console.v1alpha1.ListTableColumnsResponse:
@@ -4966,10 +5102,11 @@ components:
         parent:
           type: string
           title: parent
-          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
           description: |-
-            Required. The parent Table from which to list constraints.
-             Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+            Required. The parent table or materialized view from which to list constraints.
+             aip.dev/not-precedent: This compatibility field accepts either a Table or
+             View resource. Runtime validation narrows the wildcard to those two types.
       title: ListTableConstraintsRequest
       additionalProperties: false
     querylane.console.v1alpha1.ListTableConstraintsResponse:
@@ -4988,10 +5125,11 @@ components:
         parent:
           type: string
           title: parent
-          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
           description: |-
-            Required. The parent Table from which to list indexes.
-             Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+            Required. The parent table or materialized view from which to list indexes.
+             aip.dev/not-precedent: This compatibility field accepts either a Table or
+             View resource. Runtime validation narrows the wildcard to those two types.
       title: ListTableIndexesRequest
       additionalProperties: false
     querylane.console.v1alpha1.ListTableIndexesResponse:
@@ -5121,6 +5259,62 @@ components:
           $ref: '#/components/schemas/querylane.console.v1alpha1.CatalogSyncMetadata'
       title: ListTablesResponse
       additionalProperties: false
+    querylane.console.v1alpha1.ListViewDependenciesRequest:
+      type: object
+      properties:
+        parent:
+          type: string
+          title: parent
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$
+          description: Required. The view whose direct dependencies should be returned.
+        pageSize:
+          type: integer
+          title: page_size
+          minimum: 0
+          format: int32
+          description: |-
+            Optional. Maximum dependencies to return. The server clamps values above
+             1000 and uses 50 when this is unset.
+        pageToken:
+          type: string
+          title: page_token
+          description: Optional. Opaque continuation token from a previous response.
+        filter:
+          type: string
+          title: filter
+          description: |-
+            Optional. Filter expression joined by `AND`. name, schema_name, and
+             display_name support `=`, `!=`, and `:`. direction and relation_type
+             support `=` and `!=` with their enum names.
+             aip.dev/not-precedent: For compatibility with Querylane's existing list
+             grammar, `:` is a case-insensitive scalar substring operator rather than
+             AIP-160's collection has operator.
+        orderBy:
+          type: string
+          title: order_by
+          description: |-
+            Optional. Comma-separated ordering. Supported fields are name,
+             schema_name, display_name, direction, and relation_type. The default is
+             direction asc, schema_name asc, display_name asc, then name asc.
+      title: ListViewDependenciesRequest
+      additionalProperties: false
+      description: Request message for ListViewDependencies.
+    querylane.console.v1alpha1.ListViewDependenciesResponse:
+      type: object
+      properties:
+        viewDependencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/querylane.console.v1alpha1.ViewDependency'
+          title: view_dependencies
+          description: The dependency edges in this page.
+        nextPageToken:
+          type: string
+          title: next_page_token
+          description: Opaque token for the next page, or empty when this is the final page.
+      title: ListViewDependenciesResponse
+      additionalProperties: false
+      description: Response message for ListViewDependencies.
     querylane.console.v1alpha1.ListViewsRequest:
       type: object
       properties:
@@ -5700,10 +5894,11 @@ components:
         name:
           type: string
           title: name
-          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
           description: |-
-            Required. The table the cell belongs to.
-             Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+            Required. The table or materialized view the cell belongs to.
+             aip.dev/not-precedent: This compatibility field accepts either a Table or
+             View resource. Runtime validation narrows the wildcard to those two types.
         fullValueToken:
           type: string
           title: full_value_token
@@ -5745,10 +5940,11 @@ components:
         name:
           type: string
           title: name
-          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
           description: |-
-            Required. The table to read from.
-             Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+            Required. The table or materialized view to read from.
+             aip.dev/not-precedent: This compatibility field accepts either a Table or
+             View resource. Runtime validation narrows the wildcard to those two types.
         pageSize:
           type: integer
           title: page_size
@@ -5846,6 +6042,39 @@ components:
         - REFERENTIAL_ACTION_CASCADE
         - REFERENTIAL_ACTION_SET_NULL
         - REFERENTIAL_ACTION_SET_DEFAULT
+    querylane.console.v1alpha1.RefreshMaterializedViewMode:
+      type: string
+      title: RefreshMaterializedViewMode
+      enum:
+        - REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED
+        - REFRESH_MATERIALIZED_VIEW_MODE_STANDARD
+        - REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT
+      description: RefreshMaterializedViewMode selects the PostgreSQL refresh strategy.
+    querylane.console.v1alpha1.RefreshMaterializedViewRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$
+          description: Required. The materialized view to refresh.
+        mode:
+          title: mode
+          description: Optional. Standard refresh is used when unspecified.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.RefreshMaterializedViewMode'
+      title: RefreshMaterializedViewRequest
+      additionalProperties: false
+      description: Request message for RefreshMaterializedView.
+    querylane.console.v1alpha1.RefreshMaterializedViewResponse:
+      type: object
+      properties:
+        view:
+          title: view
+          description: The refreshed materialized view.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.View'
+      title: RefreshMaterializedViewResponse
+      additionalProperties: false
+      description: Response message for RefreshMaterializedView.
     querylane.console.v1alpha1.Replica:
       type: object
       properties:
@@ -6837,8 +7066,11 @@ components:
         name:
           type: string
           title: name
-          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$
-          description: Required. Same shape as ReadRowsRequest.name.
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$
+          description: |-
+            Required. Same shape as ReadRowsRequest.name.
+             aip.dev/not-precedent: This compatibility field accepts either a Table or
+             View resource. Runtime validation narrows the wildcard to those two types.
         selectedColumns:
           type: array
           items:
@@ -7698,6 +7930,62 @@ components:
         - VIEW_TYPE_STANDARD
         - VIEW_TYPE_MATERIALIZED
       description: The type of view object.
+    querylane.console.v1alpha1.ViewDependency:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: The dependency edge resource name.
+        relation:
+          type: string
+          title: relation
+          description: |-
+            Output-only. Canonical Table or View resource attached to this edge.
+             aip.dev/not-precedent: PostgreSQL dependencies can target either resource
+             type. Runtime construction narrows this wildcard to Table or View.
+        schemaName:
+          type: string
+          title: schema_name
+          description: Output-only. Schema containing the relation.
+        displayName:
+          type: string
+          title: display_name
+          description: |-
+            Output-only. Relation display name.
+             aip.dev/not-precedent: PostgreSQL owns this identifier and this API only
+             mirrors catalog state, so clients cannot mutate display_name as AIP-148
+             normally recommends.
+        direction:
+          title: direction
+          description: Output-only. Whether the relation is upstream or downstream of the view.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.ViewDependency.Direction'
+        relationType:
+          title: relation_type
+          description: Output-only. PostgreSQL relation kind.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.ViewDependency.RelationType'
+      title: ViewDependency
+      additionalProperties: false
+      description: A relation connected to a view through PostgreSQL catalog dependencies.
+    querylane.console.v1alpha1.ViewDependency.Direction:
+      type: string
+      title: Direction
+      enum:
+        - DIRECTION_UNSPECIFIED
+        - DIRECTION_UPSTREAM
+        - DIRECTION_DOWNSTREAM
+      description: Direction identifies which side of the selected view contains the relation.
+    querylane.console.v1alpha1.ViewDependency.RelationType:
+      type: string
+      title: RelationType
+      enum:
+        - RELATION_TYPE_UNSPECIFIED
+        - RELATION_TYPE_TABLE
+        - RELATION_TYPE_VIEW
+        - RELATION_TYPE_MATERIALIZED_VIEW
+        - RELATION_TYPE_FOREIGN_TABLE
+        - RELATION_TYPE_PARTITIONED_TABLE
+      description: RelationType identifies the PostgreSQL catalog kind of the relation.
     querylane.console.v1alpha1.ViewView:
       type: string
       title: ViewView
@@ -7773,9 +8061,9 @@ tags:
     description: Service for managing tables within schemas.
   - name: TableData
     description: |-
-      TableDataService exposes live row reads against a single Table resource.
+      TableDataService exposes live row reads against a Table or materialized View resource.
 
-       Methods are AIP-136 custom methods on the Table resource — requests use
+       Methods are AIP-136 custom methods on the selected resource — requests use
        `name`, not `parent`. Distinct from TableService (catalog) and SQLService
        (ad-hoc SQL) because the three surfaces have different cost, timeout,
        pooling, and authorization profiles.

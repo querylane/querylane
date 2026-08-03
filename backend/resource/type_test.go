@@ -28,6 +28,7 @@ func TestTypeKind(t *testing.T) {
 		{name: "schema", typ: TypeSchema, want: "Schema", lower: "schema"},
 		{name: "table", typ: TypeTable, want: "Table", lower: "table"},
 		{name: "view", typ: TypeView, want: "View", lower: "view"},
+		{name: "multiword kind", typ: TypeViewDependency, want: "ViewDependency", lower: "view dependency"},
 		{name: "no slash returns whole string", typ: Type("Custom"), want: "Custom", lower: "custom"},
 		{name: "trailing slash returns whole string", typ: Type("domain/"), want: "domain/", lower: "domain/"},
 		{name: "empty", typ: Type(""), want: "", lower: ""},

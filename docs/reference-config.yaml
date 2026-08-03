@@ -66,6 +66,11 @@ limits:
     # Shared by every database in one managed PostgreSQL instance.
     per_instance: 6
 
+  # Synchronous PostgreSQL deadline for materialized-view refreshes. Values
+  # above 30 seconds are rejected; use a smaller value to protect busy servers.
+  materialized_view_refresh:
+    timeout: "30s"
+
   # Process-local token bucket for connection tests, creates, and connection
   # config updates. Callers are keyed by their direct socket IP; forwarding
   # headers are not trusted. Behind a reverse proxy, callers share its bucket.

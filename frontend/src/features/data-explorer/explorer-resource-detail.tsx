@@ -82,7 +82,15 @@ export function ResourceDetail({
     );
   }
   if (category === "views") {
-    return <ViewDetail schemaName={schemaName} view={view} viewName={name} />;
+    return (
+      <ViewDetail
+        databaseId={databaseId}
+        instanceId={instanceId}
+        schemaName={schemaName}
+        view={view}
+        viewName={name}
+      />
+    );
   }
   return null;
 }

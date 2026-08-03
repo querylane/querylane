@@ -77,6 +77,60 @@ func (ViewView) EnumDescriptor() ([]byte, []int) {
 	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{0}
 }
 
+// RefreshMaterializedViewMode selects the PostgreSQL refresh strategy.
+type RefreshMaterializedViewMode int32
+
+const (
+	// Uses a standard, blocking refresh.
+	RefreshMaterializedViewMode_REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED RefreshMaterializedViewMode = 0
+	// Replaces the stored rows while preventing concurrent reads.
+	RefreshMaterializedViewMode_REFRESH_MATERIALIZED_VIEW_MODE_STANDARD RefreshMaterializedViewMode = 1
+	// Replaces the stored rows without preventing concurrent reads.
+	// PostgreSQL requires a qualifying unique index.
+	RefreshMaterializedViewMode_REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT RefreshMaterializedViewMode = 2
+)
+
+// Enum value maps for RefreshMaterializedViewMode.
+var (
+	RefreshMaterializedViewMode_name = map[int32]string{
+		0: "REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED",
+		1: "REFRESH_MATERIALIZED_VIEW_MODE_STANDARD",
+		2: "REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT",
+	}
+	RefreshMaterializedViewMode_value = map[string]int32{
+		"REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED": 0,
+		"REFRESH_MATERIALIZED_VIEW_MODE_STANDARD":    1,
+		"REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT":  2,
+	}
+)
+
+func (x RefreshMaterializedViewMode) Enum() *RefreshMaterializedViewMode {
+	p := new(RefreshMaterializedViewMode)
+	*p = x
+	return p
+}
+
+func (x RefreshMaterializedViewMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RefreshMaterializedViewMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_querylane_console_v1alpha1_view_proto_enumTypes[1].Descriptor()
+}
+
+func (RefreshMaterializedViewMode) Type() protoreflect.EnumType {
+	return &file_querylane_console_v1alpha1_view_proto_enumTypes[1]
+}
+
+func (x RefreshMaterializedViewMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RefreshMaterializedViewMode.Descriptor instead.
+func (RefreshMaterializedViewMode) EnumDescriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{1}
+}
+
 // The type of view object.
 type View_ViewType int32
 
@@ -111,11 +165,11 @@ func (x View_ViewType) String() string {
 }
 
 func (View_ViewType) Descriptor() protoreflect.EnumDescriptor {
-	return file_querylane_console_v1alpha1_view_proto_enumTypes[1].Descriptor()
+	return file_querylane_console_v1alpha1_view_proto_enumTypes[2].Descriptor()
 }
 
 func (View_ViewType) Type() protoreflect.EnumType {
-	return &file_querylane_console_v1alpha1_view_proto_enumTypes[1]
+	return &file_querylane_console_v1alpha1_view_proto_enumTypes[2]
 }
 
 func (x View_ViewType) Number() protoreflect.EnumNumber {
@@ -125,6 +179,124 @@ func (x View_ViewType) Number() protoreflect.EnumNumber {
 // Deprecated: Use View_ViewType.Descriptor instead.
 func (View_ViewType) EnumDescriptor() ([]byte, []int) {
 	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{0, 0}
+}
+
+// Direction identifies which side of the selected view contains the relation.
+type ViewDependency_Direction int32
+
+const (
+	// The direction is not specified.
+	ViewDependency_DIRECTION_UNSPECIFIED ViewDependency_Direction = 0
+	// The selected view reads from the relation.
+	ViewDependency_DIRECTION_UPSTREAM ViewDependency_Direction = 1
+	// The relation reads from the selected view.
+	ViewDependency_DIRECTION_DOWNSTREAM ViewDependency_Direction = 2
+)
+
+// Enum value maps for ViewDependency_Direction.
+var (
+	ViewDependency_Direction_name = map[int32]string{
+		0: "DIRECTION_UNSPECIFIED",
+		1: "DIRECTION_UPSTREAM",
+		2: "DIRECTION_DOWNSTREAM",
+	}
+	ViewDependency_Direction_value = map[string]int32{
+		"DIRECTION_UNSPECIFIED": 0,
+		"DIRECTION_UPSTREAM":    1,
+		"DIRECTION_DOWNSTREAM":  2,
+	}
+)
+
+func (x ViewDependency_Direction) Enum() *ViewDependency_Direction {
+	p := new(ViewDependency_Direction)
+	*p = x
+	return p
+}
+
+func (x ViewDependency_Direction) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ViewDependency_Direction) Descriptor() protoreflect.EnumDescriptor {
+	return file_querylane_console_v1alpha1_view_proto_enumTypes[3].Descriptor()
+}
+
+func (ViewDependency_Direction) Type() protoreflect.EnumType {
+	return &file_querylane_console_v1alpha1_view_proto_enumTypes[3]
+}
+
+func (x ViewDependency_Direction) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ViewDependency_Direction.Descriptor instead.
+func (ViewDependency_Direction) EnumDescriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{1, 0}
+}
+
+// RelationType identifies the PostgreSQL catalog kind of the relation.
+type ViewDependency_RelationType int32
+
+const (
+	// The relation type is not specified.
+	ViewDependency_RELATION_TYPE_UNSPECIFIED ViewDependency_RelationType = 0
+	// A base table.
+	ViewDependency_RELATION_TYPE_TABLE ViewDependency_RelationType = 1
+	// A standard view.
+	ViewDependency_RELATION_TYPE_VIEW ViewDependency_RelationType = 2
+	// A materialized view.
+	ViewDependency_RELATION_TYPE_MATERIALIZED_VIEW ViewDependency_RelationType = 3
+	// A foreign table.
+	ViewDependency_RELATION_TYPE_FOREIGN_TABLE ViewDependency_RelationType = 4
+	// A partitioned table.
+	ViewDependency_RELATION_TYPE_PARTITIONED_TABLE ViewDependency_RelationType = 5
+)
+
+// Enum value maps for ViewDependency_RelationType.
+var (
+	ViewDependency_RelationType_name = map[int32]string{
+		0: "RELATION_TYPE_UNSPECIFIED",
+		1: "RELATION_TYPE_TABLE",
+		2: "RELATION_TYPE_VIEW",
+		3: "RELATION_TYPE_MATERIALIZED_VIEW",
+		4: "RELATION_TYPE_FOREIGN_TABLE",
+		5: "RELATION_TYPE_PARTITIONED_TABLE",
+	}
+	ViewDependency_RelationType_value = map[string]int32{
+		"RELATION_TYPE_UNSPECIFIED":       0,
+		"RELATION_TYPE_TABLE":             1,
+		"RELATION_TYPE_VIEW":              2,
+		"RELATION_TYPE_MATERIALIZED_VIEW": 3,
+		"RELATION_TYPE_FOREIGN_TABLE":     4,
+		"RELATION_TYPE_PARTITIONED_TABLE": 5,
+	}
+)
+
+func (x ViewDependency_RelationType) Enum() *ViewDependency_RelationType {
+	p := new(ViewDependency_RelationType)
+	*p = x
+	return p
+}
+
+func (x ViewDependency_RelationType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ViewDependency_RelationType) Descriptor() protoreflect.EnumDescriptor {
+	return file_querylane_console_v1alpha1_view_proto_enumTypes[4].Descriptor()
+}
+
+func (ViewDependency_RelationType) Type() protoreflect.EnumType {
+	return &file_querylane_console_v1alpha1_view_proto_enumTypes[4]
+}
+
+func (x ViewDependency_RelationType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ViewDependency_RelationType.Descriptor instead.
+func (ViewDependency_RelationType) EnumDescriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{1, 1}
 }
 
 // A View represents a standard or materialized view within a Schema.
@@ -272,6 +444,102 @@ func (x *View) GetLastDdlTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// A relation connected to a view through PostgreSQL catalog dependencies.
+type ViewDependency struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The dependency edge resource name.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Output-only. Canonical Table or View resource attached to this edge.
+	// aip.dev/not-precedent: PostgreSQL dependencies can target either resource
+	// type. Runtime construction narrows this wildcard to Table or View.
+	Relation string `protobuf:"bytes,2,opt,name=relation,proto3" json:"relation,omitempty"`
+	// Output-only. Schema containing the relation.
+	SchemaName string `protobuf:"bytes,3,opt,name=schema_name,json=schemaName,proto3" json:"schema_name,omitempty"`
+	// Output-only. Relation display name.
+	// aip.dev/not-precedent: PostgreSQL owns this identifier and this API only
+	// mirrors catalog state, so clients cannot mutate display_name as AIP-148
+	// normally recommends.
+	DisplayName string `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Output-only. Whether the relation is upstream or downstream of the view.
+	Direction ViewDependency_Direction `protobuf:"varint,5,opt,name=direction,proto3,enum=querylane.console.v1alpha1.ViewDependency_Direction" json:"direction,omitempty"`
+	// Output-only. PostgreSQL relation kind.
+	RelationType  ViewDependency_RelationType `protobuf:"varint,6,opt,name=relation_type,json=relationType,proto3,enum=querylane.console.v1alpha1.ViewDependency_RelationType" json:"relation_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ViewDependency) Reset() {
+	*x = ViewDependency{}
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ViewDependency) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ViewDependency) ProtoMessage() {}
+
+func (x *ViewDependency) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ViewDependency.ProtoReflect.Descriptor instead.
+func (*ViewDependency) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ViewDependency) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ViewDependency) GetRelation() string {
+	if x != nil {
+		return x.Relation
+	}
+	return ""
+}
+
+func (x *ViewDependency) GetSchemaName() string {
+	if x != nil {
+		return x.SchemaName
+	}
+	return ""
+}
+
+func (x *ViewDependency) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *ViewDependency) GetDirection() ViewDependency_Direction {
+	if x != nil {
+		return x.Direction
+	}
+	return ViewDependency_DIRECTION_UNSPECIFIED
+}
+
+func (x *ViewDependency) GetRelationType() ViewDependency_RelationType {
+	if x != nil {
+		return x.RelationType
+	}
+	return ViewDependency_RELATION_TYPE_UNSPECIFIED
+}
+
 type ListViewsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. The parent schema from which to list views.
@@ -295,7 +563,7 @@ type ListViewsRequest struct {
 
 func (x *ListViewsRequest) Reset() {
 	*x = ListViewsRequest{}
-	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[1]
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -307,7 +575,7 @@ func (x *ListViewsRequest) String() string {
 func (*ListViewsRequest) ProtoMessage() {}
 
 func (x *ListViewsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[1]
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -320,7 +588,7 @@ func (x *ListViewsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListViewsRequest.ProtoReflect.Descriptor instead.
 func (*ListViewsRequest) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{1}
+	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ListViewsRequest) GetParent() string {
@@ -375,7 +643,7 @@ type ListViewsResponse struct {
 
 func (x *ListViewsResponse) Reset() {
 	*x = ListViewsResponse{}
-	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[2]
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -387,7 +655,7 @@ func (x *ListViewsResponse) String() string {
 func (*ListViewsResponse) ProtoMessage() {}
 
 func (x *ListViewsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[2]
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -400,7 +668,7 @@ func (x *ListViewsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListViewsResponse.ProtoReflect.Descriptor instead.
 func (*ListViewsResponse) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{2}
+	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ListViewsResponse) GetViews() []*View {
@@ -429,7 +697,7 @@ type GetViewRequest struct {
 
 func (x *GetViewRequest) Reset() {
 	*x = GetViewRequest{}
-	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[3]
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -441,7 +709,7 @@ func (x *GetViewRequest) String() string {
 func (*GetViewRequest) ProtoMessage() {}
 
 func (x *GetViewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[3]
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -454,7 +722,7 @@ func (x *GetViewRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetViewRequest.ProtoReflect.Descriptor instead.
 func (*GetViewRequest) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{3}
+	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetViewRequest) GetName() string {
@@ -480,7 +748,7 @@ type GetViewResponse struct {
 
 func (x *GetViewResponse) Reset() {
 	*x = GetViewResponse{}
-	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[4]
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -492,7 +760,7 @@ func (x *GetViewResponse) String() string {
 func (*GetViewResponse) ProtoMessage() {}
 
 func (x *GetViewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[4]
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -505,10 +773,303 @@ func (x *GetViewResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetViewResponse.ProtoReflect.Descriptor instead.
 func (*GetViewResponse) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{4}
+	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetViewResponse) GetView() *View {
+	if x != nil {
+		return x.View
+	}
+	return nil
+}
+
+// Request message for GetViewDependency.
+type GetViewDependencyRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The dependency edge to retrieve.
+	// Format: instances/{instance}/databases/{database}/schemas/{schema}/views/{view}/viewDependencies/{view_dependency}
+	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetViewDependencyRequest) Reset() {
+	*x = GetViewDependencyRequest{}
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetViewDependencyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetViewDependencyRequest) ProtoMessage() {}
+
+func (x *GetViewDependencyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetViewDependencyRequest.ProtoReflect.Descriptor instead.
+func (*GetViewDependencyRequest) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetViewDependencyRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// Request message for ListViewDependencies.
+type ListViewDependenciesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The view whose direct dependencies should be returned.
+	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
+	// Optional. Maximum dependencies to return. The server clamps values above
+	// 1000 and uses 50 when this is unset.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Optional. Opaque continuation token from a previous response.
+	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Optional. Filter expression joined by `AND`. name, schema_name, and
+	// display_name support `=`, `!=`, and `:`. direction and relation_type
+	// support `=` and `!=` with their enum names.
+	// aip.dev/not-precedent: For compatibility with Querylane's existing list
+	// grammar, `:` is a case-insensitive scalar substring operator rather than
+	// AIP-160's collection has operator.
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional. Comma-separated ordering. Supported fields are name,
+	// schema_name, display_name, direction, and relation_type. The default is
+	// direction asc, schema_name asc, display_name asc, then name asc.
+	OrderBy       string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListViewDependenciesRequest) Reset() {
+	*x = ListViewDependenciesRequest{}
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListViewDependenciesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListViewDependenciesRequest) ProtoMessage() {}
+
+func (x *ListViewDependenciesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListViewDependenciesRequest.ProtoReflect.Descriptor instead.
+func (*ListViewDependenciesRequest) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ListViewDependenciesRequest) GetParent() string {
+	if x != nil {
+		return x.Parent
+	}
+	return ""
+}
+
+func (x *ListViewDependenciesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListViewDependenciesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListViewDependenciesRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
+func (x *ListViewDependenciesRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+// Response message for ListViewDependencies.
+type ListViewDependenciesResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The dependency edges in this page.
+	ViewDependencies []*ViewDependency `protobuf:"bytes,1,rep,name=view_dependencies,json=viewDependencies,proto3" json:"view_dependencies,omitempty"`
+	// Opaque token for the next page, or empty when this is the final page.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListViewDependenciesResponse) Reset() {
+	*x = ListViewDependenciesResponse{}
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListViewDependenciesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListViewDependenciesResponse) ProtoMessage() {}
+
+func (x *ListViewDependenciesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListViewDependenciesResponse.ProtoReflect.Descriptor instead.
+func (*ListViewDependenciesResponse) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ListViewDependenciesResponse) GetViewDependencies() []*ViewDependency {
+	if x != nil {
+		return x.ViewDependencies
+	}
+	return nil
+}
+
+func (x *ListViewDependenciesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+// Request message for RefreshMaterializedView.
+type RefreshMaterializedViewRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The materialized view to refresh.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional. Standard refresh is used when unspecified.
+	Mode          RefreshMaterializedViewMode `protobuf:"varint,2,opt,name=mode,proto3,enum=querylane.console.v1alpha1.RefreshMaterializedViewMode" json:"mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefreshMaterializedViewRequest) Reset() {
+	*x = RefreshMaterializedViewRequest{}
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshMaterializedViewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshMaterializedViewRequest) ProtoMessage() {}
+
+func (x *RefreshMaterializedViewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshMaterializedViewRequest.ProtoReflect.Descriptor instead.
+func (*RefreshMaterializedViewRequest) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *RefreshMaterializedViewRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *RefreshMaterializedViewRequest) GetMode() RefreshMaterializedViewMode {
+	if x != nil {
+		return x.Mode
+	}
+	return RefreshMaterializedViewMode_REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED
+}
+
+// Response message for RefreshMaterializedView.
+type RefreshMaterializedViewResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The refreshed materialized view.
+	View          *View `protobuf:"bytes,1,opt,name=view,proto3" json:"view,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefreshMaterializedViewResponse) Reset() {
+	*x = RefreshMaterializedViewResponse{}
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshMaterializedViewResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshMaterializedViewResponse) ProtoMessage() {}
+
+func (x *RefreshMaterializedViewResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_view_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshMaterializedViewResponse.ProtoReflect.Descriptor instead.
+func (*RefreshMaterializedViewResponse) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_view_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *RefreshMaterializedViewResponse) GetView() *View {
 	if x != nil {
 		return x.View
 	}
@@ -519,7 +1080,7 @@ var File_querylane_console_v1alpha1_view_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_view_proto_rawDesc = "" +
 	"\n" +
-	"%querylane/console/v1alpha1/view.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe8\x05\n" +
+	"%querylane/console/v1alpha1/view.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe8\x05\n" +
 	"\x04View\x12\x1a\n" +
 	"\x04name\x18\x01 \x01(\tB\x06\xe0A\x03\xe0A\bR\x04name\x12&\n" +
 	"\fdisplay_name\x18\x02 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12K\n" +
@@ -542,7 +1103,28 @@ const file_querylane_console_v1alpha1_view_proto_rawDesc = "" +
 	"\x15VIEW_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12VIEW_TYPE_STANDARD\x10\x01\x12\x1a\n" +
 	"\x16VIEW_TYPE_MATERIALIZED\x10\x02:u\xeaAr\n" +
-	"\x1aconsole.querylane.dev/View\x12Ginstances/{instance}/databases/{database}/schemas/{schema}/views/{view}*\x05views2\x04view\"\xfa\x02\n" +
+	"\x1aconsole.querylane.dev/View\x12Ginstances/{instance}/databases/{database}/schemas/{schema}/views/{view}*\x05views2\x04view\"\xbb\x06\n" +
+	"\x0eViewDependency\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\bR\x04name\x12%\n" +
+	"\brelation\x18\x02 \x01(\tB\t\xe0A\x03\xfaA\x03\n" +
+	"\x01*R\brelation\x12$\n" +
+	"\vschema_name\x18\x03 \x01(\tB\x03\xe0A\x03R\n" +
+	"schemaName\x12&\n" +
+	"\fdisplay_name\x18\x04 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12W\n" +
+	"\tdirection\x18\x05 \x01(\x0e24.querylane.console.v1alpha1.ViewDependency.DirectionB\x03\xe0A\x03R\tdirection\x12a\n" +
+	"\rrelation_type\x18\x06 \x01(\x0e27.querylane.console.v1alpha1.ViewDependency.RelationTypeB\x03\xe0A\x03R\frelationType\"X\n" +
+	"\tDirection\x12\x19\n" +
+	"\x15DIRECTION_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12DIRECTION_UPSTREAM\x10\x01\x12\x18\n" +
+	"\x14DIRECTION_DOWNSTREAM\x10\x02\"\xc9\x01\n" +
+	"\fRelationType\x12\x1d\n" +
+	"\x19RELATION_TYPE_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13RELATION_TYPE_TABLE\x10\x01\x12\x16\n" +
+	"\x12RELATION_TYPE_VIEW\x10\x02\x12#\n" +
+	"\x1fRELATION_TYPE_MATERIALIZED_VIEW\x10\x03\x12\x1f\n" +
+	"\x1bRELATION_TYPE_FOREIGN_TABLE\x10\x04\x12#\n" +
+	"\x1fRELATION_TYPE_PARTITIONED_TABLE\x10\x05:\xb8\x01\xeaA\xb4\x01\n" +
+	"$console.querylane.dev/ViewDependency\x12jinstances/{instance}/databases/{database}/schemas/{schema}/views/{view}/viewDependencies/{view_dependency}*\x10viewDependencies2\x0eviewDependency\"\xfa\x02\n" +
 	"\x10ListViewsRequest\x12\x91\x01\n" +
 	"\x06parent\x18\x01 \x01(\tBy\xe0A\x02\xfaA\x1e\n" +
 	"\x1cconsole.querylane.dev/Schema\xbaHRrP2N^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+$R\x06parent\x12*\n" +
@@ -560,14 +1142,42 @@ const file_querylane_console_v1alpha1_view_proto_rawDesc = "" +
 	"\x1aconsole.querylane.dev/View\xbaH^r\\2Z^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$R\x04name\x12E\n" +
 	"\x04view\x18\x02 \x01(\x0e2$.querylane.console.v1alpha1.ViewViewB\v\xe0A\x01\xbaH\x05\x82\x01\x02\x10\x01R\x04view\"G\n" +
 	"\x0fGetViewResponse\x124\n" +
+	"\x04view\x18\x01 \x01(\v2 .querylane.console.v1alpha1.ViewR\x04view\"\xe8\x01\n" +
+	"\x18GetViewDependencyRequest\x12\xcb\x01\n" +
+	"\x04name\x18\x01 \x01(\tB\xb6\x01\xe0A\x02\xfaA&\n" +
+	"$console.querylane.dev/ViewDependency\xbaH\x86\x01r\x83\x012\x80\x01^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+/viewDependencies/[a-z][a-z0-9-]{3,62}$R\x04name\"\xc6\x02\n" +
+	"\x1bListViewDependenciesRequest\x12\x9c\x01\n" +
+	"\x06parent\x18\x01 \x01(\tB\x83\x01\xe0A\x02\xfaA\x1c\n" +
+	"\x1aconsole.querylane.dev/View\xbaH^r\\2Z^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$R\x06parent\x12'\n" +
+	"\tpage_size\x18\x02 \x01(\x05B\n" +
+	"\xe0A\x01\xbaH\x04\x1a\x02(\x00R\bpageSize\x12\"\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tB\x03\xe0A\x01R\tpageToken\x12\x1b\n" +
+	"\x06filter\x18\x04 \x01(\tB\x03\xe0A\x01R\x06filter\x12\x1e\n" +
+	"\border_by\x18\x05 \x01(\tB\x03\xe0A\x01R\aorderBy\"\x9f\x01\n" +
+	"\x1cListViewDependenciesResponse\x12W\n" +
+	"\x11view_dependencies\x18\x01 \x03(\v2*.querylane.console.v1alpha1.ViewDependencyR\x10viewDependencies\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x95\x02\n" +
+	"\x1eRefreshMaterializedViewRequest\x12\x98\x01\n" +
+	"\x04name\x18\x01 \x01(\tB\x83\x01\xe0A\x02\xfaA\x1c\n" +
+	"\x1aconsole.querylane.dev/View\xbaH^r\\2Z^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$R\x04name\x12X\n" +
+	"\x04mode\x18\x02 \x01(\x0e27.querylane.console.v1alpha1.RefreshMaterializedViewModeB\v\xe0A\x01\xbaH\x05\x82\x01\x02\x10\x01R\x04mode\"W\n" +
+	"\x1fRefreshMaterializedViewResponse\x124\n" +
 	"\x04view\x18\x01 \x01(\v2 .querylane.console.v1alpha1.ViewR\x04view*N\n" +
 	"\bViewView\x12\x19\n" +
 	"\x15VIEW_VIEW_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fVIEW_VIEW_BASIC\x10\x01\x12\x12\n" +
-	"\x0eVIEW_VIEW_FULL\x10\x022\xdf\x01\n" +
+	"\x0eVIEW_VIEW_FULL\x10\x02*\xa9\x01\n" +
+	"\x1bRefreshMaterializedViewMode\x12.\n" +
+	"*REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED\x10\x00\x12+\n" +
+	"'REFRESH_MATERIALIZED_VIEW_MODE_STANDARD\x10\x01\x12-\n" +
+	")REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT\x10\x022\x8c\a\n" +
 	"\vViewService\x12j\n" +
 	"\tListViews\x12,.querylane.console.v1alpha1.ListViewsRequest\x1a-.querylane.console.v1alpha1.ListViewsResponse\"\x00\x12d\n" +
-	"\aGetView\x12*.querylane.console.v1alpha1.GetViewRequest\x1a+.querylane.console.v1alpha1.GetViewResponse\"\x00B\x91\x02\n" +
+	"\aGetView\x12*.querylane.console.v1alpha1.GetViewRequest\x1a+.querylane.console.v1alpha1.GetViewResponse\"\x00\x12\xd3\x01\n" +
+	"\x11GetViewDependency\x124.querylane.console.v1alpha1.GetViewDependencyRequest\x1a*.querylane.console.v1alpha1.ViewDependency\"\\\xdaA\x04name\x82\xd3\xe4\x93\x02O\x12M/v1alpha1/{name=instances/*/databases/*/schemas/*/views/*/viewDependencies/*}\x12\xe9\x01\n" +
+	"\x14ListViewDependencies\x127.querylane.console.v1alpha1.ListViewDependenciesRequest\x1a8.querylane.console.v1alpha1.ListViewDependenciesResponse\"^\xdaA\x06parent\x82\xd3\xe4\x93\x02O\x12M/v1alpha1/{parent=instances/*/databases/*/schemas/*/views/*}/viewDependencies\x12\xe8\x01\n" +
+	"\x17RefreshMaterializedView\x12:.querylane.console.v1alpha1.RefreshMaterializedViewRequest\x1a;.querylane.console.v1alpha1.RefreshMaterializedViewResponse\"T\xdaA\x04name\x82\xd3\xe4\x93\x02G:\x01*\"B/v1alpha1/{name=instances/*/databases/*/schemas/*/views/*}:refreshB\x91\x02\n" +
 	"\x1ecom.querylane.console.v1alpha1B\tViewProtoP\x01ZZgithub.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1;consolev1alpha1\xa2\x02\x03QCX\xaa\x02\x1aQuerylane.Console.V1alpha1\xca\x02\x1aQuerylane\\Console\\V1alpha1\xe2\x02&Querylane\\Console\\V1alpha1\\GPBMetadata\xea\x02\x1cQuerylane::Console::V1alpha1b\x06proto3"
 
 var (
@@ -582,35 +1192,55 @@ func file_querylane_console_v1alpha1_view_proto_rawDescGZIP() []byte {
 	return file_querylane_console_v1alpha1_view_proto_rawDescData
 }
 
-var file_querylane_console_v1alpha1_view_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_querylane_console_v1alpha1_view_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_querylane_console_v1alpha1_view_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_querylane_console_v1alpha1_view_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_querylane_console_v1alpha1_view_proto_goTypes = []any{
-	(ViewView)(0),                 // 0: querylane.console.v1alpha1.ViewView
-	(View_ViewType)(0),            // 1: querylane.console.v1alpha1.View.ViewType
-	(*View)(nil),                  // 2: querylane.console.v1alpha1.View
-	(*ListViewsRequest)(nil),      // 3: querylane.console.v1alpha1.ListViewsRequest
-	(*ListViewsResponse)(nil),     // 4: querylane.console.v1alpha1.ListViewsResponse
-	(*GetViewRequest)(nil),        // 5: querylane.console.v1alpha1.GetViewRequest
-	(*GetViewResponse)(nil),       // 6: querylane.console.v1alpha1.GetViewResponse
-	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
+	(ViewView)(0),                           // 0: querylane.console.v1alpha1.ViewView
+	(RefreshMaterializedViewMode)(0),        // 1: querylane.console.v1alpha1.RefreshMaterializedViewMode
+	(View_ViewType)(0),                      // 2: querylane.console.v1alpha1.View.ViewType
+	(ViewDependency_Direction)(0),           // 3: querylane.console.v1alpha1.ViewDependency.Direction
+	(ViewDependency_RelationType)(0),        // 4: querylane.console.v1alpha1.ViewDependency.RelationType
+	(*View)(nil),                            // 5: querylane.console.v1alpha1.View
+	(*ViewDependency)(nil),                  // 6: querylane.console.v1alpha1.ViewDependency
+	(*ListViewsRequest)(nil),                // 7: querylane.console.v1alpha1.ListViewsRequest
+	(*ListViewsResponse)(nil),               // 8: querylane.console.v1alpha1.ListViewsResponse
+	(*GetViewRequest)(nil),                  // 9: querylane.console.v1alpha1.GetViewRequest
+	(*GetViewResponse)(nil),                 // 10: querylane.console.v1alpha1.GetViewResponse
+	(*GetViewDependencyRequest)(nil),        // 11: querylane.console.v1alpha1.GetViewDependencyRequest
+	(*ListViewDependenciesRequest)(nil),     // 12: querylane.console.v1alpha1.ListViewDependenciesRequest
+	(*ListViewDependenciesResponse)(nil),    // 13: querylane.console.v1alpha1.ListViewDependenciesResponse
+	(*RefreshMaterializedViewRequest)(nil),  // 14: querylane.console.v1alpha1.RefreshMaterializedViewRequest
+	(*RefreshMaterializedViewResponse)(nil), // 15: querylane.console.v1alpha1.RefreshMaterializedViewResponse
+	(*timestamppb.Timestamp)(nil),           // 16: google.protobuf.Timestamp
 }
 var file_querylane_console_v1alpha1_view_proto_depIdxs = []int32{
-	1, // 0: querylane.console.v1alpha1.View.view_type:type_name -> querylane.console.v1alpha1.View.ViewType
-	7, // 1: querylane.console.v1alpha1.View.create_time:type_name -> google.protobuf.Timestamp
-	7, // 2: querylane.console.v1alpha1.View.last_ddl_time:type_name -> google.protobuf.Timestamp
-	0, // 3: querylane.console.v1alpha1.ListViewsRequest.view:type_name -> querylane.console.v1alpha1.ViewView
-	2, // 4: querylane.console.v1alpha1.ListViewsResponse.views:type_name -> querylane.console.v1alpha1.View
-	0, // 5: querylane.console.v1alpha1.GetViewRequest.view:type_name -> querylane.console.v1alpha1.ViewView
-	2, // 6: querylane.console.v1alpha1.GetViewResponse.view:type_name -> querylane.console.v1alpha1.View
-	3, // 7: querylane.console.v1alpha1.ViewService.ListViews:input_type -> querylane.console.v1alpha1.ListViewsRequest
-	5, // 8: querylane.console.v1alpha1.ViewService.GetView:input_type -> querylane.console.v1alpha1.GetViewRequest
-	4, // 9: querylane.console.v1alpha1.ViewService.ListViews:output_type -> querylane.console.v1alpha1.ListViewsResponse
-	6, // 10: querylane.console.v1alpha1.ViewService.GetView:output_type -> querylane.console.v1alpha1.GetViewResponse
-	9, // [9:11] is the sub-list for method output_type
-	7, // [7:9] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	2,  // 0: querylane.console.v1alpha1.View.view_type:type_name -> querylane.console.v1alpha1.View.ViewType
+	16, // 1: querylane.console.v1alpha1.View.create_time:type_name -> google.protobuf.Timestamp
+	16, // 2: querylane.console.v1alpha1.View.last_ddl_time:type_name -> google.protobuf.Timestamp
+	3,  // 3: querylane.console.v1alpha1.ViewDependency.direction:type_name -> querylane.console.v1alpha1.ViewDependency.Direction
+	4,  // 4: querylane.console.v1alpha1.ViewDependency.relation_type:type_name -> querylane.console.v1alpha1.ViewDependency.RelationType
+	0,  // 5: querylane.console.v1alpha1.ListViewsRequest.view:type_name -> querylane.console.v1alpha1.ViewView
+	5,  // 6: querylane.console.v1alpha1.ListViewsResponse.views:type_name -> querylane.console.v1alpha1.View
+	0,  // 7: querylane.console.v1alpha1.GetViewRequest.view:type_name -> querylane.console.v1alpha1.ViewView
+	5,  // 8: querylane.console.v1alpha1.GetViewResponse.view:type_name -> querylane.console.v1alpha1.View
+	6,  // 9: querylane.console.v1alpha1.ListViewDependenciesResponse.view_dependencies:type_name -> querylane.console.v1alpha1.ViewDependency
+	1,  // 10: querylane.console.v1alpha1.RefreshMaterializedViewRequest.mode:type_name -> querylane.console.v1alpha1.RefreshMaterializedViewMode
+	5,  // 11: querylane.console.v1alpha1.RefreshMaterializedViewResponse.view:type_name -> querylane.console.v1alpha1.View
+	7,  // 12: querylane.console.v1alpha1.ViewService.ListViews:input_type -> querylane.console.v1alpha1.ListViewsRequest
+	9,  // 13: querylane.console.v1alpha1.ViewService.GetView:input_type -> querylane.console.v1alpha1.GetViewRequest
+	11, // 14: querylane.console.v1alpha1.ViewService.GetViewDependency:input_type -> querylane.console.v1alpha1.GetViewDependencyRequest
+	12, // 15: querylane.console.v1alpha1.ViewService.ListViewDependencies:input_type -> querylane.console.v1alpha1.ListViewDependenciesRequest
+	14, // 16: querylane.console.v1alpha1.ViewService.RefreshMaterializedView:input_type -> querylane.console.v1alpha1.RefreshMaterializedViewRequest
+	8,  // 17: querylane.console.v1alpha1.ViewService.ListViews:output_type -> querylane.console.v1alpha1.ListViewsResponse
+	10, // 18: querylane.console.v1alpha1.ViewService.GetView:output_type -> querylane.console.v1alpha1.GetViewResponse
+	6,  // 19: querylane.console.v1alpha1.ViewService.GetViewDependency:output_type -> querylane.console.v1alpha1.ViewDependency
+	13, // 20: querylane.console.v1alpha1.ViewService.ListViewDependencies:output_type -> querylane.console.v1alpha1.ListViewDependenciesResponse
+	15, // 21: querylane.console.v1alpha1.ViewService.RefreshMaterializedView:output_type -> querylane.console.v1alpha1.RefreshMaterializedViewResponse
+	17, // [17:22] is the sub-list for method output_type
+	12, // [12:17] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_view_proto_init() }
@@ -623,8 +1253,8 @@ func file_querylane_console_v1alpha1_view_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_querylane_console_v1alpha1_view_proto_rawDesc), len(file_querylane_console_v1alpha1_view_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   5,
+			NumEnums:      5,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

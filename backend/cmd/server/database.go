@@ -88,6 +88,7 @@ type dbState struct {
 	connectionRecorder     *storage.PGInstanceConnectionRecorder
 	connManager            *engine.SessionResolver
 	liveQueryLimiter       *livequery.Limiter
+	viewRefreshTimeout     time.Duration
 	connectionTestGuard    *instancesvc.ConnectionTestGuard
 	catalog                *catalogcache.Catalog
 	runnerExecutionStore   *storage.PGRunnerExecutionStore
@@ -293,6 +294,7 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 		connectionRecorder:     connectionRecorder,
 		connManager:            connManager,
 		liveQueryLimiter:       liveQueryLimiter,
+		viewRefreshTimeout:     limits.MaterializedViewRefresh.Timeout,
 		connectionTestGuard:    connectionTestGuard,
 		catalog:                catalogCache,
 		runnerExecutionStore:   runnerExecutionStore,

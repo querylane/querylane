@@ -283,8 +283,11 @@ func (a *App) mountDBServices(mux *http.ServeMux, state *dbState, accessLogger *
 	mux.Handle(v1alpha1connect.NewMetricsServiceHandler(metricsvc.NewService(state.sampleStores, state.instanceReader), opts...))
 	mux.Handle(v1alpha1connect.NewSchemaServiceHandler(schema.NewService(cat), opts...))
 	mux.Handle(v1alpha1connect.NewExtensionServiceHandler(extension.NewService(liveSessions), opts...))
-	mux.Handle(v1alpha1connect.NewTableServiceHandler(table.NewService(cat), opts...))
-	mux.Handle(v1alpha1connect.NewViewServiceHandler(view.NewService(cat), opts...))
+	mux.Handle(v1alpha1connect.NewTableServiceHandler(table.NewService(cat, state.liveQueryLimiter), opts...))
+	mux.Handle(v1alpha1connect.NewViewServiceHandler(
+		view.NewService(cat, state.liveQueryLimiter, state.viewRefreshTimeout),
+		opts...,
+	))
 	mux.Handle(v1alpha1connect.NewTableDataServiceHandler(tabledata.NewService(cat, state.connManager, state.tokenCodec, state.liveQueryLimiter), opts...))
 	mux.Handle(v1alpha1connect.NewSQLServiceHandler(sqlsvc.NewService(liveSessions), opts...))
 }

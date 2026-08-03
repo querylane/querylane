@@ -358,6 +358,7 @@ type Manager struct {
 	tablePartitionDriver  tablePartitionDriver
 	tableDataDriver       tableDataDriver
 	queryDriver           queryDriver
+	viewDriver            viewDriver
 	config                PoolConfig
 	secrets               SecretResolver
 	targetPolicy          *TargetPolicy
@@ -371,6 +372,7 @@ type managerDrivers struct {
 	tablePartitionDriver  tablePartitionDriver
 	tableDataDriver       tableDataDriver
 	queryDriver           queryDriver
+	viewDriver            viewDriver
 }
 
 // NewManager creates a new connection manager with the provided configuration.
@@ -383,6 +385,7 @@ func NewManager(config PoolConfig, driver adminDriver, targetPolicy *TargetPolic
 		tablePartitionDriver:  driver,
 		tableDataDriver:       driver,
 		queryDriver:           driver,
+		viewDriver:            driver,
 	}, targetPolicy)
 }
 
@@ -402,6 +405,7 @@ func newManagerWithDrivers(config PoolConfig, drivers managerDrivers, targetPoli
 		tablePartitionDriver:  drivers.tablePartitionDriver,
 		tableDataDriver:       drivers.tableDataDriver,
 		queryDriver:           drivers.queryDriver,
+		viewDriver:            drivers.viewDriver,
 		config:                config,
 		secrets:               LocalSecretResolver{},
 		targetPolicy:          targetPolicy,
@@ -426,6 +430,7 @@ func (m *Manager) OpenInstance(ctx context.Context, instanceName resource.Instan
 		tablePartitionDriver:  m.tablePartitionDriver,
 		tableDataDriver:       m.tableDataDriver,
 		queryDriver:           m.queryDriver,
+		viewDriver:            m.viewDriver,
 	}, nil
 }
 

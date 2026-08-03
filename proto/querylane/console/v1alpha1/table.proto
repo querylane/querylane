@@ -365,12 +365,13 @@ message GetTablePartitionMetadataResponse {
 // --- ListTableColumns RPC ---
 
 message ListTableColumnsRequest {
-  // Required. The parent Table from which to list columns.
-  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  // Required. The parent table or materialized view from which to list columns.
+  // aip.dev/not-precedent: This compatibility field accepts either a Table or
+  // View resource. Runtime validation narrows the wildcard to those two types.
   string parent = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
-    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+    (google.api.resource_reference) = {type: "*"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$"
   ];
 }
 
@@ -382,12 +383,13 @@ message ListTableColumnsResponse {
 // --- ListTableConstraints RPC ---
 
 message ListTableConstraintsRequest {
-  // Required. The parent Table from which to list constraints.
-  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  // Required. The parent table or materialized view from which to list constraints.
+  // aip.dev/not-precedent: This compatibility field accepts either a Table or
+  // View resource. Runtime validation narrows the wildcard to those two types.
   string parent = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
-    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+    (google.api.resource_reference) = {type: "*"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$"
   ];
 }
 
@@ -398,12 +400,13 @@ message ListTableConstraintsResponse {
 // --- ListTableIndexes RPC ---
 
 message ListTableIndexesRequest {
-  // Required. The parent Table from which to list indexes.
-  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  // Required. The parent table or materialized view from which to list indexes.
+  // aip.dev/not-precedent: This compatibility field accepts either a Table or
+  // View resource. Runtime validation narrows the wildcard to those two types.
   string parent = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
-    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+    (google.api.resource_reference) = {type: "*"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$"
   ];
 }
 

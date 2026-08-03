@@ -185,6 +185,139 @@ func TestResourceMessagesHaveAIPResourceAnnotations(t *testing.T) {
 	}
 }
 
+func TestFileLevelResourceDefinitionsHaveAIPNames(t *testing.T) {
+	t.Parallel()
+
+	for _, file := range newProtoContract().files {
+		options, ok := file.Options().(*descriptorpb.FileOptions)
+		if !ok || !proto.HasExtension(options, annotations.E_ResourceDefinition) {
+			continue
+		}
+
+		definitions, ok := proto.GetExtension(options, annotations.E_ResourceDefinition).([]*annotations.ResourceDescriptor)
+		require.True(t, ok)
+
+		for _, definition := range definitions {
+			t.Run(definition.GetType(), func(t *testing.T) {
+				t.Parallel()
+				assert.NotEmpty(t, definition.GetPattern())
+				assert.NotEmpty(t, definition.GetSingular())
+				assert.NotEmpty(t, definition.GetPlural())
+
+				for _, pattern := range definition.GetPattern() {
+					segments := strings.Split(pattern, "/")
+					require.GreaterOrEqual(t, len(segments), 2)
+					assert.Equal(t, definition.GetPlural(), segments[len(segments)-2], "terminal collection must match plural")
+				}
+			})
+		}
+	}
+}
+
+func TestViewDependenciesUsePaginatedResourceShape(t *testing.T) {
+	t.Parallel()
+
+	descriptor, err := protoregistry.GlobalFiles.FindDescriptorByName("querylane.console.v1alpha1.ViewService.ListViewDependencies")
+	require.NoError(t, err)
+
+	method, ok := descriptor.(protoreflect.MethodDescriptor)
+	require.True(t, ok)
+
+	parent := method.Input().Fields().ByName("parent")
+	require.NotNil(t, parent)
+	assert.Contains(t, fieldBehaviors(parent), annotations.FieldBehavior_REQUIRED)
+	require.NotNil(t, fieldResourceReference(parent))
+	assert.Equal(t, "console.querylane.dev/View", fieldResourceReference(parent).GetType())
+	assertRepeatedMessageFieldNumberOne(t, method.Output())
+	assertField(t, method.Input(), "page_size", protoreflect.Int32Kind)
+	assertField(t, method.Input(), "page_token", protoreflect.StringKind)
+	assertField(t, method.Input(), "filter", protoreflect.StringKind)
+	assertField(t, method.Input(), "order_by", protoreflect.StringKind)
+	assertField(t, method.Output(), "next_page_token", protoreflect.StringKind)
+
+	dependency := method.Output().Fields().ByNumber(1).Message()
+	resource := resourceDescriptor(dependency)
+	require.NotNil(t, resource)
+	assert.Equal(t, "console.querylane.dev/ViewDependency", resource.GetType())
+	assert.Equal(t, []string{"instances/{instance}/databases/{database}/schemas/{schema}/views/{view}/viewDependencies/{view_dependency}"}, resource.GetPattern())
+	assert.Equal(t, "viewDependency", resource.GetSingular())
+	assert.Equal(t, "viewDependencies", resource.GetPlural())
+
+	relation := dependency.Fields().ByName("relation")
+	require.NotNil(t, relation)
+	require.NotNil(t, fieldResourceReference(relation))
+	assert.Equal(t, "*", fieldResourceReference(relation).GetType())
+
+	getDescriptor, err := protoregistry.GlobalFiles.FindDescriptorByName("querylane.console.v1alpha1.ViewService.GetViewDependency")
+	require.NoError(t, err)
+
+	getMethod, ok := getDescriptor.(protoreflect.MethodDescriptor)
+	require.True(t, ok)
+	assert.Equal(t, dependency.FullName(), getMethod.Output().FullName())
+
+	name := getMethod.Input().Fields().ByName("name")
+	require.NotNil(t, name)
+	assert.Contains(t, fieldBehaviors(name), annotations.FieldBehavior_REQUIRED)
+	require.NotNil(t, fieldResourceReference(name))
+	assert.Equal(t, resource.GetType(), fieldResourceReference(name).GetType())
+}
+
+func TestNewViewRPCsDeclareHTTPAndMethodSignatures(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		methodName protoreflect.FullName
+		signature  string
+		httpPath   string
+	}{
+		{
+			methodName: "querylane.console.v1alpha1.ViewService.GetViewDependency",
+			signature:  "name",
+			httpPath:   "/v1alpha1/{name=instances/*/databases/*/schemas/*/views/*/viewDependencies/*}",
+		},
+		{
+			methodName: "querylane.console.v1alpha1.ViewService.ListViewDependencies",
+			signature:  "parent",
+			httpPath:   "/v1alpha1/{parent=instances/*/databases/*/schemas/*/views/*}/viewDependencies",
+		},
+		{
+			methodName: "querylane.console.v1alpha1.ViewService.RefreshMaterializedView",
+			signature:  "name",
+			httpPath:   "/v1alpha1/{name=instances/*/databases/*/schemas/*/views/*}:refresh",
+		},
+	}
+
+	for _, tt := range tests {
+		descriptor, err := protoregistry.GlobalFiles.FindDescriptorByName(tt.methodName)
+		require.NoError(t, err)
+
+		method, ok := descriptor.(protoreflect.MethodDescriptor)
+		require.True(t, ok)
+
+		options, ok := method.Options().(*descriptorpb.MethodOptions)
+		require.True(t, ok)
+
+		httpRule, ok := proto.GetExtension(options, annotations.E_Http).(*annotations.HttpRule)
+		require.True(t, ok, "%s must declare google.api.http", tt.methodName)
+
+		switch tt.methodName {
+		case "querylane.console.v1alpha1.ViewService.GetViewDependency":
+			assert.Equal(t, tt.httpPath, httpRule.GetGet())
+		case "querylane.console.v1alpha1.ViewService.ListViewDependencies":
+			assert.Equal(t, tt.httpPath, httpRule.GetGet())
+		case "querylane.console.v1alpha1.ViewService.RefreshMaterializedView":
+			assert.Equal(t, tt.httpPath, httpRule.GetPost())
+			assert.Equal(t, "*", httpRule.GetBody())
+		default:
+			t.Fatalf("unexpected method under test: %s", tt.methodName)
+		}
+
+		signatures, ok := proto.GetExtension(options, annotations.E_MethodSignature).([]string)
+		require.True(t, ok, "%s must declare google.api.method_signature", tt.methodName)
+		assert.Equal(t, []string{tt.signature}, signatures)
+	}
+}
+
 func TestNameFieldsAreAIPResourceNamesOrDocumentedCompatibilityExceptions(t *testing.T) {
 	t.Parallel()
 

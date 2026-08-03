@@ -14,9 +14,9 @@ import "querylane/console/v1alpha1/table.proto";
 // Service
 // --------------------------------------------------------------------------
 
-// TableDataService exposes live row reads against a single Table resource.
+// TableDataService exposes live row reads against a Table or materialized View resource.
 //
-// Methods are AIP-136 custom methods on the Table resource — requests use
+// Methods are AIP-136 custom methods on the selected resource — requests use
 // `name`, not `parent`. Distinct from TableService (catalog) and SQLService
 // (ad-hoc SQL) because the three surfaces have different cost, timeout,
 // pooling, and authorization profiles.
@@ -331,12 +331,13 @@ message TableResultSet {
 // --- ReadRows RPC ---
 
 message ReadRowsRequest {
-  // Required. The table to read from.
-  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  // Required. The table or materialized view to read from.
+  // aip.dev/not-precedent: This compatibility field accepts either a Table or
+  // View resource. Runtime validation narrows the wildcard to those two types.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
-    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+    (google.api.resource_reference) = {type: "*"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$"
   ];
 
   // Optional. Default 50, hard cap 500.
@@ -417,10 +418,12 @@ message ReadRowsResponse {
 
 message StreamRowsRequest {
   // Required. Same shape as ReadRowsRequest.name.
+  // aip.dev/not-precedent: This compatibility field accepts either a Table or
+  // View resource. Runtime validation narrows the wildcard to those two types.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
-    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+    (google.api.resource_reference) = {type: "*"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$"
   ];
 
   // Optional. Subset of columns.
@@ -521,12 +524,13 @@ message StreamRowsStats {
 // --- ReadCellValue RPC ---
 
 message ReadCellValueRequest {
-  // Required. The table the cell belongs to.
-  // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}
+  // Required. The table or materialized view the cell belongs to.
+  // aip.dev/not-precedent: This compatibility field accepts either a Table or
+  // View resource. Runtime validation narrows the wildcard to those two types.
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
-    (google.api.resource_reference) = {type: "console.querylane.dev/Table"},
-    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$"
+    (google.api.resource_reference) = {type: "*"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$"
   ];
 
   // Required. Token from a TableCell.full_value_token. The server rejects

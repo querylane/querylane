@@ -19,6 +19,7 @@ func TestLimitsDefaults(t *testing.T) {
 
 	assert.Equal(t, 32, limits.LiveQueries.Global)
 	assert.Equal(t, 6, limits.LiveQueries.PerInstance)
+	assert.Equal(t, 30*time.Second, limits.MaterializedViewRefresh.Timeout)
 	assert.Equal(t, 10, limits.ConnectionTests.PerCallerPerMinute)
 	assert.Equal(t, 5, limits.ConnectionTests.Burst)
 	assert.Equal(t, 8, limits.PostgresPool.MaxOpenConnections)
@@ -55,6 +56,20 @@ func TestLimitsValidate(t *testing.T) {
 				limits.LiveQueries.PerInstance = limits.LiveQueries.Global + 1
 			},
 			want: "live_queries.per_instance must not exceed live_queries.global",
+		},
+		{
+			name: "materialized view refresh timeout must be positive",
+			mutate: func(limits *Limits) {
+				limits.MaterializedViewRefresh.Timeout = 0
+			},
+			want: "materialized_view_refresh.timeout must be positive",
+		},
+		{
+			name: "materialized view refresh timeout must stay synchronous",
+			mutate: func(limits *Limits) {
+				limits.MaterializedViewRefresh.Timeout = 31 * time.Second
+			},
+			want: "materialized_view_refresh.timeout must not exceed 30s",
 		},
 		{
 			name: "connection test rate must be positive",
@@ -152,6 +167,8 @@ func TestLimitsLoadFromConfigFile(t *testing.T) {
   live_queries:
     global: 12
     per_instance: 4
+  materialized_view_refresh:
+    timeout: 20s
   connection_tests:
     per_caller_per_minute: 8
     burst: 3
@@ -170,6 +187,7 @@ func TestLimitsLoadFromConfigFile(t *testing.T) {
 	limits := manager.CurrentConfig().Limits
 	assert.Equal(t, 12, limits.LiveQueries.Global)
 	assert.Equal(t, 4, limits.LiveQueries.PerInstance)
+	assert.Equal(t, 20*time.Second, limits.MaterializedViewRefresh.Timeout)
 	assert.Equal(t, 8, limits.ConnectionTests.PerCallerPerMinute)
 	assert.Equal(t, 3, limits.ConnectionTests.Burst)
 	assert.Equal(t, 5, limits.PostgresPool.MaxOpenConnections)

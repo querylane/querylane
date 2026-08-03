@@ -114,6 +114,71 @@ func (s *PostgresEngineIntegrationTestSuite) TestGetInstanceOverviewExposesPgSta
 	s.GreaterOrEqual(overview.IO.Fsyncs, int64(0))
 }
 
+func (s *PostgresEngineIntegrationTestSuite) TestListViewDependenciesPaginatesLargeGraph() {
+	ctx := s.T().Context()
+
+	testDB := s.getTestDBConnection()
+	defer testDB.Close()
+
+	_, err := testDB.ExecContext(ctx, `
+		CREATE TABLE dependency_source (id integer);
+		CREATE VIEW dependency_target AS SELECT * FROM dependency_source;
+		DO $$
+		BEGIN
+			FOR dependency_number IN 1..100 LOOP
+				EXECUTE format(
+					'CREATE VIEW dependency_%s AS SELECT * FROM dependency_target',
+					dependency_number
+				);
+			END LOOP;
+		END
+		$$;
+	`)
+	s.Require().NoError(err)
+
+	var (
+		dependencies []engine.ViewDependency
+		pageToken    string
+	)
+
+	for {
+		page, nextPageToken, listErr := s.eng.ListViewDependencies(ctx, testDB, "public", "dependency_target", aip.Params{
+			PageSize:  40,
+			PageToken: pageToken,
+			OrderBy:   "direction asc, schema_name asc, display_name asc",
+		})
+		s.Require().NoError(listErr)
+
+		dependencies = append(dependencies, page...)
+
+		if nextPageToken == "" {
+			break
+		}
+
+		pageToken = nextPageToken
+	}
+
+	s.Require().Len(dependencies, 101)
+
+	resourceIDs := make(map[string]struct{}, len(dependencies))
+	for _, dependency := range dependencies {
+		s.NotEmpty(dependency.ResourceID)
+		s.NotContains(dependency.ResourceID, "/")
+		s.LessOrEqual(len(dependency.ResourceID), 63, "dependency resource IDs must fit the AIP-122 resource ID limit")
+		s.Regexp(`^[a-z][a-z0-9-]{3,62}$`, dependency.ResourceID, "dependency resource IDs must use the AIP-122 identifier shape")
+		resourceIDs[dependency.ResourceID] = struct{}{}
+	}
+
+	s.Len(resourceIDs, 101, "each dependency edge must have a stable unique resource ID")
+
+	upstreamTables, _, err := s.eng.ListViewDependencies(ctx, testDB, "public", "dependency_target", aip.Params{
+		Filter: `direction = "DIRECTION_UPSTREAM" AND relation_type = "RELATION_TYPE_TABLE"`,
+	})
+	s.Require().NoError(err)
+	s.Require().Len(upstreamTables, 1)
+	s.Equal("dependency_source", upstreamTables[0].Name)
+}
+
 func (s *PostgresEngineIntegrationTestSuite) TestProbeMetricsCollectRealSamples() {
 	ctx := context.Background()
 

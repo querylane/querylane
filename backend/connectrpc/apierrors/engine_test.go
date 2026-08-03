@@ -64,6 +64,14 @@ func TestMapEngineErr(t *testing.T) {
 			expectedErrMessage: "table not found: instances/i1/databases/test_db/schemas/public/tables/users",
 		},
 		{
+			name:               "ErrViewDependencyNotFound",
+			inputErr:           engine.ErrViewDependencyNotFound,
+			rctx:               ResourceCtx{Type: resource.TypeViewDependency, Name: "instances/i1/databases/test_db/schemas/public/views/report/viewDependencies/abc123", Op: "get_view_dependency"},
+			expectedCode:       connect.CodeNotFound,
+			expectedReason:     consolev1alpha1.ErrorReason_RESOURCE_NOT_FOUND,
+			expectedErrMessage: "view dependency not found: instances/i1/databases/test_db/schemas/public/views/report/viewDependencies/abc123",
+		},
+		{
 			name:               "ErrInstanceNotFound_from_table_validation",
 			inputErr:           engine.ErrInstanceNotFound,
 			rctx:               ResourceCtx{Type: resource.TypeTable, Name: "instances/nonexistent/databases/mydb/schemas/public/tables/users", Op: "validate_parent"},
@@ -271,6 +279,8 @@ func TestMapEngineErrNotFoundSentinelDoesNotAttachPostgresDetail(t *testing.T) {
 
 func resourceTypeForErr(err error, defaultType resource.Type) resource.Type {
 	switch {
+	case errors.Is(err, engine.ErrViewDependencyNotFound):
+		return resource.TypeViewDependency
 	case errors.Is(err, engine.ErrViewNotFound):
 		return resource.TypeView
 	case errors.Is(err, engine.ErrTableNotFound):

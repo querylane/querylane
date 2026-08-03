@@ -941,6 +941,24 @@ describe("TableDataGrid row interactions", () => {
     );
   });
 
+  it("hides insert SQL for a read-only materialized view", () => {
+    seedRowsQuery(1);
+
+    render(
+      <TableDataGrid
+        allowInsertCopy={false}
+        name="instances/prod/databases/app/schemas/public/views/customer_rollup"
+      />
+    );
+
+    openCellContextMenu("email", 0);
+
+    expect(screen.getByRole("menuitem", { name: "Copy cell" })).toBeTruthy();
+    expect(
+      screen.queryByRole("menuitem", { name: "Copy row as INSERT" })
+    ).toBeNull();
+  });
+
   it("copies raw cell and row values without display formatting", async () => {
     const user = userEvent.setup();
     seedRowsQueryWithRawClipboardValues();

@@ -76,11 +76,13 @@ function buildSelectedResourceName({
 function injectSelectedResource<
   T extends { displayName?: string; name: string },
 >(resources: T[], selected: T | undefined, query: string): T[] {
-  if (
-    !(selected && matchesNameFilter(resourceDisplayName(selected), query)) ||
-    resources.some((resource) => resource.name === selected.name)
-  ) {
+  if (!(selected && matchesNameFilter(resourceDisplayName(selected), query))) {
     return resources;
+  }
+  if (resources.some((resource) => resource.name === selected.name)) {
+    return resources.map((resource) =>
+      resource.name === selected.name ? selected : resource
+    );
   }
   return [...resources, selected].sort((left, right) =>
     resourceDisplayName(left).localeCompare(resourceDisplayName(right))

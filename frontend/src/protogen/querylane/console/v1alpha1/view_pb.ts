@@ -5,6 +5,8 @@
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
+import { file_google_api_annotations } from "../../../google/api/annotations_pb";
+import { file_google_api_client } from "../../../google/api/client_pb";
 import { file_google_api_field_behavior } from "../../../google/api/field_behavior_pb";
 import { file_google_api_resource } from "../../../google/api/resource_pb";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
@@ -15,7 +17,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file querylane/console/v1alpha1/view.proto.
  */
 export const file_querylane_console_v1alpha1_view: GenFile = /*@__PURE__*/
-  fileDesc("CiVxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS92aWV3LnByb3RvEhpxdWVyeWxhbmUuY29uc29sZS52MWFscGhhMSLmBAoEVmlldxIUCgRuYW1lGAEgASgJQgbgQQPgQQgSGQoMZGlzcGxheV9uYW1lGAIgASgJQgPgQQMSQQoJdmlld190eXBlGAMgASgOMikucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuVmlldy5WaWV3VHlwZUID4EEDEhIKBW93bmVyGAQgASgJQgPgQQMSFAoHY29tbWVudBgFIAEoCUID4EEDEhsKDmlzX3N5c3RlbV92aWV3GAYgASgIQgPgQQMSFwoKZGVmaW5pdGlvbhgHIAEoCUID4EEDEhcKCnNpemVfYnl0ZXMYCCABKANCA+BBAxIWCglyb3dfY291bnQYCSABKANCA+BBAxIZCgxpc19wb3B1bGF0ZWQYCiABKAhCA+BBAxI0CgtjcmVhdGVfdGltZRgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI2Cg1sYXN0X2RkbF90aW1lGAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEID4EEDIlkKCFZpZXdUeXBlEhkKFVZJRVdfVFlQRV9VTlNQRUNJRklFRBAAEhYKElZJRVdfVFlQRV9TVEFOREFSRBABEhoKFlZJRVdfVFlQRV9NQVRFUklBTElaRUQQAjp16kFyChpjb25zb2xlLnF1ZXJ5bGFuZS5kZXYvVmlldxJHaW5zdGFuY2VzL3tpbnN0YW5jZX0vZGF0YWJhc2VzL3tkYXRhYmFzZX0vc2NoZW1hcy97c2NoZW1hfS92aWV3cy97dmlld30qBXZpZXdzMgR2aWV3IsYCChBMaXN0Vmlld3NSZXF1ZXN0EokBCgZwYXJlbnQYASABKAlCeeBBAvpBHgocY29uc29sZS5xdWVyeWxhbmUuZGV2L1NjaGVtYbpIUnJQMk5eaW5zdGFuY2VzL1thLXpBLVpdKFthLXpBLVowLTlfLV0qW2EtekEtWjAtOV0pPy9kYXRhYmFzZXMvW14vXSsvc2NoZW1hcy9bXi9dKyQSIAoJcGFnZV9zaXplGAIgASgFQg3gQQG6SAcaBRjoBygAEhcKCnBhZ2VfdG9rZW4YAyABKAlCA+BBARITCgZmaWx0ZXIYBCABKAlCA+BBARIVCghvcmRlcl9ieRgFIAEoCUID4EEBEj8KBHZpZXcYBiABKA4yJC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5WaWV3Vmlld0IL4EEBukgFggECEAEiXQoRTGlzdFZpZXdzUmVzcG9uc2USLwoFdmlld3MYASADKAsyIC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5WaWV3EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSLmAQoOR2V0Vmlld1JlcXVlc3QSkgEKBG5hbWUYASABKAlCgwHgQQL6QRwKGmNvbnNvbGUucXVlcnlsYW5lLmRldi9WaWV3ukheclwyWl5pbnN0YW5jZXMvW2EtekEtWl0oW2EtekEtWjAtOV8tXSpbYS16QS1aMC05XSk/L2RhdGFiYXNlcy9bXi9dKy9zY2hlbWFzL1teL10rL3ZpZXdzL1teL10rJBI/CgR2aWV3GAIgASgOMiQucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuVmlld1ZpZXdCC+BBAbpIBYIBAhABIkEKD0dldFZpZXdSZXNwb25zZRIuCgR2aWV3GAEgASgLMiAucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuVmlldypOCghWaWV3VmlldxIZChVWSUVXX1ZJRVdfVU5TUEVDSUZJRUQQABITCg9WSUVXX1ZJRVdfQkFTSUMQARISCg5WSUVXX1ZJRVdfRlVMTBACMt8BCgtWaWV3U2VydmljZRJqCglMaXN0Vmlld3MSLC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5MaXN0Vmlld3NSZXF1ZXN0Gi0ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuTGlzdFZpZXdzUmVzcG9uc2UiABJkCgdHZXRWaWV3EioucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuR2V0Vmlld1JlcXVlc3QaKy5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5HZXRWaWV3UmVzcG9uc2UiAEKRAgoeY29tLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExQglWaWV3UHJvdG9QAVpaZ2l0aHViLmNvbS9xdWVyeWxhbmUvcXVlcnlsYW5lL2JhY2tlbmQvcHJvdG9nZW4vcXVlcnlsYW5lL2NvbnNvbGUvdjFhbHBoYTE7Y29uc29sZXYxYWxwaGExogIDUUNYqgIaUXVlcnlsYW5lLkNvbnNvbGUuVjFhbHBoYTHKAhpRdWVyeWxhbmVcQ29uc29sZVxWMWFscGhhMeICJlF1ZXJ5bGFuZVxDb25zb2xlXFYxYWxwaGExXEdQQk1ldGFkYXRh6gIcUXVlcnlsYW5lOjpDb25zb2xlOjpWMWFscGhhMWIGcHJvdG8z", [file_buf_validate_validate, file_google_api_field_behavior, file_google_api_resource, file_google_protobuf_timestamp]);
+  fileDesc("CiVxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS92aWV3LnByb3RvEhpxdWVyeWxhbmUuY29uc29sZS52MWFscGhhMSLmBAoEVmlldxIUCgRuYW1lGAEgASgJQgbgQQPgQQgSGQoMZGlzcGxheV9uYW1lGAIgASgJQgPgQQMSQQoJdmlld190eXBlGAMgASgOMikucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuVmlldy5WaWV3VHlwZUID4EEDEhIKBW93bmVyGAQgASgJQgPgQQMSFAoHY29tbWVudBgFIAEoCUID4EEDEhsKDmlzX3N5c3RlbV92aWV3GAYgASgIQgPgQQMSFwoKZGVmaW5pdGlvbhgHIAEoCUID4EEDEhcKCnNpemVfYnl0ZXMYCCABKANCA+BBAxIWCglyb3dfY291bnQYCSABKANCA+BBAxIZCgxpc19wb3B1bGF0ZWQYCiABKAhCA+BBAxI0CgtjcmVhdGVfdGltZRgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI2Cg1sYXN0X2RkbF90aW1lGAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEID4EEDIlkKCFZpZXdUeXBlEhkKFVZJRVdfVFlQRV9VTlNQRUNJRklFRBAAEhYKElZJRVdfVFlQRV9TVEFOREFSRBABEhoKFlZJRVdfVFlQRV9NQVRFUklBTElaRUQQAjp16kFyChpjb25zb2xlLnF1ZXJ5bGFuZS5kZXYvVmlldxJHaW5zdGFuY2VzL3tpbnN0YW5jZX0vZGF0YWJhc2VzL3tkYXRhYmFzZX0vc2NoZW1hcy97c2NoZW1hfS92aWV3cy97dmlld30qBXZpZXdzMgR2aWV3IvkFCg5WaWV3RGVwZW5kZW5jeRIRCgRuYW1lGAEgASgJQgPgQQgSGwoIcmVsYXRpb24YAiABKAlCCeBBA/pBAwoBKhIYCgtzY2hlbWFfbmFtZRgDIAEoCUID4EEDEhkKDGRpc3BsYXlfbmFtZRgEIAEoCUID4EEDEkwKCWRpcmVjdGlvbhgFIAEoDjI0LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlZpZXdEZXBlbmRlbmN5LkRpcmVjdGlvbkID4EEDElMKDXJlbGF0aW9uX3R5cGUYBiABKA4yNy5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5WaWV3RGVwZW5kZW5jeS5SZWxhdGlvblR5cGVCA+BBAyJYCglEaXJlY3Rpb24SGQoVRElSRUNUSU9OX1VOU1BFQ0lGSUVEEAASFgoSRElSRUNUSU9OX1VQU1RSRUFNEAESGAoURElSRUNUSU9OX0RPV05TVFJFQU0QAiLJAQoMUmVsYXRpb25UeXBlEh0KGVJFTEFUSU9OX1RZUEVfVU5TUEVDSUZJRUQQABIXChNSRUxBVElPTl9UWVBFX1RBQkxFEAESFgoSUkVMQVRJT05fVFlQRV9WSUVXEAISIwofUkVMQVRJT05fVFlQRV9NQVRFUklBTElaRURfVklFVxADEh8KG1JFTEFUSU9OX1RZUEVfRk9SRUlHTl9UQUJMRRAEEiMKH1JFTEFUSU9OX1RZUEVfUEFSVElUSU9ORURfVEFCTEUQBTq4AepBtAEKJGNvbnNvbGUucXVlcnlsYW5lLmRldi9WaWV3RGVwZW5kZW5jeRJqaW5zdGFuY2VzL3tpbnN0YW5jZX0vZGF0YWJhc2VzL3tkYXRhYmFzZX0vc2NoZW1hcy97c2NoZW1hfS92aWV3cy97dmlld30vdmlld0RlcGVuZGVuY2llcy97dmlld19kZXBlbmRlbmN5fSoQdmlld0RlcGVuZGVuY2llczIOdmlld0RlcGVuZGVuY3kixgIKEExpc3RWaWV3c1JlcXVlc3QSiQEKBnBhcmVudBgBIAEoCUJ54EEC+kEeChxjb25zb2xlLnF1ZXJ5bGFuZS5kZXYvU2NoZW1hukhSclAyTl5pbnN0YW5jZXMvW2EtekEtWl0oW2EtekEtWjAtOV8tXSpbYS16QS1aMC05XSk/L2RhdGFiYXNlcy9bXi9dKy9zY2hlbWFzL1teL10rJBIgCglwYWdlX3NpemUYAiABKAVCDeBBAbpIBxoFGOgHKAASFwoKcGFnZV90b2tlbhgDIAEoCUID4EEBEhMKBmZpbHRlchgEIAEoCUID4EEBEhUKCG9yZGVyX2J5GAUgASgJQgPgQQESPwoEdmlldxgGIAEoDjIkLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlZpZXdWaWV3QgvgQQG6SAWCAQIQASJdChFMaXN0Vmlld3NSZXNwb25zZRIvCgV2aWV3cxgBIAMoCzIgLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlZpZXcSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIuYBCg5HZXRWaWV3UmVxdWVzdBKSAQoEbmFtZRgBIAEoCUKDAeBBAvpBHAoaY29uc29sZS5xdWVyeWxhbmUuZGV2L1ZpZXe6SF5yXDJaXmluc3RhbmNlcy9bYS16QS1aXShbYS16QS1aMC05Xy1dKlthLXpBLVowLTldKT8vZGF0YWJhc2VzL1teL10rL3NjaGVtYXMvW14vXSsvdmlld3MvW14vXSskEj8KBHZpZXcYAiABKA4yJC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5WaWV3Vmlld0IL4EEBukgFggECEAEiQQoPR2V0Vmlld1Jlc3BvbnNlEi4KBHZpZXcYASABKAsyIC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5WaWV3IuIBChhHZXRWaWV3RGVwZW5kZW5jeVJlcXVlc3QSxQEKBG5hbWUYASABKAlCtgHgQQL6QSYKJGNvbnNvbGUucXVlcnlsYW5lLmRldi9WaWV3RGVwZW5kZW5jebpIhgFygwEygAFeaW5zdGFuY2VzL1thLXpBLVpdKFthLXpBLVowLTlfLV0qW2EtekEtWjAtOV0pPy9kYXRhYmFzZXMvW14vXSsvc2NoZW1hcy9bXi9dKy92aWV3cy9bXi9dKy92aWV3RGVwZW5kZW5jaWVzL1thLXpdW2EtejAtOS1dezMsNjJ9JCKYAgobTGlzdFZpZXdEZXBlbmRlbmNpZXNSZXF1ZXN0EpQBCgZwYXJlbnQYASABKAlCgwHgQQL6QRwKGmNvbnNvbGUucXVlcnlsYW5lLmRldi9WaWV3ukheclwyWl5pbnN0YW5jZXMvW2EtekEtWl0oW2EtekEtWjAtOV8tXSpbYS16QS1aMC05XSk/L2RhdGFiYXNlcy9bXi9dKy9zY2hlbWFzL1teL10rL3ZpZXdzL1teL10rJBIdCglwYWdlX3NpemUYAiABKAVCCuBBAbpIBBoCKAASFwoKcGFnZV90b2tlbhgDIAEoCUID4EEBEhMKBmZpbHRlchgEIAEoCUID4EEBEhUKCG9yZGVyX2J5GAUgASgJQgPgQQEifgocTGlzdFZpZXdEZXBlbmRlbmNpZXNSZXNwb25zZRJFChF2aWV3X2RlcGVuZGVuY2llcxgBIAMoCzIqLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlZpZXdEZXBlbmRlbmN5EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSKJAgoeUmVmcmVzaE1hdGVyaWFsaXplZFZpZXdSZXF1ZXN0EpIBCgRuYW1lGAEgASgJQoMB4EEC+kEcChpjb25zb2xlLnF1ZXJ5bGFuZS5kZXYvVmlld7pIXnJcMlpeaW5zdGFuY2VzL1thLXpBLVpdKFthLXpBLVowLTlfLV0qW2EtekEtWjAtOV0pPy9kYXRhYmFzZXMvW14vXSsvc2NoZW1hcy9bXi9dKy92aWV3cy9bXi9dKyQSUgoEbW9kZRgCIAEoDjI3LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlJlZnJlc2hNYXRlcmlhbGl6ZWRWaWV3TW9kZUIL4EEBukgFggECEAEiUQofUmVmcmVzaE1hdGVyaWFsaXplZFZpZXdSZXNwb25zZRIuCgR2aWV3GAEgASgLMiAucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuVmlldypOCghWaWV3VmlldxIZChVWSUVXX1ZJRVdfVU5TUEVDSUZJRUQQABITCg9WSUVXX1ZJRVdfQkFTSUMQARISCg5WSUVXX1ZJRVdfRlVMTBACKqkBChtSZWZyZXNoTWF0ZXJpYWxpemVkVmlld01vZGUSLgoqUkVGUkVTSF9NQVRFUklBTElaRURfVklFV19NT0RFX1VOU1BFQ0lGSUVEEAASKwonUkVGUkVTSF9NQVRFUklBTElaRURfVklFV19NT0RFX1NUQU5EQVJEEAESLQopUkVGUkVTSF9NQVRFUklBTElaRURfVklFV19NT0RFX0NPTkNVUlJFTlQQAjKMBwoLVmlld1NlcnZpY2USagoJTGlzdFZpZXdzEiwucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuTGlzdFZpZXdzUmVxdWVzdBotLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkxpc3RWaWV3c1Jlc3BvbnNlIgASZAoHR2V0VmlldxIqLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkdldFZpZXdSZXF1ZXN0GisucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuR2V0Vmlld1Jlc3BvbnNlIgAS0wEKEUdldFZpZXdEZXBlbmRlbmN5EjQucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuR2V0Vmlld0RlcGVuZGVuY3lSZXF1ZXN0GioucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuVmlld0RlcGVuZGVuY3kiXNpBBG5hbWWC0+STAk8STS92MWFscGhhMS97bmFtZT1pbnN0YW5jZXMvKi9kYXRhYmFzZXMvKi9zY2hlbWFzLyovdmlld3MvKi92aWV3RGVwZW5kZW5jaWVzLyp9EukBChRMaXN0Vmlld0RlcGVuZGVuY2llcxI3LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkxpc3RWaWV3RGVwZW5kZW5jaWVzUmVxdWVzdBo4LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkxpc3RWaWV3RGVwZW5kZW5jaWVzUmVzcG9uc2UiXtpBBnBhcmVudILT5JMCTxJNL3YxYWxwaGExL3twYXJlbnQ9aW5zdGFuY2VzLyovZGF0YWJhc2VzLyovc2NoZW1hcy8qL3ZpZXdzLyp9L3ZpZXdEZXBlbmRlbmNpZXMS6AEKF1JlZnJlc2hNYXRlcmlhbGl6ZWRWaWV3EjoucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuUmVmcmVzaE1hdGVyaWFsaXplZFZpZXdSZXF1ZXN0GjsucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuUmVmcmVzaE1hdGVyaWFsaXplZFZpZXdSZXNwb25zZSJU2kEEbmFtZYLT5JMCRzoBKiJCL3YxYWxwaGExL3tuYW1lPWluc3RhbmNlcy8qL2RhdGFiYXNlcy8qL3NjaGVtYXMvKi92aWV3cy8qfTpyZWZyZXNoQpECCh5jb20ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTFCCVZpZXdQcm90b1ABWlpnaXRodWIuY29tL3F1ZXJ5bGFuZS9xdWVyeWxhbmUvYmFja2VuZC9wcm90b2dlbi9xdWVyeWxhbmUvY29uc29sZS92MWFscGhhMTtjb25zb2xldjFhbHBoYTGiAgNRQ1iqAhpRdWVyeWxhbmUuQ29uc29sZS5WMWFscGhhMcoCGlF1ZXJ5bGFuZVxDb25zb2xlXFYxYWxwaGEx4gImUXVlcnlsYW5lXENvbnNvbGVcVjFhbHBoYTFcR1BCTWV0YWRhdGHqAhxRdWVyeWxhbmU6OkNvbnNvbGU6OlYxYWxwaGExYgZwcm90bzM", [file_buf_validate_validate, file_google_api_annotations, file_google_api_client, file_google_api_field_behavior, file_google_api_resource, file_google_protobuf_timestamp]);
 
 /**
  * A View represents a standard or materialized view within a Schema.
@@ -144,6 +146,156 @@ export const View_ViewTypeSchema: GenEnum<View_ViewType> = /*@__PURE__*/
   enumDesc(file_querylane_console_v1alpha1_view, 0, 0);
 
 /**
+ * A relation connected to a view through PostgreSQL catalog dependencies.
+ *
+ * @generated from message querylane.console.v1alpha1.ViewDependency
+ */
+export type ViewDependency = Message<"querylane.console.v1alpha1.ViewDependency"> & {
+  /**
+   * The dependency edge resource name.
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * Output-only. Canonical Table or View resource attached to this edge.
+   * aip.dev/not-precedent: PostgreSQL dependencies can target either resource
+   * type. Runtime construction narrows this wildcard to Table or View.
+   *
+   * @generated from field: string relation = 2;
+   */
+  relation: string;
+
+  /**
+   * Output-only. Schema containing the relation.
+   *
+   * @generated from field: string schema_name = 3;
+   */
+  schemaName: string;
+
+  /**
+   * Output-only. Relation display name.
+   * aip.dev/not-precedent: PostgreSQL owns this identifier and this API only
+   * mirrors catalog state, so clients cannot mutate display_name as AIP-148
+   * normally recommends.
+   *
+   * @generated from field: string display_name = 4;
+   */
+  displayName: string;
+
+  /**
+   * Output-only. Whether the relation is upstream or downstream of the view.
+   *
+   * @generated from field: querylane.console.v1alpha1.ViewDependency.Direction direction = 5;
+   */
+  direction: ViewDependency_Direction;
+
+  /**
+   * Output-only. PostgreSQL relation kind.
+   *
+   * @generated from field: querylane.console.v1alpha1.ViewDependency.RelationType relation_type = 6;
+   */
+  relationType: ViewDependency_RelationType;
+};
+
+/**
+ * Describes the message querylane.console.v1alpha1.ViewDependency.
+ * Use `create(ViewDependencySchema)` to create a new message.
+ */
+export const ViewDependencySchema: GenMessage<ViewDependency> = /*@__PURE__*/
+  messageDesc(file_querylane_console_v1alpha1_view, 1);
+
+/**
+ * Direction identifies which side of the selected view contains the relation.
+ *
+ * @generated from enum querylane.console.v1alpha1.ViewDependency.Direction
+ */
+export enum ViewDependency_Direction {
+  /**
+   * The direction is not specified.
+   *
+   * @generated from enum value: DIRECTION_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * The selected view reads from the relation.
+   *
+   * @generated from enum value: DIRECTION_UPSTREAM = 1;
+   */
+  UPSTREAM = 1,
+
+  /**
+   * The relation reads from the selected view.
+   *
+   * @generated from enum value: DIRECTION_DOWNSTREAM = 2;
+   */
+  DOWNSTREAM = 2,
+}
+
+/**
+ * Describes the enum querylane.console.v1alpha1.ViewDependency.Direction.
+ */
+export const ViewDependency_DirectionSchema: GenEnum<ViewDependency_Direction> = /*@__PURE__*/
+  enumDesc(file_querylane_console_v1alpha1_view, 1, 0);
+
+/**
+ * RelationType identifies the PostgreSQL catalog kind of the relation.
+ *
+ * @generated from enum querylane.console.v1alpha1.ViewDependency.RelationType
+ */
+export enum ViewDependency_RelationType {
+  /**
+   * The relation type is not specified.
+   *
+   * @generated from enum value: RELATION_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * A base table.
+   *
+   * @generated from enum value: RELATION_TYPE_TABLE = 1;
+   */
+  TABLE = 1,
+
+  /**
+   * A standard view.
+   *
+   * @generated from enum value: RELATION_TYPE_VIEW = 2;
+   */
+  VIEW = 2,
+
+  /**
+   * A materialized view.
+   *
+   * @generated from enum value: RELATION_TYPE_MATERIALIZED_VIEW = 3;
+   */
+  MATERIALIZED_VIEW = 3,
+
+  /**
+   * A foreign table.
+   *
+   * @generated from enum value: RELATION_TYPE_FOREIGN_TABLE = 4;
+   */
+  FOREIGN_TABLE = 4,
+
+  /**
+   * A partitioned table.
+   *
+   * @generated from enum value: RELATION_TYPE_PARTITIONED_TABLE = 5;
+   */
+  PARTITIONED_TABLE = 5,
+}
+
+/**
+ * Describes the enum querylane.console.v1alpha1.ViewDependency.RelationType.
+ */
+export const ViewDependency_RelationTypeSchema: GenEnum<ViewDependency_RelationType> = /*@__PURE__*/
+  enumDesc(file_querylane_console_v1alpha1_view, 1, 1);
+
+/**
  * @generated from message querylane.console.v1alpha1.ListViewsRequest
  */
 export type ListViewsRequest = Message<"querylane.console.v1alpha1.ListViewsRequest"> & {
@@ -194,7 +346,7 @@ export type ListViewsRequest = Message<"querylane.console.v1alpha1.ListViewsRequ
  * Use `create(ListViewsRequestSchema)` to create a new message.
  */
 export const ListViewsRequestSchema: GenMessage<ListViewsRequest> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_view, 1);
+  messageDesc(file_querylane_console_v1alpha1_view, 2);
 
 /**
  * @generated from message querylane.console.v1alpha1.ListViewsResponse
@@ -216,7 +368,7 @@ export type ListViewsResponse = Message<"querylane.console.v1alpha1.ListViewsRes
  * Use `create(ListViewsResponseSchema)` to create a new message.
  */
 export const ListViewsResponseSchema: GenMessage<ListViewsResponse> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_view, 2);
+  messageDesc(file_querylane_console_v1alpha1_view, 3);
 
 /**
  * @generated from message querylane.console.v1alpha1.GetViewRequest
@@ -242,7 +394,7 @@ export type GetViewRequest = Message<"querylane.console.v1alpha1.GetViewRequest"
  * Use `create(GetViewRequestSchema)` to create a new message.
  */
 export const GetViewRequestSchema: GenMessage<GetViewRequest> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_view, 3);
+  messageDesc(file_querylane_console_v1alpha1_view, 4);
 
 /**
  * @generated from message querylane.console.v1alpha1.GetViewResponse
@@ -259,7 +411,163 @@ export type GetViewResponse = Message<"querylane.console.v1alpha1.GetViewRespons
  * Use `create(GetViewResponseSchema)` to create a new message.
  */
 export const GetViewResponseSchema: GenMessage<GetViewResponse> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_view, 4);
+  messageDesc(file_querylane_console_v1alpha1_view, 5);
+
+/**
+ * Request message for GetViewDependency.
+ *
+ * @generated from message querylane.console.v1alpha1.GetViewDependencyRequest
+ */
+export type GetViewDependencyRequest = Message<"querylane.console.v1alpha1.GetViewDependencyRequest"> & {
+  /**
+   * Required. The dependency edge to retrieve.
+   * Format: instances/{instance}/databases/{database}/schemas/{schema}/views/{view}/viewDependencies/{view_dependency}
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message querylane.console.v1alpha1.GetViewDependencyRequest.
+ * Use `create(GetViewDependencyRequestSchema)` to create a new message.
+ */
+export const GetViewDependencyRequestSchema: GenMessage<GetViewDependencyRequest> = /*@__PURE__*/
+  messageDesc(file_querylane_console_v1alpha1_view, 6);
+
+/**
+ * Request message for ListViewDependencies.
+ *
+ * @generated from message querylane.console.v1alpha1.ListViewDependenciesRequest
+ */
+export type ListViewDependenciesRequest = Message<"querylane.console.v1alpha1.ListViewDependenciesRequest"> & {
+  /**
+   * Required. The view whose direct dependencies should be returned.
+   *
+   * @generated from field: string parent = 1;
+   */
+  parent: string;
+
+  /**
+   * Optional. Maximum dependencies to return. The server clamps values above
+   * 1000 and uses 50 when this is unset.
+   *
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize: number;
+
+  /**
+   * Optional. Opaque continuation token from a previous response.
+   *
+   * @generated from field: string page_token = 3;
+   */
+  pageToken: string;
+
+  /**
+   * Optional. Filter expression joined by `AND`. name, schema_name, and
+   * display_name support `=`, `!=`, and `:`. direction and relation_type
+   * support `=` and `!=` with their enum names.
+   * aip.dev/not-precedent: For compatibility with Querylane's existing list
+   * grammar, `:` is a case-insensitive scalar substring operator rather than
+   * AIP-160's collection has operator.
+   *
+   * @generated from field: string filter = 4;
+   */
+  filter: string;
+
+  /**
+   * Optional. Comma-separated ordering. Supported fields are name,
+   * schema_name, display_name, direction, and relation_type. The default is
+   * direction asc, schema_name asc, display_name asc, then name asc.
+   *
+   * @generated from field: string order_by = 5;
+   */
+  orderBy: string;
+};
+
+/**
+ * Describes the message querylane.console.v1alpha1.ListViewDependenciesRequest.
+ * Use `create(ListViewDependenciesRequestSchema)` to create a new message.
+ */
+export const ListViewDependenciesRequestSchema: GenMessage<ListViewDependenciesRequest> = /*@__PURE__*/
+  messageDesc(file_querylane_console_v1alpha1_view, 7);
+
+/**
+ * Response message for ListViewDependencies.
+ *
+ * @generated from message querylane.console.v1alpha1.ListViewDependenciesResponse
+ */
+export type ListViewDependenciesResponse = Message<"querylane.console.v1alpha1.ListViewDependenciesResponse"> & {
+  /**
+   * The dependency edges in this page.
+   *
+   * @generated from field: repeated querylane.console.v1alpha1.ViewDependency view_dependencies = 1;
+   */
+  viewDependencies: ViewDependency[];
+
+  /**
+   * Opaque token for the next page, or empty when this is the final page.
+   *
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+};
+
+/**
+ * Describes the message querylane.console.v1alpha1.ListViewDependenciesResponse.
+ * Use `create(ListViewDependenciesResponseSchema)` to create a new message.
+ */
+export const ListViewDependenciesResponseSchema: GenMessage<ListViewDependenciesResponse> = /*@__PURE__*/
+  messageDesc(file_querylane_console_v1alpha1_view, 8);
+
+/**
+ * Request message for RefreshMaterializedView.
+ *
+ * @generated from message querylane.console.v1alpha1.RefreshMaterializedViewRequest
+ */
+export type RefreshMaterializedViewRequest = Message<"querylane.console.v1alpha1.RefreshMaterializedViewRequest"> & {
+  /**
+   * Required. The materialized view to refresh.
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * Optional. Standard refresh is used when unspecified.
+   *
+   * @generated from field: querylane.console.v1alpha1.RefreshMaterializedViewMode mode = 2;
+   */
+  mode: RefreshMaterializedViewMode;
+};
+
+/**
+ * Describes the message querylane.console.v1alpha1.RefreshMaterializedViewRequest.
+ * Use `create(RefreshMaterializedViewRequestSchema)` to create a new message.
+ */
+export const RefreshMaterializedViewRequestSchema: GenMessage<RefreshMaterializedViewRequest> = /*@__PURE__*/
+  messageDesc(file_querylane_console_v1alpha1_view, 9);
+
+/**
+ * Response message for RefreshMaterializedView.
+ *
+ * @generated from message querylane.console.v1alpha1.RefreshMaterializedViewResponse
+ */
+export type RefreshMaterializedViewResponse = Message<"querylane.console.v1alpha1.RefreshMaterializedViewResponse"> & {
+  /**
+   * The refreshed materialized view.
+   *
+   * @generated from field: querylane.console.v1alpha1.View view = 1;
+   */
+  view?: View;
+};
+
+/**
+ * Describes the message querylane.console.v1alpha1.RefreshMaterializedViewResponse.
+ * Use `create(RefreshMaterializedViewResponseSchema)` to create a new message.
+ */
+export const RefreshMaterializedViewResponseSchema: GenMessage<RefreshMaterializedViewResponse> = /*@__PURE__*/
+  messageDesc(file_querylane_console_v1alpha1_view, 10);
 
 /**
  * ViewView controls how much detail the server should populate for View resources.
@@ -294,6 +602,41 @@ export const ViewViewSchema: GenEnum<ViewView> = /*@__PURE__*/
   enumDesc(file_querylane_console_v1alpha1_view, 0);
 
 /**
+ * RefreshMaterializedViewMode selects the PostgreSQL refresh strategy.
+ *
+ * @generated from enum querylane.console.v1alpha1.RefreshMaterializedViewMode
+ */
+export enum RefreshMaterializedViewMode {
+  /**
+   * Uses a standard, blocking refresh.
+   *
+   * @generated from enum value: REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Replaces the stored rows while preventing concurrent reads.
+   *
+   * @generated from enum value: REFRESH_MATERIALIZED_VIEW_MODE_STANDARD = 1;
+   */
+  STANDARD = 1,
+
+  /**
+   * Replaces the stored rows without preventing concurrent reads.
+   * PostgreSQL requires a qualifying unique index.
+   *
+   * @generated from enum value: REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT = 2;
+   */
+  CONCURRENT = 2,
+}
+
+/**
+ * Describes the enum querylane.console.v1alpha1.RefreshMaterializedViewMode.
+ */
+export const RefreshMaterializedViewModeSchema: GenEnum<RefreshMaterializedViewMode> = /*@__PURE__*/
+  enumDesc(file_querylane_console_v1alpha1_view, 1);
+
+/**
  * ViewService exposes views as a separate resource hierarchy.
  *
  * @generated from service querylane.console.v1alpha1.ViewService
@@ -318,6 +661,45 @@ export const ViewService: GenService<{
     methodKind: "unary";
     input: typeof GetViewRequestSchema;
     output: typeof GetViewResponseSchema;
+  },
+  /**
+   * Gets one direct relation dependency edge for a view.
+   * buf:lint:ignore RPC_RESPONSE_STANDARD_NAME: AIP-131 requires returning the resource directly.
+   *
+   * @generated from rpc querylane.console.v1alpha1.ViewService.GetViewDependency
+   */
+  getViewDependency: {
+    methodKind: "unary";
+    input: typeof GetViewDependencyRequestSchema;
+    output: typeof ViewDependencySchema;
+  },
+  /**
+   * Lists direct relation dependencies for a view.
+   *
+   * @generated from rpc querylane.console.v1alpha1.ViewService.ListViewDependencies
+   */
+  listViewDependencies: {
+    methodKind: "unary";
+    input: typeof ListViewDependenciesRequestSchema;
+    output: typeof ListViewDependenciesResponseSchema;
+  },
+  /**
+   * Refreshes a materialized view within the configured synchronous timeout,
+   * which is capped at 30 seconds.
+   * aip.dev/not-precedent: This alpha, interactive operation remains
+   * synchronous so the UI can report PostgreSQL's immediate result. It fails
+   * at the hard deadline; support for longer refreshes must use a long-running
+   * operation before that deadline is widened.
+   * Returns INVALID_ARGUMENT for a standard view or unsupported mode,
+   * FAILED_PRECONDITION when concurrent refresh requirements are unmet, and
+   * DEADLINE_EXCEEDED when PostgreSQL cannot finish within the timeout.
+   *
+   * @generated from rpc querylane.console.v1alpha1.ViewService.RefreshMaterializedView
+   */
+  refreshMaterializedView: {
+    methodKind: "unary";
+    input: typeof RefreshMaterializedViewRequestSchema;
+    output: typeof RefreshMaterializedViewResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_querylane_console_v1alpha1_view, 0);

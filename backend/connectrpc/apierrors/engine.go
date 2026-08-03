@@ -333,6 +333,8 @@ func notFoundResource(err error, rctx ResourceCtx) (resourceType resource.Type, 
 	switch {
 	case errors.Is(err, engine.ErrRoleNotFound):
 		return resource.TypeRole, name, true
+	case errors.Is(err, engine.ErrViewDependencyNotFound):
+		return resource.TypeViewDependency, name, true
 	case errors.Is(err, engine.ErrViewNotFound):
 		return resource.TypeView, name, true
 	case errors.Is(err, engine.ErrTableNotFound):

@@ -10,7 +10,7 @@ interface CellContextMenuProps {
   onClose: () => void;
   onCopyCell: () => void;
   onCopyRow: () => void;
-  onCopyRowAsSql: () => void;
+  onCopyRowAsSql?: (() => void) | undefined;
   returnFocusTo: HTMLElement;
   top: number;
 }
@@ -64,10 +64,12 @@ function CellContextMenu({
           <Rows3 className="size-3.5" />
           Copy row
         </DropdownMenuItem>
-        <DropdownMenuItem className="gap-2 text-xs" onClick={onCopyRowAsSql}>
-          <FileCode2 className="size-3.5" />
-          Copy row as INSERT
-        </DropdownMenuItem>
+        {onCopyRowAsSql ? (
+          <DropdownMenuItem className="gap-2 text-xs" onClick={onCopyRowAsSql}>
+            <FileCode2 className="size-3.5" />
+            Copy row as INSERT
+          </DropdownMenuItem>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

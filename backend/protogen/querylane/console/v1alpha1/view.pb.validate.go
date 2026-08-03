@@ -211,6 +211,118 @@ var _ interface {
 	ErrorName() string
 } = ViewValidationError{}
 
+// Validate checks the field values on ViewDependency with the rules defined in
+// the proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *ViewDependency) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ViewDependency with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in ViewDependencyMultiError,
+// or nil if none found.
+func (m *ViewDependency) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ViewDependency) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Name
+
+	// no validation rules for Relation
+
+	// no validation rules for SchemaName
+
+	// no validation rules for DisplayName
+
+	// no validation rules for Direction
+
+	// no validation rules for RelationType
+
+	if len(errors) > 0 {
+		return ViewDependencyMultiError(errors)
+	}
+
+	return nil
+}
+
+// ViewDependencyMultiError is an error wrapping multiple validation errors
+// returned by ViewDependency.ValidateAll() if the designated constraints
+// aren't met.
+type ViewDependencyMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ViewDependencyMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ViewDependencyMultiError) AllErrors() []error { return m }
+
+// ViewDependencyValidationError is the validation error returned by
+// ViewDependency.Validate if the designated constraints aren't met.
+type ViewDependencyValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ViewDependencyValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ViewDependencyValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ViewDependencyValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ViewDependencyValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ViewDependencyValidationError) ErrorName() string { return "ViewDependencyValidationError" }
+
+// Error satisfies the builtin error interface
+func (e ViewDependencyValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sViewDependency.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ViewDependencyValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ViewDependencyValidationError{}
+
 // Validate checks the field values on ListViewsRequest with the rules defined
 // in the proto definition for this message. If any rules are violated, the
 // first error encountered is returned, or nil if there are no violations.
@@ -693,3 +805,598 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = GetViewResponseValidationError{}
+
+// Validate checks the field values on GetViewDependencyRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *GetViewDependencyRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on GetViewDependencyRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// GetViewDependencyRequestMultiError, or nil if none found.
+func (m *GetViewDependencyRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *GetViewDependencyRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Name
+
+	if len(errors) > 0 {
+		return GetViewDependencyRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// GetViewDependencyRequestMultiError is an error wrapping multiple validation
+// errors returned by GetViewDependencyRequest.ValidateAll() if the designated
+// constraints aren't met.
+type GetViewDependencyRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GetViewDependencyRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GetViewDependencyRequestMultiError) AllErrors() []error { return m }
+
+// GetViewDependencyRequestValidationError is the validation error returned by
+// GetViewDependencyRequest.Validate if the designated constraints aren't met.
+type GetViewDependencyRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e GetViewDependencyRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e GetViewDependencyRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e GetViewDependencyRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e GetViewDependencyRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e GetViewDependencyRequestValidationError) ErrorName() string {
+	return "GetViewDependencyRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e GetViewDependencyRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sGetViewDependencyRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = GetViewDependencyRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = GetViewDependencyRequestValidationError{}
+
+// Validate checks the field values on ListViewDependenciesRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ListViewDependenciesRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ListViewDependenciesRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ListViewDependenciesRequestMultiError, or nil if none found.
+func (m *ListViewDependenciesRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ListViewDependenciesRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Parent
+
+	// no validation rules for PageSize
+
+	// no validation rules for PageToken
+
+	// no validation rules for Filter
+
+	// no validation rules for OrderBy
+
+	if len(errors) > 0 {
+		return ListViewDependenciesRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// ListViewDependenciesRequestMultiError is an error wrapping multiple
+// validation errors returned by ListViewDependenciesRequest.ValidateAll() if
+// the designated constraints aren't met.
+type ListViewDependenciesRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ListViewDependenciesRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ListViewDependenciesRequestMultiError) AllErrors() []error { return m }
+
+// ListViewDependenciesRequestValidationError is the validation error returned
+// by ListViewDependenciesRequest.Validate if the designated constraints
+// aren't met.
+type ListViewDependenciesRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ListViewDependenciesRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ListViewDependenciesRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ListViewDependenciesRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ListViewDependenciesRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ListViewDependenciesRequestValidationError) ErrorName() string {
+	return "ListViewDependenciesRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ListViewDependenciesRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sListViewDependenciesRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ListViewDependenciesRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ListViewDependenciesRequestValidationError{}
+
+// Validate checks the field values on ListViewDependenciesResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ListViewDependenciesResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ListViewDependenciesResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ListViewDependenciesResponseMultiError, or nil if none found.
+func (m *ListViewDependenciesResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ListViewDependenciesResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	for idx, item := range m.GetViewDependencies() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, ListViewDependenciesResponseValidationError{
+						field:  fmt.Sprintf("ViewDependencies[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, ListViewDependenciesResponseValidationError{
+						field:  fmt.Sprintf("ViewDependencies[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return ListViewDependenciesResponseValidationError{
+					field:  fmt.Sprintf("ViewDependencies[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	// no validation rules for NextPageToken
+
+	if len(errors) > 0 {
+		return ListViewDependenciesResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// ListViewDependenciesResponseMultiError is an error wrapping multiple
+// validation errors returned by ListViewDependenciesResponse.ValidateAll() if
+// the designated constraints aren't met.
+type ListViewDependenciesResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ListViewDependenciesResponseMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ListViewDependenciesResponseMultiError) AllErrors() []error { return m }
+
+// ListViewDependenciesResponseValidationError is the validation error returned
+// by ListViewDependenciesResponse.Validate if the designated constraints
+// aren't met.
+type ListViewDependenciesResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ListViewDependenciesResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ListViewDependenciesResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ListViewDependenciesResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ListViewDependenciesResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ListViewDependenciesResponseValidationError) ErrorName() string {
+	return "ListViewDependenciesResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ListViewDependenciesResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sListViewDependenciesResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ListViewDependenciesResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ListViewDependenciesResponseValidationError{}
+
+// Validate checks the field values on RefreshMaterializedViewRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *RefreshMaterializedViewRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on RefreshMaterializedViewRequest with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the result is a list of violation errors wrapped in
+// RefreshMaterializedViewRequestMultiError, or nil if none found.
+func (m *RefreshMaterializedViewRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *RefreshMaterializedViewRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Name
+
+	// no validation rules for Mode
+
+	if len(errors) > 0 {
+		return RefreshMaterializedViewRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// RefreshMaterializedViewRequestMultiError is an error wrapping multiple
+// validation errors returned by RefreshMaterializedViewRequest.ValidateAll()
+// if the designated constraints aren't met.
+type RefreshMaterializedViewRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m RefreshMaterializedViewRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m RefreshMaterializedViewRequestMultiError) AllErrors() []error { return m }
+
+// RefreshMaterializedViewRequestValidationError is the validation error
+// returned by RefreshMaterializedViewRequest.Validate if the designated
+// constraints aren't met.
+type RefreshMaterializedViewRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e RefreshMaterializedViewRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e RefreshMaterializedViewRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e RefreshMaterializedViewRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e RefreshMaterializedViewRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e RefreshMaterializedViewRequestValidationError) ErrorName() string {
+	return "RefreshMaterializedViewRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e RefreshMaterializedViewRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sRefreshMaterializedViewRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = RefreshMaterializedViewRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = RefreshMaterializedViewRequestValidationError{}
+
+// Validate checks the field values on RefreshMaterializedViewResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *RefreshMaterializedViewResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on RefreshMaterializedViewResponse with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the result is a list of violation errors wrapped in
+// RefreshMaterializedViewResponseMultiError, or nil if none found.
+func (m *RefreshMaterializedViewResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *RefreshMaterializedViewResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetView()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, RefreshMaterializedViewResponseValidationError{
+					field:  "View",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, RefreshMaterializedViewResponseValidationError{
+					field:  "View",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetView()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return RefreshMaterializedViewResponseValidationError{
+				field:  "View",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return RefreshMaterializedViewResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// RefreshMaterializedViewResponseMultiError is an error wrapping multiple
+// validation errors returned by RefreshMaterializedViewResponse.ValidateAll()
+// if the designated constraints aren't met.
+type RefreshMaterializedViewResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m RefreshMaterializedViewResponseMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m RefreshMaterializedViewResponseMultiError) AllErrors() []error { return m }
+
+// RefreshMaterializedViewResponseValidationError is the validation error
+// returned by RefreshMaterializedViewResponse.Validate if the designated
+// constraints aren't met.
+type RefreshMaterializedViewResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e RefreshMaterializedViewResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e RefreshMaterializedViewResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e RefreshMaterializedViewResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e RefreshMaterializedViewResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e RefreshMaterializedViewResponseValidationError) ErrorName() string {
+	return "RefreshMaterializedViewResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e RefreshMaterializedViewResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sRefreshMaterializedViewResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = RefreshMaterializedViewResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = RefreshMaterializedViewResponseValidationError{}

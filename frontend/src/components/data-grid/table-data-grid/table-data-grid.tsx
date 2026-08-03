@@ -92,7 +92,7 @@ import {
   useRefreshSettingsStore,
 } from "@/features/user-settings/refresh-settings";
 import { useReadCellValueMutation } from "@/hooks/api/table-data";
-import { parseTableQualifiedName } from "@/lib/console-resources";
+import { parseRelationQualifiedName } from "@/lib/console-resources";
 import { downloadBlob } from "@/lib/download-blob";
 import { HIGH_VOLUME_PAGE_SIZE_OPTIONS } from "@/lib/pagination";
 import { normalizeAppUiError } from "@/lib/ui-error";
@@ -107,6 +107,7 @@ import { RowIdentity_Source } from "@/protogen/querylane/console/v1alpha1/table_
 import "@/components/data-grid/table-data-grid/data-grid-theme.css";
 
 interface TableDataGridProps {
+  allowInsertCopy?: boolean | undefined;
   children?: (state: {
     grid: ReactNode;
     lastFetchedLabel: string;
@@ -318,7 +319,7 @@ function RecordDetailDrawerHost({
   rows: GridRow[];
   setOpenRowIndex: (next: number | null) => void;
 }) {
-  const tableQualifiedName = parseTableQualifiedName(name);
+  const relationQualifiedName = parseRelationQualifiedName(name);
   const openRow =
     openRowIndex !== null && openRowIndex >= 0 && openRowIndex < rows.length
       ? rows[openRowIndex]
@@ -352,7 +353,10 @@ function RecordDetailDrawerHost({
       rowCells={openRowCells}
       rowCount={rows.length}
       rowIndex={openRowIndex ?? 0}
-      tableName={tableQualifiedName}
+      tableName={{
+        schema: relationQualifiedName.schema,
+        table: relationQualifiedName.relation,
+      }}
     />
   );
 }
@@ -450,6 +454,7 @@ function TableDataGridAlerts({
 }
 
 interface TableDataGridChromeProps {
+  allowSqlExport: boolean;
   columnOrder: readonly string[];
   columns: Column<GridRow>[];
   filterLogic: TableFilterLogic;
@@ -506,6 +511,7 @@ interface TableDataGridChromeProps {
 }
 
 function TableDataGridChrome({
+  allowSqlExport,
   columnOrder,
   columns,
   filterLogic,
@@ -555,6 +561,7 @@ function TableDataGridChrome({
         )}
       >
         <DataGridToolbar
+          allowSqlExport={allowSqlExport}
           className={state.variant === "expanded" ? "pr-12" : undefined}
           columnOrder={columnOrder}
           columns={resultColumns}
@@ -1045,7 +1052,7 @@ function TableDataGridContent({
   onCloseContextMenu: () => void;
   onContextMenuCopyCell: () => void;
   onContextMenuCopyRow: () => void;
-  onContextMenuCopyRowAsSql: () => void;
+  onContextMenuCopyRowAsSql?: (() => void) | undefined;
   onDataGridExpandedChange: (next: boolean) => void;
   openRowIndex: number | null;
   pkColumnSet: Set<string>;
@@ -1151,14 +1158,22 @@ function buildCellInteractionHandlers({
   };
 }
 
+function optionalHandler(
+  enabled: boolean,
+  handler: () => void
+): (() => void) | undefined {
+  return enabled ? handler : undefined;
+}
+
 function TableDataGrid({
+  allowInsertCopy = true,
   children,
   foreignKeyReferences = NO_FOREIGN_KEY_REFERENCES,
   name,
   initialPageSize = DEFAULT_PAGE_SIZE,
   renderOpenReferencedTableLink,
 }: TableDataGridProps) {
-  const tableQualifiedName = parseTableQualifiedName(name);
+  const relationQualifiedName = parseRelationQualifiedName(name);
   const [filterSearch, setFilterSearch] = useState<string>();
   const [sortSearch, setSortSearch] = useState<string>();
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -1305,11 +1320,12 @@ function TableDataGrid({
     );
   const clearFilters = () => setFilterSearch(undefined);
   const chromeProps: TableDataGridChromeProps = {
+    allowSqlExport: allowInsertCopy,
     columnOrder: columnLayout.columnOrder,
     columns,
     filterLogic,
     filterRules,
-    filterTitle: `Filter ${tableQualifiedName.schema}.${tableQualifiedName.table}`,
+    filterTitle: `Filter ${relationQualifiedName.schema}.${relationQualifiedName.relation}`,
     hiddenColumnKeys: columnLayout.hiddenColumnKeys,
     invalidFilterRules,
     isColumnLayoutCustomized: columnLayout.isCustomized,
@@ -1361,7 +1377,10 @@ function TableDataGrid({
         onCloseContextMenu={() => setContextMenu(null)}
         onContextMenuCopyCell={cellHandlers.handleContextMenuCopyCell}
         onContextMenuCopyRow={cellHandlers.handleContextMenuCopyRow}
-        onContextMenuCopyRowAsSql={cellHandlers.handleContextMenuCopyRowAsSql}
+        onContextMenuCopyRowAsSql={optionalHandler(
+          allowInsertCopy,
+          cellHandlers.handleContextMenuCopyRowAsSql
+        )}
         onDataGridExpandedChange={setIsDataGridExpanded}
         openRowIndex={openRowIndex}
         pkColumnSet={pkColumnSet}
