@@ -6,6 +6,10 @@ export function InstanceConfigurationPage() {
     from: "/instances/$instanceId/configuration",
   });
   return (
-    <BackendInstancePage instanceId={instanceId} section="configuration" />
+    <BackendInstancePage
+      instanceId={instanceId}
+      searchRoute="/instances/$instanceId/configuration"
+      section="configuration"
+    />
   );
 }

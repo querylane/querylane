@@ -11,6 +11,7 @@ function DatabaseExtensionsPage() {
     <BackendDatabaseExtensionsPage
       databaseId={databaseId}
       instanceId={instanceId}
+      searchRoute={Route.fullPath}
     />
   );
 }

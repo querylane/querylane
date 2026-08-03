@@ -22,7 +22,7 @@ import { useUrlTableSearch } from "@/lib/url-search-state";
 afterEach(() => cleanup());
 
 function SearchHarness() {
-  const [query, setQuery] = useUrlTableSearch();
+  const [query, setQuery] = useUrlTableSearch("/instances/$instanceId/roles");
 
   return (
     <Input

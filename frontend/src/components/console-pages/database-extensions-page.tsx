@@ -43,7 +43,10 @@ import {
   PAGE_SIZE_OPTIONS,
   pageIndexForPageSizeChange,
 } from "@/lib/pagination";
-import { useUrlTableSearch } from "@/lib/url-search-state";
+import {
+  type UrlTableSearchRoute,
+  useUrlTableSearch,
+} from "@/lib/url-search-state";
 import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 
 function selectedExtensionFilterValue<Value extends string>(
@@ -194,8 +197,14 @@ function paginationLabel({
   return `Showing ${first}–${last} of ${filteredCount} extensions`;
 }
 
-function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
-  const [search, setSearch] = useUrlTableSearch();
+function ExtensionsGrid({
+  extensions,
+  searchRoute,
+}: {
+  extensions: Extension[];
+  searchRoute: UrlTableSearchRoute;
+}) {
+  const [search, setSearch] = useUrlTableSearch(searchRoute);
   const [status, setStatus] = useState<ExtensionStatusFilter>("All");
   const [scope, setScope] = useState<ExtensionScopeFilter>("All");
   const [category, setCategory] = useState<ExtensionCategoryFilter>("All");
@@ -433,9 +442,11 @@ function NoExtensionsState() {
 function BackendDatabaseExtensionsPage({
   databaseId,
   instanceId,
+  searchRoute,
 }: {
   databaseId: string;
   instanceId: string;
+  searchRoute: UrlTableSearchRoute;
 }) {
   const input = extensionsForDatabaseQueryInput({ databaseId, instanceId });
   const extensionsQuery = useListAllExtensionsQuery(input, {
@@ -463,7 +474,7 @@ function BackendDatabaseExtensionsPage({
         {extensions.length === 0 ? (
           <NoExtensionsState />
         ) : (
-          <ExtensionsGrid extensions={extensions} />
+          <ExtensionsGrid extensions={extensions} searchRoute={searchRoute} />
         )}
       </div>
     </ResourcePageState>

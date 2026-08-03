@@ -72,14 +72,35 @@ function InstanceAdminPageContent({
   }
   switch (page) {
     case "instance.activity":
-      return <BackendInstancePage instanceId={instanceId} section="activity" />;
+      return (
+        <BackendInstancePage
+          instanceId={instanceId}
+          searchRoute="/instances/$instanceId"
+          section="activity"
+        />
+      );
     case "instance.overview":
-      return <BackendInstancePage instanceId={instanceId} section="overview" />;
+      return (
+        <BackendInstancePage
+          instanceId={instanceId}
+          searchRoute="/instances/$instanceId"
+          section="overview"
+        />
+      );
     case "instance.roles":
-      return <InstanceRolesPage instanceId={instanceId} />;
+      return (
+        <InstanceRolesPage
+          instanceId={instanceId}
+          searchRoute="/instances/$instanceId"
+        />
+      );
     case "instance.configuration":
       return (
-        <BackendInstancePage instanceId={instanceId} section="configuration" />
+        <BackendInstancePage
+          instanceId={instanceId}
+          searchRoute="/instances/$instanceId"
+          section="configuration"
+        />
       );
     default:
       return null;
@@ -115,6 +136,7 @@ function DatabaseAdminPageContent({
         <BackendDatabaseExtensionsPage
           databaseId={databaseId}
           instanceId={instanceId}
+          searchRoute="/instances/$instanceId"
         />
       );
     case "database.explorer":

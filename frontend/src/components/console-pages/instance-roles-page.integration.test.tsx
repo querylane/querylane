@@ -155,7 +155,12 @@ describe("InstanceRolesPage", () => {
     const user = userEvent.setup();
 
     render(
-      <InstanceRolesPage instanceId="prod" tab={undefined} type="login" />
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab={undefined}
+        type="login"
+      />
     );
 
     const tableTab = screen.getByRole("tab", { name: "Table" });
@@ -178,7 +183,14 @@ describe("InstanceRolesPage", () => {
   test("hydrates the access map tab from URL search and shows object access", async () => {
     const user = userEvent.setup();
 
-    render(<InstanceRolesPage instanceId="prod" tab="map" type="login" />);
+    render(
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab="map"
+        type="login"
+      />
+    );
 
     expect(
       screen
@@ -208,7 +220,13 @@ describe("InstanceRolesPage", () => {
   test("does not show the empty grants state while object access is loading", () => {
     mocks.accessMapPending = true;
 
-    render(<InstanceRolesPage instanceId="prod" tab="map" />);
+    render(
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab="map"
+      />
+    );
 
     expect(screen.getByText("Loading role object access.")).toBeTruthy();
     expect(
@@ -220,7 +238,12 @@ describe("InstanceRolesPage", () => {
     const user = userEvent.setup();
 
     render(
-      <InstanceRolesPage instanceId="prod" tab={undefined} type="login" />
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab={undefined}
+        type="login"
+      />
     );
 
     expect(screen.getByText("app_user")).toBeTruthy();
@@ -244,7 +267,13 @@ describe("InstanceRolesPage", () => {
   test("hides built-in roles until they are enabled from the map view", async () => {
     const user = userEvent.setup();
 
-    render(<InstanceRolesPage instanceId="prod" tab="map" />);
+    render(
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab="map"
+      />
+    );
 
     const canvas = screen.getByLabelText("Role access map");
     expect(canvas.textContent).not.toContain("pg_read_all_data");
@@ -258,7 +287,14 @@ describe("InstanceRolesPage", () => {
   });
 
   test("shows built-in roles when the type filter explicitly selects them", () => {
-    render(<InstanceRolesPage instanceId="prod" tab="map" type="builtin" />);
+    render(
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab="map"
+        type="builtin"
+      />
+    );
 
     expect(screen.getByLabelText("Role access map").textContent).toContain(
       "pg_read_all_data"
@@ -269,7 +305,13 @@ describe("InstanceRolesPage", () => {
   test("keeps partial access data visible with a warning", () => {
     mocks.failedRequestCount = 2;
 
-    render(<InstanceRolesPage instanceId="prod" tab="map" />);
+    render(
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab="map"
+      />
+    );
 
     expect(
       screen.getByText(
@@ -282,7 +324,13 @@ describe("InstanceRolesPage", () => {
   test("warns when access results are truncated and keeps the map visible", () => {
     mocks.truncatedRequestCount = 1;
 
-    render(<InstanceRolesPage instanceId="prod" tab="map" />);
+    render(
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab="map"
+      />
+    );
 
     const warning = screen.getByRole("status");
     expect(warning.textContent).toContain("Some access data is not shown");
@@ -295,7 +343,13 @@ describe("InstanceRolesPage", () => {
   test("warns when the access-map request budget skips results", () => {
     mocks.budgetSkippedRequestCount = 1;
 
-    render(<InstanceRolesPage instanceId="prod" tab="map" />);
+    render(
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab="map"
+      />
+    );
 
     expect(screen.getByRole("status").textContent).toContain(
       "Some access data is not shown"

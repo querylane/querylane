@@ -393,7 +393,7 @@ function InstanceCommandItem({
   navigateToInstance: ReturnType<typeof useDb>["navigateToInstance"];
   selected: boolean;
 }) {
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/" });
   const handleSelect = () => {
     if (instance.credentialsUnreadable) {
       navigate({
@@ -457,7 +457,7 @@ function RegisterInstanceCommand({
   isConfigManaged: boolean;
   isModeLoaded: boolean;
 }) {
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/" });
   if (!hasInstances) {
     return isModeLoaded ? null : (
       <CommandItem

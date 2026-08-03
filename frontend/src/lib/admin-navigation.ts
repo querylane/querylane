@@ -1,9 +1,16 @@
+import type { NavigateFn } from "@tanstack/react-router";
 import {
   type AdminPageId,
   canRenderAdminPageAtScope,
   getDefaultAdminPageForScope,
   type InstanceLayoutSearch,
 } from "@/lib/admin-page";
+import { assertNever } from "@/lib/assert-never";
+import {
+  type InstanceRolesSearch,
+  isInstanceRolesTab,
+  isInstanceRolesType,
+} from "@/lib/instance-roles-search";
 
 type ScopeLevel = "none" | "instance" | "database";
 
@@ -69,9 +76,19 @@ type CanonicalAdminPageTarget =
       to: "/instances/$instanceId/databases/$databaseId/explorer";
     };
 
-type CanonicalAdminNavigateOptions = CanonicalAdminPageTarget & {
-  search: (previous: Record<string, unknown>) => Record<string, unknown>;
-};
+interface CanonicalAdminSearchOptions {
+  clearPageSearch?: boolean | undefined;
+  currentPage?: AdminPageId | undefined;
+  targetPage: AdminPageId;
+}
+
+function shouldPreservePageSearch({
+  clearPageSearch = false,
+  currentPage,
+  targetPage,
+}: CanonicalAdminSearchOptions): boolean {
+  return Boolean(currentPage && targetPage === currentPage && !clearPageSearch);
+}
 
 function resolveNextAdminPage({
   currentPage,
@@ -180,29 +197,95 @@ function resolveCanonicalDatabasePageTarget({
 }
 
 function buildCanonicalAdminSearch(
-  previous: Record<string, unknown>,
+  previous: InstanceLayoutSearch,
   {
     clearPageSearch = false,
     currentPage,
-    extraSearch,
     targetPage,
-  }: {
-    clearPageSearch?: boolean | undefined;
-    currentPage?: AdminPageId | undefined;
-    extraSearch?: Record<string, unknown> | undefined;
-    targetPage: AdminPageId;
-  }
+  }: CanonicalAdminSearchOptions
 ): InstanceLayoutSearch {
-  const baseSearch =
-    currentPage && targetPage === currentPage && !clearPageSearch
-      ? previous
-      : { ...previous, ...CLEARED_PAGE_SEARCH };
+  const baseSearch = shouldPreservePageSearch({
+    clearPageSearch,
+    currentPage,
+    targetPage,
+  })
+    ? previous
+    : CLEARED_PAGE_SEARCH;
 
   return {
     ...baseSearch,
-    ...extraSearch,
     page: undefined,
   };
+}
+
+function buildCanonicalRolesSearch(
+  previous: InstanceLayoutSearch & { type?: unknown },
+  searchOptions: CanonicalAdminSearchOptions
+): InstanceLayoutSearch & InstanceRolesSearch {
+  const search = buildCanonicalAdminSearch(previous, searchOptions);
+  const previousType =
+    shouldPreservePageSearch(searchOptions) && typeof previous.type === "string"
+      ? previous.type
+      : undefined;
+
+  return {
+    ...search,
+    tab: isInstanceRolesTab(search.tab) ? search.tab : undefined,
+    type: isInstanceRolesType(previousType) ? previousType : undefined,
+  };
+}
+
+function navigateToCanonicalAdminTarget(
+  navigate: NavigateFn,
+  target: CanonicalAdminPageTarget,
+  searchOptions: CanonicalAdminSearchOptions
+): Promise<void> {
+  switch (target.to) {
+    case "/instances/$instanceId":
+      return navigate({
+        ...target,
+        search: (previous) =>
+          buildCanonicalAdminSearch(previous, searchOptions),
+      });
+    case "/instances/$instanceId/activity":
+      return navigate({
+        ...target,
+        search: (previous) =>
+          buildCanonicalAdminSearch(previous, searchOptions),
+      });
+    case "/instances/$instanceId/configuration":
+      return navigate({
+        ...target,
+        search: (previous) =>
+          buildCanonicalAdminSearch(previous, searchOptions),
+      });
+    case "/instances/$instanceId/roles":
+      return navigate({
+        ...target,
+        search: (previous) =>
+          buildCanonicalRolesSearch(previous, searchOptions),
+      });
+    case "/instances/$instanceId/databases/$databaseId":
+      return navigate({
+        ...target,
+        search: (previous) =>
+          buildCanonicalAdminSearch(previous, searchOptions),
+      });
+    case "/instances/$instanceId/databases/$databaseId/extensions":
+      return navigate({
+        ...target,
+        search: (previous) =>
+          buildCanonicalAdminSearch(previous, searchOptions),
+      });
+    case "/instances/$instanceId/databases/$databaseId/explorer":
+      return navigate({
+        ...target,
+        search: (previous) =>
+          buildCanonicalAdminSearch(previous, searchOptions),
+      });
+    default:
+      return assertNever(target);
+  }
 }
 
 function resolveScopeLevelFromIds(ids: RouteSelectionIds): ScopeLevel {
@@ -243,19 +326,22 @@ function resolveLegacyAdminPageRedirect({
   if (!target) {
     return null;
   }
+  const searchOptions = { currentPage, targetPage };
 
   return {
     ...target,
-    search: buildCanonicalAdminSearch(search, {
-      currentPage,
-      targetPage,
-    }),
+    search:
+      target.to === "/instances/$instanceId/roles"
+        ? buildCanonicalRolesSearch(search, searchOptions)
+        : buildCanonicalAdminSearch(search, searchOptions),
   };
 }
 
-export type { CanonicalAdminNavigateOptions };
+export type { CanonicalAdminPageTarget, CanonicalAdminSearchOptions };
 export {
   buildCanonicalAdminSearch,
+  buildCanonicalRolesSearch,
+  navigateToCanonicalAdminTarget,
   resolveCanonicalAdminPageTarget,
   resolveLegacyAdminPageRedirect,
   resolveNextAdminPage,

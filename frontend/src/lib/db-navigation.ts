@@ -1,7 +1,6 @@
 import type { useNavigate } from "@tanstack/react-router";
 import {
-  buildCanonicalAdminSearch,
-  type CanonicalAdminNavigateOptions,
+  navigateToCanonicalAdminTarget,
   resolveCanonicalAdminPageTarget,
   resolveNextAdminPage,
 } from "@/lib/admin-navigation";
@@ -10,6 +9,7 @@ import type {
   PostgresDatabase,
   PostgresInstance,
 } from "@/lib/db-resource-mappers";
+import { handleNavigationResult } from "@/lib/navigation-errors";
 
 type ScopeLevel = "none" | "instance" | "database";
 
@@ -39,17 +39,12 @@ function useCanonicalAdminNavigation({
   navigate: ReturnType<typeof useNavigate>;
   persistSelection: (ids: RouteSelectionIds) => void;
 }) {
-  const navigateWithSearch: (options: CanonicalAdminNavigateOptions) => void =
-    navigate;
-
   return ({
     clearPageSearch,
-    extraSearch,
     ids,
     overridePage,
   }: {
     clearPageSearch?: boolean | undefined;
-    extraSearch?: Record<string, unknown> | undefined;
     ids: RouteSelectionIds;
     overridePage?: AdminPageId | undefined;
   }) => {
@@ -73,16 +68,14 @@ function useCanonicalAdminNavigation({
     }
 
     persistSelection(ids);
-    navigateWithSearch({
-      ...target,
-      search: (previous: Record<string, unknown>) =>
-        buildCanonicalAdminSearch(previous, {
-          clearPageSearch,
-          currentPage,
-          extraSearch,
-          targetPage,
-        }),
-    });
+    handleNavigationResult(
+      navigateToCanonicalAdminTarget(navigate, target, {
+        clearPageSearch,
+        currentPage,
+        targetPage,
+      }),
+      { area: `db-navigation.${targetPage}` }
+    );
   };
 }
 
@@ -138,7 +131,8 @@ function useNavigationCallbacks({
         databaseId: effDatabaseId,
         instanceId,
       },
-      overridePage: `${level}.overview` as AdminPageId,
+      overridePage:
+        level === "instance" ? "instance.overview" : "database.overview",
     });
   };
 

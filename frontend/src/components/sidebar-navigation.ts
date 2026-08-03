@@ -16,15 +16,25 @@ import type {
 } from "@/components/sidebar-paths";
 import {
   buildCanonicalAdminSearch,
+  type CanonicalAdminPageTarget,
   resolveCanonicalAdminPageTarget,
 } from "@/lib/admin-navigation";
-import type { AdminPageId } from "@/lib/admin-page";
+import type { AdminPageId, InstanceLayoutSearch } from "@/lib/admin-page";
 import type { ScopeLevel } from "@/lib/db-navigation";
 
-interface NavLinkProps {
-  params: Record<string, string>;
-  search: (previous: Record<string, unknown>) => Record<string, unknown>;
-  to: string;
+type NavLinkProps = CanonicalAdminPageTarget & {
+  currentPage?: AdminPageId | undefined;
+  targetPage: AdminPageId;
+};
+
+function buildNavLinkSearch(
+  link: NavLinkProps,
+  previous: InstanceLayoutSearch
+): InstanceLayoutSearch {
+  return buildCanonicalAdminSearch(previous, {
+    currentPage: link.currentPage,
+    targetPage: link.targetPage,
+  });
 }
 
 /**
@@ -40,23 +50,13 @@ function buildNavLinkProps({
 }): Partial<Record<NavKey, NavLinkProps>> {
   const links: Partial<Record<NavKey, NavLinkProps>> = {};
 
-  function linkToPage({
-    extraSearch,
-    page,
-  }: {
-    extraSearch?: Record<string, unknown> | undefined;
-    page: AdminPageId;
-  }) {
+  function linkToPage({ page }: { page: AdminPageId }) {
     const target = resolveCanonicalAdminPageTarget({ ids, page });
     if (target) {
       links[page] = {
         ...target,
-        search: (previous: Record<string, unknown>) =>
-          buildCanonicalAdminSearch(previous, {
-            currentPage,
-            extraSearch,
-            targetPage: page,
-          }),
+        currentPage,
+        targetPage: page,
       };
     }
   }
@@ -189,4 +189,9 @@ function getNextStepHint(scopeLevel: ScopeLevel): string | null {
 }
 
 export type { NavLinkProps };
-export { buildNavLinkProps, getNavForScope, getNextStepHint };
+export {
+  buildNavLinkProps,
+  buildNavLinkSearch,
+  getNavForScope,
+  getNextStepHint,
+};

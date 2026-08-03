@@ -103,6 +103,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -147,6 +148,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -164,6 +166,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -181,6 +184,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -198,6 +202,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -239,6 +244,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -254,6 +260,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -272,6 +279,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -289,6 +297,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -322,6 +331,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -344,6 +354,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 

@@ -1,21 +1,28 @@
-import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { handleNavigationError } from "@/lib/navigation-errors";
 
-export function normalizeSearchText(value: string): string {
+function normalizeSearchText(value: string): string {
   return value.trim() === "" ? "" : value;
 }
 
-export function useUrlTableSearch(): [
-  string,
-  (value: string) => Promise<void>,
-] {
+type UrlTableSearchRoute =
+  | "/instances/$instanceId"
+  | "/instances/$instanceId/"
+  | "/instances/$instanceId/activity"
+  | "/instances/$instanceId/configuration"
+  | "/instances/$instanceId/roles"
+  | "/instances/$instanceId/roles/"
+  | "/instances/$instanceId/databases/$databaseId/extensions";
+
+function useUrlTableSearch(
+  from: UrlTableSearchRoute
+): [string, (value: string) => Promise<void>] {
   const routeSearchText = useSearch({
+    from,
     select: (search) => (typeof search.q === "string" ? search.q : ""),
-    strict: false,
   });
-  const navigate = useNavigate();
-  const locationHash = useLocation({ select: ({ hash }) => hash });
+  const navigate = useNavigate({ from });
   const pendingNavigationRef = useRef<{
     settledRevisionAtStart: number;
     text: string;
@@ -49,7 +56,7 @@ export function useUrlTableSearch(): [
     setDraftSearchText(nextValue);
 
     return navigate({
-      hash: locationHash,
+      hash: true,
       ignoreBlocker: true,
       replace: true,
       resetScroll: false,
@@ -57,7 +64,6 @@ export function useUrlTableSearch(): [
         ...previous,
         q: nextValue === "" ? undefined : nextValue,
       }),
-      to: ".",
     })
       .then(() => {
         if (pendingNavigationRef.current === pendingNavigation) {
@@ -81,3 +87,6 @@ export function useUrlTableSearch(): [
 
   return [draftSearchText, setUrlSearchText];
 }
+
+export type { UrlTableSearchRoute };
+export { normalizeSearchText, useUrlTableSearch };

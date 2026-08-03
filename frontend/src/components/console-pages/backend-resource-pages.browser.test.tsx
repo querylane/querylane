@@ -527,7 +527,13 @@ test("backend instance page explains unavailable server info", async () => {
   ];
   state.instanceQuery = { data: response };
 
-  render(<BackendInstancePage instanceId="prod" section="overview" />);
+  render(
+    <BackendInstancePage
+      instanceId="prod"
+      searchRoute="/instances/$instanceId"
+      section="overview"
+    />
+  );
 
   await expect.element(page.getByText("Server info unavailable")).toBeVisible();
   await expect
@@ -985,7 +991,11 @@ test("backend instance overview shows live metrics and database catalog together
   render(
     <ScreenshotFrame>
       <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendInstancePage instanceId="prod" section="overview" />
+        <BackendInstancePage
+          instanceId="prod"
+          searchRoute="/instances/$instanceId"
+          section="overview"
+        />
       </div>
     </ScreenshotFrame>
   );
@@ -1039,7 +1049,11 @@ test("backend instance activity matches the live sessions redesign", async () =>
   render(
     <ScreenshotFrame>
       <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendInstancePage instanceId="prod" section="activity" />
+        <BackendInstancePage
+          instanceId="prod"
+          searchRoute="/instances/$instanceId"
+          section="activity"
+        />
       </div>
     </ScreenshotFrame>
   );
@@ -1205,7 +1219,11 @@ test("background activity refresh keeps the table fixed in place", async () => {
     return (
       <ScreenshotFrame>
         <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
-          <BackendInstancePage instanceId="prod" section="activity" />
+          <BackendInstancePage
+            instanceId="prod"
+            searchRoute="/instances/$instanceId"
+            section="activity"
+          />
         </div>
       </ScreenshotFrame>
     );
@@ -1239,7 +1257,11 @@ test("backend instance activity empty state matches", async () => {
   render(
     <ScreenshotFrame>
       <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendInstancePage instanceId="prod" section="activity" />
+        <BackendInstancePage
+          instanceId="prod"
+          searchRoute="/instances/$instanceId"
+          section="activity"
+        />
       </div>
     </ScreenshotFrame>
   );
@@ -1277,7 +1299,11 @@ test("backend instance activity unavailable state matches", async () => {
   render(
     <ScreenshotFrame>
       <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendInstancePage instanceId="prod" section="activity" />
+        <BackendInstancePage
+          instanceId="prod"
+          searchRoute="/instances/$instanceId"
+          section="activity"
+        />
       </div>
     </ScreenshotFrame>
   );
@@ -1303,7 +1329,11 @@ test("backend instance activity disconnected state matches", async () => {
   render(
     <ScreenshotFrame>
       <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendInstancePage instanceId="prod" section="activity" />
+        <BackendInstancePage
+          instanceId="prod"
+          searchRoute="/instances/$instanceId"
+          section="activity"
+        />
       </div>
     </ScreenshotFrame>
   );
@@ -1546,6 +1576,7 @@ test("backend database extensions page matches design source", async () => {
         <BackendDatabaseExtensionsPage
           databaseId="customer-events"
           instanceId="prod"
+          searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
         />
       </div>
     </ScreenshotFrame>
@@ -1573,6 +1604,7 @@ test("backend database extensions pagination stays contained on narrow screens",
         <BackendDatabaseExtensionsPage
           databaseId="customer-events"
           instanceId="prod"
+          searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
         />
       </div>
     </ScreenshotFrame>
@@ -1606,6 +1638,7 @@ test("backend database extensions drawer matches design source", async () => {
         <BackendDatabaseExtensionsPage
           databaseId="customer-events"
           instanceId="prod"
+          searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
         />
       </div>
     </ScreenshotFrame>
@@ -1636,6 +1669,7 @@ test("backend database extensions available drawer matches design source", async
         <BackendDatabaseExtensionsPage
           databaseId="customer-events"
           instanceId="prod"
+          searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
         />
       </div>
     </ScreenshotFrame>
@@ -1672,7 +1706,11 @@ test("backend instance delete navigates without waiting for catalog refresh", as
   render(
     <ScreenshotFrame>
       <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendInstancePage instanceId="prod" section="configuration" />
+        <BackendInstancePage
+          instanceId="prod"
+          searchRoute="/instances/$instanceId"
+          section="configuration"
+        />
       </div>
     </ScreenshotFrame>
   );

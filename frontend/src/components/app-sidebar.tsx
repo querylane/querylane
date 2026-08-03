@@ -30,6 +30,7 @@ import {
 } from "@/components/querylane-ui/sidebar";
 import {
   buildNavLinkProps,
+  buildNavLinkSearch,
   getNavForScope,
   getNextStepHint,
   type NavLinkProps,
@@ -74,6 +75,7 @@ import {
   CONSOLE_CONFIG_STATIC_QUERY_OPTIONS,
   useGetConsoleConfigQuery,
 } from "@/hooks/api/console";
+import { buildCanonicalRolesSearch } from "@/lib/admin-navigation";
 import {
   type AdminPageId,
   type InstanceLayoutSearch,
@@ -84,6 +86,7 @@ import {
   type QuerylaneAboutMetadata,
   resolveQuerylaneAboutMetadata,
 } from "@/lib/app-metadata";
+import { assertNever } from "@/lib/assert-never";
 import { useDb } from "@/lib/db-context";
 import type { ScopeLevel } from "@/lib/db-navigation";
 import { useExplorerSidebarSlotRegistration } from "@/lib/explorer-sidebar-slot";
@@ -93,6 +96,75 @@ import { cn } from "@/lib/utils";
 import packageJson from "../../package.json" with { type: "json" };
 
 const FRONTEND_PACKAGE_VERSION = packageJson.version;
+
+function renderNavLink(link: NavLinkProps) {
+  switch (link.to) {
+    case "/instances/$instanceId":
+      return (
+        <Link
+          params={link.params}
+          search={(previous) => buildNavLinkSearch(link, previous)}
+          to={link.to}
+        />
+      );
+    case "/instances/$instanceId/activity":
+      return (
+        <Link
+          params={link.params}
+          search={(previous) => buildNavLinkSearch(link, previous)}
+          to={link.to}
+        />
+      );
+    case "/instances/$instanceId/configuration":
+      return (
+        <Link
+          params={link.params}
+          search={(previous) => buildNavLinkSearch(link, previous)}
+          to={link.to}
+        />
+      );
+    case "/instances/$instanceId/roles":
+      return (
+        <Link
+          params={link.params}
+          search={(previous) =>
+            buildCanonicalRolesSearch(previous, {
+              currentPage: link.currentPage,
+              targetPage: link.targetPage,
+            })
+          }
+          to={link.to}
+        />
+      );
+    case "/instances/$instanceId/databases/$databaseId":
+      return (
+        <Link
+          params={link.params}
+          search={(previous) => buildNavLinkSearch(link, previous)}
+          to={link.to}
+        />
+      );
+    case "/instances/$instanceId/databases/$databaseId/extensions":
+      return (
+        <Link
+          params={link.params}
+          search={(previous) => buildNavLinkSearch(link, previous)}
+          to={link.to}
+        />
+      );
+    case "/instances/$instanceId/databases/$databaseId/explorer":
+      return (
+        <Link
+          params={link.params}
+          search={(previous) => buildNavLinkSearch(link, previous)}
+          to={link.to}
+        />
+      );
+    default:
+      return assertNever(link);
+  }
+}
+
 function useSidebarFooterState() {
   const {
     data: consoleConfig,
@@ -309,7 +381,7 @@ function ExplorerRailContent({
           <SidebarMenuItem>
             <SidebarMenuButton
               disabled={!backLink}
-              {...(backLink ? { render: <Link {...backLink} /> } : {})}
+              {...(backLink ? { render: renderNavLink(backLink) } : {})}
               className="text-sidebar-foreground/70 hover:text-sidebar-foreground"
             >
               <ArrowLeftIcon className="size-4 shrink-0" />
@@ -340,7 +412,7 @@ function renderSidebarNavigationItem({
   const activeProps =
     item.isActive === undefined ? {} : { isActive: item.isActive };
   const renderProps = itemLinkProps
-    ? { render: <Link {...itemLinkProps} /> }
+    ? { render: renderNavLink(itemLinkProps) }
     : {};
 
   return (

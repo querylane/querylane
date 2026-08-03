@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   buildNavLinkProps,
+  buildNavLinkSearch,
   getNavForScope,
   getNextStepHint,
 } from "@/components/sidebar-navigation";
@@ -37,8 +38,14 @@ describe("sidebar navigation", () => {
       ids: { databaseId: "postgres", instanceId: "local" },
     });
 
+    const overviewLink = links["database.overview"];
+    expect(overviewLink).toBeDefined();
+    if (!overviewLink) {
+      throw new Error("expected database overview link");
+    }
+
     expect(
-      links["database.overview"]?.search({
+      buildNavLinkSearch(overviewLink, {
         category: "tables",
         name: "users",
         schema: "public",
