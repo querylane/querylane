@@ -1,4 +1,4 @@
-# React performance audit — 2026-07-16
+# React performance audit, 2026-07-16
 
 ## Result
 
@@ -7,7 +7,7 @@ React Compiler was already enabled globally through Rsbuild. Its unspecified
 explicit for every development and production build. An annotation-only mode
 exists solely as a local measurement control.
 
-The measured `infer` build reduced React work in all three representative
+The measured `infer` build reduced React work in all 3 representative
 journeys without changing their relevant RPC counts:
 
 | Journey | Component renders | React render time | Interaction duration | Long-task time | Relevant RPCs |
@@ -16,18 +16,18 @@ journeys without changing their relevant RPC counts:
 | Data Explorer filter and select | 2,514 → 1,358 (**-46.0%**) | 145.3 ms → 90.6 ms (**-37.6%**) | 490.3 ms → 411.5 ms (**-16.1%**) | 144 ms → 82 ms (**-43.1%**) | 2 → 2 |
 | Proto form edit and connection test | 306 → 55 (**-82.0%**) | 19.1 ms → 4.1 ms (**-78.5%**) | 178.4 ms → 181.1 ms (**+1.5%**) | 0 ms → 0 ms | 1 → 1 |
 
-Summing the three medians for orientation gives **51.6% fewer component
+Summing the 3 medians for orientation gives **51.6% fewer component
 renders**, **48.3% less React render time**, **16.1% lower interaction
 duration**, and **59.2% less long-task time**. This is not a whole-application
 estimate or production telemetry.
 
 No compiler-specific correctness defect was reproduced. Every measured journey
-completed five times in the annotation control and five times in infer mode.
+completed 5 times in the annotation control and 5 times in infer mode.
 
-## Data Explorer follow-up — 2026-07-17
+## Data Explorer follow-up, 2026-07-17
 
 The seeded `commerce.orders` page was profiled separately after reports that
-selecting every row and resizing the window had become laggy. Seven local React
+selecting every row and resizing the window had become laggy. 7 local React
 Scan samples were recorded before and after the fix on this route:
 
 `/instances/seed-demo-complex/databases/demo_complex/explorer?schema=commerce&category=tables&name=orders`
@@ -50,7 +50,7 @@ Its wall-clock interaction median moved only 547.4 ms → 532.7 ms because the
 automation still performs all 38 browser viewport changes; the reduced commit,
 render, script, task, and long-task measurements isolate the removed app work.
 
-Three causes were addressed:
+3 causes were addressed:
 
 - The select-all checkbox mounted an interactive tooltip layer on its pointer
   hot path. A dynamic native title retains the hint without the extra tooltip
@@ -62,14 +62,14 @@ Three causes were addressed:
   React batches continuous notifications while retaining responsive horizontal
   virtualization. A browser regression test sends ten observer deliveries:
   beta.59 without a patch produced 30 commits; beta.61 without a patch produces
-  at most three. The local package patch is no longer needed.
+  at most 3. The local package patch is no longer needed.
 
 The recorder and raw samples remain local audit artifacts; React Scan is not
 enabled in CI or production.
 
 ### Compiler hot-path pass
 
-A second pass found one inference boundary in the selection path.
+A second pass found 1 inference boundary in the selection path.
 `useGridColumns` is named like a hook but intentionally calls no React hooks, so
 infer mode did not transform it. Every selection render consequently rebuilt
 the complete column model and defeated the data grid's cell memoization. A
@@ -83,7 +83,7 @@ preserves all-row selection, clearing, indeterminate state, Shift selection,
 keyboard focus, accessible names, and the dynamic native title while removing
 avoidable component work.
 
-Five before samples and five final samples used the same exact live seeded
+5 before samples and 5 final samples used the same live seeded
 route, 1,000 ms pre-interaction settle, React Scan callbacks, and Chrome
 Performance metrics:
 
@@ -100,7 +100,7 @@ Performance metrics:
 The remaining selection renders are primarily the 23 visible rows and their 26
 selection cells, whose checked and selected states must change. No data cell or
 foreign-key preview subtree renders during select-all. The resize sweep remains
-bounded at a median eight `DataGrid` renders for 38 viewport changes, with no
+bounded at a median 8 `DataGrid` renders for 38 viewport changes, with no
 long task.
 
 ## Compatibility audit
@@ -109,21 +109,21 @@ long task.
 - React Hook Form render-time `watch()` calls: none.
 - React Hook Form subscriptions: `useWatch()` is used in both proto-form
   consumers. The whole-form subscription in `UiConfiguredPhase` remained
-  reactive under infer and the connection-test request count stayed at one.
-- Protobuf form bridge: its five infer runs validated the edited form, sent the
+  reactive under infer and the connection-test request count stayed at 1.
+- Protobuf form bridge: its 5 infer runs validated the edited form, sent the
   expected connection-test RPC, rendered the success state, and enabled the
   continuation action.
 - TanStack Table: v9 is installed; the measured roles search remained reactive
   under infer with no refetch.
 - Router, query, and data grid: the Data Explorer selection reached the expected
-  route and row result in every run with two relevant requests in both modes.
-- Compiler coverage: a one-off local health check compiled 814 of 814
+  route and row result in every run with 2 relevant requests in both modes.
+- Compiler coverage: a single local health check compiled 814 of 814
   discovered components, found Strict Mode, and found no incompatible
   libraries.
 - Manual memo APIs: application-owned source has no `useMemo`, `useCallback`,
   or `React.memo` call sites outside tests; vendored registry components remain
   byte-for-byte compatible with their upstream source.
-- Compiler directives: one targeted `"use memo"` forces the non-hook
+- Compiler directives: 1 targeted `"use memo"` forces the non-hook
   `useGridColumns` builder into infer compilation. The undocumented
   `"use no memo"` opt-out on `OverflowTooltip` was removed and its generated
   bundle now contains the compiler runtime cache. No opt-outs remain.
@@ -132,8 +132,8 @@ The broad local E2E run against the unchanged application and test source was
 not clean: infer passed 61/82 and the annotation control passed 62/82. Twenty
 failures were shared, so the differential run does not attribute them to React
 Compiler; this branch does not change those tests. Infer's only additional
-failure was one cold-route hard-budget sample at
-1,529 ms. The controlled five-run Data Explorer comparison moved the opposite
+failure was 1 cold-route hard-budget sample at
+1,529 ms. The controlled 5-run Data Explorer comparison moved the opposite
 direction, with a 490.3 ms → 411.5 ms median, so the isolated miss is not treated
 as a compiler correctness regression.
 
@@ -149,12 +149,12 @@ as a compiler correctness regression.
 - Control: `compilationMode: "annotation"`, `target: "19"`
 - Candidate/default: `compilationMode: "infer"`, `target: "19"`
 - Dataset: deterministic Playwright RPC mocks
-- Samples: five sequential runs per mode and journey; median reported
+- Samples: 5 sequential runs per mode and journey; median reported
 - Viewport and locale: 1280 × 900, UTC, en-US
 
 The recorder attached React Scan after each page reached its usable initial
-state. It then reset counters, performed one interaction, waited for the
-expected UI state and two animation frames, and captured:
+state. It then reset counters, performed 1 interaction, waited for the
+expected UI state and 2 animation frames, and captured:
 
 - component render count and render self-time,
 - commit count and compiler memo-cache markers,
@@ -165,7 +165,7 @@ expected UI state and two animation frames, and captured:
 Unnecessary-render tracking was disabled because it adds measurement overhead;
 no unnecessary-render claim is made.
 
-## Raw five-run samples
+## Raw 5-run samples
 
 Values are in run order. Times are milliseconds.
 
@@ -198,7 +198,7 @@ Values are in run order. Times are milliseconds.
 - `UiConfiguredPhase` remained the largest named proto-form cost, but its median
   React time was only 1.3 ms under infer and the end-to-end interaction did not
   materially improve. No form refactor is justified by this baseline.
-- Repeat the same five-run protocol after material table, router, form, or
+- Repeat the same 5-run protocol after material table, router, form, or
   provider changes. Keep RPC counts and correctness states as acceptance gates.
 
 ## References

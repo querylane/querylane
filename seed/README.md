@@ -2,7 +2,7 @@
 
 `task dev:seed` starts local PostgreSQL instances for exercising Querylane with different catalog shapes.
 
-| Instance config ID | Port | Database | Login used by Querylane | Purpose |
+| Instance configuration ID | Port | Database | Login used by Querylane | Purpose |
 | --- | ---: | --- | --- | --- |
 | `seed-normal` | 5500 | `ecommerce` | `seeduser` | Normal ecommerce fixture from seeder-buddy. |
 | `seed-edgecases` | 5501 | `postgres` | `seeduser` | Database-name and identifier edge cases. |
@@ -24,7 +24,7 @@ task dev:seed:clean
 task dev:seed
 ```
 
-## Demo Complex
+## Demo complex
 
 The Demo Complex fixture lives in `seed/instance-demo-complex/` and is loaded by the `pg-demo-complex` container on first boot.
 

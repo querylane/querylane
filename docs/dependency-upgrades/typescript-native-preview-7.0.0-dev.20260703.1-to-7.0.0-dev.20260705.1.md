@@ -1,10 +1,10 @@
-# Dependency upgrade: @typescript/native-preview 7.0.0-dev.20260703.1 -> 7.0.0-dev.20260705.1
+# Dependency upgrade: @typescript/native-preview 7.0.0-dev.20260703.1 to 7.0.0-dev.20260705.1
 
 ## Summary
-- Ecosystem: JavaScript/Bun frontend workspace.
-- Manifest/lockfiles: `frontend/package.json`, `frontend/bun.lock`.
-- Direct dep, parent dep, or transitive: direct dev dependency.
-- Requested by: user request for latest TypeScript native preview / `tsgo` and strict UI type-check hardening.
+- Ecosystem: JavaScript and Bun frontend workspace.
+- Manifest and lockfiles: `frontend/package.json`, `frontend/bun.lock`.
+- Dependency relation: direct dev dependency.
+- Request: user request for the latest TypeScript native preview and `tsgo`, plus strict UI type-check hardening.
 
 ## Version path
 Every published version from current exclusive to target inclusive; research every row; do not install every version.
@@ -16,25 +16,25 @@ Every published version from current exclusive to target inclusive; research eve
 
 ## Consolidated upgrade actions
 API changes: none required in Querylane source; `tsgo` binary remains present.
-Syntax/style-guide changes: removed local checker escape hatch in `rsbuild.config.ts` by typing Rsdoctor options structurally instead of `as never`.
-Behavior/config changes: removed `bun-types` from frontend type roots/package because no app/tooling source references Bun globals; kept browser app on Rsbuild env types and Node/tooling on Rsbuild + Node types; enabled `skipLibCheck: false` for registry UI declaration generation where vendor declarations pass.
-Repo actions before target install: audited TypeScript suppressions/casts, checked current scripts already use `tsgo` not `tsc`, verified `typescript@6.0.3` remains latest stable for peer-tooling package imports.
+Syntax and style-guide changes: removed the local checker escape hatch in `rsbuild.config.ts` by typing Rsdoctor options structurally instead of `as never`.
+Behavior and configuration changes: removed `bun-types` from frontend type roots and the package list because no application or tooling source references Bun globals; kept the browser application on Rsbuild environment types and Node tooling on Rsbuild and Node types; enabled `skipLibCheck: false` for registry UI declaration generation where vendor declarations pass.
+Repository actions before target install: audited TypeScript suppressions and casts, checked that current scripts already use `tsgo` instead of `tsc`, and verified that `typescript@6.0.3` remains the latest stable release for peer-tooling package imports.
 
 ## Dependency tree
-Target: `@typescript/native-preview`. Parents: root `frontend/package.json` devDependency. Children: platform optional packages `@typescript/native-preview-{darwin,linux,win32}-*`. Repo dependents: `type:check`, `type:check:ui`, `postinstall`. Peers: none. Plugins/adapters: none.
+Target: `@typescript/native-preview`. Parents: root `frontend/package.json` devDependency. Children: optional platform packages `@typescript/native-preview-{darwin,linux,win32}-*`. Repository dependents: `type:check`, `type:check:ui`, `postinstall`. Peers: none. Plugins and adapters: none.
 
 ## Non-SemVer scale
-Release cadence: daily/nightly. Change volume: unknown per nightly. Diff size: package tarball metadata changed, optional platform package integrities changed. API churn: low for CLI use because `tsgo` remains. Effort: low. Danger/blast radius: medium because compiler updates can surface stricter diagnostics.
+Release cadence: daily. Change volume: unknown per nightly. Diff size: package tarball metadata and optional platform package integrities changed. API churn: low for CLI use because `tsgo` remains. Effort: low. Danger and blast radius: medium because compiler updates can surface stricter diagnostics.
 
 ## Security notes
-| Advisory | Source | Reachability/exploitability | Fixed version | Decision |
+| Advisory | Source | Reachability and exploitability | Fixed version | Decision |
 |---|---|---|---|---|
 | none for `@typescript/native-preview` in this run | `bun audit` | not applicable | not applicable | proceed |
 | pre-existing transitive advisories: `js-yaml`, `tmp`, `uuid` | `bun audit` | not introduced by this dependency bump; separate remediation needed | see advisory fixed versions | documented residual risk |
 
 ## Risk gate
 Decision: apply now.
-Reason: user explicitly requested latest native-preview/`tsgo`; package was already on the same nightly preview line; compiler, full tests, doctor, and build pass after hardening changes.
+Reason: user explicitly requested the latest native preview and `tsgo`; the package was already on the same nightly preview line; the compiler, full tests, doctor, and build pass after the hardening changes.
 Explicit approval: direct user request in this thread.
 
 ## Commands
@@ -55,4 +55,4 @@ bun audit
 ```
 
 ## Verification
-Lint: `bun run lint:fix` passed. Type check: `bun run type:check` passed with `tsgo 7.0.0-dev.20260705.1`. Tests: focused unit/integration tests and full `bun run test` passed. Build/vet/security scan: `bun run doctor:changed`, `bun run build`, and `RSDOCTOR=1 bun run build:profile` passed; `bun audit` completed with pre-existing transitive advisories unrelated to this bump.
+Lint: `bun run lint:fix` passed. Type check: `bun run type:check` passed with `tsgo 7.0.0-dev.20260705.1`. Tests: focused unit and integration tests and the full `bun run test` command passed. Build, vet, and security scan: `bun run doctor:changed`, `bun run build`, and `RSDOCTOR=1 bun run build:profile` passed; `bun audit` completed with pre-existing transitive advisories unrelated to this bump.

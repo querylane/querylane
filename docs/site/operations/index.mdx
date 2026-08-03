@@ -1,6 +1,6 @@
 ---
-title: Operate Querylane
-description: Secure, back up, upgrade, restore, and monitor a durable Querylane installation.
+title: Operations
+description: Secure, back up, upgrade, restore, and monitor a durable Querylane installation with explicit ownership and acceptance checks.
 sidebar:
   label: Operations overview
 ---
@@ -12,7 +12,7 @@ Querylane sits between operators and PostgreSQL. Its operating boundary includes
     Give Querylane enough visibility for the workflows you need without using a superuser.
   </Card>
   <Card title="Backup and restore" href="/operations/backup-and-restore" icon="database-backup">
-    Protect metadata, encryption keys, configuration, and recovery instructions as one unit.
+    Protect metadata, encryption keys, configuration, and recovery instructions as 1 unit.
   </Card>
   <Card title="Upgrades and rollbacks" href="/operations/upgrades-and-rollbacks" icon="refresh-cw">
     Pin releases, inspect migrations, verify a new version, and prepare a restore-based rollback.
@@ -48,7 +48,7 @@ Querylane sits between operators and PostgreSQL. Its operating boundary includes
 1. Read the [release notes](/changelog).
 2. Back up metadata, configuration, and the instance secret key.
 3. Review pending migrations and save the current image digest.
-4. Upgrade one replica in a maintenance window.
+4. Upgrade 1 replica in a maintenance window.
 5. Verify readiness, a non-critical instance, and background samples.
 6. Scale out only after the first replica is healthy.
 

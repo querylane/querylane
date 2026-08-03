@@ -1,14 +1,14 @@
-# QueryLane Playwright smoke tests
+# Querylane Playwright smoke tests
 
-Playwright is a frontend UI-state harness for QueryLane. It is intentionally **not** the backend end-to-end test layer.
+Playwright is a frontend UI-state harness for Querylane. It is not the backend end-to-end test layer.
 
 ## Contract
 
 - CI starts the frontend only.
-- QueryLane RPC traffic must be intercepted with `page.route()`.
+- Querylane RPC traffic must be intercepted with `page.route()`.
 - Tests use `route.fulfill()` to model happy paths and unhappy paths.
 - A spec should not depend on a live backend, meta database, or user PostgreSQL instance.
-- Unhandled QueryLane RPCs return a mocked 503 error and abort the test so missing scenarios are visible and deterministic.
+- Unhandled Querylane RPCs return a mocked 503 error and abort the test so missing scenarios are visible and deterministic.
 - Retries stay disabled. A flaky smoke test should be fixed, simplified, or moved down to a cheaper unit/integration layer.
 
 ## When to add a Playwright test
@@ -26,7 +26,7 @@ Use backend tests for API correctness, database behavior, migrations, and AIP se
 
 - Treat each spec as a user-facing contract: test visible behavior plus the mocked RPC shape that matters for safety.
 - Keep each test under ~1s locally where possible; investigate any e2e test that repeatedly exceeds 2s.
-- Prefer one mocked browser journey per business risk. Do not add duplicate route-load tests for the same state.
+- Prefer 1 mocked browser journey per business risk. Do not add duplicate route-load tests for the same state.
 - Use `page.route()` and `route.fulfill()` for every backend condition. Never start a backend just to force an error state.
 - Prefer `getByRole()` / `getByLabel()` selectors. `getByText()` is fine for user-visible copy; test ids are only for layout/regression hooks.
 - Avoid fixed sleeps and polling loops. Wait on visible UI, URLs, or captured requests.

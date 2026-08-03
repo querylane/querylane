@@ -1,6 +1,6 @@
 ---
 title: How Querylane models PostgreSQL
-description: Learn the difference between Querylane storage, instances, databases, schemas, and live observations.
+description: Learn how Querylane separates its metadata database from managed PostgreSQL instances, then combines stored state with live observations.
 sidebar:
   label: How Querylane works
 ---
@@ -12,16 +12,16 @@ Querylane keeps its own application state separate from the PostgreSQL servers y
 | Term | Meaning |
 | --- | --- |
 | Querylane metadata database | Querylane's internal PostgreSQL database for configuration, connection records, sampled metrics, and application state |
-| Instance | One user-managed PostgreSQL server connection identified by host, port, and credentials |
+| Instance | A user-managed PostgreSQL server connection identified by host, port, and credentials |
 | Database | A PostgreSQL database inside an instance, such as `app`, `analytics`, or `postgres` |
 | Schema | A namespace inside a database, such as `public` or `pg_catalog` |
 | Object | A table, view, routine, sequence, type, collation, foreign server, policy, trigger, and other catalog resource |
 
-One Querylane installation can hold many instances. One instance can expose many databases, and each database owns its schemas and objects.
+A Querylane installation can hold many instances. Each instance can expose many databases, and each database owns its schemas and objects.
 
 ## Stored configuration and live observations
 
-Querylane combines two kinds of information:
+Querylane combines 2 kinds of information:
 
 - **Stored configuration** includes the connection record, labels, sampled metrics, and Querylane's own state.
 - **Live observations** come from the managed server's PostgreSQL catalogs and statistics views when you open or refresh a page.
@@ -30,7 +30,7 @@ That distinction matters during failures. Querylane can still know an instance e
 
 ## Connection ownership
 
-Instances can be **API-managed** through the browser or **config-managed** through YAML. API-managed credentials are stored in Querylane's metadata database and should be encrypted with a stable `QUERYLANE_INSTANCE_SECRET_KEY`. Config-managed secrets can be read from environment variables and are not written back to YAML.
+Instances can be **API-managed** through the browser or **configuration-managed** through YAML. API-managed credentials are stored in Querylane's metadata database and should be encrypted with a stable `QUERYLANE_INSTANCE_SECRET_KEY`. Configuration-managed secrets can be read from environment variables and are not written back to YAML.
 
 ## Read-first behavior
 

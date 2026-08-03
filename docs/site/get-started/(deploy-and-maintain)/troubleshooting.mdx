@@ -1,6 +1,6 @@
 ---
 title: Troubleshoot setup
-description: Diagnose Querylane startup, metadata setup, PostgreSQL connections, secrets, containers, and API requests.
+description: Diagnose Querylane startup, metadata setup, PostgreSQL connections, secrets, containers, and API requests with targeted recovery steps.
 sidebar:
   label: Troubleshooting
 ---
@@ -67,7 +67,7 @@ Embedded setup needs a writable data directory, a free local port, and enough di
 
 Common fixes:
 
-- Correct home-directory and data-directory ownership. If Querylane cannot write to its home directory, the wizard warns that it will use ephemeral storage.
+- Correct home-directory and data-directory ownership. If Querylane cannot write to its home directory, the wizard warns that it is using ephemeral storage.
 - If manual YAML pins a busy port, stop the conflicting process or set `embedded.port` to `0` for automatic selection.
 - Do not mount the Querylane filesystem read-only.
 - Avoid embedded mode inside ephemeral containers or with multiple replicas.
@@ -75,13 +75,13 @@ Common fixes:
 
 Use external PostgreSQL for durable container and multi-node deployments.
 
-## Querylane will not restart after changing the secret key
+## Querylane does not restart after changing the secret key
 
 All restarts and replicas must use the exact `QUERYLANE_INSTANCE_SECRET_KEY` that encrypted existing data. Querylane intentionally refuses to replace an encrypted shared signing key with a new one.
 
 Restore the original key from your secret manager. Key rotation is not currently supported. If the original value is lost, encrypted instance credentials cannot be recovered by Querylane.
 
-## A managed instance will not connect
+## A managed instance does not connect
 
 Run the connection test from the registration form and check:
 

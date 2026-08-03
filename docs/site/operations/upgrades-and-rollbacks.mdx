@@ -5,7 +5,7 @@ sidebar:
   label: Upgrades and rollbacks
 ---
 
-Querylane applies pending metadata migrations during startup. Treat an application upgrade and metadata schema change as one operation.
+Querylane applies pending metadata migrations during startup. Treat an application upgrade and metadata schema change as 1 operation.
 
 Use immutable image digests. A rolling tag can move between the time you test and the time you deploy.
 
@@ -48,18 +48,18 @@ docker run --rm \
 
 The server runs forward migrations automatically. Use the standalone migration commands for inspection and recovery, not as a routine extra step before every start.
 
-## Upgrade one replica first
+## Upgrade 1 replica first
 
 For the safest preview upgrade, use a maintenance window:
 
 1. Stop or drain all current Querylane replicas.
-2. Start one replica with the target image, existing config, metadata DSN, and instance secret key.
+2. Start 1 replica with the target image, existing configuration, metadata DSN, and instance secret key.
 3. Wait for metadata migration and service initialization to finish.
-4. Run the acceptance checks below.
+4. Run the acceptance checks.
 5. Start the remaining replicas only after the first is healthy.
 6. Keep the pre-upgrade backup until the release has passed your retention window.
 
-Do not assume a zero-downtime rolling upgrade is safe across a metadata schema change. Use one only when the release notes explicitly state that old and new replicas are schema-compatible.
+Do not assume a 0-downtime rolling upgrade is safe across a metadata schema change. Use it only when the release notes explicitly state that old and new replicas are schema-compatible.
 
 ## Acceptance checks
 
@@ -80,10 +80,10 @@ Confirm that the response reports the ready state and a migration version.
 
 ### Managed instances
 
-- Open one non-critical instance.
+- Open 1 non-critical instance.
 - Confirm connection state, server identity, and database list.
 - Open Activity and a permitted table.
-- Wait for at least one background probe cycle and inspect fresh metrics.
+- Wait for at least 1 background probe cycle and inspect fresh metrics.
 - Exercise any API client or export workflow your team relies on.
 
 ### Operations

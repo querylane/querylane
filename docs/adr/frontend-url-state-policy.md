@@ -34,7 +34,7 @@ Avoid by default:
 - ephemeral UI state, including dialogs, popovers, hover, focus, toasts, and copied state
 - verbose encoded blobs
 - full data grid replay state
-- sort, unless there is a clear bookmark/share UX win
+- sort, only when it creates a clear bookmarking or sharing benefit
 
 URL-backed state is the source of truth. Do not duplicate URL params into local React `useState`; derive them from route-owned search params or a URL-state hook and write changes back to the URL. Empty/default values should be omitted.
 
@@ -47,5 +47,5 @@ Typing into simple search fields should use `history: replace` or equivalent beh
 - Data Explorer keeps schema, object category/type, and object name in the URL because those are stable resource identity.
 - Data Explorer table detail keeps non-default table tabs in `tab` because they are meaningful sub-views; schema overview search/facets stay local because they are detail-scoped inventory controls.
 - Data Explorer must not add pagination, page size, selected row drawers, advanced table filters, sort, category expansion, or full grid replay state as part of this policy.
-- Instance database and role list search use `q`, omit empty values, and update via replacement history.
+- Instance database and role list search use `q`, omit empty values, and update with replacement history.
 - Role list kind filtering uses `type`; map-tab visualization filters stay local.

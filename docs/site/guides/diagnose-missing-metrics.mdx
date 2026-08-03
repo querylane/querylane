@@ -1,6 +1,6 @@
 ---
 title: Diagnose missing metrics
-description: Distinguish collection delay, target permissions, PostgreSQL extension setup, and Querylane runner failures.
+description: Distinguish collection delay, target permissions, PostgreSQL extension setup, and Querylane runner failures when charts are incomplete.
 sidebar:
   label: Diagnose missing metrics
 ---
@@ -10,8 +10,8 @@ Use this workflow when charts are empty, Query insights are unavailable, databas
 ## Before you start
 
 - Confirm the instance is connected and note when it was registered.
-- Record which surface is missing data: overview charts, database sizes, Query insights, or one table statistic.
-- Check whether the problem affects one instance, one database, or every target.
+- Record which surface is missing data: overview charts, database sizes, Query insights, or 1 table statistic.
+- Check whether the problem affects 1 instance, 1 database, or every target.
 - Give background collection enough time to produce its first samples.
 
 Querylane collects different signals at different cadences. Activity can be live while sampled charts are still collecting, and storage or vacuum signals can take several minutes to appear.
@@ -26,7 +26,7 @@ On the instance overview, expand the health checks for:
 - connectivity; and
 - connection capacity.
 
-A warning about limited statistics is different from a disconnected instance. Querylane keeps available panels working when one probe cannot run.
+A warning about limited statistics is different from a disconnected instance. Querylane keeps available panels working when 1 probe cannot run.
 
 ## 2. Check the permission profile
 
@@ -92,6 +92,6 @@ In a multi-replica deployment, every replica must share the same metadata databa
 - **New instance or idle target:** wait for the relevant cadence and create only approved test activity.
 - **Permission warning:** grant the narrow monitoring role, reconnect, and verify again.
 - **Missing `pg_stat_statements`:** schedule extension and server configuration through the database owner.
-- **One probe fails:** capture its health detail and PostgreSQL error while leaving healthy surfaces in use.
+- **1 probe fails:** capture its health detail and PostgreSQL error while leaving healthy surfaces in use.
 - **All samples are stale:** inspect runner state, metadata availability, and replica logs.
 - **Metrics resumed:** record the first valid sample time so dashboards are not read as if the gap contained zeros.

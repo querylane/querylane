@@ -1,6 +1,6 @@
 ---
 title: Call the experimental API
-description: Send alpha Connect and gRPC requests with curl, grpcurl, or generated TypeScript clients.
+description: Send alpha Connect and gRPC requests with curl, grpcurl, or generated TypeScript clients, including unary and streaming examples.
 sidebar:
   label: Call the API
 ---
@@ -23,7 +23,7 @@ Use the [generated experimental reference](/api) when you need the current metho
 
 ## Read method shapes
 
-The experimental reference labels each operation by its RPC shape. Unary methods return once, while streaming methods keep one or both sides of the connection open:
+The experimental reference labels each operation by its RPC shape. Unary methods return once, while streaming methods keep 1 or both sides of the connection open:
 
 <Component path="rpc-method-kinds" />
 
@@ -46,7 +46,7 @@ curl --fail-with-body --silent --show-error \
   "$QUERYLANE_URL/querylane.console.v1alpha1.InstanceService/ListInstances"
 ```
 
-Get one resource by its complete name:
+Get a resource by its complete name:
 
 ```sh
 curl --fail-with-body --silent --show-error \
@@ -95,7 +95,7 @@ Do not rely on reflection in deployed automation. Generate the protoset from the
 
 ## Register an instance
 
-`CreateInstance` accepts one of the current `spec` or legacy `instance` request bodies. Prefer `spec`:
+`CreateInstance` accepts 1 of the current `spec` or legacy `instance` request bodies. Prefer `spec`:
 
 ```sh
 curl --fail-with-body --silent --show-error \
@@ -121,7 +121,7 @@ curl --fail-with-body --silent --show-error \
 JSON
 ```
 
-The password travels in the request body. Use HTTPS, keep shell history and CI logs clean, and prefer config-managed credentials sourced from environment variables when automation should not send inline passwords.
+The password travels in the request body. Use HTTPS, keep shell history and CI logs clean, and prefer configuration-managed credentials sourced from environment variables when automation should not send inline passwords.
 
 ## Use a generated TypeScript client
 

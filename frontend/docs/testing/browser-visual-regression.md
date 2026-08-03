@@ -1,8 +1,8 @@
 # Browser visual regression tests
 
 Use Vitest browser mode for focused UI snapshots of critical components and routes.
-It runs in Chromium via Playwright, but stays component-scoped: mock API hooks,
-render one stable state, assert accessible text, then snapshot the smallest stable
+It runs in Chromium through Playwright, but stays component-scoped: mock API hooks,
+render 1 stable state, assert accessible text, then snapshot the smallest stable
 container.
 
 Use Playwright e2e separately for full user journeys against a served app. E2e
@@ -23,13 +23,13 @@ For an explicit dark-theme local run, call Vitest directly with
 
 ## Stability rules
 
-- Chromium baselines use a canonical Linux screenshot path via Vitest's
+- Chromium baselines use a canonical Linux screenshot path through Vitest's
   `resolveScreenshotPath`; cross-browser belongs in e2e.
-- Update baselines from Linux only. The config rejects `--update` on macOS/Darwin
+- Update baselines from Linux only. The configuration rejects `--update` on macOS/Darwin
   so local updates cannot overwrite canonical Linux screenshots.
 - Default local browser tests run light mode only for fast feedback. CI uses the
-  all-themes config so dark baselines stay required.
-- Reduced motion and near-zero CSS animation/transition duration are applied in
+  all-themes configuration so dark baselines stay required.
+- Reduced motion and CSS animation and transition durations near 0 are applied in
   `vitest.browser.setup.css`.
 - Fixed `ScreenshotFrame` dimensions and a fixed browser viewport keep layout
   deterministic.

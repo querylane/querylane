@@ -1,11 +1,11 @@
 ---
-title: Complete your first successful session
-description: Verify one PostgreSQL connection, learn the Querylane workspace, and answer an operational question you can validate.
+title: Complete a successful first session
+description: Verify 1 PostgreSQL connection, learn the Querylane workspace, and answer an operational question you can validate.
 sidebar:
   label: First successful session
 ---
 
-A successful first session is more than a green connection. You should understand where to find health, activity, database structure, and access information, then use one of those views to answer a real question about a server you know.
+A successful first session is more than a green connection. You should understand where to find health, activity, database structure, and access information, then use 1 of those views to answer a real question about a server you know.
 
 :::tip
 Start with a non-production instance and a dedicated read-only PostgreSQL login. Familiar data gives you a reliable baseline for deciding whether Querylane's view is accurate and useful.
@@ -16,9 +16,9 @@ Start with a non-production instance and a dedicated read-only PostgreSQL login.
 You need:
 
 - a completed Querylane storage setup;
-- one [registered PostgreSQL instance](/get-started/register-instance);
+- 1 [registered PostgreSQL instance](/get-started/register-instance);
 - permission to inspect the databases and schemas relevant to your evaluation;
-- one fact or question you can independently verify, such as current connections, a known table, or a role membership.
+- 1 fact or question you can independently verify, such as current connections, a known table, or a role membership.
 
 ## Follow the first-session path
 
@@ -29,7 +29,7 @@ You need:
   <Step title="Find a database object you know">
     Open a database, then browse to a familiar schema and table. Check its columns, indexes, constraints, policies, partitions, or triggers in the [data explorer](/guides/data-explorer). This confirms Querylane can see the catalog objects your login should expose.
   </Step>
-  <Step title="Answer one live question">
+  <Step title="Answer 1 live question">
     Open Activity and look for active sessions, long transactions, waits, or blocking relationships. If blocking is the question you chose, follow [Find blocking sessions](/guides/find-blocking-sessions) from symptom to next action.
   </Step>
   <Step title="Check the access boundary">
@@ -44,7 +44,7 @@ You need:
 
 - The instance remains connected and the overview matches the server you intended to register.
 - You can navigate from the instance to a database, schema, and known object.
-- You can explain at least one current health, activity, structure, or access finding.
+- You can explain at least 1 current health, activity, structure, or access finding.
 - The finding agrees with another trusted source, such as `psql`, an existing dashboard, or a known catalog definition.
 - You know whether a missing view is expected from the PostgreSQL login's permissions.
 - You have a clear next workflow instead of exploring the interface without a question.
@@ -53,13 +53,13 @@ You need:
 
 | Symptom | Next check |
 | --- | --- |
-| The instance disconnects or health is incomplete | [Troubleshoot the managed instance connection](/get-started/troubleshooting#a-managed-instance-will-not-connect) |
+| The instance disconnects or health is incomplete | [Troubleshoot the managed instance connection](/get-started/troubleshooting#a-managed-instance-does-not-connect) |
 | Expected databases or objects are missing | Review [PostgreSQL permissions](/operations/postgresql-permissions) and reconnect with the intended login |
 | Activity is empty or incomplete | Confirm the login can read monitoring views, then review [activity and health](/guides/activity-and-health) |
 | Metrics have gaps | Follow [Diagnose missing metrics](/guides/diagnose-missing-metrics) |
 | A finding is surprising | Validate it with `psql` before changing PostgreSQL or Querylane configuration |
 
-## Choose your next workflow
+## Choose the next workflow
 
 | Goal | Continue with |
 | --- | --- |

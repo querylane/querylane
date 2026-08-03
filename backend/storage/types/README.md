@@ -1,13 +1,13 @@
-# Proto-Compatible Types
+# Protobuf-compatible types
 
-This package provides custom types that seamlessly bridge the gap between protobuf types and PostgreSQL database types, eliminating the need for manual JSON marshaling/unmarshaling in mappers.
+This package maps protobuf types to PostgreSQL database types. The custom types keep JSON marshaling and unmarshaling out of mappers.
 
 ## Overview
 
 The traditional approach required manual JSON handling in mapper functions:
 
 ```go
-// OLD APPROACH - Manual JSON handling
+// Previous approach: manual JSON handling
 func (m mapper) serializeLabels(labels map[string]string) *string {
     data, _ := json.Marshal(labels)
     result := string(data)
@@ -24,27 +24,27 @@ func (m mapper) parseLabels(labelsJSON *string) map[string]string {
 With our custom types, this becomes:
 
 ```go
-// NEW APPROACH - Type-safe with explicit conversion
+// Current approach: type-safe explicit conversion
 workspace := &api.Workspace{
     Labels: w.Labels.ToMap(),
     CreateTime: timestamppb.New(w.CreatedAt),
 }
 
-// For INSERT operations - explicit ToJSONB() required for type safety
+// INSERT operations require explicit ToJSONB() conversion.
 stmt := table.Workspace.
     INSERT(table.Workspace.Labels).
-    VALUES(labels.ToJSONB()) // ← Compile-time type safety
+    VALUES(labels.ToJSONB()) // Compile-time type safety
 ```
 
-## Custom Types
+## Custom types
 
 ### StringMap
 
-**Purpose**: Maps `map[string]string` (protobuf) <-> `JSONB` (PostgreSQL)
+**Purpose:** Maps protobuf `map[string]string` values to and from PostgreSQL `JSONB`.
 
-**Usage**:
+**Usage:**
 ```go
-// In generated model (automatically applied via go-jet template)
+// The go-jet template applies this type to the generated model.
 type Workspace struct {
     Labels types.StringMap  // Applied automatically to all JSONB fields
 }
@@ -60,37 +60,41 @@ workspace := model.Workspace{
 }
 ```
 
-**Features**:
-- Automatic JSON marshaling/unmarshaling
-- Null-safe operations
-- Error handling with detailed messages
-- Empty value handling
+**Features:**
+
+- automatic JSON marshaling and unmarshaling;
+- null-safe operations;
+- detailed error messages; and
+- empty-value handling.
 
 ## Integration with go-jet
 
-### Automated Model Generation
+### Automated model generation
 
-The system uses go-jet with custom template generation:
+The system generates go-jet models with a custom template:
 
-1. **Schema Discovery**: Connects to PostgreSQL database and discovers tables/columns
-2. **Template Customization**: Applies custom type mappings for JSONB fields during generation
-3. **Code Generation**: Generates models with proper imports and type references
+1. **Discover the schema:** connect to PostgreSQL and find its tables and columns.
+2. **Customize the template:** apply custom type mappings to JSONB fields.
+3. **Generate code:** create models with the required imports and type references.
 
-### Generation Process
+### Generation process
 
 ```bash
 task sql:generate
 ```
 
-This runs:
-`go run tools/jet_generator.go <dsn>` - Custom go-jet generation with template hooks
+This runs the custom go-jet generator with template hooks:
 
-### Current Type Mappings
+```sh
+go run tools/jet_generator.go <dsn>
+```
 
-- **All JSONB columns named "labels"**  -> `types.StringMap` (generic string map storage)
-- **Other types** → Default go-jet types
+### Current type mappings
 
-### Generated Code Example
+- All JSONB columns named `labels` map to `types.StringMap`.
+- Other columns use the default go-jet types.
+
+### Generated code example
 
 ```go
 // backend/storage/gen/querylane/public/model/workspace.go
@@ -106,23 +110,23 @@ type Workspace struct {
 
 ## Benefits
 
-1. **Type Safety**: Compile-time validation for all mappings
-2. **Performance**: No runtime JSON marshaling overhead in mappers
-3. **Maintainability**: Automated type application, no manual model editing
-4. **Scalability**: Easy to add new proto types via post-processor
-5. **Idiomatic**: Clean, readable Go code following conventions
+1. **Type safety:** validate mappings at compile time.
+2. **Performance:** keep runtime JSON marshaling out of mappers.
+3. **Maintenance:** apply types automatically without manual model edits.
+4. **Extension:** add protobuf types through the postprocessor.
+5. **Go conventions:** keep mapper code direct and readable.
 
-## Extension Pattern
+## Extension pattern
 
 To add support for new proto types:
 
 1. Create a new type in `backend/storage/types/`
 2. Implement `sql.Scanner` and `driver.Valuer` interfaces
-3. Add conversion methods (e.g., `ToMap()`, `FromMap()`)
+3. Add conversion methods, such as `ToMap()` and `FromMap()`.
 4. Update `tools/post_process_models.go` to detect and apply the new type
 5. Use in mappers with direct assignment
 
-### Example: Adding ProtoStringSlice
+### Example: add `ProtoStringSlice`
 
 ```go
 // 1. Create the type

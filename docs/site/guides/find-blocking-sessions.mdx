@@ -1,6 +1,6 @@
 ---
 title: Find blocking sessions
-description: Trace lock waits from blocked work to the root blocker and its client context.
+description: Trace PostgreSQL lock waits from blocked work to the root blocker and its client context before choosing an intervention.
 sidebar:
   label: Find blocking sessions
 ---
@@ -19,7 +19,7 @@ Querylane explains blocking but does not cancel or terminate sessions.
 
 Open the instance, select **Activity**, and refresh.
 
-When PostgreSQL reports blockers, Querylane places a blocking-chain card above the session table. Read it from the root blocker to the waiting sessions. A blocker can itself wait behind another backend, so follow the complete chain before choosing a PID.
+When PostgreSQL reports blockers, Querylane adds a blocking-chain card to the session view. Read it from the root blocker to the waiting sessions. A blocker can itself wait behind another backend, so follow the complete chain before choosing a PID.
 
 If a blocker is not present in the sample, Querylane says so. The session may have ended, fallen outside the 50-session snapshot, or be hidden by the registered role's statistics visibility.
 
@@ -46,10 +46,10 @@ Open representative waiting sessions and compare:
 - how long each has waited;
 - which applications and databases are affected;
 - the lock wait event;
-- whether one blocker fans out to many sessions; and
+- whether 1 blocker fans out to many sessions; and
 - whether retries are adding more waiting work.
 
-This separates one delayed maintenance task from a blocker on a critical request path.
+This separates 1 delayed maintenance task from a blocker on a critical request path.
 
 ## 4. Verify before intervention
 

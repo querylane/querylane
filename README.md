@@ -1,6 +1,6 @@
 # Querylane
 
-Postgres admin UI for managing multiple PostgreSQL servers.
+Self-hosted PostgreSQL admin UI for managing multiple servers.
 
 ## Documentation
 
@@ -13,9 +13,9 @@ bun run docs:dev
 
 Use `bun run docs:build` to verify the site.
 
-Run `bun run docs:eval` to test whether the docs answer the critical reader
-questions in `evals.yaml`. This uses the Codex CLI with an OpenAI API key. For
-local runs, install Codex and authenticate it first:
+Run `bun run docs:eval` to test whether the docs answer the critical questions
+in `evals.yaml`. The command uses the Codex CLI with an OpenAI API key. Install
+and authenticate Codex before running it locally:
 
 ```sh
 npm install --global @openai/codex
@@ -23,11 +23,11 @@ printenv OPENAI_API_KEY | codex login --with-api-key
 bun run docs:eval
 ```
 
-To keep API spending opt-in, pull request CI does not run evals automatically.
-The `docs-eval` manual GitHub Actions workflow maps the `OPENAI_API_KEY`
-repository secret to Codex only for its eval step. Select the branch and run the
-workflow from GitHub Actions when you want a paid eval. OpenAI bills API-key
-usage at standard API rates.
+Pull request CI does not run paid evals automatically. Use the manual GitHub Actions workflow,
+`docs-eval`, when you want a paid eval. It maps the
+`OPENAI_API_KEY` repository secret to Codex only for its eval step. Select the
+branch and run the workflow from GitHub Actions. OpenAI bills API-key usage at
+standard API rates.
 
 The API reference is generated from `proto/`. Run `task proto:generate` after
 changing an API contract.

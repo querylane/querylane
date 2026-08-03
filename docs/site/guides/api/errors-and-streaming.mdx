@@ -1,11 +1,13 @@
 ---
 title: Errors and streaming
-description: Handle Connect error codes, field details, partial responses, deadlines, and server-streaming methods.
+description: Handle Connect error codes, field details, partial responses, deadlines, and server-streaming methods without hiding available data.
 sidebar:
   label: Errors and streaming
 ---
 
 API clients need to distinguish a failed RPC, a successful response with partial errors, and a stream that ends with an error.
+
+Start with [Call the Querylane API](/guides/api/calling-the-api) for protocols, credentials, and request examples.
 
 ## Handle unary errors
 
@@ -54,13 +56,13 @@ Do not log complete request bodies for methods that accept PostgreSQL passwords,
 
 ## Read validation details
 
-Validation failures can carry structured `google.rpc.BadRequest` details with one or more field violations. PostgreSQL failures can include Querylane's transport-neutral PostgreSQL detail with SQLSTATE category and safe operation context.
+Validation failures can carry structured `google.rpc.BadRequest` details with 1 or more field violations. PostgreSQL failures can include Querylane's transport-neutral PostgreSQL detail with SQLSTATE category and safe operation context.
 
 Register the protobuf detail types in clients that decode `google.protobuf.Any`. If a generic client does not know a detail type, keep the top-level Connect code and message useful and retain the raw detail only through an approved diagnostic channel.
 
 ## Handle partial responses
 
-Some live overview and insight RPCs return useful data plus `partialErrors`. The RPC itself succeeds because one failed probe should not hide healthy sections.
+Some live overview and insight RPCs return useful data plus `partialErrors`. The RPC itself succeeds because 1 failed probe should not hide healthy sections.
 
 For each partial error:
 
@@ -69,7 +71,7 @@ For each partial error:
 3. keep successful sections visible; and
 4. offer a targeted retry or permission fix.
 
-Do not convert a missing metric into zero. Zero is an observation; unavailable means Querylane did not obtain one.
+Do not convert a missing metric into 0. A value of 0 is an observation; unavailable means Querylane did not obtain a value.
 
 ## Call a server stream
 
