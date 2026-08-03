@@ -15,9 +15,7 @@ export function useUrlTableSearch(): [
     strict: false,
   });
   const navigate = useNavigate();
-  const location = useLocation({
-    select: ({ hash, pathname, searchStr }) => ({ hash, pathname, searchStr }),
-  });
+  const locationHash = useLocation({ select: ({ hash }) => hash });
   const pendingNavigationRef = useRef<{
     settledRevisionAtStart: number;
     text: string;
@@ -50,21 +48,16 @@ export function useUrlTableSearch(): [
     pendingNavigationRef.current = pendingNavigation;
     setDraftSearchText(nextValue);
 
-    const params = new URLSearchParams(location.searchStr);
-    if (nextValue === "") {
-      params.delete("q");
-    } else {
-      params.set("q", nextValue);
-    }
-
-    const nextSearch = params.toString();
-    const nextHash = location.hash ? `#${location.hash}` : "";
-
     return navigate({
-      href: `${location.pathname}${nextSearch ? `?${nextSearch}` : ""}${nextHash}`,
+      hash: locationHash,
       ignoreBlocker: true,
       replace: true,
       resetScroll: false,
+      search: (previous) => ({
+        ...previous,
+        q: nextValue === "" ? undefined : nextValue,
+      }),
+      to: ".",
     })
       .then(() => {
         if (pendingNavigationRef.current === pendingNavigation) {

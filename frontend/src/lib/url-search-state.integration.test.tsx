@@ -4,6 +4,7 @@ import {
   createRoute,
   createRouter,
   RouterProvider,
+  retainSearchParams,
 } from "@tanstack/react-router";
 import {
   act,
@@ -37,6 +38,7 @@ function renderSearchHarness(initialEntry = "/instances/prod/roles") {
   const instanceRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "instances/$instanceId",
+    search: { middlewares: [retainSearchParams(["q"])] },
     validateSearch: (search: Record<string, unknown>) => ({
       q: typeof search["q"] === "string" ? search["q"] : undefined,
     }),
