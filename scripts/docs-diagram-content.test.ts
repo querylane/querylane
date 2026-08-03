@@ -75,15 +75,18 @@ test("replaces the production ASCII topology with the theme-aware diagram", asyn
 	expect(source).toContain("Managed instances");
 });
 
-test("gives the stored and live sequence more inline room", async () => {
-	const [source, theme] = await Promise.all([
+test("gives sequence diagrams more inline room", async () => {
+	const [storedAndLive, serverStream, theme] = await Promise.all([
 		read("concepts/how-querylane-works.mdx"),
+		read("guides/api/errors-and-streaming.mdx"),
 		readFile(new URL("../theme.css", import.meta.url), "utf8"),
 	]);
 
-	expect(source).toContain(
-		'<div class="docs-diagram-wide">\n\n```mermaid\nsequenceDiagram',
-	);
+	for (const source of [storedAndLive, serverStream]) {
+		expect(source).toContain(
+			'<div class="docs-diagram-wide">\n\n```mermaid\nsequenceDiagram',
+		);
+	}
 	expect(theme).toContain(".docs-diagram-wide");
 	expect(theme).toContain("width: min(56rem, calc(100vw - 2rem))");
 	expect(theme).toContain(".docs-diagram-wide blume-mermaid > div");

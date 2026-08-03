@@ -75,6 +75,8 @@ Do not convert a missing metric into zero. Zero is an observation; unavailable m
 
 `TableDataService.StreamRows`, `SQLService.ExecuteQuery`, `OnboardingService.SetupAppDatabase`, and `OnboardingService.WatchConfigChanges` return server streams. Connect streaming uses framed `application/connect+json`, not newline-delimited JSON, so use a generated client.
 
+<div class="docs-diagram-wide">
+
 ```mermaid
 sequenceDiagram
   actor Client
@@ -99,6 +101,8 @@ sequenceDiagram
     Querylane--xWork: Release underlying work
   end
 ```
+
+</div>
 
 Walk through one successful stream from top to bottom. The client starts the operation once, then consumes framed events incrementally. SQL and table streams read PostgreSQL; onboarding streams report background progress instead. Row streams identify their shape before sending batches and finish with statistics. A terminal error can follow messages already processed, so only a clean end proves that the stream completed.
 
