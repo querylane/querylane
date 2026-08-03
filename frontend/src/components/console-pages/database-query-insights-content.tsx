@@ -29,8 +29,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { DataTableFilter } from "@/components/ui/data-table";
-import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
+import {
+  type DataTableFilterFacet,
+  DataTableFilterToolbar,
+} from "@/components/ui/data-table-filter-toolbar";
 import {
   Select,
   SelectContent,
@@ -516,70 +518,6 @@ function MetricUnavailableNotice({
   );
 }
 
-function QueryToolbar({
-  kind,
-  meanFilter,
-  onKindChange,
-  onMeanFilterChange,
-  onSearchChange,
-  search,
-}: {
-  kind: QueryKindFilter;
-  meanFilter: MeanFilterValue;
-  onKindChange: (kind: QueryKindFilter) => void;
-  onMeanFilterChange: (value: MeanFilterValue) => void;
-  onSearchChange: (value: string) => void;
-  search: string;
-}) {
-  const hasActiveFacet = kind !== "all" || meanFilter !== "any";
-
-  return (
-    <div
-      className="flex min-w-0 flex-wrap items-center justify-start gap-2"
-      data-slot="query-insights-filter-bar"
-    >
-      <DataTableFilter
-        onChange={onSearchChange}
-        placeholder="Search queries…"
-        value={search}
-      />
-      <DataTableFacetedFilter
-        onSelectedValuesChange={(values) =>
-          onKindChange(queryKindFromSelectedValues(values))
-        }
-        options={QUERY_KIND_FILTER_OPTIONS}
-        selectedValues={kind === "all" ? [] : [kind]}
-        singleSelect={true}
-        title="Type"
-      />
-      <DataTableFacetedFilter
-        onSelectedValuesChange={(values) =>
-          onMeanFilterChange(meanFilterFromSelectedValues(values))
-        }
-        options={MEAN_FILTER_OPTIONS}
-        selectedValues={meanFilter === "any" ? [] : [meanFilter]}
-        singleSelect={true}
-        title="Mean"
-      />
-      {hasActiveFacet ? (
-        <Button
-          className="h-8 px-2 text-xs"
-          onClick={() => {
-            onKindChange("all");
-            onMeanFilterChange("any");
-          }}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <X data-icon="inline-start" />
-          Reset
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
 function TopQueriesTable({
   onSelectQuery,
   queries,
@@ -904,6 +842,32 @@ function TopQueriesCard({
     setPageIndex(Math.min(pageCount - 1, safePageIndex + 1));
     onSelectQuery(null);
   };
+  const facets = [
+    {
+      label: "Type",
+      onChange: (values: string[]) =>
+        handleKindChange(queryKindFromSelectedValues(values)),
+      options: QUERY_KIND_FILTER_OPTIONS,
+      selected: kind === "all" ? [] : [kind],
+      singleSelect: true,
+    },
+    {
+      label: "Mean",
+      onChange: (values: string[]) =>
+        handleMeanFilterChange(meanFilterFromSelectedValues(values)),
+      options: MEAN_FILTER_OPTIONS,
+      selected: meanFilter === "any" ? [] : [meanFilter],
+      singleSelect: true,
+    },
+  ] satisfies DataTableFilterFacet[];
+
+  function handleClearAll() {
+    setSearch("");
+    setKind("all");
+    setMeanFilter("any");
+    setPageIndex(0);
+    onSelectQuery(null);
+  }
 
   return (
     <CardShell>
@@ -917,13 +881,13 @@ function TopQueriesCard({
           </div>
         </div>
         {insights.queryStatsAvailable ? (
-          <QueryToolbar
-            kind={kind}
-            meanFilter={meanFilter}
-            onKindChange={handleKindChange}
-            onMeanFilterChange={handleMeanFilterChange}
+          <DataTableFilterToolbar
+            dataSlot="query-insights-filter-bar"
+            facets={facets}
+            onClearAll={handleClearAll}
             onSearchChange={handleSearchChange}
-            search={search}
+            searchPlaceholder="Search queries…"
+            searchValue={search}
           />
         ) : null}
       </CardHeader>

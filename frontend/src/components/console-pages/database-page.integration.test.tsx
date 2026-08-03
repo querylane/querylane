@@ -1291,7 +1291,7 @@ describe("backend database query insights drawer", () => {
       screen.queryByRole("button", { name: "Query text unavailable" })
     ).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Reset" }));
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
     await user.click(screen.getByRole("button", { name: "Type" }));
     await user.click(screen.getByRole("option", { name: "Read queries" }));
 
@@ -1551,7 +1551,6 @@ describe("database query insights resilience", () => {
       screen.queryByRole("button", { name: SELECT_EVENTS_QUERY_BUTTON_RE })
     ).toBeNull();
 
-    await user.clear(searchInput);
     await user.click(within(filterBar).getByRole("button", { name: "Type" }));
     await user.click(screen.getByRole("option", { name: "Write queries" }));
 
@@ -1562,7 +1561,13 @@ describe("database query insights resilience", () => {
       screen.queryByRole("button", { name: SELECT_EVENTS_QUERY_BUTTON_RE })
     ).toBeNull();
 
-    await user.click(within(filterBar).getByRole("button", { name: "Reset" }));
+    await user.click(
+      within(filterBar).getByRole("button", { name: "Clear all" })
+    );
+    expect((searchInput as HTMLInputElement).value).toBe("");
+    expect(
+      screen.getByRole("button", { name: SELECT_EVENTS_QUERY_BUTTON_RE })
+    ).toBeTruthy();
     await user.click(within(filterBar).getByRole("button", { name: "Mean" }));
     await user.click(screen.getByRole("option", { name: "Mean > 30 ms" }));
 

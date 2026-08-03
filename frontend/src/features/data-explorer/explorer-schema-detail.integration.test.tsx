@@ -195,7 +195,7 @@ describe("schema detail integration", () => {
     expect(screen.queryByText("active_accounts")).toBeNull();
   });
 
-  it("resets local schema overview facets without leaving the schema", async () => {
+  it("clears local schema overview search and facets without leaving the schema", async () => {
     const user = userEvent.setup();
 
     render(
@@ -213,6 +213,8 @@ describe("schema detail integration", () => {
       />
     );
 
+    const search = screen.getByRole("textbox", { name: "Search objects…" });
+    await user.type(search, "daily");
     await user.click(screen.getByRole("button", { name: KIND_FILTER_RE }));
     await user.click(
       screen.getByRole("option", { name: "Materialized views" })
@@ -222,9 +224,10 @@ describe("schema detail integration", () => {
     expect(screen.getByText("daily_rollups")).toBeTruthy();
     expect(screen.queryByText("audit_log")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Reset" }));
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
 
     expect(screen.getByRole("heading", { name: "public" })).toBeTruthy();
+    expect((search as HTMLInputElement).value).toBe("");
     expect(screen.getByText("audit_log")).toBeTruthy();
     expect(screen.getByText("active_accounts")).toBeTruthy();
   });

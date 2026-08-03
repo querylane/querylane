@@ -3,7 +3,6 @@ import {
   Eye,
   FolderTree,
   Table2,
-  X,
 } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { CatalogKindBadge } from "@/components/console-pages/catalog-object-badge";
@@ -11,17 +10,16 @@ import {
   catalogObjectKindValue,
   presentCatalogObjectKindOptions,
 } from "@/components/console-pages/database-overview-filters";
-import { Button } from "@/components/ui/button";
 import {
   DataTable,
   type DataTableColumnDef,
-  DataTableFilter,
   SortableHeader,
 } from "@/components/ui/data-table";
+import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter";
 import {
-  DataTableFacetedFilter,
-  type FacetedFilterOption,
-} from "@/components/ui/data-table-faceted-filter";
+  type DataTableFilterFacet,
+  DataTableFilterToolbar,
+} from "@/components/ui/data-table-filter-toolbar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { CatalogSyncNotice } from "@/features/data-explorer/catalog-sync-notice";
@@ -268,77 +266,6 @@ function filterSchemaObjectRows({
   );
 }
 
-function SchemaObjectFilterBar({
-  kindFilters,
-  kindOptions,
-  onKindFiltersChange,
-  onOwnerFiltersChange,
-  ownerFilters,
-  ownerOptions,
-}: {
-  kindFilters: string[];
-  kindOptions: FacetedFilterOption[];
-  onKindFiltersChange: (values: string[]) => void;
-  onOwnerFiltersChange: (values: string[]) => void;
-  ownerFilters: string[];
-  ownerOptions: FacetedFilterOption[];
-}) {
-  const filters = [
-    {
-      handleSelectedValuesChange: onKindFiltersChange,
-      label: "Kind",
-      options: kindOptions,
-      selectedValues: kindFilters,
-    },
-    {
-      handleSelectedValuesChange: onOwnerFiltersChange,
-      label: "Owner",
-      options: ownerOptions,
-      selectedValues: ownerFilters,
-    },
-  ].filter((filter) => filter.options.length > 0);
-  const hasActiveFilter = filters.some(
-    (filter) => filter.selectedValues.length > 0
-  );
-
-  if (filters.length === 0) {
-    return null;
-  }
-
-  return (
-    <div
-      className="flex min-w-0 flex-wrap items-center gap-2"
-      data-slot="schema-object-filter-bar"
-    >
-      {filters.map((filter) => (
-        <DataTableFacetedFilter
-          key={filter.label}
-          onSelectedValuesChange={filter.handleSelectedValuesChange}
-          options={filter.options}
-          selectedValues={filter.selectedValues}
-          title={filter.label}
-        />
-      ))}
-      {hasActiveFilter ? (
-        <Button
-          className="h-8 px-2 text-xs"
-          onClick={() => {
-            for (const filter of filters) {
-              filter.handleSelectedValuesChange([]);
-            }
-          }}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <X data-icon="inline-start" />
-          Reset
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
 function SchemaObjectsTable({
   onSelectTable,
   onSelectView,
@@ -366,26 +293,37 @@ function SchemaObjectsTable({
     ownerFilters,
     rows,
   });
+  const facets = [
+    {
+      label: "Kind",
+      onChange: setKindFilters,
+      options: presentKindOptions(rows),
+      selected: kindFilters,
+    },
+    {
+      label: "Owner",
+      onChange: setOwnerFilters,
+      options: presentOwnerOptions(rows),
+      selected: ownerFilters,
+    },
+  ] satisfies DataTableFilterFacet[];
+
+  function handleClearAll() {
+    setSearch("");
+    setKindFilters([]);
+    setOwnerFilters([]);
+  }
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex min-h-8 flex-wrap items-center justify-start gap-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <DataTableFilter
-            onChange={setSearch}
-            placeholder="Search objects…"
-            value={search}
-          />
-          <SchemaObjectFilterBar
-            kindFilters={kindFilters}
-            kindOptions={presentKindOptions(rows)}
-            onKindFiltersChange={setKindFilters}
-            onOwnerFiltersChange={setOwnerFilters}
-            ownerFilters={ownerFilters}
-            ownerOptions={presentOwnerOptions(rows)}
-          />
-        </div>
-      </div>
+      <DataTableFilterToolbar
+        dataSlot="schema-object-filter-bar"
+        facets={facets}
+        onClearAll={handleClearAll}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search objects…"
+        searchValue={search}
+      />
       <DataTable
         columns={schemaObjectColumns()}
         data={visibleRows}

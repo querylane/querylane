@@ -132,6 +132,21 @@ describe("GrantedObjectsTable: deferred filtering", () => {
     expect(screen.queryByText(RE_PRODUCTS)).toBeNull();
   });
 
+  test("clears object search and kind together", async () => {
+    const user = userEvent.setup();
+    render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
+
+    await user.click(screen.getByRole("button", { name: "Kind" }));
+    await user.click(screen.getByRole("option", { name: "View" }));
+    const search = screen.getByRole("textbox", { name: "Search objects…" });
+    await user.type(search, "revenue");
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
+
+    expect((search as HTMLInputElement).value).toBe("");
+    expect(await screen.findByText(RE_ORDERS)).toBeTruthy();
+    expect(screen.getByText(RE_REVENUE_VIEW)).toBeTruthy();
+  });
+
   test("search input reflects typed value immediately (urgent path)", async () => {
     const user = userEvent.setup();
     render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);

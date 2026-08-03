@@ -22,8 +22,10 @@ import { PaginationFooter } from "@/components/data-grid/table-data-grid/paginat
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DataTableFilter } from "@/components/ui/data-table";
-import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
+import {
+  type DataTableFilterFacet,
+  DataTableFilterToolbar,
+} from "@/components/ui/data-table-filter-toolbar";
 import {
   Sheet,
   SheetContent,
@@ -44,109 +46,12 @@ import {
 import { useUrlTableSearch } from "@/lib/url-search-state";
 import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 
-interface ExtensionFacetFilterProps<Value extends string> {
-  label: string;
-  onValueChange: (value: Value | "All") => void;
-  options: ExtensionFilterOption<Value>[];
-  value: Value | "All";
-}
-
-function ExtensionFacetFilter<Value extends string>({
-  label,
-  onValueChange,
-  options,
-  value,
-}: ExtensionFacetFilterProps<Value>) {
+function selectedExtensionFilterValue<Value extends string>(
+  options: ExtensionFilterOption<Value>[],
+  selectedValues: string[]
+): Value | "All" {
   return (
-    <DataTableFacetedFilter
-      onSelectedValuesChange={(selectedValues) => {
-        const selectedOption = options.find(
-          (option) => option.value === selectedValues[0]
-        );
-        onValueChange(selectedOption?.value ?? "All");
-      }}
-      options={options}
-      selectedValues={value === "All" ? [] : [value]}
-      singleSelect={true}
-      title={label}
-    />
-  );
-}
-
-function ExtensionFilterBar({
-  category,
-  categoryFilterOptions,
-  onCategoryChange,
-  onScopeChange,
-  onSearchChange,
-  onSourceChange,
-  onStatusChange,
-  scope,
-  search,
-  scopeFilterOptions,
-  source,
-  sourceFilterOptions,
-  status,
-  statusFilterOptions,
-}: {
-  category: ExtensionCategoryFilter;
-  categoryFilterOptions: ExtensionFilterOption<
-    Exclude<ExtensionCategoryFilter, "All">
-  >[];
-  onCategoryChange: (value: ExtensionCategoryFilter) => void;
-  onScopeChange: (value: ExtensionScopeFilter) => void;
-  onSearchChange: (value: string) => void;
-  onSourceChange: (value: ExtensionSourceFilter) => void;
-  onStatusChange: (value: ExtensionStatusFilter) => void;
-  scope: ExtensionScopeFilter;
-  search: string;
-  scopeFilterOptions: ExtensionFilterOption<
-    Exclude<ExtensionScopeFilter, "All">
-  >[];
-  source: ExtensionSourceFilter;
-  sourceFilterOptions: ExtensionFilterOption<
-    Exclude<ExtensionSourceFilter, "All">
-  >[];
-  status: ExtensionStatusFilter;
-  statusFilterOptions: ExtensionFilterOption<
-    Exclude<ExtensionStatusFilter, "All">
-  >[];
-}) {
-  return (
-    <div
-      className="flex min-w-0 flex-wrap items-center justify-start gap-2"
-      data-slot="extension-filter-bar"
-    >
-      <DataTableFilter
-        onChange={onSearchChange}
-        placeholder="Search extensions…"
-        value={search}
-      />
-      <ExtensionFacetFilter
-        label="Status"
-        onValueChange={onStatusChange}
-        options={statusFilterOptions}
-        value={status}
-      />
-      <ExtensionFacetFilter
-        label="Scope"
-        onValueChange={onScopeChange}
-        options={scopeFilterOptions}
-        value={scope}
-      />
-      <ExtensionFacetFilter
-        label="Category"
-        onValueChange={onCategoryChange}
-        options={categoryFilterOptions}
-        value={category}
-      />
-      <ExtensionFacetFilter
-        label="Source"
-        onValueChange={onSourceChange}
-        options={sourceFilterOptions}
-        value={source}
-      />
-    </div>
+    options.find((option) => option.value === selectedValues[0])?.value ?? "All"
   );
 }
 
@@ -355,6 +260,59 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
     setSource(nextSource);
   }
 
+  function handleClearAll() {
+    resetPage();
+    setSelectedKey(null);
+    setSearch("");
+    setStatus("All");
+    setScope("All");
+    setCategory("All");
+    setSource("All");
+  }
+
+  const facets = [
+    {
+      label: "Status",
+      onChange: (selectedValues: string[]) =>
+        handleStatusChange(
+          selectedExtensionFilterValue(filterOptions.statuses, selectedValues)
+        ),
+      options: filterOptions.statuses,
+      selected: status === "All" ? [] : [status],
+      singleSelect: true,
+    },
+    {
+      label: "Scope",
+      onChange: (selectedValues: string[]) =>
+        handleScopeChange(
+          selectedExtensionFilterValue(filterOptions.scopes, selectedValues)
+        ),
+      options: filterOptions.scopes,
+      selected: scope === "All" ? [] : [scope],
+      singleSelect: true,
+    },
+    {
+      label: "Category",
+      onChange: (selectedValues: string[]) =>
+        handleCategoryChange(
+          selectedExtensionFilterValue(filterOptions.categories, selectedValues)
+        ),
+      options: filterOptions.categories,
+      selected: category === "All" ? [] : [category],
+      singleSelect: true,
+    },
+    {
+      label: "Source",
+      onChange: (selectedValues: string[]) =>
+        handleSourceChange(
+          selectedExtensionFilterValue(filterOptions.sources, selectedValues)
+        ),
+      options: filterOptions.sources,
+      selected: source === "All" ? [] : [source],
+      singleSelect: true,
+    },
+  ] satisfies DataTableFilterFacet[];
+
   function handlePageSizeChange(nextPageSize: number) {
     setPageIndex(
       pageIndexForPageSizeChange({
@@ -387,21 +345,13 @@ function ExtensionsGrid({ extensions }: { extensions: Extension[] }) {
         {extensionInventorySummary(presentedExtensions)}; installation requires
         a superuser connection; Querylane only reads what is there
       </p>
-      <ExtensionFilterBar
-        category={category}
-        categoryFilterOptions={filterOptions.categories}
-        onCategoryChange={handleCategoryChange}
-        onScopeChange={handleScopeChange}
+      <DataTableFilterToolbar
+        dataSlot="extension-filter-bar"
+        facets={facets}
+        onClearAll={handleClearAll}
         onSearchChange={handleSearchChange}
-        onSourceChange={handleSourceChange}
-        onStatusChange={handleStatusChange}
-        scope={scope}
-        scopeFilterOptions={filterOptions.scopes}
-        search={search}
-        source={source}
-        sourceFilterOptions={filterOptions.sources}
-        status={status}
-        statusFilterOptions={filterOptions.statuses}
+        searchPlaceholder="Search extensions…"
+        searchValue={search}
       />
       <div className="flex flex-col gap-4">
         <div className="min-w-0 flex-1 space-y-4">
