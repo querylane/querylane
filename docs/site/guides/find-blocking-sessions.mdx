@@ -7,6 +7,15 @@ sidebar:
 
 Use this workflow when requests stall, migrations wait, or the instance overview reports lock pressure.
 
+```mermaid
+flowchart TD
+  Root["PID 1842: root blocker"] -->|blocks| WaitA["PID 2190: waiting"]
+  Root -->|blocks| WaitB["PID 2207: waiting"]
+  WaitA -->|blocks while waiting| WaitC["PID 2244: waiting downstream"]
+```
+
+Read every arrow from top to bottom as “the session above blocks the session below.” Start at a node with no incoming blocking arrow, then follow every downstream branch. A waiting session can also block another session behind it, which is why the oldest query is not automatically the root blocker.
+
 ## Before you start
 
 - Give the managed-instance login `pg_monitor` so other sessions and queries are visible.

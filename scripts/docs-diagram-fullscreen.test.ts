@@ -34,6 +34,14 @@ test("uses the full viewport while keeping diagram controls accessible", async (
 	expect(theme).toContain("[data-mermaid-fullscreen-canvas] svg");
 });
 
+test("contains tall fullscreen diagrams instead of expanding the canvas", async () => {
+	const theme = await read("theme.css");
+
+	expect(theme).toContain("min-width: 0");
+	expect(theme).toContain("min-height: 0");
+	expect(theme).toContain("overflow: hidden");
+});
+
 test("packages the Mermaid controls in the docs container", async () => {
 	const dockerfile = await read("Dockerfile.docs");
 

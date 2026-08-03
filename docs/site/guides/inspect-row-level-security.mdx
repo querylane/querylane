@@ -38,6 +38,23 @@ Use **Preview visibility as** to choose a role and command. Querylane applies Po
 3. Applicable restrictive policies combine with `AND` on top.
 4. With no applicable permissive policy, row-level security denies the rows.
 
+```mermaid
+flowchart TD
+  Command[Table command] --> Privilege{Object access?}
+  Privilege -->|No| Denied[Denied before RLS]
+  Privilege -->|Yes| Bypass{RLS bypass?}
+  Bypass -->|Yes| Bypassed[Policies bypassed]
+  Bypass -->|No| Enabled{RLS enabled?}
+  Enabled -->|No| NotApplied[No policy filter]
+  Enabled -->|Yes| Permissive{Permissive match?}
+  Permissive -->|No| DefaultDeny[Default deny]
+  Permissive -->|Yes| Combine[Combine policies]
+  Combine --> Existing[USING: existing rows]
+  Combine --> NewRows[WITH CHECK: new rows]
+```
+
+Follow the decision from top to bottom. PostgreSQL first checks ordinary access. Roles that bypass row-level security stop before policy evaluation. Everyone else needs at least one applicable permissive policy; restrictive policies can only narrow that result. `USING` controls existing rows, while `WITH CHECK` controls proposed rows for writes.
+
 Review the applied policy badges and combined predicate. A preview explains policy logic; it does not execute a row query as the selected role.
 
 ## 3. Check bypass conditions
