@@ -1,6 +1,6 @@
 ---
 title: Export table data safely
-description: Scope, review, and export permitted rows as CSV, JSON, or SQL without treating a preview as a backup.
+description: Scope, review, and export permitted rows as CSV, JSON, or SQL without treating a preview as a database backup or bulk migration.
 sidebar:
   label: Export data safely
 ---
@@ -38,7 +38,7 @@ Before export:
 - note which displayed cells use an oversized-value preview; and
 - verify that the selected count matches the intended scope.
 
-For selection copy and export, Querylane fetches the complete values behind oversized previews before producing output. One action resolves up to 100 oversized cells. If a selection exceeds that limit or a full-value read fails, Querylane stops without producing a plausible but incomplete file. Reduce the selection or use an approved server-side export for the complete result.
+For selection copy and export, Querylane fetches the complete values behind oversized previews before producing output. 1 action resolves up to 100 oversized cells. If a selection exceeds that limit or a full-value read fails, Querylane stops without producing a plausible but incomplete file. Reduce the selection or use an approved server-side export for the complete result.
 
 ## 3. Choose a format
 
@@ -67,4 +67,4 @@ The SQL option is not a replacement for `pg_dump`. Never run generated statement
 - **Need reproducibility:** save the filter definition and source timestamp with the file checksum.
 - **Need to share externally:** complete the required data-classification and redaction review first.
 - **Full-value resolution exceeds 100 cells:** narrow the selected rows or use a database-native export that preserves the complete values.
-- **Need one binary field:** open the row detail drawer and download the `bytea` value as a `.bin` file.
+- **Need 1 binary field:** open the row detail drawer and download the `bytea` value as a `.bin` file.

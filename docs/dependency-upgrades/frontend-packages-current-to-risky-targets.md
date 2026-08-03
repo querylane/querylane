@@ -1,11 +1,11 @@
-# Dependency upgrade: frontend packages current -> newest risky targets
+# Dependency upgrade: current frontend packages to newest risky targets
 
 ## Summary
-- Ecosystem: npm/Bun frontend workspace
-- Manifest/lockfiles: frontend/package.json, frontend/bun.lock
-- Direct dep, parent dep, or transitive: direct dependencies and direct devDependencies; package overrides are removed after review
-- Requested by: user asked to upgrade every single Querylane frontend package, including risky beta, rc, alpha, and nightlies
-- Target policy: highest semver including prereleases; fresh nightly/canary/experimental/insiders channels when newer than the current manifest version; stale prerelease downgrades skipped; PR feedback overrode prerelease choices where the changelog showed no Querylane benefit or a peer/tooling risk.
+- Ecosystem: npm and Bun frontend workspace
+- Manifest and lockfiles: `frontend/package.json`, `frontend/bun.lock`
+- Dependency relation: direct dependencies and direct devDependencies; package overrides are removed after review
+- Request: user asked to upgrade every single Querylane frontend package, including risky beta, rc, alpha, and nightlies
+- Target policy: highest semver, including prereleases; fresh nightly, canary, experimental, and insiders channels when newer than the current manifest version; stale prerelease downgrades skipped; PR feedback overrode prerelease choices where the changelog showed no Querylane benefit or introduced peer or tooling risk.
 - Rebase note: report is aligned to `origin/main` after Base UI 1.6.0 merged; `@base-ui/react` is already in the base branch and is not part of this PR delta.
 - Full per-package version paths: docs/dependency-upgrades/frontend-packages-full-version-paths.json
 
@@ -94,7 +94,7 @@ Every published version path captured in JSON because this request spans 80 dire
 ## Consolidated upgrade actions
 API changes:
 - React and React DOM stay on latest stable 19.2.7 after review rejected the experimental channel.
-- Vitest browser packages move to 5.0 beta; all direct Vitest coverage scripts, provider config, and merge tooling are removed after review.
+- Vitest browser packages move to 5.0 beta; all direct Vitest coverage scripts, provider configuration, and merge tooling are removed after review.
 - React Hook Form stops at latest stable 7.80.0; 8.0.0-beta.2 caused maximum-update-depth errors in browser onboarding smoke.
 - date-fns stays on 4.4.0 because v5 alpha is package-size/CDN work only and peer ranges remain 4.x.
 - Tailwind packages stay on stable 4.3.1 after review rejected 0.0.0 insiders builds.
@@ -104,35 +104,35 @@ API changes:
 - TypeScript package stays on 6.0.3; the native-preview tsgo package carries the TS7-native benefit used by this repo.
 - Zod stays on stable 4.4.3; the 4.5 canary touches JSON Schema/CIDR internals Querylane does not use.
 
-Syntax/style-guide changes:
+Syntax and style-guide changes:
 - Deleted package-version policy assertions for React Doctor and Vitest UI so tests no longer require edits for dependency bumps.
 - Enabled broader React Doctor opt-in rules, plus Biome `noAutofocus`, and a large Biome rule set verified by a rule sweep; only high-churn refactor rules with current findings stay out of this dependency PR.
 - Updated the sort-column integration test to use the accessible add-sort-column combobox after giving the trigger a stable ARIA label.
-- Enabled `exactOptionalPropertyTypes` for the UI TypeScript config and fixed the resulting `sonner` prop typing.
+- Enabled `exactOptionalPropertyTypes` for the UI TypeScript configuration and fixed the resulting `sonner` prop typing.
 
-Behavior/config changes:
+Behavior and configuration changes:
 - Added an admin-shell browser-test scale shim to preserve existing Linux visual baselines after Vitest 5 screenshot capture semantics changed.
 - Removed all package-manager overrides after review accepted dev-tooling transitive advisory risk over forced overrides.
 - External browser telemetry setup is no longer bundled in this app.
-- Advanced Rspack/Rsbuild settings are now explicit: deterministic IDs, duplicate chunk merge, real content hash, export/module graph optimizers, `incremental: advance-silent`, `runtimeMode: rspack`, deferred imports, native watcher, pure functions, future defaults, and explicit Rsdoctor loader/plugin/resolver/bundle/tree-shaking analysis unless explicitly disabled.
+- Advanced Rspack and Rsbuild settings are now explicit: deterministic IDs, duplicate chunk merging, real content hashes, export and module graph optimizers, `incremental: advance-silent`, `runtimeMode: rspack`, deferred imports, the native watcher, pure functions, future defaults, and Rsdoctor loader, plugin, resolver, bundle, and tree-shaking analysis unless explicitly disabled.
 - Very high toolchain blast radius remains: Vitest beta, Playwright alpha, Rsbuild/Rspack rc, Rsdoctor alpha, and TypeScript native-preview.
-- Some targets are younger than seven days: @axe-core/playwright@4.12.2-6c589ff.0, @biomejs/biome@2.5.1, @bufbuild/protobuf@2.12.1, @rsbuild/core@2.1.0-rc.0, @rspack/core@2.1.0-rc.0, @tanstack/query-core@5.101.1, @tanstack/react-query@5.101.1, @tanstack/react-query-devtools@5.101.1, @tanstack/react-table@9.0.0-beta.18, @types/node@26.0.0, @typescript/native-preview@7.0.0-dev.20260624.1, @xyflow/react@12.11.1, playwright@1.62.0-alpha-2026-06-24, playwright-core@1.62.0-alpha-2026-06-24, react-doctor@0.5.8.
-- Non-semver pins are intentional risky-channel pins in this PR: @axe-core/playwright uses a commit-SHA prerelease and bun-types uses a dated canary because the request explicitly asked for beta/rc/alpha/nightly packages. Re-check both on the next dependency sweep because registry availability is more fragile than normal semver releases.
+- Some targets are younger than 7 days: @axe-core/playwright@4.12.2-6c589ff.0, @biomejs/biome@2.5.1, @bufbuild/protobuf@2.12.1, @rsbuild/core@2.1.0-rc.0, @rspack/core@2.1.0-rc.0, @tanstack/query-core@5.101.1, @tanstack/react-query@5.101.1, @tanstack/react-query-devtools@5.101.1, @tanstack/react-table@9.0.0-beta.18, @types/node@26.0.0, @typescript/native-preview@7.0.0-dev.20260624.1, @xyflow/react@12.11.1, playwright@1.62.0-alpha-2026-06-24, playwright-core@1.62.0-alpha-2026-06-24, react-doctor@0.5.8.
+- Non-semver pins are intentional risky-channel pins in this PR: `@axe-core/playwright` uses a commit-SHA prerelease, and `bun-types` uses a dated canary because the request explicitly asked for beta, rc, alpha, and nightly packages. Recheck both during the next dependency sweep because registry availability is less reliable than for normal semver releases.
 
-Repo actions before target install:
-- Preserved direct package relationship groups: React + React DOM; Vitest family; Playwright + Playwright core; Tailwind family; TanStack query family; Rspack/Rsbuild family.
+Repository actions before target install:
+- Preserved direct package relationship groups: React and React DOM; Vitest family; Playwright and Playwright core; Tailwind family; TanStack Query family; and Rspack/Rsbuild family.
 - Removed all overrides; no package-manager resolution forcing remains.
 
 ## Dependency tree
-Target: all direct frontend package entries. Parents: frontend/package.json. Children: transitive packages resolved by Bun. Repo dependents: frontend source, tests, scripts, Rsbuild config, Vitest config, Playwright E2E, bundle/lighthouse scripts. Peers: React, React DOM, TanStack Query, Rsbuild/Rspack, Tailwind, Vitest, Playwright. Plugins/adapters: connect-query, router-plugin, rsbuild plugins, tailwind plugins, vitest browser/playwright adapter.
+Target: all direct frontend package entries. Parents: frontend/package.json. Children: transitive packages resolved by Bun. Repository dependents: frontend source, tests, scripts, Rsbuild configuration, Vitest configuration, Playwright E2E, bundle and Lighthouse scripts. Peers: React, React DOM, TanStack Query, Rsbuild/Rspack, Tailwind, Vitest, Playwright. Plugins and adapters: connect-query, router-plugin, Rsbuild plugins, Tailwind plugins, and the Vitest browser Playwright adapter.
 
 ## Non-SemVer scale
-Release cadence: high. Change volume: very high. Diff size: high lockfile churn. API churn: high. Effort: high. Danger/blast radius: very high.
+Release cadence: high. Change volume: very high. Diff size: high lockfile churn. API churn: high. Effort: high. Danger and blast radius: very high.
 
 ## Security notes
-Package-manager overrides were removed after review. `bun audit` now reports only dev/test/tooling transitive advisories, not app runtime dependencies, and these should be handled by upstream package updates instead of forced overrides in this PR.
+Package-manager overrides were removed after review. `bun audit` now reports only development, test, and tooling transitive advisories, not app runtime dependencies. Upstream package updates should resolve these advisories instead of forced overrides in this PR.
 
-| Advisory | Source | Reachability/exploitability | Decision |
+| Advisory | Source | Reachability and exploitability | Decision |
 |---|---|---|---|
 | GHSA-w5hq-g745-h8pq | `@lhci/cli > uuid` | Lighthouse CLI transitive, not app runtime | No override |
 | GHSA-52f5-9888-hmc6, GHSA-ph9p-34f9-6g65 | `@lhci/cli > tmp` | Lighthouse CLI transitive, not app runtime | No override |
@@ -159,9 +159,9 @@ QUALITY_BASE_REF=origin/main bun run test:browser:changed -- --reporter=verbose
 ```
 
 ## Verification
-Lint: pass. Type check: pass. Tests: full unit/integration pass; targeted harness unit pass. Backend CORS targeted tests pass. Build/vet/security scan: normal build pass (`initial-br=239.9 KiB`, `total-br=801.6 KiB`), Rsdoctor alpha `build:profile` pass. Changed browser passes locally after the Vitest 5 browser-scale fix. `bun audit` reports dev-tooling transitives because package overrides were intentionally removed. `build:profile` removes `dist` first so Rsdoctor output cannot mix stale profile assets into later budget checks. Dev-server smoke passed with native watcher/runtime experiments enabled (`bun run dev`, `curl /`, live edit, `curl /`).
+Lint: pass. Type check: pass. Tests: full unit and integration pass; targeted harness unit pass. Backend CORS targeted tests pass. Build, vet, and security scan: normal build pass (`initial-br=239.9 KiB`, `total-br=801.6 KiB`), Rsdoctor alpha `build:profile` pass. Changed browser passes locally after the Vitest 5 browser-scale fix. `bun audit` reports development-tooling transitives because package overrides were intentionally removed. `build:profile` removes `dist` first so Rsdoctor output cannot mix stale profile assets into later budget checks. Development-server smoke passed with native watcher and runtime experiments enabled (`bun run dev`, `curl /`, live edit, `curl /`).
 
 ## Known residual risk
-- Frontend still carries risky prerelease/nightly toolchain pins; re-check the SHA/date prereleases during the next dependency sweep.
+- Frontend still carries risky prerelease and nightly toolchain pins; recheck the SHA and date prereleases during the next dependency sweep.
 - React Hook Form 8 beta was dropped after full browser surfaced maximum-update-depth errors; stable 7.80.0 removes that runtime failure.
 - Full-scope React Doctor 0.5.8 reports pre-existing warnings in unchanged app files; PR CI uses changed-scope React Doctor, which passes.

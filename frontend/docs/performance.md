@@ -1,6 +1,6 @@
 # Frontend performance measurement
 
-Querylane stays client-side only. Measure performance in four layers instead of trusting one score.
+Querylane stays client-side only. Measure performance in 4 layers instead of trusting 1 score.
 
 ## Local commands
 
@@ -18,12 +18,12 @@ bun run doctor:full              # React Doctor full health gate
 React Scan is local-only and opt-in. `dev:scan` serves the exact pinned package
 asset before React; normal development and production builds omit it. A build
 with `QUERYLANE_REACT_SCAN=1` is rejected. React Compiler runs globally in
-`infer` mode by default. For one-off local comparisons, set
+`infer` mode by default. For single local comparisons, set
 `QUERYLANE_REACT_COMPILER_MODE=annotation` on `dev` or `build` directly.
 Verify compilation through the production build output and React DevTools.
 
 See the [2026-07-16 React performance audit](react-performance-audit-2026-07-16.md)
-for the five-run baseline, compatibility findings, and raw measurements.
+for the 5-run baseline, compatibility findings, and raw measurements.
 
 Lighthouse HTML and JSON reports are written to `frontend/dist/lighthouse`.
 Public report links use Lighthouse CI temporary public storage. Those links are
@@ -34,7 +34,7 @@ gate.
 ## Accessibility manual-check evidence
 
 Lighthouse always lists some accessibility checks as manual because it cannot
-prove intent, visual order, or focus behavior from static audits alone. QueryLane
+prove intent, visual order, or focus behavior from static audits alone. Querylane
 keeps those checks covered by Playwright accessibility tests.
 
 Run:
@@ -46,7 +46,7 @@ bun run test:accessibility
 
 Current route-level coverage:
 
-| Lighthouse manual item | QueryLane evidence |
+| Lighthouse manual item | Querylane evidence |
 | --- | --- |
 | Interactive controls are keyboard focusable | `data explorer: Lighthouse route covers manual accessibility contracts` focuses key Data Explorer controls and walks tab focus. |
 | Interactive elements indicate their purpose and state | Axe plus role/name assertions cover buttons, comboboxes, selected tabs, and labels. |
@@ -66,7 +66,7 @@ Current route-level coverage:
 - User journey gates: Playwright `@perf` specs for mocked Data Explorer readiness and payload budgets.
 - React health gates: React Doctor changed-file checks in `frontend-ci`.
 
-The Lighthouse command uses three desktop runs and median assertions against a mocked Data Explorer route. The mock API is served only by `scripts/lighthouse-mock-server.ts`; production transport has no public perf-demo flag or fixture branch. Lighthouse uses actual local Chrome timings, not simulated throttling, then writes HTML/JSON reports with performance, accessibility, best practices, SEO, first contentful paint, largest contentful paint, speed index, total blocking time, time to interactive, and cumulative layout shift.
+The Lighthouse command uses 3 desktop runs and median assertions against a mocked Data Explorer route. The mock API is served only by `scripts/lighthouse-mock-server.ts`; production transport has no public performance-demo flag or fixture branch. Lighthouse uses actual local Chrome timings, not simulated throttling, then writes HTML and JSON reports with performance, accessibility, best practices, SEO, first contentful paint, largest contentful paint, speed index, total blocking time, time to interactive, and cumulative layout shift.
 
 ## Current thresholds
 

@@ -1,6 +1,6 @@
 ---
 title: Back up and restore Querylane
-description: Protect Querylane metadata, encryption keys, configuration, and image identity as one recoverable set.
+description: Protect Querylane metadata, encryption keys, configuration, and image identity as 1 recoverable set that you can restore and verify.
 sidebar:
   label: Backup and restore
 ---
@@ -13,7 +13,7 @@ A usable Querylane recovery set has more than a PostgreSQL dump. Back up the met
 | --- | --- | --- |
 | Metadata PostgreSQL | Holds UI-managed instances, encrypted passwords, catalog state, metrics samples, runner state, and shared signing material | Use encrypted database backups with a defined retention policy |
 | `QUERYLANE_INSTANCE_SECRET_KEY` | Decrypts UI-managed instance credentials and protected signing material | Keep in a secret manager and a separate recovery escrow |
-| `querylane.yaml` | Defines networking, target policy, limits, metadata mode, and config-managed instances | Version non-secret settings; protect inline secrets and DSNs |
+| `querylane.yaml` | Defines networking, target policy, limits, metadata mode, and configuration-managed instances | Version non-secret settings; protect inline secrets and DSNs |
 | Referenced environment secrets | Supply metadata and managed-instance passwords that are not stored in YAML | Back up through the owning secret manager |
 | Image digest and release notes | Recreate the application version that wrote the backup | Record beside the backup manifest |
 
@@ -95,7 +95,7 @@ Embedded mode is intended for local and single-node use. For a cold filesystem b
 
 1. Stop Querylane and confirm the embedded PostgreSQL process has exited.
 2. Copy the entire configured `embedded.data_path`, not selected files.
-3. Copy the Querylane config and instance secret key at the same time.
+3. Copy the Querylane configuration and instance secret key at the same time.
 4. Record the Querylane image or source revision and operating platform.
 5. Restart Querylane and verify readiness.
 
@@ -121,7 +121,7 @@ A restore is complete only when:
 - the Console API reports ready;
 - the expected saved instances are listed;
 - encrypted instance credentials can be used;
-- one non-critical target passes its connection test;
+- 1 non-critical target passes its connection test;
 - the catalog and recent metrics appear for that target;
 - the restored Querylane process cannot reach unintended networks; and
 - the recovery event and new backup baseline are recorded.

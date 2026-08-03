@@ -1,35 +1,35 @@
 ---
-title: PostgreSQL operations, in one browser workspace
+title: PostgreSQL operations, in 1 browser workspace
 description: Querylane brings server health, live activity, access, and database structure together without hiding the PostgreSQL underneath.
 sidebar:
   label: Overview
   order: 0
 ---
 
-Querylane is a self-hosted, PostgreSQL-first admin workspace for people who need to understand more than one server. It puts the running system and its catalog in the same place: instance health, sessions, roles, databases, schemas, tables, policies, partitions, triggers, and definitions.
+Querylane is a self-hosted, PostgreSQL-first admin workspace for people who need to understand more than 1 server. It puts the running system and its catalog in the same place: instance health, sessions, roles, databases, schemas, tables, policies, partitions, triggers, and definitions.
 
-The fastest way to understand Querylane is to connect one non-production server you already know, then use it to answer a question whose answer you can verify.
+The fastest way to understand Querylane is to connect 1 non-production server you already know, then use it to answer a question whose answer you can verify.
 
 <CardGroup cols={3}>
   <Card title="Start the guided setup" href="/get-started" icon="rocket">
-    Install the preview, choose internal storage, and connect one PostgreSQL server.
+    Install the preview, choose internal storage, and connect 1 PostgreSQL server.
   </Card>
-  <Card title="Complete your first session" href="/get-started/first-successful-session" icon="circle-check-big">
-    Verify the connection, learn the workspace, and answer one useful operational question.
+  <Card title="Complete a successful first session" href="/get-started/first-successful-session" icon="circle-check-big">
+    Verify the connection, learn the workspace, and answer 1 useful operational question.
   </Card>
   <Card title="Deploy it safely" href="/get-started/production-deployment" icon="shield-check">
     Add durable storage, least-privilege access, authentication, backups, and upgrades.
   </Card>
 </CardGroup>
 
-## Your path to a useful first session
+## Reach a useful first session
 
 <Steps>
   <Step title="Start Querylane">
     Use the [guided setup](/get-started) to run the preview and configure Querylane's own metadata database.
   </Step>
   <Step title="Connect a server you understand">
-    [Register one instance](/get-started/register-instance), preferably a non-production server with a dedicated read-only login.
+    [Register 1 instance](/get-started/register-instance), preferably a non-production server with a dedicated read-only login.
   </Step>
   <Step title="Establish a baseline">
     Confirm connection state, server details, health checks, activity, database structure, and role visibility.
@@ -39,9 +39,9 @@ The fastest way to understand Querylane is to connect one non-production server 
   </Step>
 </Steps>
 
-## One place to answer operational questions
+## 1 place to answer operational questions
 
-Database tools often split the job in two: a SQL client for structure and data, then a monitoring tool for the live server. Querylane is designed around the questions that cross that boundary.
+Database tools often split the job in 2: a SQL client for structure and data, then a monitoring tool for the live server. Querylane is designed around the questions that cross that boundary.
 
 - Is this instance healthy, connected, and replicating?
 - Which sessions are active, idle in a transaction, waiting, or blocking work?
@@ -70,13 +70,15 @@ Database tools often split the job in two: a SQL client for structure and data, 
 | --- | --- |
 | Instances | Register multiple PostgreSQL servers, inspect connection state, server details, metrics, and health |
 | Activity | Inspect live sessions, transaction age, client origin, waits, and blocking relationships |
-| Data explorer | Browse schemas and database objects, map table relationships, inspect table metadata, filter rows, and export data |
+| Data Explorer | Browse schemas and database objects, map table relationships, inspect table metadata, filter rows, and export data |
 | Roles and access | Explore roles, memberships, grants, definitions, and effective access paths |
-| Database insights | Review extensions, database health, and query insights |
+| [Database insights](/guides/extensions-and-insights) | Review extensions, database health, and query insights |
 
 ## A read-first preview
 
 Querylane is deliberately read-first today. It is useful for inspection and operational understanding, but it does not yet replace a mature SQL IDE or every write-heavy PostgreSQL administration workflow. The planned [SQL Workbench and write path](/roadmap) close those gaps in that order, with safety rails before broad mutation support.
+
+Review [Why choose Querylane](/why-querylane) for a comparison with pgAdmin, database IDEs, and ORM-oriented studios.
 
 <CardGroup cols={2}>
   <Card title="Understand the workspace" href="/concepts/how-querylane-works" icon="boxes">

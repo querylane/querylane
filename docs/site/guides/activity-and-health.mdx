@@ -1,6 +1,6 @@
 ---
 title: Investigate activity and health
-description: Inspect current PostgreSQL sessions, waits, transaction age, client origin, and blocking relationships.
+description: Inspect current PostgreSQL sessions, waits, transaction age, client origin, and blocking relationships to diagnose active work.
 sidebar:
   label: Activity and health
 ---
@@ -36,7 +36,7 @@ Select a row to inspect the complete query text, backend identifiers, timestamps
 
 ## Correlate with health
 
-Return to the instance overview to compare a session-level symptom with connection capacity, metric history, and replication health. Inside a database, Query Insights groups query-level behavior over a longer window than the live session list.
+Return to the instance overview to compare a session-level symptom with connection capacity, metric history, and replication health. Inside a database, Query insights groups query-level behavior over a longer window than the live session list.
 
 :::note
 Querylane does not currently terminate sessions or cancel queries. Use your approved PostgreSQL operational process when an intervention is required. Session actions are tracked on the [roadmap](/roadmap).

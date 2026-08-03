@@ -4,11 +4,11 @@ Use Changesets to describe release-worthy frontend changes in pull requests.
 
 ## When to add a changeset
 
-Add a changeset when your PR changes behavior, APIs, UX, or fixes bugs that should appear in release notes.
+Add a changeset when your PR changes behavior, APIs, or UX, or fixes a bug that should appear in the release notes.
 
 Do not add a changeset for internal-only changes that should not trigger a release note entry (for example, local refactors with no behavior change).
 
-## How to add one
+## Add a changeset
 
 From `frontend/`, run:
 

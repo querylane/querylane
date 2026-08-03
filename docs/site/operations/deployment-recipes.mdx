@@ -7,7 +7,7 @@ sidebar:
 
 These recipes start after you have prepared external metadata PostgreSQL, generated `QUERYLANE_INSTANCE_SECRET_KEY`, and pinned a Querylane image digest. See [Deploy Querylane](/get-started/production-deployment) for the base configuration.
 
-All hostnames, usernames, password hashes, image digests, and network addresses below are examples. Replace them with values from your own environment.
+All hostnames, usernames, password hashes, image digests, and network addresses in these recipes are examples. Replace them with values from your own environment.
 
 :::warning
 Querylane does not currently provide built-in authentication. A tunnel or TLS certificate alone does not restrict users. Every public route must have an authentication policy in front of it.
@@ -17,8 +17,8 @@ Querylane does not currently provide built-in authentication. A tunnel or TLS ce
 
 | Shape | Use it when | Authentication boundary |
 | --- | --- | --- |
-| Single host with Docker Compose | One Linux host already runs your reverse proxy | Host reverse proxy, VPN, or private network |
-| Caddy on the host | You want automatic HTTPS and a small reverse-proxy config | Caddy `basic_auth` for a small team, or `forward_auth` to your identity proxy |
+| Single host with Docker Compose | 1 Linux host already runs your reverse proxy | Host reverse proxy, VPN, or private network |
+| Caddy on the host | You want automatic HTTPS and a small reverse-proxy configuration | Caddy `basic_auth` for a small team, or `forward_auth` to your identity proxy |
 | Cloudflare Tunnel | The host should not accept inbound web traffic | Cloudflare Access policy on the published application |
 | Multiple replicas | Your platform provides scheduling, secrets, health checks, and ingress | Platform ingress or identity-aware proxy |
 
@@ -114,7 +114,7 @@ Expose port `8080` through an internal service and put the authenticating ingres
 
 Estimate worst-case target PostgreSQL load by multiplying each configured live-query limit by the maximum replica count.
 
-During an upgrade, start one new replica first. Do not mix versions across a metadata migration unless the release notes declare that combination compatible.
+During an upgrade, start 1 new replica first. Do not mix versions across a metadata migration unless the release notes declare that combination compatible.
 
 ## Network checklist
 

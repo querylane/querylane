@@ -1,4 +1,4 @@
-# Release Process
+# Release process
 
 This repository uses Changesets for frontend releases.
 

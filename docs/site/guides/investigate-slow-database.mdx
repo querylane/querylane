@@ -1,6 +1,6 @@
 ---
 title: Investigate a slow database
-description: Move from a server-wide symptom to live sessions, recurring queries, and table-level evidence.
+description: Move from a server-wide symptom to live sessions, recurring queries, and table-level evidence, then form a testable diagnosis.
 sidebar:
   label: Investigate a slow database
 ---
@@ -26,7 +26,7 @@ Open the **instance overview** and select a metric range that includes the repor
 - read and write throughput; and
 - storage growth.
 
-Look for a change near the incident start rather than treating any high absolute value as a fault. A flat chart can still hide one slow query, while a connection spike can explain many otherwise ordinary queries.
+Look for a change near the incident start rather than treating any high absolute value as a fault. A flat chart can still hide 1 slow query, while a connection spike can explain many otherwise ordinary queries.
 
 ## 2. Check live work
 
@@ -65,7 +65,7 @@ Then open the table in **Data Explorer**. Inspect its indexes, row estimate, siz
 
 ## 5. Form a testable hypothesis
 
-Summarize the evidence in one sentence before changing anything. For example:
+Summarize the evidence in 1 sentence before changing anything. For example:
 
 > Checkout latency rose while connections waited behind PID 1842, whose transaction stayed open for 11 minutes after updating `orders`.
 
@@ -78,7 +78,7 @@ The first case points to transaction ownership and blocking. The second points t
 ## What to do next
 
 - **Blocking or old transaction:** trace the PID to its application and use your approved cancel or terminate process. Querylane does not terminate sessions.
-- **One recurring query:** reproduce it with representative parameters and review a safe `EXPLAIN` in your SQL tooling.
+- **1 recurring query:** reproduce it with representative parameters and review a safe `EXPLAIN` in your SQL tooling.
 - **Sequential scan hotspot:** review predicate selectivity and existing indexes before proposing an index.
 - **Connection pressure:** inspect pool configuration and application connection ownership.
 - **Insufficient evidence:** capture another Querylane snapshot during the next incident and compare it with application traces and PostgreSQL logs.

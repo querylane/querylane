@@ -1,11 +1,11 @@
 ---
 title: Install Querylane
-description: Run the Querylane preview with Docker or build it from source, then verify the first-launch setup.
+description: Run the Querylane preview with Docker or build it from source, then verify first-launch setup and choose internal metadata storage.
 sidebar:
   label: Install Querylane
 ---
 
-Querylane currently publishes a rolling preview image. There is no stable tagged release yet, so use the preview to evaluate the product and pin its digest anywhere repeatability matters.
+Querylane currently publishes a rolling preview image. No stable tagged release is available yet, so use the preview to evaluate the product and pin its digest anywhere repeatability matters.
 
 ## Fastest path: Docker
 
@@ -23,12 +23,12 @@ docker run --rm \
 Open `http://localhost:8080`. A fresh container has no metadata database configuration, so Querylane opens the first-launch wizard.
 
 :::warning
-`querylane-dev:edge` follows the latest build and can change without notice. The command above also removes the container when it stops. Use it for evaluation, not as a durable deployment.
+`querylane-dev:edge` follows the latest build and can change without notice. This Docker command also removes the container when it stops. Use it for evaluation, not as a durable deployment.
 :::
 
 ## Choose Querylane's storage
 
-The wizard is configuring **Querylane's own metadata database**, not the PostgreSQL server you want to inspect. Choose one path:
+The wizard is configuring **Querylane's own metadata database**, not the PostgreSQL server you want to inspect. Choose 1 path:
 
 | Path | Best for | Continue with |
 | --- | --- | --- |

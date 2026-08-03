@@ -1,6 +1,6 @@
 ---
 title: Review extensions and query insights
-description: Use database-level pages to understand installed capabilities and recurring query behavior.
+description: Use database-level pages to understand installed capabilities and recurring query behavior from the same PostgreSQL workspace.
 sidebar:
   label: Extensions and insights
 ---
@@ -13,15 +13,15 @@ The Extensions page lists installed and available PostgreSQL extensions with ver
 
 The current page is an inventory. Install, update, and remove operations remain outside the read-first surface.
 
-## Query Insights
+## Query insights
 
-Query Insights groups query behavior so you can move from a database symptom to recurring statement patterns. Open a query to inspect its details without stretching the main table with long SQL text.
+Query insights groups query behavior so you can move from a database symptom to recurring statement patterns. Open a query to inspect its details without stretching the main table with long SQL text.
 
-Use it with two other views:
+Use it with 2 other views:
 
 - **Activity** shows what is happening right now at session level.
 - **Instance metrics** show whether resource or connection behavior changed over time.
 
-Together they answer whether a problem is one live session, a repeated query pattern, or a server-wide trend.
+Together they answer whether a problem is 1 live session, a repeated query pattern, or a server-wide trend.
 
-Query Insights depends on the target PostgreSQL statistics available to Querylane. When data is unavailable, the page reports that state rather than presenting zeros as evidence.
+Query insights depends on the target PostgreSQL statistics available to Querylane. When data is unavailable, the page reports that state rather than presenting zeros as evidence.

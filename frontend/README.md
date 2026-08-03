@@ -2,9 +2,9 @@
 
 React + TypeScript app bundled with Rsbuild.
 
-## Runtime Policy
+## Runtime policy
 
-- Frontend scripts are intentionally Bun-runtime first.
+- Frontend scripts use the Bun runtime by default.
 - Run frontend workflows through `bun run <script>` so local `node_modules/.bin` tools are used consistently.
 - Vitest runs under Node (not Bun) for unit, integration, and browser tests.
 - `react-doctor` runs lint/dead-code checks.
@@ -23,7 +23,7 @@ React + TypeScript app bundled with Rsbuild.
 - `bun run doctor:audit` - run full React Doctor with inline suppressions ignored
 - `bun run test:unit` - run unit tests with Vitest in the Node environment
 - `bun run test:integration` - run integration tests with Vitest (happy-dom)
-- `bun run test:vitest` - run the unit, integration, and browser Vitest projects in one labeled project run
+- `bun run test:vitest` - run the unit, integration, and browser Vitest projects in 1 labeled project run
 - `bun run test:watch` - run unit and integration watch mode together
 - `bun run test:browser` - run visual browser tests with Vitest + Playwright browser provider
 - `bun run test:e2e` - run Playwright end-to-end tests
@@ -33,7 +33,7 @@ React + TypeScript app bundled with Rsbuild.
 - `bun run lint:changed` - run canonical Biome checks only on changed frontend files
 - `bun run lint:fix` - apply canonical Biome fixes
 
-## AI-Friendly Test Output
+## Agent-friendly test output
 
 - Vitest local runs use the default reporter; CI scripts call Vitest directly with the native verbose reporter so failures include test names, project labels, and runtimes without custom wrappers.
 - Playwright local runs use a compact reporter; CI uses the built-in list reporter plus failure artifacts.
@@ -47,9 +47,9 @@ This README is agent-facing documentation under `frontend/**/*{.md,_agent.{js,ts
 - Required checkpoint: get or rely on explicit human instruction before pushing code, refreshing baselines, or changing CI behavior.
 - Escalate when a test requires credentials, network access beyond package/GitHub tooling, or a snapshot change whose UX intent is unclear.
 
-## Lint/Format Consistency
+## Lint and format consistency
 
-- This repo uses Biome as the single source of truth for formatting + linting.
+- This repository uses Biome as the single source of truth for formatting and linting.
 - Workspace settings force Biome in Cursor/VS Code and disable Prettier for this project.
 - The editor is pinned to the local `node_modules` Biome binary to avoid version drift.
 - Commit hook (`lefthook`) and CI both run Biome, so all contributors get the same output path.
@@ -59,7 +59,7 @@ This README is agent-facing documentation under `frontend/**/*{.md,_agent.{js,ts
 
 - Run most frontend workflows through `bun run <script>` from the `frontend` directory.
 - Use `bun run <script>` for `quality:gate`, `test:integration*`, and `test:browser*`.
-- If you invoke scripts via another package manager, Bun runtime enforcement may be bypassed by that runner.
+- Another package manager can bypass Bun runtime enforcement.
 
 ## Stack
 

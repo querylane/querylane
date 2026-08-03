@@ -1,6 +1,6 @@
 ---
 title: Pagination and filtering
-description: Page through list RPCs, preserve token scope, apply supported filters, and use stable ordering.
+description: Page through list RPCs, preserve token scope, apply supported filters, and use stable ordering across repeated requests.
 sidebar:
   label: Pagination and filtering
 ---
@@ -101,7 +101,7 @@ display_name desc
 owner asc, name asc
 ```
 
-Querylane adds a stable tie-breaker when the resource schema requires one. Do not infer a default order across endpoint versions. Send an explicit order when deterministic traversal matters.
+Querylane adds a stable tie-breaker when the resource schema requires it. Do not infer a default order across endpoint versions. Send an explicit order when deterministic traversal matters.
 
 Changing `orderBy` while reusing a page token is invalid. Start again without a token.
 
@@ -110,7 +110,7 @@ Changing `orderBy` while reusing a page token is invalid. Start again without a 
 A client loop should:
 
 1. set a bounded page size;
-2. process one response before requesting the next;
+2. process 1 response before requesting the next;
 3. keep parent, filter, and order unchanged;
 4. stop when the returned token is empty;
 5. discard the token after an error or request-plan change; and

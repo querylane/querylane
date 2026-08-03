@@ -1,28 +1,29 @@
-# Local-files privacy mode — single source of truth
+# Local-files privacy mode: single source of truth
 
 This file is the canonical contract for fully local, no-database planning and
 recaps. It is shared word for word by `/visual-plan` and `/visual-recap`. Read it
 in full before using local-files mode; do not call any hosted Plan tool for a
-local plan/recap except the schema-only block-catalog lookup described below.
+local plan or recap except the schema-only block-catalog lookup in this file.
 
 <!-- SHARED-CORE:local-files START -->
 
 **When to use it.** Use local-files privacy mode when the user explicitly asks
-for no DB writes, no hosted Plan database writes, no Plan MCP publish, fully local
-files, offline/private work, or repo-owned/source-controlled artifacts, or when
-`AGENT_NATIVE_PLANS_MODE=local-files` is set. Also use it when a user or repo
-policy says the work must stay under their own brand, domain, source control, or
-infrastructure. In this mode the plan/recap data must never be sent to the Plan
-MCP server or the Plan app action surface. This is the only exception to the
-always-publish rule in `references/connection.md`.
+for no database writes, no hosted Plan database writes, no Plan MCP publish,
+fully local files, offline or private work, or repository-owned and
+source-controlled artifacts. Also use it when
+`AGENT_NATIVE_PLANS_MODE=local-files` is set, or when a user or repository policy
+says the work must stay under their own brand, domain, source control, or
+infrastructure. In this mode, the plan or recap data must never be sent to the
+Plan MCP server or the Plan app action surface. This is the only exception to
+the always-publish rule in `references/connection.md`.
 
 The local-files contract:
 
 - **Read context locally.** Read source, diff, and stat context from local files
   and shell commands only. For recaps, the
   `npx @agent-native/core@latest recap collect-diff`, `scan`, and
-  `build-prompt --local-files` helpers are safe — they operate on local files and
-  do not write to the Plan database.
+  `build-prompt --local-files` helpers are safe because they operate on local
+  files and do not write to the Plan database.
 - **Fetch the block catalog first** (it sends no plan content). Use the MCP
   `get-plan-blocks` tool if it is already available, or run
   `npx @agent-native/core@latest plan blocks --out plan-blocks.md` and read that
@@ -32,20 +33,20 @@ The local-files contract:
   catch invalid tags. Copy the catalog examples verbatim for the fields the
   registry table cannot encode: `checklist` items need `id` and `label`;
   `question-form` questions need `id`, `title`, and `mode`, and each option needs
-  `id` and `label`; and `Code` / `AnnotatedCode` / `Diff` are whitespace-sensitive
-  — encode multiline code as JSON string attributes such as `code={"const x =\n  y"}`
+  `id` and `label`; and `Code`, `AnnotatedCode`, and `Diff` are whitespace-sensitive.
+  Encode multiline code as JSON string attributes such as `code={"const x =\n  y"}`
   (a static template literal is accepted only when it has no `${...}`
-  interpolation). `plan local check` is a quick OFFLINE lint (a subset of the
+  interpolation). `plan local check` is a quick offline lint (a subset of the
   renderer schema), so a green `check` does not guarantee the plan renders.
   `plan local verify` also stays on-device: it uses the offline lint unless it
   can reach a Plan renderer on an explicit loopback `--app-url`.
 - **Write a local MDX folder.** Use `plans/<slug>/` to check the artifact into the
-  repo, or a repo-ignored/temporary folder such as `.agent-native/plans/<slug>/`
+  repository, or a repository-ignored or temporary folder such as `.agent-native/plans/<slug>/`
   or `/tmp/agent-native-plans/<slug>/` when it should not be checked in. The
   folder holds `plan.mdx`, optional `canvas.mdx`, optional `prototype.mdx`, and
   optional `.plan-state.json`. For a recap, set `kind: "recap"` and
   `localOnly: true` in the frontmatter/state. Use that exact folder as
-  `<plan-dir>` in every command below.
+  `<plan-dir>` in every local command.
 - **Check, then serve.** Run
   `npx @agent-native/core@latest plan local check --dir <plan-dir>` before any
   preview, then
@@ -69,21 +70,21 @@ The local-files contract:
   It starts the bridge and checks the private-network preflight and JSON payload
   entirely on loopback. It never sends MDX or assets to a remote validation
   action. When `--app-url` points to a loopback Plan app, verify also validates
-  against that local app's real renderer schema via `validate-local-plan-source`.
+  against that local app's real renderer schema using `validate-local-plan-source`.
   A non-`ok` result with
-  `validation.valid: false` lists the renderer's exact schema-path issues (e.g.
+  `validation.valid: false` lists the renderer's exact schema-path issues (for example,
   `blocks[1].data.tabs[0]...`); fix those before handing off. If `validation.ran`
   is `false`, verify used the offline lint because the app URL was remote or the
   local Plan app was unavailable. Run a local Plan app and pass
-  `--app-url http://localhost:8096` for the authoritative check. If the browser hangs on
-  "Loading plan", fetch the `bridgeUrl` from the verify/serve JSON to read the
-  concrete validation error.
-- **Never call hosted tools for that plan/recap.** Do not call
+  `--app-url http://localhost:8096` for the authoritative check. If the browser
+  hangs on "Loading plan", fetch the `bridgeUrl` from the verify or serve JSON
+  to read the concrete validation error.
+- **Never call hosted tools for that plan or recap.** Do not call
   `create-visual-plan`, `create-ui-plan`, `create-prototype-plan`,
   `create-plan-design`, `create-visual-recap`, `create-visual-questions`,
   `import-visual-plan-source`, `update-visual-plan`, `patch-visual-plan-source`,
   `get-plan-feedback`, `export-visual-plan`, `set-resource-visibility`, or any
-  other hosted Plan tool — except the schema-only block-catalog lookup above.
+  other hosted Plan tool except the schema-only block-catalog lookup in this file.
 - **Feedback is file/chat feedback.** Update the MDX files directly, rerun
   `plan local check`, and rerun `serve` or `verify` when that preview path is
   available. Summarize the new local URL when one exists; otherwise summarize the
@@ -91,9 +92,9 @@ The local-files contract:
   attachment, and publish/export receipts are unavailable until the user
   explicitly opts into publishing.
 
-Local-files mode prevents plan/recap content from being uploaded to the
-Agent-Native Plan server or database. It does not by itself make the coding agent's language model local;
-for that stronger boundary the host agent/model must also be local or otherwise
-approved by the user.
+Local-files mode prevents plan or recap content from being uploaded to the
+Agent-Native Plan server or database. It does not make the coding agent's
+language model local. For that stronger boundary, the host agent and model must
+also be local or otherwise approved by the user.
 
 <!-- SHARED-CORE:local-files END -->
