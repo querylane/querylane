@@ -128,6 +128,6 @@ Skip the `SELECT` grants if operators should only see the catalog and server hea
 
 Querylane is stateless apart from the metadata database, so several replicas can sit behind one load balancer. They must share the same metadata database, the same `QUERYLANE_INSTANCE_SECRET_KEY`, the same configuration and target policy, and the same network access to your servers. Do not use embedded PostgreSQL for a multi-replica deployment. Live-query limits are process-local, so the total load Querylane can put on a server grows with the replica count.
 
-`GET /` answers as soon as the process is up; for a readiness check, call `ConsoleService.GetConsoleConfig` as shown under [Verify](/get-started/configure-querylane#verify).
+Use `GET /livez` as the liveness check. It returns `200` while the HTTP server is running and does not depend on the metadata database. Use `GET /readyz` as the readiness check. It returns `200` when the metadata database is initialized and reachable, and `503` while Querylane is initializing or the database is unavailable.
 
 Continue with [Operate Querylane](/get-started/operate-querylane) for backups, upgrades, and troubleshooting.
