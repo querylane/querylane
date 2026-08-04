@@ -4548,6 +4548,10 @@ components:
         filter:
           type: string
           title: filter
+          description: |-
+            Optional. AIP-160-inspired filter. Supported fields: display_name and id.
+             Both support `=`, `!=`, and the `:` case-insensitive substring operator.
+             Example: display_name:"production"
         orderBy:
           type: string
           title: order_by
@@ -4929,8 +4933,11 @@ components:
           type: string
           title: filter
           description: |-
-            Optional. Reserved for future AIP-160 filtering support.
-             The server currently rejects non-empty filters.
+            Optional. AIP-160-inspired filter. Supported fields:
+               - name (string; supports `=`, `!=`, and `:` substring)
+               - can_login, is_superuser, can_replicate, is_system_role (boolean;
+                 support `=` and `!=`)
+             Example: name:"report" AND can_login = true
         orderBy:
           type: string
           title: order_by

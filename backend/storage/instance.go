@@ -31,8 +31,9 @@ var instanceSchema = aipjet.Bind(
 		"console.querylane.dev/Instance",
 		aip.Fields[model.Instance]{
 			"display_name": {
-				Codec:    aip.StringCodec{},
-				GetValue: func(m *model.Instance) any { return m.DisplayName },
+				Codec:      aip.StringCodec{},
+				GetValue:   func(m *model.Instance) any { return m.DisplayName },
+				Filterable: true,
 			},
 			"engine": {
 				Codec:    aip.StringCodec{},
@@ -43,8 +44,9 @@ var instanceSchema = aipjet.Bind(
 				GetValue: func(m *model.Instance) any { return m.CreatedAt },
 			},
 			"id": {
-				Codec:    aip.StringCodec{},
-				GetValue: func(m *model.Instance) any { return m.ID },
+				Codec:      aip.StringCodec{},
+				GetValue:   func(m *model.Instance) any { return m.ID },
+				Filterable: true,
 			},
 		},
 		aip.WithDefaultOrder("display_name", aip.Asc),
@@ -164,8 +166,7 @@ func (p *PGInstanceRepository) CreateInstance(ctx context.Context, instance *api
 // It supports custom ordering and cursor-based pagination.
 // The pageSize parameter controls how many instances to return (default: 50 if <= 0).
 // The pageToken enables cursor-based pagination for consistent results across requests.
-// Filtering is not supported yet; the aip engine rejects a non-empty filter
-// with ErrInvalidFilter because the schema declares no Filterable fields.
+// Filters support display_name and id string comparisons/substrings.
 // Returns the list of instances, next page token (empty if no more pages), and any error.
 func (p *PGInstanceRepository) ListInstances(ctx context.Context, pageSize int32, pageToken string, filter string, orderBy string) ([]*api.Instance, string, error) {
 	baseQuery := postgres.SELECT(table.Instance.AllColumns).FROM(table.Instance)

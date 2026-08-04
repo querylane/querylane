@@ -1732,6 +1732,31 @@ func (s *PostgresEngineIntegrationTestSuite) TestRolesListAndGet() {
 	s.ErrorIs(err, engine.ErrRoleNotFound)
 }
 
+func (s *PostgresEngineIntegrationTestSuite) TestListRolesFiltering() {
+	ctx := context.Background()
+
+	for _, stmt := range []string{
+		"CREATE ROLE qltest_filter_login LOGIN",
+		"CREATE ROLE qltest_filter_group NOLOGIN",
+	} {
+		_, err := s.db.ExecContext(ctx, stmt)
+		s.Require().NoError(err)
+	}
+
+	s.T().Cleanup(func() {
+		_, _ = s.db.ExecContext(ctx, "DROP ROLE IF EXISTS qltest_filter_login")
+		_, _ = s.db.ExecContext(ctx, "DROP ROLE IF EXISTS qltest_filter_group")
+	})
+
+	roles, _, err := s.eng.ListRoles(ctx, s.db, aip.Params{
+		Filter:   `name:"filter" AND can_login = true AND is_system_role = false`,
+		PageSize: 100,
+	})
+	s.Require().NoError(err)
+	s.Require().Len(roles, 1)
+	s.Equal("qltest_filter_login", roles[0].Name)
+}
+
 // TestListRolesPaginationAndOrdering verifies cursor pagination and ordering
 // for ListRoles using the always-present built-in roles.
 func (s *PostgresEngineIntegrationTestSuite) TestListRolesPaginationAndOrdering() {

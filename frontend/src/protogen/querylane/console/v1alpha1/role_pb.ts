@@ -436,8 +436,11 @@ export type ListRolesRequest = Message<"querylane.console.v1alpha1.ListRolesRequ
   pageToken: string;
 
   /**
-   * Optional. Reserved for future AIP-160 filtering support.
-   * The server currently rejects non-empty filters.
+   * Optional. AIP-160-inspired filter. Supported fields:
+   *   - name (string; supports `=`, `!=`, and `:` substring)
+   *   - can_login, is_superuser, can_replicate, is_system_role (boolean;
+   *     support `=` and `!=`)
+   * Example: name:"report" AND can_login = true
    *
    * @generated from field: string filter = 4;
    */

@@ -332,8 +332,11 @@ message ListRolesRequest {
   // Provide this to retrieve the next page of results.
   string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Reserved for future AIP-160 filtering support.
-  // The server currently rejects non-empty filters.
+  // Optional. AIP-160-inspired filter. Supported fields:
+  //   - name (string; supports `=`, `!=`, and `:` substring)
+  //   - can_login, is_superuser, can_replicate, is_system_role (boolean;
+  //     support `=` and `!=`)
+  // Example: name:"report" AND can_login = true
   string filter = 4 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Ordering expression following AIP-132 syntax.

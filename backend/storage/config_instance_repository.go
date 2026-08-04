@@ -24,15 +24,17 @@ var configInstanceSchema = aip.NewSchema[*api.Instance](
 	"console.querylane.dev/Instance",
 	aip.Fields[*api.Instance]{
 		"display_name": {
-			Codec:    aip.StringCodec{},
-			GetValue: func(inst **api.Instance) any { return (*inst).GetDisplayName() },
+			Codec:      aip.StringCodec{},
+			GetValue:   func(inst **api.Instance) any { return (*inst).GetDisplayName() },
+			Filterable: true,
 		},
 		"create_time": {
 			Codec:    aip.TimestampCodec{},
 			GetValue: func(inst **api.Instance) any { return (*inst).GetCreateTime().AsTime() },
 		},
 		"id": {
-			Codec: aip.StringCodec{},
+			Codec:      aip.StringCodec{},
+			Filterable: true,
 			GetValue: func(inst **api.Instance) any {
 				id, _ := extractInstanceIDFromName((*inst).GetName())
 				return id
@@ -113,9 +115,8 @@ func (r *ConfigInstanceRepository) GetInstance(_ context.Context, name string) (
 
 // ListInstances returns config-defined instances with the same AIP-132
 // pagination, token validation, and order_by semantics as PGInstanceRepository.
-// Filtering is not supported by either instance repository yet; the aip engine
-// rejects a non-empty filter with ErrInvalidFilter because the schema declares
-// no Filterable fields.
+// Filtering supports the same display_name and id expressions as the
+// Postgres-backed repository.
 func (r *ConfigInstanceRepository) ListInstances(_ context.Context, pageSize int32, pageToken string, filter string, orderBy string) ([]*api.Instance, string, error) {
 	plan, err := aip.BuildPlan(configInstanceSchema, aip.Params{
 		PageSize:  pageSize,
@@ -130,7 +131,15 @@ func (r *ConfigInstanceRepository) ListInstances(_ context.Context, pageSize int
 	ordered := make([]*api.Instance, 0, len(r.ordered))
 	for _, id := range r.ordered {
 		clone, _ := proto.Clone(r.instances[id]).(*api.Instance)
-		ordered = append(ordered, clone)
+
+		matches, matchErr := configInstanceMatchesFilter(clone, plan.ParsedFilter())
+		if matchErr != nil {
+			return nil, "", matchErr
+		}
+
+		if matches {
+			ordered = append(ordered, clone)
+		}
 	}
 
 	slices.SortFunc(ordered, func(a, b *api.Instance) int {
@@ -151,6 +160,83 @@ func (r *ConfigInstanceRepository) ListInstances(_ context.Context, pageSize int
 	}
 
 	return ordered[:plan.PageSize], nextToken, nil
+}
+
+func configInstanceMatchesFilter(inst *api.Instance, expr aip.FilterExpr) (bool, error) {
+	if expr == nil {
+		return true, nil
+	}
+
+	switch node := expr.(type) {
+	case aip.FilterAnd:
+		for _, operand := range node.Operands {
+			matches, err := configInstanceMatchesFilter(inst, operand)
+			if err != nil {
+				return false, err
+			}
+
+			if !matches {
+				return false, nil
+			}
+		}
+
+		return true, nil
+	case aip.FilterOr:
+		for _, operand := range node.Operands {
+			matches, err := configInstanceMatchesFilter(inst, operand)
+			if err != nil {
+				return false, err
+			}
+
+			if matches {
+				return true, nil
+			}
+		}
+
+		return false, nil
+	case aip.FilterNot:
+		matches, err := configInstanceMatchesFilter(inst, node.Operand)
+		if err != nil {
+			return false, err
+		}
+
+		return !matches, nil
+	case aip.FilterCondition:
+		return configInstanceMatchesCondition(inst, node)
+	default:
+		return false, fmt.Errorf("unsupported config instance filter expression %T", expr)
+	}
+}
+
+func configInstanceMatchesCondition(inst *api.Instance, condition aip.FilterCondition) (bool, error) {
+	var actual string
+
+	switch condition.Field {
+	case "display_name":
+		actual = inst.GetDisplayName()
+	case "id":
+		actual, _ = extractInstanceIDFromName(inst.GetName())
+	default:
+		return false, fmt.Errorf("unsupported config instance filter field %q", condition.Field)
+	}
+
+	expected, ok := condition.Value.(string)
+	if !ok {
+		return false, fmt.Errorf("config instance filter field %q requires a string value", condition.Field)
+	}
+
+	switch condition.Operator {
+	case aip.OpEqual:
+		return actual == expected, nil
+	case aip.OpNotEqual:
+		return actual != expected, nil
+	case aip.OpContains:
+		return strings.Contains(strings.ToLower(actual), strings.ToLower(expected)), nil
+	case aip.OpLess, aip.OpLessEq, aip.OpGreater, aip.OpGreaterEq:
+		return false, fmt.Errorf("unsupported ordered comparison for config instance string field %q", condition.Field)
+	default:
+		return false, fmt.Errorf("unsupported config instance filter operator %q", condition.Operator)
+	}
 }
 
 func compareConfigInstances(a, b *api.Instance, orderBy aip.OrderBy) int {

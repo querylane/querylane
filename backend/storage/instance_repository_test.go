@@ -337,15 +337,41 @@ func TestIntegrationInstanceRepository_UpdateInstanceUsesWithTxExecutor(t *testi
 	})
 }
 
-func TestPGInstanceRepositoryListInstancesRejectsUnsupportedFilter(t *testing.T) {
+func TestIntegrationInstanceRepositoryListInstancesFilters(t *testing.T) {
 	t.Parallel()
 
-	repo := &PGInstanceRepository{}
+	testDB := NewTestDB(t)
+	repo, err := NewInstanceRepository(testDB.DB())
+	require.NoError(t, err)
 
-	_, _, err := repo.ListInstances(t.Context(), 10, "", "display_name.contains('prod')", "")
+	for id, displayName := range map[string]string{
+		"dev":  "Development",
+		"prod": "Production",
+	} {
+		_, err = repo.CreateInstance(t.Context(), &api.Instance{
+			DisplayName: displayName,
+			Config: &api.PostgresConfig{
+				Database: "postgres",
+				Host:     "localhost",
+				Port:     5432,
+				Username: "querylane",
+			},
+		}, id)
+		require.NoError(t, err)
+	}
 
-	require.ErrorIs(t, err, ErrInvalidFilter)
-	require.ErrorContains(t, err, "filter")
+	instances, nextPageToken, err := repo.ListInstances(
+		t.Context(),
+		10,
+		"",
+		`display_name:"duct"`,
+		"",
+	)
+
+	require.NoError(t, err)
+	assert.Empty(t, nextPageToken)
+	require.Len(t, instances, 1)
+	assert.Equal(t, "instances/prod", instances[0].GetName())
 }
 
 func TestNewInstanceRepositoryRejectsMalformedSecretKey(t *testing.T) {

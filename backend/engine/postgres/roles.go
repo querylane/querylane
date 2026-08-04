@@ -18,14 +18,39 @@ var roleSchema = rawsql.Bind(
 		"console.querylane.dev/Role",
 		aip.Fields[engine.Role]{
 			"name": {
-				Codec:    aip.StringCodec{},
-				GetValue: func(m *engine.Role) any { return m.Name },
+				Codec:      aip.StringCodec{},
+				GetValue:   func(m *engine.Role) any { return m.Name },
+				Filterable: true,
+			},
+			"can_login": {
+				Codec:           aip.BoolCodec{},
+				DisableOrdering: true,
+				Filterable:      true,
+			},
+			"is_superuser": {
+				Codec:           aip.BoolCodec{},
+				DisableOrdering: true,
+				Filterable:      true,
+			},
+			"can_replicate": {
+				Codec:           aip.BoolCodec{},
+				DisableOrdering: true,
+				Filterable:      true,
+			},
+			"is_system_role": {
+				Codec:           aip.BoolCodec{},
+				DisableOrdering: true,
+				Filterable:      true,
 			},
 		},
 		aip.WithNameOrdering(),
 	),
 	rawsql.Exprs{
-		"name": "r.rolname",
+		"name":           "r.rolname",
+		"can_login":      "r.rolcanlogin",
+		"is_superuser":   "r.rolsuper",
+		"can_replicate":  "r.rolreplication",
+		"is_system_role": `(r.rolname LIKE 'pg\_%' ESCAPE '\')`,
 	},
 )
 

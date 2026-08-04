@@ -291,6 +291,10 @@ export type ListInstancesRequest = Message<"querylane.console.v1alpha1.ListInsta
   pageToken: string;
 
   /**
+   * Optional. AIP-160-inspired filter. Supported fields: display_name and id.
+   * Both support `=`, `!=`, and the `:` case-insensitive substring operator.
+   * Example: display_name:"production"
+   *
    * @generated from field: string filter = 4;
    */
   filter: string;

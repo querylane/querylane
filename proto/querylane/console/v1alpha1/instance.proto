@@ -192,6 +192,9 @@ message ListInstancesRequest {
     }
   ];
   string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+  // Optional. AIP-160-inspired filter. Supported fields: display_name and id.
+  // Both support `=`, `!=`, and the `:` case-insensitive substring operator.
+  // Example: display_name:"production"
   string filter = 4 [(google.api.field_behavior) = OPTIONAL];
   string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
 }

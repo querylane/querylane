@@ -137,13 +137,16 @@ func TestConfigInstanceRepository_ListInstances(t *testing.T) { //nolint:tparall
 		assert.Equal(t, "Staging", instances[2].GetDisplayName())
 	})
 
-	t.Run("rejects unsupported filter", func(t *testing.T) {
+	t.Run("filters by display name", func(t *testing.T) {
 		t.Parallel()
 
 		repo := NewConfigInstanceRepository(newTestConfigs())
 
-		_, _, err := repo.ListInstances(ctx, 10, "", "display_name.contains('Prod')", "")
-		require.ErrorIs(t, err, ErrInvalidFilter)
+		instances, nextToken, err := repo.ListInstances(ctx, 10, "", `display_name:"duct"`, "")
+		require.NoError(t, err)
+		assert.Empty(t, nextToken)
+		require.Len(t, instances, 1)
+		assert.Equal(t, "Production", instances[0].GetDisplayName())
 	})
 
 	t.Run("returns empty list for empty config", func(t *testing.T) {
