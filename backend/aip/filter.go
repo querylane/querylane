@@ -330,7 +330,15 @@ func lexBare(s string) (string, int, error) {
 }
 
 func isBareChar(c byte) bool {
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '.'
+	return isIdentifierChar(c) || c == '.'
+}
+
+func isIdentifierStart(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+}
+
+func isIdentifierChar(c byte) bool {
+	return isIdentifierStart(c) || (c >= '0' && c <= '9')
 }
 
 func isFilterSpace(c byte) bool {
@@ -550,17 +558,12 @@ func validateIdentifier(field string) error {
 			return fmt.Errorf("%w: invalid field name %q", ErrInvalidFilter, field)
 		}
 
-		for i := range len(segment) {
-			c := segment[i]
+		if !isIdentifierStart(segment[0]) {
+			return fmt.Errorf("%w: invalid field name %q", ErrInvalidFilter, field)
+		}
 
-			isLetter := (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
-			isDigit := c >= '0' && c <= '9'
-
-			if i == 0 && !isLetter {
-				return fmt.Errorf("%w: invalid field name %q", ErrInvalidFilter, field)
-			}
-
-			if !isLetter && !isDigit {
+		for i := 1; i < len(segment); i++ {
+			if !isIdentifierChar(segment[i]) {
 				return fmt.Errorf("%w: invalid field name %q", ErrInvalidFilter, field)
 			}
 		}
