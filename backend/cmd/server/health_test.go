@@ -65,10 +65,6 @@ func healthHandler(app *App) http.Handler {
 func TestAppHealthEndpointsBeforeDatabaseInitialization(t *testing.T) {
 	t.Parallel()
 
-	if !testing.Short() {
-		t.Skip("unit test: run with -short")
-	}
-
 	app := newHealthTestApp(t)
 	handler := healthHandler(app)
 
@@ -99,10 +95,6 @@ func TestAppHealthEndpointsBeforeDatabaseInitialization(t *testing.T) {
 
 func TestAppReadinessTracksMetaDatabaseAvailability(t *testing.T) {
 	t.Parallel()
-
-	if !testing.Short() {
-		t.Skip("unit test: run with -short")
-	}
 
 	t.Run("ready", func(t *testing.T) {
 		t.Parallel()
