@@ -37,6 +37,14 @@ kubectl port-forward service/querylane 8080:80
 
 Open `http://127.0.0.1:8080`.
 
+## Health checks
+
+`GET /livez` returns `200` while the HTTP server is running and does not depend
+on the metadata database. `GET /readyz` returns `200` when the metadata database
+is initialized and reachable, and `503` while Querylane is initializing or the
+database is unavailable. The chart configures its Kubernetes probes to use
+these endpoints.
+
 Use `externalDatabase.existingSecret` and `instanceSecret.existingSecret` when
 the two values live in different Secrets. The chart never creates or stores
 credential values in Helm values.
