@@ -107,6 +107,17 @@ func TestExtractBuildInfoPrefersStampedMetadata(t *testing.T) {
 			wantBuiltAt: new(time.Date(2025, time.January, 2, 3, 4, 5, 0, time.UTC)),
 		},
 		{
+			name: "development stamp preserves tagged module version",
+			buildInfo: &debug.BuildInfo{
+				Main: debug.Module{Version: "v9.8.7"},
+			},
+			stamp:       buildStamp{version: "dev"},
+			wantVersion: "v9.8.7",
+			wantCommit:  "unknown",
+			wantBranch:  "unknown",
+			wantBuiltAt: nil,
+		},
+		{
 			name:        "nil runtime info and empty stamp retain unknown defaults",
 			buildInfo:   nil,
 			stamp:       buildStamp{},

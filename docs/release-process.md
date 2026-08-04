@@ -43,6 +43,11 @@ builds report `dev`.
 
 Do not hardcode release versions in Go or Docker build files.
 
+`.tool-versions` intentionally pins only GoReleaser. GoReleaser Action's
+`version-file` input requires the asdf/mise format; Go and Bun keep their
+existing source-of-truth pins in `backend/go.mod` and the root
+`packageManager` field.
+
 ## Validate locally
 
 Build the frontend assets used by an embedded binary:
