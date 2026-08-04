@@ -374,6 +374,17 @@ func TestIntegrationInstanceRepositoryListInstancesFilters(t *testing.T) {
 	assert.Equal(t, "instances/prod", instances[0].GetName())
 }
 
+func TestIntegrationInstanceRepositoryListInstancesRejectsSyntheticIDFilter(t *testing.T) {
+	t.Parallel()
+
+	testDB := NewTestDB(t)
+	repo, err := NewInstanceRepository(testDB.DB())
+	require.NoError(t, err)
+
+	_, _, err = repo.ListInstances(t.Context(), 10, "", `id = "prod"`, "")
+	require.ErrorIs(t, err, ErrInvalidFilter)
+}
+
 func TestNewInstanceRepositoryRejectsMalformedSecretKey(t *testing.T) {
 	t.Parallel()
 

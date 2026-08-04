@@ -180,12 +180,12 @@ describe("InstanceRolesPage", () => {
     );
 
     expect(mocks.roleQueryInputs).not.toContainEqual({
-      filter: 'name:"post"',
+      filter: 'role_name:"post"',
       parent: "instances/prod",
     });
     act(() => vi.advanceTimersByTime(200));
     expect(mocks.roleQueryInputs).toContainEqual({
-      filter: 'name:"post"',
+      filter: 'role_name:"post"',
       parent: "instances/prod",
     });
   });
@@ -203,7 +203,8 @@ describe("InstanceRolesPage", () => {
     );
 
     expect(mocks.roleQueryInputs).toContainEqual({
-      filter: 'name:"post" AND is_system_role = false AND is_superuser = true',
+      filter:
+        'role_name:"post" AND is_system_role = false AND attributes.is_superuser = true',
       parent: "instances/prod",
     });
   });

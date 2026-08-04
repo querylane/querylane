@@ -436,11 +436,15 @@ export type ListRolesRequest = Message<"querylane.console.v1alpha1.ListRolesRequ
   pageToken: string;
 
   /**
-   * Optional. AIP-160-inspired filter. Supported fields:
-   *   - name (string; supports `=`, `!=`, and `:` substring)
-   *   - can_login, is_superuser, can_replicate, is_system_role (boolean;
-   *     support `=` and `!=`)
-   * Example: name:"report" AND can_login = true
+   * Optional. Filter on resource fields:
+   *   - role_name (string; supports `=`, `!=`, and `:` substring)
+   *   - attributes.can_login, attributes.is_superuser,
+   *     attributes.can_replicate, and is_system_role (boolean; support `=`
+   *     and `!=`)
+   * aip.dev/not-precedent: For compatibility with Querylane's existing list
+   * grammar, `:` is a case-insensitive scalar substring operator rather than
+   * AIP-160's collection has operator.
+   * Example: role_name:"report" AND attributes.can_login = true
    *
    * @generated from field: string filter = 4;
    */

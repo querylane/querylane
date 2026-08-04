@@ -47,16 +47,16 @@ describe("AIP filter builders", () => {
 
   it("maps role kinds to the backend role classification fields", () => {
     expect(buildRoleFilter({ query: " report ", type: "super" })).toBe(
-      'name:"report" AND is_system_role = false AND is_superuser = true'
+      'role_name:"report" AND is_system_role = false AND attributes.is_superuser = true'
     );
     expect(buildRoleFilter({ query: "", type: "repl" })).toBe(
-      "is_system_role = false AND is_superuser = false AND can_replicate = true AND can_login = true"
+      "is_system_role = false AND attributes.is_superuser = false AND attributes.can_replicate = true AND attributes.can_login = true"
     );
     expect(buildRoleFilter({ query: "", type: "group" })).toBe(
-      "is_system_role = false AND is_superuser = false AND can_login = false"
+      "is_system_role = false AND attributes.is_superuser = false AND attributes.can_login = false"
     );
     expect(buildRoleFilter({ query: "", type: "login" })).toBe(
-      "is_system_role = false AND is_superuser = false AND can_login = true AND can_replicate = false"
+      "is_system_role = false AND attributes.is_superuser = false AND attributes.can_login = true AND attributes.can_replicate = false"
     );
     expect(buildRoleFilter({ query: "", type: "builtin" })).toBe(
       "is_system_role = true"

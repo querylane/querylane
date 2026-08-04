@@ -2,6 +2,7 @@ type ContainsFilterField =
   | "display_name"
   | "name"
   | "object_name"
+  | "role_name"
   | "schema_name";
 
 type RoleFilterKind = "builtin" | "group" | "login" | "repl" | "super";
@@ -78,13 +79,13 @@ function roleTypeFilter(type: RoleFilterKind | undefined): string | undefined {
     case "builtin":
       return "is_system_role = true";
     case "super":
-      return "is_system_role = false AND is_superuser = true";
+      return "is_system_role = false AND attributes.is_superuser = true";
     case "repl":
-      return "is_system_role = false AND is_superuser = false AND can_replicate = true AND can_login = true";
+      return "is_system_role = false AND attributes.is_superuser = false AND attributes.can_replicate = true AND attributes.can_login = true";
     case "group":
-      return "is_system_role = false AND is_superuser = false AND can_login = false";
+      return "is_system_role = false AND attributes.is_superuser = false AND attributes.can_login = false";
     case "login":
-      return "is_system_role = false AND is_superuser = false AND can_login = true AND can_replicate = false";
+      return "is_system_role = false AND attributes.is_superuser = false AND attributes.can_login = true AND attributes.can_replicate = false";
     default:
       return type satisfies never;
   }
@@ -98,7 +99,7 @@ function buildRoleFilter({
   type?: RoleFilterKind | undefined;
 }): string | undefined {
   return joinFilterConditions([
-    buildContainsFilter("name", query),
+    buildContainsFilter("role_name", query),
     roleTypeFilter(type),
   ]);
 }

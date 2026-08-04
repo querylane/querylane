@@ -33,8 +33,7 @@ var configInstanceSchema = aip.NewSchema[*api.Instance](
 			GetValue: func(inst **api.Instance) any { return (*inst).GetCreateTime().AsTime() },
 		},
 		"id": {
-			Codec:      aip.StringCodec{},
-			Filterable: true,
+			Codec: aip.StringCodec{},
 			GetValue: func(inst **api.Instance) any {
 				id, _ := extractInstanceIDFromName((*inst).GetName())
 				return id
@@ -115,8 +114,8 @@ func (r *ConfigInstanceRepository) GetInstance(_ context.Context, name string) (
 
 // ListInstances returns config-defined instances with the same AIP-132
 // pagination, token validation, and order_by semantics as PGInstanceRepository.
-// Filtering supports the same display_name and id expressions as the
-// Postgres-backed repository.
+// Filtering supports the same display_name expressions as the PostgreSQL-backed
+// repository.
 func (r *ConfigInstanceRepository) ListInstances(_ context.Context, pageSize int32, pageToken string, filter string, orderBy string) ([]*api.Instance, string, error) {
 	plan, err := aip.BuildPlan(configInstanceSchema, aip.Params{
 		PageSize:  pageSize,
@@ -214,8 +213,6 @@ func configInstanceMatchesCondition(inst *api.Instance, condition aip.FilterCond
 	switch condition.Field {
 	case "display_name":
 		actual = inst.GetDisplayName()
-	case "id":
-		actual, _ = extractInstanceIDFromName(inst.GetName())
 	default:
 		return false, fmt.Errorf("unsupported config instance filter field %q", condition.Field)
 	}

@@ -232,12 +232,12 @@ func TestListRoles(t *testing.T) {
 			opener: &fakeOpener{sess: &fakeRoleSession{}},
 			req: &v1alpha1.ListRolesRequest{
 				Parent: "instances/prod",
-				Filter: "name = 'postgres'",
+				Filter: "role_name = 'postgres'",
 			},
 			assertion: func(t *testing.T, opener *fakeOpener, _ *connect.Response[v1alpha1.ListRolesResponse], err error) {
 				t.Helper()
 				require.NoError(t, err)
-				assert.Equal(t, "name = 'postgres'", opener.sess.params.Filter)
+				assert.Equal(t, "role_name = 'postgres'", opener.sess.params.Filter)
 			},
 		},
 		{

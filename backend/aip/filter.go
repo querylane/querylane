@@ -119,8 +119,9 @@ const (
 //	op          = "=" | "!=" | ":" | "<" | "<=" | ">" | ">="
 //	value       = quoted string | bare token (true/false/integers)
 //
-// Not supported (rejected with ErrInvalidFilter): bare fuzzy-match terms,
-// function calls, dotted traversal, wildcard string matching.
+// Dotted field paths are accepted only when the complete path is explicitly
+// declared filterable by the resource schema. Bare fuzzy-match terms,
+// function calls, and wildcard string matching are rejected.
 
 // rawExpr is a parsed but not yet schema-validated expression node.
 type rawExpr interface {
@@ -314,7 +315,7 @@ func lexQuoted(s string) (string, int, error) {
 	return "", 0, fmt.Errorf("%w: unterminated quoted value", ErrInvalidFilter)
 }
 
-// lexBare consumes a run of bare-word bytes (letters, digits, underscore).
+// lexBare consumes a run of field-path or bare-value bytes.
 func lexBare(s string) (string, int, error) {
 	i := 0
 	for i < len(s) && isBareChar(s[i]) {
@@ -329,7 +330,7 @@ func lexBare(s string) (string, int, error) {
 }
 
 func isBareChar(c byte) bool {
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_'
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '.'
 }
 
 func isFilterSpace(c byte) bool {
@@ -541,21 +542,27 @@ func isKeyword(s string) bool {
 	return strings.EqualFold(s, andKeyword) || strings.EqualFold(s, orKeyword) || strings.EqualFold(s, notKeyword)
 }
 
-// validateIdentifier checks a bare field name: a letter or underscore followed
-// by letters, digits, or underscores.
+// validateIdentifier checks every segment of a dotted field path: a letter or
+// underscore followed by letters, digits, or underscores.
 func validateIdentifier(field string) error {
-	for i := range len(field) {
-		c := field[i]
-
-		isLetter := (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
-		isDigit := c >= '0' && c <= '9'
-
-		if i == 0 && !isLetter {
+	for segment := range strings.SplitSeq(field, ".") {
+		if segment == "" {
 			return fmt.Errorf("%w: invalid field name %q", ErrInvalidFilter, field)
 		}
 
-		if !isLetter && !isDigit {
-			return fmt.Errorf("%w: invalid field name %q", ErrInvalidFilter, field)
+		for i := range len(segment) {
+			c := segment[i]
+
+			isLetter := (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+			isDigit := c >= '0' && c <= '9'
+
+			if i == 0 && !isLetter {
+				return fmt.Errorf("%w: invalid field name %q", ErrInvalidFilter, field)
+			}
+
+			if !isLetter && !isDigit {
+				return fmt.Errorf("%w: invalid field name %q", ErrInvalidFilter, field)
+			}
 		}
 	}
 

@@ -26,7 +26,7 @@ import {
 } from "@/lib/admin-navigation";
 import type { AdminPageId } from "@/lib/admin-page";
 import {
-  buildContainsFilter,
+  buildRoleFilter,
   MIN_SERVER_SUBSTRING_LENGTH,
   SERVER_FILTER_DEBOUNCE_MS,
 } from "@/lib/aip-filter";
@@ -332,7 +332,7 @@ function AdminCommandPaletteContent({
     instanceId,
     query: serverQuery,
   });
-  const roleFilter = buildContainsFilter("name", serverQuery);
+  const roleFilter = buildRoleFilter({ query: serverQuery });
   const rolesQuery = useListRolesQuery(
     instanceId && roleFilter
       ? {

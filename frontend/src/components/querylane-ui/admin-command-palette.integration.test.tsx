@@ -184,7 +184,7 @@ test("palette search sends bounded server filters", async () => {
 
   await waitFor(() => {
     expect(commandPaletteMockState.roleInputs).toContainEqual({
-      filter: 'name:"app\\"reader"',
+      filter: 'role_name:"app\\"reader"',
       instanceId: "prod-analytics",
       pageSize: 5,
     });

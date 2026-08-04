@@ -62,6 +62,7 @@ func aipCompatibilityNoteChecks() []compatibilityNoteCheck {
 		{name: "table data anchor", snippet: "<!-- aip-exception:custom-table-data-rpcs -->"},
 		{name: "table metadata anchor", snippet: "<!-- aip-exception:bounded-table-metadata-lists -->"},
 		{name: "operational surfaces anchor", snippet: "<!-- aip-exception:operational-surfaces -->"},
+		{name: "scalar filter colon anchor", snippet: "<!-- aip-exception:scalar-filter-colon -->"},
 		{name: "pagination boundary anchor", snippet: "<!-- aip-boundary:pagination-pr -->"},
 		{name: "generated files guardrail", snippet: "<!-- aip-guardrail:generated-files -->"},
 	}

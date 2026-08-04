@@ -18,21 +18,26 @@ var roleSchema = rawsql.Bind(
 		"console.querylane.dev/Role",
 		aip.Fields[engine.Role]{
 			"name": {
-				Codec:      aip.StringCodec{},
-				GetValue:   func(m *engine.Role) any { return m.Name },
-				Filterable: true,
+				Codec:    aip.StringCodec{},
+				GetValue: func(m *engine.Role) any { return m.Name },
 			},
-			"can_login": {
+			"role_name": {
+				Codec:           aip.StringCodec{},
+				GetValue:        func(m *engine.Role) any { return m.Name },
+				DisableOrdering: true,
+				Filterable:      true,
+			},
+			"attributes.can_login": {
 				Codec:           aip.BoolCodec{},
 				DisableOrdering: true,
 				Filterable:      true,
 			},
-			"is_superuser": {
+			"attributes.is_superuser": {
 				Codec:           aip.BoolCodec{},
 				DisableOrdering: true,
 				Filterable:      true,
 			},
-			"can_replicate": {
+			"attributes.can_replicate": {
 				Codec:           aip.BoolCodec{},
 				DisableOrdering: true,
 				Filterable:      true,
@@ -46,11 +51,12 @@ var roleSchema = rawsql.Bind(
 		aip.WithNameOrdering(),
 	),
 	rawsql.Exprs{
-		"name":           "r.rolname",
-		"can_login":      "r.rolcanlogin",
-		"is_superuser":   "r.rolsuper",
-		"can_replicate":  "r.rolreplication",
-		"is_system_role": `(r.rolname LIKE 'pg\_%' ESCAPE '\')`,
+		"name":                     "r.rolname",
+		"role_name":                "r.rolname",
+		"attributes.can_login":     "r.rolcanlogin",
+		"attributes.is_superuser":  "r.rolsuper",
+		"attributes.can_replicate": "r.rolreplication",
+		"is_system_role":           `(r.rolname LIKE 'pg\_%' ESCAPE '\')`,
 	},
 )
 

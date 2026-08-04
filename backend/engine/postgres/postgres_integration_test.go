@@ -1738,23 +1738,56 @@ func (s *PostgresEngineIntegrationTestSuite) TestListRolesFiltering() {
 	for _, stmt := range []string{
 		"CREATE ROLE qltest_filter_login LOGIN",
 		"CREATE ROLE qltest_filter_group NOLOGIN",
+		"CREATE ROLE qltest_filter_super SUPERUSER NOLOGIN",
+		"CREATE ROLE qltest_filter_repl REPLICATION LOGIN",
 	} {
 		_, err := s.db.ExecContext(ctx, stmt)
 		s.Require().NoError(err)
 	}
 
 	s.T().Cleanup(func() {
-		_, _ = s.db.ExecContext(ctx, "DROP ROLE IF EXISTS qltest_filter_login")
-		_, _ = s.db.ExecContext(ctx, "DROP ROLE IF EXISTS qltest_filter_group")
+		for _, roleName := range []string{
+			"qltest_filter_login",
+			"qltest_filter_group",
+			"qltest_filter_super",
+			"qltest_filter_repl",
+		} {
+			_, err := s.db.ExecContext(ctx, "DROP ROLE IF EXISTS "+roleName)
+			s.Require().NoError(err)
+		}
 	})
 
-	roles, _, err := s.eng.ListRoles(ctx, s.db, aip.Params{
-		Filter:   `name:"filter" AND can_login = true AND is_system_role = false`,
-		PageSize: 100,
-	})
-	s.Require().NoError(err)
-	s.Require().Len(roles, 1)
-	s.Equal("qltest_filter_login", roles[0].Name)
+	for _, tc := range []struct {
+		name     string
+		filter   string
+		wantRole string
+	}{
+		{
+			name:     "role name and login attribute",
+			filter:   `role_name:"filter_login" AND attributes.can_login = true AND is_system_role = false`,
+			wantRole: "qltest_filter_login",
+		},
+		{
+			name:     "superuser attribute",
+			filter:   `role_name = "qltest_filter_super" AND attributes.is_superuser = true`,
+			wantRole: "qltest_filter_super",
+		},
+		{
+			name:     "replication attribute",
+			filter:   `role_name = "qltest_filter_repl" AND attributes.can_replicate = true`,
+			wantRole: "qltest_filter_repl",
+		},
+	} {
+		s.Run(tc.name, func() {
+			roles, _, err := s.eng.ListRoles(ctx, s.db, aip.Params{
+				Filter:   tc.filter,
+				PageSize: 100,
+			})
+			s.Require().NoError(err)
+			s.Require().Len(roles, 1)
+			s.Equal(tc.wantRole, roles[0].Name)
+		})
+	}
 }
 
 // TestListRolesPaginationAndOrdering verifies cursor pagination and ordering

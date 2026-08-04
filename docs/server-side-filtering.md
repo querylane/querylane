@@ -50,8 +50,9 @@ new abstractions**. It adds about 100 lines across the existing files (see §11)
   summary state as well as table rows (§7).
 
 **Non-goals for this iteration** are deliberate AIP-160 omissions (see §2.1):
-- Field traversal (`a.b.c`), full `:` HAS semantics for repeated, map, or message fields, function calls
-  (including legacy `.contains()`), bare fuzzy-match terms, and `*` wildcards.
+- Arbitrary field traversal beyond exact schema-allowlisted paths, full `:` HAS semantics for repeated,
+  map, or message fields, function calls (including legacy `.contains()`), bare fuzzy-match terms, and
+  `*` wildcards.
 - Strict AIP enum-name semantics for `object_type` and `privilege` (we filter on the stored token; §2.1).
 - Matching all non-`page_size` arguments in the page token (parent and database scope are not enforced; §13).
 - Changing the keyset pagination model (still cursor-based AIP-132).
@@ -64,16 +65,17 @@ We implement a **subset** of [AIP-160](https://google.aip.dev/160), not the full
 scope is a deliberate complexity trade-off. The surface includes everything the UI needs (kind tabs,
 a search box, and the cached lists' `is_system_*` and `owner` filters) and nothing more.
 
-**Supported:** `=`, `!=`, `<`, `<=`, `>`, `>=`, string `:` substring, `AND`, `OR`, `NOT`/`-`, and
-parenthesized groups. Values are quoted strings/RFC 3339 timestamps, bare booleans, or bare integers.
+**Supported:** `=`, `!=`, `<`, `<=`, `>`, `>=`, string `:` substring, `AND`, `OR`, `NOT`/`-`,
+parenthesized groups, and exact schema-allowlisted dotted field paths. Values are quoted strings/RFC
+3339 timestamps, bare booleans, or bare integers.
 
 **Deliberately omitted (documented deviations):**
-- Field traversal, `*`/wildcard matching, function calls (including `.contains()`), bare fuzzy-match
-  terms, and the full AIP-160 `:` semantics for repeated, map, or message presence checks. A non-empty
-  unsupported construct → `InvalidArgument`, never silently ignored.
-- We use AIP-160's **`:` spelling** for string substring now, while filters are still ignored or rejected and
-  no client can depend on the older `.contains()` comments. Update the existing
-  database, schema, table, and view proto comments to `name:"..."` in the same implementation pass.
+- Arbitrary field traversal, `*`/wildcard matching, function calls (including `.contains()`), bare
+  fuzzy-match terms, and the full AIP-160 `:` semantics for repeated, map, or message presence checks.
+  A non-empty unsupported construct → `InvalidArgument`, never silently ignored.
+- We keep Querylane's established **`:` spelling** for case-insensitive scalar substring search. Public
+  proto declarations mark this AIP-160 deviation `aip.dev/not-precedent` so strict AIP surfaces do not
+  copy it.
 - **Enum fields** (`object_type`, `privilege`) are filtered on their **stored string token**
   (`"TABLE"`, `"VIEW"`, and similar tokens; the proto enum name minus the `GRANT_OBJECT_TYPE_` prefix; the DB column is
   this token and is mapped to the proto enum only at the API boundary, `service.go:414-451`), **not** the
@@ -121,6 +123,7 @@ full AIP-160 language.
 
 ```
 restriction := field op value
+field       := IDENT { "." IDENT }
 simple      := "(" expression ")" | restriction
 term        := [ "NOT" | "-" ] simple
 factor      := term { "OR" term }
@@ -141,6 +144,8 @@ Examples the UI sends:
 **Decisions**
 - **Expression tree:** `FilterAnd`, `FilterOr`, `FilterNot`, and `FilterCondition` preserve grouping
   and AIP-160 precedence for both compilers.
+- **Field paths:** the parser accepts dotted identifiers, but schema validation requires the complete
+  path to be explicitly allowlisted. It never performs implicit or reflective traversal.
 - **`:`** means a case-insensitive substring for string fields (the search-box operator). See §5.4 for
   the SQL form and escaping. This is not the full AIP-160 HAS operator for repeated, map, or message fields.
 - **Typed comparisons:** integers use bare literals; timestamps use quoted RFC 3339 values. Both support
@@ -386,11 +391,11 @@ Enabled fields:
 | `ownedObjectSchema` (engine/postgres/owned_objects.go) | live | `object_type`, `object_name`, `schema_name` |
 | `defaultPrivilegeSchema` (engine/postgres/default_privileges.go) | live | `object_type`, `privilege`, `schema_name`, `creator_role_name` |
 | `grantSchema` / `publicGrantSchema` (engine/postgres/{grants,public_grants}.go) | live | `object_type`, `object_name`, `schema_name`, `privilege`, `grantor` |
-| `roleSchema` (engine/postgres/roles.go) | live | `name` (+ `is_system_role`, see caveat) |
+| `roleSchema` (engine/postgres/roles.go) | live | `role_name`, `attributes.can_login`, `attributes.is_superuser`, `attributes.can_replicate`, `is_system_role` |
 | `tableSchema` (engine/postgres/tables.go) | live | `table_type` |
 | `catalog{Database,Schema,Table}Schema` (storage/catalog/*.go) | jet | `name`, `owner`, `table_type` (tables), `is_system_*` |
 | `catalogViewSchema` (storage/catalog/view.go) | jet | `name` |
-| `instanceSchema` (storage/instance.go) | jet | `display_name`, `id` (note: `instance` has no `name` trigram index) |
+| `instanceSchema` (storage/instance.go) | jet | `display_name` |
 
 Caveats from review:
 - **`is_system_role` is a computed SELECT alias** (`list_roles.sql`: `r.rolname LIKE 'pg\_%' … AS
