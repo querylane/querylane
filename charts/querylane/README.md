@@ -49,6 +49,20 @@ Use `externalDatabase.existingSecret` and `instanceSecret.existingSecret` when
 the two values live in different Secrets. The chart never creates or stores
 credential values in Helm values.
 
+## Production settings
+
+Upgrades use the `Recreate` strategy to avoid running different Querylane
+versions concurrently while metadata migrations run. Plan for brief downtime.
+
+The preview does not set default resource requests or limits because the right
+values depend on the number and size of managed PostgreSQL instances. Set
+`resources.requests` and `resources.limits` from observed usage before a
+production rollout.
+
+An empty `image.tag` uses the chart's `appVersion`, currently `edge`. When
+changing `image.repository`, also set `image.tag` or, preferably,
+`image.digest`.
+
 ## Scope
 
 The preview deliberately excludes chart publishing, Ingress, bundled
