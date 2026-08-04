@@ -25,19 +25,19 @@ func TestIntegrationCatalogListNameContainsFilterIsCaseInsensitive(t *testing.T)
 	repo := catalog.New(storage.NewTestDB(t).DB())
 	now := time.Now()
 
-	require.NoError(t, repo.SyncDatabases(ctx, "inst", []model.CatalogDatabase{
+	require.NoError(t, syncDatabases(ctx, repo, "inst", []model.CatalogDatabase{
 		{InstanceID: "inst", Name: "Inventory", DisplayName: "Inventory", Owner: "owner", SyncedAt: now},
 		{InstanceID: "inst", Name: "billing", DisplayName: "billing", Owner: "owner", SyncedAt: now},
 	}))
-	require.NoError(t, repo.SyncSchemas(ctx, "inst", "db", []model.CatalogSchema{
+	require.NoError(t, syncSchemas(ctx, repo, "inst", "db", []model.CatalogSchema{
 		{InstanceID: "inst", DatabaseName: "db", Name: "public", DisplayName: "public", Owner: "owner", SyncedAt: now},
 		{InstanceID: "inst", DatabaseName: "db", Name: "Audit", DisplayName: "Audit", Owner: "owner", SyncedAt: now},
 	}))
-	require.NoError(t, repo.SyncTables(ctx, "inst", "db", "public", []model.CatalogTable{
+	require.NoError(t, syncTables(ctx, repo, "inst", "db", "public", []model.CatalogTable{
 		{InstanceID: "inst", DatabaseName: "db", SchemaName: "public", Name: "Invoices", DisplayName: "Invoices", Owner: "owner", SyncedAt: now},
 		{InstanceID: "inst", DatabaseName: "db", SchemaName: "public", Name: "payments", DisplayName: "payments", Owner: "owner", SyncedAt: now},
 	}))
-	require.NoError(t, repo.SyncViews(ctx, "inst", "db", "public", []model.CatalogView{
+	require.NoError(t, syncViews(ctx, repo, "inst", "db", "public", []model.CatalogView{
 		{InstanceID: "inst", DatabaseName: "db", SchemaName: "public", Name: "INVOICE_LINES", DisplayName: "INVOICE_LINES", ViewType: int32(consolev1alpha1.View_VIEW_TYPE_STANDARD), Owner: "owner", SyncedAt: now},
 		{InstanceID: "inst", DatabaseName: "db", SchemaName: "public", Name: "daily_totals", DisplayName: "daily_totals", ViewType: int32(consolev1alpha1.View_VIEW_TYPE_STANDARD), Owner: "owner", SyncedAt: now},
 	}))
@@ -71,11 +71,11 @@ func TestIntegrationCatalogListAIPFilterGrammar(t *testing.T) {
 	repo := catalog.New(storage.NewTestDB(t).DB())
 	now := time.Now()
 
-	require.NoError(t, repo.SyncDatabases(ctx, "inst", []model.CatalogDatabase{
+	require.NoError(t, syncDatabases(ctx, repo, "inst", []model.CatalogDatabase{
 		{InstanceID: "inst", Name: "appdb", DisplayName: "appdb", Owner: "app_owner", SyncedAt: now},
 		{InstanceID: "inst", Name: "postgres", DisplayName: "postgres", Owner: "postgres", IsSystemDatabase: true, SyncedAt: now},
 	}))
-	require.NoError(t, repo.SyncTables(ctx, "inst", "appdb", "public", []model.CatalogTable{
+	require.NoError(t, syncTables(ctx, repo, "inst", "appdb", "public", []model.CatalogTable{
 		{InstanceID: "inst", DatabaseName: "appdb", SchemaName: "public", Name: "orders", DisplayName: "orders", TableType: "TABLE_TYPE_BASE_TABLE", Owner: "app_owner", SyncedAt: now},
 		{InstanceID: "inst", DatabaseName: "appdb", SchemaName: "public", Name: "events", DisplayName: "events", TableType: "TABLE_TYPE_PARTITIONED", Owner: "app_owner", SyncedAt: now},
 		{InstanceID: "inst", DatabaseName: "appdb", SchemaName: "public", Name: "remote_orders", DisplayName: "remote_orders", TableType: "TABLE_TYPE_EXTERNAL", Owner: "app_owner", SyncedAt: now},

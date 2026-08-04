@@ -15,31 +15,6 @@ import (
 	"github.com/querylane/querylane/backend/storage/gen/querylane/public/model"
 )
 
-const syncPageSize = 10000
-
-// collectAllPages drains a paginated list endpoint into a single slice.
-func collectAllPages[T any](ctx context.Context, fetch func(context.Context, aip.Params) ([]T, string, error)) ([]T, error) {
-	var (
-		all       []T
-		pageToken string
-	)
-
-	for {
-		page, nextToken, err := fetch(ctx, aip.Params{PageSize: syncPageSize, PageToken: pageToken})
-		if err != nil {
-			return nil, err
-		}
-
-		all = append(all, page...)
-
-		if nextToken == "" {
-			return all, nil
-		}
-
-		pageToken = nextToken
-	}
-}
-
 // ensureFresh checks whether the scope is fresh. If stale or missing, it runs
 // a sync from the live instance.
 //
@@ -84,7 +59,37 @@ func (c *Catalog) ensureFreshUncached(ctx context.Context, scope string, syncFn 
 		return nil // recent refresh failure — serve stale data during cooldown
 	}
 
+	if state != nil && state.LastSyncedAt != nil {
+		return c.refreshStaleInBackground(ctx, scope, syncFn)
+	}
+
 	return c.claimAndSync(ctx, scope, syncFn)
+}
+
+// refreshStaleInBackground claims the distributed sync lock before returning,
+// then refreshes on a detached, bounded context while the caller reads the
+// existing catalog rows. Cold misses and force refreshes stay synchronous.
+func (c *Catalog) refreshStaleInBackground(ctx context.Context, scope string, syncFn func(ctx context.Context) error) error {
+	claimed, err := c.claimSync(ctx, scope)
+	if err != nil {
+		return err
+	}
+
+	if !claimed {
+		return c.waitIfColdMiss(ctx, scope, syncFn)
+	}
+
+	backgroundCtx := context.WithoutCancel(ctx)
+
+	go func() {
+		if err := c.runClaimedSync(backgroundCtx, scope, syncFn); err != nil {
+			slog.ErrorContext(backgroundCtx, "background catalog sync failed",
+				slog.String("scope", scope),
+				slog.String("error", err.Error()))
+		}
+	}()
+
+	return nil
 }
 
 // claimAndSync tries to acquire the sync lock for the scope and run the sync.
@@ -92,18 +97,31 @@ func (c *Catalog) ensureFreshUncached(ctx context.Context, scope string, syncFn 
 //   - If stale data exists (LastSyncedAt != nil): returns nil (stale-while-revalidate).
 //   - If no data exists (cold miss): polls until the winner finishes syncing.
 func (c *Catalog) claimAndSync(ctx context.Context, scope string, syncFn func(ctx context.Context) error) error {
-	claimed, err := c.syncStore.ClaimSync(ctx, scope, catalog.SyncClaimOptions{
-		Force:       isForceRefresh(ctx),
-		StaleBefore: time.Now().Add(-c.config.StalenessThreshold),
-	})
+	claimed, err := c.claimSync(ctx, scope)
 	if err != nil {
-		return fmt.Errorf("claim sync lock: %w", err)
+		return err
 	}
 
 	if !claimed {
 		return c.waitIfColdMiss(ctx, scope, syncFn)
 	}
 
+	return c.runClaimedSync(ctx, scope, syncFn)
+}
+
+func (c *Catalog) claimSync(ctx context.Context, scope string) (bool, error) {
+	claimed, err := c.syncStore.ClaimSync(ctx, scope, catalog.SyncClaimOptions{
+		Force:       isForceRefresh(ctx),
+		StaleBefore: time.Now().Add(-c.config.StalenessThreshold),
+	})
+	if err != nil {
+		return false, fmt.Errorf("claim sync lock: %w", err)
+	}
+
+	return claimed, nil
+}
+
+func (c *Catalog) runClaimedSync(ctx context.Context, scope string, syncFn func(ctx context.Context) error) error {
 	// Detach from the caller's context so the sync completes even if the
 	// original RPC is canceled (e.g. client disconnect, React StrictMode
 	// unmount). Other callers may be polling for this sync to finish.
@@ -265,19 +283,15 @@ func (c *Catalog) syncDatabases(ctx context.Context, instanceID string, instance
 	}
 	defer session.Close()
 
-	databases, err := collectAllPages(ctx, session.ListDatabases)
+	spool, err := spoolCatalogPages(ctx, "list databases", session.ListDatabases, func(db engine.Database, syncedAt time.Time) model.CatalogDatabase {
+		return engineDBToCatalog(instanceID, db, syncedAt)
+	})
 	if err != nil {
-		return fmt.Errorf("list databases: %w", err)
+		return err
 	}
+	defer spool.remove()
 
-	now := time.Now()
-
-	catalogRows := make([]model.CatalogDatabase, len(databases))
-	for i, db := range databases {
-		catalogRows[i] = engineDBToCatalog(instanceID, db, now)
-	}
-
-	return c.repo.SyncDatabases(ctx, instanceID, catalogRows)
+	return c.repo.SyncDatabasePages(ctx, instanceID, spool.syncedAt, spool.pages())
 }
 
 func (c *Catalog) openDatabaseSession(ctx context.Context, instanceName resource.InstanceName, databaseName string) (engine.DatabaseSession, func(), error) {
@@ -310,19 +324,15 @@ func (c *Catalog) syncSchemas(ctx context.Context, instanceID, databaseName stri
 	}
 	defer closeFn()
 
-	schemas, err := collectAllPages(ctx, dbSession.ListSchemas)
+	spool, err := spoolCatalogPages(ctx, "list schemas", dbSession.ListSchemas, func(schema engine.Schema, syncedAt time.Time) model.CatalogSchema {
+		return engineSchemaToCatalog(instanceID, databaseName, schema, syncedAt)
+	})
 	if err != nil {
-		return fmt.Errorf("list schemas: %w", err)
+		return err
 	}
+	defer spool.remove()
 
-	now := time.Now()
-
-	catalogRows := make([]model.CatalogSchema, len(schemas))
-	for i, s := range schemas {
-		catalogRows[i] = engineSchemaToCatalog(instanceID, databaseName, s, now)
-	}
-
-	return c.repo.SyncSchemas(ctx, instanceID, databaseName, catalogRows)
+	return c.repo.SyncSchemaPages(ctx, instanceID, databaseName, spool.syncedAt, spool.pages())
 }
 
 // syncTables fetches all tables for a schema from the live instance and writes
@@ -334,21 +344,17 @@ func (c *Catalog) syncTables(ctx context.Context, instanceID, databaseName, sche
 	}
 	defer closeFn()
 
-	tables, err := collectAllPages(ctx, func(ctx context.Context, p aip.Params) ([]engine.Table, string, error) {
+	spool, err := spoolCatalogPages(ctx, "list tables", func(ctx context.Context, p aip.Params) ([]engine.Table, string, error) {
 		return dbSession.ListTables(ctx, schemaName, p)
+	}, func(table engine.Table, syncedAt time.Time) model.CatalogTable {
+		return engineTableToCatalog(instanceID, databaseName, schemaName, table, syncedAt)
 	})
 	if err != nil {
-		return fmt.Errorf("list tables: %w", err)
+		return err
 	}
+	defer spool.remove()
 
-	now := time.Now()
-
-	catalogRows := make([]model.CatalogTable, len(tables))
-	for i, t := range tables {
-		catalogRows[i] = engineTableToCatalog(instanceID, databaseName, schemaName, t, now)
-	}
-
-	return c.repo.SyncTables(ctx, instanceID, databaseName, schemaName, catalogRows)
+	return c.repo.SyncTablePages(ctx, instanceID, databaseName, schemaName, spool.syncedAt, spool.pages())
 }
 
 // syncColumns fetches all columns for a table from the live instance and
@@ -382,21 +388,17 @@ func (c *Catalog) syncViews(ctx context.Context, instanceID, databaseName, schem
 	}
 	defer closeFn()
 
-	views, err := collectAllPages(ctx, func(ctx context.Context, p aip.Params) ([]engine.View, string, error) {
+	spool, err := spoolCatalogPages(ctx, "list views", func(ctx context.Context, p aip.Params) ([]engine.View, string, error) {
 		return dbSession.ListViews(ctx, schemaName, p)
+	}, func(view engine.View, syncedAt time.Time) model.CatalogView {
+		return engineViewToCatalog(instanceID, databaseName, schemaName, view, syncedAt)
 	})
 	if err != nil {
-		return fmt.Errorf("list views: %w", err)
+		return err
 	}
+	defer spool.remove()
 
-	now := time.Now()
-
-	catalogRows := make([]model.CatalogView, len(views))
-	for i, v := range views {
-		catalogRows[i] = engineViewToCatalog(instanceID, databaseName, schemaName, v, now)
-	}
-
-	return c.repo.SyncViews(ctx, instanceID, databaseName, schemaName, catalogRows)
+	return c.repo.SyncViewPages(ctx, instanceID, databaseName, schemaName, spool.pages())
 }
 
 func (c *Catalog) syncTableConstraints(ctx context.Context, instanceID, databaseName, schemaName, tableName string, instanceName resource.InstanceName) error {

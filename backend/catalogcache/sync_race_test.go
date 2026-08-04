@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,6 +17,78 @@ import (
 	"github.com/querylane/querylane/backend/storage/catalog"
 	"github.com/querylane/querylane/backend/storage/gen/querylane/public/model"
 )
+
+func TestIntegrationStaleListDatabasesReturnsWhileRefreshRuns(t *testing.T) {
+	t.Parallel()
+
+	if testing.Short() {
+		t.Skip("skipping integration test; run without -short")
+	}
+
+	ctx := context.Background()
+	config := DefaultConfig()
+	testDB := storage.NewTestDB(t)
+	repo := catalog.New(testDB.DB())
+	syncStore := catalog.NewSyncStore(testDB.DB(), config.SyncLockTimeout)
+	instanceSession := &mockInstanceSession{databases: []engine.Database{{Name: "cached"}}}
+	cat := New(config, repo, syncStore, &mockEngine{sessions: map[string]*mockInstanceSession{"inst1": instanceSession}})
+	instance := resource.NewInstanceName("inst1")
+
+	initial, _, err := cat.ListDatabases(ctx, instance, aip.Params{PageSize: 10})
+	require.NoError(t, err)
+	require.Len(t, initial, 1)
+	require.Equal(t, "cached", initial[0].Name)
+
+	_, err = testDB.DB().ExecContext(ctx, `
+		UPDATE catalog_sync_state
+		SET last_synced_at = NOW() - INTERVAL '2 hours'
+		WHERE scope = $1
+	`, instance.String()+"/databases")
+	require.NoError(t, err)
+
+	refreshStarted := make(chan struct{})
+	releaseRefresh := make(chan struct{})
+	instanceSession.databases = []engine.Database{{Name: "refreshed"}}
+	instanceSession.startedCh = refreshStarted
+	instanceSession.syncCh = releaseRefresh
+
+	type listResult struct {
+		databases []engine.Database
+		err       error
+	}
+
+	resultCh := make(chan listResult, 1)
+
+	go func() {
+		databases, _, listErr := cat.ListDatabases(ctx, instance, aip.Params{PageSize: 10})
+		resultCh <- listResult{databases: databases, err: listErr}
+	}()
+
+	select {
+	case <-refreshStarted:
+	case <-time.After(2 * time.Second):
+		close(releaseRefresh)
+		t.Fatal("stale refresh did not start")
+	}
+
+	select {
+	case result := <-resultCh:
+		require.NoError(t, result.err)
+		require.Len(t, result.databases, 1)
+		assert.Equal(t, "cached", result.databases[0].Name)
+	case <-time.After(2 * time.Second):
+		close(releaseRefresh)
+		<-resultCh
+		t.Fatal("stale read waited for the background refresh")
+	}
+
+	close(releaseRefresh)
+	require.Eventually(t, func() bool {
+		databases, _, listErr := repo.ListDatabases(ctx, "inst1", aip.Params{PageSize: 10})
+
+		return listErr == nil && len(databases) == 1 && databases[0].Name == "refreshed"
+	}, 5*time.Second, 10*time.Millisecond)
+}
 
 // TestIntegrationParentSyncPreservesChildrenForStillExistingTables exercises
 // Fix A: a force-refresh of the parent {schema}/tables scope must not nuke

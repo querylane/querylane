@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 
 	"github.com/go-jet/jet/v2/postgres"
 	"github.com/go-jet/jet/v2/qrm"
@@ -72,46 +73,73 @@ func (r *PGRepository) GetView(ctx context.Context, instanceID, databaseName, sc
 	return &row, nil
 }
 
-// SyncViews replaces the cached view list for a schema in one transaction.
-func (r *PGRepository) SyncViews(ctx context.Context, instanceID, databaseName, schemaName string, views []model.CatalogView) error {
+// SyncViewPages atomically replaces a schema's views while consuming only one
+// bounded page at a time.
+func (r *PGRepository) SyncViewPages(
+	ctx context.Context,
+	instanceID, databaseName, schemaName string,
+	pages iter.Seq2[[]model.CatalogView, error],
+) error {
 	return storage.RunInTransaction(ctx, r.db, func(tx storage.QueryExecutor) error {
-		if _, err := table.CatalogView.DELETE().
-			WHERE(
-				table.CatalogView.InstanceID.EQ(postgres.String(instanceID)).
-					AND(table.CatalogView.DatabaseName.EQ(postgres.String(databaseName))).
-					AND(table.CatalogView.SchemaName_.EQ(postgres.String(schemaName))),
-			).
-			ExecContext(ctx, tx); err != nil {
-			return fmt.Errorf("delete old views: %w", err)
+		if err := deleteViews(ctx, tx, instanceID, databaseName, schemaName); err != nil {
+			return err
 		}
 
-		if len(views) == 0 {
-			return nil
-		}
+		for views, pageErr := range pages {
+			if pageErr != nil {
+				return pageErr
+			}
 
-		stmt := table.CatalogView.
-			INSERT(
-				table.CatalogView.InstanceID,
-				table.CatalogView.DatabaseName,
-				table.CatalogView.SchemaName_,
-				table.CatalogView.Name,
-				table.CatalogView.DisplayName,
-				table.CatalogView.ViewType,
-				table.CatalogView.Owner,
-				table.CatalogView.Comment,
-				table.CatalogView.IsSystemView,
-				table.CatalogView.Definition,
-				table.CatalogView.SizeBytes,
-				table.CatalogView.RowCount,
-				table.CatalogView.IsPopulated,
-				table.CatalogView.SyncedAt,
-			).
-			MODELS(views)
-
-		if _, err := stmt.ExecContext(ctx, tx); err != nil {
-			return fmt.Errorf("insert views: %w", err)
+			if err := insertViews(ctx, tx, views); err != nil {
+				return err
+			}
 		}
 
 		return nil
 	})
+}
+
+func deleteViews(ctx context.Context, tx storage.QueryExecutor, instanceID, databaseName, schemaName string) error {
+	if _, err := table.CatalogView.DELETE().
+		WHERE(
+			table.CatalogView.InstanceID.EQ(postgres.String(instanceID)).
+				AND(table.CatalogView.DatabaseName.EQ(postgres.String(databaseName))).
+				AND(table.CatalogView.SchemaName_.EQ(postgres.String(schemaName))),
+		).
+		ExecContext(ctx, tx); err != nil {
+		return fmt.Errorf("delete old views: %w", err)
+	}
+
+	return nil
+}
+
+func insertViews(ctx context.Context, tx storage.QueryExecutor, views []model.CatalogView) error {
+	if len(views) == 0 {
+		return nil
+	}
+
+	stmt := table.CatalogView.
+		INSERT(
+			table.CatalogView.InstanceID,
+			table.CatalogView.DatabaseName,
+			table.CatalogView.SchemaName_,
+			table.CatalogView.Name,
+			table.CatalogView.DisplayName,
+			table.CatalogView.ViewType,
+			table.CatalogView.Owner,
+			table.CatalogView.Comment,
+			table.CatalogView.IsSystemView,
+			table.CatalogView.Definition,
+			table.CatalogView.SizeBytes,
+			table.CatalogView.RowCount,
+			table.CatalogView.IsPopulated,
+			table.CatalogView.SyncedAt,
+		).
+		MODELS(views)
+
+	if _, err := stmt.ExecContext(ctx, tx); err != nil {
+		return fmt.Errorf("insert views: %w", err)
+	}
+
+	return nil
 }

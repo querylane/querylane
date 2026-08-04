@@ -28,15 +28,15 @@ func TestIntegrationCatalogListOrderByDisplayName(t *testing.T) {
 
 	// Display names sort in the opposite order of names so the test fails if
 	// ordering falls back to name.
-	require.NoError(t, repo.SyncDatabases(ctx, "inst", []model.CatalogDatabase{
+	require.NoError(t, syncDatabases(ctx, repo, "inst", []model.CatalogDatabase{
 		{InstanceID: "inst", Name: "alpha", DisplayName: "zeta", Owner: "owner", SyncedAt: now},
 		{InstanceID: "inst", Name: "beta", DisplayName: "apex", Owner: "owner", SyncedAt: now},
 	}))
-	require.NoError(t, repo.SyncSchemas(ctx, "inst", "alpha", []model.CatalogSchema{
+	require.NoError(t, syncSchemas(ctx, repo, "inst", "alpha", []model.CatalogSchema{
 		{InstanceID: "inst", DatabaseName: "alpha", Name: "first", DisplayName: "omega", Owner: "owner", SyncedAt: now},
 		{InstanceID: "inst", DatabaseName: "alpha", Name: "second", DisplayName: "delta", Owner: "owner", SyncedAt: now},
 	}))
-	require.NoError(t, repo.SyncTables(ctx, "inst", "alpha", "first", []model.CatalogTable{
+	require.NoError(t, syncTables(ctx, repo, "inst", "alpha", "first", []model.CatalogTable{
 		{InstanceID: "inst", DatabaseName: "alpha", SchemaName: "first", Name: "small", DisplayName: "small", Owner: "owner", SizeBytes: 10, SyncedAt: now},
 		{InstanceID: "inst", DatabaseName: "alpha", SchemaName: "first", Name: "large", DisplayName: "large", Owner: "owner", SizeBytes: 200, SyncedAt: now},
 		{InstanceID: "inst", DatabaseName: "alpha", SchemaName: "first", Name: "medium", DisplayName: "medium", Owner: "owner", SizeBytes: 100, SyncedAt: now},

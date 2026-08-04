@@ -9,6 +9,7 @@ package catalogcache
 
 import (
 	"context"
+	"iter"
 	"time"
 
 	gocache "github.com/twmb/go-cache/cache"
@@ -35,22 +36,22 @@ type instanceSessionOpener interface {
 type catalogRepository interface { //nolint:interfacebloat // cohesive catalog CRUD interface
 	ListDatabases(ctx context.Context, instanceID string, params aip.Params) ([]model.CatalogDatabase, string, error)
 	GetDatabase(ctx context.Context, instanceID, name string) (*model.CatalogDatabase, error)
-	SyncDatabases(ctx context.Context, instanceID string, databases []model.CatalogDatabase) error
+	SyncDatabasePages(ctx context.Context, instanceID string, syncedAt time.Time, pages iter.Seq2[[]model.CatalogDatabase, error]) error
 
 	ListSchemas(ctx context.Context, instanceID, databaseName string, params aip.Params) ([]model.CatalogSchema, string, error)
 	GetSchema(ctx context.Context, instanceID, databaseName, name string) (*model.CatalogSchema, error)
-	SyncSchemas(ctx context.Context, instanceID, databaseName string, schemas []model.CatalogSchema) error
+	SyncSchemaPages(ctx context.Context, instanceID, databaseName string, syncedAt time.Time, pages iter.Seq2[[]model.CatalogSchema, error]) error
 
 	ListTables(ctx context.Context, instanceID, databaseName, schemaName string, params aip.Params) ([]model.CatalogTable, string, error)
 	GetTable(ctx context.Context, instanceID, databaseName, schemaName, name string) (*model.CatalogTable, error)
-	SyncTables(ctx context.Context, instanceID, databaseName, schemaName string, tables []model.CatalogTable) error
+	SyncTablePages(ctx context.Context, instanceID, databaseName, schemaName string, syncedAt time.Time, pages iter.Seq2[[]model.CatalogTable, error]) error
 
 	ListTableColumns(ctx context.Context, instanceID, databaseName, schemaName, tableName string) ([]model.CatalogColumn, error)
 	SyncColumns(ctx context.Context, instanceID, databaseName, schemaName, tableName string, columns []model.CatalogColumn) error
 
 	ListViews(ctx context.Context, instanceID, databaseName, schemaName string, params aip.Params) ([]model.CatalogView, string, error)
 	GetView(ctx context.Context, instanceID, databaseName, schemaName, name string) (*model.CatalogView, error)
-	SyncViews(ctx context.Context, instanceID, databaseName, schemaName string, views []model.CatalogView) error
+	SyncViewPages(ctx context.Context, instanceID, databaseName, schemaName string, pages iter.Seq2[[]model.CatalogView, error]) error
 
 	ListTableConstraints(ctx context.Context, instanceID, databaseName, schemaName, tableName string) ([]model.CatalogTableConstraint, error)
 	SyncTableConstraints(ctx context.Context, instanceID, databaseName, schemaName, tableName string, constraints []model.CatalogTableConstraint) error
