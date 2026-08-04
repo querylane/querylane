@@ -1,10 +1,9 @@
 # Spec: Server-side filtering for list endpoints (AIP-160-inspired subset)
 
-> Status: **Implemented in the backend**: the `backend/aip` filter engine, the live slice
-> (`ListRoleOwnedObjects`, `ListRoleDefaultPrivileges`, `ListRoleGrants`, `ListPublicGrants`), and the
-> cached catalog lists (`ListDatabases`, `ListSchemas`, `ListTables`, and `ListViews`, with a legacy `name.contains('...')`
-> translation shim for pre-rollout SPA bundles) all ship. `ListRoles` and `ListInstances` still reject or
-> ignore filters pending their data-flow splits. Frontend phases F1 and F2 (§7) are not implemented yet.
+> Status: **Implemented end to end**. The backend engine, live role/grant lists, cached catalog lists,
+> `ListRoles`, both `ListInstances` repositories, and PUBLIC grants accept the documented filters. The Explorer,
+> role list, grant drill-ins, and command palette send escaped server filters while their summary/facet
+> data remains independent. Bounded list summaries surface partial-result states.
 > Owner: platform.
 > This implements a **defensible subset** of AIP-160 (see §2.1), not the full grammar. The narrower
 > scope is a deliberate complexity trade-off.
@@ -17,8 +16,7 @@ rows on the server instead of the client fetching everything and filtering in th
 
 Before this work, filtering was a **no-op**: the `filter` string was accepted, threaded into
 `aip.Params`, and hashed into the page token for cursor consistency, but never compiled into SQL.
-The role-centric services explicitly rejected non-empty filters (today only `ListRoles` keeps that
-guard, `backend/service/role/service.go`), and the cached catalog lists accepted exactly 1 legacy
+The role-centric services originally rejected non-empty filters, and the cached catalog lists accepted exactly 1 legacy
 spelling, `name.contains('...')`, through a pre-parser (now a translation shim; see the §3 callout).
 
 The framework already compiles a validated query *plan* to **2 backends**: go-jet
@@ -36,13 +34,13 @@ new abstractions**. It adds about 100 lines across the existing files (see §11)
 ## 2. Goals and non-goals
 
 **Goals**
-- A small **AIP-160 subset** grammar (equality, inequality, string substring using `:`, and `AND`; see §2.1),
-  parsed by a tiny **quote-aware, schema-free** scanner; coercion and validation happen later (§5.3).
-- 1 parser → a flat `[]FilterCondition` → 2 compilers (Jet and raw SQL), reusing existing helpers.
+- A small **AIP-160 subset** grammar with comparisons, `AND`/`OR`/`NOT`, groups, and string substring
+  using `:` (see §2.1), parsed by a quote-aware, schema-free lexer/parser.
+- 1 parser → a validated `FilterExpr` tree → 2 compilers (Jet and raw SQL), reusing existing helpers.
 - Per-field opt-in with a single `Filterable bool`; allowed operators **derived from the field codec**;
   enum-like fields validated against an optional **bounded value set** (§5.1).
-- Endpoints that opt in **nothing** keep today's no-op behavior (filter ignored, not rejected).
-  Enablement is additive and causes **no regression** (§5.3).
+- Endpoints that opt in **nothing** reject non-empty filters with `InvalidArgument`; empty filters keep
+  normal list behavior (§5.3).
 - Safe by construction: field names from a schema allowlist only; values always bound parameters; the
   **frontend** escapes user text into quoted literals so it can't inject filter grammar (§7, §9).
 - `InvalidArgument` errors for bad filters, consistent with `order_by` and `page_token`.
@@ -52,14 +50,13 @@ new abstractions**. It adds about 100 lines across the existing files (see §11)
   summary state as well as table rows (§7).
 
 **Non-goals for this iteration** are deliberate AIP-160 omissions (see §2.1):
-- `OR`, `NOT`, nested groups, field traversal (`a.b.c`), full `:` HAS semantics for repeated, map, or message
-  fields, function calls (including legacy `.contains()`), comparison operators (`<`, `>=`, …), and `*`
-  wildcards.
+- Field traversal (`a.b.c`), full `:` HAS semantics for repeated, map, or message fields, function calls
+  (including legacy `.contains()`), bare fuzzy-match terms, and `*` wildcards.
 - Strict AIP enum-name semantics for `object_type` and `privilege` (we filter on the stored token; §2.1).
 - Matching all non-`page_size` arguments in the page token (parent and database scope are not enforced; §13).
 - Changing the keyset pagination model (still cursor-based AIP-132).
 - Removing the per-page catalog scan on live endpoints (see §10).
-- Frontend cursor pagination and facets (deferred to Phase F2, §7).
+- A dedicated server facets/count RPC. The frontend preserves unfiltered summary data and uses it for facets.
 
 ### 2.1 Relationship to AIP-160 (a documented subset)
 
@@ -67,13 +64,13 @@ We implement a **subset** of [AIP-160](https://google.aip.dev/160), not the full
 scope is a deliberate complexity trade-off. The surface includes everything the UI needs (kind tabs,
 a search box, and the cached lists' `is_system_*` and `owner` filters) and nothing more.
 
-**Supported:** `field = value`, `field != value`, `field:"substr"` (case-insensitive string
-substring), and top-level `AND`. Values are quoted strings or the bare booleans `true` and `false`.
+**Supported:** `=`, `!=`, `<`, `<=`, `>`, `>=`, string `:` substring, `AND`, `OR`, `NOT`/`-`, and
+parenthesized groups. Values are quoted strings/RFC 3339 timestamps, bare booleans, or bare integers.
 
 **Deliberately omitted (documented deviations):**
-- `OR`, `NOT`, parenthesized groups, field traversal, comparison operators, `*`/wildcard matching,
-  function calls (including `.contains()`), and the full AIP-160 `:` semantics for repeated, map, or message
-  presence checks. A non-empty unsupported construct → `InvalidArgument`, never silently ignored.
+- Field traversal, `*`/wildcard matching, function calls (including `.contains()`), bare fuzzy-match
+  terms, and the full AIP-160 `:` semantics for repeated, map, or message presence checks. A non-empty
+  unsupported construct → `InvalidArgument`, never silently ignored.
 - We use AIP-160's **`:` spelling** for string substring now, while filters are still ignored or rejected and
   no client can depend on the older `.contains()` comments. Update the existing
   database, schema, table, and view proto comments to `name:"..."` in the same implementation pass.
@@ -123,36 +120,35 @@ Uses AIP-160's `:` spelling for the substring operation we need; see §2.1 for h
 full AIP-160 language.
 
 ```
-filter      := condition ( "AND" condition )*          // whitespace-separated AND; case-insensitive keyword
-condition   := field "=" value
-            |  field "!=" value
-            |  field ":" string                         // case-insensitive substring for string fields
-field       := IDENT                                     // API field name (validated vs schema)
-value       := string | bool                             // int reserved; see §5.3
-string      := '"' … '"' | "'" … "'"                     // backslash escapes; precise rule in §4 decisions
-bool        := "true" | "false"
+restriction := field op value
+simple      := "(" expression ")" | restriction
+term        := [ "NOT" | "-" ] simple
+factor      := term { "OR" term }
+expression  := factor { "AND" factor }
+op          := "=" | "!=" | ":" | "<" | "<=" | ">" | ">="
+value       := quoted-string | bare-bool | bare-int
 ```
+
+As required by AIP-160, `OR` binds tighter than `AND`. Keywords are case-insensitive.
 
 Examples the UI sends:
 - Kind tab: `object_type = "TABLE"`
 - Search box: `object_name:"orders"`
 - Combined: `object_type = "VIEW" AND object_name:"user"`
+- Cross-field search: `(object_name:"orders" OR schema_name:"orders")`
 - System filter (cached lists): `is_system_database = false`
 
 **Decisions**
-- **AND-only**, flat (no `OR` or nesting). Covers every current UI need (tab and search). A flat
-  `[]FilterCondition` leaves room to add `OR` later (for example, `[][]FilterCondition`) without
-  changing call sites.
+- **Expression tree:** `FilterAnd`, `FilterOr`, `FilterNot`, and `FilterCondition` preserve grouping
+  and AIP-160 precedence for both compilers.
 - **`:`** means a case-insensitive substring for string fields (the search-box operator). See §5.4 for
   the SQL form and escaping. This is not the full AIP-160 HAS operator for repeated, map, or message fields.
-- **Equality and inequality** for strings and booleans only (v1). Integer and timestamp literals are
-  **not** parsed yet, so
-  `Int64Codec` and `TimestampCodec` fields are not filterable in v1 (§5.3).
+- **Typed comparisons:** integers use bare literals; timestamps use quoted RFC 3339 values. Both support
+  equality, inequality, and ordered comparisons.
 - **Enum values use the stored token** (`object_type = "TABLE"`, not `"GRANT_OBJECT_TYPE_TABLE"`), per
   §2.1; validated against the field's bounded set (§5.1).
-- **Quoted values are opaque**: a string value may contain spaces, the `AND` keyword, `=`, `(`, `)`. The
-  parser is therefore **quote-aware** (§5.3). The top-level `AND` split and operator detection ignore
-  anything inside quotes, and value contents are not subject to the structural-character allowlist.
+- **Quoted values are opaque**: a string value may contain spaces, logical keywords, operators, or
+  parentheses. The parser is quote-aware and value contents are not structural tokens.
 - **String escaping (precise):** inside a double-quoted value `\\`→`\` and `\"`→`"`; inside a
   single-quoted value `\\`→`\` and `\'`→`'`. A backslash before any other character, or a trailing
   dangling backslash, is `InvalidArgument`. Operator-looking content inside quotes is literal;
@@ -169,8 +165,6 @@ Add a field with a safe 0 value (existing call sites compile unchanged):
 
 ```go
 type Field[Model any] struct {
-    Column          postgres.Column
-    SQLExpr         string
     Codec           CursorCodec
     DisableOrdering bool
     GetValue        func(m *Model) any
@@ -212,7 +206,8 @@ mapping covers every token.
 `DisableOrdering` fields entirely today. Add, for any `Filterable` field (including
 `DisableOrdering: true` ones like `is_system_*`):
 
-- require `Codec != nil` **and** (`Column != nil` **or** `SQLExpr != ""`);
+- require a supported `Codec`; backend-specific `Bind` validation separately requires a Jet column or
+  raw-SQL expression for every filterable path;
 - **Do not** require `GetValue`. It is used only for cursor extraction of *order* fields, never for
   filtering. (Original spec wrongly required it; that would break the `is_system_*` fields, which omit
   `GetValue`.)
@@ -235,74 +230,51 @@ func (s *Schema[M]) filterableFields() []string {
 }
 ```
 
-### 5.2 AST: a flat slice (`backend/aip/filter.go`, new file)
+### 5.2 AST (`backend/aip/filter.go`)
 
 ```go
 type FilterOperator int
 const (
     OpEqual FilterOperator = iota
     OpNotEqual
-    OpContains // `:` string substring in the v1 grammar.
+    OpContains
+    OpLess
+    OpLessEq
+    OpGreater
+    OpGreaterEq
 )
 
+type FilterExpr interface { isFilterExpr() }
+type FilterAnd struct { Operands []FilterExpr }
+type FilterOr struct { Operands []FilterExpr }
+type FilterNot struct { Operand FilterExpr }
 type FilterCondition struct {
-    Field    string         // API field name (validated against schema.fields)
+    Field    string
     Operator FilterOperator
-    Value    any            // string | bool (matches the field codec; int/time reserved)
+    Value    any // string | bool | int64 | time.Time
 }
 ```
 
-> **Rejected (review):** a `Filter{Conditions []FilterCondition}` wrapper. AND-only semantics make it
-> isomorphic to the slice; a `nil` or empty slice means "no filter." Both compilers return early on
-> `len(conds) == 0` (mirroring `buildJetKeysetCondition`'s `len(vals)==0` guard at `jet.go:37`).
-
-`FilterCondition.Value` is the **coerced** value (string or bool), produced by the schema-aware
-validation step (§5.3), not by the lexical parser. The parser emits raw lexemes; validation coerces and
-bounds-checks them, keeping the parser schema-free.
-
-`Plan` (`plan.go:12`) gains an **unexported** `parsedFilter []FilterCondition` alongside the existing
-exported `Filter string` (kept for token hashing at `execute.go:99`). Keeping it unexported avoids a field and type
-name clash and signals it's consumed only inside `package aip` (both compilers).
+`FilterCondition.Value` is the coerced value produced by schema-aware validation. `Plan` stores the
+validated tree and exposes it through `ParsedFilter()` for the Jet, raw-SQL, and config-repository evaluators.
 
 ### 5.3 Parser and validation
 
-- `parseFilter(raw string) ([]rawCondition, error)` in `filter.go`: a **tiny quote-aware, schema-free
-  scanner** (lexical only; coercion and validation happen later in `validateFilter`). A plain `strings.Split`
-  is **insufficient**: quoted values may contain spaces, the `AND` keyword, `=`, `(`, `)`. Steps:
-  1. `strings.TrimSpace`; if empty → `(nil, nil)`.
-  2. **Quote-aware top-level `AND` split:** scan the string once tracking an `inQuote` flag (honoring
-     the §4 backslash escape); treat a whitespace-delimited, case-insensitive `AND` as a separator only
-     when `inQuote == false`. (~15–25 lines; do **not** `strings.Split` the whole string on `AND`.)
-  3. Per condition, detect the operator in precedence order **`!=` → `=` → `:`** (test `!=` before `=`,
-     and ignore all operator-looking bytes inside quotes), splitting on the **first** top-level match
-     only so a value like `"a=b"` survives. The left side must be a bare identifier (validated).
-  4. Emit a **raw lexeme** per condition (`rawCondition{field, op, value string, quoted bool}`): a quoted
-     value (strip quotes, unescape the backslash escape; contents unrestricted, so `owner = "a@b.com"`,
-     `name:"50/50"`, `"my-schema"` all work) or an unquoted bareword (for example, `true`). The parser
-     is **schema-free**: **no** codec coercion or type checks here. The structural-character allowlist
-     applies only to the **unquoted** structure, never to quoted contents.
-  5. **Duplicate conditions on the same field are allowed** (AND-ed; contradictory equalities simply
-     yield no rows); do not deduplicate or reject them (unlike `ParseOrderBy`).
-- **No-op for non-opted-in endpoints (no regression):** `BuildPlan` first checks
-  `len(schema.filterableFields()) == 0`; if so it **ignores** the filter entirely, matching today's behavior. The
-  raw string is still hashed into the token but never parsed or compiled. Only schemas that opt in ≥1
-  `Filterable` field run parsing, validation, and compilation, so the global engine never regresses an endpoint
-  from "filter ignored" to "filter errored".
-- **Schema-aware `validateFilter`** then runs in `BuildPlan` (`plan.go`), **after** `validateToken`
-  succeeds and **before** `decodeCursorValues`, turning `[]rawCondition` → `[]FilterCondition`. Per
-  condition: field exists in `schema.fields`; field is `Filterable`; operator allowed for the codec
-  (described next); the lexeme **coerces** to the codec's Go type (`StringCodec` → string; `BoolCodec` → bare
-  `true` or `false`, reject a quoted value); and, if the field has `FilterValues`, the value is in that set.
+- `parseFilter` uses a quote-aware lexer and recursive-descent parser. It trims empty input, bounds bytes,
+  conditions, and nesting, then produces a schema-free raw expression tree.
+- Parentheses and unary `NOT`/`-` are structural only outside quotes. Duplicate restrictions are allowed.
+- **Non-opted-in endpoints:** `BuildPlan` accepts an empty filter but rejects a non-empty filter when the
+  schema declares no filterable fields. Only schemas that opt in at least one field run parsing,
+  validation, and compilation.
+- **Schema-aware `validateFilter`** runs in `BuildPlan` after token validation and before cursor decoding.
+  Every leaf must name a filterable field, use an operator allowed by its codec, coerce successfully,
+  and satisfy `FilterValues` when present.
 - **Operator allowlist** (unexported helper in `filter.go`): if the field has a non-empty `FilterValues`
   → **`=`, `!=` only** (bounded enum, no substring); else by codec: `StringCodec` → `=`, `!=`,
-  `:`; `BoolCodec` → `=`, `!=`. `Int64Codec` and `TimestampCodec` are **not filterable in v1** (the parser
-  produces no integer or timestamp literals). A `Filterable` field with those codecs is a schema-construction
-  error until literal parsing is added. The error must name the field, codec type, and limitation, for example
-  `filterable field "create_time" uses TimestampCodec; timestamp filtering requires phase 2 comparison
-  operators and literal parsing`. `:` is `StringCodec`-only.
-- **Limits (abuse guards):** reject a filter over `maxFilterBytes` (for example, 1 KiB) or with more than
-  `maxConditions` (for example, 16) `AND` conditions → `InvalidArgument` before compilation. These
-  checks are inexpensive and bound pathological inputs.
+  `:`; `BoolCodec` → `=`, `!=`; `Int64Codec` and `TimestampCodec` → equality and ordered comparisons.
+  `:` is `StringCodec`-only.
+- **Limits (abuse guards):** reject filters over 1 KiB, more than 16 conditions, or more than 8 nesting
+  levels before compilation.
 - **Errors use `wrapAIPError(err, ErrInvalidFilter)`** (`plan.go:61`) so the sentinel isn't
   double-wrapped and `errors.Is` stays clean across the engine/storage re-exports. A
   `newFilterFieldError(path, filterableFields())` helper mirrors `newFieldError` (`order.go:112`) but
@@ -400,14 +372,13 @@ Reuse, don't duplicate, the type-switch:
   `NewInvalidArgumentError(NewFieldViolation("filter", err.Error()))`, exactly like `order_by`.
 - Remove the filter-rejection guards in `backend/service/role/service.go` as each endpoint is enabled.
   Done for the shared `openRoleDatabaseSession` guard (grants, owned objects, default privileges) and
-  `ListPublicGrants`; only the `ListRoles` guard remains.
+  `ListPublicGrants` and `ListRoles`.
 
 ### 5.8 Per-endpoint enablement and field caveats
 
 Enable an endpoint by marking fields `Filterable` in the schema and removing the service guard.
-**Status:** all rows in the following table are enabled except `roleSchema` (`ListRoles` keeps its
-service guard until its fetch-all data flow is split, §6) and `instanceSchema` (both instance
-repositories still reject filters).
+**Status:** all rows in the following table are enabled. The config-backed instance repository evaluates
+the validated filter AST in memory so it matches the PostgreSQL-backed repository.
 Enabled fields:
 
 | Schema (file) | Path | Mark `Filterable` |
@@ -419,7 +390,7 @@ Enabled fields:
 | `tableSchema` (engine/postgres/tables.go) | live | `table_type` |
 | `catalog{Database,Schema,Table}Schema` (storage/catalog/*.go) | jet | `name`, `owner`, `table_type` (tables), `is_system_*` |
 | `catalogViewSchema` (storage/catalog/view.go) | jet | `name` |
-| `instanceSchema` (storage/instance.go) | jet | `display_name`, `engine` (note: `instance` has no `name` trigram index) |
+| `instanceSchema` (storage/instance.go) | jet | `display_name`, `id` (note: `instance` has no `name` trigram index) |
 
 Caveats from review:
 - **`is_system_role` is a computed SELECT alias** (`list_roles.sql`: `r.rolname LIKE 'pg\_%' … AS
@@ -444,19 +415,11 @@ Caveats from review:
   indexes** for the common `is_system_* = false` filter, for example
   `CREATE INDEX … ON catalog_table (instance_id, database_name, schema_name, name) WHERE is_system_table = false`.
 
-### 5.9 Explicit phase 2: comparisons and typed literals
+### 5.9 Comparisons and typed literals
 
-The flat `[]FilterCondition` design is ready for numeric and temporal fields, but v1 deliberately does
-not parse their literals. The next expansion phase is concrete, not an open-ended reservation:
-
-- add `OpLess`, `OpLessEqual`, `OpGreater`, `OpGreaterEqual`;
-- extend the value rule to parse `int64` literals and RFC3339 timestamp strings into `time.Time`;
-- allow `Int64Codec`/`TimestampCodec` fields to be `Filterable`;
-- compile the new operators in both SQL and jet backends;
-- cover table-size, row-count, and created-at style filters before marking any such field filterable.
-
-Until that phase lands, schema construction must fail loudly for `Filterable` fields using
-`Int64Codec`/`TimestampCodec`, with an error that names the field, codec, and phase-2 limitation.
+Numeric and temporal comparisons ship in the shared engine. `Int64Codec` accepts bare signed integers;
+`TimestampCodec` accepts quoted RFC 3339 timestamps. Jet and raw SQL compile all comparison operators.
+Endpoints still opt individual fields in with `Filterable`; support in the engine does not expose a field by default.
 
 ## 6. Vertical slice: live role lists (shared session opener)
 
@@ -466,24 +429,19 @@ shipped slice therefore enables all 3 (plus `ListPublicGrants`, whose schema is 
 `newGrantSchema`): their schema fields are `Filterable`, the shared guard and the `ListPublicGrants`
 guard are removed, and each has integration coverage. A guard removal without a schema opt-in would
 have regressed an endpoint from "rejects filters" to "silently ignores filters" against its proto
-contract. This is why the slice includes `ListRoleGrants`. Endpoints that have not
-opted in any `Filterable` field keep ignoring filters (the §5.3 no-op rule); only `ListRoles` still
-carries an explicit reject guard.
+contract. This is why the slice includes `ListRoleGrants`. Endpoints without filterable fields reject
+non-empty filters as described in §5.3.
 
-**Decision after external review:** keep this as a backend and API slice, but do not call it end-to-end UI
-validation. `ListRoles` would also require a split before safe server-side UI filtering because the same
-fetch-all result feeds counts, role detail lookup, breadcrumb and header state, and membership indexes. The
-owned-object and default-privilege slice exercises the live SQL compiler, shared opener, enum token validation, and
-cursor interaction on the highest-impact role-detail path. The UI proves server filtering only in F2,
-after summary, facet, and table-slice data are separated.
+The frontend completes the end-to-end slice by keeping bounded, unfiltered role/grant summaries for counts,
+detail context, and facets while separate filtered requests supply role tables and grant drill-in rows.
 
 ## 7. Frontend design
 
-Today every role list uses `paginateAll` (`frontend/src/lib/paginate-all.ts`) to fetch **all** pages
+Before F1, every role list used `paginateAll` (`frontend/src/lib/paginate-all.ts`) to fetch **all** pages
 (`pageSize 1000`); `DataTable` filters, sorts, and paginates on the client; the count badge and "which kind
 tabs to show" derive from the full array.
 
-**Phase F1: backend filter live and bounded frontend fetch (no UI server filtering yet).**
+**Phase F1: complete — backend filter live and bounded frontend fetch.**
 The owned-objects query (`role-detail-page.tsx:1216`) is **shared**: its `ownedObjects` array powers the
 OWNS KPI and the `OWNER · N` hero badge (`:1455`, `:1539`), the overview reach rows, **and** the
 `OwnedObjectsTable` drill-in (through `OwnsGrantsView`, `:1625`); and `KindFilteredTable` derives its visible
@@ -499,21 +457,19 @@ of 3,549). F1 must not do this.
   banner using the existing `lastResponse`. This bounds the worst case (partitioned tables,
   PUBLIC-grant enumeration) even for the unfiltered `All` tab.
 
-**Phase F2: frontend server-side filtering and facets.**
+**Phase F2: complete — frontend server-side filtering with independent facets.**
 This is where the UI sends a server `filter`, and it requires **splitting the data sources**:
 - A **summary and facets query** (unfiltered) drives the KPIs, hero badge, overview, kind tabs, and
   per-kind counts. They stay complete regardless of the table filter. `KindFilteredTable` and
   `OwnedObjectsTable` take present kinds and counts from this query as **props** (not from their own `data`).
-- A separate **table-slice query** (server-filtered and cursor-paginated) drives only the table rows.
+- A separate **table-slice query** (server-filtered and bounded to 1,000 rows) drives only the table rows.
   Build the filter with shared, tested `quoteFilterValue` and `buildOwnedFilter` helpers (§9). Never
   concatenate raw values. **Debounce** the search and require a **minimum length** (2 or 3 characters)
   before issuing a `:` substring filter. Short patterns have no extractable trigrams and degrade to a
   scan (§10). Reset the cursor
   on filter change.
-- **Facets cost (review):** a `COUNT(*) … GROUP BY object_type` over the owned-objects `UNION` costs a
-  second catalog scan. Run it **once per filter** (its own query key, no `pageToken`, and a `staleTime`)
-  or through a dedicated `Count…` or facets RPC, never once per page turn. The project's mock-first
-  preference allows an interim demo-badged approximate count.
+- **Facets cost:** no count RPC is needed in this iteration. Existing bounded summary responses drive
+  kind availability and counts; filtered table responses never overwrite that state.
 
 Honor `frontend/AGENTS.md`: keep the `useTransport` and `useQuery` pattern in `role.ts`; build requests
 with `create(Schema, …)`; keep `filter` and `pageToken` in client state and the query key.
@@ -548,9 +504,8 @@ on the I/O-free unit tests).
   filtered results, keeping the changed-filter → `ErrFilterMismatch` half. (Distinct from the
   known-flaky `TestCreateInstance_Success` and `TestDeleteInstance_Success`.)
 - **API errors**: `ErrInvalidFilter` → `InvalidArgument` with a `filter` field violation.
-- **Frontend**: F1 adds the `paginateUpTo` cap and banner without changing counts or tabs. F2 adds the
-  `quoteFilterValue`/`buildOwnedFilter` builder unit test, and the table rendering server-filtered results
-  and cursor reset (browser test per the project's manual-verification rule).
+- **Frontend**: `paginateUpTo` caps role summaries without changing counts or tabs. Shared escaped filter
+  builders have unit coverage; integration tests assert role, grant, Explorer, and palette request filters.
 
 ## 9. Security
 
@@ -560,7 +515,7 @@ on the I/O-free unit tests).
   literals on the Jet path). No string interpolation of values into SQL.
 - **`:` and `ILIKE`**: `escapeLikePattern` neutralizes `%`, `_`, and `\` (default backslash escape,
   §5.4) in a read-only context. This is the only place user text reaches a pattern position.
-- **Filter-grammar injection (F2):** once the frontend builds filters (F2), it must use a tested
+- **Filter-grammar injection:** the frontend uses tested
   `quoteFilterValue`/`buildOwnedFilter` helper: `quoteFilterValue` escapes `\` and `"` and wraps the
   value in quotes. User search text is always a single escaped, quoted literal and cannot inject
   conditions or operators. The backend parser independently re-validates (unknown field or operator, bad escape,
@@ -587,20 +542,19 @@ on the I/O-free unit tests).
   condition, acceptable without a new index.
 - **Parser, compiler, and filter-hash** cost is negligible (per request, on a short string; `hashFilter("")`
   early-returns).
-- **Frontend:** F1's bounded fetch derives counts and tabs from the in-memory filtered set (correct, no
-  extra query). F2's facets must be cached per-filter (§7), not per page-turn.
+- **Frontend:** bounded unfiltered summaries derive counts and tabs; filtered table queries are separately
+  keyed, so search and kind changes cannot corrupt summary state.
 
 ## 11. Leanest v1: file-by-file delta
 
 **Backend (`backend/aip/`):**
-- `filter.go` (new): `FilterOperator` (3 consts), `rawCondition` and `FilterCondition`, the quote-aware
-  schema-free `parseFilter`, schema-aware `validateFilter` (coercion, `FilterValues` bounds, and codec operations
+- `filter.go`: comparison operators, raw and validated expression trees, the quote-aware schema-free
+  `parseFilter`, schema-aware `validateFilter` (coercion, `FilterValues` bounds, and codec operations
   through `allowedOps`), `newFilterFieldError`, `escapeLikePattern`.
 - `schema.go`: add `Filterable bool` and optional `FilterValues []string` to `Field`; extend `validate()`
-  (`Codec` and `Column` or `SQLExpr` when `Filterable`, **not** GetValue; reject `Filterable` on Int64/Timestamp
-  codecs in v1); add `filterableFields()`.
-- `plan.go`: add unexported `parsedFilter []FilterCondition` to `Plan`; trim `params.Filter`; if the
-  schema has 0 filterable fields, skip filtering (no-op); otherwise, parse and validate in `BuildPlan`
+  for filter codecs independently of ordering; add `filterableFields()`.
+- `plan.go`: add the validated filter expression to `Plan`; trim `params.Filter`; if the
+  schema has 0 filterable fields, reject non-empty input; otherwise, parse and validate in `BuildPlan`
   between `validateToken` and `decodeCursorValues`, using `wrapAIPError`.
 - `errors.go`: add `ErrInvalidFilter`.
 - `sql.go`: add `buildSQLFilterPredicate`; in `buildSQLClauses`, build filter first (shared `sqlBuilder`)
@@ -623,34 +577,33 @@ on the I/O-free unit tests).
   enabled requests with the supported filters; update existing `database/schema/table/view` comments
   from `.contains()` examples to `field:"..."`; run `task proto:generate` (never hand-edit `protogen/`).
 
-**Frontend (F1: bounded fetch only; no UI server filtering, see §7):**
+**Frontend (F1/F2):**
 - `lib/paginate-all.ts`: add `paginateUpTo(maxRows)`.
-- `hooks/api/role.ts`: switch the owned-objects (and default-privileges) hooks to `paginateUpTo` with a
-  cap and the "Showing first N results. Refine your search." banner. The query stays **unfiltered**, so KPIs/overview/tabs/counts are
-  unaffected and no component internals change. (The `quoteFilterValue`/`buildOwnedFilter` builder, the
-  summary/table query split, and the table→server-`filter` wiring are **F2**; see §7.)
+- `hooks/api/role.ts`: cap role summaries, expose single-page filtered role/grant queries, and keep filters
+  in their query keys.
+- `lib/aip-filter.ts`: quote user values and compose catalog, role-kind, owned-object, and grant filters.
+- Role/grant views: preserve summary/facet inputs while filtered requests supply table rows and partial states.
+- Explorer and command palette: send `name:"..."` filters; the palette limits result sets.
 
 About 100 lines of new backend code, no new dependencies, no new abstractions.
 
 ## 12. Resolved decisions
 
-1. **Subset, not full AIP-160** (AIP-160-*inspired*, not wire-compatible; §2.1): `=`, `!=`, string
-   substring using `:`, and `AND`. Enum fields are filtered on the stored token with a bounded `FilterValues` set
+1. **Subset, not full AIP-160** (AIP-160-*inspired*, not wire-compatible; §2.1): comparisons, string
+   substring using `:`, logical operators, and groups. Enum fields are filtered on the stored token with a bounded `FilterValues` set
    that also makes them **equality-only** (no `:`); token sets differ per endpoint (singular for
    owned/grants, plural for default privileges) and live in shared `backend/engine` token slices.
    Documented deviations; no silent unsupported syntax.
 2. **`:` substring:** `ILIKE` on both backends (uses the existing trigram GIN indexes); `escapeLikePattern`
    and the **default** backslash escape (no explicit `ESCAPE`, §5.4).
-3. **Allowed operators:** `FilterValues`-bounded → `=` and `!=` only; otherwise, derive from `Codec` (`StringCodec` and `BoolCodec` only in
-   v1); no `FilterOps` override. Abuse guards: `maxFilterBytes` and `maxConditions` (§5.3).
+3. **Allowed operators:** `FilterValues`-bounded → `=` and `!=` only; otherwise, derive from `Codec`;
+   no `FilterOps` override. Abuse guards bound bytes, conditions, and nesting (§5.3).
 4. **Parser vs validation:** `parseFilter` is lexical and schema-free; coercion, bounds, and operator checks live in
    schema-aware `validateFilter`.
-5. **No regression:** endpoints with 0 `Filterable` fields keep ignoring filters (§5.3). Enablement
-   is additive.
-6. **AST:** flat `[]FilterCondition`, AND-only; no `Filter` wrapper.
-7. **Frontend:** F1 means a backend/API filter and **bounded fetch only**: the owned-objects query is shared with
-   KPIs/overview/tabs, so it stays unfiltered (§7). F2 means UI server filtering with split facets and table queries,
-   escaped `quoteFilterValue` and `buildOwnedFilter` helpers, and cursor pagination.
+5. **Explicit support:** endpoints with 0 `Filterable` fields reject non-empty filters (§5.3).
+6. **AST:** validated `FilterAnd`/`FilterOr`/`FilterNot`/`FilterCondition` tree.
+7. **Frontend:** bounded unfiltered summaries feed KPIs/overview/tabs; split table queries send escaped
+   server filters and expose partial-result states (§7).
 8. **`is_system_role`:** filterable, but its `SQLExpr` must be the full LIKE expression, not the alias.
 9. **Jet `:` substring:** `col ILIKE $n` using go-jet `BinaryOperator`/`BoolExp`, column type-asserted to
    `StringExpression`, asserted with **`Sql()`** (keeps `$n`; not `DebugSql()`).
@@ -659,12 +612,12 @@ About 100 lines of new backend code, no new dependencies, no new abstractions.
 
 - Verify with `EXPLAIN` whether PostgreSQL prunes / pushes into the owned-objects `UNION ALL` arms under
   a kind filter (§10), which determines whether the single-branch query variant is worth building.
-- `paginateUpTo` cap value (2k vs 5k) and whether the banner should surface the (unknown) true total or
-  just "first N".
+- ~~`paginateUpTo` cap value.~~ **Resolved:** role summaries cap at 5,000; grant table slices cap at one
+  1,000-row server page and ask the user to refine filters when more rows exist.
 - ~~Whether to enable the cached-list (`ListDatabases/Schemas/Tables/Views`) filters in the same release
   as the live slice or stage them after.~~ **Resolved: enabled with the live slice**, with a legacy
-  `name.contains('...')` translation shim for pre-rollout SPA bundles (§3 callout). Follow-ups: switch
-  the Explorer's `buildNameContainsFilter` to emit `name:"..."` and then remove the shim; add the
+  `name.contains('...')` translation shim for pre-rollout SPA bundles (§3 callout). The Explorer now emits
+  `name:"..."`; remove the shim after the compatibility window. Also add the
   §5.8 partial btree indexes for `is_system_*` if those filters show up in slow-query logs.
 - **AIP-158 follow-up (not blocking):** page tokens enforce filter/order/resource type but not
   parent/database scope (`proto/querylane/common/v1/pagination.proto`). AIP-158 wants all non-`page_size`
