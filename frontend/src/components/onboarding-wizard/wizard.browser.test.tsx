@@ -361,7 +361,7 @@ describe("Onboarding wizard — browser visuals", () => {
       .element(page.getByRole("heading", { name: "Embedded PostgreSQL" }))
       .toBeVisible();
     await expect
-      .element(page.getByText("Persistent — data is kept across restarts"))
+      .element(page.getByText("Persistent: data is kept across restarts"))
       .toBeVisible();
     await expect
       .element(page.getByText("/Users/you/.querylane/pgdata"))

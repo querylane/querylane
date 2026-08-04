@@ -78,8 +78,8 @@ export function EmbeddedPhase() {
             <div>Storage</div>
             <div className="text-white/88">
               {persistenceAvailable
-                ? "Persistent — data is kept across restarts"
-                : "Ephemeral — data is cleared on shutdown"}
+                ? "Persistent: data is kept across restarts"
+                : "Ephemeral: data is cleared on shutdown"}
             </div>
             <div>Data path</div>
             <div className="font-mono text-white/88">{embeddedDataPath}</div>

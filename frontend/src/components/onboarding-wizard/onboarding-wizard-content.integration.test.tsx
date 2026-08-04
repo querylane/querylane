@@ -503,7 +503,7 @@ describe("onboarding wizard content integration", () => {
       screen.getByRole("heading", { name: "Embedded PostgreSQL" })
     ).toBeTruthy();
     expect(
-      screen.getByText("Persistent — data is kept across restarts")
+      screen.getByText("Persistent: data is kept across restarts")
     ).toBeTruthy();
     expect(screen.getByText("/tmp/querylane/embedded-postgres")).toBeTruthy();
     expect(screen.getByText("Local port, chosen automatically")).toBeTruthy();
@@ -526,7 +526,7 @@ describe("onboarding wizard content integration", () => {
 
     expect(screen.getByText("Data will not persist")).toBeTruthy();
     expect(
-      screen.getByText("Ephemeral — data is cleared on shutdown")
+      screen.getByText("Ephemeral: data is cleared on shutdown")
     ).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Continue" }));

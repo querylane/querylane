@@ -155,11 +155,11 @@ function ConfigRail({ compact = false }: { compact?: boolean }) {
             </div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <div className="rounded-[14px] border border-white/8 bg-white/[0.05] px-3 py-3 text-center">
+            <div className="rounded-[14px] border border-white/8 bg-white/[0.05] p-3 text-center">
               <div className="font-semibold text-white text-xl">4</div>
               <div className="text-white/45 text-xs">steps</div>
             </div>
-            <div className="rounded-[14px] border border-white/8 bg-white/[0.05] px-3 py-3 text-center">
+            <div className="rounded-[14px] border border-white/8 bg-white/[0.05] p-3 text-center">
               <div className="font-semibold text-white text-xl">OK</div>
               <div className="text-white/45 text-xs">status</div>
             </div>
