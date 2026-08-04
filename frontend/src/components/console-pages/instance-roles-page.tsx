@@ -2,7 +2,7 @@
 
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   PageHeader,
   ResourcePageState,
@@ -29,6 +29,8 @@ import {
   useListAllRolesQuery,
   useRolesAccessMapResourcesQuery,
 } from "@/hooks/api/role";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { buildRoleFilter, SERVER_FILTER_DEBOUNCE_MS } from "@/lib/aip-filter";
 import {
   type InstanceRolesSearch,
   type InstanceRolesTab,
@@ -233,6 +235,91 @@ function hasNoMatchingRoles(visibleRoleCount: number, roleCount: number) {
   return visibleRoleCount === 0 && roleCount > 0;
 }
 
+function roleMatchesTableFilters(
+  role: Role,
+  query: string,
+  type: RoleKind | undefined
+) {
+  const normalizedQuery = query.trim().toLowerCase();
+  return (
+    (!normalizedQuery ||
+      role.roleName.toLowerCase().includes(normalizedQuery)) &&
+    (type === undefined || deriveRoleKind(role) === type)
+  );
+}
+
+function RolesDetailsContent({
+  error,
+  filter,
+  isPending,
+  onFilterChange,
+  onOpenRole,
+  partial,
+  roleCount,
+  roles,
+}: {
+  error: unknown;
+  filter: string;
+  isPending: boolean;
+  onFilterChange: (value: string) => void;
+  onOpenRole: (role: Role) => void;
+  partial: boolean;
+  roleCount: number;
+  roles: Role[];
+}) {
+  let body: ReactNode;
+  if (isPending) {
+    body = (
+      <p className="text-muted-foreground text-sm" role="status">
+        Loading matching roles…
+      </p>
+    );
+  } else if (error) {
+    body = (
+      <p className="text-destructive text-sm" role="alert">
+        Could not load matching roles.
+      </p>
+    );
+  } else if (hasNoMatchingRoles(roles.length, roleCount)) {
+    body = <SearchEmptyState resourceName="roles" />;
+  } else {
+    body = (
+      <DataTable
+        columns={COLUMNS}
+        data={roles}
+        emptyResourceName="roles"
+        filterColumn="roleName"
+        filterValue={filter}
+        initialSorting={[{ desc: false, id: "roleName" }]}
+        onFilterChange={onFilterChange}
+        onRowClick={onOpenRole}
+        tableKey="instance-roles"
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {body}
+      {partial ? (
+        <p className="text-muted-foreground text-xs" role="status">
+          Showing the first 5,000 matching roles. Refine your search to narrow
+          the results.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function rolesPageDescription(
+  counts: ReturnType<typeof summarizeRoles>["counts"],
+  loginCount: number,
+  partial: boolean
+): string {
+  const description = rolesDescription(counts, loginCount);
+  return partial ? `${description} · first 5,000 shown` : description;
+}
+
 function shouldLoadAccessMap(activeTab: InstanceRolesTab, roleCount: number) {
   return activeTab === "map" && roleCount > 0;
 }
@@ -282,12 +369,21 @@ export function InstanceRolesPage({
   );
   const roles = rolesQuery.data?.roles ?? [];
 
-  const { counts, kinds, loginCount } = summarizeRoles(roles);
+  const debouncedFilter = useDebouncedValue(filter, SERVER_FILTER_DEBOUNCE_MS);
+  const serverFilter = buildRoleFilter({ query: debouncedFilter, type });
+  const filteredRolesQuery = useListAllRolesQuery(
+    {
+      ...rolesForInstanceQueryInput(instanceId),
+      ...(serverFilter ? { filter: serverFilter } : {}),
+    },
+    { enabled: activeTab === "details" }
+  );
+  const tableRoles = (filteredRolesQuery.data?.roles ?? []).filter((role) =>
+    roleMatchesTableFilters(role, filter, type)
+  );
 
-  const kindFiltered =
-    type === undefined
-      ? roles
-      : roles.filter((_, index) => kinds[index] === type);
+  const { counts, loginCount } = summarizeRoles(roles);
+
   const {
     builtInRoleCount,
     roles: accessMapRoles,
@@ -354,33 +450,28 @@ export function InstanceRolesPage({
     );
   }
 
+  function handleOpenRole(role: Role) {
+    handleNavigationResult(
+      navigate({
+        params: { instanceId, roleId: roleIdOf(role) },
+        search: {},
+        to: "/instances/$instanceId/roles/$roleId",
+      }),
+      { area: "roles.open-detail" }
+    );
+  }
+
   const rolesDetailsContent = (
-    <div className="flex flex-col gap-4">
-      {hasNoMatchingRoles(kindFiltered.length, roles.length) ? (
-        <SearchEmptyState resourceName="roles" />
-      ) : (
-        <DataTable
-          columns={COLUMNS}
-          data={kindFiltered}
-          emptyResourceName="roles"
-          filterColumn="roleName"
-          filterValue={filter}
-          initialSorting={[{ desc: false, id: "roleName" }]}
-          onFilterChange={setFilter}
-          onRowClick={(role) =>
-            handleNavigationResult(
-              navigate({
-                params: { instanceId, roleId: roleIdOf(role) },
-                search: {},
-                to: "/instances/$instanceId/roles/$roleId",
-              }),
-              { area: "roles.open-detail" }
-            )
-          }
-          tableKey="instance-roles"
-        />
-      )}
-    </div>
+    <RolesDetailsContent
+      error={filteredRolesQuery.error}
+      filter={filter}
+      isPending={filteredRolesQuery.isPending}
+      onFilterChange={setFilter}
+      onOpenRole={handleOpenRole}
+      partial={Boolean(filteredRolesQuery.data?.nextPageToken)}
+      roleCount={roles.length}
+      roles={tableRoles}
+    />
   );
 
   const rolesMapContent = (
@@ -428,7 +519,11 @@ export function InstanceRolesPage({
     >
       <div className="mx-auto flex w-full max-w-[980px] flex-col gap-6">
         <PageHeader
-          description={rolesDescription(counts, loginCount)}
+          description={rolesPageDescription(
+            counts,
+            loginCount,
+            Boolean(rolesQuery.data?.nextPageToken)
+          )}
           eyebrow="Instance"
           title="Roles"
         />

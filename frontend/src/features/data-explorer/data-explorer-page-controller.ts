@@ -11,7 +11,6 @@ import {
   useSchemaOverviewState,
   viewListItems,
 } from "@/features/data-explorer/data-explorer-catalog-queries";
-import { useDebouncedValue } from "@/features/data-explorer/data-explorer-filter-url-state";
 import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model";
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
 import { selectedResourceQueryError } from "@/features/data-explorer/data-explorer-selected-resource";
@@ -37,6 +36,7 @@ import {
   assertNoUnhandledTableDetailQueries,
   tableDetailQueryOptions,
 } from "@/hooks/api/table";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { parseResourceLeafId } from "@/lib/console-resources";
 import { useDb } from "@/lib/db-context";
 import { handleNavigationResult } from "@/lib/navigation-errors";

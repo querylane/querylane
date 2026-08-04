@@ -1,3 +1,4 @@
+import { buildContainsFilter } from "@/lib/aip-filter";
 import { parseResourceLeafId } from "@/lib/console-resources";
 
 function resourceDisplayName(resource: { displayName?: string; name: string }) {
@@ -10,21 +11,7 @@ function matchesNameFilter(name: string, query: string) {
 }
 
 function buildNameContainsFilter(query: string): string | undefined {
-  const trimmed = query.trim();
-  if (!trimmed) {
-    return;
-  }
-  const escaped = escapeAipFilterString(trimmed);
-  return `name.contains('${escaped}')`;
+  return buildContainsFilter("name", query);
 }
 
-function escapeAipFilterString(value: string): string {
-  return value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
-}
-
-export {
-  buildNameContainsFilter,
-  escapeAipFilterString,
-  matchesNameFilter,
-  resourceDisplayName,
-};
+export { buildNameContainsFilter, matchesNameFilter, resourceDisplayName };

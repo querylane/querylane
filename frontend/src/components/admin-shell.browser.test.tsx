@@ -195,6 +195,20 @@ vi.mock("@/hooks/api/github", () => ({
 }));
 
 vi.mock("@/hooks/api/database-catalog", () => ({
+  useDatabaseCatalogSearchQuery: () => ({
+    data: {
+      objects: [
+        {
+          kind: "table",
+          objectId: "shipments",
+          rowCount: 2_400_000n,
+          schemaId: "public",
+        },
+      ],
+    },
+    error: null,
+    isPending: false,
+  }),
   useDatabaseCatalogQuery: () => ({
     data: {
       objects: [
@@ -237,6 +251,11 @@ vi.mock("@/hooks/api/database-catalog", () => ({
 
 vi.mock("@/hooks/api/role", () => ({
   rolesForInstanceQueryInput: (instanceId: string) => ({ instanceId }),
+  useListRolesQuery: () => ({
+    data: { roles: [] },
+    error: null,
+    isPending: false,
+  }),
   useListAllRolesQuery: () => ({
     data: {
       roles: [

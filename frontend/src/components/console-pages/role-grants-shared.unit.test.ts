@@ -11,6 +11,8 @@ import {
   dominantGrantor,
   type GrantedObject,
   getObjectTypeLabel,
+  grantObjectTypeFilterToken,
+  grantObjectTypeFilterTokenForSlug,
   grantorSummary,
   groupBySchema,
   groupDefaultPrivileges,
@@ -158,6 +160,22 @@ describe("slugForObjectType", () => {
 
   test("returns undefined for a type with no slug", () => {
     expect(slugForObjectType(GrantObjectType.UNSPECIFIED)).toBeUndefined();
+  });
+});
+
+describe("grantObjectTypeFilterToken", () => {
+  test("uses the PostgreSQL filter vocabulary", () => {
+    expect(grantObjectTypeFilterToken(GrantObjectType.TABLE)).toBe("TABLE");
+    expect(grantObjectTypeFilterToken(GrantObjectType.MATERIALIZED_VIEW)).toBe(
+      "MATERIALIZED_VIEW"
+    );
+    expect(
+      grantObjectTypeFilterToken(GrantObjectType.UNSPECIFIED)
+    ).toBeUndefined();
+    expect(grantObjectTypeFilterTokenForSlug("matviews")).toBe(
+      "MATERIALIZED_VIEW"
+    );
+    expect(grantObjectTypeFilterTokenForSlug("all")).toBeUndefined();
   });
 });
 

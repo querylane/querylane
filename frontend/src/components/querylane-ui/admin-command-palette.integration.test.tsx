@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 
 const navigateMock = vi.fn(() => Promise.resolve());
 const commandPaletteMockState = vi.hoisted(() => ({
+  catalogInputs: [] as Record<string, unknown>[],
   catalogQuery: {
     data: {
       objects: [
@@ -37,6 +38,7 @@ const commandPaletteMockState = vi.hoisted(() => ({
     error: null as Error | null,
     isPending: false,
   },
+  roleInputs: [] as Record<string, unknown>[],
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -57,21 +59,34 @@ vi.mock("@/lib/db-context", () => ({
 }));
 
 vi.mock("@/hooks/api/database-catalog", () => ({
-  useDatabaseCatalogQuery: () => commandPaletteMockState.catalogQuery,
+  useDatabaseCatalogQuery: (input: Record<string, unknown>) => {
+    commandPaletteMockState.catalogInputs.push(input);
+    return commandPaletteMockState.catalogQuery;
+  },
+  useDatabaseCatalogSearchQuery: (input: Record<string, unknown>) => {
+    commandPaletteMockState.catalogInputs.push(input);
+    return commandPaletteMockState.catalogQuery;
+  },
 }));
 
 vi.mock("@/hooks/api/role", () => ({
   rolesForInstanceQueryInput: (instanceId: string) => ({ instanceId }),
   useListAllRolesQuery: () => commandPaletteMockState.rolesQuery,
+  useListRolesQuery: (input: Record<string, unknown>) => {
+    commandPaletteMockState.roleInputs.push(input);
+    return commandPaletteMockState.rolesQuery;
+  },
 }));
 
 beforeEach(() => {
   navigateMock.mockClear();
+  commandPaletteMockState.catalogInputs = [];
   commandPaletteMockState.catalogQuery.error = null;
   commandPaletteMockState.catalogQuery.isPending = false;
   commandPaletteMockState.rolesQuery.data.roles = [];
   commandPaletteMockState.rolesQuery.error = null;
   commandPaletteMockState.rolesQuery.isPending = false;
+  commandPaletteMockState.roleInputs = [];
 });
 
 function CommandPaletteTrigger() {
@@ -155,6 +170,33 @@ test("role search jumps to the selected role", async () => {
   });
 });
 
+test("palette search sends bounded server filters", async () => {
+  const user = userEvent.setup();
+  renderAdminCommandPalette();
+
+  await user.click(screen.getByRole("button", { name: "Search or jump to" }));
+  await user.type(
+    await screen.findByRole("combobox", {
+      name: "Search tables, screens, roles, or saved queries",
+    }),
+    'app"reader'
+  );
+
+  await waitFor(() => {
+    expect(commandPaletteMockState.roleInputs).toContainEqual({
+      filter: 'name:"app\\"reader"',
+      instanceId: "prod-analytics",
+      pageSize: 5,
+    });
+    expect(commandPaletteMockState.catalogInputs).toContainEqual({
+      databaseId: "customer-events",
+      enabled: true,
+      instanceId: "prod-analytics",
+      query: 'app"reader',
+    });
+  });
+});
+
 test("screen selection jumps to the current database overview", async () => {
   const user = userEvent.setup();
   renderAdminCommandPalette();
@@ -183,6 +225,24 @@ test("catalog loading remains visible beside available screen targets", async ()
 
   expect(await screen.findByText("Loading database objects…")).toBeDefined();
   expect(screen.getByText("Overview")).toBeDefined();
+});
+
+test("one-character searches do not show a disabled server query as loading", async () => {
+  commandPaletteMockState.catalogQuery.isPending = true;
+  const user = userEvent.setup();
+  renderAdminCommandPalette();
+
+  await user.click(screen.getByRole("button", { name: "Search or jump to" }));
+  await user.type(
+    await screen.findByRole("combobox", {
+      name: "Search tables, screens, roles, or saved queries",
+    }),
+    "a"
+  );
+
+  await waitFor(() => {
+    expect(screen.queryByText("Loading database objects…")).toBeNull();
+  });
 });
 
 test("role loading replaces the no-matches state while search resolves", async () => {

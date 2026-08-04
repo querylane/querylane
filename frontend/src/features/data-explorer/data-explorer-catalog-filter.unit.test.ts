@@ -10,33 +10,29 @@ describe("buildNameContainsFilter", () => {
     expect(buildNameContainsFilter("")).toBeUndefined();
   });
 
+  it("omits one-character substring scans", () => {
+    expect(buildNameContainsFilter("a")).toBeUndefined();
+  });
+
   it("preserves unusual unicode while escaping the filter literal", () => {
-    expect(buildNameContainsFilter("naïve 数据 🐘 \\'owner")).toBe(
-      "name.contains('naïve 数据 🐘 \\\\\\'owner')"
+    expect(buildNameContainsFilter(String.raw`naïve 数据 🐘 \'owner`)).toBe(
+      String.raw`name:"naïve 数据 🐘 \\'owner"`
     );
   });
 
-  it("trims and wraps simple name contains filters", () => {
-    expect(buildNameContainsFilter("  accounts  ")).toBe(
-      "name.contains('accounts')"
-    );
+  it("trims and wraps simple name substring filters", () => {
+    expect(buildNameContainsFilter("  accounts  ")).toBe('name:"accounts"');
   });
 
-  it("escapes single quotes", () => {
+  it("keeps single quotes literal", () => {
     expect(buildNameContainsFilter("owner's table")).toBe(
-      "name.contains('owner\\'s table')"
+      `name:"owner's table"`
     );
   });
 
-  it("escapes backslashes before building the filter", () => {
-    expect(buildNameContainsFilter(String.raw`tenant\archive`)).toBe(
-      String.raw`name.contains('tenant\\archive')`
-    );
-  });
-
-  it("escapes mixed quotes and backslashes deterministically", () => {
-    expect(buildNameContainsFilter(String.raw`tenant\'archive`)).toBe(
-      String.raw`name.contains('tenant\\\'archive')`
+  it("escapes backslashes and double quotes", () => {
+    expect(buildNameContainsFilter(String.raw`tenant\"archive`)).toBe(
+      String.raw`name:"tenant\\\"archive"`
     );
   });
 });

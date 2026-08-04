@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { InstanceRolesPage } from "@/components/console-pages/instance-roles-page";
@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   budgetSkippedRequestCount: 0,
   failedRequestCount: 0,
   navigate: vi.fn(),
+  roleQueryInputs: [] as Array<{ filter?: string; parent: string }>,
   tableSearch: "",
   truncatedRequestCount: 0,
 }));
@@ -37,52 +38,55 @@ vi.mock("@/hooks/api/role", () => ({
   rolesForInstanceQueryInput: (instanceId: string) => ({
     parent: `instances/${instanceId}`,
   }),
-  useListAllRolesQuery: () => ({
-    data: {
-      roles: [
-        create(RoleSchema, {
-          attributes: create(RoleAttributesSchema, { canLogin: true }),
-          memberOf: [
-            create(RoleMembershipSchema, {
-              role: "instances/prod/roles/app_group",
-              roleName: "app_group",
+  useListAllRolesQuery: (input: { filter?: string; parent: string }) => {
+    mocks.roleQueryInputs.push(input);
+    return {
+      data: {
+        roles: [
+          create(RoleSchema, {
+            attributes: create(RoleAttributesSchema, { canLogin: true }),
+            memberOf: [
+              create(RoleMembershipSchema, {
+                role: "instances/prod/roles/app_group",
+                roleName: "app_group",
+              }),
+            ],
+            name: "instances/prod/roles/app_user",
+            roleName: "app_user",
+          }),
+          create(RoleSchema, {
+            attributes: create(RoleAttributesSchema, { canLogin: false }),
+            name: "instances/prod/roles/app_group",
+            roleName: "app_group",
+          }),
+          create(RoleSchema, {
+            attributes: create(RoleAttributesSchema, {
+              canLogin: true,
+              canReplicate: true,
             }),
-          ],
-          name: "instances/prod/roles/app_user",
-          roleName: "app_user",
-        }),
-        create(RoleSchema, {
-          attributes: create(RoleAttributesSchema, { canLogin: false }),
-          name: "instances/prod/roles/app_group",
-          roleName: "app_group",
-        }),
-        create(RoleSchema, {
-          attributes: create(RoleAttributesSchema, {
-            canLogin: true,
-            canReplicate: true,
+            name: "instances/prod/roles/replicator",
+            roleName: "replicator",
           }),
-          name: "instances/prod/roles/replicator",
-          roleName: "replicator",
-        }),
-        create(RoleSchema, {
-          attributes: create(RoleAttributesSchema, {
-            canLogin: true,
-            isSuperuser: true,
+          create(RoleSchema, {
+            attributes: create(RoleAttributesSchema, {
+              canLogin: true,
+              isSuperuser: true,
+            }),
+            name: "instances/prod/roles/postgres",
+            roleName: "postgres",
           }),
-          name: "instances/prod/roles/postgres",
-          roleName: "postgres",
-        }),
-        create(RoleSchema, {
-          isSystemRole: true,
-          name: "instances/prod/roles/pg_read_all_data",
-          roleName: "pg_read_all_data",
-        }),
-      ],
-    },
-    error: null,
-    isPending: false,
-    refetch: vi.fn(async () => undefined),
-  }),
+          create(RoleSchema, {
+            isSystemRole: true,
+            name: "instances/prod/roles/pg_read_all_data",
+            roleName: "pg_read_all_data",
+          }),
+        ],
+      },
+      error: null,
+      isPending: false,
+      refetch: vi.fn(async () => undefined),
+    };
+  },
   useRolesAccessMapResourcesQuery: (input: {
     roles: { roleName: string }[];
   }) => {
@@ -140,10 +144,12 @@ vi.mock("@/hooks/api/role", () => ({
 }));
 
 afterEach(() => {
+  vi.useRealTimers();
   mocks.accessMapPending = false;
   mocks.accessMapRoleNames = [];
   mocks.budgetSkippedRequestCount = 0;
   mocks.failedRequestCount = 0;
+  mocks.roleQueryInputs = [];
   cleanup();
   vi.clearAllMocks();
   mocks.tableSearch = "";
@@ -151,6 +157,57 @@ afterEach(() => {
 });
 
 describe("InstanceRolesPage", () => {
+  test("debounces role search requests", () => {
+    vi.useFakeTimers();
+    const { rerender } = render(
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab={undefined}
+        type={undefined}
+      />
+    );
+    mocks.roleQueryInputs = [];
+    mocks.tableSearch = "post";
+
+    rerender(
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab={undefined}
+        type={undefined}
+      />
+    );
+
+    expect(mocks.roleQueryInputs).not.toContainEqual({
+      filter: 'name:"post"',
+      parent: "instances/prod",
+    });
+    act(() => vi.advanceTimersByTime(200));
+    expect(mocks.roleQueryInputs).toContainEqual({
+      filter: 'name:"post"',
+      parent: "instances/prod",
+    });
+  });
+
+  test("sends the role search and type filter to the list endpoint", () => {
+    mocks.tableSearch = " post ";
+
+    render(
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab={undefined}
+        type="super"
+      />
+    );
+
+    expect(mocks.roleQueryInputs).toContainEqual({
+      filter: 'name:"post" AND is_system_role = false AND is_superuser = true',
+      parent: "instances/prod",
+    });
+  });
+
   test("keeps roles table as the default tab and writes access map tab to the URL search", async () => {
     const user = userEvent.setup();
 
