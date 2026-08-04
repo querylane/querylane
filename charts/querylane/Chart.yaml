@@ -1,0 +1,13 @@
+apiVersion: v2
+name: querylane
+description: PostgreSQL administration for multiple servers
+type: application
+version: 0.1.0
+appVersion: "edge"
+home: https://querylane.com
+icon: https://raw.githubusercontent.com/querylane/querylane/main/public/icon.svg
+sources:
+  - https://github.com/querylane/querylane
+maintainers:
+  - name: Querylane maintainers
+    url: https://github.com/querylane/querylane
