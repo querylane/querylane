@@ -40,16 +40,20 @@ function renderNavigationCallbacks({
   currentPage,
   effDatabaseId,
   instanceId,
+  navigationError,
 }: {
   currentPage?: AdminPageId;
   effDatabaseId?: string;
   instanceId?: string;
+  navigationError?: unknown;
 } = {}) {
   const persisted: RouteSelectionIds[] = [];
   const navigations: unknown[] = [];
   const navigate: ReturnType<typeof useNavigate> = (options: unknown) => {
     navigations.push(options);
-    return Promise.resolve();
+    return navigationError
+      ? Promise.reject(navigationError)
+      : Promise.resolve();
   };
 
   const { result } = renderHook(() =>
@@ -83,6 +87,17 @@ function applySearchUpdater(
 }
 
 describe("useNavigationCallbacks", () => {
+  test("contains rejected navigation promises", async () => {
+    const { callbacks } = renderNavigationCallbacks({
+      instanceId: "local",
+      navigationError: new Error("navigation failed"),
+    });
+
+    callbacks.navigateToInstance(buildInstance("staging"));
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
   describe("navigateToInstance", () => {
     test("keeps the selected database when re-selecting the current instance", () => {
       const { callbacks, navigations, persisted } = renderNavigationCallbacks({

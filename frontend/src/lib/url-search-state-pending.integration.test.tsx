@@ -31,7 +31,7 @@ vi.mock("@tanstack/react-router", () => ({
 vi.mock("@/lib/navigation-errors", () => navigationErrorMocks);
 
 function SearchHarness() {
-  const [query, setQuery] = useUrlTableSearch();
+  const [query, setQuery] = useUrlTableSearch("/instances/$instanceId/roles");
   return (
     <Input
       aria-label="Search roles"

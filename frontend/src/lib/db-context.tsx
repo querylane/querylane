@@ -260,7 +260,7 @@ function deriveInstanceQueryPolicy({
 }
 
 function useDbProviderValue() {
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/" });
   const location = useLocation({
     select: (current) => ({
       pathname: current.pathname,

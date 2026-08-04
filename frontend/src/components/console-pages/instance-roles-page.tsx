@@ -7,12 +7,6 @@ import {
   PageHeader,
   ResourcePageState,
 } from "@/components/console-pages/console-layout";
-import {
-  type InstanceRolesSearch,
-  type InstanceRolesTab,
-  isInstanceRolesTab,
-  isInstanceRolesType,
-} from "@/components/console-pages/instance-roles-search";
 import { RoleAvatar } from "@/components/console-pages/role-avatar";
 import { RoleKindBadge } from "@/components/console-pages/role-kind-badge";
 import { RolesAccessMapCanvas } from "@/components/console-pages/roles-access-map-canvas";
@@ -35,6 +29,12 @@ import {
   useListAllRolesQuery,
   useRolesAccessMapResourcesQuery,
 } from "@/hooks/api/role";
+import {
+  type InstanceRolesSearch,
+  type InstanceRolesTab,
+  isInstanceRolesTab,
+  isInstanceRolesType,
+} from "@/lib/instance-roles-search";
 import { handleNavigationResult } from "@/lib/navigation-errors";
 import {
   deriveRoleKind,
@@ -43,12 +43,29 @@ import {
   type RoleKind,
   roleIdOf,
 } from "@/lib/role-display";
-import { useUrlTableSearch } from "@/lib/url-search-state";
+import {
+  type UrlTableSearchRoute,
+  useUrlTableSearch,
+} from "@/lib/url-search-state";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 type KindFilter = "all" | RoleKind;
-type RolesNavigateSearch = Record<string, unknown> & InstanceRolesSearch;
 
+function normalizeRolesNavigateSearch(previous: {
+  q?: unknown;
+  tab?: unknown;
+  type?: unknown;
+}): InstanceRolesSearch {
+  const q = typeof previous.q === "string" ? previous.q : undefined;
+  const tab = typeof previous.tab === "string" ? previous.tab : undefined;
+  const type = typeof previous.type === "string" ? previous.type : undefined;
+
+  return {
+    q,
+    tab: isInstanceRolesTab(tab) ? tab : undefined,
+    type: isInstanceRolesType(type) ? type : undefined,
+  };
+}
 const DEFAULT_ROLE_MAP_KIND_VISIBILITY = {
   builtin: false,
   group: true,
@@ -241,19 +258,21 @@ function selectRoleMapData({
 
 export function InstanceRolesPage({
   instanceId,
+  searchRoute,
   tab,
   type,
 }: {
   instanceId: string;
+  searchRoute: UrlTableSearchRoute;
   tab?: InstanceRolesTab | undefined;
   type?: RoleKind | undefined;
 }) {
-  const [filter, setFilter] = useUrlTableSearch();
+  const [filter, setFilter] = useUrlTableSearch(searchRoute);
   const [roleSelectedNodeId, setRoleSelectedNodeId] = useState<string | null>(
     null
   );
   const [showBuiltInRoles, setShowBuiltInRoles] = useState(false);
-  const navigate = useNavigate({ from: "/instances/$instanceId/roles/" });
+  const navigate = useNavigate({ from: searchRoute });
   const [optimisticTab, setOptimisticTab] =
     useState<InstanceRolesTab>("details");
   const activeTab = tab ?? optimisticTab;
@@ -309,8 +328,8 @@ export function InstanceRolesPage({
         params: { instanceId },
         replace: false,
         resetScroll: false,
-        search: (previous: RolesNavigateSearch) => ({
-          ...previous,
+        search: (previous) => ({
+          ...normalizeRolesNavigateSearch(previous),
           tab: next === "details" ? undefined : next,
         }),
         to: "/instances/$instanceId/roles",
@@ -325,8 +344,8 @@ export function InstanceRolesPage({
         params: { instanceId },
         replace: false,
         resetScroll: false,
-        search: (previous: RolesNavigateSearch) => ({
-          ...previous,
+        search: (previous) => ({
+          ...normalizeRolesNavigateSearch(previous),
           type: nextType,
         }),
         to: "/instances/$instanceId/roles",

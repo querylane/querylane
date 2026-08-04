@@ -108,7 +108,10 @@ import { handleQueryActionError } from "@/lib/query-action-errors";
 import { createResourceLoader } from "@/lib/resource-loader";
 import { prefetchRouteQueryOnIntent } from "@/lib/route-prefetch";
 import { normalizeAppUiError } from "@/lib/ui-error";
-import { useUrlTableSearch } from "@/lib/url-search-state";
+import {
+  type UrlTableSearchRoute,
+  useUrlTableSearch,
+} from "@/lib/url-search-state";
 import type { Status } from "@/protogen/google/rpc/status_pb";
 import type {
   ConnectionActivityHealth,
@@ -673,6 +676,7 @@ function InstanceOverviewSection({
   navigateToDatabase,
   onDatabaseIntent,
   queryState,
+  searchRoute,
   unavailableMessage,
 }: {
   databases: DatabaseRow[];
@@ -680,9 +684,10 @@ function InstanceOverviewSection({
   navigateToDatabase: ReturnType<typeof useDb>["navigateToDatabase"];
   onDatabaseIntent?: (database: DatabaseRow) => void;
   queryState: ReturnType<typeof useDb>["queryStates"]["databases"];
+  searchRoute: UrlTableSearchRoute;
   unavailableMessage?: string | undefined;
 }) {
-  const [dbFilter, setDbFilter] = useUrlTableSearch();
+  const [dbFilter, setDbFilter] = useUrlTableSearch(searchRoute);
   const [kindFilters, setKindFilters] = useState<string[]>([]);
   const [encodingFilters, setEncodingFilters] = useState<string[]>([]);
   const [ownerFilters, setOwnerFilters] = useState<string[]>([]);
@@ -802,6 +807,7 @@ function InstanceOverviewContent({
   navigateToDatabase,
   onDatabaseIntent,
   queryState,
+  searchRoute,
   serverInfo,
 }: {
   connectionStatus: DbConnectionStatus;
@@ -814,6 +820,7 @@ function InstanceOverviewContent({
   navigateToDatabase: ReturnType<typeof useDb>["navigateToDatabase"];
   onDatabaseIntent: (database: DatabaseRow) => void;
   queryState: ReturnType<typeof useDb>["queryStates"]["databases"];
+  searchRoute: UrlTableSearchRoute;
   serverInfo?: ServerInfo | undefined;
 }) {
   return (
@@ -855,6 +862,7 @@ function InstanceOverviewContent({
         navigateToDatabase={navigateToDatabase}
         onDatabaseIntent={onDatabaseIntent}
         queryState={queryState}
+        searchRoute={searchRoute}
         unavailableMessage="Database list is unavailable while this instance is not connected."
       />
     </>
@@ -1155,12 +1163,14 @@ function getSettledMetricsResponse({
 
 function BackendInstancePage({
   instanceId,
+  searchRoute,
   section,
 }: {
   instanceId: string;
+  searchRoute: UrlTableSearchRoute;
   section: InstanceSection;
 }) {
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: searchRoute });
   const transport = useTransport();
   const queryClient = useQueryClient();
   const {
@@ -1431,6 +1441,7 @@ function BackendInstancePage({
               ...(overviewQuery.data?.partialErrors ?? []),
             ]),
             queryState: queryStates.databases,
+            searchRoute,
             section,
             serverInfo,
           })
@@ -1466,6 +1477,7 @@ function renderLoadedInstancePageContent({
   overview,
   partialErrors,
   queryState,
+  searchRoute,
   section,
   serverInfo,
 }: {
@@ -1495,6 +1507,7 @@ function renderLoadedInstancePageContent({
   overview: InstanceOverview | undefined;
   partialErrors: Status[];
   queryState: ReturnType<typeof useDb>["queryStates"]["databases"];
+  searchRoute: UrlTableSearchRoute;
   section: InstanceSection;
   serverInfo: ServerInfo | undefined;
 }) {
@@ -1532,6 +1545,7 @@ function renderLoadedInstancePageContent({
         partialErrors={liveData.activityPartialErrors}
         pending={liveData.activityPending}
         refreshing={liveData.activityRefreshing}
+        searchRoute={searchRoute}
       />
     );
   } else {
@@ -1547,6 +1561,7 @@ function renderLoadedInstancePageContent({
         navigateToDatabase={navigateToDatabase}
         onDatabaseIntent={onDatabaseIntent}
         queryState={queryState}
+        searchRoute={searchRoute}
         serverInfo={serverInfo}
       />
     );

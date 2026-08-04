@@ -99,7 +99,7 @@ const state = vi.hoisted(() => ({
   instanceCatalogIsPending: false,
   instanceData: undefined as GetInstanceResponse | undefined,
   instances: [] as PostgresInstance[],
-  navigate: vi.fn(async () => undefined),
+  navigate: vi.fn(async (_options: Record<string, unknown>) => undefined),
   navigateToDatabase: vi.fn(),
   overviewData: undefined as GetInstanceOverviewResponse | undefined,
   queryClient: {
@@ -597,16 +597,32 @@ afterEach(() => {
 
 function renderInstanceConfiguration() {
   return render(
-    <BackendInstancePage instanceId="prod" section="configuration" />
+    <BackendInstancePage
+      instanceId="prod"
+      searchRoute="/instances/$instanceId"
+      section="configuration"
+    />
   );
 }
 
 function renderInstanceOverview() {
-  return render(<BackendInstancePage instanceId="prod" section="overview" />);
+  return render(
+    <BackendInstancePage
+      instanceId="prod"
+      searchRoute="/instances/$instanceId"
+      section="overview"
+    />
+  );
 }
 
 function renderInstanceActivity() {
-  return render(<BackendInstancePage instanceId="prod" section="activity" />);
+  return render(
+    <BackendInstancePage
+      instanceId="prod"
+      searchRoute="/instances/$instanceId"
+      section="activity"
+    />
+  );
 }
 
 function setFieldValue(label: string, value: string) {
@@ -1035,7 +1051,13 @@ describe("backend instance activity interactions", () => {
     const response = activityHealthResponse();
     response.health?.connectionActivity?.sessions.splice(1);
     state.healthData = response;
-    rerender(<BackendInstancePage instanceId="prod" section="activity" />);
+    rerender(
+      <BackendInstancePage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId"
+        section="activity"
+      />
+    );
 
     const details = await screen.findByRole("dialog", { name: "Session 4302" });
     expect(within(details).getByText("Session ended")).toBeTruthy();
@@ -1230,11 +1252,20 @@ describe("backend instance activity", () => {
         name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
       })
     ).toBeNull();
-    expect(state.navigate).toHaveBeenLastCalledWith({
-      href: "/?q=4302",
+    const searchNavigation = state.navigate.mock.lastCall?.[0];
+    expect(searchNavigation).toEqual({
+      hash: true,
       ignoreBlocker: true,
       replace: true,
       resetScroll: false,
+      search: expect.any(Function),
+    });
+    if (!searchNavigation || typeof searchNavigation["search"] !== "function") {
+      throw new Error("expected table search navigation updater");
+    }
+    expect(searchNavigation["search"]({ tab: "details" })).toEqual({
+      q: "4302",
+      tab: "details",
     });
 
     await user.clear(search);
@@ -1405,7 +1436,13 @@ describe("backend instance activity pagination and states", () => {
     expect(within(table).getByText("5000")).toBeTruthy();
 
     state.healthData = activityHealthResponse();
-    rerender(<BackendInstancePage instanceId="prod" section="activity" />);
+    rerender(
+      <BackendInstancePage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId"
+        section="activity"
+      />
+    );
 
     expect(within(activity).getByText("Page 1 of 1")).toBeTruthy();
     expect(within(table).getByText("4211")).toBeTruthy();

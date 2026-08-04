@@ -1487,7 +1487,7 @@ test("data explorer schema detail keeps dense table summaries scannable", async 
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: OWNER_FILTER_RE }))
-    .toBeVisible();
+    .not.toBeInTheDocument();
   await expect
     .element(page.getByRole("tab", { name: OBJECTS_TAB_RE }))
     .toBeVisible();
@@ -1562,6 +1562,9 @@ test("data explorer schema detail captures active object filters", async () => {
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: ACTIVE_OWNER_FILTER_RE }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Clear all" }))
     .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-schema-active-filters"

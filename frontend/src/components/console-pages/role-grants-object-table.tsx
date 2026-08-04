@@ -17,10 +17,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   DataTable,
   type DataTableColumnDef,
-  DataTableFilter,
   SortableHeader,
 } from "@/components/ui/data-table";
-import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
+import { DataTableFilterToolbar } from "@/components/ui/data-table-filter-toolbar";
 import { GrantObjectType } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 // Object types in the order their tabs appear, matching the Owns view.
@@ -135,34 +134,33 @@ function KindFilteredTable<T extends RowData>({
     activeKind === "all"
       ? data
       : data.filter((row) => slugForObjectType(kindOf(row)) === activeKind);
+  const kindOptions = presentKinds.flatMap((type) => {
+    const slug = slugForObjectType(type);
+    return slug ? [{ label: getObjectTypeLabel(type), value: slug }] : [];
+  });
 
   return (
     <div className="flex flex-col gap-3">
-      <div
-        className="flex min-w-0 flex-wrap items-center justify-start gap-2"
-        data-slot="role-grants-filter-bar"
-      >
-        {/* value stays urgent so the input reflects keystrokes immediately */}
-        <DataTableFilter
-          onChange={onSearchChange}
-          placeholder={searchPlaceholder}
-          value={search}
-        />
-        <DataTableFacetedFilter
-          onSelectedValuesChange={(values) =>
-            onKindChange(values.at(-1) ?? "all")
-          }
-          options={presentKinds.flatMap((type) => {
-            const slug = slugForObjectType(type);
-            return slug
-              ? [{ label: getObjectTypeLabel(type), value: slug }]
-              : [];
-          })}
-          selectedValues={activeKind === "all" ? [] : [activeKind]}
-          singleSelect={true}
-          title="Kind"
-        />
-      </div>
+      {/* value stays urgent so the input reflects keystrokes immediately */}
+      <DataTableFilterToolbar
+        dataSlot="role-grants-filter-bar"
+        facets={[
+          {
+            label: "Kind",
+            onChange: (values) => onKindChange(values.at(-1) ?? "all"),
+            options: kindOptions,
+            selected: activeKind === "all" ? [] : [activeKind],
+            singleSelect: true,
+          },
+        ]}
+        onClearAll={() => {
+          onKindChange("all");
+          onSearchChange("");
+        }}
+        onSearchChange={onSearchChange}
+        searchPlaceholder={searchPlaceholder}
+        searchValue={search}
+      />
       {/* filterValue uses the deferred term so TanStack Table re-filters at
           lower priority, keeping the input responsive on large grant lists */}
       <DataTable

@@ -9,7 +9,7 @@ interface NotFoundStateProps {
   containerClassName?: string;
 }
 export function NotFoundState({ containerClassName }: NotFoundStateProps) {
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/" });
   const handleGoBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
       window.history.back();

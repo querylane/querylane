@@ -1,12 +1,39 @@
 import { describe, expect, test } from "vitest";
 import {
   buildCanonicalAdminSearch,
+  buildCanonicalRolesSearch,
+  navigateToCanonicalAdminTarget,
   resolveCanonicalAdminPageTarget,
   resolveLegacyAdminPageRedirect,
   resolveNextAdminPage,
 } from "@/lib/admin-navigation";
 
 describe("admin navigation", () => {
+  test("navigates canonical targets without erasing route types", async () => {
+    const navigations: unknown[] = [];
+
+    await navigateToCanonicalAdminTarget(
+      (options: unknown) => {
+        navigations.push(options);
+        return Promise.resolve();
+      },
+      {
+        params: { instanceId: "local" },
+        to: "/instances/$instanceId/activity",
+      },
+      {
+        currentPage: "instance.overview",
+        targetPage: "instance.activity",
+      }
+    );
+
+    expect(navigations).toHaveLength(1);
+    expect(navigations[0]).toMatchObject({
+      params: { instanceId: "local" },
+      to: "/instances/$instanceId/activity",
+    });
+  });
+
   test("resolves canonical targets for instance activity", () => {
     expect(
       resolveCanonicalAdminPageTarget({
@@ -72,6 +99,51 @@ describe("admin navigation", () => {
     });
   });
 
+  test("drops child-route search when changing pages", () => {
+    const previous = {
+      grantsReach: "owns",
+      q: "postgres",
+      tab: "grants",
+      type: "login",
+    };
+
+    expect(
+      buildCanonicalAdminSearch(previous, {
+        currentPage: "instance.roles",
+        targetPage: "instance.overview",
+      })
+    ).toEqual({
+      category: undefined,
+      name: undefined,
+      page: undefined,
+      q: undefined,
+      schema: undefined,
+      sort: undefined,
+      tab: undefined,
+    });
+  });
+
+  test("drops stale role filters when entering roles from another page", () => {
+    expect(
+      buildCanonicalRolesSearch(
+        { q: "postgres", type: "login" },
+        {
+          currentPage: "database.overview",
+          targetPage: "instance.roles",
+        }
+      )
+    ).toEqual({
+      category: undefined,
+      name: undefined,
+      page: undefined,
+      q: undefined,
+      schema: undefined,
+      sort: undefined,
+      tab: undefined,
+      type: undefined,
+    });
+  });
+
   test("clears page-local explorer search when changing databases on the same page", () => {
     expect(
       buildCanonicalAdminSearch(
@@ -120,6 +192,29 @@ describe("admin navigation", () => {
         schema: "public",
       },
       to: "/instances/$instanceId/databases/$databaseId/explorer",
+    });
+  });
+
+  test("normalizes role search in legacy redirects", () => {
+    expect(
+      resolveLegacyAdminPageRedirect({
+        currentPage: "instance.roles",
+        ids: { instanceId: "local" },
+        search: {
+          page: "instance.roles",
+          q: "postgres",
+          tab: "grants",
+        },
+      })
+    ).toEqual({
+      params: { instanceId: "local" },
+      search: {
+        page: undefined,
+        q: "postgres",
+        tab: undefined,
+        type: undefined,
+      },
+      to: "/instances/$instanceId/roles",
     });
   });
 

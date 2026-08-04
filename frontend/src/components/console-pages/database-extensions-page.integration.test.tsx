@@ -103,6 +103,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -147,6 +148,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -164,6 +166,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -181,6 +184,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -198,6 +202,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -239,6 +244,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -254,6 +260,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -264,12 +271,33 @@ describe("database extensions page", () => {
     expect(screen.getByText("uuid-ossp")).toBeTruthy();
     expect(screen.queryByText("plpgsql")).toBeNull();
   });
+
+  test("clears URL search and extension facets together", async () => {
+    const user = userEvent.setup();
+    state.tableSearch = "uuid";
+    render(
+      <BackendDatabaseExtensionsPage
+        databaseId="customer-events"
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Status" }));
+    await user.click(screen.getByRole("option", { name: "Available" }));
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
+
+    expect(state.updateTableSearch).toHaveBeenCalledWith("");
+    expect(screen.getByRole("button", { name: "Status" })).toBeTruthy();
+  });
+
   test("opens extension explanation drawer without mutation actions", async () => {
     const user = userEvent.setup();
     render(
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -303,6 +331,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 
@@ -325,6 +354,7 @@ describe("database extensions page", () => {
       <BackendDatabaseExtensionsPage
         databaseId="customer-events"
         instanceId="prod"
+        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
       />
     );
 

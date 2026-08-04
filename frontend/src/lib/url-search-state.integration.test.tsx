@@ -4,6 +4,7 @@ import {
   createRoute,
   createRouter,
   RouterProvider,
+  retainSearchParams,
 } from "@tanstack/react-router";
 import {
   act,
@@ -21,7 +22,7 @@ import { useUrlTableSearch } from "@/lib/url-search-state";
 afterEach(() => cleanup());
 
 function SearchHarness() {
-  const [query, setQuery] = useUrlTableSearch();
+  const [query, setQuery] = useUrlTableSearch("/instances/$instanceId/roles");
 
   return (
     <Input
@@ -37,6 +38,7 @@ function renderSearchHarness(initialEntry = "/instances/prod/roles") {
   const instanceRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "instances/$instanceId",
+    search: { middlewares: [retainSearchParams(["q"])] },
     validateSearch: (search: Record<string, unknown>) => ({
       q: typeof search["q"] === "string" ? search["q"] : undefined,
     }),

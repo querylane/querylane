@@ -643,7 +643,12 @@ test("console resource overview keeps dense metadata readable", async () => {
 });
 
 test("console roles list shows an inline type filter, sortable columns, and role rows", async () => {
-  renderConsoleSurface(<InstanceRolesPage instanceId="prod" />);
+  renderConsoleSurface(
+    <InstanceRolesPage
+      instanceId="prod"
+      searchRoute="/instances/$instanceId/roles/"
+    />
+  );
 
   await expect
     .element(page.getByRole("heading", { level: 1, name: "Roles" }))
@@ -684,7 +689,13 @@ test("console roles list shows an inline type filter, sortable columns, and role
 
 test("console roles access map matches the design source", async () => {
   setRolesAccessMapDesignFixture();
-  renderConsoleSurface(<InstanceRolesPage instanceId="prod" tab="map" />);
+  renderConsoleSurface(
+    <InstanceRolesPage
+      instanceId="prod"
+      searchRoute="/instances/$instanceId/roles/"
+      tab="map"
+    />
+  );
 
   await expect
     .element(page.getByText("cloud_admin", { exact: true }))
@@ -727,7 +738,13 @@ test("console roles access map matches the design source", async () => {
 
 test("console roles dense access map starts with reduced edge filters", async () => {
   setRolesAccessMapDesignFixture(5);
-  renderConsoleSurface(<InstanceRolesPage instanceId="prod" tab="map" />);
+  renderConsoleSurface(
+    <InstanceRolesPage
+      instanceId="prod"
+      searchRoute="/instances/$instanceId/roles/"
+      tab="map"
+    />
+  );
 
   const viewButton = page.getByRole("button", {
     name: "View, 3 filters hidden",
@@ -761,7 +778,13 @@ test("console roles access map keeps partial results visibly qualified", async (
   }
   roleApiState.accessMapResources.truncatedRequestCount = 2;
 
-  renderConsoleSurface(<InstanceRolesPage instanceId="prod" tab="map" />);
+  renderConsoleSurface(
+    <InstanceRolesPage
+      instanceId="prod"
+      searchRoute="/instances/$instanceId/roles/"
+      tab="map"
+    />
+  );
 
   await expect
     .element(page.getByText("Some access data is not shown"))
@@ -789,7 +812,13 @@ test("console roles access map keeps failed requests visible when expanded", asy
   }
   roleApiState.accessMapResources.failedRequestCount = 1;
 
-  renderConsoleSurface(<InstanceRolesPage instanceId="prod" tab="map" />);
+  renderConsoleSurface(
+    <InstanceRolesPage
+      instanceId="prod"
+      searchRoute="/instances/$instanceId/roles/"
+      tab="map"
+    />
+  );
 
   await page.getByRole("button", { name: "Maximize role access map" }).click();
   const dialog = page.getByRole("dialog", {
@@ -815,7 +844,13 @@ test("console roles access map does not show an empty state while loading", asyn
     truncatedRequestCount: 0,
   };
   try {
-    renderConsoleSurface(<InstanceRolesPage instanceId="prod" tab="map" />);
+    renderConsoleSurface(
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab="map"
+      />
+    );
 
     await expect
       .element(page.getByText("Loading role object access."))
@@ -833,7 +868,13 @@ test("console roles access filters contain their switches on narrow viewports", 
   await page.viewport(355, 812);
   try {
     setRolesAccessMapDesignFixture();
-    renderConsoleSurface(<InstanceRolesPage instanceId="prod" tab="map" />);
+    renderConsoleSurface(
+      <InstanceRolesPage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId/roles/"
+        tab="map"
+      />
+    );
 
     await page.getByRole("button", { name: "View" }).click();
     await expect.element(page.getByText("Access filters")).toBeVisible();
@@ -877,7 +918,12 @@ test("console roles login no state keeps the same indicator slot", async () => {
     }),
   ];
 
-  renderConsoleSurface(<InstanceRolesPage instanceId="prod" />);
+  renderConsoleSurface(
+    <InstanceRolesPage
+      instanceId="prod"
+      searchRoute="/instances/$instanceId/roles/"
+    />
+  );
 
   await expect.element(page.getByText("No", { exact: true })).toBeVisible();
   const noLabel = page.getByText("No", { exact: true }).element();
@@ -1110,6 +1156,46 @@ test("console role detail grants overview keeps access sources scannable", async
     .toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "console-role-detail-grants-overview"
+  );
+});
+
+test("console role schema grants capture active shared filters", async () => {
+  setRoleDetailFixture();
+  roleApiState.grants.push({
+    grantor: "postgres",
+    objectName: "recent_orders",
+    objectType: GrantObjectType.VIEW,
+    privilege: "SELECT",
+    schemaName: "public",
+    withGrantOption: false,
+  });
+
+  renderConsoleSurface(
+    <RoleDetailPage
+      grantsReach={undefined}
+      grantsSchema="public"
+      grantsType="tables"
+      instanceId="prod"
+      roleId="app_user"
+      tab="grants"
+    />
+  );
+
+  await page.getByRole("textbox", { name: "Search objects…" }).fill("orders");
+  await expect
+    .element(page.getByRole("button", { name: "Kind Table" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Clear all" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("cell", { name: "public.orders" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("recent_orders", { exact: true }))
+    .not.toBeInTheDocument();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "console-role-detail-grants-active-filters"
   );
 });
 

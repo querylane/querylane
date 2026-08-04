@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useSidebar } from "@/components/querylane-ui/sidebar";
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 import {
-  buildCanonicalAdminSearch,
+  navigateToCanonicalAdminTarget,
   resolveCanonicalAdminPageTarget,
 } from "@/lib/admin-navigation";
 import type { AdminPageId } from "@/lib/admin-page";
@@ -12,7 +12,7 @@ import { useDb } from "@/lib/db-context";
 import { handleNavigationResult } from "@/lib/navigation-errors";
 
 function AdminKeyboardShortcuts() {
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/" });
   const { navigationIds } = useDb();
   const { toggleSidebar } = useSidebar();
 
@@ -25,11 +25,7 @@ function AdminKeyboardShortcuts() {
       return;
     }
     handleNavigationResult(
-      navigate({
-        ...target,
-        search: (previous) =>
-          buildCanonicalAdminSearch(previous, { targetPage: page }),
-      }),
+      navigateToCanonicalAdminTarget(navigate, target, { targetPage: page }),
       { area: `admin-keyboard-shortcuts.${page}` }
     );
   }

@@ -3,7 +3,13 @@ import { BackendInstancePage } from "@/components/console-pages/instance-page";
 
 function InstancePage() {
   const { instanceId } = Route.useParams();
-  return <BackendInstancePage instanceId={instanceId} section="overview" />;
+  return (
+    <BackendInstancePage
+      instanceId={instanceId}
+      searchRoute={Route.fullPath}
+      section="overview"
+    />
+  );
 }
 
 export const Route = createFileRoute("/instances/$instanceId/")({

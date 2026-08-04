@@ -1,23 +1,28 @@
-import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { handleNavigationError } from "@/lib/navigation-errors";
 
-export function normalizeSearchText(value: string): string {
+function normalizeSearchText(value: string): string {
   return value.trim() === "" ? "" : value;
 }
 
-export function useUrlTableSearch(): [
-  string,
-  (value: string) => Promise<void>,
-] {
+type UrlTableSearchRoute =
+  | "/instances/$instanceId"
+  | "/instances/$instanceId/"
+  | "/instances/$instanceId/activity"
+  | "/instances/$instanceId/configuration"
+  | "/instances/$instanceId/roles"
+  | "/instances/$instanceId/roles/"
+  | "/instances/$instanceId/databases/$databaseId/extensions";
+
+function useUrlTableSearch(
+  from: UrlTableSearchRoute
+): [string, (value: string) => Promise<void>] {
   const routeSearchText = useSearch({
+    from,
     select: (search) => (typeof search.q === "string" ? search.q : ""),
-    strict: false,
   });
-  const navigate = useNavigate();
-  const location = useLocation({
-    select: ({ hash, pathname, searchStr }) => ({ hash, pathname, searchStr }),
-  });
+  const navigate = useNavigate({ from });
   const pendingNavigationRef = useRef<{
     settledRevisionAtStart: number;
     text: string;
@@ -50,21 +55,15 @@ export function useUrlTableSearch(): [
     pendingNavigationRef.current = pendingNavigation;
     setDraftSearchText(nextValue);
 
-    const params = new URLSearchParams(location.searchStr);
-    if (nextValue === "") {
-      params.delete("q");
-    } else {
-      params.set("q", nextValue);
-    }
-
-    const nextSearch = params.toString();
-    const nextHash = location.hash ? `#${location.hash}` : "";
-
     return navigate({
-      href: `${location.pathname}${nextSearch ? `?${nextSearch}` : ""}${nextHash}`,
+      hash: true,
       ignoreBlocker: true,
       replace: true,
       resetScroll: false,
+      search: (previous) => ({
+        ...previous,
+        q: nextValue === "" ? undefined : nextValue,
+      }),
     })
       .then(() => {
         if (pendingNavigationRef.current === pendingNavigation) {
@@ -88,3 +87,6 @@ export function useUrlTableSearch(): [
 
   return [draftSearchText, setUrlSearchText];
 }
+
+export type { UrlTableSearchRoute };
+export { normalizeSearchText, useUrlTableSearch };

@@ -40,7 +40,10 @@ import {
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import { useMinimumSpin } from "@/hooks/use-minimum-spin";
 import type { DbConnectionStatus } from "@/lib/console-resources";
-import { useUrlTableSearch } from "@/lib/url-search-state";
+import {
+  type UrlTableSearchRoute,
+  useUrlTableSearch,
+} from "@/lib/url-search-state";
 import { cn } from "@/lib/utils";
 import type { Status } from "@/protogen/google/rpc/status_pb";
 import type { ConnectionActivityHealth } from "@/protogen/querylane/console/v1alpha1/instance_pb";
@@ -737,6 +740,7 @@ function InstanceActivityPage({
   partialErrors,
   pending,
   refreshing,
+  searchRoute,
 }: {
   activity: ConnectionActivityHealth | undefined;
   connectionStatus: DbConnectionStatus;
@@ -745,8 +749,9 @@ function InstanceActivityPage({
   partialErrors: Status[] | undefined;
   pending: boolean;
   refreshing: boolean;
+  searchRoute: UrlTableSearchRoute;
 }) {
-  const [search, setSearch] = useUrlTableSearch();
+  const [search, setSearch] = useUrlTableSearch(searchRoute);
   const [stateFilter, setStateFilter] = useState<string[]>([]);
   const [appFilter, setAppFilter] = useState<string[]>([]);
   const [databaseFilter, setDatabaseFilter] = useState<string[]>([]);

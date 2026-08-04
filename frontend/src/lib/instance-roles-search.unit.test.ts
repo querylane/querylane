@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   instanceRolesSearchSchema,
   isInstanceRolesTab,
-} from "@/components/console-pages/instance-roles-search";
+} from "@/lib/instance-roles-search";
 
 describe("instanceRolesSearchSchema", () => {
   test("normalizes legacy tab links", () => {

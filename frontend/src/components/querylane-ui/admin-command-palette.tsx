@@ -20,7 +20,7 @@ import {
 } from "@/hooks/api/role";
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 import {
-  buildCanonicalAdminSearch,
+  navigateToCanonicalAdminTarget,
   resolveCanonicalAdminPageTarget,
 } from "@/lib/admin-navigation";
 import type { AdminPageId } from "@/lib/admin-page";
@@ -303,7 +303,7 @@ function AdminCommandPaletteContent({
 }: {
   onOpenChange: (open: boolean) => void;
 }) {
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/" });
   const { navigationIds, selectedDatabase } = useDb();
   const [query, setQuery] = useState("");
   const instanceId = navigationIds.instanceId ?? "";
@@ -345,11 +345,7 @@ function AdminCommandPaletteContent({
       return;
     }
     handleNavigationResult(
-      navigate({
-        ...target,
-        search: (previous) =>
-          buildCanonicalAdminSearch(previous, { targetPage: page }),
-      }),
+      navigateToCanonicalAdminTarget(navigate, target, { targetPage: page }),
       { area: "admin-command-palette.page" }
     );
     close();
