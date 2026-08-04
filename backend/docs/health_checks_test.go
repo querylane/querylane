@@ -26,7 +26,8 @@ func TestDeploymentDocsUseHealthEndpoints(t *testing.T) {
 			}
 
 			var healthChecks string
-			for _, paragraph := range strings.Split(string(contents), "\n\n") {
+
+			for paragraph := range strings.SplitSeq(string(contents), "\n\n") {
 				if strings.Contains(paragraph, "/livez") && strings.Contains(paragraph, "/readyz") {
 					healthChecks = paragraph
 
