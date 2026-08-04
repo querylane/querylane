@@ -237,7 +237,7 @@ test("stamps one build-info source used by the CLI and Console", async () => {
 			read("backend/buildstamp/buildstamp.go"),
 		]);
 
-	expect(main).toContain('"version": buildstamp.Version');
+	expect(main).toContain('"version": buildstamp.CurrentVersion()');
 	expect(main).not.toContain('var version = "dev"');
 
 	for (const buildConfig of [goreleaser, dockerfile, backendTasks]) {

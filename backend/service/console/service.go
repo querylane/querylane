@@ -130,9 +130,7 @@ func extractBuildInfoFrom(
 		applyRuntimeBuildInfo(ctx, result, buildInfo)
 	}
 
-	if stamp.version != "" {
-		result.Version = stamp.version
-	}
+	result.Version = buildstamp.ResolveVersion(stamp.version, buildInfo)
 
 	if stamp.gitCommit != "" {
 		result.GitCommit = stamp.gitCommit
@@ -158,10 +156,6 @@ func applyRuntimeBuildInfo(
 	result *v1alpha1.BuildInfo,
 	buildInfo *debug.BuildInfo,
 ) {
-	if buildInfo.Main.Version != "" && buildInfo.Main.Version != "(devel)" {
-		result.Version = buildInfo.Main.Version
-	}
-
 	for _, setting := range buildInfo.Settings {
 		switch setting.Key {
 		case "vcs.revision":

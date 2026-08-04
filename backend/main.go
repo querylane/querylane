@@ -24,7 +24,7 @@ func main() {
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{Compact: false}),
 		kong.Vars{
-			"version": buildstamp.Version,
+			"version": buildstamp.CurrentVersion(),
 		},
 	)
 	err := ctx.Run(&cli.Globals)
