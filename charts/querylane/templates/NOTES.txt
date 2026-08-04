@@ -1,0 +1,6 @@
+Querylane is available inside the cluster at:
+
+  http://{{ include "querylane.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
+
+Querylane does not currently include built-in authentication. Keep the Service
+private and use an authenticating proxy before exposing it outside the cluster.
