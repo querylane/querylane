@@ -8,7 +8,7 @@ import {
   ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
-import { Fragment, type ReactNode, useEffect, useState } from "react";
+import { Fragment, type ReactNode, useState } from "react";
 import type { GrantsView } from "@/components/console-pages/role-detail-search";
 import {
   GrantedObjectsTable,
@@ -179,6 +179,17 @@ function DefaultsDrillView({
   );
 }
 
+function publicTableFilter(
+  activeKind: string,
+  search: string
+): RoleGrantsTableFilter | null {
+  const filter = buildGrantFilter({
+    objectType: grantObjectTypeFilterTokenForSlug(activeKind),
+    search,
+  });
+  return filter ? { filter, source: "public" } : null;
+}
+
 function usePublicGrantTableState({
   onTableFilterChange,
   tableSlice,
@@ -189,20 +200,25 @@ function usePublicGrantTableState({
   const [activeKind, setActiveKind] = useState("all");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, SERVER_FILTER_DEBOUNCE_MS);
-  const filter = buildGrantFilter({
-    objectType: grantObjectTypeFilterTokenForSlug(activeKind),
-    search: debouncedSearch,
-  });
-
-  useEffect(
-    function syncServerFilter() {
-      onTableFilterChange?.(filter ? { filter, source: "public" } : null);
-    },
-    [filter, onTableFilterChange]
-  );
+  const filter = publicTableFilter(activeKind, debouncedSearch)?.filter;
+  const handleKindChange = (nextKind: string) => {
+    setActiveKind(nextKind);
+    setSearch("");
+    onTableFilterChange?.(publicTableFilter(nextKind, ""));
+  };
+  const handleSearchChange = (nextSearch: string) => {
+    setSearch(nextSearch);
+    onTableFilterChange?.(publicTableFilter(activeKind, nextSearch));
+  };
 
   const serverSlice = selectRoleGrantsTableSlice(tableSlice, "public", filter);
-  return { activeKind, search, serverSlice, setActiveKind, setSearch };
+  return {
+    activeKind,
+    handleKindChange,
+    handleSearchChange,
+    search,
+    serverSlice,
+  };
 }
 
 function PublicDrillView({
@@ -216,8 +232,13 @@ function PublicDrillView({
   partial: boolean;
   tableSlice?: RoleGrantsTableSlice | undefined;
 }) {
-  const { activeKind, search, serverSlice, setActiveKind, setSearch } =
-    usePublicGrantTableState({ onTableFilterChange, tableSlice });
+  const {
+    activeKind,
+    handleKindChange,
+    handleSearchChange,
+    search,
+    serverSlice,
+  } = usePublicGrantTableState({ onTableFilterChange, tableSlice });
   const tableObjects = serverSlice?.grantObjects ?? objects;
   return (
     <div className="flex flex-col">
@@ -256,11 +277,9 @@ function PublicDrillView({
             activeKind={activeKind}
             facetObjects={objects}
             objects={tableObjects}
-            onKindChange={(slug) => {
-              setActiveKind(slug);
-              setSearch("");
-            }}
-            onSearchChange={setSearch}
+            onClearAll={() => handleKindChange("all")}
+            onKindChange={handleKindChange}
+            onSearchChange={handleSearchChange}
             search={search}
           />
         </RoleGrantsTableStatus>
@@ -886,6 +905,13 @@ function selectActiveTableFilter(
     : undefined;
 }
 
+function settleTableFilter(
+  tableFilter: RoleGrantsTableFilter | null,
+  debouncedTableFilter: RoleGrantsTableFilter | null
+): RoleGrantsTableFilter | null {
+  return tableFilter?.source === "direct" ? tableFilter : debouncedTableFilter;
+}
+
 function ServerFilteredGrantsSection({
   queryScope,
   ...props
@@ -894,7 +920,18 @@ function ServerFilteredGrantsSection({
     null
   );
   const activeSource = grantsTableSourceForView(props.grantsView);
-  const activeFilter = selectActiveTableFilter(tableFilter, activeSource);
+  const debouncedTableFilter = useDebouncedValue(
+    tableFilter,
+    SERVER_FILTER_DEBOUNCE_MS
+  );
+  const settledTableFilter = settleTableFilter(
+    tableFilter,
+    debouncedTableFilter
+  );
+  const activeFilter = selectActiveTableFilter(
+    settledTableFilter,
+    activeSource
+  );
 
   const directQuery = useListRoleGrantsQuery(
     roleGrantsForDatabaseQueryInput({

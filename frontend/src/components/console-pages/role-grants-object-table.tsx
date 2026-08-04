@@ -137,6 +137,7 @@ function KindFilteredTable<T extends RowData>({
   filterColumnId,
   initialSorting,
   kindOf,
+  onClearAll,
   onKindChange,
   onSearchChange,
   search,
@@ -151,6 +152,7 @@ function KindFilteredTable<T extends RowData>({
   filterColumnId: string;
   initialSorting: SortingState;
   kindOf: (row: T) => GrantObjectType;
+  onClearAll?: (() => void) | undefined;
   onKindChange: (slug: string) => void;
   onSearchChange: (value: string) => void;
   search: string;
@@ -190,6 +192,10 @@ function KindFilteredTable<T extends RowData>({
           },
         ]}
         onClearAll={() => {
+          if (onClearAll) {
+            onClearAll();
+            return;
+          }
           onKindChange("all");
           onSearchChange("");
         }}
@@ -219,6 +225,7 @@ function GrantedObjectsTable({
   activeKind,
   facetObjects,
   objects,
+  onClearAll,
   onKindChange,
   onSearchChange,
   search,
@@ -226,6 +233,7 @@ function GrantedObjectsTable({
   activeKind: string;
   facetObjects?: GrantedObject[];
   objects: GrantedObject[];
+  onClearAll?: (() => void) | undefined;
   onKindChange: (slug: string) => void;
   onSearchChange: (value: string) => void;
   search: string;
@@ -283,6 +291,7 @@ function GrantedObjectsTable({
       filterColumnId="object"
       initialSorting={[{ desc: false, id: "object" }]}
       kindOf={(object) => object.objectType}
+      onClearAll={onClearAll}
       onKindChange={onKindChange}
       onSearchChange={onSearchChange}
       search={search}

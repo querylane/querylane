@@ -1,7 +1,7 @@
 "use client";
 
 import { Crown, Info, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   GrantObjectKindBadge,
   KindFilteredTable,
@@ -24,6 +24,7 @@ import {
   slugForObjectType,
 } from "@/components/console-pages/role-grants-shared";
 import type {
+  RoleGrantsTableFilter,
   RoleGrantsTableSlice,
   SetRoleGrantsTableFilter,
 } from "@/components/console-pages/role-grants-table-filter";
@@ -177,6 +178,23 @@ function OwnedObjectCell({ object }: { object: OwnedObject }) {
   );
 }
 
+function ownedTableFilter(
+  activeKind: string,
+  search: string
+): RoleGrantsTableFilter | null {
+  const activeObjectType = OWNED_TYPE_ORDER.find(
+    (type) => slugForObjectType(type) === activeKind
+  );
+  const filter = buildOwnedFilter({
+    objectType:
+      activeObjectType === undefined
+        ? undefined
+        : grantObjectTypeFilterToken(activeObjectType),
+    search,
+  });
+  return filter ? { filter, source: "owned" } : null;
+}
+
 function OwnedObjectsTable({
   facetObjects,
   objects,
@@ -193,23 +211,20 @@ function OwnedObjectsTable({
   const [activeKind, setActiveKind] = useState("all");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, SERVER_FILTER_DEBOUNCE_MS);
-  const activeObjectType = OWNED_TYPE_ORDER.find(
-    (type) => slugForObjectType(type) === activeKind
-  );
-  const filter = buildOwnedFilter({
-    objectType:
-      activeObjectType === undefined
-        ? undefined
-        : grantObjectTypeFilterToken(activeObjectType),
-    search: debouncedSearch,
-  });
-
-  useEffect(
-    function syncServerFilter() {
-      onTableFilterChange?.(filter ? { filter, source: "owned" } : null);
-    },
-    [filter, onTableFilterChange]
-  );
+  const filter = ownedTableFilter(activeKind, debouncedSearch)?.filter;
+  const handleKindChange = (nextKind: string) => {
+    setActiveKind(nextKind);
+    onTableFilterChange?.(ownedTableFilter(nextKind, search));
+  };
+  const handleSearchChange = (nextSearch: string) => {
+    setSearch(nextSearch);
+    onTableFilterChange?.(ownedTableFilter(activeKind, nextSearch));
+  };
+  const handleClearAll = () => {
+    setActiveKind("all");
+    setSearch("");
+    onTableFilterChange?.(null);
+  };
 
   const serverSlice = selectRoleGrantsTableSlice(tableSlice, "owned", filter);
   const tableObjects = serverSlice?.ownedObjects ?? objects;
@@ -258,8 +273,9 @@ function OwnedObjectsTable({
           filterColumnId="object"
           initialSorting={[{ desc: false, id: "object" }]}
           kindOf={(object) => object.objectType}
-          onKindChange={setActiveKind}
-          onSearchChange={setSearch}
+          onClearAll={handleClearAll}
+          onKindChange={handleKindChange}
+          onSearchChange={handleSearchChange}
           search={search}
           searchPlaceholder="Search owned objects…"
           tableKey="role-owned-objects"
