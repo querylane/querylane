@@ -3,6 +3,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/querylane/querylane-dev
   pullPolicy: IfNotPresent
+  # Defaults to Chart.appVersion. Set this or digest when changing repository.
   tag: ""
   digest: ""
 
