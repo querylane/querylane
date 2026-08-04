@@ -6,6 +6,7 @@ metadata:
     {{- include "querylane.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  # Avoid overlapping Querylane versions while metadata migrations run.
   strategy:
     type: Recreate
   selector:
