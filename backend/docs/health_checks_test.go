@@ -5,6 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDeploymentDocsUseHealthEndpoints(t *testing.T) {
@@ -20,9 +23,7 @@ func TestDeploymentDocsUseHealthEndpoints(t *testing.T) {
 			t.Parallel()
 
 			contents, err := os.ReadFile(filepath.Join(repositoryRoot(t), docPath))
-			if err != nil {
-				t.Fatalf("read deployment docs: %v", err)
-			}
+			require.NoError(t, err, "read deployment docs")
 
 			var healthChecks string
 
@@ -34,14 +35,10 @@ func TestDeploymentDocsUseHealthEndpoints(t *testing.T) {
 				}
 			}
 
-			if healthChecks == "" {
-				t.Fatal("deployment docs must explain /livez and /readyz together")
-			}
+			require.NotEmpty(t, healthChecks, "deployment docs must explain /livez and /readyz together")
 
 			for _, statusCode := range []string{"200", "503"} {
-				if !strings.Contains(healthChecks, statusCode) {
-					t.Errorf("health-check guidance missing status %s", statusCode)
-				}
+				assert.Contains(t, healthChecks, statusCode, "health-check guidance missing status")
 			}
 		})
 	}
