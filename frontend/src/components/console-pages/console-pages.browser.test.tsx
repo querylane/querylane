@@ -1159,6 +1159,46 @@ test("console role detail grants overview keeps access sources scannable", async
   );
 });
 
+test("console role schema grants capture active shared filters", async () => {
+  setRoleDetailFixture();
+  roleApiState.grants.push({
+    grantor: "postgres",
+    objectName: "recent_orders",
+    objectType: GrantObjectType.VIEW,
+    privilege: "SELECT",
+    schemaName: "public",
+    withGrantOption: false,
+  });
+
+  renderConsoleSurface(
+    <RoleDetailPage
+      grantsReach={undefined}
+      grantsSchema="public"
+      grantsType="tables"
+      instanceId="prod"
+      roleId="app_user"
+      tab="grants"
+    />
+  );
+
+  await page.getByRole("textbox", { name: "Search objects…" }).fill("orders");
+  await expect
+    .element(page.getByRole("button", { name: "Kind Table" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Clear all" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("cell", { name: "public.orders" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("recent_orders", { exact: true }))
+    .not.toBeInTheDocument();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "console-role-detail-grants-active-filters"
+  );
+});
+
 test("console role detail access map keeps partial counts qualified", async () => {
   setRoleDetailFixture();
   roleApiState.grantsNextPageToken = "more-grants";

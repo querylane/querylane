@@ -1504,6 +1504,36 @@ test("backend database overview opens the query insights drawer", async () => {
   );
 });
 
+test("query insights active filters match the shared toolbar", async () => {
+  const drawer = await openQueryInsightsDrawer(queryInsightsResponse());
+  await expect.element(drawer).toBeVisible();
+
+  await drawer.getByRole("textbox", { name: "Search queries…" }).fill("SELECT");
+  await drawer.getByRole("button", { name: "Type" }).click();
+  await page.getByRole("option", { name: "Read queries" }).click();
+  await drawer.getByText("Top queries by total time").click();
+
+  await expect
+    .element(drawer.getByRole("button", { name: "Type Read queries" }))
+    .toBeVisible();
+  await expect
+    .element(drawer.getByRole("button", { name: "Clear all" }))
+    .toBeVisible();
+
+  const topQueriesCard = drawer
+    .getByText("Top queries by total time")
+    .element()
+    .closest('[data-slot="card"]');
+  if (!(topQueriesCard instanceof HTMLElement)) {
+    throw new Error("Expected top queries card");
+  }
+
+  await document.fonts.ready;
+  await expect(page.elementLocator(topQueriesCard)).toMatchScreenshot(
+    "backend-database-query-insights-active-filters"
+  );
+});
+
 test("query insights drawer caps its width at 64rem", async () => {
   const drawer = await openQueryInsightsDrawer(queryInsightsResponse());
   await expect.element(drawer).toBeVisible();
@@ -1678,6 +1708,9 @@ test("backend database extensions available drawer matches design source", async
   await page
     .getByRole("textbox", { name: "Search extensions…" })
     .fill("timescaledb");
+  await expect
+    .element(page.getByRole("button", { name: "Clear all" }))
+    .toBeVisible();
   await expect.element(page.getByText("Available")).toBeVisible();
   await expect.element(page.getByText("available to install")).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
