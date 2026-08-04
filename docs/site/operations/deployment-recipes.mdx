@@ -110,7 +110,7 @@ Use this shape only with external metadata PostgreSQL. Every replica must receiv
 - the same non-secret configuration and target network policy; and
 - network access to the same metadata and managed PostgreSQL endpoints.
 
-Expose port `8080` through an internal service and put the authenticating ingress in front of that service. Use `GET /` for liveness. For readiness, call `ConsoleService.GetConsoleConfig` and require the ready application state rather than treating any HTTP response as ready.
+Expose port `8080` through an internal service and put the authenticating ingress in front of that service. Use `GET /livez` for liveness; it returns `200` while the HTTP server is running. Use `GET /readyz` for readiness; it returns `200` when the metadata database is initialized and reachable, and `503` while Querylane is initializing or the database is unavailable.
 
 Estimate worst-case target PostgreSQL load by multiplying each configured live-query limit by the maximum replica count.
 
