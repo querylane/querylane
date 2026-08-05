@@ -188,7 +188,7 @@ function FilterPopover({
       <DataGridPopoverContent
         align="start"
         aria-label={title}
-        className="w-[min(36rem,var(--available-width))] max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0"
+        className="@container/filter-popover w-[min(36rem,var(--available-width))] max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0"
         collisionBoundary={popoverBoundary ?? undefined}
       >
         <div className="p-2">

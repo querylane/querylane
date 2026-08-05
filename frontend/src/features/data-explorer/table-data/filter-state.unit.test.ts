@@ -3,6 +3,7 @@ import {
   buildRowFilter,
   filterRulesForColumnNames,
   getInvalidFilterRules,
+  getOperatorsForColumn,
   parseTableFilterSearch,
   parseTableFilterSearchResult,
   serializeTableFilterSearch,
@@ -39,6 +40,29 @@ describe("table filter search params", () => {
     const serialized = serializeTableFilterSearch({ logic: "or", rules });
 
     expect(parseTableFilterSearch(serialized)).toEqual({ logic: "or", rules });
+  });
+
+  test("round-trips advanced operators and predicate negation", () => {
+    const rules: TableFilterRule[] = [
+      {
+        column: "email",
+        id: "regex",
+        negated: true,
+        operator: "imatch",
+        value: "@example\\.com$",
+      },
+      {
+        column: "active",
+        id: "unknown",
+        operator: "isUnknown",
+        value: "",
+      },
+    ];
+
+    const serialized = serializeTableFilterSearch({ logic: "and", rules });
+
+    expect(serialized).toContain('"n":true');
+    expect(parseTableFilterSearch(serialized)).toEqual({ logic: "and", rules });
   });
 
   test("round-trips per-rule match logic", () => {
@@ -470,5 +494,107 @@ describe("buildRowFilter", () => {
         message: "contains JSON cannot be used with email.",
       },
     ]);
+  });
+});
+
+describe("advanced RowFilter operators", () => {
+  test("builds regex, NULL-safe, boolean identity, and negated predicates", () => {
+    const filter = buildRowFilter(
+      [
+        {
+          column: "email",
+          id: "regex",
+          negated: true,
+          operator: "match",
+          value: "^support@",
+        },
+        {
+          column: "status",
+          id: "distinct",
+          operator: "isDistinct",
+          value: "done",
+        },
+        {
+          column: "active",
+          id: "truth",
+          operator: "isTrue",
+          value: "",
+        },
+      ],
+      columns
+    );
+
+    if (filter?.node.case !== "group") {
+      throw new Error("expected group filter");
+    }
+    expect(filter.node.value.children[0]?.node.value).toMatchObject({
+      column: "email",
+      negated: true,
+      operator: RowPredicate_Operator.MATCH,
+      values: [{ kind: { case: "stringValue", value: "^support@" } }],
+    });
+    expect(filter.node.value.children[1]?.node.value).toMatchObject({
+      column: "status",
+      operator: RowPredicate_Operator.IS_DISTINCT,
+    });
+    expect(filter.node.value.children[2]?.node.value).toMatchObject({
+      column: "active",
+      operator: RowPredicate_Operator.IS_TRUE,
+      values: [],
+    });
+  });
+
+  test("offers advanced operators only for compatible column types", () => {
+    expect(
+      getOperatorsForColumn({ columnName: "email", dataType: DataType.STRING })
+    ).toEqual(expect.arrayContaining(["match", "imatch", "isDistinct"]));
+    expect(
+      getOperatorsForColumn({
+        columnName: "active",
+        dataType: DataType.BOOLEAN,
+      })
+    ).toEqual(
+      expect.arrayContaining(["isTrue", "isFalse", "isUnknown", "isDistinct"])
+    );
+    const integerOperators = getOperatorsForColumn({
+      columnName: "id",
+      dataType: DataType.INTEGER,
+    });
+    expect(integerOperators).not.toContain("match");
+    expect(integerOperators).not.toContain("imatch");
+    expect(integerOperators).not.toContain("isTrue");
+    expect(integerOperators).not.toContain("isFalse");
+    expect(integerOperators).not.toContain("isUnknown");
+  });
+
+  test("offers null-safe inequality only for equality-comparable JSON", () => {
+    expect(
+      getOperatorsForColumn({
+        columnName: "legacy_payload",
+        dataType: DataType.JSON,
+        rawType: "json",
+      })
+    ).not.toContain("isDistinct");
+    expect(
+      getOperatorsForColumn({
+        columnName: "payload",
+        dataType: DataType.JSON,
+        rawType: "jsonb",
+      })
+    ).toContain("isDistinct");
+    expect(
+      getOperatorsForColumn({
+        columnName: "legacy_payloads",
+        dataType: DataType.ARRAY,
+        rawType: "json[]",
+      })
+    ).not.toContain("isDistinct");
+    expect(
+      getOperatorsForColumn({
+        columnName: "payloads",
+        dataType: DataType.ARRAY,
+        rawType: "jsonb[]",
+      })
+    ).toContain("isDistinct");
   });
 });

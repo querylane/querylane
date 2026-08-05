@@ -218,6 +218,29 @@ describe("FilterPopover match logic", () => {
 });
 
 describe("FilterPopover value guidance", () => {
+  it("shows a regular expression example for match operators", () => {
+    render(
+      <FilterRow
+        columns={columns}
+        onApplyRequest={vi.fn()}
+        onChange={vi.fn()}
+        onRemove={vi.fn()}
+        rule={{
+          column: "email",
+          id: "regex",
+          operator: "match",
+          value: "",
+        }}
+      />
+    );
+
+    expect(
+      screen
+        .getByRole("textbox", { name: "Filter value" })
+        .getAttribute("placeholder")
+    ).toBe("^support@");
+  });
+
   it("lists column types in the column picker", async () => {
     const user = userEvent.setup();
 
@@ -338,10 +361,98 @@ describe("FilterRow value editing", () => {
 
     await user.click(screen.getByRole("combobox", { name: "Filter operator" }));
 
-    expect(screen.getByRole("option", { name: "LIKE" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "ILIKE" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "!=" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Contains text" })).toBeTruthy();
+    expect(
+      screen.getByRole("option", {
+        name: "Contains text, ignoring case",
+      })
+    ).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Does not equal" })).toBeTruthy();
     expect(screen.queryByText("eq")).toBeNull();
+  });
+
+  it("offers regular expression and NULL-safe operators", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <div>
+        <FilterRow
+          columns={columns}
+          onApplyRequest={vi.fn()}
+          onChange={vi.fn()}
+          onRemove={vi.fn()}
+          rule={emailRule()}
+        />
+      </div>
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "Filter operator" }));
+
+    expect(
+      screen.getByRole("option", { name: "Matches regular expression" })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("option", {
+        name: "Matches regular expression, ignoring case",
+      })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("option", { name: "Is distinct from" })
+    ).toBeTruthy();
+  });
+
+  it("offers boolean identity operators for boolean columns", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <div>
+        <FilterRow
+          columns={columns}
+          onApplyRequest={vi.fn()}
+          onChange={vi.fn()}
+          onRemove={vi.fn()}
+          rule={{
+            column: "active",
+            id: "boolean",
+            operator: "eq",
+            value: "true",
+          }}
+        />
+      </div>
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "Filter operator" }));
+
+    expect(screen.getByRole("option", { name: "Is true" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Is false" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Is unknown" })).toBeTruthy();
+    expect(
+      screen.queryByRole("option", { name: "Matches regular expression" })
+    ).toBeNull();
+  });
+
+  it("toggles generic predicate negation", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <div>
+        <FilterRow
+          columns={columns}
+          onApplyRequest={vi.fn()}
+          onChange={onChange}
+          onRemove={vi.fn()}
+          rule={emailRule("alice@example.com")}
+        />
+      </div>
+    );
+
+    const negate = screen.getByRole("button", { name: "Negate filter" });
+    expect(negate.getAttribute("aria-pressed")).toBe("false");
+
+    await user.click(negate);
+
+    expect(onChange).toHaveBeenCalledWith({ negated: true });
   });
 
   it("debounces keystrokes into a single rule change", async () => {

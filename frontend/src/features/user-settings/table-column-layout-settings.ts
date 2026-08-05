@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 interface TableColumnLayout {
+  fetchVisibleColumns?: true | undefined;
   hiddenColumns: string[];
   order: string[];
 }
@@ -30,6 +31,27 @@ function parseStringArray(value: unknown): string[] | null {
   ];
 }
 
+function parsePersistedLayout(
+  tableName: string,
+  candidate: unknown
+): TableColumnLayout | undefined {
+  if (!(tableName && isObjectRecord(candidate))) {
+    return;
+  }
+  const hiddenColumns = parseStringArray(candidate["hiddenColumns"]);
+  const order = parseStringArray(candidate["order"]);
+  if (!(hiddenColumns && order)) {
+    return;
+  }
+  return {
+    ...(candidate["fetchVisibleColumns"] === true
+      ? { fetchVisibleColumns: true as const }
+      : {}),
+    hiddenColumns,
+    order,
+  };
+}
+
 function parsePersistedLayouts(
   value: unknown
 ): Record<string, TableColumnLayout> {
@@ -38,15 +60,10 @@ function parsePersistedLayouts(
   }
   const layouts: Record<string, TableColumnLayout> = {};
   for (const [tableName, candidate] of Object.entries(value["layouts"])) {
-    if (!(tableName && isObjectRecord(candidate))) {
-      continue;
+    const layout = parsePersistedLayout(tableName, candidate);
+    if (layout) {
+      layouts[tableName] = layout;
     }
-    const hiddenColumns = parseStringArray(candidate["hiddenColumns"]);
-    const order = parseStringArray(candidate["order"]);
-    if (!(hiddenColumns && order)) {
-      continue;
-    }
-    layouts[tableName] = { hiddenColumns, order };
   }
   return layouts;
 }
@@ -80,9 +97,22 @@ function resolveTableColumnLayout(
       : savedHiddenColumns;
 
   return {
+    ...(savedLayout?.fetchVisibleColumns
+      ? { fetchVisibleColumns: true as const }
+      : {}),
     hiddenColumns,
     order: orderedColumns,
   };
+}
+
+function resolveSelectedColumns(
+  layout: TableColumnLayout | undefined
+): string[] {
+  if (!layout?.fetchVisibleColumns) {
+    return [];
+  }
+  const hiddenColumnKeys = new Set(layout.hiddenColumns);
+  return layout.order.filter((column) => !hiddenColumnKeys.has(column));
 }
 
 function layoutsMatch(
@@ -91,7 +121,8 @@ function layoutsMatch(
 ): boolean {
   return (
     first.order.join("\0") === second.order.join("\0") &&
-    first.hiddenColumns.join("\0") === second.hiddenColumns.join("\0")
+    first.hiddenColumns.join("\0") === second.hiddenColumns.join("\0") &&
+    Boolean(first.fetchVisibleColumns) === Boolean(second.fetchVisibleColumns)
   );
 }
 
@@ -178,6 +209,7 @@ const useTableColumnLayoutSettingsStore =
 export type { TableColumnLayout };
 export {
   reorderVisibleTableColumns,
+  resolveSelectedColumns,
   resolveTableColumnLayout,
   useTableColumnLayoutSettingsStore,
 };

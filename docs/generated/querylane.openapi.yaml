@@ -5978,8 +5978,10 @@ components:
           items:
             type: string
           title: selected_columns
-          maxItems: 256
-          description: Optional. Subset of columns. Empty = all columns in catalog ordinal order.
+          maxItems: 1600
+          description: |-
+            Optional. Subset of columns. Empty = all columns in catalog ordinal order.
+             Bounded by PostgreSQL's maximum columns per table.
         orderBy:
           type: array
           items:
@@ -6487,10 +6489,7 @@ components:
             - predicate
       title: RowFilter
       additionalProperties: false
-      description: |-
-        RowFilter is a tree of conditions. Empty = no WHERE clause.
-
-         Example: (a = 1 OR b IS NULL) AND created_at > '2025-01-01'
+      description: "RowFilter is a tree of conditions. Empty = no WHERE clause.\n \n\n Example: (a = 1 OR b IS NULL) AND created_at > '2025-01-01'"
     querylane.console.v1alpha1.RowFilterGroup:
       type: object
       properties:
@@ -6600,12 +6599,20 @@ components:
           description: |-
             Predicate literals. Uses TableValue (NOT TableCell) — preview metadata
              makes no sense in a filter.
-               IS_NULL/IS_NOT_NULL  -> 0 values
+               IS_NULL/IS_NOT_NULL/IS_TRUE/IS_FALSE/IS_UNKNOWN -> 0 values
                IN/NOT_IN            -> 1..1024 values
                BETWEEN              -> exactly 2 values
                everything else      -> exactly 1 value
+        negated:
+          type: boolean
+          title: negated
+          description: |-
+            Optional. Negates the complete predicate while preserving PostgreSQL's
+             three-valued NULL semantics (for example, NOT (status = 'done')). False
+             or omitted applies the predicate as written.
       title: RowPredicate
       additionalProperties: false
+      description: RowPredicate compares one catalog column with zero or more typed values.
     querylane.console.v1alpha1.RowPredicate.Operator:
       type: string
       title: Operator
@@ -6625,6 +6632,15 @@ components:
         - OPERATOR_IS_NOT_NULL
         - OPERATOR_BETWEEN
         - OPERATOR_JSON_CONTAINS
+        - OPERATOR_MATCH
+        - OPERATOR_IMATCH
+        - OPERATOR_IS_DISTINCT
+        - OPERATOR_IS_TRUE
+        - OPERATOR_IS_FALSE
+        - OPERATOR_IS_UNKNOWN
+      description: |-
+        Identifies a supported PostgreSQL comparison. This request-only enum may
+         gain values as Data Explorer adds operators.
     querylane.console.v1alpha1.RunnerExecution:
       type: object
       properties:
@@ -7090,8 +7106,10 @@ components:
           items:
             type: string
           title: selected_columns
-          maxItems: 256
-          description: Optional. Subset of columns.
+          maxItems: 1600
+          description: |-
+            Optional. Subset of columns. Bounded by PostgreSQL's maximum columns per
+             table.
         orderBy:
           type: array
           items:

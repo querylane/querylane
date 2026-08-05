@@ -14,6 +14,9 @@ func sampleColumns() []engine.Column {
 	return []engine.Column{
 		{Name: "id", DataType: api.DataType_DATA_TYPE_INTEGER, RawType: "bigint"},
 		{Name: "email", DataType: api.DataType_DATA_TYPE_STRING, RawType: "text"},
+		{Name: "active", DataType: api.DataType_DATA_TYPE_BOOLEAN, RawType: "boolean"},
+		{Name: "legacy_metadata", DataType: api.DataType_DATA_TYPE_JSON, RawType: "json"},
+		{Name: "legacy_metadata_array", DataType: api.DataType_DATA_TYPE_ARRAY, RawType: "json[]"},
 		{Name: "metadata", DataType: api.DataType_DATA_TYPE_JSON, RawType: "jsonb"},
 		{Name: "created_at", DataType: api.DataType_DATA_TYPE_TIMESTAMP, RawType: "timestamptz"},
 	}
@@ -100,6 +103,53 @@ func TestValidateReadRowsRequest(t *testing.T) {
 				Filter: mkLeaf("id", api.RowPredicate_OPERATOR_LIKE, strVal("%foo%")),
 			},
 			wantErr: "LIKE requires a string column",
+		},
+		{
+			name: "match_on_int",
+			params: engine.ReadRowsParams{
+				Filter: mkLeaf("id", api.RowPredicate_OPERATOR_MATCH, strVal("^4")),
+			},
+			wantErr: "MATCH requires a string column",
+		},
+		{
+			name: "is_true_on_text",
+			params: engine.ReadRowsParams{
+				Filter: mkLeaf("email", api.RowPredicate_OPERATOR_IS_TRUE),
+			},
+			wantErr: "IS_TRUE requires a boolean column",
+		},
+		{
+			name: "is_false_with_value",
+			params: engine.ReadRowsParams{
+				Filter: mkLeaf("active", api.RowPredicate_OPERATOR_IS_FALSE, strVal("false")),
+			},
+			wantErr: "takes no values",
+		},
+		{
+			name: "advanced_predicates_valid",
+			params: engine.ReadRowsParams{
+				Filter: mkGroup(api.RowFilterGroup_LOGIC_AND,
+					mkLeaf("email", api.RowPredicate_OPERATOR_MATCH, strVal("^support@")),
+					mkLeaf("email", api.RowPredicate_OPERATOR_IMATCH, strVal("acme$")),
+					mkLeaf("email", api.RowPredicate_OPERATOR_IS_DISTINCT, strVal("blocked@example.com")),
+					mkLeaf("active", api.RowPredicate_OPERATOR_IS_UNKNOWN),
+				),
+			},
+			wantOK: true,
+		},
+		{
+			name: "is_distinct_on_json",
+			params: engine.ReadRowsParams{
+				Filter: mkLeaf("legacy_metadata", api.RowPredicate_OPERATOR_IS_DISTINCT, strVal(`{"tier":"enterprise"}`)),
+			},
+			wantErr: "IS_DISTINCT requires an equality-comparable column",
+		},
+		{
+			name: "is_distinct_on_json_array",
+			params: engine.ReadRowsParams{
+				Filter: mkLeaf("legacy_metadata_array", api.RowPredicate_OPERATOR_IS_DISTINCT, strVal(`{"tier":"enterprise"}`)),
+			},
+			wantErr: "IS_DISTINCT requires an equality-comparable column",
 		},
 		{
 			name: "json_contains_on_text",

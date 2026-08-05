@@ -97,4 +97,23 @@ describe("table data query search", () => {
       { id: "id", message: "id expects a whole number, like 42." },
     ]);
   });
+
+  test("removes stale projected columns before reading rows", () => {
+    const state = resolveTableDataQueryState({
+      columnCatalog: columns,
+      selectedColumns: ["email", "dropped_column"],
+    });
+
+    expect(state.selectedColumns).toEqual(["email"]);
+
+    const fullyStaleState = resolveTableDataQueryState({
+      columnCatalog: columns,
+      selectedColumns: ["dropped_column"],
+    });
+    expect(fullyStaleState.selectedColumns).toEqual([
+      "id",
+      "email",
+      "created_at",
+    ]);
+  });
 });

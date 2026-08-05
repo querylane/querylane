@@ -22,6 +22,7 @@ interface DataGridToolbarProps {
   className?: string | undefined;
   columnOrder: readonly string[];
   columns: TableResultColumn[];
+  fetchVisibleColumns: boolean;
   filterLogic: TableFilterLogic;
   filterRules: TableFilterRule[];
   filterTitle?: string | undefined;
@@ -36,6 +37,7 @@ interface DataGridToolbarProps {
   onColumnVisibilityChange: (columnKey: string, visible: boolean) => void;
   onCopySelection: (format: ExportFormat) => void;
   onExportSelection: (format: ExportFormat) => void;
+  onFetchVisibleColumnsChange: (enabled: boolean) => void;
   onFilterChange: (
     nextRules: TableFilterRule[],
     nextLogic?: TableFilterLogic
@@ -142,6 +144,7 @@ function DataGridToolbar({
   className,
   columnOrder,
   columns,
+  fetchVisibleColumns,
   hiddenColumnKeys,
   isColumnLayoutCustomized,
   filterTitle,
@@ -154,6 +157,7 @@ function DataGridToolbar({
   onColumnVisibilityChange,
   onCopySelection,
   onExportSelection,
+  onFetchVisibleColumnsChange,
   onFilterChange,
   onColumnOrderChange,
   onColumnLayoutReset,
@@ -199,8 +203,10 @@ function DataGridToolbar({
         <ColumnsPopover
           columnOrder={columnOrder}
           columns={columns}
+          fetchVisibleColumns={fetchVisibleColumns}
           hiddenColumnKeys={hiddenColumnKeys}
           isCustomized={isColumnLayoutCustomized}
+          onFetchVisibleColumnsChange={onFetchVisibleColumnsChange}
           onOrderChange={onColumnOrderChange}
           onReset={onColumnLayoutReset}
           onVisibilityChange={onColumnVisibilityChange}

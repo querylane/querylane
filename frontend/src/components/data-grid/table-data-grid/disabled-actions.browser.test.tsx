@@ -43,8 +43,10 @@ test("explains why the last visible column cannot be hidden", async () => {
     <ColumnsPopover
       columnOrder={["id"]}
       columns={[idColumn]}
+      fetchVisibleColumns={false}
       hiddenColumnKeys={new Set()}
       isCustomized={false}
+      onFetchVisibleColumnsChange={vi.fn()}
       onOrderChange={vi.fn()}
       onReset={vi.fn()}
       onVisibilityChange={vi.fn()}

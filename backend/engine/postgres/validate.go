@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/querylane/querylane/backend/engine"
 	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
@@ -157,7 +158,11 @@ func validatePredicate(pred *api.RowPredicate, idx *columnIndex, path string) er
 
 func checkOperatorArity(op api.RowPredicate_Operator, n int, path string) error {
 	switch op { //nolint:exhaustive // default branch covers single-value operators
-	case api.RowPredicate_OPERATOR_IS_NULL, api.RowPredicate_OPERATOR_IS_NOT_NULL:
+	case api.RowPredicate_OPERATOR_IS_NULL,
+		api.RowPredicate_OPERATOR_IS_NOT_NULL,
+		api.RowPredicate_OPERATOR_IS_TRUE,
+		api.RowPredicate_OPERATOR_IS_FALSE,
+		api.RowPredicate_OPERATOR_IS_UNKNOWN:
 		if n != 0 {
 			return invalidAt(path+".values", fmt.Sprintf("%s takes no values, got %d", op, n))
 		}
@@ -184,13 +189,27 @@ func checkOperatorArity(op api.RowPredicate_Operator, n int, path string) error 
 // on text). Other type checks fall through to PostgreSQL.
 func checkOperatorType(op api.RowPredicate_Operator, col engine.Column, path string) error {
 	switch op { //nolint:exhaustive // most operators have no additional type rule
-	case api.RowPredicate_OPERATOR_LIKE, api.RowPredicate_OPERATOR_ILIKE:
+	case api.RowPredicate_OPERATOR_LIKE,
+		api.RowPredicate_OPERATOR_ILIKE,
+		api.RowPredicate_OPERATOR_MATCH,
+		api.RowPredicate_OPERATOR_IMATCH:
 		if col.DataType != api.DataType_DATA_TYPE_STRING && col.DataType != api.DataType_DATA_TYPE_UNKNOWN {
 			return invalidAt(path+".operator", fmt.Sprintf("%s requires a string column, got %s", op, col.RawType))
+		}
+	case api.RowPredicate_OPERATOR_IS_TRUE,
+		api.RowPredicate_OPERATOR_IS_FALSE,
+		api.RowPredicate_OPERATOR_IS_UNKNOWN:
+		if col.DataType != api.DataType_DATA_TYPE_BOOLEAN && col.DataType != api.DataType_DATA_TYPE_UNKNOWN {
+			return invalidAt(path+".operator", fmt.Sprintf("%s requires a boolean column, got %s", op, col.RawType))
 		}
 	case api.RowPredicate_OPERATOR_JSON_CONTAINS:
 		if col.DataType != api.DataType_DATA_TYPE_JSON {
 			return invalidAt(path+".operator", "JSON_CONTAINS requires a JSON/JSONB column, got "+col.RawType)
+		}
+	case api.RowPredicate_OPERATOR_IS_DISTINCT:
+		rawType := strings.ToLower(strings.TrimSpace(col.RawType))
+		if rawType == "json" || strings.HasPrefix(rawType, "json[") {
+			return invalidAt(path+".operator", "IS_DISTINCT requires an equality-comparable column, got "+col.RawType)
 		}
 	case api.RowPredicate_OPERATOR_BETWEEN:
 		switch col.DataType { //nolint:exhaustive // explicit allow-list
