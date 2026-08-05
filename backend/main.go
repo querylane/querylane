@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/alecthomas/kong"
 
+	"github.com/querylane/querylane/backend/buildstamp"
 	"github.com/querylane/querylane/backend/cmd/migrate"
 	"github.com/querylane/querylane/backend/cmd/server"
 	"github.com/querylane/querylane/backend/config"
@@ -23,7 +24,7 @@ func main() {
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{Compact: false}),
 		kong.Vars{
-			"version": "0.0.1",
+			"version": buildstamp.CurrentVersion(),
 		},
 	)
 	err := ctx.Run(&cli.Globals)

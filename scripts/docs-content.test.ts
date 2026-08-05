@@ -63,7 +63,7 @@ const readProtoServices = async (): Promise<ProtoService[]> => {
 					return [];
 				}
 
-				const kind = clientStream
+				const kind: ProtoService["rpcs"][number]["kind"] = clientStream
 					? serverStream
 						? "bidirectional-streaming"
 						: "client-streaming"
@@ -257,6 +257,19 @@ test("keeps installation and production setup ahead of product guides", async ()
 			`missing ${basename(page)}`,
 		).toBe(true);
 	}
+});
+
+test("documents release archives without advertising an unpublished Homebrew tap", async () => {
+	const installation = await readFile(
+		join(root, "docs/site/get-started/(install-and-run)/install-querylane.mdx"),
+		"utf8",
+	);
+
+	expect(installation).toContain("## Download a release binary");
+	expect(installation).toContain("checksums.txt");
+	expect(installation).toContain("darwin_arm64");
+	expect(installation).toContain("linux_amd64");
+	expect(installation).not.toContain("brew install");
 });
 
 test("guides a new user through a successful first session", async () => {

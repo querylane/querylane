@@ -1,0 +1,71 @@
+name: _release-artifacts
+
+env:
+  BUN_VERSION: &bun_version 1.3.14
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag to build."
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to rebuild."
+        type: string
+        required: true
+
+concurrency:
+  group: release-artifacts-${{ inputs.tag }}
+  cancel-in-progress: false
+
+# The workflow_dispatch entry point needs write access. Reusable-workflow
+# callers must grant the same permission because called workflows cannot
+# elevate the caller's token.
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Build and publish release artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v7.0.0
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: *bun_version
+
+      - name: Verify GitHub Release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            echo "::error::Create GitHub Release $TAG with exact Changesets notes before publishing artifacts."
+            exit 1
+          fi
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v7.2.3
+        with:
+          distribution: goreleaser
+          version-file: .tool-versions
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

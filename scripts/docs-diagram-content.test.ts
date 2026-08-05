@@ -8,7 +8,10 @@ const expectedDiagrams = [
 	{
 		page: "concepts/how-querylane-works.mdx",
 		types: ["flowchart TD", "sequenceDiagram"],
-		walkthroughs: ["Read the hierarchy from top to bottom", "Follow one page load"],
+		walkthroughs: [
+			"Read the hierarchy from top to bottom",
+			"Follow one page load",
+		],
 	},
 	{
 		page: "get-started/(deploy-and-maintain)/production-deployment.mdx",

@@ -1,11 +1,11 @@
 ---
 title: Install Querylane
-description: Run the Querylane preview with Docker or build it from source, then verify first-launch setup and choose internal metadata storage.
+description: Run the Querylane preview with Docker, download a release binary, or build from source, then verify first-launch setup and choose internal metadata storage.
 sidebar:
   label: Install Querylane
 ---
 
-Querylane currently publishes a rolling preview image. No stable tagged release is available yet, so use the preview to evaluate the product and pin its digest anywhere repeatability matters.
+Querylane currently publishes a rolling preview image. Tagged releases produced by the release pipeline also include self-contained binaries. Until the first binary release is available, use the preview to evaluate the product and pin its digest anywhere repeatability matters.
 
 ## Fastest path: Docker
 
@@ -25,6 +25,59 @@ Open `http://localhost:8080`. A fresh container has no metadata database configu
 :::warning
 `querylane-dev:edge` follows the latest build and can change without notice. This Docker command also removes the container when it stops. Use it for evaluation, not as a durable deployment.
 :::
+
+## Download a release binary
+
+Each tagged binary release includes the compiled web application and needs no separate frontend runtime. Open [Querylane releases](https://github.com/querylane/querylane/releases), choose a version, and select the archive for your system:
+
+| System | Archive suffix |
+| --- | --- |
+| Apple silicon macOS | `darwin_arm64.tar.gz` |
+| Intel macOS | `darwin_amd64.tar.gz` |
+| ARM64 Linux | `linux_arm64.tar.gz` |
+| AMD64 Linux | `linux_amd64.tar.gz` |
+| AMD64 Windows | `windows_amd64.zip` |
+
+On macOS or Linux, replace `1.2.3` below with the release version:
+
+```sh
+set -eu
+
+version="1.2.3"
+
+case "$(uname -s):$(uname -m)" in
+  Darwin:arm64) target="darwin_arm64" ;;
+  Darwin:x86_64) target="darwin_amd64" ;;
+  Linux:aarch64 | Linux:arm64) target="linux_arm64" ;;
+  Linux:x86_64) target="linux_amd64" ;;
+  *) echo "Unsupported system: $(uname -s) $(uname -m)" >&2; exit 1 ;;
+esac
+
+archive="querylane_${version}_${target}.tar.gz"
+release_url="https://github.com/querylane/querylane/releases/download/v${version}"
+curl --fail --location --remote-name "${release_url}/${archive}"
+curl --fail --location --remote-name "${release_url}/checksums.txt"
+
+checksum_line="$(awk -v archive="$archive" '$2 == archive { print }' checksums.txt)"
+if [ -z "$checksum_line" ]; then
+  echo "No checksum found for $archive" >&2
+  exit 1
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+  printf '%s\n' "$checksum_line" | sha256sum --check
+else
+  printf '%s\n' "$checksum_line" | shasum --algorithm 256 --check
+fi
+
+tar --extract --gzip --file "$archive"
+mkdir -p "$HOME/.local/bin"
+install -m 0755 querylane "$HOME/.local/bin/querylane"
+"$HOME/.local/bin/querylane" --version
+"$HOME/.local/bin/querylane" server start --host 127.0.0.1
+```
+
+Add `$HOME/.local/bin` to `PATH` if you want to run `querylane` without its full path. Windows users can verify the downloaded ZIP against `checksums.txt`, extract `querylane.exe`, and place it on `PATH`.
 
 ## Choose Querylane's storage
 
