@@ -19,14 +19,15 @@ Querylane keeps its own application state separate from the PostgreSQL servers y
 
 A Querylane installation can hold many instances. Each instance can expose many databases, and each database owns its schemas and objects.
 
-```mermaid
-flowchart TD
-  I[Instance] -->|contains many| D[Database]
-  D -->|contains many| S[Schema]
-  S -->|contains many| O[Objects]
-```
+<img
+  alt="PostgreSQL resource hierarchy from an instance through databases and schemas to objects"
+  height="365"
+  loading="lazy"
+  src="/images/docs/diagrams/resource-model.svg"
+  width="1320"
+/>
 
-Read the hierarchy from top to bottom:
+Read the hierarchy from left to right:
 
 1. An **instance** tells Querylane how to reach one PostgreSQL server.
 2. That server exposes one or more **databases**.
@@ -41,32 +42,13 @@ Querylane combines 2 kinds of information:
 - **Live observations** come from the managed server's PostgreSQL catalogs and statistics views when you open or refresh a page.
 
 <div class="docs-diagram-wide">
-
-```mermaid
-sequenceDiagram
-  actor Operator
-  participant Browser
-  participant Querylane
-  participant Metadata as Metadata PostgreSQL
-  participant Managed as Managed PostgreSQL
-
-  Operator->>Browser: Open or refresh a page
-  Browser->>Querylane: Request saved instance state
-  Querylane->>Metadata: Read configuration and samples
-  Metadata-->>Querylane: Stored state
-  Querylane-->>Browser: Saved instance sections
-  Browser->>Querylane: Request live catalog or health data
-  Querylane->>Managed: Read catalogs and statistics
-  alt Live read succeeds
-    Managed-->>Querylane: Current observation
-    Querylane-->>Browser: Live section
-  else One live probe fails
-    Managed--xQuerylane: PostgreSQL error
-    Querylane-->>Browser: Available sections and partial error
-  end
-  Browser-->>Operator: Render every available section
-```
-
+  <img
+    alt="Page-load sequence combining stored metadata with live PostgreSQL observations"
+    height="790"
+    loading="lazy"
+    src="/images/docs/diagrams/stored-and-live-data.svg"
+    width="1500"
+  />
 </div>
 
 Follow one page load from top to bottom. The browser first asks Querylane for saved state, then requests the live sections needed by the page. Querylane reads its metadata database for the first kind and the managed server for the second. A failed live probe changes only the affected section; it does not erase the saved instance.

@@ -1,0 +1,314 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "mcp-excalidraw-server",
+  "elements": [
+    {
+      "id": "canvas",
+      "type": "rectangle",
+      "x": 0,
+      "y": 0,
+      "width": 1120,
+      "height": 580,
+      "backgroundColor": "#ffffff",
+      "strokeColor": "#cbd5e1",
+      "strokeWidth": 1,
+      "roughness": 0,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:34:34.987Z",
+      "updatedAt": "2026-08-05T10:34:34.987Z",
+      "version": 1
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "x": 48,
+      "y": 28,
+      "strokeColor": "#0f172a",
+      "roughness": 1,
+      "text": "Blocking chain",
+      "fontSize": 30,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    },
+    {
+      "id": "subtitle",
+      "type": "text",
+      "x": 48,
+      "y": 72,
+      "strokeColor": "#64748b",
+      "roughness": 1,
+      "text": "Start at a session with no incoming blocking arrow, then follow every downstream branch.",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    },
+    {
+      "id": "root-note",
+      "type": "text",
+      "x": 55,
+      "y": 150,
+      "strokeColor": "#e03131",
+      "roughness": 1,
+      "text": "ROOT: no incoming arrow",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    },
+    {
+      "id": "root",
+      "type": "rectangle",
+      "x": 55,
+      "y": 220,
+      "width": 245,
+      "height": 100,
+      "backgroundColor": "#ffe3e3",
+      "strokeColor": "#e03131",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "PID 1842\nroot blocker"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    },
+    {
+      "id": "wait-a",
+      "type": "rectangle",
+      "x": 430,
+      "y": 145,
+      "width": 250,
+      "height": 100,
+      "backgroundColor": "#fff3bf",
+      "strokeColor": "#f08c00",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "PID 2190\nwaiting"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    },
+    {
+      "id": "wait-b",
+      "type": "rectangle",
+      "x": 430,
+      "y": 350,
+      "width": 250,
+      "height": 100,
+      "backgroundColor": "#fff3bf",
+      "strokeColor": "#f08c00",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "PID 2207\nwaiting"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    },
+    {
+      "id": "wait-c",
+      "type": "rectangle",
+      "x": 815,
+      "y": 145,
+      "width": 250,
+      "height": 100,
+      "backgroundColor": "#f1f3f5",
+      "strokeColor": "#495057",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "PID 2244\nwaiting downstream"
+      },
+      "fontSize": 20,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    },
+    {
+      "id": "root-wait-a",
+      "type": "arrow",
+      "x": 307.84663767460347,
+      "y": 244.1033170182907,
+      "strokeColor": "#e03131",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          114.30672465079306,
+          -22.70994529485955
+        ]
+      ],
+      "start": {
+        "id": "root"
+      },
+      "end": {
+        "id": "wait-a"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    },
+    {
+      "id": "root-wait-b",
+      "type": "arrow",
+      "x": 307.5640478993332,
+      "y": 314.7902681507638,
+      "strokeColor": "#e03131",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          114.87190420133356,
+          39.558536546154585
+        ]
+      ],
+      "start": {
+        "id": "root"
+      },
+      "end": {
+        "id": "wait-b"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    },
+    {
+      "id": "wait-a-wait-c",
+      "type": "arrow",
+      "x": 688,
+      "y": 195,
+      "strokeColor": "#f08c00",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          119,
+          2.842170943040401e-14
+        ]
+      ],
+      "start": {
+        "id": "wait-a"
+      },
+      "end": {
+        "id": "wait-c"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    },
+    {
+      "id": "blocks-a",
+      "type": "text",
+      "x": 310,
+      "y": 165,
+      "strokeColor": "#e03131",
+      "roughness": 1,
+      "text": "blocks",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    },
+    {
+      "id": "blocks-b",
+      "type": "text",
+      "x": 320,
+      "y": 355,
+      "strokeColor": "#e03131",
+      "roughness": 1,
+      "text": "blocks",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    },
+    {
+      "id": "blocks-c",
+      "type": "text",
+      "x": 685,
+      "y": 128,
+      "strokeColor": "#f08c00",
+      "roughness": 1,
+      "text": "blocks while waiting",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    },
+    {
+      "id": "legend",
+      "type": "text",
+      "x": 55,
+      "y": 500,
+      "strokeColor": "#475569",
+      "roughness": 1,
+      "text": "Read each arrow as: session on the left blocks session on the right.",
+      "fontSize": 19,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:34:34.988Z",
+      "updatedAt": "2026-08-05T10:34:34.988Z",
+      "version": 1
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "gridSize": null
+  }
+}

@@ -1,0 +1,794 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "mcp-excalidraw-server",
+  "elements": [
+    {
+      "id": "canvas",
+      "type": "rectangle",
+      "x": 0,
+      "y": 0,
+      "width": 1500,
+      "height": 790,
+      "backgroundColor": "#ffffff",
+      "strokeColor": "#cbd5e1",
+      "strokeWidth": 1,
+      "roughness": 0,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:01.938Z",
+      "updatedAt": "2026-08-05T10:37:01.938Z",
+      "version": 1
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "x": 48,
+      "y": 28,
+      "strokeColor": "#0f172a",
+      "roughness": 1,
+      "text": "One page load, 2 sources of truth",
+      "fontSize": 30,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.938Z",
+      "updatedAt": "2026-08-05T10:37:01.938Z",
+      "version": 1
+    },
+    {
+      "id": "subtitle",
+      "type": "text",
+      "x": 48,
+      "y": 72,
+      "strokeColor": "#64748b",
+      "roughness": 1,
+      "text": "Saved state comes from Querylane metadata; live sections come from the managed server.",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.938Z",
+      "updatedAt": "2026-08-05T10:37:01.938Z",
+      "version": 1
+    },
+    {
+      "id": "stored-zone",
+      "type": "rectangle",
+      "x": 255,
+      "y": 252,
+      "width": 1195,
+      "height": 186,
+      "backgroundColor": "#dbeafe",
+      "strokeColor": "#336791",
+      "strokeWidth": 1,
+      "strokeStyle": "dashed",
+      "roughness": 0,
+      "opacity": 45,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:01.938Z",
+      "updatedAt": "2026-08-05T10:37:01.938Z",
+      "version": 1
+    },
+    {
+      "id": "live-zone",
+      "type": "rectangle",
+      "x": 255,
+      "y": 452,
+      "width": 1195,
+      "height": 186,
+      "backgroundColor": "#ebfbee",
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 1,
+      "strokeStyle": "dashed",
+      "roughness": 0,
+      "opacity": 45,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:01.938Z",
+      "updatedAt": "2026-08-05T10:37:01.938Z",
+      "version": 1
+    },
+    {
+      "id": "render-zone",
+      "type": "rectangle",
+      "x": 30,
+      "y": 650,
+      "width": 1420,
+      "height": 86,
+      "backgroundColor": "#fff3bf",
+      "strokeColor": "#f08c00",
+      "strokeWidth": 1,
+      "strokeStyle": "dashed",
+      "roughness": 0,
+      "opacity": 45,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:01.938Z",
+      "updatedAt": "2026-08-05T10:37:01.938Z",
+      "version": 1
+    },
+    {
+      "id": "stored-label",
+      "type": "text",
+      "x": 1080,
+      "y": 265,
+      "strokeColor": "#336791",
+      "roughness": 1,
+      "text": "STORED STATE",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.938Z",
+      "updatedAt": "2026-08-05T10:37:05.208Z",
+      "version": 2
+    },
+    {
+      "id": "live-label",
+      "type": "text",
+      "x": 1080,
+      "y": 465,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "LIVE OBSERVATIONS",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.938Z",
+      "updatedAt": "2026-08-05T10:37:05.211Z",
+      "version": 2
+    },
+    {
+      "id": "render-label",
+      "type": "text",
+      "x": 161,
+      "y": 662,
+      "strokeColor": "#f08c00",
+      "roughness": 1,
+      "text": "Render every available section",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.938Z",
+      "updatedAt": "2026-08-05T10:37:01.938Z",
+      "version": 1
+    },
+    {
+      "id": "operator",
+      "type": "rectangle",
+      "x": 35,
+      "y": 120,
+      "width": 220,
+      "height": 80,
+      "backgroundColor": "#f1f3f5",
+      "strokeColor": "#495057",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Operator"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:01.938Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "operator-lifeline",
+      "type": "line",
+      "x": 145,
+      "y": 205,
+      "strokeColor": "#495057",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          520
+        ]
+      ],
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "browser",
+      "type": "rectangle",
+      "x": 280,
+      "y": 120,
+      "width": 220,
+      "height": 80,
+      "backgroundColor": "#dbeafe",
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Browser"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "browser-lifeline",
+      "type": "line",
+      "x": 390,
+      "y": 205,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          520
+        ]
+      ],
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "querylane",
+      "type": "rectangle",
+      "x": 605,
+      "y": 120,
+      "width": 220,
+      "height": 80,
+      "backgroundColor": "#ede9fe",
+      "strokeColor": "#7048e8",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Querylane"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "querylane-lifeline",
+      "type": "line",
+      "x": 715,
+      "y": 205,
+      "strokeColor": "#7048e8",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          520
+        ]
+      ],
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "metadata",
+      "type": "rectangle",
+      "x": 930,
+      "y": 120,
+      "width": 220,
+      "height": 80,
+      "backgroundColor": "#dbeafe",
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Metadata\nPostgreSQL"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "metadata-lifeline",
+      "type": "line",
+      "x": 1040,
+      "y": 205,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          520
+        ]
+      ],
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "managed",
+      "type": "rectangle",
+      "x": 1240,
+      "y": 120,
+      "width": 220,
+      "height": 80,
+      "backgroundColor": "#ebfbee",
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Managed\nPostgreSQL"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "managed-lifeline",
+      "type": "line",
+      "x": 1350,
+      "y": 205,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          520
+        ]
+      ],
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "open",
+      "type": "arrow",
+      "x": 145,
+      "y": 230,
+      "strokeColor": "#495057",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          245,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "open-label",
+      "type": "text",
+      "x": 161,
+      "y": 202,
+      "strokeColor": "#495057",
+      "roughness": 1,
+      "text": "Open or refresh page",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "saved-request",
+      "type": "arrow",
+      "x": 390,
+      "y": 300,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          325,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "saved-request-label",
+      "type": "text",
+      "x": 406,
+      "y": 272,
+      "strokeColor": "#336791",
+      "roughness": 1,
+      "text": "Request saved instance state",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "metadata-read",
+      "type": "arrow",
+      "x": 715,
+      "y": 345,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          325,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "metadata-read-label",
+      "type": "text",
+      "x": 731,
+      "y": 317,
+      "strokeColor": "#336791",
+      "roughness": 1,
+      "text": "Read configuration + samples",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "metadata-return",
+      "type": "arrow",
+      "x": 1040,
+      "y": 390,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -325,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "metadata-return-label",
+      "type": "text",
+      "x": 731,
+      "y": 362,
+      "strokeColor": "#336791",
+      "roughness": 1,
+      "text": "Stored state",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "saved-sections",
+      "type": "arrow",
+      "x": 715,
+      "y": 425,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -325,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "saved-sections-label",
+      "type": "text",
+      "x": 406,
+      "y": 397,
+      "strokeColor": "#336791",
+      "roughness": 1,
+      "text": "Saved instance sections",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "live-request",
+      "type": "arrow",
+      "x": 390,
+      "y": 500,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          325,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "live-request-label",
+      "type": "text",
+      "x": 406,
+      "y": 472,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "Request catalog or health data",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "managed-read",
+      "type": "arrow",
+      "x": 715,
+      "y": 545,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          635,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "managed-read-label",
+      "type": "text",
+      "x": 731,
+      "y": 517,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "Read catalogs + statistics",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "managed-return",
+      "type": "arrow",
+      "x": 1350,
+      "y": 590,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -635,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "managed-return-label",
+      "type": "text",
+      "x": 731,
+      "y": 562,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "Observation or PostgreSQL error",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "live-sections",
+      "type": "arrow",
+      "x": 715,
+      "y": 625,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -325,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "live-sections-label",
+      "type": "text",
+      "x": 406,
+      "y": 597,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "Live section or partial error",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    },
+    {
+      "id": "render",
+      "type": "arrow",
+      "x": 390,
+      "y": 690,
+      "strokeColor": "#f08c00",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -245,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:01.939Z",
+      "updatedAt": "2026-08-05T10:37:01.939Z",
+      "version": 1
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "gridSize": null
+  }
+}

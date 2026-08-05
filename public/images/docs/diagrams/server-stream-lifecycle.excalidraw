@@ -1,0 +1,721 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "mcp-excalidraw-server",
+  "elements": [
+    {
+      "id": "canvas",
+      "type": "rectangle",
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 930,
+      "backgroundColor": "#ffffff",
+      "strokeColor": "#cbd5e1",
+      "strokeWidth": 1,
+      "roughness": 0,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "x": 48,
+      "y": 28,
+      "strokeColor": "#0f172a",
+      "roughness": 1,
+      "text": "Server-stream lifecycle",
+      "fontSize": 30,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "subtitle",
+      "type": "text",
+      "x": 48,
+      "y": 72,
+      "strokeColor": "#64748b",
+      "roughness": 1,
+      "text": "Messages may arrive before completion; only a clean end proves success.",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "start-zone",
+      "type": "rectangle",
+      "x": 35,
+      "y": 215,
+      "width": 1210,
+      "height": 145,
+      "backgroundColor": "#dbeafe",
+      "strokeColor": "#336791",
+      "strokeWidth": 1,
+      "strokeStyle": "dashed",
+      "roughness": 0,
+      "opacity": 45,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "repeat-zone",
+      "type": "rectangle",
+      "x": 35,
+      "y": 375,
+      "width": 1210,
+      "height": 190,
+      "backgroundColor": "#ebfbee",
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 1,
+      "strokeStyle": "dashed",
+      "roughness": 0,
+      "opacity": 45,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "finish-zone",
+      "type": "rectangle",
+      "x": 35,
+      "y": 580,
+      "width": 1210,
+      "height": 205,
+      "backgroundColor": "#fff3bf",
+      "strokeColor": "#f08c00",
+      "strokeWidth": 1,
+      "strokeStyle": "dashed",
+      "roughness": 0,
+      "opacity": 45,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "cancel-zone",
+      "type": "rectangle",
+      "x": 35,
+      "y": 800,
+      "width": 1210,
+      "height": 95,
+      "backgroundColor": "#ffe3e3",
+      "strokeColor": "#e03131",
+      "strokeWidth": 1,
+      "strokeStyle": "dashed",
+      "roughness": 0,
+      "opacity": 45,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "start-label",
+      "type": "text",
+      "x": 214,
+      "y": 233,
+      "strokeColor": "#336791",
+      "roughness": 1,
+      "text": "Start stream + deadline",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "repeat-label",
+      "type": "text",
+      "x": 50,
+      "y": 388,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "REPEAT WHILE RESULTS REMAIN",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "finish-label",
+      "type": "text",
+      "x": 50,
+      "y": 593,
+      "strokeColor": "#f08c00",
+      "roughness": 1,
+      "text": "FINISH",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "cancel-label",
+      "type": "text",
+      "x": 214,
+      "y": 823,
+      "strokeColor": "#e03131",
+      "roughness": 1,
+      "text": "Cancel or output sink fails",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "client",
+      "type": "rectangle",
+      "x": 80,
+      "y": 115,
+      "width": 220,
+      "height": 80,
+      "backgroundColor": "#dbeafe",
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Client"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "client-lifeline",
+      "type": "line",
+      "x": 190,
+      "y": 200,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          680
+        ]
+      ],
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "querylane",
+      "type": "rectangle",
+      "x": 530,
+      "y": 115,
+      "width": 220,
+      "height": 80,
+      "backgroundColor": "#ede9fe",
+      "strokeColor": "#7048e8",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Querylane"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "querylane-lifeline",
+      "type": "line",
+      "x": 640,
+      "y": 200,
+      "strokeColor": "#7048e8",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          680
+        ]
+      ],
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "worker",
+      "type": "rectangle",
+      "x": 980,
+      "y": 115,
+      "width": 220,
+      "height": 80,
+      "backgroundColor": "#ebfbee",
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Database or worker"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "worker-lifeline",
+      "type": "line",
+      "x": 1090,
+      "y": 200,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          680
+        ]
+      ],
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "start",
+      "type": "arrow",
+      "x": 190,
+      "y": 260,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          450,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "operation",
+      "type": "arrow",
+      "x": 640,
+      "y": 325,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          450,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:27.902Z",
+      "updatedAt": "2026-08-05T10:37:27.902Z",
+      "version": 1
+    },
+    {
+      "id": "operation-label",
+      "type": "text",
+      "x": 664,
+      "y": 298,
+      "strokeColor": "#336791",
+      "roughness": 1,
+      "text": "Start bounded operation",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "metadata",
+      "type": "arrow",
+      "x": 640,
+      "y": 425,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -450,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "metadata-label",
+      "type": "text",
+      "x": 350,
+      "y": 398,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "Metadata or progress event",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:33.690Z",
+      "version": 2
+    },
+    {
+      "id": "rows",
+      "type": "arrow",
+      "x": 1090,
+      "y": 490,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -450,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "rows-label",
+      "type": "text",
+      "x": 664,
+      "y": 463,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "Rows or progress",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "batch",
+      "type": "arrow",
+      "x": 640,
+      "y": 545,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -450,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "batch-label",
+      "type": "text",
+      "x": 214,
+      "y": 518,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "Framed batch or progress",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "complete",
+      "type": "arrow",
+      "x": 1090,
+      "y": 635,
+      "strokeColor": "#f08c00",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -450,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "complete-label",
+      "type": "text",
+      "x": 664,
+      "y": 608,
+      "strokeColor": "#f08c00",
+      "roughness": 1,
+      "text": "Completion or failure",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "clean",
+      "type": "arrow",
+      "x": 640,
+      "y": 695,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -450,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "clean-label",
+      "type": "text",
+      "x": 214,
+      "y": 668,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "Stats + clean end",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "terminal",
+      "type": "arrow",
+      "x": 640,
+      "y": 755,
+      "strokeColor": "#e03131",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -450,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "terminal-label",
+      "type": "text",
+      "x": 214,
+      "y": 728,
+      "strokeColor": "#e03131",
+      "roughness": 1,
+      "text": "Alternative: terminal Connect error",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "cancel",
+      "type": "arrow",
+      "x": 190,
+      "y": 850,
+      "strokeColor": "#e03131",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          450,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "release",
+      "type": "arrow",
+      "x": 640,
+      "y": 885,
+      "strokeColor": "#e03131",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "roundness": {
+        "type": 2
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          450,
+          0
+        ]
+      ],
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    },
+    {
+      "id": "release-label",
+      "type": "text",
+      "x": 664,
+      "y": 858,
+      "strokeColor": "#e03131",
+      "roughness": 1,
+      "text": "Release underlying work",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:37:27.903Z",
+      "updatedAt": "2026-08-05T10:37:27.903Z",
+      "version": 1
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "gridSize": null
+  }
+}

@@ -1,0 +1,822 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "mcp-excalidraw-server",
+  "elements": [
+    {
+      "id": "canvas",
+      "type": "rectangle",
+      "x": 0,
+      "y": 0,
+      "width": 1700,
+      "height": 760,
+      "backgroundColor": "#ffffff",
+      "strokeColor": "#cbd5e1",
+      "strokeWidth": 1,
+      "roughness": 0,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "x": 48,
+      "y": 28,
+      "strokeColor": "#0f172a",
+      "roughness": 1,
+      "text": "Table access check",
+      "fontSize": 30,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "subtitle",
+      "type": "text",
+      "x": 48,
+      "y": 72,
+      "strokeColor": "#64748b",
+      "roughness": 1,
+      "text": "Resolve memberships, pass every privilege layer, then verify with PostgreSQL.",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "subject",
+      "type": "rectangle",
+      "x": 45,
+      "y": 165,
+      "width": 200,
+      "height": 95,
+      "backgroundColor": "#f1f3f5",
+      "strokeColor": "#495057",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Role + command"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "membership",
+      "type": "rectangle",
+      "x": 295,
+      "y": 165,
+      "width": 210,
+      "height": 95,
+      "backgroundColor": "#ede9fe",
+      "strokeColor": "#7048e8",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Resolve\nmemberships"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "database",
+      "type": "diamond",
+      "x": 555,
+      "y": 145,
+      "width": 165,
+      "height": 135,
+      "backgroundColor": "#fff3bf",
+      "strokeColor": "#f08c00",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "DB\naccess?"
+      },
+      "fontSize": 19,
+      "fontFamily": 5,
+      "roundness": null,
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:16.482Z",
+      "version": 2
+    },
+    {
+      "id": "schema",
+      "type": "diamond",
+      "x": 790,
+      "y": 145,
+      "width": 165,
+      "height": 135,
+      "backgroundColor": "#fff3bf",
+      "strokeColor": "#f08c00",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Schema\nUSAGE?"
+      },
+      "fontSize": 19,
+      "fontFamily": 5,
+      "roundness": null,
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "object",
+      "type": "diamond",
+      "x": 1025,
+      "y": 145,
+      "width": 165,
+      "height": 135,
+      "backgroundColor": "#fff3bf",
+      "strokeColor": "#f08c00",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Object\naccess?"
+      },
+      "fontSize": 19,
+      "fontFamily": 5,
+      "roundness": null,
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:16.485Z",
+      "version": 2
+    },
+    {
+      "id": "rls",
+      "type": "diamond",
+      "x": 1260,
+      "y": 145,
+      "width": 165,
+      "height": 135,
+      "backgroundColor": "#fff3bf",
+      "strokeColor": "#f08c00",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "RLS\napplies?"
+      },
+      "fontSize": 19,
+      "fontFamily": 5,
+      "roundness": null,
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "db-denied",
+      "type": "rectangle",
+      "x": 555,
+      "y": 380,
+      "width": 165,
+      "height": 90,
+      "backgroundColor": "#ffe3e3",
+      "strokeColor": "#e03131",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "No CONNECT"
+      },
+      "fontSize": 19,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "policies",
+      "type": "rectangle",
+      "x": 1240,
+      "y": 380,
+      "width": 205,
+      "height": 90,
+      "backgroundColor": "#dbeafe",
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Evaluate policies"
+      },
+      "fontSize": 20,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "context",
+      "type": "rectangle",
+      "x": 1470,
+      "y": 380,
+      "width": 190,
+      "height": 90,
+      "backgroundColor": "#ede9fe",
+      "strokeColor": "#7048e8",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Security context"
+      },
+      "fontSize": 19,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "verify",
+      "type": "rectangle",
+      "x": 1470,
+      "y": 590,
+      "width": 190,
+      "height": 90,
+      "backgroundColor": "#ebfbee",
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Verify in\nPostgreSQL"
+      },
+      "fontSize": 20,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "subject-membership",
+      "type": "arrow",
+      "x": 253,
+      "y": 212.5,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          34,
+          0
+        ]
+      ],
+      "start": {
+        "id": "subject"
+      },
+      "end": {
+        "id": "membership"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "membership-database",
+      "type": "arrow",
+      "x": 513,
+      "y": 212.5,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          34,
+          0
+        ]
+      ],
+      "start": {
+        "id": "membership"
+      },
+      "end": {
+        "id": "database"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "database-schema",
+      "type": "arrow",
+      "x": 728,
+      "y": 212.5,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          54,
+          0
+        ]
+      ],
+      "start": {
+        "id": "database"
+      },
+      "end": {
+        "id": "schema"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "schema-object",
+      "type": "arrow",
+      "x": 963,
+      "y": 212.5,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          54,
+          0
+        ]
+      ],
+      "start": {
+        "id": "schema"
+      },
+      "end": {
+        "id": "object"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "object-rls",
+      "type": "arrow",
+      "x": 1198,
+      "y": 212.5,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          54,
+          0
+        ]
+      ],
+      "start": {
+        "id": "object"
+      },
+      "end": {
+        "id": "rls"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "database-denied",
+      "type": "arrow",
+      "x": 637.5,
+      "y": 288,
+      "strokeColor": "#e03131",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          84
+        ]
+      ],
+      "start": {
+        "id": "database"
+      },
+      "end": {
+        "id": "db-denied"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "rls-policies",
+      "type": "arrow",
+      "x": 1342.5,
+      "y": 288,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          84
+        ]
+      ],
+      "start": {
+        "id": "rls"
+      },
+      "end": {
+        "id": "policies"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "rls-context",
+      "type": "arrow",
+      "x": 1386.3513245981783,
+      "y": 254.38047854882197,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          125.74565996601814,
+          120.09416963046667
+        ]
+      ],
+      "start": {
+        "id": "rls"
+      },
+      "end": {
+        "id": "context"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "policies-context",
+      "type": "arrow",
+      "x": 1453,
+      "y": 425,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          9,
+          0
+        ]
+      ],
+      "start": {
+        "id": "policies"
+      },
+      "end": {
+        "id": "context"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "context-verify",
+      "type": "arrow",
+      "x": 1565,
+      "y": 478,
+      "strokeColor": "#2f9e44",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          104
+        ]
+      ],
+      "start": {
+        "id": "context"
+      },
+      "end": {
+        "id": "verify"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "yes-1",
+      "type": "text",
+      "x": 730,
+      "y": 170,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "Yes",
+      "fontSize": 16,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "yes-2",
+      "type": "text",
+      "x": 965,
+      "y": 170,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "Yes",
+      "fontSize": 16,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "yes-3",
+      "type": "text",
+      "x": 1200,
+      "y": 170,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "Yes",
+      "fontSize": 16,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "no-1",
+      "type": "text",
+      "x": 575,
+      "y": 315,
+      "strokeColor": "#e03131",
+      "roughness": 1,
+      "text": "No",
+      "fontSize": 16,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "no-2",
+      "type": "text",
+      "x": 810,
+      "y": 315,
+      "strokeColor": "#e03131",
+      "roughness": 1,
+      "text": "No",
+      "fontSize": 16,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "no-3",
+      "type": "text",
+      "x": 1045,
+      "y": 315,
+      "strokeColor": "#e03131",
+      "roughness": 1,
+      "text": "No",
+      "fontSize": 16,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "rls-yes",
+      "type": "text",
+      "x": 1255,
+      "y": 315,
+      "strokeColor": "#336791",
+      "roughness": 1,
+      "text": "Yes",
+      "fontSize": 16,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "rls-no",
+      "type": "text",
+      "x": 1435,
+      "y": 260,
+      "strokeColor": "#2f9e44",
+      "roughness": 1,
+      "text": "No",
+      "fontSize": 16,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "denied-note",
+      "type": "text",
+      "x": 555,
+      "y": 505,
+      "strokeColor": "#e03131",
+      "roughness": 1,
+      "text": "A failed required privilege stops table access before row-level security.",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "schema-denied-box",
+      "type": "rectangle",
+      "x": 790,
+      "y": 380,
+      "width": 165,
+      "height": 90,
+      "backgroundColor": "#ffe3e3",
+      "strokeColor": "#e03131",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "No USAGE"
+      },
+      "fontSize": 19,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "object-denied-box",
+      "type": "rectangle",
+      "x": 1025,
+      "y": 380,
+      "width": 165,
+      "height": 90,
+      "backgroundColor": "#ffe3e3",
+      "strokeColor": "#e03131",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "No command"
+      },
+      "fontSize": 19,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "schema-to-denied",
+      "type": "arrow",
+      "x": 872.5,
+      "y": 288,
+      "strokeColor": "#e03131",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          84
+        ]
+      ],
+      "start": {
+        "id": "schema"
+      },
+      "end": {
+        "id": "schema-denied-box"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    },
+    {
+      "id": "object-to-denied",
+      "type": "arrow",
+      "x": 1107.5,
+      "y": 288,
+      "strokeColor": "#e03131",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          84
+        ]
+      ],
+      "start": {
+        "id": "object"
+      },
+      "end": {
+        "id": "object-denied-box"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:43:12.463Z",
+      "updatedAt": "2026-08-05T10:43:12.463Z",
+      "version": 1
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "gridSize": null
+  }
+}

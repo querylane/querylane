@@ -13,16 +13,15 @@ Querylane does not currently include built-in authentication. Do not expose it d
 
 ## Production shape
 
-```mermaid
-flowchart TD
-  Users[Operators] -->|Authenticated HTTPS| Ingress[Trusted ingress]
-  Ingress -->|Private HTTP| Querylane
-  Secrets[Secret manager] -->|DSN and stable key| Querylane
-  Querylane -->|State| Metadata[(Metadata PostgreSQL)]
-  Querylane -->|Read-only inspection| Managed[(Managed instances)]
-```
+<img
+  alt="Production topology with trusted ingress, Querylane, a secret manager, metadata PostgreSQL, and managed instances"
+  height="620"
+  loading="lazy"
+  src="/images/docs/diagrams/production-topology.svg"
+  width="1400"
+/>
 
-Follow one browser request from top to bottom:
+Follow one browser request from left to right:
 
 1. Trusted ingress authenticates the operator and terminates TLS.
 2. Querylane receives private HTTP traffic and loads its DSN and encryption key from protected environment variables.

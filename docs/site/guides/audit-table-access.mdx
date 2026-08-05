@@ -14,23 +14,17 @@ Use this workflow to answer why a role can reach a table, why it cannot, or whic
 - Use a Querylane login with enough catalog access to see the relevant roles and objects.
 - Remember that Querylane's access map explains catalog evidence; PostgreSQL remains the authority.
 
-```mermaid
-flowchart TD
-  Subject[Role and command] --> Membership[Resolve memberships]
-  Membership --> Database{Database CONNECT?}
-  Database -->|No| Denied[No table access]
-  Database -->|Yes| Schema{Schema USAGE?}
-  Schema -->|No| Denied
-  Schema -->|Yes| Object{Object command?}
-  Object -->|No| Denied
-  Object -->|Yes| RLS{RLS applies?}
-  RLS -->|Yes| Policies[Evaluate policies]
-  RLS -->|No| Context[Check security context]
-  Policies --> Context
-  Context --> Verify[Verify in PostgreSQL]
-```
+<div class="docs-diagram-wide">
+  <img
+    alt="Table access decision from role memberships through database, schema, object, row-level security, and PostgreSQL verification"
+    height="760"
+    loading="lazy"
+    src="/images/docs/diagrams/table-access-check.svg"
+    width="1700"
+  />
+</div>
 
-Follow one access check from top to bottom. Membership can supply privileges at several layers, but every required database, schema, and object check still matters. Row-level security can narrow the rows after the object privilege passes. The final verification must use PostgreSQL as the effective role because the graph explains evidence rather than executing the command for that role.
+Follow one access check from left to right, then down to PostgreSQL verification. Membership can supply privileges at several layers, but every required database, schema, and object check still matters. Row-level security can narrow the rows after the object privilege passes. The final verification must use PostgreSQL as the effective role because the graph explains evidence rather than executing the command for that role.
 
 ## 1. Inspect the subject role
 
