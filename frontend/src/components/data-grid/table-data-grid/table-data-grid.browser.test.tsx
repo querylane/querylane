@@ -507,6 +507,65 @@ function renderEmptyFilterToolbar() {
   );
 }
 
+function renderAdvancedFilterToolbar() {
+  render(
+    <ScreenshotFrame>
+      <div className="w-[900px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <DataGridToolbar
+          {...columnLayoutProps(resultColumns)}
+          columns={resultColumns}
+          filterLogic="and"
+          filterRules={[
+            {
+              column: "email",
+              id: "filter-email-support",
+              negated: true,
+              operator: "imatch",
+              value: "^support@",
+            },
+          ]}
+          isFetching={false}
+          onClearSelection={vi.fn()}
+          onCopySelection={vi.fn()}
+          onExportSelection={vi.fn()}
+          onFilterChange={vi.fn()}
+          onRefresh={vi.fn()}
+          onSortChange={vi.fn()}
+          selectedCount={0}
+          sortColumns={[]}
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+}
+
+function renderColumnProjectionToolbar() {
+  render(
+    <ScreenshotFrame>
+      <div className="w-[900px] rounded-2xl border border-border bg-background p-6 text-foreground">
+        <DataGridToolbar
+          {...columnLayoutProps(resultColumns)}
+          columns={resultColumns}
+          fetchVisibleColumns={true}
+          filterLogic="and"
+          filterRules={[]}
+          hiddenColumnKeys={new Set(["metadata"])}
+          isColumnLayoutCustomized={true}
+          isFetching={false}
+          onClearSelection={vi.fn()}
+          onCopySelection={vi.fn()}
+          onExportSelection={vi.fn()}
+          onFilterChange={vi.fn()}
+          onRefresh={vi.fn()}
+          onSortChange={vi.fn()}
+          selectedCount={0}
+          sortColumns={[]}
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+}
+
 function renderSortableToolbar() {
   render(
     <ScreenshotFrame>
@@ -1266,6 +1325,42 @@ test("filter popover starts with an unapplied rule", async () => {
   );
 });
 
+test("advanced filter popover shows negation and regex controls", async () => {
+  renderAdvancedFilterToolbar();
+
+  await page.getByRole("button", { name: "Filter 1" }).click();
+
+  const filterDialog = page.getByRole("dialog", { name: "Filter rows" });
+  await expect.element(filterDialog).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Negate filter" }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect
+    .element(filterDialog.getByText("~*", { exact: true }))
+    .toBeVisible();
+  await expect(filterDialog).toMatchScreenshot(
+    "data-explorer-advanced-filter-popover"
+  );
+});
+
+test("column popover shows visible-column projection state", async () => {
+  renderColumnProjectionToolbar();
+
+  await page.getByRole("button", { name: "Columns" }).click();
+
+  const columnsDialog = page.getByRole("dialog", { name: "Manage columns" });
+  await expect.element(columnsDialog).toBeVisible();
+  await expect
+    .element(page.getByRole("switch", { name: "Fetch visible columns only" }))
+    .toBeChecked();
+  await expect
+    .element(page.getByRole("checkbox", { name: "metadata" }))
+    .not.toBeChecked();
+  await expect(columnsDialog).toMatchScreenshot(
+    "data-explorer-column-projection-popover"
+  );
+});
+
 test("page size select shows every option when the footer is near the viewport edge", async () => {
   const onPageSizeChange = vi.fn();
 
@@ -1377,6 +1472,9 @@ test("filter popover stays inside the data-grid boundary when the grid is offset
     expect(controlBox.left).toBeGreaterThanOrEqual(popoverBox.left - 1);
     expect(controlBox.right).toBeLessThanOrEqual(popoverBox.right + 1);
   }
+  await expect(page.elementLocator(popoverBox.element)).toMatchScreenshot(
+    "data-explorer-filter-popover-narrow"
+  );
 });
 
 test("sort popover keeps every row control aligned", async () => {
