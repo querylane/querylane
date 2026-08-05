@@ -178,6 +178,7 @@ func (a *App) Routes(ctx context.Context) http.Handler {
 
 	mux := http.NewServeMux()
 
+	a.mountHealthRoutes(mux)
 	registerGRPCReflection(mux)
 
 	var accessLogger *interceptor.AccessLogger

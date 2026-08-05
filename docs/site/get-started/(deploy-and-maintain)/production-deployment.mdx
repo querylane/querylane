@@ -155,7 +155,7 @@ Querylane is read-first, but it can expose catalog data, table rows, SQL text, r
 
 ## 6. Readiness, backups, and upgrades
 
-Use `GET /` as a liveness check. Use `ConsoleService.GetConsoleConfig` as readiness after metadata setup; the command is in the [installation guide](/get-started/install-querylane#verify-the-server).
+Use `GET /livez` as the liveness check. It returns `200` while the HTTP server is running and does not depend on the metadata database. Use `GET /readyz` as the readiness check. It returns `200` when the metadata database is initialized and reachable, and `503` while Querylane is initializing or the database is unavailable.
 
 Before each upgrade:
 
