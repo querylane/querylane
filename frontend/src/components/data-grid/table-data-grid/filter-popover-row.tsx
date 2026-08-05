@@ -274,7 +274,7 @@ function FilterRow({
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <div className="grid @lg/filter-popover:grid-cols-[minmax(9rem,1.3fr)_10rem_minmax(7.5rem,1fr)_2rem] grid-cols-[minmax(0,1fr)_2rem] items-center gap-1.5">
+      <div className="grid @lg/filter-popover:grid-cols-[minmax(6rem,1fr)_14rem_minmax(7.5rem,1fr)_2rem] grid-cols-[minmax(0,1fr)_2rem] items-center gap-1.5">
         <Select onValueChange={changeColumn} value={rule.column}>
           <SelectTrigger
             aria-label="Filter column"
@@ -329,14 +329,14 @@ function FilterRow({
             >
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="min-w-72">
               {operators.map((operator) => (
                 <SelectItem
                   key={operator}
-                  label={FILTER_OPERATOR_META[operator].label}
+                  label={FILTER_OPERATOR_META[operator].displayLabel}
                   value={operator}
                 >
-                  {FILTER_OPERATOR_META[operator].label}
+                  {FILTER_OPERATOR_META[operator].displayLabel}
                 </SelectItem>
               ))}
             </SelectContent>

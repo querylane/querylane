@@ -1336,8 +1336,20 @@ test("advanced filter popover shows negation and regex controls", async () => {
   await expect.element(negateButton).toHaveTextContent("NOT");
   await expect.element(negateButton).toHaveAttribute("aria-pressed", "true");
   await expect
-    .element(filterDialog.getByText("~*", { exact: true }))
+    .element(filterDialog.getByText("Regex (ignore case)", { exact: true }))
     .toBeVisible();
+  const operatorTrigger = page
+    .getByRole("combobox", { name: "Filter operator" })
+    .element();
+  const operatorValue = operatorTrigger.querySelector<HTMLElement>(
+    '[data-slot="select-value"]'
+  );
+  if (!operatorValue) {
+    throw new Error("expected selected operator label");
+  }
+  expect(operatorValue.scrollWidth).toBeLessThanOrEqual(
+    operatorValue.clientWidth
+  );
   await expect(filterDialog).toMatchScreenshot(
     "data-explorer-advanced-filter-popover"
   );

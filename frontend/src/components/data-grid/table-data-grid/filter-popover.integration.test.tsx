@@ -361,9 +361,13 @@ describe("FilterRow value editing", () => {
 
     await user.click(screen.getByRole("combobox", { name: "Filter operator" }));
 
-    expect(screen.getByRole("option", { name: "LIKE" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "ILIKE" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "!=" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Contains text" })).toBeTruthy();
+    expect(
+      screen.getByRole("option", {
+        name: "Contains text, ignoring case",
+      })
+    ).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Does not equal" })).toBeTruthy();
     expect(screen.queryByText("eq")).toBeNull();
   });
 
@@ -384,10 +388,16 @@ describe("FilterRow value editing", () => {
 
     await user.click(screen.getByRole("combobox", { name: "Filter operator" }));
 
-    expect(screen.getByRole("option", { name: "~" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "~*" })).toBeTruthy();
     expect(
-      screen.getByRole("option", { name: "is distinct from" })
+      screen.getByRole("option", { name: "Matches regular expression" })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("option", {
+        name: "Matches regular expression, ignoring case",
+      })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("option", { name: "Is distinct from" })
     ).toBeTruthy();
   });
 
@@ -413,10 +423,12 @@ describe("FilterRow value editing", () => {
 
     await user.click(screen.getByRole("combobox", { name: "Filter operator" }));
 
-    expect(screen.getByRole("option", { name: "is true" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "is false" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "is unknown" })).toBeTruthy();
-    expect(screen.queryByRole("option", { name: "~" })).toBeNull();
+    expect(screen.getByRole("option", { name: "Is true" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Is false" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Is unknown" })).toBeTruthy();
+    expect(
+      screen.queryByRole("option", { name: "Matches regular expression" })
+    ).toBeNull();
   });
 
   it("toggles generic predicate negation", async () => {

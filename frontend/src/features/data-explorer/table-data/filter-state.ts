@@ -124,15 +124,15 @@ const FILTER_OPERATOR_META: Record<FilterOperator, FilterOperatorMeta> = {
   },
   ilike: {
     description: "Use % as a wildcard; ignores letter case.",
-    displayLabel: "Contains text, case-insensitive",
+    displayLabel: "Contains text, ignoring case",
     label: "ILIKE",
     proto: RowPredicate_Operator.ILIKE,
     valueCount: 1,
   },
   imatch: {
     description: "Matches a POSIX regular expression; ignores letter case.",
-    displayLabel: "Matches regular expression, case-insensitive",
-    label: "~*",
+    displayLabel: "Matches regular expression, ignoring case",
+    label: "Regex (ignore case)",
     proto: RowPredicate_Operator.IMATCH,
     valueCount: 1,
   },
@@ -202,7 +202,7 @@ const FILTER_OPERATOR_META: Record<FilterOperator, FilterOperatorMeta> = {
   match: {
     description: "Matches a POSIX regular expression.",
     displayLabel: "Matches regular expression",
-    label: "~",
+    label: "Regex",
     proto: RowPredicate_Operator.MATCH,
     valueCount: 1,
   },
