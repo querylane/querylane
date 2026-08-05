@@ -218,6 +218,29 @@ describe("FilterPopover match logic", () => {
 });
 
 describe("FilterPopover value guidance", () => {
+  it("shows a regular expression example for match operators", () => {
+    render(
+      <FilterRow
+        columns={columns}
+        onApplyRequest={vi.fn()}
+        onChange={vi.fn()}
+        onRemove={vi.fn()}
+        rule={{
+          column: "email",
+          id: "regex",
+          operator: "match",
+          value: "",
+        }}
+      />
+    );
+
+    expect(
+      screen
+        .getByRole("textbox", { name: "Filter value" })
+        .getAttribute("placeholder")
+    ).toBe("^support@");
+  });
+
   it("lists column types in the column picker", async () => {
     const user = userEvent.setup();
 

@@ -5978,8 +5978,10 @@ components:
           items:
             type: string
           title: selected_columns
-          maxItems: 256
-          description: Optional. Subset of columns. Empty = all columns in catalog ordinal order.
+          maxItems: 1600
+          description: |-
+            Optional. Subset of columns. Empty = all columns in catalog ordinal order.
+             Bounded by PostgreSQL's maximum columns per table.
         orderBy:
           type: array
           items:
@@ -7104,8 +7106,10 @@ components:
           items:
             type: string
           title: selected_columns
-          maxItems: 256
-          description: Optional. Subset of columns.
+          maxItems: 1600
+          description: |-
+            Optional. Subset of columns. Bounded by PostgreSQL's maximum columns per
+             table.
         orderBy:
           type: array
           items:

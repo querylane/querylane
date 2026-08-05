@@ -111,8 +111,8 @@ function ColumnsPopover({
               className="mt-0.5 text-muted-foreground text-xs"
               id={fetchVisibleDescriptionId}
             >
-              Reduces row payloads. Hidden columns remain available to filters
-              and sorting.
+              Excludes hidden columns from row payloads while keeping them
+              available to filters and sorting.
             </p>
           </div>
           <Switch

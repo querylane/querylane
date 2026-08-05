@@ -51,6 +51,9 @@ function getValuePlaceholder(
   if (rule.operator === "like" || rule.operator === "ilike") {
     return "%@acme.com";
   }
+  if (rule.operator === "match" || rule.operator === "imatch") {
+    return "^support@";
+  }
   if (rule.operator === "jsonContains") {
     return '{"tier":"enterprise"}';
   }
@@ -114,7 +117,11 @@ function BooleanValueSelect({
       }}
       value={value}
     >
-      <SelectTrigger aria-label="Filter value" className="w-full" size="sm">
+      <SelectTrigger
+        aria-label="Filter value"
+        className="@lg/filter-popover:col-start-auto col-start-1 w-full"
+        size="sm"
+      >
         <SelectValue placeholder="Select value" />
       </SelectTrigger>
       <SelectContent>
@@ -218,7 +225,7 @@ function FilterRow({
   function renderValueEditor() {
     if (operatorMeta.valueCount === 0) {
       return (
-        <div className="flex h-8 items-center rounded-md border border-dashed px-2 text-muted-foreground text-xs">
+        <div className="@lg/filter-popover:col-start-auto col-start-1 flex h-8 items-center rounded-md border border-dashed px-2 text-muted-foreground text-xs">
           No value needed
         </div>
       );
@@ -236,7 +243,7 @@ function FilterRow({
     }
     return (
       <div
-        className="grid min-w-0 grid-cols-1 gap-1.5 data-[range=true]:grid-cols-2"
+        className="@lg/filter-popover:col-start-auto col-start-1 grid min-w-0 grid-cols-1 gap-1.5 data-[range=true]:grid-cols-2"
         data-range={operatorMeta.valueCount === 2}
       >
         <Input
@@ -267,11 +274,11 @@ function FilterRow({
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <div className="grid grid-cols-[minmax(11rem,1.3fr)_10rem_minmax(8.5rem,1fr)_2rem] items-center gap-1.5">
+      <div className="grid @lg/filter-popover:grid-cols-[minmax(9rem,1.3fr)_10rem_minmax(7.5rem,1fr)_2rem] grid-cols-[minmax(0,1fr)_2rem] items-center gap-1.5">
         <Select onValueChange={changeColumn} value={rule.column}>
           <SelectTrigger
             aria-label="Filter column"
-            className="w-full font-mono"
+            className="@lg/filter-popover:col-span-1 col-span-2 w-full font-mono"
             size="sm"
           >
             <SelectValue />
@@ -299,7 +306,7 @@ function FilterRow({
           </SelectContent>
         </Select>
 
-        <div className="flex min-w-0 items-center gap-1">
+        <div className="@lg/filter-popover:col-span-1 col-span-2 flex min-w-0 items-center gap-1">
           <Button
             aria-label="Negate filter"
             aria-pressed={rule.negated ?? false}

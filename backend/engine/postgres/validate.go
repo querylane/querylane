@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/querylane/querylane/backend/engine"
 	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
@@ -204,6 +205,11 @@ func checkOperatorType(op api.RowPredicate_Operator, col engine.Column, path str
 	case api.RowPredicate_OPERATOR_JSON_CONTAINS:
 		if col.DataType != api.DataType_DATA_TYPE_JSON {
 			return invalidAt(path+".operator", "JSON_CONTAINS requires a JSON/JSONB column, got "+col.RawType)
+		}
+	case api.RowPredicate_OPERATOR_IS_DISTINCT:
+		rawType := strings.ToLower(strings.TrimSpace(col.RawType))
+		if rawType == "json" || strings.HasPrefix(rawType, "json[") {
+			return invalidAt(path+".operator", "IS_DISTINCT requires an equality-comparable column, got "+col.RawType)
 		}
 	case api.RowPredicate_OPERATOR_BETWEEN:
 		switch col.DataType { //nolint:exhaustive // explicit allow-list

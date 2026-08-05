@@ -225,6 +225,7 @@ function useTableDataQuery({
     columnCatalog: columnCatalog.data?.columns.map((column) => ({
       columnName: column.columnName,
       dataType: column.dataType,
+      rawType: column.rawType,
     })),
     filterSearch,
     selectedColumns,

@@ -72,6 +72,7 @@ interface TableFilterRule {
 interface FilterColumnMeta {
   columnName: string;
   dataType: DataType;
+  rawType?: string | undefined;
 }
 
 interface InvalidFilterRule {
@@ -518,6 +519,8 @@ const ORDERABLE_OPERATORS: readonly FilterOperator[] = [
   "isDistinct",
   "between",
 ];
+const LEGACY_JSON_ARRAY_OPERATORS: readonly FilterOperator[] =
+  ORDERABLE_OPERATORS.filter((operator) => operator !== "isDistinct");
 const BOOLEAN_OPERATORS: readonly FilterOperator[] = [
   "eq",
   "ne",
@@ -540,6 +543,9 @@ const JSON_OPERATORS: readonly FilterOperator[] = [
   "isNotNull",
   "isDistinct",
 ];
+const LEGACY_JSON_OPERATORS: readonly FilterOperator[] = JSON_OPERATORS.filter(
+  (operator) => operator !== "isDistinct"
+);
 
 // Set views of the per-type operator lists above (the arrays stay the source
 // of truth because their order drives the operator dropdown), so membership
@@ -570,7 +576,9 @@ function getOperatorsForColumn(
   }
   switch (column.dataType) {
     case DataType.JSON:
-      return JSON_OPERATORS;
+      return column.rawType?.trim().toLowerCase() === "jsonb"
+        ? JSON_OPERATORS
+        : LEGACY_JSON_OPERATORS;
     case DataType.BOOLEAN:
       return BOOLEAN_OPERATORS;
     case DataType.INTEGER:
@@ -585,8 +593,11 @@ function getOperatorsForColumn(
     // instead of being blocked client-side.
     case DataType.BINARY:
     case DataType.GEOMETRY:
-    case DataType.ARRAY:
       return ORDERABLE_OPERATORS;
+    case DataType.ARRAY:
+      return column.rawType?.trim().toLowerCase().startsWith("json[")
+        ? LEGACY_JSON_ARRAY_OPERATORS
+        : ORDERABLE_OPERATORS;
     default:
       return TEXT_OPERATORS;
   }

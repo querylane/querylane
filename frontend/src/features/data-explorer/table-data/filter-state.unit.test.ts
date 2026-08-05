@@ -566,4 +566,35 @@ describe("advanced RowFilter operators", () => {
     expect(integerOperators).not.toContain("isFalse");
     expect(integerOperators).not.toContain("isUnknown");
   });
+
+  test("offers null-safe inequality only for equality-comparable JSON", () => {
+    expect(
+      getOperatorsForColumn({
+        columnName: "legacy_payload",
+        dataType: DataType.JSON,
+        rawType: "json",
+      })
+    ).not.toContain("isDistinct");
+    expect(
+      getOperatorsForColumn({
+        columnName: "payload",
+        dataType: DataType.JSON,
+        rawType: "jsonb",
+      })
+    ).toContain("isDistinct");
+    expect(
+      getOperatorsForColumn({
+        columnName: "legacy_payloads",
+        dataType: DataType.ARRAY,
+        rawType: "json[]",
+      })
+    ).not.toContain("isDistinct");
+    expect(
+      getOperatorsForColumn({
+        columnName: "payloads",
+        dataType: DataType.ARRAY,
+        rawType: "jsonb[]",
+      })
+    ).toContain("isDistinct");
+  });
 });

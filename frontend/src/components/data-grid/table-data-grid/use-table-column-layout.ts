@@ -51,6 +51,12 @@ function useTableColumnLayout({
     const column = columnByName.get(columnName);
     return column && !hiddenColumnKeys.has(columnName) ? [column] : [];
   });
+  const hasColumnCustomization =
+    layout.hiddenColumns.length > 0 ||
+    layout.order.length !== availableColumnNames.length ||
+    layout.order.some(
+      (columnName, index) => columnName !== availableColumnNames[index]
+    );
 
   useEffect(
     function reconcileSavedLayout() {
@@ -93,6 +99,10 @@ function useTableColumnLayout({
   }
 
   function setFetchVisibleColumns(enabled: boolean) {
+    if (!(enabled || hasColumnCustomization)) {
+      resetLayout(tableName);
+      return;
+    }
     setLayout(tableName, {
       ...(enabled ? { fetchVisibleColumns: true as const } : {}),
       hiddenColumns: layout.hiddenColumns,
@@ -116,7 +126,7 @@ function useTableColumnLayout({
     displayColumns,
     fetchVisibleColumns: layout.fetchVisibleColumns ?? false,
     hiddenColumnKeys,
-    isCustomized: savedLayout !== undefined,
+    isCustomized: Boolean(layout.fetchVisibleColumns) || hasColumnCustomization,
     reorderColumns,
     reset: () => resetLayout(tableName),
     setColumnOrder,

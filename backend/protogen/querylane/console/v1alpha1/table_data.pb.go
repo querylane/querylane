@@ -1513,6 +1513,7 @@ type ReadRowsRequest struct {
 	// returns INVALID_ARGUMENT.
 	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	// Optional. Subset of columns. Empty = all columns in catalog ordinal order.
+	// Bounded by PostgreSQL's maximum columns per table.
 	SelectedColumns []string `protobuf:"bytes,4,rep,name=selected_columns,json=selectedColumns,proto3" json:"selected_columns,omitempty"`
 	// Optional. Compound order. Server appends identity columns internally as
 	// a tiebreaker; clients neither see nor need to provide it.
@@ -1708,7 +1709,8 @@ type StreamRowsRequest struct {
 	// aip.dev/not-precedent: This compatibility field accepts either a Table or
 	// View resource. Runtime validation narrows the wildcard to those two types.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Optional. Subset of columns.
+	// Optional. Subset of columns. Bounded by PostgreSQL's maximum columns per
+	// table.
 	SelectedColumns []string `protobuf:"bytes,2,rep,name=selected_columns,json=selectedColumns,proto3" json:"selected_columns,omitempty"`
 	// Optional. Compound order.
 	OrderBy []*RowOrder `protobuf:"bytes,3,rep,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
@@ -2344,7 +2346,7 @@ const file_querylane_console_v1alpha1_table_data_proto_rawDesc = "" +
 	"\tpage_size\x18\x02 \x01(\x05B\r\xe0A\x01\xbaH\a\x1a\x05\x18\xf4\x03(\x00R\bpageSize\x12\"\n" +
 	"\n" +
 	"page_token\x18\x03 \x01(\tB\x03\xe0A\x01R\tpageToken\x124\n" +
-	"\x10selected_columns\x18\x04 \x03(\tB\t\xbaH\x06\x92\x01\x03\x10\x80\x02R\x0fselectedColumns\x12I\n" +
+	"\x10selected_columns\x18\x04 \x03(\tB\t\xbaH\x06\x92\x01\x03\x10\xc0\fR\x0fselectedColumns\x12I\n" +
 	"\border_by\x18\x05 \x03(\v2$.querylane.console.v1alpha1.RowOrderB\b\xbaH\x05\x92\x01\x02\x10\bR\aorderBy\x12B\n" +
 	"\x06filter\x18\x06 \x01(\v2%.querylane.console.v1alpha1.RowFilterB\x03\xe0A\x01R\x06filter\x12[\n" +
 	"\x0erow_count_mode\x18\a \x01(\x0e2(.querylane.console.v1alpha1.RowCountModeB\v\xe0A\x01\xbaH\x05\x82\x01\x02\x10\x01R\frowCountMode\x12^\n" +
@@ -2360,7 +2362,7 @@ const file_querylane_console_v1alpha1_table_data_proto_rawDesc = "" +
 	"\x11StreamRowsRequest\x12\x87\x01\n" +
 	"\x04name\x18\x01 \x01(\tBs\xe0A\x02\xfaA\x03\n" +
 	"\x01*\xbaHgre2c^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/(tables|views)/[^/]+$R\x04name\x124\n" +
-	"\x10selected_columns\x18\x02 \x03(\tB\t\xbaH\x06\x92\x01\x03\x10\x80\x02R\x0fselectedColumns\x12I\n" +
+	"\x10selected_columns\x18\x02 \x03(\tB\t\xbaH\x06\x92\x01\x03\x10\xc0\fR\x0fselectedColumns\x12I\n" +
 	"\border_by\x18\x03 \x03(\v2$.querylane.console.v1alpha1.RowOrderB\b\xbaH\x05\x92\x01\x02\x10\bR\aorderBy\x12B\n" +
 	"\x06filter\x18\x04 \x01(\v2%.querylane.console.v1alpha1.RowFilterB\x03\xe0A\x01R\x06filter\x12^\n" +
 	"\x0fcell_value_mode\x18\x05 \x01(\x0e2).querylane.console.v1alpha1.CellValueModeB\v\xe0A\x01\xbaH\x05\x82\x01\x02\x10\x01R\rcellValueMode\x124\n" +

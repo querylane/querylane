@@ -210,18 +210,9 @@ func buildPredicate(args *argList, pred *api.RowPredicate) (string, error) {
 		api.RowPredicate_OPERATOR_MATCH,
 		api.RowPredicate_OPERATOR_IMATCH,
 		api.RowPredicate_OPERATOR_IS_DISTINCT:
-		operators := map[api.RowPredicate_Operator]string{
-			api.RowPredicate_OPERATOR_EQUAL:                 "=",
-			api.RowPredicate_OPERATOR_NOT_EQUAL:             "!=",
-			api.RowPredicate_OPERATOR_GREATER_THAN:          ">",
-			api.RowPredicate_OPERATOR_GREATER_THAN_OR_EQUAL: ">=",
-			api.RowPredicate_OPERATOR_LESS_THAN:             "<",
-			api.RowPredicate_OPERATOR_LESS_THAN_OR_EQUAL:    "<=",
-			api.RowPredicate_OPERATOR_LIKE:                  "LIKE",
-			api.RowPredicate_OPERATOR_ILIKE:                 "ILIKE",
-			api.RowPredicate_OPERATOR_MATCH:                 "~",
-			api.RowPredicate_OPERATOR_IMATCH:                "~*",
-			api.RowPredicate_OPERATOR_IS_DISTINCT:           "IS DISTINCT FROM",
+		operator, ok := comparisonOperatorSQL(pred.GetOperator())
+		if !ok {
+			return "", fmt.Errorf("%w: unsupported comparison operator %s", engine.ErrQueryInvalid, pred.GetOperator())
 		}
 
 		columnExpression := col
@@ -230,7 +221,7 @@ func buildPredicate(args *argList, pred *api.RowPredicate) (string, error) {
 		}
 
 		placeholder := args.add(extractTableValues(pred.GetValues())[0])
-		clause = fmt.Sprintf("%s %s %s", columnExpression, operators[pred.GetOperator()], placeholder)
+		clause = fmt.Sprintf("%s %s %s", columnExpression, operator, placeholder)
 	case api.RowPredicate_OPERATOR_UNSPECIFIED:
 		return "", fmt.Errorf("%w: row predicate operator is required", engine.ErrQueryInvalid)
 	default:
@@ -242,4 +233,33 @@ func buildPredicate(args *argList, pred *api.RowPredicate) (string, error) {
 	}
 
 	return clause, nil
+}
+
+func comparisonOperatorSQL(operator api.RowPredicate_Operator) (string, bool) {
+	switch operator { //nolint:exhaustive // non-comparison operators return false
+	case api.RowPredicate_OPERATOR_EQUAL:
+		return "=", true
+	case api.RowPredicate_OPERATOR_NOT_EQUAL:
+		return "!=", true
+	case api.RowPredicate_OPERATOR_GREATER_THAN:
+		return ">", true
+	case api.RowPredicate_OPERATOR_GREATER_THAN_OR_EQUAL:
+		return ">=", true
+	case api.RowPredicate_OPERATOR_LESS_THAN:
+		return "<", true
+	case api.RowPredicate_OPERATOR_LESS_THAN_OR_EQUAL:
+		return "<=", true
+	case api.RowPredicate_OPERATOR_LIKE:
+		return "LIKE", true
+	case api.RowPredicate_OPERATOR_ILIKE:
+		return "ILIKE", true
+	case api.RowPredicate_OPERATOR_MATCH:
+		return "~", true
+	case api.RowPredicate_OPERATOR_IMATCH:
+		return "~*", true
+	case api.RowPredicate_OPERATOR_IS_DISTINCT:
+		return "IS DISTINCT FROM", true
+	default:
+		return "", false
+	}
 }

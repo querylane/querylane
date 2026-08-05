@@ -15,6 +15,8 @@ func sampleColumns() []engine.Column {
 		{Name: "id", DataType: api.DataType_DATA_TYPE_INTEGER, RawType: "bigint"},
 		{Name: "email", DataType: api.DataType_DATA_TYPE_STRING, RawType: "text"},
 		{Name: "active", DataType: api.DataType_DATA_TYPE_BOOLEAN, RawType: "boolean"},
+		{Name: "legacy_metadata", DataType: api.DataType_DATA_TYPE_JSON, RawType: "json"},
+		{Name: "legacy_metadata_array", DataType: api.DataType_DATA_TYPE_ARRAY, RawType: "json[]"},
 		{Name: "metadata", DataType: api.DataType_DATA_TYPE_JSON, RawType: "jsonb"},
 		{Name: "created_at", DataType: api.DataType_DATA_TYPE_TIMESTAMP, RawType: "timestamptz"},
 	}
@@ -134,6 +136,20 @@ func TestValidateReadRowsRequest(t *testing.T) {
 				),
 			},
 			wantOK: true,
+		},
+		{
+			name: "is_distinct_on_json",
+			params: engine.ReadRowsParams{
+				Filter: mkLeaf("legacy_metadata", api.RowPredicate_OPERATOR_IS_DISTINCT, strVal(`{"tier":"enterprise"}`)),
+			},
+			wantErr: "IS_DISTINCT requires an equality-comparable column",
+		},
+		{
+			name: "is_distinct_on_json_array",
+			params: engine.ReadRowsParams{
+				Filter: mkLeaf("legacy_metadata_array", api.RowPredicate_OPERATOR_IS_DISTINCT, strVal(`{"tier":"enterprise"}`)),
+			},
+			wantErr: "IS_DISTINCT requires an equality-comparable column",
 		},
 		{
 			name: "json_contains_on_text",

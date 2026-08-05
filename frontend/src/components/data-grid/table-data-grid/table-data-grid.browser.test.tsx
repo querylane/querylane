@@ -1364,6 +1364,19 @@ test("filter popover stays inside the data-grid boundary when the grid is offset
   expect(boundary.contains(popoverBox.element)).toBe(false);
   expect(popoverBox.left).toBeGreaterThanOrEqual(boundaryBox.left - 1);
   expect(popoverBox.right).toBeLessThanOrEqual(boundaryBox.right + 1);
+
+  const filterRow = popoverBox.element.querySelector("li");
+  if (!filterRow) {
+    throw new Error("expected filter row");
+  }
+  const rowControls = filterRow.querySelectorAll<HTMLElement>(
+    'button, input, [data-slot="select-trigger"]'
+  );
+  for (const control of rowControls) {
+    const controlBox = control.getBoundingClientRect();
+    expect(controlBox.left).toBeGreaterThanOrEqual(popoverBox.left - 1);
+    expect(controlBox.right).toBeLessThanOrEqual(popoverBox.right + 1);
+  }
 });
 
 test("sort popover keeps every row control aligned", async () => {

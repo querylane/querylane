@@ -321,6 +321,27 @@ function seedRowsQueryWithRawClipboardValues() {
   });
 }
 
+function seedMeasurementColumnCatalog() {
+  tableApi.useListTableColumnsQuery.mockReturnValue({
+    data: create(ListTableColumnsResponseSchema, {
+      columns: [
+        create(ColumnSchema, {
+          columnName: "measurement",
+          dataType: DataType.FLOAT,
+          rawType: "double precision",
+        }),
+        create(ColumnSchema, {
+          columnName: "observed_at",
+          dataType: DataType.TIMESTAMP,
+          rawType: "timestamptz",
+        }),
+      ],
+    }),
+    error: null,
+    isError: false,
+  });
+}
+
 function seedRowsQueryWithExpandableValues() {
   tableApi.useListTableColumnsQuery.mockReturnValue({
     data: create(ListTableColumnsResponseSchema, { columns: [] }),
@@ -1519,24 +1540,7 @@ describe("TableDataGrid column layout", () => {
   it("opts into fetching visible columns only", async () => {
     const user = userEvent.setup();
     seedRowsQueryWithRawClipboardValues();
-    tableApi.useListTableColumnsQuery.mockReturnValue({
-      data: create(ListTableColumnsResponseSchema, {
-        columns: [
-          create(ColumnSchema, {
-            columnName: "measurement",
-            dataType: DataType.FLOAT,
-            rawType: "double precision",
-          }),
-          create(ColumnSchema, {
-            columnName: "observed_at",
-            dataType: DataType.TIMESTAMP,
-            rawType: "timestamptz",
-          }),
-        ],
-      }),
-      error: null,
-      isError: false,
-    });
+    seedMeasurementColumnCatalog();
 
     render(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
@@ -1559,6 +1563,38 @@ describe("TableDataGrid column layout", () => {
         "instances/prod/databases/app/schemas/public/tables/measurements"
       ]
     ).toMatchObject({ fetchVisibleColumns: true });
+  });
+
+  it("clears a no-op layout after opting back out of column projection", async () => {
+    const user = userEvent.setup();
+    seedRowsQueryWithRawClipboardValues();
+    seedMeasurementColumnCatalog();
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
+    );
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+
+    const projection = screen.getByRole("switch", {
+      name: "Fetch visible columns only",
+    });
+    await user.click(projection);
+    await user.click(projection);
+
+    await waitFor(() => {
+      expect(
+        (
+          screen.getByRole("button", {
+            name: "Reset columns",
+          }) as HTMLButtonElement
+        ).disabled
+      ).toBe(true);
+    });
+    expect(
+      useTableColumnLayoutSettingsStore.getState().layouts[
+        "instances/prod/databases/app/schemas/public/tables/measurements"
+      ]
+    ).toBeUndefined();
   });
 
   it("persists layout for one table without leaking it to another", async () => {

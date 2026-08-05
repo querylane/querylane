@@ -1565,23 +1565,29 @@ func (s *PostgresEngineIntegrationTestSuite) TestReadRowsAdvancedFilters() {
 			id integer PRIMARY KEY,
 			email text NOT NULL,
 			status advanced_filter_status,
-			active boolean
+			active boolean,
+			legacy_payload json,
+			legacy_payloads json[],
+			payload jsonb
 		)
 	`)
 	s.Require().NoError(err)
 
 	_, err = testDB.ExecContext(ctx, `
-		INSERT INTO advanced_filter_rows (id, email, status, active)
+		INSERT INTO advanced_filter_rows (id, email, status, active, legacy_payload, payload)
 		VALUES
-			(1, 'Support@Acme.com', 'done', true),
-			(2, 'sales@acme.com', NULL, false),
-			(3, 'bot@example.com', 'pending', NULL)
+			(1, 'Support@Acme.com', 'done', true, '{"tier":"enterprise"}', '{"tier":"enterprise"}'),
+			(2, 'sales@acme.com', NULL, false, NULL, NULL),
+			(3, 'bot@example.com', 'pending', NULL, '{"tier":"free"}', '{"tier":"free"}')
 	`)
 	s.Require().NoError(err)
 
 	resourceName := "instances/test/databases/" + s.testDBName + "/schemas/public/tables/advanced_filter_rows"
 	stringValue := func(value string) *api.TableValue {
 		return &api.TableValue{Kind: &api.TableValue_StringValue{StringValue: value}}
+	}
+	jsonValue := func(value string) *api.TableValue {
+		return &api.TableValue{Kind: &api.TableValue_JsonValue{JsonValue: value}}
 	}
 	predicate := func(column string, operator api.RowPredicate_Operator, values ...*api.TableValue) *api.RowFilter {
 		return &api.RowFilter{Node: &api.RowFilter_Predicate{Predicate: &api.RowPredicate{
@@ -1611,6 +1617,11 @@ func (s *PostgresEngineIntegrationTestSuite) TestReadRowsAdvancedFilters() {
 		{
 			name:    "null safe inequality",
 			filter:  predicate("status", api.RowPredicate_OPERATOR_IS_DISTINCT, stringValue("done")),
+			wantIDs: []int64{2, 3},
+		},
+		{
+			name:    "null safe inequality on jsonb",
+			filter:  predicate("payload", api.RowPredicate_OPERATOR_IS_DISTINCT, jsonValue(`{"tier":"enterprise"}`)),
 			wantIDs: []int64{2, 3},
 		},
 		{
@@ -1674,6 +1685,42 @@ func (s *PostgresEngineIntegrationTestSuite) TestReadRowsAdvancedFilters() {
 
 		s.Require().Error(readErr)
 		s.True(postgreserrors.IsKind(readErr, postgreserrors.KindInvalidArgument))
+	})
+
+	s.Run("null safe inequality on legacy json", func() {
+		_, readErr := s.eng.ReadRows(ctx, testDB, engine.ReadRowsParams{
+			ResourceName:    resourceName,
+			SchemaName:      "public",
+			TableName:       "advanced_filter_rows",
+			PageSize:        10,
+			SelectedColumns: []string{"id"},
+			Filter: predicate(
+				"legacy_payload",
+				api.RowPredicate_OPERATOR_IS_DISTINCT,
+				jsonValue(`{"tier":"enterprise"}`),
+			),
+		})
+
+		s.Require().Error(readErr)
+		s.ErrorIs(readErr, engine.ErrQueryInvalid)
+	})
+
+	s.Run("null safe inequality on legacy json array", func() {
+		_, readErr := s.eng.ReadRows(ctx, testDB, engine.ReadRowsParams{
+			ResourceName:    resourceName,
+			SchemaName:      "public",
+			TableName:       "advanced_filter_rows",
+			PageSize:        10,
+			SelectedColumns: []string{"id"},
+			Filter: predicate(
+				"legacy_payloads",
+				api.RowPredicate_OPERATOR_IS_DISTINCT,
+				stringValue("{}"),
+			),
+		})
+
+		s.Require().Error(readErr)
+		s.ErrorIs(readErr, engine.ErrQueryInvalid)
 	})
 }
 
