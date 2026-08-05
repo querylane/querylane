@@ -39,6 +39,7 @@ Use backend tests for API correctness, database behavior, migrations, and AIP se
 bun run test:browser:setup
 bun run test:e2e:list
 bun run test:e2e
+bun run test:e2e:base-ui
 bun run test:e2e:repeat
 bun run test:accessibility
 bun run test:e2e:ui

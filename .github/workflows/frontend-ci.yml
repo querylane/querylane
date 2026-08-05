@@ -147,7 +147,7 @@ jobs:
     name: Frontend Browser
     if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       actions: write
       contents: read
@@ -173,17 +173,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - name: Restore Playwright Chromium cache
+      - name: Restore Playwright browser cache
         id: playwright-cache
         uses: *action_cache
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('frontend/node_modules/playwright-core/browsers.json') }}
+          key: ${{ runner.os }}-playwright-all-${{ hashFiles('frontend/node_modules/playwright-core/browsers.json') }}
           restore-keys: |
-            ${{ runner.os }}-playwright-chromium-
-      - name: Install Playwright Chromium
+            ${{ runner.os }}-playwright-all-
+      - name: Install Playwright system dependencies
+        run: bunx playwright install-deps chromium firefox webkit
+      - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: bunx playwright install chromium
+        run: bunx playwright install chromium firefox webkit
       - name: Run browser visual tests
         env:
           QUALITY_BASE_REF: origin/${{ github.base_ref }}
@@ -196,6 +198,17 @@ jobs:
           else
             bun run test:browser:changed -- --reporter=verbose
           fi
+      - name: Run Base UI cross-browser contracts
+        run: bun run test:e2e:base-ui
+      - name: Upload Playwright failure artifacts
+        if: failure()
+        uses: *action_upload_artifact
+        with:
+          name: playwright-base-ui-failure-artifacts
+          path: frontend/e2e/test-results
+          retention-days: 1
+          overwrite: true
+          if-no-files-found: ignore
       - name: Upload Vitest visual failure artifacts
         if: failure()
         uses: *action_upload_artifact
