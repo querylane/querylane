@@ -18,6 +18,7 @@ import (
 	"github.com/querylane/querylane/backend/engine"
 	"github.com/querylane/querylane/backend/engine/postgres"
 	"github.com/querylane/querylane/backend/integration/testutil"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
@@ -1660,6 +1661,20 @@ func (s *PostgresEngineIntegrationTestSuite) TestReadRowsAdvancedFilters() {
 			s.Equal(tt.wantIDs, gotIDs)
 		})
 	}
+
+	s.Run("invalid regular expression", func() {
+		_, readErr := s.eng.ReadRows(ctx, testDB, engine.ReadRowsParams{
+			ResourceName:    resourceName,
+			SchemaName:      "public",
+			TableName:       "advanced_filter_rows",
+			PageSize:        10,
+			SelectedColumns: []string{"id"},
+			Filter:          predicate("email", api.RowPredicate_OPERATOR_MATCH, stringValue("[")),
+		})
+
+		s.Require().Error(readErr)
+		s.True(postgreserrors.IsKind(readErr, postgreserrors.KindInvalidArgument))
+	})
 }
 
 func (s *PostgresEngineIntegrationTestSuite) TestReadRowsRowCountModes() {
