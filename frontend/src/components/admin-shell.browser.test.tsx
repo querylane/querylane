@@ -194,8 +194,8 @@ vi.mock("@/hooks/api/github", () => ({
   useGithubRepoStarsQuery: () => ({ data: "1.2k" }),
 }));
 
-vi.mock("@/hooks/api/database-catalog", () => ({
-  useDatabaseCatalogQuery: () => ({
+vi.mock("@/hooks/api/database-catalog", () => {
+  const catalogQuery = {
     data: {
       objects: [
         {
@@ -232,11 +232,21 @@ vi.mock("@/hooks/api/database-catalog", () => ({
     },
     error: null,
     isPending: false,
-  }),
-}));
+  };
+
+  return {
+    useDatabaseCatalogQuery: () => catalogQuery,
+    useDatabaseCatalogSearchQuery: () => catalogQuery,
+  };
+});
 
 vi.mock("@/hooks/api/role", () => ({
   rolesForInstanceQueryInput: (instanceId: string) => ({ instanceId }),
+  useListRolesQuery: () => ({
+    data: { roles: [] },
+    error: null,
+    isPending: false,
+  }),
   useListAllRolesQuery: () => ({
     data: {
       roles: [

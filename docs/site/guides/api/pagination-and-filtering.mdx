@@ -73,9 +73,15 @@ Endpoints with server-side filtering implement a bounded, AIP-160-inspired subse
 | `field != "value"` | String inequality |
 | `field:"text"` | Case-insensitive string substring |
 | `field = true` | Boolean equality |
-| `condition AND condition` | Combine top-level conditions |
+| `field >= 100` | Integer or timestamp comparison |
+| `condition AND condition` | Require both conditions |
+| `condition OR condition` | Require either condition |
+| `NOT condition` or `-condition` | Negate a condition |
+| `(expression)` | Group an expression |
 
-String values can use single or double quotes. Escape the quote style and backslashes inside the value. `OR`, `NOT`, groups, wildcards, comparison operators, field traversal, and arbitrary functions are not supported.
+String and RFC 3339 timestamp values can use single or double quotes. Booleans and integers are unquoted. Escape the quote style and backslashes inside a quoted value. `OR` binds tighter than `AND`, following AIP-160. Exact dotted field paths are supported only when the endpoint allowlists them. Wildcards, bare fuzzy terms, arbitrary traversal, and functions are not supported.
+
+Filters are limited to 1 KiB, 16 conditions, and 8 levels of nesting. An unsupported field, operator, value, or expression returns `invalid_argument`.
 
 Example catalog filters:
 
@@ -87,7 +93,15 @@ name:"order" AND owner != "postgres"
 table_type = "TABLE_TYPE_PARTITIONED"
 ```
 
-Some list methods expose the wire-level `filter` field before a backend filter is enabled. In particular, do not rely on server filtering for `ListInstances` or `ListRoles` in this preview. An unsupported field or expression on an enabled endpoint returns `invalid_argument`; a method without enabled filtering can leave the result unfiltered.
+`ListInstances` filters on `display_name`. `ListRoles` filters on `role_name`, `attributes.can_login`, `attributes.is_superuser`, `attributes.can_replicate`, and `is_system_role`. For example:
+
+```text
+display_name:"production"
+role_name:"report" AND attributes.can_login = true
+NOT is_system_role = true
+```
+
+Filtering is opt-in per endpoint and field. A list method with no enabled filter fields rejects a non-empty filter rather than returning an unfiltered result.
 
 Always verify the returned rows and keep client-side safety checks when filtering affects access or destructive automation.
 

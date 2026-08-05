@@ -1,7 +1,7 @@
 "use client";
 
 import type { RowData, SortingState } from "@tanstack/react-table";
-import { useDeferredValue } from "react";
+import { type ReactNode, useDeferredValue } from "react";
 import { HeldPillStrip } from "@/components/console-pages/role-grants-pills";
 import {
   columnsFor,
@@ -38,6 +38,40 @@ const GRANT_TYPE_ORDER: GrantObjectType[] = [
 // Em dash as a JS expression (not JSX text) so it renders as the "no value"
 // glyph without tripping the no-em-dash-in-prose lint.
 const EM_DASH = "—";
+
+function RoleGrantsTableStatus({
+  children,
+  error,
+  isPending,
+  partial,
+}: {
+  children: ReactNode;
+  error: unknown;
+  isPending: boolean;
+  partial: boolean;
+}) {
+  return (
+    <>
+      {isPending ? (
+        <p className="text-muted-foreground text-sm" role="status">
+          Loading results…
+        </p>
+      ) : null}
+      {error ? (
+        <p className="text-destructive text-sm" role="alert">
+          Could not load filtered results.
+        </p>
+      ) : null}
+      {children}
+      {partial ? (
+        <p className="pt-2 text-muted-foreground text-xs">
+          Showing the first 1,000 matching rows. Refine the filters to narrow
+          the results.
+        </p>
+      ) : null}
+    </>
+  );
+}
 
 // Schema-dimmed object name (e.g. "public.orders") for relation rows; bare name
 // for schema- and database-level grants.
@@ -99,9 +133,11 @@ function KindFilteredTable<T extends RowData>({
   activeKind,
   columns,
   data,
+  facetData = data,
   filterColumnId,
   initialSorting,
   kindOf,
+  onClearAll,
   onKindChange,
   onSearchChange,
   search,
@@ -112,9 +148,11 @@ function KindFilteredTable<T extends RowData>({
   activeKind: string;
   columns: DataTableColumnDef<T>[];
   data: T[];
+  facetData?: T[];
   filterColumnId: string;
   initialSorting: SortingState;
   kindOf: (row: T) => GrantObjectType;
+  onClearAll?: (() => void) | undefined;
   onKindChange: (slug: string) => void;
   onSearchChange: (value: string) => void;
   search: string;
@@ -128,7 +166,7 @@ function KindFilteredTable<T extends RowData>({
   const deferredSearch = useDeferredValue(search);
 
   const presentKinds = typeOrder.filter((type) =>
-    data.some((row) => kindOf(row) === type)
+    facetData.some((row) => kindOf(row) === type)
   );
   const filtered =
     activeKind === "all"
@@ -154,6 +192,10 @@ function KindFilteredTable<T extends RowData>({
           },
         ]}
         onClearAll={() => {
+          if (onClearAll) {
+            onClearAll();
+            return;
+          }
           onKindChange("all");
           onSearchChange("");
         }}
@@ -181,13 +223,17 @@ function KindFilteredTable<T extends RowData>({
 // Kind · Granted by · Privileges, on the shared kind facet + search shell.
 function GrantedObjectsTable({
   activeKind,
+  facetObjects,
   objects,
+  onClearAll,
   onKindChange,
   onSearchChange,
   search,
 }: {
   activeKind: string;
+  facetObjects?: GrantedObject[];
   objects: GrantedObject[];
+  onClearAll?: (() => void) | undefined;
   onKindChange: (slug: string) => void;
   onSearchChange: (value: string) => void;
   search: string;
@@ -241,9 +287,11 @@ function GrantedObjectsTable({
       activeKind={activeKind}
       columns={columns}
       data={objects}
+      {...(facetObjects ? { facetData: facetObjects } : {})}
       filterColumnId="object"
       initialSorting={[{ desc: false, id: "object" }]}
       kindOf={(object) => object.objectType}
+      onClearAll={onClearAll}
       onKindChange={onKindChange}
       onSearchChange={onSearchChange}
       search={search}
@@ -254,4 +302,9 @@ function GrantedObjectsTable({
   );
 }
 
-export { GrantedObjectsTable, GrantObjectKindBadge, KindFilteredTable };
+export {
+  GrantedObjectsTable,
+  GrantObjectKindBadge,
+  KindFilteredTable,
+  RoleGrantsTableStatus,
+};

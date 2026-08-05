@@ -89,4 +89,27 @@ describe("role query option helpers", () => {
       parent: "instances/local/databases/postgres",
     });
   });
+
+  test("includes server filters in grant table-slice inputs", () => {
+    const scope = {
+      databaseId: "postgres",
+      filter: 'object_name:"orders"',
+      instanceId: "local",
+      roleId: "YWxpY2U",
+    };
+
+    expect(roleGrantsForDatabaseQueryInput(scope).filter).toBe(
+      'object_name:"orders"'
+    );
+    expect(roleOwnedObjectsForDatabaseQueryInput(scope).filter).toBe(
+      'object_name:"orders"'
+    );
+    expect(
+      publicGrantsForDatabaseQueryInput({
+        databaseId: scope.databaseId,
+        filter: scope.filter,
+        instanceId: scope.instanceId,
+      }).filter
+    ).toBe('object_name:"orders"');
+  });
 });

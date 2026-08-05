@@ -137,13 +137,69 @@ func TestConfigInstanceRepository_ListInstances(t *testing.T) { //nolint:tparall
 		assert.Equal(t, "Staging", instances[2].GetDisplayName())
 	})
 
-	t.Run("rejects unsupported filter", func(t *testing.T) {
+	t.Run("filters by display name", func(t *testing.T) {
 		t.Parallel()
 
 		repo := NewConfigInstanceRepository(newTestConfigs())
 
-		_, _, err := repo.ListInstances(ctx, 10, "", "display_name.contains('Prod')", "")
-		require.ErrorIs(t, err, ErrInvalidFilter)
+		instances, nextToken, err := repo.ListInstances(ctx, 10, "", `display_name:"duct"`, "")
+		require.NoError(t, err)
+		assert.Empty(t, nextToken)
+		require.Len(t, instances, 1)
+		assert.Equal(t, "Production", instances[0].GetDisplayName())
+	})
+
+	t.Run("evaluates equality inequality disjunction and negation", func(t *testing.T) {
+		t.Parallel()
+
+		tests := []struct {
+			name        string
+			filter      string
+			wantDisplay []string
+		}{
+			{
+				name:        "equality",
+				filter:      `display_name = "Production"`,
+				wantDisplay: []string{"Production"},
+			},
+			{
+				name:        "inequality and negation",
+				filter:      `display_name != "Production" AND NOT display_name:"aging"`,
+				wantDisplay: []string{"Development"},
+			},
+			{
+				name:        "disjunction",
+				filter:      `display_name = "Production" OR display_name = "Staging"`,
+				wantDisplay: []string{"Production", "Staging"},
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				repo := NewConfigInstanceRepository(newTestConfigs())
+				instances, nextToken, err := repo.ListInstances(ctx, 10, "", tc.filter, "")
+				require.NoError(t, err)
+				assert.Empty(t, nextToken)
+
+				displayNames := make([]string, len(instances))
+				for i, instance := range instances {
+					displayNames[i] = instance.GetDisplayName()
+				}
+
+				assert.Equal(t, tc.wantDisplay, displayNames)
+			})
+		}
+	})
+
+	t.Run("rejects synthetic id filter field", func(t *testing.T) {
+		t.Parallel()
+
+		repo := NewConfigInstanceRepository(newTestConfigs())
+
+		_, _, err := repo.ListInstances(ctx, 10, "", `id = "prod"`, "")
+		assert.ErrorIs(t, err, ErrInvalidFilter)
 	})
 
 	t.Run("returns empty list for empty config", func(t *testing.T) {

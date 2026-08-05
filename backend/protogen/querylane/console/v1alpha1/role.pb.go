@@ -792,8 +792,16 @@ type ListRolesRequest struct {
 	// Optional. A page token received from a previous `ListRoles` call.
 	// Provide this to retrieve the next page of results.
 	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	// Optional. Reserved for future AIP-160 filtering support.
-	// The server currently rejects non-empty filters.
+	// Optional. Filter on resource fields:
+	//   - role_name (string; supports `=`, `!=`, and `:` substring)
+	//   - attributes.can_login, attributes.is_superuser,
+	//     attributes.can_replicate, and is_system_role (boolean; support `=`
+	//     and `!=`)
+	//
+	// aip.dev/not-precedent: For compatibility with Querylane's existing list
+	// grammar, `:` is a case-insensitive scalar substring operator rather than
+	// AIP-160's collection has operator.
+	// Example: role_name:"report" AND attributes.can_login = true
 	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	// Optional. Ordering expression following AIP-132 syntax.
 	// Supported fields: name

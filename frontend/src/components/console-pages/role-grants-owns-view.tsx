@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   GrantObjectKindBadge,
   KindFilteredTable,
+  RoleGrantsTableStatus,
 } from "@/components/console-pages/role-grants-object-table";
 import {
   ContentHead,
@@ -15,11 +16,19 @@ import {
   GRANT_OBJECT_META,
   type GrantedObject,
   getObjectTypeLabel,
+  grantObjectTypeFilterToken,
   OWNED_TYPE_ORDER,
   ownedObjectName,
   PRIV_TONE_CLASS,
   type PrivTone,
+  slugForObjectType,
 } from "@/components/console-pages/role-grants-shared";
+import type {
+  RoleGrantsTableFilter,
+  RoleGrantsTableSlice,
+  SetRoleGrantsTableFilter,
+} from "@/components/console-pages/role-grants-table-filter";
+import { selectRoleGrantsTableSlice } from "@/components/console-pages/role-grants-table-filter";
 import { Button } from "@/components/ui/button";
 import {
   type DataTableColumnDef,
@@ -31,6 +40,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { buildOwnedFilter, SERVER_FILTER_DEBOUNCE_MS } from "@/lib/aip-filter";
 import type { RoleKind } from "@/lib/role-display";
 import { cn } from "@/lib/utils";
 import {
@@ -167,15 +178,56 @@ function OwnedObjectCell({ object }: { object: OwnedObject }) {
   );
 }
 
+function ownedTableFilter(
+  activeKind: string,
+  search: string
+): RoleGrantsTableFilter | null {
+  const activeObjectType = OWNED_TYPE_ORDER.find(
+    (type) => slugForObjectType(type) === activeKind
+  );
+  const filter = buildOwnedFilter({
+    objectType:
+      activeObjectType === undefined
+        ? undefined
+        : grantObjectTypeFilterToken(activeObjectType),
+    search,
+  });
+  return filter ? { filter, source: "owned" } : null;
+}
+
 function OwnedObjectsTable({
+  facetObjects,
   objects,
+  onTableFilterChange,
   partial,
+  tableSlice,
 }: {
+  facetObjects: OwnedObject[];
   objects: OwnedObject[];
+  onTableFilterChange?: SetRoleGrantsTableFilter | undefined;
   partial: boolean;
+  tableSlice?: RoleGrantsTableSlice | undefined;
 }) {
   const [activeKind, setActiveKind] = useState("all");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, SERVER_FILTER_DEBOUNCE_MS);
+  const filter = ownedTableFilter(activeKind, debouncedSearch)?.filter;
+  const handleKindChange = (nextKind: string) => {
+    setActiveKind(nextKind);
+    onTableFilterChange?.(ownedTableFilter(nextKind, search));
+  };
+  const handleSearchChange = (nextSearch: string) => {
+    setSearch(nextSearch);
+    onTableFilterChange?.(ownedTableFilter(activeKind, nextSearch));
+  };
+  const handleClearAll = () => {
+    setActiveKind("all");
+    setSearch("");
+    onTableFilterChange?.(null);
+  };
+
+  const serverSlice = selectRoleGrantsTableSlice(tableSlice, "owned", filter);
+  const tableObjects = serverSlice?.ownedObjects ?? objects;
 
   const columns: DataTableColumnDef<OwnedObject>[] = [
     {
@@ -208,20 +260,28 @@ function OwnedObjectsTable({
         </span>
         <CountPill partial={partial} value={objects.length} />
       </div>
-      <KindFilteredTable
-        activeKind={activeKind}
-        columns={columns}
-        data={objects}
-        filterColumnId="object"
-        initialSorting={[{ desc: false, id: "object" }]}
-        kindOf={(object) => object.objectType}
-        onKindChange={setActiveKind}
-        onSearchChange={setSearch}
-        search={search}
-        searchPlaceholder="Search owned objects…"
-        tableKey="role-owned-objects"
-        typeOrder={OWNED_TYPE_ORDER}
-      />
+      <RoleGrantsTableStatus
+        error={serverSlice?.error ?? null}
+        isPending={serverSlice?.isPending ?? false}
+        partial={serverSlice?.partial ?? false}
+      >
+        <KindFilteredTable
+          activeKind={activeKind}
+          columns={columns}
+          data={tableObjects}
+          facetData={facetObjects}
+          filterColumnId="object"
+          initialSorting={[{ desc: false, id: "object" }]}
+          kindOf={(object) => object.objectType}
+          onClearAll={handleClearAll}
+          onKindChange={handleKindChange}
+          onSearchChange={handleSearchChange}
+          search={search}
+          searchPlaceholder="Search owned objects…"
+          tableKey="role-owned-objects"
+          typeOrder={OWNED_TYPE_ORDER}
+        />
+      </RoleGrantsTableStatus>
     </section>
   );
 }
@@ -329,16 +389,28 @@ function schemasWithCreateGrant(directGrants: GrantedObject[]): string[] {
 function OwnedObjectsContent({
   databaseName,
   isEmpty,
+  onTableFilterChange,
   ownedObjects,
   partial,
+  tableSlice,
 }: {
   databaseName: string | undefined;
   isEmpty: boolean;
+  onTableFilterChange?: SetRoleGrantsTableFilter | undefined;
   ownedObjects: OwnedObject[];
   partial: boolean;
+  tableSlice?: RoleGrantsTableSlice | undefined;
 }) {
   if (!isEmpty) {
-    return <OwnedObjectsTable objects={ownedObjects} partial={partial} />;
+    return (
+      <OwnedObjectsTable
+        facetObjects={ownedObjects}
+        objects={ownedObjects}
+        onTableFilterChange={onTableFilterChange}
+        partial={partial}
+        tableSlice={tableSlice}
+      />
+    );
   }
   return (
     <GrantsEmptyState
@@ -360,16 +432,20 @@ export function OwnsGrantsView({
   databaseName,
   directGrants,
   kind,
+  onTableFilterChange,
   ownedObjects,
   partial,
   roleName,
+  tableSlice,
 }: {
   databaseName: string | undefined;
   directGrants: GrantedObject[];
   kind: RoleKind;
+  onTableFilterChange?: SetRoleGrantsTableFilter | undefined;
   ownedObjects: OwnedObject[];
   partial: boolean;
   roleName: string;
+  tableSlice?: RoleGrantsTableSlice | undefined;
 }) {
   const isSuper = kind === "super";
   const isEmpty = ownedObjects.length === 0;
@@ -405,8 +481,10 @@ export function OwnsGrantsView({
         <OwnedObjectsContent
           databaseName={databaseName}
           isEmpty={isEmpty}
+          onTableFilterChange={onTableFilterChange}
           ownedObjects={ownedObjects}
           partial={partial}
+          tableSlice={tableSlice}
         />
 
         {isEmpty || isSuper ? null : (

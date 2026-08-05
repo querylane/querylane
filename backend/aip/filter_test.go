@@ -35,6 +35,11 @@ func newFilterTestSchema() *Schema[testModel] {
 				DisableOrdering: true,
 				Filterable:      true,
 			},
+			"attributes.can_login": {
+				Codec:           BoolCodec{},
+				DisableOrdering: true,
+				Filterable:      true,
+			},
 			"size_bytes": {
 				Codec:           Int64Codec{},
 				DisableOrdering: true,
@@ -92,6 +97,11 @@ func TestParseFilter_Valid(t *testing.T) {
 			name:  "bare bool true",
 			input: `is_system = true`,
 			want:  cond("is_system", OpEqual, "true", false),
+		},
+		{
+			name:  "nested field path",
+			input: `attributes.can_login = true`,
+			want:  cond("attributes.can_login", OpEqual, "true", false),
 		},
 		{
 			name:  "comparison operators",
@@ -215,6 +225,9 @@ func TestParseFilter_Invalid(t *testing.T) {
 		{name: "trailing dangling backslash", input: `display_name = "x\"`},
 		{name: "chars after closing quote", input: `display_name = "x"y`},
 		{name: "invalid field name", input: `1bad = "x"`},
+		{name: "field path with empty segment", input: `attributes..can_login = true`},
+		{name: "field path with leading dot", input: `.attributes = true`},
+		{name: "field path with trailing dot", input: `attributes. = true`},
 		{name: "leading AND", input: `AND display_name = "x"`},
 		{name: "trailing AND", input: `display_name = "x" AND`},
 		{name: "trailing OR", input: `display_name = "x" OR`},
@@ -264,6 +277,11 @@ func TestValidateFilter(t *testing.T) {
 			name:  "int64 comparison",
 			input: `size_bytes >= 1024`,
 			want:  FilterCondition{Field: "size_bytes", Operator: OpGreaterEq, Value: int64(1024)},
+		},
+		{
+			name:  "nested boolean field",
+			input: `attributes.can_login = true`,
+			want:  FilterCondition{Field: "attributes.can_login", Operator: OpEqual, Value: true},
 		},
 		{
 			name:  "timestamp comparison",

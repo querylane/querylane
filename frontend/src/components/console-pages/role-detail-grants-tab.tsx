@@ -2,6 +2,7 @@
 
 import type { RoleDetailViewProps } from "@/components/console-pages/role-detail-model";
 import { GrantsSection } from "@/components/console-pages/role-grants-tab";
+import { parseResourceLeafId } from "@/lib/console-resources";
 
 function RoleGrantsTab({
   builtinInfo,
@@ -16,6 +17,7 @@ function RoleGrantsTab({
   grantsError,
   grantsPending,
   grantsView,
+  instanceId,
   kind,
   onNavigateGrants,
   onSelectGrantsDatabase,
@@ -45,6 +47,15 @@ function RoleGrantsTab({
       ownedPartial={ownedPartial}
       publicGrants={publicGrants}
       publicGrantsPartial={publicGrantsPartial}
+      {...(effectiveDbId
+        ? {
+            queryScope: {
+              databaseId: effectiveDbId,
+              instanceId,
+              roleId: parseResourceLeafId(role.name),
+            },
+          }
+        : {})}
       roleName={role.roleName}
       selectedDatabaseId={effectiveDbId ?? undefined}
     />

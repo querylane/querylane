@@ -15,7 +15,7 @@ import {
   buildRoleName,
   parseResourceLeafId,
 } from "@/lib/console-resources";
-import { paginateAll } from "@/lib/paginate-all";
+import { paginateAll, paginateUpTo } from "@/lib/paginate-all";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import {
   type Database,
@@ -99,6 +99,7 @@ interface RoleDatabasePair {
 const ACCESS_MAP_RESOURCE_CONCURRENCY = 2;
 const ACCESS_MAP_REQUEST_BUDGET = 300;
 const ACCESS_MAP_ROLE_FACET_REQUEST_COUNT = 3;
+const ROLE_SUMMARY_ROW_CAP = 5000;
 
 async function mapWithConcurrency<T, Result>(
   items: T[],
@@ -168,7 +169,8 @@ async function fetchAllRoles(
   input?: MessageInitShape<(typeof listRoles)["input"]>
 ) {
   const client = createClient(RoleService, transport);
-  const roles = await paginateAll(
+  const result = await paginateUpTo(
+    ROLE_SUMMARY_ROW_CAP,
     (pageToken) =>
       client.listRoles({
         ...(input ?? {}),
@@ -178,8 +180,10 @@ async function fetchAllRoles(
   );
 
   return create(ListRolesResponseSchema, {
-    nextPageToken: "",
-    roles,
+    nextPageToken: result.truncated
+      ? (result.lastResponse?.nextPageToken ?? "")
+      : "",
+    roles: result.items,
   });
 }
 
@@ -382,6 +386,16 @@ function useListAllRolesQuery(
   });
 }
 
+function useListRolesQuery(
+  input?: MessageInitShape<(typeof listRoles)["input"]>,
+  options?: ListAllQueryOptions
+) {
+  return useConnectQuery(listRoles, input, {
+    ...RESOURCE_QUERY_OPTIONS.roleList,
+    ...options,
+  });
+}
+
 function useRolesAccessMapResourcesQuery(
   input: { instanceId: string; roles: Role[] },
   options?: ListAllQueryOptions
@@ -407,15 +421,18 @@ function useRolesAccessMapResourcesQuery(
 
 export function roleGrantsForDatabaseQueryInput({
   databaseId,
+  filter,
   instanceId,
   roleId,
 }: {
   databaseId: string;
+  filter?: string | undefined;
   instanceId: string;
   roleId: string;
 }) {
   return {
     database: buildDatabaseName(instanceId, databaseId),
+    ...(filter ? { filter } : {}),
     orderBy: "schema_name asc, object_name asc, privilege asc",
     pageSize: 1000,
     parent: buildRoleName(instanceId, roleId),
@@ -434,15 +451,18 @@ export function useListRoleGrantsQuery(
 
 export function roleOwnedObjectsForDatabaseQueryInput({
   databaseId,
+  filter,
   instanceId,
   roleId,
 }: {
   databaseId: string;
+  filter?: string | undefined;
   instanceId: string;
   roleId: string;
 }) {
   return {
     database: buildDatabaseName(instanceId, databaseId),
+    ...(filter ? { filter } : {}),
     orderBy: "schema_name asc, object_name asc",
     pageSize: 1000,
     parent: buildRoleName(instanceId, roleId),
@@ -489,12 +509,15 @@ export function useListRoleDefaultPrivilegesQuery(
 
 export function publicGrantsForDatabaseQueryInput({
   databaseId,
+  filter,
   instanceId,
 }: {
   databaseId: string;
+  filter?: string | undefined;
   instanceId: string;
 }) {
   return {
+    ...(filter ? { filter } : {}),
     orderBy: "schema_name asc, object_name asc, privilege asc",
     pageSize: 1000,
     parent: buildDatabaseName(instanceId, databaseId),
@@ -519,5 +542,6 @@ export type {
 export {
   rolesForInstanceQueryInput,
   useListAllRolesQuery,
+  useListRolesQuery,
   useRolesAccessMapResourcesQuery,
 };

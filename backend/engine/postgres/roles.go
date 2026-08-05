@@ -21,11 +21,42 @@ var roleSchema = rawsql.Bind(
 				Codec:    aip.StringCodec{},
 				GetValue: func(m *engine.Role) any { return m.Name },
 			},
+			"role_name": {
+				Codec:           aip.StringCodec{},
+				GetValue:        func(m *engine.Role) any { return m.Name },
+				DisableOrdering: true,
+				Filterable:      true,
+			},
+			"attributes.can_login": {
+				Codec:           aip.BoolCodec{},
+				DisableOrdering: true,
+				Filterable:      true,
+			},
+			"attributes.is_superuser": {
+				Codec:           aip.BoolCodec{},
+				DisableOrdering: true,
+				Filterable:      true,
+			},
+			"attributes.can_replicate": {
+				Codec:           aip.BoolCodec{},
+				DisableOrdering: true,
+				Filterable:      true,
+			},
+			"is_system_role": {
+				Codec:           aip.BoolCodec{},
+				DisableOrdering: true,
+				Filterable:      true,
+			},
 		},
 		aip.WithNameOrdering(),
 	),
 	rawsql.Exprs{
-		"name": "r.rolname",
+		"name":                     "r.rolname",
+		"role_name":                "r.rolname",
+		"attributes.can_login":     "r.rolcanlogin",
+		"attributes.is_superuser":  "r.rolsuper",
+		"attributes.can_replicate": "r.rolreplication",
+		"is_system_role":           `(r.rolname LIKE 'pg\_%' ESCAPE '\')`,
 	},
 )
 

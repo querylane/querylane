@@ -1,6 +1,7 @@
 import { createClient, type Transport } from "@connectrpc/connect";
 import { useTransport } from "@connectrpc/connect-query";
 import { useQuery } from "@tanstack/react-query";
+import { buildContainsFilter } from "@/lib/aip-filter";
 import {
   buildDatabaseName,
   buildSchemaName,
@@ -28,6 +29,8 @@ import {
 // same approach the explorer's schema detail uses, widened to a whole database.
 
 const PAGE_SIZE = 200;
+const DEFAULT_SEARCH_LIMIT = 5;
+const FILTERED_SEARCH_LIMIT = 10;
 const ZERO_BYTES = 0n;
 
 type ProtoTimestamp = Schema["lastDdlTime"];
@@ -259,6 +262,83 @@ function useDatabaseCatalogQuery(input: {
   });
 }
 
+async function fetchDatabaseCatalogSearch(
+  transport: Transport,
+  input: { databaseId: string; instanceId: string; query: string }
+): Promise<{ objects: CatalogObject[] }> {
+  const databaseName = buildDatabaseName(input.instanceId, input.databaseId);
+  const schemasResult = await fetchAllSchemas(transport, databaseName);
+  const filter = buildContainsFilter("name", input.query);
+  const limit = filter ? FILTERED_SEARCH_LIMIT : DEFAULT_SEARCH_LIMIT;
+  const tableClient = createClient(TableService, transport);
+  const viewClient = createClient(ViewService, transport);
+  const objects: CatalogObject[] = [];
+
+  async function collectSchema(schemaIndex: number): Promise<void> {
+    const schema = schemasResult.items[schemaIndex];
+    if (!schema || objects.length >= limit) {
+      return;
+    }
+    const schemaId = schema.displayName;
+    const parent = buildSchemaName(
+      input.instanceId,
+      input.databaseId,
+      schemaId
+    );
+    const request = {
+      ...(filter ? { filter } : {}),
+      orderBy: "name asc",
+      pageSize: limit,
+      parent,
+    } as const;
+    const [tables, views] = await Promise.all([
+      tableClient.listTables(request),
+      viewClient.listViews(request),
+    ]);
+    objects.push(
+      ...tables.tables.map((table) => tableToObject(table, schemaId)),
+      ...views.views.map((view) => viewToObject(view, schemaId))
+    );
+    await collectSchema(schemaIndex + 1);
+  }
+
+  await collectSchema(0);
+
+  return { objects: objects.slice(0, limit) };
+}
+
+function useDatabaseCatalogSearchQuery(input: {
+  databaseId: string;
+  enabled?: boolean;
+  instanceId: string;
+  query: string;
+}) {
+  const transport = useTransport();
+  const normalizedQuery = input.query.trim().toLowerCase();
+  const queryCanRun =
+    normalizedQuery.length === 0 || normalizedQuery.length >= 2;
+  return useQuery({
+    enabled:
+      (input.enabled ?? true) &&
+      queryCanRun &&
+      Boolean(input.instanceId && input.databaseId),
+    queryFn: () =>
+      fetchDatabaseCatalogSearch(transport, {
+        databaseId: input.databaseId,
+        instanceId: input.instanceId,
+        query: normalizedQuery,
+      }),
+    queryKey: [
+      "console",
+      "database-catalog-search",
+      input.instanceId,
+      input.databaseId,
+      normalizedQuery,
+    ] as const,
+    staleTime: 60_000,
+  });
+}
+
 export type {
   CatalogObject,
   CatalogSchema,
@@ -266,4 +346,4 @@ export type {
   CatalogTotals,
   DatabaseCatalogResult,
 };
-export { useDatabaseCatalogQuery };
+export { useDatabaseCatalogQuery, useDatabaseCatalogSearchQuery };

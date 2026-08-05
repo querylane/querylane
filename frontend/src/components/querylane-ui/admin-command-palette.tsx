@@ -13,17 +13,23 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { formatRows } from "@/features/data-explorer/format-rows";
-import { useDatabaseCatalogQuery } from "@/hooks/api/database-catalog";
+import { useDatabaseCatalogSearchQuery } from "@/hooks/api/database-catalog";
 import {
   rolesForInstanceQueryInput,
-  useListAllRolesQuery,
+  useListRolesQuery,
 } from "@/hooks/api/role";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 import {
   navigateToCanonicalAdminTarget,
   resolveCanonicalAdminPageTarget,
 } from "@/lib/admin-navigation";
 import type { AdminPageId } from "@/lib/admin-page";
+import {
+  buildRoleFilter,
+  MIN_SERVER_SUBSTRING_LENGTH,
+  SERVER_FILTER_DEBOUNCE_MS,
+} from "@/lib/aip-filter";
 import { normalizeEstimatedRowCount } from "@/lib/console-resources";
 import { useDb } from "@/lib/db-context";
 import { handleNavigationResult } from "@/lib/navigation-errors";
@@ -82,12 +88,16 @@ function matchesQuery(value: string, query: string): boolean {
   return query.length === 0 || value.toLowerCase().includes(query);
 }
 
+function canRunCatalogSearch(query: string): boolean {
+  return query.length === 0 || query.length >= MIN_SERVER_SUBSTRING_LENGTH;
+}
+
 type NavigationIds = ReturnType<typeof useDb>["navigationIds"];
 type CatalogObject = NonNullable<
-  ReturnType<typeof useDatabaseCatalogQuery>["data"]
+  ReturnType<typeof useDatabaseCatalogSearchQuery>["data"]
 >["objects"][number];
 type PaletteRole = NonNullable<
-  ReturnType<typeof useListAllRolesQuery>["data"]
+  ReturnType<typeof useListRolesQuery>["data"]
 >["roles"][number];
 
 function selectNavigationTargets(ids: NavigationIds, query: string) {
@@ -310,15 +320,28 @@ function AdminCommandPaletteContent({
   const databaseId = navigationIds.databaseId ?? "";
   const hasDatabaseScope = Boolean(instanceId && databaseId);
   const normalizedQuery = query.trim().toLowerCase();
-  const hasRoleSearch = normalizedQuery.length > 0;
-  const catalogQuery = useDatabaseCatalogQuery({
+  const serverQuery = useDebouncedValue(
+    normalizedQuery,
+    SERVER_FILTER_DEBOUNCE_MS
+  );
+  const catalogSearchCanRun = canRunCatalogSearch(serverQuery);
+  const hasRoleSearch = serverQuery.length >= MIN_SERVER_SUBSTRING_LENGTH;
+  const catalogQuery = useDatabaseCatalogSearchQuery({
     databaseId,
     enabled: hasDatabaseScope,
     instanceId,
+    query: serverQuery,
   });
-  const rolesQuery = useListAllRolesQuery(
-    instanceId ? rolesForInstanceQueryInput(instanceId) : undefined,
-    { enabled: Boolean(instanceId && normalizedQuery) }
+  const roleFilter = buildRoleFilter({ query: serverQuery });
+  const rolesQuery = useListRolesQuery(
+    instanceId && roleFilter
+      ? {
+          ...rolesForInstanceQueryInput(instanceId),
+          filter: roleFilter,
+          pageSize: SEARCH_ROLE_LIMIT,
+        }
+      : undefined,
+    { enabled: Boolean(instanceId && hasRoleSearch) }
   );
   const databaseLabel = selectedDatabase?.name ?? databaseId;
   const navigationTargets = selectNavigationTargets(
@@ -418,7 +441,7 @@ function AdminCommandPaletteContent({
         <PaletteSearchFeedback
           catalogError={catalogQuery.error}
           catalogIsPending={catalogQuery.isPending}
-          hasDatabaseScope={hasDatabaseScope}
+          hasDatabaseScope={hasDatabaseScope && catalogSearchCanRun}
           hasRoleSearch={hasRoleSearch}
           rolesError={rolesQuery.error}
           rolesIsPending={rolesQuery.isPending}

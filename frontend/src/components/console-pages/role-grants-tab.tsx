@@ -10,7 +10,10 @@ import {
 } from "lucide-react";
 import { Fragment, type ReactNode, useState } from "react";
 import type { GrantsView } from "@/components/console-pages/role-detail-search";
-import { GrantedObjectsTable } from "@/components/console-pages/role-grants-object-table";
+import {
+  GrantedObjectsTable,
+  RoleGrantsTableStatus,
+} from "@/components/console-pages/role-grants-object-table";
 import {
   GrantsOverview,
   OverviewLede,
@@ -30,10 +33,19 @@ import {
   type DefaultPrivilegeRule,
   type FacetStates,
   type GrantedObject,
+  grantObjectTypeFilterTokenForSlug,
   groupDefaultPrivileges,
   type SchemaGrantGroup,
   TABLE_LIKE_TYPES,
 } from "@/components/console-pages/role-grants-shared";
+import type {
+  RoleGrantsQueryScope,
+  RoleGrantsTableFilter,
+  RoleGrantsTableSlice,
+  RoleGrantsTableSource,
+  SetRoleGrantsTableFilter,
+} from "@/components/console-pages/role-grants-table-filter";
+import { selectRoleGrantsTableSlice } from "@/components/console-pages/role-grants-table-filter";
 import { EmptyState } from "@/components/empty-state";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -43,6 +55,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  publicGrantsForDatabaseQueryInput,
+  roleGrantsForDatabaseQueryInput,
+  roleOwnedObjectsForDatabaseQueryInput,
+  useListPublicGrantsQuery,
+  useListRoleGrantsQuery,
+  useListRoleOwnedObjectsQuery,
+} from "@/hooks/api/role";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { buildGrantFilter, SERVER_FILTER_DEBOUNCE_MS } from "@/lib/aip-filter";
 import type { PredefinedRoleInfo, RoleKind } from "@/lib/role-display";
 import { cn } from "@/lib/utils";
 import {
@@ -157,15 +179,67 @@ function DefaultsDrillView({
   );
 }
 
-function PublicDrillView({
-  objects,
-  partial,
+function publicTableFilter(
+  activeKind: string,
+  search: string
+): RoleGrantsTableFilter | null {
+  const filter = buildGrantFilter({
+    objectType: grantObjectTypeFilterTokenForSlug(activeKind),
+    search,
+  });
+  return filter ? { filter, source: "public" } : null;
+}
+
+function usePublicGrantTableState({
+  onTableFilterChange,
+  tableSlice,
 }: {
-  objects: GrantedObject[];
-  partial: boolean;
+  onTableFilterChange?: SetRoleGrantsTableFilter | undefined;
+  tableSlice?: RoleGrantsTableSlice | undefined;
 }) {
   const [activeKind, setActiveKind] = useState("all");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, SERVER_FILTER_DEBOUNCE_MS);
+  const filter = publicTableFilter(activeKind, debouncedSearch)?.filter;
+  const handleKindChange = (nextKind: string) => {
+    setActiveKind(nextKind);
+    setSearch("");
+    onTableFilterChange?.(publicTableFilter(nextKind, ""));
+  };
+  const handleSearchChange = (nextSearch: string) => {
+    setSearch(nextSearch);
+    onTableFilterChange?.(publicTableFilter(activeKind, nextSearch));
+  };
+
+  const serverSlice = selectRoleGrantsTableSlice(tableSlice, "public", filter);
+  return {
+    activeKind,
+    handleKindChange,
+    handleSearchChange,
+    search,
+    serverSlice,
+  };
+}
+
+function PublicDrillView({
+  objects,
+  onTableFilterChange,
+  partial,
+  tableSlice,
+}: {
+  objects: GrantedObject[];
+  onTableFilterChange?: SetRoleGrantsTableFilter | undefined;
+  partial: boolean;
+  tableSlice?: RoleGrantsTableSlice | undefined;
+}) {
+  const {
+    activeKind,
+    handleKindChange,
+    handleSearchChange,
+    search,
+    serverSlice,
+  } = usePublicGrantTableState({ onTableFilterChange, tableSlice });
+  const tableObjects = serverSlice?.grantObjects ?? objects;
   return (
     <div className="flex flex-col">
       <ContentHead
@@ -194,16 +268,21 @@ function PublicDrillView({
           )}
         </GrantsEmptyState>
       ) : (
-        <GrantedObjectsTable
-          activeKind={activeKind}
-          objects={objects}
-          onKindChange={(slug) => {
-            setActiveKind(slug);
-            setSearch("");
-          }}
-          onSearchChange={setSearch}
-          search={search}
-        />
+        <RoleGrantsTableStatus
+          error={serverSlice?.error ?? null}
+          isPending={serverSlice?.isPending ?? false}
+          partial={serverSlice?.partial ?? false}
+        >
+          <GrantedObjectsTable
+            activeKind={activeKind}
+            facetObjects={objects}
+            objects={tableObjects}
+            onClearAll={() => handleKindChange("all")}
+            onKindChange={handleKindChange}
+            onSearchChange={handleSearchChange}
+            search={search}
+          />
+        </RoleGrantsTableStatus>
       )}
     </div>
   );
@@ -526,6 +605,7 @@ function GrantsViewBody({
   kind,
   objects,
   onNavigateGrants,
+  onTableFilterChange,
   ownedObjects,
   ownedPartial,
   publicObjects,
@@ -533,6 +613,7 @@ function GrantsViewBody({
   roleName,
   schemaGroup,
   schemaIndex,
+  tableSlice,
   view,
 }: {
   databaseName: string | undefined;
@@ -543,6 +624,7 @@ function GrantsViewBody({
   kind: RoleKind;
   objects: GrantedObject[];
   onNavigateGrants: (next: GrantsView) => void;
+  onTableFilterChange?: SetRoleGrantsTableFilter | undefined;
   ownedObjects: OwnedObject[];
   ownedPartial: boolean;
   publicObjects: GrantedObject[];
@@ -550,6 +632,7 @@ function GrantsViewBody({
   roleName: string;
   schemaGroup: SchemaGrantGroup | null;
   schemaIndex: SchemaGrantGroup[];
+  tableSlice?: RoleGrantsTableSlice | undefined;
   view: GrantsView;
 }) {
   if (view.kind === "schema" && schemaGroup) {
@@ -558,7 +641,9 @@ function GrantsViewBody({
         databaseName={databaseName}
         group={schemaGroup}
         onNavigate={onNavigateGrants}
+        onTableFilterChange={onTableFilterChange}
         partial={grantsPartial}
+        tableSlice={tableSlice}
         type={view.type}
       />
     );
@@ -576,9 +661,11 @@ function GrantsViewBody({
         databaseName={databaseName}
         directGrants={objects}
         kind={kind}
+        onTableFilterChange={onTableFilterChange}
         ownedObjects={ownedObjects}
         partial={ownedPartial}
         roleName={roleName}
+        tableSlice={tableSlice}
       />
     );
   }
@@ -592,7 +679,12 @@ function GrantsViewBody({
   }
   if (view.kind === "reach" && view.reach === "public") {
     return (
-      <PublicDrillView objects={publicObjects} partial={publicGrantsPartial} />
+      <PublicDrillView
+        objects={publicObjects}
+        onTableFilterChange={onTableFilterChange}
+        partial={publicGrantsPartial}
+        tableSlice={tableSlice}
+      />
     );
   }
   return (
@@ -613,7 +705,7 @@ function GrantsViewBody({
   );
 }
 
-function GrantsSection({
+function GrantsSectionView({
   builtinInfo,
   databaseName,
   databases,
@@ -628,12 +720,14 @@ function GrantsSection({
   objects,
   onNavigateGrants,
   onSelectDatabase,
+  onTableFilterChange,
   ownedObjects,
   ownedPartial,
   publicGrants,
   publicGrantsPartial,
   roleName,
   selectedDatabaseId,
+  tableSlice,
 }: {
   builtinInfo: PredefinedRoleInfo | null;
   databaseName: string | undefined;
@@ -649,12 +743,14 @@ function GrantsSection({
   objects: GrantedObject[];
   onNavigateGrants: (next: GrantsView) => void;
   onSelectDatabase: (value: string) => void;
+  onTableFilterChange?: SetRoleGrantsTableFilter | undefined;
   ownedObjects: OwnedObject[];
   ownedPartial: boolean;
   publicGrants: ObjectGrant[];
   publicGrantsPartial: boolean;
   roleName: string;
   selectedDatabaseId: string | undefined;
+  tableSlice?: RoleGrantsTableSlice | undefined;
 }) {
   const loadState = grantsLoadState({
     databaseName,
@@ -731,6 +827,7 @@ function GrantsSection({
           kind={kind}
           objects={objects}
           onNavigateGrants={onNavigateGrants}
+          onTableFilterChange={onTableFilterChange}
           ownedObjects={ownedObjects}
           ownedPartial={ownedPartial}
           publicGrantsPartial={publicGrantsPartial}
@@ -738,10 +835,172 @@ function GrantsSection({
           roleName={roleName}
           schemaGroup={schemaGroup}
           schemaIndex={schemaIndex}
+          tableSlice={tableSlice}
           view={view}
         />
       )}
     </div>
+  );
+}
+
+type GrantsSectionViewProps = Parameters<typeof GrantsSectionView>[0];
+type GrantsSectionProps = GrantsSectionViewProps & {
+  queryScope?: RoleGrantsQueryScope | undefined;
+};
+
+function grantsTableSourceForView(
+  view: GrantsView
+): RoleGrantsTableSource | undefined {
+  if (view.kind === "schema") {
+    return "direct";
+  }
+  if (view.kind !== "reach") {
+    return;
+  }
+  switch (view.reach) {
+    case "owns":
+      return "owned";
+    case "public":
+      return "public";
+    case "defaults":
+      return;
+    default:
+      return view.reach satisfies never;
+  }
+}
+
+interface GrantsTableQueryResult {
+  error: unknown;
+  grants: ObjectGrant[];
+  isPending: boolean;
+  nextPageToken: string;
+  ownedObjects: OwnedObject[];
+}
+
+function buildRoleGrantsTableSlice(
+  activeFilter: RoleGrantsTableFilter | undefined,
+  queryResults: Record<RoleGrantsTableSource, GrantsTableQueryResult>
+): RoleGrantsTableSlice | undefined {
+  if (!activeFilter) {
+    return;
+  }
+  const result = queryResults[activeFilter.source];
+  return {
+    error: result.error,
+    filter: activeFilter.filter,
+    grantObjects: aggregateGrants(result.grants),
+    isPending: result.isPending,
+    ownedObjects: result.ownedObjects,
+    partial: Boolean(result.nextPageToken),
+    source: activeFilter.source,
+  };
+}
+
+function selectActiveTableFilter(
+  tableFilter: RoleGrantsTableFilter | null,
+  activeSource: RoleGrantsTableSource | undefined
+): RoleGrantsTableFilter | undefined {
+  return tableFilter && tableFilter.source === activeSource
+    ? tableFilter
+    : undefined;
+}
+
+function settleTableFilter(
+  tableFilter: RoleGrantsTableFilter | null,
+  debouncedTableFilter: RoleGrantsTableFilter | null
+): RoleGrantsTableFilter | null {
+  return tableFilter?.source === "direct" ? tableFilter : debouncedTableFilter;
+}
+
+function ServerFilteredGrantsSection({
+  queryScope,
+  ...props
+}: GrantsSectionViewProps & { queryScope: RoleGrantsQueryScope }) {
+  const [tableFilter, setTableFilter] = useState<RoleGrantsTableFilter | null>(
+    null
+  );
+  const activeSource = grantsTableSourceForView(props.grantsView);
+  const debouncedTableFilter = useDebouncedValue(
+    tableFilter,
+    SERVER_FILTER_DEBOUNCE_MS
+  );
+  const settledTableFilter = settleTableFilter(
+    tableFilter,
+    debouncedTableFilter
+  );
+  const activeFilter = selectActiveTableFilter(
+    settledTableFilter,
+    activeSource
+  );
+
+  const directQuery = useListRoleGrantsQuery(
+    roleGrantsForDatabaseQueryInput({
+      ...queryScope,
+      ...(activeFilter?.source === "direct"
+        ? { filter: activeFilter.filter }
+        : {}),
+    }),
+    { enabled: activeFilter?.source === "direct" }
+  );
+  const ownedQuery = useListRoleOwnedObjectsQuery(
+    roleOwnedObjectsForDatabaseQueryInput({
+      ...queryScope,
+      ...(activeFilter?.source === "owned"
+        ? { filter: activeFilter.filter }
+        : {}),
+    }),
+    { enabled: activeFilter?.source === "owned" }
+  );
+  const publicQuery = useListPublicGrantsQuery(
+    publicGrantsForDatabaseQueryInput({
+      databaseId: queryScope.databaseId,
+      instanceId: queryScope.instanceId,
+      ...(activeFilter?.source === "public"
+        ? { filter: activeFilter.filter }
+        : {}),
+    }),
+    { enabled: activeFilter?.source === "public" }
+  );
+
+  const tableSlice = buildRoleGrantsTableSlice(activeFilter, {
+    direct: {
+      error: directQuery.error,
+      grants: directQuery.data?.grants ?? [],
+      isPending: directQuery.isPending,
+      nextPageToken: directQuery.data?.nextPageToken ?? "",
+      ownedObjects: [],
+    },
+    owned: {
+      error: ownedQuery.error,
+      grants: [],
+      isPending: ownedQuery.isPending,
+      nextPageToken: ownedQuery.data?.nextPageToken ?? "",
+      ownedObjects: ownedQuery.data?.ownedObjects ?? [],
+    },
+    public: {
+      error: publicQuery.error,
+      grants: publicQuery.data?.grants ?? [],
+      isPending: publicQuery.isPending,
+      nextPageToken: publicQuery.data?.nextPageToken ?? "",
+      ownedObjects: [],
+    },
+  });
+
+  return (
+    <GrantsSectionView
+      {...props}
+      onTableFilterChange={setTableFilter}
+      {...(tableSlice ? { tableSlice } : {})}
+    />
+  );
+}
+
+function GrantsSection(props: GrantsSectionProps) {
+  const { queryScope, ...viewProps } = props;
+  return queryScope ? (
+    <ServerFilteredGrantsSection {...viewProps} queryScope={queryScope} />
+  ) : (
+    <GrantsSectionView {...viewProps} />
   );
 }
 

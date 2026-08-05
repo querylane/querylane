@@ -362,6 +362,44 @@ export function slugForObjectType(
   );
 }
 
+export function grantObjectTypeFilterToken(
+  type: GrantObjectType
+): string | undefined {
+  switch (type) {
+    case GrantObjectType.DATABASE:
+      return "DATABASE";
+    case GrantObjectType.SCHEMA:
+      return "SCHEMA";
+    case GrantObjectType.TABLE:
+      return "TABLE";
+    case GrantObjectType.VIEW:
+      return "VIEW";
+    case GrantObjectType.MATERIALIZED_VIEW:
+      return "MATERIALIZED_VIEW";
+    case GrantObjectType.SEQUENCE:
+      return "SEQUENCE";
+    case GrantObjectType.FOREIGN_TABLE:
+      return "FOREIGN_TABLE";
+    case GrantObjectType.FUNCTION:
+      return "FUNCTION";
+    case GrantObjectType.LARGE_OBJECT:
+      return "LARGE_OBJECT";
+    default:
+      return;
+  }
+}
+
+export function grantObjectTypeFilterTokenForSlug(
+  slug: string
+): string | undefined {
+  const objectType = Object.entries(SLUG_TO_OBJECT_TYPE).find(
+    ([candidate]) => candidate === slug
+  )?.[1];
+  return objectType === undefined
+    ? undefined
+    : grantObjectTypeFilterToken(objectType);
+}
+
 // A schema at or under this size opens inline; above it stays collapsed and
 // gains an inline filter bar when opened. Baked-in (no user tweak).
 export const AUTO_EXPAND_THRESHOLD = 12;
