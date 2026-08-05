@@ -315,7 +315,7 @@ function FilterRow({
             type="button"
             variant={rule.negated ? "secondary" : "outline"}
           >
-            Not
+            NOT
           </Button>
           <Select
             items={operatorItems}

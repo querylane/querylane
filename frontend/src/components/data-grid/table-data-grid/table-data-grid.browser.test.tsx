@@ -1332,9 +1332,9 @@ test("advanced filter popover shows negation and regex controls", async () => {
 
   const filterDialog = page.getByRole("dialog", { name: "Filter rows" });
   await expect.element(filterDialog).toBeVisible();
-  await expect
-    .element(page.getByRole("button", { name: "Negate filter" }))
-    .toHaveAttribute("aria-pressed", "true");
+  const negateButton = page.getByRole("button", { name: "Negate filter" });
+  await expect.element(negateButton).toHaveTextContent("NOT");
+  await expect.element(negateButton).toHaveAttribute("aria-pressed", "true");
   await expect
     .element(filterDialog.getByText("~*", { exact: true }))
     .toBeVisible();
