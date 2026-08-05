@@ -7,6 +7,46 @@ const readPage = (path: string) =>
 const readAsset = (path: string) =>
 	readFile(new URL(`../public/images/docs/diagrams/${path}`, import.meta.url));
 
+type DiagramElement = {
+	height?: number;
+	id?: string;
+	points?: [number, number][];
+	type?: string;
+	width?: number;
+	x?: number;
+	y?: number;
+};
+
+const segmentCrossesRectangle = (
+	[[startX, startY], [endX, endY]]: [[number, number], [number, number]],
+	rectangle: Required<Pick<DiagramElement, "height" | "width" | "x" | "y">>,
+) => {
+	const left = rectangle.x + 1;
+	const right = rectangle.x + rectangle.width - 1;
+	const top = rectangle.y + 1;
+	const bottom = rectangle.y + rectangle.height - 1;
+
+	if (startX === endX) {
+		return (
+			startX > left &&
+			startX < right &&
+			Math.max(startY, endY) > top &&
+			Math.min(startY, endY) < bottom
+		);
+	}
+
+	if (startY === endY) {
+		return (
+			startY > top &&
+			startY < bottom &&
+			Math.max(startX, endX) > left &&
+			Math.min(startX, endX) < right
+		);
+	}
+
+	return false;
+};
+
 const expectedDiagrams = [
 	{
 		page: "concepts/how-querylane-works.mdx",
@@ -121,4 +161,61 @@ test("gives detailed Excalidraw diagrams more inline room", async () => {
 	expect(theme).toContain("width: min(56rem, calc(100vw - 2rem))");
 	expect(theme).toContain(".docs-diagram-wide img");
 	expect(theme).toContain("width: 100%");
+});
+
+test("routes cursor pagination retry edges around nodes", async () => {
+	const scene = JSON.parse(
+		(await readAsset("cursor-pagination.excalidraw")).toString(),
+	) as { elements?: DiagramElement[] };
+	const elements = scene.elements ?? [];
+	const nodes = elements.filter(
+		(
+			element,
+		): element is DiagramElement &
+			Required<Pick<DiagramElement, "height" | "id" | "width" | "x" | "y">> =>
+			element.type === "rectangle" &&
+			element.id !== "canvas" &&
+			typeof element.id === "string" &&
+			typeof element.x === "number" &&
+			typeof element.y === "number" &&
+			typeof element.width === "number" &&
+			typeof element.height === "number",
+	);
+
+	for (const arrowId of ["keep-loop", "restart-loop"]) {
+		const arrow = elements.find((element) => element.id === arrowId);
+		expect(arrow?.type, `${arrowId} type`).toBe("arrow");
+		expect(arrow?.points, `${arrowId} points`).toBeDefined();
+		expect(arrow?.x, `${arrowId} x`).toBeNumber();
+		expect(arrow?.y, `${arrowId} y`).toBeNumber();
+
+		if (
+			!arrow?.points ||
+			typeof arrow.x !== "number" ||
+			typeof arrow.y !== "number"
+		) {
+			continue;
+		}
+
+		const collisions = nodes.flatMap((node) =>
+			arrow.points?.some((point, index, points) => {
+				const nextPoint = points[index + 1];
+				if (!nextPoint) {
+					return false;
+				}
+
+				return segmentCrossesRectangle(
+					[
+						[arrow.x + point[0], arrow.y + point[1]],
+						[arrow.x + nextPoint[0], arrow.y + nextPoint[1]],
+					],
+					node,
+				);
+			})
+				? [node.id]
+				: [],
+		);
+
+		expect(collisions, `${arrowId} crosses nodes`).toEqual([]);
+	}
 });

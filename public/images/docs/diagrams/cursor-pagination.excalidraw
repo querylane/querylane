@@ -576,36 +576,28 @@
           0
         ],
         [
-          -185,
-          0
-        ],
-        [
-          -185,
-          -340
-        ],
-        [
-          -45,
-          -340
+          0,
+          -287
         ]
       ],
       "endArrowhead": "arrow",
       "createdAt": "2026-08-05T10:41:44.529Z",
-      "updatedAt": "2026-08-05T10:41:44.529Z",
-      "version": 1
+      "updatedAt": "2026-08-05T22:46:01.400Z",
+      "version": 2
     },
     {
       "id": "keep-loop-label",
       "type": "text",
-      "x": 70,
-      "y": 680,
+      "x": 160,
+      "y": 455,
       "strokeColor": "#7048e8",
       "roughness": 1,
       "text": "Repeat with same plan",
       "fontSize": 17,
       "fontFamily": 5,
       "createdAt": "2026-08-05T10:41:44.529Z",
-      "updatedAt": "2026-08-05T10:41:44.529Z",
-      "version": 1
+      "updatedAt": "2026-08-05T22:46:33.570Z",
+      "version": 2
     },
     {
       "id": "restart-loop",
@@ -625,18 +617,30 @@
           0
         ],
         [
-          -500,
+          -60,
           0
         ],
         [
-          -500,
+          -60,
+          280
+        ],
+        [
+          -580,
+          280
+        ],
+        [
+          -580,
+          -190
+        ],
+        [
+          -558,
           -190
         ]
       ],
       "endArrowhead": "arrow",
       "createdAt": "2026-08-05T10:41:44.529Z",
-      "updatedAt": "2026-08-05T10:41:44.529Z",
-      "version": 1
+      "updatedAt": "2026-08-05T22:46:01.404Z",
+      "version": 2
     }
   ],
   "appState": {
