@@ -253,25 +253,44 @@ func (RowFilterGroup_Logic) EnumDescriptor() ([]byte, []int) {
 	return file_querylane_console_v1alpha1_table_data_proto_rawDescGZIP(), []int{1, 0}
 }
 
+// Identifies a supported PostgreSQL comparison. This request-only enum may
+// gain values as Data Explorer adds operators.
+// (-- aip.dev/not-precedent: Existing values use the OPERATOR_ prefix.
+//
+//	New values preserve that prefix for source consistency. Ordinarily,
+//	nested enum values would not repeat the enum name. --)
 type RowPredicate_Operator int32
 
 const (
-	RowPredicate_OPERATOR_UNSPECIFIED           RowPredicate_Operator = 0
-	RowPredicate_OPERATOR_EQUAL                 RowPredicate_Operator = 1
-	RowPredicate_OPERATOR_NOT_EQUAL             RowPredicate_Operator = 2
-	RowPredicate_OPERATOR_GREATER_THAN          RowPredicate_Operator = 3
+	// Does not specify an operator and is rejected in requests.
+	RowPredicate_OPERATOR_UNSPECIFIED RowPredicate_Operator = 0
+	// Matches values equal to the predicate value.
+	RowPredicate_OPERATOR_EQUAL RowPredicate_Operator = 1
+	// Matches values not equal to the predicate value.
+	RowPredicate_OPERATOR_NOT_EQUAL RowPredicate_Operator = 2
+	// Matches values greater than the predicate value.
+	RowPredicate_OPERATOR_GREATER_THAN RowPredicate_Operator = 3
+	// Matches values greater than or equal to the predicate value.
 	RowPredicate_OPERATOR_GREATER_THAN_OR_EQUAL RowPredicate_Operator = 4
-	RowPredicate_OPERATOR_LESS_THAN             RowPredicate_Operator = 5
-	RowPredicate_OPERATOR_LESS_THAN_OR_EQUAL    RowPredicate_Operator = 6
-	RowPredicate_OPERATOR_LIKE                  RowPredicate_Operator = 7
-	RowPredicate_OPERATOR_ILIKE                 RowPredicate_Operator = 8
-	RowPredicate_OPERATOR_IN                    RowPredicate_Operator = 9
-	RowPredicate_OPERATOR_NOT_IN                RowPredicate_Operator = 10
-	RowPredicate_OPERATOR_IS_NULL               RowPredicate_Operator = 11
-	RowPredicate_OPERATOR_IS_NOT_NULL           RowPredicate_Operator = 12
-	// Exactly two values.
+	// Matches values less than the predicate value.
+	RowPredicate_OPERATOR_LESS_THAN RowPredicate_Operator = 5
+	// Matches values less than or equal to the predicate value.
+	RowPredicate_OPERATOR_LESS_THAN_OR_EQUAL RowPredicate_Operator = 6
+	// Matches text using a case-sensitive SQL LIKE pattern.
+	RowPredicate_OPERATOR_LIKE RowPredicate_Operator = 7
+	// Matches text using a case-insensitive SQL ILIKE pattern.
+	RowPredicate_OPERATOR_ILIKE RowPredicate_Operator = 8
+	// Matches any value in the supplied value list.
+	RowPredicate_OPERATOR_IN RowPredicate_Operator = 9
+	// Matches values outside the supplied value list.
+	RowPredicate_OPERATOR_NOT_IN RowPredicate_Operator = 10
+	// Matches NULL values.
+	RowPredicate_OPERATOR_IS_NULL RowPredicate_Operator = 11
+	// Matches non-NULL values.
+	RowPredicate_OPERATOR_IS_NOT_NULL RowPredicate_Operator = 12
+	// Matches the inclusive range between exactly two values.
 	RowPredicate_OPERATOR_BETWEEN RowPredicate_Operator = 13
-	// jsonb @> operator. Operand must be a JSON value.
+	// Matches JSON values containing the supplied JSON value using jsonb @>.
 	RowPredicate_OPERATOR_JSON_CONTAINS RowPredicate_Operator = 14
 	// POSIX regular-expression match (~).
 	RowPredicate_OPERATOR_MATCH RowPredicate_Operator = 15
@@ -279,9 +298,11 @@ const (
 	RowPredicate_OPERATOR_IMATCH RowPredicate_Operator = 16
 	// NULL-safe inequality (IS DISTINCT FROM).
 	RowPredicate_OPERATOR_IS_DISTINCT RowPredicate_Operator = 17
-	// Boolean identity checks. These deliberately take no values.
-	RowPredicate_OPERATOR_IS_TRUE    RowPredicate_Operator = 18
-	RowPredicate_OPERATOR_IS_FALSE   RowPredicate_Operator = 19
+	// Matches the Boolean value TRUE and takes no values.
+	RowPredicate_OPERATOR_IS_TRUE RowPredicate_Operator = 18
+	// Matches the Boolean value FALSE and takes no values.
+	RowPredicate_OPERATOR_IS_FALSE RowPredicate_Operator = 19
+	// Matches the Boolean value UNKNOWN (NULL) and takes no values.
 	RowPredicate_OPERATOR_IS_UNKNOWN RowPredicate_Operator = 20
 )
 
@@ -523,6 +544,11 @@ func (RowCount_Status) EnumDescriptor() ([]byte, []int) {
 }
 
 // RowFilter is a tree of conditions. Empty = no WHERE clause.
+// (-- aip.dev/not-precedent: ReadRows operates on dynamic PostgreSQL schemas
+//
+//	in the data plane. A typed tree preserves literal types and quoted
+//	identifiers; ordinary resource List filters use the AIP-160 string
+//	grammar. --)
 //
 // Example: (a = 1 OR b IS NULL) AND created_at > '2025-01-01'
 type RowFilter struct {
@@ -661,6 +687,7 @@ func (x *RowFilterGroup) GetChildren() []*RowFilter {
 	return nil
 }
 
+// RowPredicate compares one catalog column with zero or more typed values.
 type RowPredicate struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. Bare column name as it appears in the catalog (NOT pre-quoted).
@@ -676,7 +703,8 @@ type RowPredicate struct {
 	//	everything else      -> exactly 1 value
 	Values []*TableValue `protobuf:"bytes,3,rep,name=values,proto3" json:"values,omitempty"`
 	// Optional. Negates the complete predicate while preserving PostgreSQL's
-	// three-valued NULL semantics (for example, NOT (status = 'done')).
+	// three-valued NULL semantics (for example, NOT (status = 'done')). False
+	// or omitted applies the predicate as written.
 	Negated       bool `protobuf:"varint,4,opt,name=negated,proto3" json:"negated,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2209,11 +2237,11 @@ const file_querylane_console_v1alpha1_table_data_proto_rawDesc = "" +
 	"\x05Logic\x12\x15\n" +
 	"\x11LOGIC_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tLOGIC_AND\x10\x01\x12\f\n" +
-	"\bLOGIC_OR\x10\x02\"\xff\x05\n" +
+	"\bLOGIC_OR\x10\x02\"\x82\x06\n" +
 	"\fRowPredicate\x12$\n" +
 	"\x06column\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18?R\x06column\x12\\\n" +
-	"\boperator\x18\x02 \x01(\x0e21.querylane.console.v1alpha1.RowPredicate.OperatorB\r\xe0A\x02\xbaH\a\x82\x01\x04\x10\x01 \x00R\boperator\x12I\n" +
-	"\x06values\x18\x03 \x03(\v2&.querylane.console.v1alpha1.TableValueB\t\xbaH\x06\x92\x01\x03\x10\x80\bR\x06values\x12\x1d\n" +
+	"\boperator\x18\x02 \x01(\x0e21.querylane.console.v1alpha1.RowPredicate.OperatorB\r\xe0A\x02\xbaH\a\x82\x01\x04\x10\x01 \x00R\boperator\x12L\n" +
+	"\x06values\x18\x03 \x03(\v2&.querylane.console.v1alpha1.TableValueB\f\xe0A\x01\xbaH\x06\x92\x01\x03\x10\x80\bR\x06values\x12\x1d\n" +
 	"\anegated\x18\x04 \x01(\bB\x03\xe0A\x01R\anegated\"\x80\x04\n" +
 	"\bOperator\x12\x18\n" +
 	"\x14OPERATOR_UNSPECIFIED\x10\x00\x12\x12\n" +

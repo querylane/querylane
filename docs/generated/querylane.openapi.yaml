@@ -6487,10 +6487,7 @@ components:
             - predicate
       title: RowFilter
       additionalProperties: false
-      description: |-
-        RowFilter is a tree of conditions. Empty = no WHERE clause.
-
-         Example: (a = 1 OR b IS NULL) AND created_at > '2025-01-01'
+      description: "RowFilter is a tree of conditions. Empty = no WHERE clause.\n \n\n Example: (a = 1 OR b IS NULL) AND created_at > '2025-01-01'"
     querylane.console.v1alpha1.RowFilterGroup:
       type: object
       properties:
@@ -6609,9 +6606,11 @@ components:
           title: negated
           description: |-
             Optional. Negates the complete predicate while preserving PostgreSQL's
-             three-valued NULL semantics (for example, NOT (status = 'done')).
+             three-valued NULL semantics (for example, NOT (status = 'done')). False
+             or omitted applies the predicate as written.
       title: RowPredicate
       additionalProperties: false
+      description: RowPredicate compares one catalog column with zero or more typed values.
     querylane.console.v1alpha1.RowPredicate.Operator:
       type: string
       title: Operator
@@ -6637,6 +6636,9 @@ components:
         - OPERATOR_IS_TRUE
         - OPERATOR_IS_FALSE
         - OPERATOR_IS_UNKNOWN
+      description: |-
+        Identifies a supported PostgreSQL comparison. This request-only enum may
+         gain values as Data Explorer adds operators.
     querylane.console.v1alpha1.RunnerExecution:
       type: object
       properties:

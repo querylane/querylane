@@ -84,6 +84,10 @@ enum PaginationStrategy {
 }
 
 // RowFilter is a tree of conditions. Empty = no WHERE clause.
+// (-- aip.dev/not-precedent: ReadRows operates on dynamic PostgreSQL schemas
+//     in the data plane. A typed tree preserves literal types and quoted
+//     identifiers; ordinary resource List filters use the AIP-160 string
+//     grammar. --)
 //
 // Example: (a = 1 OR b IS NULL) AND created_at > '2025-01-01'
 message RowFilter {
@@ -116,24 +120,43 @@ message RowFilterGroup {
   ];
 }
 
+// RowPredicate compares one catalog column with zero or more typed values.
 message RowPredicate {
+  // Identifies a supported PostgreSQL comparison. This request-only enum may
+  // gain values as Data Explorer adds operators.
+  // (-- aip.dev/not-precedent: Existing values use the OPERATOR_ prefix.
+  //     New values preserve that prefix for source consistency. Ordinarily,
+  //     nested enum values would not repeat the enum name. --)
   enum Operator {
+    // Does not specify an operator and is rejected in requests.
     OPERATOR_UNSPECIFIED = 0;
+    // Matches values equal to the predicate value.
     OPERATOR_EQUAL = 1;
+    // Matches values not equal to the predicate value.
     OPERATOR_NOT_EQUAL = 2;
+    // Matches values greater than the predicate value.
     OPERATOR_GREATER_THAN = 3;
+    // Matches values greater than or equal to the predicate value.
     OPERATOR_GREATER_THAN_OR_EQUAL = 4;
+    // Matches values less than the predicate value.
     OPERATOR_LESS_THAN = 5;
+    // Matches values less than or equal to the predicate value.
     OPERATOR_LESS_THAN_OR_EQUAL = 6;
+    // Matches text using a case-sensitive SQL LIKE pattern.
     OPERATOR_LIKE = 7;
+    // Matches text using a case-insensitive SQL ILIKE pattern.
     OPERATOR_ILIKE = 8;
+    // Matches any value in the supplied value list.
     OPERATOR_IN = 9;
+    // Matches values outside the supplied value list.
     OPERATOR_NOT_IN = 10;
+    // Matches NULL values.
     OPERATOR_IS_NULL = 11;
+    // Matches non-NULL values.
     OPERATOR_IS_NOT_NULL = 12;
-    // Exactly two values.
+    // Matches the inclusive range between exactly two values.
     OPERATOR_BETWEEN = 13;
-    // jsonb @> operator. Operand must be a JSON value.
+    // Matches JSON values containing the supplied JSON value using jsonb @>.
     OPERATOR_JSON_CONTAINS = 14;
     // POSIX regular-expression match (~).
     OPERATOR_MATCH = 15;
@@ -141,9 +164,11 @@ message RowPredicate {
     OPERATOR_IMATCH = 16;
     // NULL-safe inequality (IS DISTINCT FROM).
     OPERATOR_IS_DISTINCT = 17;
-    // Boolean identity checks. These deliberately take no values.
+    // Matches the Boolean value TRUE and takes no values.
     OPERATOR_IS_TRUE = 18;
+    // Matches the Boolean value FALSE and takes no values.
     OPERATOR_IS_FALSE = 19;
+    // Matches the Boolean value UNKNOWN (NULL) and takes no values.
     OPERATOR_IS_UNKNOWN = 20;
   }
 
@@ -169,10 +194,14 @@ message RowPredicate {
   //   IN/NOT_IN            -> 1..1024 values
   //   BETWEEN              -> exactly 2 values
   //   everything else      -> exactly 1 value
-  repeated TableValue values = 3 [(buf.validate.field).repeated.max_items = 1024];
+  repeated TableValue values = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).repeated.max_items = 1024
+  ];
 
   // Optional. Negates the complete predicate while preserving PostgreSQL's
-  // three-valued NULL semantics (for example, NOT (status = 'done')).
+  // three-valued NULL semantics (for example, NOT (status = 'done')). False
+  // or omitted applies the predicate as written.
   bool negated = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
