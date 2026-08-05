@@ -32,10 +32,16 @@ const FILTER_OPERATORS = [
   "lte",
   "like",
   "ilike",
+  "match",
+  "imatch",
   "in",
   "notIn",
   "isNull",
   "isNotNull",
+  "isTrue",
+  "isFalse",
+  "isUnknown",
+  "isDistinct",
   "between",
   "jsonContains",
 ] as const;
@@ -57,6 +63,7 @@ interface TableFilterRule {
   id: string;
   /** Joins this rule to the preceding rule. The first rule ignores it. */
   logic?: TableFilterLogic | undefined;
+  negated?: boolean | undefined;
   operator: FilterOperator;
   value: string;
   value2?: string | undefined;
@@ -121,12 +128,33 @@ const FILTER_OPERATOR_META: Record<FilterOperator, FilterOperatorMeta> = {
     proto: RowPredicate_Operator.ILIKE,
     valueCount: 1,
   },
+  imatch: {
+    description: "Matches a POSIX regular expression; ignores letter case.",
+    displayLabel: "Matches regular expression, case-insensitive",
+    label: "~*",
+    proto: RowPredicate_Operator.IMATCH,
+    valueCount: 1,
+  },
   in: {
     description: "Matches any value in a comma-separated list.",
     displayLabel: "Is one of",
     label: "in",
     proto: RowPredicate_Operator.IN,
     valueCount: "list",
+  },
+  isDistinct: {
+    description: "Differs from this value, treating NULL as a value.",
+    displayLabel: "Is distinct from",
+    label: "is distinct from",
+    proto: RowPredicate_Operator.IS_DISTINCT,
+    valueCount: 1,
+  },
+  isFalse: {
+    description: "Keeps rows where the boolean value is false.",
+    displayLabel: "Is false",
+    label: "is false",
+    proto: RowPredicate_Operator.IS_FALSE,
+    valueCount: 0,
   },
   isNotNull: {
     description: "Keeps rows where the column has a value.",
@@ -142,6 +170,20 @@ const FILTER_OPERATOR_META: Record<FilterOperator, FilterOperatorMeta> = {
     proto: RowPredicate_Operator.IS_NULL,
     valueCount: 0,
   },
+  isTrue: {
+    description: "Keeps rows where the boolean value is true.",
+    displayLabel: "Is true",
+    label: "is true",
+    proto: RowPredicate_Operator.IS_TRUE,
+    valueCount: 0,
+  },
+  isUnknown: {
+    description: "Keeps rows where the boolean value is NULL.",
+    displayLabel: "Is unknown",
+    label: "is unknown",
+    proto: RowPredicate_Operator.IS_UNKNOWN,
+    valueCount: 0,
+  },
   jsonContains: {
     description: "Matches rows whose JSON contains this object or value.",
     displayLabel: "Contains JSON",
@@ -154,6 +196,13 @@ const FILTER_OPERATOR_META: Record<FilterOperator, FilterOperatorMeta> = {
     displayLabel: "Contains text",
     label: "LIKE",
     proto: RowPredicate_Operator.LIKE,
+    valueCount: 1,
+  },
+  match: {
+    description: "Matches a POSIX regular expression.",
+    displayLabel: "Matches regular expression",
+    label: "~",
+    proto: RowPredicate_Operator.MATCH,
     valueCount: 1,
   },
   lt: {
@@ -249,6 +298,7 @@ const compactRuleSearchSchema = z.object({
   c: z.string().min(1),
   i: z.string().min(1),
   l: z.enum(FILTER_LOGICS).optional(),
+  n: z.boolean().optional(),
   o: z.enum(FILTER_OPERATORS),
   v: z.string().default(""),
   v2: z.string().optional(),
@@ -288,6 +338,7 @@ function parseTableFilterSearchResult(
           column: rule.c,
           id: rule.i,
           ...(rule.l === undefined ? {} : { logic: rule.l }),
+          ...(rule.n === undefined ? {} : { negated: rule.n }),
           operator: rule.o,
           value: rule.v,
           value2: rule.v2,
@@ -319,6 +370,7 @@ function serializeTableFilterSearch(
       c: rule.column,
       i: rule.id,
       ...(rule.logic === undefined ? {} : { l: rule.logic }),
+      ...(rule.negated ? { n: true } : {}),
       o: rule.operator,
       v: rule.value,
       ...(rule.value2 === undefined ? {} : { v2: rule.value2 }),
@@ -428,19 +480,27 @@ function getInvalidFilterRules(
 
 function buildFilterLabel(rule: TableFilterRule): string {
   const operator = FILTER_OPERATOR_META[rule.operator];
+  let label: string;
   if (operator.valueCount === 0) {
-    return `${rule.column} ${operator.label}`;
+    label = `${rule.column} ${operator.label}`;
+  } else if (operator.valueCount === 2) {
+    label = `${rule.column} ${operator.label} ${rule.value} and ${rule.value2 ?? ""}`;
+  } else {
+    label = `${rule.column} ${operator.label} ${rule.value}`;
   }
-  if (operator.valueCount === 2) {
-    return `${rule.column} ${operator.label} ${rule.value} and ${rule.value2 ?? ""}`;
-  }
-  return `${rule.column} ${operator.label} ${rule.value}`;
+  return rule.negated ? `not (${label})` : label;
 }
 
 // Text-like columns (including enums and other types Postgres can compare as
 // text) keep every operator except JSON containment.
+const BOOLEAN_IDENTITY_OPERATORS = new Set<FilterOperator>([
+  "isTrue",
+  "isFalse",
+  "isUnknown",
+]);
 const TEXT_OPERATORS: readonly FilterOperator[] = FILTER_OPERATORS.filter(
-  (operator) => operator !== "jsonContains"
+  (operator) =>
+    operator !== "jsonContains" && !BOOLEAN_IDENTITY_OPERATORS.has(operator)
 );
 // Numbers and temporal types compare and range, but LIKE would require a text
 // cast the read path does not perform.
@@ -455,6 +515,7 @@ const ORDERABLE_OPERATORS: readonly FilterOperator[] = [
   "notIn",
   "isNull",
   "isNotNull",
+  "isDistinct",
   "between",
 ];
 const BOOLEAN_OPERATORS: readonly FilterOperator[] = [
@@ -464,6 +525,10 @@ const BOOLEAN_OPERATORS: readonly FilterOperator[] = [
   "notIn",
   "isNull",
   "isNotNull",
+  "isTrue",
+  "isFalse",
+  "isUnknown",
+  "isDistinct",
 ];
 // JSON list operators are excluded because list values split on commas, which
 // JSON literals routinely contain.
@@ -473,6 +538,7 @@ const JSON_OPERATORS: readonly FilterOperator[] = [
   "jsonContains",
   "isNull",
   "isNotNull",
+  "isDistinct",
 ];
 
 // Set views of the per-type operator lists above (the arrays stay the source
@@ -625,6 +691,7 @@ function buildPredicate(
   }
   return create(RowPredicateSchema, {
     column: rule.column,
+    negated: rule.negated ?? false,
     operator: meta.proto,
     values,
   });

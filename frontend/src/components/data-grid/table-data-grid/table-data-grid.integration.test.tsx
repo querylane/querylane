@@ -1516,6 +1516,51 @@ describe("TableDataGrid column layout", () => {
     ).toBe("true");
   });
 
+  it("opts into fetching visible columns only", async () => {
+    const user = userEvent.setup();
+    seedRowsQueryWithRawClipboardValues();
+    tableApi.useListTableColumnsQuery.mockReturnValue({
+      data: create(ListTableColumnsResponseSchema, {
+        columns: [
+          create(ColumnSchema, {
+            columnName: "measurement",
+            dataType: DataType.FLOAT,
+            rawType: "double precision",
+          }),
+          create(ColumnSchema, {
+            columnName: "observed_at",
+            dataType: DataType.TIMESTAMP,
+            rawType: "timestamptz",
+          }),
+        ],
+      }),
+      error: null,
+      isError: false,
+    });
+
+    render(
+      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
+    );
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("checkbox", { name: "measurement" }));
+    await user.click(
+      screen.getByRole("switch", { name: "Fetch visible columns only" })
+    );
+
+    await waitFor(() => {
+      expect(
+        tableDataApi.useReadRowsQuery.mock.calls.at(-1)?.[0]
+      ).toMatchObject({
+        selectedColumns: ["observed_at"],
+      });
+    });
+    expect(
+      useTableColumnLayoutSettingsStore.getState().layouts[
+        "instances/prod/databases/app/schemas/public/tables/measurements"
+      ]
+    ).toMatchObject({ fetchVisibleColumns: true });
+  });
+
   it("persists layout for one table without leaking it to another", async () => {
     const user = userEvent.setup();
     const measurements =

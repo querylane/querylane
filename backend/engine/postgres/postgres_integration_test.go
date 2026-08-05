@@ -1552,6 +1552,116 @@ func (s *PostgresEngineIntegrationTestSuite) TestReadRowsKeysetWithPKExcludedFro
 	}
 }
 
+func (s *PostgresEngineIntegrationTestSuite) TestReadRowsAdvancedFilters() {
+	ctx := context.Background()
+
+	testDB := s.getTestDBConnection()
+	defer testDB.Close()
+
+	_, err := testDB.ExecContext(ctx, `
+		CREATE TYPE advanced_filter_status AS ENUM ('done', 'pending');
+		CREATE TABLE advanced_filter_rows (
+			id integer PRIMARY KEY,
+			email text NOT NULL,
+			status advanced_filter_status,
+			active boolean
+		)
+	`)
+	s.Require().NoError(err)
+
+	_, err = testDB.ExecContext(ctx, `
+		INSERT INTO advanced_filter_rows (id, email, status, active)
+		VALUES
+			(1, 'Support@Acme.com', 'done', true),
+			(2, 'sales@acme.com', NULL, false),
+			(3, 'bot@example.com', 'pending', NULL)
+	`)
+	s.Require().NoError(err)
+
+	resourceName := "instances/test/databases/" + s.testDBName + "/schemas/public/tables/advanced_filter_rows"
+	stringValue := func(value string) *api.TableValue {
+		return &api.TableValue{Kind: &api.TableValue_StringValue{StringValue: value}}
+	}
+	predicate := func(column string, operator api.RowPredicate_Operator, values ...*api.TableValue) *api.RowFilter {
+		return &api.RowFilter{Node: &api.RowFilter_Predicate{Predicate: &api.RowPredicate{
+			Column: column, Operator: operator, Values: values,
+		}}}
+	}
+	tests := []struct {
+		name    string
+		filter  *api.RowFilter
+		wantIDs []int64
+	}{
+		{
+			name:    "regular expression",
+			filter:  predicate("email", api.RowPredicate_OPERATOR_MATCH, stringValue(`^Support@`)),
+			wantIDs: []int64{1},
+		},
+		{
+			name:    "case insensitive regular expression",
+			filter:  predicate("email", api.RowPredicate_OPERATOR_IMATCH, stringValue(`@ACME\.COM$`)),
+			wantIDs: []int64{1, 2},
+		},
+		{
+			name:    "regular expression on enum text",
+			filter:  predicate("status", api.RowPredicate_OPERATOR_MATCH, stringValue(`^pend`)),
+			wantIDs: []int64{3},
+		},
+		{
+			name:    "null safe inequality",
+			filter:  predicate("status", api.RowPredicate_OPERATOR_IS_DISTINCT, stringValue("done")),
+			wantIDs: []int64{2, 3},
+		},
+		{
+			name:    "boolean true identity",
+			filter:  predicate("active", api.RowPredicate_OPERATOR_IS_TRUE),
+			wantIDs: []int64{1},
+		},
+		{
+			name:    "boolean false identity",
+			filter:  predicate("active", api.RowPredicate_OPERATOR_IS_FALSE),
+			wantIDs: []int64{2},
+		},
+		{
+			name:    "boolean unknown identity",
+			filter:  predicate("active", api.RowPredicate_OPERATOR_IS_UNKNOWN),
+			wantIDs: []int64{3},
+		},
+		{
+			name: "generic negation",
+			filter: &api.RowFilter{Node: &api.RowFilter_Predicate{Predicate: &api.RowPredicate{
+				Column: "email", Operator: api.RowPredicate_OPERATOR_IMATCH, Negated: true,
+				Values: []*api.TableValue{stringValue(`@acme\.com$`)},
+			}}},
+			wantIDs: []int64{3},
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			page, readErr := s.eng.ReadRows(ctx, testDB, engine.ReadRowsParams{
+				ResourceName:    resourceName,
+				SchemaName:      "public",
+				TableName:       "advanced_filter_rows",
+				PageSize:        10,
+				SelectedColumns: []string{"id"},
+				Filter:          tt.filter,
+				OrderBy: []*api.RowOrder{{
+					Column: "id", Direction: api.RowOrder_DIRECTION_ASC,
+				}},
+			})
+			s.Require().NoError(readErr)
+
+			gotIDs := make([]int64, 0, len(page.Rows))
+			for _, row := range page.Rows {
+				gotIDs = append(gotIDs, row.GetValues()[0].GetValue().GetInt64Value())
+			}
+
+			s.Equal(tt.wantIDs, gotIDs)
+		})
+	}
+}
+
 func (s *PostgresEngineIntegrationTestSuite) TestReadRowsRowCountModes() {
 	ctx := context.Background()
 

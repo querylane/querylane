@@ -116,6 +116,25 @@ describe("useTableDataController", () => {
     ]);
   });
 
+  test("projects selected columns and binds them to the pagination shape", () => {
+    const controller = useTableDataController({
+      name: "table-a",
+      onPageSizeChange: vi.fn(),
+      onSortColumnsChange: vi.fn(),
+      pageSize: 25,
+      selectedColumns: ["id", "email"],
+      sortColumns: [],
+    });
+
+    expect(controller.request.selectedColumns).toEqual(["id", "email"]);
+    controller.setPageSize(50);
+    expect(setStateMocks[0]).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryShapeKey: expect.stringContaining('["id","email"]'),
+      })
+    );
+  });
+
   test("includes filters in requests and resets stale page tokens for filter shape changes", () => {
     const filter = buildTestFilter("email", "alice@example.com");
     const nextFilter = buildTestFilter("email", "bob@example.com");

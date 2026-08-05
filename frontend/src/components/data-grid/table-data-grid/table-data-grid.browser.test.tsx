@@ -140,11 +140,13 @@ function column(name: string, rawType: string, dataType: DataType) {
 function columnLayoutProps(columns: TableResultColumn[]) {
   return {
     columnOrder: columns.map((resultColumn) => resultColumn.columnName),
+    fetchVisibleColumns: false,
     hiddenColumnKeys: new Set<string>(),
     isColumnLayoutCustomized: false,
     onColumnLayoutReset: vi.fn(),
     onColumnOrderChange: vi.fn(),
     onColumnVisibilityChange: vi.fn(),
+    onFetchVisibleColumnsChange: vi.fn(),
   };
 }
 

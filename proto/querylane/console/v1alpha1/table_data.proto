@@ -135,6 +135,16 @@ message RowPredicate {
     OPERATOR_BETWEEN = 13;
     // jsonb @> operator. Operand must be a JSON value.
     OPERATOR_JSON_CONTAINS = 14;
+    // POSIX regular-expression match (~).
+    OPERATOR_MATCH = 15;
+    // Case-insensitive POSIX regular-expression match (~*).
+    OPERATOR_IMATCH = 16;
+    // NULL-safe inequality (IS DISTINCT FROM).
+    OPERATOR_IS_DISTINCT = 17;
+    // Boolean identity checks. These deliberately take no values.
+    OPERATOR_IS_TRUE = 18;
+    OPERATOR_IS_FALSE = 19;
+    OPERATOR_IS_UNKNOWN = 20;
   }
 
   // Required. Bare column name as it appears in the catalog (NOT pre-quoted).
@@ -155,11 +165,15 @@ message RowPredicate {
 
   // Predicate literals. Uses TableValue (NOT TableCell) — preview metadata
   // makes no sense in a filter.
-  //   IS_NULL/IS_NOT_NULL  -> 0 values
+  //   IS_NULL/IS_NOT_NULL/IS_TRUE/IS_FALSE/IS_UNKNOWN -> 0 values
   //   IN/NOT_IN            -> 1..1024 values
   //   BETWEEN              -> exactly 2 values
   //   everything else      -> exactly 1 value
   repeated TableValue values = 3 [(buf.validate.field).repeated.max_items = 1024];
+
+  // Optional. Negates the complete predicate while preserving PostgreSQL's
+  // three-valued NULL semantics (for example, NOT (status = 'done')).
+  bool negated = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // Structured ordering — avoids the AIP-132 string parser, which is unsafe

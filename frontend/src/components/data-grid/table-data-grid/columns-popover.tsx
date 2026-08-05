@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
   TooltipContent,
@@ -17,8 +18,10 @@ import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/ta
 interface ColumnsPopoverProps {
   columnOrder: readonly string[];
   columns: TableResultColumn[];
+  fetchVisibleColumns: boolean;
   hiddenColumnKeys: ReadonlySet<string>;
   isCustomized: boolean;
+  onFetchVisibleColumnsChange: (enabled: boolean) => void;
   onOrderChange: (columnOrder: string[]) => void;
   onReset: () => void;
   onVisibilityChange: (columnKey: string, visible: boolean) => void;
@@ -28,13 +31,16 @@ interface ColumnsPopoverProps {
 function ColumnsPopover({
   columnOrder,
   columns,
+  fetchVisibleColumns,
   hiddenColumnKeys,
   isCustomized,
+  onFetchVisibleColumnsChange,
   onOrderChange,
   onReset,
   onVisibilityChange,
   popoverBoundary,
 }: ColumnsPopoverProps) {
+  const fetchVisibleDescriptionId = useId();
   const lastVisibleReasonId = useId();
   const visibleCount = columns.length - hiddenColumnKeys.size;
   const columnByName = new Map(
@@ -97,6 +103,25 @@ function ColumnsPopover({
           >
             Reset
           </Button>
+        </div>
+        <div className="flex items-start justify-between gap-3 rounded-md border bg-muted/30 p-2.5">
+          <div className="min-w-0">
+            <p className="font-medium text-xs">Fetch visible columns only</p>
+            <p
+              className="mt-0.5 text-muted-foreground text-xs"
+              id={fetchVisibleDescriptionId}
+            >
+              Reduces row payloads. Hidden columns remain available to filters
+              and sorting.
+            </p>
+          </div>
+          <Switch
+            aria-describedby={fetchVisibleDescriptionId}
+            aria-label="Fetch visible columns only"
+            checked={fetchVisibleColumns}
+            onCheckedChange={onFetchVisibleColumnsChange}
+            size="sm"
+          />
         </div>
         <ul className="max-h-80 space-y-1 overflow-y-auto pr-1">
           {orderedColumns.map((column, index) => {

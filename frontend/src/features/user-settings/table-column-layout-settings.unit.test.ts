@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   reorderVisibleTableColumns,
+  resolveSelectedColumns,
   resolveTableColumnLayout,
   useTableColumnLayoutSettingsStore,
 } from "@/features/user-settings/table-column-layout-settings";
@@ -44,6 +45,22 @@ describe("table column layout settings", () => {
         targetColumnKey: "id",
       })
     ).toEqual(["created_at", "internal_note", "id", "email"]);
+  });
+
+  it("projects visible columns only after explicit opt in", () => {
+    expect(
+      resolveSelectedColumns({
+        hiddenColumns: ["internal_note"],
+        order: ["id", "internal_note", "email"],
+      })
+    ).toEqual([]);
+    expect(
+      resolveSelectedColumns({
+        fetchVisibleColumns: true,
+        hiddenColumns: ["internal_note"],
+        order: ["id", "internal_note", "email"],
+      })
+    ).toEqual(["id", "email"]);
   });
 
   it("persists layouts independently by full table resource name", () => {

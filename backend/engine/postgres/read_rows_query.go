@@ -125,7 +125,7 @@ func buildFilterNode(args *argList, filter *api.RowFilter) (string, error) {
 
 	switch node := filter.GetNode().(type) {
 	case *api.RowFilter_Predicate:
-		return buildPredicate(args, node.Predicate), nil
+		return buildPredicate(args, node.Predicate)
 	case *api.RowFilter_Group:
 		group := node.Group
 
@@ -168,14 +168,22 @@ func buildFilterNode(args *argList, filter *api.RowFilter) (string, error) {
 	}
 }
 
-func buildPredicate(args *argList, pred *api.RowPredicate) string {
+func buildPredicate(args *argList, pred *api.RowPredicate) (string, error) {
 	col := quoteIdent(pred.GetColumn())
 
-	switch pred.GetOperator() { //nolint:exhaustive // remaining operators in default
+	var clause string
+
+	switch pred.GetOperator() {
 	case api.RowPredicate_OPERATOR_IS_NULL:
-		return col + " IS NULL"
+		clause = col + " IS NULL"
 	case api.RowPredicate_OPERATOR_IS_NOT_NULL:
-		return col + " IS NOT NULL"
+		clause = col + " IS NOT NULL"
+	case api.RowPredicate_OPERATOR_IS_TRUE:
+		clause = col + " IS TRUE"
+	case api.RowPredicate_OPERATOR_IS_FALSE:
+		clause = col + " IS FALSE"
+	case api.RowPredicate_OPERATOR_IS_UNKNOWN:
+		clause = col + " IS UNKNOWN"
 	case api.RowPredicate_OPERATOR_IN, api.RowPredicate_OPERATOR_NOT_IN:
 		placeholders := args.addAll(extractTableValues(pred.GetValues()))
 
@@ -184,40 +192,54 @@ func buildPredicate(args *argList, pred *api.RowPredicate) string {
 			op = "NOT IN"
 		}
 
-		return fmt.Sprintf("%s %s (%s)", col, op, strings.Join(placeholders, ", "))
+		clause = fmt.Sprintf("%s %s (%s)", col, op, strings.Join(placeholders, ", "))
 	case api.RowPredicate_OPERATOR_BETWEEN:
 		placeholders := args.addAll(extractTableValues(pred.GetValues()))
-		return fmt.Sprintf("%s BETWEEN %s AND %s", col, placeholders[0], placeholders[1])
+		clause = fmt.Sprintf("%s BETWEEN %s AND %s", col, placeholders[0], placeholders[1])
 	case api.RowPredicate_OPERATOR_JSON_CONTAINS:
 		placeholder := args.add(extractTableValues(pred.GetValues())[0])
-		return fmt.Sprintf("%s @> %s::jsonb", col, placeholder)
+		clause = fmt.Sprintf("%s @> %s::jsonb", col, placeholder)
+	case api.RowPredicate_OPERATOR_EQUAL,
+		api.RowPredicate_OPERATOR_NOT_EQUAL,
+		api.RowPredicate_OPERATOR_GREATER_THAN,
+		api.RowPredicate_OPERATOR_GREATER_THAN_OR_EQUAL,
+		api.RowPredicate_OPERATOR_LESS_THAN,
+		api.RowPredicate_OPERATOR_LESS_THAN_OR_EQUAL,
+		api.RowPredicate_OPERATOR_LIKE,
+		api.RowPredicate_OPERATOR_ILIKE,
+		api.RowPredicate_OPERATOR_MATCH,
+		api.RowPredicate_OPERATOR_IMATCH,
+		api.RowPredicate_OPERATOR_IS_DISTINCT:
+		operators := map[api.RowPredicate_Operator]string{
+			api.RowPredicate_OPERATOR_EQUAL:                 "=",
+			api.RowPredicate_OPERATOR_NOT_EQUAL:             "!=",
+			api.RowPredicate_OPERATOR_GREATER_THAN:          ">",
+			api.RowPredicate_OPERATOR_GREATER_THAN_OR_EQUAL: ">=",
+			api.RowPredicate_OPERATOR_LESS_THAN:             "<",
+			api.RowPredicate_OPERATOR_LESS_THAN_OR_EQUAL:    "<=",
+			api.RowPredicate_OPERATOR_LIKE:                  "LIKE",
+			api.RowPredicate_OPERATOR_ILIKE:                 "ILIKE",
+			api.RowPredicate_OPERATOR_MATCH:                 "~",
+			api.RowPredicate_OPERATOR_IMATCH:                "~*",
+			api.RowPredicate_OPERATOR_IS_DISTINCT:           "IS DISTINCT FROM",
+		}
+
+		columnExpression := col
+		if pred.GetOperator() == api.RowPredicate_OPERATOR_MATCH || pred.GetOperator() == api.RowPredicate_OPERATOR_IMATCH {
+			columnExpression += "::text"
+		}
+
+		placeholder := args.add(extractTableValues(pred.GetValues())[0])
+		clause = fmt.Sprintf("%s %s %s", columnExpression, operators[pred.GetOperator()], placeholder)
+	case api.RowPredicate_OPERATOR_UNSPECIFIED:
+		return "", fmt.Errorf("%w: row predicate operator is required", engine.ErrQueryInvalid)
 	default:
-		values := extractTableValues(pred.GetValues())
-		if len(values) == 0 {
-			values = []any{nil}
-		}
-
-		operator := "="
-
-		switch pred.GetOperator() { //nolint:exhaustive // fall back to "="
-		case api.RowPredicate_OPERATOR_NOT_EQUAL:
-			operator = "!="
-		case api.RowPredicate_OPERATOR_GREATER_THAN:
-			operator = ">"
-		case api.RowPredicate_OPERATOR_GREATER_THAN_OR_EQUAL:
-			operator = ">="
-		case api.RowPredicate_OPERATOR_LESS_THAN:
-			operator = "<"
-		case api.RowPredicate_OPERATOR_LESS_THAN_OR_EQUAL:
-			operator = "<="
-		case api.RowPredicate_OPERATOR_LIKE:
-			operator = "LIKE"
-		case api.RowPredicate_OPERATOR_ILIKE:
-			operator = "ILIKE"
-		}
-
-		placeholder := args.add(values[0])
-
-		return fmt.Sprintf("%s %s %s", col, operator, placeholder)
+		return "", fmt.Errorf("%w: unsupported row predicate operator %s", engine.ErrQueryInvalid, pred.GetOperator())
 	}
+
+	if pred.GetNegated() {
+		return "NOT (" + clause + ")", nil
+	}
+
+	return clause, nil
 }

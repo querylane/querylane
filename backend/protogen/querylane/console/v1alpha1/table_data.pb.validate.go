@@ -420,6 +420,8 @@ func (m *RowPredicate) validate(all bool) error {
 
 	}
 
+	// no validation rules for Negated
+
 	if len(errors) > 0 {
 		return RowPredicateMultiError(errors)
 	}

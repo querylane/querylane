@@ -273,6 +273,16 @@ const (
 	RowPredicate_OPERATOR_BETWEEN RowPredicate_Operator = 13
 	// jsonb @> operator. Operand must be a JSON value.
 	RowPredicate_OPERATOR_JSON_CONTAINS RowPredicate_Operator = 14
+	// POSIX regular-expression match (~).
+	RowPredicate_OPERATOR_MATCH RowPredicate_Operator = 15
+	// Case-insensitive POSIX regular-expression match (~*).
+	RowPredicate_OPERATOR_IMATCH RowPredicate_Operator = 16
+	// NULL-safe inequality (IS DISTINCT FROM).
+	RowPredicate_OPERATOR_IS_DISTINCT RowPredicate_Operator = 17
+	// Boolean identity checks. These deliberately take no values.
+	RowPredicate_OPERATOR_IS_TRUE    RowPredicate_Operator = 18
+	RowPredicate_OPERATOR_IS_FALSE   RowPredicate_Operator = 19
+	RowPredicate_OPERATOR_IS_UNKNOWN RowPredicate_Operator = 20
 )
 
 // Enum value maps for RowPredicate_Operator.
@@ -293,6 +303,12 @@ var (
 		12: "OPERATOR_IS_NOT_NULL",
 		13: "OPERATOR_BETWEEN",
 		14: "OPERATOR_JSON_CONTAINS",
+		15: "OPERATOR_MATCH",
+		16: "OPERATOR_IMATCH",
+		17: "OPERATOR_IS_DISTINCT",
+		18: "OPERATOR_IS_TRUE",
+		19: "OPERATOR_IS_FALSE",
+		20: "OPERATOR_IS_UNKNOWN",
 	}
 	RowPredicate_Operator_value = map[string]int32{
 		"OPERATOR_UNSPECIFIED":           0,
@@ -310,6 +326,12 @@ var (
 		"OPERATOR_IS_NOT_NULL":           12,
 		"OPERATOR_BETWEEN":               13,
 		"OPERATOR_JSON_CONTAINS":         14,
+		"OPERATOR_MATCH":                 15,
+		"OPERATOR_IMATCH":                16,
+		"OPERATOR_IS_DISTINCT":           17,
+		"OPERATOR_IS_TRUE":               18,
+		"OPERATOR_IS_FALSE":              19,
+		"OPERATOR_IS_UNKNOWN":            20,
 	}
 )
 
@@ -648,11 +670,14 @@ type RowPredicate struct {
 	// Predicate literals. Uses TableValue (NOT TableCell) — preview metadata
 	// makes no sense in a filter.
 	//
-	//	IS_NULL/IS_NOT_NULL  -> 0 values
+	//	IS_NULL/IS_NOT_NULL/IS_TRUE/IS_FALSE/IS_UNKNOWN -> 0 values
 	//	IN/NOT_IN            -> 1..1024 values
 	//	BETWEEN              -> exactly 2 values
 	//	everything else      -> exactly 1 value
-	Values        []*TableValue `protobuf:"bytes,3,rep,name=values,proto3" json:"values,omitempty"`
+	Values []*TableValue `protobuf:"bytes,3,rep,name=values,proto3" json:"values,omitempty"`
+	// Optional. Negates the complete predicate while preserving PostgreSQL's
+	// three-valued NULL semantics (for example, NOT (status = 'done')).
+	Negated       bool `protobuf:"varint,4,opt,name=negated,proto3" json:"negated,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -706,6 +731,13 @@ func (x *RowPredicate) GetValues() []*TableValue {
 		return x.Values
 	}
 	return nil
+}
+
+func (x *RowPredicate) GetNegated() bool {
+	if x != nil {
+		return x.Negated
+	}
+	return false
 }
 
 // Structured ordering — avoids the AIP-132 string parser, which is unsafe
@@ -2177,11 +2209,12 @@ const file_querylane_console_v1alpha1_table_data_proto_rawDesc = "" +
 	"\x05Logic\x12\x15\n" +
 	"\x11LOGIC_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tLOGIC_AND\x10\x01\x12\f\n" +
-	"\bLOGIC_OR\x10\x02\"\xd7\x04\n" +
+	"\bLOGIC_OR\x10\x02\"\xff\x05\n" +
 	"\fRowPredicate\x12$\n" +
 	"\x06column\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18?R\x06column\x12\\\n" +
 	"\boperator\x18\x02 \x01(\x0e21.querylane.console.v1alpha1.RowPredicate.OperatorB\r\xe0A\x02\xbaH\a\x82\x01\x04\x10\x01 \x00R\boperator\x12I\n" +
-	"\x06values\x18\x03 \x03(\v2&.querylane.console.v1alpha1.TableValueB\t\xbaH\x06\x92\x01\x03\x10\x80\bR\x06values\"\xf7\x02\n" +
+	"\x06values\x18\x03 \x03(\v2&.querylane.console.v1alpha1.TableValueB\t\xbaH\x06\x92\x01\x03\x10\x80\bR\x06values\x12\x1d\n" +
+	"\anegated\x18\x04 \x01(\bB\x03\xe0A\x01R\anegated\"\x80\x04\n" +
 	"\bOperator\x12\x18\n" +
 	"\x14OPERATOR_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eOPERATOR_EQUAL\x10\x01\x12\x16\n" +
@@ -2198,7 +2231,13 @@ const file_querylane_console_v1alpha1_table_data_proto_rawDesc = "" +
 	"\x10OPERATOR_IS_NULL\x10\v\x12\x18\n" +
 	"\x14OPERATOR_IS_NOT_NULL\x10\f\x12\x14\n" +
 	"\x10OPERATOR_BETWEEN\x10\r\x12\x1a\n" +
-	"\x16OPERATOR_JSON_CONTAINS\x10\x0e\"\xf0\x02\n" +
+	"\x16OPERATOR_JSON_CONTAINS\x10\x0e\x12\x12\n" +
+	"\x0eOPERATOR_MATCH\x10\x0f\x12\x13\n" +
+	"\x0fOPERATOR_IMATCH\x10\x10\x12\x18\n" +
+	"\x14OPERATOR_IS_DISTINCT\x10\x11\x12\x14\n" +
+	"\x10OPERATOR_IS_TRUE\x10\x12\x12\x15\n" +
+	"\x11OPERATOR_IS_FALSE\x10\x13\x12\x17\n" +
+	"\x13OPERATOR_IS_UNKNOWN\x10\x14\"\xf0\x02\n" +
 	"\bRowOrder\x12$\n" +
 	"\x06column\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18?R\x06column\x12L\n" +
 	"\tdirection\x18\x02 \x01(\x0e2..querylane.console.v1alpha1.RowOrder.DirectionR\tdirection\x12M\n" +

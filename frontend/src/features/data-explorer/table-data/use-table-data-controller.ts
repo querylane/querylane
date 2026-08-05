@@ -22,6 +22,7 @@ interface UseTableDataControllerArgs {
   onPageSizeChange: (next: number) => void;
   onSortColumnsChange: (next: SortColumn[]) => void;
   pageSize: number;
+  selectedColumns?: readonly string[] | undefined;
   sortColumns: SortColumn[];
 }
 
@@ -58,6 +59,7 @@ function useTableDataController({
   onPageSizeChange,
   onSortColumnsChange,
   pageSize,
+  selectedColumns = [],
   sortColumns,
 }: UseTableDataControllerArgs): TableDataController {
   const queryShapeKey = buildQueryShapeKey({
@@ -65,6 +67,7 @@ function useTableDataController({
     sortColumns,
     filter,
     pageSize,
+    selectedColumns,
   });
   const [pageTokenState, setPageTokenState] = useState<PageTokenState>(() =>
     resetPageTokenState(queryShapeKey)
@@ -85,6 +88,7 @@ function useTableDataController({
     pageToken:
       activePageTokenState.tokens[activePageTokenState.currentPageIndex] ?? "",
     rowCountMode: RowCountMode.ESTIMATE,
+    selectedColumns: [...selectedColumns],
   });
 
   function setSortColumns(next: SortColumn[]) {
@@ -92,7 +96,13 @@ function useTableDataController({
     onSortColumnsChange(clamped);
     setPageTokenState(
       resetPageTokenState(
-        buildQueryShapeKey({ name, sortColumns: clamped, filter, pageSize })
+        buildQueryShapeKey({
+          name,
+          sortColumns: clamped,
+          filter,
+          pageSize,
+          selectedColumns,
+        })
       )
     );
   }
@@ -101,7 +111,13 @@ function useTableDataController({
     onPageSizeChange(next);
     setPageTokenState(
       resetPageTokenState(
-        buildQueryShapeKey({ name, sortColumns, filter, pageSize: next })
+        buildQueryShapeKey({
+          name,
+          sortColumns,
+          filter,
+          pageSize: next,
+          selectedColumns,
+        })
       )
     );
   }
@@ -158,17 +174,23 @@ function buildQueryShapeKey({
   sortColumns,
   filter,
   pageSize,
+  selectedColumns,
 }: {
   name: string;
   sortColumns: readonly SortColumn[];
   filter: RowFilter | undefined;
   pageSize: number;
+  selectedColumns: readonly string[];
 }) {
   const sortKey = sortColumns
     .map((sort) => `${sort.columnKey}:${sort.direction}`)
     .join(",");
   const filterKey = filter ? toJsonString(RowFilterSchema, filter) : "";
-  return `${name}\u0000${sortKey}\u0000${filterKey}\u0000${pageSize}`;
+  const projectionKey =
+    selectedColumns.length > 0
+      ? `\u0000${JSON.stringify(selectedColumns)}`
+      : "";
+  return `${name}\u0000${sortKey}\u0000${filterKey}\u0000${pageSize}${projectionKey}`;
 }
 
 function resetPageTokenState(queryShapeKey: string): PageTokenState {

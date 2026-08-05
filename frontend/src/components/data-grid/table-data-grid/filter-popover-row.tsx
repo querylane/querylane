@@ -267,7 +267,7 @@ function FilterRow({
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <div className="grid grid-cols-[minmax(11rem,1.3fr)_6.75rem_minmax(8.5rem,1fr)_2rem] items-center gap-1.5">
+      <div className="grid grid-cols-[minmax(11rem,1.3fr)_10rem_minmax(8.5rem,1fr)_2rem] items-center gap-1.5">
         <Select onValueChange={changeColumn} value={rule.column}>
           <SelectTrigger
             aria-label="Filter column"
@@ -299,30 +299,42 @@ function FilterRow({
           </SelectContent>
         </Select>
 
-        <Select
-          items={operatorItems}
-          onValueChange={changeOperator}
-          value={rule.operator}
-        >
-          <SelectTrigger
-            aria-label="Filter operator"
-            className="w-full"
-            size="sm"
+        <div className="flex min-w-0 items-center gap-1">
+          <Button
+            aria-label="Negate filter"
+            aria-pressed={rule.negated ?? false}
+            className="h-8 px-2 text-xs"
+            onClick={() => onChange({ negated: !rule.negated })}
+            type="button"
+            variant={rule.negated ? "secondary" : "outline"}
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {operators.map((operator) => (
-              <SelectItem
-                key={operator}
-                label={FILTER_OPERATOR_META[operator].label}
-                value={operator}
-              >
-                {FILTER_OPERATOR_META[operator].label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            Not
+          </Button>
+          <Select
+            items={operatorItems}
+            onValueChange={changeOperator}
+            value={rule.operator}
+          >
+            <SelectTrigger
+              aria-label="Filter operator"
+              className="min-w-0 flex-1"
+              size="sm"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {operators.map((operator) => (
+                <SelectItem
+                  key={operator}
+                  label={FILTER_OPERATOR_META[operator].label}
+                  value={operator}
+                >
+                  {FILTER_OPERATOR_META[operator].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {renderValueEditor()}
 

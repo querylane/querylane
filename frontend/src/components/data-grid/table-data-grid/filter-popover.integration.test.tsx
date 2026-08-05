@@ -344,6 +344,82 @@ describe("FilterRow value editing", () => {
     expect(screen.queryByText("eq")).toBeNull();
   });
 
+  it("offers regular expression and NULL-safe operators", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <div>
+        <FilterRow
+          columns={columns}
+          onApplyRequest={vi.fn()}
+          onChange={vi.fn()}
+          onRemove={vi.fn()}
+          rule={emailRule()}
+        />
+      </div>
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "Filter operator" }));
+
+    expect(screen.getByRole("option", { name: "~" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "~*" })).toBeTruthy();
+    expect(
+      screen.getByRole("option", { name: "is distinct from" })
+    ).toBeTruthy();
+  });
+
+  it("offers boolean identity operators for boolean columns", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <div>
+        <FilterRow
+          columns={columns}
+          onApplyRequest={vi.fn()}
+          onChange={vi.fn()}
+          onRemove={vi.fn()}
+          rule={{
+            column: "active",
+            id: "boolean",
+            operator: "eq",
+            value: "true",
+          }}
+        />
+      </div>
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "Filter operator" }));
+
+    expect(screen.getByRole("option", { name: "is true" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "is false" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "is unknown" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "~" })).toBeNull();
+  });
+
+  it("toggles generic predicate negation", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <div>
+        <FilterRow
+          columns={columns}
+          onApplyRequest={vi.fn()}
+          onChange={onChange}
+          onRemove={vi.fn()}
+          rule={emailRule("alice@example.com")}
+        />
+      </div>
+    );
+
+    const negate = screen.getByRole("button", { name: "Negate filter" });
+    expect(negate.getAttribute("aria-pressed")).toBe("false");
+
+    await user.click(negate);
+
+    expect(onChange).toHaveBeenCalledWith({ negated: true });
+  });
+
   it("debounces keystrokes into a single rule change", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

@@ -54,7 +54,10 @@ import { GridStatusBar } from "@/components/data-grid/table-data-grid/grid-statu
 import { GridSurface } from "@/components/data-grid/table-data-grid/grid-surface";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { RecordDetailDrawer } from "@/components/data-grid/table-data-grid/record-detail-drawer";
-import { useTableColumnLayout } from "@/components/data-grid/table-data-grid/use-table-column-layout";
+import {
+  useSelectedTableColumns,
+  useTableColumnLayout,
+} from "@/components/data-grid/table-data-grid/use-table-column-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -101,8 +104,12 @@ import {
   ReadCellValueRequestSchema,
   type TableCell,
   type TableResultColumn,
+  TableResultColumnSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
-import { RowIdentity_Source } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import {
+  RowIdentity_Source,
+  type Column as TableColumn,
+} from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 import "@/components/data-grid/table-data-grid/data-grid-theme.css";
 
@@ -455,8 +462,10 @@ function TableDataGridAlerts({
 
 interface TableDataGridChromeProps {
   allowSqlExport: boolean;
+  availableColumns: TableResultColumn[];
   columnOrder: readonly string[];
   columns: Column<GridRow>[];
+  fetchVisibleColumns: boolean;
   filterLogic: TableFilterLogic;
   filterRules: TableFilterRule[];
   filterTitle: string;
@@ -480,6 +489,7 @@ interface TableDataGridChromeProps {
   onColumnVisibilityChange: (columnKey: string, visible: boolean) => void;
   onCopySelection: (format: ExportFormat) => void;
   onExportSelection: (format: ExportFormat) => void;
+  onFetchVisibleColumnsChange: (enabled: boolean) => void;
   onFilterChange: (
     nextRules: TableFilterRule[],
     nextLogic?: TableFilterLogic
@@ -492,7 +502,6 @@ interface TableDataGridChromeProps {
   onSortChange: (next: SortColumn[]) => void;
   onToggleExpanded: () => void;
   queryError: Error | null;
-  resultColumns: TableResultColumn[];
   rows: GridRow[];
   selectedCount: number;
   selectedRows: ReadonlySet<string>;
@@ -512,8 +521,10 @@ interface TableDataGridChromeProps {
 
 function TableDataGridChrome({
   allowSqlExport,
+  availableColumns,
   columnOrder,
   columns,
+  fetchVisibleColumns,
   filterLogic,
   filterRules,
   filterTitle,
@@ -531,6 +542,7 @@ function TableDataGridChrome({
   onColumnVisibilityChange,
   onCopySelection,
   onExportSelection,
+  onFetchVisibleColumnsChange,
   onFilterChange,
   onNext,
   onPageSizeChange,
@@ -540,7 +552,6 @@ function TableDataGridChrome({
   onSortChange,
   onToggleExpanded,
   queryError,
-  resultColumns,
   rows,
   selectedCount,
   selectedRows,
@@ -564,7 +575,8 @@ function TableDataGridChrome({
           allowSqlExport={allowSqlExport}
           className={state.variant === "expanded" ? "pr-12" : undefined}
           columnOrder={columnOrder}
-          columns={resultColumns}
+          columns={availableColumns}
+          fetchVisibleColumns={fetchVisibleColumns}
           filterLogic={filterLogic}
           filterRules={filterRules}
           filterTitle={filterTitle}
@@ -579,6 +591,7 @@ function TableDataGridChrome({
           onColumnVisibilityChange={onColumnVisibilityChange}
           onCopySelection={onCopySelection}
           onExportSelection={onExportSelection}
+          onFetchVisibleColumnsChange={onFetchVisibleColumnsChange}
           onFilterChange={onFilterChange}
           onRefresh={onRefresh}
           onSortChange={onSortChange}
@@ -688,6 +701,30 @@ function copyCellValue({
     return;
   }
   writeClipboard(formatCellForClipboard(cell));
+}
+
+function buildAvailableColumns(
+  columnCatalog: readonly TableColumn[],
+  resultColumns: TableResultColumn[]
+): TableResultColumn[] {
+  if (columnCatalog.length === 0) {
+    return resultColumns;
+  }
+  return columnCatalog.map((column) =>
+    create(TableResultColumnSchema, {
+      columnName: column.columnName,
+      dataType: column.dataType,
+      isNullable: column.isNullable,
+      rawType: column.rawType,
+    })
+  );
+}
+
+function hasColumnMetadata(
+  availableColumns: readonly TableResultColumn[],
+  resultSet: unknown
+): boolean {
+  return availableColumns.length > 0 || resultSet !== undefined;
 }
 
 function copyRowValues(
@@ -1177,7 +1214,9 @@ function TableDataGrid({
   const [filterSearch, setFilterSearch] = useState<string>();
   const [sortSearch, setSortSearch] = useState<string>();
   const [pageSize, setPageSize] = useState(initialPageSize);
+  const selectedColumns = useSelectedTableColumns(name);
   const {
+    columnCatalog,
     controller,
     error: queryStateError,
     filterLogic,
@@ -1193,6 +1232,7 @@ function TableDataGrid({
     onPageSizeChange: setPageSize,
     onSortSearchChange: setSortSearch,
     pageSize,
+    selectedColumns,
     sortSearch,
   });
   const {
@@ -1223,6 +1263,7 @@ function TableDataGrid({
   );
 
   const resultColumns = data?.resultSet?.columns ?? EMPTY_RESULT_COLUMNS;
+  const availableColumns = buildAvailableColumns(columnCatalog, resultColumns);
   const resultRows = data?.resultSet?.rows ?? EMPTY_RESULT_ROWS;
   const rowCount = data?.resultSet?.rowCount;
   const rows = buildGridRows(resultRows, resultColumns);
@@ -1250,8 +1291,9 @@ function TableDataGrid({
   );
 
   const columnLayout = useTableColumnLayout({
+    availableColumns,
     columns: resultColumns,
-    hasResultSet: data?.resultSet !== undefined,
+    hasColumnMetadata: hasColumnMetadata(availableColumns, data?.resultSet),
     tableName: name,
   });
 
@@ -1321,8 +1363,10 @@ function TableDataGrid({
   const clearFilters = () => setFilterSearch(undefined);
   const chromeProps: TableDataGridChromeProps = {
     allowSqlExport: allowInsertCopy,
+    availableColumns,
     columnOrder: columnLayout.columnOrder,
     columns,
+    fetchVisibleColumns: columnLayout.fetchVisibleColumns,
     filterLogic,
     filterRules,
     filterTitle: `Filter ${relationQualifiedName.schema}.${relationQualifiedName.relation}`,
@@ -1340,6 +1384,7 @@ function TableDataGrid({
     onColumnVisibilityChange: columnLayout.setColumnVisibility,
     onCopySelection: selectionActions.handleCopySelection,
     onExportSelection: selectionActions.handleExportSelection,
+    onFetchVisibleColumnsChange: columnLayout.setFetchVisibleColumns,
     onFilterChange: handleFilterChange,
     onNext: handleNext,
     onPageSizeChange: controller.setPageSize,
@@ -1349,7 +1394,6 @@ function TableDataGrid({
     onSortChange: handleSortChange,
     onToggleExpanded: () => setIsDataGridExpanded(true),
     queryError: queryStateError ?? error,
-    resultColumns,
     rows,
     selectedCount: selectedRows.size,
     selectedRows,

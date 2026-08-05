@@ -26,6 +26,7 @@ interface UseTableDataQueryArgs extends TableDataSearchState {
   onPageSizeChange: (next: number) => void;
   onSortSearchChange: (next: string | undefined) => void;
   pageSize: number;
+  selectedColumns?: readonly string[] | undefined;
 }
 
 const SORT_COLUMN_KEY_QUERY_META_PATTERN = /[&=+]/g;
@@ -109,13 +110,31 @@ function filterSortColumnsForNames(
   return sortColumns.filter((sort) => allowed.has(sort.columnKey));
 }
 
+function filterSelectedColumnsForNames(
+  selectedColumns: readonly string[],
+  columnNames: readonly string[]
+): string[] {
+  if (selectedColumns.length === 0) {
+    return [];
+  }
+  const allowed = new Set(columnNames);
+  const selectedKnownColumns = selectedColumns.filter((column) =>
+    allowed.has(column)
+  );
+  return selectedKnownColumns.length > 0
+    ? selectedKnownColumns
+    : [...columnNames];
+}
+
 function resolveTableDataQueryState({
   columnCatalog,
   filterSearch,
+  selectedColumns = [],
   sortSearch,
 }: {
   columnCatalog?: FilterColumnMeta[] | undefined;
   filterSearch?: string | undefined;
+  selectedColumns?: readonly string[] | undefined;
   sortSearch?: string | undefined;
 }): {
   filterColumns: FilterColumnMeta[];
@@ -124,6 +143,7 @@ function resolveTableDataQueryState({
   invalidFilterRules: Array<{ id: string; message: string }>;
   normalizedFilterSearch?: string | undefined;
   normalizedSortSearch?: string | undefined;
+  selectedColumns: string[];
   shouldLoadColumnCatalog: boolean;
   sortColumns: SortColumn[];
 } {
@@ -131,6 +151,7 @@ function resolveTableDataQueryState({
   const parsedFilterSearch = parseTableFilterSearchResult(filterSearch);
   const parsedFilterState = parsedFilterSearch.state;
   const shouldLoadColumnCatalog =
+    selectedColumns.length > 0 ||
     parsedSortColumns.length > 0 ||
     (parsedFilterSearch.ok && parsedFilterState.rules.length > 0);
   const columnNames = columnCatalog?.map((column) => column.columnName);
@@ -168,6 +189,9 @@ function resolveTableDataQueryState({
         ? filterSearch
         : serializeTableFilterSearch(filterState),
     normalizedSortSearch: serializeSortSearch(sortColumns),
+    selectedColumns: columnNames
+      ? filterSelectedColumnsForNames(selectedColumns, columnNames)
+      : [...selectedColumns],
     shouldLoadColumnCatalog,
     sortColumns,
   };
@@ -180,9 +204,14 @@ function useTableDataQuery({
   onPageSizeChange,
   onSortSearchChange,
   pageSize,
+  selectedColumns = [],
   sortSearch,
 }: UseTableDataQueryArgs) {
-  const parsed = resolveTableDataQueryState({ filterSearch, sortSearch });
+  const parsed = resolveTableDataQueryState({
+    filterSearch,
+    selectedColumns,
+    sortSearch,
+  });
   const columnCatalog = useListTableColumnsQuery(
     { parent: name },
     {
@@ -198,6 +227,7 @@ function useTableDataQuery({
       dataType: column.dataType,
     })),
     filterSearch,
+    selectedColumns,
     sortSearch,
   });
   const filter = buildRowFilter(
@@ -212,6 +242,7 @@ function useTableDataQuery({
     onSortColumnsChange: (next) =>
       onSortSearchChange(serializeSortSearch(next)),
     pageSize,
+    selectedColumns: queryState.selectedColumns,
     sortColumns: queryState.sortColumns,
   });
   const rowsQuery = useReadRowsQuery(controller.request, {
@@ -274,6 +305,7 @@ function useTableDataQuery({
   };
 
   return {
+    columnCatalog: columnCatalog.data?.columns ?? [],
     controller,
     error: columnCatalog.error ?? null,
     filterLogic: queryState.filterLogic,
