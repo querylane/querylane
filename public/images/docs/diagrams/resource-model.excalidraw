@@ -1,0 +1,342 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "mcp-excalidraw-server",
+  "elements": [
+    {
+      "id": "canvas",
+      "type": "rectangle",
+      "x": 0,
+      "y": 0,
+      "width": 1320,
+      "height": 365,
+      "backgroundColor": "#ffffff",
+      "strokeColor": "#cbd5e1",
+      "strokeWidth": 1,
+      "roughness": 0,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:31:04.656Z",
+      "updatedAt": "2026-08-05T10:31:04.656Z",
+      "version": 1
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "x": 48,
+      "y": 28,
+      "strokeColor": "#0f172a",
+      "roughness": 1,
+      "text": "PostgreSQL resource hierarchy",
+      "fontSize": 30,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:31:04.656Z",
+      "updatedAt": "2026-08-05T10:31:04.656Z",
+      "version": 1
+    },
+    {
+      "id": "subtitle",
+      "type": "text",
+      "x": 48,
+      "y": 72,
+      "strokeColor": "#64748b",
+      "roughness": 1,
+      "text": "Each level contains many resources from the next level.",
+      "fontSize": 18,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:31:04.656Z",
+      "updatedAt": "2026-08-05T10:31:04.656Z",
+      "version": 1
+    },
+    {
+      "id": "instance",
+      "type": "rectangle",
+      "x": 55,
+      "y": 155,
+      "width": 220,
+      "height": 90,
+      "backgroundColor": "#dbeafe",
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Instance"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:31:04.656Z",
+      "updatedAt": "2026-08-05T10:31:04.656Z",
+      "version": 1
+    },
+    {
+      "id": "instance-note",
+      "type": "text",
+      "x": 67,
+      "y": 278,
+      "strokeColor": "#475569",
+      "roughness": 1,
+      "text": "Server connection",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:31:04.656Z",
+      "updatedAt": "2026-08-05T10:31:04.656Z",
+      "version": 1
+    },
+    {
+      "id": "database",
+      "type": "rectangle",
+      "x": 365,
+      "y": 155,
+      "width": 220,
+      "height": 90,
+      "backgroundColor": "#dbeafe",
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Database"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:31:04.656Z",
+      "updatedAt": "2026-08-05T10:31:04.656Z",
+      "version": 1
+    },
+    {
+      "id": "database-note",
+      "type": "text",
+      "x": 377,
+      "y": 278,
+      "strokeColor": "#475569",
+      "roughness": 1,
+      "text": "PostgreSQL database",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:31:04.656Z",
+      "updatedAt": "2026-08-05T10:31:04.656Z",
+      "version": 1
+    },
+    {
+      "id": "schema",
+      "type": "rectangle",
+      "x": 675,
+      "y": 155,
+      "width": 220,
+      "height": 90,
+      "backgroundColor": "#dbeafe",
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Schema"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:31:04.656Z",
+      "updatedAt": "2026-08-05T10:31:04.656Z",
+      "version": 1
+    },
+    {
+      "id": "schema-note",
+      "type": "text",
+      "x": 687,
+      "y": 278,
+      "strokeColor": "#475569",
+      "roughness": 1,
+      "text": "Namespace",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:31:04.656Z",
+      "updatedAt": "2026-08-05T10:31:04.656Z",
+      "version": 1
+    },
+    {
+      "id": "objects",
+      "type": "rectangle",
+      "x": 985,
+      "y": 155,
+      "width": 220,
+      "height": 90,
+      "backgroundColor": "#dbeafe",
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "label": {
+        "text": "Objects"
+      },
+      "fontSize": 22,
+      "fontFamily": 5,
+      "roundness": {
+        "type": 3
+      },
+      "fillStyle": "solid",
+      "createdAt": "2026-08-05T10:31:04.657Z",
+      "updatedAt": "2026-08-05T10:31:04.657Z",
+      "version": 1
+    },
+    {
+      "id": "objects-note",
+      "type": "text",
+      "x": 997,
+      "y": 278,
+      "strokeColor": "#475569",
+      "roughness": 1,
+      "text": "Tables, views, routines, and more",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:31:04.657Z",
+      "updatedAt": "2026-08-05T10:31:04.657Z",
+      "version": 1
+    },
+    {
+      "id": "instance-database",
+      "type": "arrow",
+      "x": 283,
+      "y": 200,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          74,
+          0
+        ]
+      ],
+      "start": {
+        "id": "instance"
+      },
+      "end": {
+        "id": "database"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:31:04.657Z",
+      "updatedAt": "2026-08-05T10:31:04.657Z",
+      "version": 1
+    },
+    {
+      "id": "database-schema",
+      "type": "arrow",
+      "x": 593,
+      "y": 200,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          74,
+          0
+        ]
+      ],
+      "start": {
+        "id": "database"
+      },
+      "end": {
+        "id": "schema"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:31:04.657Z",
+      "updatedAt": "2026-08-05T10:31:04.657Z",
+      "version": 1
+    },
+    {
+      "id": "schema-objects",
+      "type": "arrow",
+      "x": 903,
+      "y": 200,
+      "strokeColor": "#336791",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          74,
+          0
+        ]
+      ],
+      "start": {
+        "id": "schema"
+      },
+      "end": {
+        "id": "objects"
+      },
+      "endArrowhead": "arrow",
+      "createdAt": "2026-08-05T10:31:04.657Z",
+      "updatedAt": "2026-08-05T10:31:04.657Z",
+      "version": 1
+    },
+    {
+      "id": "contains-1",
+      "type": "text",
+      "x": 276,
+      "y": 172,
+      "strokeColor": "#336791",
+      "roughness": 1,
+      "text": "contains many",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:31:04.657Z",
+      "updatedAt": "2026-08-05T10:31:04.657Z",
+      "version": 1
+    },
+    {
+      "id": "contains-2",
+      "type": "text",
+      "x": 586,
+      "y": 172,
+      "strokeColor": "#336791",
+      "roughness": 1,
+      "text": "contains many",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:31:04.657Z",
+      "updatedAt": "2026-08-05T10:31:04.657Z",
+      "version": 1
+    },
+    {
+      "id": "contains-3",
+      "type": "text",
+      "x": 896,
+      "y": 172,
+      "strokeColor": "#336791",
+      "roughness": 1,
+      "text": "contains many",
+      "fontSize": 17,
+      "fontFamily": 5,
+      "createdAt": "2026-08-05T10:31:04.657Z",
+      "updatedAt": "2026-08-05T10:31:04.657Z",
+      "version": 1
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "gridSize": null
+  }
+}
