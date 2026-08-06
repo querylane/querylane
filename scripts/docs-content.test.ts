@@ -405,6 +405,24 @@ test("summarizes product features and common PostgreSQL investigations", async (
 	}
 });
 
+test("makes comparison status scannable without relying on color", async () => {
+	const productGuide = await readFile(
+		join(root, "docs/site/use-querylane.mdx"),
+		"utf8",
+	);
+
+	for (const status of [
+		"✅ Built in",
+		"🟡 Varies",
+		"🟠 Planned",
+		"⚪ Not primary scope",
+	]) {
+		expect(productGuide).toContain(status);
+	}
+
+	expect(productGuide).toContain("Icons supplement the text labels");
+});
+
 test("documents automatic embedded setup and full-value exports", async () => {
 	const getStartedRoot = join(root, "docs/site/get-started");
 	const [configuration, operations, productGuide] = await Promise.all([
