@@ -113,9 +113,37 @@ Exports contain selected rows from the currently loaded result, not every matchi
 
 Use the roles list and access map to trace login attributes, direct and inherited memberships, database access, schema usage, object privileges, ownership, and `PUBLIC` grants.
 
+### Trace table access
+
+<div class="docs-diagram-wide">
+  <img
+    alt="Table access decision from role memberships through database, schema, object, row-level security, and PostgreSQL verification"
+    height="760"
+    loading="lazy"
+    src="/images/docs/diagrams/table-access-check.svg"
+    width="1700"
+  />
+</div>
+
+Follow one access check from left to right, then down to PostgreSQL verification. Membership can supply privileges at several layers, but every required database, schema, and object check still matters. Row-level security can narrow the rows after the object privilege passes.
+
 The graph explains catalog evidence; it is not a policy engine. PostgreSQL remains the authority. Confirm sensitive decisions with privilege functions or an approved session as the subject role.
 
+### Review row-level security
+
 Row-level security runs after ordinary object grants. Querylane shows policy roles, commands, permissive or restrictive mode, `USING`, and `WITH CHECK` expressions. Its visibility preview explains policy composition but does not execute a query as the selected role. Owners, superusers, and roles with `BYPASSRLS` can produce a different result from ordinary application roles.
+
+<div class="docs-diagram-wide">
+  <img
+    alt="Row-level security decision from object access through bypass, policy matching, and existing or new row checks"
+    height="735"
+    loading="lazy"
+    src="/images/docs/diagrams/row-level-security.svg"
+    width="1700"
+  />
+</div>
+
+Follow the decision from left to right, then down to the row checks. PostgreSQL first checks ordinary access. Roles that bypass row-level security stop before policy evaluation. Everyone else needs at least 1 applicable permissive policy; restrictive policies can only narrow that result. `USING` controls existing rows, while `WITH CHECK` controls proposed rows for writes.
 
 ## What Querylane offers today
 

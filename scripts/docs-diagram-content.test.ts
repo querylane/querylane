@@ -73,8 +73,16 @@ const expectedDiagrams = [
 	},
 	{
 		page: "use-querylane.mdx",
-		diagrams: ["blocking-sessions"],
-		walkthroughs: ["Read every arrow from left to right as"],
+		diagrams: [
+			"blocking-sessions",
+			"table-access-check",
+			"row-level-security",
+		],
+		walkthroughs: [
+			"Read every arrow from left to right as",
+			"Follow one access check from left to right",
+			"Follow the decision from left to right",
+		],
 	},
 ] as const;
 
