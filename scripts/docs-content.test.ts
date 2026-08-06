@@ -192,62 +192,42 @@ test("redirects the previous API pages", async () => {
 	}
 });
 
-test("redirects superseded content into the consolidated guides", () => {
-	const redirects = config.redirects ?? [];
-	const destinations = new Map<string, string[]>([
-		[
-			"/get-started",
-			[
-				"/get-started/install-querylane",
-				"/get-started/local-preview",
-				"/get-started/register-instance",
-				"/get-started/first-successful-session",
-			],
-		],
-		[
-			"/get-started/configure-querylane",
-			[
-				"/get-started/embedded-postgresql",
-				"/get-started/external-postgresql",
-				"/get-started/manual-yaml",
-				"/concepts/how-querylane-works",
-			],
-		],
-		[
-			"/get-started/deploy-querylane",
-			[
-				"/get-started/production-deployment",
-				"/operations/deployment-recipes",
-				"/operations/postgresql-permissions",
-			],
-		],
-		[
-			"/get-started/operate-querylane",
-			[
-				"/get-started/troubleshooting",
-				"/operations",
-				"/operations/backup-and-restore",
-				"/operations/upgrades-and-rollbacks",
-			],
-		],
-		[
-			"/use-querylane",
-			[
-				"/guides/instance-overview",
-				"/guides/investigate-slow-database",
-				"/guides/find-blocking-sessions",
-				"/guides/data-explorer",
-				"/guides/export-data-safely",
-				"/guides/roles-and-access",
-				"/why-querylane",
-			],
-		],
-	]);
+test("does not preserve routes for removed content pages", () => {
+	const redirectedRoutes = new Set(
+		(config.redirects ?? []).map((redirect) => redirect.from),
+	);
+	const removedRoutes = [
+		"/get-started/install-querylane",
+		"/get-started/local-preview",
+		"/get-started/embedded-postgresql",
+		"/get-started/external-postgresql",
+		"/get-started/manual-yaml",
+		"/get-started/register-instance",
+		"/get-started/first-successful-session",
+		"/get-started/production-deployment",
+		"/get-started/troubleshooting",
+		"/concepts/how-querylane-works",
+		"/operations",
+		"/operations/deployment-recipes",
+		"/operations/postgresql-permissions",
+		"/operations/backup-and-restore",
+		"/operations/upgrades-and-rollbacks",
+		"/guides/instance-overview",
+		"/guides/investigate-slow-database",
+		"/guides/find-blocking-sessions",
+		"/guides/diagnose-missing-metrics",
+		"/guides/activity-and-health",
+		"/guides/data-explorer",
+		"/guides/export-data-safely",
+		"/guides/inspect-row-level-security",
+		"/guides/roles-and-access",
+		"/guides/audit-table-access",
+		"/guides/extensions-and-insights",
+		"/why-querylane",
+	];
 
-	for (const [to, sources] of destinations) {
-		for (const from of sources) {
-			expect(redirects).toContainEqual({ from, status: 301, to });
-		}
+	for (const route of removedRoutes) {
+		expect(redirectedRoutes).not.toContain(route);
 	}
 });
 

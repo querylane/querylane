@@ -35,55 +35,6 @@ export default defineConfig({
 		],
 	},
 	redirects: [
-		...[
-			"/get-started/install-querylane",
-			"/get-started/local-preview",
-			"/get-started/register-instance",
-			"/get-started/first-successful-session",
-		].map((from) => ({ from, status: 301 as const, to: "/get-started" })),
-		...[
-			"/get-started/embedded-postgresql",
-			"/get-started/external-postgresql",
-			"/get-started/manual-yaml",
-			"/concepts/how-querylane-works",
-		].map((from) => ({
-			from,
-			status: 301 as const,
-			to: "/get-started/configure-querylane",
-		})),
-		...[
-			"/get-started/production-deployment",
-			"/operations/deployment-recipes",
-			"/operations/postgresql-permissions",
-		].map((from) => ({
-			from,
-			status: 301 as const,
-			to: "/get-started/deploy-querylane",
-		})),
-		...[
-			"/get-started/troubleshooting",
-			"/operations",
-			"/operations/backup-and-restore",
-			"/operations/upgrades-and-rollbacks",
-		].map((from) => ({
-			from,
-			status: 301 as const,
-			to: "/get-started/operate-querylane",
-		})),
-		...[
-			"/guides/instance-overview",
-			"/guides/investigate-slow-database",
-			"/guides/find-blocking-sessions",
-			"/guides/diagnose-missing-metrics",
-			"/guides/activity-and-health",
-			"/guides/data-explorer",
-			"/guides/export-data-safely",
-			"/guides/inspect-row-level-security",
-			"/guides/roles-and-access",
-			"/guides/audit-table-access",
-			"/guides/extensions-and-insights",
-			"/why-querylane",
-		].map((from) => ({ from, status: 301 as const, to: "/use-querylane" })),
 		{
 			from: "/api/calling-the-api",
 			status: 301,
