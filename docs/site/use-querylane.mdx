@@ -1,0 +1,191 @@
+---
+title: Use Querylane
+description: Learn Querylane's PostgreSQL operations workflow, current features, safety boundaries, and fit compared with other database UIs.
+sidebar:
+  icon: panels-top-left
+---
+
+Querylane is a self-hosted, PostgreSQL-first workspace for understanding multiple servers. It keeps live operations, database structure, access, and permitted rows in 1 browser surface.
+
+## Start with the instance overview
+
+<img
+  alt="An instance overview showing server identity, capacity, metrics, connections, and health."
+  className="dark:hidden"
+  height="992"
+  src="/images/docs/instance-overview.png"
+  width="1168"
+/>
+<img
+  alt="An instance overview showing server identity, capacity, metrics, connections, and health."
+  className="hidden dark:block"
+  height="992"
+  src="/images/docs/instance-overview-dark.png"
+  width="1168"
+/>
+
+Use the overview to establish a baseline before investigating a database:
+
+1. Confirm connection state, PostgreSQL version, and the sample timestamp.
+2. Review active, idle, and idle-in-transaction connections.
+3. Compare sampled transactions, cache, storage, and connection metrics across the incident window.
+4. Expand health checks for connectivity, pressure, statistics access, and replication.
+5. Open a database when the question moves from server health to structure or data.
+
+Querylane keeps healthy sections available when 1 probe fails. A partial warning is not the same as a disconnected server.
+
+## Investigate live activity
+
+Activity is a live, read-only session view. Filter by database, role, application, state, or wait condition. Sort by query or transaction age, inspect full query and client context, and follow explicit blocking relationships.
+
+<img
+  alt="Blocking chain from a root blocker to waiting and downstream sessions"
+  height="580"
+  loading="lazy"
+  src="/images/docs/diagrams/blocking-sessions.svg"
+  width="1120"
+/>
+
+Read every arrow from left to right as “the session on the left blocks the session on the right.” Start with a node that has no incoming blocking arrow. A waiting session can block more work behind it, so the oldest query is not automatically the root blocker.
+
+Refresh immediately before acting through another tool. Querylane does not currently cancel queries or terminate sessions.
+
+For a slow database:
+
+1. Establish the incident window on the instance metrics.
+2. Check live sessions, old transactions, waits, and blocking chains.
+3. Use Query insights to compare cumulative time, mean time, calls, rows, and buffer behavior.
+4. Inspect table indexes, size, partitions, and sequential-scan evidence.
+5. Write a testable diagnosis before changing PostgreSQL.
+
+Query insights requires `pg_stat_statements` and sufficient statistics visibility. Missing data is reported as unavailable rather than displayed as zero.
+
+## Explore structure and rows
+
+<img
+  alt="A schema map showing the selected table and its foreign-key relationships."
+  className="dark:hidden"
+  height="1360"
+  src="/images/docs/schema-map.png"
+  width="1168"
+/>
+<img
+  alt="A schema map showing the selected table and its foreign-key relationships."
+  className="hidden dark:block"
+  height="1360"
+  src="/images/docs/schema-map-dark.png"
+  width="1168"
+/>
+
+Data Explorer moves from a database and schema map to the details of 1 table or view.
+
+| Surface | What it answers |
+| --- | --- |
+| Data | Which permitted rows match filters and sorts? |
+| Columns | What are the types, defaults, generated values, and comments? |
+| Keys and constraints | What rules and relationships shape the data? |
+| Indexes | Which methods, columns, predicates, and expressions exist? |
+| Partitions | What are the parent, children, strategy, and bounds? |
+| Policies | Which row-level security roles and predicates apply? |
+| Triggers | Which functions run for each event and timing? |
+| Definition | How is the PostgreSQL object defined? |
+
+Large values can appear as bounded previews. Copy and export fetch complete values first. 1 action resolves up to 100 oversized cells. If a full-value read fails or the selection exceeds that limit, Querylane stops instead of producing a plausible but incomplete result. Download `bytea` values from the row detail drawer.
+
+Exports contain selected rows from the currently loaded result, not every matching database row. CSV, JSON, and SQL formats are available. CSV neutralizes values spreadsheet software could interpret as formulas. Use PostgreSQL `COPY` or backup tooling for bulk, authoritative, or recoverable data movement.
+
+## Understand roles and access
+
+<img
+  alt="The roles access map visualizes how roles and memberships lead to PostgreSQL resources."
+  className="dark:hidden"
+  height="992"
+  src="/images/docs/roles-access-map.png"
+  width="1168"
+/>
+<img
+  alt="The roles access map visualizes how roles and memberships lead to PostgreSQL resources."
+  className="hidden dark:block"
+  height="992"
+  src="/images/docs/roles-access-map-dark.png"
+  width="1168"
+/>
+
+Use the roles list and access map to trace login attributes, direct and inherited memberships, database access, schema usage, object privileges, ownership, and `PUBLIC` grants.
+
+### Trace table access
+
+<div class="docs-diagram-wide">
+  <img
+    alt="Table access decision from role memberships through database, schema, object, row-level security, and PostgreSQL verification"
+    height="760"
+    loading="lazy"
+    src="/images/docs/diagrams/table-access-check.svg"
+    width="1700"
+  />
+</div>
+
+Follow one access check from left to right, then down to PostgreSQL verification. Membership can supply privileges at several layers, but every required database, schema, and object check still matters. Row-level security can narrow the rows after the object privilege passes.
+
+The graph explains catalog evidence; it is not a policy engine. PostgreSQL remains the authority. Confirm sensitive decisions with privilege functions or an approved session as the subject role.
+
+### Review row-level security
+
+Row-level security runs after ordinary object grants. Querylane shows policy roles, commands, permissive or restrictive mode, `USING`, and `WITH CHECK` expressions. Its visibility preview explains policy composition but does not execute a query as the selected role. Owners, superusers, and roles with `BYPASSRLS` can produce a different result from ordinary application roles.
+
+<div class="docs-diagram-wide">
+  <img
+    alt="Row-level security decision from object access through bypass, policy matching, and existing or new row checks"
+    height="735"
+    loading="lazy"
+    src="/images/docs/diagrams/row-level-security.svg"
+    width="1700"
+  />
+</div>
+
+Follow the decision from left to right, then down to the row checks. PostgreSQL first checks ordinary access. Roles that bypass row-level security stop before policy evaluation. Everyone else needs at least 1 applicable permissive policy; restrictive policies can only narrow that result. `USING` controls existing rows, while `WITH CHECK` controls proposed rows for writes.
+
+## What Querylane offers today
+
+| Area | What you can do |
+| --- | --- |
+| Instances | Register multiple PostgreSQL servers and inspect identity, connection state, metrics, and health |
+| Activity | Inspect sessions, transaction age, clients, waits, and blocking relationships |
+| Data Explorer | Browse schemas and objects, map relationships, inspect metadata, filter rows, and export selected data |
+| Roles and access | Explore roles, memberships, grants, definitions, and effective-access paths |
+| Database insights | Review extensions, database health, query patterns, and table-level statistics |
+
+## How Querylane compares
+
+This comparison covers first-party capabilities documented as of August 6, 2026. Editions, plugins, and newer releases can differ.
+
+Icons supplement the text labels: ✅ **Built in** is part of the product's normal workflow, 🟡 **Varies** covers database-specific, edition-specific, plugin-based, or project-scoped behavior, 🟠 **Planned** is on Querylane's roadmap, and ⚪ **Not primary scope** does not claim that every extension or workaround is absent.
+
+| Capability | **Querylane** | [pgAdmin 4](https://www.pgadmin.org/docs/pgadmin4/latest/getting_started.html) | [DBeaver Community](https://dbeaver.io/about/) | [DataGrip](https://www.jetbrains.com/datagrip/features/) | [Drizzle Studio](https://orm.drizzle.team/drizzle-studio/overview) |
+| --- | :---: | :---: | :---: | :---: | :---: |
+| PostgreSQL-first product | ✅ Built in | ✅ Built in | ⚪ Not primary scope | ⚪ Not primary scope | ⚪ Not primary scope |
+| Browser-based interface | ✅ Built in | ✅ Built in | ⚪ Not primary scope | ⚪ Not primary scope | 🟡 Project-local |
+| Multiple saved server connections | ✅ Built in | ✅ Built in | ✅ Built in | ✅ Built in | 🟡 Project configuration |
+| Live sessions and blocking context | ✅ Built in | ✅ Built in | 🟡 Varies | 🟡 Varies | ⚪ Not primary scope |
+| Sampled instance metrics and health | ✅ Built in | 🟡 Varies | ⚪ Not primary scope | ⚪ Not primary scope | ⚪ Not primary scope |
+| Roles, memberships, and grants | ✅ Built in | ✅ Built in | 🟡 Varies | 🟡 Varies | ⚪ Not primary scope |
+| Effective-access graph | ✅ Built in | ⚪ Not primary scope | ⚪ Not primary scope | ⚪ Not primary scope | ⚪ Not primary scope |
+| PostgreSQL catalog and object depth | ✅ Built in | ✅ Built in | 🟡 Varies | 🟡 Varies | 🟡 Project-schema scope |
+| Relationship diagram or schema map | ✅ Built in | ✅ Built in | ✅ Built in | ✅ Built in | 🟡 Project-schema scope |
+| Row browsing, filtering, and export | ✅ Built in | ✅ Built in | ✅ Built in | ✅ Built in | ✅ Built in |
+| SQL editor | 🟠 Planned | ✅ Built in | ✅ Built in | ✅ Built in | ⚪ Not primary scope |
+| Row editing | 🟠 Planned | ✅ Built in | ✅ Built in | ✅ Built in | ✅ Built in |
+| Backup and restore administration | ⚪ Not primary scope | ✅ Built in | 🟡 Varies | 🟡 Varies | ⚪ Not primary scope |
+
+The tools optimize for different jobs:
+
+- Choose **pgAdmin** for mature PostgreSQL administration and broad write workflows.
+- Choose **DBeaver or DataGrip** for desktop SQL work across database engines.
+- Choose **Drizzle Studio** when work should stay centered on 1 Drizzle project's schema and data.
+- Choose **Querylane** when the primary job is understanding a PostgreSQL fleet from 1 operational workspace.
+
+## Current boundary
+
+Querylane is deliberately read-first. It does not yet replace a mature SQL IDE, backup tool, or write-heavy administration surface. SQL Workbench, row editing, session actions, and broader administration writes remain planned, with safety rails before broad mutation support.
+
+Anyone who can reach Querylane can use the visibility granted to its PostgreSQL roles. Protect the application with authenticated ingress before adding production credentials. See [Deploy Querylane](/get-started/deploy-querylane).

@@ -192,6 +192,45 @@ test("redirects the previous API pages", async () => {
 	}
 });
 
+test("does not preserve routes for removed content pages", () => {
+	const redirectedRoutes = new Set(
+		(config.redirects ?? []).map((redirect) => redirect.from),
+	);
+	const removedRoutes = [
+		"/get-started/install-querylane",
+		"/get-started/local-preview",
+		"/get-started/embedded-postgresql",
+		"/get-started/external-postgresql",
+		"/get-started/manual-yaml",
+		"/get-started/register-instance",
+		"/get-started/first-successful-session",
+		"/get-started/production-deployment",
+		"/get-started/troubleshooting",
+		"/concepts/how-querylane-works",
+		"/operations",
+		"/operations/deployment-recipes",
+		"/operations/postgresql-permissions",
+		"/operations/backup-and-restore",
+		"/operations/upgrades-and-rollbacks",
+		"/guides/instance-overview",
+		"/guides/investigate-slow-database",
+		"/guides/find-blocking-sessions",
+		"/guides/diagnose-missing-metrics",
+		"/guides/activity-and-health",
+		"/guides/data-explorer",
+		"/guides/export-data-safely",
+		"/guides/inspect-row-level-security",
+		"/guides/roles-and-access",
+		"/guides/audit-table-access",
+		"/guides/extensions-and-insights",
+		"/why-querylane",
+	];
+
+	for (const route of removedRoutes) {
+		expect(redirectedRoutes).not.toContain(route);
+	}
+});
+
 test("keeps API usage guidance alongside the generated reference", async () => {
 	const pages = await readdir(apiGuideRoot);
 	for (const page of apiGuidePages) {
@@ -242,142 +281,96 @@ test("explains RPC badges with an agent-readable live example", async () => {
 });
 
 test("keeps installation and production setup ahead of product guides", async () => {
-	const setupPages = [
-		"install-querylane.mdx",
-		"production-deployment.mdx",
-		"troubleshooting.mdx",
+	const getStartedRoot = join(root, "docs/site/get-started");
+	const mainPages = [
+		"index.mdx",
+		"configure-querylane.mdx",
+		"deploy-querylane.mdx",
+		"operate-querylane.mdx",
+		"meta.ts",
 	];
-	const pages = await readdir(join(root, "docs/site/get-started"), {
-		recursive: true,
+	const pages = await readdir(getStartedRoot);
+
+	expect(pages.sort()).toEqual(mainPages.sort());
+	expect(config.navigation?.sidebar).toMatchObject({
+		display: "group",
+		items: [
+			"/",
+			{
+				items: [
+					"/get-started",
+					"/get-started/configure-querylane",
+					"/get-started/deploy-querylane",
+					"/get-started/operate-querylane",
+				],
+				label: "Get started",
+			},
+			"/use-querylane",
+		],
 	});
 
-	for (const page of setupPages) {
-		expect(
-			pages.some((candidate) => basename(candidate) === page),
-			`missing ${basename(page)}`,
-		).toBe(true);
-	}
+	const [quickstart, deploy, productGuide] = await Promise.all([
+		readFile(join(getStartedRoot, "index.mdx"), "utf8"),
+		readFile(join(getStartedRoot, "deploy-querylane.mdx"), "utf8"),
+		readFile(join(root, "docs/site/use-querylane.mdx"), "utf8"),
+	]);
+	expect(quickstart).toContain("## 1. Start the Docker preview");
+	expect(deploy).toContain("## Production shape");
+	expect(productGuide).toContain("## What Querylane offers today");
 });
 
 test("guides a new user through a successful first session", async () => {
 	const getStartedRoot = join(root, "docs/site/get-started");
-	const [home, meta, firstSession, apiMeta, callingApi] = await Promise.all([
+	const [home, meta, quickstart, apiMeta, callingApi] = await Promise.all([
 		readFile(join(root, "docs/site/index.mdx"), "utf8"),
-		readFile(join(getStartedRoot, "(connect-and-explore)/meta.ts"), "utf8"),
-		readFile(
-			join(
-				getStartedRoot,
-				"(connect-and-explore)/first-successful-session.mdx",
-			),
-			"utf8",
-		),
+		readFile(join(getStartedRoot, "meta.ts"), "utf8"),
+		readFile(join(getStartedRoot, "index.mdx"), "utf8"),
 		readFile(join(apiGuideRoot, "meta.ts"), "utf8"),
 		readFile(join(apiGuideRoot, "calling-the-api.mdx"), "utf8"),
 	]);
 
-	expect(config.description).toContain("getting started");
-	expect(home).toContain("/get-started/first-successful-session");
-	expect(meta).toMatch(/"register-instance",\s*"first-successful-session"/u);
+	expect(config.description).toContain("Get started");
+	expect(home).toContain('href="/get-started"');
+	expect(meta).toMatch(
+		/"index",\s*"configure-querylane",\s*"deploy-querylane",\s*"operate-querylane"/u,
+	);
 	for (const destination of [
-		"/guides/instance-overview",
-		"/guides/find-blocking-sessions",
-		"/guides/roles-and-access",
-		"/operations/postgresql-permissions",
+		"/get-started/configure-querylane",
+		"/get-started/deploy-querylane",
+		"/use-querylane",
 	]) {
-		expect(firstSession).toContain(destination);
+		expect(quickstart).toContain(destination);
 	}
-	expect(firstSession).toContain("## You are successful when");
+	expect(quickstart).toContain("## You are successful when");
 	expect(apiMeta).toContain('title: "Experimental API"');
 	expect(callingApi).toContain("alpha integration surface");
 });
 
-test("groups getting-started pages into an ordered hierarchy", async () => {
+test("keeps getting-started pages in 1 ordered hierarchy level", async () => {
 	const getStartedRoot = join(root, "docs/site/get-started");
-	const groups = [
-		{
-			folder: "(install-and-run)",
-			key: "install-and-run",
-			pages: ["install-querylane", "local-preview"],
-			title: "Install and run",
-		},
-		{
-			folder: "(configure-storage)",
-			key: "configure-storage",
-			pages: ["embedded-postgresql", "external-postgresql", "manual-yaml"],
-			title: "Configure storage",
-		},
-		{
-			folder: "(connect-and-explore)",
-			key: "connect-and-explore",
-			pages: ["register-instance", "first-successful-session"],
-			title: "Connect and explore",
-		},
-		{
-			folder: "(deploy-and-maintain)",
-			key: "deploy-and-maintain",
-			pages: ["production-deployment", "troubleshooting"],
-			title: "Deploy and maintain",
-		},
-	];
-
-	expect(config.navigation?.sidebar).toMatchObject({ display: "group" });
-
-	const parentMeta = await readFile(join(getStartedRoot, "meta.ts"), "utf8");
-	for (const group of groups) {
-		expect(parentMeta).toContain(`"${group.key}"`);
-		const [groupMeta, files] = await Promise.all([
-			readFile(join(getStartedRoot, group.folder, "meta.ts"), "utf8"),
-			readdir(join(getStartedRoot, group.folder)),
-		]);
-
-		expect(groupMeta).toContain(`title: "${group.title}"`);
-		for (const page of group.pages) {
-			expect(groupMeta).toContain(`"${page}"`);
-			expect(files).toContain(`${page}.mdx`);
-		}
-	}
+	const entries = await readdir(getStartedRoot, { withFileTypes: true });
+	expect(entries.filter((entry) => entry.isDirectory())).toEqual([]);
+	expect(entries.filter((entry) => entry.name.endsWith(".mdx"))).toHaveLength(4);
 });
 
 test("documents the operational lifecycle for self-hosted deployments", async () => {
-	const operationsRoot = join(root, "docs/site/operations");
-	const pages = await readdir(operationsRoot);
-	const expectedPages = [
-		"index.mdx",
-		"postgresql-permissions.mdx",
-		"backup-and-restore.mdx",
-		"upgrades-and-rollbacks.mdx",
-		"deployment-recipes.mdx",
-	];
+	const getStartedRoot = join(root, "docs/site/get-started");
+	const [deploy, operate] = await Promise.all([
+		readFile(join(getStartedRoot, "deploy-querylane.mdx"), "utf8"),
+		readFile(join(getStartedRoot, "operate-querylane.mdx"), "utf8"),
+	]);
 
-	for (const page of expectedPages) {
-		expect(pages, `missing ${basename(page)}`).toContain(page);
-	}
-
-	const permissions = await readFile(
-		join(operationsRoot, "postgresql-permissions.mdx"),
-		"utf8",
-	);
-	expect(permissions).toContain("GRANT pg_monitor");
-	expect(permissions).toContain("NOBYPASSRLS");
-
-	const backups = await readFile(
-		join(operationsRoot, "backup-and-restore.mdx"),
-		"utf8",
-	);
-	expect(backups).toContain("pg_dump");
-	expect(backups).toContain("QUERYLANE_INSTANCE_SECRET_KEY");
-
-	const upgrades = await readFile(
-		join(operationsRoot, "upgrades-and-rollbacks.mdx"),
-		"utf8",
-	);
-	expect(upgrades).toContain("migrate status");
-	expect(upgrades).toContain("Restore the pre-upgrade backup");
+	expect(deploy).toContain("GRANT pg_monitor");
+	expect(deploy).toContain("NOBYPASSRLS");
+	expect(operate).toContain("pg_dump");
+	expect(operate).toContain("QUERYLANE_INSTANCE_SECRET_KEY");
+	expect(operate).toContain("migrate status");
+	expect(operate).toContain("Restore the pre-upgrade backup");
 });
 
 test("keeps deployment recipes generic and customer-facing", async () => {
 	const deployment = await readFile(
-		join(root, "docs/site/operations/deployment-recipes.mdx"),
+		join(root, "docs/site/get-started/deploy-querylane.mdx"),
 		"utf8",
 	);
 
@@ -395,55 +388,56 @@ test("keeps deployment recipes generic and customer-facing", async () => {
 	expect(deployment).toContain("```nginx\nquerylane.example.com");
 });
 
-test("provides task-based guides for common PostgreSQL investigations", async () => {
-	const guidesRoot = join(root, "docs/site/guides");
-	const pages = await readdir(guidesRoot);
-	const expectedPages = [
-		"investigate-slow-database.mdx",
-		"find-blocking-sessions.mdx",
-		"audit-table-access.mdx",
-		"inspect-row-level-security.mdx",
-		"export-data-safely.mdx",
-		"diagnose-missing-metrics.mdx",
-	];
+test("summarizes product features and common PostgreSQL investigations", async () => {
+	const productGuide = await readFile(
+		join(root, "docs/site/use-querylane.mdx"),
+		"utf8",
+	);
 
-	for (const page of expectedPages) {
-		expect(pages, `missing ${basename(page)}`).toContain(page);
-		const contents = await readFile(join(guidesRoot, page), "utf8");
-		expect(contents).toContain("## Before you start");
-		expect(contents).toContain("## What to do next");
+	for (const section of [
+		"## Start with the instance overview",
+		"## Investigate live activity",
+		"## Explore structure and rows",
+		"## Understand roles and access",
+		"## How Querylane compares",
+	]) {
+		expect(productGuide).toContain(section);
 	}
+});
+
+test("makes comparison status scannable without relying on color", async () => {
+	const productGuide = await readFile(
+		join(root, "docs/site/use-querylane.mdx"),
+		"utf8",
+	);
+
+	for (const status of [
+		"✅ Built in",
+		"🟡 Varies",
+		"🟠 Planned",
+		"⚪ Not primary scope",
+	]) {
+		expect(productGuide).toContain(status);
+	}
+
+	expect(productGuide).toContain("Icons supplement the text labels");
 });
 
 test("documents automatic embedded setup and full-value exports", async () => {
 	const getStartedRoot = join(root, "docs/site/get-started");
-	const guidesRoot = join(root, "docs/site/guides");
-	const [embedded, manualYaml, troubleshooting, dataExplorer, exportGuide] =
-		await Promise.all([
-			readFile(
-				join(getStartedRoot, "(configure-storage)/embedded-postgresql.mdx"),
-				"utf8",
-			),
-			readFile(
-				join(getStartedRoot, "(configure-storage)/manual-yaml.mdx"),
-				"utf8",
-			),
-			readFile(
-				join(getStartedRoot, "(deploy-and-maintain)/troubleshooting.mdx"),
-				"utf8",
-			),
-			readFile(join(guidesRoot, "data-explorer.mdx"), "utf8"),
-			readFile(join(guidesRoot, "export-data-safely.mdx"), "utf8"),
-		]);
+	const [configuration, operations, productGuide] = await Promise.all([
+		readFile(join(getStartedRoot, "configure-querylane.mdx"), "utf8"),
+		readFile(join(getStartedRoot, "operate-querylane.mdx"), "utf8"),
+		readFile(join(root, "docs/site/use-querylane.mdx"), "utf8"),
+	]);
 
-	expect(embedded).toContain("chooses the first free port");
-	expect(embedded).toContain("always creates persistent storage");
-	expect(embedded).not.toContain("Choose a storage mode");
-	expect(manualYaml).toContain("port: 0");
-	expect(troubleshooting).toContain("scans upward automatically");
-	expect(dataExplorer).toContain("Download bytea values");
-	expect(exportGuide).toContain("up to 100 oversized cells");
-	expect(exportGuide).not.toContain(
+	expect(configuration).toContain("chooses the first free port");
+	expect(configuration).toContain("always creates persistent storage");
+	expect(configuration).toContain("port: 0");
+	expect(operations).toContain("scans upward automatically");
+	expect(productGuide).toContain("Download `bytea` values");
+	expect(productGuide).toContain("up to 100 oversized cells");
+	expect(productGuide).not.toContain(
 		"refuses to export selected rows with truncated values",
 	);
 });

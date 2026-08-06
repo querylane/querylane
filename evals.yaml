@@ -7,7 +7,7 @@ questions:
       - open http://localhost:8080
       - a fresh container opens the first-launch wizard because its metadata database is not configured
       - the edge image and disposable container command are for evaluation, not durable deployment
-    routes: /get-started/install-querylane
+    routes: /get-started
 
   - id: metadata-storage-choice
     question: Is the PostgreSQL server I register the same database Querylane uses for its own storage?
@@ -16,9 +16,8 @@ questions:
       - embedded PostgreSQL is best for a direct local run or disposable demo
       - external PostgreSQL is the durable installation choice
     routes:
-      - /get-started/install-querylane
-      - /get-started/embedded-postgresql
-      - /get-started/external-postgresql
+      - /get-started
+      - /get-started/configure-querylane
 
   - id: instance-secret-key-stability
     question: How should I manage QUERYLANE_INSTANCE_SECRET_KEY across restarts and replicas?
@@ -28,8 +27,8 @@ questions:
       - changing or losing the key makes existing encrypted instance credentials unreadable
       - key rotation is not currently supported
     routes:
-      - /get-started/external-postgresql
-      - /get-started/production-deployment
+      - /get-started/configure-querylane
+      - /get-started/deploy-querylane
 
   - id: register-instance-test
     question: What must I provide and verify before Querylane lets me register a PostgreSQL instance?
@@ -38,7 +37,7 @@ questions:
       - Querylane requires a successful connection test before registration
       - changing the connection invalidates the previous test
       - use a dedicated login with only the access operators need
-    routes: /get-started/register-instance
+    routes: /get-started
 
   - id: production-access-boundary
     question: Can I expose Querylane directly to the public internet in production?
@@ -47,7 +46,7 @@ questions:
       - do not expose it directly to the public internet
       - put it behind a trusted network or reverse proxy that enforces authentication and TLS
       - expose only the Querylane HTTP service on port 8080, not PostgreSQL or the container runtime
-    routes: /get-started/production-deployment
+    routes: /get-started/deploy-querylane
 
   - id: production-replicas
     question: What must multiple Querylane replicas share, and can they use embedded PostgreSQL?
@@ -56,7 +55,7 @@ questions:
       - replicas must share the same QUERYLANE_INSTANCE_SECRET_KEY, configuration, and target policy
       - do not use embedded PostgreSQL for a multi-replica deployment
       - live-query limits are process-local, so total capacity grows with the replica count
-    routes: /get-started/production-deployment
+    routes: /get-started/deploy-querylane
 
   - id: backup-recovery-set
     question: What must I back up so a Querylane installation can actually be restored?
@@ -65,7 +64,7 @@ questions:
       - preserve the exact matching QUERYLANE_INSTANCE_SECRET_KEY
       - preserve Querylane configuration, referenced environment secrets, and application image identity
       - a database dump without the matching key can leave encrypted credentials unrecoverable
-    routes: /operations/backup-and-restore
+    routes: /get-started/operate-querylane
 
   - id: upgrade-rollback
     question: How should I upgrade Querylane, and is switching back to the old image enough to roll back?
@@ -74,7 +73,7 @@ questions:
       - inspect migrations and upgrade one replica before the rest
       - an old binary may not understand a schema migrated by a newer version
       - the default rollback restores the pre-upgrade database and previous image, configuration, key, and DSN rather than only swapping the image
-    routes: /operations/upgrades-and-rollbacks
+    routes: /get-started/operate-querylane
 
   - id: least-privilege-role
     question: Which PostgreSQL permissions should I give Querylane on a managed instance?
@@ -83,13 +82,13 @@ questions:
       - add SELECT only on approved tables and views when operators need reads and exports
       - add pg_monitor when operators need fuller activity, health, statistics, and query insights
       - do not grant superuser or BYPASSRLS solely for Querylane
-    routes: /operations/postgresql-permissions
+    routes: /get-started/deploy-querylane
 
   - id: safe-data-export
     question: What safety limits apply when I export rows from Querylane's Data Explorer?
     expected:
       - export is limited to selected rows from the currently loaded result, not every matching row
-      - Querylane refuses to export selected rows containing truncated values
+      - Querylane fetches complete values for up to 100 oversized cells and stops without output if full-value resolution fails
       - CSV values that spreadsheet software could interpret as formulas are neutralized
       - Data Explorer export is not a database backup or bulk migration tool
-    routes: /guides/export-data-safely
+    routes: /use-querylane

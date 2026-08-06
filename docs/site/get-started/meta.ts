@@ -7,9 +7,8 @@ export default defineMeta({
 	collapsed: false,
 	pages: [
 		"index",
-		"install-and-run",
-		"configure-storage",
-		"connect-and-explore",
-		"deploy-and-maintain",
+		"configure-querylane",
+		"deploy-querylane",
+		"operate-querylane",
 	],
 });

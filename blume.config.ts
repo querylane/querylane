@@ -3,7 +3,7 @@ import { defineConfig } from "blume";
 export default defineConfig({
 	title: "Querylane",
 	description:
-		"Guides for getting started, exploring PostgreSQL, and operating Querylane safely.",
+		"Get started, configure, deploy, and operate Querylane safely.",
 	logo: "/icon.svg",
 	deployment: {
 		adapter: "node",
@@ -78,6 +78,21 @@ export default defineConfig({
 		],
 		sidebar: {
 			display: "group",
+			items: [
+				"/",
+				{
+					label: "Get started",
+					icon: "rocket",
+					collapsed: false,
+					items: [
+						"/get-started",
+						"/get-started/configure-querylane",
+						"/get-started/deploy-querylane",
+						"/get-started/operate-querylane",
+					],
+				},
+				"/use-querylane",
+			],
 		},
 		tabs: [
 			{ label: "Docs", path: "/" },
