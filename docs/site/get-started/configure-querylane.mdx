@@ -1,0 +1,154 @@
+---
+title: Configure Querylane
+description: Choose Querylane metadata storage, manage stable secrets, and configure PostgreSQL instances through the UI or YAML.
+---
+
+Querylane uses 2 different PostgreSQL connection types:
+
+- The **metadata database** stores Querylane configuration, encrypted credentials, catalog state, samples, and application state.
+- A **managed instance** is a PostgreSQL server Querylane inspects.
+
+Do not reuse the metadata database owner as a managed-instance login. Keep the databases, roles, and recovery responsibilities separate.
+
+## Understand the resource model
+
+<img
+  alt="Querylane resource hierarchy from an instance to databases, schemas, and database objects"
+  height="620"
+  loading="lazy"
+  src="/images/docs/diagrams/resource-model.svg"
+  width="1400"
+/>
+
+Read the hierarchy from left to right. An instance is 1 PostgreSQL server connection. It contains databases; each database contains schemas; schemas contain tables, views, routines, types, and other PostgreSQL objects.
+
+<div class="docs-diagram-wide">
+  <img
+    alt="Querylane combines stored metadata and samples with live PostgreSQL queries"
+    height="760"
+    loading="lazy"
+    src="/images/docs/diagrams/stored-and-live-data.svg"
+    width="1700"
+  />
+</div>
+
+Follow one page load from Querylane configuration and stored samples to the live PostgreSQL query. Stored state gives continuity across sessions; live reads keep operational views tied to the current server.
+
+## Choose metadata storage
+
+| Method | Best for | Main trade-off |
+| --- | --- | --- |
+| Embedded PostgreSQL | A local evaluation, demo, or direct single-node run | Querylane owns the local process and data path |
+| External PostgreSQL | A durable installation | You own provisioning, availability, backups, and credentials |
+| Manual YAML | Configuration-as-code and environment-backed secrets | YAML-managed instances become read-only in the UI |
+
+### Embedded PostgreSQL
+
+In the first-launch wizard, choose **Use embedded database**. Querylane always creates persistent storage when it can write to its home directory. It uses `~/.querylane/pgdata` and chooses the first free port, starting at `5433`.
+
+The wizard does not ask for a storage mode or port. If Querylane cannot write to its home directory, it warns that storage will be ephemeral. Fix the directory permissions before continuing when saved connections and metadata must survive shutdown.
+
+Embedded PostgreSQL fits a direct local run. Avoid it inside an ephemeral container or with multiple Querylane replicas. For a fixed path, an intentionally ephemeral database, or a fixed port, use YAML.
+
+### External PostgreSQL
+
+Create a dedicated database and login:
+
+```sql
+CREATE ROLE querylane LOGIN PASSWORD 'replace-me';
+CREATE DATABASE querylane OWNER querylane;
+```
+
+In the first-launch wizard, choose **Configure via UI**. Enter host, port, database, username, password, and SSL mode, or paste a PostgreSQL DSN. Querylane tests the connection, applies its schema, and switches the application into the ready state.
+
+External PostgreSQL is the durable choice. The login must be able to connect and create or migrate Querylane's tables.
+
+## Keep the instance secret key stable
+
+Generate the key once:
+
+```sh
+openssl rand -base64 32
+```
+
+Store the value as `QUERYLANE_INSTANCE_SECRET_KEY` in a secret manager. Every restart and replica must receive the exact same value. Querylane uses it to protect UI-managed instance passwords and shared signing material.
+
+:::warning
+Key rotation is not currently supported. Changing or losing the key makes existing encrypted instance credentials unreadable and can prevent startup.
+:::
+
+## Configure with YAML
+
+Manual YAML works without the UI and lets environment variables own secrets. Querylane watches the file and applies supported changes.
+
+Use an environment variable for the metadata DSN when possible:
+
+```yaml querylane.yaml
+http:
+  host: "0.0.0.0"
+  port: 8080
+
+database:
+  dsn: "postgres://querylane:replace-me@db.example.com:5432/querylane?sslmode=require"
+```
+
+Set `QUERYLANE_DATABASE_DSN` instead of placing the DSN in the file. To configure embedded storage:
+
+```yaml querylane.yaml
+embedded:
+  mode: persistent
+  data_path: "~/.querylane/pgdata"
+  port: 0
+```
+
+`port: 0` chooses the first free local port starting at `5433`. A positive fixed port fails startup when unavailable. Set `mode: ephemeral` only when losing Querylane state at shutdown is intentional.
+
+Start the server with the file:
+
+```sh
+querylane server start --config /path/to/querylane.yaml
+```
+
+## Manage instances from YAML
+
+Add an `instances` list when configuration should own the PostgreSQL servers Querylane inspects:
+
+```yaml querylane.yaml
+instances:
+  - id: production
+    display_name: "Production"
+    host: "db.example.com"
+    port: 5432
+    database: "app"
+    username: "querylane_reader"
+    password_env: "PRODUCTION_DATABASE_PASSWORD"
+    ssl_mode: require
+    labels:
+      env: production
+```
+
+`id` must stay stable and contain letters, digits, hyphens, or underscores. `password_env` and `dsn_env` keep secrets out of the file.
+
+When `instances` is present, YAML owns instance configuration and the UI cannot create, update, or delete those connections. Remove the complete section to return ownership to the browser and API.
+
+The complete commented example is [`docs/reference-config.yaml`](https://github.com/querylane/querylane/blob/main/docs/reference-config.yaml).
+
+## Verify configuration
+
+A successful request to `/` proves that Querylane serves the web application:
+
+```sh
+curl --fail http://localhost:8080/ > /dev/null
+```
+
+After metadata setup, verify the Console API:
+
+```sh
+curl --fail --request POST \
+  --header 'Content-Type: application/json' \
+  --header 'Connect-Protocol-Version: 1' \
+  --data '{}' \
+  http://localhost:8080/querylane.console.v1alpha1.ConsoleService/GetConsoleConfig
+```
+
+`failed_precondition` means the HTTP server is available but the metadata database is not configured or ready. Continue with [Operate Querylane](/get-started/operate-querylane#troubleshoot-setup) when configuration fails.

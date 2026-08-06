@@ -1,0 +1,210 @@
+---
+title: Operate Querylane
+description: Back up, restore, upgrade, roll back, and troubleshoot Querylane as a matched database, secret, configuration, and image recovery set.
+---
+
+Operate Querylane as 1 recovery set: the application image, metadata database, instance secret key, configuration, referenced secrets, and authenticated ingress.
+
+## Responsibility map
+
+| Resource | What it holds | Operator responsibility |
+| --- | --- | --- |
+| Querylane process | Web application, API, catalog reads, and background probes | Pin the image, restrict the network, collect logs, and replace unhealthy replicas |
+| Metadata PostgreSQL | Saved instances, encrypted credentials, catalog state, samples, runner state, and signing material | Provide availability, backups, restore tests, and migration access |
+| Instance secret key | Protects UI-managed credentials and shared signing material | Store it outside the database and preserve the exact value |
+| Managed instances | PostgreSQL servers Querylane inspects | Use least-privilege logins and restrict source networks |
+| Ingress | Browser and API access boundary | Require TLS and authentication |
+
+## Back up and restore
+
+### Protect the complete recovery set
+
+Back up these items together:
+
+- metadata PostgreSQL;
+- the exact matching `QUERYLANE_INSTANCE_SECRET_KEY`;
+- `querylane.yaml` and referenced environment secrets;
+- the pinned Querylane image digest; and
+- release and migration notes for that image.
+
+A database dump without the matching key can leave encrypted instance credentials unrecoverable.
+
+### Back up external metadata PostgreSQL
+
+Use the PostgreSQL client version recommended by your provider:
+
+```sh
+export QUERYLANE_DATABASE_DSN='postgresql://querylane@metadata.example.com/querylane?sslmode=verify-full'
+backup="querylane-$(date -u +%Y%m%dT%H%M%SZ).dump"
+
+pg_dump \
+  --format=custom \
+  --no-owner \
+  --no-privileges \
+  --file="$backup" \
+  "$QUERYLANE_DATABASE_DSN"
+
+pg_restore --list "$backup" > "$backup.contents"
+sha256sum "$backup" > "$backup.sha256"
+```
+
+Record the creation time, image digest, metadata PostgreSQL version, configuration revision, and secret-key version beside the backup. Do not copy secret values into the manifest.
+
+### Restore into an isolated database
+
+Never test a restore over the active metadata database.
+
+<Steps>
+  <Step title="Create a new database">
+    Ensure no production Querylane process points to it.
+  </Step>
+  <Step title="Restore the dump">
+    Use a role that owns the new database and can create Querylane schema objects.
+  </Step>
+  <Step title="Attach matching secrets">
+    Supply the same instance secret key, configuration, and referenced secrets used by the backup.
+  </Step>
+  <Step title="Start the recorded image">
+    Run it in an isolated network and wait for readiness.
+  </Step>
+  <Step title="Verify recovery">
+    List saved instances, test 1 non-critical target, and confirm recent samples and catalog data.
+  </Step>
+</Steps>
+
+```sh
+createdb --owner=querylane querylane_restore
+
+pg_restore \
+  --exit-on-error \
+  --no-owner \
+  --no-privileges \
+  --dbname='postgresql://querylane@metadata.example.com/querylane_restore?sslmode=verify-full' \
+  querylane-20260717T120000Z.dump
+```
+
+For embedded PostgreSQL, stop Querylane and copy the complete configured data directory together with the configuration, secret key, image or source revision, and operating platform. Never copy an active PostgreSQL data directory as an ordinary filesystem backup. Move durable installations to external PostgreSQL before portability becomes critical.
+
+## Upgrade and roll back
+
+Querylane applies pending metadata migrations during startup. Treat the application image and metadata schema as 1 versioned unit.
+
+### Before the maintenance window
+
+1. Read the [release notes](/changelog).
+2. Resolve the target image to a digest and record the current digest.
+3. Back up metadata and verify its checksum.
+4. Confirm the matching instance secret key is recoverable.
+5. Test the target image against a restored copy of metadata when possible.
+6. Prepare the old image, pre-upgrade backup, and old configuration for rollback.
+
+Inspect the target image's migrations:
+
+```sh
+docker run --rm \
+  --env QUERYLANE_DATABASE_DSN="$QUERYLANE_DATABASE_DSN" \
+  "$TARGET_IMAGE" \
+  migrate status
+```
+
+### Upgrade 1 replica first
+
+1. Stop or drain the current replicas.
+2. Start 1 replica with the target image and existing configuration, DSN, and secret key.
+3. Wait for migration and initialization.
+4. Verify readiness, a non-critical instance, Activity, permitted table data, recent samples, ingress, and logs.
+5. Start the remaining replicas only after the first is healthy.
+
+Do not assume a zero-downtime rolling upgrade is safe across a metadata schema change. Mix versions only when the release notes state that their schemas are compatible.
+
+### Roll back safely
+
+An old binary may not understand a schema migrated by a newer version. The default rollback restores the complete pre-upgrade state, not only the image.
+
+1. Stop every replica using the upgraded database.
+2. Preserve the failed database for investigation.
+3. Create a new empty metadata database.
+4. **Restore the pre-upgrade backup** into it.
+5. Start the previous image with its previous configuration, matching key, and restored DSN.
+6. Repeat the acceptance checks before reopening ingress.
+
+Use `migrate down` only when a release-specific runbook requires it. A restore keeps the failed upgrade available for diagnosis and recreates a known image and schema pair.
+
+## Troubleshoot setup
+
+Start with process logs, then separate metadata database problems from managed-instance problems.
+
+```sh
+docker logs --tail 200 querylane
+docker inspect querylane --format '{{json .State}}'
+```
+
+For a direct run:
+
+```sh
+querylane --log-level=debug server start --config /path/to/querylane.yaml
+```
+
+Do not paste DSNs, passwords, the instance secret key, or unredacted database rows into an issue.
+
+### The browser does not open Querylane
+
+Confirm the process logged `started HTTP server`, then request it directly:
+
+```sh
+curl --verbose http://localhost:8080/
+```
+
+`127.0.0.1:8080:8080` is reachable only from the Docker host. A reverse proxy in another container must share a Docker network and use `http://querylane:8080`.
+
+### The setup wizard does not appear
+
+Querylane skips first launch when storage is already configured. Check the explicit `--config` path, `~/.querylane/config.yaml`, `QUERYLANE_DATABASE_DSN`, other database environment variables, and container mounts.
+
+To repeat onboarding, use a new disposable container and an empty environment. Do not delete durable configuration until its metadata and secrets are backed up.
+
+### External metadata setup fails
+
+| Symptom | Check |
+| --- | --- |
+| Refused connection or timeout | Host, port, firewall, and PostgreSQL listener |
+| Password rejected | The same DSN with `psql` and the matching `pg_hba.conf` rule |
+| Database missing | A dedicated Querylane metadata database exists |
+| Certificate or hostname error | CA, hostname, and `verify-full` settings match |
+| Migration permission denied | The metadata role owns or can migrate the database |
+
+Inside Docker, `localhost` means the Querylane container. Use a Compose service name, routable hostname, or `host.docker.internal` on Docker Desktop when PostgreSQL runs on the Mac host.
+
+### Embedded PostgreSQL fails
+
+Embedded setup needs a writable directory, free port, and enough disk space. The wizard starts at port `5433` and scans upward automatically.
+
+- Fix the Querylane home and data-directory ownership.
+- Set `embedded.port` to `0` if a pinned port is busy.
+- Do not use a read-only filesystem.
+- Avoid embedded mode in ephemeral containers or with multiple replicas.
+- Do not delete a partial data directory until you know whether it contains needed state.
+
+### Querylane fails after a key change
+
+Restore the original `QUERYLANE_INSTANCE_SECRET_KEY` from the secret manager. All replicas must use the exact key that encrypted existing data. Key rotation is not currently supported.
+
+### A managed instance does not connect
+
+Run the connection test and verify DNS, host and port reachability, initial database access, credentials in the server process, SSL mode, target CIDR policy, `pg_hba.conf`, firewall, and cloud network rules.
+
+### Instance editing is read-only
+
+An `instances` list in YAML owns those connections. Edit the watched file or remove the complete section to return ownership to the UI and API.
+
+### The API returns `failed_precondition`
+
+The HTTP server is available, but metadata PostgreSQL is not configured or ready. Complete first launch, correct the configuration, or restore database availability.
+
+## Regular checks
+
+- Test restores, not only backup-file creation.
+- Review managed-instance memberships and `PUBLIC` grants.
+- Check metadata storage growth and sample retention.
+- Remove stale database credentials and ingress identities.
+- Confirm Querylane can reach only approved PostgreSQL networks.
