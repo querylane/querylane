@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 
+import { isAlreadyConfigured, toConnectError } from "@/lib/connect-errors";
 import {
   consumeSetupStreamWithProgress,
   consumeWatchStreamWithProgress,
@@ -125,6 +126,14 @@ async function runWatchAttempt(
     onComplete?.();
   } catch (error) {
     if (isCancelled()) {
+      return;
+    }
+
+    // The backend rejects a watch subscription with FailedPrecondition once
+    // the database is initialized — e.g. setup finished in the background
+    // after a failed attempt, and the user hit Retry. That is success.
+    if (isAlreadyConfigured(toConnectError(error))) {
+      onComplete?.();
       return;
     }
 

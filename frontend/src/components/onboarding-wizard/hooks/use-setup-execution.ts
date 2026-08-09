@@ -2,16 +2,13 @@ import { Code } from "@connectrpc/connect";
 import { useEffect, useEffectEvent, useRef } from "react";
 
 import { SETUP_FAILURE_FALLBACK_MESSAGE } from "@/components/onboarding-wizard/constants";
-import {
-  isAlreadyConfigured,
-  shouldAutoRunSetup,
-  toConnectError,
-} from "@/components/onboarding-wizard/mappers";
+import { shouldAutoRunSetup } from "@/components/onboarding-wizard/mappers";
 import type {
   ConfigMethod,
   WizardPhase,
 } from "@/components/onboarding-wizard/types";
 import type { SetupAppDatabaseMutationVariables } from "@/hooks/api/onboarding";
+import { isAlreadyConfigured, toConnectError } from "@/lib/connect-errors";
 import {
   buildEmbeddedSetupRequest,
   buildSetupAppDatabaseRequest,

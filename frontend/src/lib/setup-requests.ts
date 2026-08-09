@@ -125,6 +125,13 @@ async function consumeSetupStreamWithProgress(
   return null;
 }
 
+function isWatchCompletionEvent(event: SetupProgressEvent): boolean {
+  return (
+    event.stepId === SetupStep.INITIALIZING_SERVICES &&
+    event.state === StepState.SUCCEEDED
+  );
+}
+
 async function consumeWatchStreamWithProgress(
   stream: AsyncIterable<WatchConfigChangesResponse>,
   onProgress: StepProgressCallback
@@ -135,6 +142,13 @@ async function consumeWatchStreamWithProgress(
     const { event } = response;
     if (event) {
       onProgress(event);
+      // A failed step is not final on the watch path: the user can fix the
+      // config file and the backend retries initialization on the same
+      // stream. Initialization succeeding after a failure means setup
+      // completed — clear the stale failure.
+      if (isWatchCompletionEvent(event)) {
+        failureMessage = null;
+      }
     }
 
     const message = getProgressFailureMessage(event);

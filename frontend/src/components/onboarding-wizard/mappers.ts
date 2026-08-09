@@ -1,5 +1,3 @@
-import { Code, ConnectError } from "@connectrpc/connect";
-
 import type {
   ConfigMethod,
   WizardPhase,
@@ -25,16 +23,5 @@ export function shouldAutoRunSetup(
     phase === "progress_running" &&
     selectedMethod !== null &&
     selectedMethod !== "manual_yaml"
-  );
-}
-
-export function toConnectError(error: unknown): ConnectError {
-  return ConnectError.from(error);
-}
-
-export function isAlreadyConfigured(connectError: ConnectError): boolean {
-  return (
-    connectError.code === Code.FailedPrecondition &&
-    connectError.rawMessage.toLowerCase().includes("already configured")
   );
 }

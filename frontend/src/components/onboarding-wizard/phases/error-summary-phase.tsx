@@ -4,7 +4,6 @@ import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import { RetryActionButton } from "@/components/retry-action-button";
 import { Button } from "@/components/ui/button";
 import { waitForNextFrame } from "@/lib/wait-for-next-frame";
-import { StepState } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 
 /**
@@ -52,9 +51,12 @@ export function ErrorSummaryPhase() {
   );
   const failedStepName = failedEvent?.displayName;
   const failedStepError = failedEvent?.error;
-  const succeededCount = progressEvents.filter(
-    (e) => e.state === StepState.SUCCEEDED
-  ).length;
+  // Position of the failed step in the pipeline. Counting succeeded steps
+  // instead would over-report when steps succeed after the failure (the
+  // backend can retry on the same stream).
+  const failedStepIndex = failedEvent
+    ? progressEvents.findIndex((e) => e.stepId === failedEvent.stepId)
+    : -1;
   const totalCount = progressEvents.length;
   const errorText =
     failedStepError || streamError?.title || "An unknown error occurred";
@@ -63,7 +65,7 @@ export function ErrorSummaryPhase() {
     <WizardPage
       description={
         failedStepName
-          ? `Setup failed during "${failedStepName}" (step ${succeededCount + 1} of ${totalCount}). Review the error details below.`
+          ? `Setup failed during "${failedStepName}"${failedStepIndex >= 0 ? ` (step ${failedStepIndex + 1} of ${totalCount})` : ""}. Review the error details below.`
           : "Setup stopped before Querylane could finish configuring the metadata database. Review the error details below and retry when you're ready."
       }
       footer={

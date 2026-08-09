@@ -59,12 +59,17 @@ function buildSucceededSetupResponse(stepId: SetupStep) {
   });
 }
 
-function buildWatchResponse(state: StepState, error = "", displayName = "") {
+function buildWatchResponse(
+  state: StepState,
+  error = "",
+  options: { displayName?: string; stepId?: SetupStep } = {}
+) {
   return createProto(WatchConfigChangesResponseSchema, {
     event: createProto(SetupProgressEventSchema, {
-      displayName,
+      displayName: options.displayName ?? "",
       error,
       state,
+      stepId: options.stepId ?? SetupStep.UNSPECIFIED,
     }),
   });
 }
@@ -291,6 +296,51 @@ describe("watch stream consumption", () => {
       message: "watch failed",
     });
     expect(events).toEqual([StepState.PENDING, StepState.FAILED]);
+  });
+
+  it("clears an earlier failure when initialization later succeeds", async () => {
+    // The user saves a bad config (step fails), then fixes the file; the
+    // backend retries on the same stream and closes it only after
+    // initialization succeeded. The stale failure must not be reported.
+    const responses = [
+      buildWatchResponse(StepState.FAILED, "bad password", {
+        displayName: "Connecting",
+      }),
+      buildWatchResponse(StepState.SUCCEEDED, "", {
+        displayName: "Connecting",
+        stepId: SetupStep.CONNECTING,
+      }),
+      buildWatchResponse(StepState.SUCCEEDED, "", {
+        displayName: "Initializing services",
+        stepId: SetupStep.INITIALIZING_SERVICES,
+      }),
+    ];
+
+    const failure = await consumeWatchStreamWithProgress(
+      buildAsyncStream(responses),
+      () => undefined
+    );
+
+    expect(failure).toBeNull();
+  });
+
+  it("keeps a failure that arrives after initialization succeeded", async () => {
+    const responses = [
+      buildWatchResponse(StepState.SUCCEEDED, "", {
+        displayName: "Initializing services",
+        stepId: SetupStep.INITIALIZING_SERVICES,
+      }),
+      buildWatchResponse(StepState.FAILED, "late failure", {
+        displayName: "Connecting",
+      }),
+    ];
+
+    const failure = await consumeWatchStreamWithProgress(
+      buildAsyncStream(responses),
+      () => undefined
+    );
+
+    expect(failure).toMatchObject({ message: "late failure" });
   });
 });
 
