@@ -119,13 +119,52 @@ func NewConfigManager[T Node](ctx context.Context, defaultConfig T, options ...O
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	if opts.withFilewatcher && opts.configFile != "" {
-		if err := manager.ensureWatcher(opts.configFile); err != nil { //nolint:contextcheck // watcher goroutines outlive the construction context and reload with a background context by design
-			return nil, fmt.Errorf("failed to start watcher: %w", err)
+	if opts.withFilewatcher {
+		if err := manager.startInitialWatcher(); err != nil {
+			return nil, err
 		}
 	}
 
 	return manager, nil
+}
+
+// startInitialWatcher watches the config file from construction. On a fresh
+// install no file exists yet, so it watches the standard path instead: the
+// onboarding wizard's "configure YAML manually" flow depends on the user
+// creating that file being noticed. startWatcher watches the parent directory
+// and filters by name, so the file itself may appear later — but the
+// directory has to exist, and on a fresh install it usually does not.
+func (cm *Manager[T]) startInitialWatcher() error {
+	if path := cm.activeConfigFilePath(); path != "" {
+		if err := cm.ensureWatcher(path); err != nil {
+			return fmt.Errorf("failed to start watcher: %w", err)
+		}
+
+		return nil
+	}
+
+	stdPath := cm.standardConfigFilepath
+	if stdPath == "" {
+		return nil
+	}
+
+	// Best effort from here on: a read-only home is a supported deployment
+	// (the wizard then only offers the manual YAML method against a config
+	// mounted at an explicit --config path), so failing to watch a file that
+	// does not exist yet must not stop the server from booting.
+	if err := os.MkdirAll(filepath.Dir(stdPath), 0o755); err != nil {
+		slog.Warn("cannot create config directory, config file changes will not be detected",
+			"dir", filepath.Dir(stdPath), "err", err)
+
+		return nil
+	}
+
+	if err := cm.ensureWatcher(stdPath); err != nil {
+		slog.Warn("cannot watch standard config path, config file changes will not be detected",
+			"file", stdPath, "err", err)
+	}
+
+	return nil
 }
 
 // reloadConfiguration loads configuration using the Loader and configured sources.
@@ -135,6 +174,11 @@ func (cm *Manager[T]) reloadConfiguration(ctx context.Context) error {
 
 	// Get the old config before loading (for subscribers that want to diff changes)
 	oldConfig := cm.CurrentConfig()
+
+	// A file created at the standard path after startup (the manual YAML
+	// onboarding flow) becomes the active config, mirroring the adoption
+	// NewConfigManager does for a file that already exists.
+	cm.adoptStandardPathIfCreated()
 
 	// Build sources in priority order: defaults -> file -> env
 	var sources []Source
@@ -289,6 +333,25 @@ func (cm *Manager[T]) adoptWritePath(path string) {
 	if err := cm.ensureWatcher(path); err != nil {
 		slog.Error("failed to start config file watcher after first write",
 			"file", path, "err", err)
+	}
+}
+
+// adoptStandardPathIfCreated promotes the standard config path to the active
+// path once a file appears there. No-op when a path is already active.
+func (cm *Manager[T]) adoptStandardPathIfCreated() {
+	if cm.activeConfigFilePath() != "" || cm.standardConfigFilepath == "" {
+		return
+	}
+
+	if !fileExists(cm.standardConfigFilepath) {
+		return
+	}
+
+	cm.pathMu.Lock()
+	defer cm.pathMu.Unlock()
+
+	if cm.activeFilePath == "" {
+		cm.activeFilePath = cm.standardConfigFilepath
 	}
 }
 

@@ -174,6 +174,53 @@ func TestManager_WatcherStartsAfterFirstWrite(t *testing.T) { //nolint:parallelt
 	}, 5*time.Second, 50*time.Millisecond, "watcher must start after the write path is adopted")
 }
 
+// TestManager_WatcherDetectsExternallyCreatedConfig is the regression guard
+// for the onboarding wizard's "configure YAML manually" method: on a fresh
+// install no config file exists, and the user creates one by hand. Nothing
+// writes through the manager first, so the watcher has to already be on the
+// standard path — otherwise the wizard waits forever.
+func TestManager_WatcherDetectsExternallyCreatedConfig(t *testing.T) { //nolint:paralleltest // uses t.Setenv
+	tempHome := t.TempDir()
+	t.Setenv("HOME", tempHome)
+	t.Setenv("USERPROFILE", tempHome) // Windows: os.UserHomeDir() checks USERPROFILE
+
+	manager, err := config.NewConfigManager(context.Background(),
+		NewSimpleTestConfig(),
+		config.WithFilewatcher())
+	require.NoError(t, err)
+
+	defer manager.Stop()
+
+	require.Empty(t, manager.ConfigFilePath(), "no config file should exist yet")
+
+	notified := make(chan string, 4)
+
+	manager.Subscribe(func(_, newCfg *SimpleTestConfig) {
+		select {
+		case notified <- newCfg.Name:
+		default:
+		}
+	})
+
+	configFile := filepath.Join(tempHome, ".querylane", "config.yaml")
+	writeConfigFileAtomically(t, configFile, `name: hand-written-app`)
+
+	assert.Eventually(t, func() bool {
+		return manager.CurrentConfig().Name == "hand-written-app"
+	}, 5*time.Second, 50*time.Millisecond,
+		"a config file created by hand must be picked up without a restart")
+
+	assert.Equal(t, configFile, manager.ConfigFilePath(),
+		"the created file must be adopted as the active config path")
+
+	select {
+	case name := <-notified:
+		assert.Equal(t, "hand-written-app", name)
+	case <-time.After(time.Second):
+		t.Fatal("subscribers must be notified so onboarding can continue setup")
+	}
+}
+
 // TestManager_ConcurrentPathAccessDuringFirstWrite guards the data race on
 // activeFilePath: the first write mutates it while readers (ConfigFilePath,
 // ConfigPersisted, CanWriteConfig) may run concurrently. Fails under -race
