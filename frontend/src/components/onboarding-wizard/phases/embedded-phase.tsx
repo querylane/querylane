@@ -82,7 +82,11 @@ export function EmbeddedPhase() {
                 : "Ephemeral: data is cleared on shutdown"}
             </div>
             <div>Data path</div>
-            <div className="font-mono text-white/88">{embeddedDataPath}</div>
+            {/* Mono has a larger x-height than the sans face — one size down
+                keeps the path visually level with the 14px sans values. */}
+            <div className="min-w-0 break-all font-mono text-white/88 text-xs leading-5">
+              {embeddedDataPath}
+            </div>
             <div>Network</div>
             <div className="text-white/88">
               Local port, chosen automatically

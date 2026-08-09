@@ -46,14 +46,14 @@ function getStepStateLabel(state: StepState): string {
 function StepStateIcon({ state }: { state: StepState }) {
   if (state === StepState.SUCCEEDED) {
     return (
-      <span className="flex size-9 items-center justify-center rounded-full border border-emerald-400/45 bg-emerald-500/14 text-emerald-300">
-        <Check aria-hidden="true" className="size-4.5" />
+      <span className="flex size-8 items-center justify-center rounded-full border border-emerald-400/45 bg-emerald-500/14 text-emerald-300">
+        <Check aria-hidden="true" className="size-4" />
       </span>
     );
   }
   if (state === StepState.IN_PROGRESS) {
     return (
-      <span className="flex size-9 items-center justify-center rounded-full border border-white/30 bg-white/8 text-white">
+      <span className="flex size-8 items-center justify-center rounded-full border border-white/30 bg-white/8 text-white">
         <Loader2
           aria-hidden="true"
           className="size-4 animate-spin motion-reduce:animate-none"
@@ -63,13 +63,13 @@ function StepStateIcon({ state }: { state: StepState }) {
   }
   if (state === StepState.FAILED) {
     return (
-      <span className="flex size-9 items-center justify-center rounded-full border border-red-400/40 bg-red-500/12 text-red-200">
+      <span className="flex size-8 items-center justify-center rounded-full border border-red-400/40 bg-red-500/12 text-red-200">
         <X aria-hidden="true" className="size-4" />
       </span>
     );
   }
   return (
-    <span className="flex size-9 items-center justify-center rounded-full border border-white/16 bg-white/[0.03] text-white/45">
+    <span className="flex size-8 items-center justify-center rounded-full border border-white/16 bg-white/[0.03] text-white/45">
       <Circle aria-hidden="true" className="size-4 fill-current" />
     </span>
   );
@@ -77,7 +77,7 @@ function StepStateIcon({ state }: { state: StepState }) {
 function StepStateBadge({ state }: { state: StepState }) {
   if (state === StepState.SUCCEEDED) {
     return (
-      <Badge className="border-emerald-400/40 bg-emerald-500/14 px-4 text-emerald-200">
+      <Badge className="border-emerald-400/40 bg-emerald-500/14 px-2.5 text-emerald-200">
         Done
       </Badge>
     );
@@ -85,7 +85,7 @@ function StepStateBadge({ state }: { state: StepState }) {
   if (state === StepState.IN_PROGRESS) {
     return (
       <Badge
-        className="border-white/16 bg-white/10 px-4 text-white"
+        className="border-white/16 bg-white/10 px-2.5 text-white"
         variant="outline"
       >
         Running
@@ -95,7 +95,7 @@ function StepStateBadge({ state }: { state: StepState }) {
   if (state === StepState.FAILED) {
     return (
       <Badge
-        className="border-red-400/35 bg-red-500/14 px-4 text-red-100"
+        className="border-red-400/35 bg-red-500/14 px-2.5 text-red-100"
         variant="outline"
       >
         Failed
@@ -104,12 +104,82 @@ function StepStateBadge({ state }: { state: StepState }) {
   }
   return (
     <Badge
-      className="border-white/10 bg-white/[0.04] px-4 text-white/62"
+      className="border-white/10 bg-white/[0.04] px-2.5 text-white/62"
       variant="outline"
     >
       Pending
     </Badge>
   );
+}
+/**
+ * Only the step you are waiting on (or one that failed) needs an explanation.
+ * Repeating a description for every pending step makes the page scroll
+ * without adding information.
+ */
+function getStepDetail(event: SetupProgressEvent): string | null {
+  if (event.error) {
+    return event.error;
+  }
+  if (event.state === StepState.IN_PROGRESS) {
+    return getStepDescription(event.stepId);
+  }
+  return null;
+}
+function ProgressStepItem({
+  connector,
+  event,
+}: {
+  connector: "none" | "pending" | "succeeded";
+  event: SetupProgressEvent;
+}) {
+  const detail = getStepDetail(event);
+  return (
+    <li
+      aria-label={`${event.displayName}: ${getStepStateLabel(event.state)}`}
+      className="grid grid-cols-[3rem_minmax(0,1fr)] gap-4"
+      data-step-card={event.displayName}
+    >
+      <div className="relative flex justify-center">
+        {connector === "none" ? null : (
+          <span
+            aria-hidden="true"
+            className={cn(
+              "absolute top-10 bottom-[-0.75rem] left-1/2 w-px -translate-x-1/2",
+              connector === "succeeded" ? "bg-emerald-400/70" : "bg-white/12"
+            )}
+          />
+        )}
+        <div className="relative z-10 rounded-full bg-background p-1">
+          <StepStateIcon state={event.state} />
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-1 items-start justify-between gap-4 pt-2.5">
+        <div className="space-y-1.5">
+          <div className="font-medium text-sm text-white">
+            {event.displayName}
+          </div>
+          {detail ? (
+            <p className="max-w-3xl text-sm text-white/58 leading-6">
+              {detail}
+            </p>
+          ) : null}
+        </div>
+        <StepStateBadge state={event.state} />
+      </div>
+    </li>
+  );
+}
+function getConnector(
+  event: SetupProgressEvent,
+  nextEvent: SetupProgressEvent | undefined
+) {
+  if (!nextEvent) {
+    return "none" as const;
+  }
+  return event.state === StepState.SUCCEEDED &&
+    nextEvent.state === StepState.SUCCEEDED
+    ? ("succeeded" as const)
+    : ("pending" as const);
 }
 export function ProgressStepList({ events }: { events: SetupProgressEvent[] }) {
   if (events.length === 0) {
@@ -121,47 +191,13 @@ export function ProgressStepList({ events }: { events: SetupProgressEvent[] }) {
   }
   return (
     <ol aria-label="Setup progress steps" className="list-none space-y-3">
-      {events.map((event, index) => {
-        const nextEvent = events[index + 1];
-        const hasSucceededConnector =
-          event.state === StepState.SUCCEEDED &&
-          nextEvent?.state === StepState.SUCCEEDED;
-
-        return (
-          <li
-            aria-label={`${event.displayName}: ${getStepStateLabel(event.state)}`}
-            className="grid grid-cols-[3rem_minmax(0,1fr)] gap-4"
-            data-step-card={event.displayName}
-            key={event.stepId}
-          >
-            <div className="relative flex justify-center">
-              {index < events.length - 1 ? (
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "absolute top-11 bottom-[-0.75rem] left-1/2 w-px -translate-x-1/2",
-                    hasSucceededConnector ? "bg-emerald-400/70" : "bg-white/12"
-                  )}
-                />
-              ) : null}
-              <div className="relative z-10 rounded-full bg-background p-1">
-                <StepStateIcon state={event.state} />
-              </div>
-            </div>
-            <div className="flex min-w-0 flex-1 items-start justify-between gap-4 pt-1">
-              <div className="space-y-2">
-                <div className="font-medium text-base text-white">
-                  {event.displayName}
-                </div>
-                <p className="max-w-3xl text-sm text-white/58 leading-6 md:text-base">
-                  {event.error || getStepDescription(event.stepId)}
-                </p>
-              </div>
-              <StepStateBadge state={event.state} />
-            </div>
-          </li>
-        );
-      })}
+      {events.map((event, index) => (
+        <ProgressStepItem
+          connector={getConnector(event, events[index + 1])}
+          event={event}
+          key={event.stepId}
+        />
+      ))}
     </ol>
   );
 }

@@ -8,6 +8,7 @@ import { ManualYamlPhase } from "@/components/onboarding-wizard/phases/manual-ya
 import { MethodSelectionPhase } from "@/components/onboarding-wizard/phases/method-selection-phase";
 import { ProgressPhase } from "@/components/onboarding-wizard/phases/progress-phase";
 import { UiConfiguredPhase } from "@/components/onboarding-wizard/phases/ui-configured-phase";
+import { getRailDoneCount } from "@/components/onboarding-wizard/shared/progress-rail-state";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import type {
   ConfigMethod,
@@ -170,6 +171,14 @@ function ConfigRail({ compact = false }: { compact?: boolean }) {
   );
 }
 function ProgressRail({ success = false }: { success?: boolean }) {
+  const progressEvents = useOnboardingWizardStore(
+    (state) => state.progressEvents
+  );
+  const doneCount = getRailDoneCount(
+    progressEvents,
+    PROGRESS_RAIL_CARDS.length,
+    success
+  );
   return (
     <RailSurface>
       <div className="w-full max-w-[320px] space-y-5">
@@ -190,29 +199,34 @@ function ProgressRail({ success = false }: { success?: boolean }) {
           </div>
         </div>
         <div className="space-y-3">
-          {PROGRESS_RAIL_CARDS.map((card, index) => (
-            <div
-              className="flex items-center justify-between rounded-[14px] border border-white/10 bg-white/[0.05] px-3.5 py-2.5"
-              key={card.key}
-            >
-              <div className="space-y-0.5">
-                <div className="font-medium text-sm text-white">
-                  {card.label}
-                </div>
-                <div className="text-white/45 text-xs">{card.description}</div>
-              </div>
-              <span
-                className={cn(
-                  "rounded-full px-2.5 py-1 font-medium text-xs",
-                  success || index < 2
-                    ? "bg-emerald-500/15 text-emerald-200"
-                    : "bg-white/[0.06] text-white/55"
-                )}
+          {PROGRESS_RAIL_CARDS.map((card, index) => {
+            const isDone = index < doneCount;
+            return (
+              <div
+                className="flex items-center justify-between rounded-[14px] border border-white/10 bg-white/[0.05] px-3.5 py-2.5"
+                key={card.key}
               >
-                {success || index < 2 ? "done" : "pending"}
-              </span>
-            </div>
-          ))}
+                <div className="space-y-0.5">
+                  <div className="font-medium text-sm text-white">
+                    {card.label}
+                  </div>
+                  <div className="text-white/45 text-xs">
+                    {card.description}
+                  </div>
+                </div>
+                <span
+                  className={cn(
+                    "rounded-full px-2.5 py-1 font-medium text-xs",
+                    isDone
+                      ? "bg-emerald-500/15 text-emerald-200"
+                      : "bg-white/[0.06] text-white/55"
+                  )}
+                >
+                  {isDone ? "done" : "pending"}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </RailSurface>
@@ -399,7 +413,7 @@ export function OnboardingWizardContent() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] opacity-20 [background-size:40px_40px]" />
         <div className="relative mx-auto flex min-h-[calc(100dvh-3rem)] w-full max-w-4xl items-center justify-center xl:max-w-5xl">
           <Card
-            className="relative w-full overflow-hidden border-white/10 bg-[#05070c] text-white shadow-[0_32px_96px_rgba(0,0,0,0.45)]"
+            className="relative w-full overflow-hidden border-white/10 bg-[#05070c] py-0 text-white shadow-[0_32px_96px_rgba(0,0,0,0.45)]"
             data-onboarding-panel=""
             data-testid="onboarding-panel"
           >

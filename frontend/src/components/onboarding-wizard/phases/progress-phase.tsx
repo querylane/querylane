@@ -33,33 +33,30 @@ function WaitingForConfigBody({
     }
   };
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col items-center gap-5 pt-2 text-center">
-        <div className="relative flex size-44 items-center justify-center rounded-full border border-white/8 bg-[radial-gradient(circle,rgba(98,122,255,0.14),rgba(7,9,15,0)_65%)]">
-          <div className="absolute inset-5 rounded-full border border-white/7" />
-          <div className="absolute inset-10 rounded-full border border-white/10" />
-          <div className="relative z-10 flex size-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-white/78">
-            <FileCog className="size-7" />
+    <div className="space-y-5">
+      <div className="flex flex-col items-center gap-4 text-center">
+        <div className="relative flex size-24 items-center justify-center rounded-full border border-white/8 bg-[radial-gradient(circle,rgba(98,122,255,0.14),rgba(7,9,15,0)_65%)]">
+          <div className="absolute inset-3 rounded-full border border-white/7" />
+          <div className="relative z-10 flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-white/78">
+            <FileCog className="size-5" />
           </div>
         </div>
         <Button
-          className="flex h-auto items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-sm text-white/88 transition-colors hover:bg-white/[0.07] md:text-base"
+          className="flex h-auto max-w-full items-center gap-3 whitespace-normal rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono font-normal text-white/88 text-xs transition-colors hover:bg-white/[0.07]"
           onClick={copyPath}
           title="Click to copy path"
           type="button"
           variant="ghost"
         >
-          {configFilePath}
+          <span className="min-w-0 break-all text-left">{configFilePath}</span>
           {pathCopied ? (
-            <Check className="size-5 shrink-0 text-emerald-400" />
+            <Check className="size-4 shrink-0 text-emerald-400" />
           ) : (
-            <ClipboardCopy className="size-5 shrink-0 text-white/50" />
+            <ClipboardCopy className="size-4 shrink-0 text-white/50" />
           )}
         </Button>
-        <p className="max-w-2xl text-sm text-white/56 leading-6 md:text-base">
-          Querylane is watching this path. Save a valid config file and it will
-          continue setup automatically.
-        </p>
+        {/* No explanatory copy here: the page description above this body
+            already says Querylane is watching the path shown. */}
         <Button
           className="h-9 rounded-lg border border-white/10 bg-white/[0.04] px-4 font-medium text-sm text-white hover:bg-white/[0.07]"
           disabled={retryPending}
@@ -91,11 +88,11 @@ function SuccessCallout() {
         <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full border border-emerald-400/35 bg-emerald-500/16 text-emerald-100">
           <Check aria-hidden="true" className="size-5" />
         </span>
-        <div className="min-w-0 space-y-2">
-          <div className="font-medium text-emerald-100 text-lg">
+        <div className="min-w-0 space-y-1.5">
+          <div className="font-medium text-base text-emerald-100">
             Ready to go!
           </div>
-          <p className="max-w-4xl text-emerald-50/90 text-sm leading-6 md:text-base">
+          <p className="max-w-4xl text-emerald-50/90 text-sm leading-6">
             Querylane is now configured and ready to manage your PostgreSQL
             instances. Click finish to start exploring.
           </p>
@@ -144,7 +141,7 @@ export function ProgressPhase() {
   const progressHeader =
     isWaiting || isSuccess ? null : (
       <div aria-live="polite" className="space-y-5">
-        <div className="flex items-center justify-between gap-4 text-sm md:text-base">
+        <div className="flex items-center justify-between gap-4 text-sm">
           <span className="text-white/70">{summary.statusLabel}</span>
           <span className="font-medium text-white/72">
             {summary.percentage}%

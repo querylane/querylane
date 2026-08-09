@@ -93,7 +93,7 @@ export function ManualYamlPhase() {
       title="YAML Configuration"
       titleBadge={
         <Badge
-          className="border-emerald-400/28 bg-emerald-500/10 px-3 py-1 text-emerald-200 text-xs"
+          className="border-emerald-400/28 bg-emerald-500/10 px-2.5 py-0.5 text-emerald-200 text-xs"
           variant="outline"
         >
           Recommended for file-based setups
@@ -106,7 +106,7 @@ export function ManualYamlPhase() {
             Default path
           </div>
           <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/8 bg-[#080b12] px-4 py-3">
-            <span className="min-w-0 flex-1 break-all font-mono text-white/92 text-xs md:text-sm">
+            <span className="min-w-0 flex-1 break-all font-mono text-white/92 text-xs">
               {configFilePath}
             </span>
             <Button
@@ -125,11 +125,11 @@ export function ManualYamlPhase() {
           </div>
           <p className="mt-3 text-sm text-white/54 leading-6">
             Override with{" "}
-            <code className="rounded bg-white/[0.06] px-2 py-1 text-white/72">
+            <code className="rounded bg-white/[0.06] px-1.5 py-0.5 text-white/72 text-xs">
               {"--config <path>"}
             </code>{" "}
             or{" "}
-            <code className="rounded bg-white/[0.06] px-2 py-1 text-white/72">
+            <code className="rounded bg-white/[0.06] px-1.5 py-0.5 text-white/72 text-xs">
               QUERYLANE_CONFIG
             </code>
             .
@@ -140,7 +140,7 @@ export function ManualYamlPhase() {
           <div className="flex items-center justify-between border-white/8 border-b px-5 py-4">
             <div className="font-medium text-base text-white">config.yaml</div>
             <Button
-              className="h-9 rounded-lg border-white/10 px-3 text-sm text-white/78 hover:bg-white/[0.05] hover:text-white"
+              className="h-8 rounded-lg border-white/10 px-3 text-white/78 text-xs hover:bg-white/[0.05] hover:text-white"
               onClick={async () => {
                 try {
                   await writeClipboard(configPreview);
@@ -152,9 +152,9 @@ export function ManualYamlPhase() {
               variant="ghost"
             >
               {copyState === "copied" ? (
-                <Check className="size-4" />
+                <Check className="size-3.5" />
               ) : (
-                <Copy className="size-4" />
+                <Copy className="size-3.5" />
               )}
               {copyState === "copied" ? "Copied" : "Copy"}
             </Button>
