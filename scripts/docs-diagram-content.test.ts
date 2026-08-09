@@ -178,18 +178,19 @@ test("routes cursor pagination retry edges around nodes", async () => {
 		) {
 			continue;
 		}
+		const { points, x, y } = arrow;
 
 		const collisions = nodes.flatMap((node) =>
-			arrow.points?.some((point, index, points) => {
-				const nextPoint = points[index + 1];
+			points.some((point, index, arrowPoints) => {
+				const nextPoint = arrowPoints[index + 1];
 				if (!nextPoint) {
 					return false;
 				}
 
 				return segmentCrossesRectangle(
 					[
-						[arrow.x + point[0], arrow.y + point[1]],
-						[arrow.x + nextPoint[0], arrow.y + nextPoint[1]],
+						[x + point[0], y + point[1]],
+						[x + nextPoint[0], y + nextPoint[1]],
 					],
 					node,
 				);
