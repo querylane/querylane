@@ -34,10 +34,25 @@ describe("downsampleTrend", () => {
     expect(sampled.at(-1)?.time).toBeLessThanOrEqual(99_000);
   });
 
+  test("crops empty buckets outside the observed trend", () => {
+    const sampled = downsampleTrend(
+      rows([null, null, 1, null, 2, null]),
+      "v",
+      24
+    );
+
+    expect(sampled).toEqual([
+      { time: 2000, v: 1 },
+      { time: 3000, v: null },
+      { time: 4000, v: 2 },
+    ]);
+  });
+
   test("a bucket with no finite values stays a gap", () => {
     const data = rows([
       ...Array.from({ length: 50 }, () => 1),
       ...Array.from({ length: 50 }, (): null => null),
+      ...Array.from({ length: 50 }, () => 2),
     ]);
     const sampled = downsampleTrend(data, "v", 10);
 
