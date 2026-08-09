@@ -57,6 +57,9 @@ lefthook-local.yml
 
 notes.md
 postgres_data
+
+# Throwaway HOME for onboarding-wizard testing (scripts/dev-onboarding-reset.sh)
+/.dev-onboarding
 frontend/playwright-report
 frontend/test-results
 frontend/.vitest
