@@ -1,6 +1,6 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { afterEach, expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { ColumnHeader } from "@/components/data-grid/table-data-grid/column-header";
@@ -170,7 +170,8 @@ function seedForeignKeyGridQueries(
     fetch: vi.fn(() => Promise.resolve()),
     getState: vi.fn(() => ({ fetchStatus: "idle", status: "success" })),
     prefetch: vi.fn(),
-  }
+  },
+  sourceRowCount = 1
 ) {
   tableDataApi.useReadRowsQueryActions.mockReturnValue(queryActions);
   tableApi.useListTableColumnsQuery.mockImplementation((input) => {
@@ -250,18 +251,21 @@ function seedForeignKeyGridQueries(
             column("origin_port", "text", DataType.STRING),
             column("dest_port", "text", DataType.STRING),
           ],
-          rows: [
+          rows: Array.from({ length: sourceRowCount }, (_, index) =>
             createProto(TableResultRowSchema, {
-              rowKey: "shipment-1",
+              rowKey: `shipment-${index + 1}`,
               values: [
-                cell({ case: "stringValue", value: "ML-2026-048291" }),
+                cell({
+                  case: "stringValue",
+                  value: `ML-2026-04829${index + 1}`,
+                }),
                 cell({ case: "int64Value", value: 214n }),
                 cell({ case: "stringValue", value: "in_transit" }),
                 cell({ case: "stringValue", value: "CNSHA" }),
                 cell({ case: "stringValue", value: "DEHAM" }),
               ],
-            }),
-          ],
+            })
+          ),
         }),
       }),
       dataUpdatedAt: 1_782_882_000_000,
@@ -789,10 +793,17 @@ test("data explorer controls and row detail drawer expose dense table context", 
 
 function renderForeignKeyReferenceGrid(
   className: string,
-  targetTableName = carriersName,
-  queryActions?: ForeignKeyQueryActionsStub
+  {
+    queryActions,
+    sourceRowCount = 1,
+    targetTableName = carriersName,
+  }: {
+    queryActions?: ForeignKeyQueryActionsStub;
+    sourceRowCount?: number;
+    targetTableName?: string;
+  } = {}
 ) {
-  seedForeignKeyGridQueries(targetTableName, queryActions);
+  seedForeignKeyGridQueries(targetTableName, queryActions, sourceRowCount);
 
   render(
     <ScreenshotFrame>
@@ -862,6 +873,37 @@ test("expanded data grid keeps close and refresh actions separate", async () => 
   const closeBox = closeButton.element().getBoundingClientRect();
   const refreshBox = refreshButton.element().getBoundingClientRect();
   expect(refreshBox.right).toBeLessThanOrEqual(closeBox.left - 8);
+});
+
+test("Escape clears cell selection without closing the expanded grid", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
+  );
+
+  await page.getByRole("button", { name: "Expand data grid" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Expanded data grid" });
+  const dialogElement = dialog.element();
+  const referenceValue = dialog.getByText("ML-2026-048291");
+  await referenceValue.click();
+  const referenceCell = referenceValue.element().closest(".rdg-cell");
+  if (!(referenceCell instanceof HTMLElement)) {
+    throw new Error("Expected the reference value inside a grid cell.");
+  }
+  expect(
+    dialogElement.querySelectorAll('[data-cell-range-selected="true"]')
+  ).toHaveLength(1);
+  expect(document.activeElement).toBe(referenceCell);
+
+  await userEvent.keyboard("{Escape}");
+
+  await vi.waitFor(() => {
+    expect(
+      dialogElement.querySelectorAll('[data-cell-range-selected="true"]')
+    ).toHaveLength(0);
+    expect(dialogElement).toHaveAttribute("data-open", "");
+    expect(dialogElement).not.toHaveAttribute("data-closed");
+  });
 });
 
 test("column headers reorder while layout controls stay compact", async () => {
@@ -965,6 +1007,320 @@ test("select-all stays tooltip-free and preserves native selection behavior", as
   }
 });
 
+test("keyboard navigation extends and clears a multi-cell selection", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
+  );
+
+  const referenceValue = page.getByText("ML-2026-048291");
+  await referenceValue.click();
+  const referenceCell = referenceValue.element().closest(".rdg-cell");
+  if (!(referenceCell instanceof HTMLElement)) {
+    throw new Error("Expected the reference value inside a grid cell.");
+  }
+
+  referenceCell.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      bubbles: true,
+      key: "ArrowRight",
+      shiftKey: true,
+    })
+  );
+
+  await vi.waitFor(() => {
+    expect(
+      document.querySelectorAll('[data-cell-range-selected="true"]')
+    ).toHaveLength(2);
+  });
+  const selectedCells = Array.from(
+    document.querySelectorAll<HTMLElement>('[data-cell-range-selected="true"]')
+  );
+  expect(selectedCells[0]).toHaveAttribute("data-cell-range-left", "true");
+  expect(selectedCells[1]).toHaveAttribute("data-cell-range-right", "true");
+  expect(
+    getComputedStyle(selectedCells[0] as HTMLElement).backgroundColor
+  ).not.toBe("rgba(0, 0, 0, 0)");
+
+  const activeCell = document.querySelector<HTMLElement>(
+    '[data-cell-range-active="true"]'
+  );
+  if (!activeCell) {
+    throw new Error("Expected an active selected cell.");
+  }
+  activeCell.dispatchEvent(
+    new KeyboardEvent("keydown", { bubbles: true, key: "Escape" })
+  );
+
+  await vi.waitFor(() => {
+    expect(
+      document.querySelectorAll('[data-cell-range-selected="true"]')
+    ).toHaveLength(0);
+  });
+
+  activeCell.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      bubbles: true,
+      ctrlKey: true,
+      key: "a",
+    })
+  );
+
+  await vi.waitFor(() => {
+    expect(
+      document.querySelectorAll('[data-cell-range-selected="true"]')
+    ).toHaveLength(5);
+  });
+  expect(
+    document.querySelector('.rdg-select-cell[data-cell-range-selected="true"]')
+  ).toBeNull();
+
+  activeCell.dispatchEvent(
+    new KeyboardEvent("keydown", { bubbles: true, key: "Escape" })
+  );
+  const statusCell = page
+    .getByText("in_transit")
+    .element()
+    .closest(".rdg-cell");
+  if (!(statusCell instanceof HTMLElement)) {
+    throw new Error("Expected the status value inside a grid cell.");
+  }
+  await userEvent.dragAndDrop(referenceCell, statusCell);
+
+  await vi.waitFor(() => {
+    expect(
+      document.querySelectorAll('[data-cell-range-selected="true"]')
+    ).toHaveLength(3);
+  });
+});
+
+test("grid exposes selected cell state without selection toolbar", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
+  );
+
+  await expect
+    .element(page.getByRole("grid", { name: "Table data" }))
+    .toBeVisible();
+  const referenceValue = page.getByText("ML-2026-048291");
+  await referenceValue.click();
+  const referenceCell = referenceValue.element().closest(".rdg-cell");
+  if (!(referenceCell instanceof HTMLElement)) {
+    throw new Error("Expected accessible selected cell.");
+  }
+
+  expect(referenceCell).toHaveAttribute("aria-selected", "true");
+  await expect
+    .element(page.getByRole("status", { name: "Cell selection" }))
+    .toHaveTextContent("1 cell selected in 1 row by 1 column.");
+  await expect.element(page.getByText("1 cell · 1×1")).not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("button", { name: "Copy selected cells" }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("button", { name: "Clear cell selection" }))
+    .not.toBeInTheDocument();
+});
+
+test("touch pointer drag selects a cell range", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground",
+    { sourceRowCount: 2 }
+  );
+
+  const startValue = page.getByText("ML-2026-048291");
+  const endValue = page.getByText("ML-2026-048292");
+  await expect.element(startValue).toBeVisible();
+  await expect.element(endValue).toBeVisible();
+  const startCell = startValue.element().closest(".rdg-cell");
+  const endCell = endValue.element().closest(".rdg-cell");
+  if (!(startCell instanceof HTMLElement && endCell instanceof HTMLElement)) {
+    throw new Error("Expected touch selection cells.");
+  }
+  const startBox = startCell.getBoundingClientRect();
+  const endBox = endCell.getBoundingClientRect();
+  expect(getComputedStyle(startCell).touchAction).toBe("auto");
+
+  startCell.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      button: 0,
+      clientX: startBox.x + startBox.width / 2,
+      clientY: startBox.y + startBox.height / 2,
+      pointerId: 6,
+      pointerType: "touch",
+    })
+  );
+  window.dispatchEvent(
+    new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 6,
+      pointerType: "touch",
+    })
+  );
+  await vi.waitFor(() => {
+    expect(
+      document.querySelectorAll('[data-cell-range-selected="true"]')
+    ).toHaveLength(1);
+    expect(getComputedStyle(startCell).touchAction).toBe("none");
+  });
+
+  startCell.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      button: 0,
+      clientX: startBox.x + startBox.width / 2,
+      clientY: startBox.y + startBox.height / 2,
+      pointerId: 7,
+      pointerType: "touch",
+    })
+  );
+  window.dispatchEvent(
+    new PointerEvent("pointermove", {
+      bubbles: true,
+      clientX: endBox.x + endBox.width / 2,
+      clientY: endBox.y + endBox.height / 2,
+      pointerId: 7,
+      pointerType: "touch",
+    })
+  );
+  window.dispatchEvent(
+    new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 7,
+      pointerType: "touch",
+    })
+  );
+
+  await vi.waitFor(() => {
+    expect(
+      document.querySelectorAll('[data-cell-range-selected="true"]')
+    ).toHaveLength(2);
+  });
+});
+
+test("dragging near a grid edge auto-scrolls the cell selection", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[420px] rounded-2xl border border-border bg-background p-6 text-foreground"
+  );
+
+  const startValue = page.getByText("ML-2026-048291");
+  await expect.element(startValue).toBeVisible();
+  const startCell = startValue.element().closest(".rdg-cell");
+  const grid = document.querySelector<HTMLElement>(".rdg");
+  if (!(startCell instanceof HTMLElement && grid)) {
+    throw new Error("Expected auto-scroll grid elements.");
+  }
+  expect(grid.scrollWidth).toBeGreaterThan(grid.clientWidth);
+  const startBox = startCell.getBoundingClientRect();
+  const gridBox = grid.getBoundingClientRect();
+
+  startCell.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      button: 0,
+      clientX: startBox.x + startBox.width / 2,
+      clientY: startBox.y + startBox.height / 2,
+      pointerId: 11,
+      pointerType: "mouse",
+    })
+  );
+  startCell.dispatchEvent(
+    new MouseEvent("mousedown", {
+      bubbles: true,
+      button: 0,
+      clientX: startBox.x + startBox.width / 2,
+      clientY: startBox.y + startBox.height / 2,
+    })
+  );
+  window.dispatchEvent(
+    new PointerEvent("pointermove", {
+      bubbles: true,
+      clientX: gridBox.right - 2,
+      clientY: startBox.y + startBox.height / 2,
+      pointerId: 11,
+      pointerType: "mouse",
+    })
+  );
+
+  await vi.waitFor(() => {
+    expect(grid.scrollLeft).toBeGreaterThan(0);
+  });
+  await vi.waitFor(() => {
+    expect(
+      document.querySelectorAll('[data-cell-range-selected="true"]').length
+    ).toBeGreaterThan(1);
+  });
+
+  window.dispatchEvent(
+    new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 11,
+      pointerType: "mouse",
+    })
+  );
+});
+
+test("dragging near the bottom edge auto-scrolls through rows", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[480px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground",
+    { sourceRowCount: 25 }
+  );
+
+  const startValue = page.getByText("ML-2026-048291");
+  await expect.element(startValue).toBeVisible();
+  const startCell = startValue.element().closest(".rdg-cell");
+  const grid = document.querySelector<HTMLElement>(".rdg");
+  if (!(startCell instanceof HTMLElement && grid)) {
+    throw new Error("Expected vertical auto-scroll grid elements.");
+  }
+  expect(grid.scrollHeight).toBeGreaterThan(grid.clientHeight);
+  const startBox = startCell.getBoundingClientRect();
+  const gridBox = grid.getBoundingClientRect();
+
+  startCell.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      button: 0,
+      clientX: startBox.x + startBox.width / 2,
+      clientY: startBox.y + startBox.height / 2,
+      pointerId: 12,
+      pointerType: "mouse",
+    })
+  );
+  startCell.dispatchEvent(
+    new MouseEvent("mousedown", {
+      bubbles: true,
+      button: 0,
+      clientX: startBox.x + startBox.width / 2,
+      clientY: startBox.y + startBox.height / 2,
+    })
+  );
+  window.dispatchEvent(
+    new PointerEvent("pointermove", {
+      bubbles: true,
+      clientX: startBox.x + startBox.width / 2,
+      clientY: gridBox.bottom - 2,
+      pointerId: 12,
+      pointerType: "mouse",
+    })
+  );
+
+  await vi.waitFor(() => {
+    expect(grid.scrollTop).toBeGreaterThan(0);
+    expect(
+      document.querySelectorAll('[data-cell-range-selected="true"]').length
+    ).toBeGreaterThan(1);
+  });
+
+  window.dispatchEvent(
+    new PointerEvent("pointerup", {
+      bubbles: true,
+      pointerId: 12,
+      pointerType: "mouse",
+    })
+  );
+});
+
 async function openForeignKeyReference() {
   const carrierLink = page.getByRole("button", {
     name: "Open carrier_id reference 214",
@@ -972,6 +1328,21 @@ async function openForeignKeyReference() {
   await carrierLink.click();
   return carrierLink;
 }
+
+test("interactive cell actions do not change the cell selection", async () => {
+  renderForeignKeyReferenceGrid(
+    "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground"
+  );
+
+  await openForeignKeyReference();
+
+  await expect
+    .element(page.getByRole("dialog", { name: "public.carriers" }))
+    .toBeVisible();
+  expect(
+    document.querySelectorAll('[data-cell-range-selected="true"]')
+  ).toHaveLength(0);
+});
 
 test("foreign key reference popover keeps the source table visible", async () => {
   renderForeignKeyReferenceGrid(
@@ -1030,8 +1401,7 @@ test("foreign key reference waits for first-load data before opening", async () 
 
   renderForeignKeyReferenceGrid(
     "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground",
-    carriersName,
-    queryActions
+    { queryActions }
   );
 
   const trigger = page.getByRole("button", {
@@ -1064,7 +1434,7 @@ test("foreign key reference popover fits a narrow viewport", async () => {
   try {
     renderForeignKeyReferenceGrid(
       "h-[700px] w-full rounded-xl border border-border bg-background p-3 text-foreground",
-      longCarriersName
+      { targetTableName: longCarriersName }
     );
     await openForeignKeyReference();
 
