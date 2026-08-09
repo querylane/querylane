@@ -1,67 +1,131 @@
 ---
-title: Get started
-description: Install Querylane, choose internal storage, connect 1 PostgreSQL server, and complete a useful first session with verifiable results.
+title: Quickstart
+description: Start Querylane, configure its metadata database, connect 1 PostgreSQL instance, and verify a useful first session.
 sidebar:
-  label: Get started
+  label: Quickstart
 ---
 
-The goal of setup is a useful first session with 1 PostgreSQL server. Follow 4 steps:
-
-1. **Install Querylane.** Start the preview container or run the application from source.
-2. **Configure Querylane internal storage.** Querylane needs its own PostgreSQL database for metadata, saved connections, and application state.
-3. **Register a PostgreSQL server to manage.** This is your application, production, staging, or analytics server.
-4. **Answer a real operational question.** Confirm health, inspect activity, explore structure, or review access on a server you understand.
-
-The first database belongs to Querylane. The second is an **instance** you ask Querylane to inspect. They can run on the same PostgreSQL server, but they are different resources and should use different databases and credentials.
-
-<CardGroup cols={2}>
-  <Card title="Install Querylane" href="/get-started/install-querylane" icon="download">
-    Start the rolling preview with Docker, or build and run the current source tree.
-  </Card>
-  <Card title="Complete a successful first session" href="/get-started/first-successful-session" icon="circle-check-big">
-    Verify 1 connection, learn the workspace, and leave with an answer you can validate.
-  </Card>
-</CardGroup>
-
-<img
-  alt="The embedded PostgreSQL setup step shows persistent storage, the data path, and automatic local port selection."
-  className="dark:hidden"
-  height="602"
-  src="/images/docs/onboarding-embedded.png"
-  width="1024"
-/>
-<img
-  alt="The embedded PostgreSQL setup step shows persistent storage, the data path, and automatic local port selection."
-  className="hidden dark:block"
-  height="602"
-  src="/images/docs/onboarding-embedded-dark.png"
-  width="1024"
-/>
-
-## Pick 1 of 3 paths
-
-<CardGroup cols={3}>
-  <Card title="Embedded PostgreSQL" href="/get-started/embedded-postgresql" icon="package">
-    Fastest local path. Querylane starts and manages its own metadata database on this machine.
-  </Card>
-  <Card title="External PostgreSQL" href="/get-started/external-postgresql" icon="database">
-    Durable setup. Connect an existing PostgreSQL database through the first-launch form.
-  </Card>
-  <Card title="Manual YAML" href="/get-started/manual-yaml" icon="file-code">
-    Operator path. Keep metadata and managed-instance settings in a watched configuration file.
-  </Card>
-</CardGroup>
-
-| Choose | When it fits | Main trade-off |
-| --- | --- | --- |
-| Embedded PostgreSQL | A local evaluation, demo, or direct single-node run | Querylane owns the process and local data path; not intended for containerized or multi-node use |
-| External PostgreSQL | A durable installation with an existing PostgreSQL service | You provision the database, credentials, backups, and availability |
-| Manual YAML | Configuration-as-code, secret environment variables, or UI-independent operation | Instance configuration becomes read-only in the UI while YAML owns it |
+Use this path to evaluate Querylane with 1 PostgreSQL server you already understand. You will start the preview, configure Querylane's own storage, register a server, and verify 1 operational answer.
 
 :::tip
-If you want to see Querylane quickly, use **Embedded PostgreSQL**. If you plan to keep the installation, move to **External PostgreSQL** with backups and a stable secret key.
+Start with a non-production server and a dedicated read-only PostgreSQL login. Familiar data gives you a reliable baseline for checking what Querylane shows.
 :::
 
-Not installed yet? [Start with the installation guide](/get-started/install-querylane). Already running from source? [Open the local preview guide](/get-started/local-preview). After internal storage is ready, every path continues to [register your first instance](/get-started/register-instance).
+## 1. Start the Docker preview
 
-After registration, use the [first successful session](/get-started/first-successful-session) to confirm the product is useful with a server you already understand. If any stage fails, use the [setup troubleshooting guide](/get-started/troubleshooting). When you decide to keep Querylane, follow the [production deployment guide](/get-started/production-deployment).
+You need Docker and a PostgreSQL server that the Querylane container can reach.
+
+```sh
+docker run --rm \
+  --name querylane \
+  --publish 127.0.0.1:8080:8080 \
+  ghcr.io/querylane/querylane-dev:edge
+```
+
+Open `http://localhost:8080`. A fresh container has no metadata database configuration, so Querylane opens the first-launch wizard.
+
+:::warning
+`querylane-dev:edge` is a rolling preview and can change without notice. The command also removes the container when it stops. Use it for evaluation, not a durable deployment.
+:::
+
+## 2. Configure Querylane storage
+
+The wizard configures **Querylane's metadata database**. This is separate from the PostgreSQL instance you want Querylane to inspect.
+
+| Storage | Use it for |
+| --- | --- |
+| Embedded PostgreSQL | A direct local run or disposable demo |
+| External PostgreSQL | A durable installation |
+| Manual YAML | Configuration-as-code and environment-backed secrets |
+
+For this disposable container, choose external PostgreSQL if one is available. Embedded PostgreSQL is better for a direct host run because the process and data directory must survive together. See [Configure Querylane](/get-started/configure-querylane) before keeping an installation.
+
+## 3. Register a PostgreSQL instance
+
+An **instance** is a PostgreSQL server connection managed by Querylane. It can contain many databases and is not Querylane's metadata database.
+
+<img
+  alt="The instance form collects a display name and PostgreSQL server connection."
+  className="dark:hidden"
+  height="992"
+  src="/images/docs/register-instance.png"
+  width="1008"
+/>
+<img
+  alt="The instance form collects a display name and PostgreSQL server connection."
+  className="hidden dark:block"
+  height="992"
+  src="/images/docs/register-instance-dark.png"
+  width="1008"
+/>
+
+<Steps>
+  <Step title="Open Add instance">
+    Onboarding sends you to the instance form. Later, use the instance switcher to add another server.
+  </Step>
+  <Step title="Enter the connection">
+    Provide a display name, host, port, initial database, username, password, and SSL mode. You can paste a complete PostgreSQL DSN instead.
+  </Step>
+  <Step title="Test the connection">
+    Querylane requires a successful test before registration. Changing the connection invalidates the previous test.
+  </Step>
+  <Step title="Register the instance">
+    Querylane stores the connection, discovers server information and databases, and opens the instance overview.
+  </Step>
+</Steps>
+
+If the test fails, check DNS and network access, the initial database, credentials, PostgreSQL `pg_hba.conf`, and SSL mode. Querylane returns a generic connection failure unless an administrator configured a strict target allowlist.
+
+## 4. Complete a useful first session
+
+Do not stop at a green connection. Use the instance to answer a question you can verify elsewhere.
+
+<Steps>
+  <Step title="Confirm the server baseline">
+    Check connection state, PostgreSQL version, connection capacity, health warnings, and the sample timestamp.
+  </Step>
+  <Step title="Find an object you know">
+    Open a database and schema, then confirm the columns, indexes, constraints, policies, or triggers of a familiar table.
+  </Step>
+  <Step title="Answer 1 live question">
+    Review Activity for active sessions, old transactions, waits, or blockers. Or inspect a known role's memberships and grants.
+  </Step>
+  <Step title="Verify the answer">
+    Compare the result with `psql`, an existing dashboard, or a catalog definition you trust.
+  </Step>
+</Steps>
+
+## You are successful when
+
+- The connected instance is the server you intended to register.
+- You can navigate to a known database, schema, and object.
+- You can explain at least 1 health, activity, structure, or access finding.
+- The finding agrees with another trusted source.
+- You understand whether missing information is caused by the registered PostgreSQL role's permissions.
+
+Continue with [Use Querylane](/use-querylane) for the product tour. Before adding production credentials, follow [Deploy Querylane](/get-started/deploy-querylane).
+
+## Run from source
+
+Use the source path for contributor work or to test an unreleased change. Install Go 1.26, Bun 1.3, [Task](https://taskfile.dev/), and Git.
+
+```sh
+git clone https://github.com/querylane/querylane.git
+cd querylane
+task setup
+task dev:setup
+task dev
+```
+
+To exercise the first-launch wizard instead of the checked-in development configuration:
+
+```sh Terminal 1
+cd backend
+go run . server start --config=./configs/manual-onboarding.yaml
+```
+
+```sh Terminal 2
+task dev:frontend
+```
+
+Open the URL printed by Rsbuild, normally `http://localhost:3000`.

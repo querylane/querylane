@@ -49,7 +49,7 @@ const segmentCrossesRectangle = (
 
 const expectedDiagrams = [
 	{
-		page: "concepts/how-querylane-works.mdx",
+		page: "get-started/configure-querylane.mdx",
 		diagrams: ["resource-model", "stored-and-live-data"],
 		walkthroughs: [
 			"Read the hierarchy from left to right",
@@ -57,7 +57,7 @@ const expectedDiagrams = [
 		],
 	},
 	{
-		page: "get-started/(deploy-and-maintain)/production-deployment.mdx",
+		page: "get-started/deploy-querylane.mdx",
 		diagrams: ["production-topology"],
 		walkthroughs: ["Follow one browser request from left to right"],
 	},
@@ -72,19 +72,17 @@ const expectedDiagrams = [
 		walkthroughs: ["Walk through one successful stream"],
 	},
 	{
-		page: "guides/audit-table-access.mdx",
-		diagrams: ["table-access-check"],
-		walkthroughs: ["Follow one access check from left to right"],
-	},
-	{
-		page: "guides/find-blocking-sessions.mdx",
-		diagrams: ["blocking-sessions"],
-		walkthroughs: ["Read every arrow from left to right as"],
-	},
-	{
-		page: "guides/inspect-row-level-security.mdx",
-		diagrams: ["row-level-security"],
-		walkthroughs: ["Follow the decision from left to right"],
+		page: "use-querylane.mdx",
+		diagrams: [
+			"blocking-sessions",
+			"table-access-check",
+			"row-level-security",
+		],
+		walkthroughs: [
+			"Read every arrow from left to right as",
+			"Follow one access check from left to right",
+			"Follow the decision from left to right",
+		],
 	},
 ] as const;
 
@@ -149,7 +147,7 @@ test("removes Mermaid blocks from the docs site", async () => {
 
 test("gives detailed Excalidraw diagrams more inline room", async () => {
 	const [storedAndLive, serverStream, theme] = await Promise.all([
-		readPage("concepts/how-querylane-works.mdx"),
+		readPage("get-started/configure-querylane.mdx"),
 		readPage("guides/api/errors-and-streaming.mdx"),
 		readFile(new URL("../theme.css", import.meta.url), "utf8"),
 	]);

@@ -1,6 +1,6 @@
 ---
-title: PostgreSQL operations, in 1 browser workspace
-description: Querylane brings server health, live activity, access, and database structure together without hiding the PostgreSQL underneath.
+title: PostgreSQL operations in 1 browser workspace
+description: Evaluate, configure, deploy, and operate Querylane, a self-hosted PostgreSQL-first administration workspace for multiple servers.
 sidebar:
   label: Overview
   order: 0
@@ -11,14 +11,14 @@ Querylane is a self-hosted, PostgreSQL-first admin workspace for people who need
 The fastest way to understand Querylane is to connect 1 non-production server you already know, then use it to answer a question whose answer you can verify.
 
 <CardGroup cols={3}>
-  <Card title="Start the guided setup" href="/get-started" icon="rocket">
-    Install the preview, choose internal storage, and connect 1 PostgreSQL server.
+  <Card title="Start the quickstart" href="/get-started" icon="rocket">
+    Run the preview, configure storage, and connect 1 PostgreSQL server.
   </Card>
-  <Card title="Complete a successful first session" href="/get-started/first-successful-session" icon="circle-check-big">
-    Verify the connection, learn the workspace, and answer 1 useful operational question.
+  <Card title="Configure Querylane" href="/get-started/configure-querylane" icon="settings">
+    Choose metadata storage, manage secrets, and configure instances.
   </Card>
-  <Card title="Deploy it safely" href="/get-started/production-deployment" icon="shield-check">
-    Add durable storage, least-privilege access, authentication, backups, and upgrades.
+  <Card title="Deploy Querylane" href="/get-started/deploy-querylane" icon="shield-check">
+    Add durable storage, least-privilege access, and authenticated ingress.
   </Card>
 </CardGroup>
 
@@ -26,16 +26,16 @@ The fastest way to understand Querylane is to connect 1 non-production server yo
 
 <Steps>
   <Step title="Start Querylane">
-    Use the [guided setup](/get-started) to run the preview and configure Querylane's own metadata database.
+    Use the [quickstart](/get-started) to run the preview and configure Querylane's own metadata database.
   </Step>
   <Step title="Connect a server you understand">
-    [Register 1 instance](/get-started/register-instance), preferably a non-production server with a dedicated read-only login.
+    Register 1 instance, preferably a non-production server with a dedicated read-only login.
   </Step>
   <Step title="Establish a baseline">
     Confirm connection state, server details, health checks, activity, database structure, and role visibility.
   </Step>
   <Step title="Leave with a verified answer">
-    Follow the [first successful session](/get-started/first-successful-session) and compare what Querylane shows with a fact you already know about the server.
+    Follow the quickstart and compare what Querylane shows with a fact you already know about the server.
   </Step>
 </Steps>
 
@@ -72,19 +72,19 @@ Database tools often split the job in 2: a SQL client for structure and data, th
 | Activity | Inspect live sessions, transaction age, client origin, waits, and blocking relationships |
 | Data Explorer | Browse schemas and database objects, map table relationships, inspect table metadata, filter rows, and export data |
 | Roles and access | Explore roles, memberships, grants, definitions, and effective access paths |
-| [Database insights](/guides/extensions-and-insights) | Review extensions, database health, and query insights |
+| Database insights | Review extensions, database health, and query insights |
 
 ## A read-first preview
 
 Querylane is deliberately read-first today. It is useful for inspection and operational understanding, but it does not yet replace a mature SQL IDE or every write-heavy PostgreSQL administration workflow. The planned [SQL Workbench and write path](/roadmap) close those gaps in that order, with safety rails before broad mutation support.
 
-Review [Why choose Querylane](/why-querylane) for a comparison with pgAdmin, database IDEs, and ORM-oriented studios.
+Review [Use Querylane](/use-querylane) for the product tour and a comparison with pgAdmin, database IDEs, and ORM-oriented studios.
 
 <CardGroup cols={2}>
-  <Card title="Understand the workspace" href="/concepts/how-querylane-works" icon="boxes">
-    Learn how Querylane separates its own metadata from the PostgreSQL instances you inspect.
+  <Card title="Use Querylane" href="/use-querylane" icon="panels-top-left">
+    Learn the product workflow, current features, and read-first boundaries.
   </Card>
-  <Card title="Operate it durably" href="/operations" icon="shield-check">
+  <Card title="Operate it durably" href="/get-started/operate-querylane" icon="shield-check">
     Configure permissions, backups, upgrades, rollback, and authenticated ingress.
   </Card>
 </CardGroup>

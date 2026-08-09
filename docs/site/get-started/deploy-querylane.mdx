@@ -1,0 +1,217 @@
+---
+title: Deploy Querylane
+description: Deploy Querylane with external PostgreSQL, stable secrets, authenticated ingress, least-privilege database access, and readiness checks.
+---
+
+Querylane is self-hosted and still a preview. A durable deployment needs external metadata PostgreSQL, persistent secrets, authenticated ingress, restricted database access, backups, and a pinned image.
+
+:::warning
+Querylane does not currently include built-in authentication. Do not expose it directly to the public internet. Put it behind a trusted private network or a reverse proxy that enforces authentication and TLS.
+:::
+
+## Production shape
+
+<img
+  alt="Production topology with trusted ingress, Querylane, a secret manager, metadata PostgreSQL, and managed instances"
+  height="620"
+  loading="lazy"
+  src="/images/docs/diagrams/production-topology.svg"
+  width="1400"
+/>
+
+Follow one browser request from left to right:
+
+1. Trusted ingress authenticates the operator and terminates TLS.
+2. Querylane receives private HTTP traffic and loads its DSN and encryption key from protected environment variables.
+3. Querylane reads application state from metadata PostgreSQL.
+4. Querylane opens separate, least-privilege connections to the PostgreSQL instances it inspects.
+
+## 1. Prepare metadata PostgreSQL
+
+Create a dedicated database and login:
+
+```sql
+CREATE ROLE querylane LOGIN PASSWORD 'replace-me';
+CREATE DATABASE querylane OWNER querylane;
+```
+
+Use a managed or otherwise backed-up PostgreSQL service. Querylane applies metadata migrations during startup, so back up the database before every upgrade.
+
+Generate `QUERYLANE_INSTANCE_SECRET_KEY` once and store it with the metadata DSN in your secret manager:
+
+```sh
+openssl rand -base64 32
+```
+
+Every replica and restart must receive the same key. Changing or losing it makes existing encrypted instance credentials unreadable. Key rotation is not currently supported.
+
+## 2. Add production policy
+
+Keep non-secret settings in `querylane.yaml`:
+
+```yaml
+http:
+  host: "0.0.0.0"
+  port: 8080
+  access_log: true
+  cors:
+    allowed_origins:
+      - "https://querylane.example.com"
+
+instance_targets:
+  allowed_cidrs:
+    - "10.0.0.0/8"
+  denied_cidrs:
+    - "10.10.0.0/16"
+
+limits:
+  live_queries:
+    global: 32
+    per_instance: 6
+  connection_tests:
+    per_caller_per_minute: 10
+    burst: 5
+  postgres_pool:
+    max_open_connections: 8
+    max_idle_connections: 2
+    idle_timeout: "5m"
+    connection_max_lifetime: "30m"
+```
+
+A nonempty `allowed_cidrs` list is strict. Querylane resolves the hostname and checks the resolved address before each managed PostgreSQL connection. Custom deny rules always win.
+
+## 3. Run a pinned container
+
+The project currently publishes the rolling `ghcr.io/querylane/querylane-dev:edge` preview. Resolve its digest before deployment:
+
+```sh
+docker pull ghcr.io/querylane/querylane-dev:edge
+docker image inspect \
+  --format='{{index .RepoDigests 0}}' \
+  ghcr.io/querylane/querylane-dev:edge
+```
+
+Use the immutable digest in `compose.yaml`:
+
+```yaml
+services:
+  querylane:
+    image: ghcr.io/querylane/querylane-dev@sha256:replace-with-pinned-digest
+    command: ["server", "start", "--config", "/etc/querylane/querylane.yaml"]
+    environment:
+      QUERYLANE_DATABASE_DSN: "${QUERYLANE_DATABASE_DSN}"
+      QUERYLANE_INSTANCE_SECRET_KEY: "${QUERYLANE_INSTANCE_SECRET_KEY}"
+    volumes:
+      - ./querylane.yaml:/etc/querylane/querylane.yaml:ro
+    ports:
+      - "127.0.0.1:8080:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+```
+
+Keep `.env` outside version control with mode `0600`, then start and inspect the service:
+
+```sh
+chmod 600 .env
+docker compose pull
+docker compose up --detach
+docker compose logs --follow querylane
+```
+
+The loopback binding assumes the reverse proxy runs on the host. If it is another container, remove `ports`, place both services on a private Docker network, and proxy to `querylane:8080`.
+
+## 4. Protect ingress
+
+Expose only the Querylane HTTP service on port `8080`. Do not expose PostgreSQL or the container runtime. Require SSO, an identity-aware proxy, a VPN, or another authentication layer.
+
+For a small controlled deployment, Caddy can terminate TLS and require a generated password hash:
+
+```sh
+caddy hash-password
+```
+
+```nginx
+querylane.example.com {
+  encode zstd gzip
+
+  basic_auth {
+    operator $2a$14$replace_with_caddy_hash
+  }
+
+  reverse_proxy 127.0.0.1:8080
+}
+```
+
+Use Caddy `forward_auth` with your identity proxy when you need SSO, groups, or centralized revocation. Cloudflare Tunnel is another option, but the tunnel alone does not authenticate users. Create and test a Cloudflare Access policy before sharing the hostname.
+
+Verify an allowed identity can load the application, a signed-out browser receives an authentication challenge, and direct requests to the host's public IP cannot reach port `8080`.
+
+## 5. Configure least-privilege instance access
+
+Give every managed trust boundary a dedicated PostgreSQL login. Start with catalog-only access, then add only the capabilities operators need.
+
+| Profile | Grants | Querylane capability |
+| --- | --- | --- |
+| Catalog only | `LOGIN`, database `CONNECT`, schema `USAGE`, and existing object privileges | Discover visible databases, schemas, and objects |
+| Read and export | Catalog grants plus `SELECT` on approved tables and views | Read and export permitted rows |
+| Operations | Read and export plus `pg_monitor` | See fuller activity, health, statistics, and query insights |
+
+Example operations reader:
+
+```sql
+CREATE ROLE querylane_reader
+  LOGIN
+  PASSWORD 'replace-me'
+  INHERIT
+  NOSUPERUSER
+  NOCREATEDB
+  NOCREATEROLE
+  NOREPLICATION
+  NOBYPASSRLS;
+
+GRANT CONNECT ON DATABASE app TO querylane_reader;
+GRANT pg_monitor TO querylane_reader;
+```
+
+Connect to every approved database before granting schema and row access:
+
+```sql
+GRANT USAGE ON SCHEMA app_schema TO querylane_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA app_schema TO querylane_reader;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE app_owner IN SCHEMA app_schema
+  GRANT SELECT ON TABLES TO querylane_reader;
+```
+
+Do not grant `SUPERUSER`, `BYPASSRLS`, database ownership, or broad `pg_read_all_data` access solely for Querylane. Row-level security continues to apply to the registered role.
+
+## 6. Add readiness and replicas
+
+Use `GET /` for liveness. For readiness, call `ConsoleService.GetConsoleConfig` and require the ready application state.
+
+Multiple replicas must share:
+
+- the same pinned image;
+- the same external metadata database;
+- the same `QUERYLANE_INSTANCE_SECRET_KEY`;
+- the same configuration and target policy; and
+- network access to the same metadata and managed PostgreSQL endpoints.
+
+Do not use embedded PostgreSQL for a multi-replica deployment. Live-query limits are process-local, so calculate worst-case PostgreSQL load by multiplying each limit by the maximum replica count.
+
+## Production checklist
+
+- Querylane is reachable only through authenticated HTTPS ingress.
+- Port `8080`, metadata PostgreSQL, managed PostgreSQL, and the container runtime are not publicly exposed.
+- The image is pinned by digest.
+- Secrets come from a secret manager and are recoverable.
+- CORS lists exact browser origins when cross-origin access is required.
+- Managed-instance egress is limited by Querylane policy and network firewalls.
+- Every managed instance uses a dedicated role with reviewed grants.
+- Metadata backups and a restore rehearsal exist.
+
+Continue with [Operate Querylane](/get-started/operate-querylane) for backup, upgrade, recovery, and troubleshooting procedures.
