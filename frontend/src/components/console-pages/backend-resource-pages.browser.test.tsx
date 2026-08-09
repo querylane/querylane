@@ -40,6 +40,13 @@ import {
   ServerInfoSchema,
   StorageMetricsSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import {
+  MetricId,
+  MetricKind,
+  MetricUnit,
+  type QueryMetricsResponse,
+  QueryMetricsResponseSchema,
+} from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
 const BLOCKED_ACTIVITY_ROW_NAME =
   /4302.*api-gateway.*UPDATE shipping\.shipments/;
@@ -91,6 +98,7 @@ async function getMarkerCenterPixels(marker: HTMLElement) {
 
 const state = vi.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
+  databaseMetricsQuery: {} as QueryState<QueryMetricsResponse>,
   databaseQuery: {} as QueryState<GetDatabaseResponse>,
   databasesQuery: {} as { data?: unknown; isPending?: boolean },
   deleteInstance: vi.fn(async () => undefined),
@@ -138,6 +146,7 @@ const state = vi.hoisted(() => ({
     partialErrors?: unknown[];
   }>,
   instanceQuery: {} as QueryState<GetInstanceResponse>,
+  instanceMetricsQuery: {} as QueryState<QueryMetricsResponse>,
   navigate: vi.fn(async () => undefined),
   overviewQuery: {} as QueryState<GetInstanceOverviewResponse>,
   queryClient: {
@@ -230,6 +239,7 @@ beforeEach(() => {
   document.documentElement.classList.add(visualTheme);
   document.documentElement.style.colorScheme = visualTheme;
   state.catalogQuery = {};
+  state.databaseMetricsQuery = {};
   state.databaseQuery = {};
   state.databasesQuery = { data: databasesListResponse() };
   state.extensionQuery = {};
@@ -237,6 +247,7 @@ beforeEach(() => {
   state.queryInsightsQuery = {};
   state.selectedInstanceStatus = "connected";
   state.instanceQuery = {};
+  state.instanceMetricsQuery = {};
   state.overviewQuery = {};
   state.queryClient.getQueryState.mockReset();
   state.queryClient.getQueryState.mockReturnValue(undefined);
@@ -332,8 +343,23 @@ vi.mock("@/hooks/api/metrics", async () => {
     ...actual,
     quantizedMetricsAnchor: () => 0,
     useDatabaseMetricsQuery: () => ({
-      data: { series: [] },
+      data: state.databaseMetricsQuery.data ?? { series: [] },
+      error: state.databaseMetricsQuery.error ?? null,
+      isFetching: state.databaseMetricsQuery.isFetching ?? false,
+      isPending: state.databaseMetricsQuery.isPending ?? false,
+    }),
+    useInstanceMetricsQuery: () => ({
+      data: state.instanceMetricsQuery.data,
+      dataUpdatedAt: state.instanceMetricsQuery.dataUpdatedAt ?? 0,
+      error: state.instanceMetricsQuery.error ?? null,
+      isFetching: state.instanceMetricsQuery.isFetching ?? false,
+      isPending: state.instanceMetricsQuery.isPending ?? false,
+      refetch: state.instanceMetricsQuery.refetch ?? vi.fn(async () => ({})),
+    }),
+    useInstancePreviousMetricsQuery: () => ({
+      data: undefined,
       error: null,
+      isFetching: false,
       isPending: false,
     }),
   };
@@ -653,6 +679,88 @@ function overviewResponse() {
   });
 }
 
+function overviewMetricUnit(metric: MetricId): MetricUnit {
+  if (metric === MetricId.CACHE_HIT_RATIO) {
+    return MetricUnit.RATIO;
+  }
+  if (
+    metric === MetricId.STORAGE_TOTAL_BYTES ||
+    metric === MetricId.DATABASE_SIZE_BYTES
+  ) {
+    return MetricUnit.BYTES;
+  }
+  return MetricUnit.COUNT;
+}
+
+function overviewMetricsResponse(): QueryMetricsResponse {
+  const startSeconds = BigInt(Date.UTC(2026, 6, 30, 17, 0) / 1000);
+  const valuesByMetric = new Map<MetricId, number[]>([
+    [
+      MetricId.CONNECTIONS_TOTAL,
+      [68, 70, 69, 72, 71, 74, 73, 76, 74, 75, 77, 74, 74],
+    ],
+    [
+      MetricId.CACHE_HIT_RATIO,
+      [
+        0.982, 0.985, 0.981, 0.988, 0.986, 0.989, 0.987, 0.991, 0.99, 0.988,
+        0.992, 0.989, 0.991,
+      ],
+    ],
+    [
+      MetricId.STORAGE_TOTAL_BYTES,
+      [
+        1.17e12, 1.18e12, 1.19e12, 1.2e12, 1.21e12, 1.22e12, 1.23e12, 1.24e12,
+        1.25e12, 1.26e12, 1.27e12, 1.28e12, 1.29e12,
+      ],
+    ],
+    [
+      MetricId.DATABASE_SIZE_BYTES,
+      [
+        58_900_000, 59_000_000, 59_100_000, 59_300_000, 59_500_000, 59_700_000,
+        59_900_000, 60_000_000, 60_100_000, 60_200_000, 60_300_000, 60_400_000,
+        60_500_000,
+      ],
+    ],
+    [
+      MetricId.DATABASE_LIVE_TUPLES,
+      [
+        1_220_000, 1_225_000, 1_228_000, 1_232_000, 1_238_000, 1_241_000,
+        1_245_000, 1_249_000, 1_252_000, 1_257_000, 1_261_000, 1_265_000,
+        1_270_000,
+      ],
+    ],
+    [
+      MetricId.DATABASE_DEAD_TUPLES,
+      [
+        8100, 7900, 7600, 8300, 8800, 8600, 8200, 7800, 7500, 7300, 7100, 6900,
+        6700,
+      ],
+    ],
+  ]);
+
+  return createProto(QueryMetricsResponseSchema, {
+    interval: {
+      endTime: { nanos: 0, seconds: startSeconds + 3600n },
+      startTime: { nanos: 0, seconds: startSeconds },
+    },
+    series: Array.from(valuesByMetric, ([metric, values]) => ({
+      delta: {
+        currentValue: values.at(-1) ?? 0,
+        percentChange: 4.2,
+        previousAvailable: false,
+      },
+      kind: MetricKind.GAUGE,
+      metric,
+      points: {
+        startTime: { nanos: 0, seconds: startSeconds },
+        step: { nanos: 0, seconds: 300n },
+        values,
+      },
+      unit: overviewMetricUnit(metric),
+    })),
+  });
+}
+
 function activityHealthResponse() {
   return {
     health: {
@@ -961,6 +1069,27 @@ function cardRect(label: string) {
   return card.getBoundingClientRect();
 }
 
+async function statSparkline(label: string): Promise<SVGElement> {
+  let sparkline: SVGElement | null = null;
+  await vi.waitFor(() => {
+    const statLabel = Array.from(document.querySelectorAll("span")).find(
+      (element) =>
+        element.textContent === label &&
+        element.parentElement?.parentElement?.classList.contains("grid") &&
+        element.parentElement.querySelector("svg")
+    );
+    sparkline =
+      statLabel?.parentElement?.querySelector<SVGElement>("svg") ?? null;
+    if (!sparkline) {
+      throw new Error(`Waiting for ${label} sparkline`);
+    }
+  });
+  if (!sparkline) {
+    throw new Error(`Expected ${label} sparkline`);
+  }
+  return sparkline;
+}
+
 async function openQueryInsightsDrawer(
   queryInsights: GetDatabaseQueryInsightsResponse
 ) {
@@ -1036,6 +1165,45 @@ test("backend instance overview shows live metrics and database catalog together
     "backend-instance-overview"
   );
   await expect(health).toMatchScreenshot("backend-instance-overview-health");
+});
+
+test("instance overview keeps passive sparklines large on mobile", async () => {
+  await page.viewport(390, 844);
+  try {
+    state.instanceQuery = {
+      data: instanceResponse(),
+      dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
+    };
+    state.instanceMetricsQuery = { data: overviewMetricsResponse() };
+    state.overviewQuery = { data: overviewResponse() };
+
+    render(
+      <BackendInstancePage
+        instanceId="prod"
+        searchRoute="/instances/$instanceId"
+        section="overview"
+      />
+    );
+
+    const sparkline = await statSparkline("Connections");
+    const geometry = sparkline.getBoundingClientRect();
+    expect.soft(geometry.width).toBeGreaterThanOrEqual(112);
+    expect.soft(geometry.height).toBeGreaterThanOrEqual(44);
+    expect.soft(sparkline.closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(document.querySelector('button[aria-label^="Expand"]')).toBeNull();
+    expect(document.documentElement.scrollWidth).toBe(
+      document.documentElement.clientWidth
+    );
+    const statStrip = sparkline.closest(".grid");
+    if (!(statStrip instanceof HTMLElement)) {
+      throw new Error("Expected instance stat strip");
+    }
+    await expect(page.elementLocator(statStrip)).toMatchScreenshot(
+      "backend-instance-overview-stat-strip-mobile"
+    );
+  } finally {
+    await page.viewport(1280, 1000);
+  }
 });
 
 test("backend instance activity matches the live sessions redesign", async () => {
@@ -1389,6 +1557,42 @@ test("backend database overview shows mission control stats and catalog tables",
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-database-overview"
   );
+});
+
+test("database overview keeps passive sparklines large on mobile", async () => {
+  await page.viewport(390, 844);
+  try {
+    state.databaseQuery = { data: databaseResponse() };
+    state.catalogQuery = { data: catalogResult() };
+    state.databaseMetricsQuery = { data: overviewMetricsResponse() };
+
+    render(
+      <BackendDatabasePage
+        databaseId="customer-events"
+        instanceId="prod"
+        section="overview"
+      />
+    );
+
+    const sparkline = await statSparkline("Total size");
+    const geometry = sparkline.getBoundingClientRect();
+    expect.soft(geometry.width).toBeGreaterThanOrEqual(112);
+    expect.soft(geometry.height).toBeGreaterThanOrEqual(44);
+    expect.soft(sparkline.closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(document.querySelector('button[aria-label^="Expand"]')).toBeNull();
+    expect(document.documentElement.scrollWidth).toBe(
+      document.documentElement.clientWidth
+    );
+    const statStrip = sparkline.closest('[data-slot="card"]');
+    if (!(statStrip instanceof HTMLElement)) {
+      throw new Error("Expected database stat strip");
+    }
+    await expect(page.elementLocator(statStrip)).toMatchScreenshot(
+      "backend-database-overview-stat-strip-mobile"
+    );
+  } finally {
+    await page.viewport(1280, 1000);
+  }
 });
 
 test("dense schema inventories use the wide row without layout holes", async () => {

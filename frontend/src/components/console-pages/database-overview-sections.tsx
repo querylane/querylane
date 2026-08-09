@@ -112,8 +112,9 @@ function TrendSparkline({ values }: { values: number[] }) {
   return (
     <svg
       aria-hidden="true"
-      className="h-8 w-16 shrink-0 text-chart-1 opacity-60"
+      className="size-full text-chart-1 opacity-60"
       fill="none"
+      preserveAspectRatio="none"
       viewBox={`0 0 ${SPARKLINE_WIDTH} ${SPARKLINE_HEIGHT}`}
     >
       <defs>
@@ -144,13 +145,19 @@ function StatCell({
   sub?: string | undefined;
   value: string;
 }) {
+  const hasSparkline = sparkline !== undefined && sparkline.length >= 2;
   return (
     <div className={cn("flex flex-col gap-1.5 px-5 py-4", className)}>
       <span className="font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em]">
         {label}
       </span>
-      <div className="flex items-end justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
+      <div
+        className={cn(
+          "flex items-end gap-3 max-sm:flex-col max-sm:items-stretch",
+          hasSparkline ? "min-h-14" : undefined
+        )}
+      >
+        <div className="flex shrink-0 flex-col gap-0.5">
           <span className="font-mono font-semibold text-[1.375rem] text-foreground tabular-nums leading-none tracking-tight">
             {value}
           </span>
@@ -158,7 +165,14 @@ function StatCell({
             <span className="mt-1 text-muted-foreground text-xs">{sub}</span>
           ) : null}
         </div>
-        {sparkline ? <TrendSparkline values={sparkline} /> : null}
+        {hasSparkline ? (
+          <div
+            aria-hidden="true"
+            className="h-14 min-w-28 flex-1 max-sm:w-full max-sm:min-w-0 max-sm:flex-none"
+          >
+            <TrendSparkline values={sparkline} />
+          </div>
+        ) : null}
       </div>
     </div>
   );
