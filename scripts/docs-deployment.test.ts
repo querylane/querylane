@@ -25,15 +25,28 @@ test("hosts the docs MCP endpoint", () => {
 	});
 });
 
-test("pins the latest Blume 1.3 release and its MCP type patch", async () => {
+test("pins Blume 1.4.2 without the MCP type patch fixed upstream", async () => {
 	const packageFile = JSON.parse(await read("package.json")) as {
 		devDependencies?: Record<string, string>;
 		patchedDependencies?: Record<string, string>;
 	};
 
-	expect(packageFile.devDependencies?.blume).toBe("1.3.1");
-	expect(packageFile.patchedDependencies).toEqual({
-		"blume@1.3.1": "patches/blume@1.3.1.patch",
+	expect(packageFile.devDependencies?.blume).toBe("1.4.2");
+	expect(packageFile.patchedDependencies).toBeUndefined();
+});
+
+test("pins patched versions of vulnerable Blume transitive dependencies", async () => {
+	const packageFile = JSON.parse(await read("package.json")) as {
+		overrides?: Record<string, string>;
+	};
+
+	expect(packageFile.overrides).toEqual({
+		"@hono/node-server": "2.0.10",
+		"@modelcontextprotocol/sdk": "1.30.0",
+		"fast-uri": "3.1.5",
+		hono: "4.12.34",
+		"js-yaml": "4.3.1",
+		postcss: "8.5.26",
 	});
 });
 
@@ -41,10 +54,7 @@ test("ships the Blume server in a health-checked container", async () => {
 	const dockerfile = await read("Dockerfile.docs");
 
 	expect(dockerfile).toContain("FROM --platform=$BUILDPLATFORM oven/bun:");
-	expect(dockerfile).toContain("COPY patches ./patches");
-	expect(dockerfile.indexOf("COPY patches ./patches")).toBeLessThan(
-		dockerfile.indexOf("bun install --frozen-lockfile"),
-	);
+	expect(dockerfile).not.toContain("COPY patches ./patches");
 	expect(dockerfile).toContain("COPY docs/components ./docs/components");
 	expect(dockerfile).toContain("COPY docs/generated ./docs/generated");
 	expect(dockerfile).toContain("COPY examples ./examples");
@@ -85,7 +95,19 @@ test("type-checks generated docs before the container build", async () => {
 
 	expect(packageFile).toContain('"docs:check": "blume check --strict"');
 	expect(dockerfile).toContain(
-		"RUN bun run docs:check\nRUN bun run docs:build",
+		"RUN bun run docs:check\nRUN bun run docs:validate",
+	);
+});
+
+test("validates docs links and anchors before the container build", async () => {
+	const [packageFile, dockerfile] = await Promise.all([
+		read("package.json"),
+		read("Dockerfile.docs"),
+	]);
+
+	expect(packageFile).toContain('"docs:validate": "blume validate --strict"');
+	expect(dockerfile).toContain(
+		"RUN bun run docs:validate\nRUN bun run docs:build",
 	);
 });
 
