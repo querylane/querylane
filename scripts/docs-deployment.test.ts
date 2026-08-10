@@ -35,21 +35,6 @@ test("pins Blume 1.4.2 without the MCP type patch fixed upstream", async () => {
 	expect(packageFile.patchedDependencies).toBeUndefined();
 });
 
-test("pins patched versions of vulnerable Blume transitive dependencies", async () => {
-	const packageFile = JSON.parse(await read("package.json")) as {
-		overrides?: Record<string, string>;
-	};
-
-	expect(packageFile.overrides).toEqual({
-		"@hono/node-server": "2.0.10",
-		"@modelcontextprotocol/sdk": "1.30.0",
-		"fast-uri": "3.1.5",
-		hono: "4.12.34",
-		"js-yaml": "4.3.1",
-		postcss: "8.5.26",
-	});
-});
-
 test("ships the Blume server in a health-checked container", async () => {
 	const dockerfile = await read("Dockerfile.docs");
 
