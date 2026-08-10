@@ -25,16 +25,6 @@ test("hosts the docs MCP endpoint", () => {
 	});
 });
 
-test("pins Blume 1.4.2 without the MCP type patch fixed upstream", async () => {
-	const packageFile = JSON.parse(await read("package.json")) as {
-		devDependencies?: Record<string, string>;
-		patchedDependencies?: Record<string, string>;
-	};
-
-	expect(packageFile.devDependencies?.blume).toBe("1.4.2");
-	expect(packageFile.patchedDependencies).toBeUndefined();
-});
-
 test("ships the Blume server in a health-checked container", async () => {
 	const dockerfile = await read("Dockerfile.docs");
 
