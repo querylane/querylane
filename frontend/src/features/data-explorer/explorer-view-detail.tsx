@@ -8,7 +8,7 @@ import {
   Rows3,
   TriangleAlert,
 } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
@@ -32,6 +32,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DisabledReasonButton } from "@/components/ui/disabled-reason-button";
+import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -551,22 +553,41 @@ function DependenciesTab({
   );
 }
 
+function mutationDisabledReason(mutationsAllowed: boolean): string | null {
+  return mutationsAllowed
+    ? null
+    : "This instance is read-only. Enable mutations in its safety settings to refresh materialized views.";
+}
+
 function MaterializedRefreshControl({
+  confirmationTarget,
+  mutationsAllowed,
   name,
   readiness,
+  rowCount,
+  sizeBytes,
   viewName,
 }: {
+  confirmationTarget: string;
+  mutationsAllowed: boolean;
   name: string;
   readiness: ConcurrentRefreshReadiness;
+  rowCount: bigint;
+  sizeBytes: bigint;
   viewName: string;
 }) {
   const mutation = useRefreshMaterializedViewMutation();
+  const confirmationId = useId();
   const controllerRef = useRef<AbortController | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
+  const impactSummary = `${formatRows(
+    normalizeEstimatedRowCount(rowCount)
+  )} estimated rows · ${formatBytes(sizeBytes)}`;
 
   useEffect(
     function updateRefreshElapsedTime() {
@@ -596,7 +617,21 @@ function MaterializedRefreshControl({
     setStartedAt(Date.now());
 
     try {
-      await mutation.mutateAsync({ mode, name, signal: controller.signal });
+      await mutation.mutateAsync(
+        {
+          confirmation,
+          mode,
+          name,
+          signal: controller.signal,
+        },
+        {
+          onError: (error) => {
+            setErrorMessage(
+              refreshErrorMessage(error, controller.signal.aborted)
+            );
+          },
+        }
+      );
       toast.success("Materialized view refreshed");
       setDialogOpen(false);
     } catch (error) {
@@ -610,10 +645,12 @@ function MaterializedRefreshControl({
 
   return (
     <>
-      <Button
+      <DisabledReasonButton
         disabled={refreshing}
+        disabledReason={mutationDisabledReason(mutationsAllowed)}
         onClick={() => {
           setErrorMessage("");
+          setConfirmation("");
           setDialogOpen(true);
         }}
         size="sm"
@@ -622,7 +659,7 @@ function MaterializedRefreshControl({
         {refreshing ? <Spinner /> : <RefreshCw />}
         Refresh
         <span className="sr-only"> materialized view</span>
-      </Button>
+      </DisabledReasonButton>
       <AlertDialog
         onOpenChange={(open) => {
           if (!refreshing) {
@@ -651,6 +688,32 @@ function MaterializedRefreshControl({
                 : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-4">
+            <Alert>
+              <TriangleAlert />
+              <AlertTitle>Mutation impact</AlertTitle>
+              <AlertDescription className="space-y-1">
+                <span className="block">{impactSummary}</span>
+                <span className="block">
+                  A standard refresh blocks reads until replacement finishes.
+                </span>
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-2">
+              <label className="text-sm" htmlFor={confirmationId}>
+                Type <span className="font-mono">{confirmationTarget}</span> to
+                confirm
+              </label>
+              <Input
+                aria-label={`Type ${confirmationTarget} to confirm`}
+                autoComplete="off"
+                disabled={refreshing}
+                id={confirmationId}
+                onChange={(event) => setConfirmation(event.target.value)}
+                value={confirmation}
+              />
+            </div>
+          </div>
           {refreshing ? (
             <div
               aria-label="Materialized view refresh in progress"
@@ -680,6 +743,7 @@ function MaterializedRefreshControl({
               <>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <Button
+                  disabled={confirmation !== confirmationTarget}
                   onClick={() => refresh(RefreshMaterializedViewMode.STANDARD)}
                   type="button"
                   variant="outline"
@@ -688,6 +752,7 @@ function MaterializedRefreshControl({
                 </Button>
                 {readiness === "ready" ? (
                   <Button
+                    disabled={confirmation !== confirmationTarget}
                     onClick={() =>
                       refresh(RefreshMaterializedViewMode.CONCURRENT)
                     }
@@ -746,6 +811,7 @@ function ConcurrentReadinessAlert({
 function MaterializedViewHeader({
   indexCount,
   indexesLoaded,
+  mutationsAllowed,
   readiness,
   schemaName,
   subtitle,
@@ -754,6 +820,7 @@ function MaterializedViewHeader({
 }: {
   indexCount: number;
   indexesLoaded: boolean;
+  mutationsAllowed: boolean;
   readiness: ConcurrentRefreshReadiness;
   schemaName: string | undefined;
   subtitle: string;
@@ -763,11 +830,18 @@ function MaterializedViewHeader({
   return (
     <ObjectDetailHeader
       actions={
-        <MaterializedRefreshControl
-          name={view.name}
-          readiness={readiness}
-          viewName={viewName}
-        />
+        <div className="flex items-center gap-2">
+          {mutationsAllowed ? null : <Badge variant="outline">Read-only</Badge>}
+          <MaterializedRefreshControl
+            confirmationTarget={formatViewSqlIdentifier(view, viewName)}
+            mutationsAllowed={mutationsAllowed}
+            name={view.name}
+            readiness={readiness}
+            rowCount={view.rowCount}
+            sizeBytes={view.sizeBytes}
+            viewName={viewName}
+          />
+        </div>
       }
       icon={Eye}
       iconClassName="bg-sky-500/10 text-sky-600 dark:text-sky-400"
@@ -933,6 +1007,7 @@ function MaterializedViewSurface({
   indexes,
   indexesQuery,
   instanceId,
+  mutationsAllowed,
   onTabChange,
   readiness,
   schemaName,
@@ -951,6 +1026,7 @@ function MaterializedViewSurface({
   indexes: readonly TableIndex[];
   indexesQuery: ReturnType<typeof useListTableIndexesQuery>;
   instanceId: string | undefined;
+  mutationsAllowed: boolean;
   onTabChange: (tab: MaterializedViewTab) => void;
   readiness: ConcurrentRefreshReadiness;
   schemaName: string | undefined;
@@ -964,6 +1040,7 @@ function MaterializedViewSurface({
       <MaterializedViewHeader
         indexCount={indexes.length}
         indexesLoaded={indexesQuery.data !== undefined}
+        mutationsAllowed={mutationsAllowed}
         readiness={readiness}
         schemaName={schemaName}
         subtitle={subtitle}
@@ -994,12 +1071,14 @@ function MaterializedViewSurface({
 function MaterializedViewDetail({
   databaseId,
   instanceId,
+  mutationsAllowed,
   schemaName,
   view,
   viewName,
 }: {
   databaseId: string | undefined;
   instanceId: string | undefined;
+  mutationsAllowed: boolean;
   schemaName: string | undefined;
   view: View;
   viewName: string;
@@ -1057,6 +1136,7 @@ function MaterializedViewDetail({
     indexes,
     indexesQuery,
     instanceId,
+    mutationsAllowed,
     onTabChange: setActiveTab,
     readiness,
     schemaName,
@@ -1080,12 +1160,14 @@ function MaterializedViewDetail({
 function ViewDetail({
   databaseId,
   instanceId,
+  mutationsAllowed,
   schemaName,
   view,
   viewName,
 }: {
   databaseId?: string | undefined;
   instanceId?: string | undefined;
+  mutationsAllowed: boolean;
   schemaName?: string | undefined;
   view: View | undefined;
   viewName: string;
@@ -1095,6 +1177,7 @@ function ViewDetail({
       <MaterializedViewDetail
         databaseId={databaseId}
         instanceId={instanceId}
+        mutationsAllowed={mutationsAllowed}
         schemaName={schemaName}
         view={view}
         viewName={viewName}

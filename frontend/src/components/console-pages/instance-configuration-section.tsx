@@ -6,6 +6,7 @@ import { useId, useState } from "react";
 import { SectionCard } from "@/components/console-pages/console-layout";
 import {
   DEFAULT_POSTGRES_PORT,
+  DEFAULT_STATEMENT_TIMEOUT_SECONDS,
   type InstanceFormErrors,
   type InstanceFormInvalidFieldName,
   type InstanceFormState,
@@ -34,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { DisabledReasonButton } from "@/components/ui/disabled-reason-button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectTrigger } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   formatSslMode,
   formatSslNegotiation,
@@ -48,6 +50,7 @@ import { InstanceConfigurationLabels } from "./instance-configuration-labels";
 
 function createInstanceFormState(instance: InstanceRecord): InstanceFormState {
   return {
+    allowMutations: instance.config?.allowMutations ?? false,
     database: instance.config?.database ?? "",
     dirtyFields: {},
     displayName: instance.displayName,
@@ -61,6 +64,10 @@ function createInstanceFormState(instance: InstanceRecord): InstanceFormState {
     sslNegotiation: formatSslNegotiation(
       normalizeSslNegotiation(instance.config?.sslNegotiation)
     ),
+    statementTimeoutSeconds: String(
+      instance.config?.statementTimeout?.seconds ??
+        BigInt(DEFAULT_STATEMENT_TIMEOUT_SECONDS)
+    ),
     username: instance.config?.username ?? "",
   };
 }
@@ -69,6 +76,7 @@ function areInstanceFormStatesEqual(
   next: InstanceFormState
 ) {
   return (
+    current.allowMutations === next.allowMutations &&
     current.database === next.database &&
     current.displayName === next.displayName &&
     current.host === next.host &&
@@ -77,6 +85,7 @@ function areInstanceFormStatesEqual(
     current.port === next.port &&
     current.sslMode === next.sslMode &&
     current.sslNegotiation === next.sslNegotiation &&
+    current.statementTimeoutSeconds === next.statementTimeoutSeconds &&
     current.username === next.username
   );
 }
@@ -187,6 +196,8 @@ function InstanceConfigurationSection({
   const passwordId = useId();
   const sslModeId = useId();
   const sslNegotiationId = useId();
+  const allowMutationsId = useId();
+  const statementTimeoutId = useId();
   const credentialGuidanceId = `${passwordId}-credential-guidance`;
   const [formState, setFormState] = useState<InstanceFormState>(() =>
     createInstanceFormState(instance)
@@ -256,6 +267,7 @@ function InstanceConfigurationSection({
       />
 
       <InstanceConfigurationFields
+        allowMutationsId={allowMutationsId}
         databaseId={databaseId}
         displayNameId={displayNameId}
         formErrors={formErrors}
@@ -270,6 +282,7 @@ function InstanceConfigurationSection({
         setFormState={setFormState}
         sslModeId={sslModeId}
         sslNegotiationId={sslNegotiationId}
+        statementTimeoutId={statementTimeoutId}
         usernameId={usernameId}
       />
 
@@ -293,6 +306,7 @@ function markInstanceFieldDirty(
 }
 
 function InstanceConfigurationFields({
+  allowMutationsId,
   databaseId,
   displayNameId,
   formErrors,
@@ -305,8 +319,10 @@ function InstanceConfigurationFields({
   setFormState,
   sslModeId,
   sslNegotiationId,
+  statementTimeoutId,
   usernameId,
 }: {
+  allowMutationsId: string;
   databaseId: string;
   displayNameId: string;
   formErrors: InstanceFormErrors;
@@ -319,6 +335,7 @@ function InstanceConfigurationFields({
   setFormState: Dispatch<SetStateAction<InstanceFormState>>;
   sslModeId: string;
   sslNegotiationId: string;
+  statementTimeoutId: string;
   usernameId: string;
 }) {
   return (
@@ -507,6 +524,62 @@ function InstanceConfigurationFields({
             </SelectContent>
           </Select>
           <FieldError error={formErrors.sslNegotiation} />
+        </div>
+      </div>
+      <div className="space-y-4 rounded-lg border bg-muted/20 p-4 lg:col-span-2">
+        <div>
+          <h3 className="font-medium text-sm">Safety</h3>
+          <p className="text-muted-foreground text-sm">
+            Server-enforced mutation access and query timeout defaults for this
+            instance.
+          </p>
+        </div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <label className="font-medium text-sm" htmlFor={allowMutationsId}>
+              Allow mutations
+            </label>
+            <p className="text-muted-foreground text-sm">
+              Off by default. When off, Querylane rejects managed write
+              operations before opening a target session.
+            </p>
+          </div>
+          <Switch
+            checked={formState.allowMutations}
+            disabled={isConfigManaged}
+            id={allowMutationsId}
+            onCheckedChange={(checked) =>
+              setFormState((current) => ({
+                ...current,
+                ...markInstanceFieldDirty(current, "allowMutations"),
+                allowMutations: checked,
+              }))
+            }
+          />
+        </div>
+        <div className="max-w-xs space-y-2">
+          <label className="font-medium text-sm" htmlFor={statementTimeoutId}>
+            Statement timeout (seconds)
+          </label>
+          <Input
+            aria-invalid={Boolean(formErrors.statementTimeoutSeconds)}
+            data-instance-config-field="statementTimeoutSeconds"
+            disabled={isConfigManaged}
+            id={statementTimeoutId}
+            inputMode="numeric"
+            max={60}
+            min={1}
+            onChange={(event) =>
+              setFormState((current) => ({
+                ...current,
+                ...markInstanceFieldDirty(current, "statementTimeoutSeconds"),
+                statementTimeoutSeconds: event.target.value,
+              }))
+            }
+            type="number"
+            value={formState.statementTimeoutSeconds}
+          />
+          <FieldError error={formErrors.statementTimeoutSeconds} />
         </div>
       </div>
     </div>

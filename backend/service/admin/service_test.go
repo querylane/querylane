@@ -51,6 +51,21 @@ type fakeExecutionLister struct {
 	err           error
 }
 
+type fakeAuditLogLister struct {
+	rows          []storage.AuditLogEntry
+	nextPageToken string
+	err           error
+	pageSize      int32
+	pageToken     string
+}
+
+func (f *fakeAuditLogLister) ListAuditLogEntries(_ context.Context, pageSize int32, pageToken string) ([]storage.AuditLogEntry, string, error) {
+	f.pageSize = pageSize
+	f.pageToken = pageToken
+
+	return f.rows, f.nextPageToken, f.err
+}
+
 func (f *fakeExecutionLister) ListRunnerExecutions(_ context.Context, params aip.Params) ([]model.RunnerExecutionState, string, error) {
 	f.params = params
 	return f.rows, f.nextPageToken, f.err
@@ -89,7 +104,78 @@ func newTestService(replicas *fakeReplicaStore, executions *fakeExecutionLister,
 		sampleStats = noSampleStats
 	}
 
-	return NewService(replicas, executions, syncStates, sampleStats, 30*24*time.Hour)
+	return NewService(replicas, executions, syncStates, sampleStats, &fakeAuditLogLister{}, 30*24*time.Hour)
+}
+
+func TestListAuditLogEntries(t *testing.T) {
+	t.Parallel()
+
+	finishedAt := time.Now()
+	lister := &fakeAuditLogLister{
+		rows: []storage.AuditLogEntry{{
+			ID: 42,
+			AuditMutation: storage.AuditMutation{
+				Actor:        "127.0.0.1:4000",
+				Action:       "refresh_materialized_view",
+				Statement:    `REFRESH MATERIALIZED VIEW "public"."revenue"`,
+				Target:       "instances/prod/databases/app/schemas/public/views/revenue",
+				InstanceName: "instances/prod",
+				DatabaseName: "app",
+			},
+			Status:        storage.AuditMutationSucceeded,
+			ResultSummary: "refreshed",
+			StartedAt:     finishedAt.Add(-time.Second),
+			FinishedAt:    &finishedAt,
+		}},
+		nextPageToken: "next",
+	}
+
+	svc := NewService(&fakeReplicaStore{}, &fakeExecutionLister{}, &fakeSyncStateLister{}, noSampleStats, lister, 30*24*time.Hour)
+	res, err := svc.ListAuditLogEntries(t.Context(), connect.NewRequest(&v1alpha1.ListAuditLogEntriesRequest{
+		PageSize:  25,
+		PageToken: "cursor",
+	}))
+	require.NoError(t, err)
+	assert.Equal(t, int32(25), lister.pageSize)
+	assert.Equal(t, "cursor", lister.pageToken)
+	assert.Equal(t, "next", res.Msg.GetNextPageToken())
+	require.Len(t, res.Msg.GetAuditLogEntries(), 1)
+	entry := res.Msg.GetAuditLogEntries()[0]
+	assert.Equal(t, "auditLogEntries/42", entry.GetName())
+	assert.Equal(t, v1alpha1.AuditLogEntry_STATUS_SUCCEEDED, entry.GetStatus())
+	assert.Equal(t, "127.0.0.1:4000", entry.GetActor())
+	assert.Equal(t, "app", entry.GetDatabase())
+	assert.Equal(t, finishedAt.Unix(), entry.GetFinishedAt().AsTime().Unix())
+}
+
+func TestListAuditLogEntriesRejectsUnsupportedQueryParameters(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		name    string
+		request *v1alpha1.ListAuditLogEntriesRequest
+	}{
+		{
+			name:    "filter",
+			request: &v1alpha1.ListAuditLogEntriesRequest{Filter: `status = "FAILED"`},
+		},
+		{
+			name:    "order by",
+			request: &v1alpha1.ListAuditLogEntriesRequest{OrderBy: "started_at"},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			lister := &fakeAuditLogLister{}
+			svc := NewService(&fakeReplicaStore{}, &fakeExecutionLister{}, &fakeSyncStateLister{}, noSampleStats, lister, 30*24*time.Hour)
+
+			_, err := svc.ListAuditLogEntries(t.Context(), connect.NewRequest(test.request))
+
+			require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+			assert.Zero(t, lister.pageSize, "unsupported parameters must be rejected before storage")
+		})
+	}
 }
 
 func TestListReplicas(t *testing.T) {

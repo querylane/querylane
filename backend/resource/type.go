@@ -21,6 +21,7 @@ const (
 	TypeReplica         Type = "console.querylane.dev/Replica"
 	TypeCatalogSync     Type = "console.querylane.dev/CatalogSyncState"
 	TypeMetricSample    Type = "console.querylane.dev/MetricSample"
+	TypeAuditLogEntry   Type = "console.querylane.dev/AuditLogEntry"
 )
 
 // String returns the canonical resource type string.

@@ -11,6 +11,7 @@ import {
 import {
   AdminService,
   type ListAdminRunnerExecutionsResponse,
+  type ListAuditLogEntriesResponse,
 } from "@/protogen/querylane/console/v1alpha1/admin_pb";
 import {
   getMetricsStorageStats,
@@ -19,6 +20,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/admin-AdminService_connectquery";
 
 const JOB_QUEUE_PAGE_SIZE = 50;
+const AUDIT_LOG_PAGE_SIZE = 50;
 /**
  * Catalog scopes and replicas are small sets (scopes scale with browsed
  * catalog objects, replicas with deployment size); a single max-size page is
@@ -35,6 +37,14 @@ function fetchRunnerExecutionsPage(
   return client.listAdminRunnerExecutions({
     ...(filter ? { filter } : {}),
     pageSize: JOB_QUEUE_PAGE_SIZE,
+    pageToken,
+  });
+}
+
+function fetchAuditLogEntriesPage(transport: Transport, pageToken = "") {
+  const client = createClient(AdminService, transport);
+  return client.listAuditLogEntries({
+    pageSize: AUDIT_LOG_PAGE_SIZE,
     pageToken,
   });
 }
@@ -67,6 +77,25 @@ export function useAdminRunnerExecutionsInfiniteQuery(filter: string) {
       fetchRunnerExecutionsPage(transport, filter, pageParam),
     queryKey: ["admin", "runner-executions", "list-pages", filter] as const,
     refetchInterval: ADMIN_OPS_REFETCH_INTERVALS.jobQueue,
+    ...RESOURCE_QUERY_OPTIONS.adminOps,
+  });
+}
+
+export function useAuditLogEntriesInfiniteQuery() {
+  const transport = useTransport();
+
+  return useInfiniteQuery<
+    ListAuditLogEntriesResponse,
+    Error,
+    InfiniteData<ListAuditLogEntriesResponse>,
+    readonly ["admin", "audit-log", "list-pages"],
+    string
+  >({
+    getNextPageParam: (lastPage) => lastPage.nextPageToken || undefined,
+    initialPageParam: "",
+    queryFn: ({ pageParam }) => fetchAuditLogEntriesPage(transport, pageParam),
+    queryKey: ["admin", "audit-log", "list-pages"] as const,
+    refetchInterval: ADMIN_OPS_REFETCH_INTERVALS.auditLog,
     ...RESOURCE_QUERY_OPTIONS.adminOps,
   });
 }

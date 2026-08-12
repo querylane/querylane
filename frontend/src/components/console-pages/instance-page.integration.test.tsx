@@ -64,12 +64,14 @@ import {
 interface InstanceUpdateInput {
   instance: {
     config: {
+      allowMutations: boolean;
       database: string;
       host: string;
       password: string;
       port: number;
       sslMode: number;
       sslNegotiation: number;
+      statementTimeout?: { nanos: number; seconds: bigint };
       username: string;
     };
     displayName: string;
@@ -308,6 +310,7 @@ function postgresInstanceFixture(
   status: PostgresInstance["status"] = "disconnected"
 ): PostgresInstance {
   return {
+    allowMutations: false,
     connectionError: "",
     credentialsUnreadable: false,
     host: "db.internal",
@@ -655,6 +658,27 @@ function setFieldValue(label: string, value: string) {
 }
 
 describe("backend instance configuration save", () => {
+  test("shows read-only mode and saves explicit mutation safety settings", async () => {
+    const user = userEvent.setup();
+    renderInstanceConfiguration();
+
+    expect(screen.getByText("Read-only")).toBeTruthy();
+    await user.click(screen.getByRole("switch", { name: "Allow mutations" }));
+    setFieldValue("Statement timeout (seconds)", "45");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => {
+      expect(state.updateInstance).toHaveBeenCalledTimes(1);
+    });
+    const input = state.updateInstance.mock.calls[0]?.[0];
+    expect(input?.instance.config.allowMutations).toBe(true);
+    expect(input?.instance.config.statementTimeout?.seconds).toBe(45n);
+    expect(input?.updateMask.paths).toEqual([
+      "config.allow_mutations",
+      "config.statement_timeout",
+    ]);
+  });
+
   test("requires the operator key before password recovery", () => {
     state.instanceData = instanceResponse({
       credentialError:
@@ -1600,6 +1624,7 @@ describe("backend instance health checks", () => {
     expect(within(health).getByText("aarch64 / linux")).toBeTruthy();
     expect(within(health).getByText("2 extensions")).toBeTruthy();
     expect(within(health).getByText("max 100 connections")).toBeTruthy();
+    expect(within(health).getByText("Privileged PostgreSQL role")).toBeTruthy();
     expect(state.extensionInput).toEqual({
       orderBy: "installed desc",
       pageSize: 50,

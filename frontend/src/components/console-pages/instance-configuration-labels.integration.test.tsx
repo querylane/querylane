@@ -5,6 +5,7 @@ import type { InstanceFormState } from "@/components/console-pages/instance-conf
 import { InstanceConfigurationLabels } from "@/components/console-pages/instance-configuration-labels";
 
 const baseFormState: InstanceFormState = {
+  allowMutations: false,
   database: "querylane",
   displayName: "Production",
   host: "db.internal",
@@ -16,6 +17,7 @@ const baseFormState: InstanceFormState = {
   port: "5432",
   sslMode: "prefer",
   sslNegotiation: "postgres",
+  statementTimeoutSeconds: "30",
   username: "querylane",
 };
 

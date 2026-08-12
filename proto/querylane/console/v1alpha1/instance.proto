@@ -5,6 +5,7 @@ package querylane.console.v1alpha1;
 import "buf/validate/validate.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
+import "google/protobuf/duration.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 import "google/rpc/status.proto";
@@ -169,6 +170,16 @@ message ServerInfo {
 
   // The maximum number of concurrent connections the server allows.
   int32 max_connections = 6;
+
+  // Output-only. PostgreSQL role used by Querylane for this instance.
+  string connected_role = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the connected role is a PostgreSQL superuser.
+  bool connected_role_is_superuser = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether the connected role can execute server-side programs
+  // through COPY ... TO/FROM PROGRAM, including implicit superuser access.
+  bool connected_role_can_execute_server_program = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   enum ReplicationRole {
     REPLICATION_ROLE_UNSPECIFIED = 0;
@@ -398,6 +409,11 @@ message PostgresConfig {
     message: "ssl_negotiation direct requires ssl_mode require, verify-ca, or verify-full"
     expression: "this.ssl_negotiation != querylane.console.v1alpha1.PostgresConfig.SslNegotiation.SSL_NEGOTIATION_DIRECT || this.ssl_mode in [querylane.console.v1alpha1.PostgresConfig.SslMode.SSL_MODE_REQUIRE, querylane.console.v1alpha1.PostgresConfig.SslMode.SSL_MODE_VERIFY_CA, querylane.console.v1alpha1.PostgresConfig.SslMode.SSL_MODE_VERIFY_FULL]"
   };
+  option (buf.validate.message).cel = {
+    id: "postgres_config_statement_timeout_bounded"
+    message: "statement_timeout must be greater than zero and at most 60 seconds"
+    expression: "!has(this.statement_timeout) || (this.statement_timeout > duration('0s') && this.statement_timeout <= duration('60s'))"
+  };
 
   enum SslMode {
     SSL_MODE_UNSPECIFIED = 0;
@@ -466,6 +482,16 @@ message PostgresConfig {
     (google.api.field_behavior) = OPTIONAL,
     (buf.validate.field).enum.defined_only = true
   ];
+
+  // Optional. Allows Querylane write RPCs against this instance. False by
+  // default so new and existing instances remain read-only until an operator
+  // explicitly opts in. This is enforced server-side.
+  bool allow_mutations = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Default timeout for user-driven statements against this
+  // instance. Requests may override it, subject to the server's hard limit.
+  // When omitted, Querylane uses 30 seconds.
+  google.protobuf.Duration statement_timeout = 10 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // --------------------------------------------------------------------------
@@ -657,6 +683,9 @@ message StatsAccessHealth {
   bool pg_read_all_stats_member = 6;
   bool can_read_pg_stat_activity = 7;
   bool can_read_pg_stat_database = 8;
+  // Whether the connected role can run COPY ... PROGRAM. A read-only
+  // transaction cannot contain this operating-system command capability.
+  bool can_execute_server_program = 9;
 }
 
 // pg_stat_statements health from pg_extension, PostgreSQL settings, and the

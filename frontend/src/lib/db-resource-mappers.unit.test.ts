@@ -17,6 +17,7 @@ describe("mapInstance", () => {
   test("maps API instances into sidebar resources", () => {
     const instance = create(InstanceSchema, {
       config: create(PostgresConfigSchema, {
+        allowMutations: true,
         host: "db.internal",
         port: 6543,
       }),
@@ -27,6 +28,7 @@ describe("mapInstance", () => {
     });
 
     expect(mapInstance(instance)).toEqual({
+      allowMutations: true,
       connectionError: "password authentication failed",
       credentialsUnreadable: false,
       host: "db.internal",

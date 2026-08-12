@@ -46,6 +46,7 @@ describe("instance config model", () => {
 
 describe("instance config validation", () => {
   const validForm = {
+    allowMutations: false,
     database: "querylane",
     displayName: "Production",
     host: "db.internal",
@@ -54,6 +55,7 @@ describe("instance config validation", () => {
     port: "5432",
     sslMode: "prefer",
     sslNegotiation: "postgres",
+    statementTimeoutSeconds: "30",
     username: "querylane",
   };
 
@@ -80,6 +82,21 @@ describe("instance config validation", () => {
     expect(parseInstanceFormPort("0")).toBeNull();
     expect(parseInstanceFormPort("65536")).toBeNull();
     expect(parseInstanceFormPort(" 5432 ")).toBe(5432);
+  });
+
+  it("validates the statement timeout safety bound", () => {
+    expect(
+      validateInstanceForm({
+        ...validForm,
+        statementTimeoutSeconds: "0",
+      }).errors.statementTimeoutSeconds
+    ).toBe("Statement timeout must be between 1 and 60 seconds.");
+    expect(
+      validateInstanceForm({
+        ...validForm,
+        statementTimeoutSeconds: "61",
+      }).firstInvalidField
+    ).toBe("statementTimeoutSeconds");
   });
 
   it("requires complete label keys", () => {
@@ -121,6 +138,7 @@ describe("instance config update paths", () => {
   });
 
   const persistedForm: InstanceFormState = {
+    allowMutations: false,
     database: "querylane",
     displayName: "Production",
     host: "db.internal",
@@ -129,6 +147,7 @@ describe("instance config update paths", () => {
     port: "5432",
     sslMode: "prefer",
     sslNegotiation: "postgres",
+    statementTimeoutSeconds: "30",
     username: "querylane",
   };
 
@@ -196,6 +215,20 @@ describe("instance config update paths", () => {
         nextPort: 5432,
       })
     ).toEqual(["config.ssl_mode", "config.ssl_negotiation"]);
+  });
+
+  it("updates mutation mode and statement timeout independently", () => {
+    expect(
+      buildInstanceUpdatePaths({
+        formState: {
+          ...persistedForm,
+          allowMutations: true,
+          statementTimeoutSeconds: "45",
+        },
+        instance: persistedInstance,
+        nextPort: 5432,
+      })
+    ).toEqual(["config.allow_mutations", "config.statement_timeout"]);
   });
 
   it("does not require or update an untouched blank password", () => {

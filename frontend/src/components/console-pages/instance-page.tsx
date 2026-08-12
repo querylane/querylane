@@ -1,5 +1,7 @@
 "use client";
 
+import { create as createProto } from "@bufbuild/protobuf";
+import { DurationSchema } from "@bufbuild/protobuf/wkt";
 import { useTransport } from "@connectrpc/connect-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -238,12 +240,16 @@ function buildInstanceUpdateInput({
   return {
     instance: {
       config: {
+        allowMutations: formState.allowMutations,
         database: formState.database,
         host: formState.host,
         password: formState.password,
         port: nextPort,
         sslMode: toSslMode(formState.sslMode),
         sslNegotiation: toSslNegotiation(formState.sslNegotiation),
+        statementTimeout: createProto(DurationSchema, {
+          seconds: BigInt(formState.statementTimeoutSeconds),
+        }),
         username: formState.username,
       },
       displayName: formState.displayName,
@@ -468,6 +474,21 @@ function InstanceConnectionStatusBadge({
   );
 }
 
+function InstanceSafetyModeBadge({
+  allowMutations,
+}: {
+  allowMutations: boolean;
+}) {
+  return (
+    <Badge
+      className="px-2.5 py-0.5 text-xs"
+      variant={allowMutations ? "secondary" : "outline"}
+    >
+      {allowMutations ? "Mutations enabled" : "Read-only"}
+    </Badge>
+  );
+}
+
 function InstancePageHeader({
   connectionStatus,
   databasesState,
@@ -519,6 +540,9 @@ function InstancePageHeader({
               {instance.displayName}
             </h1>
             <div className="flex flex-wrap items-center gap-2">
+              <InstanceSafetyModeBadge
+                allowMutations={instance.config?.allowMutations ?? false}
+              />
               <ReplicationRoleBadge serverInfo={serverInfo} />
               <InstanceConnectionStatusBadge
                 connectionStatus={connectionStatus}

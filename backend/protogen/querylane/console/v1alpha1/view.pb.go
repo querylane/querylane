@@ -15,6 +15,7 @@ import (
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	durationpb "google.golang.org/protobuf/types/known/durationpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -981,7 +982,13 @@ type RefreshMaterializedViewRequest struct {
 	// Required. The materialized view to refresh.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Optional. Standard refresh is used when unspecified.
-	Mode          RefreshMaterializedViewMode `protobuf:"varint,2,opt,name=mode,proto3,enum=querylane.console.v1alpha1.RefreshMaterializedViewMode" json:"mode,omitempty"`
+	Mode RefreshMaterializedViewMode `protobuf:"varint,2,opt,name=mode,proto3,enum=querylane.console.v1alpha1.RefreshMaterializedViewMode" json:"mode,omitempty"`
+	// Required. Must exactly match the schema-qualified, quoted SQL identifier
+	// derived from name, such as `"public"."daily_revenue"`. This prevents
+	// stale or accidental UI confirmations from authorizing a different target.
+	Confirmation string `protobuf:"bytes,3,opt,name=confirmation,proto3" json:"confirmation,omitempty"`
+	// Optional. Per-request timeout override, capped by the server.
+	Timeout       *durationpb.Duration `protobuf:"bytes,4,opt,name=timeout,proto3" json:"timeout,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1028,6 +1035,20 @@ func (x *RefreshMaterializedViewRequest) GetMode() RefreshMaterializedViewMode {
 		return x.Mode
 	}
 	return RefreshMaterializedViewMode_REFRESH_MATERIALIZED_VIEW_MODE_UNSPECIFIED
+}
+
+func (x *RefreshMaterializedViewRequest) GetConfirmation() string {
+	if x != nil {
+		return x.Confirmation
+	}
+	return ""
+}
+
+func (x *RefreshMaterializedViewRequest) GetTimeout() *durationpb.Duration {
+	if x != nil {
+		return x.Timeout
+	}
+	return nil
 }
 
 // Response message for RefreshMaterializedView.
@@ -1080,7 +1101,7 @@ var File_querylane_console_v1alpha1_view_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_view_proto_rawDesc = "" +
 	"\n" +
-	"%querylane/console/v1alpha1/view.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe8\x05\n" +
+	"%querylane/console/v1alpha1/view.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe8\x05\n" +
 	"\x04View\x12\x1a\n" +
 	"\x04name\x18\x01 \x01(\tB\x06\xe0A\x03\xe0A\bR\x04name\x12&\n" +
 	"\fdisplay_name\x18\x02 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12K\n" +
@@ -1157,11 +1178,13 @@ const file_querylane_console_v1alpha1_view_proto_rawDesc = "" +
 	"\border_by\x18\x05 \x01(\tB\x03\xe0A\x01R\aorderBy\"\x9f\x01\n" +
 	"\x1cListViewDependenciesResponse\x12W\n" +
 	"\x11view_dependencies\x18\x01 \x03(\v2*.querylane.console.v1alpha1.ViewDependencyR\x10viewDependencies\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x95\x02\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xf8\x02\n" +
 	"\x1eRefreshMaterializedViewRequest\x12\x98\x01\n" +
 	"\x04name\x18\x01 \x01(\tB\x83\x01\xe0A\x02\xfaA\x1c\n" +
 	"\x1aconsole.querylane.dev/View\xbaH^r\\2Z^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/views/[^/]+$R\x04name\x12X\n" +
-	"\x04mode\x18\x02 \x01(\x0e27.querylane.console.v1alpha1.RefreshMaterializedViewModeB\v\xe0A\x01\xbaH\x05\x82\x01\x02\x10\x01R\x04mode\"W\n" +
+	"\x04mode\x18\x02 \x01(\x0e27.querylane.console.v1alpha1.RefreshMaterializedViewModeB\v\xe0A\x01\xbaH\x05\x82\x01\x02\x10\x01R\x04mode\x12'\n" +
+	"\fconfirmation\x18\x03 \x01(\tB\x03\xe0A\x02R\fconfirmation\x128\n" +
+	"\atimeout\x18\x04 \x01(\v2\x19.google.protobuf.DurationB\x03\xe0A\x01R\atimeout\"W\n" +
 	"\x1fRefreshMaterializedViewResponse\x124\n" +
 	"\x04view\x18\x01 \x01(\v2 .querylane.console.v1alpha1.ViewR\x04view*N\n" +
 	"\bViewView\x12\x19\n" +
@@ -1212,6 +1235,7 @@ var file_querylane_console_v1alpha1_view_proto_goTypes = []any{
 	(*RefreshMaterializedViewRequest)(nil),  // 14: querylane.console.v1alpha1.RefreshMaterializedViewRequest
 	(*RefreshMaterializedViewResponse)(nil), // 15: querylane.console.v1alpha1.RefreshMaterializedViewResponse
 	(*timestamppb.Timestamp)(nil),           // 16: google.protobuf.Timestamp
+	(*durationpb.Duration)(nil),             // 17: google.protobuf.Duration
 }
 var file_querylane_console_v1alpha1_view_proto_depIdxs = []int32{
 	2,  // 0: querylane.console.v1alpha1.View.view_type:type_name -> querylane.console.v1alpha1.View.ViewType
@@ -1225,22 +1249,23 @@ var file_querylane_console_v1alpha1_view_proto_depIdxs = []int32{
 	5,  // 8: querylane.console.v1alpha1.GetViewResponse.view:type_name -> querylane.console.v1alpha1.View
 	6,  // 9: querylane.console.v1alpha1.ListViewDependenciesResponse.view_dependencies:type_name -> querylane.console.v1alpha1.ViewDependency
 	1,  // 10: querylane.console.v1alpha1.RefreshMaterializedViewRequest.mode:type_name -> querylane.console.v1alpha1.RefreshMaterializedViewMode
-	5,  // 11: querylane.console.v1alpha1.RefreshMaterializedViewResponse.view:type_name -> querylane.console.v1alpha1.View
-	7,  // 12: querylane.console.v1alpha1.ViewService.ListViews:input_type -> querylane.console.v1alpha1.ListViewsRequest
-	9,  // 13: querylane.console.v1alpha1.ViewService.GetView:input_type -> querylane.console.v1alpha1.GetViewRequest
-	11, // 14: querylane.console.v1alpha1.ViewService.GetViewDependency:input_type -> querylane.console.v1alpha1.GetViewDependencyRequest
-	12, // 15: querylane.console.v1alpha1.ViewService.ListViewDependencies:input_type -> querylane.console.v1alpha1.ListViewDependenciesRequest
-	14, // 16: querylane.console.v1alpha1.ViewService.RefreshMaterializedView:input_type -> querylane.console.v1alpha1.RefreshMaterializedViewRequest
-	8,  // 17: querylane.console.v1alpha1.ViewService.ListViews:output_type -> querylane.console.v1alpha1.ListViewsResponse
-	10, // 18: querylane.console.v1alpha1.ViewService.GetView:output_type -> querylane.console.v1alpha1.GetViewResponse
-	6,  // 19: querylane.console.v1alpha1.ViewService.GetViewDependency:output_type -> querylane.console.v1alpha1.ViewDependency
-	13, // 20: querylane.console.v1alpha1.ViewService.ListViewDependencies:output_type -> querylane.console.v1alpha1.ListViewDependenciesResponse
-	15, // 21: querylane.console.v1alpha1.ViewService.RefreshMaterializedView:output_type -> querylane.console.v1alpha1.RefreshMaterializedViewResponse
-	17, // [17:22] is the sub-list for method output_type
-	12, // [12:17] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	17, // 11: querylane.console.v1alpha1.RefreshMaterializedViewRequest.timeout:type_name -> google.protobuf.Duration
+	5,  // 12: querylane.console.v1alpha1.RefreshMaterializedViewResponse.view:type_name -> querylane.console.v1alpha1.View
+	7,  // 13: querylane.console.v1alpha1.ViewService.ListViews:input_type -> querylane.console.v1alpha1.ListViewsRequest
+	9,  // 14: querylane.console.v1alpha1.ViewService.GetView:input_type -> querylane.console.v1alpha1.GetViewRequest
+	11, // 15: querylane.console.v1alpha1.ViewService.GetViewDependency:input_type -> querylane.console.v1alpha1.GetViewDependencyRequest
+	12, // 16: querylane.console.v1alpha1.ViewService.ListViewDependencies:input_type -> querylane.console.v1alpha1.ListViewDependenciesRequest
+	14, // 17: querylane.console.v1alpha1.ViewService.RefreshMaterializedView:input_type -> querylane.console.v1alpha1.RefreshMaterializedViewRequest
+	8,  // 18: querylane.console.v1alpha1.ViewService.ListViews:output_type -> querylane.console.v1alpha1.ListViewsResponse
+	10, // 19: querylane.console.v1alpha1.ViewService.GetView:output_type -> querylane.console.v1alpha1.GetViewResponse
+	6,  // 20: querylane.console.v1alpha1.ViewService.GetViewDependency:output_type -> querylane.console.v1alpha1.ViewDependency
+	13, // 21: querylane.console.v1alpha1.ViewService.ListViewDependencies:output_type -> querylane.console.v1alpha1.ListViewDependenciesResponse
+	15, // 22: querylane.console.v1alpha1.ViewService.RefreshMaterializedView:output_type -> querylane.console.v1alpha1.RefreshMaterializedViewResponse
+	18, // [18:23] is the sub-list for method output_type
+	13, // [13:18] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_view_proto_init() }

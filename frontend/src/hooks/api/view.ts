@@ -102,6 +102,7 @@ function queryKeyContainsResourceName(value: unknown, name: string): boolean {
 }
 
 interface RefreshMaterializedViewInput {
+  confirmation: string;
   mode: RefreshMaterializedViewMode;
   name: string;
   signal: AbortSignal;
@@ -113,8 +114,13 @@ function useRefreshMaterializedViewMutation() {
   const client = createClient(ViewService, transport);
 
   return useMutation({
-    mutationFn: ({ mode, name, signal }: RefreshMaterializedViewInput) =>
-      client.refreshMaterializedView({ mode, name }, { signal }),
+    mutationFn: ({
+      confirmation,
+      mode,
+      name,
+      signal,
+    }: RefreshMaterializedViewInput) =>
+      client.refreshMaterializedView({ confirmation, mode, name }, { signal }),
     onSuccess: (_response, input) =>
       queryClient.invalidateQueries({
         predicate: (query) =>

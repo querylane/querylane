@@ -14,7 +14,42 @@ import (
 	"github.com/querylane/querylane/backend/livequery"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
+	"github.com/querylane/querylane/backend/safety"
+	"github.com/querylane/querylane/backend/storage"
 )
+
+const (
+	testViewName         = "instances/prod/databases/app/schemas/public/views/daily_revenue"
+	testViewConfirmation = `"public"."daily_revenue"`
+)
+
+type viewInstanceReaderStub struct {
+	allowMutations bool
+}
+
+func (s viewInstanceReaderStub) GetInstance(context.Context, string) (*v1alpha1.Instance, error) {
+	return &v1alpha1.Instance{Config: &v1alpha1.PostgresConfig{AllowMutations: s.allowMutations}}, nil
+}
+
+type auditRecorderStub struct {
+	started  []storage.AuditMutation
+	finished []storage.AuditMutationStatus
+	startErr error
+}
+
+func (s *auditRecorderStub) StartMutation(_ context.Context, mutation storage.AuditMutation) (int64, error) {
+	s.started = append(s.started, mutation)
+	return 42, s.startErr
+}
+
+func (s *auditRecorderStub) FinishMutation(_ context.Context, _ int64, status storage.AuditMutationStatus, _ string) error {
+	s.finished = append(s.finished, status)
+	return nil
+}
+
+func newTestService(catalog viewCatalog, limiter liveQueryLimiter, timeout time.Duration) *Service {
+	return NewService(catalog, limiter, safety.NewGate(viewInstanceReaderStub{allowMutations: true}), &auditRecorderStub{}, timeout)
+}
 
 func TestViewLiveOperationsHonorQueryLimit(t *testing.T) {
 	t.Parallel()
@@ -47,7 +82,8 @@ func TestViewLiveOperationsHonorQueryLimit(t *testing.T) {
 			name: "refresh materialized view",
 			call: func(ctx context.Context, service *Service) error {
 				_, err := service.RefreshMaterializedView(ctx, connect.NewRequest(&v1alpha1.RefreshMaterializedViewRequest{
-					Name: "instances/prod/databases/app/schemas/public/views/daily_revenue",
+					Name:         testViewName,
+					Confirmation: testViewConfirmation,
 				}))
 
 				return err
@@ -67,7 +103,7 @@ func TestViewLiveOperationsHonorQueryLimit(t *testing.T) {
 			t.Cleanup(release)
 
 			catalog := &viewCatalogStub{}
-			err = tt.call(t.Context(), NewService(catalog, limiter, 30*time.Second))
+			err = tt.call(t.Context(), newTestService(catalog, limiter, 30*time.Second))
 
 			require.Equal(t, connect.CodeResourceExhausted, connect.CodeOf(err))
 			require.False(t, catalog.getDependencyCalled)
@@ -98,7 +134,7 @@ func TestGetViewDependencyReturnsNamedEdge(t *testing.T) {
 		},
 	}
 
-	response, err := NewService(catalog, limiter, 30*time.Second).GetViewDependency(t.Context(), connect.NewRequest(
+	response, err := newTestService(catalog, limiter, 30*time.Second).GetViewDependency(t.Context(), connect.NewRequest(
 		&v1alpha1.GetViewDependencyRequest{Name: wantName.String()},
 	))
 	require.NoError(t, err)
@@ -117,15 +153,118 @@ func TestRefreshMaterializedViewValidatesModeBeforeAdmission(t *testing.T) {
 	t.Cleanup(release)
 
 	catalog := &viewCatalogStub{}
-	_, err = NewService(catalog, limiter, 30*time.Second).RefreshMaterializedView(t.Context(), connect.NewRequest(
+	_, err = newTestService(catalog, limiter, 30*time.Second).RefreshMaterializedView(t.Context(), connect.NewRequest(
 		&v1alpha1.RefreshMaterializedViewRequest{
-			Name: "instances/prod/databases/app/schemas/public/views/daily_revenue",
-			Mode: v1alpha1.RefreshMaterializedViewMode(99),
+			Name:         testViewName,
+			Confirmation: testViewConfirmation,
+			Mode:         v1alpha1.RefreshMaterializedViewMode(99),
 		},
 	))
 
 	require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 	require.False(t, catalog.refreshCalled)
+}
+
+func TestRefreshMaterializedViewRequiresExactConfirmation(t *testing.T) {
+	t.Parallel()
+
+	limiter, err := livequery.NewLimiter(1, 1)
+	require.NoError(t, err)
+
+	catalog := &viewCatalogStub{}
+
+	_, err = newTestService(catalog, limiter, 30*time.Second).RefreshMaterializedView(t.Context(), connect.NewRequest(
+		&v1alpha1.RefreshMaterializedViewRequest{
+			Name:         testViewName,
+			Confirmation: "daily_revenue",
+		},
+	))
+
+	require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+	require.False(t, catalog.refreshCalled)
+}
+
+func TestRefreshMaterializedViewBlocksReadOnlyInstanceBeforeAdmission(t *testing.T) {
+	t.Parallel()
+
+	limiter, err := livequery.NewLimiter(1, 1)
+	require.NoError(t, err)
+
+	catalog := &viewCatalogStub{}
+	audit := &auditRecorderStub{}
+	service := NewService(catalog, limiter, safety.NewGate(viewInstanceReaderStub{}), audit, 30*time.Second)
+
+	_, err = service.RefreshMaterializedView(t.Context(), connect.NewRequest(
+		&v1alpha1.RefreshMaterializedViewRequest{Name: testViewName, Confirmation: testViewConfirmation},
+	))
+
+	require.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
+	require.False(t, catalog.refreshCalled)
+	require.Empty(t, audit.started)
+}
+
+func TestRefreshMaterializedViewAuditsSuccessAndFailure(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		name       string
+		refreshErr error
+		wantStatus storage.AuditMutationStatus
+	}{
+		{name: "success", wantStatus: storage.AuditMutationSucceeded},
+		{name: "failure", refreshErr: errors.New("permission denied"), wantStatus: storage.AuditMutationFailed},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			limiter, err := livequery.NewLimiter(1, 1)
+			require.NoError(t, err)
+
+			audit := &auditRecorderStub{}
+			catalog := &viewCatalogStub{refreshFunc: func(context.Context, resource.ViewName, bool) (*engine.View, error) {
+				require.Len(t, audit.started, 1, "attempt must be durable before target execution")
+
+				if test.refreshErr != nil {
+					return nil, test.refreshErr
+				}
+
+				return &engine.View{}, nil
+			}}
+			service := NewService(catalog, limiter, safety.NewGate(viewInstanceReaderStub{allowMutations: true}), audit, 30*time.Second)
+
+			_, callErr := service.RefreshMaterializedView(t.Context(), connect.NewRequest(
+				&v1alpha1.RefreshMaterializedViewRequest{Name: testViewName, Confirmation: testViewConfirmation},
+			))
+			if test.refreshErr == nil {
+				require.NoError(t, callErr)
+			} else {
+				require.Error(t, callErr)
+			}
+
+			require.Equal(t, []storage.AuditMutationStatus{test.wantStatus}, audit.finished)
+			require.Equal(t, "instances/prod", audit.started[0].InstanceName)
+			require.Equal(t, "app", audit.started[0].DatabaseName)
+			require.Contains(t, audit.started[0].Statement, "REFRESH MATERIALIZED VIEW")
+		})
+	}
+}
+
+func TestRefreshMaterializedViewFailsClosedWhenAuditStartFails(t *testing.T) {
+	t.Parallel()
+
+	limiter, err := livequery.NewLimiter(1, 1)
+	require.NoError(t, err)
+
+	catalog := &viewCatalogStub{}
+	audit := &auditRecorderStub{startErr: errors.New("audit unavailable")}
+	service := NewService(catalog, limiter, safety.NewGate(viewInstanceReaderStub{allowMutations: true}), audit, 30*time.Second)
+
+	_, err = service.RefreshMaterializedView(t.Context(), connect.NewRequest(
+		&v1alpha1.RefreshMaterializedViewRequest{Name: testViewName, Confirmation: testViewConfirmation},
+	))
+
+	require.Error(t, err)
+	require.False(t, catalog.refreshCalled, "the target mutation must not run without a durable audit start")
 }
 
 func TestRefreshMaterializedViewAddsConfiguredDeadline(t *testing.T) {
@@ -149,9 +288,10 @@ func TestRefreshMaterializedViewAddsConfiguredDeadline(t *testing.T) {
 		},
 	}
 
-	_, err = NewService(catalog, limiter, refreshTimeout).RefreshMaterializedView(t.Context(), connect.NewRequest(
+	_, err = newTestService(catalog, limiter, refreshTimeout).RefreshMaterializedView(t.Context(), connect.NewRequest(
 		&v1alpha1.RefreshMaterializedViewRequest{
-			Name: "instances/prod/databases/app/schemas/public/views/daily_revenue",
+			Name:         testViewName,
+			Confirmation: testViewConfirmation,
 		},
 	))
 	require.NoError(t, err)
@@ -171,9 +311,10 @@ func TestRefreshMaterializedViewReportsConfiguredTimeout(t *testing.T) {
 		},
 	}
 
-	_, err = NewService(catalog, limiter, time.Millisecond).RefreshMaterializedView(t.Context(), connect.NewRequest(
+	_, err = newTestService(catalog, limiter, time.Millisecond).RefreshMaterializedView(t.Context(), connect.NewRequest(
 		&v1alpha1.RefreshMaterializedViewRequest{
-			Name: "instances/prod/databases/app/schemas/public/views/daily_revenue",
+			Name:         testViewName,
+			Confirmation: testViewConfirmation,
 		},
 	))
 	require.Equal(t, connect.CodeDeadlineExceeded, connect.CodeOf(err))
@@ -189,7 +330,7 @@ func TestNewServiceRejectsUnboundedRefreshTimeout(t *testing.T) {
 		t,
 		"view.NewService: materialized view refresh timeout must not exceed 30s",
 		func() {
-			NewService(&viewCatalogStub{}, limiter, 31*time.Second)
+			newTestService(&viewCatalogStub{}, limiter, 31*time.Second)
 		},
 	)
 }
@@ -214,7 +355,7 @@ func TestListViewDependenciesForwardsAIPParameters(t *testing.T) {
 		},
 	}
 
-	response, err := NewService(catalog, limiter, 30*time.Second).ListViewDependencies(t.Context(), connect.NewRequest(
+	response, err := newTestService(catalog, limiter, 30*time.Second).ListViewDependencies(t.Context(), connect.NewRequest(
 		&v1alpha1.ListViewDependenciesRequest{
 			Parent:    "instances/prod/databases/app/schemas/public/views/daily_revenue",
 			PageSize:  wantParams.PageSize,

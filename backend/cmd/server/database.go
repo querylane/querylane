@@ -18,6 +18,7 @@ import (
 	"github.com/querylane/querylane/backend/engine/postgres"
 	"github.com/querylane/querylane/backend/livequery"
 	"github.com/querylane/querylane/backend/postgreserrors"
+	"github.com/querylane/querylane/backend/resource"
 	"github.com/querylane/querylane/backend/runner"
 	"github.com/querylane/querylane/backend/runner/jobs"
 	instancesvc "github.com/querylane/querylane/backend/service/instance"
@@ -92,6 +93,7 @@ type dbState struct {
 	connectionTestGuard    *instancesvc.ConnectionTestGuard
 	catalog                *catalogcache.Catalog
 	runnerExecutionStore   *storage.PGRunnerExecutionStore
+	auditLogStore          *storage.PGAuditLogStore
 	replicaStore           *storage.PGReplicaStore
 	catalogSyncStore       *catalog.PGSyncStore
 	tokenCodec             *engine.TokenCodec
@@ -242,6 +244,7 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 	instanceRuntimeStore := storage.NewInstanceRuntimeStateStore(cl)
 	connectionRecorder := storage.NewInstanceConnectionRecorder(cl)
 	runnerExecutionStore := storage.NewRunnerExecutionStore(cl)
+	auditLogStore := storage.NewAuditLogStore(cl)
 	connectionSampleStore := storage.NewInstanceConnectionSampleStore(cl)
 	storageSampleStore := storage.NewInstanceStorageSampleStore(cl)
 	cacheSampleStore := storage.NewInstanceCacheSampleStore(cl)
@@ -278,6 +281,8 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 	// outlive the stream. Shutdown goes through dbState.close().
 	runnerManager.Start(context.WithoutCancel(ctx), backgroundJobs...)
 
+	go logPrivilegedInstanceRoles(context.WithoutCancel(ctx), instanceRepo, connManager)
+
 	// Every replica heartbeats (not lease-gated), so the replica registry
 	// lists the whole fleet — including replicas holding zero leases.
 	replicaStore := storage.NewReplicaStore(cl)
@@ -298,6 +303,7 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 		connectionTestGuard:    connectionTestGuard,
 		catalog:                catalogCache,
 		runnerExecutionStore:   runnerExecutionStore,
+		auditLogStore:          auditLogStore,
 		replicaStore:           replicaStore,
 		catalogSyncStore:       catalogSyncStore,
 		tokenCodec:             tokenCodec,
@@ -314,6 +320,58 @@ func buildDatabase(ctx context.Context, cfg *serverconfig.Config, bc *dbsetup.Br
 			DatabaseVacuum: databaseVacuumSampleStore,
 		},
 	}, nil
+}
+
+// logPrivilegedInstanceRoles performs a best-effort startup check for roles
+// that make PostgreSQL read-only transactions an incomplete containment
+// boundary. It never blocks server readiness.
+func logPrivilegedInstanceRoles(ctx context.Context, instances storage.InstanceReader, sessions interface {
+	OpenInstance(context.Context, resource.InstanceName) (engine.InstanceSession, error)
+},
+) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	pageToken := ""
+	for {
+		page, nextPageToken, err := instances.ListInstances(ctx, 1000, pageToken, "", "")
+		if err != nil {
+			slog.WarnContext(ctx, "could not check instance role privileges at startup", slog.String("error", err.Error()))
+			return
+		}
+
+		for _, instance := range page {
+			name, err := resource.ParseInstanceName(instance.GetName())
+			if err != nil {
+				continue
+			}
+
+			session, err := sessions.OpenInstance(ctx, name)
+			if err != nil {
+				continue
+			}
+
+			info, infoErr := session.GetServerInfo(ctx)
+			_ = session.Close()
+
+			if infoErr != nil || info == nil || (!info.ConnectedRoleIsSuperuser && !info.ConnectedRoleCanExecuteServerProgram) {
+				continue
+			}
+
+			slog.WarnContext(ctx, "privileged PostgreSQL role weakens read-only containment",
+				slog.String("instance", name.String()),
+				slog.String("role", info.ConnectedRole),
+				slog.Bool("superuser", info.ConnectedRoleIsSuperuser),
+				slog.Bool("can_execute_server_program", info.ConnectedRoleCanExecuteServerProgram),
+				slog.String("guidance", "use a reduced-privilege role; read-only transactions do not block COPY PROGRAM or external side effects"))
+		}
+
+		if nextPageToken == "" {
+			return
+		}
+
+		pageToken = nextPageToken
+	}
 }
 
 func poolConfigFromLimits(limits serverconfig.PostgresPoolLimits) engine.PoolConfig {

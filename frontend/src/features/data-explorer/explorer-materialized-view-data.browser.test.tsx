@@ -239,6 +239,7 @@ test("materialized view data tab renders its real grid", async () => {
         <ViewDetail
           databaseId="app"
           instanceId="prod"
+          mutationsAllowed={true}
           schemaName="public"
           view={create(ViewSchema, {
             comment:

@@ -2074,6 +2074,7 @@ test("data explorer materialized view detail stays readable", async () => {
 
   renderExplorerSurface(
     <ViewDetail
+      mutationsAllowed={true}
       view={createProto(ViewSchema, {
         comment:
           "Precomputed customer success metrics for account health dashboards.",
@@ -2103,6 +2104,53 @@ test("data explorer materialized view detail stays readable", async () => {
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-view-detail"
   );
+
+  await page.viewport(390, 800);
+  const refreshButton = page.getByRole("button", {
+    name: "Refresh materialized view",
+  });
+  await refreshButton.click();
+
+  const normalRefreshButton = page.getByRole("button", {
+    name: "Refresh normally",
+  });
+  const concurrentRefreshButton = page.getByRole("button", {
+    name: "Refresh concurrently",
+  });
+  const confirmationInput = page.getByRole("textbox", {
+    name: 'Type "public"."customer_success_daily_rollups" to confirm',
+  });
+
+  await expect.element(page.getByText("Mutation impact")).toBeVisible();
+  await expect
+    .element(page.getByText("8.4M estimated rows · 488.3 MB"))
+    .toBeVisible();
+  await expect.element(normalRefreshButton).toBeDisabled();
+  await expect.element(concurrentRefreshButton).toBeDisabled();
+
+  await confirmationInput.fill('"public"."customer_success_daily_rollup"');
+  await expect.element(normalRefreshButton).toBeDisabled();
+  await confirmationInput.fill('"public"."customer_success_daily_rollups"');
+  await expect.element(normalRefreshButton).toBeEnabled();
+  await expect.element(concurrentRefreshButton).toBeEnabled();
+  await expect(page.getByRole("alertdialog")).toMatchScreenshot(
+    "data-explorer-view-refresh-confirmation"
+  );
+
+  await page.getByRole("button", { name: "Cancel" }).click();
+  // allow: to-be-in-document [closed dialogs are removed from the DOM]
+  await expect
+    .element(
+      page.getByRole("heading", {
+        name: "Refresh customer_success_daily_rollups",
+      })
+    )
+    .not.toBeInTheDocument();
+  await expect.element(refreshButton).toHaveFocus();
+  await page.viewport(
+    DEFAULT_BROWSER_VIEWPORT.width,
+    DEFAULT_BROWSER_VIEWPORT.height
+  );
 });
 
 test("data explorer view notice check displays returned notices", async () => {
@@ -2117,6 +2165,7 @@ test("data explorer view notice check displays returned notices", async () => {
 
   renderExplorerSurface(
     <ViewDetail
+      mutationsAllowed={true}
       view={createProto(ViewSchema, {
         comment: "Tracks paid revenue by day for finance reporting.",
         definition:

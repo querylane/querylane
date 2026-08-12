@@ -14,6 +14,7 @@ import (
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	"github.com/querylane/querylane/backend/resource"
+	"github.com/querylane/querylane/backend/safety"
 )
 
 // opExecuteQuery labels the SQL execution operation in error metadata.
@@ -24,7 +25,6 @@ var _ v1connect.SQLServiceHandler = (*Service)(nil)
 const (
 	defaultRowLimit  = 1000
 	defaultBatchSize = 250
-	maxTimeout       = 60 * time.Second
 	minTimeoutGrace  = 50 * time.Millisecond
 	maxTimeoutGrace  = 500 * time.Millisecond
 )
@@ -36,11 +36,16 @@ type instanceOpener interface {
 // Service implements the SQLService RPC handlers.
 type Service struct {
 	connManager instanceOpener
+	safety      *safety.Gate
 }
 
 // NewService creates a new SQLService.
-func NewService(connManager instanceOpener) *Service {
-	return &Service{connManager: connManager}
+func NewService(connManager instanceOpener, safetyGate *safety.Gate) *Service {
+	if safetyGate == nil {
+		panic("sqlsvc.NewService: safety gate is required") //nolint:forbidigo // programmer error in dependency wiring
+	}
+
+	return &Service{connManager: connManager, safety: safetyGate}
 }
 
 // ExecuteQuery executes a read-only SQL query and streams results.
@@ -48,6 +53,13 @@ func (s *Service) ExecuteQuery(ctx context.Context, req *connect.Request[v1alpha
 	dbRes, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseDatabaseName)
 	if connErr != nil {
 		return connErr
+	}
+
+	policy, err := s.safety.Policy(ctx, dbRes.Instance())
+	if err != nil {
+		return apierrors.MapRepoErr(ctx, err, apierrors.ResourceCtx{
+			Type: resource.TypeInstance, Name: dbRes.Instance().String(), Op: "execute_query",
+		})
 	}
 
 	instSession, err := s.connManager.OpenInstance(ctx, dbRes.Instance())
@@ -76,10 +88,12 @@ func (s *Service) ExecuteQuery(ctx context.Context, req *connect.Request[v1alpha
 		batchSize = defaultBatchSize
 	}
 
-	timeout := maxTimeout
-	if reqTimeout := req.Msg.GetTimeout(); reqTimeout != nil && reqTimeout.AsDuration() > 0 {
-		timeout = min(reqTimeout.AsDuration(), maxTimeout)
+	requestedTimeout := time.Duration(0)
+	if reqTimeout := req.Msg.GetTimeout(); reqTimeout != nil {
+		requestedTimeout = reqTimeout.AsDuration()
 	}
+
+	timeout := policy.StatementTimeout(requestedTimeout)
 
 	queryCtx, cancel := context.WithTimeout(ctx, timeoutWithPostgresGrace(timeout))
 	defer cancel()
@@ -167,6 +181,13 @@ func (s *Service) ExplainQuery(ctx context.Context, req *connect.Request[v1alpha
 		return nil, connErr
 	}
 
+	policy, err := s.safety.Policy(ctx, dbRes.Instance())
+	if err != nil {
+		return nil, apierrors.MapRepoErr(ctx, err, apierrors.ResourceCtx{
+			Type: resource.TypeInstance, Name: dbRes.Instance().String(), Op: "explain_query",
+		})
+	}
+
 	instSession, err := s.connManager.OpenInstance(ctx, dbRes.Instance())
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
@@ -183,10 +204,12 @@ func (s *Service) ExplainQuery(ctx context.Context, req *connect.Request[v1alpha
 	}
 	defer dbSession.Close()
 
-	timeout := maxTimeout
-	if reqTimeout := req.Msg.GetTimeout(); reqTimeout != nil && reqTimeout.AsDuration() > 0 {
-		timeout = min(reqTimeout.AsDuration(), maxTimeout)
+	requestedTimeout := time.Duration(0)
+	if reqTimeout := req.Msg.GetTimeout(); reqTimeout != nil {
+		requestedTimeout = reqTimeout.AsDuration()
 	}
+
+	timeout := policy.StatementTimeout(requestedTimeout)
 
 	queryCtx, cancel := context.WithTimeout(ctx, timeoutWithPostgresGrace(timeout))
 	defer cancel()

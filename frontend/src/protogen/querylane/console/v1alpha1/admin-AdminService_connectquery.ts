@@ -34,3 +34,10 @@ export const listCatalogSyncStates = AdminService.method.listCatalogSyncStates;
  * @generated from rpc querylane.console.v1alpha1.AdminService.GetMetricsStorageStats
  */
 export const getMetricsStorageStats = AdminService.method.getMetricsStorageStats;
+
+/**
+ * Lists the immutable audit trail for mutations run through Querylane.
+ *
+ * @generated from rpc querylane.console.v1alpha1.AdminService.ListAuditLogEntries
+ */
+export const listAuditLogEntries = AdminService.method.listAuditLogEntries;

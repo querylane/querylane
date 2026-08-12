@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,16 +15,18 @@ import (
 func newTestConfigs() []*serverconfig.InstanceConfig {
 	return []*serverconfig.InstanceConfig{
 		{
-			ID:             "prod",
-			DisplayName:    "Production",
-			Host:           "prod.example.com",
-			Port:           5432,
-			Database:       "myapp",
-			Username:       "admin",
-			Password:       "secret",
-			SSLMode:        "require",
-			SSLNegotiation: "direct",
-			Labels:         map[string]string{"env": "production"},
+			ID:               "prod",
+			DisplayName:      "Production",
+			Host:             "prod.example.com",
+			Port:             5432,
+			Database:         "myapp",
+			Username:         "admin",
+			Password:         "secret",
+			SSLMode:          "require",
+			SSLNegotiation:   "direct",
+			AllowMutations:   true,
+			StatementTimeout: 8 * time.Second,
+			Labels:           map[string]string{"env": "production"},
 		},
 		{
 			ID:          "dev",
@@ -73,6 +76,8 @@ func TestConfigInstanceRepository_GetInstance(t *testing.T) { //nolint:tparallel
 		assert.Equal(t, "secret", inst.GetConfig().GetPassword())
 		assert.Equal(t, api.PostgresConfig_SSL_MODE_REQUIRE, inst.GetConfig().GetSslMode())
 		assert.Equal(t, api.PostgresConfig_SSL_NEGOTIATION_DIRECT, inst.GetConfig().GetSslNegotiation())
+		assert.True(t, inst.GetConfig().GetAllowMutations())
+		assert.Equal(t, 8*time.Second, inst.GetConfig().GetStatementTimeout().AsDuration())
 		assert.Equal(t, map[string]string{"env": "production"}, inst.GetLabels())
 		assert.NotNil(t, inst.GetCreateTime())
 		assert.NotNil(t, inst.GetUpdateTime())

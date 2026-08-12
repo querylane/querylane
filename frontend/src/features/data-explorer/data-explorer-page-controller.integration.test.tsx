@@ -125,7 +125,10 @@ rs.mock("@/hooks/api/view", () => ({
 }));
 
 rs.mock("@/lib/db-context", () => ({
-  useDb: () => ({ selectedDatabase: { name: "appdb" } }),
+  useDb: () => ({
+    selectedDatabase: { name: "appdb" },
+    selectedInstance: { allowMutations: true },
+  }),
 }));
 
 rs.mock("@/lib/route-prefetch", () => ({

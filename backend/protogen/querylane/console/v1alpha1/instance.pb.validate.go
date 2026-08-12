@@ -325,6 +325,12 @@ func (m *ServerInfo) validate(all bool) error {
 
 	// no validation rules for MaxConnections
 
+	// no validation rules for ConnectedRole
+
+	// no validation rules for ConnectedRoleIsSuperuser
+
+	// no validation rules for ConnectedRoleCanExecuteServerProgram
+
 	if len(errors) > 0 {
 		return ServerInfoMultiError(errors)
 	}
@@ -2315,6 +2321,37 @@ func (m *PostgresConfig) validate(all bool) error {
 
 	// no validation rules for SslNegotiation
 
+	// no validation rules for AllowMutations
+
+	if all {
+		switch v := interface{}(m.GetStatementTimeout()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, PostgresConfigValidationError{
+					field:  "StatementTimeout",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, PostgresConfigValidationError{
+					field:  "StatementTimeout",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetStatementTimeout()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return PostgresConfigValidationError{
+				field:  "StatementTimeout",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
 	if len(errors) > 0 {
 		return PostgresConfigMultiError(errors)
 	}
@@ -4075,6 +4112,8 @@ func (m *StatsAccessHealth) validate(all bool) error {
 	// no validation rules for CanReadPgStatActivity
 
 	// no validation rules for CanReadPgStatDatabase
+
+	// no validation rules for CanExecuteServerProgram
 
 	if len(errors) > 0 {
 		return StatsAccessHealthMultiError(errors)

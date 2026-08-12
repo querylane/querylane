@@ -4,6 +4,7 @@ import { resolveHomeInstanceId } from "@/routes/index";
 
 function instance(id: string, credentialsUnreadable = false): PostgresInstance {
   return {
+    allowMutations: false,
     connectionError: "",
     credentialsUnreadable,
     host: `${id}.internal`,

@@ -3,7 +3,10 @@ package server
 import (
 	"errors"
 	"fmt"
+	"time"
 )
+
+const maxInstanceStatementTimeout = time.Minute
 
 // InstanceConfig defines a single managed PostgreSQL instance from the config file.
 type InstanceConfig struct {
@@ -37,6 +40,13 @@ type InstanceConfig struct {
 	// Labels are optional key-value pairs for organizing instances.
 	Labels map[string]string `koanf:"labels"`
 
+	// AllowMutations must be explicitly enabled for Querylane write RPCs.
+	AllowMutations bool `koanf:"allow_mutations"`
+
+	// StatementTimeout is the default for user-driven statements. Requests may
+	// lower or override it, but the server always applies its hard cap.
+	StatementTimeout time.Duration `koanf:"statement_timeout"`
+
 	// Unexported resolved fields are never serialized.
 	resolvedDSN      string
 	resolvedPassword string
@@ -51,6 +61,10 @@ type InstanceConfig struct {
 func (c *InstanceConfig) SetDefaults() {
 	if c.DisplayName == "" {
 		c.DisplayName = c.ID
+	}
+
+	if c.StatementTimeout == 0 {
+		c.StatementTimeout = 30 * time.Second
 	}
 
 	if hasDSNSource(c.DSN, c.DSNEnv) {
@@ -187,6 +201,14 @@ func (c *InstanceConfig) EffectiveSSLNegotiation() string {
 // Validate checks that all required fields are present and valid.
 // Must be called after SetDefaults and ResolveSecrets.
 func (c *InstanceConfig) Validate() error {
+	if c.StatementTimeout < 0 {
+		return errors.New("statement_timeout must not be negative")
+	}
+
+	if c.StatementTimeout > maxInstanceStatementTimeout {
+		return errors.New("statement_timeout must not exceed 60s")
+	}
+
 	if dsn := c.EffectiveDSN(); dsn != "" {
 		// If ResolveSecrets already parsed the DSN successfully, skip re-parsing.
 		if c.parsedDSN != nil {
