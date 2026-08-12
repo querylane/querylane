@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { expect, test } from "@rstest/core";
 
 test("global settings dialog files stay deleted", () => {
   const globalSettingsFiles = import.meta.glob([

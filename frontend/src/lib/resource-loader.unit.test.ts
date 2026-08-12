@@ -1,16 +1,16 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, rs, test } from "@rstest/core";
 import { logger } from "@/lib/diagnostics";
 import { createResourceLoader } from "./resource-loader";
 
-vi.mock("@/lib/diagnostics", () => ({
+rs.mock("@/lib/diagnostics", () => ({
   logger: {
-    debug: vi.fn(),
-    error: vi.fn(),
-    fatal: vi.fn(),
-    fmt: vi.fn(),
-    info: vi.fn(),
-    trace: vi.fn(),
-    warn: vi.fn(),
+    debug: rs.fn(),
+    error: rs.fn(),
+    fatal: rs.fn(),
+    fmt: rs.fn(),
+    info: rs.fn(),
+    trace: rs.fn(),
+    warn: rs.fn(),
   },
 }));
 
@@ -28,7 +28,7 @@ function makeMockQuery<T = undefined>(
     error: null as unknown,
     isFetching: false,
     isPending: true,
-    refetch: vi.fn(() => Promise.resolve()),
+    refetch: rs.fn(() => Promise.resolve()),
     ...overrides,
   };
 }
@@ -71,7 +71,7 @@ describe("createResourceLoader", () => {
 
   test("retry handler logs failures and resolves", async () => {
     const retryError = new Error("retry failed");
-    const refetch = vi.fn(() => Promise.reject(retryError));
+    const refetch = rs.fn(() => Promise.reject(retryError));
     const query = makeMockQuery({ refetch });
     const loader = createResourceLoader(query, "console.instance");
 
@@ -86,7 +86,7 @@ describe("createResourceLoader", () => {
   });
 
   test("retry handler resolves when refetch succeeds", async () => {
-    const refetch = vi.fn(() => Promise.resolve({ data: {} }));
+    const refetch = rs.fn(() => Promise.resolve({ data: {} }));
     const query = makeMockQuery({ refetch });
     const loader = createResourceLoader(query, "console.instance");
 
@@ -103,7 +103,7 @@ describe("createResourceLoader", () => {
 
   test("pageStateProps maps query state to ResourcePageState props", () => {
     const error = new Error("fail");
-    const refetch = vi.fn(() => Promise.resolve());
+    const refetch = rs.fn(() => Promise.resolve());
     const query = makeMockQuery({
       data: { db: "test" },
       error,

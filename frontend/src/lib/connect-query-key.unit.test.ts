@@ -3,7 +3,7 @@ import {
   addStaticKeyToTransport,
   createConnectQueryKey,
 } from "@connectrpc/connect-query-core";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import {
   createConnectListAllQueryKey,
   createConnectMethodQueryKey,

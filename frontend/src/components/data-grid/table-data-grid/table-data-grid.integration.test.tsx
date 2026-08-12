@@ -1,6 +1,15 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  rs,
+  test,
+} from "@rstest/core";
+import {
   act,
   cleanup,
   fireEvent,
@@ -10,6 +19,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { expectTypeOf } from "expect-type";
 import {
   type ComponentProps,
   type ClipboardEvent as ReactClipboardEvent,
@@ -17,16 +27,6 @@ import {
   StrictMode,
 } from "react";
 import type { DefaultColumnOptions, Renderers } from "react-data-grid";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  expectTypeOf,
-  it,
-  test,
-  vi,
-} from "vitest";
 import {
   EXPAND_COLUMN_KEY,
   fallbackRowKey,
@@ -57,6 +57,8 @@ import {
   ListTableColumnsResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
+const restoreRealTimers = rs.useRealTimers;
+
 const RETRY_BUTTON_RE = /retry/i;
 const LAST_FETCHED_RE = /Last fetched/;
 const FILTER_BUTTON_RE = /Filter/;
@@ -70,27 +72,27 @@ type ControlledGridStateProp = Extract<
   `${string}Search` | `on${string}SearchChange`
 >;
 
-const tableApi = vi.hoisted(() => ({
-  useListTableColumnsQuery: vi.fn(),
+const tableApi = rs.hoisted(() => ({
+  useListTableColumnsQuery: rs.fn(),
 }));
 
-const tableDataApi = vi.hoisted(() => ({
-  useReadCellValueMutation: vi.fn(),
-  useReadRowsQuery: vi.fn(),
-  useReadRowsQueryActions: vi.fn(() => ({
-    fetch: vi.fn(() => Promise.resolve()),
-    getState: vi.fn(() => ({ fetchStatus: "idle", status: "success" })),
-    prefetch: vi.fn(),
+const tableDataApi = rs.hoisted(() => ({
+  useReadCellValueMutation: rs.fn(),
+  useReadRowsQuery: rs.fn(),
+  useReadRowsQueryActions: rs.fn(() => ({
+    fetch: rs.fn(() => Promise.resolve()),
+    getState: rs.fn(() => ({ fetchStatus: "idle", status: "success" })),
+    prefetch: rs.fn(),
   })),
 }));
 
-const downloadBlobMock = vi.hoisted(() => vi.fn());
-const toastMock = vi.hoisted(() => ({
-  dismiss: vi.fn(),
-  error: vi.fn(),
-  loading: vi.fn(() => "toast-id"),
-  success: vi.fn(),
-  warning: vi.fn(),
+const downloadBlobMock = rs.hoisted(() => rs.fn());
+const toastMock = rs.hoisted(() => ({
+  dismiss: rs.fn(),
+  error: rs.fn(),
+  loading: rs.fn(() => "toast-id"),
+  success: rs.fn(),
+  warning: rs.fn(),
 }));
 
 interface MockGridColumn {
@@ -160,8 +162,8 @@ interface MockGridProps {
   selectedRows?: ReadonlySet<string>;
 }
 
-const reactDataGrid = vi.hoisted(() => ({
-  dataGrid: vi.fn((props: MockGridProps) => (
+const reactDataGrid = rs.hoisted(() => ({
+  dataGrid: rs.fn((props: MockGridProps) => (
     <div data-testid="data-grid">
       <div data-testid="data-grid-headers">
         {props.columns?.map((column) => (
@@ -209,7 +211,7 @@ function openCellContextMenu(
   });
 }
 
-vi.mock("react-data-grid", () => ({
+rs.mock("react-data-grid", () => ({
   ...Object.fromEntries([
     ["DataGrid", reactDataGrid.dataGrid],
     ["SelectColumn", { columnName: "", key: "__select" }],
@@ -217,26 +219,26 @@ vi.mock("react-data-grid", () => ({
   SELECT_COLUMN_KEY: "__select",
 }));
 
-vi.mock("@/hooks/api/table", () => ({
+rs.mock("@/hooks/api/table", () => ({
   useListTableColumnsQuery: tableApi.useListTableColumnsQuery,
 }));
 
-vi.mock("@/hooks/api/table-data", () => ({
+rs.mock("@/hooks/api/table-data", () => ({
   useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
   useReadRowsQuery: tableDataApi.useReadRowsQuery,
   useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
 }));
 
-vi.mock("@/lib/download-blob", () => ({
+rs.mock("@/lib/download-blob", () => ({
   downloadBlob: downloadBlobMock,
 }));
 
-vi.mock("sonner", () => ({ toast: toastMock }));
+rs.mock("sonner", () => ({ toast: toastMock }));
 
-const writeClipboardMock = vi.hoisted(() => vi.fn());
-const writeClipboardDeferredMock = vi.hoisted(() => vi.fn());
+const writeClipboardMock = rs.hoisted(() => rs.fn());
+const writeClipboardDeferredMock = rs.hoisted(() => rs.fn());
 
-vi.mock("@/components/data-grid/table-data-grid/grid-clipboard", () => ({
+rs.mock("@/components/data-grid/table-data-grid/grid-clipboard", () => ({
   writeClipboard: writeClipboardMock,
   writeClipboardDeferred: writeClipboardDeferredMock,
 }));
@@ -289,13 +291,13 @@ function seedRowsQuery(
     error: null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(),
+    refetch: rs.fn(),
     ...overrides,
   });
   tableDataApi.useReadCellValueMutation.mockReturnValue({
     isError: false,
     isPending: false,
-    mutate: vi.fn(),
+    mutate: rs.fn(),
   });
 }
 
@@ -346,12 +348,12 @@ function seedRowsQueryWithRawClipboardValues() {
     error: null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(),
+    refetch: rs.fn(),
   });
   tableDataApi.useReadCellValueMutation.mockReturnValue({
     isError: false,
     isPending: false,
-    mutate: vi.fn(),
+    mutate: rs.fn(),
   });
 }
 
@@ -435,12 +437,12 @@ function seedRowsQueryWithCellSelectionValues() {
     error: null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(),
+    refetch: rs.fn(),
   });
   tableDataApi.useReadCellValueMutation.mockReturnValue({
     isError: false,
     isPending: false,
-    mutate: vi.fn(),
+    mutate: rs.fn(),
   });
 }
 
@@ -494,16 +496,16 @@ function seedRowsQueryWithExpandableValues() {
     error: null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(),
+    refetch: rs.fn(),
   });
   tableDataApi.useReadCellValueMutation.mockReturnValue({
     isError: false,
     isPending: false,
-    mutate: vi.fn(),
+    mutate: rs.fn(),
   });
 }
 
-function seedRowsQueryWithTruncatedCell(mutateAsync: ReturnType<typeof vi.fn>) {
+function seedRowsQueryWithTruncatedCell(mutateAsync: ReturnType<typeof rs.fn>) {
   tableApi.useListTableColumnsQuery.mockReturnValue({
     data: create(ListTableColumnsResponseSchema, { columns: [] }),
     error: null,
@@ -541,12 +543,12 @@ function seedRowsQueryWithTruncatedCell(mutateAsync: ReturnType<typeof vi.fn>) {
     error: null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(),
+    refetch: rs.fn(),
   });
   tableDataApi.useReadCellValueMutation.mockReturnValue({
     isError: false,
     isPending: false,
-    mutate: vi.fn(),
+    mutate: rs.fn(),
     mutateAsync,
   });
 }
@@ -568,12 +570,12 @@ function seedRowsQueryError(error: Error) {
     error,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(),
+    refetch: rs.fn(),
   });
   tableDataApi.useReadCellValueMutation.mockReturnValue({
     isError: false,
     isPending: false,
-    mutate: vi.fn(),
+    mutate: rs.fn(),
   });
 }
 
@@ -636,13 +638,13 @@ function createLiveQueryLimitError() {
 }
 
 function setupTableDataGridIntegrationTest() {
-  // No shared query/mutation state needs seeding beyond the vi.mock defaults.
+  // No shared query/mutation state needs seeding beyond the rs.mock defaults.
 }
 
 function teardownTableDataGridIntegrationTest() {
   cleanup();
-  vi.clearAllMocks();
-  vi.useRealTimers();
+  rs.clearAllMocks();
+  restoreRealTimers();
   useRefreshSettingsStore.getState().setRefreshIntervalMs(null);
   useTableColumnLayoutSettingsStore.setState({ layouts: {} });
 }
@@ -791,12 +793,12 @@ describe("TableDataGrid query setup", () => {
       error: null,
       isFetching: false,
       isLoading: false,
-      refetch: vi.fn(),
+      refetch: rs.fn(),
     });
     tableDataApi.useReadCellValueMutation.mockReturnValue({
       isError: false,
       isPending: false,
-      mutate: vi.fn(),
+      mutate: rs.fn(),
     });
 
     render(
@@ -901,7 +903,7 @@ describe("TableDataGrid foreign key references", () => {
           isFetching: false,
           isLoading: false,
           isPending: targetQueryState === "paused",
-          refetch: vi.fn(),
+          refetch: rs.fn(),
         };
       }
       return {
@@ -932,13 +934,13 @@ describe("TableDataGrid foreign key references", () => {
         error: null,
         isFetching: false,
         isLoading: false,
-        refetch: vi.fn(),
+        refetch: rs.fn(),
       };
     });
     tableDataApi.useReadCellValueMutation.mockReturnValue({
       isError: false,
       isPending: false,
-      mutate: vi.fn(),
+      mutate: rs.fn(),
     });
 
     render(
@@ -1307,8 +1309,8 @@ describe("TableDataGrid row interactions", () => {
   });
 
   it("auto refreshes on the global interval and resets after manual refresh", async () => {
-    vi.useFakeTimers();
-    const refetch = vi.fn().mockResolvedValue(undefined);
+    rs.useFakeTimers();
+    const refetch = rs.fn().mockResolvedValue(undefined);
     useRefreshSettingsStore.getState().setRefreshIntervalMs(60_000);
     seedRowsQuery(1, {
       dataUpdatedAt: Date.now(),
@@ -1319,24 +1321,24 @@ describe("TableDataGrid row interactions", () => {
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
     );
 
-    await vi.advanceTimersByTimeAsync(59_999);
+    await rs.advanceTimersByTimeAsync(59_999);
     expect(refetch).not.toHaveBeenCalled();
 
-    await vi.advanceTimersByTimeAsync(1);
+    await rs.advanceTimersByTimeAsync(1);
     expect(refetch).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Refresh rows" }));
     expect(refetch).toHaveBeenCalledTimes(2);
 
-    await vi.advanceTimersByTimeAsync(59_999);
+    await rs.advanceTimersByTimeAsync(59_999);
     expect(refetch).toHaveBeenCalledTimes(2);
 
-    await vi.advanceTimersByTimeAsync(1);
+    await rs.advanceTimersByTimeAsync(1);
     expect(refetch).toHaveBeenCalledTimes(3);
   });
 
   it("does not overwrite an active text selection when copying from the grid", () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
+    const writeText = rs.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
@@ -1408,8 +1410,8 @@ describe("TableDataGrid cell selection", () => {
       button: 0,
       ctrlKey: false,
       metaKey: false,
-      preventDefault: vi.fn(),
-      preventGridDefault: vi.fn(),
+      preventDefault: rs.fn(),
+      preventGridDefault: rs.fn(),
       shiftKey: false,
     };
     gridProps.onCellMouseDown(
@@ -1464,9 +1466,9 @@ describe("TableDataGrid cell selection", () => {
     }
 
     const activeColumn = { ...firstNameColumn, idx: 2 };
-    const preventDefault = vi.fn();
-    const preventGridDefault = vi.fn();
-    const setActivePosition = vi.fn();
+    const preventDefault = rs.fn();
+    const preventGridDefault = rs.fn();
+    const setActivePosition = rs.fn();
     gridProps.onCellMouseDown(
       { column: activeColumn, row: firstRow, rowIdx: 0 },
       {
@@ -1566,9 +1568,9 @@ describe("TableDataGrid cell selection navigation", () => {
       throw new Error("Expected edge navigation props.");
     }
 
-    const preventDefault = vi.fn();
-    const preventGridDefault = vi.fn();
-    const setActivePosition = vi.fn();
+    const preventDefault = rs.fn();
+    const preventGridDefault = rs.fn();
+    const setActivePosition = rs.fn();
     const firstColumn = { ...firstNameColumn, idx: 2 };
     const lastColumn = { ...lastNameColumn, idx: 3 };
     const baseKeyboardEvent = {
@@ -1665,9 +1667,9 @@ describe("TableDataGrid cell selection navigation", () => {
     grid.className = "rdg";
     Object.defineProperty(grid, "clientHeight", { value: 356 });
     const activeColumn = { ...emailColumn, idx: 2 };
-    const setActivePosition = vi.fn();
-    const preventDefault = vi.fn();
-    const preventGridDefault = vi.fn();
+    const setActivePosition = rs.fn();
+    const preventDefault = rs.fn();
+    const preventGridDefault = rs.fn();
     gridProps.onCellMouseDown(
       { column: activeColumn, row: firstRow, rowIdx: 0 },
       {
@@ -1712,7 +1714,7 @@ describe("TableDataGrid cell selection full values", () => {
   afterEach(teardownTableDataGridIntegrationTest);
 
   it("resolves truncated values before copying selected cells", async () => {
-    const mutateAsync = vi.fn().mockResolvedValue({
+    const mutateAsync = rs.fn().mockResolvedValue({
       value: create(TableCellSchema, {
         value: create(TableValueSchema, {
           kind: { case: "stringValue", value: "the complete text" },
@@ -1746,8 +1748,8 @@ describe("TableDataGrid cell selection full values", () => {
         button: 0,
         ctrlKey: false,
         metaKey: false,
-        preventDefault: vi.fn(),
-        preventGridDefault: vi.fn(),
+        preventDefault: rs.fn(),
+        preventGridDefault: rs.fn(),
         shiftKey: false,
       }
     );
@@ -1766,7 +1768,7 @@ describe("TableDataGrid truncated-cell copy", () => {
 
   it("fetches the full value before copying a truncated cell", async () => {
     const user = userEvent.setup();
-    const mutateAsync = vi.fn().mockResolvedValue({
+    const mutateAsync = rs.fn().mockResolvedValue({
       value: create(TableCellSchema, {
         value: create(TableValueSchema, {
           kind: { case: "stringValue", value: "the complete text" },
@@ -1796,7 +1798,7 @@ describe("TableDataGrid truncated-cell copy", () => {
 
   it("surfaces a failed full-value fetch instead of copying the preview", async () => {
     const user = userEvent.setup();
-    const mutateAsync = vi.fn().mockRejectedValue(new Error("token expired"));
+    const mutateAsync = rs.fn().mockRejectedValue(new Error("token expired"));
     seedRowsQueryWithTruncatedCell(mutateAsync);
 
     render(
@@ -1813,7 +1815,7 @@ describe("TableDataGrid truncated-cell copy", () => {
 
   it("resolves truncated cells when copying a row as INSERT", async () => {
     const user = userEvent.setup();
-    const mutateAsync = vi.fn().mockResolvedValue({
+    const mutateAsync = rs.fn().mockResolvedValue({
       value: create(TableCellSchema, {
         value: create(TableValueSchema, {
           kind: { case: "stringValue", value: "the complete text" },
@@ -1842,8 +1844,8 @@ describe("TableDataGrid truncated-cell copy", () => {
 describe("TableDataGrid value dialogs", () => {
   afterEach(() => {
     cleanup();
-    vi.clearAllMocks();
-    vi.useRealTimers();
+    rs.clearAllMocks();
+    rs.useRealTimers();
     useRefreshSettingsStore.getState().setRefreshIntervalMs(null);
   });
 
@@ -1914,7 +1916,7 @@ describe("TableDataGrid value dialogs", () => {
 describe("TableDataGrid toolbar", () => {
   afterEach(() => {
     cleanup();
-    vi.clearAllMocks();
+    rs.clearAllMocks();
     useRefreshSettingsStore.getState().setRefreshIntervalMs(null);
   });
 
@@ -2314,7 +2316,7 @@ describe("TableDataGrid column layout", () => {
 describe("TableDataGrid local state", () => {
   afterEach(() => {
     cleanup();
-    vi.clearAllMocks();
+    rs.clearAllMocks();
   });
 
   it("keeps page size interactive in local state", async () => {
@@ -2416,7 +2418,7 @@ describe("TableDataGrid local state", () => {
       }),
       error: null,
       isError: false,
-      refetch: vi.fn(),
+      refetch: rs.fn(),
     });
 
     render(
@@ -2487,7 +2489,7 @@ describe("TableDataGrid local state", () => {
 describe("TableDataGrid error recovery", () => {
   afterEach(() => {
     cleanup();
-    vi.clearAllMocks();
+    rs.clearAllMocks();
   });
 
   test("shows a retry button when the rows query fails", () => {
@@ -2538,7 +2540,7 @@ describe("TableDataGrid error recovery", () => {
 
   test("clicking the retry button triggers a refetch", async () => {
     const user = userEvent.setup();
-    const refetch = vi.fn().mockResolvedValue(undefined);
+    const refetch = rs.fn().mockResolvedValue(undefined);
     tableApi.useListTableColumnsQuery.mockReturnValue({
       data: undefined,
       error: null,
@@ -2554,7 +2556,7 @@ describe("TableDataGrid error recovery", () => {
     tableDataApi.useReadCellValueMutation.mockReturnValue({
       isError: false,
       isPending: false,
-      mutate: vi.fn(),
+      mutate: rs.fn(),
     });
 
     render(
@@ -2580,7 +2582,7 @@ describe("TableDataGrid error recovery", () => {
       }),
       error: null,
       isError: false,
-      refetch: vi.fn(),
+      refetch: rs.fn(),
     });
 
     const grid = (
@@ -2605,7 +2607,7 @@ describe("TableDataGrid error recovery", () => {
       }),
       error: null,
       isError: false,
-      refetch: vi.fn(),
+      refetch: rs.fn(),
     });
     rerender(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />

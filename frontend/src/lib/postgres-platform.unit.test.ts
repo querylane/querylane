@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { parsePostgresPlatform } from "@/lib/postgres-platform";
 
 describe("parsePostgresPlatform", () => {

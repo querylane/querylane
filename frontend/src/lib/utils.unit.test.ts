@@ -1,5 +1,5 @@
+import { describe, expect, it } from "@rstest/core";
 import { cn as cnfast } from "cnfast";
-import { describe, expect, it } from "vitest";
 import { cn } from "./utils";
 
 describe("cn", () => {

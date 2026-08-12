@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { describePostgresType } from "@/features/data-explorer/postgres-type-display";
 import {
   ColumnSchema,

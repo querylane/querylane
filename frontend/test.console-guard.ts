@@ -1,5 +1,3 @@
-import { afterEach } from "vitest";
-
 type UnexpectedConsoleIssueLevel = "error" | "warn";
 
 interface UnexpectedConsoleIssue {
@@ -15,6 +13,8 @@ interface ConsoleIssueGuardState {
   originalWarn: Console["warn"];
 }
 
+type RegisterAfterEach = (callback: () => void) => void;
+
 const stateKey = Symbol.for("querylane.test.console-issue-guard");
 
 function isConsoleIssueGuardState(
@@ -29,6 +29,20 @@ function isConsoleIssueGuardState(
     "originalError" in value &&
     "originalWarn" in value
   );
+}
+
+function getTestConsole(): Console {
+  const testConsole = Reflect.get(globalThis, "console");
+  if (
+    typeof testConsole === "object" &&
+    testConsole !== null &&
+    "error" in testConsole &&
+    "warn" in testConsole
+  ) {
+    return testConsole as Console;
+  }
+
+  throw new Error("Expected the test environment to provide a global console.");
 }
 
 function getConsoleIssueGuardState(): ConsoleIssueGuardState {
@@ -47,20 +61,6 @@ function getConsoleIssueGuardState(): ConsoleIssueGuardState {
   };
   Reflect.set(globalThis, stateKey, state);
   return state;
-}
-
-function getTestConsole(): Console {
-  const testConsole = Reflect.get(globalThis, "console");
-  if (
-    typeof testConsole === "object" &&
-    testConsole !== null &&
-    "error" in testConsole &&
-    "warn" in testConsole
-  ) {
-    return testConsole as Console;
-  }
-
-  throw new Error("Expected global console to be available in Vitest.");
 }
 
 function formatConsoleArgument(argument: unknown): string {
@@ -85,13 +85,15 @@ function formatUnexpectedConsoleIssues(
   );
 
   return [
-    "Unexpected console output during Vitest run.",
+    "Unexpected console output during test run.",
     "Mock console.warn or console.error in the specific test only when that console output is the behavior under test.",
     ...formattedIssues,
   ].join("\n");
 }
 
-function installUnexpectedConsoleIssueGuard() {
+function installUnexpectedConsoleIssueGuard(
+  registerAfterEach: RegisterAfterEach
+) {
   const state = getConsoleIssueGuardState();
 
   if (!state.installed) {
@@ -112,7 +114,7 @@ function installUnexpectedConsoleIssueGuard() {
   }
 
   state.afterEachInstalled = true;
-  afterEach(function assertNoUnexpectedConsoleIssues() {
+  registerAfterEach(function assertNoUnexpectedConsoleIssues() {
     const issues = state.issues.splice(0);
     if (issues.length > 0) {
       throw new Error(formatUnexpectedConsoleIssues(issues));
@@ -120,5 +122,5 @@ function installUnexpectedConsoleIssueGuard() {
   });
 }
 
-export type { UnexpectedConsoleIssue };
+export type { RegisterAfterEach, UnexpectedConsoleIssue };
 export { formatUnexpectedConsoleIssues, installUnexpectedConsoleIssueGuard };

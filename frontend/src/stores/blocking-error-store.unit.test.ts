@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "@rstest/core";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { useBlockingErrorStore } from "@/stores/blocking-error-store";
 

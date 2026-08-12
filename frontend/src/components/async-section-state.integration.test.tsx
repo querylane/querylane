@@ -1,7 +1,7 @@
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Database } from "lucide-react";
-import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AsyncSectionState } from "@/components/async-section-state";
 import { ConfigManagedEmptyState } from "@/components/config-managed-empty-state";
@@ -86,7 +86,7 @@ describe("async and managed state integration", () => {
 
   it("keeps empty state actions interactive for recovery flows", async () => {
     const user = userEvent.setup();
-    const onRegister = vi.fn();
+    const onRegister = rs.fn();
 
     render(
       <EmptyState
@@ -118,7 +118,7 @@ describe("async and managed state integration", () => {
   it("shows config-managed path and copyable YAML snippet", async () => {
     const user = userEvent.setup();
     const originalClipboard = navigator.clipboard;
-    const writeText = vi.fn(async () => undefined);
+    const writeText = rs.fn(async () => undefined);
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },

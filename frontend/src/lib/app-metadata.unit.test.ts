@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { timestampFromDate } from "@bufbuild/protobuf/wkt";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@rstest/core";
 import { resolveQuerylaneAboutMetadata } from "@/lib/app-metadata";
 import { BuildInfoSchema } from "@/protogen/querylane/console/v1alpha1/console_pb";
 

@@ -1,8 +1,8 @@
 import { create as createProto } from "@bufbuild/protobuf";
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { SortColumn } from "react-data-grid";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { SortPopover } from "@/components/data-grid/table-data-grid/sort-popover";
 import {
   type TableResultColumn,
@@ -27,7 +27,7 @@ afterEach(() => {
 describe("SortPopover", () => {
   it("adds a column to the sort from the picker", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn<(next: SortColumn[]) => void>();
+    const onChange = rs.fn<(next: SortColumn[]) => void>();
 
     render(
       <SortPopover
@@ -56,7 +56,7 @@ describe("SortPopover", () => {
           column("sub_feature_name"),
           column("is_verified_by"),
         ]}
-        onChange={vi.fn()}
+        onChange={rs.fn()}
         sortColumns={[
           { columnKey: "sub_feature_name", direction: "ASC" },
           { columnKey: "is_verified_by", direction: "DESC" },
@@ -82,7 +82,7 @@ describe("SortPopover", () => {
     render(
       <SortPopover
         columns={[column("id"), column("metadata")]}
-        onChange={vi.fn()}
+        onChange={rs.fn()}
         sortColumns={[{ columnKey: "id", direction: "ASC" }]}
       />
     );

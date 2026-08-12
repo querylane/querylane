@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@rstest/core";
 import { isConcurrentRefreshReady } from "@/features/data-explorer/explorer-materialized-view-model";
 import {
   type TableIndex,

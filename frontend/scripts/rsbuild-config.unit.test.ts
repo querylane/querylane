@@ -1,7 +1,6 @@
 import path from "node:path";
 import { createRsbuild, loadConfig } from "@rsbuild/core";
-import { RsdoctorRspackPlugin } from "@rsdoctor/rspack-plugin";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, rs, test } from "@rstest/core";
 
 const frontendRoot = path.resolve(import.meta.dirname, "..");
 
@@ -13,6 +12,20 @@ async function createLoadedRsbuild() {
   });
 
   return createRsbuild({ config: loadedConfig, cwd: frontendRoot });
+}
+
+function isRsdoctorPlugin(
+  value: unknown
+): value is { name: "RsdoctorRspackPlugin"; options: object } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "name" in value &&
+    value.name === "RsdoctorRspackPlugin" &&
+    "options" in value &&
+    typeof value.options === "object" &&
+    value.options !== null
+  );
 }
 
 describe("Rsbuild config loading", () => {
@@ -31,25 +44,25 @@ describe("Rsbuild config loading", () => {
   });
 
   test("emits standalone Rsdoctor HTML and JSON reports", async () => {
-    vi.stubEnv("RSDOCTOR", "1");
+    rs.stubEnv("RSDOCTOR", "1");
 
     try {
       const rsbuild = await createLoadedRsbuild();
       const rspackConfigs = await rsbuild.initConfigs({ action: "build" });
-      const rsdoctorPlugin = rspackConfigs
-        .flatMap((config) => config.plugins ?? [])
-        .find((plugin) => plugin instanceof RsdoctorRspackPlugin);
+      const rspackPlugins: unknown[] = rspackConfigs.flatMap(
+        (config) => config.plugins ?? []
+      );
+      const rsdoctorPlugin = rspackPlugins.find(isRsdoctorPlugin);
 
-      if (!(rsdoctorPlugin instanceof RsdoctorRspackPlugin)) {
+      if (!rsdoctorPlugin) {
         throw new Error("Rsdoctor plugin was not registered");
       }
 
-      expect(rsdoctorPlugin.options.output.options.type).toEqual([
-        "html",
-        "json",
-      ]);
+      expect(rsdoctorPlugin.options).toMatchObject({
+        output: { options: { type: ["html", "json"] } },
+      });
     } finally {
-      vi.unstubAllEnvs();
+      rs.unstubAllEnvs();
     }
   });
 });

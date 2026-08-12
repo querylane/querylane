@@ -1,5 +1,5 @@
 import { Code, ConnectError } from "@connectrpc/connect";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 
 import { buildGitHubBugReportUrl } from "@/lib/error-report";
 import { normalizeAppUiError } from "@/lib/ui-error";

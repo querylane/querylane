@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { buildRolesAccessMapModel } from "@/components/console-pages/roles-access-map-model";
 import {
   DefaultPrivilegeObjectType,

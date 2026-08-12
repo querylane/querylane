@@ -1,21 +1,28 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import { waitForNextFrame } from "@/lib/wait-for-next-frame";
 
 describe("waitForNextFrame (DOM environment: window is defined)", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.useRealTimers();
+    rs.restoreAllMocks();
+    rs.useRealTimers();
   });
 
   test("resolves after requestAnimationFrame fires", async () => {
     // happy-dom provides window and requestAnimationFrame
     expect(typeof window).toBe("object");
 
-    const rafSpy = vi
+    const rafSpy = rs
       .spyOn(window, "requestAnimationFrame")
       .mockImplementation((cb) => {
         // invoke callback synchronously so we can control timing
@@ -30,7 +37,7 @@ describe("waitForNextFrame (DOM environment: window is defined)", () => {
   test("does not resolve before requestAnimationFrame fires", async () => {
     const rafState: { callback?: FrameRequestCallback } = {};
 
-    vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+    rs.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
       rafState.callback = cb;
       return 0;
     });

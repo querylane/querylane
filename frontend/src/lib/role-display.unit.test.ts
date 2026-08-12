@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { timestampFromDate } from "@bufbuild/protobuf/wkt";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@rstest/core";
 import {
   buildInverseMembershipIndex,
   buildRoleSql,

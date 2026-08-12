@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, rs, test } from "@rstest/core";
 import {
   CONSOLE_CONFIG_STATIC_QUERY_OPTIONS,
   useConfigManagedInstancesStatus,
@@ -9,11 +9,11 @@ import {
 import { InstanceManagementMode } from "@/protogen/querylane/console/v1alpha1/console_pb";
 import { getConsoleConfig } from "@/protogen/querylane/console/v1alpha1/console-ConsoleService_connectquery";
 
-const { useQueryMock } = vi.hoisted(() => ({
-  useQueryMock: vi.fn(),
+const { useQueryMock } = rs.hoisted(() => ({
+  useQueryMock: rs.fn(),
 }));
 
-vi.mock("@connectrpc/connect-query", () => ({
+rs.mock("@connectrpc/connect-query", () => ({
   useQuery: useQueryMock,
 }));
 

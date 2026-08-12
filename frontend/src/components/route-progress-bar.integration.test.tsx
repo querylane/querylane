@@ -1,14 +1,14 @@
+import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RouteProgressBar } from "@/components/route-progress-bar";
 
-const routerState = vi.hoisted(() => ({
+const routerState = rs.hoisted(() => ({
   isLoading: false,
   isTransitioning: false,
   status: "idle" as "idle" | "pending",
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   useRouterState: ({
     select,
   }: {
@@ -18,7 +18,7 @@ vi.mock("@tanstack/react-router", () => ({
 
 describe("RouteProgressBar", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
   });
 
   afterEach(() => {
@@ -26,7 +26,7 @@ describe("RouteProgressBar", () => {
     routerState.isLoading = false;
     routerState.isTransitioning = false;
     routerState.status = "idle";
-    vi.useRealTimers();
+    rs.useRealTimers();
   });
 
   it("stays hidden when the router is idle", () => {
@@ -44,13 +44,13 @@ describe("RouteProgressBar", () => {
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();
 
     act(() => {
-      vi.advanceTimersByTime(199);
+      rs.advanceTimersByTime(199);
     });
 
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();
 
     act(() => {
-      vi.advanceTimersByTime(1);
+      rs.advanceTimersByTime(1);
     });
 
     const progressbar = screen.getByTestId("route-progress-bar");
@@ -71,14 +71,14 @@ describe("RouteProgressBar", () => {
     const { rerender } = render(<RouteProgressBar />);
 
     act(() => {
-      vi.advanceTimersByTime(199);
+      rs.advanceTimersByTime(199);
     });
 
     routerState.isLoading = false;
     rerender(<RouteProgressBar />);
 
     act(() => {
-      vi.advanceTimersByTime(1);
+      rs.advanceTimersByTime(1);
     });
 
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();
@@ -90,7 +90,7 @@ describe("RouteProgressBar", () => {
     const { rerender } = render(<RouteProgressBar />);
 
     act(() => {
-      vi.advanceTimersByTime(200);
+      rs.advanceTimersByTime(200);
     });
 
     expect(screen.getByTestId("route-progress-bar")).toBeTruthy();
@@ -99,13 +99,13 @@ describe("RouteProgressBar", () => {
     rerender(<RouteProgressBar />);
 
     act(() => {
-      vi.advanceTimersByTime(399);
+      rs.advanceTimersByTime(399);
     });
 
     expect(screen.getByTestId("route-progress-bar")).toBeTruthy();
 
     act(() => {
-      vi.advanceTimersByTime(1);
+      rs.advanceTimersByTime(1);
     });
 
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();
@@ -118,7 +118,7 @@ describe("RouteProgressBar", () => {
     render(<RouteProgressBar />);
 
     act(() => {
-      vi.advanceTimersByTime(200);
+      rs.advanceTimersByTime(200);
     });
 
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();

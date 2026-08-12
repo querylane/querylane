@@ -1,7 +1,7 @@
+import { describe, expect, test } from "@rstest/core";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, test } from "vitest";
 import { RolesAccessMapCanvas } from "@/components/console-pages/roles-access-map-canvas";
 import type { RolesAccessMapModel } from "@/components/console-pages/roles-access-map-model";
 

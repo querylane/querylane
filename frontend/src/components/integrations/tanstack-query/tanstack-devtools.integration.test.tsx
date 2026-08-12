@@ -1,18 +1,18 @@
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import { createRootRoute, createRouter } from "@tanstack/react-router";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
 
-const devtoolsMocks = vi.hoisted(() => ({
-  reactQueryDevtools: vi.fn(() => null),
-  tanStackRouterDevtools: vi.fn(() => null),
+const devtoolsMocks = rs.hoisted(() => ({
+  reactQueryDevtools: rs.fn(() => null),
+  tanStackRouterDevtools: rs.fn(() => null),
 }));
 
-vi.mock("@tanstack/react-query-devtools", () => ({
+rs.mock("@tanstack/react-query-devtools", () => ({
   ReactQueryDevtools: devtoolsMocks.reactQueryDevtools,
 }));
 
-vi.mock("@tanstack/react-router-devtools", () => ({
+rs.mock("@tanstack/react-router-devtools", () => ({
   TanStackRouterDevtools: devtoolsMocks.tanStackRouterDevtools,
 }));
 
@@ -24,7 +24,6 @@ afterEach(() => {
 
 describe("TanStack devtools integration", () => {
   it("keeps devtools unmounted until the launcher is clicked", async () => {
-    vi.resetModules();
     devtoolsMocks.reactQueryDevtools.mockClear();
     devtoolsMocks.tanStackRouterDevtools.mockClear();
 
@@ -46,7 +45,6 @@ describe("TanStack devtools integration", () => {
   });
 
   it("restores devtools across reloads within the same tab session", async () => {
-    vi.resetModules();
     devtoolsMocks.reactQueryDevtools.mockClear();
     devtoolsMocks.tanStackRouterDevtools.mockClear();
     window.sessionStorage.setItem("querylane-devtools-mounted", "1");

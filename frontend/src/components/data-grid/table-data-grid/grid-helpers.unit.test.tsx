@@ -1,14 +1,17 @@
 import { create as createProto } from "@bufbuild/protobuf";
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { toast } from "sonner";
-import { afterEach, describe, expect, test, vi } from "vitest";
 import { writeClipboard } from "@/components/data-grid/table-data-grid/grid-clipboard";
 import {
   buildColumn,
   buildPageLabel,
 } from "@/components/data-grid/table-data-grid/grid-helpers";
 import { ROW_KEY_FIELD } from "@/components/data-grid/table-data-grid/grid-row-model";
+import * as tableDataActual from "@/hooks/api/table-data" with {
+  rstest: "importActual",
+};
 import {
   RowCount_Status,
   TableCellSchema,
@@ -18,27 +21,23 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
-const tableDataApi = vi.hoisted(() => ({
-  useReadRowsQueryActions: vi.fn(() => ({
-    fetch: vi.fn(() => Promise.resolve()),
-    getState: vi.fn(() => ({ fetchStatus: "idle", status: "success" })),
-    prefetch: vi.fn(),
+const tableDataApi = rs.hoisted(() => ({
+  useReadRowsQueryActions: rs.fn(() => ({
+    fetch: rs.fn(() => Promise.resolve()),
+    getState: rs.fn(() => ({ fetchStatus: "idle", status: "success" })),
+    prefetch: rs.fn(),
   })),
 }));
 
-vi.mock("@/hooks/api/table-data", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/hooks/api/table-data")>();
-  return {
-    ...actual,
-    useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
-  };
-});
+rs.mock("@/hooks/api/table-data", () => ({
+  ...tableDataActual,
+  useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
+}));
 
-vi.mock("sonner", () => ({
+rs.mock("sonner", () => ({
   toast: {
-    error: vi.fn(),
-    success: vi.fn(),
+    error: rs.fn(),
+    success: rs.fn(),
   },
 }));
 
@@ -73,9 +72,9 @@ const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(
 );
 
 afterEach(() => {
-  vi.mocked(toast.success).mockClear();
-  vi.mocked(toast.error).mockClear();
-  vi.restoreAllMocks();
+  rs.mocked(toast.success).mockClear();
+  rs.mocked(toast.error).mockClear();
+  rs.restoreAllMocks();
   if (originalClipboardDescriptor) {
     Object.defineProperty(navigator, "clipboard", originalClipboardDescriptor);
   } else {
@@ -125,11 +124,11 @@ describe("grid helpers", () => {
       canHide: true,
       column: testColumn(),
       isFrozen: true,
-      onCopyName: vi.fn(),
-      onHide: vi.fn(),
-      onSortAsc: vi.fn(),
-      onSortDesc: vi.fn(),
-      onToggleFreeze: vi.fn(),
+      onCopyName: rs.fn(),
+      onHide: rs.fn(),
+      onSortAsc: rs.fn(),
+      onSortDesc: rs.fn(),
+      onToggleFreeze: rs.fn(),
       pkColumnSet: new Set(["email"]),
       sortDirection: "ASC",
       sortPriority: 1,
@@ -165,11 +164,11 @@ describe("grid helpers", () => {
         },
       ],
       isFrozen: false,
-      onCopyName: vi.fn(),
-      onHide: vi.fn(),
-      onSortAsc: vi.fn(),
-      onSortDesc: vi.fn(),
-      onToggleFreeze: vi.fn(),
+      onCopyName: rs.fn(),
+      onHide: rs.fn(),
+      onSortAsc: rs.fn(),
+      onSortDesc: rs.fn(),
+      onToggleFreeze: rs.fn(),
       pkColumnSet: new Set(),
       resultColumns: [carrierColumn, tenantColumn],
     });
@@ -195,11 +194,11 @@ describe("grid helpers", () => {
     const commonArgs = {
       canHide: true,
       isFrozen: false,
-      onCopyName: vi.fn(),
-      onHide: vi.fn(),
-      onSortAsc: vi.fn(),
-      onSortDesc: vi.fn(),
-      onToggleFreeze: vi.fn(),
+      onCopyName: rs.fn(),
+      onHide: rs.fn(),
+      onSortAsc: rs.fn(),
+      onSortDesc: rs.fn(),
+      onToggleFreeze: rs.fn(),
       pkColumnSet: new Set<string>(),
     };
 
@@ -286,11 +285,11 @@ describe("grid helpers", () => {
     const commonArgs = {
       canHide: true,
       isFrozen: false,
-      onCopyName: vi.fn(),
-      onHide: vi.fn(),
-      onSortAsc: vi.fn(),
-      onSortDesc: vi.fn(),
-      onToggleFreeze: vi.fn(),
+      onCopyName: rs.fn(),
+      onHide: rs.fn(),
+      onSortAsc: rs.fn(),
+      onSortDesc: rs.fn(),
+      onToggleFreeze: rs.fn(),
       pkColumnSet: new Set<string>(),
     };
 
@@ -363,11 +362,11 @@ describe("grid helpers", () => {
       canHide: true,
       column: testColumn(),
       isFrozen: true,
-      onCopyName: vi.fn(),
-      onHide: vi.fn(),
-      onSortAsc: vi.fn(),
-      onSortDesc: vi.fn(),
-      onToggleFreeze: vi.fn(),
+      onCopyName: rs.fn(),
+      onHide: rs.fn(),
+      onSortAsc: rs.fn(),
+      onSortDesc: rs.fn(),
+      onToggleFreeze: rs.fn(),
       pkColumnSet: new Set(),
     });
 
@@ -392,14 +391,14 @@ describe("grid helpers", () => {
   });
 
   test("toasts success after a clipboard write resolves", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
+    const writeText = rs.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
     });
 
     writeClipboard("copy me");
-    await vi.waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
+    await rs.waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
 
     expect(writeText).toHaveBeenCalledWith("copy me");
     expect(toast.success).toHaveBeenCalledWith("Copied", { duration: 1500 });
@@ -407,14 +406,14 @@ describe("grid helpers", () => {
   });
 
   test("toasts an error when a clipboard write rejects", async () => {
-    const writeText = vi.fn().mockRejectedValue(new Error("denied"));
+    const writeText = rs.fn().mockRejectedValue(new Error("denied"));
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
     });
 
     writeClipboard("copy me");
-    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
+    await rs.waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
 
     expect(toast.error).toHaveBeenCalledWith("Couldn't copy to clipboard");
     expect(toast.success).not.toHaveBeenCalled();

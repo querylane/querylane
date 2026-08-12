@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { parsePostgresArrayLiteral } from "@/features/data-explorer/table-data/postgres-array";
 
 describe("parsePostgresArrayLiteral", () => {

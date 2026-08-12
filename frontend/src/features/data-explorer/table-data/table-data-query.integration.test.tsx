@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
+import { beforeEach, describe, expect, rs, test } from "@rstest/core";
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
 import { useTableDataQuery } from "@/features/data-explorer/table-data/table-data-query";
 import {
   CellValueMode,
@@ -13,18 +13,18 @@ import {
   DataType,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
-const { useListTableColumnsQueryMock, useReadRowsQueryMock } = vi.hoisted(
+const { useListTableColumnsQueryMock, useReadRowsQueryMock } = rs.hoisted(
   () => ({
-    useListTableColumnsQueryMock: vi.fn(),
-    useReadRowsQueryMock: vi.fn(),
+    useListTableColumnsQueryMock: rs.fn(),
+    useReadRowsQueryMock: rs.fn(),
   })
 );
 
-vi.mock("@/hooks/api/table", () => ({
+rs.mock("@/hooks/api/table", () => ({
   useListTableColumnsQuery: useListTableColumnsQueryMock,
 }));
 
-vi.mock("@/hooks/api/table-data", () => ({
+rs.mock("@/hooks/api/table-data", () => ({
   useReadRowsQuery: useReadRowsQueryMock,
 }));
 
@@ -80,14 +80,14 @@ describe("useTableDataQuery", () => {
       data: { columns },
       error: null,
       isError: false,
-      refetch: vi.fn(),
+      refetch: rs.fn(),
     });
     useReadRowsQueryMock.mockReturnValue({
       data: undefined,
       error: null,
       isFetching: false,
       isLoading: false,
-      refetch: vi.fn(),
+      refetch: rs.fn(),
     });
   });
 
@@ -99,9 +99,9 @@ describe("useTableDataQuery", () => {
           r: [{ c: "email", i: "email", o: "ilike", v: "%@acme.com" }],
         }),
         name: tableName,
-        onFilterSearchChange: vi.fn(),
-        onPageSizeChange: vi.fn(),
-        onSortSearchChange: vi.fn(),
+        onFilterSearchChange: rs.fn(),
+        onPageSizeChange: rs.fn(),
+        onSortSearchChange: rs.fn(),
         pageSize: 25,
         sortSearch: "created_at:desc",
       })
@@ -129,15 +129,15 @@ describe("useTableDataQuery", () => {
       data: undefined,
       error: null,
       isError: false,
-      refetch: vi.fn(),
+      refetch: rs.fn(),
     });
 
     renderHook(() =>
       useTableDataQuery({
         name: tableName,
-        onFilterSearchChange: vi.fn(),
-        onPageSizeChange: vi.fn(),
-        onSortSearchChange: vi.fn(),
+        onFilterSearchChange: rs.fn(),
+        onPageSizeChange: rs.fn(),
+        onSortSearchChange: rs.fn(),
         pageSize: 25,
         sortSearch: "created_at:desc",
       })
@@ -148,15 +148,15 @@ describe("useTableDataQuery", () => {
   });
 
   test("keeps malformed filter URL search and disables row reads", () => {
-    const onFilterSearchChange = vi.fn();
-    const onSortSearchChange = vi.fn();
+    const onFilterSearchChange = rs.fn();
+    const onSortSearchChange = rs.fn();
 
     renderHook(() =>
       useTableDataQuery({
         filterSearch: "not-json",
         name: tableName,
         onFilterSearchChange,
-        onPageSizeChange: vi.fn(),
+        onPageSizeChange: rs.fn(),
         onSortSearchChange,
         pageSize: 25,
         sortSearch: "email:sideways",
@@ -169,8 +169,8 @@ describe("useTableDataQuery", () => {
   });
 
   test("retries column catalog errors before retrying disabled row reads", async () => {
-    const columnRefetch = vi.fn(() => Promise.resolve({ data: { columns } }));
-    const rowRefetch = vi.fn(() => Promise.resolve({ data: undefined }));
+    const columnRefetch = rs.fn(() => Promise.resolve({ data: { columns } }));
+    const rowRefetch = rs.fn(() => Promise.resolve({ data: undefined }));
     useListTableColumnsQueryMock.mockReturnValue({
       data: undefined,
       error: new Error("column catalog unavailable"),
@@ -188,9 +188,9 @@ describe("useTableDataQuery", () => {
     const { result } = renderHook(() =>
       useTableDataQuery({
         name: tableName,
-        onFilterSearchChange: vi.fn(),
-        onPageSizeChange: vi.fn(),
-        onSortSearchChange: vi.fn(),
+        onFilterSearchChange: rs.fn(),
+        onPageSizeChange: rs.fn(),
+        onSortSearchChange: rs.fn(),
         pageSize: 25,
         sortSearch: "email:asc",
       })
@@ -210,9 +210,9 @@ describe("useTableDataQuery", () => {
     renderHook(() =>
       useTableDataQuery({
         name: tableName,
-        onFilterSearchChange: vi.fn(),
-        onPageSizeChange: vi.fn(),
-        onSortSearchChange: vi.fn(),
+        onFilterSearchChange: rs.fn(),
+        onPageSizeChange: rs.fn(),
+        onSortSearchChange: rs.fn(),
         pageSize: 25,
       })
     );
@@ -227,9 +227,9 @@ describe("useTableDataQuery", () => {
         useTableDataQuery({
           filterSearch,
           name: tableName,
-          onFilterSearchChange: vi.fn(),
-          onPageSizeChange: vi.fn(),
-          onSortSearchChange: vi.fn(),
+          onFilterSearchChange: rs.fn(),
+          onPageSizeChange: rs.fn(),
+          onSortSearchChange: rs.fn(),
           pageSize: 25,
           sortSearch: "created_at:desc",
         }),

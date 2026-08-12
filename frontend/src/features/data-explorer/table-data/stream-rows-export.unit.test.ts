@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { createRouterTransport } from "@connectrpc/connect";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, rs, test } from "@rstest/core";
 import type { ExportFormat } from "@/features/data-explorer/table-data/selection-formatters";
 import {
   CellValueMode,
@@ -160,7 +160,7 @@ describe("buildStreamRowsExportPayload", () => {
         },
       })
     );
-    const onProgress = vi.fn();
+    const onProgress = rs.fn();
 
     const result = await buildStreamRowsExportPayload({
       exportFormat: "csv",
@@ -215,8 +215,8 @@ describe("buildStreamRowsExportPayload", () => {
     );
     const writes: BlobPart[] = [];
     const fileSink = {
-      close: vi.fn(),
-      write: vi.fn((chunks: readonly BlobPart[]) => {
+      close: rs.fn(),
+      write: rs.fn((chunks: readonly BlobPart[]) => {
         writes.push(...chunks);
       }),
     };
@@ -242,9 +242,9 @@ describe("buildStreamRowsExportPayload", () => {
     const exportError = new Error("write failed");
     const abortError = new Error("abort failed");
     const fileSink = {
-      abort: vi.fn().mockRejectedValue(abortError),
-      close: vi.fn(),
-      write: vi.fn().mockRejectedValue(exportError),
+      abort: rs.fn().mockRejectedValue(abortError),
+      close: rs.fn(),
+      write: rs.fn().mockRejectedValue(exportError),
     };
 
     await expect(
@@ -282,13 +282,13 @@ describe("exportStreamRows", () => {
       const columns = [column("id")];
       const writes: BlobPart[] = [];
       const writable = {
-        abort: vi.fn(),
-        close: vi.fn(),
-        write: vi.fn((chunk: BlobPart) => {
+        abort: rs.fn(),
+        close: rs.fn(),
+        write: rs.fn((chunk: BlobPart) => {
           writes.push(chunk);
         }),
       };
-      const showSaveFilePicker = vi.fn((options: SaveFilePickerOptions) => {
+      const showSaveFilePicker = rs.fn((options: SaveFilePickerOptions) => {
         const acceptTypes = options.types.flatMap((type) =>
           Object.keys(type.accept)
         );

@@ -1,14 +1,14 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, rs, test } from "@rstest/core";
 import { useGetViewQuery, viewsForSchemaQueryInput } from "@/hooks/api/view";
 import { ViewView } from "@/protogen/querylane/console/v1alpha1/view_pb";
 import { getView } from "@/protogen/querylane/console/v1alpha1/view-ViewService_connectquery";
 
-const { useQueryMock, useTransportMock } = vi.hoisted(() => ({
-  useQueryMock: vi.fn(),
-  useTransportMock: vi.fn(),
+const { useQueryMock, useTransportMock } = rs.hoisted(() => ({
+  useQueryMock: rs.fn(),
+  useTransportMock: rs.fn(),
 }));
 
-vi.mock("@connectrpc/connect-query", () => ({
+rs.mock("@connectrpc/connect-query", () => ({
   useQuery: useQueryMock,
   useTransport: useTransportMock,
 }));

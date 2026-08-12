@@ -1,8 +1,8 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AppErrorView } from "@/components/app-error-view";
 import { Button } from "@/components/ui/button";
@@ -99,7 +99,7 @@ afterEach(() => {
 
 describe("app error view integration", () => {
   it("renders a normalized Connect error with retry and a details affordance", () => {
-    const onRetry = vi.fn(async () => undefined);
+    const onRetry = rs.fn(async () => undefined);
 
     render(
       <AppErrorView
@@ -143,7 +143,7 @@ describe("app error view integration", () => {
 
   it("runs the provided retry action from the integrated retry button", async () => {
     const user = userEvent.setup();
-    const onRetry = vi.fn(async () => undefined);
+    const onRetry = rs.fn(async () => undefined);
 
     render(<AppErrorView error={createBootError()} onRetry={onRetry} />);
 
@@ -258,7 +258,7 @@ describe("app error view integration", () => {
     const secondCopy = new Promise<void>((resolve) => {
       resolveSecondCopy = resolve;
     });
-    const writeText = vi
+    const writeText = rs
       .fn<() => Promise<void>>()
       .mockResolvedValueOnce()
       .mockReturnValueOnce(secondCopy);
@@ -303,7 +303,7 @@ describe("app error view integration", () => {
     );
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
-      value: { writeText: vi.fn(() => Promise.resolve()) },
+      value: { writeText: rs.fn(() => Promise.resolve()) },
     });
 
     try {
@@ -337,7 +337,7 @@ describe("app error view integration", () => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: {
-        writeText: vi.fn(() => Promise.reject(new Error("denied"))),
+        writeText: rs.fn(() => Promise.reject(new Error("denied"))),
       },
     });
 

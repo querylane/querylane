@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, rs, test } from "@rstest/core";
 import {
   findExpectedShadcnOverwriteCount,
   findShadcnOverwriteFiles,
@@ -12,7 +12,7 @@ import {
 const PINNED_SHADCN_SPECIFIER_PATTERN = /^shadcn@\d+\.\d+\.\d+/u;
 
 function mockExpectedConsoleError() {
-  return vi.spyOn(console, "error").mockImplementation(() => undefined);
+  return rs.spyOn(console, "error").mockImplementation(() => undefined);
 }
 
 describe("shadcn registry sync check", () => {

@@ -7,19 +7,14 @@ export const VITEST_DEFINES = Object.fromEntries(VITEST_DEFINE_ENTRIES);
 
 export const VITEST_TIMEOUTS = {
   browser: 10_000,
-  integration: 5000,
-  unit: 3000,
 } as const;
 
 export const VITEST_SLOW_TEST_THRESHOLDS = {
   browser: 250,
-  integration: 100,
-  unit: 50,
 } as const;
 
 export const VITEST_SETUP_FILES = {
   browser: "./vitest.browser.setup.ts",
-  dom: "./vitest.setup.ts",
 } as const;
 
 export const VITEST_PLUGIN_NAMES = ["tailwindcss"] as const;

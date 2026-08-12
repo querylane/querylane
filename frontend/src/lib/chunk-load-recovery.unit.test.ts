@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 
 import {
   isChunkLoadError,
@@ -48,7 +48,7 @@ describe("chunk load recovery", () => {
   });
 
   it("reloads once and then returns false so callers can render loop-safe copy", () => {
-    const reloadPage = vi.fn();
+    const reloadPage = rs.fn();
 
     expect(
       reloadChunkLoadErrorOnce({

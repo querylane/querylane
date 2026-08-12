@@ -1,6 +1,6 @@
+import { describe, expect, test } from "@rstest/core";
 import type { useNavigate } from "@tanstack/react-router";
 import { renderHook } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
 import type { AdminPageId } from "@/lib/admin-page";
 import {
   type RouteSelectionIds,

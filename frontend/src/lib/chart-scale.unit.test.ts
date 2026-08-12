@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { niceAxisTicks } from "@/lib/chart-scale";
 import { formatBytes } from "@/lib/console-resources";
 import { formatCompactNumber } from "@/lib/metrics";

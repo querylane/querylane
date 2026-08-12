@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { collectQueryErrors } from "@/features/data-explorer/table-detail-query-state";
 
 describe("collectQueryErrors", () => {

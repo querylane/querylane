@@ -1,6 +1,6 @@
 import { globSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 
 const sourceRoot = resolve(import.meta.dirname, "../src");
 const PROTOGEN_PATH_PATTERN = /(^|\/)protogen\//u;

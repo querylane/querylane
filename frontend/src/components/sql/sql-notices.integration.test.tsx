@@ -1,5 +1,5 @@
+import { describe, expect, test } from "@rstest/core";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
 import { SqlNotices } from "@/components/sql/sql-notices";
 
 describe("SqlNotices", () => {

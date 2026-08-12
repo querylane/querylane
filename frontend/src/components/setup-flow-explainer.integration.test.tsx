@@ -1,5 +1,5 @@
+import { afterEach, describe, expect, it } from "@rstest/core";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
 import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
 
 const INTERNAL_STORAGE_DESCRIPTION_RE =

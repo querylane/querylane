@@ -1,5 +1,13 @@
 import { create } from "@bufbuild/protobuf";
 import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
+import {
   act,
   cleanup,
   fireEvent,
@@ -7,7 +15,6 @@ import {
   screen,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ForeignKeyDataCell } from "@/components/data-grid/table-data-grid/foreign-key-data-cell";
 import type { ForeignKeyReferencePreview } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import { INTENT_PREFETCH_POLICY } from "@/lib/query-policy";
@@ -19,25 +26,25 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
-const tableDataApi = vi.hoisted(() => {
+const tableDataApi = rs.hoisted(() => {
   const queryActions = {
-    fetch: vi.fn(() => Promise.resolve()),
-    getState: vi.fn(() => ({ fetchStatus: "idle", status: "success" })),
-    prefetch: vi.fn(),
+    fetch: rs.fn(() => Promise.resolve()),
+    getState: rs.fn(() => ({ fetchStatus: "idle", status: "success" })),
+    prefetch: rs.fn(),
   };
   return {
     queryActions,
-    useReadCellValueMutation: vi.fn(() => ({
+    useReadCellValueMutation: rs.fn(() => ({
       isError: false,
       isPending: false,
-      mutate: vi.fn(),
+      mutate: rs.fn(),
     })),
-    useReadRowsQuery: vi.fn(),
-    useReadRowsQueryActions: vi.fn(() => queryActions),
+    useReadRowsQuery: rs.fn(),
+    useReadRowsQueryActions: rs.fn(() => queryActions),
   };
 });
 
-vi.mock("@/hooks/api/table-data", () => ({
+rs.mock("@/hooks/api/table-data", () => ({
   useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
   useReadRowsQuery: tableDataApi.useReadRowsQuery,
   useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
@@ -99,36 +106,36 @@ beforeEach(() => {
     fetchStatus: "idle",
     isError: false,
     isPending: false,
-    refetch: vi.fn(),
+    refetch: rs.fn(),
   });
 });
 
 afterEach(() => {
   cleanup();
-  vi.useRealTimers();
-  vi.clearAllMocks();
+  rs.useRealTimers();
+  rs.clearAllMocks();
 });
 
 describe("ForeignKeyDataCell intent prefetch", () => {
   test("prefetches after hover dwell and cancels when the pointer leaves", async () => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
     const trigger = renderForeignKeyCell();
 
     fireEvent.pointerEnter(trigger);
     await act(() =>
-      vi.advanceTimersByTimeAsync(INTENT_PREFETCH_POLICY.delayMs - 1)
+      rs.advanceTimersByTimeAsync(INTENT_PREFETCH_POLICY.delayMs - 1)
     );
     expect(tableDataApi.queryActions.prefetch).not.toHaveBeenCalled();
 
     fireEvent.pointerLeave(trigger);
     await act(() =>
-      vi.advanceTimersByTimeAsync(INTENT_PREFETCH_POLICY.delayMs)
+      rs.advanceTimersByTimeAsync(INTENT_PREFETCH_POLICY.delayMs)
     );
     expect(tableDataApi.queryActions.prefetch).not.toHaveBeenCalled();
 
     fireEvent.pointerEnter(trigger);
     await act(() =>
-      vi.advanceTimersByTimeAsync(INTENT_PREFETCH_POLICY.delayMs)
+      rs.advanceTimersByTimeAsync(INTENT_PREFETCH_POLICY.delayMs)
     );
     expect(tableDataApi.queryActions.prefetch).toHaveBeenCalledTimes(1);
   });
@@ -183,7 +190,7 @@ test("opens the waiting state when the clicked fetch pauses", async () => {
     fetchStatus: "paused",
     isError: false,
     isPending: true,
-    refetch: vi.fn(),
+    refetch: rs.fn(),
   });
   const user = setupUser();
   const trigger = renderForeignKeyCell();
@@ -210,7 +217,7 @@ test("opens the error state when the clicked fetch fails", async () => {
     fetchStatus: "idle",
     isError: true,
     isPending: false,
-    refetch: vi.fn(),
+    refetch: rs.fn(),
   });
   const user = setupUser();
   const trigger = renderForeignKeyCell();
