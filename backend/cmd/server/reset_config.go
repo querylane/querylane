@@ -1,9 +1,9 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/querylane/querylane/backend/config"
 )
@@ -11,7 +11,7 @@ import (
 // ResetConfigCmd removes the persisted internal-storage selection so the
 // onboarding wizard runs again after the server restarts.
 type ResetConfigCmd struct {
-	Config string `help:"Path to config file"                                     optional:"" placeholder:"/path/to/config.yaml" type:"path"`
+	Config string `help:"Path to config file"                                     placeholder:"/path/to/config.yaml" required:"" type:"path"`
 	Yes    bool   `help:"Confirm removal of the saved internal storage selection"`
 }
 
@@ -20,12 +20,7 @@ type ResetConfigCmd struct {
 func (cmd *ResetConfigCmd) Run(_ *config.Globals) error {
 	configPath := cmd.Config
 	if configPath == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("resolve home directory: %w", err)
-		}
-
-		configPath = filepath.Join(home, ".querylane", "config.yaml")
+		return errors.New("refusing to reset internal storage configuration without --config")
 	}
 
 	if !cmd.Yes {

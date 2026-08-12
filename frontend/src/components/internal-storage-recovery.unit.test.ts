@@ -10,7 +10,7 @@ describe("internal storage recovery", () => {
 
   it("lets the CLI resolve the standard configuration path", () => {
     expect(buildResetConfigCommand("~/.querylane/config.yaml")).toBe(
-      "querylane server reset-config --yes"
+      'querylane server reset-config --yes --config "$HOME/.querylane/config.yaml"'
     );
   });
 });

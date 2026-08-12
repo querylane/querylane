@@ -98,14 +98,34 @@ func writeConfigBackup(path string, data []byte) (string, error) {
 }
 
 func replaceConfigFile(path string, data []byte) error {
-	temporaryPath := filepath.Join(filepath.Dir(path), "."+filepath.Base(path)+".reset.tmp")
-	if err := os.WriteFile(temporaryPath, data, 0o600); err != nil {
+	temporary, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".reset.*.tmp")
+	if err != nil {
+		return fmt.Errorf("create temporary reset configuration beside %q: %w", path, err)
+	}
+
+	temporaryPath := temporary.Name()
+
+	defer func() { _ = os.Remove(temporaryPath) }()
+
+	if _, err := temporary.Write(data); err != nil {
+		_ = temporary.Close()
+
 		return fmt.Errorf("write reset configuration %q: %w", temporaryPath, err)
 	}
 
-	if err := os.Rename(temporaryPath, path); err != nil {
-		_ = os.Remove(temporaryPath)
+	if err := temporary.Sync(); err != nil {
+		_ = temporary.Close()
 
+		return fmt.Errorf("sync reset configuration %q: %w", temporaryPath, err)
+	}
+
+	if err := temporary.Close(); err != nil {
+		return fmt.Errorf("close reset configuration %q: %w", temporaryPath, err)
+	}
+
+	// --config explicitly scopes this local operator action, and temporaryPath
+	// was created exclusively beside that destination.
+	if err := os.Rename(temporaryPath, path); err != nil { //nolint:gosec // G703: intentional confirmed local config path.
 		return fmt.Errorf("replace configuration file %q: %w", path, err)
 	}
 
