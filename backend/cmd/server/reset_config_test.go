@@ -31,7 +31,7 @@ instances:
 `
 	require.NoError(t, os.WriteFile(configPath, []byte(original), 0o600))
 
-	cmd := server.ResetConfigCmd{Config: configPath}
+	cmd := server.ResetConfigCmd{Config: configPath, Yes: true}
 	require.NoError(t, cmd.Run(&config.Globals{}))
 
 	updated, err := os.ReadFile(configPath)
@@ -56,7 +56,7 @@ func TestResetConfigCmd_UsesStandardConfigPath(t *testing.T) {
   mode: persistent
 `), 0o600))
 
-	cmd := server.ResetConfigCmd{}
+	cmd := server.ResetConfigCmd{Yes: true}
 	require.NoError(t, cmd.Run(&config.Globals{}))
 
 	updated, err := os.ReadFile(configPath)
@@ -69,7 +69,7 @@ func TestResetConfigCmd_MissingConfigIsActionable(t *testing.T) {
 	t.Parallel()
 
 	configPath := filepath.Join(t.TempDir(), "missing.yaml")
-	cmd := server.ResetConfigCmd{Config: configPath}
+	cmd := server.ResetConfigCmd{Config: configPath, Yes: true}
 
 	err := cmd.Run(&config.Globals{})
 	require.Error(t, err)
@@ -84,7 +84,7 @@ func TestResetConfigCmd_DoesNotOverwriteExistingBackup(t *testing.T) {
 	require.NoError(t, os.WriteFile(configPath, []byte("database:\n  dsn: first\n"), 0o600))
 	require.NoError(t, os.WriteFile(configPath+".bak", []byte("older backup\n"), 0o600))
 
-	cmd := server.ResetConfigCmd{Config: configPath}
+	cmd := server.ResetConfigCmd{Config: configPath, Yes: true}
 	require.NoError(t, cmd.Run(&config.Globals{}))
 
 	olderBackup, err := os.ReadFile(configPath + ".bak")
@@ -103,11 +103,29 @@ func TestResetConfigCmd_LeavesConfigWithoutInternalStorageUntouched(t *testing.T
 	original := "http:\n  host: 127.0.0.1\n  port: 8080\n"
 	require.NoError(t, os.WriteFile(configPath, []byte(original), 0o600))
 
-	cmd := server.ResetConfigCmd{Config: configPath}
+	cmd := server.ResetConfigCmd{Config: configPath, Yes: true}
 	require.NoError(t, cmd.Run(&config.Globals{}))
 
 	updated, err := os.ReadFile(configPath)
 	require.NoError(t, err)
+	assert.Equal(t, original, string(updated))
+	assert.NoFileExists(t, configPath+".bak")
+}
+
+func TestResetConfigCmd_RequiresExplicitConfirmation(t *testing.T) {
+	t.Parallel()
+
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	original := "database:\n  host: broken.example.com\n"
+	require.NoError(t, os.WriteFile(configPath, []byte(original), 0o600))
+
+	cmd := server.ResetConfigCmd{Config: configPath}
+	err := cmd.Run(&config.Globals{})
+
+	require.ErrorContains(t, err, "--yes")
+
+	updated, readErr := os.ReadFile(configPath)
+	require.NoError(t, readErr)
 	assert.Equal(t, original, string(updated))
 	assert.NoFileExists(t, configPath+".bak")
 }

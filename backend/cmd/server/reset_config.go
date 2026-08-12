@@ -11,7 +11,8 @@ import (
 // ResetConfigCmd removes the persisted internal-storage selection so the
 // onboarding wizard runs again after the server restarts.
 type ResetConfigCmd struct {
-	Config string `help:"Path to config file" optional:"" placeholder:"/path/to/config.yaml" type:"path"`
+	Config string `help:"Path to config file"                                     optional:"" placeholder:"/path/to/config.yaml" type:"path"`
+	Yes    bool   `help:"Confirm removal of the saved internal storage selection"`
 }
 
 // Run resets only the meta-database configuration and preserves other server
@@ -25,6 +26,10 @@ func (cmd *ResetConfigCmd) Run(_ *config.Globals) error {
 		}
 
 		configPath = filepath.Join(home, ".querylane", "config.yaml")
+	}
+
+	if !cmd.Yes {
+		return fmt.Errorf("refusing to reset internal storage configuration in %q without --yes", configPath)
 	}
 
 	backupPath, changed, err := config.RemoveFileKeys(configPath, "database", "embedded")
