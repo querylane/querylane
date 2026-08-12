@@ -45,7 +45,7 @@ instances:
 	assert.Equal(t, original, string(backup))
 }
 
-func TestResetConfigCmd_UsesStandardConfigPath(t *testing.T) {
+func TestResetConfigCmd_RequiresExplicitConfigPath(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
@@ -57,12 +57,13 @@ func TestResetConfigCmd_UsesStandardConfigPath(t *testing.T) {
 `), 0o600))
 
 	cmd := server.ResetConfigCmd{Yes: true}
-	require.NoError(t, cmd.Run(&config.Globals{}))
+	err := cmd.Run(&config.Globals{})
 
+	require.ErrorContains(t, err, "--config")
 	updated, err := os.ReadFile(configPath)
 	require.NoError(t, err)
-	assert.NotContains(t, string(updated), "embedded:")
-	assert.FileExists(t, configPath+".bak")
+	assert.Contains(t, string(updated), "embedded:")
+	assert.NoFileExists(t, configPath+".bak")
 }
 
 func TestResetConfigCmd_MissingConfigIsActionable(t *testing.T) {
@@ -128,4 +129,24 @@ func TestResetConfigCmd_RequiresExplicitConfirmation(t *testing.T) {
 	require.NoError(t, readErr)
 	assert.Equal(t, original, string(updated))
 	assert.NoFileExists(t, configPath+".bak")
+}
+
+func TestResetConfigCmd_DoesNotFollowPreexistingTemporaryFileSymlink(t *testing.T) {
+	t.Parallel()
+
+	directory := t.TempDir()
+	configPath := filepath.Join(directory, "config.yaml")
+	victimPath := filepath.Join(directory, "victim.txt")
+	temporaryPath := filepath.Join(directory, ".config.yaml.reset.tmp")
+
+	require.NoError(t, os.WriteFile(configPath, []byte("database:\n  host: broken.example.com\n"), 0o600))
+	require.NoError(t, os.WriteFile(victimPath, []byte("do not replace\n"), 0o600))
+	require.NoError(t, os.Symlink(victimPath, temporaryPath))
+
+	cmd := server.ResetConfigCmd{Config: configPath, Yes: true}
+	require.NoError(t, cmd.Run(&config.Globals{}))
+
+	victim, err := os.ReadFile(victimPath)
+	require.NoError(t, err)
+	assert.Equal(t, "do not replace\n", string(victim))
 }
