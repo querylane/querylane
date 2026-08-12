@@ -196,7 +196,10 @@ vi.mock("@/hooks/api/table", () => ({
 }));
 
 vi.mock("@/lib/db-context", () => ({
-  useDb: () => ({ selectedDatabase: { name: "appdb" } }),
+  useDb: () => ({
+    selectedDatabase: { name: "appdb" },
+    selectedInstance: { allowMutations: true },
+  }),
 }));
 
 function renderDataExplorerPage() {

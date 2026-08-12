@@ -21,6 +21,7 @@ export function ExplorerDetailPane({
   hasMoreTables,
   hasMoreViews,
   instanceId,
+  mutationsAllowed,
   onSchemaTabChange,
   onTableTabChange,
   onSelectResource,
@@ -45,6 +46,7 @@ export function ExplorerDetailPane({
   hasMoreTables: boolean;
   hasMoreViews: boolean;
   instanceId: string;
+  mutationsAllowed: boolean;
   onSchemaTabChange: (tab: SchemaDetailTab) => void;
   onTableTabChange: (tab: TableDetailTab) => void;
   onSelectResource: (category: CategoryKey, name: string) => void;
@@ -119,6 +121,7 @@ export function ExplorerDetailPane({
       category={selection.category}
       databaseId={databaseId}
       instanceId={instanceId}
+      mutationsAllowed={mutationsAllowed}
       name={selection.name}
       onTableTabChange={onTableTabChange}
       schemaName={activeSchema.name}

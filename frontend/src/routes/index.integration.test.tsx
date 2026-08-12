@@ -42,6 +42,7 @@ vi.mock("@/lib/db-context", () => ({
 
 function instance(id: string, credentialsUnreadable = false): PostgresInstance {
   return {
+    allowMutations: false,
     connectionError: "",
     credentialsUnreadable,
     host: `${id}.internal`,

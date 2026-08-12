@@ -42,6 +42,7 @@ export function ResourceDetail({
   category,
   databaseId,
   instanceId,
+  mutationsAllowed,
   name,
   onTableTabChange,
   schemaName,
@@ -52,6 +53,7 @@ export function ResourceDetail({
   category: CategoryKey;
   databaseId: string;
   instanceId: string;
+  mutationsAllowed: boolean;
   name: string;
   onTableTabChange: (tab: TableDetailTab) => void;
   schemaName: string;
@@ -86,6 +88,7 @@ export function ResourceDetail({
       <ViewDetail
         databaseId={databaseId}
         instanceId={instanceId}
+        mutationsAllowed={mutationsAllowed}
         schemaName={schemaName}
         view={view}
         viewName={name}

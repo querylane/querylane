@@ -148,14 +148,15 @@ func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) 
 					Summary:                "primary with 2 attached replicas",
 				},
 				StatsAccess: &engine.StatsAccessHealth{
-					CurrentUser:           "querylane",
-					Superuser:             false,
-					PGMonitorMember:       true,
-					PGReadAllStatsMember:  true,
-					CanReadPGStatActivity: true,
-					CanReadPGStatDatabase: true,
-					Status:                engine.HealthStatusOK,
-					Summary:               "querylane can inspect PostgreSQL statistics",
+					CurrentUser:             "querylane",
+					Superuser:               false,
+					PGMonitorMember:         true,
+					PGReadAllStatsMember:    true,
+					CanReadPGStatActivity:   true,
+					CanReadPGStatDatabase:   true,
+					CanExecuteServerProgram: true,
+					Status:                  engine.HealthStatusOK,
+					Summary:                 "querylane can inspect PostgreSQL statistics",
 				},
 				PGStatStatements: &engine.PGStatStatementsHealth{
 					ExtensionInstalled:      true,
@@ -188,6 +189,7 @@ func TestCheckInstanceHealthReturnsActionableDatabaseBackedChecks(t *testing.T) 
 
 	health := resp.Msg.GetHealth()
 	require.NotNil(t, health)
+	require.True(t, health.GetStatsAccess().GetCanExecuteServerProgram())
 
 	activity := health.GetConnectionActivity()
 	require.NotNil(t, activity)

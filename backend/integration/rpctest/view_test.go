@@ -189,8 +189,9 @@ func (s *RPCSuite) TestRefreshMaterializedViewConcurrently() {
 	defer cancel()
 
 	resp, err := s.viewClient.RefreshMaterializedView(ctx, connect.NewRequest(&consolev1alpha1.RefreshMaterializedViewRequest{
-		Name: s.viewName("analytics", "order_summary"),
-		Mode: consolev1alpha1.RefreshMaterializedViewMode_REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT,
+		Name:         s.viewName("analytics", "order_summary"),
+		Mode:         consolev1alpha1.RefreshMaterializedViewMode_REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT,
+		Confirmation: `"analytics"."order_summary"`,
 	}))
 	s.Require().NoError(err)
 	s.True(resp.Msg.GetView().GetIsPopulated())
@@ -218,8 +219,9 @@ func (s *RPCSuite) TestRefreshMaterializedViewConcurrentRequiresUniqueIndex() {
 	}()
 
 	_, err = s.viewClient.RefreshMaterializedView(ctx, connect.NewRequest(&consolev1alpha1.RefreshMaterializedViewRequest{
-		Name: s.viewName("analytics", "order_summary"),
-		Mode: consolev1alpha1.RefreshMaterializedViewMode_REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT,
+		Name:         s.viewName("analytics", "order_summary"),
+		Mode:         consolev1alpha1.RefreshMaterializedViewMode_REFRESH_MATERIALIZED_VIEW_MODE_CONCURRENT,
+		Confirmation: `"analytics"."order_summary"`,
 	}))
 	s.Require().Error(err)
 	s.Equal(connect.CodeFailedPrecondition, connect.CodeOf(err))
@@ -261,7 +263,8 @@ func (s *RPCSuite) TestRefreshMaterializedViewUsesStandardModeWhenUnspecified() 
 	}()
 
 	_, err = s.viewClient.RefreshMaterializedView(ctx, connect.NewRequest(&consolev1alpha1.RefreshMaterializedViewRequest{
-		Name: s.viewName("analytics", "order_summary"),
+		Name:         s.viewName("analytics", "order_summary"),
+		Confirmation: `"analytics"."order_summary"`,
 	}))
 	s.Require().NoError(err)
 
@@ -277,7 +280,8 @@ func (s *RPCSuite) TestRefreshMaterializedViewRejectsStandardView() {
 	defer cancel()
 
 	_, err := s.viewClient.RefreshMaterializedView(ctx, connect.NewRequest(&consolev1alpha1.RefreshMaterializedViewRequest{
-		Name: s.viewName("sales", "customer_orders"),
+		Name:         s.viewName("sales", "customer_orders"),
+		Confirmation: `"sales"."customer_orders"`,
 	}))
 	s.Require().Error(err)
 	s.Equal(connect.CodeInvalidArgument, connect.CodeOf(err))

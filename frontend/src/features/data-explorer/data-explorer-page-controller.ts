@@ -63,7 +63,7 @@ function useDataExplorerPageController({
   });
   const queryClient = useQueryClient();
   const transport = useTransport();
-  const { selectedDatabase } = useDb();
+  const { selectedDatabase, selectedInstance } = useDb();
   const [queryState, setQueryState] = useState(() => ({
     source: search.q,
     value: search.q ?? "",
@@ -221,6 +221,7 @@ function useDataExplorerPageController({
     databaseLabel: selectedDatabase?.name ?? databaseId,
     expandedCategories,
     instanceId,
+    mutationsAllowed: selectedInstance?.allowMutations ?? false,
     itemsByCategory: itemsByCategory(activeSchema, tables, views),
     onLoadMoreCategory: (category: CategoryKey) => {
       if (category === "tables") {

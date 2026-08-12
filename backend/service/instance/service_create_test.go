@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
@@ -222,6 +223,24 @@ func TestRequestValidationRejectsDirectSSLNegotiationWithoutRequiredSSLMode(t *t
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "ssl_negotiation direct requires ssl_mode require")
+}
+
+func TestRequestValidationRejectsUnsafeStatementTimeout(t *testing.T) {
+	t.Parallel()
+
+	if !testing.Short() {
+		t.Skip("unit test: run with -short")
+	}
+
+	validator, err := protovalidate.New()
+	require.NoError(t, err)
+
+	createReq := createInstanceTestRequest(false)
+	createReq.GetSpec().GetConfig().StatementTimeout = durationpb.New(61 * time.Second)
+
+	err = validator.Validate(createReq)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "statement_timeout must be greater than zero")
 }
 
 func TestTestInstanceConnectionFailureReturnsActionableMessage(t *testing.T) {

@@ -88,6 +88,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ListAdminRunnerExecutionsResponse'
+  /querylane.console.v1alpha1.AdminService/ListAuditLogEntries:
+    post:
+      x-connectrpc-method-kind: unary
+      tags:
+        - Admin
+      summary: ListAuditLogEntries
+      description: Lists the immutable audit trail for mutations run through Querylane.
+      operationId: AdminService_ListAuditLogEntries
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/querylane.console.v1alpha1.ListAuditLogEntriesRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/querylane.console.v1alpha1.ListAuditLogEntriesResponse'
   /querylane.console.v1alpha1.AdminService/ListCatalogSyncStates:
     post:
       x-connectrpc-method-kind: unary
@@ -2777,6 +2814,58 @@ components:
       title: ApplicationConnections
       additionalProperties: false
       description: Client backend connection counts for one application_name, split by state.
+    querylane.console.v1alpha1.AuditLogEntry:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+        actor:
+          type: string
+          title: actor
+        action:
+          type: string
+          title: action
+        statement:
+          type: string
+          title: statement
+        target:
+          type: string
+          title: target
+        instance:
+          type: string
+          title: instance
+        database:
+          type: string
+          title: database
+        status:
+          title: status
+          $ref: '#/components/schemas/querylane.console.v1alpha1.AuditLogEntry.Status'
+        resultSummary:
+          type: string
+          title: result_summary
+        startedAt:
+          title: started_at
+          type: string
+          format: date-time
+        finishedAt:
+          title: finished_at
+          type: string
+          format: date-time
+      title: AuditLogEntry
+      additionalProperties: false
+      description: |-
+        AuditLogEntry is one mutation attempt against a managed PostgreSQL
+         instance. Entries are created before execution and finalized afterward, so
+         failed and interrupted attempts remain visible.
+    querylane.console.v1alpha1.AuditLogEntry.Status:
+      type: string
+      title: Status
+      enum:
+        - STATUS_UNSPECIFIED
+        - STATUS_STARTED
+        - STATUS_SUCCEEDED
+        - STATUS_FAILED
     querylane.console.v1alpha1.AutovacuumHealth:
       type: object
       properties:
@@ -4362,6 +4451,41 @@ components:
           title: next_page_token
       title: ListAdminRunnerExecutionsResponse
       additionalProperties: false
+    querylane.console.v1alpha1.ListAuditLogEntriesRequest:
+      type: object
+      properties:
+        pageSize:
+          type: integer
+          title: page_size
+          maximum: 1000
+          minimum: 0
+          format: int32
+        pageToken:
+          type: string
+          title: page_token
+        filter:
+          type: string
+          title: filter
+          description: Optional. AIP-160 filter. Reserved for server-side audit filtering.
+        orderBy:
+          type: string
+          title: order_by
+          description: Optional. AIP-132 order_by. Entries are currently returned newest first.
+      title: ListAuditLogEntriesRequest
+      additionalProperties: false
+    querylane.console.v1alpha1.ListAuditLogEntriesResponse:
+      type: object
+      properties:
+        auditLogEntries:
+          type: array
+          items:
+            $ref: '#/components/schemas/querylane.console.v1alpha1.AuditLogEntry'
+          title: audit_log_entries
+        nextPageToken:
+          type: string
+          title: next_page_token
+      title: ListAuditLogEntriesResponse
+      additionalProperties: false
     querylane.console.v1alpha1.ListCatalogSyncStatesRequest:
       type: object
       properties:
@@ -5694,10 +5818,26 @@ components:
              used. `direct` maps to the libpq `sslnegotiation=direct` connection option
              and requires ssl_mode `require`, `verify-ca`, or `verify-full`.
           $ref: '#/components/schemas/querylane.console.v1alpha1.PostgresConfig.SslNegotiation'
+        allowMutations:
+          type: boolean
+          title: allow_mutations
+          description: |-
+            Optional. Allows Querylane write RPCs against this instance. False by
+             default so new and existing instances remain read-only until an operator
+             explicitly opts in. This is enforced server-side.
+        statementTimeout:
+          title: statement_timeout
+          description: |-
+            Optional. Default timeout for user-driven statements against this
+             instance. Requests may override it, subject to the server's hard limit.
+             When omitted, Querylane uses 30 seconds.
+          type: string
+          format: duration
       title: PostgresConfig
       additionalProperties: false
       description: |
         postgres_config_direct_ssl_negotiation_requires_tls // ssl_negotiation direct requires ssl_mode require, verify-ca, or verify-full
+        postgres_config_statement_timeout_bounded // statement_timeout must be greater than zero and at most 60 seconds
     querylane.console.v1alpha1.PostgresConfig.SslMode:
       type: string
       title: SslMode
@@ -6078,6 +6218,18 @@ components:
           title: mode
           description: Optional. Standard refresh is used when unspecified.
           $ref: '#/components/schemas/querylane.console.v1alpha1.RefreshMaterializedViewMode'
+        confirmation:
+          type: string
+          title: confirmation
+          description: |-
+            Required. Must exactly match the schema-qualified, quoted SQL identifier
+             derived from name, such as `"public"."daily_revenue"`. This prevents
+             stale or accidental UI confirmations from authorizing a different target.
+        timeout:
+          title: timeout
+          description: Optional. Per-request timeout override, capped by the server.
+          type: string
+          format: duration
       title: RefreshMaterializedViewRequest
       additionalProperties: false
       description: Request message for RefreshMaterializedView.
@@ -6905,6 +7057,20 @@ components:
           title: max_connections
           format: int32
           description: The maximum number of concurrent connections the server allows.
+        connectedRole:
+          type: string
+          title: connected_role
+          description: Output-only. PostgreSQL role used by Querylane for this instance.
+        connectedRoleIsSuperuser:
+          type: boolean
+          title: connected_role_is_superuser
+          description: Output-only. Whether the connected role is a PostgreSQL superuser.
+        connectedRoleCanExecuteServerProgram:
+          type: boolean
+          title: connected_role_can_execute_server_program
+          description: |-
+            Output-only. Whether the connected role can execute server-side programs
+             through COPY ... TO/FROM PROGRAM, including implicit superuser access.
       title: ServerInfo
       additionalProperties: false
       description: Live server metadata queried from the PostgreSQL instance.
@@ -7028,6 +7194,12 @@ components:
         canReadPgStatDatabase:
           type: boolean
           title: can_read_pg_stat_database
+        canExecuteServerProgram:
+          type: boolean
+          title: can_execute_server_program
+          description: |-
+            Whether the connected role can run COPY ... PROGRAM. A read-only
+             transaction cannot contain this operating-system command capability.
       title: StatsAccessHealth
       additionalProperties: false
       description: Statistics visibility for the connected role.

@@ -285,6 +285,7 @@ func (s *PostgresEngineIntegrationTestSuite) TestCheckInstanceHealthReturnsDatab
 	s.NotEmpty(health.StatsAccess.CurrentUser)
 	s.True(health.StatsAccess.CanReadPGStatActivity)
 	s.True(health.StatsAccess.CanReadPGStatDatabase)
+	s.True(health.StatsAccess.CanExecuteServerProgram, "test superuser can execute server programs")
 
 	s.Require().NotNil(health.PGStatStatements)
 	s.True(health.PGStatStatements.ExtensionInstalled)

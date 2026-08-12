@@ -604,6 +604,39 @@ func (s *IntegrationTestSuite) TestUpdateInstanceRejectsUntestableConfigIntegrat
 	s.Empty(connManager.evictedNames, "failed update must not evict working pool")
 }
 
+func (s *IntegrationTestSuite) TestUpdateInstanceSafetyPolicyDoesNotRequireTargetConnectionIntegration() {
+	ctx := context.Background()
+
+	testDB := storage.NewTestDB(s.T())
+	defer testDB.Close()
+
+	instanceRepo, err := storage.NewInstanceRepository(testDB.DB())
+	s.Require().NoError(err)
+
+	connManager := &mockConnectionManager{testErr: errors.New("dial tcp: connection refused")}
+
+	_, err = instanceRepo.CreateInstance(ctx, s.createTestInstance(), "update-test-safety-policy")
+	s.Require().NoError(err)
+
+	defer instanceRepo.DeleteInstance(ctx, "instances/update-test-safety-policy") //nolint:errcheck // test cleanup
+
+	service := NewService(instanceRepo, instanceRepo, &mockConnectionRecorder{}, connManager, &mockCatalogProvider{}, &mockOverviewFetcher{}, false, newTestConnectionGuard())
+
+	resp, err := service.UpdateInstance(ctx, connect.NewRequest(&v1alpha1.UpdateInstanceRequest{
+		Instance: &v1alpha1.Instance{
+			Name: "instances/update-test-safety-policy",
+			Config: &v1alpha1.PostgresConfig{
+				AllowMutations: true,
+			},
+		},
+		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"config.allow_mutations"}},
+	}))
+
+	s.Require().NoError(err)
+	s.True(resp.Msg.GetInstance().GetConfig().GetAllowMutations())
+	s.Empty(connManager.testedConfigs, "safety-only settings must remain changeable while the target is unavailable")
+}
+
 func (s *IntegrationTestSuite) TestUpdateInstanceTestsConfigBeforePersistingIntegration() {
 	ctx := context.Background()
 

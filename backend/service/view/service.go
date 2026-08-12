@@ -6,18 +6,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgx/v5"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/querylane/querylane/backend/aip"
 	"github.com/querylane/querylane/backend/connectrpc/apierrors"
 	"github.com/querylane/querylane/backend/engine"
 	"github.com/querylane/querylane/backend/livequery"
+	"github.com/querylane/querylane/backend/postgreserrors"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	"github.com/querylane/querylane/backend/resource"
+	"github.com/querylane/querylane/backend/safety"
+	"github.com/querylane/querylane/backend/storage"
 )
 
 var _ v1connect.ViewServiceHandler = (*Service)(nil)
@@ -36,6 +42,8 @@ type viewCatalog interface {
 type Service struct {
 	catalog        viewCatalog
 	liveQueries    liveQueryLimiter
+	safety         *safety.Gate
+	audit          mutationAuditor
 	refreshTimeout time.Duration
 }
 
@@ -43,10 +51,23 @@ type liveQueryLimiter interface {
 	Acquire(instance resource.InstanceName) (livequery.Release, error)
 }
 
+type mutationAuditor interface {
+	StartMutation(context.Context, storage.AuditMutation) (int64, error)
+	FinishMutation(context.Context, int64, storage.AuditMutationStatus, string) error
+}
+
 // NewService creates a new ViewService.
-func NewService(catalog viewCatalog, liveQueries liveQueryLimiter, refreshTimeout time.Duration) *Service {
+func NewService(catalog viewCatalog, liveQueries liveQueryLimiter, safetyGate *safety.Gate, audit mutationAuditor, refreshTimeout time.Duration) *Service {
 	if liveQueries == nil {
 		panic("view.NewService: live query limiter is required") //nolint:forbidigo // programmer error during DI setup
+	}
+
+	if safetyGate == nil {
+		panic("view.NewService: safety gate is required") //nolint:forbidigo // programmer error during DI setup
+	}
+
+	if audit == nil {
+		panic("view.NewService: mutation auditor is required") //nolint:forbidigo // programmer error during DI setup
 	}
 
 	if refreshTimeout <= 0 {
@@ -57,7 +78,7 @@ func NewService(catalog viewCatalog, liveQueries liveQueryLimiter, refreshTimeou
 		panic("view.NewService: materialized view refresh timeout must not exceed 30s") //nolint:forbidigo // programmer error during DI setup
 	}
 
-	return &Service{catalog: catalog, liveQueries: liveQueries, refreshTimeout: refreshTimeout}
+	return &Service{catalog: catalog, liveQueries: liveQueries, safety: safetyGate, audit: audit, refreshTimeout: refreshTimeout}
 }
 
 // ListViews lists views in a schema.
@@ -188,6 +209,13 @@ func (s *Service) RefreshMaterializedView(ctx context.Context, req *connect.Requ
 		return nil, connErr
 	}
 
+	confirmationTarget := pgx.Identifier{viewRes.SchemaID, viewRes.ViewID}.Sanitize()
+	if req.Msg.GetConfirmation() != confirmationTarget {
+		return nil, apierrors.NewInvalidArgumentError(
+			apierrors.NewFieldViolation("confirmation", "must exactly match the qualified view identifier"),
+		)
+	}
+
 	var concurrently bool
 
 	switch req.Msg.GetMode() {
@@ -202,6 +230,25 @@ func (s *Service) RefreshMaterializedView(ctx context.Context, req *connect.Requ
 		})
 	}
 
+	policy, err := s.safety.Policy(ctx, viewRes.Instance())
+	if err != nil {
+		return nil, apierrors.MapRepoErr(ctx, err, apierrors.ResourceCtx{
+			Type: resource.TypeInstance, Name: viewRes.Instance().String(), Op: "refresh_materialized_view",
+		})
+	}
+
+	if !policy.MutationsAllowed() {
+		return nil, apierrors.NewConnectError(
+			connect.CodeFailedPrecondition,
+			errors.New("this instance is read-only; enable mutations in its safety settings before refreshing materialized views"),
+			&errdetails.ErrorInfo{
+				Domain:   "console.querylane.dev",
+				Reason:   v1alpha1.ErrorReason_FAILED_PRECONDITION.String(),
+				Metadata: map[string]string{"instance": viewRes.Instance().String()},
+			},
+		)
+	}
+
 	release, err := s.liveQueries.Acquire(viewRes.Instance())
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
@@ -210,11 +257,39 @@ func (s *Service) RefreshMaterializedView(ctx context.Context, req *connect.Requ
 	}
 	defer release()
 
-	refreshCtx, cancel := context.WithTimeout(ctx, s.refreshTimeout)
+	requestedTimeout := time.Duration(0)
+	if req.Msg.GetTimeout() != nil {
+		requestedTimeout = req.Msg.GetTimeout().AsDuration()
+	}
+
+	refreshTimeout := min(policy.StatementTimeout(requestedTimeout), s.refreshTimeout)
+
+	refreshCtx, cancel := context.WithTimeout(ctx, refreshTimeout)
 	defer cancel()
+
+	modifier := ""
+	if concurrently {
+		modifier = " CONCURRENTLY"
+	}
+
+	auditID, err := s.audit.StartMutation(ctx, storage.AuditMutation{
+		Actor:        req.Peer().Addr,
+		Action:       "refresh_materialized_view",
+		Statement:    "REFRESH MATERIALIZED VIEW" + modifier + " " + confirmationTarget,
+		Target:       viewRes.String(),
+		InstanceName: viewRes.Instance().String(),
+		DatabaseName: viewRes.DatabaseID,
+	})
+	if err != nil {
+		return nil, apierrors.MapRepoErr(ctx, err, apierrors.ResourceCtx{
+			Type: resource.TypeAuditLogEntry, Op: "start_mutation_audit",
+		})
+	}
 
 	refreshed, err := s.catalog.RefreshMaterializedView(refreshCtx, viewRes, concurrently)
 	if err != nil {
+		s.finishAudit(ctx, auditID, storage.AuditMutationFailed, postgreserrors.RedactedMessage(err, "refresh materialized view"))
+
 		if errors.Is(err, context.DeadlineExceeded) {
 			err = fmt.Errorf("materialized view refresh exceeded its deadline: %w", engine.ErrQueryTimeout)
 		}
@@ -224,9 +299,23 @@ func (s *Service) RefreshMaterializedView(ctx context.Context, req *connect.Requ
 		})
 	}
 
+	s.finishAudit(ctx, auditID, storage.AuditMutationSucceeded, "refreshed")
+
 	return connect.NewResponse(&v1alpha1.RefreshMaterializedViewResponse{
 		View: convertViewToProto(*refreshed, viewRes.Schema(), true),
 	}), nil
+}
+
+func (s *Service) finishAudit(ctx context.Context, auditID int64, status storage.AuditMutationStatus, summary string) {
+	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+	defer cancel()
+
+	if err := s.audit.FinishMutation(finishCtx, auditID, status, summary); err != nil {
+		slog.ErrorContext(ctx, "failed to finalize mutation audit entry",
+			slog.Int64("audit_id", auditID),
+			slog.String("status", string(status)),
+			slog.String("error", err.Error()))
+	}
 }
 
 func convertDependencyToProto(dependency engine.ViewDependency, viewRes resource.ViewName) *v1alpha1.ViewDependency {

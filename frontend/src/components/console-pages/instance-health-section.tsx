@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, ChevronDown } from "lucide-react";
+import { AlertCircle, ChevronDown, TriangleAlert } from "lucide-react";
 import { SectionCard } from "@/components/console-pages/console-layout";
 import type { InstanceRecord } from "@/components/console-pages/instance-config-model";
 import {
@@ -11,6 +11,7 @@ import {
   type HealthRowModel,
   type HealthRowTone,
 } from "@/components/console-pages/instance-health-rows";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Collapsible,
   CollapsibleContent,
@@ -174,6 +175,16 @@ function InstanceHealthSection({
     serverInfo,
   });
   const showLiveSkeleton = isConnected && healthPending && !health;
+  const privilegedRole = Boolean(
+    health?.statsAccess?.superuser ||
+      health?.statsAccess?.canExecuteServerProgram ||
+      serverInfo?.connectedRoleIsSuperuser ||
+      serverInfo?.connectedRoleCanExecuteServerProgram
+  );
+  const connectedRole =
+    health?.statsAccess?.currentUser ||
+    serverInfo?.connectedRole ||
+    "This role";
   const rows = isConnected
     ? [
         buildConnectedEndpointRow(instance),
@@ -196,6 +207,18 @@ function InstanceHealthSection({
         title="Health"
       >
         <div className="flex flex-col gap-3">
+          {privilegedRole ? (
+            <Alert>
+              <TriangleAlert />
+              <AlertTitle>Privileged PostgreSQL role</AlertTitle>
+              <AlertDescription>
+                {connectedRole} can bypass parts of read-only containment.
+                Read-only transactions do not contain COPY PROGRAM or other
+                external side effects. Use a reduced-privilege role without
+                superuser or pg_execute_server_program.
+              </AlertDescription>
+            </Alert>
+          ) : null}
           {facts.length > 0 ? (
             <>
               <InstanceFactsHeader facts={facts} />

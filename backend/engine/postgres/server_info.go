@@ -22,6 +22,9 @@ func (d *Postgres) GetServerInfo(ctx context.Context, db *sql.DB) (*engine.Serve
 		&info.StartedAt,
 		&info.IsInRecovery,
 		&info.MaxConnections,
+		&info.ConnectedRole,
+		&info.ConnectedRoleIsSuperuser,
+		&info.ConnectedRoleCanExecuteServerProgram,
 	)
 	if err != nil {
 		return nil, classifyQueryError("query server info", err)
@@ -424,6 +427,7 @@ func queryStatsAccessHealth(ctx context.Context, db *sql.DB) (*engine.StatsAcces
 		&statsAccess.PGReadAllStatsMember,
 		&statsAccess.CanReadPGStatActivity,
 		&statsAccess.CanReadPGStatDatabase,
+		&statsAccess.CanExecuteServerProgram,
 	); err != nil {
 		return nil, classifyQueryError("query stats access health", err)
 	}
@@ -578,7 +582,11 @@ func summarizeConnectionActivity(activity engine.ConnectionActivityHealth) (engi
 }
 
 func summarizeStatsAccess(statsAccess engine.StatsAccessHealth) (engine.HealthStatus, string) {
-	if statsAccess.Superuser || statsAccess.PGMonitorMember || statsAccess.PGReadAllStatsMember {
+	if statsAccess.Superuser || statsAccess.CanExecuteServerProgram {
+		return engine.HealthStatusWarning, statsAccess.CurrentUser + " can execute server-side programs; read-only transactions cannot contain this role"
+	}
+
+	if statsAccess.PGMonitorMember || statsAccess.PGReadAllStatsMember {
 		return engine.HealthStatusOK, statsAccess.CurrentUser + " can inspect PostgreSQL statistics"
 	}
 

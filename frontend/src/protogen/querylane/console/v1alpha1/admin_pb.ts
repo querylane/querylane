@@ -2,10 +2,11 @@
 // @generated from file querylane/console/v1alpha1/admin.proto (package querylane.console.v1alpha1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
 import { file_google_api_field_behavior } from "../../../google/api/field_behavior_pb";
+import { file_google_api_resource } from "../../../google/api/resource_pb";
 import type { Duration, Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_duration, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { CatalogSyncStatus } from "./catalog_sync_pb";
@@ -16,7 +17,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file querylane/console/v1alpha1/admin.proto.
  */
 export const file_querylane_console_v1alpha1_admin: GenFile = /*@__PURE__*/
-  fileDesc("CiZxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS9hZG1pbi5wcm90bxIacXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEizAEKB1JlcGxpY2ESFwoKcmVwbGljYV9pZBgBIAEoCUID4EEDEhUKCGhvc3RuYW1lGAIgASgJQgPgQQMSEAoDcGlkGAMgASgDQgPgQQMSMwoKc3RhcnRlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI1CgxsYXN0X3NlZW5fYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSEwoGYWN0aXZlGAYgASgIQgPgQQMifAoTTGlzdFJlcGxpY2FzUmVxdWVzdBIgCglwYWdlX3NpemUYASABKAVCDeBBAbpIBxoFGOgHKAASFwoKcGFnZV90b2tlbhgCIAEoCUID4EEBEhMKBmZpbHRlchgDIAEoCUID4EEBEhUKCG9yZGVyX2J5GAQgASgJQgPgQQEiZgoUTGlzdFJlcGxpY2FzUmVzcG9uc2USNQoIcmVwbGljYXMYASADKAsyIy5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5SZXBsaWNhEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSJBCg9SZXBsaWNhSWRlbnRpdHkSFwoKcmVwbGljYV9pZBgBIAEoCUID4EEDEhUKCGhvc3RuYW1lGAIgASgJQgPgQQMiqAMKFEFkbWluUnVubmVyRXhlY3V0aW9uEhgKC3J1bm5lcl9uYW1lGAEgASgJQgPgQQMSEwoGdGFyZ2V0GAIgASgJQgPgQQMSFwoKbGVhc2VfaGVsZBgDIAEoCEID4EEDEkUKC2xlYXNlX293bmVyGAQgASgLMisucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuUmVwbGljYUlkZW50aXR5QgPgQQMSOQoQbGVhc2VfZXhwaXJlc19hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI4Cg9sYXN0X3N0YXJ0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSOQoQbGFzdF9maW5pc2hlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI4Cg9sYXN0X3N1Y2Nlc3NfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSFwoKbGFzdF9lcnJvchgJIAEoCUID4EEDIokBCiBMaXN0QWRtaW5SdW5uZXJFeGVjdXRpb25zUmVxdWVzdBIgCglwYWdlX3NpemUYASABKAVCDeBBAbpIBxoFGOgHKAASFwoKcGFnZV90b2tlbhgCIAEoCUID4EEBEhMKBmZpbHRlchgDIAEoCUID4EEBEhUKCG9yZGVyX2J5GAQgASgJQgPgQQEiiQEKIUxpc3RBZG1pblJ1bm5lckV4ZWN1dGlvbnNSZXNwb25zZRJLChFydW5uZXJfZXhlY3V0aW9ucxgBIAMoCzIwLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkFkbWluUnVubmVyRXhlY3V0aW9uEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSLxAQoQQ2F0YWxvZ1N5bmNTdGF0ZRISCgVzY29wZRgBIAEoCUID4EEDEkIKBnN0YXR1cxgCIAEoDjItLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkNhdGFsb2dTeW5jU3RhdHVzQgPgQQMSNwoObGFzdF9zeW5jZWRfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSFwoKc3luY19lcnJvchgEIAEoCUID4EEDEjMKCnVwZGF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMihQEKHExpc3RDYXRhbG9nU3luY1N0YXRlc1JlcXVlc3QSIAoJcGFnZV9zaXplGAEgASgFQg3gQQG6SAcaBRjoBygAEhcKCnBhZ2VfdG9rZW4YAiABKAlCA+BBARITCgZmaWx0ZXIYAyABKAlCA+BBARIVCghvcmRlcl9ieRgEIAEoCUID4EEBIoMBCh1MaXN0Q2F0YWxvZ1N5bmNTdGF0ZXNSZXNwb25zZRJJChNjYXRhbG9nX3N5bmNfc3RhdGVzGAEgAygLMiwucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuQ2F0YWxvZ1N5bmNTdGF0ZRIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAki3QEKEFNhbXBsZVRhYmxlU3RhdHMSFwoKdGFibGVfbmFtZRgBIAEoCUID4EEDEiAKE2VzdGltYXRlZF9yb3dfY291bnQYAiABKANCA+BBAxIYCgt0b3RhbF9ieXRlcxgDIAEoA0ID4EEDEjkKEG9sZGVzdF9zYW1wbGVfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSOQoQbmV3ZXN0X3NhbXBsZV9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAyIfCh1HZXRNZXRyaWNzU3RvcmFnZVN0YXRzUmVxdWVzdCKkAQoeR2V0TWV0cmljc1N0b3JhZ2VTdGF0c1Jlc3BvbnNlEkgKDXNhbXBsZV90YWJsZXMYASADKAsyLC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5TYW1wbGVUYWJsZVN0YXRzQgPgQQMSOAoQcmV0ZW50aW9uX3BlcmlvZBgCIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkID4EEDMsUECgxBZG1pblNlcnZpY2UScwoMTGlzdFJlcGxpY2FzEi8ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuTGlzdFJlcGxpY2FzUmVxdWVzdBowLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkxpc3RSZXBsaWNhc1Jlc3BvbnNlIgASmgEKGUxpc3RBZG1pblJ1bm5lckV4ZWN1dGlvbnMSPC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5MaXN0QWRtaW5SdW5uZXJFeGVjdXRpb25zUmVxdWVzdBo9LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkxpc3RBZG1pblJ1bm5lckV4ZWN1dGlvbnNSZXNwb25zZSIAEo4BChVMaXN0Q2F0YWxvZ1N5bmNTdGF0ZXMSOC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5MaXN0Q2F0YWxvZ1N5bmNTdGF0ZXNSZXF1ZXN0GjkucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuTGlzdENhdGFsb2dTeW5jU3RhdGVzUmVzcG9uc2UiABKRAQoWR2V0TWV0cmljc1N0b3JhZ2VTdGF0cxI5LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkdldE1ldHJpY3NTdG9yYWdlU3RhdHNSZXF1ZXN0GjoucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuR2V0TWV0cmljc1N0b3JhZ2VTdGF0c1Jlc3BvbnNlIgBCkgIKHmNvbS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMUIKQWRtaW5Qcm90b1ABWlpnaXRodWIuY29tL3F1ZXJ5bGFuZS9xdWVyeWxhbmUvYmFja2VuZC9wcm90b2dlbi9xdWVyeWxhbmUvY29uc29sZS92MWFscGhhMTtjb25zb2xldjFhbHBoYTGiAgNRQ1iqAhpRdWVyeWxhbmUuQ29uc29sZS5WMWFscGhhMcoCGlF1ZXJ5bGFuZVxDb25zb2xlXFYxYWxwaGEx4gImUXVlcnlsYW5lXENvbnNvbGVcVjFhbHBoYTFcR1BCTWV0YWRhdGHqAhxRdWVyeWxhbmU6OkNvbnNvbGU6OlYxYWxwaGExYgZwcm90bzM", [file_buf_validate_validate, file_google_api_field_behavior, file_google_protobuf_duration, file_google_protobuf_timestamp, file_querylane_console_v1alpha1_catalog_sync]);
+  fileDesc("CiZxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS9hZG1pbi5wcm90bxIacXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEizAEKB1JlcGxpY2ESFwoKcmVwbGljYV9pZBgBIAEoCUID4EEDEhUKCGhvc3RuYW1lGAIgASgJQgPgQQMSEAoDcGlkGAMgASgDQgPgQQMSMwoKc3RhcnRlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI1CgxsYXN0X3NlZW5fYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSEwoGYWN0aXZlGAYgASgIQgPgQQMifAoTTGlzdFJlcGxpY2FzUmVxdWVzdBIgCglwYWdlX3NpemUYASABKAVCDeBBAbpIBxoFGOgHKAASFwoKcGFnZV90b2tlbhgCIAEoCUID4EEBEhMKBmZpbHRlchgDIAEoCUID4EEBEhUKCG9yZGVyX2J5GAQgASgJQgPgQQEiZgoUTGlzdFJlcGxpY2FzUmVzcG9uc2USNQoIcmVwbGljYXMYASADKAsyIy5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5SZXBsaWNhEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSJBCg9SZXBsaWNhSWRlbnRpdHkSFwoKcmVwbGljYV9pZBgBIAEoCUID4EEDEhUKCGhvc3RuYW1lGAIgASgJQgPgQQMiqAMKFEFkbWluUnVubmVyRXhlY3V0aW9uEhgKC3J1bm5lcl9uYW1lGAEgASgJQgPgQQMSEwoGdGFyZ2V0GAIgASgJQgPgQQMSFwoKbGVhc2VfaGVsZBgDIAEoCEID4EEDEkUKC2xlYXNlX293bmVyGAQgASgLMisucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuUmVwbGljYUlkZW50aXR5QgPgQQMSOQoQbGVhc2VfZXhwaXJlc19hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI4Cg9sYXN0X3N0YXJ0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSOQoQbGFzdF9maW5pc2hlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI4Cg9sYXN0X3N1Y2Nlc3NfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSFwoKbGFzdF9lcnJvchgJIAEoCUID4EEDIokBCiBMaXN0QWRtaW5SdW5uZXJFeGVjdXRpb25zUmVxdWVzdBIgCglwYWdlX3NpemUYASABKAVCDeBBAbpIBxoFGOgHKAASFwoKcGFnZV90b2tlbhgCIAEoCUID4EEBEhMKBmZpbHRlchgDIAEoCUID4EEBEhUKCG9yZGVyX2J5GAQgASgJQgPgQQEiiQEKIUxpc3RBZG1pblJ1bm5lckV4ZWN1dGlvbnNSZXNwb25zZRJLChFydW5uZXJfZXhlY3V0aW9ucxgBIAMoCzIwLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkFkbWluUnVubmVyRXhlY3V0aW9uEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSLBBAoNQXVkaXRMb2dFbnRyeRIRCgRuYW1lGAEgASgJQgPgQQgSEgoFYWN0b3IYAiABKAlCA+BBAxITCgZhY3Rpb24YAyABKAlCA+BBAxIWCglzdGF0ZW1lbnQYBCABKAlCA+BBAxITCgZ0YXJnZXQYBSABKAlCA+BBAxIVCghpbnN0YW5jZRgGIAEoCUID4EEDEhUKCGRhdGFiYXNlGAcgASgJQgPgQQMSRQoGc3RhdHVzGAggASgOMjAucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuQXVkaXRMb2dFbnRyeS5TdGF0dXNCA+BBAxIbCg5yZXN1bHRfc3VtbWFyeRgJIAEoCUID4EEDEjMKCnN0YXJ0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSNAoLZmluaXNoZWRfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMiXQoGU3RhdHVzEhYKElNUQVRVU19VTlNQRUNJRklFRBAAEhIKDlNUQVRVU19TVEFSVEVEEAESFAoQU1RBVFVTX1NVQ0NFRURFRBACEhEKDVNUQVRVU19GQUlMRUQQAzpr6kFoCiNjb25zb2xlLnF1ZXJ5bGFuZS5kZXYvQXVkaXRMb2dFbnRyeRIhYXVkaXRMb2dFbnRyaWVzL3thdWRpdF9sb2dfZW50cnl9Kg9hdWRpdExvZ0VudHJpZXMyDWF1ZGl0TG9nRW50cnkigwEKGkxpc3RBdWRpdExvZ0VudHJpZXNSZXF1ZXN0EiAKCXBhZ2Vfc2l6ZRgBIAEoBUIN4EEBukgHGgUY6AcoABIXCgpwYWdlX3Rva2VuGAIgASgJQgPgQQESEwoGZmlsdGVyGAMgASgJQgPgQQESFQoIb3JkZXJfYnkYBCABKAlCA+BBASJ8ChtMaXN0QXVkaXRMb2dFbnRyaWVzUmVzcG9uc2USRAoRYXVkaXRfbG9nX2VudHJpZXMYASADKAsyKS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5BdWRpdExvZ0VudHJ5EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSLxAQoQQ2F0YWxvZ1N5bmNTdGF0ZRISCgVzY29wZRgBIAEoCUID4EEDEkIKBnN0YXR1cxgCIAEoDjItLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkNhdGFsb2dTeW5jU3RhdHVzQgPgQQMSNwoObGFzdF9zeW5jZWRfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSFwoKc3luY19lcnJvchgEIAEoCUID4EEDEjMKCnVwZGF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMihQEKHExpc3RDYXRhbG9nU3luY1N0YXRlc1JlcXVlc3QSIAoJcGFnZV9zaXplGAEgASgFQg3gQQG6SAcaBRjoBygAEhcKCnBhZ2VfdG9rZW4YAiABKAlCA+BBARITCgZmaWx0ZXIYAyABKAlCA+BBARIVCghvcmRlcl9ieRgEIAEoCUID4EEBIoMBCh1MaXN0Q2F0YWxvZ1N5bmNTdGF0ZXNSZXNwb25zZRJJChNjYXRhbG9nX3N5bmNfc3RhdGVzGAEgAygLMiwucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuQ2F0YWxvZ1N5bmNTdGF0ZRIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAki3QEKEFNhbXBsZVRhYmxlU3RhdHMSFwoKdGFibGVfbmFtZRgBIAEoCUID4EEDEiAKE2VzdGltYXRlZF9yb3dfY291bnQYAiABKANCA+BBAxIYCgt0b3RhbF9ieXRlcxgDIAEoA0ID4EEDEjkKEG9sZGVzdF9zYW1wbGVfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSOQoQbmV3ZXN0X3NhbXBsZV9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAyIfCh1HZXRNZXRyaWNzU3RvcmFnZVN0YXRzUmVxdWVzdCKkAQoeR2V0TWV0cmljc1N0b3JhZ2VTdGF0c1Jlc3BvbnNlEkgKDXNhbXBsZV90YWJsZXMYASADKAsyLC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5TYW1wbGVUYWJsZVN0YXRzQgPgQQMSOAoQcmV0ZW50aW9uX3BlcmlvZBgCIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkID4EEDMtAFCgxBZG1pblNlcnZpY2UScwoMTGlzdFJlcGxpY2FzEi8ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuTGlzdFJlcGxpY2FzUmVxdWVzdBowLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkxpc3RSZXBsaWNhc1Jlc3BvbnNlIgASmgEKGUxpc3RBZG1pblJ1bm5lckV4ZWN1dGlvbnMSPC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5MaXN0QWRtaW5SdW5uZXJFeGVjdXRpb25zUmVxdWVzdBo9LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkxpc3RBZG1pblJ1bm5lckV4ZWN1dGlvbnNSZXNwb25zZSIAEo4BChVMaXN0Q2F0YWxvZ1N5bmNTdGF0ZXMSOC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5MaXN0Q2F0YWxvZ1N5bmNTdGF0ZXNSZXF1ZXN0GjkucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuTGlzdENhdGFsb2dTeW5jU3RhdGVzUmVzcG9uc2UiABKRAQoWR2V0TWV0cmljc1N0b3JhZ2VTdGF0cxI5LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkdldE1ldHJpY3NTdG9yYWdlU3RhdHNSZXF1ZXN0GjoucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuR2V0TWV0cmljc1N0b3JhZ2VTdGF0c1Jlc3BvbnNlIgASiAEKE0xpc3RBdWRpdExvZ0VudHJpZXMSNi5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5MaXN0QXVkaXRMb2dFbnRyaWVzUmVxdWVzdBo3LnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkxpc3RBdWRpdExvZ0VudHJpZXNSZXNwb25zZSIAQpICCh5jb20ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTFCCkFkbWluUHJvdG9QAVpaZ2l0aHViLmNvbS9xdWVyeWxhbmUvcXVlcnlsYW5lL2JhY2tlbmQvcHJvdG9nZW4vcXVlcnlsYW5lL2NvbnNvbGUvdjFhbHBoYTE7Y29uc29sZXYxYWxwaGExogIDUUNYqgIaUXVlcnlsYW5lLkNvbnNvbGUuVjFhbHBoYTHKAhpRdWVyeWxhbmVcQ29uc29sZVxWMWFscGhhMeICJlF1ZXJ5bGFuZVxDb25zb2xlXFYxYWxwaGExXEdQQk1ldGFkYXRh6gIcUXVlcnlsYW5lOjpDb25zb2xlOjpWMWFscGhhMWIGcHJvdG8z", [file_buf_validate_validate, file_google_api_field_behavior, file_google_api_resource, file_google_protobuf_duration, file_google_protobuf_timestamp, file_querylane_console_v1alpha1_catalog_sync]);
 
 /**
  * Replica is one querylane backend process, registered via periodic
@@ -313,6 +314,166 @@ export const ListAdminRunnerExecutionsResponseSchema: GenMessage<ListAdminRunner
   messageDesc(file_querylane_console_v1alpha1_admin, 6);
 
 /**
+ * AuditLogEntry is one mutation attempt against a managed PostgreSQL
+ * instance. Entries are created before execution and finalized afterward, so
+ * failed and interrupted attempts remain visible.
+ *
+ * @generated from message querylane.console.v1alpha1.AuditLogEntry
+ */
+export type AuditLogEntry = Message<"querylane.console.v1alpha1.AuditLogEntry"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string actor = 2;
+   */
+  actor: string;
+
+  /**
+   * @generated from field: string action = 3;
+   */
+  action: string;
+
+  /**
+   * @generated from field: string statement = 4;
+   */
+  statement: string;
+
+  /**
+   * @generated from field: string target = 5;
+   */
+  target: string;
+
+  /**
+   * @generated from field: string instance = 6;
+   */
+  instance: string;
+
+  /**
+   * @generated from field: string database = 7;
+   */
+  database: string;
+
+  /**
+   * @generated from field: querylane.console.v1alpha1.AuditLogEntry.Status status = 8;
+   */
+  status: AuditLogEntry_Status;
+
+  /**
+   * @generated from field: string result_summary = 9;
+   */
+  resultSummary: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp started_at = 10;
+   */
+  startedAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp finished_at = 11;
+   */
+  finishedAt?: Timestamp;
+};
+
+/**
+ * Describes the message querylane.console.v1alpha1.AuditLogEntry.
+ * Use `create(AuditLogEntrySchema)` to create a new message.
+ */
+export const AuditLogEntrySchema: GenMessage<AuditLogEntry> = /*@__PURE__*/
+  messageDesc(file_querylane_console_v1alpha1_admin, 7);
+
+/**
+ * @generated from enum querylane.console.v1alpha1.AuditLogEntry.Status
+ */
+export enum AuditLogEntry_Status {
+  /**
+   * @generated from enum value: STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: STATUS_STARTED = 1;
+   */
+  STARTED = 1,
+
+  /**
+   * @generated from enum value: STATUS_SUCCEEDED = 2;
+   */
+  SUCCEEDED = 2,
+
+  /**
+   * @generated from enum value: STATUS_FAILED = 3;
+   */
+  FAILED = 3,
+}
+
+/**
+ * Describes the enum querylane.console.v1alpha1.AuditLogEntry.Status.
+ */
+export const AuditLogEntry_StatusSchema: GenEnum<AuditLogEntry_Status> = /*@__PURE__*/
+  enumDesc(file_querylane_console_v1alpha1_admin, 7, 0);
+
+/**
+ * @generated from message querylane.console.v1alpha1.ListAuditLogEntriesRequest
+ */
+export type ListAuditLogEntriesRequest = Message<"querylane.console.v1alpha1.ListAuditLogEntriesRequest"> & {
+  /**
+   * @generated from field: int32 page_size = 1;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: string page_token = 2;
+   */
+  pageToken: string;
+
+  /**
+   * Optional. AIP-160 filter. Reserved for server-side audit filtering.
+   *
+   * @generated from field: string filter = 3;
+   */
+  filter: string;
+
+  /**
+   * Optional. AIP-132 order_by. Entries are currently returned newest first.
+   *
+   * @generated from field: string order_by = 4;
+   */
+  orderBy: string;
+};
+
+/**
+ * Describes the message querylane.console.v1alpha1.ListAuditLogEntriesRequest.
+ * Use `create(ListAuditLogEntriesRequestSchema)` to create a new message.
+ */
+export const ListAuditLogEntriesRequestSchema: GenMessage<ListAuditLogEntriesRequest> = /*@__PURE__*/
+  messageDesc(file_querylane_console_v1alpha1_admin, 8);
+
+/**
+ * @generated from message querylane.console.v1alpha1.ListAuditLogEntriesResponse
+ */
+export type ListAuditLogEntriesResponse = Message<"querylane.console.v1alpha1.ListAuditLogEntriesResponse"> & {
+  /**
+   * @generated from field: repeated querylane.console.v1alpha1.AuditLogEntry audit_log_entries = 1;
+   */
+  auditLogEntries: AuditLogEntry[];
+
+  /**
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+};
+
+/**
+ * Describes the message querylane.console.v1alpha1.ListAuditLogEntriesResponse.
+ * Use `create(ListAuditLogEntriesResponseSchema)` to create a new message.
+ */
+export const ListAuditLogEntriesResponseSchema: GenMessage<ListAuditLogEntriesResponse> = /*@__PURE__*/
+  messageDesc(file_querylane_console_v1alpha1_admin, 9);
+
+/**
  * CatalogSyncState is the raw sync bookkeeping of one cached catalog scope.
  * Unlike the user-facing CatalogSyncMetadata, errors are surfaced verbatim.
  *
@@ -361,7 +522,7 @@ export type CatalogSyncState = Message<"querylane.console.v1alpha1.CatalogSyncSt
  * Use `create(CatalogSyncStateSchema)` to create a new message.
  */
 export const CatalogSyncStateSchema: GenMessage<CatalogSyncState> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_admin, 7);
+  messageDesc(file_querylane_console_v1alpha1_admin, 10);
 
 /**
  * @generated from message querylane.console.v1alpha1.ListCatalogSyncStatesRequest
@@ -397,7 +558,7 @@ export type ListCatalogSyncStatesRequest = Message<"querylane.console.v1alpha1.L
  * Use `create(ListCatalogSyncStatesRequestSchema)` to create a new message.
  */
 export const ListCatalogSyncStatesRequestSchema: GenMessage<ListCatalogSyncStatesRequest> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_admin, 8);
+  messageDesc(file_querylane_console_v1alpha1_admin, 11);
 
 /**
  * @generated from message querylane.console.v1alpha1.ListCatalogSyncStatesResponse
@@ -419,7 +580,7 @@ export type ListCatalogSyncStatesResponse = Message<"querylane.console.v1alpha1.
  * Use `create(ListCatalogSyncStatesResponseSchema)` to create a new message.
  */
 export const ListCatalogSyncStatesResponseSchema: GenMessage<ListCatalogSyncStatesResponse> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_admin, 9);
+  messageDesc(file_querylane_console_v1alpha1_admin, 12);
 
 /**
  * SampleTableStats is the storage footprint of one metrics sample table.
@@ -472,7 +633,7 @@ export type SampleTableStats = Message<"querylane.console.v1alpha1.SampleTableSt
  * Use `create(SampleTableStatsSchema)` to create a new message.
  */
 export const SampleTableStatsSchema: GenMessage<SampleTableStats> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_admin, 10);
+  messageDesc(file_querylane_console_v1alpha1_admin, 13);
 
 /**
  * @generated from message querylane.console.v1alpha1.GetMetricsStorageStatsRequest
@@ -485,7 +646,7 @@ export type GetMetricsStorageStatsRequest = Message<"querylane.console.v1alpha1.
  * Use `create(GetMetricsStorageStatsRequestSchema)` to create a new message.
  */
 export const GetMetricsStorageStatsRequestSchema: GenMessage<GetMetricsStorageStatsRequest> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_admin, 11);
+  messageDesc(file_querylane_console_v1alpha1_admin, 14);
 
 /**
  * @generated from message querylane.console.v1alpha1.GetMetricsStorageStatsResponse
@@ -512,7 +673,7 @@ export type GetMetricsStorageStatsResponse = Message<"querylane.console.v1alpha1
  * Use `create(GetMetricsStorageStatsResponseSchema)` to create a new message.
  */
 export const GetMetricsStorageStatsResponseSchema: GenMessage<GetMetricsStorageStatsResponse> = /*@__PURE__*/
-  messageDesc(file_querylane_console_v1alpha1_admin, 12);
+  messageDesc(file_querylane_console_v1alpha1_admin, 15);
 
 /**
  * AdminService exposes operational introspection of querylane's own backend:
@@ -567,6 +728,16 @@ export const AdminService: GenService<{
     methodKind: "unary";
     input: typeof GetMetricsStorageStatsRequestSchema;
     output: typeof GetMetricsStorageStatsResponseSchema;
+  },
+  /**
+   * Lists the immutable audit trail for mutations run through Querylane.
+   *
+   * @generated from rpc querylane.console.v1alpha1.AdminService.ListAuditLogEntries
+   */
+  listAuditLogEntries: {
+    methodKind: "unary";
+    input: typeof ListAuditLogEntriesRequestSchema;
+    output: typeof ListAuditLogEntriesResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_querylane_console_v1alpha1_admin, 0);

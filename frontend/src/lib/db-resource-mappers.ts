@@ -11,6 +11,7 @@ import { Instance_CredentialState } from "@/protogen/querylane/console/v1alpha1/
 const DEFAULT_POSTGRES_PORT = 5432;
 
 interface PostgresInstance {
+  allowMutations: boolean;
   connectionError: string;
   credentialsUnreadable: boolean;
   host: string;
@@ -50,6 +51,7 @@ function mapInstance(instance: Instance): PostgresInstance {
     instance.credentialState !== Instance_CredentialState.UNSPECIFIED;
 
   return {
+    allowMutations: instance.config?.allowMutations ?? false,
     connectionError: instance.connectionError,
     credentialsUnreadable,
     host: instance.config?.host ?? "",

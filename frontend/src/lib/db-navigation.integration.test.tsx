@@ -13,6 +13,7 @@ import type {
 
 function buildInstance(id: string): PostgresInstance {
   return {
+    allowMutations: false,
     connectionError: "",
     credentialsUnreadable: false,
     host: "localhost",

@@ -173,6 +173,12 @@ instances:
     database: "myapp"
     username: "myuser"
     ssl_mode: "prefer"                 # disable | allow | prefer | require | verify-ca | verify-full
+    # Querylane write RPCs are denied unless explicitly enabled. Read-only is
+    # the default for both file-managed and API-managed instances.
+    allow_mutations: false
+    # Default for user-driven queries and mutations. Per-request overrides are
+    # allowed, but Querylane always caps statements at 60 seconds.
+    statement_timeout: "30s"
     labels:
       env: production
 

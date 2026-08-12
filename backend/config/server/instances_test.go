@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,18 +26,22 @@ func TestInstanceConfig_SetDefaults(t *testing.T) {
 		assert.Equal(t, 5432, cfg.Port)
 		assert.Equal(t, "prefer", cfg.SSLMode)
 		assert.Equal(t, "postgres", cfg.SSLNegotiation)
+		assert.Equal(t, 30*time.Second, cfg.StatementTimeout)
+		assert.False(t, cfg.AllowMutations)
 	})
 
 	t.Run("preserves explicit values", func(t *testing.T) {
 		t.Parallel()
 
 		cfg := &InstanceConfig{
-			ID:             "my-db",
-			DisplayName:    "Custom Name",
-			Host:           "localhost",
-			Port:           5433,
-			SSLMode:        "require",
-			SSLNegotiation: "direct",
+			ID:               "my-db",
+			DisplayName:      "Custom Name",
+			Host:             "localhost",
+			Port:             5433,
+			SSLMode:          "require",
+			SSLNegotiation:   "direct",
+			StatementTimeout: 5 * time.Second,
+			AllowMutations:   true,
 		}
 		cfg.SetDefaults()
 
@@ -44,6 +49,8 @@ func TestInstanceConfig_SetDefaults(t *testing.T) {
 		assert.Equal(t, 5433, cfg.Port)
 		assert.Equal(t, "require", cfg.SSLMode)
 		assert.Equal(t, "direct", cfg.SSLNegotiation)
+		assert.Equal(t, 5*time.Second, cfg.StatementTimeout)
+		assert.True(t, cfg.AllowMutations)
 	})
 
 	t.Run("skips connection defaults when dsn source is configured", func(t *testing.T) {
@@ -55,6 +62,7 @@ func TestInstanceConfig_SetDefaults(t *testing.T) {
 		assert.Equal(t, "my-db", cfg.DisplayName)
 		assert.Zero(t, cfg.Port)
 		assert.Empty(t, cfg.SSLMode)
+		assert.Equal(t, 30*time.Second, cfg.StatementTimeout)
 	})
 }
 
@@ -77,6 +85,14 @@ func TestInstanceConfig_Validate(t *testing.T) {
 	t.Run("valid config passes", func(t *testing.T) {
 		t.Parallel()
 		require.NoError(t, validConfig().Validate())
+	})
+
+	t.Run("rejects unsafe statement timeout", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := validConfig()
+		cfg.StatementTimeout = 2 * time.Minute
+		assert.ErrorContains(t, cfg.Validate(), "statement_timeout must not exceed 60s")
 	})
 
 	t.Run("missing host", func(t *testing.T) {
