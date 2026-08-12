@@ -162,7 +162,7 @@ describe("DatabaseLayout route transitions", () => {
     expect(screen.getByText("/tmp/querylane/config.yaml")).toBeTruthy();
     expect(
       screen.getByText(
-        "querylane server reset-config --config '/tmp/querylane/config.yaml'"
+        "querylane server reset-config --yes --config '/tmp/querylane/config.yaml'"
       )
     ).toBeTruthy();
     expect(screen.getByText(PRESERVES_SETTINGS_RE)).toBeTruthy();
