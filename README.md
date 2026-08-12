@@ -11,7 +11,8 @@ bun install
 bun run docs:dev
 ```
 
-Use `bun run docs:build` to verify the site.
+Use `bun run docs:check` to check types, `bun run docs:validate` to check links and
+anchors, and `bun run docs:build` to build the production site.
 
 Run `bun run docs:eval` to test whether the docs answer the critical questions
 in `evals.yaml`. The command uses the Codex CLI with an OpenAI API key. Install
