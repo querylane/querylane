@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { brotliCompressSync, gzipSync } from "node:zlib";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "@rstest/core";
 import { collectBundleBudgetStats } from "./check-bundle-budget";
 
 const tempDirs: string[] = [];

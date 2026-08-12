@@ -1,30 +1,38 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  type MockInstance,
+  rs,
+  test,
+} from "@rstest/core";
 import { downloadBlob } from "@/lib/download-blob";
 
 describe("downloadBlob", () => {
-  let createObjectUrlSpy: ReturnType<typeof vi.spyOn>;
-  let revokeObjectUrlSpy: ReturnType<typeof vi.spyOn>;
-  let appendChildSpy: ReturnType<typeof vi.spyOn>;
-  let clickSpy: ReturnType<typeof vi.spyOn> | undefined;
-  let removeSpy: ReturnType<typeof vi.spyOn> | undefined;
+  let createObjectUrlSpy: MockInstance<typeof URL.createObjectURL>;
+  let revokeObjectUrlSpy: MockInstance<typeof URL.revokeObjectURL>;
+  let appendChildSpy: MockInstance<typeof document.body.append>;
+  let clickSpy: MockInstance<HTMLAnchorElement["click"]> | undefined;
+  let removeSpy: MockInstance<HTMLAnchorElement["remove"]> | undefined;
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
 
-    createObjectUrlSpy = vi
+    createObjectUrlSpy = rs
       .spyOn(URL, "createObjectURL")
       .mockReturnValue("blob:fake-url");
-    revokeObjectUrlSpy = vi
+    revokeObjectUrlSpy = rs
       .spyOn(URL, "revokeObjectURL")
       .mockReturnValue(undefined);
 
     // spy on document.body.append to intercept anchor
-    appendChildSpy = vi.spyOn(document.body, "append");
+    appendChildSpy = rs.spyOn(document.body, "append");
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.useRealTimers();
+    rs.restoreAllMocks();
+    rs.useRealTimers();
   });
 
   function requireAnchor(value: HTMLAnchorElement | null): HTMLAnchorElement {
@@ -34,6 +42,20 @@ describe("downloadBlob", () => {
     return value;
   }
 
+  function installBlobConstructorSpy() {
+    const blobConstructorSpy = rs.fn();
+
+    class TestBlob extends Blob {
+      constructor(blobParts?: BlobPart[], options?: BlobPropertyBag) {
+        blobConstructorSpy(blobParts, options);
+        super(blobParts, options);
+      }
+    }
+
+    rs.stubGlobal("Blob", TestBlob);
+    return blobConstructorSpy;
+  }
+
   test("creates an anchor with the correct href and download attribute, then clicks and removes it", () => {
     let capturedAnchor: HTMLAnchorElement | null = null;
 
@@ -41,8 +63,8 @@ describe("downloadBlob", () => {
       const [node] = nodes;
       if (node instanceof HTMLAnchorElement) {
         capturedAnchor = node;
-        clickSpy = vi.spyOn(node, "click").mockReturnValue(undefined);
-        removeSpy = vi.spyOn(node, "remove").mockReturnValue(undefined);
+        clickSpy = rs.spyOn(node, "click").mockReturnValue(undefined);
+        removeSpy = rs.spyOn(node, "remove").mockReturnValue(undefined);
       }
     });
 
@@ -68,8 +90,8 @@ describe("downloadBlob", () => {
     appendChildSpy.mockImplementation((...nodes: (Node | string)[]) => {
       const [node] = nodes;
       if (node instanceof HTMLAnchorElement) {
-        vi.spyOn(node, "click").mockReturnValue(undefined);
-        vi.spyOn(node, "remove").mockReturnValue(undefined);
+        rs.spyOn(node, "click").mockReturnValue(undefined);
+        rs.spyOn(node, "remove").mockReturnValue(undefined);
       }
     });
 
@@ -77,44 +99,44 @@ describe("downloadBlob", () => {
 
     expect(revokeObjectUrlSpy).not.toHaveBeenCalled();
 
-    vi.runAllTimers();
+    rs.runAllTimers();
 
     expect(revokeObjectUrlSpy).toHaveBeenCalledOnce();
     expect(revokeObjectUrlSpy).toHaveBeenCalledWith("blob:fake-url");
   });
 
   test("creates a Blob with the provided contents and MIME type", () => {
-    const BlobSpy = vi.spyOn(globalThis, "Blob");
+    const blobConstructorSpy = installBlobConstructorSpy();
 
     appendChildSpy.mockImplementation((...nodes: (Node | string)[]) => {
       const [node] = nodes;
       if (node instanceof HTMLAnchorElement) {
-        vi.spyOn(node, "click").mockReturnValue(undefined);
-        vi.spyOn(node, "remove").mockReturnValue(undefined);
+        rs.spyOn(node, "click").mockReturnValue(undefined);
+        rs.spyOn(node, "remove").mockReturnValue(undefined);
       }
     });
 
     downloadBlob("report.txt", "hello world", "text/plain");
 
-    expect(BlobSpy).toHaveBeenCalledWith(["hello world"], {
+    expect(blobConstructorSpy).toHaveBeenCalledWith(["hello world"], {
       type: "text/plain",
     });
   });
 
   test("passes chunked contents through to Blob without joining first", () => {
-    const BlobSpy = vi.spyOn(globalThis, "Blob");
+    const blobConstructorSpy = installBlobConstructorSpy();
 
     appendChildSpy.mockImplementation((...nodes: (Node | string)[]) => {
       const [node] = nodes;
       if (node instanceof HTMLAnchorElement) {
-        vi.spyOn(node, "click").mockReturnValue(undefined);
-        vi.spyOn(node, "remove").mockReturnValue(undefined);
+        rs.spyOn(node, "click").mockReturnValue(undefined);
+        rs.spyOn(node, "remove").mockReturnValue(undefined);
       }
     });
 
     downloadBlob("report.csv", ["id,name\n", "1,Ada\n"], "text/csv");
 
-    expect(BlobSpy).toHaveBeenCalledWith(["id,name\n", "1,Ada\n"], {
+    expect(blobConstructorSpy).toHaveBeenCalledWith(["id,name\n", "1,Ada\n"], {
       type: "text/csv",
     });
   });

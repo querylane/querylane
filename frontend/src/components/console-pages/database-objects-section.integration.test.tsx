@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import type { OtherDatabaseObject } from "@/components/console-pages/database-object-categories";
 import {
   DatabaseObjectsPanel,
@@ -9,26 +9,26 @@ import {
 } from "@/components/console-pages/database-objects-section";
 import { ExtensionSchema } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 
-const otherObjectsQuery = vi.hoisted(() => ({
+const otherObjectsQuery = rs.hoisted(() => ({
   data: {},
   error: null,
   isLoading: false,
-  refetch: vi.fn(() => Promise.resolve()),
+  refetch: rs.fn(() => Promise.resolve()),
 }));
 
-const browseQuery = vi.hoisted(() => ({
+const browseQuery = rs.hoisted(() => ({
   data: { pages: [{ hasMore: false, objects: [] }] } as {
     pages: { hasMore: boolean; objects: unknown[] }[];
   },
   error: null,
-  fetchNextPage: vi.fn(),
+  fetchNextPage: rs.fn(),
   hasNextPage: false,
   isFetchingNextPage: false,
   isLoading: false,
-  refetch: vi.fn(() => Promise.resolve()),
+  refetch: rs.fn(() => Promise.resolve()),
 }));
 
-vi.mock("@/components/console-pages/other-database-objects-query", () => ({
+rs.mock("@/components/console-pages/other-database-objects-query", () => ({
   useOtherDatabaseObjectsSummaryQuery: () => otherObjectsQuery,
   useOtherObjectsBrowseQuery: () => browseQuery,
 }));
@@ -126,7 +126,7 @@ function sequenceObject(index: number): OtherDatabaseObject {
 
 afterEach(() => {
   cleanup();
-  vi.restoreAllMocks();
+  rs.restoreAllMocks();
 });
 
 describe("DatabaseObjectsSection", () => {
@@ -295,7 +295,7 @@ describe("DatabaseObjectsPanel", () => {
   });
 
   it("shows loading and retryable error states", async () => {
-    const onRetry = vi.fn(() => Promise.resolve());
+    const onRetry = rs.fn(() => Promise.resolve());
     const user = userEvent.setup();
     const { rerender } = render(
       <DatabaseObjectsPanel

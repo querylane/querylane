@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, rs, test } from "@rstest/core";
 import {
   markSetupRequired,
   registerSetupRequiredHandler,
@@ -20,7 +20,7 @@ describe("setup-required-signal", () => {
   });
 
   test("registerSetupRequiredHandler registers a handler that is invoked by markSetupRequired", () => {
-    const handler = vi.fn();
+    const handler = rs.fn();
     registerSetupRequiredHandler(handler);
 
     markSetupRequired();
@@ -29,7 +29,7 @@ describe("setup-required-signal", () => {
   });
 
   test("markSetupRequired calls the handler each time it is invoked", () => {
-    const handler = vi.fn();
+    const handler = rs.fn();
     registerSetupRequiredHandler(handler);
 
     markSetupRequired();
@@ -40,8 +40,8 @@ describe("setup-required-signal", () => {
   });
 
   test("registering a new handler replaces the previous one", () => {
-    const firstHandler = vi.fn();
-    const secondHandler = vi.fn();
+    const firstHandler = rs.fn();
+    const secondHandler = rs.fn();
 
     registerSetupRequiredHandler(firstHandler);
     registerSetupRequiredHandler(secondHandler);

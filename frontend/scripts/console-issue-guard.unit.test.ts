@@ -1,8 +1,8 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import {
   formatUnexpectedConsoleIssues,
   type UnexpectedConsoleIssue,
-} from "../vitest.console-guard";
+} from "../test.console-guard";
 
 describe("console issue guard", () => {
   test("formats every unexpected console warning and error", () => {
@@ -12,7 +12,7 @@ describe("console issue guard", () => {
     ];
 
     expect(formatUnexpectedConsoleIssues(issues)).toContain(
-      "Unexpected console output during Vitest run"
+      "Unexpected console output during test run"
     );
     expect(formatUnexpectedConsoleIssues(issues)).toContain(
       "console.warn: slow test warning"

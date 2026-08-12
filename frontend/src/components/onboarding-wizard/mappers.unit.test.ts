@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@rstest/core";
 
 import { getMethodLabel } from "@/components/onboarding-wizard/mappers";
 import { formatSetupMethod, toSslMode } from "@/lib/protobuf-enums";

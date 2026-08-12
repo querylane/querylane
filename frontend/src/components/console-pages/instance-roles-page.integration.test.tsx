@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, test, vi } from "vitest";
 import { InstanceRolesPage } from "@/components/console-pages/instance-roles-page";
 import {
   GrantObjectType,
@@ -12,12 +12,12 @@ import {
   RoleSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const mocks = vi.hoisted(() => ({
+const mocks = rs.hoisted(() => ({
   accessMapPending: false,
   accessMapRoleNames: [] as string[],
   budgetSkippedRequestCount: 0,
   failedRequestCount: 0,
-  navigate: vi.fn(),
+  navigate: rs.fn(),
   roleQueryInputs: [] as Array<{ filter?: string; parent: string }>,
   tableSearch: "",
   truncatedRequestCount: 0,
@@ -26,15 +26,15 @@ const mocks = vi.hoisted(() => ({
 const SUPERUSERS_FILTER_OPTION_NAME = /Superusers 1/;
 const TYPE_FILTER_BUTTON_NAME = /^Type/;
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
 }));
 
-vi.mock("@/lib/url-search-state", () => ({
-  useUrlTableSearch: () => [mocks.tableSearch, vi.fn()] as const,
+rs.mock("@/lib/url-search-state", () => ({
+  useUrlTableSearch: () => [mocks.tableSearch, rs.fn()] as const,
 }));
 
-vi.mock("@/hooks/api/role", () => ({
+rs.mock("@/hooks/api/role", () => ({
   rolesForInstanceQueryInput: (instanceId: string) => ({
     parent: `instances/${instanceId}`,
   }),
@@ -84,7 +84,7 @@ vi.mock("@/hooks/api/role", () => ({
       },
       error: null,
       isPending: false,
-      refetch: vi.fn(async () => undefined),
+      refetch: rs.fn(async () => undefined),
     };
   },
   useRolesAccessMapResourcesQuery: (input: {
@@ -144,21 +144,21 @@ vi.mock("@/hooks/api/role", () => ({
 }));
 
 afterEach(() => {
-  vi.useRealTimers();
+  rs.useRealTimers();
   mocks.accessMapPending = false;
   mocks.accessMapRoleNames = [];
   mocks.budgetSkippedRequestCount = 0;
   mocks.failedRequestCount = 0;
   mocks.roleQueryInputs = [];
   cleanup();
-  vi.clearAllMocks();
+  rs.clearAllMocks();
   mocks.tableSearch = "";
   mocks.truncatedRequestCount = 0;
 });
 
 describe("InstanceRolesPage", () => {
   test("debounces role search requests", () => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
     const { rerender } = render(
       <InstanceRolesPage
         instanceId="prod"
@@ -183,7 +183,7 @@ describe("InstanceRolesPage", () => {
       filter: 'role_name:"post"',
       parent: "instances/prod",
     });
-    act(() => vi.advanceTimersByTime(200));
+    act(() => rs.advanceTimersByTime(200));
     expect(mocks.roleQueryInputs).toContainEqual({
       filter: 'role_name:"post"',
       parent: "instances/prod",

@@ -1,10 +1,17 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { Code, ConnectError, type Transport } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   type CreateInstanceFormState,
   getConnectionFingerprint,
@@ -15,19 +22,19 @@ import { useCreateInstancePageController } from "@/routes/new-instance-page-cont
 import { createTestQueryClient } from "@/test/query-client";
 import { createTestRouterTransport } from "@/test/router-transport";
 
-const routeState = vi.hoisted(() => ({
-  navigate: vi.fn(async () => undefined),
+const routeState = rs.hoisted(() => ({
+  navigate: rs.fn(async () => undefined),
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => routeState.navigate,
 }));
 
-const focusState = vi.hoisted(() => ({
-  focusFirstCreateInstanceInvalidField: vi.fn(),
+const focusState = rs.hoisted(() => ({
+  focusFirstCreateInstanceInvalidField: rs.fn(),
 }));
 
-vi.mock("@/routes/new-instance-focus", () => focusState);
+rs.mock("@/routes/new-instance-focus", () => focusState);
 
 const FOCUS_FAILURE = "focus handoff failed";
 const HOST_VIOLATION = "Could not resolve host db.internal.";

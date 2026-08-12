@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 
 import {
   fetchGithubRepoStars,
@@ -6,11 +6,11 @@ import {
   useGithubRepoStarsQuery,
 } from "@/hooks/api/github";
 
-const { useQueryMock } = vi.hoisted(() => ({
-  useQueryMock: vi.fn(),
+const { useQueryMock } = rs.hoisted(() => ({
+  useQueryMock: rs.fn(),
 }));
 
-vi.mock("@tanstack/react-query", () => ({
+rs.mock("@tanstack/react-query", () => ({
   useQuery: useQueryMock,
 }));
 
@@ -27,7 +27,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.unstubAllGlobals();
+  rs.unstubAllGlobals();
   globalThis.fetch = originalFetch;
 });
 
@@ -42,7 +42,7 @@ describe("github api helpers", () => {
   });
 
   it("returns formatted stars on successful response", async () => {
-    vi.stubGlobal("fetch", () =>
+    rs.stubGlobal("fetch", () =>
       Promise.resolve(
         new Response(JSON.stringify({ stargazers_count: STAR_COUNT_3210 }), {
           status: 200,
@@ -56,7 +56,7 @@ describe("github api helpers", () => {
   });
 
   it("returns null when response is not successful", async () => {
-    vi.stubGlobal("fetch", () =>
+    rs.stubGlobal("fetch", () =>
       Promise.resolve(
         new Response(null, {
           status: HTTP_INTERNAL_SERVER_ERROR,
@@ -70,7 +70,7 @@ describe("github api helpers", () => {
   });
 
   it("returns null on network failure", async () => {
-    vi.stubGlobal("fetch", () => Promise.reject(new Error("network down")));
+    rs.stubGlobal("fetch", () => Promise.reject(new Error("network down")));
 
     await expect(
       fetchGithubRepoStars("querylane/querylane")
@@ -78,7 +78,7 @@ describe("github api helpers", () => {
   });
 
   it("returns null when GitHub payload has no numeric star count", async () => {
-    vi.stubGlobal("fetch", () =>
+    rs.stubGlobal("fetch", () =>
       Promise.resolve(Response.json({ stargazers_count: "321" }))
     );
 
@@ -105,12 +105,12 @@ describe("useGithubRepoStarsQuery", () => {
     useGithubRepoStarsQuery(" querylane/querylane ");
     const options = useQueryMock.mock.calls[0]?.[0];
     const { signal } = new AbortController();
-    const fetchMock = vi.fn(() =>
+    const fetchMock = rs.fn(() =>
       Promise.resolve(
         new Response(JSON.stringify({ stargazers_count: 42 }), { status: 200 })
       )
     );
-    vi.stubGlobal("fetch", fetchMock);
+    rs.stubGlobal("fetch", fetchMock);
 
     await expect(options.queryFn({ signal })).resolves.toBe("42");
     expect(fetchMock).toHaveBeenCalledWith(

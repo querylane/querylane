@@ -1,6 +1,7 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, rs } from "@rstest/core";
+import * as reactActual from "react" with { rstest: "importActual" };
 
 import {
   resolveSetupFailureAction,
@@ -8,14 +9,15 @@ import {
 } from "@/components/onboarding-wizard/hooks/use-setup-execution";
 
 const { cleanupCallbacks, useEffectEventMock, useEffectMock, useRefMock } =
-  vi.hoisted(() => ({
+  rs.hoisted(() => ({
     cleanupCallbacks: [] as Array<() => void>,
-    useEffectEventMock: vi.fn((callback: unknown) => callback),
-    useEffectMock: vi.fn(),
-    useRefMock: vi.fn(),
+    useEffectEventMock: rs.fn((callback: unknown) => callback),
+    useEffectMock: rs.fn(),
+    useRefMock: rs.fn(),
   }));
 
-vi.mock("react", () => ({
+rs.mock("react", () => ({
+  ...reactActual,
   useEffect: useEffectMock,
   useEffectEvent: useEffectEventMock,
   useRef: useRefMock,
@@ -44,13 +46,13 @@ function createSetupOptions(
   overrides: Partial<Parameters<typeof useSetupExecution>[0]> = {}
 ) {
   return {
-    getFailedEvent: vi.fn(() => null),
-    onSuccess: vi.fn(),
+    getFailedEvent: rs.fn(() => null),
+    onSuccess: rs.fn(),
     phase: "progress_running" as const,
-    runSetupMutation: vi.fn(async () => undefined),
+    runSetupMutation: rs.fn(async () => undefined),
     selectedMethod: "embedded" as const,
-    setConfigureValidationError: vi.fn(),
-    setStreamFailure: vi.fn(),
+    setConfigureValidationError: rs.fn(),
+    setStreamFailure: rs.fn(),
     setupRunToken: 1,
     submittedEmbeddedConfig: null,
     submittedPostgresConfig: null,
@@ -173,7 +175,7 @@ describe("useSetupExecution", () => {
 
   it("aborts in-flight setup through returned action and cleanup", async () => {
     const options = createSetupOptions({
-      runSetupMutation: vi.fn(
+      runSetupMutation: rs.fn(
         ({ signal }) =>
           new Promise<void>((_resolve, reject) => {
             signal.addEventListener("abort", () => {
@@ -184,7 +186,7 @@ describe("useSetupExecution", () => {
     });
 
     const result = useSetupExecution(options);
-    const call = vi.mocked(options.runSetupMutation).mock.calls[0]?.[0];
+    const call = rs.mocked(options.runSetupMutation).mock.calls[0]?.[0];
     if (!call?.signal) {
       throw new Error("expected setup mutation call with signal");
     }
@@ -204,7 +206,7 @@ describe("useSetupExecution", () => {
 
   it("routes invalid setup errors back to configure validation", async () => {
     const options = createSetupOptions({
-      runSetupMutation: vi.fn(() =>
+      runSetupMutation: rs.fn(() =>
         Promise.reject(
           new ConnectError("host is required", Code.InvalidArgument)
         )
@@ -222,7 +224,7 @@ describe("useSetupExecution", () => {
 
   it("treats already-configured setup responses as successful", async () => {
     const options = createSetupOptions({
-      runSetupMutation: vi.fn(() =>
+      runSetupMutation: rs.fn(() =>
         Promise.reject(
           new ConnectError("already configured", Code.FailedPrecondition)
         )
@@ -239,7 +241,7 @@ describe("useSetupExecution", () => {
 
   it("ignores setup failures after abort", async () => {
     const options = createSetupOptions({
-      runSetupMutation: vi.fn(() =>
+      runSetupMutation: rs.fn(() =>
         Promise.reject(new Error("request cancelled"))
       ),
     });
@@ -261,8 +263,8 @@ describe("useSetupExecution", () => {
       stepId: SetupStep.MIGRATING,
     });
     const options = createSetupOptions({
-      getFailedEvent: vi.fn(() => failedEvent),
-      runSetupMutation: vi.fn(() => Promise.reject(new Error("boom"))),
+      getFailedEvent: rs.fn(() => failedEvent),
+      runSetupMutation: rs.fn(() => Promise.reject(new Error("boom"))),
     });
 
     useSetupExecution(options);

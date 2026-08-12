@@ -1,9 +1,9 @@
 import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, rs } from "@rstest/core";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 
-const highlighter = vi.hoisted(() => ({
-  codeToTokensWithThemes: vi.fn((sqlText: string) => [
+const highlighter = rs.hoisted(() => ({
+  codeToTokensWithThemes: rs.fn((sqlText: string) => [
     [
       {
         content: sqlText,
@@ -16,7 +16,7 @@ const highlighter = vi.hoisted(() => ({
   ]),
 }));
 
-vi.mock("shiki/core", () => ({
+rs.mock("shiki/core", () => ({
   createHighlighterCoreSync: () => highlighter,
 }));
 

@@ -1,7 +1,7 @@
+import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useDataExplorerPageController } from "@/features/data-explorer/data-explorer-page-controller";
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
 import { createTestQueryClient } from "@/test/query-client";
@@ -31,19 +31,19 @@ interface ViewListData {
   }>;
 }
 
-const mocks = vi.hoisted(() => {
+const mocks = rs.hoisted(() => {
   const emptyListQuery = <T,>() => ({
     data: undefined as T | undefined,
     error: null,
-    fetchNextPage: vi.fn(() => Promise.resolve()),
+    fetchNextPage: rs.fn(() => Promise.resolve()),
     hasNextPage: false,
     isFetchingNextPage: false,
     isLoading: false,
-    refetch: vi.fn(() => Promise.resolve()),
+    refetch: rs.fn(() => Promise.resolve()),
   });
   return {
     filteredTablesQuery: emptyListQuery<TableListData>(),
-    navigate: vi.fn(),
+    navigate: rs.fn(),
     schemasQuery: {
       data: {
         pages: [
@@ -59,32 +59,32 @@ const mocks = vi.hoisted(() => {
         ],
       },
       error: null as Error | null,
-      fetchNextPage: vi.fn(() => Promise.resolve()),
+      fetchNextPage: rs.fn(() => Promise.resolve()),
       hasNextPage: false,
       isFetching: false,
       isFetchingNextPage: false,
       isLoading: false,
       isPending: false,
-      refetch: vi.fn(() => Promise.resolve()),
+      refetch: rs.fn(() => Promise.resolve()),
     },
     tablesQuery: emptyListQuery<TableListData>(),
-    useListTablesInfiniteQuery: vi.fn(),
-    useListViewsInfiniteQuery: vi.fn(),
+    useListTablesInfiniteQuery: rs.fn(),
+    useListViewsInfiniteQuery: rs.fn(),
     viewsQuery: emptyListQuery<ViewListData>(),
   };
 });
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
 }));
 
-vi.mock("@connectrpc/connect-query", () => ({
+rs.mock("@connectrpc/connect-query", () => ({
   useQuery: () => ({ data: undefined }),
   useTransport: () => ({}),
 }));
 
-vi.mock("@/hooks/api/schema", () => ({
-  schemasForDatabaseQueryInput: vi.fn((input) => input),
+rs.mock("@/hooks/api/schema", () => ({
+  schemasForDatabaseQueryInput: rs.fn((input) => input),
   useGetSchemaQuery: () => ({
     data: undefined,
     error: null,
@@ -94,10 +94,10 @@ vi.mock("@/hooks/api/schema", () => ({
   useListSchemasInfiniteQuery: () => mocks.schemasQuery,
 }));
 
-vi.mock("@/hooks/api/table", () => ({
-  assertNoUnhandledTableDetailQueries: vi.fn(),
-  tableDetailQueryOptions: vi.fn(() => []),
-  tablesForSchemaQueryInput: vi.fn((input) => input),
+rs.mock("@/hooks/api/table", () => ({
+  assertNoUnhandledTableDetailQueries: rs.fn(),
+  tableDetailQueryOptions: rs.fn(() => []),
+  tablesForSchemaQueryInput: rs.fn((input) => input),
   useGetTablePartitionMetadataQuery: () => ({
     data: {
       partitionMetadata: {
@@ -112,24 +112,24 @@ vi.mock("@/hooks/api/table", () => ({
     error: null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(() => Promise.resolve()),
+    refetch: rs.fn(() => Promise.resolve()),
   }),
   useGetTableQuery: () => ({ data: undefined, error: null }),
   useListTablesInfiniteQuery: mocks.useListTablesInfiniteQuery,
 }));
 
-vi.mock("@/hooks/api/view", () => ({
+rs.mock("@/hooks/api/view", () => ({
   useGetViewQuery: () => ({ data: undefined, error: null }),
   useListViewsInfiniteQuery: mocks.useListViewsInfiniteQuery,
-  viewsForSchemaQueryInput: vi.fn((input) => input),
+  viewsForSchemaQueryInput: rs.fn((input) => input),
 }));
 
-vi.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context", () => ({
   useDb: () => ({ selectedDatabase: { name: "appdb" } }),
 }));
 
-vi.mock("@/lib/route-prefetch", () => ({
-  prefetchRouteQueryOnIntent: vi.fn(),
+rs.mock("@/lib/route-prefetch", () => ({
+  prefetchRouteQueryOnIntent: rs.fn(),
 }));
 
 const BASE_SEARCH = {
@@ -177,7 +177,7 @@ function activeTableOrder() {
 }
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  rs.useFakeTimers();
   mocks.tablesQuery.data = tablePage(["accounts", "events"]);
   mocks.tablesQuery.hasNextPage = false;
   mocks.filteredTablesQuery.data = tablePage(["accounts"]);
@@ -191,8 +191,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.useRealTimers();
-  vi.clearAllMocks();
+  rs.useRealTimers();
+  rs.clearAllMocks();
 });
 
 describe("data explorer search navigation", () => {
@@ -221,7 +221,7 @@ describe("data explorer search navigation", () => {
     expect(mocks.navigate).not.toHaveBeenCalled();
 
     act(() => {
-      vi.advanceTimersByTime(200);
+      rs.advanceTimersByTime(200);
     });
 
     expect(mocks.navigate).toHaveBeenCalledWith(
@@ -275,7 +275,7 @@ describe("schema overview stats", () => {
       result.current.setQuery("acc");
     });
     act(() => {
-      vi.advanceTimersByTime(250);
+      rs.advanceTimersByTime(250);
     });
 
     // The sidebar list honors the typed filter…

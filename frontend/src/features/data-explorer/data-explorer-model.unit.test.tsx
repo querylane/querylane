@@ -1,5 +1,5 @@
+import { describe, expect, test } from "@rstest/core";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
 import {
   getItemsForCategory,
   highlightMatch,

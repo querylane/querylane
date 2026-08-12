@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@rstest/core";
 import { buildForeignKeyReferencePreview } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import { ROW_KEY_FIELD } from "@/components/data-grid/table-data-grid/grid-row-model";
 import {

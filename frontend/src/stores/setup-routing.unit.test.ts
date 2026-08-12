@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@rstest/core";
 
 import { AppDatabaseStatus_State } from "@/protogen/querylane/console/v1alpha1/console_pb";
 import { resolveRoutingDecision } from "@/stores/setup-routing";

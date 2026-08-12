@@ -1,5 +1,5 @@
 import { Code, ConnectError } from "@connectrpc/connect";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, rs, test } from "@rstest/core";
 import type { UnexpectedResponseInfo } from "@/lib/unexpected-response";
 import {
   BODY_SNIPPET_MAX_LENGTH,
@@ -16,7 +16,7 @@ const HTML_LOGIN_BODY =
   "<html><head><title>Sign in</title></head><body>Please sign in</body></html>";
 
 function createBaseFetch(response: Response) {
-  return vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
+  return rs.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
     Promise.resolve(response)
   );
 }
@@ -226,7 +226,7 @@ describe("createUnexpectedResponseFetch", () => {
   test("lets genuine network failures pass through untouched", async () => {
     const failure = new TypeError("Failed to fetch");
     const fetchWithDetection = createUnexpectedResponseFetch(
-      vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
+      rs.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
         Promise.reject(failure)
       )
     );

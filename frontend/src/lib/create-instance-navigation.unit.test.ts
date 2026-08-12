@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { resolveCreateInstanceSuccessTarget } from "@/lib/create-instance-navigation";
 
 describe("create instance success navigation", () => {

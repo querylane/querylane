@@ -1,8 +1,8 @@
+import { describe, expect, it, rs } from "@rstest/core";
 import { act, renderHook } from "@testing-library/react";
 import { useLayoutEffect } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import { describe, expect, it, vi } from "vitest";
 
 import { useSetupExecution } from "@/components/onboarding-wizard/hooks/use-setup-execution";
 import type { SetupAppDatabaseMutationVariables } from "@/hooks/api/onboarding";
@@ -18,18 +18,18 @@ function createDeferred() {
 describe("useSetupExecution", () => {
   it("keeps an in-flight setup running when callback identity changes", async () => {
     const setup = createDeferred();
-    const runSetupMutation = vi.fn(
+    const runSetupMutation = rs.fn(
       (_variables: SetupAppDatabaseMutationVariables) => setup.promise
     );
-    const firstOnSuccess = vi.fn();
-    const secondOnSuccess = vi.fn();
+    const firstOnSuccess = rs.fn();
+    const secondOnSuccess = rs.fn();
     const stableOptions = {
-      getFailedEvent: vi.fn(() => null),
+      getFailedEvent: rs.fn(() => null),
       phase: "progress_running" as const,
       runSetupMutation,
       selectedMethod: "embedded" as const,
-      setConfigureValidationError: vi.fn(),
-      setStreamFailure: vi.fn(),
+      setConfigureValidationError: rs.fn(),
+      setStreamFailure: rs.fn(),
       setupRunToken: 1,
       submittedEmbeddedConfig: null,
       submittedPostgresConfig: null,
@@ -63,18 +63,18 @@ describe("useSetupExecution", () => {
     const updateCommitted = new Promise<void>((resolve) => {
       markUpdateCommitted = resolve;
     });
-    const runSetupMutation = vi.fn(
+    const runSetupMutation = rs.fn(
       (_variables: SetupAppDatabaseMutationVariables) => setup.promise
     );
-    const firstOnSuccess = vi.fn();
-    const secondOnSuccess = vi.fn();
+    const firstOnSuccess = rs.fn();
+    const secondOnSuccess = rs.fn();
     const stableOptions = {
-      getFailedEvent: vi.fn(() => null),
+      getFailedEvent: rs.fn(() => null),
       phase: "progress_running" as const,
       runSetupMutation,
       selectedMethod: "embedded" as const,
-      setConfigureValidationError: vi.fn(),
-      setStreamFailure: vi.fn(),
+      setConfigureValidationError: rs.fn(),
+      setStreamFailure: rs.fn(),
       setupRunToken: 1,
       submittedEmbeddedConfig: null,
       submittedPostgresConfig: null,
@@ -133,7 +133,7 @@ describe("useSetupExecution", () => {
   });
 
   it("restarts setup when the run token changes", () => {
-    const runSetupMutation = vi.fn(
+    const runSetupMutation = rs.fn(
       ({ signal }: SetupAppDatabaseMutationVariables) =>
         new Promise<void>((_resolve, reject) => {
           signal?.addEventListener(
@@ -144,13 +144,13 @@ describe("useSetupExecution", () => {
         })
     );
     const stableOptions = {
-      getFailedEvent: vi.fn(() => null),
-      onSuccess: vi.fn(),
+      getFailedEvent: rs.fn(() => null),
+      onSuccess: rs.fn(),
       phase: "progress_running" as const,
       runSetupMutation,
       selectedMethod: "embedded" as const,
-      setConfigureValidationError: vi.fn(),
-      setStreamFailure: vi.fn(),
+      setConfigureValidationError: rs.fn(),
+      setStreamFailure: rs.fn(),
       submittedEmbeddedConfig: null,
       submittedPostgresConfig: null,
     };

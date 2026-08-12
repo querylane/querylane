@@ -1,6 +1,7 @@
 import { create } from "@bufbuild/protobuf";
+import { beforeEach, describe, expect, rs, test } from "@rstest/core";
+import * as reactActual from "react" with { rstest: "importActual" };
 import type { SortColumn } from "react-data-grid";
-import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   MAX_SORT_COLUMNS,
   pushPageToken,
@@ -16,9 +17,9 @@ import {
   TableValueSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
-const { setStateMocks, useStateMock } = vi.hoisted(() => ({
-  setStateMocks: [] as ReturnType<typeof vi.fn>[],
-  useStateMock: vi.fn(),
+const { setStateMocks, useStateMock } = rs.hoisted(() => ({
+  setStateMocks: [] as ReturnType<typeof rs.fn>[],
+  useStateMock: rs.fn(),
 }));
 
 interface PageTokenState {
@@ -27,7 +28,8 @@ interface PageTokenState {
   tokens: string[];
 }
 
-vi.mock("react", () => ({
+rs.mock("react", () => ({
+  ...reactActual,
   useState: useStateMock,
 }));
 
@@ -35,7 +37,7 @@ function arrangeUseState() {
   setStateMocks.length = 0;
   useStateMock.mockImplementation((initial: unknown) => {
     const value = typeof initial === "function" ? initial() : initial;
-    const setter = vi.fn();
+    const setter = rs.fn();
     setStateMocks.push(setter);
     return [value, setter];
   });
@@ -95,8 +97,8 @@ describe("useTableDataController", () => {
 
     const controller = useTableDataController({
       name: "instances/i/databases/d/schemas/public/tables/events",
-      onPageSizeChange: vi.fn(),
-      onSortColumnsChange: vi.fn(),
+      onPageSizeChange: rs.fn(),
+      onSortColumnsChange: rs.fn(),
       pageSize: 50,
       sortColumns,
     });
@@ -119,8 +121,8 @@ describe("useTableDataController", () => {
   test("projects selected columns and binds them to the pagination shape", () => {
     const controller = useTableDataController({
       name: "table-a",
-      onPageSizeChange: vi.fn(),
-      onSortColumnsChange: vi.fn(),
+      onPageSizeChange: rs.fn(),
+      onSortColumnsChange: rs.fn(),
       pageSize: 25,
       selectedColumns: ["id", "email"],
       sortColumns: [],
@@ -142,8 +144,8 @@ describe("useTableDataController", () => {
     const controller = useTableDataController({
       filter,
       name: "table-a",
-      onPageSizeChange: vi.fn(),
-      onSortColumnsChange: vi.fn(),
+      onPageSizeChange: rs.fn(),
+      onSortColumnsChange: rs.fn(),
       pageSize: 25,
       sortColumns: [],
     });
@@ -170,14 +172,14 @@ describe("useTableDataController", () => {
         queryShapeKey: filteredShape,
         tokens: ["", "page-2", "page-3"],
       },
-      vi.fn(),
+      rs.fn(),
     ]);
 
     const changedController = useTableDataController({
       filter: nextFilter,
       name: "table-a",
-      onPageSizeChange: vi.fn(),
-      onSortColumnsChange: vi.fn(),
+      onPageSizeChange: rs.fn(),
+      onSortColumnsChange: rs.fn(),
       pageSize: 25,
       sortColumns: [],
     });
@@ -188,10 +190,10 @@ describe("useTableDataController", () => {
   });
 
   test("clamps multi-sort changes and resets page tokens", () => {
-    const onSortColumnsChange = vi.fn();
+    const onSortColumnsChange = rs.fn();
     const controller = useTableDataController({
       name: "table-a",
-      onPageSizeChange: vi.fn(),
+      onPageSizeChange: rs.fn(),
       onSortColumnsChange,
       pageSize: 25,
       sortColumns: [],
@@ -218,11 +220,11 @@ describe("useTableDataController", () => {
   });
 
   test("ignores empty next-page tokens and resets tokens on page size changes", () => {
-    const onPageSizeChange = vi.fn();
+    const onPageSizeChange = rs.fn();
     const controller = useTableDataController({
       name: "table-a",
       onPageSizeChange,
-      onSortColumnsChange: vi.fn(),
+      onSortColumnsChange: rs.fn(),
       pageSize: 25,
       sortColumns: [],
     });
@@ -237,8 +239,8 @@ describe("useTableDataController", () => {
   test("pushes next tokens and clamps previous page at zero", () => {
     const controller = useTableDataController({
       name: "table-a",
-      onPageSizeChange: vi.fn(),
-      onSortColumnsChange: vi.fn(),
+      onPageSizeChange: rs.fn(),
+      onSortColumnsChange: rs.fn(),
       pageSize: 25,
       sortColumns: [],
     });
@@ -282,8 +284,8 @@ describe("useTableDataController", () => {
   test("keeps token state when pushing the existing next token", () => {
     const controller = useTableDataController({
       name: "table-a",
-      onPageSizeChange: vi.fn(),
-      onSortColumnsChange: vi.fn(),
+      onPageSizeChange: rs.fn(),
+      onSortColumnsChange: rs.fn(),
       pageSize: 25,
       sortColumns: [],
     });

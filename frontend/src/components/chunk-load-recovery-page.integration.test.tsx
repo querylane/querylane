@@ -1,6 +1,6 @@
+import { afterEach, describe, expect, it, rs, test } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, test, vi } from "vitest";
 
 import { ChunkLoadRecoveryPage } from "@/components/chunk-load-recovery-page";
 
@@ -20,7 +20,7 @@ describe("chunk load recovery page", () => {
 
   it("keeps a manual refresh after automatic recovery pauses", async () => {
     const user = userEvent.setup();
-    const reloadPage = vi.fn();
+    const reloadPage = rs.fn();
 
     render(<ChunkLoadRecoveryPage reloadPage={reloadPage} />);
 

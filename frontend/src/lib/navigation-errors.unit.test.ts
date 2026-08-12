@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, rs, test } from "@rstest/core";
 import { logger } from "@/lib/diagnostics";
 import {
   handleNavigationError,
@@ -6,20 +6,20 @@ import {
   isNavigationCancellationError,
 } from "@/lib/navigation-errors";
 
-vi.mock("@/lib/diagnostics", () => ({
+rs.mock("@/lib/diagnostics", () => ({
   logger: {
-    debug: vi.fn(),
-    error: vi.fn(),
-    fatal: vi.fn(),
-    fmt: vi.fn(),
-    info: vi.fn(),
-    trace: vi.fn(),
-    warn: vi.fn(),
+    debug: rs.fn(),
+    error: rs.fn(),
+    fatal: rs.fn(),
+    fmt: rs.fn(),
+    info: rs.fn(),
+    trace: rs.fn(),
+    warn: rs.fn(),
   },
 }));
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  rs.clearAllMocks();
 });
 
 describe("handleNavigationError", () => {

@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, rs, test } from "@rstest/core";
 import {
   cellNeedsFullValue,
   resolveFullCell,
@@ -33,7 +33,7 @@ describe("cellNeedsFullValue", () => {
 
 describe("resolveFullCell", () => {
   test("passes complete cells through without fetching", async () => {
-    const fetchFullCell = vi.fn();
+    const fetchFullCell = rs.fn();
 
     await expect(resolveFullCell(completeCell, fetchFullCell)).resolves.toBe(
       completeCell
@@ -48,7 +48,7 @@ describe("resolveFullCell", () => {
     const full = create(TableCellSchema, {
       value: { kind: { case: "stringValue", value: "prefix and the rest" } },
     });
-    const fetchFullCell = vi.fn().mockResolvedValue(full);
+    const fetchFullCell = rs.fn().mockResolvedValue(full);
 
     await expect(resolveFullCell(truncatedCell, fetchFullCell)).resolves.toBe(
       full
@@ -73,7 +73,7 @@ describe("resolveRowCells", () => {
     const full = create(TableCellSchema, {
       value: { kind: { case: "stringValue", value: "full" } },
     });
-    const fetchFullCell = vi.fn().mockResolvedValue(full);
+    const fetchFullCell = rs.fn().mockResolvedValue(full);
     const cells = new Map([
       ["plain", completeCell],
       ["missing", undefined],

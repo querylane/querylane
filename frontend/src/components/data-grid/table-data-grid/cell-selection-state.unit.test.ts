@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import {
   CELL_SELECTION_BOTTOM,
   CELL_SELECTION_LEFT,

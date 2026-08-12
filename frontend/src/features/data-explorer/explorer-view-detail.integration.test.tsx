@@ -1,7 +1,7 @@
 import { create as createProto } from "@bufbuild/protobuf";
+import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ViewDetail } from "@/features/data-explorer/explorer-view-detail";
 import { ExplainQueryRequest_Format } from "@/protogen/querylane/console/v1alpha1/sql_pb";
 import {
@@ -27,48 +27,48 @@ const DEPENDENCIES_TAB_PATTERN = /Dependencies/;
 const INDEXES_TAB_PATTERN = /Indexes/;
 const SALES_ORDERS_PATTERN = /sales\.orders/;
 
-const { tableApi, useExplainQueryMock, viewApi } = vi.hoisted(() => ({
+const { tableApi, useExplainQueryMock, viewApi } = rs.hoisted(() => ({
   tableApi: {
     columns: {
       data: undefined as unknown,
       error: null as Error | null,
       isLoading: false,
-      refetch: vi.fn(),
+      refetch: rs.fn(),
     },
     constraints: {
       data: undefined as unknown,
       error: null as Error | null,
       isLoading: false,
-      refetch: vi.fn(),
+      refetch: rs.fn(),
     },
     indexes: {
       data: undefined as unknown,
       error: null as Error | null,
       isLoading: false,
-      refetch: vi.fn(),
+      refetch: rs.fn(),
     },
   },
-  useExplainQueryMock: vi.fn(),
+  useExplainQueryMock: rs.fn(),
   viewApi: {
     dependencies: {
       data: undefined as unknown,
       error: null as Error | null,
-      fetchNextPage: vi.fn(),
+      fetchNextPage: rs.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
       isLoading: false,
-      refetch: vi.fn(),
+      refetch: rs.fn(),
     },
     refresh: {
       error: null as Error | null,
       isPending: false,
-      mutateAsync: vi.fn(),
-      reset: vi.fn(),
+      mutateAsync: rs.fn(),
+      reset: rs.fn(),
     },
   },
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
     className,
@@ -82,7 +82,7 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
-vi.mock("@/components/data-grid/table-data-grid/table-data-grid", () => ({
+rs.mock("@/components/data-grid/table-data-grid/table-data-grid", () => ({
   TableDataGrid: ({
     children,
   }: {
@@ -98,18 +98,18 @@ vi.mock("@/components/data-grid/table-data-grid/table-data-grid", () => ({
   },
 }));
 
-vi.mock("@/hooks/api/table", () => ({
+rs.mock("@/hooks/api/table", () => ({
   useListTableColumnsQuery: () => tableApi.columns,
   useListTableConstraintsQuery: () => tableApi.constraints,
   useListTableIndexesQuery: () => tableApi.indexes,
 }));
 
-vi.mock("@/hooks/api/view", () => ({
+rs.mock("@/hooks/api/view", () => ({
   useListViewDependenciesQuery: () => viewApi.dependencies,
   useRefreshMaterializedViewMutation: () => viewApi.refresh,
 }));
 
-vi.mock("@/hooks/api/sql", () => ({
+rs.mock("@/hooks/api/sql", () => ({
   useExplainQuery: useExplainQueryMock,
 }));
 

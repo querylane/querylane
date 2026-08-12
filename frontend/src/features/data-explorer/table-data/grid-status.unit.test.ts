@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
+import { expectTypeOf } from "expect-type";
 import {
   buildGridStatusItems,
   type GridStatusId,

@@ -1,6 +1,6 @@
+import { afterEach, expect, rs, test } from "@rstest/core";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, test, vi } from "vitest";
 import { KeyboardShortcutsProvider } from "@/components/keyboard-shortcuts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ function RegisteredNavigationShortcut({ onRun }: { onRun: () => void }) {
 }
 
 afterEach(() => {
-  vi.useRealTimers();
+  rs.useRealTimers();
 });
 
 test("question mark opens help generated from the shortcut catalog", async () => {
@@ -55,7 +55,7 @@ test("question mark remains available for text entry", async () => {
 });
 
 test("registered primary-modifier shortcuts work during text entry", async () => {
-  const onRun = vi.fn();
+  const onRun = rs.fn();
   const user = userEvent.setup();
   render(
     <KeyboardShortcutsProvider>
@@ -70,7 +70,7 @@ test("registered primary-modifier shortcuts work during text entry", async () =>
 });
 
 test("registered key sequences run as a chord", async () => {
-  const onRun = vi.fn();
+  const onRun = rs.fn();
   const user = userEvent.setup();
   render(
     <KeyboardShortcutsProvider>
@@ -84,10 +84,10 @@ test("registered key sequences run as a chord", async () => {
 });
 
 test("key sequences expire after one second", () => {
-  vi.useFakeTimers();
+  rs.useFakeTimers();
   const startedAt = new Date("2026-07-15T00:00:00Z");
-  vi.setSystemTime(startedAt);
-  const onRun = vi.fn();
+  rs.setSystemTime(startedAt);
+  const onRun = rs.fn();
   render(
     <KeyboardShortcutsProvider>
       <RegisteredNavigationShortcut onRun={onRun} />
@@ -95,7 +95,7 @@ test("key sequences expire after one second", () => {
   );
 
   fireEvent.keyDown(window, { key: "g" });
-  vi.setSystemTime(new Date(startedAt.getTime() + 1001));
+  rs.setSystemTime(new Date(startedAt.getTime() + 1001));
   fireEvent.keyDown(window, { key: "o" });
 
   expect(onRun).not.toHaveBeenCalled();
@@ -127,7 +127,7 @@ test.each([
   ["repeated", { repeat: true }],
   ["composing", { isComposing: true }],
 ] as const)("ignores %s shortcut events", (_label, eventInit) => {
-  const onRun = vi.fn();
+  const onRun = rs.fn();
   render(
     <KeyboardShortcutsProvider>
       <RegisteredPaletteShortcut onRun={onRun} />

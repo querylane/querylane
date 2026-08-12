@@ -6,7 +6,7 @@ import {
   type UnaryRequest,
   type UnaryResponse,
 } from "@connectrpc/connect";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, rs, test } from "@rstest/core";
 
 import {
   createSetupInterceptor,
@@ -209,8 +209,8 @@ describe("transport error interceptor", () => {
       "PostgreSQL rejected this password",
       Code.InvalidArgument
     );
-    const reportError = vi.fn();
-    vi.stubGlobal("reportError", reportError);
+    const reportError = rs.fn();
+    rs.stubGlobal("reportError", reportError);
     const { interceptor } = createTestInterceptor();
 
     try {
@@ -221,7 +221,7 @@ describe("transport error interceptor", () => {
       ).rejects.toBe(failure);
       expect(reportError).not.toHaveBeenCalled();
     } finally {
-      vi.unstubAllGlobals();
+      rs.unstubAllGlobals();
     }
   });
 

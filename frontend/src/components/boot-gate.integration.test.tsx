@@ -1,12 +1,19 @@
 import { Code, ConnectError } from "@connectrpc/connect";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { BootGate } from "@/components/boot-gate";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { useSetupStore } from "@/stores/setup-store";
 import { ThemeProvider } from "@/theme-provider";
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   useLocation: ({
     select,
   }: {
@@ -24,7 +31,7 @@ const initialSetupState = useSetupStore.getState();
 beforeEach(() => {
   useSetupStore.setState({
     ...initialSetupState,
-    bootstrap: vi.fn(async () => undefined),
+    bootstrap: rs.fn(async () => undefined),
     status: "verifying",
   });
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@rstest/core";
 import { normalizeSearchText } from "@/lib/url-search-state";
 
 describe("url search state", () => {

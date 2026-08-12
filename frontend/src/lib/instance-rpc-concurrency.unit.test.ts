@@ -4,7 +4,7 @@ import {
   type UnaryRequest,
   type UnaryResponse,
 } from "@connectrpc/connect";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@rstest/core";
 import {
   createInstanceRpcConcurrencyInterceptor,
   createKeyedRpcSemaphore,
@@ -25,7 +25,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/schema_pb";
 
 const generatedProtoModules = import.meta.glob<Record<string, unknown>>(
-  "@/protogen/querylane/console/v1alpha1/*_pb.ts",
+  "../protogen/querylane/console/v1alpha1/*_pb.ts",
   { eager: true }
 );
 

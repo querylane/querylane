@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { createRouterTransport } from "@connectrpc/connect";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import {
   DEFAULT_ALL_INSTANCES_QUERY_INPUT,
   listAllInstancesQueryOptions,

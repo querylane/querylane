@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { RecordField } from "@/components/data-grid/table-data-grid/record-field";
 import {
   TableCellSchema,
@@ -10,37 +10,37 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
-const tableDataApi = vi.hoisted(() => ({
-  useReadCellValueMutation: vi.fn(),
+const tableDataApi = rs.hoisted(() => ({
+  useReadCellValueMutation: rs.fn(),
 }));
-const writeClipboardMock = vi.hoisted(() => vi.fn());
-const writeClipboardDeferredMock = vi.hoisted(() => vi.fn());
-const downloadBlobMock = vi.hoisted(() => vi.fn());
+const writeClipboardMock = rs.hoisted(() => rs.fn());
+const writeClipboardDeferredMock = rs.hoisted(() => rs.fn());
+const downloadBlobMock = rs.hoisted(() => rs.fn());
 
-vi.mock("@/components/data-grid/table-data-grid/grid-clipboard", () => ({
+rs.mock("@/components/data-grid/table-data-grid/grid-clipboard", () => ({
   writeClipboard: writeClipboardMock,
   writeClipboardDeferred: writeClipboardDeferredMock,
 }));
 
-vi.mock("@/lib/download-blob", () => ({
+rs.mock("@/lib/download-blob", () => ({
   downloadBlob: downloadBlobMock,
 }));
 
-vi.mock("@/hooks/api/table-data", () => ({
+rs.mock("@/hooks/api/table-data", () => ({
   useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
 }));
 
 describe("RecordField", () => {
   afterEach(() => {
     cleanup();
-    vi.clearAllMocks();
+    rs.clearAllMocks();
   });
 
   it("renders PostgreSQL arrays as indexed values in the detail drawer", () => {
     tableDataApi.useReadCellValueMutation.mockReturnValue({
       isError: false,
       isPending: false,
-      mutate: vi.fn(),
+      mutate: rs.fn(),
     });
     const column = create(TableResultColumnSchema, {
       columnName: "tags",
@@ -75,7 +75,7 @@ describe("RecordField", () => {
     tableDataApi.useReadCellValueMutation.mockReturnValue({
       isError: false,
       isPending: false,
-      mutate: vi.fn(),
+      mutate: rs.fn(),
     });
     const column = create(TableResultColumnSchema, {
       columnName: "observed_at",
@@ -111,7 +111,7 @@ describe("RecordField", () => {
   it("downloads a truncated bytea value after fetching it in full", async () => {
     const user = userEvent.setup();
     const fullBytes = new Uint8Array([1, 2, 3, 4]);
-    const mutateAsync = vi.fn().mockResolvedValue({
+    const mutateAsync = rs.fn().mockResolvedValue({
       value: create(TableCellSchema, {
         value: create(TableValueSchema, {
           kind: { case: "bytesValue", value: fullBytes },
@@ -121,7 +121,7 @@ describe("RecordField", () => {
     tableDataApi.useReadCellValueMutation.mockReturnValue({
       isError: false,
       isPending: false,
-      mutate: vi.fn(),
+      mutate: rs.fn(),
       mutateAsync,
     });
     const column = create(TableResultColumnSchema, {
@@ -163,7 +163,7 @@ describe("RecordField", () => {
 
   it("fetches the full value before copying a truncated cell", async () => {
     const user = userEvent.setup();
-    const mutateAsync = vi.fn().mockResolvedValue({
+    const mutateAsync = rs.fn().mockResolvedValue({
       value: create(TableCellSchema, {
         value: create(TableValueSchema, {
           kind: { case: "stringValue", value: "the complete text" },
@@ -173,7 +173,7 @@ describe("RecordField", () => {
     tableDataApi.useReadCellValueMutation.mockReturnValue({
       isError: false,
       isPending: false,
-      mutate: vi.fn(),
+      mutate: rs.fn(),
       mutateAsync,
     });
     const column = create(TableResultColumnSchema, {

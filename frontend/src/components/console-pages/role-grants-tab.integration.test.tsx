@@ -1,5 +1,5 @@
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
 import type { GrantsView } from "@/components/console-pages/role-detail-search";
 import type { GrantedObject } from "@/components/console-pages/role-grants-shared";
 import { GrantsSection } from "@/components/console-pages/role-grants-tab";
@@ -35,8 +35,8 @@ function renderPartialFacet(
       isPending={false}
       kind="login"
       objects={objects}
-      onNavigateGrants={vi.fn()}
-      onSelectDatabase={vi.fn()}
+      onNavigateGrants={rs.fn()}
+      onSelectDatabase={rs.fn()}
       ownedObjects={[]}
       ownedPartial={true}
       publicGrants={[]}
@@ -67,8 +67,8 @@ describe("GrantsSection partial empty states", () => {
         isPending={true}
         kind="login"
         objects={[]}
-        onNavigateGrants={vi.fn()}
-        onSelectDatabase={vi.fn()}
+        onNavigateGrants={rs.fn()}
+        onSelectDatabase={rs.fn()}
         ownedObjects={[]}
         ownedPartial={false}
         publicGrants={[]}

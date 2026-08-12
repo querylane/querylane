@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { describePostgresIndexMethod } from "@/features/data-explorer/postgres-index-method-display";
 
 describe("describePostgresIndexMethod", () => {

@@ -1,6 +1,6 @@
+import { afterEach, describe, expect, test } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import { Table2 } from "lucide-react";
-import { afterEach, describe, expect, test } from "vitest";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
 
 afterEach(() => cleanup());

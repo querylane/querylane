@@ -1,6 +1,6 @@
+import { beforeEach, expect, rs, test } from "@rstest/core";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, expect, test, vi } from "vitest";
 import { KeyboardShortcutsProvider } from "@/components/keyboard-shortcuts";
 import {
   CommandPaletteProvider,
@@ -8,8 +8,8 @@ import {
 } from "@/components/querylane-ui/admin-command-palette";
 import { Button } from "@/components/ui/button";
 
-const navigateMock = vi.fn(() => Promise.resolve());
-const commandPaletteMockState = vi.hoisted(() => ({
+const navigateMock = rs.fn(() => Promise.resolve());
+const commandPaletteMockState = rs.hoisted(() => ({
   catalogInputs: [] as Record<string, unknown>[],
   catalogQuery: {
     data: {
@@ -41,11 +41,11 @@ const commandPaletteMockState = vi.hoisted(() => ({
   roleInputs: [] as Record<string, unknown>[],
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigateMock,
 }));
 
-vi.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context", () => ({
   useDb: () => ({
     navigationIds: {
       databaseId: "customer-events",
@@ -58,7 +58,7 @@ vi.mock("@/lib/db-context", () => ({
   }),
 }));
 
-vi.mock("@/hooks/api/database-catalog", () => ({
+rs.mock("@/hooks/api/database-catalog", () => ({
   useDatabaseCatalogQuery: (input: Record<string, unknown>) => {
     commandPaletteMockState.catalogInputs.push(input);
     return commandPaletteMockState.catalogQuery;
@@ -69,7 +69,7 @@ vi.mock("@/hooks/api/database-catalog", () => ({
   },
 }));
 
-vi.mock("@/hooks/api/role", () => ({
+rs.mock("@/hooks/api/role", () => ({
   rolesForInstanceQueryInput: (instanceId: string) => ({ instanceId }),
   useListAllRolesQuery: () => commandPaletteMockState.rolesQuery,
   useListRolesQuery: (input: Record<string, unknown>) => {

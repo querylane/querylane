@@ -123,6 +123,7 @@
               "**/scripts/**",
               "**/*.config.{ts,js,mts,cts,mjs,cjs}",
               "**/playwright.config.*",
+              "**/rstest.*.{ts,js,mts,cts,mjs,cjs}",
               "**/vitest.*.{ts,js,mts,cts,mjs,cjs}",
               "**/vitest.*.config.*",
               "**/rsbuild.config.*",
@@ -367,6 +368,7 @@
       "includes": [
         "e2e/**/*",
         "lighthouserc.*",
+        "rstest.shared.ts",
         "vitest.browser.shared.ts",
         "vitest.shared.ts"
       ],
@@ -454,6 +456,10 @@
         "rules": {
           "security": {
             "noSecrets": "off"
+          },
+          "performance": {
+            // Rstest partial mocks require namespace imports with the importActual attribute.
+            "noNamespaceImport": "off"
           },
           "style": {
             "noMagicNumbers": "off",

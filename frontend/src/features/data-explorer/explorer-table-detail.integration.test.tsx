@@ -1,5 +1,9 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
+import * as routerActual from "@tanstack/react-router" with {
+  rstest: "importActual",
+};
 import {
   cleanup,
   render,
@@ -9,7 +13,6 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { GridRow } from "@/components/data-grid/table-data-grid/grid-row-model";
 import { ROW_KEY_FIELD } from "@/components/data-grid/table-data-grid/grid-row-model";
@@ -81,12 +84,10 @@ const KIND_FILTER_RE = /^Kind$/;
 const LAST_FETCHED_RE = /^Last fetched/;
 const COMMAND_REGION_RE = /command$/;
 
-vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@tanstack/react-router")>();
+rs.mock("@tanstack/react-router", () => {
   const linkExportName = "Link";
   return {
-    ...actual,
+    ...routerActual,
     [linkExportName]: ({
       children,
       params,
@@ -132,14 +133,14 @@ function getSqlCodeBlock(pattern: RegExp) {
   return codeBlock;
 }
 
-const tableQueries = vi.hoisted(() => ({
+const tableQueries = rs.hoisted(() => ({
   columns: {
     data: undefined as unknown,
     dataUpdatedAt: 0,
     error: null as Error | null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(() => Promise.resolve()),
+    refetch: rs.fn(() => Promise.resolve()),
   },
   constraints: {
     data: undefined as unknown,
@@ -147,7 +148,7 @@ const tableQueries = vi.hoisted(() => ({
     error: null as Error | null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(() => Promise.resolve()),
+    refetch: rs.fn(() => Promise.resolve()),
   },
   indexes: {
     data: undefined as unknown,
@@ -155,7 +156,7 @@ const tableQueries = vi.hoisted(() => ({
     error: null as Error | null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(() => Promise.resolve()),
+    refetch: rs.fn(() => Promise.resolve()),
   },
   partitionMetadata: {
     data: undefined as unknown,
@@ -163,7 +164,7 @@ const tableQueries = vi.hoisted(() => ({
     error: null as Error | null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(() => Promise.resolve()),
+    refetch: rs.fn(() => Promise.resolve()),
   },
   policies: {
     data: undefined as unknown,
@@ -171,7 +172,7 @@ const tableQueries = vi.hoisted(() => ({
     error: null as Error | null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(() => Promise.resolve()),
+    refetch: rs.fn(() => Promise.resolve()),
   },
   triggers: {
     data: undefined as unknown,
@@ -179,23 +180,23 @@ const tableQueries = vi.hoisted(() => ({
     error: null as Error | null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(() => Promise.resolve()),
+    refetch: rs.fn(() => Promise.resolve()),
   },
 }));
 
-const tableDataApi = vi.hoisted(() => ({
-  useReadCellValueMutation: vi.fn(),
-  useReadRowsQuery: vi.fn(),
-  useReadRowsQueryActions: vi.fn(() => ({
-    fetch: vi.fn(() => Promise.resolve()),
-    getState: vi.fn(() => ({ fetchStatus: "idle", status: "success" })),
-    prefetch: vi.fn(),
+const tableDataApi = rs.hoisted(() => ({
+  useReadCellValueMutation: rs.fn(),
+  useReadRowsQuery: rs.fn(),
+  useReadRowsQueryActions: rs.fn(() => ({
+    fetch: rs.fn(() => Promise.resolve()),
+    getState: rs.fn(() => ({ fetchStatus: "idle", status: "success" })),
+    prefetch: rs.fn(),
   })),
-  useStreamRowsExporter: vi.fn(),
+  useStreamRowsExporter: rs.fn(),
 }));
 
-const reactDataGrid = vi.hoisted(() => ({
-  dataGrid: vi.fn((props: MockGridProps) => (
+const reactDataGrid = rs.hoisted(() => ({
+  dataGrid: rs.fn((props: MockGridProps) => (
     <div data-testid="data-grid">
       {props.rows?.map((row, rowIndex) => (
         <div key={row[ROW_KEY_FIELD]}>
@@ -210,7 +211,7 @@ const reactDataGrid = vi.hoisted(() => ({
   )),
 }));
 
-vi.mock("react-data-grid", () => ({
+rs.mock("react-data-grid", () => ({
   ...Object.fromEntries([
     ["DataGrid", reactDataGrid.dataGrid],
     ["SelectColumn", { columnName: "", key: "__select" }],
@@ -218,7 +219,7 @@ vi.mock("react-data-grid", () => ({
   SELECT_COLUMN_KEY: "__select",
 }));
 
-vi.mock("@/hooks/api/table", () => ({
+rs.mock("@/hooks/api/table", () => ({
   useGetTablePartitionMetadataQuery: () => tableQueries.partitionMetadata,
   useListTableColumnsQuery: () => tableQueries.columns,
   useListTableConstraintsQuery: () => tableQueries.constraints,
@@ -227,7 +228,7 @@ vi.mock("@/hooks/api/table", () => ({
   useListTableTriggersQuery: () => tableQueries.triggers,
 }));
 
-vi.mock("@/hooks/api/table-data", () => ({
+rs.mock("@/hooks/api/table-data", () => ({
   useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
   useReadRowsQuery: tableDataApi.useReadRowsQuery,
   useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
@@ -272,14 +273,14 @@ function seedSuccessfulMetadataQueries() {
     error: null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(),
+    refetch: rs.fn(),
   });
   tableDataApi.useReadCellValueMutation.mockReturnValue({
     isError: false,
     isPending: false,
-    mutate: vi.fn(),
+    mutate: rs.fn(),
   });
-  tableDataApi.useStreamRowsExporter.mockReturnValue(vi.fn());
+  tableDataApi.useStreamRowsExporter.mockReturnValue(rs.fn());
 }
 
 function createMetadataError({
@@ -369,7 +370,7 @@ function mockClipboardWriteText() {
     navigator,
     "clipboard"
   );
-  const writeText = vi.fn(() => Promise.resolve());
+  const writeText = rs.fn(() => Promise.resolve());
   Object.defineProperty(navigator, "clipboard", {
     configurable: true,
     value: { writeText },
@@ -416,7 +417,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
+  rs.clearAllMocks();
 });
 
 describe("TableDetail header", () => {
@@ -436,7 +437,7 @@ describe("TableDetail header", () => {
       error: null,
       isFetching: false,
       isLoading: false,
-      refetch: vi.fn(),
+      refetch: rs.fn(),
     });
 
     render(
@@ -918,7 +919,7 @@ describe("TableDetail definition safety", () => {
 
   it("copies a shell-valid reproduce script", async () => {
     const user = userEvent.setup();
-    const writeText = vi.fn<(value: string) => Promise<void>>(() =>
+    const writeText = rs.fn<(value: string) => Promise<void>>(() =>
       Promise.resolve()
     );
     const originalClipboard = Object.getOwnPropertyDescriptor(
@@ -969,7 +970,7 @@ describe("TableDetail definition safety", () => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: {
-        writeText: vi.fn(() => Promise.reject(new Error("permission denied"))),
+        writeText: rs.fn(() => Promise.reject(new Error("permission denied"))),
       },
     });
 
@@ -1003,7 +1004,7 @@ describe("TableDetail definition safety", () => {
 describe("TableDetail tab routing", () => {
   it("honors URL-backed metadata tabs and reports tab changes", async () => {
     const user = userEvent.setup();
-    const onTabChange = vi.fn();
+    const onTabChange = rs.fn();
 
     render(
       <TableDetail
@@ -2219,7 +2220,7 @@ describe("TableDetail triggers tab", () => {
 
   it("renders trigger cards with executable SQL and copy action", async () => {
     const user = userEvent.setup();
-    const writeText = vi.fn(() => Promise.resolve());
+    const writeText = rs.fn(() => Promise.resolve());
     const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(
       navigator,
       "clipboard"

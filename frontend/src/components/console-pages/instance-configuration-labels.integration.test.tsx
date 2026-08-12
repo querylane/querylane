@@ -1,6 +1,6 @@
+import { describe, expect, rs, test } from "@rstest/core";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, test, vi } from "vitest";
 import type { InstanceFormState } from "@/components/console-pages/instance-config-model";
 import { InstanceConfigurationLabels } from "@/components/console-pages/instance-configuration-labels";
 
@@ -22,7 +22,7 @@ const baseFormState: InstanceFormState = {
 describe("InstanceConfigurationLabels", () => {
   test("names dynamic label inputs and remove actions accessibly", async () => {
     const user = userEvent.setup();
-    const setFormState = vi.fn();
+    const setFormState = rs.fn();
 
     render(
       <InstanceConfigurationLabels

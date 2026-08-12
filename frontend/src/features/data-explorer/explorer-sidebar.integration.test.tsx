@@ -1,6 +1,6 @@
+import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CATEGORY_ORDER,
   type CategoryKey,
@@ -96,20 +96,20 @@ function explorerSidebarProps(
       tables: [{ name: "orders", sizeLabel: "12 KB" }],
       views: [],
     },
-    onLoadMoreCategory: vi.fn(),
-    onLoadMoreSchemas: vi.fn(),
-    onRetryTables: vi.fn(),
-    onRetryViews: vi.fn(),
-    onSelectResource: vi.fn(),
-    onSelectSchema: vi.fn(),
+    onLoadMoreCategory: rs.fn(),
+    onLoadMoreSchemas: rs.fn(),
+    onRetryTables: rs.fn(),
+    onRetryViews: rs.fn(),
+    onSelectResource: rs.fn(),
+    onSelectSchema: rs.fn(),
     query: "",
     schemaSelectionError: null,
     schemas: [defaultSchema],
     schemasLoading: false,
     schemasSyncNotice: null,
     selection: { kind: "schema" },
-    setExpandedCategories: vi.fn(),
-    setQuery: vi.fn(),
+    setExpandedCategories: rs.fn(),
+    setQuery: rs.fn(),
     tablesError: null,
     tablesSyncNotice: null,
     viewsError: null,
@@ -123,12 +123,12 @@ function renderExplorerSidebar(overrides: Partial<ExplorerSidebarProps> = {}) {
 
 beforeEach(() => {
   MockIntersectionObserver.instances = [];
-  vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
+  rs.stubGlobal("IntersectionObserver", MockIntersectionObserver);
 });
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
+  rs.unstubAllGlobals();
 });
 
 describe("ExplorerSidebar resources", () => {
@@ -157,7 +157,7 @@ describe("CategoryInfiniteScrollSentinel", () => {
       <CategoryInfiniteScrollSentinel
         hasNextPage={false}
         isFetchingNextPage={false}
-        onLoadMore={vi.fn()}
+        onLoadMore={rs.fn()}
       />
     );
 
@@ -165,7 +165,7 @@ describe("CategoryInfiniteScrollSentinel", () => {
   });
 
   it("does not load more while a page is already being fetched", () => {
-    const onLoadMore = vi.fn();
+    const onLoadMore = rs.fn();
     const { rerender } = render(
       <CategoryInfiniteScrollSentinel
         hasNextPage={true}
@@ -192,7 +192,7 @@ describe("CategoryInfiniteScrollSentinel", () => {
   });
 
   it("re-observes after a fetch finishes so a still-visible sentinel keeps loading", () => {
-    const onLoadMore = vi.fn();
+    const onLoadMore = rs.fn();
     const { rerender } = render(
       <CategoryInfiniteScrollSentinel
         hasNextPage={true}
@@ -239,7 +239,7 @@ describe("CategoryInfiniteScrollSentinel", () => {
       <CategoryInfiniteScrollSentinel
         hasNextPage={true}
         isFetchingNextPage={false}
-        onLoadMore={vi.fn()}
+        onLoadMore={rs.fn()}
         scrollRoot={scrollRoot}
       />
     );
@@ -291,7 +291,7 @@ describe("ExplorerSidebar search empty state", () => {
   });
 
   it("paces the loading skeleton: hidden at first, shown for slow loads", () => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
     try {
       const emptyItemsByCategory: Record<CategoryKey, ResourceItem[]> = {
         tables: [],
@@ -322,13 +322,13 @@ describe("ExplorerSidebar search empty state", () => {
       expect(screen.queryByTestId("resource-list-loading")).toBeNull();
 
       act(() => {
-        vi.advanceTimersByTime(350);
+        rs.advanceTimersByTime(350);
       });
 
       expect(screen.getByTestId("resource-list-loading")).toBeTruthy();
       expect(screen.queryByText("No database objects found")).toBeNull();
     } finally {
-      vi.useRealTimers();
+      rs.useRealTimers();
     }
   });
 });

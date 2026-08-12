@@ -6,7 +6,7 @@ React + TypeScript app bundled with Rsbuild.
 
 - Frontend scripts use the Bun runtime by default.
 - Run frontend workflows through `bun run <script>` so local `node_modules/.bin` tools are used consistently.
-- Vitest runs under Node (not Bun) for unit, integration, and browser tests.
+- Rstest runs unit and integration tests under Node; Vitest remains for browser visual tests.
 - `react-doctor` runs lint/dead-code checks.
 
 ## Scripts
@@ -16,15 +16,15 @@ React + TypeScript app bundled with Rsbuild.
 - `bun run build` - build production assets
 - `bun run preview` - preview the production build
 - `bun run quality:gate` - run the standard full local gate with React Doctor, typecheck, build, unit tests, and integration tests
-- `bun run quality:changed` - run changed-file Ultracite, React Doctor, typecheck, and changed Vitest suites against `QUALITY_BASE_REF` (defaults to `origin/main`)
+- `bun run quality:changed` - run changed-file Ultracite, React Doctor, typecheck, changed Rstest DOM suites, and changed Vitest browser tests against `QUALITY_BASE_REF` (defaults to `origin/main`)
 - `bun run type:check` - run the TypeScript project build check used by local hooks and CI
 - `bun run doctor` - run React Doctor against the whole frontend
 - `bun run doctor:full` - run React Doctor against the whole frontend
 - `bun run doctor:audit` - run full React Doctor with inline suppressions ignored
-- `bun run test:unit` - run unit tests with Vitest in the Node environment
-- `bun run test:integration` - run integration tests with Vitest (happy-dom)
-- `bun run test:vitest` - run the unit, integration, and browser Vitest projects in 1 labeled project run
-- `bun run test:watch` - run unit and integration watch mode together
+- `bun run test:unit` - run unit tests with Rstest and happy-dom
+- `bun run test:integration` - run integration tests with Rstest and happy-dom
+- `bun run test:unit:watch` - run unit tests in Rstest watch mode
+- `bun run test:integration:watch` - run integration tests in Rstest watch mode
 - `bun run test:browser` - run visual browser tests with Vitest + Playwright browser provider
 - `bun run test:e2e` - run Playwright end-to-end tests
 - `bun run test:accessibility` - run dedicated Playwright accessibility checks with axe-core
@@ -35,7 +35,9 @@ React + TypeScript app bundled with Rsbuild.
 
 ## Agent-friendly test output
 
-- Vitest local runs use the default reporter; CI scripts call Vitest directly with the native verbose reporter so failures include test names, project labels, and runtimes without custom wrappers.
+- Rstest automatically selects its compact Markdown reporter for coding agents; CI selects the same native reporter explicitly.
+- Vitest browser tests use native reporters and preserve visual failure artifacts.
+- Vitest browser mode remains because Rstest 0.11.6 does not support the screenshot assertions used by the visual regression suite.
 - Playwright local runs use a compact reporter; CI uses the built-in list reporter plus failure artifacts.
 
 ### Agent boundaries
@@ -67,7 +69,7 @@ This README is agent-facing documentation under `frontend/**/*{.md,_agent.{js,ts
 - React 19
 - TanStack Router file-based routing
 - Tailwind CSS 4
-- Vitest (unit/integration/browser) + Playwright (e2e)
+- Rstest (unit/integration) + Vitest browser mode (visual regression) + Playwright (e2e)
 
 ## Diagnostics
 

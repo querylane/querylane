@@ -1,7 +1,14 @@
 import { create } from "@bufbuild/protobuf";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { BackendDatabaseExtensionsPage } from "@/components/console-pages/database-extensions-page";
 import {
   ExtensionSchema,
@@ -17,10 +24,10 @@ interface QueryState<T> {
   refetch?: () => Promise<unknown>;
 }
 
-const state = vi.hoisted(() => ({
+const state = rs.hoisted(() => ({
   extensionsQuery: {} as QueryState<ListExtensionsResponse>,
   tableSearch: "",
-  updateTableSearch: vi.fn(),
+  updateTableSearch: rs.fn(),
 }));
 const INSTALL_EXTENSION_BUTTON_NAME = /install extension/i;
 const OPEN_IN_WORKBENCH_BUTTON_NAME = /open in sql workbench/i;
@@ -28,7 +35,7 @@ const PG_TRGM_EXTENSION_CARD_NAME = /pg_trgm/i;
 const UUID_OSSP_EXTENSION_CARD_NAME = /uuid-ossp/i;
 const PG_TRGM_EXTENSION_KEY = "pg_trgm";
 
-vi.mock("@/hooks/api/extension", () => ({
+rs.mock("@/hooks/api/extension", () => ({
   extensionsForDatabaseQueryInput: ({
     databaseId,
     instanceId,
@@ -45,11 +52,11 @@ vi.mock("@/hooks/api/extension", () => ({
     error: state.extensionsQuery.error ?? null,
     isFetching: state.extensionsQuery.isFetching ?? false,
     isPending: state.extensionsQuery.isPending ?? false,
-    refetch: state.extensionsQuery.refetch ?? vi.fn(async () => undefined),
+    refetch: state.extensionsQuery.refetch ?? rs.fn(async () => undefined),
   }),
 }));
 
-vi.mock("@/lib/url-search-state", () => ({
+rs.mock("@/lib/url-search-state", () => ({
   useUrlTableSearch: () =>
     [state.tableSearch, state.updateTableSearch] as const,
 }));
@@ -90,7 +97,7 @@ function extensionsResponse() {
 beforeEach(() => {
   state.extensionsQuery = { data: extensionsResponse() };
   state.tableSearch = "";
-  state.updateTableSearch = vi.fn();
+  state.updateTableSearch = rs.fn();
 });
 
 afterEach(() => {

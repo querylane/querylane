@@ -1,4 +1,11 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 
 import {
   arePersistedSelectionsEqual,
@@ -22,11 +29,11 @@ function createSessionStorage(values: Map<string, string>): Storage {
 }
 
 function stubWindowSessionStorage(sessionStorage: Storage) {
-  vi.stubGlobal("window", { sessionStorage });
+  rs.stubGlobal("window", { sessionStorage });
 }
 
 afterEach(() => {
-  vi.unstubAllGlobals();
+  rs.unstubAllGlobals();
 });
 
 describe("normalizePersistedNavigationSelection", () => {

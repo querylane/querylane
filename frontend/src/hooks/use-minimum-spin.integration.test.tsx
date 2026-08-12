@@ -1,5 +1,5 @@
+import { afterEach, expect, test } from "@rstest/core";
 import { act, cleanup, render } from "@testing-library/react";
-import { afterEach, expect, test } from "vitest";
 
 import { useMinimumSpin } from "@/hooks/use-minimum-spin";
 
