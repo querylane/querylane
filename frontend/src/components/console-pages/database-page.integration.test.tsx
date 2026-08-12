@@ -47,6 +47,7 @@ interface QueryState<T> {
 
 const ENCODING_RE = /UTF8/;
 const HEADER_COUNTS_RE = /3 schemas · 3 objects/;
+const LOWER_BOUND_CATALOG_RE = /Counts, sizes, and rankings are lower bounds/;
 const state = vi.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
   databaseQuery: {} as QueryState<GetDatabaseResponse>,
@@ -669,6 +670,13 @@ function queryInsightsWithPartialError(metric: "query_stats" | "table_stats") {
 
 function catalogResult() {
   return {
+    coverage: {
+      isPartial: false,
+      objectLimit: 1000,
+      objectsPartial: false,
+      schemaLimit: 100,
+      schemasPartial: false,
+    },
     objects: [
       {
         comment: "",
@@ -1108,6 +1116,32 @@ describe("backend database overview", () => {
       screen.getByRole<HTMLButtonElement>("button", { name: "Insights" })
         .disabled
     ).toBe(true);
+  });
+});
+
+describe("bounded database catalog overview", () => {
+  test("qualifies catalog summaries when the bounded result is partial", () => {
+    const partialCatalog = catalogResult();
+    partialCatalog.coverage.isPartial = true;
+    partialCatalog.coverage.objectsPartial = true;
+    state.catalogQuery = { data: partialCatalog };
+
+    render(
+      <BackendDatabasePage
+        databaseId="customer-events"
+        instanceId="prod"
+        section="overview"
+      />
+    );
+
+    expect(
+      screen.getByRole("status", { name: "Some catalog data is not shown" })
+    ).toBeTruthy();
+    expect(screen.getByText("3 schemas")).toBeTruthy();
+    expect(screen.queryByText("3+ schemas")).toBeNull();
+    expect(screen.getByText("2+")).toBeTruthy();
+    expect(screen.getByText("1+ views")).toBeTruthy();
+    expect(screen.getByText(LOWER_BOUND_CATALOG_RE)).toBeTruthy();
   });
 });
 

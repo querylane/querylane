@@ -1,7 +1,7 @@
 "use client";
 
 import { Link } from "@tanstack/react-router";
-import { CircleOff, FolderTree, Gauge } from "lucide-react";
+import { CircleAlert, CircleOff, FolderTree, Gauge } from "lucide-react";
 import { useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { ResourcePageState } from "@/components/console-pages/console-layout";
@@ -16,6 +16,7 @@ import {
 } from "@/components/console-pages/database-overview-sections";
 import { DatabaseQueryInsightsDrawer } from "@/components/console-pages/database-query-insights-drawer";
 import { EmptyState } from "@/components/empty-state";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -49,6 +50,9 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
 type DatabaseSection = "overview";
+type DatabaseCatalogData = NonNullable<
+  ReturnType<typeof useDatabaseCatalogQuery>["data"]
+>;
 
 const EXPLORER_ROUTE =
   "/instances/$instanceId/databases/$databaseId/explorer" as const;
@@ -152,6 +156,42 @@ function CatalogErrorNotice({
       onRetry={onRetry}
     />
   );
+}
+
+function CatalogCoverageNotice({
+  catalog,
+}: {
+  catalog: ReturnType<typeof useDatabaseCatalogQuery>["data"];
+}) {
+  if (!catalogIsPartial(catalog)) {
+    return null;
+  }
+
+  const objectUnit = catalog.objects.length === 1 ? "object" : "objects";
+  const schemaUnit = catalog.schemas.length === 1 ? "schema" : "schemas";
+  return (
+    <Alert aria-label="Some catalog data is not shown" role="status">
+      <CircleAlert aria-hidden="true" />
+      <AlertTitle>Some catalog data is not shown</AlertTitle>
+      <AlertDescription>
+        Showing a bounded sample of {catalog.objects.length.toLocaleString()}{" "}
+        {objectUnit} across {catalog.schemas.length.toLocaleString()}{" "}
+        {schemaUnit}. Counts, sizes, and rankings are lower bounds.
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+function catalogIsPartial(
+  catalog: ReturnType<typeof useDatabaseCatalogQuery>["data"]
+): catalog is DatabaseCatalogData {
+  return Boolean(catalog?.coverage.isPartial);
+}
+
+function catalogObjectsArePartial(
+  catalog: ReturnType<typeof useDatabaseCatalogQuery>["data"]
+): boolean {
+  return Boolean(catalog?.coverage.objectsPartial);
 }
 
 function seriesFor(
@@ -268,6 +308,7 @@ function BackendDatabasePage({
             )}
             sizeSeries={seriesFor(metricSeries, MetricId.DATABASE_SIZE_BYTES)}
           />
+          <CatalogCoverageNotice catalog={catalog} />
           {catalogQuery.error ? (
             <CatalogErrorNotice
               error={catalogQuery.error}
@@ -286,6 +327,7 @@ function BackendDatabasePage({
               isPending={catalogPending}
               objects={toTopObjects(catalog)}
               params={params}
+              partial={catalogObjectsArePartial(catalog)}
             />
             <SchemasCard
               catalog={catalog}

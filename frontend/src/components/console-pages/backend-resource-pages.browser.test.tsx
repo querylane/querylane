@@ -1013,6 +1013,13 @@ function queryInsightsWithoutQueryStatsResponse() {
 
 function catalogResult() {
   return {
+    coverage: {
+      isPartial: false,
+      objectLimit: 1000,
+      objectsPartial: false,
+      schemaLimit: 100,
+      schemasPartial: false,
+    },
     objects: [
       {
         comment: "",
@@ -1622,6 +1629,35 @@ test("backend database overview shows mission control stats and catalog tables",
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-database-overview"
   );
+});
+
+test("backend database overview qualifies a bounded catalog sample", async () => {
+  const catalog = catalogResult();
+  catalog.coverage.isPartial = true;
+  catalog.coverage.objectsPartial = true;
+  catalog.coverage.schemasPartial = true;
+  state.databaseQuery = { data: databaseResponse() };
+  state.catalogQuery = { data: catalog };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1120px] border border-border bg-background p-6 text-foreground">
+        <BackendDatabasePage
+          databaseId="customer-events"
+          instanceId="prod"
+          section="overview"
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await expect
+    .element(
+      page.getByRole("status", { name: "Some catalog data is not shown" })
+    )
+    .toBeVisible();
+  await expect.element(page.getByText("2+ schemas")).toBeVisible();
+  await expect.element(page.getByText("partial sample")).toBeVisible();
 });
 
 test("database overview keeps passive sparklines large on mobile", async () => {
