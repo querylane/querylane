@@ -1,12 +1,18 @@
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { Code, ConnectError } from "@connectrpc/connect";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { PostgresInstance } from "@/lib/db-resource-mappers";
 import { Route } from "@/routes/index";
+import { ThemeProvider } from "@/theme-provider";
 
 const state = vi.hoisted(() => ({
+  configFilePath: "",
+  instancesError: null as Error | null,
   instances: [] as PostgresInstance[],
   navigate: vi.fn(async () => undefined),
   search: {} as { instanceId?: string | undefined },
+  showDegradedBanner: false,
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -21,7 +27,7 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@/hooks/api/console", () => ({
   useConsoleConfigStatus: () => ({
-    configFilePath: "",
+    configFilePath: state.configFilePath,
     isConfigManaged: false,
     isLoaded: true,
   }),
@@ -32,12 +38,18 @@ vi.mock("@/lib/db-context", () => ({
     instances: state.instances,
     queryStates: {
       instances: {
-        error: null,
+        error: state.instancesError,
         hasResolved: true,
       },
     },
     retryInstanceCatalog: vi.fn(async () => undefined),
   }),
+}));
+
+vi.mock("@/stores/setup-store", () => ({
+  useSetupStore: (
+    selector: (value: { showDegradedBanner: boolean }) => unknown
+  ) => selector({ showDegradedBanner: state.showDegradedBanner }),
 }));
 
 function instance(id: string, credentialsUnreadable = false): PostgresInstance {
@@ -54,10 +66,13 @@ function instance(id: string, credentialsUnreadable = false): PostgresInstance {
 }
 
 beforeEach(() => {
+  state.configFilePath = "";
+  state.instancesError = null;
   state.instances = [];
   state.navigate.mockReset();
   state.navigate.mockResolvedValue(undefined);
   state.search = {};
+  state.showDegradedBanner = false;
 });
 
 afterEach(() => {
@@ -99,5 +114,32 @@ describe("home instance redirect", () => {
         to: "/instances/$instanceId",
       });
     });
+  });
+
+  test("offers storage recovery when the degraded instance catalog fails", async () => {
+    const user = userEvent.setup();
+    state.configFilePath = "/tmp/querylane/config.yaml";
+    state.instancesError = new ConnectError(
+      "database is currently unavailable",
+      Code.Unavailable
+    );
+    state.showDegradedBanner = true;
+    const HomeRedirectPage = Route.options.component;
+    if (!HomeRedirectPage) {
+      throw new Error("Expected home route component");
+    }
+
+    render(
+      <ThemeProvider defaultTheme="light">
+        <HomeRedirectPage />
+      </ThemeProvider>
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Reconfigure internal storage" })
+    );
+
+    screen.getByRole("heading", { name: "Reconfigure internal storage" });
+    screen.getByText("/tmp/querylane/config.yaml");
   });
 });

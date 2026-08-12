@@ -7,9 +7,15 @@ import { useEffect, useRef } from "react";
 import { AppErrorView } from "@/components/app-error-view";
 import { AppShellFrame } from "@/components/app-shell-frame";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
+import { DEFAULT_CONFIG_FILE_PATH } from "@/components/config-managed-guidance";
+import { InternalStorageRecoveryAction } from "@/components/internal-storage-recovery";
 import { useRetainedRetryError } from "@/components/use-retained-retry-error";
 import { captureException } from "@/lib/diagnostics";
-import { getBlockingRoutePath, normalizeAppUiError } from "@/lib/ui-error";
+import {
+  getBlockingRoutePath,
+  isAppDatabaseUnavailableError,
+  normalizeAppUiError,
+} from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { useBlockingErrorStore } from "@/stores/blocking-error-store";
 import { useSetupStore } from "@/stores/setup-store";
@@ -71,6 +77,9 @@ function shouldRenderBlockingRoute(
 export function BootGate({ children }: { children: React.ReactNode }) {
   const bootError = useSetupStore((state) => state.bootError);
   const bootstrap = useSetupStore((state) => state.bootstrap);
+  const configFilePath = useSetupStore(
+    (state) => state.onboardingState?.configFilePath || DEFAULT_CONFIG_FILE_PATH
+  );
   const status = useSetupStore((state) => state.status);
   const blockingError = useBlockingErrorStore((state) => state.blockingError);
   const bootstrappedRef = useRef(false);
@@ -113,6 +122,12 @@ export function BootGate({ children }: { children: React.ReactNode }) {
     return (
       <AppShellFrame>
         <AppErrorView
+          actions={
+            <InternalStorageRecoveryAction
+              configFilePath={configFilePath}
+              show={isAppDatabaseUnavailableError(displayedError.originalError)}
+            />
+          }
           error={presentBootError(displayedError)}
           onRetry={retry}
           retryLabel="Retry"

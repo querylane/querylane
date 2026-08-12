@@ -1,10 +1,12 @@
 import { AlertTriangle, ArrowLeft, RefreshCw, Settings2 } from "lucide-react";
 import { AppInlineError } from "@/components/app-error-view";
+import { DEFAULT_CONFIG_FILE_PATH } from "@/components/config-managed-guidance";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import { RetryActionButton } from "@/components/retry-action-button";
 import { Button } from "@/components/ui/button";
 import { waitForNextFrame } from "@/lib/wait-for-next-frame";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
+import { useSetupStore } from "@/stores/setup-store";
 
 /**
  * Patterns that indicate a configuration issue (wrong credentials,
@@ -48,6 +50,9 @@ export function ErrorSummaryPhase() {
   const failedEvent = useOnboardingWizardStore((state) => state.failedEvent);
   const progressEvents = useOnboardingWizardStore(
     (state) => state.progressEvents
+  );
+  const configFilePath = useSetupStore(
+    (state) => state.onboardingState?.configFilePath || DEFAULT_CONFIG_FILE_PATH
   );
   const failedStepName = failedEvent?.displayName;
   const failedStepError = failedEvent?.error;
@@ -160,6 +165,19 @@ export function ErrorSummaryPhase() {
         ) : null}
 
         {streamError ? <AppInlineError error={streamError} /> : null}
+
+        <div className="space-y-2 rounded-xl border border-border bg-muted/30 px-4 py-3">
+          <div className="font-medium text-foreground text-sm">
+            Configuration file
+          </div>
+          <code className="block break-all rounded-lg bg-muted px-3 py-2 text-muted-foreground text-xs">
+            {configFilePath}
+          </code>
+          <p className="text-muted-foreground text-sm leading-6">
+            Use <strong>Start over</strong> to choose another storage method or
+            <strong> Reconfigure</strong> to update this connection.
+          </p>
+        </div>
       </div>
     </WizardPage>
   );

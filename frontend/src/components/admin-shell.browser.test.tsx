@@ -452,16 +452,22 @@ test("degraded mode banner starts after the desktop sidebar", async () => {
   await page.viewport(1280, 800);
   renderDatabaseLayoutWithDegradedBanner();
 
-  const bannerText = "Meta-database unreachable. Running in degraded mode.";
+  const bannerText =
+    "Meta database unavailable. Querylane is running in degraded mode.";
   await expect.element(page.getByText(bannerText)).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "Reconfigure internal storage" }))
+    .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: "Collapse sidebar" }))
     .toBeVisible();
 
-  const banner = document.querySelector("output");
+  const banner = Array.from(document.querySelectorAll("output")).find((item) =>
+    item.textContent.includes("Meta database unavailable")
+  )?.parentElement;
   const sidebar = document.querySelector('[data-slot="sidebar-container"]');
 
-  if (!(banner instanceof HTMLOutputElement)) {
+  if (!(banner instanceof HTMLDivElement)) {
     throw new Error("Expected degraded banner element to be mounted");
   }
   if (!(sidebar instanceof HTMLDivElement)) {
