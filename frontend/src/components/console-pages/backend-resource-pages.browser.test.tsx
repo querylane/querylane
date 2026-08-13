@@ -1071,19 +1071,22 @@ function cardRect(label: string) {
 
 async function statSparkline(label: string): Promise<SVGElement> {
   let sparkline: SVGElement | null = null;
-  await vi.waitFor(() => {
-    const statLabel = Array.from(document.querySelectorAll("span")).find(
-      (element) =>
-        element.textContent === label &&
-        element.parentElement?.parentElement?.classList.contains("grid") &&
-        element.parentElement.querySelector("svg")
-    );
-    sparkline =
-      statLabel?.parentElement?.querySelector<SVGElement>("svg") ?? null;
-    if (!sparkline) {
-      throw new Error(`Waiting for ${label} sparkline`);
-    }
-  });
+  await vi.waitFor(
+    () => {
+      const statLabel = Array.from(document.querySelectorAll("span")).find(
+        (element) =>
+          element.textContent === label &&
+          element.parentElement?.parentElement?.classList.contains("grid") &&
+          element.parentElement.querySelector("svg")
+      );
+      sparkline =
+        statLabel?.parentElement?.querySelector<SVGElement>("svg") ?? null;
+      if (!sparkline) {
+        throw new Error(`Waiting for ${label} sparkline`);
+      }
+    },
+    { timeout: 5000 }
+  );
   if (!sparkline) {
     throw new Error(`Expected ${label} sparkline`);
   }

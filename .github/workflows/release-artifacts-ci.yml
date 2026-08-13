@@ -1,0 +1,106 @@
+name: release-artifacts-ci
+
+env:
+  BUN_VERSION: &bun_version 1.3.14
+
+on:
+  # GoReleaser compiles the complete backend and embedded frontend for five
+  # targets, so any product-source change can break the release matrix.
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+
+concurrency:
+  group: release-artifacts-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate release artifacts (${{ matrix.os }})
+    if: github.event.pull_request.draft != true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: *bun_version
+
+      - name: Test release workflows
+        run: bun test scripts/extract-release-notes.test.ts scripts/generate-homebrew-formula.test.ts scripts/release-workflow.test.ts
+
+      - name: Build snapshot
+        uses: goreleaser/goreleaser-action@v7.2.3
+        with:
+          distribution: goreleaser
+          version-file: .tool-versions
+          args: release --snapshot --clean
+
+      - name: Verify snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(jq -r .version .build/goreleaser/metadata.json)"
+          archive_count="$(
+            find .build/goreleaser -maxdepth 1 \
+              \( -name '*.tar.gz' -o -name '*.zip' \) -print |
+              wc -l |
+              tr -d '[:space:]'
+          )"
+          if [ "$archive_count" -ne 5 ]; then
+            echo "::error::Expected 5 release archives, found $archive_count"
+            exit 1
+          fi
+
+          if command -v sha256sum >/dev/null 2>&1; then
+            (cd .build/goreleaser && sha256sum --check checksums.txt)
+          else
+            (cd .build/goreleaser && shasum --algorithm 256 --check checksums.txt)
+          fi
+
+          case "$(uname -s):$(uname -m)" in
+            Darwin:arm64) target="darwin_arm64" ;;
+            Darwin:x86_64) target="darwin_amd64" ;;
+            Linux:aarch64 | Linux:arm64) target="linux_arm64" ;;
+            Linux:x86_64) target="linux_amd64" ;;
+            *)
+              echo "::error::Unsupported runner: $(uname -s) $(uname -m)"
+              exit 1
+              ;;
+          esac
+
+          extract_dir="$(mktemp -d)"
+          trap 'rm -r "$extract_dir"' EXIT
+          tar -xzf ".build/goreleaser/querylane_${version}_${target}.tar.gz" -C "$extract_dir"
+
+          actual_version="$("$extract_dir/querylane" --version)"
+          if [ "$actual_version" != "$version" ]; then
+            echo "::error::Expected querylane --version to print $version, got $actual_version"
+            exit 1
+          fi
+
+      - name: Validate local Homebrew formula
+        run: bash scripts/validate-homebrew-formula.sh

@@ -13,16 +13,17 @@ import (
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/querylane/querylane/backend/buildstamp"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 )
 
-// Build-time variables injected via -ldflags.
-var (
-	// GitBranch is the git branch this binary was built from.
-	// This is populated at build time via -ldflags.
-	GitBranch = "unknown"
-)
+type buildStamp struct {
+	version   string
+	gitCommit string
+	gitBranch string
+	builtAt   string
+}
 
 // Ensure Service implements the ConsoleServiceHandler interface at compile time.
 var _ v1connect.ConsoleServiceHandler = (*Service)(nil)
@@ -105,28 +106,60 @@ func (s *Service) getDatabaseStatus(ctx context.Context) *v1alpha1.AppDatabaseSt
 // It attempts to parse version information, git commit SHA, and build timestamp
 // from the embedded build information, and includes the git branch from build-time injection.
 func extractBuildInfo(ctx context.Context, buildInfo *debug.BuildInfo) *v1alpha1.BuildInfo {
+	return extractBuildInfoFrom(ctx, buildInfo, buildStamp{
+		version:   buildstamp.Version,
+		gitCommit: buildstamp.GitCommit,
+		gitBranch: buildstamp.GitBranch,
+		builtAt:   buildstamp.BuiltAt,
+	})
+}
+
+func extractBuildInfoFrom(
+	ctx context.Context,
+	buildInfo *debug.BuildInfo,
+	stamp buildStamp,
+) *v1alpha1.BuildInfo {
 	result := &v1alpha1.BuildInfo{
 		Version:   "unknown",
 		GitCommit: "unknown",
-		GitBranch: GitBranch,
+		GitBranch: "unknown",
 		BuiltAt:   nil,
 	}
 
-	if buildInfo == nil {
-		return result
+	if buildInfo != nil {
+		applyRuntimeBuildInfo(ctx, result, buildInfo)
 	}
 
-	// Extract version from Main module
-	if buildInfo.Main.Version != "" && buildInfo.Main.Version != "(devel)" {
-		result.Version = buildInfo.Main.Version
+	result.Version = buildstamp.ResolveVersion(stamp.version, buildInfo)
+
+	if stamp.gitCommit != "" {
+		result.GitCommit = stamp.gitCommit
 	}
 
-	// Extract build settings for git commit and build time
+	if stamp.gitBranch != "" {
+		result.GitBranch = stamp.gitBranch
+	}
+
+	if stamp.builtAt != "" {
+		if buildTime, err := time.Parse(time.RFC3339, stamp.builtAt); err == nil {
+			result.BuiltAt = timestamppb.New(buildTime)
+		} else {
+			slog.WarnContext(ctx, "failed to parse stamped build time", "value", stamp.builtAt, "error", err)
+		}
+	}
+
+	return result
+}
+
+func applyRuntimeBuildInfo(
+	ctx context.Context,
+	result *v1alpha1.BuildInfo,
+	buildInfo *debug.BuildInfo,
+) {
 	for _, setting := range buildInfo.Settings {
 		switch setting.Key {
 		case "vcs.revision":
 			if len(setting.Value) >= 7 {
-				// Use short commit SHA (first 7 characters)
 				result.GitCommit = setting.Value[:7]
 			} else {
 				result.GitCommit = setting.Value
@@ -140,17 +173,11 @@ func extractBuildInfo(ctx context.Context, buildInfo *debug.BuildInfo) *v1alpha1
 		}
 	}
 
-	// If we couldn't get git commit from vcs.revision, try to extract from version
-	if result.GitCommit == "unknown" && result.Version != "unknown" {
-		// Try to extract commit from version strings like "v1.0.0-20231201123456-abcdef123456"
-		if len(result.Version) > 12 {
-			parts := result.Version[len(result.Version)-12:]
-			// Check if it looks like a commit hash (hexadecimal)
-			if _, err := strconv.ParseInt(parts, 16, 64); err == nil {
-				result.GitCommit = parts[:7]
-			}
+	// If vcs.revision is unavailable, try the commit suffix from a Go pseudo-version.
+	if result.GitCommit == "unknown" && result.Version != "unknown" && len(result.Version) > 12 {
+		parts := result.Version[len(result.Version)-12:]
+		if _, err := strconv.ParseInt(parts, 16, 64); err == nil {
+			result.GitCommit = parts[:7]
 		}
 	}
-
-	return result
 }

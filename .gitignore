@@ -23,6 +23,7 @@ __debug_bin*
 /node_modules
 /.blume
 .blume-verify/
+/.context/
 /dist
 .codex/*
 !.codex/README.md
@@ -65,3 +66,4 @@ frontend/test-results
 frontend/.vitest
 frontend/e2e/playwright-report
 frontend/e2e/test-results
+/backend/frontend/dist/

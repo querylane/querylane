@@ -21,9 +21,11 @@ const FILES_SUMMARY_PATTERN =
   /^\s*(?:[├+|]\s*)?Files\s*\(\d+\)(?<summary>[^\n]*)$/mu;
 const OVERWRITE_SUMMARY_PATTERN = /~(?<count>\d+)\s+overwrite\b/u;
 const NO_CHANGES_PATTERN = /\bNo changes\./u;
-// Deliberate patches against shadcn output: interactive items use the pointer
-// cursor, and sonner sanitizes the resolved theme before passing it to Sonner.
+// Deliberate patches against shadcn output: card content leaves spacing to its
+// consumers, interactive items use the pointer cursor, and sonner sanitizes
+// the resolved theme before passing it to Sonner.
 const ALLOWED_REGISTRY_DRIFT_FILES = new Set([
+  "src/components/ui/card.tsx",
   "src/components/ui/command.tsx",
   "src/components/ui/dropdown-menu.tsx",
   "src/components/ui/select.tsx",

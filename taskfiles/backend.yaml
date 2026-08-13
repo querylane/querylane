@@ -43,7 +43,7 @@ tasks:
       - :install:go
     dir: "{{.BACKEND_ROOT}}"
     cmds:
-      - '{{.PATH_PREFIX}} go build -ldflags "-X github.com/querylane/querylane/backend/service/console.GitBranch={{.BRANCH_SLUG}}" -o ../build/bin/querylane'
+      - '{{.PATH_PREFIX}} go build -ldflags "-X github.com/querylane/querylane/backend/buildstamp.Version=dev -X github.com/querylane/querylane/backend/buildstamp.GitBranch={{.BRANCH_SLUG}}" -o ../build/bin/querylane'
 
   test:
     desc: Run all Go tests

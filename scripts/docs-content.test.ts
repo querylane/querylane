@@ -63,7 +63,7 @@ const readProtoServices = async (): Promise<ProtoService[]> => {
 					return [];
 				}
 
-				const kind = clientStream
+				const kind: ProtoService["rpcs"][number]["kind"] = clientStream
 					? serverStream
 						? "bidirectional-streaming"
 						: "client-streaming"
@@ -319,6 +319,19 @@ test("keeps installation and production setup ahead of product guides", async ()
 	expect(productGuide).toContain("## What Querylane offers today");
 });
 
+test("documents release archives without advertising an unpublished Homebrew tap", async () => {
+	const installation = await readFile(
+		join(root, "docs/site/get-started/index.mdx"),
+		"utf8",
+	);
+
+	expect(installation).toContain("## Download a release binary");
+	expect(installation).toContain("checksums.txt");
+	expect(installation).toContain("darwin_arm64");
+	expect(installation).toContain("linux_amd64");
+	expect(installation).not.toContain("brew install");
+});
+
 test("guides a new user through a successful first session", async () => {
 	const getStartedRoot = join(root, "docs/site/get-started");
 	const [home, meta, quickstart, apiMeta, callingApi] = await Promise.all([
@@ -350,7 +363,9 @@ test("keeps getting-started pages in 1 ordered hierarchy level", async () => {
 	const getStartedRoot = join(root, "docs/site/get-started");
 	const entries = await readdir(getStartedRoot, { withFileTypes: true });
 	expect(entries.filter((entry) => entry.isDirectory())).toEqual([]);
-	expect(entries.filter((entry) => entry.name.endsWith(".mdx"))).toHaveLength(4);
+	expect(entries.filter((entry) => entry.name.endsWith(".mdx"))).toHaveLength(
+		4,
+	);
 });
 
 test("documents the operational lifecycle for self-hosted deployments", async () => {
