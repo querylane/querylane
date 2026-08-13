@@ -42,6 +42,7 @@ import {
   PostgreSqlErrorRetryGuidance,
 } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 import {
+  type ReadRowsResponse,
   ReadRowsResponseSchema,
   RowOrder_Direction,
   RowPredicate_Operator,
@@ -557,17 +558,22 @@ function latestEmailGridColumn() {
     ?.columns?.find((column) => column.key === "email");
 }
 
-function seedRowsQueryError(error: Error) {
+function seedRowsQueryError(
+  error: Error,
+  retainedData?: ReadRowsResponse | undefined,
+  lastSuccessfulData?: ReadRowsResponse | undefined
+) {
   tableApi.useListTableColumnsQuery.mockReturnValue({
-    data: undefined,
+    data: create(ListTableColumnsResponseSchema, { columns: [] }),
     error: null,
     isError: false,
   });
   tableDataApi.useReadRowsQuery.mockReturnValue({
-    data: undefined,
+    data: retainedData,
     error,
     isFetching: false,
     isLoading: false,
+    lastSuccessfulData,
     refetch: vi.fn(),
   });
   tableDataApi.useReadCellValueMutation.mockReturnValue({
@@ -2498,6 +2504,104 @@ describe("TableDataGrid error recovery", () => {
     );
 
     expect(screen.getByRole("button", { name: RETRY_BUTTON_RE })).toBeTruthy();
+    expect(screen.queryByText("No rows found")).toBeNull();
+    expect(screen.queryByText("This table is empty.")).toBeNull();
+    expect(screen.queryByText("Page 1 of 1")).toBeNull();
+  });
+
+  test("keeps the last loaded rows visible when a refresh fails", () => {
+    const name = "instances/prod/databases/app/schemas/public/tables/customers";
+    seedRowsQuery([{ rowKey: "row-1", value: "loaded@example.com" }]);
+
+    const view = render(<TableDataGrid name={name} />);
+    expect(screen.getByText("loaded@example.com")).toBeTruthy();
+    const retainedData =
+      tableDataApi.useReadRowsQuery.mock.results.at(-1)?.value.data;
+
+    seedRowsQueryError(new Error("connection refused"), retainedData);
+    view.rerender(<TableDataGrid name={name} />);
+
+    expect(screen.getByText("loaded@example.com")).toBeTruthy();
+    expect(
+      screen.getByText("Showing the last loaded rows until retry succeeds.")
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: RETRY_BUTTON_RE })).toBeTruthy();
+    expect(screen.queryByText("No rows found")).toBeNull();
+  });
+
+  test("keeps the last loaded page visible when the requested page fails", () => {
+    const name = "instances/prod/databases/app/schemas/public/tables/customers";
+    seedRowsQuery([{ rowKey: "row-1", value: "loaded@example.com" }]);
+
+    const view = render(<TableDataGrid name={name} />);
+    const retainedData =
+      tableDataApi.useReadRowsQuery.mock.results.at(-1)?.value.data;
+
+    seedRowsQueryError(
+      new Error("connection refused"),
+      undefined,
+      retainedData
+    );
+    view.rerender(<TableDataGrid name={name} />);
+
+    expect(screen.getByText("loaded@example.com")).toBeTruthy();
+    expect(
+      screen.getByText("Showing the last loaded rows until retry succeeds.")
+    ).toBeTruthy();
+    expect(screen.queryByText("No rows found")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Next page" })).toBeNull();
+  });
+
+  test("marks retained rows stale when column metadata fails", () => {
+    const name = "instances/prod/databases/app/schemas/public/tables/customers";
+    const retainedData = create(ReadRowsResponseSchema, {
+      nextPageToken: "page-2",
+      resultSet: create(TableResultSetSchema, {
+        columns: [
+          create(TableResultColumnSchema, {
+            columnName: "email",
+            dataType: DataType.STRING,
+            rawType: "text",
+          }),
+        ],
+        rows: [
+          create(TableResultRowSchema, {
+            rowKey: "row-1",
+            values: [
+              create(TableCellSchema, {
+                value: create(TableValueSchema, {
+                  kind: { case: "stringValue", value: "loaded@example.com" },
+                }),
+              }),
+            ],
+          }),
+        ],
+      }),
+    });
+    tableApi.useListTableColumnsQuery.mockReturnValue({
+      data: undefined,
+      error: new Error("metadata unavailable"),
+      isError: true,
+    });
+    tableDataApi.useReadRowsQuery.mockReturnValue({
+      data: retainedData,
+      error: null,
+      isFetching: false,
+      isLoading: false,
+      lastSuccessfulData: retainedData,
+      refetch: vi.fn(),
+    });
+
+    render(<TableDataGrid name={name} />);
+
+    expect(screen.getByText("loaded@example.com")).toBeTruthy();
+    expect(
+      screen.getByText("Showing the last loaded rows until retry succeeds.")
+    ).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: "Next page" }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
   });
 
   test("renders SQLSTATE-aware row-load errors with retry and copyable details", async () => {

@@ -3,11 +3,15 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/go-jet/jet/v2/postgres"
+	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/querylane/querylane/backend/postgreserrors"
 	"github.com/querylane/querylane/backend/storage/gen/querylane/public/model"
 	"github.com/querylane/querylane/backend/storage/gen/querylane/public/table"
 )
@@ -41,12 +45,54 @@ func (r *PGInstanceConnectionRecorder) RecordActiveTx(ctx context.Context, exec 
 // RecordErrorTx records a failed connectivity probe inside the caller's
 // transaction so lease bookkeeping and state stay atomic.
 func (r *PGInstanceConnectionRecorder) RecordErrorTx(ctx context.Context, exec QueryExecutor, instanceID string, checkedAt time.Time, err error) error {
-	var connErr string
-	if err != nil {
-		connErr = err.Error()
+	return updateConnectionStateTx(ctx, exec, instanceID, model.ConnectionState_ConnectionStateError, safeInstanceConnectionError(err), checkedAt)
+}
+
+func safeInstanceConnectionError(err error) string {
+	if err == nil {
+		return ""
 	}
 
-	return updateConnectionStateTx(ctx, exec, instanceID, model.ConnectionState_ConnectionStateError, connErr, checkedAt)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch postgreserrors.Classify(pgErr, postgreserrors.ProfileDefault).Kind {
+		case postgreserrors.KindUnauthenticated:
+			return "PostgreSQL authentication failed"
+		case postgreserrors.KindPermissionDenied:
+			return "PostgreSQL connection permission denied"
+		case postgreserrors.KindResourceExhausted:
+			return "PostgreSQL resource limit reached"
+		case postgreserrors.KindTimeout:
+			return "PostgreSQL connection timed out"
+		case postgreserrors.KindUnavailable:
+			return "PostgreSQL instance is unavailable"
+		case postgreserrors.KindInvalidArgument,
+			postgreserrors.KindFailedPrecondition,
+			postgreserrors.KindNotFound,
+			postgreserrors.KindAlreadyExists,
+			postgreserrors.KindAborted,
+			postgreserrors.KindUnimplemented,
+			postgreserrors.KindInternal:
+			return "PostgreSQL connection failed"
+		default:
+			return "PostgreSQL connection failed"
+		}
+	}
+
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "PostgreSQL connection timed out"
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return "PostgreSQL connection timed out"
+	}
+
+	if postgreserrors.IsConnectionReachabilityError(err) {
+		return "PostgreSQL instance is unreachable"
+	}
+
+	return "PostgreSQL connection failed"
 }
 
 func updateConnectionStateTx(ctx context.Context, exec QueryExecutor, instanceID string, state model.ConnectionState, connectionErr string, checkedAt time.Time) error {

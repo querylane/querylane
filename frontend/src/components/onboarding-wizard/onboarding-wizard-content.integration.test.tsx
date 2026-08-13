@@ -752,6 +752,48 @@ describe("onboarding wizard setup progression", () => {
     });
   });
 
+  it("explains how to recover when embedded setup runs out of disk space", async () => {
+    const user = userEvent.setup();
+    const error =
+      "write /Users/alice/.querylane/postgres/base/16384/2600: no space left on device";
+    const failedEvent = createProto(SetupProgressEventSchema, {
+      displayName: "Starting embedded PostgreSQL",
+      error,
+      state: StepState.FAILED,
+      stepId: SetupStep.STARTING_EMBEDDED,
+    });
+    seedOnboardingState();
+    useOnboardingWizardStore.setState({
+      failedEvent,
+      phase: "error_summary",
+      progressEvents: [failedEvent],
+      selectedMethod: "embedded",
+      streamError: normalizeAppUiError(new Error(error), {
+        area: "onboarding-setup",
+        source: "setup_stream",
+      }),
+    });
+
+    renderWizard();
+
+    expect(screen.getAllByText("Storage full")).not.toHaveLength(0);
+    expect(
+      screen.getAllByText(
+        "Free disk space where Querylane stores embedded PostgreSQL data, then retry."
+      )
+    ).not.toHaveLength(0);
+    expect(screen.queryByText("May be a transient issue")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reconfigure" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Report bug" })).toBeNull();
+    expect(screen.queryByText(error)).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Error details" }));
+
+    expect(
+      await screen.findAllByText(error, { exact: false })
+    ).not.toHaveLength(0);
+  });
+
   it("classifies an embedded port collision as reconfigurable", () => {
     const error =
       "embedded postgres port 5433 is already in use; stop the process using it or choose another port";

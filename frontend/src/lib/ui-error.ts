@@ -31,6 +31,11 @@ const APP_UI_ERROR_SURFACED = Symbol.for("querylane.app-ui-error-surfaced");
  * behind a proxy) collapses into one updating toast instead of a storm.
  */
 const UNEXPECTED_RESPONSE_TOAST_ID = "unexpected-server-response";
+const BROWSER_TRANSPORT_FAILURE_MESSAGES = new Set([
+  "Failed to fetch",
+  "Load failed",
+  "NetworkError when attempting to fetch resource.",
+]);
 
 const POSTGRES_TITLES = {
   [PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED]: "PostgreSQL error",
@@ -230,7 +235,7 @@ function buildRetryGuidance({
     return POSTGRES_RETRY_GUIDANCE[postgres.retryGuidance] ?? null;
   }
   if (code === Code.DeadlineExceeded || code === Code.Unavailable) {
-    return "The database instance may still be starting. Retry in a moment.";
+    return "Check that the Querylane server is running and that your network or proxy can reach it, then retry.";
   }
   return null;
 }
@@ -323,6 +328,21 @@ function buildErrorPresentation({
 }): { retryGuidance: string | null; summary: string; title: string } {
   if (unexpectedResponse) {
     return describeUnexpectedResponse(unexpectedResponse);
+  }
+  if (
+    postgres === null &&
+    reason === null &&
+    ((code === Code.Unknown &&
+      BROWSER_TRANSPORT_FAILURE_MESSAGES.has(message)) ||
+      code === Code.DeadlineExceeded ||
+      code === Code.Unavailable)
+  ) {
+    return {
+      retryGuidance:
+        "Check that the Querylane server is running and that your network or proxy can reach it, then retry.",
+      summary: "Querylane did not respond.",
+      title: "Cannot reach Querylane",
+    };
   }
   return {
     retryGuidance: buildRetryGuidance({ code, postgres, reason }),

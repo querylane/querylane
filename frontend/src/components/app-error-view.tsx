@@ -33,6 +33,7 @@ interface AppErrorViewProps {
   containerClassName?: string | undefined;
   error: AppUiError;
   onRetry?: (() => Promise<unknown> | undefined) | undefined;
+  reportBug?: boolean | undefined;
   retryLabel?: string | undefined;
   variant?: AppErrorViewVariant | undefined;
 }
@@ -203,6 +204,7 @@ function AppPageError({
   containerClassName,
   error,
   onRetry,
+  reportBug,
   retryLabel,
 }: Omit<AppErrorViewProps, "variant"> & { retryLabel: string }) {
   return (
@@ -231,7 +233,7 @@ function AppPageError({
               <RetryActionButton label={retryLabel} onRetry={onRetry} />
             ) : null}
             {actions}
-            {onRetry || actions ? null : (
+            {onRetry || actions || reportBug === false ? null : (
               <ReportBugLink error={error} variant="default" />
             )}
             <ErrorDetailsDialog
@@ -252,6 +254,7 @@ function AppCompactError({
   containerClassName,
   error,
   onRetry,
+  reportBug,
   retryLabel,
 }: Omit<AppErrorViewProps, "variant"> & { retryLabel: string }) {
   return (
@@ -283,13 +286,17 @@ function AppCompactError({
                 />
               ) : null}
               {actions}
-              {onRetry || actions ? null : (
+              {onRetry || actions || reportBug === false ? null : (
                 <ReportBugLink error={error} variant="default" />
               )}
               <ErrorDetailsDialog
                 error={error}
                 retryAvailable={Boolean(onRetry)}
-                triggerClassName={onRetry || actions ? undefined : "-ml-2.5"}
+                triggerClassName={
+                  onRetry || actions || reportBug === false
+                    ? undefined
+                    : "-ml-2.5"
+                }
                 triggerVariant="ghost"
               />
             </div>

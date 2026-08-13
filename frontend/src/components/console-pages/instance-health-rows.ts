@@ -8,6 +8,7 @@ import {
   formatBytes,
   formatUptime,
 } from "@/lib/console-resources";
+import { describeInstanceConnectionError } from "@/lib/instance-connection-error";
 import { parsePostgresPlatform } from "@/lib/postgres-platform";
 import {
   formatReplicationRole,
@@ -576,23 +577,23 @@ function buildDisconnectedDiagnosticRows({
   const connectionError = instance.connectionError.trim();
 
   if (connectionStatus === "error") {
+    const presentation = describeInstanceConnectionError(connectionError);
     return [
       {
         detail: [
           { label: "Endpoint", value: endpoint },
-          { label: "Error", value: connectionError || "Connection failed" },
+          { label: "Error", value: presentation.summary },
         ],
         id: "tcp",
         label: "TCP",
-        summary: connectionError || "Connection failed",
+        summary: presentation.title,
         tone: "error",
       },
       {
         detail: [
           {
             label: "Reason",
-            value:
-              "No authenticated session. Use the connection error for the exact cause.",
+            value: presentation.retryGuidance,
           },
         ],
         id: "authentication",

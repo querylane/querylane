@@ -3,6 +3,7 @@ import { AppInlineError } from "@/components/app-error-view";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import { RetryActionButton } from "@/components/retry-action-button";
 import { Button } from "@/components/ui/button";
+import type { AppUiError } from "@/lib/ui-error-types";
 import { waitForNextFrame } from "@/lib/wait-for-next-frame";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 
@@ -28,9 +29,163 @@ const CONFIG_ERROR_PATTERNS = [
   /certificate/i,
   /timeout/i,
 ];
+const STORAGE_FULL_PATTERNS = [
+  /no space left on device/i,
+  /\benospc\b/i,
+  /disk (?:is )?full/i,
+  /not enough (?:disk )?space/i,
+];
+
 function isLikelyConfigurationError(errorMessage: string): boolean {
   return CONFIG_ERROR_PATTERNS.some((pattern) => pattern.test(errorMessage));
 }
+
+function isStorageFullError(errorMessage: string): boolean {
+  return STORAGE_FULL_PATTERNS.some((pattern) => pattern.test(errorMessage));
+}
+
+type SetupErrorKind = "configuration" | "storage_full" | "transient";
+
+function classifySetupError(errorText: string): SetupErrorKind {
+  if (isStorageFullError(errorText)) {
+    return "storage_full";
+  }
+  if (isLikelyConfigurationError(errorText)) {
+    return "configuration";
+  }
+  return "transient";
+}
+
+function presentStreamError(
+  streamError: AppUiError | null,
+  errorKind: SetupErrorKind
+): AppUiError | null {
+  if (!(streamError && errorKind === "storage_full")) {
+    return streamError;
+  }
+
+  return {
+    ...streamError,
+    retryGuidance:
+      "Free disk space where Querylane stores embedded PostgreSQL data, then retry.",
+    summary: "Embedded PostgreSQL could not write its data.",
+    title: "Storage full",
+  };
+}
+
+function buildSetupFailureDescription({
+  failedStepIndex,
+  failedStepName,
+  totalCount,
+}: {
+  failedStepIndex: number;
+  failedStepName: string | undefined;
+  totalCount: number;
+}) {
+  if (!failedStepName) {
+    return "Setup stopped before Querylane could finish configuring the metadata database. Review the error details below and retry when you're ready.";
+  }
+  const position =
+    failedStepIndex >= 0
+      ? ` (step ${failedStepIndex + 1} of ${totalCount})`
+      : "";
+  return `Setup failed during "${failedStepName}"${position}. Review the error details below.`;
+}
+
+function SetupErrorHint({ errorKind }: { errorKind: SetupErrorKind }) {
+  if (errorKind === "storage_full") {
+    return null;
+  }
+
+  if (errorKind === "configuration") {
+    return (
+      <div className="flex items-start gap-4 rounded-xl border border-amber-400/20 bg-amber-500/[0.06] px-4 py-3">
+        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+        <div className="space-y-1">
+          <div className="font-medium text-amber-100 text-base">
+            Likely a configuration issue
+          </div>
+          <p className="text-amber-100/70 text-sm">
+            This error usually means the connection details need adjusting.
+            Click <strong>Reconfigure</strong> to update your settings.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-start gap-4 rounded-xl border border-blue-400/20 bg-blue-500/[0.06] px-4 py-3">
+      <RefreshCw className="mt-0.5 size-4 shrink-0 text-blue-400" />
+      <div className="space-y-1">
+        <div className="font-medium text-base text-blue-100">
+          May be a transient issue
+        </div>
+        <p className="text-blue-100/70 text-sm">
+          This could be a temporary problem. Try clicking <strong>Retry</strong>{" "}
+          first. If it persists, reconfigure your connection.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ErrorSummaryFooter({
+  clearStreamFailure,
+  errorKind,
+  goBackToMethodSelection,
+  goToConfigure,
+  retry,
+}: {
+  clearStreamFailure: () => void;
+  errorKind: SetupErrorKind;
+  goBackToMethodSelection: () => void;
+  goToConfigure: () => void;
+  retry: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center gap-2">
+        <Button
+          className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
+          onClick={() => {
+            clearStreamFailure();
+            goBackToMethodSelection();
+          }}
+          variant="ghost"
+        >
+          <ArrowLeft className="size-4" />
+          Start over
+        </Button>
+        {errorKind === "storage_full" ? null : (
+          <Button
+            className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
+            onClick={() => {
+              clearStreamFailure();
+              goToConfigure();
+            }}
+            variant="ghost"
+          >
+            <Settings2 className="size-4" />
+            Reconfigure
+          </Button>
+        )}
+      </div>
+      <RetryActionButton
+        className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
+        label="Retry"
+        onRetry={() =>
+          waitForNextFrame().then(() => {
+            retry();
+          })
+        }
+        pendingLabel="Retrying…"
+        variant="default"
+      />
+    </div>
+  );
+}
+
 export function ErrorSummaryPhase() {
   const goToConfigure = useOnboardingWizardStore(
     (state) => state.goToConfigure
@@ -60,85 +215,29 @@ export function ErrorSummaryPhase() {
   const totalCount = progressEvents.length;
   const errorText =
     failedStepError || streamError?.title || "An unknown error occurred";
-  const isConfigError = isLikelyConfigurationError(errorText);
+  const errorKind = classifySetupError(errorText);
+  const presentedStreamError = presentStreamError(streamError, errorKind);
+
   return (
     <WizardPage
-      description={
-        failedStepName
-          ? `Setup failed during "${failedStepName}"${failedStepIndex >= 0 ? ` (step ${failedStepIndex + 1} of ${totalCount})` : ""}. Review the error details below.`
-          : "Setup stopped before Querylane could finish configuring the metadata database. Review the error details below and retry when you're ready."
-      }
+      description={buildSetupFailureDescription({
+        failedStepIndex,
+        failedStepName,
+        totalCount,
+      })}
       footer={
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Button
-              className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
-              onClick={() => {
-                clearStreamFailure();
-                goBackToMethodSelection();
-              }}
-              variant="ghost"
-            >
-              <ArrowLeft className="size-4" />
-              Start over
-            </Button>
-            <Button
-              className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
-              onClick={() => {
-                clearStreamFailure();
-                goToConfigure();
-              }}
-              variant="ghost"
-            >
-              <Settings2 className="size-4" />
-              Reconfigure
-            </Button>
-          </div>
-          <RetryActionButton
-            className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
-            label="Retry"
-            onRetry={() =>
-              waitForNextFrame().then(() => {
-                retry();
-              })
-            }
-            pendingLabel="Retrying…"
-            variant="default"
-          />
-        </div>
+        <ErrorSummaryFooter
+          clearStreamFailure={clearStreamFailure}
+          errorKind={errorKind}
+          goBackToMethodSelection={goBackToMethodSelection}
+          goToConfigure={goToConfigure}
+          retry={retry}
+        />
       }
       title="Setup failed"
     >
       <div className="space-y-5">
-        {/* Hint banner for config vs transient errors */}
-        {isConfigError ? (
-          <div className="flex items-start gap-4 rounded-xl border border-amber-400/20 bg-amber-500/[0.06] px-4 py-3">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
-            <div className="space-y-1">
-              <div className="font-medium text-amber-100 text-base">
-                Likely a configuration issue
-              </div>
-              <p className="text-amber-100/70 text-sm">
-                This error usually means the connection details need adjusting.
-                Click <strong>Reconfigure</strong> to update your settings.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-start gap-4 rounded-xl border border-blue-400/20 bg-blue-500/[0.06] px-4 py-3">
-            <RefreshCw className="mt-0.5 size-4 shrink-0 text-blue-400" />
-            <div className="space-y-1">
-              <div className="font-medium text-base text-blue-100">
-                May be a transient issue
-              </div>
-              <p className="text-blue-100/70 text-sm">
-                This could be a temporary problem. Try clicking{" "}
-                <strong>Retry</strong> first. If it persists, reconfigure your
-                connection.
-              </p>
-            </div>
-          </div>
-        )}
+        <SetupErrorHint errorKind={errorKind} />
 
         {/* Failed step detail */}
         {failedStepName ? (
@@ -152,14 +251,19 @@ export function ErrorSummaryPhase() {
                   {failedStepName}
                 </span>
               </div>
-              {failedStepError ? (
+              {failedStepError && errorKind !== "storage_full" ? (
                 <p className="text-red-200/80 text-sm">{failedStepError}</p>
               ) : null}
             </div>
           </div>
         ) : null}
 
-        {streamError ? <AppInlineError error={streamError} /> : null}
+        {presentedStreamError ? (
+          <AppInlineError
+            error={presentedStreamError}
+            reportBug={errorKind !== "storage_full"}
+          />
+        ) : null}
       </div>
     </WizardPage>
   );

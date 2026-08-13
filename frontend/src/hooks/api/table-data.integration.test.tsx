@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import type { Transport } from "@connectrpc/connect";
+import { Code, ConnectError, type Transport } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
@@ -79,5 +79,87 @@ describe("useReadRowsQuery", () => {
       request.name,
       request.name,
     ]);
+  });
+
+  test("retains the latest same-table result when a new page fails", async () => {
+    const tableName =
+      "instances/local/databases/postgres/schemas/public/tables/events";
+    const transport = createTestRouterTransport(({ service }) => {
+      service(TableDataService, {
+        readRows(request) {
+          if (request.pageToken) {
+            throw new ConnectError("instance unavailable", Code.Unavailable);
+          }
+          return create(ReadRowsResponseSchema, { nextPageToken: "page-2" });
+        },
+      });
+    });
+    const queryClient = createTestQueryClient();
+    activeQueryClients.push(queryClient);
+    const wrapper = createWrapper(transport, queryClient);
+    const firstPage = create(ReadRowsRequestSchema, { name: tableName });
+    const secondPage = create(ReadRowsRequestSchema, {
+      name: tableName,
+      pageToken: "page-2",
+    });
+    const view = renderHook(
+      ({ request }) => useReadRowsQuery(request, { keepPreviousData: true }),
+      { initialProps: { request: firstPage }, wrapper }
+    );
+
+    await waitFor(() => {
+      expect(view.result.current.isSuccess).toBe(true);
+    });
+
+    view.rerender({ request: secondPage });
+
+    await waitFor(() => {
+      expect(view.result.current.isError).toBe(true);
+    });
+    expect(view.result.current.data).toBeUndefined();
+    expect(view.result.current.lastSuccessfulData?.nextPageToken).toBe(
+      "page-2"
+    );
+  });
+
+  test("does not retain rows from a different projection", async () => {
+    const tableName =
+      "instances/local/databases/postgres/schemas/public/tables/events";
+    const transport = createTestRouterTransport(({ service }) => {
+      service(TableDataService, {
+        readRows(request) {
+          if (request.selectedColumns.includes("private_value")) {
+            throw new ConnectError("instance unavailable", Code.Unavailable);
+          }
+          return create(ReadRowsResponseSchema, { nextPageToken: "page-2" });
+        },
+      });
+    });
+    const queryClient = createTestQueryClient();
+    activeQueryClients.push(queryClient);
+    const wrapper = createWrapper(transport, queryClient);
+    const firstProjection = create(ReadRowsRequestSchema, {
+      name: tableName,
+      selectedColumns: ["public_value"],
+    });
+    const secondProjection = create(ReadRowsRequestSchema, {
+      name: tableName,
+      selectedColumns: ["private_value"],
+    });
+    const view = renderHook(
+      ({ request }) => useReadRowsQuery(request, { keepPreviousData: true }),
+      { initialProps: { request: firstProjection }, wrapper }
+    );
+
+    await waitFor(() => {
+      expect(view.result.current.isSuccess).toBe(true);
+    });
+
+    view.rerender({ request: secondProjection });
+
+    await waitFor(() => {
+      expect(view.result.current.isError).toBe(true);
+    });
+    expect(view.result.current.lastSuccessfulData).toBeUndefined();
   });
 });

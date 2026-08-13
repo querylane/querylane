@@ -98,6 +98,7 @@ const state = vi.hoisted(() => ({
   instanceCatalogHasResolved: true,
   instanceCatalogIsPending: false,
   instanceData: undefined as GetInstanceResponse | undefined,
+  instanceQueryError: null as unknown,
   instances: [] as PostgresInstance[],
   navigate: vi.fn(async (_options: Record<string, unknown>) => undefined),
   navigateToDatabase: vi.fn(),
@@ -255,7 +256,7 @@ vi.mock("@/hooks/api/instance", () => ({
   useGetInstanceQuery: () => ({
     data: state.instanceData,
     dataUpdatedAt: 0,
-    error: null,
+    error: state.instanceQueryError,
     isFetching: false,
     isPending: false,
     refetch: state.refetchInstance,
@@ -569,6 +570,7 @@ beforeEach(() => {
   state.instanceCatalogHasResolved = true;
   state.instanceCatalogIsPending = false;
   state.instanceData = instanceResponse();
+  state.instanceQueryError = null;
   state.instances = [postgresInstanceFixture()];
   state.navigate.mockClear();
   state.navigateToDatabase.mockClear();
@@ -623,6 +625,24 @@ function renderInstanceActivity() {
       section="activity"
     />
   );
+}
+
+function metaDatabaseUnavailableError() {
+  const error = new ConnectError(
+    "meta database is unavailable",
+    Code.Unavailable
+  );
+  error.details = [
+    {
+      debug: {
+        domain: "console.querylane.dev",
+        reason: "ERROR_REASON_APP_DATABASE_UNAVAILABLE",
+      },
+      type: "google.rpc.ErrorInfo",
+      value: new Uint8Array([1]),
+    },
+  ];
+  return error;
 }
 
 function setFieldValue(label: string, value: string) {
@@ -1686,8 +1706,100 @@ describe("backend instance health checks", () => {
     const health = screen.getByRole("region", { name: "Health checks" });
 
     expect(within(health).getByText("TCP")).toBeTruthy();
-    expect(within(health).getByText("connection refused")).toBeTruthy();
+    expect(
+      within(health).getAllByText("PostgreSQL instance unavailable")
+    ).not.toHaveLength(0);
     expect(within(health).getByText("No authenticated session")).toBeTruthy();
+  });
+
+  test("keeps rotated credential details behind explicit disclosure", async () => {
+    const user = userEvent.setup();
+    const rawError =
+      'failed to connect to user=admin database=postgres host=10.0.0.8:5432: SASL authentication failed: FATAL: password authentication failed for user "admin" (SQLSTATE 28P01)';
+    state.selectedInstanceStatus = "error";
+    state.instanceData = instanceResponse({ connectionError: rawError });
+
+    renderInstanceOverview();
+
+    expect(
+      screen.getAllByText("PostgreSQL authentication failed")
+    ).not.toHaveLength(0);
+    expect(
+      screen.getByText("PostgreSQL rejected the saved credentials.")
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "Update credentials" })
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Showing the last loaded data until the connection succeeds."
+      )
+    ).toBeTruthy();
+    expect(screen.queryByText(rawError)).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Error details" }));
+
+    const details = await screen.findByLabelText("Technical details JSON");
+    expect(details).toHaveProperty(
+      "value",
+      expect.stringContaining("host=10.0.0.8:5432")
+    );
+    expect(details).toHaveProperty(
+      "value",
+      expect.stringContaining("SQLSTATE 28P01")
+    );
+  });
+});
+
+describe("backend dependency recovery", () => {
+  test("keeps cached instance data visible when the meta database stops", async () => {
+    const user = userEvent.setup();
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.instanceQueryError = metaDatabaseUnavailableError();
+    state.instanceCatalogError = state.instanceQueryError;
+
+    renderInstanceOverview();
+
+    expect(screen.getByRole("heading", { name: "Production" })).toBeTruthy();
+    expect(screen.getByText("Meta database unavailable")).toBeTruthy();
+    expect(screen.getByText("Status unavailable")).toBeTruthy();
+    expect(screen.queryByText("Connected")).toBeNull();
+    expect(
+      screen.getByText("Showing the last loaded data until refresh succeeds.")
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    await waitFor(() => {
+      expect(state.refetchInstance).toHaveBeenCalledTimes(1);
+      expect(state.retryInstanceCatalog).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test("attributes a server outage to Querylane instead of PostgreSQL", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.instanceQueryError = new ConnectError(
+      "fetch failed",
+      Code.Unavailable
+    );
+
+    renderInstanceOverview();
+
+    expect(screen.getByText("Cannot reach Querylane")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Check that the Querylane server is running and that your network or proxy can reach it, then retry."
+      )
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        "The database instance may still be starting. Retry in a moment."
+      )
+    ).toBeNull();
   });
 });
 
