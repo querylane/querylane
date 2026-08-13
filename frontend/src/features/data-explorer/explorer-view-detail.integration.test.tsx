@@ -175,9 +175,31 @@ afterEach(() => {
 });
 
 describe("view detail integration", () => {
+  it("marks materialized view actions read-only when mutations are disabled", () => {
+    render(
+      <ViewDetail
+        mutationsAllowed={false}
+        view={createProto(ViewSchema, {
+          displayName: "daily_revenue",
+          name: "instances/prod/databases/app/schemas/public/views/daily_revenue",
+          viewType: View_ViewType.MATERIALIZED,
+        })}
+        viewName="daily_revenue"
+      />
+    );
+
+    expect(screen.getByText("Read-only")).toBeTruthy();
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", {
+        name: "Refresh materialized view",
+      }).disabled
+    ).toBe(true);
+  });
+
   it("shows materialized view storage, population, owner, and comment", () => {
     render(
       <ViewDetail
+        mutationsAllowed={true}
         view={createProto(ViewSchema, {
           comment: "Precomputed daily revenue totals",
           displayName: "daily_revenue",
@@ -208,6 +230,7 @@ describe("view detail integration", () => {
       <ViewDetail
         databaseId="app"
         instanceId="prod"
+        mutationsAllowed={true}
         schemaName="public"
         view={createProto(ViewSchema, {
           definition: "SELECT day, total FROM sales.orders",
@@ -247,6 +270,17 @@ describe("view detail integration", () => {
     expect(
       screen.getByRole("heading", { name: "Refresh daily_revenue" })
     ).toBeTruthy();
+    expect(screen.getByText("42 estimated rows · 8 KB")).toBeTruthy();
+    const confirmation = screen.getByRole("textbox", {
+      name: 'Type "public"."daily_revenue" to confirm',
+    });
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", {
+        name: "Refresh concurrently",
+      }).disabled
+    ).toBe(true);
+    await user.click(confirmation);
+    await user.paste('"public"."daily_revenue"');
     await user.click(
       screen.getByRole("button", { name: "Refresh concurrently" })
     );
@@ -254,8 +288,10 @@ describe("view detail integration", () => {
       expect.objectContaining({
         mode: RefreshMaterializedViewMode.CONCURRENT,
         name,
+        confirmation: '"public"."daily_revenue"',
         signal: expect.any(AbortSignal),
-      })
+      }),
+      expect.objectContaining({ onError: expect.any(Function) })
     );
   });
 
@@ -265,6 +301,7 @@ describe("view detail integration", () => {
       <ViewDetail
         databaseId="app"
         instanceId="prod"
+        mutationsAllowed={true}
         schemaName="public"
         view={createProto(ViewSchema, {
           displayName: "empty_rollup",
@@ -291,9 +328,12 @@ describe("view detail integration", () => {
     expect(
       screen.queryByRole("button", { name: "Refresh concurrently" })
     ).toBeNull();
+    expect(screen.getByText("0 estimated rows · 0 B")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Refresh normally" })
-    ).toBeTruthy();
+      screen.getByRole<HTMLButtonElement>("button", {
+        name: "Refresh normally",
+      }).disabled
+    ).toBe(true);
   });
 
   it("loads the next dependency page on demand", async () => {
@@ -304,6 +344,7 @@ describe("view detail integration", () => {
       <ViewDetail
         databaseId="app"
         instanceId="prod"
+        mutationsAllowed={true}
         schemaName="public"
         view={createProto(ViewSchema, {
           displayName: "daily_revenue",
@@ -331,6 +372,7 @@ describe("view detail integration", () => {
 
     render(
       <ViewDetail
+        mutationsAllowed={true}
         view={createProto(ViewSchema, {
           displayName: "daily_revenue",
           isPopulated: true,
@@ -350,6 +392,7 @@ describe("standard view detail integration", () => {
   it("explains a view with purpose, sources, query shape, and SQL definition", () => {
     const { container } = render(
       <ViewDetail
+        mutationsAllowed={true}
         view={createProto(ViewSchema, {
           comment: "Paid order revenue by day for finance dashboards",
           definition: `SELECT date_trunc('day', orders.created_at) AS day,
@@ -406,6 +449,7 @@ GROUP BY 1;`,
 
     render(
       <ViewDetail
+        mutationsAllowed={true}
         view={createProto(ViewSchema, {
           definition: "SELECT * FROM sales.orders;",
           displayName: "daily_paid_revenue",
@@ -453,6 +497,7 @@ GROUP BY 1;`,
 
     render(
       <ViewDetail
+        mutationsAllowed={true}
         view={createProto(ViewSchema, {
           definition: "SELECT * FROM sales.orders;",
           displayName: "daily_paid_revenue",
@@ -477,6 +522,7 @@ GROUP BY 1;`,
   it("keeps standard views focused on metadata without materialized stats", () => {
     render(
       <ViewDetail
+        mutationsAllowed={true}
         view={createProto(ViewSchema, {
           displayName: "active_accounts",
           name: "instances/prod/databases/app/schemas/public/views/active_accounts",

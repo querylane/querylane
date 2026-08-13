@@ -214,6 +214,10 @@ func (s *Service) TestInstanceConnection(ctx context.Context, req *connect.Reque
 		return nil, configManagedError()
 	}
 
+	if err := validatePostgresConfigStatementTimeout(req.Msg.GetConfig(), "config"); err != nil {
+		return nil, err
+	}
+
 	if err := s.connectionTests.admit(req.Peer().Addr); err != nil {
 		return nil, err
 	}
@@ -250,6 +254,21 @@ func validatePostgresConfigSSLNegotiation(config *v1alpha1.PostgresConfig, field
 			apierrors.NewFieldViolation(fieldPath+".ssl_negotiation", "must be postgres or direct"),
 		)
 	}
+}
+
+func validatePostgresConfigStatementTimeout(config *v1alpha1.PostgresConfig, fieldPath string) *connect.Error {
+	if config == nil || config.GetStatementTimeout() == nil {
+		return nil
+	}
+
+	timeout := config.GetStatementTimeout().AsDuration()
+	if timeout <= 0 || timeout > time.Minute {
+		return apierrors.NewInvalidArgumentError(
+			apierrors.NewFieldViolation(fieldPath+".statement_timeout", "must be greater than zero and at most 60 seconds"),
+		)
+	}
+
+	return nil
 }
 
 func isDirectSSLNegotiationMode(sslMode v1alpha1.PostgresConfig_SslMode) bool {
@@ -362,9 +381,12 @@ func (s *Service) UpdateInstance(ctx context.Context, req *connect.Request[v1alp
 		err             error
 	)
 
+	testConnection := updateMaskTouchesConnectionConfig(mask)
 	if updateMaskTouchesConfig(mask) {
-		if err := s.connectionTests.admit(req.Peer().Addr); err != nil {
-			return nil, err
+		if testConnection {
+			if err := s.connectionTests.admit(req.Peer().Addr); err != nil {
+				return nil, err
+			}
 		}
 
 		updatedInstance, err = s.instanceRepo.UpdateInstanceWithValidation(
@@ -372,15 +394,7 @@ func (s *Service) UpdateInstance(ctx context.Context, req *connect.Request[v1alp
 			instance,
 			mask,
 			func(ctx context.Context, mergedInstance *v1alpha1.Instance) error {
-				if err := validatePostgresConfigSSLNegotiation(mergedInstance.GetConfig(), "instance.config"); err != nil {
-					return err
-				}
-
-				if err := s.connManager.TestConnection(ctx, mergedInstance); err != nil {
-					return s.connectionTestError(ctx, "instance.config", instance.GetName(), err)
-				}
-
-				return nil
+				return s.validateInstanceConfigUpdate(ctx, mergedInstance, instance.GetName(), testConnection)
 			},
 		)
 	} else {
@@ -741,14 +755,15 @@ func replicationHealthToProto(replication *engine.ReplicationHealth) *v1alpha1.R
 
 func statsAccessHealthToProto(statsAccess *engine.StatsAccessHealth) *v1alpha1.StatsAccessHealth {
 	return &v1alpha1.StatsAccessHealth{
-		Status:                healthStatusToProto(statsAccess.Status),
-		Summary:               statsAccess.Summary,
-		CurrentUser:           statsAccess.CurrentUser,
-		Superuser:             statsAccess.Superuser,
-		PgMonitorMember:       statsAccess.PGMonitorMember,
-		PgReadAllStatsMember:  statsAccess.PGReadAllStatsMember,
-		CanReadPgStatActivity: statsAccess.CanReadPGStatActivity,
-		CanReadPgStatDatabase: statsAccess.CanReadPGStatDatabase,
+		Status:                  healthStatusToProto(statsAccess.Status),
+		Summary:                 statsAccess.Summary,
+		CurrentUser:             statsAccess.CurrentUser,
+		Superuser:               statsAccess.Superuser,
+		PgMonitorMember:         statsAccess.PGMonitorMember,
+		PgReadAllStatsMember:    statsAccess.PGReadAllStatsMember,
+		CanReadPgStatActivity:   statsAccess.CanReadPGStatActivity,
+		CanReadPgStatDatabase:   statsAccess.CanReadPGStatDatabase,
+		CanExecuteServerProgram: statsAccess.CanExecuteServerProgram,
 	}
 }
 
@@ -923,11 +938,14 @@ func (s *Service) buildServerInfo(ctx context.Context, instanceName resource.Ins
 	}
 
 	si := &v1alpha1.ServerInfo{
-		Version:         info.Version,
-		VersionNum:      info.VersionNum,
-		VersionShort:    formatVersionShort(info.VersionNum),
-		ReplicationRole: replicationRoleFromRecovery(info.IsInRecovery),
-		MaxConnections:  info.MaxConnections,
+		Version:                              info.Version,
+		VersionNum:                           info.VersionNum,
+		VersionShort:                         formatVersionShort(info.VersionNum),
+		ReplicationRole:                      replicationRoleFromRecovery(info.IsInRecovery),
+		MaxConnections:                       info.MaxConnections,
+		ConnectedRole:                        info.ConnectedRole,
+		ConnectedRoleIsSuperuser:             info.ConnectedRoleIsSuperuser,
+		ConnectedRoleCanExecuteServerProgram: info.ConnectedRoleCanExecuteServerProgram,
 	}
 
 	if !info.StartedAt.IsZero() {
@@ -1131,8 +1149,45 @@ func updateMaskTouchesConfig(mask *fieldmaskpb.FieldMask) bool {
 	return false
 }
 
+func updateMaskTouchesConnectionConfig(mask *fieldmaskpb.FieldMask) bool {
+	for _, path := range mask.GetPaths() {
+		switch path {
+		case "config.allow_mutations", "config.statement_timeout":
+			continue
+		case "config":
+			return true
+		default:
+			if strings.HasPrefix(path, "config.") {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 // configManagedError returns a FailedPrecondition error indicating that
 // instance mutations are not allowed because instances are config-managed.
+func (s *Service) validateInstanceConfigUpdate(ctx context.Context, instance *v1alpha1.Instance, originalName string, testConnection bool) error {
+	if err := validatePostgresConfigSSLNegotiation(instance.GetConfig(), "instance.config"); err != nil {
+		return err
+	}
+
+	if err := validatePostgresConfigStatementTimeout(instance.GetConfig(), "instance.config"); err != nil {
+		return err
+	}
+
+	if !testConnection {
+		return nil
+	}
+
+	if err := s.connManager.TestConnection(ctx, instance); err != nil {
+		return s.connectionTestError(ctx, "instance.config", originalName, err)
+	}
+
+	return nil
+}
+
 func configManagedError() *connect.Error {
 	return connect.NewError(connect.CodeFailedPrecondition, storage.ErrConfigManaged)
 }
@@ -1163,6 +1218,10 @@ func (s *Service) createInstanceRequestToBody(req *v1alpha1.CreateInstanceReques
 			)
 		}
 
+		if err := validatePostgresConfigStatementTimeout(req.GetSpec().GetConfig(), "spec.config"); err != nil {
+			return nil, err
+		}
+
 		return &createInstanceBody{
 			instance:    createInstanceBodyInstance(req.GetSpec().GetDisplayName(), req.GetSpec().GetLabels(), req.GetSpec().GetConfig()),
 			configField: "spec.config",
@@ -1173,6 +1232,10 @@ func (s *Service) createInstanceRequestToBody(req *v1alpha1.CreateInstanceReques
 		return nil, apierrors.NewInvalidArgumentError(
 			apierrors.NewFieldViolation("instance.config", "is required"),
 		)
+	}
+
+	if err := validatePostgresConfigStatementTimeout(req.GetInstance().GetConfig(), "instance.config"); err != nil {
+		return nil, err
 	}
 
 	return &createInstanceBody{

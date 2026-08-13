@@ -78,6 +78,7 @@ export const STATIC_QUERY_OPTIONS = {
  * when the tab is hidden (refetchIntervalInBackground stays false).
  */
 export const ADMIN_OPS_REFETCH_INTERVALS = {
+  auditLog: 10_000,
   catalogSync: 30_000,
   jobQueue: 10_000,
   replicas: 10_000,

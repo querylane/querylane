@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -350,13 +351,15 @@ func configToProto(id string, cfg *serverconfig.InstanceConfig, now *timestamppb
 		DisplayName: cfg.DisplayName,
 		Labels:      cfg.Labels,
 		Config: &api.PostgresConfig{
-			Host:           cfg.EffectiveHost(),
-			Port:           int32(cfg.EffectivePort()), //nolint:gosec // G115: Port is validated 1-65535 by InstanceConfig.Validate
-			Database:       cfg.EffectiveDatabase(),
-			Username:       cfg.EffectiveUsername(),
-			Password:       cfg.EffectivePassword(),
-			SslMode:        sslModeStringToProto(cfg.EffectiveSSLMode()),
-			SslNegotiation: sslNegotiationStringToProto(cfg.EffectiveSSLNegotiation()),
+			Host:             cfg.EffectiveHost(),
+			Port:             int32(cfg.EffectivePort()), //nolint:gosec // G115: Port is validated 1-65535 by InstanceConfig.Validate
+			Database:         cfg.EffectiveDatabase(),
+			Username:         cfg.EffectiveUsername(),
+			Password:         cfg.EffectivePassword(),
+			SslMode:          sslModeStringToProto(cfg.EffectiveSSLMode()),
+			SslNegotiation:   sslNegotiationStringToProto(cfg.EffectiveSSLNegotiation()),
+			AllowMutations:   cfg.AllowMutations,
+			StatementTimeout: durationpb.New(cfg.StatementTimeout),
 		},
 		CreateTime: now,
 		UpdateTime: now,

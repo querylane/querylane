@@ -153,7 +153,10 @@ vi.mock("@/hooks/api/view", () => ({
 }));
 
 vi.mock("@/lib/db-context", () => ({
-  useDb: () => ({ selectedDatabase: { name: "appdb" } }),
+  useDb: () => ({
+    selectedDatabase: { name: "appdb" },
+    selectedInstance: { allowMutations: true },
+  }),
 }));
 
 vi.mock("@/lib/route-prefetch", () => ({

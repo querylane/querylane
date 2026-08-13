@@ -1,4 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
+import { DurationSchema } from "@bufbuild/protobuf/wkt";
 import type { useGetInstanceQuery } from "@/hooks/api/instance";
 import { createProtoStandardSchema } from "@/lib/proto-standard-schema";
 import {
@@ -24,6 +25,7 @@ interface InstanceLabelEntry {
 }
 
 type InstanceFormFieldName =
+  | "allowMutations"
   | "database"
   | "displayName"
   | "host"
@@ -31,6 +33,7 @@ type InstanceFormFieldName =
   | "port"
   | "sslMode"
   | "sslNegotiation"
+  | "statementTimeoutSeconds"
   | "username";
 type InstanceFormInvalidFieldName = InstanceFormFieldName | "labels";
 type InstanceFormErrors = Partial<Record<InstanceFormInvalidFieldName, string>>;
@@ -43,6 +46,7 @@ interface InstanceValidationResult {
 }
 
 interface InstanceFormState {
+  allowMutations: boolean;
   database: string;
   dirtyFields?: InstanceFormDirtyFields;
   displayName: string;
@@ -52,6 +56,7 @@ interface InstanceFormState {
   port: string;
   sslMode: string;
   sslNegotiation: string;
+  statementTimeoutSeconds: string;
   username: string;
 }
 
@@ -59,6 +64,9 @@ const DEFAULT_POSTGRES_PORT = 5432;
 const MIN_POSTGRES_PORT = 1;
 const MAX_POSTGRES_PORT = 65_535;
 const POSTGRES_PORT_PATTERN = /^\d+$/;
+const DEFAULT_STATEMENT_TIMEOUT_SECONDS = 30;
+const MAX_STATEMENT_TIMEOUT_SECONDS = 60;
+const MIN_STATEMENT_TIMEOUT_SECONDS = 1;
 const INSTANCE_CONFIG_STANDARD_SCHEMA = createProtoStandardSchema(
   CreateInstanceSpecSchema
 );
@@ -70,6 +78,7 @@ const INSTANCE_FIELD_FOCUS_ORDER = [
   "username",
   "password",
   "sslNegotiation",
+  "statementTimeoutSeconds",
   "labels",
 ] as const satisfies readonly InstanceFormInvalidFieldName[];
 
@@ -132,6 +141,21 @@ function parseInstanceFormPort(port: string): number | null {
   return nextPort;
 }
 
+function parseStatementTimeoutSeconds(value: string): number | null {
+  const normalizedValue = value.trim();
+  const seconds = Number(normalizedValue);
+  if (
+    !(
+      POSTGRES_PORT_PATTERN.test(normalizedValue) && Number.isInteger(seconds)
+    ) ||
+    seconds < MIN_STATEMENT_TIMEOUT_SECONDS ||
+    seconds > MAX_STATEMENT_TIMEOUT_SECONDS
+  ) {
+    return null;
+  }
+  return seconds;
+}
+
 function labelsToMap(labels: InstanceLabelEntry[]): Record<string, string> {
   const labelsMap: Record<string, string> = {};
   for (const label of labels) {
@@ -144,6 +168,8 @@ function getInstanceFormErrorMessage(
   field: InstanceFormInvalidFieldName
 ): string {
   switch (field) {
+    case "allowMutations":
+      return "Mutation mode is invalid.";
     case "database":
       return "Default database is required.";
     case "displayName":
@@ -162,6 +188,8 @@ function getInstanceFormErrorMessage(
       return "SSL mode is invalid.";
     case "sslNegotiation":
       return "Direct SSL negotiation requires SSL mode require, verify-ca, or verify-full.";
+    case "statementTimeoutSeconds":
+      return `Statement timeout must be between ${MIN_STATEMENT_TIMEOUT_SECONDS} and ${MAX_STATEMENT_TIMEOUT_SECONDS} seconds.`;
     default:
       return "Invalid field value.";
   }
@@ -232,14 +260,21 @@ function validateInstanceForm(
   formState: InstanceFormState
 ): InstanceValidationResult {
   const parsedPort = parseInstanceFormPort(formState.port);
+  const statementTimeoutSeconds = parseStatementTimeoutSeconds(
+    formState.statementTimeoutSeconds
+  );
   const spec = createProto(CreateInstanceSpecSchema, {
     config: createProto(PostgresConfigSchema, {
+      allowMutations: formState.allowMutations,
       database: formState.database.trim(),
       host: formState.host.trim(),
       password: formState.password,
       port: parsedPort ?? 0,
       sslMode: toSslMode(formState.sslMode),
       sslNegotiation: toSslNegotiation(formState.sslNegotiation),
+      statementTimeout: createProto(DurationSchema, {
+        seconds: BigInt(statementTimeoutSeconds ?? 0),
+      }),
       username: formState.username.trim(),
     }),
     displayName: formState.displayName.trim(),
@@ -253,6 +288,11 @@ function validateInstanceForm(
   }
   const errors = collectInstanceFormErrors(formState, validation.issues);
   Object.assign(errors, getSslNegotiationErrors(formState));
+  if (statementTimeoutSeconds === null) {
+    errors.statementTimeoutSeconds = getInstanceFormErrorMessage(
+      "statementTimeoutSeconds"
+    );
+  }
 
   return {
     errors,
@@ -275,6 +315,7 @@ function trimInstanceFormState(
     displayName: formState.displayName.trim(),
     host: formState.host.trim(),
     port: formState.port.trim(),
+    statementTimeoutSeconds: formState.statementTimeoutSeconds.trim(),
     username: formState.username.trim(),
   };
 }
@@ -321,6 +362,18 @@ function buildInstanceConfigUpdatePaths({
           normalizeSslNegotiation(instance.config?.sslNegotiation),
         "config.ssl_negotiation",
       ],
+      [
+        formState.allowMutations !== (instance.config?.allowMutations ?? false),
+        "config.allow_mutations",
+      ],
+      [
+        parseStatementTimeoutSeconds(formState.statementTimeoutSeconds) !==
+          Number(
+            instance.config?.statementTimeout?.seconds ??
+              BigInt(DEFAULT_STATEMENT_TIMEOUT_SECONDS)
+          ),
+        "config.statement_timeout",
+      ],
     ];
   return changedPaths.flatMap(([changed, path]) => (changed ? [path] : []));
 }
@@ -359,10 +412,12 @@ export {
   buildInstanceUpdatePaths,
   createLabelEntry,
   DEFAULT_POSTGRES_PORT,
+  DEFAULT_STATEMENT_TIMEOUT_SECONDS,
   labelsEqual,
   labelsToEntries,
   labelsToMap,
   parseInstanceFormPort,
+  parseStatementTimeoutSeconds,
   trimInstanceFormState,
   validateInstanceForm,
 };

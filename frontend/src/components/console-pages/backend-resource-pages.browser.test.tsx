@@ -494,6 +494,7 @@ vi.mock("@/lib/db-context", () => ({
     },
     retryInstanceCatalog: vi.fn(async () => undefined),
     selectedInstance: {
+      allowMutations: false,
       connectionError: "",
       host: "analytics-writer.internal.querylane.test",
       id: "prod",

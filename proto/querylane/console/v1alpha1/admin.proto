@@ -4,6 +4,7 @@ package querylane.console.v1alpha1;
 
 import "buf/validate/validate.proto";
 import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "querylane/console/v1alpha1/catalog_sync.proto";
@@ -29,6 +30,9 @@ service AdminService {
   // Reports storage consumed by the metrics sample tables and the
   // configured retention period.
   rpc GetMetricsStorageStats(GetMetricsStorageStatsRequest) returns (GetMetricsStorageStatsResponse) {}
+
+  // Lists the immutable audit trail for mutations run through Querylane.
+  rpc ListAuditLogEntries(ListAuditLogEntriesRequest) returns (ListAuditLogEntriesResponse) {}
 }
 
 // Replica is one querylane backend process, registered via periodic
@@ -149,6 +153,59 @@ message ListAdminRunnerExecutionsRequest {
 
 message ListAdminRunnerExecutionsResponse {
   repeated AdminRunnerExecution runner_executions = 1;
+  string next_page_token = 2;
+}
+
+// AuditLogEntry is one mutation attempt against a managed PostgreSQL
+// instance. Entries are created before execution and finalized afterward, so
+// failed and interrupted attempts remain visible.
+message AuditLogEntry {
+  option (google.api.resource) = {
+    type: "console.querylane.dev/AuditLogEntry"
+    pattern: "auditLogEntries/{audit_log_entry}"
+    plural: "auditLogEntries"
+    singular: "auditLogEntry"
+  };
+
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    STATUS_STARTED = 1;
+    STATUS_SUCCEEDED = 2;
+    STATUS_FAILED = 3;
+  }
+
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  string actor = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string action = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string statement = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string target = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string instance = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string database = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  Status status = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string result_summary = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp started_at = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp finished_at = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message ListAuditLogEntriesRequest {
+  int32 page_size = 1 [
+    (google.api.field_behavior) = OPTIONAL,
+    (buf.validate.field).int32 = {
+      gte: 0
+      lte: 1000
+    }
+  ];
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. AIP-160 filter. Reserved for server-side audit filtering.
+  string filter = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. AIP-132 order_by. Entries are currently returned newest first.
+  string order_by = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListAuditLogEntriesResponse {
+  repeated AuditLogEntry audit_log_entries = 1;
   string next_page_token = 2;
 }
 

@@ -131,12 +131,13 @@ instance_targets:
 	s.instanceID = "test-ext"
 
 	pgConfig := &consolev1alpha1.PostgresConfig{
-		Host:     host,
-		Port:     mustAtoi(t, port),
-		Database: externalDBName,
-		Username: "testuser",
-		Password: "testpass",
-		SslMode:  consolev1alpha1.PostgresConfig_SSL_MODE_DISABLED,
+		Host:           host,
+		Port:           mustAtoi(t, port),
+		Database:       externalDBName,
+		Username:       "testuser",
+		Password:       "testpass",
+		SslMode:        consolev1alpha1.PostgresConfig_SSL_MODE_DISABLED,
+		AllowMutations: true,
 	}
 
 	_, err = s.instanceClient.CreateInstance(ctx, connect.NewRequest(&consolev1alpha1.CreateInstanceRequest{

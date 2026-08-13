@@ -125,14 +125,15 @@ type ReplicationHealth struct {
 // StatsAccessHealth describes whether the connected role has enough catalog
 // and statistics visibility for rich diagnostics.
 type StatsAccessHealth struct {
-	Status                HealthStatus
-	Summary               string
-	CurrentUser           string
-	Superuser             bool
-	PGMonitorMember       bool
-	PGReadAllStatsMember  bool
-	CanReadPGStatActivity bool
-	CanReadPGStatDatabase bool
+	Status                  HealthStatus
+	Summary                 string
+	CurrentUser             string
+	Superuser               bool
+	PGMonitorMember         bool
+	PGReadAllStatsMember    bool
+	CanReadPGStatActivity   bool
+	CanReadPGStatDatabase   bool
+	CanExecuteServerProgram bool
 }
 
 // PGStatStatementsHealth describes whether pg_stat_statements is installed,
@@ -361,11 +362,14 @@ type RoleDefaultPrivilege struct {
 
 // ServerInfo holds live metadata queried from a PostgreSQL instance.
 type ServerInfo struct {
-	Version        string
-	VersionNum     int32
-	StartedAt      time.Time
-	IsInRecovery   bool
-	MaxConnections int32
+	Version                              string
+	VersionNum                           int32
+	StartedAt                            time.Time
+	IsInRecovery                         bool
+	MaxConnections                       int32
+	ConnectedRole                        string
+	ConnectedRoleIsSuperuser             bool
+	ConnectedRoleCanExecuteServerProgram bool
 }
 
 // Database represents a database within an external instance.

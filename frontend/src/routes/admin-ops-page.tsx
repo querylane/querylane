@@ -1,3 +1,4 @@
+import { AuditLogSection } from "@/components/admin-ops/audit-log-section";
 import { BuildInfoSection } from "@/components/admin-ops/build-info-section";
 import { CatalogSyncSection } from "@/components/admin-ops/catalog-sync-section";
 import { JobQueueSection } from "@/components/admin-ops/job-queue-section";
@@ -24,6 +25,7 @@ export function AdminOpsSections() {
       />
       <ReplicasSection />
       <JobQueueSection />
+      <AuditLogSection />
       <CatalogSyncSection />
       <StorageSection />
       <BuildInfoSection />

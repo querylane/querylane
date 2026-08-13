@@ -3,8 +3,8 @@
 --
 
 
--- Dumped from database version 16.13
--- Dumped by pg_dump version 16.13
+-- Dumped from database version 16.14
+-- Dumped by pg_dump version 16.14
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -447,6 +447,40 @@ CREATE TABLE public.instance_storage_sample (
 
 
 --
+-- Name: mutation_audit_log; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.mutation_audit_log (
+    id bigint NOT NULL,
+    actor text NOT NULL,
+    action text NOT NULL,
+    statement text NOT NULL,
+    target text NOT NULL,
+    instance_name text NOT NULL,
+    database_name text NOT NULL,
+    status text NOT NULL,
+    result_summary text DEFAULT ''::text NOT NULL,
+    started_at timestamp with time zone DEFAULT now() NOT NULL,
+    finished_at timestamp with time zone,
+    CONSTRAINT mutation_audit_log_status_check CHECK ((status = ANY (ARRAY['STARTED'::text, 'SUCCEEDED'::text, 'FAILED'::text])))
+);
+
+
+--
+-- Name: mutation_audit_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.mutation_audit_log ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.mutation_audit_log_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: replica; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -648,6 +682,14 @@ ALTER TABLE ONLY public.instance_storage_sample
 
 
 --
+-- Name: mutation_audit_log mutation_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mutation_audit_log
+    ADD CONSTRAINT mutation_audit_log_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: replica replica_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -760,6 +802,13 @@ CREATE INDEX idx_instance_runtime_state_connection_checked_at ON public.instance
 --
 
 CREATE INDEX idx_instance_storage_sample_observed_at ON public.instance_storage_sample USING btree (observed_at);
+
+
+--
+-- Name: idx_mutation_audit_log_instance_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_mutation_audit_log_instance_id ON public.mutation_audit_log USING btree (instance_name, id DESC);
 
 
 --

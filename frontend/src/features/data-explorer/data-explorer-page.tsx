@@ -91,6 +91,7 @@ function DataExplorerPage({
       hasMoreTables={explorer.schemaOverview.hasMoreTables}
       hasMoreViews={explorer.schemaOverview.hasMoreViews}
       instanceId={explorer.instanceId}
+      mutationsAllowed={explorer.mutationsAllowed}
       onSchemaTabChange={handleSchemaTabChange}
       onSelectResource={handleSelectResource}
       onSelectTableInSchema={handleSelectTableInSchema}

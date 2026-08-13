@@ -7,6 +7,7 @@ import "google/api/annotations.proto";
 import "google/api/client.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
+import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
 // --------------------------------------------------------------------------
@@ -339,6 +340,14 @@ message RefreshMaterializedViewRequest {
     (google.api.field_behavior) = OPTIONAL,
     (buf.validate.field).enum.defined_only = true
   ];
+
+  // Required. Must exactly match the schema-qualified, quoted SQL identifier
+  // derived from name, such as `"public"."daily_revenue"`. This prevents
+  // stale or accidental UI confirmations from authorizing a different target.
+  string confirmation = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Per-request timeout override, capped by the server.
+  google.protobuf.Duration timeout = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // Response message for RefreshMaterializedView.
