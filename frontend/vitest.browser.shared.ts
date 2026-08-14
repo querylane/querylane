@@ -157,9 +157,6 @@ function createBrowserConfig(themes: readonly BrowserTheme[]) {
       },
       clearMocks: true,
       exclude: ["node_modules/**"],
-      // page.viewport mutates the shared browser page. Parallel files can reset
-      // it while a responsive assertion or screenshot is still in flight.
-      fileParallelism: false,
       include: ["src/**/*.browser.{test,spec}.{ts,tsx}"],
       name: getBrowserProjectName(themes),
       passWithNoTests: false,

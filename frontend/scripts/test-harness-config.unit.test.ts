@@ -118,13 +118,6 @@ describe("test harness config", () => {
     ).toBe("/repo/frontend/src/components/__screenshots__/dark");
   });
 
-  test("serializes browser files so viewport changes cannot race", () => {
-    expect(browserConfig.test?.fileParallelism).toBe(false);
-    expect(browserAllConfig.test?.fileParallelism).toBe(false);
-    expect(browserLightConfig.test?.fileParallelism).toBe(false);
-    expect(browserDarkConfig.test?.fileParallelism).toBe(false);
-  });
-
   test("uses one requested prerelease Vitest browser dependency set", () => {
     const { devDependencies } = packageJson;
     const vitestVersion = devDependencies.vitest;

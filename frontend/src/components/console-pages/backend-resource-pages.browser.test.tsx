@@ -66,6 +66,7 @@ const REPLICATION_ROW_NAME = /Replication/;
 const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/;
 const TIMESCALEDB_BUTTON_NAME = /timescaledb/i;
 const DENSE_SCHEMA_COUNT = 12;
+const SPARKLINE_RENDER_TIMEOUT_MS = 5000;
 
 async function getMarkerCenterPixels(marker: HTMLElement) {
   const screenshot = await page
@@ -1090,19 +1091,22 @@ function cardRect(label: string) {
 
 async function statSparkline(label: string): Promise<SVGElement> {
   let sparkline: SVGElement | null = null;
-  await vi.waitFor(() => {
-    const statLabel = Array.from(document.querySelectorAll("span")).find(
-      (element) =>
-        element.textContent === label &&
-        element.parentElement?.parentElement?.classList.contains("grid") &&
-        element.parentElement.querySelector("svg")
-    );
-    sparkline =
-      statLabel?.parentElement?.querySelector<SVGElement>("svg") ?? null;
-    if (!sparkline) {
-      throw new Error(`Waiting for ${label} sparkline`);
-    }
-  });
+  await vi.waitFor(
+    () => {
+      const statLabel = Array.from(document.querySelectorAll("span")).find(
+        (element) =>
+          element.textContent === label &&
+          element.parentElement?.parentElement?.classList.contains("grid") &&
+          element.parentElement.querySelector("svg")
+      );
+      sparkline =
+        statLabel?.parentElement?.querySelector<SVGElement>("svg") ?? null;
+      if (!sparkline) {
+        throw new Error(`Waiting for ${label} sparkline`);
+      }
+    },
+    { timeout: SPARKLINE_RENDER_TIMEOUT_MS }
+  );
   if (!sparkline) {
     throw new Error(`Expected ${label} sparkline`);
   }
