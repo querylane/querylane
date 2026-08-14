@@ -1658,6 +1658,9 @@ test("backend database overview qualifies a bounded catalog sample", async () =>
     .toBeVisible();
   await expect.element(page.getByText("2+ schemas")).toBeVisible();
   await expect.element(page.getByText("partial sample")).toBeVisible();
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "backend-database-overview-partial-catalog"
+  );
 });
 
 test("database overview keeps passive sparklines large on mobile", async () => {
