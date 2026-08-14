@@ -1,3 +1,4 @@
+import { create } from "@bufbuild/protobuf";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -18,6 +19,8 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouteErrorView } from "@/components/route-error-view";
 import { reserveChunkLoadReloadAttempt } from "@/lib/chunk-load-recovery";
+import { GetOnboardingStateResponseSchema } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
+import { useSetupStore } from "@/stores/setup-store";
 
 const CHUNK_LOAD_ERROR = new Error(
   "Loading chunk 9818 failed.\n(missing: https://demo.querylane.net/static/js/async/9818.55e76f5dd2.js)"
@@ -36,6 +39,10 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   window.sessionStorage.clear();
+  useSetupStore.setState({
+    onboardingState: null,
+    showDegradedBanner: false,
+  });
 });
 
 describe("route error view", () => {
@@ -93,5 +100,30 @@ describe("route error view", () => {
 
     await waitFor(() => expect(routerMock.invalidate).toHaveBeenCalledTimes(1));
     expect(reset).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers internal storage recovery from a degraded route error", async () => {
+    const user = userEvent.setup();
+    useSetupStore.setState({
+      onboardingState: create(GetOnboardingStateResponseSchema, {
+        configFilePath: "/tmp/querylane/config.yaml",
+        isConfigured: true,
+      }),
+      showDegradedBanner: true,
+    });
+
+    renderRouteErrorView(
+      <RouteErrorView
+        error={new Error("meta database unavailable")}
+        reset={vi.fn()}
+      />
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Reconfigure internal storage" })
+    );
+
+    screen.getByRole("heading", { name: "Reconfigure internal storage" });
+    screen.getByText("/tmp/querylane/config.yaml");
   });
 });

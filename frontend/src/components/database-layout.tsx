@@ -4,6 +4,8 @@ import { CatchBoundary, useLocation } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { AdminHeader } from "@/components/admin-header";
 import { AdminKeyboardShortcuts } from "@/components/admin-keyboard-shortcuts";
+import { DEFAULT_CONFIG_FILE_PATH } from "@/components/config-managed-guidance";
+import { InternalStorageRecoveryDialog } from "@/components/internal-storage-recovery";
 import { KeyboardShortcutsProvider } from "@/components/keyboard-shortcuts";
 import { CommandPaletteProvider } from "@/components/querylane-ui/admin-command-palette";
 import {
@@ -95,6 +97,9 @@ export function DatabaseLayout({
   page?: AdminPageId;
 }) {
   const showDegradedBanner = useSetupStore((state) => state.showDegradedBanner);
+  const configFilePath = useSetupStore(
+    (state) => state.onboardingState?.configFilePath || DEFAULT_CONFIG_FILE_PATH
+  );
 
   // Data Explorer renders its own full-bleed layout with an internal sidebar.
   // Use the committed page match from the parent route so pending navigations
@@ -128,9 +133,15 @@ export function DatabaseLayout({
                 <AdminHeader />
                 <RouteProgressBar />
                 {showDegradedBanner ? (
-                  <output className="block border-amber-400/40 border-b bg-amber-500/10 px-4 py-2 text-amber-700 text-xs dark:text-amber-300">
-                    Meta-database unreachable. Running in degraded mode.
-                  </output>
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-destructive/30 border-b bg-destructive/10 px-4 py-2 text-destructive text-xs">
+                    <output>
+                      Meta database unavailable. Querylane is running in
+                      degraded mode.
+                    </output>
+                    <InternalStorageRecoveryDialog
+                      configFilePath={configFilePath}
+                    />
+                  </div>
                 ) : null}
                 <div
                   className={cn(

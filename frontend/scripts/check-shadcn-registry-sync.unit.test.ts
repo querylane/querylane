@@ -138,6 +138,29 @@ describe("shadcn registry sync check", () => {
     expect(runShadcnRegistrySyncCheck({ runner })).toBe(0);
   });
 
+  test("allows the established card content spacing contract", () => {
+    const runner = {
+      run: (_command: string, args: readonly string[]) => {
+        if (args.includes("info")) {
+          return {
+            status: 0,
+            stderr: "",
+            stdout: JSON.stringify({ components: ["card"] }),
+          };
+        }
+
+        return {
+          status: 0,
+          stderr: "",
+          stdout: `├ Files (1) ~1 overwrite
+│ ~ src/components/ui/card.tsx overwrite`,
+        };
+      },
+    };
+
+    expect(runShadcnRegistrySyncCheck({ runner })).toBe(0);
+  });
+
   test("does not allow drift for the deleted calendar component", () => {
     const consoleError = mockExpectedConsoleError();
     const runner = {
