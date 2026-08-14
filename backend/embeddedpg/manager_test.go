@@ -1,6 +1,7 @@
 package embeddedpg
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -184,45 +185,47 @@ func TestSelectFreePort(t *testing.T) {
 	t.Run("honors a free preferred port", func(t *testing.T) {
 		t.Parallel()
 
-		listener, err := net.Listen("tcp4", "127.0.0.1:0") //nolint:noctx // Test owns the listener lifecycle.
-		require.NoError(t, err)
+		const preferredPort = 6000
 
-		address, ok := listener.Addr().(*net.TCPAddr)
-		require.True(t, ok)
-		require.NoError(t, listener.Close())
-
-		port, err := selectFreePort(t.Context(), address.Port)
+		port, err := selectFreePortWithAvailability(
+			t.Context(),
+			preferredPort,
+			func(_ context.Context, port int) (bool, error) {
+				return port == preferredPort, nil
+			},
+		)
 		require.NoError(t, err)
-		assert.Equal(t, address.Port, port)
+		assert.Equal(t, preferredPort, port)
 	})
 
 	t.Run("skips a busy preferred port", func(t *testing.T) {
 		t.Parallel()
 
-		listener, err := net.Listen("tcp4", "127.0.0.1:0") //nolint:noctx // Test owns the listener lifecycle.
-		require.NoError(t, err)
-		t.Cleanup(func() {
-			require.NoError(t, listener.Close())
-		})
+		const preferredPort = 6000
 
-		address, ok := listener.Addr().(*net.TCPAddr)
-		require.True(t, ok)
-
-		port, err := selectFreePort(t.Context(), address.Port)
+		port, err := selectFreePortWithAvailability(
+			t.Context(),
+			preferredPort,
+			func(_ context.Context, port int) (bool, error) {
+				return port != preferredPort, nil
+			},
+		)
 		require.NoError(t, err)
-		assert.NotEqual(t, address.Port, port)
-		assert.GreaterOrEqual(t, port, defaultAutoPort)
-		assert.Less(t, port, defaultAutoPort+autoPortRangeSize)
+		assert.Equal(t, defaultAutoPort, port)
 	})
 
 	t.Run("falls back within the auto range without a preference", func(t *testing.T) {
 		t.Parallel()
 
-		port, err := selectFreePort(t.Context(), 0)
+		port, err := selectFreePortWithAvailability(
+			t.Context(),
+			0,
+			func(_ context.Context, _ int) (bool, error) {
+				return true, nil
+			},
+		)
 		require.NoError(t, err)
-		assert.GreaterOrEqual(t, port, defaultAutoPort)
-		assert.Less(t, port, defaultAutoPort+autoPortRangeSize)
-		assert.False(t, portHasActiveListener(t.Context(), port))
+		assert.Equal(t, defaultAutoPort, port)
 	})
 }
 

@@ -366,35 +366,53 @@ const autoPortRangeSize = 100
 // checkPortAvailable verifies nothing listens on the port and that it can be
 // bound, returning the user-facing "already in use" error otherwise.
 func checkPortAvailable(ctx context.Context, port int) error {
-	if portHasActiveListener(ctx, port) {
+	available, err := portAvailable(ctx, port)
+	if err != nil {
+		return err
+	}
+
+	if !available {
 		return fmt.Errorf(
 			"embedded postgres port %d is already in use; stop the process using it or set embedded.port to another available port",
 			port,
 		)
 	}
 
+	return nil
+}
+
+func portAvailable(ctx context.Context, port int) (bool, error) {
+	if portHasActiveListener(ctx, port) {
+		return false, nil
+	}
+
 	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp4", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		if errors.Is(err, syscall.EADDRINUSE) {
-			return fmt.Errorf(
-				"embedded postgres port %d is already in use; stop the process using it or set embedded.port to another available port",
-				port,
-			)
+			return false, nil
 		}
 
-		return fmt.Errorf("check embedded postgres port %d availability: %w", port, err)
+		return false, fmt.Errorf("check embedded postgres port %d availability: %w", port, err)
 	}
 
 	if err := listener.Close(); err != nil {
-		return fmt.Errorf("release embedded postgres port %d after availability check: %w", port, err)
+		return false, fmt.Errorf("release embedded postgres port %d after availability check: %w", port, err)
 	}
 
-	return nil
+	return true, nil
 }
 
 // selectFreePort returns the first available port, trying preferred first
 // (when non-zero), then defaultAutoPort and the ports above it.
 func selectFreePort(ctx context.Context, preferred int) (int, error) {
+	return selectFreePortWithAvailability(ctx, preferred, portAvailable)
+}
+
+func selectFreePortWithAvailability(
+	ctx context.Context,
+	preferred int,
+	isAvailable func(context.Context, int) (bool, error),
+) (int, error) {
 	candidates := make([]int, 0, autoPortRangeSize+1)
 	if preferred != 0 {
 		candidates = append(candidates, preferred)
@@ -407,24 +425,14 @@ func selectFreePort(ctx context.Context, preferred int) (int, error) {
 	}
 
 	for _, port := range candidates {
-		if portHasActiveListener(ctx, port) {
-			continue
-		}
-
-		listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp4", fmt.Sprintf("127.0.0.1:%d", port))
+		available, err := isAvailable(ctx, port)
 		if err != nil {
-			if errors.Is(err, syscall.EADDRINUSE) {
-				continue
-			}
-
-			return 0, fmt.Errorf("check embedded postgres port %d availability: %w", port, err)
+			return 0, err
 		}
 
-		if err := listener.Close(); err != nil {
-			return 0, fmt.Errorf("release embedded postgres port %d after availability check: %w", port, err)
+		if available {
+			return port, nil
 		}
-
-		return port, nil
 	}
 
 	return 0, fmt.Errorf(
