@@ -1,5 +1,6 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { anyPack, timestampFromDate } from "@bufbuild/protobuf/wkt";
+import { Code, ConnectError } from "@connectrpc/connect";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
@@ -533,6 +534,24 @@ function instanceResponse({
         }
       : {}),
   });
+}
+
+function metaDatabaseUnavailableError() {
+  const error = new ConnectError(
+    "meta database is unavailable",
+    Code.Unavailable
+  );
+  error.details = [
+    {
+      debug: {
+        domain: "console.querylane.dev",
+        reason: "ERROR_REASON_APP_DATABASE_UNAVAILABLE",
+      },
+      type: "google.rpc.ErrorInfo",
+      value: new Uint8Array([1]),
+    },
+  ];
+  return error;
 }
 
 test("backend instance page explains unavailable server info", async () => {
@@ -1165,6 +1184,48 @@ test("backend instance overview shows live metrics and database catalog together
     "backend-instance-overview"
   );
   await expect(health).toMatchScreenshot("backend-instance-overview-health");
+});
+
+test("instance overview keeps cached catalog visible during a meta database outage", async () => {
+  const dependencyError = metaDatabaseUnavailableError();
+  state.instanceQuery = {
+    data: instanceResponse(),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
+    error: dependencyError,
+  };
+  state.overviewQuery = {
+    data: overviewResponse(),
+    error: dependencyError,
+  };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1120px] rounded-xl border border-border bg-background p-6 text-foreground">
+        <BackendInstancePage
+          instanceId="prod"
+          searchRoute="/instances/$instanceId"
+          section="overview"
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await expect
+    .element(page.getByText("Meta database unavailable"))
+    .toBeVisible();
+  await expect.element(page.getByText("Status unavailable")).toBeVisible();
+  await expect.element(page.getByText("customer_events")).toBeVisible();
+  await expect
+    .element(
+      page.getByText("Showing the last loaded data until refresh succeeds.")
+    )
+    .toBeVisible();
+  expect(page.getByText("Connected", { exact: true }).elements()).toHaveLength(
+    0
+  );
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "backend-instance-overview-meta-database-unavailable"
+  );
 });
 
 test("instance overview keeps passive sparklines large on mobile", async () => {

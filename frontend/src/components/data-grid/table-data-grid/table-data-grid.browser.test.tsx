@@ -1,4 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
+import { Code, ConnectError } from "@connectrpc/connect";
 import { afterEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
@@ -77,6 +78,7 @@ const shipmentsName =
   "instances/prod/databases/app/schemas/shipping/tables/shipments";
 const carriersName =
   "instances/prod/databases/app/schemas/public/tables/carriers";
+const PAGE_LABEL_RE = /Page \d+/;
 const longSchemaName = `schema_${"x".repeat(56)}`;
 const longCarriersName = `instances/prod/databases/app/schemas/${longSchemaName}/tables/carriers`;
 
@@ -285,6 +287,97 @@ const resultColumns = [
   column("active", "bool", DataType.BOOLEAN),
   column("last_seen_at", "timestamptz", DataType.TIMESTAMP),
 ];
+
+function instanceUnavailableRowsError() {
+  const error = new ConnectError(
+    "PostgreSQL instance is unavailable",
+    Code.Unavailable
+  );
+  error.details = [
+    {
+      debug: {
+        domain: "console.querylane.dev",
+        reason: "INSTANCE_UNAVAILABLE",
+      },
+      type: "google.rpc.ErrorInfo",
+      value: new Uint8Array([1]),
+    },
+  ];
+  return error;
+}
+
+function staleCustomerRows() {
+  return createProto(ReadRowsResponseSchema, {
+    nextPageToken: "customers-page-3",
+    resultSet: createProto(TableResultSetSchema, {
+      columns: resultColumns,
+      rows: [
+        createProto(TableResultRowSchema, {
+          rowKey: "customer-1051",
+          values: [
+            cell({ case: "stringValue", value: "cst_0000001051" }),
+            cell({ case: "stringValue", value: "arun.patel@example.com" }),
+            cell({ case: "jsonValue", value: '{"tier":"enterprise"}' }),
+            cell({ case: "boolValue", value: true }),
+            cell({
+              case: "timestampValue",
+              value: "2026-08-12T09:14:00Z",
+            }),
+          ],
+        }),
+        createProto(TableResultRowSchema, {
+          rowKey: "customer-1052",
+          values: [
+            cell({ case: "stringValue", value: "cst_0000001052" }),
+            cell({ case: "stringValue", value: "maria.chen@example.com" }),
+            cell({ case: "jsonValue", value: '{"tier":"growth"}' }),
+            cell({ case: "boolValue", value: true }),
+            cell({
+              case: "timestampValue",
+              value: "2026-08-12T09:12:00Z",
+            }),
+          ],
+        }),
+      ],
+    }),
+  });
+}
+
+function renderUnavailableRowsGrid() {
+  const lastSuccessfulData = staleCustomerRows();
+  tableApi.useListTableColumnsQuery.mockReturnValue({
+    data: createProto(ListTableColumnsResponseSchema, {
+      columns: resultColumns.map((resultColumn) =>
+        createProto(ColumnSchema, {
+          columnName: resultColumn.columnName,
+          dataType: resultColumn.dataType,
+          rawType: resultColumn.rawType,
+        })
+      ),
+    }),
+    error: null,
+    isError: false,
+    refetch: vi.fn(),
+  });
+  tableDataApi.useReadRowsQuery.mockReturnValue({
+    data: undefined,
+    dataUpdatedAt: Date.UTC(2026, 7, 12, 9, 15, 0),
+    error: instanceUnavailableRowsError(),
+    isFetching: false,
+    isLoading: false,
+    isPlaceholderData: false,
+    lastSuccessfulData,
+    refetch: vi.fn(async () => undefined),
+  });
+
+  render(
+    <ScreenshotFrame>
+      <div className="h-[600px] w-[1120px] rounded-xl border border-border bg-background p-6 text-foreground">
+        <TableDataGrid initialPageSize={50} name={shipmentsName} />
+      </div>
+    </ScreenshotFrame>
+  );
+}
 
 const sortableColumns = [
   column("stat_date", "date", DataType.DATE),
@@ -788,6 +881,27 @@ test("data explorer controls and row detail drawer expose dense table context", 
   await expect.element(page.getByText("PK")).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "data-explorer-controls-and-row-detail"
+  );
+});
+
+test("failed page loads keep prior rows visibly stale without false pagination", async () => {
+  renderUnavailableRowsGrid();
+
+  await expect
+    .element(page.getByText("PostgreSQL instance unavailable"))
+    .toBeVisible();
+  await expect
+    .element(
+      page.getByText("Showing the last loaded rows until retry succeeds.")
+    )
+    .toBeVisible();
+  await expect.element(page.getByText("arun.patel@example.com")).toBeVisible();
+  expect(
+    page.getByRole("button", { name: "Next page" }).elements()
+  ).toHaveLength(0);
+  expect(page.getByText(PAGE_LABEL_RE).elements()).toHaveLength(0);
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "data-grid-stale-rows-after-page-failure"
   );
 });
 
