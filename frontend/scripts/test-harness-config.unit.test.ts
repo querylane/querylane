@@ -61,6 +61,11 @@ describe("test harness config", () => {
     });
   });
 
+  test("enables persistent build caching for DOM suites", () => {
+    expect(unitConfig.performance?.buildCache).toBe(true);
+    expect(integrationConfig.performance?.buildCache).toBe(true);
+  });
+
   test("defaults browser script and config to light mode only", () => {
     expect(scripts["test:browser"]).toContain("vitest.browser.config.ts");
     expect(browserConfig.test?.browser?.instances).toHaveLength(1);
