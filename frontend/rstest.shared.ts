@@ -20,6 +20,9 @@ export const RSTEST_PROJECT_NAMES = {
 
 export function createQuerylaneRstestBuildConfig() {
   return {
+    performance: {
+      buildCache: true,
+    },
     plugins: [pluginReact({ reactCompiler: false })],
     resolve: {
       alias: {
