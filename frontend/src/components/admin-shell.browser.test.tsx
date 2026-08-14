@@ -373,16 +373,26 @@ function renderAdminShellAtViewport({ width }: { width: 320 | 768 }) {
 }
 
 function renderDatabaseLayoutWithDegradedBanner() {
-  useSetupStore.setState({ showDegradedBanner: true });
+  const visualTheme =
+    document.documentElement.dataset["visualTheme"] === "dark"
+      ? "dark"
+      : "light";
+  useSetupStore.setState({
+    onboardingState: null,
+    showDegradedBanner: true,
+  });
 
   render(
     <ThemeProvider
-      defaultTheme="dark"
+      defaultTheme={visualTheme}
       storageKey="querylane-admin-shell-browser-test-theme-degraded"
     >
       <TooltipProvider>
         <div
-          className="dark h-[760px] w-[1100px] origin-top-left scale-[0.8] overflow-hidden rounded-2xl border border-border bg-background text-foreground"
+          className={cn(
+            visualTheme,
+            "h-[760px] w-[1100px] origin-top-left scale-[0.8] overflow-hidden rounded-lg border border-border bg-background text-foreground"
+          )}
           data-testid="admin-shell-visual-root"
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
@@ -479,6 +489,28 @@ test("degraded mode banner starts after the desktop sidebar", async () => {
 
   expect(sidebarRect.right).toBeGreaterThan(0);
   expect(bannerRect.left).toBeGreaterThanOrEqual(sidebarRect.right - 1);
+
+  await expect(page.getByTestId("admin-shell-visual-root")).toMatchScreenshot(
+    "admin-shell-degraded-mode"
+  );
+});
+
+test("internal storage recovery dialog presents the reset steps", async () => {
+  await page.viewport(1280, 800);
+  renderDatabaseLayoutWithDegradedBanner();
+
+  await userEvent.click(
+    page.getByRole("button", { name: "Reconfigure internal storage" })
+  );
+
+  const dialog = page.getByRole("dialog", {
+    name: "Reconfigure internal storage",
+  });
+  await expect.element(dialog).toBeVisible();
+  await expect
+    .element(page.getByText("querylane server reset-config", { exact: false }))
+    .toBeVisible();
+  await expect(dialog).toMatchScreenshot("internal-storage-recovery-dialog");
 });
 
 test("admin shell shows selected instance, database, scoped navigation, and actions", async () => {
