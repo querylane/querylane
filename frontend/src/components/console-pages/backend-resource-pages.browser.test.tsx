@@ -1069,25 +1069,21 @@ function cardRect(label: string) {
   return card.getBoundingClientRect();
 }
 
-async function statSparkline(label: string): Promise<SVGElement> {
-  let sparkline: SVGElement | null = null;
-  await vi.waitFor(() => {
+function statSparkline(label: string): Promise<SVGElement> {
+  return vi.waitFor(() => {
     const statLabel = Array.from(document.querySelectorAll("span")).find(
       (element) =>
         element.textContent === label &&
         element.parentElement?.parentElement?.classList.contains("grid") &&
         element.parentElement.querySelector("svg")
     );
-    sparkline =
+    const sparkline =
       statLabel?.parentElement?.querySelector<SVGElement>("svg") ?? null;
     if (!sparkline) {
       throw new Error(`Waiting for ${label} sparkline`);
     }
-  });
-  if (!sparkline) {
-    throw new Error(`Expected ${label} sparkline`);
-  }
-  return sparkline;
+    return sparkline;
+  }, 5000);
 }
 
 async function openQueryInsightsDrawer(
