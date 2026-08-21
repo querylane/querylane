@@ -1,6 +1,7 @@
-import { expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
-import { render } from "vitest-browser-react";
+import { page } from "@rstest/browser";
+import { render } from "@rstest/browser-react";
+import { expect, rs, test } from "@rstest/core";
+import { getByTestId } from "@testing-library/dom";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import {
   CATEGORY_ORDER,
@@ -28,13 +29,13 @@ function categoryPagination() {
   >;
 }
 
-function renderLargeExplorerSidebar() {
+async function renderLargeExplorerSidebar() {
   const tables = Array.from({ length: 1000 }, (_, index) => ({
     name: `table_${index.toString().padStart(4, "0")}`,
     sizeLabel: `${index + 1} KB`,
   }));
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="flex h-[760px] w-[320px] overflow-hidden rounded-2xl border border-border bg-background">
         <ExplorerSidebar
@@ -48,20 +49,20 @@ function renderLargeExplorerSidebar() {
             tables,
             views: [],
           }}
-          onLoadMoreCategory={vi.fn()}
-          onLoadMoreSchemas={vi.fn()}
-          onRetryTables={vi.fn()}
-          onRetryViews={vi.fn()}
-          onSelectResource={vi.fn()}
-          onSelectSchema={vi.fn()}
+          onLoadMoreCategory={rs.fn()}
+          onLoadMoreSchemas={rs.fn()}
+          onRetryTables={rs.fn()}
+          onRetryViews={rs.fn()}
+          onSelectResource={rs.fn()}
+          onSelectSchema={rs.fn()}
           query=""
           schemaSelectionError={null}
           schemas={[defaultSchema]}
           schemasLoading={false}
           schemasSyncNotice={null}
           selection={{ kind: "schema" }}
-          setExpandedCategories={vi.fn()}
-          setQuery={vi.fn()}
+          setExpandedCategories={rs.fn()}
+          setQuery={rs.fn()}
           tablesError={null}
           tablesSyncNotice={null}
           viewsError={null}
@@ -91,15 +92,13 @@ function firstVisibleResourceGap(scrollRoot: HTMLElement): number {
 }
 
 test("virtualized object list keeps fast bottom scroll filled from the top", async () => {
-  renderLargeExplorerSidebar();
+  await renderLargeExplorerSidebar();
 
   await expect
     .element(page.getByRole("button", { name: FIRST_TABLE_BUTTON_RE }))
     .toBeVisible();
 
-  const scrollRoot = page
-    .getByTestId("resource-list-scroll")
-    .element() as HTMLElement;
+  const scrollRoot = getByTestId(document.body, "resource-list-scroll");
   scrollRoot.scrollTop = scrollRoot.scrollHeight;
   scrollRoot.dispatchEvent(new Event("scroll", { bubbles: true }));
 
@@ -111,15 +110,13 @@ test("virtualized object list keeps fast bottom scroll filled from the top", asy
 });
 
 test("virtualized object list commits a fast bottom scroll after the next frame", async () => {
-  renderLargeExplorerSidebar();
+  await renderLargeExplorerSidebar();
 
   await expect
     .element(page.getByRole("button", { name: FIRST_TABLE_BUTTON_RE }))
     .toBeVisible();
 
-  const scrollRoot = page
-    .getByTestId("resource-list-scroll")
-    .element() as HTMLElement;
+  const scrollRoot = getByTestId(document.body, "resource-list-scroll");
   scrollRoot.scrollTop = scrollRoot.scrollHeight;
   scrollRoot.dispatchEvent(new Event("scroll", { bubbles: true }));
 

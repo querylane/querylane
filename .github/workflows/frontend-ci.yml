@@ -184,17 +184,17 @@ jobs:
       - name: Install Playwright Chromium
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: bunx playwright install chromium
-      - name: Run browser visual tests
+      - name: Run browser tests
         env:
           QUALITY_BASE_REF: origin/${{ github.base_ref }}
         shell: bash
         run: |
           set -euo pipefail
           changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|postcss\.config\.mjs|rstest[^/]*\.ts|test\.console-guard\.ts|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(browser-test\.setup\.css|package\.json|bun\.lock|postcss\.config\.mjs|rstest[^/]*\.ts|test\.console-guard\.ts|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
             bun run test:browser:ci
           else
-            bun run test:browser:changed -- --reporter=verbose
+            bun run test:browser:changed
           fi
       - name: Upload Vitest visual failure artifacts
         if: failure()

@@ -1,6 +1,8 @@
 import { describe, expect, test } from "@rstest/core";
 import { CI_REPORTERS } from "../e2e/reporters";
 import packageJson from "../package.json" with { type: "json" };
+import rstestBrowserConfig from "../rstest.browser.config";
+import rstestBrowserDarkConfig from "../rstest.browser.dark.config";
 import integrationConfig from "../rstest.integration.config";
 import { RSTEST_PROJECT_NAMES } from "../rstest.shared";
 import unitConfig from "../rstest.unit.config";
@@ -33,8 +35,9 @@ function getAllowWrite(api: unknown) {
 }
 
 describe("test harness config", () => {
-  test("splits Rstest DOM suites from Vitest browser projects", () => {
+  test("splits Rstest suites from Vitest visual browser projects", () => {
     expect(RSTEST_PROJECT_NAMES).toEqual({
+      browser: "browser-rstest",
       integration: "integration",
       unit: "unit",
     });
@@ -42,6 +45,8 @@ describe("test harness config", () => {
     expect(integrationConfig.name).toBe("integration");
     expect(browserLightConfig.test?.name).toBe("browser-light");
     expect(browserDarkConfig.test?.name).toBe("browser-dark");
+    expect(rstestBrowserConfig.name).toBe("browser-rstest-light");
+    expect(rstestBrowserDarkConfig.name).toBe("browser-rstest-dark");
   });
 
   test("uses happy-dom and shared setup for unit and integration tests", () => {
@@ -67,7 +72,11 @@ describe("test harness config", () => {
   });
 
   test("defaults browser script and config to light mode only", () => {
-    expect(scripts["test:browser"]).toContain("vitest.browser.config.ts");
+    expect(scripts["test:browser"]).toContain("test:browser:vitest");
+    expect(scripts["test:browser"]).toContain("test:browser:rstest");
+    expect(scripts["test:browser:vitest"]).toContain(
+      "vitest.browser.config.ts"
+    );
     expect(browserConfig.test?.browser?.instances).toHaveLength(1);
     expect(browserConfig.test?.browser?.instances?.[0]).toMatchObject({
       browser: "chromium",
@@ -75,6 +84,12 @@ describe("test harness config", () => {
     });
     expect(browserLightConfig.test?.browser?.instances?.[0]).toMatchObject({
       name: "chromium-light",
+    });
+    expect(rstestBrowserConfig.browser).toMatchObject({
+      browser: "chromium",
+      enabled: true,
+      provider: "playwright",
+      providerOptions: { context: { colorScheme: "light" } },
     });
   });
 
@@ -84,12 +99,21 @@ describe("test harness config", () => {
       name: "chromium-dark",
     });
     expect(browserAllConfig.test?.browser?.instances).toHaveLength(2);
+    expect(rstestBrowserDarkConfig.browser).toMatchObject({
+      providerOptions: { context: { colorScheme: "dark" } },
+    });
+    expect(scripts["test:browser:ci"]).toContain("test:browser:vitest:ci");
+    expect(scripts["test:browser:ci"]).toContain("test:browser:rstest:ci");
   });
 
   test("keeps browser checks fast, deterministic, and Chromium only", () => {
     expect(browserLightConfig.test?.testTimeout).toBeLessThanOrEqual(10_000);
     expect(browserDarkConfig.test?.testTimeout).toBeLessThanOrEqual(10_000);
     expect(browserLightConfig.test?.browser?.viewport).toEqual({
+      height: 1000,
+      width: 1280,
+    });
+    expect(rstestBrowserConfig.browser?.viewport).toEqual({
       height: 1000,
       width: 1280,
     });
@@ -123,11 +147,13 @@ describe("test harness config", () => {
     ).toBe("/repo/frontend/src/components/__screenshots__/dark");
   });
 
-  test("pins Rstest for DOM suites and Vitest beta for browser suites", () => {
+  test("pins Rstest and keeps Vitest beta for visual browser suites", () => {
     const { devDependencies } = packageJson;
     const vitestVersion = devDependencies.vitest;
 
     expect(devDependencies["@rstest/core"]).toBe(RSTEST_VERSION);
+    expect(devDependencies["@rstest/browser"]).toBe(RSTEST_VERSION);
+    expect(devDependencies["@rstest/browser-react"]).toBe(RSTEST_VERSION);
     expect(devDependencies["expect-type"]).toBe("1.4.0");
     expect(vitestVersion).toMatch(VITEST_BETA_VERSION_PATTERN);
     expect(devDependencies["@vitest/browser"]).toBe(vitestVersion);
@@ -182,6 +208,10 @@ describe("test harness config", () => {
     expect([...VITEST_PLUGIN_NAMES]).toEqual(["tailwindcss"]);
     expect(unitConfig.plugins?.map((plugin) => plugin?.name)).toEqual([
       "rsbuild:react",
+    ]);
+    expect(rstestBrowserConfig.plugins?.map((plugin) => plugin?.name)).toEqual([
+      "rsbuild:react",
+      "rsbuild:tailwindcss",
     ]);
   });
 
