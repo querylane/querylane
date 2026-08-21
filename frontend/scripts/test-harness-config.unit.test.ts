@@ -17,7 +17,7 @@ import {
 const { scripts } = packageJson;
 const VITEST_BETA_VERSION_PATTERN = /^5\.0\.0-beta\.\d+$/u;
 const PLAYWRIGHT_VERSION = "1.62.0";
-const RSTEST_VERSION = "0.11.8";
+const RSTEST_VERSION = "0.11.9";
 
 function getAllowWrite(api: unknown) {
   if (
