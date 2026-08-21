@@ -1,6 +1,7 @@
-import { expect, test } from "vitest";
-import { page, userEvent } from "vitest/browser";
-import { render } from "vitest-browser-react";
+import { getByRole } from "@testing-library/dom";
+import { page } from "@rstest/browser";
+import { render } from "@rstest/browser-react";
+import { expect, test } from "@rstest/core";
 import { useState } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
@@ -109,8 +110,8 @@ function contrastRatio(first: string, second: string) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-function renderSelectedOwnerFilter() {
-  render(
+async function renderSelectedOwnerFilter() {
+  await render(
     <ScreenshotFrame>
       <DataTableFacetedFilter
         onSelectedValuesChange={() => undefined}
@@ -180,7 +181,7 @@ function SelectedBadgeOrderFixture() {
 }
 
 test("selected filter checkbox checkmark remains visible while hovered", async () => {
-  renderSelectedOwnerFilter();
+  await renderSelectedOwnerFilter();
 
   await page.getByRole("button", { exact: true, name: "Owner neondb_owner" }).click();
   const selectedOption = page.getByRole("option", {
@@ -189,7 +190,9 @@ test("selected filter checkbox checkmark remains visible while hovered", async (
   });
   await selectedOption.hover();
 
-  const optionElement = selectedOption.element();
+  const optionElement = getByRole(document.body, "option", {
+    name: "neondb_owner",
+  });
   expect(optionElement.getAttribute("aria-checked")).toBeNull();
   const selectedDescription = document.getElementById(
     optionElement.getAttribute("aria-describedby") ?? ""
@@ -220,7 +223,7 @@ test("selected filter checkbox checkmark remains visible while hovered", async (
 });
 
 test("single-select filter replaces the previous option and shows counts", async () => {
-  render(<SingleSelectFilterFixture />);
+  await render(<SingleSelectFilterFixture />);
 
   await page.getByRole("button", { name: /Type.*User/ }).click();
   await expect.element(page.getByRole("option", { name: /Superuser\s+1/ }))
@@ -232,17 +235,20 @@ test("single-select filter replaces the previous option and shows counts", async
     .element(page.getByRole("button", { name: /Type.*Superuser/ }))
     .toBeVisible();
   await expect.element(page.getByRole("button", { name: /Type.*User/ }))
-    .not.toBeInTheDocument();
+    .toBeDetached();
 });
 
 test("filter option counts stay beside their labels", async () => {
-  render(<SingleSelectFilterFixture />);
+  await render(<SingleSelectFilterFixture />);
 
   await page.getByRole("button", { name: /Type.*User/ }).click();
   const option = page.getByRole("option", { name: /Superuser\s+1/ });
   await expect.element(option).toBeVisible();
 
-  const [label, count] = option.element().querySelectorAll(":scope > span");
+  const optionElement = getByRole(document.body, "option", {
+    name: /Superuser\s+1/,
+  });
+  const [label, count] = optionElement.querySelectorAll(":scope > span");
   if (!(label && count)) {
     throw new Error("Expected the filter option to render a label and count.");
   }
@@ -253,18 +259,18 @@ test("filter option counts stay beside their labels", async () => {
 });
 
 test("fixed enum filters omit search without changing option behavior", async () => {
-  render(<FixedEnumFilterFixture />);
+  await render(<FixedEnumFilterFixture />);
 
   await page.getByRole("button", { name: "Status" }).click();
 
   await expect.element(page.getByRole("option", { name: "Active" })).toBeVisible();
   await expect.element(page.getByRole("option", { name: "Paused" })).toBeVisible();
-  const activeOption = page.getByRole("option", { name: "Active" }).element();
+  const activeOption = getByRole(document.body, "option", { name: "Active" });
   const activeDescription = document.getElementById(
     activeOption.getAttribute("aria-describedby") ?? ""
   );
   expect(activeDescription?.textContent).toBe("Not included in filter");
-  await expect.element(page.getByRole("combobox")).not.toBeInTheDocument();
+  await expect.element(page.getByRole("combobox")).toBeDetached();
 
   await page.getByRole("option", { name: "Active" }).click();
   await expect
@@ -273,23 +279,25 @@ test("fixed enum filters omit search without changing option behavior", async ()
 });
 
 test("fixed enum filters support keyboard selection and restore trigger focus", async () => {
-  render(<FixedEnumFilterFixture />);
+  await render(<FixedEnumFilterFixture />);
 
   const trigger = page.getByRole("button", { name: "Status" });
   await expect.element(trigger).toBeVisible();
-  const triggerElement = trigger.element();
-  triggerElement.focus();
-  await userEvent.keyboard("{Enter}");
+  const triggerElement = getByRole(document.body, "button", { name: "Status" });
+  await trigger.focus();
+  await trigger.press("Enter");
   await expect.element(page.getByRole("option", { name: "Active" })).toBeVisible();
   const listbox = page.getByRole("listbox", { name: "Status options" });
   await expect.element(listbox).toBeVisible();
-  const listboxElement = listbox.element();
+  const listboxElement = getByRole(document.body, "listbox", {
+    name: "Status options",
+  });
   expect(document.activeElement).toBe(listboxElement);
   const initialActiveDescendant = listboxElement.getAttribute(
     "aria-activedescendant"
   );
 
-  await userEvent.keyboard("{ArrowDown}");
+  await listbox.press("ArrowDown");
   await expect
     .poll(() => listboxElement.getAttribute("aria-activedescendant"))
     .not.toBe(initialActiveDescendant);
@@ -298,17 +306,19 @@ test("fixed enum filters support keyboard selection and restore trigger focus", 
   );
   expect(document.getElementById(nextActiveDescendant ?? "")?.textContent)
     .toContain("Paused");
-  await userEvent.keyboard("{Enter}");
+  await listbox.press("Enter");
 
   await expect
     .element(page.getByRole("button", { name: /Status.*Paused/ }))
     .toBeVisible();
-  await userEvent.keyboard("{Escape}");
+  await page
+    .getByRole("button", { name: /Status.*Paused/ })
+    .press("Escape");
   await expect.poll(() => document.activeElement).toBe(triggerElement);
 });
 
 test("selected badges follow option order and hide stale values", async () => {
-  render(<SelectedBadgeOrderFixture />);
+  await render(<SelectedBadgeOrderFixture />);
 
   await expect
     .element(page.getByRole("button", { name: "Mode Primary Replica" }))
@@ -318,5 +328,5 @@ test("selected badges follow option order and hide stale values", async () => {
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: /internal-stale-id/ }))
-    .not.toBeInTheDocument();
+    .toBeDetached();
 });

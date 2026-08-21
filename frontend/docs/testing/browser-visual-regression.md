@@ -1,9 +1,8 @@
 # Browser visual regression tests
 
 Use Vitest browser mode for focused UI snapshots of critical components and routes.
-It runs in Chromium through Playwright, but stays component-scoped: mock API hooks,
-render 1 stable state, assert accessible text, then snapshot the smallest stable
-container.
+Use experimental Rstest Browser Mode for component-scoped browser behavior that does
+not need screenshot assertions. Both run in Chromium through Playwright.
 
 Use Playwright e2e separately for full user journeys against a served app. E2e
 should validate routing, backend integration, and cross-browser behavior. Do not
@@ -13,9 +12,11 @@ put component visual baselines there.
 
 ```sh
 bun run test:browser             # light theme, default local check
-bun run test:browser:ci          # CI-style light + dark verbose output
+bun run test:browser:ci          # CI-style light + dark coverage
 bun run test:browser:update      # intentionally update Linux light baselines
 bun run test:browser:ui          # debug light browser tests interactively
+bun run test:browser:rstest      # run only the Rstest browser subset
+bun run test:browser:rstest:ui   # debug the Rstest subset in a visible browser
 ```
 
 For an explicit dark-theme local run, call Vitest directly with
@@ -30,7 +31,7 @@ For an explicit dark-theme local run, call Vitest directly with
 - Default local browser tests run light mode only for fast feedback. CI uses the
   all-themes configuration so dark baselines stay required.
 - Reduced motion and CSS animation and transition durations near 0 are applied in
-  `vitest.browser.setup.css`.
+  `browser-test.setup.css`.
 - Fixed `ScreenshotFrame` dimensions and a fixed browser viewport keep layout
   deterministic.
 - Assert visible UI before snapshotting.
@@ -39,14 +40,13 @@ For an explicit dark-theme local run, call Vitest directly with
 
 ## CI output
 
-CI uses Vitest directly with the built-in verbose reporter. Avoid custom Vitest
-wrapper scripts unless native reporters stop exposing enough failure and runtime
-detail.
+CI uses Vitest's built-in verbose reporter for visual tests and Rstest's compact native
+reporter for functional browser tests.
 
 ## Agent capabilities and limitations
 
 This document is agent-facing guidance under `frontend/**/*{.md,_agent.{js,ts,json},agent.{config,schema}.{js,ts,json}}`.
 
-Agents may run Vitest browser commands, inspect snapshots, capture failure artifacts, and parse native verbose output to explain failures. Agents may propose or apply baseline updates only when the user explicitly asks or when CI artifacts prove the expected visual state.
+Agents may run Rstest and Vitest browser commands, inspect snapshots, capture failure artifacts, and parse native output to explain failures. Agents may propose or apply baseline updates only when the user explicitly asks or when CI artifacts prove the expected visual state.
 
 Agents must not autonomously redesign UI, bless visual diffs, commit refreshed screenshots, access secrets, or run production-affecting/network mutations without human approval. Escalate to a human when the intended UX is ambiguous, when a visual diff hides possible product regression, or when credentials/external services are required.

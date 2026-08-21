@@ -1,8 +1,8 @@
+import { page } from "@rstest/browser";
+import { render } from "@rstest/browser-react";
+import { afterEach, expect, rs, test } from "@rstest/core";
 import { Profiler } from "react";
 import type { Column } from "react-data-grid";
-import { afterEach, expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
-import { cleanup, render } from "vitest-browser-react";
 
 import "react-data-grid/lib/styles.css";
 
@@ -17,9 +17,8 @@ const COLUMNS: Column<TestRow>[] = Array.from({ length: 10 }, (_, index) => ({
 }));
 const ROWS: TestRow[] = [{ id: 1 }];
 
-afterEach(async () => {
-  await cleanup();
-  vi.unstubAllGlobals();
+afterEach(() => {
+  rs.unstubAllGlobals();
 });
 
 test("batches continuous grid resizes", async () => {
@@ -65,11 +64,11 @@ test("batches continuous grid resizes", async () => {
     }
   }
 
-  vi.stubGlobal("ResizeObserver", TestResizeObserver);
+  rs.stubGlobal("ResizeObserver", TestResizeObserver);
   const { DataGrid } = await import("react-data-grid");
 
   let resizeCommitCount = 0;
-  render(
+  await render(
     <Profiler
       id={profilerId}
       onRender={() => {
