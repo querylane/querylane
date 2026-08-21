@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
+import { afterEach, expect, it, rs } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
 import { GrantsOverview } from "@/components/console-pages/role-grants-overview";
 import {
   buildSchemaIndex,
@@ -42,7 +42,7 @@ it("renders no-direct-grants prose as one description", () => {
       }}
       grantsPartial={false}
       objects={[]}
-      onNavigate={vi.fn()}
+      onNavigate={rs.fn()}
       ownedObjects={[]}
       ownedPartial={false}
       publicGrantsPartial={false}
@@ -86,7 +86,7 @@ it("summarizes MAINTAIN in PUBLIC table grant previews", () => {
       }}
       grantsPartial={false}
       objects={[]}
-      onNavigate={vi.fn()}
+      onNavigate={rs.fn()}
       ownedObjects={[]}
       ownedPartial={false}
       publicGrantsPartial={false}
@@ -101,7 +101,7 @@ it("summarizes MAINTAIN in PUBLIC table grant previews", () => {
 
 it("uses the database name when navigating to database-scope grants", async () => {
   const user = userEvent.setup();
-  const onNavigate = vi.fn();
+  const onNavigate = rs.fn();
   const objects: GrantedObject[] = [
     {
       grantors: ["postgres"],
@@ -174,7 +174,7 @@ it("qualifies every truncated facet count as partial", () => {
       }}
       grantsPartial={true}
       objects={directObjects}
-      onNavigate={vi.fn()}
+      onNavigate={rs.fn()}
       ownedObjects={[
         create(OwnedObjectSchema, {
           objectName: "owned_orders",

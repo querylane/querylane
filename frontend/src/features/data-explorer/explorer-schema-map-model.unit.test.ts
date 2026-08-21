@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model";
 import { buildSchemaMapModel } from "@/features/data-explorer/explorer-schema-map-model";
 import {

@@ -1,6 +1,6 @@
 import { globSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 
 const ROUTER_MODULE = "@tanstack/react-router";
 const ROUTER_IMPORT_ALIAS_PATTERN = /\s+as\s+/;

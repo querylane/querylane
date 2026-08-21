@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { resolveScopeLevel } from "@/lib/db-navigation";
 
 describe("resolveScopeLevel", () => {

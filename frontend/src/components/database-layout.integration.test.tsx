@@ -1,14 +1,14 @@
+import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DatabaseLayout } from "@/components/database-layout";
 import { useSetupStore } from "@/stores/setup-store";
 
-const routerState = vi.hoisted(() => ({
+const routerState = rs.hoisted(() => ({
   isLoading: false,
   pathname: "/instances/prod",
 }));
 
-vi.mock("@tanstack/react-router", () => {
+rs.mock("@tanstack/react-router", () => {
   function MockCatchBoundary({ children }: { children: React.ReactNode }) {
     return children;
   }
@@ -43,7 +43,7 @@ vi.mock("@tanstack/react-router", () => {
   };
 });
 
-vi.mock("@/components/admin-header", () => {
+rs.mock("@/components/admin-header", () => {
   function MockAdminHeader() {
     return <header data-testid="admin-header" />;
   }
@@ -51,7 +51,7 @@ vi.mock("@/components/admin-header", () => {
   return Object.fromEntries([["AdminHeader", MockAdminHeader]]);
 });
 
-vi.mock("@/components/admin-keyboard-shortcuts", () => {
+rs.mock("@/components/admin-keyboard-shortcuts", () => {
   function MockAdminKeyboardShortcuts() {
     return null;
   }
@@ -61,7 +61,7 @@ vi.mock("@/components/admin-keyboard-shortcuts", () => {
   ]);
 });
 
-vi.mock("@/components/app-sidebar", () => {
+rs.mock("@/components/app-sidebar", () => {
   function MockAppSidebar() {
     return <aside data-testid="app-sidebar" />;
   }
@@ -78,7 +78,7 @@ describe("DatabaseLayout route transitions", () => {
 
   afterEach(() => {
     cleanup();
-    vi.useRealTimers();
+    rs.useRealTimers();
   });
 
   it("renders the instance shell while the target route stays in instance scope", async () => {
@@ -107,7 +107,7 @@ describe("DatabaseLayout route transitions", () => {
   });
 
   it("mounts route progress inside the content inset", () => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
     routerState.isLoading = true;
 
     render(
@@ -119,7 +119,7 @@ describe("DatabaseLayout route transitions", () => {
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();
 
     act(() => {
-      vi.advanceTimersByTime(200);
+      rs.advanceTimersByTime(200);
     });
 
     const progressbar = screen.getByTestId("route-progress-bar");

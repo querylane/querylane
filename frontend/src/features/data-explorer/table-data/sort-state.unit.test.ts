@@ -1,5 +1,5 @@
+import { describe, expect, test } from "@rstest/core";
 import type { SortColumn } from "react-data-grid";
-import { describe, expect, test } from "vitest";
 import { toggleColumnSortDirection } from "@/features/data-explorer/table-data/sort-state";
 
 describe("toggleColumnSortDirection", () => {

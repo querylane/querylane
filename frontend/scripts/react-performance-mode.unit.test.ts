@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { resolveReactPerformanceMode } from "./react-performance-mode";
 
 describe("resolveReactPerformanceMode", () => {

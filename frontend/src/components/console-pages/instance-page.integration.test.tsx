@@ -2,6 +2,17 @@ import { create as createProto } from "@bufbuild/protobuf";
 import { anyPack, timestampFromDate } from "@bufbuild/protobuf/wkt";
 import { Code, ConnectError } from "@connectrpc/connect";
 import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
+import * as reactQueryActual from "@tanstack/react-query" with {
+  rstest: "importActual",
+};
+import {
   cleanup,
   fireEvent,
   render,
@@ -11,7 +22,6 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { BackendInstancePage } from "@/components/console-pages/instance-page";
 import type {
   PostgresDatabase,
@@ -83,10 +93,10 @@ const MISSING_INSTANCE_SECRET_KEY_MESSAGE =
 const REPLICATION_ROW_NAME = /Replication/;
 const REPLICATION_WARNING_ROW_NAME = /Warning: Replication/;
 
-const state = vi.hoisted(() => ({
+const state = rs.hoisted(() => ({
   activityQueryOptions: undefined as Record<string, unknown> | undefined,
   databases: [] as PostgresDatabase[],
-  deleteInstance: vi.fn(async () => undefined),
+  deleteInstance: rs.fn(async () => undefined),
   extensionData: undefined as ListExtensionsResponse | undefined,
   extensionInput: undefined as
     | { filter?: string; orderBy?: string; pageSize?: number; parent: string }
@@ -99,26 +109,26 @@ const state = vi.hoisted(() => ({
   instanceCatalogIsPending: false,
   instanceData: undefined as GetInstanceResponse | undefined,
   instances: [] as PostgresInstance[],
-  navigate: vi.fn(async (_options: Record<string, unknown>) => undefined),
-  navigateToDatabase: vi.fn(),
+  navigate: rs.fn(async (_options: Record<string, unknown>) => undefined),
+  navigateToDatabase: rs.fn(),
   overviewData: undefined as GetInstanceOverviewResponse | undefined,
   queryClient: {
-    getQueryState: vi.fn(() => undefined),
-    prefetchQuery: vi.fn(async () => undefined),
+    getQueryState: rs.fn(() => undefined),
+    prefetchQuery: rs.fn(async () => undefined),
     tag: "query-client",
   },
-  refetchExtensions: vi.fn(async () => ({})),
-  refetchInstance: vi.fn(async () => ({})),
-  retryInstanceCatalog: vi.fn(async () => undefined),
+  refetchExtensions: rs.fn(async () => ({})),
+  refetchInstance: rs.fn(async () => ({})),
+  retryInstanceCatalog: rs.fn(async () => undefined),
   selectedInstanceStatus: "disconnected" as
     | "connected"
     | "disconnected"
     | "error",
   transport: { tag: "transport" },
-  updateInstance: vi.fn(async (_input: InstanceUpdateInput) => undefined),
+  updateInstance: rs.fn(async (_input: InstanceUpdateInput) => undefined),
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   ...Object.fromEntries([
     [
       "Link",
@@ -142,31 +152,26 @@ vi.mock("@tanstack/react-router", () => ({
   }) => select({}),
 }));
 
-vi.mock("@connectrpc/connect-query", () => ({
+rs.mock("@connectrpc/connect-query", () => ({
   useTransport: () => state.transport,
 }));
 
-vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
-    "@tanstack/react-query"
-  );
-  return {
-    ...actual,
-    useQueryClient: () => state.queryClient,
-  };
-});
+rs.mock("@tanstack/react-query", () => ({
+  ...reactQueryActual,
+  useQueryClient: () => state.queryClient,
+}));
 
-vi.mock("@/hooks/api/console", () => ({
+rs.mock("@/hooks/api/console", () => ({
   useIsConfigManagedInstances: () => false,
 }));
 
-vi.mock("@/hooks/api/database", () => ({
+rs.mock("@/hooks/api/database", () => ({
   selectedDatabaseQueryOptions: () => ({
     queryKey: ["integration", "selected-database"],
   }),
 }));
 
-vi.mock("@/hooks/api/extension", () => ({
+rs.mock("@/hooks/api/extension", () => ({
   extensionsForDatabaseQueryInput: (input: {
     databaseId: string;
     instanceId: string;
@@ -191,25 +196,25 @@ vi.mock("@/hooks/api/extension", () => ({
   },
 }));
 
-vi.mock("@/hooks/api/metrics", () => ({
+rs.mock("@/hooks/api/metrics", () => ({
   quantizedMetricsAnchor: () => 0,
   useInstanceMetricsQuery: () => ({
     data: undefined,
     error: null,
     isFetching: false,
     isPending: true,
-    refetch: vi.fn(async () => ({})),
+    refetch: rs.fn(async () => ({})),
   }),
   useInstancePreviousMetricsQuery: () => ({
     data: undefined,
     error: null,
     isFetching: false,
     isPending: true,
-    refetch: vi.fn(async () => ({})),
+    refetch: rs.fn(async () => ({})),
   }),
 }));
 
-vi.mock("@/hooks/api/instance", () => ({
+rs.mock("@/hooks/api/instance", () => ({
   useCheckInstanceActivityQuery: (
     _input: unknown,
     options: Record<string, unknown>
@@ -225,7 +230,7 @@ vi.mock("@/hooks/api/instance", () => ({
       error: null,
       isFetching: false,
       isPending: state.healthData === undefined,
-      refetch: vi.fn(async () => ({})),
+      refetch: rs.fn(async () => ({})),
     };
   },
   useCheckInstanceHealthQuery: (
@@ -238,7 +243,7 @@ vi.mock("@/hooks/api/instance", () => ({
       error: null,
       isFetching: false,
       isPending: state.healthData === undefined,
-      refetch: vi.fn(async () => ({})),
+      refetch: rs.fn(async () => ({})),
     };
   },
   useDeleteInstanceMutation: () => ({
@@ -250,7 +255,7 @@ vi.mock("@/hooks/api/instance", () => ({
     error: null,
     isFetching: false,
     isPending: false,
-    refetch: vi.fn(async () => ({})),
+    refetch: rs.fn(async () => ({})),
   }),
   useGetInstanceQuery: () => ({
     data: state.instanceData,
@@ -266,7 +271,7 @@ vi.mock("@/hooks/api/instance", () => ({
   }),
 }));
 
-vi.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context", () => ({
   useDb: () => ({
     databases: state.databases,
     instances: state.instances,
@@ -998,7 +1003,7 @@ describe("backend instance activity interactions", () => {
   test("copies the session pid and query from the inspector", async () => {
     const user = userEvent.setup();
     const originalClipboard = navigator.clipboard;
-    const writeText = vi.fn(async () => undefined);
+    const writeText = rs.fn(async () => undefined);
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },

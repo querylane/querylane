@@ -1,4 +1,5 @@
 import { create } from "@bufbuild/protobuf";
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import {
   act,
   cleanup,
@@ -8,7 +9,6 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { FilterPopover } from "@/components/data-grid/table-data-grid/filter-popover";
 import { FilterRow } from "@/components/data-grid/table-data-grid/filter-popover-row";
 import type { TableFilterRule } from "@/features/data-explorer/table-data/filter-state";
@@ -50,7 +50,7 @@ function emailRule(value = ""): TableFilterRule {
 
 afterEach(() => {
   cleanup();
-  vi.useRealTimers();
+  rs.useRealTimers();
 });
 
 describe("FilterPopover match logic", () => {
@@ -61,7 +61,7 @@ describe("FilterPopover match logic", () => {
       <FilterPopover
         columns={columns}
         logic="and"
-        onChange={vi.fn()}
+        onChange={rs.fn()}
         rules={[emailRule("alice@example.com")]}
       />
     );
@@ -75,7 +75,7 @@ describe("FilterPopover match logic", () => {
 
   it("changes match logic for one rule without changing the others", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
+    const onChange = rs.fn();
     const rules: TableFilterRule[] = [
       emailRule("alice@example.com"),
       {
@@ -133,7 +133,7 @@ describe("FilterPopover match logic", () => {
 
   it("does not apply the blank starter rule", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
+    const onChange = rs.fn();
 
     render(
       <FilterPopover
@@ -152,7 +152,7 @@ describe("FilterPopover match logic", () => {
 
   it("applies a freshly typed value on Enter without waiting for the debounce", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
+    const onChange = rs.fn();
 
     render(
       <FilterPopover
@@ -187,7 +187,7 @@ describe("FilterPopover match logic", () => {
       <FilterPopover
         columns={columns}
         logic="and"
-        onChange={vi.fn()}
+        onChange={rs.fn()}
         rules={[]}
       />
     );
@@ -199,7 +199,7 @@ describe("FilterPopover match logic", () => {
 
   it("clears committed rules immediately from the footer", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
+    const onChange = rs.fn();
 
     render(
       <FilterPopover
@@ -222,9 +222,9 @@ describe("FilterPopover value guidance", () => {
     render(
       <FilterRow
         columns={columns}
-        onApplyRequest={vi.fn()}
-        onChange={vi.fn()}
-        onRemove={vi.fn()}
+        onApplyRequest={rs.fn()}
+        onChange={rs.fn()}
+        onRemove={rs.fn()}
         rule={{
           column: "email",
           id: "regex",
@@ -248,7 +248,7 @@ describe("FilterPopover value guidance", () => {
       <FilterPopover
         columns={columns}
         logic="and"
-        onChange={vi.fn()}
+        onChange={rs.fn()}
         rules={[]}
       />
     );
@@ -262,7 +262,7 @@ describe("FilterPopover value guidance", () => {
 
   it("offers a true/false picker for boolean columns", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
+    const onChange = rs.fn();
 
     render(
       <FilterPopover
@@ -288,7 +288,7 @@ describe("FilterPopover value guidance", () => {
 
   it("flags an unparsable value inline and keeps the popover open on apply", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
+    const onChange = rs.fn();
 
     render(
       <FilterPopover
@@ -327,9 +327,9 @@ describe("FilterRow value editing", () => {
       <div>
         <FilterRow
           columns={columns}
-          onApplyRequest={vi.fn()}
-          onChange={vi.fn()}
-          onRemove={vi.fn()}
+          onApplyRequest={rs.fn()}
+          onChange={rs.fn()}
+          onRemove={rs.fn()}
           rule={emailRule()}
         />
       </div>
@@ -351,9 +351,9 @@ describe("FilterRow value editing", () => {
       <div>
         <FilterRow
           columns={columns}
-          onApplyRequest={vi.fn()}
-          onChange={vi.fn()}
-          onRemove={vi.fn()}
+          onApplyRequest={rs.fn()}
+          onChange={rs.fn()}
+          onRemove={rs.fn()}
           rule={emailRule()}
         />
       </div>
@@ -378,9 +378,9 @@ describe("FilterRow value editing", () => {
       <div>
         <FilterRow
           columns={columns}
-          onApplyRequest={vi.fn()}
-          onChange={vi.fn()}
-          onRemove={vi.fn()}
+          onApplyRequest={rs.fn()}
+          onChange={rs.fn()}
+          onRemove={rs.fn()}
           rule={emailRule()}
         />
       </div>
@@ -408,9 +408,9 @@ describe("FilterRow value editing", () => {
       <div>
         <FilterRow
           columns={columns}
-          onApplyRequest={vi.fn()}
-          onChange={vi.fn()}
-          onRemove={vi.fn()}
+          onApplyRequest={rs.fn()}
+          onChange={rs.fn()}
+          onRemove={rs.fn()}
           rule={{
             column: "active",
             id: "boolean",
@@ -433,15 +433,15 @@ describe("FilterRow value editing", () => {
 
   it("toggles generic predicate negation", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
+    const onChange = rs.fn();
 
     render(
       <div>
         <FilterRow
           columns={columns}
-          onApplyRequest={vi.fn()}
+          onApplyRequest={rs.fn()}
           onChange={onChange}
-          onRemove={vi.fn()}
+          onRemove={rs.fn()}
           rule={emailRule("alice@example.com")}
         />
       </div>
@@ -457,15 +457,15 @@ describe("FilterRow value editing", () => {
 
   it("debounces keystrokes into a single rule change", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
+    const onChange = rs.fn();
 
     render(
       <div>
         <FilterRow
           columns={columns}
-          onApplyRequest={vi.fn()}
+          onApplyRequest={rs.fn()}
           onChange={onChange}
-          onRemove={vi.fn()}
+          onRemove={rs.fn()}
           rule={emailRule()}
         />
       </div>
@@ -484,14 +484,14 @@ describe("FilterRow value editing", () => {
   });
 
   it("resets the draft when the rule value changes from outside", async () => {
-    const onChange = vi.fn();
+    const onChange = rs.fn();
     const { rerender } = render(
       <div>
         <FilterRow
           columns={columns}
-          onApplyRequest={vi.fn()}
+          onApplyRequest={rs.fn()}
           onChange={onChange}
-          onRemove={vi.fn()}
+          onRemove={rs.fn()}
           rule={emailRule("alice")}
         />
       </div>
@@ -501,9 +501,9 @@ describe("FilterRow value editing", () => {
       <div>
         <FilterRow
           columns={columns}
-          onApplyRequest={vi.fn()}
+          onApplyRequest={rs.fn()}
           onChange={onChange}
-          onRemove={vi.fn()}
+          onRemove={rs.fn()}
           rule={emailRule("")}
         />
       </div>
@@ -515,15 +515,15 @@ describe("FilterRow value editing", () => {
   });
 
   it("cancels a pending value draft when the rule branch changes", () => {
-    vi.useFakeTimers();
-    const onChange = vi.fn();
+    rs.useFakeTimers();
+    const onChange = rs.fn();
     const { rerender } = render(
       <div>
         <FilterRow
           columns={columns}
-          onApplyRequest={vi.fn()}
+          onApplyRequest={rs.fn()}
           onChange={onChange}
-          onRemove={vi.fn()}
+          onRemove={rs.fn()}
           rule={emailRule()}
         />
       </div>
@@ -537,9 +537,9 @@ describe("FilterRow value editing", () => {
       <div>
         <FilterRow
           columns={columns}
-          onApplyRequest={vi.fn()}
+          onApplyRequest={rs.fn()}
           onChange={onChange}
-          onRemove={vi.fn()}
+          onRemove={rs.fn()}
           rule={{
             column: "weight_kg",
             id: "rule-1",
@@ -551,7 +551,7 @@ describe("FilterRow value editing", () => {
     );
 
     act(() => {
-      vi.advanceTimersByTime(250);
+      rs.advanceTimersByTime(250);
     });
 
     expect(onChange).not.toHaveBeenCalled();

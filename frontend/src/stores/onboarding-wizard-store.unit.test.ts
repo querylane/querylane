@@ -1,5 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@rstest/core";
 
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { PostgresConfigSchema } from "@/protogen/querylane/console/v1alpha1/instance_pb";

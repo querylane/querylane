@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
 import { InstanceMetricsPanel } from "@/components/console-pages/instance-metrics-panel";
 import {
   DEFAULT_METRIC_RANGE,
@@ -15,7 +15,7 @@ import {
   QueryMetricsResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
-vi.mock("@/components/charts/metric-time-chart", () => ({
+rs.mock("@/components/charts/metric-time-chart", () => ({
   MetricTimeChart: () => <div data-testid="metric-time-chart" />,
 }));
 
@@ -104,7 +104,7 @@ function renderPanel(overrides: {
   range?: MetricRange;
   response: QueryMetricsResponse;
 }) {
-  const onRangeChange = overrides.onRangeChange ?? vi.fn();
+  const onRangeChange = overrides.onRangeChange ?? rs.fn();
   render(
     <InstanceMetricsPanel
       isError={false}

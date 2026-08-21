@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, rs } from "@rstest/core";
 import {
   fetchOtherDatabaseObjectsSummary,
   fetchOtherObjectsBrowsePage,
@@ -83,7 +83,7 @@ describe("other database objects query", () => {
   });
 
   it("builds a per-category summary with exact totals from window counts", async () => {
-    const execute = vi.fn(({ statement }: { statement: string }) => {
+    const execute = rs.fn(({ statement }: { statement: string }) => {
       if (statement.includes("has_cron_job_table")) {
         return Promise.resolve([{ has_cron_job_table: "false" }]);
       }
@@ -126,7 +126,7 @@ describe("other database objects query", () => {
       routineRow(`a.f_${String(index).padStart(3, "0")}()`)
     );
     const statements: string[] = [];
-    const execute = vi.fn(({ statement }: { statement: string }) => {
+    const execute = rs.fn(({ statement }: { statement: string }) => {
       statements.push(statement);
       return Promise.resolve(manyRows);
     });
@@ -144,7 +144,7 @@ describe("other database objects query", () => {
   });
 
   it("skips the cron category entirely when pg_cron is absent", async () => {
-    const execute = vi.fn(() =>
+    const execute = rs.fn(() =>
       Promise.resolve([{ has_cron_job_table: "false" }])
     );
 

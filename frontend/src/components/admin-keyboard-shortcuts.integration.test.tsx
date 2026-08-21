@@ -1,17 +1,17 @@
+import { beforeEach, expect, rs, test } from "@rstest/core";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, expect, test, vi } from "vitest";
 import { AdminKeyboardShortcuts } from "@/components/admin-keyboard-shortcuts";
 import { KeyboardShortcutsProvider } from "@/components/keyboard-shortcuts";
 import { SidebarProvider, useSidebar } from "@/components/querylane-ui/sidebar";
 
-const navigateMock = vi.fn(() => Promise.resolve());
+const navigateMock = rs.fn(() => Promise.resolve());
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigateMock,
 }));
 
-vi.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context", () => ({
   useDb: () => ({
     navigationIds: {
       databaseId: "customer-events",

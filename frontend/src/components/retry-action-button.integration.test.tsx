@@ -1,6 +1,6 @@
+import { afterEach, expect, rs, test } from "@rstest/core";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
-import { afterEach, expect, test, vi } from "vitest";
 
 import { RetryActionButton } from "@/components/retry-action-button";
 
@@ -13,7 +13,7 @@ afterEach(() => {
 // reset in the retry `finally` would be skipped and the button would wedge on
 // "Retrying…" forever. This guards against that regression.
 test("re-enables the retry button after a failed retry under StrictMode", async () => {
-  const onRetry = vi.fn(() => Promise.reject(new Error("still unreachable")));
+  const onRetry = rs.fn(() => Promise.reject(new Error("still unreachable")));
 
   render(
     <StrictMode>

@@ -1,6 +1,6 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { anyPack, timestampFromDate } from "@bufbuild/protobuf/wkt";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import {
   buildConnectedEndpointRow,
   buildDisconnectedDiagnosticRows,

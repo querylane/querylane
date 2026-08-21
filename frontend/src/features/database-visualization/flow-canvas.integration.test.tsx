@@ -1,5 +1,5 @@
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
 import { Button } from "@/components/ui/button";
 import { FlowCanvas } from "@/features/database-visualization/flow-canvas";
 import type {
@@ -20,15 +20,15 @@ const {
   capturedEdges,
   capturedNodes,
   fitViewMock,
-} = vi.hoisted(() => ({
+} = rs.hoisted(() => ({
   capturedControlsClassNames: [] as (string | undefined)[],
   capturedControlsStyles: [] as CapturedControlsStyle[],
   capturedEdges: [] as unknown[],
   capturedNodes: [] as unknown[],
-  fitViewMock: vi.fn(),
+  fitViewMock: rs.fn(),
 }));
 
-vi.mock("@xyflow/react", () => ({
+rs.mock("@xyflow/react", () => ({
   Background: () => <div data-testid="flow-background" />,
   Controls: ({
     className,

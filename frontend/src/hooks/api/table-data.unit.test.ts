@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, rs, test } from "@rstest/core";
 import {
   useReadCellValueMutation,
   useReadRowsQuery,
@@ -13,20 +13,20 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_data-TableDataService_connectquery";
 
 const { useMutationMock, useQueryClientMock, useQueryMock, useTransportMock } =
-  vi.hoisted(() => ({
-    useMutationMock: vi.fn(),
-    useQueryClientMock: vi.fn(),
-    useQueryMock: vi.fn(),
-    useTransportMock: vi.fn(),
+  rs.hoisted(() => ({
+    useMutationMock: rs.fn(),
+    useQueryClientMock: rs.fn(),
+    useQueryMock: rs.fn(),
+    useTransportMock: rs.fn(),
   }));
 
-vi.mock("@connectrpc/connect-query", () => ({
+rs.mock("@connectrpc/connect-query", () => ({
   useMutation: useMutationMock,
   useQuery: useQueryMock,
   useTransport: useTransportMock,
 }));
 
-vi.mock("@tanstack/react-query", () => ({
+rs.mock("@tanstack/react-query", () => ({
   useQueryClient: useQueryClientMock,
 }));
 
@@ -125,11 +125,11 @@ describe("useReadRowsQueryActions", () => {
       staleTime?: number;
     }
     const queryClient = {
-      fetchQuery: vi.fn((_options: QueryOptionsStub) =>
+      fetchQuery: rs.fn((_options: QueryOptionsStub) =>
         Promise.resolve("rows")
       ),
-      getQueryState: vi.fn(() => queryState),
-      prefetchQuery: vi.fn((_options: QueryOptionsStub) => Promise.resolve()),
+      getQueryState: rs.fn(() => queryState),
+      prefetchQuery: rs.fn((_options: QueryOptionsStub) => Promise.resolve()),
     };
     useQueryClientMock.mockReturnValue(queryClient);
     useTransportMock.mockReturnValue({});
@@ -158,7 +158,7 @@ describe("useReadCellValueMutation", () => {
   });
 
   test("uses the generated ReadCellValue mutation descriptor", () => {
-    const options = { onSuccess: vi.fn() };
+    const options = { onSuccess: rs.fn() };
 
     useReadCellValueMutation(options);
 

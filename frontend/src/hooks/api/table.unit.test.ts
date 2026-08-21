@@ -1,5 +1,5 @@
 import { createRouterTransport } from "@connectrpc/connect";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import {
   assertNoUnhandledTableDetailQueries,
   tableDetailQueryOptions,

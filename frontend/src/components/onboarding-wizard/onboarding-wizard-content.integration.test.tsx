@@ -1,5 +1,6 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { TransportProvider } from "@connectrpc/connect-query";
+import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -10,7 +11,6 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OnboardingWizardControllerProvider } from "@/components/onboarding-wizard/controller-provider";
 import type { OnboardingWizardController } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller";
@@ -128,11 +128,11 @@ function createController(
   overrides: Partial<OnboardingWizardController> = {}
 ): OnboardingWizardController {
   return {
-    finishWizard: vi.fn(),
-    goBackToConfigure: vi.fn(),
-    goBackToMethodSelection: vi.fn(),
-    refreshOnboardingState: vi.fn(async () => undefined),
-    retryWatch: vi.fn(async () => undefined),
+    finishWizard: rs.fn(),
+    goBackToConfigure: rs.fn(),
+    goBackToMethodSelection: rs.fn(),
+    refreshOnboardingState: rs.fn(async () => undefined),
+    retryWatch: rs.fn(async () => undefined),
     setupRunning: false,
     watchIsRunning: false,
     watchManualRetryRequired: false,
@@ -146,7 +146,7 @@ function renderWizard(controller = createController()) {
   renderedQueryClients.push(queryClient);
   const transport = createTestRouterTransport(({ service }) => {
     service(InstanceService, {
-      testInstanceConnection: vi.fn(async () => ({})),
+      testInstanceConnection: rs.fn(async () => ({})),
     });
   });
 
@@ -171,7 +171,7 @@ function renderRealWizard(initialMethod: ConfigMethod) {
   renderedQueryClients.push(queryClient);
   const transport = createTestRouterTransport(({ service }) => {
     service(InstanceService, {
-      testInstanceConnection: vi.fn(async () => ({})),
+      testInstanceConnection: rs.fn(async () => ({})),
     });
   });
 
@@ -189,7 +189,7 @@ function renderRealWizard(initialMethod: ConfigMethod) {
 function seedOnboardingState() {
   useSetupStore.setState({
     onboardingState: createOnboardingState(),
-    refreshOnboardingState: vi.fn(async () => undefined),
+    refreshOnboardingState: rs.fn(async () => undefined),
     showWizardErrorBanner: false,
     status: "onboarding",
   });
@@ -238,7 +238,7 @@ afterEach(() => {
 describe("onboarding wizard content integration", () => {
   it("renders loading state and refresh action before onboarding state exists", async () => {
     const user = userEvent.setup();
-    const refreshOnboardingState = vi.fn(async () => undefined);
+    const refreshOnboardingState = rs.fn(async () => undefined);
     useSetupStore.setState({ onboardingState: null, refreshOnboardingState });
 
     renderWizard();
@@ -513,7 +513,7 @@ describe("onboarding wizard content integration", () => {
     const user = userEvent.setup();
     useSetupStore.setState({
       onboardingState: createOnboardingState({ isHomeWritable: false }),
-      refreshOnboardingState: vi.fn(async () => undefined),
+      refreshOnboardingState: rs.fn(async () => undefined),
       showWizardErrorBanner: false,
       status: "onboarding",
     });
@@ -665,7 +665,7 @@ describe("onboarding wizard setup progression", () => {
 
   it("shows waiting-for-config recovery controls for manual YAML setup", async () => {
     const user = userEvent.setup();
-    const retryWatch = vi.fn(async () => undefined);
+    const retryWatch = rs.fn(async () => undefined);
     seedOnboardingState();
     useOnboardingWizardStore.setState({
       phase: "progress_waiting_for_config",
@@ -689,7 +689,7 @@ describe("onboarding wizard setup progression", () => {
 
   it("renders successful setup completion and calls finish action", async () => {
     const user = userEvent.setup();
-    const finishWizard = vi.fn();
+    const finishWizard = rs.fn();
     seedOnboardingState();
     useOnboardingWizardStore.setState({
       phase: "progress_success",
@@ -835,7 +835,7 @@ describe("onboarding wizard setup progression", () => {
       onboardingState: createOnboardingState({
         availableMethods: [SetupMethod.MANUAL_YAML],
       }),
-      refreshOnboardingState: vi.fn(async () => undefined),
+      refreshOnboardingState: rs.fn(async () => undefined),
       showWizardErrorBanner: false,
       status: "onboarding",
     });

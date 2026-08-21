@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@rstest/core";
 import { buildNameContainsFilter } from "@/features/data-explorer/data-explorer-catalog-filter";
 
 describe("buildNameContainsFilter", () => {

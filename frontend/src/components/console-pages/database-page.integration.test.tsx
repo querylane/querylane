@@ -2,6 +2,14 @@ import { create as createProto, toBinary } from "@bufbuild/protobuf";
 import { anyPack } from "@bufbuild/protobuf/wkt";
 import { Code, ConnectError } from "@connectrpc/connect";
 import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
+import {
   cleanup,
   render,
   screen,
@@ -10,7 +18,6 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { BackendDatabasePage } from "@/components/console-pages/database-page";
 import { DatabaseQueryInsightsContent } from "@/components/console-pages/database-query-insights-content";
 import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
@@ -47,19 +54,19 @@ interface QueryState<T> {
 
 const ENCODING_RE = /UTF8/;
 const HEADER_COUNTS_RE = /3 schemas · 3 objects/;
-const state = vi.hoisted(() => ({
+const state = rs.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
   databaseQuery: {} as QueryState<GetDatabaseResponse>,
   databasesQuery: {} as { data?: unknown; isPending?: boolean },
   extensionsQuery: {} as { data?: unknown; isPending?: boolean },
   metricsQuery: {} as { data?: unknown; isPending?: boolean },
-  navigate: vi.fn(async () => undefined),
+  navigate: rs.fn(async () => undefined),
   otherObjectsQuery: {} as {
     data?: unknown;
     error?: unknown;
     isLoading?: boolean;
   },
-  queryInsightsHook: vi.fn(),
+  queryInsightsHook: rs.fn(),
   queryInsightsQuery: {} as QueryState<GetDatabaseQueryInsightsResponse>,
 }));
 const SELECT_EVENTS_QUERY_BUTTON_RE =
@@ -98,7 +105,7 @@ const EMPTY_PAGINATION_RANGE_RE = /Showing 1–0/;
 const QUERY_STATS_UNAVAILABLE_RE =
   /Query statistics are unavailable for this database/;
 
-vi.mock("@tanstack/react-router", () => {
+rs.mock("@tanstack/react-router", () => {
   const linkExportName = "Link";
   return {
     [linkExportName]: ({
@@ -127,7 +134,7 @@ vi.mock("@tanstack/react-router", () => {
   };
 });
 
-vi.mock("@/hooks/api/database", () => ({
+rs.mock("@/hooks/api/database", () => ({
   databasesForInstanceQueryInput: (instanceId: string) => ({
     parent: instanceId,
   }),
@@ -141,7 +148,7 @@ vi.mock("@/hooks/api/database", () => ({
     error: state.databaseQuery.error ?? null,
     isFetching: state.databaseQuery.isFetching ?? false,
     isPending: state.databaseQuery.isPending ?? false,
-    refetch: state.databaseQuery.refetch ?? vi.fn(async () => undefined),
+    refetch: state.databaseQuery.refetch ?? rs.fn(async () => undefined),
   }),
   useGetDatabaseQueryInsightsQuery: () => {
     state.queryInsightsHook();
@@ -150,39 +157,39 @@ vi.mock("@/hooks/api/database", () => ({
       error: state.queryInsightsQuery.error ?? null,
       isFetching: state.queryInsightsQuery.isFetching ?? false,
       isPending: state.queryInsightsQuery.isPending ?? false,
-      refetch: state.queryInsightsQuery.refetch ?? vi.fn(async () => undefined),
+      refetch: state.queryInsightsQuery.refetch ?? rs.fn(async () => undefined),
     };
   },
 }));
 
-vi.mock("@/hooks/api/database-catalog", () => ({
+rs.mock("@/hooks/api/database-catalog", () => ({
   useDatabaseCatalogQuery: () => ({
     data: state.catalogQuery.data,
     error: state.catalogQuery.error ?? null,
     isPending: state.catalogQuery.isPending ?? false,
-    refetch: vi.fn(async () => undefined),
+    refetch: rs.fn(async () => undefined),
   }),
 }));
 
-vi.mock("@/components/console-pages/other-database-objects-query", () => ({
+rs.mock("@/components/console-pages/other-database-objects-query", () => ({
   useOtherDatabaseObjectsSummaryQuery: () => ({
     data: state.otherObjectsQuery.data,
     error: state.otherObjectsQuery.error ?? null,
     isLoading: state.otherObjectsQuery.isLoading ?? false,
-    refetch: vi.fn(async () => undefined),
+    refetch: rs.fn(async () => undefined),
   }),
   useOtherObjectsBrowseQuery: () => ({
     data: { pages: [] },
     error: null,
-    fetchNextPage: vi.fn(),
+    fetchNextPage: rs.fn(),
     hasNextPage: false,
     isFetchingNextPage: false,
     isLoading: false,
-    refetch: vi.fn(async () => undefined),
+    refetch: rs.fn(async () => undefined),
   }),
 }));
 
-vi.mock("@/hooks/api/extension", () => ({
+rs.mock("@/hooks/api/extension", () => ({
   extensionsForDatabaseQueryInput: (input: unknown) => input,
   useListAllExtensionsQuery: () => ({
     data: state.extensionsQuery.data,
@@ -191,7 +198,7 @@ vi.mock("@/hooks/api/extension", () => ({
   }),
 }));
 
-vi.mock("@/hooks/api/metrics", () => ({
+rs.mock("@/hooks/api/metrics", () => ({
   quantizedMetricsAnchor: () => 0,
   useDatabaseMetricsQuery: () => ({
     data: state.metricsQuery.data,
@@ -1690,7 +1697,7 @@ describe("database query insights resilience", () => {
 
     state.queryInsightsQuery = {
       error: new Error("query insights unavailable"),
-      refetch: vi.fn(async () => undefined),
+      refetch: rs.fn(async () => undefined),
     };
     rerender(
       <QueryInsightsDrawerForTest
@@ -1704,7 +1711,7 @@ describe("database query insights resilience", () => {
 
   test("shows partial metric failures with retry while retaining other data", async () => {
     const user = userEvent.setup();
-    const refetch = vi.fn(async () => undefined);
+    const refetch = rs.fn(async () => undefined);
     state.queryInsightsQuery = {
       data: queryInsightsWithPartialError("query_stats"),
       refetch,
@@ -1731,7 +1738,7 @@ describe("database query insights resilience", () => {
     state.queryInsightsQuery = {
       data: queryInsightsResponse(),
       error: new Error("background refresh failed"),
-      refetch: vi.fn(async () => undefined),
+      refetch: rs.fn(async () => undefined),
     };
 
     render(

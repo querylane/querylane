@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
+import { afterEach, expect, rs, test } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, expect, test, vi } from "vitest";
 import { BuiltinRoleBody } from "@/components/console-pages/role-detail-builtins";
 import { RoleSchema } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
@@ -17,7 +17,7 @@ test("shows loading instead of an empty database state while grants resolve", ()
       grantsPending={true}
       instanceId="local-dev"
       members={[]}
-      onSelectDatabase={vi.fn()}
+      onSelectDatabase={rs.fn()}
       parents={[]}
       role={create(RoleSchema, {
         isSystemRole: true,

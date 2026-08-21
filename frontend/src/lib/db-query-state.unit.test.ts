@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { buildResourceCollectionQueryState } from "@/lib/db-query-state";
 
 describe("buildResourceCollectionQueryState", () => {

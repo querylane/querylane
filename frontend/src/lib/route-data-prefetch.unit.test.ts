@@ -1,6 +1,6 @@
 import type { Transport } from "@connectrpc/connect";
+import { describe, expect, rs, test } from "@rstest/core";
 import { QueryClient } from "@tanstack/react-query";
-import { describe, expect, test, vi } from "vitest";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import {
   databaseRouteDataQueries,
@@ -21,7 +21,7 @@ function makeQueryClientStub(
       queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
     },
   });
-  vi.spyOn(queryClient, "prefetchQuery").mockImplementation((options) => {
+  rs.spyOn(queryClient, "prefetchQuery").mockImplementation((options) => {
     calls.push(options);
     return prefetchResult;
   });

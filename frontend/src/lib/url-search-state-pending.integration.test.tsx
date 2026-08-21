@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it, rs } from "@rstest/core";
 import {
   act,
   fireEvent,
@@ -6,29 +7,28 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Input } from "@/components/ui/input";
 import { useUrlTableSearch } from "@/lib/url-search-state";
 
-const routerMocks = vi.hoisted(() => ({
+const routerMocks = rs.hoisted(() => ({
   location: { hash: "", pathname: "/instances/prod/roles", searchStr: "" },
-  navigate: vi.fn(),
+  navigate: rs.fn(),
   navigationRejects: [] as Array<(reason?: unknown) => void>,
   navigationResolves: [] as Array<() => void>,
   q: "",
 }));
 
-const navigationErrorMocks = vi.hoisted(() => ({
-  handleNavigationError: vi.fn(),
+const navigationErrorMocks = rs.hoisted(() => ({
+  handleNavigationError: rs.fn(),
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   useLocation: () => routerMocks.location,
   useNavigate: () => routerMocks.navigate,
   useSearch: () => routerMocks.q,
 }));
 
-vi.mock("@/lib/navigation-errors", () => navigationErrorMocks);
+rs.mock("@/lib/navigation-errors", () => navigationErrorMocks);
 
 function SearchHarness() {
   const [query, setQuery] = useUrlTableSearch("/instances/$instanceId/roles");

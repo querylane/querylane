@@ -97,10 +97,10 @@ jobs:
         run: |
           set -euo pipefail
           changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(doctor\.config\.ts|react-doctor\.config\.json|package\.json|bun\.lock|postcss\.config\.mjs|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|react-doctor-policy|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
-            bun run test:unit -- --reporter=verbose
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(doctor\.config\.ts|react-doctor\.config\.json|package\.json|bun\.lock|postcss\.config\.mjs|rstest[^/]*\.ts|test\.console-guard\.ts|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|react-doctor-policy|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+            bun run test:unit -- --reporter=md
           else
-            bun run test:unit:changed -- --reporter=verbose
+            bun run test:unit:changed -- --reporter=md
           fi
 
   integration:
@@ -137,10 +137,10 @@ jobs:
         run: |
           set -euo pipefail
           changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|postcss\.config\.mjs|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
-            bun run test:integration -- --reporter=verbose
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|postcss\.config\.mjs|rstest[^/]*\.ts|test\.console-guard\.ts|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+            bun run test:integration -- --reporter=md
           else
-            bun run test:integration:changed -- --reporter=verbose
+            bun run test:integration:changed -- --reporter=md
           fi
 
   browser:
@@ -191,7 +191,7 @@ jobs:
         run: |
           set -euo pipefail
           changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|postcss\.config\.mjs|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|postcss\.config\.mjs|rstest[^/]*\.ts|test\.console-guard\.ts|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
             bun run test:browser:ci
           else
             bun run test:browser:changed -- --reporter=verbose

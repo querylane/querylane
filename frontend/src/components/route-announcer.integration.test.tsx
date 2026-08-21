@@ -1,22 +1,22 @@
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { RouteAnnouncer } from "@/components/route-announcer";
 
 const ROLE = "status";
 
-const { useLocationMock } = vi.hoisted(() => ({
-  useLocationMock: vi.fn(),
+const { useLocationMock } = rs.hoisted(() => ({
+  useLocationMock: rs.fn(),
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   useLocation: useLocationMock,
 }));
 
 describe("RouteAnnouncer", () => {
   afterEach(() => {
     cleanup();
-    vi.clearAllMocks();
+    rs.clearAllMocks();
   });
 
   test("renders a live region with role=status and aria-live=polite", () => {

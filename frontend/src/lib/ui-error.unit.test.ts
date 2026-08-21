@@ -1,6 +1,6 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, rs, test } from "@rstest/core";
 
 import {
   attachAppUiErrorContext,
@@ -94,9 +94,9 @@ function createDebugPostgresFailure({
 
 function createReportingDependencies() {
   return {
-    captureException: vi.fn(),
-    logger: { error: vi.fn() },
-    toast: { error: vi.fn() },
+    captureException: rs.fn(),
+    logger: { error: rs.fn() },
+    toast: { error: rs.fn() },
   };
 }
 

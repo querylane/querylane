@@ -3,7 +3,6 @@ import process from "node:process";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 import { getBrowserPolicy } from "./vitest.browser-policy";
-import { VITEST_PROJECT_NAMES } from "./vitest.projects";
 import {
   createVitestBaseConfig,
   VITEST_BROWSER_OPTIMIZE_DEPS,
@@ -13,6 +12,12 @@ import {
 } from "./vitest.shared";
 
 type BrowserTheme = "light" | "dark";
+
+const VITEST_BROWSER_PROJECT_NAMES = {
+  browser: "browser",
+  dark: "browser-dark",
+  light: "browser-light",
+} as const;
 
 const CANONICAL_SCREENSHOT_PLATFORM = "linux";
 const CANONICAL_SCREENSHOT_MISMATCH_THRESHOLD = 0.02;
@@ -80,12 +85,12 @@ function resolveBrowserScreenshotDirectory({
 
 function getBrowserProjectName(themes: readonly BrowserTheme[]) {
   if (themes.length > 1) {
-    return VITEST_PROJECT_NAMES.browser;
+    return VITEST_BROWSER_PROJECT_NAMES.browser;
   }
 
   return themes[0] === "dark"
-    ? VITEST_PROJECT_NAMES.browserDark
-    : VITEST_PROJECT_NAMES.browserLight;
+    ? VITEST_BROWSER_PROJECT_NAMES.dark
+    : VITEST_BROWSER_PROJECT_NAMES.light;
 }
 
 function createBrowserConfig(themes: readonly BrowserTheme[]) {

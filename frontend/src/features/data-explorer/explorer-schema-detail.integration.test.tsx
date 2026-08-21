@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SchemaDetail } from "@/features/data-explorer/explorer-schema-detail";
 import { TableSchema } from "@/protogen/querylane/console/v1alpha1/table_pb";
@@ -63,8 +63,8 @@ describe("schema detail integration", () => {
   it("summarizes schema metadata and normalizes unknown row counts", () => {
     render(
       <SchemaDetail
-        onSelectTable={vi.fn()}
-        onSelectView={vi.fn()}
+        onSelectTable={rs.fn()}
+        onSelectView={rs.fn()}
         owner="app_owner"
         schemaName="public"
         tables={schemaTables}
@@ -90,8 +90,8 @@ describe("schema detail integration", () => {
   it("keeps kind and owner filters inside the Objects tab", () => {
     render(
       <SchemaDetail
-        onSelectTable={vi.fn()}
-        onSelectView={vi.fn()}
+        onSelectTable={rs.fn()}
+        onSelectView={rs.fn()}
         owner="app_owner"
         schemaName="public"
         tables={schemaTables}
@@ -112,12 +112,12 @@ describe("schema detail integration", () => {
 
   it("opens the selected table from the inventory table", async () => {
     const user = userEvent.setup();
-    const onSelectTable = vi.fn();
+    const onSelectTable = rs.fn();
 
     render(
       <SchemaDetail
         onSelectTable={onSelectTable}
-        onSelectView={vi.fn()}
+        onSelectView={rs.fn()}
         owner="app_owner"
         schemaName="public"
         tables={schemaTables}
@@ -139,8 +139,8 @@ describe("schema detail integration", () => {
 
     render(
       <SchemaDetail
-        onSelectTable={vi.fn()}
-        onSelectView={vi.fn()}
+        onSelectTable={rs.fn()}
+        onSelectView={rs.fn()}
         owner="app_owner"
         schemaName="public"
         tables={schemaTables}
@@ -169,8 +169,8 @@ describe("schema detail integration", () => {
 
     render(
       <SchemaDetail
-        onSelectTable={vi.fn()}
-        onSelectView={vi.fn()}
+        onSelectTable={rs.fn()}
+        onSelectView={rs.fn()}
         owner="app_owner"
         schemaName="public"
         tables={schemaTables}
@@ -200,8 +200,8 @@ describe("schema detail integration", () => {
 
     render(
       <SchemaDetail
-        onSelectTable={vi.fn()}
-        onSelectView={vi.fn()}
+        onSelectTable={rs.fn()}
+        onSelectView={rs.fn()}
         owner="app_owner"
         schemaName="public"
         tables={schemaTables}
@@ -234,11 +234,11 @@ describe("schema detail integration", () => {
 
   it("opens the selected view from the inventory table", async () => {
     const user = userEvent.setup();
-    const onSelectView = vi.fn();
+    const onSelectView = rs.fn();
 
     render(
       <SchemaDetail
-        onSelectTable={vi.fn()}
+        onSelectTable={rs.fn()}
         onSelectView={onSelectView}
         owner="app_owner"
         schemaName="public"
@@ -261,8 +261,8 @@ describe("schema detail integration", () => {
       <SchemaDetail
         hasMoreTables={true}
         hasMoreViews={true}
-        onSelectTable={vi.fn()}
-        onSelectView={vi.fn()}
+        onSelectTable={rs.fn()}
+        onSelectView={rs.fn()}
         owner="app_owner"
         schemaName="public"
         tables={schemaTables}
@@ -285,8 +285,8 @@ describe("schema detail integration", () => {
   it("renders a loading state while the first table page is pending", () => {
     render(
       <SchemaDetail
-        onSelectTable={vi.fn()}
-        onSelectView={vi.fn()}
+        onSelectTable={rs.fn()}
+        onSelectView={rs.fn()}
         owner=""
         schemaName="archive"
         tables={[]}
@@ -306,8 +306,8 @@ describe("schema detail integration", () => {
   it("shows the shared empty state when the schema has no objects", () => {
     render(
       <SchemaDetail
-        onSelectTable={vi.fn()}
-        onSelectView={vi.fn()}
+        onSelectTable={rs.fn()}
+        onSelectView={rs.fn()}
         owner=""
         schemaName="archive"
         tables={[]}
@@ -326,8 +326,8 @@ describe("schema detail integration", () => {
   it("marks catalog sync warnings as alerts", () => {
     render(
       <SchemaDetail
-        onSelectTable={vi.fn()}
-        onSelectView={vi.fn()}
+        onSelectTable={rs.fn()}
+        onSelectView={rs.fn()}
         owner="app_owner"
         schemaName="public"
         tables={schemaTables}

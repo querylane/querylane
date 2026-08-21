@@ -1,4 +1,7 @@
 import { create, type DescService } from "@bufbuild/protobuf";
+import * as connectActual from "@connectrpc/connect" with {
+  rstest: "importActual",
+};
 import {
   type Client,
   Code,
@@ -7,10 +10,10 @@ import {
   type Transport,
 } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   type SetupAppDatabaseMutationVariables,
   useSetupAppDatabaseMutation,
@@ -32,15 +35,10 @@ import {
 import { createTestQueryClient } from "@/test/query-client";
 import { createTestRouterTransport } from "@/test/router-transport";
 
-// Production builds run useOnboardingStreamingClient through the React
-// Compiler, which memoizes the createClient(OnboardingService, transport)
-// call per transport. Vitest compiles with esbuild only, so without this
-// memoization every render would produce a new client identity and
-// useWatchConfigChanges would abort and restart its stream on each render.
-// Memoizing createClient per (transport, service) restores the compiled
-// behavior the hook relies on.
-vi.mock("@connectrpc/connect", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@connectrpc/connect")>();
+// Keep the client identity stable across test renders just as the React
+// Compiler does in production. Otherwise useWatchConfigChanges aborts and
+// restarts its stream on each render.
+rs.mock("@connectrpc/connect", () => {
   const clientsByTransport = new WeakMap<
     Transport,
     Map<DescService, unknown>
@@ -57,13 +55,13 @@ vi.mock("@connectrpc/connect", async (importOriginal) => {
     }
     let client = clientsByService.get(service);
     if (client === undefined) {
-      client = actual.createClient(service, transport);
+      client = connectActual.createClient(service, transport);
       clientsByService.set(service, client);
     }
     return client as Client<T>;
   }
 
-  return { ...actual, createClient };
+  return { ...connectActual, createClient };
 });
 
 const WATCH_BACKOFF_SCHEDULE_MS = [500, 1000, 2000] as const;
@@ -185,7 +183,7 @@ async function flushUntil(condition: () => boolean, maxTicks = 200) {
 
 async function advanceTimers(ms: number) {
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
+    await rs.advanceTimersByTimeAsync(ms);
   });
 }
 
@@ -208,7 +206,7 @@ afterEach(async () => {
       queryClient.clear();
     })
   );
-  vi.useRealTimers();
+  rs.useRealTimers();
 });
 
 describe("useSetupAppDatabaseMutation", () => {
@@ -223,7 +221,7 @@ describe("useSetupAppDatabaseMutation", () => {
         );
       },
     });
-    const onProgress = vi.fn<(event: SetupProgressEvent) => void>();
+    const onProgress = rs.fn<(event: SetupProgressEvent) => void>();
     const { result } = renderHook(
       () => useSetupAppDatabaseMutation({ onProgress }),
       { wrapper: createWrapper(transport) }
@@ -273,8 +271,8 @@ describe("useSetupAppDatabaseMutation", () => {
           setupResponse(failedEvent())
         ),
     });
-    const onError = vi.fn<(error: Error) => void>();
-    const onProgress = vi.fn<(event: SetupProgressEvent) => void>();
+    const onError = rs.fn<(error: Error) => void>();
+    const onProgress = rs.fn<(event: SetupProgressEvent) => void>();
     const { result } = renderHook(
       () => useSetupAppDatabaseMutation({ onError, onProgress }),
       { wrapper: createWrapper(transport) }
@@ -299,7 +297,7 @@ describe("useSetupAppDatabaseMutation", () => {
     const transport = createOnboardingTransport({
       setupAppDatabase: () => streamOf(setupResponse(succeededEvent())),
     });
-    const onError = vi.fn<(error: Error) => void>();
+    const onError = rs.fn<(error: Error) => void>();
     const { result } = renderHook(
       () => useSetupAppDatabaseMutation({ onError }),
       { wrapper: createWrapper(transport) }
@@ -325,7 +323,7 @@ describe("useSetupAppDatabaseMutation", () => {
 
 describe("useWatchConfigChanges", () => {
   test("reports progress and completion for a successful watch stream", async () => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
     let attempts = 0;
     const transport = createOnboardingTransport({
       watchConfigChanges() {
@@ -336,9 +334,9 @@ describe("useWatchConfigChanges", () => {
         );
       },
     });
-    const onComplete = vi.fn<() => void>();
-    const onError = vi.fn<(error: Error, reason: WatchErrorReason) => void>();
-    const onProgress = vi.fn<(event: SetupProgressEvent) => void>();
+    const onComplete = rs.fn<() => void>();
+    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
+    const onProgress = rs.fn<(event: SetupProgressEvent) => void>();
     const { result } = renderHook(
       () =>
         useWatchConfigChanges({
@@ -362,11 +360,11 @@ describe("useWatchConfigChanges", () => {
     ]);
     expect(result.current.manualRetryRequired).toBe(false);
     expect(attempts).toBe(1);
-    expect(vi.getTimerCount()).toBe(0);
+    expect(rs.getTimerCount()).toBe(0);
   });
 
   test("reports failed_step without retrying when the stream delivers a failed event", async () => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
     let attempts = 0;
     const transport = createOnboardingTransport({
       watchConfigChanges() {
@@ -377,8 +375,8 @@ describe("useWatchConfigChanges", () => {
         );
       },
     });
-    const onComplete = vi.fn<() => void>();
-    const onError = vi.fn<(error: Error, reason: WatchErrorReason) => void>();
+    const onComplete = rs.fn<() => void>();
+    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
     const { result } = renderHook(
       () => useWatchConfigChanges({ enabled: true, onComplete, onError }),
       { wrapper: createWrapper(transport) }
@@ -392,11 +390,11 @@ describe("useWatchConfigChanges", () => {
     expect(onComplete).not.toHaveBeenCalled();
     expect(result.current.manualRetryRequired).toBe(false);
     expect(attempts).toBe(1);
-    expect(vi.getTimerCount()).toBe(0);
+    expect(rs.getTimerCount()).toBe(0);
   });
 
   test("retries with 500/1000/2000ms backoff before requiring manual retry", async () => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
     let attempts = 0;
     const transport = createOnboardingTransport({
       watchConfigChanges() {
@@ -407,8 +405,8 @@ describe("useWatchConfigChanges", () => {
         return streamOf(watchResponse(succeededEvent()));
       },
     });
-    const onComplete = vi.fn<() => void>();
-    const onError = vi.fn<(error: Error, reason: WatchErrorReason) => void>();
+    const onComplete = rs.fn<() => void>();
+    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
     const { result } = renderHook(
       () => useWatchConfigChanges({ enabled: true, onComplete, onError }),
       { wrapper: createWrapper(transport) }
@@ -443,11 +441,11 @@ describe("useWatchConfigChanges", () => {
     expect(onComplete).not.toHaveBeenCalled();
     expect(result.current.isRunning).toBe(false);
     expect(result.current.retryPending).toBe(false);
-    expect(vi.getTimerCount()).toBe(0);
+    expect(rs.getTimerCount()).toBe(0);
   });
 
   test("retry() restarts the stream and resolves once the watch settles", async () => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
     let attempts = 0;
     const transport = createOnboardingTransport({
       watchConfigChanges() {
@@ -458,8 +456,8 @@ describe("useWatchConfigChanges", () => {
         return streamOf(watchResponse(succeededEvent()));
       },
     });
-    const onComplete = vi.fn<() => void>();
-    const onError = vi.fn<(error: Error, reason: WatchErrorReason) => void>();
+    const onComplete = rs.fn<() => void>();
+    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
     const { result } = renderHook(
       () => useWatchConfigChanges({ enabled: true, onComplete, onError }),
       { wrapper: createWrapper(transport) }
@@ -490,11 +488,11 @@ describe("useWatchConfigChanges", () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(result.current.retryPending).toBe(false);
     expect(result.current.manualRetryRequired).toBe(false);
-    expect(vi.getTimerCount()).toBe(0);
+    expect(rs.getTimerCount()).toBe(0);
   });
 
   test("aborts the in-flight stream when disabled", async () => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
     let abortedByClient = false;
     const transport = createOnboardingTransport({
       async *watchConfigChanges(_request, context) {
@@ -511,9 +509,9 @@ describe("useWatchConfigChanges", () => {
         });
       },
     });
-    const onComplete = vi.fn<() => void>();
-    const onError = vi.fn<(error: Error, reason: WatchErrorReason) => void>();
-    const onProgress = vi.fn<(event: SetupProgressEvent) => void>();
+    const onComplete = rs.fn<() => void>();
+    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
+    const onProgress = rs.fn<(event: SetupProgressEvent) => void>();
     const { result, rerender } = renderHook(
       ({ enabled }: { enabled: boolean }) =>
         useWatchConfigChanges({ enabled, onComplete, onError, onProgress }),
@@ -532,11 +530,11 @@ describe("useWatchConfigChanges", () => {
     expect(onComplete).not.toHaveBeenCalled();
     expect(onError).not.toHaveBeenCalled();
     expect(result.current.manualRetryRequired).toBe(false);
-    expect(vi.getTimerCount()).toBe(0);
+    expect(rs.getTimerCount()).toBe(0);
   });
 
   test("stops retrying when disabled during the backoff wait", async () => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
     let attempts = 0;
     const transport = createOnboardingTransport({
       watchConfigChanges() {
@@ -547,7 +545,7 @@ describe("useWatchConfigChanges", () => {
         return streamOf(watchResponse(succeededEvent()));
       },
     });
-    const onError = vi.fn<(error: Error, reason: WatchErrorReason) => void>();
+    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
     const { result, rerender } = renderHook(
       ({ enabled }: { enabled: boolean }) =>
         useWatchConfigChanges({ enabled, onError }),
@@ -566,11 +564,11 @@ describe("useWatchConfigChanges", () => {
     expect(onError).not.toHaveBeenCalled();
     expect(result.current.isRunning).toBe(false);
     expect(result.current.manualRetryRequired).toBe(false);
-    expect(vi.getTimerCount()).toBe(0);
+    expect(rs.getTimerCount()).toBe(0);
   });
 
   test("does not start the watch stream while disabled", async () => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
     let attempts = 0;
     const transport = createOnboardingTransport({
       watchConfigChanges() {
@@ -589,11 +587,11 @@ describe("useWatchConfigChanges", () => {
     expect(result.current.isRunning).toBe(false);
     expect(result.current.retryPending).toBe(false);
     expect(result.current.manualRetryRequired).toBe(false);
-    expect(vi.getTimerCount()).toBe(0);
+    expect(rs.getTimerCount()).toBe(0);
   });
 
   test("normalizes non-Error stream failures before reporting them", async () => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
     let attempts = 0;
     const transport = createOnboardingTransport({
       watchConfigChanges() {
@@ -605,10 +603,10 @@ describe("useWatchConfigChanges", () => {
       },
     });
     const nonErrorFailure: unknown = "watch consumer failed without an Error";
-    const onError = vi.fn<(error: Error, reason: WatchErrorReason) => void>();
+    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
     // Throwing from onProgress is treated like a stream failure; a non-Error
     // value must be normalized into an Error before reaching onError.
-    const onProgress = vi.fn<(event: SetupProgressEvent) => void>(() => {
+    const onProgress = rs.fn<(event: SetupProgressEvent) => void>(() => {
       throw nonErrorFailure;
     });
     const { result } = renderHook(
@@ -627,11 +625,11 @@ describe("useWatchConfigChanges", () => {
       "Onboarding request failed"
     );
     expect(onError.mock.calls[0]?.[1]).toBe("stream_error");
-    expect(vi.getTimerCount()).toBe(0);
+    expect(rs.getTimerCount()).toBe(0);
   });
 
   test("reports again through the defensive catch when the consumer onError throws", async () => {
-    vi.useFakeTimers();
+    rs.useFakeTimers();
     let attempts = 0;
     const transport = createOnboardingTransport({
       watchConfigChanges() {
@@ -642,7 +640,7 @@ describe("useWatchConfigChanges", () => {
         return streamOf(watchResponse(succeededEvent()));
       },
     });
-    const onError = vi
+    const onError = rs
       .fn<(error: Error, reason: WatchErrorReason) => void>()
       .mockImplementationOnce(() => {
         throw new Error("consumer onError exploded");
@@ -666,6 +664,6 @@ describe("useWatchConfigChanges", () => {
     expect(onError.mock.calls[1]?.[1]).toBe("stream_error");
     expect(result.current.manualRetryRequired).toBe(true);
     await flushUntil(() => result.current.isRunning === false);
-    expect(vi.getTimerCount()).toBe(0);
+    expect(rs.getTimerCount()).toBe(0);
   });
 });

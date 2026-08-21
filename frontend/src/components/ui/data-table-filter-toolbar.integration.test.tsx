@@ -1,6 +1,6 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import { useState } from "react";
 import { DataTableFilterToolbar } from "@/components/ui/data-table-filter-toolbar";
 
@@ -116,7 +116,7 @@ describe("data table filter toolbar", () => {
 
   it("clears search and every facet without owning pagination state", async () => {
     const user = userEvent.setup();
-    const onClearAllCall = vi.fn();
+    const onClearAllCall = rs.fn();
     render(<FilterToolbarFixture onClearAllCall={onClearAllCall} />);
 
     await user.click(screen.getByRole("button", { name: "Clear all" }));

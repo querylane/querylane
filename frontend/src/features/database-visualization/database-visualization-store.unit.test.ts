@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "@rstest/core";
 import { useDatabaseVisualizationStore } from "@/features/database-visualization/database-visualization-store";
 
 describe("useDatabaseVisualizationStore", () => {

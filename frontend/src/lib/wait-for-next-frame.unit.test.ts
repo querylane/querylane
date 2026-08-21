@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { waitForNextFrame } from "@/lib/wait-for-next-frame";
 
 describe("waitForNextFrame (node environment: window is undefined)", () => {
