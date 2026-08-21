@@ -1,5 +1,6 @@
 "use client";
 
+import { Code } from "@connectrpc/connect";
 import { useLocation } from "@tanstack/react-router";
 import type React from "react";
 import { useEffect, useRef } from "react";
@@ -23,15 +24,28 @@ const GENERIC_ERROR_TITLES = new Set(["Unexpected error", "Request failed"]);
  * kept as-is. The original message stays visible in the details dialog.
  */
 function presentBootError(error: AppUiError): AppUiError {
-  if (!GENERIC_ERROR_TITLES.has(error.title)) {
+  const isBootPathFailure =
+    error.connectReason === null &&
+    (error.code === Code.DeadlineExceeded ||
+      error.code === Code.Unavailable ||
+      GENERIC_ERROR_TITLES.has(error.title));
+
+  if (!isBootPathFailure) {
     return error;
   }
+
+  const summary =
+    error.code === Code.DeadlineExceeded
+      ? "Querylane did not respond before the request timed out."
+      : "The interface loaded, but the Querylane server is not responding.";
+
   return {
     ...error,
-    message:
-      "The interface loaded, but the Querylane server is not responding. If it was just started, it may still be booting.",
-    retryGuidance: null,
-    title: "Cannot reach the Querylane server",
+    message: summary,
+    retryGuidance:
+      "Check that the Querylane server is running and that your network or proxy can reach it, then retry.",
+    summary,
+    title: "Cannot reach Querylane",
   };
 }
 

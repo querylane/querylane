@@ -2,9 +2,12 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -31,12 +34,34 @@ func TestIntegrationInstanceRuntimeStateStore_UpdateAndList(t *testing.T) {
 
 	assert.Equal(t, model.ConnectionState_ConnectionStateError, states["prod"].ConnectionState)
 	require.NotNil(t, states["prod"].ConnectionError)
-	assert.Equal(t, "connection refused", *states["prod"].ConnectionError)
+	assert.Equal(t, "PostgreSQL instance is unreachable", *states["prod"].ConnectionError)
 	require.NotNil(t, states["prod"].ConnectionCheckedAt)
 	assert.WithinDuration(t, checkedAt, *states["prod"].ConnectionCheckedAt, time.Second)
 
 	assert.Equal(t, model.ConnectionState_ConnectionStateActive, states["staging"].ConnectionState)
 	assert.Nil(t, states["staging"].ConnectionError)
+}
+
+func TestIntegrationInstanceRuntimeStateStore_RedactsConnectionFailure(t *testing.T) {
+	t.Parallel()
+
+	testDB := NewTestDB(t)
+	store := NewInstanceRuntimeStateStore(testDB.DB())
+	recorder := NewInstanceConnectionRecorder(testDB.DB())
+	checkedAt := time.Now().UTC().Truncate(time.Second)
+	rawError := fmt.Errorf("connect host=10.0.0.8 user=admin: %w", &pgconn.PgError{
+		Code:    pgerrcode.InvalidPassword,
+		Message: `password authentication failed for user "admin"`,
+	})
+
+	require.NoError(t, recorder.RecordErrorTx(t.Context(), testDB.DB(), "prod", checkedAt, rawError))
+
+	states, err := store.ListInstanceRuntimeStates(t.Context(), []string{"prod"})
+	require.NoError(t, err)
+	require.NotNil(t, states["prod"].ConnectionError)
+	assert.Equal(t, "PostgreSQL authentication failed", *states["prod"].ConnectionError)
+	assert.NotContains(t, *states["prod"].ConnectionError, "10.0.0.8")
+	assert.NotContains(t, *states["prod"].ConnectionError, "admin")
 }
 
 func TestIntegrationInstanceRuntimeStateStore_UpdateOverwritesExisting(t *testing.T) {

@@ -39,18 +39,12 @@ const (
 	streamRowsBatchRowsFieldNumber  protowire.Number = 1
 )
 
-type tableResolver interface {
-	EnsureTableExists(ctx context.Context, table resource.TableName) error
-	EnsureMaterializedViewExists(ctx context.Context, view resource.ViewName) error
-}
-
 type instanceOpener interface {
 	OpenInstance(ctx context.Context, name resource.InstanceName) (engine.InstanceSession, error)
 }
 
 // Service implements the TableDataService RPC handlers.
 type Service struct {
-	resolver    tableResolver
 	connManager instanceOpener
 	tokens      *engine.TokenCodec
 	liveQueries *livequery.Limiter
@@ -59,7 +53,7 @@ type Service struct {
 // NewService creates a new TableDataService. The token codec is used by
 // ReadCellValue to verify full_value_token and is shared with the engine
 // (which mints those tokens during ReadRows scans).
-func NewService(resolver tableResolver, connManager instanceOpener, tokens *engine.TokenCodec, liveQueries *livequery.Limiter) *Service {
+func NewService(connManager instanceOpener, tokens *engine.TokenCodec, liveQueries *livequery.Limiter) *Service {
 	if tokens == nil {
 		panic("tabledata.NewService: token codec is required") //nolint:forbidigo // programmer error during DI setup
 	}
@@ -68,7 +62,7 @@ func NewService(resolver tableResolver, connManager instanceOpener, tokens *engi
 		panic("tabledata.NewService: live query limiter is required") //nolint:forbidigo // programmer error during DI setup
 	}
 
-	return &Service{resolver: resolver, connManager: connManager, tokens: tokens, liveQueries: liveQueries}
+	return &Service{connManager: connManager, tokens: tokens, liveQueries: liveQueries}
 }
 
 // ReadRows reads a single page of rows from a table or materialized view.
@@ -83,12 +77,6 @@ func (s *Service) ReadRows(ctx context.Context, req *connect.Request[v1alpha1.Re
 		return nil, apierrors.MapLiveQueryLimit(err)
 	}
 	defer release()
-
-	if err := s.ensureReadableRelationExists(ctx, relation); err != nil {
-		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: relation.Type, Name: relation.String(), Op: "read_rows",
-		})
-	}
 
 	instSession, err := s.connManager.OpenInstance(ctx, relation.Instance())
 	if err != nil {
@@ -166,10 +154,6 @@ func (s *Service) StreamRows(ctx context.Context, req *connect.Request[v1alpha1.
 		return apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
 			Type: relation.Type, Name: relation.String(), Op: "stream_rows",
 		})
-	}
-
-	if err := s.ensureReadableRelationExists(ctx, relation); err != nil {
-		return mapErr(err)
 	}
 
 	instSession, err := s.connManager.OpenInstance(ctx, relation.Instance())
@@ -417,10 +401,6 @@ func (s *Service) ReadCellValue(ctx context.Context, req *connect.Request[v1alph
 		})
 	}
 
-	if err := s.ensureReadableRelationExists(ctx, relation); err != nil {
-		return nil, mapErr(err)
-	}
-
 	instSession, err := s.connManager.OpenInstance(ctx, relation.Instance())
 	if err != nil {
 		return nil, mapErr(err)
@@ -448,16 +428,4 @@ func (s *Service) ReadCellValue(ctx context.Context, req *connect.Request[v1alph
 	return connect.NewResponse(&v1alpha1.ReadCellValueResponse{
 		Value: result.Cell,
 	}), nil
-}
-
-func (s *Service) ensureReadableRelationExists(ctx context.Context, relation resource.RelationName) error {
-	if relation.Type == resource.TypeView {
-		return s.resolver.EnsureMaterializedViewExists(ctx, resource.NewViewName(
-			relation.InstanceID, relation.DatabaseID, relation.SchemaID, relation.RelationID,
-		))
-	}
-
-	return s.resolver.EnsureTableExists(ctx, resource.NewTableName(
-		relation.InstanceID, relation.DatabaseID, relation.SchemaID, relation.RelationID,
-	))
 }

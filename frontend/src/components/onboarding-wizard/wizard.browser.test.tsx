@@ -22,6 +22,8 @@ import { useSetupStore } from "@/stores/setup-store";
 
 const ADVANCED_CONNECTION_OPTIONS_RE = /Advanced connection options/;
 const INVALID_CONNECTION_STRING_RE = /Invalid connection string/;
+const STORAGE_FULL_ERROR_MESSAGE =
+  "extract /Users/you/.querylane/embedded-postgres: no space left on device";
 
 vi.mock("@/hooks/api/instance", () => ({
   useTestInstanceConnectionMutation: () => ({
@@ -142,6 +144,32 @@ function renderFailedProgress() {
     ],
     selectedMethod: "ui_configured",
     streamError: normalizeAppUiError(new Error(errorMessage), {
+      endpoint: "/querylane.console.v1alpha1.ConsoleService/Setup",
+      source: "setup_stream",
+    }),
+  });
+  renderWizard();
+}
+
+function renderStorageFullProgress() {
+  useOnboardingWizardStore.setState({
+    failedEvent: progressEvent({
+      stepId: SetupStep.STARTING_EMBEDDED,
+      displayName: "Start embedded PostgreSQL",
+      state: StepState.FAILED,
+      error: STORAGE_FULL_ERROR_MESSAGE,
+    }),
+    phase: "error_summary",
+    progressEvents: [
+      progressEvent({
+        stepId: SetupStep.STARTING_EMBEDDED,
+        displayName: "Start embedded PostgreSQL",
+        state: StepState.FAILED,
+        error: STORAGE_FULL_ERROR_MESSAGE,
+      }),
+    ],
+    selectedMethod: "embedded",
+    streamError: normalizeAppUiError(new Error(STORAGE_FULL_ERROR_MESSAGE), {
       endpoint: "/querylane.console.v1alpha1.ConsoleService/Setup",
       source: "setup_stream",
     }),
@@ -400,6 +428,34 @@ describe("Onboarding wizard — browser visuals", () => {
       .toBeVisible();
     await expect(page.getByTestId("onboarding-panel")).toMatchScreenshot(
       "onboarding-progress-failed"
+    );
+  });
+
+  test("embedded storage exhaustion shows only applicable recovery actions", async () => {
+    renderStorageFullProgress();
+
+    await expect.element(page.getByText("Storage full")).toBeVisible();
+    await expect
+      .element(
+        page.getByText(
+          "Free disk space where Querylane stores embedded PostgreSQL data, then retry."
+        )
+      )
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: "Retry" }))
+      .toBeVisible();
+    expect(
+      page.getByRole("button", { name: "Reconfigure" }).elements()
+    ).toHaveLength(0);
+    expect(
+      page.getByRole("link", { name: "Report bug" }).elements()
+    ).toHaveLength(0);
+    expect(page.getByText(STORAGE_FULL_ERROR_MESSAGE).elements()).toHaveLength(
+      0
+    );
+    await expect(page.getByTestId("onboarding-panel")).toMatchScreenshot(
+      "onboarding-storage-full"
     );
   });
 

@@ -1,5 +1,6 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { anyPack, timestampFromDate } from "@bufbuild/protobuf/wkt";
+import { Code, ConnectError } from "@connectrpc/connect";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
@@ -65,6 +66,7 @@ const REPLICATION_ROW_NAME = /Replication/;
 const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/;
 const TIMESCALEDB_BUTTON_NAME = /timescaledb/i;
 const DENSE_SCHEMA_COUNT = 12;
+const SPARKLINE_RENDER_TIMEOUT_MS = 5000;
 
 async function getMarkerCenterPixels(marker: HTMLElement) {
   const screenshot = await page
@@ -533,6 +535,24 @@ function instanceResponse({
         }
       : {}),
   });
+}
+
+function metaDatabaseUnavailableError() {
+  const error = new ConnectError(
+    "meta database is unavailable",
+    Code.Unavailable
+  );
+  error.details = [
+    {
+      debug: {
+        domain: "console.querylane.dev",
+        reason: "ERROR_REASON_APP_DATABASE_UNAVAILABLE",
+      },
+      type: "google.rpc.ErrorInfo",
+      value: new Uint8Array([1]),
+    },
+  ];
+  return error;
 }
 
 test("backend instance page explains unavailable server info", async () => {
@@ -1071,19 +1091,22 @@ function cardRect(label: string) {
 
 async function statSparkline(label: string): Promise<SVGElement> {
   let sparkline: SVGElement | null = null;
-  await vi.waitFor(() => {
-    const statLabel = Array.from(document.querySelectorAll("span")).find(
-      (element) =>
-        element.textContent === label &&
-        element.parentElement?.parentElement?.classList.contains("grid") &&
-        element.parentElement.querySelector("svg")
-    );
-    sparkline =
-      statLabel?.parentElement?.querySelector<SVGElement>("svg") ?? null;
-    if (!sparkline) {
-      throw new Error(`Waiting for ${label} sparkline`);
-    }
-  });
+  await vi.waitFor(
+    () => {
+      const statLabel = Array.from(document.querySelectorAll("span")).find(
+        (element) =>
+          element.textContent === label &&
+          element.parentElement?.parentElement?.classList.contains("grid") &&
+          element.parentElement.querySelector("svg")
+      );
+      sparkline =
+        statLabel?.parentElement?.querySelector<SVGElement>("svg") ?? null;
+      if (!sparkline) {
+        throw new Error(`Waiting for ${label} sparkline`);
+      }
+    },
+    { timeout: SPARKLINE_RENDER_TIMEOUT_MS }
+  );
   if (!sparkline) {
     throw new Error(`Expected ${label} sparkline`);
   }
@@ -1165,6 +1188,48 @@ test("backend instance overview shows live metrics and database catalog together
     "backend-instance-overview"
   );
   await expect(health).toMatchScreenshot("backend-instance-overview-health");
+});
+
+test("instance overview keeps cached catalog visible during a meta database outage", async () => {
+  const dependencyError = metaDatabaseUnavailableError();
+  state.instanceQuery = {
+    data: instanceResponse(),
+    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
+    error: dependencyError,
+  };
+  state.overviewQuery = {
+    data: overviewResponse(),
+    error: dependencyError,
+  };
+
+  render(
+    <ScreenshotFrame>
+      <div className="w-[1120px] rounded-xl border border-border bg-background p-6 text-foreground">
+        <BackendInstancePage
+          instanceId="prod"
+          searchRoute="/instances/$instanceId"
+          section="overview"
+        />
+      </div>
+    </ScreenshotFrame>
+  );
+
+  await expect
+    .element(page.getByText("Meta database unavailable"))
+    .toBeVisible();
+  await expect.element(page.getByText("Status unavailable")).toBeVisible();
+  await expect.element(page.getByText("customer_events")).toBeVisible();
+  await expect
+    .element(
+      page.getByText("Showing the last loaded data until refresh succeeds.")
+    )
+    .toBeVisible();
+  expect(page.getByText("Connected", { exact: true }).elements()).toHaveLength(
+    0
+  );
+  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
+    "backend-instance-overview-meta-database-unavailable"
+  );
 });
 
 test("instance overview keeps passive sparklines large on mobile", async () => {

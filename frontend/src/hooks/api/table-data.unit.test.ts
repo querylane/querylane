@@ -33,8 +33,15 @@ vi.mock("@tanstack/react-query", () => ({
 describe("useReadRowsQuery", () => {
   beforeEach(() => {
     useQueryMock.mockReset();
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      isPlaceholderData: false,
+    });
     useMutationMock.mockReset();
     useQueryClientMock.mockReset();
+    useQueryClientMock.mockReturnValue({
+      getQueryCache: () => ({ findAll: () => [] }),
+    });
     useTransportMock.mockReset();
   });
 

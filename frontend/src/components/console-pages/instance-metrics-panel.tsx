@@ -420,7 +420,7 @@ export function InstanceMetricsPanel({
         <div className="px-6 pb-6">
           <EmptyState
             className="mt-4 min-h-72"
-            description="The metrics query failed. Refresh to retry; if it keeps failing, check the instance connection."
+            description="Querylane couldn't load metrics. Refresh to retry."
             icon={ChartNoAxesColumn}
             title="Metrics unavailable"
           />

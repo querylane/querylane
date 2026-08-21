@@ -117,6 +117,7 @@ import { normalizeAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
 import {
   ReadCellValueRequestSchema,
+  type ReadRowsResponse,
   type TableCell,
   type TableResultColumn,
   TableResultColumnSchema,
@@ -455,11 +456,13 @@ function reportTruncatedExport(result: ExportResult & { ok: false }) {
 }
 
 function TableDataGridAlerts({
+  hasStaleRows,
   invalidFilterRules,
   onClearFilters,
   onRetry,
   queryError,
 }: {
+  hasStaleRows: boolean;
   invalidFilterRules: Array<{ id: string; message: string }>;
   onClearFilters: () => void;
   onRetry: () => Promise<unknown> | undefined;
@@ -467,17 +470,24 @@ function TableDataGridAlerts({
 }) {
   if (queryError) {
     return (
-      <AppInlineError
-        error={normalizeAppUiError(queryError, {
-          action: "read_rows",
-          area: "data-explorer.table-data-grid.rows",
-          endpoint: "ReadRows",
-          source: "query",
-          surface: "inline",
-        })}
-        onRetry={onRetry}
-        retryLabel="Retry"
-      />
+      <div className="space-y-2">
+        <AppInlineError
+          error={normalizeAppUiError(queryError, {
+            action: "read_rows",
+            area: "data-explorer.table-data-grid.rows",
+            endpoint: "ReadRows",
+            source: "query",
+            surface: "inline",
+          })}
+          onRetry={onRetry}
+          retryLabel="Retry"
+        />
+        {hasStaleRows ? (
+          <p className="text-muted-foreground text-xs" role="status">
+            Showing the last loaded rows until retry succeeds.
+          </p>
+        ) : null}
+      </div>
     );
   }
   if (invalidFilterRules.length > 0) {
@@ -518,6 +528,7 @@ interface TableDataGridChromeProps {
   filterLogic: TableFilterLogic;
   filterRules: TableFilterRule[];
   filterTitle: string;
+  hasStaleRows: boolean;
   hiddenColumnKeys: ReadonlySet<string>;
   invalidFilterRules: Array<{ id: string; message: string }>;
   isColumnLayoutCustomized: boolean;
@@ -574,6 +585,7 @@ interface TableDataGridChromeProps {
     variant: "default" | "expanded";
   };
   statusItems: GridStatusItem[];
+  suppressStatusAndPagination: boolean;
 }
 
 function pluralizedCount(
@@ -653,6 +665,7 @@ function TableDataGridChrome({
   filterTitle,
   invalidFilterRules,
   hiddenColumnKeys,
+  hasStaleRows,
   isColumnLayoutCustomized,
   lastFetchedLabel,
   onCellContextMenu,
@@ -683,6 +696,7 @@ function TableDataGridChrome({
   sortColumns,
   state,
   statusItems,
+  suppressStatusAndPagination,
 }: TableDataGridChromeProps) {
   // Default variant renders full-bleed inside the explorer pane: the toolbar,
   // status bar, and pagination become padded bars while the grid itself runs
@@ -726,6 +740,7 @@ function TableDataGridChrome({
         />
 
         <TableDataGridAlerts
+          hasStaleRows={hasStaleRows}
           invalidFilterRules={invalidFilterRules}
           onClearFilters={onClearFilters}
           onRetry={onRefresh}
@@ -755,25 +770,30 @@ function TableDataGridChrome({
           rows={rows}
           selectedRows={selectedRows}
           sortColumns={sortColumns}
+          suppressEmptyState={Boolean(queryError)}
         />
       </GridSurface>
 
-      <GridStatusBar
-        className={isFlush ? "border-t-0 px-3 pt-1.5 sm:px-4" : undefined}
-        items={statusItems}
-      />
+      {suppressStatusAndPagination ? null : (
+        <>
+          <GridStatusBar
+            className={isFlush ? "border-t-0 px-3 pt-1.5 sm:px-4" : undefined}
+            items={statusItems}
+          />
 
-      <PaginationFooter
-        className={isFlush ? "px-3 py-2 sm:px-4" : undefined}
-        hasNext={state.hasNext}
-        hasPrev={state.currentPageIndex > 0}
-        onNext={onNext}
-        onPageSizeChange={onPageSizeChange}
-        onPrev={onPrev}
-        pageLabel={state.pageLabel}
-        pageSize={state.pageSize}
-        pageSizeOptions={HIGH_VOLUME_PAGE_SIZE_OPTIONS}
-      />
+          <PaginationFooter
+            className={isFlush ? "px-3 py-2 sm:px-4" : undefined}
+            hasNext={state.hasNext}
+            hasPrev={state.currentPageIndex > 0}
+            onNext={onNext}
+            onPageSizeChange={onPageSizeChange}
+            onPrev={onPrev}
+            pageLabel={state.pageLabel}
+            pageSize={state.pageSize}
+            pageSizeOptions={HIGH_VOLUME_PAGE_SIZE_OPTIONS}
+          />
+        </>
+      )}
     </>
   );
 }
@@ -1802,6 +1822,50 @@ function optionalHandler(
   return enabled ? handler : undefined;
 }
 
+function availableNextPageToken({
+  error,
+  isFetching,
+  response,
+}: {
+  error: unknown;
+  isFetching: boolean;
+  response: ReadRowsResponse | undefined;
+}): string {
+  if (error || isFetching) {
+    return "";
+  }
+  return response?.nextPageToken ?? "";
+}
+
+function resolveReadRowsVisibility({
+  current,
+  error,
+  lastSuccessful,
+}: {
+  current: ReadRowsResponse | undefined;
+  error: unknown;
+  lastSuccessful: ReadRowsResponse | undefined;
+}) {
+  const data = current ?? (error ? lastSuccessful : undefined);
+  return {
+    data,
+    hasStaleRows: Boolean(error && data),
+    isPreviousRequestFallback: Boolean(error && !current && data),
+  };
+}
+
+function shouldSuppressStatusAndPagination({
+  error,
+  isPreviousRequestFallback,
+  rowCount,
+}: {
+  error: unknown;
+  isPreviousRequestFallback: boolean;
+  rowCount: number;
+}): boolean {
+  return Boolean(isPreviousRequestFallback || (error && rowCount === 0));
+}
+
 function TableDataGrid({
   allowInsertCopy = true,
   children,
@@ -1842,7 +1906,21 @@ function TableDataGrid({
     isFetching,
     isLoading,
     isPlaceholderData,
+    lastSuccessfulData,
   } = rowsQuery;
+  // Use TanStack Query's successful data, including the most recent page for
+  // the same request shape. Filters, sorts, projections, and tables keep
+  // separate identities so a failure never displays unrelated rows.
+  const queryError = queryStateError ?? error;
+  const {
+    data: visibleData,
+    hasStaleRows,
+    isPreviousRequestFallback,
+  } = resolveReadRowsVisibility({
+    current: data,
+    error: queryError,
+    lastSuccessful: lastSuccessfulData,
+  });
   const refreshState = useDataGridRefreshState({
     dataUpdatedAt,
     isFetching,
@@ -1863,10 +1941,10 @@ function TableDataGrid({
   );
   const cellSelectionStore = useCellSelectionStore();
 
-  const resultColumns = data?.resultSet?.columns ?? EMPTY_RESULT_COLUMNS;
+  const resultColumns = visibleData?.resultSet?.columns ?? EMPTY_RESULT_COLUMNS;
   const availableColumns = buildAvailableColumns(columnCatalog, resultColumns);
-  const resultRows = data?.resultSet?.rows ?? EMPTY_RESULT_ROWS;
-  const rowCount = data?.resultSet?.rowCount;
+  const resultRows = visibleData?.resultSet?.rows ?? EMPTY_RESULT_ROWS;
+  const rowCount = visibleData?.resultSet?.rowCount;
   const rows = buildGridRows(resultRows, resultColumns);
   const { openRowIndex, setOpenRowIndex } = useOpenRowState(rows);
 
@@ -1895,7 +1973,10 @@ function TableDataGrid({
   const columnLayout = useTableColumnLayout({
     availableColumns,
     columns: resultColumns,
-    hasColumnMetadata: hasColumnMetadata(availableColumns, data?.resultSet),
+    hasColumnMetadata: hasColumnMetadata(
+      availableColumns,
+      visibleData?.resultSet
+    ),
     tableName: name,
   });
 
@@ -1908,7 +1989,7 @@ function TableDataGrid({
       columnLayout.setColumnVisibility(columnKey, false),
     renderOpenReferencedTableLink,
     resultColumns,
-    rowIdentity: data?.resultSet?.rowIdentity,
+    rowIdentity: visibleData?.resultSet?.rowIdentity,
     setOpenRowIndex,
     setSortColumns: controller.setSortColumns,
     sortColumns: controller.sortColumns,
@@ -1928,11 +2009,16 @@ function TableDataGrid({
           pageSize: controller.pageSize,
           rowCount,
         });
-  const hasNext = (data?.nextPageToken ?? "") !== "" && !isFetching;
-  const statusItems = data?.resultSet
+  const nextPageToken = availableNextPageToken({
+    error: queryError,
+    isFetching,
+    response: visibleData,
+  });
+  const hasNext = nextPageToken !== "";
+  const statusItems = visibleData?.resultSet
     ? buildGridStatusItems({
         hasNext,
-        limits: data.limits,
+        limits: visibleData.limits,
         pageSize: controller.pageSize,
         rowsReturned: resultRows.length,
       })
@@ -1961,8 +2047,8 @@ function TableDataGrid({
   }
 
   function handleNext() {
-    if (data?.nextPageToken) {
-      controller.goNext(data.nextPageToken);
+    if (nextPageToken) {
+      controller.goNext(nextPageToken);
     }
   }
 
@@ -1985,6 +2071,7 @@ function TableDataGrid({
     filterRules,
     filterTitle: `Filter ${relationQualifiedName.schema}.${relationQualifiedName.relation}`,
     hiddenColumnKeys: columnLayout.hiddenColumnKeys,
+    hasStaleRows,
     invalidFilterRules,
     isColumnLayoutCustomized: columnLayout.isCustomized,
     lastFetchedLabel: refreshState.lastFetchedLabel,
@@ -2009,7 +2096,7 @@ function TableDataGrid({
     onSelectedRowsChange: setSelectedRows,
     onSortChange: handleSortChange,
     onToggleExpanded: () => setIsDataGridExpanded(true),
-    queryError: queryStateError ?? error,
+    queryError,
     rows,
     selectedCount: selectedRows.size,
     selectedRows,
@@ -2025,6 +2112,11 @@ function TableDataGrid({
       variant: "default",
     },
     statusItems,
+    suppressStatusAndPagination: shouldSuppressStatusAndPagination({
+      error: queryError,
+      isPreviousRequestFallback,
+      rowCount: rows.length,
+    }),
   };
 
   const grid = (

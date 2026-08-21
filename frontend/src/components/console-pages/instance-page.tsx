@@ -2,10 +2,11 @@
 
 import { useTransport } from "@connectrpc/connect-query";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Database, RefreshCw, TriangleAlert } from "lucide-react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AppInlineError } from "@/components/app-error-view";
 import { AsyncSectionState } from "@/components/async-section-state";
 import { MetricSparkline } from "@/components/charts/metric-chart";
 import { ConfigManagedNotice } from "@/components/config-managed-notice";
@@ -44,8 +45,7 @@ import { InstanceMetricsPanel } from "@/components/console-pages/instance-metric
 import { EmptyState } from "@/components/empty-state";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CopyIconButton } from "@/components/ui/copy-icon-button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DataTable,
   type DataTableColumnDef,
@@ -84,6 +84,7 @@ import {
   formatUptime,
 } from "@/lib/console-resources";
 import { useDb } from "@/lib/db-context";
+import { createInstanceConnectionUiError } from "@/lib/instance-connection-error";
 import {
   getMetricPartialErrors,
   type MetricPartialErrors,
@@ -437,10 +438,43 @@ function ReplicationRoleBadge({
   );
 }
 
+function InstanceConnectionStatusBadge({
+  connectionStatus,
+  dependencyUnavailable,
+}: {
+  connectionStatus: DbConnectionStatus;
+  dependencyUnavailable: boolean;
+}) {
+  if (dependencyUnavailable) {
+    return (
+      <Badge className="px-2.5 py-0.5 text-xs" variant="destructive">
+        Status unavailable
+      </Badge>
+    );
+  }
+
+  if (connectionStatus === "error") {
+    return (
+      <Badge className="px-2.5 py-0.5 text-xs" variant="destructive">
+        Connection failed
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge className="px-2.5 py-0.5 text-xs" variant="outline">
+      <StatusIndicator showLabel={true} status={connectionStatus} />
+    </Badge>
+  );
+}
+
 function InstancePageHeader({
   connectionStatus,
   databasesState,
+  dependencyError,
   instance,
+  instanceId,
+  isConfigManaged,
   isRefreshing,
   lastRefreshedAt,
   metricsResponse,
@@ -451,7 +485,10 @@ function InstancePageHeader({
 }: {
   connectionStatus: DbConnectionStatus;
   databasesState: InstancePageHeaderDatabasesState;
+  dependencyError: unknown;
   instance: InstanceRecord;
+  instanceId: string;
+  isConfigManaged: boolean;
   isRefreshing: boolean;
   lastRefreshedAt: number;
   metricsResponse?: QueryMetricsResponse | undefined;
@@ -465,6 +502,9 @@ function InstancePageHeader({
   const metricPartialErrors = getMetricPartialErrors(partialErrors);
   const serverInfoNotice = getMetricNotice(metricPartialErrors, "server_info");
   const connectionError = instance.connectionError.trim();
+  const connectionUiError = connectionError
+    ? createInstanceConnectionUiError(connectionError)
+    : null;
   return (
     <>
       <div className="flex flex-col gap-3">
@@ -480,18 +520,10 @@ function InstancePageHeader({
             </h1>
             <div className="flex flex-wrap items-center gap-2">
               <ReplicationRoleBadge serverInfo={serverInfo} />
-              <Badge
-                className="px-2.5 py-0.5 text-xs"
-                variant={
-                  connectionStatus === "error" ? "destructive" : "outline"
-                }
-              >
-                {connectionStatus === "error" ? (
-                  "Connection failed"
-                ) : (
-                  <StatusIndicator showLabel={true} status={connectionStatus} />
-                )}
-              </Badge>
+              <InstanceConnectionStatusBadge
+                connectionStatus={connectionStatus}
+                dependencyUnavailable={Boolean(dependencyError)}
+              />
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 text-muted-foreground text-xs">
@@ -556,16 +588,28 @@ function InstancePageHeader({
             </AlertDescription>
           </Alert>
         ) : null}
-        {connectionError ? (
-          <div className="flex max-w-3xl items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[0.8125rem] text-destructive">
-            <span className="min-w-0 flex-1 truncate">
-              Connection error: {connectionError}
-            </span>
-            <CopyIconButton
-              ariaLabel="Copy connection error"
-              copiedLabel="Error copied"
-              value={connectionError}
+        {connectionUiError ? (
+          <div className="space-y-2">
+            <AppInlineError
+              actions={
+                isConfigManaged ? null : (
+                  <Link
+                    className={buttonVariants({
+                      size: "sm",
+                      variant: "outline",
+                    })}
+                    params={{ instanceId }}
+                    to="/instances/$instanceId/configuration"
+                  >
+                    Update credentials
+                  </Link>
+                )
+              }
+              error={connectionUiError}
             />
+            <p className="text-muted-foreground text-xs" role="status">
+              Showing the last loaded data until the connection succeeds.
+            </p>
           </div>
         ) : null}
       </div>
@@ -1307,6 +1351,11 @@ function BackendInstancePage({
   const isInstanceMutationPending =
     updateInstanceMutation.isPending || deleteInstanceMutation.isPending;
   const loader = createResourceLoader(instanceQuery, "console.instance");
+  const dependencyError = [
+    instanceQuery.error,
+    queryStates.instances.error,
+    queryStates.databases.error,
+  ].find((error) => error !== null && error !== undefined);
   const isRefreshing = instanceQuery.isFetching;
   const deleteDisabledReason = getInstanceDeleteDisabledReason({
     credentialsUnreadable,
@@ -1390,6 +1439,7 @@ function BackendInstancePage({
             connectionStatus: selectedInstance?.status ?? "disconnected",
             databases,
             databasesUnavailable,
+            dependencyError,
             deleteDisabledReason,
             deletePending: deleteInstanceMutation.isPending,
             extensionsInstalledCount: getInstalledExtensionCount(
@@ -1455,6 +1505,7 @@ function renderLoadedInstancePageContent({
   connectionStatus,
   databases,
   databasesUnavailable,
+  dependencyError,
   deleteDisabledReason,
   deletePending,
   extensionsInstalledCount,
@@ -1485,6 +1536,7 @@ function renderLoadedInstancePageContent({
   connectionStatus: DbConnectionStatus;
   databases: DatabaseRow[];
   databasesUnavailable: boolean;
+  dependencyError: unknown;
   deleteDisabledReason: string | null;
   deletePending: boolean;
   extensionsInstalledCount: number | undefined;
@@ -1570,6 +1622,23 @@ function renderLoadedInstancePageContent({
   return (
     <>
       <div className="flex flex-col gap-8">
+        {dependencyError ? (
+          <div className="space-y-2">
+            <AppInlineError
+              error={normalizeAppUiError(dependencyError, {
+                area: "console.instance",
+                source: "query",
+              })}
+              onRetry={() => {
+                onRefresh();
+                return undefined;
+              }}
+            />
+            <p className="text-muted-foreground text-xs" role="status">
+              Showing the last loaded data until refresh succeeds.
+            </p>
+          </div>
+        ) : null}
         {/* The activity view brings its own heading + live stats and refreshes
             on its own cadence, so the shared instance header (and its KPI bar)
             would just duplicate that chrome. */}
@@ -1582,7 +1651,10 @@ function renderLoadedInstancePageContent({
               isPending: queryState.status === "pending",
               isUnavailable: databasesUnavailable,
             }}
+            dependencyError={dependencyError}
             instance={instance}
+            instanceId={instanceId}
+            isConfigManaged={isConfigManaged}
             isRefreshing={isRefreshing}
             lastRefreshedAt={lastRefreshedAt}
             metricsResponse={liveData.metricsResponse}

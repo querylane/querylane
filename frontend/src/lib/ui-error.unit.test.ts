@@ -341,6 +341,37 @@ describe("PostgreSQL structured error rendering", () => {
 });
 
 describe("error routing and reporting", () => {
+  test.each([
+    "Failed to fetch",
+    "Load failed",
+    "NetworkError when attempting to fetch resource.",
+  ])("attributes browser transport failure %s to Querylane", (message) => {
+    const normalized = normalizeAppUiError(
+      new ConnectError(message, Code.Unknown)
+    );
+
+    expect(normalized).toMatchObject({
+      summary: "Querylane did not respond.",
+      title: "Cannot reach Querylane",
+    });
+    expect(normalized.retryGuidance).toBe(
+      "Check that the Querylane server is running and that your network or proxy can reach it, then retry."
+    );
+  });
+
+  test.each([Code.DeadlineExceeded, Code.Unavailable])(
+    "attributes unstructured transport code %s to Querylane",
+    (code) => {
+      const normalized = normalizeAppUiError(
+        new ConnectError("request failed", code)
+      );
+
+      expect(normalized).toMatchObject({
+        title: "Cannot reach Querylane",
+      });
+    }
+  );
+
   test("turns an unreachable instance into concise recovery guidance", () => {
     const error = new ConnectError(
       "engine list_roles failed: connection refused",

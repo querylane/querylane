@@ -264,7 +264,7 @@ describe("buildDisconnectedDiagnosticRows", () => {
     expect(rows[2]?.summary).toBe("prefer · may fall back to plaintext");
   });
 
-  test("surfaces the connection error on failure", () => {
+  test("summarizes the connection error without exposing raw details", () => {
     const instance = instanceFixture();
     instance.connectionError = "connection refused";
     const rows = buildDisconnectedDiagnosticRows({
@@ -273,7 +273,10 @@ describe("buildDisconnectedDiagnosticRows", () => {
     });
 
     expect(rows[0]?.tone).toBe("error");
-    expect(rows[0]?.summary).toBe("connection refused");
+    expect(rows[0]?.summary).toBe("PostgreSQL instance unavailable");
+    expect(rows[0]?.detail).not.toContainEqual(
+      expect.objectContaining({ value: "connection refused" })
+    );
     expect(rows[1]?.tone).toBe("error");
   });
 

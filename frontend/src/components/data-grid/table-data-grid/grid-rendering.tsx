@@ -370,6 +370,7 @@ interface GridBodyProps {
   rows: GridRow[];
   selectedRows: ReadonlySet<string>;
   sortColumns: SortColumn[];
+  suppressEmptyState?: boolean;
 }
 
 function GridBody({
@@ -388,6 +389,7 @@ function GridBody({
   cellSelectionStore,
   selectedRows,
   sortColumns,
+  suppressEmptyState = false,
 }: GridBodyProps) {
   const gridRootRef = useRef<HTMLDivElement>(null);
 
@@ -577,7 +579,7 @@ function GridBody({
           selectedRows={selectedRows}
           sortColumns={sortColumns}
         />
-        {rows.length === 0 ? (
+        {rows.length === 0 && !suppressEmptyState ? (
           <NoRowsOverlay hasActiveFilter={hasActiveFilter} />
         ) : null}
       </div>

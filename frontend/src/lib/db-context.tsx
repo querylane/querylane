@@ -44,7 +44,6 @@ import {
   shouldEnableDatabaseSelectionQuery,
 } from "@/lib/db-selection-utils";
 import { useCurrentRouteIds } from "@/lib/route-ids";
-import { isAppDatabaseUnavailableError } from "@/lib/ui-error";
 
 const EMPTY_DB_ARRAY: PostgresDatabase[] = [];
 const EMPTY_INSTANCE_ARRAY: PostgresInstance[] = [];
@@ -96,17 +95,10 @@ function useSelectedInstanceResource({
       refetchOnReconnect: true,
     }
   );
-  const queryUnavailable = isAppDatabaseUnavailableError(
-    selectedInstanceQuery.error
-  );
-  const queryInstance = queryUnavailable
-    ? null
-    : selectedInstanceQuery.data?.instance;
+  const queryInstance = selectedInstanceQuery.data?.instance;
 
   let selectedInstance: PostgresInstance | null;
-  if (queryUnavailable) {
-    selectedInstance = null;
-  } else if (queryInstance) {
+  if (queryInstance) {
     selectedInstance = mapInstance(queryInstance);
   } else {
     selectedInstance = pickSelectedResource(instances, effectiveInstanceId);
@@ -283,12 +275,11 @@ function useDbProviderValue() {
       refetchOnReconnect: true,
     }
   );
-  const instancesUnavailable = isAppDatabaseUnavailableError(
-    instancesQuery.error
-  );
-  const instances = instancesUnavailable
-    ? EMPTY_INSTANCE_ARRAY
-    : (instancesQuery.data?.instances.map(mapInstance) ?? EMPTY_INSTANCE_ARRAY);
+  // TanStack Query retains the last successful response when a background
+  // refresh fails. Keep using that catalog as stale data while queryStates
+  // exposes the failure and retry path to the UI.
+  const instances =
+    instancesQuery.data?.instances.map(mapInstance) ?? EMPTY_INSTANCE_ARRAY;
 
   const routeInstanceId = routeIds.instanceId;
   const effectiveInstanceId = resolveValidSelectionId({

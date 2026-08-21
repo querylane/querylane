@@ -1,3 +1,4 @@
+import { isMessage } from "@bufbuild/protobuf";
 import {
   type UseQueryOptions as ConnectUseQueryOptions,
   type UseMutationOptions,
@@ -6,10 +7,14 @@ import {
   useTransport,
 } from "@connectrpc/connect-query";
 import { createQueryOptions } from "@connectrpc/connect-query-core";
-import { useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import { prefetchRouteQuery } from "@/lib/route-prefetch";
-import type { ReadRowsRequest } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
+import {
+  type ReadRowsRequest,
+  type ReadRowsResponse,
+  ReadRowsResponseSchema,
+} from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import {
   readCellValue,
   readRows,
@@ -35,10 +40,42 @@ function queryKeyContainsTableName(value: unknown, tableName: string): boolean {
   return false;
 }
 
+function findLastSuccessfulReadRows(
+  queryClient: QueryClient,
+  currentQueryKey: readonly unknown[]
+): ReadRowsResponse | undefined {
+  let latest: { data: ReadRowsResponse; updatedAt: number } | undefined;
+  const requestIdentity = JSON.stringify(currentQueryKey, (key, value) =>
+    key === "pageToken" ? undefined : value
+  );
+
+  for (const query of queryClient.getQueryCache().findAll()) {
+    if (
+      query.state.status !== "success" ||
+      JSON.stringify(query.queryKey, (key, value) =>
+        key === "pageToken" ? undefined : value
+      ) !== requestIdentity ||
+      !isMessage(query.state.data, ReadRowsResponseSchema)
+    ) {
+      continue;
+    }
+    if (!latest || query.state.dataUpdatedAt > latest.updatedAt) {
+      latest = {
+        data: query.state.data,
+        updatedAt: query.state.dataUpdatedAt,
+      };
+    }
+  }
+
+  return latest?.data;
+}
+
 function useReadRowsQuery(
   request: ReadRowsRequest,
   options?: UseReadRowsQueryOptions
 ) {
+  const queryClient = useQueryClient();
+  const transport = useTransport();
   const baseEnabled = options?.enabled ?? true;
   const connectOptions: ConnectUseQueryOptions<(typeof readRows)["output"]> = {
     ...RESOURCE_QUERY_OPTIONS.tableRows,
@@ -50,7 +87,18 @@ function useReadRowsQuery(
         ? previous
         : undefined;
   }
-  return useConnectQuery(readRows, request, connectOptions);
+  const query = useConnectQuery(readRows, request, connectOptions);
+  const currentQueryKey = createQueryOptions(readRows, request, {
+    transport,
+  }).queryKey;
+
+  return {
+    ...query,
+    lastSuccessfulData:
+      query.data && !query.isPlaceholderData
+        ? query.data
+        : findLastSuccessfulReadRows(queryClient, currentQueryKey),
+  };
 }
 
 function useReadRowsQueryActions(request: ReadRowsRequest) {

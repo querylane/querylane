@@ -178,6 +178,10 @@ function useSetupAppDatabaseMutation(
 
   return useTanStackMutation<void, Error, SetupAppDatabaseMutationVariables>({
     ...options,
+    meta: {
+      ...options?.meta,
+      appErrorSurface: "silent",
+    },
     mutationFn: async ({ request, signal }) => {
       const setupFailedMessage = await consumeSetupStreamWithProgress(
         onboardingStreamingClient.setupAppDatabase(

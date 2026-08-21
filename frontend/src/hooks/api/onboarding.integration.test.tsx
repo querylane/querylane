@@ -293,6 +293,9 @@ describe("useSetupAppDatabaseMutation", () => {
     expect(onError).toHaveBeenCalledTimes(1);
     // The failed event is still surfaced to onProgress before rejection.
     expect(onProgress).toHaveBeenCalledTimes(2);
+    expect(
+      activeQueryClients.at(-1)?.getMutationCache().getAll()[0]?.meta
+    ).toMatchObject({ appErrorSurface: "silent" });
   });
 
   test("rejects when the provided abort signal is already aborted", async () => {

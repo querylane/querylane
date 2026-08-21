@@ -109,11 +109,11 @@ describe("app error view integration", () => {
       />
     );
 
-    screen.getByText("Can't reach the server");
+    screen.getByText("Cannot reach Querylane");
     expect(
-      screen.getByRole("heading", { level: 2, name: "Can't reach the server" })
+      screen.getByRole("heading", { level: 2, name: "Cannot reach Querylane" })
     ).toBeTruthy();
-    screen.getByText("meta database is unavailable");
+    screen.getByText("Querylane did not respond.");
     screen.getByRole("button", { name: "Retry" });
     screen.getByRole("button", { name: "Error details" });
   });

@@ -7,6 +7,8 @@ import (
 	"unicode/utf8"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgerrcode"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/querylane/querylane/backend/integration/testutil"
@@ -35,6 +37,114 @@ func (s *RPCSuite) TestReadRows_BasicRead() {
 	s.True(colNames["id"], "should have id column")
 	s.True(colNames["first_name"], "should have first_name column")
 	s.True(colNames["email"], "should have email column")
+}
+
+func (s *RPCSuite) TestReadRows_ReportsRevokedSelectAsPermissionDenied() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	const (
+		instanceID = "select-denied"
+		roleName   = "querylane_select_denied"
+		password   = "denied-pass"
+	)
+
+	extDB, err := s.pgContainer.ConnectToDatabase(ctx, externalDBName)
+	s.Require().NoError(err)
+
+	defer extDB.Close()
+
+	_, err = extDB.ExecContext(ctx, `CREATE ROLE querylane_select_denied LOGIN PASSWORD 'denied-pass'`)
+	s.Require().NoError(err)
+	s.Require().NoError(func() error {
+		_, grantErr := extDB.ExecContext(ctx, `
+			GRANT CONNECT ON DATABASE test_external TO querylane_select_denied;
+			GRANT USAGE ON SCHEMA public TO querylane_select_denied;
+			REVOKE ALL ON TABLE public.customers FROM querylane_select_denied;
+		`)
+
+		return grantErr
+	}())
+
+	host, err := s.pgContainer.Host(ctx)
+	s.Require().NoError(err)
+	port, err := s.pgContainer.MappedPort(ctx)
+	s.Require().NoError(err)
+
+	_, err = s.instanceClient.CreateInstance(ctx, connect.NewRequest(&consolev1alpha1.CreateInstanceRequest{
+		Spec: &consolev1alpha1.CreateInstanceSpec{
+			DisplayName: "SELECT denied",
+			Config: &consolev1alpha1.PostgresConfig{
+				Host:     host,
+				Port:     mustAtoi(s.T(), port),
+				Database: externalDBName,
+				Username: roleName,
+				Password: password,
+				SslMode:  consolev1alpha1.PostgresConfig_SSL_MODE_DISABLED,
+			},
+		},
+		InstanceId: instanceID,
+	}))
+	s.Require().NoError(err)
+	s.T().Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cleanupCancel()
+
+		_, cleanupErr := s.instanceClient.DeleteInstance(cleanupCtx, connect.NewRequest(&consolev1alpha1.DeleteInstanceRequest{
+			Name: "instances/" + instanceID,
+		}))
+		s.Require().NoError(cleanupErr)
+		cleanupDB, cleanupErr := s.pgContainer.ConnectToDatabase(cleanupCtx, externalDBName)
+		s.Require().NoError(cleanupErr)
+
+		defer cleanupDB.Close()
+
+		_, cleanupErr = cleanupDB.ExecContext(cleanupCtx, `
+			DROP OWNED BY querylane_select_denied;
+			DROP ROLE IF EXISTS querylane_select_denied;
+		`)
+		s.Require().NoError(cleanupErr)
+	})
+
+	_, err = s.tableDataClient.ReadRows(ctx, connect.NewRequest(&consolev1alpha1.ReadRowsRequest{
+		Name: "instances/" + instanceID + "/databases/" + externalDBName + "/schemas/public/tables/customers",
+	}))
+
+	var connectErr *connect.Error
+	s.Require().ErrorAs(err, &connectErr)
+	s.Equal(connect.CodePermissionDenied, connectErr.Code())
+
+	var (
+		foundErrorInfo      bool
+		foundPostgresDetail bool
+	)
+
+	for _, detail := range connectErr.Details() {
+		value, valueErr := detail.Value()
+		s.Require().NoError(valueErr)
+
+		if errorInfo, ok := value.(*errdetails.ErrorInfo); ok {
+			foundErrorInfo = true
+
+			s.Equal(consolev1alpha1.ErrorReason_PERMISSION_DENIED.String(), errorInfo.GetReason())
+		}
+
+		postgresDetail, ok := value.(*consolev1alpha1.PostgreSqlErrorDetail)
+		if !ok {
+			continue
+		}
+
+		foundPostgresDetail = true
+
+		s.Equal(pgerrcode.InsufficientPrivilege, postgresDetail.GetSqlstate())
+		s.Equal(
+			consolev1alpha1.PostgreSqlErrorKind_POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
+			postgresDetail.GetKind(),
+		)
+	}
+
+	s.True(foundErrorInfo, "expected ErrorInfo on permission denied error")
+	s.True(foundPostgresDetail, "expected PostgreSqlErrorDetail on permission denied error")
 }
 
 func (s *RPCSuite) TestLiveQueryConcurrencyLimitIsSharedAcrossServices() {
