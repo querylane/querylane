@@ -185,6 +185,25 @@ function lastFiniteValue(values: number[]): number | null {
   return values.length > 0 ? (values.at(-1) ?? null) : null;
 }
 
+function formatCatalogCount(count: number, partial: boolean): string {
+  return `${count.toLocaleString()}${partial ? "+" : ""}`;
+}
+
+function formatCatalogMeasure(value: string, partial: boolean): string {
+  return partial ? `≥ ${value}` : value;
+}
+
+function loadingStatValue(isPending: boolean): string | undefined {
+  return isPending ? "Loading" : undefined;
+}
+
+function catalogCoverage(catalog: DatabaseCatalogResult | undefined) {
+  return {
+    objectsPartial: Boolean(catalog?.coverage.objectsPartial),
+    schemasPartial: Boolean(catalog?.coverage.schemasPartial),
+  };
+}
+
 function DatabaseStatStrip({
   catalog,
   deadTuplesSeries,
@@ -199,9 +218,25 @@ function DatabaseStatStrip({
   sizeSeries: MetricSeries | undefined;
 }) {
   const totals = catalog?.totals;
+  const { objectsPartial, schemasPartial } = catalogCoverage(catalog);
   const deadValues = sparklineValues(deadTuplesSeries);
   const deadNow = lastFiniteValue(deadValues);
-  const pendingValue = isPending ? "—" : undefined;
+  const pendingValue = loadingStatValue(isPending);
+  const schemaCount = totals
+    ? `${formatCatalogCount(totals.schemaCount, schemasPartial)} schemas`
+    : undefined;
+  const viewCount = totals
+    ? `${formatCatalogCount(totals.viewCount, objectsPartial)} views`
+    : undefined;
+  const totalSize = totals
+    ? formatCatalogMeasure(formatBytes(totals.totalSizeBytes), objectsPartial)
+    : "Not loaded";
+  const tableCount = totals
+    ? formatCatalogCount(totals.tableCount, objectsPartial)
+    : "Not loaded";
+  const estimatedRows = totals
+    ? formatCatalogMeasure(formatRows(totals.estimatedRows), objectsPartial)
+    : "Not loaded";
   // Below md the strip is a 2×2 grid: separate the rows with a border on the
   // first two cells and the columns with a border on odd cells.
   const cellBorders =
@@ -212,32 +247,28 @@ function DatabaseStatStrip({
         className={cellBorders}
         label="Total size"
         sparklineValues={sparklineValues(sizeSeries)}
-        sub={totals ? `${totals.schemaCount} schemas` : undefined}
-        value={
-          pendingValue ?? (totals ? formatBytes(totals.totalSizeBytes) : "—")
-        }
+        sub={schemaCount}
+        value={pendingValue ?? totalSize}
       />
       <StatCell
         className={cellBorders}
         label="Tables"
-        sub={totals ? `${totals.viewCount} views` : undefined}
-        value={pendingValue ?? (totals ? String(totals.tableCount) : "—")}
+        sub={viewCount}
+        value={pendingValue ?? tableCount}
       />
       <StatCell
         className={cellBorders}
         label="Est. rows"
         sparklineValues={sparklineValues(liveTuplesSeries)}
         sub="across user tables"
-        value={
-          pendingValue ?? (totals ? formatRows(totals.estimatedRows) : "—")
-        }
+        value={pendingValue ?? estimatedRows}
       />
       <StatCell
         className={cellBorders}
         label="Dead tuples"
         sparklineValues={deadValues}
         sub="awaiting vacuum"
-        value={deadNow === null ? "—" : formatRows(deadNow)}
+        value={deadNow === null ? "Not reported" : formatRows(deadNow)}
       />
     </Card>
   );
@@ -410,34 +441,71 @@ function TopTableRow({
   );
 }
 
+function TopTablesBody({
+  isPending,
+  objects,
+  params,
+  partial,
+}: {
+  isPending: boolean;
+  objects: CatalogObject[];
+  params: ExplorerParams;
+  partial: boolean;
+}) {
+  if (isPending) {
+    return (
+      <div className="px-6 pb-2">
+        <CardLoadingRows label="Loading objects" />
+      </div>
+    );
+  }
+  if (objects.length === 0) {
+    return (
+      <p className="px-6 pb-2 text-[0.8125rem] text-muted-foreground">
+        {partial
+          ? "No user tables or views appear in this catalog sample."
+          : "No user tables or views found."}
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col divide-y divide-border/60">
+      {objects.map((object) => (
+        <TopTableRow key={object.name} object={object} params={params} />
+      ))}
+    </div>
+  );
+}
+
 function TopTablesCard({
   className,
   isPending,
   objects,
   params,
+  partial,
 }: {
   className?: string | undefined;
   isPending: boolean;
   objects: CatalogObject[];
   params: ExplorerParams;
+  partial: boolean;
 }) {
+  let context: string | undefined;
+  if (!isPending) {
+    context = partial ? "partial sample" : "by size";
+  }
   return (
     <Card className={cn("gap-4", className)}>
       <CardHeader>
-        <Eyebrow right={isPending ? undefined : "by size"}>Top tables</Eyebrow>
+        <Eyebrow right={context}>Top tables</Eyebrow>
       </CardHeader>
       <CardContent className="p-0">
-        {isPending ? (
-          <div className="px-6 pb-2">
-            <CardLoadingRows label="Loading objects" />
-          </div>
-        ) : (
-          <div className="flex flex-col divide-y divide-border/60">
-            {objects.map((object) => (
-              <TopTableRow key={object.name} object={object} params={params} />
-            ))}
-          </div>
-        )}
+        <TopTablesBody
+          isPending={isPending}
+          objects={objects}
+          params={params}
+          partial={partial}
+        />
       </CardContent>
     </Card>
   );
@@ -445,6 +513,112 @@ function TopTablesCard({
 
 // ————————————————————————————————————————————————————————————————
 // Schemas
+
+function SchemaCardRow({
+  params,
+  schema,
+}: {
+  params: ExplorerParams;
+  schema: DatabaseCatalogResult["schemas"][number];
+}) {
+  const tableUnit = schema.tableCount === 1 ? "table" : "tables";
+  const viewSummary =
+    schema.viewCount > 0
+      ? ` · ${schema.viewCount} ${schema.viewCount === 1 ? "view" : "views"}`
+      : "";
+  return (
+    <Link
+      className="flex flex-col gap-1 bg-card px-6 py-3 transition-colors hover:bg-muted/50 focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      params={params}
+      search={{ schema: schema.schemaId }}
+      to={EXPLORER_ROUTE}
+    >
+      <span className="flex items-center gap-2">
+        <Folder
+          aria-hidden="true"
+          className="size-3.5 shrink-0 text-muted-foreground"
+        />
+        <code className="truncate font-medium font-mono text-[0.8125rem] text-foreground">
+          {schema.schemaId}
+        </code>
+      </span>
+      <span className="truncate text-muted-foreground text-xs">
+        {schema.tableCount} {tableUnit}
+        {viewSummary}
+        {` · ${formatBytes(schema.totalSizeBytes)}`}
+      </span>
+    </Link>
+  );
+}
+
+function SchemasCardBody({
+  isPending,
+  params,
+  partial,
+  schemas,
+  wide,
+}: {
+  isPending: boolean;
+  params: ExplorerParams;
+  partial: boolean;
+  schemas: DatabaseCatalogResult["schemas"];
+  wide: boolean;
+}) {
+  if (isPending) {
+    return (
+      <div className="px-6 pb-2">
+        <CardLoadingRows label="Loading schemas" />
+      </div>
+    );
+  }
+  if (schemas.length === 0) {
+    return (
+      <p className="px-6 pb-2 text-[0.8125rem] text-muted-foreground">
+        {partial
+          ? "No schemas appear in this catalog sample."
+          : "No schemas found."}
+      </p>
+    );
+  }
+
+  const twoColumnFillers = schemas.length % 2;
+  const threeColumnFillers =
+    (SCHEMA_WIDE_COLUMN_COUNT - (schemas.length % SCHEMA_WIDE_COLUMN_COUNT)) %
+    SCHEMA_WIDE_COLUMN_COUNT;
+  return (
+    <div
+      className={cn(
+        "grid @[21rem]:grid-cols-2 gap-px bg-border/60",
+        wide && "@[42rem]:grid-cols-3"
+      )}
+    >
+      {schemas.map((schema) => (
+        <SchemaCardRow key={schema.schemaId} params={params} schema={schema} />
+      ))}
+      {twoColumnFillers === 1 ? (
+        <div
+          aria-hidden="true"
+          className={cn(
+            "@[21rem]:block hidden bg-card",
+            wide && "@[42rem]:hidden"
+          )}
+        />
+      ) : null}
+      {wide
+        ? Array.from(
+            { length: threeColumnFillers },
+            (_, index) => `three-column-filler-${index}`
+          ).map((key) => (
+            <div
+              aria-hidden="true"
+              className="@[42rem]:block hidden bg-card"
+              key={key}
+            />
+          ))
+        : null}
+    </div>
+  );
+}
 
 function SchemasCard({
   catalog,
@@ -460,79 +634,23 @@ function SchemasCard({
   wide: boolean;
 }) {
   const schemas = toSortedSchemas(catalog);
-  const twoColumnFillers = schemas.length % 2;
-  const threeColumnFillers =
-    (SCHEMA_WIDE_COLUMN_COUNT - (schemas.length % SCHEMA_WIDE_COLUMN_COUNT)) %
-    SCHEMA_WIDE_COLUMN_COUNT;
+  const partial = catalog?.coverage?.schemasPartial ?? false;
+  const count = isPending
+    ? undefined
+    : formatCatalogCount(schemas.length, partial);
   return (
     <Card className={cn("@container gap-4", className)}>
       <CardHeader>
-        <Eyebrow right={isPending ? undefined : String(schemas.length)}>
-          Schemas
-        </Eyebrow>
+        <Eyebrow right={count}>Schemas</Eyebrow>
       </CardHeader>
       <CardContent className="p-0">
-        {isPending ? (
-          <div className="px-6 pb-2">
-            <CardLoadingRows label="Loading schemas" />
-          </div>
-        ) : (
-          <div
-            className={cn(
-              "grid @[21rem]:grid-cols-2 gap-px bg-border/60",
-              wide && "@[42rem]:grid-cols-3"
-            )}
-          >
-            {schemas.map((schema) => (
-              <Link
-                className="flex flex-col gap-1 bg-card px-6 py-3 transition-colors hover:bg-muted/50 focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                key={schema.schemaId}
-                params={params}
-                search={{ schema: schema.schemaId }}
-                to={EXPLORER_ROUTE}
-              >
-                <span className="flex items-center gap-2">
-                  <Folder
-                    aria-hidden="true"
-                    className="size-3.5 shrink-0 text-muted-foreground"
-                  />
-                  <code className="truncate font-medium font-mono text-[0.8125rem] text-foreground">
-                    {schema.schemaId}
-                  </code>
-                </span>
-                <span className="truncate text-muted-foreground text-xs">
-                  {schema.tableCount}{" "}
-                  {schema.tableCount === 1 ? "table" : "tables"}
-                  {schema.viewCount > 0
-                    ? ` · ${schema.viewCount} ${schema.viewCount === 1 ? "view" : "views"}`
-                    : ""}
-                  {` · ${formatBytes(schema.totalSizeBytes)}`}
-                </span>
-              </Link>
-            ))}
-            {twoColumnFillers === 1 ? (
-              <div
-                aria-hidden="true"
-                className={cn(
-                  "@[21rem]:block hidden bg-card",
-                  wide && "@[42rem]:hidden"
-                )}
-              />
-            ) : null}
-            {wide
-              ? Array.from(
-                  { length: threeColumnFillers },
-                  (_, index) => `three-column-filler-${index}`
-                ).map((key) => (
-                  <div
-                    aria-hidden="true"
-                    className="@[42rem]:block hidden bg-card"
-                    key={key}
-                  />
-                ))
-              : null}
-          </div>
-        )}
+        <SchemasCardBody
+          isPending={isPending}
+          params={params}
+          partial={partial}
+          schemas={schemas}
+          wide={wide}
+        />
       </CardContent>
     </Card>
   );
