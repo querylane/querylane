@@ -106,4 +106,4 @@ run `task proto:generate` after changing an API contract.
 
 ## License
 
-[AGPL-3.0](./LICENSE)
+[Apache-2.0](./LICENSE)

@@ -22,7 +22,7 @@ maintainers:
   - name: Querylane
     url: https://github.com/querylane
 annotations:
-  artifacthub.io/license: AGPL-3.0
+  artifacthub.io/license: Apache-2.0
   artifacthub.io/links: |
     - name: Helm documentation
       url: https://docs.querylane.net/get-started/install-helm
