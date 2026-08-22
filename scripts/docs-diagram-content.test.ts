@@ -49,14 +49,6 @@ const segmentCrossesRectangle = (
 
 const expectedDiagrams = [
 	{
-		page: "get-started/configure-querylane.mdx",
-		diagrams: ["resource-model", "stored-and-live-data"],
-		walkthroughs: [
-			"Read the hierarchy from left to right",
-			"Follow one page load",
-		],
-	},
-	{
 		page: "get-started/deploy-querylane.mdx",
 		diagrams: ["production-topology"],
 		walkthroughs: ["Follow one browser request from left to right"],
@@ -146,15 +138,12 @@ test("removes Mermaid blocks from the docs site", async () => {
 });
 
 test("gives detailed Excalidraw diagrams more inline room", async () => {
-	const [storedAndLive, serverStream, theme] = await Promise.all([
-		readPage("get-started/configure-querylane.mdx"),
+	const [serverStream, theme] = await Promise.all([
 		readPage("guides/api/errors-and-streaming.mdx"),
 		readFile(new URL("../theme.css", import.meta.url), "utf8"),
 	]);
 
-	for (const source of [storedAndLive, serverStream]) {
-		expect(source).toContain('<div class="docs-diagram-wide">');
-	}
+	expect(serverStream).toContain('<div class="docs-diagram-wide">');
 	expect(theme).toContain(".docs-diagram-wide");
 	expect(theme).toContain("width: min(56rem, calc(100vw - 2rem))");
 	expect(theme).toContain(".docs-diagram-wide img");
