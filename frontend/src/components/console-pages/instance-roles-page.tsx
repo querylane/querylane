@@ -517,7 +517,7 @@ export function InstanceRolesPage({
       retry={rolesQuery.refetch}
       title="Roles"
     >
-      <div className="mx-auto flex w-full max-w-[980px] flex-col gap-6">
+      <div className="flex w-full flex-col gap-6">
         <PageHeader
           description={rolesPageDescription(
             counts,
@@ -533,11 +533,10 @@ export function InstanceRolesPage({
           onValueChange={handleRolesTabChange}
           value={activeTab}
         >
-          <TabsList>
-            <TabsTrigger value="details">Table</TabsTrigger>
-            <TabsTrigger value="map">Access map</TabsTrigger>
-          </TabsList>
-          <div className="flex min-w-0 items-center gap-2">
+          {/* One toolbar row: search + type filter lead on the left like every
+              other page's toolbar; the view switcher sits on the right because
+              both filters apply to the table and the access map alike. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <div className="min-w-0 flex-1 sm:flex-none">
               <DataTableFilter
                 onChange={setFilter}
@@ -558,11 +557,17 @@ export function InstanceRolesPage({
               singleSelect={true}
               title="Type"
             />
+            <TabsList className="shrink-0 basis-full sm:ml-auto sm:basis-auto">
+              <TabsTrigger value="details">Table</TabsTrigger>
+              <TabsTrigger value="map">Access map</TabsTrigger>
+            </TabsList>
           </div>
-          <TabsContent className="mt-4" value="details">
+          {/* Tabs root already adds gap-2; mt-1 lands on the 12px toolbar→table
+              gap that the shared DataTable toolbar uses on other pages. */}
+          <TabsContent className="mt-1" value="details">
             {rolesDetailsContent}
           </TabsContent>
-          <TabsContent className="mt-4" value="map">
+          <TabsContent className="mt-1" value="map">
             {rolesMapContent}
           </TabsContent>
         </Tabs>
