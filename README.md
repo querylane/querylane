@@ -6,7 +6,7 @@
 
 <p align="center">
   Self-hosted PostgreSQL admin UI for managing multiple servers.<br />
-  Browse catalogs, inspect activity and health, manage roles and grants, and explore data across every PostgreSQL instance you operate.
+  Explore data stored in tables, inspect activity and health, manage resources such as databases/schemas/triggers, and manage roles and grants across every PostgreSQL instance you operate.
 </p>
 
 <p align="center">
@@ -14,6 +14,7 @@
   <a href="https://docs.querylane.net/get-started">Quickstart</a> ·
   <a href="https://docs.querylane.net/use-querylane">Product tour</a> ·
   <a href="https://github.com/querylane/querylane/releases">Releases</a>
+  <a href="https://demo.querylane.net/">Live Demo</a>
 </p>
 
 ## Features
