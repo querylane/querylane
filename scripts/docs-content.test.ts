@@ -284,6 +284,8 @@ test("keeps installation and production setup ahead of product guides", async ()
 	const getStartedRoot = join(root, "docs/site/get-started");
 	const mainPages = [
 		"index.mdx",
+		"install-docker.mdx",
+		"install-helm.mdx",
 		"configure-querylane.mdx",
 		"deploy-querylane.mdx",
 		"operate-querylane.mdx",
@@ -299,6 +301,8 @@ test("keeps installation and production setup ahead of product guides", async ()
 			{
 				items: [
 					"/get-started",
+					"/get-started/install-docker",
+					"/get-started/install-helm",
 					"/get-started/configure-querylane",
 					"/get-started/deploy-querylane",
 					"/get-started/operate-querylane",
@@ -314,7 +318,7 @@ test("keeps installation and production setup ahead of product guides", async ()
 		readFile(join(getStartedRoot, "deploy-querylane.mdx"), "utf8"),
 		readFile(join(root, "docs/site/use-querylane.mdx"), "utf8"),
 	]);
-	expect(quickstart).toContain("## 1. Start the Docker preview");
+	expect(quickstart).toContain("## 1. Start Querylane");
 	expect(deploy).toContain("## Production shape");
 	expect(productGuide).toContain("## What Querylane offers today");
 });
@@ -332,9 +336,11 @@ test("guides a new user through a successful first session", async () => {
 	expect(config.description).toContain("Get started");
 	expect(home).toContain('href="/get-started"');
 	expect(meta).toMatch(
-		/"index",\s*"configure-querylane",\s*"deploy-querylane",\s*"operate-querylane"/u,
+		/"index",\s*"install-docker",\s*"install-helm",\s*"configure-querylane",\s*"deploy-querylane",\s*"operate-querylane"/u,
 	);
 	for (const destination of [
+		"/get-started/install-docker",
+		"/get-started/install-helm",
 		"/get-started/configure-querylane",
 		"/get-started/deploy-querylane",
 		"/use-querylane",
@@ -350,7 +356,7 @@ test("keeps getting-started pages in 1 ordered hierarchy level", async () => {
 	const getStartedRoot = join(root, "docs/site/get-started");
 	const entries = await readdir(getStartedRoot, { withFileTypes: true });
 	expect(entries.filter((entry) => entry.isDirectory())).toEqual([]);
-	expect(entries.filter((entry) => entry.name.endsWith(".mdx"))).toHaveLength(4);
+	expect(entries.filter((entry) => entry.name.endsWith(".mdx"))).toHaveLength(6);
 });
 
 test("documents the operational lifecycle for self-hosted deployments", async () => {

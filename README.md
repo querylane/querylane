@@ -97,10 +97,12 @@ bun run docs:validate  # links and anchors
 bun run docs:build
 ```
 
-`bun run docs:eval` checks whether the docs answer the questions in `evals.yaml`
-using the Codex CLI (`OPENAI_API_KEY` required; CI runs it only via the manual
-`docs-eval` workflow). The API reference is generated from `proto/`; run
-`task proto:generate` after changing an API contract.
+`bun run docs:eval` checks whether the docs answer the questions in `evals.yaml`.
+It uses the Codex CLI with an OpenAI API key, so install and authenticate Codex
+first (`npm install --global @openai/codex`, then `codex login --with-api-key`).
+Pull request CI never runs paid evals; use the manual GitHub Actions workflow
+`docs-eval` for an on-demand run. The API reference is generated from `proto/`;
+run `task proto:generate` after changing an API contract.
 
 ## License
 
