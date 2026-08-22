@@ -16,6 +16,12 @@
   <a href="https://demo.querylane.net/">Live Demo</a>
 </p>
 
+<p align="center">
+  <a href="https://demo.querylane.net/instances/demo-ecommerce">
+    <img src="docs/media/querylane-demo.gif" alt="Querylane demo: browsing the e-commerce demo instance in the Data Explorer" width="960" />
+  </a>
+</p>
+
 ## Features
 
 - **One workspace for many servers** — register every PostgreSQL instance you operate and switch between them; connection state, version, capacity, and health checks on one overview.

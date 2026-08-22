@@ -1,0 +1,25 @@
+{
+  "name": "querylane-demo-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "record": "bun run record.ts",
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts QuerylaneDemo out/querylane-demo.mp4 --codec=h264 --crf=20",
+    "gif": "bun run gif.ts",
+    "build": "bun run record && bun run render && bun run gif"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.515",
+    "@remotion/google-fonts": "^4.0.515",
+    "@remotion/media-utils": "^4.0.515",
+    "react": "19",
+    "react-dom": "19",
+    "remotion": "^4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "playwright": "1.62.0",
+    "typescript": "^7.0.2"
+  }
+}
