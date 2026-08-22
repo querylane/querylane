@@ -8,7 +8,6 @@ package admin
 import (
 	"context"
 	"strconv"
-	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -52,17 +51,19 @@ type syncStateLister interface {
 type sampleStatsLister func(ctx context.Context) ([]storage.SampleTableStats, error)
 
 type auditLogLister interface {
-	ListAuditLogEntries(ctx context.Context, pageSize int32, pageToken string) ([]storage.AuditLogEntry, string, error)
+	GetAuditLogEntry(ctx context.Context, id int64) (storage.AuditLogEntry, error)
+	ListAuditLogEntries(ctx context.Context, params aip.Params) ([]storage.AuditLogEntry, string, error)
 }
 
 // Service implements AdminService RPC handlers.
 type Service struct {
-	replicas        replicaStore
-	executions      runnerExecutionLister
-	syncStates      syncStateLister
-	sampleStats     sampleStatsLister
-	auditLog        auditLogLister
-	retentionPeriod time.Duration
+	replicas              replicaStore
+	executions            runnerExecutionLister
+	syncStates            syncStateLister
+	sampleStats           sampleStatsLister
+	auditLog              auditLogLister
+	sampleRetentionPeriod time.Duration
+	auditRetentionPeriod  time.Duration
 }
 
 // NewService creates a new AdminService.
@@ -72,33 +73,54 @@ func NewService(
 	syncStates syncStateLister,
 	sampleStats sampleStatsLister,
 	auditLog auditLogLister,
-	retentionPeriod time.Duration,
+	sampleRetentionPeriod time.Duration,
+	auditRetentionPeriod time.Duration,
 ) *Service {
 	return &Service{
-		replicas:        replicas,
-		executions:      executions,
-		syncStates:      syncStates,
-		sampleStats:     sampleStats,
-		auditLog:        auditLog,
-		retentionPeriod: retentionPeriod,
+		replicas:              replicas,
+		executions:            executions,
+		syncStates:            syncStates,
+		sampleStats:           sampleStats,
+		auditLog:              auditLog,
+		sampleRetentionPeriod: sampleRetentionPeriod,
+		auditRetentionPeriod:  auditRetentionPeriod,
 	}
+}
+
+// GetAuditLogEntry returns one immutable mutation audit entry.
+func (s *Service) GetAuditLogEntry(ctx context.Context, req *connect.Request[v1alpha1.GetAuditLogEntryRequest]) (*connect.Response[v1alpha1.AuditLogEntry], error) {
+	name, connErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseAuditLogEntryName)
+	if connErr != nil {
+		return nil, connErr
+	}
+
+	id, err := strconv.ParseInt(name.AuditLogEntryID, 10, 64)
+	if err != nil || id <= 0 {
+		return nil, apierrors.NewInvalidArgumentError(
+			apierrors.NewFieldViolation("name", "audit log entry identifier must be a positive integer"),
+		)
+	}
+
+	row, err := s.auditLog.GetAuditLogEntry(ctx, id)
+	if err != nil {
+		return nil, apierrors.MapRepoErr(ctx, err, apierrors.ResourceCtx{
+			Type: resource.TypeAuditLogEntry, Name: name.String(), Op: "get_audit_log_entry",
+		})
+	}
+
+	return connect.NewResponse(toProtoAuditLogEntry(row, s.auditRetentionPeriod)), nil
 }
 
 // ListAuditLogEntries returns the immutable mutation trail newest-first.
 func (s *Service) ListAuditLogEntries(ctx context.Context, req *connect.Request[v1alpha1.ListAuditLogEntriesRequest]) (*connect.Response[v1alpha1.ListAuditLogEntriesResponse], error) {
-	if strings.TrimSpace(req.Msg.GetFilter()) != "" {
-		return nil, apierrors.NewInvalidArgumentError(
-			apierrors.NewFieldViolation("filter", "filtering audit entries is not supported"),
-		)
+	params := aip.Params{
+		PageSize:  req.Msg.GetPageSize(),
+		PageToken: req.Msg.GetPageToken(),
+		Filter:    req.Msg.GetFilter(),
+		OrderBy:   req.Msg.GetOrderBy(),
 	}
 
-	if strings.TrimSpace(req.Msg.GetOrderBy()) != "" {
-		return nil, apierrors.NewInvalidArgumentError(
-			apierrors.NewFieldViolation("order_by", "audit entries are returned newest first"),
-		)
-	}
-
-	rows, nextPageToken, err := s.auditLog.ListAuditLogEntries(ctx, req.Msg.GetPageSize(), req.Msg.GetPageToken())
+	rows, nextPageToken, err := s.auditLog.ListAuditLogEntries(ctx, params)
 	if err != nil {
 		return nil, apierrors.MapRepoErr(ctx, err, apierrors.ResourceCtx{
 			Type: resource.TypeAuditLogEntry,
@@ -108,23 +130,7 @@ func (s *Service) ListAuditLogEntries(ctx context.Context, req *connect.Request[
 
 	entries := make([]*v1alpha1.AuditLogEntry, len(rows))
 	for index, row := range rows {
-		entry := &v1alpha1.AuditLogEntry{
-			Name:          "auditLogEntries/" + strconv.FormatInt(row.ID, 10),
-			Actor:         row.Actor,
-			Action:        row.Action,
-			Statement:     row.Statement,
-			Target:        row.Target,
-			Instance:      row.InstanceName,
-			Database:      row.DatabaseName,
-			Status:        auditStatusToProto(row.Status),
-			ResultSummary: row.ResultSummary,
-			StartedAt:     timestamppb.New(row.StartedAt),
-		}
-		if row.FinishedAt != nil {
-			entry.FinishedAt = timestamppb.New(*row.FinishedAt)
-		}
-
-		entries[index] = entry
+		entries[index] = toProtoAuditLogEntry(row, s.auditRetentionPeriod)
 	}
 
 	return connect.NewResponse(&v1alpha1.ListAuditLogEntriesResponse{
@@ -133,16 +139,46 @@ func (s *Service) ListAuditLogEntries(ctx context.Context, req *connect.Request[
 	}), nil
 }
 
-func auditStatusToProto(status storage.AuditMutationStatus) v1alpha1.AuditLogEntry_Status {
-	switch status {
-	case storage.AuditMutationStarted:
-		return v1alpha1.AuditLogEntry_STATUS_STARTED
-	case storage.AuditMutationSucceeded:
-		return v1alpha1.AuditLogEntry_STATUS_SUCCEEDED
-	case storage.AuditMutationFailed:
-		return v1alpha1.AuditLogEntry_STATUS_FAILED
+func toProtoAuditLogEntry(row storage.AuditLogEntry, retentionPeriod time.Duration) *v1alpha1.AuditLogEntry {
+	entry := &v1alpha1.AuditLogEntry{
+		Name:          resource.NewAuditLogEntryName(strconv.FormatInt(row.ID, 10)).String(),
+		Actor:         row.Actor,
+		Action:        auditActionToProto(row.Action),
+		Command:       row.Command,
+		Target:        row.Target,
+		Instance:      row.InstanceName,
+		Database:      row.DatabaseName,
+		State:         auditStateToProto(row.State),
+		ResultSummary: row.ResultSummary,
+		StartTime:     timestamppb.New(row.StartTime),
+		ExpireTime:    timestamppb.New(row.StartTime.Add(retentionPeriod)),
+	}
+	if row.FinishTime != nil {
+		entry.FinishTime = timestamppb.New(*row.FinishTime)
+	}
+
+	return entry
+}
+
+func auditActionToProto(action storage.AuditMutationAction) v1alpha1.AuditLogEntry_Action {
+	switch action {
+	case storage.AuditMutationRefreshMaterializedView:
+		return v1alpha1.AuditLogEntry_ACTION_REFRESH_MATERIALIZED_VIEW
 	default:
-		return v1alpha1.AuditLogEntry_STATUS_UNSPECIFIED
+		return v1alpha1.AuditLogEntry_ACTION_UNSPECIFIED
+	}
+}
+
+func auditStateToProto(state storage.AuditMutationState) v1alpha1.AuditLogEntry_State {
+	switch state {
+	case storage.AuditMutationRunning:
+		return v1alpha1.AuditLogEntry_STATE_RUNNING
+	case storage.AuditMutationSucceeded:
+		return v1alpha1.AuditLogEntry_STATE_SUCCEEDED
+	case storage.AuditMutationFailed:
+		return v1alpha1.AuditLogEntry_STATE_FAILED
+	default:
+		return v1alpha1.AuditLogEntry_STATE_UNSPECIFIED
 	}
 }
 
@@ -369,7 +405,7 @@ func (s *Service) GetMetricsStorageStats(ctx context.Context, _ *connect.Request
 
 	return connect.NewResponse(&v1alpha1.GetMetricsStorageStatsResponse{
 		SampleTables:    tables,
-		RetentionPeriod: durationpb.New(s.retentionPeriod),
+		RetentionPeriod: durationpb.New(s.sampleRetentionPeriod),
 	}), nil
 }
 

@@ -71,6 +71,11 @@ limits:
   materialized_view_refresh:
     timeout: "30s"
 
+  # Mutation audit entries are deleted by the hourly retention sweep after
+  # this age. Increase it when external policy requires longer history.
+  audit_log:
+    retention: "2160h" # 90 days
+
   # Process-local token bucket for connection tests, creates, and connection
   # config updates. Callers are keyed by their direct socket IP; forwarding
   # headers are not trusted. Behind a reverse proxy, callers share its bucket.

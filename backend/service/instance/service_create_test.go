@@ -134,6 +134,7 @@ func TestCreateInstanceValidateOnlyTestsConnectionWithoutPersisting(t *testing.T
 	assert.Equal(t, "instances/test-instance", res.Msg.GetInstance().GetName())
 	assert.Equal(t, v1alpha1.Instance_CONNECTION_STATE_ACTIVE, res.Msg.GetInstance().GetConnectionState())
 	assert.Empty(t, res.Msg.GetInstance().GetConfig().GetPassword())
+	assert.Equal(t, 30*time.Second, res.Msg.GetInstance().GetConfig().GetEffectiveStatementTimeout().AsDuration())
 	assert.NotNil(t, res.Msg.GetInstance().GetLastConnectionCheckTime())
 }
 

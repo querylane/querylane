@@ -52,16 +52,22 @@ type fakeExecutionLister struct {
 }
 
 type fakeAuditLogLister struct {
+	getRow        storage.AuditLogEntry
+	getID         int64
+	getErr        error
 	rows          []storage.AuditLogEntry
 	nextPageToken string
 	err           error
-	pageSize      int32
-	pageToken     string
+	params        aip.Params
 }
 
-func (f *fakeAuditLogLister) ListAuditLogEntries(_ context.Context, pageSize int32, pageToken string) ([]storage.AuditLogEntry, string, error) {
-	f.pageSize = pageSize
-	f.pageToken = pageToken
+func (f *fakeAuditLogLister) GetAuditLogEntry(_ context.Context, id int64) (storage.AuditLogEntry, error) {
+	f.getID = id
+	return f.getRow, f.getErr
+}
+
+func (f *fakeAuditLogLister) ListAuditLogEntries(_ context.Context, params aip.Params) ([]storage.AuditLogEntry, string, error) {
+	f.params = params
 
 	return f.rows, f.nextPageToken, f.err
 }
@@ -104,78 +110,69 @@ func newTestService(replicas *fakeReplicaStore, executions *fakeExecutionLister,
 		sampleStats = noSampleStats
 	}
 
-	return NewService(replicas, executions, syncStates, sampleStats, &fakeAuditLogLister{}, 30*24*time.Hour)
+	return NewService(replicas, executions, syncStates, sampleStats, &fakeAuditLogLister{}, 30*24*time.Hour, 90*24*time.Hour)
 }
 
 func TestListAuditLogEntries(t *testing.T) {
 	t.Parallel()
 
-	finishedAt := time.Now()
+	finishTime := time.Now()
 	lister := &fakeAuditLogLister{
 		rows: []storage.AuditLogEntry{{
 			ID: 42,
 			AuditMutation: storage.AuditMutation{
 				Actor:        "127.0.0.1:4000",
-				Action:       "refresh_materialized_view",
-				Statement:    `REFRESH MATERIALIZED VIEW "public"."revenue"`,
+				Action:       storage.AuditMutationRefreshMaterializedView,
+				Command:      `REFRESH MATERIALIZED VIEW "public"."revenue"`,
 				Target:       "instances/prod/databases/app/schemas/public/views/revenue",
 				InstanceName: "instances/prod",
-				DatabaseName: "app",
+				DatabaseName: "instances/prod/databases/app",
 			},
-			Status:        storage.AuditMutationSucceeded,
+			State:         storage.AuditMutationSucceeded,
 			ResultSummary: "refreshed",
-			StartedAt:     finishedAt.Add(-time.Second),
-			FinishedAt:    &finishedAt,
+			StartTime:     finishTime.Add(-time.Second),
+			FinishTime:    &finishTime,
 		}},
 		nextPageToken: "next",
 	}
 
-	svc := NewService(&fakeReplicaStore{}, &fakeExecutionLister{}, &fakeSyncStateLister{}, noSampleStats, lister, 30*24*time.Hour)
+	svc := NewService(&fakeReplicaStore{}, &fakeExecutionLister{}, &fakeSyncStateLister{}, noSampleStats, lister, 30*24*time.Hour, 90*24*time.Hour)
 	res, err := svc.ListAuditLogEntries(t.Context(), connect.NewRequest(&v1alpha1.ListAuditLogEntriesRequest{
 		PageSize:  25,
 		PageToken: "cursor",
+		Filter:    `instance = "instances/prod"`,
+		OrderBy:   "start_time desc",
 	}))
 	require.NoError(t, err)
-	assert.Equal(t, int32(25), lister.pageSize)
-	assert.Equal(t, "cursor", lister.pageToken)
+	assert.Equal(t, aip.Params{
+		PageSize: 25, PageToken: "cursor", Filter: `instance = "instances/prod"`, OrderBy: "start_time desc",
+	}, lister.params)
 	assert.Equal(t, "next", res.Msg.GetNextPageToken())
 	require.Len(t, res.Msg.GetAuditLogEntries(), 1)
 	entry := res.Msg.GetAuditLogEntries()[0]
 	assert.Equal(t, "auditLogEntries/42", entry.GetName())
-	assert.Equal(t, v1alpha1.AuditLogEntry_STATUS_SUCCEEDED, entry.GetStatus())
+	assert.Equal(t, v1alpha1.AuditLogEntry_STATE_SUCCEEDED, entry.GetState())
 	assert.Equal(t, "127.0.0.1:4000", entry.GetActor())
-	assert.Equal(t, "app", entry.GetDatabase())
-	assert.Equal(t, finishedAt.Unix(), entry.GetFinishedAt().AsTime().Unix())
+	assert.Equal(t, "instances/prod/databases/app", entry.GetDatabase())
+	assert.Equal(t, finishTime.Unix(), entry.GetFinishTime().AsTime().Unix())
+	assert.Equal(t, finishTime.Add(-time.Second).Add(90*24*time.Hour).Unix(), entry.GetExpireTime().AsTime().Unix())
 }
 
-func TestListAuditLogEntriesRejectsUnsupportedQueryParameters(t *testing.T) {
+func TestGetAuditLogEntry(t *testing.T) {
 	t.Parallel()
 
-	for _, test := range []struct {
-		name    string
-		request *v1alpha1.ListAuditLogEntriesRequest
-	}{
-		{
-			name:    "filter",
-			request: &v1alpha1.ListAuditLogEntriesRequest{Filter: `status = "FAILED"`},
-		},
-		{
-			name:    "order by",
-			request: &v1alpha1.ListAuditLogEntriesRequest{OrderBy: "started_at"},
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
+	lister := &fakeAuditLogLister{getRow: storage.AuditLogEntry{
+		ID:        42,
+		State:     storage.AuditMutationRunning,
+		StartTime: time.Now(),
+	}}
+	svc := NewService(&fakeReplicaStore{}, &fakeExecutionLister{}, &fakeSyncStateLister{}, noSampleStats, lister, 30*24*time.Hour, 90*24*time.Hour)
 
-			lister := &fakeAuditLogLister{}
-			svc := NewService(&fakeReplicaStore{}, &fakeExecutionLister{}, &fakeSyncStateLister{}, noSampleStats, lister, 30*24*time.Hour)
-
-			_, err := svc.ListAuditLogEntries(t.Context(), connect.NewRequest(test.request))
-
-			require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-			assert.Zero(t, lister.pageSize, "unsupported parameters must be rejected before storage")
-		})
-	}
+	res, err := svc.GetAuditLogEntry(t.Context(), connect.NewRequest(&v1alpha1.GetAuditLogEntryRequest{Name: "auditLogEntries/42"}))
+	require.NoError(t, err)
+	assert.Equal(t, int64(42), lister.getID)
+	assert.Equal(t, "auditLogEntries/42", res.Msg.GetName())
+	assert.Equal(t, v1alpha1.AuditLogEntry_STATE_RUNNING, res.Msg.GetState())
 }
 
 func TestListReplicas(t *testing.T) {

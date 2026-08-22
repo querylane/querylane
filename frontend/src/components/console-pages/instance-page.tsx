@@ -489,6 +489,31 @@ function InstanceSafetyModeBadge({
   );
 }
 
+function InstanceHeaderBadges({
+  connectionStatus,
+  dependencyUnavailable,
+  instance,
+  serverInfo,
+}: {
+  connectionStatus: DbConnectionStatus;
+  dependencyUnavailable: boolean;
+  instance: InstanceRecord;
+  serverInfo?: ServerInfo | undefined;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <InstanceSafetyModeBadge
+        allowMutations={instance.config?.allowMutations ?? false}
+      />
+      <ReplicationRoleBadge serverInfo={serverInfo} />
+      <InstanceConnectionStatusBadge
+        connectionStatus={connectionStatus}
+        dependencyUnavailable={dependencyUnavailable}
+      />
+    </div>
+  );
+}
+
 function InstancePageHeader({
   connectionStatus,
   databasesState,
@@ -539,16 +564,12 @@ function InstancePageHeader({
             >
               {instance.displayName}
             </h1>
-            <div className="flex flex-wrap items-center gap-2">
-              <InstanceSafetyModeBadge
-                allowMutations={instance.config?.allowMutations ?? false}
-              />
-              <ReplicationRoleBadge serverInfo={serverInfo} />
-              <InstanceConnectionStatusBadge
-                connectionStatus={connectionStatus}
-                dependencyUnavailable={Boolean(dependencyError)}
-              />
-            </div>
+            <InstanceHeaderBadges
+              connectionStatus={connectionStatus}
+              dependencyUnavailable={Boolean(dependencyError)}
+              instance={instance}
+              serverInfo={serverInfo}
+            />
           </div>
           <div className="flex shrink-0 items-center gap-2 text-muted-foreground text-xs">
             {lastRefreshedLabel ? (

@@ -47,6 +47,9 @@ const (
 	// AdminServiceGetMetricsStorageStatsProcedure is the fully-qualified name of the AdminService's
 	// GetMetricsStorageStats RPC.
 	AdminServiceGetMetricsStorageStatsProcedure = "/querylane.console.v1alpha1.AdminService/GetMetricsStorageStats"
+	// AdminServiceGetAuditLogEntryProcedure is the fully-qualified name of the AdminService's
+	// GetAuditLogEntry RPC.
+	AdminServiceGetAuditLogEntryProcedure = "/querylane.console.v1alpha1.AdminService/GetAuditLogEntry"
 	// AdminServiceListAuditLogEntriesProcedure is the fully-qualified name of the AdminService's
 	// ListAuditLogEntries RPC.
 	AdminServiceListAuditLogEntriesProcedure = "/querylane.console.v1alpha1.AdminService/ListAuditLogEntries"
@@ -54,6 +57,8 @@ const (
 
 // AdminServiceClient is a client for the querylane.console.v1alpha1.AdminService service.
 type AdminServiceClient interface {
+	// aip.dev/beta-blocker: Restrict this operator surface, especially audit
+	// methods, to authenticated administrators before beta.
 	// Lists querylane backend replicas known from their heartbeats.
 	ListReplicas(context.Context, *connect.Request[v1alpha1.ListReplicasRequest]) (*connect.Response[v1alpha1.ListReplicasResponse], error)
 	// Lists background runner executions with lease ownership details. The
@@ -65,6 +70,8 @@ type AdminServiceClient interface {
 	// Reports storage consumed by the metrics sample tables and the
 	// configured retention period.
 	GetMetricsStorageStats(context.Context, *connect.Request[v1alpha1.GetMetricsStorageStatsRequest]) (*connect.Response[v1alpha1.GetMetricsStorageStatsResponse], error)
+	// Gets one immutable mutation audit entry.
+	GetAuditLogEntry(context.Context, *connect.Request[v1alpha1.GetAuditLogEntryRequest]) (*connect.Response[v1alpha1.AuditLogEntry], error)
 	// Lists the immutable audit trail for mutations run through Querylane.
 	ListAuditLogEntries(context.Context, *connect.Request[v1alpha1.ListAuditLogEntriesRequest]) (*connect.Response[v1alpha1.ListAuditLogEntriesResponse], error)
 }
@@ -104,6 +111,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("GetMetricsStorageStats")),
 			connect.WithClientOptions(opts...),
 		),
+		getAuditLogEntry: connect.NewClient[v1alpha1.GetAuditLogEntryRequest, v1alpha1.AuditLogEntry](
+			httpClient,
+			baseURL+AdminServiceGetAuditLogEntryProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetAuditLogEntry")),
+			connect.WithClientOptions(opts...),
+		),
 		listAuditLogEntries: connect.NewClient[v1alpha1.ListAuditLogEntriesRequest, v1alpha1.ListAuditLogEntriesResponse](
 			httpClient,
 			baseURL+AdminServiceListAuditLogEntriesProcedure,
@@ -119,6 +132,7 @@ type adminServiceClient struct {
 	listAdminRunnerExecutions *connect.Client[v1alpha1.ListAdminRunnerExecutionsRequest, v1alpha1.ListAdminRunnerExecutionsResponse]
 	listCatalogSyncStates     *connect.Client[v1alpha1.ListCatalogSyncStatesRequest, v1alpha1.ListCatalogSyncStatesResponse]
 	getMetricsStorageStats    *connect.Client[v1alpha1.GetMetricsStorageStatsRequest, v1alpha1.GetMetricsStorageStatsResponse]
+	getAuditLogEntry          *connect.Client[v1alpha1.GetAuditLogEntryRequest, v1alpha1.AuditLogEntry]
 	listAuditLogEntries       *connect.Client[v1alpha1.ListAuditLogEntriesRequest, v1alpha1.ListAuditLogEntriesResponse]
 }
 
@@ -143,6 +157,11 @@ func (c *adminServiceClient) GetMetricsStorageStats(ctx context.Context, req *co
 	return c.getMetricsStorageStats.CallUnary(ctx, req)
 }
 
+// GetAuditLogEntry calls querylane.console.v1alpha1.AdminService.GetAuditLogEntry.
+func (c *adminServiceClient) GetAuditLogEntry(ctx context.Context, req *connect.Request[v1alpha1.GetAuditLogEntryRequest]) (*connect.Response[v1alpha1.AuditLogEntry], error) {
+	return c.getAuditLogEntry.CallUnary(ctx, req)
+}
+
 // ListAuditLogEntries calls querylane.console.v1alpha1.AdminService.ListAuditLogEntries.
 func (c *adminServiceClient) ListAuditLogEntries(ctx context.Context, req *connect.Request[v1alpha1.ListAuditLogEntriesRequest]) (*connect.Response[v1alpha1.ListAuditLogEntriesResponse], error) {
 	return c.listAuditLogEntries.CallUnary(ctx, req)
@@ -150,6 +169,8 @@ func (c *adminServiceClient) ListAuditLogEntries(ctx context.Context, req *conne
 
 // AdminServiceHandler is an implementation of the querylane.console.v1alpha1.AdminService service.
 type AdminServiceHandler interface {
+	// aip.dev/beta-blocker: Restrict this operator surface, especially audit
+	// methods, to authenticated administrators before beta.
 	// Lists querylane backend replicas known from their heartbeats.
 	ListReplicas(context.Context, *connect.Request[v1alpha1.ListReplicasRequest]) (*connect.Response[v1alpha1.ListReplicasResponse], error)
 	// Lists background runner executions with lease ownership details. The
@@ -161,6 +182,8 @@ type AdminServiceHandler interface {
 	// Reports storage consumed by the metrics sample tables and the
 	// configured retention period.
 	GetMetricsStorageStats(context.Context, *connect.Request[v1alpha1.GetMetricsStorageStatsRequest]) (*connect.Response[v1alpha1.GetMetricsStorageStatsResponse], error)
+	// Gets one immutable mutation audit entry.
+	GetAuditLogEntry(context.Context, *connect.Request[v1alpha1.GetAuditLogEntryRequest]) (*connect.Response[v1alpha1.AuditLogEntry], error)
 	// Lists the immutable audit trail for mutations run through Querylane.
 	ListAuditLogEntries(context.Context, *connect.Request[v1alpha1.ListAuditLogEntriesRequest]) (*connect.Response[v1alpha1.ListAuditLogEntriesResponse], error)
 }
@@ -196,6 +219,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("GetMetricsStorageStats")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetAuditLogEntryHandler := connect.NewUnaryHandler(
+		AdminServiceGetAuditLogEntryProcedure,
+		svc.GetAuditLogEntry,
+		connect.WithSchema(adminServiceMethods.ByName("GetAuditLogEntry")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceListAuditLogEntriesHandler := connect.NewUnaryHandler(
 		AdminServiceListAuditLogEntriesProcedure,
 		svc.ListAuditLogEntries,
@@ -212,6 +241,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceListCatalogSyncStatesHandler.ServeHTTP(w, r)
 		case AdminServiceGetMetricsStorageStatsProcedure:
 			adminServiceGetMetricsStorageStatsHandler.ServeHTTP(w, r)
+		case AdminServiceGetAuditLogEntryProcedure:
+			adminServiceGetAuditLogEntryHandler.ServeHTTP(w, r)
 		case AdminServiceListAuditLogEntriesProcedure:
 			adminServiceListAuditLogEntriesHandler.ServeHTTP(w, r)
 		default:
@@ -237,6 +268,10 @@ func (UnimplementedAdminServiceHandler) ListCatalogSyncStates(context.Context, *
 
 func (UnimplementedAdminServiceHandler) GetMetricsStorageStats(context.Context, *connect.Request[v1alpha1.GetMetricsStorageStatsRequest]) (*connect.Response[v1alpha1.GetMetricsStorageStatsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("querylane.console.v1alpha1.AdminService.GetMetricsStorageStats is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetAuditLogEntry(context.Context, *connect.Request[v1alpha1.GetAuditLogEntryRequest]) (*connect.Response[v1alpha1.AuditLogEntry], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("querylane.console.v1alpha1.AdminService.GetAuditLogEntry is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) ListAuditLogEntries(context.Context, *connect.Request[v1alpha1.ListAuditLogEntriesRequest]) (*connect.Response[v1alpha1.ListAuditLogEntriesResponse], error) {

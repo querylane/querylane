@@ -53,7 +53,7 @@ type liveQueryLimiter interface {
 
 type mutationAuditor interface {
 	StartMutation(context.Context, storage.AuditMutation) (int64, error)
-	FinishMutation(context.Context, int64, storage.AuditMutationStatus, string) error
+	FinishMutation(context.Context, int64, storage.AuditMutationState, string) error
 }
 
 // NewService creates a new ViewService.
@@ -274,11 +274,11 @@ func (s *Service) RefreshMaterializedView(ctx context.Context, req *connect.Requ
 
 	auditID, err := s.audit.StartMutation(ctx, storage.AuditMutation{
 		Actor:        req.Peer().Addr,
-		Action:       "refresh_materialized_view",
-		Statement:    "REFRESH MATERIALIZED VIEW" + modifier + " " + confirmationTarget,
+		Action:       storage.AuditMutationRefreshMaterializedView,
+		Command:      "REFRESH MATERIALIZED VIEW" + modifier + " " + confirmationTarget,
 		Target:       viewRes.String(),
 		InstanceName: viewRes.Instance().String(),
-		DatabaseName: viewRes.DatabaseID,
+		DatabaseName: resource.NewDatabaseName(viewRes.InstanceID, viewRes.DatabaseID).String(),
 	})
 	if err != nil {
 		return nil, apierrors.MapRepoErr(ctx, err, apierrors.ResourceCtx{
@@ -306,14 +306,14 @@ func (s *Service) RefreshMaterializedView(ctx context.Context, req *connect.Requ
 	}), nil
 }
 
-func (s *Service) finishAudit(ctx context.Context, auditID int64, status storage.AuditMutationStatus, summary string) {
+func (s *Service) finishAudit(ctx context.Context, auditID int64, state storage.AuditMutationState, summary string) {
 	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
 	defer cancel()
 
-	if err := s.audit.FinishMutation(finishCtx, auditID, status, summary); err != nil {
+	if err := s.audit.FinishMutation(finishCtx, auditID, state, summary); err != nil {
 		slog.ErrorContext(ctx, "failed to finalize mutation audit entry",
 			slog.Int64("audit_id", auditID),
-			slog.String("status", string(status)),
+			slog.String("state", string(state)),
 			slog.String("error", err.Error()))
 	}
 }

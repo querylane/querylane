@@ -370,6 +370,7 @@ function buildInstanceConfigUpdatePaths({
         parseStatementTimeoutSeconds(formState.statementTimeoutSeconds) !==
           Number(
             instance.config?.statementTimeout?.seconds ??
+              instance.config?.effectiveStatementTimeout?.seconds ??
               BigInt(DEFAULT_STATEMENT_TIMEOUT_SECONDS)
           ),
         "config.statement_timeout",

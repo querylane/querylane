@@ -9,6 +9,43 @@ info:
     authenticate API callers; keep the server behind a trusted network or an
     authenticating reverse proxy.
 paths:
+  /querylane.console.v1alpha1.AdminService/GetAuditLogEntry:
+    post:
+      x-connectrpc-method-kind: unary
+      tags:
+        - Admin
+      summary: GetAuditLogEntry
+      description: Gets one immutable mutation audit entry.
+      operationId: AdminService_GetAuditLogEntry
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/querylane.console.v1alpha1.GetAuditLogEntryRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/querylane.console.v1alpha1.AuditLogEntry'
   /querylane.console.v1alpha1.AdminService/GetMetricsStorageStats:
     post:
       x-connectrpc-method-kind: unary
@@ -168,7 +205,10 @@ paths:
       tags:
         - Admin
       summary: ListReplicas
-      description: Lists querylane backend replicas known from their heartbeats.
+      description: |-
+        aip.dev/beta-blocker: Restrict this operator surface, especially audit
+         methods, to authenticated administrators before beta.
+         Lists querylane backend replicas known from their heartbeats.
       operationId: AdminService_ListReplicas
       parameters:
         - name: Connect-Protocol-Version
@@ -2820,36 +2860,56 @@ components:
         name:
           type: string
           title: name
+          description: Identifier. Canonical resource name of this entry.
         actor:
           type: string
           title: actor
+          description: |-
+            Output-only. Direct RPC peer address. This is connection attribution,
+             not verified user identity, until application authentication exists.
         action:
-          type: string
           title: action
-        statement:
+          description: Output-only. Mutation kind.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.AuditLogEntry.Action'
+        command:
           type: string
-          title: statement
+          title: command
+          description: Output-only. Server-generated command. Never contains raw user SQL or secrets.
         target:
           type: string
           title: target
+          description: Output-only. Canonical resource name of the mutation target.
         instance:
           type: string
           title: instance
+          description: Output-only. Canonical instance resource name.
         database:
           type: string
           title: database
-        status:
-          title: status
-          $ref: '#/components/schemas/querylane.console.v1alpha1.AuditLogEntry.Status'
+          description: Output-only. Canonical database resource name.
+        state:
+          title: state
+          description: Output-only. Durable mutation state.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.AuditLogEntry.State'
         resultSummary:
           type: string
           title: result_summary
-        startedAt:
-          title: started_at
+          description: Output-only. Redacted result summary.
+        startTime:
+          title: start_time
+          description: Output-only. Time Querylane admitted the mutation.
           type: string
           format: date-time
-        finishedAt:
-          title: finished_at
+        finishTime:
+          title: finish_time
+          description: Output-only. Time Querylane recorded the final outcome, when known.
+          type: string
+          format: date-time
+        expireTime:
+          title: expire_time
+          description: |-
+            Output-only. Time the configured retention sweep makes this entry eligible
+             for deletion.
           type: string
           format: date-time
       title: AuditLogEntry
@@ -2858,14 +2918,23 @@ components:
         AuditLogEntry is one mutation attempt against a managed PostgreSQL
          instance. Entries are created before execution and finalized afterward, so
          failed and interrupted attempts remain visible.
-    querylane.console.v1alpha1.AuditLogEntry.Status:
+         allow: proto-unshipped [Audit log API is still in draft; AIP field names were corrected before release.]
+    querylane.console.v1alpha1.AuditLogEntry.Action:
       type: string
-      title: Status
+      title: Action
       enum:
-        - STATUS_UNSPECIFIED
-        - STATUS_STARTED
-        - STATUS_SUCCEEDED
-        - STATUS_FAILED
+        - ACTION_UNSPECIFIED
+        - ACTION_REFRESH_MATERIALIZED_VIEW
+      description: Action identifies the server-admitted mutation kind.
+    querylane.console.v1alpha1.AuditLogEntry.State:
+      type: string
+      title: State
+      enum:
+        - STATE_UNSPECIFIED
+        - STATE_RUNNING
+        - STATE_SUCCEEDED
+        - STATE_FAILED
+      description: State is the durable outcome known to Querylane.
     querylane.console.v1alpha1.AutovacuumHealth:
       type: object
       properties:
@@ -3787,6 +3856,16 @@ components:
       title: Extension
       additionalProperties: false
       description: A PostgreSQL extension available in a Database.
+    querylane.console.v1alpha1.GetAuditLogEntryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Required. Canonical name of the audit entry to retrieve.
+      title: GetAuditLogEntryRequest
+      additionalProperties: false
+      description: Request for AdminService.GetAuditLogEntry.
     querylane.console.v1alpha1.GetConsoleConfigRequest:
       type: object
       title: GetConsoleConfigRequest
@@ -4310,6 +4389,8 @@ components:
       description: |-
         An Instance represents a connection record to an existing, externally-managed
          database. The platform uses this information to connect to and manage the database.
+         aip.dev/beta-blocker: Add etag freshness checks for concurrent configuration
+         updates, including safety-setting changes, before beta.
     querylane.console.v1alpha1.Instance.ConnectionState:
       type: string
       title: ConnectionState
@@ -4457,22 +4538,31 @@ components:
         pageSize:
           type: integer
           title: page_size
-          maximum: 1000
           minimum: 0
           format: int32
+          description: |-
+            Optional. Number of entries to return. The server uses 50 when omitted
+             and coerces values above 1000 to 1000.
         pageToken:
           type: string
           title: page_token
+          description: Optional. Opaque token returned by the preceding list request.
         filter:
           type: string
           title: filter
-          description: Optional. AIP-160 filter. Reserved for server-side audit filtering.
+          description: |-
+            Optional. AIP-160 filter. Filterable fields: actor, action, target,
+             instance, database, state, and start_time.
         orderBy:
           type: string
           title: order_by
-          description: Optional. AIP-132 order_by. Entries are currently returned newest first.
+          description: |-
+            Optional. AIP-132 ordering. Orderable fields: name, actor, action, target,
+             instance, database, state, and start_time. Defaults to `start_time desc`
+             with a stable resource-name tie-breaker.
       title: ListAuditLogEntriesRequest
       additionalProperties: false
+      description: Request for AdminService.ListAuditLogEntries.
     querylane.console.v1alpha1.ListAuditLogEntriesResponse:
       type: object
       properties:
@@ -4481,11 +4571,14 @@ components:
           items:
             $ref: '#/components/schemas/querylane.console.v1alpha1.AuditLogEntry'
           title: audit_log_entries
+          description: Audit entries ordered from newest to oldest.
         nextPageToken:
           type: string
           title: next_page_token
+          description: Opaque token for the next page. Empty when there are no more entries.
       title: ListAuditLogEntriesResponse
       additionalProperties: false
+      description: Response from AdminService.ListAuditLogEntries.
     querylane.console.v1alpha1.ListCatalogSyncStatesRequest:
       type: object
       properties:
@@ -5831,6 +5924,13 @@ components:
             Optional. Default timeout for user-driven statements against this
              instance. Requests may override it, subject to the server's hard limit.
              When omitted, Querylane uses 30 seconds.
+          type: string
+          format: duration
+        effectiveStatementTimeout:
+          title: effective_statement_timeout
+          description: |-
+            Output-only. Timeout Querylane uses after resolving the configured value
+             or server default. Per-request overrides remain subject to the hard limit.
           type: string
           format: duration
       title: PostgresConfig

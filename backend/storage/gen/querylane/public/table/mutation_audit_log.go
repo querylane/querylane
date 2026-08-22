@@ -20,14 +20,14 @@ type mutationAuditLogTable struct {
 	ID            postgres.ColumnInteger
 	Actor         postgres.ColumnString
 	Action        postgres.ColumnString
-	Statement     postgres.ColumnString
+	Command       postgres.ColumnString
 	Target        postgres.ColumnString
 	InstanceName  postgres.ColumnString
 	DatabaseName  postgres.ColumnString
-	Status        postgres.ColumnString
+	State         postgres.ColumnString
 	ResultSummary postgres.ColumnString
-	StartedAt     postgres.ColumnTimestampz
-	FinishedAt    postgres.ColumnTimestampz
+	StartTime     postgres.ColumnTimestampz
+	FinishTime    postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -72,17 +72,17 @@ func newMutationAuditLogTableImpl(schemaName, tableName, alias string) mutationA
 		IDColumn            = postgres.IntegerColumn("id")
 		ActorColumn         = postgres.StringColumn("actor")
 		ActionColumn        = postgres.StringColumn("action")
-		StatementColumn     = postgres.StringColumn("statement")
+		CommandColumn       = postgres.StringColumn("command")
 		TargetColumn        = postgres.StringColumn("target")
 		InstanceNameColumn  = postgres.StringColumn("instance_name")
 		DatabaseNameColumn  = postgres.StringColumn("database_name")
-		StatusColumn        = postgres.StringColumn("status")
+		StateColumn         = postgres.StringColumn("state")
 		ResultSummaryColumn = postgres.StringColumn("result_summary")
-		StartedAtColumn     = postgres.TimestampzColumn("started_at")
-		FinishedAtColumn    = postgres.TimestampzColumn("finished_at")
-		allColumns          = postgres.ColumnList{IDColumn, ActorColumn, ActionColumn, StatementColumn, TargetColumn, InstanceNameColumn, DatabaseNameColumn, StatusColumn, ResultSummaryColumn, StartedAtColumn, FinishedAtColumn}
-		mutableColumns      = postgres.ColumnList{ActorColumn, ActionColumn, StatementColumn, TargetColumn, InstanceNameColumn, DatabaseNameColumn, StatusColumn, ResultSummaryColumn, StartedAtColumn, FinishedAtColumn}
-		defaultColumns      = postgres.ColumnList{ResultSummaryColumn, StartedAtColumn}
+		StartTimeColumn     = postgres.TimestampzColumn("start_time")
+		FinishTimeColumn    = postgres.TimestampzColumn("finish_time")
+		allColumns          = postgres.ColumnList{IDColumn, ActorColumn, ActionColumn, CommandColumn, TargetColumn, InstanceNameColumn, DatabaseNameColumn, StateColumn, ResultSummaryColumn, StartTimeColumn, FinishTimeColumn}
+		mutableColumns      = postgres.ColumnList{ActorColumn, ActionColumn, CommandColumn, TargetColumn, InstanceNameColumn, DatabaseNameColumn, StateColumn, ResultSummaryColumn, StartTimeColumn, FinishTimeColumn}
+		defaultColumns      = postgres.ColumnList{ResultSummaryColumn, StartTimeColumn}
 	)
 
 	return mutationAuditLogTable{
@@ -92,14 +92,14 @@ func newMutationAuditLogTableImpl(schemaName, tableName, alias string) mutationA
 		ID:            IDColumn,
 		Actor:         ActorColumn,
 		Action:        ActionColumn,
-		Statement:     StatementColumn,
+		Command:       CommandColumn,
 		Target:        TargetColumn,
 		InstanceName:  InstanceNameColumn,
 		DatabaseName:  DatabaseNameColumn,
-		Status:        StatusColumn,
+		State:         StateColumn,
 		ResultSummary: ResultSummaryColumn,
-		StartedAt:     StartedAtColumn,
-		FinishedAt:    FinishedAtColumn,
+		StartTime:     StartTimeColumn,
+		FinishTime:    FinishTimeColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

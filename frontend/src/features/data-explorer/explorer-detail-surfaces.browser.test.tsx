@@ -2133,7 +2133,16 @@ test("data explorer materialized view detail stays readable", async () => {
   await confirmationInput.fill('"public"."customer_success_daily_rollups"');
   await expect.element(normalRefreshButton).toBeEnabled();
   await expect.element(concurrentRefreshButton).toBeEnabled();
-  await expect(page.getByRole("alertdialog")).toMatchScreenshot(
+  const refreshDialog = page.getByRole("alertdialog");
+  const dialogBounds = refreshDialog.element().getBoundingClientRect();
+  const cancelBounds = page
+    .getByRole("button", { name: "Cancel" })
+    .element()
+    .getBoundingClientRect();
+  expect(dialogBounds.top).toBeGreaterThanOrEqual(16);
+  expect(dialogBounds.bottom).toBeLessThanOrEqual(784);
+  expect(cancelBounds.bottom).toBeLessThanOrEqual(768);
+  await expect(refreshDialog).toMatchScreenshot(
     "data-explorer-view-refresh-confirmation"
   );
 

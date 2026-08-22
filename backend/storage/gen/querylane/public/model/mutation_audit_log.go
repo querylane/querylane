@@ -15,12 +15,12 @@ type MutationAuditLog struct {
 	ID            int64 `sql:"primary_key"`
 	Actor         string
 	Action        string
-	Statement     string
+	Command       string
 	Target        string
 	InstanceName  string
 	DatabaseName  string
-	Status        string
+	State         string
 	ResultSummary string
-	StartedAt     time.Time
-	FinishedAt    *time.Time
+	StartTime     time.Time
+	FinishTime    *time.Time
 }

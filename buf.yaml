@@ -12,6 +12,10 @@ lint:
   ignore_only:
     ENUM_VALUE_PREFIX:
       - proto/querylane/console/v1alpha1/errors.proto
+    # AIP-131 standard Get methods return the resource directly, while Buf's
+    # STANDARD response-name rule requires a wrapper response message.
+    RPC_RESPONSE_STANDARD_NAME:
+      - proto/querylane/console/v1alpha1/admin.proto
 
 breaking:
   use:

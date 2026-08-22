@@ -454,15 +454,15 @@ CREATE TABLE public.mutation_audit_log (
     id bigint NOT NULL,
     actor text NOT NULL,
     action text NOT NULL,
-    statement text NOT NULL,
+    command text NOT NULL,
     target text NOT NULL,
     instance_name text NOT NULL,
     database_name text NOT NULL,
-    status text NOT NULL,
+    state text NOT NULL,
     result_summary text DEFAULT ''::text NOT NULL,
-    started_at timestamp with time zone DEFAULT now() NOT NULL,
-    finished_at timestamp with time zone,
-    CONSTRAINT mutation_audit_log_status_check CHECK ((status = ANY (ARRAY['STARTED'::text, 'SUCCEEDED'::text, 'FAILED'::text])))
+    start_time timestamp with time zone DEFAULT now() NOT NULL,
+    finish_time timestamp with time zone,
+    CONSTRAINT mutation_audit_log_state_check CHECK ((state = ANY (ARRAY['RUNNING'::text, 'SUCCEEDED'::text, 'FAILED'::text])))
 );
 
 
@@ -849,5 +849,4 @@ CREATE TRIGGER update_runner_execution_state_updated_at BEFORE UPDATE ON public.
 --
 -- PostgreSQL database dump complete
 --
-
 

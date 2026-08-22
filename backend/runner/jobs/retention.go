@@ -21,11 +21,14 @@ const retentionTarget = "meta"
 // finishes in well under a second on modest hardware: the sweep stays
 // responsive to cancellation and never holds long row locks, while still
 // clearing millions of backlogged rows within one lease window.
-const sampleRetentionBatchSize = 10_000
+const retentionBatchSize = 10_000
 
 // samplePruner deletes sample rows older than age in batches, returning
 // deleted counts per table. Implemented by storage.PruneSamplesOlderThan.
 type samplePruner func(ctx context.Context, db storage.QueryExecutor, age time.Duration, batchSize int64) (map[string]int64, error)
+
+// auditPruner deletes expired mutation audit entries in batches.
+type auditPruner func(ctx context.Context, db storage.QueryExecutor, age time.Duration, batchSize int64) (int64, error)
 
 // leasePruner deletes departed-target lease rows older than age. Implemented
 // by storage.PruneStaleRunnerExecutionStateTx.
@@ -39,8 +42,10 @@ type SampleRetentionJob struct {
 	config        runner.Config
 	db            storage.QueryExecutor
 	sampleAge     time.Duration
+	auditAge      time.Duration
 	staleLeaseAge time.Duration
 	pruneSamples  samplePruner
+	pruneAudit    auditPruner
 	pruneLeases   leasePruner
 }
 
@@ -48,13 +53,15 @@ type SampleRetentionJob struct {
 // than sampleAge and departed-target lease rows older than staleLeaseAge on
 // each cycle. db must be the raw meta-DB handle (not a transaction): the
 // sample sweep commits each delete batch independently.
-func NewSampleRetention(cfg runner.Config, db storage.QueryExecutor, sampleAge time.Duration, staleLeaseAge time.Duration) *SampleRetentionJob {
+func NewSampleRetention(cfg runner.Config, db storage.QueryExecutor, sampleAge time.Duration, auditAge time.Duration, staleLeaseAge time.Duration) *SampleRetentionJob {
 	return &SampleRetentionJob{
 		config:        cfg,
 		db:            db,
 		sampleAge:     sampleAge,
+		auditAge:      auditAge,
 		staleLeaseAge: staleLeaseAge,
 		pruneSamples:  storage.PruneSamplesOlderThan,
+		pruneAudit:    storage.PruneAuditLogEntriesOlderThan,
 		pruneLeases:   storage.PruneStaleRunnerExecutionStateTx,
 	}
 }
@@ -77,7 +84,12 @@ func (j *SampleRetentionJob) ListTargets(_ context.Context) ([]string, error) {
 // where it stopped. Only the cheap lease pruning and the summary log ride in
 // Commit with the success bookkeeping.
 func (j *SampleRetentionJob) Run(ctx context.Context, _ string) (runner.RunResult, error) {
-	prunedSamples, err := j.pruneSamples(ctx, j.db, j.sampleAge, sampleRetentionBatchSize)
+	prunedSamples, err := j.pruneSamples(ctx, j.db, j.sampleAge, retentionBatchSize)
+	if err != nil {
+		return runner.RunResult{}, err
+	}
+
+	prunedAuditEntries, err := j.pruneAudit(ctx, j.db, j.auditAge, retentionBatchSize)
 	if err != nil {
 		return runner.RunResult{}, err
 	}
@@ -98,9 +110,11 @@ func (j *SampleRetentionJob) Run(ctx context.Context, _ string) (runner.RunResul
 		// logs its own warning right after.
 		slog.InfoContext(ctx, "retention sweep",
 			slog.Int64("samples_pruned", totalSamples),
+			slog.Int64("audit_entries_pruned", prunedAuditEntries),
 			slog.Int64("stale_leases_pruned", prunedLeases),
 			slog.Any("samples_pruned_by_table", prunedSamples),
 			slog.Duration("sample_age", j.sampleAge),
+			slog.Duration("audit_age", j.auditAge),
 			slog.Duration("stale_lease_age", j.staleLeaseAge))
 
 		return nil

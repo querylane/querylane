@@ -33,7 +33,7 @@ func (s viewInstanceReaderStub) GetInstance(context.Context, string) (*v1alpha1.
 
 type auditRecorderStub struct {
 	started  []storage.AuditMutation
-	finished []storage.AuditMutationStatus
+	finished []storage.AuditMutationState
 	startErr error
 }
 
@@ -42,8 +42,8 @@ func (s *auditRecorderStub) StartMutation(_ context.Context, mutation storage.Au
 	return 42, s.startErr
 }
 
-func (s *auditRecorderStub) FinishMutation(_ context.Context, _ int64, status storage.AuditMutationStatus, _ string) error {
-	s.finished = append(s.finished, status)
+func (s *auditRecorderStub) FinishMutation(_ context.Context, _ int64, state storage.AuditMutationState, _ string) error {
+	s.finished = append(s.finished, state)
 	return nil
 }
 
@@ -209,10 +209,10 @@ func TestRefreshMaterializedViewAuditsSuccessAndFailure(t *testing.T) {
 	for _, test := range []struct {
 		name       string
 		refreshErr error
-		wantStatus storage.AuditMutationStatus
+		wantState  storage.AuditMutationState
 	}{
-		{name: "success", wantStatus: storage.AuditMutationSucceeded},
-		{name: "failure", refreshErr: errors.New("permission denied"), wantStatus: storage.AuditMutationFailed},
+		{name: "success", wantState: storage.AuditMutationSucceeded},
+		{name: "failure", refreshErr: errors.New("permission denied"), wantState: storage.AuditMutationFailed},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -241,10 +241,10 @@ func TestRefreshMaterializedViewAuditsSuccessAndFailure(t *testing.T) {
 				require.Error(t, callErr)
 			}
 
-			require.Equal(t, []storage.AuditMutationStatus{test.wantStatus}, audit.finished)
+			require.Equal(t, []storage.AuditMutationState{test.wantState}, audit.finished)
 			require.Equal(t, "instances/prod", audit.started[0].InstanceName)
-			require.Equal(t, "app", audit.started[0].DatabaseName)
-			require.Contains(t, audit.started[0].Statement, "REFRESH MATERIALIZED VIEW")
+			require.Equal(t, "instances/prod/databases/app", audit.started[0].DatabaseName)
+			require.Contains(t, audit.started[0].Command, "REFRESH MATERIALIZED VIEW")
 		})
 	}
 }

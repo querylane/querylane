@@ -5,6 +5,8 @@
 import { AdminService } from "./admin_pb";
 
 /**
+ * aip.dev/beta-blocker: Restrict this operator surface, especially audit
+ * methods, to authenticated administrators before beta.
  * Lists querylane backend replicas known from their heartbeats.
  *
  * @generated from rpc querylane.console.v1alpha1.AdminService.ListReplicas
@@ -34,6 +36,13 @@ export const listCatalogSyncStates = AdminService.method.listCatalogSyncStates;
  * @generated from rpc querylane.console.v1alpha1.AdminService.GetMetricsStorageStats
  */
 export const getMetricsStorageStats = AdminService.method.getMetricsStorageStats;
+
+/**
+ * Gets one immutable mutation audit entry.
+ *
+ * @generated from rpc querylane.console.v1alpha1.AdminService.GetAuditLogEntry
+ */
+export const getAuditLogEntry = AdminService.method.getAuditLogEntry;
 
 /**
  * Lists the immutable audit trail for mutations run through Querylane.

@@ -20,6 +20,7 @@ func TestLimitsDefaults(t *testing.T) {
 	assert.Equal(t, 32, limits.LiveQueries.Global)
 	assert.Equal(t, 6, limits.LiveQueries.PerInstance)
 	assert.Equal(t, 30*time.Second, limits.MaterializedViewRefresh.Timeout)
+	assert.Equal(t, 90*24*time.Hour, limits.AuditLog.Retention)
 	assert.Equal(t, 10, limits.ConnectionTests.PerCallerPerMinute)
 	assert.Equal(t, 5, limits.ConnectionTests.Burst)
 	assert.Equal(t, 8, limits.PostgresPool.MaxOpenConnections)
@@ -36,6 +37,20 @@ func TestLimitsValidate(t *testing.T) {
 		mutate func(*Limits)
 		want   string
 	}{
+		{
+			name: "audit log retention must be positive",
+			mutate: func(limits *Limits) {
+				limits.AuditLog.Retention = 0
+			},
+			want: "audit_log.retention must be positive",
+		},
+		{
+			name: "audit log retention must outlive in-flight mutations",
+			mutate: func(limits *Limits) {
+				limits.AuditLog.Retention = 59 * time.Minute
+			},
+			want: "audit_log.retention must be at least 1h",
+		},
 		{
 			name: "global live query limit must be positive",
 			mutate: func(limits *Limits) {
@@ -169,6 +184,8 @@ func TestLimitsLoadFromConfigFile(t *testing.T) {
     per_instance: 4
   materialized_view_refresh:
     timeout: 20s
+  audit_log:
+    retention: 2160h
   connection_tests:
     per_caller_per_minute: 8
     burst: 3
@@ -188,6 +205,7 @@ func TestLimitsLoadFromConfigFile(t *testing.T) {
 	assert.Equal(t, 12, limits.LiveQueries.Global)
 	assert.Equal(t, 4, limits.LiveQueries.PerInstance)
 	assert.Equal(t, 20*time.Second, limits.MaterializedViewRefresh.Timeout)
+	assert.Equal(t, 90*24*time.Hour, limits.AuditLog.Retention)
 	assert.Equal(t, 8, limits.ConnectionTests.PerCallerPerMinute)
 	assert.Equal(t, 3, limits.ConnectionTests.Burst)
 	assert.Equal(t, 5, limits.PostgresPool.MaxOpenConnections)

@@ -41,10 +41,12 @@ identity.
 
 Audit-start persistence is fail-closed: if Querylane cannot record an admitted
 mutation, it does not run it. A process crash after the target operation starts
-can leave an entry in `Started` state because no replica can safely infer the
-remote PostgreSQL outcome. Audit result summaries are intentionally redacted;
-the submitted statement is stored and should be protected with the same access
-controls and retention policy as the meta database.
+can leave an entry in `Running` state because no replica can safely infer the
+remote PostgreSQL outcome. Audit result summaries are intentionally redacted.
+The server-generated command is stored, but raw user SQL and secrets must never
+be copied into this field. Querylane deletes audit entries after 90 days by
+default; configure `limits.audit_log.retention` to match the deployment's
+retention policy.
 
 ## Reporting vulnerabilities
 

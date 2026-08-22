@@ -26,56 +26,110 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type AuditLogEntry_Status int32
+// State is the durable outcome known to Querylane.
+type AuditLogEntry_State int32
 
 const (
-	AuditLogEntry_STATUS_UNSPECIFIED AuditLogEntry_Status = 0
-	AuditLogEntry_STATUS_STARTED     AuditLogEntry_Status = 1
-	AuditLogEntry_STATUS_SUCCEEDED   AuditLogEntry_Status = 2
-	AuditLogEntry_STATUS_FAILED      AuditLogEntry_Status = 3
+	// The state is unknown.
+	AuditLogEntry_STATE_UNSPECIFIED AuditLogEntry_State = 0
+	// Querylane admitted the mutation, but no outcome was recorded.
+	AuditLogEntry_STATE_RUNNING AuditLogEntry_State = 1
+	// The mutation completed successfully.
+	AuditLogEntry_STATE_SUCCEEDED AuditLogEntry_State = 2
+	// The mutation failed.
+	AuditLogEntry_STATE_FAILED AuditLogEntry_State = 3
 )
 
-// Enum value maps for AuditLogEntry_Status.
+// Enum value maps for AuditLogEntry_State.
 var (
-	AuditLogEntry_Status_name = map[int32]string{
-		0: "STATUS_UNSPECIFIED",
-		1: "STATUS_STARTED",
-		2: "STATUS_SUCCEEDED",
-		3: "STATUS_FAILED",
+	AuditLogEntry_State_name = map[int32]string{
+		0: "STATE_UNSPECIFIED",
+		1: "STATE_RUNNING",
+		2: "STATE_SUCCEEDED",
+		3: "STATE_FAILED",
 	}
-	AuditLogEntry_Status_value = map[string]int32{
-		"STATUS_UNSPECIFIED": 0,
-		"STATUS_STARTED":     1,
-		"STATUS_SUCCEEDED":   2,
-		"STATUS_FAILED":      3,
+	AuditLogEntry_State_value = map[string]int32{
+		"STATE_UNSPECIFIED": 0,
+		"STATE_RUNNING":     1,
+		"STATE_SUCCEEDED":   2,
+		"STATE_FAILED":      3,
 	}
 )
 
-func (x AuditLogEntry_Status) Enum() *AuditLogEntry_Status {
-	p := new(AuditLogEntry_Status)
+func (x AuditLogEntry_State) Enum() *AuditLogEntry_State {
+	p := new(AuditLogEntry_State)
 	*p = x
 	return p
 }
 
-func (x AuditLogEntry_Status) String() string {
+func (x AuditLogEntry_State) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (AuditLogEntry_Status) Descriptor() protoreflect.EnumDescriptor {
+func (AuditLogEntry_State) Descriptor() protoreflect.EnumDescriptor {
 	return file_querylane_console_v1alpha1_admin_proto_enumTypes[0].Descriptor()
 }
 
-func (AuditLogEntry_Status) Type() protoreflect.EnumType {
+func (AuditLogEntry_State) Type() protoreflect.EnumType {
 	return &file_querylane_console_v1alpha1_admin_proto_enumTypes[0]
 }
 
-func (x AuditLogEntry_Status) Number() protoreflect.EnumNumber {
+func (x AuditLogEntry_State) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use AuditLogEntry_Status.Descriptor instead.
-func (AuditLogEntry_Status) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use AuditLogEntry_State.Descriptor instead.
+func (AuditLogEntry_State) EnumDescriptor() ([]byte, []int) {
 	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{7, 0}
+}
+
+// Action identifies the server-admitted mutation kind.
+type AuditLogEntry_Action int32
+
+const (
+	// The action is unknown.
+	AuditLogEntry_ACTION_UNSPECIFIED AuditLogEntry_Action = 0
+	// Refresh of one managed materialized view.
+	AuditLogEntry_ACTION_REFRESH_MATERIALIZED_VIEW AuditLogEntry_Action = 1
+)
+
+// Enum value maps for AuditLogEntry_Action.
+var (
+	AuditLogEntry_Action_name = map[int32]string{
+		0: "ACTION_UNSPECIFIED",
+		1: "ACTION_REFRESH_MATERIALIZED_VIEW",
+	}
+	AuditLogEntry_Action_value = map[string]int32{
+		"ACTION_UNSPECIFIED":               0,
+		"ACTION_REFRESH_MATERIALIZED_VIEW": 1,
+	}
+)
+
+func (x AuditLogEntry_Action) Enum() *AuditLogEntry_Action {
+	p := new(AuditLogEntry_Action)
+	*p = x
+	return p
+}
+
+func (x AuditLogEntry_Action) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AuditLogEntry_Action) Descriptor() protoreflect.EnumDescriptor {
+	return file_querylane_console_v1alpha1_admin_proto_enumTypes[1].Descriptor()
+}
+
+func (AuditLogEntry_Action) Type() protoreflect.EnumType {
+	return &file_querylane_console_v1alpha1_admin_proto_enumTypes[1]
+}
+
+func (x AuditLogEntry_Action) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AuditLogEntry_Action.Descriptor instead.
+func (AuditLogEntry_Action) EnumDescriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{7, 1}
 }
 
 // Replica is one querylane backend process, registered via periodic
@@ -606,19 +660,35 @@ func (x *ListAdminRunnerExecutionsResponse) GetNextPageToken() string {
 // AuditLogEntry is one mutation attempt against a managed PostgreSQL
 // instance. Entries are created before execution and finalized afterward, so
 // failed and interrupted attempts remain visible.
+// allow: proto-unshipped [Audit log API is still in draft; AIP field names were corrected before release.]
 type AuditLogEntry struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Actor         string                 `protobuf:"bytes,2,opt,name=actor,proto3" json:"actor,omitempty"`
-	Action        string                 `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`
-	Statement     string                 `protobuf:"bytes,4,opt,name=statement,proto3" json:"statement,omitempty"`
-	Target        string                 `protobuf:"bytes,5,opt,name=target,proto3" json:"target,omitempty"`
-	Instance      string                 `protobuf:"bytes,6,opt,name=instance,proto3" json:"instance,omitempty"`
-	Database      string                 `protobuf:"bytes,7,opt,name=database,proto3" json:"database,omitempty"`
-	Status        AuditLogEntry_Status   `protobuf:"varint,8,opt,name=status,proto3,enum=querylane.console.v1alpha1.AuditLogEntry_Status" json:"status,omitempty"`
-	ResultSummary string                 `protobuf:"bytes,9,opt,name=result_summary,json=resultSummary,proto3" json:"result_summary,omitempty"`
-	StartedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
-	FinishedAt    *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=finished_at,json=finishedAt,proto3" json:"finished_at,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Identifier. Canonical resource name of this entry.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Output-only. Direct RPC peer address. This is connection attribution,
+	// not verified user identity, until application authentication exists.
+	Actor string `protobuf:"bytes,2,opt,name=actor,proto3" json:"actor,omitempty"`
+	// Output-only. Mutation kind.
+	Action AuditLogEntry_Action `protobuf:"varint,3,opt,name=action,proto3,enum=querylane.console.v1alpha1.AuditLogEntry_Action" json:"action,omitempty"`
+	// Output-only. Server-generated command. Never contains raw user SQL or secrets.
+	Command string `protobuf:"bytes,4,opt,name=command,proto3" json:"command,omitempty"`
+	// Output-only. Canonical resource name of the mutation target.
+	Target string `protobuf:"bytes,5,opt,name=target,proto3" json:"target,omitempty"`
+	// Output-only. Canonical instance resource name.
+	Instance string `protobuf:"bytes,6,opt,name=instance,proto3" json:"instance,omitempty"`
+	// Output-only. Canonical database resource name.
+	Database string `protobuf:"bytes,7,opt,name=database,proto3" json:"database,omitempty"`
+	// Output-only. Durable mutation state.
+	State AuditLogEntry_State `protobuf:"varint,8,opt,name=state,proto3,enum=querylane.console.v1alpha1.AuditLogEntry_State" json:"state,omitempty"`
+	// Output-only. Redacted result summary.
+	ResultSummary string `protobuf:"bytes,9,opt,name=result_summary,json=resultSummary,proto3" json:"result_summary,omitempty"`
+	// Output-only. Time Querylane admitted the mutation.
+	StartTime *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	// Output-only. Time Querylane recorded the final outcome, when known.
+	FinishTime *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=finish_time,json=finishTime,proto3" json:"finish_time,omitempty"`
+	// Output-only. Time the configured retention sweep makes this entry eligible
+	// for deletion.
+	ExpireTime    *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=expire_time,json=expireTime,proto3" json:"expire_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -667,16 +737,16 @@ func (x *AuditLogEntry) GetActor() string {
 	return ""
 }
 
-func (x *AuditLogEntry) GetAction() string {
+func (x *AuditLogEntry) GetAction() AuditLogEntry_Action {
 	if x != nil {
 		return x.Action
 	}
-	return ""
+	return AuditLogEntry_ACTION_UNSPECIFIED
 }
 
-func (x *AuditLogEntry) GetStatement() string {
+func (x *AuditLogEntry) GetCommand() string {
 	if x != nil {
-		return x.Statement
+		return x.Command
 	}
 	return ""
 }
@@ -702,11 +772,11 @@ func (x *AuditLogEntry) GetDatabase() string {
 	return ""
 }
 
-func (x *AuditLogEntry) GetStatus() AuditLogEntry_Status {
+func (x *AuditLogEntry) GetState() AuditLogEntry_State {
 	if x != nil {
-		return x.Status
+		return x.State
 	}
-	return AuditLogEntry_STATUS_UNSPECIFIED
+	return AuditLogEntry_STATE_UNSPECIFIED
 }
 
 func (x *AuditLogEntry) GetResultSummary() string {
@@ -716,27 +786,87 @@ func (x *AuditLogEntry) GetResultSummary() string {
 	return ""
 }
 
-func (x *AuditLogEntry) GetStartedAt() *timestamppb.Timestamp {
+func (x *AuditLogEntry) GetStartTime() *timestamppb.Timestamp {
 	if x != nil {
-		return x.StartedAt
+		return x.StartTime
 	}
 	return nil
 }
 
-func (x *AuditLogEntry) GetFinishedAt() *timestamppb.Timestamp {
+func (x *AuditLogEntry) GetFinishTime() *timestamppb.Timestamp {
 	if x != nil {
-		return x.FinishedAt
+		return x.FinishTime
 	}
 	return nil
 }
 
+func (x *AuditLogEntry) GetExpireTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpireTime
+	}
+	return nil
+}
+
+// Request for AdminService.GetAuditLogEntry.
+type GetAuditLogEntryRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. Canonical name of the audit entry to retrieve.
+	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAuditLogEntryRequest) Reset() {
+	*x = GetAuditLogEntryRequest{}
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAuditLogEntryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAuditLogEntryRequest) ProtoMessage() {}
+
+func (x *GetAuditLogEntryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAuditLogEntryRequest.ProtoReflect.Descriptor instead.
+func (*GetAuditLogEntryRequest) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetAuditLogEntryRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// Request for AdminService.ListAuditLogEntries.
 type ListAuditLogEntriesRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	PageSize  int32                  `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken string                 `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	// Optional. AIP-160 filter. Reserved for server-side audit filtering.
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional. Number of entries to return. The server uses 50 when omitted
+	// and coerces values above 1000 to 1000.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Optional. Opaque token returned by the preceding list request.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Optional. AIP-160 filter. Filterable fields: actor, action, target,
+	// instance, database, state, and start_time.
 	Filter string `protobuf:"bytes,3,opt,name=filter,proto3" json:"filter,omitempty"`
-	// Optional. AIP-132 order_by. Entries are currently returned newest first.
+	// Optional. AIP-132 ordering. Orderable fields: name, actor, action, target,
+	// instance, database, state, and start_time. Defaults to `start_time desc`
+	// with a stable resource-name tie-breaker.
 	OrderBy       string `protobuf:"bytes,4,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -744,7 +874,7 @@ type ListAuditLogEntriesRequest struct {
 
 func (x *ListAuditLogEntriesRequest) Reset() {
 	*x = ListAuditLogEntriesRequest{}
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[8]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -756,7 +886,7 @@ func (x *ListAuditLogEntriesRequest) String() string {
 func (*ListAuditLogEntriesRequest) ProtoMessage() {}
 
 func (x *ListAuditLogEntriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[8]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -769,7 +899,7 @@ func (x *ListAuditLogEntriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditLogEntriesRequest.ProtoReflect.Descriptor instead.
 func (*ListAuditLogEntriesRequest) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{8}
+	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListAuditLogEntriesRequest) GetPageSize() int32 {
@@ -800,17 +930,20 @@ func (x *ListAuditLogEntriesRequest) GetOrderBy() string {
 	return ""
 }
 
+// Response from AdminService.ListAuditLogEntries.
 type ListAuditLogEntriesResponse struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	AuditLogEntries []*AuditLogEntry       `protobuf:"bytes,1,rep,name=audit_log_entries,json=auditLogEntries,proto3" json:"audit_log_entries,omitempty"`
-	NextPageToken   string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Audit entries ordered from newest to oldest.
+	AuditLogEntries []*AuditLogEntry `protobuf:"bytes,1,rep,name=audit_log_entries,json=auditLogEntries,proto3" json:"audit_log_entries,omitempty"`
+	// Opaque token for the next page. Empty when there are no more entries.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListAuditLogEntriesResponse) Reset() {
 	*x = ListAuditLogEntriesResponse{}
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[9]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -822,7 +955,7 @@ func (x *ListAuditLogEntriesResponse) String() string {
 func (*ListAuditLogEntriesResponse) ProtoMessage() {}
 
 func (x *ListAuditLogEntriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[9]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -835,7 +968,7 @@ func (x *ListAuditLogEntriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditLogEntriesResponse.ProtoReflect.Descriptor instead.
 func (*ListAuditLogEntriesResponse) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{9}
+	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListAuditLogEntriesResponse) GetAuditLogEntries() []*AuditLogEntry {
@@ -873,7 +1006,7 @@ type CatalogSyncState struct {
 
 func (x *CatalogSyncState) Reset() {
 	*x = CatalogSyncState{}
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[10]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -885,7 +1018,7 @@ func (x *CatalogSyncState) String() string {
 func (*CatalogSyncState) ProtoMessage() {}
 
 func (x *CatalogSyncState) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[10]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -898,7 +1031,7 @@ func (x *CatalogSyncState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CatalogSyncState.ProtoReflect.Descriptor instead.
 func (*CatalogSyncState) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{10}
+	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CatalogSyncState) GetScope() string {
@@ -950,7 +1083,7 @@ type ListCatalogSyncStatesRequest struct {
 
 func (x *ListCatalogSyncStatesRequest) Reset() {
 	*x = ListCatalogSyncStatesRequest{}
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[11]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -962,7 +1095,7 @@ func (x *ListCatalogSyncStatesRequest) String() string {
 func (*ListCatalogSyncStatesRequest) ProtoMessage() {}
 
 func (x *ListCatalogSyncStatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[11]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -975,7 +1108,7 @@ func (x *ListCatalogSyncStatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCatalogSyncStatesRequest.ProtoReflect.Descriptor instead.
 func (*ListCatalogSyncStatesRequest) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{11}
+	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListCatalogSyncStatesRequest) GetPageSize() int32 {
@@ -1016,7 +1149,7 @@ type ListCatalogSyncStatesResponse struct {
 
 func (x *ListCatalogSyncStatesResponse) Reset() {
 	*x = ListCatalogSyncStatesResponse{}
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[12]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1028,7 +1161,7 @@ func (x *ListCatalogSyncStatesResponse) String() string {
 func (*ListCatalogSyncStatesResponse) ProtoMessage() {}
 
 func (x *ListCatalogSyncStatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[12]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1041,7 +1174,7 @@ func (x *ListCatalogSyncStatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCatalogSyncStatesResponse.ProtoReflect.Descriptor instead.
 func (*ListCatalogSyncStatesResponse) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{12}
+	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListCatalogSyncStatesResponse) GetCatalogSyncStates() []*CatalogSyncState {
@@ -1081,7 +1214,7 @@ type SampleTableStats struct {
 
 func (x *SampleTableStats) Reset() {
 	*x = SampleTableStats{}
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[13]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1093,7 +1226,7 @@ func (x *SampleTableStats) String() string {
 func (*SampleTableStats) ProtoMessage() {}
 
 func (x *SampleTableStats) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[13]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1106,7 +1239,7 @@ func (x *SampleTableStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SampleTableStats.ProtoReflect.Descriptor instead.
 func (*SampleTableStats) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{13}
+	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *SampleTableStats) GetTableName() string {
@@ -1152,7 +1285,7 @@ type GetMetricsStorageStatsRequest struct {
 
 func (x *GetMetricsStorageStatsRequest) Reset() {
 	*x = GetMetricsStorageStatsRequest{}
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[14]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1164,7 +1297,7 @@ func (x *GetMetricsStorageStatsRequest) String() string {
 func (*GetMetricsStorageStatsRequest) ProtoMessage() {}
 
 func (x *GetMetricsStorageStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[14]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1177,7 +1310,7 @@ func (x *GetMetricsStorageStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMetricsStorageStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetMetricsStorageStatsRequest) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{14}
+	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{15}
 }
 
 type GetMetricsStorageStatsResponse struct {
@@ -1193,7 +1326,7 @@ type GetMetricsStorageStatsResponse struct {
 
 func (x *GetMetricsStorageStatsResponse) Reset() {
 	*x = GetMetricsStorageStatsResponse{}
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[15]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1205,7 +1338,7 @@ func (x *GetMetricsStorageStatsResponse) String() string {
 func (*GetMetricsStorageStatsResponse) ProtoMessage() {}
 
 func (x *GetMetricsStorageStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[15]
+	mi := &file_querylane_console_v1alpha1_admin_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1218,7 +1351,7 @@ func (x *GetMetricsStorageStatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMetricsStorageStatsResponse.ProtoReflect.Descriptor instead.
 func (*GetMetricsStorageStatsResponse) Descriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{15}
+	return file_querylane_console_v1alpha1_admin_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetMetricsStorageStatsResponse) GetSampleTables() []*SampleTableStats {
@@ -1239,7 +1372,7 @@ var File_querylane_console_v1alpha1_admin_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_admin_proto_rawDesc = "" +
 	"\n" +
-	"&querylane/console/v1alpha1/admin.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a-querylane/console/v1alpha1/catalog_sync.proto\"\x85\x02\n" +
+	"&querylane/console/v1alpha1/admin.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a-querylane/console/v1alpha1/catalog_sync.proto\"\x85\x02\n" +
 	"\aReplica\x12\"\n" +
 	"\n" +
 	"replica_id\x18\x01 \x01(\tB\x03\xe0A\x03R\treplicaId\x12\x1f\n" +
@@ -1285,30 +1418,42 @@ const file_querylane_console_v1alpha1_admin_proto_rawDesc = "" +
 	"\border_by\x18\x04 \x01(\tB\x03\xe0A\x01R\aorderBy\"\xaa\x01\n" +
 	"!ListAdminRunnerExecutionsResponse\x12]\n" +
 	"\x11runner_executions\x18\x01 \x03(\v20.querylane.console.v1alpha1.AdminRunnerExecutionR\x10runnerExecutions\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xab\x05\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xa7\a\n" +
 	"\rAuditLogEntry\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\bR\x04name\x12\x19\n" +
-	"\x05actor\x18\x02 \x01(\tB\x03\xe0A\x03R\x05actor\x12\x1b\n" +
-	"\x06action\x18\x03 \x01(\tB\x03\xe0A\x03R\x06action\x12!\n" +
-	"\tstatement\x18\x04 \x01(\tB\x03\xe0A\x03R\tstatement\x12\x1b\n" +
-	"\x06target\x18\x05 \x01(\tB\x03\xe0A\x03R\x06target\x12\x1f\n" +
-	"\binstance\x18\x06 \x01(\tB\x03\xe0A\x03R\binstance\x12\x1f\n" +
-	"\bdatabase\x18\a \x01(\tB\x03\xe0A\x03R\bdatabase\x12M\n" +
-	"\x06status\x18\b \x01(\x0e20.querylane.console.v1alpha1.AuditLogEntry.StatusB\x03\xe0A\x03R\x06status\x12*\n" +
+	"\x05actor\x18\x02 \x01(\tB\x03\xe0A\x03R\x05actor\x12M\n" +
+	"\x06action\x18\x03 \x01(\x0e20.querylane.console.v1alpha1.AuditLogEntry.ActionB\x03\xe0A\x03R\x06action\x12\x1d\n" +
+	"\acommand\x18\x04 \x01(\tB\x03\xe0A\x03R\acommand\x12!\n" +
+	"\x06target\x18\x05 \x01(\tB\t\xe0A\x03\xfaA\x03\n" +
+	"\x01*R\x06target\x12B\n" +
+	"\binstance\x18\x06 \x01(\tB&\xe0A\x03\xfaA \n" +
+	"\x1econsole.querylane.dev/InstanceR\binstance\x12B\n" +
+	"\bdatabase\x18\a \x01(\tB&\xe0A\x03\xfaA \n" +
+	"\x1econsole.querylane.dev/DatabaseR\bdatabase\x12J\n" +
+	"\x05state\x18\b \x01(\x0e2/.querylane.console.v1alpha1.AuditLogEntry.StateB\x03\xe0A\x03R\x05state\x12*\n" +
 	"\x0eresult_summary\x18\t \x01(\tB\x03\xe0A\x03R\rresultSummary\x12>\n" +
 	"\n" +
-	"started_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tstartedAt\x12@\n" +
-	"\vfinished_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
-	"finishedAt\"]\n" +
-	"\x06Status\x12\x16\n" +
-	"\x12STATUS_UNSPECIFIED\x10\x00\x12\x12\n" +
-	"\x0eSTATUS_STARTED\x10\x01\x12\x14\n" +
-	"\x10STATUS_SUCCEEDED\x10\x02\x12\x11\n" +
-	"\rSTATUS_FAILED\x10\x03:k\xeaAh\n" +
-	"#console.querylane.dev/AuditLogEntry\x12!auditLogEntries/{audit_log_entry}*\x0fauditLogEntries2\rauditLogEntry\"\xa9\x01\n" +
-	"\x1aListAuditLogEntriesRequest\x12*\n" +
-	"\tpage_size\x18\x01 \x01(\x05B\r\xe0A\x01\xbaH\a\x1a\x05\x18\xe8\a(\x00R\bpageSize\x12\"\n" +
+	"start_time\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tstartTime\x12@\n" +
+	"\vfinish_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"finishTime\x12@\n" +
+	"\vexpire_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"expireTime\"X\n" +
+	"\x05State\x12\x15\n" +
+	"\x11STATE_UNSPECIFIED\x10\x00\x12\x11\n" +
+	"\rSTATE_RUNNING\x10\x01\x12\x13\n" +
+	"\x0fSTATE_SUCCEEDED\x10\x02\x12\x10\n" +
+	"\fSTATE_FAILED\x10\x03\"F\n" +
+	"\x06Action\x12\x16\n" +
+	"\x12ACTION_UNSPECIFIED\x10\x00\x12$\n" +
+	" ACTION_REFRESH_MATERIALIZED_VIEW\x10\x01:k\xeaAh\n" +
+	"#console.querylane.dev/AuditLogEntry\x12!auditLogEntries/{audit_log_entry}*\x0fauditLogEntries2\rauditLogEntry\"Z\n" +
+	"\x17GetAuditLogEntryRequest\x12?\n" +
+	"\x04name\x18\x01 \x01(\tB+\xe0A\x02\xfaA%\n" +
+	"#console.querylane.dev/AuditLogEntryR\x04name\"\xa6\x01\n" +
+	"\x1aListAuditLogEntriesRequest\x12'\n" +
+	"\tpage_size\x18\x01 \x01(\x05B\n" +
+	"\xe0A\x01\xbaH\x04\x1a\x02(\x00R\bpageSize\x12\"\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tB\x03\xe0A\x01R\tpageToken\x12\x1b\n" +
 	"\x06filter\x18\x03 \x01(\tB\x03\xe0A\x01R\x06filter\x12\x1e\n" +
@@ -1344,13 +1489,14 @@ const file_querylane_console_v1alpha1_admin_proto_rawDesc = "" +
 	"\x1dGetMetricsStorageStatsRequest\"\xc3\x01\n" +
 	"\x1eGetMetricsStorageStatsResponse\x12V\n" +
 	"\rsample_tables\x18\x01 \x03(\v2,.querylane.console.v1alpha1.SampleTableStatsB\x03\xe0A\x03R\fsampleTables\x12I\n" +
-	"\x10retention_period\x18\x02 \x01(\v2\x19.google.protobuf.DurationB\x03\xe0A\x03R\x0fretentionPeriod2\xd0\x05\n" +
+	"\x10retention_period\x18\x02 \x01(\v2\x19.google.protobuf.DurationB\x03\xe0A\x03R\x0fretentionPeriod2\x9c\a\n" +
 	"\fAdminService\x12s\n" +
 	"\fListReplicas\x12/.querylane.console.v1alpha1.ListReplicasRequest\x1a0.querylane.console.v1alpha1.ListReplicasResponse\"\x00\x12\x9a\x01\n" +
 	"\x19ListAdminRunnerExecutions\x12<.querylane.console.v1alpha1.ListAdminRunnerExecutionsRequest\x1a=.querylane.console.v1alpha1.ListAdminRunnerExecutionsResponse\"\x00\x12\x8e\x01\n" +
 	"\x15ListCatalogSyncStates\x128.querylane.console.v1alpha1.ListCatalogSyncStatesRequest\x1a9.querylane.console.v1alpha1.ListCatalogSyncStatesResponse\"\x00\x12\x91\x01\n" +
-	"\x16GetMetricsStorageStats\x129.querylane.console.v1alpha1.GetMetricsStorageStatsRequest\x1a:.querylane.console.v1alpha1.GetMetricsStorageStatsResponse\"\x00\x12\x88\x01\n" +
-	"\x13ListAuditLogEntries\x126.querylane.console.v1alpha1.ListAuditLogEntriesRequest\x1a7.querylane.console.v1alpha1.ListAuditLogEntriesResponse\"\x00B\x92\x02\n" +
+	"\x16GetMetricsStorageStats\x129.querylane.console.v1alpha1.GetMetricsStorageStatsRequest\x1a:.querylane.console.v1alpha1.GetMetricsStorageStatsResponse\"\x00\x12\xa5\x01\n" +
+	"\x10GetAuditLogEntry\x123.querylane.console.v1alpha1.GetAuditLogEntryRequest\x1a).querylane.console.v1alpha1.AuditLogEntry\"1\xdaA\x04name\x82\xd3\xe4\x93\x02$\x12\"/v1alpha1/{name=auditLogEntries/*}\x12\xac\x01\n" +
+	"\x13ListAuditLogEntries\x126.querylane.console.v1alpha1.ListAuditLogEntriesRequest\x1a7.querylane.console.v1alpha1.ListAuditLogEntriesResponse\"$\xdaA\x00\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1alpha1/auditLogEntriesB\x92\x02\n" +
 	"\x1ecom.querylane.console.v1alpha1B\n" +
 	"AdminProtoP\x01ZZgithub.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1;consolev1alpha1\xa2\x02\x03QCX\xaa\x02\x1aQuerylane.Console.V1alpha1\xca\x02\x1aQuerylane\\Console\\V1alpha1\xe2\x02&Querylane\\Console\\V1alpha1\\GPBMetadata\xea\x02\x1cQuerylane::Console::V1alpha1b\x06proto3"
 
@@ -1366,67 +1512,73 @@ func file_querylane_console_v1alpha1_admin_proto_rawDescGZIP() []byte {
 	return file_querylane_console_v1alpha1_admin_proto_rawDescData
 }
 
-var file_querylane_console_v1alpha1_admin_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_querylane_console_v1alpha1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_querylane_console_v1alpha1_admin_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_querylane_console_v1alpha1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_querylane_console_v1alpha1_admin_proto_goTypes = []any{
-	(AuditLogEntry_Status)(0),                 // 0: querylane.console.v1alpha1.AuditLogEntry.Status
-	(*Replica)(nil),                           // 1: querylane.console.v1alpha1.Replica
-	(*ListReplicasRequest)(nil),               // 2: querylane.console.v1alpha1.ListReplicasRequest
-	(*ListReplicasResponse)(nil),              // 3: querylane.console.v1alpha1.ListReplicasResponse
-	(*ReplicaIdentity)(nil),                   // 4: querylane.console.v1alpha1.ReplicaIdentity
-	(*AdminRunnerExecution)(nil),              // 5: querylane.console.v1alpha1.AdminRunnerExecution
-	(*ListAdminRunnerExecutionsRequest)(nil),  // 6: querylane.console.v1alpha1.ListAdminRunnerExecutionsRequest
-	(*ListAdminRunnerExecutionsResponse)(nil), // 7: querylane.console.v1alpha1.ListAdminRunnerExecutionsResponse
-	(*AuditLogEntry)(nil),                     // 8: querylane.console.v1alpha1.AuditLogEntry
-	(*ListAuditLogEntriesRequest)(nil),        // 9: querylane.console.v1alpha1.ListAuditLogEntriesRequest
-	(*ListAuditLogEntriesResponse)(nil),       // 10: querylane.console.v1alpha1.ListAuditLogEntriesResponse
-	(*CatalogSyncState)(nil),                  // 11: querylane.console.v1alpha1.CatalogSyncState
-	(*ListCatalogSyncStatesRequest)(nil),      // 12: querylane.console.v1alpha1.ListCatalogSyncStatesRequest
-	(*ListCatalogSyncStatesResponse)(nil),     // 13: querylane.console.v1alpha1.ListCatalogSyncStatesResponse
-	(*SampleTableStats)(nil),                  // 14: querylane.console.v1alpha1.SampleTableStats
-	(*GetMetricsStorageStatsRequest)(nil),     // 15: querylane.console.v1alpha1.GetMetricsStorageStatsRequest
-	(*GetMetricsStorageStatsResponse)(nil),    // 16: querylane.console.v1alpha1.GetMetricsStorageStatsResponse
-	(*timestamppb.Timestamp)(nil),             // 17: google.protobuf.Timestamp
-	(CatalogSyncStatus)(0),                    // 18: querylane.console.v1alpha1.CatalogSyncStatus
-	(*durationpb.Duration)(nil),               // 19: google.protobuf.Duration
+	(AuditLogEntry_State)(0),                  // 0: querylane.console.v1alpha1.AuditLogEntry.State
+	(AuditLogEntry_Action)(0),                 // 1: querylane.console.v1alpha1.AuditLogEntry.Action
+	(*Replica)(nil),                           // 2: querylane.console.v1alpha1.Replica
+	(*ListReplicasRequest)(nil),               // 3: querylane.console.v1alpha1.ListReplicasRequest
+	(*ListReplicasResponse)(nil),              // 4: querylane.console.v1alpha1.ListReplicasResponse
+	(*ReplicaIdentity)(nil),                   // 5: querylane.console.v1alpha1.ReplicaIdentity
+	(*AdminRunnerExecution)(nil),              // 6: querylane.console.v1alpha1.AdminRunnerExecution
+	(*ListAdminRunnerExecutionsRequest)(nil),  // 7: querylane.console.v1alpha1.ListAdminRunnerExecutionsRequest
+	(*ListAdminRunnerExecutionsResponse)(nil), // 8: querylane.console.v1alpha1.ListAdminRunnerExecutionsResponse
+	(*AuditLogEntry)(nil),                     // 9: querylane.console.v1alpha1.AuditLogEntry
+	(*GetAuditLogEntryRequest)(nil),           // 10: querylane.console.v1alpha1.GetAuditLogEntryRequest
+	(*ListAuditLogEntriesRequest)(nil),        // 11: querylane.console.v1alpha1.ListAuditLogEntriesRequest
+	(*ListAuditLogEntriesResponse)(nil),       // 12: querylane.console.v1alpha1.ListAuditLogEntriesResponse
+	(*CatalogSyncState)(nil),                  // 13: querylane.console.v1alpha1.CatalogSyncState
+	(*ListCatalogSyncStatesRequest)(nil),      // 14: querylane.console.v1alpha1.ListCatalogSyncStatesRequest
+	(*ListCatalogSyncStatesResponse)(nil),     // 15: querylane.console.v1alpha1.ListCatalogSyncStatesResponse
+	(*SampleTableStats)(nil),                  // 16: querylane.console.v1alpha1.SampleTableStats
+	(*GetMetricsStorageStatsRequest)(nil),     // 17: querylane.console.v1alpha1.GetMetricsStorageStatsRequest
+	(*GetMetricsStorageStatsResponse)(nil),    // 18: querylane.console.v1alpha1.GetMetricsStorageStatsResponse
+	(*timestamppb.Timestamp)(nil),             // 19: google.protobuf.Timestamp
+	(CatalogSyncStatus)(0),                    // 20: querylane.console.v1alpha1.CatalogSyncStatus
+	(*durationpb.Duration)(nil),               // 21: google.protobuf.Duration
 }
 var file_querylane_console_v1alpha1_admin_proto_depIdxs = []int32{
-	17, // 0: querylane.console.v1alpha1.Replica.started_at:type_name -> google.protobuf.Timestamp
-	17, // 1: querylane.console.v1alpha1.Replica.last_seen_at:type_name -> google.protobuf.Timestamp
-	1,  // 2: querylane.console.v1alpha1.ListReplicasResponse.replicas:type_name -> querylane.console.v1alpha1.Replica
-	4,  // 3: querylane.console.v1alpha1.AdminRunnerExecution.lease_owner:type_name -> querylane.console.v1alpha1.ReplicaIdentity
-	17, // 4: querylane.console.v1alpha1.AdminRunnerExecution.lease_expires_at:type_name -> google.protobuf.Timestamp
-	17, // 5: querylane.console.v1alpha1.AdminRunnerExecution.last_started_at:type_name -> google.protobuf.Timestamp
-	17, // 6: querylane.console.v1alpha1.AdminRunnerExecution.last_finished_at:type_name -> google.protobuf.Timestamp
-	17, // 7: querylane.console.v1alpha1.AdminRunnerExecution.last_success_at:type_name -> google.protobuf.Timestamp
-	5,  // 8: querylane.console.v1alpha1.ListAdminRunnerExecutionsResponse.runner_executions:type_name -> querylane.console.v1alpha1.AdminRunnerExecution
-	0,  // 9: querylane.console.v1alpha1.AuditLogEntry.status:type_name -> querylane.console.v1alpha1.AuditLogEntry.Status
-	17, // 10: querylane.console.v1alpha1.AuditLogEntry.started_at:type_name -> google.protobuf.Timestamp
-	17, // 11: querylane.console.v1alpha1.AuditLogEntry.finished_at:type_name -> google.protobuf.Timestamp
-	8,  // 12: querylane.console.v1alpha1.ListAuditLogEntriesResponse.audit_log_entries:type_name -> querylane.console.v1alpha1.AuditLogEntry
-	18, // 13: querylane.console.v1alpha1.CatalogSyncState.status:type_name -> querylane.console.v1alpha1.CatalogSyncStatus
-	17, // 14: querylane.console.v1alpha1.CatalogSyncState.last_synced_at:type_name -> google.protobuf.Timestamp
-	17, // 15: querylane.console.v1alpha1.CatalogSyncState.updated_at:type_name -> google.protobuf.Timestamp
-	11, // 16: querylane.console.v1alpha1.ListCatalogSyncStatesResponse.catalog_sync_states:type_name -> querylane.console.v1alpha1.CatalogSyncState
-	17, // 17: querylane.console.v1alpha1.SampleTableStats.oldest_sample_at:type_name -> google.protobuf.Timestamp
-	17, // 18: querylane.console.v1alpha1.SampleTableStats.newest_sample_at:type_name -> google.protobuf.Timestamp
-	14, // 19: querylane.console.v1alpha1.GetMetricsStorageStatsResponse.sample_tables:type_name -> querylane.console.v1alpha1.SampleTableStats
-	19, // 20: querylane.console.v1alpha1.GetMetricsStorageStatsResponse.retention_period:type_name -> google.protobuf.Duration
-	2,  // 21: querylane.console.v1alpha1.AdminService.ListReplicas:input_type -> querylane.console.v1alpha1.ListReplicasRequest
-	6,  // 22: querylane.console.v1alpha1.AdminService.ListAdminRunnerExecutions:input_type -> querylane.console.v1alpha1.ListAdminRunnerExecutionsRequest
-	12, // 23: querylane.console.v1alpha1.AdminService.ListCatalogSyncStates:input_type -> querylane.console.v1alpha1.ListCatalogSyncStatesRequest
-	15, // 24: querylane.console.v1alpha1.AdminService.GetMetricsStorageStats:input_type -> querylane.console.v1alpha1.GetMetricsStorageStatsRequest
-	9,  // 25: querylane.console.v1alpha1.AdminService.ListAuditLogEntries:input_type -> querylane.console.v1alpha1.ListAuditLogEntriesRequest
-	3,  // 26: querylane.console.v1alpha1.AdminService.ListReplicas:output_type -> querylane.console.v1alpha1.ListReplicasResponse
-	7,  // 27: querylane.console.v1alpha1.AdminService.ListAdminRunnerExecutions:output_type -> querylane.console.v1alpha1.ListAdminRunnerExecutionsResponse
-	13, // 28: querylane.console.v1alpha1.AdminService.ListCatalogSyncStates:output_type -> querylane.console.v1alpha1.ListCatalogSyncStatesResponse
-	16, // 29: querylane.console.v1alpha1.AdminService.GetMetricsStorageStats:output_type -> querylane.console.v1alpha1.GetMetricsStorageStatsResponse
-	10, // 30: querylane.console.v1alpha1.AdminService.ListAuditLogEntries:output_type -> querylane.console.v1alpha1.ListAuditLogEntriesResponse
-	26, // [26:31] is the sub-list for method output_type
-	21, // [21:26] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	19, // 0: querylane.console.v1alpha1.Replica.started_at:type_name -> google.protobuf.Timestamp
+	19, // 1: querylane.console.v1alpha1.Replica.last_seen_at:type_name -> google.protobuf.Timestamp
+	2,  // 2: querylane.console.v1alpha1.ListReplicasResponse.replicas:type_name -> querylane.console.v1alpha1.Replica
+	5,  // 3: querylane.console.v1alpha1.AdminRunnerExecution.lease_owner:type_name -> querylane.console.v1alpha1.ReplicaIdentity
+	19, // 4: querylane.console.v1alpha1.AdminRunnerExecution.lease_expires_at:type_name -> google.protobuf.Timestamp
+	19, // 5: querylane.console.v1alpha1.AdminRunnerExecution.last_started_at:type_name -> google.protobuf.Timestamp
+	19, // 6: querylane.console.v1alpha1.AdminRunnerExecution.last_finished_at:type_name -> google.protobuf.Timestamp
+	19, // 7: querylane.console.v1alpha1.AdminRunnerExecution.last_success_at:type_name -> google.protobuf.Timestamp
+	6,  // 8: querylane.console.v1alpha1.ListAdminRunnerExecutionsResponse.runner_executions:type_name -> querylane.console.v1alpha1.AdminRunnerExecution
+	1,  // 9: querylane.console.v1alpha1.AuditLogEntry.action:type_name -> querylane.console.v1alpha1.AuditLogEntry.Action
+	0,  // 10: querylane.console.v1alpha1.AuditLogEntry.state:type_name -> querylane.console.v1alpha1.AuditLogEntry.State
+	19, // 11: querylane.console.v1alpha1.AuditLogEntry.start_time:type_name -> google.protobuf.Timestamp
+	19, // 12: querylane.console.v1alpha1.AuditLogEntry.finish_time:type_name -> google.protobuf.Timestamp
+	19, // 13: querylane.console.v1alpha1.AuditLogEntry.expire_time:type_name -> google.protobuf.Timestamp
+	9,  // 14: querylane.console.v1alpha1.ListAuditLogEntriesResponse.audit_log_entries:type_name -> querylane.console.v1alpha1.AuditLogEntry
+	20, // 15: querylane.console.v1alpha1.CatalogSyncState.status:type_name -> querylane.console.v1alpha1.CatalogSyncStatus
+	19, // 16: querylane.console.v1alpha1.CatalogSyncState.last_synced_at:type_name -> google.protobuf.Timestamp
+	19, // 17: querylane.console.v1alpha1.CatalogSyncState.updated_at:type_name -> google.protobuf.Timestamp
+	13, // 18: querylane.console.v1alpha1.ListCatalogSyncStatesResponse.catalog_sync_states:type_name -> querylane.console.v1alpha1.CatalogSyncState
+	19, // 19: querylane.console.v1alpha1.SampleTableStats.oldest_sample_at:type_name -> google.protobuf.Timestamp
+	19, // 20: querylane.console.v1alpha1.SampleTableStats.newest_sample_at:type_name -> google.protobuf.Timestamp
+	16, // 21: querylane.console.v1alpha1.GetMetricsStorageStatsResponse.sample_tables:type_name -> querylane.console.v1alpha1.SampleTableStats
+	21, // 22: querylane.console.v1alpha1.GetMetricsStorageStatsResponse.retention_period:type_name -> google.protobuf.Duration
+	3,  // 23: querylane.console.v1alpha1.AdminService.ListReplicas:input_type -> querylane.console.v1alpha1.ListReplicasRequest
+	7,  // 24: querylane.console.v1alpha1.AdminService.ListAdminRunnerExecutions:input_type -> querylane.console.v1alpha1.ListAdminRunnerExecutionsRequest
+	14, // 25: querylane.console.v1alpha1.AdminService.ListCatalogSyncStates:input_type -> querylane.console.v1alpha1.ListCatalogSyncStatesRequest
+	17, // 26: querylane.console.v1alpha1.AdminService.GetMetricsStorageStats:input_type -> querylane.console.v1alpha1.GetMetricsStorageStatsRequest
+	10, // 27: querylane.console.v1alpha1.AdminService.GetAuditLogEntry:input_type -> querylane.console.v1alpha1.GetAuditLogEntryRequest
+	11, // 28: querylane.console.v1alpha1.AdminService.ListAuditLogEntries:input_type -> querylane.console.v1alpha1.ListAuditLogEntriesRequest
+	4,  // 29: querylane.console.v1alpha1.AdminService.ListReplicas:output_type -> querylane.console.v1alpha1.ListReplicasResponse
+	8,  // 30: querylane.console.v1alpha1.AdminService.ListAdminRunnerExecutions:output_type -> querylane.console.v1alpha1.ListAdminRunnerExecutionsResponse
+	15, // 31: querylane.console.v1alpha1.AdminService.ListCatalogSyncStates:output_type -> querylane.console.v1alpha1.ListCatalogSyncStatesResponse
+	18, // 32: querylane.console.v1alpha1.AdminService.GetMetricsStorageStats:output_type -> querylane.console.v1alpha1.GetMetricsStorageStatsResponse
+	9,  // 33: querylane.console.v1alpha1.AdminService.GetAuditLogEntry:output_type -> querylane.console.v1alpha1.AuditLogEntry
+	12, // 34: querylane.console.v1alpha1.AdminService.ListAuditLogEntries:output_type -> querylane.console.v1alpha1.ListAuditLogEntriesResponse
+	29, // [29:35] is the sub-list for method output_type
+	23, // [23:29] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_admin_proto_init() }
@@ -1440,8 +1592,8 @@ func file_querylane_console_v1alpha1_admin_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_querylane_console_v1alpha1_admin_proto_rawDesc), len(file_querylane_console_v1alpha1_admin_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   16,
+			NumEnums:      2,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

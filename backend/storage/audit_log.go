@@ -3,41 +3,110 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/go-jet/jet/v2/postgres"
+	"github.com/go-jet/jet/v2/qrm"
+
 	"github.com/querylane/querylane/backend/aip"
+	aipjet "github.com/querylane/querylane/backend/aip/jet"
+	"github.com/querylane/querylane/backend/storage/gen/querylane/public/model"
+	"github.com/querylane/querylane/backend/storage/gen/querylane/public/table"
 )
 
 const defaultAuditPageSize = 50
 
-var auditLogSchema = aip.NewSchema(
-	"console.querylane.dev/AuditLogEntry",
-	aip.Fields[AuditLogEntry]{
-		"id": {
-			Codec:    aip.Int64Codec{},
-			GetValue: func(entry *AuditLogEntry) any { return entry.ID },
+var auditLogSchema = aipjet.Bind(
+	aip.NewSchema(
+		"console.querylane.dev/AuditLogEntry",
+		aip.Fields[model.MutationAuditLog]{
+			"name": {
+				Codec:    aip.Int64Codec{},
+				GetValue: func(entry *model.MutationAuditLog) any { return entry.ID },
+			},
+			"actor": {
+				Codec:      aip.StringCodec{},
+				GetValue:   func(entry *model.MutationAuditLog) any { return entry.Actor },
+				Filterable: true,
+			},
+			"action": {
+				Codec:        aip.StringCodec{},
+				GetValue:     func(entry *model.MutationAuditLog) any { return entry.Action },
+				Filterable:   true,
+				FilterValues: []string{string(AuditMutationRefreshMaterializedView)},
+			},
+			"target": {
+				Codec:      aip.StringCodec{},
+				GetValue:   func(entry *model.MutationAuditLog) any { return entry.Target },
+				Filterable: true,
+			},
+			"instance": {
+				Codec:      aip.StringCodec{},
+				GetValue:   func(entry *model.MutationAuditLog) any { return entry.InstanceName },
+				Filterable: true,
+			},
+			"database": {
+				Codec:      aip.StringCodec{},
+				GetValue:   func(entry *model.MutationAuditLog) any { return entry.DatabaseName },
+				Filterable: true,
+			},
+			"state": {
+				Codec:      aip.StringCodec{},
+				GetValue:   func(entry *model.MutationAuditLog) any { return entry.State },
+				Filterable: true,
+				FilterValues: []string{
+					string(AuditMutationRunning),
+					string(AuditMutationSucceeded),
+					string(AuditMutationFailed),
+				},
+			},
+			"start_time": {
+				Codec:      aip.TimestampCodec{},
+				GetValue:   func(entry *model.MutationAuditLog) any { return entry.StartTime },
+				Filterable: true,
+			},
 		},
+		aip.WithDefaultPageSize(defaultAuditPageSize),
+		aip.WithMaxPageSize(1000),
+		aip.WithDefaultOrder("start_time", aip.Desc),
+		aip.WithTieBreaker("name", aip.Desc),
+	),
+	aipjet.Columns{
+		"name":       table.MutationAuditLog.ID,
+		"actor":      table.MutationAuditLog.Actor,
+		"action":     table.MutationAuditLog.Action,
+		"target":     table.MutationAuditLog.Target,
+		"instance":   table.MutationAuditLog.InstanceName,
+		"database":   table.MutationAuditLog.DatabaseName,
+		"state":      table.MutationAuditLog.State,
+		"start_time": table.MutationAuditLog.StartTime,
 	},
-	aip.WithDefaultPageSize(defaultAuditPageSize),
-	aip.WithMaxPageSize(1000),
-	aip.WithDefaultOrder("id", aip.Desc),
 )
 
-// AuditMutationStatus is the durable lifecycle state of a UI mutation.
-type AuditMutationStatus string
+// AuditMutationAction identifies an admitted mutation kind.
+type AuditMutationAction string
 
 const (
-	AuditMutationStarted   AuditMutationStatus = "STARTED"
-	AuditMutationSucceeded AuditMutationStatus = "SUCCEEDED"
-	AuditMutationFailed    AuditMutationStatus = "FAILED"
+	// AuditMutationRefreshMaterializedView refreshes one managed materialized view.
+	AuditMutationRefreshMaterializedView AuditMutationAction = "REFRESH_MATERIALIZED_VIEW"
+)
+
+// AuditMutationState is the durable lifecycle state of a UI mutation.
+type AuditMutationState string
+
+const (
+	AuditMutationRunning   AuditMutationState = "RUNNING"
+	AuditMutationSucceeded AuditMutationState = "SUCCEEDED"
+	AuditMutationFailed    AuditMutationState = "FAILED"
 )
 
 // AuditMutation describes a mutation before it executes.
 type AuditMutation struct {
 	Actor        string
-	Action       string
-	Statement    string
+	Action       AuditMutationAction
+	Command      string
 	Target       string
 	InstanceName string
 	DatabaseName string
@@ -48,10 +117,10 @@ type AuditLogEntry struct {
 	AuditMutation
 
 	ID            int64
-	Status        AuditMutationStatus
+	State         AuditMutationState
 	ResultSummary string
-	StartedAt     time.Time
-	FinishedAt    *time.Time
+	StartTime     time.Time
+	FinishTime    *time.Time
 }
 
 // PGAuditLogStore persists mutation attempts in the meta database.
@@ -66,37 +135,59 @@ func NewAuditLogStore(db *sql.DB) *PGAuditLogStore {
 
 // StartMutation writes the audit entry before the target mutation runs.
 func (s *PGAuditLogStore) StartMutation(ctx context.Context, mutation AuditMutation) (int64, error) {
-	const query = `
-		INSERT INTO mutation_audit_log
-			(actor, action, statement, target, instance_name, database_name, status)
-		VALUES ($1, $2, $3, $4, $5, $6, 'STARTED')
-		RETURNING id`
+	row := model.MutationAuditLog{
+		Actor:        mutation.Actor,
+		Action:       string(mutation.Action),
+		Command:      mutation.Command,
+		Target:       mutation.Target,
+		InstanceName: mutation.InstanceName,
+		DatabaseName: mutation.DatabaseName,
+		State:        string(AuditMutationRunning),
+	}
+	stmt := table.MutationAuditLog.
+		INSERT(
+			table.MutationAuditLog.Actor,
+			table.MutationAuditLog.Action,
+			table.MutationAuditLog.Command,
+			table.MutationAuditLog.Target,
+			table.MutationAuditLog.InstanceName,
+			table.MutationAuditLog.DatabaseName,
+			table.MutationAuditLog.State,
+		).
+		MODEL(row).
+		RETURNING(table.MutationAuditLog.AllColumns)
 
-	var id int64
-	if err := s.db.QueryRowContext(ctx, query,
-		mutation.Actor,
-		mutation.Action,
-		mutation.Statement,
-		mutation.Target,
-		mutation.InstanceName,
-		mutation.DatabaseName,
-	).Scan(&id); err != nil {
+	var created model.MutationAuditLog
+	if err := stmt.QueryContext(ctx, s.db, &created); err != nil {
 		return 0, fmt.Errorf("start mutation audit: %w", err)
 	}
 
-	return id, nil
+	return created.ID, nil
 }
 
 // FinishMutation records the final result of a prior mutation attempt.
-func (s *PGAuditLogStore) FinishMutation(ctx context.Context, id int64, status AuditMutationStatus, summary string) error {
-	if status != AuditMutationSucceeded && status != AuditMutationFailed {
+func (s *PGAuditLogStore) FinishMutation(ctx context.Context, id int64, state AuditMutationState, summary string) error {
+	if state != AuditMutationSucceeded && state != AuditMutationFailed {
 		return fmt.Errorf("%w: audit outcome must be SUCCEEDED or FAILED", ErrInvalidInput)
 	}
 
-	result, err := s.db.ExecContext(ctx, `
-		UPDATE mutation_audit_log
-		SET status = $2, result_summary = $3, finished_at = now()
-		WHERE id = $1 AND status = 'STARTED'`, id, status, summary)
+	stmt := table.MutationAuditLog.
+		UPDATE(
+			table.MutationAuditLog.State,
+			table.MutationAuditLog.ResultSummary,
+			table.MutationAuditLog.FinishTime,
+		).
+		SET(
+			postgres.String(string(state)),
+			postgres.String(summary),
+			postgres.NOW(),
+		).
+		WHERE(
+			table.MutationAuditLog.ID.EQ(postgres.Int64(id)).
+				AND(table.MutationAuditLog.State.EQ(postgres.String(string(AuditMutationRunning)))),
+		)
+
+	result, err := stmt.ExecContext(ctx, s.db)
 	if err != nil {
 		return fmt.Errorf("finish mutation audit: %w", err)
 	}
@@ -113,72 +204,94 @@ func (s *PGAuditLogStore) FinishMutation(ctx context.Context, id int64, status A
 	return nil
 }
 
-// ListAuditLogEntries pages entries newest-first using the numeric identity as
-// an opaque cursor.
-func (s *PGAuditLogStore) ListAuditLogEntries(ctx context.Context, pageSize int32, pageToken string) ([]AuditLogEntry, string, error) {
-	plan, err := aip.BuildPlan(auditLogSchema, aip.Params{PageSize: pageSize, PageToken: pageToken})
-	if err != nil {
-		return nil, "", err
-	}
+// GetAuditLogEntry returns one mutation audit entry by numeric identity.
+func (s *PGAuditLogStore) GetAuditLogEntry(ctx context.Context, id int64) (AuditLogEntry, error) {
+	stmt := postgres.SELECT(table.MutationAuditLog.AllColumns).
+		FROM(table.MutationAuditLog).
+		WHERE(table.MutationAuditLog.ID.EQ(postgres.Int64(id)))
 
-	var cursor int64
-
-	if len(plan.CursorValues) > 0 {
-		var ok bool
-
-		cursor, ok = plan.CursorValues[0].(int64)
-		if !ok {
-			return nil, "", fmt.Errorf("%w: audit cursor has an invalid type", ErrInvalidPageToken)
+	var row model.MutationAuditLog
+	if err := stmt.QueryContext(ctx, s.db, &row); err != nil {
+		if errors.Is(err, qrm.ErrNoRows) {
+			return AuditLogEntry{}, ErrNotFound
 		}
+
+		return AuditLogEntry{}, fmt.Errorf("get mutation audit log entry: %w", err)
 	}
 
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, actor, action, statement, target, instance_name, database_name,
-		       status, result_summary, started_at, finished_at
-		FROM mutation_audit_log
-		WHERE ($1::bigint = 0 OR id < $1)
-		ORDER BY id DESC
-		LIMIT $2`, cursor, plan.PageSize+1)
+	return auditLogEntryFromModel(row), nil
+}
+
+// ListAuditLogEntries filters, orders, and keyset-pages immutable entries.
+func (s *PGAuditLogStore) ListAuditLogEntries(ctx context.Context, params aip.Params) ([]AuditLogEntry, string, error) {
+	query := postgres.SELECT(table.MutationAuditLog.AllColumns).FROM(table.MutationAuditLog)
+
+	rows, nextPageToken, err := aipjet.Execute(ctx, auditLogSchema, params, query, s.db)
 	if err != nil {
 		return nil, "", fmt.Errorf("list mutation audit log: %w", err)
 	}
-	defer rows.Close()
 
-	entries := make([]AuditLogEntry, 0, plan.PageSize+1)
+	entries := make([]AuditLogEntry, len(rows))
+	for index, row := range rows {
+		entries[index] = auditLogEntryFromModel(row)
+	}
 
-	for rows.Next() {
-		var entry AuditLogEntry
-		if err := rows.Scan(
-			&entry.ID,
-			&entry.Actor,
-			&entry.Action,
-			&entry.Statement,
-			&entry.Target,
-			&entry.InstanceName,
-			&entry.DatabaseName,
-			&entry.Status,
-			&entry.ResultSummary,
-			&entry.StartedAt,
-			&entry.FinishedAt,
-		); err != nil {
-			return nil, "", fmt.Errorf("scan mutation audit log: %w", err)
+	return entries, nextPageToken, nil
+}
+
+func auditLogEntryFromModel(row model.MutationAuditLog) AuditLogEntry {
+	return AuditLogEntry{
+		ID: row.ID,
+		AuditMutation: AuditMutation{
+			Actor:        row.Actor,
+			Action:       AuditMutationAction(row.Action),
+			Command:      row.Command,
+			Target:       row.Target,
+			InstanceName: row.InstanceName,
+			DatabaseName: row.DatabaseName,
+		},
+		State:         AuditMutationState(row.State),
+		ResultSummary: row.ResultSummary,
+		StartTime:     row.StartTime,
+		FinishTime:    row.FinishTime,
+	}
+}
+
+// PruneAuditLogEntriesOlderThan deletes expired audit entries in bounded,
+// independently committed batches and returns the total removed row count.
+func PruneAuditLogEntriesOlderThan(ctx context.Context, db QueryExecutor, age time.Duration, batchSize int64) (int64, error) {
+	if age <= 0 {
+		return 0, fmt.Errorf("%w: audit retention age must be positive", ErrInvalidInput)
+	}
+
+	batchSize = max(batchSize, 1)
+
+	var total int64
+
+	for {
+		result, err := db.ExecContext(ctx, `
+			WITH expired AS (
+				SELECT id
+				FROM mutation_audit_log
+				WHERE start_time < now() - ($1::bigint * interval '1 microsecond')
+				ORDER BY id
+				LIMIT $2
+			)
+			DELETE FROM mutation_audit_log AS audit
+			USING expired
+			WHERE audit.id = expired.id`, age.Microseconds(), batchSize)
+		if err != nil {
+			return 0, fmt.Errorf("prune mutation audit log: %w", err)
 		}
 
-		entries = append(entries, entry)
-	}
+		rows, err := result.RowsAffected()
+		if err != nil {
+			return 0, fmt.Errorf("prune mutation audit log rows affected: %w", err)
+		}
 
-	if err := rows.Err(); err != nil {
-		return nil, "", fmt.Errorf("iterate mutation audit log: %w", err)
+		total += rows
+		if rows == 0 {
+			return total, nil
+		}
 	}
-
-	nextToken, err := auditLogSchema.NextPageToken(plan, entries)
-	if err != nil {
-		return nil, "", fmt.Errorf("encode mutation audit page token: %w", err)
-	}
-
-	if nextToken == "" {
-		return entries, "", nil
-	}
-
-	return entries[:plan.PageSize], nextToken, nil
 }

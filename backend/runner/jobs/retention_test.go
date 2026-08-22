@@ -21,9 +21,9 @@ func TestSampleRetentionRun(t *testing.T) {
 	t.Run("prunes samples during run and leases during commit", func(t *testing.T) {
 		t.Parallel()
 
-		var sampleCalls, leaseCalls int
+		var sampleCalls, auditCalls, leaseCalls int
 
-		job := NewSampleRetention(cfg, noopQueryExecutor{}, 30*24*time.Hour, 40*24*time.Hour)
+		job := NewSampleRetention(cfg, noopQueryExecutor{}, 30*24*time.Hour, 90*24*time.Hour, 40*24*time.Hour)
 		job.pruneSamples = func(_ context.Context, db storage.QueryExecutor, age time.Duration, batchSize int64) (map[string]int64, error) {
 			sampleCalls++
 
@@ -32,6 +32,15 @@ func TestSampleRetentionRun(t *testing.T) {
 			assert.Positive(t, batchSize)
 
 			return map[string]int64{"instance_io_sample": 3}, nil
+		}
+		job.pruneAudit = func(_ context.Context, db storage.QueryExecutor, age time.Duration, batchSize int64) (int64, error) {
+			auditCalls++
+
+			assert.Equal(t, noopQueryExecutor{}, db)
+			assert.Equal(t, 90*24*time.Hour, age)
+			assert.Positive(t, batchSize)
+
+			return 2, nil
 		}
 		job.pruneLeases = func(_ context.Context, _ storage.QueryExecutor, age time.Duration) (int64, error) {
 			leaseCalls++
@@ -46,6 +55,7 @@ func TestSampleRetentionRun(t *testing.T) {
 		require.NotNil(t, result.Commit)
 
 		assert.Equal(t, 1, sampleCalls, "samples are pruned during Run, before any commit")
+		assert.Equal(t, 1, auditCalls, "audit entries are pruned during Run, before any commit")
 		assert.Equal(t, 0, leaseCalls, "lease pruning waits for Commit")
 
 		require.NoError(t, result.Commit(t.Context(), noopQueryExecutor{}))
@@ -58,12 +68,37 @@ func TestSampleRetentionRun(t *testing.T) {
 
 		pruneErr := errors.New("sweep interrupted")
 
-		job := NewSampleRetention(cfg, noopQueryExecutor{}, 30*24*time.Hour, 40*24*time.Hour)
+		job := NewSampleRetention(cfg, noopQueryExecutor{}, 30*24*time.Hour, 90*24*time.Hour, 40*24*time.Hour)
 		job.pruneSamples = func(context.Context, storage.QueryExecutor, time.Duration, int64) (map[string]int64, error) {
 			return nil, pruneErr
 		}
+		job.pruneAudit = func(context.Context, storage.QueryExecutor, time.Duration, int64) (int64, error) {
+			t.Fatal("audit pruning must not run when the sample sweep failed")
+			return 0, nil
+		}
 		job.pruneLeases = func(context.Context, storage.QueryExecutor, time.Duration) (int64, error) {
 			t.Fatal("lease pruning must not run when the sample sweep failed")
+			return 0, nil
+		}
+
+		result, err := job.Run(t.Context(), retentionTarget)
+		require.ErrorIs(t, err, pruneErr)
+		assert.Nil(t, result.Commit)
+	})
+
+	t.Run("audit prune failure fails the run without a commit", func(t *testing.T) {
+		t.Parallel()
+
+		pruneErr := errors.New("audit sweep interrupted")
+		job := NewSampleRetention(cfg, noopQueryExecutor{}, 30*24*time.Hour, 90*24*time.Hour, 40*24*time.Hour)
+		job.pruneSamples = func(context.Context, storage.QueryExecutor, time.Duration, int64) (map[string]int64, error) {
+			return map[string]int64{}, nil
+		}
+		job.pruneAudit = func(context.Context, storage.QueryExecutor, time.Duration, int64) (int64, error) {
+			return 0, pruneErr
+		}
+		job.pruneLeases = func(context.Context, storage.QueryExecutor, time.Duration) (int64, error) {
+			t.Fatal("lease pruning must not run when the audit sweep failed")
 			return 0, nil
 		}
 
@@ -77,9 +112,12 @@ func TestSampleRetentionRun(t *testing.T) {
 
 		leaseErr := errors.New("lease prune failed")
 
-		job := NewSampleRetention(cfg, noopQueryExecutor{}, 30*24*time.Hour, 40*24*time.Hour)
+		job := NewSampleRetention(cfg, noopQueryExecutor{}, 30*24*time.Hour, 90*24*time.Hour, 40*24*time.Hour)
 		job.pruneSamples = func(context.Context, storage.QueryExecutor, time.Duration, int64) (map[string]int64, error) {
 			return map[string]int64{}, nil
+		}
+		job.pruneAudit = func(context.Context, storage.QueryExecutor, time.Duration, int64) (int64, error) {
+			return 0, nil
 		}
 		job.pruneLeases = func(context.Context, storage.QueryExecutor, time.Duration) (int64, error) {
 			return 0, leaseErr

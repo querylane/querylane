@@ -10,30 +10,37 @@ import { formatTimestampLabel } from "@/lib/console-resources";
 import { cn } from "@/lib/utils";
 import {
   type AuditLogEntry,
-  AuditLogEntry_Status,
+  AuditLogEntry_Action,
+  AuditLogEntry_State,
 } from "@/protogen/querylane/console/v1alpha1/admin_pb";
 
 function auditStatus(entry: AuditLogEntry): {
   label: string;
   variant: "destructive" | "outline" | "secondary";
 } {
-  switch (entry.status) {
-    case AuditLogEntry_Status.STARTED:
-      return { label: "Started", variant: "outline" };
-    case AuditLogEntry_Status.SUCCEEDED:
+  switch (entry.state) {
+    case AuditLogEntry_State.RUNNING:
+      return { label: "Running", variant: "outline" };
+    case AuditLogEntry_State.SUCCEEDED:
       return { label: "Succeeded", variant: "secondary" };
-    case AuditLogEntry_Status.FAILED:
+    case AuditLogEntry_State.FAILED:
       return { label: "Failed", variant: "destructive" };
-    case AuditLogEntry_Status.UNSPECIFIED:
+    case AuditLogEntry_State.UNSPECIFIED:
       return { label: "Unknown", variant: "outline" };
     default:
-      return entry.status satisfies never;
+      return entry.state satisfies never;
   }
 }
 
-function actionLabel(action: string): string {
-  const spaced = action.replaceAll("_", " ");
-  return spaced ? spaced[0]?.toUpperCase() + spaced.slice(1) : "Mutation";
+function actionLabel(action: AuditLogEntry_Action): string {
+  switch (action) {
+    case AuditLogEntry_Action.REFRESH_MATERIALIZED_VIEW:
+      return "Refresh materialized view";
+    case AuditLogEntry_Action.UNSPECIFIED:
+      return "Mutation";
+    default:
+      return action satisfies never;
+  }
 }
 
 function instanceId(resourceName: string): string {
@@ -63,7 +70,7 @@ const AUDIT_COLUMNS: DataTableColumnDef<AuditLogEntry>[] = [
       return <Badge variant={status.variant}>{status.label}</Badge>;
     },
     header: "Result",
-    id: "status",
+    id: "state",
   },
   {
     accessorKey: "action",
@@ -72,9 +79,9 @@ const AUDIT_COLUMNS: DataTableColumnDef<AuditLogEntry>[] = [
         <p className="font-medium">{actionLabel(row.original.action)}</p>
         <CompactValue
           className="font-mono text-muted-foreground text-xs"
-          title={row.original.statement}
+          title={row.original.command}
         >
-          {row.original.statement}
+          {row.original.command}
         </CompactValue>
       </div>
     ),
@@ -96,7 +103,7 @@ const AUDIT_COLUMNS: DataTableColumnDef<AuditLogEntry>[] = [
   },
   {
     cell: ({ row }) => {
-      const scope = `${instanceId(row.original.instance)} / ${row.original.database || "Not available"}`;
+      const scope = `${instanceId(row.original.instance)} / ${instanceId(row.original.database)}`;
       return (
         <CompactValue className="w-36" title={scope}>
           {scope}
@@ -120,10 +127,10 @@ const AUDIT_COLUMNS: DataTableColumnDef<AuditLogEntry>[] = [
     id: "actor",
   },
   {
-    accessorKey: "startedAt",
-    cell: ({ row }) => formatTimestampLabel(row.original.startedAt),
+    accessorKey: "startTime",
+    cell: ({ row }) => formatTimestampLabel(row.original.startTime),
     header: "Started",
-    id: "startedAt",
+    id: "startTime",
   },
   {
     accessorKey: "resultSummary",

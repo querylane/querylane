@@ -6,7 +6,8 @@ import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { AuditLogSection } from "@/components/admin-ops/audit-log-section";
 import {
-  AuditLogEntry_Status,
+  AuditLogEntry_Action,
+  AuditLogEntry_State,
   AuditLogEntrySchema,
   ListAuditLogEntriesResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/admin_pb";
@@ -18,42 +19,43 @@ vi.mock("@/hooks/api/admin", () => ({
         createProto(ListAuditLogEntriesResponseSchema, {
           auditLogEntries: [
             createProto(AuditLogEntrySchema, {
-              action: "refresh_materialized_view",
+              action: AuditLogEntry_Action.REFRESH_MATERIALIZED_VIEW,
               actor: "10.42.7.19:54321",
-              database: "warehouse",
-              finishedAt: timestampFromDate(new Date("2026-08-12T12:00:01Z")),
+              database: "instances/prod-analytics/databases/warehouse",
+              finishTime: timestampFromDate(new Date("2026-08-12T12:00:01Z")),
               instance: "instances/prod-analytics",
               resultSummary: "refreshed",
-              startedAt: timestampFromDate(new Date("2026-08-12T12:00:00Z")),
-              statement:
+              startTime: timestampFromDate(new Date("2026-08-12T12:00:00Z")),
+              command:
                 'REFRESH MATERIALIZED VIEW CONCURRENTLY "analytics"."daily_revenue"',
-              status: AuditLogEntry_Status.SUCCEEDED,
+              state: AuditLogEntry_State.SUCCEEDED,
               target:
                 "instances/prod-analytics/databases/warehouse/schemas/analytics/views/daily_revenue",
             }),
             createProto(AuditLogEntrySchema, {
-              action: "refresh_materialized_view",
+              action: AuditLogEntry_Action.REFRESH_MATERIALIZED_VIEW,
               actor: "10.42.7.20:62113",
-              database: "customer_events",
-              finishedAt: timestampFromDate(new Date("2026-08-12T11:54:35Z")),
+              database:
+                "instances/eu-customer-events/databases/customer_events",
+              finishTime: timestampFromDate(new Date("2026-08-12T11:54:35Z")),
               instance: "instances/eu-customer-events",
               resultSummary: "operation failed",
-              startedAt: timestampFromDate(new Date("2026-08-12T11:54:30Z")),
-              statement:
+              startTime: timestampFromDate(new Date("2026-08-12T11:54:30Z")),
+              command:
                 'REFRESH MATERIALIZED VIEW "reporting"."weekly_retention_by_channel"',
-              status: AuditLogEntry_Status.FAILED,
+              state: AuditLogEntry_State.FAILED,
               target:
                 "instances/eu-customer-events/databases/customer_events/schemas/reporting/views/weekly_retention_by_channel",
             }),
             createProto(AuditLogEntrySchema, {
-              action: "refresh_materialized_view",
+              action: AuditLogEntry_Action.REFRESH_MATERIALIZED_VIEW,
               actor: "10.42.7.21:65002",
-              database: "billing",
+              database: "instances/billing-primary/databases/billing",
               instance: "instances/billing-primary",
-              startedAt: timestampFromDate(new Date("2026-08-12T11:50:00Z")),
-              statement:
+              startTime: timestampFromDate(new Date("2026-08-12T11:50:00Z")),
+              command:
                 'REFRESH MATERIALIZED VIEW "finance"."monthly_invoice_totals"',
-              status: AuditLogEntry_Status.STARTED,
+              state: AuditLogEntry_State.RUNNING,
               target:
                 "instances/billing-primary/databases/billing/schemas/finance/views/monthly_invoice_totals",
             }),
@@ -82,7 +84,7 @@ test("audit log keeps mutation scope and outcome scannable", async () => {
   await expect.element(page.getByText("Mutation audit log")).toBeVisible();
   await expect.element(page.getByText("Succeeded")).toBeVisible();
   await expect.element(page.getByText("Failed")).toBeVisible();
-  await expect.element(page.getByText("Started").last()).toBeVisible();
+  await expect.element(page.getByText("Running").last()).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "admin-mutation-audit-log"
   );

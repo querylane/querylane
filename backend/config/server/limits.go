@@ -5,13 +5,17 @@ import (
 	"time"
 )
 
-const maxMaterializedViewRefreshTimeout = 30 * time.Second
+const (
+	maxMaterializedViewRefreshTimeout = 30 * time.Second
+	minAuditLogRetention              = time.Hour
+)
 
 // Limits bounds user-driven work against managed PostgreSQL instances and the
 // connection pools used to reach them.
 type Limits struct {
 	LiveQueries             LiveQueryLimits              `koanf:"live_queries"`
 	MaterializedViewRefresh MaterializedViewRefreshLimit `koanf:"materialized_view_refresh"`
+	AuditLog                AuditLogLimit                `koanf:"audit_log"`
 	ConnectionTests         ConnectionTestLimits         `koanf:"connection_tests"`
 	PostgresPool            PostgresPoolLimits           `koanf:"postgres_pool"`
 }
@@ -28,6 +32,11 @@ type LiveQueryLimits struct {
 // statement execution and the RPC context share this deadline.
 type MaterializedViewRefreshLimit struct {
 	Timeout time.Duration `koanf:"timeout"`
+}
+
+// AuditLogLimit bounds durable mutation-history growth in the meta database.
+type AuditLogLimit struct {
+	Retention time.Duration `koanf:"retention"`
 }
 
 // ConnectionTestLimits bounds caller-driven PostgreSQL connection probes.
@@ -61,6 +70,10 @@ func (l *Limits) SetDefaults() {
 
 	if l.MaterializedViewRefresh.Timeout == 0 {
 		l.MaterializedViewRefresh.Timeout = maxMaterializedViewRefreshTimeout
+	}
+
+	if l.AuditLog.Retention == 0 {
+		l.AuditLog.Retention = 90 * 24 * time.Hour
 	}
 
 	if l.ConnectionTests.PerCallerPerMinute == 0 {
@@ -109,6 +122,14 @@ func (l *Limits) Validate() error {
 
 	if l.MaterializedViewRefresh.Timeout > maxMaterializedViewRefreshTimeout {
 		return errors.New("materialized_view_refresh.timeout must not exceed 30s")
+	}
+
+	if l.AuditLog.Retention <= 0 {
+		return errors.New("audit_log.retention must be positive")
+	}
+
+	if l.AuditLog.Retention < minAuditLogRetention {
+		return errors.New("audit_log.retention must be at least 1h")
 	}
 
 	if l.ConnectionTests.PerCallerPerMinute <= 0 {

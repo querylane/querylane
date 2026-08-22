@@ -13,6 +13,7 @@ const (
 	TablePattern          = "instances/{instanceID}/databases/{databaseID}/schemas/{schemaID}/tables/{tableID}"
 	ViewPattern           = "instances/{instanceID}/databases/{databaseID}/schemas/{schemaID}/views/{viewID}"
 	ViewDependencyPattern = "instances/{instanceID}/databases/{databaseID}/schemas/{schemaID}/views/{viewID}/viewDependencies/{viewDependencyID}"
+	AuditLogEntryPattern  = "auditLogEntries/{auditLogEntryID}"
 )
 
 // Match reports whether name matches pattern.

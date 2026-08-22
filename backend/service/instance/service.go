@@ -15,7 +15,9 @@ import (
 	"github.com/rs/xid"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -25,6 +27,7 @@ import (
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	"github.com/querylane/querylane/backend/resource"
+	"github.com/querylane/querylane/backend/safety"
 	"github.com/querylane/querylane/backend/storage"
 )
 
@@ -163,7 +166,7 @@ func (s *Service) CreateInstance(ctx context.Context, req *connect.Request[v1alp
 			ConnectionState:         v1alpha1.Instance_CONNECTION_STATE_ACTIVE,
 			LastConnectionCheckTime: timestamppb.Now(),
 		}
-		storage.RedactInstanceForAPI(testInstance)
+		prepareInstanceForAPI(testInstance)
 
 		return connect.NewResponse(&v1alpha1.CreateInstanceResponse{
 			Instance: testInstance,
@@ -195,7 +198,7 @@ func (s *Service) CreateInstance(ctx context.Context, req *connect.Request[v1alp
 	createdInstance.ConnectionState = v1alpha1.Instance_CONNECTION_STATE_ACTIVE
 	createdInstance.LastConnectionCheckTime = timestamppb.New(checkedAt)
 
-	storage.RedactInstanceForAPI(createdInstance)
+	prepareInstanceForAPI(createdInstance)
 
 	res := &v1alpha1.CreateInstanceResponse{
 		Instance: createdInstance,
@@ -212,10 +215,6 @@ func (s *Service) CreateInstance(ctx context.Context, req *connect.Request[v1alp
 func (s *Service) TestInstanceConnection(ctx context.Context, req *connect.Request[v1alpha1.TestInstanceConnectionRequest]) (*connect.Response[v1alpha1.TestInstanceConnectionResponse], error) {
 	if s.readOnly {
 		return nil, configManagedError()
-	}
-
-	if err := validatePostgresConfigStatementTimeout(req.Msg.GetConfig(), "config"); err != nil {
-		return nil, err
 	}
 
 	if err := s.connectionTests.admit(req.Peer().Addr); err != nil {
@@ -256,21 +255,6 @@ func validatePostgresConfigSSLNegotiation(config *v1alpha1.PostgresConfig, field
 	}
 }
 
-func validatePostgresConfigStatementTimeout(config *v1alpha1.PostgresConfig, fieldPath string) *connect.Error {
-	if config == nil || config.GetStatementTimeout() == nil {
-		return nil
-	}
-
-	timeout := config.GetStatementTimeout().AsDuration()
-	if timeout <= 0 || timeout > time.Minute {
-		return apierrors.NewInvalidArgumentError(
-			apierrors.NewFieldViolation(fieldPath+".statement_timeout", "must be greater than zero and at most 60 seconds"),
-		)
-	}
-
-	return nil
-}
-
 func isDirectSSLNegotiationMode(sslMode v1alpha1.PostgresConfig_SslMode) bool {
 	return sslMode == v1alpha1.PostgresConfig_SSL_MODE_REQUIRE ||
 		sslMode == v1alpha1.PostgresConfig_SSL_MODE_VERIFY_CA ||
@@ -294,7 +278,7 @@ func (s *Service) ListInstances(ctx context.Context, req *connect.Request[v1alph
 	}
 
 	for _, inst := range instances {
-		storage.RedactInstanceForAPI(inst)
+		prepareInstanceForAPI(inst)
 	}
 
 	res := &v1alpha1.ListInstancesResponse{
@@ -325,7 +309,7 @@ func (s *Service) GetInstance(ctx context.Context, req *connect.Request[v1alpha1
 		})
 	}
 
-	storage.RedactInstanceForAPI(instance)
+	prepareInstanceForAPI(instance)
 
 	resp := &v1alpha1.GetInstanceResponse{Instance: instance}
 
@@ -337,7 +321,7 @@ func (s *Service) GetInstance(ctx context.Context, req *connect.Request[v1alpha1
 			// The sync may have marked the instance as ERROR in the DB.
 			// Re-read so this response reflects the current state.
 			if fresh, rerr := s.instanceReader.GetInstance(ctx, instanceName); rerr == nil {
-				storage.RedactInstanceForAPI(fresh)
+				prepareInstanceForAPI(fresh)
 				resp.Instance = fresh
 			}
 		} else {
@@ -369,6 +353,11 @@ func (s *Service) UpdateInstance(ctx context.Context, req *connect.Request[v1alp
 		return nil, apierrors.NewInvalidArgumentError(
 			apierrors.NewFieldViolation("update_mask", "contains field paths that do not exist in the schema"),
 		)
+	}
+
+	instance = proto.CloneOf(instance)
+	if instance.GetConfig() != nil {
+		instance.GetConfig().EffectiveStatementTimeout = nil
 	}
 
 	resourceID, connectErr := apierrors.ParseResourceWithError(instance.GetName(), "instance.name", resource.ParseInstanceName)
@@ -422,7 +411,7 @@ func (s *Service) UpdateInstance(ctx context.Context, req *connect.Request[v1alp
 			slog.String("instance", resourceID.String()), slog.String("error", err.Error()))
 	}
 
-	storage.RedactInstanceForAPI(updatedInstance)
+	prepareInstanceForAPI(updatedInstance)
 
 	return connect.NewResponse(&v1alpha1.UpdateInstanceResponse{
 		Instance: updatedInstance,
@@ -1170,10 +1159,6 @@ func (s *Service) validateInstanceConfigUpdate(ctx context.Context, instance *v1
 		return err
 	}
 
-	if err := validatePostgresConfigStatementTimeout(instance.GetConfig(), "instance.config"); err != nil {
-		return err
-	}
-
 	if !testConnection {
 		return nil
 	}
@@ -1215,10 +1200,6 @@ func (s *Service) createInstanceRequestToBody(req *v1alpha1.CreateInstanceReques
 			)
 		}
 
-		if err := validatePostgresConfigStatementTimeout(req.GetSpec().GetConfig(), "spec.config"); err != nil {
-			return nil, err
-		}
-
 		return &createInstanceBody{
 			instance:    createInstanceBodyInstance(req.GetSpec().GetDisplayName(), req.GetSpec().GetLabels(), req.GetSpec().GetConfig()),
 			configField: "spec.config",
@@ -1229,10 +1210,6 @@ func (s *Service) createInstanceRequestToBody(req *v1alpha1.CreateInstanceReques
 		return nil, apierrors.NewInvalidArgumentError(
 			apierrors.NewFieldViolation("instance.config", "is required"),
 		)
-	}
-
-	if err := validatePostgresConfigStatementTimeout(req.GetInstance().GetConfig(), "instance.config"); err != nil {
-		return nil, err
 	}
 
 	return &createInstanceBody{
@@ -1248,11 +1225,23 @@ func (s *Service) createInstanceRequestToBody(req *v1alpha1.CreateInstanceReques
 }
 
 func createInstanceBodyInstance(displayName string, labels map[string]string, config *v1alpha1.PostgresConfig) *v1alpha1.Instance {
+	inputConfig := proto.CloneOf(config)
+	inputConfig.EffectiveStatementTimeout = nil
+
 	return &v1alpha1.Instance{
 		DisplayName: displayName,
 		Labels:      labels,
-		Config:      config,
+		Config:      inputConfig,
 		// Server-managed fields will be set later:
 		// Name, ConnectionState, ConnectionError, CreateTime, UpdateTime
 	}
+}
+
+func prepareInstanceForAPI(instance *v1alpha1.Instance) {
+	if instance.GetConfig() != nil {
+		effective := safety.FromPostgresConfig(instance.GetConfig()).StatementTimeout(0)
+		instance.GetConfig().EffectiveStatementTimeout = durationpb.New(effective)
+	}
+
+	storage.RedactInstanceForAPI(instance)
 }

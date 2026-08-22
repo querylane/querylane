@@ -3,6 +3,8 @@ syntax = "proto3";
 package querylane.console.v1alpha1;
 
 import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
 import "google/protobuf/duration.proto";
@@ -16,6 +18,8 @@ import "querylane/console/v1alpha1/catalog_sync.proto";
 // gated by authorization; once authn/authz lands, access will be restricted
 // to admins at the service level.
 service AdminService {
+  // aip.dev/beta-blocker: Restrict this operator surface, especially audit
+  // methods, to authenticated administrators before beta.
   // Lists querylane backend replicas known from their heartbeats.
   rpc ListReplicas(ListReplicasRequest) returns (ListReplicasResponse) {}
 
@@ -31,8 +35,17 @@ service AdminService {
   // configured retention period.
   rpc GetMetricsStorageStats(GetMetricsStorageStatsRequest) returns (GetMetricsStorageStatsResponse) {}
 
+  // Gets one immutable mutation audit entry.
+  rpc GetAuditLogEntry(GetAuditLogEntryRequest) returns (AuditLogEntry) {
+    option (google.api.http) = {get: "/v1alpha1/{name=auditLogEntries/*}"};
+    option (google.api.method_signature) = "name";
+  }
+
   // Lists the immutable audit trail for mutations run through Querylane.
-  rpc ListAuditLogEntries(ListAuditLogEntriesRequest) returns (ListAuditLogEntriesResponse) {}
+  rpc ListAuditLogEntries(ListAuditLogEntriesRequest) returns (ListAuditLogEntriesResponse) {
+    option (google.api.http) = {get: "/v1alpha1/auditLogEntries"};
+    option (google.api.method_signature) = "";
+  }
 }
 
 // Replica is one querylane backend process, registered via periodic
@@ -159,6 +172,7 @@ message ListAdminRunnerExecutionsResponse {
 // AuditLogEntry is one mutation attempt against a managed PostgreSQL
 // instance. Entries are created before execution and finalized afterward, so
 // failed and interrupted attempts remain visible.
+// allow: proto-unshipped [Audit log API is still in draft; AIP field names were corrected before release.]
 message AuditLogEntry {
   option (google.api.resource) = {
     type: "console.querylane.dev/AuditLogEntry"
@@ -167,45 +181,96 @@ message AuditLogEntry {
     singular: "auditLogEntry"
   };
 
-  enum Status {
-    STATUS_UNSPECIFIED = 0;
-    STATUS_STARTED = 1;
-    STATUS_SUCCEEDED = 2;
-    STATUS_FAILED = 3;
+  // State is the durable outcome known to Querylane.
+  enum State {
+    // The state is unknown.
+    STATE_UNSPECIFIED = 0;
+    // Querylane admitted the mutation, but no outcome was recorded.
+    STATE_RUNNING = 1;
+    // The mutation completed successfully.
+    STATE_SUCCEEDED = 2;
+    // The mutation failed.
+    STATE_FAILED = 3;
   }
 
+  // Action identifies the server-admitted mutation kind.
+  enum Action {
+    // The action is unknown.
+    ACTION_UNSPECIFIED = 0;
+    // Refresh of one managed materialized view.
+    ACTION_REFRESH_MATERIALIZED_VIEW = 1;
+  }
+
+  // Identifier. Canonical resource name of this entry.
   string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  // Output-only. Direct RPC peer address. This is connection attribution,
+  // not verified user identity, until application authentication exists.
   string actor = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
-  string action = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
-  string statement = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
-  string target = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
-  string instance = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
-  string database = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
-  Status status = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Output-only. Mutation kind.
+  Action action = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Output-only. Server-generated command. Never contains raw user SQL or secrets.
+  string command = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Output-only. Canonical resource name of the mutation target.
+  string target = 5 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.resource_reference).type = "*"
+  ];
+  // Output-only. Canonical instance resource name.
+  string instance = 6 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.resource_reference).type = "console.querylane.dev/Instance"
+  ];
+  // Output-only. Canonical database resource name.
+  string database = 7 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.resource_reference).type = "console.querylane.dev/Database"
+  ];
+  // Output-only. Durable mutation state.
+  State state = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Output-only. Redacted result summary.
   string result_summary = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
-  google.protobuf.Timestamp started_at = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
-  google.protobuf.Timestamp finished_at = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Output-only. Time Querylane admitted the mutation.
+  google.protobuf.Timestamp start_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Output-only. Time Querylane recorded the final outcome, when known.
+  google.protobuf.Timestamp finish_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Output-only. Time the configured retention sweep makes this entry eligible
+  // for deletion.
+  google.protobuf.Timestamp expire_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request for AdminService.GetAuditLogEntry.
+message GetAuditLogEntryRequest {
+  // Required. Canonical name of the audit entry to retrieve.
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "console.querylane.dev/AuditLogEntry"
+  ];
+}
+
+// Request for AdminService.ListAuditLogEntries.
 message ListAuditLogEntriesRequest {
+  // Optional. Number of entries to return. The server uses 50 when omitted
+  // and coerces values above 1000 to 1000.
   int32 page_size = 1 [
     (google.api.field_behavior) = OPTIONAL,
-    (buf.validate.field).int32 = {
-      gte: 0
-      lte: 1000
-    }
+    (buf.validate.field).int32.gte = 0
   ];
+  // Optional. Opaque token returned by the preceding list request.
   string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. AIP-160 filter. Reserved for server-side audit filtering.
+  // Optional. AIP-160 filter. Filterable fields: actor, action, target,
+  // instance, database, state, and start_time.
   string filter = 3 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. AIP-132 order_by. Entries are currently returned newest first.
+  // Optional. AIP-132 ordering. Orderable fields: name, actor, action, target,
+  // instance, database, state, and start_time. Defaults to `start_time desc`
+  // with a stable resource-name tie-breaker.
   string order_by = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// Response from AdminService.ListAuditLogEntries.
 message ListAuditLogEntriesResponse {
+  // Audit entries ordered from newest to oldest.
   repeated AuditLogEntry audit_log_entries = 1;
+  // Opaque token for the next page. Empty when there are no more entries.
   string next_page_token = 2;
 }
 

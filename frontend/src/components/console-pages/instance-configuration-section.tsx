@@ -66,6 +66,7 @@ function createInstanceFormState(instance: InstanceRecord): InstanceFormState {
     ),
     statementTimeoutSeconds: String(
       instance.config?.statementTimeout?.seconds ??
+        instance.config?.effectiveStatementTimeout?.seconds ??
         BigInt(DEFAULT_STATEMENT_TIMEOUT_SECONDS)
     ),
     username: instance.config?.username ?? "",

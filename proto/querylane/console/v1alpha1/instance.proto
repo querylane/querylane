@@ -54,6 +54,8 @@ service InstanceService {
 
 // An Instance represents a connection record to an existing, externally-managed
 // database. The platform uses this information to connect to and manage the database.
+// aip.dev/beta-blocker: Add etag freshness checks for concurrent configuration
+// updates, including safety-setting changes, before beta.
 message Instance {
   option (google.api.resource) = {
     type: "console.querylane.dev/Instance"
@@ -492,6 +494,10 @@ message PostgresConfig {
   // instance. Requests may override it, subject to the server's hard limit.
   // When omitted, Querylane uses 30 seconds.
   google.protobuf.Duration statement_timeout = 10 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output-only. Timeout Querylane uses after resolving the configured value
+  // or server default. Per-request overrides remain subject to the hard limit.
+  google.protobuf.Duration effective_statement_timeout = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // --------------------------------------------------------------------------

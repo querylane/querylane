@@ -4,7 +4,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import { AuditLogSection } from "@/components/admin-ops/audit-log-section";
 import {
-  AuditLogEntry_Status,
+  AuditLogEntry_Action,
+  AuditLogEntry_State,
   AuditLogEntrySchema,
   ListAuditLogEntriesResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/admin_pb";
@@ -20,14 +21,15 @@ vi.mock("@/hooks/api/admin", () => ({
         createProto(ListAuditLogEntriesResponseSchema, {
           auditLogEntries: [
             createProto(AuditLogEntrySchema, {
-              action: "refresh_materialized_view",
+              action: AuditLogEntry_Action.REFRESH_MATERIALIZED_VIEW,
               actor: "127.0.0.1:54321",
-              database: "app",
-              finishedAt: timestampFromDate(new Date("2026-08-12T12:00:01Z")),
+              command: 'REFRESH MATERIALIZED VIEW "public"."revenue"',
+              database: "instances/prod/databases/app",
+              finishTime: timestampFromDate(new Date("2026-08-12T12:00:01Z")),
               instance: "instances/prod",
               resultSummary: "refreshed concurrently",
-              startedAt: timestampFromDate(new Date("2026-08-12T12:00:00Z")),
-              status: AuditLogEntry_Status.SUCCEEDED,
+              startTime: timestampFromDate(new Date("2026-08-12T12:00:00Z")),
+              state: AuditLogEntry_State.SUCCEEDED,
               target: "public.daily_revenue",
             }),
           ],

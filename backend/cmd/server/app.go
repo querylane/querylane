@@ -281,7 +281,7 @@ func (a *App) mountDBServices(mux *http.ServeMux, state *dbState, accessLogger *
 	sampleStats := func(ctx context.Context) ([]storage.SampleTableStats, error) {
 		return storage.ListSampleTableStats(ctx, state.postgresCl)
 	}
-	mux.Handle(v1alpha1connect.NewAdminServiceHandler(adminsvc.NewService(state.replicaStore, state.runnerExecutionStore, state.catalogSyncStore, sampleStats, state.auditLogStore, sampleRetentionAge), opts...))
+	mux.Handle(v1alpha1connect.NewAdminServiceHandler(adminsvc.NewService(state.replicaStore, state.runnerExecutionStore, state.catalogSyncStore, sampleStats, state.auditLogStore, sampleRetentionAge, state.auditLogRetention), opts...))
 	mux.Handle(v1alpha1connect.NewMetricsServiceHandler(metricsvc.NewService(state.sampleStores, state.instanceReader), opts...))
 	mux.Handle(v1alpha1connect.NewSchemaServiceHandler(schema.NewService(cat), opts...))
 	mux.Handle(v1alpha1connect.NewExtensionServiceHandler(extension.NewService(liveSessions), opts...))
@@ -290,7 +290,7 @@ func (a *App) mountDBServices(mux *http.ServeMux, state *dbState, accessLogger *
 		view.NewService(cat, state.liveQueryLimiter, safetyGate, state.auditLogStore, state.viewRefreshTimeout),
 		opts...,
 	))
-	mux.Handle(v1alpha1connect.NewTableDataServiceHandler(tabledata.NewService(cat, state.connManager, state.tokenCodec, state.liveQueryLimiter), opts...))
+	mux.Handle(v1alpha1connect.NewTableDataServiceHandler(tabledata.NewService(state.connManager, state.tokenCodec, state.liveQueryLimiter), opts...))
 	mux.Handle(v1alpha1connect.NewSQLServiceHandler(sqlsvc.NewService(liveSessions, safetyGate), opts...))
 }
 
