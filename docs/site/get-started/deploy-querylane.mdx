@@ -82,21 +82,21 @@ A nonempty `allowed_cidrs` list is strict. Querylane resolves the hostname and c
 
 ## 3. Run a pinned container
 
-The project currently publishes the rolling `ghcr.io/querylane/querylane-dev:edge` preview. Resolve its digest before deployment:
+Releases are published as `ghcr.io/querylane/querylane:<version>` (and `latest`); every commit on `main` lands in `ghcr.io/querylane/querylane-dev:edge`. Resolve the digest of the release you deploy:
 
 ```sh
-docker pull ghcr.io/querylane/querylane-dev:edge
+docker pull ghcr.io/querylane/querylane:0.1.0
 docker image inspect \
   --format='{{index .RepoDigests 0}}' \
-  ghcr.io/querylane/querylane-dev:edge
+  ghcr.io/querylane/querylane:0.1.0
 ```
 
-Use the immutable digest in `compose.yaml`:
+Use the immutable digest in `compose.yaml`. On Kubernetes, use the [Helm chart](/get-started/install-helm) with `image.digest` instead.
 
 ```yaml
 services:
   querylane:
-    image: ghcr.io/querylane/querylane-dev@sha256:replace-with-pinned-digest
+    image: ghcr.io/querylane/querylane@sha256:replace-with-pinned-digest
     command: ["server", "start", "--config", "/etc/querylane/querylane.yaml"]
     environment:
       QUERYLANE_DATABASE_DSN: "${QUERYLANE_DATABASE_DSN}"

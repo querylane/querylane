@@ -1,0 +1,30 @@
+Querylane {{ include "querylane.imageTag" . }} is being deployed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+{{- if .Values.devPostgres.enabled }}
+
+  WARNING: devPostgres is enabled. The metadata database runs as a single
+  unmanaged Postgres pod with no backups. Fine for evaluation; for anything
+  durable set metadataDatabase.dsn or metadataDatabase.existingSecret.
+{{- end }}
+{{- if not (or .Values.instanceSecretKey.value .Values.instanceSecretKey.existingSecret.name) }}
+
+  NOTE: instanceSecretKey is not set. Querylane refuses to save instance
+  passwords entered in the UI until it has this key (it never stores them
+  unencrypted). Generate one with `openssl rand -base64 32`, store it in a
+  Secret, and set instanceSecretKey.existingSecret. Keep it stable forever.
+{{- end }}
+
+Open the UI:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "querylane.fullname" . }} 8080:{{ .Values.service.port }}
+  open http://localhost:8080
+{{- end }}
+
+Querylane has no built-in authentication. Keep it on a private network or
+behind an authenticating proxy: https://docs.querylane.net/get-started/deploy-querylane

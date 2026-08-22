@@ -1,0 +1,96 @@
+---
+title: Install with Docker
+description: Start a complete Querylane evaluation stack with one command, or run the image against your own PostgreSQL server.
+sidebar:
+  label: Docker
+---
+
+Use Docker to try Querylane in minutes. The quick start brings up Querylane, its metadata database, and a demo PostgreSQL server with a live workload. The plain image run connects Querylane to a server you already have.
+
+## Quick start with demo data
+
+You need Docker with Compose v2.23 or newer. Nothing is written next to the file; everything lives in the Compose project `querylane-quick-start`.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/querylane/querylane/main/deploy/quick-start/compose.yaml | docker compose -f - up
+```
+
+Open `http://localhost:8080`. Querylane opens directly on the **Demo: Ecommerce** instance.
+
+| Service | Role |
+| --- | --- |
+| `querylane` | The UI on port `8080`, image `ghcr.io/querylane/querylane:latest` |
+| `postgres-meta` | Querylane's own metadata database. It is not shown in the UI. |
+| `postgres-demo` | A PostgreSQL 17 instance with `pg_stat_statements` and 2 demo databases |
+| `seeder` | [seeder-buddy](https://github.com/querylane/seeder-buddy) generating a continuous e-commerce workload so Activity, statistics, and I/O stay alive |
+
+Set `QUERYLANE_PORT` to use another local port:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/querylane/querylane/main/deploy/quick-start/compose.yaml | QUERYLANE_PORT=9090 docker compose -f - up
+```
+
+Stop with `Ctrl+C`. Remove the containers and volumes:
+
+```sh
+docker compose -p querylane-quick-start down --volumes
+```
+
+### Add your own server to the quick start
+
+The demo instance is defined in the `instances` section of the Compose file, so the instance editor in the UI is read-only. Download the file, add your server to the list, and start it from disk:
+
+```sh
+mkdir querylane && cd querylane
+curl -fsSLO https://raw.githubusercontent.com/querylane/querylane/main/deploy/quick-start/compose.yaml
+```
+
+```yaml title="compose.yaml (configs.querylane-config)"
+instances:
+  - id: demo-ecommerce
+    # ...
+  - id: my-database
+    display_name: "My Database"
+    host: "host.docker.internal"   # a PostgreSQL server on your machine
+    port: 5432
+    database: "myapp"
+    username: "readonly"
+    password: "secret"
+    ssl_mode: "prefer"
+```
+
+```sh
+docker compose up
+```
+
+Delete the whole `instances` section instead if you prefer to register servers through the UI.
+
+:::warning
+The quick start is for evaluation. Credentials are hard-coded, Querylane has no built-in authentication, and ports bind to `127.0.0.1` only. Follow [Deploy Querylane](/get-started/deploy-querylane) for a durable installation.
+:::
+
+## Run the image against your own server
+
+Run Querylane alone when you already have a PostgreSQL server to inspect and a PostgreSQL database for Querylane's metadata:
+
+```sh
+docker run --rm \
+  --name querylane \
+  --publish 127.0.0.1:8080:8080 \
+  --env QUERYLANE_DATABASE_DSN="postgres://querylane:secret@db.example.com:5432/querylane?sslmode=require" \
+  --env QUERYLANE_INSTANCE_SECRET_KEY="$(openssl rand -base64 32)" \
+  ghcr.io/querylane/querylane:latest
+```
+
+Open `http://localhost:8080` and register your first instance. Omit `QUERYLANE_DATABASE_DSN` to get the first-launch wizard instead, which can also run an embedded PostgreSQL for a disposable demo.
+
+Generate `QUERYLANE_INSTANCE_SECRET_KEY` once and reuse the same value on every start. It encrypts stored instance credentials; a new key makes existing credentials unreadable. See [Configure Querylane](/get-started/configure-querylane) for the full configuration file and environment variables.
+
+## Images
+
+| Image | Tags | Use |
+| --- | --- | --- |
+| `ghcr.io/querylane/querylane` | `latest`, `<version>` | Releases. Pin `<version>` or a digest in deployments. |
+| `ghcr.io/querylane/querylane-dev` | `edge`, `sha-<commit>` | Every commit on `main`. Unstable. |
+
+Images are multi-arch (`linux/amd64`, `linux/arm64`), distroless, and run as a non-root user. The container listens on port `8080` and serves the UI and API from the same port.

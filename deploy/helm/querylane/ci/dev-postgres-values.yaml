@@ -1,0 +1,16 @@
+# CI: zero-dependency install exercised by the helm workflow.
+devPostgres:
+  enabled: true
+  persistence:
+    enabled: false
+instanceSecretKey:
+  value: "a6N5BFT5krixLrcQxFJZwu+RdMSHu/cHJRnZJ+FHzfw="
+podDisruptionBudget:
+  enabled: true
+ingress:
+  enabled: true
+  hosts:
+    - host: querylane.ci.local
+      paths:
+        - path: /
+          pathType: Prefix

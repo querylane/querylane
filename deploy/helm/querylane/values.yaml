@@ -1,0 +1,261 @@
+# Default values for the Querylane Helm chart.
+#
+# Minimum for a real deployment (pick ONE way to provide the metadata DSN):
+#
+#   metadataDatabase:
+#     dsn: "postgres://querylane:***@db.example.com:5432/querylane?sslmode=require"
+#   # or, preferred: reference a Secret you manage
+#   metadataDatabase:
+#     existingSecret:
+#       name: querylane
+#       key: dsn
+#
+#   instanceSecretKey:
+#     existingSecret:
+#       name: querylane
+#       key: instance-secret-key
+#
+# Docs: https://docs.querylane.net/get-started/install-helm
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/querylane/querylane
+  # Defaults to the chart's appVersion.
+  tag: ""
+  # Pin by digest instead of tag (takes precedence when set), e.g. "sha256:abc...".
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# -----------------------------------------------------------------------------
+# Metadata database (Querylane's own PostgreSQL storage; NOT a managed instance)
+# -----------------------------------------------------------------------------
+metadataDatabase:
+  # Inline DSN. The chart stores it in a Secret it creates. Fine for trials;
+  # prefer existingSecret for production so the DSN never lives in values.
+  dsn: ""
+  # Reference a Secret that already contains the DSN.
+  existingSecret:
+    name: ""
+    key: dsn
+
+# -----------------------------------------------------------------------------
+# QUERYLANE_INSTANCE_SECRET_KEY — encrypts stored instance credentials and the
+# token-signing key. Generate once with `openssl rand -base64 32` and keep it
+# stable across upgrades and replicas. Losing it makes stored credentials
+# unreadable. Strongly recommended for every non-throwaway install.
+# -----------------------------------------------------------------------------
+instanceSecretKey:
+  value: ""
+  existingSecret:
+    name: ""
+    key: instance-secret-key
+
+# -----------------------------------------------------------------------------
+# Evaluation-only PostgreSQL for the metadata database.
+#
+# Runs a single plain `postgres` StatefulSet and wires Querylane to it so the
+# chart installs with zero external dependencies. No backups, no HA, no
+# tuning. Do not use it for production; set metadataDatabase instead.
+# -----------------------------------------------------------------------------
+devPostgres:
+  enabled: false
+  image:
+    repository: postgres
+    tag: 17-alpine
+    pullPolicy: IfNotPresent
+  auth:
+    username: querylane
+    password: querylane
+    database: querylane
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+# -----------------------------------------------------------------------------
+# Querylane configuration file (rendered to /etc/querylane/querylane.yaml).
+#
+# Anything accepted by the config reference works here:
+# https://docs.querylane.net/get-started/configure-querylane
+#
+# Do not put `database.dsn`/passwords here — use metadataDatabase and
+# password_env/dsn_env together with extraEnv so secrets stay in Secrets.
+# -----------------------------------------------------------------------------
+config:
+  http:
+    host: "0.0.0.0"
+    port: 8080
+    access_log: true
+    # cors:
+    #   allowed_origins:
+    #     - "https://querylane.example.com"
+
+  # Managed PostgreSQL target policy (requires a Querylane release newer than
+  # 0.1.0; the 0.1.0 image rejects unknown keys). A non-empty allowed_cidrs
+  # list is strict.
+  # instance_targets:
+  #   allowed_cidrs:
+  #     - "10.0.0.0/8"
+  #   denied_cidrs: []
+
+  # Live-query and pool limits (requires a release newer than 0.1.0).
+  # limits:
+  #   live_queries:
+  #     global: 32
+  #     per_instance: 6
+
+  # Config-managed instances (infrastructure-as-code). When this list is
+  # non-empty the UI's instance editor becomes read-only. Leave it empty to
+  # register instances through the UI; they are stored encrypted in the
+  # metadata database.
+  #
+  # instances:
+  #   - id: production
+  #     display_name: "Production"
+  #     host: "db.example.com"
+  #     port: 5432
+  #     database: "app"
+  #     username: "querylane_reader"
+  #     password_env: "PROD_DB_PASSWORD"   # provide via extraEnv / extraEnvFrom
+  #     ssl_mode: "require"
+  #     labels:
+  #       env: production
+  instances: []
+
+# Extra environment variables for the Querylane container (e.g. passwords
+# referenced by password_env / dsn_env above).
+extraEnv: []
+#  - name: PROD_DB_PASSWORD
+#    valueFrom:
+#      secretKeyRef:
+#        name: prod-db
+#        key: password
+
+extraEnvFrom: []
+#  - secretRef:
+#      name: querylane-instance-passwords
+
+extraVolumes: []
+extraVolumeMounts: []
+
+# Extra command-line arguments appended to `querylane server start --config ...`.
+extraArgs: []
+
+# -----------------------------------------------------------------------------
+# Workload
+# -----------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+# The image is distroless and runs as uid 65532 (nonroot).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+# Querylane serves the UI on GET / and has no dedicated health endpoint yet;
+# both probes use the root path.
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 15
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 3
+  periodSeconds: 10
+startupProbe:
+  httpGet:
+    path: /
+    port: http
+  failureThreshold: 30
+  periodSeconds: 2
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+
+terminationGracePeriodSeconds: 30
+priorityClassName: ""
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+# -----------------------------------------------------------------------------
+# Networking
+# -----------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 8080
+  annotations: {}
+
+# Querylane has no built-in authentication. Put an authenticating proxy,
+# identity-aware ingress, or private network in front of it.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: querylane.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: querylane-tls
+  #    hosts:
+  #      - querylane.example.com
+
+# -----------------------------------------------------------------------------
+# Availability
+# -----------------------------------------------------------------------------
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  # maxUnavailable: 1
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80

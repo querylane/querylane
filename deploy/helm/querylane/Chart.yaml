@@ -1,0 +1,30 @@
+apiVersion: v2
+name: querylane
+description: Self-hosted PostgreSQL admin UI for managing multiple servers.
+type: application
+# Chart version. Bump on every chart change; the publish workflow pushes a
+# chart release to oci://ghcr.io/querylane/charts only for new versions.
+version: 0.1.0
+# Querylane image tag used when image.tag is empty.
+appVersion: "0.1.0"
+kubeVersion: ">=1.25.0-0"
+home: https://querylane.net
+icon: https://raw.githubusercontent.com/querylane/querylane/main/public/icon.svg
+sources:
+  - https://github.com/querylane/querylane
+keywords:
+  - postgres
+  - postgresql
+  - database
+  - admin
+  - monitoring
+maintainers:
+  - name: Querylane
+    url: https://github.com/querylane
+annotations:
+  artifacthub.io/license: AGPL-3.0
+  artifacthub.io/links: |
+    - name: Helm documentation
+      url: https://docs.querylane.net/get-started/install-helm
+    - name: Deploy Querylane
+      url: https://docs.querylane.net/get-started/deploy-querylane

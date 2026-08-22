@@ -11,21 +11,29 @@ Use this path to evaluate Querylane with 1 PostgreSQL server you already underst
 Start with a non-production server and a dedicated read-only PostgreSQL login. Familiar data gives you a reliable baseline for checking what Querylane shows.
 :::
 
-## 1. Start the Docker preview
+## 1. Start Querylane
 
-You need Docker and a PostgreSQL server that the Querylane container can reach.
+The fastest path is the Docker quick start. It starts Querylane, its metadata database, and a demo PostgreSQL server with a live workload, and needs only Docker:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/querylane/querylane/main/deploy/quick-start/compose.yaml | docker compose -f - up
+```
+
+Open `http://localhost:8080`. Querylane lands on the preconfigured **Demo: Ecommerce** instance, so you can skip to [step 4](#4-complete-a-useful-first-session). See [Install with Docker](/get-started/install-docker) to add your own server, or [Install with Helm](/get-started/install-helm) for Kubernetes.
+
+To evaluate against a PostgreSQL server you already have, run the image on its own:
 
 ```sh
 docker run --rm \
   --name querylane \
   --publish 127.0.0.1:8080:8080 \
-  ghcr.io/querylane/querylane-dev:edge
+  ghcr.io/querylane/querylane:latest
 ```
 
 Open `http://localhost:8080`. A fresh container has no metadata database configuration, so Querylane opens the first-launch wizard.
 
 :::warning
-`querylane-dev:edge` is a rolling preview and can change without notice. The command also removes the container when it stops. Use it for evaluation, not a durable deployment.
+`docker run --rm` removes the container when it stops, and the quick start hard-codes credentials. Use them for evaluation, not a durable deployment.
 :::
 
 ## 2. Configure Querylane storage

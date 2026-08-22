@@ -86,6 +86,8 @@ export default defineConfig({
 					collapsed: false,
 					items: [
 						"/get-started",
+						"/get-started/install-docker",
+						"/get-started/install-helm",
 						"/get-started/configure-querylane",
 						"/get-started/deploy-querylane",
 						"/get-started/operate-querylane",

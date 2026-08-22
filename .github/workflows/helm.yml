@@ -1,0 +1,132 @@
+# === Helm chart pipeline ==================================================
+#   on PR          -> lint, template, install on kind, verify readiness
+#   on push main   -> same checks, then push the chart to
+#                     oci://ghcr.io/querylane/charts/querylane when
+#                     Chart.yaml carries a version that is not published yet.
+#
+# Install:  helm install querylane oci://ghcr.io/querylane/charts/querylane
+# ==========================================================================
+name: helm
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "deploy/helm/**"
+      - ".github/workflows/helm.yml"
+  push:
+    branches: [main]
+    paths:
+      - "deploy/helm/**"
+      - ".github/workflows/helm.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: helm-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  CHART_DIR: deploy/helm/querylane
+  CHART_OCI: oci://ghcr.io/querylane/charts
+
+jobs:
+  test:
+    name: Lint and install on kind
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: azure/setup-helm@v4.3.0
+
+      - name: Lint and render
+        run: |
+          set -euo pipefail
+          helm lint "$CHART_DIR"
+          for f in "$CHART_DIR"/ci/*-values.yaml; do
+            echo "::group::$f"
+            helm lint "$CHART_DIR" -f "$f"
+            helm template querylane "$CHART_DIR" -f "$f" > /dev/null
+            echo "::endgroup::"
+          done
+          # Default values must fail with an actionable message (no metadata DB).
+          if helm template querylane "$CHART_DIR" > /dev/null 2>&1; then
+            echo "::error::chart rendered without a metadata database configured"
+            exit 1
+          fi
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.12.0
+        with:
+          cluster_name: querylane
+
+      - name: Install chart
+        run: |
+          set -euo pipefail
+          helm install querylane "$CHART_DIR" \
+            --namespace querylane --create-namespace \
+            -f "$CHART_DIR/ci/dev-postgres-values.yaml" \
+            --wait --timeout 5m
+
+      - name: Verify Querylane is ready
+        run: |
+          set -euo pipefail
+          kubectl -n querylane port-forward svc/querylane 18080:8080 &
+          sleep 5
+          for i in $(seq 1 30); do
+            body="$(curl -sf -X POST http://localhost:18080/querylane.console.v1alpha1.ConsoleService/GetConsoleConfig \
+              -H 'content-type: application/json' -d '{}' || true)"
+            echo "$body"
+            if echo "$body" | grep -q '"STATE_READY"'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::metadata database never became ready"
+          kubectl -n querylane logs deploy/querylane --tail 50
+          exit 1
+
+      - name: Upgrade is a no-op rollout
+        run: |
+          set -euo pipefail
+          helm upgrade querylane "$CHART_DIR" \
+            --namespace querylane \
+            -f "$CHART_DIR/ci/dev-postgres-values.yaml" \
+            --wait --timeout 5m
+          helm -n querylane history querylane
+
+  publish:
+    name: Publish chart to GHCR
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: azure/setup-helm@v4.3.0
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      - name: Package and push when version is new
+        run: |
+          set -euo pipefail
+          version="$(yq -r '.version' "$CHART_DIR/Chart.yaml")"
+          if helm show chart "$CHART_OCI/querylane" --version "$version" > /dev/null 2>&1; then
+            echo "chart version $version already published; skipping"
+            exit 0
+          fi
+          helm package "$CHART_DIR" --destination dist
+          helm push "dist/querylane-$version.tgz" "$CHART_OCI"
+          echo "published querylane chart $version to $CHART_OCI"

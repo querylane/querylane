@@ -1,0 +1,104 @@
+{{- if .Values.devPostgres.enabled -}}
+{{- $name := include "querylane.devPostgres.fullname" . -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "querylane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dev-postgres
+spec:
+  clusterIP: None
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+  selector:
+    {{- include "querylane.devPostgres.selectorLabels" . | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "querylane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dev-postgres
+  annotations:
+    querylane.net/warning: "Evaluation-only metadata database. No backups, no HA. Use metadataDatabase for production."
+spec:
+  serviceName: {{ $name }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "querylane.devPostgres.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "querylane.devPostgres.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: "{{ .Values.devPostgres.image.repository }}:{{ .Values.devPostgres.image.tag }}"
+          imagePullPolicy: {{ .Values.devPostgres.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.devPostgres.auth.username | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.devPostgres.auth.password | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.devPostgres.auth.database | quote }}
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - name: postgres
+              containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.devPostgres.auth.username | quote }}, "-d", {{ .Values.devPostgres.auth.database | quote }}]
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.devPostgres.auth.username | quote }}, "-d", {{ .Values.devPostgres.auth.database | quote }}]
+            periodSeconds: 15
+          {{- with .Values.devPostgres.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: run
+              mountPath: /var/run/postgresql
+      volumes:
+        - name: run
+          emptyDir: {}
+        {{- if not .Values.devPostgres.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+  {{- if .Values.devPostgres.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- with .Values.devPostgres.persistence.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.devPostgres.persistence.size }}
+  {{- end }}
+{{- end }}

@@ -7,6 +7,8 @@ export default defineMeta({
 	collapsed: false,
 	pages: [
 		"index",
+		"install-docker",
+		"install-helm",
 		"configure-querylane",
 		"deploy-querylane",
 		"operate-querylane",

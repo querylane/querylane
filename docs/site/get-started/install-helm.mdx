@@ -1,0 +1,166 @@
+---
+title: Install with Helm
+description: Deploy Querylane on Kubernetes with the official Helm chart, connect it to your metadata PostgreSQL, and manage instances and secrets as values.
+sidebar:
+  label: Helm
+---
+
+The Querylane chart is published as an OCI artifact at `oci://ghcr.io/querylane/charts/querylane`. It deploys Querylane as a Deployment with a Service, an optional Ingress, a ConfigMap for `querylane.yaml`, and Secrets for the metadata DSN and the encryption key.
+
+Source: [`deploy/helm/querylane`](https://github.com/querylane/querylane/tree/main/deploy/helm/querylane).
+
+## Try it on any cluster
+
+The chart can run a single-pod evaluation PostgreSQL for the metadata database so it installs with no external dependencies:
+
+```sh
+helm install querylane oci://ghcr.io/querylane/charts/querylane \
+  --namespace querylane --create-namespace \
+  --set devPostgres.enabled=true
+
+kubectl --namespace querylane port-forward svc/querylane 8080:8080
+```
+
+Open `http://localhost:8080` and register a PostgreSQL instance.
+
+:::warning
+`devPostgres` is a plain `postgres:17` StatefulSet with no backups or HA. Use it to evaluate the chart, not to keep data. Production installs set `metadataDatabase` instead.
+:::
+
+## Install for production
+
+Querylane needs 2 secrets: the metadata DSN and `QUERYLANE_INSTANCE_SECRET_KEY`. Create them with your secret manager or directly:
+
+```sh
+kubectl --namespace querylane create secret generic querylane \
+  --from-literal=dsn='postgres://querylane:replace-me@db.example.com:5432/querylane?sslmode=require' \
+  --from-literal=instance-secret-key="$(openssl rand -base64 32)"
+```
+
+Generate the key once and keep it for the lifetime of the installation. Every replica and upgrade must use the same value; changing it makes stored instance credentials unreadable.
+
+Then install with a values file:
+
+```yaml title="values.yaml"
+metadataDatabase:
+  existingSecret:
+    name: querylane
+    key: dsn
+
+instanceSecretKey:
+  existingSecret:
+    name: querylane
+    key: instance-secret-key
+
+replicaCount: 2
+podDisruptionBudget:
+  enabled: true
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    # Querylane has no built-in authentication. Put an authenticating
+    # proxy or identity-aware ingress in front of it.
+    nginx.ingress.kubernetes.io/auth-url: "https://auth.example.com/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://auth.example.com/oauth2/start?rd=$scheme://$host$request_uri"
+  hosts:
+    - host: querylane.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: querylane-tls
+      hosts:
+        - querylane.example.com
+
+config:
+  http:
+    host: "0.0.0.0"
+    port: 8080
+    cors:
+      allowed_origins:
+        - "https://querylane.example.com"
+```
+
+```sh
+helm install querylane oci://ghcr.io/querylane/charts/querylane \
+  --namespace querylane --create-namespace \
+  --values values.yaml
+```
+
+The chart refuses to render without a metadata database. Provide `metadataDatabase.existingSecret`, `metadataDatabase.dsn`, or `devPostgres.enabled=true`.
+
+## Manage instances as values
+
+Everything under `config` is rendered into `/etc/querylane/querylane.yaml`. Register PostgreSQL servers there to manage them as infrastructure-as-code; the instance editor in the UI becomes read-only. Reference passwords through environment variables so they stay in Secrets:
+
+```yaml title="values.yaml"
+config:
+  instances:
+    - id: production
+      display_name: "Production"
+      host: "db.example.com"
+      port: 5432
+      database: "app"
+      username: "querylane_reader"
+      password_env: "PROD_DB_PASSWORD"
+      ssl_mode: "require"
+      labels:
+        env: production
+    - id: analytics
+      display_name: "Analytics"
+      dsn_env: "ANALYTICS_DATABASE_URL"
+
+extraEnv:
+  - name: PROD_DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: prod-db
+        key: password
+  - name: ANALYTICS_DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: analytics-db
+        key: dsn
+```
+
+Leave `config.instances` empty to register servers through the UI. They are stored in the metadata database, encrypted with `QUERYLANE_INSTANCE_SECRET_KEY`.
+
+Rolling out a changed `config` restarts the pods; the Deployment carries a checksum of the ConfigMap and Secret.
+
+## Values reference
+
+| Value | Default | Purpose |
+| --- | --- | --- |
+| `image.repository`, `image.tag`, `image.digest` | `ghcr.io/querylane/querylane`, chart `appVersion`, `""` | Image. A digest takes precedence over the tag. |
+| `replicaCount` | `1` | Replicas. Multi-replica needs an external metadata database. |
+| `metadataDatabase.dsn` | `""` | Inline DSN; the chart stores it in a Secret. |
+| `metadataDatabase.existingSecret.name` / `.key` | `""` / `dsn` | Secret that already holds the DSN. |
+| `instanceSecretKey.value` | `""` | Inline encryption key; the chart stores it in a Secret. |
+| `instanceSecretKey.existingSecret.name` / `.key` | `""` / `instance-secret-key` | Secret that already holds the key. |
+| `devPostgres.enabled` | `false` | Evaluation-only metadata PostgreSQL StatefulSet. |
+| `config` | `http` defaults, no instances | Rendered to `querylane.yaml`. See [Configure Querylane](/get-started/configure-querylane). |
+| `extraEnv`, `extraEnvFrom` | `[]` | Extra environment, typically instance passwords. |
+| `extraVolumes`, `extraVolumeMounts`, `extraArgs` | `[]` | Custom CA bundles, extra flags. |
+| `service.type`, `service.port` | `ClusterIP`, `8080` | Service. |
+| `ingress.*` | disabled | Ingress with class, annotations, hosts, TLS. |
+| `resources` | `100m` / `256Mi` requests, `1Gi` memory limit | Container resources. |
+| `podSecurityContext`, `securityContext` | non-root `65532`, read-only root filesystem, no capabilities | Hardened defaults matching the distroless image. |
+| `livenessProbe`, `readinessProbe`, `startupProbe` | `GET /` | Probes. Querylane has no dedicated health endpoint yet. |
+| `podDisruptionBudget.*`, `autoscaling.*` | disabled | PDB and HPA. |
+| `nodeSelector`, `tolerations`, `affinity`, `topologySpreadConstraints`, `priorityClassName` | empty | Scheduling. |
+| `serviceAccount.*` | created, token not mounted | ServiceAccount. |
+
+Run `helm show values oci://ghcr.io/querylane/charts/querylane` for the complete, commented file.
+
+## Upgrade
+
+Querylane applies metadata migrations during startup. Back up the metadata database, then:
+
+```sh
+helm upgrade querylane oci://ghcr.io/querylane/charts/querylane \
+  --namespace querylane --values values.yaml
+```
+
+Pin a chart version with `--version` and an image by digest with `image.digest` for reproducible rollouts. Continue with [Deploy Querylane](/get-started/deploy-querylane) for the full production checklist and [Operate Querylane](/get-started/operate-querylane) for backups and recovery.
