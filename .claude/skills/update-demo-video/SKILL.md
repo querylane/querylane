@@ -14,8 +14,8 @@ or the GIF looks stale.
 - **Audience is technical** (engineers, DBAs). No intro/outro cards, no marketing copy,
   no captions/subtitles. Just the product.
 - **Static frame, no camera moves.** Zooms/pans were tried and rejected. The only effects
-  are the rendered cursor (eased glides, press squash, click ripple), eased scrolling,
-  and the small "Querylane" watermark bottom-right.
+  are the rendered cursor (eased glides, press squash, click ripple) and eased scrolling.
+
 - **Short**: ~20–25 s. High-level overview, not a feature tour. Current beats:
   instance overview → Data Explorer objects → `orders` grid → one filter rule
   (`amount > 200`) → foreign-key popover → Indexes → Definition tab.
