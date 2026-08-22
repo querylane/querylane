@@ -369,7 +369,9 @@ test("keeps getting-started pages in 1 ordered hierarchy level", async () => {
 	const getStartedRoot = join(root, "docs/site/get-started");
 	const entries = await readdir(getStartedRoot, { withFileTypes: true });
 	expect(entries.filter((entry) => entry.isDirectory())).toEqual([]);
-	expect(entries.filter((entry) => entry.name.endsWith(".mdx"))).toHaveLength(6);
+	expect(entries.filter((entry) => entry.name.endsWith(".mdx"))).toHaveLength(
+		6,
+	);
 });
 
 test("documents the operational lifecycle for self-hosted deployments", async () => {
