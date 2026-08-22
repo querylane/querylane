@@ -12,8 +12,7 @@
 <p align="center">
   <a href="https://docs.querylane.net">Documentation</a> ·
   <a href="https://docs.querylane.net/get-started">Quickstart</a> ·
-  <a href="https://docs.querylane.net/use-querylane">Product tour</a> ·
-  <a href="https://github.com/querylane/querylane/releases">Releases</a>
+  <a href="https://github.com/querylane/querylane/releases">Releases</a> ·
   <a href="https://demo.querylane.net/">Live Demo</a>
 </p>
 
