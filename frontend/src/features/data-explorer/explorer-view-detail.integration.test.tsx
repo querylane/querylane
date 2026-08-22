@@ -268,7 +268,9 @@ describe("view detail integration", () => {
       screen.getByRole("button", { name: "Refresh materialized view" })
     );
     expect(
-      screen.getByRole("heading", { name: "Refresh daily_revenue" })
+      screen.getByRole("heading", {
+        name: "Refresh materialized view daily_revenue",
+      })
     ).toBeTruthy();
     expect(screen.getByText("42 estimated rows · 8 KB")).toBeTruthy();
     const confirmation = screen.getByRole("textbox", {

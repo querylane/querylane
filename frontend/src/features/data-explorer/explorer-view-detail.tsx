@@ -669,8 +669,13 @@ function MaterializedRefreshControl({
         open={dialogOpen}
       >
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Refresh {viewName}</AlertDialogTitle>
+          <AlertDialogHeader className="min-w-0">
+            <AlertDialogTitle className="min-w-0">
+              <span className="block">Refresh materialized view</span>
+              <span className="mt-1 block break-all font-medium font-mono text-sm">
+                {viewName}
+              </span>
+            </AlertDialogTitle>
             <AlertDialogDescription>
               A normal refresh blocks reads while PostgreSQL replaces the stored
               rows.
@@ -688,7 +693,7 @@ function MaterializedRefreshControl({
                 : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <Alert>
               <TriangleAlert />
               <AlertTitle>Mutation impact</AlertTitle>
@@ -701,8 +706,12 @@ function MaterializedRefreshControl({
             </Alert>
             <div className="space-y-2">
               <label className="text-sm" htmlFor={confirmationId}>
-                Type <span className="font-mono">{confirmationTarget}</span> to
-                confirm
+                <span className="block">
+                  Type this exact target to confirm:
+                </span>
+                <span className="mt-1 block break-all font-mono text-xs leading-relaxed">
+                  {confirmationTarget}
+                </span>
               </label>
               <Input
                 aria-label={`Type ${confirmationTarget} to confirm`}
