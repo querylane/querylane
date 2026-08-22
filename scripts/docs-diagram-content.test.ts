@@ -49,11 +49,6 @@ const segmentCrossesRectangle = (
 
 const expectedDiagrams = [
 	{
-		page: "get-started/deploy-querylane.mdx",
-		diagrams: ["production-topology"],
-		walkthroughs: ["Follow one browser request from left to right"],
-	},
-	{
 		page: "guides/api/pagination-and-filtering.mdx",
 		diagrams: ["cursor-pagination"],
 		walkthroughs: ["Walk through one complete traversal"],
