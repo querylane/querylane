@@ -434,16 +434,24 @@ func queryStatsAccessHealth(ctx context.Context, db *sql.DB) (*engine.StatsAcces
 }
 
 func queryPGStatStatementsHealth(ctx context.Context, db *sql.DB) (*engine.PGStatStatementsHealth, error) {
-	var pgStatStatements engine.PGStatStatementsHealth
+	var (
+		pgStatStatements engine.PGStatStatementsHealth
+		sharedPreload    sql.NullBool
+	)
 	if err := db.QueryRowContext(ctx, getPGStatStatementsConfigQuery).Scan(
 		&pgStatStatements.ExtensionInstalled,
 		&pgStatStatements.ExtensionSchema,
 		&pgStatStatements.ExtensionVersion,
-		&pgStatStatements.SharedPreloadConfigured,
+		&sharedPreload,
 		&pgStatStatements.TrackMode,
 	); err != nil {
 		return nil, classifyQueryError("query pg_stat_statements config", err)
 	}
+	// NULL means the connecting role cannot see shared_preload_libraries
+	// (it is a superuser-only GUC); the answer is then inferred from whether
+	// the pg_stat_statements view is queryable, which requires the library.
+	pgStatStatements.SharedPreloadKnown = sharedPreload.Valid
+	pgStatStatements.SharedPreloadConfigured = sharedPreload.Valid && sharedPreload.Bool
 
 	if !pgStatStatements.ExtensionInstalled {
 		pgStatStatements.Status = engine.HealthStatusNotApplicable
@@ -463,16 +471,18 @@ func queryPGStatStatementsHealth(ctx context.Context, db *sql.DB) (*engine.PGSta
 	)
 	if err != nil {
 		pgStatStatements.Status = engine.HealthStatusWarning
-
-		pgStatStatements.Summary = "pg_stat_statements is installed but not queryable"
-		if !pgStatStatements.SharedPreloadConfigured {
-			pgStatStatements.Summary = "pg_stat_statements is installed but not in shared_preload_libraries"
-		}
+		pgStatStatements.Summary = summarizeUnqueryablePGStatStatements(pgStatStatements, err)
 
 		return &pgStatStatements, nil
 	}
 
 	pgStatStatements.ViewQueryable = true
+	if !pgStatStatements.SharedPreloadKnown {
+		// The view only works when the library is preloaded, so a successful
+		// query settles the question even though the GUC itself is hidden.
+		pgStatStatements.SharedPreloadKnown = true
+		pgStatStatements.SharedPreloadConfigured = true
+	}
 
 	if statsResetAt.Valid {
 		resetAt := statsResetAt.Time
@@ -587,6 +597,21 @@ func summarizeStatsAccess(statsAccess engine.StatsAccessHealth) (engine.HealthSt
 	}
 
 	return engine.HealthStatusWarning, statsAccess.CurrentUser + " has limited PostgreSQL statistics visibility"
+}
+
+// summarizeUnqueryablePGStatStatements explains a failed read of the
+// pg_stat_statements view. It is a warning rather than an error because the
+// extension being present but unusable is a server configuration state.
+func summarizeUnqueryablePGStatStatements(pgStatStatements engine.PGStatStatementsHealth, queryErr error) string {
+	if !pgStatStatements.SharedPreloadKnown {
+		return "pg_stat_statements is installed but not queryable; the connecting role cannot read shared_preload_libraries to verify it is loaded (requires pg_read_all_settings): " + queryErr.Error()
+	}
+
+	if !pgStatStatements.SharedPreloadConfigured {
+		return "pg_stat_statements is installed but not in shared_preload_libraries"
+	}
+
+	return "pg_stat_statements is installed but not queryable: " + queryErr.Error()
 }
 
 func summarizePGStatStatements(pgStatStatements engine.PGStatStatementsHealth) (engine.HealthStatus, string) {

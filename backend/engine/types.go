@@ -138,11 +138,15 @@ type StatsAccessHealth struct {
 // PGStatStatementsHealth describes whether pg_stat_statements is installed,
 // loaded, queryable, and accumulating rows.
 type PGStatStatementsHealth struct {
-	Status                  HealthStatus
-	Summary                 string
-	ExtensionInstalled      bool
-	ExtensionSchema         string
-	ExtensionVersion        string
+	Status             HealthStatus
+	Summary            string
+	ExtensionInstalled bool
+	ExtensionSchema    string
+	ExtensionVersion   string
+	// SharedPreloadKnown is false when the connecting role cannot read
+	// shared_preload_libraries (superuser-only GUC) and the view could not be
+	// queried to infer it; SharedPreloadConfigured is then meaningless.
+	SharedPreloadKnown      bool
 	SharedPreloadConfigured bool
 	TrackMode               string
 	ViewQueryable           bool
