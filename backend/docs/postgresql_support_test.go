@@ -19,7 +19,7 @@ func TestPostgreSQLSupportDocsMentionPG17MaintainPrivilege(t *testing.T) {
 	for _, snippet := range []string{
 		"PostgreSQL 17 `MAINTAIN`",
 		"direct role grants",
-		"PUBLIC grants",
+		"`PUBLIC` grants",
 		"default privileges",
 		"`privilege = \"MAINTAIN\"`",
 	} {

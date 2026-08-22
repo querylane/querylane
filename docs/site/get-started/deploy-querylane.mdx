@@ -191,7 +191,7 @@ Do not grant `SUPERUSER`, `BYPASSRLS`, database ownership, or broad `pg_read_all
 
 ## 6. Add readiness and replicas
 
-Use `GET /` for liveness. For readiness, call `ConsoleService.GetConsoleConfig` and require the ready application state.
+Use `GET /livez` as the liveness check. It returns `200` while the HTTP server is running and does not depend on the metadata database. Use `GET /readyz` as the readiness check. It returns `200` when the metadata database is initialized and reachable, and `503` while Querylane is initializing or the database is unavailable.
 
 Multiple replicas must share:
 
