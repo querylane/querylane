@@ -241,15 +241,13 @@ func (s *PGAuditLogStore) ListAuditLogEntries(ctx context.Context, params aip.Pa
 
 func auditLogEntryFromModel(row model.MutationAuditLog) AuditLogEntry {
 	return AuditLogEntry{
-		ID: row.ID,
-		AuditMutation: AuditMutation{
-			Actor:        row.Actor,
-			Action:       AuditMutationAction(row.Action),
-			Command:      row.Command,
-			Target:       row.Target,
-			InstanceName: row.InstanceName,
-			DatabaseName: row.DatabaseName,
-		},
+		ID:            row.ID,
+		Actor:         row.Actor,
+		Action:        AuditMutationAction(row.Action),
+		Command:       row.Command,
+		Target:        row.Target,
+		InstanceName:  row.InstanceName,
+		DatabaseName:  row.DatabaseName,
 		State:         AuditMutationState(row.State),
 		ResultSummary: row.ResultSummary,
 		StartTime:     row.StartTime,

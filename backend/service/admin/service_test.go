@@ -119,15 +119,13 @@ func TestListAuditLogEntries(t *testing.T) {
 	finishTime := time.Now()
 	lister := &fakeAuditLogLister{
 		rows: []storage.AuditLogEntry{{
-			ID: 42,
-			AuditMutation: storage.AuditMutation{
-				Actor:        "127.0.0.1:4000",
-				Action:       storage.AuditMutationRefreshMaterializedView,
-				Command:      `REFRESH MATERIALIZED VIEW "public"."revenue"`,
-				Target:       "instances/prod/databases/app/schemas/public/views/revenue",
-				InstanceName: "instances/prod",
-				DatabaseName: "instances/prod/databases/app",
-			},
+			ID:            42,
+			Actor:         "127.0.0.1:4000",
+			Action:        storage.AuditMutationRefreshMaterializedView,
+			Command:       `REFRESH MATERIALIZED VIEW "public"."revenue"`,
+			Target:        "instances/prod/databases/app/schemas/public/views/revenue",
+			InstanceName:  "instances/prod",
+			DatabaseName:  "instances/prod/databases/app",
 			State:         storage.AuditMutationSucceeded,
 			ResultSummary: "refreshed",
 			StartTime:     finishTime.Add(-time.Second),

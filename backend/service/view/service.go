@@ -28,7 +28,10 @@ import (
 
 var _ v1connect.ViewServiceHandler = (*Service)(nil)
 
-const maxSynchronousRefreshTimeout = 30 * time.Second
+const (
+	maxSynchronousRefreshTimeout = 30 * time.Second
+	opRefreshMaterializedView    = "refresh_materialized_view"
+)
 
 type viewCatalog interface {
 	ListViews(ctx context.Context, schema resource.SchemaName, params aip.Params) ([]engine.View, string, error)
@@ -226,14 +229,14 @@ func (s *Service) RefreshMaterializedView(ctx context.Context, req *connect.Requ
 		concurrently = true
 	default:
 		return nil, apierrors.MapEngineErr(ctx, engine.NewInvalidQueryError("mode", "unsupported refresh mode"), apierrors.ResourceCtx{
-			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: "refresh_materialized_view",
+			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: opRefreshMaterializedView,
 		})
 	}
 
 	policy, err := s.safety.Policy(ctx, viewRes.Instance())
 	if err != nil {
 		return nil, apierrors.MapRepoErr(ctx, err, apierrors.ResourceCtx{
-			Type: resource.TypeInstance, Name: viewRes.Instance().String(), Op: "refresh_materialized_view",
+			Type: resource.TypeInstance, Name: viewRes.Instance().String(), Op: opRefreshMaterializedView,
 		})
 	}
 
@@ -252,7 +255,7 @@ func (s *Service) RefreshMaterializedView(ctx context.Context, req *connect.Requ
 	release, err := s.liveQueries.Acquire(viewRes.Instance())
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: "refresh_materialized_view",
+			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: opRefreshMaterializedView,
 		})
 	}
 	defer release()
@@ -295,7 +298,7 @@ func (s *Service) RefreshMaterializedView(ctx context.Context, req *connect.Requ
 		}
 
 		return nil, apierrors.MapEngineErr(refreshCtx, err, apierrors.ResourceCtx{
-			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: "refresh_materialized_view",
+			Type: viewRes.ResourceType(), Name: viewRes.String(), Op: opRefreshMaterializedView,
 		})
 	}
 
