@@ -374,6 +374,59 @@ func TestIntegrationInstanceRepositoryListInstancesFilters(t *testing.T) {
 	assert.Equal(t, "instances/prod", instances[0].GetName())
 }
 
+// Walks a keyset cursor over a timestamp order field through the jet adapter.
+// The compiled predicate binds time.Time cursor values as bare $n parameters
+// (no explicit ::timestamptz cast) behind the deleted_at base condition, so
+// this covers placeholder renumbering and server-side parameter type
+// inference against a real database.
+func TestIntegrationInstanceRepositoryListInstancesPaginatesByCreateTime(t *testing.T) {
+	t.Parallel()
+
+	testDB := NewTestDB(t)
+	repo, err := NewInstanceRepository(testDB.DB())
+	require.NoError(t, err)
+
+	ids := []string{"first", "second", "third"}
+	for _, id := range ids {
+		_, err = repo.CreateInstance(t.Context(), &api.Instance{
+			DisplayName: "Instance " + id,
+			Config: &api.PostgresConfig{
+				Database: "postgres",
+				Host:     "localhost",
+				Port:     5432,
+				Username: "querylane",
+			},
+		}, id)
+		require.NoError(t, err)
+	}
+
+	var seen []string
+
+	pageToken := ""
+
+	for range len(ids) + 1 {
+		instances, nextToken, err := repo.ListInstances(
+			t.Context(),
+			1,
+			pageToken,
+			`display_name:"Instance"`,
+			"create_time desc",
+		)
+		require.NoError(t, err)
+		require.Len(t, instances, 1)
+
+		seen = append(seen, instances[0].GetName())
+
+		if nextToken == "" {
+			break
+		}
+
+		pageToken = nextToken
+	}
+
+	assert.Equal(t, []string{"instances/third", "instances/second", "instances/first"}, seen)
+}
+
 func TestIntegrationInstanceRepositoryListInstancesRejectsSyntheticIDFilter(t *testing.T) {
 	t.Parallel()
 

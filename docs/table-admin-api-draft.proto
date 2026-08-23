@@ -603,7 +603,7 @@ message ListViewsRequest {
   // Supported filters:
   //   - is_system_view
   //   - view_type
-  //   - name.contains()
+  //   - name:"..."
   string filter = 4 [(google.api.field_behavior) = OPTIONAL];
 
   string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
