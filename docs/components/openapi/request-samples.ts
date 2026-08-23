@@ -6,7 +6,7 @@ import {
 
 const goString = (value: string): string => JSON.stringify(value);
 
-const goSnippet = (sample: RequestSample): string => {
+export const goSnippet = (sample: RequestSample): string => {
 	const imports = ['\t"net/http"'];
 	const body = sample.body
 		? `strings.NewReader(${goString(sample.body)})`
