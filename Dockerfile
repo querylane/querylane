@@ -2,7 +2,7 @@
 # =============================================================================
 # Stage 1: Build the frontend
 # =============================================================================
-FROM --platform=$BUILDPLATFORM oven/bun:1.3.14-alpine AS frontend-builder
+FROM --platform=$BUILDPLATFORM oven/bun:1.4.0-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/bun.lock ./
