@@ -1,7 +1,7 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { timestampFromDate } from "@bufbuild/protobuf/wkt";
+import { afterEach, expect, rs, test } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, expect, test, vi } from "vitest";
 import { AuditLogSection } from "@/components/admin-ops/audit-log-section";
 import {
   AuditLogEntry_Action,
@@ -10,11 +10,11 @@ import {
   ListAuditLogEntriesResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/admin_pb";
 
-const state = vi.hoisted(() => ({
-  fetchNextPage: vi.fn(async () => undefined),
+const state = rs.hoisted(() => ({
+  fetchNextPage: rs.fn(async () => undefined),
 }));
 
-vi.mock("@/hooks/api/admin", () => ({
+rs.mock("@/hooks/api/admin", () => ({
   useAuditLogEntriesInfiniteQuery: () => ({
     data: {
       pages: [
@@ -41,7 +41,7 @@ vi.mock("@/hooks/api/admin", () => ({
     hasNextPage: false,
     isFetchingNextPage: false,
     isPending: false,
-    refetch: vi.fn(),
+    refetch: rs.fn(),
   }),
 }));
 
