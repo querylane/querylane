@@ -13,6 +13,7 @@
 		"docs:build": "blume build --strict",
 		"docs:check": "blume check --strict",
 		"docs:dev": "blume dev",
+		"docs:diagrams:generate": "bun scripts/generate-doc-diagram-themes.ts",
 		"docs:eval": "blume eval --agent codex --json",
 		"docs:test": "bun test scripts/docs-*.test.ts",
 		"docs:test:content": "bun test scripts/docs-content.test.ts",
