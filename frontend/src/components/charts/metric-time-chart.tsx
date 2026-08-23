@@ -1,17 +1,16 @@
+import {
+  areaY,
+  crosshair,
+  defineChart,
+  lineY,
+  ruleY,
+  stack,
+  text,
+} from "@tanstack/charts";
+import { decorative } from "@tanstack/charts/mark/decorative";
+import { scaleLinear } from "@tanstack/charts/scales/linear";
+import { tooltip } from "@tanstack/charts/tooltip";
 import { useId } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ReferenceLine,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  EdgeAwareTimeTick,
-  InsetValueTick,
-} from "@/components/charts/chart-axis-tick";
 import { ChartContainer } from "@/components/charts/chart-container";
 import type {
   ChartRow,
@@ -19,16 +18,17 @@ import type {
   ChartThreshold,
   MetricTimeChartVariant,
 } from "@/components/charts/chart-context";
-import { ChartTooltipContent } from "@/components/charts/chart-tooltip";
+import { ResponsiveChart } from "@/components/charts/responsive-chart";
 import { type ChartTickBase, niceAxisTicks } from "@/lib/chart-scale";
-import { buildTimeTicks, formatTimeTick } from "@/lib/chart-time";
+import {
+  buildTimeTicks,
+  formatTimeTick,
+  formatTooltipTime,
+} from "@/lib/chart-time";
 
 interface MetricTimeChartProps {
   data: ChartRow[];
-  /**
-   * Pins the x-axis to a fixed window (epoch ms) so sparse data reads
-   * honestly and side-by-side charts align. Defaults to the data extent.
-   */
+  /** Pins the x-axis to a fixed epoch-ms window. Defaults to the data extent. */
   domain?: [number, number] | undefined;
   /** Full-precision tooltip formatter; defaults to `formatValue`. */
   formatDetailedValue?: ((value: number) => string) | undefined;
@@ -37,56 +37,32 @@ interface MetricTimeChartProps {
   isRefreshing?: boolean | undefined;
   series: ChartSeries[];
   showLegend?: boolean | undefined;
-  /** Charts sharing a syncId share crosshair + tooltip position by time. */
-  syncId?: string | undefined;
   thresholds?: ChartThreshold[] | undefined;
   variant?: MetricTimeChartVariant | undefined;
-  /**
-   * `gutter` (default) reserves a right-side column for y-labels; `inset`
-   * draws them INSIDE the plot on a surface-colored halo, so the plot spans
-   * the full container width (dashboard-dense look). Inset labels sit just
-   * above their gridline and stay legible over data via the halo.
-   */
+  /** `inset` trades the gutter axis for labels inside the plot. */
   yAxisMode?: "gutter" | "inset" | undefined;
-  /**
-   * Fixed y-axis bounds with evenly divided ticks, for metrics on a naturally
-   * bounded scale (a ratio is `[0, 1]`). Without it Recharts "nices" the auto
-   * domain past the data — a 105% tick on a hit ratio that cannot exceed 100%.
-   */
+  /** Fixed y-axis bounds for naturally bounded metrics such as ratios. */
   yDomain?: [number, number] | undefined;
-  /**
-   * Pass 1024 for byte-based units so auto ticks land on binary boundaries
-   * (0 / 50 KB / 100 KB / 150 KB) instead of decimal steps the 1024-based
-   * formatter would render as "48,8 KB". Defaults to decimal steps.
-   */
+  /** Use 1024 for byte-based ticks; defaults to decimal steps. */
   yTickBase?: ChartTickBase | undefined;
 }
 
-const CHART_MARGIN = { bottom: 4, left: 8, right: 8, top: 8 };
-// Inset labels render above the top gridline, so the plot needs headroom.
-const INSET_CHART_MARGIN = { bottom: 4, left: 0, right: 4, top: 18 };
-const Y_AXIS_TICK_COUNT = 4;
+interface MetricDatum {
+  seriesKey: string;
+  time: number;
+  value: number | null;
+}
+
+const INSET_CHART_MARGIN = { bottom: 28, left: 8, right: 4, top: 18 };
 const AREA_FILL_TOP_OPACITY = 0.16;
 const STACKED_FILL_OPACITY = 0.3;
-const ACTIVE_DOT = { r: 4, stroke: "var(--color-card)", strokeWidth: 2 };
-const GRID_DASH = "3 3";
-/**
- * The hover crosshair: a dashed hairline in half-strength foreground ink —
- * strong enough to read as a crosshair (a border-colored line disappears),
- * dashed so it never impersonates a data series (Grafana/Axiom convention).
- */
-const CURSOR = {
-  stroke: "var(--color-foreground)",
-  strokeDasharray: "4 4",
-  strokeOpacity: 0.4,
-};
 const DASHED_STROKE = "4 4";
 const SOLID_STROKE_WIDTH = 2;
 const DASHED_STROKE_WIDTH = 1.5;
-/** Dashed context series render translucent so the live series stays primary. */
 const DASHED_STROKE_OPACITY = 0.55;
-/** Fixed-yDomain axes divide into quarters: 0 / 25 / 50 / 75 / 100%. */
 const Y_DOMAIN_SEGMENTS = 4;
+const INITIAL_HEIGHT = 200;
+const INITIAL_WIDTH = 320;
 
 function extentOf(data: ChartRow[]): [number, number] {
   const first = data[0]?.time ?? 0;
@@ -117,11 +93,6 @@ function rowMax(
   return Math.max(max, stackSum);
 }
 
-/**
- * The largest value the y-axis must cover: the data's finite max (stack sums
- * in stacked mode, per-series values otherwise) plus any threshold that is
- * allowed to extend the domain.
- */
 function yAxisMax({
   data,
   series,
@@ -142,11 +113,9 @@ function yAxisMax({
       max = Math.max(max, threshold.value);
     }
   }
-
   return max;
 }
 
-/** Evenly spaced ticks across a fixed domain, endpoints included. */
 function evenTicks([min, max]: [number, number]): number[] {
   const step = (max - min) / Y_DOMAIN_SEGMENTS;
   return Array.from(
@@ -162,7 +131,6 @@ function resolveVariant(
   if (variant !== "auto") {
     return variant;
   }
-
   return seriesCount === 1 ? "area" : "line";
 }
 
@@ -172,41 +140,44 @@ function thresholdColor(tone: ChartThreshold["tone"]): string {
     : "var(--color-muted-foreground)";
 }
 
-function MetricArea({
+function rowsForSeries(data: ChartRow[], seriesKey: string): MetricDatum[] {
+  return data.map((row) => ({
+    seriesKey,
+    time: row.time,
+    value: row[seriesKey] ?? null,
+  }));
+}
+
+function resolveValueAxis({
+  data,
   drawMode,
-  gradientId,
-  item,
+  series,
+  thresholds,
+  yDomain,
+  yTickBase,
 }: {
-  drawMode: MetricTimeChartVariant;
-  gradientId: string;
-  item: ChartSeries;
-}) {
-  const stacked = drawMode === "stacked" && !item.dashed;
-  return (
-    <Area
-      activeDot={ACTIVE_DOT}
-      connectNulls={false}
-      dataKey={item.key}
-      dot={false}
-      fill={stacked ? item.color : `url(#${gradientId}-${item.key})`}
-      fillOpacity={stacked ? STACKED_FILL_OPACITY : 1}
-      isAnimationActive={false}
-      {...(stacked ? { stackId: "stack" } : {})}
-      {...(item.dashed ? { strokeDasharray: DASHED_STROKE } : {})}
-      stroke={item.color}
-      strokeOpacity={item.dashed ? DASHED_STROKE_OPACITY : 1}
-      strokeWidth={item.dashed ? DASHED_STROKE_WIDTH : SOLID_STROKE_WIDTH}
-      type="linear"
-    />
-  );
+  data: ChartRow[];
+  drawMode: "area" | "line" | "stacked";
+  series: ChartSeries[];
+  thresholds: ChartThreshold[] | undefined;
+  yDomain: [number, number] | undefined;
+  yTickBase: ChartTickBase;
+}): { domain: [number, number]; ticks: number[] } {
+  if (yDomain) {
+    return { domain: yDomain, ticks: evenTicks(yDomain) };
+  }
+
+  const ticks = niceAxisTicks(
+    yAxisMax({ data, series, stacked: drawMode === "stacked", thresholds }),
+    yTickBase
+  ) ?? [0, 1];
+  return { domain: [0, ticks.at(-1) ?? 1], ticks };
 }
 
 /**
- * A themed time-series chart on a continuous time axis: calendar-aligned ticks
- * (whole minutes/hours/local midnights), range-adaptive labels, a solid
- * hairline grid, a crosshair tooltip listing every series, and gradient fills
- * from the `--chart-*` tokens. Gaps (null) break the line so probe outages
- * stay visible. This module is intentionally heavy (Recharts) and lazy-loaded.
+ * A themed, responsive TanStack time-series chart. App-owned tick generation,
+ * formatters, colors, missing-value gaps, thresholds, overlays, and legends
+ * remain stable while TanStack owns the accessible SVG and interaction model.
  */
 function MetricTimeChart({
   data,
@@ -216,147 +187,280 @@ function MetricTimeChart({
   isRefreshing,
   series,
   showLegend,
-  syncId,
   thresholds,
   variant = "auto",
   yAxisMode = "gutter",
   yDomain,
   yTickBase = 10,
 }: MetricTimeChartProps) {
-  const gradientId = useId().replaceAll(":", "");
+  const gradientPrefix = useId().replaceAll(/[^a-zA-Z0-9_-]/g, "");
   const [minMs, maxMs] = domain ?? extentOf(data);
   const spanMs = maxMs - minMs;
-  const ticks = buildTimeTicks(minMs, maxMs);
-  // Dashed context series (previous-period overlays) don't count: a lone real
-  // series keeps its area fill even with an overlay beside it.
-  const solidSeriesCount = series.filter((item) => !item.dashed).length;
-  const drawMode = resolveVariant(variant, solidSeriesCount);
-  const hasGradientFill = drawMode === "area";
-  const autoTicks = yDomain
-    ? null
-    : niceAxisTicks(
-        yAxisMax({ data, series, stacked: drawMode === "stacked", thresholds }),
-        yTickBase
-      );
-  const autoTop = autoTicks?.at(-1);
+  const timeTicks = buildTimeTicks(minMs, maxMs);
+  const solidSeries = series.filter((item) => !item.dashed);
+  const dashedSeries = series.filter((item) => item.dashed);
+  const drawMode = resolveVariant(variant, solidSeries.length);
+  const { domain: valueDomain, ticks: valueTicks } = resolveValueAxis({
+    data,
+    drawMode,
+    series,
+    thresholds,
+    yDomain,
+    yTickBase,
+  });
+  const detailedValue = formatDetailedValue ?? formatValue;
+  const seriesOrder = new Map(
+    series.map((item, index) => [item.key, index] as const)
+  );
+  const seriesByKey = new Map(series.map((item) => [item.key, item] as const));
+  const gradients =
+    drawMode === "area"
+      ? solidSeries.map((item) => ({
+          id: `${gradientPrefix}-${item.key}`,
+          stops: [
+            { color: item.color, offset: 0, opacity: 0 },
+            { color: item.color, offset: 1, opacity: AREA_FILL_TOP_OPACITY },
+          ],
+        }))
+      : [];
+
+  const solidMarks =
+    drawMode === "stacked"
+      ? [
+          areaY(
+            solidSeries.flatMap((item) => rowsForSeries(data, item.key)),
+            {
+              fill: (row) =>
+                seriesByKey.get(row.seriesKey)?.color ?? "currentColor",
+              fillOpacity: STACKED_FILL_OPACITY,
+              id: "stacked-series",
+              key: (row) => `${row.seriesKey}-${row.time}`,
+              layout: stack({ order: solidSeries.map((item) => item.key) }),
+              strokeWidth: 0,
+              x: "time",
+              y: "value",
+              z: "seriesKey",
+            }
+          ),
+        ]
+      : solidSeries.flatMap((item) => {
+          const rows = rowsForSeries(data, item.key);
+          if (drawMode === "line") {
+            return [
+              lineY(rows, {
+                id: item.key,
+                key: (row) => `${row.seriesKey}-${row.time}`,
+                stroke: item.color,
+                strokeWidth: SOLID_STROKE_WIDTH,
+                x: "time",
+                y: "value",
+              }),
+            ];
+          }
+          return [
+            areaY(rows, {
+              fill: `url(#${gradientPrefix}-${item.key})`,
+              id: `${item.key}-fill`,
+              key: (row) => `${row.seriesKey}-${row.time}`,
+              strokeWidth: 0,
+              x: "time",
+              y: "value",
+            }),
+            lineY(rows, {
+              id: `${item.key}-stroke`,
+              key: (row) => `${row.seriesKey}-${row.time}`,
+              stroke: item.color,
+              strokeWidth: SOLID_STROKE_WIDTH,
+              x: "time",
+              y: "value",
+            }),
+          ];
+        });
+  const contextMarks = dashedSeries.map((item) =>
+    lineY(rowsForSeries(data, item.key), {
+      id: item.key,
+      key: (row) => `${row.seriesKey}-${row.time}`,
+      stroke: item.color,
+      strokeDasharray: DASHED_STROKE,
+      strokeOpacity: DASHED_STROKE_OPACITY,
+      strokeWidth: DASHED_STROKE_WIDTH,
+      x: "time",
+      y: "value",
+    })
+  );
+  const thresholdRules = (thresholds ?? []).map((threshold) =>
+    decorative(
+      ruleY([threshold.value], {
+        id: `threshold-${threshold.value}`,
+        stroke: thresholdColor(threshold.tone),
+        strokeDasharray: DASHED_STROKE,
+      })
+    )
+  );
+  const thresholdLabels = (thresholds ?? []).flatMap((threshold) =>
+    threshold.label === undefined
+      ? []
+      : [
+          decorative(
+            text(
+              [
+                {
+                  label: threshold.label,
+                  time: maxMs,
+                  value: threshold.value,
+                },
+              ],
+              {
+                anchor: "end",
+                dx: -4,
+                dy: -6,
+                fill: "var(--color-muted-foreground)",
+                fontSize: 10,
+                id: `threshold-label-${threshold.value}`,
+                text: "label",
+                x: "time",
+                y: "value",
+              }
+            )
+          ),
+        ]
+  );
+  const insetLabels =
+    yAxisMode === "inset"
+      ? valueTicks.map((value) =>
+          decorative(
+            text([{ label: formatValue(value), time: maxMs, value }], {
+              anchor: "end",
+              dx: -4,
+              dy: -5,
+              fill: "var(--color-muted-foreground)",
+              fontSize: 10,
+              id: `value-label-${value}`,
+              text: "label",
+              x: "time",
+              y: "value",
+            })
+          )
+        )
+      : [];
+  const definition = defineChart({
+    chart: () => ({
+      gradients,
+      marks: [
+        ...solidMarks,
+        ...contextMarks,
+        ...thresholdRules,
+        ...thresholdLabels,
+        ...insetLabels,
+        crosshair({
+          marker: {
+            fill: "var(--color-card)",
+            radius: 4,
+            stroke: "var(--color-foreground)",
+            strokeWidth: 2,
+          },
+          x: {
+            stroke: "var(--color-foreground)",
+            strokeDasharray: DASHED_STROKE,
+            strokeOpacity: 0.4,
+          },
+          y: false,
+        }),
+      ],
+      ...(yAxisMode === "inset" ? { margin: INSET_CHART_MARGIN } : {}),
+      theme: {
+        background: "transparent",
+        foreground: "var(--color-foreground)",
+        grid: "var(--color-border)",
+        muted: "var(--color-muted-foreground)",
+        palette: series.map((item) => item.color),
+      },
+      x: {
+        axis: {
+          line: false,
+          tickLabels: {
+            anchor: ({ index }) => {
+              if (index === 0) {
+                return "start";
+              }
+              return index === timeTicks.length - 1 ? "end" : "middle";
+            },
+            thin: false,
+          },
+          ticks: {
+            format: (value) => formatTimeTick(value, spanMs),
+            padding: 8,
+            size: 0,
+            values: timeTicks,
+          },
+        },
+        scale: scaleLinear().domain([minMs, maxMs]),
+      },
+      y: {
+        axis:
+          yAxisMode === "inset"
+            ? false
+            : {
+                line: false,
+                ticks: {
+                  format: formatValue,
+                  padding: 6,
+                  size: 0,
+                  values: valueTicks,
+                },
+              },
+        grid: true,
+        scale: scaleLinear().domain(valueDomain),
+      },
+    }),
+    focus: "group-x",
+    focusRing: false,
+    keyboard: true,
+    tooltip: {
+      anchor: "group-center",
+      className: "querylane-chart-tooltip",
+      content: (points) => {
+        const valueBySeries = new Map(
+          points.map((point) => [point.datum.seriesKey, point.datum.value])
+        );
+        const time = points[0]?.xValue;
+        return {
+          ...(typeof time === "number"
+            ? { title: formatTooltipTime(time) }
+            : {}),
+          rows: series.map((item) => {
+            const value = valueBySeries.get(item.key);
+            return {
+              color: item.color,
+              label: item.label,
+              value: typeof value === "number" ? detailedValue(value) : "–",
+            };
+          }),
+        };
+      },
+      offset: 8,
+      placement: ["top", "right", "left", "bottom"],
+      sort: (left, right) =>
+        (seriesOrder.get(left.datum.seriesKey) ?? Number.MAX_SAFE_INTEGER) -
+        (seriesOrder.get(right.datum.seriesKey) ?? Number.MAX_SAFE_INTEGER),
+      sticky: false,
+      use: tooltip,
+    },
+  });
 
   return (
     <ChartContainer
       className="cursor-crosshair"
-      formatDetailedValue={formatDetailedValue}
-      formatValue={formatValue}
-      insetValueAxis={yAxisMode === "inset"}
       isRefreshing={isRefreshing}
       series={series}
       showLegend={showLegend}
     >
-      <AreaChart
-        data={data}
-        margin={yAxisMode === "inset" ? INSET_CHART_MARGIN : CHART_MARGIN}
-        {...(syncId === undefined
-          ? {}
-          : { syncId, syncMethod: "value" as const })}
-      >
-        <defs>
-          {series.map((item) => (
-            <linearGradient
-              id={`${gradientId}-${item.key}`}
-              key={item.key}
-              x1="0"
-              x2="0"
-              y1="0"
-              y2="1"
-            >
-              <stop
-                offset="0%"
-                stopColor={item.color}
-                stopOpacity={
-                  hasGradientFill && !item.dashed ? AREA_FILL_TOP_OPACITY : 0
-                }
-              />
-              <stop offset="100%" stopColor={item.color} stopOpacity={0} />
-            </linearGradient>
-          ))}
-        </defs>
-        <CartesianGrid
-          stroke="var(--color-border)"
-          strokeDasharray={GRID_DASH}
-          vertical={false}
-        />
-        <XAxis
-          axisLine={false}
-          dataKey="time"
-          domain={[minMs, maxMs]}
-          scale="time"
-          tick={
-            <EdgeAwareTimeTick
-              formatter={(value: number) => formatTimeTick(value, spanMs)}
-            />
-          }
-          tickLine={false}
-          tickMargin={8}
-          ticks={ticks}
-          type="number"
-        />
-        <Tooltip
-          content={<ChartTooltipContent />}
-          cursor={CURSOR}
-          isAnimationActive={false}
-        />
-        {thresholds?.map((threshold) => (
-          <ReferenceLine
-            ifOverflow={threshold.extendDomain ? "extendDomain" : "discard"}
-            key={threshold.value}
-            stroke={thresholdColor(threshold.tone)}
-            strokeDasharray="4 4"
-            y={threshold.value}
-            {...(threshold.label === undefined
-              ? {}
-              : {
-                  label: {
-                    fill: "var(--color-muted-foreground)",
-                    fontSize: 10,
-                    position: "insideTopRight" as const,
-                    value: threshold.label,
-                  },
-                })}
-          />
-        ))}
-        {series.map((item) => (
-          <MetricArea
-            drawMode={drawMode}
-            gradientId={gradientId}
-            item={item}
-            key={item.key}
-          />
-        ))}
-        {/* Declared AFTER the series: Recharts paints in JSX order, and inset
-            labels live inside the plot, so the axis must sit on top of the
-            data (its surface halo then punches out whatever runs beneath).
-            Layout is unaffected by declaration order. */}
-        <YAxis
-          axisLine={false}
-          orientation="right"
-          tickFormatter={(value: number) => formatValue(value)}
-          tickLine={false}
-          {...(yAxisMode === "inset"
-            ? {
-                mirror: true,
-                tick: (
-                  <InsetValueTick
-                    formatter={(value: number) => formatValue(value)}
-                  />
-                ),
-                width: 1,
-              }
-            : { tickMargin: 6, width: "auto" as const })}
-          {...(yDomain ? { domain: yDomain, ticks: evenTicks(yDomain) } : {})}
-          {...(!yDomain && autoTicks && autoTop !== undefined
-            ? { domain: [0, autoTop] as [number, number], ticks: autoTicks }
-            : {})}
-          {...(yDomain || autoTicks ? {} : { tickCount: Y_AXIS_TICK_COUNT })}
-        />
-      </AreaChart>
+      <ResponsiveChart
+        ariaLabel="Metric time series"
+        definition={definition}
+        initialHeight={INITIAL_HEIGHT}
+        initialWidth={INITIAL_WIDTH}
+      />
     </ChartContainer>
   );
 }

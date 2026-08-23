@@ -319,8 +319,8 @@ function TabChart({
     dataSeries.push({ key: overlay.series.key, points: overlay.points });
   }
 
-  // Default gutter axis: the plot stops at a reserved right-side column for
-  // the y-labels, so dense series never run underneath them.
+  // Default gutter axis: the plot reserves space for y-labels so dense series
+  // never run underneath them.
   return (
     <div className="h-72 w-full pt-4">
       <MetricChart

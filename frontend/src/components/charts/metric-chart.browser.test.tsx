@@ -68,6 +68,20 @@ test("renders the metric chart kit", async () => {
     </ScreenshotFrame>
   );
 
+  await expect
+    .element(page.getByRole("img", { name: "Metric time series" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("img", { name: "Metric trend" }))
+    .toBeVisible();
+  const filledAreaPaths = page
+    .getByTestId("metric-chart-fixture")
+    .element()
+    .querySelectorAll<SVGPathElement>('path[fill^="url("]');
+  expect(filledAreaPaths.length).toBeGreaterThanOrEqual(2);
+  for (const path of filledAreaPaths) {
+    expect(path.getAttribute("stroke-width")).toBe("0");
+  }
   await expect.element(page.getByText("Alert threshold")).toBeVisible();
   await page.getByTestId("metric-chart-surface").hover();
   await expect.element(page.getByText("15.00 req/s")).toBeVisible();

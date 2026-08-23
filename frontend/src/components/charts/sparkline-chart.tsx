@@ -1,73 +1,117 @@
+import { areaY, defineChart, lineY } from "@tanstack/charts";
+import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { useId } from "react";
-import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import type { ChartRow } from "@/components/charts/chart-context";
+import { ResponsiveChart } from "@/components/charts/responsive-chart";
 import { downsampleTrend } from "@/lib/chart-data";
 
 interface SparklineChartProps {
-  /** CSS color for the stroke/fill, e.g. `var(--color-chart-1)`. */
+  /** CSS color for the stroke/fill, for example `var(--color-chart-1)`. */
   color: string;
   data: ChartRow[];
-  /** dataKey into each row. */
   seriesKey: string;
 }
 
-const SPARK_MARGIN = { bottom: 2, left: 0, right: 0, top: 2 };
-const SPARK_FILL_TOP_OPACITY = 0.2;
-const SPARK_INITIAL_DIMENSION = { height: 32, width: 96 };
-/**
- * A trend glyph is ~90px wide; ~24 segments give 3-4px each. More reads as
- * pixel noise (a 1h window carries up to 240 raw buckets).
- */
-const SPARK_MAX_POINTS = 24;
+interface SparklineDatum {
+  time: number;
+  value: number | null;
+}
 
-/**
- * A bare trend glyph for stat tiles and dense lists: one series, no axes, no
- * grid, no tooltip — the enclosing tile carries the value and label. Fills its
- * parent, so the parent constrains the size (e.g. `h-8 w-24`). Heavy
- * (Recharts); load via the lazy boundary in metric-chart.tsx.
- */
+const SPARK_FILL_TOP_OPACITY = 0.14;
+const SPARK_INITIAL_HEIGHT = 48;
+const SPARK_INITIAL_WIDTH = 160;
+const SPARK_MAX_POINTS = 36;
+const FLAT_SERIES_PADDING_RATIO = 0.01;
+const MINIMUM_FLAT_SERIES_PADDING = 1;
+
+function finiteExtent(data: SparklineDatum[]): [number, number] {
+  let minimum = Number.POSITIVE_INFINITY;
+  let maximum = Number.NEGATIVE_INFINITY;
+  for (const row of data) {
+    if (typeof row.value === "number" && Number.isFinite(row.value)) {
+      minimum = Math.min(minimum, row.value);
+      maximum = Math.max(maximum, row.value);
+    }
+  }
+  if (!(Number.isFinite(minimum) && Number.isFinite(maximum))) {
+    return [0, 1];
+  }
+  if (minimum === maximum) {
+    const padding = Math.max(
+      Math.abs(minimum) * FLAT_SERIES_PADDING_RATIO,
+      MINIMUM_FLAT_SERIES_PADDING
+    );
+    return [minimum - padding, maximum + padding];
+  }
+  return [minimum, maximum];
+}
+
+/** A bare, parent-sized trend glyph with no guides or interaction chrome. */
 function SparklineChart({ color, data, seriesKey }: SparklineChartProps) {
-  const gradientId = useId().replaceAll(":", "");
-  const trend = downsampleTrend(data, seriesKey, SPARK_MAX_POINTS);
+  const gradientId = `spark-${useId().replaceAll(/[^a-zA-Z0-9_-]/g, "")}`;
+  const trend = downsampleTrend(data, seriesKey, SPARK_MAX_POINTS).map(
+    (row): SparklineDatum => ({
+      time: row.time,
+      value: row[seriesKey] ?? null,
+    })
+  );
+  const [minimum, maximum] = finiteExtent(trend);
+  const firstTime = trend[0]?.time ?? 0;
+  const lastTime = trend.at(-1)?.time ?? firstTime + 1;
+  const definition = defineChart({
+    focus: false,
+    keyboard: false,
+    pointer: false,
+    chart: () => ({
+      gradients: [
+        {
+          id: gradientId,
+          stops: [
+            { color, offset: 0, opacity: 0 },
+            { color, offset: 1, opacity: SPARK_FILL_TOP_OPACITY },
+          ],
+        },
+      ],
+      guides: false,
+      margin: 0,
+      marks: [
+        areaY(trend, {
+          fill: `url(#${gradientId})`,
+          id: "sparkline-fill",
+          key: (row) => row.time,
+          strokeWidth: 0,
+          x: "time",
+          y1: minimum,
+          y2: "value",
+        }),
+        lineY(trend, {
+          id: "sparkline-stroke",
+          key: (row) => row.time,
+          stroke: color,
+          strokeWidth: 1.5,
+          x: "time",
+          y: "value",
+        }),
+      ],
+      theme: {
+        background: "transparent",
+        foreground: color,
+        grid: "transparent",
+        muted: color,
+        palette: [color],
+      },
+      x: { scale: scaleLinear().domain([firstTime, lastTime]) },
+      y: { scale: scaleLinear().domain([minimum, maximum]) },
+    }),
+  });
 
   return (
-    <ResponsiveContainer
-      height="100%"
-      initialDimension={SPARK_INITIAL_DIMENSION}
-      width="100%"
-    >
-      <AreaChart data={trend} margin={SPARK_MARGIN}>
-        <defs>
-          <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-            <stop
-              offset="0%"
-              stopColor={color}
-              stopOpacity={SPARK_FILL_TOP_OPACITY}
-            />
-            <stop offset="100%" stopColor={color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <XAxis
-          dataKey="time"
-          domain={["dataMin", "dataMax"]}
-          hide={true}
-          scale="time"
-          type="number"
-        />
-        <YAxis domain={["auto", "auto"]} hide={true} />
-        <Area
-          activeDot={false}
-          connectNulls={false}
-          dataKey={seriesKey}
-          dot={false}
-          fill={`url(#${gradientId})`}
-          isAnimationActive={false}
-          stroke={color}
-          strokeWidth={1.5}
-          type="linear"
-        />
-      </AreaChart>
-    </ResponsiveContainer>
+    <ResponsiveChart
+      ariaLabel="Metric trend"
+      definition={definition}
+      initialHeight={SPARK_INITIAL_HEIGHT}
+      initialWidth={SPARK_INITIAL_WIDTH}
+    />
   );
 }
 
