@@ -489,6 +489,13 @@ test("degraded mode banner starts after the desktop sidebar", async () => {
 
   expect(sidebarRect.right).toBeGreaterThan(0);
   expect(bannerRect.left).toBeGreaterThanOrEqual(sidebarRect.right - 1);
+  expect(
+    getComputedStyle(
+      page
+        .getByRole("button", { name: "Reconfigure internal storage" })
+        .element()
+    ).backgroundColor
+  ).not.toBe("rgba(0, 0, 0, 0)");
 
   await expect(page.getByTestId("admin-shell-visual-root")).toMatchScreenshot(
     "admin-shell-degraded-mode"

@@ -270,18 +270,20 @@ export function ErrorSummaryPhase() {
           />
         ) : null}
 
-        <div className="space-y-2 rounded-xl border border-border bg-muted/30 px-4 py-3">
-          <div className="font-medium text-foreground text-sm">
-            Configuration file
+        {errorKind === "storage_full" ? null : (
+          <div className="space-y-2 rounded-xl border border-border bg-muted/30 px-4 py-3">
+            <div className="font-medium text-foreground text-sm">
+              Configuration file
+            </div>
+            <code className="block break-all rounded-lg bg-muted px-3 py-2 text-muted-foreground text-xs">
+              {configFilePath}
+            </code>
+            <p className="text-muted-foreground text-sm leading-6">
+              Use <strong>Start over</strong> to choose another storage method
+              or <strong>Reconfigure</strong> to update this connection.
+            </p>
           </div>
-          <code className="block break-all rounded-lg bg-muted px-3 py-2 text-muted-foreground text-xs">
-            {configFilePath}
-          </code>
-          <p className="text-muted-foreground text-sm leading-6">
-            Use <strong>Start over</strong> to choose another storage method or
-            <strong> Reconfigure</strong> to update this connection.
-          </p>
-        </div>
+        )}
       </div>
     </WizardPage>
   );

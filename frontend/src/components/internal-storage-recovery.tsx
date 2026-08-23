@@ -25,10 +25,10 @@ function InternalStorageRecoveryDialog({
       <DialogTrigger
         render={
           <Button
-            className="h-auto shrink-0 px-2 py-1 text-destructive text-xs hover:bg-destructive/10"
+            className="h-auto shrink-0 px-2 py-1 text-xs"
             onClick={() => setOpen(true)}
             size="sm"
-            variant="ghost"
+            variant="destructive"
           >
             Reconfigure internal storage
           </Button>
