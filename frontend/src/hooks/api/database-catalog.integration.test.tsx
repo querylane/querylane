@@ -1,10 +1,10 @@
 import { create } from "@bufbuild/protobuf";
 import type { Transport } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
+import { afterEach, describe, expect, test } from "@rstest/core";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, test } from "vitest";
 import { useDatabaseCatalogQuery } from "@/hooks/api/database-catalog";
 import {
   type ListSchemasRequest,

@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
+import { afterEach, expect, rs, test } from "@rstest/core";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, test, vi } from "vitest";
 import type { GrantsView } from "@/components/console-pages/role-detail-search";
 import { GrantsSection } from "@/components/console-pages/role-grants-tab";
 import {
@@ -9,13 +9,13 @@ import {
   OwnedObjectSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const captured = vi.hoisted(() => ({
+const captured = rs.hoisted(() => ({
   direct: [] as unknown[],
   owned: [] as unknown[],
   publicGrants: [] as unknown[],
 }));
 
-vi.mock("@/hooks/api/role", () => ({
+rs.mock("@/hooks/api/role", () => ({
   publicGrantsForDatabaseQueryInput: (input: unknown) => input,
   roleGrantsForDatabaseQueryInput: (input: unknown) => input,
   roleOwnedObjectsForDatabaseQueryInput: (input: unknown) => input,
@@ -86,8 +86,8 @@ test("owned object search is sent to the server", async () => {
       isPending={false}
       kind="login"
       objects={[]}
-      onNavigateGrants={vi.fn()}
-      onSelectDatabase={vi.fn()}
+      onNavigateGrants={rs.fn()}
+      onSelectDatabase={rs.fn()}
       ownedObjects={[
         create(OwnedObjectSchema, {
           objectName: "orders",
@@ -148,8 +148,8 @@ test("schema kind and search filters are sent together", async () => {
           schemaName: "public",
         },
       ]}
-      onNavigateGrants={vi.fn()}
-      onSelectDatabase={vi.fn()}
+      onNavigateGrants={rs.fn()}
+      onSelectDatabase={rs.fn()}
       ownedObjects={[]}
       ownedPartial={false}
       publicGrants={[]}

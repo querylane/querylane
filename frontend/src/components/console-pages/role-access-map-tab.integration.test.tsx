@@ -1,4 +1,5 @@
 import { create } from "@bufbuild/protobuf";
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import {
   cleanup,
   render,
@@ -7,7 +8,6 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, test, vi } from "vitest";
 import { RoleAccessMapTab } from "@/components/console-pages/role-access-map-tab";
 import type { RoleDetailViewProps } from "@/components/console-pages/role-detail-model";
 import type { GrantedObject } from "@/components/console-pages/role-grants-shared";
@@ -21,14 +21,14 @@ import {
   RoleSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const navigateMock = vi.hoisted(() => vi.fn());
+const navigateMock = rs.hoisted(() => rs.fn());
 const COUNT_WITH_PLUS = /\d\+/;
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigateMock,
 }));
 
-vi.mock("@/features/database-visualization/flow-canvas", () => ({
+rs.mock("@/features/database-visualization/flow-canvas", () => ({
   FlowCanvas: ({
     actionPanel,
     nodes,
@@ -96,8 +96,8 @@ function accessMapProps(): RoleDetailViewProps {
     isSystem: false,
     kind: "login",
     memberRows: [{ options: [], roleId: "reporter", roleName: "reporter" }],
-    onNavigateGrants: vi.fn(),
-    onSelectGrantsDatabase: vi.fn(),
+    onNavigateGrants: rs.fn(),
+    onSelectGrantsDatabase: rs.fn(),
     ownedObjects: [
       create(OwnedObjectSchema, {
         objectName: "job_runs",
@@ -126,8 +126,8 @@ function accessMapProps(): RoleDetailViewProps {
       roleName: "app_user",
     }),
     section: "access-map",
-    setChosenDbId: vi.fn(),
-    setSection: vi.fn(),
+    setChosenDbId: rs.fn(),
+    setSection: rs.fn(),
     sql: "CREATE ROLE app_user;",
   };
 }

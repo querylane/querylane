@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { anyPack } from "@bufbuild/protobuf/wkt";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
 import { StatusSchema } from "@/protogen/google/rpc/status_pb";
 

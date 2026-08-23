@@ -1,6 +1,6 @@
 import { create, type MessageInitShape } from "@bufbuild/protobuf";
 import { timestampDate, timestampFromDate } from "@bufbuild/protobuf/wkt";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import {
   buildAccessRows,
   builtinDetailText,

@@ -1,6 +1,14 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -10,18 +18,17 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 import { InstanceService } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import { CreateInstancePageInner } from "@/routes/new-instance-page";
 import { createTestQueryClient } from "@/test/query-client";
 import { createTestRouterTransport } from "@/test/router-transport";
 
-const routeState = vi.hoisted(() => ({
-  navigate: vi.fn(async () => undefined),
+const routeState = rs.hoisted(() => ({
+  navigate: rs.fn(async () => undefined),
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => routeState.navigate,
 }));
 

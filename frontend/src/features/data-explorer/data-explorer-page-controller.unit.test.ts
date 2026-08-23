@@ -1,6 +1,13 @@
 import type { Transport } from "@connectrpc/connect";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import { QueryClient } from "@tanstack/react-query";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { prefetchTableDetails } from "@/features/data-explorer/data-explorer-page-controller";
 import { tableDetailQueryOptions } from "@/hooks/api/table";
 import {
@@ -11,16 +18,16 @@ import {
 const transport = {} as Transport;
 
 async function runIntentPrefetchTimers() {
-  await vi.advanceTimersByTimeAsync(INTENT_PREFETCH_POLICY.delayMs);
+  await rs.advanceTimersByTimeAsync(INTENT_PREFETCH_POLICY.delayMs);
 }
 
 beforeEach(function useIntentPrefetchFakeTimers() {
-  vi.useFakeTimers();
+  rs.useFakeTimers();
 });
 
 afterEach(function expectNoIntentPrefetchTimersLeaked() {
-  const timerCount = vi.getTimerCount();
-  vi.useRealTimers();
+  const timerCount = rs.getTimerCount();
+  rs.useRealTimers();
   if (timerCount !== 0) {
     throw new Error(`Expected no leaked prefetch timers, found ${timerCount}.`);
   }
@@ -30,7 +37,7 @@ function makeQueryClientStub(calls: unknown[]): QueryClient {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY } },
   });
-  vi.spyOn(queryClient, "prefetchQuery").mockImplementation((options) => {
+  rs.spyOn(queryClient, "prefetchQuery").mockImplementation((options) => {
     calls.push(options);
     return Promise.resolve();
   });

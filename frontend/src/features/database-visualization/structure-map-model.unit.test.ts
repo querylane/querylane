@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { buildStructureMapModel } from "@/features/database-visualization/structure-map-model";
 
 describe("buildStructureMapModel", () => {

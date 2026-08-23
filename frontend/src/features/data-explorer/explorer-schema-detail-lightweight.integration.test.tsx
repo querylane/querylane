@@ -1,6 +1,9 @@
 import { create } from "@bufbuild/protobuf";
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import * as dataTableActual from "@/components/ui/data-table" with {
+  rstest: "importActual",
+};
 
 import { TableSchema } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import {
@@ -28,18 +31,15 @@ const views = [
 
 afterEach(() => {
   cleanup();
-  vi.doUnmock("@/components/ui/data-table");
-  vi.resetModules();
+  rs.doUnmock("@/components/ui/data-table");
 });
 
 describe("SchemaDetail inventory rendering", () => {
   it("renders the unified inventory through the generic DataTable", async () => {
     let loadedDataTable = false;
-    vi.doMock("@/components/ui/data-table", async (importOriginal) => {
-      const actual =
-        await importOriginal<typeof import("@/components/ui/data-table")>();
+    rs.doMock("@/components/ui/data-table", () => {
       loadedDataTable = true;
-      return actual;
+      return dataTableActual;
     });
     const { SchemaDetail } = await import(
       "@/features/data-explorer/explorer-schema-detail"
@@ -47,8 +47,8 @@ describe("SchemaDetail inventory rendering", () => {
 
     render(
       <SchemaDetail
-        onSelectTable={vi.fn()}
-        onSelectView={vi.fn()}
+        onSelectTable={rs.fn()}
+        onSelectView={rs.fn()}
         owner="app_owner"
         schemaName="public"
         tables={tables}
@@ -72,8 +72,8 @@ describe("SchemaDetail inventory rendering", () => {
 
     render(
       <SchemaDetail
-        onSelectTable={vi.fn()}
-        onSelectView={vi.fn()}
+        onSelectTable={rs.fn()}
+        onSelectView={rs.fn()}
         owner="app_owner"
         schemaName="public"
         tables={tables}

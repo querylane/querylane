@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 
 import {
   DataTable,
@@ -66,7 +66,7 @@ describe("data table integration", () => {
   });
 
   it("defers filter controls to the parent surface when filter state is controlled", () => {
-    const onFilterChange = vi.fn();
+    const onFilterChange = rs.fn();
 
     render(
       <DataTable
@@ -83,7 +83,7 @@ describe("data table integration", () => {
   });
 
   it("applies controlled filter values from the parent surface", async () => {
-    const onFilterChange = vi.fn();
+    const onFilterChange = rs.fn();
     const { rerender } = render(
       <DataTable
         columns={columns}
@@ -202,7 +202,7 @@ describe("data table integration", () => {
 
   it("emits the original Querylane row when an interactive row is selected", async () => {
     const user = userEvent.setup();
-    const onRowClick = vi.fn();
+    const onRowClick = rs.fn();
 
     render(<DataTable columns={columns} data={rows} onRowClick={onRowClick} />);
 
@@ -219,7 +219,7 @@ describe("data table integration", () => {
 
   it("announces sortable header state as sorting changes", async () => {
     const user = userEvent.setup();
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {
+    const consoleError = rs.spyOn(console, "error").mockImplementation(() => {
       // Asserted below. Keeps React's stderr warning from escaping if this regresses.
     });
 

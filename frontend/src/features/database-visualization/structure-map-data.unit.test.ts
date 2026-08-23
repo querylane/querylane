@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import {
   schemasInMapScope,
   structureMapSchemaInput,

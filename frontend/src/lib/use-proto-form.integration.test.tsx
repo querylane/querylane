@@ -1,5 +1,5 @@
+import { describe, expect, test } from "@rstest/core";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
 import { useProtoForm } from "@/lib/use-proto-form";
 import {
   PostgresConfig_SslMode,

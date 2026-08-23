@@ -1,38 +1,45 @@
 import { create } from "@bufbuild/protobuf";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { RoleDetailContent } from "@/components/console-pages/role-detail-content";
 import type { RoleDetailViewProps } from "@/components/console-pages/role-detail-model";
+import * as roleApiActual from "@/hooks/api/role" with {
+  rstest: "importActual",
+};
 import { RoleSchema } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const hookMocks = vi.hoisted(() => ({
-  dbContext: vi.fn(),
-  defaultPrivileges: vi.fn(),
-  grants: vi.fn(),
-  owned: vi.fn(),
-  publicGrants: vi.fn(),
+const hookMocks = rs.hoisted(() => ({
+  dbContext: rs.fn(),
+  defaultPrivileges: rs.fn(),
+  grants: rs.fn(),
+  owned: rs.fn(),
+  publicGrants: rs.fn(),
 }));
 
-vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(() => Promise.resolve()),
+rs.mock("@tanstack/react-router", () => ({
+  useNavigate: () => rs.fn(() => Promise.resolve()),
 }));
 
-vi.mock("@/hooks/api/role", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/hooks/api/role")>();
-  return {
-    ...original,
-    useListPublicGrantsQuery: hookMocks.publicGrants,
-    useListRoleDefaultPrivilegesQuery: hookMocks.defaultPrivileges,
-    useListRoleGrantsQuery: hookMocks.grants,
-    useListRoleOwnedObjectsQuery: hookMocks.owned,
-  };
-});
+rs.mock("@/hooks/api/role", () => ({
+  ...roleApiActual,
+  useListPublicGrantsQuery: hookMocks.publicGrants,
+  useListRoleDefaultPrivilegesQuery: hookMocks.defaultPrivileges,
+  useListRoleGrantsQuery: hookMocks.grants,
+  useListRoleOwnedObjectsQuery: hookMocks.owned,
+}));
 
-vi.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context", () => ({
   useDb: hookMocks.dbContext,
 }));
 
-vi.mock("@/components/console-pages/role-detail-view", () => ({
+rs.mock("@/components/console-pages/role-detail-view", () => ({
   RoleDetailView: (props: RoleDetailViewProps) => (
     <>
       <output data-testid="partial-flags">
@@ -64,7 +71,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
+  rs.clearAllMocks();
 });
 
 describe("RoleDetailContent", () => {

@@ -1,5 +1,5 @@
 import { Code } from "@connectrpc/connect";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@rstest/core";
 import type { AppUiError, BlockingErrorReason } from "@/lib/ui-error-types";
 import {
   decideBlockingAppRedirect,

@@ -1,15 +1,22 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import { cleanup, render, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { PostgresInstance } from "@/lib/db-resource-mappers";
 import { Route } from "@/routes/index";
 
-const state = vi.hoisted(() => ({
+const state = rs.hoisted(() => ({
   instances: [] as PostgresInstance[],
-  navigate: vi.fn(async () => undefined),
+  navigate: rs.fn(async () => undefined),
   search: {} as { instanceId?: string | undefined },
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   createFileRoute:
     () => (options: { component: () => unknown; validateSearch: unknown }) => ({
       fullPath: "/",
@@ -19,7 +26,7 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => state.navigate,
 }));
 
-vi.mock("@/hooks/api/console", () => ({
+rs.mock("@/hooks/api/console", () => ({
   useConsoleConfigStatus: () => ({
     configFilePath: "",
     isConfigManaged: false,
@@ -27,7 +34,7 @@ vi.mock("@/hooks/api/console", () => ({
   }),
 }));
 
-vi.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context", () => ({
   useDb: () => ({
     instances: state.instances,
     queryStates: {
@@ -36,7 +43,7 @@ vi.mock("@/lib/db-context", () => ({
         hasResolved: true,
       },
     },
-    retryInstanceCatalog: vi.fn(async () => undefined),
+    retryInstanceCatalog: rs.fn(async () => undefined),
   }),
 }));
 

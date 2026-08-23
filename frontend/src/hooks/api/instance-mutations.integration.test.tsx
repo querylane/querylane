@@ -5,10 +5,10 @@ import {
   useQuery as useConnectQuery,
 } from "@connectrpc/connect-query";
 import { createQueryOptions } from "@connectrpc/connect-query-core";
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   databasesForInstanceQueryInput,
   listAllDatabasesQueryOptions,
@@ -104,7 +104,7 @@ describe("instance create and update cache invalidation", () => {
       instanceListQueryKey,
       create(ListInstancesResponseSchema)
     );
-    const onSuccess = vi.fn();
+    const onSuccess = rs.fn();
     const { result } = renderHook(
       () => useCreateInstanceMutation({ onSuccess }),
       { wrapper }
@@ -553,7 +553,7 @@ describe("instance list variant cleanup", () => {
         },
       });
     });
-    const warn = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const warn = rs.spyOn(logger, "warn").mockImplementation(() => undefined);
     const { wrapper } = createWrapper(transport);
     const { result } = renderHook(
       () => ({

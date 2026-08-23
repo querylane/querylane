@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
 import type { RoleDetailViewProps } from "@/components/console-pages/role-detail-model";
 import { RoleDetailView } from "@/components/console-pages/role-detail-view";
 import type { GrantedObject } from "@/components/console-pages/role-grants-shared";
@@ -10,17 +10,17 @@ import {
   RoleSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: React.ReactNode }) => (
     <a href="/roles">{children}</a>
   ),
 }));
 
-vi.mock("@/components/console-pages/role-detail-builtins", () => ({
+rs.mock("@/components/console-pages/role-detail-builtins", () => ({
   BuiltinRoleBody: () => <div>Built-in role details</div>,
 }));
 
-vi.mock("@/components/console-pages/role-detail-tabs", () => ({
+rs.mock("@/components/console-pages/role-detail-tabs", () => ({
   OrdinaryRoleTabs: () => <div>Role tabs</div>,
 }));
 
@@ -59,8 +59,8 @@ function roleDetailProps(): RoleDetailViewProps {
     isSystem: false,
     kind: "login",
     memberRows: [],
-    onNavigateGrants: vi.fn(),
-    onSelectGrantsDatabase: vi.fn(),
+    onNavigateGrants: rs.fn(),
+    onSelectGrantsDatabase: rs.fn(),
     ownedObjects: [],
     ownedPartial: false,
     ownedReady: true,
@@ -74,8 +74,8 @@ function roleDetailProps(): RoleDetailViewProps {
       roleName: "app_user",
     }),
     section: "grants",
-    setChosenDbId: vi.fn(),
-    setSection: vi.fn(),
+    setChosenDbId: rs.fn(),
+    setSection: rs.fn(),
     sql: "CREATE ROLE app_user;",
   };
 }

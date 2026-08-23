@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { vi } from "vitest";
 import { OnboardingWizardControllerProvider } from "@/components/onboarding-wizard/controller-provider";
 import type { OnboardingWizardController } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -41,11 +40,11 @@ function createMockOnboardingController(
   overrides: Partial<OnboardingWizardController> = {}
 ): OnboardingWizardController {
   return {
-    finishWizard: vi.fn(),
-    goBackToConfigure: vi.fn(),
-    goBackToMethodSelection: vi.fn(),
-    refreshOnboardingState: vi.fn(async () => undefined),
-    retryWatch: vi.fn(async () => undefined),
+    finishWizard: () => undefined,
+    goBackToConfigure: () => undefined,
+    goBackToMethodSelection: () => undefined,
+    refreshOnboardingState: async () => undefined,
+    retryWatch: async () => undefined,
     setupRunning: false,
     watchIsRunning: false,
     watchManualRetryRequired: false,

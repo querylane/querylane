@@ -1,12 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, rs } from "@rstest/core";
 
 import { parseRouteIdsFromPathname, useCurrentRouteIds } from "@/lib/route-ids";
 
-const { useLocationMock } = vi.hoisted(() => ({
-  useLocationMock: vi.fn(),
+const { useLocationMock } = rs.hoisted(() => ({
+  useLocationMock: rs.fn(),
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   useLocation: useLocationMock,
 }));
 

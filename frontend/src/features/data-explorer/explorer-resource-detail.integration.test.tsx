@@ -1,30 +1,25 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 
 const TABLE_DETAIL_EXPORT = "TableDetail";
 const VIEW_DETAIL_EXPORT = "ViewDetail";
-type TableDetailModule = Pick<
-  typeof import("@/features/data-explorer/explorer-table-detail"),
-  "TableDetail"
->;
 
 afterEach(() => {
   cleanup();
-  vi.doUnmock("@/features/data-explorer/explorer-table-detail");
-  vi.doUnmock("@/features/data-explorer/explorer-view-detail");
-  vi.resetModules();
+  rs.doUnmock("@/features/data-explorer/explorer-table-detail");
+  rs.doUnmock("@/features/data-explorer/explorer-view-detail");
 });
 
 describe("ResourceDetail", () => {
   it("does not load table detail code for view resources", async () => {
     let loadedTableDetail = false;
-    vi.doMock("@/features/data-explorer/explorer-table-detail", () => {
+    rs.doMock("@/features/data-explorer/explorer-table-detail", () => {
       loadedTableDetail = true;
       return {
         [TABLE_DETAIL_EXPORT]: () => <div>Table detail</div>,
       };
     });
-    vi.doMock("@/features/data-explorer/explorer-view-detail", () => ({
+    rs.doMock("@/features/data-explorer/explorer-view-detail", () => ({
       [VIEW_DETAIL_EXPORT]: ({ viewName }: { viewName: string }) => (
         <div>View detail: {viewName}</div>
       ),
@@ -39,7 +34,7 @@ describe("ResourceDetail", () => {
         databaseId="db"
         instanceId="inst"
         name="active_users"
-        onTableTabChange={vi.fn()}
+        onTableTabChange={rs.fn()}
         schemaName="public"
         table={undefined}
         tableTab={undefined}
@@ -50,15 +45,23 @@ describe("ResourceDetail", () => {
     screen.getByText("View detail: active_users");
     expect(loadedTableDetail).toBe(false);
   });
-  it("paints the selected table heading while table detail code loads", async () => {
-    let resolveTableDetail: ((module: TableDetailModule) => void) | undefined;
-    vi.doMock(
-      "@/features/data-explorer/explorer-table-detail",
-      () =>
-        new Promise<TableDetailModule>((resolve) => {
-          resolveTableDetail = resolve;
-        })
-    );
+  it("paints the selected table heading while table detail suspends", async () => {
+    let tableDetailLoaded = false;
+    let resolveTableDetail: (() => void) | undefined;
+    const tableDetailLoading = new Promise<void>((resolve) => {
+      resolveTableDetail = () => {
+        tableDetailLoaded = true;
+        resolve();
+      };
+    });
+    rs.doMock("@/features/data-explorer/explorer-table-detail", () => ({
+      [TABLE_DETAIL_EXPORT]: () => {
+        if (!tableDetailLoaded) {
+          throw tableDetailLoading;
+        }
+        return <div>Table detail loaded</div>;
+      },
+    }));
     const { ResourceDetail } = await import(
       "@/features/data-explorer/explorer-resource-detail"
     );
@@ -69,7 +72,7 @@ describe("ResourceDetail", () => {
         databaseId="db"
         instanceId="inst"
         name="orders"
-        onTableTabChange={vi.fn()}
+        onTableTabChange={rs.fn()}
         schemaName="public"
         table={undefined}
         tableTab={undefined}
@@ -82,8 +85,9 @@ describe("ResourceDetail", () => {
     await waitFor(() => {
       expect(resolveTableDetail).toBeTypeOf("function");
     });
-    resolveTableDetail?.({
-      TableDetail: () => <div>Table detail loaded</div>,
+    await act(() => {
+      resolveTableDetail?.();
+      return tableDetailLoading;
     });
     await screen.findByText("Table detail loaded");
   }, 20_000);

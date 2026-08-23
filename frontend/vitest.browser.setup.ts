@@ -1,7 +1,8 @@
-import "./vitest.browser.setup.css";
-import { installUnexpectedConsoleIssueGuard } from "./vitest.console-guard";
+import "./browser-test.setup.css";
+import { afterEach } from "vitest";
+import { installUnexpectedConsoleIssueGuard } from "./test.console-guard";
 
-installUnexpectedConsoleIssueGuard();
+installUnexpectedConsoleIssueGuard(afterEach);
 
 const browserTheme =
   import.meta.env.PUBLIC_TEST_BROWSER_THEME === "dark" ? "dark" : "light";

@@ -1,5 +1,12 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import type { QueryClient } from "@tanstack/react-query";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { INTENT_PREFETCH_POLICY } from "@/lib/query-policy";
 import {
   prefetchRouteQuery,
@@ -7,16 +14,16 @@ import {
 } from "@/lib/route-prefetch";
 
 async function runIntentPrefetchTimers() {
-  await vi.advanceTimersByTimeAsync(INTENT_PREFETCH_POLICY.delayMs);
+  await rs.advanceTimersByTimeAsync(INTENT_PREFETCH_POLICY.delayMs);
 }
 
 beforeEach(function useIntentPrefetchFakeTimers() {
-  vi.useFakeTimers();
+  rs.useFakeTimers();
 });
 
 afterEach(function expectNoIntentPrefetchTimersLeaked() {
-  const timerCount = vi.getTimerCount();
-  vi.useRealTimers();
+  const timerCount = rs.getTimerCount();
+  rs.useRealTimers();
   if (timerCount !== 0) {
     throw new Error(`Expected no leaked prefetch timers, found ${timerCount}.`);
   }

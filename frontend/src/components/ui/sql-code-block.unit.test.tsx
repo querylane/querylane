@@ -1,5 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "@rstest/core";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 
 afterEach(() => {

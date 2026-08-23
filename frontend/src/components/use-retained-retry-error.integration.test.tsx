@@ -1,5 +1,5 @@
+import { describe, expect, rs, test } from "@rstest/core";
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, test, vi } from "vitest";
 
 import { useRetainedRetryError } from "@/components/use-retained-retry-error";
 
@@ -36,7 +36,7 @@ describe("useRetainedRetryError", () => {
 
   test("syncs displayed error to the latest error after a successful retry", async () => {
     const retryAttempt = createDeferred();
-    const onRetry = vi.fn(() => retryAttempt.promise);
+    const onRetry = rs.fn(() => retryAttempt.promise);
     const { rerender, result } = renderHook(
       ({ error }) => useRetainedRetryError({ error, onRetry }),
       {
@@ -67,7 +67,7 @@ describe("useRetainedRetryError", () => {
 
   test("keeps the latest refreshed error after a failed retry", async () => {
     const retryAttempt = createDeferred();
-    const onRetry = vi.fn(() => retryAttempt.promise);
+    const onRetry = rs.fn(() => retryAttempt.promise);
     const { rerender, result } = renderHook(
       ({ error }) => useRetainedRetryError({ error, onRetry }),
       {

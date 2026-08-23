@@ -1,5 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import {
   databaseResourceNameFromView,
   formatViewSqlIdentifier,

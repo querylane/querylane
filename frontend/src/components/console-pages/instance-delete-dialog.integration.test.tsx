@@ -1,11 +1,11 @@
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, test, vi } from "vitest";
 import { InstanceDeleteDialog } from "@/components/console-pages/instance-delete-dialog";
 
 function renderDeleteDialog({
-  onConfirm = vi.fn(),
-  onOpenChange = vi.fn(),
+  onConfirm = rs.fn(),
+  onOpenChange = rs.fn(),
   open = true,
   pending = false,
 }: {

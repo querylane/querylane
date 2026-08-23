@@ -1,6 +1,6 @@
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PasswordInput } from "@/components/password-input";
 import { RetryActionButton } from "@/components/retry-action-button";
@@ -37,7 +37,7 @@ describe("form controls integration", () => {
   it("runs retry once while pending and restores the idle label afterward", async () => {
     const user = userEvent.setup();
     let resolveRetry: (() => void) | undefined;
-    const onRetry = vi.fn(
+    const onRetry = rs.fn(
       () =>
         new Promise<void>((resolve) => {
           resolveRetry = resolve;
@@ -65,7 +65,7 @@ describe("form controls integration", () => {
   it("supports custom pending copy for destructive recovery actions", async () => {
     const user = userEvent.setup();
     let resolveRetry: (() => void) | undefined;
-    const onRetry = vi.fn(
+    const onRetry = rs.fn(
       () =>
         new Promise<void>((resolve) => {
           resolveRetry = resolve;
@@ -94,7 +94,7 @@ describe("form controls integration", () => {
 
   it("shows retry failures without leaving an unhandled rejection", async () => {
     const user = userEvent.setup();
-    const onRetry = vi.fn().mockRejectedValue(new Error("Connection failed"));
+    const onRetry = rs.fn().mockRejectedValue(new Error("Connection failed"));
 
     render(<RetryActionButton label="Retry" onRetry={onRetry} />);
 

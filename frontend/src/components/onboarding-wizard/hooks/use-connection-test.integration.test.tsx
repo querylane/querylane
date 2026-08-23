@@ -1,7 +1,7 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useConnectionTest } from "@/components/onboarding-wizard/hooks/use-connection-test";
 import {
@@ -9,11 +9,11 @@ import {
   PostgresConfigSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
-const { mutateAsyncMock } = vi.hoisted(() => ({
-  mutateAsyncMock: vi.fn(),
+const { mutateAsyncMock } = rs.hoisted(() => ({
+  mutateAsyncMock: rs.fn(),
 }));
 
-vi.mock("@/hooks/api/instance", () => ({
+rs.mock("@/hooks/api/instance", () => ({
   useTestInstanceConnectionMutation: () => ({
     mutateAsync: mutateAsyncMock,
   }),
@@ -33,12 +33,12 @@ function buildPostgresConfig() {
 describe("useConnectionTest", () => {
   beforeEach(() => {
     mutateAsyncMock.mockReset();
-    vi.useFakeTimers();
+    rs.useFakeTimers();
   });
 
   afterEach(() => {
-    vi.runOnlyPendingTimers();
-    vi.useRealTimers();
+    rs.runOnlyPendingTimers();
+    rs.useRealTimers();
   });
 
   it("submits a validate-only create instance request and reports temporary success", async () => {
@@ -61,7 +61,7 @@ describe("useConnectionTest", () => {
     expect(result.current.errorMessage).toBeNull();
 
     act(() => {
-      vi.advanceTimersByTime(4000);
+      rs.advanceTimersByTime(4000);
     });
 
     expect(result.current.status).toBe("idle");
@@ -93,7 +93,7 @@ describe("useConnectionTest", () => {
 
     act(() => {
       result.current.resetTest();
-      vi.advanceTimersByTime(4000);
+      rs.advanceTimersByTime(4000);
     });
 
     expect(result.current.status).toBe("idle");

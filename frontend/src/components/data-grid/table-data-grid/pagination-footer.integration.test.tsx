@@ -1,6 +1,6 @@
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 
 afterEach(() => cleanup());
@@ -8,15 +8,15 @@ afterEach(() => cleanup());
 describe("PaginationFooter", () => {
   it("groups resource-specific page sizes with navigation", async () => {
     const user = userEvent.setup();
-    const onPageSizeChange = vi.fn();
+    const onPageSizeChange = rs.fn();
 
     render(
       <PaginationFooter
         hasNext={true}
         hasPrev={false}
-        onNext={vi.fn()}
+        onNext={rs.fn()}
         onPageSizeChange={onPageSizeChange}
-        onPrev={vi.fn()}
+        onPrev={rs.fn()}
         pageLabel="Page 1 of 2"
         pageSize={10}
         pageSizeLabel="Triggers per page"
@@ -50,9 +50,9 @@ describe("PaginationFooter", () => {
     const props = {
       hasNext: true,
       hasPrev: false,
-      onNext: vi.fn(),
-      onPageSizeChange: vi.fn(),
-      onPrev: vi.fn(),
+      onNext: rs.fn(),
+      onPageSizeChange: rs.fn(),
+      onPrev: rs.fn(),
       pageLabel: "Page 1 of 4",
       pageSize: 25,
     };
@@ -79,9 +79,9 @@ describe("PaginationFooter", () => {
       <PaginationFooter
         hasNext={false}
         hasPrev={false}
-        onNext={vi.fn()}
-        onPageSizeChange={vi.fn()}
-        onPrev={vi.fn()}
+        onNext={rs.fn()}
+        onPageSizeChange={rs.fn()}
+        onPrev={rs.fn()}
         pageLabel="Page 1 of 1"
         pageSize={10}
       />

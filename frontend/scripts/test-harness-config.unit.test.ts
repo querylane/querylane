@@ -1,25 +1,31 @@
-import { describe, expect, test } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, test } from "@rstest/core";
 import { CI_REPORTERS } from "../e2e/reporters";
 import packageJson from "../package.json" with { type: "json" };
+import rstestBrowserConfig from "../rstest.browser.config";
+import rstestBrowserDarkConfig from "../rstest.browser.dark.config";
+import integrationConfig from "../rstest.integration.config";
+import { RSTEST_PROJECT_NAMES } from "../rstest.shared";
+import unitConfig from "../rstest.unit.config";
 import browserAllConfig from "../vitest.browser.all.config";
 import browserConfig from "../vitest.browser.config";
 import browserDarkConfig from "../vitest.browser.dark.config";
 import browserLightConfig from "../vitest.browser.light.config";
 import { resolveBrowserScreenshotDirectory } from "../vitest.browser.shared";
-import integrationConfig from "../vitest.integration.config";
-import {
-  VITEST_PROJECT_CONFIGS,
-  VITEST_PROJECT_NAME_ORDER,
-} from "../vitest.projects";
 import {
   VITEST_BROWSER_OPTIMIZE_DEPS,
   VITEST_PLUGIN_NAMES,
 } from "../vitest.shared";
-import unitConfig from "../vitest.unit.config";
 
 const { scripts } = packageJson;
 const VITEST_BETA_VERSION_PATTERN = /^5\.0\.0-beta\.\d+$/u;
 const PLAYWRIGHT_VERSION = "1.62.0";
+const RSTEST_VERSION = "0.11.9";
+const frontendCiWorkflow = readFileSync(
+  resolve(import.meta.dirname, "../../.github/workflows/frontend-ci.yml"),
+  "utf8"
+);
 
 function getAllowWrite(api: unknown) {
   if (
@@ -35,34 +41,48 @@ function getAllowWrite(api: unknown) {
 }
 
 describe("test harness config", () => {
-  test("splits unit, integration, browser light, and browser dark projects", () => {
-    expect([...VITEST_PROJECT_CONFIGS]).toEqual([
-      "./vitest.unit.config.ts",
-      "./vitest.integration.config.ts",
-      "./vitest.browser.light.config.ts",
-      "./vitest.browser.dark.config.ts",
-    ]);
-    expect([...VITEST_PROJECT_NAME_ORDER]).toEqual([
-      "unit",
-      "integration",
-      "browser-light",
-      "browser-dark",
-    ]);
+  test("splits Rstest suites from Vitest visual browser projects", () => {
+    expect(RSTEST_PROJECT_NAMES).toEqual({
+      browser: "browser-rstest",
+      integration: "integration",
+      unit: "unit",
+    });
+    expect(unitConfig.name).toBe("unit");
+    expect(integrationConfig.name).toBe("integration");
+    expect(browserLightConfig.test?.name).toBe("browser-light");
+    expect(browserDarkConfig.test?.name).toBe("browser-dark");
+    expect(rstestBrowserConfig.name).toBe("browser-rstest-light");
+    expect(rstestBrowserDarkConfig.name).toBe("browser-rstest-dark");
   });
 
   test("uses happy-dom and shared setup for unit and integration tests", () => {
-    expect(unitConfig.test?.environment).toBe("happy-dom");
-    expect(integrationConfig.test?.environment).toBe("happy-dom");
-    expect(unitConfig.test?.setupFiles).toEqual("./vitest.setup.ts");
-    expect(integrationConfig.test?.setupFiles).toEqual("./vitest.setup.ts");
-    expect(unitConfig.test?.execArgv).toContain("--no-experimental-webstorage");
-    expect(integrationConfig.test?.execArgv).toContain(
-      "--no-experimental-webstorage"
-    );
+    expect(unitConfig.testEnvironment).toMatchObject({ name: "happy-dom" });
+    expect(integrationConfig.testEnvironment).toMatchObject({
+      name: "happy-dom",
+    });
+    expect(unitConfig.setupFiles).toEqual(["./rstest.setup.ts"]);
+    expect(integrationConfig.setupFiles).toEqual(["./rstest.setup.ts"]);
+    expect(unitConfig.pool).toMatchObject({ type: "threads" });
+    expect(integrationConfig.pool).toMatchObject({ type: "threads" });
+    expect(unitConfig.pool).toMatchObject({
+      execArgv: expect.arrayContaining(["--no-experimental-webstorage"]),
+    });
+    expect(integrationConfig.pool).toMatchObject({
+      execArgv: expect.arrayContaining(["--no-experimental-webstorage"]),
+    });
+  });
+
+  test("enables persistent build caching for DOM suites", () => {
+    expect(unitConfig.performance?.buildCache).toBe(true);
+    expect(integrationConfig.performance?.buildCache).toBe(true);
   });
 
   test("defaults browser script and config to light mode only", () => {
-    expect(scripts["test:browser"]).toContain("vitest.browser.config.ts");
+    expect(scripts["test:browser"]).toContain("test:browser:vitest");
+    expect(scripts["test:browser"]).toContain("test:browser:rstest");
+    expect(scripts["test:browser:vitest"]).toContain(
+      "vitest.browser.config.ts"
+    );
     expect(browserConfig.test?.browser?.instances).toHaveLength(1);
     expect(browserConfig.test?.browser?.instances?.[0]).toMatchObject({
       browser: "chromium",
@@ -70,6 +90,12 @@ describe("test harness config", () => {
     });
     expect(browserLightConfig.test?.browser?.instances?.[0]).toMatchObject({
       name: "chromium-light",
+    });
+    expect(rstestBrowserConfig.browser).toMatchObject({
+      browser: "chromium",
+      enabled: true,
+      provider: "playwright",
+      providerOptions: { context: { colorScheme: "light" } },
     });
   });
 
@@ -79,12 +105,21 @@ describe("test harness config", () => {
       name: "chromium-dark",
     });
     expect(browserAllConfig.test?.browser?.instances).toHaveLength(2);
+    expect(rstestBrowserDarkConfig.browser).toMatchObject({
+      providerOptions: { context: { colorScheme: "dark" } },
+    });
+    expect(scripts["test:browser:ci"]).toContain("test:browser:vitest:ci");
+    expect(scripts["test:browser:ci"]).toContain("test:browser:rstest:ci");
   });
 
   test("keeps browser checks fast, deterministic, and Chromium only", () => {
     expect(browserLightConfig.test?.testTimeout).toBeLessThanOrEqual(10_000);
     expect(browserDarkConfig.test?.testTimeout).toBeLessThanOrEqual(10_000);
     expect(browserLightConfig.test?.browser?.viewport).toEqual({
+      height: 1000,
+      width: 1280,
+    });
+    expect(rstestBrowserConfig.browser?.viewport).toEqual({
       height: 1000,
       width: 1280,
     });
@@ -118,15 +153,20 @@ describe("test harness config", () => {
     ).toBe("/repo/frontend/src/components/__screenshots__/dark");
   });
 
-  test("uses one requested prerelease Vitest browser dependency set", () => {
+  test("pins Rstest and keeps Vitest beta for visual browser suites", () => {
     const { devDependencies } = packageJson;
     const vitestVersion = devDependencies.vitest;
 
+    expect(devDependencies["@rstest/core"]).toBe(RSTEST_VERSION);
+    expect(devDependencies["@rstest/browser"]).toBe(RSTEST_VERSION);
+    expect(devDependencies["@rstest/browser-react"]).toBe(RSTEST_VERSION);
+    expect(devDependencies["expect-type"]).toBe("1.4.0");
     expect(vitestVersion).toMatch(VITEST_BETA_VERSION_PATTERN);
     expect(devDependencies["@vitest/browser"]).toBe(vitestVersion);
     expect(devDependencies["@vitest/browser-playwright"]).toBe(vitestVersion);
-    expect(devDependencies["@vitest/coverage-v8"]).toBe(vitestVersion);
     expect(devDependencies["@vitest/ui"]).toBe(vitestVersion);
+    expect(devDependencies).not.toHaveProperty("@vitest/coverage-v8");
+    expect(devDependencies).not.toHaveProperty("@vitest/expect");
   });
 
   test("pins the stable Playwright package set", () => {
@@ -147,6 +187,10 @@ describe("test harness config", () => {
     ]);
   });
 
+  test("does not force the agent-only Markdown reporter in CI", () => {
+    expect(frontendCiWorkflow).not.toContain("--reporter=md");
+  });
+
   test("prebundles browser dependencies without late discovery", () => {
     expect(browserLightConfig.optimizeDeps?.noDiscovery).toBe(true);
     expect([...VITEST_BROWSER_OPTIMIZE_DEPS]).toEqual(
@@ -161,7 +205,7 @@ describe("test harness config", () => {
     );
   });
 
-  test("keeps jsdom and direct Babel plugins out of Vitest", () => {
+  test("keeps jsdom and direct Babel plugins out of the test runners", () => {
     expect(packageJson.devDependencies).not.toHaveProperty("jsdom");
     expect(packageJson.dependencies).not.toHaveProperty("jsdom");
     expect(packageJson.devDependencies).not.toHaveProperty("@babel/core");
@@ -172,7 +216,13 @@ describe("test harness config", () => {
       "@vitejs/plugin-react"
     );
     expect([...VITEST_PLUGIN_NAMES]).toEqual(["tailwindcss"]);
-    expect(unitConfig.plugins).toHaveLength(1);
+    expect(unitConfig.plugins?.map((plugin) => plugin?.name)).toEqual([
+      "rsbuild:react",
+    ]);
+    expect(rstestBrowserConfig.plugins?.map((plugin) => plugin?.name)).toEqual([
+      "rsbuild:react",
+      "rsbuild:tailwindcss",
+    ]);
   });
 
   test("does not expose scripts whose backing files are gone", () => {
@@ -232,7 +282,7 @@ describe("test harness config", () => {
 
   test("does not expose diagnostic wrapper commands", () => {
     expect(scripts["test:integration:leaks"]).toBe(
-      "vitest run --config vitest.integration.config.ts --detectAsyncLeaks"
+      "rstest --config rstest.integration.config.ts --detectAsyncLeaks --bail=1"
     );
     expect(scripts).not.toHaveProperty("test:unit:leaks");
     expect(scripts).not.toHaveProperty("test:browser:dark");

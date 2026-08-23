@@ -9,10 +9,10 @@
  *   - Rows not matching the search are absent from the rendered table.
  */
 
+import { afterEach, describe, expect, test } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, test } from "vitest";
 import { GrantedObjectsTable } from "@/components/console-pages/role-grants-object-table";
 import type { GrantedObject } from "@/components/console-pages/role-grants-shared";
 import { GrantObjectType } from "@/protogen/querylane/console/v1alpha1/role_pb";

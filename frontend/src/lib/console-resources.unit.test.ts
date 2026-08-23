@@ -1,5 +1,5 @@
 import { timestampFromDate } from "@bufbuild/protobuf/wkt";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import {
   buildDatabaseName,
   buildInstanceName,
@@ -232,7 +232,7 @@ describe("formatBytes", () => {
 
 describe("time labels", () => {
   afterEach(() => {
-    vi.useRealTimers();
+    rs.useRealTimers();
   });
 
   it("formats absent timestamps as an em dash", () => {
@@ -240,8 +240,8 @@ describe("time labels", () => {
   });
 
   it("formats uptime at minute, hour, and day boundaries", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-05-20T12:00:00Z"));
+    rs.useFakeTimers();
+    rs.setSystemTime(new Date("2026-05-20T12:00:00Z"));
 
     expect(
       formatUptime(timestampFromDate(new Date("2026-05-20T11:59:05Z")))

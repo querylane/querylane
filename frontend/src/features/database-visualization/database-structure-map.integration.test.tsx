@@ -1,4 +1,12 @@
 import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
+import {
   cleanup,
   render,
   screen,
@@ -6,15 +14,14 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { DatabaseStructureMap } from "@/features/database-visualization/database-structure-map";
 import { useDatabaseVisualizationStore } from "@/features/database-visualization/database-visualization-store";
 
-vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(),
+rs.mock("@tanstack/react-router", () => ({
+  useNavigate: () => rs.fn(),
 }));
 
-vi.mock("@/features/database-visualization/flow-canvas", () => ({
+rs.mock("@/features/database-visualization/flow-canvas", () => ({
   FlowCanvas: ({
     actionPanel,
     nodes,
@@ -32,7 +39,7 @@ vi.mock("@/features/database-visualization/flow-canvas", () => ({
   ),
 }));
 
-vi.mock("@/features/database-visualization/structure-map-data", () => ({
+rs.mock("@/features/database-visualization/structure-map-data", () => ({
   useStructureMapData: () => ({
     error: null,
     hasPartialData: false,
@@ -125,7 +132,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
+  rs.clearAllMocks();
 });
 
 describe("DatabaseStructureMap", () => {

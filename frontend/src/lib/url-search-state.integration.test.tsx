@@ -1,3 +1,4 @@
+import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -15,7 +16,6 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { Input } from "@/components/ui/input";
 import { useUrlTableSearch } from "@/lib/url-search-state";
 
@@ -85,7 +85,7 @@ describe("url table search state", () => {
   it("omits empty q and replaces history when search is cleared", async () => {
     const user = userEvent.setup();
     const router = renderSearchHarness("/instances/prod/roles?q=app_user");
-    const onReplace = vi.fn();
+    const onReplace = rs.fn();
 
     router.history.subscribe(({ action, location }) => {
       if (action.type === "REPLACE") {

@@ -1,6 +1,6 @@
+import { describe, expect, rs, test } from "@rstest/core";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, test, vi } from "vitest";
 import {
   Sidebar,
   SidebarInset,
@@ -14,13 +14,13 @@ function stubDesktopHoverViewport(canHover = true) {
     configurable: true,
     value: 1280,
   });
-  vi.stubGlobal("matchMedia", (query: string) => ({
-    addEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
+  rs.stubGlobal("matchMedia", (query: string) => ({
+    addEventListener: rs.fn(),
+    dispatchEvent: rs.fn(),
     matches: canHover && query === "(hover: hover) and (pointer: fine)",
     media: query,
     onchange: null,
-    removeEventListener: vi.fn(),
+    removeEventListener: rs.fn(),
   }));
 }
 
@@ -38,7 +38,7 @@ function dispatchPointerMove(
 }
 
 function stubSidebarBounds(sidebarPanel: HTMLElement) {
-  vi.spyOn(sidebarPanel, "getBoundingClientRect").mockReturnValue(
+  rs.spyOn(sidebarPanel, "getBoundingClientRect").mockReturnValue(
     DOMRect.fromRect({
       height: 720,
       width: 256,

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "@rstest/core";
 import { schemasForDatabaseQueryInput } from "@/hooks/api/schema";
 
 describe("schema query option helpers", () => {

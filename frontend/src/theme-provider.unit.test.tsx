@@ -1,8 +1,8 @@
+import { afterEach, beforeEach, describe, expect, it } from "@rstest/core";
 import { Window } from "happy-dom";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Button } from "@/components/ui/button";
 import {
   type ResolvedTheme,

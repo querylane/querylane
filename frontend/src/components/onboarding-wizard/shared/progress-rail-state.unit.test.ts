@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@rstest/core";
 import { getRailDoneCount } from "@/components/onboarding-wizard/shared/progress-rail-state";
 import {
   SetupProgressEventSchema,

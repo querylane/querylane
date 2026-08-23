@@ -1,5 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, rs } from "@rstest/core";
 
 import {
   AppDatabaseStatus_State,
@@ -47,7 +47,7 @@ function createInterleavedTestStore() {
   const olderRequest = Promise.withResolvers<GetOnboardingStateResponse>();
   const newerRequest = Promise.withResolvers<GetOnboardingStateResponse>();
   const { useSetupStore } = createTestStore(
-    vi
+    rs
       .fn()
       .mockReturnValueOnce(olderRequest.promise)
       .mockReturnValueOnce(newerRequest.promise)
@@ -226,7 +226,7 @@ describe("setup-store request sequencing", () => {
         state: AppDatabaseStatus_State.NOT_CONFIGURED,
       })
     );
-    await vi.waitFor(() => {
+    await rs.waitFor(() => {
       expect(useSetupStore.getState().onboardingState?.isConfigured).toBe(
         false
       );

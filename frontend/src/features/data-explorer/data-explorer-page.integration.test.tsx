@@ -1,8 +1,8 @@
 import { Code, ConnectError } from "@connectrpc/connect";
+import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataExplorerPage } from "@/features/data-explorer/data-explorer-page";
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
@@ -18,7 +18,7 @@ function ExplorerRailSlotTarget() {
   return <div data-testid="explorer-rail-slot" ref={registerSlotTarget} />;
 }
 
-const mocks = vi.hoisted(() => ({
+const mocks = rs.hoisted(() => ({
   getSchemaQuery: {
     data: undefined as
       | {
@@ -33,8 +33,8 @@ const mocks = vi.hoisted(() => ({
     isFetching: false,
     isLoading: false,
   },
-  navigate: vi.fn(),
-  prefetchRouteQueryOnIntent: vi.fn(),
+  navigate: rs.fn(),
+  prefetchRouteQueryOnIntent: rs.fn(),
   schemasQuery: {
     data: undefined as
       | {
@@ -48,12 +48,12 @@ const mocks = vi.hoisted(() => ({
         }
       | undefined,
     error: new Error("schema rpc failed") as Error | null,
-    fetchNextPage: vi.fn(() => Promise.resolve()),
+    fetchNextPage: rs.fn(() => Promise.resolve()),
     hasNextPage: false,
     isFetching: false,
     isFetchingNextPage: false,
     isPending: false,
-    refetch: vi.fn(() => Promise.resolve()),
+    refetch: rs.fn(() => Promise.resolve()),
   },
   tablesQuery: {
     data: undefined as
@@ -71,7 +71,7 @@ const mocks = vi.hoisted(() => ({
       | undefined,
     error: null,
     isLoading: false,
-    refetch: vi.fn(() => Promise.resolve()),
+    refetch: rs.fn(() => Promise.resolve()),
   },
   viewsQuery: {
     data: {
@@ -88,36 +88,36 @@ const mocks = vi.hoisted(() => ({
       ],
     },
     error: null,
-    fetchNextPage: vi.fn(() => Promise.resolve()),
+    fetchNextPage: rs.fn(() => Promise.resolve()),
     hasNextPage: false,
     isFetchingNextPage: false,
     isLoading: false,
-    refetch: vi.fn(() => Promise.resolve()),
+    refetch: rs.fn(() => Promise.resolve()),
   },
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
 }));
 
-vi.mock("@/components/querylane-ui/sidebar", () => ({
-  useSidebar: () => ({ isMobile: false, setOpenMobile: vi.fn() }),
+rs.mock("@/components/querylane-ui/sidebar", () => ({
+  useSidebar: () => ({ isMobile: false, setOpenMobile: rs.fn() }),
 }));
 
-vi.mock("@connectrpc/connect-query", () => ({
+rs.mock("@connectrpc/connect-query", () => ({
   useQuery: () => ({ data: undefined }),
   useTransport: () => ({}),
 }));
 
-vi.mock("@/hooks/api/schema", () => ({
-  schemasForDatabaseQueryInput: vi.fn((input) => input),
+rs.mock("@/hooks/api/schema", () => ({
+  schemasForDatabaseQueryInput: rs.fn((input) => input),
   useGetSchemaQuery: () => mocks.getSchemaQuery,
   useListSchemasInfiniteQuery: () => mocks.schemasQuery,
 }));
 
-vi.mock("@/hooks/api/table", () => ({
-  assertNoUnhandledTableDetailQueries: vi.fn(),
-  tableDetailQueryOptions: vi.fn(() => [
+rs.mock("@/hooks/api/table", () => ({
+  assertNoUnhandledTableDetailQueries: rs.fn(),
+  tableDetailQueryOptions: rs.fn(() => [
     { queryKey: ["columns"], staleTime: 1 },
     { queryKey: ["indexes"], staleTime: 1 },
     { queryKey: ["constraints"], staleTime: 1 },
@@ -125,7 +125,7 @@ vi.mock("@/hooks/api/table", () => ({
     { queryKey: ["triggers"], staleTime: 1 },
     { queryKey: ["partition-metadata"], staleTime: 1 },
   ]),
-  tablesForSchemaQueryInput: vi.fn((input) => input),
+  tablesForSchemaQueryInput: rs.fn((input) => input),
   useGetTablePartitionMetadataQuery: () => ({
     data: {
       partitionMetadata: {
@@ -140,23 +140,23 @@ vi.mock("@/hooks/api/table", () => ({
     error: null,
     isFetching: false,
     isLoading: false,
-    refetch: vi.fn(() => Promise.resolve()),
+    refetch: rs.fn(() => Promise.resolve()),
   }),
   useGetTableQuery: () => ({ data: undefined }),
   useListTablesInfiniteQuery: () => mocks.tablesQuery,
 }));
 
-vi.mock("@/hooks/api/view", () => ({
+rs.mock("@/hooks/api/view", () => ({
   useGetViewQuery: () => ({ data: undefined }),
   useListViewsInfiniteQuery: () => mocks.viewsQuery,
-  viewsForSchemaQueryInput: vi.fn((input) => input),
+  viewsForSchemaQueryInput: rs.fn((input) => input),
 }));
 
-vi.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context", () => ({
   useDb: () => ({ selectedDatabase: { name: "appdb" } }),
 }));
 
-vi.mock("@/lib/route-prefetch", () => ({
+rs.mock("@/lib/route-prefetch", () => ({
   prefetchRouteQueryOnIntent: mocks.prefetchRouteQueryOnIntent,
 }));
 
@@ -200,7 +200,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
+  rs.clearAllMocks();
 });
 
 describe("DataExplorerPage", () => {
