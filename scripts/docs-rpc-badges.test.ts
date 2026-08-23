@@ -113,14 +113,18 @@ test("replaces HTTP badges only for known RPC navigation routes", () => {
 	]);
 });
 
-test("keeps Blume authorization details and request credentials in RPC operations", async () => {
+test("keeps Blume authorization and playground behavior in RPC operations", async () => {
 	const operation = await readFile(
 		new URL("../docs/components/openapi/Operation.astro", import.meta.url),
 		"utf8",
 	);
 
 	expect(operation).toContain("<Authorization security={security} />");
-	expect(operation).toContain("sampleAuth(security)");
+	expect(operation).toContain("operationModel({");
+	expect(operation).toContain("<Playground");
+	expect(operation).toContain("spec.playground.enabled");
+	expect(operation).toContain("<querylane-operation-panel");
+	expect(operation).toContain('import "./go-playground.ts"');
 });
 
 test("wraps long RPC summaries and routes in API overview cards", async () => {

@@ -1,60 +1,64 @@
 ---
 import specs from "blume:openapi";
-import {
-  mergeParameters,
-  type ParameterLike,
-  resolveComponentRef,
-  type SchemaLike,
-} from "blume/components/openapi/helpers.ts";
-import {
-  effectiveSecurity,
-  resolveSecurity,
-  sampleAuth,
-  type SecurityRequirementLike,
-  type SecuritySchemeLike,
-} from "blume/components/openapi/security.ts";
-import { buildRequestSample } from "blume/components/openapi/snippets.ts";
 import Authorization from "blume/components/openapi/Authorization.astro";
+import {
+	mergeParameters,
+	type ParameterLike,
+	resolveComponentRef,
+	type SchemaLike,
+} from "blume/components/openapi/helpers.ts";
+import { operationModel } from "blume/components/openapi/operation-model.ts";
 import ParametersTable from "blume/components/openapi/ParametersTable.astro";
+import Playground from "blume/components/openapi/Playground.astro";
 import RequestBody from "blume/components/openapi/RequestBody.astro";
 import RequestPanel from "blume/components/openapi/RequestPanel.astro";
 import Responses from "blume/components/openapi/Responses.astro";
+import {
+	buildRequest,
+	defaultValues,
+} from "blume/components/openapi/request.ts";
+import {
+	effectiveSecurity,
+	resolveSecurity,
+	type SecurityRequirementLike,
+	type SecuritySchemeLike,
+} from "blume/components/openapi/security.ts";
 import { visibleOperationParameters } from "./parameters.ts";
 import RpcBadge from "./RpcBadge.astro";
 import { querylaneSampleLanguages } from "./request-samples.ts";
 import { rpcPresentationForReference } from "./rpc-kind.ts";
 
 interface Props {
-  source: string;
-  id: string;
+	source: string;
+	id: string;
 }
 
 interface MediaTypeLike {
-  schema?: SchemaLike;
-  example?: unknown;
+	schema?: SchemaLike;
+	example?: unknown;
 }
 
 interface RequestBodyLike {
-  $ref?: string;
-  description?: string;
-  required?: boolean;
-  content?: Record<string, MediaTypeLike>;
+	$ref?: string;
+	description?: string;
+	required?: boolean;
+	content?: Record<string, MediaTypeLike>;
 }
 
 interface ResponseLike {
-  $ref?: string;
-  description?: string;
-  content?: Record<string, MediaTypeLike>;
+	$ref?: string;
+	description?: string;
+	content?: Record<string, MediaTypeLike>;
 }
 
 interface FullOperation {
-  summary?: string;
-  description?: string;
-  deprecated?: boolean;
-  parameters?: ParameterLike[];
-  requestBody?: RequestBodyLike;
-  responses?: Record<string, ResponseLike>;
-  security?: SecurityRequirementLike[];
+	summary?: string;
+	description?: string;
+	deprecated?: boolean;
+	parameters?: ParameterLike[];
+	requestBody?: RequestBodyLike;
+	responses?: Record<string, ResponseLike>;
+	security?: SecurityRequirementLike[];
 }
 
 const { source, id } = Astro.props;
@@ -62,62 +66,64 @@ const spec = specs[source];
 const ref = spec?.operations[id];
 
 const doc = (spec?.document ?? {}) as {
-  paths?: Record<
-    string,
-    Record<string, unknown> & { parameters?: ParameterLike[] }
-  >;
-  components?: {
-    schemas?: Record<string, SchemaLike>;
-    parameters?: Record<string, ParameterLike>;
-    requestBodies?: Record<string, RequestBodyLike>;
-    responses?: Record<string, ResponseLike>;
-    securitySchemes?: Record<string, SecuritySchemeLike>;
-  };
-  security?: SecurityRequirementLike[];
-  servers?: { url?: string }[];
+	paths?: Record<
+		string,
+		Record<string, unknown> & { parameters?: ParameterLike[] }
+	>;
+	components?: {
+		schemas?: Record<string, SchemaLike>;
+		parameters?: Record<string, ParameterLike>;
+		requestBodies?: Record<string, RequestBodyLike>;
+		responses?: Record<string, ResponseLike>;
+		securitySchemes?: Record<string, SecuritySchemeLike>;
+	};
+	security?: SecurityRequirementLike[];
+	servers?: { url?: string }[];
 };
 const pathItem = ref ? doc.paths?.[ref.path] : undefined;
-const operation = (
-  pathItem && ref ? pathItem[ref.method] : undefined
-) as FullOperation | undefined;
+const operation = (pathItem && ref ? pathItem[ref.method] : undefined) as
+	| FullOperation
+	| undefined;
 
 const schemas = doc.components?.schemas ?? {};
 const components = doc.components ?? {};
 const params = mergeParameters(
-  pathItem?.parameters,
-  operation?.parameters,
-  components
+	pathItem?.parameters,
+	operation?.parameters,
+	components,
 );
 const visibleParams = visibleOperationParameters(params);
 const requestBody = operation?.requestBody
-  ? resolveComponentRef(operation.requestBody, components, "requestBodies")
-  : undefined;
+	? resolveComponentRef(operation.requestBody, components, "requestBodies")
+	: undefined;
 const responses = Object.fromEntries(
-  Object.entries(operation?.responses ?? {}).map(([status, response]) => [
-    status,
-    resolveComponentRef(response, components, "responses"),
-  ])
+	Object.entries(operation?.responses ?? {}).map(([status, response]) => [
+		status,
+		resolveComponentRef(response, components, "responses"),
+	]),
 );
 const security = resolveSecurity(
-  effectiveSecurity(operation?.security, doc.security),
-  doc.components?.securitySchemes
+	effectiveSecurity(operation?.security, doc.security),
+	doc.components?.securitySchemes,
 );
 
-const sample =
-  ref && operation
-    ? buildRequestSample(
-        { parameters: params, requestBody },
-        ref.method,
-        ref.path,
-        doc.servers ?? [],
-        schemas,
-        sampleAuth(security)
-      )
-    : null;
+const model =
+	ref && operation
+		? operationModel({
+				method: ref.method,
+				parameters: params,
+				path: ref.path,
+				requestBody,
+				schemas,
+				security,
+				servers: doc.servers ?? [],
+			})
+		: null;
+const sample = model ? buildRequest(model, defaultValues(model)) : null;
 const languages = querylaneSampleLanguages(spec?.codeSamples ?? []);
 const presentation = ref
-  ? rpcPresentationForReference(spec?.document, ref)
-  : undefined;
+	? rpcPresentationForReference(spec?.document, ref)
+	: undefined;
 ---
 
 {
@@ -155,17 +161,32 @@ const presentation = ref
             />
           )}
         </div>
-        {sample && (
-          <div class="xl:sticky xl:top-24 xl:self-start">
+        {sample && model && (
+          <querylane-operation-panel
+            class="xl:sticky xl:top-24 xl:self-start"
+            data-operation-panel
+          >
+            {spec.playground.enabled && (
+              <Playground
+                model={model}
+                operation={id}
+                proxy={spec.playground.proxy}
+                slug={spec.slug}
+              />
+            )}
             <RequestPanel
               languages={languages}
               responses={responses}
               sample={sample}
               schemas={schemas}
             />
-          </div>
+          </querylane-operation-panel>
         )}
       </div>
     </div>
   )
 }
+
+<script>
+  import "./go-playground.ts";
+</script>

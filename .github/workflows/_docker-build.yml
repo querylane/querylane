@@ -61,6 +61,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.0
         with:
+          # Blume uses Git history for accurate sitemap and "Last updated" dates.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Docker metadata
