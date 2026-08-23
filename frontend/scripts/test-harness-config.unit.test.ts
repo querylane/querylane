@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, test } from "@rstest/core";
 import { CI_REPORTERS } from "../e2e/reporters";
 import packageJson from "../package.json" with { type: "json" };
@@ -20,6 +22,10 @@ const { scripts } = packageJson;
 const VITEST_BETA_VERSION_PATTERN = /^5\.0\.0-beta\.\d+$/u;
 const PLAYWRIGHT_VERSION = "1.62.0";
 const RSTEST_VERSION = "0.11.9";
+const frontendCiWorkflow = readFileSync(
+  resolve(import.meta.dirname, "../../.github/workflows/frontend-ci.yml"),
+  "utf8"
+);
 
 function getAllowWrite(api: unknown) {
   if (
@@ -179,6 +185,10 @@ describe("test harness config", () => {
         outputFolder: "playwright-report",
       },
     ]);
+  });
+
+  test("does not force the agent-only Markdown reporter in CI", () => {
+    expect(frontendCiWorkflow).not.toContain("--reporter=md");
   });
 
   test("prebundles browser dependencies without late discovery", () => {

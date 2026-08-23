@@ -98,9 +98,9 @@ jobs:
           set -euo pipefail
           changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
           if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(doctor\.config\.ts|react-doctor\.config\.json|package\.json|bun\.lock|postcss\.config\.mjs|rstest[^/]*\.ts|test\.console-guard\.ts|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|react-doctor-policy|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
-            bun run test:unit -- --reporter=md
+            bun run test:unit
           else
-            bun run test:unit:changed -- --reporter=md
+            bun run test:unit:changed
           fi
 
   integration:
@@ -138,9 +138,9 @@ jobs:
           set -euo pipefail
           changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
           if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|postcss\.config\.mjs|rstest[^/]*\.ts|test\.console-guard\.ts|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
-            bun run test:integration -- --reporter=md
+            bun run test:integration
           else
-            bun run test:integration:changed -- --reporter=md
+            bun run test:integration:changed
           fi
 
   browser:
