@@ -269,17 +269,7 @@ func PruneAuditLogEntriesOlderThan(ctx context.Context, db QueryExecutor, age ti
 	var total int64
 
 	for {
-		result, err := db.ExecContext(ctx, `
-			WITH expired AS (
-				SELECT id
-				FROM mutation_audit_log
-				WHERE start_time < now() - ($1::bigint * interval '1 microsecond')
-				ORDER BY id
-				LIMIT $2
-			)
-			DELETE FROM mutation_audit_log AS audit
-			USING expired
-			WHERE audit.id = expired.id`, age.Microseconds(), batchSize)
+		result, err := auditLogPruneStatement(age, batchSize).ExecContext(ctx, db)
 		if err != nil {
 			return 0, fmt.Errorf("prune mutation audit log: %w", err)
 		}
@@ -294,4 +284,21 @@ func PruneAuditLogEntriesOlderThan(ctx context.Context, db QueryExecutor, age ti
 			return total, nil
 		}
 	}
+}
+
+func auditLogPruneStatement(age time.Duration, batchSize int64) postgres.Statement {
+	expiredID := postgres.IntegerColumn("id")
+	expired := postgres.CTE("expired", expiredID).AS(
+		postgres.SELECT(table.MutationAuditLog.ID).
+			FROM(table.MutationAuditLog).
+			WHERE(table.MutationAuditLog.StartTime.LT(postgres.NOW().SUB(postgres.INTERVALd(age)))).
+			ORDER_BY(table.MutationAuditLog.ID.ASC()).
+			LIMIT(batchSize),
+	)
+
+	return postgres.WITH(expired)(
+		table.MutationAuditLog.DELETE().
+			USING(expired).
+			WHERE(table.MutationAuditLog.ID.EQ(expiredID.From(expired))),
+	)
 }

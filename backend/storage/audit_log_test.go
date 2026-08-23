@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -9,6 +10,22 @@ import (
 
 	"github.com/querylane/querylane/backend/aip"
 )
+
+func TestAuditLogPruneStatementUsesBoundedJetDelete(t *testing.T) {
+	t.Parallel()
+
+	query := auditLogPruneStatement(90*24*time.Hour, 2).DebugSql()
+
+	for _, fragment := range []string{
+		"WITH expired",
+		"LIMIT 2",
+		"DELETE FROM public.mutation_audit_log",
+		"USING expired",
+		"mutation_audit_log.id = expired.id",
+	} {
+		assert.Containsf(t, query, fragment, "expected %q in Jet SQL:\n%s", fragment, query)
+	}
+}
 
 func TestIntegrationAuditLogPersistsAttemptBeforeOutcomeAndPagesNewestFirst(t *testing.T) {
 	t.Parallel()
