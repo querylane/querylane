@@ -9,7 +9,7 @@ var viewDependencyTemplate = strings.Split(ViewDependencyPattern, "/")
 
 // ViewDependencyName represents a parsed view dependency resource name.
 // Format: instances/{instance}/databases/{database}/schemas/{schema}/views/{view}/viewDependencies/{view_dependency}.
-type ViewDependencyName struct { //nolint:recvcheck // UnmarshalText requires pointer receiver
+type ViewDependencyName struct {
 	InstanceID       string
 	DatabaseID       string
 	SchemaID         string

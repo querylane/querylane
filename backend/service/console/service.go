@@ -17,11 +17,15 @@ import (
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 )
 
+// unknownBuildValue is the placeholder used whenever build metadata cannot be
+// determined from -ldflags or the embedded build info.
+const unknownBuildValue = "unknown"
+
 // Build-time variables injected via -ldflags.
 var (
 	// GitBranch is the git branch this binary was built from.
 	// This is populated at build time via -ldflags.
-	GitBranch = "unknown"
+	GitBranch = unknownBuildValue
 )
 
 // Ensure Service implements the ConsoleServiceHandler interface at compile time.
@@ -106,8 +110,8 @@ func (s *Service) getDatabaseStatus(ctx context.Context) *v1alpha1.AppDatabaseSt
 // from the embedded build information, and includes the git branch from build-time injection.
 func extractBuildInfo(ctx context.Context, buildInfo *debug.BuildInfo) *v1alpha1.BuildInfo {
 	result := &v1alpha1.BuildInfo{
-		Version:   "unknown",
-		GitCommit: "unknown",
+		Version:   unknownBuildValue,
+		GitCommit: unknownBuildValue,
 		GitBranch: GitBranch,
 		BuiltAt:   nil,
 	}
@@ -141,7 +145,7 @@ func extractBuildInfo(ctx context.Context, buildInfo *debug.BuildInfo) *v1alpha1
 	}
 
 	// If we couldn't get git commit from vcs.revision, try to extract from version
-	if result.GitCommit == "unknown" && result.Version != "unknown" {
+	if result.GitCommit == unknownBuildValue && result.Version != unknownBuildValue {
 		// Try to extract commit from version strings like "v1.0.0-20231201123456-abcdef123456"
 		if len(result.Version) > 12 {
 			parts := result.Version[len(result.Version)-12:]

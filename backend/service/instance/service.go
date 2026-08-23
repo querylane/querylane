@@ -388,8 +388,7 @@ func (s *Service) UpdateInstance(ctx context.Context, req *connect.Request[v1alp
 	}
 
 	if err != nil {
-		var connectErr *connect.Error
-		if errors.As(err, &connectErr) {
+		if connectErr, ok := errors.AsType[*connect.Error](err); ok {
 			return nil, connectErr
 		}
 
@@ -987,8 +986,7 @@ func connectionTestErrorWithDetails(ctx context.Context, field string, instanceN
 		return genericConnectionTestError()
 	}
 
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return postgresConnectionTestError(field, pgErr)
 	}
 
@@ -1028,8 +1026,7 @@ func connectionTestLogError(err error) string {
 		return ""
 	}
 
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return postgreserrors.Wrap(
 			pgErr,
 			postgreserrors.ProfileDefault,

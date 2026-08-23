@@ -7,9 +7,11 @@ linters:
     - cyclop # covered by gocyclo
     - depguard # we don't maintain a guard list yet, may be added later
     - exhaustruct # not always desired, can clutter code a lot
+    - exhaustruct_v5 # deprecated alias pair: `default: all` enables both names
     - funlen  # rely on code review to limit function length
     - gochecknoglobals
     - gocognit # dubious "cognitive overhead" quantification
+    - gomodguard # deprecated alias of gomodguard_v2, which stays enabled via `default: all`
     - inamedparam # convention is not followed
     - ireturn # don't think it's an idiomatic practice
     - lll # don't want hard limits for line length
@@ -23,6 +25,7 @@ linters:
     - varnamelen # oftentimes short varnames are fine
     - wrapcheck # we don't always have to wrap errors
     - wsl # too much enforced whitespace
+    - wsl_v5 # deprecated alias pair: `default: all` enables both names
   settings:
     errcheck:
       check-type-assertions: true
@@ -38,6 +41,8 @@ linters:
         - FIXME
     goconst:
       min-occurrences: 4 # 3 is too aggressive for column name strings in cursor extractors
+      ignore-tests: true # golangci-lint v2.12 started counting test-file strings; tests legitimately repeat literals
+      ignore-map-keys: true # AIP schema field names are map keys in aip.Fields{}; a shared const would couple unrelated packages
     dupl:
       threshold: 200
     interfacebloat:

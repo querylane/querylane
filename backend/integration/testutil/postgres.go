@@ -25,6 +25,9 @@ import (
 	consolev1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
+// psqlBinary is the psql executable inside the postgres container image.
+const psqlBinary = "psql"
+
 const (
 	// defaultPostgresImage is the newest supported major, exercising the PG18+
 	// pg_stat_io read_bytes/write_bytes columns and the 14+ session counters.
@@ -156,7 +159,7 @@ func (c *PostgreSQLContainer) MappedPort(ctx context.Context) (string, error) {
 func (c *PostgreSQLContainer) CreateDatabase(ctx context.Context, dbName string) (string, error) {
 	// Execute CREATE DATABASE command using psql directly in the container
 	_, _, err := c.container.Exec(ctx, []string{
-		"psql", "-U", containerUsername, "-d", containerDatabase, "-c", fmt.Sprintf("CREATE DATABASE %s;", dbName),
+		psqlBinary, "-U", containerUsername, "-d", containerDatabase, "-c", fmt.Sprintf("CREATE DATABASE %s;", dbName),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create database %s: %w", dbName, err)
@@ -188,7 +191,7 @@ func (c *PostgreSQLContainer) CreateDatabase(ctx context.Context, dbName string)
 // test containers.
 func (c *PostgreSQLContainer) CreateDatabaseWithEncoding(ctx context.Context, dbName, encoding string) (string, error) {
 	_, _, err := c.container.Exec(ctx, []string{
-		"psql",
+		psqlBinary,
 		"-U", containerUsername,
 		"-d", containerDatabase,
 		"-v", "ON_ERROR_STOP=1",
@@ -228,7 +231,7 @@ func (c *PostgreSQLContainer) CreateDatabaseWithEncoding(ctx context.Context, db
 // environments even when the database server encoding is UTF8.
 func (c *PostgreSQLContainer) SetDatabaseClientEncoding(ctx context.Context, dbName, encoding string) error {
 	_, _, err := c.container.Exec(ctx, []string{
-		"psql",
+		psqlBinary,
 		"-U", containerUsername,
 		"-d", containerDatabase,
 		"-v", "ON_ERROR_STOP=1",
@@ -248,7 +251,7 @@ func (c *PostgreSQLContainer) SetDatabaseClientEncoding(ctx context.Context, dbN
 // DropDatabase drops a database with the given name from this PostgreSQL instance.
 func (c *PostgreSQLContainer) DropDatabase(ctx context.Context, dbName string) error {
 	_, _, err := c.container.Exec(ctx, []string{
-		"psql", "-U", containerUsername, "-d", containerDatabase, "-c", fmt.Sprintf("DROP DATABASE IF EXISTS %s;", dbName),
+		psqlBinary, "-U", containerUsername, "-d", containerDatabase, "-c", fmt.Sprintf("DROP DATABASE IF EXISTS %s;", dbName),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to drop database %s: %w", dbName, err)
@@ -352,7 +355,7 @@ type ConnectionInfo struct {
 	Port     int
 	Database string
 	Username string
-	Password string //nolint:gosec // G117: Test-only struct, not a credential leak
+	Password string
 }
 
 // NewTestPostgres starts a PostgreSQL testcontainer, creates an isolated

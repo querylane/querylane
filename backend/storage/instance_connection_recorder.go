@@ -53,8 +53,7 @@ func safeInstanceConnectionError(err error) string {
 		return ""
 	}
 
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		switch postgreserrors.Classify(pgErr, postgreserrors.ProfileDefault).Kind {
 		case postgreserrors.KindUnauthenticated:
 			return "PostgreSQL authentication failed"

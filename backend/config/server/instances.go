@@ -31,7 +31,7 @@ type InstanceConfig struct {
 	SSLNegotiation string `koanf:"ssl_negotiation"`
 
 	// Password fields.
-	Password    string `koanf:"password"` //nolint:gosec // G101: Password is a legitimate config field name
+	Password    string `koanf:"password"`
 	PasswordEnv string `koanf:"password_env"`
 
 	// Labels are optional key-value pairs for organizing instances.

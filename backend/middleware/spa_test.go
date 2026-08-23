@@ -77,7 +77,7 @@ func TestSPACacheControl(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tt.path, nil)
 			rec := httptest.NewRecorder()
 			handler.ServeHTTP(rec, req)
 
@@ -144,7 +144,7 @@ func TestSPAGzip(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tt.path, nil)
 			if tt.acceptEncoding != "" {
 				req.Header.Set("Accept-Encoding", tt.acceptEncoding)
 			}
@@ -204,7 +204,7 @@ func TestSPAGzipWeakensETag(t *testing.T) {
 
 	handler := NewSPA(newTestFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/static/js/main.abc123.js", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/static/js/main.abc123.js", nil)
 	req.Header.Set("Accept-Encoding", "gzip")
 
 	rec := httptest.NewRecorder()
@@ -228,7 +228,7 @@ func TestSPAIdentityETagIsStrong(t *testing.T) {
 
 	handler := NewSPA(newTestFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/static/js/main.abc123.js", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/static/js/main.abc123.js", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -250,7 +250,7 @@ func TestSPAFallbackServesIndex(t *testing.T) {
 
 	handler := NewSPA(newTestFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/instances/42/databases", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/instances/42/databases", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -277,7 +277,7 @@ func TestSPAConditionalGet304(t *testing.T) {
 	handler := NewSPA(newTestFS())
 
 	// First request: learn the ETag the file server assigns (identity).
-	req := httptest.NewRequest(http.MethodGet, "/static/js/main.abc123.js", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/static/js/main.abc123.js", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -291,7 +291,7 @@ func TestSPAConditionalGet304(t *testing.T) {
 
 	// Second request with If-None-Match should yield 304 and no body, even
 	// when gzip is accepted (304 has no body to compress).
-	req2 := httptest.NewRequest(http.MethodGet, "/static/js/main.abc123.js", nil)
+	req2 := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/static/js/main.abc123.js", nil)
 	req2.Header.Set("Accept-Encoding", "gzip")
 	req2.Header.Set("If-None-Match", etag)
 
@@ -327,7 +327,7 @@ func TestSPAIndexConditionalGet(t *testing.T) {
 
 	handler := NewSPA(newTestFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -339,7 +339,7 @@ func TestSPAIndexConditionalGet(t *testing.T) {
 		t.Fatal("expected an ETag on index.html")
 	}
 
-	req2 := httptest.NewRequest(http.MethodGet, "/", nil)
+	req2 := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req2.Header.Set("If-None-Match", etag)
 
 	rec2 := httptest.NewRecorder()
@@ -362,7 +362,7 @@ func TestSPAGzipSkipsRangeResponses(t *testing.T) {
 
 	handler := NewSPA(newTestFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/static/js/main.abc123.js", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/static/js/main.abc123.js", nil)
 	req.Header.Set("Accept-Encoding", "gzip")
 	req.Header.Set("Range", "bytes=0-15")
 
@@ -392,7 +392,7 @@ func TestSPAGzipRefusedWithQZero(t *testing.T) {
 
 	handler := NewSPA(newTestFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/static/js/main.abc123.js", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/static/js/main.abc123.js", nil)
 	req.Header.Set("Accept-Encoding", "gzip;q=0")
 
 	rec := httptest.NewRecorder()

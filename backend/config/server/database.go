@@ -26,7 +26,7 @@ type Database struct {
 	SSLNegotiation string `koanf:"ssl_negotiation"`
 
 	// Password fields.
-	Password string `koanf:"password"` //nolint:gosec // G101: Password is a legitimate config field name
+	Password string `koanf:"password"`
 }
 
 // SetDefaults for database configuration.

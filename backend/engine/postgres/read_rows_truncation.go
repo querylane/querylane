@@ -21,6 +21,7 @@ func applyEmergencyTruncation(d *Postgres, row *api.TableResultRow, publicCols [
 			break
 		}
 
+		//nolint:gosec // G602 false positive: the `i >= len(publicCols)` break above bounds i.
 		col := publicCols[i]
 		if !previewEligible(col) {
 			continue

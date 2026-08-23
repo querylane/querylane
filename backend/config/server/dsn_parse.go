@@ -14,7 +14,7 @@ type parsedDSNFields struct {
 	Port           int
 	Database       string
 	Username       string
-	Password       string //nolint:gosec // G117: Password is a legitimate field name in a DSN parse result
+	Password       string
 	SSLMode        string
 	SSLNegotiation string
 }

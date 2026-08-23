@@ -37,6 +37,6 @@ jobs:
           cache-dependency-path: backend/go.sum
       - uses: *action_golangci_lint
         with:
-          version: v2.10.1
+          version: v2.13.1
           working-directory: backend
           args: --timeout=5m

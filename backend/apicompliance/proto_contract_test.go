@@ -818,11 +818,11 @@ func TestBoundedMetadataListRequestsStayUnpaginated(t *testing.T) {
 	t.Parallel()
 
 	requests := []protoreflect.MessageDescriptor{
-		((&api.ListTableColumnsRequest{}).ProtoReflect().Descriptor()),
-		((&api.ListTableConstraintsRequest{}).ProtoReflect().Descriptor()),
-		((&api.ListTableIndexesRequest{}).ProtoReflect().Descriptor()),
-		((&api.ListTablePoliciesRequest{}).ProtoReflect().Descriptor()),
-		((&api.ListTableTriggersRequest{}).ProtoReflect().Descriptor()),
+		(&api.ListTableColumnsRequest{}).ProtoReflect().Descriptor(),
+		(&api.ListTableConstraintsRequest{}).ProtoReflect().Descriptor(),
+		(&api.ListTableIndexesRequest{}).ProtoReflect().Descriptor(),
+		(&api.ListTablePoliciesRequest{}).ProtoReflect().Descriptor(),
+		(&api.ListTableTriggersRequest{}).ProtoReflect().Descriptor(),
 	}
 
 	for _, req := range requests {

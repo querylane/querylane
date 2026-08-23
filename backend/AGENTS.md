@@ -1,6 +1,6 @@
 # Backend
 
-Go 1.26. Use the modern standard library (`slices`, `maps`, `cmp`, range-over-func). Interfaces belong in the consumer package.
+Go 1.27. Use the modern standard library (`slices`, `maps`, `cmp`, range-over-func). Interfaces belong in the consumer package.
 
 ## Testing
 

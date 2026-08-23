@@ -36,7 +36,7 @@ func NewConnectError(
 		}
 
 		detailValue := reflect.ValueOf(detailMsg)
-		if detailValue.Kind() == reflect.Ptr && detailValue.IsNil() {
+		if detailValue.Kind() == reflect.Pointer && detailValue.IsNil() {
 			continue
 		}
 
@@ -156,8 +156,7 @@ func NewLiveQueryLimitExceeded(scope string) *connect.Error {
 // MapLiveQueryLimit maps an admission failure to the stable public error
 // contract. Unexpected limiter errors remain internal failures.
 func MapLiveQueryLimit(err error) *connect.Error {
-	var limitErr *livequery.LimitExceededError
-	if errors.As(err, &limitErr) {
+	if limitErr, ok := errors.AsType[*livequery.LimitExceededError](err); ok {
 		return NewLiveQueryLimitExceeded(string(limitErr.Scope))
 	}
 

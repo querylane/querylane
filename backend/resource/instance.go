@@ -9,7 +9,7 @@ var instanceTemplate = strings.Split(InstancePattern, "/")
 
 // InstanceName represents a parsed instance resource name.
 // Format: instances/{instance}.
-type InstanceName struct { //nolint:recvcheck // UnmarshalText requires pointer receiver
+type InstanceName struct {
 	InstanceID string
 }
 

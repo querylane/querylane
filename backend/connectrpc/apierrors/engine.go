@@ -31,8 +31,7 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 		return nil
 	}
 
-	var liveQueryLimitErr *livequery.LimitExceededError
-	if errors.As(err, &liveQueryLimitErr) {
+	if _, ok := errors.AsType[*livequery.LimitExceededError](err); ok {
 		return MapLiveQueryLimit(err)
 	}
 
@@ -51,15 +50,13 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 		)
 	}
 
-	var classifiedPostgresErr *postgreserrors.Error
-	if errors.As(err, &classifiedPostgresErr) {
+	if classifiedPostgresErr, ok := errors.AsType[*postgreserrors.Error](err); ok {
 		classification := adaptPostgresClassification(
 			classifiedPostgresErr.Classification(),
 			PostgresOperationLabel(rctx.Op),
 		)
 
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			if resourceType, name, ok := rawPostgresHierarchyNotFoundResource(pgErr, rctx); ok {
 				return newPostgresHierarchyNotFoundError(
 					err,
@@ -90,8 +87,7 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 		)
 	}
 
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		if resourceType, name, ok := rawPostgresHierarchyNotFoundResource(pgErr, rctx); ok {
 			classification := ClassifyPostgresError(
 				pgErr,
@@ -117,7 +113,7 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 			NewErrorInfo(
 				DomainConsole,
 				consolev1alpha1.ErrorReason_INSTANCE_UNAVAILABLE,
-				KeyVal{Key: "operation", Value: rctx.Op},
+				KeyVal{Key: MetadataKeyOperation, Value: rctx.Op},
 			),
 		)
 	}
@@ -154,7 +150,7 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 		errorInfo := NewErrorInfo(
 			DomainConsole,
 			consolev1alpha1.ErrorReason_TIMEOUT,
-			KeyVal{Key: "operation", Value: rctx.Op},
+			KeyVal{Key: MetadataKeyOperation, Value: rctx.Op},
 		)
 
 		return NewConnectError(
@@ -170,7 +166,7 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 		errorInfo := NewErrorInfo(
 			DomainConsole,
 			consolev1alpha1.ErrorReason_TIMEOUT,
-			KeyVal{Key: "operation", Value: rctx.Op},
+			KeyVal{Key: MetadataKeyOperation, Value: rctx.Op},
 		)
 
 		return NewConnectError(
@@ -183,7 +179,7 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 		errorInfo := NewErrorInfo(
 			DomainConsole,
 			consolev1alpha1.ErrorReason_INTERNAL_ERROR,
-			KeyVal{Key: "operation", Value: rctx.Op},
+			KeyVal{Key: MetadataKeyOperation, Value: rctx.Op},
 		)
 
 		return NewConnectError(
@@ -199,13 +195,13 @@ func MapEngineErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Err
 		slog.Any("error", err),
 		slog.String("resource_type", rctx.Type.String()),
 		slog.String("resource_name", rctx.Name),
-		slog.String("operation", rctx.Op),
+		slog.String(MetadataKeyOperation, rctx.Op),
 	)
 
 	errorInfo := NewErrorInfo(
 		DomainConsole,
 		consolev1alpha1.ErrorReason_INTERNAL_ERROR,
-		KeyVal{Key: "operation", Value: rctx.Op},
+		KeyVal{Key: MetadataKeyOperation, Value: rctx.Op},
 	)
 
 	return NewConnectError(
@@ -230,7 +226,7 @@ func newPostgresHierarchyNotFoundError(
 		classification,
 		postgresUserErrorMessage(classification),
 		true,
-		[]KeyVal{{Key: "resourceName", Value: name}},
+		[]KeyVal{{Key: MetadataKeyResourceName, Value: name}},
 		NewResourceInfo(resourceType, name),
 	)
 }
@@ -242,7 +238,7 @@ func newResourceNotFoundErrorWithDetails(
 	otherDetails ...proto.Message,
 ) *connect.Error {
 	errorInfoMetadata := make([]KeyVal, 0, 1+len(metadata))
-	errorInfoMetadata = append(errorInfoMetadata, KeyVal{Key: "resourceName", Value: name})
+	errorInfoMetadata = append(errorInfoMetadata, KeyVal{Key: MetadataKeyResourceName, Value: name})
 	errorInfoMetadata = append(errorInfoMetadata, metadata...)
 
 	errorInfo := NewErrorInfo(

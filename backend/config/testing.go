@@ -103,7 +103,7 @@ type DatabaseConfig struct {
 	Host                    string `koanf:"host"`
 	Port                    int    `koanf:"port"`
 	Username                string `koanf:"username"`
-	Password                string `koanf:"password"` //nolint:gosec // G117: Password is a legitimate config field name
+	Password                string `koanf:"password"`
 	MaxConnections          int    `koanf:"max_connections"`
 	validateCalled          bool   `koanf:"-"`
 	onLoadingCompleteCalled bool   `koanf:"-"`
