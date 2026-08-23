@@ -298,6 +298,12 @@ function navigateToCanonicalAdminTarget(
         search: (previous) =>
           buildCanonicalAdminSearch(previous, searchOptions),
       });
+    case "/instances/$instanceId/databases/$databaseId/workbench":
+      return navigate({
+        ...target,
+        search: (previous) =>
+          buildCanonicalAdminSearch(previous, searchOptions),
+      });
     default:
       return assertNever(target);
   }
