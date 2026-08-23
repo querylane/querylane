@@ -125,7 +125,7 @@ func replaceConfigFile(path string, data []byte) error {
 
 	// --config explicitly scopes this local operator action, and temporaryPath
 	// was created exclusively beside that destination.
-	if err := os.Rename(temporaryPath, path); err != nil { //nolint:gosec // G703: intentional confirmed local config path.
+	if err := os.Rename(temporaryPath, path); err != nil {
 		return fmt.Errorf("replace configuration file %q: %w", path, err)
 	}
 
