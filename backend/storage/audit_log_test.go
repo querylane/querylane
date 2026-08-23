@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"strings"
 	"testing"
 	"time"
 
