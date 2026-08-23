@@ -68,8 +68,7 @@ func mapRepoPostgresDetails(classification PostgresErrorClassification, rctx Res
 //
 // Returns a *connect.Error with appropriate error details and codes.
 func MapRepoErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Error {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		classification := ClassifyPostgresError(
 			pgErr,
 			PostgresOperationLabel(rctx.Op),
@@ -91,7 +90,7 @@ func MapRepoErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Error
 		errorInfo := NewErrorInfo(
 			DomainConsole,
 			consolev1alpha1.ErrorReason_RESOURCE_NOT_FOUND,
-			KeyVal{Key: "resourceName", Value: rctx.Name},
+			KeyVal{Key: MetadataKeyResourceName, Value: rctx.Name},
 		)
 		resourceInfo := NewResourceInfo(rctx.Type, rctx.Name)
 
@@ -106,7 +105,7 @@ func MapRepoErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Error
 		errorInfo := NewErrorInfo(
 			DomainConsole,
 			consolev1alpha1.ErrorReason_RESOURCE_ALREADY_EXISTS,
-			KeyVal{Key: "resourceName", Value: rctx.Name},
+			KeyVal{Key: MetadataKeyResourceName, Value: rctx.Name},
 		)
 		resourceInfo := NewResourceInfo(rctx.Type, rctx.Name)
 
@@ -121,7 +120,7 @@ func MapRepoErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Error
 		errorInfo := NewErrorInfo(
 			DomainConsole,
 			consolev1alpha1.ErrorReason_INVALID_ARGUMENT,
-			KeyVal{Key: "operation", Value: rctx.Op},
+			KeyVal{Key: MetadataKeyOperation, Value: rctx.Op},
 		)
 
 		return NewConnectError(
@@ -134,7 +133,7 @@ func MapRepoErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Error
 		errorInfo := NewErrorInfo(
 			DomainConsole,
 			consolev1alpha1.ErrorReason_INVALID_ARGUMENT,
-			KeyVal{Key: "operation", Value: rctx.Op},
+			KeyVal{Key: MetadataKeyOperation, Value: rctx.Op},
 		)
 
 		return NewConnectError(
@@ -147,7 +146,7 @@ func MapRepoErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Error
 		errorInfo := NewErrorInfo(
 			DomainConsole,
 			consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
-			KeyVal{Key: "resourceName", Value: rctx.Name},
+			KeyVal{Key: MetadataKeyResourceName, Value: rctx.Name},
 		)
 
 		return NewConnectError(
@@ -160,7 +159,7 @@ func MapRepoErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Error
 		errorInfo := NewErrorInfo(
 			DomainConsole,
 			consolev1alpha1.ErrorReason_FAILED_PRECONDITION,
-			KeyVal{Key: "operation", Value: rctx.Op},
+			KeyVal{Key: MetadataKeyOperation, Value: rctx.Op},
 		)
 
 		return NewConnectError(
@@ -191,13 +190,13 @@ func MapRepoErr(ctx context.Context, err error, rctx ResourceCtx) *connect.Error
 			slog.Any("error", err),
 			slog.String("resource_type", rctx.Type.String()),
 			slog.String("resource_name", rctx.Name),
-			slog.String("operation", rctx.Op),
+			slog.String(MetadataKeyOperation, rctx.Op),
 		)
 
 		errorInfo := NewErrorInfo(
 			DomainConsole,
 			consolev1alpha1.ErrorReason_INTERNAL_ERROR,
-			KeyVal{Key: "operation", Value: rctx.Op},
+			KeyVal{Key: MetadataKeyOperation, Value: rctx.Op},
 		)
 
 		return NewConnectError(

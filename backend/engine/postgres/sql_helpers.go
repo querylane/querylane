@@ -90,8 +90,7 @@ func classifyQueryErrorWithProfile(op string, err error, profile postgreserrors.
 		return fmt.Errorf("%s: %w", op, engine.ErrQueryTimeout)
 	}
 
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return postgreserrors.Wrap(pgErr, profile, op)
 	}
 

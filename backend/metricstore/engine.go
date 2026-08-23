@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"slices"
 	"sort"
 	"time"
 
@@ -363,9 +364,9 @@ func interval(prev, cur rawSample) (intervalDeltas, bool) {
 // ratio. ok is false when the window has no usable data.
 func summarize(kind Kind, samples []rawSample, start, end time.Time) (float64, bool) {
 	if kind == KindGauge {
-		for i := len(samples) - 1; i >= 0; i-- {
-			if inWindow(samples[i].At, start, end) {
-				return samples[i].Primary, true
+		for _, sample := range slices.Backward(samples) {
+			if inWindow(sample.At, start, end) {
+				return sample.Primary, true
 			}
 		}
 

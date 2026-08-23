@@ -343,13 +343,11 @@ func (c *capabilitySkipCache) recordFailure(ctx context.Context, probeName, targ
 }
 
 func probeLogError(err error) string {
-	var classified *postgreserrors.Error
-	if errors.As(err, &classified) {
+	if classified, ok := errors.AsType[*postgreserrors.Error](err); ok {
 		return classified.Error()
 	}
 
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return postgreserrors.Wrap(pgErr, postgreserrors.ProfileDefault, "").Error()
 	}
 

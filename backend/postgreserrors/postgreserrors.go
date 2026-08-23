@@ -200,13 +200,11 @@ func (e *Error) Error() string {
 // RedactedMessage returns a client- and telemetry-safe description of err.
 // operation must be a trusted internal label, never user input.
 func RedactedMessage(err error, operation string) string {
-	var classified *Error
-	if errors.As(err, &classified) {
+	if classified, ok := errors.AsType[*Error](err); ok {
 		return redactedMessage(classified.Classification(), operation)
 	}
 
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return redactedMessage(Classify(pgErr, ProfileDefault), operation)
 	}
 
@@ -284,13 +282,11 @@ func IsConnectionReachabilityError(err error) bool {
 		return false
 	}
 
-	var pgConnectErr *pgconn.ConnectError
-	if errors.As(err, &pgConnectErr) {
+	if _, ok := errors.AsType[*pgconn.ConnectError](err); ok {
 		return true
 	}
 
-	var dnsErr *net.DNSError
-	if errors.As(err, &dnsErr) {
+	if _, ok := errors.AsType[*net.DNSError](err); ok {
 		return true
 	}
 

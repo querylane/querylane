@@ -210,8 +210,7 @@ func TestParseError(t *testing.T) {
 	}
 
 	// Check if it's a ParseError
-	var parseErr *ParseError
-	if !errors.As(err, &parseErr) {
+	if parseErr, ok := errors.AsType[*ParseError](err); !ok {
 		t.Errorf("error should be a ParseError, got %T", err)
 	} else if parseErr.Segment == 0 {
 		t.Errorf("ParseError.Segment should not be zero, got %d", parseErr.Segment)

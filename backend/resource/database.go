@@ -9,7 +9,7 @@ var databaseTemplate = strings.Split(DatabasePattern, "/")
 
 // DatabaseName represents a parsed database resource name.
 // Format: instances/{instance}/databases/{database}.
-type DatabaseName struct { //nolint:recvcheck // UnmarshalText requires pointer receiver
+type DatabaseName struct {
 	InstanceID string
 	DatabaseID string
 }

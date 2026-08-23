@@ -260,7 +260,7 @@ func (cm *Manager[T]) checkWriteCapability() bool {
 	}
 
 	closeErr := probe.Close()
-	removeErr := os.Remove(probe.Name()) //nolint:gosec // CreateTemp returns a path inside the checked config directory.
+	removeErr := os.Remove(probe.Name())
 
 	return closeErr == nil && removeErr == nil
 }

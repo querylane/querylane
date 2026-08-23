@@ -307,7 +307,7 @@ func TestQuerySharedSourceLoadsOnce(t *testing.T) {
 
 	calls := 0
 	reader := countingReader{
-		fakeReader:      fakeReader{connection: []model.InstanceConnectionSample{conn(0, 10)}},
+		connection:      []model.InstanceConnectionSample{conn(0, 10)},
 		connectionCalls: &calls,
 	}
 
@@ -360,9 +360,9 @@ func TestQueryStepIgnoresFailedMetrics(t *testing.T) {
 	// Connections (30s cadence) errors; storage (5m cadence) succeeds. The
 	// response-level Step must reflect the ONLY returned series (5m), not the
 	// finer cadence of the metric that failed.
-	reader := failConnReader{fakeReader: fakeReader{
+	reader := failConnReader{
 		storage: []model.InstanceStorageSample{{ObservedAt: at(0), TotalSizeBytes: 1 << 30}},
-	}}
+	}
 
 	res, err := NewEngine(reader).Query(context.Background(), Query{
 		InstanceID: "i",
@@ -455,9 +455,9 @@ func (r prevWindowFailReader) ConnectionSamples(ctx context.Context, inst string
 func TestQueryComparisonLoadFailureKeepsSeries(t *testing.T) {
 	t.Parallel()
 
-	reader := prevWindowFailReader{fakeReader: fakeReader{connection: []model.InstanceConnectionSample{
+	reader := prevWindowFailReader{connection: []model.InstanceConnectionSample{
 		conn(30*time.Second, 42),
-	}}}
+	}}
 
 	res, err := NewEngine(reader).Query(context.Background(), Query{
 		InstanceID: "i", Metrics: []v1alpha1.MetricId{v1alpha1.MetricId_METRIC_ID_CONNECTIONS_ACTIVE},

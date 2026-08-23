@@ -99,8 +99,7 @@ func PostgresErrorResponseFromError(
 }
 
 func postgresClassificationFromError(err error, operation string) (PostgresErrorClassification, bool) {
-	var classified *postgreserrors.Error
-	if errors.As(err, &classified) {
+	if classified, ok := errors.AsType[*postgreserrors.Error](err); ok {
 		if operation == "" {
 			operation = classified.Operation()
 		}
@@ -111,8 +110,7 @@ func postgresClassificationFromError(err error, operation string) (PostgresError
 		), true
 	}
 
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return ClassifyPostgresError(
 			pgErr,
 			PostgresOperationLabel(operation),
@@ -264,7 +262,7 @@ func postgresErrorInfoMetadata(classification PostgresErrorClassification) []Key
 	metadata = appendIfValue(metadata, "sqlstate", classification.SQLState)
 	metadata = appendIfValue(metadata, "sqlstate_class", classification.SQLStateClass)
 	metadata = appendIfValue(metadata, "condition_name", classification.ConditionName)
-	metadata = appendIfValue(metadata, "operation", string(classification.Operation))
+	metadata = appendIfValue(metadata, MetadataKeyOperation, string(classification.Operation))
 
 	return metadata
 }

@@ -101,6 +101,7 @@ func (r *executeQueryFakeRows) Next(dest []driver.Value) error {
 
 	return nil
 }
+
 func (r *executeQueryFakeRows) ColumnTypeScanType(int) reflect.Type   { return reflect.TypeFor[int64]() }
 func (r *executeQueryFakeRows) ColumnTypeDatabaseTypeName(int) string { return "INT8" }
 

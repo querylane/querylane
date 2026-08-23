@@ -10,7 +10,7 @@ var roleTemplate = strings.Split(RolePattern, "/")
 
 // RoleName represents a parsed role resource name.
 // Format: instances/{instance}/roles/{role}.
-type RoleName struct { //nolint:recvcheck // UnmarshalText requires pointer receiver
+type RoleName struct {
 	InstanceID string
 	RoleID     string
 	// postgresRoleName is the decoded PostgreSQL role name, set by the

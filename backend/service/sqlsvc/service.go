@@ -16,6 +16,9 @@ import (
 	"github.com/querylane/querylane/backend/resource"
 )
 
+// opExecuteQuery labels the SQL execution operation in error metadata.
+const opExecuteQuery = "execute_query"
+
 var _ v1connect.SQLServiceHandler = (*Service)(nil)
 
 const (
@@ -50,7 +53,7 @@ func (s *Service) ExecuteQuery(ctx context.Context, req *connect.Request[v1alpha
 	instSession, err := s.connManager.OpenInstance(ctx, dbRes.Instance())
 	if err != nil {
 		return apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: "execute_query",
+			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: opExecuteQuery,
 		})
 	}
 	defer instSession.Close()
@@ -58,7 +61,7 @@ func (s *Service) ExecuteQuery(ctx context.Context, req *connect.Request[v1alpha
 	dbSession, err := instSession.OpenDatabase(ctx, dbRes.DatabaseID)
 	if err != nil {
 		return apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: "execute_query",
+			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: opExecuteQuery,
 		})
 	}
 	defer dbSession.Close()
@@ -89,7 +92,7 @@ func (s *Service) ExecuteQuery(ctx context.Context, req *connect.Request[v1alpha
 	})
 	if err != nil {
 		return apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: "execute_query",
+			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: opExecuteQuery,
 		})
 	}
 	defer result.Close()
@@ -135,7 +138,7 @@ func (s *Service) ExecuteQuery(ctx context.Context, req *connect.Request[v1alpha
 
 	if err := result.Err(); err != nil {
 		return apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: "execute_query",
+			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: opExecuteQuery,
 		})
 	}
 

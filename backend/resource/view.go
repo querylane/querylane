@@ -9,7 +9,7 @@ var viewTemplate = strings.Split(ViewPattern, "/")
 
 // ViewName represents a parsed view resource name.
 // Format: instances/{instance}/databases/{database}/schemas/{schema}/views/{view}.
-type ViewName struct { //nolint:recvcheck // UnmarshalText requires pointer receiver
+type ViewName struct {
 	InstanceID string
 	DatabaseID string
 	SchemaID   string

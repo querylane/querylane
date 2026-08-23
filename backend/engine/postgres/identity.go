@@ -64,10 +64,12 @@ func discoverRowIdentity(ctx context.Context, db *sql.DB, schemaName, tableName 
 	// VACUUM-FULL/CLUSTER-stable window. The proto field stays consistent
 	// with the engine's bookkeeping so downstream code can use the same
 	// `[]identityColumn` slice for projection/scanning.
+	ctidCols := []identityColumn{
+		{name: ctidColumn, rawType: "tid"},
+	}
+
 	return &api.RowIdentity{
-			Source:      api.RowIdentity_SOURCE_OPAQUE_ROW_KEY,
-			ColumnNames: []string{ctidColumn},
-		}, []identityColumn{
-			{name: ctidColumn, rawType: "tid"},
-		}, nil
+		Source:      api.RowIdentity_SOURCE_OPAQUE_ROW_KEY,
+		ColumnNames: []string{ctidColumn},
+	}, ctidCols, nil
 }

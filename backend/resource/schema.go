@@ -9,7 +9,7 @@ var schemaTemplate = strings.Split(SchemaPattern, "/")
 
 // SchemaName represents a parsed schema resource name.
 // Format: instances/{instance}/databases/{database}/schemas/{schema}.
-type SchemaName struct { //nolint:recvcheck // UnmarshalText requires pointer receiver
+type SchemaName struct {
 	InstanceID string
 	DatabaseID string
 	SchemaID   string

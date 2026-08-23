@@ -9,7 +9,7 @@ var tableTemplate = strings.Split(TablePattern, "/")
 
 // TableName represents a parsed table resource name.
 // Format: instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}.
-type TableName struct { //nolint:recvcheck // UnmarshalText requires pointer receiver
+type TableName struct {
 	InstanceID string
 	DatabaseID string
 	SchemaID   string
