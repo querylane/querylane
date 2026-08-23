@@ -1,8 +1,8 @@
 import { create } from "@bufbuild/protobuf";
 import { durationFromMs } from "@bufbuild/protobuf/wkt";
+import { beforeEach, describe, expect, rs, test } from "@rstest/core";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   type ExecuteQueryResponse,
   ExecuteQueryResponseSchema,
@@ -17,12 +17,12 @@ const BUFFERS_READ_FROM_DISK_RE = /buffers read from disk/i;
 const EXPLAIN_ANALYZE_BUFFERS_RE = /EXPLAIN \(ANALYZE, BUFFERS\)/;
 const VERBOSE_RE = /VERBOSE/;
 
-const apiMocks = vi.hoisted(() => ({
-  executeWorkbenchQuery: vi.fn(),
-  explainWorkbenchQuery: vi.fn(),
+const apiMocks = rs.hoisted(() => ({
+  executeWorkbenchQuery: rs.fn(),
+  explainWorkbenchQuery: rs.fn(),
 }));
 
-vi.mock("@/hooks/api/sql", () => apiMocks);
+rs.mock("@/hooks/api/sql", () => apiMocks);
 
 function streamResponses(
   responses: ExecuteQueryResponse[]

@@ -193,6 +193,14 @@ function renderNavLink(link: NavLinkProps, router: RegisteredRouter) {
           to={link.to}
         />
       );
+    case "/instances/$instanceId/databases/$databaseId/workbench":
+      return (
+        <Link
+          params={link.params}
+          search={(previous) => buildNavLinkSearch(link, previous)}
+          to={link.to}
+        />
+      );
     default:
       return assertNever(link);
   }

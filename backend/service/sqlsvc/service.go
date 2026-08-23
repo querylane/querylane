@@ -26,6 +26,8 @@ const opValidateQuery = "validate_query"
 // planning or execution, so anything slower means the pool or server is
 // in trouble and the editor should just skip that check.
 const validateTimeout = 5 * time.Second
+// opExplainQuery labels the SQL explain operation in error metadata.
+const opExplainQuery = "explain_query"
 
 var _ v1connect.SQLServiceHandler = (*Service)(nil)
 
@@ -185,14 +187,14 @@ func (s *Service) ExplainQuery(ctx context.Context, req *connect.Request[v1alpha
 
 	if err := validateReadOnlyStatement(req.Msg.GetStatement()); err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: "explain_query",
+			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: opExplainQuery,
 		})
 	}
 
 	instSession, err := s.connManager.OpenInstance(ctx, dbRes.Instance())
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: "explain_query",
+			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: opExplainQuery,
 		})
 	}
 	defer instSession.Close()
@@ -200,7 +202,7 @@ func (s *Service) ExplainQuery(ctx context.Context, req *connect.Request[v1alpha
 	dbSession, err := instSession.OpenDatabase(ctx, dbRes.DatabaseID)
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: "explain_query",
+			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: opExplainQuery,
 		})
 	}
 	defer dbSession.Close()
@@ -223,7 +225,7 @@ func (s *Service) ExplainQuery(ctx context.Context, req *connect.Request[v1alpha
 	})
 	if err != nil {
 		return nil, apierrors.MapEngineErr(ctx, err, apierrors.ResourceCtx{
-			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: "explain_query",
+			Type: dbRes.ResourceType(), Name: dbRes.String(), Op: opExplainQuery,
 		})
 	}
 
