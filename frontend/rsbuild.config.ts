@@ -231,7 +231,9 @@ export default defineConfig({
       }
 
       config.experiments ??= {};
-      config.experiments.nativeWatcher = true;
+      // Exercise upcoming defaults so incompatible assumptions fail in CI
+      // before the next major release.
+      config.experiments.futureDefaults = true;
 
       if (enableRsdoctor) {
         config.plugins.push(new RsdoctorRspackPlugin(rsdoctorPluginOptions));

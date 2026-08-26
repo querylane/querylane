@@ -43,6 +43,32 @@ describe("Rsbuild config loading", () => {
     );
   });
 
+  test("enables future defaults and compact IDs without losing managed chunking", async () => {
+    rs.stubEnv("NODE_ENV", "production");
+
+    try {
+      const rsbuild = await createLoadedRsbuild();
+      const [rspackConfig] = await rsbuild.initConfigs({ action: "build" });
+
+      expect(rspackConfig).toBeDefined();
+      expect(rspackConfig?.experiments).toMatchObject({
+        futureDefaults: true,
+      });
+      expect(rspackConfig?.optimization).toMatchObject({
+        chunkIds: "compat-hashed",
+        moduleIds: "compat-hashed",
+        splitChunks: {
+          chunks: "all",
+          maxAsyncRequests: 30,
+          maxInitialRequests: 20,
+          minSize: 20 * 1024,
+        },
+      });
+    } finally {
+      rs.unstubAllEnvs();
+    }
+  });
+
   test("emits standalone Rsdoctor HTML and JSON reports", async () => {
     rs.stubEnv("RSDOCTOR", "1");
 
