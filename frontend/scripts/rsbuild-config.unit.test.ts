@@ -4,11 +4,11 @@ import { describe, expect, rs, test } from "@rstest/core";
 
 const frontendRoot = path.resolve(import.meta.dirname, "..");
 
-async function createLoadedRsbuild() {
+async function createLoadedRsbuild(action: "build" | "dev" = "build") {
   const loadedConfig = await loadConfig({
-    command: "build",
+    command: action,
     cwd: frontendRoot,
-    envMode: "production",
+    envMode: action === "build" ? "production" : "development",
   });
 
   return createRsbuild({ config: loadedConfig, cwd: frontendRoot });
@@ -41,6 +41,43 @@ describe("Rsbuild config loading", () => {
         path.join(frontendRoot, "scripts/react-performance-mode.ts"),
       ])
     );
+  });
+
+  test("uses the native watcher with Rsbuild source imports in development", async () => {
+    const rsbuild = await createLoadedRsbuild("dev");
+    const [rspackConfig] = await rsbuild.initConfigs({ action: "dev" });
+
+    expect(rspackConfig?.experiments).toMatchObject({
+      futureDefaults: true,
+      nativeWatcher: true,
+      sourceImport: true,
+    });
+  });
+
+  test("enables future defaults and compact IDs without losing managed chunking", async () => {
+    rs.stubEnv("NODE_ENV", "production");
+
+    try {
+      const rsbuild = await createLoadedRsbuild();
+      const [rspackConfig] = await rsbuild.initConfigs({ action: "build" });
+
+      expect(rspackConfig).toBeDefined();
+      expect(rspackConfig?.experiments).toMatchObject({
+        futureDefaults: true,
+      });
+      expect(rspackConfig?.optimization).toMatchObject({
+        chunkIds: "compat-hashed",
+        moduleIds: "compat-hashed",
+        splitChunks: {
+          chunks: "all",
+          maxAsyncRequests: 30,
+          maxInitialRequests: 20,
+          minSize: 20 * 1024,
+        },
+      });
+    } finally {
+      rs.unstubAllEnvs();
+    }
   });
 
   test("emits standalone Rsdoctor HTML and JSON reports", async () => {

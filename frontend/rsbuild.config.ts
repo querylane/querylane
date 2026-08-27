@@ -231,6 +231,9 @@ export default defineConfig({
       }
 
       config.experiments ??= {};
+      // Rsbuild 2.2 reverted its planned native-watcher default before GA, so
+      // opt in explicitly while exercising upcoming defaults in CI.
+      config.experiments.futureDefaults = true;
       config.experiments.nativeWatcher = true;
 
       if (enableRsdoctor) {

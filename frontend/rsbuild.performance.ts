@@ -68,18 +68,11 @@ const managedSplitChunksConfig = {
 } satisfies SplitChunksConfig;
 
 const productionOptimizationOverrides = {
-  chunkIds: "deterministic",
-  concatenateModules: true,
-  emitOnErrors: false,
-  innerGraph: true,
+  // Prefer compact stable IDs and the smallest export names; every other
+  // production optimization inherits newer Rspack defaults.
+  chunkIds: "compat-hashed",
   mangleExports: "size",
-  mergeDuplicateChunks: true,
-  moduleIds: "deterministic",
-  providedExports: true,
-  realContentHash: true,
-  removeEmptyChunks: true,
-  sideEffects: true,
-  usedExports: true,
+  moduleIds: "compat-hashed",
 } satisfies Rspack.Configuration["optimization"];
 
 interface BuildCacheDigestInput {
