@@ -233,8 +233,17 @@ export default defineConfig({
       config.experiments ??= {};
       // Rsbuild 2.2 reverted its planned native-watcher default before GA, so
       // opt in explicitly while exercising upcoming defaults in CI.
+      config.experiments.asyncWebAssembly = true;
       config.experiments.futureDefaults = true;
       config.experiments.nativeWatcher = true;
+      config.experiments.pureFunctions = config.mode === "production";
+      // Rsbuild 2.2 owns sourceImport; the config contract pins its effective
+      // value. Leave buildHttp unset because Querylane has no remote URL
+      // imports and network-backed builds would expand the supply-chain
+      // surface. Leave deferImport unset because its proposal syntax is unused.
+      // Keep runtimeMode on the webpack-compatible default while Rspack's
+      // runtime is under development and aimed at ESM modern-module output.
+      // Leave useInputFileSystem unset because Querylane does not replace it.
 
       if (enableRsdoctor) {
         config.plugins.push(new RsdoctorRspackPlugin(rsdoctorPluginOptions));
