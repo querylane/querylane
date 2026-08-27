@@ -43,18 +43,24 @@ describe("Rsbuild config loading", () => {
     );
   });
 
-  test("uses the native watcher with Rsbuild source imports in development", async () => {
+  test("pins supported experiments and excludes unused ones in development", async () => {
     const rsbuild = await createLoadedRsbuild("dev");
     const [rspackConfig] = await rsbuild.initConfigs({ action: "dev" });
 
     expect(rspackConfig?.experiments).toMatchObject({
+      asyncWebAssembly: true,
       futureDefaults: true,
       nativeWatcher: true,
+      pureFunctions: false,
       sourceImport: true,
     });
+    expect(rspackConfig?.experiments?.buildHttp).toBeUndefined();
+    expect(rspackConfig?.experiments?.deferImport).not.toBe(true);
+    expect(rspackConfig?.experiments?.runtimeMode).not.toBe("rspack");
+    expect(rspackConfig?.experiments?.useInputFileSystem).toBeFalsy();
   });
 
-  test("enables future defaults and compact IDs without losing managed chunking", async () => {
+  test("pins production experiments and compact IDs without losing managed chunking", async () => {
     rs.stubEnv("NODE_ENV", "production");
 
     try {
@@ -63,7 +69,10 @@ describe("Rsbuild config loading", () => {
 
       expect(rspackConfig).toBeDefined();
       expect(rspackConfig?.experiments).toMatchObject({
+        asyncWebAssembly: true,
         futureDefaults: true,
+        pureFunctions: true,
+        sourceImport: true,
       });
       expect(rspackConfig?.optimization).toMatchObject({
         chunkIds: "compat-hashed",
