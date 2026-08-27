@@ -16,9 +16,9 @@ import {
   type CreateInstanceFormState,
   getConnectionFingerprint,
 } from "@/features/new-instance-workflow";
+import { useCreateInstancePageController } from "@/hooks/use-create-instance-page-controller";
 import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 import { InstanceService } from "@/protogen/querylane/console/v1alpha1/instance_pb";
-import { useCreateInstancePageController } from "@/routes/new-instance-page-controller";
 import { createTestQueryClient } from "@/test/query-client";
 import { createTestRouterTransport } from "@/test/router-transport";
 

@@ -141,17 +141,21 @@ function createController(
   };
 }
 
-function renderWizard(controller = createController()) {
+function renderWizard(
+  controller = createController(),
+  testInstanceConnection = rs.fn(async () => ({}))
+) {
   const queryClient = createTestQueryClient();
   renderedQueryClients.push(queryClient);
   const transport = createTestRouterTransport(({ service }) => {
     service(InstanceService, {
-      testInstanceConnection: rs.fn(async () => ({})),
+      testInstanceConnection,
     });
   });
 
   return {
     controller,
+    testInstanceConnection,
     ...render(
       <TransportProvider transport={transport}>
         <QueryClientProvider client={queryClient}>
@@ -569,6 +573,48 @@ describe("onboarding wizard content integration", () => {
     expect(state.submittedPostgresConfig?.sslMode).toBe(
       PostgresConfig_SslMode.VERIFY_FULL
     );
+  });
+});
+
+describe("onboarding wizard connection testing", () => {
+  it("validates required fields before testing the connection", async () => {
+    const user = userEvent.setup();
+    seedWizardPhase("configure_ui", "ui_configured");
+
+    const { testInstanceConnection } = renderWizard();
+
+    await user.click(screen.getByRole("button", { name: "Test connection" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText("Password").getAttribute("aria-invalid")
+      ).toBe("true");
+    });
+    expect(screen.getByText("This field is required.")).toBeTruthy();
+    expect(testInstanceConnection).not.toHaveBeenCalled();
+  });
+
+  it("clears stale connection failures after the configuration changes", async () => {
+    const user = userEvent.setup();
+    const testInstanceConnection = rs.fn(() =>
+      Promise.reject(new Error("connection refused"))
+    );
+    seedWizardPhase("configure_ui", "ui_configured");
+
+    renderWizard(createController(), testInstanceConnection);
+
+    setFieldValue("Password", "secret");
+    await user.click(screen.getByRole("button", { name: "Test connection" }));
+    await waitFor(() => {
+      expect(screen.getByText("connection refused")).toBeTruthy();
+    });
+
+    setFieldValue("Host", "metadata.internal");
+
+    expect(screen.queryByText("connection refused")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Test connection" })
+    ).toBeTruthy();
   });
 });
 

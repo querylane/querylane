@@ -1,5 +1,3 @@
-// Copyright 2026 Redpanda Data, Inc.
-
 import { readdir, readFile, writeFile } from "node:fs/promises";
 
 const diagramDirectory = new URL(

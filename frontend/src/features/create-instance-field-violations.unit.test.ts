@@ -1,10 +1,7 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { describe, expect, test } from "@rstest/core";
-import {
-  extractCreateInstanceFieldViolations,
-  extractInstanceConfigFieldViolations,
-} from "@/features/create-instance-field-violations";
+import { extractCreateInstanceFieldViolations } from "@/features/create-instance-field-violations";
 import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 
 function badRequestError(
@@ -112,24 +109,6 @@ describe("extractCreateInstanceFieldViolations", () => {
 
     expect(result.fieldErrors).toEqual({});
     expect(result.firstInvalidField).toBeNull();
-    expect(result.generalErrors).toEqual([]);
-  });
-});
-
-describe("extractInstanceConfigFieldViolations", () => {
-  test("maps update-instance config violations onto form fields", () => {
-    const result = extractInstanceConfigFieldViolations(
-      badRequestError([
-        { description: "auth failed", field: "instance.config.password" },
-        { description: "database missing", field: "instance.config.database" },
-      ])
-    );
-
-    expect(result.fieldErrors).toEqual({
-      database: "database missing",
-      password: "auth failed",
-    });
-    expect(result.firstInvalidField).toBe("database");
     expect(result.generalErrors).toEqual([]);
   });
 });
