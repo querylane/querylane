@@ -173,6 +173,29 @@ describe("SqlWorkbenchPage", () => {
     expect(screen.queryByText("Customs holds by carrier")).toBeNull();
   });
 
+  test("starts with a portable query for every PostgreSQL database", async () => {
+    apiMocks.executeWorkbenchQuery.mockReturnValue(queryResponseStream());
+    const user = userEvent.setup();
+
+    render(
+      <SqlWorkbenchPage databaseId="logistics" instanceId="prod-core-eu" />
+    );
+
+    const expectedStatement =
+      "SELECT current_database() AS database_name, current_user AS connected_as, now() AS server_time;";
+    expect(
+      screen.getByRole("textbox", { name: "SQL statement" })
+    ).toHaveProperty("value", expectedStatement);
+
+    await user.click(screen.getByRole("button", { name: RUN_BUTTON_NAME }));
+
+    await waitFor(() => {
+      expect(apiMocks.executeWorkbenchQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ statement: expectedStatement })
+      );
+    });
+  });
+
   test("renders metrics and nodes from the live explain response", async () => {
     apiMocks.explainWorkbenchQuery.mockResolvedValue(
       create(ExplainQueryResponseSchema, {
