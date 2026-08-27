@@ -1,5 +1,7 @@
 "use client";
 
+// Copyright 2026 Redpanda Data, Inc.
+
 import {
   ChevronDown,
   Copy,
@@ -42,13 +44,8 @@ import {
   parseExplainTextPlan,
 } from "./sql-workbench-model";
 
-const DEFAULT_SQL = `SELECT s.ref, c.name AS carrier, s.status,
-       s.origin_port, s.dest_port, s.eta
-FROM shipping.shipments s
-JOIN shipping.carriers c ON c.id = s.carrier_id
-WHERE s.status = 'customs_hold'
-ORDER BY s.eta ASC
-LIMIT 50;`;
+const DEFAULT_SQL =
+  "SELECT current_database() AS database_name, current_user AS connected_as, now() AS server_time;";
 
 const EDITOR_LINE_COUNT = 7;
 const FIRST_EDITOR_LINE_NUMBER = 1;
@@ -136,7 +133,7 @@ function WorkbenchSidebar() {
     <aside className="hidden w-[270px] shrink-0 border-white/10 border-r bg-zinc-950/60 px-3 py-5 text-zinc-400 xl:block">
       <section aria-labelledby={savedQueriesHeadingId} className="space-y-4">
         <h2
-          className="font-semibold text-[11px] text-zinc-500 uppercase tracking-[0.18em]"
+          className="font-semibold text-xs text-zinc-500"
           id={savedQueriesHeadingId}
         >
           Saved queries
@@ -145,7 +142,7 @@ function WorkbenchSidebar() {
       </section>
       <section aria-labelledby={historyHeadingId} className="mt-8 space-y-4">
         <h2
-          className="font-semibold text-[11px] text-zinc-500 uppercase tracking-[0.18em]"
+          className="font-semibold text-xs text-zinc-500"
           id={historyHeadingId}
         >
           History
@@ -186,9 +183,7 @@ function GuardPill() {
         </PopoverHeader>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <h3 className="font-semibold text-[11px] text-emerald-300 uppercase tracking-[0.18em]">
-              Allowed
-            </h3>
+            <h3 className="font-semibold text-emerald-300 text-xs">Allowed</h3>
             <ul className="mt-2 space-y-2">
               {GUARD_ALLOWED.map((item) => (
                 <li className="flex gap-2 text-xs leading-5" key={item.what}>
@@ -202,9 +197,7 @@ function GuardPill() {
             </ul>
           </div>
           <div>
-            <h3 className="font-semibold text-[11px] text-red-300 uppercase tracking-[0.18em]">
-              Rejected
-            </h3>
+            <h3 className="font-semibold text-red-300 text-xs">Rejected</h3>
             <ul className="mt-2 space-y-2">
               {GUARD_BLOCKED.map((item) => (
                 <li className="flex gap-2 text-xs leading-5" key={item.what}>
@@ -292,7 +285,7 @@ function SqlTextEditor({
   return (
     <section
       aria-label="SQL editor"
-      className="overflow-hidden rounded-xl border border-white/10 bg-zinc-900/80 shadow-2xl shadow-black/30"
+      className="overflow-hidden rounded-xl border border-white/10 bg-zinc-900/80"
     >
       <div className="grid min-h-[210px] grid-cols-[52px_1fr]">
         <div className="border-white/10 border-r bg-zinc-950/20 py-5 text-right font-mono text-sm text-zinc-600 leading-8">
@@ -327,13 +320,11 @@ function VisualBuilderPreview() {
   return (
     <section
       aria-label="Visual query builder preview"
-      className="overflow-hidden rounded-xl border border-white/10 bg-zinc-900/80 shadow-2xl shadow-black/30"
+      className="overflow-hidden rounded-xl border border-white/10 bg-zinc-900/80"
     >
       <div className="space-y-5 p-5">
         <div className="flex flex-wrap items-center gap-4">
-          <span className="w-20 font-semibold text-[11px] text-zinc-500 uppercase tracking-[0.18em]">
-            From
-          </span>
+          <span className="w-20 font-semibold text-xs text-zinc-500">From</span>
           <span className="rounded-lg border border-white/10 bg-zinc-950 px-4 py-2 font-mono text-zinc-100">
             logistics.shipping.shipments
           </span>
@@ -343,7 +334,7 @@ function VisualBuilderPreview() {
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="w-20 font-semibold text-[11px] text-zinc-500 uppercase tracking-[0.18em]">
+          <span className="w-20 font-semibold text-xs text-zinc-500">
             Columns
           </span>
           {[
@@ -373,7 +364,7 @@ function VisualBuilderPreview() {
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="w-20 font-semibold text-[11px] text-zinc-500 uppercase tracking-[0.18em]">
+          <span className="w-20 font-semibold text-xs text-zinc-500">
             Where
           </span>
           <span className="rounded-lg border border-white/10 bg-zinc-950 px-4 py-2 font-mono">
@@ -388,7 +379,7 @@ function VisualBuilderPreview() {
         </div>
       </div>
       <div className="border-white/10 border-t bg-zinc-950/40 p-5">
-        <h3 className="mb-3 font-semibold text-[11px] text-zinc-500 uppercase tracking-[0.18em]">
+        <h3 className="mb-3 font-semibold text-xs text-zinc-500">
           Query pipeline
         </h3>
         <div className="flex flex-wrap items-center gap-4">
@@ -470,9 +461,7 @@ function EditorToolbar({
         Save query
       </Button>
       <div className="h-8 w-px bg-white/10" />
-      <span className="font-semibold text-[11px] text-zinc-500 uppercase tracking-[0.18em]">
-        Engine
-      </span>
+      <span className="font-semibold text-xs text-zinc-500">Engine</span>
       <span className="inline-flex rounded-lg bg-zinc-950 p-1 text-sm">
         <span className="rounded-md bg-zinc-800 px-3 py-1 text-white">
           postgres
@@ -649,9 +638,7 @@ function MetricCards({
           className="min-w-0 rounded-xl border border-white/10 bg-zinc-900/90 p-4"
           key={label}
         >
-          <p className="font-semibold text-[11px] text-zinc-500 uppercase tracking-[0.14em]">
-            {label}
-          </p>
+          <p className="font-semibold text-xs text-zinc-500">{label}</p>
           <p className="mt-1 truncate font-bold font-mono text-xl text-zinc-100">
             {value}
           </p>
@@ -935,6 +922,9 @@ function ExplainTable({ summary }: { summary: ExplainPlanSummary }) {
   return (
     <div className="overflow-auto rounded-xl border border-white/10 bg-zinc-950">
       <table className="w-full min-w-[880px] text-left font-mono text-sm">
+        <caption className="sr-only">
+          Query plan node timings and row estimates
+        </caption>
         <thead className="text-zinc-500 uppercase tracking-wider">
           <tr>
             <th className="px-4 py-3" scope="col">
