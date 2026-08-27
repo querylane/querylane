@@ -166,7 +166,7 @@ function isDeferredChartsAsset(distDir: string, relativePath: string) {
     // are bundled into the console-pages route chunk, and matching them would
     // silently exclude that entire chunk from the core budget.
     return (
-      normalizedSource.includes("node_modules/recharts/") ||
+      normalizedSource.includes("node_modules/@tanstack/charts/") ||
       normalizedSource.includes("src/components/charts/metric-time-chart") ||
       normalizedSource.includes("src/components/charts/sparkline-chart")
     );
