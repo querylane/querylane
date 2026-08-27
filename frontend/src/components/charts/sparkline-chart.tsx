@@ -58,11 +58,8 @@ function SparklineChart({ color, data, seriesKey }: SparklineChartProps) {
   const [minimum, maximum] = finiteExtent(trend);
   const firstTime = trend[0]?.time ?? 0;
   const lastTime = trend.at(-1)?.time ?? firstTime + 1;
-  const definition = defineChart({
-    focus: false,
-    keyboard: false,
-    pointer: false,
-    chart: () => ({
+  const definition = defineChart(
+    {
       gradients: [
         {
           id: gradientId,
@@ -93,6 +90,10 @@ function SparklineChart({ color, data, seriesKey }: SparklineChartProps) {
           y: "value",
         }),
       ],
+      scales: {
+        x: { scale: scaleLinear().domain([firstTime, lastTime]) },
+        y: { scale: scaleLinear().domain([minimum, maximum]) },
+      },
       theme: {
         background: "transparent",
         foreground: color,
@@ -100,10 +101,13 @@ function SparklineChart({ color, data, seriesKey }: SparklineChartProps) {
         muted: color,
         palette: [color],
       },
-      x: { scale: scaleLinear().domain([firstTime, lastTime]) },
-      y: { scale: scaleLinear().domain([minimum, maximum]) },
-    }),
-  });
+    },
+    {
+      focus: false,
+      keyboard: false,
+      pointer: false,
+    }
+  );
 
   return (
     <ResponsiveChart

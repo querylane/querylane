@@ -343,8 +343,8 @@ function MetricTimeChart({
           )
         )
       : [];
-  const definition = defineChart({
-    chart: () => ({
+  const definition = defineChart(
+    {
       gradients,
       marks: [
         ...solidMarks,
@@ -368,6 +368,45 @@ function MetricTimeChart({
         }),
       ],
       ...(yAxisMode === "inset" ? { margin: INSET_CHART_MARGIN } : {}),
+      scales: {
+        x: {
+          axis: {
+            line: false,
+            tickLabels: {
+              anchor: ({ index }) => {
+                if (index === 0) {
+                  return "start";
+                }
+                return index === timeTicks.length - 1 ? "end" : "middle";
+              },
+              thin: false,
+            },
+            ticks: {
+              format: (value) => formatTimeTick(value, spanMs),
+              padding: 8,
+              size: 0,
+              values: timeTicks,
+            },
+          },
+          scale: scaleLinear().domain([minMs, maxMs]),
+        },
+        y: {
+          axis:
+            yAxisMode === "inset"
+              ? false
+              : {
+                  line: false,
+                  ticks: {
+                    format: formatValue,
+                    padding: 6,
+                    size: 0,
+                    values: valueTicks,
+                  },
+                },
+          grid: true,
+          scale: scaleLinear().domain(valueDomain),
+        },
+      },
       theme: {
         background: "transparent",
         foreground: "var(--color-foreground)",
@@ -375,78 +414,43 @@ function MetricTimeChart({
         muted: "var(--color-muted-foreground)",
         palette: series.map((item) => item.color),
       },
-      x: {
-        axis: {
-          line: false,
-          tickLabels: {
-            anchor: ({ index }) => {
-              if (index === 0) {
-                return "start";
-              }
-              return index === timeTicks.length - 1 ? "end" : "middle";
-            },
-            thin: false,
-          },
-          ticks: {
-            format: (value) => formatTimeTick(value, spanMs),
-            padding: 8,
-            size: 0,
-            values: timeTicks,
-          },
-        },
-        scale: scaleLinear().domain([minMs, maxMs]),
-      },
-      y: {
-        axis:
-          yAxisMode === "inset"
-            ? false
-            : {
-                line: false,
-                ticks: {
-                  format: formatValue,
-                  padding: 6,
-                  size: 0,
-                  values: valueTicks,
-                },
-              },
-        grid: true,
-        scale: scaleLinear().domain(valueDomain),
-      },
-    }),
-    focus: "group-x",
-    focusRing: false,
-    keyboard: true,
-    tooltip: {
-      anchor: "group-center",
-      className: "querylane-chart-tooltip",
-      content: (points) => {
-        const valueBySeries = new Map(
-          points.map((point) => [point.datum.seriesKey, point.datum.value])
-        );
-        const time = points[0]?.xValue;
-        return {
-          ...(typeof time === "number"
-            ? { title: formatTooltipTime(time) }
-            : {}),
-          rows: series.map((item) => {
-            const value = valueBySeries.get(item.key);
-            return {
-              color: item.color,
-              label: item.label,
-              value: typeof value === "number" ? detailedValue(value) : "–",
-            };
-          }),
-        };
-      },
-      offset: 8,
-      placement: ["top", "right", "left", "bottom"],
-      sort: (left, right) =>
-        (seriesOrder.get(left.datum.seriesKey) ?? Number.MAX_SAFE_INTEGER) -
-        (seriesOrder.get(right.datum.seriesKey) ?? Number.MAX_SAFE_INTEGER),
-      sticky: false,
-      use: tooltip,
     },
-  });
+    {
+      focus: "group-x",
+      focusRing: false,
+      keyboard: true,
+      tooltip: {
+        anchor: "group-center",
+        className: "querylane-chart-tooltip",
+        content: (points) => {
+          const valueBySeries = new Map(
+            points.map((point) => [point.datum.seriesKey, point.datum.value])
+          );
+          const time = points[0]?.xValue;
+          return {
+            ...(typeof time === "number"
+              ? { title: formatTooltipTime(time) }
+              : {}),
+            rows: series.map((item) => {
+              const value = valueBySeries.get(item.key);
+              return {
+                color: item.color,
+                label: item.label,
+                value: typeof value === "number" ? detailedValue(value) : "–",
+              };
+            }),
+          };
+        },
+        offset: 8,
+        placement: ["top", "right", "left", "bottom"],
+        sort: (left, right) =>
+          (seriesOrder.get(left.datum.seriesKey) ?? Number.MAX_SAFE_INTEGER) -
+          (seriesOrder.get(right.datum.seriesKey) ?? Number.MAX_SAFE_INTEGER),
+        sticky: false,
+        use: tooltip,
+      },
+    }
+  );
 
   return (
     <ChartContainer
