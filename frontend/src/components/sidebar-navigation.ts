@@ -1,5 +1,6 @@
 import {
   Activity,
+  Code2,
   DatabaseZap,
   FolderTree,
   LayoutDashboard,
@@ -72,6 +73,7 @@ function buildNavLinkProps({
     linkToPage({ page: "database.overview" });
     linkToPage({ page: "database.extensions" });
     linkToPage({ page: "database.explorer" });
+    linkToPage({ page: "database.workbench" });
   }
 
   return links;
@@ -134,6 +136,13 @@ function getDatabaseNav({
           isDisabled: !paths.databaseOverview,
           key: "database.overview",
           label: "Overview",
+        },
+        {
+          icon: Code2,
+          isActive: active.databaseWorkbench,
+          isDisabled: !paths.databaseWorkbench,
+          key: "database.workbench",
+          label: "SQL workbench",
         },
         {
           icon: Puzzle,

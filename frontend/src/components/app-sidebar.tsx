@@ -160,6 +160,14 @@ function renderNavLink(link: NavLinkProps) {
           to={link.to}
         />
       );
+    case "/instances/$instanceId/databases/$databaseId/workbench":
+      return (
+        <Link
+          params={link.params}
+          search={(previous) => buildNavLinkSearch(link, previous)}
+          to={link.to}
+        />
+      );
     default:
       return assertNever(link);
   }
@@ -209,6 +217,7 @@ function resolveActivePage({
       databaseExplorer: false,
       databaseExtensions: false,
       databaseOverview: false,
+      databaseWorkbench: false,
       instanceActivity: false,
       instanceConfiguration: false,
       instanceOverview: false,
@@ -218,6 +227,7 @@ function resolveActivePage({
       "database.explorer": "databaseExplorer",
       "database.extensions": "databaseExtensions",
       "database.overview": "databaseOverview",
+      "database.workbench": "databaseWorkbench",
       "instance.activity": "instanceActivity",
       "instance.configuration": "instanceConfiguration",
       "instance.overview": "instanceOverview",

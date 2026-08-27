@@ -48,6 +48,8 @@ export function resolveBreadcrumbTail(pathname: string): BreadcrumbTail {
       return { kind: "page", label: "Extensions" };
     case "database.explorer":
       return { kind: "page", label: "Data Explorer" };
+    case "database.workbench":
+      return { kind: "page", label: "SQL workbench" };
     case "instance.roles": {
       const roleSegments = pathname.split("/").filter(Boolean);
       const roleSegment =
