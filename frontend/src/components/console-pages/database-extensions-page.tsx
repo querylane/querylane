@@ -1,31 +1,33 @@
-"use client";
-
-import { Check, Info, PackageOpen } from "lucide-react";
+import { PackageOpen, Search } from "lucide-react";
 import { useState } from "react";
 import {
   PageHeader,
   ResourcePageState,
 } from "@/components/console-pages/console-layout";
 import {
-  type ExtensionCategoryFilter,
-  type ExtensionFilterOption,
-  type ExtensionScopeFilter,
-  type ExtensionSourceFilter,
   type ExtensionStatusFilter,
-  extensionFilterOptions,
-  extensionInventorySummary,
+  extensionCategoryOptions,
   filterPresentedExtensions,
   type PresentedExtension,
   presentExtensions,
 } from "@/components/console-pages/database-extensions-filters";
-import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { EmptyState } from "@/components/empty-state";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  type DataTableFilterFacet,
-  DataTableFilterToolbar,
-} from "@/components/ui/data-table-filter-toolbar";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -35,30 +37,51 @@ import {
 } from "@/components/ui/sheet";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
   extensionsForDatabaseQueryInput,
   useListAllExtensionsQuery,
 } from "@/hooks/api/extension";
-import {
-  DEFAULT_PAGE_SIZE,
-  PAGE_SIZE_OPTIONS,
-  pageIndexForPageSizeChange,
-} from "@/lib/pagination";
+import { DETAIL_DRAWER_WIDTH_CLASS } from "@/lib/drawer-width";
 import {
   type UrlTableSearchRoute,
   useUrlTableSearch,
 } from "@/lib/url-search-state";
-import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_pb";
+import { cn } from "@/lib/utils";
 
-function selectedExtensionFilterValue<Value extends string>(
-  options: ExtensionFilterOption<Value>[],
-  selectedValues: string[]
-): Value | "All" {
+const EMPTY_VALUE = "—";
+
+function StatusCell({ extension }: { extension: PresentedExtension }) {
+  const installed = extension.statusFilter === "installed";
   return (
-    options.find((option) => option.value === selectedValues[0])?.value ?? "All"
+    <span className="flex items-center gap-2">
+      <span
+        aria-hidden="true"
+        className={cn(
+          "size-2 rounded-full",
+          installed ? "bg-success" : "bg-muted-foreground/30"
+        )}
+      />
+      <span
+        className={cn(
+          "text-xs",
+          installed ? "font-medium text-success" : "text-muted-foreground"
+        )}
+      >
+        {extension.statusLabel}
+      </span>
+    </span>
   );
 }
 
-function ExtensionCard({
+function LedgerRow({
   extension,
   isSelected,
   onSelect,
@@ -67,364 +90,389 @@ function ExtensionCard({
   isSelected: boolean;
   onSelect: (key: string) => void;
 }) {
+  const installed = extension.statusFilter === "installed";
   return (
-    <Button
-      aria-expanded={isSelected}
-      aria-haspopup="dialog"
-      className="h-auto min-h-0 w-full items-stretch justify-start rounded-xl border border-border bg-card p-0 text-left text-card-foreground shadow-xs hover:bg-card hover:ring-1 hover:ring-foreground/20 aria-expanded:ring-2 aria-expanded:ring-primary/50"
+    <TableRow
+      className={cn(
+        "cursor-pointer border-l-2",
+        installed
+          ? "border-l-success bg-success/[0.04] hover:bg-success/[0.08]"
+          : "border-l-transparent"
+      )}
       onClick={() => onSelect(extension.key)}
-      type="button"
-      variant="ghost"
     >
-      <span className="flex w-full flex-col gap-3 p-4">
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="truncate font-mono font-semibold text-sm">
-            {extension.displayName}
-          </span>
-          <Badge variant={extension.badgeVariant}>
-            {extension.statusLabel}
-          </Badge>
-          <span className="ml-auto font-mono text-muted-foreground text-xs">
-            {extension.versionLabel}
-          </span>
-        </span>
-        <span className="line-clamp-2 min-h-10 whitespace-normal text-muted-foreground text-sm leading-relaxed">
-          {extension.description}
-        </span>
-        <span className="flex min-w-0 flex-wrap items-center gap-2">
-          <Badge variant="ghost">{extension.category}</Badge>
-          <Badge variant="outline">{extension.scopeLabel}</Badge>
-          <span className="ml-auto truncate text-muted-foreground text-xs">
-            {extension.metaLabel}
-          </span>
-        </span>
-      </span>
-    </Button>
+      <TableCell>
+        <Button
+          aria-expanded={isSelected}
+          aria-haspopup="dialog"
+          className="h-auto min-h-0 justify-start whitespace-normal p-0 font-medium font-mono text-sm hover:bg-transparent"
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect(extension.key);
+          }}
+          size="xs"
+          type="button"
+          variant="ghost"
+        >
+          {extension.displayName}
+        </Button>
+      </TableCell>
+      <TableCell>
+        <StatusCell extension={extension} />
+      </TableCell>
+      <TableCell className="font-mono text-muted-foreground text-xs tabular-nums">
+        {extension.versionLabel}
+      </TableCell>
+      <TableCell className="text-muted-foreground text-xs">
+        {extension.category ?? EMPTY_VALUE}
+      </TableCell>
+      <TableCell className="hidden max-w-md truncate text-muted-foreground text-sm lg:table-cell">
+        {extension.description}
+      </TableCell>
+    </TableRow>
   );
 }
 
-function ExtensionDetails({ extension }: { extension: PresentedExtension }) {
+function statusTabLabel(label: string, count: number) {
+  return (
+    <span className="flex items-center gap-1.5">
+      {label}
+      <span className="font-mono text-muted-foreground text-xs tabular-nums">
+        {count}
+      </span>
+    </span>
+  );
+}
+
+function LedgerToolbar({
+  category,
+  categoryOptions,
+  extensions,
+  filteredCount,
+  onCategoryChange,
+  onSearchChange,
+  onStatusChange,
+  search,
+  status,
+}: {
+  category: string;
+  categoryOptions: { label: string; value: string }[];
+  extensions: PresentedExtension[];
+  filteredCount: number;
+  onCategoryChange: (category: string) => void;
+  onSearchChange: (search: string) => void;
+  onStatusChange: (status: ExtensionStatusFilter) => void;
+  search: string;
+  status: ExtensionStatusFilter;
+}) {
+  const installedCount = extensions.filter(
+    (extension) => extension.statusFilter === "installed"
+  ).length;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="relative w-full sm:w-64">
+        <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          aria-label="Search extensions…"
+          className="pl-8"
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Search extensions…"
+          value={search}
+        />
+      </div>
+      <Tabs
+        onValueChange={(value) =>
+          onStatusChange(value as ExtensionStatusFilter)
+        }
+        value={status}
+      >
+        <TabsList>
+          <TabsTrigger value="All">
+            {statusTabLabel("All", extensions.length)}
+          </TabsTrigger>
+          <TabsTrigger value="installed">
+            {statusTabLabel("Installed", installedCount)}
+          </TabsTrigger>
+          <TabsTrigger value="available">
+            {statusTabLabel("Available", extensions.length - installedCount)}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {categoryOptions.length > 0 ? (
+        <Select
+          onValueChange={(value) => onCategoryChange(value ?? "All")}
+          value={category}
+        >
+          <SelectTrigger aria-label="Category" className="w-44">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All categories</SelectItem>
+            {categoryOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : null}
+      <span className="ml-auto text-muted-foreground text-xs">
+        {filteredCount} of {extensions.length} extensions
+      </span>
+    </div>
+  );
+}
+
+function DrawerStatusHero({ extension }: { extension: PresentedExtension }) {
+  if (extension.statusFilter === "installed") {
+    const detailLine = [
+      extension.schema ? `schema ${extension.schema}` : undefined,
+      extension.scopeLabel,
+      extension.metaLabel,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    return (
+      <div className="rounded-lg border border-success/30 bg-success/5 p-3">
+        <p className="flex items-center gap-2 font-medium text-sm text-success">
+          <span aria-hidden="true" className="size-2 rounded-full bg-success" />
+          Installed · {extension.installedVersion || extension.versionLabel}
+        </p>
+        {detailLine ? (
+          <p className="mt-1 text-muted-foreground text-xs">{detailLine}</p>
+        ) : null}
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+      <p className="flex items-center gap-2 font-medium text-sm">
+        <span
+          aria-hidden="true"
+          className="size-2 rounded-full bg-muted-foreground/40"
+        />
+        Not installed in this database
+      </p>
+      <SqlCodeBlock sql={extension.installSql} wrap={true} />
+      <p className="text-muted-foreground text-xs">
+        Requires a superuser connection; Querylane only reads what is there.
+      </p>
+    </div>
+  );
+}
+
+function DrawerDetailsList({ extension }: { extension: PresentedExtension }) {
+  return (
+    <dl className="space-y-1.5">
+      {extension.facts.map((fact) => (
+        <div
+          className="flex items-baseline justify-between gap-4 text-sm"
+          key={fact.label}
+        >
+          <dt className="text-muted-foreground">{fact.label}</dt>
+          <dd className="break-words text-right font-mono">{fact.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function CuratedDrawerSections({
+  extension,
+}: {
+  extension: PresentedExtension;
+}) {
+  const { curated } = extension;
+  if (!curated) {
+    return (
+      <section className="space-y-2">
+        <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
+          Details
+        </h3>
+        <DrawerDetailsList extension={extension} />
+      </section>
+    );
+  }
   return (
     <>
-      <SheetHeader className="border-border border-b pr-12">
-        <div className="flex min-w-0 items-center gap-2">
-          <SheetTitle className="truncate font-mono font-semibold text-sm">
-            {extension.displayName}
-            <span className="sr-only"> details</span>
-          </SheetTitle>
-          <Badge variant={extension.badgeVariant}>
-            {extension.statusLabel}
-          </Badge>
+      <section className="space-y-2">
+        <div className="flex items-baseline gap-2">
+          <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
+            Try it
+          </h3>
+          <span className="text-muted-foreground text-xs">
+            read-only, safe to run
+          </span>
         </div>
-        <SheetDescription>
-          Read-only PostgreSQL extension details and safe example SQL.
-        </SheetDescription>
-      </SheetHeader>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        <div className="flex flex-col gap-5">
-          <div className="grid grid-cols-2 gap-2">
-            {extension.facts.map((fact) => (
-              <div
-                className="rounded-lg border border-border p-3"
-                key={fact.label}
-              >
-                <div className="font-semibold text-[0.65rem] text-muted-foreground uppercase tracking-wide">
-                  {fact.label}
-                </div>
-                <div className="mt-1 break-words font-mono text-sm">
-                  {fact.value}
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-sm leading-relaxed">{extension.about}</p>
-          <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-muted-foreground text-xs leading-relaxed">
-            <Info className="mt-0.5 size-4 shrink-0" />
-            <span>{extension.applied}</span>
-          </div>
-          {extension.statusFilter === "available" && extension.installSql ? (
-            <div className="space-y-2 rounded-lg bg-muted/50 p-3 text-muted-foreground text-xs leading-relaxed">
-              <p>A superuser can install it with:</p>
-              <SqlCodeBlock sql={extension.installSql} />
-            </div>
-          ) : null}
-          <section className="space-y-2">
-            <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-              What it gives you
-            </h3>
+        <SqlCodeBlock sql={curated.exampleSql} wrap={true} />
+      </section>
+      <Accordion defaultValue={["about"]}>
+        <AccordionItem value="about">
+          <AccordionTrigger className="text-sm">What it is</AccordionTrigger>
+          <AccordionContent>
             <div className="space-y-2">
-              {extension.provides.map((item) => (
-                <div className="flex gap-2" key={item.label}>
-                  <Check className="mt-0.5 size-4 shrink-0 text-primary" />
-                  <p className="text-sm leading-relaxed">
-                    <span className="font-medium font-mono text-xs">
-                      {item.label}
-                    </span>{" "}
-                    : {item.value}
-                  </p>
-                </div>
+              <p className="text-sm leading-relaxed">{curated.about}</p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                {curated.applied}
+              </p>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="capabilities">
+          <AccordionTrigger className="text-sm">
+            What it gives you
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-2">
+              {curated.provides.map((item) => (
+                <p className="text-sm leading-relaxed" key={item.label}>
+                  <span className="font-medium font-mono text-xs">
+                    {item.label}
+                  </span>
+                  <span className="text-muted-foreground"> — {item.value}</span>
+                </p>
               ))}
             </div>
-          </section>
-          <section className="space-y-2">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-                Try it
-              </h3>
-              <span className="text-muted-foreground text-xs">
-                read-only, safe to run
-              </span>
-            </div>
-            <SqlCodeBlock sql={extension.exampleSql} />
-          </section>
-        </div>
-      </div>
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="details">
+          <AccordionTrigger className="text-sm">Details</AccordionTrigger>
+          <AccordionContent>
+            <DrawerDetailsList extension={extension} />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </>
   );
 }
 
-function paginationLabel({
-  filteredCount,
-  pageIndex,
-  pageSize,
+function ExtensionDrawer({
+  extension,
+  onClose,
 }: {
-  filteredCount: number;
-  pageIndex: number;
-  pageSize: number;
+  extension: PresentedExtension | undefined;
+  onClose: () => void;
 }) {
-  const first = pageIndex * pageSize + 1;
-  const last = Math.min((pageIndex + 1) * pageSize, filteredCount);
-  return `Showing ${first}–${last} of ${filteredCount} extensions`;
+  return (
+    <Sheet
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+      open={extension !== undefined}
+    >
+      <SheetContent
+        className={cn("gap-0 overflow-hidden p-0", DETAIL_DRAWER_WIDTH_CLASS)}
+        side="right"
+      >
+        {extension ? (
+          <>
+            <SheetHeader className="border-border border-b pr-12">
+              <div className="flex min-w-0 items-center gap-2">
+                <SheetTitle className="truncate font-mono font-semibold text-base">
+                  {extension.displayName}
+                  <span className="sr-only"> details</span>
+                </SheetTitle>
+                <Badge variant={extension.badgeVariant}>
+                  {extension.statusLabel}
+                </Badge>
+                <span className="ml-auto font-mono text-muted-foreground text-xs tabular-nums">
+                  {extension.versionLabel}
+                </span>
+              </div>
+              <SheetDescription className="text-left">
+                {extension.description ||
+                  "The server reports no description for this extension."}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+              <DrawerStatusHero extension={extension} />
+              <CuratedDrawerSections extension={extension} />
+            </div>
+          </>
+        ) : null}
+      </SheetContent>
+    </Sheet>
+  );
 }
 
-function ExtensionsGrid({
+function ExtensionsLedger({
   extensions,
   searchRoute,
 }: {
-  extensions: Extension[];
+  extensions: PresentedExtension[];
   searchRoute: UrlTableSearchRoute;
 }) {
   const [search, setSearch] = useUrlTableSearch(searchRoute);
   const [status, setStatus] = useState<ExtensionStatusFilter>("All");
-  const [scope, setScope] = useState<ExtensionScopeFilter>("All");
-  const [category, setCategory] = useState<ExtensionCategoryFilter>("All");
-  const [source, setSource] = useState<ExtensionSourceFilter>("All");
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [pageIndex, setPageIndex] = useState(0);
+  const [category, setCategory] = useState("All");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
-  const presentedExtensions = presentExtensions(extensions);
-  const filterOptions = extensionFilterOptions(presentedExtensions);
-  const filteredExtensions = filterPresentedExtensions(presentedExtensions, {
+  const categoryOptions = extensionCategoryOptions(extensions);
+  const filtered = filterPresentedExtensions(extensions, {
     category,
-    scope,
     search,
-    source,
     status,
   });
-  const pageCount = Math.max(
-    1,
-    Math.ceil(filteredExtensions.length / pageSize)
-  );
-  const currentPageIndex = Math.min(pageIndex, pageCount - 1);
-  const pageExtensions = filteredExtensions.slice(
-    currentPageIndex * pageSize,
-    (currentPageIndex + 1) * pageSize
-  );
-  const selectedExtension = filteredExtensions.find(
+  const selected = extensions.find(
     (extension) => extension.key === selectedKey
   );
 
-  function resetPage() {
-    setPageIndex(0);
-  }
-
-  function handleSearchChange(nextSearch: string) {
-    resetPage();
-    setSelectedKey(null);
-    setSearch(nextSearch);
-  }
-
-  function handleStatusChange(nextStatus: ExtensionStatusFilter) {
-    resetPage();
-    setSelectedKey(null);
-    setStatus(nextStatus);
-  }
-
-  function handleScopeChange(nextScope: ExtensionScopeFilter) {
-    resetPage();
-    setSelectedKey(null);
-    setScope(nextScope);
-  }
-
-  function handleCategoryChange(nextCategory: ExtensionCategoryFilter) {
-    resetPage();
-    setSelectedKey(null);
-    setCategory(nextCategory);
-  }
-
-  function handleSourceChange(nextSource: ExtensionSourceFilter) {
-    resetPage();
-    setSelectedKey(null);
-    setSource(nextSource);
-  }
-
-  function handleClearAll() {
-    resetPage();
-    setSelectedKey(null);
-    setSearch("");
-    setStatus("All");
-    setScope("All");
-    setCategory("All");
-    setSource("All");
-  }
-
-  const facets = [
-    {
-      label: "Status",
-      onChange: (selectedValues: string[]) =>
-        handleStatusChange(
-          selectedExtensionFilterValue(filterOptions.statuses, selectedValues)
-        ),
-      options: filterOptions.statuses,
-      selected: status === "All" ? [] : [status],
-      singleSelect: true,
-    },
-    {
-      label: "Scope",
-      onChange: (selectedValues: string[]) =>
-        handleScopeChange(
-          selectedExtensionFilterValue(filterOptions.scopes, selectedValues)
-        ),
-      options: filterOptions.scopes,
-      selected: scope === "All" ? [] : [scope],
-      singleSelect: true,
-    },
-    {
-      label: "Category",
-      onChange: (selectedValues: string[]) =>
-        handleCategoryChange(
-          selectedExtensionFilterValue(filterOptions.categories, selectedValues)
-        ),
-      options: filterOptions.categories,
-      selected: category === "All" ? [] : [category],
-      singleSelect: true,
-    },
-    {
-      label: "Source",
-      onChange: (selectedValues: string[]) =>
-        handleSourceChange(
-          selectedExtensionFilterValue(filterOptions.sources, selectedValues)
-        ),
-      options: filterOptions.sources,
-      selected: source === "All" ? [] : [source],
-      singleSelect: true,
-    },
-  ] satisfies DataTableFilterFacet[];
-
-  function handlePageSizeChange(nextPageSize: number) {
-    setPageIndex(
-      pageIndexForPageSizeChange({
-        nextPageSize,
-        pageIndex: currentPageIndex,
-        pageSize,
-      })
-    );
-    setSelectedKey(null);
-    setPageSize(nextPageSize);
-  }
-
-  function handleSelectExtension(key: string) {
-    setSelectedKey((currentKey) => (currentKey === key ? null : key));
-  }
-
-  function handlePreviousPage() {
-    setSelectedKey(null);
-    setPageIndex((index) => Math.max(0, index - 1));
-  }
-
-  function handleNextPage() {
-    setSelectedKey(null);
-    setPageIndex((index) => Math.min(pageCount - 1, index + 1));
-  }
-
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-muted-foreground text-sm">
-        {extensionInventorySummary(presentedExtensions)}; installation requires
-        a superuser connection; Querylane only reads what is there
-      </p>
-      <DataTableFilterToolbar
-        dataSlot="extension-filter-bar"
-        facets={facets}
-        onClearAll={handleClearAll}
-        onSearchChange={handleSearchChange}
-        searchPlaceholder="Search extensions…"
-        searchValue={search}
+      <LedgerToolbar
+        category={category}
+        categoryOptions={categoryOptions}
+        extensions={extensions}
+        filteredCount={filtered.length}
+        onCategoryChange={setCategory}
+        onSearchChange={setSearch}
+        onStatusChange={setStatus}
+        search={search}
+        status={status}
       />
-      <div className="flex flex-col gap-4">
-        <div className="min-w-0 flex-1 space-y-4">
-          {pageExtensions.length === 0 ? (
-            <EmptyState
-              description="Try a different search or filter."
-              icon={PackageOpen}
-              title="No extensions match"
-            />
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {pageExtensions.map((extension) => (
-                <ExtensionCard
+      {filtered.length === 0 ? (
+        <EmptyState
+          description="Try a different search or filter."
+          icon={PackageOpen}
+          title="No extensions match"
+        />
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-l-2 border-l-transparent hover:bg-transparent">
+                <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Version</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead className="hidden lg:table-cell">
+                  Description
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((extension) => (
+                <LedgerRow
                   extension={extension}
                   isSelected={extension.key === selectedKey}
                   key={extension.key}
-                  onSelect={handleSelectExtension}
+                  onSelect={(key) =>
+                    setSelectedKey((currentKey) =>
+                      currentKey === key ? null : key
+                    )
+                  }
                 />
               ))}
-            </div>
-          )}
-          <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
-            {filteredExtensions.length > 0 ? (
-              <span className="shrink-0">
-                {paginationLabel({
-                  filteredCount: filteredExtensions.length,
-                  pageIndex: currentPageIndex,
-                  pageSize,
-                })}
-              </span>
-            ) : null}
-            <div className="w-full sm:min-w-0 sm:flex-1">
-              <PaginationFooter
-                hasNext={currentPageIndex < pageCount - 1}
-                hasPrev={currentPageIndex > 0}
-                onNext={handleNextPage}
-                onPageSizeChange={handlePageSizeChange}
-                onPrev={handlePreviousPage}
-                pageLabel={`Page ${currentPageIndex + 1} of ${pageCount}`}
-                pageSize={pageSize}
-                pageSizeLabel="Extensions per page"
-                pageSizeOptions={PAGE_SIZE_OPTIONS}
-              />
-            </div>
-          </div>
+            </TableBody>
+          </Table>
         </div>
-      </div>
-      <Sheet
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedKey(null);
-          }
-        }}
-        open={selectedExtension !== undefined}
-      >
-        <SheetContent
-          className="w-[min(34rem,calc(100vw-1rem))] gap-0 overflow-hidden p-0 sm:max-w-[34rem]"
-          side="right"
-        >
-          {selectedExtension ? (
-            <ExtensionDetails extension={selectedExtension} />
-          ) : null}
-        </SheetContent>
-      </Sheet>
+      )}
+      <ExtensionDrawer
+        extension={selected}
+        onClose={() => setSelectedKey(null)}
+      />
     </div>
   );
 }
@@ -453,7 +501,7 @@ function BackendDatabaseExtensionsPage({
     enabled: Boolean(instanceId && databaseId),
     refetchOnWindowFocus: false,
   });
-  const extensions = extensionsQuery.data?.extensions ?? [];
+  const extensions = presentExtensions(extensionsQuery.data?.extensions ?? []);
   const hasData = extensionsQuery.data !== undefined;
 
   return (
@@ -474,7 +522,7 @@ function BackendDatabaseExtensionsPage({
         {extensions.length === 0 ? (
           <NoExtensionsState />
         ) : (
-          <ExtensionsGrid extensions={extensions} searchRoute={searchRoute} />
+          <ExtensionsLedger extensions={extensions} searchRoute={searchRoute} />
         )}
       </div>
     </ResourcePageState>

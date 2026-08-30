@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/sheet";
 import { formatCellForClipboard } from "@/features/data-explorer/table-data/selection-formatters";
 import type { QualifiedTableName } from "@/lib/console-resources";
+import { DETAIL_DRAWER_WIDTH_CLASS } from "@/lib/drawer-width";
+import { cn } from "@/lib/utils";
 import type {
   TableCell,
   TableResultColumn,
@@ -178,7 +180,7 @@ function RecordDetailDrawer({
         // Registry sheets cap at sm:max-w-sm; record details need a wide
         // drawer, and `ui/` must stay native shadcn output, so the width
         // override lives here.
-        className="flex flex-col gap-0 p-0 data-[side=right]:w-[min(calc(100vw-1rem),clamp(34rem,45vw,60rem))] data-[side=right]:sm:max-w-none"
+        className={cn("flex flex-col gap-0 p-0", DETAIL_DRAWER_WIDTH_CLASS)}
         side="right"
       >
         <SheetHeader className="gap-2 border-b px-5 py-3.5 pr-14">

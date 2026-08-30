@@ -1924,13 +1924,13 @@ test("backend database extensions page matches design source", async () => {
     .element(page.getByRole("heading", { name: "Extensions" }))
     .toBeVisible();
   await expect.element(page.getByText("pg_stat_statements")).toBeVisible();
-  await expect.element(page.getByText("powers Query insights")).toBeVisible();
+  await expect.element(page.getByText("Observability")).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-database-extensions"
   );
 });
 
-test("backend database extensions pagination stays contained on narrow screens", async () => {
+test("backend database extensions toolbar stays contained on narrow screens", async () => {
   state.extensionQuery = { data: extensionDesignInventoryResponse() };
 
   render(
@@ -1948,23 +1948,21 @@ test("backend database extensions pagination stays contained on narrow screens",
     </ScreenshotFrame>
   );
 
-  await expect.element(page.getByRole("combobox")).toBeVisible();
+  await expect.element(page.getByRole("tablist")).toBeVisible();
 
   const surfaceBox = page
     .getByTestId("narrow-extensions-page")
     .element()
     .getBoundingClientRect();
-  const pageSizeBox = page
-    .getByRole("combobox")
+  const searchBox = page
+    .getByRole("textbox", { name: "Search extensions…" })
     .element()
     .getBoundingClientRect();
-  const nextPageBox = page
-    .getByRole("button", { name: "Next page" })
-    .element()
-    .getBoundingClientRect();
+  const tabsBox = page.getByRole("tablist").element().getBoundingClientRect();
 
-  expect(pageSizeBox.left).toBeGreaterThanOrEqual(surfaceBox.left);
-  expect(nextPageBox.right).toBeLessThanOrEqual(surfaceBox.right);
+  expect(searchBox.right).toBeLessThanOrEqual(surfaceBox.right);
+  expect(tabsBox.left).toBeGreaterThanOrEqual(surfaceBox.left);
+  expect(tabsBox.right).toBeLessThanOrEqual(surfaceBox.right);
 });
 
 test("backend database extensions drawer matches design source", async () => {
@@ -1993,6 +1991,9 @@ test("backend database extensions drawer matches design source", async () => {
   await expect
     .element(page.getByText(SHARED_PRELOAD_LIBRARIES_TEXT))
     .toBeVisible();
+
+  await drawer.getByRole("button", { name: "What it gives you" }).click();
+
   await expect.element(page.getByText("pg_stat_statements view")).toBeVisible();
   await expect.element(page.getByText("track_planning setting")).toBeVisible();
   await expect(drawer).toMatchScreenshot("backend-database-extensions-drawer");
@@ -2016,11 +2017,8 @@ test("backend database extensions available drawer matches design source", async
   await page
     .getByRole("textbox", { name: "Search extensions…" })
     .fill("timescaledb");
-  await expect
-    .element(page.getByRole("button", { name: "Clear all" }))
-    .toBeVisible();
-  await expect.element(page.getByText("Available")).toBeVisible();
-  await expect.element(page.getByText("available to install")).toBeVisible();
+  await expect.element(page.getByText("Time-series")).toBeVisible();
+  await expect.element(page.getByText("1 of 7 extensions")).toBeVisible();
   await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
     "backend-database-extensions-available"
   );
@@ -2030,7 +2028,7 @@ test("backend database extensions available drawer matches design source", async
   const drawer = page.getByRole("dialog", { name: "timescaledb details" });
   await expect.element(drawer).toBeVisible();
   await expect
-    .element(page.getByText("A superuser can install it with:"))
+    .element(page.getByText("Not installed in this database"))
     .toBeVisible();
   await expect(drawer).toMatchScreenshot(
     "backend-database-extensions-available-drawer"
