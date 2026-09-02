@@ -36,9 +36,21 @@
       },
       {
         "files": [
+          "src/hooks/use-proto-form/**",
+          "src/lib/core/**",
+          "src/lib/protobuf-provider/**"
+        ],
+        "rules": [
+          "deslop/unused-export",
+          "deslop/unused-file",
+          "react-doctor/no-barrel-import"
+        ]
+      },
+      {
+        "files": [
           "src/components/onboarding-wizard/phases/manual-yaml-phase.tsx",
           "src/components/onboarding-wizard/wizard-content.tsx",
-          "src/routes/new-instance-connection-fields.tsx"
+          "src/components/new-instance-connection-fields.tsx"
         ],
         "rules": ["react-doctor/no-nested-card-surface"]
       },

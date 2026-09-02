@@ -1,20 +1,24 @@
 "use client";
 
 import { AlertCircle, CheckCircle2, Save } from "lucide-react";
-import type { Dispatch, SetStateAction } from "react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
+import { useWatch } from "react-hook-form";
 import { SectionCard } from "@/components/console-pages/console-layout";
 import {
-  DEFAULT_POSTGRES_PORT,
-  type InstanceFormErrors,
-  type InstanceFormInvalidFieldName,
-  type InstanceFormState,
+  type InstanceLabelEntry,
   type InstanceRecord,
-  labelsEqual,
   labelsToEntries,
-  validateInstanceForm,
+  labelsToMap,
 } from "@/components/console-pages/instance-config-model";
+import {
+  createInstanceFormDefaults,
+  createInstanceUpdate,
+  findFirstErrorMessage,
+  type InstanceProtoForm,
+  normalizeInstanceProtoForm,
+} from "@/components/console-pages/instance-config-protoform";
 import { FieldError } from "@/components/console-pages/instance-configuration-field-error";
+import { InstanceConfigurationLabels } from "@/components/console-pages/instance-configuration-labels";
 import { PasswordInput } from "@/components/password-input";
 import {
   SslModeSelectItems,
@@ -34,65 +38,54 @@ import { Button } from "@/components/ui/button";
 import { DisabledReasonButton } from "@/components/ui/disabled-reason-button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectTrigger } from "@/components/ui/select";
+import { useProtoForm } from "@/hooks/use-proto-form";
 import {
   formatSslMode,
   formatSslNegotiation,
-  normalizeSslNegotiation,
+  toSslMode,
+  toSslNegotiation,
 } from "@/lib/protobuf-enums";
+import { isDirectSslNegotiationMode } from "@/lib/ssl-modes";
+import { normalizeAppUiError } from "@/lib/ui-error";
 import { waitForNextFrame } from "@/lib/wait-for-next-frame";
 import {
   Instance_CredentialState,
-  PostgresConfig_SslMode,
+  InstanceSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
-import { InstanceConfigurationLabels } from "./instance-configuration-labels";
 
-function createInstanceFormState(instance: InstanceRecord): InstanceFormState {
-  return {
-    database: instance.config?.database ?? "",
-    dirtyFields: {},
-    displayName: instance.displayName,
-    host: instance.config?.host ?? "",
-    labels: labelsToEntries(instance.labels ?? {}),
-    password: instance.config?.password ?? "",
-    port: String(instance.config?.port ?? DEFAULT_POSTGRES_PORT),
-    sslMode: formatSslMode(
-      instance.config?.sslMode ?? PostgresConfig_SslMode.PREFER
-    ),
-    sslNegotiation: formatSslNegotiation(
-      normalizeSslNegotiation(instance.config?.sslNegotiation)
-    ),
-    username: instance.config?.username ?? "",
-  };
-}
-function areInstanceFormStatesEqual(
-  current: InstanceFormState,
-  next: InstanceFormState
-) {
-  return (
-    current.database === next.database &&
-    current.displayName === next.displayName &&
-    current.host === next.host &&
-    labelsEqual(current.labels, next.labels) &&
-    current.password === next.password &&
-    current.port === next.port &&
-    current.sslMode === next.sslMode &&
-    current.sslNegotiation === next.sslNegotiation &&
-    current.username === next.username
-  );
+const REQUIRED_ERROR_BY_FIELD = {
+  database: "Default database is required.",
+  displayName: "Display name is required.",
+  host: "Host is required.",
+  password: "Password is required.",
+  username: "Username is required.",
+} as const;
+const PORT_ERROR = "Port must be between 1 and 65535.";
+const SSL_NEGOTIATION_ERROR =
+  "Direct SSL negotiation requires SSL mode require, verify-ca, or verify-full.";
+
+interface InstanceConfigurationFieldErrors {
+  database: string | undefined;
+  displayName: string | undefined;
+  host: string | undefined;
+  labels: string | undefined;
+  password: string | undefined;
+  port: string | undefined;
+  sslMode: string | undefined;
+  sslNegotiation: string | undefined;
+  username: string | undefined;
 }
 
-interface InstanceConfigurationSaveOutcome {
-  fieldErrors: InstanceFormErrors;
-  firstInvalidField: InstanceFormInvalidFieldName | null;
-}
-
-function focusInstanceConfigurationInvalidField(
-  field: InstanceFormInvalidFieldName
-) {
+function focusInstanceConfigurationInvalidField(field: string) {
   waitForNextFrame().then(() => {
-    document
-      .querySelector<HTMLElement>(`[data-instance-config-field="${field}"]`)
-      ?.focus();
+    for (const element of document.querySelectorAll<HTMLElement>(
+      "[data-instance-config-field]"
+    )) {
+      if (element.dataset["instanceConfigField"] === field) {
+        element.focus();
+        return;
+      }
+    }
   });
 }
 
@@ -159,6 +152,230 @@ function InstanceCredentialAlert({
   );
 }
 
+function localErrorMessage(
+  error: unknown,
+  fallback: string
+): string | undefined {
+  if (!error) {
+    return;
+  }
+  if (typeof error === "object" && "type" in error && error.type === "server") {
+    return findFirstErrorMessage(error) ?? fallback;
+  }
+  return fallback;
+}
+
+function surfaceSaveError({
+  error,
+  form,
+  onInvalidSave,
+}: {
+  error: unknown;
+  form: InstanceProtoForm;
+  onInvalidSave: (message?: string) => void;
+}) {
+  const serverOutcome = form.setServerErrors(error);
+  if (serverOutcome.handled && serverOutcome.unmapped.length === 0) {
+    onInvalidSave();
+    return;
+  }
+  if (serverOutcome.unmapped.length > 0) {
+    onInvalidSave(
+      serverOutcome.unmapped.map((violation) => violation.description).join(" ")
+    );
+    return;
+  }
+  const uiError = normalizeAppUiError(error, {
+    action: "save instance configuration",
+    area: "console.instance.configuration",
+    source: "mutation",
+    surface: "inline",
+  });
+  onInvalidSave(uiError.message);
+}
+
+function InstanceConfigurationFields({
+  credentialGuidanceId,
+  credentialsUnreadable,
+  fieldErrors,
+  form,
+  isConfigManaged,
+  sslMode,
+  sslNegotiation,
+}: {
+  credentialGuidanceId: string;
+  credentialsUnreadable: boolean;
+  fieldErrors: InstanceConfigurationFieldErrors;
+  form: InstanceProtoForm;
+  isConfigManaged: boolean;
+  sslMode: string;
+  sslNegotiation: string;
+}) {
+  const displayNameId = useId();
+  const hostId = useId();
+  const portId = useId();
+  const databaseId = useId();
+  const usernameId = useId();
+  const passwordId = useId();
+  const sslModeId = useId();
+  const sslNegotiationId = useId();
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <div className="space-y-2">
+        <label className="text-sm" htmlFor={displayNameId}>
+          Display name
+        </label>
+        <Input
+          aria-invalid={Boolean(fieldErrors.displayName)}
+          data-instance-config-field="displayName"
+          disabled={isConfigManaged}
+          id={displayNameId}
+          {...form.register("displayName")}
+        />
+        <FieldError error={fieldErrors.displayName} />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm" htmlFor={hostId}>
+          Host
+        </label>
+        <Input
+          aria-invalid={Boolean(fieldErrors.host)}
+          data-instance-config-field="host"
+          disabled={isConfigManaged}
+          id={hostId}
+          {...form.register("config.host")}
+        />
+        <FieldError error={fieldErrors.host} />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm" htmlFor={portId}>
+          Port
+        </label>
+        <Input
+          aria-invalid={Boolean(fieldErrors.port)}
+          data-instance-config-field="port"
+          disabled={isConfigManaged}
+          id={portId}
+          type="number"
+          {...form.register("config.port", { valueAsNumber: true })}
+        />
+        <FieldError error={fieldErrors.port} />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm" htmlFor={databaseId}>
+          Default database
+        </label>
+        <Input
+          aria-invalid={Boolean(fieldErrors.database)}
+          data-instance-config-field="database"
+          disabled={isConfigManaged}
+          id={databaseId}
+          {...form.register("config.database")}
+        />
+        <FieldError error={fieldErrors.database} />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm" htmlFor={usernameId}>
+          Username
+        </label>
+        <Input
+          aria-invalid={Boolean(fieldErrors.username)}
+          data-instance-config-field="username"
+          disabled={isConfigManaged}
+          id={usernameId}
+          {...form.register("config.username")}
+        />
+        <FieldError error={fieldErrors.username} />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm" htmlFor={passwordId}>
+          Password
+        </label>
+        <PasswordInput
+          aria-describedby={
+            credentialsUnreadable ? credentialGuidanceId : undefined
+          }
+          aria-invalid={Boolean(fieldErrors.password)}
+          data-instance-config-field="password"
+          disabled={isConfigManaged}
+          id={passwordId}
+          {...form.register("config.password")}
+        />
+        <FieldError error={fieldErrors.password} />
+      </div>
+      <div className="grid gap-4 lg:col-span-2 lg:grid-cols-2">
+        <div className="space-y-2">
+          <label className="text-sm" htmlFor={sslModeId}>
+            SSL mode
+          </label>
+          <Select
+            disabled={isConfigManaged}
+            onValueChange={(value) => {
+              if (value) {
+                form.setValue("config.sslMode", toSslMode(value), {
+                  shouldDirty: true,
+                  shouldTouch: true,
+                  shouldValidate: true,
+                });
+              }
+            }}
+            value={sslMode}
+          >
+            <SelectTrigger
+              aria-invalid={Boolean(fieldErrors.sslMode)}
+              className="w-full"
+              data-instance-config-field="sslMode"
+              id={sslModeId}
+            >
+              <SslModeSelectValue value={sslMode} />
+            </SelectTrigger>
+            <SelectContent className="min-w-[22rem]">
+              <SslModeSelectItems />
+            </SelectContent>
+          </Select>
+          <FieldError error={fieldErrors.sslMode} />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm" htmlFor={sslNegotiationId}>
+            SSL negotiation
+          </label>
+          <Select
+            disabled={isConfigManaged}
+            onValueChange={(value) => {
+              if (value) {
+                form.setValue(
+                  "config.sslNegotiation",
+                  toSslNegotiation(value),
+                  {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true,
+                  }
+                );
+              }
+            }}
+            value={sslNegotiation}
+          >
+            <SelectTrigger
+              aria-invalid={Boolean(fieldErrors.sslNegotiation)}
+              className="w-full"
+              data-instance-config-field="sslNegotiation"
+              id={sslNegotiationId}
+            >
+              <SslNegotiationSelectValue value={sslNegotiation} />
+            </SelectTrigger>
+            <SelectContent className="min-w-[22rem]">
+              <SslNegotiationSelectItems />
+            </SelectContent>
+          </Select>
+          <FieldError error={fieldErrors.sslNegotiation} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InstanceConfigurationSection({
   formNotice,
   instance,
@@ -170,62 +387,117 @@ function InstanceConfigurationSection({
   formNotice: { message: string; variant: "error" | "success" } | null;
   instance: InstanceRecord;
   isConfigManaged: boolean;
-  onInvalidSave: () => void;
+  onInvalidSave: (message?: string) => void;
   onSave: (
-    formState: InstanceFormState
-  ) =>
-    | Promise<InstanceConfigurationSaveOutcome | undefined>
-    | InstanceConfigurationSaveOutcome
-    | undefined;
+    editedInstance: ReturnType<typeof createInstanceFormDefaults>,
+    updatePaths: string[]
+  ) => Promise<unknown | undefined> | unknown | undefined;
   pending: boolean;
 }) {
-  const displayNameId = useId();
-  const hostId = useId();
-  const portId = useId();
-  const databaseId = useId();
-  const usernameId = useId();
-  const passwordId = useId();
-  const sslModeId = useId();
-  const sslNegotiationId = useId();
-  const credentialGuidanceId = `${passwordId}-credential-guidance`;
-  const [formState, setFormState] = useState<InstanceFormState>(() =>
-    createInstanceFormState(instance)
+  const credentialGuidanceId = useId();
+  const formDefaultsRef = useRef<ReturnType<
+    typeof createInstanceFormDefaults
+  > | null>(null);
+  if (formDefaultsRef.current === null) {
+    formDefaultsRef.current = createInstanceFormDefaults(instance);
+  }
+  const formDefaults = formDefaultsRef.current;
+  const form = useProtoForm(InstanceSchema, {
+    defaultValues: formDefaults,
+    mode: "onChange",
+    serverPathPrefix: "instance",
+    validationScope: "modified-fields",
+  });
+  const values = useWatch({ control: form.control });
+  // allow: proto-form-parallel-state protobuf maps cannot represent a blank
+  // key while the user is composing a new row; valid rows are synced below.
+  const [labels, setLabels] = useState<InstanceLabelEntry[]>(() =>
+    labelsToEntries(instance.labels)
   );
-  const [formErrors, setFormErrors] = useState<InstanceFormErrors>({});
-  const persistedFormState = createInstanceFormState(instance);
-  const hasUnsavedChanges = !areInstanceFormStatesEqual(
-    formState,
-    persistedFormState
-  );
+  const [labelsError, setLabelsError] = useState<string>();
   const credentialsUnreadable =
     instance.credentialState !== Instance_CredentialState.UNSPECIFIED;
   const credentialKeyMissing =
     instance.credentialState === Instance_CredentialState.KEY_MISSING;
   const needsReplacementPassword =
     instance.credentialState === Instance_CredentialState.UNREADABLE &&
-    !formState.dirtyFields?.password;
+    !values.config?.password;
   const saveDisabledReason = getInstanceSaveDisabledReason({
     credentialKeyMissing,
-    hasUnsavedChanges,
+    hasUnsavedChanges:
+      createInstanceUpdate(form, instance).updatePaths.length > 0,
     needsReplacementPassword,
     pending,
   });
+  const { errors } = form.formState;
+  const fieldErrors = {
+    database: localErrorMessage(
+      errors.config?.database,
+      REQUIRED_ERROR_BY_FIELD.database
+    ),
+    displayName: localErrorMessage(
+      errors.displayName,
+      REQUIRED_ERROR_BY_FIELD.displayName
+    ),
+    host: localErrorMessage(errors.config?.host, REQUIRED_ERROR_BY_FIELD.host),
+    labels: labelsError ?? findFirstErrorMessage(errors.labels),
+    password: localErrorMessage(
+      errors.config?.password,
+      REQUIRED_ERROR_BY_FIELD.password
+    ),
+    port: localErrorMessage(errors.config?.port, PORT_ERROR),
+    sslMode: findFirstErrorMessage(errors.config?.sslMode),
+    sslNegotiation: localErrorMessage(
+      errors.config?.sslNegotiation,
+      SSL_NEGOTIATION_ERROR
+    ),
+    username: localErrorMessage(
+      errors.config?.username,
+      REQUIRED_ERROR_BY_FIELD.username
+    ),
+  };
+  const sslMode = formatSslMode(values.config?.sslMode ?? 0);
+  const sslNegotiation = formatSslNegotiation(
+    values.config?.sslNegotiation ?? 0
+  );
+  if (sslNegotiation === "direct" && !isDirectSslNegotiationMode(sslMode)) {
+    fieldErrors.sslNegotiation ??= SSL_NEGOTIATION_ERROR;
+  }
+
+  const handleLabelsChange = (nextLabels: InstanceLabelEntry[]) => {
+    setLabels(nextLabels);
+    setLabelsError(undefined);
+    form.setValue("labels", labelsToMap(nextLabels), {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+  };
   const handleSaveClick = async () => {
-    const validation = validateInstanceForm(formState);
-    setFormErrors(validation.errors);
-    if (validation.firstInvalidField) {
+    const hasBlankLabel = labels.some((label) => label.key.trim().length === 0);
+    if (hasBlankLabel) {
+      setLabelsError("Label keys cannot be empty.");
       onInvalidSave();
-      focusInstanceConfigurationInvalidField(validation.firstInvalidField);
+      focusInstanceConfigurationInvalidField("labels");
       return;
     }
-    const outcome = await onSave(formState);
-    if (outcome?.fieldErrors) {
-      setFormErrors(outcome.fieldErrors);
+    normalizeInstanceProtoForm(form);
+    const isValid = await form.trigger(undefined, { shouldFocus: true });
+    if (!isValid) {
+      onInvalidSave();
+      return;
     }
-    if (outcome?.firstInvalidField) {
-      focusInstanceConfigurationInvalidField(outcome.firstInvalidField);
+    const update = createInstanceUpdate(form, instance);
+    if (update.updatePaths.length === 0) {
+      return;
+    }
+    form.clearServerErrorContext();
+    const error = await onSave(update.instance, update.updatePaths);
+    if (error) {
+      surfaceSaveError({ error, form, onInvalidSave });
     }
   };
+
   return (
     <SectionCard
       action={
@@ -256,260 +528,24 @@ function InstanceConfigurationSection({
       />
 
       <InstanceConfigurationFields
-        databaseId={databaseId}
-        displayNameId={displayNameId}
-        formErrors={formErrors}
-        formState={formState}
-        hostId={hostId}
+        credentialGuidanceId={credentialGuidanceId}
+        credentialsUnreadable={credentialsUnreadable}
+        fieldErrors={fieldErrors}
+        form={form}
         isConfigManaged={isConfigManaged}
-        passwordDescriptionId={
-          credentialsUnreadable ? credentialGuidanceId : undefined
-        }
-        passwordId={passwordId}
-        portId={portId}
-        setFormState={setFormState}
-        sslModeId={sslModeId}
-        sslNegotiationId={sslNegotiationId}
-        usernameId={usernameId}
+        sslMode={sslMode}
+        sslNegotiation={sslNegotiation}
       />
 
       <InstanceConfigurationLabels
-        formErrors={formErrors}
-        formState={formState}
+        error={fieldErrors.labels}
         isConfigManaged={isConfigManaged}
-        setFormState={setFormState}
+        labels={labels}
+        onChange={handleLabelsChange}
       />
 
       <InstanceConfigurationNotice formNotice={formNotice} />
     </SectionCard>
-  );
-}
-
-function markInstanceFieldDirty(
-  current: InstanceFormState,
-  field: keyof NonNullable<InstanceFormState["dirtyFields"]>
-): Pick<InstanceFormState, "dirtyFields"> {
-  return { dirtyFields: { ...current.dirtyFields, [field]: true } };
-}
-
-function InstanceConfigurationFields({
-  databaseId,
-  displayNameId,
-  formErrors,
-  formState,
-  hostId,
-  isConfigManaged,
-  passwordId,
-  passwordDescriptionId,
-  portId,
-  setFormState,
-  sslModeId,
-  sslNegotiationId,
-  usernameId,
-}: {
-  databaseId: string;
-  displayNameId: string;
-  formErrors: InstanceFormErrors;
-  formState: InstanceFormState;
-  hostId: string;
-  isConfigManaged: boolean;
-  passwordId: string;
-  passwordDescriptionId?: string | undefined;
-  portId: string;
-  setFormState: Dispatch<SetStateAction<InstanceFormState>>;
-  sslModeId: string;
-  sslNegotiationId: string;
-  usernameId: string;
-}) {
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div className="space-y-2">
-        <label className="text-sm" htmlFor={displayNameId}>
-          Display name
-        </label>
-        <Input
-          aria-invalid={Boolean(formErrors.displayName)}
-          data-instance-config-field="displayName"
-          disabled={isConfigManaged}
-          id={displayNameId}
-          onChange={(event) =>
-            setFormState((current) => ({
-              ...current,
-              ...markInstanceFieldDirty(current, "displayName"),
-              displayName: event.target.value,
-            }))
-          }
-          value={formState.displayName}
-        />
-        <FieldError error={formErrors.displayName} />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm" htmlFor={hostId}>
-          Host
-        </label>
-        <Input
-          aria-invalid={Boolean(formErrors.host)}
-          data-instance-config-field="host"
-          disabled={isConfigManaged}
-          id={hostId}
-          onChange={(event) =>
-            setFormState((current) => ({
-              ...current,
-              ...markInstanceFieldDirty(current, "host"),
-              host: event.target.value,
-            }))
-          }
-          value={formState.host}
-        />
-        <FieldError error={formErrors.host} />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm" htmlFor={portId}>
-          Port
-        </label>
-        <Input
-          aria-invalid={Boolean(formErrors.port)}
-          data-instance-config-field="port"
-          disabled={isConfigManaged}
-          id={portId}
-          onChange={(event) =>
-            setFormState((current) => ({
-              ...current,
-              ...markInstanceFieldDirty(current, "port"),
-              port: event.target.value,
-            }))
-          }
-          value={formState.port}
-        />
-        <FieldError error={formErrors.port} />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm" htmlFor={databaseId}>
-          Default database
-        </label>
-        <Input
-          aria-invalid={Boolean(formErrors.database)}
-          data-instance-config-field="database"
-          disabled={isConfigManaged}
-          id={databaseId}
-          onChange={(event) =>
-            setFormState((current) => ({
-              ...current,
-              ...markInstanceFieldDirty(current, "database"),
-              database: event.target.value,
-            }))
-          }
-          value={formState.database}
-        />
-        <FieldError error={formErrors.database} />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm" htmlFor={usernameId}>
-          Username
-        </label>
-        <Input
-          aria-invalid={Boolean(formErrors.username)}
-          data-instance-config-field="username"
-          disabled={isConfigManaged}
-          id={usernameId}
-          onChange={(event) =>
-            setFormState((current) => ({
-              ...current,
-              ...markInstanceFieldDirty(current, "username"),
-              username: event.target.value,
-            }))
-          }
-          value={formState.username}
-        />
-        <FieldError error={formErrors.username} />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm" htmlFor={passwordId}>
-          Password
-        </label>
-        <PasswordInput
-          aria-describedby={passwordDescriptionId}
-          aria-invalid={Boolean(formErrors.password)}
-          data-instance-config-field="password"
-          disabled={isConfigManaged}
-          id={passwordId}
-          onChange={(event) =>
-            setFormState((current) => ({
-              ...current,
-              ...markInstanceFieldDirty(current, "password"),
-              password: event.target.value,
-            }))
-          }
-          value={formState.password}
-        />
-        <FieldError error={formErrors.password} />
-      </div>
-      <div className="grid gap-4 lg:col-span-2 lg:grid-cols-2">
-        <div className="space-y-2">
-          <label className="text-sm" htmlFor={sslModeId}>
-            SSL mode
-          </label>
-          <Select
-            disabled={isConfigManaged}
-            onValueChange={(value) => {
-              if (!value) {
-                return;
-              }
-              setFormState((current) => ({
-                ...current,
-                ...markInstanceFieldDirty(current, "sslMode"),
-                sslMode: value,
-              }));
-            }}
-            value={formState.sslMode}
-          >
-            <SelectTrigger
-              className="w-full"
-              data-instance-config-field="sslMode"
-              id={sslModeId}
-            >
-              <SslModeSelectValue value={formState.sslMode} />
-            </SelectTrigger>
-            <SelectContent className="min-w-[22rem]">
-              <SslModeSelectItems />
-            </SelectContent>
-          </Select>
-          <FieldError error={formErrors.sslMode} />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm" htmlFor={sslNegotiationId}>
-            SSL negotiation
-          </label>
-          <Select
-            disabled={isConfigManaged}
-            onValueChange={(value) => {
-              if (!value) {
-                return;
-              }
-              setFormState((current) => ({
-                ...current,
-                ...markInstanceFieldDirty(current, "sslNegotiation"),
-                sslNegotiation: value,
-              }));
-            }}
-            value={formState.sslNegotiation}
-          >
-            <SelectTrigger
-              aria-invalid={Boolean(formErrors.sslNegotiation)}
-              className="w-full"
-              data-instance-config-field="sslNegotiation"
-              id={sslNegotiationId}
-            >
-              <SslNegotiationSelectValue value={formState.sslNegotiation} />
-            </SelectTrigger>
-            <SelectContent className="min-w-[22rem]">
-              <SslNegotiationSelectItems />
-            </SelectContent>
-          </Select>
-          <FieldError error={formErrors.sslNegotiation} />
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -529,7 +565,7 @@ function InstanceConfigurationNotice({
       {formNotice.variant === "error" ? (
         <AlertCircle className="size-4" />
       ) : (
-        <CheckCircle2 className="size-4 text-emerald-600" />
+        <CheckCircle2 className="size-4 text-success" />
       )}
       <AlertTitle>
         {formNotice.variant === "error" ? "Could not save" : "Saved"}

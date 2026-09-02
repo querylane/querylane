@@ -1,8 +1,4 @@
 import { ConnectError } from "@connectrpc/connect";
-import type {
-  InstanceFormErrors,
-  InstanceFormInvalidFieldName,
-} from "@/components/console-pages/instance-config-model";
 import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 import type {
   CreateInstanceFormErrors,
@@ -30,10 +26,14 @@ const SERVER_FIELD_FOCUS_ORDER = [
 // `instance` body). Violations point at the request shape, the form does not.
 const RESOURCE_BODY_PREFIX_PATTERN = /^(?:spec|instance)\./;
 
-type ConnectionConfigFieldName = Extract<
-  CreateInstanceInvalidFieldName,
-  InstanceFormInvalidFieldName
->;
+type ConnectionConfigFieldName =
+  | "database"
+  | "host"
+  | "password"
+  | "port"
+  | "sslMode"
+  | "sslNegotiation"
+  | "username";
 
 const CONFIG_FIELD_BY_PATH: Partial<Record<string, ConnectionConfigFieldName>> =
   {
@@ -149,64 +149,5 @@ function extractCreateInstanceFieldViolations(
   };
 }
 
-const INSTANCE_CONFIG_FIELD_FOCUS_ORDER = [
-  "displayName",
-  "host",
-  "port",
-  "database",
-  "username",
-  "password",
-  "sslMode",
-  "sslNegotiation",
-  "labels",
-] as const satisfies readonly InstanceFormInvalidFieldName[];
-
-function mapViolationFieldToInstanceConfigField(
-  field: string
-): InstanceFormInvalidFieldName | null {
-  const path = field.replace(RESOURCE_BODY_PREFIX_PATTERN, "");
-  if (path === "display_name" || path === "displayName") {
-    return "displayName";
-  }
-  if (
-    path === "labels" ||
-    path.startsWith("labels.") ||
-    path.startsWith("labels[")
-  ) {
-    return "labels";
-  }
-  return CONFIG_FIELD_BY_PATH[path] ?? null;
-}
-
-interface InstanceConfigFieldViolationResult {
-  fieldErrors: InstanceFormErrors;
-  firstInvalidField: InstanceFormInvalidFieldName | null;
-  generalErrors: string[];
-}
-
-function extractInstanceConfigFieldViolations(
-  error: unknown
-): InstanceConfigFieldViolationResult {
-  const result = extractBadRequestFieldViolations<InstanceFormInvalidFieldName>(
-    {
-      error,
-      focusOrder: INSTANCE_CONFIG_FIELD_FOCUS_ORDER,
-      mapField: mapViolationFieldToInstanceConfigField,
-    }
-  );
-
-  return {
-    fieldErrors: result.fieldErrors,
-    firstInvalidField: result.firstInvalidField,
-    generalErrors: result.generalErrors,
-  };
-}
-
-export type {
-  CreateInstanceFieldViolationResult,
-  InstanceConfigFieldViolationResult,
-};
-export {
-  extractCreateInstanceFieldViolations,
-  extractInstanceConfigFieldViolations,
-};
+export type { CreateInstanceFieldViolationResult };
+export { extractCreateInstanceFieldViolations };
