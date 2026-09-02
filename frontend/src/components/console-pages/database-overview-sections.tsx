@@ -37,6 +37,8 @@ const DATABASE_ROUTE = "/instances/$instanceId/databases/$databaseId" as const;
 const INSTANCE_ROUTE = "/instances/$instanceId" as const;
 const SPARKLINE_WIDTH = 64;
 const SPARKLINE_HEIGHT = 32;
+/** Where a flat (zero-span) series draws: centered in the sparkline box. */
+const SPARKLINE_FLAT_POSITION = 0.5;
 const LOADING_ROW_KEYS = ["first", "second", "third", "fourth"] as const;
 const MAX_DATABASE_ROWS = 8;
 const SCHEMA_WIDE_COLUMN_COUNT = 3;
@@ -89,15 +91,14 @@ function sparklineValues(series: MetricSeries | undefined): number[] {
 function sparklinePath(values: number[]): string {
   const minimum = Math.min(...values);
   const maximum = Math.max(...values);
-  const span = maximum - minimum || 1;
+  const span = maximum - minimum;
   const stepX = SPARKLINE_WIDTH / Math.max(values.length - 1, 1);
   return values
     .map((value, index) => {
       const x = index * stepX;
-      const y =
-        SPARKLINE_HEIGHT -
-        ((value - minimum) / span) * (SPARKLINE_HEIGHT - 2) -
-        1;
+      const normalized =
+        span === 0 ? SPARKLINE_FLAT_POSITION : (value - minimum) / span;
+      const y = SPARKLINE_HEIGHT - normalized * (SPARKLINE_HEIGHT - 2) - 1;
       return `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(" ");
@@ -147,17 +148,25 @@ function StatCell({
 }) {
   const hasSparkline = sparkline !== undefined && sparkline.length >= 2;
   return (
-    <div className={cn("flex flex-col gap-1.5 px-5 py-4", className)}>
-      <span className="font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em]">
-        {label}
-      </span>
-      <div
-        className={cn(
-          "flex items-end gap-3 max-sm:flex-col max-sm:items-stretch",
-          hasSparkline ? "min-h-14" : undefined
-        )}
-      >
-        <div className="flex shrink-0 flex-col gap-0.5">
+    <div
+      className={cn(
+        "relative flex min-h-24 flex-col px-5 pt-4 pb-8",
+        className
+      )}
+    >
+      {hasSparkline ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-7 opacity-70"
+        >
+          <TrendSparkline values={sparkline} />
+        </div>
+      ) : null}
+      <div className="relative flex flex-col gap-1.5">
+        <span className="font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em]">
+          {label}
+        </span>
+        <div className="flex flex-col gap-0.5">
           <span className="font-mono font-semibold text-[1.375rem] text-foreground tabular-nums leading-none tracking-tight">
             {value}
           </span>
@@ -165,14 +174,6 @@ function StatCell({
             <span className="mt-1 text-muted-foreground text-xs">{sub}</span>
           ) : null}
         </div>
-        {hasSparkline ? (
-          <div
-            aria-hidden="true"
-            className="h-14 min-w-28 flex-1 max-sm:w-full max-sm:min-w-0 max-sm:flex-none"
-          >
-            <TrendSparkline values={sparkline} />
-          </div>
-        ) : null}
       </div>
     </div>
   );
@@ -242,7 +243,7 @@ function DatabaseStatStrip({
   const cellBorders =
     "border-border max-md:odd:border-r max-md:nth-[-n+2]:border-b";
   return (
-    <Card className="grid grid-cols-2 gap-0 py-0 md:grid-cols-4 md:divide-x md:divide-border">
+    <Card className="grid grid-cols-2 gap-0 overflow-hidden py-0 md:grid-cols-4 md:divide-x md:divide-border">
       <StatCell
         className={cellBorders}
         label="Total size"
