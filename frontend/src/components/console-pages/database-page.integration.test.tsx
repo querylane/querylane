@@ -878,9 +878,13 @@ describe("backend database overview", () => {
     );
 
     for (const label of ["Total size", "Est. rows", "Dead tuples"]) {
-      const sparkline = screen
-        .getByText(label)
-        .parentElement?.querySelector("svg");
+      // Walk up from the label to the stat tile: the nearest ancestor that
+      // contains a sparkline svg, regardless of the tile's internal layout.
+      let tile = screen.getByText(label).parentElement;
+      while (tile && tile.querySelector("svg") === null) {
+        tile = tile.parentElement;
+      }
+      const sparkline = tile?.querySelector("svg");
 
       expect.soft(sparkline?.getAttribute("class")).toContain("text-chart-1");
     }

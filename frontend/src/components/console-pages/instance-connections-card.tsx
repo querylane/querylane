@@ -1,14 +1,16 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, Lock, Timer, Users } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
-import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { formatElapsedDuration } from "@/lib/metrics";
 import { cn } from "@/lib/utils";
 import type {
@@ -23,166 +25,114 @@ interface InstanceConnectionsCardProps {
 }
 
 /**
- * The disjoint pg_stat_activity states every bar in this card is colored by.
- * Lock waiters are NOT a state — they are a subset of active backends — so
- * they surface as an alert pill instead of a stack segment.
+ * The disjoint pg_stat_activity states the ledger has a column for. Lock
+ * waiters are NOT a state — they are a subset of active backends — so they
+ * surface as a signal row instead of a column.
  */
 const CONNECTION_STATES = [
-  { className: "bg-chart-1", key: "activeConnections", label: "Active" },
   {
-    className: "bg-muted-foreground/50",
+    className: "bg-chart-1",
+    key: "activeConnections",
+    label: "Active",
+    short: "Active",
+  },
+  {
+    className: "bg-muted-foreground/45",
     key: "idleConnections",
     label: "Idle",
+    short: "Idle",
   },
   {
     className: "bg-chart-4",
     key: "idleInTransactionConnections",
-    label: "Idle in txn",
+    label: "Idle in transaction",
+    short: "Idle in txn",
   },
 ] as const;
 
-/** Shape shared by the instance totals and each by-application row. */
-interface ConnectionStateCounts {
-  activeConnections: number;
-  idleConnections: number;
-  idleInTransactionConnections: number;
-  totalConnections: number;
-}
-
 const PERCENT = 100;
 const MS_PER_SECOND = 1000;
+/** Rows beyond this fold into a "more on the Activity page" line. */
+const MAX_APPLICATION_ROWS = 10;
+/** Sentinel the backend emits for backends that set no application_name. */
+const UNNAMED_APPLICATION = "(unnamed)";
+const NUMERIC_CELL = "w-9 px-1 py-1.5 text-right text-xs";
+const NAME_CELL = "w-full max-w-0 py-1.5 pr-2 pl-0 text-xs";
+const LEDGER_COLUMNS = CONNECTION_STATES.length + 2;
+
+function sharePercent(count: number, total: number): number {
+  return total <= 0 ? 0 : Math.round((count / total) * PERCENT);
+}
 
 function widthPercent(count: number, denominator: number): string {
-  if (denominator <= 0) {
-    return "0%";
-  }
-
-  return `${(count / denominator) * PERCENT}%`;
+  return denominator <= 0 ? "0%" : `${(count / denominator) * PERCENT}%`;
 }
 
-/**
- * Connections drawn as stacked state segments over a track sized by
- * `denominator` — the same encoding at both zoom levels (instance capacity,
- * single application).
- */
-function SegmentedBar({
-  className,
-  counts,
-  denominator,
-}: {
-  className?: string;
-  counts: ConnectionStateCounts;
-  denominator: number;
-}) {
-  const known = CONNECTION_STATES.reduce(
-    (sum, state) => sum + counts[state.key],
-    0
-  );
-  const other = Math.max(0, counts.totalConnections - known);
-
+function Swatch({ className }: { className: string }) {
   return (
-    <div
-      className={cn(
-        "flex h-2 w-full gap-[2px] overflow-hidden rounded-full bg-muted",
-        className
-      )}
-    >
-      {CONNECTION_STATES.map((state) =>
-        counts[state.key] > 0 ? (
-          <div
-            className={cn("h-full min-w-[3px]", state.className)}
-            key={state.key}
-            style={{ width: widthPercent(counts[state.key], denominator) }}
-          />
-        ) : null
-      )}
-      {other > 0 ? (
+    <span
+      aria-hidden="true"
+      className={cn("inline-block size-2 shrink-0 rounded-[3px]", className)}
+    />
+  );
+}
+
+/** One sentence with a meter: how much of max_connections is spoken for. */
+function CapacityLine({ activity }: { activity: ConnectionActivityHealth }) {
+  const label = `${activity.totalConnections} of ${activity.maxConnections} connections in use`;
+  return (
+    <div className="flex items-center gap-3 text-xs">
+      <span className="whitespace-nowrap">
+        <span className="font-semibold text-base tabular-nums leading-none">
+          {activity.totalConnections}
+        </span>
+        <span className="text-muted-foreground">
+          {" "}
+          of {activity.maxConnections} in use
+        </span>
+      </span>
+      <div
+        aria-label={label}
+        className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
+        role="img"
+      >
         <div
-          className="h-full min-w-[3px] bg-muted-foreground/25"
-          style={{ width: widthPercent(other, denominator) }}
+          className="h-full rounded-full bg-chart-1"
+          style={{
+            width: widthPercent(
+              activity.totalConnections,
+              activity.maxConnections
+            ),
+          }}
         />
-      ) : null}
+      </div>
+      <span className="text-muted-foreground tabular-nums">
+        {sharePercent(activity.totalConnections, activity.maxConnections)}%
+      </span>
     </div>
   );
 }
 
-/**
- * The hero: a composition bar over the connections that exist right now
- * (denominator = total), so it is always fully filled. Capacity ("n of
- * max_connections") is the header stat tile's job — repeating it here left a
- * nearly empty track at typical single-digit utilization.
- */
-function CompositionBar({ activity }: { activity: ConnectionActivityHealth }) {
-  const parts = CONNECTION_STATES.map(
-    (state) => `${activity[state.key]} ${state.label.toLowerCase()}`
-  ).join(", ");
-
-  return (
-    <div
-      aria-label={`${activity.totalConnections} connections: ${parts}`}
-      role="img"
-    >
-      <SegmentedBar
-        className="h-2.5"
-        counts={activity}
-        denominator={Math.max(activity.totalConnections, 1)}
-      />
-    </div>
-  );
-}
-
-/** Compact legend items; one line at the card's fixed column width. */
-function StateLegend({ activity }: { activity: ConnectionActivityHealth }) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1">
-      {CONNECTION_STATES.map((state) => {
-        const count = activity[state.key];
-        return (
-          <span className="flex items-center gap-1.5 text-xs" key={state.key}>
-            <span
-              aria-hidden="true"
-              className={cn(
-                "size-2 rounded-[3px]",
-                state.className,
-                count === 0 && "opacity-40"
-              )}
-            />
-            <span className="text-muted-foreground">{state.label}</span>
-            <span
-              className={cn(
-                "font-medium tabular-nums",
-                count === 0 && "text-muted-foreground/60"
-              )}
-            >
-              {count}
-            </span>
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
-interface ActivityAlert {
+interface ActivitySignal {
   icon: typeof Lock;
-  iconClassName: string;
   key: string;
   text: string;
+  toneClassName: string;
 }
 
-function collectAlerts(activity: ConnectionActivityHealth): ActivityAlert[] {
-  const alerts: ActivityAlert[] = [];
+function collectSignals(activity: ConnectionActivityHealth): ActivitySignal[] {
+  const signals: ActivitySignal[] = [];
 
   const waiting = activity.waitingForLockConnections;
   if (waiting > 0) {
-    alerts.push({
+    signals.push({
       icon: Lock,
-      iconClassName: "text-destructive",
       key: "waiting",
       text:
         waiting === 1
           ? "1 connection waiting on a lock"
           : `${waiting} connections waiting on locks`,
+      toneClassName: "bg-destructive/8 text-destructive",
     });
   }
 
@@ -191,56 +141,67 @@ function collectAlerts(activity: ConnectionActivityHealth): ActivityAlert[] {
     const longest = formatElapsedDuration(
       Number(activity.longestTransactionSeconds) * MS_PER_SECOND
     );
-    alerts.push({
+    signals.push({
       icon: Timer,
-      iconClassName: "text-chart-4",
       key: "long-running",
       text:
         longRunning === 1
           ? `1 transaction open for ${longest}`
-          : `${longRunning} long transactions · longest open ${longest}`,
+          : `${longRunning} long transactions, longest open ${longest}`,
+      toneClassName: "bg-chart-4/12 text-chart-4",
     });
   }
 
-  return alerts;
+  return signals;
 }
 
 /**
  * Lock waits and long-running transactions overlap the state counts, so they
- * render as standalone signals — loud when present, absent when healthy.
+ * render as tinted rows — loud when present, absent when healthy.
  */
-function ActivityAlerts({ activity }: { activity: ConnectionActivityHealth }) {
-  const alerts = collectAlerts(activity);
-  if (alerts.length === 0) {
+function ActivitySignals({ activity }: { activity: ConnectionActivityHealth }) {
+  const signals = collectSignals(activity);
+  if (signals.length === 0) {
     return null;
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {alerts.map((alert) => (
-        <span
-          className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 font-medium text-xs"
-          key={alert.key}
+    <ul className="flex flex-col gap-1.5">
+      {signals.map((signal) => (
+        <li
+          className={cn(
+            "flex items-center gap-2 rounded-md px-2.5 py-1.5 font-medium text-xs",
+            signal.toneClassName
+          )}
+          key={signal.key}
         >
-          <alert.icon
-            aria-hidden="true"
-            className={cn("size-3.5", alert.iconClassName)}
-          />
-          {alert.text}
+          <signal.icon aria-hidden="true" className="size-3.5 shrink-0" />
+          <span className="text-foreground">{signal.text}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Names the swatch-only column headers below. */
+function StateLegend() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-xs">
+      {CONNECTION_STATES.map((state) => (
+        <span className="flex items-center gap-1.5" key={state.key}>
+          <Swatch className={state.className} />
+          {state.short}
         </span>
       ))}
     </div>
   );
 }
 
-/** Sentinel the backend emits for backends that set no application_name. */
-const UNNAMED_APPLICATION = "(unnamed)";
-
 function ApplicationLabel({ name }: { name: string }) {
   if (name === UNNAMED_APPLICATION) {
     return (
       <span
-        className="w-24 shrink-0 truncate text-muted-foreground text-xs italic"
+        className="block truncate text-muted-foreground italic"
         title="Clients that don't set application_name"
       >
         no name set
@@ -249,59 +210,161 @@ function ApplicationLabel({ name }: { name: string }) {
   }
 
   return (
-    <span className="w-24 shrink-0 truncate font-mono text-xs" title={name}>
+    <span className="block truncate font-mono" title={name}>
       {name}
     </span>
   );
 }
 
-function ApplicationRow({
-  app,
-  maxTotal,
-}: {
-  app: ApplicationConnections;
-  maxTotal: number;
-}) {
-  const split = `${app.activeConnections} active · ${app.idleConnections} idle · ${app.idleInTransactionConnections} idle in txn`;
-
+function Count({ bold = false, value }: { bold?: boolean; value: number }) {
   return (
-    <div className="flex items-center gap-3" title={split}>
-      <ApplicationLabel name={app.applicationName} />
-      <SegmentedBar
-        className="min-w-0 flex-1"
-        counts={app}
-        denominator={maxTotal}
-      />
-      <span className="w-8 shrink-0 text-right font-medium text-sm tabular-nums">
-        {app.totalConnections}
-      </span>
-    </div>
+    <span
+      className={cn(
+        "tabular-nums",
+        bold && "font-medium",
+        value === 0 && "text-muted-foreground/50"
+      )}
+    >
+      {value}
+    </span>
   );
 }
 
-function ByApplication({ apps }: { apps: ApplicationConnections[] }) {
-  const maxTotal = apps.reduce(
-    (max, app) => Math.max(max, app.totalConnections),
-    0
+/**
+ * Swatch-only state headers: at the card's fixed column width, text headers
+ * left no room for application names.
+ */
+function LedgerHeader() {
+  return (
+    <TableHeader>
+      <TableRow className="hover:bg-transparent">
+        <TableHead className="h-7 pl-0 text-xs">Application</TableHead>
+        {CONNECTION_STATES.map((state) => (
+          <TableHead
+            className="h-7 w-9 px-1 text-right text-xs"
+            key={state.key}
+            title={state.label}
+          >
+            <Swatch className={state.className} />
+            <span className="sr-only">{state.label}</span>
+          </TableHead>
+        ))}
+        <TableHead className="h-7 w-9 px-1 pr-0 text-right text-xs">
+          Total
+        </TableHead>
+      </TableRow>
+    </TableHeader>
   );
+}
+
+function LedgerRow({ app }: { app: ApplicationConnections }) {
+  return (
+    <TableRow>
+      <TableCell className={NAME_CELL}>
+        <ApplicationLabel name={app.applicationName} />
+      </TableCell>
+      {CONNECTION_STATES.map((state) => (
+        <TableCell className={NUMERIC_CELL} key={state.key}>
+          <Count value={app[state.key]} />
+        </TableCell>
+      ))}
+      <TableCell className={cn(NUMERIC_CELL, "pr-0")}>
+        <Count bold={true} value={app.totalConnections} />
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function LedgerFooter({ activity }: { activity: ConnectionActivityHealth }) {
+  return (
+    <TableFooter className="bg-transparent">
+      <TableRow className="hover:bg-transparent">
+        <TableCell className={cn(NAME_CELL, "font-medium")}>Total</TableCell>
+        {CONNECTION_STATES.map((state) => (
+          <TableCell
+            className={cn(NUMERIC_CELL, "font-medium")}
+            key={state.key}
+          >
+            <Count bold={true} value={activity[state.key]} />
+          </TableCell>
+        ))}
+        <TableCell className={cn(NUMERIC_CELL, "pr-0 font-semibold")}>
+          <Count bold={true} value={activity.totalConnections} />
+        </TableCell>
+      </TableRow>
+    </TableFooter>
+  );
+}
+
+/**
+ * One row per application (top talkers first, as the backend orders them),
+ * one column per state, instance totals in the footer. The totals row stays
+ * authoritative even when by_application is capped or empty.
+ */
+function ApplicationLedger({
+  activity,
+}: {
+  activity: ConnectionActivityHealth;
+}) {
+  const shown = activity.byApplication.slice(0, MAX_APPLICATION_ROWS);
 
   return (
-    // mt-auto pins this section to the card's bottom edge, so a stretched
-    // card distributes its sections instead of pooling empty space below.
-    <div className="mt-auto space-y-3">
-      <span className="text-muted-foreground text-xs uppercase tracking-wide">
-        By application
+    <Table className="text-xs">
+      <LedgerHeader />
+      <TableBody>
+        {shown.length === 0 ? (
+          <TableRow className="hover:bg-transparent">
+            <TableCell
+              className="py-4 pl-0 text-center text-muted-foreground text-xs"
+              colSpan={LEDGER_COLUMNS}
+            >
+              No client connections right now.
+            </TableCell>
+          </TableRow>
+        ) : (
+          shown.map((app) => <LedgerRow app={app} key={app.applicationName} />)
+        )}
+      </TableBody>
+      <LedgerFooter activity={activity} />
+    </Table>
+  );
+}
+
+/**
+ * The card's one call to action, pinned to its bottom edge as a footer so it
+ * reads as "where this leads" rather than a stray control in the title row.
+ * Applications cut from the ledger are mentioned here, where the reader can
+ * act on them.
+ */
+function SessionsFooterLink({
+  activity,
+  instanceId,
+}: {
+  activity: ConnectionActivityHealth | undefined;
+  instanceId: string;
+}) {
+  const hidden = activity
+    ? Math.max(0, activity.byApplication.length - MAX_APPLICATION_ROWS)
+    : 0;
+  return (
+    <Link
+      className="group -mx-6 mt-auto -mb-6 flex h-11 items-center justify-between gap-3 border-border border-t px-6 font-medium text-sm transition-colors hover:bg-foreground/[0.03] focus-visible:bg-foreground/[0.03] focus-visible:outline-none"
+      params={{ instanceId }}
+      to="/instances/$instanceId/activity"
+    >
+      <span>View live sessions</span>
+      <span className="flex items-center gap-2 text-muted-foreground">
+        {hidden > 0 ? (
+          <span className="font-normal text-xs">
+            {hidden} more {hidden === 1 ? "application" : "applications"}
+          </span>
+        ) : null}
+        <ChevronRight
+          aria-hidden="true"
+          className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
+        />
       </span>
-      <div className="space-y-2">
-        {apps.map((app) => (
-          <ApplicationRow
-            app={app}
-            key={app.applicationName}
-            maxTotal={maxTotal}
-          />
-        ))}
-      </div>
-    </div>
+    </Link>
   );
 }
 
@@ -333,26 +396,24 @@ function ConnectionsCardBody({
 
   return (
     <>
-      <div className="space-y-2.5">
-        <CompositionBar activity={activity} />
-        <StateLegend activity={activity} />
+      <CapacityLine activity={activity} />
+      <ActivitySignals activity={activity} />
+      <div className="flex flex-col gap-2">
+        <StateLegend />
+        <ApplicationLedger activity={activity} />
       </div>
-      <ActivityAlerts activity={activity} />
-      {activity.byApplication.length > 0 ? (
-        <ByApplication apps={activity.byApplication} />
-      ) : null}
     </>
   );
 }
 
 /**
  * Live connection composition from a pg_stat_activity snapshot
- * (CheckInstanceHealth). One visual language throughout: every bar is the
- * current connections colored by state, first for the whole instance, then
- * per application. Capacity vs max_connections lives in the header stat
- * tile, not here. Overlapping signals (lock waits, long transactions) render
- * as alert pills rather than stack segments. The header action routes to the
- * Activity page, where sessions are listed live.
+ * (CheckInstanceHealth), laid out as a ledger: a one-line capacity meter,
+ * overlapping signals (lock waits, long transactions) as tinted rows, then a
+ * table with one row per application and one column per state. Numbers over
+ * bars, because the card has to read the same with two applications and with
+ * thirty. The footer link routes to the Activity page, where sessions are
+ * listed live.
  */
 export function InstanceConnectionsCard({
   activity,
@@ -363,22 +424,10 @@ export function InstanceConnectionsCard({
     <Card className="h-full">
       <CardHeader>
         <CardTitle>Connections</CardTitle>
-        <CardAction className="-my-1.5">
-          <Link
-            className={cn(
-              buttonVariants({ size: "sm", variant: "ghost" }),
-              "text-muted-foreground"
-            )}
-            params={{ instanceId }}
-            to="/instances/$instanceId/activity"
-          >
-            Activity
-            <ChevronRight aria-hidden="true" className="size-3.5" />
-          </Link>
-        </CardAction>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-5">
+      <CardContent className="flex flex-1 flex-col gap-4">
         <ConnectionsCardBody activity={activity} isPending={isPending} />
+        <SessionsFooterLink activity={activity} instanceId={instanceId} />
       </CardContent>
     </Card>
   );
