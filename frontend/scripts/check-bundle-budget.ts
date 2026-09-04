@@ -13,6 +13,9 @@ const LEADING_SLASH_PATTERN = /^\//;
 const MAX_ASYNC_SCRIPT_GZIP_KIB = 130;
 const MAX_DEFERRED_VISUALIZATION_GZIP_KIB = 91;
 const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
+// CodeMirror (+ lang-sql, lezer) and sql-formatter only load on the SQL
+// workbench route, so they are split out and guarded separately from core.
+const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 200;
 // Recharts (+ its d3 deps) is lazy-loaded and only pulled in on the instance
 // overview metrics panel, so it is split out and guarded separately from core.
 // 145 (was 140): the console-pages chunk shares these sources and also grew
@@ -43,6 +46,10 @@ interface BundleBudgetStats {
   deferredChartsBrotli: number;
   deferredChartsGzip: number;
   deferredChartsRaw: number;
+  deferredSqlEditorAssets: BundleBudgetAsset[];
+  deferredSqlEditorBrotli: number;
+  deferredSqlEditorGzip: number;
+  deferredSqlEditorRaw: number;
   deferredSqlHighlighterAssets: BundleBudgetAsset[];
   deferredSqlHighlighterBrotli: number;
   deferredSqlHighlighterGzip: number;
@@ -73,6 +80,8 @@ interface CollectBundleBudgetStatsInput {
 const budgets = {
   maxAsyncScriptGzipBytes: MAX_ASYNC_SCRIPT_GZIP_KIB * BYTES_PER_KIB,
   maxDeferredChartsGzipBytes: MAX_DEFERRED_CHARTS_GZIP_KIB * BYTES_PER_KIB,
+  maxDeferredSqlEditorGzipBytes:
+    MAX_DEFERRED_SQL_EDITOR_GZIP_KIB * BYTES_PER_KIB,
   maxDeferredSqlHighlighterGzipBytes:
     MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB * BYTES_PER_KIB,
   maxDeferredVisualizationGzipBytes:
@@ -173,6 +182,18 @@ function isDeferredChartsAsset(distDir: string, relativePath: string) {
   });
 }
 
+function isDeferredSqlEditorAsset(distDir: string, relativePath: string) {
+  return sourceMapSources(distDir, relativePath).some((source) => {
+    const normalizedSource = source.replaceAll("\\", "/");
+    return (
+      normalizedSource.includes("node_modules/@codemirror/") ||
+      normalizedSource.includes("node_modules/@lezer/") ||
+      normalizedSource.includes("node_modules/sql-formatter/") ||
+      normalizedSource.includes("src/features/sql-workbench/")
+    );
+  });
+}
+
 function isDeferredSqlHighlighterAsset(distDir: string, relativePath: string) {
   return sourceMapSources(distDir, relativePath).some((source) => {
     const normalizedSource = source.replaceAll("\\", "/");
@@ -219,12 +240,19 @@ function collectBundleBudgetStats({
   const deferredChartsPaths = new Set(
     deferredChartsAssets.map((asset) => asset.path)
   );
+  const deferredSqlEditorAssets = allAssets.filter((asset) =>
+    isDeferredSqlEditorAsset(distDir, asset.path)
+  );
+  const deferredSqlEditorPaths = new Set(
+    deferredSqlEditorAssets.map((asset) => asset.path)
+  );
   const coreAssets = allAssets.filter(
     (asset) =>
       !(
         deferredVisualizationPaths.has(asset.path) ||
         deferredSqlHighlighterPaths.has(asset.path) ||
-        deferredChartsPaths.has(asset.path)
+        deferredChartsPaths.has(asset.path) ||
+        deferredSqlEditorPaths.has(asset.path)
       )
   );
   const asyncScripts = allAssets.filter(
@@ -288,6 +316,18 @@ function collectBundleBudgetStats({
     (sum, asset) => sum + asset.raw,
     0
   );
+  const deferredSqlEditorGzip = deferredSqlEditorAssets.reduce(
+    (sum, asset) => sum + asset.gzip,
+    0
+  );
+  const deferredSqlEditorBrotli = deferredSqlEditorAssets.reduce(
+    (sum, asset) => sum + asset.brotli,
+    0
+  );
+  const deferredSqlEditorRaw = deferredSqlEditorAssets.reduce(
+    (sum, asset) => sum + asset.raw,
+    0
+  );
   const deferredSqlHighlighterRaw = deferredSqlHighlighterAssets.reduce(
     (sum, asset) => sum + asset.raw,
     0
@@ -304,6 +344,10 @@ function collectBundleBudgetStats({
     deferredChartsBrotli,
     deferredChartsGzip,
     deferredChartsRaw,
+    deferredSqlEditorAssets,
+    deferredSqlEditorBrotli,
+    deferredSqlEditorGzip,
+    deferredSqlEditorRaw,
     deferredSqlHighlighterAssets,
     deferredSqlHighlighterBrotli,
     deferredSqlHighlighterGzip,
@@ -383,6 +427,12 @@ function runBundleBudgetCheck() {
     actual: stats.deferredChartsGzip,
     budget: budgets.maxDeferredChartsGzipBytes,
   });
+  check({
+    failures,
+    label: "deferred SQL editor gzip",
+    actual: stats.deferredSqlEditorGzip,
+    budget: budgets.maxDeferredSqlEditorGzipBytes,
+  });
   if (stats.maxAsyncScript) {
     check({
       failures,
@@ -412,6 +462,8 @@ function runBundleBudgetCheck() {
       `deferred-sql-highlighter-br=${formatKiB(stats.deferredSqlHighlighterBrotli)}`,
       `deferred-charts=${formatKiB(stats.deferredChartsGzip)}`,
       `deferred-charts-br=${formatKiB(stats.deferredChartsBrotli)}`,
+      `deferred-sql-editor=${formatKiB(stats.deferredSqlEditorGzip)}`,
+      `deferred-sql-editor-br=${formatKiB(stats.deferredSqlEditorBrotli)}`,
       stats.maxAsyncScript
         ? `largest-async=${stats.maxAsyncScript.path} ${formatKiB(stats.maxAsyncScript.gzip)} gzip ${formatKiB(stats.maxAsyncScript.brotli)} br`
         : "largest-async=n/a",

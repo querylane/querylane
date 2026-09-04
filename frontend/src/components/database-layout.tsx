@@ -105,11 +105,14 @@ export function DatabaseLayout({
   // Use the committed page match from the parent route so pending navigations
   // keep the current page until the next route is ready.
   const isExplorerRoute = page === "database.explorer";
-  const mainPaddingClass = isExplorerRoute ? "p-0" : "p-4 sm:p-6 lg:p-8";
-  const mainOverflowClass = isExplorerRoute
+  // The SQL workbench is an editor surface: it owns its own scrolling panes
+  // and fills the main area edge to edge like the explorer does.
+  const isFullBleedRoute = isExplorerRoute || page === "database.sql";
+  const mainPaddingClass = isFullBleedRoute ? "p-0" : "p-4 sm:p-6 lg:p-8";
+  const mainOverflowClass = isFullBleedRoute
     ? "overflow-hidden"
     : "overflow-auto";
-  const isWideRoute = isExplorerRoute;
+  const isWideRoute = isFullBleedRoute;
   return (
     <KeyboardShortcutsProvider>
       <CommandPaletteProvider>

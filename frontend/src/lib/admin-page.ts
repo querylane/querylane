@@ -18,7 +18,8 @@ type AdminPageId =
   // Database-level pages
   | "database.overview"
   | "database.extensions"
-  | "database.explorer";
+  | "database.explorer"
+  | "database.sql";
 
 type AdminSelectionScope = "none" | "instance" | "database";
 
@@ -30,6 +31,7 @@ const ADMIN_PAGE_IDS: readonly AdminPageId[] = [
   "database.overview",
   "database.extensions",
   "database.explorer",
+  "database.sql",
 ] as const;
 
 const ADMIN_PAGE_MIN_SCOPE: Record<
@@ -39,6 +41,7 @@ const ADMIN_PAGE_MIN_SCOPE: Record<
   "database.explorer": "database",
   "database.extensions": "database",
   "database.overview": "database",
+  "database.sql": "database",
   "instance.activity": "instance",
   "instance.configuration": "instance",
   "instance.overview": "instance",
@@ -110,6 +113,18 @@ function isInstanceAdminRoot(segments: string[]): boolean {
   return segments[2] === "admin" && segments[3] === undefined;
 }
 
+const DATABASE_PAGE_BY_SEGMENT: Record<string, AdminPageId> = {
+  explorer: "database.explorer",
+  extensions: "database.extensions",
+  sql: "database.sql",
+};
+
+function resolveDatabasePageFromSegment(
+  segment: string | undefined
+): AdminPageId {
+  return (segment && DATABASE_PAGE_BY_SEGMENT[segment]) || "database.overview";
+}
+
 function resolveImplicitAdminPageFromPathname(
   pathname: string
 ): AdminPageId | undefined {
@@ -126,13 +141,7 @@ function resolveImplicitAdminPageFromPathname(
   }
 
   if (isDatabasePath(segments)) {
-    if (segments[4] === "explorer") {
-      return "database.explorer";
-    }
-    if (segments[4] === "extensions") {
-      return "database.extensions";
-    }
-    return "database.overview";
+    return resolveDatabasePageFromSegment(segments[4]);
   }
   // The instance-scoped admin panel is not an AdminPageId page: it renders
   // app-global backend state and must not resolve to instance.overview.
@@ -158,6 +167,8 @@ function resolveImplicitAdminPageFromRouteId(
       return "database.explorer";
     case "/instances/$instanceId/databases/$databaseId/extensions":
       return "database.extensions";
+    case "/instances/$instanceId/databases/$databaseId/sql":
+      return "database.sql";
     case "/instances/$instanceId/databases/$databaseId/":
       return "database.overview";
     case "/instances/$instanceId":

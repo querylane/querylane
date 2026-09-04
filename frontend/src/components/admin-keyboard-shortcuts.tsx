@@ -48,6 +48,9 @@ function AdminKeyboardShortcuts() {
   useKeyboardShortcut("navigation.instance-overview", () =>
     navigateToPage("instance.overview")
   );
+  useKeyboardShortcut("navigation.sql-workbench", () =>
+    navigateToPage("database.sql")
+  );
   useKeyboardShortcut("sidebar.toggle", toggleSidebar);
 
   return null;

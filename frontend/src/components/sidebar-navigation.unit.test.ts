@@ -65,6 +65,7 @@ describe("sidebar navigation", () => {
         databaseExplorer: false,
         databaseExtensions: false,
         databaseOverview: false,
+        databaseSql: false,
         instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: true,
@@ -94,6 +95,7 @@ describe("sidebar navigation", () => {
         databaseExplorer: false,
         databaseExtensions: false,
         databaseOverview: true,
+        databaseSql: false,
         instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: false,
@@ -103,6 +105,7 @@ describe("sidebar navigation", () => {
         databaseExplorer: "/instances/local/databases/postgres/explorer",
         databaseExtensions: "/instances/local/databases/postgres/extensions",
         databaseOverview: "/instances/local/databases/postgres",
+        databaseSql: "/instances/local/databases/postgres/sql",
         instanceActivity: "/instances/local/activity",
         instanceConfiguration: "/instances/local/configuration",
         instanceOverview: "/instances/local",
@@ -119,6 +122,7 @@ describe("sidebar navigation", () => {
       "database.overview",
       "database.extensions",
       "database.explorer",
+      "database.sql",
     ]);
   });
   test("returns next-step hints by navigation scope", () => {

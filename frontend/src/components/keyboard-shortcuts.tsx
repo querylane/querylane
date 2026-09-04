@@ -22,6 +22,7 @@ import {
 const SHORTCUT_GROUPS: readonly KeyboardShortcutGroup[] = [
   "General",
   "Navigation",
+  "SQL workbench",
   "Data grid",
 ];
 const KEYBOARD_SHORTCUT_CHORD_TIMEOUT_MS = 1000;
