@@ -2,7 +2,14 @@ import { create as createProto } from "@bufbuild/protobuf";
 import { anyPack, timestampFromDate } from "@bufbuild/protobuf/wkt";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  expect,
+  onTestFinished,
+  test,
+  vi,
+} from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
@@ -67,6 +74,8 @@ const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/;
 const TIMESCALEDB_BUTTON_NAME = /timescaledb/i;
 const DENSE_SCHEMA_COUNT = 12;
 const SPARKLINE_RENDER_TIMEOUT_MS = 5000;
+/** The full-width sparkline band at the bottom of every stat tile (h-7). */
+const MOBILE_SPARKLINE_MIN_HEIGHT = 28;
 
 async function getMarkerCenterPixels(marker: HTMLElement) {
   const screenshot = await page
@@ -1096,6 +1105,18 @@ function cardRect(label: string) {
   return card.getBoundingClientRect();
 }
 
+/**
+ * The stat tile owning `element`: its nearest ancestor that is a direct child
+ * of the stat strip grid. Independent of the tile's internal layout.
+ */
+function statTile(element: HTMLElement): HTMLElement | null {
+  let tile: HTMLElement | null = element;
+  while (tile && !tile.parentElement?.classList.contains("grid")) {
+    tile = tile.parentElement;
+  }
+  return tile;
+}
+
 async function statSparkline(label: string): Promise<SVGElement> {
   let sparkline: SVGElement | null = null;
   await vi.waitFor(
@@ -1103,11 +1124,13 @@ async function statSparkline(label: string): Promise<SVGElement> {
       const statLabel = Array.from(document.querySelectorAll("span")).find(
         (element) =>
           element.textContent === label &&
-          element.parentElement?.parentElement?.classList.contains("grid") &&
-          element.parentElement.querySelector("svg")
+          statTile(element)?.querySelector('[aria-hidden="true"] svg')
       );
-      sparkline =
-        statLabel?.parentElement?.querySelector<SVGElement>("svg") ?? null;
+      sparkline = statLabel
+        ? (statTile(statLabel)?.querySelector<SVGElement>(
+            '[aria-hidden="true"] svg'
+          ) ?? null)
+        : null;
       if (!sparkline) {
         throw new Error(`Waiting for ${label} sparkline`);
       }
@@ -1140,6 +1163,10 @@ async function openQueryInsightsDrawer(
 }
 
 test("backend instance overview shows live metrics and database catalog together", async () => {
+  // Tall enough that expanding the replication row never scrolls: an element
+  // capture leaves whatever sits above the viewport blank.
+  await page.viewport(1280, 1800);
+  onTestFinished(() => page.viewport(1280, 1000));
   state.instanceQuery = {
     data: instanceResponse(),
     dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
@@ -1172,7 +1199,9 @@ test("backend instance overview shows live metrics and database catalog together
   await expect
     .element(page.getByRole("region", { name: "Replication overview" }))
     .not.toBeInTheDocument();
-  await expect.element(page.getByText("74")).toBeVisible();
+  await expect
+    .element(page.getByRole("img", { name: "74 of 100 connections in use" }))
+    .toBeVisible();
   await health.getByRole("button", { name: REPLICATION_ROW_NAME }).click();
   await expect
     .element(health.getByText("Primary", { exact: true }))
@@ -1260,7 +1289,9 @@ test("instance overview keeps passive sparklines large on mobile", async () => {
     const sparkline = await statSparkline("Connections");
     const geometry = sparkline.getBoundingClientRect();
     expect.soft(geometry.width).toBeGreaterThanOrEqual(112);
-    expect.soft(geometry.height).toBeGreaterThanOrEqual(44);
+    expect
+      .soft(geometry.height)
+      .toBeGreaterThanOrEqual(MOBILE_SPARKLINE_MIN_HEIGHT);
     expect.soft(sparkline.closest('[aria-hidden="true"]')).not.toBeNull();
     expect(document.querySelector('button[aria-label^="Expand"]')).toBeNull();
     expect(document.documentElement.scrollWidth).toBe(
@@ -1681,7 +1712,9 @@ test("database overview keeps passive sparklines large on mobile", async () => {
     const sparkline = await statSparkline("Total size");
     const geometry = sparkline.getBoundingClientRect();
     expect.soft(geometry.width).toBeGreaterThanOrEqual(112);
-    expect.soft(geometry.height).toBeGreaterThanOrEqual(44);
+    expect
+      .soft(geometry.height)
+      .toBeGreaterThanOrEqual(MOBILE_SPARKLINE_MIN_HEIGHT);
     expect.soft(sparkline.closest('[aria-hidden="true"]')).not.toBeNull();
     expect(document.querySelector('button[aria-label^="Expand"]')).toBeNull();
     expect(document.documentElement.scrollWidth).toBe(

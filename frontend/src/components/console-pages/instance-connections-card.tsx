@@ -334,7 +334,8 @@ function ApplicationLedger({
  * The card's one call to action, pinned to its bottom edge as a footer so it
  * reads as "where this leads" rather than a stray control in the title row.
  * Applications cut from the ledger are mentioned here, where the reader can
- * act on them.
+ * act on them. The focus ring is inset because the link bleeds to the card
+ * edge and the card clips overflow.
  */
 function SessionsFooterLink({
   activity,
@@ -348,7 +349,7 @@ function SessionsFooterLink({
     : 0;
   return (
     <Link
-      className="group -mx-6 mt-auto -mb-6 flex h-11 items-center justify-between gap-3 border-border border-t px-6 font-medium text-sm transition-colors hover:bg-foreground/[0.03] focus-visible:bg-foreground/[0.03] focus-visible:outline-none"
+      className="group -mx-6 mt-auto -mb-6 flex h-11 items-center justify-between gap-3 border-border border-t px-6 font-medium text-sm transition-colors hover:bg-foreground/[0.03] focus-visible:relative focus-visible:z-10 focus-visible:bg-foreground/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       params={{ instanceId }}
       to="/instances/$instanceId/activity"
     >
