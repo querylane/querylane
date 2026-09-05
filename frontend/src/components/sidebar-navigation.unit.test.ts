@@ -5,6 +5,7 @@ import {
   getNavForScope,
   getNextStepHint,
 } from "@/components/sidebar-navigation";
+import { buildSidebarPaths } from "@/components/sidebar-paths";
 
 describe("sidebar navigation", () => {
   test("builds native link props for available instance pages", () => {
@@ -30,6 +31,33 @@ describe("sidebar navigation", () => {
     });
 
     expect(links["database.explorer"]).toBeUndefined();
+  });
+
+  test("provides a link for every database nav item", () => {
+    const ids = { databaseId: "postgres", instanceId: "local" };
+    const links = buildNavLinkProps({ currentPage: "database.overview", ids });
+    const sections = getNavForScope({
+      active: {
+        databaseExplorer: false,
+        databaseExtensions: false,
+        databaseOverview: true,
+        databaseSql: false,
+        instanceActivity: false,
+        instanceConfiguration: false,
+        instanceOverview: false,
+        instanceRoles: false,
+      },
+      paths: buildSidebarPaths(ids),
+      scopeLevel: "database",
+    });
+
+    for (const item of sections.flatMap((section) => section.items)) {
+      expect(links[item.key], `missing link for ${item.key}`).toBeDefined();
+    }
+    expect(links["database.sql"]).toMatchObject({
+      params: ids,
+      to: "/instances/$instanceId/databases/$databaseId/sql",
+    });
   });
 
   test("clears explorer search when moving to another sidebar page", () => {

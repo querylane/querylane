@@ -73,6 +73,7 @@ function buildNavLinkProps({
     linkToPage({ page: "database.overview" });
     linkToPage({ page: "database.extensions" });
     linkToPage({ page: "database.explorer" });
+    linkToPage({ page: "database.sql" });
   }
 
   return links;
