@@ -17,6 +17,14 @@ The current main branch turns the initial preview into a much deeper read-side P
 - Added an Admin operations panel for replica heartbeat, background jobs, catalog synchronization, and metrics storage.
 - Added database Query insights and improved extension inventory.
 
+## SQL workbench
+
+- Added a read-only SQL workbench per database: a PostgreSQL-aware editor with syntax highlighting, catalog-driven autocompletion for schemas, tables, views, and columns, and multiple query tabs that persist per database.
+- Run the selection or the statement under the cursor with ⌘/Ctrl + Enter, run every statement in order, cancel long-running statements, and pick a row limit up to the server cap.
+- Results reuse the data grid with typed cells and CSV, JSON, and SQL export; server notices land in a Messages tab.
+- `EXPLAIN` and `EXPLAIN ANALYZE` render as a plan tree with per-node rows, cost, self time, and estimate-mismatch hints, plus the raw JSON plan.
+- Format SQL, keep a per-database run history, and save named queries in the browser.
+
 ## Data Explorer
 
 - Added schema maps and detailed pages for table data, columns, keys, constraints, indexes, partitions, row-level security policies, triggers, and definitions.

@@ -36,6 +36,20 @@ const managedChunkCacheGroups = {
     reuseExistingChunk: true,
     test: /[/\\]src[/\\]components[/\\]ui[/\\]/,
   },
+  sqlEditor: {
+    chunks: "async",
+    name: "sql-editor",
+    priority: 31,
+    reuseExistingChunk: true,
+    test: /[/\\]node_modules[/\\](?:@codemirror|@lezer|@marijn|crelt|style-mod|w3c-keyname)[/\\]/,
+  },
+  sqlFormatter: {
+    chunks: "async",
+    name: "sql-formatter",
+    priority: 31,
+    reuseExistingChunk: true,
+    test: /[/\\]node_modules[/\\](?:sql-formatter|nearley|moo|discontinuous-range|randexp|ret|railroad-diagrams)[/\\]/,
+  },
   sqlHighlighter: {
     chunks: "async",
     name: "sql-highlighter",

@@ -5,6 +5,7 @@ import {
   getNavForScope,
   getNextStepHint,
 } from "@/components/sidebar-navigation";
+import { buildSidebarPaths } from "@/components/sidebar-paths";
 
 describe("sidebar navigation", () => {
   test("builds native link props for available instance pages", () => {
@@ -30,6 +31,33 @@ describe("sidebar navigation", () => {
     });
 
     expect(links["database.explorer"]).toBeUndefined();
+  });
+
+  test("provides a link for every database nav item", () => {
+    const ids = { databaseId: "postgres", instanceId: "local" };
+    const links = buildNavLinkProps({ currentPage: "database.overview", ids });
+    const sections = getNavForScope({
+      active: {
+        databaseExplorer: false,
+        databaseExtensions: false,
+        databaseOverview: true,
+        databaseSql: false,
+        instanceActivity: false,
+        instanceConfiguration: false,
+        instanceOverview: false,
+        instanceRoles: false,
+      },
+      paths: buildSidebarPaths(ids),
+      scopeLevel: "database",
+    });
+
+    for (const item of sections.flatMap((section) => section.items)) {
+      expect(links[item.key], `missing link for ${item.key}`).toBeDefined();
+    }
+    expect(links["database.sql"]).toMatchObject({
+      params: ids,
+      to: "/instances/$instanceId/databases/$databaseId/sql",
+    });
   });
 
   test("clears explorer search when moving to another sidebar page", () => {
@@ -65,6 +93,7 @@ describe("sidebar navigation", () => {
         databaseExplorer: false,
         databaseExtensions: false,
         databaseOverview: false,
+        databaseSql: false,
         instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: true,
@@ -94,6 +123,7 @@ describe("sidebar navigation", () => {
         databaseExplorer: false,
         databaseExtensions: false,
         databaseOverview: true,
+        databaseSql: false,
         instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: false,
@@ -103,6 +133,7 @@ describe("sidebar navigation", () => {
         databaseExplorer: "/instances/local/databases/postgres/explorer",
         databaseExtensions: "/instances/local/databases/postgres/extensions",
         databaseOverview: "/instances/local/databases/postgres",
+        databaseSql: "/instances/local/databases/postgres/sql",
         instanceActivity: "/instances/local/activity",
         instanceConfiguration: "/instances/local/configuration",
         instanceOverview: "/instances/local",
@@ -119,6 +150,7 @@ describe("sidebar navigation", () => {
       "database.overview",
       "database.extensions",
       "database.explorer",
+      "database.sql",
     ]);
   });
   test("returns next-step hints by navigation scope", () => {

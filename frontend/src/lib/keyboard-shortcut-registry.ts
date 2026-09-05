@@ -20,7 +20,11 @@ interface KeyboardShortcutConflict {
   scope: KeyboardShortcutScope;
 }
 
-type KeyboardShortcutGroup = "Data grid" | "General" | "Navigation";
+type KeyboardShortcutGroup =
+  | "Data grid"
+  | "General"
+  | "Navigation"
+  | "SQL workbench";
 
 interface KeyboardShortcutDefinition extends KeyboardShortcutConflictCandidate {
   description: string;
@@ -159,6 +163,42 @@ const KEYBOARD_SHORTCUTS = [
     id: "navigation.instance-overview",
     kind: "handled",
     scope: "global",
+  },
+  {
+    bindings: [[{ key: "g" }, { key: "q" }]],
+    description: "Go to SQL workbench",
+    displayKeys: ["G", "Q"],
+    group: "Navigation",
+    id: "navigation.sql-workbench",
+    kind: "handled",
+    scope: "global",
+  },
+  {
+    bindings: [[{ key: "Enter", primary: true }]],
+    description: "Run the selection or the statement under the cursor",
+    displayKeys: ["⌘/Ctrl", "↵"],
+    group: "SQL workbench",
+    id: "editor.run",
+    kind: "native",
+    scope: "editor",
+  },
+  {
+    bindings: [[{ key: "Enter", primary: true, shift: true }]],
+    description: "Run every statement in the editor",
+    displayKeys: ["⌘/Ctrl", "Shift", "↵"],
+    group: "SQL workbench",
+    id: "editor.run-all",
+    kind: "native",
+    scope: "editor",
+  },
+  {
+    bindings: [[{ key: "f", primary: true, shift: true }]],
+    description: "Format SQL",
+    displayKeys: ["⌘/Ctrl", "Shift", "F"],
+    group: "SQL workbench",
+    id: "editor.format",
+    kind: "native",
+    scope: "editor",
   },
   {
     bindings: [

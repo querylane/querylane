@@ -26,7 +26,9 @@ The next product step is to make Querylane useful for daily investigation withou
 
 ### SQL Workbench
 
-A PostgreSQL Workbench is the largest planned addition: an editor with tabs, selected-statement execution, history, cancellation, typed results, export, formatting, and explain output. The first release remains read-only, with backend enforcement rather than a UI-only promise.
+The first, read-only SQL workbench has landed on main: an editor with tabs, selected-statement execution, cancellation, typed results with export, formatting, a run history, saved queries, and `EXPLAIN` / `EXPLAIN ANALYZE` rendered as a plan tree. Statements run inside a read-only transaction with a server-side statement timeout, so the guarantee is enforced by the backend rather than by the UI.
+
+What remains: server-side (shared) saved queries once Querylane has user identity, a text-format plan view, and deeper `EXPLAIN` insights such as buffer and I/O breakdowns.
 
 Track [SQL editor UI](https://github.com/querylane/querylane/issues/69), [saved query library](https://github.com/querylane/querylane/issues/137), and [EXPLAIN visualization](https://github.com/querylane/querylane/issues/70).
 
