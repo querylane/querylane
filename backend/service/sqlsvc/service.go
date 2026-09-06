@@ -19,6 +19,14 @@ import (
 // opExecuteQuery labels the SQL execution operation in error metadata.
 const opExecuteQuery = "execute_query"
 
+// opValidateQuery labels the statement check operation in error metadata.
+const opValidateQuery = "validate_query"
+
+// validateTimeout bounds a parse-and-describe round trip. It does no
+// planning or execution, so anything slower means the pool or server is
+// in trouble and the editor should just skip that check.
+const validateTimeout = 5 * time.Second
+
 var _ v1connect.SQLServiceHandler = (*Service)(nil)
 
 const (
@@ -151,10 +159,12 @@ func (s *Service) ExecuteQuery(ctx context.Context, req *connect.Request[v1alpha
 	return stream.Send(&v1alpha1.ExecuteQueryResponse{
 		Result: &v1alpha1.ExecuteQueryResponse_Stats{
 			Stats: &v1alpha1.QueryStats{
-				RowCount:  stats.RowCount,
-				Latency:   durationpb.New(stats.Latency),
-				Notices:   stats.Notices,
-				Truncated: stats.Truncated,
+				RowCount:     stats.RowCount,
+				Latency:      durationpb.New(stats.Latency),
+				Notices:      stats.Notices,
+				Truncated:    stats.Truncated,
+				CommandTag:   stats.CommandTag,
+				RowsAffected: stats.RowsAffected,
 			},
 		},
 	})
@@ -210,6 +220,57 @@ func (s *Service) ExplainQuery(ctx context.Context, req *connect.Request[v1alpha
 		Notices: result.Notices,
 		Latency: durationpb.New(result.Latency),
 	}), nil
+}
+
+// ValidateQuery checks a statement without running it.
+func (s *Service) ValidateQuery(ctx context.Context, req *connect.Request[v1alpha1.ValidateQueryRequest]) (*connect.Response[v1alpha1.ValidateQueryResponse], error) {
+	dbRes, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseDatabaseName)
+	if connErr != nil {
+		return nil, connErr
+	}
+
+	resourceCtx := apierrors.ResourceCtx{Type: dbRes.ResourceType(), Name: dbRes.String(), Op: opValidateQuery}
+
+	instSession, err := s.connManager.OpenInstance(ctx, dbRes.Instance())
+	if err != nil {
+		return nil, apierrors.MapEngineErr(ctx, err, resourceCtx)
+	}
+	defer instSession.Close()
+
+	dbSession, err := instSession.OpenDatabase(ctx, dbRes.DatabaseID)
+	if err != nil {
+		return nil, apierrors.MapEngineErr(ctx, err, resourceCtx)
+	}
+	defer dbSession.Close()
+
+	validateCtx, cancel := context.WithTimeout(ctx, timeoutWithPostgresGrace(validateTimeout))
+	defer cancel()
+
+	result, err := dbSession.ValidateQuery(validateCtx, engine.ValidateQueryParams{
+		Statement: req.Msg.GetStatement(),
+		Timeout:   validateTimeout,
+	})
+	if err != nil {
+		return nil, apierrors.MapEngineErr(ctx, err, resourceCtx)
+	}
+
+	return connect.NewResponse(&v1alpha1.ValidateQueryResponse{
+		Diagnostic: diagnosticToProto(result.Diagnostic),
+	}), nil
+}
+
+func diagnosticToProto(diagnostic *engine.QueryDiagnostic) *v1alpha1.QueryDiagnostic {
+	if diagnostic == nil {
+		return nil
+	}
+
+	return &v1alpha1.QueryDiagnostic{
+		Sqlstate: diagnostic.SQLState,
+		Message:  diagnostic.Message,
+		Detail:   diagnostic.Detail,
+		Hint:     diagnostic.Hint,
+		Position: diagnostic.Position,
+	}
 }
 
 func timeoutWithPostgresGrace(timeout time.Duration) time.Duration {

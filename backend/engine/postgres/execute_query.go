@@ -70,7 +70,11 @@ func (*Postgres) ExecuteQuery(ctx context.Context, db *sql.DB, params engine.Exe
 
 	start := time.Now()
 
-	rows, err := tx.QueryContext(ctx, params.Statement)
+	// database/sql drops the command tag; the pool tracer reports it into the
+	// sink when the rows close, so stats can name the command that ran.
+	queryCtx, commandTag := engine.WithCommandTagSink(ctx)
+
+	rows, err := tx.QueryContext(queryCtx, params.Statement)
 	if err != nil {
 		_ = tx.Rollback()
 
@@ -79,7 +83,7 @@ func (*Postgres) ExecuteQuery(ctx context.Context, db *sql.DB, params engine.Exe
 		return nil, classifySQLConsoleError("execute query", err)
 	}
 
-	columns, err := buildResultColumns(rows)
+	columns, err := buildResultColumns(ctx, db, rows)
 	if err != nil {
 		_ = rows.Close() //nolint:sqlclosecheck // rows ownership transfers to queryStream on success; close is only for this error path
 		_ = tx.Rollback()
@@ -90,12 +94,13 @@ func (*Postgres) ExecuteQuery(ctx context.Context, db *sql.DB, params engine.Exe
 	}
 
 	return &queryStream{
-		rows:     rows,
-		tx:       tx,
-		columns:  columns,
-		rowLimit: params.RowLimit,
-		start:    start,
-		notices:  noticeSession,
+		rows:       rows,
+		tx:         tx,
+		columns:    columns,
+		rowLimit:   params.RowLimit,
+		start:      start,
+		notices:    noticeSession,
+		commandTag: commandTag,
 	}, nil
 }
 
@@ -167,6 +172,7 @@ type queryStream struct {
 	currentRow *api.TableResultRow
 	stats      engine.ExecuteQueryStats
 	notices    *engine.PostgresNoticeSession
+	commandTag *engine.CommandTagSink
 	err        error
 	closed     bool
 	finalized  bool
@@ -256,6 +262,12 @@ func (s *queryStream) finalize() {
 		Notices:   notices,
 		Truncated: s.truncated,
 	}
+
+	// The tag arrives when the rows close, so read it after closeResources.
+	if tag, ok := s.commandTag.Tag(); ok {
+		s.stats.CommandTag = tag.String()
+		s.stats.RowsAffected = tag.RowsAffected()
+	}
 }
 
 func (s *queryStream) closeResources() {
@@ -285,8 +297,9 @@ func (s *queryStream) closeResources() {
 // buildResultColumns reads column metadata off rows for ExecuteQuery,
 // where there is no caller-supplied catalog to fall back on. ReadRows uses
 // buildResultColumnsForPlan instead, since the plan already knows the
-// projection's data types.
-func buildResultColumns(rows *sql.Rows) ([]*api.TableResultColumn, error) {
+// projection's data types. Type names come from the driver where it knows
+// them and from pg_type otherwise; see result_types.go.
+func buildResultColumns(ctx context.Context, db *sql.DB, rows *sql.Rows) ([]*api.TableResultColumn, error) {
 	columnTypes, err := rows.ColumnTypes()
 	if err != nil {
 		return nil, classifySQLConsoleError("column types", err)
@@ -295,16 +308,14 @@ func buildResultColumns(rows *sql.Rows) ([]*api.TableResultColumn, error) {
 	resultColumns := make([]*api.TableResultColumn, len(columnTypes))
 	for i, ct := range columnTypes {
 		nullable, _ := ct.Nullable()
-		rawType := ct.DatabaseTypeName()
 		resultColumns[i] = &api.TableResultColumn{
 			ColumnName: ct.Name(),
-			// database/sql exposes no array flag here; the driver reports array
-			// columns as element types (e.g. "_text"), so they classify as UNKNOWN.
-			DataType:   pgTypeToDataType(rawType, false),
-			RawType:    rawType,
 			IsNullable: nullable,
 		}
 	}
+
+	pending := classifyResultTypes(columnTypes, resultColumns)
+	resolveResultTypeNames(ctx, db, pending, resultColumns)
 
 	return resultColumns, nil
 }

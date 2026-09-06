@@ -177,7 +177,13 @@ type QueryStats struct {
 	// Output-only. Database notices emitted during execution.
 	Notices []string `protobuf:"bytes,3,rep,name=notices,proto3" json:"notices,omitempty"`
 	// Output-only. Whether the server truncated results at the requested limit.
-	Truncated     bool `protobuf:"varint,4,opt,name=truncated,proto3" json:"truncated,omitempty"`
+	Truncated bool `protobuf:"varint,4,opt,name=truncated,proto3" json:"truncated,omitempty"`
+	// Output-only. The command tag PostgreSQL reported for the statement, such
+	// as "SELECT 42", "SET" or "UPDATE 3". Empty when the driver reported none.
+	CommandTag string `protobuf:"bytes,5,opt,name=command_tag,json=commandTag,proto3" json:"command_tag,omitempty"`
+	// Output-only. The row count carried by the command tag: rows returned for
+	// SELECT, rows changed for DML, zero for utility commands.
+	RowsAffected  int64 `protobuf:"varint,6,opt,name=rows_affected,json=rowsAffected,proto3" json:"rows_affected,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -238,6 +244,20 @@ func (x *QueryStats) GetTruncated() bool {
 		return x.Truncated
 	}
 	return false
+}
+
+func (x *QueryStats) GetCommandTag() string {
+	if x != nil {
+		return x.CommandTag
+	}
+	return ""
+}
+
+func (x *QueryStats) GetRowsAffected() int64 {
+	if x != nil {
+		return x.RowsAffected
+	}
+	return 0
 }
 
 type ExecuteQueryRequest struct {
@@ -588,6 +608,188 @@ func (x *ExplainQueryResponse) GetLatency() *durationpb.Duration {
 	return nil
 }
 
+type ValidateQueryRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The database against which to check the statement.
+	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
+	// Required. A single SQL statement to check.
+	Statement     string `protobuf:"bytes,2,opt,name=statement,proto3" json:"statement,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateQueryRequest) Reset() {
+	*x = ValidateQueryRequest{}
+	mi := &file_querylane_console_v1alpha1_sql_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateQueryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateQueryRequest) ProtoMessage() {}
+
+func (x *ValidateQueryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_sql_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateQueryRequest.ProtoReflect.Descriptor instead.
+func (*ValidateQueryRequest) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_sql_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ValidateQueryRequest) GetParent() string {
+	if x != nil {
+		return x.Parent
+	}
+	return ""
+}
+
+func (x *ValidateQueryRequest) GetStatement() string {
+	if x != nil {
+		return x.Statement
+	}
+	return ""
+}
+
+type ValidateQueryResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output-only. Why PostgreSQL rejected the statement. Unset when the
+	// statement is valid.
+	Diagnostic    *QueryDiagnostic `protobuf:"bytes,1,opt,name=diagnostic,proto3" json:"diagnostic,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateQueryResponse) Reset() {
+	*x = ValidateQueryResponse{}
+	mi := &file_querylane_console_v1alpha1_sql_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateQueryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateQueryResponse) ProtoMessage() {}
+
+func (x *ValidateQueryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_sql_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateQueryResponse.ProtoReflect.Descriptor instead.
+func (*ValidateQueryResponse) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_sql_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ValidateQueryResponse) GetDiagnostic() *QueryDiagnostic {
+	if x != nil {
+		return x.Diagnostic
+	}
+	return nil
+}
+
+// QueryDiagnostic is one problem PostgreSQL found in a statement. The text
+// fields are bounded, untrusted server text: render them, never log them.
+type QueryDiagnostic struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The five-character SQLSTATE code, for example "42601" (syntax_error).
+	Sqlstate string `protobuf:"bytes,1,opt,name=sqlstate,proto3" json:"sqlstate,omitempty"`
+	// The primary error message, for example "relation \"custmer\" does not exist".
+	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Detail  string `protobuf:"bytes,3,opt,name=detail,proto3" json:"detail,omitempty"`
+	Hint    string `protobuf:"bytes,4,opt,name=hint,proto3" json:"hint,omitempty"`
+	// 1-based character offset into the statement where the problem starts,
+	// or 0 when PostgreSQL did not report one.
+	Position      int32 `protobuf:"varint,5,opt,name=position,proto3" json:"position,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryDiagnostic) Reset() {
+	*x = QueryDiagnostic{}
+	mi := &file_querylane_console_v1alpha1_sql_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryDiagnostic) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryDiagnostic) ProtoMessage() {}
+
+func (x *QueryDiagnostic) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_sql_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryDiagnostic.ProtoReflect.Descriptor instead.
+func (*QueryDiagnostic) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_sql_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *QueryDiagnostic) GetSqlstate() string {
+	if x != nil {
+		return x.Sqlstate
+	}
+	return ""
+}
+
+func (x *QueryDiagnostic) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *QueryDiagnostic) GetDetail() string {
+	if x != nil {
+		return x.Detail
+	}
+	return ""
+}
+
+func (x *QueryDiagnostic) GetHint() string {
+	if x != nil {
+		return x.Hint
+	}
+	return ""
+}
+
+func (x *QueryDiagnostic) GetPosition() int32 {
+	if x != nil {
+		return x.Position
+	}
+	return 0
+}
+
 var File_querylane_console_v1alpha1_sql_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_sql_proto_rawDesc = "" +
@@ -596,13 +798,16 @@ const file_querylane_console_v1alpha1_sql_proto_rawDesc = "" +
 	"\x13QueryColumnMetadata\x12L\n" +
 	"\acolumns\x18\x01 \x03(\v2-.querylane.console.v1alpha1.TableResultColumnB\x03\xe0A\x03R\acolumns\"T\n" +
 	"\rQueryRowBatch\x12C\n" +
-	"\x04rows\x18\x01 \x03(\v2*.querylane.console.v1alpha1.TableResultRowB\x03\xe0A\x03R\x04rows\"\xaa\x01\n" +
+	"\x04rows\x18\x01 \x03(\v2*.querylane.console.v1alpha1.TableResultRowB\x03\xe0A\x03R\x04rows\"\xfa\x01\n" +
 	"\n" +
 	"QueryStats\x12 \n" +
 	"\trow_count\x18\x01 \x01(\x03B\x03\xe0A\x03R\browCount\x128\n" +
 	"\alatency\x18\x02 \x01(\v2\x19.google.protobuf.DurationB\x03\xe0A\x03R\alatency\x12\x1d\n" +
 	"\anotices\x18\x03 \x03(\tB\x03\xe0A\x03R\anotices\x12!\n" +
-	"\ttruncated\x18\x04 \x01(\bB\x03\xe0A\x03R\ttruncated\"\x87\x03\n" +
+	"\ttruncated\x18\x04 \x01(\bB\x03\xe0A\x03R\ttruncated\x12$\n" +
+	"\vcommand_tag\x18\x05 \x01(\tB\x03\xe0A\x03R\n" +
+	"commandTag\x12(\n" +
+	"\rrows_affected\x18\x06 \x01(\x03B\x03\xe0A\x03R\frowsAffected\"\x87\x03\n" +
 	"\x13ExecuteQueryRequest\x12\x85\x01\n" +
 	"\x06parent\x18\x01 \x01(\tBm\xe0A\x02\xfaA \n" +
 	"\x1econsole.querylane.dev/Database\xbaHDrB2@^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$R\x06parent\x12(\n" +
@@ -636,11 +841,27 @@ const file_querylane_console_v1alpha1_sql_proto_rawDesc = "" +
 	"\x14ExplainQueryResponse\x12\x17\n" +
 	"\x04plan\x18\x01 \x01(\tB\x03\xe0A\x03R\x04plan\x12\x1d\n" +
 	"\anotices\x18\x02 \x03(\tB\x03\xe0A\x03R\anotices\x128\n" +
-	"\alatency\x18\x03 \x01(\v2\x19.google.protobuf.DurationB\x03\xe0A\x03R\alatency2\xf8\x01\n" +
+	"\alatency\x18\x03 \x01(\v2\x19.google.protobuf.DurationB\x03\xe0A\x03R\alatency\"\xc8\x01\n" +
+	"\x14ValidateQueryRequest\x12\x85\x01\n" +
+	"\x06parent\x18\x01 \x01(\tBm\xe0A\x02\xfaA \n" +
+	"\x1econsole.querylane.dev/Database\xbaHDrB2@^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$R\x06parent\x12(\n" +
+	"\tstatement\x18\x02 \x01(\tB\n" +
+	"\xe0A\x02\xbaH\x04r\x02\x10\x01R\tstatement\"i\n" +
+	"\x15ValidateQueryResponse\x12P\n" +
+	"\n" +
+	"diagnostic\x18\x01 \x01(\v2+.querylane.console.v1alpha1.QueryDiagnosticB\x03\xe0A\x03R\n" +
+	"diagnostic\"\xa8\x01\n" +
+	"\x0fQueryDiagnostic\x12\x1f\n" +
+	"\bsqlstate\x18\x01 \x01(\tB\x03\xe0A\x03R\bsqlstate\x12\x1d\n" +
+	"\amessage\x18\x02 \x01(\tB\x03\xe0A\x03R\amessage\x12\x1b\n" +
+	"\x06detail\x18\x03 \x01(\tB\x03\xe0A\x03R\x06detail\x12\x17\n" +
+	"\x04hint\x18\x04 \x01(\tB\x03\xe0A\x03R\x04hint\x12\x1f\n" +
+	"\bposition\x18\x05 \x01(\x05B\x03\xe0A\x03R\bposition2\xf0\x02\n" +
 	"\n" +
 	"SQLService\x12u\n" +
 	"\fExecuteQuery\x12/.querylane.console.v1alpha1.ExecuteQueryRequest\x1a0.querylane.console.v1alpha1.ExecuteQueryResponse\"\x000\x01\x12s\n" +
-	"\fExplainQuery\x12/.querylane.console.v1alpha1.ExplainQueryRequest\x1a0.querylane.console.v1alpha1.ExplainQueryResponse\"\x00B\x90\x02\n" +
+	"\fExplainQuery\x12/.querylane.console.v1alpha1.ExplainQueryRequest\x1a0.querylane.console.v1alpha1.ExplainQueryResponse\"\x00\x12v\n" +
+	"\rValidateQuery\x120.querylane.console.v1alpha1.ValidateQueryRequest\x1a1.querylane.console.v1alpha1.ValidateQueryResponse\"\x00B\x90\x02\n" +
 	"\x1ecom.querylane.console.v1alpha1B\bSqlProtoP\x01ZZgithub.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1;consolev1alpha1\xa2\x02\x03QCX\xaa\x02\x1aQuerylane.Console.V1alpha1\xca\x02\x1aQuerylane\\Console\\V1alpha1\xe2\x02&Querylane\\Console\\V1alpha1\\GPBMetadata\xea\x02\x1cQuerylane::Console::V1alpha1b\x06proto3"
 
 var (
@@ -656,7 +877,7 @@ func file_querylane_console_v1alpha1_sql_proto_rawDescGZIP() []byte {
 }
 
 var file_querylane_console_v1alpha1_sql_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_querylane_console_v1alpha1_sql_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_querylane_console_v1alpha1_sql_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_querylane_console_v1alpha1_sql_proto_goTypes = []any{
 	(ExplainQueryRequest_Format)(0), // 0: querylane.console.v1alpha1.ExplainQueryRequest.Format
 	(*QueryColumnMetadata)(nil),     // 1: querylane.console.v1alpha1.QueryColumnMetadata
@@ -666,30 +887,36 @@ var file_querylane_console_v1alpha1_sql_proto_goTypes = []any{
 	(*ExecuteQueryResponse)(nil),    // 5: querylane.console.v1alpha1.ExecuteQueryResponse
 	(*ExplainQueryRequest)(nil),     // 6: querylane.console.v1alpha1.ExplainQueryRequest
 	(*ExplainQueryResponse)(nil),    // 7: querylane.console.v1alpha1.ExplainQueryResponse
-	(*TableResultColumn)(nil),       // 8: querylane.console.v1alpha1.TableResultColumn
-	(*TableResultRow)(nil),          // 9: querylane.console.v1alpha1.TableResultRow
-	(*durationpb.Duration)(nil),     // 10: google.protobuf.Duration
+	(*ValidateQueryRequest)(nil),    // 8: querylane.console.v1alpha1.ValidateQueryRequest
+	(*ValidateQueryResponse)(nil),   // 9: querylane.console.v1alpha1.ValidateQueryResponse
+	(*QueryDiagnostic)(nil),         // 10: querylane.console.v1alpha1.QueryDiagnostic
+	(*TableResultColumn)(nil),       // 11: querylane.console.v1alpha1.TableResultColumn
+	(*TableResultRow)(nil),          // 12: querylane.console.v1alpha1.TableResultRow
+	(*durationpb.Duration)(nil),     // 13: google.protobuf.Duration
 }
 var file_querylane_console_v1alpha1_sql_proto_depIdxs = []int32{
-	8,  // 0: querylane.console.v1alpha1.QueryColumnMetadata.columns:type_name -> querylane.console.v1alpha1.TableResultColumn
-	9,  // 1: querylane.console.v1alpha1.QueryRowBatch.rows:type_name -> querylane.console.v1alpha1.TableResultRow
-	10, // 2: querylane.console.v1alpha1.QueryStats.latency:type_name -> google.protobuf.Duration
-	10, // 3: querylane.console.v1alpha1.ExecuteQueryRequest.timeout:type_name -> google.protobuf.Duration
+	11, // 0: querylane.console.v1alpha1.QueryColumnMetadata.columns:type_name -> querylane.console.v1alpha1.TableResultColumn
+	12, // 1: querylane.console.v1alpha1.QueryRowBatch.rows:type_name -> querylane.console.v1alpha1.TableResultRow
+	13, // 2: querylane.console.v1alpha1.QueryStats.latency:type_name -> google.protobuf.Duration
+	13, // 3: querylane.console.v1alpha1.ExecuteQueryRequest.timeout:type_name -> google.protobuf.Duration
 	1,  // 4: querylane.console.v1alpha1.ExecuteQueryResponse.column_metadata:type_name -> querylane.console.v1alpha1.QueryColumnMetadata
 	2,  // 5: querylane.console.v1alpha1.ExecuteQueryResponse.row_batch:type_name -> querylane.console.v1alpha1.QueryRowBatch
 	3,  // 6: querylane.console.v1alpha1.ExecuteQueryResponse.stats:type_name -> querylane.console.v1alpha1.QueryStats
 	0,  // 7: querylane.console.v1alpha1.ExplainQueryRequest.format:type_name -> querylane.console.v1alpha1.ExplainQueryRequest.Format
-	10, // 8: querylane.console.v1alpha1.ExplainQueryRequest.timeout:type_name -> google.protobuf.Duration
-	10, // 9: querylane.console.v1alpha1.ExplainQueryResponse.latency:type_name -> google.protobuf.Duration
-	4,  // 10: querylane.console.v1alpha1.SQLService.ExecuteQuery:input_type -> querylane.console.v1alpha1.ExecuteQueryRequest
-	6,  // 11: querylane.console.v1alpha1.SQLService.ExplainQuery:input_type -> querylane.console.v1alpha1.ExplainQueryRequest
-	5,  // 12: querylane.console.v1alpha1.SQLService.ExecuteQuery:output_type -> querylane.console.v1alpha1.ExecuteQueryResponse
-	7,  // 13: querylane.console.v1alpha1.SQLService.ExplainQuery:output_type -> querylane.console.v1alpha1.ExplainQueryResponse
-	12, // [12:14] is the sub-list for method output_type
-	10, // [10:12] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	13, // 8: querylane.console.v1alpha1.ExplainQueryRequest.timeout:type_name -> google.protobuf.Duration
+	13, // 9: querylane.console.v1alpha1.ExplainQueryResponse.latency:type_name -> google.protobuf.Duration
+	10, // 10: querylane.console.v1alpha1.ValidateQueryResponse.diagnostic:type_name -> querylane.console.v1alpha1.QueryDiagnostic
+	4,  // 11: querylane.console.v1alpha1.SQLService.ExecuteQuery:input_type -> querylane.console.v1alpha1.ExecuteQueryRequest
+	6,  // 12: querylane.console.v1alpha1.SQLService.ExplainQuery:input_type -> querylane.console.v1alpha1.ExplainQueryRequest
+	8,  // 13: querylane.console.v1alpha1.SQLService.ValidateQuery:input_type -> querylane.console.v1alpha1.ValidateQueryRequest
+	5,  // 14: querylane.console.v1alpha1.SQLService.ExecuteQuery:output_type -> querylane.console.v1alpha1.ExecuteQueryResponse
+	7,  // 15: querylane.console.v1alpha1.SQLService.ExplainQuery:output_type -> querylane.console.v1alpha1.ExplainQueryResponse
+	9,  // 16: querylane.console.v1alpha1.SQLService.ValidateQuery:output_type -> querylane.console.v1alpha1.ValidateQueryResponse
+	14, // [14:17] is the sub-list for method output_type
+	11, // [11:14] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_sql_proto_init() }
@@ -709,7 +936,7 @@ func file_querylane_console_v1alpha1_sql_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_querylane_console_v1alpha1_sql_proto_rawDesc), len(file_querylane_console_v1alpha1_sql_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   7,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -24,6 +24,9 @@ The current main branch turns the initial preview into a much deeper read-side P
 - Results reuse the data grid with typed cells and CSV, JSON, and SQL export; server notices land in a Messages tab.
 - `EXPLAIN` and `EXPLAIN ANALYZE` render as a plan tree with per-node rows, cost, self time, and estimate-mismatch hints, plus the raw JSON plan.
 - Format SQL, keep a per-database run history, and save named queries in the browser.
+- Browse schemas, tables, views, and columns in the sidebar while writing SQL: click a name to insert it at the cursor, or query the first 100 rows of a table in a new tab.
+- Statements are checked against PostgreSQL as you type: syntax errors, unknown tables and columns, and invalid literals are underlined with the server's message and hint, without running anything.
+- Statements without a result set (`SET`, `DO`, `CALL`) report PostgreSQL's command tag and affected-row count instead of an empty grid; an empty result shows why the grid has no rows; writes rejected by the read-only transaction explain the workbench rule rather than a raw SQLSTATE.
 
 ## Data Explorer
 

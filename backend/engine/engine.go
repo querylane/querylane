@@ -74,6 +74,7 @@ type DatabaseSession interface {
 	ReadCellValue(ctx context.Context, params ReadCellValueParams) (*ReadCellValueResult, error)
 	ExecuteQuery(ctx context.Context, params ExecuteQueryParams) (ExecuteQueryStream, error)
 	ExplainQuery(ctx context.Context, params ExplainQueryParams) (*ExplainQueryResult, error)
+	ValidateQuery(ctx context.Context, params ValidateQueryParams) (*ValidateQueryResult, error)
 	GetDatabaseQueryInsights(ctx context.Context) (*DatabaseQueryInsights, error)
 	Close() error
 }

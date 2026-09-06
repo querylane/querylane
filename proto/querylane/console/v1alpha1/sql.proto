@@ -20,6 +20,11 @@ service SQLService {
 
   // Produces an EXPLAIN plan for a single query.
   rpc ExplainQuery(ExplainQueryRequest) returns (ExplainQueryResponse) {}
+
+  // Checks a single statement without running it. PostgreSQL parses the
+  // statement and resolves every table, column, function and type it
+  // references, so the result covers syntax errors and unknown objects alike.
+  rpc ValidateQuery(ValidateQueryRequest) returns (ValidateQueryResponse) {}
 }
 
 // --------------------------------------------------------------------------
@@ -49,6 +54,14 @@ message QueryStats {
 
   // Output-only. Whether the server truncated results at the requested limit.
   bool truncated = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The command tag PostgreSQL reported for the statement, such
+  // as "SELECT 42", "SET" or "UPDATE 3". Empty when the driver reported none.
+  string command_tag = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. The row count carried by the command tag: rows returned for
+  // SELECT, rows changed for DML, zero for utility commands.
+  int64 rows_affected = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // --------------------------------------------------------------------------
@@ -149,4 +162,43 @@ message ExplainQueryResponse {
 
   // Output-only. Explain latency.
   google.protobuf.Duration latency = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message ValidateQueryRequest {
+  // Required. The database against which to check the statement.
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "console.querylane.dev/Database"},
+    (buf.validate.field).string.pattern = "^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$"
+  ];
+
+  // Required. A single SQL statement to check.
+  string statement = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1
+  ];
+}
+
+message ValidateQueryResponse {
+  // Output-only. Why PostgreSQL rejected the statement. Unset when the
+  // statement is valid.
+  QueryDiagnostic diagnostic = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// QueryDiagnostic is one problem PostgreSQL found in a statement. The text
+// fields are bounded, untrusted server text: render them, never log them.
+message QueryDiagnostic {
+  // The five-character SQLSTATE code, for example "42601" (syntax_error).
+  string sqlstate = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The primary error message, for example "relation \"custmer\" does not exist".
+  string message = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  string detail = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  string hint = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // 1-based character offset into the statement where the problem starts,
+  // or 0 when PostgreSQL did not report one.
+  int32 position = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
