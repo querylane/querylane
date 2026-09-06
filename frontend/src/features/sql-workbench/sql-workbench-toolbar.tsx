@@ -40,7 +40,7 @@ import { formatCount } from "@/features/sql-workbench/sql-workbench-format";
 
 function ShortcutHint({ keys }: { keys: string[] }) {
   return (
-    <span className="ml-1 hidden items-center gap-0.5 font-mono text-[10px] opacity-70 sm:inline-flex">
+    <span className="ml-1 hidden items-center gap-0.5 font-mono text-xs opacity-70 sm:inline-flex">
       {keys.map((key) => (
         <kbd className="rounded border border-border/60 px-1" key={key}>
           {key}
@@ -56,6 +56,7 @@ function SqlWorkbenchToolbar({
   isExplaining,
   isRunning,
   onCancel,
+  onCancelExplain,
   onExplain,
   onFormat,
   onOpenHistory,
@@ -71,6 +72,7 @@ function SqlWorkbenchToolbar({
   isExplaining: boolean;
   isRunning: boolean;
   onCancel: () => void;
+  onCancelExplain: () => void;
   onExplain: (analyze: boolean) => void;
   onFormat: () => void;
   onOpenHistory: () => void;
@@ -82,7 +84,7 @@ function SqlWorkbenchToolbar({
   statementCount: number;
 }) {
   return (
-    <div className="flex min-h-11 flex-wrap items-center gap-1.5 border-border border-b bg-background px-2 py-1">
+    <div className="flex min-h-11 flex-wrap items-center gap-1.5 border-border border-b bg-background p-2">
       {isRunning ? (
         <Button
           onClick={onCancel}
@@ -121,36 +123,47 @@ function SqlWorkbenchToolbar({
           </TooltipContent>
         </Tooltip>
       ) : null}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              disabled={!canRun || isExplaining}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              {isExplaining ? (
-                <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
-              ) : (
+      {isExplaining ? (
+        <Button
+          onClick={onCancelExplain}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <Loader2
+            aria-hidden="true"
+            className="size-3.5 motion-safe:animate-spin"
+          />
+          Cancel explain
+        </Button>
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                disabled={!canRun}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
                 <Waypoints aria-hidden="true" className="size-3.5" />
-              )}
+                Explain
+                <ChevronDown aria-hidden="true" className="size-3 opacity-60" />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="start" className="min-w-64">
+            <DropdownMenuItem onClick={() => onExplain(false)}>
               Explain
-              <ChevronDown aria-hidden="true" className="size-3 opacity-60" />
-            </Button>
-          }
-        />
-        <DropdownMenuContent align="start" className="min-w-64">
-          <DropdownMenuItem onClick={() => onExplain(false)}>
-            Explain
-            <DropdownMenuShortcut>estimates only</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onExplain(true)}>
-            Explain analyze
-            <DropdownMenuShortcut>runs the query</DropdownMenuShortcut>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+              <DropdownMenuShortcut>estimates only</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onExplain(true)}>
+              Explain analyze
+              <DropdownMenuShortcut>runs the query</DropdownMenuShortcut>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
       <Button onClick={onFormat} size="sm" type="button" variant="ghost">
         <WandSparkles aria-hidden="true" className="size-3.5" />
         Format
@@ -170,8 +183,8 @@ function SqlWorkbenchToolbar({
         <Tooltip>
           <TooltipTrigger
             render={
-              <span className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground">
-                <Lock aria-hidden="true" className="size-3" />
+              <span className="inline-flex h-8 cursor-help items-center gap-1.5 px-2 text-muted-foreground text-sm">
+                <Lock aria-hidden="true" className="size-3.5" />
                 Read-only
               </span>
             }
@@ -209,7 +222,7 @@ function SqlWorkbenchToolbar({
           <History aria-hidden="true" className="size-3.5" />
           History
           {historyCount > 0 ? (
-            <span className="rounded-full bg-muted px-1.5 font-mono text-[10px] tabular-nums">
+            <span className="rounded-full bg-muted px-1.5 font-mono text-xs tabular-nums">
               {historyCount}
             </span>
           ) : null}

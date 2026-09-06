@@ -75,7 +75,7 @@ function HistoryRow({
         <span className="line-clamp-2 w-full font-mono text-xs leading-relaxed">
           {summarizeStatement(entry.statement, PREVIEW_LENGTH)}
         </span>
-        <span className="flex w-full flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
+        <span className="flex w-full flex-wrap items-center gap-x-2 text-muted-foreground text-xs">
           <span className={cn("font-medium", statusTone(entry.status))}>
             {STATUS_LABEL[entry.status]}
           </span>
@@ -119,7 +119,7 @@ function SavedRow({
       </Button>
       <Button
         aria-label={`Delete saved query ${query.name}`}
-        className="mt-1 text-muted-foreground opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+        className="mt-1 text-muted-foreground opacity-0 focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
         onClick={() => onDelete(query.id)}
         size="icon-xs"
         type="button"
@@ -240,14 +240,14 @@ function SheetTabs({
         <TabsTrigger className="h-7 gap-1.5 px-2.5 text-xs" value="history">
           <History aria-hidden="true" className="size-3.5" />
           History
-          <Badge className="px-1.5 font-mono text-[10px]" variant="secondary">
+          <Badge className="px-1.5 font-mono text-xs" variant="secondary">
             {historyCount}
           </Badge>
         </TabsTrigger>
         <TabsTrigger className="h-7 gap-1.5 px-2.5 text-xs" value="saved">
           <Bookmark aria-hidden="true" className="size-3.5" />
           Saved
-          <Badge className="px-1.5 font-mono text-[10px]" variant="secondary">
+          <Badge className="px-1.5 font-mono text-xs" variant="secondary">
             {savedCount}
           </Badge>
         </TabsTrigger>
@@ -305,7 +305,7 @@ function SqlHistorySheet({
             value={search}
           />
         </div>
-        <div className="min-h-0 flex-1 overflow-auto px-2 py-2">
+        <div className="min-h-0 flex-1 overflow-auto p-2">
           {tab === "history" ? (
             <HistoryList
               history={history}

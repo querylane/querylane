@@ -10,12 +10,14 @@ import type { SQLNamespace } from "@codemirror/lang-sql";
  */
 
 interface CompletionRelation {
+  isMaterialized: boolean;
   kind: "table" | "view";
   name: string;
   schema: string;
 }
 
 interface CompletionColumn {
+  isPrimaryKey: boolean;
   name: string;
   type: string;
 }
@@ -29,6 +31,18 @@ type RelationIndex = ReadonlyMap<string, ReadonlySet<string>>;
 
 const DEFAULT_SCHEMA = "public";
 const MAX_REFERENCED_RELATIONS = 12;
+// Ranking among equally good matches: what you are most likely reaching for
+// in a given position wins. lang-sql gives keywords -1.
+const COLUMN_BOOST = 3;
+const RELATION_BOOST = 2;
+const SCHEMA_BOOST = 1;
+// Typing "." while a schema or relation is highlighted accepts it and keeps
+// going, so `cr.cus` flows into `crm.customer` without pressing Enter.
+const MEMBER_ACCESS = ["."];
+// Text after FROM/JOIN/UPDATE/INTO up to the cursor is a relation reference in
+// progress: keywords are noise there.
+const RELATION_POSITION_PATTERN =
+  /\b(?:from|join|update|into|only)\s+[\w$".]*$/i;
 const RELATION_REFERENCE_PATTERN =
   /\b(?:from|join|update|into|only)\s+("[^"]+"|[A-Za-z_][\w$]*)(?:\s*\.\s*("[^"]+"|[A-Za-z_][\w$]*))?/gi;
 const RESERVED_AFTER_KEYWORD = new Set([
@@ -123,22 +137,42 @@ function extractReferencedRelations(
   return [...found.values()];
 }
 
+/**
+ * True when the text before the cursor is a relation reference in progress,
+ * e.g. `FROM cr` or `JOIN crm.`; false once an alias or a space follows.
+ */
+function isRelationPosition(textBeforeCursor: string): boolean {
+  return RELATION_POSITION_PATTERN.test(textBeforeCursor);
+}
+
+// Completion `type` values name the glyph in sql-completion-icons.ts; the
+// detail is the secondary, right-aligned text (data type, object kind).
 function columnCompletion(column: CompletionColumn): Completion {
   return {
-    boost: 1,
+    boost: COLUMN_BOOST,
     detail: column.type,
     label: column.name,
-    type: "property",
+    type: column.isPrimaryKey ? "primary-key" : "column",
   };
 }
 
+function relationType(relation: CompletionRelation): string {
+  if (relation.kind === "table") {
+    return "table";
+  }
+  return relation.isMaterialized ? "materialized-view" : "view";
+}
+
 function relationCompletion(relation: CompletionRelation): SQLNamespace {
+  const type = relationType(relation);
   return {
     children: [],
     self: {
-      detail: relation.kind,
+      boost: RELATION_BOOST,
+      commitCharacters: MEMBER_ACCESS,
+      detail: type.replace("-", " "),
       label: relation.name,
-      type: relation.kind === "view" ? "interface" : "class",
+      type,
     },
   };
 }
@@ -164,7 +198,13 @@ function buildCompletionNamespace({
     if (!schema) {
       schema = {
         children: {},
-        self: { label: relation.schema, type: "namespace" },
+        self: {
+          boost: SCHEMA_BOOST,
+          commitCharacters: MEMBER_ACCESS,
+          detail: "schema",
+          label: relation.schema,
+          type: "namespace",
+        },
       };
       namespace[relation.schema] = schema;
     }
@@ -181,5 +221,6 @@ export {
   buildCompletionNamespace,
   DEFAULT_SCHEMA,
   extractReferencedRelations,
+  isRelationPosition,
   relationKey,
 };

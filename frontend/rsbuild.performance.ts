@@ -43,6 +43,15 @@ const managedChunkCacheGroups = {
     reuseExistingChunk: true,
     test: /[/\\]node_modules[/\\](?:@codemirror|@lezer|@marijn|crelt|style-mod|w3c-keyname)[/\\]/,
   },
+  // The PostgreSQL grammar and the Lezer runtime load alongside the editor
+  // core; keeping them apart holds each chunk under the async script cap.
+  sqlGrammar: {
+    chunks: "async",
+    name: "sql-grammar",
+    priority: 32,
+    reuseExistingChunk: true,
+    test: /[/\\]node_modules[/\\](?:@codemirror[/\\]lang-sql|@lezer)[/\\]/,
+  },
   sqlFormatter: {
     chunks: "async",
     name: "sql-formatter",

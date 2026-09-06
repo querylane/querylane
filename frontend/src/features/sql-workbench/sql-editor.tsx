@@ -2,6 +2,7 @@
 
 import {
   autocompletion,
+  type CompletionSource,
   closeBrackets,
   closeBracketsKeymap,
   closeCompletion,
@@ -13,8 +14,17 @@ import {
   historyKeymap,
   indentWithTab,
 } from "@codemirror/commands";
-import { PostgreSQL, type SQLNamespace, sql } from "@codemirror/lang-sql";
-import { bracketMatching, indentOnInput } from "@codemirror/language";
+import {
+  keywordCompletionSource,
+  PostgreSQL,
+  type SQLNamespace,
+  schemaCompletionSource,
+} from "@codemirror/lang-sql";
+import {
+  bracketMatching,
+  indentOnInput,
+  LanguageSupport,
+} from "@codemirror/language";
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorState } from "@codemirror/state";
 import {
@@ -29,9 +39,16 @@ import {
   rectangularSelection,
 } from "@codemirror/view";
 import { type Ref, useEffect, useImperativeHandle, useRef } from "react";
-import { DEFAULT_SCHEMA } from "@/features/sql-workbench/sql-completion-schema";
+import { padInsertion } from "@/features/sql-workbench/sql-catalog-model";
+import { completionIconOption } from "@/features/sql-workbench/sql-completion-icons";
+import {
+  DEFAULT_SCHEMA,
+  isRelationPosition,
+} from "@/features/sql-workbench/sql-completion-schema";
 import { sqlEditorTheme } from "@/features/sql-workbench/sql-editor-theme";
 import type { SqlEditorHandle } from "@/features/sql-workbench/sql-editor-types";
+import { sqlLinter } from "@/features/sql-workbench/sql-lint";
+import type { SqlValidator } from "@/features/sql-workbench/use-sql-validation";
 
 interface SqlEditorProps {
   ariaLabel: string;
@@ -43,6 +60,8 @@ interface SqlEditorProps {
   placeholder?: string | undefined;
   ref?: Ref<SqlEditorHandle> | undefined;
   schema: SQLNamespace;
+  /** Server-side statement check; omit to lint nothing. */
+  validate?: SqlValidator | undefined;
   value: string;
 }
 
@@ -54,14 +73,50 @@ interface EditorCallbacks {
 }
 
 const EMPTY_SCHEMA: SQLNamespace = {};
+const RELATION_LOOKBEHIND_CHARS = 200;
+const postgresKeywords = keywordCompletionSource(PostgreSQL, true);
 
-function sqlLanguage(schema: SQLNamespace) {
-  return sql({
-    defaultSchema: DEFAULT_SCHEMA,
-    dialect: PostgreSQL,
-    schema,
-    upperCaseKeywords: true,
+/** Keyword completions, except where only a relation name belongs. */
+const contextualKeywords: CompletionSource = (context) => {
+  const before = context.state.sliceDoc(
+    Math.max(0, context.pos - RELATION_LOOKBEHIND_CHARS),
+    context.pos
+  );
+  return isRelationPosition(before) ? null : postgresKeywords(context);
+};
+
+type EditorCompartments = ReturnType<typeof createCompartments>;
+
+function createCompartments() {
+  return {
+    attributes: new Compartment(),
+    editable: new Compartment(),
+    language: new Compartment(),
+    placeholder: new Compartment(),
+  };
+}
+
+function contentAttributes(ariaLabel: string) {
+  return EditorView.contentAttributes.of({
+    "aria-label": ariaLabel,
+    "aria-multiline": "true",
+    role: "textbox",
   });
+}
+
+// Mirrors lang-sql's `sql()` but with the keyword source made contextual.
+function sqlLanguage(schema: SQLNamespace) {
+  const { language } = PostgreSQL;
+  return new LanguageSupport(language, [
+    language.data.of({
+      autocomplete: schemaCompletionSource({
+        defaultSchema: DEFAULT_SCHEMA,
+        dialect: PostgreSQL,
+        schema,
+      }),
+    }),
+    language.data.of({ autocomplete: contextualKeywords }),
+  ]);
 }
 
 function SqlEditor({
@@ -74,6 +129,7 @@ function SqlEditor({
   placeholder,
   ref,
   schema,
+  validate,
   value,
 }: SqlEditorProps) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -84,12 +140,22 @@ function SqlEditor({
     onRunAll,
     onRunCurrent,
   });
-  const languageCompartment = useRef(new Compartment());
-  const editableCompartment = useRef(new Compartment());
-  const initialValueRef = useRef(value);
+  const validateRef = useRef(validate);
+  // Created once per mount. A `useRef(createCompartments())` initialiser
+  // would allocate four compartments on every render and discard them.
+  const compartmentsRef = useRef<EditorCompartments | null>(null);
+  if (compartmentsRef.current === null) {
+    compartmentsRef.current = createCompartments();
+  }
+  const compartments = compartmentsRef.current;
+  // The view is created once per mount; props that can change afterwards are
+  // applied through compartments so the document and its undo history survive
+  // (a tab rename must not reset the SQL).
+  const initialPropsRef = useRef({ ariaLabel, placeholder, value });
 
   useEffect(function keepCallbacksCurrent() {
     callbacksRef.current = { onChange, onFormat, onRunAll, onRunCurrent };
+    validateRef.current = validate;
   });
 
   useImperativeHandle(ref, () => ({
@@ -105,6 +171,23 @@ function SqlEditor({
         selection: { from, to },
         text: view.state.doc.toString(),
       };
+    },
+    insertText: (text) => {
+      const view = viewRef.current;
+      if (!view) {
+        return;
+      }
+      const { from, to } = view.state.selection.main;
+      const insert = padInsertion(
+        view.state.doc.sliceString(Math.max(0, from - 1), from),
+        text
+      );
+      view.dispatch({
+        changes: { from, insert, to },
+        scrollIntoView: true,
+        selection: { anchor: from + insert.length },
+      });
+      view.focus();
     },
     replaceText: (text) => {
       const view = viewRef.current;
@@ -154,8 +237,9 @@ function SqlEditor({
           },
         },
       ]);
+      const initial = initialPropsRef.current;
       const state = EditorState.create({
-        doc: initialValueRef.current,
+        doc: initial.value,
         extensions: [
           lineNumbers(),
           highlightActiveLineGutter(),
@@ -167,8 +251,14 @@ function SqlEditor({
           indentOnInput(),
           bracketMatching(),
           closeBrackets(),
-          autocompletion({ activateOnTyping: true, maxRenderedOptions: 40 }),
+          autocompletion({
+            activateOnTyping: true,
+            addToOptions: [completionIconOption],
+            icons: false,
+            maxRenderedOptions: 40,
+          }),
           highlightSelectionMatches(),
+          sqlLinter(() => validateRef.current),
           EditorState.allowMultipleSelections.of(true),
           runKeymap,
           keymap.of([
@@ -179,14 +269,12 @@ function SqlEditor({
             ...completionKeymap,
             indentWithTab,
           ]),
-          languageCompartment.current.of(sqlLanguage(EMPTY_SCHEMA)),
-          editableCompartment.current.of(EditorView.editable.of(true)),
-          placeholderExtension(placeholder ?? ""),
-          EditorView.contentAttributes.of({
-            "aria-label": ariaLabel,
-            "aria-multiline": "true",
-            role: "textbox",
-          }),
+          compartments.language.of(sqlLanguage(EMPTY_SCHEMA)),
+          compartments.editable.of(EditorView.editable.of(true)),
+          compartments.placeholder.of(
+            placeholderExtension(initial.placeholder ?? "")
+          ),
+          compartments.attributes.of(contentAttributes(initial.ariaLabel)),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
               callbacksRef.current.onChange(update.state.doc.toString());
@@ -202,27 +290,49 @@ function SqlEditor({
         viewRef.current = null;
       };
     },
-    [ariaLabel, placeholder]
+    [compartments]
+  );
+
+  useEffect(
+    function syncAriaLabel() {
+      viewRef.current?.dispatch({
+        effects: compartments.attributes.reconfigure(
+          contentAttributes(ariaLabel)
+        ),
+      });
+    },
+    [ariaLabel, compartments]
+  );
+
+  useEffect(
+    function syncPlaceholder() {
+      viewRef.current?.dispatch({
+        effects: compartments.placeholder.reconfigure(
+          placeholderExtension(placeholder ?? "")
+        ),
+      });
+    },
+    [placeholder, compartments]
   );
 
   useEffect(
     function syncSchema() {
       viewRef.current?.dispatch({
-        effects: languageCompartment.current.reconfigure(sqlLanguage(schema)),
+        effects: compartments.language.reconfigure(sqlLanguage(schema)),
       });
     },
-    [schema]
+    [schema, compartments]
   );
 
   useEffect(
     function syncEditable() {
       viewRef.current?.dispatch({
-        effects: editableCompartment.current.reconfigure(
+        effects: compartments.editable.reconfigure(
           EditorView.editable.of(!disabled)
         ),
       });
     },
-    [disabled]
+    [disabled, compartments]
   );
 
   useEffect(

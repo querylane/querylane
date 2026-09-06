@@ -72,7 +72,7 @@ function MismatchBadge({ node }: { node: PlanNode }) {
       : `${Math.round(1 / ratio)}× fewer`;
   return (
     <span
-      className="rounded-sm bg-chart-4/15 px-1.5 py-0.5 font-medium text-[11px] text-chart-4"
+      className="rounded-sm bg-chart-4/15 px-1.5 py-0.5 font-medium text-chart-4 text-xs"
       title="Actual rows differ from the planner's estimate by more than 10×. Stale statistics are the usual cause; ANALYZE the table."
     >
       {label} than estimated
@@ -180,7 +180,7 @@ function PlanRow({
               )}
             />
           </Button>
-          <span className="truncate font-medium font-mono text-[13px]">
+          <span className="truncate font-medium font-mono text-[0.8125rem]">
             {title}
           </span>
           <MismatchBadge node={node} />

@@ -4,6 +4,7 @@ import {
   type ExplainPlan,
   parseExplainPlan,
 } from "@/features/sql-workbench/explain-plan-model";
+import { describeSqlExecutionError } from "@/features/sql-workbench/sql-execution-error";
 import { buildDatabaseName } from "@/lib/console-resources";
 import { longRunningTransport } from "@/lib/transport";
 import { normalizeAppUiError } from "@/lib/ui-error";
@@ -21,8 +22,11 @@ import type {
 type ExecutionStatus = "cancelled" | "error" | "idle" | "running" | "success";
 
 interface SqlExecutionStats {
+  /** PostgreSQL's command tag ("SELECT 42", "SET"); empty when unknown. */
+  commandTag: string;
   latencyMs: number;
   rowCount: number;
+  rowsAffected: number;
   truncated: boolean;
 }
 
@@ -48,7 +52,7 @@ interface SqlExplain {
   rawPlan?: string | undefined;
   startedAt: number;
   statement: string;
-  status: Exclude<ExecutionStatus, "cancelled">;
+  status: ExecutionStatus;
 }
 
 interface ExecutionSettledEvent {
@@ -72,6 +76,11 @@ const EXECUTE_BATCH_SIZE = 500;
 const MS_PER_SECOND = 1000;
 const NANOS_PER_MS = 1_000_000;
 const ERROR_CONTEXT = { area: "sql-workbench", source: "query" } as const;
+
+/** Explains share the controller map with runs under their own key. */
+function explainKey(tabId: string): string {
+  return `explain:${tabId}`;
+}
 
 function isCancellation(error: unknown): boolean {
   return error instanceof ConnectError && error.code === Code.Canceled;
@@ -108,8 +117,10 @@ function patchForResponse(
         ...current,
         notices: stats.notices,
         stats: {
+          commandTag: stats.commandTag,
           latencyMs: durationToMs(stats.latency),
           rowCount: Number(stats.rowCount),
+          rowsAffected: Number(stats.rowsAffected),
           truncated: stats.truncated,
         },
       });
@@ -171,6 +182,10 @@ function useSqlExecution({
 
   function cancel(tabId: string) {
     controllers.current.get(tabId)?.abort();
+  }
+
+  function cancelExplain(tabId: string) {
+    controllers.current.get(explainKey(tabId))?.abort();
   }
 
   async function consumeStream({
@@ -257,7 +272,9 @@ function useSqlExecution({
         return settle(tabId, context, { status: "cancelled" });
       }
       return settle(tabId, context, {
-        error: normalizeAppUiError(error, ERROR_CONTEXT),
+        error: describeSqlExecutionError(
+          normalizeAppUiError(error, ERROR_CONTEXT)
+        ),
         status: "error",
       });
     } finally {
@@ -272,6 +289,9 @@ function useSqlExecution({
     statement: string,
     options: { analyze: boolean }
   ): Promise<void> {
+    cancelExplain(tabId);
+    const controller = new AbortController();
+    controllers.current.set(explainKey(tabId), controller);
     const startedAt = Date.now();
     const base = {
       analyze: options.analyze,
@@ -285,13 +305,16 @@ function useSqlExecution({
     }));
     const client = createClient(SQLService, longRunningTransport);
     try {
-      const response = await client.explainQuery({
-        analyze: options.analyze,
-        buffers: options.analyze,
-        format: ExplainQueryRequest_Format.JSON,
-        parent,
-        statement,
-      });
+      const response = await client.explainQuery(
+        {
+          analyze: options.analyze,
+          buffers: options.analyze,
+          format: ExplainQueryRequest_Format.JSON,
+          parent,
+          statement,
+        },
+        { signal: controller.signal }
+      );
       setExplains((current) => ({
         ...current,
         [tabId]: {
@@ -304,22 +327,30 @@ function useSqlExecution({
         },
       }));
     } catch (error) {
+      const cancelled = isCancellation(error) || controller.signal.aborted;
       setExplains((current) => ({
         ...current,
-        [tabId]: {
-          ...base,
-          error: normalizeAppUiError(error, {
-            ...ERROR_CONTEXT,
-            action: "explain",
-          }),
-          status: "error",
-        },
+        [tabId]: cancelled
+          ? { ...base, status: "cancelled" }
+          : {
+              ...base,
+              error: normalizeAppUiError(error, {
+                ...ERROR_CONTEXT,
+                action: "explain",
+              }),
+              status: "error",
+            },
       }));
+    } finally {
+      if (controllers.current.get(explainKey(tabId)) === controller) {
+        controllers.current.delete(explainKey(tabId));
+      }
     }
   }
 
   function clear(tabId: string) {
     cancel(tabId);
+    cancelExplain(tabId);
     setExecutions((current) => {
       const { [tabId]: _removed, ...rest } = current;
       return rest;
@@ -330,7 +361,7 @@ function useSqlExecution({
     });
   }
 
-  return { cancel, clear, executions, explain, explains, run };
+  return { cancel, cancelExplain, clear, executions, explain, explains, run };
 }
 
 export type {

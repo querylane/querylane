@@ -684,11 +684,12 @@ export function AppSidebar({ page }: { page?: AdminPageId | undefined }) {
     scopeLevel,
   });
   const nextStepHint = getNextStepHint(scopeLevel);
-  const isExplorerMode = page === "database.explorer";
+  // The explorer and the SQL workbench swap the nav for an object browser.
+  const isDrillInMode = page === "database.explorer" || page === "database.sql";
   return (
     <Sidebar className="overflow-hidden" collapsible="offcanvas">
       <SidebarBrandHeader />
-      {isExplorerMode ? (
+      {isDrillInMode ? (
         <ExplorerRailContent backLink={linkProps["database.overview"]} />
       ) : (
         <SidebarNavigationContent

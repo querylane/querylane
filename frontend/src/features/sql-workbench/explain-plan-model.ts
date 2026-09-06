@@ -71,17 +71,19 @@ function formatDetailValue(value: unknown): string {
 }
 
 function buildDetails(record: JsonRecord): PlanNode["details"] {
-  return Object.entries(record)
-    .filter(([key]) => !DETAIL_KEYS_TO_SKIP.has(key))
-    .map(([label, value]) => ({ label, value: formatDetailValue(value) }));
+  return Object.entries(record).flatMap(([label, value]) =>
+    DETAIL_KEYS_TO_SKIP.has(label)
+      ? []
+      : [{ label, value: formatDetailValue(value) }]
+  );
 }
 
 function buildNode(record: JsonRecord, id: string): PlanNode {
   const rawChildren = record["Plans"];
   const children = Array.isArray(rawChildren)
-    ? rawChildren
-        .filter(isRecord)
-        .map((child, index) => buildNode(child, `${id}.${index}`))
+    ? rawChildren.flatMap((child, index) =>
+        isRecord(child) ? [buildNode(child, `${id}.${index}`)] : []
+      )
     : [];
   const actualLoops = numberField(record, "Actual Loops");
   const actualTotalMs = numberField(record, "Actual Total Time");

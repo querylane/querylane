@@ -2,11 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useSidebar } from "@/components/querylane-ui/sidebar";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import {
+  type CatalogRelation,
+  sampleStatement,
+} from "@/features/sql-workbench/sql-catalog-model";
+import { SqlCatalogRail } from "@/features/sql-workbench/sql-catalog-rail";
 import { SqlEditor } from "@/features/sql-workbench/sql-editor";
 import type { SqlEditorHandle } from "@/features/sql-workbench/sql-editor-types";
 import { SqlHistorySheet } from "@/features/sql-workbench/sql-history-sheet";
@@ -35,6 +41,8 @@ import {
 import { SqlWorkbenchToolbar } from "@/features/sql-workbench/sql-workbench-toolbar";
 import { useSqlCompletionNamespace } from "@/features/sql-workbench/use-sql-completion-namespace";
 import { useSqlExecution } from "@/features/sql-workbench/use-sql-execution";
+import { useSqlValidator } from "@/features/sql-workbench/use-sql-validation";
+import { ExplorerSidebarPortal } from "@/lib/explorer-sidebar-slot";
 
 const EDITOR_PLACEHOLDER =
   "-- Read-only SQL against this database. ⌘/Ctrl + Enter runs the statement under the cursor.";
@@ -67,11 +75,14 @@ function SqlWorkbenchPage({
   if (!(workspace && activeTab)) {
     return <div aria-busy="true" className="flex-1" />;
   }
+  // Keyed by scope so switching databases unmounts the workbench: in-flight
+  // queries abort with it instead of settling into the next database's history.
   return (
     <SqlWorkbench
       activeTab={activeTab}
       databaseId={databaseId}
       instanceId={instanceId}
+      key={scope}
       scope={scope}
       tabs={workspace.tabs}
     />
@@ -138,6 +149,7 @@ function SqlWorkbench({
   const [resultsTab, setResultsTab] = useState<ResultsTab>("results");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
+  const { isMobile, setOpenMobile } = useSidebar();
   const execution = useSqlExecution({
     databaseId,
     instanceId,
@@ -148,6 +160,7 @@ function SqlWorkbench({
     instanceId,
     text: activeTab.text,
   });
+  const validate = useSqlValidator({ databaseId, instanceId });
   const { currentStatement, formatCurrent } = useWorkbenchEditorActions({
     editorRef,
   });
@@ -157,9 +170,9 @@ function SqlWorkbench({
   const isExplaining = activeExplain?.status === "running";
   const statements = splitSqlStatements(activeTab.text);
   const runningTabIds = new Set(
-    Object.entries(execution.executions)
-      .filter(([, state]) => state.status === "running")
-      .map(([tabId]) => tabId)
+    Object.entries(execution.executions).flatMap(([tabId, state]) =>
+      state.status === "running" ? [tabId] : []
+    )
   );
 
   function runCurrent(): Promise<unknown> | undefined {
@@ -213,6 +226,30 @@ function SqlWorkbench({
     setHistoryOpen(false);
   }
 
+  // On phones the rail is a sheet; close it after a pick so the editor or the
+  // fresh results are visible immediately.
+  function closeMobileRail() {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }
+
+  function insertFromCatalog(text: string) {
+    editorRef.current?.insertText(text);
+    closeMobileRail();
+  }
+
+  function queryRelation(relation: CatalogRelation) {
+    const statement = sampleStatement(relation);
+    const tabId = store.addTab(scope, {
+      text: statement,
+      title: relation.name,
+    });
+    setResultsTab("results");
+    execution.run(tabId, statement, { rowLimit }).catch(() => undefined);
+    closeMobileRail();
+  }
+
   function saveActiveTab(name: string) {
     store.saveQuery(scope, {
       name,
@@ -225,6 +262,14 @@ function SqlWorkbench({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
+      <ExplorerSidebarPortal>
+        <SqlCatalogRail
+          databaseId={databaseId}
+          instanceId={instanceId}
+          onInsert={insertFromCatalog}
+          onQueryRelation={queryRelation}
+        />
+      </ExplorerSidebarPortal>
       <SqlTabStrip
         activeTabId={activeTab.id}
         onAdd={() => store.addTab(scope)}
@@ -242,6 +287,7 @@ function SqlWorkbench({
         isExplaining={isExplaining}
         isRunning={isRunning}
         onCancel={() => execution.cancel(activeTab.id)}
+        onCancelExplain={() => execution.cancelExplain(activeTab.id)}
         onExplain={explain}
         onFormat={formatCurrent}
         onOpenHistory={() => setHistoryOpen(true)}
@@ -267,6 +313,7 @@ function SqlWorkbench({
               placeholder={EDITOR_PLACEHOLDER}
               ref={editorRef}
               schema={schema}
+              validate={validate}
               value={activeTab.text}
             />
           </div>

@@ -104,10 +104,12 @@ export function DatabaseLayout({
   // Data Explorer renders its own full-bleed layout with an internal sidebar.
   // Use the committed page match from the parent route so pending navigations
   // keep the current page until the next route is ready.
-  const isExplorerRoute = page === "database.explorer";
-  // The SQL workbench is an editor surface: it owns its own scrolling panes
-  // and fills the main area edge to edge like the explorer does.
-  const isFullBleedRoute = isExplorerRoute || page === "database.sql";
+  // The SQL workbench is an editor surface: it owns its own scrolling panes,
+  // fills the main area edge to edge, and hosts an object browser in the rail
+  // like the explorer does.
+  const isExplorerRoute =
+    page === "database.explorer" || page === "database.sql";
+  const isFullBleedRoute = isExplorerRoute;
   const mainPaddingClass = isFullBleedRoute ? "p-0" : "p-4 sm:p-6 lg:p-8";
   const mainOverflowClass = isFullBleedRoute
     ? "overflow-hidden"

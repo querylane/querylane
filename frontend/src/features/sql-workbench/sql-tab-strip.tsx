@@ -8,7 +8,10 @@ import { cn } from "@/lib/utils";
 function TabIcon({ isRunning, tab }: { isRunning: boolean; tab: SqlTab }) {
   if (isRunning) {
     return (
-      <Loader2 aria-label="Running" className="size-3 shrink-0 animate-spin" />
+      <Loader2
+        aria-label="Running"
+        className="size-3 shrink-0 motion-safe:animate-spin"
+      />
     );
   }
   if (tab.savedQueryId) {

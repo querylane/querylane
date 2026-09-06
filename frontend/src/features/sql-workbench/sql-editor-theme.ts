@@ -95,18 +95,28 @@ const editorTheme = EditorView.theme({
   ".cm-tooltip .cm-tooltip-arrow:before": {
     borderTopColor: "var(--border)",
   },
+  // Completion popup: icon, label, then a muted right-aligned detail per row.
   ".cm-tooltip-autocomplete": {
     "& > ul": {
       fontFamily: "var(--font-mono)",
       fontSize: "12px",
-      maxHeight: "16rem",
+      maxHeight: "17rem",
+      minWidth: "18rem",
+      padding: "4px",
+      scrollbarWidth: "thin",
     },
     "& > ul > li": {
+      alignItems: "center",
+      borderRadius: "4px",
+      display: "flex",
+      gap: "8px",
+      lineHeight: "1.4",
       padding: "3px 8px",
     },
     "& > ul > li[aria-selected]": {
-      backgroundColor: "var(--accent)",
-      color: "var(--accent-foreground)",
+      backgroundColor:
+        "color-mix(in oklab, var(--primary) 10%, var(--popover))",
+      color: "var(--popover-foreground)",
     },
   },
   ".cm-tooltip.cm-completionInfo": {
@@ -114,14 +124,59 @@ const editorTheme = EditorView.theme({
   },
   ".cm-completionDetail": {
     color: "var(--muted-foreground)",
+    flexShrink: "0",
+    fontSize: "11px",
     fontStyle: "normal",
-    marginLeft: "0.75rem",
+    marginLeft: "auto",
+    maxWidth: "40%",
+    overflow: "hidden",
+    paddingLeft: "1rem",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
   ".cm-completionIcon": {
-    opacity: "0.7",
+    flexShrink: "0",
+    height: "14px",
+    opacity: "1",
+    padding: "0",
+    width: "14px",
   },
   ".cm-completionLabel": {
     color: "inherit",
+    flex: "0 1 auto",
+    minWidth: "0",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  // Diagnostics: a wavy underline under the offending token and a tooltip
+  // with PostgreSQL's message, detail and hint.
+  ".cm-lintRange-error": {
+    backgroundImage: "none",
+    textDecoration: "underline wavy var(--destructive)",
+    textDecorationSkipInk: "none",
+    textUnderlineOffset: "3px",
+  },
+  ".cm-tooltip.cm-tooltip-lint": {
+    fontSize: "12px",
+    padding: "2px 0",
+  },
+  ".cm-tooltip-lint .cm-diagnostic": {
+    borderLeft: "3px solid var(--destructive)",
+    margin: "2px 4px",
+    padding: "4px 8px",
+  },
+  ".cm-tooltip-lint .cm-diagnostic-error": {
+    borderLeftColor: "var(--destructive)",
+  },
+  ".cm-sqlDiagnosticExtra": {
+    color: "var(--muted-foreground)",
+    marginTop: "2px",
+  },
+  ".cm-completionMatchedText": {
+    color: "var(--primary)",
+    fontWeight: "600",
+    textDecoration: "none",
   },
 });
 

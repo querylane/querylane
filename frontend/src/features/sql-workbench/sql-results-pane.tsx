@@ -3,6 +3,7 @@
 import {
   AlertTriangle,
   Ban,
+  CircleCheck,
   Download,
   Loader2,
   MessageSquareText,
@@ -22,8 +23,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   buildExport,
   type ExportFormat,
+  resultColumnKeys,
 } from "@/features/data-explorer/table-data/selection-formatters";
 import { ExplainPlanView } from "@/features/sql-workbench/explain-plan-view";
+import {
+  describeCommandOutcome,
+  gridEmptyState,
+} from "@/features/sql-workbench/sql-command-outcome";
 import { SqlResultsGrid } from "@/features/sql-workbench/sql-results-grid";
 import {
   parseResultsTab,
@@ -72,7 +78,10 @@ function elapsedMs(execution: SqlExecution): number {
 function RunningStatus({ execution }: { execution: SqlExecution }) {
   return (
     <span className="flex items-center gap-2 text-muted-foreground">
-      <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+      <Loader2
+        aria-hidden="true"
+        className="size-3.5 motion-safe:animate-spin"
+      />
       Running…
       {execution.rows.length > 0
         ? ` ${formatCount(execution.rows.length)} rows so far`
@@ -83,9 +92,17 @@ function RunningStatus({ execution }: { execution: SqlExecution }) {
 
 function SuccessStatus({ execution }: { execution: SqlExecution }) {
   const rowCount = execution.stats?.rowCount ?? execution.rows.length;
+  // Statements without a result set are summarised by their command tag
+  // ("SET", "DO") rather than a meaningless "0 rows".
+  const isCommand = execution.columns.length === 0;
+  const commandTag = execution.stats?.commandTag;
   return (
     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <span className="font-medium">{formatRowCount(rowCount)}</span>
+      {isCommand ? (
+        <span className="font-medium font-mono">{commandTag || "Done"}</span>
+      ) : (
+        <span className="font-medium">{formatRowCount(rowCount)}</span>
+      )}
       <span className="text-muted-foreground">
         {formatDurationMs(elapsedMs(execution))}
       </span>
@@ -132,17 +149,15 @@ function ExecutionStatusLine({ execution }: { execution: SqlExecution }) {
 }
 
 function exportExecution(execution: SqlExecution, exportFormat: ExportFormat) {
+  // Cells are keyed by position-unique keys, not names: `SELECT a.id, b.id`
+  // must export both values.
+  const keys = resultColumnKeys(execution.columns);
   const result = buildExport({
     columns: execution.columns,
     exportFormat,
     resourceName: EXPORT_RESOURCE_NAME,
     rows: execution.rows.map((row) => ({
-      cells: new Map(
-        execution.columns.map((column, index) => [
-          column.columnName,
-          row.values[index],
-        ])
-      ),
+      cells: new Map(keys.map((key, index) => [key, row.values[index]])),
     })),
   });
   if (!result.ok) {
@@ -186,6 +201,34 @@ function ExportMenu({ execution }: { execution: SqlExecution }) {
   );
 }
 
+function CommandResult({ execution }: { execution: SqlExecution }) {
+  const outcome = describeCommandOutcome({
+    commandTag: execution.stats?.commandTag,
+    rowsAffected: execution.stats?.rowsAffected,
+  });
+  return (
+    <div
+      className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-10 text-center"
+      data-slot="sql-command-result"
+    >
+      <CircleCheck
+        aria-hidden="true"
+        className="size-6 text-emerald-500 dark:text-emerald-400"
+      />
+      {outcome.tag ? (
+        <code className="rounded-md bg-muted px-2 py-0.5 font-medium font-mono text-sm">
+          {outcome.tag}
+        </code>
+      ) : (
+        <p className="font-medium text-sm">{outcome.title}</p>
+      )}
+      <p className="max-w-md text-muted-foreground text-sm">
+        {outcome.description}
+      </p>
+    </div>
+  );
+}
+
 function ResultsBody({
   execution,
   onRetry,
@@ -210,7 +253,19 @@ function ResultsBody({
     );
   }
   if (execution.columns.length > 0) {
-    return <SqlResultsGrid columns={execution.columns} rows={execution.rows} />;
+    return (
+      <SqlResultsGrid
+        columns={execution.columns}
+        emptyState={gridEmptyState({
+          rowCount: execution.rows.length,
+          status: execution.status,
+        })}
+        rows={execution.rows}
+      />
+    );
+  }
+  if (execution.status === "success") {
+    return <CommandResult execution={execution} />;
   }
   if (execution.status === "running") {
     return (
@@ -232,7 +287,7 @@ function ResultsBody({
   }
   return (
     <ResultsPlaceholder
-      description="The statement completed without returning columns."
+      description="The statement ended without returning columns."
       icon={Table2}
       title="No result set"
     />
@@ -262,7 +317,7 @@ function MessagesBody({
   if (notices.length === 0) {
     return (
       <ResultsPlaceholder
-        description="RAISE NOTICE output and other server messages from the last run show up here."
+        description="PostgreSQL can send text alongside a result: NOTICE and WARNING lines raised by functions, triggers and DO blocks, or hints about deprecated settings. The last run sent none."
         icon={MessageSquareText}
         title="No messages"
       />
@@ -312,6 +367,15 @@ function PlanBody({ explain }: { explain: SqlExplain | undefined }) {
       </div>
     );
   }
+  if (explain.status === "cancelled") {
+    return (
+      <ResultsPlaceholder
+        description="Explain was stopped before PostgreSQL returned a plan."
+        icon={Ban}
+        title="Cancelled"
+      />
+    );
+  }
   return (
     <ExplainPlanView
       analyze={explain.analyze}
@@ -326,7 +390,7 @@ function CountPill({ count }: { count: number }) {
     return null;
   }
   return (
-    <span className="rounded-full bg-muted px-1.5 font-mono text-[10px] tabular-nums">
+    <span className="rounded-full bg-muted px-1.5 font-mono text-xs tabular-nums">
       {count}
     </span>
   );
@@ -350,7 +414,10 @@ function SqlResultsPane({
   return (
     <section
       aria-label="Query output"
-      className="flex min-h-0 flex-1 flex-col bg-background"
+      // h-full: the resizable panel's content box is a plain block, so without
+      // an explicit height this section grows to the grid's full row height.
+      // That defeats virtualization and scrolls the tab strip and header away.
+      className="flex h-full min-h-0 flex-1 flex-col bg-background"
     >
       <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 border-border border-b px-2">
         <Tabs
