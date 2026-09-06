@@ -1,11 +1,15 @@
 import { expect, test } from "bun:test";
-import { readFile, stat } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
+import { createDarkDiagram } from "./generate-doc-diagram-themes";
 
 const readPage = (path: string) =>
 	readFile(new URL(`../docs/site/${path}`, import.meta.url), "utf8");
 
 const readAsset = (path: string) =>
 	readFile(new URL(`../public/images/docs/diagrams/${path}`, import.meta.url));
+
+const readScreenshot = (path: string) =>
+	readFile(new URL(`../public/images/docs/${path}`, import.meta.url));
 
 type DiagramElement = {
 	height?: number;
@@ -60,11 +64,7 @@ const expectedDiagrams = [
 	},
 	{
 		page: "use-querylane.mdx",
-		diagrams: [
-			"blocking-sessions",
-			"table-access-check",
-			"row-level-security",
-		],
+		diagrams: ["blocking-sessions", "table-access-check", "row-level-security"],
 		walkthroughs: [
 			"Read every arrow from left to right as",
 			"Follow one access check from left to right",
@@ -73,14 +73,38 @@ const expectedDiagrams = [
 	},
 ] as const;
 
-test("embeds editable Excalidraw diagrams with prose walkthroughs", async () => {
+const expectedScreenshots = [
+	{ page: "index.mdx", screenshots: ["instance-overview"] },
+	{ page: "get-started/index.mdx", screenshots: ["register-instance"] },
+	{
+		page: "use-querylane.mdx",
+		screenshots: ["instance-overview", "schema-map", "roles-access-map"],
+	},
+] as const;
+
+const expectThemeImagePair = (
+	source: string,
+	path: string,
+	extension: "png" | "svg",
+) => {
+	expect(source).toMatch(
+		new RegExp(
+			`<img(?=[^>]*className="dark:hidden")(?=[^>]*src="${path}\\.${extension}")[^>]*/>`,
+		),
+	);
+	expect(source).toMatch(
+		new RegExp(
+			`<img(?=[^>]*className="hidden dark:block")(?=[^>]*src="${path}-dark\\.${extension}")[^>]*/>`,
+		),
+	);
+};
+
+test("embeds paired light and dark Excalidraw diagrams with prose walkthroughs", async () => {
 	for (const expected of expectedDiagrams) {
 		const source = await readPage(expected.page);
 
 		for (const diagram of expected.diagrams) {
-			expect(source, `${expected.page} missing ${diagram}`).toContain(
-				`/images/docs/diagrams/${diagram}.svg`,
-			);
+			expectThemeImagePair(source, `/images/docs/diagrams/${diagram}`, "svg");
 		}
 
 		for (const walkthrough of expected.walkthroughs) {
@@ -91,38 +115,96 @@ test("embeds editable Excalidraw diagrams with prose walkthroughs", async () => 
 	}
 });
 
-test("ships editable sources beside every rendered diagram", async () => {
+test("ships editable sources beside every light and dark rendered diagram", async () => {
 	for (const { diagrams } of expectedDiagrams) {
 		for (const diagram of diagrams) {
-			const [sceneBuffer, svgBuffer] = await Promise.all([
+			const [sceneBuffer, lightSvgBuffer, darkSvgBuffer] = await Promise.all([
 				readAsset(`${diagram}.excalidraw`),
 				readAsset(`${diagram}.svg`),
+				readAsset(`${diagram}-dark.svg`),
 			]);
 			const scene = JSON.parse(sceneBuffer.toString()) as {
 				elements?: unknown[];
 				type?: string;
 			};
-			const svg = svgBuffer.toString();
+			const lightSvg = lightSvgBuffer.toString();
+			const darkSvg = darkSvgBuffer.toString();
 
 			expect(scene.type, `${diagram} source type`).toBe("excalidraw");
 			expect(
 				scene.elements?.length,
 				`${diagram} editable element count`,
 			).toBeGreaterThan(3);
-			expect(svg, `${diagram} SVG root`).toContain("<svg");
-			expect(svg, `${diagram} SVG safety`).not.toContain("<script");
-			expect(
-				(
-					await stat(
-						new URL(
-							`../public/images/docs/diagrams/${diagram}.svg`,
-							import.meta.url,
-						),
-					)
-				).size,
-				`${diagram} SVG size`,
-			).toBeGreaterThan(500);
+			for (const [theme, svg] of [
+				["light", lightSvg],
+				["dark", darkSvg],
+			] as const) {
+				expect(svg, `${diagram} ${theme} SVG root`).toContain("<svg");
+				expect(svg, `${diagram} ${theme} SVG safety`).not.toContain("<script");
+				expect(svg.length, `${diagram} ${theme} SVG size`).toBeGreaterThan(500);
+			}
+			expect(lightSvg, `${diagram} light background`).toContain(
+				'fill="#ffffff"',
+			);
+			expect(darkSvg, `${diagram} dark background`).toContain('fill="#0f172a"');
+			expect(darkSvg, `${diagram} generated dark asset`).toBe(
+				createDarkDiagram(lightSvg),
+			);
 		}
+	}
+});
+
+test("rejects unreviewed colors when generating a dark diagram", () => {
+	expect(() =>
+		createDarkDiagram(
+			'<svg><metadata/><rect fill="#ffffff"/><path stroke="#123456"/></svg>',
+		),
+	).toThrow("Unsupported light diagram colors: #123456");
+});
+
+test("renders every docs screenshot in the active theme", async () => {
+	for (const expected of expectedScreenshots) {
+		const source = await readPage(expected.page);
+
+		for (const screenshot of expected.screenshots) {
+			expectThemeImagePair(source, `/images/docs/${screenshot}`, "png");
+		}
+	}
+});
+
+test("ships equal-size light and dark versions of every docs screenshot", async () => {
+	const screenshotDirectory = new URL(
+		"../public/images/docs/",
+		import.meta.url,
+	);
+	const screenshotNames = (await readdir(screenshotDirectory)).filter((path) =>
+		path.endsWith(".png"),
+	);
+	const lightScreenshots = screenshotNames
+		.filter((path) => !path.endsWith("-dark.png"))
+		.toSorted();
+	const darkScreenshots = screenshotNames
+		.filter((path) => path.endsWith("-dark.png"))
+		.map((path) => path.replace(/-dark\.png$/, ".png"))
+		.toSorted();
+
+	expect(darkScreenshots).toEqual(lightScreenshots);
+
+	for (const lightName of lightScreenshots) {
+		const darkName = lightName.replace(/\.png$/, "-dark.png");
+		const [light, dark] = await Promise.all([
+			readScreenshot(lightName),
+			readScreenshot(darkName),
+		]);
+		const dimensions = (png: Buffer) => ({
+			height: png.readUInt32BE(20),
+			width: png.readUInt32BE(16),
+		});
+
+		expect(dimensions(dark), `${darkName} dimensions`).toEqual(
+			dimensions(light),
+		);
+		expect(dark.equals(light), `${darkName} uses the dark theme`).toBeFalse();
 	}
 });
 

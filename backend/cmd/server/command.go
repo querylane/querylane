@@ -12,7 +12,8 @@ import (
 
 // Command contains all server-related commands.
 type Command struct {
-	Start StartCmd `cmd:"" help:"Start the server that serves the Web UI"`
+	ResetConfig ResetConfigCmd `cmd:"" help:"Reset internal storage configuration"`
+	Start       StartCmd       `cmd:"" help:"Start the server that serves the Web UI"`
 }
 
 // StartCmd starts the API server.

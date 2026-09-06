@@ -35,10 +35,6 @@
         "rules": ["react-doctor/no-decorative-grid-background"]
       },
       {
-        "files": ["src/components/charts/chart-tooltip.tsx"],
-        "rules": ["react-doctor/no-hairline-border-wide-shadow"]
-      },
-      {
         "files": [
           "src/components/onboarding-wizard/phases/manual-yaml-phase.tsx",
           "src/components/onboarding-wizard/wizard-content.tsx",

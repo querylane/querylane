@@ -1,5 +1,3 @@
-import { createContext, useContext } from "react";
-
 /**
  * A charting row: a timestamp (epoch ms) plus one value per series key; null
  * marks a gap the chart must not bridge.
@@ -28,17 +26,6 @@ export interface ChartSeries {
   label: string;
 }
 
-export interface ChartContextValue {
-  /**
-   * Tooltip-grade formatter: full precision, because the reader hovering a
-   * point wants the exact number. Falls back to `formatValue`.
-   */
-  formatDetailedValue: (value: number) => string;
-  /** Axis-grade formatter: compact, may abbreviate ("12.3K"). */
-  formatValue: (value: number) => string;
-  series: ChartSeries[];
-}
-
 /**
  * How a time chart draws its series. `auto` picks the honest default: a
  * gradient area for a single series, overlaid lines for several (overlapping
@@ -58,16 +45,4 @@ export interface ChartThreshold {
   /** `critical` draws in the destructive color; `neutral` in muted ink. */
   tone?: "critical" | "neutral";
   value: number;
-}
-
-export const ChartContext = createContext<ChartContextValue | null>(null);
-
-/** Series config + value formatter for tooltip/legend content components. */
-export function useChartContext(): ChartContextValue {
-  const context = useContext(ChartContext);
-  if (!context) {
-    throw new Error("useChartContext must be used within a <ChartContainer>");
-  }
-
-  return context;
 }

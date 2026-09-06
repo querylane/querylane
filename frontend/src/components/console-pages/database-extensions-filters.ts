@@ -1,14 +1,6 @@
 import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 
 type ExtensionStatusFilter = "All" | "available" | "installed";
-type ExtensionScopeFilter = "All" | "cluster" | "database" | "schema" | "table";
-type ExtensionSourceFilter =
-  | "All"
-  | "bundled"
-  | "community"
-  | "core"
-  | "postgresql"
-  | "vendor";
 type ExtensionCategoryFilter = "All" | string;
 
 type ExtensionBadgeVariant = "default" | "outline";
@@ -18,43 +10,42 @@ interface ExtensionFilterOption<Value extends string> {
   value: Value;
 }
 
-interface ExtensionMetadata {
+type ExtensionScope = "cluster" | "database" | "schema" | "table";
+type ExtensionSource =
+  | "bundled"
+  | "community"
+  | "core"
+  | "postgresql"
+  | "vendor";
+
+interface CuratedExtensionDocs {
   about: string;
   applied: string;
   category: string;
   exampleSql: string;
-  installSql?: string;
   meta: string;
   minPostgres: number;
   provides: { label: string; value: string }[];
-  scope: Exclude<ExtensionScopeFilter, "All">;
-  source: Exclude<ExtensionSourceFilter, "All">;
+  scope: ExtensionScope;
+  source: ExtensionSource;
 }
 
 interface PresentedExtension {
-  about: string;
-  applied: string;
   badgeVariant: ExtensionBadgeVariant;
-  category: string;
-  categoryFilter: Exclude<ExtensionCategoryFilter, "All">;
+  category: string | undefined;
+  curated: CuratedExtensionDocs | undefined;
   defaultVersion: string;
   description: string;
   displayName: string;
-  exampleSql: string;
   extension: Extension;
   facts: { label: string; value: string }[];
   installedVersion: string;
-  installSql?: string;
+  installSql: string;
   key: string;
-  metaLabel: string;
-  provides: { label: string; value: string }[];
-  requiresLabel: string;
+  metaLabel: string | undefined;
   schema: string;
-  scopeFilter: Exclude<ExtensionScopeFilter, "All">;
-  scopeLabel: string;
+  scopeLabel: string | undefined;
   searchText: string;
-  sourceFilter: Exclude<ExtensionSourceFilter, "All">;
-  sourceLabel: string;
   statusFilter: Exclude<ExtensionStatusFilter, "All">;
   statusLabel: "Available" | "Installed";
   versionLabel: string;
@@ -62,9 +53,7 @@ interface PresentedExtension {
 
 interface ExtensionFilters {
   category: ExtensionCategoryFilter;
-  scope: ExtensionScopeFilter;
   search: string;
-  source: ExtensionSourceFilter;
   status: ExtensionStatusFilter;
 }
 
@@ -73,7 +62,7 @@ const SCOPE_LABELS = {
   database: "per database",
   schema: "per schema",
   table: "per table",
-} satisfies Record<Exclude<ExtensionScopeFilter, "All">, string>;
+} satisfies Record<ExtensionScope, string>;
 
 const SOURCE_LABELS = {
   bundled: "Bundled",
@@ -81,10 +70,12 @@ const SOURCE_LABELS = {
   core: "Core contrib",
   postgresql: "PostgreSQL",
   vendor: "Vendor",
-} satisfies Record<Exclude<ExtensionSourceFilter, "All">, string>;
+} satisfies Record<ExtensionSource, string>;
 const VERSION_PREFIX_PATTERN = /^v(?=\d)/i;
 
-const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
+// Editorial notes for well-known extensions. This is an optional enrichment
+// layer: extensions without an entry render only what the server reports.
+const EXTENSION_METADATA: Record<string, CuratedExtensionDocs> = {
   hstore: {
     about: "Stores key-value pairs in a single column with index support.",
     applied:
@@ -92,7 +83,6 @@ const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
     category: "Data types",
     exampleSql:
       "SELECT settings -> 'sla_hours'\nFROM carriers\nWHERE settings ? 'sla_hours';",
-    installSql: "CREATE EXTENSION hstore;",
     meta: "flexible attributes",
     minPostgres: 9,
     provides: [
@@ -110,7 +100,6 @@ const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
     category: "Observability",
     exampleSql:
       "SELECT queryid, calls,\n       round(mean_exec_time::numeric, 1) AS mean_ms,\n       rows / greatest(calls, 1) AS rows_per_call\nFROM pg_stat_statements\nORDER BY total_exec_time DESC\nLIMIT 10;",
-    installSql: "CREATE EXTENSION pg_stat_statements;",
     meta: "powers Query insights",
     minPostgres: 9,
     provides: [
@@ -138,7 +127,6 @@ const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
     category: "Search",
     exampleSql:
       "SELECT similarity(name, 'hansa lines') AS score\nFROM carriers\nWHERE name % 'hansa lines'\nORDER BY score DESC;",
-    installSql: "CREATE EXTENSION pg_trgm;",
     meta: "carrier name search",
     minPostgres: 9,
     provides: [
@@ -158,7 +146,6 @@ const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
       "Installed per database; call functions from application-owned schemas as needed.",
     category: "Security",
     exampleSql: "SELECT encode(digest('payload', 'sha256'), 'hex') AS sha256;",
-    installSql: "CREATE EXTENSION pgcrypto;",
     meta: "used by auth.users",
     minPostgres: 9,
     provides: [
@@ -176,7 +163,6 @@ const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
       "Create vector columns on embedding tables, then add HNSW or IVFFlat indexes for nearest-neighbor search.",
     category: "AI / vectors",
     exampleSql: "SELECT id\nFROM docs\nORDER BY embedding <=> $1\nLIMIT 5;",
-    installSql: "CREATE EXTENSION vector;",
     meta: "semantic search",
     minPostgres: 11,
     provides: [
@@ -211,7 +197,6 @@ const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
     category: "Geospatial",
     exampleSql:
       "SELECT ST_Distance(port_a.geog, port_b.geog)\nFROM ports port_a, ports port_b;",
-    installSql: "CREATE EXTENSION postgis;",
     meta: "maps and routes",
     minPostgres: 12,
     provides: [
@@ -235,7 +220,6 @@ const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
       "Loaded via shared_preload_libraries, then enabled in databases that own time-series tables.",
     category: "Time-series",
     exampleSql: "SELECT create_hypertable('metrics', by_range('time'));",
-    installSql: "CREATE EXTENSION timescaledb;",
     meta: "available to install",
     minPostgres: 12,
     provides: [
@@ -259,7 +243,6 @@ const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
       "Install per database when UUID defaults or SQL-side UUID generation need uuid-ossp functions.",
     category: "Data types",
     exampleSql: "SELECT uuid_generate_v4();",
-    installSql: 'CREATE EXTENSION "uuid-ossp";',
     meta: "default for shipments.id",
     minPostgres: 9,
     provides: [
@@ -282,7 +265,6 @@ const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
       "Create vector columns on embedding tables, then add HNSW or IVFFlat indexes for nearest-neighbor search.",
     category: "AI / vectors",
     exampleSql: "SELECT id\nFROM docs\nORDER BY embedding <=> $1\nLIMIT 5;",
-    installSql: "CREATE EXTENSION vector;",
     meta: "semantic search",
     minPostgres: 11,
     provides: [
@@ -293,28 +275,7 @@ const EXTENSION_METADATA: Record<string, ExtensionMetadata> = {
     scope: "table",
     source: "community",
   },
-} satisfies Record<string, ExtensionMetadata>;
-
-const DEFAULT_METADATA = {
-  about:
-    "PostgreSQL reports this extension through pg_available_extensions. Querylane shows its installed state and version without changing the database.",
-  applied:
-    "Querylane reads pg_available_extensions and pg_extension only; it does not install, update, or drop extensions.",
-  category: "Extension",
-  exampleSql:
-    "SELECT extname, extversion\nFROM pg_extension\nORDER BY extname;",
-  meta: "catalog visibility",
-  minPostgres: 9,
-  provides: [
-    { label: "Catalog visibility", value: "see whether it is installed" },
-    {
-      label: "Version tracking",
-      value: "compare installed and default versions",
-    },
-  ],
-  scope: "database",
-  source: "postgresql",
-} satisfies ExtensionMetadata;
+} satisfies Record<string, CuratedExtensionDocs>;
 
 function extensionDisplayName(extension: Extension): string {
   const fromName = extension.name.split("/").at(-1);
@@ -327,113 +288,118 @@ function extensionStatusFilterValue(
   return extension.installed ? "installed" : "available";
 }
 
-function normalizeExtensionName(extension: Extension): string {
-  return extensionDisplayName(extension).toLowerCase();
-}
-
-function metadataForExtension(extension: Extension): ExtensionMetadata {
-  return (
-    EXTENSION_METADATA[normalizeExtensionName(extension)] ?? DEFAULT_METADATA
-  );
-}
-
-function extensionSchemaLabel(extension: Extension): string {
-  return extension.schema || "—";
+function curatedDocsForExtension(
+  extension: Extension
+): CuratedExtensionDocs | undefined {
+  return EXTENSION_METADATA[extensionDisplayName(extension).toLowerCase()];
 }
 
 function versionLabel(version: string): string {
-  return version.replace(VERSION_PREFIX_PATTERN, "") || "—";
+  return version.replace(VERSION_PREFIX_PATTERN, "") || "";
 }
 
 function extensionVersionLabel(extension: Extension): string {
-  if (extension.installedVersion) {
-    return versionLabel(extension.installedVersion);
-  }
-  if (extension.defaultVersion) {
-    return versionLabel(extension.defaultVersion);
-  }
-  return "—";
+  return (
+    versionLabel(extension.installedVersion) ||
+    versionLabel(extension.defaultVersion) ||
+    "\u2014"
+  );
 }
 
 function extensionKey(extension: Extension): string {
   return extension.name || extensionDisplayName(extension);
 }
 
+const UNQUOTED_EXTENSION_NAME_PATTERN = /^[a-z_][a-z0-9_]*$/;
+
+function extensionInstallSql(displayName: string): string {
+  const identifier = UNQUOTED_EXTENSION_NAME_PATTERN.test(displayName)
+    ? displayName
+    : `"${displayName}"`;
+  return `CREATE EXTENSION ${identifier};`;
+}
+
+function extensionFacts(
+  extension: Extension,
+  curated: CuratedExtensionDocs | undefined
+): { label: string; value: string }[] {
+  const facts: { label: string; value: string }[] = [];
+  const installedVersion = versionLabel(extension.installedVersion);
+  const defaultVersion = versionLabel(extension.defaultVersion);
+  if (installedVersion) {
+    facts.push({ label: "Version", value: installedVersion });
+  }
+  if (defaultVersion) {
+    facts.push({ label: "Latest", value: defaultVersion });
+  }
+  if (extension.schema) {
+    facts.push({ label: "Schema", value: extension.schema });
+  }
+  if (curated) {
+    facts.push(
+      { label: "Scope", value: SCOPE_LABELS[curated.scope] },
+      { label: "Source", value: SOURCE_LABELS[curated.source] },
+      { label: "Requires", value: `PG ${curated.minPostgres}+` }
+    );
+  }
+  return facts;
+}
+
 function presentExtension(extension: Extension): PresentedExtension {
   const displayName = extensionDisplayName(extension);
-  const metadata = metadataForExtension(extension);
-  const statusFilter = extensionStatusFilterValue(extension);
-  const statusLabel = extension.installed ? "Installed" : "Available";
-  const defaultVersion = versionLabel(extension.defaultVersion);
-  const installedVersion = versionLabel(extension.installedVersion);
-  const description = extension.comment || metadata.about;
-  const schema = extensionSchemaLabel(extension);
-  const sourceLabel = SOURCE_LABELS[metadata.source];
-  const scopeLabel = SCOPE_LABELS[metadata.scope];
-  const requiresLabel = `PG ${metadata.minPostgres}+`;
-  const facts = [
-    { label: "Version", value: installedVersion },
-    { label: "Latest", value: defaultVersion },
-    { label: "Scope", value: scopeLabel },
-    { label: "Source", value: sourceLabel },
-    { label: "Requires", value: requiresLabel },
-    { label: "Schema", value: schema },
-  ];
+  const curated = curatedDocsForExtension(extension);
+  const description = extension.comment || curated?.about || "";
   const searchText = [
     displayName,
     description,
-    metadata.about,
-    metadata.applied,
-    metadata.category,
-    metadata.meta,
-    sourceLabel,
-    scopeLabel,
-    schema,
+    curated?.about,
+    curated?.applied,
+    curated?.category,
+    curated?.meta,
+    extension.schema,
   ]
+    .filter(Boolean)
     .join(" ")
     .toLowerCase();
 
   return {
-    about: metadata.about,
-    applied: metadata.applied,
     badgeVariant: extension.installed ? "default" : "outline",
-    category: metadata.category,
-    categoryFilter: metadata.category,
-    defaultVersion,
+    category: curated?.category,
+    curated,
+    defaultVersion: versionLabel(extension.defaultVersion),
     description,
     displayName,
-    exampleSql: metadata.exampleSql,
     extension,
-    facts,
-    installedVersion,
+    facts: extensionFacts(extension, curated),
+    installSql: extensionInstallSql(displayName),
+    installedVersion: versionLabel(extension.installedVersion),
     key: extensionKey(extension),
-    metaLabel: metadata.meta,
-    provides: metadata.provides,
-    requiresLabel,
-    schema,
-    scopeFilter: metadata.scope,
-    scopeLabel,
+    metaLabel: curated?.meta,
+    schema: extension.schema,
+    scopeLabel: curated ? SCOPE_LABELS[curated.scope] : undefined,
     searchText,
-    sourceFilter: metadata.source,
-    sourceLabel,
-    statusFilter,
-    statusLabel,
+    statusFilter: extensionStatusFilterValue(extension),
+    statusLabel: extension.installed ? "Installed" : "Available",
     versionLabel: extensionVersionLabel(extension),
-    ...(metadata.installSql ? { installSql: metadata.installSql } : {}),
   };
 }
 
 function presentExtensions(extensions: Extension[]): PresentedExtension[] {
-  return extensions.map(presentExtension).sort((left, right) => {
-    if (left.statusFilter !== right.statusFilter) {
-      return left.statusFilter === "installed" ? -1 : 1;
-    }
-    return left.displayName.localeCompare(right.displayName);
-  });
+  return extensions.map(presentExtension);
 }
 
-function matchesFilter<Value extends string>(value: Value, filter: Value) {
-  return filter === "All" || value === filter;
+function matchesStatus(
+  extension: PresentedExtension,
+  status: ExtensionStatusFilter
+) {
+  return status === "All" || extension.statusFilter === status;
+}
+
+function matchesCategory(
+  extension: PresentedExtension,
+  category: ExtensionCategoryFilter
+) {
+  return category === "All" || extension.category === category;
 }
 
 function filterPresentedExtensions(
@@ -441,21 +407,12 @@ function filterPresentedExtensions(
   filters: ExtensionFilters
 ): PresentedExtension[] {
   const search = filters.search.trim().toLowerCase();
-  return extensions.filter((extension) => {
-    if (!matchesFilter(extension.statusFilter, filters.status)) {
-      return false;
-    }
-    if (!matchesFilter(extension.scopeFilter, filters.scope)) {
-      return false;
-    }
-    if (!matchesFilter(extension.sourceFilter, filters.source)) {
-      return false;
-    }
-    if (!matchesFilter(extension.categoryFilter, filters.category)) {
-      return false;
-    }
-    return !search || extension.searchText.includes(search);
-  });
+  return extensions.filter(
+    (extension) =>
+      matchesStatus(extension, filters.status) &&
+      matchesCategory(extension, filters.category) &&
+      (search === "" || extension.searchText.includes(search))
+  );
 }
 
 function extensionInventorySummary(extensions: PresentedExtension[]): string {
@@ -463,63 +420,31 @@ function extensionInventorySummary(extensions: PresentedExtension[]): string {
     (extension) => extension.statusFilter === "installed"
   ).length;
   const available = extensions.length - installed;
-  return `${installed} installed · ${available} available on this server`;
+  return `${installed} installed \u00b7 ${available} available on this server`;
 }
 
-function uniqueOptions<Value extends string>(
-  values: { label: string; value: Value }[]
-): ExtensionFilterOption<Value>[] {
-  const seen = new Set<Value>();
-  const options: ExtensionFilterOption<Value>[] = [];
-  for (const value of values) {
-    if (!seen.has(value.value)) {
-      seen.add(value.value);
-      options.push(value);
+function extensionCategoryOptions(
+  extensions: PresentedExtension[]
+): ExtensionFilterOption<string>[] {
+  const categories = new Set<string>();
+  for (const extension of extensions) {
+    if (extension.category) {
+      categories.add(extension.category);
     }
   }
-  return options.sort((left, right) => left.label.localeCompare(right.label));
-}
-
-function extensionFilterOptions(extensions: PresentedExtension[]) {
-  return {
-    categories: uniqueOptions(
-      extensions.map((extension) => ({
-        label: extension.category,
-        value: extension.categoryFilter,
-      }))
-    ),
-    scopes: uniqueOptions(
-      extensions.map((extension) => ({
-        label: extension.scopeLabel,
-        value: extension.scopeFilter,
-      }))
-    ),
-    sources: uniqueOptions(
-      extensions.map((extension) => ({
-        label: extension.sourceLabel,
-        value: extension.sourceFilter,
-      }))
-    ),
-    statuses: uniqueOptions(
-      extensions.map((extension) => ({
-        label: extension.statusLabel,
-        value: extension.statusFilter,
-      }))
-    ),
-  };
+  return [...categories]
+    .sort((left, right) => left.localeCompare(right))
+    .map((category) => ({ label: category, value: category }));
 }
 
 export type {
   ExtensionCategoryFilter,
   ExtensionFilterOption,
-  ExtensionFilters,
-  ExtensionScopeFilter,
-  ExtensionSourceFilter,
   ExtensionStatusFilter,
   PresentedExtension,
 };
 export {
-  extensionFilterOptions,
+  extensionCategoryOptions,
   extensionInventorySummary,
   filterPresentedExtensions,
   presentExtensions,

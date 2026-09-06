@@ -19,6 +19,7 @@ const removedDependencies = [
   "@tanstack/store",
   "bun-types",
   "react-day-picker",
+  "recharts",
 ];
 
 const strictCategories = [
@@ -49,10 +50,6 @@ const reactDoctorRuleOverrides = [
   {
     files: ["src/components/onboarding-wizard/wizard-content.tsx"],
     rules: ["react-doctor/no-decorative-grid-background"],
-  },
-  {
-    files: ["src/components/charts/chart-tooltip.tsx"],
-    rules: ["react-doctor/no-hairline-border-wide-shadow"],
   },
   {
     files: [

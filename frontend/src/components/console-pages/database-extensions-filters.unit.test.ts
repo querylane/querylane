@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { describe, expect, test } from "@rstest/core";
 import {
-  extensionFilterOptions,
+  extensionCategoryOptions,
   extensionInventorySummary,
   filterPresentedExtensions,
   presentExtensions,
@@ -37,43 +37,69 @@ const extensions: Extension[] = [
     installed: false,
     name: "instances/prod/databases/customer-events/extensions/uuid-ossp",
   }),
+  create(ExtensionSchema, {
+    comment: "functions for verifying relation integrity",
+    defaultVersion: "1.4",
+    displayName: "amcheck",
+    installed: false,
+    name: "instances/prod/databases/customer-events/extensions/amcheck",
+  }),
 ];
 
 describe("database extension filters", () => {
-  test("presents extension inventory with redesign metadata", () => {
+  test("keeps curated docs as an optional enrichment layer", () => {
     const presented = presentExtensions(extensions);
 
     expect(presented.map((extension) => extension.displayName)).toEqual([
       "pg_trgm",
       "plpgsql",
       "uuid-ossp",
+      "amcheck",
     ]);
     expect(extensionInventorySummary(presented)).toBe(
-      "2 installed · 1 available on this server"
+      "2 installed · 2 available on this server"
     );
-    expect(extensionFilterOptions(presented)).toMatchObject({
-      categories: [
-        { label: "Data types", value: "Data types" },
-        { label: "Languages", value: "Languages" },
-        { label: "Search", value: "Search" },
-      ],
-      scopes: [
-        { label: "per database", value: "database" },
-        { label: "per table", value: "table" },
-      ],
-      sources: [
-        { label: "Bundled", value: "bundled" },
-        { label: "Core contrib", value: "core" },
-      ],
-      statuses: [
-        { label: "Available", value: "available" },
-        { label: "Installed", value: "installed" },
-      ],
-    });
+
+    const [pgTrgm] = presented;
+    expect(pgTrgm?.curated).toBeDefined();
+    expect(pgTrgm?.category).toBe("Search");
+    expect(pgTrgm?.facts.map((fact) => fact.label)).toEqual([
+      "Version",
+      "Latest",
+      "Schema",
+      "Scope",
+      "Source",
+      "Requires",
+    ]);
+  });
+
+  test("never fabricates docs or facts for non-curated extensions", () => {
+    const presented = presentExtensions(extensions);
+    const amcheck = presented.at(-1);
+
+    expect(amcheck?.curated).toBeUndefined();
+    expect(amcheck?.category).toBeUndefined();
+    expect(amcheck?.metaLabel).toBeUndefined();
+    expect(amcheck?.scopeLabel).toBeUndefined();
+    expect(amcheck?.description).toBe(
+      "functions for verifying relation integrity"
+    );
+    expect(amcheck?.facts).toEqual([{ label: "Latest", value: "1.4" }]);
+  });
+
+  test("derives install SQL for every extension with quoting when needed", () => {
+    const presented = presentExtensions(extensions);
+
+    expect(presented.map((extension) => extension.installSql)).toEqual([
+      "CREATE EXTENSION pg_trgm;",
+      "CREATE EXTENSION plpgsql;",
+      'CREATE EXTENSION "uuid-ossp";',
+      "CREATE EXTENSION amcheck;",
+    ]);
   });
 
   test("presents version labels without duplicate v prefixes", () => {
-    const presentedExtensions = presentExtensions([
+    const [presented] = presentExtensions([
       create(ExtensionSchema, {
         comment: "vector similarity search",
         defaultVersion: "v0.8.0",
@@ -84,7 +110,6 @@ describe("database extension filters", () => {
         schema: "public",
       }),
     ]);
-    const [presented] = presentedExtensions;
     if (!presented) {
       throw new Error("Expected pgvector extension metadata");
     }
@@ -98,15 +123,23 @@ describe("database extension filters", () => {
     });
   });
 
-  test("filters presented extensions by search and redesign facets", () => {
+  test("offers only curated categories as filter options", () => {
+    const presented = presentExtensions(extensions);
+
+    expect(extensionCategoryOptions(presented)).toEqual([
+      { label: "Data types", value: "Data types" },
+      { label: "Languages", value: "Languages" },
+      { label: "Search", value: "Search" },
+    ]);
+  });
+
+  test("filters presented extensions by search, status, and category", () => {
     const presented = presentExtensions(extensions);
 
     expect(
       filterPresentedExtensions(presented, {
         category: "All",
-        scope: "All",
         search: "uuid",
-        source: "All",
         status: "available",
       }).map((extension) => extension.displayName)
     ).toEqual(["uuid-ossp"]);
@@ -114,11 +147,25 @@ describe("database extension filters", () => {
     expect(
       filterPresentedExtensions(presented, {
         category: "Search",
-        scope: "table",
         search: "",
-        source: "core",
-        status: "installed",
+        status: "All",
       }).map((extension) => extension.displayName)
     ).toEqual(["pg_trgm"]);
+
+    expect(
+      filterPresentedExtensions(presented, {
+        category: "All",
+        search: "verifying relation",
+        status: "All",
+      }).map((extension) => extension.displayName)
+    ).toEqual(["amcheck"]);
+
+    expect(
+      filterPresentedExtensions(presented, {
+        category: "All",
+        search: "",
+        status: "installed",
+      })
+    ).toHaveLength(2);
   });
 });

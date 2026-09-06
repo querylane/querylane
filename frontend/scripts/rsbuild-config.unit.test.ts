@@ -4,11 +4,11 @@ import { describe, expect, rs, test } from "@rstest/core";
 
 const frontendRoot = path.resolve(import.meta.dirname, "..");
 
-async function createLoadedRsbuild() {
+async function createLoadedRsbuild(action: "build" | "dev" = "build") {
   const loadedConfig = await loadConfig({
-    command: "build",
+    command: action,
     cwd: frontendRoot,
-    envMode: "production",
+    envMode: action === "build" ? "production" : "development",
   });
 
   return createRsbuild({ config: loadedConfig, cwd: frontendRoot });
@@ -41,6 +41,52 @@ describe("Rsbuild config loading", () => {
         path.join(frontendRoot, "scripts/react-performance-mode.ts"),
       ])
     );
+  });
+
+  test("pins supported experiments and excludes unused ones in development", async () => {
+    const rsbuild = await createLoadedRsbuild("dev");
+    const [rspackConfig] = await rsbuild.initConfigs({ action: "dev" });
+
+    expect(rspackConfig?.experiments).toMatchObject({
+      asyncWebAssembly: true,
+      futureDefaults: true,
+      nativeWatcher: true,
+      pureFunctions: false,
+      sourceImport: true,
+    });
+    expect(rspackConfig?.experiments?.buildHttp).toBeUndefined();
+    expect(rspackConfig?.experiments?.deferImport).not.toBe(true);
+    expect(rspackConfig?.experiments?.runtimeMode).not.toBe("rspack");
+    expect(rspackConfig?.experiments?.useInputFileSystem).toBeFalsy();
+  });
+
+  test("pins production experiments and compact IDs without losing managed chunking", async () => {
+    rs.stubEnv("NODE_ENV", "production");
+
+    try {
+      const rsbuild = await createLoadedRsbuild();
+      const [rspackConfig] = await rsbuild.initConfigs({ action: "build" });
+
+      expect(rspackConfig).toBeDefined();
+      expect(rspackConfig?.experiments).toMatchObject({
+        asyncWebAssembly: true,
+        futureDefaults: true,
+        pureFunctions: true,
+        sourceImport: true,
+      });
+      expect(rspackConfig?.optimization).toMatchObject({
+        chunkIds: "compat-hashed",
+        moduleIds: "compat-hashed",
+        splitChunks: {
+          chunks: "all",
+          maxAsyncRequests: 30,
+          maxInitialRequests: 20,
+          minSize: 20 * 1024,
+        },
+      });
+    } finally {
+      rs.unstubAllEnvs();
+    }
   });
 
   test("emits standalone Rsdoctor HTML and JSON reports", async () => {

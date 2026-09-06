@@ -7,10 +7,12 @@ import { AppErrorView } from "@/components/app-error-view";
 import { AppShellFrame } from "@/components/app-shell-frame";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
 import { ConfigManagedEmptyState } from "@/components/config-managed-empty-state";
+import { InternalStorageRecoveryAction } from "@/components/internal-storage-recovery";
 import { useConsoleConfigStatus } from "@/hooks/api/console";
 import { useDb } from "@/lib/db-context";
 import { handleNavigationError } from "@/lib/navigation-errors";
 import { normalizeAppUiError } from "@/lib/ui-error";
+import { useSetupStore } from "@/stores/setup-store";
 
 const homeSearchSchema = z.object({
   instanceId: z.string().min(1).optional(),
@@ -48,6 +50,9 @@ function HomeRedirectPage() {
   const search = Route.useSearch();
   const { instances, queryStates, retryInstanceCatalog } = useDb();
   const instancesState = queryStates.instances;
+  const showDegradedRecovery = useSetupStore(
+    (state) => state.showDegradedBanner
+  );
   const {
     configFilePath,
     isConfigManaged,
@@ -137,6 +142,12 @@ function HomeRedirectPage() {
     return (
       <AppShellFrame>
         <AppErrorView
+          actions={
+            <InternalStorageRecoveryAction
+              configFilePath={configFilePath || undefined}
+              show={showDegradedRecovery}
+            />
+          }
           error={normalizeAppUiError(instancesState.error, {
             area: "home-route",
             source: "query",

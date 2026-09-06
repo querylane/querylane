@@ -30,10 +30,11 @@ const state = rs.hoisted(() => ({
   updateTableSearch: rs.fn(),
 }));
 const INSTALL_EXTENSION_BUTTON_NAME = /install extension/i;
-const OPEN_IN_WORKBENCH_BUTTON_NAME = /open in sql workbench/i;
-const PG_TRGM_EXTENSION_CARD_NAME = /pg_trgm/i;
-const UUID_OSSP_EXTENSION_CARD_NAME = /uuid-ossp/i;
-const PG_TRGM_EXTENSION_KEY = "pg_trgm";
+const PG_TRGM_BUTTON_NAME = /^pg_trgm$/;
+const AMCHECK_BUTTON_NAME = /^amcheck$/;
+const INSTALLED_PG_TRGM_TEXT = /Installed · 1\.6/;
+const SCHEMA_PUBLIC_TEXT = /schema public/;
+const UUID_OSSP_BUTTON_NAME = /^uuid-ossp$/;
 
 rs.mock("@/hooks/api/extension", () => ({
   extensionsForDatabaseQueryInput: ({
@@ -68,7 +69,7 @@ function extensionsResponse() {
         comment:
           "Trigram matching — fuzzy text search and fast LIKE/ILIKE indexing",
         defaultVersion: "1.6",
-        displayName: PG_TRGM_EXTENSION_KEY,
+        displayName: "pg_trgm",
         installed: true,
         installedVersion: "1.6",
         name: "instances/prod/databases/customer-events/extensions/pg_trgm",
@@ -90,8 +91,25 @@ function extensionsResponse() {
         installed: false,
         name: "instances/prod/databases/customer-events/extensions/uuid-ossp",
       }),
+      create(ExtensionSchema, {
+        comment: "functions for verifying relation integrity",
+        defaultVersion: "1.4",
+        displayName: "amcheck",
+        installed: false,
+        name: "instances/prod/databases/customer-events/extensions/amcheck",
+      }),
     ],
   });
+}
+
+function renderPage() {
+  render(
+    <BackendDatabaseExtensionsPage
+      databaseId="customer-events"
+      instanceId="prod"
+      searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
+    />
+  );
 }
 
 beforeEach(() => {
@@ -105,95 +123,84 @@ afterEach(() => {
 });
 
 describe("database extensions page", () => {
-  test("renders installed and available extensions", () => {
-    render(
-      <BackendDatabaseExtensionsPage
-        databaseId="customer-events"
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-      />
-    );
+  test("renders the full inventory as a single table without pagination", () => {
+    renderPage();
 
     expect(screen.getByRole("heading", { name: "Extensions" })).toBeTruthy();
+    expect(screen.getByRole("table")).toBeTruthy();
     expect(
-      screen.getByText(
-        "Extensions are installed per database. Available means the server exposes the extension files, but this database has not installed it."
-      )
+      screen.getByRole("button", { name: PG_TRGM_BUTTON_NAME })
     ).toBeTruthy();
-    expect(screen.queryByText("Extension inventory")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: AMCHECK_BUTTON_NAME })
+    ).toBeTruthy();
+    expect(screen.getByText("4 of 4 extensions")).toBeTruthy();
+    expect(screen.getAllByText("Installed").length).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole("combobox", { name: "Extensions per page" })
+    ).toBeNull();
     expect(
       screen.queryByRole("button", { name: INSTALL_EXTENSION_BUTTON_NAME })
     ).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: OPEN_IN_WORKBENCH_BUTTON_NAME })
-    ).toBeNull();
-    expect(
-      screen.getByText(
-        "2 installed · 1 available on this server; installation requires a superuser connection; Querylane only reads what is there"
-      )
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: PG_TRGM_EXTENSION_CARD_NAME })
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: UUID_OSSP_EXTENSION_CARD_NAME })
-    ).toBeTruthy();
-    expect(screen.getAllByText("Installed").length).toBeGreaterThan(0);
-    expect(screen.getByText("Available")).toBeTruthy();
-    expect(screen.getByText("1.6")).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Generate universally unique identifiers (v1, v3, v4, v5)"
-      )
-    ).toBeTruthy();
-    expect(screen.queryByRole("table")).toBeNull();
   });
 
-  test("shows one empty-state message when filters match nothing", () => {
-    state.tableSearch = "missing";
-    render(
-      <BackendDatabaseExtensionsPage
-        databaseId="customer-events"
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-      />
-    );
+  test("filters by status tabs with counts", async () => {
+    const user = userEvent.setup();
+    renderPage();
 
-    expect(screen.getAllByText("No extensions match")).toHaveLength(1);
+    const tabs = screen.getByRole("tablist");
+    expect(within(tabs).getByRole("tab", { name: "All 4" })).toBeTruthy();
+
+    await user.click(within(tabs).getByRole("tab", { name: "Available 2" }));
+
     expect(
-      screen.getByRole("combobox", { name: "Extensions per page" })
+      screen.getByRole("button", { name: UUID_OSSP_BUTTON_NAME })
     ).toBeTruthy();
-    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: PG_TRGM_BUTTON_NAME })
+    ).toBeNull();
+    expect(screen.getByText("2 of 4 extensions")).toBeTruthy();
+  });
+
+  test("filters by curated category without offering fabricated ones", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole("combobox", { name: "Category" }));
+
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent)
+    ).toEqual(["All categories", "Data types", "Languages", "Search"]);
+
+    await user.click(screen.getByRole("option", { name: "Search" }));
+
+    expect(
+      screen.getByRole("button", { name: PG_TRGM_BUTTON_NAME })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: AMCHECK_BUTTON_NAME })
+    ).toBeNull();
   });
 
   test("restores the table filter from URL search state", () => {
     state.tableSearch = "trgm";
-
-    render(
-      <BackendDatabaseExtensionsPage
-        databaseId="customer-events"
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-      />
-    );
+    renderPage();
 
     const filterInput = screen.getByRole("textbox", {
       name: "Search extensions…",
     }) as HTMLInputElement;
     expect(filterInput.value).toBe("trgm");
-    expect(screen.getByText("pg_trgm")).toBeTruthy();
-    expect(screen.queryByText("uuid-ossp")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: PG_TRGM_BUTTON_NAME })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: UUID_OSSP_BUTTON_NAME })
+    ).toBeNull();
   });
 
   test("writes filter changes to URL search state", async () => {
     const user = userEvent.setup();
-    render(
-      <BackendDatabaseExtensionsPage
-        databaseId="customer-events"
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-      />
-    );
+    renderPage();
 
     await user.type(
       screen.getByRole("textbox", { name: "Search extensions…" }),
@@ -203,176 +210,86 @@ describe("database extensions page", () => {
     expect(state.updateTableSearch).toHaveBeenCalledWith("p");
   });
 
-  test("uses shared list filters beside search and standard page sizes in the footer", async () => {
-    const user = userEvent.setup();
-    render(
-      <BackendDatabaseExtensionsPage
-        databaseId="customer-events"
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-      />
-    );
+  test("shows one empty-state message when filters match nothing", () => {
+    state.tableSearch = "missing";
+    renderPage();
 
-    const search = screen.getByRole("textbox", {
-      name: "Search extensions…",
-    });
-    const filterBar = search.closest('[data-slot="extension-filter-bar"]');
-    if (!(filterBar instanceof HTMLElement)) {
-      throw new Error("Missing extension filter bar");
-    }
-
-    expect(filterBar.className).toContain("justify-start");
-    expect(
-      within(filterBar)
-        .getAllByRole("button")
-        .map((button) => button.textContent)
-    ).toEqual(["Status", "Scope", "Category", "Source"]);
-    expect(within(filterBar).queryByRole("combobox")).toBeNull();
-
-    const pageLabel = screen.getByText("Page 1 of 1");
-    const pagination = pageLabel.closest('[data-slot="pagination-footer"]');
-    if (!(pagination instanceof HTMLElement)) {
-      throw new Error("Missing shared pagination footer");
-    }
-    const pageSize = within(pagination).getByRole("combobox", {
-      name: "Extensions per page",
-    });
-    expect(pageSize).toBeTruthy();
-
-    await user.click(pageSize);
-    expect(
-      screen.getAllByRole("option").map((option) => option.textContent)
-    ).toEqual(["10", "25", "50"]);
+    expect(screen.getAllByText("No extensions match")).toHaveLength(1);
+    expect(screen.queryByRole("table")).toBeNull();
   });
 
-  test("filters extensions by status and source facets", async () => {
+  test("opens an installed curated drawer with docs and no mutation actions", async () => {
     const user = userEvent.setup();
-    render(
-      <BackendDatabaseExtensionsPage
-        databaseId="customer-events"
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-      />
-    );
+    renderPage();
 
-    await user.click(screen.getByRole("button", { name: "Status" }));
-    await user.click(screen.getByRole("option", { name: "Available" }));
+    const trigger = screen.getByRole("button", { name: PG_TRGM_BUTTON_NAME });
+    expect(trigger.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
 
-    expect(screen.getByText("uuid-ossp")).toBeTruthy();
-    expect(screen.queryByText("pg_trgm")).toBeNull();
-    expect(screen.queryByText("plpgsql")).toBeNull();
-
-    cleanup();
-    render(
-      <BackendDatabaseExtensionsPage
-        databaseId="customer-events"
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-      />
-    );
-
-    await user.click(screen.getByRole("button", { name: "Source" }));
-    await user.click(screen.getByRole("option", { name: "Core contrib" }));
-
-    expect(screen.getByText("pg_trgm")).toBeTruthy();
-    expect(screen.getByText("uuid-ossp")).toBeTruthy();
-    expect(screen.queryByText("plpgsql")).toBeNull();
-  });
-
-  test("clears URL search and extension facets together", async () => {
-    const user = userEvent.setup();
-    state.tableSearch = "uuid";
-    render(
-      <BackendDatabaseExtensionsPage
-        databaseId="customer-events"
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-      />
-    );
-
-    await user.click(screen.getByRole("button", { name: "Status" }));
-    await user.click(screen.getByRole("option", { name: "Available" }));
-    await user.click(screen.getByRole("button", { name: "Clear all" }));
-
-    expect(state.updateTableSearch).toHaveBeenCalledWith("");
-    expect(screen.getByRole("button", { name: "Status" })).toBeTruthy();
-  });
-
-  test("opens extension explanation drawer without mutation actions", async () => {
-    const user = userEvent.setup();
-    render(
-      <BackendDatabaseExtensionsPage
-        databaseId="customer-events"
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-      />
-    );
-
-    await user.click(
-      screen.getByRole("button", { name: PG_TRGM_EXTENSION_CARD_NAME })
-    );
+    await user.click(trigger);
 
     const drawer = screen.getByRole("dialog", { name: "pg_trgm details" });
     expect(drawer.getAttribute("data-slot")).toBe("sheet-content");
-    expect(within(drawer).getByText("What it gives you")).toBeTruthy();
+    expect(within(drawer).getByText(INSTALLED_PG_TRGM_TEXT)).toBeTruthy();
+    expect(within(drawer).getByText(SCHEMA_PUBLIC_TEXT)).toBeTruthy();
     expect(within(drawer).getByText("Try it")).toBeTruthy();
-    expect(within(drawer).getByText("Schema")).toBeTruthy();
-    expect(within(drawer).getByText("public")).toBeTruthy();
+    expect(within(drawer).getByText("What it is")).toBeTruthy();
+
+    await user.click(
+      within(drawer).getByRole("button", { name: "What it gives you" })
+    );
+    expect(within(drawer).getByText("gin_trgm_ops")).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: INSTALL_EXTENSION_BUTTON_NAME })
     ).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: OPEN_IN_WORKBENCH_BUTTON_NAME })
-    ).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Close" }));
-
     expect(
       screen.queryByRole("dialog", { name: "pg_trgm details" })
     ).toBeNull();
   });
 
-  test("renders available install SQL with the shared code block", async () => {
+  test("shows derived install SQL for available extensions", async () => {
     const user = userEvent.setup();
-    render(
-      <BackendDatabaseExtensionsPage
-        databaseId="customer-events"
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-      />
-    );
+    renderPage();
 
     await user.click(
-      screen.getByRole("button", { name: UUID_OSSP_EXTENSION_CARD_NAME })
+      screen.getByRole("button", { name: UUID_OSSP_BUTTON_NAME })
     );
 
     const drawer = screen.getByRole("dialog", { name: "uuid-ossp details" });
     expect(
-      within(drawer).getByText("A superuser can install it with:")
+      within(drawer).getByText("Not installed in this database")
+    ).toBeTruthy();
+    expect(
+      within(drawer).getByText(
+        "Requires a superuser connection; Querylane only reads what is there."
+      )
     ).toBeTruthy();
     expect(
       within(drawer).getAllByRole("button", { name: "Copy SQL" })
     ).toHaveLength(2);
   });
 
-  test("marks extension cards as dialog triggers", async () => {
+  test("renders non-curated drawers from server data only", async () => {
     const user = userEvent.setup();
-    render(
-      <BackendDatabaseExtensionsPage
-        databaseId="customer-events"
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-      />
-    );
+    renderPage();
 
-    const card = screen.getByRole("button", {
-      name: PG_TRGM_EXTENSION_CARD_NAME,
-    });
-    expect(card.getAttribute("aria-haspopup")).toBe("dialog");
-    expect(card.getAttribute("aria-expanded")).toBe("false");
+    await user.click(screen.getByRole("button", { name: AMCHECK_BUTTON_NAME }));
 
-    await user.click(card);
-
-    expect(card.getAttribute("aria-expanded")).toBe("true");
+    const drawer = screen.getByRole("dialog", { name: "amcheck details" });
+    expect(
+      within(drawer).getByText("functions for verifying relation integrity")
+    ).toBeTruthy();
+    expect(
+      within(drawer).getByText("Not installed in this database")
+    ).toBeTruthy();
+    expect(within(drawer).queryByText("What it gives you")).toBeNull();
+    expect(within(drawer).queryByText("Try it")).toBeNull();
+    expect(within(drawer).getByText("Details")).toBeTruthy();
+    expect(within(drawer).getByText("Latest")).toBeTruthy();
+    expect(
+      within(drawer).getAllByRole("button", { name: "Copy SQL" })
+    ).toHaveLength(1);
   });
 });

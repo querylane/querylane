@@ -1,18 +1,21 @@
 # Chart kit
 
-This reusable, app-agnostic layer builds monitoring charts with Recharts 3. It
-supports time-series line, area, and stacked charts; sparklines; axes; tooltips;
-and legends. Every Querylane chart, and eventually charts outside Querylane,
-should use this kit instead of hand-assembled Recharts.
+This reusable, app-agnostic layer builds monitoring charts with TanStack Charts.
+It supports time-series line, area, and stacked charts; sparklines; axes;
+tooltips; and legends. Every Querylane chart should use this kit instead of
+hand-assembled chart-library primitives.
+
+> **Spike status:** TanStack Charts 0.14.0 is pre-alpha and pinned exactly. Its
+> API may change between releases. This migration stays a draft until the
+> interaction, visual-parity, bundle, and maintenance trade-offs are accepted.
 
 ## Modules
 
 | Module | Role |
 |---|---|
-| `chart-context.ts` | Kit types (`ChartRow`, `ChartSeries`, `ChartThreshold`) + React context feeding tooltip/legend |
-| `chart-container.tsx` | Mounting frame: responsive sizing, legend, refresh-dimming, inset-axis halo hook |
-| `chart-tooltip.tsx` | Shared tooltip: timestamp header, 1 row per series, full-precision values |
-| `chart-axis-tick.tsx` | Edge-aware x-tick: first/last labels anchor inward so they never clip |
+| `chart-context.ts` | Kit types (`ChartRow`, `ChartSeries`, `ChartThreshold`) |
+| `chart-container.tsx` | Parent-sized mounting frame, app-owned legend, refresh dimming |
+| `responsive-chart.tsx` | Height observer adapting TanStack's width-responsive host to parent-sized slots |
 | `metric-time-chart.tsx` | The time-series chart (lazy-loaded; owns axes/grid/cursor/overlays) |
 | `sparkline-chart.tsx` | Bare trend glyph for stat tiles (lazy-loaded) |
 | `metric-chart.tsx` | Lazy boundaries (`MetricChart`, `MetricSparkline`), the only eager imports |
@@ -29,7 +32,7 @@ into `ChartRow[]`/`ChartSeries[]` and passes formatters in.
 - **Locale**: all chart numbers and time labels pin `en-US` + 24h clock. A
   floating locale renders "48,8" next to "1.2K" on 1 screen; en-US default
   12h clock triples x-label width.
-- **Ticks are generated, never delegated**: Recharts' generators produce
+- **Ticks are generated, never delegated**: chart-library generators can produce
   fractional steps that duplicate after formatting ("0, 1, 2, 2") and overshoot
   domains (105% on a ratio). Byte axes use the binary ladder so labels stay
   whole as the 1024-based formatter rolls through KB/MB/GB.
@@ -38,24 +41,23 @@ into `ChartRow[]`/`ChartSeries[]` and passes formatters in.
 - **Dash = context, never measurement**: dashed strokes are reserved for the
   previous-period overlay and threshold/limit lines. The grid is dashed-faint
   chrome; the hover crosshair is dashed foreground at 40%.
-- **Gaps stay gaps** (`connectNulls={false}`): probe outages and counter
+- **Gaps stay gaps** (`null` remains in each mark's value channel): probe outages and counter
   resets must be visible, never bridged.
 - **Color follows the entity**: series keep their `--chart-N` token across
   filters/refetches; the previous-period overlay uses the SAME hue as its
   live series (translucent + dashed), never gray.
 - **Honest empty/loading states**: hold the previous render dimmed on refetch
   (`isRefreshing`); never resurrect an empty chart from its overlay.
-- **Axis modes**: `gutter` (default, auto-width right column) or `inset`
+- **Axis modes**: `gutter` (default, auto-sized guide) or `inset`
   (labels inside the plot on a surface-colored halo for full-bleed plots).
   Edge x-labels anchor inward in both modes.
 
 ## Extension points
 
 `MetricTimeChart` props: `variant` (`auto`/`area`/`line`/`stacked`),
-`thresholds` (dashed reference lines, optional `extendDomain`), `syncId`
-(shared crosshair across charts), `domain` (pin x to a queried window),
-`yDomain` (fixed bounded scales like ratios), `yTickBase` (10 | 1024),
-`yAxisMode`, `formatDetailedValue`.
+`thresholds` (dashed reference lines, optional `extendDomain`), `domain` (pin x
+to a queried window), `yDomain` (fixed bounded scales like ratios),
+`yTickBase` (10 | 1024), `yAxisMode`, `formatDetailedValue`.
 
 ## Backlog (researched, not yet built)
 
@@ -69,7 +71,7 @@ Prioritized from the 2026-07 research pass (Grafana/Datadog/Axiom/d3 audits):
 5. Time-window permalinks (anchor + range in URL search params).
 6. `d3-time` adoption for tick intervals when ranges grow past 7d (month/year
    boundaries can't be faked with fixed-ms strides); it is already in the
-   dependency graph through Recharts.
+   dependency graph through TanStack Charts.
 7. Bar/histogram/percentile-band and stat-tile (value + muted unit suffix)
    chart types; a Grafana-style parts-model unit formatter
    (`{text, suffix}`) is designed and ready to vendor (Apache-2.0) when these

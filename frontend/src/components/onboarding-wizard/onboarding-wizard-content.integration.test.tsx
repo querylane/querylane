@@ -742,6 +742,8 @@ describe("onboarding wizard setup progression", () => {
 
     expect(screen.getByRole("heading", { name: "Setup failed" })).toBeTruthy();
     expect(screen.getByText("Likely a configuration issue")).toBeTruthy();
+    expect(screen.getByText("Configuration file")).toBeTruthy();
+    expect(screen.getByText("/tmp/querylane/config.yaml")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Reconfigure" }));
 

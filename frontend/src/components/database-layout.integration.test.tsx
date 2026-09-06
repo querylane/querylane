@@ -1,12 +1,17 @@
+import { create } from "@bufbuild/protobuf";
 import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { DatabaseLayout } from "@/components/database-layout";
+import { GetOnboardingStateResponseSchema } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 import { useSetupStore } from "@/stores/setup-store";
 
 const routerState = rs.hoisted(() => ({
   isLoading: false,
   pathname: "/instances/prod",
 }));
+const PRESERVES_SETTINGS_RE =
+  /creates a backup and preserves your other settings/i;
 
 rs.mock("@tanstack/react-router", () => {
   function MockCatchBoundary({ children }: { children: React.ReactNode }) {
@@ -73,7 +78,10 @@ describe("DatabaseLayout route transitions", () => {
   beforeEach(() => {
     routerState.isLoading = false;
     routerState.pathname = "/instances/prod";
-    useSetupStore.setState({ showDegradedBanner: false });
+    useSetupStore.setState({
+      onboardingState: null,
+      showDegradedBanner: false,
+    });
   });
 
   afterEach(() => {
@@ -126,5 +134,37 @@ describe("DatabaseLayout route transitions", () => {
 
     expect(progressbar.className).toContain("absolute");
     expect(progressbar.className).toContain("top-0");
+  });
+
+  it("links degraded mode to internal storage recovery instructions", async () => {
+    const user = userEvent.setup();
+    useSetupStore.setState({
+      onboardingState: create(GetOnboardingStateResponseSchema, {
+        configFilePath: "/tmp/querylane/config.yaml",
+        isConfigured: true,
+      }),
+      showDegradedBanner: true,
+    });
+
+    render(
+      <DatabaseLayout>
+        <div>Instance content</div>
+      </DatabaseLayout>
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Reconfigure internal storage" })
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Reconfigure internal storage" })
+    ).toBeTruthy();
+    expect(screen.getByText("/tmp/querylane/config.yaml")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "querylane server reset-config --yes --config '/tmp/querylane/config.yaml'"
+      )
+    ).toBeTruthy();
+    expect(screen.getByText(PRESERVES_SETTINGS_RE)).toBeTruthy();
   });
 });
