@@ -2,7 +2,7 @@
 	"name": "querylane",
 	"devDependencies": {
 		"@types/node": "24.13.3",
-		"blume": "1.5.3",
+		"blume": "1.6.3",
 		"zod": "4.3.6"
 	},
 	"packageManager": "bun@1.4.0",
