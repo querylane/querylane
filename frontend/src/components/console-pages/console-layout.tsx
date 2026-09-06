@@ -92,7 +92,7 @@ export function InstanceStatsBar({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 divide-x divide-border rounded-lg border border-border lg:grid-cols-4",
+        "grid grid-cols-2 divide-x divide-border overflow-hidden rounded-lg border border-border lg:grid-cols-4",
         className
       )}
     >
@@ -120,24 +120,32 @@ export function InstanceStatItem({
   renderTrend?: (() => React.ReactNode) | undefined;
 }) {
   return (
-    <div className="flex flex-col gap-1 px-4 py-3.5">
-      {hint ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <span className="flex w-fit cursor-help items-center gap-1 text-muted-foreground text-xs">
-                {label}
-                <Info aria-hidden="true" className="size-3 opacity-60" />
-              </span>
-            }
-          />
-          <TooltipContent className="max-w-xs">{hint}</TooltipContent>
-        </Tooltip>
-      ) : (
-        <span className="text-muted-foreground text-xs">{label}</span>
-      )}
-      <div className="flex min-h-7 items-center gap-1.5 max-sm:flex-col max-sm:items-stretch">
-        <div className="flex items-baseline gap-1.5">
+    <div className="relative flex min-h-24 flex-col px-4 pt-3.5 pb-8">
+      {renderTrend ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-4 bottom-0 h-7 opacity-45 empty:hidden"
+        >
+          {renderTrend()}
+        </div>
+      ) : null}
+      <div className="relative flex flex-col gap-1">
+        {hint ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="flex w-fit cursor-help items-center gap-1 text-muted-foreground text-xs">
+                  {label}
+                  <Info aria-hidden="true" className="size-3 opacity-60" />
+                </span>
+              }
+            />
+            <TooltipContent className="max-w-xs">{hint}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <span className="text-muted-foreground text-xs">{label}</span>
+        )}
+        <div className="flex min-h-7 items-baseline gap-1.5">
           {children}
           {suffix ? (
             <span className="font-mono text-muted-foreground text-xs tabular-nums">
@@ -145,23 +153,15 @@ export function InstanceStatItem({
             </span>
           ) : null}
         </div>
-        {renderTrend ? (
-          <div
-            aria-hidden="true"
-            className="ml-auto h-12 min-w-28 flex-1 empty:hidden max-sm:ml-0 max-sm:w-full max-sm:min-w-0 max-sm:flex-none"
-          >
-            {renderTrend()}
+        {progress === undefined ? null : (
+          <Progress className="gap-0" value={progress} />
+        )}
+        {notice ? (
+          <div className="text-amber-600 text-xs leading-snug dark:text-amber-400">
+            {notice}
           </div>
         ) : null}
       </div>
-      {progress === undefined ? null : (
-        <Progress className="gap-0" value={progress} />
-      )}
-      {notice ? (
-        <div className="text-amber-600 text-xs leading-snug dark:text-amber-400">
-          {notice}
-        </div>
-      ) : null}
     </div>
   );
 }

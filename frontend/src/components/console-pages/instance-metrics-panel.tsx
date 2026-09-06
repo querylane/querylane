@@ -242,6 +242,13 @@ function comparisonOverlay(
   };
 }
 
+/**
+ * Empty states that stand in for a chart render flat inside the card, at the
+ * chart's own height: a bordered box inside the card read as a second card,
+ * and a shorter box made the panel jump between tabs.
+ */
+const CHART_EMPTY_STATE_CLASS = "h-72 min-h-0 border-0 bg-transparent";
+
 function TabChart({
   tab,
   series,
@@ -271,7 +278,7 @@ function TabChart({
   if (present.length === 0) {
     return (
       <EmptyState
-        className="mt-4 px-4"
+        className={CHART_EMPTY_STATE_CLASS}
         description="These samples require PostgreSQL 16+, or none have been collected yet for this window."
         icon={ChartNoAxesColumn}
         title="No data for this metric"
@@ -297,7 +304,7 @@ function TabChart({
   if (!hasRenderableSpan(mergeSeriesData(dataSeries))) {
     return (
       <EmptyState
-        className="mt-4 px-4"
+        className={CHART_EMPTY_STATE_CLASS}
         description="Charts appear once a few samples have been collected for this window."
         icon={ChartNoAxesColumn}
         title="Not enough samples yet"
@@ -417,9 +424,9 @@ export function InstanceMetricsPanel({
     return (
       <Card className="gap-0 border-border py-0">
         <PanelHeader onRangeChange={onRangeChange} range={range} />
-        <div className="px-6 pb-6">
+        <div className="pb-6">
           <EmptyState
-            className="mt-4 min-h-72"
+            className={CHART_EMPTY_STATE_CLASS}
             description="Querylane couldn't load metrics. Refresh to retry."
             icon={ChartNoAxesColumn}
             title="Metrics unavailable"
@@ -440,9 +447,9 @@ export function InstanceMetricsPanel({
             <CollectingStat key={tab.key} series={series} tab={tab} />
           ))}
         </div>
-        <div className="px-6 pb-6">
+        <div className="pb-6">
           <EmptyState
-            className="mt-4 min-h-72"
+            className={CHART_EMPTY_STATE_CLASS}
             description={collectingDescription(coverage)}
             icon={Activity}
             title="Collecting metrics"
