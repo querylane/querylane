@@ -2,6 +2,7 @@ import { describe, expect, rs, test } from "@rstest/core";
 import {
   findExpectedShadcnOverwriteCount,
   findShadcnOverwriteFiles,
+  isCnImportOnlyShadcnDiff,
   isNoChangeShadcnDiff,
   normalizeShadcnComponents,
   parseShadcnInfoComponents,
@@ -86,6 +87,50 @@ describe("shadcn registry sync check", () => {
       isNoChangeShadcnDiff(`├ src/components/ui/command.tsx (skip)
 │ No changes.`)
     ).toBe(true);
+  });
+
+  test("treats the registry's cn package import swap as no drift", () => {
+    expect(
+      isCnImportOnlyShadcnDiff(`├ src/components/ui/input-group.tsx (overwrite)
+│ ┌──────────────────────────────────────────────
+│ │ --- a/src/components/ui/input-group.tsx
+│ │ +++ b/src/components/ui/input-group.tsx
+│ │ @@ -2,8 +2,8 @@
+│ │  
+│ │  import * as React from "react"
+│ │  import { cva, type VariantProps } from "class-variance-authority"
+│ │ +import { cn } from "cn"
+│ │  
+│ │ -import { cn } from "@/lib/utils"
+│ │  import { Button } from "@/components/ui/button"
+│ └──────────────────────────────────────────────`)
+    ).toBe(true);
+    expect(
+      isCnImportOnlyShadcnDiff(`├ src/components/ui/accordion.tsx (overwrite)
+│ │ @@ -1,6 +1,5 @@
+│ │  import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion"
+│ │ -
+│ │ +import { cn } from "cn"
+│ │ -import { cn } from "@/lib/utils"
+│ │  import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
+│ └──────────────────────────────────────────────
+│
+├ Dependencies (1)
+│ + cn
+│
+└ Run without --dry-run to apply.`)
+    ).toBe(true);
+  });
+
+  test("still reports diffs that change more than the cn import", () => {
+    expect(
+      isCnImportOnlyShadcnDiff(`├ src/components/ui/button.tsx (overwrite)
+│ │ +import { cn } from "cn"
+│ │ -import { cn } from "@/lib/utils"
+│ │ -      className={cn(buttonVariants({ variant, size }), className)}
+│ │ +      className={cn(buttonVariants({ variant, size, className }))}`)
+    ).toBe(false);
+    expect(isCnImportOnlyShadcnDiff("│ No changes.")).toBe(false);
   });
 
   test("allows only known strict TypeScript compatibility patches", () => {
