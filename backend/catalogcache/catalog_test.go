@@ -252,6 +252,10 @@ func (m *mockDatabaseSession) ExplainQuery(_ context.Context, _ engine.ExplainQu
 	return nil, nil //nolint:nilnil // test mock
 }
 
+func (m *mockDatabaseSession) ValidateQuery(_ context.Context, _ engine.ValidateQueryParams) (*engine.ValidateQueryResult, error) {
+	return nil, nil //nolint:nilnil // test mock
+}
+
 func (m *mockDatabaseSession) GetDatabaseQueryInsights(_ context.Context) (*engine.DatabaseQueryInsights, error) {
 	return nil, nil //nolint:nilnil // test mock
 }
