@@ -13,17 +13,26 @@ COPY components.ts ./
 COPY examples ./examples
 COPY theme.css ./
 COPY docs/components ./docs/components
+COPY docs/api-redirects.json ./docs/api-redirects.json
 COPY docs/generated ./docs/generated
 COPY docs/site ./docs/site
 COPY public ./public
 COPY proto ./proto
 COPY scripts/docs-content.test.ts ./scripts/docs-content.test.ts
+COPY scripts/docs-runtime.spec.ts ./scripts/docs-runtime.spec.ts
 
 RUN bun run docs:test:content
 RUN bun run docs:check
 RUN bun run docs:validate
 RUN bun run docs:build
 RUN bun run docs:audit
+
+# Verify the built site using the same Node version as the deployed server.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS verified
+WORKDIR /app
+COPY --from=builder /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=builder /app /app
+RUN bun run docs:test:runtime
 
 FROM oven/bun:1.4.0-alpine AS runtime-deps
 
@@ -40,7 +49,7 @@ WORKDIR /app
 ENV HOST=0.0.0.0
 ENV PORT=80
 
-COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=verified --chown=node:node /app/dist ./dist
 COPY --from=runtime-deps --chown=node:node /app/node_modules ./node_modules
 
 USER node

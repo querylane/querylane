@@ -17,6 +17,7 @@
 		"docs:eval": "blume eval --agent codex --json",
 		"docs:test": "bun test scripts/docs-*.test.ts",
 		"docs:test:content": "bun test scripts/docs-content.test.ts",
+		"docs:test:runtime": "bun test scripts/docs-runtime.spec.ts",
 		"docs:validate": "blume validate --strict",
 		"setup:worktree": "bun ./scripts/setup-worktree.mjs"
 	},

@@ -3,8 +3,7 @@ import apiRedirects from "./docs/api-redirects.json";
 
 export default defineConfig({
 	title: "Querylane",
-	description:
-		"Get started, configure, deploy, and operate Querylane safely.",
+	description: "Get started, configure, deploy, and operate Querylane safely.",
 	logo: "/icon.svg",
 	deployment: {
 		adapter: "node",
@@ -12,6 +11,19 @@ export default defineConfig({
 		site: "https://docs.querylane.net",
 	},
 	ai: {
+		llmsTxt: {
+			details: `Use these docs to evaluate, configure, deploy, and operate Querylane, a self-hosted PostgreSQL administration workspace.
+
+Terminology:
+- Instance = a user-managed PostgreSQL server connection (host, port, credentials).
+- Database = a database inside an instance, created with CREATE DATABASE.
+- Schema = a namespace inside a database, such as public or pg_catalog.
+- Meta database = Querylane's own persistence database, not a user instance.
+
+Querylane is a read-first preview. Do not assume write operations are supported merely because an experimental API method exists. Check the documented workflow and its limitations before recommending mutations.
+
+Start with the [quickstart](https://docs.querylane.net/get-started). For production, read [deployment](https://docs.querylane.net/get-started/deploy-querylane) and [operations](https://docs.querylane.net/get-started/operate-querylane): authenticated ingress, least-privilege instance access, metadata backups, and a stable instance secret key. Never request or reproduce real passwords or secret-key values.`,
+		},
 		mcp: {
 			enabled: true,
 			route: "/mcp",
@@ -115,6 +127,9 @@ export default defineConfig({
 		og: {
 			enabled: false,
 		},
+	},
+	search: {
+		indexing: { includeCodeBlocks: true },
 	},
 	theme: {
 		fonts: {
