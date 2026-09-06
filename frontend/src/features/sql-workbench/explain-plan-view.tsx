@@ -239,7 +239,7 @@ function PlanTree({
     <div className="min-h-0 flex-1 overflow-auto">
       <div
         className={cn(
-          "sticky top-0 z-10 grid gap-3 border-border border-b bg-background px-4 py-1.5 text-[11px] text-muted-foreground uppercase tracking-wide",
+          "sticky top-0 z-10 grid gap-3 border-border border-b bg-background px-4 py-1.5 text-muted-foreground text-xs uppercase tracking-wide",
           GRID_COLUMNS_CLASS
         )}
       >

@@ -149,7 +149,7 @@ function RelationColumns({
             <span className="min-w-0 flex-1 truncate text-left font-mono">
               {column.name}
             </span>
-            <span className="max-w-[45%] truncate font-mono text-[0.6875rem] text-muted-foreground">
+            <span className="max-w-[45%] truncate font-mono text-muted-foreground text-xs">
               {column.type}
             </span>
           </Button>
@@ -210,7 +210,7 @@ function RelationRow({
             {highlightMatch(relation.name, query)}
           </span>
         </Button>
-        <span className="flex shrink-0 items-center opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100">
+        <span className="flex shrink-0 items-center opacity-0 pointer-coarse:opacity-100 transition-opacity focus-within:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100">
           <Tooltip>
             <TooltipTrigger
               render={
@@ -311,7 +311,7 @@ function SchemaSection({
         <span className="min-w-0 flex-1 truncate text-left font-mono text-xs">
           {highlightMatch(schema.id, query)}
         </span>
-        <span className="font-mono text-[0.6875rem] text-muted-foreground tabular-nums">
+        <span className="font-mono text-muted-foreground text-xs tabular-nums">
           {schema.relations.length}
         </span>
       </Button>
@@ -444,13 +444,13 @@ function SqlCatalogRail(actions: CatalogRailActions) {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
         {catalog.data?.coverage.isPartial ? (
-          <p className="px-2 pb-1.5 text-[0.6875rem] text-muted-foreground">
+          <p className="px-2 pb-1.5 text-muted-foreground text-xs">
             Showing the first {catalog.data.coverage.objectLimit} objects.
           </p>
         ) : null}
         {body}
       </div>
-      <p className="border-sidebar-border border-t px-3 py-1.5 text-[0.6875rem] text-muted-foreground leading-snug">
+      <p className="border-sidebar-border border-t px-3 py-1.5 text-muted-foreground text-xs leading-snug">
         Click a name to insert it at the cursor.
       </p>
     </aside>
