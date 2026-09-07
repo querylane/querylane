@@ -1,5 +1,4 @@
 import { defineConfig } from "blume";
-import apiRedirects from "./docs/api-redirects.json";
 
 export default defineConfig({
 	title: "Querylane",
@@ -48,12 +47,6 @@ Start with the [quickstart](https://docs.querylane.net/get-started). For product
 		],
 	},
 	redirects: [
-		// Preserve published operation URLs after Blume 1.6 split camelCase names.
-		...Object.entries(apiRedirects).map(([from, to]) => ({
-			from,
-			to,
-			status: 301 as const,
-		})),
 		{
 			from: "/api/calling-the-api",
 			status: 301,

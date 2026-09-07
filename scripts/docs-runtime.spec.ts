@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createInterface } from "node:readline";
 import { Readable } from "node:stream";
-import apiRedirects from "../docs/api-redirects.json";
 
 // Exercise the production Node adapter, not the dev server or config objects.
 const server = Bun.spawn(["node", "dist/server/entry.mjs"], {
@@ -68,21 +67,6 @@ test("llms.txt gives agents terminology, safety boundaries, and deployment links
 		expect(markdown).toContain(guidance);
 	}
 });
-
-test.each(Object.entries(apiRedirects))(
-	"redirects published API URL %s to a real operation page",
-	async (from, to) => {
-		const redirect = await fetch(`${baseUrl}${from}`, { redirect: "manual" });
-		expect(redirect.status).toBe(301);
-		expect(redirect.headers.get("location")).toBe(to);
-		const destination = await fetch(`${baseUrl}${to}`, { redirect: "manual" });
-		expect(destination.status).toBe(200);
-		expect(destination.headers.get("content-type")).toContain("text/html");
-		expect(await destination.text()).toMatch(
-			/Unary RPC|Server stream|Client stream|Bidi stream/u,
-		);
-	},
-);
 
 test("JSON page index advertises a readable Markdown and JSON page", async () => {
 	const index = await fetch(`${baseUrl}/api/docs/pages.json`);
