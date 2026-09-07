@@ -101,6 +101,7 @@ bun install
 bun run docs:dev       # local preview
 bun run docs:validate  # links and anchors
 bun run docs:build
+bun run docs:test:runtime  # built Node server: search and agent docs
 ```
 
 `bun run docs:eval` checks whether the docs answer the questions in `evals.yaml`.
