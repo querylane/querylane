@@ -1391,6 +1391,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/querylane.console.v1alpha1.ExplainQueryResponse'
+  /querylane.console.v1alpha1.SQLService/ValidateQuery:
+    post:
+      x-connectrpc-method-kind: unary
+      tags:
+        - SQL
+      summary: ValidateQuery
+      description: |-
+        Checks a single statement without running it. PostgreSQL parses the
+         statement and resolves every table, column, function and type it
+         references, so the result covers syntax errors and unknown objects alike.
+      operationId: SQLService_ValidateQuery
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/querylane.console.v1alpha1.ValidateQueryRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/querylane.console.v1alpha1.ValidateQueryResponse'
   /querylane.console.v1alpha1.SchemaService/GetSchema:
     post:
       x-connectrpc-method-kind: unary
@@ -5727,6 +5767,35 @@ components:
       title: QueryColumnMetadata
       additionalProperties: false
       description: QueryColumnMetadata is the first message in an ExecuteQuery stream.
+    querylane.console.v1alpha1.QueryDiagnostic:
+      type: object
+      properties:
+        sqlstate:
+          type: string
+          title: sqlstate
+          description: The five-character SQLSTATE code, for example "42601" (syntax_error).
+        message:
+          type: string
+          title: message
+          description: The primary error message, for example "relation \"custmer\" does not exist".
+        detail:
+          type: string
+          title: detail
+        hint:
+          type: string
+          title: hint
+        position:
+          type: integer
+          title: position
+          format: int32
+          description: |-
+            1-based character offset into the statement where the problem starts,
+             or 0 when PostgreSQL did not report one.
+      title: QueryDiagnostic
+      additionalProperties: false
+      description: |-
+        QueryDiagnostic is one problem PostgreSQL found in a statement. The text
+         fields are bounded, untrusted server text: render them, never log them.
     querylane.console.v1alpha1.QueryMetricsRequest:
       type: object
       properties:
@@ -5899,6 +5968,21 @@ components:
           type: boolean
           title: truncated
           description: Output-only. Whether the server truncated results at the requested limit.
+        commandTag:
+          type: string
+          title: command_tag
+          description: |-
+            Output-only. The command tag PostgreSQL reported for the statement, such
+             as "SELECT 42", "SET" or "UPDATE 3". Empty when the driver reported none.
+        rowsAffected:
+          type:
+            - integer
+            - string
+          title: rows_affected
+          format: int64
+          description: |-
+            Output-only. The row count carried by the command tag: rows returned for
+             SELECT, rows changed for DML, zero for utility commands.
       title: QueryStats
       additionalProperties: false
       description: QueryStats is the final message in an ExecuteQuery stream.
@@ -7891,6 +7975,32 @@ components:
           title: instance
           $ref: '#/components/schemas/querylane.console.v1alpha1.Instance'
       title: UpdateInstanceResponse
+      additionalProperties: false
+    querylane.console.v1alpha1.ValidateQueryRequest:
+      type: object
+      properties:
+        parent:
+          type: string
+          title: parent
+          pattern: ^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$
+          description: Required. The database against which to check the statement.
+        statement:
+          type: string
+          title: statement
+          minLength: 1
+          description: Required. A single SQL statement to check.
+      title: ValidateQueryRequest
+      additionalProperties: false
+    querylane.console.v1alpha1.ValidateQueryResponse:
+      type: object
+      properties:
+        diagnostic:
+          title: diagnostic
+          description: |-
+            Output-only. Why PostgreSQL rejected the statement. Unset when the
+             statement is valid.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.QueryDiagnostic'
+      title: ValidateQueryResponse
       additionalProperties: false
     querylane.console.v1alpha1.View:
       type: object

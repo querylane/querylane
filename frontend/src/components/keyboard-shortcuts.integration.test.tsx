@@ -120,7 +120,13 @@ test("help lists the active scope first", async () => {
     screen
       .getAllByRole("heading", { level: 2 })
       .map((heading) => heading.textContent)
-  ).toEqual(["Keyboard shortcuts", "Data grid", "General", "Navigation"]);
+  ).toEqual([
+    "Keyboard shortcuts",
+    "Data grid",
+    "General",
+    "Navigation",
+    "SQL workbench",
+  ]);
 });
 
 test.each([

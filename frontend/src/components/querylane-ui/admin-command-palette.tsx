@@ -53,6 +53,11 @@ const NAVIGATION_TARGETS: readonly NavigationTarget[] = [
     summary: "tables · views",
   },
   {
+    label: "SQL workbench",
+    page: "database.sql",
+    summary: "run read-only queries",
+  },
+  {
     label: "Roles",
     page: "instance.roles",
     summary: "users and grants",

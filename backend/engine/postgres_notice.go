@@ -42,6 +42,7 @@ func openPostgresDBWithBudget(dsn string, budget *connectionBudget, targetPolicy
 	}
 
 	cfg.OnNotice = routePostgresNotice
+	cfg.Tracer = commandTagTracer{}
 	applyTargetPolicy(cfg, targetPolicy)
 
 	connector := stdlib.GetConnector(*cfg, stdlib.OptionAfterConnect(func(_ context.Context, conn *pgx.Conn) error {
@@ -192,7 +193,7 @@ func (s *postgresNoticeSlot) add(notice *pgconn.Notice) {
 
 func installPostgresNoticeCollector(conn *sql.Conn, collector *postgresNoticeCollector) error {
 	return conn.Raw(func(driverConn any) error {
-		postgresConn, ok := unwrapPostgresConn(driverConn)
+		postgresConn, ok := UnwrapPostgresConn(driverConn)
 		if !ok {
 			return ErrPostgresNoticeCaptureUnsupported
 		}
@@ -210,7 +211,7 @@ func installPostgresNoticeCollector(conn *sql.Conn, collector *postgresNoticeCol
 
 func clearPostgresNoticeCollector(conn *sql.Conn) error {
 	return conn.Raw(func(driverConn any) error {
-		postgresConn, ok := unwrapPostgresConn(driverConn)
+		postgresConn, ok := UnwrapPostgresConn(driverConn)
 		if !ok {
 			return ErrPostgresNoticeCaptureUnsupported
 		}
@@ -226,7 +227,11 @@ func clearPostgresNoticeCollector(conn *sql.Conn) error {
 	})
 }
 
-func unwrapPostgresConn(driverConn any) (*pgx.Conn, bool) {
+// UnwrapPostgresConn returns the pgx connection behind a database/sql driver
+// connection handed to sql.Conn.Raw, whether it is a bare pgx stdlib
+// connection or one wrapped by the engine's connection budget. Drivers use
+// it for protocol-level work database/sql cannot express.
+func UnwrapPostgresConn(driverConn any) (*pgx.Conn, bool) {
 	switch conn := driverConn.(type) {
 	case *stdlib.Conn:
 		return conn.Conn(), true

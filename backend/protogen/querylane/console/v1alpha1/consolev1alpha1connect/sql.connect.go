@@ -39,6 +39,9 @@ const (
 	SQLServiceExecuteQueryProcedure = "/querylane.console.v1alpha1.SQLService/ExecuteQuery"
 	// SQLServiceExplainQueryProcedure is the fully-qualified name of the SQLService's ExplainQuery RPC.
 	SQLServiceExplainQueryProcedure = "/querylane.console.v1alpha1.SQLService/ExplainQuery"
+	// SQLServiceValidateQueryProcedure is the fully-qualified name of the SQLService's ValidateQuery
+	// RPC.
+	SQLServiceValidateQueryProcedure = "/querylane.console.v1alpha1.SQLService/ValidateQuery"
 )
 
 // SQLServiceClient is a client for the querylane.console.v1alpha1.SQLService service.
@@ -47,6 +50,10 @@ type SQLServiceClient interface {
 	ExecuteQuery(context.Context, *connect.Request[v1alpha1.ExecuteQueryRequest]) (*connect.ServerStreamForClient[v1alpha1.ExecuteQueryResponse], error)
 	// Produces an EXPLAIN plan for a single query.
 	ExplainQuery(context.Context, *connect.Request[v1alpha1.ExplainQueryRequest]) (*connect.Response[v1alpha1.ExplainQueryResponse], error)
+	// Checks a single statement without running it. PostgreSQL parses the
+	// statement and resolves every table, column, function and type it
+	// references, so the result covers syntax errors and unknown objects alike.
+	ValidateQuery(context.Context, *connect.Request[v1alpha1.ValidateQueryRequest]) (*connect.Response[v1alpha1.ValidateQueryResponse], error)
 }
 
 // NewSQLServiceClient constructs a client for the querylane.console.v1alpha1.SQLService service. By
@@ -72,13 +79,20 @@ func NewSQLServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(sQLServiceMethods.ByName("ExplainQuery")),
 			connect.WithClientOptions(opts...),
 		),
+		validateQuery: connect.NewClient[v1alpha1.ValidateQueryRequest, v1alpha1.ValidateQueryResponse](
+			httpClient,
+			baseURL+SQLServiceValidateQueryProcedure,
+			connect.WithSchema(sQLServiceMethods.ByName("ValidateQuery")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // sQLServiceClient implements SQLServiceClient.
 type sQLServiceClient struct {
-	executeQuery *connect.Client[v1alpha1.ExecuteQueryRequest, v1alpha1.ExecuteQueryResponse]
-	explainQuery *connect.Client[v1alpha1.ExplainQueryRequest, v1alpha1.ExplainQueryResponse]
+	executeQuery  *connect.Client[v1alpha1.ExecuteQueryRequest, v1alpha1.ExecuteQueryResponse]
+	explainQuery  *connect.Client[v1alpha1.ExplainQueryRequest, v1alpha1.ExplainQueryResponse]
+	validateQuery *connect.Client[v1alpha1.ValidateQueryRequest, v1alpha1.ValidateQueryResponse]
 }
 
 // ExecuteQuery calls querylane.console.v1alpha1.SQLService.ExecuteQuery.
@@ -91,12 +105,21 @@ func (c *sQLServiceClient) ExplainQuery(ctx context.Context, req *connect.Reques
 	return c.explainQuery.CallUnary(ctx, req)
 }
 
+// ValidateQuery calls querylane.console.v1alpha1.SQLService.ValidateQuery.
+func (c *sQLServiceClient) ValidateQuery(ctx context.Context, req *connect.Request[v1alpha1.ValidateQueryRequest]) (*connect.Response[v1alpha1.ValidateQueryResponse], error) {
+	return c.validateQuery.CallUnary(ctx, req)
+}
+
 // SQLServiceHandler is an implementation of the querylane.console.v1alpha1.SQLService service.
 type SQLServiceHandler interface {
 	// Executes a single read-only SQL query and streams results in batches.
 	ExecuteQuery(context.Context, *connect.Request[v1alpha1.ExecuteQueryRequest], *connect.ServerStream[v1alpha1.ExecuteQueryResponse]) error
 	// Produces an EXPLAIN plan for a single query.
 	ExplainQuery(context.Context, *connect.Request[v1alpha1.ExplainQueryRequest]) (*connect.Response[v1alpha1.ExplainQueryResponse], error)
+	// Checks a single statement without running it. PostgreSQL parses the
+	// statement and resolves every table, column, function and type it
+	// references, so the result covers syntax errors and unknown objects alike.
+	ValidateQuery(context.Context, *connect.Request[v1alpha1.ValidateQueryRequest]) (*connect.Response[v1alpha1.ValidateQueryResponse], error)
 }
 
 // NewSQLServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -118,12 +141,20 @@ func NewSQLServiceHandler(svc SQLServiceHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(sQLServiceMethods.ByName("ExplainQuery")),
 		connect.WithHandlerOptions(opts...),
 	)
+	sQLServiceValidateQueryHandler := connect.NewUnaryHandler(
+		SQLServiceValidateQueryProcedure,
+		svc.ValidateQuery,
+		connect.WithSchema(sQLServiceMethods.ByName("ValidateQuery")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/querylane.console.v1alpha1.SQLService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SQLServiceExecuteQueryProcedure:
 			sQLServiceExecuteQueryHandler.ServeHTTP(w, r)
 		case SQLServiceExplainQueryProcedure:
 			sQLServiceExplainQueryHandler.ServeHTTP(w, r)
+		case SQLServiceValidateQueryProcedure:
+			sQLServiceValidateQueryHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -139,4 +170,8 @@ func (UnimplementedSQLServiceHandler) ExecuteQuery(context.Context, *connect.Req
 
 func (UnimplementedSQLServiceHandler) ExplainQuery(context.Context, *connect.Request[v1alpha1.ExplainQueryRequest]) (*connect.Response[v1alpha1.ExplainQueryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("querylane.console.v1alpha1.SQLService.ExplainQuery is not implemented"))
+}
+
+func (UnimplementedSQLServiceHandler) ValidateQuery(context.Context, *connect.Request[v1alpha1.ValidateQueryRequest]) (*connect.Response[v1alpha1.ValidateQueryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("querylane.console.v1alpha1.SQLService.ValidateQuery is not implemented"))
 }

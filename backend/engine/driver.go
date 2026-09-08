@@ -83,6 +83,7 @@ type tableDataDriver interface {
 type queryDriver interface {
 	ExecuteQuery(ctx context.Context, db *sql.DB, params ExecuteQueryParams) (ExecuteQueryStream, error)
 	ExplainQuery(ctx context.Context, db *sql.DB, params ExplainQueryParams) (*ExplainQueryResult, error)
+	ValidateQuery(ctx context.Context, db *sql.DB, params ValidateQueryParams) (*ValidateQueryResult, error)
 	GetDatabaseQueryInsights(ctx context.Context, db *sql.DB) (*DatabaseQueryInsights, error)
 }
 

@@ -48,6 +48,10 @@ func (d *stubQueryDriver) ExplainQuery(context.Context, *sql.DB, ExplainQueryPar
 	return nil, assert.AnError
 }
 
+func (d *stubQueryDriver) ValidateQuery(context.Context, *sql.DB, ValidateQueryParams) (*ValidateQueryResult, error) {
+	return nil, assert.AnError
+}
+
 func (d *stubQueryDriver) GetDatabaseQueryInsights(context.Context, *sql.DB) (*DatabaseQueryInsights, error) {
 	return nil, assert.AnError
 }

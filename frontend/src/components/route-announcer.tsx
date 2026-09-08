@@ -12,6 +12,9 @@ function databasePageName(segments: string[]): string {
   if (segments[4] === "extensions") {
     return "Extensions";
   }
+  if (segments[4] === "sql") {
+    return "SQL workbench";
+  }
   return "Database overview";
 }
 

@@ -1,0 +1,168 @@
+"use client";
+
+import "react-data-grid/lib/styles.css";
+import "@/components/data-grid/table-data-grid/data-grid-theme.css";
+
+import { Rows3 } from "lucide-react";
+import type { CellCopyArgs, Column } from "react-data-grid";
+import { DataGrid } from "react-data-grid";
+import { DataCell } from "@/components/data-grid/table-data-grid/data-cell";
+import { writeClipboard } from "@/components/data-grid/table-data-grid/grid-clipboard";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  formatCellForClipboard,
+  resultColumnKeys,
+} from "@/features/data-explorer/table-data/selection-formatters";
+import type { GridEmptyState } from "@/features/sql-workbench/sql-command-outcome";
+import type {
+  TableCell,
+  TableResultColumn,
+  TableResultRow,
+} from "@/protogen/querylane/console/v1alpha1/table_data_pb";
+
+interface ResultGridRow {
+  cells: Map<string, TableCell | undefined>;
+  index: number;
+}
+
+// NUL cannot appear in a PostgreSQL identifier, so the key never collides
+// with a real column name.
+const ROW_NUMBER_KEY = "\u0000__rowNumber";
+const ROW_NUMBER_WIDTH = 56;
+const MIN_COLUMN_WIDTH = 120;
+const MAX_COLUMN_WIDTH = 480;
+const ROW_HEIGHT = 30;
+const HEADER_HEIGHT = 36;
+
+function buildResultRows(
+  rows: readonly TableResultRow[],
+  keys: readonly string[]
+): ResultGridRow[] {
+  return rows.map((row, index) => {
+    const cells = new Map<string, TableCell | undefined>();
+    keys.forEach((key, columnIndex) => {
+      cells.set(key, row.values[columnIndex]);
+    });
+    return { cells, index };
+  });
+}
+
+function rowKeyGetter(row: ResultGridRow): number {
+  return row.index;
+}
+
+function buildGridColumns(
+  columns: readonly TableResultColumn[],
+  keys: readonly string[]
+): Column<ResultGridRow>[] {
+  const rowNumberColumn: Column<ResultGridRow> = {
+    cellClass: "text-muted-foreground tabular-nums",
+    frozen: true,
+    key: ROW_NUMBER_KEY,
+    maxWidth: ROW_NUMBER_WIDTH,
+    minWidth: ROW_NUMBER_WIDTH,
+    name: "",
+    renderCell: ({ row }) => (
+      <span className="block text-right text-xs">{row.index + 1}</span>
+    ),
+    resizable: false,
+    sortable: false,
+    width: ROW_NUMBER_WIDTH,
+  };
+  const valueColumns = columns.map(
+    (column, index): Column<ResultGridRow> => ({
+      key: keys[index] ?? column.columnName,
+      maxWidth: MAX_COLUMN_WIDTH,
+      minWidth: MIN_COLUMN_WIDTH,
+      name: column.columnName,
+      renderCell: ({ row }) => (
+        <DataCell cell={row.cells.get(keys[index] ?? "")} column={column} />
+      ),
+      renderHeaderCell: () => (
+        <span className="flex min-w-0 items-baseline gap-2">
+          <span className="truncate font-medium">{column.columnName}</span>
+          <span className="truncate font-normal text-muted-foreground text-xs">
+            {column.rawType}
+          </span>
+        </span>
+      ),
+      resizable: true,
+      sortable: false,
+      width: "auto",
+    })
+  );
+  return [rowNumberColumn, ...valueColumns];
+}
+
+function handleCellCopy({ row, column }: CellCopyArgs<ResultGridRow>) {
+  if (column.key === ROW_NUMBER_KEY) {
+    return;
+  }
+  writeClipboard(formatCellForClipboard(row.cells.get(column.key)));
+}
+
+function EmptyRowsOverlay({ emptyState }: { emptyState: GridEmptyState }) {
+  return (
+    <div
+      className="pointer-events-none absolute inset-x-0 top-9 bottom-0 flex items-center justify-center p-6"
+      data-slot="sql-results-empty"
+    >
+      <Empty className="flex-none border-0 p-0">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <Rows3 aria-hidden={true} className="size-5" />
+          </EmptyMedia>
+          <EmptyTitle className="text-sm">{emptyState.title}</EmptyTitle>
+          <EmptyDescription>{emptyState.description}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    </div>
+  );
+}
+
+function SqlResultsGrid({
+  columns,
+  emptyState,
+  rows,
+}: {
+  columns: readonly TableResultColumn[];
+  /** Shown under the header while the grid has no rows; omit while streaming. */
+  emptyState?: GridEmptyState | undefined;
+  rows: readonly TableResultRow[];
+}) {
+  const keys = resultColumnKeys(columns);
+  const gridColumns = buildGridColumns(columns, keys);
+  const gridRows = buildResultRows(rows, keys);
+  return (
+    <div
+      className="relative flex min-h-0 flex-1 flex-col"
+      data-keyboard-shortcut-scope="grid"
+    >
+      <DataGrid
+        aria-label="Query results"
+        // The grid theme sheet is unlayered, so its radius and border beat
+        // plain Tailwind utilities; force the flush look like the explorer does.
+        className="rdg-light dark:rdg-dark rounded-none! border-0!"
+        columns={gridColumns}
+        defaultColumnOptions={{ resizable: true }}
+        enableVirtualization={true}
+        headerRowHeight={HEADER_HEIGHT}
+        onCellCopy={handleCellCopy}
+        rowHeight={ROW_HEIGHT}
+        rowKeyGetter={rowKeyGetter}
+        rows={gridRows}
+      />
+      {rows.length === 0 && emptyState ? (
+        <EmptyRowsOverlay emptyState={emptyState} />
+      ) : null}
+    </div>
+  );
+}
+
+export { SqlResultsGrid };

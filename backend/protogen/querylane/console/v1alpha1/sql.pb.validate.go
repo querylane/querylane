@@ -360,6 +360,10 @@ func (m *QueryStats) validate(all bool) error {
 
 	// no validation rules for Truncated
 
+	// no validation rules for CommandTag
+
+	// no validation rules for RowsAffected
+
 	if len(errors) > 0 {
 		return QueryStatsMultiError(errors)
 	}
@@ -1083,3 +1087,350 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = ExplainQueryResponseValidationError{}
+
+// Validate checks the field values on ValidateQueryRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ValidateQueryRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ValidateQueryRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ValidateQueryRequestMultiError, or nil if none found.
+func (m *ValidateQueryRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ValidateQueryRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Parent
+
+	// no validation rules for Statement
+
+	if len(errors) > 0 {
+		return ValidateQueryRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// ValidateQueryRequestMultiError is an error wrapping multiple validation
+// errors returned by ValidateQueryRequest.ValidateAll() if the designated
+// constraints aren't met.
+type ValidateQueryRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ValidateQueryRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ValidateQueryRequestMultiError) AllErrors() []error { return m }
+
+// ValidateQueryRequestValidationError is the validation error returned by
+// ValidateQueryRequest.Validate if the designated constraints aren't met.
+type ValidateQueryRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ValidateQueryRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ValidateQueryRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ValidateQueryRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ValidateQueryRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ValidateQueryRequestValidationError) ErrorName() string {
+	return "ValidateQueryRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ValidateQueryRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sValidateQueryRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ValidateQueryRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ValidateQueryRequestValidationError{}
+
+// Validate checks the field values on ValidateQueryResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ValidateQueryResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ValidateQueryResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ValidateQueryResponseMultiError, or nil if none found.
+func (m *ValidateQueryResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ValidateQueryResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetDiagnostic()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, ValidateQueryResponseValidationError{
+					field:  "Diagnostic",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, ValidateQueryResponseValidationError{
+					field:  "Diagnostic",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetDiagnostic()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return ValidateQueryResponseValidationError{
+				field:  "Diagnostic",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return ValidateQueryResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// ValidateQueryResponseMultiError is an error wrapping multiple validation
+// errors returned by ValidateQueryResponse.ValidateAll() if the designated
+// constraints aren't met.
+type ValidateQueryResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ValidateQueryResponseMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ValidateQueryResponseMultiError) AllErrors() []error { return m }
+
+// ValidateQueryResponseValidationError is the validation error returned by
+// ValidateQueryResponse.Validate if the designated constraints aren't met.
+type ValidateQueryResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ValidateQueryResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ValidateQueryResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ValidateQueryResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ValidateQueryResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ValidateQueryResponseValidationError) ErrorName() string {
+	return "ValidateQueryResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ValidateQueryResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sValidateQueryResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ValidateQueryResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ValidateQueryResponseValidationError{}
+
+// Validate checks the field values on QueryDiagnostic with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *QueryDiagnostic) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on QueryDiagnostic with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// QueryDiagnosticMultiError, or nil if none found.
+func (m *QueryDiagnostic) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *QueryDiagnostic) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Sqlstate
+
+	// no validation rules for Message
+
+	// no validation rules for Detail
+
+	// no validation rules for Hint
+
+	// no validation rules for Position
+
+	if len(errors) > 0 {
+		return QueryDiagnosticMultiError(errors)
+	}
+
+	return nil
+}
+
+// QueryDiagnosticMultiError is an error wrapping multiple validation errors
+// returned by QueryDiagnostic.ValidateAll() if the designated constraints
+// aren't met.
+type QueryDiagnosticMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m QueryDiagnosticMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m QueryDiagnosticMultiError) AllErrors() []error { return m }
+
+// QueryDiagnosticValidationError is the validation error returned by
+// QueryDiagnostic.Validate if the designated constraints aren't met.
+type QueryDiagnosticValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e QueryDiagnosticValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e QueryDiagnosticValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e QueryDiagnosticValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e QueryDiagnosticValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e QueryDiagnosticValidationError) ErrorName() string { return "QueryDiagnosticValidationError" }
+
+// Error satisfies the builtin error interface
+func (e QueryDiagnosticValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sQueryDiagnostic.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = QueryDiagnosticValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = QueryDiagnosticValidationError{}

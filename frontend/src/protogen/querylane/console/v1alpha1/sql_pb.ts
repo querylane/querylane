@@ -17,7 +17,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file querylane/console/v1alpha1/sql.proto.
  */
 export const file_querylane_console_v1alpha1_sql: GenFile = /*@__PURE__*/
-  fileDesc("CiRxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS9zcWwucHJvdG8SGnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExIloKE1F1ZXJ5Q29sdW1uTWV0YWRhdGESQwoHY29sdW1ucxgBIAMoCzItLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlRhYmxlUmVzdWx0Q29sdW1uQgPgQQMiTgoNUXVlcnlSb3dCYXRjaBI9CgRyb3dzGAEgAygLMioucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuVGFibGVSZXN1bHRSb3dCA+BBAyKDAQoKUXVlcnlTdGF0cxIWCglyb3dfY291bnQYASABKANCA+BBAxIvCgdsYXRlbmN5GAIgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uQgPgQQMSFAoHbm90aWNlcxgDIAMoCUID4EEDEhYKCXRydW5jYXRlZBgEIAEoCEID4EEDIsYCChNFeGVjdXRlUXVlcnlSZXF1ZXN0En0KBnBhcmVudBgBIAEoCUJt4EEC+kEgCh5jb25zb2xlLnF1ZXJ5bGFuZS5kZXYvRGF0YWJhc2W6SERyQjJAXmluc3RhbmNlcy9bYS16QS1aXShbYS16QS1aMC05Xy1dKlthLXpBLVowLTldKT8vZGF0YWJhc2VzL1teL10rJBIdCglzdGF0ZW1lbnQYAiABKAlCCuBBArpIBHICEAESIAoJcm93X2xpbWl0GAMgASgFQg3gQQG6SAcaBRiQTigAEiEKCmJhdGNoX3NpemUYBCABKAVCDeBBAbpIBxoFGOgHKAASLwoHdGltZW91dBgFIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkID4EEBEhsKDmRlZmF1bHRfc2NoZW1hGAYgASgJQgPgQQEi5QEKFEV4ZWN1dGVRdWVyeVJlc3BvbnNlEkoKD2NvbHVtbl9tZXRhZGF0YRgBIAEoCzIvLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlF1ZXJ5Q29sdW1uTWV0YWRhdGFIABI+Cglyb3dfYmF0Y2gYAiABKAsyKS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5RdWVyeVJvd0JhdGNoSAASNwoFc3RhdHMYAyABKAsyJi5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5RdWVyeVN0YXRzSABCCAoGcmVzdWx0ItcDChNFeHBsYWluUXVlcnlSZXF1ZXN0En0KBnBhcmVudBgBIAEoCUJt4EEC+kEgCh5jb25zb2xlLnF1ZXJ5bGFuZS5kZXYvRGF0YWJhc2W6SERyQjJAXmluc3RhbmNlcy9bYS16QS1aXShbYS16QS1aMC05Xy1dKlthLXpBLVowLTldKT8vZGF0YWJhc2VzL1teL10rJBIdCglzdGF0ZW1lbnQYAiABKAlCCuBBArpIBHICEAESUwoGZm9ybWF0GAMgASgOMjYucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuRXhwbGFpblF1ZXJ5UmVxdWVzdC5Gb3JtYXRCC+BBAbpIBYIBAhABEhQKB2FuYWx5emUYBCABKAhCA+BBARIUCgdidWZmZXJzGAUgASgIQgPgQQESLwoHdGltZW91dBgGIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkID4EEBEhsKDmRlZmF1bHRfc2NoZW1hGAcgASgJQgPgQQEiUwoGRm9ybWF0EhYKEkZPUk1BVF9VTlNQRUNJRklFRBAAEg8KC0ZPUk1BVF9URVhUEAESDwoLRk9STUFUX0pTT04QAhIPCgtGT1JNQVRfWUFNTBADInAKFEV4cGxhaW5RdWVyeVJlc3BvbnNlEhEKBHBsYW4YASABKAlCA+BBAxIUCgdub3RpY2VzGAIgAygJQgPgQQMSLwoHbGF0ZW5jeRgDIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkID4EEDMvgBCgpTUUxTZXJ2aWNlEnUKDEV4ZWN1dGVRdWVyeRIvLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkV4ZWN1dGVRdWVyeVJlcXVlc3QaMC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5FeGVjdXRlUXVlcnlSZXNwb25zZSIAMAEScwoMRXhwbGFpblF1ZXJ5Ei8ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuRXhwbGFpblF1ZXJ5UmVxdWVzdBowLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkV4cGxhaW5RdWVyeVJlc3BvbnNlIgBCkAIKHmNvbS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMUIIU3FsUHJvdG9QAVpaZ2l0aHViLmNvbS9xdWVyeWxhbmUvcXVlcnlsYW5lL2JhY2tlbmQvcHJvdG9nZW4vcXVlcnlsYW5lL2NvbnNvbGUvdjFhbHBoYTE7Y29uc29sZXYxYWxwaGExogIDUUNYqgIaUXVlcnlsYW5lLkNvbnNvbGUuVjFhbHBoYTHKAhpRdWVyeWxhbmVcQ29uc29sZVxWMWFscGhhMeICJlF1ZXJ5bGFuZVxDb25zb2xlXFYxYWxwaGExXEdQQk1ldGFkYXRh6gIcUXVlcnlsYW5lOjpDb25zb2xlOjpWMWFscGhhMWIGcHJvdG8z", [file_buf_validate_validate, file_google_api_field_behavior, file_google_api_resource, file_google_protobuf_duration, file_querylane_console_v1alpha1_table_data]);
+  fileDesc("CiRxdWVyeWxhbmUvY29uc29sZS92MWFscGhhMS9zcWwucHJvdG8SGnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExIloKE1F1ZXJ5Q29sdW1uTWV0YWRhdGESQwoHY29sdW1ucxgBIAMoCzItLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlRhYmxlUmVzdWx0Q29sdW1uQgPgQQMiTgoNUXVlcnlSb3dCYXRjaBI9CgRyb3dzGAEgAygLMioucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuVGFibGVSZXN1bHRSb3dCA+BBAyK5AQoKUXVlcnlTdGF0cxIWCglyb3dfY291bnQYASABKANCA+BBAxIvCgdsYXRlbmN5GAIgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uQgPgQQMSFAoHbm90aWNlcxgDIAMoCUID4EEDEhYKCXRydW5jYXRlZBgEIAEoCEID4EEDEhgKC2NvbW1hbmRfdGFnGAUgASgJQgPgQQMSGgoNcm93c19hZmZlY3RlZBgGIAEoA0ID4EEDIsYCChNFeGVjdXRlUXVlcnlSZXF1ZXN0En0KBnBhcmVudBgBIAEoCUJt4EEC+kEgCh5jb25zb2xlLnF1ZXJ5bGFuZS5kZXYvRGF0YWJhc2W6SERyQjJAXmluc3RhbmNlcy9bYS16QS1aXShbYS16QS1aMC05Xy1dKlthLXpBLVowLTldKT8vZGF0YWJhc2VzL1teL10rJBIdCglzdGF0ZW1lbnQYAiABKAlCCuBBArpIBHICEAESIAoJcm93X2xpbWl0GAMgASgFQg3gQQG6SAcaBRiQTigAEiEKCmJhdGNoX3NpemUYBCABKAVCDeBBAbpIBxoFGOgHKAASLwoHdGltZW91dBgFIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkID4EEBEhsKDmRlZmF1bHRfc2NoZW1hGAYgASgJQgPgQQEi5QEKFEV4ZWN1dGVRdWVyeVJlc3BvbnNlEkoKD2NvbHVtbl9tZXRhZGF0YRgBIAEoCzIvLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlF1ZXJ5Q29sdW1uTWV0YWRhdGFIABI+Cglyb3dfYmF0Y2gYAiABKAsyKS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5RdWVyeVJvd0JhdGNoSAASNwoFc3RhdHMYAyABKAsyJi5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5RdWVyeVN0YXRzSABCCAoGcmVzdWx0ItcDChNFeHBsYWluUXVlcnlSZXF1ZXN0En0KBnBhcmVudBgBIAEoCUJt4EEC+kEgCh5jb25zb2xlLnF1ZXJ5bGFuZS5kZXYvRGF0YWJhc2W6SERyQjJAXmluc3RhbmNlcy9bYS16QS1aXShbYS16QS1aMC05Xy1dKlthLXpBLVowLTldKT8vZGF0YWJhc2VzL1teL10rJBIdCglzdGF0ZW1lbnQYAiABKAlCCuBBArpIBHICEAESUwoGZm9ybWF0GAMgASgOMjYucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuRXhwbGFpblF1ZXJ5UmVxdWVzdC5Gb3JtYXRCC+BBAbpIBYIBAhABEhQKB2FuYWx5emUYBCABKAhCA+BBARIUCgdidWZmZXJzGAUgASgIQgPgQQESLwoHdGltZW91dBgGIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkID4EEBEhsKDmRlZmF1bHRfc2NoZW1hGAcgASgJQgPgQQEiUwoGRm9ybWF0EhYKEkZPUk1BVF9VTlNQRUNJRklFRBAAEg8KC0ZPUk1BVF9URVhUEAESDwoLRk9STUFUX0pTT04QAhIPCgtGT1JNQVRfWUFNTBADInAKFEV4cGxhaW5RdWVyeVJlc3BvbnNlEhEKBHBsYW4YASABKAlCA+BBAxIUCgdub3RpY2VzGAIgAygJQgPgQQMSLwoHbGF0ZW5jeRgDIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkID4EEDIrQBChRWYWxpZGF0ZVF1ZXJ5UmVxdWVzdBJ9CgZwYXJlbnQYASABKAlCbeBBAvpBIAoeY29uc29sZS5xdWVyeWxhbmUuZGV2L0RhdGFiYXNlukhEckIyQF5pbnN0YW5jZXMvW2EtekEtWl0oW2EtekEtWjAtOV8tXSpbYS16QS1aMC05XSk/L2RhdGFiYXNlcy9bXi9dKyQSHQoJc3RhdGVtZW50GAIgASgJQgrgQQK6SARyAhABIl0KFVZhbGlkYXRlUXVlcnlSZXNwb25zZRJECgpkaWFnbm9zdGljGAEgASgLMisucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuUXVlcnlEaWFnbm9zdGljQgPgQQMifQoPUXVlcnlEaWFnbm9zdGljEhUKCHNxbHN0YXRlGAEgASgJQgPgQQMSFAoHbWVzc2FnZRgCIAEoCUID4EEDEhMKBmRldGFpbBgDIAEoCUID4EEDEhEKBGhpbnQYBCABKAlCA+BBAxIVCghwb3NpdGlvbhgFIAEoBUID4EEDMvACCgpTUUxTZXJ2aWNlEnUKDEV4ZWN1dGVRdWVyeRIvLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkV4ZWN1dGVRdWVyeVJlcXVlc3QaMC5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMS5FeGVjdXRlUXVlcnlSZXNwb25zZSIAMAEScwoMRXhwbGFpblF1ZXJ5Ei8ucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuRXhwbGFpblF1ZXJ5UmVxdWVzdBowLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLkV4cGxhaW5RdWVyeVJlc3BvbnNlIgASdgoNVmFsaWRhdGVRdWVyeRIwLnF1ZXJ5bGFuZS5jb25zb2xlLnYxYWxwaGExLlZhbGlkYXRlUXVlcnlSZXF1ZXN0GjEucXVlcnlsYW5lLmNvbnNvbGUudjFhbHBoYTEuVmFsaWRhdGVRdWVyeVJlc3BvbnNlIgBCkAIKHmNvbS5xdWVyeWxhbmUuY29uc29sZS52MWFscGhhMUIIU3FsUHJvdG9QAVpaZ2l0aHViLmNvbS9xdWVyeWxhbmUvcXVlcnlsYW5lL2JhY2tlbmQvcHJvdG9nZW4vcXVlcnlsYW5lL2NvbnNvbGUvdjFhbHBoYTE7Y29uc29sZXYxYWxwaGExogIDUUNYqgIaUXVlcnlsYW5lLkNvbnNvbGUuVjFhbHBoYTHKAhpRdWVyeWxhbmVcQ29uc29sZVxWMWFscGhhMeICJlF1ZXJ5bGFuZVxDb25zb2xlXFYxYWxwaGExXEdQQk1ldGFkYXRh6gIcUXVlcnlsYW5lOjpDb25zb2xlOjpWMWFscGhhMWIGcHJvdG8z", [file_buf_validate_validate, file_google_api_field_behavior, file_google_api_resource, file_google_protobuf_duration, file_querylane_console_v1alpha1_table_data]);
 
 /**
  * QueryColumnMetadata is the first message in an ExecuteQuery stream.
@@ -90,6 +90,22 @@ export type QueryStats = Message<"querylane.console.v1alpha1.QueryStats"> & {
    * @generated from field: bool truncated = 4;
    */
   truncated: boolean;
+
+  /**
+   * Output-only. The command tag PostgreSQL reported for the statement, such
+   * as "SELECT 42", "SET" or "UPDATE 3". Empty when the driver reported none.
+   *
+   * @generated from field: string command_tag = 5;
+   */
+  commandTag: string;
+
+  /**
+   * Output-only. The row count carried by the command tag: rows returned for
+   * SELECT, rows changed for DML, zero for utility commands.
+   *
+   * @generated from field: int64 rows_affected = 6;
+   */
+  rowsAffected: bigint;
 };
 
 /**
@@ -308,6 +324,99 @@ export const ExplainQueryResponseSchema: GenMessage<ExplainQueryResponse> = /*@_
   messageDesc(file_querylane_console_v1alpha1_sql, 6);
 
 /**
+ * @generated from message querylane.console.v1alpha1.ValidateQueryRequest
+ */
+export type ValidateQueryRequest = Message<"querylane.console.v1alpha1.ValidateQueryRequest"> & {
+  /**
+   * Required. The database against which to check the statement.
+   *
+   * @generated from field: string parent = 1;
+   */
+  parent: string;
+
+  /**
+   * Required. A single SQL statement to check.
+   *
+   * @generated from field: string statement = 2;
+   */
+  statement: string;
+};
+
+/**
+ * Describes the message querylane.console.v1alpha1.ValidateQueryRequest.
+ * Use `create(ValidateQueryRequestSchema)` to create a new message.
+ */
+export const ValidateQueryRequestSchema: GenMessage<ValidateQueryRequest> = /*@__PURE__*/
+  messageDesc(file_querylane_console_v1alpha1_sql, 7);
+
+/**
+ * @generated from message querylane.console.v1alpha1.ValidateQueryResponse
+ */
+export type ValidateQueryResponse = Message<"querylane.console.v1alpha1.ValidateQueryResponse"> & {
+  /**
+   * Output-only. Why PostgreSQL rejected the statement. Unset when the
+   * statement is valid.
+   *
+   * @generated from field: querylane.console.v1alpha1.QueryDiagnostic diagnostic = 1;
+   */
+  diagnostic?: QueryDiagnostic;
+};
+
+/**
+ * Describes the message querylane.console.v1alpha1.ValidateQueryResponse.
+ * Use `create(ValidateQueryResponseSchema)` to create a new message.
+ */
+export const ValidateQueryResponseSchema: GenMessage<ValidateQueryResponse> = /*@__PURE__*/
+  messageDesc(file_querylane_console_v1alpha1_sql, 8);
+
+/**
+ * QueryDiagnostic is one problem PostgreSQL found in a statement. The text
+ * fields are bounded, untrusted server text: render them, never log them.
+ *
+ * @generated from message querylane.console.v1alpha1.QueryDiagnostic
+ */
+export type QueryDiagnostic = Message<"querylane.console.v1alpha1.QueryDiagnostic"> & {
+  /**
+   * The five-character SQLSTATE code, for example "42601" (syntax_error).
+   *
+   * @generated from field: string sqlstate = 1;
+   */
+  sqlstate: string;
+
+  /**
+   * The primary error message, for example "relation \"custmer\" does not exist".
+   *
+   * @generated from field: string message = 2;
+   */
+  message: string;
+
+  /**
+   * @generated from field: string detail = 3;
+   */
+  detail: string;
+
+  /**
+   * @generated from field: string hint = 4;
+   */
+  hint: string;
+
+  /**
+   * 1-based character offset into the statement where the problem starts,
+   * or 0 when PostgreSQL did not report one.
+   *
+   * @generated from field: int32 position = 5;
+   */
+  position: number;
+};
+
+/**
+ * Describes the message querylane.console.v1alpha1.QueryDiagnostic.
+ * Use `create(QueryDiagnosticSchema)` to create a new message.
+ */
+export const QueryDiagnosticSchema: GenMessage<QueryDiagnostic> = /*@__PURE__*/
+  messageDesc(file_querylane_console_v1alpha1_sql, 9);
+
+/**
  * SQLService exposes ad-hoc read-only query execution.
  * This is intended for the SQL editor, not for grid-style table browsing.
  *
@@ -333,6 +442,18 @@ export const SQLService: GenService<{
     methodKind: "unary";
     input: typeof ExplainQueryRequestSchema;
     output: typeof ExplainQueryResponseSchema;
+  },
+  /**
+   * Checks a single statement without running it. PostgreSQL parses the
+   * statement and resolves every table, column, function and type it
+   * references, so the result covers syntax errors and unknown objects alike.
+   *
+   * @generated from rpc querylane.console.v1alpha1.SQLService.ValidateQuery
+   */
+  validateQuery: {
+    methodKind: "unary";
+    input: typeof ValidateQueryRequestSchema;
+    output: typeof ValidateQueryResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_querylane_console_v1alpha1_sql, 0);

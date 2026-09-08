@@ -83,6 +83,12 @@ type ExecuteQueryStats struct {
 	Latency   time.Duration
 	Notices   []string
 	Truncated bool
+	// CommandTag is the tag PostgreSQL reported for the statement, such as
+	// "SELECT 42" or "SET". Empty when the driver did not report one.
+	CommandTag string
+	// RowsAffected is the count carried by CommandTag: rows returned for
+	// SELECT, rows changed for DML, zero for utility commands.
+	RowsAffected int64
 }
 
 type ExecuteQueryStream interface {
@@ -107,4 +113,25 @@ type ExplainQueryResult struct {
 	Plan    string
 	Notices []string
 	Latency time.Duration
+}
+
+type ValidateQueryParams struct {
+	Statement string
+	Timeout   time.Duration
+}
+
+// ValidateQueryResult reports whether PostgreSQL accepted a statement.
+// Diagnostic is nil when it did.
+type ValidateQueryResult struct {
+	Diagnostic *QueryDiagnostic
+}
+
+// QueryDiagnostic is one problem PostgreSQL found in a statement. Text fields
+// are bounded server text; Position is a 1-based character offset or 0.
+type QueryDiagnostic struct {
+	SQLState string
+	Message  string
+	Detail   string
+	Hint     string
+	Position int32
 }
