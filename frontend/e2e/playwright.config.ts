@@ -65,7 +65,7 @@ export default defineConfig({
     actionTimeout: ACTION_TIMEOUT_MS,
     [PLAYWRIGHT_BASE_URL_KEY]: BASE_URL,
     colorScheme: "light",
-    contextOptions: { reducedMotion: "reduce" },
+    reducedMotion: "reduce",
     headless: true,
     locale: "en-US",
     navigationTimeout: NAVIGATION_TIMEOUT_MS,
@@ -74,7 +74,10 @@ export default defineConfig({
     // should use softScreenshot(), which captures the content panel instead.
     screenshot: { fullPage: false, mode: "only-on-failure" },
     timezoneId: "UTC",
-    trace: "retain-on-failure",
+    trace: {
+      mode: "retain-on-failure",
+      snapshots: { aria: true, dom: true, screen: true },
+    },
     video: "off",
     viewport: { height: 900, width: 1280 },
   },

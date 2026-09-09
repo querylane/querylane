@@ -52,3 +52,45 @@ bun run test:e2e:debug
 - Prefer `getByRole`, then `getByLabel`, then visible text.
 - Keep scenario responses explicit so tests document frontend expectations.
 - Add unhappy paths by fulfilling RPC errors, not by starting a broken backend.
+
+## Playwright 1.63 diagnostics
+
+- Failed tests retain DOM, accessibility, and screen snapshots in their trace.
+  Open the trace viewer's Display Aria mode to inspect accessible names beside
+  the action screenshot. Successful tests still discard traces; retries stay off.
+- Reduced motion uses the standalone test option, so individual suites can
+  override it with `test.use({ reducedMotion: "no-preference" })`.
+- `bun run test:e2e:profile` adds the Perfetto worker timeline without replacing
+  the configured reporters. Open `test-results/perfetto.json` in Perfetto to investigate slow or
+  uneven workers; it does not enable retries.
+- CI list and GitHub reporters omit repeated tags from titles; JSON and HTML
+  reports retain the complete test metadata. HTML now includes step waterfalls
+  and automatic locator/argument subtitles.
+- Browser setup uses `--no-remove` to preserve browsers needed by other workspaces.
+
+### Choosing the other new APIs
+
+Use features for real scenarios, not to expand smoke tests artificially:
+
+- `test.step(..., { params })`: instance-creation setup records the route and
+  empty-catalog scenario. Never put credentials in reporter parameters.
+- `locator.visible()`: prefer it over `:visible` when hidden duplicate elements
+  really need filtering. Existing role locators already exclude hidden elements.
+- Named test locks: only for unavoidable shared external resources. These tests
+  use isolated browser contexts and mocked RPCs, so no locks are needed.
+- Selector-free `frameLocator()`: only for cross-frame content; this app's smoke
+  flows do not use iframes.
+- `ariaSnapshotJSON()`: for consumers needing structured accessibility data;
+  failure traces already provide accessibility snapshots without extra attachments.
+- Typed request `json()`: for APIRequestContext consumers. Our frontend harness
+  fulfills mocked RPCs instead of issuing live API requests.
+- Standalone `forcedColors` and `contrast`: available for targeted accessibility
+  scenarios, not new blanket projects that multiply every smoke test.
+- Credential arrays and authenticated codegen: no HTTP Basic auth in this harness.
+- OPFS storage state: no persisted origin-private files to restore.
+- `dialogclosed`: no native JavaScript dialog lifecycle in these smoke flows.
+- Stories registry typing: no experimental Playwright component-testing packages;
+  component tests remain on Rstest and Vitest.
+
+CI uses `ubuntu-latest`, not the removed Ubuntu 20.04 platform. Browser installation
+follows the pinned package's browser manifest; no manual browser version pins.

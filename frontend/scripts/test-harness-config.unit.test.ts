@@ -20,7 +20,7 @@ import {
 
 const { scripts } = packageJson;
 const VITEST_BETA_VERSION_PATTERN = /^5\.0\.0-beta\.\d+$/u;
-const PLAYWRIGHT_VERSION = "1.62.0";
+const PLAYWRIGHT_VERSION = "1.63.0";
 const RSTEST_VERSION = "0.11.9";
 const frontendCiWorkflow = readFileSync(
   resolve(import.meta.dirname, "../../.github/workflows/frontend-ci.yml"),

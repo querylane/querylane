@@ -1,8 +1,8 @@
 import type { PlaywrightTestConfig } from "playwright/test";
 
 const CI_REPORTERS = [
-  ["list"],
-  ["github"],
+  ["list", { omitTags: true }],
+  ["github", { omitTags: true }],
   [
     "html",
     {

@@ -19,11 +19,17 @@ const PRODUCTION_APPDB_EXPLORER_URL_RE =
   /\/instances\/production\/databases\/appdb\/explorer\/?$/;
 
 async function gotoCreateInstance(page: Page) {
-  await mockReadyEmptyApp(page);
-  await page.goto("/new-instance");
-  await expect(
-    page.getByRole("heading", { name: "Postgres server to manage" })
-  ).toBeVisible();
+  await test.step(
+    "Open instance creation",
+    async () => {
+      await mockReadyEmptyApp(page);
+      await page.goto("/new-instance");
+      await expect(
+        page.getByRole("heading", { name: "Postgres server to manage" })
+      ).toBeVisible();
+    },
+    { params: { catalog: "empty", path: "/new-instance" } }
+  );
 }
 
 async function fillRequiredInstanceFields(page: Page) {
@@ -256,7 +262,9 @@ test("new instance: API error keeps user on form with retryable feedback", {
   await testConnection(page);
   await page.getByRole("button", { name: "Create instance" }).click();
 
-  await expect(page.getByText("duplicate instance")).toBeVisible();
+  await expect(
+    page.getByRole("alert").getByText("duplicate instance")
+  ).toBeVisible();
   await expect(page).toHaveURL(NEW_INSTANCE_URL_RE);
 });
 
