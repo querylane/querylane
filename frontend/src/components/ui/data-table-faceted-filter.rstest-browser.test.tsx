@@ -292,7 +292,7 @@ test("fixed enum filters support keyboard selection and restore trigger focus", 
   const listboxElement = getByRole(document.body, "listbox", {
     name: "Status options",
   });
-  expect(document.activeElement).toBe(listboxElement);
+  await expect.poll(() => document.activeElement).toBe(listboxElement);
   const initialActiveDescendant = listboxElement.getAttribute(
     "aria-activedescendant"
   );

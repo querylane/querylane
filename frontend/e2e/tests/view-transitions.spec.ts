@@ -105,6 +105,11 @@ for (const motion of [
       await page.locator("html").getAttribute("data-transition-count")
     ).toBeNull();
     if (animated) {
+      if (motion !== "mobile") {
+        await expect(
+          page.getByRole("button", { name: "Search or jump to", exact: true })
+        ).toBeVisible();
+      }
       await expect(page).toHaveScreenshot(
         `${screenshotPrefix}database-page.png`
       );

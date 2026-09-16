@@ -602,14 +602,16 @@ afterEach(() => {
   cleanup();
 });
 
-function renderInstanceConfiguration() {
-  return render(
+async function renderInstanceConfiguration() {
+  const result = render(
     <BackendInstancePage
       instanceId="prod"
       searchRoute="/instances/$instanceId"
       section="configuration"
     />
   );
+  await screen.findByRole("button", { name: "Save changes" });
+  return result;
 }
 
 function renderInstanceOverview() {
@@ -655,13 +657,13 @@ function setFieldValue(label: string, value: string) {
 }
 
 describe("backend instance configuration save", () => {
-  test("requires the operator key before password recovery", () => {
+  test("requires the operator key before password recovery", async () => {
     state.instanceData = instanceResponse({
       credentialError:
         "Stored credentials cannot be read because QUERYLANE_INSTANCE_SECRET_KEY is not configured. Set the key and restart Querylane before replacing the password.",
       credentialState: Instance_CredentialState.KEY_MISSING,
     });
-    renderInstanceConfiguration();
+    await renderInstanceConfiguration();
 
     expect(screen.getByText(MISSING_INSTANCE_SECRET_KEY_MESSAGE)).toBeTruthy();
     expect(
@@ -680,7 +682,7 @@ describe("backend instance configuration save", () => {
         "Stored credentials cannot be read. Re-enter the password to restore access.",
       credentialState: Instance_CredentialState.UNREADABLE,
     });
-    renderInstanceConfiguration();
+    await renderInstanceConfiguration();
 
     expect(screen.getByText("Credentials need attention")).toBeTruthy();
     expect(
@@ -708,7 +710,7 @@ describe("backend instance configuration save", () => {
 
   test("trims text fields before building the update payload", async () => {
     const user = userEvent.setup();
-    renderInstanceConfiguration();
+    await renderInstanceConfiguration();
 
     setFieldValue("Display name", "  Production Writer  ");
     setFieldValue("Host", " writer.internal ");
@@ -747,7 +749,7 @@ describe("backend instance configuration save", () => {
         ]
       )
     );
-    renderInstanceConfiguration();
+    await renderInstanceConfiguration();
 
     setFieldValue("Password", "wrong-password");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -766,7 +768,7 @@ describe("backend instance configuration save", () => {
 
   test("does not send an update when changes are whitespace only", async () => {
     const user = userEvent.setup();
-    renderInstanceConfiguration();
+    await renderInstanceConfiguration();
 
     setFieldValue("Display name", "Production ");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -776,7 +778,7 @@ describe("backend instance configuration save", () => {
 
   test("resets the form after a successful save so the password is not re-sent", async () => {
     const user = userEvent.setup();
-    renderInstanceConfiguration();
+    await renderInstanceConfiguration();
 
     setFieldValue("Password", "hunter2");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -831,8 +833,8 @@ describe("backend instance credential recovery routing", () => {
 });
 
 describe("backend instance danger zone", () => {
-  test("disables delete when this is the only registered instance", () => {
-    renderInstanceConfiguration();
+  test("disables delete when this is the only registered instance", async () => {
+    await renderInstanceConfiguration();
 
     const dangerZone = screen.getByTestId("instance-danger-zone");
 
@@ -846,9 +848,9 @@ describe("backend instance danger zone", () => {
     ).toBeTruthy();
   });
 
-  test("shows empty-catalog copy when no instances are registered", () => {
+  test("shows empty-catalog copy when no instances are registered", async () => {
     state.instances = [];
-    renderInstanceConfiguration();
+    await renderInstanceConfiguration();
 
     expect(
       screen.getByText(
@@ -857,11 +859,11 @@ describe("backend instance danger zone", () => {
     ).toBeTruthy();
   });
 
-  test("keeps delete available when the only instance credentials are unreadable", () => {
+  test("keeps delete available when the only instance credentials are unreadable", async () => {
     state.instanceData = instanceResponse({
       credentialState: Instance_CredentialState.UNREADABLE,
     });
-    renderInstanceConfiguration();
+    await renderInstanceConfiguration();
 
     const dangerZone = screen.getByTestId("instance-danger-zone");
     expect(
@@ -869,7 +871,7 @@ describe("backend instance danger zone", () => {
     ).toHaveProperty("disabled", false);
   });
 
-  test("keeps delete disabled while the instance catalog is pending", () => {
+  test("keeps delete disabled while the instance catalog is pending", async () => {
     state.instanceCatalogHasData = false;
     state.instanceCatalogHasResolved = false;
     state.instanceCatalogIsPending = true;
@@ -877,7 +879,7 @@ describe("backend instance danger zone", () => {
       credentialState: Instance_CredentialState.UNREADABLE,
     });
     state.instances = [];
-    renderInstanceConfiguration();
+    await renderInstanceConfiguration();
 
     expect(
       within(screen.getByTestId("instance-danger-zone")).getByRole("button", {
@@ -889,7 +891,7 @@ describe("backend instance danger zone", () => {
     ).toBeTruthy();
   });
 
-  test("keeps delete disabled when the instance catalog failed", () => {
+  test("keeps delete disabled when the instance catalog failed", async () => {
     state.instanceCatalogError = new Error("catalog unavailable");
     state.instanceCatalogHasData = false;
     state.instanceCatalogHasResolved = true;
@@ -897,7 +899,7 @@ describe("backend instance danger zone", () => {
       credentialState: Instance_CredentialState.UNREADABLE,
     });
     state.instances = [];
-    renderInstanceConfiguration();
+    await renderInstanceConfiguration();
 
     expect(
       within(screen.getByTestId("instance-danger-zone")).getByRole("button", {
@@ -916,7 +918,7 @@ describe("backend instance danger zone", () => {
     state.instanceData = instanceResponse({
       credentialState: Instance_CredentialState.UNREADABLE,
     });
-    renderInstanceConfiguration();
+    await renderInstanceConfiguration();
 
     await user.click(screen.getByRole("button", { name: "Delete instance" }));
     await user.type(
