@@ -1920,14 +1920,7 @@ describe("backend instance database list", () => {
       }),
       { overridePage: "database.overview" }
     );
-    await waitFor(() => {
-      expect(state.queryClient.prefetchQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          meta: { appErrorSurface: "silent" },
-          queryKey: ["integration", "selected-database"],
-        })
-      );
-    });
+    expect(state.queryClient.prefetchQuery).not.toHaveBeenCalled();
   });
 
   test("groups charset and collation into one encoding column", () => {

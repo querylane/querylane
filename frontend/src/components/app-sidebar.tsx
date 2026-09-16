@@ -1,6 +1,11 @@
 "use client";
 
-import { Link, useLocation } from "@tanstack/react-router";
+import {
+  Link,
+  type RegisteredRouter,
+  useLocation,
+  useRouter,
+} from "@tanstack/react-router";
 import {
   AlertTriangle,
   ArrowLeftIcon,
@@ -90,6 +95,7 @@ import { assertNever } from "@/lib/assert-never";
 import { useDb } from "@/lib/db-context";
 import type { ScopeLevel } from "@/lib/db-navigation";
 import { useExplorerSidebarSlotRegistration } from "@/lib/explorer-sidebar-slot";
+import { preloadRouteCode } from "@/lib/route-code-preload";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
@@ -97,11 +103,26 @@ import packageJson from "../../package.json" with { type: "json" };
 
 const FRONTEND_PACKAGE_VERSION = packageJson.version;
 
-function renderNavLink(link: NavLinkProps) {
+function renderNavLink(link: NavLinkProps, router: RegisteredRouter) {
+  const routeId =
+    link.to === "/instances/$instanceId" ||
+    link.to === "/instances/$instanceId/roles" ||
+    link.to === "/instances/$instanceId/databases/$databaseId"
+      ? (`${link.to}/` as const)
+      : link.to;
+  const preloadCode = () =>
+    preloadRouteCode(router, router.routesById[routeId]);
+  const intent = {
+    onFocus: preloadCode,
+    onMouseEnter: preloadCode,
+    onTouchStart: preloadCode,
+    preload: false,
+  } as const;
   switch (link.to) {
     case "/instances/$instanceId":
       return (
         <Link
+          {...intent}
           params={link.params}
           search={(previous) => buildNavLinkSearch(link, previous)}
           to={link.to}
@@ -110,6 +131,7 @@ function renderNavLink(link: NavLinkProps) {
     case "/instances/$instanceId/activity":
       return (
         <Link
+          {...intent}
           params={link.params}
           search={(previous) => buildNavLinkSearch(link, previous)}
           to={link.to}
@@ -118,6 +140,7 @@ function renderNavLink(link: NavLinkProps) {
     case "/instances/$instanceId/configuration":
       return (
         <Link
+          {...intent}
           params={link.params}
           search={(previous) => buildNavLinkSearch(link, previous)}
           to={link.to}
@@ -126,6 +149,7 @@ function renderNavLink(link: NavLinkProps) {
     case "/instances/$instanceId/roles":
       return (
         <Link
+          {...intent}
           params={link.params}
           search={(previous) =>
             buildCanonicalRolesSearch(previous, {
@@ -139,6 +163,7 @@ function renderNavLink(link: NavLinkProps) {
     case "/instances/$instanceId/databases/$databaseId":
       return (
         <Link
+          {...intent}
           params={link.params}
           search={(previous) => buildNavLinkSearch(link, previous)}
           to={link.to}
@@ -147,6 +172,7 @@ function renderNavLink(link: NavLinkProps) {
     case "/instances/$instanceId/databases/$databaseId/extensions":
       return (
         <Link
+          {...intent}
           params={link.params}
           search={(previous) => buildNavLinkSearch(link, previous)}
           to={link.to}
@@ -155,6 +181,7 @@ function renderNavLink(link: NavLinkProps) {
     case "/instances/$instanceId/databases/$databaseId/explorer":
       return (
         <Link
+          {...intent}
           params={link.params}
           search={(previous) => buildNavLinkSearch(link, previous)}
           to={link.to}
@@ -373,6 +400,7 @@ function ExplorerRailContent({
 }: {
   backLink: NavLinkProps | undefined;
 }) {
+  const router = useRouter();
   const registerSlotTarget = useExplorerSidebarSlotRegistration();
   return (
     <>
@@ -381,7 +409,7 @@ function ExplorerRailContent({
           <SidebarMenuItem>
             <SidebarMenuButton
               disabled={!backLink}
-              {...(backLink ? { render: renderNavLink(backLink) } : {})}
+              {...(backLink ? { render: renderNavLink(backLink, router) } : {})}
               className="text-sidebar-foreground/70 hover:text-sidebar-foreground"
             >
               <ArrowLeftIcon className="size-4 shrink-0" />
@@ -403,16 +431,18 @@ function renderSidebarNavigationItem({
   item,
   linkProps,
   sectionTitle,
+  router,
 }: {
   item: NavSection["items"][number];
   linkProps: Partial<Record<NavKey, NavLinkProps>>;
   sectionTitle: string;
+  router: RegisteredRouter;
 }) {
   const itemLinkProps = item.isDisabled ? undefined : linkProps[item.key];
   const activeProps =
     item.isActive === undefined ? {} : { isActive: item.isActive };
   const renderProps = itemLinkProps
-    ? { render: renderNavLink(itemLinkProps) }
+    ? { render: renderNavLink(itemLinkProps, router) }
     : {};
 
   return (
@@ -528,6 +558,7 @@ function SidebarNavigationContent({
   nextStepHint: string | null;
   sections: NavSection[];
 }) {
+  const router = useRouter();
   return (
     <SidebarContent>
       {sections.length === 0 && (
@@ -559,6 +590,7 @@ function SidebarNavigationContent({
                 <SidebarMenu>
                   {section.items.map((item) =>
                     renderSidebarNavigationItem({
+                      router,
                       item,
                       linkProps,
                       sectionTitle: section.title,

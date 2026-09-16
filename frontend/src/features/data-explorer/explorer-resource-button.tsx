@@ -67,7 +67,6 @@ export function ExplorerResourceButton({
   category,
   icon: Icon,
   item,
-  onResourceIntent,
   onSelectResource,
   query,
   selection,
@@ -75,7 +74,6 @@ export function ExplorerResourceButton({
   category: CategoryKey;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
   item: ResourceItem;
-  onResourceIntent: ((category: CategoryKey, name: string) => void) | undefined;
   onSelectResource: (category: CategoryKey, name: string) => void;
   query: string;
   selection: Selection;
@@ -92,8 +90,6 @@ export function ExplorerResourceButton({
         isItemSelected && "bg-accent hover:bg-accent"
       )}
       onClick={() => onSelectResource(category, item.name)}
-      onFocus={() => onResourceIntent?.(category, item.name)}
-      onMouseEnter={() => onResourceIntent?.(category, item.name)}
       title={item.name}
       variant="ghost"
     >

@@ -1,4 +1,3 @@
-import type { Transport } from "@connectrpc/connect";
 import { describe, expect, rs, test } from "@rstest/core";
 import { QueryClient } from "@tanstack/react-query";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
@@ -9,8 +8,9 @@ import {
   instanceRouteDataQueries,
   prefetchRouteData,
 } from "@/lib/route-data-prefetch";
+import { createTestRouterTransport } from "@/test/router-transport";
 
-const transport = {} as Transport;
+const transport = createTestRouterTransport(() => undefined);
 
 function makeQueryClientStub(
   calls: unknown[],
@@ -127,8 +127,12 @@ describe("route data prefetch registry", () => {
   });
 
   test("skips fresh metadata but still refetches table rows", () => {
-    const calls: unknown[] = [];
-    const queryClient = makeQueryClientStub(calls);
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
+      },
+    });
+    const unary = rs.spyOn(transport, "unary");
     const queries = explorerRouteDataQueries({
       databaseId: "postgres",
       instanceId: "local",
@@ -136,15 +140,40 @@ describe("route data prefetch registry", () => {
       transport,
     });
     markFreshRouteDataQueries(queryClient, queries);
+    try {
+      prefetchRouteData({ queryClient, transport }, queries);
+      expect(unary.mock.calls.map(([method]) => method.name)).toEqual([
+        "ReadRows",
+      ]);
+    } finally {
+      queryClient.clear();
+      unary.mockRestore();
+    }
+  });
 
-    prefetchRouteData({ queryClient, transport }, queries);
-
-    // Metadata uses a 5-minute stale policy and is skipped; table rows use
-    // staleTime=0, so direct route entry still fetches fresh visible rows.
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject({
-      staleTime: RESOURCE_QUERY_OPTIONS.tableRows.staleTime,
+  test("refetches invalidated metadata even inside its stale time", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
+      },
     });
+    const unary = rs.spyOn(transport, "unary");
+    const queries = databaseRouteDataQueries({
+      databaseId: "postgres",
+      instanceId: "local",
+      transport,
+    });
+    markFreshRouteDataQueries(queryClient, queries);
+    await queryClient.invalidateQueries();
+    try {
+      prefetchRouteData({ queryClient, transport }, queries);
+      expect(unary.mock.calls.map(([method]) => method.name)).toEqual([
+        "GetDatabase",
+      ]);
+    } finally {
+      queryClient.clear();
+      unary.mockRestore();
+    }
   });
 
   test("returns immediately when route prefetch promises are still pending", async () => {

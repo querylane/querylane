@@ -1,6 +1,3 @@
-import type { Transport } from "@connectrpc/connect";
-import { useTransport } from "@connectrpc/connect-query";
-import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { buildNameContainsFilter } from "@/features/data-explorer/data-explorer-catalog-filter";
@@ -32,20 +29,11 @@ import {
   catalogSyncNotice,
   selectionFromSearch,
 } from "@/features/data-explorer/use-data-explorer-state";
-import {
-  assertNoUnhandledTableDetailQueries,
-  tableDetailQueryOptions,
-} from "@/hooks/api/table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { parseResourceLeafId } from "@/lib/console-resources";
 import { useDb } from "@/lib/db-context";
 import { handleNavigationResult } from "@/lib/navigation-errors";
 import { handleQueryActionError } from "@/lib/query-action-errors";
 import { createResourceLoader } from "@/lib/resource-loader";
-import {
-  prefetchRouteQueryOnIntent,
-  type RoutePrefetchClient,
-} from "@/lib/route-prefetch";
 
 const EXPLORER_SEARCH_DEBOUNCE_MS = 200;
 
@@ -61,8 +49,6 @@ function useDataExplorerPageController({
   const navigate = useNavigate({
     from: "/instances/$instanceId/databases/$databaseId/explorer",
   });
-  const queryClient = useQueryClient();
-  const transport = useTransport();
   const { selectedDatabase } = useDb();
   const [queryState, setQueryState] = useState(() => ({
     source: search.q,
@@ -186,20 +172,6 @@ function useDataExplorerPageController({
     [activeSchemaName, databaseId, instanceId, navigate, schemaSearchNeedsReset]
   );
 
-  const onResourceIntent = (category: CategoryKey, name: string) => {
-    if (!(activeSchema && category === "tables")) {
-      return;
-    }
-    prefetchTableDetails({
-      activeSchema,
-      databaseId,
-      instanceId,
-      name,
-      queryClient,
-      rawTables,
-      transport,
-    });
-  };
   const onRetryTables = () =>
     tablesQuery.refetch().catch((error: unknown) => {
       handleQueryActionError(error, {
@@ -245,7 +217,6 @@ function useDataExplorerPageController({
           area: "data-explorer.schemas",
         });
       }),
-    onResourceIntent,
     onRetryTables,
     onRetryViews,
     onSchemaTabChange: (next: SchemaDetailTab) => {
@@ -363,51 +334,4 @@ interface ExplorerSearchPatch {
   tab?: SchemaDetailTab | TableDetailTab | undefined;
 }
 
-function prefetchTableDetails({
-  activeSchema,
-  databaseId,
-  instanceId,
-  name,
-  queryClient,
-  rawTables,
-  transport,
-}: {
-  activeSchema: SchemaSummary;
-  databaseId: string;
-  instanceId: string;
-  name: string;
-  queryClient: RoutePrefetchClient;
-  rawTables: Array<{ displayName: string; name: string }>;
-  transport: Transport;
-}) {
-  const table = rawTables.find((candidate) => {
-    const tableId = parseResourceLeafId(candidate.name);
-    return candidate.displayName === name || tableId === name;
-  });
-  const tableId = table ? parseResourceLeafId(table.name) : name;
-  const [
-    columnsQuery,
-    indexesQuery,
-    constraintsQuery,
-    policiesQuery,
-    triggersQuery,
-    partitionMetadataQuery,
-    ...unhandledQueries
-  ] = tableDetailQueryOptions({
-    databaseId,
-    instanceId,
-    schemaId: activeSchema.id,
-    tableId,
-    transport,
-  });
-  assertNoUnhandledTableDetailQueries(unhandledQueries);
-
-  prefetchRouteQueryOnIntent(queryClient, columnsQuery);
-  prefetchRouteQueryOnIntent(queryClient, indexesQuery);
-  prefetchRouteQueryOnIntent(queryClient, constraintsQuery);
-  prefetchRouteQueryOnIntent(queryClient, policiesQuery);
-  prefetchRouteQueryOnIntent(queryClient, triggersQuery);
-  prefetchRouteQueryOnIntent(queryClient, partitionMetadataQuery);
-}
-
-export { prefetchTableDetails, useDataExplorerPageController };
+export { useDataExplorerPageController };
