@@ -16,6 +16,7 @@ import {
   productionOptimizationOverrides,
 } from "./rsbuild.performance.ts";
 import { resolveReactPerformanceMode } from "./scripts/react-performance-mode.ts";
+import { bundleContractRules } from "./scripts/rsdoctor-bundle-contracts.ts";
 
 const RSPACK_BUILD_CACHE_DIRECTORY = "node_modules/.cache/rsbuild";
 // Rsbuild tracks this config and its static imports automatically. Keep only
@@ -30,7 +31,9 @@ const RSPACK_BUILD_DEPENDENCIES = [
   path.resolve(import.meta.dirname, "tsconfig.ui.json"),
 ];
 type RsdoctorPluginOptions = NonNullable<
-  ConstructorParameters<typeof RsdoctorRspackPlugin<[]>>[0]
+  ConstructorParameters<
+    typeof RsdoctorRspackPlugin<typeof bundleContractRules>
+  >[0]
 >;
 
 if (existsSync(".env") && typeof process.loadEnvFile === "function") {
@@ -83,6 +86,7 @@ const rsdoctorPluginOptions = {
     treeShaking: true,
   },
   linter: {
+    extends: bundleContractRules,
     rules: {
       // The app itself is intentionally split by TanStack Router route chunks;
       // Rsdoctor models local src files as the Querylane frontend package and

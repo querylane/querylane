@@ -105,6 +105,26 @@ describe("Rsbuild config loading", () => {
       }
 
       expect(rsdoctorPlugin.options).toMatchObject({
+        linter: {
+          extends: [
+            {
+              meta: {
+                title: "querylane-heavy-packages-stay-deferred",
+                severity: "Error",
+              },
+            },
+            {
+              meta: { title: "querylane-routes-stay-split", severity: "Error" },
+            },
+            {
+              meta: {
+                title: "querylane-no-shiki-oniguruma",
+                severity: "Error",
+              },
+            },
+          ],
+          rules: { "cross-chunks-package": "off" },
+        },
         output: { options: { type: ["html", "json"] } },
       });
     } finally {

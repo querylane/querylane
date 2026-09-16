@@ -75,3 +75,24 @@ This README is agent-facing documentation under `frontend/**/*{.md,_agent.{js,ts
 
 - Runtime diagnostics stay in local app error states and tests.
 - Production builds do not upload source maps or initialize external product analytics/error tracking clients.
+
+### Bundle contracts
+
+Run `bun run build:profile` to check the production module/chunk graph. Successful builds
+generate `dist/rsdoctor-report.html` and `dist/rsdoctor-data.json`. Frontend CI runs this after
+the normal build and byte budgets; contract violations fail the build.
+
+- Heavy feature dependencies stay outside all initial chunks, including shared vendors.
+- Landing, new-instance, instance-overview, and database-explorer component splits must
+  exist in async chunks. Their route configuration may remain eager.
+- Shiki's Oniguruma engine and WASM entrypoints are forbidden in every emitted chunk.
+  Its JavaScript engine, `oniguruma-to-es`, and `oniguruma-parser` remain allowed when deferred.
+
+Rules live in `scripts/rsdoctor-bundle-contracts.ts`, using Rsdoctor's
+[custom rule API](https://rsdoctor.rs/guide/rules/rule-custom). They follow concatenated
+modules and ignore tree-shaken modules; `cross-chunks-package` stays off because of
+known route/CSS false positives. An `onCheckEnd` hook fails only these contracts because
+the installed Rsdoctor 1.6.4 forwards even error-level findings as compiler warnings.
+Update the explicit route sentinels when intentionally
+renaming those routes. Ordinary local `bun run build` keeps its existing byte-budget gate;
+use `build:profile` for graph enforcement.
