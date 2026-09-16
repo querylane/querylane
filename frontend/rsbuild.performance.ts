@@ -28,6 +28,16 @@ const managedChunkCacheGroups = {
     reuseExistingChunk: true,
     test: /[/\\]node_modules[/\\](?:@bufbuild|@connectrpc)[/\\]/,
   },
+  sharedAsyncStyles: {
+    chunks: "async",
+    minChunks: 2,
+    // Shared grid styles are smaller than the global JS-oriented threshold.
+    minSize: 0,
+    name: "shared-async-styles",
+    priority: 40,
+    reuseExistingChunk: true,
+    type: "css/mini-extract",
+  },
   sharedUi: {
     chunks: "async",
     minChunks: 2,
