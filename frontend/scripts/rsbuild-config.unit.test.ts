@@ -78,6 +78,16 @@ describe("Rsbuild config loading", () => {
         chunkIds: "compat-hashed",
         moduleIds: "compat-hashed",
         splitChunks: {
+          cacheGroups: {
+            sharedAsyncStyles: {
+              chunks: "async",
+              minChunks: 2,
+              minSize: 0,
+              name: "shared-async-styles",
+              reuseExistingChunk: true,
+              type: "css/mini-extract",
+            },
+          },
           chunks: "all",
           maxAsyncRequests: 30,
           maxInitialRequests: 20,
