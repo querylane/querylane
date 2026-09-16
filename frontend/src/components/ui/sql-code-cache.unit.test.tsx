@@ -1,8 +1,9 @@
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, rs } from "@rstest/core";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 
 const highlighter = rs.hoisted(() => ({
+  creations: 0,
   codeToTokensWithThemes: rs.fn((sqlText: string) => [
     [
       {
@@ -17,7 +18,10 @@ const highlighter = rs.hoisted(() => ({
 }));
 
 rs.mock("shiki/core", () => ({
-  createHighlighterCoreSync: () => highlighter,
+  createHighlighterCoreSync: () => {
+    highlighter.creations += 1;
+    return highlighter;
+  },
 }));
 
 afterEach(() => {
@@ -25,7 +29,8 @@ afterEach(() => {
 });
 
 describe("SqlCode token cache", () => {
-  test("tokenizes duplicate SQL once across component instances", () => {
+  test("defers highlighting without delaying text and tokenizes duplicate SQL once", async () => {
+    expect(highlighter.creations).toBe(0);
     const sql = "SELECT * FROM shipping.shipments WHERE id = $1";
 
     const { container } = render(
@@ -38,6 +43,9 @@ describe("SqlCode token cache", () => {
     expect(
       Array.from(container.querySelectorAll("code"), (code) => code.textContent)
     ).toEqual([sql, sql]);
-    expect(highlighter.codeToTokensWithThemes).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(highlighter.creations).toBe(1);
+      expect(highlighter.codeToTokensWithThemes).toHaveBeenCalledTimes(1);
+    });
   });
 });
