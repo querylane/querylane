@@ -225,12 +225,12 @@ export default defineConfig({
         TanStackRouterRspack({
           autoCodeSplitting: true,
           codeSplittingOptions: {
+            // Keep tiny fallback wrappers with their UI, not in extra requests.
+            // Loaders stay available immediately; defer heavy dependencies inside
+            // them deliberately. Pending UI stays eager so it can render at once.
+            // Use per-route codeSplitGroupings for unusually heavy fallback UI.
             defaultBehavior: [
-              ["loader"],
-              ["component"],
-              ["pendingComponent"],
-              ["errorComponent"],
-              ["notFoundComponent"],
+              ["component", "errorComponent", "notFoundComponent"],
             ],
           },
           target: "react",

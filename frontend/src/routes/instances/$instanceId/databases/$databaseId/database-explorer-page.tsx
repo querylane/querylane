@@ -1,7 +1,8 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import { lazy, Suspense, useLayoutEffect } from "react";
+import { Suspense, useLayoutEffect } from "react";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DataExplorerPage } from "@/features/data-explorer/data-explorer-page";
 import {
   isExplorerSearchNormalized,
   normalizeExplorerSearch,
@@ -9,11 +10,8 @@ import {
 import { ExplorerSidebarPortal } from "@/lib/explorer-sidebar-slot";
 import { handleNavigationError } from "@/lib/navigation-errors";
 
-const DataExplorerPage = lazy(() =>
-  import("@/features/data-explorer/data-explorer-page").then((module) => ({
-    default: module.DataExplorerPage,
-  }))
-);
+// TanStack Router already splits this route component. A second lazy page
+// adds another request waterfall and Suspense reveal before the explorer.
 
 function DatabaseExplorerLoadingShell() {
   // Mirrors the loaded layout: the object browser lives in the shared

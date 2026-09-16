@@ -119,16 +119,14 @@ interface MockGridProps {
 
 function querySqlCodeBlock(pattern: RegExp) {
   return Array.from(
-    document.querySelectorAll<HTMLElement>(
-      'code.language-sql[data-syntax-highlighter="shiki"]'
-    )
+    document.querySelectorAll<HTMLElement>("code.language-sql")
   ).find((codeBlock) => pattern.test(codeBlock.textContent ?? ""));
 }
 
 function getSqlCodeBlock(pattern: RegExp) {
   const codeBlock = querySqlCodeBlock(pattern);
   if (!codeBlock) {
-    throw new Error(`Expected a highlighted SQL block matching ${pattern}.`);
+    throw new Error(`Expected a SQL block matching ${pattern}.`);
   }
   return codeBlock;
 }
@@ -456,7 +454,7 @@ describe("TableDetail header", () => {
 });
 
 describe("TableDetail definition document", () => {
-  it("renders the definition tab as a copyable schema document", () => {
+  it("renders the definition tab as a copyable schema document", async () => {
     tableQueries.columns.data = create(ListTableColumnsResponseSchema, {
       columns: [
         {
@@ -575,7 +573,14 @@ describe("TableDetail definition document", () => {
 
     expect(screen.getByText("Schema document")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Create table" })).toBeTruthy();
-    expect(getSqlCodeBlock(CREATE_TABLE_SQL_RE)).toBeTruthy();
+    await waitFor(() => {
+      expect(getSqlCodeBlock(CREATE_TABLE_SQL_RE)).toBeTruthy();
+      expect(
+        container.querySelectorAll(
+          'code.language-bash[data-syntax-highlighter="shiki"]'
+        )
+      ).toHaveLength(3);
+    });
     expect(getSqlCodeBlock(IDENTITY_COLUMN_SQL_RE)).toBeTruthy();
     expect(getSqlCodeBlock(PRIMARY_KEY_CONSTRAINT_SQL_RE)).toBeTruthy();
     expect(querySqlCodeBlock(PRIMARY_KEY_INDEX_SQL_RE)).toBeUndefined();

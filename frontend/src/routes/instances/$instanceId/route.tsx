@@ -17,10 +17,6 @@ import {
   resolveRequestedAdminPageForScope,
 } from "@/lib/admin-page";
 import { resolveScopeLevel } from "@/lib/admin-scope-level";
-import {
-  instanceRouteDataQueries,
-  prefetchRouteData,
-} from "@/lib/route-data-prefetch";
 import { parseRouteIdsFromPathname, useCurrentRouteIds } from "@/lib/route-ids";
 import { InstanceLayoutErrorComponent } from "@/routes/instances/$instanceId/instance-layout-error";
 
@@ -80,7 +76,10 @@ export const Route = createFileRoute("/instances/$instanceId")({
   },
   component: InstanceLayoutRoute,
   errorComponent: InstanceLayoutErrorComponent,
-  loader: ({ context, params }) => {
+  loader: async ({ context, params }) => {
+    const { instanceRouteDataQueries, prefetchRouteData } = await import(
+      "@/lib/route-data-prefetch"
+    );
     prefetchRouteData(
       context,
       instanceRouteDataQueries({

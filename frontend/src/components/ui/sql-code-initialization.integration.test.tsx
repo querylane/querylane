@@ -77,10 +77,10 @@ test("initializes once on first SQL tab activation and reuses it on remount", as
 
   await waitFor(() => {
     expect(container.querySelector("code")?.textContent).toBe(sql);
+    expect(
+      container.querySelectorAll("[data-shiki-token]").length,
+    ).toBeGreaterThan(2);
   });
-  expect(
-    container.querySelectorAll("[data-shiki-token]").length,
-  ).toBeGreaterThan(2);
   expect(screen.getByRole("button", { name: "Copy SQL" })).toBeTruthy();
   expect(createHighlighterCoreSync).toHaveBeenCalledTimes(1);
   expect(createJavaScriptRegexEngine).toHaveBeenCalledTimes(1);

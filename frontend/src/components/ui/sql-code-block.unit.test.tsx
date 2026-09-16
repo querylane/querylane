@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "@rstest/core";
 import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 
@@ -7,7 +7,7 @@ afterEach(() => {
 });
 
 describe("SqlCodeBlock", () => {
-  test("renders SQL snippets through Shiki while preserving copy text", () => {
+  test("renders SQL snippets through Shiki while preserving copy text", async () => {
     const sql = `-- Required before DROP ROLE "replicator";
 CREATE ROLE "replicator" WITH LOGIN REPLICATION;
 GRANT pg_read_all_data TO "replicator";
@@ -16,6 +16,9 @@ SELECT 'active' AS status;`;
 
     const { container } = render(<SqlCodeBlock sql={sql} />);
 
+    await waitFor(() => {
+      expect(container.querySelector("[data-syntax-highlighter]")).not.toBeNull();
+    });
     const code = container.querySelector(
       'code.language-sql[data-syntax-highlighter="shiki"]'
     );
@@ -54,10 +57,7 @@ SELECT 'active' AS status;`;
       <SqlCodeBlock copyable={false} sql="—" variant="inline" />
     );
 
-    const code = container.querySelector(
-      'code.language-sql[data-syntax-highlighter="shiki"]'
-    );
-    expect(code?.textContent).toBe("—");
+    expect(container.querySelector("code.language-sql")?.textContent).toBe("—");
   });
 
   test("renders compact expressions without the default bordered gutter", () => {

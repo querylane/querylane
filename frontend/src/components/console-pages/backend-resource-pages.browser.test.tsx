@@ -1377,11 +1377,14 @@ test("backend instance activity matches the live sessions redesign", async () =>
       })
     )
     .toBeVisible();
-  expect(
-    document.querySelectorAll(
-      'code.language-sql[data-syntax-highlighter="shiki"]'
+  await expect
+    .poll(
+      () =>
+        document.querySelectorAll(
+          'code.language-sql[data-syntax-highlighter="shiki"]'
+        ).length
     )
-  ).toHaveLength(8);
+    .toBe(8);
   const waitingSql = page
     .getByText("waiting · pid 4302")
     .element()
