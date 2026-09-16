@@ -181,26 +181,29 @@ const ROUTES = [
   "instances/$instanceId/databases/$databaseId/explorer.tsx",
 ];
 
-function splitRoutes() {
+function splitRoutes(group = "component") {
   const context = buildGraph();
   for (const route of ROUTES) {
     emitModule(context, `/app/src/routes/${route}`, true);
     const { module } = emitModule(
       context,
-      `/app/src/routes/${route}?tsr-split=component`
+      `/app/src/routes/${route}?tsr-split=${group}`
     );
     module.addNormalModule(
-      createModule(`/app/src/routes/${route}?tsr-split=component`)
+      createModule(`/app/src/routes/${route}?tsr-split=${group}`)
     );
   }
   return context;
 }
 
-test("allows eager route configuration and concatenated async component proxies", async () => {
-  expect(
-    (await Rule.from(routesStaySplit).validate(splitRoutes())).errors
-  ).toEqual([]);
-});
+test.each(["component", "component---errorComponent---notFoundComponent"])(
+  "allows eager configuration and async component proxies grouped as %s",
+  async (group) => {
+    expect(
+      (await Rule.from(routesStaySplit).validate(splitRoutes(group))).errors
+    ).toEqual([]);
+  }
+);
 
 test("fails closed when route splitting disappears despite unrelated async chunks", async () => {
   const context = buildGraph();
@@ -226,18 +229,28 @@ test("rejects a single missing route split even when the other routes still spli
   expect(result.errors[0]?.message).toContain("new-instance.tsx");
 });
 
-test("rejects an initial copy of a split route even if an async copy remains", async () => {
-  const context = splitRoutes();
-  emitModule(
-    context,
-    "/app/src/routes/new-instance.tsx?tsr-split=component",
-    true
+test.each(["component", "component---errorComponent---notFoundComponent"])(
+  "rejects an initial %s copy even if an async copy remains",
+  async (group) => {
+    const context = splitRoutes();
+    emitModule(
+      context,
+      `/app/src/routes/new-instance.tsx?tsr-split=${group}`,
+      true
+    );
+
+    const result = await Rule.from(routesStaySplit).validate(context);
+
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.message).toContain("chunk-8");
+  }
+);
+
+test("does not mistake fallback-only splits for component splits", async () => {
+  const result = await Rule.from(routesStaySplit).validate(
+    splitRoutes("errorComponent---notFoundComponent")
   );
-
-  const result = await Rule.from(routesStaySplit).validate(context);
-
-  expect(result.errors).toHaveLength(1);
-  expect(result.errors[0]?.message).toContain("chunk-8");
+  expect(result.errors).toHaveLength(4);
 });
 
 test.each([

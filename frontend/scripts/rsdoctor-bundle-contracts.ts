@@ -55,6 +55,13 @@ function enforceBundleContracts({
   }
 }
 
+function routeComponentPath(modulePath: string) {
+  const [path = "", query] = modulePath.replaceAll("\\", "/").split("?");
+  // TanStack encodes grouped split targets with `---` separators.
+  const targets = new URLSearchParams(query).get("tsr-split")?.split("---");
+  return targets?.includes("component") ? path : "";
+}
+
 export const heavyPackagesStayDeferred = defineRule(() => ({
   meta: {
     category: "bundle",
@@ -113,12 +120,12 @@ export const routesStaySplit = defineRule(() => ({
   check({ chunkGraph, root, report }) {
     const expected = new Map(
       REQUIRED_ROUTE_SPLITS.map((route) => [
-        `${root.replaceAll("\\", "/")}/src/routes/${route}?tsr-split=component`,
+        `${root.replaceAll("\\", "/")}/src/routes/${route}`,
         new Set<SDK.ChunkInstance>(),
       ])
     );
     for (const { chunk, module } of emittedModules(chunkGraph)) {
-      expected.get(module.path.replaceAll("\\", "/"))?.add(chunk);
+      expected.get(routeComponentPath(module.path))?.add(chunk);
     }
     for (const [path, chunks] of expected) {
       if (chunks.size === 0) {
