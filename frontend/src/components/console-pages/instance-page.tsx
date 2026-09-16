@@ -4,7 +4,14 @@ import { useTransport } from "@connectrpc/connect-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Database, RefreshCw, TriangleAlert } from "lucide-react";
-import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
+import {
+  type Dispatch,
+  lazy,
+  type SetStateAction,
+  Suspense,
+  useEffect,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { AppInlineError } from "@/components/app-error-view";
 import { AsyncSectionState } from "@/components/async-section-state";
@@ -30,7 +37,6 @@ import {
   parseInstanceFormPort,
   trimInstanceFormState,
 } from "@/components/console-pages/instance-config-model";
-import { InstanceConfigurationSection } from "@/components/console-pages/instance-configuration-section";
 import { InstanceConnectionsCard } from "@/components/console-pages/instance-connections-card";
 import { InstanceDangerZoneSection } from "@/components/console-pages/instance-danger-zone-section";
 import {
@@ -131,6 +137,12 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
 type InstanceSection = "activity" | "configuration" | "overview";
+
+const InstanceConfigurationSection = lazy(() =>
+  import("@/components/console-pages/instance-configuration-section").then(
+    (module) => ({ default: module.InstanceConfigurationSection })
+  )
+);
 
 interface OverviewLiveData {
   activity: ConnectionActivityHealth | undefined;
@@ -1568,15 +1580,25 @@ function renderLoadedInstancePageContent({
     sectionContent = (
       <>
         {isConfigManaged ? <ConfigManagedNotice /> : null}
-        <InstanceConfigurationSection
-          formNotice={formNotice}
-          instance={instance}
-          isConfigManaged={isConfigManaged}
-          key={`${instance.name}:${configFormResetKey}`}
-          onInvalidSave={onInvalidSave}
-          onSave={onSave}
-          pending={isInstanceMutationPending}
-        />
+        <Suspense
+          fallback={
+            <AsyncSectionState
+              hasContent={false}
+              isPending={true}
+              loadingMessage="Loading configuration…"
+            />
+          }
+        >
+          <InstanceConfigurationSection
+            formNotice={formNotice}
+            instance={instance}
+            isConfigManaged={isConfigManaged}
+            key={`${instance.name}:${configFormResetKey}`}
+            onInvalidSave={onInvalidSave}
+            onSave={onSave}
+            pending={isInstanceMutationPending}
+          />
+        </Suspense>
         {isConfigManaged ? null : (
           <InstanceDangerZoneSection
             deleteDisabledReason={deleteDisabledReason}

@@ -21,12 +21,22 @@ const managedChunkCacheGroups = {
     reuseExistingChunk: true,
     test: /[/\\]node_modules[/\\]react-data-grid[/\\]/,
   },
+  formValidation: {
+    chunks: "async",
+    name: "form-validation",
+    priority: 20,
+    reuseExistingChunk: true,
+    // React Hook Form stays in its onboarding-only chunk; grouping it here
+    // would make the instance configuration form download a library it omits.
+    test: /[/\\]node_modules[/\\]@bufbuild[/\\](?:protovalidate|cel|cel-spec)[/\\]/,
+  },
   protobufRpc: {
     chunks: "async",
     name: "protobuf",
     priority: 20,
     reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\](?:@bufbuild|@connectrpc)[/\\]/,
+    // Keep validation engines out of the runtime used by ordinary RPC pages.
+    test: /[/\\]node_modules[/\\](?:@bufbuild[/\\]protobuf|@connectrpc[/\\][^/\\]+)[/\\]/,
   },
   sharedUi: {
     chunks: "async",

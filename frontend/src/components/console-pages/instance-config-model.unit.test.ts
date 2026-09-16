@@ -8,8 +8,8 @@ import {
   labelsEqual,
   parseInstanceFormPort,
   trimInstanceFormState,
-  validateInstanceForm,
 } from "@/components/console-pages/instance-config-model";
+import { validateInstanceForm } from "@/components/console-pages/instance-config-validation";
 import {
   Instance_CredentialState,
   InstanceSchema,
