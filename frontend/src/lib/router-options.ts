@@ -1,3 +1,5 @@
+import type { AnyRouter, NavigateOptions } from "@tanstack/react-router";
+
 interface NetworkNavigator extends Navigator {
   connection?: {
     effectiveType?: string;
@@ -30,4 +32,28 @@ export function canPreloadRouteCode(): boolean {
 
 export function getDefaultPreloadStaleTime(): number {
   return 0;
+}
+
+export function getDefaultViewTransition(): NonNullable<
+  NavigateOptions<AnyRouter>["viewTransition"]
+> {
+  // Router skips the types callback on older implementations. Disable those
+  // entirely so they cannot bypass the per-navigation motion preference.
+  if (
+    typeof window === "undefined" ||
+    !window.CSS?.supports(
+      "selector(:active-view-transition-type(page-navigation))"
+    )
+  ) {
+    return false;
+  }
+
+  return {
+    types: ({ fromLocation, pathChanged }) =>
+      fromLocation &&
+      pathChanged &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? ["page-navigation"]
+        : false,
+  };
 }
