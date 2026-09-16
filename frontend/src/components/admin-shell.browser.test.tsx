@@ -32,12 +32,14 @@ function MockRouterLink({
   children,
   className,
   params: _params,
+  preload: _preload,
   ref,
   search: _search,
   to,
   ...props
 }: AnchorHTMLAttributes<HTMLAnchorElement> & {
   params?: unknown;
+  preload?: false | "intent" | "render" | "viewport";
   ref?: Ref<HTMLAnchorElement>;
   search?: unknown;
   to?: string;

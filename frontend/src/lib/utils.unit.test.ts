@@ -1,5 +1,4 @@
 import { describe, expect, it } from "@rstest/core";
-import { cn as cnfast } from "cnfast";
 import { cn } from "./utils";
 
 describe("cn", () => {
@@ -7,7 +6,12 @@ describe("cn", () => {
     expect(cn("px-2", "px-4")).toBe("px-4");
   });
 
-  it("uses cnfast for the shadcn class helper", () => {
-    expect(cn).toBe(cnfast);
+  it("flattens conditional inputs before resolving Tailwind conflicts", () => {
+    expect(
+      cn("flex px-2", [null, false, "px-4"], {
+        "gap-2": true,
+        hidden: false,
+      })
+    ).toBe("flex px-4 gap-2");
   });
 });

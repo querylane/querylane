@@ -11,6 +11,7 @@ import { createReactRootErrorHandlers } from "@/lib/react-root-errors";
 import {
   getDefaultPreload,
   getDefaultPreloadStaleTime,
+  getDefaultViewTransition,
 } from "@/lib/router-options";
 import { transport } from "@/lib/transport";
 import { normalizeAppUiError, reportAppUiError } from "@/lib/ui-error";
@@ -39,6 +40,7 @@ const router = createRouter({
   },
   defaultPreload: getDefaultPreload(),
   defaultPreloadStaleTime: getDefaultPreloadStaleTime(),
+  defaultViewTransition: getDefaultViewTransition(),
   routeTree,
 });
 

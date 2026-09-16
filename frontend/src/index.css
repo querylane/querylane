@@ -6,6 +6,31 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* The router owns the snapshot around its synchronous store commit. Keep the
+   shell interactive; animate only page content, never search/filter updates. */
+:root:active-view-transition-type(page-navigation) {
+  view-transition-name: none;
+}
+
+:root:active-view-transition-type(page-navigation)::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-group(page-content),
+::view-transition-old(page-content),
+::view-transition-new(page-content) {
+  animation-duration: 150ms;
+  animation-timing-function: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(page-content),
+  ::view-transition-old(page-content),
+  ::view-transition-new(page-content) {
+    animation: none;
+  }
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
