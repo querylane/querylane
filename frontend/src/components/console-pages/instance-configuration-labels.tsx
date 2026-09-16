@@ -1,26 +1,24 @@
 "use client";
 
 import { Plus, X } from "lucide-react";
-import type { Dispatch, SetStateAction } from "react";
 import {
   createLabelEntry,
-  type InstanceFormErrors,
-  type InstanceFormState,
+  type InstanceLabelEntry,
 } from "@/components/console-pages/instance-config-model";
 import { FieldError } from "@/components/console-pages/instance-configuration-field-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export function InstanceConfigurationLabels({
-  formErrors,
-  formState,
+  error,
   isConfigManaged,
-  setFormState,
+  labels,
+  onChange,
 }: {
-  formErrors: InstanceFormErrors;
-  formState: InstanceFormState;
+  error?: string | undefined;
   isConfigManaged: boolean;
-  setFormState: Dispatch<SetStateAction<InstanceFormState>>;
+  labels: InstanceLabelEntry[];
+  onChange: (labels: InstanceLabelEntry[]) => void;
 }) {
   return (
     <div className="mt-6 space-y-3 border-t pt-4">
@@ -34,14 +32,9 @@ export function InstanceConfigurationLabels({
         {isConfigManaged ? null : (
           <Button
             data-instance-config-field={
-              formState.labels.length === 0 ? "labels" : undefined
+              labels.length === 0 ? "labels" : undefined
             }
-            onClick={() =>
-              setFormState((current) => ({
-                ...current,
-                labels: [...current.labels, createLabelEntry()],
-              }))
-            }
+            onClick={() => onChange([...labels, createLabelEntry()])}
             size="sm"
             type="button"
             variant="outline"
@@ -51,66 +44,52 @@ export function InstanceConfigurationLabels({
           </Button>
         )}
       </div>
-      {formState.labels.length > 0 ? (
+      {labels.length > 0 ? (
         <div className="space-y-2">
-          {formState.labels.map((label, index) => (
+          {labels.map((label, index) => (
             <div className="flex gap-2" key={label.id}>
               <Input
-                aria-invalid={Boolean(
-                  formErrors.labels && label.key.trim().length === 0
-                )}
+                aria-invalid={Boolean(error && label.key.trim().length === 0)}
                 aria-label={`Label key ${index + 1}`}
                 data-instance-config-field={index === 0 ? "labels" : undefined}
                 disabled={isConfigManaged}
-                onChange={(event) =>
-                  setFormState((current) => {
-                    const next = [...current.labels];
-                    const currentLabel = next[index];
-                    if (currentLabel === undefined) {
-                      return current;
-                    }
-                    next[index] = {
-                      ...currentLabel,
-                      key: event.target.value,
-                    };
-                    return { ...current, labels: next };
-                  })
-                }
+                onChange={(event) => {
+                  const next = [...labels];
+                  const currentLabel = next[index];
+                  if (!currentLabel) {
+                    return;
+                  }
+                  next[index] = {
+                    ...currentLabel,
+                    key: event.target.value,
+                  };
+                  onChange(next);
+                }}
                 placeholder="Key"
                 value={label.key}
               />
               <Input
                 aria-label={`Label value ${index + 1}`}
                 disabled={isConfigManaged}
-                onChange={(event) =>
-                  setFormState((current) => {
-                    const next = [...current.labels];
-                    const currentLabel = next[index];
-                    if (currentLabel === undefined) {
-                      return current;
-                    }
-                    next[index] = {
-                      ...currentLabel,
-                      value: event.target.value,
-                    };
-                    return {
-                      ...current,
-                      labels: next,
-                    };
-                  })
-                }
+                onChange={(event) => {
+                  const next = [...labels];
+                  const currentLabel = next[index];
+                  if (!currentLabel) {
+                    return;
+                  }
+                  next[index] = {
+                    ...currentLabel,
+                    value: event.target.value,
+                  };
+                  onChange(next);
+                }}
                 placeholder="Value"
                 value={label.value}
               />
               {isConfigManaged ? null : (
                 <Button
                   aria-label="Remove label"
-                  onClick={() =>
-                    setFormState((current) => ({
-                      ...current,
-                      labels: current.labels.filter((_, i) => i !== index),
-                    }))
-                  }
+                  onClick={() => onChange(labels.filter((_, i) => i !== index))}
                   size="icon"
                   type="button"
                   variant="ghost"
@@ -125,7 +104,7 @@ export function InstanceConfigurationLabels({
       ) : (
         <p className="text-muted-foreground text-xs">No labels configured.</p>
       )}
-      <FieldError error={formErrors.labels} />
+      <FieldError error={error} />
     </div>
   );
 }

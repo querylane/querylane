@@ -1452,6 +1452,7 @@ test("selected edge header cell keeps a continuous square border", async () => {
 
 test("data grid scrollbars use theme colors in dark mode", async () => {
   await renderSelectedHeaderEdgeFixture();
+  const wasDark = document.documentElement.classList.contains("dark");
   document.documentElement.classList.add("dark");
   try {
     await expect.element(page.getByText("created_at")).toBeVisible();
@@ -1462,12 +1463,23 @@ test("data grid scrollbars use theme colors in dark mode", async () => {
     }
     const style = getComputedStyle(grid);
 
-    expect(style.scrollbarColor).toContain("oklch");
+    const expectedScrollbar = document.createElement("div");
+    expectedScrollbar.style.scrollbarColor = `${style.getPropertyValue("--querylane-scrollbar-thumb")} ${style.getPropertyValue("--querylane-scrollbar-track")}`;
+    grid.append(expectedScrollbar);
+    try {
+      // Chromium may interpolate scrollbar colors after a theme change.
+      await expect
+        .poll(() => getComputedStyle(grid).scrollbarColor)
+        .toBe(getComputedStyle(expectedScrollbar).scrollbarColor);
+      expect(style.scrollbarColor).not.toBe("auto");
+    } finally {
+      expectedScrollbar.remove();
+    }
     expect(style.scrollbarWidth).toBe("thin");
     expect(style.getPropertyValue("--querylane-scrollbar-thumb")).not.toBe("");
     expect(style.getPropertyValue("--querylane-scrollbar-track")).not.toBe("");
   } finally {
-    document.documentElement.classList.remove("dark");
+    document.documentElement.classList.toggle("dark", wasDark);
   }
 });
 

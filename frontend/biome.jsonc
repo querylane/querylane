@@ -318,6 +318,9 @@
     "includes": [
       "!**/protogen",
       "!**/components/ui",
+      "!**/hooks/use-proto-form",
+      "!**/lib/core",
+      "!**/lib/protobuf-provider",
       "!**/dist/**/*",
       "!**/build/**/*",
       "!**/out/**/*",
@@ -332,6 +335,9 @@
     {
       "includes": [
         "src/components/ui/**",
+        "src/hooks/use-proto-form/**",
+        "src/lib/core/**",
+        "src/lib/protobuf-provider/**",
         "src/routeTree.gen.ts",
         "src/protogen/**"
       ],

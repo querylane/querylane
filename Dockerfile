@@ -6,6 +6,7 @@ FROM --platform=$BUILDPLATFORM oven/bun:1.4.0-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/bun.lock ./
+COPY frontend/.npmrc ./
 COPY frontend/patches ./patches
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile --ignore-scripts
 

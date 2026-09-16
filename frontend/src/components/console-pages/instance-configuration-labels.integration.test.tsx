@@ -1,35 +1,23 @@
 import { describe, expect, rs, test } from "@rstest/core";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { InstanceFormState } from "@/components/console-pages/instance-config-model";
 import { InstanceConfigurationLabels } from "@/components/console-pages/instance-configuration-labels";
 
-const baseFormState: InstanceFormState = {
-  database: "querylane",
-  displayName: "Production",
-  host: "db.internal",
-  labels: [
-    { id: "env", key: "env", value: "prod" },
-    { id: "team", key: "team", value: "analytics" },
-  ],
-  password: "secret",
-  port: "5432",
-  sslMode: "prefer",
-  sslNegotiation: "postgres",
-  username: "querylane",
-};
+const labels = [
+  { id: "env", key: "env", value: "prod" },
+  { id: "team", key: "team", value: "analytics" },
+];
 
 describe("InstanceConfigurationLabels", () => {
   test("names dynamic label inputs and remove actions accessibly", async () => {
     const user = userEvent.setup();
-    const setFormState = rs.fn();
+    const onChange = rs.fn();
 
     render(
       <InstanceConfigurationLabels
-        formErrors={{}}
-        formState={baseFormState}
         isConfigManaged={false}
-        setFormState={setFormState}
+        labels={labels}
+        onChange={onChange}
       />
     );
 
@@ -55,10 +43,7 @@ describe("InstanceConfigurationLabels", () => {
     }
     await user.click(secondRemoveButton);
 
-    expect(setFormState).toHaveBeenCalledOnce();
-    const update = setFormState.mock.calls[0]?.[0];
-    expect(typeof update).toBe("function");
-    expect(update(baseFormState).labels).toEqual([
+    expect(onChange).toHaveBeenCalledWith([
       { id: "env", key: "env", value: "prod" },
     ]);
   });
