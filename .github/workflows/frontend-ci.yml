@@ -255,6 +255,8 @@ jobs:
           PUBLIC_SENTRY_ENVIRONMENT: production
           PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
         run: bun run build
+      - name: Verify emitted bundle contracts
+        run: bun run build:profile
       - name: Run React Doctor on changed files
         env:
           GITHUB_TOKEN: ${{ github.token }}
