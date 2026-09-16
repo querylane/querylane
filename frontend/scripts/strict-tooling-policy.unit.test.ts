@@ -109,6 +109,8 @@ describe("strict tooling policy", () => {
 
     expect(devDependencies).toMatchObject({
       "@biomejs/biome": "2.5.14",
+      "@shadcn/lint": "0.1.0",
+      oxlint: "1.83.0",
       "react-doctor": "0.9.14",
       typescript: "7.0.2",
       ultracite: "7.12.0",
