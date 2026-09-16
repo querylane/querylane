@@ -1,7 +1,7 @@
 import { type ComponentProps, lazy, Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Keep the pre-alpha chart runtime out of the initial bundle by splitting the
+// Keep the chart runtime out of the initial bundle by splitting the
 // chart internals into their own lazily loaded chunks.
 const MetricTimeChart = lazy(() =>
   import("@/components/charts/metric-time-chart").then((module) => ({

@@ -61,7 +61,6 @@ const SOLID_STROKE_WIDTH = 2;
 const DASHED_STROKE_WIDTH = 1.5;
 const DASHED_STROKE_OPACITY = 0.55;
 const Y_DOMAIN_SEGMENTS = 4;
-const INITIAL_HEIGHT = 200;
 const INITIAL_WIDTH = 320;
 
 function extentOf(data: ChartRow[]): [number, number] {
@@ -254,18 +253,21 @@ function MetricTimeChart({
                 strokeWidth: SOLID_STROKE_WIDTH,
                 x: "time",
                 y: "value",
+                z: "seriesKey",
               }),
             ];
           }
           return [
-            areaY(rows, {
-              fill: `url(#${gradientPrefix}-${item.key})`,
-              id: `${item.key}-fill`,
-              key: (row) => `${row.seriesKey}-${row.time}`,
-              strokeWidth: 0,
-              x: "time",
-              y: "value",
-            }),
+            decorative(
+              areaY(rows, {
+                fill: `url(#${gradientPrefix}-${item.key})`,
+                id: `${item.key}-fill`,
+                key: (row) => `${row.seriesKey}-${row.time}`,
+                strokeWidth: 0,
+                x: "time",
+                y: "value",
+              })
+            ),
             lineY(rows, {
               id: `${item.key}-stroke`,
               key: (row) => `${row.seriesKey}-${row.time}`,
@@ -273,6 +275,7 @@ function MetricTimeChart({
               strokeWidth: SOLID_STROKE_WIDTH,
               x: "time",
               y: "value",
+              z: "seriesKey",
             }),
           ];
         });
@@ -286,6 +289,7 @@ function MetricTimeChart({
       strokeWidth: DASHED_STROKE_WIDTH,
       x: "time",
       y: "value",
+      z: "seriesKey",
     })
   );
   const thresholdRules = (thresholds ?? []).map((threshold) =>
@@ -353,12 +357,6 @@ function MetricTimeChart({
         ...thresholdLabels,
         ...insetLabels,
         crosshair({
-          marker: {
-            fill: "var(--color-card)",
-            radius: 4,
-            stroke: "var(--color-foreground)",
-            strokeWidth: 2,
-          },
           x: {
             stroke: "var(--color-foreground)",
             strokeDasharray: DASHED_STROKE,
@@ -417,12 +415,17 @@ function MetricTimeChart({
     },
     {
       focus: "group-x",
-      focusRing: false,
+      focusRing: {
+        fill: "var(--color-card)",
+        radius: 4,
+        stroke: "var(--color-foreground)",
+        strokeWidth: 2,
+      },
       keyboard: true,
       tooltip: {
-        anchor: "group-center",
+        anchor: "point",
         className: "querylane-chart-tooltip",
-        content: (points) => {
+        content: (points, context) => {
           const valueBySeries = new Map(
             points.map((point) => [point.datum.seriesKey, point.datum.value])
           );
@@ -434,6 +437,7 @@ function MetricTimeChart({
             rows: series.map((item) => {
               const value = valueBySeries.get(item.key);
               return {
+                active: context.primaryPoint?.group === item.key,
                 color: item.color,
                 label: item.label,
                 value: typeof value === "number" ? detailedValue(value) : "–",
@@ -462,7 +466,6 @@ function MetricTimeChart({
       <ResponsiveChart
         ariaLabel="Metric time series"
         definition={definition}
-        initialHeight={INITIAL_HEIGHT}
         initialWidth={INITIAL_WIDTH}
       />
     </ChartContainer>

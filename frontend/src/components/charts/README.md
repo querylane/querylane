@@ -5,7 +5,7 @@ It supports time-series line, area, and stacked charts; sparklines; axes;
 tooltips; and legends. Every Querylane chart should use this kit instead of
 hand-assembled chart-library primitives.
 
-> **Spike status:** TanStack Charts 0.14.0 is pre-alpha and pinned exactly. Its
+> **Spike status:** TanStack Charts 0.18.0 is alpha and pinned exactly. Its
 > API may change between releases. This migration stays a draft until the
 > interaction, visual-parity, bundle, and maintenance trade-offs are accepted.
 
@@ -15,7 +15,7 @@ hand-assembled chart-library primitives.
 |---|---|
 | `chart-context.ts` | Kit types (`ChartRow`, `ChartSeries`, `ChartThreshold`) |
 | `chart-container.tsx` | Parent-sized mounting frame, app-owned legend, refresh dimming |
-| `responsive-chart.tsx` | Height observer adapting TanStack's width-responsive host to parent-sized slots |
+| `responsive-chart.tsx` | CSS-sized host; TanStack observes parent-owned width and height |
 | `metric-time-chart.tsx` | The time-series chart (lazy-loaded; owns axes/grid/cursor/overlays) |
 | `sparkline-chart.tsx` | Bare trend glyph for stat tiles (lazy-loaded) |
 | `metric-chart.tsx` | Lazy boundaries (`MetricChart`, `MetricSparkline`), the only eager imports |
