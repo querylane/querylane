@@ -18,7 +18,6 @@ interface SparklineDatum {
 }
 
 const SPARK_FILL_TOP_OPACITY = 0.14;
-const SPARK_INITIAL_HEIGHT = 48;
 const SPARK_INITIAL_WIDTH = 160;
 const SPARK_MAX_POINTS = 36;
 const FLAT_SERIES_PADDING_RATIO = 0.01;
@@ -113,7 +112,6 @@ function SparklineChart({ color, data, seriesKey }: SparklineChartProps) {
     <ResponsiveChart
       ariaLabel="Metric trend"
       definition={definition}
-      initialHeight={SPARK_INITIAL_HEIGHT}
       initialWidth={SPARK_INITIAL_WIDTH}
     />
   );
