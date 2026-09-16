@@ -1,9 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { BackendDatabasePage } from "@/components/console-pages/database-page";
-import {
-  databaseRouteDataQueries,
-  prefetchRouteData,
-} from "@/lib/route-data-prefetch";
 
 function DatabasePage() {
   const { databaseId, instanceId } = Route.useParams();
@@ -20,7 +16,10 @@ export const Route = createFileRoute(
   "/instances/$instanceId/databases/$databaseId/"
 )({
   component: DatabasePage,
-  loader: ({ context, params }) => {
+  loader: async ({ context, params }) => {
+    const { databaseRouteDataQueries, prefetchRouteData } = await import(
+      "@/lib/route-data-prefetch"
+    );
     prefetchRouteData(
       context,
       databaseRouteDataQueries({
