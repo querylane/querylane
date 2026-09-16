@@ -1,3 +1,3 @@
-import { cn as cnfast } from "cnfast";
+import { cn as mergeClasses } from "cn";
 
-export const cn = cnfast;
+export const cn = mergeClasses;
