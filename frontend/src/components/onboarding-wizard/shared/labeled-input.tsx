@@ -44,6 +44,7 @@ export function LabeledInput({
           id={id}
           presentation="onboarding"
           ref={ref}
+          validation={error ? "error" : undefined}
           {...inputProps}
         />
       ) : (
@@ -55,6 +56,7 @@ export function LabeledInput({
           presentation="onboarding"
           ref={ref}
           type={type}
+          validation={error ? "error" : undefined}
           {...inputProps}
         />
       )}

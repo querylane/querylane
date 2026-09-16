@@ -15,9 +15,13 @@ const inputPresentations = cva("", {
       identifier: "font-mono",
       password: "pr-12",
       onboarding:
-        "rounded-lg border-white/10 bg-white/3 px-3 py-0 text-sm text-white leading-none placeholder:text-white/32 focus-visible:border-onboarding-focus focus-visible:ring-onboarding-focus/25 aria-invalid:border-negative-400/40 aria-invalid:focus-visible:border-negative-400/60 aria-invalid:focus-visible:ring-negative-400/20",
+        "rounded-lg border-white/10 bg-white/3 px-3 py-0 text-sm text-white leading-none placeholder:text-white/32 focus-visible:border-onboarding-focus focus-visible:ring-onboarding-focus/25",
     },
     trailingAction: { true: "pr-12" },
+    validation: {
+      error:
+        "border-negative-400/40 focus-visible:border-negative-400/60 focus-visible:ring-negative-400/20",
+    },
   },
 });
 
@@ -25,12 +29,13 @@ function Input({
   trailingAction,
   className,
   presentation,
+  validation,
   ...props
 }: ComponentProps<typeof BaseInput> & VariantProps<typeof inputPresentations>) {
   return (
     <BaseInput
       className={cn(
-        inputPresentations({ presentation, trailingAction }),
+        inputPresentations({ presentation, trailingAction, validation }),
         className
       )}
       {...props}

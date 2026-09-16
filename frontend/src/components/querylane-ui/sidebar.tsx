@@ -463,7 +463,7 @@ function Sidebar({
     return (
       <Sheet onOpenChange={setOpenMobile} open={openMobile} {...props}>
         <SheetContent
-          className="w-[min(var(--sidebar-width),calc(100vw-1rem))] max-w-none bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+          className="bg-sidebar p-0 text-sidebar-foreground data-[side=left]:w-[min(var(--sidebar-width),calc(100vw-1rem))] data-[side=right]:w-[min(var(--sidebar-width),calc(100vw-1rem))] data-[side=left]:sm:max-w-none data-[side=right]:sm:max-w-none [&>button]:hidden"
           data-mobile="true"
           data-sidebar="sidebar"
           data-slot="sidebar"
