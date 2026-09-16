@@ -8,7 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { type RefObject, useId, useRef, useState } from "react";
-import { type UseFormSetValue, useWatch } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import {
   type ConnectionTestStatus,
   useConnectionTest,
@@ -45,6 +45,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { type UseProtoFormReturn, useProtoForm } from "@/hooks/use-proto-form";
 import {
   formatUnsupportedPostgresConnectionParameters,
   parsePostgresConnectionString,
@@ -55,9 +56,7 @@ import {
   toSslMode,
   toSslNegotiation,
 } from "@/lib/protobuf-enums";
-import { useProtoForm } from "@/lib/use-proto-form";
 import {
-  type PostgresConfig,
   PostgresConfig_SslMode,
   PostgresConfig_SslNegotiation,
   PostgresConfigSchema,
@@ -376,7 +375,7 @@ const APPLIED_CONNECTION_FIELD_OPTIONS = {
 
 function applyParsedConnectionFields(
   parsed: ParsedConnection,
-  setValue: UseFormSetValue<PostgresConfig>
+  setValue: UseProtoFormReturn<typeof PostgresConfigSchema>["setValue"]
 ) {
   const parsedStringFields: [ParsedStringField, string | undefined][] = [
     ["host", parsed.host],
@@ -500,6 +499,8 @@ export function UiConfiguredPhase() {
     useState<ConnectionStringFeedback>({ error: null, warning: null });
   const [advancedConnectionOptionsOpen, setAdvancedConnectionOptionsOpen] =
     useState(false);
+  const [testedConnectionFingerprint, setTestedConnectionFingerprint] =
+    useState<string | null>(null);
   const connectionTest = useConnectionTest();
   const currentConnectionFingerprint = connectionTest.getConnectionFingerprint(
     toPostgresConfig(watchedValues)
@@ -508,6 +509,10 @@ export function UiConfiguredPhase() {
     isValid &&
     connectionTest.verifiedConnectionFingerprint ===
       currentConnectionFingerprint;
+  const displayedConnectionTestStatus =
+    isValid && testedConnectionFingerprint === currentConnectionFingerprint
+      ? connectionTest.status
+      : "idle";
   const canContinue = isCurrentConfigVerified;
   const connectionStringInputRef = useRef<HTMLInputElement>(null);
   const handleConnectionStringApply = () => {
@@ -532,16 +537,24 @@ export function UiConfiguredPhase() {
     setConnectionStringMode(false);
     setConnectionStringValue("");
   };
-  const handleTestConnection = () => {
-    const values = form.getValues();
-    connectionTest.testConnection(createProto(PostgresConfigSchema, values));
-  };
+  const handleTestConnection = form.handleSubmit(
+    async (values) => {
+      const config = form.createMessage(values);
+      setTestedConnectionFingerprint(
+        connectionTest.getConnectionFingerprint(config)
+      );
+      await connectionTest.testConnection(config);
+    },
+    () => {
+      setTestedConnectionFingerprint(null);
+      connectionTest.resetTest();
+    }
+  );
   const handleContinue = () => {
     if (!canContinue) {
       return;
     }
-    const values = form.getValues();
-    setSubmittedPostgresConfig(createProto(PostgresConfigSchema, values));
+    setSubmittedPostgresConfig(form.createMessage());
     startProgress();
   };
   return (
@@ -561,12 +574,7 @@ export function UiConfiguredPhase() {
           <div className="flex items-center gap-3">
             <ConnectionTestButton
               onClick={handleTestConnection}
-              status={
-                isValid &&
-                (connectionTest.status !== "success" || isCurrentConfigVerified)
-                  ? connectionTest.status
-                  : "idle"
-              }
+              status={displayedConnectionTestStatus}
             />
             <UiConfiguredContinueAction
               canContinue={canContinue}
@@ -702,7 +710,7 @@ export function UiConfiguredPhase() {
         <ConnectionTestResult
           errorMessage={connectionTest.errorMessage}
           isCurrentConfigVerified={isCurrentConfigVerified}
-          status={connectionTest.status}
+          status={displayedConnectionTestStatus}
         />
       </div>
     </WizardPage>

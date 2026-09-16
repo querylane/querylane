@@ -1,4 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
+import { Code, ConnectError } from "@connectrpc/connect";
 import { type ReactNode, useState } from "react";
 import { expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
@@ -7,6 +8,7 @@ import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { InstanceConfigurationSection } from "@/components/console-pages/instance-configuration-section";
 import { InstanceDangerZoneSection } from "@/components/console-pages/instance-danger-zone-section";
 import { InstanceDeleteDialog } from "@/components/console-pages/instance-delete-dialog";
+import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 import {
   Instance_CredentialState,
   InstanceSchema,
@@ -65,19 +67,33 @@ function InstanceConfigServerFieldErrorFixture() {
       formNotice={formNotice}
       instance={createInstance()}
       isConfigManaged={false}
-      onInvalidSave={vi.fn()}
-      onSave={vi.fn(() => {
+      onInvalidSave={() => {
         setFormNotice({
           message: "Fix the highlighted fields, then save again.",
           variant: "error",
         });
-        return {
-          fieldErrors: {
-            password: passwordMessage,
-          },
-          firstInvalidField: "password" as const,
-        };
-      })}
+      }}
+      onSave={vi.fn(
+        () =>
+          new ConnectError(
+            "authentication failed",
+            Code.Unauthenticated,
+            undefined,
+            [
+              {
+                desc: BadRequestSchema,
+                value: createProto(BadRequestSchema, {
+                  fieldViolations: [
+                    {
+                      description: passwordMessage,
+                      field: "instance.config.password",
+                    },
+                  ],
+                }),
+              },
+            ]
+          )
+      )}
       pending={false}
     />
   );
