@@ -28,6 +28,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/querylane-ui/sidebar";
+import { SidebarCodeWarmup } from "@/components/sidebar-code-warmup";
 import {
   buildNavLinkProps,
   buildNavLinkSearch,
@@ -677,6 +678,7 @@ export function AppSidebar({ page }: { page?: AdminPageId | undefined }) {
   const isExplorerMode = page === "database.explorer";
   return (
     <Sidebar className="overflow-hidden" collapsible="offcanvas">
+      <SidebarCodeWarmup scope={scopeLevel} />
       <SidebarBrandHeader />
       {isExplorerMode ? (
         <ExplorerRailContent backLink={linkProps["database.overview"]} />
