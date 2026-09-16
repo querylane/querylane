@@ -73,6 +73,19 @@ for (const viewport of [
         const status = page.getByRole("status");
         await expect(status).toHaveText("Loading Querylane…");
         await expect(status).toBeVisible();
+        const logo = status.locator("img:visible");
+        await expect(logo).toHaveCount(1);
+        await expect(logo).toHaveAttribute("src", `/icon-${theme}.svg`);
+        await expect(logo).toHaveJSProperty("complete", true);
+        await expect(logo).toHaveJSProperty("naturalWidth", 32);
+        await expect(status.locator("span")).toHaveClass("sr-only");
+        const bounds = await logo.boundingBox();
+        expect(bounds).toEqual({
+          height: 40,
+          width: 40,
+          x: (viewport.width - 40) / 2,
+          y: (viewport.height - 40) / 2,
+        });
         await expect(page.locator("html")).toHaveAttribute(
           "data-theme-at-body",
           theme
@@ -83,6 +96,12 @@ for (const viewport of [
           '"Geist Variable", sans-serif'
         );
         await expect(page).toHaveScreenshot(`${theme}-${viewport.name}.png`, {
+          clip: {
+            x: (viewport.width - 160) / 2,
+            y: (viewport.height - 160) / 2,
+            width: 160,
+            height: 160,
+          },
           maxDiffPixels: 0,
         });
         expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
@@ -230,6 +249,7 @@ test.describe("without JavaScript", () => {
     await expect(page.locator("noscript")).toBeVisible();
     await expect(page.getByRole("status")).toBeHidden();
     await expect(page).toHaveScreenshot("no-javascript-desktop.png", {
+      clip: { x: 440, y: 390, width: 400, height: 120 },
       maxDiffPixels: 0,
     });
   });
