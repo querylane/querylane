@@ -16,10 +16,6 @@
   pointer-events: none;
 }
 
-:root:active-view-transition-type(page-navigation) .page-transition-content {
-  view-transition-name: page-content;
-}
-
 ::view-transition-group(page-content),
 ::view-transition-old(page-content),
 ::view-transition-new(page-content) {

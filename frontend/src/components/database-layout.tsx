@@ -148,7 +148,7 @@ export function DatabaseLayout({
                     // `relative` keeps absolutely-positioned descendants (e.g.
                     // sr-only labels) anchored inside this scroll container
                     // instead of escaping it and stretching the document.
-                    "page-transition-content relative min-w-0 flex-1",
+                    "relative min-w-0 flex-1 [:root:active-view-transition-type(page-navigation)_&]:[view-transition-name:page-content]",
                     mainOverflowClass,
                     mainPaddingClass
                   )}
