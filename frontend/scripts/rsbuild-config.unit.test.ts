@@ -75,8 +75,8 @@ describe("Rsbuild config loading", () => {
         sourceImport: true,
       });
       expect(rspackConfig?.optimization).toMatchObject({
-        chunkIds: "compat-hashed",
-        moduleIds: "compat-hashed",
+        chunkIds: "compact-hashed",
+        moduleIds: "compact-hashed",
         splitChunks: {
           chunks: "all",
           maxAsyncRequests: 30,

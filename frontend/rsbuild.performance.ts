@@ -70,9 +70,9 @@ const managedSplitChunksConfig = {
 const productionOptimizationOverrides = {
   // Prefer compact stable IDs and the smallest export names; every other
   // production optimization inherits newer Rspack defaults.
-  chunkIds: "compat-hashed",
+  chunkIds: "compact-hashed",
   mangleExports: "size",
-  moduleIds: "compat-hashed",
+  moduleIds: "compact-hashed",
 } satisfies Rspack.Configuration["optimization"];
 
 interface BuildCacheDigestInput {

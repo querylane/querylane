@@ -78,6 +78,14 @@ describe("isNavigationCancellationError", () => {
     expect(isNavigationCancellationError(error)).toBe(true);
   });
 
+  // Mixed tables must preserve array inputs instead of spreading their errors.
+  test.each([null, undefined, "cancelled", [new Error("cancelled")]])(
+    "does not treat non-error input %# as a cancellation",
+    (error) => {
+      expect(isNavigationCancellationError(error)).toBe(false);
+    }
+  );
+
   test("does not treat ordinary route failures as cancellations", () => {
     expect(isNavigationCancellationError(new Error("loader failed"))).toBe(
       false
