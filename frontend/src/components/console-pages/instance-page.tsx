@@ -1,7 +1,5 @@
 "use client";
 
-import { useTransport } from "@connectrpc/connect-query";
-import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Database, RefreshCw, TriangleAlert } from "lucide-react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
@@ -58,7 +56,6 @@ import {
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { extractInstanceConfigFieldViolations } from "@/features/create-instance-field-violations";
 import { useIsConfigManagedInstances } from "@/hooks/api/console";
-import { selectedDatabaseQueryOptions } from "@/hooks/api/database";
 import {
   extensionsForDatabaseQueryInput,
   useListAllExtensionsQuery,
@@ -107,7 +104,6 @@ import {
 } from "@/lib/protobuf-enums";
 import { handleQueryActionError } from "@/lib/query-action-errors";
 import { createResourceLoader } from "@/lib/resource-loader";
-import { prefetchRouteQueryOnIntent } from "@/lib/route-prefetch";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import {
   type UrlTableSearchRoute,
@@ -718,7 +714,6 @@ function InstanceOverviewSection({
   databases,
   isUnavailable = false,
   navigateToDatabase,
-  onDatabaseIntent,
   queryState,
   searchRoute,
   unavailableMessage,
@@ -726,7 +721,6 @@ function InstanceOverviewSection({
   databases: DatabaseRow[];
   isUnavailable?: boolean | undefined;
   navigateToDatabase: ReturnType<typeof useDb>["navigateToDatabase"];
-  onDatabaseIntent?: (database: DatabaseRow) => void;
   queryState: ReturnType<typeof useDb>["queryStates"]["databases"];
   searchRoute: UrlTableSearchRoute;
   unavailableMessage?: string | undefined;
@@ -804,10 +798,6 @@ function InstanceOverviewSection({
         emptyResourceName="databases"
         filterColumn="name"
         filterValue={dbFilter}
-        getRowProps={(database) => ({
-          onFocus: () => onDatabaseIntent?.(database),
-          onMouseEnter: () => onDatabaseIntent?.(database),
-        })}
         onFilterChange={setDbFilter}
         onRowClick={(database) =>
           navigateToDatabase(database, {
@@ -849,7 +839,6 @@ function InstanceOverviewContent({
   isUnavailable,
   liveData,
   navigateToDatabase,
-  onDatabaseIntent,
   queryState,
   searchRoute,
   serverInfo,
@@ -862,7 +851,6 @@ function InstanceOverviewContent({
   isUnavailable: boolean;
   liveData: OverviewLiveData;
   navigateToDatabase: ReturnType<typeof useDb>["navigateToDatabase"];
-  onDatabaseIntent: (database: DatabaseRow) => void;
   queryState: ReturnType<typeof useDb>["queryStates"]["databases"];
   searchRoute: UrlTableSearchRoute;
   serverInfo?: ServerInfo | undefined;
@@ -904,7 +892,6 @@ function InstanceOverviewContent({
         databases={databases}
         isUnavailable={isUnavailable}
         navigateToDatabase={navigateToDatabase}
-        onDatabaseIntent={onDatabaseIntent}
         queryState={queryState}
         searchRoute={searchRoute}
         unavailableMessage="Database list is unavailable while this instance is not connected."
@@ -1215,8 +1202,6 @@ function BackendInstancePage({
   section: InstanceSection;
 }) {
   const navigate = useNavigate({ from: searchRoute });
-  const transport = useTransport();
-  const queryClient = useQueryClient();
   const {
     databases,
     instances,
@@ -1417,16 +1402,6 @@ function BackendInstancePage({
     });
   const databasesUnavailable =
     queryStates.databases.isSuppressed && !queryStates.databases.hasData;
-  const handleDatabaseIntent = (database: DatabaseRow) => {
-    prefetchRouteQueryOnIntent(
-      queryClient,
-      selectedDatabaseQueryOptions({
-        databaseId: database.id,
-        instanceId,
-        transport,
-      })
-    );
-  };
   return (
     <ResourcePageState
       {...loader.pageStateProps}
@@ -1479,7 +1454,6 @@ function BackendInstancePage({
               }),
             },
             navigateToDatabase,
-            onDatabaseIntent: handleDatabaseIntent,
             onDelete: handleDelete,
             onInvalidSave: handleInvalidSave,
             onOpenDeleteDialogChange: setIsDeleteDialogOpen,
@@ -1519,7 +1493,6 @@ function renderLoadedInstancePageContent({
   lastRefreshedAt,
   liveData,
   navigateToDatabase,
-  onDatabaseIntent,
   onDelete,
   onInvalidSave,
   onOpenDeleteDialogChange,
@@ -1550,7 +1523,6 @@ function renderLoadedInstancePageContent({
   lastRefreshedAt: number;
   liveData: OverviewLiveData;
   navigateToDatabase: ReturnType<typeof useDb>["navigateToDatabase"];
-  onDatabaseIntent: (database: DatabaseRow) => void;
   onDelete: () => void;
   onInvalidSave: () => void;
   onOpenDeleteDialogChange: (open: boolean) => void;
@@ -1611,7 +1583,6 @@ function renderLoadedInstancePageContent({
         isUnavailable={databasesUnavailable}
         liveData={liveData}
         navigateToDatabase={navigateToDatabase}
-        onDatabaseIntent={onDatabaseIntent}
         queryState={queryState}
         searchRoute={searchRoute}
         serverInfo={serverInfo}

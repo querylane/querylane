@@ -128,10 +128,6 @@ rs.mock("@/lib/db-context", () => ({
   useDb: () => ({ selectedDatabase: { name: "appdb" } }),
 }));
 
-rs.mock("@/lib/route-prefetch", () => ({
-  prefetchRouteQueryOnIntent: rs.fn(),
-}));
-
 const BASE_SEARCH = {
   category: "tables",
   name: "accounts",

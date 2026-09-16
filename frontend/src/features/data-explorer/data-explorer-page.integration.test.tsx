@@ -1,8 +1,13 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 
 import { DataExplorerPage } from "@/features/data-explorer/data-explorer-page";
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
@@ -34,7 +39,6 @@ const mocks = rs.hoisted(() => ({
     isLoading: false,
   },
   navigate: rs.fn(),
-  prefetchRouteQueryOnIntent: rs.fn(),
   schemasQuery: {
     data: undefined as
       | {
@@ -154,10 +158,6 @@ rs.mock("@/hooks/api/view", () => ({
 
 rs.mock("@/lib/db-context", () => ({
   useDb: () => ({ selectedDatabase: { name: "appdb" } }),
-}));
-
-rs.mock("@/lib/route-prefetch", () => ({
-  prefetchRouteQueryOnIntent: mocks.prefetchRouteQueryOnIntent,
 }));
 
 function renderExplorer(search: DataExplorerSearch = {}) {
@@ -345,8 +345,11 @@ describe("DataExplorerPage", () => {
     expect(tableItem.textContent).toContain("48 KB");
   });
 
-  it("prefetches table detail queries when table navigation intent is shown", async () => {
-    const user = userEvent.setup();
+  it("does not fetch table details on hover or focus", async () => {
+    rs.useFakeTimers();
+    const prefetch = rs
+      .spyOn(QueryClient.prototype, "prefetchQuery")
+      .mockResolvedValue(undefined);
     mocks.schemasQuery.data = {
       pages: [
         {
@@ -378,23 +381,17 @@ describe("DataExplorerPage", () => {
 
     renderExplorer();
 
-    await user.hover(
+    fireEvent.mouseEnter(
       screen.getByRole("button", { name: ACCOUNTS_BUTTON_NAME })
     );
 
-    expect(mocks.prefetchRouteQueryOnIntent).toHaveBeenCalledTimes(6);
-    for (const queryKey of [
-      ["columns"],
-      ["indexes"],
-      ["constraints"],
-      ["policies"],
-      ["triggers"],
-      ["partition-metadata"],
-    ]) {
-      expect(mocks.prefetchRouteQueryOnIntent).toHaveBeenCalledWith(
-        expect.any(QueryClient),
-        expect.objectContaining({ queryKey })
-      );
+    screen.getByRole("button", { name: ACCOUNTS_BUTTON_NAME }).focus();
+    try {
+      await rs.runOnlyPendingTimersAsync();
+      expect(prefetch).not.toHaveBeenCalled();
+    } finally {
+      rs.useRealTimers();
+      prefetch.mockRestore();
     }
   });
 });

@@ -41,7 +41,6 @@ function DataExplorerPage({
     itemsByCategory: explorer.itemsByCategory,
     onLoadMoreCategory: explorer.onLoadMoreCategory,
     onLoadMoreSchemas: explorer.onLoadMoreSchemas,
-    onResourceIntent: explorer.onResourceIntent,
     onRetryTables: explorer.onRetryTables,
     onRetryViews: explorer.onRetryViews,
     onSelectResource: (

@@ -90,9 +90,6 @@ interface ResourceListItemControls {
   isCategoryOpen: (category: CategoryKey) => boolean;
   onLoadMoreCategory: (category: CategoryKey) => void;
   onLoadMoreSchemas: () => void;
-  onResourceIntent?:
-    | ((category: CategoryKey, name: string) => void)
-    | undefined;
   onSelectResource: (category: CategoryKey, name: string) => void;
   onSelectSchema: (schema: SchemaSummary) => void;
   onToggleActiveSchema: () => void;
@@ -305,7 +302,6 @@ function ObjectTreeList({
   itemsByCategory,
   onLoadMoreCategory,
   onLoadMoreSchemas,
-  onResourceIntent,
   onSelectResource,
   onSelectSchema,
   query,
@@ -320,9 +316,6 @@ function ObjectTreeList({
   itemsByCategory: Record<CategoryKey, ResourceItem[]> | null;
   onLoadMoreCategory: (category: CategoryKey) => void;
   onLoadMoreSchemas: () => void;
-  onResourceIntent?:
-    | ((category: CategoryKey, name: string) => void)
-    | undefined;
   onSelectResource: (category: CategoryKey, name: string) => void;
   onSelectSchema: (schema: SchemaSummary) => void;
   query: string;
@@ -374,7 +367,6 @@ function ObjectTreeList({
     isCategoryOpen,
     onLoadMoreCategory,
     onLoadMoreSchemas,
-    onResourceIntent,
     onSelectResource,
     onSelectSchema: (schema) => {
       setCollapsedSchemaId(null);
@@ -912,14 +904,12 @@ function CategoryListItem({
       );
     }
     case "resource": {
-      const handleResourceIntent = controls.onResourceIntent;
       const handleSelectResource = controls.onSelectResource;
       return (
         <ExplorerResourceButton
           category={item.category}
           icon={meta.icon}
           item={item.item}
-          onResourceIntent={handleResourceIntent}
           onSelectResource={handleSelectResource}
           query={controls.query}
           selection={controls.selection}
@@ -1011,7 +1001,6 @@ function ExplorerSidebar({
   onLoadMoreSchemas,
   onRetryTables,
   onRetryViews,
-  onResourceIntent,
   onSelectResource,
   onSelectSchema,
   query,
@@ -1034,7 +1023,6 @@ function ExplorerSidebar({
   onLoadMoreSchemas: () => void;
   onRetryTables: () => Promise<unknown>;
   onRetryViews: () => Promise<unknown>;
-  onResourceIntent?: (category: CategoryKey, name: string) => void;
   onSelectResource: (category: CategoryKey, name: string) => void;
   onSelectSchema: (schema: SchemaSummary) => void;
   query: string;
@@ -1138,7 +1126,6 @@ function ExplorerSidebar({
             itemsByCategory={itemsByCategory}
             onLoadMoreCategory={onLoadMoreCategory}
             onLoadMoreSchemas={onLoadMoreSchemas}
-            onResourceIntent={onResourceIntent}
             onSelectResource={onSelectResource}
             onSelectSchema={onSelectSchema}
             query={query}
