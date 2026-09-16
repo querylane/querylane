@@ -128,17 +128,28 @@ export default defineConfig({
     lazyCompilation: false,
   },
   html: {
-    tags: reactPerformanceMode.reactScanEnabled
-      ? [
-          {
-            append: false,
-            attrs: { src: "/react-scan.js" },
-            head: true,
-            publicPath: false,
-            tag: "script",
-          },
-        ]
-      : [],
+    tags: [
+      {
+        // Intentionally parser-blocking: resolve the saved theme before body
+        // paint. Same-origin external JS needs no unsafe-inline CSP exception.
+        append: false,
+        attrs: { src: "/theme-init.js" },
+        head: true,
+        publicPath: false,
+        tag: "script",
+      },
+      ...(reactPerformanceMode.reactScanEnabled
+        ? [
+            {
+              append: false,
+              attrs: { src: "/react-scan.js" },
+              head: true,
+              publicPath: false,
+              tag: "script",
+            },
+          ]
+        : []),
+    ],
     template: "./index.html",
   },
   output: {
@@ -168,6 +179,12 @@ export default defineConfig({
   },
   performance: {
     ...(preconnectOrigins.length > 0 ? { preconnect: preconnectOrigins } : {}),
+    // Only the immediately used UI face; leave mono and other subsets on demand.
+    // Match emitted assets so the hint reuses CSS's content-hashed font URL.
+    preload: {
+      include: /\/geist-latin-wght-normal(?:\.[\w]+)?\.woff2$/,
+      type: "all-assets",
+    },
     buildCache: {
       buildDependencies: RSPACK_BUILD_DEPENDENCIES,
       cacheDigest: buildCacheDigest,

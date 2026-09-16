@@ -23,6 +23,32 @@
     <title>QueryLane</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main
+        aria-label="Starting Querylane"
+        class="flex min-h-dvh flex-col items-center justify-center gap-4 bg-background p-6 text-center font-sans text-foreground text-sm"
+      >
+        <div class="noscript:hidden" role="status">
+          <img
+            alt=""
+            class="size-10 dark:hidden"
+            height="40"
+            src="/icon-light.svg"
+            width="40"
+          >
+          <img
+            alt=""
+            class="hidden size-10 dark:block"
+            height="40"
+            src="/icon-dark.svg"
+            width="40"
+          >
+          <span class="sr-only">Loading Querylane…</span>
+        </div>
+        <noscript>
+          <p>Enable JavaScript and reload to use Querylane.</p>
+        </noscript>
+      </main>
+    </div>
   </body>
 </html>
