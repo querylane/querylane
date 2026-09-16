@@ -28,11 +28,7 @@ type ShikiTokenStyle = CSSProperties & {
   "--querylane-sql-token-light"?: string;
 };
 
-const SQL_HIGHLIGHTER = createHighlighterCoreSync({
-  engine: createJavaScriptRegexEngine(),
-  langs: [sql],
-  themes: [githubLight, githubDark],
-});
+let sqlHighlighter: ReturnType<typeof createHighlighterCoreSync> | undefined;
 
 const SQL_THEMES = {
   dark: "github-dark",
@@ -47,7 +43,13 @@ function highlightSql(sqlText: string): ThemedTokenWithVariants[][] {
     return cachedTokenLines;
   }
 
-  const tokenLines = SQL_HIGHLIGHTER.codeToTokensWithThemes(sqlText, {
+  // Route preloads import SQL-only tabs before their contents are mounted.
+  sqlHighlighter ??= createHighlighterCoreSync({
+    engine: createJavaScriptRegexEngine(),
+    langs: [sql],
+    themes: [githubLight, githubDark],
+  });
+  const tokenLines = sqlHighlighter.codeToTokensWithThemes(sqlText, {
     lang: "sql",
     themes: SQL_THEMES,
     tokenizeTimeLimit: 200,
