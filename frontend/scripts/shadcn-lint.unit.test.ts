@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, test } from "@rstest/core";
+import shadcnLint from "@shadcn/lint";
 import { z } from "zod";
 
 const projectRoot = resolve(import.meta.dirname, "..");
@@ -19,7 +20,7 @@ describe("shadcn lint command", () => {
     try {
       writeFileSync(
         invalid,
-        `import { Button } from "@/components/ui/button";
+        `import { Button } from "@/components/querylane-ui/button";
 export function Invalid({ className }: { className: string }) {
   return <>
     <Button className="p-4">Restyled</Button>
@@ -33,9 +34,9 @@ export function Invalid({ className }: { className: string }) {
       );
       writeFileSync(
         valid,
-        `import { Button } from "@/components/ui/button";
+        `import { Button } from "@/components/querylane-ui/button";
 export function Valid() {
-  return <Button variant="outline" size="sm" className="mt-4 w-full">Save</Button>;
+  return <Button presentation="quiet" variant="outline" size="sm" className="mt-4 w-full">Save</Button>;
 }`
       );
       const result = spawnSync(
@@ -50,14 +51,11 @@ export function Valid() {
       const report = reportSchema.parse(JSON.parse(result.stdout));
       expect(
         [...new Set(report.diagnostics.map(({ code }) => code))].sort()
-      ).toEqual([
-        "shadcn(no-arbitrary-values)",
-        "shadcn(no-inline-styles)",
-        "shadcn(no-raw-colors)",
-        "shadcn(no-restyle)",
-        "shadcn(no-unknown-classes)",
-        "shadcn(require-static-classes)",
-      ]);
+      ).toEqual(
+        Object.keys(shadcnLint.rules)
+          .map((rule) => `shadcn(${rule})`)
+          .sort()
+      );
       expect(
         report.diagnostics.every(({ severity }) => severity === "error")
       ).toBe(true);

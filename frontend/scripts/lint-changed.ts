@@ -107,18 +107,22 @@ function lintableChangedFiles(
   repoPaths: readonly string[],
   fileSystem: FileSystemAccess = nodeFileSystem
 ) {
-  return repoPaths.map(frontendRelativePath).filter((path): path is string => {
+  return repoPaths.flatMap((repoPath) => {
+    const path = frontendRelativePath(repoPath);
     if (
       path === null ||
       isGeneratedOrRegistryPath(path) ||
       !hasLintableExtension(path)
     ) {
-      return false;
+      return [];
     }
     try {
-      return fileSystem.existsSync(path) && fileSystem.statSync(path).isFile();
+      return fileSystem.existsSync(path) && fileSystem.statSync(path).isFile()
+        ? [path]
+        : [];
     } catch {
-      return false;
+      // A concurrently removed file is no longer a lint target.
+      return [];
     }
   });
 }

@@ -1,0 +1,152 @@
+.querylane-logo-row-track {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: querylane-row-shift 1.4s ease-in-out infinite;
+  animation-delay: var(--row-pulse-delay);
+}
+
+.querylane-logo-row {
+  fill: currentColor;
+}
+
+.querylane-logo-active-row {
+  fill: currentColor;
+  opacity: 0;
+  animation: querylane-row-sweep-cursor 2.5s linear infinite;
+  animation-delay: var(--row-sweep-delay);
+}
+
+.querylane-logo-chevron-track {
+  animation: querylane-chevron-track 2.5s linear infinite;
+}
+
+.querylane-logo-chevron {
+  fill: var(--color-brand-cursor);
+  opacity: 0.9;
+  animation:
+    querylane-chevron-scan 0.5s ease-in-out infinite,
+    querylane-chevron-blink 0.85s steps(1, end) infinite;
+}
+
+@keyframes querylane-row-shift {
+  0%,
+  100% {
+    transform: translateX(-0.35px);
+  }
+
+  50% {
+    transform: translateX(0.45px);
+  }
+}
+
+@keyframes querylane-row-sweep-cursor {
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  4% {
+    opacity: 0;
+  }
+
+  7% {
+    opacity: 1;
+  }
+
+  10% {
+    opacity: 0.58;
+  }
+
+  13% {
+    opacity: 1;
+  }
+
+  17% {
+    opacity: 0;
+  }
+}
+
+@keyframes querylane-chevron-track {
+  0%,
+  16% {
+    transform: translate(-1.4px, -7.6px);
+  }
+
+  20%,
+  36% {
+    transform: translate(-1.4px, -3.6px);
+  }
+
+  40%,
+  56% {
+    transform: translate(-1.4px, 0px);
+  }
+
+  60%,
+  76% {
+    transform: translate(-1.4px, 3.8px);
+  }
+
+  80%,
+  96% {
+    transform: translate(-1.4px, 7.8px);
+  }
+
+  100% {
+    transform: translate(-1.4px, -7.6px);
+  }
+}
+
+@keyframes querylane-chevron-scan {
+  0%,
+  100% {
+    transform: translateX(0px);
+  }
+
+  50% {
+    transform: translateX(1.6px);
+  }
+}
+
+@keyframes querylane-chevron-blink {
+  0%,
+  47% {
+    opacity: 1;
+  }
+
+  48%,
+  55% {
+    opacity: 0.45;
+  }
+
+  56%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .querylane-logo-row-track,
+  .querylane-logo-active-row,
+  .querylane-logo-chevron-track,
+  .querylane-logo-chevron {
+    animation: none;
+  }
+
+  .querylane-logo-active-row {
+    opacity: 0;
+  }
+
+  .querylane-logo-active-row[data-row="2"] {
+    opacity: 1;
+  }
+
+  .querylane-logo-chevron-track {
+    transform: translate(-1.4px, 0px);
+  }
+
+  .querylane-logo-chevron {
+    opacity: 1;
+    transform: translateX(0.8px);
+  }
+}

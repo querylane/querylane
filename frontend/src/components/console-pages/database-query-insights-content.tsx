@@ -11,24 +11,33 @@ import {
 import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { EmptyState } from "@/components/empty-state";
-import { Progress } from "@/components/querylane-ui/progress";
-import { WarningBadge } from "@/components/querylane-ui/warning-badge";
-import { RetryActionButton } from "@/components/retry-action-button";
-import { SelectValue } from "@/components/select-extensions";
 import {
   Alert,
   AlertAction,
   AlertDescription,
   AlertTitle,
-} from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+} from "@/components/querylane-ui/alert";
+import { Button } from "@/components/querylane-ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/components/querylane-ui/card";
+import { Progress } from "@/components/querylane-ui/progress";
+import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/querylane-ui/table";
+import { WarningBadge } from "@/components/querylane-ui/warning-badge";
+import { RetryActionButton } from "@/components/retry-action-button";
+import { SelectValue } from "@/components/select-extensions";
 import {
   type DataTableFilterFacet,
   DataTableFilterToolbar,
@@ -39,15 +48,6 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useGetDatabaseQueryInsightsQuery } from "@/hooks/api/database";
 import { buildDatabaseName, formatBytes } from "@/lib/console-resources";
 import {
@@ -479,7 +479,11 @@ function CardShell({
   children: ReactNode;
   className?: string;
 }) {
-  return <Card className={cn("gap-0 py-0", className)}>{children}</Card>;
+  return (
+    <Card className={className} presentation="flush">
+      {children}
+    </Card>
+  );
 }
 
 function MetricUnavailableNotice({
@@ -497,10 +501,8 @@ function MetricUnavailableNotice({
 }) {
   return (
     <Alert
-      className={cn(
-        "m-5 w-auto has-data-[slot=alert-action]:pr-4",
-        status && "border-destructive/30 bg-destructive/5"
-      )}
+      className="m-5 w-auto"
+      presentation={status ? "insights-error" : "insights"}
       variant={status ? "destructive" : "default"}
     >
       {status ? <AlertCircle aria-hidden="true" /> : null}
@@ -538,20 +540,18 @@ function TopQueriesTable({
   return (
     <Table>
       <TableHeader>
-        <TableRow className="hover:bg-transparent">
-          <TableHead className="pl-5 text-muted-foreground text-xs">
-            Query
-          </TableHead>
-          <TableHead className="text-right text-muted-foreground text-xs">
+        <TableRow presentation="static">
+          <TableHead presentation="insight-leading">Query</TableHead>
+          <TableHead className="text-right" presentation="insight">
             Calls
           </TableHead>
-          <TableHead className="text-right text-muted-foreground text-xs">
+          <TableHead className="text-right" presentation="insight">
             Mean
           </TableHead>
-          <TableHead className="text-right text-muted-foreground text-xs">
+          <TableHead className="text-right" presentation="insight">
             Total
           </TableHead>
-          <TableHead className="w-28 text-muted-foreground text-xs">
+          <TableHead className="w-28" presentation="insight">
             Relative
           </TableHead>
         </TableRow>
@@ -564,15 +564,19 @@ function TopQueriesTable({
           const selected = selectedQueryKey === rowSelectionKey;
           return (
             <TableRow
-              className={cn(selected && "bg-muted/70 hover:bg-muted/70")}
               key={entry.selectionKey}
+              presentation={selected ? "selected" : undefined}
             >
-              <TableCell className="min-w-0 max-w-[34rem] py-2 pl-5">
+              <TableCell
+                className="min-w-0 max-w-[34rem]"
+                presentation="insight-leading"
+              >
                 <Button
                   aria-label={queryLabel}
                   aria-pressed={selected}
-                  className="h-auto w-full justify-start overflow-hidden p-0 text-left font-normal hover:bg-transparent"
+                  className="h-auto w-full justify-start overflow-hidden text-left"
                   onClick={() => onSelectQuery(entry)}
+                  presentation="query"
                   type="button"
                   variant="ghost"
                 >
@@ -583,19 +587,19 @@ function TopQueriesTable({
                   />
                 </Button>
               </TableCell>
-              <TableCell className="text-right font-mono text-muted-foreground text-xs tabular-nums">
+              <TableCell className="text-right" presentation="numeric-muted">
                 {formatInsightInteger(query.calls)}
               </TableCell>
-              <TableCell className="text-right font-mono text-muted-foreground text-xs tabular-nums">
+              <TableCell className="text-right" presentation="numeric-muted">
                 {formatInsightMs(query.meanTimeMs)}
               </TableCell>
-              <TableCell className="text-right font-mono text-xs tabular-nums">
+              <TableCell className="text-right" presentation="numeric">
                 {formatInsightMs(query.totalTimeMs)}
               </TableCell>
               <TableCell>
                 <Progress
                   aria-label={`Runtime relative to top query for ${queryLabel}`}
-                  className="gap-0"
+                  density="compact"
                   value={insightProgressValue(query.totalTimeRatio)}
                 />
               </TableCell>
@@ -666,9 +670,10 @@ function QueryPaginationFooter({
       <div className="ml-auto flex items-center gap-1">
         <Button
           aria-label="Previous page"
-          className="size-7 p-0"
+          className="size-7"
           disabled={pageIndex <= 0}
           onClick={onPreviousPage}
+          presentation="unpadded"
           size="sm"
           type="button"
           variant="outline"
@@ -680,9 +685,10 @@ function QueryPaginationFooter({
         </span>
         <Button
           aria-label="Next page"
-          className="size-7 p-0"
+          className="size-7"
           disabled={pageIndex >= pageCount - 1}
           onClick={onNextPage}
+          presentation="unpadded"
           size="sm"
           type="button"
           variant="outline"
@@ -746,11 +752,11 @@ function QueryDetailPanel({
       tabIndex={-1}
     >
       <CardShell className="min-w-0">
-        <CardHeader className="border-b py-4">
+        <CardHeader presentation="insights">
           <div className="flex items-start gap-3">
             <div className="min-w-0">
               <CardTitle>Query detail</CardTitle>
-              <CardDescription className="font-mono text-xs">
+              <CardDescription presentation="identifier">
                 queryid {query.queryId.toString()}
               </CardDescription>
             </div>
@@ -766,7 +772,7 @@ function QueryDetailPanel({
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="grid min-w-0 gap-4 py-4">
+        <CardContent className="grid min-w-0" presentation="insights">
           <SqlCodeBlock
             className="max-h-56"
             sql={queryInsightLabel(query)}
@@ -871,7 +877,7 @@ function TopQueriesCard({
 
   return (
     <CardShell>
-      <CardHeader className="gap-3 py-4">
+      <CardHeader presentation="insights-stacked">
         <div className="flex flex-wrap items-start gap-3">
           <div>
             <CardTitle>Top queries by total time</CardTitle>
@@ -928,13 +934,13 @@ function SequentialScanHotspotsCard({
 }) {
   return (
     <CardShell>
-      <CardHeader className="py-4">
+      <CardHeader presentation="compact">
         <CardTitle>Sequential scan hotspots</CardTitle>
         <CardDescription>
           Large tables read without matching index usage.
         </CardDescription>
       </CardHeader>
-      <CardContent className="px-0 pb-2">
+      <CardContent presentation="chart">
         {hotspots.length > 0 ? (
           <div className="divide-y divide-border">
             {hotspots.map((hotspot) => (
@@ -955,7 +961,7 @@ function SequentialScanHotspotsCard({
                 </div>
                 <Progress
                   aria-label={`Sequential scan ratio for ${formatQualifiedTable(hotspot.schemaName, hotspot.tableName)}`}
-                  className="gap-0"
+                  density="compact"
                   value={insightProgressValue(hotspot.sequentialScanRatio)}
                   variant="warning"
                 />
@@ -989,13 +995,13 @@ function TableCacheHitCard({
 }) {
   return (
     <CardShell>
-      <CardHeader className="py-4">
+      <CardHeader presentation="compact">
         <CardTitle>Cache hit by table</CardTitle>
         <CardDescription>
           Heap blocks served from shared buffers.
         </CardDescription>
       </CardHeader>
-      <CardContent className="px-0 pb-2">
+      <CardContent presentation="chart">
         {cacheHits.length > 0 ? (
           <div className="divide-y divide-border">
             {cacheHits.map((cacheHit) => {
@@ -1021,7 +1027,7 @@ function TableCacheHitCard({
                   </div>
                   <Progress
                     aria-label={`${warning ? "Low cache hit, " : ""}cache hit ratio for ${label}`}
-                    className="gap-0"
+                    density="compact"
                     value={insightProgressValue(cacheHit.hitRatio)}
                     variant={warning ? "warning" : "default"}
                   />

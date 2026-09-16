@@ -6,15 +6,15 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
-} from "@/components/ui/empty";
+} from "@/components/querylane-ui/empty";
 import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
   action?: ReactNode;
   className?: string;
-  contentClassName?: string;
   description: string;
   icon: LucideIcon;
+  presentation?: "page" | "chart";
   title: string;
 }
 
@@ -24,14 +24,15 @@ export function EmptyState({
   description,
   action,
   className,
-  contentClassName,
+  presentation = "page",
 }: EmptyStateProps) {
   return (
     <Empty
-      className={cn("min-h-64 border border-border bg-card", className)}
+      className={cn("min-h-64", className)}
       data-slot="app-empty-state"
+      presentation={presentation}
     >
-      <EmptyHeader className={contentClassName}>
+      <EmptyHeader>
         <EmptyMedia variant="icon">
           <Icon />
         </EmptyMedia>

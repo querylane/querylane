@@ -28,7 +28,7 @@
     "lighthouse:summary": "bun run scripts/lighthouse-summary.ts ./dist/lighthouse",
     "lint": "ultracite check && bun run lint:shadcn && bun run suppressions:check",
     "lint:changed": "bun run scripts/lint-changed.ts && bun run lint:shadcn && bun run suppressions:check",
-    "lint:fix": "ultracite fix && bun run lint:shadcn && bun run suppressions:check",
+    "lint:fix": "biome format --write . && ultracite fix && bun run lint:shadcn && bun run suppressions:check",
     "lint:shadcn": "oxlint --config oxlint.config.ts --deny-warnings",
     "perf:check": "bun run scripts/perf-budgets.ts",
     "perf:lighthouse": "bun run build && bun run lighthouse:ci && bun run lighthouse:summary",

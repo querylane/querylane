@@ -31,23 +31,23 @@ import {
   RELATION_TYPES,
   TYPE_UNIT,
 } from "@/components/console-pages/role-grants-shared";
+import { Button } from "@/components/querylane-ui/button";
+import { Input } from "@/components/querylane-ui/input";
 import { SearchEmptyState } from "@/components/search-empty-state";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { GrantObjectType } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 function GrantRowName({ object }: { object: GrantedObject }) {
   if (RELATION_TYPES.has(object.objectType) && object.schemaName) {
     return (
-      <span className="truncate font-mono text-[0.78125rem]">
+      <span className="text-(length:--text-label-lg) truncate font-mono">
         <span className="text-muted-foreground">{object.schemaName}.</span>
         {object.objectName}
       </span>
     );
   }
   return (
-    <span className="truncate font-mono text-[0.78125rem]">
+    <span className="text-(length:--text-label-lg) truncate font-mono">
       {objectDisplayName(object)}
     </span>
   );
@@ -67,11 +67,12 @@ function ObjectRow({
   const grantCount = privileges.filter((p) => p.grantable).length;
   const grantor = grantorSummary(object.grantors);
   return (
-    <div className={cn("rounded-sm", open && "bg-foreground/[0.02]")}>
+    <div className={cn("rounded-sm", open && "bg-foreground/2")}>
       <Button
         aria-expanded={open}
-        className="h-auto w-full items-center justify-start gap-2 rounded-sm px-1.5 py-1 font-normal hover:bg-foreground/[0.03]"
+        className="h-auto w-full items-center justify-start"
         onClick={() => setOpen(!open)}
+        presentation="grant-group"
         type="button"
         variant="ghost"
       >
@@ -85,7 +86,7 @@ function ObjectRow({
         <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-muted-foreground text-xs">
           {heldCount} priv{heldCount === 1 ? "" : "s"}
           {grantCount > 0 ? (
-            <span className="text-amber-600/90 dark:text-amber-400/90">
+            <span className="text-warning-600/90 dark:text-warning-400/90">
               {" "}
               · {grantCount}+
             </span>
@@ -93,7 +94,7 @@ function ObjectRow({
         </span>
       </Button>
       {open ? (
-        <div className="mt-1 flex flex-col gap-1.5 border-border/60 border-t border-dashed py-2 pr-1.5 pl-[26px]">
+        <div className="mt-1 flex flex-col gap-1.5 border-border/60 border-t border-dashed py-2 pr-1.5 pl-6.5">
           <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-xs">
             <span className="text-muted-foreground text-xs">privileges</span>
             <HeldPillStrip columns={columns} object={object} />
@@ -102,7 +103,7 @@ function ObjectRow({
             <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-xs">
               <span className="text-muted-foreground text-xs">granted by</span>
               <span
-                className="font-mono text-[0.75rem] text-foreground/85"
+                className="text-(length:--text-label) font-mono text-foreground/85"
                 title={grantor.title}
               >
                 {grantor.text}
@@ -156,10 +157,11 @@ function SchemaFilterBar({
         />
         <Input
           aria-label={`Filter ${unit}s in ${schema}`}
-          className="h-7 pl-8 font-mono text-xs"
+          className="h-7"
           name={`grant-filter-${schema}`}
           onChange={(event) => setSearch(event.target.value)}
           placeholder={`Filter ${total.toLocaleString()} ${unit}s in ${schema}…`}
+          presentation="identifier-search"
           value={search}
         />
       </div>
@@ -184,8 +186,9 @@ function SchemaFilterBar({
         />
         {filterActive ? (
           <Button
-            className="h-[22px] px-2 font-normal text-muted-foreground text-xs"
+            className="h-[22px]"
             onClick={onClear}
+            presentation="grant-count"
             size="xs"
             type="button"
             variant="ghost"
@@ -194,7 +197,7 @@ function SchemaFilterBar({
           </Button>
         ) : null}
         {filterActive ? (
-          <span className="ml-auto font-mono text-muted-foreground text-xs tracking-[0.02em]">
+          <span className="ml-auto font-mono text-muted-foreground text-xs tracking-label">
             {matchCount.toLocaleString()} match{matchCount === 1 ? "" : "es"}
           </span>
         ) : null}
@@ -225,8 +228,9 @@ function SchemaSectionHeader({
   return (
     <Button
       aria-expanded={open}
-      className="h-auto w-full items-center justify-start gap-3 rounded-sm px-1 py-1.5 font-normal hover:bg-foreground/[0.03]"
+      className="h-auto w-full items-center justify-start"
       onClick={onToggle}
+      presentation="grant-entity"
       type="button"
       variant="ghost"
     >
@@ -238,7 +242,7 @@ function SchemaSectionHeader({
       />
       <FolderTree className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="flex min-w-0 flex-col items-start">
-        <span className="truncate font-medium font-mono text-[0.8125rem] leading-tight">
+        <span className="text-(length:--text-caption) truncate font-medium font-mono leading-tight">
           {schema}
         </span>
         {grantor ? (
@@ -250,7 +254,7 @@ function SchemaSectionHeader({
           </span>
         ) : null}
       </span>
-      <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-foreground/[0.78] text-xs tracking-[0.02em]">
+      <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-foreground/78 text-xs tracking-label">
         <span className="font-medium">{objects.length.toLocaleString()}</span>
         <span className="ml-1 font-normal text-muted-foreground">
           {unit}
@@ -311,7 +315,7 @@ function SchemaSectionBody({
   const overflow = filtered.length - sample.length;
   const hasOverflow = filtered.length > MAX_SAMPLE_ROWS;
   return (
-    <div className="flex flex-col pb-2 pl-[26px]">
+    <div className="flex flex-col pb-2 pl-6.5">
       {isLarge ? (
         <SchemaFilterBar
           columns={columns}
@@ -332,7 +336,8 @@ function SchemaSectionBody({
       ) : null}
       {sample.length === 0 ? (
         <SearchEmptyState
-          className="min-h-16 py-3.5"
+          className="min-h-16"
+          presentation="search-compact"
           resourceName={`${unit}s`}
         />
       ) : null}
@@ -341,8 +346,9 @@ function SchemaSectionBody({
       ))}
       {hasOverflow ? (
         <Button
-          className="h-auto justify-start self-start px-1.5 pt-1.5 pb-1 font-normal text-muted-foreground text-xs underline-offset-2 hover:text-foreground hover:underline"
+          className="h-auto justify-start self-start"
           onClick={() => setShowAll(!showAll)}
+          presentation="grant-more"
           size="sm"
           type="button"
           variant="link"
@@ -503,8 +509,9 @@ function GroupHeader({
   return (
     <Button
       aria-expanded={open}
-      className="h-auto w-full items-center justify-start gap-2.5 rounded-none px-1 py-2.5 font-normal hover:bg-foreground/[0.02]"
+      className="h-auto w-full items-center justify-start"
       onClick={onToggle}
+      presentation="grant-object"
       type="button"
       variant="ghost"
     >
@@ -518,7 +525,7 @@ function GroupHeader({
         <Icon className="size-3.5" />
       </span>
       <span className="font-medium text-sm">{title}</span>
-      <span className="font-mono text-muted-foreground text-xs tracking-[0.04em]">
+      <span className="font-mono text-muted-foreground text-xs tracking-control">
         {count.toLocaleString()}
       </span>
       <span className="ml-auto flex items-center">{density}</span>
@@ -613,11 +620,11 @@ function FlatGroup({
             const grantor = grantorSummary(object.grantors);
             return (
               <div
-                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-sm p-1.5 hover:bg-foreground/[0.03]"
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-sm p-1.5 hover:bg-foreground/3"
                 key={object.key}
               >
                 <span className="flex min-w-0 flex-col">
-                  <span className="truncate font-mono text-[0.78125rem] leading-tight">
+                  <span className="text-(length:--text-label-lg) truncate font-mono leading-tight">
                     {objectDisplayName(object)}
                   </span>
                   {grantor ? (

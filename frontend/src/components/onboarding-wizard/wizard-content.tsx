@@ -14,8 +14,8 @@ import type {
   ConfigMethod,
   WizardPhase,
 } from "@/components/onboarding-wizard/types";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/querylane-ui/button";
+import { Card, CardContent } from "@/components/querylane-ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { captureException } from "@/lib/diagnostics";
 import type { AppUiError } from "@/lib/ui-error-types";
@@ -67,10 +67,10 @@ function RailSurface({ children }: { children: ReactNode }) {
   return (
     <div
       aria-hidden="true"
-      className="relative isolate flex min-h-[240px] w-full max-w-[300px] items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] px-5 py-6 shadow-[0_20px_80px_rgba(2,4,10,0.32)]"
+      className="relative isolate flex min-h-[240px] w-full max-w-[300px] items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-white/3 px-5 py-6 shadow-(--shadow-onboarding-panel)"
       data-onboarding-rail-visual=""
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_30%,rgba(64,102,255,0.18),transparent_40%),radial-gradient(circle_at_60%_72%,rgba(129,71,255,0.12),transparent_34%)]" />
+      <div className="onboarding-preview-glow absolute inset-0" />
       {children}
     </div>
   );
@@ -80,21 +80,21 @@ function SelectionRail() {
     <RailSurface>
       <div className="relative flex w-full max-w-[320px] flex-col items-center gap-5">
         <div className="relative h-[220px] w-full">
-          <div className="absolute top-0 left-6 h-20 w-[76%] rounded-[20px] border border-white/14 bg-white/[0.08] backdrop-blur-md" />
-          <div className="absolute top-16 left-0 h-32 w-full rounded-[24px] border border-white/14 bg-white/[0.08] p-5 backdrop-blur-md">
-            <div className="mb-4 h-3.5 w-28 rounded-full bg-[#4d72d8]" />
+          <div className="absolute top-0 left-6 h-20 w-[76%] rounded-card border border-white/14 bg-white/8 backdrop-blur-md" />
+          <div className="absolute top-16 left-0 h-32 w-full rounded-dialog border border-white/14 bg-white/8 p-5 backdrop-blur-md">
+            <div className="mb-4 h-3.5 w-28 rounded-full bg-onboarding-accent" />
             <div className="grid grid-cols-3 gap-4">
               {PLACEHOLDER_CARD_IDS.map((cardId) => (
                 <div
-                  className="h-20 rounded-[16px] border border-white/8 bg-white/[0.06]"
+                  className="h-20 rounded-panel-lg border border-white/8 bg-white/6"
                   key={cardId}
                 />
               ))}
             </div>
           </div>
-          <div className="absolute bottom-0 left-0 h-20 w-full rounded-[20px] border border-white/14 bg-white/[0.08] px-4 py-3 backdrop-blur-md">
+          <div className="absolute bottom-0 left-0 h-20 w-full rounded-card border border-white/14 bg-white/8 px-4 py-3 backdrop-blur-md">
             <div className="flex items-center gap-3.5">
-              <div className="size-10 rounded-[12px] bg-[#1d3d8e]" />
+              <div className="size-10 rounded-panel-sm bg-onboarding-primary-hover" />
               <div className="flex-1 space-y-2">
                 <div className="h-3.5 w-2/3 rounded-full bg-white/18" />
                 <div className="h-2.5 w-1/2 rounded-full bg-white/12" />
@@ -116,34 +116,34 @@ function ConfigRail({ compact = false }: { compact?: boolean }) {
         )}
         data-testid="onboarding-config-rail"
       >
-        <div className="mx-auto w-[82%] rounded-[22px] border border-white/14 bg-white/[0.08] px-5 py-4 backdrop-blur-md">
+        <div className="mx-auto w-[82%] rounded-dialog-sm border border-white/14 bg-white/8 px-5 py-4 backdrop-blur-md">
           <div className="mb-3 flex items-center gap-2.5 text-white/56">
-            <Sparkles className="size-4 text-blue-300" />
+            <Sparkles className="size-4 text-info-300" />
             <span className="font-mono text-xs">config.yaml</span>
           </div>
           <div className="space-y-2 font-mono text-xs leading-5">
-            <div className="text-fuchsia-300">database:</div>
-            <div className="text-blue-300">
+            <div className="text-highlight-300">database:</div>
+            <div className="text-info-300">
               {" "}
               host: <span className="text-white">localhost</span>
             </div>
-            <div className="text-blue-300">
+            <div className="text-info-300">
               {" "}
-              port: <span className="text-amber-200">5432</span>
+              port: <span className="text-warning-200">5432</span>
             </div>
-            <div className="text-blue-300">
+            <div className="text-info-300">
               {" "}
-              database: <span className="text-amber-200">querylane</span>
+              database: <span className="text-warning-200">querylane</span>
             </div>
-            <div className="text-blue-300">
+            <div className="text-info-300">
               {" "}
               ssl_mode: <span className="text-white">disable</span>
             </div>
           </div>
         </div>
-        <div className="mx-auto w-[88%] rounded-[22px] border border-white/14 bg-white/[0.08] p-4 backdrop-blur-md">
+        <div className="mx-auto w-[88%] rounded-dialog-sm border border-white/14 bg-white/8 p-4 backdrop-blur-md">
           <div className="flex items-center gap-3.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-500/16 text-emerald-200">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-positive-500/16 text-positive-200">
               <Workflow className="size-4.5" />
             </div>
             <div className="space-y-0.5">
@@ -156,11 +156,11 @@ function ConfigRail({ compact = false }: { compact?: boolean }) {
             </div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <div className="rounded-[14px] border border-white/8 bg-white/[0.05] p-3 text-center">
+            <div className="rounded-panel border border-white/8 bg-white/5 p-3 text-center">
               <div className="font-semibold text-white text-xl">4</div>
               <div className="text-white/45 text-xs">steps</div>
             </div>
-            <div className="rounded-[14px] border border-white/8 bg-white/[0.05] p-3 text-center">
+            <div className="rounded-panel border border-white/8 bg-white/5 p-3 text-center">
               <div className="font-semibold text-white text-xl">OK</div>
               <div className="text-white/45 text-xs">status</div>
             </div>
@@ -182,13 +182,13 @@ function ProgressRail({ success = false }: { success?: boolean }) {
   return (
     <RailSurface>
       <div className="w-full max-w-[320px] space-y-5">
-        <div className="mx-auto flex h-24 w-[82%] items-center justify-center rounded-[20px] border border-white/14 bg-white/[0.08] backdrop-blur-md">
+        <div className="mx-auto flex h-24 w-[82%] items-center justify-center rounded-card border border-white/14 bg-white/8 backdrop-blur-md">
           <div
             className={cn(
-              "flex size-14 items-center justify-center rounded-[18px]",
+              "flex size-14 items-center justify-center rounded-card-sm",
               success
-                ? "bg-emerald-500/18 text-emerald-200"
-                : "bg-[#21479e] text-blue-300"
+                ? "bg-positive-500/18 text-positive-200"
+                : "bg-onboarding-primary text-info-300"
             )}
           >
             {success ? (
@@ -203,7 +203,7 @@ function ProgressRail({ success = false }: { success?: boolean }) {
             const isDone = index < doneCount;
             return (
               <div
-                className="flex items-center justify-between rounded-[14px] border border-white/10 bg-white/[0.05] px-3.5 py-2.5"
+                className="flex items-center justify-between rounded-panel border border-white/10 bg-white/5 px-3.5 py-2.5"
                 key={card.key}
               >
                 <div className="space-y-0.5">
@@ -218,8 +218,8 @@ function ProgressRail({ success = false }: { success?: boolean }) {
                   className={cn(
                     "rounded-full px-2.5 py-1 font-medium text-xs",
                     isDone
-                      ? "bg-emerald-500/15 text-emerald-200"
-                      : "bg-white/[0.06] text-white/55"
+                      ? "bg-positive-500/15 text-positive-200"
+                      : "bg-white/6 text-white/55"
                   )}
                 >
                   {isDone ? "done" : "pending"}
@@ -287,10 +287,11 @@ function LoadingContent({ onRefresh }: { onRefresh: () => Promise<void> }) {
       footer={
         <div className="flex justify-end">
           <Button
-            className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
+            className="h-9"
             onClick={() => {
               onRefresh().catch((error) => captureException(error));
             }}
+            presentation="onboarding-primary"
           >
             Refresh
             <ChevronRight className="size-4" />
@@ -300,7 +301,7 @@ function LoadingContent({ onRefresh }: { onRefresh: () => Promise<void> }) {
       title="Loading onboarding state"
     >
       <div className="flex h-full items-center justify-center">
-        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/68">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/3 px-4 py-3 text-sm text-white/68">
           <Spinner className="size-4" />
           Checking Querylane setup prerequisites…
         </div>
@@ -358,11 +359,11 @@ function OnboardingStageContent({
   return (
     <>
       {showPreviousErrorBanner ? (
-        <div className="rounded-2xl border border-amber-400/18 bg-amber-500/[0.08] px-4 py-3">
-          <div className="font-medium text-amber-50 text-base">
+        <div className="rounded-2xl border border-warning-400/18 bg-warning-500/8 px-4 py-3">
+          <div className="font-medium text-base text-warning-50">
             Previous setup attempt failed
           </div>
-          <p className="mt-1.5 text-amber-50/78 text-sm leading-6">
+          <p className="mt-1.5 text-sm text-warning-50/78 leading-6">
             {wizardStateError}
           </p>
         </div>
@@ -406,24 +407,25 @@ export function OnboardingWizardContent() {
   return (
     <div className="dark w-full">
       <div
-        className="relative min-h-dvh overflow-hidden bg-[#03050a] px-4 py-6 sm:px-6 sm:py-8"
+        className="relative min-h-dvh overflow-hidden bg-onboarding-backdrop px-4 py-6 sm:px-6 sm:py-8"
         data-onboarding-shell=""
       >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(69,98,196,0.12),transparent_32%),radial-gradient(circle_at_50%_45%,rgba(63,93,194,0.12),transparent_28%)]" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] opacity-20 [background-size:40px_40px]" />
+        <div className="onboarding-page-glow pointer-events-none absolute inset-0" />
+        <div className="onboarding-dot-grid pointer-events-none absolute inset-0 opacity-20 [background-size:40px_40px]" />
         <div className="relative mx-auto flex min-h-[calc(100dvh-3rem)] w-full max-w-4xl items-center justify-center xl:max-w-5xl">
           <Card
-            className="relative w-full overflow-hidden border-white/10 bg-[#05070c] py-0 text-white shadow-[0_32px_96px_rgba(0,0,0,0.45)]"
+            className="relative w-full overflow-hidden"
             data-onboarding-panel=""
             data-testid="onboarding-panel"
+            presentation="onboarding"
           >
-            <CardContent className="p-0">
+            <CardContent presentation="flush">
               <div className="grid grid-cols-1 lg:min-h-[460px] lg:grid-cols-[minmax(0,1.2fr)_minmax(250px,0.8fr)]">
-                <section className="flex flex-col bg-[#05070c] px-5 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
+                <section className="flex flex-col bg-onboarding-card px-5 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
                   <div className="mx-auto flex h-full w-full max-w-4xl flex-1 flex-col">
                     <div className="mb-5 flex items-center justify-between gap-4 text-white/62">
                       <Logo className="text-white" size={22} />
-                      <div className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-medium text-white/62 text-xs tracking-[0.18em]">
+                      <div className="rounded-full border border-white/10 bg-white/3 px-3 py-1 font-medium text-white/62 text-xs tracking-display">
                         {getStepCounter(phase)}
                       </div>
                     </div>
@@ -433,10 +435,10 @@ export function OnboardingWizardContent() {
                   </div>
                 </section>
                 <aside
-                  className="relative hidden border-white/10 bg-[#090b10] lg:block lg:border-l"
+                  className="relative hidden border-white/10 bg-onboarding-grid lg:block lg:border-l"
                   data-onboarding-rail=""
                 >
-                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.08)_1px,transparent_1px)] opacity-35 [background-size:64px_64px]" />
+                  <div className="onboarding-line-grid pointer-events-none absolute inset-0 opacity-35 [background-size:64px_64px]" />
                   <div className="relative flex h-full flex-col items-center justify-center gap-5 px-5 py-6">
                     {railModel.visual}
                     <p className="max-w-[300px] text-center text-white/58 text-xs leading-5 xl:text-sm xl:leading-6">

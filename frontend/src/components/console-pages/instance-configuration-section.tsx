@@ -17,6 +17,12 @@ import { validateInstanceForm } from "@/components/console-pages/instance-config
 import { FieldError } from "@/components/console-pages/instance-configuration-field-error";
 import { PasswordInput } from "@/components/password-input";
 import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/querylane-ui/alert";
+import {
   SslModeSelectItems,
   SslModeSelectValue,
 } from "@/components/ssl-mode-select";
@@ -24,12 +30,6 @@ import {
   SslNegotiationSelectItems,
   SslNegotiationSelectValue,
 } from "@/components/ssl-negotiation-select";
-import {
-  Alert,
-  AlertAction,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DisabledReasonButton } from "@/components/ui/disabled-reason-button";
 import { Input } from "@/components/ui/input";
@@ -135,10 +135,7 @@ function InstanceCredentialAlert({
       "Configure QUERYLANE_INSTANCE_SECRET_KEY and restart Querylane before replacing the password."
     : "Stored credentials can’t be read. Enter the password again to restore access.";
   return (
-    <Alert
-      className="has-data-[slot=alert-action]:pr-4 sm:has-data-[slot=alert-action]:pr-44"
-      variant="destructive"
-    >
+    <Alert presentation="responsive-action" variant="destructive">
       <AlertCircle aria-hidden="true" />
       <AlertTitle>Credentials need attention</AlertTitle>
       <AlertDescription id={credentialGuidanceId}>
@@ -529,7 +526,7 @@ function InstanceConfigurationNotice({
       {formNotice.variant === "error" ? (
         <AlertCircle className="size-4" />
       ) : (
-        <CheckCircle2 className="size-4 text-emerald-600" />
+        <CheckCircle2 className="size-4 text-positive-600" />
       )}
       <AlertTitle>
         {formNotice.variant === "error" ? "Could not save" : "Saved"}

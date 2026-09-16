@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import type { MouseEvent, PointerEvent } from "react";
 import { useId, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -19,7 +19,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/querylane-ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -74,7 +74,8 @@ function ColumnHeaderMenu({
         render={
           <Button
             aria-label={`Open options for column ${columnName}`}
-            className="shrink-0 text-muted-foreground"
+            className="shrink-0"
+            presentation="muted"
             size="icon-xs"
             type="button"
             variant="ghost"
@@ -85,7 +86,7 @@ function ColumnHeaderMenu({
       />
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="flex flex-col gap-0.5">
+          <DropdownMenuLabel className="flex flex-col" presentation="stacked">
             <span className="truncate font-mono text-foreground">
               {columnName}
             </span>

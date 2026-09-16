@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { DEFAULT_CONFIG_FILE_PATH } from "@/components/config-managed-guidance";
 import { buildResetConfigCommand } from "@/components/internal-storage-recovery-command";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
 import {
   Dialog,
@@ -25,8 +25,9 @@ function InternalStorageRecoveryDialog({
       <DialogTrigger
         render={
           <Button
-            className="h-auto shrink-0 px-2 py-1 text-xs"
+            className="h-auto shrink-0"
             onClick={() => setOpen(true)}
+            presentation="recovery"
             size="sm"
             variant="destructive"
           >

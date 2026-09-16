@@ -17,25 +17,17 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+} from "@/components/querylane-ui/accordion";
+import { Button } from "@/components/querylane-ui/button";
+import { Input } from "@/components/querylane-ui/input";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
+} from "@/components/querylane-ui/sheet";
+import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
 import {
   Table,
   TableBody,
@@ -43,13 +35,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/querylane-ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   extensionsForDatabaseQueryInput,
   useListAllExtensionsQuery,
 } from "@/hooks/api/extension";
-import { DETAIL_DRAWER_WIDTH_CLASS } from "@/lib/drawer-width";
 import {
   type UrlTableSearchRoute,
   useUrlTableSearch,
@@ -93,23 +92,20 @@ function LedgerRow({
   const installed = extension.statusFilter === "installed";
   return (
     <TableRow
-      className={cn(
-        "cursor-pointer border-l-2",
-        installed
-          ? "border-l-success bg-success/[0.04] hover:bg-success/[0.08]"
-          : "border-l-transparent"
-      )}
+      className="cursor-pointer"
       onClick={() => onSelect(extension.key)}
+      presentation={installed ? "extension-installed" : "extension-available"}
     >
       <TableCell>
         <Button
           aria-expanded={isSelected}
           aria-haspopup="dialog"
-          className="h-auto min-h-0 justify-start whitespace-normal p-0 font-medium font-mono text-sm hover:bg-transparent"
+          className="h-auto min-h-0 justify-start whitespace-normal"
           onClick={(event) => {
             event.stopPropagation();
             onSelect(extension.key);
           }}
+          presentation="extension"
           size="xs"
           type="button"
           variant="ghost"
@@ -120,13 +116,16 @@ function LedgerRow({
       <TableCell>
         <StatusCell extension={extension} />
       </TableCell>
-      <TableCell className="font-mono text-muted-foreground text-xs tabular-nums">
+      <TableCell presentation="numeric-muted">
         {extension.versionLabel}
       </TableCell>
-      <TableCell className="text-muted-foreground text-xs">
+      <TableCell presentation="muted-small">
         {extension.category ?? EMPTY_VALUE}
       </TableCell>
-      <TableCell className="hidden max-w-md truncate text-muted-foreground text-sm lg:table-cell">
+      <TableCell
+        className="hidden max-w-md lg:table-cell"
+        presentation="description"
+      >
         {extension.description}
       </TableCell>
     </TableRow>
@@ -174,9 +173,9 @@ function LedgerToolbar({
         <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           aria-label="Search extensions…"
-          className="pl-8"
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search extensions…"
+          presentation="search"
           value={search}
         />
       </div>
@@ -308,7 +307,7 @@ function CuratedDrawerSections({
       </section>
       <Accordion defaultValue={["about"]}>
         <AccordionItem value="about">
-          <AccordionTrigger className="text-sm">What it is</AccordionTrigger>
+          <AccordionTrigger presentation="compact">What it is</AccordionTrigger>
           <AccordionContent>
             <div className="space-y-2">
               <p className="text-sm leading-relaxed">{curated.about}</p>
@@ -319,7 +318,7 @@ function CuratedDrawerSections({
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="capabilities">
-          <AccordionTrigger className="text-sm">
+          <AccordionTrigger presentation="compact">
             What it gives you
           </AccordionTrigger>
           <AccordionContent>
@@ -336,7 +335,7 @@ function CuratedDrawerSections({
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="details">
-          <AccordionTrigger className="text-sm">Details</AccordionTrigger>
+          <AccordionTrigger presentation="compact">Details</AccordionTrigger>
           <AccordionContent>
             <DrawerDetailsList extension={extension} />
           </AccordionContent>
@@ -363,14 +362,16 @@ function ExtensionDrawer({
       open={extension !== undefined}
     >
       <SheetContent
-        className={cn("gap-0 overflow-hidden p-0", DETAIL_DRAWER_WIDTH_CLASS)}
+        className="overflow-hidden"
+        presentation="detail"
         side="right"
+        width="detail"
       >
         {extension ? (
           <>
-            <SheetHeader className="border-border border-b pr-12">
+            <SheetHeader presentation="inspector">
               <div className="flex min-w-0 items-center gap-2">
-                <SheetTitle className="truncate font-mono font-semibold text-base">
+                <SheetTitle presentation="identifier">
                   {extension.displayName}
                   <span className="sr-only"> details</span>
                 </SheetTitle>
@@ -442,7 +443,7 @@ function ExtensionsLedger({
         <div className="overflow-x-auto rounded-lg border border-border">
           <Table>
             <TableHeader>
-              <TableRow className="border-l-2 border-l-transparent hover:bg-transparent">
+              <TableRow presentation="inspector">
                 <TableHead>Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Version</TableHead>

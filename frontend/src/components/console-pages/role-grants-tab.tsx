@@ -111,7 +111,7 @@ function DefaultsBody({
         >
           <span className="leading-relaxed">
             <span className="text-muted-foreground">When </span>
-            <span className="font-mono text-[0.78125rem] text-foreground/85">
+            <span className="text-(length:--text-label-lg) font-mono text-foreground/85">
               {rule.creatorRoleName}
             </span>
             <span className="text-muted-foreground"> creates new </span>
@@ -119,7 +119,7 @@ function DefaultsBody({
               {DEFAULT_PRIV_OBJECT_LABEL[rule.objectType]}
             </strong>
             <span className="text-muted-foreground"> in </span>
-            <span className="font-mono text-[0.78125rem] text-foreground/85">
+            <span className="text-(length:--text-label-lg) font-mono text-foreground/85">
               {rule.schemaName || "any schema"}
             </span>
             <span className="text-muted-foreground"> → grant </span>
@@ -164,7 +164,7 @@ function DefaultsDrillView({
         count={rules.length}
         countUnit="rule"
         icon={Clock}
-        iconClassName="text-violet-600 dark:text-violet-300"
+        iconClassName="text-permission-600 dark:text-permission-300"
         partial={partial}
         title="Default privileges"
       />
@@ -245,7 +245,7 @@ function PublicDrillView({
       <ContentHead
         count={objects.length}
         icon={Globe}
-        iconClassName="text-sky-600 dark:text-sky-400"
+        iconClassName="text-reference-600 dark:text-reference-400"
         partial={partial}
         title="Granted to PUBLIC"
       />
@@ -292,10 +292,11 @@ function PublicDrillView({
 
 type HeadlineTone = "danger" | "info" | "rw" | "ro" | "usage";
 const HEADLINE_TONE_CLASS: Record<HeadlineTone, string> = {
-  danger: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  info: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
-  ro: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  rw: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  danger:
+    "border-negative-500/30 bg-negative-500/10 text-red-700 dark:text-negative-400",
+  info: "border-reference-500/30 bg-reference-500/10 text-reference-700 dark:text-reference-400",
+  ro: "border-positive-500/30 bg-positive-500/10 text-positive-700 dark:text-positive-400",
+  rw: "border-warning-500/30 bg-warning-500/10 text-warning-700 dark:text-warning-400",
   usage: "border-border bg-muted text-muted-foreground",
 };
 

@@ -1,0 +1,7 @@
+.selected-header-edge-fixture {
+  inline-size: 360px;
+  block-size: 84px;
+}
+.selected-header-edge-fixture .rdg-header-row {
+  display: contents;
+}

@@ -1,8 +1,8 @@
 import type { ComponentProps } from "react";
 
 import { PasswordInput } from "@/components/password-input";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Input } from "@/components/querylane-ui/input";
+import { Label } from "@/components/querylane-ui/label";
 import { cn } from "@/lib/utils";
 
 interface LabeledInputProps
@@ -10,39 +10,26 @@ interface LabeledInputProps
   className?: string | undefined;
   description?: string | undefined;
   error?: string | undefined;
-  inputClassName?: string | undefined;
   label: string;
 }
-
-const BASE_INPUT_CLASSES =
-  "h-9 rounded-lg border-white/10 bg-white/[0.03] px-3 py-0 text-sm text-white leading-none placeholder:text-white/32 focus-visible:border-[#4b73d7] focus-visible:ring-[#4b73d7]/25";
-
-const ERROR_INPUT_CLASSES =
-  "border-red-400/40 focus-visible:border-red-400/60 focus-visible:ring-red-400/20";
 
 export function LabeledInput({
   className,
   description,
   error,
   id,
-  inputClassName,
   label,
   type = "text",
   ref,
   ...inputProps
 }: LabeledInputProps) {
-  const inputCn = cn(
-    BASE_INPUT_CLASSES,
-    error && ERROR_INPUT_CLASSES,
-    inputClassName
-  );
   const errorId = error ? `${id}-error` : undefined;
   const invalid = error ? true : undefined;
 
   return (
     <div className={cn("space-y-1.5", className)}>
       <div className="space-y-0.5">
-        <Label className="font-medium text-sm text-white" htmlFor={id}>
+        <Label htmlFor={id} presentation="onboarding">
           {label}
         </Label>
         {description ? (
@@ -53,8 +40,9 @@ export function LabeledInput({
         <PasswordInput
           aria-describedby={errorId}
           aria-invalid={invalid}
-          className={inputCn}
+          className="h-9"
           id={id}
+          presentation="onboarding"
           ref={ref}
           {...inputProps}
         />
@@ -62,15 +50,16 @@ export function LabeledInput({
         <Input
           aria-describedby={errorId}
           aria-invalid={invalid}
-          className={inputCn}
+          className="h-9"
           id={id}
+          presentation="onboarding"
           ref={ref}
           type={type}
           {...inputProps}
         />
       )}
       {error ? (
-        <p className="text-red-300/80 text-xs" id={errorId} role="alert">
+        <p className="text-negative-300/80 text-xs" id={errorId} role="alert">
           {error}
         </p>
       ) : null}

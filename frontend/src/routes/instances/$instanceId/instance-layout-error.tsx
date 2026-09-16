@@ -8,11 +8,7 @@ export function InstanceLayoutErrorComponent({
 }: ErrorComponentProps) {
   return (
     <DatabaseLayout>
-      <RouteErrorView
-        containerClassName="min-h-[60vh]"
-        error={error}
-        reset={reset}
-      />
+      <RouteErrorView error={error} fillViewport={true} reset={reset} />
     </DatabaseLayout>
   );
 }

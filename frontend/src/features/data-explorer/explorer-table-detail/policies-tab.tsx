@@ -1,17 +1,12 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import { Badge } from "@/components/querylane-ui/badge";
+import { Button } from "@/components/querylane-ui/button";
+import { SelectContent, SelectTrigger } from "@/components/querylane-ui/select";
+import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
 import { SearchEmptyState } from "@/components/search-empty-state";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { DataTableFilter } from "@/components/ui/data-table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
+import { Select, SelectItem, SelectValue } from "@/components/ui/select";
 import { deriveMetadataToolbar } from "@/features/data-explorer/explorer-table-detail/metadata";
 import { presentPolicyModeOptions } from "@/features/data-explorer/explorer-table-detail/options";
 import {
@@ -21,8 +16,8 @@ import {
   isPolicyPageSize,
   POLICY_PAGE_SIZE_OPTIONS,
   type PolicyPageSize,
-  policyModeBadgeClassName,
   policyModeLabel,
+  policyModePresentation,
 } from "@/features/data-explorer/explorer-table-detail/policies-model";
 import {
   FacetFilterBar,
@@ -67,14 +62,12 @@ function PolicyCard({ policy }: { policy: TablePolicy }) {
     <article className="rounded-lg border bg-card p-3 shadow-xs">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-mono font-semibold text-sm">{policy.policyName}</h2>
-        <Badge className="h-[18px] font-mono text-xs" variant="outline">
+        <Badge className="h-[18px]" presentation="identifier" variant="outline">
           FOR {formatPolicyCommand(policy.command)}
         </Badge>
         <Badge
-          className={cn(
-            "h-[18px] font-mono text-xs",
-            policyModeBadgeClassName(policy.mode)
-          )}
+          className="h-[18px]"
+          presentation={policyModePresentation(policy.mode)}
           variant="secondary"
         >
           {policyModeLabel(policy.mode)}
@@ -85,7 +78,7 @@ function PolicyCard({ policy }: { policy: TablePolicy }) {
       </div>
       {policy.usingExpression ? (
         <div className="mt-3">
-          <div className="font-semibold text-[0.625rem] text-muted-foreground uppercase tracking-wider">
+          <div className="text-(length:--text-micro) font-semibold text-muted-foreground uppercase tracking-wider">
             USING
           </div>
           <PolicyExpression expression={policy.usingExpression} />
@@ -93,7 +86,7 @@ function PolicyCard({ policy }: { policy: TablePolicy }) {
       ) : null}
       {policy.checkExpression ? (
         <div className="mt-2">
-          <div className="font-semibold text-[0.625rem] text-muted-foreground uppercase tracking-wider">
+          <div className="text-(length:--text-micro) font-semibold text-muted-foreground uppercase tracking-wider">
             WITH CHECK
           </div>
           <PolicyExpression expression={policy.checkExpression} />
@@ -174,7 +167,8 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
         <Select onValueChange={handleRoleChange} value={activeRole}>
           <SelectTrigger
             aria-label="Policy role"
-            className="h-8 min-w-44 font-mono"
+            className="h-8 min-w-44"
+            presentation="identifier"
             size="sm"
           >
             <SelectValue>{activeRole}</SelectValue>
@@ -194,7 +188,8 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
         >
           <SelectTrigger
             aria-label="Policy command"
-            className="h-8 min-w-32 font-mono"
+            className="h-8 min-w-32"
+            presentation="identifier"
             size="sm"
           >
             <SelectValue>{formatPolicyCommand(previewCommand)}</SelectValue>
@@ -218,15 +213,15 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
           className={cn(
             "mt-4 flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm leading-relaxed",
             preview.hasRows
-              ? "bg-emerald-500/10 text-foreground"
-              : "bg-amber-500/10 text-foreground"
+              ? "bg-positive-500/10 text-foreground"
+              : "bg-warning-500/10 text-foreground"
           )}
         >
           <span
             aria-hidden="true"
             className={cn(
               "mt-1.5 size-2 shrink-0 rounded-full",
-              preview.hasRows ? "bg-emerald-500" : "bg-amber-500"
+              preview.hasRows ? "bg-positive-500" : "bg-warning-500"
             )}
           />
           <span>{preview.verdict}</span>
@@ -235,13 +230,14 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
         {preview.hasRows ? (
           <>
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-[0.625rem] text-muted-foreground uppercase tracking-wider">
+              <span className="text-(length:--text-micro) font-semibold text-muted-foreground uppercase tracking-wider">
                 Applied
               </span>
               {preview.appliedPolicies.map((policy) => (
                 <Badge
-                  className="h-5 font-mono text-xs"
+                  className="h-5"
                   key={policy.policyName}
+                  presentation="identifier"
                   variant="secondary"
                 >
                   {policy.policyName}
@@ -322,7 +318,7 @@ function PoliciesTab({
       <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-xs">
         <span
           aria-hidden="true"
-          className="size-2 rounded-full bg-emerald-500"
+          className="size-2 rounded-full bg-positive-500"
         />
         <p className="font-medium text-sm">
           This table defines row-level security policies; table owners and
@@ -360,7 +356,10 @@ function PoliciesTab({
         </div>
       ) : null}
       {pagePolicies.length === 0 ? (
-        <SearchEmptyState className="border" resourceName="policies" />
+        <SearchEmptyState
+          presentation="search-bordered"
+          resourceName="policies"
+        />
       ) : null}
       <fieldset
         aria-label="Policies pagination"
@@ -421,11 +420,12 @@ function PoliciesTab({
         <nav aria-label="Policy pages" className="flex items-center gap-2">
           <Button
             aria-label="Previous policies page"
-            className="size-7 p-0"
+            className="size-7"
             disabled={currentPageIndex === 0}
             onClick={() => {
               setPageIndex(Math.max(0, currentPageIndex - 1));
             }}
+            presentation="unpadded"
             size="sm"
             type="button"
             variant="outline"
@@ -437,11 +437,12 @@ function PoliciesTab({
           </span>
           <Button
             aria-label="Next policies page"
-            className="size-7 p-0"
+            className="size-7"
             disabled={currentPageIndex >= pageCount - 1}
             onClick={() => {
               setPageIndex(Math.min(pageCount - 1, currentPageIndex + 1));
             }}
+            presentation="unpadded"
             size="sm"
             type="button"
             variant="outline"

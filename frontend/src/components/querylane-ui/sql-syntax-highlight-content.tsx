@@ -7,14 +7,15 @@ import type { CSSProperties } from "react";
 import type { ThemedTokenWithVariants } from "shiki";
 import { createHighlighterCoreSync } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import { keyedTokenLines } from "./keyed-token-lines";
 
-type SqlSyntaxHighlightProps = {
+interface SqlSyntaxHighlightProps {
   sql: string;
-};
+}
 
 type ShikiTokenStyle = CSSProperties & {
-  "--querylane-sql-token-dark"?: string;
-  "--querylane-sql-token-light"?: string;
+  "--querylane-sql-token-dark"?: string | undefined;
+  "--querylane-sql-token-light"?: string | undefined;
 };
 
 let sqlHighlighter: ReturnType<typeof createHighlighterCoreSync> | undefined;
@@ -52,26 +53,9 @@ function highlightSql(sqlText: string): ThemedTokenWithVariants[][] {
   SQL_TOKEN_CACHE.set(sqlText, tokenLines);
   return tokenLines;
 }
-
-function tokenStyle(token: ThemedTokenWithVariants): ShikiTokenStyle | undefined {
-  const dark = token.variants["dark"]?.color;
-  const light = token.variants["light"]?.color;
-  if (!(dark || light)) {
-    return undefined;
-  }
-  const style: ShikiTokenStyle = {};
-  if (dark) {
-    style["--querylane-sql-token-dark"] = dark;
-  }
-  if (light) {
-    style["--querylane-sql-token-light"] = light;
-  }
-  return style;
-}
-
 /** Multiline SQL needs preserved whitespace; nowrap containers support single-line SQL. */
 export function SqlSyntaxHighlight({ sql: sqlText }: SqlSyntaxHighlightProps) {
-  const tokenLines = highlightSql(sqlText);
+  const tokenLines = keyedTokenLines(highlightSql(sqlText));
 
   return (
     <code
@@ -79,19 +63,24 @@ export function SqlSyntaxHighlight({ sql: sqlText }: SqlSyntaxHighlightProps) {
       data-language="sql"
       data-syntax-highlighter="shiki"
     >
-      {tokenLines.map((line, lineIndex) => (
-        <span data-shiki-line="" key={`line-${lineIndex}`}>
-          {line.map((token, tokenIndex) => (
+      {tokenLines.map((line) => (
+        <span data-shiki-line="" key={line.key}>
+          {line.tokens.map(({ key, token }) => (
             <span
-              className="[color:var(--querylane-sql-token-light,currentColor)] dark:[color:var(--querylane-sql-token-dark,var(--querylane-sql-token-light,currentColor))]"
+              className="syntax-sql-token"
               data-shiki-token=""
-              key={`token-${lineIndex}-${tokenIndex}`}
-              style={tokenStyle(token)}
+              key={key}
+              style={
+                {
+                  "--querylane-sql-token-dark": token.variants["dark"]?.color,
+                  "--querylane-sql-token-light": token.variants["light"]?.color,
+                } satisfies ShikiTokenStyle
+              }
             >
               {token.content}
             </span>
           ))}
-          {lineIndex < tokenLines.length - 1 ? "\n" : null}
+          {line.trailingNewline ? "\n" : null}
         </span>
       ))}
     </code>

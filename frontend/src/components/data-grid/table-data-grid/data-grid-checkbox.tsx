@@ -26,7 +26,7 @@ function DataGridCheckbox(props: RenderCheckboxProps) {
   return (
     <span
       className={cn(
-        "relative mx-auto flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input text-primary-foreground shadow-xs transition-shadow dark:bg-input/30",
+        "relative mx-auto flex size-4 shrink-0 items-center justify-center rounded-control-sm border border-input text-primary-foreground shadow-xs transition-shadow dark:bg-input/30",
         "has-focus-visible:border-ring has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
         isMarked && "border-primary bg-primary dark:bg-primary",
         props.disabled && "opacity-50"

@@ -2,8 +2,12 @@ import { create as createProto } from "@bufbuild/protobuf";
 import { AlertTriangle, ArrowLeft, ChevronRight } from "lucide-react";
 import { useOnboardingWizardControllerContext } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller-context";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/querylane-ui/alert";
+import { Button } from "@/components/querylane-ui/button";
 import { EmbeddedSetupConfigSchema } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
@@ -36,16 +40,18 @@ export function EmbeddedPhase() {
       footer={
         <div className="flex items-center justify-between gap-4">
           <Button
-            className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
+            className="h-9"
             onClick={goBackToMethodSelection}
+            presentation="onboarding-secondary"
             variant="ghost"
           >
             <ArrowLeft className="size-4" />
             Back
           </Button>
           <Button
-            className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
+            className="h-9"
             onClick={handleContinue}
+            presentation="onboarding-primary"
           >
             Continue
             <ChevronRight className="size-4" />
@@ -56,15 +62,12 @@ export function EmbeddedPhase() {
     >
       <div className="space-y-4">
         {persistenceAvailable ? null : (
-          <Alert
-            className="border-amber-400/25 bg-amber-500/[0.08]"
-            role="alert"
-          >
-            <AlertTriangle className="text-amber-400" />
-            <AlertTitle className="text-amber-100">
+          <Alert presentation="onboarding-notice" role="alert">
+            <AlertTriangle className="text-warning-400" />
+            <AlertTitle presentation="onboarding-warning">
               Data will not persist
             </AlertTitle>
-            <AlertDescription className="text-amber-100/75">
+            <AlertDescription presentation="onboarding-notice">
               Querylane cannot write to {embeddedDataPath}, so the embedded
               database will run in ephemeral mode: all metadata, saved
               connections, and query history are lost on shutdown. Fix the
@@ -73,7 +76,7 @@ export function EmbeddedPhase() {
           </Alert>
         )}
 
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="rounded-xl border border-white/10 bg-white/3 p-4">
           <div className="grid gap-4 text-sm text-white/62 md:grid-cols-[200px_minmax(0,1fr)]">
             <div>Storage</div>
             <div className="text-white/88">

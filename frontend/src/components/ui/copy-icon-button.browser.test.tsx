@@ -7,7 +7,7 @@ import {
   SheetContent,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
+import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
 
 afterEach(async () => {
   await cleanup();

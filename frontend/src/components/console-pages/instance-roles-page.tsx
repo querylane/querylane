@@ -143,7 +143,7 @@ function LoginCell({ role }: { role: Role }) {
   if (role.attributes?.canLogin) {
     return (
       <span className="inline-flex items-center gap-1.5">
-        <span className="size-1.5 rounded-full bg-emerald-500" />
+        <span className="size-1.5 rounded-full bg-positive-500" />
         Yes
       </span>
     );

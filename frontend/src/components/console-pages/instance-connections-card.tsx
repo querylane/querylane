@@ -1,7 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, Lock, Timer, Users } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/querylane-ui/card";
 import {
   Table,
   TableBody,
@@ -10,7 +15,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/querylane-ui/table";
 import { formatElapsedDuration } from "@/lib/metrics";
 import { cn } from "@/lib/utils";
 import type {
@@ -56,8 +61,6 @@ const MS_PER_SECOND = 1000;
 const MAX_APPLICATION_ROWS = 10;
 /** Sentinel the backend emits for backends that set no application_name. */
 const UNNAMED_APPLICATION = "(unnamed)";
-const NUMERIC_CELL = "w-9 px-1 py-1.5 text-right text-xs";
-const NAME_CELL = "w-full max-w-0 py-1.5 pr-2 pl-0 text-xs";
 const LEDGER_COLUMNS = CONNECTION_STATES.length + 2;
 
 function sharePercent(count: number, total: number): number {
@@ -72,7 +75,10 @@ function Swatch({ className }: { className: string }) {
   return (
     <span
       aria-hidden="true"
-      className={cn("inline-block size-2 shrink-0 rounded-[3px]", className)}
+      className={cn(
+        "inline-block size-2 shrink-0 rounded-control-xs",
+        className
+      )}
     />
   );
 }
@@ -97,9 +103,9 @@ function CapacityLine({ activity }: { activity: ConnectionActivityHealth }) {
         role="img"
       >
         <div
-          className="h-full rounded-full bg-chart-1"
+          className="h-full w-(--connection-utilization) rounded-full bg-chart-1"
           style={{
-            width: widthPercent(
+            "--connection-utilization": widthPercent(
               activity.totalConnections,
               activity.maxConnections
             ),
@@ -237,19 +243,25 @@ function Count({ bold = false, value }: { bold?: boolean; value: number }) {
 function LedgerHeader() {
   return (
     <TableHeader>
-      <TableRow className="hover:bg-transparent">
-        <TableHead className="h-7 pl-0 text-xs">Application</TableHead>
+      <TableRow presentation="static">
+        <TableHead className="h-7" presentation="connection-leading">
+          Application
+        </TableHead>
         {CONNECTION_STATES.map((state) => (
           <TableHead
-            className="h-7 w-9 px-1 text-right text-xs"
+            className="h-7 w-9 text-right"
             key={state.key}
+            presentation="connection"
             title={state.label}
           >
             <Swatch className={state.className} />
             <span className="sr-only">{state.label}</span>
           </TableHead>
         ))}
-        <TableHead className="h-7 w-9 px-1 pr-0 text-right text-xs">
+        <TableHead
+          className="h-7 w-9 text-right"
+          presentation="connection-trailing"
+        >
           Total
         </TableHead>
       </TableRow>
@@ -260,15 +272,19 @@ function LedgerHeader() {
 function LedgerRow({ app }: { app: ApplicationConnections }) {
   return (
     <TableRow>
-      <TableCell className={NAME_CELL}>
+      <TableCell className="w-full max-w-0" presentation="connection-name">
         <ApplicationLabel name={app.applicationName} />
       </TableCell>
       {CONNECTION_STATES.map((state) => (
-        <TableCell className={NUMERIC_CELL} key={state.key}>
+        <TableCell
+          className="w-9 text-right"
+          key={state.key}
+          presentation="connection-value"
+        >
           <Count value={app[state.key]} />
         </TableCell>
       ))}
-      <TableCell className={cn(NUMERIC_CELL, "pr-0")}>
+      <TableCell className="w-9 text-right" presentation="connection-total">
         <Count bold={true} value={app.totalConnections} />
       </TableCell>
     </TableRow>
@@ -277,18 +293,27 @@ function LedgerRow({ app }: { app: ApplicationConnections }) {
 
 function LedgerFooter({ activity }: { activity: ConnectionActivityHealth }) {
   return (
-    <TableFooter className="bg-transparent">
-      <TableRow className="hover:bg-transparent">
-        <TableCell className={cn(NAME_CELL, "font-medium")}>Total</TableCell>
+    <TableFooter presentation="transparent">
+      <TableRow presentation="static">
+        <TableCell
+          className="w-full max-w-0"
+          presentation="connection-name-summary"
+        >
+          Total
+        </TableCell>
         {CONNECTION_STATES.map((state) => (
           <TableCell
-            className={cn(NUMERIC_CELL, "font-medium")}
+            className="w-9 text-right"
             key={state.key}
+            presentation="connection-value-summary"
           >
             <Count bold={true} value={activity[state.key]} />
           </TableCell>
         ))}
-        <TableCell className={cn(NUMERIC_CELL, "pr-0 font-semibold")}>
+        <TableCell
+          className="w-9 text-right"
+          presentation="connection-total-summary"
+        >
           <Count bold={true} value={activity.totalConnections} />
         </TableCell>
       </TableRow>
@@ -309,14 +334,15 @@ function ApplicationLedger({
   const shown = activity.byApplication.slice(0, MAX_APPLICATION_ROWS);
 
   return (
-    <Table className="text-xs">
+    <Table presentation="compact">
       <LedgerHeader />
       <TableBody>
         {shown.length === 0 ? (
-          <TableRow className="hover:bg-transparent">
+          <TableRow presentation="static">
             <TableCell
-              className="py-4 pl-0 text-center text-muted-foreground text-xs"
+              className="text-center"
               colSpan={LEDGER_COLUMNS}
+              presentation="empty"
             >
               No client connections right now.
             </TableCell>
@@ -349,7 +375,7 @@ function SessionsFooterLink({
     : 0;
   return (
     <Link
-      className="group -mx-6 mt-auto -mb-6 flex h-11 items-center justify-between gap-3 border-border border-t px-6 font-medium text-sm transition-colors hover:bg-foreground/[0.03] focus-visible:relative focus-visible:z-10 focus-visible:bg-foreground/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+      className="group -mx-6 mt-auto -mb-6 flex h-11 items-center justify-between gap-3 border-border border-t px-6 font-medium text-sm transition-colors hover:bg-foreground/3 focus-visible:relative focus-visible:z-10 focus-visible:bg-foreground/3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       params={{ instanceId }}
       to="/instances/$instanceId/activity"
     >
@@ -426,7 +452,7 @@ export function InstanceConnectionsCard({
       <CardHeader>
         <CardTitle>Connections</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-4">
+      <CardContent className="flex flex-1 flex-col" presentation="spacious-row">
         <ConnectionsCardBody activity={activity} isPending={isPending} />
         <SessionsFooterLink activity={activity} instanceId={instanceId} />
       </CardContent>

@@ -5,15 +5,15 @@ import {
   ObjectRow,
 } from "@/components/console-pages/database-object-rows";
 import { useOtherObjectsBrowseQuery } from "@/components/console-pages/other-database-objects-query";
-import { RetryActionButton } from "@/components/retry-action-button";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/querylane-ui/dialog";
+import { RetryActionButton } from "@/components/retry-action-button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_pb";
@@ -67,7 +67,10 @@ function BrowseDialogShell({
 }) {
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="flex max-h-[min(42rem,85vh)] flex-col gap-4 sm:max-w-2xl">
+      <DialogContent
+        className="flex max-h-[min(42rem,85vh)] flex-col sm:max-w-2xl"
+        presentation="spacious"
+      >
         <DialogHeader>
           <DialogTitle>{label}</DialogTitle>
           <DialogDescription>
@@ -107,7 +110,7 @@ function BrowseResults({
   if (isError) {
     return (
       <div className="flex flex-col items-start gap-3 py-2">
-        <p className="text-[0.8125rem] text-muted-foreground">
+        <p className="text-(length:--text-caption) text-muted-foreground">
           Failed to load objects.
         </p>
         <RetryActionButton
@@ -121,7 +124,7 @@ function BrowseResults({
   }
   if (isEmpty) {
     return (
-      <p className="py-2 text-[0.8125rem] text-muted-foreground">
+      <p className="text-(length:--text-caption) py-2 text-muted-foreground">
         No objects match this search.
       </p>
     );
@@ -234,7 +237,7 @@ function ExtensionsBrowseDialog({
       total={extensions.length}
     >
       {visible.length === 0 ? (
-        <p className="py-2 text-[0.8125rem] text-muted-foreground">
+        <p className="text-(length:--text-caption) py-2 text-muted-foreground">
           No extensions match this search.
         </p>
       ) : (

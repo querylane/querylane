@@ -18,6 +18,21 @@ import { Fragment, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { Logo } from "@/components/logo";
 import { useCommandPalette } from "@/components/querylane-ui/admin-command-palette";
+import { Button } from "@/components/querylane-ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/querylane-ui/command";
+import { OverflowTooltip } from "@/components/querylane-ui/overflow-tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/querylane-ui/popover";
 import {
   Sidebar,
   SidebarContent,
@@ -49,15 +64,6 @@ import {
   type NavSection,
   type SidebarPaths,
 } from "@/components/sidebar-paths";
-import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import {
   Dialog,
   DialogContent,
@@ -65,12 +71,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { OverflowTooltip } from "@/components/ui/overflow-tooltip";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -266,7 +266,9 @@ function AboutMetadataRow({ label, value }: { label: string; value: string }) {
     <>
       <dt className="text-muted-foreground text-xs">{label}</dt>
       <dd className="font-mono text-xs">
-        <OverflowTooltip className="block truncate">{value}</OverflowTooltip>
+        <OverflowTooltip className="block" presentation="truncated">
+          {value}
+        </OverflowTooltip>
       </dd>
     </>
   );
@@ -294,7 +296,10 @@ function SidebarFooterContent({
             onRetry={onRetryFooter}
           />
         ) : null}
-        <OverflowTooltip className="block truncate px-2 text-left font-mono text-muted-foreground text-xs">
+        <OverflowTooltip
+          className="block text-left"
+          presentation="sidebar-detail"
+        >
           {`Querylane ${aboutMetadata.version}`}
         </OverflowTooltip>
       </div>
@@ -309,8 +314,8 @@ function SidebarFooterContent({
               render={
                 <Button
                   aria-label="Build metadata error"
-                  className="text-amber-600 hover:text-amber-700"
                   onClick={toggleSidebar}
+                  presentation="warning"
                   size="icon-sm"
                   variant="ghost"
                 />
@@ -329,7 +334,8 @@ function SidebarFooterContent({
           <TooltipTrigger render={<div className="flex" />}>
             <SidebarTrigger
               aria-label="Expand menu"
-              className="shrink-0 text-muted-foreground hover:text-foreground"
+              className="shrink-0"
+              presentation="quiet"
             />
           </TooltipTrigger>
           <TooltipContent align="center" side="right">
@@ -342,8 +348,8 @@ function SidebarFooterContent({
             render={
               <Button
                 aria-label="About Querylane"
-                className="text-muted-foreground hover:text-foreground"
                 onClick={() => setIsAboutDialogOpen(true)}
+                presentation="quiet"
                 size="icon-sm"
                 variant="ghost"
               />
@@ -410,7 +416,7 @@ function ExplorerRailContent({
             <SidebarMenuButton
               disabled={!backLink}
               {...(backLink ? { render: renderNavLink(backLink, router) } : {})}
-              className="text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              variant="subtle"
             >
               <ArrowLeftIcon className="size-4 shrink-0" />
               <span>Back to workspace</span>
@@ -455,7 +461,7 @@ function renderSidebarNavigationItem({
       >
         <span className="flex min-w-0 items-center gap-2 overflow-hidden">
           <item.icon className="size-4 shrink-0" />
-          <OverflowTooltip className="block truncate">
+          <OverflowTooltip className="block" presentation="truncated">
             {item.label}
           </OverflowTooltip>
         </span>
@@ -484,7 +490,8 @@ function SidebarDatabaseSelector() {
             ? `Database: ${selectedDatabase.name}`
             : "Select database"
         }
-        className="flex h-9 w-full items-center gap-2 rounded-md border border-sidebar-border bg-sidebar-accent px-2.5 text-left shadow-sm outline-none transition-colors hover:border-ring focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[popup-open]:border-ring"
+        className="flex h-9 w-full items-center text-left"
+        presentation="sidebar-switcher"
       >
         <HardDrive
           aria-hidden="true"
@@ -492,7 +499,7 @@ function SidebarDatabaseSelector() {
         />
         <span
           className={cn(
-            "min-w-0 flex-1 truncate font-medium font-mono text-[0.8125rem]",
+            "text-(length:--text-caption) min-w-0 flex-1 truncate font-medium font-mono",
             selectedDatabase ? "text-foreground" : "text-muted-foreground"
           )}
         >
@@ -503,7 +510,7 @@ function SidebarDatabaseSelector() {
           className="size-3.5 shrink-0 text-muted-foreground"
         />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-60 p-0">
+      <PopoverContent align="start" className="w-60" presentation="flush">
         <Command
           filter={(value, search) =>
             value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
@@ -511,7 +518,7 @@ function SidebarDatabaseSelector() {
         >
           <CommandInput placeholder="Search databases…" />
           <CommandList>
-            <CommandEmpty className="py-4 text-center text-muted-foreground text-sm">
+            <CommandEmpty className="text-center" presentation="compact">
               No databases found
             </CommandEmpty>
             <CommandGroup>
@@ -619,18 +626,21 @@ function SidebarSearchButton() {
     <Button
       aria-keyshortcuts="Meta+K Control+K"
       aria-label="Search or jump to"
-      className="h-8 w-full justify-start gap-2 border-border bg-background px-2.5 font-normal text-muted-foreground shadow-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      className="h-8 w-full justify-start"
       onClick={openPalette}
+      presentation="sidebar-action"
       type="button"
       variant="outline"
     >
       <Search className="size-3.5 shrink-0" />
-      <span className="truncate text-[0.8125rem]">Search or jump to…</span>
+      <span className="text-(length:--text-caption) truncate">
+        Search or jump to…
+      </span>
       <span aria-hidden="true" className="ml-auto flex gap-0.5">
-        <kbd className="flex size-5 items-center justify-center rounded bg-muted font-mono text-[0.625rem]">
+        <kbd className="text-(length:--text-micro) flex size-5 items-center justify-center rounded bg-muted font-mono">
           ⌘
         </kbd>
-        <kbd className="flex size-5 items-center justify-center rounded bg-muted font-mono text-[0.625rem]">
+        <kbd className="text-(length:--text-micro) flex size-5 items-center justify-center rounded bg-muted font-mono">
           K
         </kbd>
       </span>
@@ -648,13 +658,14 @@ function SidebarBrandHeader() {
       <div className="flex h-12 shrink-0 items-center gap-1 pr-1.5 pl-2">
         <Button
           aria-label="Go to instance overview"
-          className="size-auto min-w-0 shrink gap-2 rounded-sm px-1.5 py-1"
+          className="size-auto min-w-0 shrink"
           disabled={!selectedInstance}
           onClick={() => {
             if (selectedInstance) {
               navigateToInstance(selectedInstance);
             }
           }}
+          presentation="compact-group"
           type="button"
           variant="ghost"
         >
@@ -665,7 +676,8 @@ function SidebarBrandHeader() {
         </Button>
         <SidebarTrigger
           aria-label="Collapse sidebar"
-          className="ml-auto shrink-0 text-muted-foreground hover:text-foreground"
+          className="ml-auto shrink-0"
+          presentation="quiet"
         />
       </div>
       <div className="px-2 pb-2">

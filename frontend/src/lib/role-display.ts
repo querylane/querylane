@@ -313,15 +313,6 @@ export const ROLE_KIND_TOOLTIP: Record<RoleKind, string> = {
   super: "Has SUPERUSER — bypasses every permission check (rolsuper).",
 };
 
-// Per-kind background/text tokens, shared by the role avatar and the kind badges.
-export const ROLE_KIND_TONE: Record<RoleKind, string> = {
-  builtin: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
-  group: "bg-muted text-muted-foreground",
-  login: "bg-primary/10 text-primary",
-  repl: "bg-violet-500/15 text-violet-700 dark:text-violet-400",
-  super: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-};
-
 // Predefined PostgreSQL roles ship in pg_authid and grant implicit privileges
 // to their members via hard-coded has_*_privilege() checks — there are no GRANT
 // rows to inspect. The catalog does not expose what each grants, and the set
@@ -595,14 +586,14 @@ export function describeRoleRisk(risk: RoleRisk): string[] {
   return clauses;
 }
 
-export function expiryToneClass(state: ExpiryState): string {
+export function expiryPresentation(state: ExpiryState) {
   if (state === "expired") {
-    return "text-destructive";
+    return "expiry-expired";
   }
   if (state === "soon") {
-    return "text-amber-600 dark:text-amber-400";
+    return "expiry-soon";
   }
-  return "";
+  return undefined;
 }
 
 export function formatConnectionLimit(limit: number): string {

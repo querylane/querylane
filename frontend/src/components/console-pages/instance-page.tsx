@@ -47,8 +47,8 @@ import { InstanceDeleteDialog } from "@/components/console-pages/instance-delete
 import { InstanceHealthSection } from "@/components/console-pages/instance-health-section";
 import { InstanceMetricsPanel } from "@/components/console-pages/instance-metrics-panel";
 import { EmptyState } from "@/components/empty-state";
+import { Badge } from "@/components/querylane-ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DataTable,
@@ -440,7 +440,7 @@ function ReplicationRoleBadge({
     return null;
   }
   return (
-    <Badge className="px-2.5 py-0.5 text-xs" variant="default">
+    <Badge presentation="status" variant="default">
       {formatReplicationRole(role)}
     </Badge>
   );
@@ -455,7 +455,7 @@ function InstanceConnectionStatusBadge({
 }) {
   if (dependencyUnavailable) {
     return (
-      <Badge className="px-2.5 py-0.5 text-xs" variant="destructive">
+      <Badge presentation="status" variant="destructive">
         Status unavailable
       </Badge>
     );
@@ -463,14 +463,14 @@ function InstanceConnectionStatusBadge({
 
   if (connectionStatus === "error") {
     return (
-      <Badge className="px-2.5 py-0.5 text-xs" variant="destructive">
+      <Badge presentation="status" variant="destructive">
         Connection failed
       </Badge>
     );
   }
 
   return (
-    <Badge className="px-2.5 py-0.5 text-xs" variant="outline">
+    <Badge presentation="status" variant="outline">
       <StatusIndicator showLabel={true} status={connectionStatus} />
     </Badge>
   );
@@ -518,12 +518,7 @@ function InstancePageHeader({
       <div className="flex flex-col gap-3">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
           <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <h1
-              className="min-w-0 break-words font-semibold text-2xl text-foreground tracking-tight"
-              style={{
-                textWrap: "balance",
-              }}
-            >
+            <h1 className="min-w-0 text-balance break-words font-semibold text-2xl text-foreground tracking-tight">
               {instance.displayName}
             </h1>
             <div className="flex flex-wrap items-center gap-2">
@@ -556,7 +551,7 @@ function InstancePageHeader({
             </Button>
           </div>
         </div>
-        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[0.8125rem] text-muted-foreground">
+        <div className="text-(length:--text-caption) flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground">
           {instance.config?.host ? (
             <>
               <CopyableHost
@@ -714,7 +709,7 @@ function InstanceDatabasesSectionHeader({ count }: { count: number | null }) {
             </span>
           )}
         </div>
-        <p className="-mt-0.5 text-[0.8125rem] text-muted-foreground">
+        <p className="text-(length:--text-caption) -mt-0.5 text-muted-foreground">
           Databases returned by the backend for this instance.
         </p>
       </div>

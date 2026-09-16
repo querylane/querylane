@@ -7,18 +7,16 @@ import {
   InputGroupButton,
   InputGroupInput,
   InputGroupText,
-} from "@/components/ui/input-group";
+} from "@/components/querylane-ui/input-group";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@/components/querylane-ui/sheet";
 import { formatCellForClipboard } from "@/features/data-explorer/table-data/selection-formatters";
 import type { QualifiedTableName } from "@/lib/console-resources";
-import { DETAIL_DRAWER_WIDTH_CLASS } from "@/lib/drawer-width";
-import { cn } from "@/lib/utils";
 import type {
   TableCell,
   TableResultColumn,
@@ -102,7 +100,7 @@ function RowNumberNavigator({
       </InputGroupAddon>
       <InputGroupInput
         aria-label="Row number"
-        className="h-8 w-10 px-1 text-center font-mono text-xs"
+        className="h-8 w-10 text-center"
         defaultValue={currentRowNumber}
         disabled={rowCount <= 1}
         inputMode="numeric"
@@ -111,10 +109,11 @@ function RowNumberNavigator({
         onChange={keepDigitsOnly}
         onKeyDown={handleRowNumberKeyDown}
         pattern="[0-9]*"
+        presentation="identifier"
         type="text"
       />
-      <InputGroupAddon align="inline-end" className="gap-1">
-        <InputGroupText className="font-mono text-xs">
+      <InputGroupAddon align="inline-end" presentation="compact">
+        <InputGroupText presentation="identifier">
           of {rowCount.toLocaleString()}
         </InputGroupText>
         <InputGroupButton
@@ -177,15 +176,17 @@ function RecordDetailDrawer({
   return (
     <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetContent
+        className="flex flex-col"
+        presentation="detail"
+        side="right"
         // Registry sheets cap at sm:max-w-sm; record details need a wide
         // drawer, and `ui/` must stay native shadcn output, so the width
         // override lives here.
-        className={cn("flex flex-col gap-0 p-0", DETAIL_DRAWER_WIDTH_CLASS)}
-        side="right"
+        width="detail"
       >
-        <SheetHeader className="gap-2 border-b px-5 py-3.5 pr-14">
+        <SheetHeader presentation="record-drawer">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
-            <SheetTitle className="min-w-0 break-all font-mono text-base leading-snug">
+            <SheetTitle className="min-w-0 break-all" presentation="record">
               {tableName.schema}.{tableName.table}
             </SheetTitle>
             <RowNumberNavigator

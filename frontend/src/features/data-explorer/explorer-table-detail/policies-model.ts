@@ -17,10 +17,10 @@ function policyModeLabel(mode: PolicyMode) {
   }
 }
 
-function policyModeBadgeClassName(mode: PolicyMode) {
+function policyModePresentation(mode: PolicyMode) {
   return mode === PolicyMode.RESTRICTIVE
-    ? "border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-300"
-    : "border-transparent bg-muted text-muted-foreground";
+    ? "policy-restrictive"
+    : "policy-permissive";
 }
 
 function policyRoles(policy: TablePolicy) {
@@ -214,6 +214,6 @@ export {
   formatPolicyRoles,
   isPolicyPageSize,
   POLICY_PAGE_SIZE_OPTIONS,
-  policyModeBadgeClassName,
   policyModeLabel,
+  policyModePresentation,
 };

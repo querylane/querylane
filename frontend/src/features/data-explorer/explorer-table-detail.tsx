@@ -4,8 +4,8 @@ import { Link } from "@tanstack/react-router";
 import { Table2 } from "lucide-react";
 import { useDeferredValue, useEffect, useState } from "react";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
+import { Tabs, TabsContent } from "@/components/querylane-ui/tabs";
 import { buttonVariants } from "@/components/ui/button";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { HeaderStat } from "@/features/data-explorer/explorer-shared-ui";
 import { ColumnsTab } from "@/features/data-explorer/explorer-table-detail/columns-tab";
 import { ConstraintsTab } from "@/features/data-explorer/explorer-table-detail/constraints-tab";
@@ -31,10 +31,6 @@ import {
   ObjectDetailTabsBar,
   ObjectDetailTabTrigger,
 } from "@/features/data-explorer/object-detail-chrome";
-import {
-  OBJECT_DETAIL_PANEL_FILL_CLASS,
-  OBJECT_DETAIL_PANEL_PADDED_CLASS,
-} from "@/features/data-explorer/object-detail-panel-classes";
 import {
   isTableDetailTab,
   type TableDetailTab,
@@ -246,8 +242,9 @@ function TableDetail({
           />
 
           <Tabs
-            className="min-h-0 w-full min-w-0 flex-1 flex-col gap-0"
+            className="min-h-0 w-full min-w-0 flex-1 flex-col"
             onValueChange={handleTabChange}
+            presentation="flush"
             value={activeTab}
           >
             <ObjectDetailTabsBar>
@@ -261,10 +258,7 @@ function TableDetail({
               ))}
             </ObjectDetailTabsBar>
 
-            <TabsContent
-              className={OBJECT_DETAIL_PANEL_FILL_CLASS}
-              value="data"
-            >
+            <TabsContent presentation="object-fill" value="data">
               {/*
                 Key on the table identity so switching tables remounts the grid:
                 a fresh query observer drops the previous table's placeholder rows
@@ -282,36 +276,24 @@ function TableDetail({
                 </div>
               )}
             </TabsContent>
-            <TabsContent
-              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
-              value="columns"
-            >
+            <TabsContent presentation="object-padded" value="columns">
               <ColumnsTab
                 columnsQuery={columnsQuery}
                 constraintsQuery={constraintsQuery}
                 indexesQuery={indexesQuery}
               />
             </TabsContent>
-            <TabsContent
-              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
-              value="keys"
-            >
+            <TabsContent presentation="object-padded" value="keys">
               <KeysTab
                 constraintsQuery={constraintsQuery}
                 indexesQuery={indexesQuery}
                 rows={keyRows}
               />
             </TabsContent>
-            <TabsContent
-              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
-              value="partitions"
-            >
+            <TabsContent presentation="object-padded" value="partitions">
               <PartitionsTab query={partitionMetadataQuery} />
             </TabsContent>
-            <TabsContent
-              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
-              value="indexes"
-            >
+            <TabsContent presentation="object-padded" value="indexes">
               <IndexesTab
                 query={indexesQuery}
                 schemaName={schemaName}
@@ -319,36 +301,24 @@ function TableDetail({
                 tableName={tableName}
               />
             </TabsContent>
-            <TabsContent
-              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
-              value="constraints"
-            >
+            <TabsContent presentation="object-padded" value="constraints">
               <ConstraintsTab
                 databaseId={databaseId}
                 instanceId={instanceId}
                 query={constraintsQuery}
               />
             </TabsContent>
-            <TabsContent
-              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
-              value="policies"
-            >
+            <TabsContent presentation="object-padded" value="policies">
               <PoliciesTab query={policiesQuery} />
             </TabsContent>
-            <TabsContent
-              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
-              value="triggers"
-            >
+            <TabsContent presentation="object-padded" value="triggers">
               <TriggersTab
                 query={triggersQuery}
                 schemaName={schemaName}
                 tableName={tableName}
               />
             </TabsContent>
-            <TabsContent
-              className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
-              value="definition"
-            >
+            <TabsContent presentation="object-padded" value="definition">
               <DefinitionTab
                 columnsQuery={columnsQuery}
                 constraintsQuery={constraintsQuery}

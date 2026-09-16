@@ -26,10 +26,10 @@ import { GrantGroups } from "@/components/console-pages/role-grants-groups";
 import type { GrantedObject } from "@/components/console-pages/role-grants-shared";
 import { DatabaseSelect } from "@/components/console-pages/role-grants-tab";
 import { EmptyState } from "@/components/empty-state";
+import { Card } from "@/components/querylane-ui/card";
+import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { ItemGroup } from "@/components/ui/item";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import type { PredefinedRoleInfo } from "@/lib/role-display";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
@@ -50,16 +50,16 @@ function BuiltinPowersCard({
 }) {
   const builtinCapabilities = builtinInfo?.implicit ?? [];
   return (
-    <Card className="gap-0 border-border py-0">
+    <Card presentation="bordered-flush">
       <div className="flex items-start gap-3.5 px-6 pt-6 pb-4">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-emerald-500/25 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-positive-500/25 bg-positive-500/15 text-positive-600 dark:text-positive-400">
           <ShieldCheck className="size-[18px]" />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-[0.9375rem] tracking-tight">
+          <h3 className="text-(length:--text-body) font-semibold tracking-tight">
             What members can do
           </h3>
-          <p className="mt-1 text-[0.8125rem] text-muted-foreground leading-relaxed">
+          <p className="text-(length:--text-caption) mt-1 text-muted-foreground leading-relaxed">
             Powers this role grants automatically: the same everywhere in the
             cluster.
           </p>
@@ -67,7 +67,7 @@ function BuiltinPowersCard({
       </div>
 
       <div className="flex items-center gap-2.5 px-6 pb-3">
-        <span className="flex items-center gap-1.5 font-medium text-[0.6875rem] text-muted-foreground/70 uppercase tracking-wider">
+        <span className="text-(length:--text-label-sm) flex items-center gap-1.5 font-medium text-muted-foreground/70 uppercase tracking-wider">
           <Globe className="size-3 text-muted-foreground" />
           Cluster-wide
         </span>
@@ -91,7 +91,7 @@ function BuiltinPowersCard({
                 <Zap className="size-4" />
               </span>
               <span className="min-w-0 flex-1 font-medium text-sm">{line}</span>
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 font-medium text-amber-700 text-xs dark:text-amber-400">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-warning-500/30 bg-warning-500/10 px-2 py-1 font-medium text-warning-700 text-xs dark:text-warning-400">
                 <Lock className="size-3" />
                 Can&apos;t revoke
               </span>
@@ -108,7 +108,7 @@ function BuiltinPowersCard({
 
       {parents.length > 0 ? (
         <div className="mt-3 flex flex-col gap-2 px-6">
-          <span className="flex items-center gap-1.5 font-medium text-[0.6875rem] text-muted-foreground/70 uppercase tracking-wider">
+          <span className="text-(length:--text-label-sm) flex items-center gap-1.5 font-medium text-muted-foreground/70 uppercase tracking-wider">
             <Network className="size-3 text-muted-foreground" />
             Also inherits via membership
           </span>
@@ -164,7 +164,7 @@ function BuiltinPowersCard({
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {builtinInfo ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2 py-1 text-muted-foreground text-xs">
-                  <span className="size-1.5 rounded-full bg-violet-500" />
+                  <span className="size-1.5 rounded-full bg-permission-500" />
                   {builtinInfo.since}+
                 </span>
               ) : null}

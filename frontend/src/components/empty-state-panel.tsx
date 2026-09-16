@@ -5,7 +5,7 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
-} from "@/components/ui/empty";
+} from "@/components/querylane-ui/empty";
 import { cn } from "@/lib/utils";
 
 type EmptyStateHeadingLevel = "div" | "h2" | "h3" | "h4";
@@ -13,17 +13,19 @@ type EmptyStateHeadingLevel = "div" | "h2" | "h3" | "h4";
 interface EmptyStatePanelProps
   extends Omit<React.ComponentProps<"div">, "title"> {
   children?: ReactNode;
-  contentClassName?: string;
+  contentWidth?: "default" | "wide";
   description?: ReactNode;
   headingLevel?: EmptyStateHeadingLevel;
   icon?: ComponentType<SVGProps<SVGSVGElement>> | undefined;
+  presentation?: "panel" | "panel-compact" | "panel-dashed";
   title?: ReactNode;
 }
 
 function EmptyStatePanel({
   children,
   className,
-  contentClassName,
+  contentWidth = "default",
+  presentation = "panel",
   description,
   headingLevel = "div",
   icon: Icon,
@@ -48,16 +50,14 @@ function EmptyStatePanel({
 
   return (
     <Empty
-      className={cn(
-        "min-h-44 rounded-xl border border-border bg-card px-6 py-10",
-        className
-      )}
+      className={cn("min-h-44", className)}
       data-slot="empty-state-panel"
+      presentation={presentation}
       {...props}
     >
       {hasStructuredContent ? (
         <>
-          <EmptyHeader className={cn("max-w-md", contentClassName)}>
+          <EmptyHeader width={contentWidth}>
             {Icon ? (
               <span
                 className="mb-1 flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground"
@@ -72,9 +72,7 @@ function EmptyStatePanel({
             ) : null}
           </EmptyHeader>
           {children ? (
-            <EmptyContent className={cn("max-w-md", contentClassName)}>
-              {children}
-            </EmptyContent>
+            <EmptyContent width={contentWidth}>{children}</EmptyContent>
           ) : null}
         </>
       ) : (

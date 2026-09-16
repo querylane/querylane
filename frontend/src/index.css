@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./components/branding/querylane-logo.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
@@ -169,6 +170,98 @@
 }
 
 @theme inline {
+  --color-brand-cursor: #60a5fa;
+  --color-permission-700: var(--color-violet-700);
+  --color-reference-hover: color-mix(
+    in oklch,
+    var(--reference) 82%,
+    var(--foreground)
+  );
+  /* Querylane status, onboarding, and dense-console design tokens. */
+  --color-positive-500: var(--color-emerald-500);
+  --color-warning-500: var(--color-amber-500);
+  --color-warning-700: var(--color-amber-700);
+  --color-warning-300: var(--color-amber-300);
+  --color-reference-500: var(--color-sky-500);
+  --color-reference-700: var(--color-sky-700);
+  --color-reference-300: var(--color-sky-300);
+  --color-warning-400: var(--color-amber-400);
+  --color-permission-600: var(--color-violet-600);
+  --color-permission-300: var(--color-violet-300);
+  --color-reference-600: var(--color-sky-600);
+  --color-reference-400: var(--color-sky-400);
+  --color-positive-600: var(--color-emerald-600);
+  --color-positive-400: var(--color-emerald-400);
+  --color-permission-500: var(--color-violet-500);
+  --color-warning-900: var(--color-amber-900);
+  --color-warning-200: var(--color-amber-200);
+  --color-warning-800: var(--color-amber-800);
+  --color-warning-600: var(--color-amber-600);
+  --color-negative-500: var(--color-red-500);
+  --color-info-400: var(--color-blue-400);
+  --color-info-500: var(--color-blue-500);
+  --color-info-700: var(--color-blue-700);
+  --color-permission-400: var(--color-violet-400);
+  --color-positive-700: var(--color-emerald-700);
+  --color-positive-300: var(--color-emerald-300);
+  --color-info-300: var(--color-blue-300);
+  --color-warning-100: var(--color-amber-100);
+  --color-negative-400: var(--color-red-400);
+  --color-negative-300: var(--color-red-300);
+  --color-warning-50: var(--color-amber-50);
+  --color-positive-100: var(--color-emerald-100);
+  --color-positive-50: var(--color-emerald-50);
+  --color-negative-200: var(--color-red-200);
+  --color-positive-200: var(--color-emerald-200);
+  --color-negative-100: var(--color-red-100);
+  --color-info-100: var(--color-blue-100);
+  --color-highlight-300: var(--color-fuchsia-300);
+  --text-micro-sm: 0.5625rem;
+  --text-micro: 0.625rem;
+  --text-micro-lg: 0.65625rem;
+  --text-label-sm: 0.6875rem;
+  --text-label-md: 0.71875rem;
+  --text-label: 0.75rem;
+  --text-label-lg: 0.78125rem;
+  --text-caption: 0.8125rem;
+  --text-caption-lg: 0.84375rem;
+  --text-body: 0.9375rem;
+  --text-heading-sm: 1.375rem;
+  --radius-control-xs: 3px;
+  --radius-control-sm: 4px;
+  --radius-control: 10px;
+  --radius-panel-sm: 12px;
+  --radius-panel: 14px;
+  --radius-panel-lg: 16px;
+  --radius-card-sm: 18px;
+  --radius-card: 20px;
+  --radius-dialog-sm: 22px;
+  --radius-dialog: 24px;
+  --tracking-label: 0.02em;
+  --tracking-control: 0.04em;
+  --tracking-section: 0.06em;
+  --tracking-heading: 0.08em;
+  --tracking-eyebrow: 0.14em;
+  --tracking-display: 0.18em;
+  --tracking-brand: 0.24em;
+  --color-onboarding-backdrop: #03050a;
+  --color-onboarding-card: #05070c;
+  --color-onboarding-surface: #070a11;
+  --color-onboarding-preview: #080b12;
+  --color-onboarding-grid: #090b10;
+  --color-onboarding-detail: #0d1324;
+  --color-onboarding-primary-hover: #1d3d8e;
+  --color-onboarding-primary: #21479e;
+  --color-onboarding-accent: #4d72d8;
+  --color-onboarding-focus: #4b73d7;
+  --color-onboarding-ink: #11151f;
+  --leading-relaxed-copy: 1.55;
+  --shadow-sidebar-border: 0 0 0 1px var(--sidebar-border);
+  --shadow-sidebar-accent: 0 0 0 1px var(--sidebar-accent);
+  --shadow-onboarding-control: 0 20px 60px rgba(0, 0, 0, 0.45);
+  --shadow-onboarding-panel: 0 20px 80px rgba(2, 4, 10, 0.32);
+  --shadow-onboarding-dialog: 0 32px 96px rgba(0, 0, 0, 0.45);
+
   --font-sans: "Geist Variable", sans-serif;
   --font-mono:
     "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco,
@@ -302,5 +395,89 @@
   .route-progress-bar-fill {
     transform: translateX(120%) scaleX(1.4);
     animation: none;
+  }
+}
+
+@utility onboarding-progress-glow {
+  background-image: radial-gradient(
+    circle,
+    rgba(98, 122, 255, 0.14),
+    rgba(7, 9, 15, 0) 65%
+  );
+}
+@utility onboarding-preview-glow {
+  background-image:
+    radial-gradient(
+      circle at 40% 30%,
+      rgba(64, 102, 255, 0.18),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 60% 72%,
+      rgba(129, 71, 255, 0.12),
+      transparent 34%
+    );
+}
+@utility onboarding-page-glow {
+  background-image:
+    radial-gradient(circle at top, rgba(69, 98, 196, 0.12), transparent 32%),
+    radial-gradient(circle at 50% 45%, rgba(63, 93, 194, 0.12), transparent 28%);
+}
+@utility onboarding-dot-grid {
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.08) 1px,
+    transparent 1px
+  );
+}
+@utility onboarding-line-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+}
+@utility schema-dot-grid {
+  background-image: radial-gradient(
+    color-mix(in oklch, var(--foreground) 8%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+}
+@utility transition-sidebar-width {
+  transition-property: width;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+@utility transition-sidebar-reveal {
+  transition-property: transform, width;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+@utility transition-sidebar-label {
+  transition-property: margin, opacity;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+@utility transition-sidebar-menu {
+  transition-property: width, height, padding;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
+}
+
+@utility syntax-sql-token {
+  color: var(--querylane-sql-token-light, currentColor);
+  @variant dark {
+    color: var(
+      --querylane-sql-token-dark,
+      var(--querylane-sql-token-light, currentColor)
+    );
+  }
+}
+
+@utility syntax-bash-token {
+  color: var(--querylane-bash-token-light, currentColor);
+  @variant dark {
+    color: var(
+      --querylane-bash-token-dark,
+      var(--querylane-bash-token-light, currentColor)
+    );
   }
 }

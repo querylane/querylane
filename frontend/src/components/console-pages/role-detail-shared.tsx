@@ -16,9 +16,7 @@ import type {
 import { capabilities } from "@/components/console-pages/role-detail-model";
 import { EmptyState } from "@/components/empty-state";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/querylane-ui/card";
 import {
   Item,
   ItemActions,
@@ -26,7 +24,9 @@ import {
   ItemGroup,
   ItemMedia,
   ItemTitle,
-} from "@/components/ui/item";
+} from "@/components/querylane-ui/item";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
@@ -40,8 +40,8 @@ function KpiCard({
   value: React.ReactNode;
 }) {
   return (
-    <Card className="border-border" size="sm">
-      <CardContent className="flex flex-col gap-1 px-4 py-3">
+    <Card presentation="bordered" size="sm">
+      <CardContent className="flex flex-col" presentation="summary">
         <div className="flex items-center gap-1.5 text-muted-foreground text-xs uppercase tracking-wide">
           {label}
         </div>
@@ -70,7 +70,7 @@ function RolePartialAccessAlert({ databaseName }: { databaseName: string }) {
 function capabilityTileClass(cap: Capability): string {
   return cn(
     "flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors",
-    cap.on && cap.danger && "border-amber-500/30 bg-amber-500/5",
+    cap.on && cap.danger && "border-warning-500/30 bg-warning-500/5",
     cap.on && !cap.danger && "border-border bg-muted/30",
     !cap.on && "border-border/50 border-dashed"
   );
@@ -81,10 +81,10 @@ function capabilityIconClass(cap: Capability): string {
     "flex size-8 shrink-0 items-center justify-center rounded-md",
     cap.on &&
       cap.danger &&
-      "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+      "bg-warning-500/15 text-warning-600 dark:text-warning-400",
     cap.on &&
       !cap.danger &&
-      "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+      "bg-positive-500/15 text-positive-600 dark:text-positive-400",
     !cap.on && "bg-muted text-muted-foreground/40"
   );
 }
@@ -92,7 +92,7 @@ function capabilityIconClass(cap: Capability): string {
 function capabilityKeywordClass(cap: Capability): string {
   return cn(
     "font-medium font-mono text-xs",
-    cap.on && cap.danger && "text-amber-700 dark:text-amber-400",
+    cap.on && cap.danger && "text-warning-700 dark:text-warning-400",
     !cap.on && "text-muted-foreground"
   );
 }
@@ -101,7 +101,9 @@ function capabilityValueClass(cap: Capability): string {
   if (!cap.on) {
     return "text-muted-foreground/60";
   }
-  return cap.danger ? "text-amber-700 dark:text-amber-400" : "text-foreground";
+  return cap.danger
+    ? "text-warning-700 dark:text-warning-400"
+    : "text-foreground";
 }
 
 // The trailing marker: a concrete value when one exists, else a check (on) or
@@ -122,14 +124,14 @@ function CapabilityMarker({ cap }: { cap: Capability }) {
         className={cn(
           "size-4 shrink-0",
           cap.danger
-            ? "text-amber-600 dark:text-amber-400"
-            : "text-emerald-600 dark:text-emerald-400"
+            ? "text-warning-600 dark:text-warning-400"
+            : "text-positive-600 dark:text-positive-400"
         )}
       />
     );
   }
   return (
-    <span className="shrink-0 text-[0.625rem] text-muted-foreground/50 uppercase tracking-wide">
+    <span className="text-(length:--text-micro) shrink-0 text-muted-foreground/50 uppercase tracking-wide">
       Off
     </span>
   );
@@ -186,7 +188,7 @@ function AccessItem({
 }) {
   return (
     <Item
-      className="hover:bg-muted/50"
+      presentation="interactive"
       render={
         <Link
           params={{ instanceId, roleId: related.roleId }}
@@ -200,7 +202,7 @@ function AccessItem({
         <Users className="text-muted-foreground" />
       </ItemMedia>
       <ItemContent>
-        <ItemTitle className="break-all font-mono">
+        <ItemTitle className="break-all" presentation="identifier">
           {related.roleName}
         </ItemTitle>
         {related.options.length > 0 || related.grantor ? (
@@ -238,8 +240,9 @@ function AccessCard({
     <SectionCard description={description} title={title}>
       {roles.length === 0 ? (
         <EmptyStatePanel
-          className="min-h-24 rounded-md px-4 py-6"
+          className="min-h-24"
           icon={UserRound}
+          presentation="panel-compact"
         >
           {emptyHint}
         </EmptyStatePanel>

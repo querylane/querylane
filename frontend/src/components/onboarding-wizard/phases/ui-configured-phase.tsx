@@ -16,6 +16,20 @@ import {
 import { useOnboardingWizardControllerContext } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller-context";
 import { LabeledInput } from "@/components/onboarding-wizard/shared/labeled-input";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
+import { Button } from "@/components/querylane-ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/querylane-ui/collapsible";
+import { Input } from "@/components/querylane-ui/input";
+import { SelectContent, SelectTrigger } from "@/components/querylane-ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/querylane-ui/tabs";
 import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
 import {
   SslModeSelectItems,
@@ -25,15 +39,7 @@ import {
   SslNegotiationSelectItems,
   SslNegotiationSelectValue,
 } from "@/components/ssl-negotiation-select";
-import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectTrigger } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select } from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -65,9 +71,9 @@ function getTestButtonIcon(status: ConnectionTestStatus) {
         <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
       );
     case "success":
-      return <Check className="size-4 text-emerald-400" />;
+      return <Check className="size-4 text-positive-400" />;
     case "error":
-      return <X className="size-4 text-red-400" />;
+      return <X className="size-4 text-negative-400" />;
     default:
       return <Unplug className="size-4" />;
   }
@@ -93,9 +99,10 @@ function ConnectionTestButton({
 }) {
   return (
     <Button
-      className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white disabled:text-white/30"
+      className="h-9"
       disabled={status === "testing"}
       onClick={onClick}
+      presentation="onboarding-back"
       variant="ghost"
     >
       <span className="shrink-0">{getTestButtonIcon(status)}</span>
@@ -138,9 +145,9 @@ function ConnectionTestResult({
 }) {
   if (status === "success" && isCurrentConfigVerified) {
     return (
-      <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/[0.08] px-4 py-3 text-emerald-100/92 text-sm">
+      <div className="rounded-xl border border-positive-400/25 bg-positive-500/8 px-4 py-3 text-positive-100/92 text-sm">
         <div className="flex items-center gap-3">
-          <Check className="size-4 shrink-0 text-emerald-400" />
+          <Check className="size-4 shrink-0 text-positive-400" />
           Connection successful. Ready to continue.
         </div>
       </div>
@@ -150,14 +157,14 @@ function ConnectionTestResult({
   if (status === "error" && errorMessage) {
     return (
       <div
-        className="rounded-xl border border-red-400/20 bg-red-500/[0.08] px-4 py-3 text-red-100/92 text-sm"
+        className="rounded-xl border border-negative-400/20 bg-negative-500/8 px-4 py-3 text-negative-100/92 text-sm"
         role="alert"
       >
         <div className="flex items-start gap-3">
-          <X className="mt-0.5 size-4 shrink-0 text-red-400" />
+          <X className="mt-0.5 size-4 shrink-0 text-negative-400" />
           <div className="space-y-1">
             <div className="font-medium">Connection failed</div>
-            <div className="text-red-200/78 text-sm">{errorMessage}</div>
+            <div className="text-negative-200/78 text-sm">{errorMessage}</div>
           </div>
         </div>
       </div>
@@ -190,14 +197,15 @@ function InternalStorageSslOptions({
 }) {
   return (
     <Collapsible onOpenChange={onOpenChange} open={open}>
-      <div className="relative space-y-3 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4">
+      <div className="relative space-y-3 rounded-xl border border-white/10 bg-white/3 px-5 py-4">
         <label className="font-medium text-sm text-white" htmlFor={modeId}>
           SSL mode
         </label>
         <CollapsibleTrigger
           aria-controls={contentId}
           aria-label="Advanced connection options"
-          className="group/advanced-connection absolute top-4 right-5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm text-white/58 outline-none transition-colors hover:text-white focus-visible:border-[#4b73d7] focus-visible:ring-3 focus-visible:ring-[#4b73d7]/25"
+          className="group/advanced-connection absolute top-4 right-5 inline-flex items-center"
+          presentation="onboarding"
         >
           Advanced
           <ChevronRight className="size-3.5 shrink-0 transition-transform group-aria-expanded/advanced-connection:rotate-90" />
@@ -212,20 +220,18 @@ function InternalStorageSslOptions({
           value={sslModeValue}
         >
           <SelectTrigger
-            className="w-full rounded-lg border-white/10 bg-white/[0.03] px-3 py-0 text-sm text-white leading-none focus-visible:border-[#4b73d7] focus-visible:ring-[#4b73d7]/25 [&_svg]:size-4 [&_svg]:text-white/68"
+            className="w-full [&_svg]:size-4"
             id={modeId}
+            presentation="onboarding"
           >
-            <SslModeSelectValue
-              iconClassName="text-white/68"
-              value={sslModeValue}
-            />
+            <SslModeSelectValue iconTone="onboarding" value={sslModeValue} />
           </SelectTrigger>
-          <SelectContent className="min-w-[24rem] rounded-[20px] border border-white/10 bg-[#070a11] p-2 text-white shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+          <SelectContent className="min-w-[24rem]" presentation="onboarding">
             <SslModeSelectItems
               descriptionClassName="mt-1 text-sm text-white/58"
-              iconClassName="text-white/68"
-              iconContainerClassName="bg-white/[0.06] text-white/68"
-              itemClassName="rounded-xl px-4 py-3 text-white focus:bg-white/[0.07] focus:text-white"
+              iconContainerClassName="bg-white/6 text-white/68"
+              iconTone="onboarding"
+              presentation="onboarding"
             />
           </SelectContent>
         </Select>
@@ -233,7 +239,7 @@ function InternalStorageSslOptions({
           Choose how Querylane negotiates TLS for its internal storage database.
         </p>
         {open ? (
-          <CollapsibleContent className="pt-2">
+          <CollapsibleContent presentation="spaced">
             <section aria-label="Advanced connection options" id={contentId}>
               <div className="space-y-3">
                 <label
@@ -252,12 +258,16 @@ function InternalStorageSslOptions({
                   value={sslNegotiationValue}
                 >
                   <SelectTrigger
-                    className="w-full rounded-lg border-white/10 bg-white/[0.03] px-3 py-0 text-sm text-white leading-none focus-visible:border-[#4b73d7] focus-visible:ring-[#4b73d7]/25 [&_svg]:size-4 [&_svg]:text-white/68"
+                    className="w-full [&_svg]:size-4"
                     id={sslNegotiationId}
+                    presentation="onboarding"
                   >
                     <SslNegotiationSelectValue value={sslNegotiationValue} />
                   </SelectTrigger>
-                  <SelectContent className="min-w-[24rem] rounded-[20px] border border-white/10 bg-[#070a11] p-2 text-white shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+                  <SelectContent
+                    className="min-w-[24rem]"
+                    presentation="onboarding"
+                  >
                     <SslNegotiationSelectItems />
                   </SelectContent>
                 </Select>
@@ -305,7 +315,7 @@ function ConnectionStringPasteForm({
             }
             aria-invalid={connectionStringError ? true : undefined}
             autoComplete="off"
-            className="h-9 flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-4 py-0 font-mono text-sm text-white leading-none placeholder:text-white/32 focus-visible:border-blue-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-400/25"
+            className="h-9 flex-1"
             id={connectionStringId}
             onChange={(e) => {
               onValueChange(e.target.value);
@@ -317,21 +327,23 @@ function ConnectionStringPasteForm({
               }
             }}
             placeholder="postgres://user:password@host:5432/database"
+            presentation="onboarding-connection"
             ref={connectionStringInputRef}
             type="text"
             value={connectionStringValue}
           />
           <Button
-            className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
+            className="h-9"
             disabled={connectionStringValue.trim().length === 0}
             onClick={onApply}
+            presentation="onboarding-primary"
           >
             Apply
           </Button>
         </div>
         {connectionStringError ? (
           <p
-            className="text-red-300/90 text-sm"
+            className="text-negative-300/90 text-sm"
             id={connectionStringErrorId}
             role="alert"
           >
@@ -410,9 +422,10 @@ function UiConfiguredContinueAction({
   const button = (
     <Button
       aria-describedby={canContinue ? undefined : disabledReasonId}
-      className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
+      className="h-9"
       disabled={!canContinue}
       onClick={onContinue}
+      presentation="onboarding-primary"
     >
       Continue
       <ChevronRight className="size-4" />
@@ -537,8 +550,9 @@ export function UiConfiguredPhase() {
       footer={
         <div className="flex items-center justify-between gap-4">
           <Button
-            className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
+            className="h-9"
             onClick={goBackToMethodSelection}
+            presentation="onboarding-secondary"
             variant="ghost"
           >
             <ArrowLeft className="size-4" />
@@ -593,7 +607,7 @@ export function UiConfiguredPhase() {
               Connection string
             </TabsTrigger>
           </TabsList>
-          <TabsContent className="space-y-4 pt-1" value="manual_fields">
+          <TabsContent presentation="onboarding-form" value="manual_fields">
             <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_200px]">
               <LabeledInput
                 error={errors.host?.message}
@@ -655,7 +669,7 @@ export function UiConfiguredPhase() {
               sslNegotiationValue={sslNegotiationValue}
             />
           </TabsContent>
-          <TabsContent className="pt-1" value="connection_string">
+          <TabsContent presentation="onboarding" value="connection_string">
             <ConnectionStringPasteForm
               connectionStringError={connectionStringFeedback.error}
               connectionStringErrorId={connectionStringErrorId}
@@ -678,7 +692,7 @@ export function UiConfiguredPhase() {
 
         {connectionStringFeedback.warning ? (
           <p
-            className="rounded-xl border border-amber-300/20 bg-amber-300/[0.07] px-4 py-3 text-amber-100/90 text-sm"
+            className="rounded-xl border border-warning-300/20 bg-warning-300/7 px-4 py-3 text-sm text-warning-100/90"
             role="status"
           >
             {connectionStringFeedback.warning}

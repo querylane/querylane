@@ -1,5 +1,5 @@
 import { FilterRow } from "@/components/data-grid/table-data-grid/filter-popover-row";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import type {
   TableFilterLogic,
   TableFilterRule,
@@ -48,13 +48,14 @@ function RulesEditor({
           ) : (
             <Button
               aria-label={`Filter rule ${index + 1} logic`}
-              className="mt-1 h-6 w-full px-0 font-mono text-xs"
+              className="mt-1 h-6 w-full"
               onClick={() => {
                 const ruleLogic = rule.logic ?? logic;
                 onUpdateRule(index, {
                   logic: ruleLogic === "and" ? "or" : "and",
                 });
               }}
+              presentation="filter-rule"
               size="xs"
               type="button"
               variant="outline"

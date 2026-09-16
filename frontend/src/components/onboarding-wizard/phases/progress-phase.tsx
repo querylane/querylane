@@ -4,7 +4,7 @@ import { useOnboardingWizardControllerContext } from "@/components/onboarding-wi
 import { ProgressStepList } from "@/components/onboarding-wizard/shared/progress-step-list";
 import { getProgressSummary } from "@/components/onboarding-wizard/shared/progress-step-summary";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { captureException } from "@/lib/diagnostics";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
@@ -35,22 +35,23 @@ function WaitingForConfigBody({
   return (
     <div className="space-y-5">
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="relative flex size-24 items-center justify-center rounded-full border border-white/8 bg-[radial-gradient(circle,rgba(98,122,255,0.14),rgba(7,9,15,0)_65%)]">
+        <div className="onboarding-progress-glow relative flex size-24 items-center justify-center rounded-full border border-white/8">
           <div className="absolute inset-3 rounded-full border border-white/7" />
-          <div className="relative z-10 flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-white/78">
+          <div className="relative z-10 flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/6 text-white/78">
             <FileCog className="size-5" />
           </div>
         </div>
         <Button
-          className="flex h-auto max-w-full items-center gap-3 whitespace-normal rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono font-normal text-white/88 text-xs transition-colors hover:bg-white/[0.07]"
+          className="flex h-auto max-w-full items-center whitespace-normal"
           onClick={copyPath}
+          presentation="onboarding-command"
           title="Click to copy path"
           type="button"
           variant="ghost"
         >
           <span className="min-w-0 break-all text-left">{configFilePath}</span>
           {pathCopied ? (
-            <Check className="size-4 shrink-0 text-emerald-400" />
+            <Check className="size-4 shrink-0 text-positive-400" />
           ) : (
             <ClipboardCopy className="size-4 shrink-0 text-white/50" />
           )}
@@ -58,11 +59,12 @@ function WaitingForConfigBody({
         {/* No explanatory copy here: the page description above this body
             already says Querylane is watching the path shown. */}
         <Button
-          className="h-9 rounded-lg border border-white/10 bg-white/[0.04] px-4 font-medium text-sm text-white hover:bg-white/[0.07]"
+          className="h-9"
           disabled={retryPending}
           onClick={() => {
             onRetryWatch().catch((error) => captureException(error));
           }}
+          presentation="onboarding-action"
           variant="ghost"
         >
           {retryPending ? (
@@ -74,7 +76,7 @@ function WaitingForConfigBody({
         </Button>
       </div>
       {watchNotice ? (
-        <div className="rounded-xl border border-amber-400/25 bg-amber-500/[0.08] px-4 py-3 text-amber-50/90 text-sm">
+        <div className="rounded-xl border border-warning-400/25 bg-warning-500/8 px-4 py-3 text-sm text-warning-50/90">
           {watchNotice}
         </div>
       ) : null}
@@ -83,16 +85,16 @@ function WaitingForConfigBody({
 }
 function SuccessCallout() {
   return (
-    <div className="rounded-xl border border-emerald-400/32 bg-emerald-500/[0.1] p-4">
+    <div className="rounded-xl border border-positive-400/32 bg-positive-500/10 p-4">
       <div className="flex items-start gap-4">
-        <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full border border-emerald-400/35 bg-emerald-500/16 text-emerald-100">
+        <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full border border-positive-400/35 bg-positive-500/16 text-positive-100">
           <Check aria-hidden="true" className="size-5" />
         </span>
         <div className="min-w-0 space-y-1.5">
-          <div className="font-medium text-base text-emerald-100">
+          <div className="font-medium text-base text-positive-100">
             Ready to go!
           </div>
-          <p className="max-w-4xl text-emerald-50/90 text-sm leading-6">
+          <p className="max-w-4xl text-positive-50/90 text-sm leading-6">
             Querylane is now configured and ready to manage your PostgreSQL
             instances. Click finish to start exploring.
           </p>
@@ -162,18 +164,20 @@ export function ProgressPhase() {
       footer={
         <div className="flex items-center justify-between gap-4">
           <Button
-            className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/68 hover:bg-white/[0.04] hover:text-white disabled:text-white/25"
+            className="h-9"
             disabled={isSuccess || setupRunning}
             onClick={goBackToConfigure}
+            presentation="onboarding-cancel"
             variant="ghost"
           >
             <ArrowLeft className="size-4" />
             Back
           </Button>
           <Button
-            className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90 disabled:bg-white/18 disabled:text-white/38"
+            className="h-9"
             disabled={!isSuccess}
             onClick={finishWizard}
+            presentation="onboarding-finish"
           >
             Finish
           </Button>

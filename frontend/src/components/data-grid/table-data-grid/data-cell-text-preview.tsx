@@ -1,9 +1,8 @@
 import { Maximize2 } from "lucide-react";
 import { truncateForAttribute } from "@/components/data-grid/table-data-grid/data-cell-preview-format";
-import { DataValueDialog } from "@/components/data-grid/table-data-grid/data-value-dialog";
 import { useDataValueDialogState } from "@/components/data-grid/table-data-grid/use-data-value-dialog-state";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/querylane-ui/button";
+import { DataValuePreviewDialog } from "./data-value-preview-dialog";
 
 const TEXT_TITLE_MAX_LENGTH = 1000;
 const TEXT_PREVIEW_MAX_LENGTH = 4000;
@@ -39,12 +38,13 @@ function TextPreview({
       </span>
       <Button
         aria-label={`View full text for ${columnName}`}
-        className="h-5 shrink-0 px-1.5 text-muted-foreground"
+        className="h-5 shrink-0"
         onClick={(event) => {
           event.stopPropagation();
           openDialog();
         }}
         onMouseDown={(event) => event.stopPropagation()}
+        presentation="preview-toolbar"
         size="xs"
         type="button"
         variant="ghost"
@@ -52,24 +52,16 @@ function TextPreview({
         <Maximize2 className="size-3" />
       </Button>
       {open ? (
-        <DataValueDialog
-          copyLabel="Copy text"
-          description={`Full ${rawType} value. Scroll the preview for long content.`}
+        <DataValuePreviewDialog
+          columnName={columnName}
+          format="text"
           isTruncated={isTruncated}
           onOpenChange={onOpenChange}
-          open={open}
           raw={raw}
-          title={`${columnName} text`}
+          rawType={rawType}
         >
-          <pre
-            className={cn(
-              "min-h-0 flex-1 overflow-auto rounded-md border bg-muted/30 p-3",
-              "whitespace-pre-wrap break-words font-mono text-xs"
-            )}
-          >
-            {raw}
-          </pre>
-        </DataValueDialog>
+          {raw}
+        </DataValuePreviewDialog>
       ) : null}
     </span>
   );

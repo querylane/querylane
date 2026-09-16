@@ -99,6 +99,16 @@ function biomeOverrideBlock(config: string, includeMarker: string): string {
 }
 
 describe("strict tooling policy", () => {
+  test("formats before Biome assists to avoid mixed-line JSX attribute corruption", () => {
+    const scripts = readJsonRecord("package.json")["scripts"];
+    if (!isJsonRecord(scripts)) {
+      throw new Error("Package scripts must be an object.");
+    }
+    expect(scripts["lint:fix"]).toBe(
+      "biome format --write . && ultracite fix && bun run lint:shadcn && bun run suppressions:check"
+    );
+  });
+
   test("pins every audited static-analysis release", () => {
     const packageJson = readJsonRecord("package.json");
     const devDependencies = packageJson["devDependencies"];
