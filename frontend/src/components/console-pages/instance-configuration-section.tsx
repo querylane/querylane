@@ -12,8 +12,8 @@ import {
   type InstanceRecord,
   labelsEqual,
   labelsToEntries,
-  validateInstanceForm,
 } from "@/components/console-pages/instance-config-model";
+import { validateInstanceForm } from "@/components/console-pages/instance-config-validation";
 import { FieldError } from "@/components/console-pages/instance-configuration-field-error";
 import { PasswordInput } from "@/components/password-input";
 import {
