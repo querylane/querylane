@@ -21,6 +21,17 @@ const FILES_SUMMARY_PATTERN =
   /^\s*(?:[├+|]\s*)?Files\s*\(\d+\)(?<summary>[^\n]*)$/mu;
 const OVERWRITE_SUMMARY_PATTERN = /~(?<count>\d+)\s+overwrite\b/u;
 const NO_CHANGES_PATTERN = /\bNo changes\./u;
+// A changed content line inside shadcn's boxed diff output ("│ │ +import ...",
+// "│ │ -"). The double bar matters: single-bar lines such as the dependency
+// summary ("│ + cn") are not file content.
+const DIFF_CHANGED_LINE_PATTERN =
+  /^\s*[│┃|]\s*[│┃|]\s*(?<sign>[-+])(?<text>.*)$/u;
+// On 2026-09-06 the shadcn registry moved `cn` into its standalone `cn`
+// package, so every component now imports it from there instead of the
+// configured utils alias. That is registry churn, not a local customization,
+// so a diff made only of that import swap (and the blank lines it shuffles)
+// does not count as drift.
+const CN_IMPORT_PATTERN = /^import \{ cn \} from "(?:cn|@\/lib\/utils)"$/u;
 // Deliberate patches against shadcn output: card content leaves layout and
 // spacing to each usage, interactive items use the pointer cursor, and sonner
 // sanitizes the resolved theme before passing it to Sonner.
@@ -175,6 +186,31 @@ function isNoChangeShadcnDiff(output: string) {
   return NO_CHANGES_PATTERN.test(stripAnsi(output));
 }
 
+function changedDiffLines(output: string) {
+  return stripAnsi(output)
+    .split("\n")
+    .flatMap((line) => {
+      const match = line.match(DIFF_CHANGED_LINE_PATTERN);
+      if (!match?.groups) {
+        return [];
+      }
+      const text = match.groups["text"] ?? "";
+      // "--- a/file" and "+++ b/file" headers are not content changes.
+      if (text.startsWith("-- ") || text.startsWith("++ ")) {
+        return [];
+      }
+      return [text.trim()];
+    });
+}
+
+function isCnImportOnlyShadcnDiff(output: string) {
+  const changed = changedDiffLines(output);
+  return (
+    changed.length > 0 &&
+    changed.every((text) => text === "" || CN_IMPORT_PATTERN.test(text))
+  );
+}
+
 function confirmBlockingOverwriteFiles({
   baseArgs,
   blockingOverwriteFiles,
@@ -198,7 +234,11 @@ function confirmBlockingOverwriteFiles({
     const diffOutput = commandOutput(diffResult);
     console.log(diffOutput);
 
-    if (!isNoChangeShadcnDiff(diffOutput)) {
+    if (
+      !(
+        isNoChangeShadcnDiff(diffOutput) || isCnImportOnlyShadcnDiff(diffOutput)
+      )
+    ) {
       confirmedBlockingOverwriteFiles.push(file);
     }
   }
@@ -306,6 +346,7 @@ export {
   confirmBlockingOverwriteFiles,
   findExpectedShadcnOverwriteCount,
   findShadcnOverwriteFiles,
+  isCnImportOnlyShadcnDiff,
   isNoChangeShadcnDiff,
   normalizeShadcnComponents,
   parseShadcnInfoComponents,
