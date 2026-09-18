@@ -12,9 +12,11 @@ interface Props {
   items: NavNode[];
   currentRoute: string;
   strings?: UIStrings["nav"];
+  ids?: Map<NavNode, string>;
+  fragmentBase?: string;
 }
 
-const { items, currentRoute, strings } = Astro.props;
+const { items, currentRoute, strings, ids, fragmentBase } = Astro.props;
 const labelsByRoute = new Map<string, string>();
 
 for (const spec of Object.values(specs)) {
@@ -27,6 +29,16 @@ for (const spec of Object.values(specs)) {
 }
 
 const rpcItems = withRpcBadges(items, labelsByRoute);
+// Blume's deferred fragments render the original tree, without RPC badges.
+// Keep customized sections eager; untouched trees retain their stable IDs
+// and can use upstream deferred navigation without losing badge semantics.
+const unchanged = rpcItems === items;
 ---
 
-<NavTree currentRoute={currentRoute} items={rpcItems} strings={strings} />
+<NavTree
+  currentRoute={currentRoute}
+  fragmentBase={unchanged ? fragmentBase : undefined}
+  ids={unchanged ? ids : undefined}
+  items={rpcItems}
+  strings={strings}
+/>

@@ -70,15 +70,15 @@ export const rpcPresentationForReference = (
 export const withRpcBadges = (
 	items: NavNode[],
 	labelsByRoute: ReadonlyMap<string, string>,
-): NavNode[] =>
-	items.map((item) => {
+): NavNode[] => {
+	const result = items.map((item) => {
 		if (item.kind === "page") {
 			const badge = labelsByRoute.get(item.route);
-			return badge ? { ...item, badge } : item;
+			return badge && badge !== item.badge ? { ...item, badge } : item;
 		}
 
-		return {
-			...item,
-			children: withRpcBadges(item.children, labelsByRoute),
-		};
+		const children = withRpcBadges(item.children, labelsByRoute);
+		return children === item.children ? item : { ...item, children };
 	});
+	return result.every((item, index) => item === items[index]) ? items : result;
+};

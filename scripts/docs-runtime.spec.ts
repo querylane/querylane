@@ -94,6 +94,19 @@ test("JSON page index advertises a readable Markdown and JSON page", async () =>
 	expect(await markdown.text()).toContain("PRODUCTION_DATABASE_PASSWORD");
 });
 
+test("API Markdown exposes the callable endpoint instead of an MDX component", async () => {
+	const response = await fetch(
+		`${baseUrl}/api/instance/instance-service-get-instance.md`,
+	);
+	expect(response.status).toBe(200);
+	const markdown = await response.text();
+	expect(markdown).toContain(
+		"POST /querylane.console.v1alpha1.InstanceService/GetInstance",
+	);
+	expect(markdown).not.toContain("<Operation ");
+	expect(markdown).not.toContain("Querylane experimental API API");
+});
+
 test("unknown docs pages fail with 404 rather than a successful fallback", async () => {
 	const response = await fetch(
 		`${baseUrl}/api/docs/pages/not-a-querylane-page.json`,
