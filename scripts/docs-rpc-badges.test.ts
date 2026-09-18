@@ -113,6 +113,22 @@ test("replaces HTTP badges only for known RPC navigation routes", () => {
 	]);
 });
 
+test("preserves non-RPC navigation identity for Blume's deferred group IDs", () => {
+	const page = {
+		kind: "page" as const,
+		label: "Quickstart",
+		pageId: "get-started",
+		route: "/get-started",
+	};
+	const items = [{ kind: "group" as const, label: "Docs", children: [page] }];
+	const result = withRpcBadges(
+		items,
+		new Map([["/api/instance/get-instance", "Unary RPC"]]),
+	);
+	expect(result).toBe(items);
+	expect(result[0]).toBe(items[0]);
+});
+
 test("keeps Blume authorization and playground behavior in RPC operations", async () => {
 	const operation = await readFile(
 		new URL("../docs/components/openapi/Operation.astro", import.meta.url),
