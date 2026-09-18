@@ -2,6 +2,7 @@
 
 import { Navigate } from "@tanstack/react-router";
 import { Database } from "lucide-react";
+import { CreateInstanceConnectionFields } from "@/components/new-instance-connection-fields";
 import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
 import {
   Card,
@@ -12,8 +13,7 @@ import {
 } from "@/components/ui/card";
 import type { CreateInstanceWorkflowState } from "@/features/new-instance-workflow";
 import { useIsConfigManagedInstances } from "@/hooks/api/console";
-import { CreateInstanceConnectionFields } from "@/routes/new-instance-connection-fields";
-import { useCreateInstancePageController } from "@/routes/new-instance-page-controller";
+import { useCreateInstancePageController } from "@/hooks/use-create-instance-page-controller";
 import {
   CreateInstanceActions,
   CreateInstanceAdvancedSection,
