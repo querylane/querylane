@@ -1,9 +1,12 @@
 {
 	"name": "querylane",
 	"devDependencies": {
-		"@types/node": "24.13.3",
-		"blume": "1.6.3",
-		"zod": "4.3.6"
+		"@types/node": "26.6.1",
+		"blume": "1.7.1",
+		"zod": "4.6.5"
+	},
+	"overrides": {
+		"@scalar/openapi-parser": "0.29.1"
 	},
 	"packageManager": "bun@1.4.0",
 	"private": true,
@@ -21,5 +24,8 @@
 		"docs:validate": "blume validate --strict",
 		"setup:worktree": "bun ./scripts/setup-worktree.mjs"
 	},
-	"type": "module"
+	"type": "module",
+	"patchedDependencies": {
+		"blume@1.7.1": "patches/blume@1.7.1.patch"
+	}
 }

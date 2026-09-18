@@ -129,7 +129,9 @@ function toSummaryRow(report: LighthouseReportLike): LighthouseSummaryRow {
 }
 
 function summarizeLighthouseReports(reports: readonly unknown[]) {
-  const rows = reports.filter(isRecord).map(toSummaryRow);
+  const rows = reports.flatMap((report) =>
+    isRecord(report) ? [toSummaryRow(report)] : []
+  );
 
   if (rows.length === 0) {
     return [
@@ -168,8 +170,11 @@ function loadLighthouseReports(reportDir: string) {
   }
 
   return readdirSync(reportDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && REPORT_FILE_PATTERN.test(entry.name))
-    .map((entry) => join(reportDir, entry.name))
+    .flatMap((entry) =>
+      entry.isFile() && REPORT_FILE_PATTERN.test(entry.name)
+        ? [join(reportDir, entry.name)]
+        : []
+    )
     .sort()
     .flatMap((path) => {
       try {

@@ -21,7 +21,7 @@ function makeQueryClientStub(
       queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
     },
   });
-  rs.spyOn(queryClient, "prefetchQuery").mockImplementation((options) => {
+  rs.spyOn(queryClient, "query").mockImplementation((options) => {
     calls.push(options);
     return prefetchResult;
   });

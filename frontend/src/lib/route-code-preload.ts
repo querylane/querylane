@@ -11,7 +11,7 @@ export async function preloadRouteCode(
     return;
   }
   try {
-    await router.loadRouteChunk(route, ["component"]);
+    await router.loadRouteChunk(route);
   } catch (error) {
     // Navigation still owns the visible route error/retry experience.
     logger.warn("Route code preload failed", { error, routeId: route.id });

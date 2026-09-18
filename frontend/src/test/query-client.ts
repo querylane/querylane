@@ -5,7 +5,6 @@ export function createTestQueryClient() {
     gcTime: Number.POSITIVE_INFINITY,
     retry: false,
   };
-  queries.experimental_prefetchInRender = true;
 
   return new QueryClient({
     defaultOptions: {

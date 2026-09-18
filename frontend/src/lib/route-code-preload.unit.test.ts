@@ -29,7 +29,9 @@ test("code-only preloading never runs loaders, including active parents", async 
     history: createMemoryHistory(),
     routeTree: root.addChildren([parent.addChildren([target])]),
   });
+  const loadRouteChunk = rs.spyOn(router, "loadRouteChunk");
   await preloadRouteCode(router, target);
+  expect(loadRouteChunk).toHaveBeenCalledWith(target);
   expect(preload).toHaveBeenCalledTimes(1);
   expect(beforeLoad).not.toHaveBeenCalled();
   expect(parentLoader).not.toHaveBeenCalled();

@@ -15,6 +15,7 @@ import { lazy, Suspense, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import type { RoleDetailViewProps } from "@/components/console-pages/role-detail-model";
 import { RolePartialAccessAlert } from "@/components/console-pages/role-detail-shared";
+import { MapFacetFilters } from "@/components/map-facet-filters";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -35,7 +35,6 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Switch } from "@/components/ui/switch";
 import type {
   AccessDefaultPrivilege,
   AccessGrant,
@@ -389,32 +388,12 @@ function AccessMapCanvasActions({
               Add or remove access facets from this role map.
             </PopoverDescription>
           </PopoverHeader>
-          <div className="grid gap-2">
-            {ACCESS_MAP_FACET_FILTERS.map((filter) => {
-              const switchId = `access-map-filter-${filter.kind}`;
-              return (
-                <div
-                  className="flex items-center justify-between gap-3 rounded-lg border bg-card/80 p-2"
-                  key={filter.kind}
-                >
-                  <div className="min-w-0">
-                    <Label htmlFor={switchId}>{filter.label}</Label>
-                    <p className="mt-1 truncate text-muted-foreground text-xs">
-                      {filter.description}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={visibleFacets[filter.kind]}
-                    id={switchId}
-                    onCheckedChange={(checked) =>
-                      onToggleFacet(filter.kind, checked)
-                    }
-                    size="sm"
-                  />
-                </div>
-              );
-            })}
-          </div>
+          <MapFacetFilters
+            filters={ACCESS_MAP_FACET_FILTERS}
+            idPrefix="access-map-filter"
+            onToggle={onToggleFacet}
+            visibility={visibleFacets}
+          />
         </PopoverContent>
       </Popover>
       <Button

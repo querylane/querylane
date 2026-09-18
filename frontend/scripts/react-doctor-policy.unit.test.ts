@@ -307,8 +307,8 @@ describe("React Doctor policy", () => {
     const devDependencies = getRecordProperty(packageJson, "devDependencies");
     const overrides = getRecordProperty(packageJson, "overrides");
 
-    expect(devDependencies["react-doctor"]).toBe("0.9.2");
-    expect(overrides["react-doctor"]).toBe("0.9.2");
+    expect(devDependencies["react-doctor"]).toBe("0.9.14");
+    expect(overrides["react-doctor"]).toBe("0.9.14");
   });
 
   test("uses the audited release for every locked React Doctor copy", () => {
@@ -320,7 +320,7 @@ describe("React Doctor policy", () => {
       )
     );
 
-    expect(lockedVersions).toEqual(new Set(["0.9.2"]));
+    expect(lockedVersions).toEqual(new Set(["0.9.14"]));
   });
 
   test("runs every non-colliding installed rule at error severity", () => {

@@ -115,7 +115,7 @@ const state = rs.hoisted(() => ({
   overviewData: undefined as GetInstanceOverviewResponse | undefined,
   queryClient: {
     getQueryState: rs.fn(() => undefined),
-    prefetchQuery: rs.fn(async () => undefined),
+    query: rs.fn(async () => undefined),
     tag: "query-client",
   },
   refetchExtensions: rs.fn(async () => ({})),
@@ -582,8 +582,8 @@ beforeEach(() => {
   state.overviewData = undefined;
   state.queryClient.getQueryState.mockReset();
   state.queryClient.getQueryState.mockReturnValue(undefined);
-  state.queryClient.prefetchQuery.mockReset();
-  state.queryClient.prefetchQuery.mockResolvedValue(undefined);
+  state.queryClient.query.mockReset();
+  state.queryClient.query.mockResolvedValue(undefined);
   state.refetchExtensions.mockReset();
   state.refetchExtensions.mockResolvedValue({});
   state.refetchInstance.mockReset();
@@ -1922,7 +1922,7 @@ describe("backend instance database list", () => {
       }),
       { overridePage: "database.overview" }
     );
-    expect(state.queryClient.prefetchQuery).not.toHaveBeenCalled();
+    expect(state.queryClient.query).not.toHaveBeenCalled();
   });
 
   test("groups charset and collation into one encoding column", () => {

@@ -72,7 +72,7 @@ describe("database query option helpers", () => {
       transport,
     });
 
-    const response = await queryClient.fetchQuery(options);
+    const response = await queryClient.query(options);
 
     expect(requests).toHaveLength(2);
     expect(requests[0]?.parent).toBe("instances/local");
@@ -101,7 +101,7 @@ describe("database query option helpers", () => {
     });
     const queryClient = createTestQueryClient();
 
-    await queryClient.fetchQuery(listAllDatabasesQueryOptions({ transport }));
+    await queryClient.query(listAllDatabasesQueryOptions({ transport }));
 
     expect(requests).toHaveLength(1);
     expect(requests[0]?.parent).toBe("");
@@ -128,7 +128,7 @@ describe("database query option helpers", () => {
       transport,
     });
 
-    const response = await queryClient.fetchQuery(options);
+    const response = await queryClient.query(options);
 
     expect(requestedNames).toEqual(["instances/local/databases/postgres"]);
     expect(response.database?.name).toBe("instances/local/databases/postgres");

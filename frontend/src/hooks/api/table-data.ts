@@ -110,7 +110,7 @@ function useReadRowsQueryActions(request: ReadRowsRequest) {
   };
 
   return {
-    fetch: () => queryClient.fetchQuery(queryOptions),
+    fetch: () => queryClient.query(queryOptions),
     getState: () => queryClient.getQueryState(queryOptions.queryKey),
     prefetch: () => prefetchRouteQuery(queryClient, queryOptions),
   };

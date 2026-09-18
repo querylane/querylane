@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { lazy, type ReactNode, Suspense, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { MapFacetFilters } from "@/components/map-facet-filters";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +25,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -33,7 +33,6 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Switch } from "@/components/ui/switch";
 import {
   useDatabaseVisualizationStore,
   type VisualizationDetailScope,
@@ -356,32 +355,12 @@ function DatabaseMapCanvasActions({
               Add or remove database resource types from this map.
             </PopoverDescription>
           </PopoverHeader>
-          <div className="grid gap-2">
-            {DATABASE_MAP_NODE_FILTERS.map((filter) => {
-              const switchId = `database-map-filter-${filter.kind}`;
-              return (
-                <div
-                  className="flex items-center justify-between gap-3 rounded-lg border bg-card/80 p-2"
-                  key={filter.kind}
-                >
-                  <div className="min-w-0">
-                    <Label htmlFor={switchId}>{filter.label}</Label>
-                    <p className="mt-1 truncate text-muted-foreground text-xs">
-                      {filter.description}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={visibleNodeKinds[filter.kind]}
-                    id={switchId}
-                    onCheckedChange={(checked) =>
-                      onToggleNodeKind(filter.kind, checked)
-                    }
-                    size="sm"
-                  />
-                </div>
-              );
-            })}
-          </div>
+          <MapFacetFilters
+            filters={DATABASE_MAP_NODE_FILTERS}
+            idPrefix="database-map-filter"
+            onToggle={onToggleNodeKind}
+            visibility={visibleNodeKinds}
+          />
           <Button
             disabled={hiddenNodeKindCount === 0}
             onClick={onShowAllNodeKinds}
