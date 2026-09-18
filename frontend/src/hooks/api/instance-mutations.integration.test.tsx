@@ -895,9 +895,7 @@ describe("instance deletion cache invalidation", () => {
     });
     const { queryClient, wrapper } = createWrapper(transport);
     const listOptions = listAllInstancesQueryOptions({ transport });
-    const staleFetch = queryClient
-      .fetchQuery(listOptions)
-      .catch(() => undefined);
+    const staleFetch = queryClient.query(listOptions).catch(() => undefined);
     await waitFor(() => {
       expect(listRequests).toHaveLength(1);
     });

@@ -162,7 +162,7 @@ const state = vi.hoisted(() => ({
   overviewQuery: {} as QueryState<GetInstanceOverviewResponse>,
   queryClient: {
     getQueryState: vi.fn(() => undefined),
-    prefetchQuery: vi.fn(async () => undefined),
+    query: vi.fn(async () => undefined),
   },
   queryInsightsQuery: {} as QueryState<GetDatabaseQueryInsightsResponse>,
   selectedInstanceStatus: "connected" as "connected" | "disconnected",
@@ -262,8 +262,8 @@ beforeEach(() => {
   state.overviewQuery = {};
   state.queryClient.getQueryState.mockReset();
   state.queryClient.getQueryState.mockReturnValue(undefined);
-  state.queryClient.prefetchQuery.mockReset();
-  state.queryClient.prefetchQuery.mockResolvedValue(undefined);
+  state.queryClient.query.mockReset();
+  state.queryClient.query.mockResolvedValue(undefined);
   state.deleteInstance.mockReset();
   state.deleteInstance.mockResolvedValue(undefined);
   state.navigate.mockClear();

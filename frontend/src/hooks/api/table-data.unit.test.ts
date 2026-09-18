@@ -132,11 +132,8 @@ describe("useReadRowsQueryActions", () => {
       staleTime?: number;
     }
     const queryClient = {
-      fetchQuery: rs.fn((_options: QueryOptionsStub) =>
-        Promise.resolve("rows")
-      ),
+      query: rs.fn((_options: QueryOptionsStub) => Promise.resolve("rows")),
       getQueryState: rs.fn(() => queryState),
-      prefetchQuery: rs.fn((_options: QueryOptionsStub) => Promise.resolve()),
     };
     useQueryClientMock.mockReturnValue(queryClient);
     useTransportMock.mockReturnValue({});
@@ -148,8 +145,8 @@ describe("useReadRowsQueryActions", () => {
     actions.prefetch();
     await Promise.resolve();
 
-    const fetchOptions = queryClient.fetchQuery.mock.calls[0]?.[0];
-    const prefetchOptions = queryClient.prefetchQuery.mock.calls[0]?.[0];
+    const fetchOptions = queryClient.query.mock.calls[0]?.[0];
+    const prefetchOptions = queryClient.query.mock.calls[1]?.[0];
     expect(fetchOptions).toMatchObject(RESOURCE_QUERY_OPTIONS.tableRows);
     expect(prefetchOptions).toMatchObject({
       ...RESOURCE_QUERY_OPTIONS.tableRows,

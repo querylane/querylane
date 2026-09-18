@@ -348,7 +348,7 @@ describe("DataExplorerPage", () => {
   it("does not fetch table details on hover or focus", async () => {
     rs.useFakeTimers();
     const prefetch = rs
-      .spyOn(QueryClient.prototype, "prefetchQuery")
+      .spyOn(QueryClient.prototype, "query")
       .mockResolvedValue(undefined);
     mocks.schemasQuery.data = {
       pages: [

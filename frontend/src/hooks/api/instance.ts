@@ -320,7 +320,7 @@ export async function refreshAllInstancesCache({
     { exact: true, queryKey: cacheQueryOptions.queryKey },
     { revert: false, silent: true }
   );
-  return await queryClient.fetchQuery({
+  return await queryClient.query({
     ...cacheQueryOptions,
     staleTime: QUERY_STALE_TIME.immediate,
   });

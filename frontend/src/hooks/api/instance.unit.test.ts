@@ -71,7 +71,7 @@ describe("instance query option helpers", () => {
     const queryClient = createTestQueryClient();
     const options = listAllInstancesQueryOptions({ transport });
 
-    const response = await queryClient.fetchQuery(options);
+    const response = await queryClient.query(options);
 
     expect(requests).toHaveLength(2);
     expect(requests[0]?.orderBy).toBe("display_name asc");
@@ -104,7 +104,7 @@ describe("instance query option helpers", () => {
       transport,
     });
 
-    const response = await queryClient.fetchQuery(options);
+    const response = await queryClient.query(options);
 
     expect(requestedNames).toEqual(["instances/local"]);
     expect(response.instance?.name).toBe("instances/local");

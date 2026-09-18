@@ -108,10 +108,10 @@ describe("strict tooling policy", () => {
     }
 
     expect(devDependencies).toMatchObject({
-      "@biomejs/biome": "2.5.6",
-      "react-doctor": "0.9.2",
+      "@biomejs/biome": "2.5.14",
+      "react-doctor": "0.9.14",
       typescript: "7.0.2",
-      ultracite: "7.9.4",
+      ultracite: "7.12.0",
     });
   });
 

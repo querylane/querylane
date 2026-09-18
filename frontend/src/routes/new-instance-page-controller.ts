@@ -157,7 +157,7 @@ async function fetchCreatedInstanceDatabases({
   }
 
   try {
-    const response = await queryClient.fetchQuery({
+    const response = await queryClient.query({
       ...listAllDatabasesQueryOptions({
         input: databasesForInstanceQueryInput(instanceId),
         transport,

@@ -43,7 +43,7 @@ vi.mock("@tanstack/react-query", async () => {
     ...actual,
     useQueryClient: () => ({
       ...routeState.queryClient,
-      fetchQuery: routeState.listDatabases,
+      query: routeState.listDatabases,
     }),
   };
 });

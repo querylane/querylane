@@ -82,7 +82,7 @@ describe("extension query option helpers", () => {
       transport,
     });
 
-    const response = await queryClient.fetchQuery(options);
+    const response = await queryClient.query(options);
 
     expect(requests).toHaveLength(2);
     expect(requests[0]?.parent).toBe("instances/local/databases/postgres");
